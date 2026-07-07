@@ -16,6 +16,9 @@ import { UsageGuide } from "@/components/usage-guide";
 import { MemeEmbed } from "@/components/meme-embed";
 import { MemeCard } from "@/components/meme-card";
 import { ReactionBar } from "@/components/reaction-bar";
+import { Comments } from "@/components/comments";
+import { SaveButton } from "@/components/save-button";
+import { MemeJsonLd } from "@/components/json-ld";
 import { ViewTracker } from "./view-tracker";
 
 /** 밈 상세 — 공개 ISR (10분), 온디맨드 생성 */
@@ -60,6 +63,12 @@ export default async function MemeDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-5 pb-14">
+      <MemeJsonLd
+        name={meme.title}
+        description={meme.summary}
+        shortId={meme.short_id}
+        slug={meme.slug}
+      />
       <ViewTracker memeId={meme.id} />
 
       {meme.moderation_status === "limited" && (
@@ -175,7 +184,11 @@ export default async function MemeDetailPage({ params }: Props) {
         </section>
       )}
 
+      <SaveButton memeId={meme.id} />
+
       <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
+
+      <Comments memeId={meme.id} />
     </main>
   );
 }

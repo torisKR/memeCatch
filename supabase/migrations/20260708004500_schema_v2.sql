@@ -60,10 +60,16 @@ create table profiles (
 );
 
 -- 자기 role/trust_score 상승 차단 (service_role만 변경 가능)
+-- 주의: PostgREST/Supabase는 복수형 request.jwt.claims(JSON)만 세팅한다.
+--       단수 request.jwt.claim.role은 legacy GUC로 항상 비어 있어 service_role까지 차단됐었음.
+--       JWT 자체가 없는 경로(psql/마이그레이션 등 직접 DB 접속)는 관리자 접속으로 보고 허용.
 create or replace function protect_profile_columns() returns trigger
 language plpgsql security definer as $$
 begin
-  if current_setting('request.jwt.claim.role', true) is distinct from 'service_role'
+  if coalesce(
+       nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+       'service_role'
+     ) <> 'service_role'
      and (new.role is distinct from old.role or new.trust_score is distinct from old.trust_score) then
     raise exception 'role/trust_score can only be changed by service role';
   end if;
@@ -452,9 +458,11 @@ grant execute on function cast_generation_vote(uuid, text, text) to authenticate
 -- ── trend_score 일배치 (B-2/B-3: ln 정규화 + 72h 윈도 + 스무딩 + KST) ──
 create or replace function compute_trend_scores() returns void
 language plpgsql security definer set search_path = public as $$
-declare v_today date := (now() at time zone 'Asia/Seoul')::date;
+declare
+  v_today date := (now() at time zone 'Asia/Seoul')::date;
+  v_run_id bigint;
 begin
-  insert into job_runs (job_name) values ('compute_trend_scores');
+  insert into job_runs (job_name) values ('compute_trend_scores') returning id into v_run_id;
 
   -- 오늘자 지표 롤업 (멱등 UPSERT)
   insert into meme_trend_metrics (meme_id, date, views, comments, saves, reactions, reports)
@@ -501,12 +509,14 @@ begin
   -- 30일 지난 view_events 롤업 후 삭제 (E-4 용량 관리)
   delete from view_events where created_at < now() - interval '30 days';
 
-  update job_runs set finished_at = now(), ok = true
-  where id = (select max(id) from job_runs where job_name = 'compute_trend_scores');
+  update job_runs set finished_at = now(), ok = true where id = v_run_id;
 exception when others then
-  update job_runs set finished_at = now(), ok = false, detail = jsonb_build_object('error', sqlerrm)
-  where id = (select max(id) from job_runs where job_name = 'compute_trend_scores');
-  raise;
+  -- 예외 진입 시 본문 전체(시작 INSERT 포함)가 서브트랜잭션 롤백으로 사라진다.
+  -- 여기서 재-raise하면 이 실패 기록마저 외부 트랜잭션과 함께 롤백되므로,
+  -- 실패 행을 새로 INSERT하고 warning만 남긴 채 정상 반환한다(감사 로그 보존).
+  insert into job_runs (job_name, finished_at, ok, detail)
+  values ('compute_trend_scores', now(), false, jsonb_build_object('error', sqlerrm));
+  raise warning 'compute_trend_scores failed: %', sqlerrm;
 end $$;
 
 -- ── 검색 RPC (trgm + 초성 + aliases 통합) ──────────────────

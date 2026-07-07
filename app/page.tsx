@@ -1,6 +1,7 @@
 import { SECTION_TITLES } from "@/lib/labels";
 import { getBeginnerMemes, getTrendingMemes, type MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
+import { WebSiteJsonLd } from "@/components/json-ld";
 
 /** 홈 — 공개 ISR (5분), 쿠키 미사용 정적 클라이언트 */
 export const revalidate = 300;
@@ -16,6 +17,7 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-12">
+      <WebSiteJsonLd />
       {/* 검색 히어로 */}
       <section aria-label="밈 검색" className="pb-8 pt-10 md:pt-16">
         <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">

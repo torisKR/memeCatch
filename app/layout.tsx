@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/bottom-nav";
+import { PwaInstall } from "@/components/pwa-install";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -46,6 +47,7 @@ export default function RootLayout({
       <body className="min-h-dvh pb-16 md:pb-0">
         {children}
         <BottomNav />
+        <PwaInstall />
       </body>
     </html>
   );

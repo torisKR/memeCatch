@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 밈 데이터셋 (원본 경로에서 관리, 시드 SQL만 커밋)
+/data/memes/raw/
+/data/memes/clean/

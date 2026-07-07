@@ -1,26 +1,111 @@
 @import "tailwindcss";
 
+/* ── 밈캐치 디자인 토큰 (라이트/다크 쌍 — 디자인 리뷰 Pass 5/6) ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfcfa;
+  --foreground: #1a1a1f;
+  --surface: #ffffff;
+  --surface-2: #f4f2ee;
+  --border: #e6e2da;
+  --muted: #6b6860;
+  --accent: #ff5c38; /* 시그니처: 불꽃 오렌지 (보라 그라디언트 금지) */
+  --accent-soft: #ffe8e1;
+
+  /* 사용 안전 신호등 — 색+아이콘+텍스트 병행 (색약 대응) */
+  --safety-green: #1a9a5b;
+  --safety-green-bg: #e3f5ec;
+  --safety-yellow: #b57d00;
+  --safety-yellow-bg: #fdf3d8;
+  --safety-gray: #71717a;
+  --safety-gray-bg: #f0f0f2;
+  --safety-red: #d63333;
+  --safety-red-bg: #fde5e5;
+
+  /* 밈 생명 게이지 (T4 시그니처) */
+  --life-rising: #ff5c38;
+  --life-active: #ff9d2e;
+  --life-cooling: #8fa3b8;
+  --life-archived: #b9b3a8;
+
+  --sent-controversial: #7c4dcc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #131316;
+    --foreground: #f0efec;
+    --surface: #1c1c21;
+    --surface-2: #26262c;
+    --border: #34343c;
+    --muted: #9c99a3;
+    --accent: #ff6b47;
+    --accent-soft: #3a2018;
+
+    --safety-green: #3ecf85;
+    --safety-green-bg: #12301f;
+    --safety-yellow: #e8b53a;
+    --safety-yellow-bg: #33290e;
+    --safety-gray: #a1a1aa;
+    --safety-gray-bg: #26262c;
+    --safety-red: #ff6b6b;
+    --safety-red-bg: #351515;
+
+    --life-rising: #ff6b47;
+    --life-active: #ffb054;
+    --life-cooling: #7d93aa;
+    --life-archived: #6f6a60;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-safety-green: var(--safety-green);
+  --color-safety-green-bg: var(--safety-green-bg);
+  --color-safety-yellow: var(--safety-yellow);
+  --color-safety-yellow-bg: var(--safety-yellow-bg);
+  --color-safety-gray: var(--safety-gray);
+  --color-safety-gray-bg: var(--safety-gray-bg);
+  --color-safety-red: var(--safety-red);
+  --color-safety-red-bg: var(--safety-red-bg);
+  --color-life-rising: var(--life-rising);
+  --color-life-active: var(--life-active);
+  --color-life-cooling: var(--life-cooling);
+  --color-life-archived: var(--life-archived);
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-family: var(--font-sans);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  word-break: keep-all; /* 한국어 타이포 (D5-4) */
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* 생명 게이지 점화 애니메이션 — 모션 감소 설정 존중 */
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); opacity: 1; }
+  50% { transform: scale(1.12) rotate(2deg); opacity: 0.9; }
+}
+.flame-rising { animation: flame-flicker 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .flame-rising { animation: none; }
+}
+
+/* 접근성: 포커스 링 유지 */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

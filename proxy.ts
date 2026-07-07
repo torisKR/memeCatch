@@ -2,10 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * 세션 갱신 미들웨어 — matcher를 인증 필요 라우트로 한정 (E-3:
+ * 세션 갱신 프록시(Next16: middleware→proxy 컨벤션) — matcher를 인증 필요 라우트로 한정 (E-3:
  * 전역 미들웨어는 모든 페이지를 dynamic으로 강등시켜 ISR을 무효화한다).
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

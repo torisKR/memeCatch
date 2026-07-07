@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const TABS = [
+const TABS: {
+  href: string;
+  label: string;
+  icon: (props: { className?: string }) => React.ReactElement;
+  emphasized?: boolean;
+}[] = [
   { href: "/", label: "홈", icon: HomeIcon },
   { href: "/rankings", label: "랭킹", icon: RankIcon },
   { href: "/submit", label: "제보", icon: PlusIcon, emphasized: true },
   { href: "/my", label: "MY", icon: UserIcon },
-] as const;
+];
 
 export function BottomNav() {
   const pathname = usePathname();

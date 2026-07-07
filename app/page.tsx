@@ -1,65 +1,119 @@
-import Image from "next/image";
+import { SECTION_TITLES } from "@/lib/labels";
+import { getBeginnerMemes, getTrendingMemes, type MemeListItem } from "@/lib/queries";
+import { MemeCard } from "@/components/meme-card";
 
-export default function Home() {
+/** 홈 — 공개 ISR (5분), 쿠키 미사용 정적 클라이언트 */
+export const revalidate = 300;
+
+export default async function Home() {
+  const [trending, beginners] = await Promise.all([
+    getTrendingMemes(10),
+    getBeginnerMemes(8),
+  ]);
+  // 섹션당 3개 미만이면 섹션 숨김
+  const showTrending = trending.length >= 3;
+  const showBeginners = beginners.length >= 3;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="mx-auto max-w-3xl px-4 pb-12">
+      {/* 검색 히어로 */}
+      <section aria-label="밈 검색" className="pb-8 pt-10 md:pt-16">
+        <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
+          그 밈, 3초 안에 알려드려요
+        </h1>
+        <p className="mt-1.5 text-base text-muted">
+          뜻·유래부터 지금 써도 되는지까지 한 번에 확인해요.
+        </p>
+        <form action="/search" role="search" className="mt-5">
+          <label htmlFor="home-search" className="sr-only">
+            밈 검색
+          </label>
+          <div className="relative">
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden
+              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              id="home-search"
+              name="q"
+              type="search"
+              placeholder="무슨 밈인지 검색해보세요"
+              autoComplete="off"
+              enterKeyHint="search"
+              className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base shadow-sm outline-none transition-colors focus:border-accent"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+        </form>
+      </section>
+
+      {showTrending && (
+        <section aria-labelledby="sec-trending" className="mt-2">
+          <h2 id="sec-trending" className="flex items-center gap-1.5 text-xl font-bold">
+            <span aria-hidden className="text-life-rising">
+              <FlameMark />
+            </span>
+            {SECTION_TITLES.trending}
+          </h2>
+          <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+            {trending.map((meme) => (
+              <li key={meme.id} className="w-40 shrink-0 snap-start">
+                <MemeCard meme={meme} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {showBeginners && (
+        <section aria-labelledby="sec-beginner" className="mt-8">
+          <h2 id="sec-beginner" className="text-xl font-bold">
+            {SECTION_TITLES.forBeginners}
+          </h2>
+          <MemeGrid memes={beginners} />
+        </section>
+      )}
+
+      {!showTrending && !showBeginners && (
+        <section className="mt-6 rounded-2xl border border-border bg-surface p-8 text-center">
+          <p className="text-lg font-bold">아직 준비된 밈이 부족해요</p>
+          <p className="mt-1 text-base text-muted">
+            밈을 차곡차곡 정리하고 있어요. 조금만 기다려 주세요.
+          </p>
+        </section>
+      )}
+    </main>
+  );
+}
+
+function MemeGrid({ memes }: { memes: MemeListItem[] }) {
+  return (
+    <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+      {memes.map((meme) => (
+        <li key={meme.id} className="min-w-0">
+          <MemeCard meme={meme} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FlameMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M12 2.5c.6 3.2-1.8 4.9-1.8 7.4a2.6 2.6 0 0 0 5.2.3c1.7 1.6 2.6 3.4 2.6 5.3a6 6 0 1 1-12 0c0-2.6 1.3-4.5 3-6.2.3 1.4.9 2.3 1.7 2.8-.4-3.3.1-6.4 1.3-9.6Z" />
+    </svg>
   );
 }

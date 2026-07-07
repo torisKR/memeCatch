@@ -1,0 +1,2407 @@
+-- 밈캐치 시드 배치 7 (150 rows)
+begin;
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('실패작 소녀', '실패작-소녀', array['실패작']::text[], '인주 앨리스와 같은 시기 유행한 보컬로이드 틱톡 밈', '보컬로이드 곡을 활용한 틱톡 짜깁기 밈으로, 2022년 8월 ''인주 앨리스''와 함께 짧은 시간에 틱톡에서 인지도가 폭발적으로 높아진 곡·영상 밈이다.',
+    '보컬로이드 곡을 활용한 2022년 8월 틱톡 짜깁기 영상 밈', '인주 앨리스류의 편집 밈과 세트로 인용', '세부 맥락과 원곡 해석이 마니아층 중심이라 일반 확산력은 제한적',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'ironic'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Young한데? 완전 MZ인데요?', 'Young한데?-완전-MZ인데요?', array['영한데 완전 MZ인데요']::text[], 'MZ세대 용어 남용을 비꼬는 메타버스 예능 발언 밈', 'MBN의 메타버스 음악쇼 ''아바타싱어''에서 래퍼 립제이가 전혀 젊어 보이지 않는 아바타를 보고 ''Young한데? 완전 MZ인데요?''라 말한 것이 방송 화제가 됐다. 이후 언론과 기성세대가 ''MZ세대''를 남발하는 것을 비꼬는 유행어로 쓰였다.',
+    'MBN ''아바타싱어''(2022년 8~12월 방영) 방송 발언', '세대 구분 용어를 억지로 갖다붙이는 상황을 비꿀 때 사용', '세대 갈라치기 맥락에서 쓰이면 냉소적으로 들릴 수 있음',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('포켓몬빵 언박싱 챌린지', '포켓몬빵-언박싱-챌린지', array['띠부씰 언박싱']::text[], '16년 만에 재출시된 포켓몬빵 띠부씰을 뜯는 언박싱 열풍', 'SPC삼립이 2022년 2월 24일 16년 만에 재출시한 포켓몬빵의 띠부씰(스티커)을 개봉하는 언박싱 영상이 유튜브·쇼츠에서 큰 인기를 끌었다. 희귀 스티커가 나오면 수만 원에 거래되는 등 레트로 열풍과 맞물려 전국적 이슈가 됐다.',
+    'SPC삼립 포켓몬빵 재출시(2022년 2월 24일) 이후 유튜브 언박싱 콘텐츠 유행', '기대감 넘치는 개봉 콘텐츠 소재로 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('웬즈데이 댄스 챌린지', '웬즈데이-댄스-챌린지', array['Wednesday 댄스','고스클럽 댄스']::text[], '넷플릭스 ''웬즈데이'' 주인공의 뻣뻣한 고스 댄스 챌린지', '넷플릭스 드라마 ''웬즈데이''에서 배우 제나 오르테가가 직접 안무한 뻣뻣하고 기괴한 춤을 레이디 가가의 ''Bloody Mary'' 속도를 높인 버전에 맞춰 따라하는 틱톡 챌린지다. 2022년 말 전 세계와 한국에서 크게 유행했다.',
+    '넷플릭스 ''웬즈데이''(2022년 11월 공개) 댄스신 + 틱톡 ''Bloody Mary'' 매쉬업 챌린지', '독특하고 뻣뻣한 개성 있는 춤 챌린지로 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('엔믹스 OO 챌린지', '엔믹스-OO-챌린지', array['O.O 챌린지']::text[], '엔믹스 데뷔곡 ''O.O''의 장르 전환 포인트 안무 챌린지', '2022년 2월 데뷔한 엔믹스의 타이틀곡 ''O.O''에 맞춰 의상이 바뀌는 듯한 연출과 포인트 안무를 따라하는 틱톡 챌린지로, 한 달여 만에 챌린지 조회수 9300만 건을 넘겼다.',
+    '엔믹스 ''O.O'' 데뷔 및 틱톡 챌린지 공개(2022년 2월 23일)', '장르가 바뀌는 듯한 연출 포인트 안무로 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('있지 스니커즈 챌린지', '있지-스니커즈-챌린지', array['SNEAKERS 챌린지']::text[], '있지 ''스니커즈''의 경쾌한 발동작 포인트 안무 챌린지', '2022년 7월 발매된 있지의 타이틀곡 ''스니커즈''에서 신발을 신고 터는 듯한 경쾌한 발동작 포인트 안무를 따라하는 챌린지다.',
+    '있지 ''스니커즈'' 발매 및 안무 공개(2022년 7월 15일)', '경쾌한 발동작 포인트 안무 챌린지로 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('갱갱갱', '갱갱갱', array['디기디기딕 갱갱갱']::text[], '식상하고 참신하지 않다는 뜻으로 쓰인 방송 유행어', '래퍼 플리키뱅이 ''쇼미더머니11''에서 선보인 시그니처 사운드 ''갱갱갱''에서 유래해 참신함을 의태어로 표현하는 말이 됐다. 같은 해 ''스트릿 맨 파이터''에서 댄서 인규가 다른 크루의 춤을 식상하다는 뜻으로 사용하며 더 유행했다.',
+    'Mnet ''쇼미더머니11''(2022년) 플리키뱅 무대 및 ''스트릿 맨 파이터'' 방송 발언', '참신하지 않고 뻔한 것을 가볍게 지적할 때 사용', '상대의 창작물을 깎아내리는 뉘앙스라 무례하게 들릴 수 있음',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('환승연애2 내일 봬요 누나', '환승연애2-내일-봬요-누나', array['내일 봬요 누나','현규 누나']::text[], '연하남의 직진 고백으로 화제 된 연애 예능 명대사', '연애 리얼리티 ''환승연애2'' 15화에서 새로 투입된 정현규가 성해은에게 건넨 ''내일 봬요 누나''라는 직진 멘트가 큰 화제를 모았다. 2022년 방영 당시 전국적으로 ''환연앓이'' 열풍을 일으키며 다양한 패러디로 활용됐다.',
+    '티빙 ''환승연애2'' 15화 방송분(2022년)', '적극적으로 호감을 표현하는 상황을 재치있게 인용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, '기타', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('우영우 자기소개(회문)', '우영우-자기소개(회문)', array['기러기 토마토 스위스 인도인 별똥별','우영우 인사법','우영우 팰린드롬']::text[], '우영우가 회문 단어로 자기소개하는 유행 대사', '드라마 ''이상한 변호사 우영우'' 1화에서 주인공이 자신을 소개하며 앞뒤 어느 방향으로 읽어도 같은 단어들을 나열하는 장면이 화제가 됐다. 방영 직후 예능, 광고, SNS에서 이 자기소개 방식을 패러디하는 유행이 확산됐다. 넷플릭스 해외판에서는 영어 회문 단어로 재번역되기도 했다.',
+    'ENA 드라마 ''이상한 변호사 우영우''(2022) 1화, 배우 박은빈 연기', '자기소개나 이름 언어유희에 가볍게 활용 가능', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://namu.wiki/w/%EC%9D%B4%EC%83%81%ED%95%9C%20%EB%B3%80%ED%98%B8%EC%82%AC%20%EC%9A%B0%EC%98%81%EC%9A%B0/%EB%AA%85%EB%8C%80%EC%82%AC', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('우영우 성지순례(팽나무·고래·김밥집)', '우영우-성지순례(팽나무·고래·김밥집)', array['우영우 팽나무','우영우 고래','소덕동']::text[], '드라마 우영우 촬영지가 관광 명소가 된 현상', '드라마 ''이상한 변호사 우영우'' 인기와 함께 극중 배경인 창원 팽나무, 우영우가 좋아하는 고래를 상상하는 CG 장면, 김밥집 등 촬영지가 실제 관광 명소로 뜨며 팬들의 성지순례가 이어졌다. 관련 지자체는 관광객 유치 마케팅에 활용했다.',
+    '드라마 ''이상한 변호사 우영우''(2022) 촬영지, 경남 창원 등', '여행/드라마 이야기할 때 자연스럽게 사용 가능', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://www.newsis.com/view/NISX20220729_0001961780', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('최준(피식대학)', '최준(피식대학)', array['준며들다','카페사장 최준','B대면데이트 최준']::text[], '피식대학 능글맞은 가상 카페사장 캐릭터, ''준며들다'' 신드롬', '유튜브 ''피식대학''의 콩트 시리즈 ''B대면데이트''에서 이용주가 연기한 카페 사장 캐릭터 ''최준''이 과장된 느끼함으로 오히려 매력적이라는 반응을 얻으며 신드롬을 일으켰다. 여기서 파생된 ''준며들다(최준에게 스며들다)''라는 신조어까지 생겼다.',
+    '유튜브 채널 ''피식대학'' B대면데이트 시리즈(2021년말~2022년), 배우 이용주', '느끼한 매력을 가리킬 때 농담으로 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%ED%94%BC%EC%8B%9D%EB%8C%80%ED%95%99', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('B대면데이트', 'B대면데이트', array['비대면데이트','피식대학 비대면']::text[], '피식대학의 가상 소개팅 콩트 시리즈, 최준 등 배출', '다단계 직원, 카페 사장, 중고차 딜러 등 다섯 가상 캐릭터와 비대면 화상 소개팅을 하는 설정의 콩트 시리즈. 시청자가 소개팅녀 시점에서 영상통화를 받는 구성으로, 여기서 탄생한 ''최준'' 캐릭터가 특히 큰 인기를 끌며 피식대학 채널 성장의 발판이 됐다.',
+    '유튜브 채널 ''피식대학''(이용주·김민수·정재형)', '유튜브 콩트/밈 이야기할 때 언급', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%ED%94%BC%EC%8B%9D%EB%8C%80%ED%95%99', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('숏박스 장기연애', '숏박스-장기연애', array['장기연애','숏박스 모텔갈래']::text[], '오래된 커플의 권태로운 현실을 그린 숏박스 콩트', '유튜브 채널 ''숏박스''가 2022년 1월 공개한 ''장기연애'' 시리즈는 오래 사귄 커플이 서로에게 무심한 듯 챙기는 현실적인 모습을 하이퍼리얼하게 그려 큰 공감을 얻었다. 이 영상이 알고리즘을 타며 채널이 단숨에 유명해졌고, 그해 유튜브코리아 최고 인기 크리에이터로 선정됐다.',
+    '유튜브 채널 ''숏박스''(김원훈·조진세·엄지윤), 2022년 1월 13일 업로드', '오래된 연인 사이 공감 소재로 언급', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%88%8F%EB%B0%95%EC%8A%A4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나는 SOLO 가명 시스템', '나는-SOLO-가명-시스템', array['영수 영철 정숙','광수 상철 옥순 현숙']::text[], '나는 SOLO 출연자 공용 가명이 밈으로 쓰이는 현상', 'ENA 연애 리얼리티 ''나는 SOLO''는 출연자를 영수·영철·정숙 등 공용 가명으로 부르는데, 2022년 시즌부터 광수·상철·옥순·현숙 등 이름이 개편되며 특정 회차 출연자의 언행이 온라인에서 크게 화제가 되는 패턴이 반복됐다. 이 가명들은 인터넷 커뮤니티에서 특정 캐릭터·상황을 지칭하는 은어로도 쓰인다.',
+    'ENA/SBS Plus 예능 ''나는 SOLO''', '연애 예능 얘기할 때 가명으로 지칭', '실존 출연자를 조롱하거나 신상 관련 언급은 자제해야 함',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://namu.wiki/w/%EB%82%98%EB%8A%94%20SOLO/%EA%B0%80%EB%AA%85', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('내일봬요누나', '내일봬요누나', array['내봬누','환승연애2 정현규']::text[], '환승연애2에서 연하남이 직진 데이트 신청한 명장면', '티빙 오리지널 ''환승연애2''에서 출연자 정현규가 연상의 성해은에게 다른 출연자들이 모두 보는 앞에서 대놓고 ''내일 봬요 누나''라며 데이트를 신청한 장면이 화제가 됐다. 솔직하고 당당한 직진 고백이라는 반응을 얻으며 2022년 하반기 최고의 연애 예능 밈으로 꼽혔다.',
+    '티빙 오리지널 ''환승연애2'' 15화(2022년 9월), 출연자 정현규', '직진 고백 상황을 유쾌하게 표현할 때 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%ED%99%98%EC%8A%B9%EC%97%B0%EC%95%A0%20%EC%8B%9C%EB%A6%AC%EC%A6%88/%EC%96%B4%EB%A1%9D', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('성해은 ''스물하나에 만났지만 벌써 스물아홉''', '성해은-스물하나에-만났지만-벌써-스물아홉', array['해은体','환승연애2 성해은']::text[], '환승연애2 성해은의 독특한 말투가 낳은 유행 문구', '환승연애2 출연자 성해은의 독특한 표정과 말투가 화제가 되며 각종 패러디의 대상이 됐다. 특히 ''우리는 스물하나에 만났지만 벌써 스물아홉이야''라는 대사가 광고, 현수막, 기사 제목 등에 인용되며 널리 퍼졌다.',
+    '티빙 오리지널 ''환승연애2''(2022), 출연자 성해은', '시간이 훌쩍 지났음을 과장해 표현할 때', '실존 출연자 외모·말투를 조롱하는 방향으로 쓰지 않도록 주의',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%84%B1%ED%95%B4%EC%9D%80', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('갸루피스', '갸루피스', array['갸루 피스','갸루 포즈']::text[], '손바닥을 아래로 뒤집는 V포즈, 2022년 재유행한 셀카포즈', '2000년대 일본 갸루 패션에서 유래한, 손바닥을 아래로 향해 뒤집는 V자 포즈. 2022년 아이브 레이의 셀카를 계기로 국내에서 폭발적으로 재유행했고, ''라디오스타'' 등 예능 방송에서 츄·주현영 같은 연예인들이 따라하며 대중적으로 퍼졌다. 톰 크루즈까지 이 포즈를 따라할 정도로 화제였다.',
+    '2000년대 일본 갸루 문화에서 유래, 2022년 아이브(IVE) 레이 셀카로 재유행', '사진 찍을 때 재미있는 포즈로 활용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://namu.wiki/w/%EA%B0%B8%EB%A3%A8%ED%94%BC%EC%8A%A4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('하입보이 챌린지', '하입보이-챌린지', array['뉴진스의 하입보이요','Hype Boy 챌린지']::text[], '뉴진스 데뷔곡 Hype Boy에 맞춘 릴스 댄스 챌린지', '2022년 데뷔한 뉴진스의 ''Hype Boy''가 인기를 끌면서 ''뉴진스의 하입보이요?''라는 질문에 즉석에서 춤을 추는 형식의 인스타그램 릴스 영상이 유행했다. 이후 다양한 패러디 버전이 쏟아지며 하반기 대표 챌린지 중 하나가 됐다.',
+    '뉴진스 ''Hype Boy''(2022년 7월 발매) 관련 인스타그램 릴스 챌린지', '신곡 나왔을 때 즉흥 댄스 드립으로 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Instagram', 'https://namu.wiki/w/%EB%89%B4%EC%A7%84%EC%8A%A4%EC%9D%98%20%ED%95%98%EC%9E%85%EB%B3%B4%EC%9D%B4%EC%9A%94', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('마미 롱 레그', '마미-롱-레그', array['Mommy Long Legs','포피플레이타임 마미롱레그']::text[], '공포게임 포피 플레이타임 챕터2 최종보스 캐릭터 밈', '2022년 5월 출시된 공포 게임 ''포피 플레이타임'' 챕터2의 최종 보스 ''마미 롱 레그''는 팔다리가 자유자재로 늘어나는 분홍색 거미 장난감 캐릭터로, 공개와 동시에 유튜브 공략·리액션 영상이 쏟아지며 전 세계적 밈으로 떠올랐다.',
+    '게임 ''포피 플레이타임 챕터2''(2022년 5월 출시)', '공포게임 유행 이야기할 때 언급', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EB%A7%88%EB%AF%B8%20%EB%A1%B1%20%EB%A0%88%EA%B7%B8', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('중꺾마', '중꺾마', array['중요한 건 꺾이지 않는 마음','데프트 인터뷰']::text[], '롤드컵 언더독 DRX 우승 스토리에서 나온 명언 유행어', '2022 리그오브레전드 월드챔피언십에서 최약체로 평가받던 DRX가 기적적으로 우승하는 과정에서, 선수 데프트(김혁규)의 인터뷰 영상 제목으로 쓰인 ''중요한 것은 꺾이지 않는 마음''이 크게 화제가 됐다. 이후 역경을 이겨내는 상황 전반에 널리 인용되는 표현이 됐다.',
+    '2022 리그 오브 레전드 월드챔피언십 DRX 우승 관련 인터뷰 영상', '역경을 이겨내는 응원 메시지로 널리 사용 가능', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%A4%91%EC%9A%94%ED%95%9C%20%EA%B2%83%EC%9D%80%20%EA%BA%BE%EC%9D%B4%EC%A7%80%20%EC%95%8A%EB%8A%94%20%EB%A7%88%EC%9D%8C', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('침착맨 ''것이다''체', '침착맨-것이다체', array['~것이다~','침착맨 말투']::text[], '침착맨 특유의 하이톤 ''~것이다'' 말투 유행', '유튜버 침착맨(이말년)이 방송에서 자주 쓰는 특유의 하이톤 억양의 ''~것이다~'' 말투가 2022년 시청자들 사이에서 유행어로 자리잡아, 다른 스트리머·시청자들이 따라 하는 밈이 됐다.',
+    '유튜브 채널 ''침착맨'' 방송(2022)', '장난스럽게 단정 짓는 말투로 패러디할 때', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%B9%A8%EC%B0%A9%EB%A7%A8', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뿅뿅 지구오락실', '뿅뿅-지구오락실', array['지구오락실','나영석 지구오락실']::text[], '나영석 PD가 만든 2022년 tvN 리얼 버라이어티, 밈 제조기', '코미디언 이은지, 래퍼 이영지, 오마이걸 미미, 아이브 안유진이 출연한 tvN 예능. 자유분방하고 진짜배기 반응으로 다양한 상황극·유행어를 쏟아내며 2022년 화제성 1위를 여러 주 차지했다.',
+    'tvN 예능 ''뿅뿅 지구오락실''(2022년 6월~9월 방영, 나영석 PD)', '예능 상황극/케미 이야기할 때 언급', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://namu.wiki/w/%EB%BF%85%EB%BF%85%20%EC%A7%80%EA%B5%AC%EC%98%A4%EB%9D%BD%EC%8B%A4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('조규성 신드롬', '조규성-신드롬', array['조규성 혓바닥 세리머니','조규성 월드컵 신드롬']::text[], '카타르 월드컵서 외모·세리머니로 전세계 화제된 조규성', '2022 카타르 월드컵 우루과이전 교체 출전 이후 조규성의 외모가 전 세계적으로 화제가 되며 인스타그램 팔로워가 폭증했다. 가나전에서 선보인 혓바닥을 내미는 골 세리머니도 함께 큰 화제를 모았다.',
+    '2022 FIFA 카타르 월드컵 대한민국 조별리그 경기 중계 방송', '월드컵 화제 인물 얘기할 때 언급', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://news.mt.co.kr/mtview.php?no=2022122218315550581', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('이강인·조규성 볼뽀뽀 세리머니', '이강인·조규성-볼뽀뽀-세리머니', array['월드컵 볼뽀뽀 밈']::text[], '포르투갈전 승리 후 조규성이 이강인에게 한 볼뽀뽀 세리머니', '2022 카타르 월드컵 조별리그 포르투갈전에서 대한민국이 극적으로 16강에 진출하자, 기쁨을 주체하지 못한 조규성이 동료 이강인에게 볼뽀뽀를 하는 장면이 중계 카메라에 잡혀 SNS에서 폭발적인 반응을 얻었다.',
+    '2022 FIFA 카타르 월드컵 대한민국-포르투갈전 중계 방송(2022년 12월)', '기쁨을 주체 못하는 상황을 표현할 때', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://news.mt.co.kr/mtview.php?no=2022122218315550581', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('이무진 ''신호등'' 표절 논란', '이무진-신호등-표절-논란', array['신호등 드래곤나이트 표절','이무진 표절설']::text[], '이무진 ''신호등'' 후렴구가 일본 밴드 곡과 유사하다는 논란', '2021년 발매된 이무진의 ''신호등'' 후렴구가 세카이노 오와리의 ''Dragon Night''와 유사하다는 지적이 있었는데, 2022년 7월 유희열 표절 논란을 계기로 재조명되며 비교 영상이 퍼지면서 큰 논쟁으로 번졌다.',
+    '이무진 ''신호등''(2021) 관련, 2022년 7월 온라인 비교 영상으로 논란 확산', '표절 논란 사례로 언급할 때', '실제 표절 여부는 법적으로 판단되지 않았으므로 단정적 표현은 자제',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%9D%B4%EB%AC%B4%EC%A7%84%20%EC%8B%A0%ED%98%B8%EB%93%B1%20%ED%91%9C%EC%A0%88%20%EB%85%BC%EB%9E%80', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('신호등', '신호등', array['이무진 신호등','이제 나만 믿어요','신호등 밈']::text[], '이무진의 노래 ''신호등'' 가사·후렴구가 각종 패러디로 쓰인 2022년 밈', '이무진이 2021년 발표한 곡 ''신호등''은 2022년까지 인기가 이어지며 유튜버 먹방 패러디, 정치 유세곡 사용 등으로 재조명되었다. 후렴구 ''이제 나만 믿어요''가 다양한 상황에 인용되는 유행어로 쓰였다.',
+    '가수 이무진이 2021년 5월 발표한 싱글 ''신호등''의 인기가 2022년까지 이어지며 방송·SNS 패러디로 확산', '밈으로 인용해도 무난, 원곡 자체는 진지한 성장통 노래', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('사건의 지평선', '사건의-지평선', array['윤하 사건의 지평선','졸업식 노래','고수 쌀국수 앨범커버']::text[], '윤하의 2022년 역주행곡, 졸업식 축가·SNS 밈으로 급부상', '리패키지 앨범 수록곡이었던 ''사건의 지평선''은 2022년 대학 축제 직캠 영상이 쇼츠로 확산되며 역주행해 SBS 인기가요 트리플크라운을 달성했다. 앨범 커버가 ''고수 들어간 쌀국수'' 같다는 우스개가 밈으로 퍼지자 윤하 본인이 이를 인스타그램에서 활용했다.',
+    '2022년 6월 청춘페스티벌 공연 영상이 쇼츠로 퍼지며 역주행 시작', '졸업식·이별·새출발 맥락에서 자연스럽게 인용 가능', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://www.youtube.com/watch?v=BBdC1rl5sKY', 'embeddable'::copyright_status from ins where true;
+insert into meme_contents (meme_id, type, platform, content_id, url, is_representative)
+select id, 'embed'::media_type, 'YouTube', 'BBdC1rl5sKY', 'https://www.youtube.com/watch?v=BBdC1rl5sKY', true from memes where slug = '사건의-지평선'
+on conflict do nothing;
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('러브다이브 챌린지', '러브다이브-챌린지', array['LOVE DIVE 챌린지','나르시서스 포즈']::text[], '아이브 ''LOVE DIVE'' 안무를 따라하는 2022년 대표 K팝 챌린지', '2022년 4월 발매된 아이브의 ''LOVE DIVE''는 멜론 연간 차트 1위를 기록하며 장원영·이서의 나르시시스틱 파트와 안유진의 댄스 브레이크를 중심으로 한 챌린지가 아이돌스타 선수권대회 등 방송에서 크게 유행했다.',
+    '2022년 4월 아이브 ''LOVE DIVE'' 발매 후 방송·SNS 챌린지로 확산', '커버댄스·팬 콘텐츠 맥락에서 사용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('여기어때송', '여기어때송', array['여기어때 챌린지','여기어때 CM송']::text[], '숙박 앱 여기어때의 계절별 CM송이 화제가 된 2022년 브랜드 밈', '숙박 앱 ''여기어때''가 계절마다 다른 스타를 기용해 공개한 중독성 있는 CM송 ''여기어때송''은 2022년 봄·여름·겨울 버전이 연이어 화제를 모았다. 틱톡 챌린지가 6500만 뷰를 넘겼고 유튜브에 수십 건의 패러디 영상이 만들어졌다.',
+    '2021년 겨울 첫 공개 후 2022년 시즌별 광고로 확장, 틱톡 챌린지로 유행', '광고송 패러디·성대모사 콘텐츠에 활용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('마미 롱 레그 노래', '마미-롱-레그-노래', array['Mommy Long Legs 송','파피 플레이타임 마미롱레그']::text[], '공포게임 ''파피 플레이타임 2'' 캐릭터 홍보송이 퍼진 2022년 밈', '2022년 5월 출시된 게임 ''파피 플레이타임'' 챕터2의 최종보스 캐릭터 마미 롱 레그를 소개하는 중독성 있는 광고송이 늘어나는 팔다리 비주얼과 함께 유튜브·틱톡에서 급속도로 퍼졌다. 더빙·패러디 영상이 대량으로 제작되었다.',
+    '2022년 5월 게임 챕터2 출시와 함께 공개된 캐릭터 광고 영상에서 시작', '공포게임·패러디 더빙 콘텐츠 소재로 사용', '다소 무서운 비주얼이 포함되어 어린이 시청 시 주의',
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('모기송', '모기송', array['모기 모기 노래','만다린 모기송']::text[], '모기를 고문하는 방법을 노래한 유튜버 만다린의 곡이 2022년 재유행한 밈', '유튜버 ''만다린''이 2019년 올린 노래로, 모기를 전자레인지에 넣거나 물에 빠뜨리는 등 우스꽝스러운 복수 방법을 나열한 가사가 특징이다. 2022년 7월 무렵 숏폼 플랫폼에서 갑자기 재유행하며 어린이들 사이에서도 큰 인기를 끌었다.',
+    '2019년 유튜버 만다린이 공개, 2022년 7월 숏폼에서 역주행', '여름철 모기 얘기할 때 농담으로 인용', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('제로투 댄스', '제로투-댄스', array['Zero Two Dance','하이풋헌 리믹스 댄스']::text[], '베트남 곡 ''Hai Phút Hơn'' 리믹스에 맞춰 골반을 흔드는 2022년 하반기 댄스 밈', '2020년 나온 베트남 노래 ''Hai Phút Hơn''의 KAIZ 리믹스에 맞춰 상반신을 젖히고 골반을 흔드는 춤이 2022년 하반기 틱톡을 통해 한국에도 크게 유행했다. 예능 프로그램 ''런닝맨''에서도 패러디되는 등 화제를 모았다.',
+    '2019~2020년 베트남에서 시작된 댄스가 2022년 하반기 한국 틱톡에서 재유행', '가벼운 개그·패러디 영상에 사용', '다소 선정적으로 느껴질 수 있어 공식 자리에서는 자제',
+    'yellow'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2022, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Young한데 완전 MZ인데요', 'Young한데-완전-MZ인데요', array['영한데 완전 엠지인데요','아바타싱어 밈']::text[], '메타버스 음악쇼 아바타 퀄리티를 보고 나온 반어법 감탄사 밈', '2022년 MBN 메타버스 음악쇼 ''아바타싱어''에서 래퍼 립제이가 다소 촌스러운 아바타 캐릭터를 보고 던진 감탄사 ''영한데? 완전 MZ인데요?''가 반어적 상황에 쓰이는 유행어로 확산되었다. 겉보기와 다르게 오히려 옛스럽거나 뒤떨어진 것을 가리킬 때 인용된다.',
+    '2022년 MBN ''아바타싱어'' 방송 중 래퍼 립제이의 발언에서 시작', '트렌디하다고 주장하지만 실제론 촌스러운 것을 놀릴 때', null,
+    'green'::safety_level, 'archived'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2022, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('슬릭백 챌린지', '슬릭백-챌린지', array['슬릭백','초전도체 춤','공중부양 춤']::text[], '옆으로 미끄러지듯 걷는 왁킹 댄스, 2023년 하반기 전세계 유행', '2022년 미국 틱톡커 jubi2fye가 시작한 춤으로, LAKIM의 ''A Pimp Named Slickback''을 배경음악 삼아 양발을 번갈아 미끄러뜨리며 걷는 동작이 특징이다. 2023년 10월 한국 중학생 이효철의 영상이 20일 만에 조회수 2억 회를 돌파하며 국내에서 폭발적으로 유행했고, 마침 화제였던 초전도체 밈과 결합해 ''초전도체 춤''으로도 불렸다.',
+    '2022년 미국 틱톡커 jubi2fye가 시작, 2023년 10월 한국 중학생 이효철의 영상으로 국내 대유행', '춤 유행 회고나 챌린지 모음 콘텐츠에 언급', '난이도가 높아 따라하다 다칠 수 있다는 보도가 있었음',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/%EC%8A%AC%EB%A6%AD%EB%B0%B1', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('큐피드 챌린지', '큐피드-챌린지', array['Cupid 챌린지','피프티피프티 큐피드']::text[], '피프티피프티 ''큐피드'' 트윈버전 곡에 맞춘 2023년 글로벌 1위 댄스챌린지', '걸그룹 피프티피프티의 ''Cupid'' 트윈버전이 스페드업되어 틱톡 배경음악으로 확산되며 전세계에서 수천 개의 댄스 챌린지 영상을 낳았다. 빌보드 핫100 25주 연속 진입 등 K팝 걸그룹 최장 기록을 세웠고, 2023년 틱톡 ''더 플레이리스트'' 글로벌 인기곡 1위로 선정됐다.',
+    '피프티피프티(어트랙트) 2023년 발매곡, 틱톡 스페드업 버전 확산으로 챌린지화', 'K팝 댄스챌린지 회고나 댄스커버 콘텐츠에 사용', '이후 멤버·소속사 분쟁으로 그룹 활동이 사실상 중단돼 언급 시 민감할 수 있음',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://www.news1.kr/entertain/music/5254734', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('OMG 챌린지', 'OMG-챌린지', array['뉴진스 OMG 챌린지','타임머신 챌린지']::text[], '뉴진스 ''OMG'' 손동작 포인트 안무를 활용한 2023년 초 대유행 댄스챌린지', '2023년 1월 발매된 뉴진스의 ''OMG''는 손으로 시계를 되돌리는 듯한 포인트 동작이 특징으로 틱톡·유튜브쇼츠에서 대규모 댄스챌린지를 일으켰다. NME, 빌보드 등 매체에서 2023년 최고의 K팝 곡 중 하나로도 꼽혔다.',
+    'ADOR 뉴진스 2023년 1월 발매곡 ''OMG'' 안무를 활용한 챌린지', '뉴진스 회고 콘텐츠나 챌린지 모음에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('슈퍼샤이 챌린지', '슈퍼샤이-챌린지', array['ImSuperShy','뉴진스 슈퍼샤이']::text[], '뉴진스 ''Super Shy'' 왁킹 기본동작 기반 유튜브쇼츠 댄스챌린지', '2023년 7월 발매된 뉴진스 ''Super Shy''는 반복적인 왁킹 기본 동작으로 구성돼 누구나 쉽게 따라 할 수 있게 만들어졌다. 뉴진스가 공식 유튜브쇼츠에서 ''#ImSuperShy'' 챌린지를 직접 진행하며 빠르게 확산됐다.',
+    'ADOR 뉴진스 2023년 7월 발매곡 안무 챌린지, 공식 유튜브쇼츠에서 시작', '뉴진스 회고 콘텐츠, 쉬운 안무 챌린지 소개', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('최애의 아이 챌린지', '최애의-아이-챌린지', array['아이돌 챌린지','오시노코 챌린지']::text[], '일본 애니 ''최애의 아이'' 오프닝곡 요아소비 ''아이돌'' 안무 댄스챌린지', '애니메이션 ''최애의 아이'' 오프닝곡 요아소비의 ''アイドル(아이돌)''에 맞춘 안무 챌린지로, 발랄하면서도 따라 하기 쉬운 동작이 특징이다. 최예나, 트와이스, 더보이즈 등 다수의 K팝 아이돌이 참여하며 2023년 상반기 한국을 포함해 전세계적으로 유행했다.',
+    '2023년 애니메이션 ''최애의 아이'' 오프닝곡 ''アイドル'' 안무를 따라추는 챌린지', '애니 팬덤·아이돌 커버 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('항공샷 챌린지', '항공샷-챌린지', array['항공샷','단체 항공샷']::text[], '팔을 뻗어 위에서 아래로 내려다보듯 찍는 단체 인증샷 촬영 챌린지', '해외 틱톡커가 시작한 것으로 알려진 촬영법으로, 팔을 쭉 뻗어 정수리나 얼굴을 위에서 내려다보듯 촬영한다. 2023년 한국 중고생 사이에서 릴스·쇼츠용 단체 사진 촬영법으로 크게 유행했고, 항공샷 전용 촬영 스튜디오까지 등장했다.',
+    '해외 틱톡커의 촬영법이 2023년 한국 중고생 사이에서 유행하며 정착', '단체 사진·졸업사진 촬영 아이디어로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Instagram', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('퀸카 챌린지', '퀸카-챌린지', array['Queencard 챌린지','여자아이들 퀸카']::text[], '(여자)아이들 ''퀸카''의 ''찰칵'' 포인트 안무를 활용한 댄스챌린지', '(여자)아이들이 2023년 5월 발매한 ''퀸카(Queencard)''의 포인트 안무로, 사진 찍는 듯한 ''찰칵'' 동작이 특징이다. 에스파, 르세라핌, 트와이스 등 다수 아이돌이 참여해 틱톡 관련 해시태그 조회수가 4억 4천만 회를 넘겼다.',
+    '(여자)아이들 2023년 5월 발매곡 ''퀸카'' 안무를 활용한 챌린지', '자기애·자신감 콘셉트 콘텐츠에 활용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://www.sportsworldi.com/newsView/20230604503810', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('마라탕후루 챌린지', '마라탕후루-챌린지', array['마라탕후루','말라탕후루']::text[], '13세 크리에이터가 만든 ''마라탕후루'' 곡에 맞춘 중독성 댄스챌린지', '매운 마라탕을 먹고 단 탕후루를 디저트로 먹는 조합을 노래한 곡으로, 13세 키즈 크리에이터 서이브가 만들었다. 간단한 동작의 댄스챌린지가 유튜브쇼츠·틱톡·온라인 커뮤니티에서 2023년 말 크게 유행했고 일본에서도 화제가 됐다.',
+    '크리에이터 서이브가 2023년 말 발표한 곡과 안무에서 시작', '어린이·가족 콘텐츠, 쉬운 챌린지 소개에 사용', '유행 이후 탕후루 가게 과잉 개업과 잇단 폐업 등 사회 이슈로도 이어짐',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('정국 세븐 챌린지', '정국-세븐-챌린지', array['Seven Challenge','정국 세븐']::text[], '방탄소년단 정국 ''Seven'' 안무 댄스챌린지, 비밀 틱톡 계정 발각으로 화제', '2023년 7월 발매된 정국의 솔로곡 ''Seven'' 안무 챌린지로 엔하이픈 등이 위버스에 챌린지 영상을 올렸다. 이 과정에서 정국의 비밀 틱톡 계정이 드러났고, 팔로워 수가 세계 기록 속도로 늘며 함께 화제가 됐다.',
+    '방탄소년단 정국 2023년 7월 발매곡 ''Seven'' 안무를 활용한 챌린지', 'BTS·정국 관련 회고 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('노제 헤이마마 챌린지', '노제-헤이마마-챌린지', array['Hey Mama 챌린지','스우파2 노제']::text[], '''스트릿 우먼 파이터2'' 리더 미션에서 나온 노제의 ''Hey Mama'' 안무 챌린지', '2023년 방영된 Mnet ''스트릿 우먼 파이터 2'' 리더 계급전 미션에서 댄서 노제가 팝송 ''Hey Mama''에 맞춰 선보인 안무가 틱톡 챌린지로 확산돼 참가 댄서들과 다수의 K팝 아이돌이 잇따라 참여했다.',
+    '2023년 Mnet ''스트릿 우먼 파이터2'' 방송 중 노제의 미션 안무에서 시작', '댄스 서바이벌·스우파 회고 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('멋지다 연진아', '멋지다-연진아', array['파이팅 박연진','더글로리 명대사']::text[], '넷플릭스 ''더 글로리'' 속 학폭 가해자를 향한 반어적 응원 대사 밈', '2023년 ''더 글로리'' 속 학교폭력 가해자 박연진이 모교 동문 시상식에서 상을 받자, 피해자 문동은이 객석에서 외치는 "파이팅 박연진, 멋지다 연진아"라는 대사에서 나온 밈이다. 실제로는 반어적 조롱의 의미로, 응원하는 척하며 누군가를 비꼴 때 인용된다.',
+    '넷플릭스 드라마 ''더 글로리''(2023) 3화 대사', '반어적으로 누군가를 응원하는 척 놀릴 때 사용', '학교폭력이 소재인 원작이라 무겁게 받아들이는 사람도 있어 실제 피해 상황 앞에서는 사용 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('연진아 편지체', '연진아-편지체', array['~했어 연진아','더글로리 말투']::text[], '''난 오늘 ~했어, 연진아'' 식으로 상대에게 말을 거는 더 글로리 말투 밈', '''더 글로리''에서 문동은이 박연진을 향한 분노를 잊지 않으려 "난 오늘 ~을 했어, 연진아"처럼 편지 쓰듯 되뇌는 장면에서 파생된 밈이다. 일상의 사소한 일도 문장 끝에 ''~연진아''를 붙여 말하는 패러디가 SNS에서 유행했다.',
+    '넷플릭스 드라마 ''더 글로리''(2023) 동은의 독백 말투', '일상 문장 끝에 붙여 유머러스하게 표현할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Community', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('SNL 코리아 MZ오피스', 'SNL-코리아-MZ오피스', array['MZ오피스','맑눈광 신입사원']::text[], 'SNL코리아 콩트, MZ세대 신입사원 특징을 과장해 풍자한 오피스 코너', '쿠팡플레이 ''SNL 코리아'' 시즌3의 인기 코너로 에어팟 착용, 회식 자리, 문해력 논란 등 MZ세대 직장인 특징을 과장되게 묘사한다. 배우 김아영이 연기한 ''맑은 눈의 광인'' 캐릭터가 특히 화제가 되며 2023년 내내 밈으로 소비됐다.',
+    '쿠팡플레이 ''SNL 코리아 리부트'' 시즌3의 정규 코너, 2023년 화제성 확산', '직장 내 세대차이를 소재로 한 유머에 인용', '세대 조롱으로 느껴질 수 있어 대상에 따라 불쾌하게 받아들여질 수 있음',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('스테이씨 파피 챌린지', '스테이씨-파피-챌린지', array['Poppy 챌린지','테디베어 챌린지']::text[], '스테이씨 ''Poppy'' 안무를 활용한 2023년 초 대형 틱톡 댄스챌린지', '스테이씨의 미니앨범 ''Teddy Bear'' 수록곡 ''Poppy'' 퍼포먼스 영상 공개 후 시작된 ''#poppychallenge''는 뉴진스, 르세라핌, NCT DREAM 등 다수 아이돌과 배우 채태현, 해외 인플루언서까지 참여해 틱톡 조회수 1000만 회를 넘겼다.',
+    '스테이씨 2023년 2월 ''Teddy Bear'' 앨범 수록곡 ''Poppy'' 퍼포먼스를 활용한 챌린지', 'K팝 댄스챌린지 회고 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://www.starnewskorea.com/music/2023/02/04/2023020410012027212', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('엔믹스 러브미라이크디스 챌린지', '엔믹스-러브미라이크디스-챌린지', array['Love Me Like This 챌린지']::text[], '엔믹스 ''Love Me Like This'' 중독성 있는 후렴 안무 댄스챌린지', '2023년 3월 발매된 엔믹스의 ''러브 미 라이크 디스'' 후렴 안무를 활용한 챌린지로 트와이스 다현, 있지 예지·채령, 니쥬 멤버 등 다수의 아이돌이 참여하며 확산됐다.',
+    '엔믹스 2023년 3월 발매곡 ''Love Me Like This'' 안무를 활용한 챌린지', 'K팝 댄스챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('에스파 드라마 챌린지', '에스파-드라마-챌린지', array['Drama 챌린지']::text[], '에스파 ''Drama'' 강렬한 포인트 안무를 활용한 2023년 하반기 댄스챌린지', '2023년 10월 발매된 에스파의 ''Drama''는 어택감 있는 힙합 비트에 맞춘 강렬한 포인트 동작으로 구성돼 SM 소속 아티스트는 물론 배우·댄서까지 참여하는 ''챌린지 맛집''으로 불렸다.',
+    '에스파 2023년 10월 발매곡 ''Drama'' 안무를 활용한 챌린지', 'K팝 댄스챌린지 회고 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('르세라핌 이프푸 오픈벌스 챌린지', '르세라핌-이프푸-오픈벌스-챌린지', array['이프푸 챌린지','Eve Psyche 챌린지']::text[], '르세라핌 영어 원곡에 직접 가사를 붙여 부르는 오픈벌스 챌린지', '2023년 5월 발매된 르세라핌의 ''Eve, Psyche & the Bluebeard''s Wife''(이프푸) 인스트루멘탈에 자신만의 가사를 붙여 부르는 ''오픈벌스 챌린지''를 진행해 북미권 틱톡 트렌드를 이끌었다.',
+    '르세라핌 2023년 5월 발매곡을 활용한 오픈벌스 챌린지', '작사·랩 창작 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://www.hankyung.com/article/2023071190495', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뽀삐뽀 챌린지', '뽀삐뽀-챌린지', array['PoPiPo 챌린지','포피포 챌린지']::text[], '얼굴을 확대·축소하듯 찍는 카메라 워크 챌린지, 배경음은 하츠네미쿠 곡', '에버랜드가 기린·레서판다 등 동물 얼굴을 리듬에 맞춰 확대·축소 촬영한 영상을 공개하며 국내에서 화제가 됐다. 배경음악은 2008년 보컬로이드 곡 ''PoPiPo''로, 2023년 하반기 사람·동물을 대상으로 한 촬영 챌린지로 확산됐다.',
+    '해외 유행 포맷을 2023년 에버랜드 동물 영상이 국내에 확산시킴', '귀여운 클로즈업 촬영 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('도도독 밈', '도도독-밈', array['김도독','도도독 챌린지']::text[], '르세라핌 김채원이 콘서트에서 가사를 더듬어 낸 ''도도독'' 발음 실수 밈', '2023년 8월 르세라핌 서울 콘서트에서 김채원이 ''Fire in the belly'' 도입부 가사를 부르다 발음이 꼬여 ''도도독''처럼 들리는 소리를 낸 영상이 화제가 됐다. 이후 말을 더듬는 상황을 ''O도독''으로 표현하는 밈으로 확산됐다.',
+    '르세라핌 김채원의 2023년 8월 콘서트 실수 영상', '누군가 말을 더듬거나 실수했을 때 애정 어린 놀림으로 사용', '당사자를 과하게 비하하는 뉘앙스로 쓰면 실례가 될 수 있음',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('너 T야?', '너-T야?', array['언니 T야','T야']::text[], '공감 못하는 사람에게 ''MBTI T형이냐''고 묻는 유행어', '유튜브 코미디 채널 ''밈고리즘''의 ''폭스클럽'' 시리즈에서 촬영자가 팩트로 지적하자 상대가 "너 T야?"라고 되받아치는 장면에서 2023년 3월 시작된 유행어다. 상대가 공감 없이 논리적으로만 반응할 때 놀리듯 쓰는 표현으로 지상파 방송까지 퍼졌다.',
+    '유튜브 채널 ''밈고리즘'' 폭스클럽 시리즈(2023년 3월) 대사', '상대의 공감 부족을 장난스럽게 지적할 때 사용', 'MBTI 유형으로 사람을 단정짓는 표현이라 진지하게 쓰면 반감을 살 수 있음',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('곽튜브 오이시쿠나레 모에모에큥', '곽튜브-오이시쿠나레-모에모에큥', array['모에모에큥','오이시쿠나레']::text[], '여행 유튜버 곽튜브가 일본 메이드카페 체험에서 따라한 주문 유행어', '유튜버 곽튜브가 일본 메이드카페를 체험하며 메이드가 음식에 거는 주문 "오이시쿠나레 오이시쿠나레 모에모에큥"을 따라한 영상이 화제가 되며 2023년 MZ세대 사이에서 장난스럽게 인용되는 유행어가 됐다.',
+    '유튜버 곽튜브의 2023년 일본 여행 콘텐츠', '음식이 맛있길 바라는 장난스러운 주문처럼 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나는 솔로 16기 영숙 논란', '나는-솔로-16기-영숙-논란', array['나솔 16기 빌런','돌싱특집 영숙']::text[], '''나는 솔로'' 16기 돌싱특집 출연자 영숙을 둘러싼 역대급 논란과 밈', '2023년 방영된 ''나는 솔로'' 16기 돌싱특집에서 영숙이 상철과 나눈 카카오톡 대화를 공개 저격하고 비판 댓글을 남긴 이들에게 고소를 언급하는 등 논란을 일으켜 ''역대급 빌런''으로 불렸다. 방송 캡처와 라이브 방송 반응이 온라인 커뮤니티에서 밈처럼 소비됐다.',
+    'ENA/SBS Plus ''나는 SOLO'' 16기 돌싱특집(2023) 방영 및 후속 논란', '방송 화제성 회고나 예능 논란 정리 콘텐츠에 사용', '실존 인물에 대한 비방으로 흐를 수 있어 실명 언급 시 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('피지컬100 헬징어게임', '피지컬100-헬징어게임', array['헬징어게임','근징어게임','갑오징어게임']::text[], '넷플릭스 ''피지컬:100''을 ''오징어 게임''에 빗대 부른 합성 별명', '2023년 공개된 넷플릭스 서바이벌쇼 ''피지컬:100''에서 정체불명의 진행자 ''마스터''가 게임 규칙을 소개하는 연출 등이 ''오징어 게임''과 유사하다는 반응이 나오며 헬스(피지컬)와 오징어게임을 합친 ''헬징어게임'' 등의 별명이 붙었다.',
+    '넷플릭스 ''피지컬:100'' 시즌1(2023년 1월) 공개 후 네티즌 반응에서 파생', '두 콘텐츠를 비교하는 유머로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('라이즈 겟어기타 챌린지', '라이즈-겟어기타-챌린지', array['Get A Guitar 챌린지','라이즈 챌린지']::text[], '신인 그룹 라이즈 데뷔곡의 발 구르는 포인트 안무 댄스챌린지', '2023년 9월 데뷔한 SM 신인 보이그룹 라이즈의 데뷔곡 ''Get A Guitar'' 후렴구 발 구르는 스텝 안무가 틱톡 댄스챌린지로 확산돼 데뷔 3개월 만에 관련 해시태그 누적 조회수 21억 회를 넘겼다.',
+    '라이즈 2023년 9월 데뷔곡 ''Get A Guitar'' 안무를 활용한 챌린지', '신인 그룹 데뷔 회고나 댄스챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나 하니인데 개추 눌렀다', '나-하니인데-개추-눌렀다', array['나 XX인데 개추 눌렀다','하니는 그런 말투 안써요']::text[], '디시식 꾸준글 드립이 뉴진스 하니 영상 댓글에서 재점화된 밈', '유튜브 댓글에 누군가 ''나 하니인데 개추 눌렀다''고 적자 다른 유저가 ''하니는 그런 말투 안 써요''라고 받아친 것이 화제가 되며 2023년 널리 퍼졌다. 오래된 디시인사이드식 드립이 대중적인 유튜브 댓글 문화로 넘어온 사례로 꼽힌다.',
+    '뉴진스 관련 유튜브 영상 댓글창, 디시인사이드 드립에서 파생', '근거 없는 자기주장 댓글에 드립으로 반응할 때', '특정 연예인을 사칭하는 형식이라 맥락 모르면 이상하게 보일 수 있음',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('I am신뢰에요~', 'I-am신뢰에요~', array['신뢰에요 밈','전청조 말투 밈']::text[], '전청조 혼인빙자 사기 사건에서 공개된 어색한 영어 말투 밈', '2023년 10월 전청조·남현희 혼인빙자 사기 사건이 불거지며 공개된 전청조의 카카오톡 메시지 중 ''I am 신뢰에요~''라는 한영 혼용 말투가 밈이 됐다. 사건 자체가 큰 사회적 파장을 일으켜 각종 방송 재연과 패러디 영상이 쏟아졌다.',
+    '유튜버 로알남이 공개하고 JTBC 등 방송에서 다룬 전청조 카카오톡 대화 보도 영상, 2023년 10월', '어설픈 영어를 섞어 허세 부리는 말투를 놀릴 때', '실제 사기 피해자가 있는 사건이라 가볍게만 쓰기엔 조심스러움',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('장충동왕족발보쌈 밈', '장충동왕족발보쌈-밈', array['말왕 CM송','장충동 왕족발보쌈 밈']::text[], '헬스 유튜버 말왕이 흥얼거린 족발집 CM송이 오케스트라 합성으로 역주행', '헬스 유튜버 ''말왕''이 평소 장충동왕족발보쌈을 시켜먹으며 부르던 CM송을, 한 유튜버가 오케스트라 반주를 입혀 편집한 영상이 2023년 9월 알고리즘을 타며 크게 유행했다. 실제로 해당 프랜차이즈 매출이 오르는 효과까지 낳았다.',
+    '유튜버 ''소음예술''이 2023년 9월 23일 올린 편집 영상', '중독성 있는 CM송 밈으로 먹방·편집 영상에 활용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('환승연애3 대사 밈', '환승연애3-대사-밈', array['네가 미안해 했잖아','환승연애 이딴거 안나왔어']::text[], '환승연애3 예고편 속 격정적인 대사가 상황극 밈으로 쓰임', '웨이브 예능 ''환승연애3'' 예고편에서 나온 ''네가 미안해 했잖아? 환승연애 이딴 거 안 나왔어''라는 대사가 2023년 12월 방송 전부터 화제가 되며 다양한 패러디와 짤로 소비됐다.',
+    '웨이브 ''환승연애3'' 예고편 영상, 2023년 12월', '과장된 연애 다툼 상황을 패러디할 때', '실제 출연자 사생활 논란과 얽혀 있어 조롱조로 쓰지 않도록 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('우리 엄마엄마가', '우리-엄마엄마가', array['누가 이렇게 이쁘게 낳았어 우리 엄마엄마가','창빈 OMG 개사']::text[], '창빈이 뉴진스 OMG 후렴을 개사해 부른 자문자답 개그가 밈이 됨', '스트레이 키즈 창빈이 2023년 초 자체 콘텐츠에서 뉴진스 ''OMG''의 ''Oh my oh my god'' 후렴을 ''우리 엄마엄마가''로 바꿔 부르며 스스로 ''누가 이렇게 예쁘게 낳았어?''라고 자문자답한 장면이 밈이 됐다. 이름을 바꿔가며 자화자찬하는 형식으로 확산됐다.',
+    '스트레이 키즈 창빈 자체 콘텐츠 영상, 2023년 1월경', '애교 섞인 자화자찬 드립으로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('할 말이 없네', '할-말이-없네', array['말과 할 말이 없네']::text[], '조주봉 명의 두 번째 병맛 싱글, 홍박사 밈의 후속작', '''홍박사님을 아세요?''로 유명해진 조주봉(조훈)이 2023년 11월 발표한 두 번째 디지털 싱글로, 무인도의 말 두 마리 이야기를 다룬 아재개그 가사가 화제가 됐다. 국내를 넘어 일본 쇼츠·틱톡까지 퍼지며 국제적 밈이 됐다.',
+    '유튜브 ''THE면상'' 채널, 2023년 11월 7일 공개', '홍박사 밈과 이어지는 병맛 밈송으로 활용', '성적 뉘앙스가 있는 가사라 공식적인 자리에는 부적절',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('여자가 봐도 설렌다', '여자가-봐도-설렌다', array['레디 설렌다 밈']::text[], '스우파2 댄서 레디의 섹시美에 붙은 극찬성 감탄 밈', 'Mnet ''스트릿 우먼 파이터2''(2023년 8~10월 방영)에서 원밀리언 소속 댄서 레디의 퍼포먼스가 화제가 되며 ''여자가 봐도 설렌다''는 감탄이 밈처럼 쓰였다. 동성에게도 반할 만큼 매력적이라는 뜻으로 확장돼 쓰인다.',
+    'Mnet ''스트릿 우먼 파이터2'' 방송분, 2023년', '동성에게도 반할 만큼 매력적인 사람이나 퍼포먼스를 칭찬할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('홍박사님을 아세요?', '홍박사님을-아세요?', array['홍박사 밈','홍박사송']::text[], '메타코미디 조주봉 캐릭터의 병맛 노래가 유튜브 밈송으로 등극', '개그맨 조훈이 연기하는 ''조주봉'' 캐릭터의 개그를 노래로 만든 ''홍박사님을 아세요?''가 2023년 7월 유튜브 ''THE면상'' 채널에 공개된 뒤 중독성 있는 비트와 화장실 유머 가사로 폭발적인 인기를 얻었다.',
+    '유튜브 ''THE면상'' 채널, 2023년 7월 5일 공개', '병맛 코미디 밈송으로 배경음악 삽입 등에 활용', '가사가 다소 저속해 공식적인 자리에는 부적절',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://www.youtube.com/watch?v=KVqxodtBhyE', 'embeddable'::copyright_status from ins where true;
+insert into meme_contents (meme_id, type, platform, content_id, url, is_representative)
+select id, 'embed'::media_type, 'YouTube', 'KVqxodtBhyE', 'https://www.youtube.com/watch?v=KVqxodtBhyE', true from memes where slug = '홍박사님을-아세요?'
+on conflict do nothing;
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('LK-99 초전도체 밈', 'LK-99-초전도체-밈', array['초전도체 밈','상온상압 초전도체 밈']::text[], '국내 연구진의 상온 초전도체 발표가 낳은 기대·병맛 밈 대유행', '2023년 7월 국내 연구진이 상온·상압 초전도체 물질 ''LK-99''를 개발했다고 발표하자 온라인 커뮤니티와 유튜브에서 검증 과정을 조마조마하게 지켜보는 밈, ''초전도체''라는 단어를 뭐든 엄청나게 좋은 것에 갖다붙이는 밈이 쏟아졌다. 실제 검증 영상과 해설 콘텐츠가 유튜브에서 큰 조회수를 기록했다.',
+    '한국 연구진의 LK-99 논문 발표(2023년 7월) 이후 유튜브 해설·반응 영상과 커뮤니티 반응', '근거 없이 좋은 일이 생길 거라 기대할 때 농담처럼 사용', '실제 과학적 검증은 실패로 결론났으므로 사실처럼 말하지 않도록 주의',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나락도 락이다', '나락도-락이다', array['나락도 락']::text[], '안 좋은 상황을 록 음악처럼 신난다고 우기는 말장난 밈', '''악법도 법이다''류의 문장 구조를 패러디해, 어떤 단어든 끝에 ''락''만 붙이면 록(rock) 음악처럼 흥겨운 것으로 둔갑시키는 말장난이 2023년 유튜브·커뮤니티 영상 콘텐츠 제목과 자막으로 널리 쓰였다.',
+    '국내 인터넷 커뮤니티발 말장난, 2023년 유튜브 콘텐츠로 확산', '안 좋은 상황을 웃프게 넘길 때 자막이나 제목에 활용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'ironic'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('선데이 90', '선데이-90', array['SNL 선데이90','X세대 이대로 괜찮은가']::text[], '1990년대 뉴스 앵커 말투를 재현한 SNL코리아 인기 코너', 'SNL코리아 시즌4(2023)에서 1990년대 특유의 화질감과 서울 사투리 억양의 뉴스 앵커를 재현한 ''선데이 90'' 코너가 세대를 아우르는 향수 코드로 큰 화제를 모았다. ''90년대생 이대로 괜찮은가'' 등 파생 코너로 이어지며 시즌4의 대표 코너가 됐다.',
+    '쿠팡플레이 SNL코리아 시즌4, 2023년 공개', '1990년대 감성을 유머러스하게 재현하는 콘텐츠에 참고', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뉴진스 OMG 챌린지', '뉴진스-OMG-챌린지', array['OMG 챌린지','뉴진스 오마이갓 챌린지']::text[], '뉴진스 ''OMG'' 안무를 따라하는 틱톡 댄스 챌린지', '2023년 1월 발매된 뉴진스의 ''OMG'' 타이틀곡이 발매 직후 틱톡을 중심으로 댄스 챌린지 열풍을 일으켰다. 후렴구 포인트 안무를 따라 추는 영상이 다수의 셀럽과 일반 유저들 사이에서 확산됐다.',
+    '2023년 1월 2일 ''OMG'' 발매 이후 틱톡에서 자연 확산', '케이팝 커버 콘텐츠나 챌린지 밈으로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뉴진스 ETA 안무 챌린지', '뉴진스-ETA-안무-챌린지', array['ETA 챌린지','이제는 더이상 물러날곳이 없다 밈']::text[], '뉴진스 ''ETA'' 후렴 안무가 무한도전 짤과 닮아 화제된 챌린지', '2023년 7월 발매된 뉴진스의 ''ETA'' 후렴구 안무가 예능 무한도전의 유명 장면 ''이제는 더 이상 물러날 곳이 없다''와 유사하다는 점이 화제가 되며 온라인에서 회자됐다. 이후 다양한 안무 커버·챌린지 영상이 유튜브와 틱톡에 올라왔다.',
+    '2023년 7월 21일 ''ETA'' 발매 후 안무 유사성 화제와 함께 확산', '케이팝 안무 챌린지, 예능 짤 드립으로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뉴진스 Super Shy 챌린지', '뉴진스-Super-Shy-챌린지', array['슈퍼샤이 챌린지','ImSuperShy']::text[], '뉴진스 ''Super Shy'' 유튜브 쇼츠 공식 댄스 챌린지', '2023년 7월 발매된 뉴진스의 ''Super Shy'' 홍보를 위해 유튜브가 공식적으로 ''#ImSuperShy'' 쇼츠 댄스 챌린지를 진행했다. 전 세계 유튜브 쇼츠 크리에이터들이 참여하며 글로벌 신드롬을 일으켰다.',
+    '2023년 7월 유튜브 공식 블로그 발표, 유튜브 쇼츠 공식 챌린지', '쇼츠 댄스 챌린지 콘텐츠 제작 시 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://blog.youtube/intl/ko-kr/creator-and-artist-stories/2023_07_newjeans-imsupershy-shorts-dance-challenge/', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('피프티피프티 큐피드 챌린지', '피프티피프티-큐피드-챌린지', array['Cupid 챌린지','큐피드 트윈버전 챌린지']::text[], '피프티피프티 ''Cupid'' 트윈버전이 전세계 틱톡 댄스 챌린지로 확산', '피프티피프티의 ''Cupid(트윈 버전)''가 2023년 틱톡 글로벌 인기음악 1위에 오르며 전 세계적으로 댄스 챌린지 열풍을 일으켰다. 빌보드 핫100 최고 17위, 25주 연속 차트인이라는 K팝 걸그룹 최장 기록도 세웠다.',
+    '2023년 상반기 틱톡 스페드업 버전 확산으로 시작된 글로벌 챌린지', '글로벌 K팝 챌린지 사례로 언급, 커버댄스 소재', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('(여자)아이들 퀸카(Queencard) 챌린지', '(여자)아이들-퀸카(Queencard)-챌린지', array['퀸카 챌린지','Queencard 챌린지','찰칵 챌린지']::text[], '''찰칵'' 셔터 포즈가 포인트인 (여자)아이들 ''퀸카'' 댄스 챌린지', '2023년 5월 발매된 (여자)아이들의 ''퀸카(Queencard)'' 포인트 안무를 따라 하는 챌린지로, 곡 중간 카메라 셔터음에 맞춰 사진 찍는 포즈를 취하는 것이 특징이다. 틱톡 해시태그 누적 조회수가 4억 4천만 회를 넘었고 다양한 아이돌·배우가 참여했다.',
+    '2023년 5월 ''퀸카'' 발매 이후 틱톡에서 자연 확산', '자신감 있는 태도를 과장해서 표현할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('르세라핌 이지 (Unforgiven) 챌린지', '르세라핌-이지-(Unforgiven)-챌린지', array['언포기븐 챌린지','이브 프시케 챌린지']::text[], '르세라핌 ''UNFORGIVEN'' 수록곡 후렴 상체 동작 댄스 챌린지', '2023년 5월 발매된 르세라핌의 정규 1집 ''UNFORGIVEN'' 수록곡 ''이브, 프시케 그리고 푸른 수염의 아내'' 후렴구의 팔 동작 위주 안무가 따라하기 쉬운 챌린지로 확산됐다. 다양한 아이돌과 방송인들이 참여했으며, 가사 일부를 비워두고 채우는 ''오픈 벌스'' 챌린지도 함께 진행됐다.',
+    '2023년 5월 앨범 발매 프로모션의 일환으로 시작', '케이팝 상체 동작 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('세븐틴 손오공(Super) 챌린지', '세븐틴-손오공(Super)-챌린지', array['슈퍼 챌린지','손오공 챌린지']::text[], '세븐틴 ''손오공(Super)'' 안무를 따라하는 틱톡 댄스 챌린지', '2023년 4월 세븐틴의 정규 4집 타이틀곡 ''손오공(Super)'' 발매와 함께 진행된 댄스 챌린지로, 뮤직비디오 촬영장, 음방 대기실, 뉴스 데스크 등 다양한 장소에서 챌린지 영상이 올라왔다. 엔하이픈 니키와 세븐틴 버논의 콜라보 영상은 880만 회 조회수를 기록했다.',
+    '2023년 4월 ''손오공'' 발매 이후 세븐틴 공식 틱톡 계정 중심 확산', '케이팝 그룹 단체 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('부석순 파이팅 해야지 챌린지', '부석순-파이팅-해야지-챌린지', array['BSS_Fighting','파이팅해야지 챌린지']::text[], '세븐틴 유닛 부석순 ''파이팅 해야지'' 포인트 안무 챌린지', '2023년 2월 발매된 세븐틴 유닛 부석순의 ''파이팅 해야지(Feat. 이영지)'' 포인트 안무를 따라 하는 챌린지로, 해시태그 ''#bss_fighting'' 조회수가 1억 3500만 회를 넘었다. BTS 슈가, 뉴진스 하니·해린 등 다양한 스타가 참여했다.',
+    '2023년 2월 6일 ''세컨드 윈드'' 발매 프로모션으로 시작', '응원·파이팅 표현 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('스테이씨 파피(Poppy) 챌린지', '스테이씨-파피(Poppy)-챌린지', array['Poppy 챌린지','STAYC 파피챌린지']::text[], '스테이씨 ''Poppy'' 안무를 따라하는 틱톡 댄스 챌린지', '2023년 2월 발매된 STAYC의 ''Teddy Bear'' 앨범 수록곡 ''Poppy''를 활용한 ''#poppychallenge''가 틱톡에서 시작돼 누적 조회수 1000만 회 이상을 기록했다. 밝고 상큼한 이미지의 안무로 큰 호응을 얻었다.',
+    '2023년 2월 앨범 발매와 함께 STAYC 공식 틱톡에서 시작', '밝고 상큼한 분위기의 짧은 댄스 챌린지에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('아이브 아이엠(I AM) 챌린지', '아이브-아이엠(I-AM)-챌린지', array['I AM 챌린지','아이브 4번째 신드롬']::text[], '아이브 ''I AM'' 선공개와 함께 진행된 틱톡 댄스 챌린지', '2023년 4월 아이브가 정규 1집 타이틀곡 ''I AM''의 일부를 틱톡에 선공개하며 댄스 챌린지를 함께 시작했다. 앞서 ''LOVE DIVE'', ''ELEVEN'' 챌린지로 틱톡 강세를 보였던 아이브의 흐름을 이어갔다.',
+    '2023년 4월 8일 틱톡 선공개와 함께 시작', '자신감·자기애 컨셉 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('에스파 스파이시(Spicy) 챌린지', '에스파-스파이시(Spicy)-챌린지', array['Spicy 챌린지','손가락 소스 챌린지']::text[], '손가락으로 매운 소스를 찍어먹는 동작이 포인트인 에스파 챌린지', '2023년 5월 발매된 에스파의 ''Spicy'' 포인트 안무를 따라하는 ''#SpicyChallenge''로, 손가락으로 매운맛 소스를 찍어 먹는 동작이 특징이다. 보아, 몬스타엑스 주헌, 르세라핌 허윤진 등 다수 아티스트가 참여했다.',
+    '2023년 5월 ''MY WORLD'' 앨범 발매 프로모션', '새콤달콤·매콤한 컨셉 표현 시 손동작 드립으로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('스트레이키즈 특(S-Class) 챌린지', '스트레이키즈-특(S-Class)-챌린지', array['S-Class 챌린지','특 챌린지']::text[], '스트레이키즈 ''특(S-Class)'' 안무를 따라하는 슈트 버전 등 댄스 챌린지', '2023년 6월 발매된 스트레이키즈 정규 3집 타이틀곡 ''특(S-Class)''의 포인트 안무 챌린지로, 슈트 버전(Suit ver.) 등 다양한 버전이 제작됐다. 투모로우바이투게더 연준, 세븐틴 디노, 보이넥스트도어 등 다수 아이돌이 참여했다.',
+    '2023년 6월 2일 ''5-STAR'' 앨범 발매와 함께 시작', '아이돌 단체 콜라보 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('ITZY 케이크(CAKE) 챌린지', 'ITZY-케이크(CAKE)-챌린지', array['CAKE 챌린지','케이크 챌린지']::text[], 'ITZY ''CAKE'' 안무를 따라하는 틱톡·유튜브 쇼츠 댄스 챌린지', '2023년 7월 발매된 ITZY의 ''CAKE''는 애초에 틱톡·유튜브 쇼츠 챌린지에 적합하도록 만들어진 곡으로, 발매와 동시에 댄스 챌린지가 확산됐다. 뮤직뱅크 2주 차 1위 등 음악방송에서도 좋은 성적을 거뒀다.',
+    '2023년 7월 31일 발매 이후 틱톡·유튜브 쇼츠에서 확산', '발랄한 이지리스닝 곡 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('정국 세븐(Seven) 데이즈 어 위크 챌린지', '정국-세븐(Seven)-데이즈-어-위크-챌린지', array['JungKook Seven 챌린지','SevenDaysAWeek Challenge']::text[], '방탄소년단 정국 솔로곡 ''Seven'' 글로벌 댄스 챌린지', '2023년 7월 발매된 방탄소년단 정국의 솔로 싱글 ''Seven(feat. Latto)''과 함께 진행된 ''#SevenDaysAWeek Challenge''로, 빅히트뮤직 공식 틱톡 영상이 1100만 개 이상의 좋아요를 받는 등 전 세계적으로 크게 유행했다.',
+    '2023년 7월 공식 틱톡 챌린지로 시작', '글로벌 K팝 솔로 활동 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('지민 라이크 크레이지(Like Crazy) 챌린지', '지민-라이크-크레이지(Like-Crazy)-챌린지', array['Like Crazy 챌린지']::text[], '방탄소년단 지민 솔로 데뷔곡 ''Like Crazy'' 글로벌 댄스 챌린지', '2023년 3월 발매된 방탄소년단 지민의 솔로 데뷔 타이틀곡 ''Like Crazy''가 빌보드 핫100 1위에 오르며 전 세계적으로 댄스 챌린지가 확산됐다. 다양한 아티스트와 팬들이 참여해 수개월간 유행이 이어졌다.',
+    '2023년 3월 솔로 데뷔 앨범 ''FACE'' 발매와 함께 시작', '글로벌 히트 솔로곡 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('보이넥스트도어 원앤온리(One and Only) 챌린지', '보이넥스트도어-원앤온리(One-and-Only)-챌린지', array['One and Only 챌린지']::text[], '보이넥스트도어 데뷔 수록곡 ''One and Only'' 선배 스타 참여 챌린지', '2023년 5월 보이넥스트도어의 데뷔 싱글 ''WHO!'' 수록곡 ''One and Only'' 챌린지에 소속사 대표 프로듀서 지코를 비롯해 이효리, 태민, 비 등 유명 선배 가수들이 참여하며 화제를 모았다. 이 덕분에 데뷔 초 그룹의 틱톡 팔로워가 100만을 돌파했다.',
+    '2023년 5월 30일 데뷔 이후 선배 아티스트들의 참여로 확산', '신인 그룹 데뷔 응원 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('제로베이스원 인블룸(In Bloom) 챌린지', '제로베이스원-인블룸(In-Bloom)-챌린지', array['In Bloom 챌린지']::text[], '제로베이스원 데뷔곡 ''In Bloom'' 안무를 따라하는 댄스 챌린지', '2023년 7월 제로베이스원의 데뷔 미니앨범 ''YOUTH IN THE SHADE'' 타이틀곡 ''In Bloom'' 안무 챌린지로, 멤버 장하오·조나단 등이 참여한 버전이 특히 화제가 되며 틱톡·유튜브에서 확산됐다.',
+    '2023년 7월 10일 데뷔와 함께 시작', '신인 보이그룹 데뷔 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('라이즈 겟 어 기타(Get A Guitar) 챌린지', '라이즈-겟-어-기타(Get-A-Guitar)-챌린지', array['Get A Guitar 챌린지']::text[], '발 구르며 기타 치는 동작이 포인트인 라이즈 데뷔곡 챌린지', '2023년 9월 라이즈의 데뷔 싱글 ''Get A Guitar''의 포인트 안무인 발을 구르며 기타를 치는 동작이 챌린지로 확산됐다. 이영지, 세븐틴 승관·도겸·정한·우지 등 다수 스타가 참여했다.',
+    '2023년 9월 4일 데뷔와 함께 시작', '신인 그룹 데뷔 안무 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Instagram', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뷔 러브 미 어게인(Love Me Again) 수어 챌린지', '뷔-러브-미-어게인(Love-Me-Again)-수어-챌린지', array['V Love Me Again 수어챌린지']::text[], '방탄소년단 뷔 솔로곡 ''Love Me Again'' 수어(手語) 댄스 챌린지', '2023년 8월 발매된 방탄소년단 뷔의 솔로 EP ''Layover'' 수록곡 ''Love Me Again''을 수어 동작으로 표현한 챌린지 영상이 유튜브 등에서 화제가 됐다. 노래 가사를 수어로 표현하며 의미를 전달하는 방식이 호평받았다.',
+    '2023년 8월 ''Layover'' 발매 이후 팬 제작 콘텐츠로 확산', '노래 의미를 수어로 전달하는 감성 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('케플러 기디(Giddy) 챌린지', '케플러-기디(Giddy)-챌린지', array['Giddy 챌린지','Giddychallenge']::text[], '케플러 ''Giddy'' 안무를 따라하는 틱톡 댄스 챌린지', '2023년 4월 발매된 케플러의 네 번째 미니앨범 ''LOVESTRUCK!'' 타이틀곡 ''Giddy'' 댄스 챌린지로, 가수 우즈(WOODZ)와 멤버 유진 등이 참여한 영상이 틱톡에서 화제가 됐다.',
+    '2023년 4월 10일 발매 프로모션으로 시작', '설렘·풋풋한 컨셉 챌린지 콘텐츠에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('박재정 헤어지자 말해요 커버 챌린지', '박재정-헤어지자-말해요-커버-챌린지', array['헤어지자 말해요 고음 챌린지']::text[], '3옥타브 고음이 포인트인 박재정 발라드 커버 챌린지', '2023년 4월 발매된 박재정의 정규 1집 타이틀곡 ''헤어지자 말해요''가 멜론 발라드 차트 1위에 오르며, 3옥타브 도샵에 이르는 고음 파트를 커버하는 챌린지가 유행했다. 김범수, 정승환, 김필, 잔나비, 로이킴 등 다수 가수가 커버 영상에 참여했다.',
+    '2023년 4월 20일 ''얼론'' 앨범 발매 이후 가수들의 커버 참여로 확산', '고음 자랑·보컬 커버 콘텐츠에 사용', '고음 난도가 높아 무리한 시도는 주의',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('키스오브라이프 쉬(Shhh) 챌린지', '키스오브라이프-쉬(Shhh)-챌린지', array['Shhh 챌린지']::text[], '키스오브라이프 데뷔곡 ''Shhh'' 안무를 따라하는 댄스 챌린지', '2023년 7월 데뷔한 키스오브라이프의 타이틀곡 ''Shhh'' 안무 챌린지로, 멤버 4인이 함께한 버전을 비롯해 다양한 콜라보 챌린지 영상이 제작되며 데뷔 초 홍보에 활용됐다.',
+    '2023년 7월 5일 데뷔와 함께 시작', '신인 걸그룹 데뷔 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('베이비몬스터 배터업(BATTER UP) 챌린지', '베이비몬스터-배터업(BATTER-UP)-챌린지', array['BATTER UP 챌린지','BatterUpChallenge']::text[], '베이비몬스터 데뷔곡 ''BATTER UP'' 안무를 따라하는 댄스 챌린지', '2023년 11월 데뷔한 YG 신인 걸그룹 베이비몬스터의 ''BATTER UP'' 안무 챌린지로, 뮤직비디오가 공개 24시간 만에 2259만 회 조회수를 기록하며 K팝 그룹 데뷔곡 최고 기록을 세운 것과 함께 챌린지도 크게 확산됐다.',
+    '2023년 11월 27일 데뷔와 함께 시작', '대형 신인 걸그룹 데뷔 챌린지 사례로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2023, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('마라탕후루', '마라탕후루', array['마라탕후루송','탕후루송','서이브 마라탕후루']::text[], '마라탕과 탕후루를 합친 초등학생 유튜버의 중독성 밈송', '2024년 4월 초등학생 크리에이터 서이브가 발표한 노래로 ''탕탕 후루후루'' 후렴구와 따라하기 쉬운 춤이 특징이다. 호불호가 크게 갈렸지만 유튜브 쇼츠와 틱톡에서 챌린지로 크게 유행했다.',
+    '2024년 4월 17일 유튜버 서이브가 발표한 EP 수록곡 ''마라탕후루'' 뮤직비디오에서 시작', '어린이·10대 문화를 가볍게 언급할 때 사용', '호불호가 갈리는 노래라 과하게 반복하면 촌스럽게 들릴 수 있음',
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EB%A7%88%EB%9D%BC%ED%83%95%ED%9B%84%EB%A3%A8(Malatanghulu)', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('꽁냥이 챌린지', '꽁냥이-챌린지', array['꽁꽁 얼어붙은 한강 위로 고양이가 걸어다닙니다','꽁꽁이']::text[], '한파 뉴스 속 고양이 영상에 노래·춤을 붙인 챌린지', '2021년 겨울 얼어붙은 한강 위를 걷는 고양이를 다룬 MBN 뉴스 영상이 원본이다. 2024년 초 노래와 안무가 붙으면서 틱톡과 유튜브 쇼츠에서 챌린지로 재유행했다.',
+    '2021년 12월 MBN이 보도한 뚝섬한강공원 고양이 뉴스 영상', '겨울철·귀여운 상황에 가볍게 인용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/%EA%BD%81%EA%BD%81%20%EC%96%BC%EC%96%B4%EB%B6%99%EC%9D%80%20%ED%95%9C%EA%B0%95%20%EC%9C%84%EB%A1%9C%20%EA%B3%A0%EC%96%91%EC%9D%B4%EA%B0%80%20%EA%B1%B8%EC%96%B4%EB%8B%A4%EB%8B%99%EB%8B%88%EB%8B%A4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('무빙챌린지', '무빙챌린지', array['음식무빙챌린지','딸기 초콜릿 무빙']::text[], '음식에 카메라를 붙여 움직이며 찍는 감성 영상 챌린지', '2024년 2월 딸기를 초콜릿 무스에 찍는 영상에 재즈풍 음악을 더해 올린 것이 시초다. 이후 다양한 음식으로 변형되며 수백만 건의 영상이 제작된 숏폼 트렌드가 됐다.',
+    '2024년 2월 한 유저가 올린 딸기·초콜릿무스 영상', '감성적인 음식 영상 연출을 언급할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('흑백요리사 이븐하게', '흑백요리사-이븐하게', array['이븐하게 익지 않았어요','이븐하게']::text[], '안성재 셰프의 심사평 "고기가 이븐하게 익지 않았어요"에서 나온 밈', '넷플릭스 예능 흑백요리사에서 안성재 심사위원이 참가자 요리를 평가하며 한 말이다. 영어 even과 한국어 어미가 섞인 어감이 화제가 되어 다양한 패러디로 쓰였다.',
+    '2024년 9월 넷플릭스 흑백요리사 방영분 중 안성재의 심사평', '무언가 고르게·균형있게 되지 않았을 때 농담으로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나야, 들기름', '나야,-들기름', array['나야 들기름']::text[], '최강록 셰프가 조림 요리에 들기름을 넣으며 한 대사 밈', '흑백요리사에서 최강록 셰프가 요리 시연 중 "나야~들기름"이라고 말한 장면이 중독성 있는 어투로 화제가 되어 패러디됐다.',
+    '2024년 넷플릭스 흑백요리사 방영분', '재료를 극적으로 추가할 때 패러디로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('이모카세 1호', '이모카세-1호', array['이모카세']::text[], '흑백요리사에 출연한 백반집 이모 셰프에게 붙은 오마카세식 별명', '오랜 경력의 백반집 사장님이 소박한 재료로도 고급 요리 못지않은 맛을 내면서 ''이모+오마카세''를 합친 별명이 붙었다. 실력파 무명 요리사에게 붙이는 애칭으로 확장됐다.',
+    '2024년 흑백요리사 방영 중 시청자들이 붙인 별명', '숨은 실력자를 치켜세울 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('비빔대왕(유비빔)', '비빔대왕(유비빔)', array['비빔대왕','유비빔']::text[], '흑백요리사 출연자 유비빔의 비빔밥 사랑 별명 밈', '비빔밥을 너무 좋아해 개명까지 한 참가자 유비빔이 비빔소리라는 식당을 운영하며 비빔 관련 소품을 전시한 사연이 알려지며 ''비빔대왕''이라는 별명으로 밈화됐다.',
+    '2024년 흑백요리사 출연자 유비빔의 사연', '한 가지를 유독 좋아하는 사람을 놀릴 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나폴리맛피아', '나폴리맛피아', array['나폴리 맛피자']::text[], '안성재가 요리사 권성준을 "나폴리 맛피자님"으로 잘못 발음한 데서 나온 별명', '흑백요리사에서 안성재 심사위원이 참가자 권성준(닉네임 나폴리맛피아)을 소개하며 발음을 잘못한 장면이 화제가 되어 별명이 밈으로 자리잡았다.',
+    '2024년 흑백요리사 방영분', '이름이나 발음을 살짝 틀렸을 때 농담으로 인용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('트리플스타', '트리플스타', '{}', '미슐랭 3스타 경력 3곳에서 일했다는 이력에서 나온 요리사 강승원의 별명', '흑백요리사 참가자 강승원이 미슐랭 3스타 레스토랑 3곳 경력을 내세워 ''트리플스타''라는 별명을 얻었고 실제로 시즌1 3위를 기록하며 화제성이 이어졌다.',
+    '2024년 흑백요리사 시즌1', '화려한 이력을 강조하는 사람을 가리킬 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('원영적 사고 / 럭키비키', '원영적-사고-/-럭키비키', array['원영적 사고','럭키비키','럭키비키잖아']::text[], '아이브 장원영의 초긍정 사고방식에서 나온 유행어', '장원영이 브이로그에서 불운을 행운으로 해석하며 웃어 보인 장면이 패러디되며 ''원영적 사고''라는 말이 생겼고, 행운을 뜻하는 럭키와 그의 영어 이름 비키를 합친 ''럭키비키''가 2024년 최고 유행어로 꼽혔다.',
+    '2024년 4~5월 아이브 공식 유튜브 ''원영 인 스페인'' 브이로그', '안 좋은 상황을 긍정적으로 돌려 말할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%9B%90%EC%98%81%EC%A0%81%20%EC%82%AC%EA%B3%A0', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('희진적 사고', '희진적-사고', '{}', '민희진 전 어도어 대표의 기자회견 발언에서 파생된 유행어', '럭키비키·원영적 사고를 패러디해 만들어진 표현으로, 민희진의 격정적인 기자회견 발언들을 희화화해 부르는 말이다. 당사자는 이 밈화에 상처받았다고 밝힌 바 있다.',
+    '2024년 4월 민희진 어도어 전 대표의 긴급 기자회견 이후 온라인에서 파생', '실존 인물의 실제 고통이 소재이므로 조롱조로 쓰지 않도록 주의', '당사자가 직접 상처받았다고 밝힌 사안이라 조롱성 사용은 부적절할 수 있음',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('맞다이로 들어와', '맞다이로-들어와', array['맞다이']::text[], '민희진 전 대표가 하이브를 향해 한 "맞다이로 들어와" 발언 밈', '2024년 4월 기자회견에서 민희진이 하이브를 향해 "이렇게 비겁하게 뒤에서 X랄 떨지 말고 맞다이로 들어오라"고 한 발언이 강렬한 어투로 화제가 되어 밈으로 쓰였다.',
+    '2024년 4월 민희진 어도어 전 대표 기자회견 발언', '정면 승부를 촉구하는 농담으로 인용', '실제 기업 분쟁·개인 명예와 관련된 발언이라 맥락 없이 쓰면 오해 소지가 있음',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('외모 췍(체크)', '외모-췍(체크)', array['외모 체크','외모 첵']::text[], '엔믹스 해원이 워크돌에서 거울보며 외친 "외모 췍!" 밈', '유튜브 예능 ''워크돌'' 승무원 편에서 엔믹스 해원이 엘리베이터 거울을 보며 장난스럽게 "외모 췍!"이라 외친 장면이 쇼츠로 퍼지며 여러 연예인이 따라했다.',
+    '2024년 6월 유튜브 채널 ''워크맨'' 스핀오프 ''워크돌'' 승무원 편', '거울 보고 장난스럽게 자기 외모를 확인할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('APT. 아파트 챌린지', 'APT.-아파트-챌린지', array['아파트 챌린지','아파트 게임']::text[], '로제·브루노 마스의 ''APT.''에 맞춰 한국 술게임 동작을 따라하는 챌린지', '한국의 손뼉치기 술게임 ''아파트 게임''을 소재로 한 노래 ''APT.''가 발매 5일 만에 유튜브 1억 뷰를 넘기며 전 세계 틱톡에서 게임 동작을 따라하는 챌린지로 확산됐다.',
+    '2024년 10월 18일 로제·브루노 마스 ''APT.'' 발매', 'K팝·술자리 문화를 소개할 때 인용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/APT.', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('두들 댄스 챌린지', '두들-댄스-챌린지', array['두들댄스','두들 챌린지']::text[], '2024년 9월부터 유행한 팔 흔들기·개다리춤 스타일 댄스 챌린지', '실사 댄스 버전과 애니메이션(최애의 아이 호시노 루비 장면 편집) 버전 두 갈래로 퍼진 밈이다. 해외에서는 게임 캐릭터 커스터마이징 관련 농담인 ''Smaller hitbox'' 밈과 결합해 확산됐다.',
+    '2024년 9월 틱톡·유튜브 쇼츠에서 확산', '중독성 있는 짧은 챌린지 춤을 가리킬 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/%EB%91%90%EB%93%A4%20%EB%8C%84%EC%8A%A4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('티라미수 케이크 챌린지', '티라미수-케이크-챌린지', array['T라 미숙해','티라미수 케익 챌린지','곤 댄스']::text[], '2015년 노래 ''티라미수 케익''에 곤 댄스를 붙여 재유행한 챌린지', '밴드 위아더나잇의 2015년 곡을 2024년 5월 한 틱톡 유저가 ''Gon Dancing'' MMD 밈과 결합해 올리며 폭발적으로 유행했다. 발음을 이용한 ''T라 미숙해''(MBTI 농담) 등 언어유희도 함께 퍼졌다.',
+    '2024년 5월 28일 틱톡 유저가 올린 티라미수 케익+곤댄스 영상', '뜬금없이 중독성 있는 챌린지를 언급할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('마그네틱 챌린지', '마그네틱-챌린지', array['Magnetic 챌린지','아일릿 마그네틱']::text[], '아일릿 데뷔곡 ''마그네틱''의 손가락 안무 챌린지', '손가락을 붙였다 떼는 포인트 안무가 특징인 아일릿의 데뷔곡으로, 2024년 스포티파이 최다 스트리밍 K팝 곡에 오를 정도로 틱톡·쇼츠에서 댄스 챌린지가 크게 유행했다.',
+    '2024년 3월 아일릿 데뷔곡 ''Magnetic'' 발매', 'K팝 신인 그룹 챌린지 사례로 인용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/Magnetic(ILLIT)', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('포켓몬 댄스 챌린지', '포켓몬-댄스-챌린지', array['포켓댄스','포케댄스','POKÉDANCE']::text[], '포켓몬 공식 유튜브가 공개한 단순 반복 안무 챌린지', '2024년 2월 27일 포켓몬 데이를 기념해 포켓몬 공식 채널이 공개한 댄스 영상으로, 엔하이픈 등 K팝 아이돌이 참여하며 확산됐다. 포켓몬을 몰라도 따라할 수 있는 단순한 동작이 특징이다.',
+    '2024년 2월 27일 포켓몬 공식 유튜브 공개 영상', '캐릭터 프로모션 챌린지의 예로 인용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/POK%C3%89DANCE', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('삐끼삐끼 춤', '삐끼삐끼-춤', array['삐끼삐끼 아웃송']::text[], 'KIA 타이거즈 치어리더 이주은이 유행시킨 KBO 아웃송 댄스', '2001년 JTL ''마이 레콘''을 리믹스한 아웃송에 맞춘 춤으로, 2024년 6월 치어리더 이주은이 화장 고치다 급히 따라 추는 영상이 화제가 되며 KBO 1000만 관중 시대와 맞물려 전국적 신드롬이 됐다.',
+    '2024년 6월 22일 KIA 타이거즈 치어리더 이주은 직캠 영상', '야구장 응원 문화를 소개할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('국회 담장 넘기 밈', '국회-담장-넘기-밈', array['담장 넘는 국회의원']::text[], '2024년 12월 비상계엄 당시 국회의원들이 담을 넘는 장면이 만든 밈', '계엄군이 국회 출입을 막자 국회의원들이 담장을 넘어 본회의장으로 향한 장면이 생중계되며 다양한 패러디 이미지·영상으로 퍼졌다.',
+    '2024년 12월 3~4일 비상계엄 사태 생중계 장면', '실제 정치적 위기 상황이 배경이므로 시사 맥락에서만 신중히 사용', '실제 국가적 위기·형사사건과 관련된 소재이므로 가볍게 소비하면 부적절할 수 있음',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', 'https://www.newsis.com/view/NISX20241205_0002985899', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('취했나 봄 (서울의 봄 패러디)', '취했나-봄-(서울의-봄-패러디)', array['서울의 봄 패러디']::text[], '영화 ''서울의 봄'' 속 전두광 얼굴에 정치인을 합성한 계엄 풍자 밈', '2024년 12월 비상계엄 사태 직후 영화 ''서울의 봄''(1979년 쿠데타를 다룬 영화) 속 장면을 차용해 "취했나 봄" 등의 말장난과 함께 정치 풍자 이미지가 확산됐다.',
+    '2024년 12월 비상계엄 사태 이후 온라인 패러디', '시사 풍자 맥락에서만 사용, 특정 정치 성향 단정에 주의', '정치적으로 민감한 실제 사건을 다루므로 진영 논리로 오용되지 않도록 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Community', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('사랑 때문에 계엄까지 해봤다', '사랑-때문에-계엄까지-해봤다', '{}', '"나 사랑 때문에 ○○까지 해봤다" 질문에 "계엄"이라 답하는 밈', '2024년 12월 비상계엄 사태 직후 유행한 자기소개·드립 형식으로, 극단적 행동의 예시로 ''계엄''을 넣어 웃음을 유발하는 밈이다.',
+    '2024년 12월 비상계엄 사태 이후 온라인 커뮤니티', '가벼운 자기소개 드립 형식에 인용', '실제 국가 비상사태를 소재로 하므로 심각한 자리에서는 부적절',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'ironic'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Community', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('전한길 "123 못 외우면" 밈', '전한길-"123-못-외우면"-밈', '{}', '공무원 강사 전한길의 강의 발언이 계엄 사태와 겹쳐 화제된 밈', '강사 전한길이 과거 강의에서 한 "12월 3일, 123 못 외우는 사람들은 빨리 때려치워라"는 발언이 2024년 12월 3일 계엄 선포일과 우연히 맞아떨어지며 재조명돼 확산됐다.',
+    '전한길 강의 클립이 2024년 12월 계엄 사태 이후 재조명', '우연의 일치를 놀랄 때 인용', null,
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'ironic'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('범죄도시4 "쨈 발라먹게?"', '범죄도시4-"쨈-발라먹게?"', '{}', '마동석의 애드리브 대사에서 나온 범죄도시4 밈', '2024년 개봉해 천만 관객을 넘긴 ''범죄도시4''에서 마석도(마동석)가 범인을 제압하며 한 애드리브 대사 "쨈 발라먹게?"가 찰진 발음으로 화제가 되어 인터넷 밈으로 쓰였다.',
+    '2024년 개봉 영화 ''범죄도시4''', '능청스러운 협박·농담조 인용에 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('파묘 - 겁나 험한 것', '파묘---겁나-험한-것', array['험한 것이 나왔다']::text[], '영화 ''파묘'' 예고편 속 무당 화림의 대사에서 나온 밈', '김고은이 연기한 무당 화림의 예고편 대사 "뭐가 나왔다고, 거기서. 겁나 험한 게"가 화제가 되며 흥행세를 뜻하는 "겁나 흥행세" 등으로 언어유희가 이어졌다.',
+    '2024년 2월 개봉 영화 ''파묘'' 예고편', '심상치 않은 상황을 과장해 표현할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('파묘(흑역사 발굴) 신조어', '파묘(흑역사-발굴)-신조어', array['파묘하다']::text[], '영화 흥행 후 ''과거 흑역사를 캐낸다''는 뜻으로 확장된 신조어', '영화 ''파묘''가 흥행하면서 원래 뜻(무덤을 파냄)과 별개로 ''잊혔던 과거 게시물·논란을 다시 파낸다''는 뜻의 신조어로 쓰이게 됐다.',
+    '2024년 영화 ''파묘'' 흥행 이후 온라인 신조어로 확장', '과거 게시물이나 흑역사를 찾아낼 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Community', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('맛꿀마', '맛꿀마', '{}', '피식대학 이용주가 만든 경상도 사투리 억양의 ''맛있다'' 표현', '유튜브 채널 피식대학의 ''메이드 인 경상도'' 시리즈에서 부산 출신 이용주가 음식을 맛보며 외친 표현이 그대로 유행어가 됐다.',
+    '유튜브 채널 ''피식대학'' 콘텐츠에서 이용주가 사용한 표현이 2024년 확산', '음식이 아주 맛있다는 뜻으로 장난스럽게 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('국가권력급', '국가권력급', '{}', '무언가 최상급으로 뛰어나다는 뜻의 웹소설발 밈', '웹소설 ''나 혼자만 레벨업''에서 국가에 필적하는 최상위 헌터를 가리키던 표현이, 2024년 애니메이션화와 유튜버 랄로의 게임 콘텐츠를 통해 ''최고''라는 뜻의 유행어로 확산됐다.',
+    '웹소설 ''나 혼자만 레벨업'' 설정 용어가 2024년 초 밈으로 확산', '무언가 압도적으로 뛰어남을 과장해 표현할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('충주맨', '충주맨', array['김선태','충주시 유튜브']::text[], 'B급 감성 홍보 콘텐츠로 전국구 스타가 된 충주시 공무원 유튜버', '충주시 유튜브 채널을 운영하던 공무원 김선태가 노골적인 홍보를 유머로 승화한 콘텐츠로 화제를 모았다. ''관짝 댄스'' 패러디, 샘 스미스 ''Unholy'' 패러디 등이 대표작이다.',
+    '충주시 유튜브 채널(2018년 개설)이 2024년 콘텐츠로 전국적 화제', '지자체 유튜브나 B급 홍보 콘텐츠 사례로 인용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('핑계고 "이건 핑계 아니냐"', '핑계고-"이건-핑계-아니냐"', array['핑계고 분홍 닭']::text[], '유재석 유튜브 ''핑계고''의 분홍 닭 짤과 함께 쓰인 드립', '유튜브 콘텐츠 ''핑계고''의 상징인 분홍색 닭 이미지와 함께 "XX, 이건 핑계 아니냐"라고 지적하는 드립이 2024년 5월경부터 유행했다.',
+    '유튜브 콘텐츠 ''핑계고''에서 파생된 2024년 5월 유행어', '상대의 변명을 장난스럽게 지적할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('김예지 사격 짤', '김예지-사격-짤', array['무심한 표정 김예지','쿨한 스나이퍼']::text[], '파리올림픽 사격 은메달리스트 김예지의 무심한 표정이 만든 밈', '2024 파리올림픽 사격 여자 10m 공기권총 경기 중계에서 무심하고 시크한 표정으로 경기를 치른 김예지의 모습이 전 세계적으로 화제가 되며 각종 합성짤과 패러디를 낳았다.',
+    '2024 파리올림픽 사격 중계 방송', '무심하고 쿨한 태도를 표현할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('오상욱 저격수', '오상욱-저격수', array['상욱업고튀어']::text[], '파리올림픽 펜싱 금메달리스트 오상욱의 눈빛이 만든 밈', '2024 파리올림픽 펜싱 남자 사브르 개인전에서 금메달을 딴 오상욱의 날카로운 눈빛과 비주얼이 중계 화면을 통해 퍼지며 ''K-로맨스 남주'' 밈으로 확산됐다.',
+    '2024 파리올림픽 펜싱 중계 방송', '멋있는 순간을 과장해서 표현할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('안세영 발언', '안세영-발언', array['배드민턴협회 비판']::text[], '파리올림픽 금메달 직후 협회를 공개 비판한 안세영의 발언', '배드민턴 여자 단식에서 금메달을 딴 안세영이 시상 직후 인터뷰에서 대한배드민턴협회의 선수 관리 문제를 공개적으로 비판하며 큰 화제와 논쟁을 낳았다.',
+    '2024 파리올림픽 배드민턴 시상식 인터뷰 생중계', '부당함에 소신 발언하는 상황을 인용할 때', '협회 대 선수 갈등이라는 민감한 소재이므로 한쪽 편을 드는 투로 쓰지 않도록 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('안귀령 총구를 잡다', '안귀령-총구를-잡다', array['국회 계엄군 대치']::text[], '계엄군 총구를 맨손으로 막아선 더불어민주당 대변인의 장면', '2024년 12월 3일 밤 계엄군의 국회 진입을 막던 중 더불어민주당 안귀령 대변인이 군인의 소총 총구를 손으로 잡고 제지한 장면이 영상으로 퍼지며 화제가 됐다.',
+    '2024년 12월 3일 밤 국회 앞 계엄군 대치 상황 영상', '위험을 무릅쓰고 정면으로 맞서는 상황을 비유할 때', '실제 인명 위험이 있었던 정치적 사건이라 가볍게 다루지 않도록 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('은행 플러팅 챌린지', '은행-플러팅-챌린지', array['농협은행 너무 예쁘네','은행 이름 챌린지']::text[], '"농협은행"을 "너무 예쁘네"로 잘못 들은 사연에서 시작된 챌린지', '외국인 손님이 "농협은행 아냐"라고 물은 것을 편의점 알바생이 "너무 예쁘네요"로 잘못 알아들었다는 에피소드가 퍼지며, 은행 이름을 칭찬으로 바꿔 부르는 노래·챌린지로 확산됐다.',
+    '온라인 커뮤니티 에피소드가 2024년 초 노래·챌린지로 확산', '상대를 예쁘다고 장난스럽게 칭찬할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나는 SOLO 정숙', '나는-SOLO-정숙', array['정숙자','최명은']::text[], '나는 SOLO 10기 출연자 정숙(가명)이 만든 각종 화제와 밈', '연애 리얼리티 ''나는 SOLO'' 10기에 출연한 정숙(가명)의 독특한 언행과 서사가 방영 후 SNL 패러디 등으로 이어지며 2024년 큰 화제를 모았다.',
+    'ENA/SBS Plus ''나는 SOLO'' 10기 방영분(2023년 말~2024년)', '연애 예능 특유의 과장된 서사를 언급할 때', '실존 출연자를 둘러싼 실제 논란(과거 이력 의혹 등)이 있어 인신공격성 사용 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://namu.wiki/w/%EB%82%98%EB%8A%94%20SOLO', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('나는 SOLO 영수', '나는-SOLO-영수', '{}', '나는 SOLO 10기 출연자 영수를 둘러싼 삼각관계 논란과 밈', '''나는 SOLO'' 10기에서 영수가 옥순과 광수 사이를 이간질했다는 논란이 불거지며 화제가 됐고, 이후 SNL 등 다른 방송에도 패러디로 등장했다.',
+    '''나는 SOLO'' 10기 방영분(2024)', '연애 예능 갈등 구도를 가볍게 언급할 때', '실존 출연자에 대한 비방으로 흐르지 않도록 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'comment'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('움파룸파 챌린지', '움파룸파-챌린지', array['웡카 움파룸파']::text[], '영화 ''웡카''(2024)의 움파룸파 노래·춤에서 파생된 챌린지', '2024년 1월 개봉한 영화 ''웡카''에 등장한 움파룸파 캐릭터의 노래와 춤이 중독성으로 화제가 되며, 얼굴을 왜곡해 작아 보이게 하는 필터와 함께 SNS 챌린지로 유행했다.',
+    '영화 ''웡카''(2024년 1월 개봉) 장면에서 파생', '귀엽고 우스꽝스러운 춤을 출 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/%EC%9B%80%ED%8C%8C%EB%A3%B8%ED%8C%8C', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('띄어쓰기의 중요성 챌린지', '띄어쓰기의-중요성-챌린지', array['띄어쓰기 챌린지']::text[], '띄어쓰기에 따라 뜻이 달라지는 문장을 연기하는 챌린지', '"아버지가 방에 들어가신다" 류의 띄어쓰기 말장난을 짧은 상황극으로 연기하는 영상이 2024년 하반기 틱톡·유튜브 쇼츠에서 대거 유행했다.',
+    '2024년 하반기 틱톡·유튜브 쇼츠 챌린지로 확산', '언어유희 상황극을 보여줄 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('업고 튀어 드립', '업고-튀어-드립', array['OO업고튀어','상욱업고튀어']::text[], '드라마 ''선재 업고 튀어'' 제목을 활용한 패러디 어구', '2024년 큰 인기를 끈 tvN 드라마 ''선재 업고 튀어''의 제목이 인터넷 밈으로 확산되어 "OO업고튀어" 형태로 다양한 분야의 패러디에 활용됐다.',
+    'tvN 드라마 ''선재 업고 튀어''(2024년 4~5월 방영) 제목에서 파생', '누군가를 업고 도망치듯 지켜주고픈 상황을 표현할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TV', 'https://namu.wiki/w/%EC%84%A0%EC%9E%AC%20%EC%97%85%EA%B3%A0%20%ED%8A%80%EC%96%B4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('성수 꽃집 챌린지', '성수-꽃집-챌린지', array['비틀즈뱅크']::text[], '서울 성수동 꽃집 사장이 손님과 함께 춤추는 영상에서 시작된 밈', '성수동 꽃집 ''비틀즈뱅크'' 사장이 손님이 오면 흥겹게 춤을 추는 영상들이 SNS에서 화제가 되며 2024년 상반기 유행 콘텐츠가 됐다.',
+    '성수동 꽃집 ''비틀즈뱅크'' 인스타그램·틱톡 영상(2024)', '흥이 넘치는 반응을 표현할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'Instagram', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('뉴진스 하니 국정감사 셀카 논란', '뉴진스-하니-국정감사-셀카-논란', array['국감 셀카','하니 국감']::text[], '국정감사장에서 뉴진스 하니 옆에서 웃으며 셀카를 찍은 기업 대표가 논란이 된 사건', '2024년 10월 국회 환경노동위원회 국정감사에 직장 내 괴롭힘 증언을 위해 출석한 뉴진스 하니 옆에서, 산재 사망 사고로 함께 출석한 한 기업 대표가 웃으며 셀카를 찍는 모습이 생중계에 포착돼 큰 비판을 받았다.',
+    '2024년 10월 국회 국정감사 생중계 영상', '부적절한 처신을 지적할 때 인용', '산업재해 사망이라는 무거운 사안과 얽혀 있어 가볍게 웃음 소재로만 쓰지 않도록 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'negative'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'News', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('오징어 게임 시즌2 딱지남 러시안룰렛', '오징어-게임-시즌2-딱지남-러시안룰렛', array['딱지남','공유 러시안룰렛']::text[], '넷플릭스 오징어 게임 시즌2에서 공유가 연기한 딱지남의 명장면', '2024년 12월 공개된 넷플릭스 ''오징어 게임'' 시즌2 1화에서 배우 공유가 연기한 ''딱지남''이 성기훈과 벌이는 러시안룰렛 장면이 편집 클립으로 틱톡·유튜브에서 폭발적으로 퍼지며 큰 화제를 모았다.',
+    '넷플릭스 ''오징어 게임'' 시즌2(2024년 12월 26일 공개) 1화', '광기 어린 연기나 긴장감 넘치는 상황을 인용할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/%EB%94%B1%EC%A7%80%EB%82%A8', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('호랑이 담요 세리머니', '호랑이-담요-세리머니', array['KIA 담요 세리머니']::text[], 'KIA 타이거즈 승리 후 수훈선수가 호랑이 담요를 두르고 런웨이하는 세리머니', 'KIA 타이거즈가 경기에서 이기면 그날의 수훈선수가 호랑이 무늬 담요를 두르고 선곡한 노래에 맞춰 팬들 앞에서 런웨이를 서는 세리머니로, 2024년 정규시즌·한국시리즈 우승과 맞물려 큰 인기를 끌며 영상으로 퍼졌다.',
+    'KIA 타이거즈 홈경기 승리 후 세리머니 영상(2024년 시즌)', '승리 후 신나게 자축하는 모습을 표현할 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'image'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('모수버거', '모수버거', array['모스버거 드립']::text[], '침착맨이 ''모스버거''를 일부러 ''모수버거''라 발음하는 유튜브 밈', '흑백요리사 심사위원 안성재 셰프의 레스토랑 ''모수 서울''과 발음이 비슷한 것을 이용해, 유튜버 침착맨이 일본 버거 브랜드 ''모스버거''를 짐짓 ''모수버거''라고 우기며 부른 데서 시작된 밈. 2024년 12월 방송에서 실제로 모스버거를 사서 먹는 콘텐츠까지 이어졌다.',
+    '유튜브 채널 ''침착맨'' 방송 중 언급되며 확산(2024년 하반기)', '억지스러운 말장난 드립을 가리킬 때', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'phrase'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('아파트 챌린지', '아파트-챌린지', array['APT 챌린지','아파트 게임 챌린지','로제 브루노마스 아파트']::text[], '로제·브루노 마스 ''APT.'' 속 한국 술게임을 따라하는 세계적 챌린지', '2024년 10월 18일 발매된 로제와 브루노 마스의 콜라보 싱글 ''APT.''가 전 세계적으로 흥행하면서, 곡의 모티브가 된 한국식 술자리 게임 ''아파트 게임''을 따라 하는 챌린지가 유행했다. 참가자들이 손을 쌓고 숫자를 외치다 걸린 사람이 벌칙을 받는 방식으로, MT·회식 문화가 그대로 세계로 퍼졌다. 틱톡에서 역대 최단 기간 20억 뷰를 기록했다.',
+    '로제가 브루노 마스에게 한국 술게임 ''아파트''를 설명하며 곡 제목이 됨. 2024 MAMA에서 최초 무대 공개.', '파티·모임에서 분위기 띄울 때 언급 가능', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/APT.', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('삐끼삐끼 챌린지', '삐끼삐끼-챌린지', array['삐끼삐끼춤','아웃송 챌린지']::text[], '기아 치어리더 영상에서 시작해 세계로 퍼진 손동작 댄스 챌린지', '기아 타이거즈 치어리더 이주은의 쇼츠 영상이 화제가 되며 시작된 춤으로, 엄지를 편 채 ㄴ자 모양 팔을 위아래로 흔드는 동작이 특징이다. 배경음악은 H.O.T. 출신 장우혁·토니안·이재원의 JTL ''My Lecon''을 인도네시아 DJ가 리믹스한 ''아웃송''이다. 2024년 하반기 국내외 SNS를 강타했다.',
+    '2024년 6월 유튜브 채널 ''내맘찍영''에 올라온 기아 치어리더 이주은의 쇼츠 영상', '흥겨운 분위기에서 따라 추기 좋음', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', 'https://namu.wiki/w/%EC%82%90%EB%81%BC%EC%82%90%EB%81%BC%20%EC%B6%A4', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Supernova 챌린지', 'Supernova-챌린지', array['슈퍼노바 챌린지','에스파 슈퍼노바']::text[], 'aespa ''Supernova'' 후렴 포인트 안무를 따라하는 댄스 챌린지', '2024년 5월 발매된 aespa의 ''Supernova''는 발매 11일 만에 걸그룹 곡 중 최단 기간 PAK을 달성하며 2024년 대표곡이 됐다. 후렴 포인트 안무를 따라 하는 챌린지 영상이 SNS에 대거 올라왔다.',
+    '2024년 5월 13일 aespa ''Supernova'' 발매', '케이팝 팬덤 대화나 커버댄스 소재로 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/Supernova(aespa)', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Magnetic 챌린지', 'Magnetic-챌린지', array['매그네틱 챌린지','아일릿 매그네틱']::text[], '아일릿 데뷔곡 ''Magnetic'' 안무를 따라하는 세계적 댄스 챌린지', '2024년 3월 25일 발매된 아일릿의 데뷔곡 ''Magnetic''은 2024년 스포티파이 최다 스트리밍 K팝 곡에 오르며 여름 내내 숏폼 플랫폼을 장악했다. 안무 챌린지가 아이허트라디오 뮤직어워드 ''올해의 K팝 댄스 챌린지'' 부문 후보에 오를 정도로 화제였다.',
+    '2024년 3월 25일 ILLIT ''Magnetic'' 발매', '케이팝 커버댄스·숏폼 콘텐츠에 활용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/Magnetic(ILLIT)', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('밤양갱 챌린지', '밤양갱-챌린지', array['밤양갱 커버챌린지','비비 밤양갱']::text[], '비비 ''밤양갱'' 후렴을 립싱크·커버하는 챌린지', '2023년 말 발매돼 2024년 초 역주행한 비비의 ''밤양갱''은 담담한 이별 가사와 중독적인 후렴으로 각종 방송인·가수들의 커버 챌린지를 낳았다. 2024 MAMA 무대에도 오르며 한 해 내내 회자됐다.',
+    '비비(BIBI) ''밤양갱'' 음원 및 뮤직비디오', '노래방·커버 콘텐츠에서 자연스럽게 언급 가능', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'song'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('고민중독 챌린지', '고민중독-챌린지', array['QWER 고민중독 챌린지']::text[], '밴드돌 QWER ''고민중독'' 쉬운 포인트 안무 챌린지', '2024년 4월 발매된 QWER의 ''고민중독''은 누구나 쉽게 따라 할 수 있는 포인트 안무 덕분에 각종 커뮤니티와 SNS에서 챌린지가 확산됐다. (여자)아이들 멤버 등 다른 아이돌들도 참여했다.',
+    '2024년 4월 1일 QWER 미니앨범 ''MANITO'' 타이틀곡 ''고민중독'' 발매', '쉬운 챌린지 추천 시 언급', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('SHEESH 챌린지', 'SHEESH-챌린지', array['시쉬 챌린지','베이비몬스터 시쉬']::text[], '베이비몬스터 ''SHEESH'' 안무를 따라하는 데뷔 초기 대박 챌린지', '2024년 4월 발매된 베이비몬스터의 ''SHEESH''는 공개 직후 유튜브 글로벌 주간 인기 뮤직비디오 1위에 오르며 다수의 커버댄스를 낳았다. 발매 9일 만에 수많은 챌린지 영상이 업로드됐다.',
+    '2024년 4월 1일 YG엔터테인먼트 베이비몬스터 ''SHEESH'' 발매', '신인 걸그룹 화제성 이야기할 때 언급', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('How Sweet 챌린지', 'How-Sweet-챌린지', array['하우스윗 챌린지','뉴진스 하우스윗']::text[], '뉴진스 유튜브 쇼츠와 협업한 ''How Sweet'' 글로벌 댄스 챌린지', '2024년 5월 뉴진스가 유튜브 쇼츠와 손잡고 신곡 ''How Sweet'' 발매에 맞춰 글로벌 캠페인과 챌린지를 예고했다. 토끼 캐릭터가 서울·뉴욕·런던·도쿄를 여행하는 티저와 함께 세계 각지에서 커버댄스가 올라왔다.',
+    '2024년 5월 24일 뉴진스 ''How Sweet'' 발매 및 유튜브 쇼츠 공식 캠페인', '뉴진스 관련 화제나 숏폼 마케팅 사례로 언급', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'wholesome'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Boom Boom Bass 챌린지', 'Boom-Boom-Bass-챌린지', array['붐붐베이스 챌린지','라이즈 붐붐베이스']::text[], '라이즈 ''붐붐베이스'' 그루비한 베이스 동작 댄스 챌린지', '2024년 6월 발매된 라이즈의 ''Boom Boom Bass''는 디스코풍 베이스 리듬에 맞춘 안무로 틱톡·유튜브에서 다양한 커버·튜토리얼 영상이 제작됐다.',
+    '2024년 6월 17일 RIIZE 첫 EP ''Riizing'' 타이틀곡 발매', '라이즈 팬덤·댄스 커버 이야기에 활용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Chk Chk Boom 챌린지', 'Chk-Chk-Boom-챌린지', array['착착붐 챌린지','스트레이키즈 챌린지']::text[], '스트레이키즈 신곡 발매 기념 유튜브 쇼츠 대규모 챌린지', '2024년 7월 스트레이키즈가 미니앨범 ''ATE'' 타이틀곡 ''Chk Chk Boom'' 발매에 맞춰 유튜브 공식 쇼츠 챌린지를 진행했다. 후렴 안무나 자신만의 스타일을 해시태그와 함께 올리는 방식으로 전 세계 팬이 참여했다.',
+    '2024년 7월 19일 Stray Kids ''ATE'' 앨범 발매 기념 유튜브 공식 챌린지', '유튜브 공식 챌린지 마케팅 사례로 언급', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('Whiplash 챌린지', 'Whiplash-챌린지', array['뒷목잡기 춤','위플래시 챌린지']::text[], 'aespa ''Whiplash'' 후렴의 ''뒷목잡기'' 동작이 화제가 된 댄스 챌린지', '2024년 10월 발매된 aespa ''Whiplash''의 후렴 안무는 목을 젖히는 동작 때문에 ''뒷목잡기 춤''으로 불리며 전작 ''Next Level''의 ''ㄷ자 춤''을 잇는 아이코닉한 포인트 안무로 꼽혔다. 콘서트 팬 챌린지 코너와 SNS에서 크게 유행했다.',
+    '2024년 10월 21일 aespa 다섯 번째 미니앨범 타이틀곡 ''Whiplash'' 발매', '에스파 안무 이야기할 때 자연스럽게 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', 'https://namu.wiki/w/Whiplash', 'embeddable'::copyright_status from ins where true;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('클락션 챌린지', '클락션-챌린지', array['Klaxon 챌린지','여자아이들 클락션']::text[], '(여자)아이들 여름 신곡 ''클락션'' 쉬운 안무 유튜브 챌린지', '2024년 7월 발매된 (여자)아이들의 ''클락션''은 구글코리아·유튜브가 진행한 쇼츠 챌린지 캠페인으로 확산됐다. 정형돈 등 방송인이 참여한 챌린지 영상도 화제가 됐다.',
+    '2024년 7월 (여자)아이들 ''클락션'' 발매 및 유튜브 쇼츠 캠페인', '여름 시즌송 챌린지 사례로 언급', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'challenge'::meme_category, 'video'::media_type, 'beginner'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'YouTube', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('DASH 챌린지', 'DASH-챌린지', array['대쉬 챌린지','엔믹스 대쉬']::text[], '엔믹스 ''DASH'' 안무를 따라하는 릴레이 댄스 챌린지', '2024년 1월 발매된 엔믹스의 ''DASH''는 발매 2주 만에 4개 음악방송 1위를 하며 인기를 끌었고, 릴레이 댄스·챌린지 커버 영상이 유튜브·틱톡에 다수 올라왔다.',
+    '2024년 1월 15일 NMIXX ''DASH'' 발매', '엔믹스 안무 챌린지 이야기할 때 사용', null,
+    'green'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'normal'::meme_difficulty,
+    'funny'::meme_sentiment, 2024, jsonb_build_object('work','green','friends','green','family','green','sns','green'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'TikTok', null, 'unknown'::copyright_status from ins where false;
+
+
+with ins as (
+  insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
+    safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
+    origin_year, usage_context, published_at)
+  values ('껌 챌린지', '껌-챌린지', array['GGUM 챌린지','연준 껌 챌린지']::text[], '투바투 연준 솔로곡 ''껌'' 후렴 고난도 안무 챌린지', '2024년 9월 투모로우바이투게더 연준이 솔로 믹스테이프 ''껌(GGUM)''의 댄스 챌린지를 공식 SNS에 공개했다. 연습실에서 가볍게 시작해 브레이크 구간에서 다리를 찢으며 앉았다 일어나는 고난도 동작과 엉덩이를 잡는 포인트 안무가 화제와 논쟁을 동시에 낳았다.',
+    '2024년 9월 13일 빅히트뮤직·연준 공식 SNS 공개', '안무 난이도나 K팝 챌린지 트렌드 논할 때 언급', '선정성 논란이 있었던 포인트 안무이므로 맥락에 주의',
+    'yellow'::safety_level, 'cooling'::lifecycle_status, 'approved'::moderation_status,
+    'dance'::meme_category, 'video'::media_type, 'deep'::meme_difficulty,
+    'controversial'::meme_sentiment, 2024, jsonb_build_object('work','yellow','friends','green','family','yellow','sns','yellow'), now())
+  on conflict (slug) do nothing
+  returning id
+)
+insert into meme_sources (meme_id, platform, source_url, copyright_status)
+select id, 'X', null, 'unknown'::copyright_status from ins where false;
+
+commit;

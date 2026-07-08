@@ -19,6 +19,9 @@ export function LifeGauge({
 }) {
   const meta = LIFECYCLE_STATUS[status];
   const flameSize = size === "lg" ? "h-6 w-6" : "h-4 w-4";
+  const isRising = status === "rising";
+  const topLit = meta.flame - 1; // 최상단(선두) 불꽃 인덱스
+
   return (
     <span
       role="img"
@@ -28,11 +31,17 @@ export function LifeGauge({
       <span aria-hidden className="inline-flex items-end gap-0.5">
         {[0, 1, 2, 3].map((i) => {
           const lit = i < meta.flame;
+          const rising = lit && isRising;
+          // 선두 불꽃이 먼저, 아래로 갈수록 지연 — 물결처럼 타오르게
+          const flicker = rising
+            ? `flame-rising${i === topLit ? " flame-rising-tip" : ""}`
+            : "";
           return (
             <FlameIcon
               key={i}
               lit={lit}
-              className={`${flameSize} ${lit && status === "rising" ? "flame-rising" : ""} ${lit ? "" : "opacity-25"}`}
+              className={`${flameSize} ${flicker} ${lit ? "" : "opacity-25"}`}
+              style={rising ? { animationDelay: `${(topLit - i) * 130}ms` } : undefined}
             />
           );
         })}
@@ -48,11 +57,20 @@ export function LifeGauge({
   );
 }
 
-function FlameIcon({ lit, className }: { lit: boolean; className?: string }) {
+function FlameIcon({
+  lit,
+  className,
+  style,
+}: {
+  lit: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
       className={className}
+      style={style}
       fill={lit ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth="1.8"

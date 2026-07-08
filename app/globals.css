@@ -94,14 +94,43 @@ body {
   line-height: 1.6;
 }
 
-/* 생명 게이지 점화 애니메이션 — 모션 감소 설정 존중 */
-@keyframes flame-flicker {
-  0%, 100% { transform: scale(1) rotate(-1deg); opacity: 1; }
-  50% { transform: scale(1.12) rotate(2deg); opacity: 0.9; }
+/* ── 모션 타이밍 토큰 (DESIGN.md §5) ── */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --dur-micro: 200ms;
+  --dur-transition: 320ms;
 }
-.flame-rising { animation: flame-flicker 1.4s ease-in-out infinite; }
+
+/* 생명 게이지 점화 애니메이션 — 밑동 고정 + 다단 흔들림으로 생동감 (transform/opacity만) */
+@keyframes flame-flicker {
+  0%   { transform: scale(1) translateY(0) rotate(-1.5deg); opacity: 1; }
+  25%  { transform: scale(1.09) translateY(-0.5px) rotate(1.5deg); opacity: 0.92; }
+  50%  { transform: scale(1.15) translateY(-1px) rotate(-2.5deg); opacity: 0.84; }
+  70%  { transform: scale(1.05) translateY(-0.5px) rotate(2deg); opacity: 0.95; }
+  100% { transform: scale(1) translateY(0) rotate(-1.5deg); opacity: 1; }
+}
+.flame-rising {
+  transform-origin: bottom center;
+  animation: flame-flicker 1.4s var(--ease-out) infinite;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 45%, transparent));
+}
+/* 최상단(선두) 불꽃 — 더 은은하게 타오르는 글로우 */
+.flame-rising-tip {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor 65%, transparent));
+}
+
+/* 안전 신호등 — 마운트 시 색 글로우 펄스 1회 (currentColor = 신호등 색) */
+@keyframes safety-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 40%, transparent); }
+  55%  { box-shadow: 0 0 14px 3px color-mix(in srgb, currentColor 45%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
+}
+.safety-pulse { animation: safety-pulse 1.15s var(--ease-out) 1 both; }
+
 @media (prefers-reduced-motion: reduce) {
-  .flame-rising { animation: none; }
+  .flame-rising,
+  .safety-pulse { animation: none; }
 }
 
 /* 접근성: 포커스 링 유지 */

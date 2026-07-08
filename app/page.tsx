@@ -1,7 +1,11 @@
 import { SECTION_TITLES } from "@/lib/labels";
-import { getBeginnerMemes, getTrendingMemes, type MemeListItem } from "@/lib/queries";
+import { getBeginnerMemes, getTrendingMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
 import { WebSiteJsonLd } from "@/components/json-ld";
+import { SearchHero } from "@/components/search-hero";
+// 레인 B 모션 래퍼(클라이언트): 스크롤 리빌 + 스태거 리스트
+import { MotionList } from "@/components/motion-list";
+import { Reveal } from "@/components/reveal";
 
 /** 홈 — 공개 ISR (5분), 쿠키 미사용 정적 클라이언트 */
 export const revalidate = 300;
@@ -14,72 +18,48 @@ export default async function Home() {
   // 섹션당 3개 미만이면 섹션 숨김
   const showTrending = trending.length >= 3;
   const showBeginners = beginners.length >= 3;
+  // 인기 검색어 칩 — 급상승 밈 제목 재사용(별도 쿼리 없음)
+  const popularTerms = trending.slice(0, 8).map((m) => m.title);
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-12">
       <WebSiteJsonLd />
-      {/* 검색 히어로 */}
-      <section aria-label="밈 검색" className="pb-8 pt-10 md:pt-16">
-        <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
-          그 밈, 3초 안에 알려드려요
-        </h1>
-        <p className="mt-1.5 text-base text-muted">
-          뜻·유래부터 지금 써도 되는지까지 한 번에 확인해요.
-        </p>
-        <form action="/search" role="search" className="mt-5">
-          <label htmlFor="home-search" className="sr-only">
-            밈 검색
-          </label>
-          <div className="relative">
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden
-              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              id="home-search"
-              name="q"
-              type="search"
-              placeholder="무슨 밈인지 검색해보세요"
-              autoComplete="off"
-              enterKeyHint="search"
-              className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base shadow-sm outline-none transition-colors focus:border-accent"
-            />
-          </div>
-        </form>
-      </section>
+      <SearchHero popularTerms={popularTerms} />
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">
-          <h2 id="sec-trending" className="flex items-center gap-1.5 text-xl font-bold">
-            <span aria-hidden className="text-life-rising">
-              <FlameMark />
-            </span>
-            {SECTION_TITLES.trending}
-          </h2>
-          <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-            {trending.map((meme) => (
-              <li key={meme.id} className="w-40 shrink-0 snap-start">
-                <MemeCard meme={meme} />
-              </li>
-            ))}
-          </ul>
+          <Reveal>
+            <h2 id="sec-trending" className="flex items-center gap-1.5 text-xl font-bold">
+              <span aria-hidden className="text-life-rising">
+                <FlameMark />
+              </span>
+              {SECTION_TITLES.trending}
+            </h2>
+            {/* 급상승 스트립: 가로 스크롤 + 생명게이지 강조 유지 */}
+            <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+              {trending.map((meme) => (
+                <li key={meme.id} className="w-40 shrink-0 snap-start">
+                  <MemeCard meme={meme} />
+                </li>
+              ))}
+            </ul>
+          </Reveal>
         </section>
       )}
 
       {showBeginners && (
         <section aria-labelledby="sec-beginner" className="mt-8">
-          <h2 id="sec-beginner" className="text-xl font-bold">
-            {SECTION_TITLES.forBeginners}
-          </h2>
-          <MemeGrid memes={beginners} />
+          <Reveal>
+            <h2 id="sec-beginner" className="text-xl font-bold">
+              {SECTION_TITLES.forBeginners}
+            </h2>
+          </Reveal>
+          {/* 큐레이션 그리드: 스크롤 리빌 + 카드 스태거 진입 */}
+          <MotionList className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {beginners.map((meme) => (
+              <MemeCard key={meme.id} meme={meme} />
+            ))}
+          </MotionList>
         </section>
       )}
 
@@ -92,18 +72,6 @@ export default async function Home() {
         </section>
       )}
     </main>
-  );
-}
-
-function MemeGrid({ memes }: { memes: MemeListItem[] }) {
-  return (
-    <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
-      {memes.map((meme) => (
-        <li key={meme.id} className="min-w-0">
-          <MemeCard meme={meme} />
-        </li>
-      ))}
-    </ul>
   );
 }
 

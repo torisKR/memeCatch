@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { REACTIONS, type ReactionType } from "@/lib/labels";
 import { flags } from "@/lib/flags";
 import { createClient } from "@/lib/supabase/client";
 
 const REACTION_KEYS = Object.keys(REACTIONS) as ReactionType[];
+const POP_SPRING = { type: "spring", stiffness: 400, damping: 25 } as const;
 
 /**
  * 반응 바 — labels.REACTIONS 6종.
@@ -23,6 +25,11 @@ export function ReactionBar({
     useState<Partial<Record<ReactionType, number>>>(initialCounts);
   const [mine, setMine] = useState<Set<ReactionType>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
+  // 탭 시 이모지 pop을 트리거하는 리마운트 카운터(키별)
+  const [popTicks, setPopTicks] = useState<Partial<Record<ReactionType, number>>>(
+    {}
+  );
+  const reduce = useReducedMotion();
 
   function showNotice(message: string) {
     setNotice(message);
@@ -35,6 +42,8 @@ export function ReactionBar({
       return;
     }
     const wasMine = mine.has(reaction);
+    // 이모지 pop 트리거(리마운트)
+    setPopTicks((prev) => ({ ...prev, [reaction]: (prev[reaction] ?? 0) + 1 }));
     // 낙관적 반영
     setMine((prev) => {
       const next = new Set(prev);
@@ -89,28 +98,54 @@ export function ReactionBar({
           const meta = REACTIONS[key];
           const active = mine.has(key);
           const count = counts[key] ?? 0;
+          const tick = popTicks[key] ?? 0;
           return (
-            <button
+            <motion.button
               key={key}
               type="button"
               onClick={() => toggle(key)}
               title={readOnly ? "준비 중" : undefined}
               aria-disabled={readOnly}
               aria-pressed={readOnly ? undefined : active}
+              whileTap={reduce ? undefined : { scale: 0.97 }}
               className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-base font-medium transition-colors ${
                 active
                   ? "border-accent bg-accent-soft text-accent"
                   : "border-border bg-surface-2 text-foreground"
               } ${readOnly ? "opacity-70" : ""}`}
             >
-              <span aria-hidden>{meta.emoji}</span>
+              {/* 탭 시 pop: tick 변경으로 리마운트되며 scale 1.3→1 spring */}
+              <motion.span
+                key={tick}
+                aria-hidden
+                className="inline-block"
+                initial={reduce ? false : { scale: 1.3 }}
+                animate={{ scale: 1 }}
+                transition={POP_SPRING}
+              >
+                {meta.emoji}
+              </motion.span>
               {meta.user}
               {count > 0 && (
-                <span className={active ? "font-bold" : "text-muted"}>
-                  {count}
+                <span
+                  className={`inline-flex overflow-hidden ${
+                    active ? "font-bold" : "text-muted"
+                  }`}
+                >
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.span
+                      key={count}
+                      initial={reduce ? false : { y: -10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={reduce ? { opacity: 0 } : { y: 10, opacity: 0 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                    >
+                      {count}
+                    </motion.span>
+                  </AnimatePresence>
                 </span>
               )}
-            </button>
+            </motion.button>
           );
         })}
       </div>

@@ -1,0 +1,171 @@
+# 밈캐치 디자인 시스템 (DESIGN.md)
+
+> 한국 밈 트렌드 사전 · 모바일 우선 반응형 PWA
+> 생성: ui-ux-pro-max(Design Intelligence) + frontend-design + ui-styling 종합
+> 원칙: **의도적이고 개성 있게**(템플릿 회피), **인터랙티브·모던**, 접근성 우선
+
+---
+
+## 1. 브랜드 아이덴티티
+
+**한 줄**: "그 밈, 3초 안에 알려드려요." — 검색하면 뜻·유래·**지금 써도 되는지**까지.
+
+**성격**: 위트 있지만 신뢰할 수 있는 사전. 놀리지 않고 따라잡게 도와준다(포용형 톤). 젊고 에너지 있되 과하지 않게.
+
+**스타일 방향**: Vibrant & Block-based — 볼드한 타이포, 블록 레이아웃, 높은 색 대비, 카드 중심. 단 보라 그라디언트·아이콘 원형 3열·이모지 아이콘 **금지**(AI 슬롭 회피).
+
+### 두 개의 시그니처 (이 서비스를 기억하게 만드는 것)
+1. **사용 안전 신호등** 🟢🟡⚪🔴 — "지금 써도 되는가"를 색+아이콘+텍스트로. 카드·상세 최상단 1급 시그널. 나무위키·AI가 못 하는 유일한 차별화.
+2. **밈 생명 게이지** — 생애주기(급상승→유행→식는 중→추억)를 불꽃 미터로. 급상승은 타오르는 불꽃 애니메이션, 추억 밈은 사그라든 재. 카드·상세·공유 이미지에 일관 적용.
+
+---
+
+## 2. 컬러 토큰 (라이트/다크 쌍, WCAG AA)
+
+색은 CSS 변수로만 사용. 컴포넌트에 raw hex 금지.
+
+```
+─ 브랜드 ─────────────────────────
+--accent          불꽃 오렌지  L #ff5c38 / D #ff6b47   (시그니처, 보라 금지)
+--accent-soft     오렌지 배경  L #ffe8e1 / D #3a2018
+
+─ 표면 ───────────────────────────
+--background       L #fdfcfa / D #131316
+--foreground       L #1a1a1f / D #f0efec
+--surface          L #ffffff / D #1c1c21
+--surface-2        L #f4f2ee / D #26262c
+--border           L #e6e2da / D #34343c
+--muted            L #6b6860 / D #9c99a3
+
+─ 안전 신호등 (색+아이콘 병행, 색약 대응) ──
+--safety-green   써도 됨    ● L #1a9a5b / D #3ecf85
+--safety-yellow  맥락 주의  ▲ L #b57d00 / D #e8b53a
+--safety-gray    이미 늦음  ◌ L #71717a / D #a1a1aa
+--safety-red     쓰면 위험  ✕ L #d63333 / D #ff6b6b
+
+─ 생명 게이지 (불꽃 그라디언트) ──────
+--life-rising    급상승  L #ff5c38 / D #ff6b47   (점화 애니메이션)
+--life-active    유행중  L #ff9d2e / D #ffb054
+--life-cooling   식는중  L #8fa3b8 / D #7d93aa
+--life-archived  추억밈  L #b9b3a8 / D #6f6a60
+
+--sent-controversial  논쟁중  #7c4dcc (status 아닌 보조 칩)
+```
+
+---
+
+## 3. 타이포그래피
+
+**폰트**: Pretendard Variable (한국어 최적, 시스템 폰트 금지). CDN 프리로드.
+
+```
+--font-sans: "Pretendard Variable", Pretendard, -apple-system,
+             "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+```
+
+| 역할 | 크기 | 무게 | 용도 |
+|---|---|---|---|
+| display | 32~40px | 800 | 홈 히어로 헤드라인 |
+| title | 20~24px | 700 | 정답 카드 밈명, 섹션 |
+| subtitle | 18px | 600 | 카드 밈명 |
+| body | 16px | 400 | 본문(모바일 최소 16px) |
+| label | 14px | 500 | 배지, 메타 |
+| caption | 13px | 400 | 보조 텍스트 |
+
+규칙: `word-break: keep-all`, line-height 1.6, 본문 16px+, 표제어 2줄 말줄임, 해요체.
+
+---
+
+## 4. 스페이싱·레이아웃
+
+- 4/8px 리듬. 섹션 간격 32~48px, 카드 내 12~16px.
+- 브레이크포인트: 375 / 768 / 1024 / 1440. 모바일 우선.
+- 컨테이너 max-w: 본문 `max-w-3xl`(768px), 넓은 피드 `max-w-5xl`.
+- 하단 탭 4개(홈/랭킹/제보 강조/MY), safe-area 존중. `/admin`은 데스크톱 사이드바.
+- 라운드: 카드 16px(`rounded-2xl`), 배지 999px(pill), 버튼 12px.
+- z-index: 0 / 10(sticky) / 40(bottom-nav) / 100(modal) / 1000(toast).
+
+---
+
+## 5. 모션 시스템 (Complex tier — 인터랙티브·모던의 핵심)
+
+라이브러리: **motion**(framer-motion) + CSS. 모든 모션은 `prefers-reduced-motion` 존중.
+
+| 상황 | 스펙 | 구현 |
+|---|---|---|
+| 카드 진입 | opacity 0→1, y 12→0, 스태거 40ms | motion `whileInView`, once |
+| 카드 호버 | y -4, scale 1.02, 그림자 상승, 250ms ease-out | motion `whileHover` |
+| 프레스 | scale 0.97 (탭 피드백 <100ms) | motion `whileTap` / `active:scale-95` |
+| 신호등 | 마운트 시 색 글로우 펄스 1회 | CSS keyframes |
+| 생명 게이지(급상승) | 불꽃 flicker 무한 루프 | CSS `flame-flicker` |
+| 페이지 전환 | fade+slide 300ms | motion `AnimatePresence` |
+| 검색 히어로 | 진입 시 헤드라인 단어 스태거 | motion stagger |
+| 스크롤 리빌 | opacity+y 350ms, 뷰포트 진입 | motion `whileInView` |
+| 반응 버튼 | 탭 시 pop(scale 1.3→1) + 숫자 롤 | motion spring |
+
+**타이밍 토큰**: micro 150~250ms, transition 300~400ms, 진입 ease-out / 이탈 ease-in(60~70% 짧게). spring: `{ stiffness: 400, damping: 25 }`.
+
+**금지**: width/height 애니메이션(transform/opacity만), 500ms 초과, 화면당 focal 모션 1~2개 초과, reduced-motion 무시.
+
+---
+
+## 6. 핵심 컴포넌트 스펙
+
+### 안전 신호등 배지 `SafetyBadge`
+- 색 원 + 아이콘(●▲◌✕) + 텍스트("써도 됨"). 색만으로 구분 금지.
+- 대형(정답 카드): 아이콘+텍스트+짧은 설명. 소형(카드): pill 하나.
+- 마운트 시 해당 색 글로우 펄스 1회로 시선 유도.
+
+### 밈 생명 게이지 `LifeGauge`
+- 불꽃 4칸 SVG 미터. flame 값(1~4)만큼 채움.
+- rising: 최상단 불꽃 flicker 애니메이션(`.flame-rising`). archived: 회색 재.
+- 카드는 소형(아이콘), 상세는 대형(라벨+칸).
+
+### 밈 카드 `MemeCard` (3단 위계)
+1. **밈명 + 한 줄 뜻** (텍스트가 주인공, 18px 600)
+2. **배지 1개**(신호등) + 생명 게이지 소형
+3. 썸네일(4:5 고정, object-cover, 없으면 카테고리 컬러 플레이스홀더+밈명 타이포)
+- 호버: 리프트+스케일. 진입: 스태거. 전체 클릭 영역.
+
+### 정답 카드 `AnswerCard` (상세 최상단, 스크롤 없이)
+- 밈명(title) + 한 줄 뜻(summary) + 생애주기 배지 + **대형 안전 신호등**
+- 375px 첫 뷰포트에 4요소 노출. 임베드는 그 아래 접힌 썸네일.
+
+### 검색 히어로 `SearchHero` (홈 최상단)
+- 대형 검색 인풋, placeholder "무슨 밈인지 검색해보세요", 불꽃 오렌지 포커스 링.
+- 헤드라인 "그 밈, 3초 안에 알려드려요" 단어 스태거 진입.
+- 인기 검색어 칩(가로 스크롤).
+
+### 반응 바 `ReactionBar`
+- 6종(이해됨/웃김/이제 알았다/이미 늦었다/아직 살아있다/쓰면 위험) 이모지+라벨.
+- 탭 시 pop 애니메이션 + 숫자 롤. 낙관적 토글.
+
+---
+
+## 7. 인터랙션·접근성 원칙
+
+- 터치 타깃 44px+, 8px+ 간격. 클릭 요소 `cursor-pointer` + `active` 상태.
+- 포커스 링 유지(2px accent). 키보드 내비 = 시각 순서.
+- 신호등·생명게이지는 색+아이콘+텍스트 병행(색약).
+- 모든 화면 로딩(스켈레톤)/빈/에러 상태.
+- 다크 모드 시스템 추종, 양쪽 대비 4.5:1 독립 검증.
+- 이미지 지연 로드 + aspect-ratio 예약(CLS<0.1). 임베드 지연 로드.
+
+---
+
+## 8. AI 슬롭 블랙리스트 (이 프로젝트에서 절대 금지)
+- ❌ 보라/인디고 그라디언트 배경 (→ 불꽃 오렌지)
+- ❌ 아이콘-원-3열 피처 그리드
+- ❌ 전부 가운데 정렬
+- ❌ 이모지를 구조 아이콘으로(반응 버튼 정의 이모지만 예외)
+- ❌ 시스템 폰트 (→ Pretendard)
+- ❌ 장식용 블롭·물결 SVG
+- ❌ 카드마다 왼쪽 컬러 보더
+
+---
+
+## 9. 페이지별 오버라이드
+- **홈**: 검색 히어로(스태거) → 급상승 스트립(가로 스크롤, 생명게이지 강조) → 큐레이션 그리드(스크롤 리빌 스태거).
+- **상세**: 정답 카드(신호등 펄스) → 임베드 → 상황별 사용 가이드 → 관련 밈.
+- **검색**: 실시간 결과 페이드 크로스, 무결과→제보 CTA.
+- **관리자**: 모션 최소(유틸리티 우선), 데스크톱 사이드바.

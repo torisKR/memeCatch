@@ -45,3 +45,8 @@ next-env.d.ts
 /data/memes/clean/
 /data/memes/remote-sql/
 /data/memes/seed-sql/
+
+# serwist 빌드 생성물 (빌드 시 재생성)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js

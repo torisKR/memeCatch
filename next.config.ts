@@ -8,7 +8,8 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
+  outputFileTracingRoot: __dirname,
 };
 
 export default withSerwist(nextConfig);

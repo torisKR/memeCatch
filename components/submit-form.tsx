@@ -63,11 +63,13 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
       const raw = window.localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const draft = JSON.parse(raw) as Partial<DraftFields>;
-        setFields((prev) => ({
+        // 외부 스토어(localStorage) 초안 복원은 마운트 후 1회 동기화 — effect가 정석
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFields({
           ...EMPTY_FIELDS,
           ...draft,
           name: defaultName || draft.name || "",
-        }));
+        });
         if (Object.values(draft).some((v) => typeof v === "string" && v.trim())) {
           setRestored(true);
         }
@@ -107,12 +109,15 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
   // 실시간 중복 검사 — 이름 입력 디바운스 후 search_memes
   useEffect(() => {
     const query = fields.name.trim();
+    // 사용자 입력(fields.name)에 반응하는 디바운스 검색 — 입력 동기화 effect(정석)
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (query.length < 2) {
       setDups([]);
       setDupLoading(false);
       return;
     }
     setDupLoading(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
     const seq = ++searchSeq.current;
     const timer = setTimeout(async () => {
       const supabase = createClient();

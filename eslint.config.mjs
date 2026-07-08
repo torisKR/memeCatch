@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 생성물·Node 스크립트·데이터는 앱 소스가 아니므로 lint 제외
+    "public/sw.js",
+    "scripts/**",
+    "data/**",
   ]),
 ]);
 

@@ -41,6 +41,8 @@ export function CommentForm({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(draftKey(memeId, parentId));
+      // 외부 스토어(localStorage) 복원은 마운트 후 1회 동기화 — effect가 정석 패턴
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved) setBody(saved);
     } catch {
       // localStorage 접근 불가 환경은 조용히 무시

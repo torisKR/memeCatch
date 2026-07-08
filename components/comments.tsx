@@ -59,6 +59,8 @@ export function Comments({ memeId }: { memeId: string }) {
   }, [memeId]);
 
   useEffect(() => {
+    // 비동기 데이터 페칭 후 setState — await 이후라 cascading render 아님(규칙 오탐)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (flags.communityEnabled) void fetchComments();
   }, [fetchComments]);
 

@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { REACTIONS, type ReactionType } from "@/lib/labels";
 import { flags } from "@/lib/flags";
 import { createClient } from "@/lib/supabase/client";
+import { LoginGate } from "@/components/login-gate";
 
 const REACTION_KEYS = Object.keys(REACTIONS) as ReactionType[];
 const POP_SPRING = { type: "spring", stiffness: 400, damping: 25 } as const;
+const REACTION_GATE_MESSAGE = "로그인하면 반응을 남길 수 있어요.";
 
 /**
  * 반응 바 — labels.REACTIONS 6종.
@@ -29,7 +32,26 @@ export function ReactionBar({
   const [popTicks, setPopTicks] = useState<Partial<Record<ReactionType, number>>>(
     {}
   );
+  // null = 아직 모름(마운트 인증 확인 전)
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [gateOpen, setGateOpen] = useState(false);
   const reduce = useReducedMotion();
+  const pathname = usePathname();
+
+  // 로그인 여부 (커뮤니티 활성 시에만 필요 — 비활성이면 조회 생략)
+  useEffect(() => {
+    if (!flags.communityEnabled) return;
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+      if (!cancelled) setLoggedIn(!!user);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function showNotice(message: string) {
     setNotice(message);
@@ -39,6 +61,11 @@ export function ReactionBar({
   async function toggle(reaction: ReactionType) {
     if (!flags.communityEnabled) {
       showNotice("반응 기능은 준비 중이에요.");
+      return;
+    }
+    // 비로그인 → 낙관적 토글 대신 로그인 유도 시트
+    if (loggedIn === false) {
+      setGateOpen(true);
       return;
     }
     const wasMine = mine.has(reaction);
@@ -72,12 +99,16 @@ export function ReactionBar({
         ...prev,
         [reaction]: Math.max(0, (prev[reaction] ?? 0) + (wasMine ? 1 : -1)),
       }));
-      showNotice(
-        error.message.includes("login_required")
-          ? "로그인하면 반응을 남길 수 있어요."
-          : "잠시 후 다시 시도해 주세요."
-      );
+      // 마운트 확인 전 탭 등으로 세션이 없던 경우도 게이트로 유도
+      if (error.message.includes("login_required")) {
+        setLoggedIn(false);
+        setGateOpen(true);
+        return;
+      }
+      showNotice("잠시 후 다시 시도해 주세요.");
+      return;
     }
+    setLoggedIn(true);
   }
 
   const readOnly = !flags.communityEnabled;
@@ -152,6 +183,12 @@ export function ReactionBar({
       <p role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-muted">
         {notice}
       </p>
+      <LoginGate
+        open={gateOpen}
+        onClose={() => setGateOpen(false)}
+        message={REACTION_GATE_MESSAGE}
+        next={pathname}
+      />
     </section>
   );
 }

@@ -1,30 +1,17 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
 
 /**
  * 전역 헤더 — DESIGN.md §10.
  * sticky top-0, 반투명 배경 + blur. 좌: 밈캐치 불꽃 워드마크(이모지 금지, SVG 불꽃).
  * 우: 검색 진입(모바일=아이콘→/search, 데스크톱=미니 검색바→/search) + <AuthMenu/>.
- * 서버 컴포넌트로 세션을 조회해 로그인 상태(nickname)를 AuthMenu(클라)에 전달한다.
+ *
+ * 순수 정적 컴포넌트 — 쿠키/세션을 서버에서 읽지 않는다.
+ * (layout에서 쿠키를 읽으면 모든 페이지가 dynamic으로 강등돼 상세/홈 ISR이
+ *  DYNAMIC_SERVER_USAGE로 깨진다. 세션은 AuthMenu가 클라이언트에서 조회한다.)
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
-export async function GlobalHeader() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let nickname: string | null = null;
-  if (user) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("nickname")
-      .eq("id", user.id)
-      .single();
-    nickname = data?.nickname ?? null;
-  }
-
+export function GlobalHeader() {
   return (
     <HideOnAdmin>
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -72,7 +59,7 @@ export async function GlobalHeader() {
               <SearchIcon className="h-5 w-5" />
             </Link>
 
-            <AuthMenu nickname={nickname} />
+            <AuthMenu />
           </div>
         </div>
       </header>

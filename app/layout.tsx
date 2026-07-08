@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/bottom-nav";
+import { GlobalHeader } from "@/components/global-header";
 import { PwaInstall } from "@/components/pwa-install";
 import "./globals.css";
 
@@ -45,6 +46,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-dvh pb-16 md:pb-0">
+        <GlobalHeader />
         {children}
         <BottomNav />
         <PwaInstall />

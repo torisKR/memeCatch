@@ -10,7 +10,7 @@ const TABS: {
   emphasized?: boolean;
 }[] = [
   { href: "/", label: "홈", icon: HomeIcon },
-  { href: "/rankings", label: "랭킹", icon: RankIcon },
+  { href: "/explore", label: "탐색", icon: CompassIcon },
   { href: "/submit", label: "제보", icon: PlusIcon, emphasized: true },
   { href: "/my", label: "MY", icon: UserIcon },
 ];
@@ -62,10 +62,11 @@ function HomeIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-function RankIcon({ className }: { className?: string }) {
+function CompassIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M5 20V10M12 20V4M19 20v-7" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
     </svg>
   );
 }

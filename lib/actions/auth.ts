@@ -100,6 +100,43 @@ export async function signUp(
     };
   }
 
+  // 가입 완료 → 온보딩(관심 카테고리·연령대)으로. 온보딩에서 next로 복귀.
+  redirect(`/onboarding?next=${encodeURIComponent(next)}`);
+}
+
+const AGE_GROUPS = ["10s", "20s", "30s", "40s", "50s+"] as const;
+const CATEGORIES = [
+  "phrase",
+  "dance",
+  "song",
+  "image",
+  "comment",
+  "challenge",
+] as const;
+
+/** 온보딩 — 관심 카테고리(다중) + 연령대(선택) 저장. Skip 가능. */
+export async function completeOnboarding(formData: FormData): Promise<void> {
+  const next = safeNext(formData.get("next"));
+  const interests = formData
+    .getAll("interests")
+    .map(String)
+    .filter((c) => (CATEGORIES as readonly string[]).includes(c));
+  const rawAge = String(formData.get("age_group") ?? "");
+  const age_group = (AGE_GROUPS as readonly string[]).includes(rawAge)
+    ? rawAge
+    : null;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("profiles")
+    .update({ interests, age_group })
+    .eq("id", user.id);
+
   redirect(next);
 }
 

@@ -1,0 +1,292 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS } from "@/lib/labels";
+
+/**
+ * 레인 B 여정2 — 탐색 필터 바 (URL 쿼리 동기화, deep link/뒤로가기 보존).
+ * - 정렬 세그먼트(급상승·최신·인기·논쟁 중)
+ * - 카테고리 칩(다중, 가로 스크롤)
+ * - 접이식 상세 필터(난이도·연도대·미디어, 각 단일)
+ * - 필터 초기화
+ * 선택 시 router.push({ scroll:false })로 쿼리만 갱신 → 서버가 새 결과 스트리밍.
+ */
+
+const SORTS = [
+  { key: "trending", label: "급상승" },
+  { key: "recent", label: "최신" },
+  { key: "popular", label: "인기" },
+  { key: "controversial", label: "논쟁 중" },
+] as const;
+
+const YEARS = [
+  { key: "2020s", label: "2020년대" },
+  { key: "2010s", label: "2010년대" },
+  { key: "2000s", label: "2000년대" },
+] as const;
+
+const MEDIA = [
+  { key: "image", label: "짤" },
+  { key: "video", label: "영상" },
+  { key: "audio", label: "오디오" },
+  { key: "text", label: "텍스트" },
+  { key: "embed", label: "임베드" },
+] as const;
+
+const CATEGORY_ENTRIES = Object.entries(CATEGORIES) as [
+  keyof typeof CATEGORIES,
+  { user: string },
+][];
+const DIFFICULTY_ENTRIES = Object.entries(DIFFICULTY) as [
+  keyof typeof DIFFICULTY,
+  { user: string },
+][];
+const LIFECYCLE_ENTRIES = Object.entries(LIFECYCLE_STATUS) as [
+  keyof typeof LIFECYCLE_STATUS,
+  { user: string },
+][];
+
+const chipBase =
+  "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const chipOff = "border-border bg-surface text-muted hover:border-accent hover:text-accent";
+const chipOn = "border-accent bg-accent-soft font-semibold text-accent";
+
+export function ExploreFilters() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [open, setOpen] = useState(false);
+
+  const activeCategories = searchParams.getAll("category");
+  const sort = searchParams.get("sort") ?? "trending";
+  const difficulty = searchParams.get("difficulty") ?? "";
+  const year = searchParams.get("year") ?? "";
+  const media = searchParams.get("media") ?? "";
+  const lifecycle = searchParams.get("lifecycle") ?? "";
+
+  const hasFilters =
+    activeCategories.length > 0 ||
+    !!difficulty ||
+    !!year ||
+    !!media ||
+    !!lifecycle ||
+    (sort !== "trending" && !!searchParams.get("sort"));
+
+  const pushParams = useCallback(
+    (next: URLSearchParams) => {
+      const qs = next.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname]
+  );
+
+  // 단일 값 토글 — 같은 값 다시 누르면 해제
+  const toggleSingle = useCallback(
+    (key: string, value: string) => {
+      const next = new URLSearchParams(searchParams);
+      if (next.get(key) === value) next.delete(key);
+      else next.set(key, value);
+      pushParams(next);
+    },
+    [searchParams, pushParams]
+  );
+
+  // 다중 값 토글(카테고리)
+  const toggleMulti = useCallback(
+    (key: string, value: string) => {
+      const next = new URLSearchParams(searchParams);
+      const current = next.getAll(key);
+      next.delete(key);
+      const updated = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      for (const v of updated) next.append(key, v);
+      pushParams(next);
+    },
+    [searchParams, pushParams]
+  );
+
+  const setSort = useCallback(
+    (value: string) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("sort", value);
+      pushParams(next);
+    },
+    [searchParams, pushParams]
+  );
+
+  const reset = useCallback(() => {
+    router.push(pathname, { scroll: false });
+  }, [router, pathname]);
+
+  return (
+    <div className="mt-4 space-y-3">
+      {/* 정렬 세그먼트 */}
+      <div
+        role="tablist"
+        aria-label="정렬"
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+      >
+        {SORTS.map((s) => {
+          const on = sort === s.key;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setSort(s.key)}
+              className={`${chipBase} ${on ? chipOn : chipOff}`}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 카테고리 칩(다중) */}
+      <div
+        aria-label="카테고리"
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+      >
+        {CATEGORY_ENTRIES.map(([key, meta]) => {
+          const on = activeCategories.includes(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggleMulti("category", key)}
+              className={`${chipBase} ${on ? chipOn : chipOff}`}
+            >
+              {meta.user}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 상세 필터 토글 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className={`${chipBase} ${
+            difficulty || year || media || lifecycle ? chipOn : chipOff
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M3 6h18M6 12h12M10 18h4" />
+          </svg>
+          상세 필터
+        </button>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-muted underline-offset-2 transition-colors hover:text-accent hover:underline active:scale-[0.97]"
+          >
+            필터 초기화
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div className="space-y-3 rounded-2xl border border-border bg-surface-2 p-4">
+          <FilterRow label="난이도">
+            {DIFFICULTY_ENTRIES.map(([key, meta]) => (
+              <ChipBtn
+                key={key}
+                on={difficulty === key}
+                onClick={() => toggleSingle("difficulty", key)}
+              >
+                {meta.user}
+              </ChipBtn>
+            ))}
+          </FilterRow>
+
+          <FilterRow label="생애주기">
+            {LIFECYCLE_ENTRIES.map(([key, meta]) => (
+              <ChipBtn
+                key={key}
+                on={lifecycle === key}
+                onClick={() => toggleSingle("lifecycle", key)}
+              >
+                {meta.user}
+              </ChipBtn>
+            ))}
+          </FilterRow>
+
+          <FilterRow label="연도대">
+            {YEARS.map((y) => (
+              <ChipBtn
+                key={y.key}
+                on={year === y.key}
+                onClick={() => toggleSingle("year", y.key)}
+              >
+                {y.label}
+              </ChipBtn>
+            ))}
+          </FilterRow>
+
+          <FilterRow label="미디어">
+            {MEDIA.map((m) => (
+              <ChipBtn
+                key={m.key}
+                on={media === m.key}
+                onClick={() => toggleSingle("media", m.key)}
+              >
+                {m.label}
+              </ChipBtn>
+            ))}
+          </FilterRow>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-semibold text-muted">{label}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function ChipBtn({
+  on,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={`${chipBase} ${on ? chipOn : chipOff}`}
+    >
+      {children}
+    </button>
+  );
+}

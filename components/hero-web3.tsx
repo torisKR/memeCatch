@@ -223,7 +223,7 @@ export function HeroWeb3({
               placeholder="무슨 밈인지 검색해보세요"
               autoComplete="off"
               enterKeyHint="search"
-              className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/40 outline-none backdrop-blur-md transition-colors duration-200 focus:border-[--flame-400]"
+              className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/50 outline-none backdrop-blur-md transition-colors duration-200 focus:border-[--flame-400]"
             />
           </div>
         </motion.form>
@@ -242,7 +242,7 @@ export function HeroWeb3({
                 <li key={term} className="shrink-0 snap-start">
                   <Link
                     href={`/search?q=${encodeURIComponent(term)}`}
-                    className="inline-flex min-h-11 items-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-sm font-medium text-white/75 backdrop-blur-sm transition-all hover:border-[--flame-400]/60 hover:bg-[--flame-500]/15 hover:text-white active:scale-[0.96]"
+                    className="inline-flex min-h-11 items-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-sm font-medium text-white/75 backdrop-blur-sm transition-[color,background-color,border-color,transform] duration-200 hover:border-[--flame-400]/60 hover:bg-[--flame-500]/15 hover:text-white active:scale-[0.96]"
                   >
                     {term}
                   </Link>
@@ -266,11 +266,24 @@ export function HeroWeb3({
                 href={memePathFrom(m.short_id, m.slug)}
                 aria-hidden={i >= trending.length || undefined}
                 tabIndex={i >= trending.length ? -1 : undefined}
-                className="flex shrink-0 items-center gap-2 text-sm text-white/70 transition-colors hover:text-white"
+                className="-my-2 flex shrink-0 items-center gap-2 py-2 text-sm text-white/70 transition-colors hover:text-white"
               >
-                <span aria-hidden className="text-[--flame-400]">▲</span>
+                {/* 상승 아이콘 — 텍스트 글리프 대신 SVG(스트로크 통일) */}
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                  className="size-3.5 shrink-0 text-[--flame-400]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 17 10 11l4 4 6-7" />
+                  <path d="M15 8h5v5" />
+                </svg>
                 <span className="font-semibold">{m.title}</span>
-                <span className="text-xs text-white/40">
+                <span className="text-xs text-white/55">
                   {LIFECYCLE_STATUS[m.lifecycle_status]?.user ?? ""}
                 </span>
               </Link>

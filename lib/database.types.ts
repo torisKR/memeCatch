@@ -72,6 +72,129 @@ export type Database = {
           },
         ]
       }
+      community_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_post_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          body: string
+          comment_count: number
+          created_at: string
+          id: string
+          like_count: number
+          meme_id: string | null
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          comment_count?: number
+          created_at?: string
+          id?: string
+          like_count?: number
+          meme_id?: string | null
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          comment_count?: number
+          created_at?: string
+          id?: string
+          like_count?: number
+          meme_id?: string | null
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discussion_reactions: {
         Row: {
           discussion_id: string
@@ -850,6 +973,14 @@ export type Database = {
         Returns: undefined
       }
       compute_trend_scores: { Args: never; Returns: undefined }
+      create_community_comment: {
+        Args: { p_body: string; p_post_id: string }
+        Returns: string
+      }
+      create_community_post: {
+        Args: { p_body: string; p_meme_id?: string; p_title: string }
+        Returns: string
+      }
       extract_chosung: { Args: { input: string }; Returns: string }
       file_report: {
         Args: {
@@ -860,6 +991,42 @@ export type Database = {
         Returns: string
       }
       gen_short_id: { Args: never; Returns: string }
+      get_daily_top_memes: {
+        Args: { p_limit?: number }
+        Returns: {
+          aliases: string[]
+          category: Database["public"]["Enums"]["meme_category"]
+          caution: string | null
+          created_at: string
+          description: string
+          difficulty: Database["public"]["Enums"]["meme_difficulty"]
+          id: string
+          lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
+          media_type: Database["public"]["Enums"]["media_type"]
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
+          origin: string
+          origin_year: number | null
+          published_at: string | null
+          safety_level: Database["public"]["Enums"]["safety_level"]
+          sentiment: Database["public"]["Enums"]["meme_sentiment"]
+          short_id: string
+          slug: string
+          submitted_by: string | null
+          summary: string
+          title: string
+          title_chosung: string | null
+          trend_score: number
+          updated_at: string
+          usage_context: Json
+          usage_note: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "memes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       increment_view: {
         Args: { p_meme_id: string; p_session_hash: string }
         Returns: undefined
@@ -918,6 +1085,19 @@ export type Database = {
         }
         Returns: string
       }
+      submit_meme_v2: {
+        Args: {
+          p_attachment_path?: string
+          p_description: string
+          p_guess: string
+          p_name: string
+          p_seen_at: string
+          p_tags: string[]
+          p_url: string
+        }
+        Returns: string
+      }
+      toggle_post_like: { Args: { p_post_id: string }; Returns: boolean }
       toggle_reaction: {
         Args: {
           p_meme_id: string

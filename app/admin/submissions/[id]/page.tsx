@@ -108,6 +108,27 @@ export default async function SubmissionDetailPage({
               <dd className="mt-0.5 whitespace-pre-wrap">{submission.guess_reason}</dd>
             </div>
           )}
+          {submission.attachment_path && (
+            <div className="sm:col-span-2">
+              <dt className="text-muted">첨부 이미지</dt>
+              <dd className="mt-2">
+                <a
+                  href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${submission.attachment_path}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-block"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${submission.attachment_path}`}
+                    alt={`${submission.name} 제보 첨부 이미지`}
+                    loading="lazy"
+                    className="max-h-80 w-auto max-w-full rounded-xl border border-border object-contain"
+                  />
+                </a>
+              </dd>
+            </div>
+          )}
           {submission.tags.length > 0 && (
             <div className="sm:col-span-2">
               <dt className="text-muted">태그</dt>

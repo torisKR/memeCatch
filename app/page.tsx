@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { SECTION_TITLES } from "@/lib/labels";
-import { getBeginnerMemes, getTrendingMemes } from "@/lib/queries";
+import { getBeginnerMemes, getTotalMemeCount, getTrendingMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
 import { TrendingCarousel } from "@/components/trending-carousel";
 import { WebSiteJsonLd } from "@/components/json-ld";
-import { SearchHero } from "@/components/search-hero";
+import { HeroWeb3 } from "@/components/hero-web3";
 // 레인 B 모션 래퍼(클라이언트): 스크롤 리빌 + 스태거 리스트
 import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
@@ -13,9 +13,10 @@ import { Reveal } from "@/components/reveal";
 export const revalidate = 300;
 
 export default async function Home() {
-  const [trending, beginners] = await Promise.all([
+  const [trending, beginners, totalCount] = await Promise.all([
     getTrendingMemes(10),
     getBeginnerMemes(8),
+    getTotalMemeCount(),
   ]);
   // 섹션당 3개 미만이면 섹션 숨김
   const showTrending = trending.length >= 3;
@@ -24,9 +25,15 @@ export default async function Home() {
   const popularTerms = trending.slice(0, 8).map((m) => m.title);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 pb-12">
+    <main className="pb-12">
       <WebSiteJsonLd />
-      <SearchHero popularTerms={popularTerms} />
+      {/* 풀블리드 web3 히어로 — 컨테이너 밖 */}
+      <HeroWeb3
+        trending={trending}
+        totalCount={totalCount}
+        popularTerms={popularTerms}
+      />
+      <div className="mx-auto max-w-3xl px-4">
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">
@@ -40,7 +47,7 @@ export default async function Home() {
               </h2>
               <Link
                 href="/explore"
-                className="shrink-0 rounded-md py-1 text-sm font-medium text-muted transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="flex min-h-11 shrink-0 items-center rounded-md py-1 text-sm font-medium text-muted transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 전체 보기 <span aria-hidden>→</span>
               </Link>
@@ -92,6 +99,7 @@ export default async function Home() {
           </p>
         </section>
       )}
+      </div>
     </main>
   );
 }

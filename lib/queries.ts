@@ -177,3 +177,18 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeRow[]>
     return [];
   }
 }
+
+/** 공개 밈 총 수 — 히어로 카운트업용(head 카운트, 행 미전송) */
+export async function getTotalMemeCount(): Promise<number> {
+  try {
+    const supabase = createStaticClient();
+    const { count, error } = await supabase
+      .from("memes")
+      .select("id", { count: "exact", head: true })
+      .in("moderation_status", ["approved", "limited"]);
+    if (error || count == null) return 0;
+    return count;
+  } catch {
+    return 0;
+  }
+}

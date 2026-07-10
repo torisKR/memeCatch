@@ -226,3 +226,37 @@ body {
   --color-cream: var(--cream);
   --color-surface-3: var(--surface-3);
 }
+
+/* ── 홈 히어로 v3 (web3 인터랙티브) — DESIGN.md §12 ─────────────── */
+/* 오로라 드리프트: transform만 애니메이션(리플로 없음) */
+@keyframes hero-aurora-a {
+  0%   { transform: translate3d(-8%, -6%, 0) scale(1); }
+  50%  { transform: translate3d(10%, 8%, 0) scale(1.15); }
+  100% { transform: translate3d(-8%, -6%, 0) scale(1); }
+}
+@keyframes hero-aurora-b {
+  0%   { transform: translate3d(12%, 10%, 0) scale(1.1); }
+  50%  { transform: translate3d(-10%, -8%, 0) scale(0.95); }
+  100% { transform: translate3d(12%, 10%, 0) scale(1.1); }
+}
+/* 헤드라인 그라디언트 시머 스윕 */
+@keyframes hero-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+/* 티커 마퀴 — 리스트 2벌 복제 후 -50% 순환 */
+@keyframes hero-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.hero-marquee-track {
+  animation: hero-marquee 36s linear infinite;
+}
+.hero-marquee:hover .hero-marquee-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-aurora-a, .hero-aurora-b { animation: none !important; }
+  .hero-shimmer-text { animation: none !important; }
+  .hero-marquee-track { animation: none !important; }
+}

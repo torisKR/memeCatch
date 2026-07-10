@@ -272,3 +272,27 @@ challenge 챌린지 #fdf0d9  #855100   #332810   #fcd34d   깃발(트로피)
 - 상단 검색 인풋(search_memes 연동) + 카테고리 필터 칩(틴트, 선택 시 텍스트색 테두리 강조).
 - 카드 그리드에 카테고리 틴트칩 적용 → 스캔 시 구분.
 - 데스크톱 헤더에 "탐색" 링크 추가.
+
+---
+
+## 12. 홈 히어로 v3 — web3 인터랙티브 (2026-07-10)
+
+첫 화면을 다크 잉크 캔버스의 몰입형 히어로로 전환. **브랜드 불꽃 오렌지만 사용(보라 그라디언트 금지 유지)**.
+
+### 레이어 구성 (전부 장식, aria-hidden, -z-10)
+1. **오로라 2겹** — flame-600/flame-800 대형 radial, 16s/22s ease-in-out 드리프트(transform만)
+2. **미세 그리드** — 56px 라인, 중앙 radial 마스크로 페이드
+3. **커서 팔로우 글로우** — pointermove→CSS 변수(--mx/--my), rAF 스로틀, pointer:fine+md 이상만
+4. **그레인** — SVG feTurbulence data URI, opacity 0.05 overlay
+
+### 콘텐츠
+- **라이브 배지**: ping 도트 + "실시간 한국 밈 사전 · N개 수록" 카운트업(1.2s ease-out cubic)
+- **헤드라인**: 단어 스태거(blur 6px→0) + "3초 안에 알려드려요"에 flame 그라디언트 시머(5s)
+- **글래스 검색**: bg-white/7 + backdrop-blur, 포커스 시 flame 글로우 링
+- **인기 칩**: 글래스, min-h-11(터치 타깃 44px+)
+- **밈 시세판 티커**: trending 2벌 복제 → -50% 무한 마퀴(36s linear), 호버 정지, 복제분 aria-hidden/tabindex=-1, 좌우 ink 페이드
+
+### 접근성·성능 규칙
+- 모든 장식 모션 transform/opacity만. prefers-reduced-motion 시: 오로라·시머·마퀴·핑·커서글로우 전부 정지, 카운트업은 즉시 최종값
+- 텍스트 대비: white/65 이상 on ink — AA 통과. 티커 링크 white/70→hover white
+- 헤더(라이트)와 히어로(다크) 경계는 그대로 노출 — 곡선/웨이브 디바이더 금지(§8)

@@ -11,7 +11,11 @@ import {
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { memePathFrom, SUBMISSION_STATUS } from "@/lib/labels";
-import { submitMeme, type SubmitState } from "@/lib/actions/submit";
+import {
+  submitMemeWithAttachment,
+  type SubmitState,
+} from "@/app/submit/actions";
+import { uploadMemeImage, validateUploadFile, UPLOAD_ACCEPT } from "@/lib/upload";
 import { SubmissionStatusBadge } from "@/components/submission-status";
 
 const DRAFT_KEY = "memecatch:submit-draft:v1";
@@ -39,7 +43,10 @@ type DupHit = { id: string; short_id: string; slug: string; title: string; summa
 const initialState: SubmitState = { status: "idle" };
 
 export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
-  const [state, formAction, pending] = useActionState(submitMeme, initialState);
+  const [state, formAction, pending] = useActionState(
+    submitMemeWithAttachment,
+    initialState
+  );
   const [fields, setFields] = useState<DraftFields>({
     ...EMPTY_FIELDS,
     name: defaultName,
@@ -48,6 +55,14 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
   const [dups, setDups] = useState<DupHit[]>([]);
   const [dupLoading, setDupLoading] = useState(false);
   const searchSeq = useRef(0);
+  // 첨부 이미지 상태
+  const [attachFile, setAttachFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 같은 파일 재제출 시 중복 업로드 방지 캐시
+  const uploadedRef = useRef<{ file: File; path: string } | null>(null);
   const ids = {
     name: useId(),
     seenAt: useId(),
@@ -55,6 +70,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
     description: useId(),
     guessReason: useId(),
     tags: useId(),
+    attachment: useId(),
   };
 
   // 임시저장 복원 (마운트 시 1회) — ?name= 프리필이 있으면 이름은 프리필 우선
@@ -144,6 +160,67 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
     return () => clearTimeout(timer);
   }, [fields.name]);
 
+  // 미리보기 object URL 정리
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const onFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0] ?? null;
+      setUploadError(null);
+      if (!file) return;
+      const invalid = validateUploadFile(file);
+      if (invalid) {
+        setUploadError(invalid);
+        e.target.value = "";
+        return;
+      }
+      setAttachFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    },
+    []
+  );
+
+  const removeFile = useCallback(() => {
+    setAttachFile(null);
+    setPreviewUrl(null);
+    setUploadError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
+  // 제출 래퍼: 첨부가 있으면 먼저 업로드하고 경로를 formData에 담아 서버 액션 호출.
+  // 업로드 실패 시 제출을 중단하고 에러 + 재시도 안내(파일은 유지).
+  const handleSubmit = useCallback(
+    async (formData: FormData) => {
+      setUploadError(null);
+      if (attachFile) {
+        let path: string;
+        if (uploadedRef.current?.file === attachFile) {
+          path = uploadedRef.current.path; // 이미 업로드된 동일 파일 재사용
+        } else {
+          setUploading(true);
+          try {
+            const result = await uploadMemeImage(attachFile);
+            if (!result.ok) {
+              setUploadError(result.error);
+              return;
+            }
+            uploadedRef.current = { file: attachFile, path: result.path };
+            path = result.path;
+          } finally {
+            setUploading(false);
+          }
+        }
+        formData.set("attachmentPath", path);
+      }
+      formAction(formData);
+    },
+    [attachFile, formAction]
+  );
+
   const update = useCallback(
     (key: keyof DraftFields) =>
       (
@@ -190,7 +267,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
   const formError = state.status === "error" ? state.formError : undefined;
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form action={handleSubmit} className="flex flex-col gap-5" noValidate>
       {restored && (
         <p className="rounded-xl bg-surface-2 px-4 py-3 text-muted" role="status">
           작성하던 내용을 불러왔어요.
@@ -372,18 +449,72 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
         )}
       </div>
 
+      <div>
+        <label htmlFor={ids.attachment} className="mb-1.5 block font-medium">
+          짤/캡처 이미지 첨부(선택)
+        </label>
+        <input
+          ref={fileInputRef}
+          id={ids.attachment}
+          type="file"
+          accept={UPLOAD_ACCEPT}
+          onChange={onFileChange}
+          aria-invalid={!!uploadError || !!fieldErrors.attachment}
+          aria-describedby={
+            uploadError || fieldErrors.attachment
+              ? `${ids.attachment}-error`
+              : `${ids.attachment}-hint`
+          }
+          className="w-full cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-base text-muted file:mr-3 file:h-8 file:cursor-pointer file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-sm file:font-semibold file:text-foreground"
+        />
+        <p id={`${ids.attachment}-hint`} className="mt-1.5 text-sm text-muted">
+          JPG·PNG·WebP·GIF, 5MB 이하
+        </p>
+        {(uploadError || fieldErrors.attachment) && (
+          <p
+            id={`${ids.attachment}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
+            {uploadError ?? fieldErrors.attachment} — 제보 보내기를 다시 눌러
+            재시도할 수 있어요
+          </p>
+        )}
+        {attachFile && previewUrl && (
+          <div className="mt-3 flex items-start gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt="첨부한 이미지 미리보기"
+              className="max-h-48 w-auto max-w-full rounded-xl border border-border object-contain"
+            />
+            <button
+              type="button"
+              onClick={removeFile}
+              className="flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold"
+            >
+              제거
+            </button>
+          </div>
+        )}
+      </div>
+
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || uploading}
         className="flex h-12 items-center justify-center gap-2 rounded-xl bg-accent text-base font-bold text-white disabled:opacity-60"
       >
-        {pending && (
+        {(pending || uploading) && (
           <span
             aria-hidden
             className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
           />
         )}
-        {pending ? "제보 보내는 중…" : "제보 보내기"}
+        {uploading
+          ? "이미지 올리는 중…"
+          : pending
+            ? "제보 보내는 중…"
+            : "제보 보내기"}
       </button>
       <p className="text-center text-sm text-muted">
         작성 중인 내용은 이 기기에 자동으로 임시저장돼요.

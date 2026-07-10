@@ -1,0 +1,128 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createStaticClient } from "@/lib/supabase/server";
+import { CommunityPostCard } from "@/components/community-post-card";
+import {
+  POSTS_PAGE_SIZE,
+  POST_SELECT,
+  type CommunityPostRow,
+} from "./shared";
+
+/**
+ * 레인 3 — 커뮤니티 글 목록 (최신순, 서버 컴포넌트 + 페이지네이션).
+ * searchParams(page) 사용 → 동적 렌더. 쿠키 미사용(createStaticClient).
+ * community_posts는 database.types.ts에 아직 없어 무타입 캐스팅.
+ * // TODO: types regen 후 정리
+ */
+
+export const metadata: Metadata = {
+  title: "커뮤니티",
+  description: "밈 추천·추억·토론 — 밈캐치 사람들과 자유롭게 이야기해요.",
+};
+
+export default async function CommunityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const sp = await searchParams;
+  const rawPage = Array.isArray(sp.page) ? sp.page[0] : sp.page;
+  const page = Math.max(1, Number.parseInt(rawPage ?? "1", 10) || 1);
+  const from = (page - 1) * POSTS_PAGE_SIZE;
+
+  let posts: CommunityPostRow[] = [];
+  let failed = false;
+  try {
+    const supabase = createStaticClient() as unknown as SupabaseClient;
+    const { data, error } = await supabase
+      .from("community_posts")
+      .select(POST_SELECT)
+      .eq("status", "visible")
+      .order("created_at", { ascending: false })
+      // +1로 다음 페이지 존재 여부 판별
+      .range(from, from + POSTS_PAGE_SIZE);
+    if (error) failed = true;
+    else posts = (data ?? []) as unknown as CommunityPostRow[];
+  } catch {
+    failed = true;
+  }
+
+  const hasNext = posts.length > POSTS_PAGE_SIZE;
+  const visible = hasNext ? posts.slice(0, POSTS_PAGE_SIZE) : posts;
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 pb-14 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">커뮤니티</h1>
+          <p className="mt-1 text-base text-muted">
+            밈 추천·추억·토론 — 뭐든 편하게 이야기해요.
+          </p>
+        </div>
+        <Link
+          href="/community/new"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          글쓰기
+        </Link>
+      </div>
+
+      {failed && (
+        <div role="alert" className="mt-6 rounded-2xl border border-border bg-surface-2 p-6 text-center">
+          <p className="text-base text-muted">글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        </div>
+      )}
+
+      {!failed && visible.length === 0 && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface-2 p-8 text-center">
+          <p className="text-lg font-bold">아직 글이 없어요</p>
+          <p className="mt-1 text-base text-muted">
+            첫 글을 남기고 이야기를 시작해 보세요.
+          </p>
+          <Link
+            href="/community/new"
+            className="mt-5 inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-base font-bold text-white"
+          >
+            첫 글 쓰러 가기
+          </Link>
+        </div>
+      )}
+
+      <ul className="mt-5 space-y-3">
+        {visible.map((post) => (
+          <li key={post.id}>
+            <CommunityPostCard post={post} />
+          </li>
+        ))}
+      </ul>
+
+      {/* 페이지네이션 */}
+      {(page > 1 || hasNext) && (
+        <nav aria-label="페이지 이동" className="mt-6 flex items-center justify-between">
+          {page > 1 ? (
+            <Link
+              href={page === 2 ? "/community" : `/community?page=${page - 1}`}
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold"
+            >
+              이전
+            </Link>
+          ) : (
+            <span />
+          )}
+          {hasNext && (
+            <Link
+              href={`/community?page=${page + 1}`}
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold"
+            >
+              더 보기
+            </Link>
+          )}
+        </nav>
+      )}
+    </main>
+  );
+}

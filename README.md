@@ -86,6 +86,12 @@ pnpm exec eslint .     # 린트
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
 | `ANTHROPIC_API_KEY` | (선택) 관리자 AI 설명 초안 생성 |
+| `R2_ACCOUNT_ID` | (선택) Cloudflare R2 — 제보 이미지 저장소. 서버 전용 |
+| `R2_ACCESS_KEY_ID` | (선택) R2 API 토큰 Access Key. 서버 전용 |
+| `R2_SECRET_ACCESS_KEY` | (선택) R2 API 토큰 Secret. 서버 전용 |
+| `R2_BUCKET` | (선택) R2 버킷 이름 (`memecatch-uploads`) |
+
+> R2 4종이 비어 있으면 제보 이미지는 Supabase Storage(`meme-uploads`)에 저장됩니다. R2 키는 서버에서만 읽으며(`lib/r2.server.ts`, `server-only`) 클라이언트 번들에 포함되지 않습니다.
 
 ## 데이터베이스
 

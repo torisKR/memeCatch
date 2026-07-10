@@ -15,6 +15,7 @@ import {
   type ExploreFilters as Filters,
   type SortKey,
 } from "@/components/explore-grid";
+import { DailyTop10 } from "@/components/daily-top10";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -129,6 +130,33 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
   return q;
 }
 
+/** 필터가 하나도 없는 기본 진입 상태인가 — TOP 10 섹션 노출 조건 */
+function isDefaultEntry(f: Filters): boolean {
+  return (
+    !f.q &&
+    f.categories.length === 0 &&
+    !f.difficulty &&
+    !f.lifecycle &&
+    !f.media &&
+    !f.year &&
+    f.sort === "trending"
+  );
+}
+
+/** 오늘(KST) 많이 본 밈 TOP 10 — get_daily_top_memes RPC (실패 시 섹션 숨김) */
+async function getDailyTopMemes(): Promise<MemeListItem[]> {
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .rpc("get_daily_top_memes", { p_limit: 10 })
+      .select("*, meme_contents(thumbnail_url, is_representative)");
+    if (error || !data) return [];
+    return data as MemeListItem[];
+  } catch {
+    return [];
+  }
+}
+
 /** 필터 상태로부터 안정적인 remount 키 — 필터 변경 시 그리드 상태 초기화 */
 function filterKey(f: Filters): string {
   return [
@@ -149,15 +177,23 @@ export default async function ExplorePage({
 }) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
+  const showTop10 = isDefaultEntry(filters);
 
-  let initial: MemeListItem[] = [];
-  try {
-    const supabase = createStaticClient();
-    const { data } = await buildQuery(supabase, filters).range(0, PAGE_SIZE - 1);
-    initial = (data ?? []) as MemeListItem[];
-  } catch {
-    initial = [];
-  }
+  const [initial, dailyTop] = await Promise.all([
+    (async (): Promise<MemeListItem[]> => {
+      try {
+        const supabase = createStaticClient();
+        const { data } = await buildQuery(supabase, filters).range(
+          0,
+          PAGE_SIZE - 1
+        );
+        return (data ?? []) as MemeListItem[];
+      } catch {
+        return [];
+      }
+    })(),
+    showTop10 ? getDailyTopMemes() : Promise.resolve([]),
+  ]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
@@ -167,6 +203,9 @@ export default async function ExplorePage({
       </p>
 
       <ExploreFilters />
+
+      {/* 기본 진입(필터/검색 없음)에서만 노출 — 필터·검색 중엔 숨김 */}
+      {showTop10 && <DailyTop10 memes={dailyTop} />}
 
       <div className="mt-5">
         <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />

@@ -298,15 +298,15 @@ export function HeroWeb3({
   );
 }
 
-/** 카운트업 — 마운트 시 1.2초 이징, reduced-motion이면 즉시 최종값 */
+/**
+ * 카운트업 — SSR/초기 HTML에는 **실제 최종값**을 렌더(AI 크롤러·JS 미실행 환경이
+ * "0개 수록"으로 보는 문제 방지). 마운트 후에만 0→값 애니메이션.
+ * reduced-motion이면 애니메이션 없이 최종값 유지.
+ */
 function CountUp({ value, reduce }: { value: number; reduce: boolean }) {
-  const [n, setN] = useState(reduce ? value : 0);
+  const [n, setN] = useState(value);
   useEffect(() => {
-    if (reduce) {
-      // reduced-motion: 카운트업 없이 rAF 1회로 최종값만 반영(동기 setState 회피)
-      const raf = requestAnimationFrame(() => setN(value));
-      return () => cancelAnimationFrame(raf);
-    }
+    if (reduce) return; // SSR 값(최종값) 그대로 유지
     let raf = 0;
     const t0 = performance.now();
     const dur = 1200;

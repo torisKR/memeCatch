@@ -18,7 +18,12 @@ import { MemeCard } from "@/components/meme-card";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
 import { SaveButton } from "@/components/save-button";
-import { MemeJsonLd } from "@/components/json-ld";
+import {
+  MemeBreadcrumbJsonLd,
+  MemeVideoJsonLd,
+  MemeWebPageJsonLd,
+} from "@/components/json-ld";
+import { memePathFrom } from "@/lib/labels";
 import { ViewTracker } from "./view-tracker";
 
 /** 밈 상세 — 공개 ISR (10분), 온디맨드 생성 */
@@ -34,7 +39,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
   const meme = await getMemeByShortId(shortIdFromParam(key));
   if (!meme) return { title: "밈을 찾을 수 없어요" };
-  return { title: meme.title, description: meme.summary };
+  return {
+    title: meme.title,
+    description: meme.summary,
+    // canonical — short_id+slug 변형 URL의 신호 분산 방지
+    alternates: { canonical: memePathFrom(meme.short_id, meme.slug) },
+  };
 }
 
 export default async function MemeDetailPage({ params }: Props) {
@@ -61,14 +71,38 @@ export default async function MemeDetailPage({ params }: Props) {
   const fallbackSourceUrl = meme.meme_sources[0]?.source_url ?? null;
   const sentimentChip = SENTIMENT[meme.sentiment].user;
 
+  const isYouTubeRep =
+    representative?.platform?.toLowerCase() === "youtube" &&
+    !!representative.content_id;
+
   return (
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-5 pb-14">
-      <MemeJsonLd
+      {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상 */}
+      <MemeWebPageJsonLd
         name={meme.title}
-        description={meme.summary}
+        summary={meme.summary}
+        description={meme.description}
+        shortId={meme.short_id}
+        slug={meme.slug}
+        datePublished={meme.published_at ?? meme.created_at}
+        dateModified={meme.updated_at}
+      />
+      <MemeBreadcrumbJsonLd
+        category={meme.category}
+        name={meme.title}
         shortId={meme.short_id}
         slug={meme.slug}
       />
+      {isYouTubeRep && (
+        <MemeVideoJsonLd
+          name={meme.title}
+          description={meme.summary}
+          videoId={representative.content_id!}
+          thumbnailUrl={representative.thumbnail_url}
+          uploadDate={meme.created_at}
+          caption={representative.caption}
+        />
+      )}
       <ViewTracker memeId={meme.id} />
 
       {meme.moderation_status === "limited" && (

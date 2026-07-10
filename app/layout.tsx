@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/bottom-nav";
 import { GlobalHeader } from "@/components/global-header";
+import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
+import { OrganizationJsonLd } from "@/components/json-ld";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -17,6 +19,8 @@ export const metadata: Metadata = {
   applicationName: "밈캐치",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "밈캐치" },
+  // 홈(루트) canonical — 하위 페이지는 각자 generateMetadata에서 설정
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "밈캐치",
@@ -40,14 +44,21 @@ export default function RootLayout({
     <html lang="ko">
       <head>
         <link
+          rel="preconnect"
+          href="https://cdn.jsdelivr.net"
+          crossOrigin="anonymous"
+        />
+        <link
           rel="stylesheet"
           crossOrigin="anonymous"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
       <body className="min-h-dvh pb-16 md:pb-0">
+        <OrganizationJsonLd />
         <GlobalHeader />
         {children}
+        <SiteFooter />
         <BottomNav />
         <PwaInstall />
       </body>

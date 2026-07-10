@@ -10,13 +10,37 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createStaticClient();
 
+  // 홈 lastmod — 빌드 시각(new Date) 대신 실제 콘텐츠 변경 시점(최신 밈 공개일)
+  let homeLastMod = new Date();
+  try {
+    const { data: latest } = await supabase
+      .from("memes")
+      .select("published_at")
+      .eq("moderation_status", "approved")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .single();
+    if (latest?.published_at) homeLastMod = new Date(latest.published_at);
+  } catch {
+    /* 실패 시 현재 시각 유지 */
+  }
+
   const entries: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
-      lastModified: new Date(),
+      lastModified: homeLastMod,
       changeFrequency: "hourly",
       priority: 1,
     },
+    // 주요 정적 페이지 — 탐색·커뮤니티·정책
+    ...(["/explore", "/rankings", "/community", "/about", "/privacy", "/terms"] as const).map(
+      (path) => ({
+        url: `${SITE_URL}${path}`,
+        lastModified: homeLastMod,
+        changeFrequency: "daily" as const,
+        priority: 0.6,
+      })
+    ),
   ];
 
   // 승인 밈 전체 (페이지 단위로 순회 — 사이트맵 상한 5만 URL)

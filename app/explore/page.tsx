@@ -15,6 +15,7 @@ import {
   type ExploreFilters as Filters,
   type SortKey,
 } from "@/components/explore-grid";
+import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { DailyTop10 } from "@/components/daily-top10";
 
 /**
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
   title: "밈 탐색",
   description:
     "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.",
+  alternates: { canonical: "/explore" },
 };
 
 // components/explore-grid.tsx의 PAGE_SIZE와 동일하게 유지
@@ -197,6 +199,7 @@ export default async function ExplorePage({
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
+      <ExploreCollectionJsonLd />
       <h1 className="text-2xl font-bold">밈 탐색</h1>
       <p className="mt-1 text-base text-muted">
         지금 도는 밈을 카테고리·연도·난이도로 골라 봐요.

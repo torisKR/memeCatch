@@ -266,7 +266,7 @@ export function HeroWeb3({
                 href={memePathFrom(m.short_id, m.slug)}
                 aria-hidden={i >= trending.length || undefined}
                 tabIndex={i >= trending.length ? -1 : undefined}
-                className="-my-2 flex shrink-0 items-center gap-2 py-2 text-sm text-white/70 transition-colors hover:text-white"
+                className="-my-3 flex shrink-0 items-center gap-2 py-3 text-sm text-white/70 transition-colors hover:text-white"
               >
                 {/* 상승 아이콘 — 텍스트 글리프 대신 SVG(스트로크 통일) */}
                 <svg

@@ -51,14 +51,14 @@ const LIFECYCLE_ENTRIES = Object.entries(LIFECYCLE_STATUS) as [
 ][];
 
 const chipBase =
-  "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const chipOff = "border-border bg-surface text-muted hover:border-accent hover:text-accent";
 const chipOn = "border-accent bg-accent-soft font-semibold text-accent";
 
 // 카테고리 틴트 칩 — 항상 자기 카테고리 색(틴트 bg + 어두운 텍스트)으로 렌더해
 // 필터 바 자체가 색 범례 역할을 한다. 폭 변화 없게 테두리는 상시 2px(off는 투명).
 const catChipBase =
-  "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border-2 px-3.5 text-sm transition-[border-color,box-shadow,transform] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border-2 px-3.5 text-sm transition-[border-color,box-shadow,transform] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 /** 카테고리 키 → --cat-* 토큰 인라인 스타일 (레인 A 제공 토큰). 선택 시 텍스트색 테두리 강조. */
 function catChipStyle(key: string, on: boolean): React.CSSProperties {
@@ -222,7 +222,7 @@ export function ExploreFilters() {
           )}
           <button
             type="submit"
-            className="inline-flex min-h-9 items-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-95 active:scale-[0.97]"
+            className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-95 active:scale-[0.97]"
           >
             검색
           </button>
@@ -302,7 +302,7 @@ export function ExploreFilters() {
           <button
             type="button"
             onClick={reset}
-            className="inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold text-muted underline-offset-2 transition-colors hover:text-accent hover:underline active:scale-[0.97]"
+            className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-muted underline-offset-2 transition-colors hover:text-accent hover:underline active:scale-[0.97]"
           >
             필터 초기화
           </button>

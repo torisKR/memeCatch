@@ -41,7 +41,7 @@ export function SiteFooter() {
               콘텐츠의 저작권은 원저작자에게 있습니다. 문의·삭제 요청:{" "}
               <a
                 href="mailto:ironjustlikethat@gmail.com"
-                className="underline underline-offset-2 hover:text-foreground"
+                className="inline-block py-2 underline underline-offset-2 hover:text-foreground"
               >
                 ironjustlikethat@gmail.com
               </a>

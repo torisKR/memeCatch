@@ -11,11 +11,12 @@ import {
  * 레인 3 — 커뮤니티 글 카드 (목록용, 서버 렌더).
  * 작성자 닉네임 · 상대시간 → 제목(주인공) → 본문 2줄 프리뷰
  * → 밈 첨부 미니 카드(옵션) → 좋아요·댓글 수.
- * 중첩 링크 회피: 카드 전체 링크 대신 제목/밈칩 링크 + 카드 hover 표면 변화.
+ * 터치 타깃: 제목 링크의 ::after를 카드 전체로 확장(stretched-link) —
+ * 카드 전체가 탭 영역이 되고, 밈칩 링크만 z-10으로 위에 떠서 개별 클릭 가능.
  */
 export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
   return (
-    <article className="rounded-2xl border border-border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md">
+    <article className="relative rounded-2xl border border-border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md">
       <header className="flex items-center gap-2 text-sm text-muted">
         <span className="font-semibold text-foreground">
           {post.profiles?.nickname ?? "익명"}
@@ -26,7 +27,7 @@ export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
       <h2 className="mt-1.5">
         <Link
           href={`/community/${post.id}`}
-          className="text-lg font-extrabold leading-snug hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="text-lg font-extrabold leading-snug underline-offset-2 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {post.title}
         </Link>
@@ -36,7 +37,11 @@ export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
         {post.body}
       </p>
 
-      {post.memes && <CommunityMemeChip meme={post.memes} className="mt-3" />}
+      {post.memes && (
+        <div className="relative z-10 mt-3 w-fit">
+          <CommunityMemeChip meme={post.memes} />
+        </div>
+      )}
 
       <footer className="mt-3 flex items-center gap-4 text-sm text-muted">
         <span className="inline-flex items-center gap-1">

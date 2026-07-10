@@ -23,7 +23,7 @@ export function GlobalHeader() {
           <Link
             href="/"
             aria-label="밈캐치 홈"
-            className="flex items-center gap-1.5 rounded-lg py-1 pr-1 text-lg font-extrabold tracking-tight transition-transform active:scale-[0.97]"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg py-1 pr-1 text-lg font-extrabold tracking-tight transition-transform active:scale-[0.97]"
           >
             <FlameMark className="h-5 w-5 text-accent" />
             <span>밈캐치</span>

@@ -205,7 +205,7 @@ export function LoginForm({
       </div>
 
       <p className="mt-8 text-center text-muted">
-        <Link href="/" className="underline underline-offset-4 hover:text-foreground">
+        <Link href="/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground">
           로그인 없이 둘러보기
         </Link>
       </p>

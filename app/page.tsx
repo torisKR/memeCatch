@@ -3,7 +3,7 @@ import { SECTION_TITLES } from "@/lib/labels";
 import { getBeginnerMemes, getTotalMemeCount, getTrendingMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
 import { TrendingCarousel } from "@/components/trending-carousel";
-import { WebSiteJsonLd } from "@/components/json-ld";
+import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
 import { HeroWeb3 } from "@/components/hero-web3";
 // 레인 B 모션 래퍼(클라이언트): 스크롤 리빌 + 스태거 리스트
 import { MotionList } from "@/components/motion-list";
@@ -27,6 +27,7 @@ export default async function Home() {
   return (
     <main className="pb-12">
       <WebSiteJsonLd />
+      <DefinedTermSetJsonLd />
       {/* 풀블리드 web3 히어로 — 컨테이너 밖 */}
       <HeroWeb3
         trending={trending}

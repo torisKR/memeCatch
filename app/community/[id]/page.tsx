@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ForumPostingJsonLd } from "@/components/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -71,6 +72,15 @@ export default async function CommunityPostPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 pb-14 pt-6">
+      <ForumPostingJsonLd
+        postId={post.id}
+        title={post.title}
+        body={post.body}
+        authorNickname={post.profiles?.nickname ?? "익명"}
+        createdAt={post.created_at}
+        likeCount={post.like_count}
+        commentCount={comments.length}
+      />
       <nav aria-label="뒤로 가기">
         <Link
           href="/community"

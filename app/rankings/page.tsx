@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RankingsJsonLd } from "@/components/json-ld";
 import Link from "next/link";
 import { createStaticClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
@@ -17,6 +18,7 @@ export const revalidate = 600;
 export const metadata: Metadata = {
   title: "랭킹",
   description: "오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.",
+  alternates: { canonical: "/rankings" },
 };
 
 type MemeRow = Pick<
@@ -131,8 +133,13 @@ export default async function RankingsPage() {
     failed = true;
   }
 
+  const rankedForSchema = data
+    ? (data.fallback ?? data.today ?? []).slice(0, 10)
+    : [];
+
   return (
     <main className="mx-auto max-w-lg px-4 py-6">
+      {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
       <h1 className="text-2xl font-bold">랭킹</h1>
       <p className="mt-1 text-base text-muted">지금 한국에서 도는 밈, 순위로 모아봤어요.</p>
 

@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "밈캐치" },
   // 홈(루트) canonical — 하위 페이지는 각자 generateMetadata에서 설정
   alternates: { canonical: "/" },
+  // 검색엔진 사이트 소유확인 — 구글 서치콘솔 + 네이버 서치어드바이저
+  verification: {
+    google: "tNpEvRKUbirAkwRA-XH0HJzDh8bCF6Waqctqu1Hak38",
+    other: {
+      "naver-site-verification": "4973421614cb5e3682ed4c99e6deee5c66b1f587",
+    },
+  },
   openGraph: {
     type: "website",
     siteName: "밈캐치",

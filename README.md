@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 밈캐치 (MemeCatch)
 
-## Getting Started
+> **그 밈, 3초 안에 알려드려요.**
+> 요즘 유행하는 밈·유행어·챌린지의 뜻·유래, 그리고 **지금 써도 되는지**까지 알려주는 한국 밈 트렌드 사전.
 
-First, run the development server:
+**🔗 프로덕션: https://memecatch.vercel.app**
+
+---
+
+## 무엇을 하나요
+
+트렌드에 뒤처졌다고 느끼는 사용자가 밈을 **빠르게 검색하고, 이해하고, 안전하게 쓸 수 있게** 돕습니다. 나무위키·AI 챗봇과 달리 두 가지에 집중합니다:
+
+- **🚦 사용 안전 신호등** — "지금 써도 되는가"를 색+아이콘+텍스트로 (`써도 됨` / `맥락 주의` / `이미 늦음` / `쓰면 위험`). 상황별(직장/친구/자녀/SNS) 가이드까지.
+- **🔥 밈 생명 게이지** — 밈의 생애주기(급상승 → 유행 → 식는 중 → 추억)를 불꽃 미터로 시각화.
+
+현재 **1,733개** 밈을 1990~2026년 전 연대에 걸쳐 수록하고 있습니다(유튜브 임베드 648 + 나무위키 출처 269 연결).
+
+## 핵심 기능
+
+| 화면 | 설명 |
+|---|---|
+| **홈** (`/`) | 검색 히어로 + 오늘의 급상승 + 입문자 큐레이션 |
+| **탐색** (`/explore`) | 전체 밈을 카테고리·난이도·생애주기·연도·미디어 필터 + 정렬(급상승/최신/인기/논쟁) + 목록 내 검색 + 무한 스크롤 |
+| **검색** (`/search`) | 키워드·**초성**(ㅇㅍㅌ→영포티)·유사어·별칭 검색 |
+| **상세** (`/memes/[key]`) | 정답 카드(뜻+신호등) → 유튜브 임베드 → 상황별 사용 가이드 → 관련 밈 → 반응·댓글 |
+| **제보** (`/submit`) | 새 밈 제보(실시간 중복 검사, 검수 대기) |
+| **MY** (`/my`) | 저장한 밈·내 제보·관심 카테고리·닉네임 |
+| **관리자** (`/admin`) | 제보 검수·밈 편집·신고 처리·AI 설명 초안 |
+
+## 기술 스택
+
+- **프론트엔드**: Next.js 16 (App Router, ISR) · React 19 · TypeScript · Tailwind CSS v4 · [motion](https://motion.dev) (framer-motion)
+- **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
+- **PWA**: Serwist (서비스 워커, 오프라인 셸, 설치 가능)
+- **배포**: Vercel (GitHub 연동 자동 배포)
+
+### 아키텍처 하이라이트
+
+- **RLS 기본 deny** — 모든 쓰기는 `security definer` RPC 경유(반응·저장·제보·신고·댓글). 서버 관리 컬럼은 클라이언트 쓰기 차단.
+- **한국어 검색** — Postgres 기본 파서가 한국어를 못 다뤄, `pg_trgm` + 초성 generated column + 별칭(aliases)으로 구현.
+- **트렌드 점수** — `ln(1+x)` 정규화 + 72h 윈도 + 신규 부스트, `pg_cron` 일배치(KST 00:30).
+- **ISR + 정적 헤더** — 상세/홈은 ISR로 캐시(쿠키 미사용 `createStaticClient`), 세션은 클라이언트에서 조회해 `DYNAMIC_SERVER_USAGE` 회피.
+- **디자인 시스템** — [`DESIGN.md`](./DESIGN.md) 참조. 불꽃 오렌지 브랜드 + 카테고리 소프트 틴트(WCAG AA) + prefers-reduced-motion 존중.
+
+## 로컬 개발
+
+### 사전 요구
+- Node.js 20+ · [pnpm](https://pnpm.io) · Docker (로컬 Supabase용)
+
+### 시작하기
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+
+# 로컬 Supabase 스택 기동 (Docker 필요)
+supabase start
+supabase db reset          # 스키마 마이그레이션 적용
+
+# 환경변수 — supabase start 출력값으로 .env.local 작성
+cp .env.example .env.local  # NEXT_PUBLIC_SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY 채우기
+
+pnpm dev                    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 스크립트
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev               # 개발 서버 (Turbopack)
+pnpm build             # 프로덕션 빌드 (webpack — Serwist PWA)
+pnpm start             # 프로덕션 서버
+pnpm exec tsc --noEmit # 타입 체크
+pnpm exec eslint .     # 린트
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> **참고**: `pnpm build`는 `--webpack`를 씁니다(Serwist가 Turbopack과 충돌). 개발(`pnpm dev`)은 Turbopack입니다.
 
-## Learn More
+## 환경변수
 
-To learn more about Next.js, take a look at the following resources:
+| 변수 | 설명 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon(publishable) 키 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service_role 키 (배치·관리·시드) |
+| `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
+| `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
+| `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
+| `ANTHROPIC_API_KEY` | (선택) 관리자 AI 설명 초안 생성 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 데이터베이스
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 테이블:
 
-## Deploy on Vercel
+- `memes` — 밈 본문(뜻·유래·신호등·생애주기·검수 상태)
+- `meme_contents` / `meme_sources` — 유튜브 임베드·출처 링크
+- `meme_submissions` · `reports` · `discussions` · `meme_reactions` · `saved_memes` · `generation_votes`
+- `profiles` — 닉네임·역할·관심 카테고리
+- `meme_trend_metrics` · `view_events` — 트렌드 집계
+- `admin_audit_log` · `job_runs` — 운영 감사·배치 로그
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `post_comment` · `file_report` · `cast_generation_vote` · `increment_view` · `compute_trend_scores`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 콘텐츠 정책
+
+- 원본 영상·이미지는 **무단 저장하지 않고 임베드·링크 중심**으로 제공 (저작권).
+- 혐오·비하 소지 밈은 아카이브하되 `쓰면 위험` 신호 + 추천 제외.
+- 제보는 검수(pending → 사실 확인 → 저작권 확인 → 공개)를 거칩니다.
+
+## 소셜 로그인 (선택)
+
+카카오·구글 로그인은 코드에 준비돼 있으며, Supabase 대시보드 → Authentication → Providers에서 OAuth를 활성화하면 동작합니다(미설정 시 "곧 열려요"로 우아하게 폴백).
+
+## 라이선스
+
+개인 프로젝트. 수익 모델은 광고·후원.
+
+---
+
+🤖 설계·구현: [Claude Code](https://claude.com/claude-code)

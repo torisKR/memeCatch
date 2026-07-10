@@ -1,16 +1,19 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS } from "@/lib/labels";
 
 /**
  * 레인 B 여정2 — 탐색 필터 바 (URL 쿼리 동기화, deep link/뒤로가기 보존).
+ * - 검색 인풋(이 목록 안 검색 → ?q=, 서버가 search_memes RPC로 필터)
  * - 정렬 세그먼트(급상승·최신·인기·논쟁 중)
- * - 카테고리 칩(다중, 가로 스크롤)
+ * - 카테고리 칩(다중, 가로 스크롤) — 각 칩이 자기 카테고리 틴트 색 = 필터가 곧 색 범례.
+ *   (DESIGN.md §11 소프트 틴트: 틴트 bg + 어두운 텍스트, 선택 시 텍스트색 테두리+진하게)
  * - 접이식 상세 필터(난이도·연도대·미디어, 각 단일)
  * - 필터 초기화
  * 선택 시 router.push({ scroll:false })로 쿼리만 갱신 → 서버가 새 결과 스트리밍.
+ * 카테고리 색 토큰(--cat-*)은 레인 A(globals.css)가 제공한다.
  */
 
 const SORTS = [
@@ -52,6 +55,21 @@ const chipBase =
 const chipOff = "border-border bg-surface text-muted hover:border-accent hover:text-accent";
 const chipOn = "border-accent bg-accent-soft font-semibold text-accent";
 
+// 카테고리 틴트 칩 — 항상 자기 카테고리 색(틴트 bg + 어두운 텍스트)으로 렌더해
+// 필터 바 자체가 색 범례 역할을 한다. 폭 변화 없게 테두리는 상시 2px(off는 투명).
+const catChipBase =
+  "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border-2 px-3.5 text-sm transition-[border-color,box-shadow,transform] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+/** 카테고리 키 → --cat-* 토큰 인라인 스타일 (레인 A 제공 토큰). 선택 시 텍스트색 테두리 강조. */
+function catChipStyle(key: string, on: boolean): React.CSSProperties {
+  return {
+    backgroundColor: `var(--cat-${key}-bg)`,
+    color: `var(--cat-${key}-text)`,
+    borderColor: on ? `var(--cat-${key}-text)` : "transparent",
+    boxShadow: on ? "0 1px 3px rgb(0 0 0 / 0.12)" : "none",
+  };
+}
+
 export function ExploreFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -64,6 +82,15 @@ export function ExploreFilters() {
   const year = searchParams.get("year") ?? "";
   const media = searchParams.get("media") ?? "";
   const lifecycle = searchParams.get("lifecycle") ?? "";
+  const activeQuery = searchParams.get("q") ?? "";
+
+  // 검색 인풋은 로컬 상태로 다루되 URL(뒤로가기·초기화)과 동기화한다.
+  const [query, setQuery] = useState(activeQuery);
+  useEffect(() => {
+    // 외부 상태(URL 쿼리)를 로컬 인풋에 반영 — 뒤로가기·필터 초기화 시 동기화
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuery(searchParams.get("q") ?? "");
+  }, [searchParams]);
 
   const hasFilters =
     activeCategories.length > 0 ||
@@ -71,6 +98,7 @@ export function ExploreFilters() {
     !!year ||
     !!media ||
     !!lifecycle ||
+    !!activeQuery ||
     (sort !== "trending" && !!searchParams.get("sort"));
 
   const pushParams = useCallback(
@@ -116,12 +144,91 @@ export function ExploreFilters() {
     [searchParams, pushParams]
   );
 
+  // 검색 제출 — ?q= 갱신(빈 값이면 제거). 다른 필터는 유지.
+  const submitSearch = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const next = new URLSearchParams(searchParams);
+      const trimmed = query.trim();
+      if (trimmed) next.set("q", trimmed);
+      else next.delete("q");
+      pushParams(next);
+    },
+    [query, searchParams, pushParams]
+  );
+
+  const clearSearch = useCallback(() => {
+    setQuery("");
+    const next = new URLSearchParams(searchParams);
+    next.delete("q");
+    pushParams(next);
+  }, [searchParams, pushParams]);
+
   const reset = useCallback(() => {
     router.push(pathname, { scroll: false });
   }, [router, pathname]);
 
   return (
     <div className="mt-4 space-y-3">
+      {/* 검색 인풋 — 이 목록 안에서 검색(제출 시 ?q=) */}
+      <form role="search" onSubmit={submitSearch} className="relative">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.2-3.2" />
+          </svg>
+        </span>
+        <input
+          type="search"
+          name="q"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="이 목록에서 검색"
+          aria-label="이 목록에서 검색"
+          enterKeyHint="search"
+          className="min-h-11 w-full rounded-full border border-border bg-surface py-2 pl-11 pr-28 text-base text-foreground placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-search-cancel-button]:appearance-none"
+        />
+        <div className="absolute inset-y-0 right-1.5 flex items-center gap-1">
+          {query && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="검색어 지우기"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:text-accent active:scale-95"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="submit"
+            className="inline-flex min-h-9 items-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-95 active:scale-[0.97]"
+          >
+            검색
+          </button>
+        </div>
+      </form>
+
       {/* 정렬 세그먼트 */}
       <div
         role="tablist"
@@ -145,7 +252,8 @@ export function ExploreFilters() {
         })}
       </div>
 
-      {/* 카테고리 칩(다중) */}
+      {/* 카테고리 칩(다중) — 각 칩이 자기 카테고리 틴트 색 = 색 범례.
+          선택 시 텍스트색 테두리+진하게(고채도는 신호등 독점이라 저채도 틴트만 사용). */}
       <div
         aria-label="카테고리"
         className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
@@ -158,7 +266,8 @@ export function ExploreFilters() {
               type="button"
               aria-pressed={on}
               onClick={() => toggleMulti("category", key)}
-              className={`${chipBase} ${on ? chipOn : chipOff}`}
+              style={catChipStyle(key, on)}
+              className={`${catChipBase} ${on ? "font-semibold" : "font-medium"}`}
             >
               {meta.user}
             </button>

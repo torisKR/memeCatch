@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SECTION_TITLES } from "@/lib/labels";
 import { getBeginnerMemes, getTrendingMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
@@ -29,12 +30,20 @@ export default async function Home() {
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">
           <Reveal>
-            <h2 id="sec-trending" className="flex items-center gap-1.5 text-xl font-bold">
-              <span aria-hidden className="text-life-rising">
-                <FlameMark />
-              </span>
-              {SECTION_TITLES.trending}
-            </h2>
+            <div className="flex items-end justify-between gap-3">
+              <h2 id="sec-trending" className="flex items-center gap-1.5 text-xl font-bold">
+                <span aria-hidden className="text-life-rising">
+                  <FlameMark />
+                </span>
+                {SECTION_TITLES.trending}
+              </h2>
+              <Link
+                href="/explore"
+                className="shrink-0 rounded-md py-1 text-sm font-medium text-muted transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                전체 보기 <span aria-hidden>→</span>
+              </Link>
+            </div>
             {/* 급상승 스트립: 가로 스크롤 + 생명게이지 강조 유지 */}
             <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
               {trending.map((meme) => (
@@ -48,7 +57,12 @@ export default async function Home() {
       )}
 
       {showBeginners && (
-        <section aria-labelledby="sec-beginner" className="mt-8">
+        // 섹션 배경 --cream으로 교차(리듬) — 토큰 미정의 시 surface-2로 안전 폴백
+        <section
+          aria-labelledby="sec-beginner"
+          className="mt-8 rounded-3xl p-5 sm:p-6"
+          style={{ background: "var(--cream, var(--surface-2))" }}
+        >
           <Reveal>
             <h2 id="sec-beginner" className="text-xl font-bold">
               {SECTION_TITLES.forBeginners}
@@ -61,6 +75,18 @@ export default async function Home() {
             ))}
           </MotionList>
         </section>
+      )}
+
+      {(showTrending || showBeginners) && (
+        <Reveal>
+          {/* 전체 밈 보기 — /explore 진입 CTA */}
+          <Link
+            href="/explore"
+            className="mt-8 flex h-12 items-center justify-center gap-1.5 rounded-2xl border border-border bg-surface text-base font-semibold shadow-sm transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+          >
+            전체 밈 보기 <span aria-hidden>→</span>
+          </Link>
+        </Reveal>
       )}
 
       {!showTrending && !showBeginners && (

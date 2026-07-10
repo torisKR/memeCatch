@@ -30,15 +30,21 @@ export const MODERATION_STATUS = {
   rejected: { admin: "반려", token: "mod-rejected" },
 } as const;
 
+/**
+ * 카테고리 = 소프트 틴트 칩(DESIGN §11). color 발명 금지 — tone은 globals.css의
+ * --cat-*-bg / --cat-*-text 토큰 베이스명. icon은 중립 SVG 식별자(불꽃 회피, 이모지 금지).
+ * challenge 아이콘은 깃발/트로피 개념(생명게이지 불꽃과 분리).
+ */
 export const CATEGORIES = {
-  phrase: { user: "유행어", emojiFree: true },
-  dance: { user: "댄스 챌린지" },
-  song: { user: "노래" },
-  image: { user: "짤" },
-  comment: { user: "댓글 밈" },
-  challenge: { user: "챌린지" },
+  phrase: { user: "유행어", emojiFree: true, tone: "cat-phrase", icon: "speech" },
+  dance: { user: "댄스 챌린지", tone: "cat-dance", icon: "dance" },
+  song: { user: "노래", tone: "cat-song", icon: "note" },
+  image: { user: "짤", tone: "cat-image", icon: "frame" },
+  comment: { user: "댓글 밈", tone: "cat-comment", icon: "comment" },
+  challenge: { user: "챌린지", tone: "cat-challenge", icon: "flag" },
 } as const;
 export type MemeCategory = keyof typeof CATEGORIES;
+export type CategoryIcon = (typeof CATEGORIES)[MemeCategory]["icon"];
 
 export const DIFFICULTY = {
   beginner: { user: "입문", token: "diff-beginner" },

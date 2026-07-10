@@ -1,17 +1,12 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_ACCEPT,
+} from "@/lib/upload-shared";
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB (버킷 제한과 동일)
-
-export const ALLOWED_IMAGE_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-};
-
-export const UPLOAD_ACCEPT = Object.keys(ALLOWED_IMAGE_TYPES).join(",");
+export { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES, UPLOAD_ACCEPT };
 
 export type UploadResult =
   | { ok: true; path: string }
@@ -29,32 +24,28 @@ export function validateUploadFile(file: File): string | null {
 }
 
 /**
- * meme-uploads 버킷의 자기 폴더({userId}/)에 이미지 업로드.
- * 성공 시 DB에 저장할 경로("meme-uploads/{userId}/{uuid}.{ext}")를 반환.
+ * 이미지 업로드 — 서버 라우트(/api/upload) 경유.
+ * 서버가 R2(설정 시) 또는 Supabase Storage(폴백)에 저장한다.
+ * 스토리지 자격증명은 서버에만 있고 클라이언트는 경로만 돌려받는다.
+ * 성공 시 DB에 저장할 경로("meme-uploads/{userId}/{uuid}.{ext}") 반환.
  */
-export async function uploadMemeImage(
-  file: File,
-  userId: string
-): Promise<UploadResult> {
+export async function uploadMemeImage(file: File): Promise<UploadResult> {
   const invalid = validateUploadFile(file);
   if (invalid) return { ok: false, error: invalid };
 
-  const ext = ALLOWED_IMAGE_TYPES[file.type];
-  const objectPath = `${userId}/${crypto.randomUUID()}.${ext}`;
-  const supabase = createClient();
-  const { data, error } = await supabase.storage
-    .from("meme-uploads")
-    .upload(objectPath, file, {
-      contentType: file.type,
-      cacheControl: "3600",
-      upsert: false,
-    });
-
-  if (error || !data) {
-    return {
-      ok: false,
-      error: "이미지 업로드에 실패했어요. 다시 시도해 주세요",
-    };
+  const form = new FormData();
+  form.set("file", file);
+  try {
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const json = (await res.json()) as { ok: boolean; path?: string; error?: string };
+    if (!res.ok || !json.ok || !json.path) {
+      if (json.error === "login_required") {
+        return { ok: false, error: "로그인이 필요해요. 로그인 후 다시 시도해 주세요" };
+      }
+      return { ok: false, error: "이미지 업로드에 실패했어요. 다시 시도해 주세요" };
+    }
+    return { ok: true, path: json.path };
+  } catch {
+    return { ok: false, error: "이미지 업로드에 실패했어요. 다시 시도해 주세요" };
   }
-  return { ok: true, path: `meme-uploads/${data.path}` };
 }

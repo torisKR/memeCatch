@@ -203,15 +203,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
         } else {
           setUploading(true);
           try {
-            const supabase = createClient();
-            const {
-              data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) {
-              setUploadError("로그인이 필요해요. 로그인 후 다시 시도해 주세요");
-              return;
-            }
-            const result = await uploadMemeImage(attachFile, user.id);
+            const result = await uploadMemeImage(attachFile);
             if (!result.ok) {
               setUploadError(result.error);
               return;

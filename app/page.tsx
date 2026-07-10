@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SECTION_TITLES } from "@/lib/labels";
 import { getBeginnerMemes, getTrendingMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
+import { TrendingCarousel } from "@/components/trending-carousel";
 import { WebSiteJsonLd } from "@/components/json-ld";
 import { SearchHero } from "@/components/search-hero";
 // 레인 B 모션 래퍼(클라이언트): 스크롤 리빌 + 스태거 리스트
@@ -44,14 +45,8 @@ export default async function Home() {
                 전체 보기 <span aria-hidden>→</span>
               </Link>
             </div>
-            {/* 급상승 스트립: 가로 스크롤 + 생명게이지 강조 유지 */}
-            <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-              {trending.map((meme) => (
-                <li key={meme.id} className="w-40 shrink-0 snap-start">
-                  <MemeCard meme={meme} />
-                </li>
-              ))}
-            </ul>
+            {/* 급상승 스트립: 자동 이동 캐러셀 (호버/터치 시 정지, reduced-motion 존중) */}
+            <TrendingCarousel memes={trending} />
           </Reveal>
         </section>
       )}

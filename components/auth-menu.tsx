@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { signOut } from "@/lib/actions/auth";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * 전역 헤더가 /admin 경로에서 숨도록 감싸는 클라이언트 게이트.
@@ -19,14 +20,44 @@ export function HideOnAdmin({ children }: { children: React.ReactNode }) {
 
 /**
  * 프로필 아바타 드롭다운 / 로그인 버튼 — DESIGN.md §10 'AuthMenu'.
- * - nickname=null(비로그인): "로그인" 버튼 → /login?next=현재경로
- * - nickname 있음(로그인): 이니셜 아바타 → 드롭다운(MY·저장한 밈·로그아웃)
+ * 세션은 클라이언트에서 조회한다(헤더가 layout에 있어 서버 조회 시 전 페이지가
+ * dynamic 강등돼 ISR이 깨지므로). 마운트 후 profiles.nickname을 읽어 상태 확정.
+ * - 비로그인/조회 전: "로그인" 버튼 → /login?next=현재경로
+ * - 로그인: 이니셜 아바타 → 드롭다운(MY·저장한 밈·로그아웃)
  * - 드롭다운 fade+scale 진입, 바깥 클릭/esc 닫기, 열릴 때 첫 항목 포커스.
  * - prefers-reduced-motion 존중. 터치 타깃 44px+.
  */
-export function AuthMenu({ nickname }: { nickname: string | null }) {
+export function AuthMenu() {
   const pathname = usePathname();
   const reduce = useReducedMotion();
+  // null = 아직 조회 전, string = 로그인, "" = 비로그인 확정
+  const [nickname, setNickname] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!alive) return;
+      if (!user) {
+        setNickname("");
+        return;
+      }
+      const { data } = await supabase
+        .from("profiles")
+        .select("nickname")
+        .eq("id", user.id)
+        .single();
+      if (alive) setNickname(data?.nickname ?? "밈러");
+    });
+    // 로그인/로그아웃 변화 반영
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session?.user) setNickname("");
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   if (!nickname) {
     const next = encodeURIComponent(pathname || "/");

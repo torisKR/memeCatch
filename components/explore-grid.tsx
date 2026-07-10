@@ -32,7 +32,11 @@ export type ExploreFilters = {
   media?: Database["public"]["Enums"]["media_type"];
   year?: string; // '2020s' | '2010s' | '2000s'
   sort: SortKey;
+  q?: string; // 이 목록 안 검색어 — 있으면 search_memes RPC 경로
 };
+
+/** 검색 RPC 상한(SQL의 least(p_limit,50)) — 검색 결과 페이지네이션의 실질 상한 */
+const SEARCH_LIMIT = 50;
 
 /** 한 페이지 크기 — app/explore/page.tsx의 첫 페이지 크기와 반드시 동일하게 유지 */
 export const PAGE_SIZE = 24;
@@ -54,6 +58,32 @@ export function buildMemesQuery(
   supabase: SupabaseClient<Database>,
   filters: ExploreFilters
 ) {
+  // 검색어가 있으면 search_memes RPC(trgm·초성·별칭 서버 처리) 결과 위에
+  // 동일한 카테고리/정렬/페이지네이션을 얹는다. RPC는 setof memes라 필터 체이닝 가능.
+  // (RPC 내부 LIMIT 50 → 검색 결과는 최대 50건까지 무한스크롤)
+  if (filters.q) {
+    let sq = supabase.rpc("search_memes", {
+      p_query: filters.q,
+      p_limit: SEARCH_LIMIT,
+    });
+    if (filters.categories.length > 0) sq = sq.in("category", filters.categories);
+    if (filters.difficulty) sq = sq.eq("difficulty", filters.difficulty);
+    if (filters.lifecycle) sq = sq.eq("lifecycle_status", filters.lifecycle);
+    if (filters.media) sq = sq.eq("media_type", filters.media);
+    if (filters.year && YEAR_RANGES[filters.year]) {
+      const [lo, hi] = YEAR_RANGES[filters.year];
+      sq = sq.gte("origin_year", lo).lte("origin_year", hi);
+    }
+    if (filters.sort === "controversial") sq = sq.eq("sentiment", "controversial");
+    if (filters.sort === "recent" || filters.sort === "controversial") {
+      sq = sq.order("published_at", { ascending: false, nullsFirst: false });
+    } else {
+      sq = sq.order("trend_score", { ascending: false });
+    }
+    sq = sq.order("id", { ascending: false });
+    return sq;
+  }
+
   let q = supabase
     .from("memes")
     .select(EXPLORE_SELECT)
@@ -145,13 +175,24 @@ export function ExploreGrid({
     return () => io.disconnect();
   }, [loadMore, hasMore]);
 
-  // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음
+  // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음 (검색어가 있으면 반영)
   if (items.length === 0) {
     return (
       <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">
-        <p className="text-xl font-bold">이 조건의 밈이 아직 없어요</p>
+        <p className="text-xl font-bold">
+          {filters.q ? (
+            <>
+              &lsquo;<span className="text-accent">{filters.q}</span>&rsquo; 검색
+              결과가 없어요
+            </>
+          ) : (
+            "이 조건의 밈이 아직 없어요"
+          )}
+        </p>
         <p className="mt-1.5 text-base text-muted">
-          필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요.
+          {filters.q
+            ? "다른 말로 검색하거나 필터를 풀어 보세요. 아직 없는 밈이면 제보해 주세요."
+            : "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."}
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <Link

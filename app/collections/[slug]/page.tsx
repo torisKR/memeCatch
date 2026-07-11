@@ -62,6 +62,15 @@ async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {
       case "latest":
         q = q.order("published_at", { ascending: false, nullsFirst: false });
         break;
+      case "keywords": {
+        // 제목·요약·유래 중 하나라도 키워드를 포함하면 매치.
+        // supabase-js .or()에서는 %가 아닌 *를 와일드카드로 써야 인코딩이 안전하다.
+        const ors = col.filter.terms
+          .flatMap((t) => ["title", "summary", "origin"].map((c) => `${c}.ilike.*${t}*`))
+          .join(",");
+        q = q.or(ors).order("trend_score", { ascending: false });
+        break;
+      }
     }
     const { data } = await q.order("id", { ascending: false }).limit(LIMIT);
     return (data ?? []) as MemeListItem[];

@@ -182,8 +182,39 @@ export default async function MemeDetailPage({ params }: Props) {
                   </span>
                 ))}
               </p>
+              {/* 상시 출처 인용 — E-E-A-T: 유래 주장 바로 아래에 근거 링크 */}
+              {meme.meme_sources.length > 0 && (
+                <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                  <span className="font-semibold">출처:</span>
+                  {meme.meme_sources.slice(0, 3).map((s, i) => (
+                    <a
+                      key={s.source_url ?? i}
+                      href={s.source_url ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2 transition-colors hover:text-foreground"
+                    >
+                      {s.source_url?.includes("namu.wiki")
+                        ? "나무위키"
+                        : s.platform || "원문"}
+                      <span aria-hidden className="text-xs">↗</span>
+                    </a>
+                  ))}
+                </p>
+              )}
             </div>
           )}
+          {/* 신선도 신호 — 검수·갱신 시점을 독자에게 노출 (E-E-A-T) */}
+          <p className="border-t border-border pt-3 text-sm text-muted">
+            밈캐치 검수팀 확인 · 마지막 업데이트{" "}
+            <time dateTime={meme.updated_at}>
+              {new Date(meme.updated_at).toLocaleDateString("ko-KR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </time>
+          </p>
         </section>
       )}
 

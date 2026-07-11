@@ -73,9 +73,21 @@ export default function AboutPage() {
       </section>
 
       <section className="mt-10">
+        <h2 className="text-xl font-bold">큐레이션 기준</h2>
+        <p className="mt-3 text-base leading-relaxed">
+          모든 항목은 같은 기준으로 기록합니다 — <strong>정의는 한 문장으로
+          독립적으로 이해될 것</strong>, 유래는 최초 발생 시점·발원지를 특정할
+          것, 사용 안전도는 실제 커뮤니티에서의 쓰임(비하 맥락 여부, 세대 간
+          수용도)을 근거로 판정할 것. 확인되지 않는 유래는 &ldquo;~로
+          알려짐&rdquo;으로 표기하고 단정하지 않습니다.
+        </p>
+      </section>
+
+      <section className="mt-10">
         <h2 className="text-xl font-bold">운영 및 문의</h2>
         <p className="mt-3 text-base leading-relaxed">
-          밈캐치는 개인 개발자가 운영하는 비영리적 프로젝트이며 광고·후원으로
+          밈캐치는 온라인 커뮤니티와 인터넷 방송 문화를 오래 지켜본 개인
+          개발자가 만들고 운영하는 비영리적 프로젝트이며 광고·후원으로
           유지됩니다. 문의·제휴·삭제 요청:{" "}
           <a
             href="mailto:ironjustlikethat@gmail.com"

@@ -25,6 +25,9 @@ import {
 } from "@/components/json-ld";
 import { memePathFrom } from "@/lib/labels";
 import { ViewTracker } from "./view-tracker";
+import { ContinueStream } from "@/components/continue-stream";
+import { TrackedBlock } from "@/components/tracked-block";
+import { ContextNav } from "@/components/context-nav";
 
 /** 밈 상세 — 공개 ISR (10분), 온디맨드 생성 */
 export const revalidate = 600;
@@ -105,6 +108,9 @@ export default async function MemeDetailPage({ params }: Props) {
         />
       )}
       <ViewTracker memeId={meme.id} />
+
+      {/* 컬렉션 진입 맥락 네비 — 클라 전용(ISR 유지) */}
+      <ContextNav />
 
       {meme.moderation_status === "limited" && (
         <p
@@ -240,13 +246,15 @@ export default async function MemeDetailPage({ params }: Props) {
           <h2 id="related-memes" className="text-xl font-bold">
             이 밈도 알아두면 좋아요
           </h2>
-          <ul className="mt-3 grid grid-cols-2 gap-4">
-            {related.map((m) => (
-              <li key={m.id} className="min-w-0">
-                <MemeCard meme={m} />
-              </li>
-            ))}
-          </ul>
+          <TrackedBlock event="related_click">
+            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {related.map((m) => (
+                <li key={m.id} className="min-w-0">
+                  <MemeCard meme={m} />
+                </li>
+              ))}
+            </ul>
+          </TrackedBlock>
         </section>
       )}
 
@@ -255,6 +263,13 @@ export default async function MemeDetailPage({ params }: Props) {
       <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
 
       <Comments memeId={meme.id} />
+
+      {/* Wave 1 — 세션 깊이: 같은 카테고리 무한 이어보기 */}
+      <ContinueStream
+        currentId={meme.id}
+        category={meme.category}
+        relatedIds={related.map((m) => m.id)}
+      />
     </main>
   );
 }

@@ -140,9 +140,23 @@ export default async function CollectionPage({
             className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
             itemClassName="min-w-0"
           >
-            {memes.map((meme) => (
-              <MemeCard key={meme.id} meme={meme} />
-            ))}
+            {memes.map((meme, idx) => {
+              // 맥락 네비 파라미터 — 이전/다음을 서버에서 인코딩(상세는 클라 파싱, ISR 유지)
+              const q = new URLSearchParams({ ctx: col.slug });
+              const prev = memes[idx - 1];
+              const next = memes[idx + 1];
+              if (prev) q.set("prev", memePathFrom(prev.short_id, prev.slug));
+              if (next) q.set("next", memePathFrom(next.short_id, next.slug));
+              q.set("i", String(idx + 1));
+              q.set("total", String(memes.length));
+              return (
+                <MemeCard
+                  key={meme.id}
+                  meme={meme}
+                  href={`${memePathFrom(meme.short_id, meme.slug)}?${q.toString()}`}
+                />
+              );
+            })}
           </MotionList>
 
           <div className="mt-8 flex flex-wrap gap-3">

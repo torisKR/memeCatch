@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
 import { ExploreNavLink } from "@/components/explore-nav-link";
 import { BrandTile } from "@/components/brand-mark";
+import { RandomMemeButton } from "@/components/random-meme-button";
 
 /**
  * 전역 헤더 — DESIGN.md §10.
@@ -61,6 +62,8 @@ export function GlobalHeader() {
                 />
               </div>
             </form>
+
+            <RandomMemeButton />
 
             {/* 모바일: 검색 아이콘 버튼 */}
             <Link

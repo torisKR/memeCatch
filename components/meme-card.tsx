@@ -20,7 +20,14 @@ import type { MemeListItem, MemeRow } from "@/lib/queries";
  */
 const MotionLink = motion.create(Link);
 
-export function MemeCard({ meme }: { meme: MemeRow | MemeListItem }) {
+export function MemeCard({
+  meme,
+  href,
+}: {
+  meme: MemeRow | MemeListItem;
+  /** 링크 오버라이드 — 컬렉션 맥락 파라미터(?ctx=...) 부착용 */
+  href?: string;
+}) {
   const reduce = useReducedMotion();
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
   const thumb =
@@ -30,7 +37,7 @@ export function MemeCard({ meme }: { meme: MemeRow | MemeListItem }) {
 
   return (
     <MotionLink
-      href={memePathFrom(meme.short_id, meme.slug)}
+      href={href ?? memePathFrom(meme.short_id, meme.slug)}
       className="group block min-w-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl focus-visible:outline-offset-4"
       whileHover={reduce ? undefined : { y: -4, scale: 1.02 }}
       whileTap={reduce ? undefined : { scale: 0.97 }}

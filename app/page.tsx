@@ -2,6 +2,8 @@ import Link from "next/link";
 import { SECTION_TITLES } from "@/lib/labels";
 import { getBeginnerMemes, getTotalMemeCount, getTrendingMemes } from "@/lib/queries";
 import { COLLECTIONS } from "@/lib/collections";
+import { TodayMeme } from "@/components/today-meme";
+import { ResumeStrip } from "@/components/resume-strip";
 import { MemeCard } from "@/components/meme-card";
 import { TrendingCarousel } from "@/components/trending-carousel";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
@@ -59,6 +61,10 @@ export default async function Home() {
           </Reveal>
         </section>
       )}
+
+      {/* Wave 1: 오늘의 밈(D1) + 이어보기 줄(D2) */}
+      <TodayMeme />
+      <ResumeStrip />
 
       {showBeginners && (
         // 섹션 배경 --cream으로 교차(리듬) — 토큰 미정의 시 surface-2로 안전 폴백

@@ -87,13 +87,19 @@ export const getMemeByShortId = cache(
 );
 
 /** 관련 밈 — 같은 태그 우선, 부족하면 같은 카테고리에서 연도 근접순으로 채움 (최대 4개) */
+/**
+ * 관련 밈 — CEO 플랜 Wave 1 스코어링:
+ *   태그 공유 여부×3 + 동일 카테고리×2 + |연도차|≤2×1, 동점 시 trend_score 내림차순.
+ * 후보 풀: 태그 공유 밈(최대 30) ∪ 동일 카테고리 상위 24 ∪ 연도 인접(±2) 상위 12.
+ */
 export async function getRelatedMemes(
   meme: { id: string; category: MemeCategory; origin_year: number | null },
-  tagIds: string[]
+  tagIds: string[],
+  limit = 9
 ): Promise<MemeListItem[]> {
-  const picked = new Map<string, MemeListItem>();
   try {
     const supabase = createStaticClient();
+    const taggedIds = new Set<string>();
     if (tagIds.length > 0) {
       const { data: mapRows } = await supabase
         .from("meme_tags_map")
@@ -101,43 +107,60 @@ export async function getRelatedMemes(
         .in("tag_id", tagIds)
         .neq("meme_id", meme.id)
         .limit(30);
-      const ids = [...new Set((mapRows ?? []).map((r) => r.meme_id))];
-      if (ids.length > 0) {
-        const { data } = await supabase
-          .from("memes")
-          .select(LIST_SELECT)
-          .in("id", ids)
-          .in("moderation_status", [...PUBLIC_STATUSES])
-          .order("trend_score", { ascending: false })
-          .limit(4);
-        for (const m of (data ?? []) as MemeListItem[]) picked.set(m.id, m);
-      }
+      for (const r of mapRows ?? []) taggedIds.add(r.meme_id);
     }
-    if (picked.size < 4) {
+
+    const pool = new Map<string, MemeListItem>();
+    const collect = (rows: MemeListItem[] | null) => {
+      for (const m of rows ?? []) if (m.id !== meme.id) pool.set(m.id, m);
+    };
+    if (taggedIds.size > 0) {
       const { data } = await supabase
         .from("memes")
         .select(LIST_SELECT)
-        .eq("category", meme.category)
+        .in("id", [...taggedIds])
+        .in("moderation_status", [...PUBLIC_STATUSES])
+        .limit(30);
+      collect(data as MemeListItem[] | null);
+    }
+    const { data: sameCat } = await supabase
+      .from("memes")
+      .select(LIST_SELECT)
+      .eq("category", meme.category)
+      .neq("id", meme.id)
+      .in("moderation_status", [...PUBLIC_STATUSES])
+      .order("trend_score", { ascending: false })
+      .limit(24);
+    collect(sameCat as MemeListItem[] | null);
+    if (meme.origin_year != null) {
+      const { data: nearYear } = await supabase
+        .from("memes")
+        .select(LIST_SELECT)
+        .gte("origin_year", meme.origin_year - 2)
+        .lte("origin_year", meme.origin_year + 2)
         .neq("id", meme.id)
         .in("moderation_status", [...PUBLIC_STATUSES])
         .order("trend_score", { ascending: false })
         .limit(12);
-      const yearDist = (m: MemeListItem) =>
-        meme.origin_year != null && m.origin_year != null
-          ? Math.abs(m.origin_year - meme.origin_year)
-          : Number.MAX_SAFE_INTEGER;
-      const fill = ((data ?? []) as MemeListItem[])
-        .filter((m) => !picked.has(m.id))
-        .sort((a, b) => yearDist(a) - yearDist(b));
-      for (const m of fill) {
-        if (picked.size >= 4) break;
-        picked.set(m.id, m);
-      }
+      collect(nearYear as MemeListItem[] | null);
     }
+
+    const score = (m: MemeListItem) =>
+      (taggedIds.has(m.id) ? 3 : 0) +
+      (m.category === meme.category ? 2 : 0) +
+      (meme.origin_year != null &&
+      m.origin_year != null &&
+      Math.abs(m.origin_year - meme.origin_year) <= 2
+        ? 1
+        : 0);
+
+    return [...pool.values()]
+      .sort((a, b) => score(b) - score(a) || (b.trend_score ?? 0) - (a.trend_score ?? 0))
+      .slice(0, limit);
   } catch {
     // 관련 밈 실패는 치명적이지 않음 — 섹션 숨김으로 처리
+    return [];
   }
-  return [...picked.values()].slice(0, 4);
 }
 
 /** 반응 카운트 — 집계 뷰(meme_reaction_counts) */

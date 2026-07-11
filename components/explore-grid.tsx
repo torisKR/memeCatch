@@ -128,9 +128,12 @@ async function fetchPage(
 export function ExploreGrid({
   initial,
   filters,
+  excludeIds = [],
 }: {
   initial: MemeListItem[];
   filters: ExploreFilters;
+  /** 스트림에서 항상 제외할 밈 id (예: 현재 보고 있는 밈) */
+  excludeIds?: string[];
 }) {
   const [items, setItems] = useState<MemeListItem[]>(initial);
   const [page, setPage] = useState(0);
@@ -138,8 +141,10 @@ export function ExploreGrid({
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  // 이미 담은 id — 중복 방지
-  const seenRef = useRef<Set<string>>(new Set(initial.map((m) => m.id)));
+  // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
+  const seenRef = useRef<Set<string>>(
+    new Set([...excludeIds, ...initial.map((m) => m.id)])
+  );
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const loadMore = useCallback(async () => {

@@ -16,7 +16,8 @@ export type CollectionDef = {
     | { kind: "decade"; from: number; to: number }
     | { kind: "category"; category: MemeCategory }
     | { kind: "beginner" }
-    | { kind: "latest" };
+    | { kind: "latest" }
+    | { kind: "keywords"; terms: string[] };
   /** /explore로 이어지는 필터 쿼리스트링 */
   exploreQuery: string;
 };
@@ -93,6 +94,30 @@ export const COLLECTIONS: CollectionDef[] = [
       "말보다 빠른 대답, 짤. 어디서 나온 장면인지 알고 쓰면 두 배 재밌습니다. 각 짤의 원출처와 어떤 상황에서 쓰는지, 출처 링크와 함께 모았습니다.",
     filter: { kind: "category", category: "image" },
     exploreQuery: "category=image",
+  },
+  {
+    slug: "streamer",
+    title: "스트리머 밈 모음",
+    description: "아프리카TV·트위치·치지직에서 태어난 인터넷 방송 밈 총정리.",
+    intro:
+      "밈의 최대 발원지 중 하나, 인터넷 방송. 스트리머의 말버릇 하나가 클립을 타고 하루 만에 전국 유행어가 됩니다. BJ 시절의 고전부터 버추얼 스트리머 밈까지, 방송에서 태어난 밈들을 모았습니다.",
+    filter: {
+      kind: "keywords",
+      terms: ["스트리머", "아프리카TV", "트위치", "치지직", "BJ", "버튜버", "인터넷 방송"],
+    },
+    exploreQuery: "",
+  },
+  {
+    slug: "game",
+    title: "게임 밈 모음",
+    description: "스타크래프트부터 롤·배그까지 — 한국 게임 커뮤니티 밈 총정리.",
+    intro:
+      "PC방에서 태어나 채팅창으로 퍼진 밈들. 게임 용어는 게임 밖으로 나와 일상 대화에 자리 잡곤 합니다. e스포츠 명장면과 중계 어록, 게임 커뮤니티 은어까지 — 게임을 몰라도 뜻을 알 수 있게 정리했습니다.",
+    filter: {
+      kind: "keywords",
+      terms: ["게임", "스타크래프트", "리그 오브 레전드", "롤", "e스포츠", "배틀그라운드", "메이플", "오버워치"],
+    },
+    exploreQuery: "",
   },
   {
     slug: "beginner",

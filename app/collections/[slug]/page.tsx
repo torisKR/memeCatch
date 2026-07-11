@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createStaticClient } from "@/lib/supabase/server";
@@ -8,7 +9,6 @@ import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { memePathFrom } from "@/lib/labels";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /** 테마별 밈 모음 허브 — 미드테일 검색("2000년대 밈" 등) 유입용 정적 콘텐츠. ISR 1시간 */
 export const revalidate = 3600;

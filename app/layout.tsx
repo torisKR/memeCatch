@@ -6,9 +6,9 @@ import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
 import { OrganizationJsonLd } from "@/components/json-ld";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 // AdSense — env(ca-pub-…)가 설정된 경우에만 사이트 소유확인 메타 + 스크립트 활성화
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 // GA4 — env(G-…)가 설정된 경우에만 로드 (AdSense·서치콘솔 연동용 분석)
@@ -40,6 +40,9 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
+    title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    description:
+      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
     siteName: "밈캐치",
     locale: "ko_KR",
   },

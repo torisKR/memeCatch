@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>밈캐치 Catch Signal 로고</title>
+  <path
+    d="M41.5 14.5c-4-2.7-8.7-4-13.9-4C15.8 10.5 6.5 20.1 6.5 32s9.3 21.5 21.1 21.5c5.2 0 9.9-1.3 13.9-4"
+    fill="none"
+    stroke="#16161a"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+  <circle cx="45.5" cy="32" r="4.6" fill="#ff5c38"/>
+</svg>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
 import { ExploreNavLink } from "@/components/explore-nav-link";
+import { BrandTile } from "@/components/brand-mark";
 
 /**
  * 전역 헤더 — DESIGN.md §10.
@@ -23,10 +24,15 @@ export function GlobalHeader() {
           <Link
             href="/"
             aria-label="밈캐치 홈"
-            className="flex min-h-11 items-center gap-1.5 rounded-lg py-1 pr-1 text-lg font-extrabold tracking-tight transition-transform active:scale-[0.97]"
+            className="group flex min-h-11 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
           >
-            <FlameMark className="h-5 w-5 text-accent" />
-            <span>밈캐치</span>
+            <BrandTile className="size-8 shadow-[0_4px_14px_color-mix(in_srgb,var(--accent)_24%,transparent)] transition-transform duration-300 group-hover:-rotate-6" />
+            <span className="flex flex-col leading-none">
+              <span className="text-lg font-extrabold tracking-[-0.045em]">밈캐치</span>
+              <span className="mt-1 hidden font-mono text-[8px] font-semibold uppercase tracking-[0.13em] text-muted sm:block">
+                catchmeme.com
+              </span>
+            </span>
           </Link>
 
           {/* 데스크톱 탐색 링크 — 모바일은 하단탭에 탐색이 있어 md 이상만 노출 */}
@@ -73,18 +79,6 @@ export function GlobalHeader() {
   );
 }
 
-function FlameMark({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d="M13.1 2c.5 2.7-.5 4.6-2 6.2-1.5 1.6-3.4 3-3.4 5.9a6.3 6.3 0 0 0 12.6.1c0-2.4-1-4.3-2-5.9-.4 1-1 1.7-1.9 2.1.7-3-.4-6.2-3.3-8.4Zm-.6 9.3c1.2 1.2 2 2.3 2 3.8a2.5 2.5 0 0 1-5 0c0-1 .5-1.8 1.1-2.6.2.6.6 1 1.1 1.3-.1-1 .2-1.8.8-2.5Z" />
-    </svg>
-  );
-}
 
 function SearchIcon({ className }: { className?: string }) {
   return (

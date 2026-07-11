@@ -1,5 +1,6 @@
 import { createStaticClient } from "@/lib/supabase/server";
 import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
+import { COLLECTIONS } from "@/lib/collections";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -58,6 +59,9 @@ export async function GET() {
 
 ## 카테고리
 ${categories}
+
+## 테마별 모음
+${COLLECTIONS.map((c) => `- [${c.title}](${SITE_URL}/collections/${c.slug}): ${c.description}`).join("\n")}
 
 ## 지금 뜨는 밈
 ${trendingBlock || "- (실시간 목록은 사이트에서 확인)"}

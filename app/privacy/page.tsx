@@ -78,12 +78,43 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold">6. 쿠키</h2>
+          <h2 className="text-xl font-bold">6. 쿠키 및 광고</h2>
           <p className="mt-3">
-            로그인 세션 유지를 위한 필수 쿠키만 사용하며, 광고·추적 목적의
-            제3자 쿠키는 사용하지 않습니다. 브라우저 설정에서 쿠키를 거부할 수
-            있으나 로그인 기능이 제한될 수 있습니다.
+            로그인 세션 유지를 위한 필수 쿠키를 사용합니다. 브라우저 설정에서
+            쿠키를 거부할 수 있으나 로그인 기능이 제한될 수 있습니다.
           </p>
+          <p className="mt-3">
+            본 서비스는 광고 게재를 위해 <strong>Google AdSense</strong>를
+            사용할 수 있습니다. Google을 포함한 제3자 광고 사업자는 쿠키를
+            사용해 이용자의 이전 방문 기록을 기반으로 광고를 게재하며, Google의
+            광고 쿠키 사용으로 이용자에게 맞춤형 광고가 표시될 수 있습니다.
+          </p>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5">
+            <li>
+              이용자는{" "}
+              <a
+                href="https://adssettings.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent underline underline-offset-2"
+              >
+                Google 광고 설정
+              </a>
+              에서 맞춤 광고를 해제할 수 있습니다.
+            </li>
+            <li>
+              제3자 광고 사업자의 쿠키 사용은{" "}
+              <a
+                href="https://policies.google.com/technologies/ads?hl=ko"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent underline underline-offset-2"
+              >
+                Google 광고 정책
+              </a>
+              을 참고하세요.
+            </li>
+          </ul>
         </section>
 
         <section>

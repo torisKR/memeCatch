@@ -55,7 +55,7 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
           autoComplete="off"
           enterKeyHint="search"
           autoFocus={!initialQuery}
-          className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base shadow-sm outline-none transition-colors focus:border-accent"
+          className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20"
         />
       </div>
     </form>

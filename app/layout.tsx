@@ -74,7 +74,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body className="min-h-dvh pb-16 md:pb-0">
+      <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
         {ADSENSE_CLIENT && (
           <Script
@@ -88,7 +88,7 @@ export default function RootLayout({
         {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
         <OrganizationJsonLd />
         <GlobalHeader />
-        {children}
+        <div className="flex-1">{children}</div>
         <SiteFooter />
         <BottomNav />
         <PwaInstall />

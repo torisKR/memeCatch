@@ -205,7 +205,7 @@ export function ExploreFilters() {
               type="button"
               onClick={clearSearch}
               aria-label="검색어 지우기"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:text-accent active:scale-95"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:text-accent active:scale-95"
             >
               <svg
                 viewBox="0 0 24 24"

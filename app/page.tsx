@@ -6,6 +6,7 @@ import { TodayMeme } from "@/components/today-meme";
 import { ResumeStrip } from "@/components/resume-strip";
 import { MemeCard } from "@/components/meme-card";
 import { TrendingCarousel } from "@/components/trending-carousel";
+import { StatusPanel } from "@/components/status-panel";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
 import { HeroWeb3 } from "@/components/hero-web3";
 // 레인 B 모션 래퍼(클라이언트): 스크롤 리빌 + 스태거 리스트
@@ -121,12 +122,29 @@ export default async function Home() {
       )}
 
       {!showTrending && !showBeginners && (
-        <section className="mt-6 rounded-2xl border border-border bg-surface p-8 text-center">
-          <p className="text-lg font-bold">아직 준비된 밈이 부족해요</p>
-          <p className="mt-1 text-base text-muted">
-            밈을 차곡차곡 정리하고 있어요. 조금만 기다려 주세요.
-          </p>
-        </section>
+        <StatusPanel
+          className="mt-6"
+          label="캐치 신호 준비 중"
+          title="새 밈을 같이 채워주세요"
+          description="테마를 먼저 둘러보거나, 지금 궁금한 밈을 제보해 주세요."
+          tone="waiting"
+          actions={
+            <>
+              <Link
+                href="/explore"
+                className="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
+              >
+                밈 탐색하기
+              </Link>
+              <Link
+                href="/submit"
+                className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent"
+              >
+                밈 제보하기
+              </Link>
+            </>
+          }
+        />
       )}
       </div>
     </main>

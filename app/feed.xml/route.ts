@@ -1,7 +1,7 @@
 import { createStaticClient } from "@/lib/supabase/server";
+import { SITE_URL } from "@/lib/site";
 import { memePathFrom, CATEGORIES, type MemeCategory } from "@/lib/labels";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /** 1시간마다 재생성 */
 export const revalidate = 3600;

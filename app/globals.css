@@ -260,3 +260,19 @@ body {
   .hero-shimmer-text { animation: none !important; }
   .hero-marquee-track { animation: none !important; }
 }
+
+/* ── Catch Signal 브랜드 토큰 (브랜드 패스 이식, 2026-07-11) ─────── */
+:root {
+  --accent-text: #c4341a; /* 밝은 표면 위 작은 텍스트용 AA 오렌지 */
+  --brand-signal: var(--accent); /* dot = 포착된 밈/판정 신호 */
+  --font-utility: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-text: #ff9a7e;
+  }
+}
+@theme inline {
+  --color-accent-text: var(--accent-text);
+  --font-mono: var(--font-utility);
+}

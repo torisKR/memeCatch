@@ -1,8 +1,8 @@
 import { createStaticClient } from "@/lib/supabase/server";
+import { SITE_URL } from "@/lib/site";
 import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /** llms.txt — AI 시스템용 사이트 안내 (https://llmstxt.org 규격). 1시간 재검증 */
 export const revalidate = 3600;

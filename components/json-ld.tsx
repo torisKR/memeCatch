@@ -1,6 +1,6 @@
 import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
+import { SITE_URL } from "@/lib/site";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /**
  * 구조화 데이터(JSON-LD) — GEO 감사(2026-07-10) 반영 전면 확장.
@@ -31,7 +31,7 @@ export function OrganizationJsonLd() {
         "@type": "Organization",
         "@id": `${SITE_URL}#org`,
         name: "밈캐치",
-        alternateName: "MemeCatch",
+        alternateName: ["MemeCatch", "catchmeme"],
         url: SITE_URL,
         logo: `${SITE_URL}/icons/icon-512.png`,
         description:

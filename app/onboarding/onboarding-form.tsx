@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { BrandTile } from "@/components/brand-mark";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "motion/react";
@@ -74,7 +75,7 @@ export function OnboardingForm({
   return (
     <motion.div variants={container} initial="hidden" animate="show">
       <motion.div variants={item} className="flex items-center gap-2">
-        <FlameMark className="h-8 w-8 text-accent" />
+        <BrandTile className="size-9" />
         <span className="text-sm font-semibold text-muted">1 / 1 단계</span>
       </motion.div>
 
@@ -213,14 +214,3 @@ function SubmitButton() {
   );
 }
 
-function FlameMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-      <path d="M12.8 2.3c.2 2.4-.7 3.9-2 5.2-1.5 1.5-3.4 3-3.4 5.9A6.6 6.6 0 0 0 18 13c0-2-.9-3.6-1.7-4.6.1.9-.2 1.7-.9 2.2.3-2.3-.6-4.9-2.6-8.3Z" />
-      <path
-        d="M12 21.7a3.9 3.9 0 0 0 3.9-3.9c0-1.7-1-2.8-1.8-3.7.1.7-.2 1.3-.7 1.7.2-1.5-.5-3.2-1.9-5-.5 1.7-1.6 2.4-2.4 3.4-.6.8-1 1.6-1 2.6A3.9 3.9 0 0 0 12 21.7Z"
-        opacity=".55"
-      />
-    </svg>
-  );
-}

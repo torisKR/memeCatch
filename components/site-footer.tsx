@@ -27,7 +27,7 @@ export function SiteFooter() {
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="inline-flex min-h-11 items-center font-medium text-muted transition-colors hover:text-foreground"
+                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted transition-colors hover:text-foreground"
                   >
                     {l.label}
                   </Link>
@@ -58,7 +58,7 @@ export function SiteFooter() {
               콘텐츠의 저작권은 원저작자에게 있습니다. 문의·삭제 요청:{" "}
               <a
                 href="mailto:ironjustlikethat@gmail.com"
-                className="inline-block py-2 underline underline-offset-2 hover:text-foreground"
+                className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-foreground"
               >
                 ironjustlikethat@gmail.com
               </a>

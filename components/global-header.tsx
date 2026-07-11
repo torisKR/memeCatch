@@ -58,7 +58,7 @@ export function GlobalHeader() {
                   placeholder="밈 검색"
                   autoComplete="off"
                   enterKeyHint="search"
-                  className="h-10 w-52 rounded-full border border-border bg-surface pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow,width] duration-200 focus:w-64 focus:border-accent focus:ring-4 focus:ring-accent/20"
+                  className="h-11 w-52 rounded-full border border-border bg-surface pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow,width] duration-200 focus:w-64 focus:border-accent focus:ring-4 focus:ring-accent/20"
                 />
               </div>
             </form>

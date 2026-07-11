@@ -35,7 +35,7 @@ function HeaderNavLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`hidden h-10 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex ${
+      className={`hidden h-11 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex ${
         active
           ? "bg-surface-2 font-semibold text-foreground"
           : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"

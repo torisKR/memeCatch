@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { BottomNav } from "@/components/bottom-nav";
 import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -10,6 +11,8 @@ import "./globals.css";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 // AdSense — env(ca-pub-…)가 설정된 경우에만 사이트 소유확인 메타 + 스크립트 활성화
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+// GA4 — env(G-…)가 설정된 경우에만 로드 (AdSense·서치콘솔 연동용 분석)
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -78,6 +81,8 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         )}
+        {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}
+        {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
         <OrganizationJsonLd />
         <GlobalHeader />
         {children}

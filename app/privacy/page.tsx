@@ -84,6 +84,11 @@ export default function PrivacyPage() {
             쿠키를 거부할 수 있으나 로그인 기능이 제한될 수 있습니다.
           </p>
           <p className="mt-3">
+            본 서비스는 이용 통계 분석을 위해 <strong>Google 애널리틱스</strong>를
+            사용합니다. 수집되는 정보는 익명화된 이용 행태(방문 페이지, 유입
+            경로, 기기 유형 등)이며 개인을 식별하지 않습니다.
+          </p>
+          <p className="mt-3">
             본 서비스는 광고 게재를 위해 <strong>Google AdSense</strong>를
             사용할 수 있습니다. Google을 포함한 제3자 광고 사업자는 쿠키를
             사용해 이용자의 이전 방문 기록을 기반으로 광고를 게재하며, Google의

@@ -28,7 +28,10 @@ export const metadata: Metadata = {
   verification: {
     google: "tNpEvRKUbirAkwRA-XH0HJzDh8bCF6Waqctqu1Hak38",
     other: {
-      "naver-site-verification": "4973421614cb5e3682ed4c99e6deee5c66b1f587",
+      "naver-site-verification": [
+        "4973421614cb5e3682ed4c99e6deee5c66b1f587",
+        "86e27030ca82a4577a7a16ed1ac0a70799c029ec",
+      ],
       ...(ADSENSE_CLIENT ? { "google-adsense-account": ADSENSE_CLIENT } : {}),
     },
   },

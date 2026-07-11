@@ -88,7 +88,16 @@ export default function AboutPage() {
         <p className="mt-3 text-base leading-relaxed">
           밈캐치는 온라인 커뮤니티와 인터넷 방송 문화를 오래 지켜본 개인
           개발자가 만들고 운영하는 비영리적 프로젝트이며 광고·후원으로
-          유지됩니다. 문의·제휴·삭제 요청:{" "}
+          유지됩니다. 서비스가 도움이 됐다면{" "}
+          <a
+            href="https://fairy.hada.io/@toris-dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent underline underline-offset-2"
+          >
+            후원(Fairy)
+          </a>
+          으로 응원할 수 있습니다. 문의·제휴·삭제 요청:{" "}
           <a
             href="mailto:ironjustlikethat@gmail.com"
             className="text-accent underline underline-offset-2"

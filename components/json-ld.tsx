@@ -37,7 +37,10 @@ export function OrganizationJsonLd() {
         description:
           "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 알려주는 한국 밈 실시간 사전.",
         email: "ironjustlikethat@gmail.com",
-        sameAs: ["https://github.com/toris-dev/memeCatch"],
+        sameAs: [
+          "https://github.com/toris-dev/memeCatch",
+          "https://fairy.hada.io/@toris-dev",
+        ],
       }}
     />
   );

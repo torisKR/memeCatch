@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "public/sw.js",
     "scripts/**",
     "data/**",
+    ".claude/**",
   ]),
 ]);
 

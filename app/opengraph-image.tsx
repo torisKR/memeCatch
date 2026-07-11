@@ -30,17 +30,21 @@ export default function OgImage() {
             style={{
               width: 56,
               height: 56,
-              borderRadius: 9999,
-              background: "#ff5c38",
+              borderRadius: 16,
+              background: "#FF5A1F",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 32,
-              color: "#fff",
-              fontWeight: 800,
             }}
           >
-            🔥
+            <svg width="38" height="38" viewBox="0 0 64 64" fill="none">
+              <path
+                fill="#FFF9F5"
+                d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"
+              />
+              <circle cx="41" cy="29" r="7.5" fill="#FF5A1F" />
+              <path d="M15 29h11" stroke="#FF5A1F" strokeWidth="5.5" strokeLinecap="round" />
+            </svg>
           </div>
           <div style={{ fontSize: 44, fontWeight: 800 }}>밈캐치</div>
         </div>

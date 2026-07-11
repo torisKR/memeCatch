@@ -310,3 +310,32 @@ challenge 챌린지 #fdf0d9  #855100   #332810   #fcd34d   깃발(트로피)
 4. **세이프에어리어** — 하단탭 `env(safe-area-inset-bottom)`, body `pb-16 md:pb-0`로 고정 요소와 콘텐츠 비겹침
 5. **커뮤니티 카드** — stretched-link 패턴(제목 링크 `after:inset-0` 확장, 밈칩만 `z-10`) → 카드 전체 탭 + 중첩 링크 공존
 6. **320px** — 히어로 헤드라인 줄바꿈 자연, 티커·칩 스크롤 정상
+
+---
+
+## 14. 브랜드 심볼 확정 — Meme Signal (2026-07-12)
+
+3콘셉트(A Flame Catch / B Meme Signal / C ㅁㅊ 모노그램) 비교 후 **B 확정**.
+근거: ① USP(사용 안전 신호등)를 심볼이 자체 설명 ② 16px 파비콘 무손실 식별 유일
+③ 기존 Catch Signal dot 계보 승계 ④ 불꽃은 생명 게이지 UI 전용으로 의미 분리.
+
+### 심볼 구조
+말풍선(밈·유행어 사전) + 신호 dot(판정) + 펄스 라인(뜻풀이). 컷 테일 + 오프센터
+dot로 메신저 로고 문법에서 이탈.
+
+### 컬러
+- 라이트: 버블 `#FF5A1F` / dot·펄스 `#FFF9F5`
+- 다크: 버블 `#FF7A1A` / dot·펄스 `#171717` (옵션 dot 강조 `#FFB800`)
+- 단색: 흑 `#171717` / 백 `#FFFFFF` (dot는 배경색 컷아웃)
+
+### 사용 규칙
+- **여백**: 심볼 높이의 25% 이상 사방 확보 (버블 테일 포함 기준)
+- **최소 크기**: 풀 심볼(펄스 포함) 24px / 파비콘판 16px
+- **파비콘 단순화 규칙**: 16~48px에서는 펄스 제거, dot 133% 확대(r7.5→10),
+  테일 과장 — `public/brand/favicon.svg`가 이 판본
+- 워드마크: Pretendard 800, letter-spacing -0.045em, 심볼:워드마크 높이 = 1:0.65
+
+### 자산 위치
+`public/brand/` — symbol.svg · favicon.svg · logo-h-light/dark.svg · logo-en.svg ·
+symbol-mono-black/white.svg / 앱: app/icon.svg · app/favicon.ico(16·32·48) ·
+app/apple-icon.png · public/icons/*(192·512·maskable, 안전영역 80%)

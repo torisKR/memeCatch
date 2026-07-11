@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SECTION_TITLES } from "@/lib/labels";
 import { getBeginnerMemes, getTotalMemeCount, getTrendingMemes } from "@/lib/queries";
+import { COLLECTIONS } from "@/lib/collections";
 import { MemeCard } from "@/components/meme-card";
 import { TrendingCarousel } from "@/components/trending-carousel";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
@@ -79,6 +80,27 @@ export default async function Home() {
           </MotionList>
         </section>
       )}
+
+      {/* 테마별 모음 허브 — 미드테일 검색 유입 + 내부 링크 */}
+      <section aria-labelledby="sec-collections" className="mt-8">
+        <Reveal>
+          <h2 id="sec-collections" className="text-xl font-bold">
+            테마별 밈 모음
+          </h2>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {COLLECTIONS.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/collections/${c.slug}`}
+                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+                >
+                  {c.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+      </section>
 
       {(showTrending || showBeginners) && (
         <Reveal>

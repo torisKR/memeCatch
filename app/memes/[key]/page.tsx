@@ -40,8 +40,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meme = await getMemeByShortId(shortIdFromParam(key));
   if (!meme) return { title: "밈을 찾을 수 없어요" };
   return {
-    title: meme.title,
-    description: meme.summary,
+    // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
+    title: `${meme.title} 뜻`,
+    description: `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: memePathFrom(meme.short_id, meme.slug) },
   };

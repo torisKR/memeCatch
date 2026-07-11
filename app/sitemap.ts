@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
+import { COLLECTIONS } from "@/lib/collections";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -32,6 +33,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 1,
     },
+    // 테마별 모음 허브
+    ...COLLECTIONS.map((c) => ({
+      url: `${SITE_URL}/collections/${c.slug}`,
+      lastModified: homeLastMod,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
     // 주요 정적 페이지 — 탐색·커뮤니티·정책
     ...(["/explore", "/rankings", "/community", "/about", "/privacy", "/terms"] as const).map(
       (path) => ({

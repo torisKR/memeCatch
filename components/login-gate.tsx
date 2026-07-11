@@ -34,6 +34,7 @@ export function LoginGate({
   const reduce = useReducedMotion();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [oauthBusy, setOauthBusy] = useState<Provider | null>(null);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
@@ -42,11 +43,32 @@ export function LoginGate({
 
   useEffect(() => {
     if (!open) return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // 게이트가 열릴 때 이전 OAuth 안내를 초기화(외부 트리거 open에 반응하는 리셋)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOauthNotice(null);
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -84,7 +106,12 @@ export function LoginGate({
   const loginHref = `/login?next=${encodeURIComponent(safeNext)}`;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence
+      onExitComplete={() => {
+        returnFocusRef.current?.focus({ preventScroll: true });
+        returnFocusRef.current = null;
+      }}
+    >
       {open && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
@@ -125,7 +152,7 @@ export function LoginGate({
               type="button"
               onClick={onClose}
               aria-label="닫기"
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2"
+              className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2"
             >
               <svg
                 viewBox="0 0 24 24"

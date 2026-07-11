@@ -138,7 +138,13 @@ export function HeroWeb3({
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--flame-400] opacity-70 motion-reduce:animate-none" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[--flame-500]" />
           </span>
-          실시간 한국 밈 사전 · <CountUp value={totalCount} reduce={!!reduce} />개 수록
+          {totalCount > 0 ? (
+            <>
+              실시간 한국 밈 사전 · <CountUp value={totalCount} reduce={!!reduce} />개 수록
+            </>
+          ) : (
+            "한국 밈을 맥락까지 캐치"
+          )}
         </motion.p>
 
         {/* 헤드라인 — 그라디언트 + 시머 */}

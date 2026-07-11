@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import { CommunityPostCard } from "@/components/community-post-card";
+import { StatusPanel } from "@/components/status-panel";
 import {
   POSTS_PAGE_SIZE,
   POST_SELECT,
@@ -72,24 +73,40 @@ export default async function CommunityPage({
       </div>
 
       {failed && (
-        <div role="alert" className="mt-6 rounded-2xl border border-border bg-surface-2 p-6 text-center">
-          <p className="text-base text-muted">글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-        </div>
+        <StatusPanel
+          className="mt-6"
+          role="alert"
+          tone="error"
+          label="연결 신호 확인 중"
+          title="글을 불러오지 못했어요"
+          description="연결이 잠시 끊겼어요. 바로 다시 불러올 수 있어요."
+          actions={
+            <Link
+              href="/community"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent"
+            >
+              다시 불러오기
+            </Link>
+          }
+        />
       )}
 
       {!failed && visible.length === 0 && (
-        <div className="mt-6 rounded-2xl border border-border bg-surface-2 p-8 text-center">
-          <p className="text-lg font-bold">아직 글이 없어요</p>
-          <p className="mt-1 text-base text-muted">
-            첫 글을 남기고 이야기를 시작해 보세요.
-          </p>
-          <Link
-            href="/community/new"
-            className="mt-5 inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-base font-bold text-white"
-          >
-            첫 글 쓰러 가기
-          </Link>
-        </div>
+        <StatusPanel
+          className="mt-6"
+          role="status"
+          label="첫 신호 대기 중"
+          title="아직 글이 없어요"
+          description="첫 글을 남기고 밈 이야기를 시작해 보세요."
+          actions={
+            <Link
+              href="/community/new"
+              className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
+            >
+              첫 글 쓰러 가기
+            </Link>
+          }
+        />
       )}
 
       <ul className="mt-5 space-y-3">

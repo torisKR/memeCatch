@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { RankingsJsonLd } from "@/components/json-ld";
+import { StatusPanel } from "@/components/status-panel";
 import Link from "next/link";
 import { createStaticClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
@@ -156,16 +157,22 @@ export default async function RankingsPage() {
       )}
 
       {failed && (
-        <div role="alert" className="mt-8 rounded-2xl border border-border bg-surface-2 p-8 text-center">
-          <p className="text-base font-semibold">랭킹을 불러오지 못했어요.</p>
-          <p className="mt-1 text-base text-muted">잠시 후 다시 시도해 주세요.</p>
-          <Link
-            href="/rankings"
-            className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold"
-          >
-            다시 불러오기
-          </Link>
-        </div>
+        <StatusPanel
+          className="mt-8"
+          role="alert"
+          tone="error"
+          label="랭킹 신호 확인 중"
+          title="랭킹을 불러오지 못했어요"
+          description="집계 연결이 잠시 끊겼어요. 바로 다시 시도할 수 있어요."
+          actions={
+            <Link
+              href="/rankings"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent"
+            >
+              다시 불러오기
+            </Link>
+          }
+        />
       )}
 
       {data?.fallback && (

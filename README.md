@@ -32,7 +32,7 @@
 
 - **프론트엔드**: Next.js 16 (App Router, 요청별 SSR) · React 19 · TypeScript · Tailwind CSS v4 · [motion](https://motion.dev) (framer-motion)
 - **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
-- **PWA**: Serwist (서비스 워커, 오프라인 셸, 설치 가능)
+- **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
 - **배포**: Vercel (GitHub 연동 자동 배포)
 
 ### 아키텍처 하이라이트
@@ -40,7 +40,7 @@
 - **RLS 기본 deny** — 모든 쓰기는 `security definer` RPC 경유(반응·저장·제보·신고·댓글). 서버 관리 컬럼은 클라이언트 쓰기 차단.
 - **한국어 검색** — Postgres 기본 파서가 한국어를 못 다뤄, `pg_trgm` + 초성 generated column + 별칭(aliases)으로 구현.
 - **트렌드 점수** — `ln(1+x)` 정규화 + 72h 윈도 + 신규 부스트, `pg_cron` 일배치(KST 00:30).
-- **경로 없는 요청별 다국어 SSR** — Proxy가 쿠키·국가·`Accept-Language`를 검증해 요청 헤더로 전달하고, root layout이 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 SSR합니다. 이 선택은 locale-prefixed URL 대신 문서 페이지의 Full Route Cache/ISR을 의도적으로 포기합니다. 공개 데이터 쿼리는 계속 쿠키 없는 `createStaticClient`를 사용하고, 별도 정적/재검증 Route Handler와 명시된 데이터 캐시는 유지합니다.
+- **경로 없는 요청별 다국어 SSR** — Proxy가 쿠키·국가·`Accept-Language`를 검증해 요청 헤더로 전달하고, root layout이 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 SSR합니다. 이 선택은 locale-prefixed URL 대신 문서 페이지의 Full Route Cache/ISR을 의도적으로 포기합니다. 서비스 워커도 문서 내비게이션을 `NetworkOnly`로 처리해 URL이 같은 다른 로케일·세션의 HTML을 재사용하지 않으며, 정적 자산·API·미디어 캐시는 유지합니다. 공개 데이터 쿼리는 계속 쿠키 없는 `createStaticClient`를 사용하고, 별도 정적/재검증 Route Handler와 명시된 데이터 캐시는 유지합니다.
 - **디자인 시스템** — [`DESIGN.md`](./DESIGN.md) 참조. 불꽃 오렌지 브랜드 + 카테고리 소프트 틴트(WCAG AA) + prefers-reduced-motion 존중.
 
 ## 로컬 개발

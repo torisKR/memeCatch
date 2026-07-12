@@ -3,12 +3,12 @@
  * 밈캐치 서비스 워커 (레인 E)
  * - 정적 자산 precache (@serwist/next가 매니페스트 주입)
  * - Supabase(원격·로컬)와 /auth 경로는 항상 NetworkOnly (세션·데이터 신선도 보장)
- * - HTML 문서는 network-first (오프라인 시 캐시 폴백)
+ * - 요청별 로케일·세션이 반영되는 HTML 문서는 항상 NetworkOnly
  * - 나머지는 defaultCache 전략
  */
-import { defaultCache, PAGES_CACHE_NAME } from "@serwist/next/worker";
+import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
+import { NetworkOnly, Serwist } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -47,25 +47,10 @@ const serwist = new Serwist({
       matcher: ({ url }) => isSupabaseOrAuth(url),
       handler: new NetworkOnly(),
     },
-    // 2) HTML 내비게이션은 network-first (오프라인 폴백용 캐시)
+    // 2) 문서 내비게이션은 로케일·세션에 따라 달라지므로 URL 기준 캐시에 넣지 않는다
     {
-      matcher: ({ request, url, sameOrigin }) =>
-        sameOrigin &&
-        request.mode === "navigate" &&
-        !url.pathname.startsWith("/auth") &&
-        !url.pathname.startsWith("/admin") &&
-        !url.pathname.startsWith("/api"),
-      handler: new NetworkFirst({
-        cacheName: PAGES_CACHE_NAME.html,
-        networkTimeoutSeconds: 3,
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 32,
-            maxAgeSeconds: 24 * 60 * 60,
-            maxAgeFrom: "last-used",
-          }),
-        ],
-      }),
+      matcher: ({ request }) => request.mode === "navigate",
+      handler: new NetworkOnly(),
     },
     // 3) 나머지는 Next.js 권장 기본 전략
     ...defaultCache,

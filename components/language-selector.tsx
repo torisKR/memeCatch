@@ -21,11 +21,11 @@ export function LanguageSelector() {
         value={locale}
         onChange={(event) => changeLocale(event.target.value as Locale)}
         aria-label={messages.languageMenu}
-        className="h-11 w-11 appearance-none rounded-full border border-border bg-surface py-0 pl-9 pr-0 text-xs font-semibold text-foreground outline-none transition-colors hover:border-accent focus:border-accent focus:ring-4 focus:ring-accent/20 lg:w-auto lg:pr-7"
+        className="h-11 w-11 appearance-none rounded-full border border-border bg-surface py-0 pl-9 pr-0 text-xs font-semibold text-foreground outline-none transition-colors hover:border-accent focus:border-accent focus:ring-4 focus:ring-accent/20 sm:w-auto sm:pr-7 md:w-11 md:pr-0 lg:w-auto lg:pr-7"
       >
         {SUPPORTED_LOCALES.map((item) => <option key={item} value={item}>{LANGUAGE_NAMES[item]}</option>)}
       </select>
-      <span aria-hidden className="pointer-events-none absolute right-2.5 hidden text-[10px] text-muted lg:block">▼</span>
+      <span aria-hidden className="pointer-events-none absolute right-2.5 hidden text-[10px] text-muted sm:block md:hidden lg:block">▼</span>
     </label>
   );
 }

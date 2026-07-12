@@ -43,7 +43,7 @@ vi.mock("@/lib/i18n-client", async (importOriginal) => {
 import { GlobalHeader } from "@/components/global-header";
 
 describe("GlobalHeader", () => {
-  it("keeps fixed-width search and language controls compact below the large breakpoint", () => {
+  it("uses compact tablet controls while preserving expanded language labels at sm and lg", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
     const desktopSearch = html.match(/<form[^>]*role="search"[^>]*>/)?.[0];
     const compactSearch = html.match(/<a[^>]*href="\/search"[^>]*>/)?.[0];
@@ -52,8 +52,9 @@ describe("GlobalHeader", () => {
 
     expect(desktopSearch).toContain("hidden lg:block");
     expect(compactSearch).toContain("lg:hidden");
-    expect(languageSelect).toContain("lg:w-auto");
-    expect(languageSelect).toContain("lg:pr-7");
-    expect(languageChevron).toContain("lg:block");
+    expect(languageSelect).toContain("sm:w-auto sm:pr-7");
+    expect(languageSelect).toContain("md:w-11 md:pr-0");
+    expect(languageSelect).toContain("lg:w-auto lg:pr-7");
+    expect(languageChevron).toContain("sm:block md:hidden lg:block");
   });
 });

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { createProductRedirectHandler } from "@/app/go/products/[id]/route";
+import { createProductRedirectHandler } from "@/lib/affiliate/product-redirect";
 
 const productId = "550e8400-e29b-41d4-a716-446655440000";
 const affiliateUrl =

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCronHandler } from "@/lib/affiliate/cron-handler";
@@ -82,5 +84,18 @@ describe("Adpick hotdeal cron handler", () => {
       ok: false,
       errorCode: "ADPICK_HTTP_ERROR",
     });
+  });
+});
+
+describe("Adpick hotdeal cron deployment", () => {
+  it("schedules the sync once daily", () => {
+    const config = JSON.parse(readFileSync("vercel.json", "utf8"));
+
+    expect(config.crons).toEqual([
+      {
+        path: "/api/cron/adpick-hotdeals",
+        schedule: "0 21 * * *",
+      },
+    ]);
   });
 });

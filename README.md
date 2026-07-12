@@ -75,6 +75,20 @@ pnpm exec eslint .     # 린트
 
 > **참고**: `pnpm build`는 `--webpack`를 씁니다(Serwist가 Turbopack과 충돌). 개발(`pnpm dev`)은 Turbopack입니다.
 
+### 애드픽 핫딜 동기화 운영
+
+프로덕션에서는 Vercel Cron이 `0 21 * * *`에 `/api/cron/adpick-hotdeals`를 호출합니다. Vercel Cron 스케줄은 UTC 기준이므로 매일 21:00 UTC, 한국 시간으로는 다음 날 06:00 KST 무렵에 하루 한 번 실행됩니다. Hobby 플랜에서는 실행 시각이 해당 시간대 안에서 달라질 수 있으며, 실패한 작업을 Vercel이 자동으로 재시도하지 않습니다.
+
+Vercel 프로젝트 환경변수에 `ADPICK_AFFILIATE_ID`와 `CRON_SECRET`을 설정하세요. 두 값은 서버 전용 비밀값이므로 실제 값을 저장소에 커밋하거나 `NEXT_PUBLIC_` 접두사로 클라이언트에 노출하지 않습니다.
+
+로컬 서버를 실행한 뒤 같은 `CRON_SECRET`을 셸 환경변수로 설정하고 다음 명령으로 수동 실행할 수 있습니다.
+
+```bash
+curl --fail-with-body \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/adpick-hotdeals
+```
+
 ## 환경변수
 
 | 변수 | 설명 |
@@ -92,6 +106,8 @@ pnpm exec eslint .     # 린트
 | `R2_BUCKET` | (선택) R2 버킷 이름 (`memecatch-uploads`) |
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | (선택) AdSense 게시자 ID(`ca-pub-…`). 설정 시 스크립트·`/ads.txt`·계정 메타 자동 활성화 |
 | `NEXT_PUBLIC_GA_ID` | (선택) GA4 측정 ID(`G-…`). 설정 시 gtag 자동 로드 |
+| `ADPICK_AFFILIATE_ID` | 애드픽 ShoppingMate 제휴 ID. 서버 전용 |
+| `CRON_SECRET` | Vercel Cron 및 수동 동기화 요청 인증 비밀값. 서버 전용 |
 
 > R2 4종이 비어 있으면 제보 이미지는 Supabase Storage(`meme-uploads`)에 저장됩니다. R2 키는 서버에서만 읽으며(`lib/r2.server.ts`, `server-only`) 클라이언트 번들에 포함되지 않습니다.
 

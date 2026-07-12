@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { AffiliateProductGrid } from "@/components/affiliate-product-grid";
 import { TrackedBlock } from "@/components/tracked-block";
+import { getAffiliateStorefront } from "@/lib/affiliate/repository.server";
 import {
   isMemeProductActive,
   MEME_PRODUCTS,
@@ -16,12 +18,47 @@ export async function generateMetadata(): Promise<Metadata> {
 export const revalidate = 3600;
 
 export default async function ProductsPage() {
-  const locale = await getRequestLocale();
+  const [locale, storefront] = await Promise.all([
+    getRequestLocale(),
+    getAffiliateStorefront(),
+  ]);
   const copy = PAGE_COPY[locale];
   const activeCount = MEME_PRODUCTS.filter((product) => isMemeProductActive(product)).length;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: storefront.hotdeals.map((product, index) => {
+      const price = product.salePrice ?? product.originalPrice;
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "Product",
+          name: product.productName,
+          ...(product.imageUrl ? { image: product.imageUrl } : {}),
+          url: `/go/products/${product.id}`,
+          ...(!storefront.isStale && price !== null && price > 0
+            ? {
+                offers: {
+                  "@type": "Offer",
+                  price,
+                  priceCurrency: "KRW",
+                },
+              }
+            : {}),
+        },
+      };
+    }),
+  };
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <header className="max-w-3xl">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">{copy.productEyebrow}</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">{copy.productTitle}</h1>
@@ -40,15 +77,22 @@ export default async function ProductsPage() {
         </p>
       </section>
 
-      <TrackedBlock event="affiliate_click" className="mt-6">
-        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {MEME_PRODUCTS.map((product) => (
-            <li key={product.id} className="min-w-0">
-              <ProductCard product={product} locale={locale} />
-            </li>
-          ))}
-        </ul>
-      </TrackedBlock>
+      <AffiliateProductGrid data={storefront} locale={locale} />
+
+      <section className="mt-14" aria-labelledby="legacy-offers-title">
+        <h2 id="legacy-offers-title" className="text-2xl font-extrabold tracking-tight">
+          {copy.legacyOffersTitle}
+        </h2>
+        <TrackedBlock event="affiliate_click" className="mt-4">
+          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {MEME_PRODUCTS.map((product) => (
+              <li key={product.id} className="min-w-0">
+                <ProductCard product={product} locale={locale} />
+              </li>
+            ))}
+          </ul>
+        </TrackedBlock>
+      </section>
     </main>
   );
 }

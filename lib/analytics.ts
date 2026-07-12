@@ -22,6 +22,7 @@ type GtagEvent =
   | "timeline_click"
   | "search_suggest_click"
   | "affiliate_click"
+  | "affiliate_product_click"
   | "generation_news_click";
 
 declare global {

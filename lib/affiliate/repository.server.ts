@@ -22,9 +22,9 @@ export type AffiliateSyncRepository = {
   fail(runId: string, errorCode: string): Promise<void>;
 };
 
-export function createAffiliateSyncRepository(): AffiliateSyncRepository {
-  const admin = createAdminClient();
-
+export function createAffiliateSyncRepository(
+  admin: ReturnType<typeof createAdminClient> = createAdminClient(),
+): AffiliateSyncRepository {
   return {
     async claim(input) {
       const { data, error } = await admin.rpc("claim_affiliate_sync", {

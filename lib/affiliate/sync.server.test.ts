@@ -74,6 +74,25 @@ describe("runDailyAdpickSync", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("does not fetch or apply when the daily claim is busy", async () => {
+    const fetcher = vi.fn();
+    const repository = createRepository({
+      claim: vi.fn().mockResolvedValue({
+        claimed: false,
+        runId: "run-1",
+        result: "busy",
+      }),
+    });
+
+    await expect(
+      runDailyAdpickSync(
+        createDependencies(fetcher as unknown as typeof fetch, repository),
+      ),
+    ).resolves.toEqual({ status: "busy", fetchedCount: 0 });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(repository.apply).not.toHaveBeenCalled();
+  });
+
   it("keeps products unchanged when Adpick returns an invalid payload", async () => {
     const repository = createRepository();
     const fetcher = vi.fn().mockResolvedValue(new Response("[]", { status: 200 }));
@@ -158,6 +177,42 @@ describe("runDailyAdpickSync", () => {
       fetchedCount: 0,
       errorCode: "ADPICK_RESPONSE_TOO_LARGE",
     });
+    expect(repository.apply).not.toHaveBeenCalled();
+  });
+
+  it("cancels a chunked response as soon as its streamed bytes exceed 1 MiB", async () => {
+    const repository = createRepository();
+    const cancel = vi.fn();
+    const chunks = [
+      new Uint8Array(600_000),
+      new Uint8Array(448_577),
+      new Uint8Array(10),
+    ];
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          const chunk = chunks[pulls++];
+          if (chunk) controller.enqueue(chunk);
+          else controller.close();
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+    const fetcher = vi.fn().mockResolvedValue(new Response(body, { status: 200 }));
+
+    await expect(
+      runDailyAdpickSync(
+        createDependencies(fetcher as unknown as typeof fetch, repository),
+      ),
+    ).resolves.toEqual({
+      status: "failed",
+      fetchedCount: 0,
+      errorCode: "ADPICK_RESPONSE_TOO_LARGE",
+    });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(pulls).toBe(2);
     expect(repository.apply).not.toHaveBeenCalled();
   });
 

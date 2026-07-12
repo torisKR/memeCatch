@@ -7,6 +7,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { LocaleDocumentSync } from "@/lib/i18n-client";
+import { getDocumentLanguage } from "@/lib/i18n";
+import { getRequestLocale } from "@/lib/i18n-server";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -58,11 +60,13 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getRequestLocale();
+
   return (
-    <html lang="ko">
+    <html lang={getDocumentLanguage(locale)}>
       <head>
         <link
           rel="preconnect"
@@ -76,7 +80,7 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
-        <LocaleDocumentSync />
+        <LocaleDocumentSync locale={locale} />
         {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
         {ADSENSE_CLIENT && (
           <Script

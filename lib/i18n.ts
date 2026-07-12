@@ -17,6 +17,10 @@ export function isLocale(value: string | null | undefined): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
 }
 
+export function getDocumentLanguage(locale: Locale): string {
+  return locale === "zh" ? "zh-Hans" : locale;
+}
+
 export function localeFromLanguageTag(value: string | null | undefined): Locale | null {
   if (!value) return null;
   const language = value.trim().toLowerCase().split(/[-_]/)[0];

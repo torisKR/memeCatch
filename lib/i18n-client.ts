@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { DEFAULT_LOCALE, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 
 const EVENT_NAME = "memecatch:locale-change";
 
@@ -20,16 +20,16 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function useLocale() {
-  const locale = useSyncExternalStore(subscribe, readLocale, () => DEFAULT_LOCALE);
+export function useLocale(initialLocale: Locale = DEFAULT_LOCALE) {
+  const locale = useSyncExternalStore(subscribe, readLocale, () => initialLocale);
   return { locale, messages: getMessages(locale) };
 }
 
-export function LocaleDocumentSync() {
-  const { locale } = useLocale();
+export function LocaleDocumentSync({ locale: initialLocale }: { locale: Locale }) {
+  const { locale } = useLocale(initialLocale);
 
   useEffect(() => {
-    document.documentElement.lang = locale === "zh" ? "zh-Hans" : locale;
+    document.documentElement.lang = getDocumentLanguage(locale);
   }, [locale]);
 
   return null;
@@ -37,7 +37,7 @@ export function LocaleDocumentSync() {
 
 export function persistLocale(locale: Locale) {
   document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  document.documentElement.lang = locale === "zh" ? "zh-Hans" : locale;
+  document.documentElement.lang = getDocumentLanguage(locale);
   localStorage.setItem(LOCALE_COOKIE, locale);
   window.dispatchEvent(new Event(EVENT_NAME));
 }

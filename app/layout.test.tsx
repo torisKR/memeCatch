@@ -1,24 +1,20 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Locale } from "@/lib/i18n";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 const { getRequestLocale } = vi.hoisted(() => ({
   getRequestLocale: vi.fn<() => Promise<Locale>>(),
 }));
 
 vi.mock("@/lib/i18n-server", () => ({ getRequestLocale }));
-vi.mock("@/lib/i18n-client", () => ({
-  LocaleDocumentSync: ({ locale }: { locale: Locale }) => (
-    <span data-synced-locale={locale} />
-  ),
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
-vi.mock("@/components/bottom-nav", () => ({ BottomNav: () => null }));
-vi.mock("@/components/global-header", () => ({ GlobalHeader: () => null }));
-vi.mock("@/components/site-footer", () => ({ SiteFooter: () => null }));
-vi.mock("@/components/pwa-install", () => ({ PwaInstall: () => null }));
-vi.mock("@/components/json-ld", () => ({ OrganizationJsonLd: () => null }));
-vi.mock("next/script", () => ({ default: () => null }));
-vi.mock("@next/third-parties/google", () => ({ GoogleAnalytics: () => null }));
+vi.mock("@/components/auth-menu", () => ({
+  AuthMenu: () => null,
+  HideOnAdmin: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 import RootLayout from "@/app/layout";
 
@@ -36,6 +32,7 @@ describe("RootLayout", () => {
     "server-renders the %s document language as %s",
     async (locale, documentLanguage) => {
       getRequestLocale.mockResolvedValue(locale);
+      const messages = getMessages(locale);
 
       const html = renderToStaticMarkup(
         await RootLayout({ children: <main>content</main> }),
@@ -44,7 +41,11 @@ describe("RootLayout", () => {
       expect(html).toMatch(
         new RegExp(`^<html lang="${documentLanguage}">`),
       );
-      expect(html).toContain(`data-synced-locale="${locale}"`);
+      expect(html).toContain(`aria-label="${messages.home}"`);
+      expect(html).toContain(`aria-label="${messages.languageMenu}"`);
+      expect(html).toContain(`aria-label="${messages.footerNav}"`);
+      expect(html).toContain(`aria-label="${messages.mainNav}"`);
+      expect(html).toContain(`>${messages.about}</a>`);
     },
   );
 });

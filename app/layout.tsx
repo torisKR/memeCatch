@@ -6,7 +6,7 @@ import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
 import { OrganizationJsonLd } from "@/components/json-ld";
-import { LocaleDocumentSync } from "@/lib/i18n-client";
+import { LocaleDocumentSync, LocaleProvider } from "@/lib/i18n-client";
 import { getDocumentLanguage } from "@/lib/i18n";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { SITE_URL } from "@/lib/site";
@@ -63,6 +63,8 @@ export const viewport: Viewport = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Intentional request-time boundary: pathless locale selection must vary the
+  // document and shared chrome per request, so document routes skip Full Route Cache.
   const locale = await getRequestLocale();
 
   return (
@@ -80,24 +82,26 @@ export default async function RootLayout({
         />
       </head>
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
-        <LocaleDocumentSync locale={locale} />
-        {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
-        {ADSENSE_CLIENT && (
-          <Script
-            id="adsense"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        )}
-        {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}
-        {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
-        <OrganizationJsonLd />
-        <GlobalHeader />
-        <div className="flex-1">{children}</div>
-        <SiteFooter />
-        <BottomNav />
-        <PwaInstall />
+        <LocaleProvider initialLocale={locale}>
+          <LocaleDocumentSync />
+          {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
+          {ADSENSE_CLIENT && (
+            <Script
+              id="adsense"
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+              crossOrigin="anonymous"
+              strategy="afterInteractive"
+            />
+          )}
+          {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}
+          {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
+          <OrganizationJsonLd />
+          <GlobalHeader />
+          <div className="flex-1">{children}</div>
+          <SiteFooter />
+          <BottomNav />
+          <PwaInstall />
+        </LocaleProvider>
       </body>
     </html>
   );

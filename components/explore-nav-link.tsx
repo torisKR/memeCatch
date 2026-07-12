@@ -6,10 +6,9 @@ import { useLocale } from "@/lib/i18n-client";
 
 /**
  * 데스크톱 헤더 내비 링크 — "탐색"(/explore) + "커뮤니티"(/community, 레인 3 추가).
- * 클라이언트 usePathname만 사용(서버 쿠키 조회 없음 → ISR/dynamic 강등 회피).
- * GlobalHeader를 정적 서버 컴포넌트로 유지하기 위해 AuthMenu/HideOnAdmin과
- * 동일하게 클라이언트 헬퍼로 분리했다. GlobalHeader가 <ExploreNavLink/> 하나만
- * 렌더하므로 커뮤니티 링크도 여기서 함께 렌더한다(헤더 파일은 다른 레인 소유).
+ * layout은 클라이언트 탐색에서 재사용되므로 최신 경로는 usePathname으로 읽는다.
+ * GlobalHeader가 <ExploreNavLink/> 하나만 렌더하므로 커뮤니티 링크도 여기서 함께
+ * 렌더한다(헤더 파일은 다른 레인 소유).
  * 모바일은 BottomNav에 두 탭이 있어 md 이상에서만 노출.
  */
 export function ExploreNavLink() {

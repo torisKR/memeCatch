@@ -10,7 +10,7 @@ import { useLocale } from "@/lib/i18n-client";
 
 /**
  * 전역 헤더가 /admin 경로에서 숨도록 감싸는 클라이언트 게이트.
- * (GlobalHeader는 세션 조회를 위한 서버 컴포넌트라 usePathname을 쓸 수 없어 여기서 처리)
+ * layout은 클라이언트 탐색에서 재사용되므로 최신 pathname은 여기서 읽는다.
  * BottomNav와 동일한 admin 숨김 규칙을 재사용한다.
  */
 export function HideOnAdmin({ children }: { children: React.ReactNode }) {
@@ -21,8 +21,8 @@ export function HideOnAdmin({ children }: { children: React.ReactNode }) {
 
 /**
  * 프로필 아바타 드롭다운 / 로그인 버튼 — DESIGN.md §10 'AuthMenu'.
- * 세션은 클라이언트에서 조회한다(헤더가 layout에 있어 서버 조회 시 전 페이지가
- * dynamic 강등돼 ISR이 깨지므로). 마운트 후 profiles.nickname을 읽어 상태 확정.
+ * 세션은 클라이언트에서 조회해 요청별 로케일 SSR과 인증 데이터 조회를 분리한다.
+ * 마운트 후 profiles.nickname을 읽어 상태 확정.
  * - 비로그인/조회 전: "로그인" 버튼 → /login?next=현재경로
  * - 로그인: 이니셜 아바타 → 드롭다운(MY·저장한 밈·로그아웃)
  * - 드롭다운 fade+scale 진입, 바깥 클릭/esc 닫기, 열릴 때 첫 항목 포커스.

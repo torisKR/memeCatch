@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
 import { DEFAULT_LOCALE, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 
 const EVENT_NAME = "memecatch:locale-change";
+type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
+const LocaleContext = createContext<LocaleContextValue | null>(null);
+
+function createLocaleContextValue(locale: Locale) {
+  return { locale, messages: getMessages(locale) };
+}
 
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
@@ -20,13 +26,29 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function useLocale(initialLocale: Locale = DEFAULT_LOCALE) {
+export function LocaleProvider({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale: Locale;
+}) {
   const locale = useSyncExternalStore(subscribe, readLocale, () => initialLocale);
-  return { locale, messages: getMessages(locale) };
+  return createElement(
+    LocaleContext.Provider,
+    { value: createLocaleContextValue(locale) },
+    children,
+  );
 }
 
-export function LocaleDocumentSync({ locale: initialLocale }: { locale: Locale }) {
-  const { locale } = useLocale(initialLocale);
+export function useLocale() {
+  const value = useContext(LocaleContext);
+  if (!value) throw new Error("useLocale must be used within LocaleProvider");
+  return value;
+}
+
+export function LocaleDocumentSync() {
+  const { locale } = useLocale();
 
   useEffect(() => {
     document.documentElement.lang = getDocumentLanguage(locale);

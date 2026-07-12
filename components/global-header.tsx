@@ -15,9 +15,9 @@ import { useLocale } from "@/lib/i18n-client";
  * 우: 검색 진입(모바일=아이콘→/search, 데스크톱=미니 검색바→/search) + <AuthMenu/>.
  * 모바일 탐색은 하단탭(BottomNav)이 담당하므로 헤더는 로고+검색만 유지.
  *
- * 순수 정적 컴포넌트 — 쿠키/세션을 서버에서 읽지 않는다.
- * (layout에서 쿠키를 읽으면 모든 페이지가 dynamic으로 강등돼 상세/홈 ISR이
- *  DYNAMIC_SERVER_USAGE로 깨진다. 세션은 AuthMenu가 클라이언트에서 조회한다.)
+ * 요청 로케일은 layout의 LocaleProvider가 주입해 첫 SSR부터 문서 언어와 맞춘다.
+ * 경로 없는 요청별 로케일을 위해 root layout은 의도적으로 dynamic이다.
+ * 인증 세션은 AuthMenu가 클라이언트에서 별도로 조회해 전역 SSR을 막지 않는다.
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
 export function GlobalHeader() {

@@ -4,21 +4,21 @@ import { MemeCardSkeleton } from "@/components/skeletons";
 export default function TimelineLoading() {
   return (
     <main className="mx-auto max-w-3xl px-4 pb-14 pt-8" aria-busy>
-      <div className="h-8 w-48 animate-pulse rounded-lg bg-surface-2" />
+      <div className="h-8 w-48 rounded-lg shimmer" />
       <div className="mt-3 space-y-2">
-        <div className="h-4 w-full animate-pulse rounded-lg bg-surface-2" />
-        <div className="h-4 w-5/6 animate-pulse rounded-lg bg-surface-2" />
-        <div className="h-4 w-2/3 animate-pulse rounded-lg bg-surface-2" />
+        <div className="h-4 w-full rounded-lg shimmer" />
+        <div className="h-4 w-5/6 rounded-lg shimmer" />
+        <div className="h-4 w-2/3 rounded-lg shimmer" />
       </div>
 
       <div className="mt-8 space-y-10">
         {[0, 1].map((d) => (
           <div key={d}>
-            <div className="h-7 w-32 animate-pulse rounded-lg bg-surface-2" />
+            <div className="h-7 w-32 rounded-lg shimmer" />
             <div className="mt-5 space-y-6">
               {[0, 1, 2].map((y) => (
                 <div key={y} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-                  <div className="h-6 w-12 shrink-0 animate-pulse rounded-lg bg-surface-2 sm:w-16" />
+                  <div className="h-6 w-12 shrink-0 rounded-lg shimmer sm:w-16" />
                   <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:flex sm:gap-3">
                     {[0, 1, 2, 3].map((c) => (
                       <div key={c} className="min-w-0 sm:w-40 sm:shrink-0">

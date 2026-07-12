@@ -28,7 +28,7 @@ export default async function ProductsPage() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     itemListElement: storefront.hotdeals.map((product, index) => {
-      const price = product.salePrice ?? product.originalPrice;
+      const price = product.salePrice;
       return {
         "@type": "ListItem",
         position: index + 1,

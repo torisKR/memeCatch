@@ -15,6 +15,7 @@ export function ExploreNavLink() {
   return (
     <>
       <HeaderNavLink href="/explore" label="탐색" icon={CompassIcon} />
+      <HeaderNavLink href="/timeline" label="연표" icon={TimelineIcon} />
       <HeaderNavLink href="/community" label="커뮤니티" icon={ChatIcon} />
     </>
   );
@@ -59,6 +60,25 @@ function CompassIcon({ className }: { className?: string }) {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TimelineIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M4 12h16" />
+      <circle cx="7" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="2" fill="currentColor" stroke="none" />
     </svg>
   );
 }

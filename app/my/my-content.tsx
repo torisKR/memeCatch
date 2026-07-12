@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   CATEGORIES,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/labels";
 import { signOut, updateNickname } from "@/lib/actions/auth";
 import { SubmissionStatusBadge } from "@/components/submission-status";
+import { MyRecent } from "@/components/my-recent";
 
 export type SavedMeme = {
   id: string;
@@ -65,6 +67,7 @@ export function MyContent({
   loadError,
   nicknameError,
   nicknameSaved,
+  myFeed,
 }: {
   nickname: string;
   ageGroup: string | null;
@@ -74,6 +77,8 @@ export function MyContent({
   loadError: boolean;
   nicknameError?: string;
   nicknameSaved: boolean;
+  /** 관심 카테고리 맞춤 피드 — 서버 컴포넌트(components/my-feed.tsx)를 페이지에서 슬롯으로 전달 */
+  myFeed: ReactNode;
 }) {
   const reduce = useReducedMotion();
   const avatarChar = (nickname.trim()[0] ?? "밈").toUpperCase();
@@ -236,6 +241,9 @@ export function MyContent({
         )}
       </motion.section>
 
+      {/* 관심 카테고리 맞춤 피드 — 서버 컴포넌트 슬롯 */}
+      {myFeed}
+
       {/* 저장한 밈 */}
       <section className="mt-8">
         <div className="flex items-baseline justify-between gap-3">
@@ -296,6 +304,9 @@ export function MyContent({
           </motion.ul>
         )}
       </section>
+
+      {/* 최근 본 밈 — 기록 없으면 컴포넌트가 자체적으로 숨김 */}
+      <MyRecent />
 
       {/* 내 제보 */}
       <section className="mt-8">

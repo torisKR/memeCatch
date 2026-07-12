@@ -77,7 +77,7 @@ pnpm exec eslint .     # 린트
 
 ### 애드픽 핫딜 동기화 운영
 
-프로덕션에서는 Vercel Cron이 `0 21 * * *`에 `/api/cron/adpick-hotdeals`를 호출합니다. Vercel Cron 스케줄은 UTC 기준이므로 매일 21:00 UTC, 한국 시간으로는 다음 날 06:00 KST 무렵에 하루 한 번 실행됩니다. Hobby 플랜에서는 실행 시각이 해당 시간대 안에서 달라질 수 있으며, 실패한 작업을 Vercel이 자동으로 재시도하지 않습니다.
+프로덕션에서는 Vercel Cron이 `0 21 * * *`에 `/api/cron/adpick-hotdeals`를 호출합니다. Vercel Cron 스케줄은 UTC 기준이며, 매일 21:00 UTC에 예약된 작업은 한국 시간으로 다음 날 06:00 KST에 해당합니다. Hobby 플랜에서는 예약된 일일 작업이 06:00:00–06:59:59 KST (21:00:00–21:59:59 UTC) 사이에 실행될 수 있습니다. 실패한 작업을 Vercel이 자동으로 재시도하지 않습니다.
 
 Vercel 프로젝트 환경변수에 `ADPICK_AFFILIATE_ID`와 `CRON_SECRET`을 설정하세요. 두 값은 서버 전용 비밀값이므로 실제 값을 저장소에 커밋하거나 `NEXT_PUBLIC_` 접두사로 클라이언트에 노출하지 않습니다.
 

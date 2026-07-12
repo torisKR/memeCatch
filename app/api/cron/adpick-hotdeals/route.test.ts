@@ -98,4 +98,15 @@ describe("Adpick hotdeal cron deployment", () => {
       },
     ]);
   });
+
+  it("documents the bounded Hobby execution window and no retries", () => {
+    const readme = readFileSync("README.md", "utf8");
+
+    expect(readme).toContain(
+      "06:00:00–06:59:59 KST (21:00:00–21:59:59 UTC)",
+    );
+    expect(readme).toContain(
+      "실패한 작업을 Vercel이 자동으로 재시도하지 않습니다.",
+    );
+  });
 });

@@ -12,7 +12,27 @@ die() {
 database_url="${TEST_DATABASE_URL:-}"
 [[ -n "$database_url" ]] || die "TEST_DATABASE_URL is required"
 
-database_url_pattern='^postgres(ql)?://([^/@]+@)?(\[[^]]+\]|[^/:?#]+)(:[0-9]+)?/([A-Za-z0-9_]+)(\?.*)?$'
+libpq_routing_variables=(
+  PGHOST
+  PGHOSTADDR
+  PGPORT
+  PGDATABASE
+  PGUSER
+  PGSERVICE
+  PGSERVICEFILE
+  PGLOADBALANCEHOSTS
+  PGTARGETSESSIONATTRS
+)
+for routing_variable in "${libpq_routing_variables[@]}"; do
+  if [[ "${!routing_variable+x}" == "x" ]]; then
+    die "libpq routing environment variable $routing_variable must be unset"
+  fi
+done
+
+[[ "$database_url" != *\?* ]] ||
+  die "TEST_DATABASE_URL query parameters are forbidden"
+
+database_url_pattern='^postgres(ql)?://([^/@]+@)?(\[[^]]+\]|[^/:?#]+)(:[0-9]+)?/([A-Za-z0-9_]+)$'
 if [[ ! "$database_url" =~ $database_url_pattern ]]; then
   die "TEST_DATABASE_URL must be an explicit PostgreSQL URL"
 fi

@@ -97,7 +97,7 @@ export default async function CommunityPostPage({ params }: Props) {
         <header>
           <h1 className="text-2xl font-extrabold leading-snug">{post.title}</h1>
           <p className="mt-2 flex items-center gap-2 text-sm text-muted">
-            <span className="font-semibold text-foreground">
+            <span id="author" className="font-semibold text-foreground">
               {post.profiles?.nickname ?? "익명"}
             </span>
             <time dateTime={post.created_at}>{timeAgo(post.created_at)}</time>

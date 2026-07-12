@@ -274,6 +274,9 @@ export function ForumPostingJsonLd({
   likeCount: number;
   commentCount: number;
 }) {
+  const postUrl = `${SITE_URL}/community/${postId}`;
+  const authorUrl = `${postUrl}#author`;
+
   return (
     <Script
       data={{
@@ -282,8 +285,12 @@ export function ForumPostingJsonLd({
         headline: title,
         text: body.slice(0, 500),
         datePublished: createdAt,
-        url: `${SITE_URL}/community/${postId}`,
-        author: { "@type": "Person", name: authorNickname },
+        url: postUrl,
+        author: {
+          "@type": "Person",
+          name: authorNickname,
+          url: authorUrl,
+        },
         interactionStatistic: {
           "@type": "InteractionCounter",
           interactionType: "https://schema.org/LikeAction",

@@ -47,7 +47,9 @@ export function getCurrentWeekRangeKST(): WeekRange {
   const year = shiftedNow.getUTCFullYear();
   const month = shiftedNow.getUTCMonth() + 1;
   const firstOfMonthWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
-  const weekOfMonth = Math.ceil((shiftedNow.getUTCDate() + firstOfMonthWeekday) / 7);
+  // 월요일 시작 주차 — getUTCDay()는 일요일=0이라 (요일+6)%7로 월요일 기준 오프셋 보정
+  const mondayOffset = (firstOfMonthWeekday + 6) % 7;
+  const weekOfMonth = Math.ceil((shiftedNow.getUTCDate() + mondayOffset) / 7);
 
   const isOngoing = shiftedNow.getTime() < shiftedSunday.getTime();
 
@@ -79,8 +81,8 @@ async function loadTrending(): Promise<MemeListItem[]> {
       .eq("moderation_status", "approved")
       .order("trend_score", { ascending: false })
       .limit(10);
-    if (error || !data) return [];
-    return data as MemeListItem[];
+    if (error) throw error;
+    return (data ?? []) as MemeListItem[];
   } catch {
     return [];
   }
@@ -97,8 +99,8 @@ async function loadFresh(range: WeekRange): Promise<MemeListItem[]> {
       .lte("published_at", range.endISO)
       .order("published_at", { ascending: false })
       .limit(24);
-    if (error || !data) return [];
-    return data as MemeListItem[];
+    if (error) throw error;
+    return (data ?? []) as MemeListItem[];
   } catch {
     return [];
   }

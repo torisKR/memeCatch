@@ -28,10 +28,10 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
       {trending.length > 0 && (
         <Reveal as="section">
           <h2 id="weekly-trending" className="text-xl font-extrabold tracking-tight">
-            {SECTION_TITLES.trending}
+            지금 가장 뜨거운 밈
           </h2>
           <p className="mt-1 text-sm text-muted">
-            이번 주 trend_score 상위 {trending.length}건이에요.
+            최근 72시간 화제성 상위 {trending.length}건 — 이번 주 결산과 함께 확인해요.
           </p>
           <TrackedBlock event="weekly_click" className="mt-4">
             <MotionList

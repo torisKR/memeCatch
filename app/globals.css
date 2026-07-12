@@ -279,3 +279,33 @@ body {
   --color-accent-text: var(--accent-text);
   --font-mono: var(--font-utility);
 }
+
+/* ── 스켈레톤 shimmer — 좌→우 스윕 1.5s (네비게이션 로딩 피드백) ── */
+:root {
+  /* 하이라이트 밴드: 라이트/다크 모두 base보다 밝은 톤 (surface-2 + white 혼합) */
+  --skeleton-hi: color-mix(in srgb, var(--surface-2) 52%, white);
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 180% 0; }
+  100% { background-position: -180% 0; }
+}
+.shimmer {
+  background-color: var(--surface-2);
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-2) 30%,
+    var(--skeleton-hi) 50%,
+    var(--surface-2) 70%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    animation: none;
+    background-image: none;
+  }
+}

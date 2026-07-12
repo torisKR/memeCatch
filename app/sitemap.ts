@@ -41,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     // 주요 정적 페이지 — 탐색·커뮤니티·정책
-    ...(["/explore", "/rankings", "/community", "/about", "/privacy", "/terms"] as const).map(
+    ...(["/explore", "/timeline", "/weekly", "/rankings", "/community", "/about", "/privacy", "/terms"] as const).map(
       (path) => ({
         url: `${SITE_URL}${path}`,
         lastModified: homeLastMod,

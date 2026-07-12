@@ -109,6 +109,57 @@ export default async function Home() {
         </Reveal>
       </section>
 
+      {/* 이렇게도 둘러보세요 — 연표·주간결산 진입 (체류·재방문) */}
+      <Reveal>
+        <section aria-labelledby="sec-discover" className="mt-8">
+          <h2 id="sec-discover" className="sr-only">
+            더 둘러보기
+          </h2>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <li>
+              <Link
+                href="/timeline"
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+              >
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M4 12h16" />
+                    <circle cx="7" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                    <circle cx="13" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                    <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold">밈 연표</span>
+                  <span className="block truncate text-sm text-muted">
+                    1990년대부터 지금까지 연대별로
+                  </span>
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/weekly"
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+              >
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 19V5M12 19V9M19 19v-6" />
+                    <path d="M3 19h18" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold">이번 주 밈 결산</span>
+                  <span className="block truncate text-sm text-muted">
+                    급상승·신규를 매주 자동 정리
+                  </span>
+                </span>
+              </Link>
+            </li>
+          </ul>
+        </section>
+      </Reveal>
+
       {(showTrending || showBeginners) && (
         <Reveal>
           {/* 전체 밈 보기 — /explore 진입 CTA */}

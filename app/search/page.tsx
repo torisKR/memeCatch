@@ -21,14 +21,16 @@ export default async function SearchPage({ searchParams }: Props) {
   const query = (typeof q === "string" ? q : "").trim();
   const results = query ? await searchMemes(query) : [];
   const needsFallback = !query || results.length === 0;
-  const trending = needsFallback ? await getTrendingMemes(6) : [];
+  // 인기 검색어(입력창 하단 칩)와 폴백 그리드가 같은 급상승 쿼리를 공유한다 — 별도 쿼리 추가 금지.
+  const trending = await getTrendingMemes(8);
+  const popularTerms = trending.map((meme) => meme.title);
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-14 pt-6">
       <h1 className="text-2xl font-bold">밈 검색</h1>
       <p className="mt-1 text-base text-muted">이름·초성·별칭으로 바로 찾아보세요.</p>
-      <div className="mt-5">
-        <SearchInput initialQuery={query} />
+      <div className="relative mt-5">
+        <SearchInput initialQuery={query} popularTerms={popularTerms} />
       </div>
 
       {query && results.length > 0 && (
@@ -91,7 +93,7 @@ export default async function SearchPage({ searchParams }: Props) {
             {SECTION_TITLES.trending}
           </h2>
           <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {trending.map((meme) => (
+            {trending.slice(0, 6).map((meme) => (
               <li key={meme.id} className="min-w-0">
                 <MemeCard meme={meme} />
               </li>

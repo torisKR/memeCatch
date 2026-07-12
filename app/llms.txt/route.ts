@@ -53,6 +53,8 @@ export async function GET() {
 주요 진입점:
 - [전체 밈 탐색](${SITE_URL}/explore): 카테고리·연도·난이도 필터 + 검색
 - [검색](${SITE_URL}/search): 키워드·초성·별칭 검색
+- [밈 연표](${SITE_URL}/timeline): 1990년대부터 지금까지 연대별 대표 밈
+- [이번 주 밈 결산](${SITE_URL}/weekly): 매주 자동 갱신되는 급상승·신규 정리
 - [오늘의 랭킹](${SITE_URL}/rankings)
 - [전체 사이트맵](${SITE_URL}/sitemap.xml): 밈 상세 페이지 전체 URL
 - [RSS 피드](${SITE_URL}/feed.xml): 최신 등록 밈

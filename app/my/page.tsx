@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { type SafetyLevel } from "@/lib/labels";
+import { CATEGORIES, type MemeCategory, type SafetyLevel } from "@/lib/labels";
+import { MyFeed } from "@/components/my-feed";
 import { MyContent, type SavedMeme, type MySubmission } from "./my-content";
 
 export const metadata: Metadata = {
@@ -49,6 +50,9 @@ export default async function MyPage({
 
   const nickname = profileRes.data?.nickname ?? "";
   const interests = profileRes.data?.interests ?? [];
+  const knownInterests = interests.filter(
+    (c): c is MemeCategory => c in CATEGORIES
+  );
   const ageGroup = profileRes.data?.age_group ?? null;
   const loadError = !!(profileRes.error || savedRes.error || subsRes.error);
 
@@ -93,6 +97,7 @@ export default async function MyPage({
       loadError={loadError}
       nicknameError={nicknameError}
       nicknameSaved={nicknameSaved}
+      myFeed={<MyFeed interests={knownInterests} />}
     />
   );
 }

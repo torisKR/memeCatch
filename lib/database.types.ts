@@ -72,6 +72,146 @@ export type Database = {
           },
         ]
       }
+      affiliate_product_daily_metrics: {
+        Row: {
+          clicks: number
+          metric_date: string
+          product_id: string
+        }
+        Insert: {
+          clicks?: number
+          metric_date: string
+          product_id: string
+        }
+        Update: {
+          clicks?: number
+          metric_date?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_product_daily_metrics_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_products: {
+        Row: {
+          affiliate_url: string
+          commission_label: string
+          external_key: string
+          first_seen_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          last_seen_at: string
+          mall_domain: string | null
+          mall_icon_url: string | null
+          mall_name: string | null
+          original_price: number | null
+          product_name: string
+          provider: string
+          sale_price: number | null
+          source_rank: number
+          source_type: string
+          synced_at: string
+          theme_code: string | null
+          theme_description: string
+          theme_title: string
+        }
+        Insert: {
+          affiliate_url: string
+          commission_label: string
+          external_key: string
+          first_seen_at: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          last_seen_at: string
+          mall_domain?: string | null
+          mall_icon_url?: string | null
+          mall_name?: string | null
+          original_price?: number | null
+          product_name: string
+          provider: string
+          sale_price?: number | null
+          source_rank: number
+          source_type: string
+          synced_at: string
+          theme_code?: string | null
+          theme_description: string
+          theme_title: string
+        }
+        Update: {
+          affiliate_url?: string
+          commission_label?: string
+          external_key?: string
+          first_seen_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          last_seen_at?: string
+          mall_domain?: string | null
+          mall_icon_url?: string | null
+          mall_name?: string | null
+          original_price?: number | null
+          product_name?: string
+          provider?: string
+          sale_price?: number | null
+          source_rank?: number
+          source_type?: string
+          synced_at?: string
+          theme_code?: string | null
+          theme_description?: string
+          theme_title?: string
+        }
+        Relationships: []
+      }
+      affiliate_sync_runs: {
+        Row: {
+          deactivated_count: number
+          error_code: string | null
+          fetched_count: number
+          finished_at: string | null
+          id: string
+          provider: string
+          scheduled_date: string
+          source_type: string
+          started_at: string
+          status: string
+          upserted_count: number
+        }
+        Insert: {
+          deactivated_count?: number
+          error_code?: string | null
+          fetched_count?: number
+          finished_at?: string | null
+          id?: string
+          provider: string
+          scheduled_date: string
+          source_type: string
+          started_at: string
+          status: string
+          upserted_count?: number
+        }
+        Update: {
+          deactivated_count?: number
+          error_code?: string | null
+          fetched_count?: number
+          finished_at?: string | null
+          id?: string
+          provider?: string
+          scheduled_date?: string
+          source_type?: string
+          started_at?: string
+          status?: string
+          upserted_count?: number
+        }
+        Relationships: []
+      }
       community_comments: {
         Row: {
           body: string
@@ -964,6 +1104,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_affiliate_sync: {
+        Args: { products: Json; run_id: string; synced_at: string }
+        Returns: undefined
+      }
       cast_generation_vote: {
         Args: { p_age_group: string; p_meme_id: string; p_vote: string }
         Returns: undefined
@@ -971,6 +1115,19 @@ export type Database = {
       check_rate_limit: {
         Args: { p_limit: number; p_minutes: number; p_table: string }
         Returns: undefined
+      }
+      claim_affiliate_sync: {
+        Args: {
+          provider: string
+          scheduled_date: string
+          source_type: string
+          started_at: string
+        }
+        Returns: {
+          claimed: boolean
+          result: string
+          run_id: string
+        }[]
       }
       compute_trend_scores: { Args: never; Returns: undefined }
       create_community_comment: {
@@ -982,6 +1139,10 @@ export type Database = {
         Returns: string
       }
       extract_chosung: { Args: { input: string }; Returns: string }
+      fail_affiliate_sync: {
+        Args: { error_code: string; run_id: string }
+        Returns: undefined
+      }
       file_report: {
         Args: {
           p_reason: string
@@ -1035,6 +1196,10 @@ export type Database = {
       post_comment: {
         Args: { p_body: string; p_meme_id: string; p_parent_id: string }
         Returns: string
+      }
+      record_affiliate_product_click: {
+        Args: { metric_date: string; product_id: string }
+        Returns: undefined
       }
       search_memes: {
         Args: { p_limit?: number; p_query: string }

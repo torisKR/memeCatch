@@ -38,7 +38,7 @@ export function AffiliateProductGrid({
       {data.isStale ? (
         <p
           role="status"
-          className="mt-3 rounded-xl border border-safety-yellow/30 bg-safety-yellow-bg px-4 py-3 text-sm font-semibold text-safety-yellow"
+          className="mt-3 rounded-xl border border-safety-yellow/30 bg-safety-yellow-bg px-4 py-3 text-sm font-semibold text-foreground"
         >
           {copy.staleWarning}
         </p>

@@ -2,7 +2,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { AffiliateProductCard } from "@/components/affiliate-product-card";
+import { AffiliateProductGrid } from "@/components/affiliate-product-grid";
 import type { AffiliateStorefrontProduct } from "@/lib/affiliate/types";
+import type { Locale } from "@/lib/i18n";
+import { PAGE_COPY } from "@/lib/i18n-pages";
 
 const product: AffiliateStorefrontProduct = {
   id: "550e8400-e29b-41d4-a716-446655440000",
@@ -64,5 +67,118 @@ describe("AffiliateProductCard", () => {
     expect(html).toContain("12,000원");
     expect(html).toContain("12,900원");
     expect(html).not.toContain("50%");
+  });
+
+  it("treats an original-only price as reference instead of a current price", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateProductCard
+        locale="ko"
+        product={{ ...product, salePrice: null, originalPrice: 25800 }}
+      />,
+    );
+
+    expect(html).toContain("판매처에서 가격 확인");
+    expect(html).toContain("정상가");
+    expect(html).toContain("25,800원");
+  });
+
+  it("does not present a theme title as the merchant", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateProductCard
+        locale="ko"
+        product={{ ...product, mallName: null, mallDomain: null }}
+      />,
+    );
+
+    expect(html).not.toContain("실시간 핫딜");
+  });
+
+  it("keeps remote product image loading explicit and private", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateProductCard locale="ko" product={product} />,
+    );
+
+    expect(html).toContain('width="640"');
+    expect(html).toContain('height="480"');
+    expect(html).toContain('loading="lazy"');
+    expect(html).toContain('decoding="async"');
+    expect(html).toContain('referrerPolicy="no-referrer"');
+  });
+
+  it("keeps the source product name unchanged in every locale", () => {
+    for (const locale of ["ko", "en", "ja", "zh"] satisfies Locale[]) {
+      const html = renderToStaticMarkup(
+        <AffiliateProductCard locale={locale} product={product} />,
+      );
+      expect(html).toContain("테스트 상품");
+    }
+  });
+});
+
+describe("AffiliateProductGrid", () => {
+  it("renders popular products only when present and before hotdeals", () => {
+    const withoutPopular = renderToStaticMarkup(
+      <AffiliateProductGrid
+        locale="ko"
+        data={{
+          hotdeals: [product],
+          popular: [],
+          lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
+          isStale: false,
+        }}
+      />,
+    );
+    expect(withoutPopular).not.toContain(PAGE_COPY.ko.popularTitle);
+    expect(withoutPopular).toContain(PAGE_COPY.ko.hotdealTitle);
+
+    const withPopular = renderToStaticMarkup(
+      <AffiliateProductGrid
+        locale="ko"
+        data={{
+          hotdeals: [product],
+          popular: [product],
+          lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
+          isStale: false,
+        }}
+      />,
+    );
+    expect(withPopular.indexOf(PAGE_COPY.ko.popularTitle)).toBeLessThan(
+      withPopular.indexOf(PAGE_COPY.ko.hotdealTitle),
+    );
+  });
+
+  it("always renders hotdeals with empty guidance", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateProductGrid
+        locale="ko"
+        data={{
+          hotdeals: [],
+          popular: [],
+          lastSuccessfulSyncAt: null,
+          isStale: false,
+        }}
+      />,
+    );
+
+    expect(html).toContain(PAGE_COPY.ko.hotdealTitle);
+    expect(html).toContain(PAGE_COPY.ko.emptyHotdeals);
+  });
+
+  it("renders stale guidance with accessible foreground contrast", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateProductGrid
+        locale="ko"
+        data={{
+          hotdeals: [product],
+          popular: [],
+          lastSuccessfulSyncAt: "2026-07-01T00:00:00.000Z",
+          isStale: true,
+        }}
+      />,
+    );
+
+    expect(html).toContain(PAGE_COPY.ko.staleWarning);
+    expect(html).toContain("text-foreground");
+    expect(html).not.toContain("text-safety-yellow");
   });
 });

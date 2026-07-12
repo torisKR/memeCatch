@@ -33,7 +33,7 @@ export function AffiliateProductCard({
     product.originalPrice,
     product.salePrice,
   );
-  const merchant = product.mallName ?? product.mallDomain ?? product.themeTitle;
+  const merchant = product.mallName || product.mallDomain;
 
   return (
     <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
@@ -69,9 +69,11 @@ export function AffiliateProductCard({
         </h3>
 
         <div className="mt-4 rounded-xl border border-border bg-surface-2 p-3">
-          <p className="truncate font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            {merchant}
-          </p>
+          {merchant ? (
+            <p className="truncate font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+              {merchant}
+            </p>
+          ) : null}
           {product.salePrice !== null ? (
             <div className="mt-2">
               {product.originalPrice !== null ? (
@@ -93,17 +95,18 @@ export function AffiliateProductCard({
                 </strong>
               </div>
             </div>
-          ) : product.originalPrice !== null ? (
-            <div className="mt-2">
-              <p className="text-xs text-muted">{copy.originalPrice}</p>
-              <strong className="text-xl font-black tracking-tight">
-                {formatPrice(product.originalPrice, locale)}
-              </strong>
-            </div>
           ) : (
-            <p className="mt-2 text-sm font-bold text-foreground">
-              {copy.priceAtMerchant}
-            </p>
+            <div className="mt-2">
+              <p className="text-sm font-bold text-foreground">
+                {copy.priceAtMerchant}
+              </p>
+              {product.originalPrice !== null ? (
+                <p className="mt-1 text-xs text-muted">
+                  {copy.originalPrice}{" "}
+                  {formatPrice(product.originalPrice, locale)}
+                </p>
+              ) : null}
+            </div>
           )}
           <p className="mt-1 text-xs leading-relaxed text-muted">
             {copy.merchantPriceNotice}

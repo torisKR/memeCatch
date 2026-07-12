@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n-client";
 
 /**
  * 전역 헤더가 /admin 경로에서 숨도록 감싸는 클라이언트 게이트.
@@ -32,6 +33,7 @@ export function AuthMenu() {
   const reduce = useReducedMotion();
   // null = 아직 조회 전, string = 로그인, "" = 비로그인 확정
   const [nickname, setNickname] = useState<string | null>(null);
+  const { messages } = useLocale();
 
   useEffect(() => {
     let alive = true;
@@ -66,7 +68,7 @@ export function AuthMenu() {
         href={`/login?next=${next}`}
         className="inline-flex h-11 items-center rounded-xl bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
-        로그인
+        {messages.login}
       </Link>
     );
   }

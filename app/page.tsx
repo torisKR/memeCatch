@@ -156,6 +156,44 @@ export default async function Home() {
                 </span>
               </Link>
             </li>
+            <li>
+              <Link
+                href="/news"
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+              >
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 4h14v16H5z" />
+                    <path d="M8 8h8M8 12h8M8 16h5" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold">세대별 밈 소식</span>
+                  <span className="block truncate text-sm text-muted">
+                    20·30·40대별 핵심 정보만
+                  </span>
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/products"
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+              >
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 8h14l-1 12H6L5 8Z" />
+                    <path d="M9 9V6a3 3 0 0 1 6 0v3" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold">밈 상품</span>
+                  <span className="block truncate text-sm text-muted">
+                    광고 고지와 조건을 먼저 확인
+                  </span>
+                </span>
+              </Link>
+            </li>
           </ul>
         </section>
       </Reveal>

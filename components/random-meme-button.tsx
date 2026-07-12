@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { track } from "@/lib/analytics";
+import { useLocale } from "@/lib/i18n-client";
 
 /** 헤더 🎲 — 랜덤 밈 이동 (Wave 1). 주사위 SVG(이모지 금지 규칙 준수) */
 export function RandomMemeButton() {
+  const { messages } = useLocale();
   return (
     <Link
       href="/memes/random"
       prefetch={false}
-      aria-label="아무 밈이나 보기"
-      title="아무 밈이나 보기"
+      aria-label={messages.random}
+      title={messages.random}
       onClick={() => track("random_meme")}
       className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95]"
     >

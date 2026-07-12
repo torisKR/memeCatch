@@ -7,6 +7,7 @@ import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
+import type { Audience } from "@/lib/meme-commerce";
 
 export type MemeRow = Database["public"]["Tables"]["memes"]["Row"];
 export type MemeContentRow = Database["public"]["Tables"]["meme_contents"]["Row"];
@@ -22,6 +23,12 @@ export type MemeDetail = MemeRow & {
   meme_contents: MemeContentRow[];
   meme_sources: MemeSourceRow[];
   meme_tags_map: { tag_id: string; tags: { name: string } | null }[];
+};
+
+export type GenerationHighlight = {
+  ageGroup: Audience;
+  totalVotes: number;
+  meme: MemeListItem;
 };
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
@@ -63,6 +70,71 @@ export async function getBeginnerMemes(limit = 8): Promise<MemeListItem[]> {
     return data as MemeListItem[];
   } catch {
     return [];
+  }
+}
+
+/**
+ * 20·30·40대별 "알아요/써요" 투표 상위 밈.
+ * 표본이 없거나 조회가 실패하면 빈 배열을 반환하고 뉴스 브리핑만 노출한다.
+ */
+export async function getGenerationHighlights(
+  limitPerGroup = 3
+): Promise<Record<Audience, GenerationHighlight[]>> {
+  const empty: Record<Audience, GenerationHighlight[]> = {
+    "20s": [],
+    "30s": [],
+    "40s": [],
+  };
+
+  try {
+    const supabase = createStaticClient();
+    const { data: stats, error: statsError } = await supabase
+      .from("generation_vote_stats")
+      .select("age_group,vote,cnt,meme_id")
+      .in("age_group", ["20s", "30s", "40s"])
+      .in("vote", ["know", "use"]);
+
+    if (statsError || !stats?.length) return empty;
+
+    const scores = new Map<string, number>();
+    for (const row of stats) {
+      if (!row.age_group || !row.meme_id) continue;
+      const key = `${row.age_group}:${row.meme_id}`;
+      scores.set(key, (scores.get(key) ?? 0) + (row.cnt ?? 0));
+    }
+
+    const memeIds = [...new Set(stats.flatMap((row) => (row.meme_id ? [row.meme_id] : [])))];
+    if (!memeIds.length) return empty;
+
+    const { data: memes, error: memesError } = await supabase
+      .from("memes")
+      .select(LIST_SELECT)
+      .in("id", memeIds)
+      .in("moderation_status", [...PUBLIC_STATUSES]);
+
+    if (memesError || !memes?.length) return empty;
+    const memeById = new Map((memes as MemeListItem[]).map((meme) => [meme.id, meme]));
+
+    for (const ageGroup of ["20s", "30s", "40s"] as const) {
+      empty[ageGroup] = [...scores.entries()]
+        .filter(([key]) => key.startsWith(`${ageGroup}:`))
+        .map(([key, totalVotes]) => ({
+          ageGroup,
+          totalVotes,
+          meme: memeById.get(key.slice(ageGroup.length + 1)),
+        }))
+        .filter((item): item is GenerationHighlight => Boolean(item.meme))
+        .sort(
+          (a, b) =>
+            b.totalVotes - a.totalVotes ||
+            (b.meme.trend_score ?? 0) - (a.meme.trend_score ?? 0)
+        )
+        .slice(0, limitPerGroup);
+    }
+
+    return empty;
+  } catch {
+    return empty;
   }
 }
 

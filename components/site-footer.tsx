@@ -1,27 +1,33 @@
+"use client";
+
 import Link from "next/link";
 import { HideOnAdmin } from "@/components/auth-menu";
 import { TrackedBlock } from "@/components/tracked-block";
+import { useLocale } from "@/lib/i18n-client";
 
 /**
  * 전역 푸터 — E-E-A-T 신뢰 신호(운영 주체·문의·정책 링크·저작권 안내).
  * /admin에서는 숨김. 모바일 하단탭과 겹치지 않게 여백 확보는 body pb가 담당.
  */
 const FOOTER_LINKS = [
-  { href: "/about", label: "밈캐치 소개" },
-  { href: "/privacy", label: "개인정보처리방침" },
-  { href: "/terms", label: "이용약관" },
-  { href: "/submit", label: "밈 제보" },
+  { href: "/about", label: "about" },
+  { href: "/privacy", label: "privacy" },
+  { href: "/terms", label: "terms" },
+  { href: "/news", label: "news" },
+  { href: "/products", label: "products" },
+  { href: "/submit", label: "submit" },
 ] as const;
 
 /** 후원 — Fairy(GeekNews) 프로필. 광고와 함께 서비스 유지 재원 */
 const DONATE_URL = "https://fairy.hada.io/@toris-dev";
 
 export function SiteFooter() {
+  const { messages } = useLocale();
   return (
     <HideOnAdmin>
       <footer className="mt-16 border-t border-border bg-surface-2">
         <div className="mx-auto max-w-5xl px-4 py-8">
-          <nav aria-label="사이트 정보">
+          <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
               {FOOTER_LINKS.map((l) => (
                 <li key={l.href}>
@@ -29,7 +35,7 @@ export function SiteFooter() {
                     href={l.href}
                     className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted transition-colors hover:text-foreground"
                   >
-                    {l.label}
+                    {messages[l.label]}
                   </Link>
                 </li>
               ))}
@@ -42,7 +48,7 @@ export function SiteFooter() {
                     className="inline-flex min-h-11 items-center gap-1 font-semibold text-accent transition-colors hover:brightness-90"
                   >
                     <HeartGlyph />
-                    후원하기
+                    {messages.donate}
                   </a>
                 </TrackedBlock>
               </li>
@@ -51,17 +57,17 @@ export function SiteFooter() {
           <div className="mt-3 text-[13px] leading-relaxed text-muted">
             <details className="group sm:hidden">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-medium text-foreground [&::-webkit-details-marker]:hidden">
-                운영·저작권 안내
+                {messages.legalSummary}
                 <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" />
               </summary>
               <div className="space-y-1.5 pb-2">
-                <LegalCopy />
+                <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
               </div>
             </details>
             <div className="hidden space-y-1.5 sm:block">
-              <LegalCopy />
+              <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
             </div>
-            <p className="mt-2">© {new Date().getFullYear()} 밈캐치 (MemeCatch)</p>
+            <p className="mt-2">© {new Date().getFullYear()} {messages.brand}</p>
           </div>
         </div>
       </footer>
@@ -69,16 +75,14 @@ export function SiteFooter() {
   );
 }
 
-function LegalCopy() {
+function LegalCopy({ legal1, legal2 }: { legal1: string; legal2: string }) {
   return (
     <>
       <p>
-        밈캐치는 한국 밈·유행어의 뜻과 유래를 기록하는 사전 서비스입니다. 모든
-        제보는 운영자 검수(사실 확인 → 저작권 확인)를 거쳐 공개됩니다.
+        {legal1}
       </p>
       <p>
-        원본 영상·이미지는 저장하지 않고 출처 링크·임베드로만 제공하며, 각
-        콘텐츠의 저작권은 원저작자에게 있습니다. 문의·삭제 요청:{" "}
+        {legal2}{" "}
         <a
           href="mailto:ironjustlikethat@gmail.com"
           className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-foreground"

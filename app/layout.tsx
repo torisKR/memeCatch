@@ -6,6 +6,7 @@ import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
 import { OrganizationJsonLd } from "@/components/json-ld";
+import { LocaleDocumentSync } from "@/lib/i18n-client";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -75,6 +76,7 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
+        <LocaleDocumentSync />
         {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
         {ADSENSE_CLIENT && (
           <Script

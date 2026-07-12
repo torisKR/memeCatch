@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
 import { ExploreNavLink } from "@/components/explore-nav-link";
 import { BrandTile } from "@/components/brand-mark";
 import { RandomMemeButton } from "@/components/random-meme-button";
+import { LanguageSelector } from "@/components/language-selector";
+import { useLocale } from "@/lib/i18n-client";
 
 /**
  * 전역 헤더 — DESIGN.md §10.
@@ -17,6 +21,7 @@ import { RandomMemeButton } from "@/components/random-meme-button";
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
 export function GlobalHeader() {
+  const { messages } = useLocale();
   return (
     <HideOnAdmin>
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -24,12 +29,12 @@ export function GlobalHeader() {
           {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
           <Link
             href="/"
-            aria-label="밈캐치 홈"
+            aria-label={messages.home}
             className="group flex min-h-11 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
           >
             <BrandTile className="size-8 shadow-[0_4px_14px_color-mix(in_srgb,var(--accent)_24%,transparent)] transition-transform duration-300 group-hover:-rotate-6" />
             <span className="flex flex-col leading-none">
-              <span className="text-lg font-extrabold tracking-[-0.045em]">밈캐치</span>
+              <span className="text-lg font-extrabold tracking-[-0.045em]">{messages.brand}</span>
               <span className="mt-1 hidden font-mono text-[8px] font-semibold uppercase tracking-[0.13em] text-muted sm:block">
                 catchmeme.com
               </span>
@@ -47,7 +52,7 @@ export function GlobalHeader() {
               className="hidden md:block"
             >
               <label htmlFor="header-search" className="sr-only">
-                밈 검색
+                {messages.search}
               </label>
               <div className="relative">
                 <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -55,7 +60,7 @@ export function GlobalHeader() {
                   id="header-search"
                   name="q"
                   type="search"
-                  placeholder="밈 검색"
+                  placeholder={messages.searchPlaceholder}
                   autoComplete="off"
                   enterKeyHint="search"
                   className="h-11 w-52 rounded-full border border-border bg-surface pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow,width] duration-200 focus:w-64 focus:border-accent focus:ring-4 focus:ring-accent/20"
@@ -63,12 +68,15 @@ export function GlobalHeader() {
               </div>
             </form>
 
-            <RandomMemeButton />
+            <span className="hidden min-[390px]:contents">
+              <RandomMemeButton />
+            </span>
+            <LanguageSelector />
 
             {/* 모바일: 검색 아이콘 버튼 */}
             <Link
               href="/search"
-              aria-label="밈 검색"
+              aria-label={messages.search}
               className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95] md:hidden"
             >
               <SearchIcon className="h-5 w-5" />

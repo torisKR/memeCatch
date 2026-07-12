@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale } from "@/lib/i18n-client";
 
 /**
  * 데스크톱 헤더 내비 링크 — "탐색"(/explore) + "커뮤니티"(/community, 레인 3 추가).
@@ -12,11 +13,12 @@ import { usePathname } from "next/navigation";
  * 모바일은 BottomNav에 두 탭이 있어 md 이상에서만 노출.
  */
 export function ExploreNavLink() {
+  const { messages } = useLocale();
   return (
     <>
-      <HeaderNavLink href="/explore" label="탐색" icon={CompassIcon} />
-      <HeaderNavLink href="/timeline" label="연표" icon={TimelineIcon} />
-      <HeaderNavLink href="/community" label="커뮤니티" icon={ChatIcon} />
+      <HeaderNavLink href="/explore" label={messages.explore} icon={CompassIcon} />
+      <HeaderNavLink href="/timeline" label={messages.timeline} icon={TimelineIcon} />
+      <HeaderNavLink href="/community" label={messages.community} icon={ChatIcon} />
     </>
   );
 }

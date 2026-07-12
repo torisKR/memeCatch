@@ -20,7 +20,9 @@ type GtagEvent =
   | "weekly_click"
   | "my_recent_click"
   | "timeline_click"
-  | "search_suggest_click";
+  | "search_suggest_click"
+  | "affiliate_click"
+  | "generation_news_click";
 
 declare global {
   interface Window {

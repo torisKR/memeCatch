@@ -2,27 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale } from "@/lib/i18n-client";
 
 const TABS: {
   href: string;
-  label: string;
+  label: "brand" | "explore" | "submit" | "community" | "my";
   icon: (props: { className?: string }) => React.ReactElement;
   emphasized?: boolean;
 }[] = [
-  { href: "/", label: "홈", icon: HomeIcon },
-  { href: "/explore", label: "탐색", icon: CompassIcon },
-  { href: "/submit", label: "제보", icon: PlusIcon, emphasized: true },
-  { href: "/community", label: "커뮤니티", icon: ChatIcon },
-  { href: "/my", label: "MY", icon: UserIcon },
+  { href: "/", label: "brand", icon: HomeIcon },
+  { href: "/explore", label: "explore", icon: CompassIcon },
+  { href: "/submit", label: "submit", icon: PlusIcon, emphasized: true },
+  { href: "/community", label: "community", icon: ChatIcon },
+  { href: "/my", label: "my", icon: UserIcon },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { locale, messages } = useLocale();
   if (pathname.startsWith("/admin")) return null;
 
   return (
     <nav
-      aria-label="주 내비게이션"
+      aria-label={messages.mainNav}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
@@ -46,7 +48,7 @@ export function BottomNav() {
                 <tab.icon
                   className={`h-5 w-5 ${tab.emphasized ? "rounded-full bg-accent-soft p-0.5" : ""}`}
                 />
-                {tab.label}
+                {tab.href === "/" ? ({ ko: "홈", en: "Home", ja: "ホーム", zh: "首页" } as const)[locale] : messages[tab.label]}
               </Link>
             </li>
           );

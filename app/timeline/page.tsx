@@ -17,7 +17,7 @@ const LIST_SELECT = "*, meme_contents(thumbnail_url, is_representative)";
 /** 연도당 카드 상한 */
 const MAX_PER_YEAR = 8;
 /** 후보 풀 상한 — 전체 밈 규모(약 3천여 건) 대비 여유 있는 상한 */
-const CANDIDATE_LIMIT = 4000;
+const CANDIDATE_LIMIT = 2500; // trend_score 상위 pool — 대표 밈 선별, 대량 fetch 방지
 
 const DECADE_DEFS = [
   { key: "1990s", label: "1990년대", from: 1990, to: 1999 },
@@ -33,15 +33,18 @@ const DECADE_DEFS = [
 const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
   try {
     const supabase = createStaticClient();
+    // trend_score 상위 pool을 먼저 뽑고 연도별로 버킷팅 — 연도 오름차순 limit이면
+    // 데이터 증가 시 최신 연대가 조용히 잘리므로, 대표성(trend) 기준으로 선별한다.
     const { data, error } = await supabase
       .from("memes")
       .select(LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .not("origin_year", "is", null)
-      .order("origin_year", { ascending: true })
       .order("trend_score", { ascending: false })
       .limit(CANDIDATE_LIMIT);
-    if (error || !data) return [];
+    // 쿼리 에러는 throw — ISR이 마지막 성공 렌더를 보존/재시도(빈 페이지 1시간 캐시 방지)
+    if (error) throw error;
+    if (!data) return [];
 
     const rows = data as MemeListItem[];
     const byYear = new Map<number, MemeListItem[]>();

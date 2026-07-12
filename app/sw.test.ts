@@ -29,6 +29,19 @@ function navigationRequest(path: string, headers: HeadersInit = {}): Request {
   return request;
 }
 
+function rscRequest(
+  path: string,
+  { cookie, prefetch = false }: { cookie: string; prefetch?: boolean },
+): Request {
+  return new Request(`${ORIGIN}${path}`, {
+    headers: {
+      RSC: "1",
+      ...(prefetch ? { "Next-Router-Prefetch": "1" } : {}),
+      cookie,
+    },
+  });
+}
+
 function firstMatchingRoute(request: Request): RuntimeCaching {
   const url = new URL(request.url);
   const sameOrigin = url.origin === ORIGIN;
@@ -81,8 +94,30 @@ describe("service-worker runtime caching", () => {
     }
   });
 
+  it("never caches request-dependent RSC payloads for client transitions, refreshes, or prefetches", () => {
+    const requests = [false, true].flatMap((prefetch) => [
+      rscRequest("/products?_rsc=same", { cookie: "memecatch_locale=ko", prefetch }),
+      rscRequest("/products?_rsc=same", { cookie: "memecatch_locale=en", prefetch }),
+      rscRequest("/my?_rsc=same", { cookie: "memecatch_locale=ko", prefetch }),
+      rscRequest("/my?_rsc=same", {
+        cookie: "memecatch_locale=ko; sb-session=authenticated",
+        prefetch,
+      }),
+    ]);
+
+    for (const request of requests) {
+      const route = firstMatchingRoute(request);
+      expect(route.handler, request.url).toBeInstanceOf(NetworkOnly);
+      expect(route.handler, request.url).not.toBeInstanceOf(NetworkFirst);
+    }
+  });
+
   it("preserves runtime caching for non-document API and static assets", () => {
-    const apiRoute = firstMatchingRoute(new Request(`${ORIGIN}/api/memes`));
+    const apiRoute = firstMatchingRoute(
+      new Request(`${ORIGIN}/api/memes`, {
+        headers: { RSC: "1", "Next-Router-Prefetch": "1" },
+      }),
+    );
     const imageRoute = firstMatchingRoute(new Request(`${ORIGIN}/meme.webp`));
 
     expect(apiRoute.handler).toBeInstanceOf(NetworkFirst);

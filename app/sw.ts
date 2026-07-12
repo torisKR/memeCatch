@@ -3,7 +3,7 @@
  * 밈캐치 서비스 워커 (레인 E)
  * - 정적 자산 precache (@serwist/next가 매니페스트 주입)
  * - Supabase(원격·로컬)와 /auth 경로는 항상 NetworkOnly (세션·데이터 신선도 보장)
- * - 요청별 로케일·세션이 반영되는 HTML 문서는 항상 NetworkOnly
+ * - 요청별 로케일·세션이 반영되는 HTML 문서와 RSC payload는 항상 NetworkOnly
  * - 나머지는 defaultCache 전략
  */
 import { defaultCache } from "@serwist/next/worker";
@@ -52,7 +52,15 @@ const serwist = new Serwist({
       matcher: ({ request }) => request.mode === "navigate",
       handler: new NetworkOnly(),
     },
-    // 3) 나머지는 Next.js 권장 기본 전략
+    // 3) 클라이언트 전환·refresh·prefetch RSC도 헤더/쿠키별 응답을 URL 기준 캐시에 넣지 않는다
+    {
+      matcher: ({ request, url, sameOrigin }) =>
+        sameOrigin &&
+        request.headers.get("RSC") === "1" &&
+        !/^\/api(?:\/|$)/.test(url.pathname),
+      handler: new NetworkOnly(),
+    },
+    // 4) 나머지는 Next.js 권장 기본 전략
     ...defaultCache,
   ],
 });

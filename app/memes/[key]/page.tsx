@@ -29,7 +29,7 @@ import { ContinueStream } from "@/components/continue-stream";
 import { TrackedBlock } from "@/components/tracked-block";
 import { ContextNav } from "@/components/context-nav";
 
-/** 밈 상세 — 공개 ISR (10분), 온디맨드 생성 */
+/** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
 
 export async function generateStaticParams(): Promise<{ key: string }[]> {
@@ -109,7 +109,7 @@ export default async function MemeDetailPage({ params }: Props) {
       )}
       <ViewTracker memeId={meme.id} />
 
-      {/* 컬렉션 진입 맥락 네비 — 클라 전용(ISR 유지) */}
+      {/* 컬렉션 진입 맥락 네비 — 최신 searchParams를 읽기 위해 클라이언트에서 처리 */}
       <ContextNav />
 
       {meme.moderation_status === "limited" && (

@@ -1,6 +1,7 @@
 /**
  * 레인 B — 공개 화면 읽기 쿼리 모음.
- * 전부 createStaticClient(쿠키 미사용) 기반 — ISR 경로에서 dynamic 강등을 막는다.
+ * 전부 인증 쿠키 없는 createStaticClient 기반이지만, 이 선택 자체는 데이터를 캐시하지 않는다.
+ * React cache로 감싼 함수만 한 번의 서버 렌더 요청 안에서 중복 호출을 제거한다.
  * 쓰기는 절대 여기서 하지 않는다(쓰기는 RPC — 클라이언트 컴포넌트에서 호출).
  */
 import { cache } from "react";

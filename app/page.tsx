@@ -13,7 +13,7 @@ import { HeroWeb3 } from "@/components/hero-web3";
 import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
 
-/** 홈 — 공개 ISR (5분), 쿠키 미사용 정적 클라이언트 */
+/** 홈 문서는 요청별 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 300;
 
 export default async function Home() {

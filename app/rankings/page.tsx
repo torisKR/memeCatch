@@ -13,7 +13,7 @@ import {
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
 
-/** 공개 ISR — 쿠키 미사용(createStaticClient), 10분 재생성 */
+/** 요청별 문서 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 600;
 
 export const metadata: Metadata = {
@@ -199,7 +199,7 @@ export default async function RankingsPage() {
 
       {data && !data.fallback && (
         <div className="mt-6">
-          {/* CSS 라디오 탭 — 서버 컴포넌트 유지(ISR)를 위해 클라이언트 JS 없이 전환 */}
+          {/* CSS 라디오 탭 — 클라이언트 상태나 JS 없이 서버 렌더 마크업으로 전환 */}
           <input type="radio" name="rank-tab" id="rank-tab-today" className="peer/today sr-only" defaultChecked />
           <input type="radio" name="rank-tab" id="rank-tab-week" className="peer/week sr-only" />
           <input type="radio" name="rank-tab" id="rank-tab-again" className="peer/again sr-only" />

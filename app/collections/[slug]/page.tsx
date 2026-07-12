@@ -10,7 +10,7 @@ import { MotionList } from "@/components/motion-list";
 import { memePathFrom } from "@/lib/labels";
 
 
-/** 테마별 밈 모음 허브 — 미드테일 검색("2000년대 밈" 등) 유입용 정적 콘텐츠. ISR 1시간 */
+/** 테마별 밈 모음 허브. slug는 미리 열거하지만 문서는 요청별 SSR로 렌더한다. */
 export const revalidate = 3600;
 
 export function generateStaticParams() {
@@ -141,7 +141,7 @@ export default async function CollectionPage({
             itemClassName="min-w-0"
           >
             {memes.map((meme, idx) => {
-              // 맥락 네비 파라미터 — 이전/다음을 서버에서 인코딩(상세는 클라 파싱, ISR 유지)
+              // 맥락 네비 파라미터 — 이전/다음을 서버에서 인코딩하고 상세에서 클라 파싱
               const q = new URLSearchParams({ ctx: col.slug });
               const prev = memes[idx - 1];
               const next = memes[idx + 1];

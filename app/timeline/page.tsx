@@ -8,7 +8,8 @@ import { TimelineView, type TimelineDecade } from "@/components/timeline-view";
 
 /**
  * 레인 A — /timeline: 한국 밈 연표 (1990년대 ~ 2020년대).
- * "밈 역사/연도별 밈" 검색 유입 + 체류형 탐험 페이지. 공개 ISR(1시간), 쿠키 미사용.
+ * "밈 역사/연도별 밈" 검색 유입 + 체류형 탐험 페이지. 문서는 요청별 SSR이며,
+ * revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값으로만 유지한다.
  */
 export const revalidate = 3600;
 
@@ -42,7 +43,7 @@ const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
       .not("origin_year", "is", null)
       .order("trend_score", { ascending: false })
       .limit(CANDIDATE_LIMIT);
-    // 쿼리 에러는 throw — ISR이 마지막 성공 렌더를 보존/재시도(빈 페이지 1시간 캐시 방지)
+    // 쿼리 에러는 throw해 아래 공통 catch에서 현재 요청의 빈 배열 폴백으로 처리한다.
     if (error) throw error;
     if (!data) return [];
 

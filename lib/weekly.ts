@@ -2,7 +2,8 @@
  * 레인 D — 주간 결산(/weekly) 데이터 조립.
  * 완전 자동(수동 큐레이션 0): KST 기준 이번 주(월~일) 범위를 계산하고
  * (a) 급상승 top10 (b) 신규 등록 밈 (c) 카테고리 분포 요약을 조립한다.
- * 전부 createStaticClient(쿠키 미사용, ISR 유지) + 개별 try/catch로 실패 시 빈 배열 폴백.
+ * 전부 인증 쿠키 없는 createStaticClient + 개별 try/catch로 실패 시 빈 배열 폴백.
+ * createStaticClient 자체는 Data Cache나 문서 ISR을 추가하지 않는다.
  */
 import { createStaticClient } from "@/lib/supabase/server";
 import type { MemeCategory } from "@/lib/labels";

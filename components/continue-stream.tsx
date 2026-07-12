@@ -8,7 +8,7 @@ const SELECT = "*, meme_contents(thumbnail_url, is_representative)";
 
 /**
  * 이어서 보기 — 상세 페이지 하단 무한 카드 스트림 (Wave 1 세션 깊이 엔진).
- * 같은 카테고리 인기순, 현재 밈·관련 밈과 중복 제외. 첫 페이지는 서버(ISR) 조회,
+ * 같은 카테고리 인기순, 현재 밈·관련 밈과 중복 제외. 첫 페이지는 요청 시 서버 조회,
  * 이후 페이지는 ExploreGrid의 무한 스크롤(클라이언트)이 이어받는다.
  * 카드 클릭 → 상세 이동(새 페이지뷰). GA4 next_meme_click.
  */

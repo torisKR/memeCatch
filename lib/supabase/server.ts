@@ -39,7 +39,7 @@ export async function createClient() {
   );
 }
 
-/** 인증 없이 공개 데이터만 읽는 정적/ISR 경로용 (쿠키 미사용 → dynamic 강등 방지, E-3) */
+/** 공개 데이터 전용 클라이언트. 인증 쿠키를 읽지 않으며, 자체적으로 Data Cache를 추가하지 않는다. */
 export function createStaticClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const client = createServerClient<Database>(

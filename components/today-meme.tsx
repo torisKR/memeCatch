@@ -7,7 +7,7 @@ import Link from "next/link";
 
 /**
  * 오늘의 밈 위젯 (Wave 1 / D1) — hash(KST일자) % N 번째 밈을 하루 동안 고정 노출.
- * 홈은 ISR 5분이라 자정 후 첫 재검증에서 자연 교체된다. 정답 카드 재사용 + 공유.
+ * 요청별 SSR에서 KST 날짜를 계산하므로 자정 이후 다음 요청부터 교체된다. 정답 카드 재사용 + 공유.
  */
 function kstDayKey(): string {
   return new Intl.DateTimeFormat("en-CA", {

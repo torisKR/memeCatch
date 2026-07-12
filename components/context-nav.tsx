@@ -10,7 +10,7 @@ import { track } from "@/lib/analytics";
  * 맥락 유지 네비 (Wave 1) — 컬렉션에서 진입한 상세 페이지 상단에
  * "← 2020년대 밈 (7/24) →" 이전·다음 이동을 제공.
  * 데이터는 컬렉션 페이지가 링크에 인코딩(?ctx=&prev=&next=&i=&total=) —
- * 상세는 ISR 유지(서버는 searchParams를 읽지 않고, 클라에서만 파싱).
+ * 최신 searchParams가 필요한 내비만 클라이언트에서 파싱한다.
  */
 function ContextNavInner() {
   const sp = useSearchParams();
@@ -73,7 +73,7 @@ function ContextNavInner() {
 }
 
 export function ContextNav() {
-  // useSearchParams는 정적(ISR) 페이지에서 Suspense 경계 필수
+  // searchParams 의존 클라이언트 하위 트리를 별도 Suspense 경계로 격리한다.
   return (
     <Suspense fallback={null}>
       <ContextNavInner />

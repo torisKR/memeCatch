@@ -10,7 +10,7 @@ const SAVE_GATE_MESSAGE = "로그인하면 밈을 저장할 수 있어요.";
 /**
  * 밈 저장 토글 — toggle_save RPC(security definer) 경유.
  * 저장한 밈은 MY 페이지(/my)의 '저장한 밈'에 나타난다.
- * 상세 페이지는 공개 ISR이라 초기 저장 상태는 클라이언트에서 조회.
+ * 사용자별 초기 저장 상태는 공개 문서 SSR과 분리해 클라이언트에서 조회.
  * 비로그인 상태에서 탭하면 로그인 유도 시트(LoginGate)를 연다.
  */
 export function SaveButton({ memeId }: { memeId: string }) {

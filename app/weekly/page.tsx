@@ -7,7 +7,8 @@ import { WeeklyDigest } from "@/components/weekly-digest";
 
 /**
  * 주간 결산 — 완전 자동 콘텐츠 자산(수동 큐레이션 0).
- * KST 월~일 기준 이번 주 급상승·신규·카테고리 분포를 매시 재생성(ISR).
+ * KST 월~일 기준 이번 주 급상승·신규·카테고리 분포를 요청 시 조립한다.
+ * 문서는 요청별 SSR이며, revalidate는 캐시 가능한 fetch의 세그먼트 기본값이다.
  * 사이트맵/RSS 등록은 오케스트레이터 담당 — 여기서는 라우트만 존재하면 된다.
  */
 export const revalidate = 3600;

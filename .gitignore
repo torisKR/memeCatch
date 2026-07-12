@@ -52,6 +52,7 @@ public/sw.js
 public/sw.js.map
 public/swe-worker-*.js
 .gstack/
+.worktrees/
 
 # 로컬 에이전트 작업트리·세션·토큰 (중첩 node_modules/.env 포함)
 .claude/

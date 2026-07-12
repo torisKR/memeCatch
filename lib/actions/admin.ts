@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
+import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
 
 type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -205,6 +206,27 @@ export async function approveSubmission(input: {
         platform,
         source_url: submission.source_url,
       });
+
+      // 지원 플랫폼 제보는 승인과 함께 대표 임베드 콘텐츠로 연결한다.
+      // 원본 파일을 복제하지 않고 플랫폼의 공식 플레이어만 사용한다.
+      if (isSupportedOEmbedUrl(submission.source_url)) {
+        try {
+          const embed = await getOEmbed(submission.source_url);
+          await supabase.from("meme_contents").insert({
+            meme_id: memeId,
+            platform: embed.provider,
+            content_id: embed.contentId,
+            type: "embed",
+            url: embed.sourceUrl,
+            caption: embed.title,
+            availability: "live",
+            moderation_status: "approved",
+            is_representative: true,
+          });
+        } catch {
+          // 플랫폼 일시 장애가 승인 자체를 막지 않도록 출처 링크는 유지한다.
+        }
+      }
     }
 
     // 4) 태그 연결

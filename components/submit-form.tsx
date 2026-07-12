@@ -17,6 +17,7 @@ import {
 } from "@/app/submit/actions";
 import { uploadMemeImage, validateUploadFile, UPLOAD_ACCEPT } from "@/lib/upload";
 import { SubmissionStatusBadge } from "@/components/submission-status";
+import { ContentUrlPreview } from "@/components/content-url-preview";
 
 const DRAFT_KEY = "memecatch:submit-draft:v1";
 
@@ -358,7 +359,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
 
       <div>
         <label htmlFor={ids.sourceUrl} className="mb-1.5 block font-medium">
-          원본 링크
+          원본 콘텐츠 링크
         </label>
         <input
           id={ids.sourceUrl}
@@ -368,7 +369,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={500}
           value={fields.sourceUrl}
           onChange={update("sourceUrl")}
-          placeholder="https:// 로 시작하는 링크"
+          placeholder="YouTube·Shorts·Instagram·TikTok 링크"
           aria-invalid={!!fieldErrors.sourceUrl}
           aria-describedby={fieldErrors.sourceUrl ? `${ids.sourceUrl}-error` : undefined}
           className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base placeholder:text-muted"
@@ -378,6 +379,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
             {fieldErrors.sourceUrl}
           </p>
         )}
+        <ContentUrlPreview url={fields.sourceUrl} />
       </div>
 
       <div>

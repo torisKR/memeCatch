@@ -3,6 +3,11 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
+import {
+  getOEmbed,
+  isSupportedOEmbedUrl,
+  OEmbedError,
+} from "@/lib/oembed";
 
 export type SubmitFieldErrors = Partial<
   Record<
@@ -103,6 +108,23 @@ export async function submitMemeWithAttachment(
 
   const { name, seenAt, sourceUrl, description, guessReason, tags, attachmentPath } =
     parsed.data;
+
+  // 지원 플랫폼 링크는 미리보기와 동일한 서버 검증을 다시 수행한다.
+  // 클라이언트 미리보기는 우회될 수 있으므로 제출 시점을 신뢰 경계로 삼는다.
+  if (sourceUrl && isSupportedOEmbedUrl(sourceUrl)) {
+    try {
+      await getOEmbed(sourceUrl);
+    } catch (error) {
+      const message =
+        error instanceof OEmbedError
+          ? error.message
+          : "콘텐츠를 확인하지 못했어요. 공개 링크인지 다시 확인해 주세요";
+      return {
+        status: "error",
+        fieldErrors: { sourceUrl: message },
+      };
+    }
+  }
 
   // 첨부 경로는 자기 폴더 프리픽스만 허용 (RPC에서도 재검증)
   if (

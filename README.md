@@ -100,7 +100,7 @@ pnpm exec eslint .     # 린트
 Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 테이블:
 
 - `memes` — 밈 본문(뜻·유래·신호등·생애주기·검수 상태)
-- `meme_contents` / `meme_sources` — 유튜브 임베드·출처 링크
+- `meme_contents` / `meme_sources` — YouTube·TikTok·Instagram·Facebook·Threads 임베드와 출처 링크
 - `meme_submissions` · `reports` · `discussions` · `meme_reactions` · `saved_memes` · `generation_votes`
 - `profiles` — 닉네임·역할·관심 카테고리
 - `meme_trend_metrics` · `view_events` — 트렌드 집계

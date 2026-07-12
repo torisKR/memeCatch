@@ -133,6 +133,13 @@ export function LoginForm({
           )}
           구글로 시작하기
         </button>
+        <Link
+          href={`/auth/tiktok?next=${encodeURIComponent(next)}`}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98]"
+        >
+          <TikTokMark className="h-5 w-5" />
+          TikTok으로 시작하기
+        </Link>
       </div>
 
       <p role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-muted">
@@ -211,6 +218,17 @@ export function LoginForm({
         </Link>
       </p>
     </motion.div>
+  );
+}
+
+function TikTokMark({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path
+        d="M14.4 3.2c.5 2.5 1.9 4 4.4 4.5v3.1a8.6 8.6 0 0 1-4.4-1.4v6.1a5.8 5.8 0 1 1-5-5.7v3.2a2.7 2.7 0 1 0 1.8 2.5V3.2h3.2Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }
 

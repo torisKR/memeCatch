@@ -49,7 +49,7 @@ export function GlobalHeader() {
             <form
               action="/search"
               role="search"
-              className="hidden md:block"
+              className="hidden lg:block"
             >
               <label htmlFor="header-search" className="sr-only">
                 {messages.search}
@@ -77,7 +77,7 @@ export function GlobalHeader() {
             <Link
               href="/search"
               aria-label={messages.search}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95] md:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95] lg:hidden"
             >
               <SearchIcon className="h-5 w-5" />
             </Link>

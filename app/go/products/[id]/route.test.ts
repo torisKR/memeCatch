@@ -88,6 +88,45 @@ describe("product redirect handler", () => {
     expect(repository.recordClick).not.toHaveBeenCalled();
   });
 
+  it.each([undefined, ""])(
+    "fails closed when the affiliate ID is %s",
+    async (affiliateId) => {
+      if (affiliateId === undefined) {
+        delete process.env.ADPICK_AFFILIATE_ID;
+      } else {
+        process.env.ADPICK_AFFILIATE_ID = affiliateId;
+      }
+      const repository = {
+        getActiveRedirect: vi.fn().mockResolvedValue(affiliateUrl),
+        recordClick: vi.fn(),
+      };
+      const handler = createProductRedirectHandler(repository, () => new Date());
+
+      const response = await handler(request(), context());
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe(
+        "https://catchmeme.com/products",
+      );
+      expect(repository.recordClick).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a stored URL for a different affiliate ID", async () => {
+    process.env.ADPICK_AFFILIATE_ID = "different-member";
+    const repository = {
+      getActiveRedirect: vi.fn().mockResolvedValue(affiliateUrl),
+      recordClick: vi.fn(),
+    };
+    const handler = createProductRedirectHandler(repository, () => new Date());
+
+    const response = await handler(request(), context());
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://catchmeme.com/products");
+    expect(repository.recordClick).not.toHaveBeenCalled();
+  });
+
   it("still redirects when click recording fails", async () => {
     const repository = {
       getActiveRedirect: vi.fn().mockResolvedValue(affiliateUrl),

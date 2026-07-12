@@ -42,6 +42,8 @@ export function createProductRedirectHandler(
     const fallback = new URL("/products", request.url).toString();
     const parsedId = z.uuid().safeParse((await params).id);
     if (!parsedId.success) return redirect(fallback);
+    const affiliateId = process.env.ADPICK_AFFILIATE_ID?.trim();
+    if (!affiliateId) return redirect(fallback);
 
     let affiliateUrl: string | null;
     try {
@@ -52,7 +54,7 @@ export function createProductRedirectHandler(
 
     if (
       !affiliateUrl ||
-      !isValidAdpickBuyUrl(affiliateUrl, process.env.ADPICK_AFFILIATE_ID)
+      !isValidAdpickBuyUrl(affiliateUrl, affiliateId)
     ) {
       return redirect(fallback);
     }

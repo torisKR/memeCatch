@@ -90,13 +90,16 @@ export async function getAffiliateStorefront(): Promise<AffiliateStorefrontData>
 
 export async function getActiveAffiliateRedirect(
   id: string,
+  admin: ReturnType<typeof createAdminClient> = createAdminClient(),
 ): Promise<string | null> {
   try {
-    const { data, error } = await createAdminClient()
+    const { data, error } = await admin
       .from("affiliate_products")
       .select("affiliate_url")
       .eq("id", id)
       .eq("is_active", true)
+      .eq("provider", "adpick")
+      .eq("source_type", "hotdeal")
       .maybeSingle();
 
     return error ? null : (data?.affiliate_url ?? null);

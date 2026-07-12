@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { createAffiliateSyncRepository } from "@/lib/affiliate/repository.server";
+import {
+  createAffiliateSyncRepository,
+  getActiveAffiliateRedirect,
+} from "@/lib/affiliate/repository.server";
 import type { NormalizedAffiliateProduct } from "@/lib/affiliate/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -66,5 +69,39 @@ describe("createAffiliateSyncRepository", () => {
     ).rejects.toThrow("DB_APPLY_RESULT_ERROR");
     expect(mock.rpc).toHaveBeenCalledOnce();
     expect(mock.from).toHaveBeenCalledOnce();
+  });
+});
+
+describe("getActiveAffiliateRedirect", () => {
+  it("scopes the lookup to active Adpick hot deals", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { affiliate_url: "https://adpick.co.kr/apis/goshopping.php" },
+      error: null,
+    });
+    const query = {
+      eq: vi.fn(),
+      maybeSingle,
+    };
+    query.eq.mockReturnValue(query);
+    const select = vi.fn().mockReturnValue(query);
+    const from = vi.fn().mockReturnValue({ select });
+    const admin = { from } as unknown as ReturnType<typeof createAdminClient>;
+
+    await getActiveAffiliateRedirect(
+      "550e8400-e29b-41d4-a716-446655440000",
+      admin,
+    );
+
+    expect(from).toHaveBeenCalledWith("affiliate_products");
+    expect(select).toHaveBeenCalledWith("affiliate_url");
+    expect(query.eq).toHaveBeenNthCalledWith(
+      1,
+      "id",
+      "550e8400-e29b-41d4-a716-446655440000",
+    );
+    expect(query.eq).toHaveBeenNthCalledWith(2, "is_active", true);
+    expect(query.eq).toHaveBeenNthCalledWith(3, "provider", "adpick");
+    expect(query.eq).toHaveBeenNthCalledWith(4, "source_type", "hotdeal");
+    expect(maybeSingle).toHaveBeenCalledOnce();
   });
 });

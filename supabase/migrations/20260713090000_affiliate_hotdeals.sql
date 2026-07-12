@@ -107,6 +107,7 @@ begin
   )
   on conflict on constraint affiliate_sync_runs_provider_source_type_scheduled_date_key
   do update set
+    id = gen_random_uuid(),
     status = 'running',
     fetched_count = 0,
     upserted_count = 0,
@@ -280,6 +281,11 @@ begin
       finished_at = now()
   where runs.id = fail_affiliate_sync.run_id
     and runs.status = 'running';
+
+  if not found then
+    raise exception 'affiliate sync run is not running'
+      using errcode = '55000';
+  end if;
 end;
 $$;
 

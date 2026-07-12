@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createCronHandler } from "@/app/api/cron/adpick-hotdeals/route";
+import { createCronHandler } from "@/lib/affiliate/cron-handler";
 
 const originalCronSecret = process.env.CRON_SECRET;
 

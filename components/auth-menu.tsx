@@ -28,6 +28,9 @@ export function HideOnAdmin({ children }: { children: React.ReactNode }) {
  * - 드롭다운 fade+scale 진입, 바깥 클릭/esc 닫기, 열릴 때 첫 항목 포커스.
  * - prefers-reduced-motion 존중. 터치 타깃 44px+.
  */
+/** 로그인 상태 힌트 — 직전 로그인의 닉네임을 보관해 재방문 시 즉시 아바타를 그린다. */
+const AUTH_HINT_KEY = "mc_auth_nick";
+
 export function AuthMenu() {
   const pathname = usePathname();
   const reduce = useReducedMotion();
@@ -37,11 +40,26 @@ export function AuthMenu() {
 
   useEffect(() => {
     let alive = true;
+    // 낙관적 초기 반영 — 직전 로그인에서 저장한 힌트를 localStorage에서 동기로 읽어
+    // 즉시 아바타를 렌더한다. 헤더는 ISR 레이아웃에 있어 서버에서 세션을 읽을 수
+    // 없으므로(읽으면 전 페이지 dynamic 강등 → 상세 500), 네트워크 getUser 지연
+    // 동안의 "로그인" 깜빡임을 이 힌트로 없앤다. 초기 state는 null로 유지해 SSR/
+    // hydration 불일치는 만들지 않는다(마운트 직후 힌트로 교체).
+    try {
+      const hint = window.localStorage.getItem(AUTH_HINT_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (hint) setNickname(hint);
+    } catch {
+      // 저장소 접근 실패(시크릿 모드 등)는 무시 — 아래 네트워크 조회로 확정된다
+    }
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!alive) return;
       if (!user) {
         setNickname("");
+        try {
+          window.localStorage.removeItem(AUTH_HINT_KEY);
+        } catch {}
         return;
       }
       const { data } = await supabase
@@ -49,11 +67,21 @@ export function AuthMenu() {
         .select("nickname")
         .eq("id", user.id)
         .single();
-      if (alive) setNickname(data?.nickname ?? "밈러");
+      if (!alive) return;
+      const nick = data?.nickname ?? "밈러";
+      setNickname(nick);
+      try {
+        window.localStorage.setItem(AUTH_HINT_KEY, nick);
+      } catch {}
     });
     // 로그인/로그아웃 변화 반영
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session?.user) setNickname("");
+      if (!session?.user) {
+        setNickname("");
+        try {
+          window.localStorage.removeItem(AUTH_HINT_KEY);
+        } catch {}
+      }
     });
     return () => {
       alive = false;

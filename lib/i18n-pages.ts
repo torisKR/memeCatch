@@ -49,7 +49,7 @@ export const PAGE_COPY = {
   en: {
     shopTitle: "MemeCatch Edit Shop", shopIntro: "Browse live sponsored products alongside picks selected by the MemeCatch editors.",
     liveAdTitle: "Live sponsored products", liveAdDescription: "Sponsored products supplied in real time by our affiliate partner.",
-    editorPickTitle: "MemeCatch editor picks", editorPickDescription: "Products selected by the MemeCatch editors for life with memes.",
+    editorPickTitle: "MemeCatch editor picks", editorPickDescription: "Products selected by MemeCatch editors for a meme-filled lifestyle.",
     liveBadge: "Live ad", editorBadge: "Editor pick", carouselLabel: "Live sponsored products carousel",
     previousProduct: "Previous product", nextProduct: "Next product", pauseCarousel: "Pause carousel", playCarousel: "Play carousel",
     viewProductLabel: (productName: string) => `View product: ${productName}`,

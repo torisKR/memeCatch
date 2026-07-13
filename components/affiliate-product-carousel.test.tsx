@@ -284,6 +284,20 @@ describe("AffiliateProductCarousel", () => {
     ).toBeTruthy();
   });
 
+  it("uses 44px touch targets for every carousel control", () => {
+    renderCarousel();
+
+    const controls = [
+      screen.getByRole("button", { name: PAGE_COPY.ko.previousProduct }),
+      screen.getByRole("button", { name: PAGE_COPY.ko.nextProduct }),
+      screen.getByRole("button", { name: PAGE_COPY.ko.pauseCarousel }),
+    ];
+
+    controls.forEach((control) => {
+      expect(control.className.split(" ")).toContain("size-11");
+    });
+  });
+
   it("stops while focus is inside and resumes after focus leaves", () => {
     renderCarousel();
     const region = screen.getByRole("region", {

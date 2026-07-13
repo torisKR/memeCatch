@@ -29,7 +29,7 @@ export function AffiliateProductGrid({
     : null;
 
   return (
-    <TrackedBlock event="affiliate_product_click" className="mt-10">
+    <TrackedBlock event="affiliate_product_click" className="shop-carousel-edge mt-10">
       {updatedAt ? (
         <p className="font-mono text-xs font-semibold text-muted">
           {copy.lastUpdated} <time dateTime={data.lastSuccessfulSyncAt ?? undefined}>{updatedAt}</time>
@@ -59,8 +59,8 @@ export function AffiliateProductGrid({
       <HotdealProductSection
         sectionId="hotdeal-products"
         className={data.popular.length > 0 ? "mt-12" : "mt-6"}
-        title={copy.hotdealTitle}
-        description={copy.hotdealDescription}
+        title={copy.liveAdTitle}
+        description={copy.liveAdDescription}
         products={data.hotdeals}
         locale={locale}
         emptyMessage={copy.emptyHotdeals}

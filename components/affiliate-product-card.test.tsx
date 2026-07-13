@@ -37,11 +37,15 @@ describe("AffiliateProductCard", () => {
     expect(html).toContain("25,800원");
     expect(html).toContain("12,900원");
     expect(html).toContain("50%");
-    expect(html).toContain("광고·제휴");
+    expect(html).toContain(PAGE_COPY.ko.affiliateBadge);
+    expect(html).toContain(PAGE_COPY.ko.liveBadge);
     expect(html).toContain(
       "/go/products/550e8400-e29b-41d4-a716-446655440000",
     );
     expect(html).toContain('rel="sponsored noopener noreferrer"');
+    expect(html).toContain(
+      `aria-label="${PAGE_COPY.ko.viewProductLabel(product.productName)}"`,
+    );
   });
 
   it("directs shoppers to verify a missing price without inventing a discount", () => {
@@ -129,7 +133,7 @@ describe("AffiliateProductGrid", () => {
       />,
     );
     expect(withoutPopular).not.toContain(PAGE_COPY.ko.popularTitle);
-    expect(withoutPopular).toContain(PAGE_COPY.ko.hotdealTitle);
+    expect(withoutPopular).toContain(PAGE_COPY.ko.liveAdTitle);
 
     const withPopular = renderToStaticMarkup(
       <AffiliateProductGrid
@@ -143,7 +147,7 @@ describe("AffiliateProductGrid", () => {
       />,
     );
     expect(withPopular.indexOf(PAGE_COPY.ko.popularTitle)).toBeLessThan(
-      withPopular.indexOf(PAGE_COPY.ko.hotdealTitle),
+      withPopular.indexOf(PAGE_COPY.ko.liveAdTitle),
     );
   });
 
@@ -160,7 +164,7 @@ describe("AffiliateProductGrid", () => {
       />,
     );
 
-    expect(html).toContain(PAGE_COPY.ko.hotdealTitle);
+    expect(html).toContain(PAGE_COPY.ko.liveAdTitle);
     expect(html).toContain(PAGE_COPY.ko.emptyHotdeals);
   });
 

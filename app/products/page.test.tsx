@@ -35,15 +35,24 @@ vi.mock("@/lib/affiliate/repository.server", () => ({
 
 import ProductsPage from "@/app/products/page";
 import { getAffiliateStorefront } from "@/lib/affiliate/repository.server";
+import { isMemeProductActive, MEME_PRODUCTS } from "@/lib/meme-commerce";
 import { PAGE_COPY } from "@/lib/i18n-pages";
 
 describe("ProductsPage", () => {
-  it("places the hotdeal storefront before legacy offers", async () => {
+  it("renders the editorial shop hierarchy and truthful available-link count", async () => {
     const html = renderToStaticMarkup(await ProductsPage());
+    const activeMemeProductCount = MEME_PRODUCTS.filter((product) =>
+      isMemeProductActive(product),
+    ).length;
 
-    expect(html.indexOf(PAGE_COPY.ko.hotdealTitle)).toBeLessThan(
-      html.indexOf(PAGE_COPY.ko.legacyOffersTitle),
+    expect(html).toContain(PAGE_COPY.ko.shopTitle);
+    expect(html.indexOf(PAGE_COPY.ko.liveAdTitle)).toBeLessThan(
+      html.indexOf(PAGE_COPY.ko.editorPickTitle),
     );
+    expect(html).toContain(
+      PAGE_COPY.ko.affiliateBody(1 + activeMemeProductCount),
+    );
+    expect(html).toContain("bg-cream");
   });
 
   it("omits all offer price fields from stale JSON-LD", async () => {

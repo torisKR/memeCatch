@@ -321,3 +321,51 @@ html:lang(zh-Hans) body {
     background-image: none;
   }
 }
+
+/* ── 편집숍 상품 스티커·캐러셀 장식 ── */
+.shop-focus-safe {
+  isolation: isolate;
+  overflow: visible;
+}
+
+.shop-sticker {
+  transform: rotate(1deg);
+  transform-origin: center;
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+
+.product-sticker-card:hover .shop-sticker {
+  transform: rotate(-1deg) translateY(-1px);
+}
+
+.shop-carousel-edge [data-slot="carousel-content"] {
+  margin-block: -0.25rem;
+  padding-block: 0.25rem;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1rem,
+    black calc(100% - 1.5rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1rem,
+    black calc(100% - 1.5rem),
+    transparent
+  );
+  transition: mask-position var(--dur-micro) var(--ease-out),
+    -webkit-mask-position var(--dur-micro) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-sticker,
+  .shop-carousel-edge [data-slot="carousel-content"] {
+    transition: none;
+  }
+
+  .product-sticker-card:hover .shop-sticker {
+    transform: rotate(1deg);
+  }
+}

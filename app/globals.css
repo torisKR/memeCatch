@@ -259,6 +259,15 @@ html:lang(zh-Hans) body {
   0%   { background-position: 0% 50%; }
   100% { background-position: 200% 50%; }
 }
+/* 헤드라인 진입 — CSS로 첫 페인트에 즉시 실행(JS 하이드레이션 비의존).
+   opacity는 건드리지 않아 LCP 텍스트가 첫 페인트부터 보인다(모바일 LCP 보호). */
+@keyframes hero-headline-in {
+  from { transform: translateY(14px); }
+  to   { transform: translateY(0); }
+}
+.hero-headline-in {
+  animation: hero-headline-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 /* 티커 마퀴 — 리스트 2벌 복제 후 -50% 순환 */
 @keyframes hero-marquee {
   from { transform: translateX(0); }
@@ -274,6 +283,7 @@ html:lang(zh-Hans) body {
   .hero-aurora-a, .hero-aurora-b { animation: none !important; }
   .hero-shimmer-text { animation: none !important; }
   .hero-marquee-track { animation: none !important; }
+  .hero-headline-in { animation: none !important; }
 }
 
 /* ── Catch Signal 브랜드 토큰 (브랜드 패스 이식, 2026-07-11) ─────── */

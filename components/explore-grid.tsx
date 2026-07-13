@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import type { MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
-import { MotionList } from "@/components/motion-list";
 import { MemeCardSkeleton } from "@/components/skeletons";
 import type { MemeCategory } from "@/lib/labels";
 
@@ -15,7 +14,8 @@ import type { MemeCategory } from "@/lib/labels";
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
  * 서버가 첫 페이지(initial)와 현재 필터(filters)를 넘겨준다.
  * 바닥 근처 진입(IntersectionObserver) 시 같은 필터·정렬로 다음 페이지를 range 조회.
- * MemeCard 재사용 + MotionList 스태거. 빈/끝/에러 상태 포함.
+ * MemeCard 재사용. 무한 스크롤에서 동적으로 추가되는 카드는 즉시 표시한다.
+ * 빈/끝/에러 상태 포함.
  *
  * ⚠️ 이 파일은 "use client" 경계라 런타임 export를 서버에서 호출할 수 없다.
  *    필터→쿼리 매핑 로직은 app/explore/page.tsx(서버)에도 동일하게 복제되어 있으며,
@@ -248,16 +248,13 @@ export function ExploreGrid({
 
   return (
     <div>
-      <MotionList
-        as="ul"
-        itemAs="li"
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3"
-        itemClassName="min-w-0"
-      >
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {items.map((meme) => (
-          <MemeCard key={meme.id} meme={meme} />
+          <li key={meme.id} className="min-w-0">
+            <MemeCard meme={meme} />
+          </li>
         ))}
-      </MotionList>
+      </ul>
 
       {/* 로딩 스켈레톤 — 다음 페이지 조회 중 */}
       {loading && (

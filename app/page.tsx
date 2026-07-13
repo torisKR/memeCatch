@@ -12,6 +12,7 @@ import { HeroWeb3 } from "@/components/hero-web3";
 // 레인 B 모션 래퍼(클라이언트): 스크롤 리빌 + 스태거 리스트
 import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
+import { DonateCard } from "@/components/donate-card";
 
 /** 홈 문서는 요청별 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 300;
@@ -235,6 +236,13 @@ export default async function Home() {
           }
         />
       )}
+
+      {/* 후원 — 1인 운영 비영리, 홈 하단에 절제된 안내 */}
+      <Reveal>
+        <div className="mt-10">
+          <DonateCard />
+        </div>
+      </Reveal>
       </div>
     </main>
   );

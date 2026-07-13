@@ -24,6 +24,7 @@ import {
   MemeWebPageJsonLd,
 } from "@/components/json-ld";
 import { memePathFrom } from "@/lib/labels";
+import { DonateCard } from "@/components/donate-card";
 import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
 import { TrackedBlock } from "@/components/tracked-block";
@@ -261,6 +262,9 @@ export default async function MemeDetailPage({ params }: Props) {
       <SaveButton memeId={meme.id} />
 
       <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
+
+      {/* 후원 — 본문·반응을 거친 고관여 지점에 절제된 1개 CTA(1인 운영 비영리) */}
+      <DonateCard />
 
       <Comments memeId={meme.id} />
 

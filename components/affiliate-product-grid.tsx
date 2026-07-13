@@ -1,4 +1,5 @@
 import { AffiliateProductCard } from "@/components/affiliate-product-card";
+import { AffiliateProductCarousel } from "@/components/affiliate-product-carousel";
 import { TrackedBlock } from "@/components/tracked-block";
 import type { AffiliateStorefrontData } from "@/lib/affiliate/types";
 import type { Locale } from "@/lib/i18n";
@@ -45,7 +46,7 @@ export function AffiliateProductGrid({
       ) : null}
 
       {data.popular.length > 0 ? (
-        <ProductSection
+        <StaticProductSection
           sectionId="popular-products"
           className="mt-6"
           title={copy.popularTitle}
@@ -55,7 +56,7 @@ export function AffiliateProductGrid({
         />
       ) : null}
 
-      <ProductSection
+      <HotdealProductSection
         sectionId="hotdeal-products"
         className={data.popular.length > 0 ? "mt-12" : "mt-6"}
         title={copy.hotdealTitle}
@@ -68,7 +69,42 @@ export function AffiliateProductGrid({
   );
 }
 
-function ProductSection({
+function StaticProductSection({
+  sectionId,
+  title,
+  description,
+  products,
+  locale,
+  className,
+}: {
+  sectionId: string;
+  title: string;
+  description: string;
+  products: AffiliateStorefrontData["hotdeals"];
+  locale: Locale;
+  className: string;
+}) {
+  return (
+    <section className={className} aria-labelledby={`${sectionId}-title`}>
+      <div className="max-w-2xl">
+        <h2 id={`${sectionId}-title`} className="text-2xl font-extrabold tracking-tight">
+          {title}
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+      </div>
+
+      <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {products.map((product) => (
+          <li key={product.id} className="min-w-0">
+            <AffiliateProductCard product={product} locale={locale} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function HotdealProductSection({
   sectionId,
   title,
   description,
@@ -83,7 +119,7 @@ function ProductSection({
   products: AffiliateStorefrontData["hotdeals"];
   locale: Locale;
   className: string;
-  emptyMessage?: string;
+  emptyMessage: string;
 }) {
   return (
     <section className={className} aria-labelledby={`${sectionId}-title`}>
@@ -95,13 +131,11 @@ function ProductSection({
       </div>
 
       {products.length > 0 ? (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <li key={product.id} className="min-w-0">
-              <AffiliateProductCard product={product} locale={locale} />
-            </li>
-          ))}
-        </ul>
+        <AffiliateProductCarousel
+          products={products}
+          locale={locale}
+          sectionId={sectionId}
+        />
       ) : (
         <p className="mt-4 rounded-2xl border border-border bg-surface-2 p-5 text-sm leading-relaxed text-muted">
           {emptyMessage}

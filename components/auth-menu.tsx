@@ -66,7 +66,7 @@ export function AuthMenu() {
     return (
       <Link
         href={`/login?next=${next}`}
-        className="inline-flex h-11 items-center rounded-xl bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         {messages.login}
       </Link>

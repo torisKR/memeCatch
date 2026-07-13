@@ -43,6 +43,22 @@ vi.mock("@/lib/i18n-client", async (importOriginal) => {
 import { GlobalHeader } from "@/components/global-header";
 
 describe("GlobalHeader", () => {
+  it("hides the wordmark below 480px while preserving the labelled home link", () => {
+    const html = renderToStaticMarkup(<GlobalHeader />);
+    const homeLink = html.match(
+      /<a[^>]*aria-label="밈캐치 홈"[^>]*>.*?<\/a>/,
+    )?.[0];
+    const wordmark = homeLink?.match(
+      /<span class="[^"]*"><span class="text-lg font-extrabold tracking-\[-0\.045em\]">밈캐치<\/span>/,
+    )?.[0];
+
+    expect(homeLink).toContain('aria-label="밈캐치 홈"');
+    expect(wordmark).toContain("hidden");
+    expect(wordmark).toContain("min-[480px]:flex");
+    expect(wordmark).toContain("shrink-0");
+    expect(wordmark).toContain("whitespace-nowrap");
+  });
+
   it("shows the compact locale label without clipping the native language control", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
     const desktopSearch = html.match(/<form[^>]*role="search"[^>]*>/)?.[0];

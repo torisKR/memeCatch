@@ -1,12 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getMessages, type Locale } from "@/lib/i18n";
+import { describe, expect, it, vi } from "vitest";
+import { getMessages } from "@/lib/i18n";
 
-const { getRequestLocale } = vi.hoisted(() => ({
-  getRequestLocale: vi.fn<() => Promise<Locale>>(),
-}));
-
-vi.mock("@/lib/i18n-server", () => ({ getRequestLocale }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => ({ refresh: vi.fn() }),
@@ -19,33 +14,22 @@ vi.mock("@/components/auth-menu", () => ({
 import RootLayout from "@/app/layout";
 
 describe("RootLayout", () => {
-  beforeEach(() => {
-    getRequestLocale.mockResolvedValue("ko");
+  // 루트 레이아웃은 로케일을 정적 기본값(ko)으로 SSR/ISR 렌더한다.
+  // 요청 헤더를 읽으면 전 페이지가 요청-동적으로 강등돼 상세(ISR)가
+  // DYNAMIC_SERVER_USAGE로 깨지므로 금지. 실제 사용자 로케일은 클라이언트
+  // LocaleProvider가 쿠키로 복원한다(useSyncExternalStore).
+  it("정적 기본 로케일(ko) 문서를 서버 렌더한다 — ISR 유지", () => {
+    const messages = getMessages("ko");
+
+    const html = renderToStaticMarkup(
+      RootLayout({ children: <main>content</main> }),
+    );
+
+    expect(html).toMatch(/^<html lang="ko">/);
+    expect(html).toContain(`aria-label="${messages.home}"`);
+    expect(html).toContain(`aria-label="${messages.languageMenu}"`);
+    expect(html).toContain(`aria-label="${messages.footerNav}"`);
+    expect(html).toContain(`aria-label="${messages.mainNav}"`);
+    expect(html).toContain(`>${messages.about}</a>`);
   });
-
-  it.each([
-    ["ko", "ko"],
-    ["en", "en"],
-    ["ja", "ja"],
-    ["zh", "zh-Hans"],
-  ] satisfies [Locale, string][])(
-    "server-renders the %s document language as %s",
-    async (locale, documentLanguage) => {
-      getRequestLocale.mockResolvedValue(locale);
-      const messages = getMessages(locale);
-
-      const html = renderToStaticMarkup(
-        await RootLayout({ children: <main>content</main> }),
-      );
-
-      expect(html).toMatch(
-        new RegExp(`^<html lang="${documentLanguage}">`),
-      );
-      expect(html).toContain(`aria-label="${messages.home}"`);
-      expect(html).toContain(`aria-label="${messages.languageMenu}"`);
-      expect(html).toContain(`aria-label="${messages.footerNav}"`);
-      expect(html).toContain(`aria-label="${messages.mainNav}"`);
-      expect(html).toContain(`>${messages.about}</a>`);
-    },
-  );
 });

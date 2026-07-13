@@ -7,8 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { LocaleDocumentSync, LocaleProvider } from "@/lib/i18n-client";
-import { getDocumentLanguage } from "@/lib/i18n";
-import { getRequestLocale } from "@/lib/i18n-server";
+import { DEFAULT_LOCALE, getDocumentLanguage } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -60,12 +59,15 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Intentional request-time boundary: pathless locale selection must vary the
-  // document and shared chrome per request, so document routes skip Full Route Cache.
-  const locale = await getRequestLocale();
+  // 로케일은 정적 기본값(ko)으로 SSR/ISR HTML을 렌더한다. 요청 헤더(headers())를
+  // 읽으면 루트 레이아웃이 전 페이지를 요청-동적으로 강등시켜 상세(ISR)가
+  // DYNAMIC_SERVER_USAGE로 500 나므로 금지. 실제 사용자 로케일은 클라이언트
+  // LocaleProvider가 쿠키(useSyncExternalStore)로 복원하고 LocaleDocumentSync가
+  // <html lang>을 갱신한다. → 전 사이트 ISR 유지(성능·크롤링·AdSense).
+  const locale = DEFAULT_LOCALE;
 
   return (
     <html lang={getDocumentLanguage(locale)}>
@@ -75,11 +77,31 @@ export default async function RootLayout({
           href="https://cdn.jsdelivr.net"
           crossOrigin="anonymous"
         />
+        {/*
+          Pretendard 폰트 — 렌더 비차단 로드. media="print"로 받아 렌더를 막지 않고
+          파싱 직후 인라인 스크립트가 media를 'all'로 승격시킨다. 그 사이 텍스트는
+          시스템 한글 폴백으로 즉시 페인트되고 Pretendard로 swap → 모바일 FCP/LCP 개선.
+        */}
         <link
+          id="pretendard-css"
           rel="stylesheet"
           crossOrigin="anonymous"
+          media="print"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "var p=document.getElementById('pretendard-css');if(p)p.media='all';",
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            crossOrigin="anonymous"
+            href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          />
+        </noscript>
       </head>
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>

@@ -2,6 +2,16 @@
   "name": "memecatch",
   "version": "0.1.0",
   "private": true,
+  "comment:browserslist": "현대 브라우저 타깃(2023+) — 레거시 폴리필/불필요 트랜스파일 제거로 번들·TBT 축소. 모바일 우선 한국 사용자 대상.",
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 111",
+    "safari >= 16.4",
+    "ios_saf >= 16.4",
+    "samsung >= 23",
+    "not dead"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -38,6 +48,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "jsdom": "^29.1.1",

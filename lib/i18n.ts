@@ -13,6 +13,13 @@ export const LANGUAGE_NAMES: Record<Locale, string> = {
   zh: "中文",
 };
 
+export const LANGUAGE_SHORT_NAMES: Record<Locale, "KO" | "EN" | "JA" | "ZH"> = {
+  ko: "KO",
+  en: "EN",
+  ja: "JA",
+  zh: "ZH",
+};
+
 export function isLocale(value: string | null | undefined): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
 }

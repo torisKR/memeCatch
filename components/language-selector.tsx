@@ -1,7 +1,13 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { LANGUAGE_NAMES, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n";
+import {
+  LANGUAGE_NAMES,
+  LANGUAGE_SHORT_NAMES,
+  SUPPORTED_LOCALES,
+  type Locale,
+} from "@/lib/i18n";
 import { persistLocale, useLocale } from "@/lib/i18n-client";
 
 export function LanguageSelector() {
@@ -14,18 +20,19 @@ export function LanguageSelector() {
   }
 
   return (
-    <label className="relative flex items-center">
+    <label className="relative grid h-11 min-w-[4.75rem] shrink-0 cursor-pointer grid-cols-[1rem_1fr_auto] items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-bold text-foreground transition-colors hover:border-accent focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/20">
       <span className="sr-only">{messages.language}</span>
-      <GlobeIcon className="pointer-events-none absolute left-3 h-4 w-4 text-muted" />
+      <GlobeIcon className="h-4 w-4 text-muted" />
+      <span aria-hidden>{LANGUAGE_SHORT_NAMES[locale]}</span>
+      <ChevronDown className="h-3.5 w-3.5 text-muted" aria-hidden />
       <select
         value={locale}
         onChange={(event) => changeLocale(event.target.value as Locale)}
         aria-label={messages.languageMenu}
-        className="h-11 w-11 appearance-none rounded-full border border-border bg-surface py-0 pl-9 pr-0 text-xs font-semibold text-foreground outline-none transition-colors hover:border-accent focus:border-accent focus:ring-4 focus:ring-accent/20 sm:w-auto sm:pr-7 md:w-11 md:pr-0 lg:w-auto lg:pr-7"
+        className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
       >
         {SUPPORTED_LOCALES.map((item) => <option key={item} value={item}>{LANGUAGE_NAMES[item]}</option>)}
       </select>
-      <span aria-hidden className="pointer-events-none absolute right-2.5 hidden text-[10px] text-muted sm:block md:hidden lg:block">▼</span>
     </label>
   );
 }

@@ -43,18 +43,23 @@ vi.mock("@/lib/i18n-client", async (importOriginal) => {
 import { GlobalHeader } from "@/components/global-header";
 
 describe("GlobalHeader", () => {
-  it("uses compact tablet controls while preserving expanded language labels at sm and lg", () => {
+  it("shows the compact locale label without clipping the native language control", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
     const desktopSearch = html.match(/<form[^>]*role="search"[^>]*>/)?.[0];
     const compactSearch = html.match(/<a[^>]*href="\/search"[^>]*>/)?.[0];
-    const languageSelect = html.match(/<select[^>]*aria-label="언어 선택"[^>]*>/)?.[0];
-    const languageChevron = html.match(/<span aria-hidden="true"[^>]*>▼<\/span>/)?.[0];
+    const languageControl = html.match(
+      /<label class="relative[^\"]*"[^>]*>.*?<select[^>]*aria-label="언어 선택"[^>]*>.*?<\/select>.*?<\/label>/,
+    )?.[0];
+    const languageSelect = languageControl?.match(
+      /<select[^>]*aria-label="언어 선택"[^>]*>/,
+    )?.[0];
 
     expect(desktopSearch).toContain("hidden lg:block");
     expect(compactSearch).toContain("lg:hidden");
-    expect(languageSelect).toContain("sm:w-auto sm:pr-7");
-    expect(languageSelect).toContain("md:w-11 md:pr-0");
-    expect(languageSelect).toContain("lg:w-auto lg:pr-7");
-    expect(languageChevron).toContain("sm:block md:hidden lg:block");
+    expect(languageControl).toContain("min-w-[4.75rem]");
+    expect(languageControl).toContain(">KO</span>");
+    expect(languageSelect).toContain("absolute inset-0 h-full w-full");
+    expect(languageSelect).toContain("opacity-0");
+    expect(languageControl).not.toMatch(/(?:^|\s)(?:md:)?w-11(?:\s|\")/);
   });
 });

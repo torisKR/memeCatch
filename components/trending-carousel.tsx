@@ -65,9 +65,10 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
       className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2"
       aria-label="오늘의 급상승 밈 목록 (자동 슬라이드, 마우스를 올리면 멈춤)"
     >
-      {memes.map((meme) => (
+      {memes.map((meme, i) => (
         <li key={meme.id} className="w-52 shrink-0 snap-start">
-          <MemeCard meme={meme} />
+          {/* 데스크톱 above-the-fold LCP: 처음 보이는 카드 썸네일을 즉시 로드 */}
+          <MemeCard meme={meme} priority={i < 2} />
         </li>
       ))}
     </ul>

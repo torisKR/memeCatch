@@ -27,24 +27,34 @@ export function HeroWeb3({
   const reduce = useReducedMotion();
   const sectionRef = useRef<HTMLElement | null>(null);
 
-  // 커서 팔로우 글로우 — CSS 변수만 갱신(리렌더 없음), 포인터 fine 환경에서만
+  // 커서 팔로우 글로우 — CSS 변수만 갱신(리렌더 없음), 포인터 fine 환경에서만.
+  // 섹션 rect는 스크롤/리사이즈 때만 바뀌므로 캐시해 두고, pointermove에서는
+  // 레이아웃을 읽지 않는다(강제 동기 리플로우 방지). 리스너는 모두 passive.
   useEffect(() => {
     if (reduce) return;
     const el = sectionRef.current;
     if (!el || !window.matchMedia("(pointer: fine)").matches) return;
     let raf = 0;
+    let rect = el.getBoundingClientRect();
+    const measure = () => {
+      rect = el.getBoundingClientRect();
+    };
     const onMove = (e: PointerEvent) => {
       if (raf) return;
+      const { clientX, clientY } = e;
       raf = requestAnimationFrame(() => {
-        const r = el.getBoundingClientRect();
-        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+        el.style.setProperty("--mx", `${clientX - rect.left}px`);
+        el.style.setProperty("--my", `${clientY - rect.top}px`);
         raf = 0;
       });
     };
-    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure, { passive: true });
     return () => {
       el.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
       if (raf) cancelAnimationFrame(raf);
     };
   }, [reduce]);

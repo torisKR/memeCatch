@@ -27,6 +27,40 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // public/ 정적 자산 장기 캐시(PageSpeed "효율적인 캐시 수명" 대응).
+      // 파일명에 해시가 없어 무한 immutable은 위험 → max-age + stale-while-revalidate.
+      // 확장자 기반(정적 이미지/폰트). HTML·sitemap.xml·robots/ads.txt(.txt)·manifest(.webmanifest)·
+      // sw.js(.js)는 이 목록에 없어 매칭되지 않는다. /_next/static 해시 자산은 Next가 이미 immutable로 서빙(덮어쓰기 불가).
+      {
+        source:
+          "/:path*\\.(svg|png|jpg|jpeg|webp|avif|ico|woff2)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=2592000, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      // PWA 아이콘·브랜드 자산은 사실상 불변에 가까움 → 더 길게(1년) 잡되 swr로 갱신 여지 확보.
+      // 위 확장자 규칙보다 뒤에 두어 동일 키(Cache-Control)를 덮어쓴다(마지막 매칭 우선).
+      {
+        source: "/brand/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, stale-while-revalidate=86400",
+          },
+        ],
+      },
     ];
   },
 };

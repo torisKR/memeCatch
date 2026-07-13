@@ -23,10 +23,13 @@ const MotionLink = motion.create(Link);
 export function MemeCard({
   meme,
   href,
+  priority = false,
 }: {
   meme: MemeRow | MemeListItem;
   /** 링크 오버라이드 — 컬렉션 맥락 파라미터(?ctx=...) 부착용 */
   href?: string;
+  /** above-the-fold 카드면 true — 썸네일을 즉시 로드해 LCP 개선. 첫 행에만 준다. */
+  priority?: boolean;
 }) {
   const reduce = useReducedMotion();
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
@@ -51,7 +54,10 @@ export function MemeCard({
           <img
             src={thumb}
             alt=""
-            loading="lazy"
+            // above-the-fold(priority) 카드는 즉시 로드해 LCP를 앞당긴다.
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : undefined}
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
           />
         ) : (

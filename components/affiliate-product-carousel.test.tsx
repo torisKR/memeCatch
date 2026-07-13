@@ -188,6 +188,15 @@ function renderCarousel(
   );
 }
 
+async function advanceTwoAnimationFrames() {
+  await act(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+}
+
 describe("AffiliateProductCarousel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -458,11 +467,67 @@ describe("AffiliateProductCarousel", () => {
     expect(mocks.autoScrollIsPlaying()).toBe(false);
 
     fireEvent.mouseLeave(region);
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await advanceTwoAnimationFrames();
+
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+  });
+
+  it("keeps a quick drag blocked when scroll arrives after pointerUp", async () => {
+    vi.useFakeTimers();
+    renderCarousel();
+
+    act(() => {
+      mocks.emitPointerDown();
+      mocks.emitPointerUp();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+
+    act(() => mocks.emitScroll());
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+
     await act(async () => {
-      mocks.independentPlay();
+      mocks.emitSettle();
       await Promise.resolve();
     });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(2499);
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+  });
 
+  it("cancels pointer finalization and reconciles when Embla reinitializes", async () => {
+    renderCarousel();
+    const region = screen.getByRole("region", {
+      name: PAGE_COPY.ko.carouselLabel,
+    });
+
+    fireEvent.mouseEnter(region);
+    act(() => mocks.emitPointerDown());
+    await act(async () => {
+      mocks.emitReInit();
+      await Promise.resolve();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+
+    fireEvent.mouseLeave(region);
+    await act(async () => Promise.resolve());
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+
+    fireEvent.mouseEnter(region);
+    act(() => {
+      mocks.emitPointerDown();
+      mocks.emitPointerUp();
+    });
+    await act(async () => {
+      mocks.emitReInit();
+      await Promise.resolve();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    fireEvent.mouseLeave(region);
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+    await advanceTwoAnimationFrames();
     expect(mocks.autoScrollIsPlaying()).toBe(true);
   });
 

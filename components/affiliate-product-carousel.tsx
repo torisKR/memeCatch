@@ -65,6 +65,7 @@ export function AffiliateProductCarousel({
   const pointerMovedRef = useRef(false);
   const pointerStartProgressRef = useRef(0);
   const pointerStartSnapRef = useRef(0);
+  const pointerReleaseFrameRef = useRef<number | null>(null);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lifecycleGenerationRef = useRef(0);
   const mountedRef = useRef(true);
@@ -73,6 +74,12 @@ export function AffiliateProductCarousel({
     if (restartTimerRef.current === null) return;
     clearTimeout(restartTimerRef.current);
     restartTimerRef.current = null;
+  }, []);
+
+  const cancelPointerReleaseFinalizer = useCallback(() => {
+    if (pointerReleaseFrameRef.current === null) return;
+    cancelAnimationFrame(pointerReleaseFrameRef.current);
+    pointerReleaseFrameRef.current = null;
   }, []);
 
   const canResume = useCallback(
@@ -211,6 +218,7 @@ export function AffiliateProductCarousel({
     const generation = lifecycleGenerationRef.current + 1;
     lifecycleGenerationRef.current = generation;
     clearRestartTimer();
+    cancelPointerReleaseFinalizer();
     pointerNavigationRef.current = false;
     pointerMovedRef.current = false;
 
@@ -228,8 +236,14 @@ export function AffiliateProductCarousel({
       queueMicrotask(() => reconcileAutoScroll(autoScroll, generation));
     };
     const handleAutoScrollStop = () => updatePlaying(false);
-    const handleReInit = () => reconcileAutoScroll(autoScroll, generation);
+    const handleReInit = () => {
+      cancelPointerReleaseFinalizer();
+      pointerNavigationRef.current = false;
+      pointerMovedRef.current = false;
+      reconcileAutoScroll(autoScroll, generation);
+    };
     const handlePointerDown = () => {
+      cancelPointerReleaseFinalizer();
       pointerNavigationRef.current = true;
       pointerMovedRef.current = false;
       pointerStartProgressRef.current = api.scrollProgress();
@@ -238,21 +252,52 @@ export function AffiliateProductCarousel({
       stopAutoScroll();
     };
     const handleScroll = () => {
-      if (pointerNavigationRef.current) pointerMovedRef.current = true;
+      if (!pointerNavigationRef.current) return;
+      pointerMovedRef.current = true;
+      cancelPointerReleaseFinalizer();
     };
     const handlePointerUp = () => {
       if (!pointerNavigationRef.current) return;
-      const moved =
-        pointerMovedRef.current ||
-        api.scrollProgress() !== pointerStartProgressRef.current ||
-        api.selectedScrollSnap() !== pointerStartSnapRef.current;
-      if (moved) return;
+      cancelPointerReleaseFinalizer();
 
-      pointerNavigationRef.current = false;
-      reconcileAutoScroll(autoScroll, generation);
+      const firstFrame = requestAnimationFrame(() => {
+        if (
+          !mountedRef.current ||
+          activeAutoScrollRef.current !== autoScroll ||
+          lifecycleGenerationRef.current !== generation ||
+          pointerReleaseFrameRef.current !== firstFrame
+        ) {
+          return;
+        }
+
+        const secondFrame = requestAnimationFrame(() => {
+          if (pointerReleaseFrameRef.current !== secondFrame) return;
+          pointerReleaseFrameRef.current = null;
+          if (
+            !mountedRef.current ||
+            activeAutoScrollRef.current !== autoScroll ||
+            lifecycleGenerationRef.current !== generation ||
+            !pointerNavigationRef.current
+          ) {
+            return;
+          }
+
+          const moved =
+            pointerMovedRef.current ||
+            api.scrollProgress() !== pointerStartProgressRef.current ||
+            api.selectedScrollSnap() !== pointerStartSnapRef.current;
+          if (moved) return;
+
+          pointerNavigationRef.current = false;
+          reconcileAutoScroll(autoScroll, generation);
+        });
+        pointerReleaseFrameRef.current = secondFrame;
+      });
+      pointerReleaseFrameRef.current = firstFrame;
     };
     const handleSettle = () => {
       if (!pointerNavigationRef.current) return;
+      cancelPointerReleaseFinalizer();
       pointerNavigationRef.current = false;
       pointerMovedRef.current = false;
       restartAfterManualNavigation();
@@ -279,6 +324,7 @@ export function AffiliateProductCarousel({
         lifecycleGenerationRef.current += 1;
       }
       clearRestartTimer();
+      cancelPointerReleaseFinalizer();
       pointerNavigationRef.current = false;
       pointerMovedRef.current = false;
       autoScroll.stop();
@@ -288,6 +334,7 @@ export function AffiliateProductCarousel({
     autoScroll,
     canAutoScroll,
     canResume,
+    cancelPointerReleaseFinalizer,
     clearRestartTimer,
     reconcileAutoScroll,
     restartAfterManualNavigation,
@@ -313,8 +360,9 @@ export function AffiliateProductCarousel({
       mountedRef.current = false;
       lifecycleGenerationRef.current += 1;
       clearRestartTimer();
+      cancelPointerReleaseFinalizer();
     };
-  }, [clearRestartTimer]);
+  }, [cancelPointerReleaseFinalizer, clearRestartTimer]);
 
   return (
     <Carousel

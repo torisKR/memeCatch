@@ -5,6 +5,7 @@ import { Pause, Play } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import {
   type FocusEvent,
+  type KeyboardEvent,
   type ReactElement,
   useCallback,
   useEffect,
@@ -54,10 +55,16 @@ export function AffiliateProductCarousel({
   );
   const [api, setApi] = useState<CarouselApi>();
   const [isPlaying, setIsPlaying] = useState(canAutoScroll);
-  const manuallyPausedRef = useRef(false);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const activeAutoScrollRef = useRef(autoScroll);
+  const canAutoScrollRef = useRef(canAutoScroll);
+  const manuallyPausedRef = useRef(isManuallyPaused);
   const focusWithinRef = useRef(false);
   const hoverWithinRef = useRef(false);
+  const pointerNavigationRef = useRef(false);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lifecycleGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const clearRestartTimer = useCallback(() => {
     if (restartTimerRef.current === null) return;
@@ -65,39 +72,71 @@ export function AffiliateProductCarousel({
     restartTimerRef.current = null;
   }, []);
 
-  const stopAutoScroll = useCallback(() => {
-    if (!canAutoScroll) return;
-    autoScroll.stop();
-    setIsPlaying(false);
-  }, [autoScroll, canAutoScroll]);
-
   const canResume = useCallback(
     () =>
-      canAutoScroll &&
+      canAutoScrollRef.current &&
       !manuallyPausedRef.current &&
       !focusWithinRef.current &&
       !hoverWithinRef.current &&
+      !pointerNavigationRef.current &&
       restartTimerRef.current === null &&
       document.visibilityState !== "hidden",
-    [canAutoScroll],
+    [],
+  );
+
+  const stopAutoScroll = useCallback(() => {
+    activeAutoScrollRef.current.stop();
+  }, []);
+
+  const reconcileAutoScroll = useCallback(
+    (
+      plugin = activeAutoScrollRef.current,
+      generation = lifecycleGenerationRef.current,
+    ) => {
+      if (
+        !mountedRef.current ||
+        plugin !== activeAutoScrollRef.current ||
+        generation !== lifecycleGenerationRef.current
+      ) {
+        return;
+      }
+
+      if (!canResume()) {
+        plugin.stop();
+        setIsPlaying(false);
+        return;
+      }
+
+      if (!plugin.isPlaying()) plugin.play();
+      setIsPlaying(plugin.isPlaying());
+    },
+    [canResume],
   );
 
   const resumeAutoScroll = useCallback(() => {
-    if (!canResume()) return;
-    autoScroll.play();
-    setIsPlaying(true);
-  }, [autoScroll, canResume]);
+    reconcileAutoScroll();
+  }, [reconcileAutoScroll]);
 
   const restartAfterManualNavigation = useCallback(() => {
-    if (!canAutoScroll || manuallyPausedRef.current) return;
-
     clearRestartTimer();
     stopAutoScroll();
+    if (!canAutoScrollRef.current || manuallyPausedRef.current) return;
+
+    const plugin = activeAutoScrollRef.current;
+    const generation = lifecycleGenerationRef.current;
     restartTimerRef.current = setTimeout(() => {
+      if (
+        plugin !== activeAutoScrollRef.current ||
+        generation !== lifecycleGenerationRef.current ||
+        !mountedRef.current
+      ) {
+        return;
+      }
+
       restartTimerRef.current = null;
-      resumeAutoScroll();
+      reconcileAutoScroll(plugin, generation);
     }, MANUAL_NAVIGATION_GRACE_MS);
-  }, [canAutoScroll, clearRestartTimer, resumeAutoScroll, stopAutoScroll]);
+  }, [clearRestartTimer, reconcileAutoScroll, stopAutoScroll]);
 
   const handlePrevious = useCallback(() => {
     api?.scrollPrev();
@@ -110,16 +149,18 @@ export function AffiliateProductCarousel({
   }, [api, restartAfterManualNavigation]);
 
   const handlePlayPause = useCallback(() => {
-    if (isPlaying) {
-      manuallyPausedRef.current = true;
+    const nextManuallyPaused = !manuallyPausedRef.current;
+    manuallyPausedRef.current = nextManuallyPaused;
+    setIsManuallyPaused(nextManuallyPaused);
+
+    if (nextManuallyPaused) {
       clearRestartTimer();
       stopAutoScroll();
       return;
     }
 
-    manuallyPausedRef.current = false;
     resumeAutoScroll();
-  }, [clearRestartTimer, isPlaying, resumeAutoScroll, stopAutoScroll]);
+  }, [clearRestartTimer, resumeAutoScroll, stopAutoScroll]);
 
   const handleFocus = useCallback(
     (event: FocusEvent<HTMLDivElement>) => {
@@ -150,38 +191,103 @@ export function AffiliateProductCarousel({
     resumeAutoScroll();
   }, [resumeAutoScroll]);
 
-  useEffect(() => {
-    if (!api || !canAutoScroll) return;
+  const handleKeyDownCapture = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        restartAfterManualNavigation();
+      }
+    },
+    [restartAfterManualNavigation],
+  );
 
-    const syncPlayingState = () => setIsPlaying(autoScroll.isPlaying());
-    api.on("autoScroll:play", syncPlayingState);
-    api.on("autoScroll:stop", syncPlayingState);
-    syncPlayingState();
+  useEffect(() => {
+    if (!api) return;
+
+    activeAutoScrollRef.current = autoScroll;
+    canAutoScrollRef.current = canAutoScroll;
+    const generation = lifecycleGenerationRef.current + 1;
+    lifecycleGenerationRef.current = generation;
+    clearRestartTimer();
+    pointerNavigationRef.current = false;
+
+    const updatePlaying = (playing: boolean) => {
+      if (
+        mountedRef.current &&
+        activeAutoScrollRef.current === autoScroll &&
+        lifecycleGenerationRef.current === generation
+      ) {
+        setIsPlaying(playing);
+      }
+    };
+    const handleAutoScrollPlay = () => {
+      updatePlaying(canResume());
+      queueMicrotask(() => reconcileAutoScroll(autoScroll, generation));
+    };
+    const handleAutoScrollStop = () => updatePlaying(false);
+    const handleReInit = () => reconcileAutoScroll(autoScroll, generation);
+    const handlePointerDown = () => {
+      pointerNavigationRef.current = true;
+      clearRestartTimer();
+      stopAutoScroll();
+    };
+    const handleSettle = () => {
+      if (!pointerNavigationRef.current) return;
+      pointerNavigationRef.current = false;
+      restartAfterManualNavigation();
+    };
+
+    api.on("autoScroll:play", handleAutoScrollPlay);
+    api.on("autoScroll:stop", handleAutoScrollStop);
+    api.on("reInit", handleReInit);
+    api.on("pointerDown", handlePointerDown);
+    api.on("settle", handleSettle);
+    reconcileAutoScroll(autoScroll, generation);
 
     return () => {
-      api.off("autoScroll:play", syncPlayingState);
-      api.off("autoScroll:stop", syncPlayingState);
+      api.off("autoScroll:play", handleAutoScrollPlay);
+      api.off("autoScroll:stop", handleAutoScrollStop);
+      api.off("reInit", handleReInit);
+      api.off("pointerDown", handlePointerDown);
+      api.off("settle", handleSettle);
+      if (lifecycleGenerationRef.current === generation) {
+        lifecycleGenerationRef.current += 1;
+      }
+      clearRestartTimer();
+      pointerNavigationRef.current = false;
+      autoScroll.stop();
     };
-  }, [api, autoScroll, canAutoScroll]);
+  }, [
+    api,
+    autoScroll,
+    canAutoScroll,
+    canResume,
+    clearRestartTimer,
+    reconcileAutoScroll,
+    restartAfterManualNavigation,
+    stopAutoScroll,
+  ]);
 
   useEffect(() => {
-    if (!canAutoScroll) return;
-
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        stopAutoScroll();
-      } else {
-        resumeAutoScroll();
-      }
+      reconcileAutoScroll();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    handleVisibilityChange();
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [canAutoScroll, resumeAutoScroll, stopAutoScroll]);
+  }, [autoScroll, canAutoScroll, reconcileAutoScroll]);
 
-  useEffect(() => clearRestartTimer, [clearRestartTimer]);
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      lifecycleGenerationRef.current += 1;
+      clearRestartTimer();
+    };
+  }, [clearRestartTimer]);
 
   return (
     <Carousel
@@ -192,6 +298,7 @@ export function AffiliateProductCarousel({
       setApi={setApi}
       onFocusCapture={handleFocus}
       onBlurCapture={handleBlur}
+      onKeyDownCapture={handleKeyDownCapture}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className="mt-4"
@@ -223,12 +330,19 @@ export function AffiliateProductCarousel({
             type="button"
             variant="outline"
             size="icon"
-            aria-label={isPlaying ? copy.pauseCarousel : copy.playCarousel}
-            aria-pressed={!isPlaying}
+            aria-label={
+              isManuallyPaused ? copy.playCarousel : copy.pauseCarousel
+            }
+            aria-pressed={isManuallyPaused}
+            data-autoplay-state={isPlaying ? "playing" : "stopped"}
             onClick={handlePlayPause}
             className="rounded-full"
           >
-            {isPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+            {isManuallyPaused ? (
+              <Play aria-hidden="true" />
+            ) : (
+              <Pause aria-hidden="true" />
+            )}
           </Button>
         ) : null}
       </div>

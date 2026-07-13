@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,19 +12,61 @@ import { PAGE_COPY } from "@/lib/i18n-pages";
 const mocks = vi.hoisted(() => {
   let reduceMotion = false;
   let playing = false;
+  let pluginPlayCalls: number[] = [];
+  let currentApi:
+    | {
+        emit: (event: string) => unknown;
+        off: (event: string, callback: () => void) => unknown;
+        on: (event: string, callback: () => void) => unknown;
+      }
+    | undefined;
+  let currentPlugin:
+    | {
+        destroy: () => void;
+        init: (api: NonNullable<typeof currentApi>) => void;
+        play: () => void;
+      }
+    | undefined;
 
   return {
     autoScrollFactory: vi.fn(),
-    autoScrollPlay: vi.fn(() => {
-      playing = true;
-    }),
-    autoScrollStop: vi.fn(() => {
-      playing = false;
-    }),
+    autoScrollPlay: vi.fn(),
+    autoScrollStop: vi.fn(),
     autoScrollIsPlaying: vi.fn(() => playing),
+    emitReInit: () => {
+      if (!currentApi || !currentPlugin) return;
+      currentPlugin.destroy();
+      currentPlugin.init(currentApi);
+      currentApi.emit("reInit");
+    },
+    emitPointerDown: () => currentApi?.emit("pointerDown"),
+    emitPointerUp: () => currentApi?.emit("pointerUp"),
+    emitSettle: () => currentApi?.emit("settle"),
     getReduceMotion: () => reduceMotion,
+    getPluginPlayCalls: (index: number) => pluginPlayCalls[index] ?? 0,
+    latestPluginIndex: () => pluginPlayCalls.length - 1,
+    independentPlay: () => currentPlugin?.play(),
+    recordPluginPlay: (index: number) => {
+      pluginPlayCalls[index] += 1;
+    },
+    registerPlugin: () => {
+      pluginPlayCalls.push(0);
+      return pluginPlayCalls.length - 1;
+    },
+    resetController: () => {
+      currentApi = undefined;
+      currentPlugin = undefined;
+      playing = false;
+      pluginPlayCalls = [];
+    },
     setReduceMotion: (value: boolean) => {
       reduceMotion = value;
+    },
+    setCurrentApi: (api: NonNullable<typeof currentApi>) => {
+      currentApi = api;
+    },
+    setCurrentPlugin: (plugin: NonNullable<typeof currentPlugin>) => {
+      currentPlugin = plugin;
     },
     setPlaying: (value: boolean) => {
       playing = value;
@@ -39,23 +81,68 @@ vi.mock("motion/react", () => ({
 vi.mock("embla-carousel-auto-scroll", () => ({
   default: (options: Record<string, unknown>) => {
     mocks.autoScrollFactory(options);
+    const pluginIndex = mocks.registerPlugin();
+    let api:
+      | {
+          emit: (event: string) => unknown;
+          off: (event: string, callback: () => void) => unknown;
+          on: (event: string, callback: () => void) => unknown;
+        }
+      | undefined;
+    let destroyed = false;
 
-    return {
+    const play = vi.fn(() => {
+      if (destroyed || mocks.autoScrollIsPlaying()) return;
+      mocks.recordPluginPlay(pluginIndex);
+      mocks.autoScrollPlay();
+      api?.emit("autoScroll:play");
+      mocks.setPlaying(true);
+    });
+    const stop = vi.fn(() => {
+      if (destroyed || !mocks.autoScrollIsPlaying()) return;
+      mocks.autoScrollStop();
+      api?.emit("autoScroll:stop");
+      mocks.setPlaying(false);
+    });
+    const settle = () => {
+      api?.off("settle", settle);
+      play();
+    };
+    const pointerDown = () => stop();
+    const pointerUp = () => api?.on("settle", settle);
+
+    const plugin = {
       name: "autoScroll",
       options: {
         active: true,
         breakpoints: {},
         ...options,
       },
-      init: () => {
-        if (options.playOnInit) mocks.autoScrollPlay();
+      init: (nextApi: NonNullable<typeof api>) => {
+        api = nextApi;
+        destroyed = false;
+        mocks.setCurrentApi(nextApi);
+        nextApi.on("pointerDown", pointerDown);
+        nextApi.on("pointerUp", pointerUp);
+        if (options.playOnInit) play();
       },
-      destroy: () => undefined,
-      play: mocks.autoScrollPlay,
-      stop: mocks.autoScrollStop,
+      destroy: () => {
+        if (!api) return;
+        api.off("pointerDown", pointerDown);
+        api.off("pointerUp", pointerUp);
+        api.off("settle", settle);
+        stop();
+        destroyed = true;
+      },
+      play,
+      stop,
       reset: vi.fn(),
       isPlaying: mocks.autoScrollIsPlaying,
     };
+
+    mocks.setCurrentPlugin(plugin);
+
+    return plugin;
   },
 }));
 
@@ -102,8 +189,9 @@ function renderCarousel(
 
 describe("AffiliateProductCarousel", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.resetController();
     mocks.setReduceMotion(false);
-    mocks.setPlaying(false);
     vi.stubGlobal(
       "matchMedia",
       vi.fn(() => ({
@@ -181,6 +269,84 @@ describe("AffiliateProductCarousel", () => {
     expect(mocks.autoScrollPlay).toHaveBeenCalledTimes(2);
   });
 
+  it("treats a control click while hovered as an explicit pause", async () => {
+    const user = userEvent.setup();
+    renderCarousel();
+    const region = screen.getByRole("region", {
+      name: PAGE_COPY.ko.carouselLabel,
+    });
+
+    fireEvent.mouseEnter(region);
+    expect(
+      screen.getByRole("button", { name: PAGE_COPY.ko.pauseCarousel }),
+    ).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: PAGE_COPY.ko.pauseCarousel }),
+    );
+    fireEvent.mouseLeave(region);
+    fireEvent.focusOut(region, { relatedTarget: document.body });
+    await act(async () => {
+      mocks.independentPlay();
+      await Promise.resolve();
+    });
+
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    expect(
+      screen.getByRole("button", { name: PAGE_COPY.ko.playCarousel }),
+    ).toBeTruthy();
+  });
+
+  it("keeps explicit pause across focus exit and visibility restoration", async () => {
+    const user = userEvent.setup();
+    const visibilityState = vi.spyOn(document, "visibilityState", "get");
+    visibilityState.mockReturnValue("visible");
+    renderCarousel();
+    const region = screen.getByRole("region", {
+      name: PAGE_COPY.ko.carouselLabel,
+    });
+
+    fireEvent.focusIn(region);
+    await user.click(
+      screen.getByRole("button", { name: PAGE_COPY.ko.pauseCarousel }),
+    );
+    fireEvent.focusOut(region, { relatedTarget: document.body });
+    visibilityState.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    visibilityState.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await act(async () => {
+      mocks.independentPlay();
+      await Promise.resolve();
+    });
+
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    expect(
+      screen.getByRole("button", { name: PAGE_COPY.ko.playCarousel }),
+    ).toBeTruthy();
+    visibilityState.mockRestore();
+  });
+
+  it("blocks the plugin focusout callback during internal focus transitions", async () => {
+    renderCarousel();
+    const previous = screen.getByRole("button", {
+      name: PAGE_COPY.ko.previousProduct,
+    });
+    const next = screen.getByRole("button", {
+      name: PAGE_COPY.ko.nextProduct,
+    });
+
+    fireEvent.focusIn(previous);
+    fireEvent.focusOut(previous, { relatedTarget: next });
+    fireEvent.focusIn(next, { relatedTarget: previous });
+    await act(async () => {
+      mocks.independentPlay();
+      await Promise.resolve();
+    });
+
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+  });
+
   it("stops for hidden tabs and resumes when the tab becomes visible", () => {
     renderCarousel();
     const visibilityState = vi.spyOn(document, "visibilityState", "get");
@@ -193,6 +359,19 @@ describe("AffiliateProductCarousel", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     expect(mocks.autoScrollPlay).toHaveBeenCalledTimes(2);
 
+    visibilityState.mockRestore();
+  });
+
+  it("stops play-on-init when the document is initially hidden", async () => {
+    const visibilityState = vi.spyOn(document, "visibilityState", "get");
+    visibilityState.mockReturnValue("hidden");
+
+    renderCarousel();
+    await act(async () => Promise.resolve());
+
+    expect(mocks.autoScrollPlay).toHaveBeenCalledTimes(1);
+    expect(mocks.autoScrollStop).toHaveBeenCalled();
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
     visibilityState.mockRestore();
   });
 
@@ -219,6 +398,114 @@ describe("AffiliateProductCarousel", () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(mocks.autoScrollPlay).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives ArrowLeft and ArrowRight navigation an exact 2500ms grace", async () => {
+    vi.useFakeTimers();
+    renderCarousel();
+    const region = screen.getByRole("region", {
+      name: PAGE_COPY.ko.carouselLabel,
+    });
+
+    fireEvent.keyDown(region, { key: "ArrowRight" });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(2499);
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+
+    fireEvent.keyDown(region, { key: "ArrowLeft" });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+  });
+
+  it("starts pointer navigation grace only after drag settle", async () => {
+    vi.useFakeTimers();
+    renderCarousel();
+
+    act(() => {
+      mocks.emitPointerDown();
+      mocks.emitPointerUp();
+    });
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+
+    await act(async () => {
+      mocks.emitSettle();
+      await Promise.resolve();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(2499);
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+  });
+
+  it("reconciles play-on-init when Embla reinitializes while paused or focused", async () => {
+    const user = userEvent.setup();
+    renderCarousel();
+    const region = screen.getByRole("region", {
+      name: PAGE_COPY.ko.carouselLabel,
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: PAGE_COPY.ko.pauseCarousel }),
+    );
+    await act(async () => {
+      mocks.emitReInit();
+      await Promise.resolve();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+
+    await user.click(
+      screen.getByRole("button", { name: PAGE_COPY.ko.playCarousel }),
+    );
+    fireEvent.focusIn(region);
+    await act(async () => {
+      mocks.emitReInit();
+      await Promise.resolve();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+  });
+
+  it("cancels grace callbacks when eligibility changes and on unmount", async () => {
+    vi.useFakeTimers();
+    const { rerender, unmount } = renderCarousel();
+    const initiallyEligiblePlugin = mocks.latestPluginIndex();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: PAGE_COPY.ko.nextProduct }),
+    );
+    rerender(
+      <AffiliateProductCarousel
+        products={products(2)}
+        locale="ko"
+        sectionId="hotdeal-products"
+      />,
+    );
+    const oldPluginCallsAfterEligibilityChange =
+      mocks.getPluginPlayCalls(initiallyEligiblePlugin);
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(mocks.getPluginPlayCalls(initiallyEligiblePlugin)).toBe(
+      oldPluginCallsAfterEligibilityChange,
+    );
+
+    rerender(
+      <AffiliateProductCarousel
+        products={products(4)}
+        locale="ko"
+        sectionId="hotdeal-products"
+      />,
+    );
+    const reeligiblePlugin = mocks.latestPluginIndex();
+    fireEvent.click(
+      screen.getByRole("button", { name: PAGE_COPY.ko.nextProduct }),
+    );
+    const playCallsBeforeUnmount = mocks.getPluginPlayCalls(reeligiblePlugin);
+    unmount();
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(mocks.getPluginPlayCalls(reeligiblePlugin)).toBe(playCallsBeforeUnmount);
   });
 
   it("does not start auto-scroll when reduced motion is preferred", () => {

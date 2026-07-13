@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import type { MemeListItem } from "@/lib/queries";
 import { LIFECYCLE_STATUS, memePathFrom } from "@/lib/labels";
 
@@ -122,12 +122,7 @@ export function HeroWeb3({
 
       <div className="mx-auto max-w-3xl px-4 pb-10 pt-14 md:pb-14 md:pt-20">
         {/* 라이브 배지 */}
-        <motion.p
-          initial={reduce ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-white/80 backdrop-blur-sm"
-        >
+        <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-white/80 backdrop-blur-sm">
           <span className="relative flex h-2 w-2" aria-hidden>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--flame-400] opacity-70 motion-reduce:animate-none" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[--flame-500]" />
@@ -139,7 +134,7 @@ export function HeroWeb3({
           ) : (
             "한국 밈을 맥락까지 캐치"
           )}
-        </motion.p>
+        </p>
 
         {/* 헤드라인 — 그라디언트 + 시머. LCP 요소이므로 motion(JS 하이드레이션
             대기) 대신 CSS 진입(.hero-headline-in)으로 첫 페인트에 즉시 렌더한다.
@@ -169,23 +164,15 @@ export function HeroWeb3({
           ))}
         </h1>
 
-        <motion.p
-          initial={reduce ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: reduce ? 0 : 0.3, duration: 0.35 }}
-          className="mt-3 max-w-xl text-base leading-relaxed text-white/65 md:text-lg"
-        >
+        <p className="mt-3 max-w-xl text-base leading-relaxed text-white/65 md:text-lg">
           뜻·유래부터 <span className="font-semibold text-white/90">지금 써도 되는지</span>까지 한
           번에. 신호등만 보면 됩니다.
-        </motion.p>
+        </p>
 
         {/* 글래스 검색 */}
-        <motion.form
+        <form
           action="/search"
           role="search"
-          initial={reduce ? false : { opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: reduce ? 0 : 0.38, duration: 0.4 }}
           className="mt-7"
         >
           <label htmlFor="home-search" className="sr-only">
@@ -220,15 +207,12 @@ export function HeroWeb3({
               className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/50 outline-none backdrop-blur-md transition-colors duration-200 focus:border-[--flame-400]"
             />
           </div>
-        </motion.form>
+        </form>
 
         {/* 인기 검색어 칩 — 글래스 */}
         {popularTerms.length > 0 && (
-          <motion.nav
+          <nav
             aria-label="인기 검색어"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: reduce ? 0 : 0.5, duration: 0.4 }}
             className="mt-4"
           >
             <ul className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
@@ -243,7 +227,7 @@ export function HeroWeb3({
                 </li>
               ))}
             </ul>
-          </motion.nav>
+          </nav>
         )}
       </div>
 

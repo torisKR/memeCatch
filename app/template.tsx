@@ -1,10 +1,10 @@
-import { PageTransition } from "@/components/page-transition";
-
 /**
- * 루트 template — 세그먼트 전환마다 리마운트되어 진입 전환을 트리거한다.
- * (layout과 달리 상태를 유지하지 않음: Next 16 template 규약)
- * 서버 컴포넌트로 두고, 모션은 클라이언트 PageTransition에 위임한다.
+ * 루트 template.
+ *
+ * 첫 방문에서 전환 래퍼가 콘텐츠를 opacity: 0으로 SSR하면, 모바일에서는
+ * 하이드레이션이 끝날 때까지 FCP/LCP 후보가 보이지 않는다. template는 서버
+ * 경계로 유지하고, 첫 화면 콘텐츠는 즉시 표시한다.
  */
 export default function Template({ children }: { children: React.ReactNode }) {
-  return <PageTransition>{children}</PageTransition>;
+  return <>{children}</>;
 }

@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { AffiliateProductCard } from "@/components/affiliate-product-card";
@@ -46,6 +47,7 @@ describe("AffiliateProductCard", () => {
     expect(html).toContain(
       `aria-label="${PAGE_COPY.ko.viewProductLabel(product.productName)}"`,
     );
+    expect(html).toContain("focus-visible:ring-inset");
   });
 
   it("directs shoppers to verify a missing price without inventing a discount", () => {
@@ -184,5 +186,25 @@ describe("AffiliateProductGrid", () => {
     expect(html).toContain(PAGE_COPY.ko.staleWarning);
     expect(html).toContain("text-foreground");
     expect(html).not.toContain("text-safety-yellow");
+  });
+
+  it("removes the carousel edge fade while focus is inside", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateProductGrid
+        locale="ko"
+        data={{
+          hotdeals: [product],
+          popular: [],
+          lastSuccessfulSyncAt: null,
+          isStale: false,
+        }}
+      />,
+    );
+    const css = readFileSync("app/globals.css", "utf8");
+
+    expect(html).toContain("shop-carousel-edges");
+    expect(css).toMatch(
+      /\.shop-carousel-edges:focus-within \[data-slot="carousel-content"\] \{[\s\S]*?-webkit-mask-image: none;[\s\S]*?mask-image: none;/,
+    );
   });
 });

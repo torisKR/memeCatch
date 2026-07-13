@@ -114,7 +114,7 @@ export function AffiliateProductCard({
               data-affiliate-product-id={product.id}
               className={cn(
                 buttonVariants(),
-                "min-h-11 w-full whitespace-normal break-words rounded-lg bg-ink px-4 text-center font-bold text-white hover:bg-flame-700 focus-visible:ring-flame-500",
+                "min-h-11 w-full whitespace-normal break-words rounded-lg bg-ink px-4 text-center font-bold text-white hover:bg-flame-700 focus-visible:ring-inset focus-visible:ring-flame-500 focus-visible:ring-offset-0",
               )}
             >
               {copy.viewProduct}

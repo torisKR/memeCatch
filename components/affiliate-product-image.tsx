@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export function AffiliateProductImage({
   imageUrl,
@@ -9,7 +9,16 @@ export function AffiliateProductImage({
   imageUrl: string | null;
   productName: string;
 }) {
-  const [failed, setFailed] = useState(!imageUrl);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const failed = !imageUrl || failedImageUrl === imageUrl;
+  const handleImageRef = useCallback(
+    (image: HTMLImageElement | null) => {
+      if (image?.complete && image.naturalWidth === 0) {
+        setFailedImageUrl(imageUrl);
+      }
+    },
+    [imageUrl],
+  );
 
   return (
     <div
@@ -20,6 +29,7 @@ export function AffiliateProductImage({
         // AdPick controls this URL, so preserve direct loading and privacy attributes.
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={handleImageRef}
           src={imageUrl}
           alt={productName}
           width={640}
@@ -28,7 +38,7 @@ export function AffiliateProductImage({
           decoding="async"
           referrerPolicy="no-referrer"
           className="h-full w-full object-cover"
-          onError={() => setFailed(true)}
+          onError={() => setFailedImageUrl(imageUrl)}
         />
       ) : (
         <div

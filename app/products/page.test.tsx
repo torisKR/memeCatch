@@ -1,6 +1,44 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+const commerceFixture = vi.hoisted(() => ({
+  products: [
+    {
+      id: "active-editorial-campaign",
+      title: "활성 에디터 캠페인",
+      description: "활성 캠페인 설명",
+      category: "크리에이터",
+      audiences: ["20s"],
+      provider: "adpick",
+      status: "approved",
+      destinationUrl: "https://deg.kr/active",
+      sourceUrl: "https://adpick.co.kr/?ac=offer&offer=active",
+      disclosure: "활성 캠페인 광고 고지",
+      approvedAt: "2000-01-01",
+      expiresAt: "2999-12-31",
+    },
+    {
+      id: "expired-editorial-campaign",
+      title: "만료 에디터 캠페인",
+      description: "만료 캠페인 설명",
+      category: "학습",
+      audiences: ["40s"],
+      provider: "adpick",
+      status: "approved",
+      destinationUrl: "https://deg.kr/expired",
+      sourceUrl: "https://adpick.co.kr/?ac=offer&offer=expired",
+      disclosure: "만료 캠페인 광고 고지",
+      approvedAt: "2000-01-01",
+      expiresAt: "2000-01-02",
+    },
+  ],
+}));
+
+vi.mock("@/lib/meme-commerce", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/meme-commerce")>();
+  return { ...actual, MEME_PRODUCTS: commerceFixture.products };
+});
+
 vi.mock("@/lib/i18n-server", () => ({
   getRequestLocale: vi.fn(async () => "ko"),
 }));
@@ -45,6 +83,8 @@ describe("ProductsPage", () => {
       isMemeProductActive(product),
     ).length;
 
+    expect(MEME_PRODUCTS).toHaveLength(2);
+    expect(activeMemeProductCount).toBe(1);
     expect(html).toContain(PAGE_COPY.ko.shopTitle);
     expect(html.indexOf(PAGE_COPY.ko.liveAdTitle)).toBeLessThan(
       html.indexOf(PAGE_COPY.ko.editorPickTitle),
@@ -52,6 +92,7 @@ describe("ProductsPage", () => {
     expect(html).toContain(
       PAGE_COPY.ko.affiliateBody(1 + activeMemeProductCount),
     );
+    expect(html).not.toContain(PAGE_COPY.ko.affiliateBody(1 + MEME_PRODUCTS.length));
     expect(html).toContain("bg-cream");
   });
 

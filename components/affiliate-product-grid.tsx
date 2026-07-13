@@ -29,7 +29,7 @@ export function AffiliateProductGrid({
     : null;
 
   return (
-    <TrackedBlock event="affiliate_product_click" className="shop-carousel-edge mt-10">
+    <TrackedBlock event="affiliate_product_click" className="shop-carousel-edges mt-10">
       {updatedAt ? (
         <p className="font-mono text-xs font-semibold text-muted">
           {copy.lastUpdated} <time dateTime={data.lastSuccessfulSyncAt ?? undefined}>{updatedAt}</time>

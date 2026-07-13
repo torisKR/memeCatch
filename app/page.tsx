@@ -120,6 +120,7 @@ export default async function Home() {
             <li>
               <Link
                 href="/timeline"
+                prefetch={false}
                 className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
               >
                 <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
@@ -141,6 +142,7 @@ export default async function Home() {
             <li>
               <Link
                 href="/weekly"
+                prefetch={false}
                 className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
               >
                 <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
@@ -160,6 +162,7 @@ export default async function Home() {
             <li>
               <Link
                 href="/news"
+                prefetch={false}
                 className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
               >
                 <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
@@ -179,6 +182,7 @@ export default async function Home() {
             <li>
               <Link
                 href="/products"
+                prefetch={false}
                 className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
               >
                 <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">

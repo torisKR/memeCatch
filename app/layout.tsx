@@ -72,36 +72,12 @@ export default function RootLayout({
   return (
     <html lang={getDocumentLanguage(locale)}>
       <head>
-        <link
-          rel="preconnect"
-          href="https://cdn.jsdelivr.net"
-          crossOrigin="anonymous"
-        />
         {/*
-          Pretendard 폰트 — 렌더 비차단 로드. media="print"로 받아 렌더를 막지 않고
-          파싱 직후 인라인 스크립트가 media를 'all'로 승격시킨다. 그 사이 텍스트는
-          시스템 한글 폴백으로 즉시 페인트되고 Pretendard로 swap → 모바일 FCP/LCP 개선.
+          Keep the first paint self-contained. Loading the remote Pretendard
+          stylesheet requested dozens of unicode-range font files before the
+          hero could settle on mobile. The system stack keeps the same local
+          Pretendard preference while avoiding a third-party font waterfall.
         */}
-        <link
-          id="pretendard-css"
-          rel="stylesheet"
-          crossOrigin="anonymous"
-          media="print"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "var p=document.getElementById('pretendard-css');if(p)p.media='all';",
-          }}
-        />
-        <noscript>
-          <link
-            rel="stylesheet"
-            crossOrigin="anonymous"
-            href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-          />
-        </noscript>
       </head>
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>
@@ -112,7 +88,7 @@ export default function RootLayout({
               id="adsense"
               src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
               crossOrigin="anonymous"
-              strategy="afterInteractive"
+              strategy="lazyOnload"
             />
           )}
           {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}

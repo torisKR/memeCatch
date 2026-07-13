@@ -16,7 +16,7 @@ export function ExploreNavLink() {
   return (
     <>
       <HeaderNavLink href="/explore" label={messages.explore} icon={CompassIcon} />
-      <HeaderNavLink href="/timeline" label={messages.timeline} icon={TimelineIcon} />
+      <HeaderNavLink href="/timeline" label={messages.timeline} icon={TimelineIcon} prefetch={false} />
       <HeaderNavLink href="/community" label={messages.community} icon={ChatIcon} />
     </>
   );
@@ -26,16 +26,19 @@ function HeaderNavLink({
   href,
   label,
   icon: Icon,
+  prefetch,
 }: {
   href: string;
   label: string;
   icon: (props: { className?: string }) => React.ReactElement;
+  prefetch?: boolean;
 }) {
   const pathname = usePathname();
   const active = pathname.startsWith(href);
   return (
     <Link
       href={href}
+      prefetch={prefetch}
       aria-current={active ? "page" : undefined}
       className={`hidden h-11 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex ${
         active

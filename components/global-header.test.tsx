@@ -53,6 +53,7 @@ describe("GlobalHeader", () => {
     )?.[0];
 
     expect(homeLink).toContain('aria-label="밈캐치 홈"');
+    expect(homeLink).toContain("min-w-11");
     expect(wordmark).toContain("hidden");
     expect(wordmark).toContain("min-[480px]:flex");
     expect(wordmark).toContain("shrink-0");

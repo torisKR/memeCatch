@@ -30,7 +30,7 @@ export function GlobalHeader() {
           <Link
             href="/"
             aria-label={messages.home}
-            className="group flex min-h-11 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
+            className="group flex min-h-11 min-w-11 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
           >
             <BrandTile className="size-8 shadow-[0_4px_14px_color-mix(in_srgb,var(--accent)_24%,transparent)] transition-transform duration-300 group-hover:-rotate-6" />
             <span className="hidden shrink-0 flex-col whitespace-nowrap leading-none min-[480px]:flex">

@@ -41,6 +41,7 @@ const mocks = vi.hoisted(() => {
     },
     emitPointerDown: () => currentApi?.emit("pointerDown"),
     emitPointerUp: () => currentApi?.emit("pointerUp"),
+    emitScroll: () => currentApi?.emit("scroll"),
     emitSettle: () => currentApi?.emit("settle"),
     getReduceMotion: () => reduceMotion,
     getPluginPlayCalls: (index: number) => pluginPlayCalls[index] ?? 0,
@@ -426,6 +427,7 @@ describe("AffiliateProductCarousel", () => {
 
     act(() => {
       mocks.emitPointerDown();
+      mocks.emitScroll();
       mocks.emitPointerUp();
     });
     await vi.advanceTimersByTimeAsync(2500);
@@ -439,6 +441,28 @@ describe("AffiliateProductCarousel", () => {
     await vi.advanceTimersByTimeAsync(2499);
     expect(mocks.autoScrollIsPlaying()).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
+    expect(mocks.autoScrollIsPlaying()).toBe(true);
+  });
+
+  it("unblocks autoplay after a pointer release with no drag or settle", async () => {
+    renderCarousel();
+    const region = screen.getByRole("region", {
+      name: PAGE_COPY.ko.carouselLabel,
+    });
+
+    fireEvent.mouseEnter(region);
+    act(() => {
+      mocks.emitPointerDown();
+      mocks.emitPointerUp();
+    });
+    expect(mocks.autoScrollIsPlaying()).toBe(false);
+
+    fireEvent.mouseLeave(region);
+    await act(async () => {
+      mocks.independentPlay();
+      await Promise.resolve();
+    });
+
     expect(mocks.autoScrollIsPlaying()).toBe(true);
   });
 

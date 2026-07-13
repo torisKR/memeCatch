@@ -62,6 +62,9 @@ export function AffiliateProductCarousel({
   const focusWithinRef = useRef(false);
   const hoverWithinRef = useRef(false);
   const pointerNavigationRef = useRef(false);
+  const pointerMovedRef = useRef(false);
+  const pointerStartProgressRef = useRef(0);
+  const pointerStartSnapRef = useRef(0);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lifecycleGenerationRef = useRef(0);
   const mountedRef = useRef(true);
@@ -209,6 +212,7 @@ export function AffiliateProductCarousel({
     lifecycleGenerationRef.current = generation;
     clearRestartTimer();
     pointerNavigationRef.current = false;
+    pointerMovedRef.current = false;
 
     const updatePlaying = (playing: boolean) => {
       if (
@@ -227,12 +231,30 @@ export function AffiliateProductCarousel({
     const handleReInit = () => reconcileAutoScroll(autoScroll, generation);
     const handlePointerDown = () => {
       pointerNavigationRef.current = true;
+      pointerMovedRef.current = false;
+      pointerStartProgressRef.current = api.scrollProgress();
+      pointerStartSnapRef.current = api.selectedScrollSnap();
       clearRestartTimer();
       stopAutoScroll();
+    };
+    const handleScroll = () => {
+      if (pointerNavigationRef.current) pointerMovedRef.current = true;
+    };
+    const handlePointerUp = () => {
+      if (!pointerNavigationRef.current) return;
+      const moved =
+        pointerMovedRef.current ||
+        api.scrollProgress() !== pointerStartProgressRef.current ||
+        api.selectedScrollSnap() !== pointerStartSnapRef.current;
+      if (moved) return;
+
+      pointerNavigationRef.current = false;
+      reconcileAutoScroll(autoScroll, generation);
     };
     const handleSettle = () => {
       if (!pointerNavigationRef.current) return;
       pointerNavigationRef.current = false;
+      pointerMovedRef.current = false;
       restartAfterManualNavigation();
     };
 
@@ -240,6 +262,8 @@ export function AffiliateProductCarousel({
     api.on("autoScroll:stop", handleAutoScrollStop);
     api.on("reInit", handleReInit);
     api.on("pointerDown", handlePointerDown);
+    api.on("scroll", handleScroll);
+    api.on("pointerUp", handlePointerUp);
     api.on("settle", handleSettle);
     reconcileAutoScroll(autoScroll, generation);
 
@@ -248,12 +272,15 @@ export function AffiliateProductCarousel({
       api.off("autoScroll:stop", handleAutoScrollStop);
       api.off("reInit", handleReInit);
       api.off("pointerDown", handlePointerDown);
+      api.off("scroll", handleScroll);
+      api.off("pointerUp", handlePointerUp);
       api.off("settle", handleSettle);
       if (lifecycleGenerationRef.current === generation) {
         lifecycleGenerationRef.current += 1;
       }
       clearRestartTimer();
       pointerNavigationRef.current = false;
+      pointerMovedRef.current = false;
       autoScroll.stop();
     };
   }, [

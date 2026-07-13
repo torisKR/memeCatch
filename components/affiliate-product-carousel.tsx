@@ -29,6 +29,7 @@ import type { Locale } from "@/lib/i18n";
 import { PAGE_COPY } from "@/lib/i18n-pages";
 
 const MANUAL_NAVIGATION_GRACE_MS = 2500;
+type AutoScrollPlugin = ReturnType<typeof AutoScroll>;
 
 export function AffiliateProductCarousel({
   products,
@@ -56,7 +57,7 @@ export function AffiliateProductCarousel({
   const [api, setApi] = useState<CarouselApi>();
   const [isPlaying, setIsPlaying] = useState(canAutoScroll);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
-  const activeAutoScrollRef = useRef(autoScroll);
+  const activeAutoScrollRef = useRef<AutoScrollPlugin | null>(null);
   const canAutoScrollRef = useRef(canAutoScroll);
   const manuallyPausedRef = useRef(isManuallyPaused);
   const focusWithinRef = useRef(false);
@@ -95,7 +96,7 @@ export function AffiliateProductCarousel({
   );
 
   const stopAutoScroll = useCallback(() => {
-    activeAutoScrollRef.current.stop();
+    activeAutoScrollRef.current?.stop();
   }, []);
 
   const reconcileAutoScroll = useCallback(
@@ -104,6 +105,7 @@ export function AffiliateProductCarousel({
       generation = lifecycleGenerationRef.current,
     ) => {
       if (
+        !plugin ||
         !mountedRef.current ||
         plugin !== activeAutoScrollRef.current ||
         generation !== lifecycleGenerationRef.current
@@ -133,6 +135,7 @@ export function AffiliateProductCarousel({
     if (!canAutoScrollRef.current || manuallyPausedRef.current) return;
 
     const plugin = activeAutoScrollRef.current;
+    if (!plugin) return;
     const generation = lifecycleGenerationRef.current;
     restartTimerRef.current = setTimeout(() => {
       if (
@@ -213,7 +216,14 @@ export function AffiliateProductCarousel({
   useEffect(() => {
     if (!api) return;
 
-    activeAutoScrollRef.current = autoScroll;
+    const plugin = api.plugins().autoScroll as AutoScrollPlugin | undefined;
+    if (!plugin) {
+      activeAutoScrollRef.current = null;
+      canAutoScrollRef.current = canAutoScroll;
+      return;
+    }
+
+    activeAutoScrollRef.current = plugin;
     canAutoScrollRef.current = canAutoScroll;
     const generation = lifecycleGenerationRef.current + 1;
     lifecycleGenerationRef.current = generation;
@@ -225,7 +235,7 @@ export function AffiliateProductCarousel({
     const updatePlaying = (playing: boolean) => {
       if (
         mountedRef.current &&
-        activeAutoScrollRef.current === autoScroll &&
+        activeAutoScrollRef.current === plugin &&
         lifecycleGenerationRef.current === generation
       ) {
         setIsPlaying(playing);
@@ -233,14 +243,14 @@ export function AffiliateProductCarousel({
     };
     const handleAutoScrollPlay = () => {
       updatePlaying(canResume());
-      queueMicrotask(() => reconcileAutoScroll(autoScroll, generation));
+      queueMicrotask(() => reconcileAutoScroll(plugin, generation));
     };
     const handleAutoScrollStop = () => updatePlaying(false);
     const handleReInit = () => {
       cancelPointerReleaseFinalizer();
       pointerNavigationRef.current = false;
       pointerMovedRef.current = false;
-      reconcileAutoScroll(autoScroll, generation);
+      reconcileAutoScroll(plugin, generation);
     };
     const handlePointerDown = () => {
       cancelPointerReleaseFinalizer();
@@ -263,7 +273,7 @@ export function AffiliateProductCarousel({
       const firstFrame = requestAnimationFrame(() => {
         if (
           !mountedRef.current ||
-          activeAutoScrollRef.current !== autoScroll ||
+          activeAutoScrollRef.current !== plugin ||
           lifecycleGenerationRef.current !== generation ||
           pointerReleaseFrameRef.current !== firstFrame
         ) {
@@ -275,7 +285,7 @@ export function AffiliateProductCarousel({
           pointerReleaseFrameRef.current = null;
           if (
             !mountedRef.current ||
-            activeAutoScrollRef.current !== autoScroll ||
+            activeAutoScrollRef.current !== plugin ||
             lifecycleGenerationRef.current !== generation ||
             !pointerNavigationRef.current
           ) {
@@ -289,7 +299,7 @@ export function AffiliateProductCarousel({
           if (moved) return;
 
           pointerNavigationRef.current = false;
-          reconcileAutoScroll(autoScroll, generation);
+          reconcileAutoScroll(plugin, generation);
         });
         pointerReleaseFrameRef.current = secondFrame;
       });
@@ -310,7 +320,7 @@ export function AffiliateProductCarousel({
     api.on("scroll", handleScroll);
     api.on("pointerUp", handlePointerUp);
     api.on("settle", handleSettle);
-    reconcileAutoScroll(autoScroll, generation);
+    reconcileAutoScroll(plugin, generation);
 
     return () => {
       api.off("autoScroll:play", handleAutoScrollPlay);
@@ -327,7 +337,7 @@ export function AffiliateProductCarousel({
       cancelPointerReleaseFinalizer();
       pointerNavigationRef.current = false;
       pointerMovedRef.current = false;
-      autoScroll.stop();
+      plugin.stop();
     };
   }, [
     api,
@@ -342,6 +352,8 @@ export function AffiliateProductCarousel({
   ]);
 
   useEffect(() => {
+    if (!api) return;
+
     const handleVisibilityChange = () => {
       reconcileAutoScroll();
     };
@@ -351,7 +363,7 @@ export function AffiliateProductCarousel({
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [autoScroll, canAutoScroll, reconcileAutoScroll]);
+  }, [api, reconcileAutoScroll]);
 
   useEffect(() => {
     mountedRef.current = true;

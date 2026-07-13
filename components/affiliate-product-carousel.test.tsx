@@ -12,6 +12,7 @@ import { PAGE_COPY } from "@/lib/i18n-pages";
 const mocks = vi.hoisted(() => {
   let reduceMotion = false;
   let playing = false;
+  let requireInitializedPlugin = false;
   let pluginPlayCalls: number[] = [];
   let currentApi:
     | {
@@ -59,7 +60,12 @@ const mocks = vi.hoisted(() => {
       currentPlugin = undefined;
       playing = false;
       pluginPlayCalls = [];
+      requireInitializedPlugin = false;
     },
+    requirePluginInitialization: () => {
+      requireInitializedPlugin = true;
+    },
+    shouldRequirePluginInitialization: () => requireInitializedPlugin,
     setReduceMotion: (value: boolean) => {
       reduceMotion = value;
     },
@@ -94,6 +100,9 @@ vi.mock("embla-carousel-auto-scroll", () => ({
 
     const play = vi.fn(() => {
       if (destroyed || mocks.autoScrollIsPlaying()) return;
+      if (mocks.shouldRequirePluginInitialization() && !api) {
+        throw new Error("AutoScroll play called before plugin initialization");
+      }
       mocks.recordPluginPlay(pluginIndex);
       mocks.autoScrollPlay();
       api?.emit("autoScroll:play");
@@ -101,6 +110,9 @@ vi.mock("embla-carousel-auto-scroll", () => ({
     });
     const stop = vi.fn(() => {
       if (destroyed || !mocks.autoScrollIsPlaying()) return;
+      if (mocks.shouldRequirePluginInitialization() && !api) {
+        throw new Error("AutoScroll stop called before plugin initialization");
+      }
       mocks.autoScrollStop();
       api?.emit("autoScroll:stop");
       mocks.setPlaying(false);
@@ -237,6 +249,12 @@ describe("AffiliateProductCarousel", () => {
     cleanup();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("does not call AutoScroll before Embla initializes the plugin", () => {
+    mocks.requirePluginInitialization();
+
+    expect(() => renderCarousel()).not.toThrow();
   });
 
   it("renders translated controls and lets the shopper pause auto-scroll", async () => {

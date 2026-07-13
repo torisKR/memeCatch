@@ -3,10 +3,7 @@ import {
   getTikTokRedirectUri,
   signInWithTikTokCode,
 } from "@/lib/tiktok-auth.server";
-
-function safeNext(raw: string | undefined) {
-  return raw?.startsWith("/") && !raw.startsWith("//") ? raw : "/";
-}
+import { safeNext } from "@/lib/safe-redirect";
 
 export async function GET(request: NextRequest) {
   const expectedState = request.cookies.get("tiktok_oauth_state")?.value;

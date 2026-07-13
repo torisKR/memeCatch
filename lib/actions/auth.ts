@@ -3,18 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-redirect";
 
 export type AuthState = {
   fieldErrors?: { email?: string; password?: string; nickname?: string };
   formError?: string;
   values?: { email?: string; nickname?: string };
 } | null;
-
-/** open redirect 방지 — 내부 경로만 허용 */
-function safeNext(raw: FormDataEntryValue | null): string {
-  const next = typeof raw === "string" ? raw : "/";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

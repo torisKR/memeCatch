@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "소개",
@@ -18,6 +19,56 @@ export default function AboutPage() {
         되는지</strong>를 한 번에 알려주는 실시간 밈 사전입니다. 1990년대부터
         오늘까지 3,000여 건의 밈을 기록하고 있습니다.
       </p>
+
+      <section className="mt-10" aria-labelledby="deployment-records">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+              Deployment record
+            </p>
+            <h2 id="deployment-records" className="mt-1 text-xl font-bold">
+              만든 기록
+            </h2>
+          </div>
+          <span className="shrink-0 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
+            계속 업데이트
+          </span>
+        </div>
+        <p className="mt-3 text-base leading-relaxed text-muted">
+          아이디어를 실제 서비스로 옮기고 배포해 온 과정을 남깁니다. 밈캐치도
+          이 기록 위에서 계속 다듬어지고 있어요.
+        </p>
+        <div className="mt-5 grid gap-4">
+          <figure className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+            <Image
+              src="/deployment-records/personal-projects.png"
+              width={1632}
+              height={534}
+              sizes="(max-width: 672px) 100vw, 672px"
+              alt="25개의 개인 프로젝트를 직접 만들고 배포해 온 기록"
+              className="h-auto w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm leading-relaxed text-muted">
+              여행 플랫폼부터 데스크톱 도구, AI 파이프라인, Web3까지 직접 만든
+              프로젝트 기록입니다.
+            </figcaption>
+          </figure>
+          <figure className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+            <Image
+              src="/deployment-records/living-portfolio.png"
+              width={1752}
+              height={384}
+              sizes="(max-width: 672px) 100vw, 672px"
+              alt="단순한 블로그가 아닌 매우 크고 만들고 다변화하고 배포한 기록이라는 포트폴리오 메시지"
+              className="h-auto w-full"
+            />
+            <figcaption className="px-4 py-3 text-sm leading-relaxed text-muted">
+              단순한 결과물이 아니라, 만들고 배포하고 다시 개선하는 살아 있는
+              포트폴리오를 지향합니다.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
 
       <section className="mt-10">
         <h2 className="text-xl font-bold">무엇이 다른가요</h2>

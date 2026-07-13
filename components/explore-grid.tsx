@@ -136,10 +136,16 @@ export function ExploreGrid({
   excludeIds?: string[];
 }) {
   const [items, setItems] = useState<MemeListItem[]>(initial);
-  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(initial.length >= PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
+  // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
+  // 모바일 브라우저의 연속 콜백에서도 같은 페이지를 중복 요청하지 않는다.
+  const loadingRef = useRef(false);
+  const pageRef = useRef(0);
+  const hasMoreRef = useRef(initial.length >= PAGE_SIZE);
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -148,37 +154,60 @@ export function ExploreGrid({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (loadingRef.current || !hasMoreRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setFailed(false);
-    const next = page + 1;
+    const next = pageRef.current + 1;
     try {
       const supabase = createClient();
       const batch = await fetchPage(supabase, filters, next);
       const fresh = batch.filter((m) => !seenRef.current.has(m.id));
       for (const m of fresh) seenRef.current.add(m.id);
       setItems((prev) => [...prev, ...fresh]);
-      setPage(next);
-      setHasMore(batch.length >= PAGE_SIZE);
+      pageRef.current = next;
+      const nextHasMore = batch.length >= PAGE_SIZE;
+      hasMoreRef.current = nextHasMore;
+      setHasMore(nextHasMore);
     } catch {
       setFailed(true);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  }, [loading, hasMore, page, filters]);
+  }, [filters]);
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !hasMore) return;
+    if (!el || !hasMoreRef.current) return;
+
+    const nearBottom = () => {
+      const rect = el.getBoundingClientRect();
+      return rect.top <= window.innerHeight + 600;
+    };
+
+    // IntersectionObserver가 없는 환경(일부 인앱 브라우저/WebView)에서도
+    // 같은 로딩 경계를 유지하도록 passive scroll 폴백을 제공한다.
+    const supportsIntersectionObserver =
+      typeof window.IntersectionObserver === "function";
+    if (!supportsIntersectionObserver) {
+      const onScroll = () => {
+        if (nearBottom()) void loadMore();
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+      return () => window.removeEventListener("scroll", onScroll);
+    }
+
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
+        if (entries[0]?.isIntersecting) void loadMore();
       },
       { rootMargin: "600px 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [loadMore, hasMore]);
+  }, [loadMore, hasMore, items.length]);
 
   // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음 (검색어가 있으면 반영)
   if (items.length === 0) {

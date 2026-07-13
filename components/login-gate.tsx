@@ -5,6 +5,7 @@ import { BrandTile } from "@/components/brand-mark";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext as normalizeNext } from "@/lib/safe-redirect";
 
 /**
  * 레인 C — 로그인 유도 게이트. DESIGN.md §10 여정1.
@@ -38,8 +39,7 @@ export function LoginGate({
   const [oauthBusy, setOauthBusy] = useState<Provider | null>(null);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
-  const safeNext =
-    next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const safeNext = normalizeNext(next);
 
   useEffect(() => {
     if (!open) return;

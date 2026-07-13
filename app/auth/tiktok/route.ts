@@ -4,10 +4,7 @@ import {
   getTikTokClientKey,
   getTikTokRedirectUri,
 } from "@/lib/tiktok-auth.server";
-
-function safeNext(raw: string | null) {
-  return raw?.startsWith("/") && !raw.startsWith("//") ? raw : "/";
-}
+import { safeNext } from "@/lib/safe-redirect";
 
 export async function GET(request: NextRequest) {
   const clientKey = getTikTokClientKey();

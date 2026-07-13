@@ -2,17 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
+import { safeNext } from "@/lib/safe-redirect";
 
 export const metadata: Metadata = {
   title: "환영해요",
   description: "관심 있는 밈을 알려 주시면 딱 맞는 밈을 먼저 보여드려요.",
 };
-
-/** 내부 경로만 허용 (open redirect 방지) */
-function safeNext(raw: string | string[] | undefined): string {
-  const next = typeof raw === "string" ? raw : "/";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
 
 export default async function OnboardingPage({
   searchParams,

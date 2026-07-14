@@ -80,3 +80,11 @@ node scripts/collect-wikimedia-meme-candidates.mjs \
   data/memes/collected/wikimedia-meme-candidates-YYYY-MM-DD.jsonl \
   --years=2000,2001,2002
 ```
+
+연도별 분류에 빠진 공개 바이럴 영상은 별도 명시 시드로만 보강한다. 수집기는 각
+Wikipedia 페이지의 존재를 확인하지만, 원본 업로드나 발생 연도를 확정하지 않는다.
+
+```sh
+node scripts/collect-wikimedia-viral-video-candidates.mjs \
+  data/memes/collected/wikimedia-viral-video-candidates-YYYY-MM-DD.jsonl
+```

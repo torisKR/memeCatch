@@ -13,6 +13,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { nativeSocialValidationMessage, parseNativeSocialContent } from "./social-content.mjs";
+import { memeTitleKey } from "./meme-title-key.mjs";
 
 const [inputPath, ...args] = process.argv.slice(2);
 const strictSocial = args.includes("--strict-social");
@@ -55,7 +56,7 @@ for (const file of inputFiles) {
       continue;
     }
     const label = `${file}:${index + 1}`;
-    const titleKey = String(row.title ?? "").replace(/\s+/g, "").toLowerCase();
+    const titleKey = memeTitleKey(row.title);
     if (!titleKey || !row.summary) errors.push(`${label} title과 summary가 모두 필요합니다.`);
     else if (seenTitles.has(titleKey)) errors.push(`${label} 중복 title: ${row.title}`);
     else seenTitles.add(titleKey);

@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseNativeSocialContent } from "./social-content.mjs";
+import { memeTitleKey } from "./meme-title-key.mjs";
 
 const [inDir, outDir, batchSizeArg] = process.argv.slice(2);
 if (!inDir || !outDir) {
@@ -48,7 +49,7 @@ for (const f of readdirSync(inDir).filter((f) => f.endsWith(".jsonl")).sort()) {
       continue;
     }
     if (!m.title || !m.summary) continue;
-    const key = String(m.title).replace(/\s+/g, "").toLowerCase();
+    const key = memeTitleKey(m.title);
     if (seen.has(key)) continue;
     seen.add(key);
 

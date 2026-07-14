@@ -89,7 +89,7 @@ export function SubmissionReview({
       setSafetyLevel(d.safety_level);
       setUsageContext(d.usage_context);
       setMode("approve");
-      setMessage({ kind: "success", text: "AI 초안을 채웠어요. 내용을 검토하고 수정해 주세요." });
+      setMessage({ kind: "success", text: "한국어 AI 초안을 채웠어요. 내용을 검토하고 수정해 주세요." });
     } finally {
       setDrafting(false);
     }
@@ -183,7 +183,7 @@ export function SubmissionReview({
             disabled={busy || !hasAnthropicKey}
             className="min-h-11 rounded-lg border border-border bg-surface-2 px-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {drafting ? "AI 초안 생성 중…" : "AI 초안 생성"}
+            {drafting ? "한국어 초안 생성 중…" : "한국어 AI 초안 생성"}
           </button>
         </span>
         <button

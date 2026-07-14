@@ -85,9 +85,9 @@ export function MemeCard({
         )}
 
         {/* 상단 오버레이: 카테고리 틴트칩(좌) + 미디어타입(우) */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex min-w-0 items-start justify-between gap-1.5 p-2.5">
           <CategoryTag category={meme.category} className="shadow-sm" />
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex min-w-0 flex-col items-end gap-1">
             {sourcePlatforms.slice(0, 2).map((platform) => (
               <SourcePlatformBadge key={platform} platform={platform} />
             ))}
@@ -102,13 +102,13 @@ export function MemeCard({
       </div>
 
       {/* 본문 */}
-      <div className="flex flex-col gap-1.5 p-3.5">
+      <div className="flex min-w-0 flex-col gap-1.5 p-3.5">
         {/* 밈명 — 텍스트가 주인공 */}
-        <p className="line-clamp-2 text-lg font-extrabold leading-snug">
+        <p className="line-clamp-2 break-keep text-lg font-extrabold leading-snug">
           {meme.title}
         </p>
         {/* 한 줄 뜻 */}
-        <p className="line-clamp-2 text-sm leading-relaxed text-muted">
+        <p className="line-clamp-2 break-keep text-sm leading-relaxed text-muted">
           {meme.summary}
         </p>
         {/* 구분선 + 하단 신호등(고채도 독점) + 생명 게이지 */}
@@ -132,7 +132,7 @@ function SourcePlatformBadge({ platform }: { platform: SourcePlatform }) {
   };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold tracking-tight shadow-sm backdrop-blur-sm ${tone[platform]}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1 text-[11px] font-bold tracking-tight shadow-sm backdrop-blur-sm ${tone[platform]}`}
     >
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
       {SOURCE_PLATFORM_META[platform].label}
@@ -193,7 +193,7 @@ const MEDIA_META: Record<
 function MediaTypeBadge({ type }: { type: MemeRow["media_type"] }) {
   const meta = MEDIA_META[type];
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-surface/85 px-2 py-1 text-xs font-semibold text-muted shadow-sm backdrop-blur-sm">
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-border/70 bg-surface/85 px-2 py-1 text-xs font-semibold text-muted shadow-sm backdrop-blur-sm">
       <svg
         viewBox="0 0 24 24"
         className="size-3.5 shrink-0"

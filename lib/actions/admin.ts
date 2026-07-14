@@ -326,6 +326,227 @@ export async function updateMeme(input: {
   }
 }
 
+export type KoreanReviewDraft = {
+  title: string;
+  summary: string;
+  description: string;
+  origin: string;
+  usage_note: string;
+  caution: string;
+  review_basis: "ai_translation" | "korean_wikipedia";
+};
+
+type KoreanReviewFields = Omit<KoreanReviewDraft, "review_basis">;
+
+const KOREAN_REVIEW_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "summary", "description", "origin", "usage_note", "caution"],
+  properties: {
+    title: { type: "string", description: "한국어 표기 제목. 고유명사는 원문을 보존" },
+    summary: { type: "string", description: "80자 이내의 자연스러운 한국어 한 줄 요약" },
+    description: { type: "string", description: "뜻과 쓰임새를 설명하는 한국어 본문" },
+    origin: { type: "string", description: "확인된 범위만 반영한 한국어 유래 설명" },
+    usage_note: { type: "string", description: "한국어 사용 팁. 원문이 비어 있으면 빈 문자열" },
+    caution: { type: "string", description: "한국어 주의 문구. 원문이 비어 있으면 빈 문자열" },
+  },
+} as const;
+
+function containsHangul(value: string | null | undefined) {
+  return /[가-힣]/.test(value ?? "");
+}
+
+function firstSentence(value: string) {
+  const sentence = value.match(/^.*?[.!?。](?:\s|$)/)?.[0]?.trim() ?? value.trim();
+  return sentence.slice(0, 120);
+}
+
+/** API 키가 없는 환경에서도 운영자가 한국어 자료를 바탕으로 검수할 수 있는 보수적 폴백. */
+async function koreanWikipediaReviewDraft(meme: {
+  title: string;
+  summary: string;
+  description: string;
+  origin: string;
+  usage_note: string | null;
+  caution: string | null;
+}): Promise<KoreanReviewDraft | null> {
+  const commonHeaders = {
+    accept: "application/json",
+    "accept-language": "ko-KR,ko;q=0.9",
+    "user-agent": "MemeCatchReview/1.0 (+https://catchmeme.com/about)",
+  };
+
+  // Wikimedia에서 수집한 영문 표제는 먼저 언어 링크로 한국어 문서와 정확히 연결한다.
+  const languageLinkEndpoint = new URL("https://en.wikipedia.org/w/api.php");
+  languageLinkEndpoint.searchParams.set("action", "query");
+  languageLinkEndpoint.searchParams.set("titles", meme.title.slice(0, 180));
+  languageLinkEndpoint.searchParams.set("redirects", "1");
+  languageLinkEndpoint.searchParams.set("prop", "langlinks");
+  languageLinkEndpoint.searchParams.set("lllang", "ko");
+  languageLinkEndpoint.searchParams.set("lllimit", "1");
+  languageLinkEndpoint.searchParams.set("format", "json");
+  languageLinkEndpoint.searchParams.set("formatversion", "2");
+  languageLinkEndpoint.searchParams.set("origin", "*");
+
+  let linkedKoreanTitle: string | null = null;
+  try {
+    const linkResponse = await fetch(languageLinkEndpoint, {
+      headers: commonHeaders,
+      signal: AbortSignal.timeout(6_000),
+      cache: "no-store",
+    });
+    if (linkResponse.ok) {
+      const linkPayload = (await linkResponse.json()) as {
+        query?: { pages?: Array<{ langlinks?: Array<{ title?: string }> }> };
+      };
+      linkedKoreanTitle =
+        linkPayload.query?.pages?.[0]?.langlinks?.[0]?.title?.trim() ?? null;
+    }
+  } catch {
+    // 언어 링크 조회가 실패해도 아래 한국어 검색 폴백을 시도한다.
+  }
+
+  const endpoint = new URL("https://ko.wikipedia.org/w/api.php");
+  endpoint.searchParams.set("action", "query");
+  if (linkedKoreanTitle) {
+    endpoint.searchParams.set("titles", linkedKoreanTitle);
+  } else {
+    endpoint.searchParams.set("generator", "search");
+    endpoint.searchParams.set("gsrsearch", meme.title.slice(0, 120));
+    endpoint.searchParams.set("gsrnamespace", "0");
+    endpoint.searchParams.set("gsrlimit", "1");
+  }
+  endpoint.searchParams.set("prop", "extracts");
+  endpoint.searchParams.set("exintro", "1");
+  endpoint.searchParams.set("explaintext", "1");
+  endpoint.searchParams.set("exsentences", "5");
+  endpoint.searchParams.set("format", "json");
+  endpoint.searchParams.set("formatversion", "2");
+  endpoint.searchParams.set("origin", "*");
+
+  const response = await fetch(endpoint, {
+    headers: commonHeaders,
+    signal: AbortSignal.timeout(8_000),
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const payload = (await response.json()) as {
+    query?: { pages?: Array<{ title?: string; extract?: string }> };
+  };
+  const page = payload.query?.pages?.find(
+    (candidate) => candidate.title?.trim() && candidate.extract?.trim()
+  );
+  if (!page?.title || !page.extract || !containsHangul(page.extract)) return null;
+
+  const extract = page.extract.trim().slice(0, 2_400);
+  return {
+    title: containsHangul(meme.title) ? meme.title : page.title.trim(),
+    summary: firstSentence(extract),
+    description: extract,
+    origin: containsHangul(meme.origin)
+      ? meme.origin
+      : `한국어 위키백과의 ‘${page.title.trim()}’ 문서를 참고했으며, 정확한 최초 유래는 추가 확인이 필요해요.`,
+    usage_note: containsHangul(meme.usage_note)
+      ? meme.usage_note!.trim()
+      : "상황과 상대를 고려해 사용해 주세요.",
+    caution: containsHangul(meme.caution)
+      ? meme.caution!.trim()
+      : "정확한 최초 출처와 연도는 추가 확인이 필요해요.",
+    review_basis: "korean_wikipedia",
+  };
+}
+
+/**
+ * 기존 밈의 영문·혼합 언어 설명을 운영자 검수용 한국어 초안으로 바꾼다.
+ * 결과를 자동 저장하지 않아 운영자가 사실관계와 고유명사를 확인한 뒤 저장할 수 있다.
+ */
+export async function generateKoreanReviewDraft(
+  memeId: string
+): Promise<ActionResult<KoreanReviewDraft>> {
+  try {
+    const { supabase, uid } = await requireOperator();
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    const { data: meme, error } = await supabase
+      .from("memes")
+      .select("title, summary, description, origin, usage_note, caution")
+      .eq("id", memeId)
+      .single();
+    if (error || !meme) return { ok: false, error: "밈을 찾을 수 없어요." };
+
+    if (!apiKey) {
+      const fallbackDraft = await koreanWikipediaReviewDraft(meme);
+      if (!fallbackDraft) {
+        return {
+          ok: false,
+          error: "일치하는 한국어 자료를 찾지 못했어요. 직접 번역하거나 ANTHROPIC_API_KEY를 설정해 주세요.",
+        };
+      }
+      await logAudit(uid, "reference.generate_korean_review", "meme", memeId, {
+        source: "ko.wikipedia.org",
+        auto_saved: false,
+      });
+      return { ok: true, data: fallbackDraft };
+    }
+
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-5",
+        max_tokens: 4096,
+        system:
+          "당신은 한국 밈 사전 서비스 '밈캐치'의 한국어 편집자입니다. 입력에 영어 또는 혼합 언어가 있으면 자연스러운 한국어 해요체로 번역·정리합니다. " +
+          "고유명사, 작품명, 인물명, 서비스명은 널리 쓰이는 한국어 표기가 확인될 때만 바꾸고 그렇지 않으면 원문을 보존합니다. " +
+          "입력에 없는 사실, 연도, 원출처를 만들지 않습니다. 불확실한 내용은 단정하지 말고 '확인 중이에요' 또는 '~로 알려져 있어요'처럼 표시합니다. " +
+          "출력은 JSON 스키마의 문자열 값까지 한국어를 기본으로 하며 불가피한 고유명사만 원문을 허용합니다.",
+        messages: [
+          {
+            role: "user",
+            content:
+              "다음 밈 항목을 한국어 검수 초안으로 정리해 주세요. 자동 게시되지 않으며 운영자가 검토할 예정입니다.\n\n" +
+              JSON.stringify(meme, null, 2),
+          },
+        ],
+        output_config: { format: { type: "json_schema", schema: KOREAN_REVIEW_SCHEMA } },
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return { ok: false, error: `한국어 초안 생성에 실패했어요 (${res.status}). ${body.slice(0, 200)}` };
+    }
+    const message: {
+      stop_reason?: string;
+      content?: { type: string; text?: string }[];
+    } = await res.json();
+    if (message.stop_reason === "refusal") {
+      return { ok: false, error: "AI가 이 항목의 한국어 초안 생성을 거절했어요. 직접 작성해 주세요." };
+    }
+    const textBlock = message.content?.find((block) => block.type === "text" && block.text);
+    if (!textBlock?.text) return { ok: false, error: "AI 응답이 비어 있어요. 다시 시도해 주세요." };
+
+    let draft: KoreanReviewFields;
+    try {
+      draft = JSON.parse(textBlock.text) as KoreanReviewFields;
+    } catch {
+      return { ok: false, error: "AI 응답을 해석하지 못했어요. 다시 시도해 주세요." };
+    }
+
+    await logAudit(uid, "ai.generate_korean_review", "meme", memeId, {
+      model: "claude-sonnet-5",
+      auto_saved: false,
+    });
+    return { ok: true, data: { ...draft, review_basis: "ai_translation" } };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
 export async function transitionMemeStatus(input: {
   memeId: string;
   to: "pending" | "fact_checking" | "rights_checking" | "approved" | "limited" | "rejected";
@@ -470,6 +691,7 @@ export async function generateDraft(submissionId: string): Promise<ActionResult<
         max_tokens: 4096,
         system:
           "당신은 한국 밈 사전 서비스 '밈캐치'의 운영 보조입니다. 제보된 밈 정보를 바탕으로 사전 항목 초안을 작성합니다. " +
+          "제보가 영어 또는 혼합 언어이면 먼저 의미를 자연스러운 한국어로 해석하고, 출력 문자열은 불가피한 고유명사를 제외하면 모두 한국어로 작성합니다. " +
           "모든 문장은 해요체로 씁니다. 확실하지 않은 사실은 단정하지 말고 '~로 알려져 있어요'처럼 표현합니다. " +
           "safety_level 기준: green=써도 됨, yellow=맥락 주의, gray=이미 유행이 지남, red=쓰면 위험(차별·혐오·논란). " +
           "usage_context는 직장(work)·친구(friends)·가족(family)·공개 SNS(sns) 각각에서의 사용 안전도를 같은 기준으로 판단합니다.",

@@ -57,6 +57,7 @@ export default async function AdminMemeEditPage({
 
       <MemeEditForm
         memeId={meme.id}
+        hasAnthropicKey={Boolean(process.env.ANTHROPIC_API_KEY)}
         initial={{
           title: meme.title,
           summary: meme.summary,

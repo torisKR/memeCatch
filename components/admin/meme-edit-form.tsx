@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateMeme } from "@/lib/actions/admin";
+import { generateKoreanReviewDraft, updateMeme } from "@/lib/actions/admin";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import {
   CATEGORY_OPTIONS,
@@ -34,7 +34,15 @@ type Initial = {
   usageContext: UsageContextState;
 };
 
-export function MemeEditForm({ memeId, initial }: { memeId: string; initial: Initial }) {
+export function MemeEditForm({
+  memeId,
+  initial,
+  hasAnthropicKey,
+}: {
+  memeId: string;
+  initial: Initial;
+  hasAnthropicKey: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
@@ -45,6 +53,7 @@ export function MemeEditForm({ memeId, initial }: { memeId: string; initial: Ini
     originYear: initial.originYear?.toString() ?? "",
   });
   const [usageContext, setUsageContext] = useState<UsageContextState>(initial.usageContext);
+  const [translating, setTranslating] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -84,13 +93,67 @@ export function MemeEditForm({ memeId, initial }: { memeId: string; initial: Ini
     });
   }
 
+  async function translateForReview() {
+    setMessage(null);
+    setTranslating(true);
+    try {
+      const res = await generateKoreanReviewDraft(memeId);
+      if (!res.ok) {
+        setMessage({ kind: "error", text: res.error });
+        return;
+      }
+      const draft = res.data!;
+      setForm((prev) => ({
+        ...prev,
+        title: draft.title,
+        summary: draft.summary,
+        description: draft.description,
+        origin: draft.origin,
+        usageNote: draft.usage_note,
+        caution: draft.caution,
+      }));
+      setMessage({
+        kind: "success",
+        text:
+          draft.review_basis === "korean_wikipedia"
+            ? "한국어 위키백과 자료로 검수 초안을 채웠어요. 항목 일치 여부와 사실관계를 확인한 뒤 저장해 주세요."
+            : "한국어 검수 초안을 채웠어요. 사실관계와 고유명사를 확인한 뒤 저장해 주세요.",
+      });
+    } finally {
+      setTranslating(false);
+    }
+  }
+
   const inputCls =
     "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base focus:outline-none";
   const selectCls = `${inputCls} min-h-11`;
 
   return (
     <form onSubmit={submit} className="space-y-4 rounded-xl border border-border bg-surface p-5">
-      <h2 className="text-lg font-semibold">밈 정보 편집</h2>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">밈 정보 편집</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            영문·혼합 언어 항목은 한국어 초안을 만든 뒤 검토해서 저장할 수 있어요.
+          </p>
+        </div>
+        <span
+          title={
+            hasAnthropicKey
+              ? "영문·혼합 언어 내용을 한국어 초안으로 해석해요."
+              : "AI 키가 없으면 한국어 위키백과의 공개 자료를 찾아 검수 초안을 만들어요."
+          }
+        >
+          <button
+            type="button"
+            onClick={translateForReview}
+            disabled={pending || translating}
+            className="min-h-11 rounded-lg border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {translating ? "한국어로 해석 중…" : "영문 내용 한국어로 해석"}
+          </button>
+        </span>
+      </div>
 
       {message && (
         <p

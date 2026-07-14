@@ -30,14 +30,25 @@ node scripts/collect-youtube-candidates.mjs \
 
 YouTube Shorts도 동일하게 공개 검색 후보만 별도로 수집합니다. `shortsLockupViewModel`의
 `reelWatchEndpoint`가 있는 결과만 `https://www.youtube.com/shorts/{videoId}` 최종 URL로 기록합니다.
-`youtube-shorts-source-candidates-2026-07-14-batch-01`~`05`에는 대표 가능한 15개
-연도에서 수집한 후보 169건이 들어 있으며, 모두 `needs_human_source_match` 상태다.
+초기 `batch-01`~`05`와 연도별 4개 제목을 고르게 조회한 `balanced-01`~`09`를
+중복 제거하면 74개 밈 제목의 후보 748건이 남는다. 모두
+`needs_human_source_match` 상태다.
 
 ```sh
 node scripts/collect-youtube-candidates.mjs \
   data/memes/verified \
   data/memes/collected/youtube-shorts-source-candidates-YYYY-MM-DD.jsonl \
   --format=shorts --max=100 --per-query=10
+```
+
+검수 우선순위가 높은 Shorts 후보는 API 키 없이 공개 YouTube oEmbed의 제목·작성자만
+보강할 수 있다. 이 단계도 임베드 가능 여부만 확인하며 원본성이나 게시 권한을 승인하지 않는다.
+
+```sh
+node scripts/enrich-youtube-oembed-candidates.mjs \
+  data/memes/review/social-source-ranking-YYYY-MM-DD.jsonl \
+  data/memes/collected/youtube-shorts-oembed-verified-YYYY-MM-DD.jsonl \
+  --priority=high --max=50
 ```
 
 TikTok과 Instagram은 로그인·권한 또는 실제 공개 게시물의 최종 URL 없이 신뢰할 수

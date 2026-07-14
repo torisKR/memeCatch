@@ -4,8 +4,9 @@
 
 - Public memes: 3,115 (`approved`; `limited` was 0 at audit time)
 - Pending 2000–2020 review records: 1,001
-- Public `meme_contents`: 1,509 distinct memes, all currently labelled YouTube
-- Public TikTok, Instagram, and YouTube Shorts rows: 0
+- Public regular YouTube contents: 1,509 distinct memes
+- Public rights-holder YouTube Shorts: 4 rows across 2 distinct memes
+- Public TikTok and Instagram rows: 0
 
 The Explore filter and card badges reflect only published `meme_contents`, so a
 zero count is intentional until a source passes review.
@@ -15,11 +16,11 @@ zero count is intentional until a source passes review.
 | Platform | Candidate rows | Distinct meme titles | High-priority rows |
 | --- | ---: | ---: | ---: |
 | YouTube | 1,963 | 150 | 185 |
-| YouTube Shorts | 169 | 18 | 1 |
+| YouTube Shorts | 748 | 74 | 13 |
 | TikTok | 7 | 1 | 2 |
-| Instagram | 3 | 1 | 0 |
+| Instagram | 3 | 1 | 2 |
 
-The ranking pass produced 188 high-priority rows across 45 distinct meme titles.
+The ranking pass produced 202 high-priority rows across 47 distinct meme titles.
 It is triage only. Title overlap or a successful oEmbed response does not prove
 that a post is the original work or an authorized upload.
 
@@ -35,6 +36,13 @@ Five top official-broadcaster candidates were compared against production:
 
 All five already had a playable official-broadcaster YouTube representative and
 a YouTube source row. No database change was needed.
+
+The expanded Shorts review then verified four scene-matching uploads from the
+rights-holder channel `KBS COMEDY: 크큭티비`: one for `개그콘서트 달인` and
+three for `개그콘서트 마빡이`. They were added as non-representative, live,
+approved embed contents with `embeddable` source records. The public Shorts
+filter therefore covers two distinct memes without replacing their long-form
+representatives.
 
 Nineteen other high-priority meme titles had no playable content row. Manual
 inspection showed that the leading results were mostly later news reports,

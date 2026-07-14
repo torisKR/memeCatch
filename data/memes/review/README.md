@@ -17,3 +17,9 @@ already collected for existing memes. The score is only a triage signal based
 on title/alias overlap, official-channel hints, derivative-content hints, and
 public oEmbed verification. It never changes `review_status` and must not be
 used as automatic publication approval.
+
+`official-social-promotions-2026-07-14.jsonl` is the much smaller promotion
+ledger. Every row has a canonical Shorts URL, public oEmbed verification,
+scene-title match, and confirmed rights-holder channel. The idempotent SQL
+generator refuses rows without both `rights_holder_confirmed = true` and
+`promotion_status = approved`.

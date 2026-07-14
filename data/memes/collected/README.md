@@ -82,6 +82,24 @@ node scripts/collect-tiktok-oembed-candidates.mjs \
   data/memes/collected/tiktok-oembed-candidates-YYYY-MM-DD.jsonl
 ```
 
+TikTok 앱 심사 없이도 공식 TikTok Newsroom의 연도별 인기 콘텐츠 문서에서 문서가
+직접 인용한 최종 `tiktok.com/@.../video/...` URL을 찾을 수 있다. 이 수집기는
+`newsroom.tiktok.com` HTTPS 문서만 허용하고, 각 URL을 공개 oEmbed로 다시 확인한다.
+앱 키·로그인·쿠키·TikTok 검색·프로필 크롤링·단축 URL·차단 우회·영상 다운로드는
+사용하지 않는다. Newsroom 선정은 발견 근거일 뿐 CatchMeme 제목 매핑이나 권리 승인이
+아니므로 모든 결과는 `catalog_match_status = unmapped` 및
+`needs_human_source_match`로 저장한다.
+
+```sh
+node scripts/collect-tiktok-newsroom-candidates.mjs \
+  'https://newsroom.tiktok.com/2019-tiktok-top-100?lang=ko-KR' \
+  data/memes/collected/tiktok-newsroom-candidates-2019-YYYY-MM-DD.jsonl
+```
+
+2026-07-14 실행에서는 공식 문서가 인용한 원본 10개를 발견했고, 현재도 공개 oEmbed가
+성공한 8개를 후보로 저장했다. 삭제·비공개 등으로 oEmbed가 실패한 2개는 오류 파일에만
+기록하고 후보에서 제외했다.
+
 앱 API 심사와 별개로, 이미 확보한 TikTok·Instagram 최종 공개 URL은 게시물 페이지 또는
 Instagram의 공개 `embed/captioned` 페이지가 로그인 없이 제공하는 메타데이터로 한 번 더 보강할 수 있다. 이 경로는
 앱 키·로그인·쿠키·비공개 엔드포인트·차단 우회를 사용하지 않으며, 제목·설명·작성자와 썸네일

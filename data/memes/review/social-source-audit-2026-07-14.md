@@ -17,12 +17,20 @@ zero count is intentional until a source passes review.
 | --- | ---: | ---: | ---: |
 | YouTube | 1,963 | 150 | 185 |
 | YouTube Shorts | 748 | 74 | 13 |
-| TikTok | 7 | 1 | 2 |
+| TikTok | 15 | 9 | 2 |
 | Instagram | 3 | 1 | 2 |
 
 The ranking pass produced 202 high-priority rows across 47 distinct meme titles.
 It is triage only. Title overlap or a successful oEmbed response does not prove
 that a post is the original work or an authorized upload.
+
+The TikTok set now also includes eight live posts cited by TikTok's official
+2019 Top 100 Newsroom article. Ten canonical video URLs were present in the
+article; eight still passed public oEmbed verification and two returned HTTP
+400, so the latter were excluded without retry or bypass. The eight live rows
+remain `catalog_match_status = unmapped` and low priority until an editor maps
+them to an existing CatchMeme record and checks rights. The ranking explicitly
+prevents an oEmbed caption from matching itself and inflating the score.
 
 ## Manual spot check
 

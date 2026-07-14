@@ -17,7 +17,7 @@ if (!inputDir || !outputPath) {
   process.exit(2);
 }
 
-const SOCIAL_FILE = /^(?:youtube-source|youtube-shorts|tiktok-oembed|instagram-oembed|tiktok-public-page|instagram-public-page).*\.jsonl$/;
+const SOCIAL_FILE = /^(?:youtube-source|youtube-shorts|tiktok-oembed|tiktok-newsroom|instagram-oembed|tiktok-public-page|instagram-public-page).*\.jsonl$/;
 const OFFICIAL_CHANNEL = /\b(?:official|records|entertainment|broadcast|network|studios?)\b|공식|kbs|mbc|sbs|jtbc|tvn|netflix|hybe|sm entertainment|jyp entertainment|yg entertainment/i;
 const DERIVATIVE_HINT = /teaser|reaction|리액션|패러디|모음|편집|fanmade|fan made|compilation/i;
 
@@ -38,6 +38,7 @@ function titleFor(row) {
 
 function rank(row) {
   const candidateTitle = titleFor(row);
+  const unmapped = row.catalog_match_status === "unmapped";
   const candidateKey = compact(candidateTitle);
   const names = [row.meme_title, ...(Array.isArray(row.aliases) ? row.aliases : [])]
     .map((name) => String(name ?? "").trim())
@@ -49,9 +50,22 @@ function rank(row) {
   const matchedTokens = nameTokens.filter((token) => candidateTokens.has(token));
   const tokenCoverage = nameTokens.length > 0 ? matchedTokens.length / nameTokens.length : 0;
   const officialChannel = OFFICIAL_CHANNEL.test(String(row.channel ?? row.public_page_author_name ?? row.oembed_author_name ?? ""));
+  const officialEditorial = row.editorial_signal === "official_tiktok_newsroom";
   const publicMetadataVerified = Boolean(row.public_page_verified_at ?? row.oembed_verified_at);
   const derivative = DERIVATIVE_HINT.test(candidateTitle);
   const genericShortTitle = nameTokens.length <= 1 && Math.max(0, ...nameKeys.map((key) => key.length)) < 5;
+
+  if (unmapped) {
+    const reasons = ["candidate is not mapped to a CatchMeme record"];
+    if (officialEditorial) reasons.push("official TikTok Newsroom editorial selection");
+    if (publicMetadataVerified) reasons.push("public embed/page metadata verified");
+    return {
+      score: Number(officialEditorial) * 15 + Number(publicMetadataVerified) * 10,
+      priority: "low",
+      reasons,
+      candidateTitle,
+    };
+  }
 
   let score = 0;
   const reasons = [];
@@ -64,6 +78,10 @@ function rank(row) {
   if (officialChannel) {
     score += 15;
     reasons.push("official/broadcaster channel hint");
+  }
+  if (officialEditorial) {
+    score += 15;
+    reasons.push("official TikTok Newsroom editorial selection");
   }
   if (publicMetadataVerified) {
     score += 10;

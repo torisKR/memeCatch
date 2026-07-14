@@ -18,6 +18,12 @@ on title/alias overlap, official-channel hints, derivative-content hints, and
 public oEmbed verification. It never changes `review_status` and must not be
 used as automatic publication approval.
 
+`tiktok-newsroom-candidates-2019-2026-07-14.jsonl` is a separate discovery set
+from TikTok's official 2019 Top 100 Newsroom article. It contains eight canonical
+posts that still pass public oEmbed verification. They are intentionally marked
+`catalog_match_status = unmapped`; an editorial mention verifies discovery, not
+CatchMeme title matching, originality, or publication rights.
+
 `official-social-promotions-2026-07-14.jsonl` is the much smaller promotion
 ledger. Every row has a canonical Shorts URL, public oEmbed verification,
 scene-title match, and confirmed rights-holder channel. The idempotent SQL

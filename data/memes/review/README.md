@@ -1,16 +1,23 @@
-# Pending review records
+# Review and limited-publication records
 
 `wikimedia-2000-2020-pending-2026-07-14.jsonl` contains 1,001 public-reference
-records for memes originating from 2000 through 2020. They have been inserted
-into the remote `memes` table with `moderation_status = 'pending'`.
+records for memes originating from 2000 through 2020. They were initially
+inserted into the remote `memes` table with `moderation_status = 'pending'`.
 
-They are intentionally not public search or explore records. A linked
-Wikipedia page is only a context reference; each entry still needs an editor to
-verify its source year, an original upload or primary source, local relevance,
-and rights before the normal moderation workflow can promote it.
+`wikimedia-2000-2020-limited-promotions-2026-07-14.jsonl` is the exact 1,000-row
+limited-publication ledger derived from that batch. Production transitioned the
+rows through `pending → fact_checking → rights_checking → limited` in one guarded
+transaction. The duplicate variant `Mundial Ronaldinho Soccer 64` remains the
+single pending row and is recorded in the companion `.excluded.json` file.
 
-The companion `.errors.json` file records the one discovery candidate that had
-no usable Wikimedia introduction and was therefore not staged.
+The resulting production state is 3,115 approved + 1,000 limited = 4,115 public
+memes. All 1,000 limited rows are from 2000–2020, have `published_at`, and display
+an “original and year under further review” caution. Safety classification is
+918 yellow and 82 red. A linked Wikipedia page remains a context reference, not
+an original upload or proof of precise origin year.
+
+The original pending batch's `.errors.json` file records the one discovery
+candidate that had no usable Wikimedia introduction and was therefore not staged.
 
 `social-source-ranking-2026-07-14.jsonl` ranks the review-only social candidates
 already collected for existing memes. The score is only a triage signal based

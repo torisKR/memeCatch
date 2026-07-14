@@ -26,6 +26,7 @@ export function MemeEmbed({
   content,
   fallbackSourceUrl,
   title,
+  isRepresentative = true,
 }: {
   content: Pick<
     MemeContentRow,
@@ -33,6 +34,7 @@ export function MemeEmbed({
   > | null;
   fallbackSourceUrl?: string | null;
   title: string;
+  isRepresentative?: boolean;
 }) {
   const isYouTube =
     content != null &&
@@ -54,6 +56,7 @@ export function MemeEmbed({
           title={title}
           thumbnailUrl={content.thumbnail_url}
           isShort={content.url?.includes("/shorts/") ?? false}
+          isRepresentative={isRepresentative}
         />
         {content.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -72,6 +75,7 @@ export function MemeEmbed({
           sourceUrl={sourceUrl}
           title={title}
           thumbnailUrl={content?.thumbnail_url}
+          isRepresentative={isRepresentative}
         />
         {content?.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -157,11 +161,13 @@ function LiteSocialEmbed({
   sourceUrl,
   title,
   thumbnailUrl,
+  isRepresentative,
 }: {
   provider: SocialProvider;
   sourceUrl: string;
   title: string;
   thumbnailUrl?: string | null;
+  isRepresentative: boolean;
 }) {
   const [embed, setEmbed] = useState<OEmbedResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -220,7 +226,7 @@ function LiteSocialEmbed({
         <iframe
           src={embed.embedUrl ?? undefined}
           srcDoc={threadsDocument}
-          title={`${title} — ${providerName} 대표 콘텐츠`}
+          title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
           sandbox={
             provider === "threads"
               ? "allow-scripts allow-popups allow-popups-to-escape-sandbox"
@@ -248,19 +254,36 @@ function LiteSocialEmbed({
         />
       )}
       <div className="relative flex min-h-72 flex-col items-center justify-center gap-3 p-6 text-center">
-        <span className="rounded-full bg-background/90 px-3 py-1 text-sm font-semibold">
-          {providerName}
-        </span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="rounded-full bg-background/90 px-3 py-1 text-sm font-semibold">
+            {providerName}
+          </span>
+          {!isRepresentative && (
+            <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+              사용 예시
+            </span>
+          )}
+        </div>
         <p className="max-w-md text-base font-semibold">
-          재생하면 {providerName}에서 콘텐츠를 불러옵니다.
+          재생하면 {providerName}에서 {isRepresentative ? "콘텐츠" : "관련 콘텐츠"}를
+          불러옵니다.
         </p>
+        {!isRepresentative && (
+          <p className="max-w-md text-sm text-muted">
+            이 게시물은 밈의 원본이 아닌 사용 예시예요.
+          </p>
+        )}
         <button
           type="button"
           onClick={loadEmbed}
           disabled={loading}
           className="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
         >
-          {loading ? "불러오는 중…" : "대표 콘텐츠 보기"}
+          {loading
+            ? "불러오는 중…"
+            : isRepresentative
+              ? "대표 콘텐츠 보기"
+              : "관련 콘텐츠 보기"}
         </button>
         {error && (
           <p role="alert" className="max-w-md text-sm text-safety-red">
@@ -271,7 +294,7 @@ function LiteSocialEmbed({
               rel="noopener noreferrer"
               className="font-semibold underline underline-offset-2"
             >
-              원본 보기 ↗
+              {isRepresentative ? "원본 보기 ↗" : "게시물 보기 ↗"}
             </a>
           </p>
         )}
@@ -285,11 +308,13 @@ function LiteYouTube({
   title,
   thumbnailUrl,
   isShort,
+  isRepresentative,
 }: {
   videoId: string;
   title: string;
   thumbnailUrl?: string | null;
   isShort: boolean;
+  isRepresentative: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
   const thumb =
@@ -304,7 +329,7 @@ function LiteYouTube({
       {playing ? (
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`}
-          title={`${title} — 대표 영상`}
+          title={`${title} — ${isRepresentative ? "대표 영상" : "관련 영상"}`}
           sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
           allow="autoplay; encrypted-media; picture-in-picture"
           allowFullScreen
@@ -315,7 +340,7 @@ function LiteYouTube({
         <button
           type="button"
           onClick={() => setPlaying(true)}
-          aria-label={`${title} 영상 재생`}
+          aria-label={`${title} ${isRepresentative ? "대표 영상" : "관련 영상"} 재생`}
           className="group relative block h-full w-full"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

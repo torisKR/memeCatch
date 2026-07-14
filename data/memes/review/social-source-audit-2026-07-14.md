@@ -2,14 +2,21 @@
 
 ## Production state
 
-- Public memes: 3,115 (`approved`; `limited` was 0 at audit time)
-- Pending 2000–2020 review records: 1,001
+- Public memes after limited promotion: 4,115 (`approved` 3,115 + `limited` 1,000)
+- Remaining pending 2000–2020 review records: 1 duplicate variant
 - Public regular YouTube contents: 1,509 distinct memes
 - Public rights-holder YouTube Shorts: 4 rows across 2 distinct memes
-- Public TikTok and Instagram rows: 0
+- Public TikTok contextual embeds: 2 rows across 2 distinct memes
+- Public Instagram contextual embeds: 1 row across 1 distinct meme
 
-The Explore filter and card badges reflect only published `meme_contents`, so a
-zero count is intentional until a source passes review.
+The Explore filter and card badges reflect only published `meme_contents`.
+TikTok and Instagram are deliberately labeled as related usage/context examples,
+not as original or representative uploads.
+
+The 1,000 limited records are now visible in Explore with context-source badges
+and caution states. Production verification found 1,000 rows in the 2000–2020
+range, zero missing `published_at`, zero missing “추가 검수 중” cautions, and the
+single remaining pending title `Mundial Ronaldinho Soccer 64`.
 
 ## Candidate coverage
 
@@ -31,6 +38,13 @@ article; eight still passed public oEmbed verification and two returned HTTP
 remain `catalog_match_status = unmapped` and low priority until an editor maps
 them to an existing CatchMeme record and checks rights. The ranking explicitly
 prevents an oEmbed caption from matching itself and inflating the score.
+
+Three exact-match contextual candidates were promoted after their public embed
+metadata was reverified: TikTok examples for `Bad Guy (Billie Eilish song)` and
+`심쿵`, and an Instagram context reel for `검정고무신 애니메이션`. All three are
+stored with `is_representative = false`, `source_role = contextual_derivative`,
+and `rights_basis = platform_public_embed`. The detail UI therefore uses
+“사용 예시 / 관련 콘텐츠 / 게시물 보기” wording and never calls them the original.
 
 ## Manual spot check
 

@@ -143,11 +143,14 @@ export default async function MemeDetailPage({ params }: Props) {
 
       <UsageGuide context={meme.usage_context} note={meme.usage_note} />
 
-      <section aria-label="대표 콘텐츠">
+      <section
+        aria-label={representative?.is_representative ? "대표 콘텐츠" : "관련 콘텐츠"}
+      >
         <MemeEmbed
           content={representative}
           fallbackSourceUrl={fallbackSourceUrl}
           title={meme.title}
+          isRepresentative={representative?.is_representative ?? true}
         />
       </section>
 

@@ -70,3 +70,13 @@ node scripts/collect-tiktok-oembed-candidates.mjs \
   data/memes/collected/tiktok-public-index-seeds-2026-07-14.jsonl \
   data/memes/collected/tiktok-oembed-candidates-YYYY-MM-DD.jsonl
 ```
+
+Wikimedia의 공개 연도별 분류는 글로벌 밈 제목 후보를 찾는 데만 사용한다. 이 결과는
+한국어 기존 제목과 중복될 수 있고 원본 콘텐츠 URL도 아니므로, 운영 시드나 공개 데이터로
+직접 사용하지 않는다.
+
+```sh
+node scripts/collect-wikimedia-meme-candidates.mjs \
+  data/memes/collected/wikimedia-meme-candidates-YYYY-MM-DD.jsonl \
+  --years=2000,2001,2002
+```

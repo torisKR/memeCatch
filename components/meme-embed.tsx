@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MemeContentRow } from "@/lib/queries";
 import { isContextSourceUrl } from "@/lib/source-links";
 
@@ -19,7 +19,7 @@ type OEmbedResponse = {
 /**
  * 대표 콘텐츠 임베드.
  * - YouTube + content_id + availability≠dead → lite embed(클릭 시 iframe, sandbox, 지연 로드)
- * - TikTok/Instagram/Facebook/Threads → 클릭 시 서버 oEmbed 검증 후 공식 플레이어
+ * - TikTok/Instagram/Facebook/Threads → 서버 oEmbed 검증 후 공식 플레이어 자동 로드
  * - 그 외 / 원본 소실 → 폴백 카드 "원본은 사라졌지만…" + 출처 링크
  */
 export function MemeEmbed({
@@ -156,6 +156,48 @@ function isTrustedEmbedUrl(provider: SocialProvider, rawUrl: string) {
   }
 }
 
+function immediateSocialEmbed(
+  provider: SocialProvider,
+  sourceUrl: string
+): OEmbedResponse | null {
+  try {
+    const url = new URL(sourceUrl);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+
+    if (provider === "tiktok" && url.hostname === "www.tiktok.com") {
+      const contentId = url.pathname.match(/^\/@[A-Za-z0-9._-]+\/video\/(\d+)/)?.[1];
+      if (!contentId) return null;
+      return {
+        provider,
+        sourceUrl,
+        embedUrl: `https://www.tiktok.com/player/v1/${contentId}?description=1&music_info=1`,
+        embedHtml: null,
+        contentId,
+        title: null,
+        authorName: null,
+      };
+    }
+
+    if (provider === "instagram" && url.hostname === "www.instagram.com") {
+      const match = url.pathname.match(/^\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+      if (!match) return null;
+      return {
+        provider,
+        sourceUrl,
+        embedUrl: `https://www.instagram.com/${match[1]}/${match[2]}/embed/captioned/`,
+        embedHtml: null,
+        contentId: match[2],
+        title: null,
+        authorName: null,
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function LiteSocialEmbed({
   provider,
   sourceUrl,
@@ -169,9 +211,10 @@ function LiteSocialEmbed({
   thumbnailUrl?: string | null;
   isRepresentative: boolean;
 }) {
-  const [embed, setEmbed] = useState<OEmbedResponse | null>(null);
+  const [embed, setEmbed] = useState<OEmbedResponse | null>(() =>
+    immediateSocialEmbed(provider, sourceUrl)
+  );
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const providerName = {
     tiktok: "TikTok",
@@ -180,49 +223,100 @@ function LiteSocialEmbed({
     threads: "Threads",
   }[provider];
 
-  async function loadEmbed() {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/oembed?url=${encodeURIComponent(sourceUrl)}`);
-      const data = (await response.json()) as OEmbedResponse | { error?: string };
-      if (!response.ok || !("embedUrl" in data)) {
-        throw new Error("error" in data ? data.error : undefined);
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    async function loadEmbed() {
+      setEmbed(immediateSocialEmbed(provider, sourceUrl));
+      setError(null);
+      try {
+        const response = await fetch(
+          `/api/oembed?url=${encodeURIComponent(sourceUrl)}`,
+          { signal: controller.signal }
+        );
+        const data = (await response.json()) as OEmbedResponse | { error?: string };
+        if (!response.ok || !("embedUrl" in data)) {
+          throw new Error("error" in data ? data.error : undefined);
+        }
+        const hasTrustedEmbed =
+          provider === "threads"
+            ? typeof data.embedHtml === "string" && data.embedHtml.length > 0
+            : typeof data.embedUrl === "string" &&
+              isTrustedEmbedUrl(provider, data.embedUrl);
+        if (data.provider !== provider || !hasTrustedEmbed) {
+          throw new Error("안전한 임베드 주소를 확인하지 못했습니다.");
+        }
+        if (active) setEmbed(data);
+      } catch (loadError) {
+        if (!active || controller.signal.aborted) return;
+        setError(
+          loadError instanceof Error && loadError.message
+            ? loadError.message
+            : "콘텐츠를 불러오지 못했습니다."
+        );
       }
-      const hasTrustedEmbed =
-        provider === "threads"
-          ? typeof data.embedHtml === "string" && data.embedHtml.length > 0
-          : typeof data.embedUrl === "string" &&
-            isTrustedEmbedUrl(provider, data.embedUrl);
-      if (data.provider !== provider || !hasTrustedEmbed) {
-        throw new Error("안전한 임베드 주소를 확인하지 못했습니다.");
-      }
-      setEmbed(data);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error && loadError.message
-          ? loadError.message
-          : "콘텐츠를 불러오지 못했습니다."
-      );
-    } finally {
-      setLoading(false);
     }
-  }
+
+    void loadEmbed();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [provider, sourceUrl]);
+
+  const frameWidthClass =
+    provider === "tiktok"
+      ? "mx-auto w-full max-w-[382px]"
+      : provider === "instagram"
+        ? "mx-auto w-full max-w-[540px]"
+        : provider === "threads"
+          ? "mx-auto w-full max-w-[540px]"
+          : "mx-auto w-full max-w-[540px]";
+  const frameHeightClass =
+    provider === "tiktok"
+      ? "h-[min(72svh,680px)]"
+      : provider === "instagram"
+        ? "h-[min(72svh,720px)]"
+        : provider === "threads"
+          ? "h-[min(72svh,700px)]"
+          : "h-[min(68svh,600px)]";
+  const frameClass = `${frameWidthClass} ${frameHeightClass}`;
+  const accentClass =
+    provider === "tiktok"
+      ? "border-l-[#25f4ee]"
+      : provider === "instagram"
+        ? "border-l-[#e1306c]"
+        : provider === "facebook"
+          ? "border-l-[#1877f2]"
+          : "border-l-foreground";
+
+  const sourceTape = (
+    <div
+      className={`${frameWidthClass} flex min-h-9 items-center gap-2 border-l-2 ${accentClass} px-3 text-sm`}
+    >
+      <span className="font-bold tracking-tight">{providerName}</span>
+      {!isRepresentative && (
+        <span className="text-muted">밈 사용 예시</span>
+      )}
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-auto inline-flex min-h-9 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        게시물 열기 <span aria-hidden>↗</span>
+      </a>
+    </div>
+  );
 
   if (embed) {
-    const frameClass =
-      provider === "tiktok"
-        ? "mx-auto aspect-[9/16] w-full max-w-[605px]"
-        : provider === "instagram"
-          ? "mx-auto h-[760px] w-full max-w-[658px]"
-          : provider === "threads"
-            ? "mx-auto h-[700px] w-full max-w-[658px]"
-            : "mx-auto h-[600px] w-full max-w-[658px]";
     const threadsDocument = embed.embedHtml
       ? `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${embed.embedHtml}</body></html>`
       : undefined;
     return (
-      <div className="overflow-hidden rounded-xl border border-border bg-surface-2">
+      <div className="space-y-2">
+        {sourceTape}
         <iframe
           src={embed.embedUrl ?? undefined}
           srcDoc={threadsDocument}
@@ -234,70 +328,52 @@ function LiteSocialEmbed({
           }
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
-          loading="lazy"
+          loading="eager"
           referrerPolicy="strict-origin-when-cross-origin"
-          className={`${frameClass} border-0 bg-white`}
+          className={`${frameClass} block rounded-2xl border border-border bg-white shadow-sm`}
         />
       </div>
     );
   }
 
-  return (
-    <div className="relative min-h-72 overflow-hidden rounded-xl border border-border bg-surface-2">
-      {thumbnailUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={thumbnailUrl}
-          alt=""
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover opacity-35 blur-[1px]"
-        />
-      )}
-      <div className="relative flex min-h-72 flex-col items-center justify-center gap-3 p-6 text-center">
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <span className="rounded-full bg-background/90 px-3 py-1 text-sm font-semibold">
-            {providerName}
-          </span>
-          {!isRepresentative && (
-            <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
-              사용 예시
-            </span>
-          )}
+  if (error) {
+    return (
+      <div className="space-y-2">
+        {sourceTape}
+        <div className="mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center">
+          <p role="alert" className="text-sm text-muted">
+            {error}
+          </p>
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
+          >
+            {providerName}에서 보기 <span aria-hidden>↗</span>
+          </a>
         </div>
-        <p className="max-w-md text-base font-semibold">
-          재생하면 {providerName}에서 {isRepresentative ? "콘텐츠" : "관련 콘텐츠"}를
-          불러옵니다.
-        </p>
-        {!isRepresentative && (
-          <p className="max-w-md text-sm text-muted">
-            이 게시물은 밈의 원본이 아닌 사용 예시예요.
-          </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {sourceTape}
+      <div
+        role="status"
+        aria-label={`${providerName} 콘텐츠 불러오는 중`}
+        className={`${frameClass} relative overflow-hidden rounded-2xl border border-border bg-surface-2`}
+      >
+        {thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-45 blur-[1px]"
+          />
         )}
-        <button
-          type="button"
-          onClick={loadEmbed}
-          disabled={loading}
-          className="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
-        >
-          {loading
-            ? "불러오는 중…"
-            : isRepresentative
-              ? "대표 콘텐츠 보기"
-              : "관련 콘텐츠 보기"}
-        </button>
-        {error && (
-          <p role="alert" className="max-w-md text-sm text-safety-red">
-            {error}{" "}
-            <a
-              href={sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold underline underline-offset-2"
-            >
-              {isRepresentative ? "원본 보기 ↗" : "게시물 보기 ↗"}
-            </a>
-          </p>
-        )}
+        <div className="absolute inset-0 animate-pulse bg-background/50 motion-reduce:animate-none" />
       </div>
     </div>
   );

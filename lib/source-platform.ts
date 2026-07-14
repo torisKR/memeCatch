@@ -6,6 +6,7 @@ export const SOCIAL_PLATFORM_KEYS = [
 ] as const;
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORM_KEYS)[number];
+export type SocialPlatformCounts = Record<SocialPlatform, number>;
 
 export type SourcePlatform = SocialPlatform | "community" | "other";
 
@@ -65,4 +66,32 @@ export function sourcePlatformFromMeme({
 
 export function isSocialPlatform(value: string | undefined): value is SocialPlatform {
   return SOCIAL_PLATFORM_KEYS.some((platform) => platform === value);
+}
+
+export function emptySocialPlatformCounts(): SocialPlatformCounts {
+  return { youtube: 0, youtube_shorts: 0, tiktok: 0, instagram: 0 };
+}
+
+/** 공개 콘텐츠 행을 밈 단위로 세어 탐색 필터의 실제 수량을 만든다. */
+export function countSocialPlatformReferences(
+  references: Array<PlatformReference & { meme_id: string }>
+): SocialPlatformCounts {
+  const ids = {
+    youtube: new Set<string>(),
+    youtube_shorts: new Set<string>(),
+    tiktok: new Set<string>(),
+    instagram: new Set<string>(),
+  };
+
+  for (const reference of references) {
+    const platform = sourcePlatformFromReference(reference);
+    if (platform && isSocialPlatform(platform)) ids[platform].add(reference.meme_id);
+  }
+
+  return {
+    youtube: ids.youtube.size,
+    youtube_shorts: ids.youtube_shorts.size,
+    tiktok: ids.tiktok.size,
+    instagram: ids.instagram.size,
+  };
 }

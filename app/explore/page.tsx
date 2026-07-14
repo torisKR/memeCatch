@@ -18,6 +18,7 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { DailyTop10 } from "@/components/daily-top10";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
+import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -212,7 +213,7 @@ export default async function ExplorePage({
   const filters = parseFilters(sp);
   const showTop10 = isDefaultEntry(filters);
 
-  const [initial, dailyTop] = await Promise.all([
+  const [initial, dailyTop, platformCounts] = await Promise.all([
     (async (): Promise<MemeListItem[]> => {
       try {
         const supabase = createStaticClient();
@@ -226,6 +227,7 @@ export default async function ExplorePage({
       }
     })(),
     showTop10 ? getDailyTopMemes() : Promise.resolve([]),
+    getSocialPlatformCounts(),
   ]);
 
   return (
@@ -236,7 +238,7 @@ export default async function ExplorePage({
         지금 도는 밈을 카테고리·연도·난이도로 골라 봐요.
       </p>
 
-      <ExploreFilters />
+      <ExploreFilters platformCounts={platformCounts} />
 
       {/* 기본 진입(필터/검색 없음)에서만 노출 — 필터·검색 중엔 숨김 */}
       {showTop10 && <DailyTop10 memes={dailyTop} />}

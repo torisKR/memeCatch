@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS } from "@/lib/labels";
+import type { SocialPlatform, SocialPlatformCounts } from "@/lib/source-platform";
 
 /**
  * 레인 B 여정2 — 탐색 필터 바 (URL 쿼리 동기화, deep link/뒤로가기 보존).
@@ -78,7 +79,11 @@ function catChipStyle(key: string, on: boolean): React.CSSProperties {
   };
 }
 
-export function ExploreFilters() {
+export function ExploreFilters({
+  platformCounts,
+}: {
+  platformCounts: SocialPlatformCounts;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -285,6 +290,10 @@ export function ExploreFilters() {
           >
             {PLATFORMS.map((item) => {
               const on = platform === item.key;
+              const count = item.key
+                ? platformCounts[item.key as SocialPlatform]
+                : null;
+              const unavailable = count === 0;
               return (
                 <button
                   key={item.key || "all"}
@@ -292,14 +301,27 @@ export function ExploreFilters() {
                   role="tab"
                   aria-selected={on}
                   onClick={() => setPlatform(item.key)}
-                  className={`${chipBase} ${on ? chipOn : chipOff}`}
+                  className={`${chipBase} ${on ? chipOn : chipOff} ${
+                    unavailable && !on ? "border-dashed opacity-70" : ""
+                  }`}
                 >
                   {item.label}
+                  {count !== null && (
+                    <span
+                      aria-label={`${count}개`}
+                      className="rounded-full bg-foreground/8 px-1.5 py-0.5 font-mono text-xs tabular-nums transition-transform duration-200 ease-out motion-reduce:transition-none"
+                    >
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
+        <p className="mt-2.5 border-t border-border pt-2.5 text-xs leading-relaxed text-muted">
+          숫자는 현재 재생 가능한 공개 콘텐츠 수예요. 0은 아직 검수된 공개 원본이 없다는 뜻이에요.
+        </p>
       </section>
 
       {/* 카테고리 칩(다중) — 각 칩이 자기 카테고리 틴트 색 = 색 범례.

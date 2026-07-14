@@ -44,3 +44,18 @@ TikTok과 Instagram은 로그인·권한 또는 실제 공개 게시물의 최�
 있는 원본성을 판별할 수 없다. 따라서 두 플랫폼은 TikTok `video.list` 동의 가져오기나
 제보 양식으로 받은 `tiktok.com/@.../video/...`, `instagram.com/reel|p|tv/...` URL만
 검수 후보로 수집한다. 검색 스니펫이나 단축 URL은 데이터에 넣지 않는다.
+
+Instagram은 공개 DuckDuckGo 인덱스에서 발견한 최종 릴스 URL을 Instagram oEmbed로
+한 번 더 확인할 수 있다. Instagram 페이지를 직접 크롤링하거나 로그인·차단 우회를 하지
+않으며, oEmbed HTML·메타데이터는 저장하지 않는다. 검색 서비스가 챌린지를 요구하면
+수집기는 재시도·우회를 하지 않고 즉시 중단한다.
+
+```sh
+node scripts/collect-instagram-oembed-candidates.mjs \
+  data/memes/verified \
+  data/memes/collected/instagram-oembed-candidates-YYYY-MM-DD.jsonl \
+  --max=20 --per-query=3
+```
+
+`instagram-oembed-candidates-2026-07-14-batch-01.jsonl`은 공개 검색 인덱스에서
+발견하고 oEmbed 응답을 확인한 후보 3건이다. 모두 원본성 검수 전이며 자동 공개하지 않는다.

@@ -41,6 +41,18 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
+  // 오프라인 폴백 — 내비게이션(NetworkOnly)이 실패하면 precache된 /offline을 보여준다.
+  // /offline은 next.config.ts의 additionalPrecacheEntries로 매니페스트에 주입된다.
+  fallbacks: {
+    entries: [
+      {
+        url: "/offline",
+        matcher({ request }) {
+          return request.destination === "document";
+        },
+      },
+    ],
+  },
   runtimeCaching: [
     // 1) Supabase·인증은 절대 캐시하지 않는다
     {

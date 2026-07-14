@@ -29,7 +29,7 @@ import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
 import { TrackedBlock } from "@/components/tracked-block";
 import { ContextNav } from "@/components/context-nav";
-import { preferredSourceUrl } from "@/lib/source-links";
+import { preferredSourceUrl, sourceLinksWithContent } from "@/lib/source-links";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
@@ -74,7 +74,8 @@ export default async function MemeDetailPage({ params }: Props) {
     meme.meme_contents.find((c) => c.is_representative) ??
     meme.meme_contents[0] ??
     null;
-  const fallbackSourceUrl = preferredSourceUrl(meme.meme_sources);
+  const sourceLinks = sourceLinksWithContent(meme.meme_sources, meme.meme_contents);
+  const fallbackSourceUrl = preferredSourceUrl(sourceLinks);
   const sentimentChip = SENTIMENT[meme.sentiment].user;
 
   const isYouTubeRep =
@@ -191,10 +192,10 @@ export default async function MemeDetailPage({ params }: Props) {
                 ))}
               </p>
               {/* 상시 출처 인용 — E-E-A-T: 유래 주장 바로 아래에 근거 링크 */}
-              {meme.meme_sources.length > 0 && (
+              {sourceLinks.length > 0 && (
                 <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
                   <span className="font-semibold">출처:</span>
-                  {meme.meme_sources.slice(0, 3).map((s, i) => (
+                  {sourceLinks.slice(0, 3).map((s, i) => (
                     <a
                       key={s.source_url ?? i}
                       href={s.source_url ?? "#"}

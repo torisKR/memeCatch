@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isContextSourceUrl, preferredSourceUrl } from "@/lib/source-links";
+import {
+  isContextSourceUrl,
+  preferredSourceUrl,
+  sourceLinksWithContent,
+} from "@/lib/source-links";
 
 describe("source link selection", () => {
   it("uses a direct source before a wiki context page", () => {
@@ -16,5 +20,21 @@ describe("source link selection", () => {
     expect(isContextSourceUrl("https://namu.wiki/w/example")).toBe(true);
     expect(isContextSourceUrl("https://ko.wikipedia.org/wiki/example")).toBe(true);
     expect(isContextSourceUrl("https://www.tiktok.com/@creator/video/1")).toBe(false);
+  });
+
+  it("uses the playable content URL before a wiki-only source list", () => {
+    const links = sourceLinksWithContent(
+      [{ source_url: "https://namu.wiki/w/example", platform: "Community" }],
+      [
+        { url: "https://www.youtube.com/watch?v=abcdefghijk", platform: "YouTube" },
+        { url: "https://www.youtube.com/watch?v=abcdefghijk", platform: "YouTube" },
+      ]
+    );
+
+    expect(links).toEqual([
+      { source_url: "https://www.youtube.com/watch?v=abcdefghijk", platform: "YouTube" },
+      { source_url: "https://namu.wiki/w/example", platform: "Community" },
+    ]);
+    expect(preferredSourceUrl(links)).toBe("https://www.youtube.com/watch?v=abcdefghijk");
   });
 });

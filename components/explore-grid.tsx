@@ -9,6 +9,7 @@ import type { MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
 import { MemeCardSkeleton } from "@/components/skeletons";
 import type { MemeCategory } from "@/lib/labels";
+import type { SocialPlatform } from "@/lib/source-platform";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -31,6 +32,7 @@ export type ExploreFilters = {
   lifecycle?: Database["public"]["Enums"]["lifecycle_status"];
   media?: Database["public"]["Enums"]["media_type"];
   year?: string; // '2020s' | '2010s' | '2000s'
+  platform?: SocialPlatform;
   sort: SortKey;
   q?: string; // 이 목록 안 검색어 — 있으면 search_memes RPC 경로
 };
@@ -42,7 +44,14 @@ const SEARCH_LIMIT = 50;
 export const PAGE_SIZE = 24;
 
 export const EXPLORE_SELECT =
-  "*, meme_contents(thumbnail_url, is_representative)";
+  "*, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url)";
+
+function exploreSelect(platform?: SocialPlatform) {
+  const contents = platform
+    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url)";
+  return `*, ${contents}, meme_sources(platform, source_url)`;
+}
 
 export const YEAR_RANGES: Record<string, [number, number]> = {
   "2020s": [2020, 2029],
@@ -62,10 +71,12 @@ export function buildMemesQuery(
   // 동일한 카테고리/정렬/페이지네이션을 얹는다. RPC는 setof memes라 필터 체이닝 가능.
   // (RPC 내부 LIMIT 50 → 검색 결과는 최대 50건까지 무한스크롤)
   if (filters.q) {
-    let sq = supabase.rpc("search_memes", {
-      p_query: filters.q,
-      p_limit: SEARCH_LIMIT,
-    });
+    let sq = supabase
+      .rpc("search_memes", {
+        p_query: filters.q,
+        p_limit: SEARCH_LIMIT,
+      })
+      .select(exploreSelect(filters.platform));
     if (filters.categories.length > 0) sq = sq.in("category", filters.categories);
     if (filters.difficulty) sq = sq.eq("difficulty", filters.difficulty);
     if (filters.lifecycle) sq = sq.eq("lifecycle_status", filters.lifecycle);
@@ -74,6 +85,14 @@ export function buildMemesQuery(
       const [lo, hi] = YEAR_RANGES[filters.year];
       sq = sq.gte("origin_year", lo).lte("origin_year", hi);
     }
+    if (filters.platform === "youtube") sq = sq.ilike("meme_contents.platform", "youtube");
+    if (filters.platform === "youtube_shorts") {
+      sq = sq
+        .ilike("meme_contents.platform", "youtube")
+        .ilike("meme_contents.url", "%/shorts/%");
+    }
+    if (filters.platform === "tiktok") sq = sq.ilike("meme_contents.platform", "tiktok");
+    if (filters.platform === "instagram") sq = sq.ilike("meme_contents.platform", "instagram");
     if (filters.sort === "controversial") sq = sq.eq("sentiment", "controversial");
     if (filters.sort === "recent" || filters.sort === "controversial") {
       sq = sq.order("published_at", { ascending: false, nullsFirst: false });
@@ -86,7 +105,7 @@ export function buildMemesQuery(
 
   let q = supabase
     .from("memes")
-    .select(EXPLORE_SELECT)
+    .select(exploreSelect(filters.platform))
     .in("moderation_status", ["approved", "limited"]);
 
   if (filters.categories.length > 0) q = q.in("category", filters.categories);
@@ -97,6 +116,14 @@ export function buildMemesQuery(
     const [lo, hi] = YEAR_RANGES[filters.year];
     q = q.gte("origin_year", lo).lte("origin_year", hi);
   }
+  if (filters.platform === "youtube") q = q.ilike("meme_contents.platform", "youtube");
+  if (filters.platform === "youtube_shorts") {
+    q = q
+      .ilike("meme_contents.platform", "youtube")
+      .ilike("meme_contents.url", "%/shorts/%");
+  }
+  if (filters.platform === "tiktok") q = q.ilike("meme_contents.platform", "tiktok");
+  if (filters.platform === "instagram") q = q.ilike("meme_contents.platform", "instagram");
   if (filters.sort === "controversial") q = q.eq("sentiment", "controversial");
 
   // 정렬 매핑: trending/popular→trend_score desc, recent/controversial→published_at desc
@@ -122,7 +149,7 @@ async function fetchPage(
     from + PAGE_SIZE - 1
   );
   if (error || !data) throw error ?? new Error("no data");
-  return data as MemeListItem[];
+  return data as unknown as MemeListItem[];
 }
 
 export function ExploreGrid({
@@ -248,7 +275,7 @@ export function ExploreGrid({
 
   return (
     <div>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4">
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
             <MemeCard meme={meme} />
@@ -259,7 +286,7 @@ export function ExploreGrid({
       {/* 로딩 스켈레톤 — 다음 페이지 조회 중 */}
       {loading && (
         <ul
-          className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3"
+          className="mt-4 grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4"
           aria-hidden
         >
           {Array.from({ length: 6 }).map((_, i) => (

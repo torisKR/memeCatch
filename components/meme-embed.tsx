@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { MemeContentRow } from "@/lib/queries";
+import { isContextSourceUrl } from "@/lib/source-links";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
@@ -83,14 +84,18 @@ export function MemeEmbed({
 
   // 출처가 있으면 "확인 가능" 톤, 정말 없을 때만 "소실" 톤 — 오해 방지
   if (sourceUrl) {
-    const isNamu = sourceUrl.includes("namu.wiki");
+    const isContextSource = isContextSourceUrl(sourceUrl);
     return (
       <div className="rounded-xl border border-border bg-surface-2 p-5">
         <p className="text-base font-semibold">
-          원본 콘텐츠는 출처에서 볼 수 있어요.
+          {isContextSource
+            ? "원본 맥락은 출처에서 확인할 수 있어요."
+            : "원본 콘텐츠는 출처에서 볼 수 있어요."}
         </p>
         <p className="mt-1 text-base text-muted">
-          저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요.
+          {isContextSource
+            ? "이 링크는 원본을 복제하지 않고 유래와 맥락을 설명하는 참고 출처예요."
+            : "저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요."}
         </p>
         <a
           href={sourceUrl}
@@ -98,7 +103,7 @@ export function MemeEmbed({
           rel="noopener noreferrer"
           className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold transition-colors hover:border-accent hover:text-accent"
         >
-          {isNamu ? "나무위키에서 원본 맥락 보기" : "출처에서 원본 보기"}
+          {isContextSource ? "출처에서 원본 맥락 보기" : "출처에서 원본 보기"}
           <span aria-hidden>↗</span>
         </a>
       </div>

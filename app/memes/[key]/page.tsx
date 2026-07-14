@@ -29,6 +29,7 @@ import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
 import { TrackedBlock } from "@/components/tracked-block";
 import { ContextNav } from "@/components/context-nav";
+import { preferredSourceUrl } from "@/lib/source-links";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
@@ -73,7 +74,7 @@ export default async function MemeDetailPage({ params }: Props) {
     meme.meme_contents.find((c) => c.is_representative) ??
     meme.meme_contents[0] ??
     null;
-  const fallbackSourceUrl = meme.meme_sources[0]?.source_url ?? null;
+  const fallbackSourceUrl = preferredSourceUrl(meme.meme_sources);
   const sentimentChip = SENTIMENT[meme.sentiment].user;
 
   const isYouTubeRep =

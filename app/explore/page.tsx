@@ -17,6 +17,7 @@ import {
 } from "@/components/explore-grid";
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { DailyTop10 } from "@/components/daily-top10";
+import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -38,7 +39,6 @@ export const metadata: Metadata = {
 // components/explore-grid.tsx의 PAGE_SIZE와 동일하게 유지
 const PAGE_SIZE = 24;
 const SEARCH_LIMIT = 50; // components/explore-grid.tsx의 SEARCH_LIMIT과 동일
-const SELECT = "*, meme_contents(thumbnail_url, is_representative)";
 const YEAR_RANGES: Record<string, [number, number]> = {
   "2020s": [2020, 2029],
   "2010s": [2010, 2019],
@@ -77,19 +77,32 @@ function parseFilters(sp: RawParams): Filters {
     lifecycle: one(sp.lifecycle, LIFECYCLE_KEYS) as Filters["lifecycle"],
     media: one(sp.media, MEDIA_KEYS) as Filters["media"],
     year: one(sp.year, YEAR_KEYS),
+    platform: (() => {
+      const candidate = Array.isArray(sp.platform) ? sp.platform[0] : sp.platform;
+      return isSocialPlatform(candidate) ? candidate : undefined;
+    })(),
     sort: (one(sp.sort, SORT_KEYS) ?? "trending") as SortKey,
     q: rawQ?.trim() || undefined,
   };
+}
+
+function selectForPlatform(platform?: SocialPlatform) {
+  const contents = platform
+    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url)";
+  return `*, ${contents}, meme_sources(platform, source_url)`;
 }
 
 function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
   // 검색어가 있으면 search_memes RPC 위에 동일 필터/정렬을 얹는다
   // (components/explore-grid.tsx의 buildMemesQuery와 반드시 동기화).
   if (filters.q) {
-    let sq = supabase.rpc("search_memes", {
-      p_query: filters.q,
-      p_limit: SEARCH_LIMIT,
-    });
+    let sq = supabase
+      .rpc("search_memes", {
+        p_query: filters.q,
+        p_limit: SEARCH_LIMIT,
+      })
+      .select(selectForPlatform(filters.platform));
     if (filters.categories.length > 0) sq = sq.in("category", filters.categories);
     if (filters.difficulty) sq = sq.eq("difficulty", filters.difficulty);
     if (filters.lifecycle) sq = sq.eq("lifecycle_status", filters.lifecycle);
@@ -98,6 +111,14 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
       const [lo, hi] = YEAR_RANGES[filters.year];
       sq = sq.gte("origin_year", lo).lte("origin_year", hi);
     }
+    if (filters.platform === "youtube") sq = sq.ilike("meme_contents.platform", "youtube");
+    if (filters.platform === "youtube_shorts") {
+      sq = sq
+        .ilike("meme_contents.platform", "youtube")
+        .ilike("meme_contents.url", "%/shorts/%");
+    }
+    if (filters.platform === "tiktok") sq = sq.ilike("meme_contents.platform", "tiktok");
+    if (filters.platform === "instagram") sq = sq.ilike("meme_contents.platform", "instagram");
     if (filters.sort === "controversial") sq = sq.eq("sentiment", "controversial");
     if (filters.sort === "recent" || filters.sort === "controversial") {
       sq = sq.order("published_at", { ascending: false, nullsFirst: false });
@@ -110,7 +131,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
 
   let q = supabase
     .from("memes")
-    .select(SELECT)
+    .select(selectForPlatform(filters.platform))
     .in("moderation_status", ["approved", "limited"]);
 
   if (filters.categories.length > 0) q = q.in("category", filters.categories);
@@ -121,6 +142,14 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
     const [lo, hi] = YEAR_RANGES[filters.year];
     q = q.gte("origin_year", lo).lte("origin_year", hi);
   }
+  if (filters.platform === "youtube") q = q.ilike("meme_contents.platform", "youtube");
+  if (filters.platform === "youtube_shorts") {
+    q = q
+      .ilike("meme_contents.platform", "youtube")
+      .ilike("meme_contents.url", "%/shorts/%");
+  }
+  if (filters.platform === "tiktok") q = q.ilike("meme_contents.platform", "tiktok");
+  if (filters.platform === "instagram") q = q.ilike("meme_contents.platform", "instagram");
   if (filters.sort === "controversial") q = q.eq("sentiment", "controversial");
 
   if (filters.sort === "recent" || filters.sort === "controversial") {
@@ -141,6 +170,7 @@ function isDefaultEntry(f: Filters): boolean {
     !f.lifecycle &&
     !f.media &&
     !f.year &&
+    !f.platform &&
     f.sort === "trending"
   );
 }
@@ -168,6 +198,7 @@ function filterKey(f: Filters): string {
     f.lifecycle ?? "",
     f.media ?? "",
     f.year ?? "",
+    f.platform ?? "",
     f.q ?? "",
   ].join("|");
 }
@@ -189,7 +220,7 @@ export default async function ExplorePage({
           0,
           PAGE_SIZE - 1
         );
-        return (data ?? []) as MemeListItem[];
+        return (data ?? []) as unknown as MemeListItem[];
       } catch {
         return [];
       }
@@ -198,7 +229,7 @@ export default async function ExplorePage({
   ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-6xl px-4 pb-14 pt-6">
       <ExploreCollectionJsonLd />
       <h1 className="text-2xl font-bold">밈 탐색</h1>
       <p className="mt-1 text-base text-muted">

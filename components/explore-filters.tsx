@@ -23,6 +23,14 @@ const SORTS = [
   { key: "controversial", label: "논쟁 중" },
 ] as const;
 
+const PLATFORMS = [
+  { key: "", label: "전체 출처" },
+  { key: "youtube", label: "YouTube" },
+  { key: "youtube_shorts", label: "Shorts" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "instagram", label: "Instagram" },
+] as const;
+
 const YEARS = [
   { key: "2020s", label: "2020년대" },
   { key: "2010s", label: "2010년대" },
@@ -82,6 +90,7 @@ export function ExploreFilters() {
   const year = searchParams.get("year") ?? "";
   const media = searchParams.get("media") ?? "";
   const lifecycle = searchParams.get("lifecycle") ?? "";
+  const platform = searchParams.get("platform") ?? "";
   const activeQuery = searchParams.get("q") ?? "";
 
   // 검색 인풋은 로컬 상태로 다루되 URL(뒤로가기·초기화)과 동기화한다.
@@ -98,6 +107,7 @@ export function ExploreFilters() {
     !!year ||
     !!media ||
     !!lifecycle ||
+    !!platform ||
     !!activeQuery ||
     (sort !== "trending" && !!searchParams.get("sort"));
 
@@ -139,6 +149,16 @@ export function ExploreFilters() {
     (value: string) => {
       const next = new URLSearchParams(searchParams);
       next.set("sort", value);
+      pushParams(next);
+    },
+    [searchParams, pushParams]
+  );
+
+  const setPlatform = useCallback(
+    (value: string) => {
+      const next = new URLSearchParams(searchParams);
+      if (value) next.set("platform", value);
+      else next.delete("platform");
       pushParams(next);
     },
     [searchParams, pushParams]
@@ -229,28 +249,58 @@ export function ExploreFilters() {
         </div>
       </form>
 
-      {/* 정렬 세그먼트 */}
-      <div
-        role="tablist"
-        aria-label="정렬"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
-      >
-        {SORTS.map((s) => {
-          const on = sort === s.key;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              onClick={() => setSort(s.key)}
-              className={`${chipBase} ${on ? chipOn : chipOff}`}
-            >
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* 신호 레일 — 정렬과 원본 플랫폼을 한 덩어리로 묶어, 필터가 여러 단으로
+          흩어져 보이지 않게 한다. */}
+      <section className="rounded-2xl border border-border bg-surface p-3.5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold tracking-[0.12em] text-muted">정렬</p>
+          <p className="text-xs font-bold tracking-[0.12em] text-muted">원본 플랫폼</p>
+        </div>
+        <div className="mt-2.5 grid gap-3 lg:grid-cols-2">
+          <div
+            role="tablist"
+            aria-label="정렬"
+            className="flex gap-1.5 overflow-x-auto pb-1"
+          >
+            {SORTS.map((s) => {
+              const on = sort === s.key;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setSort(s.key)}
+                  className={`${chipBase} ${on ? chipOn : chipOff}`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            role="tablist"
+            aria-label="원본 플랫폼"
+            className="flex gap-1.5 overflow-x-auto pb-1"
+          >
+            {PLATFORMS.map((item) => {
+              const on = platform === item.key;
+              return (
+                <button
+                  key={item.key || "all"}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setPlatform(item.key)}
+                  className={`${chipBase} ${on ? chipOn : chipOff}`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* 카테고리 칩(다중) — 각 칩이 자기 카테고리 틴트 색 = 색 범례.
           선택 시 텍스트색 테두리+진하게(고채도는 신호등 독점이라 저채도 틴트만 사용). */}

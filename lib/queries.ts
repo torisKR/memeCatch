@@ -17,7 +17,11 @@ export type ReactionType = Database["public"]["Enums"]["reaction_type"];
 
 /** 카드 썸네일용 — 목록 쿼리에 대표 콘텐츠 썸네일만 실어 온다 */
 export type MemeListItem = MemeRow & {
-  meme_contents?: Pick<MemeContentRow, "thumbnail_url" | "is_representative">[];
+  meme_contents?: Pick<
+    MemeContentRow,
+    "thumbnail_url" | "is_representative" | "platform" | "url"
+  >[];
+  meme_sources?: Pick<MemeSourceRow, "platform" | "source_url">[];
 };
 
 export type MemeDetail = MemeRow & {

@@ -7,6 +7,11 @@ import { CategoryTag } from "@/components/category-tag";
 import { SafetyBadge } from "@/components/safety-badge";
 import { LifeGauge } from "@/components/life-gauge";
 import type { MemeListItem, MemeRow } from "@/lib/queries";
+import {
+  SOURCE_PLATFORM_META,
+  sourcePlatformFromMeme,
+  type SourcePlatform,
+} from "@/lib/source-platform";
 
 /**
  * 밈 카드 — DESIGN §11 카드 스펙 v2 (검증 반영):
@@ -37,6 +42,10 @@ export function MemeCard({
     contents.find((c) => c.is_representative && c.thumbnail_url)?.thumbnail_url ??
     contents.find((c) => c.thumbnail_url)?.thumbnail_url ??
     null;
+  const sourcePlatform = sourcePlatformFromMeme({
+    contents,
+    sources: "meme_sources" in meme ? meme.meme_sources : [],
+  });
 
   return (
     <MotionLink
@@ -78,7 +87,10 @@ export function MemeCard({
         {/* 상단 오버레이: 카테고리 틴트칩(좌) + 미디어타입(우) */}
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
           <CategoryTag category={meme.category} className="shadow-sm" />
-          <MediaTypeBadge type={meme.media_type} />
+          <div className="flex flex-col items-end gap-1">
+            {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
+            <MediaTypeBadge type={meme.media_type} />
+          </div>
         </div>
       </div>
 
@@ -99,6 +111,14 @@ export function MemeCard({
         </div>
       </div>
     </MotionLink>
+  );
+}
+
+function SourcePlatformBadge({ platform }: { platform: SourcePlatform }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-border/70 bg-surface/90 px-2 py-1 text-[11px] font-bold tracking-tight text-foreground shadow-sm backdrop-blur-sm">
+      {SOURCE_PLATFORM_META[platform].label}
+    </span>
   );
 }
 

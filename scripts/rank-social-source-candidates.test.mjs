@@ -5,7 +5,10 @@ const source = readFileSync(new URL("./rank-social-source-candidates.mjs", impor
 
 assert.match(source, /review_status: "needs_human_source_match"/);
 assert.match(source, /source_match_score/);
-assert.match(source, /public oEmbed verified/);
+assert.match(source, /public embed\/page metadata verified/);
+assert.match(source, /public_page_title/);
+assert.match(source, /public_page_author_name/);
+assert.match(source, /metadataWeight > previousWeight/);
 assert.match(source, /derivative-content hint/);
 assert.match(source, /short generic title needs manual context review/);
 assert.doesNotMatch(source, /meme_contents|meme_sources|SUPABASE_SERVICE_ROLE_KEY/);

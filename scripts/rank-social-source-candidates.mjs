@@ -17,7 +17,7 @@ if (!inputDir || !outputPath) {
   process.exit(2);
 }
 
-const SOCIAL_FILE = /^(?:youtube-source|youtube-shorts|tiktok-oembed|instagram-oembed).*\.jsonl$/;
+const SOCIAL_FILE = /^(?:youtube-source|youtube-shorts|tiktok-oembed|instagram-oembed|tiktok-public-page|instagram-public-page).*\.jsonl$/;
 const OFFICIAL_CHANNEL = /\b(?:official|records|entertainment|broadcast|network|studios?)\b|공식|kbs|mbc|sbs|jtbc|tvn|netflix|hybe|sm entertainment|jyp entertainment|yg entertainment/i;
 const DERIVATIVE_HINT = /teaser|reaction|리액션|패러디|모음|편집|fanmade|fan made|compilation/i;
 
@@ -33,7 +33,7 @@ function tokens(value) {
 }
 
 function titleFor(row) {
-  return row.video_title ?? row.oembed_title ?? "";
+  return row.video_title ?? row.public_page_title ?? row.oembed_title ?? "";
 }
 
 function rank(row) {
@@ -48,8 +48,8 @@ function rank(row) {
   const candidateTokens = new Set(tokens(candidateTitle));
   const matchedTokens = nameTokens.filter((token) => candidateTokens.has(token));
   const tokenCoverage = nameTokens.length > 0 ? matchedTokens.length / nameTokens.length : 0;
-  const officialChannel = OFFICIAL_CHANNEL.test(String(row.channel ?? row.oembed_author_name ?? ""));
-  const oembedVerified = Boolean(row.oembed_verified_at);
+  const officialChannel = OFFICIAL_CHANNEL.test(String(row.channel ?? row.public_page_author_name ?? row.oembed_author_name ?? ""));
+  const publicMetadataVerified = Boolean(row.public_page_verified_at ?? row.oembed_verified_at);
   const derivative = DERIVATIVE_HINT.test(candidateTitle);
   const genericShortTitle = nameTokens.length <= 1 && Math.max(0, ...nameKeys.map((key) => key.length)) < 5;
 
@@ -65,9 +65,9 @@ function rank(row) {
     score += 15;
     reasons.push("official/broadcaster channel hint");
   }
-  if (oembedVerified) {
+  if (publicMetadataVerified) {
     score += 10;
-    reasons.push("public oEmbed verified");
+    reasons.push("public embed/page metadata verified");
   }
   if (derivative) {
     score -= 25;
@@ -82,21 +82,29 @@ function rank(row) {
   return { score, priority, reasons, candidateTitle };
 }
 
-const rows = [];
+const candidates = new Map();
 for (const file of readdirSync(inputDir).filter((name) => SOCIAL_FILE.test(name)).sort()) {
   for (const line of readFileSync(join(inputDir, file), "utf8").split("\n")) {
     if (!line.trim()) continue;
     const row = JSON.parse(line);
-    const ranked = rank(row);
-    rows.push({
+    const key = `${row.meme_title}\u0000${row.source_url}`;
+    const previous = candidates.get(key);
+    const metadataWeight = Number(Boolean(row.public_page_verified_at)) * 2 + Number(Boolean(row.oembed_verified_at));
+    const previousWeight = Number(Boolean(previous?.public_page_verified_at)) * 2 + Number(Boolean(previous?.oembed_verified_at));
+    if (!previous || metadataWeight > previousWeight) candidates.set(key, row);
+  }
+}
+
+const rows = [...candidates.values()].map((row) => {
+  const ranked = rank(row);
+  return {
       ...row,
       source_match_score: ranked.score,
       review_priority: ranked.priority,
       match_reasons: ranked.reasons,
       review_status: "needs_human_source_match",
-    });
-  }
-}
+  };
+});
 
 rows.sort(
   (a, b) =>

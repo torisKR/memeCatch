@@ -13,6 +13,7 @@ export type SourcePlatform = SocialPlatform | "community" | "other";
 export type PlatformReference = {
   platform?: string | null;
   url?: string | null;
+  is_representative?: boolean | null;
 };
 
 export const SOURCE_PLATFORM_META: Record<SourcePlatform, { label: string }> = {
@@ -30,7 +31,11 @@ export function sourcePlatformFromReference(
 ): SourcePlatform | null {
   if (!reference) return null;
   const value = `${reference.platform ?? ""} ${reference.url ?? ""}`.toLowerCase();
-  if (value.includes("youtube.com/shorts/") || value.includes("youtu.be/shorts/")) {
+  if (
+    value.includes("youtube shorts") ||
+    value.includes("youtube.com/shorts/") ||
+    value.includes("youtu.be/shorts/")
+  ) {
     return "youtube_shorts";
   }
   if (value.includes("youtube") || value.includes("youtu.be")) return "youtube";
@@ -47,21 +52,30 @@ export function sourcePlatformFromReference(
   return value.trim() ? "other" : null;
 }
 
-/** 대표 콘텐츠가 있으면 그것을, 없으면 출처 레코드를 카드 라벨로 사용한다. */
-export function sourcePlatformFromMeme({
+/** 대표 콘텐츠를 먼저 정렬하고, 같은 플랫폼은 한 번만 카드 라벨로 사용한다. */
+export function sourcePlatformsFromMeme({
   contents = [],
   sources = [],
 }: {
   contents?: PlatformReference[] | null;
   sources?: PlatformReference[] | null;
-}): SourcePlatform | null {
-  const contentReferences = contents ?? [];
-  const sourceReferences = sources ?? [];
-  return (
-    contentReferences.map(sourcePlatformFromReference).find(Boolean) ??
-    sourceReferences.map(sourcePlatformFromReference).find(Boolean) ??
-    null
+}): SourcePlatform[] {
+  const contentReferences = [...(contents ?? [])].sort(
+    (a, b) => Number(Boolean(b.is_representative)) - Number(Boolean(a.is_representative))
   );
+  const sourceReferences = sources ?? [];
+  const platforms = [...contentReferences, ...sourceReferences]
+    .map(sourcePlatformFromReference)
+    .filter((platform): platform is SourcePlatform => Boolean(platform));
+  return [...new Set(platforms)];
+}
+
+/** 단일 라벨만 필요한 기존 호출부를 위한 대표 플랫폼. */
+export function sourcePlatformFromMeme(args: {
+  contents?: PlatformReference[] | null;
+  sources?: PlatformReference[] | null;
+}): SourcePlatform | null {
+  return sourcePlatformsFromMeme(args)[0] ?? null;
 }
 
 export function isSocialPlatform(value: string | undefined): value is SocialPlatform {

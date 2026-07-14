@@ -4,6 +4,7 @@ import {
   countSocialPlatformReferences,
   sourcePlatformFromMeme,
   sourcePlatformFromReference,
+  sourcePlatformsFromMeme,
 } from "@/lib/source-platform";
 
 describe("source platform normalization", () => {
@@ -29,6 +30,22 @@ describe("source platform normalization", () => {
         sources: [{ platform: "커뮤니티", url: "https://namu.wiki/w/example" }],
       })
     ).toBe("tiktok");
+  });
+
+  it("orders representative content first and keeps distinct platform labels", () => {
+    expect(
+      sourcePlatformsFromMeme({
+        contents: [
+          { platform: "TikTok", url: "https://www.tiktok.com/@creator/video/1" },
+          {
+            platform: "YouTube",
+            url: "https://www.youtube.com/shorts/abc123",
+            is_representative: true,
+          },
+          { platform: "YouTube", url: "https://www.youtube.com/watch?v=abc123" },
+        ],
+      })
+    ).toEqual(["youtube_shorts", "tiktok", "youtube"]);
   });
 
   it("counts unique memes for each social platform", () => {

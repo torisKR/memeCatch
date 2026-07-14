@@ -9,7 +9,7 @@ import { LifeGauge } from "@/components/life-gauge";
 import type { MemeListItem, MemeRow } from "@/lib/queries";
 import {
   SOURCE_PLATFORM_META,
-  sourcePlatformFromMeme,
+  sourcePlatformsFromMeme,
   type SourcePlatform,
 } from "@/lib/source-platform";
 
@@ -42,7 +42,7 @@ export function MemeCard({
     contents.find((c) => c.is_representative && c.thumbnail_url)?.thumbnail_url ??
     contents.find((c) => c.thumbnail_url)?.thumbnail_url ??
     null;
-  const sourcePlatform = sourcePlatformFromMeme({
+  const sourcePlatforms = sourcePlatformsFromMeme({
     contents,
     sources: "meme_sources" in meme ? meme.meme_sources : [],
   });
@@ -88,7 +88,14 @@ export function MemeCard({
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
           <CategoryTag category={meme.category} className="shadow-sm" />
           <div className="flex flex-col items-end gap-1">
-            {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
+            {sourcePlatforms.slice(0, 2).map((platform) => (
+              <SourcePlatformBadge key={platform} platform={platform} />
+            ))}
+            {sourcePlatforms.length > 2 && (
+              <span className="inline-flex items-center rounded-full border border-border/70 bg-surface/90 px-2 py-1 text-[11px] font-bold text-muted shadow-sm backdrop-blur-sm">
+                +{sourcePlatforms.length - 2}
+              </span>
+            )}
             <MediaTypeBadge type={meme.media_type} />
           </div>
         </div>
@@ -115,8 +122,19 @@ export function MemeCard({
 }
 
 function SourcePlatformBadge({ platform }: { platform: SourcePlatform }) {
+  const tone: Record<SourcePlatform, string> = {
+    youtube: "border-red-200 bg-red-50/95 text-red-700",
+    youtube_shorts: "border-rose-200 bg-rose-50/95 text-rose-700",
+    tiktok: "border-cyan-200 bg-cyan-50/95 text-cyan-800",
+    instagram: "border-fuchsia-200 bg-fuchsia-50/95 text-fuchsia-800",
+    community: "border-border/70 bg-surface/90 text-foreground",
+    other: "border-border/70 bg-surface/90 text-foreground",
+  };
   return (
-    <span className="inline-flex items-center rounded-full border border-border/70 bg-surface/90 px-2 py-1 text-[11px] font-bold tracking-tight text-foreground shadow-sm backdrop-blur-sm">
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold tracking-tight shadow-sm backdrop-blur-sm ${tone[platform]}`}
+    >
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
       {SOURCE_PLATFORM_META[platform].label}
     </span>
   );

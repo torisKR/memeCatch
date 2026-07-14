@@ -23,6 +23,8 @@ export async function getSocialPlatformCounts(): Promise<SocialPlatformCounts> {
       const { data, error } = await supabase
         .from("meme_contents")
         .select("meme_id, platform, url")
+        .eq("moderation_status", "approved")
+        .neq("availability", "dead")
         .order("id", { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
       if (error || !data) return emptySocialPlatformCounts();

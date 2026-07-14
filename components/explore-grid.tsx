@@ -53,6 +53,34 @@ function exploreSelect(platform?: SocialPlatform) {
   return `*, ${contents}, meme_sources(platform, source_url)`;
 }
 
+function withPublicContent<T extends {
+  eq: (column: string, value: string) => T;
+  neq: (column: string, value: string) => T;
+}>(query: T): T {
+  return query
+    .eq("meme_contents.moderation_status", "approved")
+    .neq("meme_contents.availability", "dead");
+}
+
+function withPlatform<T extends {
+  ilike: (column: string, value: string) => T;
+  not: (column: string, operator: string, value: string) => T;
+}>(query: T, platform?: SocialPlatform): T {
+  if (platform === "youtube") {
+    return query
+      .ilike("meme_contents.platform", "youtube")
+      .not("meme_contents.url", "ilike", "%/shorts/%");
+  }
+  if (platform === "youtube_shorts") {
+    return query
+      .ilike("meme_contents.platform", "youtube")
+      .ilike("meme_contents.url", "%/shorts/%");
+  }
+  if (platform === "tiktok") return query.ilike("meme_contents.platform", "tiktok");
+  if (platform === "instagram") return query.ilike("meme_contents.platform", "instagram");
+  return query;
+}
+
 export const YEAR_RANGES: Record<string, [number, number]> = {
   "2020s": [2020, 2029],
   "2010s": [2010, 2019],
@@ -77,6 +105,7 @@ export function buildMemesQuery(
         p_limit: SEARCH_LIMIT,
       })
       .select(exploreSelect(filters.platform));
+    if (filters.platform) sq = withPublicContent(sq);
     if (filters.categories.length > 0) sq = sq.in("category", filters.categories);
     if (filters.difficulty) sq = sq.eq("difficulty", filters.difficulty);
     if (filters.lifecycle) sq = sq.eq("lifecycle_status", filters.lifecycle);
@@ -85,14 +114,7 @@ export function buildMemesQuery(
       const [lo, hi] = YEAR_RANGES[filters.year];
       sq = sq.gte("origin_year", lo).lte("origin_year", hi);
     }
-    if (filters.platform === "youtube") sq = sq.ilike("meme_contents.platform", "youtube");
-    if (filters.platform === "youtube_shorts") {
-      sq = sq
-        .ilike("meme_contents.platform", "youtube")
-        .ilike("meme_contents.url", "%/shorts/%");
-    }
-    if (filters.platform === "tiktok") sq = sq.ilike("meme_contents.platform", "tiktok");
-    if (filters.platform === "instagram") sq = sq.ilike("meme_contents.platform", "instagram");
+    sq = withPlatform(sq, filters.platform);
     if (filters.sort === "controversial") sq = sq.eq("sentiment", "controversial");
     if (filters.sort === "recent" || filters.sort === "controversial") {
       sq = sq.order("published_at", { ascending: false, nullsFirst: false });
@@ -107,6 +129,7 @@ export function buildMemesQuery(
     .from("memes")
     .select(exploreSelect(filters.platform))
     .in("moderation_status", ["approved", "limited"]);
+  if (filters.platform) q = withPublicContent(q);
 
   if (filters.categories.length > 0) q = q.in("category", filters.categories);
   if (filters.difficulty) q = q.eq("difficulty", filters.difficulty);
@@ -116,14 +139,7 @@ export function buildMemesQuery(
     const [lo, hi] = YEAR_RANGES[filters.year];
     q = q.gte("origin_year", lo).lte("origin_year", hi);
   }
-  if (filters.platform === "youtube") q = q.ilike("meme_contents.platform", "youtube");
-  if (filters.platform === "youtube_shorts") {
-    q = q
-      .ilike("meme_contents.platform", "youtube")
-      .ilike("meme_contents.url", "%/shorts/%");
-  }
-  if (filters.platform === "tiktok") q = q.ilike("meme_contents.platform", "tiktok");
-  if (filters.platform === "instagram") q = q.ilike("meme_contents.platform", "instagram");
+  q = withPlatform(q, filters.platform);
   if (filters.sort === "controversial") q = q.eq("sentiment", "controversial");
 
   // 정렬 매핑: trending/popular→trend_score desc, recent/controversial→published_at desc

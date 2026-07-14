@@ -32,6 +32,13 @@ const PLATFORMS = [
   { key: "instagram", label: "Instagram" },
 ] as const;
 
+const PLATFORM_DOT: Record<SocialPlatform, string> = {
+  youtube: "bg-red-500",
+  youtube_shorts: "bg-rose-500",
+  tiktok: "bg-cyan-500",
+  instagram: "bg-fuchsia-500",
+};
+
 const YEARS = [
   { key: "2020s", label: "2020년대" },
   { key: "2010s", label: "2010년대" },
@@ -60,7 +67,7 @@ const LIFECYCLE_ENTRIES = Object.entries(LIFECYCLE_STATUS) as [
 ][];
 
 const chipBase =
-  "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-[color,border-color,background-color,transform] duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const chipOff = "border-border bg-surface text-muted hover:border-accent hover:text-accent";
 const chipOn = "border-accent bg-accent-soft font-semibold text-accent";
 
@@ -305,6 +312,12 @@ export function ExploreFilters({
                     unavailable && !on ? "border-dashed opacity-70" : ""
                   }`}
                 >
+                  {item.key && (
+                    <span
+                      aria-hidden
+                      className={`h-2 w-2 rounded-full ${PLATFORM_DOT[item.key as SocialPlatform]}`}
+                    />
+                  )}
                   {item.label}
                   {count !== null && (
                     <span

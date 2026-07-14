@@ -6,6 +6,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { parseNativeSocialContent } from "./social-content.mjs";
 
 const [inDir, outDir, batchSizeArg] = process.argv.slice(2);
 if (!inDir || !outDir) {
@@ -34,11 +35,6 @@ function detectPlatform(url, fallback) {
   if (/x\.com|twitter\.com/i.test(url)) return "X";
   return fallback ?? "Community";
 }
-function youtubeId(url) {
-  const m = url?.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
-  return m?.[1] ?? null;
-}
-
 const seen = new Set();
 const rows = [];
 for (const f of readdirSync(inDir).filter((f) => f.endsWith(".jsonl")).sort()) {
@@ -76,8 +72,8 @@ let fileIdx = 0;
 for (let i = 0; i < rows.length; i += BATCH) {
   const chunk = rows.slice(i, i + BATCH);
   const stmts = chunk.map(({ m, year, category, media, safety, difficulty, sentiment, url, lifecycle, slug }) => {
-    const platform = detectPlatform(url, m.platform);
-    const yid = platform === "YouTube" ? youtubeId(url) : null;
+    const social = parseNativeSocialContent(url);
+    const platform = social?.platform ?? detectPlatform(url, m.platform);
     const usage = m.usage_note
       ? `jsonb_build_object('work',${q(safety)},'friends','green','family',${q(safety)},'sns',${q(safety)})`
       : `'{}'::jsonb`;
@@ -95,10 +91,15 @@ with ins as (
   returning id
 )
 insert into meme_sources (meme_id, platform, source_url, copyright_status)
-select id, ${q(platform ?? "Community")}, ${q(url)}, ${url ? "'embeddable'" : "'unknown'"}::copyright_status from ins where ${url ? "true" : "false"};
-${yid ? `insert into meme_contents (meme_id, type, platform, content_id, url, is_representative)
-select id, 'embed'::media_type, 'YouTube', ${q(yid)}, ${q(url)}, true from memes where slug = ${q(slug)}
-on conflict do nothing;` : ""}`;
+select id, ${q(platform ?? "Community")}, ${q(url)}, ${social ? "'embeddable'" : "'unknown'"}::copyright_status from ins where ${url ? "true" : "false"};
+${social ? `with ins as (
+  select id from memes where slug = ${q(slug)}
+)
+insert into meme_contents (meme_id, type, platform, content_id, url, thumbnail_url, is_representative)
+select id, 'embed'::media_type, ${q(social.platform)}, ${q(social.contentId)}, ${q(social.url)}, ${q(social.thumbnailUrl)}, true from ins
+where not exists (
+  select 1 from meme_contents existing where existing.meme_id = ins.id and existing.url = ${q(social.url)}
+);` : ""}`;
   });
   fileIdx++;
   writeFileSync(

@@ -29,6 +29,15 @@ export async function generateMetadata({
     title: col.title,
     description: col.description,
     alternates: { canonical: `/collections/${col.slug}` },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: col.title,
+      description: col.description,
+      url: `/collections/${col.slug}`,
+    },
   };
 }
 
@@ -162,7 +171,7 @@ export default async function CollectionPage({
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href={`/explore${col.exploreQuery ? `?${col.exploreQuery}` : ""}`}
-              className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
+              className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
             >
               전체 탐색에서 더 보기 <span aria-hidden className="ml-1">→</span>
             </Link>

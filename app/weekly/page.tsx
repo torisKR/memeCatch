@@ -13,11 +13,23 @@ import { WeeklyDigest } from "@/components/weekly-digest";
  */
 export const revalidate = 3600;
 
+const WEEKLY_TITLE = "이번 주 밈 결산 — 급상승·신규 총정리";
+const WEEKLY_DESCRIPTION =
+  "이번 주 한국에서 급상승한 밈, 새로 등록된 밈, 카테고리 분포를 한 번에 모아봤어요.";
+
 export const metadata: Metadata = {
-  title: "이번 주 밈 결산 — 급상승·신규 총정리",
-  description:
-    "이번 주 한국에서 급상승한 밈, 새로 등록된 밈, 카테고리 분포를 한 번에 모아봤어요.",
+  title: WEEKLY_TITLE,
+  description: WEEKLY_DESCRIPTION,
   alternates: { canonical: "/weekly" },
+  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+  openGraph: {
+    type: "website",
+    siteName: "밈캐치",
+    locale: "ko_KR",
+    title: WEEKLY_TITLE,
+    description: WEEKLY_DESCRIPTION,
+    url: "/weekly",
+  },
 };
 
 export default async function WeeklyPage() {
@@ -92,7 +104,7 @@ export default async function WeeklyPage() {
       <div className="mt-10 flex flex-wrap gap-3">
         <Link
           href="/rankings"
-          className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
+          className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
         >
           전체 랭킹 보기 <span aria-hidden className="ml-1">→</span>
         </Link>

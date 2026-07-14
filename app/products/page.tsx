@@ -11,7 +11,20 @@ import { PAGE_COPY } from "@/lib/i18n-pages";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = PAGE_COPY[await getRequestLocale()];
-  return { title: copy.productTitle, description: copy.productDescription, alternates: { canonical: "/products" } };
+  return {
+    title: copy.productTitle,
+    description: copy.productDescription,
+    alternates: { canonical: "/products" },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: copy.productTitle,
+      description: copy.productDescription,
+      url: "/products",
+    },
+  };
 }
 
 export const revalidate = 3600;

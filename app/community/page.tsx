@@ -17,9 +17,23 @@ import {
  * // TODO: types regen 후 정리
  */
 
+const COMMUNITY_DESCRIPTION =
+  "밈 추천·추억·토론 — 밈캐치 사람들과 자유롭게 이야기해요.";
+
 export const metadata: Metadata = {
   title: "커뮤니티",
-  description: "밈 추천·추억·토론 — 밈캐치 사람들과 자유롭게 이야기해요.",
+  description: COMMUNITY_DESCRIPTION,
+  // 루트 canonical("/") 상속 방지 — ?page= 쿼리 변형은 기본 경로로 수렴
+  alternates: { canonical: "/community" },
+  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+  openGraph: {
+    type: "website",
+    siteName: "밈캐치",
+    locale: "ko_KR",
+    title: "커뮤니티",
+    description: COMMUNITY_DESCRIPTION,
+    url: "/community",
+  },
 };
 
 export default async function CommunityPage({
@@ -63,7 +77,7 @@ export default async function CommunityPage({
         </div>
         <Link
           href="/community/new"
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
             <path d="M12 5v14M5 12h14" />
@@ -101,7 +115,7 @@ export default async function CommunityPage({
           actions={
             <Link
               href="/community/new"
-              className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
+              className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
             >
               첫 글 쓰러 가기
             </Link>

@@ -44,12 +44,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
   const meme = await getMemeByShortId(shortIdFromParam(key));
   if (!meme) return { title: "밈을 찾을 수 없어요" };
+  const path = memePathFrom(meme.short_id, meme.slug);
+  const description = `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
   return {
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
     title: `${meme.title} 뜻`,
-    description: `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`,
+    description,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
-    alternates: { canonical: memePathFrom(meme.short_id, meme.slug) },
+    alternates: { canonical: path },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 밈별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: `${meme.title} 뜻`,
+      description,
+      url: path,
+    },
   };
 }
 

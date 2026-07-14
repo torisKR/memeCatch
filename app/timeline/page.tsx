@@ -101,6 +101,15 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "한국 밈 연표 — 1990년대부터 지금까지",
     description,
     alternates: { canonical: "/timeline" },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: "한국 밈 연표 — 1990년대부터 지금까지",
+      description,
+      url: "/timeline",
+    },
   };
 }
 

@@ -88,7 +88,8 @@ export default function RootLayout({
               id="adsense"
               src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
               crossOrigin="anonymous"
-              strategy="lazyOnload"
+              // afterInteractive — lazyOnload면 AdSense 심사 크롤러가 광고 코드를 감지 못할 수 있음
+              strategy="afterInteractive"
             />
           )}
           {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}

@@ -16,10 +16,22 @@ import type { Database } from "@/lib/database.types";
 /** 요청별 문서 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 600;
 
+const RANKINGS_DESCRIPTION =
+  "오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.";
+
 export const metadata: Metadata = {
   title: "랭킹",
-  description: "오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.",
+  description: RANKINGS_DESCRIPTION,
   alternates: { canonical: "/rankings" },
+  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+  openGraph: {
+    type: "website",
+    siteName: "밈캐치",
+    locale: "ko_KR",
+    title: "랭킹",
+    description: RANKINGS_DESCRIPTION,
+    url: "/rankings",
+  },
 };
 
 type MemeRow = Pick<

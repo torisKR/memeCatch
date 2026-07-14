@@ -47,7 +47,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const post = await getPost(id);
   if (!post) return { title: "글을 찾을 수 없어요" };
-  return { title: post.title, description: post.body.slice(0, 120) };
+  const description = post.body.slice(0, 120);
+  return {
+    title: post.title,
+    description,
+    // 루트 canonical("/") 상속 방지 — 글별 canonical 명시
+    alternates: { canonical: `/community/${post.id}` },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: post.title,
+      description,
+      url: `/community/${post.id}`,
+    },
+  };
 }
 
 export default async function CommunityPostPage({ params }: Props) {

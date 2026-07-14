@@ -11,7 +11,20 @@ import type { Locale } from "@/lib/i18n";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = PAGE_COPY[await getRequestLocale()];
-  return { title: copy.newsTitle, description: copy.newsDescription, alternates: { canonical: "/news" } };
+  return {
+    title: copy.newsTitle,
+    description: copy.newsDescription,
+    alternates: { canonical: "/news" },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: copy.newsTitle,
+      description: copy.newsDescription,
+      url: "/news",
+    },
+  };
 }
 
 export const revalidate = 1800;

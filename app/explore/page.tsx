@@ -30,11 +30,22 @@ import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
  *    반드시 동기화한다("use client" 경계라 런타임 공유 불가 → 의도적 복제).
  */
 
+const EXPLORE_DESCRIPTION =
+  "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.";
+
 export const metadata: Metadata = {
   title: "밈 탐색",
-  description:
-    "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.",
+  description: EXPLORE_DESCRIPTION,
   alternates: { canonical: "/explore" },
+  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+  openGraph: {
+    type: "website",
+    siteName: "밈캐치",
+    locale: "ko_KR",
+    title: "밈 탐색",
+    description: EXPLORE_DESCRIPTION,
+    url: "/explore",
+  },
 };
 
 // components/explore-grid.tsx의 PAGE_SIZE와 동일하게 유지

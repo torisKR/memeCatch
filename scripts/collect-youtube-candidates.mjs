@@ -17,9 +17,19 @@ const [inputPath, outputPath, ...args] = process.argv.slice(2);
 const maxArg = args.find((arg) => arg.startsWith("--max="));
 const perQueryArg = args.find((arg) => arg.startsWith("--per-query="));
 const offsetArg = args.find((arg) => arg.startsWith("--offset="));
+const yearsArg = args.find((arg) => arg.startsWith("--years="));
+const maxPerYearArg = args.find((arg) => arg.startsWith("--max-per-year="));
 const max = Math.max(1, Math.min(500, Number(maxArg?.slice(6) ?? 100)));
 const perQuery = Math.max(1, Math.min(20, Number(perQueryArg?.slice(12) ?? 10)));
 const offset = Math.max(0, Number(offsetArg?.slice(9) ?? 0));
+const requestedYears = new Set(
+  (yearsArg?.slice(8) ?? "")
+    .split(",")
+    .filter(Boolean)
+    .map(Number)
+    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2020)
+);
+const maxPerYear = maxPerYearArg ? Math.max(1, Math.min(50, Number(maxPerYearArg.slice(15)))) : null;
 
 if (!inputPath || !outputPath) {
   console.error("usage: node scripts/collect-youtube-candidates.mjs <jsonl-file-or-directory> <output.jsonl> [--max=100] [--per-query=10]");
@@ -142,7 +152,16 @@ async function fetchCandidates(meme) {
   }));
 }
 
-const memes = readMemes(inputPath).slice(offset, offset + max);
+const sourceMemes = readMemes(inputPath).filter((meme) => requestedYears.size === 0 || requestedYears.has(meme.year));
+const selectedMemes = maxPerYear
+  ? sourceMemes.filter((meme, index, all) => all.findIndex((candidate) => candidate.year === meme.year && candidate.title === meme.title) >= 0)
+  : sourceMemes;
+const memes = maxPerYear
+  ? [...new Set(selectedMemes.map((meme) => meme.year))]
+      .sort((a, b) => a - b)
+      .flatMap((year) => selectedMemes.filter((meme) => meme.year === year).slice(0, maxPerYear))
+      .slice(offset, offset + max)
+  : selectedMemes.slice(offset, offset + max);
 const results = [];
 const errors = [];
 for (const [index, meme] of memes.entries()) {

@@ -6,4 +6,6 @@ const source = readFileSync(new URL("./collect-youtube-candidates.mjs", import.m
 assert.match(source, /review_status: "needs_human_source_match"/);
 assert.match(source, /origin_year: meme\.year/);
 assert.match(source, /https:\/\/www\.youtube\.com\/watch\?v=\$\{video\.videoId\}/);
+assert.match(source, /--years=/);
+assert.match(source, /--max-per-year=/);
 console.log("collect-youtube-candidates safeguards OK");

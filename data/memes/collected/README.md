@@ -59,3 +59,14 @@ node scripts/collect-instagram-oembed-candidates.mjs \
 
 `instagram-oembed-candidates-2026-07-14-batch-01.jsonl`은 공개 검색 인덱스에서
 발견하고 oEmbed 응답을 확인한 후보 3건이다. 모두 원본성 검수 전이며 자동 공개하지 않는다.
+
+TikTok은 공개 웹에 이미 색인된 최종 `tiktok.com/@.../video/...` URL만 시드로 받는다.
+수집기는 TikTok 페이지를 크롤링하거나 로그인하지 않고 oEmbed로 공개 임베드 가능 여부만
+검증한다. `tiktok-public-index-seeds-2026-07-14.jsonl`의 시드 7건은
+`tiktok-oembed-candidates-2026-07-14-batch-01.jsonl`로 검증해 사용한다.
+
+```sh
+node scripts/collect-tiktok-oembed-candidates.mjs \
+  data/memes/collected/tiktok-public-index-seeds-2026-07-14.jsonl \
+  data/memes/collected/tiktok-oembed-candidates-YYYY-MM-DD.jsonl
+```

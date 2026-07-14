@@ -27,3 +27,20 @@ node scripts/collect-youtube-candidates.mjs \
 공개 검색은 서비스에 부담을 주지 않도록 요청 사이에 0.7초의 간격을 둔다.
 `--years`와 `--max-per-year`를 사용하면 2000~2020년 각 연도를 고르게
 표본화할 수 있다.
+
+YouTube Shorts도 동일하게 공개 검색 후보만 별도로 수집합니다. `shortsLockupViewModel`의
+`reelWatchEndpoint`가 있는 결과만 `https://www.youtube.com/shorts/{videoId}` 최종 URL로 기록합니다.
+`youtube-shorts-source-candidates-2026-07-14-batch-01`~`05`에는 대표 가능한 15개
+연도에서 수집한 후보 169건이 들어 있으며, 모두 `needs_human_source_match` 상태다.
+
+```sh
+node scripts/collect-youtube-candidates.mjs \
+  data/memes/verified \
+  data/memes/collected/youtube-shorts-source-candidates-YYYY-MM-DD.jsonl \
+  --format=shorts --max=100 --per-query=10
+```
+
+TikTok과 Instagram은 로그인·권한 또는 실제 공개 게시물의 최종 URL 없이 신뢰할 수
+있는 원본성을 판별할 수 없다. 따라서 두 플랫폼은 TikTok `video.list` 동의 가져오기나
+제보 양식으로 받은 `tiktok.com/@.../video/...`, `instagram.com/reel|p|tv/...` URL만
+검수 후보로 수집한다. 검색 스니펫이나 단축 URL은 데이터에 넣지 않는다.

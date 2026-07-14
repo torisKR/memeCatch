@@ -19,6 +19,7 @@ const perQueryArg = args.find((arg) => arg.startsWith("--per-query="));
 const offsetArg = args.find((arg) => arg.startsWith("--offset="));
 const yearsArg = args.find((arg) => arg.startsWith("--years="));
 const maxPerYearArg = args.find((arg) => arg.startsWith("--max-per-year="));
+const formatArg = args.find((arg) => arg.startsWith("--format="));
 const max = Math.max(1, Math.min(500, Number(maxArg?.slice(6) ?? 100)));
 const perQuery = Math.max(1, Math.min(20, Number(perQueryArg?.slice(12) ?? 10)));
 const offset = Math.max(0, Number(offsetArg?.slice(9) ?? 0));
@@ -30,9 +31,14 @@ const requestedYears = new Set(
     .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2020)
 );
 const maxPerYear = maxPerYearArg ? Math.max(1, Math.min(50, Number(maxPerYearArg.slice(15)))) : null;
+const format = formatArg?.slice(9) ?? "video";
 
 if (!inputPath || !outputPath) {
-  console.error("usage: node scripts/collect-youtube-candidates.mjs <jsonl-file-or-directory> <output.jsonl> [--max=100] [--per-query=10]");
+  console.error("usage: node scripts/collect-youtube-candidates.mjs <jsonl-file-or-directory> <output.jsonl> [--max=100] [--per-query=10] [--format=video|shorts]");
+  process.exit(2);
+}
+if (format !== "video" && format !== "shorts") {
+  console.error("--format must be either video or shorts");
   process.exit(2);
 }
 
@@ -117,6 +123,38 @@ function videoCandidates(data) {
   });
 }
 
+function shortsCandidates(data) {
+  const found = [];
+  const visit = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    const short = node.shortsLockupViewModel;
+    const endpoint = short?.onTap?.innertubeCommand?.reelWatchEndpoint;
+    if (short && endpoint?.videoId) {
+      const accessibilityText = String(short.accessibilityText ?? "");
+      const videoTitle = accessibilityText.split(",")[0]?.trim() ?? "";
+      found.push({
+        videoId: endpoint.videoId,
+        videoTitle,
+        channel: "",
+        publishedText: "",
+        length: "Shorts",
+      });
+    }
+    for (const value of Object.values(node)) visit(value);
+  };
+  visit(data);
+  const seen = new Set();
+  return found.filter((video) => {
+    if (seen.has(video.videoId)) return false;
+    seen.add(video.videoId);
+    return Boolean(video.videoTitle);
+  });
+}
+
 function searchUrl(query) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
@@ -126,7 +164,7 @@ async function sleep(milliseconds) {
 }
 
 async function fetchCandidates(meme) {
-  const query = `${meme.title} 공식`;
+  const query = format === "shorts" ? `${meme.title} shorts` : `${meme.title} 공식`;
   const response = await fetch(searchUrl(query), {
     headers: {
       "accept-language": "ko-KR,ko;q=0.9",
@@ -135,12 +173,13 @@ async function fetchCandidates(meme) {
   });
   if (!response.ok) throw new Error(`YouTube search HTTP ${response.status}`);
   const data = extractInitialData(await response.text());
-  return videoCandidates(data).slice(0, perQuery).map((video) => ({
+  const candidates = format === "shorts" ? shortsCandidates(data) : videoCandidates(data);
+  return candidates.slice(0, perQuery).map((video) => ({
     meme_title: meme.title,
     origin_year: meme.year,
     aliases: meme.aliases,
-    source_platform: "YouTube",
-    source_url: `https://www.youtube.com/watch?v=${video.videoId}`,
+    source_platform: format === "shorts" ? "YouTube Shorts" : "YouTube",
+    source_url: format === "shorts" ? `https://www.youtube.com/shorts/${video.videoId}` : `https://www.youtube.com/watch?v=${video.videoId}`,
     video_title: video.videoTitle,
     channel: video.channel,
     published_text: video.publishedText,

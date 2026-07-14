@@ -11,3 +11,9 @@ and rights before the normal moderation workflow can promote it.
 
 The companion `.errors.json` file records the one discovery candidate that had
 no usable Wikimedia introduction and was therefore not staged.
+
+`social-source-ranking-2026-07-14.jsonl` ranks the review-only social candidates
+already collected for existing memes. The score is only a triage signal based
+on title/alias overlap, official-channel hints, derivative-content hints, and
+public oEmbed verification. It never changes `review_status` and must not be
+used as automatic publication approval.

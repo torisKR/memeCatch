@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireOperatorPage } from "@/app/admin/require-operator";
 import { OverdueBadge } from "@/components/admin/badges";
 import { isSubmissionOverdue } from "@/components/admin/constants";
 import { SubmissionReview } from "@/components/admin/submission-review";
@@ -23,10 +23,8 @@ export default async function SubmissionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
+  const { supabase, user } = await requireOperatorPage(`/admin/submissions/${id}`);
 
   const { data: submission } = await supabase
     .from("meme_submissions")

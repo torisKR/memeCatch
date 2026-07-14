@@ -90,12 +90,20 @@ const CSP_REPORT_ONLY = [
 const nextConfig: NextConfig = {
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
   outputFileTracingRoot: __dirname,
+  // x-powered-by 헤더 제거 — 프레임워크 버전 노출 방지
+  poweredByHeader: false,
   // 기본 보안 헤더 — CSP는 임베드·인라인 스크립트 회귀 위험이 있어 Report-Only로만 관찰(enforce 전환 금지)
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: [
+          // HSTS 보강 — Vercel 기본값(max-age=63072000)을 명시 헤더로 덮어써
+          // includeSubDomains·preload까지 적용한다.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

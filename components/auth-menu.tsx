@@ -111,6 +111,7 @@ function LoggedInMenu({
   nickname: string;
   reduce: boolean | null;
 }) {
+  const { messages } = useLocale();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -155,7 +156,7 @@ function LoggedInMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`${nickname} 메뉴`}
+        aria-label={`${nickname} · ${messages.accountMenu}`}
         className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-strong text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <span aria-hidden>{initial}</span>
@@ -165,7 +166,7 @@ function LoggedInMenu({
         {open && (
           <motion.div
             role="menu"
-            aria-label="내 계정"
+            aria-label={messages.accountMenu}
             initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -6 }}
             animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
@@ -177,7 +178,7 @@ function LoggedInMenu({
               <p className="truncate text-sm font-semibold text-foreground">
                 {nickname}
               </p>
-              <p className="text-xs text-muted">님, 어서 오세요</p>
+              <p className="text-xs text-muted">{messages.greeting}</p>
             </div>
             <div className="my-1 h-px bg-border" />
             <Link
@@ -187,7 +188,7 @@ function LoggedInMenu({
               className={itemClass}
               onClick={() => setOpen(false)}
             >
-              MY
+              {messages.my}
             </Link>
             <Link
               href="/my#saved"
@@ -195,7 +196,7 @@ function LoggedInMenu({
               className={itemClass}
               onClick={() => setOpen(false)}
             >
-              저장한 밈
+              {messages.savedMemes}
             </Link>
             <div className="my-1 h-px bg-border" />
             <form action={signOut}>
@@ -204,7 +205,7 @@ function LoggedInMenu({
                 role="menuitem"
                 className="flex h-11 w-full items-center rounded-lg px-3 text-left text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:bg-surface-2 focus-visible:text-foreground focus-visible:outline-none"
               >
-                로그아웃
+                {messages.logout}
               </button>
             </form>
           </motion.div>

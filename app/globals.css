@@ -282,7 +282,9 @@ html:lang(zh-Hans) body {
 .hero-marquee-track {
   animation: hero-marquee 36s linear infinite;
 }
-.hero-marquee:hover .hero-marquee-track {
+/* hover·키보드 포커스 시 정지 — WCAG 2.2.2(움직임 일시정지 수단) */
+.hero-marquee:hover .hero-marquee-track,
+.hero-marquee:focus-within .hero-marquee-track {
   animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { r2Configured, r2Put } from "@/lib/r2.server";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-shared";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * 제보 이미지 업로드 — 서버 전용 경로.
@@ -18,6 +19,15 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ ok: false, error: "login_required" }, { status: 401 });
+  }
+
+  // 남용 억제 — 인증 사용자당 분당 10회 (인스턴스 로컬 best-effort, lib/rate-limit.ts 참고)
+  const rl = rateLimit(`upload:${user.id}`, { limit: 10, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
   }
 
   const form = await req.formData().catch(() => null);

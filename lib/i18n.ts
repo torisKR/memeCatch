@@ -64,8 +64,10 @@ const MESSAGES = {
   ko: {
     brand: "밈캐치", home: "밈캐치 홈", search: "밈 검색", searchPlaceholder: "밈 검색",
     explore: "탐색", timeline: "연표", community: "커뮤니티", submit: "제보", my: "MY", login: "로그인",
+    savedMemes: "저장한 밈", logout: "로그아웃", greeting: "님, 어서 오세요", accountMenu: "내 계정",
     random: "아무 밈이나 보기", language: "언어 설정", languageMenu: "언어 선택",
     footerNav: "사이트 정보", about: "밈캐치 소개", privacy: "개인정보처리방침", terms: "이용약관",
+    rankings: "랭킹",
     news: "세대별 밈 소식", products: "밈 상품", donate: "후원하기", legalSummary: "운영·저작권 안내",
     donateCardTitle: "이 사전, 도움이 되셨나요?",
     donateCardBody: "밈캐치는 1인이 광고·후원으로 운영하는 비영리 밈 사전이에요. 커피 한 잔이면 다음 밈도 계속 기록할 수 있어요.",
@@ -76,8 +78,10 @@ const MESSAGES = {
   en: {
     brand: "MemeCatch", home: "MemeCatch home", search: "Search memes", searchPlaceholder: "Search memes",
     explore: "Explore", timeline: "Timeline", community: "Community", submit: "Submit", my: "MY", login: "Log in",
+    savedMemes: "Saved memes", logout: "Log out", greeting: "Welcome back", accountMenu: "My account",
     random: "Show a random meme", language: "Language", languageMenu: "Choose language",
     footerNav: "Site information", about: "About MemeCatch", privacy: "Privacy", terms: "Terms",
+    rankings: "Rankings",
     news: "Meme news by age", products: "Meme picks", donate: "Support us", legalSummary: "About & copyright",
     donateCardTitle: "Did this help?",
     donateCardBody: "MemeCatch is a non-profit meme dictionary run by one person on ads and donations. A coffee keeps the next meme documented.",
@@ -88,8 +92,10 @@ const MESSAGES = {
   ja: {
     brand: "MemeCatch", home: "MemeCatch ホーム", search: "ミームを検索", searchPlaceholder: "ミームを検索",
     explore: "探す", timeline: "年表", community: "コミュニティ", submit: "投稿", my: "MY", login: "ログイン",
+    savedMemes: "保存したミーム", logout: "ログアウト", greeting: "さん、ようこそ", accountMenu: "マイアカウント",
     random: "ランダムなミームを見る", language: "言語", languageMenu: "言語を選択",
     footerNav: "サイト情報", about: "MemeCatchについて", privacy: "プライバシー", terms: "利用規約",
+    rankings: "ランキング",
     news: "世代別ミーム情報", products: "ミーム商品", donate: "支援する", legalSummary: "運営・著作権について",
     donateCardTitle: "お役に立ちましたか？",
     donateCardBody: "MemeCatchは個人が広告と支援で運営する非営利ミーム辞典です。コーヒー一杯で次のミームも記録し続けられます。",
@@ -100,8 +106,10 @@ const MESSAGES = {
   zh: {
     brand: "MemeCatch", home: "MemeCatch 首页", search: "搜索迷因", searchPlaceholder: "搜索迷因",
     explore: "发现", timeline: "时间线", community: "社区", submit: "投稿", my: "我的", login: "登录",
+    savedMemes: "收藏的迷因", logout: "退出登录", greeting: "欢迎回来", accountMenu: "我的账户",
     random: "随机查看迷因", language: "语言", languageMenu: "选择语言",
     footerNav: "网站信息", about: "关于 MemeCatch", privacy: "隐私政策", terms: "使用条款",
+    rankings: "排行榜",
     news: "分年龄迷因资讯", products: "迷因好物", donate: "支持我们", legalSummary: "运营与版权说明",
     donateCardTitle: "这份词典对你有帮助吗？",
     donateCardBody: "MemeCatch 是个人以广告和支持运营的非营利迷因词典。一杯咖啡就能让下一个迷因继续被记录。",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireOperatorPage } from "@/app/admin/require-operator";
 import { ModerationBadge, SafetyBadge } from "@/components/admin/badges";
 import { LIFECYCLE_STATUS, MODERATION_STATUS } from "@/lib/labels";
 import type { ModerationStatus } from "@/components/admin/constants";
@@ -13,8 +13,9 @@ export default async function AdminMemesPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
+  // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
+  const { supabase } = await requireOperatorPage("/admin/memes");
   const { q = "", status = "" } = await searchParams;
-  const supabase = await createClient();
 
   let query = supabase
     .from("memes")

@@ -1,23 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireOperatorPage } from "@/app/admin/require-operator";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hoursAgoIso } from "@/components/admin/constants";
 
 export const metadata = { title: "대시보드" };
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login?next=/admin");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") redirect("/");
+  const { supabase } = await requireOperatorPage("/admin");
 
   const admin = createAdminClient();
   const dayAgo = hoursAgoIso(24);

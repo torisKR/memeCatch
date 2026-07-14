@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireOperatorPage } from "@/app/admin/require-operator";
 import { ModerationBadge } from "@/components/admin/badges";
 import { MemeEditForm } from "@/components/admin/meme-edit-form";
 import { MemeStatusControls } from "@/components/admin/meme-status-controls";
@@ -17,7 +17,8 @@ export default async function AdminMemeEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
+  const { supabase } = await requireOperatorPage(`/admin/memes/${id}`);
   const { data: meme } = await supabase.from("memes").select("*").eq("id", id).single();
   if (!meme) notFound();
 

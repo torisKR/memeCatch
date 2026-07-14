@@ -13,6 +13,7 @@ const FOOTER_LINKS = [
   { href: "/about", label: "about" },
   { href: "/privacy", label: "privacy" },
   { href: "/terms", label: "terms" },
+  { href: "/rankings", label: "rankings" },
   { href: "/news", label: "news" },
   { href: "/products", label: "products" },
   { href: "/submit", label: "submit" },

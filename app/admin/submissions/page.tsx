@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireOperatorPage } from "@/app/admin/require-operator";
 import { OverdueBadge } from "@/components/admin/badges";
 import { isSubmissionOverdue } from "@/components/admin/constants";
 import { SUBMISSION_STATUS } from "@/lib/labels";
@@ -15,7 +15,8 @@ const fmt = new Intl.DateTimeFormat("ko-KR", {
 });
 
 export default async function SubmissionsQueuePage() {
-  const supabase = await createClient();
+  // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
+  const { supabase } = await requireOperatorPage("/admin/submissions");
   const { data: submissions, error } = await supabase
     .from("meme_submissions")
     .select(

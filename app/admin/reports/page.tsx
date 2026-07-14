@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireOperatorPage } from "@/app/admin/require-operator";
 import { ReportActions } from "@/components/admin/report-actions";
 import { memePathFrom } from "@/lib/labels";
 
@@ -20,7 +20,8 @@ const TARGET_LABEL: Record<string, string> = {
 };
 
 export default async function AdminReportsPage() {
-  const supabase = await createClient();
+  // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
+  const { supabase } = await requireOperatorPage("/admin/reports");
   const { data: reports, error } = await supabase
     .from("reports")
     .select("id, target_type, target_id, reason, created_at, reporter:profiles!reports_reporter_id_fkey(nickname)")

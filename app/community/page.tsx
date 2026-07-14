@@ -70,7 +70,13 @@ export default async function CommunityPage({
     <main className="mx-auto max-w-3xl px-4 pb-14 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">커뮤니티</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">커뮤니티</h1>
+            {/* 이제 막 시작한 공간임을 정직하게 표시 */}
+            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
+              베타
+            </span>
+          </div>
           <p className="mt-1 text-base text-muted">
             밈 추천·추억·토론 — 뭐든 편하게 이야기해요.
           </p>

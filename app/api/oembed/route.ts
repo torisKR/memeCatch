@@ -1,6 +1,19 @@
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
+  // 남용 억제 — IP당 분당 20회 (인스턴스 로컬 best-effort, lib/rate-limit.ts 참고)
+  const rl = rateLimit(`oembed:${getClientIp(request)}`, {
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) {
+    return Response.json(
+      { error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   try {
     const url = new URL(request.url).searchParams.get("url") ?? "";
     const result = await getOEmbed(url);

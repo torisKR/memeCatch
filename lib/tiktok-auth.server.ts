@@ -26,6 +26,18 @@ type TikTokUserResponse = {
   error?: { code?: string; message?: string };
 };
 
+type TikTokVideoListResponse = {
+  data?: {
+    videos?: Array<{
+      id?: string;
+      title?: string;
+      video_description?: string;
+      share_url?: string;
+    }>;
+  };
+  error?: { code?: string; message?: string };
+};
+
 export function getTikTokRedirectUri() {
   if (process.env.TIKTOK_REDIRECT_URI) return process.env.TIKTOK_REDIRECT_URI;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -35,6 +47,19 @@ export function getTikTokRedirectUri() {
 
 export function getTikTokClientKey() {
   return process.env.TIKTOK_CLIENT_KEY ?? null;
+}
+
+function isPublicTikTokUrl(value: string | undefined): value is string {
+  if (!value || value.length > 500) return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      (url.hostname === "tiktok.com" || url.hostname.endsWith(".tiktok.com"))
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function exchangeCode(code: string, redirectUri: string) {
@@ -109,9 +134,83 @@ export async function signInWithTikTokCode(code: string, redirectUri: string) {
   }
 
   const supabase = await createClient();
-  const { error: sessionError } = await supabase.auth.verifyOtp({
+  const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
     token_hash: link.properties.hashed_token,
     type: "magiclink",
   });
-  if (sessionError) throw new Error("Supabase TikTok session failed");
+  if (sessionError || !sessionData.user) {
+    throw new Error("Supabase TikTok session failed");
+  }
+
+  return { accessToken, userId: sessionData.user.id };
+}
+
+/**
+ * 사용자가 OAuth 화면에서 video.list 권한을 명시적으로 허용했을 때만 호출한다.
+ * 토큰은 이 요청 안에서만 사용하며 저장하지 않는다. 가져온 영상은 자동 공개가 아닌
+ * 검수 대기 제보로만 기록한다.
+ */
+export async function importTikTokVideosAsSubmissions({
+  accessToken,
+  userId,
+}: {
+  accessToken: string;
+  userId: string;
+}) {
+  const endpoint = new URL("https://open.tiktokapis.com/v2/video/list/");
+  endpoint.searchParams.set("fields", "id,title,video_description,share_url");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ max_count: 20 }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  const result = (await response.json().catch(() => null)) as TikTokVideoListResponse | null;
+  const videos = result?.data?.videos ?? [];
+  if (!response.ok || (result?.error?.code && result.error.code !== "ok")) {
+    throw new Error(result?.error?.message ?? "TikTok 영상을 가져오지 못했습니다");
+  }
+
+  const candidates = videos.flatMap((video) => {
+    if (!video.id || !isPublicTikTokUrl(video.share_url)) return [];
+    return [{
+      sourceUrl: video.share_url,
+      name: video.title?.trim().slice(0, 100) || `TikTok 영상 ${video.id}`,
+      description:
+        video.video_description?.trim().slice(0, 2_000) ||
+        "TikTok에서 본인 계정이 video.list 권한으로 가져온 공개 영상입니다.",
+    }];
+  });
+  if (candidates.length === 0) return 0;
+
+  const admin = createAdminClient();
+  const urls = candidates.map((candidate) => candidate.sourceUrl);
+  const [{ data: submitted }, { data: existingContents }] = await Promise.all([
+    admin.from("meme_submissions").select("source_url").in("source_url", urls),
+    admin.from("meme_contents").select("url").in("url", urls),
+  ]);
+  const occupied = new Set([
+    ...(submitted ?? []).map((row) => row.source_url),
+    ...(existingContents ?? []).map((row) => row.url),
+  ]);
+  const rows = candidates
+    .filter((candidate) => !occupied.has(candidate.sourceUrl))
+    .map((candidate) => ({
+      submitter_id: userId,
+      name: candidate.name,
+      source_url: candidate.sourceUrl,
+      description: candidate.description,
+      guess_reason: "TikTok video.list에서 본인 동의로 가져옴",
+      tags: ["tiktok", "oauth-import"],
+      status: "pending" as const,
+    }));
+  if (rows.length === 0) return 0;
+
+  const { error } = await admin.from("meme_submissions").insert(rows);
+  if (error) throw new Error("TikTok 영상 제보를 저장하지 못했습니다");
+  return rows.length;
 }

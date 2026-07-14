@@ -15,6 +15,8 @@ export default async function SubmitPage({
 }) {
   const sp = await searchParams;
   const defaultName = typeof sp.name === "string" ? sp.name.slice(0, 100) : "";
+  const tiktokImport = typeof sp.tiktokImport === "string" ? sp.tiktokImport : null;
+  const imported = typeof sp.imported === "string" ? Number(sp.imported) : null;
 
   return (
     <main className="mx-auto w-full max-w-md px-5 py-8">
@@ -32,6 +34,29 @@ export default async function SubmitPage({
           </li>
         ))}
       </ol>
+
+      <section className="mt-5 rounded-2xl border border-border bg-surface p-4">
+        <p className="font-semibold">내 TikTok 공개 영상 가져오기</p>
+        <p className="mt-1 text-sm text-muted">
+          동의한 계정의 최신 공개 영상 최대 20개를 검수 대기로만 추가해요. 자동 공개하지 않아요.
+        </p>
+        <Link
+          href="/auth/tiktok?import=1&next=/submit"
+          className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background"
+        >
+          TikTok 영상 가져오기
+        </Link>
+        {tiktokImport === "done" && (
+          <p className="mt-3 text-sm text-safety-green" role="status">
+            {imported ? `${imported}개 영상을 검수 대기로 추가했어요.` : "새로 추가할 영상은 없어요."}
+          </p>
+        )}
+        {tiktokImport === "failed" && (
+          <p className="mt-3 text-sm text-safety-red" role="alert">
+            영상을 가져오지 못했어요. TikTok에서 video.list 권한을 허용한 뒤 다시 시도해 주세요.
+          </p>
+        )}
+      </section>
 
       <div className="mt-6">
         {flags.submissionsOpen ? (

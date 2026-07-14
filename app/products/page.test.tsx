@@ -39,10 +39,6 @@ vi.mock("@/lib/meme-commerce", async (importOriginal) => {
   return { ...actual, MEME_PRODUCTS: commerceFixture.products };
 });
 
-vi.mock("@/lib/i18n-server", () => ({
-  getRequestLocale: vi.fn(async () => "ko"),
-}));
-
 vi.mock("@/lib/affiliate/repository.server", () => ({
   getAffiliateStorefront: vi.fn(async () => ({
     hotdeals: [
@@ -73,12 +69,22 @@ vi.mock("@/lib/affiliate/repository.server", () => ({
 
 import ProductsPage from "@/app/products/page";
 import { getAffiliateStorefront } from "@/lib/affiliate/repository.server";
+import { LocaleProvider } from "@/lib/i18n-client";
 import { isMemeProductActive, MEME_PRODUCTS } from "@/lib/meme-commerce";
 import { PAGE_COPY } from "@/lib/i18n-pages";
 
+// M10: 페이지는 더 이상 getRequestLocale()을 읽지 않는다(ISR 유지 — ko 정적 렌더).
+// 로케일 카피는 ProductsPageContent(클라이언트)가 useLocale()로 표시하므로,
+// 서버 렌더 검증 시 LocaleProvider(initialLocale="ko")로 감싼다.
+async function renderProductsPage() {
+  return renderToStaticMarkup(
+    <LocaleProvider initialLocale="ko">{await ProductsPage()}</LocaleProvider>,
+  );
+}
+
 describe("ProductsPage", () => {
   it("renders the editorial shop hierarchy and truthful available-link count", async () => {
-    const html = renderToStaticMarkup(await ProductsPage());
+    const html = await renderProductsPage();
     const activeMemeProductCount = MEME_PRODUCTS.filter((product) =>
       isMemeProductActive(product),
     ).length;
@@ -97,7 +103,7 @@ describe("ProductsPage", () => {
   });
 
   it("omits all offer price fields from stale JSON-LD", async () => {
-    const html = renderToStaticMarkup(await ProductsPage());
+    const html = await renderProductsPage();
     const script = html.match(
       /<script type="application\/ld\+json">(.+?)<\/script>/,
     )?.[1];
@@ -135,7 +141,7 @@ describe("ProductsPage", () => {
       isStale: false,
     });
 
-    const html = renderToStaticMarkup(await ProductsPage());
+    const html = await renderProductsPage();
     const script = html.match(
       /<script type="application\/ld\+json">(.+?)<\/script>/,
     )?.[1];

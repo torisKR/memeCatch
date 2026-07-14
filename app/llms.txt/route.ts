@@ -22,7 +22,8 @@ export async function GET() {
       supabase
         .from("memes")
         .select("id", { count: "exact", head: true })
-        .in("moderation_status", ["approved", "limited"]),
+        // sitemap.ts와 동일 기준(approved만) — llms.txt 카운트와 사이트맵 URL 수 정합 유지
+        .eq("moderation_status", "approved"),
     ]);
     if (count) countLine = count.toLocaleString("en-US");
     if (trending?.length) {

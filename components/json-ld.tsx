@@ -186,13 +186,19 @@ export function MemeVideoJsonLd({
   description,
   videoId,
   thumbnailUrl,
-  uploadDate,
   caption,
 }: {
   name: string;
   description: string;
   videoId: string;
   thumbnailUrl?: string | null;
+  /**
+   * 미사용(의도적) — meme_contents에 원본 업로드일 컬럼이 없어 호출부가 밈
+   * 등록일(근사값)을 넘기는데, 이를 uploadDate로 내보내면 오정보가 된다.
+   * uploadDate는 Google 비디오 구조화 데이터 문서상 recommended이지 required가
+   * 아니므로 실데이터만 채운다는 원칙(상단 주석)에 따라 출력에서 생략한다.
+   * 호출부 prop 호환을 위해 타입에만 남겨둔다.
+   */
   uploadDate?: string | null;
   caption?: string | null;
 }) {
@@ -204,8 +210,6 @@ export function MemeVideoJsonLd({
         name: `${name} — 대표 영상`,
         description: caption || description,
         thumbnailUrl: thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        // meme_contents에 원본 업로드일 컬럼이 없어 밈 등록 시점으로 대체(근사값)
-        ...(uploadDate ? { uploadDate } : {}),
         embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
         contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
       }}
@@ -251,6 +255,43 @@ export function ExploreCollectionJsonLd() {
         url: `${SITE_URL}/explore`,
         inLanguage: "ko",
         isPartOf: { "@type": "WebSite", name: "밈캐치", url: SITE_URL },
+      }}
+    />
+  );
+}
+
+/**
+ * /news — CollectionPage + 브리핑 ItemList.
+ * ko 정적 데이터 기준(서버는 DEFAULT_LOCALE로만 렌더 — ISR 유지, M10과 일관).
+ * 브리핑은 개별 URL이 없어 세대 앵커(#age-20s 등)로 연결한다.
+ */
+export function NewsCollectionJsonLd({
+  briefs,
+}: {
+  briefs: { audience: string; title: string }[];
+}) {
+  return (
+    <Script
+      data={{
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: "세대별 밈 소식",
+        description:
+          "20대·30대·40대가 알아두면 좋은 밈과 디지털 생활 정보를 짧은 체크리스트로 정리합니다.",
+        url: `${SITE_URL}/news`,
+        inLanguage: "ko",
+        isPartOf: { "@type": "WebSite", name: "밈캐치", url: SITE_URL },
+        publisher: { "@id": `${SITE_URL}#org` },
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: briefs.length,
+          itemListElement: briefs.map((brief, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: brief.title,
+            url: `${SITE_URL}/news#age-${brief.audience}`,
+          })),
+        },
       }}
     />
   );

@@ -203,7 +203,7 @@ export function PwaInstall() {
           <button
             type="button"
             onClick={install}
-            className="min-h-11 shrink-0 rounded-xl bg-accent px-4 text-base font-semibold text-white"
+            className="min-h-11 shrink-0 rounded-xl bg-accent-strong px-4 text-base font-semibold text-white"
           >
             {ios ? "방법 보기" : "설치하기"}
           </button>
@@ -269,7 +269,7 @@ export function PwaInstall() {
             <button
               type="button"
               onClick={dismiss}
-              className="mt-6 min-h-11 w-full rounded-xl bg-accent text-base font-semibold text-white"
+              className="mt-6 min-h-11 w-full rounded-xl bg-accent-strong text-base font-semibold text-white"
             >
               확인했어요
             </button>

@@ -188,7 +188,7 @@ export function MyContent({
           />
           <button
             type="submit"
-            className="h-12 shrink-0 rounded-xl bg-accent px-5 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            className="h-12 shrink-0 rounded-xl bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             저장
           </button>
@@ -263,7 +263,7 @@ export function MyContent({
             </p>
             <Link
               href="/explore"
-              className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               탐색하러 가기
             </Link>
@@ -322,7 +322,7 @@ export function MyContent({
             </p>
             <Link
               href="/submit"
-              className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               첫 밈 제보하기
             </Link>

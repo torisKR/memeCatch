@@ -280,7 +280,7 @@ export function ExploreGrid({
           </Link>
           <Link
             href="/submit"
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 text-base font-bold text-white active:scale-[0.97]"
+            className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white active:scale-[0.97]"
           >
             밈 제보하기
           </Link>

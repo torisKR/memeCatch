@@ -226,7 +226,7 @@ export default async function Home() {
             <>
               <Link
                 href="/explore"
-                className="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
+                className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
               >
                 밈 탐색하기
               </Link>

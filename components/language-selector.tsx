@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LANGUAGE_NAMES,
   LANGUAGE_SHORT_NAMES,
@@ -10,9 +10,23 @@ import {
 } from "@/lib/i18n";
 import { persistLocale, useLocale } from "@/lib/i18n-client";
 
+/**
+ * 본문 번역(en/ja/zh)이 실제로 존재하는 라우트. 홈·밈 상세·탐색 등은 본문이
+ * 한국어 고정이라 선택기를 노출하면 "미완성 번역 사이트" 인상을 주므로,
+ * 번역 커버리지가 확보된 라우트에서만 헤더에 렌더한다.
+ * 이미 쿠키(en/ja/zh)를 저장한 사용자의 크롬 번역은 LocaleProvider가 유지한다.
+ */
+const TRANSLATED_ROUTES = ["/news", "/products"];
+
 export function LanguageSelector() {
+  const pathname = usePathname();
   const router = useRouter();
   const { locale, messages } = useLocale();
+
+  const translated = TRANSLATED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+  if (!translated) return null;
 
   function changeLocale(nextLocale: Locale) {
     persistLocale(nextLocale);

@@ -215,7 +215,7 @@ export function LoginGate({
               </a>
               <Link
                 href={loginHref}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-base font-bold text-white transition-transform active:scale-[0.98]"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong px-4 text-base font-bold text-white transition-transform active:scale-[0.98]"
               >
                 이메일로 시작하기
               </Link>

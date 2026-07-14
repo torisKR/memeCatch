@@ -8,7 +8,7 @@ export default function MyError({ reset }: { error: Error; reset: () => void }) 
       <button
         type="button"
         onClick={reset}
-        className="mt-6 h-12 rounded-xl bg-accent px-6 text-base font-bold text-white"
+        className="mt-6 h-12 rounded-xl bg-accent-strong px-6 text-base font-bold text-white"
       >
         다시 시도
       </button>

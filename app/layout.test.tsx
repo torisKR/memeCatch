@@ -27,7 +27,9 @@ describe("RootLayout", () => {
 
     expect(html).toMatch(/^<html lang="ko">/);
     expect(html).toContain(`aria-label="${messages.home}"`);
-    expect(html).toContain(`aria-label="${messages.languageMenu}"`);
+    // 언어 선택기는 번역이 존재하는 라우트(/news, /products)에서만 노출된다.
+    // 홈(/)에서는 렌더되지 않아야 한다 — H5: 본문 번역 커버리지 전까지 opt-in만.
+    expect(html).not.toContain(`aria-label="${messages.languageMenu}"`);
     expect(html).toContain(`aria-label="${messages.footerNav}"`);
     expect(html).toContain(`aria-label="${messages.mainNav}"`);
     expect(html).toContain(`>${messages.about}</a>`);

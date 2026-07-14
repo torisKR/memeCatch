@@ -1,6 +1,10 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { navigation } = vi.hoisted(() => ({
+  navigation: { pathname: "/" },
+}));
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => (
@@ -9,6 +13,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
@@ -43,6 +48,10 @@ vi.mock("@/lib/i18n-client", async (importOriginal) => {
 import { GlobalHeader } from "@/components/global-header";
 
 describe("GlobalHeader", () => {
+  beforeEach(() => {
+    navigation.pathname = "/";
+  });
+
   it("hides the wordmark below 480px while preserving the labelled home link", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
     const homeLink = html.match(
@@ -60,7 +69,9 @@ describe("GlobalHeader", () => {
     expect(wordmark).toContain("whitespace-nowrap");
   });
 
-  it("shows the compact locale label without clipping the native language control", () => {
+  // 언어 선택기는 본문 번역이 존재하는 라우트(/news, /products)에서만 노출된다.
+  it("shows the compact locale label on translated routes without clipping the native language control", () => {
+    navigation.pathname = "/news";
     const html = renderToStaticMarkup(<GlobalHeader />);
     const desktopSearch = html.match(/<form[^>]*role="search"[^>]*>/)?.[0];
     const compactSearch = html.match(/<a[^>]*href="\/search"[^>]*>/)?.[0];
@@ -79,4 +90,26 @@ describe("GlobalHeader", () => {
     expect(languageSelect).toContain("opacity-0");
     expect(languageControl).not.toMatch(/(?:^|\s)(?:md:)?w-11(?:\s|\")/);
   });
+
+  // 홈·밈 상세·탐색 등 본문이 한국어 고정인 페이지에서는 선택기를 숨긴다
+  // (H5: 번역 커버리지 확보 전까지 opt-in 노출만 허용).
+  it.each(["/", "/explore", "/memes/some-meme", "/search"])(
+    "hides the language selector on untranslated route %s",
+    (pathname) => {
+      navigation.pathname = pathname;
+      const html = renderToStaticMarkup(<GlobalHeader />);
+
+      expect(html).not.toContain('aria-label="언어 선택"');
+    },
+  );
+
+  it.each(["/news", "/products", "/products/some-item"])(
+    "shows the language selector on translated route %s",
+    (pathname) => {
+      navigation.pathname = pathname;
+      const html = renderToStaticMarkup(<GlobalHeader />);
+
+      expect(html).toContain('aria-label="언어 선택"');
+    },
+  );
 });

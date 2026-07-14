@@ -249,7 +249,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
         <div className="mt-6 flex flex-col gap-3">
           <Link
             href="/my"
-            className="flex h-12 items-center justify-center rounded-xl bg-accent text-base font-bold text-white"
+            className="flex h-12 items-center justify-center rounded-xl bg-accent-strong text-base font-bold text-white"
           >
             MY에서 제보 상태 보기
           </Link>
@@ -504,7 +504,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
       <button
         type="submit"
         disabled={pending || uploading}
-        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-accent text-base font-bold text-white disabled:opacity-60"
+        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-accent-strong text-base font-bold text-white disabled:opacity-60"
       >
         {(pending || uploading) && (
           <span

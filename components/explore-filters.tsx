@@ -254,7 +254,7 @@ export function ExploreFilters({
           )}
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-95 active:scale-[0.97]"
+            className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-95 active:scale-[0.97]"
           >
             검색
           </button>

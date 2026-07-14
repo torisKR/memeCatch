@@ -198,7 +198,7 @@ export function ContentUrlPreview({ url }: { url: string }) {
             type="button"
             onClick={checkPreview}
             disabled={currentState.status === "loading"}
-            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-sm font-bold text-accent transition-colors hover:bg-accent hover:text-white disabled:cursor-wait disabled:opacity-60"
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-accent bg-accent-soft px-4 text-sm font-bold text-accent transition-colors hover:bg-accent-strong hover:text-white disabled:cursor-wait disabled:opacity-60"
           >
             {currentState.status === "loading" && (
               <span

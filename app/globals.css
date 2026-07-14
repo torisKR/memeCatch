@@ -9,16 +9,18 @@
   --border: #e6e2da;
   --muted: #6b6860;
   --accent: #ff5c38; /* 시그니처: 불꽃 오렌지 (보라 그라디언트 금지) */
+  --accent-strong: #d63c1b; /* 흰 글자 CTA 배경용 — white 대비 4.64:1 (AA). 브랜드 오렌지는 --accent 유지 */
   --accent-soft: #ffe8e1;
 
-  /* 사용 안전 신호등 — 색+아이콘+텍스트 병행 (색약 대응) */
-  --safety-green: #1a9a5b;
+  /* 사용 안전 신호등 — 색+아이콘+텍스트 병행 (색약 대응)
+     텍스트 토큰은 각 -bg 틴트 위 4.5:1(AA) 이상으로 보정 (배경 틴트는 유지) */
+  --safety-green: #127444; /* on --safety-green-bg 5.14:1 */
   --safety-green-bg: #e3f5ec;
-  --safety-yellow: #b57d00;
+  --safety-yellow: #8a5f00; /* on --safety-yellow-bg 5.11:1 */
   --safety-yellow-bg: #fdf3d8;
-  --safety-gray: #71717a;
+  --safety-gray: #5c5c66; /* on --safety-gray-bg 5.81:1 */
   --safety-gray-bg: #f0f0f2;
-  --safety-red: #d63333;
+  --safety-red: #c22a2a; /* on --safety-red-bg 4.79:1 */
   --safety-red-bg: #fde5e5;
 
   /* 밈 생명 게이지 (T4 시그니처) */
@@ -39,6 +41,7 @@
     --border: #34343c;
     --muted: #9c99a3;
     --accent: #ff6b47;
+    --accent-strong: #d63c1b; /* 다크에서도 흰 글자 4.64:1 유지 (버튼 자체 대비는 모드 무관) */
     --accent-soft: #3a2018;
 
     --safety-green: #3ecf85;
@@ -54,6 +57,8 @@
     --life-active: #ffb054;
     --life-cooling: #7d93aa;
     --life-archived: #6f6a60;
+
+    --sent-controversial: #b79bf0; /* 어두운 표면(#1c1c21) 위 7.24:1 */
   }
 }
 
@@ -65,6 +70,7 @@
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-safety-green: var(--safety-green);
   --color-safety-green-bg: var(--safety-green-bg);
@@ -78,7 +84,7 @@
   --color-life-active: var(--life-active);
   --color-life-cooling: var(--life-cooling);
   --color-life-archived: var(--life-archived);
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
 html {

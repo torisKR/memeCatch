@@ -79,7 +79,7 @@ export async function MyFeed({ interests }: { interests: MemeCategory[] }) {
           <p className="text-muted">아직 보여드릴 밈이 없어요.</p>
           <Link
             href="/explore"
-            className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             탐색하러 가기
           </Link>

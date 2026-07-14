@@ -88,7 +88,7 @@ function Top10Card({ meme, rank }: { meme: MemeListItem; rank: number }) {
           aria-hidden
           className={`absolute left-2 top-2 grid size-7 place-items-center rounded-full text-sm font-extrabold shadow-sm ${
             top3
-              ? "bg-accent text-white"
+              ? "bg-accent-strong text-white"
               : "border border-border/70 bg-surface/85 text-foreground backdrop-blur-sm"
           }`}
         >

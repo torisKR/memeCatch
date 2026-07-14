@@ -201,7 +201,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
     >
       {pending && (
         <span

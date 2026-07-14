@@ -263,7 +263,7 @@ export function CommunityPostForm() {
         <button
           type="submit"
           disabled={isPending || title.trim().length < 2 || !body.trim()}
-          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
         >
           {isPending ? "올리는 중…" : "글 올리기"}
         </button>

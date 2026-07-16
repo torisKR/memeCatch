@@ -186,6 +186,7 @@ export function MemeVideoJsonLd({
   description,
   videoId,
   thumbnailUrl,
+  uploadDate,
   caption,
 }: {
   name: string;
@@ -193,11 +194,10 @@ export function MemeVideoJsonLd({
   videoId: string;
   thumbnailUrl?: string | null;
   /**
-   * 미사용(의도적) — meme_contents에 원본 업로드일 컬럼이 없어 호출부가 밈
-   * 등록일(근사값)을 넘기는데, 이를 uploadDate로 내보내면 오정보가 된다.
-   * uploadDate는 Google 비디오 구조화 데이터 문서상 recommended이지 required가
-   * 아니므로 실데이터만 채운다는 원칙(상단 주석)에 따라 출력에서 생략한다.
-   * 호출부 prop 호환을 위해 타입에만 남겨둔다.
+   * 밈 페이지 게시일(근사값). 한때 "원본 업로드일이 아니라 오정보"라는 이유로
+   * 생략했으나, 서치콘솔이 uploadDate 누락을 '심각한 문제'로 판정해(비디오
+   * 색인 요건) 복원한다 — 이 페이지에 영상이 게시된 날짜로서의 근사값이며,
+   * 원본 업로드일 컬럼이 생기면 교체한다.
    */
   uploadDate?: string | null;
   caption?: string | null;
@@ -212,6 +212,7 @@ export function MemeVideoJsonLd({
         thumbnailUrl: thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
         contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        ...(uploadDate ? { uploadDate } : {}),
       }}
     />
   );

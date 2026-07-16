@@ -30,32 +30,21 @@ export const revalidate = 3600;
 
 export default async function ProductsPage() {
   const storefront = await getAffiliateStorefront();
-  // JSON-LD는 로케일 무관 데이터(상품명·가격)만 담아 서버에서 정적 렌더
+  // JSON-LD — Product/Offer 타입을 쓰지 않는다(의도적). 우리는 판매자가 아닌
+  // 제휴 링크 디렉터리라 Google 판매자 목록이 요구하는 gtin·brand·availability·
+  // 반품정책·배송정보·리뷰를 정직하게 제공할 수 없고(제3자 판매처 소관),
+  // Product+offers로 내보내면 서치콘솔 판매자 목록 오류만 쌓인다.
+  // 단순 ItemList(이름+링크)로 강등해 페이지 구조만 기술한다.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: storefront.hotdeals.map((product, index) => {
-      const price = product.salePrice;
-      return {
-        "@type": "ListItem",
-        position: index + 1,
-        item: {
-          "@type": "Product",
-          name: product.productName,
-          ...(product.imageUrl ? { image: product.imageUrl } : {}),
-          url: `/go/products/${product.id}`,
-          ...(!storefront.isStale && price !== null && price > 0
-            ? {
-                offers: {
-                  "@type": "Offer",
-                  price,
-                  priceCurrency: "KRW",
-                },
-              }
-            : {}),
-        },
-      };
-    }),
+    name: "밈 상품 모음",
+    itemListElement: storefront.hotdeals.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: product.productName,
+      url: `https://catchmeme.com/go/products/${product.id}`,
+    })),
   };
 
   return (

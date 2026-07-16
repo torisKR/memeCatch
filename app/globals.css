@@ -23,11 +23,16 @@
   --safety-red: #c22a2a; /* on --safety-red-bg 4.79:1 */
   --safety-red-bg: #fde5e5;
 
-  /* 밈 생명 게이지 (T4 시그니처) */
+  /* 밈 생명 게이지 (T4 시그니처) — 불꽃 아이콘용 원색 */
   --life-rising: #ff5c38;
   --life-active: #ff9d2e;
   --life-cooling: #8fa3b8;
   --life-archived: #b9b3a8;
+  /* 게이지 라벨 텍스트용 — 밝은 표면 위 4.5:1(AA) 이상 진한 변형(아이콘은 원색 유지) */
+  --life-rising-text: #c4341a;
+  --life-active-text: #8a5f00;
+  --life-cooling-text: #52708a;
+  --life-archived-text: #6b6860;
 
   --sent-controversial: #7c4dcc;
 }
@@ -57,6 +62,11 @@
     --life-active: #ffb054;
     --life-cooling: #7d93aa;
     --life-archived: #6f6a60;
+    /* 다크 표면에선 원색이 이미 AA — 라벨도 동일 톤 사용 */
+    --life-rising-text: #ff6b47;
+    --life-active-text: #ffb054;
+    --life-cooling-text: #9db3c8;
+    --life-archived-text: #a39d92;
 
     --sent-controversial: #b79bf0; /* 어두운 표면(#1c1c21) 위 7.24:1 */
   }
@@ -84,6 +94,10 @@
   --color-life-active: var(--life-active);
   --color-life-cooling: var(--life-cooling);
   --color-life-archived: var(--life-archived);
+  --color-life-rising-text: var(--life-rising-text);
+  --color-life-active-text: var(--life-active-text);
+  --color-life-cooling-text: var(--life-cooling-text);
+  --color-life-archived-text: var(--life-archived-text);
   --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 

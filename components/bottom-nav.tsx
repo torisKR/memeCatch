@@ -39,7 +39,7 @@ export function BottomNav() {
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
                   tab.emphasized
-                    ? "text-accent font-semibold"
+                    ? "text-accent-strong font-semibold"
                     : active
                       ? "text-foreground font-semibold"
                       : "text-muted"

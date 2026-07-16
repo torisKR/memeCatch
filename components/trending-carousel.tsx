@@ -12,7 +12,9 @@ import type { MemeListItem } from "@/lib/queries";
  * - 4초 자동 이동(호버·터치·포커스·탭 비활성 시 정지), 끝에서 처음으로 순환.
  * - prefers-reduced-motion이면 자동 이동 끔(수동 스크롤·컨트롤은 유지).
  */
-const ADVANCE_MS = 4000;
+// 7초: 첫 화면에서 1위 카드가 충분히 보인 뒤에야 이동 — 초기 스크린샷/첫인상에서
+// 순위 앞부분이 잘려 보이는 문제 방지. 자동 이동은 캐러셀이 뷰포트에 보일 때만.
+const ADVANCE_MS = 7000;
 const GAP_PX = 12; // gap-3
 
 export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
@@ -60,11 +62,18 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
     };
   }, []);
 
-  // 자동 이동 — 사용자 조작 우선
+  // 자동 이동 — 사용자 조작 우선, 뷰포트 밖에서는 정지(첫 진입 시 1위 보존 + 배터리)
   useEffect(() => {
     if (reduce) return;
     const el = scrollerRef.current;
     if (!el) return;
+
+    let visible = false;
+    const io = new IntersectionObserver(
+      (entries) => (visible = entries[0]?.isIntersecting ?? false),
+      { threshold: 0.4 }
+    );
+    io.observe(el);
 
     const pause = () => (pausedRef.current = true);
     const resume = () => (pausedRef.current = false);
@@ -78,7 +87,7 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
     document.addEventListener("visibilitychange", onVis);
 
     const timer = setInterval(() => {
-      if (pausedRef.current) return;
+      if (pausedRef.current || !visible) return;
       const first = el.querySelector("li");
       if (!first) return;
       const step = first.getBoundingClientRect().width + GAP_PX;
@@ -89,6 +98,7 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
 
     return () => {
       clearInterval(timer);
+      io.disconnect();
       el.removeEventListener("pointerenter", pause);
       el.removeEventListener("pointerleave", resume);
       el.removeEventListener("touchstart", pause);

@@ -56,7 +56,7 @@ export async function TodayMeme() {
       <section aria-labelledby="today-meme" className="mt-8">
         <div className="flex items-end justify-between gap-3">
           <h2 id="today-meme" className="flex items-center gap-1.5 text-xl font-bold">
-            <span aria-hidden className="inline-block rounded-md bg-accent-soft px-1.5 py-0.5 text-sm font-extrabold text-accent">
+            <span aria-hidden className="inline-block rounded-md bg-accent-soft px-1.5 py-0.5 text-sm font-extrabold text-flame-800">
               오늘
             </span>
             오늘의 밈

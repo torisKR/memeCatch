@@ -78,7 +78,8 @@ export function HeroWeb3({
       />
       <div
         aria-hidden
-        className="hero-aurora-b pointer-events-none absolute -bottom-1/2 -right-1/4 -z-10 h-[90%] w-[90%] rounded-full opacity-30 blur-3xl"
+        // 모바일은 2번째 오로라 생략 — blur-3xl 대형 레이어 2겹의 페인트 비용 절감(LCP)
+        className="hero-aurora-b pointer-events-none absolute -bottom-1/2 -right-1/4 -z-10 hidden h-[90%] w-[90%] rounded-full opacity-30 blur-3xl sm:block"
         style={{
           background:
             "radial-gradient(closest-side, var(--flame-800) 0%, transparent 70%)",
@@ -120,7 +121,9 @@ export function HeroWeb3({
         }}
       />
 
-      <div className="mx-auto max-w-3xl px-4 pb-10 pt-14 md:pb-14 md:pt-20">
+      {/* 모바일은 패딩을 줄여 폴드에서 첫 섹션(급상승) 제목이 하단 내비에
+          가리지 않게 한다 — md+는 기존 여백 유지 */}
+      <div className="mx-auto max-w-3xl px-4 pb-7 pt-10 md:pb-14 md:pt-20">
         {/* 라이브 배지 */}
         <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-white/80 backdrop-blur-sm">
           <span className="relative flex h-2 w-2" aria-hidden>
@@ -234,7 +237,8 @@ export function HeroWeb3({
       {/* 밈 시세판 티커 — 코인 티커 감성, 호버 시 정지 */}
       {trending.length > 0 && (
         <div
-          className="hero-marquee relative border-t border-white/10 bg-black/25 py-3 backdrop-blur-sm"
+          // 모바일은 티커를 더 얇게(보조 요소) — 첫 화면 정보 밀도·폴드 확보
+          className="hero-marquee relative border-t border-white/10 bg-black/25 py-2 backdrop-blur-sm md:py-3"
           aria-label="지금 뜨는 밈 티커"
         >
           <div className="hero-marquee-track flex w-max gap-8 px-4">

@@ -52,7 +52,9 @@ describe("GlobalHeader", () => {
     navigation.pathname = "/";
   });
 
-  it("hides the wordmark below 480px while preserving the labelled home link", () => {
+  // 브랜드명은 모바일에서도 항상 노출한다(신규 방문자 브랜드 인지 — 외부 디자인
+  // 검수 반영). 도메인 서브라벨(catchmeme.com)만 sm+에서 노출.
+  it("shows the wordmark on all viewports while preserving the labelled home link", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
     const homeLink = html.match(
       /<a[^>]*aria-label="밈캐치 홈"[^>]*>.*?<\/a>/,
@@ -63,10 +65,10 @@ describe("GlobalHeader", () => {
 
     expect(homeLink).toContain('aria-label="밈캐치 홈"');
     expect(homeLink).toContain("min-w-11");
-    expect(wordmark).toContain("hidden");
-    expect(wordmark).toContain("min-[480px]:flex");
+    expect(wordmark).not.toContain("hidden");
     expect(wordmark).toContain("shrink-0");
     expect(wordmark).toContain("whitespace-nowrap");
+    expect(homeLink).toContain("sm:block"); // 도메인 서브라벨은 sm+만
   });
 
   // 언어 선택기는 본문 번역이 존재하는 라우트(/news, /products)에서만 노출된다.

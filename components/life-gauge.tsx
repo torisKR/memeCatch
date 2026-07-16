@@ -7,6 +7,13 @@ const TONE: Record<LifecycleStatus, string> = {
   cooling: "text-life-cooling",
   archived: "text-life-archived",
 };
+/* 라벨 텍스트는 밝은 표면 위 AA(4.5:1) 진한 변형 — 불꽃 아이콘만 원색 유지 */
+const LABEL_TONE: Record<LifecycleStatus, string> = {
+  rising: "text-life-rising-text",
+  active: "text-life-active-text",
+  cooling: "text-life-cooling-text",
+  archived: "text-life-archived-text",
+};
 
 export function LifeGauge({
   status,
@@ -48,7 +55,7 @@ export function LifeGauge({
       </span>
       {showLabel && (
         <span
-          className={`font-semibold ${size === "lg" ? "text-base" : "text-sm"}`}
+          className={`font-semibold ${LABEL_TONE[status]} ${size === "lg" ? "text-base" : "text-sm"}`}
         >
           {meta.user}
         </span>

@@ -33,7 +33,8 @@ export function GlobalHeader() {
             className="group flex min-h-11 min-w-11 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
           >
             <BrandTile className="size-8 shadow-[0_4px_14px_color-mix(in_srgb,var(--accent)_24%,transparent)] transition-transform duration-300 group-hover:-rotate-6" />
-            <span className="hidden shrink-0 flex-col whitespace-nowrap leading-none min-[480px]:flex">
+            {/* 브랜드명은 모바일에서도 노출(신규 방문자 브랜드 인지) — 도메인 서브라벨만 sm+ */}
+            <span className="flex shrink-0 flex-col whitespace-nowrap leading-none">
               <span className="text-lg font-extrabold tracking-[-0.045em]">{messages.brand}</span>
               <span className="mt-1 hidden font-mono text-[8px] font-semibold uppercase tracking-[0.13em] text-muted sm:block">
                 catchmeme.com

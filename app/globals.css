@@ -151,6 +151,16 @@ html:lang(zh-Hans) body {
   .safety-pulse { animation: none; }
 }
 
+/* Tailwind v4 preflight는 button 커서를 default로 리셋한다 — 클릭 가능성을
+   손끝에 되돌려준다(비활성 제외). 링크는 브라우저 기본이 이미 pointer. */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+select:not(:disabled),
+summary,
+label[for] {
+  cursor: pointer;
+}
+
 /* 접근성: 기본 포커스 링. 자체 ring/glow가 있는 outline-none 컴포넌트는 중복을 막는다. */
 :focus-visible {
   outline: 2px solid var(--accent);

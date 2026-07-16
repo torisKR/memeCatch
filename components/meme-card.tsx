@@ -53,7 +53,9 @@ export function MemeCard({
   return (
     <MotionLink
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
-      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl focus-visible:outline-offset-4"
+      // relative 필수: sr-only(absolute) 등 내부 absolute 요소의 포지셔닝 조상을
+      // 카드로 고정 — 없으면 캐러셀 래퍼까지 탈출해 문서 가로 스크롤을 만든다.
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl focus-visible:outline-offset-4"
       whileHover={reduce ? undefined : { y: -4, scale: 1.02 }}
       whileTap={reduce ? undefined : { scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}

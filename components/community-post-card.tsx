@@ -38,7 +38,9 @@ export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
       </p>
 
       {post.memes && (
-        <div className="relative z-10 mt-3 w-fit">
+        // max-w-full 필수: w-fit은 내용의 max-content로 커져 긴 밈 제목에서
+        // 컨테이너를 뚫고 가로 스크롤을 만든다(내부 truncate가 동작하려면 상한 필요)
+        <div className="relative z-10 mt-3 w-fit max-w-full">
           <CommunityMemeChip meme={post.memes} />
         </div>
       )}

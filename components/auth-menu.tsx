@@ -172,7 +172,7 @@ function LoggedInMenu({
             exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
             style={{ transformOrigin: "top right" }}
-            className="absolute right-0 top-[calc(100%+8px)] z-[100] w-52 rounded-2xl border border-border bg-surface p-2 shadow-lg"
+            className="absolute right-0 top-[calc(100%+8px)] z-[100] w-64 rounded-2xl border border-border bg-surface p-2.5 shadow-lg"
           >
             <div className="px-3 pb-2 pt-1">
               <p className="truncate text-sm font-semibold text-foreground">

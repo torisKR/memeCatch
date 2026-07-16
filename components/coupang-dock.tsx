@@ -55,9 +55,11 @@ export function CoupangDock() {
       <div aria-hidden style={{ height: dockH }} className="md:block" />
       <aside
         aria-label="쿠팡 파트너스 광고"
-        className="fixed inset-x-0 bottom-16 z-30 border-t border-border bg-surface/95 backdrop-blur-sm md:bottom-0"
+        // 불투명 배경 — 반투명(blur)이면 뒤 페이지 콘텐츠가 광고 영역에 유령처럼 비침
+        className="fixed inset-x-0 bottom-16 z-30 border-t border-border bg-surface md:bottom-0"
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 pt-0.5">
+        {/* 고지·닫기를 배너 폭(680)에 정렬 — 좌끝/우끝/중앙 3분열 방지 */}
+        <div className="mx-auto flex w-full max-w-[680px] items-center justify-between gap-2 px-4 pt-0.5 md:px-0">
           <p className="truncate text-[10px] leading-4 text-muted">
             광고 · 쿠팡 파트너스 활동으로 일정 수수료를 제공받습니다
           </p>

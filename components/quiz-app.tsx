@@ -133,23 +133,48 @@ function StartScreen({ onStart }: { onStart: (mode: QuizMode) => void }) {
     <section aria-label="밈력고사 시작" className="mt-6">
       <div className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-8">
         <p className="text-sm font-semibold text-accent-strong">10문항 스피드 퀴즈</p>
+        {/* 페이지 h1("내 밈력은 몇 점?")과 문구 중복 방지 — 카드는 행동 안내에 집중 */}
         <h2 className="mt-1 text-2xl font-extrabold sm:text-3xl">
-          내 밈력은 몇 점?
+          범위를 골라 바로 시작하세요
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
           밈캐치 사전에 실제로 등록된 밈에서 매번 새로 출제돼요. 제목을 보고
           진짜 뜻을 골라 보세요 — 다 풀면 등급과 당신의 밈 감성 연대가 나옵니다.
         </p>
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {MODES.map((m) => (
+          {MODES.map((m, i) => (
             <button
               key={m.key}
               type="button"
               onClick={() => onStart(m.key)}
-              className="flex min-h-11 flex-col items-start gap-0.5 rounded-2xl border border-border bg-surface-2 p-4 text-left transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98]"
+              // 첫 번째(전체)를 추천 CTA로 강조 — 회색 박스만 있으면 시작점이 안 보인다
+              className={`group flex min-h-11 flex-col items-start gap-0.5 rounded-2xl p-4 text-left transition-[border-color,transform,box-shadow] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98] ${
+                i === 0
+                  ? "border-2 border-accent-strong bg-accent-soft/60 shadow-sm hover:shadow-md"
+                  : "border border-border bg-surface-2 hover:border-accent"
+              }`}
             >
-              <span className="font-bold">{m.label}</span>
+              <span className="flex w-full items-center justify-between gap-2 font-bold">
+                {m.label}
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                  className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${i === 0 ? "text-accent-strong" : "text-muted"}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h13M13 6l6 6-6 6" />
+                </svg>
+              </span>
               <span className="text-sm text-muted">{m.desc}</span>
+              {i === 0 && (
+                <span className="mt-1 rounded-full bg-accent-strong px-2 py-0.5 text-[11px] font-bold text-white">
+                  추천
+                </span>
+              )}
             </button>
           ))}
         </div>

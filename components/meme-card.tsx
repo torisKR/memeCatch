@@ -29,12 +29,15 @@ export function MemeCard({
   meme,
   href,
   priority = false,
+  rank,
 }: {
   meme: MemeRow | MemeListItem;
   /** 링크 오버라이드 — 컬렉션 맥락 파라미터(?ctx=...) 부착용 */
   href?: string;
   /** above-the-fold 카드면 true — 썸네일을 즉시 로드해 LCP 개선. 첫 행에만 준다. */
   priority?: boolean;
+  /** 급상승 차트 순위(1부터) — 미디어 좌하단 대형 숫자. 순위가 실제 정보인 곳에서만. */
+  rank?: number;
 }) {
   const reduce = useReducedMotion();
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
@@ -50,13 +53,13 @@ export function MemeCard({
   return (
     <MotionLink
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
-      className="group block min-w-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl focus-visible:outline-offset-4"
+      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl focus-visible:outline-offset-4"
       whileHover={reduce ? undefined : { y: -4, scale: 1.02 }}
       whileTap={reduce ? undefined : { scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
-      {/* 미디어 4:5 — aspect 예약으로 CLS 방지 */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-surface-2">
+      {/* 미디어 4:5 — aspect 예약으로 CLS 방지. shrink-0으로 카드 높이 통일 시에도 비율 유지 */}
+      <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-surface-2">
         {thumb ? (
           // 원격 도메인이 다양해 next/image remotePatterns 대신 img 사용
           // eslint-disable-next-line @next/next/no-img-element
@@ -99,20 +102,44 @@ export function MemeCard({
             <MediaTypeBadge type={meme.media_type} />
           </div>
         </div>
+
+        {/* 급상승 차트 순위 — 좌하단 대형 숫자(1~3위 불꽃 그라디언트). 순위=정보인 맥락 전용 */}
+        {rank != null && (
+          <span
+            aria-hidden
+            className={`pointer-events-none absolute bottom-1 left-2.5 select-none text-[2.75rem] font-black italic leading-none tracking-tighter tabular-nums ${
+              rank <= 3 ? "text-transparent" : "text-white/95"
+            }`}
+            style={
+              rank <= 3
+                ? {
+                    backgroundImage:
+                      "linear-gradient(160deg, var(--flame-300) 0%, var(--flame-500) 55%, var(--flame-700) 100%)",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.45))",
+                  }
+                : { filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.55))" }
+            }
+          >
+            {rank}
+          </span>
+        )}
       </div>
 
-      {/* 본문 */}
-      <div className="flex min-w-0 flex-col gap-1.5 p-3.5">
-        {/* 밈명 — 텍스트가 주인공 */}
-        <p className="line-clamp-2 break-keep text-lg font-extrabold leading-snug">
+      {/* 본문 — flex-1 + footer mt-auto로 카드 높이를 통일(제목·요약 길이 무관) */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5">
+        {rank != null && <span className="sr-only">{rank}위</span>}
+        {/* 밈명 — 텍스트가 주인공. 2줄 높이 고정(min-h)으로 카드 간 들쭉날쭉 방지 */}
+        <p className="line-clamp-2 min-h-[2.75em] break-keep text-lg font-extrabold leading-snug">
           {meme.title}
         </p>
-        {/* 한 줄 뜻 */}
-        <p className="line-clamp-2 break-keep text-sm leading-relaxed text-muted">
+        {/* 한 줄 뜻 — 2줄 높이 고정 */}
+        <p className="line-clamp-2 min-h-[3.25em] break-keep text-sm leading-relaxed text-muted">
           {meme.summary}
         </p>
-        {/* 구분선 + 하단 신호등(고채도 독점) + 생명 게이지 */}
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-t border-border pt-2.5">
+        {/* 구분선 + 하단 신호등(고채도 독점) + 생명 게이지 — 항상 카드 바닥에 정렬 */}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-t border-border pt-2.5">
           <SafetyBadge level={meme.safety_level} />
           <LifeGauge status={meme.lifecycle_status} size="sm" showLabel={false} />
         </div>

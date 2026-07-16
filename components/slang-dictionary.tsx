@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { SafetyBadge } from "@/components/safety-badge";
 import type { SafetyLevel } from "@/lib/labels";
 
@@ -67,6 +68,20 @@ export function SlangDictionary({
   eras: SlangEra[];
   active?: SlangEraKey;
 }) {
+  // 활성 탭이 가로 스크롤 밖(모바일의 '주의·위험' 등)이면 보이도록 끌어온다.
+  // 페이지 스크롤은 건드리지 않게 block: "nearest".
+  const activeTabRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const el = activeTabRef.current;
+    if (!el || typeof el.scrollIntoView !== "function") return;
+    // 일부 환경(jsdom 등)은 미구현 — 스크롤 실패가 렌더를 막지 않게 방어
+    try {
+      el.scrollIntoView({ inline: "center", block: "nearest" });
+    } catch {
+      /* no-op */
+    }
+  }, [active]);
+
   return (
     <div className="mt-6">
       <nav
@@ -78,6 +93,7 @@ export function SlangDictionary({
           return (
             <Link
               key={era.key}
+              ref={current ? activeTabRef : undefined}
               href={era.key === "now" ? "/slang" : `/slang?era=${era.key}`}
               scroll={false}
               aria-current={current ? "page" : undefined}

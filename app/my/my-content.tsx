@@ -121,7 +121,8 @@ export function MyContent({
       };
 
   return (
-    <main className="mx-auto w-full max-w-md px-5 py-8">
+    // 컨테이너는 헤더(max-w-5xl px-4)와 사이드 간격을 정확히 일치시킨다.
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
       {/* 프로필 헤더 */}
       <motion.div
         {...section}
@@ -164,10 +165,14 @@ export function MyContent({
         </p>
       )}
 
+      {/* 반응형 2컬럼 — lg+: 좌측 설정 레일(sticky) + 우측 콘텐츠.
+          좁아지면(<lg) 자연스럽게 한 컬럼으로 내려간다(설정 → 피드 → 저장 → 제보). */}
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:w-80 lg:shrink-0">
       {/* 닉네임 수정 */}
       <motion.section
         {...section}
-        className="mt-6 rounded-2xl border border-border bg-surface p-5"
+        className="rounded-2xl border border-border bg-surface p-5"
       >
         <h2 className="text-lg font-bold">닉네임</h2>
         <form action={updateNickname} className="mt-3 flex gap-2">
@@ -212,7 +217,7 @@ export function MyContent({
       {/* 관심 카테고리 */}
       <motion.section
         {...section}
-        className="mt-6 rounded-2xl border border-border bg-surface p-5"
+        className="rounded-2xl border border-border bg-surface p-5"
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold">관심 카테고리</h2>
@@ -241,6 +246,10 @@ export function MyContent({
         )}
       </motion.section>
 
+      </aside>
+
+      {/* 우측 콘텐츠 컬럼 — 첫 섹션의 자체 mt-8은 컬럼 정렬을 위해 상쇄 */}
+      <div className="min-w-0 flex-1 [&>*:first-child]:mt-0">
       {/* 관심 카테고리 맞춤 피드 — 서버 컴포넌트 슬롯 */}
       {myFeed}
 
@@ -373,6 +382,8 @@ export function MyContent({
           </motion.ul>
         )}
       </section>
+      </div>
+      </div>
     </main>
   );
 }

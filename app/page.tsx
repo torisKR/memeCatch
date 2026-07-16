@@ -49,8 +49,10 @@ export default async function Home() {
       <WeeklyBriefing memes={latest} />
 
       {/* 인터랙티브 위젯 — 밈알못 자가진단: 제목 보고 알아요/처음 봐요 → 뜻·신호등 공개.
-          정적 캐러셀·리빌과 달리 방문자가 직접 조작하는 요소(홈 참여도). trending 재사용. */}
-      {showTrending && <MemeGuessGame memes={trending} />}
+          정적 캐러셀·리빌과 달리 방문자가 직접 조작하는 요소(홈 참여도).
+          바로 아래 급상승 캐러셀과 겹치지 않게 입문자용(beginners) 덱을 쓰고,
+          부족하면 trending으로 폴백. */}
+      <MemeGuessGame memes={beginners.length >= 3 ? beginners : trending} />
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">

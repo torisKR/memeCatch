@@ -162,6 +162,30 @@ export default async function Home() {
             </li>
             <li>
               <Link
+                href="/quiz"
+                prefetch={false}
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+              >
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  {/* 시험지 + 연필 — 체크된 답안지 느낌 */}
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h7" />
+                    <path d="m8 8 1.2 1.2L11.5 7" />
+                    <path d="M13.5 8.5H16" />
+                    <path d="m8 13.5 1.2 1.2 2.3-2.2" />
+                    <path d="m17.5 11 2.5 2.5-5 5-3 .5.5-3 5-5Z" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold">밈력고사</span>
+                  <span className="block truncate text-sm text-muted">
+                    내 밈력은 몇 점? 10문항 스피드 퀴즈
+                  </span>
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/weekly"
                 prefetch={false}
                 className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"

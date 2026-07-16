@@ -56,6 +56,7 @@ export async function GET() {
 - [검색](${SITE_URL}/search): 키워드·초성·별칭 검색
 - [밈 연표](${SITE_URL}/timeline): 1990년대부터 지금까지 연대별 대표 밈
 - [줄임말·유행어 사전](${SITE_URL}/slang): 요즘 신조어부터 1990년대 유행어까지 연대별 표제어·뜻·사용 안전도
+- [밈력고사](${SITE_URL}/quiz): 사전 데이터로 매번 새로 출제되는 10문항 밈 지식 퀴즈
 - [이번 주 밈 결산](${SITE_URL}/weekly): 매주 자동 갱신되는 급상승·신규 정리
 - [오늘의 랭킹](${SITE_URL}/rankings)
 - [전체 사이트맵](${SITE_URL}/sitemap.xml): 밈 상세 페이지 전체 URL

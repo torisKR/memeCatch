@@ -3,6 +3,7 @@ import { Suspense, cache } from "react";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
 import { getSlangTermsByYearRange, type SlangTermRow } from "@/lib/queries";
+import { createStaticClient } from "@/lib/supabase/server";
 import {
   SlangDictionary,
   SlangDictionaryFromQuery,
@@ -84,6 +85,38 @@ const loadSlangEras = cache(async (): Promise<SlangEra[]> => {
   }));
 });
 
+/**
+ * 위험 패널(5번째 탭) — red+yellow 유행어 상위. "요즘 쓰면 위험한 말" 진입점으로,
+ * 행을 누르면 상세의 "이 판정의 근거" 블록으로 이어진다.
+ * lib/queries.ts는 에이전트 A 담당이라 이 페이지에서 createStaticClient로 직접 조회.
+ */
+const loadRiskyTerms = cache(async (): Promise<SlangEra["terms"]> => {
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("memes")
+      .select(
+        "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
+      )
+      .eq("category", "phrase")
+      .in("moderation_status", ["approved", "limited"])
+      .in("safety_level", ["red", "yellow"])
+      .order("trend_score", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(TERMS_PER_ERA);
+    if (error || !data) return [];
+    // red(쓰면 위험)를 먼저 — 같은 등급 안에서는 trend 순 유지(stable sort)
+    return [...(data as SlangTermRow[])]
+      .sort(
+        (a, b) =>
+          Number(b.safety_level === "red") - Number(a.safety_level === "red")
+      )
+      .map(rowToTerm);
+  } catch {
+    return [];
+  }
+});
+
 /** 연대 대표 표제어 — 대조 문구·메타 설명용(짧은 제목 우선, 없으면 1위) */
 function pickShowcase(era: SlangEra): string | null {
   const short = era.terms.slice(0, 5).find((t) => t.title.length <= 10);
@@ -124,8 +157,30 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SlangPage() {
-  const eras = await loadSlangEras();
+  const [eras, riskyTerms] = await Promise.all([
+    loadSlangEras(),
+    loadRiskyTerms(),
+  ]);
   const hasTerms = eras.some((era) => era.terms.length > 0);
+
+  // 위험 패널은 표제어가 있을 때만 5번째 탭으로 추가(정적 4패널+hidden 구조 유지).
+  // JSON-LD·세대 대조·메타는 연대 패널(eras) 기준 그대로 — 위험 패널은 뷰 재배열일 뿐.
+  const panels: SlangEra[] =
+    riskyTerms.length > 0
+      ? [
+          ...eras,
+          {
+            key: "risky",
+            label: "주의·위험",
+            range: "",
+            // explore에 안전 등급 필터가 없어 더 보기 링크는 감춘다
+            exploreHref: "",
+            description:
+              "지금 쓰면 위험하거나 맥락 주의가 필요한 말만 모았어요. 표제어를 누르면 상세에서 ‘이 판정의 근거’를 확인할 수 있어요.",
+            terms: riskyTerms,
+          },
+        ]
+      : eras;
 
   // 세대 대조 한 줄 — 1990년대 vs 요즘 대표 표제어(데이터 없으면 정적 폴백)
   const thenTerm =
@@ -208,8 +263,8 @@ export default async function SlangPage() {
         </div>
       ) : (
         // 정적 셸에는 기본 탭(요즘) 뷰를 그대로 싣고, 하이드레이션 후 ?era=와 동기화
-        <Suspense fallback={<SlangDictionary eras={eras} />}>
-          <SlangDictionaryFromQuery eras={eras} />
+        <Suspense fallback={<SlangDictionary eras={panels} />}>
+          <SlangDictionaryFromQuery eras={panels} />
         </Suspense>
       )}
     </main>

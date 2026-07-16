@@ -12,9 +12,54 @@ function isSafetyLevel(v: unknown): v is SafetyLevel {
   return typeof v === "string" && v in SAFETY_LEVELS;
 }
 
+export type UsageContextRow = {
+  key: keyof typeof USAGE_CONTEXTS;
+  level: SafetyLevel;
+};
+
+/** usage_context jsonb({"work":"green",...}) → 검증된 상황별 행 목록 */
+export function parseUsageContext(context: Json): UsageContextRow[] {
+  const raw =
+    context && typeof context === "object" && !Array.isArray(context)
+      ? (context as Record<string, unknown>)
+      : {};
+  return (Object.keys(USAGE_CONTEXTS) as (keyof typeof USAGE_CONTEXTS)[])
+    .map((key) => ({ key, level: raw[key] }))
+    .filter((r): r is UsageContextRow => isSafetyLevel(r.level));
+}
+
+/** 상황별 가·불가 행 목록 — UsageGuide와 SafetyRationale이 공유(중복 마크업 금지) */
+export function UsageContextRows({ rows }: { rows: UsageContextRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <ul className="mt-3 divide-y divide-border">
+      {rows.map(({ key, level }) => {
+        const s = SAFETY_LEVELS[level];
+        return (
+          <li
+            key={key}
+            className="flex min-h-11 items-center justify-between gap-3 py-2"
+          >
+            <span className="text-base font-medium">{USAGE_CONTEXTS[key]}</span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}
+            >
+              <span aria-hidden className="leading-none">
+                {s.icon}
+              </span>
+              {s.user}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /**
  * 상황별 사용 가이드 — usage_context jsonb({"work":"green",...}) × 신호등.
  * 유효한 항목이 하나도 없으면 렌더하지 않는다.
+ * 밈 상세에서는 SafetyRationale(판정 근거 카드)이 이 행 목록을 흡수해 사용한다.
  */
 export function UsageGuide({
   context,
@@ -23,17 +68,7 @@ export function UsageGuide({
   context: Json;
   note?: string | null;
 }) {
-  const raw =
-    context && typeof context === "object" && !Array.isArray(context)
-      ? (context as Record<string, unknown>)
-      : {};
-  const rows = (
-    Object.keys(USAGE_CONTEXTS) as (keyof typeof USAGE_CONTEXTS)[]
-  )
-    .map((key) => ({ key, level: raw[key] }))
-    .filter((r): r is { key: keyof typeof USAGE_CONTEXTS; level: SafetyLevel } =>
-      isSafetyLevel(r.level)
-    );
+  const rows = parseUsageContext(context);
   if (rows.length === 0) return null;
 
   return (
@@ -44,29 +79,7 @@ export function UsageGuide({
       <h2 id="usage-guide-title" className="text-lg font-bold">
         어디서 써도 될까요?
       </h2>
-      <ul className="mt-3 divide-y divide-border">
-        {rows.map(({ key, level }) => {
-          const s = SAFETY_LEVELS[level];
-          return (
-            <li
-              key={key}
-              className="flex min-h-11 items-center justify-between gap-3 py-2"
-            >
-              <span className="text-base font-medium">
-                {USAGE_CONTEXTS[key]}
-              </span>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}
-              >
-                <span aria-hidden className="leading-none">
-                  {s.icon}
-                </span>
-                {s.user}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      <UsageContextRows rows={rows} />
       {note && <p className="mt-3 text-base text-muted">{note}</p>}
     </section>
   );

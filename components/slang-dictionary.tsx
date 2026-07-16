@@ -15,7 +15,7 @@ import type { SafetyLevel } from "@/lib/labels";
  * 비활성 패널은 hidden 속성으로만 감춰 크롤러에는 전체 표제어가 노출된다.
  */
 
-export type SlangEraKey = "now" | "2010s" | "2000s" | "1990s";
+export type SlangEraKey = "now" | "2010s" | "2000s" | "1990s" | "risky";
 
 export type SlangTerm = {
   href: string;
@@ -28,13 +28,22 @@ export type SlangTerm = {
 export type SlangEra = {
   key: SlangEraKey;
   label: string;
-  /** 탭 보조 연도 표기 (예: "2020~") */
+  /** 탭 보조 연도 표기 (예: "2020~") — 위험 패널처럼 없으면 빈 문자열 */
   range: string;
+  /** 빈 문자열이면 "탐색에서 더 보기" 링크를 감춘다(탐색에 대응 필터 없음) */
   exploreHref: string;
+  /** 패널 상단 안내 한 줄(위험 패널 등) — 없으면 미노출 */
+  description?: string;
   terms: SlangTerm[];
 };
 
-const ERA_KEYS: readonly SlangEraKey[] = ["now", "2010s", "2000s", "1990s"];
+const ERA_KEYS: readonly SlangEraKey[] = [
+  "now",
+  "2010s",
+  "2000s",
+  "1990s",
+  "risky",
+];
 
 function parseEra(value: string | null): SlangEraKey {
   return (ERA_KEYS as readonly string[]).includes(value ?? "")
@@ -45,7 +54,9 @@ function parseEra(value: string | null): SlangEraKey {
 /** ?era= 값과 활성 탭을 동기화하는 진입점 — 반드시 Suspense 안에서 렌더 */
 export function SlangDictionaryFromQuery({ eras }: { eras: SlangEra[] }) {
   const era = parseEra(useSearchParams().get("era"));
-  return <SlangDictionary eras={eras} active={era} />;
+  // 알려진 키라도 이번 렌더의 패널 목록에 없으면(예: 위험 표제어 0건) 기본 탭으로
+  const active = eras.some((e) => e.key === era) ? era : "now";
+  return <SlangDictionary eras={eras} active={active} />;
 }
 
 /** 순수 뷰 — 정적 셸(fallback)과 클라이언트 동기화 뷰가 공유 */
@@ -77,13 +88,15 @@ export function SlangDictionary({
               }`}
             >
               {era.label}
-              <span
-                className={`text-xs font-medium tabular-nums ${
-                  current ? "text-white/90" : ""
-                }`}
-              >
-                {era.range}
-              </span>
+              {era.range && (
+                <span
+                  className={`text-xs font-medium tabular-nums ${
+                    current ? "text-white/90" : ""
+                  }`}
+                >
+                  {era.range}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -105,10 +118,17 @@ export function SlangDictionary({
             </h2>
             {era.terms.length > 0 && (
               <p className="shrink-0 text-sm text-muted">
-                많이 본 순 · {era.terms.length}개
+                {era.key === "risky" ? "위험 우선" : "많이 본 순"} ·{" "}
+                {era.terms.length}개
               </p>
             )}
           </div>
+
+          {era.description && (
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+              {era.description}
+            </p>
+          )}
 
           {era.terms.length === 0 ? (
             <div className="mt-4 rounded-2xl border border-border bg-surface p-8 text-center">
@@ -146,13 +166,15 @@ export function SlangDictionary({
             </ul>
           )}
 
-          <Link
-            href={era.exploreHref}
-            prefetch={false}
-            className="mt-5 inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-5 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.97]"
-          >
-            탐색에서 더 보기 <span aria-hidden>→</span>
-          </Link>
+          {era.exploreHref && (
+            <Link
+              href={era.exploreHref}
+              prefetch={false}
+              className="mt-5 inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-5 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.97]"
+            >
+              탐색에서 더 보기 <span aria-hidden>→</span>
+            </Link>
+          )}
         </section>
       ))}
     </div>

@@ -75,17 +75,34 @@ export function MemeCard({
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
           />
         ) : (
+          // 타이포 플레이스홀더 — "비어 있는 회색"이 아니라 의도된 타이포 카드로:
+          // 좌상단 큰따옴표 워터마크(저불투명) + 제목 타이포 + 우하단 등장연도 칩.
           <div
             aria-hidden
-            className="flex h-full w-full items-end p-3.5"
+            className="relative flex h-full w-full flex-col justify-end gap-2 p-3.5"
             style={{
               background: `var(--cat-${meme.category}-bg)`,
               color: `var(--cat-${meme.category}-text)`,
             }}
           >
-            <span className="line-clamp-4 text-xl font-extrabold leading-snug">
+            {/* 큰따옴표 SVG 워터마크 — 상단 오버레이 칩 아래로 살짝 비껴 배치 */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden
+              className="pointer-events-none absolute left-2 top-8 h-16 w-16 opacity-[0.14]"
+            >
+              <path d="M10.6 4.9C6.8 7.1 4.6 10.3 4.6 14.2c0 2.8 1.7 4.6 4 4.6 2 0 3.6-1.5 3.6-3.6 0-2-1.4-3.3-3.2-3.3-.3 0-.7 0-.9.1.4-2 2.1-4 4-5.2L10.6 4.9Zm8.9 0c-3.9 2.2-6 5.4-6 9.3 0 2.8 1.7 4.6 4 4.6 2 0 3.5-1.5 3.5-3.6 0-2-1.3-3.3-3.1-3.3-.3 0-.7 0-.9.1.4-2 2-4 4-5.2L19.5 4.9Z" />
+            </svg>
+            <span className="relative line-clamp-4 text-xl font-extrabold leading-snug">
               {meme.title}
             </span>
+            {/* 연도 칩 — 우하단 스탬프. 좌하단 rank 대형 숫자 오버레이와 충돌 회피 */}
+            {meme.origin_year != null && (
+              <span className="relative inline-flex items-center self-end rounded-full border border-current/30 px-2 py-0.5 text-[11px] font-bold tabular-nums tracking-tight">
+                {meme.origin_year}
+              </span>
+            )}
           </div>
         )}
 

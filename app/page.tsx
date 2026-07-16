@@ -13,6 +13,7 @@ import { HeroWeb3 } from "@/components/hero-web3";
 import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
 import { DonateCard } from "@/components/donate-card";
+import { WeeklyBriefing } from "@/components/weekly-briefing";
 
 /** 홈 문서는 요청별 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 300;
@@ -40,6 +41,9 @@ export default async function Home() {
         popularTerms={popularTerms}
       />
       <div className="mx-auto max-w-5xl px-4">
+
+      {/* 주간 브리핑 — 밈알못이 첫 스크롤에서 만나는 요약 (급상승 캐러셀 위, 추가 쿼리 0) */}
+      <WeeklyBriefing memes={trending} />
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">

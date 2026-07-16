@@ -416,3 +416,30 @@ label[for] {
     transform: rotate(1deg);
   }
 }
+
+/* ── 타이포 폴백 히어로 — 임베드·썸네일 부재 시 대표 콘텐츠 영역 장식 ──
+   히어로(§12)의 미세 그리드 문법 재사용. currentColor 기반이라 카테고리
+   틴트(--cat-*-text)·라이트/다크 모두에서 은은하게 동작. 정적(애니메이션 없음). */
+.typo-hero-grid {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, currentColor 9%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, currentColor 9%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 110% 90% at 24% 18%,
+    black 32%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 110% 90% at 24% 18%,
+    black 32%,
+    transparent 100%
+  );
+}

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   CATEGORIES,
   MODERATION_STATUS,
-  SENTIMENT,
   shortIdFromParam,
 } from "@/lib/labels";
 import {
@@ -12,7 +11,8 @@ import {
   getRelatedMemes,
 } from "@/lib/queries";
 import { AnswerCard } from "@/components/answer-card";
-import { UsageGuide } from "@/components/usage-guide";
+import { SafetyRationale } from "@/components/safety-rationale";
+import { UsageExamples } from "@/components/usage-examples";
 import { MemeEmbed } from "@/components/meme-embed";
 import { MemeCard } from "@/components/meme-card";
 import { ReactionBar } from "@/components/reaction-bar";
@@ -87,7 +87,10 @@ export default async function MemeDetailPage({ params }: Props) {
     null;
   const sourceLinks = sourceLinksWithContent(meme.meme_sources, meme.meme_contents);
   const fallbackSourceUrl = preferredSourceUrl(sourceLinks);
-  const sentimentChip = SENTIMENT[meme.sentiment].user;
+  // usage_examples 컬럼·데이터는 에이전트 D가 추가 중 — DB 타입 재생성 전까지
+  // 옵셔널 캐스팅 1곳으로 안전 처리(컴포넌트가 런타임 검증, 없으면 null 렌더)
+  const usageExamples = (meme as typeof meme & { usage_examples?: unknown })
+    .usage_examples;
 
   const isYouTubeRep =
     representative?.platform?.toLowerCase() === "youtube" &&
@@ -138,21 +141,14 @@ export default async function MemeDetailPage({ params }: Props) {
 
       <AnswerCard meme={meme} />
 
-      {sentimentChip && (
-        <p
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"
-          style={{
-            color: "var(--sent-controversial)",
-            background:
-              "color-mix(in srgb, var(--sent-controversial) 12%, var(--surface))",
-          }}
-        >
-          <span aria-hidden>◆</span>
-          {sentimentChip}
-        </p>
-      )}
-
-      <UsageGuide context={meme.usage_context} note={meme.usage_note} />
+      {/* 판정 근거 한 블록 — 신호등 의미·usage_note·상황별 가이드·sentiment·caution 통합 */}
+      <SafetyRationale
+        level={meme.safety_level}
+        sentiment={meme.sentiment}
+        context={meme.usage_context}
+        note={meme.usage_note}
+        caution={meme.caution}
+      />
 
       <section
         aria-label={representative?.is_representative ? "대표 콘텐츠" : "관련 콘텐츠"}
@@ -162,6 +158,8 @@ export default async function MemeDetailPage({ params }: Props) {
           fallbackSourceUrl={fallbackSourceUrl}
           title={meme.title}
           isRepresentative={representative?.is_representative ?? true}
+          category={meme.category}
+          originYear={meme.origin_year}
         />
       </section>
 
@@ -241,22 +239,8 @@ export default async function MemeDetailPage({ params }: Props) {
         </section>
       )}
 
-      {meme.caution && (
-        <section
-          aria-labelledby="meme-caution"
-          className="rounded-2xl bg-safety-yellow-bg p-5 text-safety-yellow"
-        >
-          <h2
-            id="meme-caution"
-            className="flex items-center gap-2 text-lg font-bold"
-          >
-            <span aria-hidden>▲</span> 이건 조심해 주세요
-          </h2>
-          <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-            {meme.caution}
-          </p>
-        </section>
-      )}
+      {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
+      <UsageExamples examples={usageExamples} />
 
       {related.length > 0 && (
         <section aria-labelledby="related-memes">

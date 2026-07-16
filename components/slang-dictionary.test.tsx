@@ -90,4 +90,40 @@ describe("SlangDictionary", () => {
       screen.getByRole("link", { name: /요즘/ }).getAttribute("aria-current")
     ).toBe("page");
   });
+
+  it("?era=risky면 5번째 위험 패널이 보인다(red+yellow 진입점)", () => {
+    const eras: SlangEra[] = [
+      ...makeEras(),
+      {
+        key: "risky",
+        label: "주의·위험",
+        range: "",
+        exploreHref: "",
+        description: "지금 쓰면 위험한 말만 모았어요.",
+        terms: [
+          {
+            href: "/memes/ccc-위험밈",
+            title: "위험밈",
+            summary: "비하 맥락 유행어",
+            safety: "red",
+            year: 2021,
+          },
+        ],
+      },
+    ];
+    searchParams.set("era", "risky");
+    render(<SlangDictionaryFromQuery eras={eras} />);
+    expect(section("risky")?.hasAttribute("hidden")).toBe(false);
+    expect(section("now")?.hasAttribute("hidden")).toBe(true);
+    expect(screen.getByText("지금 쓰면 위험한 말만 모았어요.")).toBeTruthy();
+  });
+
+  it("위험 패널이 없는 렌더에서 ?era=risky는 기본 탭으로 폴백한다", () => {
+    searchParams.set("era", "risky");
+    render(<SlangDictionaryFromQuery eras={makeEras()} />);
+    expect(
+      screen.getByRole("link", { name: /요즘/ }).getAttribute("aria-current")
+    ).toBe("page");
+    expect(section("now")?.hasAttribute("hidden")).toBe(false);
+  });
 });

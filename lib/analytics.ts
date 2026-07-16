@@ -8,6 +8,7 @@
  *          | weekly_click(레인 D: /weekly 카드 클릭) | my_recent_click(레인 C: MY 최근 본 밈 클릭)
  *          | timeline_click(레인 A: /timeline 카드 클릭) | search_suggest_click(레인 B: 검색 자동완성 클릭)
  *          | quiz_start(mode) | quiz_complete(score) | quiz_share — 밈력고사(/quiz) 퍼널
+ *          | briefing_click(to) — 홈 주간 브리핑("이번 주 이것만") 내 링크 클릭
  */
 type GtagEvent =
   | "next_meme_click"
@@ -27,7 +28,8 @@ type GtagEvent =
   | "generation_news_click"
   | "quiz_start"
   | "quiz_complete"
-  | "quiz_share";
+  | "quiz_share"
+  | "briefing_click";
 
 declare global {
   interface Window {

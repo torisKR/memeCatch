@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { memePathFrom } from "@/lib/labels";
+import { stripMarkdownToText } from "@/lib/markdown";
 import { CategoryTag } from "@/components/category-tag";
 import {
   timeAgo,
@@ -33,8 +34,9 @@ export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
         </Link>
       </h2>
 
+      {/* 발췌는 마크다운 구문(이미지/링크 등)을 벗긴 플레인 텍스트로 */}
       <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-base leading-relaxed text-muted">
-        {post.body}
+        {stripMarkdownToText(post.body)}
       </p>
 
       {post.memes && (

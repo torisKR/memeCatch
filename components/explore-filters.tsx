@@ -231,13 +231,14 @@ export function ExploreFilters({
           enterKeyHint="search"
           className="min-h-11 w-full rounded-full border border-border bg-surface py-2 pl-11 pr-28 text-base text-foreground placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-search-cancel-button]:appearance-none"
         />
-        <div className="absolute inset-y-0 right-1.5 flex items-center gap-1">
+        {/* 우측 액션 — 인풋 안에 '떠 있는' 컴팩트 필(위아래 숨 쉴 여백), 지우기는 고스트 원형 */}
+        <div className="absolute inset-y-0 right-2 flex items-center gap-1">
           {query && (
             <button
               type="button"
               onClick={clearSearch}
               aria-label="검색어 지우기"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:text-accent active:scale-95"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-surface-2 hover:text-foreground active:scale-95"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -254,9 +255,22 @@ export function ExploreFilters({
           )}
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-95 active:scale-[0.97]"
+            aria-label="검색"
+            className="relative inline-flex h-8 items-center gap-1.5 rounded-full bg-accent-strong px-3.5 text-sm font-bold text-white shadow-sm transition-[filter,transform] before:absolute before:-inset-1.5 before:content-[''] hover:brightness-110 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            검색
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12h13M13 6l6 6-6 6" />
+            </svg>
+            <span className="hidden sm:inline">검색</span>
           </button>
         </div>
       </form>

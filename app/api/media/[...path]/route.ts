@@ -13,7 +13,11 @@ export async function GET(
 ) {
   const { path } = await ctx.params;
   const key = path.join("/");
-  if (!key.startsWith("meme-uploads/") || key.includes("..")) {
+  // meme-uploads/ = 사용자 업로드, meme-thumbs/ = 소셜(TikTok·IG) 썸네일 재호스팅
+  // (원본 CDN이 만료 서명 URL이라 수집 시점에 R2로 영구화 — 카드 미리보기용)
+  const allowed =
+    key.startsWith("meme-uploads/") || key.startsWith("meme-thumbs/");
+  if (!allowed || key.includes("..")) {
     return new NextResponse("Not found", { status: 404 });
   }
 

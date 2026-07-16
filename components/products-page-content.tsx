@@ -1,7 +1,6 @@
 "use client";
 
 import { AffiliateProductGrid } from "@/components/affiliate-product-grid";
-import { CoupangBanner } from "@/components/coupang-banner";
 import { EditorialProductCard } from "@/components/editorial-product-card";
 import { TrackedBlock } from "@/components/tracked-block";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -59,9 +58,7 @@ export function ProductsPageContent({
         </AlertDescription>
       </Alert>
 
-      {/* 쿠팡 파트너스 다이나믹 배너 — 고지 Alert 바로 아래(광고 섹션 묶음) */}
-      <CoupangBanner className="mt-6" />
-
+      {/* 쿠팡 배너는 전역 푸터로 이동(전 페이지 하단) — 중복 노출 방지 */}
       <AffiliateProductGrid data={storefront} locale={locale} />
 
       <section className="mt-16" aria-labelledby="editor-picks-title">

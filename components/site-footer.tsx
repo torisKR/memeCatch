@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { HideOnAdmin } from "@/components/auth-menu";
+import { CoupangBanner } from "@/components/coupang-banner";
 import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
 
@@ -28,6 +29,9 @@ export function SiteFooter() {
     <HideOnAdmin>
       <footer className="mt-16 border-t border-border bg-surface-2">
         <div className="mx-auto max-w-5xl px-4 py-8">
+          {/* 쿠팡 파트너스 배너 — 전 페이지 하단(광고 수익). 필수 고지 문구는
+              배너 컴포넌트에 동봉. lazy iframe이라 초기 로딩 영향 없음 */}
+          <CoupangBanner className="mb-8" />
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
               {FOOTER_LINKS.map((l) => (

@@ -278,6 +278,49 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeRow[]>
   }
 }
 
+/** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */
+export type SlangTermRow = Pick<
+  MemeRow,
+  | "id"
+  | "short_id"
+  | "slug"
+  | "title"
+  | "summary"
+  | "safety_level"
+  | "origin_year"
+  | "trend_score"
+>;
+
+/**
+ * /slang — 연대(origin_year 범위)별 유행어(category=phrase) 상위 조회.
+ * trend_score 내림차순 + id 내림차순(동점 안정 정렬 — explore와 동일 규칙).
+ */
+export async function getSlangTermsByYearRange(
+  fromYear: number,
+  toYear: number,
+  limit = 60
+): Promise<SlangTermRow[]> {
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("memes")
+      .select(
+        "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
+      )
+      .eq("category", "phrase")
+      .in("moderation_status", [...PUBLIC_STATUSES])
+      .gte("origin_year", fromYear)
+      .lte("origin_year", toYear)
+      .order("trend_score", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data as SlangTermRow[];
+  } catch {
+    return [];
+  }
+}
+
 /** 공개 밈 총 수 — 히어로 카운트업용(head 카운트, 행 미전송) */
 export async function getTotalMemeCount(): Promise<number> {
   try {

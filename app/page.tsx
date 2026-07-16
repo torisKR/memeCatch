@@ -141,6 +141,27 @@ export default async function Home() {
             </li>
             <li>
               <Link
+                href="/slang"
+                prefetch={false}
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"
+              >
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5V6a2 2 0 0 1 2-2h14v13.5H6a2 2 0 0 0-2 2Z" />
+                    <path d="M4 19.5A2 2 0 0 0 6 21.5h14" />
+                    <path d="M9 8.5h6M9 12h3.5" />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-bold">줄임말·유행어 사전</span>
+                  <span className="block truncate text-sm text-muted">
+                    그때는 하이루, 지금은 럭키비키
+                  </span>
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/weekly"
                 prefetch={false}
                 className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]"

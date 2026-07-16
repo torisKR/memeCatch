@@ -39,7 +39,7 @@ export default async function Home() {
         totalCount={totalCount}
         popularTerms={popularTerms}
       />
-      <div className="mx-auto max-w-3xl px-4">
+      <div className="mx-auto max-w-5xl px-4">
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">
@@ -81,7 +81,7 @@ export default async function Home() {
             </h2>
           </Reveal>
           {/* 큐레이션 그리드: 스크롤 리빌 + 카드 스태거 진입 */}
-          <MotionList className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <MotionList className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {beginners.map((meme) => (
               <MemeCard key={meme.id} meme={meme} />
             ))}

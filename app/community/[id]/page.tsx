@@ -7,6 +7,8 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { CommunityLikeButton } from "@/components/community-like-button";
 import { CommunityCommentForm } from "@/components/community-comment-form";
 import { CommunityMemeChip } from "@/components/community-post-card";
+import { MarkdownBody } from "@/components/markdown-body";
+import { stripMarkdownToText } from "@/lib/markdown";
 import {
   POST_SELECT,
   timeAgo,
@@ -47,7 +49,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const post = await getPost(id);
   if (!post) return { title: "글을 찾을 수 없어요" };
-  const description = post.body.slice(0, 120);
+  // 메타 설명은 마크다운 구문(이미지/링크)을 벗긴 플레인 텍스트로
+  const description = stripMarkdownToText(post.body).slice(0, 120);
   return {
     title: post.title,
     description,
@@ -86,7 +89,7 @@ export default async function CommunityPostPage({ params }: Props) {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-5xl space-y-6 px-4 pb-14 pt-6">
       <ForumPostingJsonLd
         postId={post.id}
         title={post.title}
@@ -119,9 +122,9 @@ export default async function CommunityPostPage({ params }: Props) {
           </p>
         </header>
 
-        <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed">
-          {post.body}
-        </p>
+        {/* 본문 — 마크다운 렌더(raw HTML 미렌더로 XSS 안전, remark-breaks로
+            기존 플레인 텍스트 글의 줄바꿈도 그대로 보이는 하위호환) */}
+        <MarkdownBody className="mt-4">{post.body}</MarkdownBody>
 
         {post.memes && <CommunityMemeChip meme={post.memes} className="mt-5" />}
 

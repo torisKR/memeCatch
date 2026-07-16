@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const popularTerms = trending.map((meme) => meme.title);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
       <h1 className="text-2xl font-bold">밈 검색</h1>
       <p className="mt-1 text-base text-muted">이름·초성·별칭으로 바로 찾아보세요.</p>
       <div className="relative mt-5">
@@ -53,7 +53,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <p className="text-base text-muted">
             &lsquo;{query}&rsquo; 검색 결과 {results.length}개예요.
           </p>
-          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {results.map((meme) => (
               <li key={meme.id} className="min-w-0">
                 <MemeCard meme={meme} />
@@ -107,7 +107,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <h2 id="search-trending" className="text-xl font-bold">
             {SECTION_TITLES.trending}
           </h2>
-          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {trending.slice(0, 6).map((meme) => (
               <li key={meme.id} className="min-w-0">
                 <MemeCard meme={meme} />

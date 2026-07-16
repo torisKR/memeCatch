@@ -11,11 +11,11 @@ const EFFECTIVE = "2026년 7월 10일";
 /** 이용약관 — 커뮤니티·제보 서비스 기준 최소 필수 조항 */
 export default function TermsPage() {
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-16 pt-10">
+    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
       <h1 className="text-3xl font-extrabold tracking-tight">이용약관</h1>
       <p className="mt-2 text-sm text-muted">시행일: {EFFECTIVE}</p>
 
-      <div className="mt-8 space-y-8 text-base leading-relaxed">
+      <div className="mt-8 max-w-3xl space-y-8 text-base leading-relaxed">
         <section>
           <h2 className="text-xl font-bold">제1조 (목적과 서비스)</h2>
           <p className="mt-3">

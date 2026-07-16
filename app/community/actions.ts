@@ -63,6 +63,11 @@ const createPostSchema = z.object({
     .trim()
     .min(2, "제목은 2자 이상 써 주세요.")
     .max(100, "제목은 100자까지 쓸 수 있어요."),
+  // body는 마크다운 원문으로 저장 — 렌더(components/markdown-body.tsx)가
+  // raw HTML을 렌더하지 않고 URL도 http(s)·자기 도메인(/api/media/)만 허용하므로
+  // 서버 측 이스케이프는 불필요.
+  // 상한 5,000자는 DB check 제약(20260710091000_community.sql:
+  // char_length(body) between 1 and 5000)과 일치 — 상향하려면 마이그레이션 필요.
   body: z
     .string()
     .trim()

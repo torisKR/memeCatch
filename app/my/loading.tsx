@@ -1,6 +1,6 @@
 export default function MyLoading() {
   return (
-    <main className="mx-auto w-full max-w-md px-5 py-8" aria-busy>
+    <main className="mx-auto w-full max-w-5xl px-4 py-8" aria-busy>
       <span className="sr-only">불러오는 중이에요</span>
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">

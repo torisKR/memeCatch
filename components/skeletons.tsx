@@ -58,7 +58,7 @@ export function AnswerCardSkeleton() {
 /** 밈 상세 전체 스켈레톤 */
 export function MemeDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <AnswerCardSkeleton />
       <div className="space-y-2 rounded-2xl border border-border bg-surface p-5">
         {Array.from({ length: 4 }).map((_, i) => (

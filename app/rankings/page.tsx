@@ -151,7 +151,7 @@ export default async function RankingsPage() {
     : [];
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-6">
+    <main className="mx-auto max-w-5xl px-4 py-6">
       {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
       <h1 className="text-2xl font-bold">랭킹</h1>
       <p className="mt-1 text-base text-muted">지금 한국에서 도는 밈, 순위로 모아봤어요.</p>
@@ -200,7 +200,7 @@ export default async function RankingsPage() {
               등록된 밈이 아직 없어요. 곧 채워질 거예요!
             </p>
           ) : (
-            <ol className="mt-4 space-y-2">
+            <ol className="mt-4 grid gap-2 lg:grid-cols-2 lg:gap-x-8">
               {data.fallback.map((m, i) => (
                 <RankItem key={m.id} meme={m} rank={i + 1} />
               ))}
@@ -242,7 +242,7 @@ export default async function RankingsPage() {
             {data.today.length === 0 ? (
               <EmptyList message="오늘 급상승한 밈이 아직 없어요." />
             ) : (
-              <ol className="space-y-2">
+              <ol className="grid gap-2 lg:grid-cols-2 lg:gap-x-8">
                 {data.today.map((m, i) => (
                   <RankItem key={m.id} meme={m} rank={i + 1} />
                 ))}
@@ -254,7 +254,7 @@ export default async function RankingsPage() {
             {data.weekly.length === 0 ? (
               <EmptyList message="이번 주 조회 집계가 아직 없어요. 내일 다시 확인해 보세요." />
             ) : (
-              <ol className="space-y-2">
+              <ol className="grid gap-2 lg:grid-cols-2 lg:gap-x-8">
                 {data.weekly.map((m, i) => (
                   <RankItem
                     key={m.id}
@@ -271,7 +271,7 @@ export default async function RankingsPage() {
             {data.comeback.length === 0 ? (
               <EmptyList message="다시 뜨는 추억 밈이 아직 없어요." />
             ) : (
-              <ol className="space-y-2">
+              <ol className="grid gap-2 lg:grid-cols-2 lg:gap-x-8">
                 {data.comeback.map((m, i) => (
                   <RankItem key={m.id} meme={m} rank={i + 1} />
                 ))}
@@ -302,7 +302,7 @@ function RankItem({
   const safety = SAFETY_LEVELS[meme.safety_level as SafetyLevel];
   const life = LIFECYCLE_STATUS[meme.lifecycle_status as LifecycleStatus];
   return (
-    <li>
+    <li className="min-w-0">
       <Link
         href={memePathFrom(meme.short_id, meme.slug)}
         className="flex min-h-11 items-start gap-3 rounded-2xl border border-border bg-surface p-4"

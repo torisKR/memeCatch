@@ -13,8 +13,8 @@ export const metadata: Metadata = {
  */
 export default function OfflinePage() {
   return (
-    <main className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="w-full rounded-2xl border border-border bg-surface px-6 py-10 shadow-sm">
+    <main className="mx-auto flex min-h-[60dvh] max-w-5xl flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface px-6 py-10 shadow-sm">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
           {/* wifi-off 아이콘 (인라인 SVG — 오프라인에서도 항상 렌더) */}
           <svg

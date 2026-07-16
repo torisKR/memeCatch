@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { r2Configured, r2Put } from "@/lib/r2.server";
-import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-shared";
+import {
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+  MAX_UPLOAD_BYTES,
+  MAX_VIDEO_UPLOAD_BYTES,
+} from "@/lib/upload-shared";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
@@ -36,11 +41,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "no_file" }, { status: 400 });
   }
 
-  const ext = ALLOWED_IMAGE_TYPES[file.type];
+  // 이미지(제보·커뮤니티 공용) 또는 동영상(커뮤니티 본문용, mp4/webm)
+  const videoExt = ALLOWED_VIDEO_TYPES[file.type];
+  const ext = ALLOWED_IMAGE_TYPES[file.type] ?? videoExt;
   if (!ext) {
     return NextResponse.json({ ok: false, error: "invalid_type" }, { status: 400 });
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
+  // 동영상 20MB(개인 운영 R2 비용 보호), 이미지 기존 5MB 유지
+  const maxBytes = videoExt ? MAX_VIDEO_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+  if (file.size > maxBytes) {
     return NextResponse.json({ ok: false, error: "too_large" }, { status: 400 });
   }
 

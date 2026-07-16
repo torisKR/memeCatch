@@ -1,7 +1,7 @@
 /** 레인 3 — 커뮤니티 글 상세 스켈레톤 */
 export default function CommunityPostLoading() {
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 pb-14 pt-6" aria-busy>
+    <main className="mx-auto max-w-5xl space-y-6 px-4 pb-14 pt-6" aria-busy>
       <div className="h-5 w-24 rounded shimmer" aria-hidden />
 
       <article className="rounded-2xl border border-border bg-surface p-5" aria-hidden>

@@ -32,13 +32,15 @@ export default async function OnboardingPage({
     .maybeSingle();
 
   return (
-    <main className="mx-auto w-full max-w-md px-5 py-10">
-      <OnboardingForm
-        next={next}
-        defaultNickname={profile?.nickname ?? ""}
-        defaultInterests={profile?.interests ?? []}
-        defaultAgeGroup={profile?.age_group ?? ""}
-      />
+    <main className="mx-auto w-full max-w-5xl px-4 py-10">
+      <div className="mx-auto w-full max-w-md">
+        <OnboardingForm
+          next={next}
+          defaultNickname={profile?.nickname ?? ""}
+          defaultInterests={profile?.interests ?? []}
+          defaultAgeGroup={profile?.age_group ?? ""}
+        />
+      </div>
     </main>
   );
 }

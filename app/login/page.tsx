@@ -17,8 +17,10 @@ export default async function LoginPage({
   const callbackError = sp.error === "auth";
 
   return (
-    <main className="mx-auto w-full max-w-md px-5 py-10">
-      <LoginForm next={next} callbackError={callbackError} />
+    <main className="mx-auto w-full max-w-5xl px-4 py-10">
+      <div className="mx-auto w-full max-w-md">
+        <LoginForm next={next} callbackError={callbackError} />
+      </div>
     </main>
   );
 }

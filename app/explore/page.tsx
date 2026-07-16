@@ -258,7 +258,7 @@ export default async function ExplorePage({
   ]);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
       <ExploreCollectionJsonLd />
       <h1 className="text-2xl font-bold">밈 탐색</h1>
       <p className="mt-1 text-base text-muted">

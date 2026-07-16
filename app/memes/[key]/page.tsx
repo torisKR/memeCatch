@@ -94,7 +94,7 @@ export default async function MemeDetailPage({ params }: Props) {
     !!representative.content_id;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-5 px-4 py-5 pb-14">
+    <main className="mx-auto max-w-5xl space-y-5 px-4 py-5 pb-14">
       {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상 */}
       <MemeWebPageJsonLd
         name={meme.title}
@@ -264,7 +264,7 @@ export default async function MemeDetailPage({ params }: Props) {
             이 밈도 알아두면 좋아요
           </h2>
           <TrackedBlock event="related_click">
-            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {related.map((m) => (
                 <li key={m.id} className="min-w-0">
                   <MemeCard meme={m} />

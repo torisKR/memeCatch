@@ -22,13 +22,15 @@ export default async function CommunityNewPage() {
   if (!user) redirect("/login?next=/community/new");
 
   return (
-    <main className="mx-auto w-full max-w-md px-5 py-8">
-      <h1 className="text-2xl font-bold">커뮤니티 글쓰기</h1>
-      <p className="mt-2 text-muted">
-        밈 추천, 추억, 토론 — 뭐든 편하게 써 주세요. 밈을 첨부하면 함께 보여드려요.
-      </p>
-      <div className="mt-6">
-        <CommunityPostForm />
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+      <div className="mx-auto w-full max-w-md">
+        <h1 className="text-2xl font-bold">커뮤니티 글쓰기</h1>
+        <p className="mt-2 text-muted">
+          밈 추천, 추억, 토론 — 뭐든 편하게 써 주세요. 밈을 첨부하면 함께 보여드려요.
+        </p>
+        <div className="mt-6">
+          <CommunityPostForm />
+        </div>
       </div>
     </main>
   );

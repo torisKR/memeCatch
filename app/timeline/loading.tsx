@@ -3,7 +3,7 @@ import { MemeCardSkeleton } from "@/components/skeletons";
 /** /timeline 로딩 스켈레톤 — 연도 라벨 + 카드 스트립 형태를 흉내낸다 */
 export default function TimelineLoading() {
   return (
-    <main className="mx-auto max-w-3xl px-4 pb-14 pt-8" aria-busy>
+    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8" aria-busy>
       <div className="h-8 w-48 rounded-lg shimmer" />
       <div className="mt-3 space-y-2">
         <div className="h-4 w-full rounded-lg shimmer" />

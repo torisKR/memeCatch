@@ -14,6 +14,7 @@ import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
 import { DonateCard } from "@/components/donate-card";
 import { WeeklyBriefing } from "@/components/weekly-briefing";
+import { MemeGuessGame } from "@/components/meme-guess-game";
 
 /** 홈 문서는 요청별 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 300;
@@ -46,6 +47,10 @@ export default async function Home() {
       {/* 주간 브리핑 — 밈알못이 첫 스크롤에서 만나는 '최신 밈' 요약 (급상승 캐러셀 위).
           trending(화제성)이 아닌 latest(유래 연도 최신순)를 넘겨 요즘 밈을 앞세운다. */}
       <WeeklyBriefing memes={latest} />
+
+      {/* 인터랙티브 위젯 — 밈알못 자가진단: 제목 보고 알아요/처음 봐요 → 뜻·신호등 공개.
+          정적 캐러셀·리빌과 달리 방문자가 직접 조작하는 요소(홈 참여도). trending 재사용. */}
+      {showTrending && <MemeGuessGame memes={trending} />}
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">

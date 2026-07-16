@@ -3,6 +3,7 @@ import {
   buildQuestions,
   eraDecadeLabel,
   gradeForScore,
+  maskTitleWords,
   MIN_SUMMARY_LENGTH,
   OPTION_COUNT,
   type QuizPoolMeme,
@@ -101,6 +102,47 @@ describe("buildQuestions — 오답 생성 로직", () => {
     const questions = buildQuestions(pool, 12, fixedRng);
     const ids = questions.map((q) => q.meme.shortId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("maskTitleWords — 제목 단어 노출 차단", () => {
+  it("정답 요약에서 곡명·그룹명을 ○○로 가린다", () => {
+    const summary =
+      "보이넥스트도어 데뷔 수록곡 'One and Only' 선배 스타 참여 챌린지";
+    const masked = maskTitleWords(summary, [
+      "보이넥스트도어",
+      "원앤온리",
+      "One and Only",
+    ]);
+    expect(masked.toLowerCase()).not.toContain("보이넥스트도어");
+    expect(masked.toLowerCase()).not.toContain("one and only");
+    expect(masked).toContain("○○");
+  });
+
+  it("장르어(챌린지 등)는 가리지 않는다", () => {
+    expect(maskTitleWords("귀여운 댄스 챌린지", [])).toBe("귀여운 댄스 챌린지");
+  });
+});
+
+describe("buildQuestions — 제목이 정답을 노출하지 않음", () => {
+  it("정답 보기에 제목의 고유 단어가 남지 않는다", () => {
+    const pool: QuizPoolMeme[] = [
+      meme({
+        short_id: "a",
+        title: "보이넥스트도어 원앤온리(One and Only) 챌린지",
+        summary: "보이넥스트도어 데뷔 수록곡 One and Only 선배 참여 챌린지입니다",
+      }),
+      meme({ short_id: "b", summary: "완전히 다른 밈에 대한 충분히 긴 설명 문장 하나" }),
+      meme({ short_id: "c", summary: "또 다른 밈에 대한 충분히 긴 설명 문장 두울" }),
+      meme({ short_id: "d", summary: "세 번째 밈에 대한 충분히 긴 설명 문장 세엣" }),
+    ];
+    const q = buildQuestions(pool, 4, () => 0).find((x) =>
+      x.question.includes("원앤온리")
+    );
+    expect(q).toBeDefined();
+    const answer = q!.options[q!.answerIndex].toLowerCase();
+    expect(answer).not.toContain("보이넥스트도어");
+    expect(answer).not.toContain("one and only");
   });
 });
 

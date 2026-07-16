@@ -45,6 +45,51 @@ function normalizeSummary(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
+/** 제목에서 마스킹하지 않는 일반 명사(장르/형식어) — 이건 여러 보기에 흔해 정답 단서가 아니다 */
+const GENERIC_TITLE_WORDS = new Set([
+  "챌린지", "챌린지송", "댄스챌린지", "밈", "댄스", "짤", "유행어", "신조어",
+  "커버", "커버챌린지", "열풍", "시리즈", "안무", "챌", "송", "패러디",
+  "브이로그", "예능", "영상", "노래",
+]);
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * 제목의 '고유 식별' 단어 목록 — 곡명·그룹명·인물명 등.
+ * 괄호 안 로마자(예: One and Only)와 괄호 제거 후 토큰을 모으되, 장르어·2자 미만은 뺀다.
+ */
+function titleNameTokens(title: string): string[] {
+  const tokens: string[] = [];
+  for (const paren of title.match(/[(（][^)）]*[)）]/g) ?? []) {
+    tokens.push(paren.replace(/[(（)）]/g, "").trim());
+  }
+  const base = title.replace(/[(（][^)）]*[)）]/g, " ").trim();
+  tokens.push(base);
+  for (const token of base.split(/[\s·,/’'"“”!?]+/)) tokens.push(token);
+  return [...new Set(tokens)]
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2 && !GENERIC_TITLE_WORDS.has(t));
+}
+
+/**
+ * 보기 요약에서 그 밈 제목의 고유 단어를 ○○로 가린다.
+ * 정답 요약이 제목을 그대로 되풀이해 "제목에 답이 있는" 문제를 없앤다.
+ */
+export function maskTitleWords(text: string, tokens: string[]): string {
+  let out = text;
+  for (const token of [...tokens].sort((a, b) => b.length - a.length)) {
+    out = out.replace(new RegExp(escapeRegExp(token), "gi"), "○○");
+  }
+  // 연속·따옴표로 둘러싼 ○○ 정리
+  return out
+    .replace(/[’'"“”]?○○[’'"“”]?/g, "○○")
+    .replace(/(?:○○[\s]*){2,}/g, "○○ ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Fisher–Yates — rng 주입 가능(테스트 결정성) */
 export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
   const result = [...items];
@@ -131,11 +176,23 @@ export function buildQuestions(
     const distractors = pickDistractors(answerSummary, sameCategory, others, rng);
     if (distractors.length < OPTION_COUNT - 1) continue;
 
-    const options = shuffle([answerSummary, ...distractors], rng);
+    // 제목 단어를 정답에서 마스킹 — "제목에 답이 있는" 문제 방지.
+    // 오답에도 같은 토큰을 적용(우연히 포함된 경우 대비)하되, 대부분 정답만 바뀐다.
+    const nameTokens = titleNameTokens(answer.title);
+    const raw = [answerSummary, ...distractors];
+    const options = shuffle(
+      raw.map((s) => maskTitleWords(s, nameTokens)),
+      rng
+    );
+    const maskedAnswer = maskTitleWords(answerSummary, nameTokens);
+    // 마스킹 후 정답이 너무 짧거나 다른 보기와 겹치면(변별 불가) 이 밈은 건너뛴다
+    if (maskedAnswer.replace(/○/g, "").trim().length < 10) continue;
+    if (new Set(options).size < OPTION_COUNT) continue;
+
     questions.push({
       question: `「${answer.title}」, 무슨 뜻일까요?`,
       options,
-      answerIndex: options.indexOf(answerSummary),
+      answerIndex: options.indexOf(maskedAnswer),
       meme: {
         shortId: answer.short_id,
         slug: answer.slug,

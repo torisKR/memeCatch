@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SECTION_TITLES } from "@/lib/labels";
-import { getBeginnerMemes, getTotalMemeCount, getTrendingMemes } from "@/lib/queries";
+import { getBeginnerMemes, getLatestMemes, getTotalMemeCount, getTrendingMemes } from "@/lib/queries";
 import { COLLECTIONS } from "@/lib/collections";
 import { TodayMeme } from "@/components/today-meme";
 import { ResumeStrip } from "@/components/resume-strip";
@@ -19,9 +19,10 @@ import { WeeklyBriefing } from "@/components/weekly-briefing";
 export const revalidate = 300;
 
 export default async function Home() {
-  const [trending, beginners, totalCount] = await Promise.all([
+  const [trending, beginners, latest, totalCount] = await Promise.all([
     getTrendingMemes(10),
     getBeginnerMemes(8),
+    getLatestMemes(6),
     getTotalMemeCount(),
   ]);
   // 섹션당 3개 미만이면 섹션 숨김
@@ -42,8 +43,9 @@ export default async function Home() {
       />
       <div className="mx-auto max-w-5xl px-4">
 
-      {/* 주간 브리핑 — 밈알못이 첫 스크롤에서 만나는 요약 (급상승 캐러셀 위, 추가 쿼리 0) */}
-      <WeeklyBriefing memes={trending} />
+      {/* 주간 브리핑 — 밈알못이 첫 스크롤에서 만나는 '최신 밈' 요약 (급상승 캐러셀 위).
+          trending(화제성)이 아닌 latest(유래 연도 최신순)를 넘겨 요즘 밈을 앞세운다. */}
+      <WeeklyBriefing memes={latest} />
 
       {showTrending && (
         <section aria-labelledby="sec-trending" className="mt-2">

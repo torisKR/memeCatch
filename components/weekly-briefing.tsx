@@ -5,17 +5,15 @@ import { SafetyBadge } from "@/components/safety-badge";
 import { TrackedBlock } from "@/components/tracked-block";
 
 /**
- * 홈 주간 브리핑 — "이번 주 이것만 알면 됩니다" (CTO 피드백: 밈알못 최우선 요약).
+ * 홈 브리핑 — "요즘 뜨는 새 밈" (CTO 피드백: 밈알못 최우선 요약).
  * 급상승 캐러셀(카드 나열)과 달리 텍스트 중심의 "읽는 브리핑" 카드 1장.
- * 데이터는 홈이 이미 가져온 trending을 props로 받는다 — 추가 쿼리 0.
- * trend_score 상위 3개를 "N. 제목 — 한 줄 요약 + 신호등" 리스트로 보여준다.
+ * 데이터는 홈이 getLatestMemes(유래 연도 최신순)로 넘긴 것 — 이미 정렬됨.
+ * 상위 3개를 "N. 제목 (연도) — 한 줄 요약 + 신호등" 리스트로 보여준다.
+ * (DB에 유래는 연 단위로만 기록돼 '이번 달'까지는 특정 불가 — 최신 연도 우선.)
  * 서버 컴포넌트. 클릭 추적은 TrackedBlock(briefing_click) 캡처로 처리.
  */
 export function WeeklyBriefing({ memes }: { memes: MemeListItem[] }) {
-  // 홈 trending은 rising 우선 정렬이므로, 브리핑은 trend_score 순으로 다시 상위 3개만 뽑는다
-  const top3 = [...memes]
-    .sort((a, b) => (b.trend_score ?? 0) - (a.trend_score ?? 0))
-    .slice(0, 3);
+  const top3 = memes.slice(0, 3);
   if (top3.length < 3) return null;
 
   return (
@@ -47,11 +45,11 @@ export function WeeklyBriefing({ memes }: { memes: MemeListItem[] }) {
             </svg>
           </span>
           <h2 id="sec-briefing" className="text-xl font-bold">
-            이번 주 이것만 알면 됩니다
+            요즘 뜨는 새 밈, 이것만 알면 됩니다
           </h2>
         </div>
         <p className="mt-1.5 text-sm text-muted">
-          요즘 대화에서 이 얘기가 나오면 이런 뜻입니다. 셋만 알아도 충분해요.
+          가장 최근에 등장한 밈부터. 대화에서 이 얘기 나오면 이런 뜻이에요.
         </p>
 
         <ol className="mt-3 divide-y divide-border">
@@ -71,6 +69,11 @@ export function WeeklyBriefing({ memes }: { memes: MemeListItem[] }) {
                   <span className="font-bold transition-colors group-hover:text-accent-text">
                     {meme.title}
                   </span>
+                  {meme.origin_year != null && (
+                    <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 py-0.5 align-middle text-xs font-bold tabular-nums text-muted">
+                      {meme.origin_year}
+                    </span>
+                  )}
                   {meme.summary && (
                     <span className="text-muted"> — {meme.summary}</span>
                   )}

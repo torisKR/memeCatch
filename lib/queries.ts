@@ -60,6 +60,31 @@ export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
   }
 }
 
+/**
+ * 최신 밈 — 유래 연도(origin_year) 최신순. 홈 "이번 주 이것만 알면 됩니다" 브리핑용.
+ * DB에는 유래가 연 단위(origin_year)로만 기록되므로 "이번 달"까지는 특정 불가 —
+ * 가장 최근 연도(2026) 밈을 우선하고, 같은 연도 안에서는 화제성(trend_score)·
+ * 등록 최신순으로 정렬해 "요즘 새로 뜬 밈"을 앞세운다.
+ */
+export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("memes")
+      .select(LIST_SELECT)
+      .in("moderation_status", [...PUBLIC_STATUSES])
+      .not("origin_year", "is", null)
+      .order("origin_year", { ascending: false })
+      .order("trend_score", { ascending: false })
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data as MemeListItem[];
+  } catch {
+    return [];
+  }
+}
+
 /** 지금 알아도 충분한 밈 — difficulty=beginner */
 export async function getBeginnerMemes(limit = 8): Promise<MemeListItem[]> {
   try {

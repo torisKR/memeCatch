@@ -65,6 +65,7 @@ const CSP_REPORT_ONLY = [
     "https://*.g.doubleclick.net",
     "https://www.google.com",
     "https://*.adtrafficquality.google",
+    "https://ads-partners.coupang.com", // 쿠팡 파트너스 위젯 iframe
   ].join(" "),
   [
     "connect-src 'self'",

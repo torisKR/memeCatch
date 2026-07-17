@@ -480,15 +480,25 @@ function LiteYouTube({
   const thumb =
     thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
+  /**
+   * 대표 영상은 처음부터 실제 iframe을 DOM에 둔다.
+   * 파사드(클릭 시 iframe)는 Googlebot이 클릭하지 않아 페이지에 플레이어가 없고,
+   * VideoObject 마크업과 어긋나 서치콘솔 '동영상이 보기 페이지에 없음'을 유발했다.
+   * loading="lazy"로 뷰포트 근처에 올 때까지 네트워크 로드는 지연한다.
+   * 관련 영상은 그대로 파사드 — 페이지당 무거운 임베드는 1개로 제한.
+   */
+  const showIframe = isRepresentative || playing;
+
   return (
     <div
       className={`relative max-h-[70vh] overflow-hidden rounded-xl border border-border bg-surface-2 ${
         isShort ? "mx-auto aspect-[9/16] w-full max-w-[394px]" : "aspect-video w-full"
       }`}
     >
-      {playing ? (
+      {showIframe ? (
         <iframe
-          src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`}
+          // autoplay는 파사드를 눌러 들어온 경우에만 — 대표 영상 최초 렌더는 자동재생 없음
+          src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?rel=0${playing ? "&autoplay=1" : ""}`}
           title={`${title} — ${isRepresentative ? "대표 영상" : "관련 영상"}`}
           sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
           allow="autoplay; encrypted-media; picture-in-picture"

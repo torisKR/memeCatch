@@ -202,6 +202,10 @@ export function MemeVideoJsonLd({
   uploadDate?: string | null;
   caption?: string | null;
 }) {
+  // uploadDate는 VideoObject 필수 항목 — 없이 내보내면 서치콘솔이 무효 항목으로 판정한다.
+  // 값이 없으면 '잘못된 마크업'보다 '마크업 없음'이 낫다.
+  if (!uploadDate) return null;
+
   return (
     <Script
       data={{
@@ -212,7 +216,7 @@ export function MemeVideoJsonLd({
         thumbnailUrl: thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
         contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        ...(uploadDate ? { uploadDate } : {}),
+        uploadDate,
       }}
     />
   );

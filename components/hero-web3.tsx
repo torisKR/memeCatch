@@ -127,8 +127,8 @@ export function HeroWeb3({
         {/* 라이브 배지 */}
         <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-white/80 backdrop-blur-sm">
           <span className="relative flex h-2 w-2" aria-hidden>
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--flame-400] opacity-70 motion-reduce:animate-none" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[--flame-500]" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--flame-400) opacity-70 motion-reduce:animate-none" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-(--flame-500)" />
           </span>
           {totalCount > 0 ? (
             <>
@@ -147,7 +147,7 @@ export function HeroWeb3({
             <span
               key={i}
               className={
-                i >= 2 ? "inline-block text-[--flame-400]" : "inline-block"
+                i >= 2 ? "inline-block text-(--flame-400)" : "inline-block"
               }
             >
               {word}
@@ -179,7 +179,7 @@ export function HeroWeb3({
             <svg
               viewBox="0 0 24 24"
               aria-hidden
-              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40 transition-colors group-focus-within:text-[--flame-400]"
+              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40 transition-colors group-focus-within:text-(--flame-400)"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -195,7 +195,7 @@ export function HeroWeb3({
               placeholder="무슨 밈인지 검색해보세요"
               autoComplete="off"
               enterKeyHint="search"
-              className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/50 outline-none backdrop-blur-md transition-colors duration-200 focus:border-[--flame-400]"
+              className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/50 outline-none backdrop-blur-md transition-colors duration-200 focus:border-(--flame-400)"
             />
           </div>
         </form>
@@ -211,7 +211,7 @@ export function HeroWeb3({
                 <li key={term} className="shrink-0 snap-start">
                   <Link
                     href={`/search?q=${encodeURIComponent(term)}`}
-                    className="inline-flex min-h-11 items-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-sm font-medium text-white/75 backdrop-blur-sm transition-[color,background-color,border-color,transform] duration-200 hover:border-[--flame-400]/60 hover:bg-[--flame-500]/15 hover:text-white active:scale-[0.96]"
+                    className="inline-flex min-h-11 items-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-sm font-medium text-white/75 backdrop-blur-sm transition-[color,background-color,border-color,transform] duration-200 hover:border-(--flame-400)/60 hover:bg-(--flame-500)/15 hover:text-white active:scale-[0.96]"
                   >
                     {term}
                   </Link>
@@ -242,7 +242,7 @@ export function HeroWeb3({
                 <svg
                   viewBox="0 0 24 24"
                   aria-hidden
-                  className="size-3.5 shrink-0 text-[--flame-400]"
+                  className="size-3.5 shrink-0 text-(--flame-400)"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.2"
@@ -260,8 +260,8 @@ export function HeroWeb3({
             ))}
           </div>
           {/* 좌우 페이드 */}
-          <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[--ink] to-transparent" />
-          <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[--ink] to-transparent" />
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-(--ink) to-transparent" />
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-(--ink) to-transparent" />
         </div>
       )}
     </section>

@@ -55,7 +55,7 @@ export default function AboutPage() {
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-base leading-relaxed">
             <li>
               <strong>제보 접수</strong> — 누구나{" "}
-              <Link href="/submit" className="text-accent underline underline-offset-2">
+              <Link href="/submit" className="text-accent-text underline underline-offset-2">
                 밈 제보
               </Link>
               로 새 밈을 알려줄 수 있습니다.
@@ -105,14 +105,14 @@ export default function AboutPage() {
               href="https://fairy.hada.io/@toris-dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent underline underline-offset-2"
+              className="text-accent-text underline underline-offset-2"
             >
               후원(Fairy)
             </a>
             으로 응원할 수 있습니다. 문의·제휴·삭제 요청:{" "}
             <a
               href="mailto:ironjustlikethat@gmail.com"
-              className="text-accent underline underline-offset-2"
+              className="text-accent-text underline underline-offset-2"
             >
               ironjustlikethat@gmail.com
             </a>

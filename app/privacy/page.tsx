@@ -101,7 +101,7 @@ export default function PrivacyPage() {
                 href="https://adssettings.google.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent underline underline-offset-2"
+                className="text-accent-text underline underline-offset-2"
               >
                 Google 광고 설정
               </a>
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
                 href="https://policies.google.com/technologies/ads?hl=ko"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent underline underline-offset-2"
+                className="text-accent-text underline underline-offset-2"
               >
                 Google 광고 정책
               </a>
@@ -130,7 +130,7 @@ export default function PrivacyPage() {
             문의:{" "}
             <a
               href="mailto:ironjustlikethat@gmail.com"
-              className="text-accent underline underline-offset-2"
+              className="text-accent-text underline underline-offset-2"
             >
               ironjustlikethat@gmail.com
             </a>

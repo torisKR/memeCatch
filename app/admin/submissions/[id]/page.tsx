@@ -87,7 +87,7 @@ export default async function SubmissionDetailPage({
                   href={submission.source_url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="text-accent underline"
+                  className="text-accent-text underline"
                 >
                   {submission.source_url}
                 </a>

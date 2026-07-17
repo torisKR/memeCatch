@@ -90,7 +90,7 @@ export default async function AdminReportsPage() {
                 {/* 대상 미리보기 */}
                 <div className="rounded-lg bg-surface-2 p-3 text-base">
                   {meme && (
-                    <Link href={memePathFrom(meme.short_id, meme.slug)} className="text-accent underline">
+                    <Link href={memePathFrom(meme.short_id, meme.slug)} className="text-accent-text underline">
                       밈: {meme.title}
                     </Link>
                   )}
@@ -103,7 +103,7 @@ export default async function AdminReportsPage() {
                     </div>
                   )}
                   {submission && (
-                    <Link href={`/admin/submissions/${submission.id}`} className="text-accent underline">
+                    <Link href={`/admin/submissions/${submission.id}`} className="text-accent-text underline">
                       제보: {submission.name}
                     </Link>
                   )}

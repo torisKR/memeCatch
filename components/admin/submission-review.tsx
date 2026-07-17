@@ -171,7 +171,7 @@ export function SubmissionReview({
             type="button"
             onClick={claim}
             disabled={busy}
-            className="min-h-11 rounded-lg bg-accent px-4 text-base font-semibold text-background disabled:opacity-50"
+            className="min-h-11 rounded-lg bg-accent-strong px-4 text-base font-semibold text-white disabled:opacity-50"
           >
             {pending ? "처리 중…" : "내가 검토하기 (claim)"}
           </button>
@@ -311,7 +311,7 @@ export function SubmissionReview({
           <button
             type="submit"
             disabled={busy}
-            className="min-h-11 rounded-lg bg-accent px-5 text-base font-semibold text-background disabled:opacity-50"
+            className="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50"
           >
             {pending ? "생성 중…" : "밈 생성 및 게시"}
           </button>

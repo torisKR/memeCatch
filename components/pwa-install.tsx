@@ -15,7 +15,7 @@
  * 사용: app/layout.tsx의 <body> 안에 <PwaInstall /> 한 줄 추가.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 const KEY_VISITS = "mc:visits";
 const KEY_SAVES = "mc:saves";
@@ -70,6 +70,9 @@ export function PwaInstall() {
   const [visible, setVisible] = useState(false);
   const [ios, setIos] = useState(false);
   const [showIosSheet, setShowIosSheet] = useState(false);
+  const iosSheetTitleId = useId();
+  const iosSheetRef = useRef<HTMLDivElement>(null);
+  const iosSheetReturnFocusRef = useRef<HTMLElement | null>(null);
 
   // 방문 카운트 (세션당 1회) + 저장 행동 카운트 리스너
   useEffect(() => {
@@ -143,6 +146,43 @@ export function PwaInstall() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [eligible]);
+
+  // iOS 바텀시트 포커스 트랩 — Tab 순환, Escape로 닫기, 닫힐 때 트리거로 포커스 복귀
+  useEffect(() => {
+    if (!showIosSheet) return;
+    iosSheetReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowIosSheet(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const focusable = iosSheetRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === iosSheetRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    iosSheetRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      iosSheetReturnFocusRef.current?.focus({ preventScroll: true });
+      iosSheetReturnFocusRef.current = null;
+    };
+  }, [showIosSheet]);
 
   const dismiss = useCallback(() => {
     try {
@@ -223,7 +263,7 @@ export function PwaInstall() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="iOS 홈 화면 추가 방법"
+          aria-labelledby={iosSheetTitleId}
           className="fixed inset-0 z-[60]"
         >
           <button
@@ -233,10 +273,12 @@ export function PwaInstall() {
             className="absolute inset-0 bg-foreground/40"
           />
           <div
-            className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-border bg-surface p-6"
+            ref={iosSheetRef}
+            tabIndex={-1}
+            className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-border bg-surface p-6 outline-none"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
           >
-            <h2 className="text-lg font-bold">홈 화면에 추가하는 방법</h2>
+            <h2 id={iosSheetTitleId} className="text-lg font-bold">홈 화면에 추가하는 방법</h2>
             <ol className="mt-4 space-y-4 text-base">
               <li className="flex items-center gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft font-semibold text-accent">

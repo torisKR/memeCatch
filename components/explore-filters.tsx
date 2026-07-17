@@ -32,6 +32,7 @@ const PLATFORMS = [
   { key: "instagram", label: "Instagram" },
 ] as const;
 
+// 플랫폼 브랜드색(YouTube red/Shorts rose/TikTok cyan/IG fuchsia) — 토큰 시스템 예외, OAuth 버튼과 동일 원칙
 const PLATFORM_DOT: Record<SocialPlatform, string> = {
   youtube: "bg-red-500",
   youtube_shorts: "bg-rose-500",

@@ -45,7 +45,7 @@ export function ReportActions({
           type="button"
           disabled={pending}
           onClick={() => resolve("resolved")}
-          className="min-h-11 rounded-lg bg-accent px-4 text-base font-semibold text-background disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-accent-strong px-4 text-base font-semibold text-white disabled:opacity-50"
         >
           처리 완료 (resolve)
         </button>

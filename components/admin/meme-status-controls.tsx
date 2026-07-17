@@ -80,7 +80,7 @@ export function MemeStatusControls({
                 danger
                   ? "border border-safety-red bg-safety-red-bg text-safety-red"
                   : to === "approved"
-                    ? "bg-accent text-background"
+                    ? "bg-accent-strong text-white"
                     : "border border-border bg-surface-2"
               }`}
             >

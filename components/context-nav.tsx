@@ -39,7 +39,7 @@ function ContextNavInner() {
         <Link
           href={prevHref}
           onClick={() => track("context_nav", { dir: "prev", ctx })}
-          className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 font-semibold text-muted transition-colors hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 font-semibold text-muted transition-colors hover:text-foreground"
         >
           <span aria-hidden>←</span> 이전
         </Link>
@@ -61,7 +61,7 @@ function ContextNavInner() {
         <Link
           href={nextHref}
           onClick={() => track("context_nav", { dir: "next", ctx })}
-          className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 font-semibold text-accent transition-colors hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 font-semibold text-accent transition-colors hover:text-foreground"
         >
           다음 <span aria-hidden>→</span>
         </Link>

@@ -235,6 +235,7 @@ function PreviewFrame({ data }: { data: PreviewData }) {
 
   return (
     <div className="bg-surface-2 p-2 sm:p-3">
+      {/* 서드파티 임베드 내부가 흰 배경이라 다크 모드에서도 흰 컨테이너 유지 */}
       <iframe
         src={data.embedUrl ?? undefined}
         srcDoc={

@@ -108,7 +108,7 @@ export function CommentForm({
         <button
           type="submit"
           disabled={isPending || !body.trim()}
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-base font-semibold text-background disabled:opacity-50"
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50"
         >
           {isPending ? "남기는 중…" : parentId ? "답글 남기기" : "댓글 남기기"}
         </button>

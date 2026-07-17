@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
-import type { MemeListItem } from "@/lib/queries";
+import { LIST_COLUMNS, LIST_SELECT, type MemeListItem } from "@/lib/queries";
 import {
   CATEGORIES,
   DIFFICULTY,
@@ -102,7 +102,8 @@ function selectForPlatform(platform?: SocialPlatform) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
-  return `*, ${contents}, meme_sources(platform, source_url)`;
+  // LIST_COLUMNS: 목록 카드가 읽는 컬럼만 — 장문 컬럼 과다 전송 방지(lib/queries.ts 참조)
+  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)`;
 }
 
 function withPublicContent<T extends {
@@ -209,7 +210,7 @@ async function getDailyTopMemes(): Promise<MemeListItem[]> {
     const supabase = createStaticClient();
     const { data, error } = await supabase
       .rpc("get_daily_top_memes", { p_limit: 10 })
-      .select("*, meme_contents(thumbnail_url, is_representative)");
+      .select(LIST_SELECT);
     if (error || !data) return [];
     return data as MemeListItem[];
   } catch {

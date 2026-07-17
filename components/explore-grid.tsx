@@ -43,14 +43,20 @@ const SEARCH_LIMIT = 50;
 /** 한 페이지 크기 — app/explore/page.tsx의 첫 페이지 크기와 반드시 동일하게 유지 */
 export const PAGE_SIZE = 24;
 
-export const EXPLORE_SELECT =
-  "*, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url)";
+/**
+ * 목록 카드가 읽는 memes 컬럼만 — lib/queries.ts의 LIST_COLUMN_LIST와 반드시 동기화.
+ * ("use client" 경계라 lib/queries.ts를 값으로 import하면 서버 전용 모듈이 딸려온다 → 의도적 복제)
+ */
+const MEME_LIST_COLUMNS =
+  "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
+
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url)`;
 
 function exploreSelect(platform?: SocialPlatform) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
-  return `*, ${contents}, meme_sources(platform, source_url)`;
+  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)`;
 }
 
 function withPublicContent<T extends {

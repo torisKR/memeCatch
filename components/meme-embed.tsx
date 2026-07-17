@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CATEGORIES, type MemeCategory } from "@/lib/labels";
 import type { MemeContentRow } from "@/lib/queries";
 import { isContextSourceUrl } from "@/lib/source-links";
@@ -299,6 +299,9 @@ function LiteSocialEmbed({
     immediateSocialEmbed(provider, sourceUrl)
   );
   const [error, setError] = useState<string | null>(null);
+  // 마운트 시점에 이미 렌더 가능한 임베드가 있었는지 — 있으면 IO 대기 없이 즉시 검증 fetch
+  const hasImmediateEmbedRef = useRef(embed != null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const providerName = {
     tiktok: "TikTok",
@@ -342,10 +345,36 @@ function LiteSocialEmbed({
       }
     }
 
-    void loadEmbed();
+    // 이미 즉시 렌더된 임베드가 있으면(서버 제공 프롭 hydration) 뷰포트 대기 없이 바로 검증
+    // fetch. 그 외에는 뷰포트 ~200px 근처에 들어올 때까지 /api/oembed 호출을 미뤄
+    // 스크롤 안 하는 사용자의 불필요한 네트워크·서버 부하를 막는다(LiteYouTube의
+    // loading=lazy와 같은 취지, IO로 fetch 자체를 지연).
+    if (
+      hasImmediateEmbedRef.current ||
+      typeof IntersectionObserver === "undefined" ||
+      !containerRef.current
+    ) {
+      void loadEmbed();
+      return () => {
+        active = false;
+        controller.abort();
+      };
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        io.disconnect();
+        void loadEmbed();
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(containerRef.current);
+
     return () => {
       active = false;
       controller.abort();
+      io.disconnect();
     };
   }, [provider, sourceUrl]);
 
@@ -366,18 +395,12 @@ function LiteSocialEmbed({
           ? "h-[min(72svh,700px)]"
           : "h-[min(68svh,600px)]";
   const frameClass = `${frameWidthClass} ${frameHeightClass}`;
-  const accentClass =
-    provider === "tiktok"
-      ? "border-l-[#25f4ee]"
-      : provider === "instagram"
-        ? "border-l-[#e1306c]"
-        : provider === "facebook"
-          ? "border-l-[#1877f2]"
-          : "border-l-foreground";
 
+  // 플랫폼 구분은 사이드 스트라이프(색상 강조 보더) 대신 라벨 텍스트 + 은은한 전체
+  // 테두리로 전달 — 디자인 시스템에서 사이드 스트라이프 악센트는 금지
   const sourceTape = (
     <div
-      className={`${frameWidthClass} flex min-h-9 items-center gap-2 border-l-2 ${accentClass} px-3 text-sm`}
+      className={`${frameWidthClass} flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm`}
     >
       <span className="font-bold tracking-tight">{providerName}</span>
       {!isRepresentative && (
@@ -387,7 +410,7 @@ function LiteSocialEmbed({
         href={sourceUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="ml-auto inline-flex min-h-9 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="ml-auto inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         게시물 열기 <span aria-hidden>↗</span>
       </a>
@@ -399,7 +422,7 @@ function LiteSocialEmbed({
       ? `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${embed.embedHtml}</body></html>`
       : undefined;
     return (
-      <div className="space-y-2">
+      <div ref={containerRef} className="space-y-2">
         {sourceTape}
         <iframe
           src={embed.embedUrl ?? undefined}
@@ -412,8 +435,9 @@ function LiteSocialEmbed({
           }
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
-          loading="eager"
+          loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
+          // 서드파티 임베드 내부가 흰 배경이라 다크 모드에서도 흰 컨테이너 유지 — 내부/외부 불일치 방지
           className={`${frameClass} block rounded-2xl border border-border bg-white shadow-sm`}
         />
       </div>
@@ -422,7 +446,7 @@ function LiteSocialEmbed({
 
   if (error) {
     return (
-      <div className="space-y-2">
+      <div ref={containerRef} className="space-y-2">
         {sourceTape}
         <div className="mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center">
           <p role="alert" className="text-sm text-muted">
@@ -442,7 +466,7 @@ function LiteSocialEmbed({
   }
 
   return (
-    <div className="space-y-2">
+    <div ref={containerRef} className="space-y-2">
       {sourceTape}
       <div
         role="status"

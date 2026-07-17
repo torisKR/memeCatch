@@ -139,27 +139,15 @@ export function HeroWeb3({
           )}
         </p>
 
-        {/* 헤드라인 — 그라디언트 + 시머. LCP 요소이므로 motion(JS 하이드레이션
-            대기) 대신 CSS 진입(.hero-headline-in)으로 첫 페인트에 즉시 렌더한다.
-            시머·reduced-motion은 CSS(.hero-shimmer-text)가 처리. */}
+        {/* 헤드라인 — LCP 요소이므로 motion(JS 하이드레이션 대기) 대신
+            CSS 진입(.hero-headline-in)으로 첫 페인트에 즉시 렌더한다.
+            강조 단어는 단색 flame 오렌지(그라디언트/시머 없음). */}
         <h1 className="hero-headline-in mt-5 flex flex-wrap gap-x-[0.26em] gap-y-1 text-[2.6rem] font-extrabold leading-[1.08] tracking-tight md:text-[3.6rem]">
           {HEADLINE_WORDS.map((word, i) => (
             <span
               key={i}
               className={
-                i >= 2
-                  ? "hero-shimmer-text inline-block bg-clip-text text-transparent"
-                  : "inline-block"
-              }
-              style={
-                i >= 2
-                  ? {
-                      backgroundImage:
-                        "linear-gradient(100deg, var(--flame-300) 0%, var(--flame-500) 35%, #ffd9cc 50%, var(--flame-500) 65%, var(--flame-300) 100%)",
-                      backgroundSize: "200% 100%",
-                      animation: "hero-shimmer 5s linear infinite",
-                    }
-                  : undefined
+                i >= 2 ? "inline-block text-[--flame-400]" : "inline-block"
               }
             >
               {word}

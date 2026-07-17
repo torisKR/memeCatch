@@ -42,7 +42,7 @@ export default async function AdminMemeEditPage({
           {["approved", "limited"].includes(meme.moderation_status) && (
             <Link
               href={memePathFrom(meme.short_id, meme.slug)}
-              className="flex min-h-11 items-center text-base text-accent underline"
+              className="flex min-h-11 items-center text-base text-accent-text underline"
             >
               공개 페이지 보기
             </Link>

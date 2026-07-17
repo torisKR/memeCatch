@@ -284,11 +284,6 @@ label[for] {
   50%  { transform: translate3d(-10%, -8%, 0) scale(0.95); }
   100% { transform: translate3d(12%, 10%, 0) scale(1.1); }
 }
-/* 헤드라인 그라디언트 시머 스윕 */
-@keyframes hero-shimmer {
-  0%   { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
-}
 /* 헤드라인 진입 — CSS로 첫 페인트에 즉시 실행(JS 하이드레이션 비의존).
    opacity는 건드리지 않아 LCP 텍스트가 첫 페인트부터 보인다(모바일 LCP 보호). */
 @keyframes hero-headline-in {
@@ -313,7 +308,6 @@ label[for] {
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-aurora-a, .hero-aurora-b { animation: none !important; }
-  .hero-shimmer-text { animation: none !important; }
   .hero-marquee-track { animation: none !important; }
   .hero-headline-in { animation: none !important; }
 }

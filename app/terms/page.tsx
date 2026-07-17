@@ -76,7 +76,7 @@ export default function TermsPage() {
             약관·저작권·정정 요청 문의:{" "}
             <a
               href="mailto:ironjustlikethat@gmail.com"
-              className="text-accent underline underline-offset-2"
+              className="text-accent-text underline underline-offset-2"
             >
               ironjustlikethat@gmail.com
             </a>

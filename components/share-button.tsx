@@ -41,30 +41,36 @@ export function ShareButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={share}
-      className={
-        className ??
-        "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
-      }
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
+    <>
+      <button
+        type="button"
+        onClick={share}
+        className={
+          className ??
+          "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+        }
       >
-        <circle cx="6" cy="12" r="2.5" />
-        <circle cx="17" cy="6" r="2.5" />
-        <circle cx="17" cy="18" r="2.5" />
-        <path d="m8.3 10.8 6.4-3.6M8.3 13.2l6.4 3.6" />
-      </svg>
-      {copied ? "링크 복사됨!" : label}
-    </button>
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <circle cx="6" cy="12" r="2.5" />
+          <circle cx="17" cy="6" r="2.5" />
+          <circle cx="17" cy="18" r="2.5" />
+          <path d="m8.3 10.8 6.4-3.6M8.3 13.2l6.4 3.6" />
+        </svg>
+        {copied ? "링크 복사됨!" : label}
+      </button>
+      {/* 버튼 라벨이 이미 시각적으로 바뀌므로 스크린 리더 전용으로만 알림 */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {copied ? "링크가 복사되었어요." : ""}
+      </p>
+    </>
   );
 }

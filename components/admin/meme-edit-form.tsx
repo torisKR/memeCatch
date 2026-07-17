@@ -148,7 +148,7 @@ export function MemeEditForm({
             type="button"
             onClick={translateForReview}
             disabled={pending || translating}
-            className="min-h-11 rounded-lg border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 rounded-lg border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent-text transition-colors hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {translating ? "한국어로 해석 중…" : "영문 내용 한국어로 해석"}
           </button>
@@ -311,7 +311,7 @@ export function MemeEditForm({
       <button
         type="submit"
         disabled={pending}
-        className="min-h-11 rounded-lg bg-accent px-5 text-base font-semibold text-background disabled:opacity-50"
+        className="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50"
       >
         {pending ? "저장 중…" : "저장"}
       </button>

@@ -7,9 +7,8 @@
  */
 import { createStaticClient } from "@/lib/supabase/server";
 import type { MemeCategory } from "@/lib/labels";
-import type { MemeListItem } from "@/lib/queries";
+import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
 
-const LIST_SELECT = "*, meme_contents(thumbnail_url, is_representative)";
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;

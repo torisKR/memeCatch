@@ -229,8 +229,9 @@ export function CommunityPostForm() {
     });
   }
 
+  // 시각적으로는 h-9(36px) 컴팩트 유지 + before 가상요소로 히트박스만 ~44px까지 확장(explore-filters.tsx 패턴)
   const toolbarBtn =
-    "flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-50";
+    "relative flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-semibold text-muted transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-surface-2 hover:text-foreground disabled:opacity-50";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -425,7 +426,7 @@ export function CommunityPostForm() {
               type="button"
               onClick={() => setMeme(null)}
               aria-label="밈 첨부 해제"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2"
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-surface-2"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                 <path d="M6 6l12 12M18 6L6 18" />

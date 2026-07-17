@@ -62,7 +62,7 @@ export default async function AdminMemesPage({
         </label>
         <button
           type="submit"
-          className="min-h-11 rounded-lg bg-accent px-5 text-base font-semibold text-background"
+          className="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white"
         >
           적용
         </button>
@@ -91,7 +91,7 @@ export default async function AdminMemesPage({
                   <td className="px-4 py-3">
                     <Link
                       href={`/admin/memes/${m.id}`}
-                      className="flex min-h-11 items-center font-semibold text-accent underline-offset-2 hover:underline"
+                      className="flex min-h-11 items-center font-semibold text-accent-text underline-offset-2 hover:underline"
                     >
                       {m.title}
                     </Link>

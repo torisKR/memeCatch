@@ -15,12 +15,31 @@ export type MemeContentRow = Database["public"]["Tables"]["meme_contents"]["Row"
 export type MemeSourceRow = Database["public"]["Tables"]["meme_sources"]["Row"];
 export type ReactionType = Database["public"]["Enums"]["reaction_type"];
 
-/** 카드 썸네일용 — 목록 쿼리에 대표 콘텐츠 썸네일만 실어 온다 */
-export type MemeListItem = MemeRow & {
-  meme_contents?: Pick<
-    MemeContentRow,
-    "thumbnail_url" | "is_representative" | "platform" | "url"
-  >[];
+/**
+ * 목록 카드가 실제로 읽는 컬럼만 명시 — memes 테이블의 장문 컬럼(description,
+ * origin, usage_note, usage_context, caution, aliases, title_chosung 등)은
+ * 목록에서 렌더하지 않으므로 select에서 제외해 전송량을 줄인다.
+ * 목록 소비처가 새 컬럼을 읽게 되면 이 배열에 추가할 것(MemeListItem이 자동 반영).
+ * ⚠️ components/explore-grid.tsx의 MEME_LIST_COLUMNS와 반드시 동기화
+ *    ("use client" 경계라 이 모듈(서버 클라이언트 의존)을 값으로 import할 수 없다).
+ */
+export const LIST_COLUMNS =
+  "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score" as const;
+
+/** "a, b, c" 리터럴 → "a" | "b" | "c" — LIST_COLUMNS와 MemeListItem의 동기화를 타입으로 강제 */
+type SplitColumns<S extends string> = S extends `${infer Head}, ${infer Tail}`
+  ? Head | SplitColumns<Tail>
+  : S;
+type MemeListColumn = SplitColumns<typeof LIST_COLUMNS>;
+
+/**
+ * 카드 썸네일용 — 목록 쿼리에 대표 콘텐츠 썸네일만 실어 온다.
+ * LIST_COLUMN_LIST에 없는 memes 컬럼은 런타임에도 없으므로 타입에서도 제외한다.
+ * meme_contents의 platform/url, meme_sources는 explore 계열 select에서만 실려 와 optional.
+ */
+export type MemeListItem = Pick<MemeRow, MemeListColumn> & {
+  meme_contents?: (Pick<MemeContentRow, "thumbnail_url" | "is_representative"> &
+    Partial<Pick<MemeContentRow, "platform" | "url">>)[];
   meme_sources?: Pick<MemeSourceRow, "platform" | "source_url">[];
 };
 
@@ -37,7 +56,8 @@ export type GenerationHighlight = {
 };
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
-const LIST_SELECT = "*, meme_contents(thumbnail_url, is_representative)";
+export const LIST_SELECT =
+  `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative)` as const;
 
 /** 오늘의 급상승 — trend_score desc, lifecycle=rising 우선(안정 정렬) */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
@@ -202,7 +222,11 @@ export async function getRelatedMemes(
   try {
     const supabase = createStaticClient();
     const taggedIds = new Set<string>();
-    if (tagIds.length > 0) {
+
+    // 태그맵→태그밈 2단계 체인만 진짜 의존 관계 — 체인을 async IIFE로 묶어
+    // sameCat·nearYear 조회와 병렬 실행한다(직렬 4회 → 병렬, 대기 시간 단축).
+    const taggedPromise = (async (): Promise<MemeListItem[] | null> => {
+      if (tagIds.length === 0) return null;
       const { data: mapRows } = await supabase
         .from("meme_tags_map")
         .select("meme_id")
@@ -210,32 +234,31 @@ export async function getRelatedMemes(
         .neq("meme_id", meme.id)
         .limit(30);
       for (const r of mapRows ?? []) taggedIds.add(r.meme_id);
-    }
-
-    const pool = new Map<string, MemeListItem>();
-    const collect = (rows: MemeListItem[] | null) => {
-      for (const m of rows ?? []) if (m.id !== meme.id) pool.set(m.id, m);
-    };
-    if (taggedIds.size > 0) {
+      if (taggedIds.size === 0) return null;
       const { data } = await supabase
         .from("memes")
         .select(LIST_SELECT)
         .in("id", [...taggedIds])
         .in("moderation_status", [...PUBLIC_STATUSES])
         .limit(30);
-      collect(data as MemeListItem[] | null);
-    }
-    const { data: sameCat } = await supabase
-      .from("memes")
-      .select(LIST_SELECT)
-      .eq("category", meme.category)
-      .neq("id", meme.id)
-      .in("moderation_status", [...PUBLIC_STATUSES])
-      .order("trend_score", { ascending: false })
-      .limit(24);
-    collect(sameCat as MemeListItem[] | null);
-    if (meme.origin_year != null) {
-      const { data: nearYear } = await supabase
+      return data as MemeListItem[] | null;
+    })();
+
+    const sameCatPromise = (async (): Promise<MemeListItem[] | null> => {
+      const { data } = await supabase
+        .from("memes")
+        .select(LIST_SELECT)
+        .eq("category", meme.category)
+        .neq("id", meme.id)
+        .in("moderation_status", [...PUBLIC_STATUSES])
+        .order("trend_score", { ascending: false })
+        .limit(24);
+      return data as MemeListItem[] | null;
+    })();
+
+    const nearYearPromise = (async (): Promise<MemeListItem[] | null> => {
+      if (meme.origin_year == null) return null;
+      const { data } = await supabase
         .from("memes")
         .select(LIST_SELECT)
         .gte("origin_year", meme.origin_year - 2)
@@ -244,8 +267,23 @@ export async function getRelatedMemes(
         .in("moderation_status", [...PUBLIC_STATUSES])
         .order("trend_score", { ascending: false })
         .limit(12);
-      collect(nearYear as MemeListItem[] | null);
-    }
+      return data as MemeListItem[] | null;
+    })();
+
+    const [tagged, sameCat, nearYear] = await Promise.all([
+      taggedPromise,
+      sameCatPromise,
+      nearYearPromise,
+    ]);
+
+    // 병합 순서는 기존 직렬 버전과 동일하게 유지: 태그밈 → 동일 카테고리 → 연도 인접
+    const pool = new Map<string, MemeListItem>();
+    const collect = (rows: MemeListItem[] | null) => {
+      for (const m of rows ?? []) if (m.id !== meme.id) pool.set(m.id, m);
+    };
+    collect(tagged);
+    collect(sameCat);
+    collect(nearYear);
 
     const score = (m: MemeListItem) =>
       (taggedIds.has(m.id) ? 3 : 0) +

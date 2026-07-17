@@ -16,7 +16,7 @@ export default function AdminError({
       <button
         type="button"
         onClick={reset}
-        className="min-h-11 rounded-lg bg-accent px-5 text-base font-semibold text-background"
+        className="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white"
       >
         다시 시도
       </button>

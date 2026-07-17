@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
 import { memePathFrom } from "@/lib/labels";
 import { CategoryTag } from "@/components/category-tag";
 import { SafetyBadge } from "@/components/safety-badge";
@@ -22,9 +19,8 @@ import {
  * 호버 y-4/scale1.02·프레스 scale0.97·진입 스태거 유지. 전체 클릭 영역.
  * 썸네일 없으면 카테고리 틴트 배경 플레이스홀더 + 밈명 타이포.
  * reduced-motion에서는 트랜스폼 애니메이션을 끈다.
+ * 호버/프레스는 CSS 전용(모션 라이브러리 불필요) — 서버 컴포넌트로 유지한다.
  */
-const MotionLink = motion.create(Link);
-
 export function MemeCard({
   meme,
   href,
@@ -39,7 +35,6 @@ export function MemeCard({
   /** 급상승 차트 순위(1부터) — 미디어 좌하단 대형 숫자. 순위가 실제 정보인 곳에서만. */
   rank?: number;
 }) {
-  const reduce = useReducedMotion();
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
   const thumb =
     contents.find((c) => c.is_representative && c.thumbnail_url)?.thumbnail_url ??
@@ -51,14 +46,14 @@ export function MemeCard({
   });
 
   return (
-    <MotionLink
+    <Link
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
       // relative 필수: sr-only(absolute) 등 내부 absolute 요소의 포지셔닝 조상을
       // 카드로 고정 — 없으면 캐러셀 래퍼까지 탈출해 문서 가로 스크롤을 만든다.
-      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow duration-300 hover:shadow-xl focus-visible:outline-offset-4"
-      whileHover={reduce ? undefined : { y: -4, scale: 1.02 }}
-      whileTap={reduce ? undefined : { scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      // 호버 y-4/scale1.02·프레스 scale0.97은 CSS 전용(구 motion whileHover/whileTap 대체).
+      // Tailwind v4는 translate/scale이 별도 CSS 속성이라 motion-reduce에서는
+      // hover/active 값을 직접 중립화한다(explore-filters 칩과 동일 idiom).
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-[box-shadow,translate,scale] duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl active:scale-[0.97] motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-offset-4"
     >
       {/* 미디어 4:5 — aspect 예약으로 CLS 방지. shrink-0으로 카드 높이 통일 시에도 비율 유지 */}
       <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-surface-2">
@@ -163,11 +158,12 @@ export function MemeCard({
           <LifeGauge status={meme.lifecycle_status} size="sm" showLabel={false} />
         </div>
       </div>
-    </MotionLink>
+    </Link>
   );
 }
 
 function SourcePlatformBadge({ platform }: { platform: SourcePlatform }) {
+  // 플랫폼 브랜드색(YouTube red/Shorts rose/TikTok cyan/IG fuchsia) — 토큰 시스템 예외, OAuth 버튼과 동일 원칙
   const tone: Record<SourcePlatform, string> = {
     youtube: "border-red-200 bg-red-50/95 text-red-700",
     youtube_shorts: "border-rose-200 bg-rose-50/95 text-rose-700",

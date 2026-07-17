@@ -88,7 +88,7 @@ const mdComponents: Components = {
   },
   blockquote({ children }) {
     return (
-      <blockquote className="my-3 border-l-4 border-accent/40 pl-3 text-muted">
+      <blockquote className="my-3 border-l-2 border-border pl-3 text-muted">
         {children}
       </blockquote>
     );

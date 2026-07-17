@@ -223,7 +223,7 @@ export function MyContent({
           <h2 className="text-lg font-bold">관심 카테고리</h2>
           <Link
             href="/onboarding?next=/my"
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
           >
             {knownInterests.length > 0 ? "수정" : "설정하기"}
           </Link>

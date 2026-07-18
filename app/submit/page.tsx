@@ -41,12 +41,12 @@ export default async function SubmitPage({
           <p className="mt-1 text-sm text-muted">
             동의한 계정의 최신 공개 영상 최대 20개를 검수 대기로만 추가해요. 자동 공개하지 않아요.
           </p>
-          <Link
+          <a
             href="/auth/tiktok?import=1&next=/submit"
             className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background"
           >
             TikTok 영상 가져오기
-          </Link>
+          </a>
           {tiktokImport === "done" && (
             <p className="mt-3 text-sm text-safety-green" role="status">
               {imported ? `${imported}개 영상을 검수 대기로 추가했어요.` : "새로 추가할 영상은 없어요."}

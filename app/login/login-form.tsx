@@ -133,13 +133,13 @@ export function LoginForm({
           )}
           구글로 시작하기
         </button>
-        <Link
+        <a
           href={`/auth/tiktok?next=${encodeURIComponent(next)}`}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98]"
         >
           <TikTokMark className="h-5 w-5" />
           TikTok으로 시작하기
-        </Link>
+        </a>
       </div>
 
       <p role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-muted">

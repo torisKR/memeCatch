@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOperatorPage } from "@/app/admin/require-operator";
 import { ModerationBadge } from "@/components/admin/badges";
+import { AdminMemeContents } from "@/components/admin/admin-meme-contents";
 import { MemeEditForm } from "@/components/admin/meme-edit-form";
 import { MemeStatusControls } from "@/components/admin/meme-status-controls";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
@@ -21,6 +22,15 @@ export default async function AdminMemeEditPage({
   const { supabase } = await requireOperatorPage(`/admin/memes/${id}`);
   const { data: meme } = await supabase.from("memes").select("*").eq("id", id).single();
   if (!meme) notFound();
+
+  const { data: contents } = await supabase
+    .from("meme_contents")
+    .select(
+      "id, platform, content_id, url, thumbnail_url, availability, caption, is_representative, moderation_status",
+    )
+    .eq("meme_id", id)
+    .order("is_representative", { ascending: false })
+    .order("created_at", { ascending: true });
 
   const rawCtx = (meme.usage_context ?? {}) as Partial<UsageContext>;
   const usageContext: UsageContext = {
@@ -54,6 +64,8 @@ export default async function AdminMemeEditPage({
         memeId={meme.id}
         currentStatus={meme.moderation_status as ModerationStatus}
       />
+
+      <AdminMemeContents contents={contents ?? []} memeTitle={meme.title} />
 
       <MemeEditForm
         memeId={meme.id}

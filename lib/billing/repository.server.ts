@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import type { Json } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +20,10 @@ export async function getCurrentBillingUser(): Promise<{ id: string } | null> {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  if (error) throw error;
+  if (error) {
+    if (isAuthSessionMissingError(error)) return null;
+    throw error;
+  }
   return user ? { id: user.id } : null;
 }
 
@@ -54,7 +58,7 @@ export async function getPremiumEntitlement(): Promise<PremiumEntitlement> {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError) throw authError;
+  if (authError && !isAuthSessionMissingError(authError)) throw authError;
   if (!user) {
     return {
       signedIn: false,

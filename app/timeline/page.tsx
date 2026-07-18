@@ -3,7 +3,7 @@ import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
-import type { MemeListItem } from "@/lib/queries";
+import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
 import { TimelineView, type TimelineDecade } from "@/components/timeline-view";
 
 /**
@@ -14,7 +14,6 @@ import { TimelineView, type TimelineDecade } from "@/components/timeline-view";
 export const revalidate = 3600;
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
-const LIST_SELECT = "*, meme_contents(thumbnail_url, is_representative)";
 /** 연도당 카드 상한 */
 const MAX_PER_YEAR = 8;
 /** 후보 풀 상한 — 전체 밈 규모(약 3천여 건) 대비 여유 있는 상한 */

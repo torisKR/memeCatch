@@ -65,7 +65,6 @@ begin
   return next;
 end;
 $$;
-
 create or replace function public.apply_affiliate_sync(
   run_id uuid,
   synced_at timestamptz,
@@ -219,12 +218,10 @@ begin
   end if;
 end;
 $$;
-
 revoke execute on function public.claim_affiliate_sync(text, text, date, timestamptz)
   from public, anon, authenticated;
 revoke execute on function public.apply_affiliate_sync(uuid, timestamptz, jsonb)
   from public, anon, authenticated;
-
 grant execute on function public.claim_affiliate_sync(text, text, date, timestamptz)
   to service_role;
 grant execute on function public.apply_affiliate_sync(uuid, timestamptz, jsonb)

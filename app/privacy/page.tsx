@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   robots: { index: true },
 };
 
-const EFFECTIVE = "2026년 7월 10일";
+const EFFECTIVE = "2026년 7월 18일";
 
 /** 개인정보처리방침 — 정보통신망법·개인정보보호법 기준 최소 필수 고지 */
 export default function PrivacyPage() {
@@ -29,6 +29,12 @@ export default function PrivacyPage() {
               기록, 관심 카테고리, 익명화된 조회 이벤트(세션 해시)
             </li>
             <li>
+              <strong>MemeCatch Plus 구매</strong>: 구매 이메일, Latpeed 주문·상품
+              식별자, 결제 상태·금액·발생 시각 — 멤버십 연동을 위해 Latpeed가
+              서명된 결제 알림으로 제공. 카드·계좌 등 결제수단 정보는 서비스가
+              직접 수집하거나 저장하지 않습니다.
+            </li>
+            <li>
               <strong>자동 수집</strong>: 접속 로그, 쿠키(로그인 세션 유지
               목적) — 서비스 인프라(Vercel)와 인증(Supabase Auth)이 처리
             </li>
@@ -41,6 +47,7 @@ export default function PrivacyPage() {
             <li>회원 식별·로그인 상태 유지</li>
             <li>제보 검수·커뮤니티 운영·부정 이용 방지</li>
             <li>저장한 밈·관심 카테고리 등 개인화 기능 제공</li>
+            <li>유료 멤버십 구매 확인·권한 제공·취소 및 환불 문의 처리</li>
             <li>밈 유행 지표 집계(익명화된 통계 목적)</li>
           </ul>
         </section>
@@ -51,7 +58,8 @@ export default function PrivacyPage() {
             회원 탈퇴 시 개인정보는 지체 없이 파기합니다. 다만 관계 법령에 따라
             보존이 필요한 기록(예: 접속 로그 3개월, 통신비밀보호법)은 해당 기간
             동안 보관 후 파기합니다. 탈퇴 후 제보·댓글은 작성자 정보가 분리된
-            상태로 남거나 삭제됩니다.
+            상태로 남거나 삭제됩니다. 결제·취소·환불 기록은 관계 법령상 보존
+            의무가 있는 경우 해당 기간 동안 분리 보관한 뒤 파기합니다.
           </p>
         </section>
 
@@ -65,6 +73,10 @@ export default function PrivacyPage() {
             <li><strong>Supabase</strong> — 데이터베이스·인증·저장소</li>
             <li><strong>Vercel</strong> — 웹 호스팅·접속 로그</li>
             <li><strong>Cloudflare</strong> — 이미지 저장소(R2)</li>
+            <li>
+              <strong>Latpeed</strong> — MemeCatch Plus 상품 판매·결제 처리 및
+              서명된 멤버십 상태 알림
+            </li>
           </ul>
         </section>
 

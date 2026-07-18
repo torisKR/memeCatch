@@ -22,7 +22,7 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const path = request.nextUrl.pathname;
-  const needsAuth = path.startsWith("/my") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
+  const needsAuth = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
   if (!needsAuth) return response;
 
   const supabase = createServerClient(
@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && (path.startsWith("/my") || path.startsWith("/submit"))) {
+  if (!user && (path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);

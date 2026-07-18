@@ -16,7 +16,7 @@ import { persistLocale, useLocale } from "@/lib/i18n-client";
  * 번역 커버리지가 확보된 라우트에서만 헤더에 렌더한다.
  * 이미 쿠키(en/ja/zh)를 저장한 사용자의 크롬 번역은 LocaleProvider가 유지한다.
  */
-const TRANSLATED_ROUTES = ["/news", "/products"];
+const TRANSLATED_ROUTES = ["/news", "/products", "/pricing", "/premium", "/my"];
 
 export function LanguageSelector() {
   const pathname = usePathname();

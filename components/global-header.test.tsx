@@ -71,7 +71,7 @@ describe("GlobalHeader", () => {
     expect(homeLink).toContain("sm:block"); // 도메인 서브라벨은 sm+만
   });
 
-  // 언어 선택기는 본문 번역이 존재하는 라우트(/news, /products)에서만 노출된다.
+  // 언어 선택기는 본문 번역이 존재하는 라우트에서만 노출된다.
   it("shows the compact locale label on translated routes without clipping the native language control", () => {
     navigation.pathname = "/news";
     const html = renderToStaticMarkup(<GlobalHeader />);
@@ -105,7 +105,7 @@ describe("GlobalHeader", () => {
     },
   );
 
-  it.each(["/news", "/products", "/products/some-item"])(
+  it.each(["/news", "/products", "/products/some-item", "/pricing", "/premium", "/my"])(
     "shows the language selector on translated route %s",
     (pathname) => {
       navigation.pathname = pathname;

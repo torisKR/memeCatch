@@ -12,8 +12,10 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import { signOut, updateNickname } from "@/lib/actions/auth";
-import { SubmissionStatusBadge } from "@/components/submission-status";
 import { MyRecent } from "@/components/my-recent";
+import { useLocale } from "@/lib/i18n-client";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { MY_COPY } from "@/lib/i18n-my";
 
 export type SavedMeme = {
   id: string;
@@ -40,23 +42,17 @@ const SAFETY_CHIP_CLASSES: Record<SafetyLevel, string> = {
   red: "bg-safety-red-bg text-safety-red",
 };
 
-/** 연령대 코드 → 노출 라벨 (labels.ts 미포함 값이라 이 화면에서만 매핑) */
-const AGE_LABELS: Record<string, string> = {
-  "10s": "10대",
-  "20s": "20대",
-  "30s": "30대",
-  "40s": "40대",
-  "50s+": "50대 이상",
+const SUBMISSION_STATUS_CLASSES: Record<keyof typeof SUBMISSION_STATUS, string> = {
+  pending: "bg-safety-gray-bg text-safety-gray",
+  reviewing: "bg-safety-yellow-bg text-safety-yellow",
+  approved: "bg-safety-green-bg text-safety-green",
+  rejected: "bg-safety-red-bg text-safety-red",
 };
 
-const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
-  dateStyle: "medium",
-  timeZone: "Asia/Seoul",
-});
-
-function categoryLabel(key: string): string {
-  return (CATEGORIES as Record<string, { user: string }>)[key]?.user ?? key;
-}
+const NICKNAME_ERROR_SOURCE = {
+  invalidLength: "닉네임은 2~20자로 지어 주세요",
+  taken: "이미 사용 중인 닉네임이에요",
+} as const;
 
 export function MyContent({
   nickname,
@@ -67,6 +63,11 @@ export function MyContent({
   loadError,
   nicknameError,
   nicknameSaved,
+  isPremium,
+  saveLimit,
+  savedTotal,
+  savedPage,
+  savedPageCount,
   myFeed,
 }: {
   nickname: string;
@@ -77,14 +78,36 @@ export function MyContent({
   loadError: boolean;
   nicknameError?: string;
   nicknameSaved: boolean;
+  isPremium: boolean;
+  saveLimit: number;
+  savedTotal: number;
+  savedPage: number;
+  savedPageCount: number;
   /** 관심 카테고리 맞춤 피드 — 서버 컴포넌트(components/my-feed.tsx)를 페이지에서 슬롯으로 전달 */
   myFeed: ReactNode;
 }) {
   const reduce = useReducedMotion();
-  const avatarChar = (nickname.trim()[0] ?? "밈").toUpperCase();
+  const { locale } = useLocale();
+  const premiumCopy = PREMIUM_COPY[locale];
+  const copy = MY_COPY[locale];
+  const avatarChar = (nickname.trim()[0] ?? copy.avatarFallback).toUpperCase();
   const knownInterests = interests.filter(
     (c) => c in CATEGORIES
   ) as MemeCategory[];
+  const ageLabel = ageGroup && ageGroup in copy.ageGroups
+    ? copy.ageGroups[ageGroup as keyof typeof copy.ageGroups]
+    : undefined;
+  const nicknameErrorMessage = !nicknameError
+    ? undefined
+    : nicknameError === NICKNAME_ERROR_SOURCE.invalidLength
+      ? copy.nickname.errors.invalidLength
+      : nicknameError === NICKNAME_ERROR_SOURCE.taken
+        ? copy.nickname.errors.taken
+        : copy.nickname.errors.saveFailed;
+  const dateFormatter = new Intl.DateTimeFormat(copy.dateLocale, {
+    dateStyle: "medium",
+    timeZone: "Asia/Seoul",
+  });
 
   // 섹션 진입 리빌 (reduced-motion이면 정적)
   const section = reduce
@@ -136,13 +159,18 @@ export function MyContent({
             {avatarChar}
           </span>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold">
-              {nickname || "밈캐치 유저"}
-            </h1>
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-2xl font-bold">
+                {nickname || copy.defaultNickname}
+              </h1>
+              {isPremium && (
+                <span className="inline-flex shrink-0 rounded-full bg-accent-soft px-2 py-1 text-[10px] font-black tracking-wider text-accent-text">
+                  {premiumCopy.badge}
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-sm text-muted">
-              {ageGroup && AGE_LABELS[ageGroup]
-                ? `${AGE_LABELS[ageGroup]} · 반가워요`
-                : "반가워요, 오늘의 밈 찾아볼까요?"}
+              {copy.greeting(ageLabel)}
             </p>
           </div>
         </div>
@@ -151,7 +179,7 @@ export function MyContent({
             type="submit"
             className="flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            로그아웃
+            {copy.logout}
           </button>
         </form>
       </motion.div>
@@ -161,7 +189,7 @@ export function MyContent({
           role="alert"
           className="mt-4 rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red"
         >
-          일부 정보를 불러오지 못했어요. 새로고침해 주세요.
+          {copy.loadError}
         </p>
       )}
 
@@ -174,10 +202,10 @@ export function MyContent({
         {...section}
         className="rounded-2xl border border-border bg-surface p-5"
       >
-        <h2 className="text-lg font-bold">닉네임</h2>
+        <h2 className="text-lg font-bold">{copy.nickname.title}</h2>
         <form action={updateNickname} className="mt-3 flex gap-2">
           <label htmlFor="nickname" className="sr-only">
-            닉네임
+            {copy.nickname.label}
           </label>
           <input
             id="nickname"
@@ -187,29 +215,29 @@ export function MyContent({
             minLength={2}
             maxLength={20}
             required
-            aria-invalid={!!nicknameError}
-            aria-describedby={nicknameError ? "nickname-error" : undefined}
+            aria-invalid={!!nicknameErrorMessage}
+            aria-describedby={nicknameErrorMessage ? "nickname-error" : undefined}
             className="h-12 min-w-0 flex-1 rounded-xl border border-border bg-surface px-4 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
           <button
             type="submit"
             className="h-12 shrink-0 rounded-xl bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
-            저장
+            {copy.nickname.save}
           </button>
         </form>
-        {nicknameError && (
+        {nicknameErrorMessage && (
           <p
             id="nickname-error"
             role="alert"
             className="mt-2 text-sm text-safety-red"
           >
-            {nicknameError}
+            {nicknameErrorMessage}
           </p>
         )}
-        {nicknameSaved && !nicknameError && (
+        {nicknameSaved && !nicknameErrorMessage && (
           <p role="status" className="mt-2 text-sm text-safety-green">
-            닉네임을 저장했어요.
+            {copy.nickname.saved}
           </p>
         )}
       </motion.section>
@@ -220,12 +248,12 @@ export function MyContent({
         className="rounded-2xl border border-border bg-surface p-5"
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">관심 카테고리</h2>
+          <h2 className="text-lg font-bold">{copy.interests.title}</h2>
           <Link
             href="/onboarding?next=/my"
             className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
           >
-            {knownInterests.length > 0 ? "수정" : "설정하기"}
+            {knownInterests.length > 0 ? copy.interests.edit : copy.interests.set}
           </Link>
         </div>
         {knownInterests.length > 0 ? (
@@ -235,13 +263,13 @@ export function MyContent({
                 key={c}
                 className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium"
               >
-                {categoryLabel(c)}
+                {copy.categories[c]}
               </li>
             ))}
           </ul>
         ) : (
           <p className="mt-2 text-sm text-muted">
-            관심 카테고리를 설정하면 취향에 맞는 밈을 먼저 보여드려요.
+            {copy.interests.empty}
           </p>
         )}
       </motion.section>
@@ -254,27 +282,29 @@ export function MyContent({
       {myFeed}
 
       {/* 저장한 밈 */}
-      <section className="mt-8">
+      <section id="saved" className="mt-8 scroll-mt-24">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-bold">저장한 밈</h2>
-          {saved.length > 0 && (
-            <span className="text-sm text-muted">{saved.length}개</span>
-          )}
+          <h2 className="text-lg font-bold">{copy.saved.title}</h2>
+          <span className="text-sm text-muted">
+            {isPremium
+              ? `${savedTotal} · ${premiumCopy.my.unlimited}`
+              : premiumCopy.my.freeLimit(savedTotal, saveLimit)}
+          </span>
         </div>
         {saved.length === 0 ? (
           <motion.div
             {...section}
             className="mt-3 rounded-2xl border border-border bg-surface p-6 text-center"
           >
-            <p className="text-muted">아직 저장한 밈이 없어요.</p>
+            <p className="text-muted">{copy.saved.emptyTitle}</p>
             <p className="mt-1 text-muted">
-              궁금한 밈을 저장해 두면 여기서 다시 볼 수 있어요.
+              {copy.saved.emptyBody}
             </p>
             <Link
               href="/explore"
               className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
-              탐색하러 가기
+              {copy.saved.explore}
             </Link>
           </motion.div>
         ) : (
@@ -298,7 +328,7 @@ export function MyContent({
                         className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${SAFETY_CHIP_CLASSES[meme.safetyLevel]}`}
                       >
                         <span aria-hidden>{safety.icon}</span>
-                        {safety.user}
+                        {copy.safety[meme.safetyLevel]}
                       </span>
                     </div>
                     {meme.summary && (
@@ -312,6 +342,46 @@ export function MyContent({
             })}
           </motion.ul>
         )}
+        {savedPageCount > 1 && (
+          <nav
+            aria-label={premiumCopy.my.paginationLabel}
+            className="mt-5 flex items-center justify-between gap-3"
+          >
+            {savedPage > 1 ? (
+              <Link
+                href={`/my?saved_page=${savedPage - 1}#saved`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {premiumCopy.my.previousPage}
+              </Link>
+            ) : (
+              <span
+                aria-disabled="true"
+                className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold text-muted opacity-50"
+              >
+                {premiumCopy.my.previousPage}
+              </span>
+            )}
+            <span aria-current="page" className="text-sm font-medium text-muted">
+              {premiumCopy.my.pageStatus(savedPage, savedPageCount)}
+            </span>
+            {savedPage < savedPageCount ? (
+              <Link
+                href={`/my?saved_page=${savedPage + 1}#saved`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {premiumCopy.my.nextPage}
+              </Link>
+            ) : (
+              <span
+                aria-disabled="true"
+                className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold text-muted opacity-50"
+              >
+                {premiumCopy.my.nextPage}
+              </span>
+            )}
+          </nav>
+        )}
       </section>
 
       {/* 최근 본 밈 — 기록 없으면 컴포넌트가 자체적으로 숨김 */}
@@ -319,21 +389,21 @@ export function MyContent({
 
       {/* 내 제보 */}
       <section className="mt-8">
-        <h2 className="text-lg font-bold">내 제보</h2>
+        <h2 className="text-lg font-bold">{copy.submissions.title}</h2>
         {submissions.length === 0 ? (
           <motion.div
             {...section}
             className="mt-3 rounded-2xl border border-border bg-surface p-6 text-center"
           >
-            <p className="text-muted">아직 제보한 밈이 없어요.</p>
+            <p className="text-muted">{copy.submissions.emptyTitle}</p>
             <p className="mt-1 text-muted">
-              처음 본 밈을 알려 주시면 검토 후 등록해 드려요.
+              {copy.submissions.emptyBody}
             </p>
             <Link
               href="/submit"
               className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
-              첫 밈 제보하기
+              {copy.submissions.first}
             </Link>
           </motion.div>
         ) : (
@@ -348,27 +418,30 @@ export function MyContent({
                   <h3 className="min-w-0 truncate text-base font-bold">
                     {sub.name}
                   </h3>
-                  <SubmissionStatusBadge
-                    status={sub.status}
-                    className="shrink-0"
-                  />
+                  <span
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${SUBMISSION_STATUS_CLASSES[sub.status]}`}
+                  >
+                    {copy.submissions.status[sub.status].badge}
+                  </span>
                 </div>
                 <p className="mt-1 text-sm text-muted">
-                  {dateFormatter.format(new Date(sub.createdAt))} 제보
+                  {copy.submissions.submittedAt(
+                    dateFormatter.format(new Date(sub.createdAt)),
+                  )}
                 </p>
                 {sub.status === "pending" && (
                   <p className="mt-2 text-muted">
-                    {SUBMISSION_STATUS.pending.user}
+                    {copy.submissions.pendingDetail}
                   </p>
                 )}
                 {sub.status === "rejected" && sub.rejectReason && (
                   <p className="mt-2 rounded-xl bg-safety-red-bg px-3 py-2 text-safety-red">
-                    반려 사유: {sub.rejectReason}
+                    {copy.submissions.rejectionReason}: {sub.rejectReason}
                   </p>
                 )}
                 {sub.dup && (
                   <p className="mt-2 text-muted">
-                    이미 등록된 밈이에요 →{" "}
+                    {copy.submissions.duplicate} →{" "}
                     <Link
                       href={memePathFrom(sub.dup.shortId, sub.dup.slug)}
                       className="inline-flex min-h-11 items-center text-foreground underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"

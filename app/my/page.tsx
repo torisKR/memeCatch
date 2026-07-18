@@ -3,7 +3,20 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, type MemeCategory, type SafetyLevel } from "@/lib/labels";
 import { MyFeed } from "@/components/my-feed";
+import { PremiumGate } from "@/components/premium/premium-gate";
 import { MyContent, type SavedMeme, type MySubmission } from "./my-content";
+import { getPremiumEntitlement } from "@/lib/billing/repository.server";
+import { getRequestLocale } from "@/lib/i18n-server";
+
+const FREE_SAVE_LIMIT = 30;
+const SAVED_PAGE_SIZE = 50;
+
+function parseSavedPage(value: string | string[] | undefined): number {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return 1;
+
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
 
 export const metadata: Metadata = {
   title: "MY",
@@ -19,6 +32,8 @@ export default async function MyPage({
   const nicknameError =
     typeof sp.nickname_error === "string" ? sp.nickname_error : undefined;
   const nicknameSaved = sp.nickname_saved === "1";
+  const savedPage = parseSavedPage(sp.saved_page);
+  const savedFrom = (savedPage - 1) * SAVED_PAGE_SIZE;
 
   const supabase = await createClient();
   const {
@@ -26,7 +41,9 @@ export default async function MyPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/my");
 
-  const [profileRes, savedRes, subsRes] = await Promise.all([
+  const [entitlement, locale, profileRes, savedRes, subsRes] = await Promise.all([
+    getPremiumEntitlement(),
+    getRequestLocale(),
     supabase
       .from("profiles")
       .select("nickname, interests, age_group")
@@ -35,10 +52,11 @@ export default async function MyPage({
     supabase
       .from("saved_memes")
       .select(
-        "created_at, memes(id, short_id, slug, title, summary, safety_level)"
+        "created_at, memes(id, short_id, slug, title, summary, safety_level)",
+        { count: "exact" },
       )
       .order("created_at", { ascending: false })
-      .limit(50),
+      .range(savedFrom, savedFrom + SAVED_PAGE_SIZE - 1),
     supabase
       .from("meme_submissions")
       .select(
@@ -55,6 +73,12 @@ export default async function MyPage({
   );
   const ageGroup = profileRes.data?.age_group ?? null;
   const loadError = !!(profileRes.error || savedRes.error || subsRes.error);
+  const savedTotal = savedRes.count ?? savedRes.data?.length ?? 0;
+  const savedPageCount = Math.max(1, Math.ceil(savedTotal / SAVED_PAGE_SIZE));
+
+  if (savedRes.count !== null && savedPage > savedPageCount) {
+    redirect(`/my?saved_page=${savedPageCount}#saved`);
+  }
 
   // 서버에서 직렬화 가능한 순수 데이터로 정규화 (클라 컴포넌트로 전달)
   const saved: SavedMeme[] = (savedRes.data ?? []).flatMap((row) => {
@@ -97,7 +121,18 @@ export default async function MyPage({
       loadError={loadError}
       nicknameError={nicknameError}
       nicknameSaved={nicknameSaved}
-      myFeed={<MyFeed interests={knownInterests} />}
+      isPremium={entitlement.isPremium}
+      saveLimit={FREE_SAVE_LIMIT}
+      savedTotal={savedTotal}
+      savedPage={savedPage}
+      savedPageCount={savedPageCount}
+      myFeed={
+        entitlement.isPremium ? (
+          <MyFeed interests={knownInterests} locale={locale} />
+        ) : (
+          <PremiumGate compact />
+        )
+      }
     />
   );
 }

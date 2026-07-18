@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n-client";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 
 /**
  * 전역 헤더가 /admin 경로에서 숨도록 감싸는 클라이언트 게이트.
@@ -113,7 +114,8 @@ function LoggedInMenu({
   nickname: string;
   reduce: boolean | null;
 }) {
-  const { messages } = useLocale();
+  const { locale, messages } = useLocale();
+  const premiumCopy = PREMIUM_COPY[locale];
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -199,6 +201,17 @@ function LoggedInMenu({
               onClick={() => setOpen(false)}
             >
               {messages.savedMemes}
+            </Link>
+            <Link
+              href="/premium"
+              role="menuitem"
+              className={`${itemClass} justify-between font-semibold text-accent-text`}
+              onClick={() => setOpen(false)}
+            >
+              {premiumCopy.menuLabel}
+              <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-black tracking-wider">
+                {premiumCopy.badge}
+              </span>
             </Link>
             <div className="my-1 h-px bg-border" />
             <form action={signOut}>

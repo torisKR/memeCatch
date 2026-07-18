@@ -3,7 +3,6 @@
 -- The URL guards make the migration safe to replay when a row was promoted manually.
 
 begin;
-
 create temporary table reviewed_social_embed_batch (
   meme_title text not null,
   content_platform text not null,
@@ -14,7 +13,6 @@ create temporary table reviewed_social_embed_batch (
   creator_name text not null,
   thumbnail_url text
 ) on commit drop;
-
 insert into reviewed_social_embed_batch (
   meme_title,
   content_platform,
@@ -95,7 +93,6 @@ insert into reviewed_social_embed_batch (
     'KBS COMEDY: 크큭티비',
     'https://i.ytimg.com/vi/VvxmFaxJRTw/hqdefault.jpg'
   );
-
 insert into meme_contents (
   meme_id,
   type,
@@ -128,7 +125,6 @@ where not exists (
   from meme_contents existing
   where existing.url = batch.source_url
 );
-
 insert into meme_sources (
   meme_id,
   platform,
@@ -153,5 +149,4 @@ where not exists (
   from meme_sources existing
   where existing.source_url = batch.source_url
 );
-
 commit;

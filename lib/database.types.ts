@@ -909,6 +909,150 @@ export type Database = {
           },
         ]
       }
+      billing_identities: {
+        Row: {
+          created_at: string
+          email: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_identities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          current_period_end: string
+          customer_email: string
+          external_order_id: string
+          provider: string
+          provider_product_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          last_event_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          current_period_end: string
+          customer_email: string
+          external_order_id: string
+          provider?: string
+          provider_product_id?: string | null
+          status: string
+          updated_at?: string
+          user_id: string
+          last_event_at: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          current_period_end?: string
+          customer_email?: string
+          external_order_id?: string
+          provider?: string
+          provider_product_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          last_event_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_webhook_events: {
+        Row: {
+          amount: number | null
+          customer_email: string
+          event_key: string
+          event_type: string
+          id: string
+          matched_user_id: string | null
+          occurred_at: string
+          order_id: string
+          payload: Json
+          processed_at: string | null
+          processing_error: string | null
+          provider: string
+          provider_product_id: string | null
+          received_at: string
+          status: string
+        }
+        Insert: {
+          amount?: number | null
+          customer_email: string
+          event_key: string
+          event_type: string
+          id?: string
+          matched_user_id?: string | null
+          occurred_at: string
+          order_id: string
+          payload: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          provider_product_id?: string | null
+          received_at?: string
+          status: string
+        }
+        Update: {
+          amount?: number | null
+          customer_email?: string
+          event_key?: string
+          event_type?: string
+          id?: string
+          matched_user_id?: string | null
+          occurred_at?: string
+          order_id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          provider_product_id?: string | null
+          received_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_webhook_events_matched_user_id_fkey"
+            columns: ["matched_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age_group: string | null
@@ -1201,6 +1345,21 @@ export type Database = {
         Args: { metric_date: string; product_id: string }
         Returns: undefined
       }
+      process_latpeed_membership_event: {
+        Args: {
+          p_amount: number | null
+          p_email: string
+          p_event_key: string
+          p_event_type: string
+          p_occurred_at: string
+          p_order_id: string
+          p_payload: Json
+          p_product_id: string | null
+          p_status: string
+        }
+        Returns: Json
+      }
+      register_billing_identity: { Args: never; Returns: Json }
       search_memes: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -1497,4 +1656,3 @@ export const Constants = {
     },
   },
 } as const
-

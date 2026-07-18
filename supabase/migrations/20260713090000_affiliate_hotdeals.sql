@@ -22,7 +22,6 @@ create table public.affiliate_products (
   synced_at timestamptz not null,
   unique (provider, source_type, external_key)
 );
-
 create table public.affiliate_sync_runs (
   id uuid primary key default gen_random_uuid(),
   provider text not null,
@@ -37,25 +36,21 @@ create table public.affiliate_sync_runs (
   finished_at timestamptz,
   unique (provider, source_type, scheduled_date)
 );
-
 create table public.affiliate_product_daily_metrics (
   product_id uuid not null references public.affiliate_products(id) on delete cascade,
   metric_date date not null,
   clicks integer not null default 0 check (clicks >= 0),
   primary key (product_id, metric_date)
 );
-
 alter table public.affiliate_products enable row level security;
 alter table public.affiliate_sync_runs enable row level security;
 alter table public.affiliate_product_daily_metrics enable row level security;
-
 revoke all on public.affiliate_products from anon, authenticated;
 revoke all on public.affiliate_sync_runs from anon, authenticated;
 revoke all on public.affiliate_product_daily_metrics from anon, authenticated;
 grant all on public.affiliate_products to service_role;
 grant all on public.affiliate_sync_runs to service_role;
 grant all on public.affiliate_product_daily_metrics to service_role;
-
 create function public.claim_affiliate_sync(
   provider text,
   source_type text,
@@ -122,7 +117,6 @@ begin
   return next;
 end;
 $$;
-
 create function public.apply_affiliate_sync(
   run_id uuid,
   synced_at timestamptz,
@@ -264,7 +258,6 @@ begin
   end if;
 end;
 $$;
-
 create function public.fail_affiliate_sync(
   run_id uuid,
   error_code text
@@ -288,7 +281,6 @@ begin
   end if;
 end;
 $$;
-
 create function public.record_affiliate_product_click(
   product_id uuid,
   metric_date date
@@ -306,12 +298,10 @@ begin
   do update set clicks = public.affiliate_product_daily_metrics.clicks + 1;
 end;
 $$;
-
 revoke execute on function public.claim_affiliate_sync(text, text, date, timestamptz) from public, anon, authenticated;
 revoke execute on function public.apply_affiliate_sync(uuid, timestamptz, jsonb) from public, anon, authenticated;
 revoke execute on function public.fail_affiliate_sync(uuid, text) from public, anon, authenticated;
 revoke execute on function public.record_affiliate_product_click(uuid, date) from public, anon, authenticated;
-
 grant execute on function public.claim_affiliate_sync(text, text, date, timestamptz) to service_role;
 grant execute on function public.apply_affiliate_sync(uuid, timestamptz, jsonb) to service_role;
 grant execute on function public.fail_affiliate_sync(uuid, text) to service_role;

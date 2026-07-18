@@ -7,6 +7,8 @@ import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { MemeGridSkeleton } from "@/components/skeletons";
 import { TrackedBlock } from "@/components/tracked-block";
+import { useLocale } from "@/lib/i18n-client";
+import { MY_COPY } from "@/lib/i18n-my";
 
 const RECENT_KEY = "mc_recent_memes";
 
@@ -17,6 +19,8 @@ const RECENT_KEY = "mc_recent_memes";
  * ResumeStrip(components/resume-strip.tsx)과 동일한 RECENT_KEY·조회 패턴을 공유한다.
  */
 export function MyRecent() {
+  const { locale } = useLocale();
+  const copy = MY_COPY[locale].recent;
   const [memes, setMemes] = useState<MemeListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +65,7 @@ export function MyRecent() {
   if (loading) {
     return (
       <section className="mt-8" aria-busy>
-        <h2 className="text-lg font-bold">최근 본 밈</h2>
+        <h2 className="text-lg font-bold">{copy.title}</h2>
         <div className="mt-3">
           <MemeGridSkeleton count={4} />
         </div>
@@ -75,13 +79,13 @@ export function MyRecent() {
   return (
     <section className="mt-8">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-bold">최근 본 밈</h2>
+        <h2 className="text-lg font-bold">{copy.title}</h2>
         <button
           type="button"
           onClick={clearAll}
           className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
         >
-          전체 지우기
+          {copy.clearAll}
         </button>
       </div>
       <TrackedBlock event="my_recent_click">

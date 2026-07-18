@@ -3,8 +3,10 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
-import { SECTION_TITLES, type MemeCategory } from "@/lib/labels";
+import { type MemeCategory } from "@/lib/labels";
 import type { MemeListItem } from "@/lib/queries";
+import type { Locale } from "@/lib/i18n";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 
 /**
  * MY — 관심 카테고리 맞춤 피드 (레인 C).
@@ -50,13 +52,20 @@ async function getFreshFeed(): Promise<MemeListItem[]> {
   }
 }
 
-export async function MyFeed({ interests }: { interests: MemeCategory[] }) {
+export async function MyFeed({
+  interests,
+  locale = "ko",
+}: {
+  interests: MemeCategory[];
+  locale?: Locale;
+}) {
+  const copy = PREMIUM_COPY[locale].feed;
   const hasInterests = interests.length > 0;
   let memes = hasInterests ? await getInterestFeed(interests) : [];
   const usedFallback = memes.length === 0;
   if (usedFallback) memes = await getFreshFeed();
 
-  const title = hasInterests && !usedFallback ? "관심 카테고리 급상승" : SECTION_TITLES.fresh;
+  const title = hasInterests && !usedFallback ? copy.personalRadar : copy.fresh;
 
   return (
     <Reveal as="section" className="mt-8">
@@ -66,22 +75,22 @@ export async function MyFeed({ interests }: { interests: MemeCategory[] }) {
           href="/onboarding?next=/my"
           className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
         >
-          {hasInterests ? "관심사 수정" : "관심사 설정"}
+          {hasInterests ? copy.editInterests : copy.setInterests}
         </Link>
       </div>
       {!hasInterests && (
         <p className="mt-2 text-sm text-muted">
-          관심 카테고리를 설정하면 취향에 맞는 급상승 밈을 먼저 보여드려요. 지금은 최근 등록된 밈이에요.
+          {copy.fallback}
         </p>
       )}
       {memes.length === 0 ? (
         <div className="mt-3 rounded-2xl border border-border bg-surface p-6 text-center">
-          <p className="text-muted">아직 보여드릴 밈이 없어요.</p>
+          <p className="text-muted">{copy.empty}</p>
           <Link
             href="/explore"
             className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
-            탐색하러 가기
+            {copy.explore}
           </Link>
         </div>
       ) : (

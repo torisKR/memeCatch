@@ -13,6 +13,7 @@ export default defineConfig({
       ...configDefaults.exclude,
       ".pnpm-store/**",
       ".worktrees/**",
+      ".claude/worktrees/**",
     ],
     clearMocks: true,
   },

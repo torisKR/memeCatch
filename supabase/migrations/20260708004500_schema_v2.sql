@@ -2,7 +2,6 @@
 -- 원칙: 모든 테이블 RLS 기본 deny / 쓰기는 RPC(security definer)로만 / 서버 관리 컬럼 클라이언트 쓰기 차단
 
 create extension if not exists pg_trgm;
-
 -- ── enums ────────────────────────────────────────────────
 create type user_role as enum ('user','operator');
 create type lifecycle_status as enum ('rising','active','cooling','archived');
@@ -20,7 +19,6 @@ create type report_target as enum ('meme','discussion','submission');
 create type revision_status as enum ('proposed','approved','rejected');
 create type reaction_type as enum ('understood','funny','just_learned','too_late','still_alive','risky');
 create type discussion_status as enum ('visible','hidden','deleted');
-
 -- ── 초성 추출 (IMMUTABLE — generated column용) ─────────────
 create or replace function extract_chosung(input text) returns text
 language plpgsql immutable strict as $$
@@ -40,14 +38,12 @@ begin
   end loop;
   return result;
 end $$;
-
 -- short_id 생성 (URL용, T6 하이브리드 slug)
 create or replace function gen_short_id() returns text
 language sql volatile as $$
   select string_agg(substr('abcdefghjkmnpqrstuvwxyz23456789', (floor(random()*31)+1)::int, 1), '')
   from generate_series(1, 8)
 $$;
-
 -- ── profiles ─────────────────────────────────────────────
 create table profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -58,7 +54,6 @@ create table profiles (
   interests text[] not null default '{}',
   created_at timestamptz not null default now()
 );
-
 -- 자기 role/trust_score 상승 차단 (service_role만 변경 가능)
 -- 주의: PostgREST/Supabase는 복수형 request.jwt.claims(JSON)만 세팅한다.
 --       단수 request.jwt.claim.role은 legacy GUC로 항상 비어 있어 service_role까지 차단됐었음.
@@ -77,7 +72,6 @@ begin
 end $$;
 create trigger trg_protect_profile before update on profiles
   for each row execute function protect_profile_columns();
-
 -- ── memes ────────────────────────────────────────────────
 create table memes (
   id uuid primary key default gen_random_uuid(),
@@ -116,7 +110,6 @@ create index idx_memes_title_trgm on memes using gin (title gin_trgm_ops);
 create index idx_memes_summary_trgm on memes using gin (summary gin_trgm_ops);
 create index idx_memes_chosung_trgm on memes using gin (title_chosung gin_trgm_ops);
 create index idx_memes_aliases on memes using gin (aliases);
-
 -- 검수 상태 전이 규칙
 create or replace function check_moderation_transition() returns trigger
 language plpgsql as $$
@@ -138,7 +131,6 @@ begin
 end $$;
 create trigger trg_meme_moderation before update on memes
   for each row execute function check_moderation_transition();
-
 -- ── 콘텐츠·출처·태그 ──────────────────────────────────────
 create table meme_sources (
   id uuid primary key default gen_random_uuid(),
@@ -151,7 +143,6 @@ create table meme_sources (
   copyright_status copyright_status not null default 'unknown'
 );
 create index idx_sources_meme on meme_sources (meme_id);
-
 create table meme_contents (
   id uuid primary key default gen_random_uuid(),
   meme_id uuid not null references memes(id) on delete cascade,
@@ -167,7 +158,6 @@ create table meme_contents (
   created_at timestamptz not null default now()
 );
 create index idx_contents_meme on meme_contents (meme_id, is_representative);
-
 create table tags (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
@@ -179,7 +169,6 @@ create table meme_tags_map (
   primary key (meme_id, tag_id)
 );
 create index idx_tags_map_tag on meme_tags_map (tag_id);
-
 -- ── 제보 ─────────────────────────────────────────────────
 create table meme_submissions (
   id uuid primary key default gen_random_uuid(),
@@ -200,7 +189,6 @@ create table meme_submissions (
 );
 create index idx_submissions_status on meme_submissions (status, created_at);
 create index idx_submissions_submitter on meme_submissions (submitter_id, created_at desc);
-
 -- ── 반응·저장·투표 ────────────────────────────────────────
 create table meme_reactions (
   user_id uuid not null references profiles(id) on delete cascade,
@@ -210,7 +198,6 @@ create table meme_reactions (
   primary key (user_id, meme_id, reaction)
 );
 create index idx_reactions_meme on meme_reactions (meme_id, reaction);
-
 create table saved_memes (
   user_id uuid not null references profiles(id) on delete cascade,
   meme_id uuid not null references memes(id) on delete cascade,
@@ -218,7 +205,6 @@ create table saved_memes (
   primary key (user_id, meme_id)
 );
 create index idx_saved_meme on saved_memes (meme_id);
-
 create table generation_votes (
   user_id uuid not null references profiles(id) on delete cascade,
   meme_id uuid not null references memes(id) on delete cascade,
@@ -228,7 +214,6 @@ create table generation_votes (
   primary key (user_id, meme_id)
 );
 create index idx_gen_votes_meme on generation_votes (meme_id, age_group);
-
 -- ── 커뮤니티 ──────────────────────────────────────────────
 create table discussions (
   id uuid primary key default gen_random_uuid(),
@@ -243,14 +228,12 @@ create table discussions (
 create index idx_discussions_meme on discussions (meme_id, created_at desc);
 create index idx_discussions_parent on discussions (parent_id);
 create index idx_discussions_user on discussions (user_id, created_at desc);
-
 create table discussion_reactions (
   user_id uuid not null references profiles(id) on delete cascade,
   discussion_id uuid not null references discussions(id) on delete cascade,
   reaction reaction_type not null,
   primary key (user_id, discussion_id, reaction)
 );
-
 -- ── 신고 (5회 누적 자동 숨김 — E-4) ────────────────────────
 create table reports (
   id uuid primary key default gen_random_uuid(),
@@ -264,7 +247,6 @@ create table reports (
   unique (target_type, target_id, reporter_id)
 );
 create index idx_reports_open on reports (status, created_at);
-
 create or replace function auto_hide_on_reports() returns trigger
 language plpgsql security definer as $$
 declare cnt int;
@@ -280,7 +262,6 @@ begin
 end $$;
 create trigger trg_auto_hide after insert on reports
   for each row execute function auto_hide_on_reports();
-
 -- ── 지표·이벤트 ───────────────────────────────────────────
 create table meme_trend_metrics (
   meme_id uuid not null references memes(id) on delete cascade,
@@ -296,7 +277,6 @@ create table meme_trend_metrics (
   primary key (meme_id, date)
 );
 create index idx_metrics_date on meme_trend_metrics (date desc, trend_score desc);
-
 create table view_events (
   id bigint generated always as identity primary key,
   meme_id uuid not null references memes(id) on delete cascade,
@@ -306,7 +286,6 @@ create table view_events (
 );
 create index idx_view_events_recent on view_events (created_at);
 create index idx_view_events_meme on view_events (meme_id, created_at);
-
 -- ── 이력·감사·운영 ────────────────────────────────────────
 create table meme_revisions (
   id uuid primary key default gen_random_uuid(),
@@ -318,7 +297,6 @@ create table meme_revisions (
   created_at timestamptz not null default now()
 );
 create index idx_revisions_meme on meme_revisions (meme_id, created_at desc);
-
 create table admin_audit_log (
   id bigint generated always as identity primary key,
   actor_id uuid references profiles(id) on delete set null,
@@ -328,7 +306,6 @@ create table admin_audit_log (
   detail jsonb,
   created_at timestamptz not null default now()
 );
-
 create table job_runs (
   id bigint generated always as identity primary key,
   job_name text not null,
@@ -338,13 +315,11 @@ create table job_runs (
   detail jsonb
 );
 create index idx_job_runs on job_runs (job_name, started_at desc);
-
 -- ── 헬퍼: 운영자 판별 / 레이트리밋 ─────────────────────────
 create or replace function is_operator() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles where id = auth.uid() and role = 'operator')
 $$;
-
 create or replace function check_rate_limit(p_table text, p_limit int, p_minutes int) returns void
 language plpgsql security definer set search_path = public as $$
 declare cnt int;
@@ -362,7 +337,6 @@ begin
     raise exception 'rate_limited' using errcode = 'P0429';
   end if;
 end $$;
-
 -- ── RPC: 쓰기 경계 ────────────────────────────────────────
 create or replace function increment_view(p_meme_id uuid, p_session_hash text) returns void
 language plpgsql security definer set search_path = public as $$
@@ -376,7 +350,6 @@ begin
   insert into view_events (meme_id, session_hash) values (p_meme_id, p_session_hash);
 end $$;
 grant execute on function increment_view(uuid, text) to anon, authenticated;
-
 create or replace function toggle_reaction(p_meme_id uuid, p_reaction reaction_type) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare removed boolean := false;
@@ -389,7 +362,6 @@ begin
   return not removed; -- true = 추가됨
 end $$;
 grant execute on function toggle_reaction(uuid, reaction_type) to authenticated;
-
 create or replace function toggle_save(p_meme_id uuid) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare removed boolean := false;
@@ -402,7 +374,6 @@ begin
   return not removed;
 end $$;
 grant execute on function toggle_save(uuid) to authenticated;
-
 create or replace function submit_meme(p_name text, p_seen_at text, p_url text, p_description text, p_guess text, p_tags text[]) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare v_id uuid; v_dup uuid;
@@ -417,7 +388,6 @@ begin
   return v_id;
 end $$;
 grant execute on function submit_meme(text, text, text, text, text, text[]) to authenticated;
-
 create or replace function post_comment(p_meme_id uuid, p_parent_id uuid, p_body text) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare v_id uuid;
@@ -430,7 +400,6 @@ begin
   return v_id;
 end $$;
 grant execute on function post_comment(uuid, uuid, text) to authenticated;
-
 create or replace function file_report(p_target report_target, p_target_id uuid, p_reason text) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare v_id uuid;
@@ -444,7 +413,6 @@ begin
   return v_id;
 end $$;
 grant execute on function file_report(report_target, uuid, text) to authenticated;
-
 create or replace function cast_generation_vote(p_meme_id uuid, p_age_group text, p_vote text) returns void
 language plpgsql security definer set search_path = public as $$
 begin
@@ -454,7 +422,6 @@ begin
   on conflict (user_id, meme_id) do update set age_group = excluded.age_group, vote = excluded.vote;
 end $$;
 grant execute on function cast_generation_vote(uuid, text, text) to authenticated;
-
 -- ── trend_score 일배치 (B-2/B-3: ln 정규화 + 72h 윈도 + 스무딩 + KST) ──
 create or replace function compute_trend_scores() returns void
 language plpgsql security definer set search_path = public as $$
@@ -518,7 +485,6 @@ exception when others then
   values ('compute_trend_scores', now(), false, jsonb_build_object('error', sqlerrm));
   raise warning 'compute_trend_scores failed: %', sqlerrm;
 end $$;
-
 -- ── 검색 RPC (trgm + 초성 + aliases 통합) ──────────────────
 create or replace function search_memes(p_query text, p_limit int default 20) returns setof memes
 language sql stable security definer set search_path = public as $$
@@ -535,7 +501,6 @@ language sql stable security definer set search_path = public as $$
   limit least(p_limit, 50)
 $$;
 grant execute on function search_memes(text, int) to anon, authenticated;
-
 -- ── RLS ──────────────────────────────────────────────────
 alter table profiles enable row level security;
 alter table memes enable row level security;
@@ -555,7 +520,6 @@ alter table view_events enable row level security;
 alter table meme_revisions enable row level security;
 alter table admin_audit_log enable row level security;
 alter table job_runs enable row level security;
-
 -- 공개 읽기 (approved/limited만; limited의 추천 제외는 쿼리 레벨)
 create policy memes_public_read on memes for select
   using (moderation_status in ('approved','limited') or is_operator() or submitted_by = (select auth.uid()));
@@ -566,35 +530,29 @@ create policy contents_public_read on meme_contents for select
 create policy tags_public_read on tags for select using (true);
 create policy tags_map_public_read on meme_tags_map for select using (true);
 create policy metrics_public_read on meme_trend_metrics for select using (true);
-
 -- profiles
-create policy profiles_self_read on profiles for select using (true); -- 닉네임은 공개 정보
+create policy profiles_self_read on profiles for select using (true);
+-- 닉네임은 공개 정보
 create policy profiles_self_insert on profiles for insert with check (id = (select auth.uid()));
 create policy profiles_self_update on profiles for update using (id = (select auth.uid()));
-
 -- 반응·저장·투표: 자기 것 읽기 + 집계는 뷰로
 create policy reactions_read on meme_reactions for select using (true);
 create policy saved_self on saved_memes for select using (user_id = (select auth.uid()));
 create policy gen_votes_read on generation_votes for select using (true);
 create policy disc_reactions_read on discussion_reactions for select using (true);
-
 -- 댓글: visible 공개, hidden/deleted는 작성자·운영자만
 create policy discussions_read on discussions for select
   using (status = 'visible' or user_id = (select auth.uid()) or is_operator());
-
 -- 제보: 본인 것 + 운영자
 create policy submissions_own_read on meme_submissions for select
   using (submitter_id = (select auth.uid()) or is_operator());
-
 -- 신고: 본인 것 + 운영자
 create policy reports_own_read on reports for select
   using (reporter_id = (select auth.uid()) or is_operator());
-
 -- 운영자 전용
 create policy revisions_operator on meme_revisions for select using (is_operator() or editor_id = (select auth.uid()));
 create policy audit_operator on admin_audit_log for select using (is_operator());
 create policy job_runs_operator on job_runs for select using (is_operator());
-
 -- 운영자 쓰기 (관리자 콘솔 — service role 또는 operator)
 create policy memes_operator_write on memes for all
   using (is_operator()) with check (is_operator());
@@ -610,7 +568,6 @@ create policy reports_operator_write on reports for update
   using (is_operator()) with check (is_operator());
 create policy revisions_operator_write on meme_revisions for all
   using (is_operator()) with check (is_operator());
-
 -- INSERT/DELETE는 전부 RPC(security definer) 경유 — 직접 insert 정책 없음 = 기본 거부
 -- (meme_reactions/saved_memes/generation_votes/discussions/reports/view_events/metrics)
 
@@ -618,11 +575,9 @@ create policy revisions_operator_write on meme_revisions for all
 create view meme_reaction_counts with (security_invoker = on) as
   select meme_id, reaction, count(*)::int as cnt
   from meme_reactions group by meme_id, reaction;
-
 create view generation_vote_stats with (security_invoker = on) as
   select meme_id, age_group, vote, count(*)::int as cnt
   from generation_votes group by meme_id, age_group, vote;
-
 -- 회원가입 시 프로필 자동 생성
 create or replace function handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$

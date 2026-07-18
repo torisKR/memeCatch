@@ -15,7 +15,6 @@ create table community_posts (
 );
 create index idx_community_posts_recent on community_posts (status, created_at desc);
 create index idx_community_posts_user on community_posts (user_id);
-
 create table community_comments (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references community_posts(id) on delete cascade,
@@ -24,7 +23,6 @@ create table community_comments (
   created_at timestamptz not null default now()
 );
 create index idx_community_comments_post on community_comments (post_id, created_at);
-
 create table community_post_likes (
   user_id uuid not null references profiles(id) on delete cascade,
   post_id uuid not null references community_posts(id) on delete cascade,
@@ -32,22 +30,18 @@ create table community_post_likes (
   primary key (user_id, post_id)
 );
 create index idx_community_post_likes_post on community_post_likes (post_id);
-
 -- ── RLS ──────────────────────────────────────────────────
 alter table community_posts enable row level security;
 alter table community_comments enable row level security;
 alter table community_post_likes enable row level security;
-
 -- select: visible 공개(작성자·운영자는 hidden도), comments/likes는 공개
 create policy community_posts_read on community_posts for select
   using (status = 'visible' or user_id = (select auth.uid()) or is_operator());
 create policy community_comments_read on community_comments for select using (true);
 create policy community_post_likes_read on community_post_likes for select using (true);
-
 -- 운영자 숨김/해제
 create policy community_posts_operator_update on community_posts for update
   using (is_operator()) with check (is_operator());
-
 -- INSERT/DELETE 정책 없음 = 직접 쓰기 기본 거부 (RPC 경유만)
 
 -- ── check_rate_limit 확장 (community_posts/community_comments 분기 추가) ──
@@ -72,7 +66,6 @@ begin
     raise exception 'rate_limited' using errcode = 'P0429';
   end if;
 end $$;
-
 -- ── RPC: 쓰기 경계 ────────────────────────────────────────
 create or replace function create_community_post(p_title text, p_body text, p_meme_id uuid default null) returns uuid
 language plpgsql security definer set search_path = public as $$
@@ -91,7 +84,6 @@ begin
   return v_id;
 end $$;
 grant execute on function create_community_post(text, text, uuid) to authenticated;
-
 create or replace function create_community_comment(p_post_id uuid, p_body text) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare v_id uuid;
@@ -108,7 +100,6 @@ begin
   return v_id;
 end $$;
 grant execute on function create_community_comment(uuid, text) to authenticated;
-
 create or replace function toggle_post_like(p_post_id uuid) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare removed boolean := false;

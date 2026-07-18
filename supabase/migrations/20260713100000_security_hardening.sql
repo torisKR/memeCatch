@@ -4,7 +4,6 @@
 -- Only the trusted scheduler/service role may run global maintenance.
 revoke execute on function public.compute_trend_scores() from public, anon, authenticated;
 grant execute on function public.compute_trend_scores() to service_role;
-
 -- Serialize the count-and-write quota boundary for each user and operation.
 create or replace function public.check_rate_limit(p_table text, p_limit int, p_minutes int) returns void
 language plpgsql security definer set search_path = public as $$
@@ -44,23 +43,18 @@ begin
   end if;
 end $$;
 revoke execute on function public.check_rate_limit(text, int, int) from public, anon, authenticated;
-
 -- Raw reaction/vote rows are private; aggregate views remain public.
 drop policy if exists reactions_read on public.meme_reactions;
 create policy reactions_self_read on public.meme_reactions for select
   using (user_id = (select auth.uid()) or is_operator());
-
 drop policy if exists gen_votes_read on public.generation_votes;
 create policy gen_votes_self_read on public.generation_votes for select
   using (user_id = (select auth.uid()) or is_operator());
-
 drop policy if exists disc_reactions_read on public.discussion_reactions;
 create policy disc_reactions_self_read on public.discussion_reactions for select
   using (user_id = (select auth.uid()) or is_operator());
-
 alter view public.meme_reaction_counts set (security_invoker = false);
 alter view public.generation_vote_stats set (security_invoker = false);
-
 -- A hidden community post must hide its comments as well, except to the
 -- post/comment owner and operators who need moderation access.
 drop policy if exists community_comments_read on public.community_comments;
@@ -74,12 +68,10 @@ create policy community_comments_read on public.community_comments for select
         and (p.status = 'visible' or p.user_id = (select auth.uid()))
     )
   );
-
 -- Public pages use the denormalized like_count; exact liker rows are private.
 drop policy if exists community_post_likes_read on public.community_post_likes;
 create policy community_post_likes_self_read on public.community_post_likes for select
   using (user_id = (select auth.uid()) or is_operator());
-
 -- Authoritative RPC bounds. Wrappers keep their friendly messages, but direct
 -- authenticated RPC callers now receive the same limits at the final boundary.
 create or replace function public.submit_meme(
@@ -111,7 +103,6 @@ begin
 end $$;
 revoke execute on function public.submit_meme(text, text, text, text, text, text[]) from public, anon;
 grant execute on function public.submit_meme(text, text, text, text, text, text[]) to authenticated;
-
 create or replace function public.submit_meme_v2(
   p_name text, p_seen_at text, p_url text, p_description text,
   p_guess text, p_tags text[], p_attachment_path text default null

@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LoginGate } from "@/components/login-gate";
+import { useLocale } from "@/lib/i18n-client";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 
-const SAVE_GATE_MESSAGE = "로그인하면 밈을 저장할 수 있어요.";
+export function getSaveFailure(message: string): "login" | "premium-limit" | "retry" {
+  if (message.includes("login_required")) return "login";
+  if (message.includes("premium_save_limit")) return "premium-limit";
+  return "retry";
+}
 
 /**
  * 밈 저장 토글 — toggle_save RPC(security definer) 경유.
@@ -20,7 +27,15 @@ export function SaveButton({ memeId }: { memeId: string }) {
   // null = 아직 모름(마운트 인증 확인 전)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
+  const [upgradeRequired, setUpgradeRequired] = useState(false);
+  const noticeTimerRef = useRef<number | null>(null);
   const pathname = usePathname();
+  const { locale } = useLocale();
+  const copy = PREMIUM_COPY[locale].save;
+
+  useEffect(() => () => {
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+  }, []);
 
   // 초기 저장 상태 + 로그인 여부 (비로그인이면 RLS로 0행 → false 유지)
   useEffect(() => {
@@ -46,8 +61,12 @@ export function SaveButton({ memeId }: { memeId: string }) {
   }, [memeId]);
 
   function showNotice(message: string) {
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
     setNotice(message);
-    window.setTimeout(() => setNotice(null), 2500);
+    noticeTimerRef.current = window.setTimeout(() => {
+      setNotice(null);
+      noticeTimerRef.current = null;
+    }, 2500);
   }
 
   async function toggle() {
@@ -58,6 +77,7 @@ export function SaveButton({ memeId }: { memeId: string }) {
       return;
     }
     setBusy(true);
+    setUpgradeRequired(false);
     const wasSaved = saved;
     setSaved(!wasSaved); // 낙관적 반영
     const { data, error } = await createClient().rpc("toggle_save", {
@@ -67,12 +87,20 @@ export function SaveButton({ memeId }: { memeId: string }) {
     if (error) {
       setSaved(wasSaved); // 롤백
       // 마운트 확인 전 탭 등으로 세션이 없던 경우도 게이트로 유도
-      if (error.message.includes("login_required")) {
+      const failure = getSaveFailure(error.message);
+      if (failure === "login") {
         setLoggedIn(false);
         setGateOpen(true);
         return;
       }
-      showNotice("잠시 후 다시 시도해 주세요.");
+      if (failure === "premium-limit") {
+        if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+        noticeTimerRef.current = null;
+        setNotice(copy.limitReached);
+        setUpgradeRequired(true);
+        return;
+      }
+      showNotice(copy.retry);
       return;
     }
     setLoggedIn(true);
@@ -81,9 +109,9 @@ export function SaveButton({ memeId }: { memeId: string }) {
     if (nowSaved) {
       // PWA 설치 배너의 저장 행동 카운트 (components/pwa-install.tsx)
       window.dispatchEvent(new Event("memecatch:save"));
-      showNotice("MY에 저장했어요.");
+      showNotice(copy.saved);
     } else {
-      showNotice("저장을 해제했어요.");
+      showNotice(copy.removed);
     }
   }
 
@@ -100,15 +128,23 @@ export function SaveButton({ memeId }: { memeId: string }) {
         }`}
       >
         <BookmarkIcon className="h-5 w-5" filled={saved} />
-        {saved ? "저장한 밈" : "이 밈 저장하기"}
+        {saved ? copy.savedButton : copy.saveButton}
       </button>
       <p role="status" aria-live="polite" className="mt-1 min-h-5 text-center text-sm text-muted">
         {notice}
       </p>
+      {upgradeRequired && (
+        <Link
+          href="/pricing"
+          className="mt-1 flex min-h-11 items-center justify-center rounded-xl text-sm font-bold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {copy.upgrade}
+        </Link>
+      )}
       <LoginGate
         open={gateOpen}
         onClose={() => setGateOpen(false)}
-        message={SAVE_GATE_MESSAGE}
+        message={copy.loginGate}
         next={pathname}
       />
     </div>

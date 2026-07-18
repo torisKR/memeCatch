@@ -13,13 +13,11 @@ values (
   array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 )
 on conflict (id) do nothing;
-
 -- 2) storage.objects 정책
 drop policy if exists "meme_uploads_public_read" on storage.objects;
 create policy "meme_uploads_public_read" on storage.objects
   for select
   using (bucket_id = 'meme-uploads');
-
 drop policy if exists "meme_uploads_auth_insert" on storage.objects;
 create policy "meme_uploads_auth_insert" on storage.objects
   for insert to authenticated
@@ -27,7 +25,6 @@ create policy "meme_uploads_auth_insert" on storage.objects
     bucket_id = 'meme-uploads'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
-
 -- 자기 폴더({auth.uid()}/...)에 올린 파일만 삭제 가능
 drop policy if exists "meme_uploads_owner_delete" on storage.objects;
 create policy "meme_uploads_owner_delete" on storage.objects
@@ -36,7 +33,6 @@ create policy "meme_uploads_owner_delete" on storage.objects
     bucket_id = 'meme-uploads'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
-
 -- 3) submit_meme_v2 — 기존 submit_meme와 동일 검증 + attachment_path 저장
 --    attachment_path는 'meme-uploads/{auth.uid()}/' 프리픽스만 허용
 create or replace function submit_meme_v2(

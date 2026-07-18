@@ -96,6 +96,9 @@ curl --fail-with-body \
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon(publishable) 키 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service_role 키 (배치·관리·시드) |
+| `LATPEED_MEMBERSHIP_URL` | MemeCatch Plus Latpeed 상품 URL. 서버 전용이며 결제 CTA가 이 URL로 이동 |
+| `LATPEED_WEBHOOK_SECRET` | Latpeed 상품별 웹훅 HMAC 시크릿. 서버 전용 |
+| `LATPEED_MEMBERSHIP_PRODUCT_ID` | (선택) 웹훅 payload의 상품 ID를 고정 검증할 때 사용 |
 | `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
@@ -119,10 +122,20 @@ Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 �
 - `meme_contents` / `meme_sources` — YouTube·TikTok·Instagram·Facebook·Threads 임베드와 출처 링크
 - `meme_submissions` · `reports` · `discussions` · `meme_reactions` · `saved_memes` · `generation_votes`
 - `profiles` — 닉네임·역할·관심 카테고리
+- `billing_identities` · `billing_subscriptions` · `billing_webhook_events` — Latpeed 결제 이메일 매칭·Plus 권한·서명 이벤트 감사 기록
 - `meme_trend_metrics` · `view_events` — 트렌드 집계
 - `admin_audit_log` · `job_runs` — 운영 감사·배치 로그
 
 RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `post_comment` · `file_report` · `cast_generation_vote` · `increment_view` · `compute_trend_scores`
+
+### MemeCatch Plus / Latpeed 연결
+
+1. 사용자가 MemeCatch 로그인 이메일과 같은 이메일로 Latpeed에서 결제합니다.
+2. `POST /api/billing/checkout`이 현재 로그인 이메일을 서버에 등록한 뒤 Latpeed 상품으로 이동시킵니다.
+3. Latpeed 상품별 웹훅을 `https://catchmeme.com/api/billing/latpeed/webhook`에 연결합니다.
+4. 서버는 `X-Latpeed-Timestamp`와 `X-Latpeed-Signature` HMAC을 검증한 이벤트만 service-role RPC로 반영합니다. 성공 이벤트는 35일의 갱신 창을 부여하고, 취소·환불 이벤트는 즉시 권한을 회수합니다.
+
+리다이렉트 쿼리나 브라우저 상태만으로 Plus 권한을 부여하지 않습니다. 상품별 웹훅 시크릿은 Vercel 서버 환경변수에만 저장하며 저장소에 커밋하지 않습니다.
 
 ## 콘텐츠 정책
 
@@ -136,7 +149,7 @@ RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `p
 
 ## 라이선스
 
-개인 프로젝트. 수익 모델은 광고·후원.
+개인 프로젝트. 수익 모델은 광고·제휴·후원과 MemeCatch Plus 구독.
 
 ---
 

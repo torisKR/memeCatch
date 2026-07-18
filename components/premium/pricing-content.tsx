@@ -23,8 +23,8 @@ export function PricingContent() {
       </header>
 
       <section className="mx-auto mt-10 max-w-xl rounded-3xl border border-accent/30 bg-surface p-6 shadow-lg sm:p-8" aria-labelledby="plus-plan-title">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex items-start justify-between gap-4 sm:items-center">
+          <div className="min-w-0">
             <span className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-xs font-black tracking-wider text-accent-text">
               {copy.badge}
             </span>
@@ -32,8 +32,8 @@ export function PricingContent() {
               {copy.productName}
             </h2>
           </div>
-          <p className="text-right">
-            <span className="text-3xl font-black tracking-tight">{copy.pricing.monthly}</span>
+          <p className="shrink-0 text-right">
+            <span className="block whitespace-nowrap text-2xl font-black tracking-tight sm:text-3xl">{copy.pricing.monthly}</span>
             <span className="block text-sm text-muted">{copy.pricing.perMonth}</span>
           </p>
         </div>

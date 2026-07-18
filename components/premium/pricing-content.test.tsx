@@ -24,5 +24,7 @@ describe("PricingContent", () => {
     expect(html).toContain('action="/api/billing/checkout"');
     expect(html).toContain('method="post"');
     expect(html).toContain("same email");
+    expect(html).toContain("shrink-0 text-right");
+    expect(html).toContain("whitespace-nowrap");
   });
 });

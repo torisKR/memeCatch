@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { MemeCard } from "@/components/meme-card";
-import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
 import type { MemeListItem } from "@/lib/queries";
 
@@ -58,6 +57,9 @@ export function TimelineView({ decades }: { decades: TimelineDecade[] }) {
     return map;
   }, [decades]);
 
+  // 배치마다 옵저버를 재생성한다(visibleRows 의존): IO는 교차 '변화'에만 콜백하므로
+  // 배치 후에도 센티널이 마진 안에 남으면 옵저버를 다시 만들어야 즉시(생성 시점
+  // 초기 콜백) 다음 배치가 이어진다 — 1회 생성 방식은 이 경우 영구 정지한다.
   useEffect(() => {
     if (allShown) return;
     const el = sentinelRef.current;
@@ -76,7 +78,7 @@ export function TimelineView({ decades }: { decades: TimelineDecade[] }) {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [allShown, totalRows]);
+  }, [allShown, totalRows, visibleRows]);
 
   function revealDecade(key: string, scroll: boolean) {
     const start = decadeStartIndex.get(key);
@@ -155,15 +157,16 @@ export function TimelineView({ decades }: { decades: TimelineDecade[] }) {
                 {decade.label}
               </h2>
 
-              <MotionList as="div" itemAs="div" className="mt-5 space-y-7">
+              {/* 행별 독립 Reveal — 컨테이너 스태거(MotionList)는 once 발동 후
+                  나중에 마운트된 자식이 hidden(opacity 0)에 갇혀 무한스크롤로
+                  추가된 행이 안 보이는 버그가 있어, 행마다 자기 whileInView를 갖게 한다 */}
+              <div className="mt-5 space-y-7">
                 {decade.years.slice(0, visibleInDecade).map((yearGroup) => (
-                  <YearRow
-                    key={yearGroup.year}
-                    decadeKey={decade.key}
-                    yearGroup={yearGroup}
-                  />
+                  <Reveal key={yearGroup.year}>
+                    <YearRow decadeKey={decade.key} yearGroup={yearGroup} />
+                  </Reveal>
                 ))}
-              </MotionList>
+              </div>
             </Reveal>
           );
         })}

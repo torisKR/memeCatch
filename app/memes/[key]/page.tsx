@@ -13,6 +13,7 @@ import {
 import { AnswerCard } from "@/components/answer-card";
 import { SafetyRationale } from "@/components/safety-rationale";
 import { UsageExamples } from "@/components/usage-examples";
+import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { MemeEmbed } from "@/components/meme-embed";
 import { MemeCard } from "@/components/meme-card";
 import { ReactionBar } from "@/components/reaction-bar";
@@ -241,6 +242,10 @@ export default async function MemeDetailPage({ params }: Props) {
 
       {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
       <UsageExamples examples={usageExamples} />
+
+      {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
+          권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}
+      <MemeTrendPanel memeId={meme.id} />
 
       {related.length > 0 && (
         <section aria-labelledby="related-memes">

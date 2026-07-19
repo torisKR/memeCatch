@@ -52,7 +52,7 @@ export default async function MyPage({
     supabase
       .from("saved_memes")
       .select(
-        "created_at, memes(id, short_id, slug, title, summary, safety_level)",
+        "created_at, collection, note, memes(id, short_id, slug, title, summary, safety_level)",
         { count: "exact" },
       )
       .order("created_at", { ascending: false })
@@ -92,6 +92,8 @@ export default async function MyPage({
         title: meme.title,
         summary: meme.summary,
         safetyLevel: meme.safety_level as SafetyLevel,
+        collection: row.collection ?? null,
+        note: row.note ?? null,
       },
     ];
   });

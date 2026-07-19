@@ -1133,18 +1133,27 @@ export type Database = {
       }
       saved_memes: {
         Row: {
+          collection: string | null
           created_at: string
           meme_id: string
+          note: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
+          collection?: string | null
           created_at?: string
           meme_id: string
+          note?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
+          collection?: string | null
           created_at?: string
           meme_id?: string
+          note?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -1344,6 +1353,7 @@ export type Database = {
         Args: { p_meme_id: string; p_session_hash: string }
         Returns: undefined
       }
+      has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
       is_operator: { Args: never; Returns: boolean }
       post_comment: {
         Args: { p_body: string; p_meme_id: string; p_parent_id: string }
@@ -1438,6 +1448,10 @@ export type Database = {
         Returns: boolean
       }
       toggle_save: { Args: { p_meme_id: string }; Returns: boolean }
+      update_saved_meme: {
+        Args: { p_collection: string | null; p_meme_id: string; p_note: string | null }
+        Returns: Json
+      }
     }
     Enums: {
       availability_status: "live" | "dead" | "region_blocked" | "unchecked"

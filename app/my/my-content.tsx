@@ -16,6 +16,7 @@ import { MyRecent } from "@/components/my-recent";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { MY_COPY } from "@/lib/i18n-my";
+import { SavedMetaEditor } from "@/components/premium/saved-meta-editor";
 
 export type SavedMeme = {
   id: string;
@@ -24,6 +25,9 @@ export type SavedMeme = {
   title: string;
   summary: string | null;
   safetyLevel: SafetyLevel;
+  /** Plus 전용 — 폴더 분류·메모 */
+  collection: string | null;
+  note: string | null;
 };
 
 export type MySubmission = {
@@ -315,10 +319,14 @@ export function MyContent({
             {saved.map((meme) => {
               const safety = SAFETY_LEVELS[meme.safetyLevel];
               return (
-                <motion.li key={meme.id} {...listItem}>
+                <motion.li
+                  key={meme.id}
+                  {...listItem}
+                  className="flex h-full flex-col rounded-2xl border border-border bg-surface transition-colors hover:border-accent"
+                >
                   <Link
                     href={memePathFrom(meme.shortId, meme.slug)}
-                    className="flex h-full flex-col rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="flex flex-1 flex-col p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="min-w-0 flex-1 truncate text-base font-bold">
@@ -337,6 +345,15 @@ export function MyContent({
                       </p>
                     )}
                   </Link>
+                  {/* 폴더·메모는 카드 링크 밖에 둔다 — 편집 클릭이 상세로 이동하지 않게 */}
+                  <div className="px-4 pb-3">
+                    <SavedMetaEditor
+                      memeId={meme.id}
+                      isPremium={isPremium}
+                      collection={meme.collection}
+                      note={meme.note}
+                    />
+                  </div>
                 </motion.li>
               );
             })}

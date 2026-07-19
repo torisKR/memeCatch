@@ -174,7 +174,7 @@ export function isAllowedLatpeedCheckoutUrl(value: string): boolean {
     return (
       url.protocol === "https:" &&
       (url.hostname === "latpeed.com" || url.hostname === "www.latpeed.com") &&
-      /^\/products\/[^/]+\/?$/.test(url.pathname)
+      /^\/(products|memberships)\/[^/]+\/?$/.test(url.pathname)
     );
   } catch {
     return false;

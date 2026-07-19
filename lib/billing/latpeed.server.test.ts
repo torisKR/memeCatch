@@ -199,11 +199,14 @@ describe("parseLatpeedWebhookEvent", () => {
 });
 
 describe("isAllowedLatpeedCheckoutUrl", () => {
-  it("accepts only HTTPS Latpeed product pages", () => {
+  it("accepts only HTTPS Latpeed product/membership pages", () => {
     expect(isAllowedLatpeedCheckoutUrl("https://www.latpeed.com/products/abc12")).toBe(true);
     expect(isAllowedLatpeedCheckoutUrl("https://latpeed.com/products/abc12")).toBe(true);
+    expect(isAllowedLatpeedCheckoutUrl("https://www.latpeed.com/memberships/6a5b3ebe2cf6c5b1dfe47f44")).toBe(true);
+    expect(isAllowedLatpeedCheckoutUrl("https://latpeed.com/memberships/abc12")).toBe(true);
     expect(isAllowedLatpeedCheckoutUrl("http://latpeed.com/products/abc12")).toBe(false);
     expect(isAllowedLatpeedCheckoutUrl("https://latpeed.com.evil.test/products/abc12")).toBe(false);
+    expect(isAllowedLatpeedCheckoutUrl("https://latpeed.com/memberships/")).toBe(false);
     expect(isAllowedLatpeedCheckoutUrl("https://latpeed.com/account")).toBe(false);
   });
 });

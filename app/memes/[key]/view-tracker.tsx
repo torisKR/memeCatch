@@ -19,10 +19,18 @@ export function ViewTracker({ memeId }: { memeId: string }) {
         hash = crypto.randomUUID();
         window.localStorage.setItem(SESSION_KEY, hash);
       }
-      void createClient().rpc("increment_view", {
-        p_meme_id: memeId,
-        p_session_hash: hash,
-      });
+      // supabase-js 쿼리 빌더는 지연 실행(thenable)이라 .then()이 호출돼야 요청이 나간다.
+      // 예전엔 `void ...rpc(...)`로 두어 HTTP 요청이 아예 발생하지 않았고,
+      // 그 결과 view_events가 계속 0행이었다. 반드시 then으로 실행시킨다.
+      createClient()
+        .rpc("increment_view", {
+          p_meme_id: memeId,
+          p_session_hash: hash,
+        })
+        .then(
+          () => {},
+          () => {} // 집계 실패는 조용히 무시 (사용자 경험에 영향 없음)
+        );
 
       // 최근 본 밈 기록 (중복 제거, 최신 앞)
       const raw = window.localStorage.getItem(RECENT_KEY);

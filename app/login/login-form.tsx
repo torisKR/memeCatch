@@ -335,6 +335,12 @@ function SignInForm({ next }: { next: string }) {
         />
       </Field>
       <SubmitButton pending={pending} label="로그인" pendingLabel="로그인 중…" />
+      <Link
+        href="/forgot-password"
+        className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-accent-text transition-colors hover:text-accent"
+      >
+        비밀번호를 잊으셨나요?
+      </Link>
     </form>
   );
 }

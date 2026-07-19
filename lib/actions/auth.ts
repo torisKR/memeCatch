@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
+import { SITE_URL } from "@/lib/site";
 
 export type AuthState = {
   fieldErrors?: { email?: string; password?: string; nickname?: string };
   formError?: string;
+  /** 성공 안내(오류 아님) — 재설정 메일 발송처럼 폼을 떠나지 않는 완료 상태 */
+  notice?: string;
   values?: { email?: string; nickname?: string };
 } | null;
 
@@ -133,6 +136,77 @@ export async function completeOnboarding(formData: FormData): Promise<void> {
     .eq("id", user.id);
 
   redirect(next);
+}
+
+/**
+ * 비밀번호 재설정 메일 발송.
+ * 가입 여부와 무관하게 항상 동일한 안내를 돌려준다 — 응답 차이로 특정 이메일의
+ * 가입 여부를 알아내는 계정 열거(account enumeration)를 막기 위함.
+ * 메일 링크는 /auth/callback으로 들어와 코드를 세션으로 교환한 뒤 /reset-password로 간다.
+ */
+export async function requestPasswordReset(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) return { fieldErrors: { email: "이메일을 입력해 주세요" } };
+  if (!EMAIL_RE.test(email)) {
+    return {
+      fieldErrors: { email: "이메일 형식이 맞지 않아요" },
+      values: { email },
+    };
+  }
+
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+  });
+
+  return {
+    notice:
+      "재설정 메일을 보냈어요. 메일함(스팸함도 함께) 을 확인해 주세요. 링크는 1시간 동안 유효해요.",
+    values: { email },
+  };
+}
+
+/**
+ * 새 비밀번호 저장 — 재설정 메일 링크로 만들어진 세션이 있을 때만 동작한다.
+ * 세션이 없으면(링크 만료·직접 접근) 변경하지 않고 재요청을 안내한다.
+ */
+export async function updatePassword(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (password.length < 6) {
+    return { fieldErrors: { password: "비밀번호는 6자 이상이어야 해요" } };
+  }
+  if (password !== confirm) {
+    return { fieldErrors: { password: "두 비밀번호가 서로 달라요" } };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      formError:
+        "재설정 링크가 만료됐거나 유효하지 않아요. 메일을 다시 요청해 주세요.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return {
+      formError: "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  redirect("/my");
 }
 
 export async function signOut(): Promise<void> {

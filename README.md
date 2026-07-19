@@ -34,6 +34,10 @@
 - **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
 - **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
 - **배포**: Vercel (GitHub 연동 자동 배포)
+- **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Latpeed · **메일**: AWS SES
+
+> 어떤 서비스가 무엇을 맡고 **왜 그렇게 정했는지**(특히 "AWS로 옮길까?"에 대한 실측 근거와
+> 결정 기록)는 [`docs/architecture.md`](./docs/architecture.md)에 정리돼 있습니다.
 
 ### 아키텍처 하이라이트
 

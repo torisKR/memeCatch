@@ -20,7 +20,7 @@ describe("PricingContent", () => {
     const html = renderToStaticMarkup(<PricingContent />);
 
     expect(html).toContain("Your personal Korean meme trend desk");
-    expect(html).toContain("₩5,900");
+    expect(html).toContain("₩3,900");
     expect(html).toContain('action="/api/billing/checkout"');
     expect(html).toContain('method="post"');
     expect(html).toContain("same email");

@@ -26,7 +26,7 @@ export function createLatpeedWebhookHandler({
   secret,
   processEvent,
   expectedProductId,
-  expectedAmount = 5_900,
+  expectedAmount = 3_900,
   timeoutMs = 4_000,
   now = Date.now,
 }: Dependencies) {

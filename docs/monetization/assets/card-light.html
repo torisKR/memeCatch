@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8" /><style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:400px;height:200px;}
+  body{font-family:"Pretendard Variable",Pretendard,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;}
+  .card{position:relative;width:400px;height:200px;overflow:hidden;
+    background:
+      radial-gradient(120% 130% at 100% 0%, rgba(255,92,56,.10) 0%, rgba(255,92,56,0) 46%),
+      #fff9f5;
+    color:#16161a; border-top:2px solid #ff5c38;}
+  .inner{position:absolute;inset:0;padding:22px 24px;display:flex;}
+  .left{display:flex;flex-direction:column;justify-content:space-between;z-index:2;}
+  .brandrow{display:flex;align-items:center;gap:8px;}
+  .tile{width:24px;height:24px;border-radius:30%;background:#ff5c38;display:grid;place-items:center;box-shadow:0 4px 12px rgba(255,92,56,.28);}
+  .tile svg{width:72%;height:72%;}
+  .brandname{font-size:13px;font-weight:800;letter-spacing:-.03em;color:#16161a;}
+  .brandsub{font-size:8.5px;font-weight:700;letter-spacing:.14em;color:#8a5f00;text-transform:uppercase;margin-left:2px;}
+  .title{font-size:33px;font-weight:800;letter-spacing:-.035em;line-height:1;color:#16161a;}
+  .title .plus{color:#ff5c38;}
+  .tagline{margin-top:9px;font-size:12.5px;font-weight:600;color:#5c5c66;letter-spacing:-.01em;}
+  .chips{display:flex;gap:7px;}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:-.01em;color:#c4341a;padding:5px 10px;border-radius:999px;border:1px solid rgba(255,92,56,.32);background:rgba(255,92,56,.08);}
+  .chip i{width:5px;height:5px;border-radius:50%;background:#ff5c38;}
+  .radar{position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:180px;height:180px;z-index:1;}
+  .blip{position:absolute;z-index:2;width:9px;height:9px;border-radius:50%;background:#ff5c38;box-shadow:0 0 12px 3px rgba(255,92,56,.5);right:36px;top:52px;}
+</style></head><body>
+  <div class="card">
+    <svg class="radar" viewBox="0 0 200 200" fill="none">
+      <defs><linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff5c38" stop-opacity=".28"/><stop offset="1" stop-color="#ff5c38" stop-opacity="0"/></linearGradient></defs>
+      <circle cx="100" cy="100" r="78" stroke="#ff7d54" stroke-opacity=".26" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="56" stroke="#ff7d54" stroke-opacity=".30" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="34" stroke="#ff7d54" stroke-opacity=".34" stroke-width="1.5"/>
+      <path d="M100 100 L100 22 A78 78 0 0 1 168 62 Z" fill="url(#sweep)"/>
+      <line x1="100" y1="100" x2="100" y2="22" stroke="#ff7d54" stroke-opacity=".55" stroke-width="1.5"/>
+      <g transform="translate(78,80) scale(0.7)">
+        <path fill="#ff5c38" d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"/>
+        <circle cx="41" cy="29" r="7.5" fill="#fff9f5"/>
+        <path d="M15 29h11" stroke="#fff9f5" stroke-width="5.5" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <span class="blip"></span>
+    <div class="inner"><div class="left">
+      <div class="brandrow">
+        <span class="tile"><svg viewBox="0 0 64 64" fill="none">
+          <path fill="#fff9f5" d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"/>
+          <circle cx="41" cy="29" r="7.5" fill="#ff5c38"/><path d="M15 29h11" stroke="#ff5c38" stroke-width="5.5" stroke-linecap="round"/></svg></span>
+        <span class="brandname">밈캐치</span><span class="brandsub">멤버십</span>
+      </div>
+      <div>
+        <div class="title">MemeCatch <span class="plus">Plus</span></div>
+        <div class="tagline">관심 밈만 먼저, 무제한으로 모아보는 개인 트렌드 도구</div>
+      </div>
+      <div class="chips"><span class="chip"><i></i>트렌드 레이더</span><span class="chip"><i></i>무제한 저장</span></div>
+    </div></div>
+  </div>
+</body></html>

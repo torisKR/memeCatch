@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root{
+    --ink:#16161a; --ink2:#1f1d22;
+    --accent:#ff5c38; --flame300:#ffa588; --flame400:#ff7d54;
+    --paper:#fff9f5;
+  }
+  html,body{ width:400px; height:200px; }
+  body{
+    font-family:"Pretendard Variable",Pretendard,system-ui,-apple-system,
+      "Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
+  }
+  .card{
+    position:relative; width:400px; height:200px; overflow:hidden;
+    background:
+      radial-gradient(120% 130% at 100% 0%, rgba(255,92,56,.28) 0%, rgba(255,92,56,0) 46%),
+      radial-gradient(90% 120% at 0% 100%, rgba(255,125,84,.10) 0%, rgba(255,125,84,0) 50%),
+      var(--ink);
+    color:#fff;
+    border-top:2px solid var(--accent);
+  }
+  .inner{ position:absolute; inset:0; padding:22px 24px; display:flex; }
+  .left{ display:flex; flex-direction:column; justify-content:space-between; z-index:2; }
+
+  .brandrow{ display:flex; align-items:center; gap:8px; }
+  .tile{
+    width:24px; height:24px; border-radius:30%; background:var(--accent);
+    display:grid; place-items:center;
+    box-shadow:0 4px 14px rgba(255,92,56,.32);
+  }
+  .tile svg{ width:72%; height:72%; }
+  .brandname{ font-size:13px; font-weight:800; letter-spacing:-.03em; color:#f3f1ef; }
+  .brandsub{ font-size:8.5px; font-weight:700; letter-spacing:.14em;
+    color:#8b8792; text-transform:uppercase; margin-left:2px; }
+
+  .title{ font-size:33px; font-weight:800; letter-spacing:-.035em; line-height:1; }
+  .title .plus{ color:var(--flame400); }
+  .tagline{ margin-top:9px; font-size:12.5px; font-weight:600; color:#c9c6cf; letter-spacing:-.01em; }
+
+  .chips{ display:flex; gap:7px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:700; letter-spacing:-.01em;
+    color:#ffd9cc; padding:5px 10px; border-radius:999px;
+    border:1px solid rgba(255,125,84,.32); background:rgba(255,92,56,.10);
+  }
+  .chip i{ width:5px; height:5px; border-radius:50%; background:var(--flame400); }
+
+  /* 우측 트렌드 레이더 심볼 — Plus의 핵심 기능(관심 카테고리 급상승 포착) */
+  .radar{ position:absolute; right:-14px; top:50%; transform:translateY(-50%);
+    width:180px; height:180px; z-index:1; opacity:.96; }
+  .blip{ position:absolute; z-index:2; width:9px; height:9px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 12px 3px rgba(255,92,56,.65);
+    right:36px; top:52px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <svg class="radar" viewBox="0 0 200 200" fill="none">
+      <defs>
+        <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff5c38" stop-opacity=".45"/>
+          <stop offset="1" stop-color="#ff5c38" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <circle cx="100" cy="100" r="78" stroke="#ff7d54" stroke-opacity=".16" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="56" stroke="#ff7d54" stroke-opacity=".20" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="34" stroke="#ff7d54" stroke-opacity=".26" stroke-width="1.5"/>
+      <path d="M100 100 L100 22 A78 78 0 0 1 168 62 Z" fill="url(#sweep)"/>
+      <line x1="100" y1="100" x2="100" y2="22" stroke="#ff7d54" stroke-opacity=".5" stroke-width="1.5"/>
+      <!-- 중심 = 브랜드 신호 심볼(말풍선 안 판정 dot) -->
+      <g transform="translate(78,80) scale(0.7)">
+        <path fill="#fff9f5" d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"/>
+        <circle cx="41" cy="29" r="7.5" fill="#ff5c38"/>
+        <path d="M15 29h11" stroke="#ff5c38" stroke-width="5.5" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <span class="blip"></span>
+
+    <div class="inner">
+      <div class="left">
+        <div class="brandrow">
+          <span class="tile">
+            <svg viewBox="0 0 64 64" fill="none">
+              <path fill="#fff9f5" d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"/>
+              <circle cx="41" cy="29" r="7.5" fill="#ff5c38"/>
+              <path d="M15 29h11" stroke="#ff5c38" stroke-width="5.5" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="brandname">밈캐치</span>
+          <span class="brandsub">멤버십</span>
+        </div>
+
+        <div>
+          <div class="title">MemeCatch <span class="plus">Plus</span></div>
+          <div class="tagline">관심 밈만 먼저, 무제한으로 모아보는 개인 트렌드 도구</div>
+        </div>
+
+        <div class="chips">
+          <span class="chip"><i></i>트렌드 레이더</span>
+          <span class="chip"><i></i>무제한 저장</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

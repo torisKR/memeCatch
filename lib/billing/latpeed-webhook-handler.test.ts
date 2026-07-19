@@ -28,7 +28,7 @@ const membershipBody = JSON.stringify({
   payment: {
     orderId: "order-1",
     email: "member@example.com",
-    amount: 5900,
+    amount: 3900,
     status: "SUCCESS",
     date: "2026-07-18T10:00:00+09:00",
   },
@@ -105,7 +105,7 @@ describe("createLatpeedWebhookHandler", () => {
       payment: {
         orderId: "order-1",
         email: "member@example.com",
-        amount: 5900,
+        amount: 3900,
         status: "SUCCESS",
         date: "2026-07-18T10:00:00+09:00",
         productId: "other-product",

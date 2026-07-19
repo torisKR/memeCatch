@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8" /><style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:800px;height:800px;}
+  body{font-family:"Pretendard Variable",Pretendard,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;}
+  .card{position:relative;width:800px;height:800px;overflow:hidden;color:#fff;
+    background:
+      radial-gradient(90% 90% at 50% 8%, rgba(255,92,56,.26) 0%, rgba(255,92,56,0) 55%),
+      radial-gradient(80% 80% at 50% 108%, rgba(255,125,84,.10) 0%, rgba(255,125,84,0) 60%),
+      #16161a;}
+  /* 대형 앰비언트 레이더 — 중앙 뒤 */
+  .radar{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);width:620px;height:620px;z-index:0;opacity:.9;}
+  .blip{position:absolute;z-index:1;width:16px;height:16px;border-radius:50%;background:#ff5c38;box-shadow:0 0 22px 5px rgba(255,92,56,.6);left:565px;top:214px;}
+  .stack{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:96px;}
+  .tile{width:150px;height:150px;border-radius:30%;background:#ff5c38;display:grid;place-items:center;box-shadow:0 18px 48px rgba(255,92,56,.4);}
+  .tile svg{width:72%;height:72%;}
+  .title{margin-top:38px;font-size:74px;font-weight:800;letter-spacing:-.035em;line-height:1;}
+  .title .plus{color:#ff7d54;}
+  .tagline{margin-top:22px;font-size:27px;font-weight:600;color:#c9c6cf;letter-spacing:-.01em;}
+  .chips{margin-top:40px;display:flex;gap:14px;}
+  .chip{display:inline-flex;align-items:center;gap:9px;font-size:22px;font-weight:700;color:#ffd9cc;padding:11px 22px;border-radius:999px;border:1.5px solid rgba(255,125,84,.34);background:rgba(255,92,56,.10);}
+  .chip i{width:9px;height:9px;border-radius:50%;background:#ff7d54;}
+</style></head><body>
+  <div class="card">
+    <svg class="radar" viewBox="0 0 200 200" fill="none">
+      <defs><linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff5c38" stop-opacity=".38"/><stop offset="1" stop-color="#ff5c38" stop-opacity="0"/></linearGradient></defs>
+      <circle cx="100" cy="100" r="90" stroke="#ff7d54" stroke-opacity=".12" stroke-width="1"/>
+      <circle cx="100" cy="100" r="70" stroke="#ff7d54" stroke-opacity=".15" stroke-width="1"/>
+      <circle cx="100" cy="100" r="50" stroke="#ff7d54" stroke-opacity=".18" stroke-width="1"/>
+      <circle cx="100" cy="100" r="30" stroke="#ff7d54" stroke-opacity=".22" stroke-width="1"/>
+      <path d="M100 100 L100 10 A90 90 0 0 1 178 55 Z" fill="url(#sweep)"/>
+      <line x1="100" y1="100" x2="100" y2="10" stroke="#ff7d54" stroke-opacity=".4" stroke-width="1"/>
+    </svg>
+    <span class="blip"></span>
+    <div class="stack">
+      <span class="tile"><svg viewBox="0 0 64 64" fill="none">
+        <path fill="#fff9f5" d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"/>
+        <circle cx="41" cy="29" r="7.5" fill="#ff5c38"/><path d="M15 29h11" stroke="#ff5c38" stroke-width="5.5" stroke-linecap="round"/></svg></span>
+      <div class="title">MemeCatch <span class="plus">Plus</span></div>
+      <div class="tagline">관심 밈만 먼저, 무제한으로</div>
+      <div class="chips"><span class="chip"><i></i>트렌드 레이더</span><span class="chip"><i></i>무제한 저장</span></div>
+    </div>
+  </div>
+</body></html>

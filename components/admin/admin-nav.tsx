@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/submissions", label: "제보 큐", icon: InboxIcon },
   { href: "/admin/memes", label: "밈 관리", icon: BookIcon },
   { href: "/admin/reports", label: "신고", icon: FlagIcon },
+  { href: "/admin/subscriptions", label: "구독 관리", icon: StarIcon },
 ] as const;
 
 export function AdminNav() {
@@ -74,6 +75,14 @@ function FlagIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M6 21V4m0 1h12l-3 4 3 4H6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="m12 3 2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.9 6.7 19.6l1-5.8L3.5 9.7l5.9-.9L12 3Z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

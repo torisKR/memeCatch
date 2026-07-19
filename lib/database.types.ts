@@ -1248,6 +1248,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_plus_status: {
+        Args: { p_email: string }
+        Returns: Json
+      }
+      admin_set_plus_entitlement: {
+        Args: { p_active: boolean; p_email: string; p_months?: number }
+        Returns: Json
+      }
       apply_affiliate_sync: {
         Args: { products: Json; run_id: string; synced_at: string }
         Returns: undefined

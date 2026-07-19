@@ -730,3 +730,92 @@ export async function generateDraft(submissionId: string): Promise<ActionResult<
     return { ok: false, error: errMessage(e) };
   }
 }
+
+// ── MemeCatch Plus 수동 권한 관리 (운영자 전용) ─────────────────────
+// 조회/부여 모두 service-role RPC를 쓰되(다른 사용자 구독 열람은 RLS로 막혀 있음),
+// 호출 전 requireOperator로 운영자를 재확인하고 부여/해제는 감사 로그에 남긴다.
+
+export type PlusStatusView = {
+  userFound: boolean;
+  userId?: string;
+  email: string;
+  hasBillingIdentity?: boolean;
+  isPremium?: boolean;
+  status?: string | null;
+  currentPeriodEnd?: string | null;
+  lastEventAt?: string | null;
+  amount?: number | null;
+  isManual?: boolean | null;
+};
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/** 이메일로 Plus 상태 조회 — 부작용 없음 */
+export async function lookupPlusStatus(
+  email: string
+): Promise<ActionResult<PlusStatusView>> {
+  try {
+    await requireOperator();
+    const normalized = normalizeEmail(email);
+    if (!normalized || normalized.indexOf("@") < 1) {
+      return { ok: false, error: "이메일을 입력해 주세요." };
+    }
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("admin_get_plus_status", {
+      p_email: normalized,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: data as unknown as PlusStatusView };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
+/** 이메일 사용자에게 Plus 수동 부여(active=true, months 시한부) 또는 해제(active=false) */
+export async function setUserPlus(input: {
+  email: string;
+  active: boolean;
+  months?: number;
+}): Promise<ActionResult<PlusStatusView>> {
+  try {
+    const { uid } = await requireOperator();
+    const normalized = normalizeEmail(input.email);
+    if (!normalized || normalized.indexOf("@") < 1) {
+      return { ok: false, error: "이메일을 입력해 주세요." };
+    }
+    const months = input.active
+      ? Math.max(1, Math.min(Math.trunc(input.months ?? 1), 36))
+      : 1;
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("admin_set_plus_entitlement", {
+      p_email: normalized,
+      p_active: input.active,
+      p_months: months,
+    });
+    if (error) {
+      const msg = error.message.includes("user_not_found")
+        ? "해당 이메일의 가입 계정을 찾을 수 없어요. (사용자가 먼저 로그인·가입해야 해요.)"
+        : error.message.includes("invalid_email")
+          ? "이메일 형식이 올바르지 않아요."
+          : error.message;
+      return { ok: false, error: msg };
+    }
+    const result = data as { userId?: string } | null;
+    await logAudit(
+      uid,
+      input.active ? "plus.grant" : "plus.revoke",
+      "billing_subscription",
+      result?.userId ?? null,
+      { email: normalized, active: input.active, months }
+    );
+    revalidatePath("/admin/subscriptions");
+    const { data: latest } = await admin.rpc("admin_get_plus_status", {
+      p_email: normalized,
+    });
+    return { ok: true, data: latest as unknown as PlusStatusView };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}

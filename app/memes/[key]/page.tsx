@@ -14,6 +14,7 @@ import { AnswerCard } from "@/components/answer-card";
 import { SafetyRationale } from "@/components/safety-rationale";
 import { UsageExamples } from "@/components/usage-examples";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
+import { MeteredGate } from "@/components/metered-gate";
 import { MemeEmbed } from "@/components/meme-embed";
 import { MemeCard } from "@/components/meme-card";
 import { ReactionBar } from "@/components/reaction-bar";
@@ -126,6 +127,8 @@ export default async function MemeDetailPage({ params }: Props) {
         />
       )}
       <ViewTracker memeId={meme.id} />
+      {/* 미터링 게이트 — 서버는 동일 HTML을 주고 방문자 본인 기록으로만 판단(클로킹 아님) */}
+      <MeteredGate memeId={meme.id} />
 
       {/* 컬렉션 진입 맥락 네비 — 최신 searchParams를 읽기 위해 클라이언트에서 처리 */}
       <ContextNav />

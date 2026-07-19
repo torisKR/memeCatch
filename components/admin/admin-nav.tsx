@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/submissions", label: "제보 큐", icon: InboxIcon },
   { href: "/admin/memes", label: "밈 관리", icon: BookIcon },
   { href: "/admin/reports", label: "신고", icon: FlagIcon },
+  { href: "/admin/users", label: "사용자 관리", icon: UsersIcon },
   { href: "/admin/subscriptions", label: "구독 관리", icon: StarIcon },
 ] as const;
 
@@ -90,6 +91,16 @@ function ArrowLeftIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M19 12H5m6-6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="10" cy="8" r="3.2" />
+      <path d="M20 19v-1.4a3.2 3.2 0 0 0-2.4-3.1M15.5 5.2a3.2 3.2 0 0 1 0 5.6" strokeLinecap="round" />
     </svg>
   );
 }

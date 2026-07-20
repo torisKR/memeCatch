@@ -5,8 +5,11 @@ import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 
 
-/** 1시간마다 재생성 — 새로 승인된 밈 반영 */
+/** 1시간마다 재생성 — 새로 공개된 밈 반영 */
 export const revalidate = 3600;
+
+/** 공개(=인덱싱 대상) 밈 상태: approved + limited. 상세 페이지가 200으로 렌더하는 전 범위. */
+const PUBLIC_STATUSES = ["approved", "limited"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createStaticClient();
@@ -17,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const { data: latest } = await supabase
       .from("memes")
       .select("published_at")
-      .eq("moderation_status", "approved")
+      .in("moderation_status", [...PUBLIC_STATUSES])
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(1)
       .single();
@@ -51,13 +54,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ),
   ];
 
-  // 승인 밈 전체 (페이지 단위로 순회 — 사이트맵 상한 5만 URL)
+  // 공개 밈 전체(approved + limited) — 상세가 200으로 렌더하는 전 범위를 인덱싱 노출.
+  // limited(정보 변동 가능 배너만 붙는 공개 페이지)를 빠뜨리면 사이트맵 발견이 지연됨.
+  // 페이지 단위로 순회 — 사이트맵 상한 5만 URL.
   const PAGE = 1000;
   for (let from = 0; from < 49000; from += PAGE) {
     const { data, error } = await supabase
       .from("memes")
       .select("short_id, slug, updated_at")
-      .eq("moderation_status", "approved")
+      .in("moderation_status", [...PUBLIC_STATUSES])
       .order("published_at", { ascending: false })
       .range(from, from + PAGE - 1);
 

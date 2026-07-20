@@ -588,3 +588,18 @@ label[for] {
     50% { opacity: 1; }
   }
 }
+
+/* Plus(프리미엄) 구독자 — "광고 없는 경험".
+   PremiumAdControl이 클라이언트에서만 <html data-premium="1">을 토글한다(ISR 유지).
+   AdSense Auto Ads가 런타임에 주입한 요소를 숨긴다. 쿠팡 배너(CoupangDock)는
+   컴포넌트 자체가 프리미엄이면 렌더하지 않으므로 여기서 다루지 않는다. */
+html[data-premium="1"] ins.adsbygoogle,
+html[data-premium="1"] .adsbygoogle,
+html[data-premium="1"] .google-auto-placed,
+html[data-premium="1"] [data-google-query-id],
+html[data-premium="1"] [data-anchor-status],
+html[data-premium="1"] iframe[src*="googlesyndication.com"],
+html[data-premium="1"] iframe[src*="googleads"],
+html[data-premium="1"] iframe[src*="doubleclick.net"] {
+  display: none !important;
+}

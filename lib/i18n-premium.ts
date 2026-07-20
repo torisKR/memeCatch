@@ -108,6 +108,13 @@ export const PREMIUM_COPY = {
           detail:
             "마음에 든 밈을 저장해 두고 나중에 다시 찾아봐요. 무료는 30개까지, Plus는 무제한으로 모을 수 있어요.",
         },
+        {
+          label: "광고 없는 경험",
+          free: "광고 표시",
+          plus: "광고 없음",
+          detail:
+            "무료에서는 하단 배너와 자동 광고가 표시돼요. Plus를 구독하면 사이트 전체에서 광고가 사라져 밈에만 집중할 수 있어요.",
+        },
       ],
     },
     dashboard: {
@@ -189,6 +196,13 @@ export const PREMIUM_COPY = {
           plus: "Unlimited",
           detail:
             "Save the memes you love and find them again later. Free stops at 30; Plus lets you collect without limit.",
+        },
+        {
+          label: "Ad-free experience",
+          free: "Ads shown",
+          plus: "No ads",
+          detail:
+            "The free tier shows a bottom banner and auto ads. Subscribe to Plus and ads disappear across the whole site so you can focus on the memes.",
         },
       ],
     },
@@ -272,6 +286,13 @@ export const PREMIUM_COPY = {
           detail:
             "気に入ったミームを保存して後で見返せます。無料は30件まで、Plusは無制限に集められます。",
         },
+        {
+          label: "広告なしの体験",
+          free: "広告あり",
+          plus: "広告なし",
+          detail:
+            "無料では下部バナーと自動広告が表示されます。Plusに登録するとサイト全体から広告が消え、ミームに集中できます。",
+        },
       ],
     },
     dashboard: {
@@ -353,6 +374,13 @@ export const PREMIUM_COPY = {
           plus: "无限",
           detail:
             "收藏你喜欢的迷因，稍后再回来查看。免费最多 30 条，Plus 可无限收藏。",
+        },
+        {
+          label: "无广告体验",
+          free: "显示广告",
+          plus: "无广告",
+          detail:
+            "免费版会显示底部横幅和自动广告。订阅 Plus 后，整个网站的广告都会消失，让你专注于迷因。",
         },
       ],
     },

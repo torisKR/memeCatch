@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePremium } from "@/lib/hooks/use-premium";
 
 /**
  * 쿠팡 파트너스 상시 하단 고정 배너(닻 광고).
@@ -22,6 +23,7 @@ export function CoupangDock() {
   const [dismissed, setDismissed] = useState(false);
   const [desktop, setDesktop] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const isPremium = usePremium();
 
   useEffect(() => {
     // 외부 스토어(sessionStorage·matchMedia·location) 마운트 1회 동기화 — effect가 정석
@@ -39,7 +41,8 @@ export function CoupangDock() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  if (!ready || dismissed || isAdmin) return null;
+  // Plus 구독자는 광고 없는 경험 — 쿠팡 배너도 렌더하지 않는다.
+  if (!ready || dismissed || isAdmin || isPremium) return null;
 
   const w = desktop ? 680 : 360;
   const h = desktop ? 120 : 100;

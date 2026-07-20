@@ -8,6 +8,7 @@ import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
 import { CoupangDock } from "@/components/coupang-dock";
+import { PremiumAdControl } from "@/components/premium-ad-control";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { LocaleDocumentSync, LocaleProvider } from "@/lib/i18n-client";
 import { DEFAULT_LOCALE, getDocumentLanguage } from "@/lib/i18n";
@@ -107,6 +108,7 @@ export default function RootLayout({
           <div className="flex-1">{children}</div>
           <SiteFooter />
           {/* 쿠팡 파트너스 상시 하단 고정 배너 — 모바일은 하단탭 위, 데스크톱은 맨 아래 */}
+          <PremiumAdControl />
           <CoupangDock />
           <BottomNav />
           <PwaInstall />

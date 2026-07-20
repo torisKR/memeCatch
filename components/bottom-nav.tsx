@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
 
@@ -37,7 +38,7 @@ export function BottomNav() {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
+                className={`no-press flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
                   tab.emphasized
                     ? "text-accent-strong font-semibold"
                     : active
@@ -45,16 +46,73 @@ export function BottomNav() {
                       : "text-muted"
                 }`}
               >
-                <tab.icon
-                  className={`h-5 w-5 ${tab.emphasized ? "rounded-full bg-accent-soft p-0.5" : ""}`}
+                <TabInner
+                  icon={tab.icon}
+                  emphasized={tab.emphasized}
+                  label={
+                    tab.href === "/"
+                      ? ({ ko: "홈", en: "Home", ja: "ホーム", zh: "首页" } as const)[locale]
+                      : messages[tab.label]
+                  }
                 />
-                {tab.href === "/" ? ({ ko: "홈", en: "Home", ja: "ホーム", zh: "首页" } as const)[locale] : messages[tab.label]}
               </Link>
             </li>
           );
         })}
       </ul>
     </nav>
+  );
+}
+
+// 탭 내부 — <Link> 자식이라 useLinkStatus()로 이 탭의 이동 대기 상태를 읽는다.
+// 대기 중이면 아이콘 자리에 스피너를 띄워 "어느 탭을 눌렀는지"를 즉시 보여준다.
+function TabInner({
+  icon: Icon,
+  emphasized,
+  label,
+}: {
+  icon: (props: { className?: string }) => React.ReactElement;
+  emphasized?: boolean;
+  label: string;
+}) {
+  const { pending } = useLinkStatus();
+  const iconWrap = `h-5 w-5 ${emphasized ? "rounded-full bg-accent-soft p-0.5" : ""}`;
+
+  return (
+    <>
+      <span className="grid h-5 w-5 place-items-center">
+        {pending ? (
+          <svg
+            className="h-5 w-5 animate-spin motion-reduce:animate-none"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeOpacity="0.25"
+            />
+            <path
+              d="M21 12a9 9 0 0 0-9-9"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
+          <Icon className={iconWrap} />
+        )}
+      </span>
+      <span
+        className={pending ? "text-accent-strong transition-colors" : undefined}
+      >
+        {label}
+      </span>
+    </>
   );
 }
 

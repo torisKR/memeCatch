@@ -163,16 +163,10 @@ export function MyContent({
             {avatarChar}
           </span>
           <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-2xl font-bold">
-                {nickname || copy.defaultNickname}
-              </h1>
-              {isPremium && (
-                <span className="inline-flex shrink-0 rounded-full bg-accent-soft px-2 py-1 text-[10px] font-black tracking-wider text-accent-text">
-                  {premiumCopy.badge}
-                </span>
-              )}
-            </div>
+            {/* PLUS 배지는 프로필이 아니라 전역 헤더(AuthMenu)에서 노출한다. */}
+            <h1 className="truncate text-2xl font-bold">
+              {nickname || copy.defaultNickname}
+            </h1>
             <p className="mt-0.5 text-sm text-muted">
               {copy.greeting(ageLabel)}
             </p>

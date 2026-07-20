@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import Script from "next/script";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { NavProgress } from "@/components/nav-progress";
 import { BottomNav } from "@/components/bottom-nav";
 import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -83,6 +85,11 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>
           <LocaleDocumentSync />
+          {/* 전역 내비게이션 진행 바 — 서버 렌더 대기 구간의 "무반응" 해소.
+              useSearchParams 사용 → Suspense 경계 필수(정적 렌더 유지). */}
+          <Suspense fallback={null}>
+            <NavProgress />
+          </Suspense>
           {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
           {ADSENSE_CLIENT && (
             <Script

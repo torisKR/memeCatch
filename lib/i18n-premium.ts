@@ -1,6 +1,6 @@
 import type { Locale } from "@/lib/i18n";
 
-type PremiumCopy = {
+export type PremiumCopy = {
   productName: "MemeCatch Plus";
   menuLabel: string;
   badge: string;
@@ -15,8 +15,16 @@ type PremiumCopy = {
     sameEmail: string;
     freeName: string;
     plusName: string;
+    /** 인터랙티브 기능 쇼케이스 섹션의 제목. */
+    featuresTitle: string;
     comparisonTitle: string;
-    features: ReadonlyArray<{ label: string; free: string; plus: string }>;
+    features: ReadonlyArray<{
+      label: string;
+      free: string;
+      plus: string;
+      /** 인터랙티브 쇼케이스에서 카드 선택 시 펼쳐지는 상세 설명. */
+      detail: string;
+    }>;
   };
   dashboard: {
     eyebrow: string;
@@ -76,11 +84,30 @@ export const PREMIUM_COPY = {
       sameEmail: "밈캐치 로그인과 같은 이메일로 래피드에서 구매해야 자동으로 연결돼요.",
       freeName: "무료",
       plusName: "Plus",
+      featuresTitle: "Plus로 무엇이 열리나요?",
       comparisonTitle: "무료로 충분히 둘러보고, 필요할 때 업그레이드하세요",
       features: [
-        { label: "밈 뜻·유래·출처 확인", free: "포함", plus: "포함" },
-        { label: "관심사 맞춤 트렌드 레이더", free: "이용 불가", plus: "전체 이용" },
-        { label: "밈 저장", free: "30개", plus: "무제한" },
+        {
+          label: "밈 뜻·유래·출처 확인",
+          free: "포함",
+          plus: "포함",
+          detail:
+            "모든 밈의 뜻·유래·출처는 무료로도 언제나 열람할 수 있어요. Plus를 구독해도 이 기본 사전 기능은 그대로 유지돼요.",
+        },
+        {
+          label: "관심사 맞춤 트렌드 레이더",
+          free: "이용 불가",
+          plus: "전체 이용",
+          detail:
+            "관심사를 골라두면 지금 뜨는 밈을 개인화된 트렌드 레이더로 모아 보여줘요. Plus에서 레이더 전체가 열려요.",
+        },
+        {
+          label: "밈 저장",
+          free: "30개",
+          plus: "무제한",
+          detail:
+            "마음에 든 밈을 저장해 두고 나중에 다시 찾아봐요. 무료는 30개까지, Plus는 무제한으로 모을 수 있어요.",
+        },
       ],
     },
     dashboard: {
@@ -139,11 +166,30 @@ export const PREMIUM_COPY = {
       sameEmail: "Purchase on Latpeed with the same email as your MemeCatch login so we can connect your membership automatically.",
       freeName: "Free",
       plusName: "Plus",
+      featuresTitle: "What do you unlock with Plus?",
       comparisonTitle: "Explore for free, then upgrade when you need more",
       features: [
-        { label: "Meanings, origins, and sources", free: "Included", plus: "Included" },
-        { label: "Personal trend radar", free: "Not included", plus: "Full access" },
-        { label: "Saved memes", free: "30", plus: "Unlimited" },
+        {
+          label: "Meanings, origins, and sources",
+          free: "Included",
+          plus: "Included",
+          detail:
+            "Every meme's meaning, origin, and source is always free to read. Subscribing to Plus keeps this core dictionary intact.",
+        },
+        {
+          label: "Personal trend radar",
+          free: "Not included",
+          plus: "Full access",
+          detail:
+            "Pick your interests and a personalized radar gathers the memes trending right now. Plus unlocks the full radar.",
+        },
+        {
+          label: "Saved memes",
+          free: "30",
+          plus: "Unlimited",
+          detail:
+            "Save the memes you love and find them again later. Free stops at 30; Plus lets you collect without limit.",
+        },
       ],
     },
     dashboard: {
@@ -202,11 +248,30 @@ export const PREMIUM_COPY = {
       sameEmail: "自動連携のため、MemeCatchのログインと同じメールアドレスでLatpeedから購入してください。",
       freeName: "無料",
       plusName: "Plus",
+      featuresTitle: "Plusで何が使えるようになる？",
       comparisonTitle: "まず無料で試し、必要になったらアップグレード",
       features: [
-        { label: "意味・由来・出典の確認", free: "利用可", plus: "利用可" },
-        { label: "興味に合うトレンドレーダー", free: "利用不可", plus: "すべて利用可" },
-        { label: "ミーム保存", free: "30件", plus: "無制限" },
+        {
+          label: "意味・由来・出典の確認",
+          free: "利用可",
+          plus: "利用可",
+          detail:
+            "すべてのミームの意味・由来・出典はいつでも無料で読めます。Plusに登録してもこの基本の辞書機能はそのままです。",
+        },
+        {
+          label: "興味に合うトレンドレーダー",
+          free: "利用不可",
+          plus: "すべて利用可",
+          detail:
+            "興味を選ぶと、今話題のミームをパーソナライズされたレーダーでまとめて表示します。Plusでレーダー全体が開放されます。",
+        },
+        {
+          label: "ミーム保存",
+          free: "30件",
+          plus: "無制限",
+          detail:
+            "気に入ったミームを保存して後で見返せます。無料は30件まで、Plusは無制限に集められます。",
+        },
       ],
     },
     dashboard: {
@@ -265,11 +330,30 @@ export const PREMIUM_COPY = {
       sameEmail: "请使用与MemeCatch登录相同的邮箱在Latpeed购买，以便自动关联会员。",
       freeName: "免费",
       plusName: "Plus",
+      featuresTitle: "订阅 Plus 能解锁什么？",
       comparisonTitle: "先免费体验，需要时再升级",
       features: [
-        { label: "含义、起源和来源", free: "包含", plus: "包含" },
-        { label: "兴趣趋势雷达", free: "不包含", plus: "完整使用" },
-        { label: "收藏迷因", free: "30条", plus: "无限" },
+        {
+          label: "含义、起源和来源",
+          free: "包含",
+          plus: "包含",
+          detail:
+            "每个迷因的含义、起源和来源始终免费阅读。订阅 Plus 后，这项基础词典功能依旧保留。",
+        },
+        {
+          label: "兴趣趋势雷达",
+          free: "不包含",
+          plus: "完整使用",
+          detail:
+            "选择你的兴趣，个性化雷达会汇集当下正在流行的迷因。Plus 解锁完整雷达。",
+        },
+        {
+          label: "收藏迷因",
+          free: "30条",
+          plus: "无限",
+          detail:
+            "收藏你喜欢的迷因，稍后再回来查看。免费最多 30 条，Plus 可无限收藏。",
+        },
       ],
     },
     dashboard: {

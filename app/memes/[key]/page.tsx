@@ -15,8 +15,8 @@ import { SafetyRationale } from "@/components/safety-rationale";
 import { UsageExamples } from "@/components/usage-examples";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { MeteredGate } from "@/components/metered-gate";
+import { AuthInvite } from "@/components/auth-invite";
 import { MemeEmbed } from "@/components/meme-embed";
-import { MemeCard } from "@/components/meme-card";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
 import { SaveButton } from "@/components/save-button";
@@ -29,7 +29,6 @@ import { memePathFrom } from "@/lib/labels";
 import { DonateCard } from "@/components/donate-card";
 import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
-import { TrackedBlock } from "@/components/tracked-block";
 import { ContextNav } from "@/components/context-nav";
 import { preferredSourceUrl, sourceLinksWithContent } from "@/lib/source-links";
 
@@ -99,7 +98,7 @@ export default async function MemeDetailPage({ params }: Props) {
     !!representative.content_id;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-5 px-4 py-5 pb-14">
+    <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">
       {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상 */}
       <MemeWebPageJsonLd
         name={meme.title}
@@ -130,6 +129,9 @@ export default async function MemeDetailPage({ params }: Props) {
       {/* 미터링 게이트 — 서버는 동일 HTML을 주고 방문자 본인 기록으로만 판단(클로킹 아님) */}
       <MeteredGate memeId={meme.id} />
 
+      {/* 상세 진입 유도 — 로그인/가입(로그아웃 방문자 전용, 클라이언트 판정으로 SSG·SEO 불변) */}
+      <AuthInvite />
+
       {/* 컬렉션 진입 맥락 네비 — 최신 searchParams를 읽기 위해 클라이언트에서 처리 */}
       <ContextNav />
 
@@ -143,145 +145,142 @@ export default async function MemeDetailPage({ params }: Props) {
         </p>
       )}
 
-      <AnswerCard meme={meme} />
+      {/* 감상(좌)·정보(우) 2단 — 데스크톱은 영상을 고정하고 오른쪽 정보만 스크롤,
+          모바일은 영상을 맨 위에 두고 세로로 이어진다. SSG·SEO 구조는 그대로. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8">
+        {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장). 데스크톱에서 고정. */}
+        <div className="space-y-4 lg:sticky lg:top-[4.5rem]">
+          <section
+            aria-label={representative?.is_representative ? "대표 콘텐츠" : "관련 콘텐츠"}
+          >
+            <MemeEmbed
+              content={representative}
+              fallbackSourceUrl={fallbackSourceUrl}
+              title={meme.title}
+              isRepresentative={representative?.is_representative ?? true}
+              category={meme.category}
+              originYear={meme.origin_year}
+            />
+          </section>
 
-      {/* 판정 근거 한 블록 — 신호등 의미·usage_note·상황별 가이드·sentiment·caution 통합 */}
-      <SafetyRationale
-        level={meme.safety_level}
-        sentiment={meme.sentiment}
-        context={meme.usage_context}
-        note={meme.usage_note}
-        caution={meme.caution}
-      />
+          {/* 감상과 함께 머무는 반응·저장 — 영상 옆에 붙어 스크롤을 따라간다 */}
+          <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
+          <SaveButton memeId={meme.id} />
+        </div>
 
-      <section
-        aria-label={representative?.is_representative ? "대표 콘텐츠" : "관련 콘텐츠"}
-      >
-        <MemeEmbed
-          content={representative}
-          fallbackSourceUrl={fallbackSourceUrl}
-          title={meme.title}
-          isRepresentative={representative?.is_representative ?? true}
-          category={meme.category}
-          originYear={meme.origin_year}
-        />
-      </section>
+        {/* 오른쪽 — 정보. 오른쪽만 스크롤된다. */}
+        <div className="mt-6 min-w-0 space-y-5 lg:mt-0">
+          <AnswerCard meme={meme} />
 
-      {(meme.description || meme.origin) && (
-        <section
-          aria-labelledby="meme-about"
-          className="space-y-4 rounded-2xl border border-border bg-surface p-5"
-        >
-          <h2 id="meme-about" className="sr-only">
-            뜻과 유래
-          </h2>
-          {meme.description && (
-            <div>
-              <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>
-              <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-                {meme.description}
-              </p>
-            </div>
-          )}
-          {meme.origin && (
-            <div>
-              <h3 className="text-lg font-bold">어디서 시작됐어요?</h3>
-              <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-                {meme.origin}
-              </p>
-              <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-                <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                  {CATEGORIES[meme.category].user}
-                </span>
-                {meme.origin_year && (
-                  <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                    {meme.origin_year}년생 밈
-                  </span>
-                )}
-                {tagNames.map((name) => (
-                  <span
-                    key={name}
-                    className="rounded-full bg-surface-2 px-2.5 py-1 font-medium"
-                  >
-                    #{name}
-                  </span>
-                ))}
-              </p>
-              {/* 상시 출처 인용 — E-E-A-T: 유래 주장 바로 아래에 근거 링크 */}
-              {sourceLinks.length > 0 && (
-                <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                  <span className="font-semibold">출처:</span>
-                  {sourceLinks.slice(0, 3).map((s, i) => (
-                    <a
-                      key={s.source_url ?? i}
-                      href={s.source_url ?? "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2 transition-colors hover:text-foreground"
-                    >
-                      {s.source_url?.includes("namu.wiki")
-                        ? "나무위키"
-                        : s.platform || "원문"}
-                      <span aria-hidden className="text-xs">↗</span>
-                    </a>
-                  ))}
-                </p>
+          {/* 판정 근거 한 블록 — 신호등 의미·usage_note·상황별 가이드·sentiment·caution 통합 */}
+          <SafetyRationale
+            level={meme.safety_level}
+            sentiment={meme.sentiment}
+            context={meme.usage_context}
+            note={meme.usage_note}
+            caution={meme.caution}
+          />
+
+          {(meme.description || meme.origin) && (
+            <section
+              aria-labelledby="meme-about"
+              className="space-y-4 rounded-2xl border border-border bg-surface p-5"
+            >
+              <h2 id="meme-about" className="sr-only">
+                뜻과 유래
+              </h2>
+              {meme.description && (
+                <div>
+                  <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>
+                  <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
+                    {meme.description}
+                  </p>
+                </div>
               )}
-            </div>
+              {meme.origin && (
+                <div>
+                  <h3 className="text-lg font-bold">어디서 시작됐어요?</h3>
+                  <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
+                    {meme.origin}
+                  </p>
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+                    <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
+                      {CATEGORIES[meme.category].user}
+                    </span>
+                    {meme.origin_year && (
+                      <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
+                        {meme.origin_year}년생 밈
+                      </span>
+                    )}
+                    {tagNames.map((name) => (
+                      <span
+                        key={name}
+                        className="rounded-full bg-surface-2 px-2.5 py-1 font-medium"
+                      >
+                        #{name}
+                      </span>
+                    ))}
+                  </p>
+                  {/* 상시 출처 인용 — E-E-A-T: 유래 주장 바로 아래에 근거 링크 */}
+                  {sourceLinks.length > 0 && (
+                    <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                      <span className="font-semibold">출처:</span>
+                      {sourceLinks.slice(0, 3).map((s, i) => (
+                        <a
+                          key={s.source_url ?? i}
+                          href={s.source_url ?? "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2 transition-colors hover:text-foreground"
+                        >
+                          {s.source_url?.includes("namu.wiki")
+                            ? "나무위키"
+                            : s.platform || "원문"}
+                          <span aria-hidden className="text-xs">↗</span>
+                        </a>
+                      ))}
+                    </p>
+                  )}
+                </div>
+              )}
+              {/* 신선도 신호 — 검수·갱신 시점을 독자에게 노출 (E-E-A-T) */}
+              <p className="border-t border-border pt-3 text-sm text-muted">
+                밈캐치 검수팀 확인 · 마지막 업데이트{" "}
+                <time dateTime={meme.updated_at}>
+                  {new Date(meme.updated_at).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </time>
+              </p>
+            </section>
           )}
-          {/* 신선도 신호 — 검수·갱신 시점을 독자에게 노출 (E-E-A-T) */}
-          <p className="border-t border-border pt-3 text-sm text-muted">
-            밈캐치 검수팀 확인 · 마지막 업데이트{" "}
-            <time dateTime={meme.updated_at}>
-              {new Date(meme.updated_at).toLocaleDateString("ko-KR", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </time>
-          </p>
-        </section>
-      )}
 
-      {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
-      <UsageExamples examples={usageExamples} />
+          {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
+          <UsageExamples examples={usageExamples} />
 
-      {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
-          권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}
-      <MemeTrendPanel memeId={meme.id} />
+          {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
+              권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}
+          <MemeTrendPanel memeId={meme.id} />
 
-      {related.length > 0 && (
-        <section aria-labelledby="related-memes">
-          <h2 id="related-memes" className="text-xl font-bold">
-            이 밈도 알아두면 좋아요
-          </h2>
-          <TrackedBlock event="related_click">
-            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {related.map((m) => (
-                <li key={m.id} className="min-w-0">
-                  <MemeCard meme={m} />
-                </li>
-              ))}
-            </ul>
-          </TrackedBlock>
-        </section>
-      )}
+          <Comments memeId={meme.id} />
 
-      <SaveButton memeId={meme.id} />
+          {/* 후원 — 본문·반응을 거친 고관여 지점에 절제된 1개 CTA(1인 운영 비영리) */}
+          <DonateCard />
+        </div>
+      </div>
 
-      <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
-
-      {/* 후원 — 본문·반응을 거친 고관여 지점에 절제된 1개 CTA(1인 운영 비영리) */}
-      <DonateCard />
-
-      <Comments memeId={meme.id} />
-
-      {/* Wave 1 — 세션 깊이: 같은 카테고리 무한 이어보기 */}
-      <ContinueStream
-        currentId={meme.id}
-        category={meme.category}
-        relatedIds={related.map((m) => m.id)}
-      />
+      {/* 더 둘러보기 — 관련 밈(비슷한 밈)을 앞에 두고 같은 카테고리로 끝없이 이어보기.
+          큐레이션 캐러셀 + 무한 스트림을 하나의 피드로 통합했다. */}
+      <div className="border-t border-border pt-10">
+        {/* Wave 1 — 세션 깊이: 관련 밈 프리펜드 + 같은 카테고리 무한 이어보기 */}
+        <ContinueStream
+          currentId={meme.id}
+          category={meme.category}
+          related={related}
+        />
+      </div>
     </main>
   );
 }

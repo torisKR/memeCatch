@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { PlusFeatures } from "@/components/premium/plus-features";
 
 export function PricingContent() {
   const { locale } = useLocale();
@@ -57,6 +58,8 @@ export function PricingContent() {
           {copy.pricing.sameEmail}
         </p>
       </section>
+
+      <PlusFeatures features={copy.pricing.features} heading={copy.pricing.featuresTitle} />
 
       <section className="mx-auto mt-14 max-w-3xl" aria-labelledby="comparison-title">
         <h2 id="comparison-title" className="text-center text-2xl font-black tracking-tight">

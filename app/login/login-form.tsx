@@ -32,12 +32,14 @@ const PROVIDER_LABEL: Record<Provider, string> = {
 export function LoginForm({
   next,
   callbackError = false,
+  initialMode = "login",
 }: {
   next: string;
   callbackError?: boolean;
+  initialMode?: Mode;
 }) {
   const reduce = useReducedMotion();
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [oauthBusy, setOauthBusy] = useState<Provider | null>(null);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 

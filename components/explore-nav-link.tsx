@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
 
@@ -40,15 +41,58 @@ function HeaderNavLink({
       href={href}
       prefetch={prefetch}
       aria-current={active ? "page" : undefined}
-      className={`hidden h-11 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex ${
+      className={`no-press hidden h-11 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex ${
         active
           ? "bg-surface-2 font-semibold text-foreground"
           : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"
       }`}
     >
-      <Icon className={`h-4 w-4 ${active ? "text-accent" : ""}`} />
-      {label}
+      <HeaderNavInner icon={Icon} label={label} active={active} />
     </Link>
+  );
+}
+
+// <Link> 자식에서 useLinkStatus로 이 링크의 이동 대기 상태를 읽어,
+// 대기 중이면 아이콘 자리에 스피너를 띄운다(바텀내비와 동일한 신호).
+function HeaderNavInner({
+  icon: Icon,
+  label,
+  active,
+}: {
+  icon: (props: { className?: string }) => React.ReactElement;
+  label: string;
+  active: boolean;
+}) {
+  const { pending } = useLinkStatus();
+  return (
+    <>
+      {pending ? (
+        <svg
+          className="h-4 w-4 animate-spin motion-reduce:animate-none text-accent"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeOpacity="0.25"
+          />
+          <path
+            d="M21 12a9 9 0 0 0-9-9"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : (
+        <Icon className={`h-4 w-4 ${active ? "text-accent" : ""}`} />
+      )}
+      {label}
+    </>
   );
 }
 

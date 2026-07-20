@@ -16,8 +16,11 @@ const withSerwist = withSerwistInit({
 });
 
 /**
- * CSP — Report-Only로만 배포한다(enforce 금지). 실제 위반은 브라우저 콘솔로
- * 관찰하고, 충분히 안정화된 뒤에만 enforce 전환을 검토한다.
+ * CSP — 기본 enforce(실제 차단). 환경변수 CSP_ENFORCE=false 를 주면 배포 없이
+ * Report-Only로 즉시 롤백된다. unsafe-inline은 유지하므로(아래 사유) enforce로
+ * 전환해도 인라인 스크립트는 계속 동작하고, allowlist 밖 도메인만 차단된다.
+ * unsafe-eval은 금지 유지. nonce는 ISR/SSG(revalidate) 붕괴 + AdSense 비호환으로
+ * 미적용(자세한 판단 근거는 PR 설명 참고).
  * 반영된 소스(코드 조사 기준):
  * - 임베드 iframe: youtube-nocookie/youtube, tiktok(player), instagram, facebook
  * - 이미지: i.ytimg.com(YouTube 썸네일), *.tiktokcdn.com(TikTok 썸네일)
@@ -27,7 +30,7 @@ const withSerwist = withSerwistInit({
  * - Supabase: *.supabase.co (REST/Storage/Realtime — wss 포함)
  * - inline script: JSON-LD(dangerouslySetInnerHTML)·Next 런타임 인라인 → 'unsafe-inline'
  */
-const CSP_REPORT_ONLY = [
+const CSP_DIRECTIVES = [
   "default-src 'self'",
   [
     "script-src 'self' 'unsafe-inline'",
@@ -86,7 +89,30 @@ const CSP_REPORT_ONLY = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
+];
+
+// 위반 리포트 수집 엔드포인트 — 기본은 같은 오리진의 /api/csp-report.
+// CSP_REPORT_URI 로 외부 수집기(예: report-uri.com)로 재지정할 수 있고,
+// 빈 문자열("")을 주면 리포트 발행을 완전히 끈다.
+const SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://catchmeme.com";
+const CSP_REPORT_URI =
+  process.env.CSP_REPORT_URI ?? `${SITE_ORIGIN}/api/csp-report`;
+
+const CSP_VALUE = [
+  ...CSP_DIRECTIVES,
+  // report-uri: 레거시(넓은 호환) / report-to: Reporting API v1(아래 Reporting-Endpoints와 짝)
+  ...(CSP_REPORT_URI
+    ? [`report-uri ${CSP_REPORT_URI}`, "report-to csp-endpoint"]
+    : []),
 ].join("; ");
+
+// 적용 모드 — 기본 enforce(실제 차단). 광고/임베드 회귀가 관측되면 코드 배포 없이
+// Vercel 환경변수 CSP_ENFORCE=false 로 즉시 Report-Only 롤백 가능.
+const CSP_ENFORCE = process.env.CSP_ENFORCE !== "false";
+const CSP_HEADER_KEY = CSP_ENFORCE
+  ? "Content-Security-Policy"
+  : "Content-Security-Policy-Report-Only";
 
 const nextConfig: NextConfig = {
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
@@ -112,11 +138,28 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
-          // 관찰 전용 CSP — 위반해도 차단되지 않는다(위 CSP_REPORT_ONLY 주석 참고)
+          // CSP — 기본 enforce로 XSS/데이터 유출 1차 방어(위 allowlist 주석 참고).
+          // ⚠️ 서비스 장애 주의(1): unsafe-inline은 유지하므로 JSON-LD·AdSense·Next
+          //    런타임 인라인은 계속 동작한다. enforce가 새로 차단하는 것은 "allowlist에
+          //    없는 도메인의 리소스"뿐이다.
+          // ⚠️ 서비스 장애 주의(2): AdSense는 런타임에 도메인을 동적 확장할 수 있어,
+          //    광고가 allowlist 밖 도메인을 끌어오면 해당 광고만 로드 실패할 수 있다.
+          //    배포 직후 실광고·임베드를 콘솔로 확인하고, 문제 시 CSP_ENFORCE=false 로
+          //    즉시 Report-Only 롤백(코드 배포 불필요).
           {
-            key: "Content-Security-Policy-Report-Only",
-            value: CSP_REPORT_ONLY,
+            key: CSP_HEADER_KEY,
+            value: CSP_VALUE,
           },
+          // 위반 리포트 수집 엔드포인트가 설정된 경우에만 Reporting-Endpoints 발행.
+          // (미설정 시 report-to 디렉티브도 생략되므로 죽은 설정이 남지 않는다.)
+          ...(CSP_REPORT_URI
+            ? [
+                {
+                  key: "Reporting-Endpoints",
+                  value: `csp-endpoint="${CSP_REPORT_URI}"`,
+                },
+              ]
+            : []),
         ],
       },
       // public/ 정적 자산 장기 캐시(PageSpeed "효율적인 캐시 수명" 대응).

@@ -246,3 +246,39 @@ export async function updateNickname(formData: FormData): Promise<void> {
   revalidatePath("/my");
   redirect("/my?nickname_saved=1");
 }
+
+export async function updateProfileCustomization(
+  formData: FormData
+): Promise<void> {
+  const flairRaw = String(formData.get("flair") ?? "").trim();
+  const accentRaw = String(formData.get("accent") ?? "").trim();
+  const flair = flairRaw.length > 0 ? flairRaw : null;
+  const accent = accentRaw.length > 0 ? accentRaw : null;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/my");
+
+  // 클라이언트 사전 검증 (RPC가 최종 강제하지만 즉각 피드백용)
+  if (flair && flair.length > 24) {
+    redirect(`/my?custom_error=flair_too_long`);
+  }
+  if (accent && !/^#[0-9a-fA-F]{6}$/.test(accent)) {
+    redirect(`/my?custom_error=invalid_color`);
+  }
+
+  const { error } = await supabase.rpc("update_profile_customization", {
+    p_flair: flair,
+    p_accent: accent,
+  });
+
+  if (error) {
+    // plus_required / auth_required / 기타 → 저장 실패로 통일 표기
+    redirect(`/my?custom_error=save_failed`);
+  }
+
+  revalidatePath("/my");
+  redirect("/my?custom_saved=1");
+}

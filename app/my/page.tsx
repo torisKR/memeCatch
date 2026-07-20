@@ -32,6 +32,9 @@ export default async function MyPage({
   const nicknameError =
     typeof sp.nickname_error === "string" ? sp.nickname_error : undefined;
   const nicknameSaved = sp.nickname_saved === "1";
+  const customError =
+    typeof sp.custom_error === "string" ? sp.custom_error : undefined;
+  const customSaved = sp.custom_saved === "1";
   const savedPage = parseSavedPage(sp.saved_page);
   const savedFrom = (savedPage - 1) * SAVED_PAGE_SIZE;
 
@@ -41,7 +44,8 @@ export default async function MyPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/my");
 
-  const [entitlement, locale, profileRes, savedRes, subsRes] = await Promise.all([
+  const [entitlement, locale, profileRes, customRes, savedRes, subsRes] =
+    await Promise.all([
     getPremiumEntitlement(),
     getRequestLocale(),
     supabase
@@ -49,6 +53,11 @@ export default async function MyPage({
       .select("nickname, interests, age_group")
       .eq("id", user.id)
       .single(),
+    supabase
+      .from("profile_customizations")
+      .select("flair, accent_color")
+      .eq("user_id", user.id)
+      .maybeSingle(),
     supabase
       .from("saved_memes")
       .select(
@@ -72,6 +81,8 @@ export default async function MyPage({
     (c): c is MemeCategory => c in CATEGORIES
   );
   const ageGroup = profileRes.data?.age_group ?? null;
+  const flair = customRes.data?.flair ?? null;
+  const accentColor = customRes.data?.accent_color ?? null;
   const loadError = !!(profileRes.error || savedRes.error || subsRes.error);
   const savedTotal = savedRes.count ?? savedRes.data?.length ?? 0;
   const savedPageCount = Math.max(1, Math.ceil(savedTotal / SAVED_PAGE_SIZE));
@@ -123,6 +134,10 @@ export default async function MyPage({
       loadError={loadError}
       nicknameError={nicknameError}
       nicknameSaved={nicknameSaved}
+      flair={flair}
+      accentColor={accentColor}
+      customError={customError}
+      customSaved={customSaved}
       isPremium={entitlement.isPremium}
       saveLimit={FREE_SAVE_LIMIT}
       savedTotal={savedTotal}

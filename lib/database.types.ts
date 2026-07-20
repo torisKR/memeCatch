@@ -1131,6 +1131,80 @@ export type Database = {
           },
         ]
       }
+      profile_customizations: {
+        Row: {
+          accent_color: string | null
+          flair: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          flair?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          flair?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_customizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trend_alerts: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          meme_id: string
+          read_at: string | null
+          trend_score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          kind?: string
+          meme_id: string
+          read_at?: string | null
+          trend_score?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          kind?: string
+          meme_id?: string
+          read_at?: string | null
+          trend_score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_alerts_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trend_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_memes: {
         Row: {
           collection: string | null
@@ -1452,6 +1526,12 @@ export type Database = {
         Args: { p_collection: string | null; p_meme_id: string; p_note: string | null }
         Returns: Json
       }
+      update_profile_customization: {
+        Args: { p_flair: string | null; p_accent: string | null }
+        Returns: Json
+      }
+      fan_out_trend_alerts: { Args: Record<PropertyKey, never>; Returns: number }
+      mark_trend_alerts_read: { Args: Record<PropertyKey, never>; Returns: number }
     }
     Enums: {
       availability_status: "live" | "dead" | "region_blocked" | "unchecked"

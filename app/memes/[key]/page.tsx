@@ -20,6 +20,7 @@ import { MemeEmbed } from "@/components/meme-embed";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
 import { SaveButton } from "@/components/save-button";
+import { ExportButton } from "@/components/export-button";
 import {
   MemeBreadcrumbJsonLd,
   MemeVideoJsonLd,
@@ -165,7 +166,10 @@ export default async function MemeDetailPage({ params }: Props) {
 
           {/* 감상과 함께 머무는 반응·저장 — 영상 옆에 붙어 스크롤을 따라간다 */}
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
-          <SaveButton memeId={meme.id} />
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveButton memeId={meme.id} />
+            <ExportButton shortId={meme.short_id} />
+          </div>
         </div>
 
         {/* 오른쪽 — 정보. 오른쪽만 스크롤된다. */}

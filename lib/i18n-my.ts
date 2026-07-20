@@ -28,6 +28,17 @@ type MyCopy = {
     set: string;
     empty: string;
   };
+  customization: {
+    title: string;
+    flairLabel: string;
+    flairPlaceholder: string;
+    flairHint: string;
+    accentLabel: string;
+    save: string;
+    saved: string;
+    plusOnly: string;
+    saveFailed: string;
+  };
   categories: Record<MemeCategory, string>;
   saved: {
     title: string;
@@ -84,6 +95,17 @@ export const MY_COPY = {
       edit: "수정",
       set: "설정하기",
       empty: "관심 카테고리를 설정하면 취향에 맞는 밈을 먼저 보여드려요.",
+    },
+    customization: {
+      title: "프로필 꾸미기",
+      flairLabel: "플레어",
+      flairPlaceholder: "예: 밈 수집가",
+      flairHint: "닉네임 옆에 붙는 짧은 문구예요 (최대 24자).",
+      accentLabel: "강조 색상",
+      save: "저장",
+      saved: "프로필 꾸미기를 저장했어요.",
+      plusOnly: "Plus 전용 기능이에요.",
+      saveFailed: "저장에 실패했어요. 잠시 후 다시 시도해 주세요.",
     },
     categories: {
       phrase: "유행어",
@@ -157,6 +179,17 @@ export const MY_COPY = {
       set: "Set interests",
       empty: "Set your interests to see relevant memes first.",
     },
+    customization: {
+      title: "Profile flair",
+      flairLabel: "Flair",
+      flairPlaceholder: "e.g. Meme curator",
+      flairHint: "A short tag shown next to your nickname (max 24 chars).",
+      accentLabel: "Accent color",
+      save: "Save",
+      saved: "Your profile flair has been saved.",
+      plusOnly: "This is a Plus-only feature.",
+      saveFailed: "Couldn't save. Please try again in a moment.",
+    },
     categories: {
       phrase: "Trending phrases",
       dance: "Dance challenges",
@@ -229,6 +262,17 @@ export const MY_COPY = {
       set: "設定する",
       empty: "興味のあるカテゴリーを設定すると、好みに合うミームを先に表示します。",
     },
+    customization: {
+      title: "プロフィール装飾",
+      flairLabel: "フレア",
+      flairPlaceholder: "例：ミームコレクター",
+      flairHint: "ニックネームの横に表示される短いタグです（最大24文字）。",
+      accentLabel: "アクセントカラー",
+      save: "保存",
+      saved: "プロフィール装飾を保存しました。",
+      plusOnly: "これは Plus 専用機能です。",
+      saveFailed: "保存に失敗しました。しばらくしてからもう一度お試しください。",
+    },
     categories: {
       phrase: "流行語",
       dance: "ダンスチャレンジ",
@@ -300,6 +344,17 @@ export const MY_COPY = {
       edit: "编辑",
       set: "设置兴趣",
       empty: "设置兴趣分类后，我们会优先显示符合你喜好的迷因。",
+    },
+    customization: {
+      title: "个人资料装饰",
+      flairLabel: "标签",
+      flairPlaceholder: "例：迷因收藏家",
+      flairHint: "显示在昵称旁边的简短标签（最多24个字符）。",
+      accentLabel: "强调色",
+      save: "保存",
+      saved: "已保存个人资料装饰。",
+      plusOnly: "这是 Plus 专属功能。",
+      saveFailed: "保存失败，请稍后再试。",
     },
     categories: {
       phrase: "流行语",

@@ -11,7 +11,11 @@ import {
   type MemeCategory,
   type SafetyLevel,
 } from "@/lib/labels";
-import { signOut, updateNickname } from "@/lib/actions/auth";
+import {
+  signOut,
+  updateNickname,
+  updateProfileCustomization,
+} from "@/lib/actions/auth";
 import { MyRecent } from "@/components/my-recent";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
@@ -67,6 +71,10 @@ export function MyContent({
   loadError,
   nicknameError,
   nicknameSaved,
+  flair,
+  accentColor,
+  customError,
+  customSaved,
   isPremium,
   saveLimit,
   savedTotal,
@@ -82,6 +90,10 @@ export function MyContent({
   loadError: boolean;
   nicknameError?: string;
   nicknameSaved: boolean;
+  flair: string | null;
+  accentColor: string | null;
+  customError?: string;
+  customSaved: boolean;
   isPremium: boolean;
   saveLimit: number;
   savedTotal: number;
@@ -108,6 +120,10 @@ export function MyContent({
       : nicknameError === NICKNAME_ERROR_SOURCE.taken
         ? copy.nickname.errors.taken
         : copy.nickname.errors.saveFailed;
+  // 커스터마이징 저장 실패는 종류 무관하게 안내 문구 하나로 통일 (입력단에서 이미 제약)
+  const customErrorMessage = customError
+    ? copy.customization.saveFailed
+    : undefined;
   const dateFormatter = new Intl.DateTimeFormat(copy.dateLocale, {
     dateStyle: "medium",
     timeZone: "Asia/Seoul",
@@ -159,6 +175,11 @@ export function MyContent({
           <span
             aria-hidden
             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-soft text-2xl font-bold text-accent"
+            style={
+              isPremium && accentColor
+                ? { boxShadow: `0 0 0 2px ${accentColor}` }
+                : undefined
+            }
           >
             {avatarChar}
           </span>
@@ -167,6 +188,19 @@ export function MyContent({
             <h1 className="truncate text-2xl font-bold">
               {nickname || copy.defaultNickname}
             </h1>
+            {/* Plus 플레어 — 저장된 강조 색상으로 렌더(색상은 DB check로 hex 강제) */}
+            {isPremium && flair && (
+              <span
+                className="mt-1 inline-flex max-w-full items-center truncate rounded-full border px-2 py-0.5 text-xs font-semibold"
+                style={
+                  accentColor
+                    ? { borderColor: accentColor, color: accentColor }
+                    : undefined
+                }
+              >
+                {flair}
+              </span>
+            )}
             <p className="mt-0.5 text-sm text-muted">
               {copy.greeting(ageLabel)}
             </p>
@@ -268,6 +302,83 @@ export function MyContent({
         ) : (
           <p className="mt-2 text-sm text-muted">
             {copy.interests.empty}
+          </p>
+        )}
+      </motion.section>
+
+      {/* 프로필 꾸미기 (Plus 전용) — 플레어 + 강조 색상 */}
+      <motion.section
+        {...section}
+        className="rounded-2xl border border-border bg-surface p-5"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">{copy.customization.title}</h2>
+          <span className="rounded-full bg-accent-strong px-2 py-0.5 text-xs font-bold text-white">
+            PLUS
+          </span>
+        </div>
+        {isPremium ? (
+          <form
+            action={updateProfileCustomization}
+            className="mt-3 flex flex-col gap-3"
+          >
+            <div>
+              <label
+                htmlFor="flair"
+                className="block text-sm font-semibold"
+              >
+                {copy.customization.flairLabel}
+              </label>
+              <input
+                id="flair"
+                name="flair"
+                type="text"
+                defaultValue={flair ?? ""}
+                maxLength={24}
+                placeholder={copy.customization.flairPlaceholder}
+                aria-invalid={!!customErrorMessage}
+                aria-describedby="flair-hint"
+                className="mt-1 h-12 w-full rounded-xl border border-border bg-surface px-4 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              />
+              <p id="flair-hint" className="mt-1 text-xs text-muted">
+                {copy.customization.flairHint}
+              </p>
+            </div>
+            <div>
+              <label
+                htmlFor="accent"
+                className="block text-sm font-semibold"
+              >
+                {copy.customization.accentLabel}
+              </label>
+              <input
+                id="accent"
+                name="accent"
+                type="color"
+                defaultValue={accentColor ?? "#6366f1"}
+                className="mt-1 h-12 w-16 cursor-pointer rounded-xl border border-border bg-surface p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              />
+            </div>
+            <button
+              type="submit"
+              className="h-12 shrink-0 rounded-xl bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            >
+              {copy.customization.save}
+            </button>
+            {customErrorMessage && (
+              <p role="alert" className="text-sm text-safety-red">
+                {customErrorMessage}
+              </p>
+            )}
+            {customSaved && !customErrorMessage && (
+              <p role="status" className="text-sm text-safety-green">
+                {copy.customization.saved}
+              </p>
+            )}
+          </form>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            {copy.customization.plusOnly}
           </p>
         )}
       </motion.section>

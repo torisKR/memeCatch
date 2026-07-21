@@ -72,11 +72,18 @@ export function LoginGate({
     }
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+    // 스크롤바 제거로 페이지가 좌우로 튀지 않게 폭만큼 패딩으로 보정(데스크톱)
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
     document.body.style.overflow = "hidden";
     panelRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
     };
   }, [open, onClose]);
 

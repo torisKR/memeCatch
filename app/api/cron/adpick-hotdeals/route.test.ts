@@ -91,12 +91,11 @@ describe("Adpick hotdeal cron deployment", () => {
   it("schedules the sync once daily", () => {
     const config = JSON.parse(readFileSync("vercel.json", "utf8"));
 
-    expect(config.crons).toEqual([
-      {
-        path: "/api/cron/adpick-hotdeals",
-        schedule: "0 21 * * *",
-      },
-    ]);
+    // 다른 cron이 추가돼도 깨지지 않도록 자기 항목만 검증한다.
+    expect(config.crons).toContainEqual({
+      path: "/api/cron/adpick-hotdeals",
+      schedule: "0 21 * * *",
+    });
   });
 
   it("documents the bounded Hobby execution window and no retries", () => {

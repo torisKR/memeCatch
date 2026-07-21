@@ -55,7 +55,6 @@ export function AuthMenu() {
       const hint = window.localStorage.getItem(AUTH_HINT_KEY);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (hint) setNickname(hint);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (window.localStorage.getItem(PLUS_HINT_KEY) === "1") setIsPremium(true);
     } catch {
       // 저장소 접근 실패(시크릿 모드 등)는 무시 — 아래 네트워크 조회로 확정된다

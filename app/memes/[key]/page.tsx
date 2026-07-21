@@ -166,8 +166,13 @@ export default async function MemeDetailPage({ params }: Props) {
 
           {/* 감상과 함께 머무는 반응·저장 — 영상 옆에 붙어 스크롤을 따라간다 */}
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
-          <div className="flex flex-wrap items-center gap-2">
-            <SaveButton memeId={meme.id} />
+          {/* 저장 버튼 폭을 레이아웃(flex-1)으로 고정 — 라벨/알림 문구 변화로
+              고유 폭이 바뀌어도 행이 흔들리지 않는다. items-start로 알림 줄바꿈 시
+              이웃 버튼이 상하로 밀리는 것도 방지. */}
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <SaveButton memeId={meme.id} />
+            </div>
             <ExportButton shortId={meme.short_id} />
           </div>
         </div>

@@ -73,7 +73,7 @@ export function GlobalHeader() {
             <span className="hidden min-[390px]:contents">
               <RandomMemeButton />
             </span>
-            {/* 번역이 존재하는 라우트(/news, /products)에서만 자체적으로 렌더된다 */}
+            {/* 언어 선택 — 브라우저 언어 자동 감지(LocaleAutoDetect) 결과를 수동 변경 */}
             <LanguageSelector />
 
             {/* 모바일: 검색 아이콘 버튼 */}

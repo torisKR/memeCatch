@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n";
+import { withLocaleFallback, type Locale } from "@/lib/i18n";
 
 export type PremiumCopy = {
   productName: "MemeCatch Plus";
@@ -68,7 +68,7 @@ export type PremiumCopy = {
   };
 };
 
-export const PREMIUM_COPY = {
+const PREMIUM_COPY_BASE = {
   ko: {
     productName: "MemeCatch Plus",
     menuLabel: "MemeCatch Plus",
@@ -425,4 +425,6 @@ export const PREMIUM_COPY = {
       pageStatus: (page, total) => `第 ${page} / ${total} 页`,
     },
   },
-} satisfies Record<Locale, PremiumCopy>;
+} satisfies Record<"ko" | "en" | "ja" | "zh", PremiumCopy>;
+
+export const PREMIUM_COPY: Record<Locale, PremiumCopy> = withLocaleFallback<PremiumCopy>(PREMIUM_COPY_BASE);

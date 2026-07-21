@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useLocale } from "@/lib/i18n-client";
+import { toBcp47 } from "@/lib/i18n";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { PremiumGate } from "@/components/premium/premium-gate";
 
-const DATE_LOCALES = { ko: "ko-KR", en: "en-US", ja: "ja-JP", zh: "zh-CN" } as const;
 
 export function PremiumDashboardContent({
   isPremium,
@@ -21,7 +21,7 @@ export function PremiumDashboardContent({
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
   const accessConfirmedThrough = currentPeriodEnd
-    ? new Intl.DateTimeFormat(DATE_LOCALES[locale], { dateStyle: "long" }).format(new Date(currentPeriodEnd))
+    ? new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "long" }).format(new Date(currentPeriodEnd))
     : null;
 
   return (

@@ -11,7 +11,7 @@ import { ChangelogModal } from "@/components/changelog-modal";
 import { CoupangDock } from "@/components/coupang-dock";
 import { PremiumAdControl } from "@/components/premium-ad-control";
 import { OrganizationJsonLd } from "@/components/json-ld";
-import { LocaleDocumentSync, LocaleProvider } from "@/lib/i18n-client";
+import { LocaleAutoDetect, LocaleDocumentSync, LocaleProvider } from "@/lib/i18n-client";
 import { DEFAULT_LOCALE, getDocumentLanguage } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -87,6 +87,7 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>
           <LocaleDocumentSync />
+          <LocaleAutoDetect />
           {/* 전역 내비게이션 진행 바 — 서버 렌더 대기 구간의 "무반응" 해소.
               useSearchParams 사용 → Suspense 경계 필수(정적 렌더 유지). */}
           <Suspense fallback={null}>

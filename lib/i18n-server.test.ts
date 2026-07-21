@@ -21,7 +21,7 @@ describe("getRequestLocale", () => {
     await expect(getRequestLocale()).resolves.toBe(locale);
   });
 
-  it.each([undefined, "", "fr", "EN", "en-US"])(
+  it.each([undefined, "", "xx", "EN", "en-US"])(
     "falls back for an untrusted request locale value (%s)",
     async (locale) => {
       headers.mockResolvedValue(

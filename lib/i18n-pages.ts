@@ -1,26 +1,34 @@
 import type { Audience, MemeProduct } from "@/lib/meme-commerce";
 import type { MemeNewsBrief } from "@/lib/meme-news";
-import type { Locale } from "@/lib/i18n";
+import { withLocaleFallback, type Locale } from "@/lib/i18n";
 
-export const AUDIENCE_LABELS_I18N: Record<Locale, Record<Audience, string>> = {
+export const AUDIENCE_LABELS_I18N: Record<Locale, Record<Audience, string>> = withLocaleFallback({
   ko: { "20s": "20대", "30s": "30대", "40s": "40대" },
   en: { "20s": "20s", "30s": "30s", "40s": "40s" },
   ja: { "20s": "20代", "30s": "30代", "40s": "40代" },
   zh: { "20s": "20多岁", "30s": "30多岁", "40s": "40多岁" },
-};
+});
 
-const PRODUCT_CATEGORIES: Record<Locale, Record<string, string>> = {
-  ko: {},
+const PRODUCT_CATEGORIES: Record<Locale, Record<string, string>> = withLocaleFallback({
+  // ko는 원문 카테고리를 그대로 쓰므로 빈 맵 — 추론이 옵셔널 유니언으로 붕괴하지 않게 명시 캐스트
+  ko: {} as Record<string, string>,
   en: { "크리에이터": "Creator", "교류 앱": "Social app", "패션": "Fashion", "차량": "Vehicle", "학습": "Learning" },
   ja: { "크리에이터": "クリエイター", "교류 앱": "交流アプリ", "패션": "ファッション", "차량": "車", "학습": "学習" },
   zh: { "크리에이터": "创作者", "교류 앱": "社交应用", "패션": "时尚", "차량": "车辆", "학습": "学习" },
-};
+});
 
 export function localizeProductCategory(category: string, locale: Locale): string {
   return PRODUCT_CATEGORIES[locale][category] ?? category;
 }
 
-export const PAGE_COPY = {
+/** 본문 번역이 존재하는 콘텐츠 로케일로 축약(zh-tw→zh, 그 외 미번역→en). */
+function contentLocale(locale: Exclude<Locale, "ko">): "en" | "ja" | "zh" {
+  if (locale === "ja") return "ja";
+  if (locale === "zh" || locale === "zh-tw") return "zh";
+  return "en";
+}
+
+const PAGE_COPY_BASE = {
   ko: {
     shopTitle: "밈캐치 편집숍", shopIntro: "실시간 광고 상품과 밈캐치 에디터가 고른 상품을 한곳에서 살펴보세요.",
     liveAdTitle: "실시간 광고 상품", liveAdDescription: "제휴 파트너가 실시간으로 제공하는 광고 상품입니다.",
@@ -121,9 +129,11 @@ export const PAGE_COPY = {
     noVotes: "目前公开投票样本不足。请先阅读下方简报，并在迷因详情页参与投票。",
     money: "省钱", safety: "安全", culture: "文化", verified: "核实日期", source: "来源",
   },
-} as const;
+};
 
-const PRODUCT_TITLES: Record<Exclude<Locale, "ko">, Record<string, string>> = {
+export const PAGE_COPY: Record<Locale, (typeof PAGE_COPY_BASE)["ko"]> = withLocaleFallback(PAGE_COPY_BASE);
+
+const PRODUCT_TITLES: Record<"en" | "ja" | "zh", Record<string, string>> = {
   en: {
     "adpick-shoppingmate-signup": "Checklist before starting AdPick Shopping Mate",
     "amasia-friend-app": "Safety checks before installing a nearby or international friends app",
@@ -153,10 +163,11 @@ const GENERIC_PRODUCT = {
 
 export function localizeProduct(product: MemeProduct, locale: Locale): Pick<MemeProduct, "title" | "description" | "disclosure"> {
   if (locale === "ko") return product;
-  return { title: PRODUCT_TITLES[locale][product.id] ?? product.title, ...GENERIC_PRODUCT[locale] };
+  const l = contentLocale(locale);
+  return { title: PRODUCT_TITLES[l][product.id] ?? product.title, ...GENERIC_PRODUCT[l] };
 }
 
-const NEWS_TITLES: Record<Exclude<Locale, "ko">, Record<string, string>> = {
+const NEWS_TITLES: Record<"en" | "ja" | "zh", Record<string, string>> = {
   en: { "20s-affiliate-disclosure": "30-second check before posting an affiliate link", "20s-social-app-safety": "Lock down location on meme profiles", "20s-sale-meme-check": "Check the final price before buying the sale meme", "30s-work-chat-meme": "Check the audience before sending a meme at work", "30s-ott-check": "Before subscribing just to see a meme's source", "30s-car-total-cost": "Car meme ads: compare total cost, not monthly payment", "40s-family-meme-context": "Check context before banning a meme your child uses", "40s-study-benefit-dates": "Write down three dates for online-class offers", "40s-chat-app-boundary": "Set payment and meeting boundaries for chat apps" },
   ja: { "20s-affiliate-disclosure": "アフィリエイトリンク投稿前の30秒確認", "20s-social-app-safety": "ミームプロフィールは位置情報から非公開に", "20s-sale-meme-check": "セールミームで買う前に最終金額を確認", "30s-work-chat-meme": "社内チャットでミームを送る前に公開範囲を確認", "30s-ott-check": "ミームの元ネタを見るためにOTTを契約する前に", "30s-car-total-cost": "車の広告は月額より総費用", "40s-family-meme-context": "子どものミームは禁止より元の文脈確認", "40s-study-benefit-dates": "オンライン講座の無料特典は3つの日付を確認", "40s-chat-app-boundary": "チャットアプリの決済・対面ルールを決める" },
   zh: { "20s-affiliate-disclosure": "发布联盟链接前的30秒检查", "20s-social-app-safety": "先关闭迷因头像中的位置暴露", "20s-sale-meme-check": "因促销迷因购买前先看最终金额", "30s-work-chat-meme": "在工作群发迷因前确认可见范围", "30s-ott-check": "为看迷因原作订阅流媒体前", "30s-car-total-cost": "汽车迷因广告：看总成本而非月供", "40s-family-meme-context": "与其禁止孩子用迷因，不如先查原始语境", "40s-study-benefit-dates": "在线课程免费优惠先记下三个日期", "40s-chat-app-boundary": "为聊天应用设定支付与见面边界" },
@@ -170,5 +181,6 @@ const GENERIC_NEWS = {
 
 export function localizeBrief(brief: MemeNewsBrief, locale: Locale): Pick<MemeNewsBrief, "title" | "summary" | "checklist"> {
   if (locale === "ko") return brief;
-  return { title: NEWS_TITLES[locale][brief.id] ?? brief.title, ...GENERIC_NEWS[locale] };
+  const l = contentLocale(locale);
+  return { title: NEWS_TITLES[l][brief.id] ?? brief.title, ...GENERIC_NEWS[l] };
 }

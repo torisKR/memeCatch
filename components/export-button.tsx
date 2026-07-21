@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { selectPremiumSubscription } from "@/lib/billing/entitlements";
 import { useLocale } from "@/lib/i18n-client";
-import type { Locale } from "@/lib/i18n";
+import { withLocaleFallback, type Locale } from "@/lib/i18n";
 
 /**
  * B2 — 밈 카드 내보내기 UI.
@@ -16,7 +16,7 @@ import type { Locale } from "@/lib/i18n";
  * 선택 시 업그레이드로 유도한다. 서버 라우트가 최종 게이팅(402)을 담당.
  */
 
-const COPY = {
+const COPY_BASE = {
   ko: {
     open: "카드 내보내기",
     title: "밈 카드로 저장",
@@ -93,7 +93,9 @@ const COPY = {
     watermarkNote: "免费导出会带有 catchmeme.com 标记。",
     failed: "导出失败，请重试。",
   },
-} satisfies Record<Locale, Record<string, string>>;
+} satisfies Record<"ko" | "en" | "ja" | "zh", Record<string, string>>;
+
+const COPY: Record<Locale, Record<string, string>> = withLocaleFallback<Record<string, string>>(COPY_BASE);
 
 type Template = "classic" | "minimal" | "bold";
 type Format = "card" | "story";

@@ -4,25 +4,19 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { calculateDiscountRate } from "@/lib/affiliate/storefront";
 import type { AffiliateStorefrontProduct } from "@/lib/affiliate/types";
-import type { Locale } from "@/lib/i18n";
+import { toBcp47, type Locale } from "@/lib/i18n";
 import { PAGE_COPY } from "@/lib/i18n-pages";
 import { cn } from "@/lib/utils";
 
-const PRICE_LOCALES: Record<Locale, string> = {
-  ko: "ko-KR",
-  en: "en-US",
-  ja: "ja-JP",
-  zh: "zh-CN",
-};
-
 function formatPrice(price: number, locale: Locale): string {
-  const amount = new Intl.NumberFormat(PRICE_LOCALES[locale], {
+  const amount = new Intl.NumberFormat(toBcp47(locale), {
     maximumFractionDigits: 0,
   }).format(price);
 
   if (locale === "ko") return `${amount}원`;
   if (locale === "ja") return `${amount}ウォン`;
   if (locale === "zh") return `${amount}韩元`;
+  if (locale === "zh-tw") return `${amount}韓元`;
   return `₩${amount}`;
 }
 

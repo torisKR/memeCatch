@@ -11,7 +11,9 @@ const OPEN_DELAY_MS = 800;
 /**
  * 배포 "새 소식" 모달 — lib/changelog.ts의 최신 항목 id와
  * localStorage에 기록된 마지막 확인 id가 다르면 1회 노출.
- * - 첫 방문(키 없음): 노출하지 않고 조용히 최신 id 기록(새 방문자에게 "새 소식"은 무의미)
+ * - 키 없음(첫 노출·기존 방문자 포함): 최신 1건만 노출 후 확인 시 기록.
+ *   (이전의 "조용히 기록" 방식은 기능 도입 시점의 모든 기존 사용자에게
+ *    첫 공지를 숨겨버리는 버그였다)
  * - /admin, /login, /auth, /onboarding 경로에서는 띄우지 않음
  */
 export function ChangelogModal() {
@@ -35,15 +37,14 @@ export function ChangelogModal() {
     } catch {
       return; // storage 접근 불가(시크릿 등) — 노출 포기
     }
-    if (seen === null) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, LATEST_CHANGELOG_ID);
-      } catch {
-        /* noop */
-      }
-      return;
-    }
     if (seen === LATEST_CHANGELOG_ID) return;
+    if (seen === null) {
+      // 키가 없으면(기능 도입 전 방문자·신규 방문자) 최신 1건만 노출한다.
+      const latest = CHANGELOG.slice(0, 1);
+      if (latest.length === 0) return;
+      const timer = window.setTimeout(() => setEntries(latest), OPEN_DELAY_MS);
+      return () => window.clearTimeout(timer);
+    }
     // 마지막 확인 이후의 항목만(최대 3개) 노출. 기록된 id가 목록에서 사라졌으면 최신 3개.
     const seenIdx = CHANGELOG.findIndex((e) => e.id === seen);
     const unseen = seenIdx === -1 ? CHANGELOG.slice(0, 3) : CHANGELOG.slice(0, Math.min(seenIdx, 3));

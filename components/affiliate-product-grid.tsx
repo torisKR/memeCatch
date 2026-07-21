@@ -2,15 +2,8 @@ import { AffiliateProductCard } from "@/components/affiliate-product-card";
 import { AffiliateProductCarousel } from "@/components/affiliate-product-carousel";
 import { TrackedBlock } from "@/components/tracked-block";
 import type { AffiliateStorefrontData } from "@/lib/affiliate/types";
-import type { Locale } from "@/lib/i18n";
+import { toBcp47, type Locale } from "@/lib/i18n";
 import { PAGE_COPY } from "@/lib/i18n-pages";
-
-const DATE_LOCALES: Record<Locale, string> = {
-  ko: "ko-KR",
-  en: "en-US",
-  ja: "ja-JP",
-  zh: "zh-CN",
-};
 
 export function AffiliateProductGrid({
   data,
@@ -21,7 +14,7 @@ export function AffiliateProductGrid({
 }) {
   const copy = PAGE_COPY[locale];
   const updatedAt = data.lastSuccessfulSyncAt
-    ? new Intl.DateTimeFormat(DATE_LOCALES[locale], {
+    ? new Intl.DateTimeFormat(toBcp47(locale), {
         dateStyle: "medium",
         timeStyle: "short",
         timeZone: "Asia/Seoul",

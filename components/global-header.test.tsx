@@ -71,8 +71,8 @@ describe("GlobalHeader", () => {
     expect(homeLink).toContain("sm:block"); // 도메인 서브라벨은 sm+만
   });
 
-  // 언어 선택기는 본문 번역이 존재하는 라우트에서만 노출된다.
-  it("shows the compact locale label on translated routes without clipping the native language control", () => {
+  // 언어 선택기는 전 라우트 상시 노출 — 첫 방문은 LocaleAutoDetect가 자동 감지.
+  it("shows the compact locale label without clipping the native language control", () => {
     navigation.pathname = "/news";
     const html = renderToStaticMarkup(<GlobalHeader />);
     const desktopSearch = html.match(/<form[^>]*role="search"[^>]*>/)?.[0];
@@ -86,27 +86,16 @@ describe("GlobalHeader", () => {
 
     expect(desktopSearch).toContain("hidden lg:block");
     expect(compactSearch).toContain("lg:hidden");
-    expect(languageControl).toContain("min-w-[4.75rem]");
+    expect(languageControl).toContain("min-w-[5.25rem]");
     expect(languageControl).toContain(">KO</span>");
     expect(languageSelect).toContain("absolute inset-0 h-full w-full");
     expect(languageSelect).toContain("opacity-0");
     expect(languageControl).not.toMatch(/(?:^|\s)(?:md:)?w-11(?:\s|\")/);
   });
 
-  // 홈·밈 상세·탐색 등 본문이 한국어 고정인 페이지에서는 선택기를 숨긴다
-  // (H5: 번역 커버리지 확보 전까지 opt-in 노출만 허용).
-  it.each(["/", "/explore", "/memes/some-meme", "/search"])(
-    "hides the language selector on untranslated route %s",
-    (pathname) => {
-      navigation.pathname = pathname;
-      const html = renderToStaticMarkup(<GlobalHeader />);
-
-      expect(html).not.toContain('aria-label="언어 선택"');
-    },
-  );
-
-  it.each(["/news", "/products", "/products/some-item", "/pricing", "/premium", "/my"])(
-    "shows the language selector on translated route %s",
+  // 선택기는 전 라우트에 노출한다 — 미번역 로케일은 en(zh-tw는 zh) 폴백 렌더.
+  it.each(["/", "/explore", "/memes/some-meme", "/search", "/news", "/products", "/pricing", "/premium", "/my"])(
+    "shows the language selector on route %s",
     (pathname) => {
       navigation.pathname = pathname;
       const html = renderToStaticMarkup(<GlobalHeader />);

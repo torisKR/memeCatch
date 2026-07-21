@@ -51,7 +51,7 @@ export function BottomNav() {
                   emphasized={tab.emphasized}
                   label={
                     tab.href === "/"
-                      ? ({ ko: "홈", en: "Home", ja: "ホーム", zh: "首页" } as const)[locale]
+                      ? ({ ko: "홈", ja: "ホーム", zh: "首页", "zh-tw": "首頁" } as Partial<Record<typeof locale, string>>)[locale] ?? "Home"
                       : messages[tab.label]
                   }
                 />

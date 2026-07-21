@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n";
+import { withLocaleFallback, type Locale } from "@/lib/i18n";
 import type { MemeCategory, SafetyLevel } from "@/lib/labels";
 
 type SubmissionStatus = "pending" | "reviewing" | "approved" | "rejected";
@@ -64,7 +64,7 @@ type MyCopy = {
   };
 };
 
-export const MY_COPY = {
+const MY_COPY_BASE = {
   ko: {
     defaultNickname: "밈캐치 유저",
     avatarFallback: "밈",
@@ -397,4 +397,6 @@ export const MY_COPY = {
       pendingDetail: "已收到 — 我们会在24至48小时内完成审核。",
     },
   },
-} satisfies Record<Locale, MyCopy>;
+} satisfies Record<"ko" | "en" | "ja" | "zh", MyCopy>;
+
+export const MY_COPY: Record<Locale, MyCopy> = withLocaleFallback<MyCopy>(MY_COPY_BASE);

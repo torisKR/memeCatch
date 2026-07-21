@@ -5,8 +5,14 @@ import { usePathname } from "next/navigation";
 import { CHANGELOG, LATEST_CHANGELOG_ID, type ChangelogEntry } from "@/lib/changelog";
 
 const STORAGE_KEY = "mc:changelog:last-seen";
+const SNOOZE_KEY = "mc:changelog:snooze-until";
 /** 첫 페인트/LCP와 겹치지 않게 살짝 늦춰 띄운다 */
 const OPEN_DELAY_MS = 800;
+
+/** 로컬 기준 오늘 날짜(YYYY-MM-DD) — 스누즈 만료 비교용 */
+function localToday(): string {
+  return new Date().toLocaleDateString("en-CA");
+}
 
 /**
  * 배포 "새 소식" 모달 — lib/changelog.ts의 최신 항목 id와
@@ -15,6 +21,8 @@ const OPEN_DELAY_MS = 800;
  *   (이전의 "조용히 기록" 방식은 기능 도입 시점의 모든 기존 사용자에게
  *    첫 공지를 숨겨버리는 버그였다)
  * - /admin, /login, /auth, /onboarding 경로에서는 띄우지 않음
+ * - "오늘 하루 보지 않기": 확인 기록 없이 로컬 날짜만 기록 — 당일 재노출 안 함,
+ *   다음 날부터는 아직 확인 전 소식이면 다시 노출
  */
 export function ChangelogModal() {
   const pathname = usePathname();
@@ -32,12 +40,15 @@ export function ChangelogModal() {
       return;
     }
     let seen: string | null = null;
+    let snoozedUntil: string | null = null;
     try {
       seen = window.localStorage.getItem(STORAGE_KEY);
+      snoozedUntil = window.localStorage.getItem(SNOOZE_KEY);
     } catch {
       return; // storage 접근 불가(시크릿 등) — 노출 포기
     }
     if (seen === LATEST_CHANGELOG_ID) return;
+    if (snoozedUntil === localToday()) return; // 오늘 하루 보지 않기
     if (seen === null) {
       // 키가 없으면(기능 도입 전 방문자·신규 방문자) 최신 1건만 노출한다.
       const latest = CHANGELOG.slice(0, 1);
@@ -60,6 +71,16 @@ export function ChangelogModal() {
       } catch {
         /* noop */
       }
+    }
+    setEntries(null);
+  }, []);
+
+  // 오늘 하루 보지 않기 — 확인 기록 없이 당일만 숨긴다
+  const snoozeToday = useCallback(() => {
+    try {
+      window.localStorage.setItem(SNOOZE_KEY, localToday());
+    } catch {
+      /* noop */
     }
     setEntries(null);
   }, []);
@@ -123,6 +144,13 @@ export function ChangelogModal() {
           className="no-press mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
         >
           확인했어요
+        </button>
+        <button
+          type="button"
+          onClick={snoozeToday}
+          className="no-press mt-2 inline-flex h-10 w-full items-center justify-center rounded-full px-4 text-sm font-semibold text-muted transition-colors hover:text-foreground"
+        >
+          오늘 하루 보지 않기
         </button>
       </div>
     </div>

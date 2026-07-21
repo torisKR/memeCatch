@@ -76,6 +76,8 @@ const CSP_DIRECTIVES = [
     "wss://*.supabase.co",
     "https://*.google-analytics.com",
     "https://*.analytics.google.com",
+    "https://analytics.google.com", // GA4 수집 — 베어 도메인은 와일드카드(*.analytics.google.com)와 미매치
+    "https://www.google.com", // GA4 리전 폴백 수집(/g/collect)
     "https://www.googletagmanager.com",
     "https://*.googlesyndication.com",
     "https://*.googleadservices.com",

@@ -519,7 +519,7 @@ label[for] {
   }
 
   /* 눌림 피드백: 이동/동작 확정 전에도 "눌렸다"는 감각을 즉시 제공.
-     .no-press 를 붙인 요소나, transition-*/transform 유틸을 이미 가진
+     .no-press 를 붙인 요소나, transition- 계열/transform 유틸을 이미 가진
      요소는 유틸리티가 이 base 규칙을 덮어써 각자 정의를 유지한다. */
   @media (prefers-reduced-motion: no-preference) {
     a:not(.no-press),

@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { GlobalHeader } from "@/components/global-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PwaInstall } from "@/components/pwa-install";
+import { ChangelogModal } from "@/components/changelog-modal";
 import { CoupangDock } from "@/components/coupang-dock";
 import { PremiumAdControl } from "@/components/premium-ad-control";
 import { OrganizationJsonLd } from "@/components/json-ld";
@@ -112,6 +113,7 @@ export default function RootLayout({
           <CoupangDock />
           <BottomNav />
           <PwaInstall />
+          <ChangelogModal />
         </LocaleProvider>
       </body>
     </html>

@@ -1247,6 +1247,53 @@ export type Database = {
           },
         ]
       }
+      support_inquiries: {
+        Row: {
+          admin_reply: string | null
+          body: string
+          category: string
+          created_at: string
+          id: string
+          replied_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          replied_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          replied_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_inquiries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tags: {
         Row: {
           id: string

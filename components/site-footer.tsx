@@ -17,6 +17,7 @@ const FOOTER_LINKS = [
   { href: "/news", label: "news" },
   { href: "/products", label: "products" },
   { href: "/submit", label: "submit" },
+  { href: "/support", label: "support" },
 ] as const;
 
 /** 후원 — Fairy(GeekNews) 프로필. 광고와 함께 서비스 유지 재원 */

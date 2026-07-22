@@ -4,16 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
 import type { MemeListItem } from "@/lib/queries";
-import { LIFECYCLE_STATUS, memePathFrom } from "@/lib/labels";
+import { LIFECYCLE_STATUS, SAFETY_LEVELS, memePathFrom } from "@/lib/labels";
 
 /**
- * 홈 히어로 v3 — web3 감성 인터랙티브 (DESIGN.md §12).
- * 다크 잉크 캔버스 + 불꽃 오로라(브랜드 오렌지, 보라 금지) + 미세 그리드/그레인 +
- * 커서 팔로우 글로우 + 밈 시세판 티커 + 카운트업 스탯 + 글래스 검색.
- * 모든 장식 모션은 transform/opacity만 사용, prefers-reduced-motion 시 전부 정지.
+ * 홈 히어로 v4 — 랜딩형 스플릿 (2026-07 전면 리뉴얼, DESIGN.md §12 계승).
+ * 좌: LIVE 신호 라벨 + "그 밈, 3초 안에 캐치." + 글래스 검색 + 급상승 칩 +
+ *     탐색/제보 CTA + 실데이터 수록 지표.
+ * 우(lg+): Higgsfield 생성 브랜드 아트 + 실데이터 플로팅 신호 카드 2장.
+ * 모바일: 아트를 저불투명 배경 레이어로 깔아 폴드를 지킨다.
+ * 장식 모션은 transform/opacity만, prefers-reduced-motion 시 전부 정지.
  */
 
-const HEADLINE_WORDS = ["그", "밈,", "3초", "안에", "알려드려요"];
+const HEADLINE_WORDS = ["그", "밈,", "3초", "안에", "캐치."];
 
 export function HeroWeb3({
   trending,
@@ -28,8 +30,7 @@ export function HeroWeb3({
   const sectionRef = useRef<HTMLElement | null>(null);
 
   // 커서 팔로우 글로우 — CSS 변수만 갱신(리렌더 없음), 포인터 fine 환경에서만.
-  // 섹션 rect는 스크롤/리사이즈 때만 바뀌므로 캐시해 두고, pointermove에서는
-  // 레이아웃을 읽지 않는다(강제 동기 리플로우 방지). 리스너는 모두 passive.
+  // rect는 스크롤/리사이즈 때만 재측정(강제 동기 리플로우 방지), 리스너는 passive.
   useEffect(() => {
     if (reduce) return;
     const el = sectionRef.current;
@@ -66,24 +67,24 @@ export function HeroWeb3({
       className="relative isolate overflow-hidden text-white"
       style={{ background: "var(--ink)", "--mx": "50%", "--my": "35%" } as React.CSSProperties}
     >
-      {/* 오로라 — 불꽃 톤 대형 라디얼 2겹 (blur는 정적, 이동은 transform만) */}
+      {/* 모바일 전용 배경 아트 — lg+에선 우측 칼럼 <img>가 대신한다 */}
       <div
         aria-hidden
-        className="hero-aurora-a pointer-events-none absolute -left-1/4 -top-1/3 -z-10 h-[80%] w-[80%] rounded-full opacity-45 blur-3xl"
+        className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-[position:85%_25%] opacity-35 lg:hidden"
+        style={{
+          backgroundImage: "url(/brand/hero-meme-signal-mobile.webp)",
+          maskImage: "linear-gradient(to bottom, black 40%, transparent 97%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 40%, transparent 97%)",
+        }}
+      />
+      {/* 오로라 — 불꽃 톤 라디얼(blur 정적, 이동은 transform만) */}
+      <div
+        aria-hidden
+        className="hero-aurora-a pointer-events-none absolute -left-1/4 -top-1/3 -z-10 h-[80%] w-[80%] rounded-full opacity-40 blur-3xl"
         style={{
           background:
             "radial-gradient(closest-side, var(--flame-600) 0%, transparent 70%)",
           animation: reduce ? undefined : "hero-aurora-a 16s ease-in-out infinite",
-        }}
-      />
-      <div
-        aria-hidden
-        // 모바일은 2번째 오로라 생략 — blur-3xl 대형 레이어 2겹의 페인트 비용 절감(LCP)
-        className="hero-aurora-b pointer-events-none absolute -bottom-1/2 -right-1/4 -z-10 hidden h-[90%] w-[90%] rounded-full opacity-30 blur-3xl sm:block"
-        style={{
-          background:
-            "radial-gradient(closest-side, var(--flame-800) 0%, transparent 70%)",
-          animation: reduce ? undefined : "hero-aurora-b 22s ease-in-out infinite",
         }}
       />
       {/* 미세 그리드 — 중앙만 보이도록 radial 마스크 */}
@@ -121,111 +122,151 @@ export function HeroWeb3({
         }}
       />
 
-      {/* 모바일은 패딩을 줄여 폴드에서 첫 섹션(급상승) 제목이 하단 내비에
-          가리지 않게 한다 — md+는 기존 여백 유지 */}
-      <div className="mx-auto max-w-3xl px-4 pb-7 pt-10 md:pb-14 md:pt-20">
-        {/* 라이브 배지 */}
-        <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-white/80 backdrop-blur-sm">
-          <span className="relative flex h-2 w-2" aria-hidden>
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--flame-400) opacity-70 motion-reduce:animate-none" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-(--flame-500)" />
-          </span>
-          {totalCount > 0 ? (
-            <>
-              실시간 한국 밈 사전 · <CountUp value={totalCount} reduce={!!reduce} />개 수록
-            </>
-          ) : (
-            "한국 밈을 맥락까지 캐치"
-          )}
-        </p>
-
-        {/* 헤드라인 — LCP 요소이므로 motion(JS 하이드레이션 대기) 대신
-            CSS 진입(.hero-headline-in)으로 첫 페인트에 즉시 렌더한다.
-            강조 단어는 단색 flame 오렌지(그라디언트/시머 없음). */}
-        <h1 className="hero-headline-in mt-5 flex flex-wrap gap-x-[0.26em] gap-y-1 text-[2.6rem] font-extrabold leading-[1.08] tracking-tight md:text-[3.6rem]">
-          {HEADLINE_WORDS.map((word, i) => (
-            <span
-              key={i}
-              className={
-                i >= 2 ? "inline-block text-(--flame-400)" : "inline-block"
-              }
-            >
-              {word}
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-7 pt-10 md:pb-14 md:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,44%)]">
+        {/* ── 좌: 카피 + 검색 + CTA ─────────────────────────── */}
+        <div className="max-w-2xl">
+          {/* LIVE 신호 라벨 — 영문 소형 라벨은 mono(§3 타이포 규칙) */}
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-1.5 font-mono text-xs font-semibold tracking-[0.14em] text-white/85 backdrop-blur-sm">
+            <span className="relative flex h-2 w-2" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--signal-cyan) opacity-70 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-(--signal-cyan)" />
             </span>
-          ))}
-        </h1>
+            LIVE K-MEME SIGNAL
+          </p>
 
-        <p className="mt-3 max-w-xl text-base leading-relaxed text-white/65 md:text-lg">
-          뜻·유래부터 <span className="font-semibold text-white/90">지금 써도 되는지</span>까지 한
-          번에. 신호등만 보면 됩니다.
-        </p>
+          {/* 헤드라인 — LCP 요소: CSS 진입(.hero-headline-in)으로 첫 페인트 즉시 렌더 */}
+          <h1 className="hero-headline-in mt-5 flex flex-wrap gap-x-[0.26em] gap-y-1 text-[2.6rem] font-extrabold leading-[1.08] tracking-tight md:text-[3.4rem]">
+            {HEADLINE_WORDS.map((word, i) => (
+              <span
+                key={i}
+                className={
+                  i >= 2 ? "inline-block text-(--flame-400)" : "inline-block"
+                }
+              >
+                {word}
+              </span>
+            ))}
+          </h1>
 
-        {/* 글래스 검색 */}
-        <form
-          action="/search"
-          role="search"
-          className="mt-7"
-        >
-          <label htmlFor="home-search" className="sr-only">
-            밈 검색
-          </label>
-          <div className="group relative">
-            {/* 포커스 시 외곽 글로우 */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-300 group-focus-within:opacity-100"
-              style={{ boxShadow: "0 0 0 4px rgba(255,92,56,0.25), 0 8px 40px -8px rgba(255,92,56,0.35)" }}
-            />
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden
-              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40 transition-colors group-focus-within:text-(--flame-400)"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
+          <p className="mt-3 max-w-xl text-base leading-relaxed text-white/65 md:text-lg">
+            뜻·유래·사용 타이밍까지.{" "}
+            <span className="font-semibold text-white/90">지금 써도 되는지</span> 신호
+            하나로 확인하세요.
+          </p>
+
+          {/* 글래스 검색 — 홈에서 가장 중요한 UI */}
+          <form action="/search" role="search" className="mt-7">
+            <label htmlFor="home-search" className="sr-only">
+              밈 검색
+            </label>
+            <div className="group relative">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-300 group-focus-within:opacity-100"
+                style={{ boxShadow: "0 0 0 4px rgba(255,92,56,0.25), 0 8px 40px -8px rgba(255,92,56,0.35)" }}
+              />
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40 transition-colors group-focus-within:text-(--flame-400)"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                id="home-search"
+                name="q"
+                type="search"
+                placeholder="궁금한 밈·유행어를 검색해보세요"
+                autoComplete="off"
+                enterKeyHint="search"
+                className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/50 outline-none backdrop-blur-md transition-colors duration-200 focus:border-(--flame-400)"
+              />
+            </div>
+          </form>
+
+          {/* 인기 검색어 칩 — 급상승 제목 재사용(실데이터) */}
+          {popularTerms.length > 0 && (
+            <nav aria-label="인기 검색어" className="mt-4">
+              <ul className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
+                {popularTerms.slice(0, 6).map((term) => (
+                  <li key={term} className="shrink-0 snap-start">
+                    <Link
+                      href={`/search?q=${encodeURIComponent(term)}`}
+                      className="inline-flex min-h-10 items-center rounded-full border border-white/20 bg-white/[0.07] px-3.5 text-sm font-medium text-white/85 backdrop-blur-sm transition-[color,background-color,border-color,transform] duration-200 hover:border-(--flame-400)/60 hover:bg-(--flame-500)/15 hover:text-white active:scale-[0.96]"
+                    >
+                      {term}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+
+          {/* 주 CTA(탐색) + 보조 CTA(제보) */}
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href="/explore"
+              className="inline-flex min-h-12 items-center gap-1.5 rounded-2xl bg-accent-strong px-6 text-base font-bold text-white shadow-[0_8px_30px_-8px_rgba(255,92,56,0.6)] transition-transform active:scale-[0.97]"
             >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              id="home-search"
-              name="q"
-              type="search"
-              placeholder="무슨 밈인지 검색해보세요"
-              autoComplete="off"
-              enterKeyHint="search"
-              className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.07] pl-12 pr-4 text-base text-white placeholder-white/50 outline-none backdrop-blur-md transition-colors duration-200 focus:border-(--flame-400)"
-            />
+              밈 탐색하기 <span aria-hidden>→</span>
+            </Link>
+            <Link
+              href="/submit"
+              className="inline-flex min-h-12 items-center rounded-2xl border border-white/20 bg-white/[0.06] px-5 text-base font-semibold text-white/85 backdrop-blur-sm transition-colors hover:border-(--flame-400)/60 hover:text-white active:scale-[0.97]"
+            >
+              새 밈 제보
+            </Link>
           </div>
-        </form>
 
-        {/* 인기 검색어 칩 — 글래스 */}
-        {popularTerms.length > 0 && (
-          <nav
-            aria-label="인기 검색어"
-            className="mt-4"
-          >
-            <ul className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
-              {popularTerms.map((term) => (
-                <li key={term} className="shrink-0 snap-start">
-                  <Link
-                    href={`/search?q=${encodeURIComponent(term)}`}
-                    className="inline-flex min-h-11 items-center rounded-full border border-white/15 bg-white/[0.06] px-4 text-sm font-medium text-white/75 backdrop-blur-sm transition-[color,background-color,border-color,transform] duration-200 hover:border-(--flame-400)/60 hover:bg-(--flame-500)/15 hover:text-white active:scale-[0.96]"
-                  >
-                    {term}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
+          {/* 실데이터 지표 — getTotalMemeCount() 단일 소스(하드코딩 금지) */}
+          {totalCount > 0 && (
+            <p className="mt-5 text-sm text-white/60">
+              1990년대부터 지금까지 <CountUp value={totalCount} reduce={!!reduce} />개의 밈을
+              기록 중이에요 · 로그인 없이 바로 볼 수 있어요
+            </p>
+          )}
+        </div>
+
+        {/* ── 우(lg+): 브랜드 아트 + 플로팅 신호 카드 ───────────── */}
+        <div className="relative hidden lg:block" aria-hidden>
+          <picture>
+            <source srcSet="/brand/hero-meme-signal.avif" type="image/avif" />
+            <img
+              src="/brand/hero-meme-signal.webp"
+              alt=""
+              width={1600}
+              height={893}
+              fetchPriority="high"
+              decoding="async"
+              className="w-full rounded-3xl border border-white/10 object-cover shadow-[0_24px_80px_-24px_rgba(0,0,0,0.8)]"
+            />
+          </picture>
+          {/* 아트 하단 잉크 페이드 — 플로팅 카드 대비 확보 */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-3xl"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(15,15,18,0.55) 0%, transparent 45%)",
+            }}
+          />
+          {trending[0] && (
+            <FloatingSignalCard meme={trending[0]} className="-left-6 top-8" />
+          )}
+          {trending[1] && (
+            <FloatingSignalCard meme={trending[1]} className="-bottom-4 right-6" />
+          )}
+        </div>
       </div>
 
-      {/* 밈 시세판 티커 — 코인 티커 감성, 호버 시 정지 */}
+      {/* 밈 시세판 티커 — 실시간 Signal strip(호버·포커스 시 정지) */}
       {trending.length > 0 && (
         <div
-          // 모바일은 티커를 더 얇게(보조 요소) — 첫 화면 정보 밀도·폴드 확보
           className="hero-marquee relative border-t border-white/10 bg-black/25 py-2 backdrop-blur-sm md:py-3"
           aria-label="지금 뜨는 밈 티커"
         >
@@ -238,7 +279,6 @@ export function HeroWeb3({
                 tabIndex={i >= trending.length ? -1 : undefined}
                 className="-my-3 flex shrink-0 items-center gap-2 py-3 text-sm text-white/70 transition-colors hover:text-white"
               >
-                {/* 상승 아이콘 — 텍스트 글리프 대신 SVG(스트로크 통일) */}
                 <svg
                   viewBox="0 0 24 24"
                   aria-hidden
@@ -259,7 +299,6 @@ export function HeroWeb3({
               </Link>
             ))}
           </div>
-          {/* 좌우 페이드 */}
           <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-(--ink) to-transparent" />
           <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-(--ink) to-transparent" />
         </div>
@@ -269,14 +308,48 @@ export function HeroWeb3({
 }
 
 /**
- * 카운트업 — SSR/초기 HTML에는 **실제 최종값**을 렌더(AI 크롤러·JS 미실행 환경이
- * "0개 수록"으로 보는 문제 방지). 마운트 후에만 0→값 애니메이션.
- * reduced-motion이면 애니메이션 없이 최종값 유지.
+ * 플로팅 신호 카드 — 급상승 실데이터(제목·생명주기·안전 신호)만 표시.
+ * 부모가 aria-hidden(장식 칼럼)이라 정보는 티커·본문에서 중복 제공된다.
+ */
+function FloatingSignalCard({
+  meme,
+  className,
+}: {
+  meme: MemeListItem;
+  className?: string;
+}) {
+  const safety = SAFETY_LEVELS[meme.safety_level];
+  const life = LIFECYCLE_STATUS[meme.lifecycle_status];
+  return (
+    <div
+      className={`absolute flex max-w-56 flex-col gap-1 rounded-2xl border border-white/15 bg-black/55 px-4 py-3 shadow-xl backdrop-blur-md ${className ?? ""}`}
+    >
+      <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-(--signal-cyan)">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+        {life?.user ?? ""}
+      </span>
+      <span className="truncate text-sm font-bold text-white">{meme.title}</span>
+      {safety && (
+        <span className="text-xs text-white/70">
+          {/* 토큰명이 동적이라 Tailwind 정적 클래스 대신 인라인 var 사용 */}
+          <span aria-hidden className="mr-1" style={{ color: `var(--${safety.token})` }}>
+            {safety.icon}
+          </span>
+          {safety.user}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 카운트업 — SSR/초기 HTML에는 실제 최종값을 렌더(JS 미실행 환경 "0개" 방지).
+ * 마운트 후에만 0→값 애니메이션, reduced-motion이면 최종값 유지.
  */
 function CountUp({ value, reduce }: { value: number; reduce: boolean }) {
   const [n, setN] = useState(value);
   useEffect(() => {
-    if (reduce) return; // SSR 값(최종값) 그대로 유지
+    if (reduce) return;
     let raf = 0;
     const t0 = performance.now();
     const dur = 1200;

@@ -411,6 +411,120 @@ label[for] {
   }
 }
 
+/* ── Signal Cyan 보조 토큰 — 라이브 데이터·상태 신호 전용(2026-07 리뉴얼).
+   브랜드 주색은 불꽃 오렌지 유지(README·DESIGN.md), cyan은 "실시간 신호"
+   의미론에만 절제 사용. 보라 금지 규칙은 그대로 유효하다. ── */
+:root {
+  --signal-cyan: #0e7490; /* 라이트 표면 위 AA */
+  --signal-cyan-soft: #d9f2f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --signal-cyan: #22d3ee;
+    --signal-cyan-soft: #0b2b33;
+  }
+}
+@theme inline {
+  --color-signal-cyan: var(--signal-cyan);
+  --color-signal-cyan-soft: var(--signal-cyan-soft);
+}
+
+/* ══ 다크 web3 스킨(.theme-ink) — 전 사이트 토큰 오버라이드 ══
+   layout.tsx가 body에 전역 적용한다(2026-07 리뉴얼: 전 페이지 잉크 통일).
+   토큰만 쓰는 기존 컴포넌트(카드·칩·배지)가 코드 수정 없이 다크 스킨을 입는다.
+   값은 prefers-color-scheme:dark 검증본(AA)을 재사용하되 배경만 딥 잉크로 강화.
+   :root와 특이도가 같으므로(0,1,0) 반드시 모든 :root 토큰 블록 뒤에 둘 것. */
+.theme-ink {
+  color-scheme: dark;
+
+  --background: #0f0f12; /* = --ink 다크: 히어로와 이음새 없이 연결 */
+  --foreground: #f2f1ee;
+  --surface: #1c1c22;
+  --surface-2: #26262e;
+  --surface-3: #2c2c34;
+  --border: #34343e;
+  --muted: #a6a3ad; /* 다크 기본(#9c99a3)보다 살짝 밝게 — 딥 잉크 위 가독성 */
+  --accent: #ff6b47;
+  --accent-soft: #3a2018;
+  --accent-text: #ff9a7e;
+  --ink: #0f0f12;
+  --cream: #1a1a20;
+
+  --safety-green: #3ecf85;
+  --safety-green-bg: #12301f;
+  --safety-yellow: #e8b53a;
+  --safety-yellow-bg: #33290e;
+  --safety-gray: #a1a1aa;
+  --safety-gray-bg: #26262c;
+  --safety-red: #ff6b6b;
+  --safety-red-bg: #351515;
+
+  --life-rising: #ff6b47;
+  --life-active: #ffb054;
+  --life-cooling: #7d93aa;
+  --life-archived: #6f6a60;
+  --life-rising-text: #ff6b47;
+  --life-active-text: #ffb054;
+  --life-cooling-text: #9db3c8;
+  --life-archived-text: #a39d92;
+
+  --sent-controversial: #b79bf0;
+  --flame-500: #ff6b47;
+  --flame-600: #ff5230;
+  --signal-cyan: #22d3ee;
+  --signal-cyan-soft: #0b2b33;
+
+  --cat-phrase-bg: #3a2018;
+  --cat-phrase-text: #ffb4a0;
+  --cat-dance-bg: #3a1526;
+  --cat-dance-text: #f9a8d4;
+  --cat-song-bg: #1e1f3a;
+  --cat-song-text: #a5b4fc;
+  --cat-image-bg: #0c2a3a;
+  --cat-image-text: #7dd3fc;
+  --cat-comment-bg: #123028;
+  --cat-comment-text: #6ee7b7;
+  --cat-challenge-bg: #332810;
+  --cat-challenge-text: #fcd34d;
+}
+
+/* 잉크 배경 미세 그리드 — 히어로 §12 문법을 홈 본문 전체로 확장(정적, 저대비) */
+.ink-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 4%, black 96%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 4%, black 96%, transparent);
+}
+
+/* 헤더 드롭다운 등장 — 우상단 기준 미세 스케일+페이드(160ms, 절제 모션) */
+@keyframes menu-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.menu-pop {
+  transform-origin: top right;
+  animation: menu-pop 160ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-pop { animation: none; }
+}
+
+/* flame 네온 글로우 호버 — 다크 글래스 카드·칩 공용. box-shadow/색만 전환(모션 아님) */
+.hover-glow-flame {
+  transition:
+    box-shadow var(--dur-transition) var(--ease-out),
+    border-color var(--dur-transition) var(--ease-out);
+}
+.hover-glow-flame:hover,
+.hover-glow-flame:focus-visible {
+  border-color: color-mix(in srgb, var(--flame-500) 55%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--flame-500) 22%, transparent),
+    0 8px 32px -8px color-mix(in srgb, var(--flame-500) 42%, transparent);
+}
+
 /* ── 타이포 폴백 히어로 — 임베드·썸네일 부재 시 대표 콘텐츠 영역 장식 ──
    히어로(§12)의 미세 그리드 문법 재사용. currentColor 기반이라 카테고리
    틴트(--cat-*-text)·라이트/다크 모두에서 은은하게 동작. 정적(애니메이션 없음). */

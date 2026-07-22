@@ -83,10 +83,19 @@ export default async function MemeDetailPage({ params }: Props) {
     getReactionCounts(meme.id),
   ]);
 
+  const liveContents = meme.meme_contents.filter(
+    (c) => c.availability !== "dead" && c.moderation_status === "approved",
+  );
   const representative =
-    meme.meme_contents.find((c) => c.is_representative) ??
-    meme.meme_contents[0] ??
-    null;
+    liveContents.find((c) => c.is_representative) ?? liveContents[0] ?? null;
+  // TikTok·Instagram 등 비대표 임베드 — 대표 영상 아래 "관련 콘텐츠"로 노출
+  const relatedSocialContents = liveContents
+    .filter(
+      (c) =>
+        c.id !== representative?.id &&
+        ["tiktok", "instagram"].includes(String(c.platform ?? "").toLowerCase()),
+    )
+    .slice(0, 4);
   const sourceLinks = sourceLinksWithContent(meme.meme_sources, meme.meme_contents);
   const fallbackSourceUrl = preferredSourceUrl(sourceLinks);
   // usage_examples 컬럼·데이터는 에이전트 D가 추가 중 — DB 타입 재생성 전까지
@@ -175,6 +184,28 @@ export default async function MemeDetailPage({ params }: Props) {
             </div>
             <ExportButton shortId={meme.short_id} />
           </div>
+
+          {/* 관련 TikTok·Instagram — 대표 아래 공개 사용 예시(비대표 임베드) */}
+          {relatedSocialContents.length > 0 && (
+            <section aria-labelledby="related-social-embeds" className="space-y-3">
+              <h2 id="related-social-embeds" className="text-lg font-bold">
+                관련 TikTok·Instagram
+              </h2>
+              <p className="text-sm text-muted">
+                원본 단정이 아닌 공개 사용 예시예요. 권리·맥락은 출처에서 확인하세요.
+              </p>
+              <div className="grid gap-4">
+                {relatedSocialContents.map((content) => (
+                  <MemeEmbed
+                    key={content.id}
+                    content={content}
+                    title={meme.title}
+                    isRepresentative={false}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* 오른쪽 — 정보. 오른쪽만 스크롤된다. */}

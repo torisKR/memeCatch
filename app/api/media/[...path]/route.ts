@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { r2Configured, r2Get } from "@/lib/r2.server";
 
 /**
- * 업로드 이미지 조회 프록시 — /api/media/meme-uploads/{userId}/{uuid}.{ext}
+ * 업로드·썸네일 이미지 조회 프록시
+ * - /api/media/meme-uploads/{userId}/{uuid}.{ext} — 사용자 업로드
+ * - /api/media/meme-thumbs/{platform}/{id}.{ext} — TikTok·IG 카드 썸네일 재호스팅
+ *   (원본 CDN 만료 서명 URL이라 수집 시점에 R2로 영구화)
  * R2가 설정돼 있으면 서버가 서명해 스트리밍(버킷 비공개 유지 가능),
  * 아니면 Supabase Storage 공개 URL로 리다이렉트.
- * meme-uploads/ 프리픽스 외 경로는 차단.
+ * 허용 프리픽스 외 경로는 차단.
  */
 export async function GET(
   _req: NextRequest,

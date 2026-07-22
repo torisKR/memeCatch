@@ -1,5 +1,5 @@
 import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
 
 
 /**
@@ -36,7 +36,7 @@ export function OrganizationJsonLd() {
         logo: `${SITE_URL}/icons/icon-512.png`,
         description:
           "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 알려주는 한국 밈 실시간 사전.",
-        email: "ironjustlikethat@gmail.com",
+        email: CONTACT_EMAIL,
         sameAs: [
           "https://github.com/toris-dev/memeCatch",
           "https://fairy.hada.io/@toris-dev",

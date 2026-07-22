@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침",
@@ -141,10 +142,10 @@ export default function PrivacyPage() {
             <br />
             문의:{" "}
             <a
-              href="mailto:ironjustlikethat@gmail.com"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="text-accent-text underline underline-offset-2"
             >
-              ironjustlikethat@gmail.com
+              {CONTACT_EMAIL}
             </a>
           </p>
           <p className="mt-3 text-sm text-muted">

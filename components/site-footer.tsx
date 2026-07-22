@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HideOnAdmin } from "@/components/auth-menu";
 import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 /**
  * 전역 푸터 — E-E-A-T 신뢰 신호(운영 주체·문의·정책 링크·저작권 안내).
@@ -86,10 +87,10 @@ function LegalCopy({ legal1, legal2 }: { legal1: string; legal2: string }) {
       <p>
         {legal2}{" "}
         <a
-          href="mailto:ironjustlikethat@gmail.com"
+          href={`mailto:${CONTACT_EMAIL}`}
           className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-foreground"
         >
-          ironjustlikethat@gmail.com
+          {CONTACT_EMAIL}
         </a>
       </p>
     </>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "이용약관",
@@ -98,10 +99,10 @@ export default function TermsPage() {
           <p className="mt-3">
             약관·저작권·정정 요청 문의:{" "}
             <a
-              href="mailto:ironjustlikethat@gmail.com"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="text-accent-text underline underline-offset-2"
             >
-              ironjustlikethat@gmail.com
+              {CONTACT_EMAIL}
             </a>
             <br />
             본 약관은 대한민국 법률에 따르며, 변경 시 시행 7일 전 공지합니다.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 const ABOUT_DESCRIPTION =
   "밈캐치는 한국 밈·유행어 3,000여 건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전입니다. 콘텐츠 검수 원칙과 운영 방침을 소개합니다.";
@@ -111,10 +112,10 @@ export default function AboutPage() {
             </a>
             으로 응원할 수 있습니다. 문의·제휴·삭제 요청:{" "}
             <a
-              href="mailto:ironjustlikethat@gmail.com"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="text-accent-text underline underline-offset-2"
             >
-              ironjustlikethat@gmail.com
+              {CONTACT_EMAIL}
             </a>
           </p>
         </section>

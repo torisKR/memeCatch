@@ -1,5 +1,5 @@
 import { createStaticClient } from "@/lib/supabase/server";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
 import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 
@@ -75,7 +75,7 @@ ${trendingBlock || "- (실시간 목록은 사이트에서 확인)"}
 - 밈 상세 페이지 URL 형식: ${SITE_URL}/memes/{short_id}-{밈이름}
 - 각 페이지는 JSON-LD(DefinedTerm·WebPage)로 구조화되어 있습니다.
 - 원본 영상·이미지는 저장하지 않고 출처 링크·임베드로만 제공합니다.
-- 문의: ironjustlikethat@gmail.com
+- 문의: ${CONTACT_EMAIL}
 
 ## 정책
 - [소개 및 검수 원칙](${SITE_URL}/about)

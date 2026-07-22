@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/i18n-client";
 import { toBcp47 } from "@/lib/i18n";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { PremiumGate } from "@/components/premium/premium-gate";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 
 export function PremiumDashboardContent({
@@ -64,7 +65,7 @@ export function PremiumDashboardContent({
               </p>
             )}
             <a
-              href="mailto:ironjustlikethat@gmail.com?subject=MemeCatch%20Plus%20billing"
+              href={`mailto:${CONTACT_EMAIL}?subject=MemeCatch%20Plus%20billing`}
               className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {copy.dashboard.billingHelp}
@@ -77,7 +78,7 @@ export function PremiumDashboardContent({
           <p className="mt-4 text-center text-sm leading-relaxed text-muted">{copy.dashboard.syncNote}</p>
           <p className="mt-2 text-center">
             <a
-              href="mailto:ironjustlikethat@gmail.com?subject=MemeCatch%20Plus%20billing"
+              href={`mailto:${CONTACT_EMAIL}?subject=MemeCatch%20Plus%20billing`}
               className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {copy.dashboard.billingHelp}

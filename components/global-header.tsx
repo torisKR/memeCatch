@@ -4,20 +4,20 @@ import Link from "next/link";
 import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
 import { ExploreNavLink } from "@/components/explore-nav-link";
 import { BrandTile } from "@/components/brand-mark";
-import { RandomMemeButton } from "@/components/random-meme-button";
+import { HeaderMenu } from "@/components/header-menu";
 import { LanguageSelector } from "@/components/language-selector";
 import { TrendAlertsBell } from "@/components/premium/trend-alerts-bell";
 import { useLocale } from "@/lib/i18n-client";
 
 /**
- * 전역 헤더 — DESIGN.md §10.
- * sticky top-0, 반투명 배경 + blur. 좌: 밈캐치 불꽃 워드마크(이모지 금지, SVG 불꽃)
- * + 데스크톱 "탐색" 링크(/explore, active 표시 — <ExploreNavLink/> 클라이언트 헬퍼).
- * 우: 검색 진입(모바일=아이콘→/search, 데스크톱=미니 검색바→/search) + <AuthMenu/>.
- * 모바일 탐색은 하단탭(BottomNav)이 담당하므로 헤더는 로고+검색만 유지.
+ * 전역 헤더 — DESIGN.md §10 + 2026-07 IA 개편(검색·탐색 중심 제품형 내비).
+ * 좌: 워드마크 + 주 동선 "탐색" 하나만 상시 노출.
+ * 우: 검색(모바일=아이콘, 데스크톱=미니 검색바) → 언어 → 제보 강조 CTA →
+ *     로그인/프로필(<AuthMenu/>) → 통합 메뉴 드롭다운(<HeaderMenu/> — 연표·
+ *     커뮤니티·랭킹·소식·상품·랜덤).
+ * 연표·커뮤니티 상시 링크와 주사위 버튼은 드롭다운으로 이동해 바를 정리했다.
  *
  * 요청 로케일은 layout의 LocaleProvider가 주입해 첫 SSR부터 문서 언어와 맞춘다.
- * 경로 없는 요청별 로케일을 위해 root layout은 의도적으로 dynamic이다.
  * 인증 세션은 AuthMenu가 클라이언트에서 별도로 조회해 전역 SSR을 막지 않는다.
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
@@ -70,11 +70,17 @@ export function GlobalHeader() {
               </div>
             </form>
 
-            <span className="hidden min-[390px]:contents">
-              <RandomMemeButton />
-            </span>
-            {/* 언어 선택 — 브라우저 언어 자동 감지(LocaleAutoDetect) 결과를 수동 변경 */}
+            {/* 언어 선택 — 브라우저 언어 자동 감지(LocaleAutoDetect) 결과를 수동 변경.
+                주사위(랜덤 밈)는 우측 통합 메뉴(<HeaderMenu/>)로 이동 */}
             <LanguageSelector />
+
+            {/* 제보 강조 CTA — 데스크톱 전용(모바일은 하단탭 제보가 담당) */}
+            <Link
+              href="/submit"
+              className="hidden min-h-10 items-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
+            >
+              {messages.submit}
+            </Link>
 
             {/* 모바일: 검색 아이콘 버튼 */}
             <Link
@@ -89,6 +95,9 @@ export function GlobalHeader() {
             <TrendAlertsBell />
 
             <AuthMenu />
+
+            {/* 통합 메뉴 드롭다운 — 연표·커뮤니티·랭킹·소식·상품·랜덤 */}
+            <HeaderMenu />
           </div>
         </div>
       </header>

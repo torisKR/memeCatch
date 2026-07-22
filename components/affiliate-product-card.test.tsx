@@ -128,6 +128,7 @@ describe("AffiliateProductGrid", () => {
         locale="ko"
         data={{
           hotdeals: [product],
+          recommended: [],
           popular: [],
           lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
           isStale: false,
@@ -142,6 +143,7 @@ describe("AffiliateProductGrid", () => {
         locale="ko"
         data={{
           hotdeals: [product],
+          recommended: [],
           popular: [product],
           lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
           isStale: false,
@@ -159,6 +161,7 @@ describe("AffiliateProductGrid", () => {
         locale="ko"
         data={{
           hotdeals: [],
+          recommended: [],
           popular: [],
           lastSuccessfulSyncAt: null,
           isStale: false,
@@ -176,6 +179,7 @@ describe("AffiliateProductGrid", () => {
         locale="ko"
         data={{
           hotdeals: [product],
+          recommended: [],
           popular: [],
           lastSuccessfulSyncAt: "2026-07-01T00:00:00.000Z",
           isStale: true,
@@ -194,6 +198,7 @@ describe("AffiliateProductGrid", () => {
         locale="ko"
         data={{
           hotdeals: [product],
+          recommended: [],
           popular: [],
           lastSuccessfulSyncAt: null,
           isStale: false,

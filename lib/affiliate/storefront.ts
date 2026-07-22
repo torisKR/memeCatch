@@ -37,13 +37,16 @@ export function buildAffiliateStorefront(
     );
   }
 
-  const hotdeals = products
+  const withClicks = products
     .map((product) => ({
       ...product,
       clickCount7d: clicksByProduct.get(product.id) ?? 0,
     }))
     .sort((left, right) => left.sourceRank - right.sourceRank);
-  const popular = hotdeals
+  // 피드 분리: hotdeal(실시간 핫딜) / recommend(쇼핑메이트 추천) — 인기는 통합
+  const hotdeals = withClicks.filter((p) => p.sourceType === "hotdeal");
+  const recommended = withClicks.filter((p) => p.sourceType === "recommend");
+  const popular = withClicks
     .filter((product) => product.clickCount7d > 0)
     .sort(
       (left, right) =>
@@ -58,6 +61,7 @@ export function buildAffiliateStorefront(
 
   return {
     hotdeals,
+    recommended,
     popular,
     lastSuccessfulSyncAt,
     isStale:

@@ -1,5 +1,6 @@
 export type AffiliateProvider = "adpick";
-export type AffiliateSourceType = "hotdeal";
+/** hotdeal = 실시간 핫딜 크롤링 피드, recommend = 쇼핑메이트 추천상품 피드 */
+export type AffiliateSourceType = "hotdeal" | "recommend";
 
 export type NormalizedAffiliateProduct = {
   provider: AffiliateProvider;
@@ -31,6 +32,8 @@ export type AffiliateStorefrontProduct = Omit<
 
 export type AffiliateStorefrontData = {
   hotdeals: AffiliateStorefrontProduct[];
+  /** 쇼핑메이트 추천상품(sdk_shopping.php) — 핫딜과 별도 피드 */
+  recommended: AffiliateStorefrontProduct[];
   popular: AffiliateStorefrontProduct[];
   lastSuccessfulSyncAt: string | null;
   isStale: boolean;

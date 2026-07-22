@@ -27,10 +27,14 @@ export function ProductsPageContent({
 }) {
   const { locale } = useLocale();
   const copy = PAGE_COPY[locale];
-  const activeEditorialCount = MEME_PRODUCTS.filter((product) =>
+  // 만료(expiresAt 경과)된 에디터 픽은 렌더링 자체를 생략 — "종료" 카드 노출 금지
+  const activeEditorial = MEME_PRODUCTS.filter((product) =>
     isMemeProductActive(product),
-  ).length;
-  const availableLinkCount = storefront.hotdeals.length + activeEditorialCount;
+  );
+  const availableLinkCount =
+    storefront.hotdeals.length +
+    storefront.recommended.length +
+    activeEditorial.length;
 
   return (
     <>
@@ -61,25 +65,28 @@ export function ProductsPageContent({
       {/* 쿠팡 배너는 전역 푸터로 이동(전 페이지 하단) — 중복 노출 방지 */}
       <AffiliateProductGrid data={storefront} locale={locale} />
 
-      <section className="mt-16" aria-labelledby="editor-picks-title">
-        <div className="max-w-2xl">
-          <h2 id="editor-picks-title" className="text-2xl font-extrabold tracking-tight">
-            {copy.editorPickTitle}
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            {copy.editorPickDescription}
-          </p>
-        </div>
-        <TrackedBlock event="affiliate_click" className="mt-4">
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {MEME_PRODUCTS.map((product) => (
-              <li key={product.id} className="min-w-0">
-                <EditorialProductCard product={product} locale={locale} />
-              </li>
-            ))}
-          </ul>
-        </TrackedBlock>
-      </section>
+      {/* 에디터 픽 — 활성 상품만 노출, 전부 만료면 섹션 자체를 숨긴다 */}
+      {activeEditorial.length > 0 && (
+        <section className="mt-16" aria-labelledby="editor-picks-title">
+          <div className="max-w-2xl">
+            <h2 id="editor-picks-title" className="text-2xl font-extrabold tracking-tight">
+              {copy.editorPickTitle}
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {copy.editorPickDescription}
+            </p>
+          </div>
+          <TrackedBlock event="affiliate_click" className="mt-4">
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {activeEditorial.map((product) => (
+                <li key={product.id} className="min-w-0">
+                  <EditorialProductCard product={product} locale={locale} />
+                </li>
+              ))}
+            </ul>
+          </TrackedBlock>
+        </section>
+      )}
     </>
   );
 }

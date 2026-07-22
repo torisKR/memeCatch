@@ -32,6 +32,8 @@ const PAGE_COPY_BASE = {
   ko: {
     shopTitle: "밈캐치 편집숍", shopIntro: "실시간 광고 상품과 밈캐치 에디터가 고른 상품을 한곳에서 살펴보세요.",
     liveAdTitle: "실시간 광고 상품", liveAdDescription: "제휴 파트너가 실시간으로 제공하는 광고 상품입니다.",
+    recommendBadge: "추천",
+    recommendTitle: "쇼핑메이트 추천", recommendDescription: "애드픽 쇼핑메이트가 오늘 홍보하기 좋은 상품으로 추천한 목록입니다.",
     editorPickTitle: "밈캐치 에디터 픽", editorPickDescription: "밈캐치 에디터가 밈 생활에 어울리는 상품을 직접 골랐습니다.",
     liveBadge: "실시간 광고", editorBadge: "에디터 픽", carouselLabel: "실시간 광고 상품 캐러셀",
     previousProduct: "이전 상품", nextProduct: "다음 상품", pauseCarousel: "캐러셀 일시정지", playCarousel: "캐러셀 재생",
@@ -57,6 +59,8 @@ const PAGE_COPY_BASE = {
   en: {
     shopTitle: "MemeCatch Edit Shop", shopIntro: "Browse live sponsored products alongside picks selected by the MemeCatch editors.",
     liveAdTitle: "Live sponsored products", liveAdDescription: "Sponsored products supplied in real time by our affiliate partner.",
+    recommendBadge: "Picks",
+    recommendTitle: "ShoppingMate picks", recommendDescription: "Products recommended today by the Adpick ShoppingMate feed.",
     editorPickTitle: "MemeCatch editor picks", editorPickDescription: "Products selected by MemeCatch editors for a meme-filled lifestyle.",
     liveBadge: "Live ad", editorBadge: "Editor pick", carouselLabel: "Live sponsored products carousel",
     previousProduct: "Previous product", nextProduct: "Next product", pauseCarousel: "Pause carousel", playCarousel: "Play carousel",
@@ -82,6 +86,8 @@ const PAGE_COPY_BASE = {
   ja: {
     shopTitle: "MemeCatch セレクトショップ", shopIntro: "リアルタイム広告商品とMemeCatch編集部が選んだ商品をまとめて紹介します。",
     liveAdTitle: "リアルタイム広告商品", liveAdDescription: "提携パートナーからリアルタイムで提供される広告商品です。",
+    recommendBadge: "おすすめ",
+    recommendTitle: "ShoppingMateのおすすめ", recommendDescription: "Adpick ShoppingMateが本日のおすすめとして提供する商品リストです。",
     editorPickTitle: "MemeCatch 編集部ピック", editorPickDescription: "ミームのある暮らしに合う商品をMemeCatch編集部が選びました。",
     liveBadge: "リアルタイム広告", editorBadge: "編集部ピック", carouselLabel: "リアルタイム広告商品のカルーセル",
     previousProduct: "前の商品", nextProduct: "次の商品", pauseCarousel: "カルーセルを一時停止", playCarousel: "カルーセルを再生",
@@ -107,6 +113,8 @@ const PAGE_COPY_BASE = {
   zh: {
     shopTitle: "MemeCatch 迷因选物店", shopIntro: "集中浏览实时广告商品与 MemeCatch 编辑团队精选的商品。",
     liveAdTitle: "实时广告商品", liveAdDescription: "由联盟合作伙伴实时提供的广告商品。",
+    recommendBadge: "推荐",
+    recommendTitle: "ShoppingMate 推荐", recommendDescription: "来自 Adpick ShoppingMate 推荐源的今日推荐商品。",
     editorPickTitle: "MemeCatch 编辑精选", editorPickDescription: "由 MemeCatch 编辑团队为迷因生活挑选的商品。",
     liveBadge: "实时广告", editorBadge: "编辑精选", carouselLabel: "实时广告商品轮播",
     previousProduct: "上一个商品", nextProduct: "下一个商品", pauseCarousel: "暂停轮播", playCarousel: "播放轮播",

@@ -46,7 +46,10 @@ export function AffiliateProductCard({
             <Badge className="shop-sticker border-foreground bg-cream text-foreground shadow-[2px_2px_0_var(--foreground)]">
               {copy.affiliateBadge}
             </Badge>
-            <Badge variant="secondary">{copy.liveBadge}</Badge>
+            {/* 피드별 배지 — 핫딜은 실시간 광고, 쇼핑메이트 추천은 추천 라벨 */}
+            <Badge variant="secondary">
+              {product.sourceType === "recommend" ? copy.recommendBadge : copy.liveBadge}
+            </Badge>
           </div>
         </div>
 

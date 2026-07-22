@@ -73,7 +73,7 @@ describe("createAffiliateSyncRepository", () => {
 });
 
 describe("getActiveAffiliateRedirect", () => {
-  it("scopes the lookup to active Adpick hot deals", async () => {
+  it("scopes the lookup to active Adpick products across both feeds", async () => {
     const maybeSingle = vi.fn().mockResolvedValue({
       data: { affiliate_url: "https://adpick.co.kr/apis/goshopping.php" },
       error: null,
@@ -101,7 +101,8 @@ describe("getActiveAffiliateRedirect", () => {
     );
     expect(query.eq).toHaveBeenNthCalledWith(2, "is_active", true);
     expect(query.eq).toHaveBeenNthCalledWith(3, "provider", "adpick");
-    expect(query.eq).toHaveBeenNthCalledWith(4, "source_type", "hotdeal");
+    // source_type 필터 없음 — 핫딜·추천 두 피드 모두 리다이렉트 허용
+    expect(query.eq).toHaveBeenCalledTimes(3);
     expect(maybeSingle).toHaveBeenCalledOnce();
   });
 });

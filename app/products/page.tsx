@@ -39,12 +39,15 @@ export default async function ProductsPage() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "밈 상품 모음",
-    itemListElement: storefront.hotdeals.map((product, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name: product.productName,
-      url: `https://catchmeme.com/go/products/${product.id}`,
-    })),
+    // 핫딜 + 쇼핑메이트 추천 두 피드를 하나의 ItemList로 기술
+    itemListElement: [...storefront.hotdeals, ...storefront.recommended].map(
+      (product, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: product.productName,
+        url: `https://catchmeme.com/go/products/${product.id}`,
+      }),
+    ),
   };
 
   return (

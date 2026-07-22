@@ -49,9 +49,25 @@ export function AffiliateProductGrid({
         />
       ) : null}
 
+      {/* 쇼핑메이트 추천상품 피드(sdk_shopping.php) — 핫딜과 별도 소스 */}
+      {data.recommended.length > 0 ? (
+        <StaticProductSection
+          sectionId="recommend-products"
+          className={data.popular.length > 0 ? "mt-12" : "mt-6"}
+          title={copy.recommendTitle}
+          description={copy.recommendDescription}
+          products={data.recommended}
+          locale={locale}
+        />
+      ) : null}
+
       <HotdealProductSection
         sectionId="hotdeal-products"
-        className={data.popular.length > 0 ? "mt-12" : "mt-6"}
+        className={
+          data.popular.length > 0 || data.recommended.length > 0
+            ? "mt-12"
+            : "mt-6"
+        }
         title={copy.liveAdTitle}
         description={copy.liveAdDescription}
         products={data.hotdeals}

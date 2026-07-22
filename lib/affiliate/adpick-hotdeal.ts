@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-import type { NormalizedAffiliateProduct } from "@/lib/affiliate/types";
+import type {
+  AffiliateSourceType,
+  NormalizedAffiliateProduct,
+} from "@/lib/affiliate/types";
 
 const themeSchema = z.object({
   title: z.string(),
@@ -64,10 +67,15 @@ function createExternalKey(affiliateUrl: string): string {
   return createHash("sha256").update(canonicalUrl.toString()).digest("hex");
 }
 
+/**
+ * 애드픽 쇼핑 피드 정규화 — 핫딜(sdk_shopping_hotdeal.php)과 추천상품
+ * (sdk_shopping.php)은 응답 스키마가 동일해 sourceType만 달리해 재사용한다.
+ */
 export function normalizeAdpickHotdeals(
   input: unknown,
   syncedAt: Date,
   affiliateId: string,
+  sourceType: AffiliateSourceType = "hotdeal",
 ): NormalizedAffiliateProduct[] {
   if (Array.isArray(input) && input.length === 0) {
     throw new Error("ADPICK_EMPTY_LIST");
@@ -107,7 +115,7 @@ export function normalizeAdpickHotdeals(
 
     normalized.push({
       provider: "adpick",
-      sourceType: "hotdeal",
+      sourceType,
       externalKey,
       themeCode: theme.theme_code == null ? null : String(theme.theme_code),
       themeTitle: theme.title,

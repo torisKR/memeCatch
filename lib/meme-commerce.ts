@@ -20,6 +20,10 @@ const ALLOWED_ADPICK_DOMAINS = ["adpick.co.kr", "deg.kr", "bitl.bz"] as const;
 /**
  * lifestyle_blog의 공개 Adpick 캠페인 설정과 비교 글 메타데이터를 가져온다.
  * 비밀번호·정산 데이터·API 키는 포함하지 않고 공개 제휴 링크만 보관한다.
+ *
+ * 재검증: 2026-07-22 — 오퍼 페이지(adpick.co.kr/?ac=offer) 전수 응답 확인으로
+ * 11개 캠페인 전부 진행 중임을 확인하고 검증 창(approvedAt→expiresAt 7일)을 갱신.
+ * 만료가 다가오면 같은 방식으로 오퍼 생존을 확인한 뒤 날짜만 갱신하면 된다.
  */
 export const MEME_PRODUCTS: readonly MemeProduct[] = [
   {
@@ -33,8 +37,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/15ddff1",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=a8753",
     disclosure: "광고: 이 링크를 통해 가입하면 운영자가 수수료를 받을 수 있으며, 가입자의 수익은 보장되지 않습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "amasia-friend-app",
@@ -47,8 +51,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/363db5f",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=7fcba",
     disclosure: "광고: 만 18세 이상 이용자가 이 링크를 통해 앱을 설치하면 운영자가 수수료를 받을 수 있습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "carebear-summer-fashion",
@@ -61,8 +65,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://bitl.bz/uO18Zh",
     sourceUrl: "https://adpick.co.kr/?ac=agent",
     disclosure: "광고: 이 링크를 통해 상품을 구매하면 운영자가 구매금액의 일부를 수수료로 제공받습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "chago-long-term-rental",
@@ -75,8 +79,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/3eb76b9",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=f82c7",
     disclosure: "광고: 이 링크를 통해 앱을 설치하면 운영자가 수수료를 받을 수 있으며, 절감액이나 계약 조건을 보장하지 않습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "daesung-grade12-signup",
@@ -89,8 +93,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/43e005a",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=90a44",
     disclosure: "광고: 이 링크를 통해 캠페인 페이지를 방문하면 운영자가 수수료를 받을 수 있습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "daytalk-friend-app",
@@ -103,8 +107,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/2e86da6",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=03074",
     disclosure: "광고: 만 18세 이상 이용자가 이 링크를 통해 앱을 설치하면 운영자가 수수료를 받을 수 있습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "dokit-friend-app",
@@ -117,8 +121,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/41ab716",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=a7bea",
     disclosure: "광고: 만 18세 이상 이용자가 이 링크를 통해 앱을 설치하면 운영자가 수수료를 받을 수 있습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "gangdae-math-season1",
@@ -131,8 +135,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/25408ad",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=2706b",
     disclosure: "광고: 이 링크를 통해 캠페인 페이지를 방문하면 운영자가 수수료를 받을 수 있으며, 성적 결과는 보장하지 않습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "kimseungri-gyeolgyeok-sayu",
@@ -145,8 +149,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/3e64de0",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=a20ee",
     disclosure: "광고: 이 링크를 통해 캠페인 페이지를 방문하면 운영자가 수수료를 받을 수 있으며, 수강 성과는 보장하지 않습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "kmate-friend-app",
@@ -159,8 +163,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/712595a",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=f937d",
     disclosure: "광고: 만 18세 이상 이용자가 이 링크를 통해 앱을 설치하면 운영자가 수수료를 받을 수 있습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
   {
     id: "truckdoctor-truck-lease",
@@ -173,8 +177,8 @@ export const MEME_PRODUCTS: readonly MemeProduct[] = [
     destinationUrl: "https://deg.kr/6db9794",
     sourceUrl: "https://adpick.co.kr/?ac=offer&offer=e4cb7",
     disclosure: "광고: 이 링크를 통해 앱을 설치하면 운영자가 수수료를 받을 수 있으며, 차량 가격이나 출고 일정은 보장하지 않습니다.",
-    approvedAt: "2026-07-12",
-    expiresAt: "2026-07-19",
+    approvedAt: "2026-07-22",
+    expiresAt: "2026-07-29",
   },
 ] as const;
 

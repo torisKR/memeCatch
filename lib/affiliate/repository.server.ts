@@ -1,7 +1,10 @@
 import "server-only";
 
 import { buildAffiliateStorefront } from "@/lib/affiliate/storefront";
-import type { NormalizedAffiliateProduct } from "@/lib/affiliate/types";
+import type {
+  AffiliateSourceType,
+  NormalizedAffiliateProduct,
+} from "@/lib/affiliate/types";
 import type { AffiliateStorefrontData } from "@/lib/affiliate/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -44,7 +47,6 @@ export async function getAffiliateStorefront(): Promise<AffiliateStorefrontData>
         .from("affiliate_sync_runs")
         .select("finished_at")
         .eq("provider", "adpick")
-        .eq("source_type", "hotdeal")
         .eq("status", "succeeded")
         .order("finished_at", { ascending: false })
         .limit(1)
@@ -58,7 +60,7 @@ export async function getAffiliateStorefront(): Promise<AffiliateStorefrontData>
     const products = (productsResult.data ?? []).map((product) => ({
       id: product.id,
       provider: product.provider as "adpick",
-      sourceType: product.source_type as "hotdeal",
+      sourceType: product.source_type as AffiliateSourceType,
       externalKey: product.external_key,
       themeCode: product.theme_code,
       themeTitle: product.theme_title,
@@ -99,7 +101,6 @@ export async function getActiveAffiliateRedirect(
       .eq("id", id)
       .eq("is_active", true)
       .eq("provider", "adpick")
-      .eq("source_type", "hotdeal")
       .maybeSingle();
 
     return error ? null : (data?.affiliate_url ?? null);
@@ -122,7 +123,7 @@ export async function recordAffiliateProductClick(
 export type AffiliateSyncRepository = {
   claim(input: {
     provider: "adpick";
-    sourceType: "hotdeal";
+    sourceType: AffiliateSourceType;
     scheduledDate: string;
     startedAt: string;
   }): Promise<{

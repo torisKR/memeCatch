@@ -37,13 +37,16 @@ export default function OgImage() {
               justifyContent: "center",
             }}
           >
+            {/* Catch Signal 심볼 v2 — C 링 + 신호 dot + 말풍선 꼬리 (brand-mark.tsx 동기화) */}
             <svg width="38" height="38" viewBox="0 0 64 64" fill="none">
               <path
-                fill="#FFF9F5"
-                d="M14 8h36a10 10 0 0 1 10 10v22a10 10 0 0 1-10 10H26L10 60c-3 2.4-6-.2-6-3V18A10 10 0 0 1 14 8Z"
+                d="M 37.4 11.7 A 21 21 0 1 0 52.9 33.8"
+                stroke="#FFF9F5"
+                strokeWidth="10"
+                strokeLinecap="round"
               />
-              <circle cx="41" cy="29" r="7.5" fill="#FF5A1F" />
-              <path d="M15 29h11" stroke="#FF5A1F" strokeWidth="5.5" strokeLinecap="round" />
+              <circle cx="49.2" cy="20" r="6" fill="#FFF9F5" />
+              <path fill="#FFF9F5" d="M14.5 44.5 10.5 58.5 25.5 53.5Z" />
             </svg>
           </div>
           <div style={{ fontSize: 44, fontWeight: 800 }}>밈캐치</div>
@@ -68,10 +71,10 @@ export default function OgImage() {
             color: "#ff6b47",
           }}
         >
-          알려드려요
+          캐치.
         </div>
         <div style={{ marginTop: 32, fontSize: 32, color: "#9c99a3" }}>
-          뜻·유래부터 지금 써도 되는지까지 — 한국 밈 실시간 사전
+          뜻·유래·지금 써도 되는지까지 — 실시간 한국 밈 사전
         </div>
       </div>
     ),

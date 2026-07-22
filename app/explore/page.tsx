@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
@@ -19,6 +20,7 @@ import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { DailyTop10 } from "@/components/daily-top10";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
+import { EXPLORE_QUICK_LINKS } from "@/lib/quick-links";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -259,12 +261,37 @@ export default async function ExplorePage({
   ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
+    // 다크 web3 스킨은 layout의 body.theme-ink가 전역 적용(전 사이트 통일)
+    <main className="relative isolate overflow-x-clip bg-background pb-14 text-foreground">
+      <div aria-hidden className="ink-grid pointer-events-none absolute inset-0 -z-10" />
+      <div className="mx-auto max-w-5xl px-4 pt-6">
       <ExploreCollectionJsonLd />
-      <h1 className="text-2xl font-bold">밈 탐색</h1>
+      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+        Discover
+      </p>
+      <h1 className="mt-1 text-2xl font-bold">밈 탐색</h1>
       <p className="mt-1 text-base text-muted">
         지금 도는 밈을 카테고리·연도·난이도로 골라 봐요.
       </p>
+
+      {/* 추천 컬렉션 — 기본 진입에서만 노출(필터 중엔 결과에 집중), 전부 실쿼리 */}
+      {showTop10 && (
+        <nav aria-label="추천 컬렉션" className="mt-4">
+          <ul className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+            {EXPLORE_QUICK_LINKS.map((item) => (
+              <li key={item.key} className="shrink-0 snap-start">
+                <Link
+                  href={item.href}
+                  className="hover-glow-flame flex w-44 flex-col gap-1 rounded-2xl border border-border bg-surface p-3.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98]"
+                >
+                  <span className="truncate text-sm font-bold">{item.title}</span>
+                  <span className="truncate text-xs text-muted">{item.description}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
       <ExploreFilters platformCounts={platformCounts} />
 
@@ -273,6 +300,7 @@ export default async function ExplorePage({
 
       <div className="mt-5">
         <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />
+      </div>
       </div>
     </main>
   );

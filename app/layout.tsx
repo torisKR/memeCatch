@@ -58,10 +58,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdfcfa" },
-    { media: "(prefers-color-scheme: dark)", color: "#131316" },
-  ],
+  // 전 사이트 다크(잉크) 통일 — 브라우저 크롬도 단일 잉크 톤
+  themeColor: "#0f0f12",
 };
 
 export default function RootLayout({
@@ -84,7 +82,8 @@ export default function RootLayout({
           Pretendard preference while avoiding a third-party font waterfall.
         */}
       </head>
-      <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
+      {/* theme-ink 전역 적용 — 전 페이지 다크 web3 스킨(토큰 오버라이드) 통일 */}
+      <body className="theme-ink flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>
           <LocaleDocumentSync />
           <LocaleAutoDetect />

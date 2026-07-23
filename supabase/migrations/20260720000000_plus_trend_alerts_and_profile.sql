@@ -23,6 +23,7 @@ create index if not exists trend_alerts_user_idx
 alter table public.trend_alerts enable row level security;
 
 -- 본인 알림만 읽는다. 쓰기 정책 없음 → 삽입은 service_role(cron)/definer RPC로만.
+drop policy if exists trend_alerts_self_read on public.trend_alerts;
 create policy trend_alerts_self_read on public.trend_alerts
   for select using (user_id = (select auth.uid()));
 
@@ -113,6 +114,7 @@ create table if not exists public.profile_customizations (
 alter table public.profile_customizations enable row level security;
 
 -- 커스터마이징은 장식용(결제 정보 아님)이라 공개 읽기 허용. 쓰기는 정책 없음 → definer RPC로만.
+drop policy if exists profile_customizations_public_read on public.profile_customizations;
 create policy profile_customizations_public_read on public.profile_customizations
   for select using (true);
 

@@ -489,6 +489,120 @@ export type Database = {
         }
         Relationships: []
       }
+      media_sources: {
+        Row: {
+          canonical_url: string
+          channel_id: string | null
+          channel_name: string | null
+          created_at: string
+          duration_seconds: number | null
+          embeddable: boolean | null
+          external_id: string | null
+          id: string
+          last_checked_at: string | null
+          license_code: string | null
+          made_for_kids: boolean | null
+          metadata_expires_at: string | null
+          metadata_refreshed_at: string | null
+          platform: string
+          platform_published_at: string | null
+          public_status: string | null
+          removed_at: string | null
+          thumbnail_url: string | null
+          title: string | null
+        }
+        Insert: {
+          canonical_url: string
+          channel_id?: string | null
+          channel_name?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          embeddable?: boolean | null
+          external_id?: string | null
+          id?: string
+          last_checked_at?: string | null
+          license_code?: string | null
+          made_for_kids?: boolean | null
+          metadata_expires_at?: string | null
+          metadata_refreshed_at?: string | null
+          platform: string
+          platform_published_at?: string | null
+          public_status?: string | null
+          removed_at?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+        }
+        Update: {
+          canonical_url?: string
+          channel_id?: string | null
+          channel_name?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          embeddable?: boolean | null
+          external_id?: string | null
+          id?: string
+          last_checked_at?: string | null
+          license_code?: string | null
+          made_for_kids?: boolean | null
+          metadata_expires_at?: string | null
+          metadata_refreshed_at?: string | null
+          platform?: string
+          platform_published_at?: string | null
+          public_status?: string | null
+          removed_at?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      meme_claims: {
+        Row: {
+          claim_text: string
+          claim_type: string
+          confidence: string
+          created_at: string
+          id: string
+          meme_id: string
+          source_id: string | null
+          verified: boolean
+        }
+        Insert: {
+          claim_text: string
+          claim_type: string
+          confidence?: string
+          created_at?: string
+          id?: string
+          meme_id: string
+          source_id?: string | null
+          verified?: boolean
+        }
+        Update: {
+          claim_text?: string
+          claim_type?: string
+          confidence?: string
+          created_at?: string
+          id?: string
+          meme_id?: string
+          source_id?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_claims_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_claims_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "media_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meme_contents: {
         Row: {
           availability: Database["public"]["Enums"]["availability_status"]
@@ -538,6 +652,54 @@ export type Database = {
             columns: ["meme_id"]
             isOneToOne: false
             referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meme_media: {
+        Row: {
+          created_at: string
+          meme_id: string
+          review_state: string
+          reviewed_at: string | null
+          reviewer_note: string | null
+          rights_basis: string
+          source_id: string
+          source_role: string
+        }
+        Insert: {
+          created_at?: string
+          meme_id: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewer_note?: string | null
+          rights_basis?: string
+          source_id: string
+          source_role?: string
+        }
+        Update: {
+          created_at?: string
+          meme_id?: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewer_note?: string | null
+          rights_basis?: string
+          source_id?: string
+          source_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_media_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_media_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "media_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -844,6 +1006,12 @@ export type Database = {
           updated_at: string
           usage_context: Json
           usage_note: string | null
+          source_work_year: number | null
+          meme_first_seen_year: number | null
+          korea_viral_year: number | null
+          revival_years: number[]
+          year_precision: string
+          era_type: string | null
         }
         Insert: {
           aliases?: string[]
@@ -871,6 +1039,12 @@ export type Database = {
           updated_at?: string
           usage_context?: Json
           usage_note?: string | null
+          source_work_year?: number | null
+          meme_first_seen_year?: number | null
+          korea_viral_year?: number | null
+          revival_years?: number[]
+          year_precision?: string
+          era_type?: string | null
         }
         Update: {
           aliases?: string[]
@@ -898,6 +1072,12 @@ export type Database = {
           updated_at?: string
           usage_context?: Json
           usage_note?: string | null
+          source_work_year?: number | null
+          meme_first_seen_year?: number | null
+          korea_viral_year?: number | null
+          revival_years?: number[]
+          year_precision?: string
+          era_type?: string | null
         }
         Relationships: [
           {

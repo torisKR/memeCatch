@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/admin", label: "대시보드", icon: GaugeIcon },
   { href: "/admin/submissions", label: "제보 큐", icon: InboxIcon },
+  { href: "/admin/sources", label: "출처 검수", icon: LinkIcon },
   { href: "/admin/memes", label: "밈 관리", icon: BookIcon },
   { href: "/admin/reports", label: "신고", icon: FlagIcon },
   { href: "/admin/users", label: "사용자 관리", icon: UsersIcon },
@@ -70,6 +71,14 @@ function BookIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M19 16H8a3 3 0 0 0-3 3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function LinkIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

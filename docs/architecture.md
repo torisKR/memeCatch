@@ -61,6 +61,13 @@ AWS를 통째로 지워도 사이트는 그대로 동작한다(메일 기능만 
 Vercel Cron이 이미 있고 무료다.
 **다시 볼 트리거**: Vercel 함수 실행시간 제한에 실제로 막힐 때(예: 장시간 밈 수집 배치).
 
+### 출처 수집 파이프라인 (2026-07-23 추가)
+
+외부 미디어는 `yt-dlp` 대량 다운로드가 아니라 **공식 API·oEmbed 후보 발견 → 운영자 검수(`/admin/sources`) → 링크·공식 임베드만 게시** 구조다.
+`media_sources`/`meme_media`/`meme_claims` 원장은 RLS로 운영자만 열고, 승인된 행만 기존 `meme_contents`/`meme_sources`로 복사해 공개한다.
+YouTube 메타데이터는 30일 갱신·삭제 대응이 필요해 Vercel Cron(`/api/cron/source-refresh`, 17:00 UTC)이 7일 주기로 공개·임베드 상태를 재확인한다.
+YouTube 조회수 등 API 지표는 파생 점수에 쓰지 않는다(트렌드 점수는 자체 view_events만).
+
 ### 저장 계층(S3 IA) 전환을 넣지 않는다
 
 이미지가 객체당 약 25KB인데 `STANDARD_IA`는 **객체당 최소 128KB로 과금**되고

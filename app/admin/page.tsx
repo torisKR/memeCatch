@@ -16,7 +16,7 @@ export default async function AdminDashboardPage() {
 
   const stats = await getAdminStats();
 
-  const [pendingRes, reportsRes, jobRes, viewsRes] = await Promise.all([
+  const [pendingRes, reportsRes, sourcesRes, jobRes, viewsRes] = await Promise.all([
     supabase
       .from("meme_submissions")
       .select("id", { count: "exact", head: true })
@@ -25,6 +25,10 @@ export default async function AdminDashboardPage() {
       .from("reports")
       .select("id", { count: "exact", head: true })
       .eq("status", "open"),
+    supabase
+      .from("meme_media")
+      .select("meme_id", { count: "exact", head: true })
+      .eq("review_state", "pending"),
     supabase
       .from("job_runs")
       .select("ok, started_at, finished_at")
@@ -73,6 +77,12 @@ export default async function AdminDashboardPage() {
       label: "미처리 신고",
       value: `${reportsRes.count ?? 0}건`,
       sub: "확인이 필요해요",
+    },
+    {
+      href: "/admin/sources",
+      label: "출처 검수 대기",
+      value: `${sourcesRes.count ?? 0}건`,
+      sub: "승인 전 임베드 후보예요",
     },
     {
       href: null,

@@ -22,14 +22,17 @@ create index if not exists support_inquiries_status_idx
 alter table public.support_inquiries enable row level security;
 
 -- 본인 문의 + 운영자 전체 조회
+drop policy if exists support_inquiries_select on public.support_inquiries;
 create policy support_inquiries_select on public.support_inquiries
   for select using (user_id = (select auth.uid()) or is_operator());
 
 -- 본인 명의로만 작성
+drop policy if exists support_inquiries_insert on public.support_inquiries;
 create policy support_inquiries_insert on public.support_inquiries
   for insert with check (user_id = (select auth.uid()));
 
 -- 답변/상태 변경은 운영자만
+drop policy if exists support_inquiries_operator_update on public.support_inquiries;
 create policy support_inquiries_operator_update on public.support_inquiries
   for update using (is_operator()) with check (is_operator());
 

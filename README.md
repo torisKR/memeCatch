@@ -79,6 +79,30 @@ pnpm exec eslint .     # 린트
 
 > **참고**: `pnpm build`는 `--webpack`를 씁니다(Serwist가 Turbopack과 충돌). 개발(`pnpm dev`)은 Turbopack입니다.
 
+### 출처 수집 파이프라인
+
+원본 영상·이미지 파일은 저장하지 않고 **공식 API 후보 발견 → 메타데이터·임베드 가능 여부 확인 → 운영자 검수(`/admin/sources`) → 링크·임베드만 게시** 순서로 동작합니다.
+
+```bash
+# 1) 기존 meme_contents/meme_sources의 URL을 media_sources/meme_media 원장으로 정규화
+node scripts/backfill-media-sources.mjs [--dry-run]
+
+# 2) 기존 YouTube/Shorts 출처 일괄 상태 재확인 (videos.list 배치, YOUTUBE_API_KEY 필요)
+node scripts/refresh-youtube-sources.mjs [--limit=2000] [--dry-run]
+
+# 3) 출처가 없는 밈을 YouTube Data API로 검색해 검수 큐에 적재 (YOUTUBE_API_KEY 필요)
+node scripts/discover-youtube-candidates.mjs [--max=20] [--dry-run]
+
+# 4) TikTok/Instagram oEmbed 수집기의 후보 JSONL을 검수 큐에 적재
+node scripts/import-source-candidates.mjs <candidates.jsonl> [--dry-run]
+```
+
+- `media_sources` — 플랫폼 콘텐츠 1건 = 1행(정규 URL·외부 ID·메타데이터·30일 갱신 시한)
+- `meme_media` — 밈 ↔ 출처 다대다 + 권리 근거(`rights_basis`)·출처 역할(`source_role`)·검수 상태
+- `meme_claims` — 유래·의미 주장과 근거 출처 연결(검증 전 `verified=false`)
+- `memes.source_work_year` / `meme_first_seen_year` / `korea_viral_year` / `era_type` — YouTube 업로드 날짜와 밈 발생 연도를 분리
+- Vercel Cron `0 17 * * *` → `/api/cron/source-refresh`가 삭제·비공개·임베드 불가를 7일 주기로 확인하고 공개 임베드를 자동으로 내립니다(`meme_contents.availability='dead'`). YouTube 메타데이터는 30일 안에 갱신됩니다.
+
 ### 애드픽 핫딜 동기화 운영
 
 프로덕션에서는 Vercel Cron이 `0 21 * * *`에 `/api/cron/adpick-hotdeals`를 호출합니다. Vercel Cron 스케줄은 UTC 기준이며, 매일 21:00 UTC에 예약된 작업은 한국 시간으로 다음 날 06:00 KST에 해당합니다. Hobby 플랜에서는 예약된 일일 작업이 06:00:00–06:59:59 KST (21:00:00–21:59:59 UTC) 사이에 실행될 수 있습니다. 실패한 작업을 Vercel이 자동으로 재시도하지 않습니다.
@@ -113,6 +137,7 @@ curl --fail-with-body \
 | `R2_BUCKET` | (선택) R2 버킷 이름 (`memecatch-uploads`) |
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | (선택) AdSense 게시자 ID(`ca-pub-…`). 설정 시 스크립트·`/ads.txt`·계정 메타 자동 활성화 |
 | `NEXT_PUBLIC_GA_ID` | (선택) GA4 측정 ID(`G-…`). 설정 시 gtag 자동 로드 |
+| `YOUTUBE_API_KEY` | (선택) YouTube Data API v3 키 — 출처 후보 발견·메타데이터 재확인. 서버 전용 |
 | `ADPICK_AFFILIATE_ID` | 애드픽 ShoppingMate 제휴 ID. 서버 전용 |
 | `CRON_SECRET` | Vercel Cron 및 수동 동기화 요청 인증 비밀값. 서버 전용 |
 
@@ -122,8 +147,9 @@ curl --fail-with-body \
 
 Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 테이블:
 
-- `memes` — 밈 본문(뜻·유래·신호등·생애주기·검수 상태)
+- `memes` — 밈 본문(뜻·유래·신호등·생애주기·검수 상태·연도 분리 필드)
 - `meme_contents` / `meme_sources` — YouTube·TikTok·Instagram·Facebook·Threads 임베드와 출처 링크
+- `media_sources` / `meme_media` / `meme_claims` — 출처 수집 파이프라인 원장(운영자 전용, RLS)
 - `meme_submissions` · `reports` · `discussions` · `meme_reactions` · `saved_memes` · `generation_votes`
 - `profiles` — 닉네임·역할·관심 카테고리
 - `billing_identities` · `billing_subscriptions` · `billing_webhook_events` — Latpeed 결제 이메일 매칭·Plus 권한·서명 이벤트 감사 기록

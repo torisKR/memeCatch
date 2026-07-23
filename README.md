@@ -95,6 +95,13 @@ node scripts/discover-youtube-candidates.mjs [--max=20] [--dry-run]
 
 # 4) TikTok/Instagram oEmbed 수집기의 후보 JSONL을 검수 큐에 적재
 node scripts/import-source-candidates.mjs <candidates.jsonl> [--dry-run]
+
+# 5) 미검증 후보 검증 (YouTube videos.list / TikTok·Instagram oEmbed)
+node scripts/verify-youtube-pending.mjs [--limit=3000]
+node scripts/verify-oembed-sources.mjs [--limit=400]
+
+# 6) 자동 승인 — 공개+임베드 확인 + 제목/채널명 정확 일치분만 게시
+node scripts/auto-approve-source-candidates.mjs [--dry-run] [--limit=2000]
 ```
 
 - `media_sources` — 플랫폼 콘텐츠 1건 = 1행(정규 URL·외부 ID·메타데이터·30일 갱신 시한)

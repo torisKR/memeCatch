@@ -44,8 +44,11 @@ for (const meme of memes ?? []) {
   }
 }
 
-const stats = { rows: seeds.length, valid: 0, noMeme: 0, badUrl: 0, linked: 0 };
+const stats = { rows: seeds.length, valid: 0, noMeme: 0, badUrl: 0, linked: 0, dupMedia: 0 };
 const now = new Date().toISOString();
+// 같은 미디어가 /p/·/reel/ 등 다른 URL로 들어오는 경우 (platform, externalId) 중복 제거.
+// 단, 서로 다른 밈에 연결되는 것은 허용해야 하므로 (memeId, platform, externalId)로 제한한다.
+const seenPair = new Set();
 
 for (const seed of seeds) {
   const memeId =
@@ -61,6 +64,12 @@ for (const seed of seeds) {
     stats.badUrl += 1;
     continue;
   }
+  const pairKey = `${memeId}${normalized.platform}${normalized.externalId}`;
+  if (seenPair.has(pairKey)) {
+    stats.dupMedia += 1;
+    continue;
+  }
+  seenPair.add(pairKey);
   stats.valid += 1;
   if (DRY) {
     console.log(`[dry-run] ${seed.meme_title ?? memeId} ← ${normalized.canonicalUrl}`);
@@ -68,21 +77,26 @@ for (const seed of seeds) {
   }
 
   // 기존 행의 메타데이터를 덮지 않도록 신규만 삽입하고, 충돌 시 id만 다시 읽는다.
-  const inserted = await rest("media_sources", {
-    method: "POST",
-    headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
-    body: JSON.stringify({
-      platform: normalized.platform,
-      external_id: normalized.externalId,
-      canonical_url: normalized.canonicalUrl,
-      title: typeof seed.video_title === "string" ? seed.video_title.slice(0, 500) : null,
-      channel_name: typeof seed.channel === "string" ? seed.channel.slice(0, 200) : null,
-    }),
-  });
-  let source = Array.isArray(inserted) ? inserted[0] : inserted;
+  let source = null;
+  try {
+    const inserted = await rest("media_sources?on_conflict=canonical_url", {
+      method: "POST",
+      headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
+      body: JSON.stringify({
+        platform: normalized.platform,
+        external_id: normalized.externalId,
+        canonical_url: normalized.canonicalUrl,
+        title: typeof seed.video_title === "string" ? seed.video_title.slice(0, 500) : null,
+        channel_name: typeof seed.channel === "string" ? seed.channel.slice(0, 200) : null,
+      }),
+    });
+    source = Array.isArray(inserted) ? inserted[0] : inserted;
+  } catch {
+    // (platform, external_id) 충돌: 동일 미디어가 다른 canonical_url로 존재 → 기존 행 재사용
+  }
   if (!source?.id) {
     const existing = await rest(
-      `media_sources?select=id&canonical_url=eq.${encodeURIComponent(normalized.canonicalUrl)}`
+      `media_sources?select=id&or=(canonical_url.eq.${encodeURIComponent(normalized.canonicalUrl)},and(platform.eq.${normalized.platform},external_id.eq.${normalized.externalId}))&limit=1`
     );
     source = Array.isArray(existing) ? existing[0] : existing;
   }
@@ -106,6 +120,9 @@ for (const seed of seeds) {
     }),
   });
   stats.linked += 1;
+  if (stats.linked % 200 === 0) {
+    console.error(`진행: 연결 ${stats.linked} / 전체 ${stats.rows}`);
+  }
 }
 
 console.log(JSON.stringify({ dryRun: DRY, ...stats }));

@@ -35,6 +35,31 @@ export const CONTENT_DEPTH_THRESHOLDS = {
 /** 점수 만점 — 3(정의) + 2(유래) + 2(예문) + 2(출처) + 1(미디어) + 1(사용법) + 1(주의) + 1(태그) */
 export const MAX_CONTENT_DEPTH_SCORE = 13;
 
+/**
+ * 유래 필드에 들어온 자동 생성 상투구 — 산문·점수에서 **양쪽 다** 제외한다.
+ *
+ * 왜 필요한가: 2026-07 Wikimedia 대량 수입 배치 603건의 origin이 연도만 바꾼
+ * 동일 문장이었다. 설명이 평균 238자로 산문 하한(250자)에 못 미쳤는데 이 45자
+ * 상투구가 더해져 283자로 통과했다 — 전 사이트 공통 보일러플레이트가 색인 자격을
+ * 만들어 주는 셈이라 이 스코어러의 설계 의도("문서 고유 산문만 센다")에 정면으로
+ * 반한다. 해당 배포분은 비공개 처리했지만, 같은 형태의 수입이 다시 들어와도
+ * 문턱을 뚫지 못하도록 방어선을 코드에 남긴다.
+ *
+ * 새 패턴을 추가할 때는 반드시 "여러 문서에 글자 그대로 반복되는" 문장만 넣는다.
+ * 특정 밈에만 나오는 서술은 고유 산문이므로 넣으면 안 된다.
+ */
+export const BOILERPLATE_ORIGIN_PATTERNS: readonly RegExp[] = [
+  /공개\s*Wikimedia\s*기록을\s*바탕으로/,
+];
+
+/** 유래가 자동 생성 상투구인가 — 맞으면 고유 산문으로 세지 않는다. */
+export function isBoilerplateOrigin(origin: unknown): boolean {
+  if (typeof origin !== "string") return false;
+  const t = origin.trim();
+  if (!t) return false;
+  return BOILERPLATE_ORIGIN_PATTERNS.some((re) => re.test(t));
+}
+
 export type DepthSourceRef = { source_url?: string | null };
 export type DepthContentRef = {
   availability?: string | null;
@@ -131,7 +156,8 @@ export function contentDepth(meme: ContentDepthInput | null | undefined): Conten
   const t = CONTENT_DEPTH_THRESHOLDS;
 
   const descriptionChars = textLength(meme?.description);
-  const originChars = textLength(meme?.origin);
+  // 자동 생성 상투구는 이 문서만의 서술이 아니므로 0으로 본다(산문·점수 양쪽).
+  const originChars = isBoilerplateOrigin(meme?.origin) ? 0 : textLength(meme?.origin);
   const usageNoteChars = textLength(meme?.usage_note);
   const cautionChars = textLength(meme?.caution);
 

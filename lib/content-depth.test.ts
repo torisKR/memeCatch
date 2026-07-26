@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CONTENT_DEPTH_THRESHOLDS as T,
   contentDepth,
+  isBoilerplateOrigin,
   isIndexableMeme,
   type ContentDepthInput,
 } from "@/lib/content-depth";
@@ -241,5 +242,77 @@ describe("신호 집계", () => {
       expect(depth.proseChars).toBe(0);
       expect(depth.isThin).toBe(true);
     }
+  });
+});
+
+/**
+ * 자동 생성 상투구가 색인 자격을 만들어 주던 실제 사고에 대한 회귀 테스트.
+ *
+ * 2026-07-14 Wikimedia 수입 배치 603건의 origin이 연도만 다른 동일 문장이었고,
+ * 설명 평균 238자로는 산문 하한(250자)에 못 미쳤는데 이 45자 상투구가 더해져
+ * 통과했다. 그 결과 색인 677건 중 533건이 위키 파생분으로 채워졌다.
+ */
+describe("자동 생성 상투구 유래", () => {
+  /** 실제 프로덕션에 들어 있던 문장(연도만 바뀌어 603건에 반복) */
+  const TEMPLATED = "2020년 전후의 공개 Wikimedia 기록을 바탕으로 원본과 확산 맥락을 검수 중이에요.";
+
+  it("상투구를 판별한다", () => {
+    expect(isBoilerplateOrigin(TEMPLATED)).toBe(true);
+    expect(isBoilerplateOrigin(TEMPLATED.replace("2020", "2008"))).toBe(true);
+    expect(isBoilerplateOrigin("2002년 국내 축구 중계에서 붙은 별명이 굳어졌다.")).toBe(false);
+    expect(isBoilerplateOrigin("")).toBe(false);
+    expect(isBoilerplateOrigin(null)).toBe(false);
+    expect(isBoilerplateOrigin(undefined)).toBe(false);
+  });
+
+  it("상투구 유래는 산문 총량과 점수 양쪽에서 제외한다", () => {
+    const withTemplate = contentDepth({ description: chars(300), origin: TEMPLATED });
+    const withNothing = contentDepth({ description: chars(300), origin: null });
+
+    expect(withTemplate.signals.originChars).toBe(0);
+    expect(withTemplate.proseChars).toBe(withNothing.proseChars);
+    expect(withTemplate.score).toBe(withNothing.score);
+  });
+
+  it("고유 유래 서술은 그대로 센다", () => {
+    const own = contentDepth({ description: chars(300), origin: chars(60) });
+
+    expect(own.signals.originChars).toBe(60);
+    expect(own.proseChars).toBe(360);
+  });
+
+  it("설명 238자 + 상투구 유래는 얇음으로 판정한다(수입 배치 재현)", () => {
+    const imported: ContentDepthInput = {
+      description: chars(238),
+      origin: TEMPLATED,
+      usage_note: chars(25),
+      usage_examples: null,
+      meme_sources: [
+        { source_url: "https://en.wikipedia.org/wiki/Example" },
+        { source_url: "https://commons.wikimedia.org/wiki/File:Example" },
+      ],
+      meme_contents: [{ availability: "live", moderation_status: "approved" }],
+      meme_tags_map: [],
+    };
+
+    const depth = contentDepth(imported);
+
+    // 상투구를 뺀 고유 산문은 238자로 하한 미달.
+    expect(depth.signals.originChars).toBe(0);
+    expect(depth.proseChars).toBe(238);
+    expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS);
+    // 점수도 4점(정의 1 + 출처 2 + 미디어 1)으로 하한 미달 — 상투구가 주던 유래 1점이 사라진다.
+    expect(depth.score).toBe(4);
+    expect(depth.score).toBeLessThan(T.MIN_SCORE);
+    expect(depth.isThin).toBe(true);
+    expect(isIndexableMeme(imported)).toBe(false);
+
+    // 대조 — 같은 길이라도 고유 서술이면 두 관문을 모두 넘어 통과했다.
+    // 즉 수정 전에는 이 배치가 산문 283자 / 점수 5점으로 색인에 남았다.
+    const asOwnProse = contentDepth({ ...imported, origin: chars(TEMPLATED.length) });
+    expect(asOwnProse.proseChars).toBe(238 + TEMPLATED.length);
+    expect(asOwnProse.proseChars).toBeGreaterThanOrEqual(T.MIN_PROSE_CHARS);
+    expect(asOwnProse.score).toBe(T.MIN_SCORE);
+    expect(asOwnProse.isSubstantial).toBe(true);
   });
 });

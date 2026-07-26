@@ -1,9 +1,10 @@
-import { SENTIMENT, type SafetyLevel } from "@/lib/labels";
+import { SENTIMENT, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import type { Database, Json } from "@/lib/database.types";
 import { SafetyBadge } from "@/components/safety-badge";
 import {
   UsageContextRows,
   parseUsageContext,
+  type UsageContextRow,
 } from "@/components/usage-guide";
 
 type Sentiment = Database["public"]["Enums"]["meme_sentiment"];
@@ -11,6 +12,10 @@ type Sentiment = Database["public"]["Enums"]["meme_sentiment"];
 /**
  * 등급별 판정 기준 한 줄 — 밈 개별 사실이 아니라 신호등 산정 규칙 설명.
  * 개별 근거는 usage_note·caution 필드만 사용(별도 '근거' 데이터 발명 금지).
+ *
+ * 이 문장은 전 사이트 공통 범례라 **그 자체로는 이 카드를 정당화하지 못한다**.
+ * 밈 고유 신호(usage_context·usage_note·caution)가 하나도 없으면 카드를 렌더하지
+ * 않는다 — 모든 문서에 같은 문장만 남는 빈 템플릿이 되기 때문이다.
  */
 const LEVEL_MEANING: Record<SafetyLevel, string> = {
   green:
@@ -21,9 +26,21 @@ const LEVEL_MEANING: Record<SafetyLevel, string> = {
   red: "비하·혐오 등 부정적 맥락과 결합해 사용 자체를 권하지 않는 등급이에요.",
 };
 
-/** caution이 비어 있는 red/yellow 폴백 — 등급 일반 설명(개별 사유 발명 금지) */
-const CAUTION_FALLBACK =
-  "커뮤니티 사용례에서 비하·논쟁 맥락이 확인된 등급이에요.";
+/** 등급별 서술어 — 상황 이름과 결합해 밈별 판정 문장을 만든다. */
+const LEVEL_CLAUSE: Record<SafetyLevel, string> = {
+  green: "무리 없이 통하지만",
+  yellow: "맥락을 가려야 하고",
+  gray: "지금은 한 박자 늦게 들리고",
+  red: "쓰지 않는 게 좋고",
+};
+
+/** 문장 마지막 절은 종결형으로 — "…해요."로 끝맺는다. */
+const LEVEL_CLAUSE_FINAL: Record<SafetyLevel, string> = {
+  green: "무리 없이 통해요",
+  yellow: "맥락을 가려야 해요",
+  gray: "지금은 한 박자 늦게 들려요",
+  red: "쓰지 않는 게 좋아요",
+};
 
 const CAUTION_TONE: Record<"red" | "yellow", string> = {
   red: "bg-safety-red-bg text-safety-red",
@@ -31,12 +48,49 @@ const CAUTION_TONE: Record<"red" | "yellow", string> = {
 };
 
 /**
+ * usage_context(밈마다 다른 실제 데이터)로 이 밈 전용 판정 문장을 조립한다.
+ * 예) {friends:"green", work:"yellow", sns:"red"}
+ *  → "친구끼리는 무리 없이 통하지만, 직장에서는 맥락을 가려야 하고,
+ *     공개 SNS에서는 쓰지 않는 게 좋아요."
+ *
+ * 같은 등급끼리 묶어 상황 이름을 나열할 뿐 없는 사실을 덧붙이지 않는다.
+ * 상황이 하나도 없으면 null — 호출부가 공통 범례로 물러난다.
+ */
+function contextVerdict(rows: UsageContextRow[]): string | null {
+  if (rows.length === 0) return null;
+
+  // 등급별로 상황을 모은다. 순서는 위험도 낮은 → 높은 순으로 읽히게 고정.
+  const order: SafetyLevel[] = ["green", "yellow", "gray", "red"];
+  const grouped = order
+    .map((level) => ({
+      level,
+      names: rows.filter((r) => r.level === level).map((r) => USAGE_CONTEXTS[r.key]),
+    }))
+    .filter((g) => g.names.length > 0);
+
+  if (grouped.length === 0) return null;
+
+  return (
+    grouped
+      .map((g, i) => {
+        const isLast = i === grouped.length - 1;
+        const clause = isLast ? LEVEL_CLAUSE_FINAL[g.level] : LEVEL_CLAUSE[g.level];
+        return `${g.names.join("·")}는 ${clause}`;
+      })
+      .join(", ") + "."
+  );
+}
+
+/**
  * "이 판정의 근거" — 상세에 흩어져 있던 신호등·usage_note·caution·sentiment를
  * 판정 근거 서사 한 카드로 구조화(CTO 피드백: '안 되는 것'과 그 근거).
- * (a) 등급+의미 한 줄 → 근거 문장(usage_note)
+ * (a) 등급 + 판정 문장 — usage_context로 조립한 밈별 문장, 없으면 등급 공통 범례
+ *     → 근거 문장(usage_note)
  * (b) 상황별 가·불가(usage_context — UsageGuide의 행 목록 재사용)
  * (c) sentiment(논쟁 중) 보조 칩
- * (d) caution — red/yellow인데 caution이 없으면 등급 일반 설명으로 폴백
+ * (d) caution — 실제 사유가 있을 때만. 없다고 일반 문구로 채우지 않는다.
+ *
+ * 고유 신호(usage_context·usage_note·caution)가 전무하면 null을 반환한다.
  */
 export function SafetyRationale({
   level,
@@ -54,7 +108,14 @@ export function SafetyRationale({
   const rows = parseUsageContext(context);
   const sentimentChip = SENTIMENT[sentiment].user;
   const isRisky = level === "red" || level === "yellow";
-  const cautionText = caution || (isRisky ? CAUTION_FALLBACK : null);
+  const noteText = note?.trim() || null;
+  // 근거는 실제 데이터일 때만 — 사유가 없다고 등급 일반 문구로 채우지 않는다.
+  const cautionText = caution?.trim() || null;
+  const verdict = contextVerdict(rows);
+
+  // 밈 고유 신호가 하나도 없으면 카드를 통째로 숨긴다. 남는 건 전 사이트 공통
+  // 범례 한 줄뿐이라, 렌더하면 모든 상세가 같은 문장을 반복하는 빈 껍데기가 된다.
+  if (!verdict && !noteText && !cautionText) return null;
 
   return (
     <section
@@ -65,17 +126,18 @@ export function SafetyRationale({
         이 판정의 근거
       </h2>
 
-      {/* (a) 등급과 그 의미 + 근거 문장(usage_note) */}
+      {/* (a) 등급 + 판정 문장. usage_context가 있으면 이 밈 전용 문장을 쓰고,
+              없을 때만 등급 공통 범례로 물러난다(고유 서술 우선). */}
       <div>
         <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <SafetyBadge level={level} />
           <span className="text-base leading-relaxed">
-            {LEVEL_MEANING[level]}
+            {verdict ?? LEVEL_MEANING[level]}
           </span>
         </p>
-        {note && (
+        {noteText && (
           <p className="mt-2 whitespace-pre-line text-base leading-relaxed text-muted">
-            {note}
+            {noteText}
           </p>
         )}
       </div>

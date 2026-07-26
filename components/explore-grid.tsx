@@ -160,12 +160,12 @@ export function buildMemesQuery(
   return q;
 }
 
-async function fetchPage(
+/** 지정한 오프셋부터 PAGE_SIZE만큼 — 서버가 소비한 행 수에서 이어받기 위해 오프셋 기준. */
+async function fetchFrom(
   supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
-  page: number
+  from: number
 ): Promise<MemeListItem[]> {
-  const from = page * PAGE_SIZE;
   const { data, error } = await buildMemesQuery(supabase, filters).range(
     from,
     from + PAGE_SIZE - 1
@@ -178,14 +178,29 @@ export function ExploreGrid({
   initial,
   filters,
   excludeIds = [],
+  initialOffset,
+  hasMoreInitial,
 }: {
   initial: MemeListItem[];
   filters: ExploreFilters;
   /** 스트림에서 항상 제외할 밈 id (예: 현재 보고 있는 밈) */
   excludeIds?: string[];
+  /**
+   * 서버가 이미 소비한 행 수 — 다음 페이지는 여기서 이어받는다.
+   * 기본값은 initial.length(서버가 보여 준 만큼만 소비한 일반적인 경우).
+   * 서버가 조회한 것보다 적게 렌더한 경우(예: 상세의 '이어서 볼 만한 밈'은
+   * 링크 수를 줄이려 앞부분만 보여 준다) 실제 소비 행 수를 넘겨야 목록이 건너뛰지 않는다.
+   */
+  initialOffset?: number;
+  /**
+   * 첫 화면 뒤로 더 있는지 — 기본값은 "첫 묶음이 꽉 찼으면 더 있다"는 추정.
+   * 서버가 의도적으로 적게 렌더한 경우 추정이 빗나가므로 명시할 수 있게 열어 둔다.
+   */
+  hasMoreInitial?: boolean;
 }) {
+  const startHasMore = hasMoreInitial ?? initial.length >= PAGE_SIZE;
   const [items, setItems] = useState<MemeListItem[]>(initial);
-  const [hasMore, setHasMore] = useState(initial.length >= PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -193,8 +208,8 @@ export function ExploreGrid({
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
   // 모바일 브라우저의 연속 콜백에서도 같은 페이지를 중복 요청하지 않는다.
   const loadingRef = useRef(false);
-  const pageRef = useRef(0);
-  const hasMoreRef = useRef(initial.length >= PAGE_SIZE);
+  const offsetRef = useRef(initialOffset ?? initial.length);
+  const hasMoreRef = useRef(startHasMore);
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -207,14 +222,15 @@ export function ExploreGrid({
     loadingRef.current = true;
     setLoading(true);
     setFailed(false);
-    const next = pageRef.current + 1;
+    const from = offsetRef.current;
     try {
       const supabase = createClient();
-      const batch = await fetchPage(supabase, filters, next);
+      const batch = await fetchFrom(supabase, filters, from);
       const fresh = batch.filter((m) => !seenRef.current.has(m.id));
       for (const m of fresh) seenRef.current.add(m.id);
       setItems((prev) => [...prev, ...fresh]);
-      pageRef.current = next;
+      // 중복 제거 전 조회한 행 수만큼 전진 — 걸러진 행을 다시 읽지 않는다.
+      offsetRef.current = from + batch.length;
       const nextHasMore = batch.length >= PAGE_SIZE;
       hasMoreRef.current = nextHasMore;
       setHasMore(nextHasMore);

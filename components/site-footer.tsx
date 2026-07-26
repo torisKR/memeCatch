@@ -12,6 +12,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
  */
 const FOOTER_LINKS = [
   { href: "/about", label: "about" },
+  { href: "/editorial", label: "editorial" },
   { href: "/privacy", label: "privacy" },
   { href: "/terms", label: "terms" },
   { href: "/rankings", label: "rankings" },
@@ -58,18 +59,23 @@ export function SiteFooter() {
             </ul>
           </nav>
           <div className="mt-3 text-[13px] leading-relaxed text-muted">
-            <details className="group sm:hidden">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-medium text-foreground [&::-webkit-details-marker]:hidden">
+            {/*
+              고지 문구는 문서에 정확히 한 번만 출력한다. 예전에는 모바일용
+              <details>와 데스크톱용 <div>에 같은 문단을 각각 렌더하고 CSS로
+              한쪽만 보여줬는데, HTML에는 두 벌이 그대로 담겨 크롤러·심사
+              도구에는 같은 문단이 연속 2회 반복되는 중복 텍스트로 읽혔다.
+              지금은 하나만 렌더하고, summary만 모바일에서 노출해 접을 수
+              있게 한다(기본 펼침 — 본문이 상호작용 뒤에 숨지 않게).
+            */}
+            <details className="group" open>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-medium text-foreground sm:hidden [&::-webkit-details-marker]:hidden">
                 {messages.legalSummary}
                 <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" />
               </summary>
-              <div className="space-y-1.5 pb-2">
+              <div className="space-y-1.5 pb-2 sm:pb-0">
                 <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
               </div>
             </details>
-            <div className="hidden space-y-1.5 sm:block">
-              <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
-            </div>
             <p className="mt-2">© {new Date().getFullYear()} {messages.brand}</p>
           </div>
         </div>

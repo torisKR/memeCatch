@@ -22,7 +22,11 @@ function Script({ data }: { data: object }) {
   );
 }
 
-/** Organization — 전 페이지(layout) 1회. sameAs로 엔티티 그래프 연결 */
+/**
+ * Organization — 전 페이지(layout) 1회. sameAs로 엔티티 그래프 연결.
+ * publishingPrinciples/correctionsPolicy는 /editorial(편집 원칙) 실문서를
+ * 가리킨다 — 발행자 신뢰신호(E-E-A-T). 없는 문서를 가리키면 안 된다.
+ */
 export function OrganizationJsonLd() {
   return (
     <Script
@@ -37,6 +41,21 @@ export function OrganizationJsonLd() {
         description:
           "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 알려주는 한국 밈 실시간 사전.",
         email: CONTACT_EMAIL,
+        // 운영 주체를 명시 — 1인 운영임을 구조화 데이터에서도 숨기지 않는다.
+        founder: {
+          "@type": "Person",
+          name: "toris-dev",
+          url: "https://github.com/toris-dev",
+        },
+        publishingPrinciples: `${SITE_URL}/editorial`,
+        correctionsPolicy: `${SITE_URL}/editorial#corrections`,
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: CONTACT_EMAIL,
+          url: `${SITE_URL}/support`,
+          availableLanguage: ["ko", "en"],
+        },
         sameAs: [
           "https://github.com/toris-dev/memeCatch",
           "https://fairy.hada.io/@toris-dev",

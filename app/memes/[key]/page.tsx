@@ -32,6 +32,9 @@ import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
 import { ContextNav } from "@/components/context-nav";
 import { preferredSourceUrl, sourceLinksWithContent } from "@/lib/source-links";
+import { SourceEvidence } from "@/components/source-evidence";
+import { DocStatusNote } from "@/components/doc-status-note";
+import { isIndexableMeme } from "@/lib/content-depth";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
@@ -54,6 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: path },
+    // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/content-depth.ts).
+    // follow는 유지 — 페이지는 200으로 살아 있고, 관련 밈·출처 링크로 크롤이 전파돼야 한다.
+    ...(isIndexableMeme(meme) ? {} : { robots: { index: false, follow: true } }),
     // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 밈별 og 명시
     openGraph: {
       type: "website",
@@ -76,9 +82,11 @@ export default async function MemeDetailPage({ params }: Props) {
     .map((t) => t.tags?.name)
     .filter((n): n is string => !!n);
   const [related, reactionCounts] = await Promise.all([
+    // 첫 화면 링크 수를 줄이려 6개만 — 나머지 탐색은 하단 무한 스크롤이 담당한다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
-      tagIds
+      tagIds,
+      6
     ),
     getReactionCounts(meme.id),
   ]);
@@ -212,6 +220,11 @@ export default async function MemeDetailPage({ params }: Props) {
         <div className="mt-6 min-w-0 space-y-5 lg:mt-0">
           <AnswerCard meme={meme} />
 
+          {/* 정리 중 안내 — content-depth가 '얇음'으로 본 문서에만. 방치된 스텁이 아니라
+              확인된 만큼만 공개하는 관리 문서임을 밝히고 제보 경로를 연다.
+              충실도 판정은 generateMetadata의 robots와 같은 입력(meme)을 쓴다. */}
+          <DocStatusNote meme={meme} title={meme.title} />
+
           {/* 판정 근거 한 블록 — 신호등 의미·usage_note·상황별 가이드·sentiment·caution 통합 */}
           <SafetyRationale
             level={meme.safety_level}
@@ -243,45 +256,49 @@ export default async function MemeDetailPage({ params }: Props) {
                   <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
                     {meme.origin}
                   </p>
-                  <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-                    <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                      {CATEGORIES[meme.category].user}
-                    </span>
-                    {meme.origin_year && (
-                      <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                        {meme.origin_year}년생 밈
-                      </span>
-                    )}
-                    {tagNames.map((name) => (
-                      <span
-                        key={name}
-                        className="rounded-full bg-surface-2 px-2.5 py-1 font-medium"
-                      >
-                        #{name}
-                      </span>
-                    ))}
-                  </p>
-                  {/* 상시 출처 인용 — E-E-A-T: 유래 주장 바로 아래에 근거 링크 */}
-                  {sourceLinks.length > 0 && (
-                    <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                      <span className="font-semibold">출처:</span>
-                      {sourceLinks.slice(0, 3).map((s, i) => (
-                        <a
-                          key={s.source_url ?? i}
-                          href={s.source_url ?? "#"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2 transition-colors hover:text-foreground"
-                        >
-                          {s.source_url?.includes("namu.wiki")
-                            ? "나무위키"
-                            : s.platform || "원문"}
-                          <span aria-hidden className="text-xs">↗</span>
-                        </a>
-                      ))}
-                    </p>
-                  )}
                 </div>
+              )}
+
+              {/* 분류·시기·태그 — 유래 유무와 무관하게 이 밈이 가진 실제 메타데이터라
+                  origin이 비어도 노출한다(있는 정보를 숨기지 않는다). */}
+              <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
+                  {CATEGORIES[meme.category].user}
+                </span>
+                {meme.origin_year && (
+                  <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
+                    {meme.origin_year}년생 밈
+                  </span>
+                )}
+                {tagNames.map((name) => (
+                  <span
+                    key={name}
+                    className="rounded-full bg-surface-2 px-2.5 py-1 font-medium"
+                  >
+                    #{name}
+                  </span>
+                ))}
+              </p>
+
+              {/* 상시 출처 인용 — E-E-A-T: 본문 주장 바로 아래에 근거 링크 */}
+              {sourceLinks.length > 0 && (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                  <span className="font-semibold">출처:</span>
+                  {sourceLinks.slice(0, 3).map((s, i) => (
+                    <a
+                      key={s.source_url ?? i}
+                      href={s.source_url ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2 transition-colors hover:text-foreground"
+                    >
+                      {s.source_url?.includes("namu.wiki")
+                        ? "나무위키"
+                        : s.platform || "원문"}
+                      <span aria-hidden className="text-xs">↗</span>
+                    </a>
+                  ))}
+                </p>
               )}
               {/* 신선도 신호 — 검수·갱신 시점을 독자에게 노출 (E-E-A-T) */}
               <p className="border-t border-border pt-3 text-sm text-muted">
@@ -299,6 +316,10 @@ export default async function MemeDetailPage({ params }: Props) {
 
           {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
           <UsageExamples examples={usageExamples} />
+
+          {/* 참고 자료 근거 목록 — 제목 있는 출처가 하나도 없으면 렌더하지 않는다.
+              유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
+          <SourceEvidence sources={meme.meme_sources} />
 
           {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
               권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}

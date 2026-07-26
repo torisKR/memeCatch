@@ -3,13 +3,31 @@ import { SITE_URL } from "@/lib/site";
 import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
+import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
 
 
 /** 1시간마다 재생성 — 새로 공개된 밈 반영 */
 export const revalidate = 3600;
 
-/** 공개(=인덱싱 대상) 밈 상태: approved + limited. 상세 페이지가 200으로 렌더하는 전 범위. */
+/** 공개(=200으로 렌더되는) 밈 상태: approved + limited. */
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
+
+/**
+ * 충실도 판정에 필요한 신호까지 함께 실어 온다.
+ * 상세 페이지의 robots 판정(app/memes/[key]/page.tsx)과 **같은 신호**를 넘겨야
+ * "사이트맵엔 있는데 noindex" 같은 모순이 생기지 않는다. 신호를 하나 빼면
+ * 그 밈은 점수가 낮게 나와 조용히 색인에서 빠지므로 컬럼 변경 시 양쪽을 함께 본다.
+ */
+const DEPTH_SELECT =
+  "short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples," +
+  " meme_sources(source_url), meme_contents(availability, moderation_status)," +
+  " meme_tags_map(tag_id)";
+
+type SitemapMemeRow = ContentDepthInput & {
+  short_id: string;
+  slug: string;
+  updated_at: string;
+};
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createStaticClient();
@@ -44,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     // 주요 정적 페이지 — 탐색·커뮤니티·정책
-    ...(["/explore", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/privacy", "/terms"] as const).map(
+    ...(["/explore", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/editorial", "/privacy", "/terms"] as const).map(
       (path) => ({
         url: `${SITE_URL}${path}`,
         lastModified: homeLastMod,
@@ -54,21 +72,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ),
   ];
 
-  // 공개 밈 전체(approved + limited) — 상세가 200으로 렌더하는 전 범위를 인덱싱 노출.
-  // limited(정보 변동 가능 배너만 붙는 공개 페이지)를 빠뜨리면 사이트맵 발견이 지연됨.
+  // 공개 밈 중 **콘텐츠가 충실한 것만** 색인 노출한다.
+  // 공개(approved + limited) 전량을 제출하면 정의 130~150자짜리 얇은 문서가
+  // 사이트맵의 대부분을 차지해 대량생산 얇은 콘텐츠로 평가된다(애드센스 거부 사유).
+  // 얇은 밈의 상세 페이지는 그대로 200으로 살아 있고 noindex,follow만 붙는다 —
+  // 데이터는 삭제하지 않으며 사이트맵에서 발견 경로만 뺀다.
   // 페이지 단위로 순회 — 사이트맵 상한 5만 URL.
   const PAGE = 1000;
   for (let from = 0; from < 49000; from += PAGE) {
     const { data, error } = await supabase
       .from("memes")
-      .select("short_id, slug, updated_at")
+      .select(DEPTH_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .order("published_at", { ascending: false })
       .range(from, from + PAGE - 1);
 
-    if (error || !data || data.length === 0) break;
+    // 조회 실패를 조용히 삼키면 사이트맵이 정적 페이지 25개짜리로 쪼그라든 채
+    // 그대로 배포된다(밈 URL 0개). 색인 노출면 자체가 사라지는 사고라 로그를 남긴다.
+    // 제어 흐름은 그대로 — 부분 사이트맵이 예외로 페이지 전체를 죽이는 것보다 낫다.
+    if (error) {
+      console.error(`[sitemap] 밈 조회 실패 (from=${from}):`, error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
 
-    for (const meme of data) {
+    for (const meme of data as unknown as SitemapMemeRow[]) {
+      if (!isIndexableMeme(meme)) continue;
       entries.push({
         url: `${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}`,
         lastModified: new Date(meme.updated_at),

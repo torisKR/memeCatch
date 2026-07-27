@@ -85,6 +85,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select(DEPTH_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .order("published_at", { ascending: false })
+      // 고유 타이브레이커 필수 — published_at은 동점이 매우 많다(일괄 등록으로
+      // 공개 3,905건 중 2,835건이 같은 타임스탬프를 공유). 단일 컬럼 정렬로
+      // range() 페이지를 나누면 페이지마다 정렬이 달라져 경계에서 같은 행을
+      // 다시 읽고 다른 행은 건너뛴다. 실제로 사이트맵에 URL 2건이 중복 등재되고
+      // 충실한 문서 1건이 누락됐다.
+      .order("id", { ascending: false })
       .range(from, from + PAGE - 1);
 
     // 조회 실패를 조용히 삼키면 사이트맵이 정적 페이지 25개짜리로 쪼그라든 채

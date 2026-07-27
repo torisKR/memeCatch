@@ -59,7 +59,7 @@ const PUBLIC_STATUSES = ["approved", "limited"] as const;
 export const LIST_SELECT =
   `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative)` as const;
 
-/** 오늘의 급상승 — trend_score desc, lifecycle=rising 우선(안정 정렬) */
+/** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
   try {
     const supabase = createStaticClient();
@@ -67,14 +67,13 @@ export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
       .from("memes")
       .select(LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
+      .or("origin_year.eq.2026,korea_viral_year.eq.2026")
       .order("trend_score", { ascending: false })
+      .order("published_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(limit);
     if (error || !data) return [];
-    return [...(data as MemeListItem[])].sort(
-      (a, b) =>
-        Number(b.lifecycle_status === "rising") -
-        Number(a.lifecycle_status === "rising")
-    );
+    return data as MemeListItem[];
   } catch {
     return [];
   }

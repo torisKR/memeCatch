@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ProductsPageContent } from "@/components/products-page-content";
 import { getAffiliateStorefront } from "@/lib/affiliate/repository.server";
 import { PAGE_COPY } from "@/lib/i18n-pages";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * ISR 로케일 함정 주의: 여기서 getRequestLocale()(=headers())를 읽으면 페이지가
@@ -52,6 +53,7 @@ export default async function ProductsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+      <AdsenseScript />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

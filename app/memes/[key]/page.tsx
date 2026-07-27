@@ -34,6 +34,7 @@ import { ContextNav } from "@/components/context-nav";
 import { preferredSourceUrl, sourceLinksWithContent } from "@/lib/source-links";
 import { SourceEvidence } from "@/components/source-evidence";
 import { DocStatusNote } from "@/components/doc-status-note";
+import { AdsenseScript } from "@/components/adsense-script";
 import { isIndexableMeme } from "@/lib/content-depth";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
@@ -117,6 +118,14 @@ export default async function MemeDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">
+      {/*
+        광고는 충실도 판정을 통과한 문서에서만 게재한다. 얇은 문서는 noindex로
+        색인에서 빠지지만 사람은 여전히 도달하므로, 로더를 렌더하지 않아야
+        "저품질 화면에 광고 게재"(게시자 정책 인벤토리 가치)를 피할 수 있다.
+        색인 판정과 같은 함수를 쓰므로 기준이 갈리지 않는다 — 문서가 채워지면
+        색인과 광고가 함께 돌아온다.
+      */}
+      {isIndexableMeme(meme) && <AdsenseScript />}
       {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상 */}
       <MemeWebPageJsonLd
         name={meme.title}

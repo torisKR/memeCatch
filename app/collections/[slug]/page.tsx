@@ -8,6 +8,7 @@ import type { MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { memePathFrom } from "@/lib/labels";
+import { AdsenseScript } from "@/components/adsense-script";
 
 
 /** 테마별 밈 모음 허브. slug는 미리 열거하지만 문서는 요청별 SSR로 렌더한다. */
@@ -102,6 +103,7 @@ export default async function CollectionPage({
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+      <AdsenseScript />
       {/* CollectionPage + ItemList — 허브의 구조화 데이터 */}
       <script
         type="application/ld+json"

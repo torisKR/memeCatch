@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
 import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
 import { TimelineView, type TimelineDecade } from "@/components/timeline-view";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * 레인 A — /timeline: 한국 밈 연표 (1990년대 ~ 2020년대).
@@ -122,6 +123,7 @@ export default async function TimelinePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+      <AdsenseScript />
       {schemaItems.length > 0 && (
         <script
           type="application/ld+json"

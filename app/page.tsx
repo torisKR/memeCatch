@@ -16,6 +16,7 @@ import {
   SafetySignalSection,
   SubmitCtaSection,
 } from "@/components/home-sections";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /** 홈 문서는 요청별 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 300;
@@ -41,6 +42,7 @@ export default async function Home() {
   return (
     // 다크 web3 스킨은 layout의 body.theme-ink가 전역 적용(전 사이트 통일)
     <main className="relative isolate overflow-x-clip bg-background pb-12 text-foreground">
+      <AdsenseScript />
       {/* 잉크 배경 미세 그리드 — 히어로 §12 문법을 본문 전체로 확장(정적 장식) */}
       <div aria-hidden className="ink-grid pointer-events-none absolute inset-0 -z-10" />
       <WebSiteJsonLd />

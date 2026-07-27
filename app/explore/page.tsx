@@ -21,6 +21,7 @@ import { DailyTop10 } from "@/components/daily-top10";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
 import { EXPLORE_QUICK_LINKS } from "@/lib/quick-links";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -263,6 +264,7 @@ export default async function ExplorePage({
   return (
     // 다크 web3 스킨은 layout의 body.theme-ink가 전역 적용(전 사이트 통일)
     <main className="relative isolate overflow-x-clip bg-background pb-14 text-foreground">
+      <AdsenseScript />
       <div aria-hidden className="ink-grid pointer-events-none absolute inset-0 -z-10" />
       <div className="mx-auto max-w-5xl px-4 pt-6">
       <ExploreCollectionJsonLd />

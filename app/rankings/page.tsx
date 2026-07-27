@@ -12,6 +12,7 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /** 요청별 문서 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 600;
@@ -152,6 +153,7 @@ export default async function RankingsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
+      <AdsenseScript />
       {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
       <h1 className="text-2xl font-bold">랭킹</h1>
       <p className="mt-1 text-base text-muted">지금 한국에서 도는 밈, 순위로 모아봤어요.</p>

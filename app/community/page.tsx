@@ -9,6 +9,7 @@ import {
   POST_SELECT,
   type CommunityPostRow,
 } from "./shared";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * 레인 3 — 커뮤니티 글 목록 (최신순, 서버 컴포넌트 + 페이지네이션).
@@ -68,6 +69,7 @@ export default async function CommunityPage({
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
+      <AdsenseScript />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

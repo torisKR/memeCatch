@@ -15,6 +15,7 @@ import {
   type CommunityCommentRow,
   type CommunityPostRow,
 } from "../shared";
+import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * 레인 3 — 커뮤니티 글 상세 + 댓글.
@@ -90,6 +91,7 @@ export default async function CommunityPostPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 pb-14 pt-6">
+      <AdsenseScript />
       <ForumPostingJsonLd
         postId={post.id}
         title={post.title}

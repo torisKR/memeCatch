@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import Script from "next/script";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { NavProgress } from "@/components/nav-progress";
 import { BottomNav } from "@/components/bottom-nav";
@@ -92,16 +91,14 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>
-          {/* AdSense — 심사·게재 공통 스크립트 (env 설정 시에만 로드) */}
-          {ADSENSE_CLIENT && (
-            <Script
-              id="adsense"
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-              crossOrigin="anonymous"
-              // afterInteractive — lazyOnload면 AdSense 심사 크롤러가 광고 코드를 감지 못할 수 있음
-              strategy="afterInteractive"
-            />
-          )}
+          {/*
+            AdSense 로더는 여기(전역)에 두지 않는다 — components/adsense-script.tsx를
+            광고를 게재할 페이지에서 각자 렌더한다. 게시자 정책 "인벤토리 가치"가
+            화면 단위로 적용되는데, 이 사이트는 수동 슬롯 없는 Auto Ads라 로더가
+            뜨면 그 화면 어디에든 광고가 주입되기 때문이다. 전역에 두면 얇은 밈
+            상세·로그인·어드민 같은 화면에도 광고가 게재된다.
+            아래 google-adsense-account 메타(사이트 소유확인)는 전역 유지가 맞다.
+          */}
           {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}
           {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
           <OrganizationJsonLd />

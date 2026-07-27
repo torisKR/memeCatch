@@ -56,3 +56,15 @@ public/swe-worker-*.js
 
 # 로컬 에이전트 작업트리·세션·토큰 (중첩 node_modules/.env 포함)
 .claude/
+
+# 로컬 도구 산출물 (재생성 가능 — 스크린샷·스크랩 캐시·배치 로그·디버깅 스냅샷)
+.playwright-mcp/
+.playwright-cli/
+.firecrawl/
+.gjc/
+.local/
+graphify-out/
+# scripts/daily-source-discovery.sh의 실행 로그
+output/
+# AdSense 봇 디버깅용으로 저장한 라이브 페이지 사본
+adsbot.html

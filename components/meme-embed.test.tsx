@@ -20,6 +20,27 @@ const tiktokContent = {
 };
 
 describe("MemeEmbed", () => {
+  it("renders YouTube Shorts as a playable video instead of a source fallback", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          platform: "YouTube Shorts",
+          content_id: "abcdefghijk",
+          url: "https://www.youtube.com/shorts/abcdefghijk",
+          thumbnail_url: null,
+          availability: "live",
+          caption: null,
+        }}
+        title="쇼츠 밈"
+        isRepresentative={false}
+      />
+    );
+
+    expect(html).toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
+    expect(html).toContain("쇼츠 밈 관련 영상 재생");
+    expect(html).not.toContain("원본 콘텐츠는 출처에서 볼 수 있어요");
+  });
+
   it("includes the TikTok iframe in the initial server markup", () => {
     const html = renderToStaticMarkup(
       <MemeEmbed

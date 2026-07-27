@@ -17,6 +17,7 @@ import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { MeteredGate } from "@/components/metered-gate";
 import { AuthInvite } from "@/components/auth-invite";
 import { MemeEmbed } from "@/components/meme-embed";
+import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
 import { SaveButton } from "@/components/save-button";
@@ -112,9 +113,14 @@ export default async function MemeDetailPage({ params }: Props) {
   const usageExamples = (meme as typeof meme & { usage_examples?: unknown })
     .usage_examples;
 
+  const representativePlatform = sourcePlatformFromReference({
+    platform: representative?.platform,
+    url: representative?.url,
+  });
   const isYouTubeRep =
-    representative?.platform?.toLowerCase() === "youtube" &&
-    !!representative.content_id;
+    (representativePlatform === "youtube" ||
+      representativePlatform === "youtube_shorts") &&
+    !!representative?.content_id;
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">

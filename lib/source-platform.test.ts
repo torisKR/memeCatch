@@ -11,6 +11,12 @@ describe("source platform normalization", () => {
   it("distinguishes YouTube Shorts from regular YouTube", () => {
     expect(
       sourcePlatformFromReference({
+        platform: "YouTube Shorts",
+        url: null,
+      })
+    ).toBe("youtube_shorts");
+    expect(
+      sourcePlatformFromReference({
         platform: "youtube",
         url: "https://www.youtube.com/shorts/abc123",
       })

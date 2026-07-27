@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CATEGORIES, type MemeCategory } from "@/lib/labels";
 import type { MemeContentRow } from "@/lib/queries";
 import { isContextSourceUrl } from "@/lib/source-links";
+import { sourcePlatformFromReference } from "@/lib/source-platform";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
@@ -43,9 +44,13 @@ export function MemeEmbed({
   /** 폴백 타이포 히어로의 등장연도 칩 — 미전달 시 칩 생략 */
   originYear?: number | null;
 }) {
+  const sourcePlatform = sourcePlatformFromReference({
+    platform: content?.platform,
+    url: content?.url,
+  });
   const isYouTube =
     content != null &&
-    content.platform?.toLowerCase() === "youtube" &&
+    (sourcePlatform === "youtube" || sourcePlatform === "youtube_shorts") &&
     !!content.content_id &&
     content.availability !== "dead";
 

@@ -20,6 +20,7 @@ const maxArg = args.find((arg) => arg.startsWith("--max="));
 const perQueryArg = args.find((arg) => arg.startsWith("--per-query="));
 const offsetArg = args.find((arg) => arg.startsWith("--offset="));
 const yearsArg = args.find((arg) => arg.startsWith("--years="));
+const maxPerYearArg = args.find((arg) => arg.startsWith("--max-per-year="));
 const max = Math.max(1, Math.min(100, Number(maxArg?.slice(6) ?? 20)));
 const perQuery = Math.max(1, Math.min(5, Number(perQueryArg?.slice(12) ?? 3)));
 const offset = Math.max(0, Number(offsetArg?.slice(9) ?? 0));
@@ -28,8 +29,9 @@ const requestedYears = new Set(
     .split(",")
     .filter(Boolean)
     .map(Number)
-    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2020)
+    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2026)
 );
+const maxPerYear = maxPerYearArg ? Math.max(1, Math.min(50, Number(maxPerYearArg.slice(15)))) : null;
 
 if (!inputPath || !outputPath) {
   console.error("usage: node scripts/collect-instagram-oembed-candidates.mjs <jsonl-file-or-directory> <output.jsonl> [--max=20] [--per-query=3]");
@@ -58,7 +60,7 @@ function readMemes(path) {
         const title = String(row.title ?? "").trim();
         const year = Number(row.year);
         const key = title.replace(/\s+/g, "").toLowerCase();
-        if (!title || !Number.isInteger(year) || year < 2000 || year > 2020 || seen.has(key)) continue;
+        if (!title || !Number.isInteger(year) || year < 2000 || year > 2026 || seen.has(key)) continue;
         seen.add(key);
         rows.push({ title, year, aliases: Array.isArray(row.aliases) ? row.aliases : [] });
       } catch {
@@ -130,8 +132,24 @@ async function verifyPublicOEmbed(sourceUrl) {
 }
 
 async function collectMeme(meme) {
-  const query = `site:instagram.com/reel ${meme.title} 밈`;
-  const found = await findPublicInstagramUrls(query);
+  // Search both Reels and classic posts — many Korean meme accounts publish
+  // stills under /p/ while dance/skits land on /reel/.
+  const queries = [
+    `site:instagram.com/reel ${meme.title} 밈`,
+    `site:instagram.com/p ${meme.title} 밈`,
+  ];
+  const found = [];
+  const seen = new Set();
+  const searchQueries = [];
+  for (const query of queries) {
+    const batch = await findPublicInstagramUrls(query);
+    searchQueries.push(query);
+    for (const source of batch) {
+      if (seen.has(source.url)) continue;
+      seen.add(source.url);
+      found.push({ ...source, search_query: query });
+    }
+  }
   const rows = [];
   for (const source of found.slice(0, perQuery)) {
     try {
@@ -143,7 +161,8 @@ async function collectMeme(meme) {
         source_platform: "Instagram",
         source_url: source.url,
         content_id: source.contentId,
-        search_query: query,
+        search_query: source.search_query,
+        search_queries: searchQueries,
         oembed_verified_at: new Date().toISOString(),
         review_status: "needs_human_source_match",
         collection_note: "Public search candidate only. oEmbed confirmed a publicly embeddable post; verify the actual meme source and rights before publishing.",
@@ -156,7 +175,12 @@ async function collectMeme(meme) {
 }
 
 const sourceMemes = readMemes(inputPath).filter((meme) => requestedYears.size === 0 || requestedYears.has(meme.year));
-const memes = sourceMemes.slice(offset, offset + max);
+const memes = maxPerYear
+  ? [...new Set(sourceMemes.map((meme) => meme.year))]
+      .sort((a, b) => a - b)
+      .flatMap((year) => sourceMemes.filter((meme) => meme.year === year).slice(0, maxPerYear))
+      .slice(offset, offset + max)
+  : sourceMemes.slice(offset, offset + max);
 const results = [];
 const errors = [];
 for (const [index, meme] of memes.entries()) {

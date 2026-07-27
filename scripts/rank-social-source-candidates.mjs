@@ -17,7 +17,8 @@ if (!inputDir || !outputPath) {
   process.exit(2);
 }
 
-const SOCIAL_FILE = /^(?:youtube-source|youtube-shorts|tiktok-oembed|tiktok-newsroom|instagram-oembed|tiktok-public-page|instagram-public-page).*\.jsonl$/;
+const SOCIAL_FILE =
+  /^(?:youtube-source|youtube-shorts|tiktok-oembed|tiktok-newsroom|tiktok-public-search|instagram-oembed|tiktok-public-page|instagram-public-page|social-discovery|social-index-oembed|public-article-social|secondary-social|korean-article-social).*\.jsonl$/;
 const OFFICIAL_CHANNEL = /\b(?:official|records|entertainment|broadcast|network|studios?)\b|공식|kbs|mbc|sbs|jtbc|tvn|netflix|hybe|sm entertainment|jyp entertainment|yg entertainment/i;
 const DERIVATIVE_HINT = /teaser|reaction|리액션|패러디|모음|편집|fanmade|fan made|compilation/i;
 

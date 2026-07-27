@@ -1,5 +1,5 @@
 const TIKTOK_VIDEO_URL = /https:\/\/(?:www\.)?tiktok\.com\/@([A-Za-z0-9._-]+)\/video\/(\d{10,25})/g;
-const ARCHIVE_YEAR = /(?:TikTok|틱톡)[^<>]{0,100}\b(20(?:0\d|1\d|20))\b/i;
+const ARCHIVE_YEAR = /(?:TikTok|틱톡)[^<>]{0,100}\b(20(?:0\d|1\d|2[0-6]))\b/i;
 
 export function tiktokVideoUrlsFromNewsroomHtml(html) {
   const normalized = String(html ?? "")

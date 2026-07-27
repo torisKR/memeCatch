@@ -20,6 +20,7 @@ const offsetArg = args.find((arg) => arg.startsWith("--offset="));
 const yearsArg = args.find((arg) => arg.startsWith("--years="));
 const maxPerYearArg = args.find((arg) => arg.startsWith("--max-per-year="));
 const formatArg = args.find((arg) => arg.startsWith("--format="));
+const delayArg = args.find((arg) => arg.startsWith("--delay="));
 const max = Math.max(1, Math.min(500, Number(maxArg?.slice(6) ?? 100)));
 const perQuery = Math.max(1, Math.min(20, Number(perQueryArg?.slice(12) ?? 10)));
 const offset = Math.max(0, Number(offsetArg?.slice(9) ?? 0));
@@ -28,10 +29,11 @@ const requestedYears = new Set(
     .split(",")
     .filter(Boolean)
     .map(Number)
-    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2020)
+    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2026)
 );
 const maxPerYear = maxPerYearArg ? Math.max(1, Math.min(50, Number(maxPerYearArg.slice(15)))) : null;
 const format = formatArg?.slice(9) ?? "video";
+const delayMs = Math.max(500, Math.min(10_000, Number(delayArg?.slice(8) ?? 700)));
 
 if (!inputPath || !outputPath) {
   console.error("usage: node scripts/collect-youtube-candidates.mjs <jsonl-file-or-directory> <output.jsonl> [--max=100] [--per-query=10] [--format=video|shorts]");
@@ -66,7 +68,7 @@ function readMemes(path) {
         const year = Number(row.year);
         const title = String(row.title ?? "").trim();
         const key = title.replace(/\s+/g, "").toLowerCase();
-        if (!title || !Number.isInteger(year) || year < 2000 || year > 2020 || seen.has(key)) continue;
+        if (!title || !Number.isInteger(year) || year < 2000 || year > 2026 || seen.has(key)) continue;
         seen.add(key);
         rows.push({ title, year, aliases: Array.isArray(row.aliases) ? row.aliases : [] });
       } catch {
@@ -165,30 +167,40 @@ async function sleep(milliseconds) {
 
 async function fetchCandidates(meme) {
   const query = format === "shorts" ? `${meme.title} shorts` : `${meme.title} 공식`;
-  const response = await fetch(searchUrl(query), {
-    headers: {
-      "accept-language": "ko-KR,ko;q=0.9",
-      "user-agent": "Mozilla/5.0 (compatible; CatchMemeSourceCollector/1.0; +https://catchmeme.com)",
-    },
-  });
-  if (!response.ok) throw new Error(`YouTube search HTTP ${response.status}`);
-  const data = extractInitialData(await response.text());
-  const candidates = format === "shorts" ? shortsCandidates(data) : videoCandidates(data);
-  return candidates.slice(0, perQuery).map((video) => ({
-    meme_title: meme.title,
-    origin_year: meme.year,
-    aliases: meme.aliases,
-    source_platform: format === "shorts" ? "YouTube Shorts" : "YouTube",
-    source_url: format === "shorts" ? `https://www.youtube.com/shorts/${video.videoId}` : `https://www.youtube.com/watch?v=${video.videoId}`,
-    video_title: video.videoTitle,
-    channel: video.channel,
-    published_text: video.publishedText,
-    duration_text: video.length,
-    search_query: query,
-    collected_at: new Date().toISOString(),
-    review_status: "needs_human_source_match",
-    collection_note: "Public search candidate only. Verify that this is the original work or an authorized official upload before publishing.",
-  }));
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(searchUrl(query), {
+        headers: {
+          "accept-language": "ko-KR,ko;q=0.9",
+          "user-agent": "Mozilla/5.0 (compatible; CatchMemeSourceCollector/1.0; +https://catchmeme.com)",
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!response.ok) throw new Error(`YouTube search HTTP ${response.status}`);
+      const data = extractInitialData(await response.text());
+      const candidates = format === "shorts" ? shortsCandidates(data) : videoCandidates(data);
+      return candidates.slice(0, perQuery).map((video) => ({
+        meme_title: meme.title,
+        origin_year: meme.year,
+        aliases: meme.aliases,
+        source_platform: format === "shorts" ? "YouTube Shorts" : "YouTube",
+        source_url: format === "shorts" ? `https://www.youtube.com/shorts/${video.videoId}` : `https://www.youtube.com/watch?v=${video.videoId}`,
+        video_title: video.videoTitle,
+        channel: video.channel,
+        published_text: video.publishedText,
+        duration_text: video.length,
+        search_query: query,
+        collected_at: new Date().toISOString(),
+        review_status: "needs_human_source_match",
+        collection_note: "Public search candidate only. Verify that this is the original work or an authorized official upload before publishing.",
+      }));
+    } catch (error) {
+      lastError = error;
+      await sleep(delayMs * (attempt + 1));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 const sourceMemes = readMemes(inputPath).filter((meme) => requestedYears.size === 0 || requestedYears.has(meme.year));
@@ -211,7 +223,7 @@ for (const [index, meme] of memes.entries()) {
     errors.push({ title: meme.title, message: error instanceof Error ? error.message : String(error) });
     process.stderr.write(`failed ${index + 1}/${memes.length}: ${meme.title}\n`);
   }
-  if (index < memes.length - 1) await sleep(700);
+  if (index < memes.length - 1) await sleep(delayMs);
 }
 
 const unique = [];

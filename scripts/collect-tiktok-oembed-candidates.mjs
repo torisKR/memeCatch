@@ -42,7 +42,7 @@ function seedsFromJsonl(path) {
         !memeTitle ||
         !Number.isInteger(originYear) ||
         originYear < 2000 ||
-        originYear > 2020 ||
+        originYear > 2026 ||
         seen.has(key)
       ) {
         continue;

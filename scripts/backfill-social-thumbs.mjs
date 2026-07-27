@@ -85,6 +85,26 @@ async function igThumb(url) {
   return urls.find((u) => !u.includes("t51.82787") && (u.includes(".jpg") || u.includes(".webp"))) ?? null;
 }
 
+/** JPEG SOF 마커에서 (w,h)를 읽는다. 프레임 헤더를 못 찾으면 null. */
+function jpegDimensions(buf) {
+  const b = new Uint8Array(buf);
+  if (b[0] !== 0xff || b[1] !== 0xd8) return null; // SOI 아님
+  let i = 2;
+  while (i + 8 < b.length) {
+    if (b[i] !== 0xff) { i++; continue; }
+    let marker = b[i + 1];
+    while (marker === 0xff) marker = b[++i + 1]; // 채움 바이트 스킵
+    // SOF0..SOF15(0xC0~0xCF) 중 DHT(C4)/JPG(C8)/DAC(CC) 제외 = 프레임 헤더
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      return { h: (b[i + 5] << 8) | b[i + 6], w: (b[i + 7] << 8) | b[i + 8] };
+    }
+    const len = (b[i + 2] << 8) | b[i + 3];
+    if (len < 2) return null;
+    i += 2 + len;
+  }
+  return null;
+}
+
 async function download(u) {
   const r = await fetch(u, {
     headers: { "User-Agent": UA, Referer: "https://www.instagram.com/" },
@@ -94,7 +114,13 @@ async function download(u) {
   const ct = r.headers.get("content-type") || "";
   if (!ct.startsWith("image/")) return null;
   const buf = await r.arrayBuffer();
-  if (buf.byteLength < 2000 || buf.byteLength > 5 * 1024 * 1024) return null;
+  // 하한 8KB — Instagram 로그인월/차단 시 embed 페이지가 흘리는 100×100 회색
+  // 플레이스홀더(2~4.6KB)가 옛 2000 하한을 통과해 빈 썸네일로 R2에 재호스팅된 사고
+  // 방지. 정상 게시물 썸네일은 최소 ~35KB(720×1280)라 8KB에서 명확히 갈린다.
+  if (buf.byteLength < 8000 || buf.byteLength > 5 * 1024 * 1024) return null;
+  // JPEG면 차원까지 검증 — 어느 한 변이 200px 미만이면 플레이스홀더로 보고 거부.
+  const dims = ct.includes("jpeg") ? jpegDimensions(buf) : null;
+  if (dims && (dims.w < 200 || dims.h < 200)) return null;
   return { buf, ct: ct.split(";")[0] };
 }
 

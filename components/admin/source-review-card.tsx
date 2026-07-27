@@ -83,6 +83,12 @@ export function SourceReviewCard({
   );
   const canEmbed =
     embeddablePlatform && source.external_id && source.embeddable !== false;
+  const isVerticalEmbed = ["youtube_shorts", "tiktok", "instagram"].includes(
+    source.platform,
+  );
+  const previewClass = isVerticalEmbed
+    ? "mx-auto aspect-[9/16] w-full max-w-[320px]"
+    : "aspect-video w-full";
 
   function submit(decision: "approve" | "reject") {
     setError(null);
@@ -147,7 +153,7 @@ export function SourceReviewCard({
                 canonicalUrl: source.canonical_url,
               })}
               title={source.title ?? `${memeTitle} 출처 영상`}
-              className="aspect-video w-full rounded-lg border border-border"
+              className={`${previewClass} rounded-lg border border-border bg-black`}
               loading="lazy"
               allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -157,11 +163,33 @@ export function SourceReviewCard({
               type="button"
               onClick={() => setShowEmbed(true)}
               disabled={!canEmbed}
-              className="flex aspect-video w-full items-center justify-center rounded-lg border border-border bg-surface-2 text-sm text-muted hover:opacity-90 disabled:cursor-not-allowed"
+              className={`${previewClass} group relative flex items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-2 text-sm text-muted hover:opacity-90 disabled:cursor-not-allowed`}
             >
-              {canEmbed
-                ? `${PLATFORM_LABELS[source.platform] ?? "외부"} 영상을 불러옵니다`
-                : "임베드 미리보기를 사용할 수 없어요"}
+              {source.thumbnail_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={source.thumbnail_url}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
+              {canEmbed ? (
+                <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/35 text-white transition-colors group-hover:bg-black/45">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 shadow-lg">
+                    <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7" fill="currentColor" aria-hidden>
+                      <path d="M8 5.5v13l11-6.5z" />
+                    </svg>
+                  </span>
+                  <span className="rounded-full bg-black/70 px-3 py-1 font-semibold">
+                    {PLATFORM_LABELS[source.platform] ?? "SNS"} 영상 재생
+                  </span>
+                </span>
+              ) : (
+                <span className="relative rounded-full bg-background/85 px-3 py-1">
+                  임베드 미리보기를 사용할 수 없어요
+                </span>
+              )}
             </button>
           )}
           <a

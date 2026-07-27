@@ -9,6 +9,11 @@
  *          | timeline_click(레인 A: /timeline 카드 클릭) | search_suggest_click(레인 B: 검색 자동완성 클릭)
  *          | quiz_start(mode) | quiz_complete(score) | quiz_share — 밈력고사(/quiz) 퍼널
  *          | briefing_click(to) — 홈 주간 브리핑("이번 주 이것만") 내 링크 클릭
+ *          | traffic_source — 세션 1회, 유입 경로 판별 결과(components/attribution-tracker.tsx)
+ *          | search_submit(query, result_count) — 검색 결과가 실제로 렌더된 시점 1회
+ *          | search_no_result(query) — 결과 0건 (search_submit과 함께 발사)
+ *          | search_result_click(query, to) — 결과 카드 클릭
+ *            ↳ 검색 성공률 = (result_click + suggest_click) / submit
  */
 type GtagEvent =
   | "next_meme_click"
@@ -29,7 +34,11 @@ type GtagEvent =
   | "quiz_start"
   | "quiz_complete"
   | "quiz_share"
-  | "briefing_click";
+  | "briefing_click"
+  | "traffic_source"
+  | "search_submit"
+  | "search_result_click"
+  | "search_no_result";
 
 declare global {
   interface Window {
@@ -40,6 +49,84 @@ declare global {
 export function track(event: GtagEvent, params?: Record<string, string | number>) {
   try {
     window.gtag?.("event", event, params ?? {});
+  } catch {
+    /* 분석 실패가 UX를 깨면 안 됨 */
+  }
+}
+
+/**
+ * gtag 준비 대기.
+ *
+ * @next/third-parties의 초기화 스크립트는 afterInteractive 전략이라
+ * 하이드레이션 직후 주입된다. 즉 컴포넌트의 useEffect가 window.gtag보다
+ * 먼저 실행될 수 있고, 그때 보낸 이벤트는 조용히 사라진다.
+ * 랜딩 1회성 측정(유입 경로)은 놓치면 복구할 방법이 없으므로 기다린다.
+ *
+ * 반환값은 정리(cleanup) 함수 — 언마운트 시 호출해 폴링을 멈춘다.
+ * GA_ID 미설정·광고 차단기 환경에서는 끝내 준비되지 않으며, 그때는
+ * 콜백을 실행하지 않고 조용히 포기한다(기존 track()과 같은 태도).
+ */
+export function whenGtagReady(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  if (window.gtag) {
+    callback();
+    return () => {};
+  }
+
+  const INTERVAL_MS = 150;
+  const MAX_ATTEMPTS = 40; // 약 6초
+  let attempts = 0;
+
+  const timer = window.setInterval(() => {
+    attempts += 1;
+    if (window.gtag) {
+      window.clearInterval(timer);
+      callback();
+    } else if (attempts >= MAX_ATTEMPTS) {
+      window.clearInterval(timer);
+    }
+  }, INTERVAL_MS);
+
+  return () => window.clearInterval(timer);
+}
+
+/**
+ * 사용자 속성 설정 — 이후 모든 이벤트에 자동으로 붙는다.
+ * 최초 유입 경로처럼 "이 사용자를 설명하는 값"에만 쓴다.
+ * GA4 관리화면에서 맞춤 정의(사용자 범위)로 등록해야 보고서에 노출된다.
+ */
+export function setUserProperties(props: Record<string, string>) {
+  try {
+    window.gtag?.("set", "user_properties", props);
+  } catch {
+    /* 분석 실패가 UX를 깨면 안 됨 */
+  }
+}
+
+/**
+ * GA4 내장 캠페인 필드 주입.
+ *
+ * 맞춤 이벤트 파라미터와 달리 이 필드들은 GA4의 기본 "트래픽 획득" 보고서와
+ * 기본 채널 그룹에 직접 반영된다. 인앱 브라우저·리다이렉터 때문에 리퍼러가
+ * 유실돼 Direct로 뭉개지던 세션을 표준 보고서 수준에서 되살리는 통로다.
+ *
+ * 주의: 이 호출 이후에 전송되는 이벤트에만 적용된다.
+ */
+export function setCampaign(campaign: {
+  source: string;
+  medium: string;
+  name?: string;
+  content?: string;
+  term?: string;
+}) {
+  try {
+    window.gtag?.("set", {
+      campaign_source: campaign.source,
+      campaign_medium: campaign.medium,
+      ...(campaign.name ? { campaign_name: campaign.name } : {}),
+      ...(campaign.content ? { campaign_content: campaign.content } : {}),
+      ...(campaign.term ? { campaign_term: campaign.term } : {}),
+    });
   } catch {
     /* 분석 실패가 UX를 깨면 안 됨 */
   }

@@ -9,10 +9,13 @@ import { track } from "@/lib/analytics";
  */
 export function TrackedBlock({
   event,
+  params,
   children,
   className,
 }: {
   event: Parameters<typeof track>[0];
+  /** 이벤트에 함께 실을 추가 파라미터(예: 검색어). `to`는 항상 링크 href로 덮인다. */
+  params?: Record<string, string | number>;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -21,7 +24,7 @@ export function TrackedBlock({
       className={className}
       onClickCapture={(e) => {
         const a = (e.target as HTMLElement).closest("a");
-        if (a) track(event, { to: a.getAttribute("href") ?? "" });
+        if (a) track(event, { ...params, to: a.getAttribute("href") ?? "" });
       }}
     >
       {children}

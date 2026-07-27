@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { AttributionTracker } from "@/components/attribution-tracker";
 import { NavProgress } from "@/components/nav-progress";
 import { BottomNav } from "@/components/bottom-nav";
 import { GlobalHeader } from "@/components/global-header";
@@ -100,7 +101,14 @@ export default function RootLayout({
             아래 google-adsense-account 메타(사이트 소유확인)는 전역 유지가 맞다.
           */}
           {/* GA4 — @next/third-parties 공식 통합 (env 설정 시에만 로드) */}
-          {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
+          {GA_ID && (
+            <>
+              <GoogleAnalytics gaId={GA_ID} />
+              {/* 유입 경로 판별·전송. 인앱 브라우저(스레드·카카오톡 등) 때문에
+                  리퍼러가 비어 Direct로 뭉개지던 세션을 UA로 복원한다. */}
+              <AttributionTracker />
+            </>
+          )}
           <OrganizationJsonLd />
           <GlobalHeader />
           <div className="flex-1">{children}</div>

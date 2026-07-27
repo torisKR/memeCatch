@@ -5,6 +5,8 @@ import { COLLECTIONS } from "@/lib/collections";
 import { getTrendingMemes, searchMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
 import { StatusPanel } from "@/components/status-panel";
+import { TrackedBlock } from "@/components/tracked-block";
+import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { SearchInput } from "./search-input";
 
 const SEARCH_DESCRIPTION =
@@ -48,18 +50,23 @@ export default async function SearchPage({ searchParams }: Props) {
         <SearchInput initialQuery={query} popularTerms={popularTerms} />
       </div>
 
+      {/* 검색 성공률 계측 — 결과가 실제로 렌더된 시점 기준(입력 중간 상태 제외) */}
+      <SearchOutcomeTracker query={query} resultCount={results.length} />
+
       {query && results.length > 0 && (
         <section aria-label="검색 결과" className="mt-6">
           <p className="text-base text-muted">
             &lsquo;{query}&rsquo; 검색 결과 {results.length}개예요.
           </p>
-          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {results.map((meme) => (
-              <li key={meme.id} className="min-w-0">
-                <MemeCard meme={meme} />
-              </li>
-            ))}
-          </ul>
+          <TrackedBlock event="search_result_click" params={{ query }}>
+            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {results.map((meme) => (
+                <li key={meme.id} className="min-w-0">
+                  <MemeCard meme={meme} />
+                </li>
+              ))}
+            </ul>
+          </TrackedBlock>
         </section>
       )}
 

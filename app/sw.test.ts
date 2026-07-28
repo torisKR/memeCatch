@@ -120,7 +120,9 @@ describe("service-worker runtime caching", () => {
     );
     const imageRoute = firstMatchingRoute(new Request(`${ORIGIN}/meme.webp`));
 
-    expect(apiRoute.handler).toBeInstanceOf(NetworkFirst);
+    // defaultCache can resolve Serwist through a separate ESM module instance,
+    // so constructor identity is not stable after resetModules().
+    expect(apiRoute.handler.constructor.name).toBe("NetworkFirst");
     expect(apiRoute.handler).toMatchObject({ cacheName: "apis" });
     expect(imageRoute.handler).toMatchObject({ cacheName: "static-image-assets" });
   });

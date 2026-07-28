@@ -18,12 +18,12 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/auth-menu", () => ({
-  AuthMenu: () => <a href="/login">로그인</a>,
+  AuthMenu: () => <span>로그인</span>,
   HideOnAdmin: ({ children }: { children: ReactNode }) => children,
 }));
 
 vi.mock("@/components/explore-nav-link", () => ({
-  ExploreNavLink: () => <a href="/explore">탐색</a>,
+  ExploreNavLink: () => <span>탐색</span>,
 }));
 
 vi.mock("@/components/brand-mark", () => ({

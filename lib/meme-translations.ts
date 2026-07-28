@@ -187,9 +187,9 @@ export function overlayMemeTranslation<T extends LocalizableMeme>(
 }
 
 /**
- * Localized SEO eligibility is deliberately stricter than display eligibility.
- * Machine and stale translations may be previewed, but only a reviewed snapshot
- * of an already substantial Korean source can be indexed.
+ * Public localized pages require a human-reviewed snapshot of an already
+ * substantial Korean source. Drafts remain available only to the operator
+ * workflow and are never returned by the public read path below.
  */
 export function isIndexableLocalizedMeme(
   meme: LocalizedMeme<LocalizableMeme> | null | undefined,
@@ -224,10 +224,12 @@ export const getLocalizedMemeByShortId = cache(async function getLocalizedMemeBy
       .select(TRANSLATION_COLUMNS)
       .eq("meme_id", meme.id)
       .eq("locale", locale)
+      .eq("status", "reviewed")
       .maybeSingle()
       .overrideTypes<MemeTranslationRow, { merge: false }>();
     if (error || !data) return null;
-    return overlayMemeTranslation(meme, data, locale);
+    const localized = overlayMemeTranslation(meme, data, locale);
+    return isIndexableLocalizedMeme(localized) ? localized : null;
   } catch {
     return null;
   }

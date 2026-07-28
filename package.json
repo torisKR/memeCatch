@@ -19,7 +19,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "translate:memes": "node scripts/translate-memes.mjs"
+    "translate:memes:mlx-linked:test": "node scripts/translate-memes-mlx-linked.test.mjs",
+    "translate:memes": "node scripts/translate-memes.mjs",
+    "translate:memes:mlx-linked": "node scripts/translate-memes-mlx-linked.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.2.10",

@@ -5,6 +5,11 @@ import { ModerationBadge } from "@/components/admin/badges";
 import { AdminMemeContents } from "@/components/admin/admin-meme-contents";
 import { MemeEditForm } from "@/components/admin/meme-edit-form";
 import { MemeStatusControls } from "@/components/admin/meme-status-controls";
+import {
+  MemeTranslationReview,
+  type MemeTranslationReviewRow,
+} from "@/components/admin/meme-translation-review";
+import { isSeoContentLocale } from "@/lib/i18n-routing";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { ModerationStatus } from "@/components/admin/constants";
 
@@ -23,14 +28,35 @@ export default async function AdminMemeEditPage({
   const { data: meme } = await supabase.from("memes").select("*").eq("id", id).single();
   if (!meme) notFound();
 
-  const { data: contents } = await supabase
-    .from("meme_contents")
-    .select(
-      "id, platform, content_id, url, thumbnail_url, availability, caption, is_representative, moderation_status",
+  const [{ data: contents }, { data: translations }] = await Promise.all([
+    supabase
+      .from("meme_contents")
+      .select(
+        "id, platform, content_id, url, thumbnail_url, availability, caption, is_representative, moderation_status",
+      )
+      .eq("meme_id", id)
+      .order("is_representative", { ascending: false })
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("meme_translations")
+      .select(
+        "locale, status, source_updated_at, translated_at, updated_at, reviewed_at, reviewed_by, title, summary, description, origin, usage_note, caution, aliases",
+      )
+      .eq("meme_id", id)
+      .order("locale", { ascending: true }),
+  ]);
+
+  const translationsForReview: MemeTranslationReviewRow[] = (translations ?? [])
+    .filter(
+      (translation) =>
+        isSeoContentLocale(translation.locale) &&
+        ["machine", "reviewed", "stale"].includes(translation.status),
     )
-    .eq("meme_id", id)
-    .order("is_representative", { ascending: false })
-    .order("created_at", { ascending: true });
+    .map((translation) => ({
+      ...translation,
+      locale: translation.locale as MemeTranslationReviewRow["locale"],
+      status: translation.status as MemeTranslationReviewRow["status"],
+    }));
 
   const rawCtx = (meme.usage_context ?? {}) as Partial<UsageContext>;
   const usageContext: UsageContext = {
@@ -63,6 +89,12 @@ export default async function AdminMemeEditPage({
       <MemeStatusControls
         memeId={meme.id}
         currentStatus={meme.moderation_status as ModerationStatus}
+      />
+
+      <MemeTranslationReview
+        memeId={meme.id}
+        memeUpdatedAt={meme.updated_at}
+        translations={translationsForReview}
       />
 
       <AdminMemeContents contents={contents ?? []} memeTitle={meme.title} />

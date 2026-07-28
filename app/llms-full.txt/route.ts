@@ -7,6 +7,7 @@ import {
   type MemeCategory,
   type SafetyLevel,
 } from "@/lib/labels";
+import { SEO_CONTENT_LOCALES } from "@/lib/i18n-routing";
 
 /**
  * llms-full.txt — AI 시스템용 사이트 "전체 본문" (https://llmstxt.org 규격의 full 변형).
@@ -117,6 +118,9 @@ export async function GET() {
 > 운영자 검수(사실 확인 → 저작권 확인)를 거친 항목만 포함하며, 원본 영상·이미지는 저장하지 않고 출처 링크로만 제공합니다.
 > 언어: 한국어(ko). 전체 밈 URL 목록은 ${SITE_URL}/sitemap.xml 을, 요약 인덱스는 ${SITE_URL}/llms.txt 를 참고하세요.
 
+## Reviewed translations
+${SEO_CONTENT_LOCALES.map((locale) => `- ${locale}: ${SITE_URL}/${locale}/llms-full.txt`).join("\n")}
+
 ## 사용 안전도(신호등) 범례
 ${safetyLegend}
 
@@ -131,6 +135,7 @@ ${bodyMemes || "- (본문은 사이트에서 확인하세요)"}
   return new Response(body, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
+      "Content-Language": "ko-KR",
       "Cache-Control": "public, max-age=3600",
     },
   });

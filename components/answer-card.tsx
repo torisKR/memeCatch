@@ -41,7 +41,10 @@ export function AnswerCard({
       <h1 className="mt-2 text-2xl font-extrabold leading-tight md:text-3xl">
         {meme.title}
       </h1>
-      <p className="mt-1.5 text-lg leading-relaxed text-foreground">
+      <p
+        id="meme-summary"
+        className="mt-1.5 text-lg leading-relaxed text-foreground"
+      >
         {meme.summary}
       </p>
       <div className="relative mt-4">

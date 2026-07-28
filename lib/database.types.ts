@@ -979,6 +979,93 @@ export type Database = {
           },
         ]
       }
+      meme_translations: {
+        Row: {
+          aliases: string[]
+          caution: string | null
+          created_at: string
+          description: string
+          locale: string
+          localized_slug: string
+          meme_id: string
+          model: string
+          origin: string
+          prompt_version: number
+          provider: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_updated_at: string
+          status: string
+          summary: string
+          title: string
+          translated_at: string
+          updated_at: string
+          usage_examples: Json | null
+          usage_note: string | null
+        }
+        Insert: {
+          aliases?: string[]
+          caution?: string | null
+          created_at?: string
+          description?: string
+          locale: string
+          localized_slug: string
+          meme_id: string
+          model: string
+          origin?: string
+          prompt_version?: number
+          provider: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_updated_at: string
+          status?: string
+          summary: string
+          title: string
+          translated_at?: string
+          updated_at?: string
+          usage_examples?: Json | null
+          usage_note?: string | null
+        }
+        Update: {
+          aliases?: string[]
+          caution?: string | null
+          created_at?: string
+          description?: string
+          locale?: string
+          localized_slug?: string
+          meme_id?: string
+          model?: string
+          origin?: string
+          prompt_version?: number
+          provider?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_updated_at?: string
+          status?: string
+          summary?: string
+          title?: string
+          translated_at?: string
+          updated_at?: string
+          usage_examples?: Json | null
+          usage_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_translations_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_translations_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memes: {
         Row: {
           aliases: string[]
@@ -1005,6 +1092,7 @@ export type Database = {
           trend_score: number
           updated_at: string
           usage_context: Json
+          usage_examples: Json | null
           usage_note: string | null
           source_work_year: number | null
           meme_first_seen_year: number | null
@@ -1038,6 +1126,7 @@ export type Database = {
           trend_score?: number
           updated_at?: string
           usage_context?: Json
+          usage_examples?: Json | null
           usage_note?: string | null
           source_work_year?: number | null
           meme_first_seen_year?: number | null
@@ -1071,6 +1160,7 @@ export type Database = {
           trend_score?: number
           updated_at?: string
           usage_context?: Json
+          usage_examples?: Json | null
           usage_note?: string | null
           source_work_year?: number | null
           meme_first_seen_year?: number | null

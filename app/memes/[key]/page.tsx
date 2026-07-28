@@ -37,6 +37,16 @@ import { SourceEvidence } from "@/components/source-evidence";
 import { DocStatusNote } from "@/components/doc-status-note";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isIndexableMeme } from "@/lib/content-depth";
+import {
+  getAvailableTranslationLocales,
+  getLocalizedMemeByShortId,
+} from "@/lib/meme-translations";
+import {
+  getHreflang,
+  getOpenGraphLocale,
+  isSeoContentLocale,
+  localizedMemePath,
+} from "@/lib/i18n-routing";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
@@ -52,13 +62,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meme = await getMemeByShortId(shortIdFromParam(key));
   if (!meme) return { title: "밈을 찾을 수 없어요" };
   const path = memePathFrom(meme.short_id, meme.slug);
+  const availableLocales = (await getAvailableTranslationLocales(meme.id)).filter(
+    isSeoContentLocale,
+  );
+  const localizedVersions = (
+    await Promise.all(
+      availableLocales.map(async (locale) => ({
+        locale,
+        version: await getLocalizedMemeByShortId(meme.short_id, locale),
+      })),
+    )
+  ).flatMap(({ locale, version }) =>
+    version ? [{ locale, version }] : [],
+  );
+  const languages = Object.fromEntries([
+    ["ko", path],
+    ...localizedVersions.map(({ locale, version }) => [
+      getHreflang(locale),
+      localizedMemePath(
+        locale,
+        version.short_id,
+        version.slug,
+      ),
+    ]),
+    ["x-default", path],
+  ]);
   const description = `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
   return {
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
     title: `${meme.title} 뜻`,
     description,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
-    alternates: { canonical: path },
+    alternates: { canonical: path, languages },
     // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/content-depth.ts).
     // follow는 유지 — 페이지는 200으로 살아 있고, 관련 밈·출처 링크로 크롤이 전파돼야 한다.
     ...(isIndexableMeme(meme) ? {} : { robots: { index: false, follow: true } }),
@@ -67,6 +102,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       siteName: "밈캐치",
       locale: "ko_KR",
+      alternateLocale: localizedVersions.map(({ locale }) =>
+        getOpenGraphLocale(locale),
+      ),
       title: `${meme.title} 뜻`,
       description,
       url: path,

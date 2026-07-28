@@ -13,6 +13,11 @@ import { PremiumAdControl } from "@/components/premium-ad-control";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { LocaleAutoDetect, LocaleDocumentSync, LocaleProvider } from "@/lib/i18n-client";
 import { DEFAULT_LOCALE, getDocumentLanguage } from "@/lib/i18n";
+import {
+  SEO_ROUTE_LOCALES,
+  buildHreflangLanguages,
+  toOpenGraphLocale,
+} from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -33,7 +38,13 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "밈캐치" },
   // 홈(루트) canonical — 하위 페이지는 각자 generateMetadata에서 설정
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    languages: {
+      ...buildHreflangLanguages("/", SEO_ROUTE_LOCALES),
+      "x-default": "/",
+    },
+  },
   // 검색엔진 사이트 소유확인 — 구글 서치콘솔 + 네이버 서치어드바이저 (+ AdSense 계정 연결)
   verification: {
     google: "tNpEvRKUbirAkwRA-XH0HJzDh8bCF6Waqctqu1Hak38",
@@ -52,6 +63,9 @@ export const metadata: Metadata = {
       "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
     siteName: "밈캐치",
     locale: "ko_KR",
+    alternateLocale: SEO_ROUTE_LOCALES.filter((locale) => locale !== "ko").map(
+      toOpenGraphLocale,
+    ),
   },
 };
 
@@ -73,7 +87,7 @@ export default function RootLayout({
   const locale = DEFAULT_LOCALE;
 
   return (
-    <html lang={getDocumentLanguage(locale)}>
+    <html lang={getDocumentLanguage(locale)} suppressHydrationWarning>
       <head>
         {/*
           Keep the first paint self-contained. Loading the remote Pretendard
@@ -81,6 +95,13 @@ export default function RootLayout({
           hero could settle on mobile. The system stack keeps the same local
           Pretendard preference while avoiding a third-party font waterfall.
         */}
+        <script
+          id="locale-document-bootstrap"
+          dangerouslySetInnerHTML={{
+            __html:
+              "(()=>{const m=location.pathname.match(/^\\/(en|ja|zh|zh-tw)(?:\\/|$)/);if(!m)return;const l=m[1];document.documentElement.lang=l==='zh'?'zh-Hans':l==='zh-tw'?'zh-Hant':l;document.documentElement.dir='ltr'})()",
+          }}
+        />
       </head>
       {/* theme-ink 전역 적용 — 전 페이지 다크 web3 스킨(토큰 오버라이드) 통일 */}
       <body className="theme-ink flex min-h-dvh flex-col pb-16 md:pb-0">

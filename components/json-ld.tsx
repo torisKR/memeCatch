@@ -1,5 +1,13 @@
 import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
 import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
+import {
+  absoluteSiteUrl,
+  getSeoCopy,
+  localizedMemePath,
+  localizedPath,
+  toHrefLang,
+  type SeoRouteLocale,
+} from "@/lib/i18n-routing";
 
 
 /**
@@ -65,22 +73,35 @@ export function OrganizationJsonLd() {
   );
 }
 
+type LocalizedSchemaProps = {
+  locale?: SeoRouteLocale;
+  path?: string;
+  name?: string;
+};
+
 /** 사이트 전체용 WebSite 스키마 + SearchAction (홈) */
-export function WebSiteJsonLd() {
+export function WebSiteJsonLd({
+  locale = "ko",
+  path,
+  name,
+}: LocalizedSchemaProps = {}) {
+  const copy = getSeoCopy(locale);
+  const homePath = path ?? localizedPath("/", locale);
+  const siteUrl = absoluteSiteUrl(homePath);
   return (
     <Script
       data={{
         "@context": "https://schema.org",
         "@type": "WebSite",
-        name: "밈캐치",
-        url: SITE_URL,
-        inLanguage: "ko",
+        name: name ?? copy.siteName,
+        url: siteUrl,
+        inLanguage: toHrefLang(locale),
         publisher: { "@id": `${SITE_URL}#org` },
         potentialAction: {
           "@type": "SearchAction",
           target: {
             "@type": "EntryPoint",
-            urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
+            urlTemplate: `${absoluteSiteUrl(localizedPath("/search", locale))}?q={search_term_string}`,
           },
           "query-input": "required name=search_term_string",
         },
@@ -90,16 +111,24 @@ export function WebSiteJsonLd() {
 }
 
 /** DefinedTermSet 실체 선언 — 홈. 상세의 inDefinedTermSet(@id)이 가리키는 대상 */
-export function DefinedTermSetJsonLd() {
+export function DefinedTermSetJsonLd({
+  locale = "ko",
+  path,
+  name,
+  description,
+}: LocalizedSchemaProps & { description?: string } = {}) {
+  const copy = getSeoCopy(locale);
+  const glossaryUrl = absoluteSiteUrl(path ?? localizedPath("/", locale));
   return (
     <Script
       data={{
         "@context": "https://schema.org",
         "@type": "DefinedTermSet",
-        "@id": `${SITE_URL}#glossary`,
-        name: "밈캐치 밈 사전",
-        description: "1990년대부터 오늘까지, 한국 유행 밈·유행어·챌린지 용어집",
-        url: SITE_URL,
+        "@id": `${glossaryUrl}#glossary`,
+        name: name ?? copy.glossaryName,
+        description: description ?? copy.glossaryDescription,
+        url: glossaryUrl,
+        inLanguage: toHrefLang(locale),
       }}
     />
   );
@@ -117,6 +146,12 @@ export function MemeWebPageJsonLd({
   slug,
   datePublished,
   dateModified,
+  locale = "ko",
+  path,
+  siteName,
+  sitePath,
+  glossaryName,
+  glossaryPath,
 }: {
   name: string;
   summary: string;
@@ -125,8 +160,19 @@ export function MemeWebPageJsonLd({
   slug: string;
   datePublished: string | null;
   dateModified: string | null;
+  locale?: SeoRouteLocale;
+  path?: string;
+  siteName?: string;
+  sitePath?: string;
+  glossaryName?: string;
+  glossaryPath?: string;
 }) {
-  const url = `${SITE_URL}${memePathFrom(shortId, slug)}`;
+  const copy = getSeoCopy(locale);
+  const url = absoluteSiteUrl(path ?? localizedMemePath(locale, shortId, slug));
+  const localizedSiteUrl = absoluteSiteUrl(sitePath ?? localizedPath("/", locale));
+  const localizedGlossaryUrl = absoluteSiteUrl(
+    glossaryPath ?? sitePath ?? localizedPath("/", locale),
+  );
   return (
     <Script
       data={{
@@ -135,15 +181,19 @@ export function MemeWebPageJsonLd({
         name,
         description: summary,
         url,
-        inLanguage: "ko",
+        inLanguage: toHrefLang(locale),
         ...(datePublished ? { datePublished } : {}),
         ...(dateModified ? { dateModified } : {}),
-        isPartOf: { "@type": "WebSite", name: "밈캐치", url: SITE_URL },
+        isPartOf: {
+          "@type": "WebSite",
+          name: siteName ?? copy.siteName,
+          url: localizedSiteUrl,
+        },
         publisher: { "@id": `${SITE_URL}#org` },
         // 정답 카드(밈명+한 줄 뜻) — "3초 안에 알려드려요" 컨셉과 일치하는 음성 답변 대상
         speakable: {
           "@type": "SpeakableSpecification",
-          cssSelector: ["h1", "section[aria-label='정답 카드'] p"],
+          cssSelector: ["h1", "#meme-summary"],
         },
         mainEntity: {
           "@type": "DefinedTerm",
@@ -152,9 +202,9 @@ export function MemeWebPageJsonLd({
           url,
           inDefinedTermSet: {
             "@type": "DefinedTermSet",
-            "@id": `${SITE_URL}#glossary`,
-            name: "밈캐치 밈 사전",
-            url: SITE_URL,
+            "@id": `${localizedGlossaryUrl}#glossary`,
+            name: glossaryName ?? copy.glossaryName,
+            url: localizedGlossaryUrl,
           },
         },
       }}
@@ -168,30 +218,53 @@ export function MemeBreadcrumbJsonLd({
   name,
   shortId,
   slug,
+  locale = "ko",
+  path,
+  homeName,
+  homePath,
+  categoryName,
+  explorePath,
 }: {
   category: MemeCategory;
   name: string;
   shortId: string;
   slug: string;
+  locale?: SeoRouteLocale;
+  path?: string;
+  homeName?: string;
+  homePath?: string;
+  categoryName?: string;
+  explorePath?: string;
 }) {
+  const copy = getSeoCopy(locale);
+  const localizedHomeUrl = absoluteSiteUrl(homePath ?? localizedPath("/", locale));
+  const localizedExploreUrl = absoluteSiteUrl(
+    explorePath ?? localizedPath(`/explore?category=${category}`, locale),
+  );
+  const memeUrl = absoluteSiteUrl(path ?? localizedMemePath(locale, shortId, slug));
   return (
     <Script
       data={{
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "밈캐치", item: SITE_URL },
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: homeName ?? copy.homeName,
+            item: localizedHomeUrl,
+          },
           {
             "@type": "ListItem",
             position: 2,
-            name: CATEGORIES[category].user,
-            item: `${SITE_URL}/explore?category=${category}`,
+            name: categoryName ?? copy.categories[category] ?? CATEGORIES[category].user,
+            item: localizedExploreUrl,
           },
           {
             "@type": "ListItem",
             position: 3,
             name,
-            item: `${SITE_URL}${memePathFrom(shortId, slug)}`,
+            item: memeUrl,
           },
         ],
       }}

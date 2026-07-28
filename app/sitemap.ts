@@ -4,6 +4,15 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import {
+  SEO_CONTENT_LOCALES,
+  SEO_ROUTE_LOCALES,
+  isSeoContentLocale,
+  localizedMemePath,
+  localizedPath,
+  toHrefLang,
+  type SeoContentLocale,
+} from "@/lib/i18n-routing";
 
 
 /** 1시간마다 재생성 — 새로 공개된 밈 반영 */
@@ -11,6 +20,9 @@ export const revalidate = 3600;
 
 /** 공개(=200으로 렌더되는) 밈 상태: approved + limited. */
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
+
+/** Google's per-sitemap protocol limit. */
+const MAX_SITEMAP_URLS = 50_000;
 
 /**
  * 충실도 판정에 필요한 신호까지 함께 실어 온다.
@@ -21,13 +33,84 @@ const PUBLIC_STATUSES = ["approved", "limited"] as const;
 const DEPTH_SELECT =
   "short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples," +
   " meme_sources(source_url), meme_contents(availability, moderation_status)," +
-  " meme_tags_map(tag_id)";
+  " meme_tags_map(tag_id)," +
+  " meme_translations(locale, status, localized_slug, source_updated_at, updated_at, title, summary, description, origin)";
+
+type SitemapTranslationRow = {
+  locale: string;
+  status: string;
+  localized_slug: string;
+  source_updated_at: string;
+  updated_at: string;
+  title: string;
+  summary: string;
+  description: string;
+  origin: string;
+};
 
 type SitemapMemeRow = ContentDepthInput & {
   short_id: string;
   slug: string;
   updated_at: string;
+  meme_translations: SitemapTranslationRow[];
 };
+
+function absolute(pathname: string): string {
+  return `${SITE_URL}${pathname === "/" ? "" : pathname}`;
+}
+
+function homeLanguages(): Record<string, string> {
+  return {
+    ...Object.fromEntries(
+      SEO_ROUTE_LOCALES.map((locale) => [
+        toHrefLang(locale),
+        absolute(localizedPath("/", locale)),
+      ]),
+    ),
+    "x-default": SITE_URL,
+  };
+}
+
+/** Only reviewed, exact-source, complete translations may become crawl targets. */
+function reviewedTranslations(meme: SitemapMemeRow): Map<SeoContentLocale, SitemapTranslationRow> {
+  const translations = new Map<SeoContentLocale, SitemapTranslationRow>();
+  for (const translation of meme.meme_translations ?? []) {
+    if (!isSeoContentLocale(translation.locale)) continue;
+    const isReviewedAndCurrent =
+      translation.status === "reviewed" &&
+      translation.source_updated_at === meme.updated_at &&
+      Boolean(translation.title?.trim()) &&
+      Boolean(translation.summary?.trim()) &&
+      Boolean(translation.description?.trim()) &&
+      Boolean(translation.origin?.trim());
+    if (!isReviewedAndCurrent) continue;
+    translations.set(translation.locale, translation);
+  }
+  return translations;
+}
+
+function memeLanguages(
+  meme: SitemapMemeRow,
+  translations: Map<SeoContentLocale, SitemapTranslationRow>,
+): Record<string, string> {
+  const koreanPath = memePathFrom(meme.short_id, meme.slug);
+  const languages: Record<string, string> = {
+    ko: absolute(koreanPath),
+    "x-default": absolute(koreanPath),
+  };
+  for (const locale of SEO_CONTENT_LOCALES) {
+    const translation = translations.get(locale);
+    if (!translation) continue;
+    languages[toHrefLang(locale)] = absolute(
+      localizedMemePath(
+        locale,
+        meme.short_id,
+        translation.localized_slug || meme.slug,
+      ),
+    );
+  }
+  return languages;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createStaticClient();
@@ -47,13 +130,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     /* 실패 시 현재 시각 유지 */
   }
 
+  const localizedHomeEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
+    (locale) => ({
+      url: absolute(localizedPath("/", locale)),
+      lastModified: homeLastMod,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+      alternates: { languages: homeLanguages() },
+    }),
+  );
+  const localizedHomeLastModified = new Map<SeoContentLocale, Date>();
+
   const entries: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
       lastModified: homeLastMod,
       changeFrequency: "hourly",
       priority: 1,
+      alternates: { languages: homeLanguages() },
     },
+    ...localizedHomeEntries,
     // 테마별 모음 허브
     ...COLLECTIONS.map((c) => ({
       url: `${SITE_URL}/collections/${c.slug}`,
@@ -104,15 +200,55 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     for (const meme of data as unknown as SitemapMemeRow[]) {
       if (!isIndexableMeme(meme)) continue;
-      entries.push({
-        url: `${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}`,
-        lastModified: new Date(meme.updated_at),
-        changeFrequency: "weekly",
-        priority: 0.8,
-      });
+      const translations = reviewedTranslations(meme);
+      const languages = memeLanguages(meme, translations);
+      for (const [locale, translation] of translations) {
+        const translationUpdatedAt = new Date(translation.updated_at);
+        const currentLatest = localizedHomeLastModified.get(locale);
+        if (
+          !Number.isNaN(translationUpdatedAt.getTime()) &&
+          (!currentLatest || translationUpdatedAt > currentLatest)
+        ) {
+          localizedHomeLastModified.set(locale, translationUpdatedAt);
+        }
+      }
+
+      if (entries.length < MAX_SITEMAP_URLS) {
+        entries.push({
+          url: `${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}`,
+          lastModified: new Date(meme.updated_at),
+          changeFrequency: "weekly",
+          priority: 0.8,
+          alternates: { languages },
+        });
+      }
+
+      for (const locale of SEO_CONTENT_LOCALES) {
+        if (entries.length >= MAX_SITEMAP_URLS) break;
+        const translation = translations.get(locale);
+        if (!translation) continue;
+        entries.push({
+          url: absolute(
+            localizedMemePath(
+              locale,
+              meme.short_id,
+              translation.localized_slug || meme.slug,
+            ),
+          ),
+          lastModified: new Date(translation.updated_at),
+          changeFrequency: "weekly",
+          priority: 0.75,
+          alternates: { languages },
+        });
+      }
     }
     if (data.length < PAGE) break;
   }
 
-  return entries;
+  for (const [index, locale] of SEO_CONTENT_LOCALES.entries()) {
+    localizedHomeEntries[index].lastModified =
+      localizedHomeLastModified.get(locale) ?? homeLastMod;
+  }
+
+  return entries.slice(0, MAX_SITEMAP_URLS);
 }

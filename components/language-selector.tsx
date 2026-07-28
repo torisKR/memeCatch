@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LANGUAGE_FLAGS,
   LANGUAGE_NAMES,
@@ -10,6 +10,33 @@ import {
   type Locale,
 } from "@/lib/i18n";
 import { persistLocale, useLocale } from "@/lib/i18n-client";
+import {
+  isSeoContentLocale,
+  localizedPath,
+  parseLocalePath,
+} from "@/lib/i18n-routing";
+
+/**
+ * Return the route needed to apply a locale, or `null` when the cookie-driven
+ * UI can update in place. The global selector does not know which individual
+ * meme translations exist, so only the detail page's availability-aware nav
+ * may link directly between translated details.
+ */
+export function localeDestination(pathname: string, nextLocale: Locale): string | null {
+  const parsed = parseLocalePath(pathname);
+
+  // UI-only locales have no URL prefix. Drop an existing SEO prefix only when
+  // necessary; otherwise preserve the current route and update in place.
+  if (!isSeoContentLocale(nextLocale) && nextLocale !== "ko") {
+    return parsed.hadLocalePrefix ? parsed.pathname : null;
+  }
+
+  if (nextLocale === "ko") return parsed.pathname;
+
+  // Every SEO locale has a home page. A foreign detail (or any other route)
+  // may not exist, so the global selector uses the guaranteed-safe home.
+  return localizedPath("/", nextLocale);
+}
 
 /**
  * 헤더 언어 선택기 — 전 라우트에 노출한다.
@@ -19,11 +46,14 @@ import { persistLocale, useLocale } from "@/lib/i18n-client";
  */
 export function LanguageSelector() {
   const router = useRouter();
+  const pathname = usePathname();
   const { locale, messages } = useLocale();
 
   function changeLocale(nextLocale: Locale) {
     persistLocale(nextLocale);
-    router.refresh();
+    const destination = localeDestination(pathname, nextLocale);
+    if (destination) router.push(destination);
+    else router.refresh();
   }
 
   return (

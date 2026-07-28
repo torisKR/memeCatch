@@ -10,9 +10,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { SafetyLevel } from "@/lib/labels";
+import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
+import {
+  isSeoContentLocale,
+  localizedMemePath,
+  SEO_CONTENT_LOCALES,
+} from "@/lib/i18n-routing";
 
 type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -56,6 +61,51 @@ async function logAudit(
 
 function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : "알 수 없는 오류가 발생했어요.";
+}
+
+type MemeRevalidationIdentity = {
+  short_id: string;
+  slug: string;
+  meme_translations: Array<{ locale: string; localized_slug: string }>;
+};
+
+async function loadMemeRevalidationIdentity(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  memeId: string,
+): Promise<MemeRevalidationIdentity | null> {
+  const { data, error } = await supabase
+    .from("memes")
+    .select("short_id, slug, meme_translations(locale, localized_slug)")
+    .eq("id", memeId)
+    .maybeSingle();
+  return error ? null : data;
+}
+
+/** 한국어 원문/공개 상태를 소비하는 모든 public artifact를 즉시 갱신한다. */
+function revalidateCanonicalMemePaths(meme: MemeRevalidationIdentity | null) {
+  const paths = new Set(["/", "/sitemap.xml", "/llms.txt", "/llms-full.txt"]);
+
+  for (const locale of SEO_CONTENT_LOCALES) {
+    paths.add(`/${locale}`);
+    paths.add(`/${locale}/llms.txt`);
+    paths.add(`/${locale}/llms-full.txt`);
+  }
+
+  if (meme) {
+    paths.add(memePathFrom(meme.short_id, meme.slug));
+    for (const translation of meme.meme_translations) {
+      if (!isSeoContentLocale(translation.locale)) continue;
+      paths.add(
+        localizedMemePath(
+          translation.locale,
+          meme.short_id,
+          translation.localized_slug,
+        ),
+      );
+    }
+  }
+
+  for (const path of paths) revalidatePath(path);
 }
 
 /* ── 제보 큐 ─────────────────────────────────────────── */
@@ -162,15 +212,17 @@ export async function approveSubmission(input: {
       submitted_by: submission.submitter_id,
     };
     let memeId: string | null = null;
+    let revalidationIdentity: MemeRevalidationIdentity | null = null;
     let insertError: string | null = null;
     for (const slug of [slugify(input.title), `${slugify(input.title)}-${Date.now().toString(36)}`]) {
       const { data, error } = await supabase
         .from("memes")
         .insert({ ...baseRow, slug })
-        .select("id")
+        .select("id, short_id, slug")
         .single();
       if (!error && data) {
         memeId = data.id;
+        revalidationIdentity = { ...data, meme_translations: [] };
         insertError = null;
         break;
       }
@@ -266,7 +318,7 @@ export async function approveSubmission(input: {
     });
     revalidatePath("/admin/submissions");
     revalidatePath("/admin/memes");
-    revalidatePath("/");
+    revalidateCanonicalMemePaths(revalidationIdentity);
     return { ok: true, data: { memeId } };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
@@ -295,6 +347,10 @@ export async function updateMeme(input: {
   try {
     const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
+    const revalidationIdentity = await loadMemeRevalidationIdentity(
+      supabase,
+      input.memeId,
+    );
     const { error } = await supabase
       .from("memes")
       .update({
@@ -319,7 +375,7 @@ export async function updateMeme(input: {
     await logAudit(uid, "meme.update", "meme", input.memeId);
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
-    revalidatePath("/");
+    revalidateCanonicalMemePaths(revalidationIdentity);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
@@ -553,6 +609,10 @@ export async function transitionMemeStatus(input: {
 }): Promise<ActionResult> {
   try {
     const { supabase, uid } = await requireOperator();
+    const revalidationIdentity = await loadMemeRevalidationIdentity(
+      supabase,
+      input.memeId,
+    );
     const { error } = await supabase
       .from("memes")
       .update({ moderation_status: input.to, updated_at: new Date().toISOString() })
@@ -567,7 +627,7 @@ export async function transitionMemeStatus(input: {
     await logAudit(uid, "meme.transition", "meme", input.memeId, { to: input.to });
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
-    revalidatePath("/");
+    revalidateCanonicalMemePaths(revalidationIdentity);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };

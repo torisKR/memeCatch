@@ -18,7 +18,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "translate:memes": "node scripts/translate-memes.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.2.10",

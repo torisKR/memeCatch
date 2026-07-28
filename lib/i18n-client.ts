@@ -2,6 +2,7 @@
 
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
 import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, localeFromLanguageTag, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
 
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
@@ -11,8 +12,16 @@ function createLocaleContextValue(locale: Locale) {
   return { locale, messages: getMessages(locale) };
 }
 
+/** Locale prefixes are shareable/crawlable, so they always beat local preference. */
+function localeFromPathname(pathname: string): Locale | null {
+  const parsed = parseLocalePath(pathname);
+  return parsed.hadLocalePrefix && isSeoContentLocale(parsed.locale) ? parsed.locale : null;
+}
+
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
+  const urlLocale = localeFromPathname(window.location.pathname);
+  if (urlLocale) return urlLocale;
   const value = document.cookie.split("; ").find((item) => item.startsWith(`${LOCALE_COOKIE}=`))?.split("=")[1];
   return isLocale(value) ? value : DEFAULT_LOCALE;
 }
@@ -66,6 +75,9 @@ export function LocaleDocumentSync() {
 export function LocaleAutoDetect() {
   useEffect(() => {
     try {
+      // A locale URL is an explicit, shareable choice. Do not overwrite it with
+      // the browser preference during hydration.
+      if (localeFromPathname(window.location.pathname)) return;
       const hasCookie = document.cookie
         .split("; ")
         .some((item) => item.startsWith(`${LOCALE_COOKIE}=`));
@@ -89,6 +101,12 @@ export function persistLocale(locale: Locale) {
   document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
   document.documentElement.lang = getDocumentLanguage(locale);
   document.documentElement.dir = getDocumentDirection(locale);
-  localStorage.setItem(LOCALE_COOKIE, locale);
+  // Private browsing and storage-restricted embeds can throw here. Cookie,
+  // in-memory subscribers, and navigation must still complete.
+  try {
+    localStorage.setItem(LOCALE_COOKIE, locale);
+  } catch {
+    /* locale cookie is sufficient */
+  }
   window.dispatchEvent(new Event(EVENT_NAME));
 }

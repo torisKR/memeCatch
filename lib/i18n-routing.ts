@@ -270,9 +270,7 @@ export function buildLocalizedMetadata({
 
   return {
     metadataBase: new URL(SITE_URL),
-    // A localized layout sits below the Korean root layout, whose title template
-    // would otherwise suffix this default with "| 밈캐치". `absolute` resets the
-    // inherited template for the localized landing page, while `template` still
+    // `absolute` keeps the localized landing title exact, while `template`
     // applies the localized brand to titles in descendant route segments.
     title: title
       ? title

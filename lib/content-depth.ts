@@ -8,7 +8,7 @@
  *
  * 소비처는 두 곳이며 **반드시 같은 신호를 넘겨야** 판정이 갈리지 않는다:
  *   - app/sitemap.ts        — 얇은 밈을 사이트맵에서 제외
- *   - app/memes/[key]/page.tsx — 얇은 밈에 robots noindex,follow 부착
+ *   - app/(default)/memes/[key]/page.tsx — 얇은 밈에 robots noindex,follow 부착
  *
  * 데이터는 삭제하지 않는다. 페이지는 그대로 200으로 살아 있고 색인 노출만 줄인다.
  */

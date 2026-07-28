@@ -14,7 +14,7 @@ import { memePathFrom, SUBMISSION_STATUS } from "@/lib/labels";
 import {
   submitMemeWithAttachment,
   type SubmitState,
-} from "@/app/submit/actions";
+} from "@/app/(default)/submit/actions";
 import { uploadMemeImage, validateUploadFile, UPLOAD_ACCEPT } from "@/lib/upload";
 import { SubmissionStatusBadge } from "@/components/submission-status";
 import { ContentUrlPreview } from "@/components/content-url-preview";
@@ -253,12 +253,12 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           >
             MY에서 제보 상태 보기
           </Link>
-          <a
+          <Link
             href="/submit"
             className="flex h-12 items-center justify-center rounded-xl border border-border bg-surface text-base font-semibold"
           >
             다른 밈 제보하기
-          </a>
+          </Link>
         </div>
       </section>
     );

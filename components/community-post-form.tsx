@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { CategoryTag } from "@/components/category-tag";
 import { MarkdownBody } from "@/components/markdown-body";
-import { createCommunityPost } from "@/app/community/actions";
+import { createCommunityPost } from "@/app/(default)/community/actions";
 import { uploadCommunityMedia, UPLOAD_ACCEPT_MEDIA } from "@/lib/upload";
 import type { MemeCategory } from "@/lib/labels";
 

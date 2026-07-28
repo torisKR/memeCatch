@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 /**
  * PWA 매니페스트 (레인 E)
- * - /manifest.webmanifest 로 서빙 (app/layout.tsx의 metadata.manifest와 일치)
+ * - /manifest.webmanifest 로 서빙 (두 root layout의 metadata.manifest와 일치)
  * - background_color는 매니페스트 스펙상 단일 값만 허용 → 라이트 토큰 사용
  *   (다크 대응은 layout.tsx의 viewport.themeColor media 쿼리가 담당)
  */

@@ -6,7 +6,7 @@ export const contentType = "image/png";
 
 /**
  * 루트(홈·공용) OG 이미지 — 카카오톡/트위터 공유 카드.
- * 상세 페이지는 app/memes/[key]/opengraph-image.tsx가 별도 생성.
+ * 상세 페이지는 app/(default)/memes/[key]/opengraph-image.tsx가 별도 생성.
  * 색은 globals.css 다크 토큰과 동일 값(ImageResponse는 CSS 변수 미지원).
  */
 export default function OgImage() {

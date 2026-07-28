@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createCommunityComment } from "@/app/community/actions";
+import { createCommunityComment } from "@/app/(default)/community/actions";
 
 const MAX_LEN = 1000;
 

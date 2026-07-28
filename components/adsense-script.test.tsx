@@ -26,11 +26,11 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
   it("로더 URL은 adsense-script.tsx 한 곳에만 존재한다", () => {
     // 전역 레이아웃 등 다른 곳에서 직접 로드하면 화면 단위 통제가 무너진다.
     expect(read("components/adsense-script.tsx")).toContain("adsbygoogle.js");
-    expect(read("app/layout.tsx")).not.toContain("adsbygoogle");
+    expect(read("app/_root/root-document.tsx")).not.toContain("adsbygoogle");
   });
 
   it("밈 상세는 충실도 판정을 통과한 문서에서만 로더를 렌더한다", () => {
-    const page = read("app/memes/[key]/page.tsx");
+    const page = read("app/(default)/memes/[key]/page.tsx");
 
     // isIndexableMeme(meme) && <AdsenseScript /> — 색인 판정과 같은 기준을 쓴다.
     expect(page).toMatch(/isIndexableMeme\(meme\)\s*&&\s*<AdsenseScript\s*\/>/);
@@ -40,13 +40,13 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
 
   it("로그인·계정·어드민 등 행동 목적 화면에는 로더를 두지 않는다", () => {
     for (const p of [
-      "app/login/page.tsx",
-      "app/my/page.tsx",
-      "app/admin/page.tsx",
-      "app/submit/page.tsx",
-      "app/support/page.tsx",
-      "app/search/page.tsx",
-      "app/offline/page.tsx",
+      "app/(default)/login/page.tsx",
+      "app/(default)/my/page.tsx",
+      "app/(default)/admin/page.tsx",
+      "app/(default)/submit/page.tsx",
+      "app/(default)/support/page.tsx",
+      "app/(default)/search/page.tsx",
+      "app/(default)/offline/page.tsx",
     ]) {
       expect(read(p), p).not.toContain("AdsenseScript");
     }

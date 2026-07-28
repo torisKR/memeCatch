@@ -12,7 +12,7 @@
  * 저장 행동 집계: 다른 컴포넌트에서 `window.dispatchEvent(new Event("memecatch:save"))`
  * 를 호출하면 카운트가 올라가요.
  *
- * 사용: app/layout.tsx의 <body> 안에 <PwaInstall /> 한 줄 추가.
+ * 사용: app/_root/root-document.tsx의 <body> 안에 <PwaInstall /> 한 줄 추가.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";

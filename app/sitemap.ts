@@ -26,7 +26,7 @@ const MAX_SITEMAP_URLS = 50_000;
 
 /**
  * 충실도 판정에 필요한 신호까지 함께 실어 온다.
- * 상세 페이지의 robots 판정(app/memes/[key]/page.tsx)과 **같은 신호**를 넘겨야
+ * 상세 페이지의 robots 판정(app/(default)/memes/[key]/page.tsx)과 **같은 신호**를 넘겨야
  * "사이트맵엔 있는데 noindex" 같은 모순이 생기지 않는다. 신호를 하나 빼면
  * 그 밈은 점수가 낮게 나와 조용히 색인에서 빠지므로 컬럼 변경 시 양쪽을 함께 본다.
  */

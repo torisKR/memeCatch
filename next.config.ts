@@ -117,6 +117,11 @@ const CSP_HEADER_KEY = CSP_ENFORCE
   : "Content-Security-Policy-Report-Only";
 
 const nextConfig: NextConfig = {
+  // Multiple root layouts make a single composed app/not-found impossible.
+  // Next's router-level global fallback returns a complete HTML document.
+  experimental: {
+    globalNotFound: true,
+  },
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
   outputFileTracingRoot: __dirname,
   // x-powered-by 헤더 제거 — 프레임워크 버전 노출 방지

@@ -6,7 +6,7 @@ import {
   timeAgo,
   type CommunityMemeMini,
   type CommunityPostRow,
-} from "@/app/community/shared";
+} from "@/app/(default)/community/shared";
 
 /**
  * 레인 3 — 커뮤니티 글 카드 (목록용, 서버 렌더).

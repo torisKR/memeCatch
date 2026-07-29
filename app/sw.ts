@@ -36,6 +36,12 @@ function isSupabaseOrAuth(url: URL): boolean {
   return false;
 }
 
+function isRemoteMemeThumbnail(url: URL): boolean {
+  return (
+    url.hostname === "i.ytimg.com" || url.hostname.endsWith(".tiktokcdn.com")
+  );
+}
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
@@ -72,7 +78,19 @@ const serwist = new Serwist({
         !/^\/api(?:\/|$)/.test(url.pathname),
       handler: new NetworkOnly(),
     },
-    // 4) 나머지는 Next.js 권장 기본 전략
+    // 4) 외부 밈 썸네일은 서비스워커 캐시에 넣지 않는다.
+    // Serwist defaultCache의 이미지 규칙은 opaque(status 0) 응답도 정상 캐시한다.
+    // 외부 CDN의 일시적 실패가 들어가면 일반 새로고침마다 그 실패 응답을 재사용하고,
+    // 강력 새로고침에서만 정상 이미지가 보이는 캐시 오염이 생긴다.
+    // same-origin 정적 이미지와 /api/media의 불변 R2 썸네일은 아래 기본 캐시를 유지한다.
+    {
+      matcher: ({ request, sameOrigin, url }) =>
+        !sameOrigin &&
+        request.destination === "image" &&
+        isRemoteMemeThumbnail(url),
+      handler: new NetworkOnly(),
+    },
+    // 5) 나머지는 Next.js 권장 기본 전략
     ...defaultCache,
   ],
 });

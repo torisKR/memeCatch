@@ -113,6 +113,13 @@ describe("사이트맵 페이지네이션 안정성", () => {
 });
 
 describe("사이트맵 다국어 색인 계약", () => {
+  it("테마별 모음 인덱스를 독립 URL로 노출한다", async () => {
+    useRows([]);
+    const entries = await sitemap();
+
+    expect(entries.filter((entry) => entry.url.endsWith("/collections"))).toHaveLength(1);
+  });
+
   it("각 URL에 localized alternates와 ko/x-default를 생성한다", () => {
     expect(source).toContain("alternates");
     expect(source).toContain("languages");

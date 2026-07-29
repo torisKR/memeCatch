@@ -3,6 +3,13 @@ import withSerwistInit from "@serwist/next";
 
 const isDev = process.env.NODE_ENV === "development";
 
+// 밈 카드의 외부 썸네일은 페이지의 <img>뿐 아니라 서비스워커 fetch()로도 요청된다.
+// 해당 호스트만 img-src와 connect-src가 공유해 CSP 권한을 필요한 범위로 제한한다.
+const REMOTE_MEME_THUMBNAIL_SOURCES = [
+  "https://i.ytimg.com",
+  "https://*.tiktokcdn.com",
+] as const;
+
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
@@ -44,8 +51,7 @@ const CSP_DIRECTIVES = [
   "style-src 'self' 'unsafe-inline'",
   [
     "img-src 'self' data: blob:",
-    "https://i.ytimg.com",
-    "https://*.tiktokcdn.com",
+    ...REMOTE_MEME_THUMBNAIL_SOURCES,
     "https://*.googlesyndication.com",
     "https://*.google-analytics.com",
     "https://www.googletagmanager.com",
@@ -72,6 +78,8 @@ const CSP_DIRECTIVES = [
   ].join(" "),
   [
     "connect-src 'self'",
+    // /sw.js의 NetworkOnly 이미지 요청은 CSP에서 connect-src 적용 대상이다.
+    ...REMOTE_MEME_THUMBNAIL_SOURCES,
     "https://*.supabase.co",
     "wss://*.supabase.co",
     "https://*.google-analytics.com",

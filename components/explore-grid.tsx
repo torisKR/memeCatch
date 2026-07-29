@@ -316,7 +316,7 @@ export function ExploreGrid({
       <ul className="grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4">
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
-            <MemeCard meme={meme} />
+            <MemeCard meme={meme} sourcePlatform={filters.platform} />
           </li>
         ))}
       </ul>

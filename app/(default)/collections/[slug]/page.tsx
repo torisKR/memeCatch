@@ -134,7 +134,10 @@ export default async function CollectionPage({
         <Link href="/" className="hover:text-foreground">
           밈캐치
         </Link>{" "}
-        <span aria-hidden>›</span> 모음
+        <span aria-hidden>›</span>{" "}
+        <Link href="/collections" className="hover:text-foreground">
+          밈 모음
+        </Link>
       </nav>
 
       <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{col.title}</h1>
@@ -187,9 +190,14 @@ export default async function CollectionPage({
 
       {/* 다른 모음으로의 내부 링크 — 허브 간 연결 */}
       <section aria-labelledby="other-collections" className="mt-12">
-        <h2 id="other-collections" className="text-lg font-bold">
-          다른 모음도 보기
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="other-collections" className="text-lg font-bold">
+            다른 모음도 보기
+          </h2>
+          <Link href="/collections" className="text-sm font-semibold text-muted hover:text-accent">
+            전체 모음 →
+          </Link>
+        </div>
         <ul className="mt-3 flex flex-wrap gap-2">
           {COLLECTIONS.filter((c) => c.slug !== col.slug).map((c) => (
             <li key={c.slug}>

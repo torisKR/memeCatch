@@ -150,6 +150,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: { languages: homeLanguages() },
     },
     ...localizedHomeEntries,
+    {
+      url: `${SITE_URL}/collections`,
+      lastModified: homeLastMod,
+      changeFrequency: "daily" as const,
+      priority: 0.75,
+    },
     // 테마별 모음 허브
     ...COLLECTIONS.map((c) => ({
       url: `${SITE_URL}/collections/${c.slug}`,

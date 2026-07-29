@@ -42,6 +42,12 @@ function rscRequest(
   });
 }
 
+function imageRequest(url: string): Request {
+  const request = new Request(url);
+  Object.defineProperty(request, "destination", { value: "image" });
+  return request;
+}
+
 function firstMatchingRoute(request: Request): RuntimeCaching {
   const url = new URL(request.url);
   const sameOrigin = url.origin === ORIGIN;
@@ -118,12 +124,32 @@ describe("service-worker runtime caching", () => {
         headers: { RSC: "1", "Next-Router-Prefetch": "1" },
       }),
     );
-    const imageRoute = firstMatchingRoute(new Request(`${ORIGIN}/meme.webp`));
+    const imageRoute = firstMatchingRoute(imageRequest(`${ORIGIN}/meme.webp`));
 
     // defaultCache can resolve Serwist through a separate ESM module instance,
     // so constructor identity is not stable after resetModules().
     expect(apiRoute.handler.constructor.name).toBe("NetworkFirst");
     expect(apiRoute.handler).toMatchObject({ cacheName: "apis" });
     expect(imageRoute.handler).toMatchObject({ cacheName: "static-image-assets" });
+  });
+
+  it("never stores cross-origin meme thumbnails in the opaque image cache", () => {
+    const requests = [
+      imageRequest("https://i.ytimg.com/vi/example/hqdefault.jpg"),
+      imageRequest(
+        "https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/example?x-expires=1785400000",
+      ),
+    ];
+
+    for (const request of requests) {
+      const route = firstMatchingRoute(request);
+      expect(route.handler, request.url).toBeInstanceOf(NetworkOnly);
+      expect(route.handler).not.toMatchObject({ cacheName: "static-image-assets" });
+    }
+
+    const unrelatedImage = firstMatchingRoute(
+      imageRequest("https://assets.example.com/brand.png"),
+    );
+    expect(unrelatedImage.handler).toMatchObject({ cacheName: "static-image-assets" });
   });
 });

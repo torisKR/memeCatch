@@ -5,18 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS } from "@/lib/labels";
 import type { SocialPlatform, SocialPlatformCounts } from "@/lib/source-platform";
 
-/**
- * 레인 B 여정2 — 탐색 필터 바 (URL 쿼리 동기화, deep link/뒤로가기 보존).
- * - 검색 인풋(이 목록 안 검색 → ?q=, 서버가 search_memes RPC로 필터)
- * - 정렬 세그먼트(급상승·최신·인기·논쟁 중)
- * - 카테고리 칩(다중, 가로 스크롤) — 각 칩이 자기 카테고리 틴트 색 = 필터가 곧 색 범례.
- *   (DESIGN.md §11 소프트 틴트: 틴트 bg + 어두운 텍스트, 선택 시 텍스트색 테두리+진하게)
- * - 접이식 상세 필터(난이도·연도대·미디어, 각 단일)
- * - 필터 초기화
- * 선택 시 router.push({ scroll:false })로 쿼리만 갱신 → 서버가 새 결과 스트리밍.
- * 카테고리 색 토큰(--cat-*)은 레인 A(globals.css)가 제공한다.
- */
-
 const SORTS = [
   { key: "trending", label: "급상승" },
   { key: "recent", label: "최신" },
@@ -31,14 +19,6 @@ const PLATFORMS = [
   { key: "tiktok", label: "TikTok" },
   { key: "instagram", label: "Instagram" },
 ] as const;
-
-// 플랫폼 브랜드색(YouTube red/Shorts rose/TikTok cyan/IG fuchsia) — 토큰 시스템 예외, OAuth 버튼과 동일 원칙
-const PLATFORM_DOT: Record<SocialPlatform, string> = {
-  youtube: "bg-red-500",
-  youtube_shorts: "bg-rose-500",
-  tiktok: "bg-cyan-500",
-  instagram: "bg-fuchsia-500",
-};
 
 const YEARS = [
   { key: "2020s", label: "2020년대" },
@@ -68,25 +48,11 @@ const LIFECYCLE_ENTRIES = Object.entries(LIFECYCLE_STATUS) as [
 ][];
 
 const chipBase =
-  "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-[color,border-color,background-color,transform] duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-const chipOff = "border-border bg-surface text-muted hover:border-accent hover:text-accent";
+  "inline-flex min-h-10 items-center rounded-full border px-3 text-sm font-medium transition-[color,border-color,background-color] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const chipOff = "border-border bg-surface text-muted hover:border-accent/60 hover:text-foreground";
 const chipOn = "border-accent bg-accent-soft font-semibold text-accent";
 
-// 카테고리 틴트 칩 — 항상 자기 카테고리 색(틴트 bg + 어두운 텍스트)으로 렌더해
-// 필터 바 자체가 색 범례 역할을 한다. 폭 변화 없게 테두리는 상시 2px(off는 투명).
-const catChipBase =
-  "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border-2 px-3.5 text-sm transition-[border-color,box-shadow,transform] active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
-/** 카테고리 키 → --cat-* 토큰 인라인 스타일 (레인 A 제공 토큰). 선택 시 텍스트색 테두리 강조. */
-function catChipStyle(key: string, on: boolean): React.CSSProperties {
-  return {
-    backgroundColor: `var(--cat-${key}-bg)`,
-    color: `var(--cat-${key}-text)`,
-    borderColor: on ? `var(--cat-${key}-text)` : "transparent",
-    boxShadow: on ? "0 1px 3px rgb(0 0 0 / 0.12)" : "none",
-  };
-}
-
+/** 검색과 결과 사이를 한 줄 도구막대로 정돈한 URL 동기화 필터. */
 export function ExploreFilters({
   platformCounts,
 }: {
@@ -105,34 +71,41 @@ export function ExploreFilters({
   const lifecycle = searchParams.get("lifecycle") ?? "";
   const platform = searchParams.get("platform") ?? "";
   const activeQuery = searchParams.get("q") ?? "";
-
-  // 검색 인풋은 로컬 상태로 다루되 URL(뒤로가기·초기화)과 동기화한다.
   const [query, setQuery] = useState(activeQuery);
+
   useEffect(() => {
-    // 외부 상태(URL 쿼리)를 로컬 인풋에 반영 — 뒤로가기·필터 초기화 시 동기화
+    // 뒤로가기와 초기화로 URL이 바뀌면 입력값도 같은 상태로 되돌린다.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery(searchParams.get("q") ?? "");
   }, [searchParams]);
 
-  const hasFilters =
-    activeCategories.length > 0 ||
-    !!difficulty ||
-    !!year ||
-    !!media ||
-    !!lifecycle ||
-    !!platform ||
-    !!activeQuery ||
-    (sort !== "trending" && !!searchParams.get("sort"));
+  const filterCount =
+    activeCategories.length +
+    Number(Boolean(difficulty)) +
+    Number(Boolean(year)) +
+    Number(Boolean(media)) +
+    Number(Boolean(lifecycle)) +
+    Number(Boolean(platform));
+  const hasAnyState = filterCount > 0 || Boolean(activeQuery) || sort !== "trending";
 
   const pushParams = useCallback(
     (next: URLSearchParams) => {
       const qs = next.toString();
       router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, pathname]
+    [pathname, router],
   );
 
-  // 단일 값 토글 — 같은 값 다시 누르면 해제
+  const setSingle = useCallback(
+    (key: string, value: string) => {
+      const next = new URLSearchParams(searchParams);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      pushParams(next);
+    },
+    [pushParams, searchParams],
+  );
+
   const toggleSingle = useCallback(
     (key: string, value: string) => {
       const next = new URLSearchParams(searchParams);
@@ -140,54 +113,33 @@ export function ExploreFilters({
       else next.set(key, value);
       pushParams(next);
     },
-    [searchParams, pushParams]
+    [pushParams, searchParams],
   );
 
-  // 다중 값 토글(카테고리)
-  const toggleMulti = useCallback(
-    (key: string, value: string) => {
+  const toggleCategory = useCallback(
+    (value: string) => {
       const next = new URLSearchParams(searchParams);
-      const current = next.getAll(key);
-      next.delete(key);
+      const current = next.getAll("category");
+      next.delete("category");
       const updated = current.includes(value)
-        ? current.filter((v) => v !== value)
+        ? current.filter((item) => item !== value)
         : [...current, value];
-      for (const v of updated) next.append(key, v);
+      for (const item of updated) next.append("category", item);
       pushParams(next);
     },
-    [searchParams, pushParams]
+    [pushParams, searchParams],
   );
 
-  const setSort = useCallback(
-    (value: string) => {
-      const next = new URLSearchParams(searchParams);
-      next.set("sort", value);
-      pushParams(next);
-    },
-    [searchParams, pushParams]
-  );
-
-  const setPlatform = useCallback(
-    (value: string) => {
-      const next = new URLSearchParams(searchParams);
-      if (value) next.set("platform", value);
-      else next.delete("platform");
-      pushParams(next);
-    },
-    [searchParams, pushParams]
-  );
-
-  // 검색 제출 — ?q= 갱신(빈 값이면 제거). 다른 필터는 유지.
   const submitSearch = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
+    (event: React.FormEvent) => {
+      event.preventDefault();
       const next = new URLSearchParams(searchParams);
       const trimmed = query.trim();
       if (trimmed) next.set("q", trimmed);
       else next.delete("q");
       pushParams(next);
     },
-    [query, searchParams, pushParams]
+    [pushParams, query, searchParams],
   );
 
   const clearSearch = useCallback(() => {
@@ -195,291 +147,259 @@ export function ExploreFilters({
     const next = new URLSearchParams(searchParams);
     next.delete("q");
     pushParams(next);
-  }, [searchParams, pushParams]);
+  }, [pushParams, searchParams]);
 
   const reset = useCallback(() => {
     router.push(pathname, { scroll: false });
-  }, [router, pathname]);
+  }, [pathname, router]);
+
+  const activeChips = [
+    ...activeCategories.map((key) => ({
+      key: `category:${key}`,
+      label: CATEGORIES[key as keyof typeof CATEGORIES]?.user ?? key,
+      clear: () => toggleCategory(key),
+    })),
+    ...(platform
+      ? [{
+          key: `platform:${platform}`,
+          label: PLATFORMS.find((item) => item.key === platform)?.label ?? platform,
+          clear: () => setSingle("platform", ""),
+        }]
+      : []),
+    ...(difficulty
+      ? [{
+          key: `difficulty:${difficulty}`,
+          label: DIFFICULTY[difficulty as keyof typeof DIFFICULTY]?.user ?? difficulty,
+          clear: () => setSingle("difficulty", ""),
+        }]
+      : []),
+    ...(lifecycle
+      ? [{
+          key: `lifecycle:${lifecycle}`,
+          label: LIFECYCLE_STATUS[lifecycle as keyof typeof LIFECYCLE_STATUS]?.user ?? lifecycle,
+          clear: () => setSingle("lifecycle", ""),
+        }]
+      : []),
+    ...(year
+      ? [{
+          key: `year:${year}`,
+          label: YEARS.find((item) => item.key === year)?.label ?? year,
+          clear: () => setSingle("year", ""),
+        }]
+      : []),
+    ...(media
+      ? [{
+          key: `media:${media}`,
+          label: MEDIA.find((item) => item.key === media)?.label ?? media,
+          clear: () => setSingle("media", ""),
+        }]
+      : []),
+  ];
 
   return (
-    <div className="mt-4 space-y-3">
-      {/* 검색 인풋 — 이 목록 안에서 검색(제출 시 ?q=) */}
+    <div className="mt-6 border-y border-border py-4">
       <form role="search" onSubmit={submitSearch} className="relative">
-        <span
+        <svg
+          viewBox="0 0 24 24"
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted"
+          className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
         >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.2-3.2" />
-          </svg>
-        </span>
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.2-3.2" />
+        </svg>
         <input
           type="search"
           name="q"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="이 목록에서 검색"
-          aria-label="이 목록에서 검색"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="밈 이름이나 뜻으로 검색"
+          aria-label="밈 이름이나 뜻으로 검색"
           enterKeyHint="search"
-          className="min-h-11 w-full rounded-full border border-border bg-surface py-2 pl-11 pr-28 text-base text-foreground placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-search-cancel-button]:appearance-none"
+          className="min-h-12 w-full rounded-xl border border-border bg-surface py-2 pl-11 pr-28 text-base text-foreground placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-search-cancel-button]:appearance-none"
         />
-        {/* 우측 액션 — 인풋 안에 '떠 있는' 컴팩트 필(위아래 숨 쉴 여백), 지우기는 고스트 원형 */}
         <div className="absolute inset-y-0 right-2 flex items-center gap-1">
           {query && (
             <button
               type="button"
               onClick={clearSearch}
               aria-label="검색어 지우기"
-              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-surface-2 hover:text-foreground active:scale-95"
+              className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
             >
-              <svg
-                viewBox="0 0 24 24"
-                aria-hidden
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <span aria-hidden>×</span>
             </button>
           )}
           <button
             type="submit"
-            aria-label="검색"
-            className="relative inline-flex h-8 items-center gap-1.5 rounded-full bg-accent-strong px-3.5 text-sm font-bold text-white shadow-sm transition-[filter,transform] before:absolute before:-inset-1.5 before:content-[''] hover:brightness-110 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="inline-flex h-9 items-center rounded-lg bg-accent-strong px-4 text-sm font-bold text-white transition-[filter] hover:brightness-110"
           >
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden
-              className="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h13M13 6l6 6-6 6" />
-            </svg>
-            <span className="hidden sm:inline">검색</span>
+            검색
           </button>
         </div>
       </form>
 
-      {/* 신호 레일 — 정렬과 원본 플랫폼을 한 덩어리로 묶어, 필터가 여러 단으로
-          흩어져 보이지 않게 한다. */}
-      <section className="rounded-2xl border border-border bg-surface p-3.5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-bold tracking-[0.12em] text-muted">정렬</p>
-          <p className="text-xs font-bold tracking-[0.12em] text-muted">원본 플랫폼</p>
-        </div>
-        <div className="mt-2.5 grid gap-3 lg:grid-cols-2">
-          <div
-            role="tablist"
-            aria-label="정렬"
-            className="flex gap-1.5 overflow-x-auto pb-1"
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <label className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm">
+          <span className="text-muted">정렬</span>
+          <select
+            value={sort}
+            onChange={(event) => setSingle("sort", event.target.value)}
+            aria-label="정렬 방식"
+            className="rounded-sm bg-transparent font-semibold text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            {SORTS.map((s) => {
-              const on = sort === s.key;
-              return (
-                <button
-                  key={s.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setSort(s.key)}
-                  className={`${chipBase} ${on ? chipOn : chipOff}`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-          <div
-            role="tablist"
+            {SORTS.map((item) => (
+              <option key={item.key} value={item.key}>{item.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm">
+          <span className="text-muted">출처</span>
+          <select
+            value={platform}
+            onChange={(event) => setSingle("platform", event.target.value)}
             aria-label="원본 플랫폼"
-            className="flex gap-1.5 overflow-x-auto pb-1"
+            className="rounded-sm bg-transparent font-semibold text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {PLATFORMS.map((item) => {
-              const on = platform === item.key;
               const count = item.key
                 ? platformCounts[item.key as SocialPlatform]
                 : null;
-              const unavailable = count === 0;
               return (
-                <button
-                  key={item.key || "all"}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setPlatform(item.key)}
-                  className={`${chipBase} ${on ? chipOn : chipOff} ${
-                    unavailable && !on ? "border-dashed opacity-70" : ""
-                  }`}
-                >
-                  {item.key && (
-                    <span
-                      aria-hidden
-                      className={`h-2 w-2 rounded-full ${PLATFORM_DOT[item.key as SocialPlatform]}`}
-                    />
-                  )}
-                  {item.label}
-                  {count !== null && (
-                    <span
-                      aria-label={`${count}개`}
-                      className="rounded-full bg-foreground/8 px-1.5 py-0.5 font-mono text-xs tabular-nums transition-transform duration-200 ease-out motion-reduce:transition-none"
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
+                <option key={item.key || "all"} value={item.key}>
+                  {item.label}{count === null ? "" : ` · ${count}`}
+                </option>
               );
             })}
-          </div>
-        </div>
-        <p className="mt-2.5 border-t border-border pt-2.5 text-xs leading-relaxed text-muted">
-          숫자는 현재 재생 가능한 공개 콘텐츠 수예요. 0은 아직 검수된 공개 원본이 없다는 뜻이에요.
-        </p>
-      </section>
+          </select>
+        </label>
 
-      {/* 카테고리 칩(다중) — 각 칩이 자기 카테고리 틴트 색 = 색 범례.
-          선택 시 텍스트색 테두리+진하게(고채도는 신호등 독점이라 저채도 틴트만 사용). */}
-      <div
-        aria-label="카테고리"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
-      >
-        {CATEGORY_ENTRIES.map(([key, meta]) => {
-          const on = activeCategories.includes(key);
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={on}
-              onClick={() => toggleMulti("category", key)}
-              style={catChipStyle(key, on)}
-              className={`${catChipBase} ${on ? "font-semibold" : "font-medium"}`}
-            >
-              {meta.user}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 상세 필터 토글 */}
-      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className={`${chipBase} ${
-            difficulty || year || media || lifecycle ? chipOn : chipOff
-          }`}
+          aria-controls="explore-filter-panel"
+          onClick={() => setOpen((value) => !value)}
+          className={`${chipBase} ${filterCount > 0 ? chipOn : chipOff}`}
         >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <path d="M3 6h18M6 12h12M10 18h4" />
-          </svg>
-          상세 필터
+          필터{filterCount > 0 ? ` ${filterCount}` : ""}
+          <span aria-hidden className={`ml-1 transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>
         </button>
-        {hasFilters && (
+
+        {hasAnyState && (
           <button
             type="button"
             onClick={reset}
-            className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-muted underline-offset-2 transition-colors hover:text-accent hover:underline active:scale-[0.97]"
+            className="inline-flex min-h-10 items-center px-2 text-sm font-semibold text-muted underline decoration-border underline-offset-4 transition-colors hover:text-accent"
           >
-            필터 초기화
+            초기화
           </button>
         )}
       </div>
 
+      {activeChips.length > 0 && (
+        <ul aria-label="적용된 필터" className="mt-3 flex flex-wrap gap-2">
+          {activeChips.map((item) => (
+            <li key={item.key}>
+              <button
+                type="button"
+                onClick={item.clear}
+                aria-label={`${item.label} 필터 해제`}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-sm font-semibold text-foreground transition-colors hover:text-accent"
+              >
+                {item.label} <span aria-hidden>×</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {open && (
-        <div className="space-y-3 rounded-2xl border border-border bg-surface-2 p-4">
-          <FilterRow label="난이도">
-            {DIFFICULTY_ENTRIES.map(([key, meta]) => (
-              <ChipBtn
-                key={key}
-                on={difficulty === key}
-                onClick={() => toggleSingle("difficulty", key)}
-              >
-                {meta.user}
-              </ChipBtn>
-            ))}
-          </FilterRow>
+        <div id="explore-filter-panel" className="mt-4 space-y-5 border-t border-border pt-4">
+          <fieldset>
+            <legend className="text-sm font-bold">카테고리</legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CATEGORY_ENTRIES.map(([key, meta]) => {
+                const on = activeCategories.includes(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleCategory(key)}
+                    className={`${chipBase} ${on ? chipOn : chipOff}`}
+                  >
+                    {meta.user}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
 
-          <FilterRow label="생애주기">
-            {LIFECYCLE_ENTRIES.map(([key, meta]) => (
-              <ChipBtn
-                key={key}
-                on={lifecycle === key}
-                onClick={() => toggleSingle("lifecycle", key)}
-              >
-                {meta.user}
-              </ChipBtn>
-            ))}
-          </FilterRow>
-
-          <FilterRow label="연도대">
-            {YEARS.map((y) => (
-              <ChipBtn
-                key={y.key}
-                on={year === y.key}
-                onClick={() => toggleSingle("year", y.key)}
-              >
-                {y.label}
-              </ChipBtn>
-            ))}
-          </FilterRow>
-
-          <FilterRow label="미디어">
-            {MEDIA.map((m) => (
-              <ChipBtn
-                key={m.key}
-                on={media === m.key}
-                onClick={() => toggleSingle("media", m.key)}
-              >
-                {m.label}
-              </ChipBtn>
-            ))}
-          </FilterRow>
+          <div className="grid gap-5 md:grid-cols-2">
+            <FilterGroup label="난이도">
+              {DIFFICULTY_ENTRIES.map(([key, meta]) => (
+                <FilterButton
+                  key={key}
+                  on={difficulty === key}
+                  onClick={() => toggleSingle("difficulty", key)}
+                >
+                  {meta.user}
+                </FilterButton>
+              ))}
+            </FilterGroup>
+            <FilterGroup label="생애주기">
+              {LIFECYCLE_ENTRIES.map(([key, meta]) => (
+                <FilterButton
+                  key={key}
+                  on={lifecycle === key}
+                  onClick={() => toggleSingle("lifecycle", key)}
+                >
+                  {meta.user}
+                </FilterButton>
+              ))}
+            </FilterGroup>
+            <FilterGroup label="연도대">
+              {YEARS.map((item) => (
+                <FilterButton
+                  key={item.key}
+                  on={year === item.key}
+                  onClick={() => toggleSingle("year", item.key)}
+                >
+                  {item.label}
+                </FilterButton>
+              ))}
+            </FilterGroup>
+            <FilterGroup label="미디어">
+              {MEDIA.map((item) => (
+                <FilterButton
+                  key={item.key}
+                  on={media === item.key}
+                  onClick={() => toggleSingle("media", item.key)}
+                >
+                  {item.label}
+                </FilterButton>
+              ))}
+            </FilterGroup>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function FilterRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <p className="mb-1.5 text-sm font-semibold text-muted">{label}</p>
-      <div className="flex flex-wrap gap-2">{children}</div>
-    </div>
+    <fieldset>
+      <legend className="text-sm font-bold">{label}</legend>
+      <div className="mt-2 flex flex-wrap gap-2">{children}</div>
+    </fieldset>
   );
 }
 
-function ChipBtn({
+function FilterButton({
   on,
   onClick,
   children,

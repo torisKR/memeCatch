@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
-import { LIST_COLUMNS, LIST_SELECT, type MemeListItem } from "@/lib/queries";
+import { LIST_COLUMNS, type MemeListItem } from "@/lib/queries";
 import {
   CATEGORIES,
   DIFFICULTY,
@@ -17,10 +17,8 @@ import {
   type SortKey,
 } from "@/components/explore-grid";
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
-import { DailyTop10 } from "@/components/daily-top10";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
-import { EXPLORE_QUICK_LINKS } from "@/lib/quick-links";
 import { AdsenseScript } from "@/components/adsense-script";
 
 /**
@@ -193,34 +191,6 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
   return q;
 }
 
-/** 필터가 하나도 없는 기본 진입 상태인가 — TOP 10 섹션 노출 조건 */
-function isDefaultEntry(f: Filters): boolean {
-  return (
-    !f.q &&
-    f.categories.length === 0 &&
-    !f.difficulty &&
-    !f.lifecycle &&
-    !f.media &&
-    !f.year &&
-    !f.platform &&
-    f.sort === "trending"
-  );
-}
-
-/** 오늘(KST) 많이 본 밈 TOP 10 — get_daily_top_memes RPC (실패 시 섹션 숨김) */
-async function getDailyTopMemes(): Promise<MemeListItem[]> {
-  try {
-    const supabase = createStaticClient();
-    const { data, error } = await supabase
-      .rpc("get_daily_top_memes", { p_limit: 10 })
-      .select(LIST_SELECT);
-    if (error || !data) return [];
-    return data as MemeListItem[];
-  } catch {
-    return [];
-  }
-}
-
 /** 필터 상태로부터 안정적인 remount 키 — 필터 변경 시 그리드 상태 초기화 */
 function filterKey(f: Filters): string {
   return [
@@ -242,9 +212,8 @@ export default async function ExplorePage({
 }) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
-  const showTop10 = isDefaultEntry(filters);
 
-  const [initial, dailyTop, platformCounts] = await Promise.all([
+  const [initial, platformCounts] = await Promise.all([
     (async (): Promise<MemeListItem[]> => {
       try {
         const supabase = createStaticClient();
@@ -257,52 +226,37 @@ export default async function ExplorePage({
         return [];
       }
     })(),
-    showTop10 ? getDailyTopMemes() : Promise.resolve([]),
     getSocialPlatformCounts(),
   ]);
 
   return (
-    // 다크 web3 스킨은 layout의 body.theme-ink가 전역 적용(전 사이트 통일)
-    <main className="relative isolate overflow-x-clip bg-background pb-14 text-foreground">
+    <main className="bg-background pb-14 text-foreground">
       <AdsenseScript />
-      <div aria-hidden className="ink-grid pointer-events-none absolute inset-0 -z-10" />
-      <div className="mx-auto max-w-5xl px-4 pt-6">
-      <ExploreCollectionJsonLd />
-      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-        Discover
-      </p>
-      <h1 className="mt-1 text-2xl font-bold">밈 탐색</h1>
-      <p className="mt-1 text-base text-muted">
-        지금 도는 밈을 카테고리·연도·난이도로 골라 봐요.
-      </p>
+      <div className="mx-auto max-w-6xl px-4 pt-8">
+        <ExploreCollectionJsonLd />
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+          Discover
+        </p>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">밈 탐색</h1>
+            <p className="mt-1 text-base text-muted">
+              검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
+            </p>
+          </div>
+          <Link
+            href="/collections"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
+          >
+            테마별 모음 <span aria-hidden className="ml-1">→</span>
+          </Link>
+        </div>
 
-      {/* 추천 컬렉션 — 기본 진입에서만 노출(필터 중엔 결과에 집중), 전부 실쿼리 */}
-      {showTop10 && (
-        <nav aria-label="추천 컬렉션" className="mt-4">
-          <ul className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
-            {EXPLORE_QUICK_LINKS.map((item) => (
-              <li key={item.key} className="shrink-0 snap-start">
-                <Link
-                  href={item.href}
-                  className="hover-glow-flame flex w-44 flex-col gap-1 rounded-2xl border border-border bg-surface p-3.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98]"
-                >
-                  <span className="truncate text-sm font-bold">{item.title}</span>
-                  <span className="truncate text-xs text-muted">{item.description}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
+        <ExploreFilters platformCounts={platformCounts} />
 
-      <ExploreFilters platformCounts={platformCounts} />
-
-      {/* 기본 진입(필터/검색 없음)에서만 노출 — 필터·검색 중엔 숨김 */}
-      {showTop10 && <DailyTop10 memes={dailyTop} />}
-
-      <div className="mt-5">
-        <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />
-      </div>
+        <section aria-label="밈 탐색 결과" className="mt-6">
+          <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />
+        </section>
       </div>
     </main>
   );

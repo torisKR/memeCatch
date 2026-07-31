@@ -37,10 +37,16 @@ const withSerwist = withSerwistInit({
  * - Supabase: *.supabase.co (REST/Storage/Realtime — wss 포함)
  * - inline script: JSON-LD(dangerouslySetInnerHTML)·Next 런타임 인라인 → 'unsafe-inline'
  */
+/* 개발 모드의 React·Turbopack은 콜스택 재구성 등 디버깅 기능에 eval()을 쓴다.
+   enforce CSP에 'unsafe-eval'이 없으면 매 페이지 로드마다 콘솔 위반이 뜬다.
+   개발에서만 허용하고 프로덕션 번들에는 절대 넣지 않는다
+   (next build 시 NODE_ENV=production이라 아래 분기가 꺼진다). */
+const IS_DEV = process.env.NODE_ENV === "development";
+
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   [
-    "script-src 'self' 'unsafe-inline'",
+    `script-src 'self' 'unsafe-inline'${IS_DEV ? " 'unsafe-eval'" : ""}`,
     "https://pagead2.googlesyndication.com",
     "https://*.googlesyndication.com",
     "https://www.googletagmanager.com",

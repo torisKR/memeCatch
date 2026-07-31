@@ -4,6 +4,28 @@ import { describe, expect, it } from "vitest";
 
 const source = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
 
+describe("script-src eval policy", () => {
+  it("allows eval only in development", () => {
+    // 개발 React는 eval()이 필요하지만, 프로덕션에 'unsafe-eval'이 새어 나가면
+    // XSS 방어가 통째로 약해진다. 허용은 IS_DEV 분기 안에서만 일어나야 한다.
+    const scriptDirective = source.slice(
+      source.indexOf("`script-src"),
+      source.indexOf('"style-src'),
+    );
+    expect(scriptDirective).toContain("unsafe-eval");
+    expect(scriptDirective).toContain("IS_DEV ?");
+
+    // 주석에도 'unsafe-eval'이 등장하므로 코드만 남기고 센다.
+    const code = source
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    expect(code.split("'unsafe-eval'").length - 1).toBe(1);
+    expect(source).toContain(
+      'const IS_DEV = process.env.NODE_ENV === "development"',
+    );
+  });
+});
+
 describe("service-worker image CSP", () => {
   it("shares the remote thumbnail allowlist between img-src and connect-src", () => {
     const allowlist = source.slice(

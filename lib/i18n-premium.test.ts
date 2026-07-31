@@ -20,12 +20,35 @@ describe("PREMIUM_COPY", () => {
     expect(copy.my.pageStatus(2, 4)).toContain("4");
   });
 
-  it("describes recurring billing without promising self-service cancellation", () => {
-    expect(PREMIUM_COPY.ko.pricing.launchNote).toBe("매월 갱신되는 월간 멤버십");
-    expect(PREMIUM_COPY.en.pricing.launchNote).toBe("A monthly recurring membership");
-    expect(PREMIUM_COPY.ja.pricing.launchNote).toBe("毎月更新される月額メンバーシップ");
-    expect(PREMIUM_COPY.zh.pricing.launchNote).toBe("按月续费的月度会员");
+  it("states the pass does not auto-renew", () => {
+    // Unifi Pay에는 정기결제 API가 없다(1회 결제 = 30일 이용권). 자동 갱신을
+    // 약속하면 오지 않을 갱신을 기다리게 만드는 거짓 안내가 된다.
+    expect(PREMIUM_COPY.ko.pricing.launchNote).toBe("30일 이용권 · 자동 갱신 없음");
+    expect(PREMIUM_COPY.en.pricing.launchNote).toBe("30-day pass · does not auto-renew");
+    expect(PREMIUM_COPY.ja.pricing.launchNote).toBe("30日間の利用券・自動更新なし");
+    expect(PREMIUM_COPY.zh.pricing.launchNote).toBe("30天使用权 · 不自动续费");
   });
+
+  it.each(SUPPORTED_LOCALES)("never promises recurring billing for %s", (locale) => {
+    const { launchNote, perMonth, sameEmail } = PREMIUM_COPY[locale].pricing;
+    const claims = `${launchNote} ${perMonth} ${sameEmail}`;
+
+    // 중국어는 "不自动续费"(자동갱신 없음)처럼 부정형에도 '续费'가 들어간다.
+    // 갱신을 약속하는 표현만 골라서 본다.
+    expect(claims).not.toMatch(
+      /매월|월간|monthly|recurring|毎月|月額|按月续费|按月訂閱|月度会员|月度會員/i,
+    );
+    // 결제 제공자가 바뀌었다 — 이전 제공자명이 남아 있으면 안내가 어긋난다.
+    expect(claims).not.toMatch(/래피드|Latpeed/i);
+  });
+
+  it.each(SUPPORTED_LOCALES)(
+    "prices the pass in a currency Unifi Pay supports for %s",
+    (locale) => {
+      // Unifi Pay는 USD·JPY만 지원한다(KRW 불가).
+      expect(PREMIUM_COPY[locale].pricing.monthly).toBe("$20");
+    },
+  );
 
   it.each(SUPPORTED_LOCALES)("does not advertise a free trend-radar preview for %s", (locale) => {
     const trendRadar = PREMIUM_COPY[locale].pricing.features[1];

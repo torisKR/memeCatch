@@ -3,7 +3,7 @@ import { PricingContent } from "@/components/premium/pricing-content";
 
 export const metadata: Metadata = {
   title: "MemeCatch Plus",
-  description: "관심사 맞춤 밈 트렌드 레이더와 무제한 저장을 제공하는 밈캐치 월간 멤버십입니다.",
+  description: "관심사 맞춤 밈 트렌드 레이더와 무제한 저장을 제공하는 밈캐치 30일 이용권입니다. 자동 갱신되지 않아요.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     type: "website",

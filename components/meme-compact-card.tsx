@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { SafetyBadge } from "@/components/safety-badge";
+import { SignalTrace } from "@/components/signal-trace";
 import { memePathFrom } from "@/lib/labels";
 import type { MemeListItem } from "@/lib/queries";
 
@@ -37,25 +38,28 @@ export function MemeCompactCard({
         />
         {rank != null && (
           <>
+            {/* 계측 화면의 채널 번호처럼 — 모노스페이스 2자리 고정 */}
             <span
               aria-hidden
-              className={`absolute left-2 top-2 grid size-7 place-items-center rounded-full text-sm font-extrabold shadow-sm ${
+              className={`absolute left-2 top-2 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums shadow-sm ${
                 rank <= 3
                   ? "bg-accent-strong text-white"
-                  : "border border-border/70 bg-surface/90 text-foreground backdrop-blur-sm"
+                  : "border border-white/15 bg-ink/80 text-white/80 backdrop-blur-sm"
               }`}
             >
-              {rank}
+              {String(rank).padStart(2, "0")}
             </span>
             <span className="sr-only">{rank}위</span>
           </>
         )}
       </div>
 
-      <div className="flex flex-col items-start gap-1.5 p-3">
+      <div className="flex flex-col items-start gap-2 p-3">
         <p className="line-clamp-2 text-sm font-extrabold leading-snug">
           {meme.title}
         </p>
+        {/* 시그니처 — 파형 모양이 곧 생애주기다(색 의존 없음) */}
+        <SignalTrace status={meme.lifecycle_status} className="w-full" />
         <SafetyBadge level={meme.safety_level} />
       </div>
     </Link>

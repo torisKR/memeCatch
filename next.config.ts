@@ -125,6 +125,11 @@ const CSP_HEADER_KEY = CSP_ENFORCE
   : "Content-Security-Policy-Report-Only";
 
 const nextConfig: NextConfig = {
+  /* 개발 서버를 Cloudflare 터널로 열어 모바일·외부 기기에서 확인할 때,
+     Next는 기본적으로 다른 origin의 dev 리소스(/_next/webpack-hmr) 접근을
+     차단한다. 터널 호스트명은 세션마다 바뀌므로 와일드카드로 허용한다.
+     개발 모드에서만 적용되며 프로덕션 동작에는 영향이 없다. */
+  allowedDevOrigins: ["*.trycloudflare.com"],
   // Multiple root layouts make a single composed app/not-found impossible.
   // Next's router-level global fallback returns a complete HTML document.
   experimental: {

@@ -70,4 +70,3 @@ output/
 adsbot.html
 # 수집 스크립트 --work 스크랩 캐시 (재생성 가능)
 data/memes/collected/.work/
-.env.local.bak-*

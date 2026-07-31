@@ -68,3 +68,5 @@ graphify-out/
 output/
 # AdSense 봇 디버깅용으로 저장한 라이브 페이지 사본
 adsbot.html
+# 수집 스크립트 --work 스크랩 캐시 (재생성 가능)
+data/memes/collected/.work/

@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "kind": "cli-adversarial-test-report",
+  "surface": "cli",
+  "createdAt": "2026-07-17T00:00:00Z",
+  "cases": [
+    {
+      "id": "case1-contract-audit-C2-C4",
+      "verdict": "pass",
+      "command": "node /tmp/ultragoal-qa-g001-p2/audit1.mjs (loads scripts/social-content.mjs parseNativeSocialContent, walks data/memes/collected/korean-article-social-candidates-2026-07-17.jsonl)",
+      "output": "{ totalRows: 450, missingSourceUrl: 0, missingPlatform: 0, missingOembedTitleKey: 0, missingOembedAuthorKey: 0, missingThumbOrFlag: 0, missingCatalogStatus: 0, parseFail: 0, dupCount: 0 }",
+      "notes": "All 450 rows have source_url/source_platform, oembed_title and oembed_author_name KEYS present (nullable ok), thumbnail_url or needs_thumb_backfill:true, catalog_match_status present, parseNativeSocialContent succeeds on every source_url, zero in-file duplicate source_url values."
+    },
+    {
+      "id": "case2-provenance-audit",
+      "verdict": "pass",
+      "command": "node /tmp/ultragoal-qa-g001-p2/audit2.mjs",
+      "output": "{ totalRows: 450, fallbackRowCount: 259, nonFallbackRowCount: 191, fallbackBadCount: 0, nonFallbackMissingOembedVerifiedCount: 0 }",
+      "notes": "Every metadata_source=public_page_og row (259) has public_page_verified_at set, catalog_match_status=unmapped, and no oembed_verified_at key. Every non-fallback row (191) has a truthy oembed_verified_at."
+    },
+    {
+      "id": "case3-ranking-integrity",
+      "verdict": "pass",
+      "command": "node /tmp/ultragoal-qa-g001-p2/audit3.mjs",
+      "output": "{ koreanEmbeddedCount: 450, priorityCounts: { high: 3, medium: 2, low: 445 }, unmappedPriorityCounts: { low: 445 }, unmappedHighCount: 0 }",
+      "notes": "In social-korean-article-ranking-2026-07-17.jsonl, all 445 korean_article_embedded rows with catalog_match_status=unmapped are review_priority=low; none are high or medium. The 5 non-low rows (3 high, 2 medium) are all catalog_match_status=title_overlap/exact, not unmapped."
+    },
+    {
+      "id": "case4-promotions-sql",
+      "verdict": "pass",
+      "command": "node inline check on korean-article-promotions-2026-07-17.jsonl; search tool regex (?i)\\b(drop|delete|truncate)\\s over the .sql file",
+      "output": "jsonl: 10/10 rows source_platform=TikTok with non-empty title (oembed_title) and creator_name. sql: 4624 bytes, contains begin;...commit;, only insert/select/do-block statements, zero matches for drop/delete/truncate.",
+      "notes": "SQL uses idempotent NOT EXISTS guards on meme_contents.url / meme_sources.source_url and an assertion block verifying match count == 10 before mutating."
+    },
+    {
+      "id": "case5-import-safety",
+      "verdict": "pass",
+      "command": "node -e 'import(\"./scripts/collect-korean-article-social-candidates.mjs\").then(() => console.log(\"import ok\"))'",
+      "output": "import ok",
+      "notes": "Process exited 0, no exit(2)/crash on bare import (top-level argv parsing tolerates absent argv)."
+    },
+    {
+      "id": "case6-usage-guard",
+      "verdict": "pass",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs (no args)",
+      "output": "exit=2; stderr: usage: node scripts/collect-korean-article-social-candidates.mjs <urls.txt|urls.jsonl|dir> <output.jsonl> [--exclude=dir] [--exclude-urls=file] [--verified=dir] [--max-pages=40] [--max-per-page=20]",
+      "notes": "No output/error files written; process.exitCode=2 with usage on stderr, stdout empty."
+    },
+    {
+      "id": "case7-e2e-seven-test-files",
+      "verdict": "pass",
+      "command": "node --test scripts/<file>.test.mjs for each of the 7 targets",
+      "output": "collect-korean-article-social-candidates exit=0; public-article-social exit=0; collect-secondary-social-candidates exit=0; collect-public-article-social-candidates exit=0; social-content exit=0 (3 subtests pass); rank-social-source-candidates exit=0; prepare-contextual-social-promotions exit=0",
+      "notes": "All 7 files exit 0 individually; total 9 passing test/subtest assertions observed, 0 failures."
+    },
+    {
+      "id": "case8-clamp-regression",
+      "verdict": "pass",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs /tmp/ultragoal-qa-g001-p2/clamp-input.txt /tmp/ultragoal-qa-g001-p2/clamp-output.jsonl --max-pages=999999 (scratch input: 90 synthetic https://*.invalid seed URLs, none touching production data)",
+      "output": "stderr: 'note: 10 seed URLs skipped due to --max-pages=80 clamp' followed by 'page 1/80 ... page 80/80 failed: fetch failed' (exactly 80 processed), summary {\"pages\":80,...}; exit=0",
+      "notes": "Confirms Math.min(80, Number(--max-pages)) clamp still holds and truncation notice format is unchanged from pass-1. Output/errors written only to /tmp scratch path."
+    }
+  ],
+  "contractAudit": {
+    "rowsAudited": 450,
+    "c2c4Violations": 0,
+    "provenanceViolations": 0,
+    "fallbackRows": 259,
+    "nonFallbackRows": 191,
+    "inFileDuplicates": 0,
+    "parseNativeSocialContentFailures": 0
+  },
+  "e2e": {
+    "filesRun": 7,
+    "filesPassed": 7,
+    "filesFailed": 0,
+    "files": [
+      "scripts/collect-korean-article-social-candidates.test.mjs",
+      "scripts/public-article-social.test.mjs",
+      "scripts/collect-secondary-social-candidates.test.mjs",
+      "scripts/collect-public-article-social-candidates.test.mjs",
+      "scripts/social-content.test.mjs",
+      "scripts/rank-social-source-candidates.test.mjs",
+      "scripts/prepare-contextual-social-promotions.test.mjs"
+    ]
+  },
+  "canonicalFileIntegrity": {
+    "checkedBeforeAndAfter": true,
+    "identical": true,
+    "sha256": {
+      "data/memes/collected/korean-article-social-candidates-2026-07-17.jsonl": "03881a65f5b01e92399a39834134064e6f9ba6419270dbf8f46eba29e778276b",
+      "data/memes/review/social-korean-article-ranking-2026-07-17.jsonl": "b709c2f9b0b5f8d50e35ac567bed7585dbc036c93fc0808a0e595695e80169b9",
+      "data/memes/review/korean-article-promotions-2026-07-17.jsonl": "2d756a3e6a2e1170441ef516ec3c3d8708d9d0d75ee9313ba532f61db96cb2ef",
+      "data/memes/review/korean-article-promotions-2026-07-17.sql": "7b398a61c0b4912d6d0d8ad1ddf8c290f858c14e54b10f5e3c7b84ef907b78a0"
+    }
+  },
+  "blockers": []
+}

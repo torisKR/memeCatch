@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "kind": "cli-adversarial-test-report",
+  "surface": "cli",
+  "createdAt": "2026-07-17T14:20:00Z",
+  "cases": [
+    {
+      "id": "case1_empty_input",
+      "scenario": "Empty input file",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs /tmp/ultragoal-qa-g001/empty-input.txt /tmp/ultragoal-qa-g001/out1.jsonl",
+      "expected": "exit code 2, no output file created",
+      "observed": "stderr: 'no article URLs found in input'; exit=2; ls /tmp/ultragoal-qa-g001/out1.jsonl -> No such file or directory",
+      "verdict": "passed"
+    },
+    {
+      "id": "case2_garbage_input",
+      "scenario": "Only comments/garbage lines: non-URL text, javascript: URL, http:// (non-https), ftp://",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs /tmp/ultragoal-qa-g001/garbage-input.txt /tmp/ultragoal-qa-g001/out2.jsonl",
+      "expected": "collector must not fetch garbage; clean no-page behavior, no network calls",
+      "observed": "stderr: 'no article URLs found in input'; exit=2; no output file; command completed in <100ms confirming zero fetch attempts (officialHttpsArticleUrl() rejected all non-https/platform lines before any network call)",
+      "verdict": "passed"
+    },
+    {
+      "id": "case3_dns_and_404",
+      "scenario": "Nonexistent domain URL + namu.wiki 404 URL",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs /tmp/ultragoal-qa-g001/case3-input.txt /tmp/ultragoal-qa-g001/out3.jsonl --max-pages=2",
+      "expected": "errors recorded per page, run continues to completion, exit 0",
+      "observed": "stderr: 'page 1/2 failed: fetch failed' then 'page 2/2 failed: public article HTTP 404'; summary {pages:2,discovered:0,kept:0,skippedDup:0,errors:2}; exit=0; out3.jsonl.errors.json contains both error entries with article_url+message",
+      "verdict": "passed"
+    },
+    {
+      "id": "case4_shortlink_profile_hashtag_filtered",
+      "scenario": "Embedded HTML contains vm.tiktok.com short-link, instagram.com profile URL, tiktok.com/tag/ hashtag URL alongside real post URLs",
+      "command": "node /tmp/ultragoal-qa-g001/case4-check.mjs (synthetic HTML through socialPostUrlsFromHtml + parseNativeSocialContent) plus canonical-output regex audit",
+      "expected": "short-link/profile/hashtag URLs never appear in extracted candidates or canonical output (parseNativeSocialContent returns null for all three)",
+      "observed": "socialPostUrlsFromHtml() extracted only the 2 real post URLs (TikTok video, IG reel), ignoring the 3 non-post URLs; parseNativeSocialContent('https://vm.tiktok.com/ZMabcdEFG/')=null, parseNativeSocialContent('https://www.instagram.com/someuser/')=null, parseNativeSocialContent('https://www.tiktok.com/tag/meme')=null; canonical-file regex audit: total rows 450, bad matches (vm.tiktok|/tag/|instagram.com/[^/]+/?$) = 0",
+      "verdict": "passed"
+    },
+    {
+      "id": "case5_dedupe_against_exclude",
+      "scenario": "Input pointing at a namu.wiki page already harvested in canonical output, run with --exclude=data/memes/collected",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs /tmp/ultragoal-qa-g001/case5-input.txt /tmp/ultragoal-qa-g001/out5.jsonl --exclude=data/memes/collected --max-pages=1",
+      "expected": "kept=0, skippedDup>0",
+      "observed": "stderr: 'page 1/1: +9 raw, path=namu_individual_page'; summary {pages:1,discovered:20,kept:0,skippedDup:20,errors:0}; out5.jsonl is 0 bytes",
+      "verdict": "passed"
+    },
+    {
+      "id": "case6_flag_clamp_abuse",
+      "scenario": "--max-pages=999999, --max-pages=0, --max-per-page=-5",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs ... --max-pages=999999 | --max-pages=0 | --max-per-page=-5 (plus arithmetic check and live functional check with --max-per-page=1)",
+      "expected": "clamps hold: max-pages in [1,80], max-per-page in [1,50]",
+      "observed": "clampPages(999999)=80 (only 2 real articles in input so pages=2, no crash/no padding); clampPages(0)=1 (stderr showed 'page 1/1'); clampPerPage(-5)=1 (arithmetic verified); live functional check with --max-per-page=1 against a page with 20 raw candidates yielded exactly discovered:1 (per-page slice enforced)",
+      "verdict": "passed"
+    },
+    {
+      "id": "case7_nested_output_dir",
+      "scenario": "Output path targets a deeply nonexistent nested directory",
+      "command": "node scripts/collect-korean-article-social-candidates.mjs /tmp/ultragoal-qa-g001/case3-input.txt /tmp/ultragoal-qa-g001/nested/a/b/c/out7.jsonl --max-pages=1",
+      "expected": "mkdirSync recursive creates the full path, run completes",
+      "observed": "exit=0; ls -la shows /tmp/ultragoal-qa-g001/nested/a/b/c/out7.jsonl (0 bytes) and out7.jsonl.errors.json (134 bytes) both created",
+      "verdict": "passed"
+    },
+    {
+      "id": "case8_static_forbidden_pattern_scan",
+      "scenario": "Static grep of collector + public-article-social.mjs for login/token/challenge-bypass/private-API markers; confirm fallback fetches only /embed/captioned/",
+      "command": "search pattern 'login|token|challenge.?bypass|private.?api|access_token|/api/v1|graphql' over scripts/collect-korean-article-social-candidates.mjs and scripts/public-article-social.mjs",
+      "expected": "no actual credential/private-API usage; only public oEmbed endpoints and the documented /embed/captioned/ fallback",
+      "observed": "all hits are safeguard comments/detection logic ('Login, challenge bypass... never used', 'never bypasses a login/challenge wall', regex /login or challenge/i for stopping on challenge pages, /captcha|unusual traffic|login to continue|sign in to continue/i detector). instagramPublicPageFallback() fetches exactly `${sourceUrl}/embed/captioned/` once (line ~249); verifyOEmbed() calls only https://www.tiktok.com/oembed and https://graph.facebook.com/v25.0/instagram_oembed (both public documented oEmbed endpoints). No token/access_token/private API constant found.",
+      "verdict": "passed"
+    },
+    {
+      "id": "case9_canonical_c2_c4_audit",
+      "scenario": "Re-verify C2 (key presence incl. explicit nulls, thumbnail-or-flag) and C4 (parseNativeSocialContent pass) plus in-file dup count over all 450 canonical rows",
+      "command": "node /tmp/ultragoal-qa-g001/audit-canonical.mjs",
+      "expected": "c2_pass=true, c4_pass=true, in_file_dup_count=0",
+      "observed": "{totalRows:450, c2_pass:true, c2_failure_count:0, c4_pass:true, c4_failure_count:0, in_file_dup_count:0}",
+      "verdict": "passed"
+    },
+    {
+      "id": "case10_regex_integration",
+      "scenario": "Extract SOCIAL_FILE regex from rank-social-source-candidates.mjs and CANDIDATE_FILE regex from prepare-contextual-social-promotions.mjs; assert both match the canonical jsonl filename and do NOT match the .errors.json filename; then run both scripts end-to-end on a scratch copy of the canonical file",
+      "command": "node -e '...regex extraction and .test()...'; node scripts/rank-social-source-candidates.mjs /tmp/ultragoal-qa-g001/collected-copy /tmp/ultragoal-qa-g001/ranked.jsonl; node scripts/prepare-contextual-social-promotions.mjs /tmp/ultragoal-qa-g001/collected-copy data/memes/verified /tmp/ultragoal-qa-g001/promotions.jsonl",
+      "expected": "both regexes match 'korean-article-social-candidates-2026-07-17.jsonl', neither matches the '.errors.json' sibling; live run flows all 450 rows through both pipelines",
+      "observed": "SOCIAL_FILE.test(jsonl)=true, SOCIAL_FILE.test(errors.json)=false; CANDIDATE_FILE.test(jsonl)=true, CANDIDATE_FILE.test(errors.json)=false; rank-social-source-candidates.mjs summary {total:450,high:154,medium:1,low:295,platforms:{TikTok:164,Instagram:286}}; prepare-contextual-social-promotions.mjs summary {candidates:450,promotions:10,tiktok:3,instagram:7,rejected:{total:450,no_match:431,weak:0,missing_meta:3,dup:6}}",
+      "verdict": "passed"
+    }
+  ],
+  "contractAudit": {
+    "C1_min_30_new_candidates": {
+      "result": "passed",
+      "evidence": "Frozen canonical output data/memes/collected/korean-article-social-candidates-2026-07-17.jsonl contains 450 rows (>= 30) from the run under test."
+    },
+    "C2_row_shape": {
+      "result": "passed",
+      "evidence": "audit-canonical.mjs verified all 450 rows have source_url, source_platform, oembed_title key present (nullable), oembed_author_name key present (nullable), and thumbnail_url OR needs_thumb_backfill:true. c2_failure_count=0."
+    },
+    "C3_rerun_zero_duplicates": {
+      "result": "passed (verified via proxy)",
+      "evidence": "Direct rerun against the live 450-row prod dataset was not repeated destructively (would require --exclude=data/memes/collected against the exact same input set, which is not preserved/available as a static input file). Equivalent proof executed instead: case5 dedupe test showed --exclude=data/memes/collected causes kept=0/skippedDup=20 for a page already harvested; audit-canonical.mjs additionally confirms in_file_dup_count=0 within the canonical output itself, and the collector's excluded-URL Set (loadExcludeUrls + excluded.add(key) at insert time) structurally guarantees 0 duplicates against prior candidates/production on any rerun with the same --exclude flag. No plan/code mismatch found."
+    },
+    "C4_source_url_parses": {
+      "result": "passed",
+      "evidence": "audit-canonical.mjs: c4_failure_count=0 across all 450 rows via parseNativeSocialContent(). Adversarial case4 confirmed short-links/profiles/hashtags are structurally excluded at both the extraction regex (socialPostUrlsFromHtml) and the URL-normalization (parseNativeSocialContent) layers, and canonical-output regex audit found 0 matches for vm.tiktok|/tag/|instagram.com/[^/]+/?$."
+    },
+    "C5_flows_into_ledger_and_ranking": {
+      "result": "passed",
+      "evidence": "Live end-to-end run on a scratch copy: rank-social-source-candidates.mjs ingested all 450 rows (SOCIAL_FILE regex match) and ranked them; prepare-contextual-social-promotions.mjs ingested all 450 candidates (CANDIDATE_FILE regex match) and produced 10 approved contextual promotions after strict oEmbed-title/creator matching. Both regexes match the canonical filename and correctly exclude the sibling .errors.json."
+    },
+    "C6_node_test_convention": {
+      "result": "passed",
+      "evidence": "All 6 directly-related test files run cleanly via `node <file>.test.mjs` with exit 0: collect-korean-article-social-candidates.test.mjs, public-article-social.test.mjs, social-content.test.mjs (uses node:test with 3/3 pass), social-public-page-metadata.test.mjs, rank-social-source-candidates.test.mjs, prepare-contextual-social-promotions.test.mjs."
+    }
+  },
+  "e2e": {
+    "commands": [
+      "node scripts/collect-korean-article-social-candidates.test.mjs",
+      "node scripts/public-article-social.test.mjs",
+      "node scripts/social-content.test.mjs",
+      "node scripts/social-public-page-metadata.test.mjs",
+      "node scripts/rank-social-source-candidates.test.mjs",
+      "node scripts/prepare-contextual-social-promotions.test.mjs"
+    ],
+    "results": [
+      { "file": "collect-korean-article-social-candidates.test.mjs", "exit": 0, "output": "collect-korean-article-social-candidates safeguards OK" },
+      { "file": "public-article-social.test.mjs", "exit": 0, "output": "public-article-social extraction OK" },
+      { "file": "social-content.test.mjs", "exit": 0, "output": "3/3 node:test assertions pass (YouTube Shorts vs regular, canonical TikTok/Instagram URL acceptance, redirect-only/context URL rejection)" },
+      { "file": "social-public-page-metadata.test.mjs", "exit": 0, "output": "social public page metadata parser OK" },
+      { "file": "rank-social-source-candidates.test.mjs", "exit": 0, "output": "rank-social-source-candidates safeguards OK" },
+      { "file": "prepare-contextual-social-promotions.test.mjs", "exit": 0, "output": "prepare-contextual-social-promotions OK" }
+    ]
+  },
+  "productionFileIntegrityCheck": {
+    "canonical_output_md5": "d6648b8a23969e8d21d390dd8886c72f",
+    "note": "Canonical file data/memes/collected/korean-article-social-candidates-2026-07-17.jsonl (450 rows) was only read, never written by this QA run. All script invocations under test wrote exclusively to /tmp/ultragoal-qa-g001/**. Pre-existing uncommitted git modifications to scripts/rank-social-source-candidates.mjs and other files predate this QA session (mtime 13:19, before QA started) and were not made by this run."
+  },
+  "blockers": []
+}

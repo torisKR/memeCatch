@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignalTrace } from "@/components/signal-trace";
+import { LiveCaretInput } from "@/components/ui/live-caret-input";
 import { LIFECYCLE_STATUS, type LifecycleStatus } from "@/lib/labels";
 
 /** 판독기에 보여줄 순서 — 밈이 실제로 거치는 생애 순서 그대로. */
@@ -46,7 +47,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
                 <svg
                   viewBox="0 0 24 24"
                   aria-hidden
-                  className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-neutral-500"
+                  className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-5 -translate-y-1/2 text-neutral-500"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -55,14 +56,20 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
                   <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-3.5-3.5" />
                 </svg>
-                <input
+                {/* 캐럿을 브랜드 신호로 — 입력하는 순간에도 Signal Desk 언어가
+                   이어진다. 네이티브 input이 그대로 남아 있어 form 제출·IME·
+                   스크린리더는 기존과 동일하게 동작한다. */}
+                <LiveCaretInput
                   id="home-search"
                   name="q"
                   type="search"
                   placeholder="궁금한 밈·유행어를 검색해보세요"
                   autoComplete="off"
                   enterKeyHint="search"
-                  className="h-12 w-full rounded-xl border-0 bg-transparent pl-11 pr-3 text-base text-neutral-950 outline-none placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent"
+                  color="var(--flame-500)"
+                  caretWidth={2}
+                  className="h-12 w-full rounded-xl focus-within:outline-2 focus-within:outline-offset-0 focus-within:outline-accent"
+                  fieldClassName="pl-11 pr-3 text-base leading-[3rem] text-neutral-950"
                 />
               </div>
               <button

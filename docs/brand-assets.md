@@ -51,23 +51,45 @@
   (docs 하단 "재생성 방법" 참조).
 - 16px에서는 꼬리·갭이 뭉개지지 않도록 타일형(2색)만 사용.
 
-## 홈 Hero 아트
+## 홈 Hero 아트 (v2 — Meme Signal 키 비주얼, 2026-07-31)
 
-- 도구: Higgsfield MCP `generate_image`, 모델 `nano_banana_flash`(요청 nano_banana_2 → 서버 매핑), 16:9 2k.
-- 프롬프트(선정안): "A premium futuristic editorial 3D illustration for a Korean meme dictionary
-  and discovery platform. A holographic signal radar is catching playful abstract reaction symbols,
-  speech bubbles, waveform fragments and cultural data particles inside a digital archive portal.
-  Obsidian graphite environment, warm flame-orange (#ff5c38) light… artwork weighted to the right
-  side, generous dark negative space on the left third… no people, no faces, no text, no letters,
-  no logos, no coins, no cryptocurrency symbols, no NFT imagery, no purple, no copyrighted
-  characters, no watermark." (job d8af21c1)
-- 후보 3종 중 선정 기준: B·C안은 이미지 내 텍스트가 렌더링되어 탈락(no-text 규칙).
-  A안: 좌측 네거티브 스페이스·밈 서비스 인상·비암호화폐 인상·모바일 크롭 모두 충족.
-- 원본: 2752×1536 PNG(5.8MB) → 최적화:
-  - `public/brand/hero-meme-signal.webp` 1600×893, 71KB (데스크톱)
-  - `public/brand/hero-meme-signal.avif` 1600×893, 38KB (`<picture>` 우선)
-  - `public/brand/hero-meme-signal-mobile.webp` 828×462, 21KB (모바일 배경 레이어)
+- 도구: Higgsfield MCP `generate_image`, 모델 `nano_banana_flash`(요청 nano_banana_2 → 서버 매핑),
+  16:9 2k. (job 3841a0cf)
+- 콘셉트: 확정 브랜드 심볼 문법(§14 Meme Signal — 말풍선 + 신호 dot + 펄스 라인)을 그대로
+  3D로 옮긴 키 비주얼. 프로스트 글래스 말풍선 클러스터 사이에서 발광하는 flame 오렌지
+  히어로 버블 내부에 신호 dot, 좌우로 펄스 파형 라인 관통. v1(범용 레이더/데이터 모티프)을
+  심볼 정합성 문제로 대체.
+- 프롬프트(선정안): "Premium 3D brand key visual on a near-black deep ink background (#0f0f12).
+  A cluster of translucent frosted-glass rounded speech bubbles floating in dark space at varying
+  depths. One large hero speech bubble at center-right glows from within in vivid flame orange
+  (#ff5c38) and contains a single small bright glowing off-center round dot, like a status signal
+  light. A thin elegant horizontal pulse waveform line of orange light passes through… Absolutely
+  no text, no letters, no words, no logos, no watermarks."
+- 원본: 2752×1536 PNG(5.2MB) → 최적화:
+  - `public/brand/hero-signal-v2.webp` 2752×1536 VP8, 56KB (`<img>` 기본 — Higgsfield min 산출물)
+  - `public/brand/hero-signal-v2.avif` 1600×893 svt-av1, 9.4KB (`<picture>` 우선)
+  - `public/brand/og-signal.jpg` 1200×630, 58KB (루트 `app/opengraph-image.tsx` 배경)
+- 주의: macOS `sips`로 인코딩한 AVIF는 Chrome에서 디코딩 실패(빈 이미지) — AVIF는
+  ffmpeg `libsvtav1`(yuv420p, `-frames:v 1`) 또는 sharp로 인코딩할 것.
+- 구 자산 `hero-meme-signal.{webp,avif}`·`hero-meme-signal-mobile.webp`(미참조)는 삭제
+  (git 히스토리 보존). 모바일 히어로는 LCP 보호를 위해 텍스트 우선 유지(이미지 lg+ 전용).
 - CLS 방지: `<img width/height>` 명시. LCP: 데스크톱에서 `fetchPriority="high"`.
+
+## 상태 일러스트 세트 (2026-07-31, 무제한 생성분)
+
+키 비주얼과 동일 문법(잉크 배경 + 프로스트 글래스 말풍선 + flame 오렌지)으로 상태
+화면을 브랜드화. 전부 Higgsfield `generate_image`(nano_banana_flash, 2k, `use_unlim`)
+산출물의 min.webp를 그대로 사용.
+
+- `public/brand/state-404.webp` 2400×1792, 38KB — 신호가 꺼진 회색 말풍선.
+  `app/(default)/not-found.tsx`. (job a7fd5917)
+- `public/brand/state-empty-search.webp` 2400×1792, 62KB — 유리 돋보기 + 미점등 말풍선.
+  `components/explore-grid.tsx` 빈 상태. (job c473e087)
+- `public/brand/login-signal.webp` 1696×2528, 60KB — 키 비주얼 세로판(수직 펄스 라인).
+  `app/(default)/login/page.tsx` 좌측 패널(lg+). (job cb8241b7)
+- 통합 기법: 다크 표면 위 `mix-blend-screen`(잉크 배경이 표면색에 융화) +
+  `mask-image: radial-gradient(...)`로 가장자리 페이드 → 사각 경계 제거.
+  로그인 패널은 full-bleed `object-cover`라 블렌드 불필요.
 
 ## 재생성 방법
 
@@ -75,9 +97,9 @@
 2. 결과 PNG 다운로드 후:
    ```bash
    node -e "const s=require('./node_modules/.pnpm/sharp@0.34.5/node_modules/sharp');
-   (async()=>{await s('in.png').resize(1600).webp({quality:82}).toFile('public/brand/hero-meme-signal.webp');
-   await s('in.png').resize(1600).avif({quality:55}).toFile('public/brand/hero-meme-signal.avif');
-   await s('in.png').resize(828).webp({quality:74}).toFile('public/brand/hero-meme-signal-mobile.webp');})()"
+   (async()=>{await s('in.png').resize(1600).webp({quality:82}).toFile('public/brand/hero-signal-v2.webp');
+   await s('in.png').resize(1600).avif({quality:55}).toFile('public/brand/hero-signal-v2.avif');
+   await s('in.png').resize(1200,630,{fit:'cover'}).jpeg({quality:80}).toFile('public/brand/og-signal.jpg');})()"
    ```
 3. 아이콘: `public/brand/favicon.svg` 수정 → sharp로 192/512/maskable/180 래스터화,
    favicon.ico는 16/32/48 PNG를 ICONDIR 헤더로 연결(git 히스토리의 생성 스크립트 참조).

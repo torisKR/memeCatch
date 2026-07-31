@@ -17,6 +17,16 @@ export default function NotFound() {
           }}
         >
           <div className="relative mx-auto max-w-md">
+            {/* 브랜드 404 일러스트 — 신호가 꺼진 말풍선. screen 블렌드로 표면 융화 */}
+            <img
+              src="/brand/state-404.webp"
+              alt=""
+              width={1024}
+              height={768}
+              loading="lazy"
+              decoding="async"
+              className="mx-auto mb-4 w-52 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-60"
+            />
             <p className="inline-flex min-h-8 items-center gap-2 rounded-full bg-ink px-3 text-xs font-semibold text-white">
               <span aria-hidden className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-accent" />

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const alt = "밈캐치 — 그 밈, 3초 안에 알려드려요";
@@ -8,8 +10,13 @@ export const contentType = "image/png";
  * 루트(홈·공용) OG 이미지 — 카카오톡/트위터 공유 카드.
  * 상세 페이지는 app/(default)/memes/[key]/opengraph-image.tsx가 별도 생성.
  * 색은 globals.css 다크 토큰과 동일 값(ImageResponse는 CSS 변수 미지원).
+ * 배경은 히어로와 동일한 브랜드 키 비주얼(말풍선+신호 dot+펄스 라인, §14).
  */
-export default function OgImage() {
+export default async function OgImage() {
+  const background = await readFile(
+    join(process.cwd(), "public/brand/og-signal.jpg")
+  );
+
   return new ImageResponse(
     (
       <div
@@ -20,11 +27,31 @@ export default function OgImage() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          background: "linear-gradient(135deg, #131316 55%, #3a2018 100%)",
+          position: "relative",
+          background: "#131316",
           color: "#f0efec",
           fontFamily: "sans-serif",
         }}
       >
+        <img
+          src={`data:image/jpeg;base64,${background.toString("base64")}`}
+          alt=""
+          width={1200}
+          height={630}
+          style={{ position: "absolute", top: 0, left: 0 }}
+        />
+        {/* 좌측 텍스트 가독 확보 — 키 비주얼의 네거티브 스페이스를 살짝 더 어둡게 */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: 1200,
+            height: 630,
+            background:
+              "linear-gradient(90deg, rgba(15,15,18,0.88) 0%, rgba(15,15,18,0.55) 42%, rgba(15,15,18,0) 68%)",
+          }}
+        />
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div
             style={{

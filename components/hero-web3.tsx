@@ -76,16 +76,17 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
 
         <div className="relative hidden min-h-[34rem] overflow-hidden border-l border-white/10 lg:block">
           <picture>
-            <source srcSet="/brand/hero-meme-signal.avif" type="image/avif" />
-            {/* 정적 브랜드 자산은 public 경로와 고정 크기를 사용한다. */}
+            <source srcSet="/brand/hero-signal-v2.avif" type="image/avif" />
+            {/* 정적 브랜드 자산은 public 경로와 고정 크기를 사용한다.
+               키 비주얼은 브랜드 심볼 문법(말풍선+신호 dot+펄스 라인)을 따른다(§14). */}
             <img
-              src="/brand/hero-meme-signal.webp"
+              src="/brand/hero-signal-v2.webp"
               alt=""
               width={1600}
               height={893}
               fetchPriority="high"
               decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover object-[63%_50%]"
             />
           </picture>
           <div

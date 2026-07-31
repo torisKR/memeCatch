@@ -278,6 +278,16 @@ export function ExploreGrid({
   if (items.length === 0) {
     return (
       <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">
+        {/* 브랜드 빈 상태 일러스트 — 잉크 배경 원본을 screen 블렌드로 표면에 융화 */}
+        <img
+          src="/brand/state-empty-search.webp"
+          alt=""
+          width={1024}
+          height={768}
+          loading="lazy"
+          decoding="async"
+          className="mx-auto mb-2 w-48 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-56"
+        />
         <p className="text-xl font-bold">
           {filters.q ? (
             <>

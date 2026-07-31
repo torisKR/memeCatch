@@ -36,6 +36,8 @@ export type PremiumCopy = {
     membershipStatus: string;
     active: string;
     renews: string;
+    extend: string;
+    expiringSoon: (days: number) => string;
     billingHelp: string;
     syncNote: string;
   };
@@ -127,6 +129,8 @@ const PREMIUM_COPY_BASE = {
       membershipStatus: "멤버십 상태",
       active: "이용 중",
       renews: "이용 확인 기한",
+      extend: "이용 연장하기",
+      expiringSoon: (days: number) => days <= 0 ? "오늘 만료돼요. 지금 연장하면 이어서 쓸 수 있어요." : `${days}일 뒤 만료돼요. 미리 연장해 두세요.`,
       billingHelp: "취소·환불 문의",
       syncNote: "구매 직후 연결까지 잠시 걸릴 수 있어요. 같은 이메일을 사용했는지 확인해 주세요.",
     },
@@ -216,6 +220,8 @@ const PREMIUM_COPY_BASE = {
       membershipStatus: "Membership status",
       active: "Active",
       renews: "Access confirmed through",
+      extend: "Extend access",
+      expiringSoon: (days: number) => days <= 0 ? "Your pass expires today. Extend now to keep access." : `Your pass expires in ${days} days. Extend it in advance.`,
       billingHelp: "Cancellation & refund help",
       syncNote: "Connection may take a moment after purchase. Make sure you used the same email.",
     },
@@ -305,6 +311,8 @@ const PREMIUM_COPY_BASE = {
       membershipStatus: "メンバーシップ状況",
       active: "利用中",
       renews: "利用確認期限",
+      extend: "利用を延長する",
+      expiringSoon: (days: number) => days <= 0 ? "本日で期限が切れます。今すぐ延長すれば続けて利用できます。" : `あと${days}日で期限が切れます。早めに延長してください。`,
       billingHelp: "キャンセル・返金のお問い合わせ",
       syncNote: "購入後の連携には少し時間がかかる場合があります。同じメールアドレスを使用したか確認してください。",
     },
@@ -394,6 +402,8 @@ const PREMIUM_COPY_BASE = {
       membershipStatus: "会员状态",
       active: "使用中",
       renews: "权限确认至",
+      extend: "延长使用权",
+      expiringSoon: (days: number) => days <= 0 ? "使用权今天到期。立即续期即可继续使用。" : `使用权将在 ${days} 天后到期，建议提前续期。`,
       billingHelp: "取消与退款咨询",
       syncNote: "购买后关联可能需要一点时间。请确认使用了相同的邮箱。",
     },

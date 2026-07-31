@@ -102,7 +102,7 @@ describe("localized JSON-LD", () => {
         "@type": "ListItem",
         position: 2,
         name: "韓国の流行語",
-        item: `${SITE_URL}/ja/explore?category=phrase`,
+        item: `${SITE_URL}/ja/explore?category=meme_term`,
       },
       {
         "@type": "ListItem",

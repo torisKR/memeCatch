@@ -1,6 +1,6 @@
 import { createStaticClient } from "@/lib/supabase/server";
 import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
-import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
+import { DISPLAY_CATEGORY_LIST, memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { SEO_CONTENT_LOCALES } from "@/lib/i18n-routing";
 
@@ -39,11 +39,8 @@ export async function GET() {
     // DB 실패 시 정적 본문만 제공
   }
 
-  const categories = (Object.keys(CATEGORIES) as MemeCategory[])
-    .map(
-      (key) =>
-        `- [${CATEGORIES[key].user}](${SITE_URL}/explore?category=${key})`
-    )
+  const categories = DISPLAY_CATEGORY_LIST
+    .map(({ key, user }) => `- [${user}](${SITE_URL}/explore?category=${key})`)
     .join("\n");
 
   const body = `# 밈캐치 (MemeCatch)

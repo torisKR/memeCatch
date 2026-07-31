@@ -1,0 +1,18 @@
+{
+  "input": "data/memes/raw/imported-koculture-memes.jsonl",
+  "rows": 503,
+  "categories": {
+    "phrase": 445,
+    "image": 17,
+    "comment": 32,
+    "dance": 6,
+    "song": 3
+  },
+  "sources": {
+    "trendaword": 261,
+    "namuwiki": 242
+  },
+  "missingDate": 149,
+  "invalidJson": 0,
+  "normalizedDuplicateGroups": 8
+}

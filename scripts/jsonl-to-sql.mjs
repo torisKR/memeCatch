@@ -8,6 +8,7 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseNativeSocialContent } from "./social-content.mjs";
 import { memeTitleKey } from "./meme-title-key.mjs";
+import { normalizeMemeCategory } from "./normalize-meme-category.mjs";
 
 const [inDir, outDir, batchSizeArg] = process.argv.slice(2);
 if (!inDir || !outDir) {
@@ -16,7 +17,6 @@ if (!inDir || !outDir) {
 }
 const BATCH = Number(batchSizeArg ?? 150);
 
-const CATEGORIES = new Set(["phrase", "dance", "song", "image", "comment", "challenge"]);
 const MEDIA = new Set(["image", "video", "audio", "text", "embed"]);
 const SAFETY = new Set(["green", "yellow", "gray", "red"]);
 const DIFF = new Set(["beginner", "normal", "deep"]);
@@ -48,13 +48,18 @@ for (const f of readdirSync(inDir).filter((f) => f.endsWith(".jsonl")).sort()) {
     } catch {
       continue;
     }
-    if (!m.title || !m.summary) continue;
+    const title = String(m.title ?? "").trim();
+    const summary = String(m.summary ?? m.content ?? m.description ?? "").trim();
+    const description = String(m.description ?? summary).trim();
+    const aliases = Array.isArray(m.aliases) ? m.aliases : [];
+    if (!title || !summary) continue;
     const key = memeTitleKey(m.title);
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const year = Math.min(2026, Math.max(1980, Number(m.year) || 2020));
-    const category = CATEGORIES.has(m.category) ? m.category : m.media_type === "video" ? "challenge" : "image";
+    const yearFromDate = Number(String(m.date ?? "").match(/(20\d{2})/)?.[1] || 0);
+    const year = Math.min(2026, Math.max(1980, Number(m.year) || yearFromDate || 2020));
+    const category = normalizeMemeCategory(m.category, m.media_type);
     const media = MEDIA.has(m.media_type) ? m.media_type : "image";
     const safety = SAFETY.has(m.safety_level) ? m.safety_level : "yellow";
     const difficulty = DIFF.has(m.difficulty) ? m.difficulty : "normal";
@@ -62,9 +67,9 @@ for (const f of readdirSync(inDir).filter((f) => f.endsWith(".jsonl")).sort()) {
     const url = m.source_url && /^https?:\/\//i.test(m.source_url) ? m.source_url : null;
     // 오래된 밈은 생애주기 archived/cooling으로 초기화
     const lifecycle = year >= 2025 ? "active" : year >= 2023 ? "cooling" : "archived";
-    const slug = String(m.title).trim().replace(/\s+/g, "-").replaceAll("'", "").slice(0, 60);
+    const slug = title.replace(/\s+/g, "-").replaceAll("'", "").slice(0, 60);
 
-    rows.push({ m, year, category, media, safety, difficulty, sentiment, url, lifecycle, slug });
+    rows.push({ m: { ...m, title, summary, description, aliases }, year, category, media, safety, difficulty, sentiment, url, lifecycle, slug });
   }
 }
 
@@ -78,13 +83,13 @@ for (let i = 0; i < rows.length; i += BATCH) {
     const usage = m.usage_note
       ? `jsonb_build_object('work',${q(safety)},'friends','green','family',${q(safety)},'sns',${q(safety)})`
       : `'{}'::jsonb`;
-    return `
+  return `
 with ins as (
   insert into memes (title, slug, aliases, summary, description, origin, usage_note, caution,
     safety_level, lifecycle_status, moderation_status, category, media_type, difficulty, sentiment,
     origin_year, usage_context, published_at)
   values (${q(m.title)}, ${q(slug)}, ${arr(m.aliases)}, ${q(m.summary)}, ${q(m.description)},
-    ${q(m.origin)}, ${q(m.usage_note)}, ${q(m.caution)},
+    ${q(m.origin ?? "")}, ${q(m.usage_note ?? null)}, ${q(m.caution ?? null)},
     ${q(safety)}::safety_level, ${q(lifecycle)}::lifecycle_status, 'approved'::moderation_status,
     ${q(category)}::meme_category, ${q(media)}::media_type, ${q(difficulty)}::meme_difficulty,
     ${q(sentiment)}::meme_sentiment, ${year}, ${usage}, now())

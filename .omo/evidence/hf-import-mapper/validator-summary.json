@@ -1,0 +1,13 @@
+{
+  "records": 503,
+  "distribution": {
+    "youtube": 0,
+    "youtubeShorts": 0,
+    "tiktok": 0,
+    "instagram": 0,
+    "nonNative": 503
+  },
+  "errorCount": 1006,
+  "firstError": "/Users/toris/projects/memecatch/data/memes/raw/imported-koculture-memes.jsonl:1 title과 summary가 모두 필요합니다.",
+  "lastError": "/Users/toris/projects/memecatch/data/memes/raw/imported-koculture-memes.jsonl:503 year는 2000~2020 정수여야 합니다."
+}

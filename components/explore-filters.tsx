@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS } from "@/lib/labels";
+import {
+  DISPLAY_CATEGORIES,
+  DISPLAY_CATEGORY_LIST,
+  DIFFICULTY,
+  LIFECYCLE_STATUS,
+  type DisplayCategoryKey,
+  expandDisplayCategoryTokens,
+} from "@/lib/labels";
 import type { SocialPlatform, SocialPlatformCounts } from "@/lib/source-platform";
 
 const SORTS = [
@@ -34,10 +41,6 @@ const MEDIA = [
   { key: "embed", label: "임베드" },
 ] as const;
 
-const CATEGORY_ENTRIES = Object.entries(CATEGORIES) as [
-  keyof typeof CATEGORIES,
-  { user: string },
-][];
 const DIFFICULTY_ENTRIES = Object.entries(DIFFICULTY) as [
   keyof typeof DIFFICULTY,
   { user: string },
@@ -63,7 +66,9 @@ export function ExploreFilters({
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
 
-  const activeCategories = searchParams.getAll("category");
+  const activeDisplayCategories = expandDisplayCategoryTokens(
+    searchParams.getAll("category")
+  );
   const sort = searchParams.get("sort") ?? "trending";
   const difficulty = searchParams.get("difficulty") ?? "";
   const year = searchParams.get("year") ?? "";
@@ -80,7 +85,7 @@ export function ExploreFilters({
   }, [searchParams]);
 
   const filterCount =
-    activeCategories.length +
+    activeDisplayCategories.length +
     Number(Boolean(difficulty)) +
     Number(Boolean(year)) +
     Number(Boolean(media)) +
@@ -118,16 +123,17 @@ export function ExploreFilters({
 
   const toggleCategory = useCallback(
     (value: string) => {
+      const token = expandDisplayCategoryTokens([value])[0];
+      if (!token) return;
       const next = new URLSearchParams(searchParams);
-      const current = next.getAll("category");
+      const current = new Set(activeDisplayCategories);
+      if (current.has(token)) current.delete(token);
+      else current.add(token);
       next.delete("category");
-      const updated = current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value];
-      for (const item of updated) next.append("category", item);
+      for (const item of current) next.append("category", item);
       pushParams(next);
     },
-    [pushParams, searchParams],
+    [activeDisplayCategories, pushParams, searchParams],
   );
 
   const submitSearch = useCallback(
@@ -154,9 +160,9 @@ export function ExploreFilters({
   }, [pathname, router]);
 
   const activeChips = [
-    ...activeCategories.map((key) => ({
+    ...activeDisplayCategories.map((key) => ({
       key: `category:${key}`,
-      label: CATEGORIES[key as keyof typeof CATEGORIES]?.user ?? key,
+      label: DISPLAY_CATEGORIES[key as DisplayCategoryKey]?.user ?? key,
       clear: () => toggleCategory(key),
     })),
     ...(platform
@@ -321,8 +327,8 @@ export function ExploreFilters({
           <fieldset>
             <legend className="text-sm font-bold">카테고리</legend>
             <div className="mt-2 flex flex-wrap gap-2">
-              {CATEGORY_ENTRIES.map(([key, meta]) => {
-                const on = activeCategories.includes(key);
+              {DISPLAY_CATEGORY_LIST.map(({ key, user }) => {
+                const on = activeDisplayCategories.includes(key);
                 return (
                   <button
                     key={key}
@@ -331,7 +337,7 @@ export function ExploreFilters({
                     onClick={() => toggleCategory(key)}
                     className={`${chipBase} ${on ? chipOn : chipOff}`}
                   >
-                    {meta.user}
+                    {user}
                   </button>
                 );
               })}

@@ -12,7 +12,7 @@ const TONE: Record<MemeCategory, string> = {
   song: "bg-cat-song-bg text-cat-song-text",
   image: "bg-cat-image-bg text-cat-image-text",
   comment: "bg-cat-comment-bg text-cat-comment-text",
-  challenge: "bg-cat-challenge-bg text-cat-challenge-text",
+  challenge: "bg-cat-dance-bg text-cat-dance-text",
 };
 
 export function CategoryTag({
@@ -90,13 +90,6 @@ const GLYPHS: Record<CategoryIcon, React.ReactNode> = {
       <circle cx="8.5" cy="10.5" r=".65" fill="currentColor" stroke="none" />
       <circle cx="12" cy="10.5" r=".65" fill="currentColor" stroke="none" />
       <circle cx="15.5" cy="10.5" r=".65" fill="currentColor" stroke="none" />
-    </>
-  ),
-  // 챌린지 — 깃발(불꽃 아님, 생명게이지와 분리)
-  flag: (
-    <>
-      <path d="M6 21V4" />
-      <path d="M6 4.5h11l-2 3.5 2 3.5H6" />
     </>
   ),
 };

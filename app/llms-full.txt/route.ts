@@ -1,7 +1,7 @@
 import { createStaticClient } from "@/lib/supabase/server";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 import {
-  CATEGORIES,
+  DISPLAY_CATEGORY_LIST,
   SAFETY_LEVELS,
   memePathFrom,
   type MemeCategory,
@@ -94,11 +94,13 @@ export async function GET() {
         byCat.set(m.category, arr);
       }
       const sections: string[] = [];
-      for (const key of Object.keys(CATEGORIES) as MemeCategory[]) {
-        const arr = byCat.get(key);
+      for (const displayCategory of DISPLAY_CATEGORY_LIST) {
+        const arr = displayCategory.categories.flatMap(
+          (category) => byCat.get(category) ?? []
+        );
         if (!arr?.length) continue;
         sections.push(
-          `## ${CATEGORIES[key].user}\n\n${arr.map(memeBlock).join("\n\n")}`
+          `## ${displayCategory.user}\n\n${arr.map(memeBlock).join("\n\n")}`
         );
       }
       bodyMemes = sections.join("\n\n");

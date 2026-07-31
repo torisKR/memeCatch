@@ -39,12 +39,12 @@ describe("ExploreFilters", () => {
     await user.click(disclosure);
     expect(disclosure.getAttribute("aria-expanded")).toBe("true");
 
-    const category = screen.getByRole("button", { name: "유행어" });
+    const category = screen.getByRole("button", { name: "밈 용어(유행어)" });
     expect(category.getAttribute("aria-pressed")).toBe("false");
     await user.click(category);
 
     expect(navigation.push).toHaveBeenCalledWith(
-      "/explore?category=phrase",
+      "/explore?category=meme_term",
       { scroll: false },
     );
   });

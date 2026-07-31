@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  daysUntilExpiry,
+  isExpiringSoon,
   isPremiumSubscription,
   selectPremiumSubscription,
 } from "@/lib/billing/entitlements";
@@ -98,5 +100,38 @@ describe("selectPremiumSubscription", () => {
         now,
       ),
     ).toBeNull();
+  });
+});
+
+describe("daysUntilExpiry", () => {
+  const now = Date.parse("2026-08-01T00:00:00.000Z");
+
+  it("counts whole days left before the pass ends", () => {
+    expect(daysUntilExpiry("2026-08-04T00:00:00.000Z", now)).toBe(3);
+    expect(daysUntilExpiry("2026-08-31T00:00:00.000Z", now)).toBe(30);
+  });
+
+  it("never reports negative days once the pass has lapsed", () => {
+    // 음수가 새면 "-3일 뒤 만료" 같은 문구가 노출된다.
+    expect(daysUntilExpiry("2026-07-20T00:00:00.000Z", now)).toBe(0);
+  });
+
+  it("returns null when there is no end date to measure", () => {
+    expect(daysUntilExpiry(null, now)).toBeNull();
+    expect(daysUntilExpiry("not-a-date", now)).toBeNull();
+  });
+});
+
+describe("isExpiringSoon", () => {
+  const now = Date.parse("2026-08-01T00:00:00.000Z");
+
+  it("warns inside the final three days", () => {
+    expect(isExpiringSoon("2026-08-03T00:00:00.000Z", now)).toBe(true);
+    expect(isExpiringSoon("2026-08-01T00:00:00.000Z", now)).toBe(true);
+  });
+
+  it("stays quiet while there is plenty of time", () => {
+    expect(isExpiringSoon("2026-08-20T00:00:00.000Z", now)).toBe(false);
+    expect(isExpiringSoon(null, now)).toBe(false);
   });
 });

@@ -5,7 +5,10 @@ import { BrandTile } from "@/components/brand-mark";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { CATEGORIES, type MemeCategory } from "@/lib/labels";
+import {
+  DISPLAY_CATEGORY_LIST,
+  type MemeCategory,
+} from "@/lib/labels";
 import { completeOnboarding } from "@/lib/actions/auth";
 
 /**
@@ -25,11 +28,6 @@ const AGE_GROUPS = [
   { value: "", label: "선택 안 함" },
 ] as const;
 
-const CATEGORY_ENTRIES = Object.entries(CATEGORIES) as [
-  MemeCategory,
-  (typeof CATEGORIES)[MemeCategory],
-][];
-
 export function OnboardingForm({
   next,
   defaultNickname,
@@ -43,16 +41,26 @@ export function OnboardingForm({
 }) {
   const reduce = useReducedMotion();
   const nickId = useId();
-  const [interests, setInterests] = useState<Set<string>>(
-    () => new Set(defaultInterests)
+  const [interests, setInterests] = useState<Set<MemeCategory>>(
+    () =>
+      new Set(
+        DISPLAY_CATEGORY_LIST.flatMap(({ categories }) =>
+          categories.some((category) => defaultInterests.includes(category))
+            ? [...categories]
+            : []
+        ) as MemeCategory[]
+      )
   );
   const [ageGroup, setAgeGroup] = useState<string>(defaultAgeGroup);
 
-  function toggleInterest(key: string) {
+  function toggleInterest(categories: readonly MemeCategory[]) {
     setInterests((prev) => {
       const nextSet = new Set(prev);
-      if (nextSet.has(key)) nextSet.delete(key);
-      else nextSet.add(key);
+      const active = categories.some((category) => nextSet.has(category));
+      for (const category of categories) {
+        if (active) nextSet.delete(category);
+        else nextSet.add(category);
+      }
       return nextSet;
     });
   }
@@ -122,13 +130,16 @@ export function OnboardingForm({
           <h2 className="font-bold">관심 있는 밈은 무엇인가요?</h2>
           <p className="mt-1 text-sm text-muted">여러 개 골라도 돼요.</p>
           <ul className="mt-3 flex flex-wrap gap-2">
-            {CATEGORY_ENTRIES.map(([key, cat]) => {
-              const active = interests.has(key);
+            {DISPLAY_CATEGORY_LIST.map(({ key, user, categories }) => {
+              const legacyCategories = categories as readonly MemeCategory[];
+              const active = legacyCategories.some((category) =>
+                interests.has(category)
+              );
               return (
                 <li key={key}>
                   <button
                     type="button"
-                    onClick={() => toggleInterest(key)}
+                    onClick={() => toggleInterest(legacyCategories)}
                     aria-pressed={active}
                     className={`inline-flex min-h-11 items-center rounded-full border px-4 text-base font-medium transition-colors active:scale-[0.97] ${
                       active
@@ -136,7 +147,7 @@ export function OnboardingForm({
                         : "border-border bg-surface text-foreground hover:border-accent"
                     }`}
                   >
-                    {cat.user}
+                    {user}
                   </button>
                 </li>
               );
@@ -213,4 +224,3 @@ function SubmitButton() {
     </button>
   );
 }
-

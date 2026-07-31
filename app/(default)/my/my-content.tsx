@@ -5,9 +5,12 @@ import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   CATEGORIES,
+  DISPLAY_CATEGORIES,
   memePathFrom,
+  resolveDisplayCategory,
   SAFETY_LEVELS,
   SUBMISSION_STATUS,
+  type DisplayCategoryKey,
   type MemeCategory,
   type SafetyLevel,
 } from "@/lib/labels";
@@ -110,6 +113,9 @@ export function MyContent({
   const knownInterests = interests.filter(
     (c) => c in CATEGORIES
   ) as MemeCategory[];
+  const displayInterests = [
+    ...new Set(knownInterests.map(resolveDisplayCategory)),
+  ] as DisplayCategoryKey[];
   const ageLabel = ageGroup && ageGroup in copy.ageGroups
     ? copy.ageGroups[ageGroup as keyof typeof copy.ageGroups]
     : undefined;
@@ -285,19 +291,22 @@ export function MyContent({
             href="/onboarding?next=/my"
             className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
           >
-            {knownInterests.length > 0 ? copy.interests.edit : copy.interests.set}
+            {displayInterests.length > 0 ? copy.interests.edit : copy.interests.set}
           </Link>
         </div>
-        {knownInterests.length > 0 ? (
+        {displayInterests.length > 0 ? (
           <ul className="mt-3 flex flex-wrap gap-2">
-            {knownInterests.map((c) => (
-              <li
-                key={c}
-                className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium"
-              >
-                {copy.categories[c]}
-              </li>
-            ))}
+            {displayInterests.map((key) => {
+              const category = DISPLAY_CATEGORIES[key].categories[0];
+              return (
+                <li
+                  key={key}
+                  className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium"
+                >
+                  {copy.categories[category]}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="mt-2 text-sm text-muted">

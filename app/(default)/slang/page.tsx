@@ -33,7 +33,7 @@ const ERA_DEFS = [
     from: 2020,
     to: 2029,
     // explore의 year 필터 키(2020s/2010s/2000s)와 맞춘 딥링크
-    exploreHref: "/explore?category=phrase&year=2020s",
+    exploreHref: "/explore?category=meme_term&year=2020s",
   },
   {
     key: "2010s",
@@ -41,7 +41,7 @@ const ERA_DEFS = [
     range: "2010~19",
     from: 2010,
     to: 2019,
-    exploreHref: "/explore?category=phrase&year=2010s",
+    exploreHref: "/explore?category=meme_term&year=2010s",
   },
   {
     key: "2000s",
@@ -49,7 +49,7 @@ const ERA_DEFS = [
     range: "2000~09",
     from: 2000,
     to: 2009,
-    exploreHref: "/explore?category=phrase&year=2000s",
+    exploreHref: "/explore?category=meme_term&year=2000s",
   },
   {
     key: "1990s",
@@ -58,7 +58,7 @@ const ERA_DEFS = [
     from: 1990,
     to: 1999,
     // explore year 필터에 1990s 키가 없음 — 카테고리 필터만 연결
-    exploreHref: "/explore?category=phrase",
+    exploreHref: "/explore?category=meme_term",
   },
 ] as const;
 

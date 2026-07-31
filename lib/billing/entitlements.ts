@@ -45,3 +45,29 @@ export function selectPremiumSubscription<T extends SubscriptionAccessRow>(
 
   return selected;
 }
+
+/**
+ * 만료까지 남은 일수. Unifi Pay에는 정기결제가 없어 자동 갱신이 일어나지
+ * 않으므로, 만료 전에 사용자가 직접 연장하도록 안내해야 한다.
+ * 이미 지났으면 0을 반환한다(음수로 "-3일 뒤 만료" 같은 문구가 나오지 않게).
+ */
+export function daysUntilExpiry(
+  currentPeriodEnd: string | null,
+  now = Date.now(),
+): number | null {
+  if (!currentPeriodEnd) return null;
+  const end = Date.parse(currentPeriodEnd);
+  if (!Number.isFinite(end)) return null;
+  return Math.max(0, Math.ceil((end - now) / 86_400_000));
+}
+
+/** 만료 임박 기준 — 이 안에 들면 연장 안내를 띄운다. */
+export const EXPIRY_WARNING_DAYS = 3;
+
+export function isExpiringSoon(
+  currentPeriodEnd: string | null,
+  now = Date.now(),
+): boolean {
+  const days = daysUntilExpiry(currentPeriodEnd, now);
+  return days !== null && days <= EXPIRY_WARNING_DAYS;
+}

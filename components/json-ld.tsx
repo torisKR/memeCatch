@@ -1,4 +1,9 @@
-import { CATEGORIES, memePathFrom, type MemeCategory } from "@/lib/labels";
+import {
+  CATEGORIES,
+  memePathFrom,
+  resolveDisplayCategory,
+  type MemeCategory,
+} from "@/lib/labels";
 import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
 import {
   absoluteSiteUrl,
@@ -238,8 +243,9 @@ export function MemeBreadcrumbJsonLd({
 }) {
   const copy = getSeoCopy(locale);
   const localizedHomeUrl = absoluteSiteUrl(homePath ?? localizedPath("/", locale));
+  const displayCategory = resolveDisplayCategory(category);
   const localizedExploreUrl = absoluteSiteUrl(
-    explorePath ?? localizedPath(`/explore?category=${category}`, locale),
+    explorePath ?? localizedPath(`/explore?category=${displayCategory}`, locale),
   );
   const memeUrl = absoluteSiteUrl(path ?? localizedMemePath(locale, shortId, slug));
   return (

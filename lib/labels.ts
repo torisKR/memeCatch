@@ -36,15 +36,96 @@ export const MODERATION_STATUS = {
  * challenge 아이콘은 깃발/트로피 개념(생명게이지 불꽃과 분리).
  */
 export const CATEGORIES = {
-  phrase: { user: "유행어", emojiFree: true, tone: "cat-phrase", icon: "speech" },
-  dance: { user: "댄스 챌린지", tone: "cat-dance", icon: "dance" },
+  phrase: { user: "밈 용어(유행어)", emojiFree: true, tone: "cat-phrase", icon: "speech" },
+  dance: { user: "챌린지 댄스", tone: "cat-dance", icon: "dance" },
   song: { user: "노래", tone: "cat-song", icon: "note" },
-  image: { user: "짤", tone: "cat-image", icon: "frame" },
-  comment: { user: "댓글 밈", tone: "cat-comment", icon: "comment" },
-  challenge: { user: "챌린지", tone: "cat-challenge", icon: "flag" },
+  image: { user: "밈 영상", tone: "cat-image", icon: "frame" },
+  comment: { user: "드라마 장면", tone: "cat-comment", icon: "comment" },
+  challenge: { user: "챌린지 댄스", tone: "cat-dance", icon: "dance" },
 } as const;
 export type MemeCategory = keyof typeof CATEGORIES;
 export type CategoryIcon = (typeof CATEGORIES)[MemeCategory]["icon"];
+
+export const DISPLAY_CATEGORIES = {
+  meme_term: {
+    key: "meme_term",
+    user: "밈 용어(유행어)",
+    tone: "cat-phrase",
+    icon: "speech" as const,
+    categories: ["phrase"] as const,
+  },
+  challenge_dance: {
+    key: "challenge_dance",
+    user: "챌린지 댄스",
+    tone: "cat-dance",
+    icon: "dance" as const,
+    categories: ["dance", "challenge"] as const,
+  },
+  song: {
+    key: "song",
+    user: "노래",
+    tone: "cat-song",
+    icon: "note" as const,
+    categories: ["song"] as const,
+  },
+  drama_scene: {
+    key: "drama_scene",
+    user: "드라마 장면",
+    tone: "cat-comment",
+    icon: "comment" as const,
+    categories: ["comment"] as const,
+  },
+  meme_video: {
+    key: "meme_video",
+    user: "밈 영상",
+    tone: "cat-image",
+    icon: "frame" as const,
+    categories: ["image"] as const,
+  },
+} as const;
+export type DisplayCategoryKey = keyof typeof DISPLAY_CATEGORIES;
+
+const DISPLAY_BY_LEGACY_CATEGORY: Record<MemeCategory, DisplayCategoryKey> = {
+  phrase: "meme_term",
+  dance: "challenge_dance",
+  song: "song",
+  image: "meme_video",
+  comment: "drama_scene",
+  challenge: "challenge_dance",
+};
+
+const DISPLAY_CATEGORY_TOKENS = Object.values(DISPLAY_CATEGORIES).map((item) => item.key);
+
+function normalizeDisplayCategory(token: string): DisplayCategoryKey | null {
+  if ((DISPLAY_CATEGORY_TOKENS as readonly string[]).includes(token)) {
+    return token as DisplayCategoryKey;
+  }
+  if ((Object.keys(CATEGORIES) as readonly string[]).includes(token)) {
+    return DISPLAY_BY_LEGACY_CATEGORY[token as MemeCategory];
+  }
+  return null;
+}
+
+export const DISPLAY_CATEGORY_LIST = Object.values(DISPLAY_CATEGORIES);
+
+export function resolveDisplayCategory(category: MemeCategory): DisplayCategoryKey {
+  return DISPLAY_BY_LEGACY_CATEGORY[category];
+}
+
+export function expandDisplayCategoryTokens(tokens: readonly string[]): DisplayCategoryKey[] {
+  const normalized = [...new Set(tokens.map((token) => normalizeDisplayCategory(token)).filter(Boolean))] as DisplayCategoryKey[];
+  return normalized;
+}
+
+export function expandToLegacyCategories(tokens: readonly DisplayCategoryKey[]): MemeCategory[] {
+  const categories = new Set<MemeCategory>();
+  for (const token of tokens) {
+    for (const category of DISPLAY_CATEGORIES[token].categories) {
+      categories.add(category as MemeCategory);
+    }
+  }
+  return [...categories];
+}
 
 export const DIFFICULTY = {
   beginner: { user: "입문", token: "diff-beginner" },

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useLocale } from "@/lib/i18n-client";
 import { toBcp47 } from "@/lib/i18n";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { EXPIRY_WARNING_DAYS, daysUntilExpiry } from "@/lib/billing/entitlements";
 import { PremiumGate } from "@/components/premium/premium-gate";
 import { CONTACT_EMAIL } from "@/lib/site";
 
@@ -24,6 +25,7 @@ export function PremiumDashboardContent({
   const accessConfirmedThrough = currentPeriodEnd
     ? new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "long" }).format(new Date(currentPeriodEnd))
     : null;
+  const remainingDays = daysUntilExpiry(currentPeriodEnd);
 
   return (
     <main
@@ -64,6 +66,26 @@ export function PremiumDashboardContent({
                 <strong className="text-foreground">{accessConfirmedThrough}</strong>
               </p>
             )}
+
+            {/* 자동 갱신이 없으므로 만료가 임박하면 직접 연장하도록 알린다. */}
+            {remainingDays !== null && remainingDays <= EXPIRY_WARNING_DAYS && (
+              <p
+                role="status"
+                className="mt-3 rounded-xl bg-safety-yellow-bg px-3 py-2 text-sm leading-relaxed text-safety-yellow"
+              >
+                {copy.dashboard.expiringSoon(remainingDays)}
+              </p>
+            )}
+
+            {/* 연장 = 새 결제. 체크아웃이 결제 링크를 다시 발급한다. */}
+            <form action="/api/billing/checkout" method="post" className="mt-4">
+              <button
+                type="submit"
+                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
+                {copy.dashboard.extend}
+              </button>
+            </form>
             <a
               href={`mailto:${CONTACT_EMAIL}?subject=MemeCatch%20Plus%20billing`}
               className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"

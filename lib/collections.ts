@@ -66,7 +66,7 @@ export const COLLECTIONS: CollectionDef[] = [
     intro:
       "대화에서 가장 많이 마주치는 밈. 유행어는 수명이 짧고 뉘앙스가 미묘해서, 뜻만 알고 쓰면 어색해지기 쉽습니다. 각 유행어의 유래와 '지금 써도 되는지'까지 신호등으로 정리했습니다.",
     filter: { kind: "category", category: "phrase" },
-    exploreQuery: "category=phrase",
+    exploreQuery: "category=meme_term",
   },
   {
     slug: "challenge",
@@ -75,7 +75,7 @@ export const COLLECTIONS: CollectionDef[] = [
     intro:
       "따라 하면서 퍼지는 밈. 챌린지는 원본 영상을 알아야 재미가 완성됩니다. 대표 영상 임베드와 함께, 이미 식은 챌린지인지 아직 뜨거운지 생명 게이지로 확인하세요.",
     filter: { kind: "category", category: "challenge" },
-    exploreQuery: "category=challenge",
+    exploreQuery: "category=challenge_dance",
   },
   {
     slug: "song",
@@ -93,7 +93,7 @@ export const COLLECTIONS: CollectionDef[] = [
     intro:
       "말보다 빠른 대답, 짤. 어디서 나온 장면인지 알고 쓰면 두 배 재밌습니다. 각 짤의 원출처와 어떤 상황에서 쓰는지, 출처 링크와 함께 모았습니다.",
     filter: { kind: "category", category: "image" },
-    exploreQuery: "category=image",
+    exploreQuery: "category=meme_video",
   },
   {
     slug: "streamer",

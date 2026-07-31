@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { memeTitleKey } from "./meme-title-key.mjs";
+import { normalizeMemeCategory } from "./normalize-meme-category.mjs";
 
 const [inputPath, outputDir] = process.argv.slice(2);
 if (!inputPath || !outputDir) {
@@ -55,6 +56,7 @@ for (const row of input) {
 }
 
 function valueTuple(row) {
+  const category = normalizeMemeCategory(row);
   return `(${[
     q(row.title),
     q(row.slug),
@@ -65,7 +67,7 @@ function valueTuple(row) {
     q(row.usage_note),
     q(row.caution),
     q(row.safety_level ?? "yellow"),
-    q(row.category ?? "image"),
+    q(category),
     q(row.media_type ?? "image"),
     q(row.difficulty ?? "normal"),
     q(row.sentiment ?? "funny"),

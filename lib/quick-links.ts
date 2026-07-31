@@ -36,9 +36,9 @@ export const EXPLORE_QUICK_LINKS: QuickLink[] = [
   },
   {
     key: "comment",
-    title: "댓글에서 자주 보이는 표현",
-    description: "댓글 밈만 모아 보기",
-    href: "/explore?category=comment",
+    title: "드라마 장면 밈",
+    description: "드라마 장면에서 나온 밈 모아 보기",
+    href: "/explore?category=drama_scene",
   },
   {
     key: "2000s",
@@ -48,9 +48,9 @@ export const EXPLORE_QUICK_LINKS: QuickLink[] = [
   },
   {
     key: "song-challenge",
-    title: "노래·챌린지",
-    description: "밈송과 챌린지 모아 보기",
-    href: "/explore?category=song&category=challenge",
+    title: "노래·챌린지 댄스",
+    description: "노래와 챌린지 댄스를 한 번에 보기",
+    href: "/explore?category=song&category=challenge_dance",
   },
   {
     key: "youtube",

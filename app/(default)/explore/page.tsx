@@ -5,10 +5,10 @@ import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { LIST_COLUMNS, type MemeListItem } from "@/lib/queries";
 import {
-  CATEGORIES,
   DIFFICULTY,
   LIFECYCLE_STATUS,
-  type MemeCategory,
+  expandDisplayCategoryTokens,
+  expandToLegacyCategories,
 } from "@/lib/labels";
 import { ExploreFilters } from "@/components/explore-filters";
 import {
@@ -58,7 +58,6 @@ const YEAR_RANGES: Record<string, [number, number]> = {
   "2000s": [2000, 2009],
 };
 
-const CATEGORY_KEYS = Object.keys(CATEGORIES) as MemeCategory[];
 const DIFFICULTY_KEYS = Object.keys(DIFFICULTY);
 const LIFECYCLE_KEYS = Object.keys(LIFECYCLE_STATUS);
 const MEDIA_KEYS = ["image", "video", "audio", "text", "embed"];
@@ -83,9 +82,9 @@ function one(
 function parseFilters(sp: RawParams): Filters {
   const rawQ = Array.isArray(sp.q) ? sp.q[0] : sp.q;
   return {
-    categories: asArray(sp.category).filter((c) =>
-      (CATEGORY_KEYS as string[]).includes(c)
-    ) as MemeCategory[],
+    categories: expandToLegacyCategories(
+      expandDisplayCategoryTokens(asArray(sp.category))
+    ),
     difficulty: one(sp.difficulty, DIFFICULTY_KEYS) as Filters["difficulty"],
     lifecycle: one(sp.lifecycle, LIFECYCLE_KEYS) as Filters["lifecycle"],
     media: one(sp.media, MEDIA_KEYS) as Filters["media"],

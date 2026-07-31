@@ -1,9 +1,9 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { LifeGauge } from "@/components/life-gauge";
 import { SafetyBadge } from "@/components/safety-badge";
-import type { SafetyLevel } from "@/lib/labels";
+import { SignalTrace } from "@/components/signal-trace";
+import { LIFECYCLE_STATUS, type SafetyLevel } from "@/lib/labels";
 import type { MemeRow } from "@/lib/queries";
 
 /** 신호등 글로우 색 — labels/globals의 안전 토큰 기준(색약 대응은 배지 아이콘·텍스트가 담당) */
@@ -37,8 +37,23 @@ export function AnswerCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
-      <LifeGauge status={meme.lifecycle_status} />
-      <h1 className="mt-2 text-2xl font-extrabold leading-tight md:text-3xl">
+      {/* 판독 헤더 — 계측 화면의 채널 라벨. 지금 이 밈이 어느 단계인지 먼저 말한다. */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <span aria-hidden className="size-1.5 rounded-full bg-(--signal-cyan)" />
+          Life signal
+        </span>
+        <span className="font-mono text-[11px] font-bold text-muted">
+          {LIFECYCLE_STATUS[meme.lifecycle_status].user}
+        </span>
+      </div>
+
+      {/* 이 밈 자신의 파형 — 홈 범례에서 배운 언어를 상세에서 크게 읽는다. */}
+      <div className="instrument-grid mt-2 rounded-xl border border-border/70 px-3 py-2">
+        <SignalTrace status={meme.lifecycle_status} size="lg" />
+      </div>
+
+      <h1 className="mt-4 text-2xl font-extrabold leading-tight md:text-3xl">
         {meme.title}
       </h1>
       <p

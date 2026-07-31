@@ -58,22 +58,28 @@ export function SignalTrace({
   status,
   className = "",
   showLabel = false,
+  size = "sm",
 }: {
   status: LifecycleStatus;
   className?: string;
   showLabel?: boolean;
+  /** lg는 상세 정답 카드처럼 파형 자체가 주인공인 자리에서 쓴다. */
+  size?: "sm" | "lg";
 }) {
   const meta = LIFECYCLE_STATUS[status];
   const live = LIVE[status];
+  const height = size === "lg" ? "h-14" : "h-5";
 
   return (
-    <span className={`inline-flex min-w-0 items-center gap-2 ${className}`}>
+    /* inline-flex는 내용 크기로 줄어들어 파형이 컨테이너를 못 채운다 —
+       트레이스는 항상 주어진 폭을 다 쓰는 계측 눈금이므로 flex+w-full이 기본. */
+    <span className={`flex w-full min-w-0 items-center gap-2 ${className}`}>
       <svg
         role="img"
         aria-label={`밈 신호: ${meta.user}`}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
-        className={`h-5 w-full min-w-14 shrink ${STROKE[status]}`}
+        className={`w-full min-w-14 shrink ${height} ${STROKE[status]}`}
       >
         {/* 기준선 — 신호가 없을 때의 자리를 보여준다. */}
         <line

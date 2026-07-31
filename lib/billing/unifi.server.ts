@@ -45,6 +45,27 @@ export function getUnifiConfig(env: NodeJS.ProcessEnv = process.env): UnifiConfi
   };
 }
 
+/**
+ * Unifi Pay 호스팅 결제 링크(https://app.unifi.me/pay/links/<id>) 검증.
+ *
+ * 이 흐름은 위의 Apps SDK(dapp-portal, 지갑 필요)와 다른 제품이다. 결제 링크는
+ * Latpeed처럼 사용자를 호스팅 결제창으로 보내기만 하므로 별도 SDK가 없다.
+ * 환경변수로 임의 URL이 들어와도 결제창이 아닌 곳으로 사용자를 보내지 않도록
+ * 호스트와 경로 형태를 고정한다(오픈 리다이렉트 방지).
+ */
+export function isAllowedUnifiPayLinkUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "app.unifi.me" &&
+      /^\/pay\/links\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Unifi 결제 상태 → 우리 구독 상태. 진행 중 상태는 아직 권한을 만들지 않는다. */
 export type UnifiPaymentStatus =
   | "CREATED"

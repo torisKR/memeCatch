@@ -4,12 +4,18 @@ type Dependencies = {
   getUser: () => Promise<{ id: string } | null>;
   registerIdentity: () => Promise<void>;
   getCheckoutUrl: () => string;
+  /**
+   * 결제 링크 호스트 검증기. 제공자를 바꿔도(예: Unifi Pay) 흐름은 같으므로
+   * 검증만 갈아끼운다. 미지정 시 기존 Latpeed 규칙을 그대로 쓴다.
+   */
+  isAllowedUrl?: (url: string) => boolean;
 };
 
 export function createLatpeedCheckoutHandler({
   getUser,
   registerIdentity,
   getCheckoutUrl,
+  isAllowedUrl = isAllowedLatpeedCheckoutUrl,
 }: Dependencies) {
   return async function handleLatpeedCheckout(request: Request): Promise<Response> {
     const user = await getUser();
@@ -20,7 +26,7 @@ export function createLatpeedCheckoutHandler({
     }
 
     const checkoutUrl = getCheckoutUrl();
-    if (!isAllowedLatpeedCheckoutUrl(checkoutUrl)) {
+    if (!isAllowedUrl(checkoutUrl)) {
       return Response.json(
         { ok: false, error: "checkout_not_configured" },
         { status: 503, headers: { "cache-control": "no-store" } },

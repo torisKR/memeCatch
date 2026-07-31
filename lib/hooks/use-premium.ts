@@ -57,11 +57,24 @@ export function usePremium(): boolean {
       } catch {}
     };
 
-    void confirm();
+    // Plus 여부는 부가 정보다. 인증 조회가 실패해도(네트워크 단절, 만료됐거나
+    // 다른 프로젝트에서 발급된 세션 쿠키 등) 화면 전체를 에러로 무너뜨리면 안 된다.
+    // catch가 없으면 unhandled rejection이 되어 개발 오버레이가 뜬다.
+    const confirmSafely = () => {
+      void confirm().catch(() => {
+        if (!alive) return;
+        setIsPremium(false);
+        try {
+          window.localStorage.setItem(PLUS_HINT_KEY, "0");
+        } catch {}
+      });
+    };
+
+    confirmSafely();
 
     // 로그인/로그아웃 변화 반영
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      void confirm();
+      confirmSafely();
     });
 
     return () => {

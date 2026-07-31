@@ -88,6 +88,10 @@ const CSP_DIRECTIVES = [
     ...REMOTE_MEME_THUMBNAIL_SOURCES,
     "https://*.supabase.co",
     "wss://*.supabase.co",
+    // 개발은 로컬 Supabase(supabase start)를 쓴다. 여기에 없으면 브라우저가
+    // 인증·조회 요청을 막아 "TypeError: Failed to fetch"로 나타난다.
+    // 프로덕션 CSP에는 포함되지 않는다(.env.production은 원격을 본다).
+    ...(IS_DEV ? ["http://127.0.0.1:54321", "ws://127.0.0.1:54321"] : []),
     "https://*.google-analytics.com",
     "https://*.analytics.google.com",
     "https://analytics.google.com", // GA4 수집 — 베어 도메인은 와일드카드(*.analytics.google.com)와 미매치

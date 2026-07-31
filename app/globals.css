@@ -703,6 +703,23 @@ label[for] {
   }
 }
 
+/* ── 에러 페이지 "신호 단절" 장치 (app/(default)/error.tsx) ──────────
+   일러스트의 끊긴 펄스 모티프를 페이지 구조로 확장. 빨간 신호 dot은
+   마운트 시 불안정하게 3회 깜빡인 뒤 점등 유지(오류의 '단속' 감각). */
+@keyframes signal-flicker {
+  0%, 100% { opacity: 1; }
+  15% { opacity: 0.25; }
+  30% { opacity: 1; }
+  45% { opacity: 0.4; }
+  60% { opacity: 1; }
+}
+.signal-flicker {
+  animation: signal-flicker 1.2s steps(1, end) 1 both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-flicker { animation: none; }
+}
+
 /* Plus(프리미엄) 구독자 — "광고 없는 경험".
    PremiumAdControl이 클라이언트에서만 <html data-premium="1">을 토글한다(ISR 유지).
    AdSense Auto Ads가 런타임에 주입한 요소를 숨긴다. 쿠팡 배너(CoupangDock)는

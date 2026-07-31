@@ -22,7 +22,18 @@ export default function RootError({
   }, [error]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-14 sm:py-20">
+    <main className="relative mx-auto flex min-h-[70dvh] w-full max-w-5xl flex-col items-center justify-center overflow-hidden px-4 py-14 sm:py-20">
+      {/* 신호 단절 라인 — 일러스트의 끊긴 펄스를 페이지 구조로 확장.
+          카드 좌우로 뻗다가 중앙(카드) 앞에서 끊긴다. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-0 right-1/2 top-1/2 mr-[21rem] hidden h-px bg-gradient-to-r from-transparent via-border to-(--safety-red) opacity-70 sm:block"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 right-0 top-1/2 ml-[21rem] hidden h-px bg-gradient-to-l from-transparent via-border to-(--safety-red) opacity-70 sm:block"
+      />
+
       <div className="mx-auto w-full max-w-2xl">
         <div
           role="alert"
@@ -33,16 +44,27 @@ export default function RootError({
           }}
         >
           <div className="relative mx-auto max-w-md">
+            {/* 브랜드 에러 일러스트 — 금 간 말풍선(신호 단절). screen 블렌드 융화 */}
+            <img
+              src="/brand/state-error.webp"
+              alt=""
+              width={1024}
+              height={768}
+              loading="lazy"
+              decoding="async"
+              className="mx-auto mb-4 w-56 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-64"
+            />
+
             <p className="inline-flex min-h-8 items-center gap-2 rounded-full bg-ink px-3 text-xs font-semibold text-white">
               <span aria-hidden className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-white/20" />
                 <span className="h-2 w-2 rounded-full bg-white/20" />
-                <span className="h-2 w-2 rounded-full bg-safety-red" />
+                <span className="signal-flicker h-2 w-2 rounded-full bg-safety-red" />
               </span>
               신호 오류
             </p>
 
-            <h1 className="mt-5 text-2xl font-extrabold tracking-tight">
+            <h1 className="mt-5 text-2xl font-extrabold tracking-tight sm:text-3xl">
               밈을 잡다가 놓쳤어요
             </h1>
             <p className="mt-2 text-base text-muted">
@@ -64,6 +86,13 @@ export default function RootError({
                 홈으로
               </Link>
             </div>
+
+            {/* 문의 시 식별용 오류 코드 — 있을 때만, 조용하게 */}
+            {error.digest && (
+              <p className="mt-5 font-mono text-[11px] tracking-wide text-muted/70">
+                오류 코드 {error.digest}
+              </p>
+            )}
           </div>
         </div>
       </div>

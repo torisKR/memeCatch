@@ -90,6 +90,12 @@
 - 통합 기법: 다크 표면 위 `mix-blend-screen`(잉크 배경이 표면색에 융화) +
   `mask-image: radial-gradient(...)`로 가장자리 페이드 → 사각 경계 제거.
   로그인 패널은 full-bleed `object-cover`라 블렌드 불필요.
+- `components/status-panel.tsx`(rankings·search·community 공용 상태 패널)에 톤별 매핑:
+  waiting→`state-waiting.webp` / missing→`state-empty-search.webp` / error→`state-error.webp`.
+  `art={false}`로 좁은 맥락에서 끌 수 있음.
+- **TODO(교체 대기)**: `state-waiting.webp`·`state-error.webp`는 현재 `state-404.webp`
+  사본(폴백). 전용판 생성 잡: waiting = job 44099495(점화 직전 스파크, 제출됨·큐 대기),
+  error = 크랙 버블(레드 굴절) 프롬프트로 재생성 필요. 완성되면 min.webp로 파일만 교체.
 
 ## 재생성 방법
 

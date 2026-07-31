@@ -1,0 +1,210 @@
+[
+  {
+    "reddit": "tiktokcringe",
+    "message": "reddit HTTP 403"
+  },
+  {
+    "reddit": "Instagramreality",
+    "message": "reddit HTTP 403"
+  },
+  {
+    "reddit": "kpop",
+    "message": "reddit HTTP 403"
+  },
+  {
+    "reddit": "Korean",
+    "message": "reddit HTTP 403"
+  },
+  {
+    "source_url": "https://www.tiktok.com/@halu__jg/video/7592215197993946386",
+    "message": "TikTok oEmbed HTTP 400"
+  },
+  {
+    "source_url": "https://www.tiktok.com/@thenewswithkamerajunior/video/7308338755298020640",
+    "message": "TikTok oEmbed HTTP 400"
+  },
+  {
+    "source_url": "https://www.tiktok.com/@p3rsussy/video/7631514812610055454",
+    "message": "TikTok oEmbed HTTP 400"
+  },
+  {
+    "title": "(여자)아이들 TOMBOY 챌린지",
+    "query": "site:tiktok.com/video (여자)아이들 TOMBOY 챌린지",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "~는 없는 거야",
+    "query": "site:tiktok.com/video ~는 없는 거야",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "○○하면 그만이야",
+    "query": "site:tiktok.com/video ○○하면 그만이야",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "100원 드립",
+    "query": "site:tiktok.com/video 100원 드립",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "10데스=1민교",
+    "query": "site:tiktok.com/video 10데스=1민교",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "2NE1 코첼라 재결합 무대",
+    "query": "site:tiktok.com/video 2NE1 코첼라 재결합 무대",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "ㄱㅈㄱㅇㅇ",
+    "query": "site:tiktok.com/video ㄱㅈㄱㅇㅇ",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "갑자기 나타나서는 또 못살게 구네",
+    "query": "site:tiktok.com/video 갑자기 나타나서는 또 못살게 구네",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "강철부대2 종진이네 꽃밭",
+    "query": "site:tiktok.com/video 강철부대2 종진이네 꽃밭",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "골키남",
+    "query": "site:tiktok.com/video 골키남",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "교도리",
+    "query": "site:tiktok.com/video 교도리",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "교이루",
+    "query": "site:tiktok.com/video 교이루",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "귀여워서 미안해",
+    "query": "site:tiktok.com/video 귀여워서 미안해",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "그 잡채",
+    "query": "site:tiktok.com/video 그 잡채",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "그날 릴파의 세상은 무너졌다",
+    "query": "site:tiktok.com/video 그날 릴파의 세상은 무너졌다",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "근데 어쩔건데?",
+    "query": "site:tiktok.com/video 근데 어쩔건데?",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "김헌곤 유니버스",
+    "query": "site:tiktok.com/video 김헌곤 유니버스",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "나는 완전히 붕괴됐어요",
+    "query": "site:tiktok.com/video 나는 완전히 붕괴됐어요",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "나는 SOLO 10기 정숙 밈",
+    "query": "site:tiktok.com/video 나는 SOLO 10기 정숙 밈",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "뉴진스 Cookie 선정성 논란",
+    "query": "site:tiktok.com/video 뉴진스 Cookie 선정성 논란",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "닭팔이",
+    "query": "site:tiktok.com/video 닭팔이",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "대상혁",
+    "query": "site:tiktok.com/video 대상혁",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "딩크족",
+    "query": "site:tiktok.com/video 딩크족",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "똥강아지",
+    "query": "site:tiktok.com/video 똥강아지",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "띠용 띠용 김띠용사건",
+    "query": "site:tiktok.com/video 띠용 띠용 김띠용사건",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "레게노",
+    "query": "site:tiktok.com/video 레게노",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "레드벨벳 필마이리듬 꽃가루 챌린지",
+    "query": "site:tiktok.com/video 레드벨벳 필마이리듬 꽃가루 챌린지",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "로악귀",
+    "query": "site:tiktok.com/video 로악귀",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "마루는 강쥐",
+    "query": "site:tiktok.com/video 마루는 강쥐",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "모시깽이",
+    "query": "site:tiktok.com/video 모시깽이",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "몰?루",
+    "query": "site:tiktok.com/video 몰?루",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "무수저 부부",
+    "query": "site:tiktok.com/video 무수저 부부",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "바질",
+    "query": "site:tiktok.com/video 바질",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "박용택의 저주",
+    "query": "site:tiktok.com/video 박용택의 저주",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "범죄도시2 진실의 방으로",
+    "query": "site:tiktok.com/video 범죄도시2 진실의 방으로",
+    "message": "bing requested a challenge; stopping without retrying"
+  },
+  {
+    "title": "벤투호 위대한 도전",
+    "query": "site:tiktok.com/video 벤투호 위대한 도전",
+    "message": "bing requested a challenge; stopping without retrying"
+  }
+]

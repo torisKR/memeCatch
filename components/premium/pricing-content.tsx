@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { PlusFeatures } from "@/components/premium/plus-features";
+import { UnifiCheckoutButton } from "@/components/premium/unifi-checkout-button";
+
+const UNIFI_ENABLED = Boolean(process.env.NEXT_PUBLIC_UNIFI_CLIENT_ID);
 
 export function PricingContent() {
   const { locale } = useLocale();
@@ -48,11 +51,17 @@ export function PricingContent() {
           ))}
         </ul>
 
-        <form action="/api/billing/checkout" method="post" className="mt-7">
-          <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-            {copy.pricing.checkout}
-          </button>
-        </form>
+        {/* Unifi clientId가 설정되면 Unifi 결제로, 아니면 기존 결제 링크로 보낸다.
+            둘 다 같은 billing_subscriptions 권한으로 수렴한다. */}
+        {UNIFI_ENABLED ? (
+          <UnifiCheckoutButton label={copy.pricing.checkout} />
+        ) : (
+          <form action="/api/billing/checkout" method="post" className="mt-7">
+            <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+              {copy.pricing.checkout}
+            </button>
+          </form>
+        )}
         <p className="mt-3 text-center text-sm text-muted">{copy.pricing.launchNote}</p>
         <p className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-muted">
           {copy.pricing.sameEmail}

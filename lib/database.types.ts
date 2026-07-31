@@ -1208,6 +1208,44 @@ export type Database = {
           },
         ]
       }
+      billing_unifi_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          item_identifier: string
+          payment_id: string
+          test_mode: boolean
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          item_identifier: string
+          payment_id: string
+          test_mode: boolean
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          item_identifier?: string
+          payment_id?: string
+          test_mode?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_unifi_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_subscriptions: {
         Row: {
           amount: number
@@ -1766,6 +1804,31 @@ export type Database = {
           p_product_id: string | null
           p_status: string
         }
+        Returns: Json
+      }
+      process_unifi_payment_event: {
+        Args: {
+          p_amount: number | null
+          p_event_key: string
+          p_occurred_at: string
+          p_payment_id: string
+          p_payload: Json
+          p_status: string
+        }
+        Returns: Json
+      }
+      create_unifi_payment_intent: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_item_identifier: string
+          p_payment_id: string
+          p_test_mode: boolean
+        }
+        Returns: Json
+      }
+      reconcile_unifi_payment: {
+        Args: { p_payment_id: string; p_user_id: string }
         Returns: Json
       }
       register_billing_identity: { Args: never; Returns: Json }

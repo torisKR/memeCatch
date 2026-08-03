@@ -1,0 +1,27 @@
+=== 병합 전 최종 검증 ===
+2026-08-03T17:51:58Z
+--- vitest ---
+ Test Files  77 passed (77)
+      Tests  646 passed (646)
+--- eslint ---
+✖ 6 problems (0 errors, 6 warnings)
+
+--- tsc ---
+tsc ok
+--- build ---
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+--- quality:check (읽기 전용, 기준선 대비 악화 확인) ---
+공개 문서 3904건 · 충실 145건 (3.7%)
+CRIT  34.1%   1330  DQ-C1-published-without-source — 공개 문서인데 근거 출처 URL이 하나도 없음
+CRIT   0.4%     14  DQ-C2-dead-representative — 대표 콘텐츠가 dead/region_blocked인데 계속 공개 중
+CRIT   1.0%     38  DQ-C3-duplicate-canonical-title — 정규화 후 제목이 겹치는 공개 문서(중복 노출)
+CRIT   7.0%    275  DQ-C4-alias-title-collision — 다른 공개 문서의 정식 제목을 alias로 보유
+HIGH  96.3%   3759  DQ-H1-thin-document — 충실도 미달(색인 제외 + 정리 중 배너 노출) 문서
+HIGH  84.8%   3310  DQ-H2-uniform-usage-context — 상황별 사용 신호가 전부 동일(기계적 기본값 의심)
+HIGH  55.0%   2148  DQ-H3-no-representative-content — 렌더 가능한 대표 콘텐츠 없음
+HIGH   7.5%    292  DQ-H4-rights-unknown — 출처의 권리 근거가 unknown인 채로 공개
+MEDI   5.7%    222  DQ-M1-origin-year-missing — 발생 연도 없음
+MEDI 100.0%   3904  DQ-M2-no-tags — 태그 없음(탐색·관련 밈 품질 저하)
+OK     0.0%      0  DQ-M3-placeholder-text — 공개 본문에 템플릿·조사 placeholder 잔존

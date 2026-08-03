@@ -383,12 +383,52 @@
   우선순위 점수: 20.0
   상태: ready
 
+- [ ] ID: DQ-017
+  문제: 링크 생존 표본 400건 검사(루프 024) — 부실률 2.5%(dead+private), 전체 외삽 ≈115건. 문제 링크의 56.5%가 나무위키에 몰렸고 timeout 11건은 전부 나무위키. **dead 확정 나무위키 5건**은 문서 삭제/이동 추정. 부수 발견: `meme_sources` 카운트가 anon 4,608 vs 관리자 5,717로 갈림 — RLS상 anon은 공개(approved/limited) 밈의 출처만 보므로, 차이 ≈1,109행은 비공개 밈의 출처로 설명된다.
+  사용자 영향: 3 / 데이터/법적 위험: 3 / 트래픽 가중치: 2 / 해결 확신: 4 / 예상 노력: 2
+  우선순위 점수: 18.0
+  완료 조건: dead 확정 5건 정리(대체 또는 제거)는 데이터 편집 → 운영자 큐. 나무위키 timeout 11건 재검증은 비게이트.
+  상태: ready (재검증) / blocked (데이터 편집)
+
+- [ ] ID: DQ-018
+  문제: 제목 정규화로 못 잡는 신규 중복 3쌍 발견(루프 024) — `5dqfn236`↔`53df75yr`, `5syxxsa9`↔`46x2hg97`, `uvdujpcy`↔`knk2hsye`. 기존 HG-004(a) 19그룹에 없음. 제목이 서로 달라 의미 기반 대조로만 검출됨.
+  사용자 영향: 3 / 데이터/법적 위험: 3 / 트래픽 가중치: 2 / 해결 확신: 4 / 예상 노력: 2
+  우선순위 점수: 18.0
+  의존성: HG-004 (병합 = 게이트)
+  상태: blocked
+
+- [ ] ID: A11Y-012
+  문제: 터치 대상 44px 미달 4곳 — export-button.tsx:213-214 · hero-web3.tsx:97 · submit-form.tsx:470 · source-evidence.tsx:37. 해법 선례(coupang-dock.tsx:78 min-h-11) 존재. (루프 024 design-2-synthesis, 점수 45.0 — 신규 후보 중 최고)
+  사용자 영향: 4 / 데이터/법적 위험: 1 / 트래픽 가중치: 4 / 해결 확신: 5 / 예상 노력: 1
+  우선순위 점수: 45.0 (design-2-synthesis 산정 유지)
+  상태: ready
+
+- [ ] ID: DES-007
+  문제: 카드 제목 truncate 시 접근 가능한 전체 title 부재(meme-card.tsx:73, meme-compact-card.tsx:58) — LOOP.md §6. 한 줄 수정. (점수 40.0)
+  상태: ready
+
+- [ ] ID: PERF-003
+  문제: AnswerCardSkeleton에 SignalTrace 블록 누락 + MemeDetailSkeleton에 대응 없는 블록 — 양방향 CLS 위험(skeletons.tsx:47-68). LOOP.md §9 「skeleton이 실제 콘텐츠와 같은 크기」. (점수 30.0)
+  상태: ready
+
+- [ ] ID: SEO-002
+  문제: 얇은 문서(96.3%)에서도 MemeWebPageJsonLd mainEntity가 무조건 완전하게 나감(page.tsx JSON-LD만 조건 누락 — AdsenseScript는 조건부) — LOOP.md §10 「보강 중 문서의 metadata 과장 금지」. (점수 20.0)
+  상태: ready
+
+> 루프 024의 전체 후보 10건·상세 근거는 `artifacts/renewal/loop-024/design-2-synthesis.md`·
+> `data-quality-2-synthesis.md` 참조. 신뢰 패널은 reader-first 안이 승자로 판정됨
+> (`trust-panel-verdict.md`) — 구현은 TrustNote 흡수·권리 문구 교체 조건부.
+
 > 루프 023 감사가 도출한 나머지 후보(LOC-001·003~005, A11Y-006~, DQ-014·015 갱신분 등 16건 전체)는
 > `artifacts/renewal/loop-023/audit-synthesis.md`에 근거·점수와 함께 있다. 다음 루프에서 triage.
 
 ---
 
 ## 기각된 항목
+
+- **요약↔본문 의미 충돌 · 안전 신호↔본문 충돌** (LOOP.md §2 검사 항목)
+  → **기각 (루프 024).** 상위 트래픽 100건 표본에서 확정 충돌 0건. 커버리지 ~2.5%라
+  전수 무결 단정은 아니지만 critical flag 격상 근거 없음.
 
 - **`을(를)` 조사 placeholder가 DB 본문에 남아 있다** (LOOP.md 초기 가설 4)
   → **데이터에서는 기각.** 공개 문서 3,904건 중 `DQ-M3-placeholder-text` 검출 0건.

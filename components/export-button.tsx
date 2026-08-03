@@ -210,8 +210,8 @@ export function ExportButton({ shortId }: { shortId: string }) {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            aria-label="close"
-            className="grid h-8 w-8 place-items-center rounded-full text-text-muted hover:bg-surface"
+            aria-label="닫기"
+            className="grid h-11 w-11 place-items-center rounded-full text-text-muted hover:bg-surface"
           >
             <span aria-hidden>✕</span>
           </button>

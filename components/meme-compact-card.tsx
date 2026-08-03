@@ -55,7 +55,8 @@ export function MemeCompactCard({
       </div>
 
       <div className="flex flex-col items-start gap-2 p-3">
-        <p className="line-clamp-2 text-sm font-extrabold leading-snug">
+        {/* line-clamp로 잘린 긴 제목의 전체 텍스트 접근 경로(title 툴팁) — LOOP.md §6 */}
+        <p title={meme.title} className="line-clamp-2 text-sm font-extrabold leading-snug">
           {meme.title}
         </p>
         {/* 시그니처 — 파형 모양이 곧 생애주기다(색 의존 없음) */}

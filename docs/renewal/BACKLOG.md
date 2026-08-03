@@ -397,15 +397,15 @@
   의존성: HG-004 (병합 = 게이트)
   상태: blocked
 
-- [ ] ID: A11Y-012
-  문제: 터치 대상 44px 미달 4곳 — export-button.tsx:213-214 · hero-web3.tsx:97 · submit-form.tsx:470 · source-evidence.tsx:37. 해법 선례(coupang-dock.tsx:78 min-h-11) 존재. (루프 024 design-2-synthesis, 점수 45.0 — 신규 후보 중 최고)
-  사용자 영향: 4 / 데이터/법적 위험: 1 / 트래픽 가중치: 4 / 해결 확신: 5 / 예상 노력: 1
-  우선순위 점수: 45.0 (design-2-synthesis 산정 유지)
-  상태: ready
+- [x] ID: A11Y-012
+  문제: 터치 대상 44px 미달 4곳 — export-button.tsx:213-214 · hero-web3.tsx:97 · submit-form.tsx:470 · source-evidence.tsx:37. (루프 024, 점수 45.0)
+  상태: done (루프 028)
+  결과: 3곳 수정 — export 닫기 버튼 h-8→h-11(라벨도 "close"→"닫기"), 홈 예시 칩 min-h-8→min-h-11, 출처 링크 min-h-6→min-h-11. 뒤 2곳은 루프 021·003에서 내가 만든 코드다. **submit-form.tsx `file:h-8`은 해당 없음으로 판정** — file: 의사요소는 별도 터치 대상이 아니라 input 전체(py-3, ≥44px)가 히트 영역이다.
 
-- [ ] ID: DES-007
-  문제: 카드 제목 truncate 시 접근 가능한 전체 title 부재(meme-card.tsx:73, meme-compact-card.tsx:58) — LOOP.md §6. 한 줄 수정. (점수 40.0)
-  상태: ready
+- [x] ID: DES-007
+  문제: 카드 제목 truncate 시 접근 가능한 전체 title 부재(meme-card.tsx:73, meme-compact-card.tsx:58) — LOOP.md §6. (점수 40.0)
+  상태: done (루프 029)
+  결과: line-clamp 제목 `<p>`에 `title={meme.title}` 부여 — 잘린 제목의 전체 텍스트 접근 경로 확보. 스크린리더는 원래 전문을 읽으므로(클램프는 시각 전용) 시각 사용자용 툴팁 보완이다.
 
 - [ ] ID: PERF-003
   문제: AnswerCardSkeleton에 SignalTrace 블록 누락 + MemeDetailSkeleton에 대응 없는 블록 — 양방향 CLS 위험(skeletons.tsx:47-68). LOOP.md §9 「skeleton이 실제 콘텐츠와 같은 크기」. (점수 30.0)

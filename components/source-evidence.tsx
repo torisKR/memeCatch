@@ -34,7 +34,7 @@ export function SourceEvidence({ sources }: { sources: CitableSourceInput[] }) {
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-6 items-start gap-1 font-medium underline underline-offset-2 transition-colors hover:text-foreground"
+              className="inline-flex min-h-11 items-start gap-1 font-medium underline underline-offset-2 transition-colors hover:text-foreground"
             >
               {source.title}
               <span aria-hidden className="text-xs">↗</span>

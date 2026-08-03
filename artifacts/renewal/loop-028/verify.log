@@ -1,0 +1,10 @@
+=== LOOP 028-029 verify ===
+2026-08-03T18:03:34Z
+ Test Files  77 passed (77)
+      Tests  646 passed (646)
+✖ 6 problems (0 errors, 6 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -70,7 +70,11 @@ export function MemeCard({
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5">
         {rank != null && <span className="sr-only">{rank}위</span>}
-        <p className="line-clamp-2 min-h-[2.75em] break-keep text-lg font-extrabold leading-snug">
+        {/* line-clamp로 잘린 긴 제목의 전체 텍스트 접근 경로(title 툴팁) — LOOP.md §6 */}
+        <p
+          title={meme.title}
+          className="line-clamp-2 min-h-[2.75em] break-keep text-lg font-extrabold leading-snug"
+        >
           {meme.title}
         </p>
         <p className="line-clamp-2 min-h-[3.25em] break-keep text-sm leading-relaxed text-muted">

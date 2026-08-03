@@ -94,7 +94,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
               <Link
                 key={q}
                 href={`/search?q=${encodeURIComponent(q)}`}
-                className="inline-flex min-h-8 items-center rounded-full border border-white/25 px-3 font-medium text-white/85 transition-colors hover:border-white/60 hover:text-white"
+                className="inline-flex min-h-11 items-center rounded-full border border-white/25 px-3 font-medium text-white/85 transition-colors hover:border-white/60 hover:text-white"
               >
                 {q}
               </Link>

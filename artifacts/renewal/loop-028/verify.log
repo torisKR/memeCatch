@@ -8,3 +8,12 @@ tsc ok
 ●  (SSG)      prerendered as static HTML (uses generateStaticParams)
 ƒ  (Dynamic)  server-rendered on demand
 
+=== LOOP 030-031 verify ===
+tsc ok
+ Test Files  77 passed (77)
+      Tests  646 passed (646)
+✖ 6 problems (0 errors, 6 warnings)
+
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

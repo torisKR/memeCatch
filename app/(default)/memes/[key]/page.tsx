@@ -185,8 +185,12 @@ export default async function MemeDetailPage({ params }: Props) {
         색인과 광고가 함께 돌아온다.
       */}
       {isIndexableMeme(meme) && <AdsenseScript />}
-      {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상 */}
-      <MemeWebPageJsonLd
+      {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상.
+          WebPage JSON-LD는 색인 판정과 같은 조건으로 게이트한다 — 얇은 문서(96.3%)는
+          noindex인데 구조화 데이터만 완성 문서처럼 나가면 LOOP.md §10「보강 중 문서의
+          metadata 과장 금지」위반이다. 브레드크럼·비디오는 사실 서술이라 유지. */}
+      {isIndexableMeme(meme) && (
+        <MemeWebPageJsonLd
         name={meme.title}
         summary={meme.summary}
         description={meme.description}
@@ -194,7 +198,8 @@ export default async function MemeDetailPage({ params }: Props) {
         slug={meme.slug}
         datePublished={meme.published_at ?? meme.created_at}
         dateModified={meme.updated_at}
-      />
+        />
+      )}
       <MemeBreadcrumbJsonLd
         category={meme.category}
         name={meme.title}

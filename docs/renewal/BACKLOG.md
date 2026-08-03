@@ -407,13 +407,15 @@
   상태: done (루프 029)
   결과: line-clamp 제목 `<p>`에 `title={meme.title}` 부여 — 잘린 제목의 전체 텍스트 접근 경로 확보. 스크린리더는 원래 전문을 읽으므로(클램프는 시각 전용) 시각 사용자용 툴팁 보완이다.
 
-- [ ] ID: PERF-003
-  문제: AnswerCardSkeleton에 SignalTrace 블록 누락 + MemeDetailSkeleton에 대응 없는 블록 — 양방향 CLS 위험(skeletons.tsx:47-68). LOOP.md §9 「skeleton이 실제 콘텐츠와 같은 크기」. (점수 30.0)
-  상태: ready
+- [x] ID: PERF-003
+  문제: AnswerCardSkeleton에 SignalTrace 블록 누락 + MemeDetailSkeleton에 대응 없는 블록 — 양방향 CLS 위험. (점수 30.0)
+  상태: done (루프 030)
+  결과: 스켈레톤을 실제 AnswerCard 구성(헤더→파형→h1→뜻→신호등, ~341px)에 맞춰 재구성. 대응물 없던 h-11×4 블록 제거, 페이지 순서(카드→미디어→본문)와 일치.
 
-- [ ] ID: SEO-002
-  문제: 얇은 문서(96.3%)에서도 MemeWebPageJsonLd mainEntity가 무조건 완전하게 나감(page.tsx JSON-LD만 조건 누락 — AdsenseScript는 조건부) — LOOP.md §10 「보강 중 문서의 metadata 과장 금지」. (점수 20.0)
-  상태: ready
+- [x] ID: SEO-002
+  문제: 얇은 문서(96.3%)에서도 MemeWebPageJsonLd가 무조건 완전하게 나감 — LOOP.md §10 위반. (점수 20.0)
+  상태: done (루프 031)
+  결과: WebPage JSON-LD를 `isIndexableMeme()`으로 게이트 — 색인·광고와 같은 단일 기준(D-001 원칙). 브레드크럼·비디오 JSON-LD는 사실 서술이라 유지. 실측: noindex 문서(e8ferq5u·uefmryky) WebPageLD 0건·브레드크럼 유지, 색인 문서(jkd7vu6x) 정상 출력.
 
 > 루프 024의 전체 후보 10건·상세 근거는 `artifacts/renewal/loop-024/design-2-synthesis.md`·
 > `data-quality-2-synthesis.md` 참조. 신뢰 패널은 reader-first 안이 승자로 판정됨

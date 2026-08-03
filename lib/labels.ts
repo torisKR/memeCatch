@@ -176,6 +176,29 @@ export const SECTION_TITLES = {
 } as const;
 
 /** T6: 하이브리드 slug — /memes/{short_id}-{한글slug}, short_id만으로도 해석 */
+/**
+ * 근거가 뒷받침하는 연도 정밀도 — 이 값일 때만 연도를 단정 표기한다.
+ * `approximate`·`decade`·`unknown`은 단정할 근거가 없다는 뜻이다.
+ */
+export const DEFINITE_YEAR_PRECISIONS = ["exact", "year"] as const;
+
+/**
+ * 등장 연도 표기.
+ *
+ * 화면은 `{origin_year}년생 밈`이라고 단정해 왔지만, 공개 문서 3,904건 전부
+ * `year_precision='unknown'`이다 — 근거보다 세밀한 날짜 정밀도를 주장하는 상태이고
+ * LOOP.md의 release blocker 중 하나다. 데이터를 고치는 대신 표시 계층에서 정밀도를
+ * 함께 읽어, 근거가 생기면 자동으로 단정 표기로 돌아가게 한다.
+ */
+export function formatOriginYear(
+  year: number | null | undefined,
+  precision?: string | null,
+): string | null {
+  if (typeof year !== "number" || !Number.isFinite(year)) return null;
+  const isDefinite = DEFINITE_YEAR_PRECISIONS.some((p) => p === precision);
+  return isDefinite ? `${year}년생 밈` : `${year}년생 밈 (추정)`;
+}
+
 export function memePathFrom(shortId: string, slug: string) {
   return `/memes/${shortId}-${encodeURIComponent(slug)}`;
 }

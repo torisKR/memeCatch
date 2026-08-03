@@ -166,7 +166,7 @@
   완료 조건: HG-004 결정 후 확정.
   상태: blocked
 
-- [ ] ID: DQ-008
+- [x] ID: DQ-008
   문제: `year_precision`이 공개 문서 3,904건 전부 `unknown`인데, 화면은 `{origin_year}년생 밈`이라고 단정 표기한다(`page.tsx:323`). 근거보다 세밀한 날짜 정밀도 표시 = LOOP.md critical flag 7번. `source_work_year`/`meme_first_seen_year`/`korea_viral_year` 컬럼도 마이그레이션으로 추가만 되고 채워지지 않았다(각 3,904건 null).
   사용자 영향: 2
   데이터/법적 위험: 3
@@ -177,6 +177,21 @@
   의존성: 없음
   완료 조건: `year_precision`이 `unknown`인 문서는 연도를 단정 표기하지 않고 「추정」으로 나타낸다. 데이터 수정 없이 표시 계층에서만 처리한다.
   검증 명령: `npx vitest run` · `npx next build --webpack`
+  상태: done (루프 007)
+  결과: `lib/labels.ts`에 `formatOriginYear(year, precision)` 추가 — `exact`·`year`일 때만 단정하고 그 외에는 「(추정)」을 붙인다. 데이터는 건드리지 않았고, 운영자가 정밀도를 올리면 자동으로 단정 표기로 복귀한다. `/memes/ra86attn` before “2004년생 밈” → after “2004년생 밈 (추정)”.
+  남은 것: 같은 단정 표기가 `app/[locale]/memes/[key]/page.tsx:351`(4개 로케일 `copy.born`)과 카드·퀴즈·주간 브리핑의 연도 칩에도 있다 → DQ-011
+
+- [ ] ID: DQ-011
+  문제: 루프 007이 한국어 상세의 연도 단정 표기만 고쳤다. 같은 주장이 다른 화면에도 남아 있다 — `app/[locale]/memes/[key]/page.tsx:351`의 `copy.born(origin_year)`(4개 로케일)와 `meme-guess-game.tsx:153`·`weekly-briefing.tsx:74`·`meme-card`/`meme-compact-card`의 연도 칩. 칩은 문장보다 약한 주장이지만 근거가 없기는 마찬가지다.
+  사용자 영향: 2
+  데이터/법적 위험: 3
+  트래픽 가중치: 3
+  해결 확신: 5
+  예상 노력: 3
+  우선순위 점수: 5.0
+  의존성: DQ-008 (완료 — `formatOriginYear` 재사용)
+  완료 조건: 연도를 노출하는 모든 화면이 `formatOriginYear`(또는 로케일 대응판)를 거친다. 연도 **필터·그룹핑**(timeline·explore·collections)은 정밀도 주장이 아니므로 대상이 아니다.
+  검증 명령: `npx vitest run`
   상태: ready
 
 - [ ] ID: DQ-010

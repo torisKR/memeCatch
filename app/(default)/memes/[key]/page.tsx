@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   CATEGORIES,
   MODERATION_STATUS,
+  formatOriginYear,
   shortIdFromParam,
 } from "@/lib/labels";
 import {
@@ -153,6 +154,13 @@ export default async function MemeDetailPage({ params }: Props) {
   // 옵셔널 캐스팅 1곳으로 안전 처리(컴포넌트가 런타임 검증, 없으면 null 렌더)
   const usageExamples = (meme as typeof meme & { usage_examples?: unknown })
     .usage_examples;
+
+  // year_precision은 3,904건 전부 'unknown'이라 지금은 대부분 「(추정)」이 붙는다.
+  // 운영자가 근거를 확인해 정밀도를 올리면 자동으로 단정 표기로 돌아간다.
+  const originYearLabel = formatOriginYear(
+    meme.origin_year,
+    (meme as typeof meme & { year_precision?: string | null }).year_precision,
+  );
 
   const representativePlatform = sourcePlatformFromReference({
     platform: representative?.platform,
@@ -334,9 +342,11 @@ export default async function MemeDetailPage({ params }: Props) {
                 <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
                   {CATEGORIES[meme.category].user}
                 </span>
-                {meme.origin_year && (
+                {/* 연도는 정밀도와 함께 읽는다 — year_precision이 근거를 뒷받침하지
+                    못하면 「(추정)」을 붙여 단정하지 않는다. */}
+                {originYearLabel && (
                   <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                    {meme.origin_year}년생 밈
+                    {originYearLabel}
                   </span>
                 )}
                 {tagNames.map((name) => (

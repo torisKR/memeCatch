@@ -1,0 +1,217 @@
+{
+  "generatedAt": "2026-08-03T14:51:49.115Z",
+  "scope": {
+    "moderationStatus": [
+      "approved",
+      "limited"
+    ],
+    "documents": 3904
+  },
+  "depth": {
+    "substantial": 145,
+    "thin": 3759,
+    "substantialRatio": 0.0371,
+    "avgScore": 2.34,
+    "avgProseChars": 173
+  },
+  "checks": [
+    {
+      "id": "DQ-C1-published-without-source",
+      "severity": "critical",
+      "title": "공개 문서인데 근거 출처 URL이 하나도 없음",
+      "count": 1330,
+      "ratio": 0.3407,
+      "samples": [
+        "pjg2amsh",
+        "g3ggtkn4",
+        "qpgnpt7m",
+        "aujrt7c3",
+        "d2tvwm8e",
+        "c5ysdndp",
+        "t5kqfdad",
+        "enh3rbgh",
+        "w5cph2k3",
+        "agksxemm"
+      ]
+    },
+    {
+      "id": "DQ-C2-dead-representative",
+      "severity": "critical",
+      "title": "대표 콘텐츠가 dead/region_blocked인데 계속 공개 중",
+      "count": 14,
+      "ratio": 0.0036,
+      "samples": [
+        "7yaqepcn",
+        "39fyk7an",
+        "6x5vm3my",
+        "xt52qg4j",
+        "rr8j2m8h",
+        "repzdxn4",
+        "sdvd764t",
+        "2j5tfqq7",
+        "329w7u7p",
+        "yp9aj4pw"
+      ]
+    },
+    {
+      "id": "DQ-C3-duplicate-canonical-title",
+      "severity": "critical",
+      "title": "정규화 후 제목이 겹치는 공개 문서(중복 노출)",
+      "count": 38,
+      "ratio": 0.0097,
+      "samples": [
+        "w5cph2k3",
+        "grhbyqw6",
+        "vmatxkyb",
+        "fxdf2buu",
+        "uy9b4gse",
+        "pgzywbqp",
+        "xyupvzhr",
+        "rgazmqqx",
+        "4vcnfmsx",
+        "aw9bunnq"
+      ]
+    },
+    {
+      "id": "DQ-C4-alias-title-collision",
+      "severity": "critical",
+      "title": "다른 공개 문서의 정식 제목을 alias로 보유",
+      "count": 275,
+      "ratio": 0.0704,
+      "samples": [
+        "qpgnpt7m",
+        "9vpyaue7",
+        "6vabjjj9",
+        "vmatxkyb",
+        "75w3a6ds",
+        "hmqmfu4s",
+        "4kn7cpvc",
+        "s5uqajj2",
+        "nsy6h2q3",
+        "pkahgrks"
+      ]
+    },
+    {
+      "id": "DQ-H1-thin-document",
+      "severity": "high",
+      "title": "충실도 미달(색인 제외 + 정리 중 배너 노출) 문서",
+      "count": 3759,
+      "ratio": 0.9629,
+      "samples": [
+        "fsjdajrb",
+        "pjg2amsh",
+        "g3ggtkn4",
+        "34fad3e8",
+        "5katqgt7",
+        "qpgnpt7m",
+        "aujrt7c3",
+        "np6cgq8j",
+        "km874pzj",
+        "fbmmjgmr"
+      ]
+    },
+    {
+      "id": "DQ-H2-uniform-usage-context",
+      "severity": "high",
+      "title": "상황별 사용 신호가 전부 동일(기계적 기본값 의심)",
+      "count": 3310,
+      "ratio": 0.8478,
+      "samples": [
+        "fsjdajrb",
+        "pjg2amsh",
+        "34fad3e8",
+        "5katqgt7",
+        "qpgnpt7m",
+        "aujrt7c3",
+        "np6cgq8j",
+        "km874pzj",
+        "fbmmjgmr",
+        "bcbpatyg"
+      ]
+    },
+    {
+      "id": "DQ-H3-no-representative-content",
+      "severity": "high",
+      "title": "렌더 가능한 대표 콘텐츠 없음",
+      "count": 2148,
+      "ratio": 0.5502,
+      "samples": [
+        "fsjdajrb",
+        "pjg2amsh",
+        "g3ggtkn4",
+        "34fad3e8",
+        "5katqgt7",
+        "qpgnpt7m",
+        "aujrt7c3",
+        "4zb62m5z",
+        "tbj2quru",
+        "d2tvwm8e"
+      ]
+    },
+    {
+      "id": "DQ-H4-rights-unknown",
+      "severity": "high",
+      "title": "출처의 권리 근거가 unknown인 채로 공개",
+      "count": 292,
+      "ratio": 0.0748,
+      "samples": [
+        "fsjdajrb",
+        "np6cgq8j",
+        "km874pzj",
+        "dwk6pxht",
+        "9e4wxp8e",
+        "c23fkqu2",
+        "ybfnzxua",
+        "gn6tyuw3",
+        "wt8u4nwg",
+        "75zh5q35"
+      ]
+    },
+    {
+      "id": "DQ-M1-origin-year-missing",
+      "severity": "medium",
+      "title": "발생 연도 없음",
+      "count": 222,
+      "ratio": 0.0569,
+      "samples": [
+        "55gk6f4h",
+        "xkn29c6h",
+        "mfj66vt6",
+        "nsy6h2q3",
+        "znnqpn63",
+        "yns4dwxe",
+        "e8ferq5u",
+        "y9vyy3me",
+        "hhxybv7v",
+        "uty2ddt6"
+      ]
+    },
+    {
+      "id": "DQ-M2-no-tags",
+      "severity": "medium",
+      "title": "태그 없음(탐색·관련 밈 품질 저하)",
+      "count": 3904,
+      "ratio": 1,
+      "samples": [
+        "fsjdajrb",
+        "pjg2amsh",
+        "g3ggtkn4",
+        "34fad3e8",
+        "5katqgt7",
+        "qpgnpt7m",
+        "aujrt7c3",
+        "np6cgq8j",
+        "km874pzj",
+        "fbmmjgmr"
+      ]
+    },
+    {
+      "id": "DQ-M3-placeholder-text",
+      "severity": "medium",
+      "title": "공개 본문에 템플릿·조사 placeholder 잔존",
+      "count": 0,
+      "ratio": 0,
+      "samples": []
+    }
+  ]
+}

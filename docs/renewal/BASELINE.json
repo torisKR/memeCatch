@@ -1,0 +1,208 @@
+{
+  "loop": 1,
+  "measuredAt": "2026-08-03T14:40:00.000Z",
+  "source": {
+    "project": "onjipuldngbdptldkpoe",
+    "environment": "production",
+    "access": "read-only",
+    "method": "PostgREST anon key (RLS 통과 후 = 공개 화면과 동일한 시야) + 읽기 전용 SQL"
+  },
+
+  "data": {
+    "memesTotal": 4539,
+    "byModerationStatus": {
+      "approved": 3903,
+      "limited": 1,
+      "pending": 28,
+      "fact_checking": 2,
+      "rights_checking": 1,
+      "rejected": 604
+    },
+    "published": 3904,
+
+    "depth": {
+      "note": "lib/content-depth.ts 기준. sitemap·robots·광고 게재 판정과 같은 함수.",
+      "substantial": 145,
+      "thin": 3759,
+      "thinRatio": 0.963,
+      "avgScore": 2.34,
+      "maxScore": 13,
+      "avgProseChars": 173,
+      "minProseCharsThreshold": 250,
+      "minScoreThreshold": 5,
+      "bestDocumentDescriptionChars": 127
+    },
+
+    "evidence": {
+      "publishedWithoutSourceUrl": 1330,
+      "publishedWithoutSourceRatio": 0.341,
+      "memeSourcesRows": 5717,
+      "sourcesCopyrightUnknown": 292,
+      "memeClaimsRows": 0,
+      "mediaSourcesRows": 5851,
+      "memeMediaRows": 6111,
+      "memeMediaBySourceRole": { "usage_example": 6111 },
+      "memeMediaByRightsBasis": {
+        "official_embed": 3912,
+        "unknown": 2193,
+        "link_only": 6
+      },
+      "memeMediaByReviewState": {
+        "approved": 3904,
+        "pending": 2193,
+        "rejected": 14
+      },
+      "mediaSourcesNeverHealthChecked": 1275,
+      "mediaSourcesRemoved": 16
+    },
+
+    "content": {
+      "memeContentsRows": 4402,
+      "byAvailability": {
+        "live": 4109,
+        "unchecked": 279,
+        "dead": 11,
+        "region_blocked": 3
+      },
+      "publishedWithoutAnyContent": 1961,
+      "publishedWithoutRenderableRepresentative": 2148,
+      "publishedWithDeadOrBlockedRepresentative": 14
+    },
+
+    "signals": {
+      "usageContextUniform": 3310,
+      "usageContextUniformRatio": 0.848,
+      "usageContextAllGreen": 3298,
+      "bySafetyLevel": { "green": 3410, "yellow": 223, "gray": 168, "red": 103 },
+      "byLifecycleStatus": { "cooling": 2212, "archived": 1625, "rising": 67, "active": 0 },
+      "byCategory": {
+        "phrase": 1883,
+        "comment": 732,
+        "image": 442,
+        "challenge": 308,
+        "song": 276,
+        "dance": 263
+      }
+    },
+
+    "identity": {
+      "duplicateNormalizedTitleRows": 38,
+      "duplicateNormalizedTitleGroups": 19,
+      "exactDuplicateTitleGroups": 0,
+      "publishedWithAliases": 3261,
+      "aliasTitleCollisions": 275,
+      "placeholderInPublishedProse": 0
+    },
+
+    "taxonomy": {
+      "publishedWithoutTags": 3904,
+      "originYearNull": 222,
+      "yearPrecisionUnknown": 3904,
+      "sourceWorkYearNull": 3904,
+      "memeFirstSeenYearNull": 3904,
+      "koreaViralYearNull": 3904,
+      "eraTypeNull": 3904
+    },
+
+    "traffic": {
+      "note": "트래픽이 매우 낮아 트래픽 가중 우선순위는 아직 신뢰도가 낮다.",
+      "viewEventsTotal": 1298,
+      "trendMetricRows": 96117,
+      "memesWithViewsLast7d": 202,
+      "topDocumentCumulativeViews": 53,
+      "rankEligible": 1683,
+      "rankEligibleRatio": 0.431
+    },
+
+    "freshness": {
+      "oldestPublishedUpdatedAt": "2026-07-15",
+      "newestPublishedUpdatedAt": "2026-07-21",
+      "publishedStaleOver30d": 0,
+      "trendCronJob": "compute_trend_scores",
+      "trendCronLastRun": "2026-08-02T18:57:00Z",
+      "trendCronRuns": 67,
+      "trendCronFailures": 0
+    }
+  },
+
+  "design": {
+    "route": "/memes/uefmryky",
+    "viewport": { "width": 390, "height": 844 },
+    "documentHeightPx": 6323,
+    "offsetsPx": {
+      "representativeEmbedTop": 301,
+      "representativeEmbedHeight": 662,
+      "answerCardTop": 1344,
+      "h1Top": 1399,
+      "oneLineSummaryTop": 1435,
+      "docStatusNoteTop": 1623,
+      "inlineSourcesTop": 2797,
+      "lastVerifiedLineTop": 2837
+    },
+    "firstViewportContainsMemeInfo": false,
+    "scrollViewportsToFirstMemeInfo": 1.59,
+    "rankings": {
+      "route": "/rankings",
+      "disclosesCalculationPeriod": false,
+      "disclosesLastUpdated": false,
+      "disclosesLowSampleState": false,
+      "affiliateDockOverlapsContent": true
+    }
+  },
+
+  "verification": {
+    "unitTests": { "command": "npx vitest run", "files": 71, "tests": 605, "status": "pass" },
+    "lint": { "command": "npx eslint", "errors": 0, "warnings": 5, "status": "pass" },
+    "typecheck": { "command": "npx tsc --noEmit", "status": "pass" },
+    "build": { "command": "npx next build --webpack", "status": "pass" },
+    "dataQuality": {
+      "command": "pnpm quality:check",
+      "status": "fail",
+      "note": "critical 4건 검출로 exit 1 — 기준선이므로 의도된 실패"
+    },
+    "e2e": { "status": "not_run", "reason": "e2e 프레임워크 미도입" },
+    "accessibility": { "status": "not_run", "reason": "자동 검사 도구 미도입 (BACKLOG A11Y-001)" },
+    "responsiveScreenshots": {
+      "status": "not_run",
+      "reason": "360×800·768×1024·1440×900 미측정. 390×844만 수동 계측"
+    },
+    "metadataCanonical": { "status": "not_run", "reason": "자동 검사 없음" },
+    "performance": { "status": "not_run", "reason": "LCP/INP/CLS 기준선 미측정 (BACKLOG PERF-001)" },
+    "migrationDryRun": { "status": "not_run", "reason": "루프 001은 스키마를 변경하지 않음" }
+  },
+
+  "hypotheses": {
+    "H1-source-presentation-too-simple": {
+      "verdict": "confirmed",
+      "evidence": "meme_claims 0건, meme_media.source_role 100% usage_example, 상세는 출처를 문서 단위 링크 3개로만 표시"
+    },
+    "H2-popular-docs-are-incomplete": {
+      "verdict": "confirmed-worse",
+      "evidence": "공개 문서의 96.3%가 충실도 미달. 색인 대상 145건"
+    },
+    "H3-usage-signals-are-defaults": {
+      "verdict": "confirmed",
+      "evidence": "84.8%가 4개 상황 동일값, 그중 3298건이 전부 green"
+    },
+    "H4-particle-placeholders-in-data": {
+      "verdict": "rejected-in-data",
+      "evidence": "공개 본문 placeholder 검출 0건. 단 UI 템플릿(doc-status-note.tsx:50)에는 잔존 → DES-003"
+    },
+    "H5-taxonomy-mixes-non-memes": {
+      "verdict": "partial",
+      "evidence": "상위 조회 문서에 문화 사건·곡 항목이 섞여 있으나 정량 분류 미실시"
+    },
+    "H6-rankings-overstate-precision": {
+      "verdict": "confirmed",
+      "evidence": "1위 누적 조회 53회. 산정 기간·갱신 시각·표본 부족 표기 모두 없음"
+    },
+    "H7-embeds-block-first-comprehension": {
+      "verdict": "confirmed",
+      "evidence": "대표 임베드 top 301px/높이 662px가 첫 뷰포트를 채우고 h1은 1399px"
+    },
+    "H8-reactions-filters-lack-semantics": {
+      "verdict": "not_verified",
+      "evidence": "접근성 자동 검사 미도입 (BACKLOG A11Y-001)"
+    }
+  }
+}

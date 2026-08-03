@@ -207,7 +207,7 @@
   검증 명령: `npx vitest run` · `pnpm quality:check`
   상태: blocked
 
-- [ ] ID: DQ-009
+- [x] ID: DQ-009
   문제: 목록 화면의 PostgREST 필터가 아직 `dead`만 제외한다 — `app/(default)/explore/page.tsx:115`, `components/explore-grid.tsx:68`, `lib/social-platform-counts.server.ts:27`이 모두 `.neq("availability","dead")`를 쓴다. 루프 002에서 렌더 경로(상세·임베드·충실도·검사기)는 `lib/content-availability.ts`로 통일했지만, 이 세 곳은 JS 술어가 아니라 쿼리 필터라 같은 함수를 쓸 수 없어 범위에서 뺐다. 결과로 `region_blocked` 썸네일이 탐색 그리드에는 계속 노출된다(현재 3건).
   사용자 영향: 2
   데이터/법적 위험: 3
@@ -218,7 +218,8 @@
   의존성: DQ-005 (완료)
   완료 조건: 세 쿼리가 `dead`와 `region_blocked`를 함께 제외하고, 제외 목록이 `UNAVAILABLE_STATUSES` 하나에서 파생된다. 임베디드 리소스 필터 동작이 바뀌지 않는지 탐색 결과 수로 확인한다.
   검증 명령: `npx vitest run` · `/explore` 결과 수 전후 비교
-  상태: ready
+  상태: done (루프 008)
+  결과: 세 쿼리가 `UNAVAILABLE_FILTER`(= `UNAVAILABLE_STATUSES`에서 파생)를 써 `not.in.(dead,region_blocked)`로 거른다. 루프 002에서 남겨 둔 렌더 경로↔쿼리 경로 불일치가 닫혔다. `/explore` 24개·`/explore?platform=youtube` 24개로 회귀 없음. 부수로 `withPublicContent`의 제네릭 제약 누락(tsc 검출)과 과도하게 넓던 테스트 단언 1건을 바로잡았다.
 
 - [ ] ID: A11Y-001
   문제: 접근성 자동 검사 도구가 없어 WCAG 2.2 AA 회귀를 확인할 수 없다. LOOP.md STEP 6의 `accessibility check`가 매 루프 `not_run`으로 남는다.

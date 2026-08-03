@@ -1,0 +1,55 @@
+=== LOOP 008 verify ===
+2026-08-03T15:43:16Z
+
+ Test Files  1 failed | 75 passed (76)
+      Tests  2 failed | 638 passed (640)
+   Start at  00:43:17
+   Duration  2.46s (transform 3.55s, setup 0ms, import 9.17s, tests 3.23s, environment 11.90s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+app/(default)/explore/page.tsx(117,6): error TS2339: Property 'not' does not exist on type 'T'.
+components/explore-grid.tsx(70,6): error TS2339: Property 'not' does not exist on type 'T'.
+  [90m119 |[0m
+  [90m120 |[0m [36mfunction[0m withPlatform<[33mT[0m [36mextends[0m {
+Next.js build worker exited with code: 1 and signal: null
+=== LOOP 008 verify (retry) ===
+2026-08-03T15:44:39Z
+
+ Test Files  76 passed (76)
+      Tests  640 passed (640)
+   Start at  00:44:39
+   Duration  2.97s (transform 4.35s, setup 0ms, import 11.77s, tests 3.40s, environment 15.72s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+app/(default)/explore/page.tsx(117,6): error TS2339: Property 'not' does not exist on type 'T'.
+  [90m119 |[0m
+  [90m120 |[0m [36mfunction[0m withPlatform<[33mT[0m [36mextends[0m {
+Next.js build worker exited with code: 1 and signal: null
+=== LOOP 008 verify (retry 2) ===
+2026-08-03T15:45:19Z
+ Test Files  76 passed (76)
+      Tests  640 passed (640)
+   Start at  00:45:19
+   Duration  2.60s (transform 4.03s, setup 0ms, import 10.11s, tests 3.43s, environment 13.04s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 008 before/after — 목록 화면 availability 필터 ===
+before: .neq("meme_contents.availability","dead")            (3곳, region_blocked 통과)
+after : .not("meme_contents.availability","in",UNAVAILABLE_FILTER)  → "(dead,region_blocked)"
+대상: components/explore-grid.tsx:70, app/(default)/explore/page.tsx:117,
+      lib/social-platform-counts.server.ts:28
+회귀 확인: /explore 24개 카드, /explore?platform=youtube 24개 카드, 오류 없음.
+부수 발견: withPublicContent<T>의 제네릭 제약이 neq만 갖고 있어 tsc가 잡았고,
+          기존 테스트 1건이 "Shorts 필터에 not 호출이 없어야 한다"를 너무 넓게
+          단언하고 있었다 — meme_contents.url 대상으로 좁혀 의도를 정확히 표현.

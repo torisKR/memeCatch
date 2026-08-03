@@ -20,6 +20,15 @@
  */
 export const UNAVAILABLE_STATUSES = ["dead", "region_blocked"] as const;
 
+/**
+ * PostgREST `not.in` 필터 값 — `.not(col, "in", UNAVAILABLE_FILTER)` 형태로 쓴다.
+ *
+ * 목록 화면(탐색 그리드 등)은 JS 술어가 아니라 쿼리로 거르므로 위 함수들을 쓸 수
+ * 없다. 대신 제외 목록을 이 상수 하나에서 파생시켜, 기준이 바뀔 때 렌더 경로와
+ * 쿼리 경로가 함께 움직이게 한다.
+ */
+export const UNAVAILABLE_FILTER = `(${UNAVAILABLE_STATUSES.join(",")})`;
+
 export type AvailabilityRef = { availability?: string | null };
 export type RenderableContentRef = AvailabilityRef & {
   moderation_status?: string | null;

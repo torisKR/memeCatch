@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createStaticClient } from "@/lib/supabase/server";
+import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import {
   countSocialPlatformReferences,
   emptySocialPlatformCounts,
@@ -24,7 +25,8 @@ export async function getSocialPlatformCounts(): Promise<SocialPlatformCounts> {
         .from("meme_contents")
         .select("meme_id, platform, url")
         .eq("moderation_status", "approved")
-        .neq("availability", "dead")
+        // 렌더 경로와 같은 제외 목록을 쓴다 — dead와 region_blocked를 함께 뺀다.
+        .not("availability", "in", UNAVAILABLE_FILTER)
         .order("id", { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
       if (error || !data) return emptySocialPlatformCounts();

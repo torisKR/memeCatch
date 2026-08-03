@@ -61,7 +61,10 @@ describe("explore platform query", () => {
       "meme_contents!inner"
     );
     expect(hasCall(calls, "eq", "meme_contents.moderation_status", "approved")).toBe(true);
-    expect(hasCall(calls, "neq", "meme_contents.availability", "dead")).toBe(true);
+    // dead만이 아니라 region_blocked도 함께 제외한다(렌더 경로와 같은 기준).
+    expect(
+      hasCall(calls, "not", "meme_contents.availability", "in", "(dead,region_blocked)")
+    ).toBe(true);
     expect(hasCall(calls, "ilike", "meme_contents.platform", "youtube")).toBe(true);
     expect(hasCall(calls, "not", "meme_contents.url", "ilike", "%/shorts/%")).toBe(true);
   });
@@ -72,6 +75,12 @@ describe("explore platform query", () => {
 
     expect(hasCall(calls, "ilike", "meme_contents.platform", "youtube")).toBe(true);
     expect(hasCall(calls, "ilike", "meme_contents.url", "%/shorts/%")).toBe(true);
-    expect(calls.some((call) => call.method === "not")).toBe(false);
+    // Shorts는 URL을 긍정 매칭으로 요구한다 — 제외(not) 조건으로 거르지 않는다.
+    // availability의 not.in은 공개 콘텐츠 필터라 여기서 세면 안 된다.
+    expect(
+      calls.some(
+        (call) => call.method === "not" && call.args[0] === "meme_contents.url"
+      )
+    ).toBe(false);
   });
 });

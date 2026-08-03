@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
+import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import { LIST_COLUMNS, type MemeListItem } from "@/lib/queries";
 import {
   DIFFICULTY,
@@ -108,11 +109,12 @@ function selectForPlatform(platform?: SocialPlatform) {
 
 function withPublicContent<T extends {
   eq: (column: string, value: string) => T;
-  neq: (column: string, value: string) => T;
+  not: (column: string, operator: string, value: string) => T;
 }>(query: T): T {
   return query
     .eq("meme_contents.moderation_status", "approved")
-    .neq("meme_contents.availability", "dead");
+    // 렌더 경로와 같은 제외 목록을 쓴다 — dead와 region_blocked를 함께 뺀다.
+    .not("meme_contents.availability", "in", UNAVAILABLE_FILTER);
 }
 
 function withPlatform<T extends {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  UNAVAILABLE_FILTER,
   UNAVAILABLE_STATUSES,
   isAvailableContent,
   isRenderableContent,
@@ -25,6 +26,14 @@ describe("isAvailableContent", () => {
 
   test("제외 목록은 DB 게이트(is_meme_rank_eligible)와 같은 두 값이다", () => {
     expect([...UNAVAILABLE_STATUSES]).toEqual(["dead", "region_blocked"]);
+  });
+
+  test("쿼리용 필터 값은 같은 목록에서 파생된다 — 두 경로가 갈리지 않는다", () => {
+    // 목록 화면은 JS 술어를 못 쓰고 PostgREST `not.in`으로 거른다.
+    expect(UNAVAILABLE_FILTER).toBe("(dead,region_blocked)");
+    for (const status of UNAVAILABLE_STATUSES) {
+      expect(UNAVAILABLE_FILTER).toContain(status);
+    }
   });
 });
 

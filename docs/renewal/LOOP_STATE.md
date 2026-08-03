@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **006** |
-| 선택 항목 | `DES-002` — 랭킹이 산정 기간·갱신 시각·표본을 밝히지 않음 |
+| 루프 번호 | **008** |
+| 선택 항목 | `DQ-008` → `DQ-009` (루프 007·008) |
 | 상태 | `continue` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-006/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-008/` |
 
 ## 전체 목표
 
@@ -174,22 +174,45 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
 | 탭별 산식 | ❌ | 3개 탭 각각 한 문장 |
 | 표본 부족 | ❌ | ▲ 표본 적음 경고 |
 
+## 완료된 작업 (루프 007 — DQ-008)
+
+공개 문서 3,904건 전부 `year_precision='unknown'`인데 상세는 「{origin_year}년생 밈」
+이라고 단정해 왔다 — 근거보다 세밀한 날짜 정밀도 표시(LOOP.md release blocker).
+
+- `lib/labels.ts`에 `formatOriginYear(year, precision)` — `exact`·`year`일 때만 단정
+- 데이터는 건드리지 않았다. 운영자가 정밀도를 올리면 자동으로 단정 표기로 복귀한다.
+- `/memes/ra86attn` before 「2004년생 밈」 → after 「2004년생 밈 (추정)」
+- 남은 범위(`[locale]` 상세 4개 로케일 + 카드 연도 칩)는 `DQ-011`로 등록
+
+## 완료된 작업 (루프 008 — DQ-009)
+
+루프 002에서 의도적으로 남겨 둔 렌더 경로↔쿼리 경로 불일치를 닫았다. 목록 화면
+3곳이 PostgREST `.neq(…, "dead")`로만 걸러 `region_blocked` 썸네일이 탐색 그리드에
+계속 노출되고 있었다.
+
+- `UNAVAILABLE_FILTER`(= `UNAVAILABLE_STATUSES`에서 파생)를 추가하고 세 쿼리가
+  `not.in.(dead,region_blocked)`를 쓴다 — 제외 목록의 단일 출처가 유지된다
+- `/explore` 24개 · `/explore?platform=youtube` 24개로 회귀 없음
+- 부수 수확: `withPublicContent`의 제네릭 제약이 `neq`만 갖고 있어 `tsc`가 잡았고,
+  기존 테스트 1건이 “Shorts 필터에 `not` 호출이 없어야 한다”를 너무 넓게 단언하고
+  있어 `meme_contents.url` 대상으로 좁혀 의도를 정확히 표현했다
+
 ## 진행 중인 작업
 
 없음.
 
-## 마지막 검증 결과 (2026-08-04 루프 006, `artifacts/renewal/loop-006/verify.log`)
+## 마지막 검증 결과 (2026-08-04 루프 008, `artifacts/renewal/loop-008/verify.log`)
 
 | 검사 | 명령 | 결과 |
 | --- | --- | --- |
-| 단위/통합 테스트 | `npx vitest run` | ✅ 75 파일 / **635 통과** (628 + 신규 7) |
+| 단위/통합 테스트 | `npx vitest run` | ✅ 76 파일 / **640 통과** (기준선 597 → +43) |
 | Lint | `npx eslint` | ✅ 0 error / 5 warning (전부 기존 `no-img-element`) |
 | 타입 | `npx tsc --noEmit` | ✅ 통과 |
 | 프로덕션 빌드 | `npx next build --webpack` | ✅ 성공 |
 | 데이터 품질 검사기 | `pnpm quality:check` | ⚠️ **의도된 실패** — critical 4건 검출로 exit 1 (기준선과 동일) |
 | 핵심 route smoke | 로컬 프로덕션 빌드 + 브라우저 계측 | ✅ 390×844·360×800·1440×900 계측 |
 | e2e 자동화 | — | `not_run` — e2e 프레임워크 미도입 |
-| 마이그레이션 dry-run | — | `not_run` — 루프 001~006 모두 스키마를 변경하지 않음 |
+| 마이그레이션 dry-run | — | `not_run` — 루프 001~008 모두 스키마를 변경하지 않음 |
 | 접근성 자동 검사 | — | `not_run` — 도구 미도입 (BACKLOG `A11Y-001`) |
 | 반응형 스크린샷 회귀 | 수동 계측 | ⚠️ 부분 — 390×844·360×800·1440×900 확인. 768×1024은 `not_run` |
 | metadata/canonical 검사 | — | `not_run` — 자동 검사 없음. 빌드 산출물 육안 확인만 |
@@ -212,9 +235,13 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
 
 ## 다음 후보 작업 3개
 
-1. **DQ-008** (15.0) — `year_precision`이 전부 unknown인데 「{연도}년생 밈」으로 단정 표기.
-2. **DQ-009** (12.0) — 목록 화면 3곳의 PostgREST 필터가 아직 `dead`만 제외.
-3. **PERF-001** (18.0) / **A11Y-001** (12.0) — 둘 다 신규 계측 도구 도입이 필요하다.
+1. **PERF-001** (18.0) — LCP/INP/CLS 기준선. DES-001로 첫 화면 구성이 바뀌었는데
+   성능 회귀 검사가 루프 001부터 계속 `not_run`이다.
+2. **A11Y-001** (12.0) — 접근성 자동 검사 도입.
+3. **DQ-011** (5.0) — `[locale]` 상세·카드의 연도 단정 표기.
+
+그 밖의 남은 항목(DQ-002·DQ-003·DQ-004·DQ-006·DQ-007·DQ-010·DES-004)은 전부
+`HUMAN_GATE` 대기다 — `DECISIONS.md`의 HG-001~HG-005 결정이 있어야 진행할 수 있다.
 
 ## 중단 조건 충족 여부
 
@@ -223,4 +250,4 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ `quality:check` critical 4개 검사가 여전히 위반. 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 남아 있고 DQ-004는 `HG-004` 대기 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ⚠️ HUMAN_GATE 5건 대기. 다만 게이트 없이 진행 가능한 작업이 남아 루프는 계속 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 6 / 12 |
+| 반복 제한 | 8 / 12 |

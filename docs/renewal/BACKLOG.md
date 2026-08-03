@@ -318,10 +318,11 @@
   해결 확신: 3
   예상 노력: 3
   우선순위 점수: 6.0
-  의존성: 없음 (Next 16 내부 동작 조사 필요)
-  완료 조건: 존재하지 않는 `/memes/*`가 404 상태 코드로 응답한다. `scripts/smoke.mts`의 `knownIssue: "SEO-001"` 플래그를 제거해 정식 게이트로 승격한다.
+  의존성: `DECISIONS.md` HG-007 — 루프 019 조사 결과, 가능한 해결책 4안이 전부 성능·검증 비용 트레이드오프를 가진다
+  완료 조건: HG-007 결정 후 확정. 존재하지 않는 `/memes/*`가 404로 응답하면 `smoke.mts`의 `knownIssue` 플래그를 제거해 정식 게이트로 승격한다.
   검증 명령: `pnpm smoke`
-  상태: ready
+  상태: blocked
+  루프 019 조사: 라우터 수준 404는 정상(`/qqqq` → 404). ISR 세그먼트 내 notFound()만 200이 된다 — `experimental.globalNotFound` + ISR 조합, Next 16.2.10. 상세는 `artifacts/renewal/loop-019/seo-001-investigation.md`.
 
 ---
 

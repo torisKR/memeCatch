@@ -251,7 +251,7 @@
       "/": {
         "lcpMs": 143,
         "cls": 0.0,
-        "inp": "not_run",
+        "inp": 52,
         "source": "local production build"
       },
       "/rankings": {
@@ -264,10 +264,13 @@
       "/memes/[key]": {
         "lcpMs": 1131,
         "cls": 0.12,
-        "inp": "not_run",
+        "inp": 47,
         "source": "local production build",
         "clsExceedsTarget": true,
         "clsNote": "실행마다 다름 — 콜드 캐시 0.12 / 웜 캐시 0.00. 원인은 크기 미지정 쿠팡 광고 이미지(루프 012). 단일 측정값으로 다루지 말 것."
+      },
+      "/explore": {
+        "inp": 40
       }
     },
     "des001BeforeAfter": {
@@ -286,8 +289,7 @@
     },
     "notRun": {
       "/explore": "루프 009 범위 밖",
-      "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족",
-      "inpOtherRoutes": "/·/explore·상세는 미측정 — /rankings 방법론 재사용 가능"
+      "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족"
     },
     "clsRootCause": {
       "culprit": "unsized third-party ad image (img1a.coupangcdn.com)",
@@ -308,7 +310,8 @@
         "/search": 313.3
       },
       "note": "route 간 차이가 ~14KB뿐 — 공유 청크가 지배적. route별 축소는 공유 청크 분해가 선행돼야 함(PERF-004)"
-    }
+    },
+    "inpMethod": "프로덕션 실측(루프 041~042) — CDP 실입력(Tab 키·클릭) 후 trace. 4개 route 전부 40~54ms, 목표 200ms 통과"
   },
   "accessibility": {
     "measuredAt": "2026-08-04",

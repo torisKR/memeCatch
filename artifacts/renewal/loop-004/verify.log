@@ -1,0 +1,27 @@
+=== LOOP 004 verify ===
+2026-08-03T15:25:01Z
+ Test Files  73 passed (73)
+      Tests  625 passed (625)
+   Start at  00:25:02
+   Duration  2.17s (transform 3.35s, setup 0ms, import 8.62s, tests 3.89s, environment 9.11s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 004 before/after — /memes/uefmryky ===
+390x844                     before   after
+  정답 카드 top              1344  →     79   (전체가 첫 뷰포트 안: bottom 420)
+  h1 top                     1399  →    216
+  한 줄 뜻 top               1435  →    252
+  안전 신호 bottom            ~1603 →    399
+  대표 임베드 top              301  →    666
+  첫 뷰포트에 밈 정보          없음  →   유행상태·제목·한줄뜻·안전신호 4종 모두
+
+360x800 (신규 측정)  정답 카드 79~420 · h1 216 · 한 줄 뜻 252 · 임베드 688 → 조건 충족
+1440x900             정답 카드 full-width(1120px) 헤더, 그 아래 2단 유지
+                     (embed left=160 w=495 | info left=687 w=593) → 회귀 없음

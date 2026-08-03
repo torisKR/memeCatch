@@ -203,9 +203,6 @@ export default async function MemeDetailPage({ params }: Props) {
       {/* 미터링 게이트 — 서버는 동일 HTML을 주고 방문자 본인 기록으로만 판단(클로킹 아님) */}
       <MeteredGate memeId={meme.id} />
 
-      {/* 상세 진입 유도 — 로그인/가입(로그아웃 방문자 전용, 클라이언트 판정으로 SSG·SEO 불변) */}
-      <AuthInvite />
-
       {/* 컬렉션 진입 맥락 네비 — 최신 searchParams를 읽기 위해 클라이언트에서 처리 */}
       <ContextNav />
 
@@ -219,8 +216,21 @@ export default async function MemeDetailPage({ params }: Props) {
         </p>
       )}
 
+      {/* 정답 카드를 2단 그리드 **위**로 올린다.
+          모바일에서는 그리드가 세로로 풀리면서 왼쪽 레일(대표 영상 662px)이 통째로
+          정보 앞에 왔고, 그 결과 h1이 1399px·정답 카드가 1344px 아래에 있었다 —
+          첫 뷰포트(844px)에 이 밈의 뜻과 신호가 하나도 없었다는 뜻이다.
+          카드를 그리드 밖으로 빼면 모바일은 "뜻 먼저, 영상 나중"(LOOP.md 정보 계층)이
+          되고 데스크톱은 제목이 전체 폭을 쓰는 헤더가 된다. 2단 구조 자체는 그대로다. */}
+      <AnswerCard meme={meme} />
+
+      {/* 상세 진입 유도 — 로그인/가입(로그아웃 방문자 전용, 클라이언트 판정으로 SSG·SEO
+          불변). 컴포넌트 문서가 명시한 자리가 "정답 카드 직후"다. 이전에는 본문보다
+          위에 있어 첫 화면 410px를 가져갔다. */}
+      <AuthInvite />
+
       {/* 감상(좌)·정보(우) 2단 — 데스크톱은 영상을 고정하고 오른쪽 정보만 스크롤,
-          모바일은 영상을 맨 위에 두고 세로로 이어진다. SSG·SEO 구조는 그대로. */}
+          모바일은 정답 카드 다음에 영상, 그다음 나머지 정보가 이어진다. */}
       <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8">
         {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장). 데스크톱에서 고정. */}
         <div className="space-y-4 lg:sticky lg:top-[4.5rem]">
@@ -279,8 +289,6 @@ export default async function MemeDetailPage({ params }: Props) {
 
         {/* 오른쪽 — 정보. 오른쪽만 스크롤된다. */}
         <div className="mt-6 min-w-0 space-y-5 lg:mt-0">
-          <AnswerCard meme={meme} />
-
           {/* 정리 중 안내 — content-depth가 '얇음'으로 본 문서에만. 방치된 스텁이 아니라
               확인된 만큼만 공개하는 관리 문서임을 밝히고 제보 경로를 연다.
               충실도 판정은 generateMetadata의 robots와 같은 입력(meme)을 쓴다. */}

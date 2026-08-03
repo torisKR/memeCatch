@@ -257,8 +257,9 @@
       "/rankings": {
         "lcpMs": 1062,
         "cls": 0.0,
-        "inp": "not_run",
-        "source": "local production build"
+        "inp": 54,
+        "source": "local production build",
+        "inpNote": "프로덕션 실측(루프 041) — CDP 실제 입력(토글·버튼 클릭) 후 trace. 목표 200ms 통과. 합성 el.click()은 INP에 집계되지 않음 — 실입력 필수"
       },
       "/memes/[key]": {
         "lcpMs": 1131,
@@ -284,9 +285,9 @@
       "note": "CLS 0.21→0.12 (43% 개선). 네트워크 조건이 달라 LCP는 엄밀한 비교가 아니다."
     },
     "notRun": {
-      "inp": "트레이스에 상호작용이 없어 측정되지 않음. 조작 시나리오 필요",
       "/explore": "루프 009 범위 밖",
-      "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족"
+      "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족",
+      "inpOtherRoutes": "/·/explore·상세는 미측정 — /rankings 방법론 재사용 가능"
     },
     "clsRootCause": {
       "culprit": "unsized third-party ad image (img1a.coupangcdn.com)",

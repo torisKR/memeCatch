@@ -7,9 +7,9 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **035** — ready 소진(전부 done/rejected/blocked). 브랜치 renewal/loop-028, push 승인 대기 |
+| 루프 번호 | **036** — 종료. 2차 배포 완료(18ef972..d5148e6), ready 0건, 잔여 전부 HUMAN_GATE |
 | 선택 항목 | 루프 022 SRCH-001 기각 → 023 병렬 감사(30 에이전트) → 025 `DQ-013` |
-| 상태 | `human_gate` |
+| 상태 | `human_gate` — 게이트 없이 가능한 작업 0건 |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
 | 산출물 | `artifacts/renewal/loop-001/` ~ `loop-025/` (023 = 병렬 감사 산출물 7종 + HG 구현안 7건) |

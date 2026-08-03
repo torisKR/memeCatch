@@ -1,0 +1,14 @@
+=== LOOP 013 verify ===
+2026-08-03T16:01:31Z
+ Test Files  76 passed (76)
+      Tests  641 passed (641)
+   Start at  01:01:31
+   Duration  3.27s (transform 4.61s, setup 0ms, import 13.39s, tests 4.23s, environment 16.31s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

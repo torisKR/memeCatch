@@ -91,6 +91,23 @@ describe("MemeEmbed", () => {
     expect(screen.queryByText("대표 콘텐츠 보기")).toBeNull();
   });
 
+  // DQ-011 회귀 — 폴백 히어로의 연도 칩은 단정하지 않는다.
+  // year_precision이 공개 문서 전부 unknown이고, 4개 로케일도 "around"로 헤지한다.
+  it("does not assert a definite origin year on the fallback hero chip", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={null}
+        fallbackSourceUrl={null}
+        title="연도 밈"
+        category="phrase"
+        originYear={2016}
+      />
+    );
+
+    expect(html).toContain("2016년 무렵");
+    expect(html).not.toContain("2016년 등장");
+  });
+
   // DQ-005 회귀 — region_blocked는 dead와 똑같이 재생 불가로 다뤄야 한다.
   // 랭킹 게이트(is_meme_rank_eligible)가 이미 둘을 함께 제외하는데 화면만
   // dead만 걸러서, 랭킹에 못 오르는 콘텐츠가 상세에는 임베드되고 있었다.

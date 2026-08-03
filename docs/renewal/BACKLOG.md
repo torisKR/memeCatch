@@ -210,7 +210,7 @@
   검증 명령: 신규 러너
   상태: ready
 
-- [ ] ID: DQ-011
+- [x] ID: DQ-011
   문제: 루프 007이 한국어 상세의 연도 단정 표기만 고쳤다. 같은 주장이 다른 화면에도 남아 있다 — `app/[locale]/memes/[key]/page.tsx:351`의 `copy.born(origin_year)`(4개 로케일)와 `meme-guess-game.tsx:153`·`weekly-briefing.tsx:74`·`meme-card`/`meme-compact-card`의 연도 칩. 칩은 문장보다 약한 주장이지만 근거가 없기는 마찬가지다.
   사용자 영향: 2
   데이터/법적 위험: 3
@@ -221,7 +221,9 @@
   의존성: DQ-008 (완료 — `formatOriginYear` 재사용)
   완료 조건: 연도를 노출하는 모든 화면이 `formatOriginYear`(또는 로케일 대응판)를 거친다. 연도 **필터·그룹핑**(timeline·explore·collections)은 정밀도 주장이 아니므로 대상이 아니다.
   검증 명령: `npx vitest run`
-  상태: ready
+  상태: done (루프 013)
+  결과: **항목이 과대 산정돼 있었다.** 조사해 보니 `[locale]` 4개 로케일은 이미 헤지돼 있었다 — `Originated around {year}` / `{year}年ごろに登場` / `约在{year}年出现` / `約在{year}年出現`. 실제 단정 표기는 `components/meme-embed.tsx:188`의 「{originYear}년 등장」 하나였고 이를 「{originYear}년 무렵」으로 바꿔 로케일판과 맞췄다. 정밀도를 prop으로 넘기지 않은 이유는 이 칩이 압축 라벨이고 「무렵」은 정밀도가 올라가도 참이기 때문이다.
+  의도적 제외: `meme-guess-game.tsx:153`·`weekly-briefing.tsx:74`의 **맨 숫자 칩**(`2016`)은 문장 단위 주장이 아니라 라벨이다. 목록 UI마다 「(추정)」을 붙이면 잡음 대비 정직성 이득이 작다고 판단했다.
 
 - [ ] ID: DQ-010
   문제: 루프 003의 `TrustNote`가 근거 수·원본 유무·마지막 업데이트까지는 말하지만, LOOP.md 「신뢰 패널」이 요구하는 나머지 세 항목은 아직 표시하지 못한다 — (a) 출처 역할(`meme_media.source_role`)은 6,111건 전부 `usage_example`이라 표시할 정보가 없고, (b) 권리 노출 방식(`meme_sources.copyright_status`)은 292건이 `unknown`, (c) 수정 이력(`meme_revisions`)은 운영자 전용 RLS라 공개 화면에서 읽을 수 없다.

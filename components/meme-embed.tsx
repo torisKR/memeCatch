@@ -185,7 +185,12 @@ function TypoFallbackHero({
         {(catMeta || originYear != null) && (
           <div className="flex flex-wrap items-center gap-1.5">
             {catMeta && <HeroChip>{catMeta.user}</HeroChip>}
-            {originYear != null && <HeroChip>{originYear}년 등장</HeroChip>}
+            {/* 「년 등장」은 단정이다. year_precision이 3,904건 전부 unknown이라
+                근거가 없고, 같은 정보를 4개 로케일은 이미 "around/ごろ/约在"로
+                헤지하고 있다(app/[locale]/memes/[key]/page.tsx). 한국어만 단정할
+                이유가 없어 「무렵」으로 맞춘다. 정밀도를 prop으로 넘기지 않는 이유는
+                이 칩이 압축 라벨이고, 「무렵」은 정밀도가 올라가도 여전히 참이기 때문. */}
+            {originYear != null && <HeroChip>{originYear}년 무렵</HeroChip>}
           </div>
         )}
         <p

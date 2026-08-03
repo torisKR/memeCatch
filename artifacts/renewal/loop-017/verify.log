@@ -1,0 +1,21 @@
+=== LOOP 017 — 체크리스트 잔여 검증 (768×1024 · reduced-motion · 키보드 포커스) ===
+2026-08-04
+
+1) 768×1024 (/memes/uefmryky) — 스크린샷 확인
+   정답 카드(유행 신호·제목·한 줄 뜻·안전 신호등) 전체가 첫 뷰포트 안.
+   가로 오버플로 없음(scrollWidth == innerWidth). 레이아웃 깨짐 없음. → PASS
+
+2) prefers-reduced-motion — 코드 증거
+   app/globals.css + 컴포넌트 14곳이 useReducedMotion / media query를 사용
+   (answer-card, motion-list, h-scroll, timeline-view, reaction-bar,
+    trending-carousel, reveal 등). → PASS (코드 수준)
+
+3) 키보드 포커스 가시성 — 실측
+   실제 Tab 입력 후 document.activeElement = A.탐색,
+   el.matches(':focus-visible') = true, outline = "2px solid rgb(166,163,173)".
+   globals.css:179의 전역 :focus-visible 규칙이 실동작. → PASS
+   주의: element.focus()(프로그램적)는 :focus-visible을 트리거하지 않아 판정 불가였고,
+   실제 키보드 입력으로 재검증했다.
+
+남은 미검증(전부 결함 증거 없는 검증 부채): 200% 확대, INP, e2e 자동화,
+전체 route 키보드 순회, loading/empty/error 상태 전수.

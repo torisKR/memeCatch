@@ -91,6 +91,43 @@ describe("MemeEmbed", () => {
     expect(screen.queryByText("대표 콘텐츠 보기")).toBeNull();
   });
 
+  // DQ-005 회귀 — region_blocked는 dead와 똑같이 재생 불가로 다뤄야 한다.
+  // 랭킹 게이트(is_meme_rank_eligible)가 이미 둘을 함께 제외하는데 화면만
+  // dead만 걸러서, 랭킹에 못 오르는 콘텐츠가 상세에는 임베드되고 있었다.
+  it("falls back to the source card when a YouTube source is region_blocked", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          platform: "YouTube",
+          content_id: "abcdefghijk",
+          url: "https://www.youtube.com/watch?v=abcdefghijk",
+          thumbnail_url: null,
+          availability: "region_blocked",
+          caption: null,
+        }}
+        fallbackSourceUrl="https://namu.wiki/w/test"
+        title="지역 차단 밈"
+        isRepresentative
+      />
+    );
+
+    expect(html).not.toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
+    expect(html).toContain("출처에서 원본 보기");
+  });
+
+  it("does not embed a region_blocked TikTok source", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{ ...tiktokContent, availability: "region_blocked" }}
+        title="심쿵"
+        isRepresentative={false}
+      />
+    );
+
+    expect(html).not.toContain("www.tiktok.com/player/v1/6833754937747361025");
+    expect(html).toContain("출처에서 원본 보기");
+  });
+
   it("loads Instagram immediately without a click gate", async () => {
     const instagramContent = {
       ...tiktokContent,

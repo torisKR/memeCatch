@@ -60,6 +60,10 @@ export function isBoilerplateOrigin(origin: unknown): boolean {
   return BOILERPLATE_ORIGIN_PATTERNS.some((re) => re.test(t));
 }
 
+// 확장자를 명시한다 — scripts/quality-check.mts가 이 파일을 Node로 직접 실행하고,
+// Node의 ESM 해석기는 번들러와 달리 확장자를 보완해 주지 않는다.
+import { isRenderableContent } from "./content-availability.ts";
+
 export type DepthSourceRef = { source_url?: string | null };
 export type DepthContentRef = {
   availability?: string | null;
@@ -143,12 +147,14 @@ function distinctSourceCount(sources?: DepthSourceRef[] | null): number {
   return seen.size;
 }
 
-/** 상세 페이지가 실제로 렌더하는 콘텐츠만 미디어로 인정 (dead·미승인 제외). */
+/**
+ * 상세 페이지가 실제로 렌더하는 콘텐츠만 미디어로 인정.
+ * 판정은 lib/content-availability.ts를 그대로 쓴다 — 화면이 보여 주지 않는 콘텐츠에
+ * 충실도 점수를 주지 않으려면 두 기준이 같아야 한다.
+ */
 function liveMediaCount(contents?: DepthContentRef[] | null): number {
   if (!Array.isArray(contents)) return 0;
-  return contents.filter(
-    (c) => c?.availability !== "dead" && c?.moderation_status === "approved"
-  ).length;
+  return contents.filter(isRenderableContent).length;
 }
 
 /** 밈 레코드 → 충실도 점수와 충실/얇음 판정. 순수 함수(DB·네트워크 접근 없음). */

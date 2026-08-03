@@ -37,6 +37,7 @@ import { SourceEvidence } from "@/components/source-evidence";
 import { DocStatusNote } from "@/components/doc-status-note";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isIndexableMeme } from "@/lib/content-depth";
+import { isRenderableContent } from "@/lib/content-availability";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
@@ -131,9 +132,10 @@ export default async function MemeDetailPage({ params }: Props) {
     getReactionCounts(meme.id),
   ]);
 
-  const liveContents = meme.meme_contents.filter(
-    (c) => c.availability !== "dead" && c.moderation_status === "approved",
-  );
+  // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트
+  // (is_meme_rank_eligible)와 같은 기준이라 "랭킹엔 못 오르는데 상세엔 뜨는"
+  // 콘텐츠가 생기지 않는다.
+  const liveContents = meme.meme_contents.filter(isRenderableContent);
   const representative =
     liveContents.find((c) => c.is_representative) ?? liveContents[0] ?? null;
   // TikTok·Instagram 등 비대표 임베드 — 대표 영상 아래 "관련 콘텐츠"로 노출
@@ -221,8 +223,13 @@ export default async function MemeDetailPage({ params }: Props) {
       <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8">
         {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장). 데스크톱에서 고정. */}
         <div className="space-y-4 lg:sticky lg:top-[4.5rem]">
+          {/* 렌더 가능한 콘텐츠가 하나도 없으면(폴백 히어로) 이 자리는 여전히 이 밈의
+              대표 미디어 슬롯이다. 아래 MemeEmbed의 isRepresentative와 같은 식을 써서
+              라벨과 컴포넌트 판정이 갈리지 않게 한다. */}
           <section
-            aria-label={representative?.is_representative ? "대표 콘텐츠" : "관련 콘텐츠"}
+            aria-label={
+              (representative?.is_representative ?? true) ? "대표 콘텐츠" : "관련 콘텐츠"
+            }
           >
             <MemeEmbed
               content={representative}

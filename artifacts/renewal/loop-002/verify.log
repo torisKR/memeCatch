@@ -1,0 +1,94 @@
+=== LOOP 002 verify ===
+2026-08-03T15:05:37Z
+--- eslint ---
+
+✖ 5 problems (0 errors, 5 warnings)
+
+--- tsc ---
+tsc ok
+--- vitest ---
+ Test Files  72 passed (72)
+      Tests  615 passed (615)
+   Start at  00:05:45
+   Duration  2.56s (transform 3.77s, setup 0ms, import 9.96s, tests 3.80s, environment 11.67s)
+
+--- next build ---
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+--- quality:check ---
+
+> memecatch@0.1.0 quality:check
+> node scripts/quality-check.mts
+
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/toris/projects/memecatch/lib/content-availability' imported from /Users/toris/projects/memecatch/lib/content-depth.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+    at #resolve (node:internal/modules/esm/loader:673:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:163:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:253:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/toris/projects/memecatch/lib/content-availability'
+}
+
+Node.js v24.16.0
+--- retry after extension fix ---
+--- tsc ---
+tsc done
+--- vitest ---
+ Test Files  72 passed (72)
+      Tests  615 passed (615)
+   Start at  00:06:40
+   Duration  2.82s (transform 5.52s, setup 0ms, import 12.59s, tests 3.50s, environment 13.37s)
+
+--- next build ---
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+--- quality:check ---
+
+> memecatch@0.1.0 quality:check
+> node scripts/quality-check.mts
+
+공개 문서 3904건 · 충실 145건 (3.7%)
+평균 충실도 2.34/13 · 평균 고유 산문 173자
+
+CRIT  34.1%   1330  DQ-C1-published-without-source — 공개 문서인데 근거 출처 URL이 하나도 없음
+CRIT   0.4%     14  DQ-C2-dead-representative — 대표 콘텐츠가 dead/region_blocked인데 계속 공개 중
+CRIT   1.0%     38  DQ-C3-duplicate-canonical-title — 정규화 후 제목이 겹치는 공개 문서(중복 노출)
+CRIT   7.0%    275  DQ-C4-alias-title-collision — 다른 공개 문서의 정식 제목을 alias로 보유
+HIGH  96.3%   3759  DQ-H1-thin-document — 충실도 미달(색인 제외 + 정리 중 배너 노출) 문서
+HIGH  84.8%   3310  DQ-H2-uniform-usage-context — 상황별 사용 신호가 전부 동일(기계적 기본값 의심)
+HIGH  55.0%   2148  DQ-H3-no-representative-content — 렌더 가능한 대표 콘텐츠 없음
+HIGH   7.5%    292  DQ-H4-rights-unknown — 출처의 권리 근거가 unknown인 채로 공개
+MEDI   5.7%    222  DQ-M1-origin-year-missing — 발생 연도 없음
+MEDI 100.0%   3904  DQ-M2-no-tags — 태그 없음(탐색·관련 밈 품질 저하)
+OK     0.0%      0  DQ-M3-placeholder-text — 공개 본문에 템플릿·조사 placeholder 잔존
+
+리포트: /Users/toris/projects/memecatch/docs/renewal/DATA_QUALITY_REPORT.json
+
+실패: 4개 검사가 critical 이상 위반
+
+=== LOOP 002 before/after (브라우저 계측, 390×844 아님 — 데스크톱 기본 뷰포트) ===
+route: /memes/f384zwnp  (나빌레라 · YouTube · availability=region_blocked · is_representative)
+BEFORE (https://catchmeme.com):
+  {"label":"대표 콘텐츠","iframeInSection":true,"fallbackHero":false}
+AFTER  (로컬 next start, 동일 프로덕션 DB):
+  {"label":"대표 콘텐츠","iframe":false,"ytThumb":false,"fallbackHero":true,
+   "canonical":"https://catchmeme.com/memes/f384zwnp-나빌레라","robots":"noindex, follow"}
+
+회귀 확인 route: /memes/ra86attn (봉숭아학당 · availability=live)
+AFTER: {"label":"대표 콘텐츠","iframe":true,"fallbackHero":false}  → 임베드 유지, 회귀 없음

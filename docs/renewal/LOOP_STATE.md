@@ -7,11 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **001** (기준선 확립) |
+| 루프 번호 | **002** |
+| 선택 항목 | `DQ-005` — region_blocked 대표 콘텐츠가 상세에서 렌더됨 |
 | 상태 | `continue` |
-| 날짜 | 2026-08-03 |
-| 브랜치 | `main` |
-| 산출물 | `artifacts/renewal/loop-001/` |
+| 날짜 | 2026-08-04 |
+| 브랜치 | `renewal/loop-001` |
+| 산출물 | `artifacts/renewal/loop-001/`, `artifacts/renewal/loop-002/` |
 
 ## 전체 목표
 
@@ -61,21 +62,48 @@
 - 우선순위 backlog 13건 → `BACKLOG.md`
 - HUMAN_GATE 5건 정리 → `DECISIONS.md`
 
+## 완료된 작업 (루프 002 — DQ-005)
+
+렌더 가능성 판정을 `lib/content-availability.ts` 한 곳으로 모았다. 기존에는 같은
+판정이 네 곳에 복사돼 있었고 전부 `dead`만 걸렀는데, DB 게이트
+(`is_meme_rank_eligible`)는 `dead`와 `region_blocked`를 함께 제외한다. 그래서
+랭킹에는 못 오르지만 상세에서는 임베드되는 콘텐츠가 있었다.
+
+- `lib/content-availability.ts` 신규 — `UNAVAILABLE_STATUSES`,
+  `isAvailableContent()`, `isRenderableContent()`
+- 소비처 4곳이 같은 함수를 쓴다: 상세 `liveContents` · `MemeEmbed` 재생 분기 ·
+  `content-depth`의 `liveMediaCount` · `quality-check`의 DQ-C2/DQ-H3
+- 렌더 가능한 콘텐츠가 없을 때 섹션 `aria-label`이 「관련 콘텐츠」로 떨어지던
+  불일치를 바로잡았다(컴포넌트에 넘기는 `isRepresentative`와 같은 식 사용)
+- 신규 테스트 10건 (`content-availability.test.ts` 8, `meme-embed.test.tsx` 2)
+
+**프로덕션 전후 비교** — `/memes/f384zwnp` (나빌레라, region_blocked YouTube)
+
+| | 대표 콘텐츠 섹션 | iframe | 폴백 히어로 | canonical |
+| --- | --- | :---: | :---: | --- |
+| before (프로덕션) | `대표 콘텐츠` | ✅ 있음 | ❌ | 유지 |
+| after (로컬 프로덕션 빌드) | `대표 콘텐츠` | ❌ 없음 | ✅ 「출처에서 원본 보기」 | 동일 |
+
+정상 문서 `/memes/ra86attn`는 임베드가 그대로 유지돼 회귀가 없다.
+데이터는 변경하지 않았으므로 `quality:check` 수치는 기준선과 동일하다 — 이 변경은
+14건이 *보이는 방식*을 고친 것이지 14건을 없앤 것이 아니다.
+
 ## 진행 중인 작업
 
-없음. 루프 001은 기준선 단계이므로 제품 UI·프로덕션 데이터를 변경하지 않았다.
+없음.
 
-## 마지막 검증 결과 (2026-08-03, `artifacts/renewal/loop-001/verify.log`)
+## 마지막 검증 결과 (2026-08-04 루프 002, `artifacts/renewal/loop-002/verify.log`)
 
 | 검사 | 명령 | 결과 |
 | --- | --- | --- |
-| 단위/통합 테스트 | `npx vitest run` | ✅ 71 파일 / **605 통과** (기존 597 + 신규 8) |
+| 단위/통합 테스트 | `npx vitest run` | ✅ 72 파일 / **615 통과** (605 + 신규 10) |
 | Lint | `npx eslint` | ✅ 0 error / 5 warning (전부 기존 `no-img-element`) |
 | 타입 | `npx tsc --noEmit` | ✅ 통과 |
 | 프로덕션 빌드 | `npx next build --webpack` | ✅ 성공 |
-| 데이터 품질 검사기 | `pnpm quality:check` | ⚠️ **의도된 실패** — critical 4건 검출로 exit 1 |
-| e2e / 핵심 route smoke | — | `not_run` — e2e 프레임워크 미도입 |
-| 마이그레이션 dry-run | — | `not_run` — 루프 001은 스키마를 변경하지 않음 |
+| 데이터 품질 검사기 | `pnpm quality:check` | ⚠️ **의도된 실패** — critical 4건 검출로 exit 1 (기준선과 동일) |
+| 핵심 route smoke | 로컬 프로덕션 빌드 + 브라우저 계측 | ✅ `f384zwnp` 폴백 전환 / `ra86attn` 회귀 없음 |
+| e2e 자동화 | — | `not_run` — e2e 프레임워크 미도입 |
+| 마이그레이션 dry-run | — | `not_run` — 루프 001·002 모두 스키마를 변경하지 않음 |
 | 접근성 자동 검사 | — | `not_run` — 도구 미도입 (BACKLOG `A11Y-001`) |
 | 반응형 스크린샷 회귀 | — | `not_run` — 360/768/1440 뷰포트 미측정. 390×844만 수동 계측 |
 | metadata/canonical 검사 | — | `not_run` — 자동 검사 없음. 빌드 산출물 육안 확인만 |
@@ -98,12 +126,10 @@
 
 ## 다음 후보 작업 3개
 
-1. **DQ-005** — `region_blocked` 대표 콘텐츠가 상세에서 그대로 렌더된다(코드 gap 1곳).
-   우선순위 75.0 · 노력 1 · 프로덕션 쓰기 없음.
-2. **DQ-001** — 출처 0건 문서에서 “밈캐치 검수팀 확인” 문구를 실제 근거 수에 따라
-   조건부로 바꾼다. 우선순위 62.5 · 프로덕션 쓰기 없음.
-3. **DES-001** — 모바일 상세 정보 계층 재배치(정답 카드 → 대표 미디어 순).
-   우선순위 37.5.
+1. **DQ-001** (62.5) — 출처 0건 문서에서 “밈캐치 검수팀 확인” 문구를 실제 근거 수에
+   따라 조건부로 바꾼다. 프로덕션 쓰기 없음.
+2. **DES-001** (37.5) — 모바일 상세 정보 계층 재배치(정답 카드 → 대표 미디어 순).
+3. **DES-002** (30.0) — 랭킹 산정 기간·갱신 시각·표본 부족 표기.
 
 ## 중단 조건 충족 여부
 
@@ -112,4 +138,4 @@
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ critical backlog 4건 미해결 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ⚠️ HUMAN_GATE 5건 대기. 다만 게이트 없이 진행 가능한 작업이 남아 루프는 계속 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 1 / 12 |
+| 반복 제한 | 2 / 12 |

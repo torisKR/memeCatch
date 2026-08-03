@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CATEGORIES, type MemeCategory } from "@/lib/labels";
 import type { MemeContentRow } from "@/lib/queries";
+import { isAvailableContent } from "@/lib/content-availability";
 import { isContextSourceUrl } from "@/lib/source-links";
 import { sourcePlatformFromReference } from "@/lib/source-platform";
 
@@ -48,17 +49,19 @@ export function MemeEmbed({
     platform: content?.platform,
     url: content?.url,
   });
+  // 재생 가능 여부는 lib/content-availability.ts 단일 판정 — dead와 region_blocked를
+  // 함께 제외한다. 불가 판정이면 아래 폴백 카드가 출처 링크를 대신 제시한다.
+  const isPlayable = isAvailableContent(content);
   const isYouTube =
     content != null &&
     (sourcePlatform === "youtube" || sourcePlatform === "youtube_shorts") &&
     !!content.content_id &&
-    content.availability !== "dead";
+    isPlayable;
 
   const sourceUrl = content?.url ?? fallbackSourceUrl ?? null;
-  const socialProvider =
-    content?.availability !== "dead"
-      ? getSocialProvider(content?.platform, sourceUrl)
-      : null;
+  const socialProvider = isPlayable
+    ? getSocialProvider(content?.platform, sourceUrl)
+    : null;
 
   if (isYouTube) {
     return (

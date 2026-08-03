@@ -16,6 +16,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { restAll } from "./source-pipeline-rest.mjs";
 import { contentDepth } from "../lib/content-depth.ts";
+import {
+  UNAVAILABLE_STATUSES,
+  isRenderableContent,
+} from "../lib/content-availability.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPORT_PATH = resolve(ROOT, "docs/renewal/DATA_QUALITY_REPORT.json");
@@ -124,15 +128,9 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-/** 상세 페이지가 실제로 렌더하는 대표 콘텐츠(page.tsx의 liveContents 규칙과 동일). */
+/** 상세 페이지가 실제로 렌더하는 대표 콘텐츠(page.tsx의 liveContents와 같은 판정). */
 function hasRenderableRepresentative(row: Row): boolean {
-  return row.meme_contents.some(
-    (c) =>
-      c.is_representative &&
-      c.moderation_status === "approved" &&
-      c.availability !== "dead" &&
-      c.availability !== "region_blocked",
-  );
+  return row.meme_contents.some((c) => c.is_representative && isRenderableContent(c));
 }
 
 function sourceUrls(row: Row): string[] {
@@ -203,7 +201,7 @@ export function buildChecks(rows: Row[]): Check[] {
         r.meme_contents.some(
           (c) =>
             c.is_representative &&
-            (c.availability === "dead" || c.availability === "region_blocked"),
+            UNAVAILABLE_STATUSES.some((s) => s === c.availability),
         ),
       ),
     ),

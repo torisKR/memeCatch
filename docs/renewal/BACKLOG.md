@@ -9,7 +9,7 @@
 
 ---
 
-- [ ] ID: DQ-005
+- [x] ID: DQ-005
   문제: `region_blocked` 대표 콘텐츠가 상세 페이지에서 그대로 렌더된다. `app/(default)/memes/[key]/page.tsx:134`의 `liveContents` 필터가 `availability !== "dead"`만 보고 `region_blocked`는 통과시킨다. 랭킹 게이트(`is_meme_rank_eligible`)와 품질 검사기는 둘 다 `region_blocked`를 제외하므로 화면만 기준이 다르다. 공개 문서 14건이 dead/region_blocked 대표 콘텐츠를 갖고 있다.
   사용자 영향: 3
   데이터/법적 위험: 5
@@ -20,7 +20,8 @@
   의존성: 없음
   완료 조건: 상세 페이지가 `dead`·`region_blocked` 대표 콘텐츠를 렌더하지 않고 대체 출처 링크로 폴백한다. 필터 기준이 `is_meme_rank_eligible`·`quality-check`와 일치한다.
   검증 명령: `npx vitest run` · `npx next build --webpack`
-  상태: ready
+  상태: done (루프 002)
+  결과: 판정을 `lib/content-availability.ts` 하나로 모으고 상세·임베드·충실도 스코어러·품질 검사기가 같은 함수를 쓴다. 프로덕션 `/memes/f384zwnp` 전후 비교 — before: 대표 콘텐츠 섹션에 `<iframe>`, after: 폴백 히어로 + 「출처에서 원본 보기」. 정상 문서(`ra86attn`)는 임베드 유지. canonical·robots 불변.
 
 - [ ] ID: DQ-001
   문제: 공개 문서 1,330건(34.1%)에 근거 출처 URL이 하나도 없는데, 상세 페이지는 `description` 또는 `origin`만 있으면 무조건 “밈캐치 검수팀 확인 · 마지막 업데이트 …”를 출력한다(`page.tsx:357`). 근거 없는 문서가 검수 완료를 주장한다. LOOP.md critical flag 1번.
@@ -171,6 +172,19 @@
   의존성: 없음
   완료 조건: `year_precision`이 `unknown`인 문서는 연도를 단정 표기하지 않고 「추정」으로 나타낸다. 데이터 수정 없이 표시 계층에서만 처리한다.
   검증 명령: `npx vitest run` · `npx next build --webpack`
+  상태: ready
+
+- [ ] ID: DQ-009
+  문제: 목록 화면의 PostgREST 필터가 아직 `dead`만 제외한다 — `app/(default)/explore/page.tsx:115`, `components/explore-grid.tsx:68`, `lib/social-platform-counts.server.ts:27`이 모두 `.neq("availability","dead")`를 쓴다. 루프 002에서 렌더 경로(상세·임베드·충실도·검사기)는 `lib/content-availability.ts`로 통일했지만, 이 세 곳은 JS 술어가 아니라 쿼리 필터라 같은 함수를 쓸 수 없어 범위에서 뺐다. 결과로 `region_blocked` 썸네일이 탐색 그리드에는 계속 노출된다(현재 3건).
+  사용자 영향: 2
+  데이터/법적 위험: 3
+  트래픽 가중치: 3
+  해결 확신: 4
+  예상 노력: 2
+  우선순위 점수: 12.0
+  의존성: DQ-005 (완료)
+  완료 조건: 세 쿼리가 `dead`와 `region_blocked`를 함께 제외하고, 제외 목록이 `UNAVAILABLE_STATUSES` 하나에서 파생된다. 임베디드 리소스 필터 동작이 바뀌지 않는지 탐색 결과 수로 확인한다.
+  검증 명령: `npx vitest run` · `/explore` 결과 수 전후 비교
   상태: ready
 
 - [ ] ID: A11Y-001

@@ -40,14 +40,21 @@ for (const f of readdirSync(inDir).filter((f) => f.endsWith(".jsonl")).sort())
       caution,
       safety_level: safety,
       lifecycle_status: life,
-      moderation_status: "approved",
+      // 기본 pending — 대량 수입이 검수 파이프라인(사실 확인→저작권 확인)을
+      // 우회해 approved로 직행하던 것이 「밈 아님·무출처 recent 문서」의 근원이었다
+      // (루프 023 표본: recent 10/10 무출처, LOOP.md 절대규칙 4 위반 경로).
+      // 예외적으로 기존 동작이 필요하면 IMPORT_APPROVED=1 로 명시한다.
+      moderation_status: process.env.IMPORT_APPROVED === "1" ? "approved" : "pending",
       category: normalizeMemeCategory(m),
       media_type: MED.has(m.media_type) ? m.media_type : "image",
       difficulty: DIF.has(m.difficulty) ? m.difficulty : "normal",
       sentiment: SEN.has(m.sentiment) ? m.sentiment : "funny",
       origin_year: year,
+      // friends도 다른 칸과 같은 값 — 하드코딩 green이 「red 문서 84건마저
+      // friends=green」인 전수 결함(루프 023 §5-1)의 근원이었다. 상황별 차등은
+      // 기계 파생이 아니라 검수자 판정으로만 넣는다.
       usage_context: m.usage_note
-        ? { work: safety, friends: "green", family: safety, sns: safety }
+        ? { work: safety, friends: safety, family: safety, sns: safety }
         : {},
       published_at: new Date().toISOString(),
     });

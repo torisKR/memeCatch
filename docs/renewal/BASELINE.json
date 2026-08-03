@@ -7,7 +7,6 @@
     "access": "read-only",
     "method": "PostgREST anon key (RLS 통과 후 = 공개 화면과 동일한 시야) + 읽기 전용 SQL"
   },
-
   "data": {
     "memesTotal": 4539,
     "byModerationStatus": {
@@ -19,7 +18,6 @@
       "rejected": 604
     },
     "published": 3904,
-
     "depth": {
       "note": "lib/content-depth.ts 기준. sitemap·robots·광고 게재 판정과 같은 함수.",
       "substantial": 145,
@@ -32,7 +30,6 @@
       "minScoreThreshold": 5,
       "bestDocumentDescriptionChars": 127
     },
-
     "evidence": {
       "publishedWithoutSourceUrl": 1330,
       "publishedWithoutSourceRatio": 0.341,
@@ -41,7 +38,9 @@
       "memeClaimsRows": 0,
       "mediaSourcesRows": 5851,
       "memeMediaRows": 6111,
-      "memeMediaBySourceRole": { "usage_example": 6111 },
+      "memeMediaBySourceRole": {
+        "usage_example": 6111
+      },
       "memeMediaByRightsBasis": {
         "official_embed": 3912,
         "unknown": 2193,
@@ -55,7 +54,6 @@
       "mediaSourcesNeverHealthChecked": 1275,
       "mediaSourcesRemoved": 16
     },
-
     "content": {
       "memeContentsRows": 4402,
       "byAvailability": {
@@ -68,13 +66,22 @@
       "publishedWithoutRenderableRepresentative": 2148,
       "publishedWithDeadOrBlockedRepresentative": 14
     },
-
     "signals": {
       "usageContextUniform": 3310,
       "usageContextUniformRatio": 0.848,
       "usageContextAllGreen": 3298,
-      "bySafetyLevel": { "green": 3410, "yellow": 223, "gray": 168, "red": 103 },
-      "byLifecycleStatus": { "cooling": 2212, "archived": 1625, "rising": 67, "active": 0 },
+      "bySafetyLevel": {
+        "green": 3410,
+        "yellow": 223,
+        "gray": 168,
+        "red": 103
+      },
+      "byLifecycleStatus": {
+        "cooling": 2212,
+        "archived": 1625,
+        "rising": 67,
+        "active": 0
+      },
       "byCategory": {
         "phrase": 1883,
         "comment": 732,
@@ -84,7 +91,6 @@
         "dance": 263
       }
     },
-
     "identity": {
       "duplicateNormalizedTitleRows": 38,
       "duplicateNormalizedTitleGroups": 19,
@@ -93,7 +99,6 @@
       "aliasTitleCollisions": 275,
       "placeholderInPublishedProse": 0
     },
-
     "taxonomy": {
       "publishedWithoutTags": 3904,
       "originYearNull": 222,
@@ -103,7 +108,6 @@
       "koreaViralYearNull": 3904,
       "eraTypeNull": 3904
     },
-
     "traffic": {
       "note": "트래픽이 매우 낮아 트래픽 가중 우선순위는 아직 신뢰도가 낮다.",
       "viewEventsTotal": 1298,
@@ -113,7 +117,6 @@
       "rankEligible": 1683,
       "rankEligibleRatio": 0.431
     },
-
     "freshness": {
       "oldestPublishedUpdatedAt": "2026-07-15",
       "newestPublishedUpdatedAt": "2026-07-21",
@@ -124,10 +127,12 @@
       "trendCronFailures": 0
     }
   },
-
   "design": {
     "route": "/memes/uefmryky",
-    "viewport": { "width": 390, "height": 844 },
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
     "documentHeightPx": 6323,
     "offsetsPx": {
       "representativeEmbedTop": 301,
@@ -149,28 +154,57 @@
       "affiliateDockOverlapsContent": true
     }
   },
-
   "verification": {
-    "unitTests": { "command": "npx vitest run", "files": 71, "tests": 605, "status": "pass" },
-    "lint": { "command": "npx eslint", "errors": 0, "warnings": 5, "status": "pass" },
-    "typecheck": { "command": "npx tsc --noEmit", "status": "pass" },
-    "build": { "command": "npx next build --webpack", "status": "pass" },
+    "unitTests": {
+      "command": "npx vitest run",
+      "files": 71,
+      "tests": 605,
+      "status": "pass"
+    },
+    "lint": {
+      "command": "npx eslint",
+      "errors": 0,
+      "warnings": 5,
+      "status": "pass"
+    },
+    "typecheck": {
+      "command": "npx tsc --noEmit",
+      "status": "pass"
+    },
+    "build": {
+      "command": "npx next build --webpack",
+      "status": "pass"
+    },
     "dataQuality": {
       "command": "pnpm quality:check",
       "status": "fail",
       "note": "critical 4건 검출로 exit 1 — 기준선이므로 의도된 실패"
     },
-    "e2e": { "status": "not_run", "reason": "e2e 프레임워크 미도입" },
-    "accessibility": { "status": "not_run", "reason": "자동 검사 도구 미도입 (BACKLOG A11Y-001)" },
+    "e2e": {
+      "status": "not_run",
+      "reason": "e2e 프레임워크 미도입"
+    },
+    "accessibility": {
+      "status": "not_run",
+      "reason": "자동 검사 도구 미도입 (BACKLOG A11Y-001)"
+    },
     "responsiveScreenshots": {
       "status": "not_run",
       "reason": "360×800·768×1024·1440×900 미측정. 390×844만 수동 계측"
     },
-    "metadataCanonical": { "status": "not_run", "reason": "자동 검사 없음" },
-    "performance": { "status": "not_run", "reason": "LCP/INP/CLS 기준선 미측정 (BACKLOG PERF-001)" },
-    "migrationDryRun": { "status": "not_run", "reason": "루프 001은 스키마를 변경하지 않음" }
+    "metadataCanonical": {
+      "status": "not_run",
+      "reason": "자동 검사 없음"
+    },
+    "performance": {
+      "status": "pass_with_exception",
+      "note": "홈·랭킹은 LCP/CLS 목표 충족. 상세 CLS 0.12가 목표 0.1 초과 → PERF-002. DES-001 이후 0.21→0.12로 악화가 아닌 개선."
+    },
+    "migrationDryRun": {
+      "status": "not_run",
+      "reason": "루프 001은 스키마를 변경하지 않음"
+    }
   },
-
   "hypotheses": {
     "H1-source-presentation-too-simple": {
       "verdict": "confirmed",
@@ -203,6 +237,55 @@
     "H8-reactions-filters-lack-semantics": {
       "verdict": "not_verified",
       "evidence": "접근성 자동 검사 미도입 (BACKLOG A11Y-001)"
+    }
+  },
+  "performance": {
+    "measuredAt": "2026-08-04",
+    "method": "Chrome DevTools MCP performance trace · 390x844 · CPU 1x · no network throttling (랩 상한값)",
+    "targets": {
+      "lcpMs": 2500,
+      "inpMs": 200,
+      "cls": 0.1
+    },
+    "routes": {
+      "/": {
+        "lcpMs": 143,
+        "cls": 0.0,
+        "inp": "not_run",
+        "source": "local production build"
+      },
+      "/rankings": {
+        "lcpMs": 1062,
+        "cls": 0.0,
+        "inp": "not_run",
+        "source": "local production build"
+      },
+      "/memes/[key]": {
+        "lcpMs": 1131,
+        "cls": 0.12,
+        "inp": "not_run",
+        "source": "local production build",
+        "clsExceedsTarget": true
+      }
+    },
+    "des001BeforeAfter": {
+      "route": "/memes/uefmryky",
+      "before": {
+        "lcpMs": 1308,
+        "cls": 0.21,
+        "source": "production (구 레이아웃)"
+      },
+      "after": {
+        "lcpMs": 1131,
+        "cls": 0.12,
+        "source": "local production build"
+      },
+      "note": "CLS 0.21→0.12 (43% 개선). 네트워크 조건이 달라 LCP는 엄밀한 비교가 아니다."
+    },
+    "notRun": {
+      "inp": "트레이스에 상호작용이 없어 측정되지 않음. 조작 시나리오 필요",
+      "/explore": "루프 009 범위 밖",
+      "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족"
     }
   }
 }

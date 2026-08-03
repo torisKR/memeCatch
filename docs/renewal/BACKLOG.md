@@ -116,7 +116,7 @@
   완료 조건: HG-002 결정 후 확정.
   상태: blocked
 
-- [ ] ID: PERF-001
+- [x] ID: PERF-001
   문제: LCP/INP/CLS 기준선이 없어 성능 회귀를 판정할 수 없다. 상세 페이지가 첫 화면에 외부 임베드(Instagram/YouTube)를 즉시 로드하므로 DES-001 작업 전후 비교가 특히 필요하다.
   사용자 영향: 3
   데이터/법적 위험: 1
@@ -126,8 +126,10 @@
   우선순위 점수: 18.0
   의존성: 없음
   완료 조건: 4개 route의 LCP/INP/CLS 랩 측정값이 `BASELINE.json`에 기록되고 재실행 명령이 문서화된다.
-  검증 명령: 신규 스크립트
-  상태: ready
+  검증 명령: `artifacts/renewal/loop-009/perf-baseline.md`의 재실행 절차
+  상태: done (루프 009, 부분)
+  결과: 이미 연결된 Chrome DevTools MCP를 써서 **의존성 추가 없이** 측정했다. `/` LCP 143ms·CLS 0.00, `/rankings` LCP 1062ms·CLS 0.00, 상세 LCP 1131ms·CLS 0.12. DES-001 전후로 상세 CLS가 0.21→0.12로 43% 개선됐다(외부 임베드가 본문을 밀어내던 구조가 사라진 결과). 상세 CLS는 목표 0.1을 여전히 초과 → PERF-002.
+  미측정: INP(트레이스에 상호작용 없음), `/explore`, 필드 지표(CrUX 데이터 없음).
 
 - [ ] ID: DQ-007
   문제: 주장 단위 근거 연결 설비가 비어 있다. `meme_claims` 0건, `meme_media.source_role` 6,111건 전부 `usage_example`(= `original`·`earliest_known` 구분 없음), `rights_basis` 2,193건(35.9%)이 `unknown`이며 같은 수가 `review_state=pending`. 공개 화면의 `meme_sources` 기준으로도 292건이 `copyright_status=unknown`. LOOP.md의 「문서 단위가 아닌 주장 단위 출처」가 스키마에만 있고 운영되지 않는다.
@@ -220,6 +222,19 @@
   검증 명령: `npx vitest run` · `/explore` 결과 수 전후 비교
   상태: done (루프 008)
   결과: 세 쿼리가 `UNAVAILABLE_FILTER`(= `UNAVAILABLE_STATUSES`에서 파생)를 써 `not.in.(dead,region_blocked)`로 거른다. 루프 002에서 남겨 둔 렌더 경로↔쿼리 경로 불일치가 닫혔다. `/explore` 24개·`/explore?platform=youtube` 24개로 회귀 없음. 부수로 `withPublicContent`의 제네릭 제약 누락(tsc 검출)과 과도하게 넓던 테스트 단언 1건을 바로잡았다.
+
+- [ ] ID: PERF-002
+  문제: 상세 route의 CLS가 0.12로 목표 0.1을 초과한다(루프 009 측정). DES-001로 0.21에서 크게 내려왔지만 아직 남아 있다. DevTools의 CLSCulprits 인사이트가 원인 분석 진입점이다.
+  사용자 영향: 3
+  데이터/법적 위험: 1
+  트래픽 가중치: 3
+  해결 확신: 4
+  예상 노력: 3
+  우선순위 점수: 12.0
+  의존성: PERF-001 (완료)
+  완료 조건: 상세 route CLS ≤ 0.1. 외부 임베드·폰트·이미지 중 어느 것이 이동을 만드는지 지목하고 해당 요소에 크기를 고정한다.
+  검증 명령: `artifacts/renewal/loop-009/perf-baseline.md`의 재실행 절차
+  상태: ready
 
 - [ ] ID: A11Y-001
   문제: 접근성 자동 검사 도구가 없어 WCAG 2.2 AA 회귀를 확인할 수 없다. LOOP.md STEP 6의 `accessibility check`가 매 루프 `not_run`으로 남는다.

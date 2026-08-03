@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **008** |
-| 선택 항목 | `DQ-008` → `DQ-009` (루프 007·008) |
+| 루프 번호 | **009** |
+| 선택 항목 | `PERF-001` — Core Web Vitals 기준선 |
 | 상태 | `continue` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-008/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-009/` |
 
 ## 전체 목표
 
@@ -197,6 +197,25 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
   기존 테스트 1건이 “Shorts 필터에 `not` 호출이 없어야 한다”를 너무 넓게 단언하고
   있어 `meme_contents.url` 대상으로 좁혀 의도를 정확히 표현했다
 
+## 완료된 작업 (루프 009 — PERF-001)
+
+성능 회귀 검사가 루프 001부터 계속 `not_run`이었다. **의존성을 추가하지 않고** 이미
+연결된 Chrome DevTools MCP의 performance trace로 기준선을 잡았다.
+
+| route | LCP (목표 2500ms) | CLS (목표 0.1) |
+| --- | ---: | ---: |
+| `/` | 143ms ✅ | 0.00 ✅ |
+| `/rankings` | 1062ms ✅ | 0.00 ✅ |
+| `/memes/[key]` | 1131ms ✅ | **0.12 ❌** |
+
+**DES-001 전후 (상세 route)** — before(프로덕션) LCP 1308ms·CLS **0.21** →
+after(로컬 프로덕션 빌드) LCP 1131ms·CLS **0.12**. CLS가 **43% 개선**됐다. 정답 카드를
+그리드 밖으로 올리면서 외부 임베드가 본문 위에서 로드되며 텍스트를 밀어내던 구조가
+사라진 결과다. 네트워크 조건이 달라 LCP는 엄밀한 비교가 아니다.
+
+미측정(`not_run`): INP(트레이스에 상호작용이 없음), `/explore`, 필드 지표(CrUX 데이터
+없음 — 트래픽 부족). 상세 CLS 0.12는 목표 초과라 `PERF-002`로 등록했다.
+
 ## 진행 중인 작업
 
 없음.
@@ -216,7 +235,7 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
 | 접근성 자동 검사 | — | `not_run` — 도구 미도입 (BACKLOG `A11Y-001`) |
 | 반응형 스크린샷 회귀 | 수동 계측 | ⚠️ 부분 — 390×844·360×800·1440×900 확인. 768×1024은 `not_run` |
 | metadata/canonical 검사 | — | `not_run` — 자동 검사 없음. 빌드 산출물 육안 확인만 |
-| 성능 회귀 검사 | — | `not_run` — LCP/INP/CLS 기준선 미측정 (BACKLOG `PERF-001`) |
+| 성능 회귀 검사 | Chrome DevTools MCP trace | ⚠️ 부분 — LCP/CLS 3개 route 측정. 홈·랭킹 목표 충족, 상세 CLS 0.12 초과(`PERF-002`). INP는 `not_run` |
 
 ## 현재 주요 위험
 
@@ -235,9 +254,9 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
 
 ## 다음 후보 작업 3개
 
-1. **PERF-001** (18.0) — LCP/INP/CLS 기준선. DES-001로 첫 화면 구성이 바뀌었는데
-   성능 회귀 검사가 루프 001부터 계속 `not_run`이다.
-2. **A11Y-001** (12.0) — 접근성 자동 검사 도입.
+1. **A11Y-001** (12.0) — 접근성 자동 검사 도입. 루프 009처럼 DevTools MCP를 쓰면
+   의존성 없이 가능할 수 있다.
+2. **PERF-002** (12.0) — 상세 CLS 0.12 → 0.1 이하.
 3. **DQ-011** (5.0) — `[locale]` 상세·카드의 연도 단정 표기.
 
 그 밖의 남은 항목(DQ-002·DQ-003·DQ-004·DQ-006·DQ-007·DQ-010·DES-004)은 전부
@@ -250,4 +269,4 @@ canonical·robots·JSON-LD 구조 전부 불변. 데이터 미변경이라 `qual
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ `quality:check` critical 4개 검사가 여전히 위반. 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 남아 있고 DQ-004는 `HG-004` 대기 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ⚠️ HUMAN_GATE 5건 대기. 다만 게이트 없이 진행 가능한 작업이 남아 루프는 계속 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 8 / 12 |
+| 반복 제한 | 9 / 12 |

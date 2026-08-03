@@ -1,0 +1,20 @@
+=== LOOP 005 verify ===
+2026-08-03T15:30:27Z
+
+ Test Files  74 passed (74)
+      Tests  628 passed (628)
+   Start at  00:30:28
+   Duration  2.64s (transform 3.15s, setup 0ms, import 8.86s, tests 3.26s, environment 13.75s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 005 before/after — /memes/uefmryky (DocStatusNote) ===
+before: 「자기 직업 불법적으로 말하기」을(를) 실제로 써 보셨다면 알려 주세요.
+after : 「자기 직업 불법적으로 말하기」, 실제로 써 보셨다면 알려 주세요.
+문서 전체 HTML에 괄호 대안형 조사 0건 (정규식 검사 통과).

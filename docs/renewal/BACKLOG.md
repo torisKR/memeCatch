@@ -197,7 +197,7 @@
   상태: done (루프 011)
   결과: **브랜드 색을 바꾸지 않았다.** `--accent-strong`(#d63c1b, white 대비 4.64:1)이 `app/globals.css:12`에 이미 정의돼 있었고 주석까지 “흰 글자 CTA 배경용”이라고 적혀 있었다 — 쓰이지 않고 있었을 뿐이다. `bg-accent` + `text-white` + 14px bold 조합 7곳을 `bg-accent-strong`으로 교체했다. Accessibility 97 → **100**, Agentic Browsing 96 → 100.
 
-- [ ] ID: A11Y-003
+- [x] ID: A11Y-003
   문제: 접근성 검사가 CI에서 자동으로 돌지 않는다. DevTools MCP는 사람이 붙어 있는 세션 도구라 회귀를 자동으로 막지 못한다. 4개 route 중 1개만 측정된 상태이기도 하다.
   사용자 영향: 2
   데이터/법적 위험: 2
@@ -207,8 +207,11 @@
   우선순위 점수: 5.3
   의존성: A11Y-001 (완료)
   완료 조건: 4개 route가 CI에서 자동 검사되고 위반 수가 기준선 대비 악화되면 실패한다.
-  검증 명령: 신규 러너
-  상태: ready
+  검증 명령: `npx vitest run lib/a11y-contrast.test.ts`
+  상태: done (루프 014, 범위 조정)
+  결과: **axe를 추가하지 않았다.** 루프 011에서 실제로 터진 결함은 “AA 토큰이 이미 있는데 안 쓰였다”였으므로, 브라우저 전면 감사 대신 그 실패 양식을 정확히 막는 의존성 0 가드 2개를 `pnpm test`(=CI)에 넣었다 — (a) `--accent-strong` 모든 선언의 흰 글자 대비 ≥ 4.5:1, (b) 소스에 `bg-accent` + `text-white` 조합 0건. **두 가드가 실제로 실패하는 것을 증명**했다(재도입 시 각각 검출, 원복 시 통과).
+  발견: 초기 구현이 CSS 토큰의 마지막 선언만 보관해 다크 값이 라이트의 결함을 가렸다. 선언마다 검사하도록 고쳤다 — 실패 증명을 하지 않았다면 구멍 뚫린 가드를 넣을 뻔했다.
+  범위 조정 사유: 4개 route 브라우저 감사는 CI에서 헤드리스 러너가 필요해 비용이 크다. 전면 감사는 DevTools MCP `lighthouse_audit`(루프 010 절차)이 계속 담당한다 → 필요해지면 A11Y-004로 재등록.
 
 - [x] ID: DQ-011
   문제: 루프 007이 한국어 상세의 연도 단정 표기만 고쳤다. 같은 주장이 다른 화면에도 남아 있다 — `app/[locale]/memes/[key]/page.tsx:351`의 `copy.born(origin_year)`(4개 로케일)와 `meme-guess-game.tsx:153`·`weekly-briefing.tsx:74`·`meme-card`/`meme-compact-card`의 연도 칩. 칩은 문장보다 약한 주장이지만 근거가 없기는 마찬가지다.

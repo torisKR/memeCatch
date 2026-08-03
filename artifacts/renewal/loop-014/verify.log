@@ -1,0 +1,38 @@
+=== LOOP 014 verify ===
+2026-08-03T16:04:33Z
+ Test Files  77 passed (77)
+      Tests  645 passed (645)
+   Start at  01:04:34
+   Duration  3.79s (transform 5.78s, setup 0ms, import 15.28s, tests 5.16s, environment 18.81s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+=== LOOP 014 final verify ===
+2026-08-03T16:06:04Z
+ Test Files  77 passed (77)
+      Tests  645 passed (645)
+   Start at  01:06:04
+   Duration  2.79s (transform 4.19s, setup 0ms, import 10.42s, tests 3.57s, environment 13.86s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== 가드 실패 증명 (가드가 실패할 수 없으면 무의미하다) ===
+1) 소스 안티패턴 재도입 (changelog-modal을 bg-accent로 되돌림)
+   → × 작은 흰 글자를 --accent 배경 위에 올리지 않는다
+     AssertionError: bg-accent-strong으로 바꾸세요: expected [Array(1)] to deeply equal []
+2) 토큰 라이트 값만 #ff8866로 변경
+   → × --accent-strong의 모든 선언이 흰 글자 기준 AA를 만족한다
+     AssertionError: 2.3423054997924027 to be >= 4.5
+두 경우 모두 원복 후 통과.
+
+발견: 초기 구현의 cssTokens()가 마지막 선언만 보관해, 다크 값(#d63c1b)이 라이트의
+결함을 가려 검사가 통과했다. 선언마다 검사하도록 고쳤다 — 가드 실패를 증명하지
+않았다면 구멍 뚫린 가드를 그대로 넣을 뻔했다.

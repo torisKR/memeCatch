@@ -34,6 +34,7 @@ import { ContinueStream } from "@/components/continue-stream";
 import { ContextNav } from "@/components/context-nav";
 import { preferredSourceUrl, sourceLinksWithContent } from "@/lib/source-links";
 import { SourceEvidence } from "@/components/source-evidence";
+import { TrustNote } from "@/components/trust-note";
 import { DocStatusNote } from "@/components/doc-status-note";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isIndexableMeme } from "@/lib/content-depth";
@@ -360,17 +361,14 @@ export default async function MemeDetailPage({ params }: Props) {
                   ))}
                 </p>
               )}
-              {/* 신선도 신호 — 검수·갱신 시점을 독자에게 노출 (E-E-A-T) */}
-              <p className="border-t border-border pt-3 text-sm text-muted">
-                밈캐치 검수팀 확인 · 마지막 업데이트{" "}
-                <time dateTime={meme.updated_at}>
-                  {new Date(meme.updated_at).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </time>
-              </p>
+              {/* 신뢰 신호 — 근거가 있는 만큼만 말한다. meme_sources만 넘긴다:
+                  sourceLinks에는 재생용 콘텐츠 URL이 섞여 있어 근거 수를 부풀린다. */}
+              <TrustNote
+                sources={meme.meme_sources}
+                updatedAt={meme.updated_at}
+                moderationStatus={meme.moderation_status}
+                title={meme.title}
+              />
             </section>
           )}
 

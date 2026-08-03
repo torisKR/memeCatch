@@ -23,7 +23,7 @@
   상태: done (루프 002)
   결과: 판정을 `lib/content-availability.ts` 하나로 모으고 상세·임베드·충실도 스코어러·품질 검사기가 같은 함수를 쓴다. 프로덕션 `/memes/f384zwnp` 전후 비교 — before: 대표 콘텐츠 섹션에 `<iframe>`, after: 폴백 히어로 + 「출처에서 원본 보기」. 정상 문서(`ra86attn`)는 임베드 유지. canonical·robots 불변.
 
-- [ ] ID: DQ-001
+- [x] ID: DQ-001
   문제: 공개 문서 1,330건(34.1%)에 근거 출처 URL이 하나도 없는데, 상세 페이지는 `description` 또는 `origin`만 있으면 무조건 “밈캐치 검수팀 확인 · 마지막 업데이트 …”를 출력한다(`page.tsx:357`). 근거 없는 문서가 검수 완료를 주장한다. LOOP.md critical flag 1번.
   사용자 영향: 5
   데이터/법적 위험: 5
@@ -34,7 +34,9 @@
   의존성: 없음
   완료 조건: (a) 출처 0건 문서는 “검수팀 확인”을 주장하지 않는다. (b) 근거 출처 수·마지막 검수 시점·문서 상태가 한 블록에서 함께 보인다. (c) 기존 canonical/metadata 불변.
   검증 명령: `npx vitest run` · `npx next build --webpack`
-  상태: ready
+  상태: done (루프 003)
+  결과: `components/trust-note.tsx` 신규 + `lib/source-links.ts`의 `summarizeEvidence()`. 근거 상태를 3단계로 구분한다 — 0건(검수 주장 없음 + 제보 CTA) / 맥락 위키만(원본 미확인 명시) / 원본 있음(근거 수). 근거 수는 `meme_sources`만 세어 재생용 콘텐츠 URL을 근거로 오인하지 않는다(해당 13건). 프로덕션 전후 비교 — `/memes/e8ferq5u` before “밈캐치 검수팀 확인”, after “근거 출처 준비 중”. canonical·robots·JSON-LD 불변.
+  남은 것: LOOP.md 신뢰 패널이 요구하는 `출처 역할`·`권리 노출 방식`·`수정 이력`은 각각 `meme_media.source_role`·`copyright_status`·`meme_revisions`에 있는데, 앞의 둘은 데이터가 비어 있고(DQ-007) `meme_revisions`는 운영자 전용 RLS라 공개 화면에서 읽을 수 없다 → DQ-010
 
 - [ ] ID: DES-001
   문제: 모바일 390×844 상세 첫 뷰포트에 밈 정보가 하나도 없다. 실측 오프셋 — 대표 임베드 top 301px(높이 662px), 정답 카드 top 1344px, h1 top 1399px, 한 줄 뜻 top 1435px. 첫 화면은 헤더 + 로그인 유도 카드 + Instagram 임베드로 채워진다. LOOP.md 「상세 페이지 정보 계층」과 정반대 순서.
@@ -173,6 +175,19 @@
   완료 조건: `year_precision`이 `unknown`인 문서는 연도를 단정 표기하지 않고 「추정」으로 나타낸다. 데이터 수정 없이 표시 계층에서만 처리한다.
   검증 명령: `npx vitest run` · `npx next build --webpack`
   상태: ready
+
+- [ ] ID: DQ-010
+  문제: 루프 003의 `TrustNote`가 근거 수·원본 유무·마지막 업데이트까지는 말하지만, LOOP.md 「신뢰 패널」이 요구하는 나머지 세 항목은 아직 표시하지 못한다 — (a) 출처 역할(`meme_media.source_role`)은 6,111건 전부 `usage_example`이라 표시할 정보가 없고, (b) 권리 노출 방식(`meme_sources.copyright_status`)은 292건이 `unknown`, (c) 수정 이력(`meme_revisions`)은 운영자 전용 RLS라 공개 화면에서 읽을 수 없다.
+  사용자 영향: 3
+  데이터/법적 위험: 3
+  트래픽 가중치: 2
+  해결 확신: 3
+  예상 노력: 4
+  우선순위 점수: 6.8
+  의존성: DQ-007 (source_role·rights_basis 데이터 채우기)
+  완료 조건: 신뢰 패널이 권리 노출 방식과 최근 변경 요약을 표시한다. `meme_revisions` 공개 노출은 개인정보(editor_id) 검토가 선행돼야 한다.
+  검증 명령: `npx vitest run` · `pnpm quality:check`
+  상태: blocked
 
 - [ ] ID: DQ-009
   문제: 목록 화면의 PostgREST 필터가 아직 `dead`만 제외한다 — `app/(default)/explore/page.tsx:115`, `components/explore-grid.tsx:68`, `lib/social-platform-counts.server.ts:27`이 모두 `.neq("availability","dead")`를 쓴다. 루프 002에서 렌더 경로(상세·임베드·충실도·검사기)는 `lib/content-availability.ts`로 통일했지만, 이 세 곳은 JS 술어가 아니라 쿼리 필터라 같은 함수를 쓸 수 없어 범위에서 뺐다. 결과로 `region_blocked` 썸네일이 탐색 그리드에는 계속 노출된다(현재 3건).

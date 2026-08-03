@@ -63,6 +63,42 @@ export function isContextSourceUrl(rawUrl?: string | null) {
   }
 }
 
+/**
+ * 이 문서가 실제로 들고 있는 근거의 양과 종류.
+ *
+ * 왜 필요한가: 상세 페이지가 출처 유무와 무관하게 "밈캐치 검수팀 확인"을 출력하고
+ * 있었다. 공개 문서의 34.1%(1,330건)는 근거 출처 URL이 하나도 없다 — 근거보다
+ * 신뢰 주장이 앞선 상태다. 화면이 상태별로 다른 문장을 쓰려면 먼저 상태를 셀 수
+ * 있어야 한다.
+ *
+ * `meme_sources`만 센다. 재생용 `meme_contents.url`은 콘텐츠를 보여 주는 링크지
+ * 주장을 입증하는 근거가 아니다(둘을 합치면 근거 0건 문서가 1건으로 보인다).
+ */
+export type EvidenceSummary = {
+  /** URL 기준 중복 제거한 근거 출처 수 */
+  total: number;
+  /** 원본·공식·보도 — 맥락 위키가 아닌 출처 */
+  primary: number;
+  /** 나무위키·위키백과 등 맥락 확인용 보조 출처 */
+  context: number;
+};
+
+export function summarizeEvidence(sources: SourceLink[]): EvidenceSummary {
+  const seen = new Set<string>();
+  let primary = 0;
+  let context = 0;
+  for (const source of sources) {
+    const url = cleanText(source.source_url);
+    if (!url) continue;
+    const key = url.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (isContextSourceUrl(url)) context += 1;
+    else primary += 1;
+  }
+  return { total: seen.size, primary, context };
+}
+
 /** 원본·공식·보도 링크를 먼저 보여 주고, 없을 때만 맥락 출처를 폴백한다. */
 export function preferredSourceUrl(sources: SourceLink[]) {
   const urls = sources

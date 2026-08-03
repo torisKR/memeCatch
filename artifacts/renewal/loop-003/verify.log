@@ -1,0 +1,50 @@
+=== LOOP 003 verify ===
+2026-08-03T15:18:27Z
+--- vitest ---
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 72 passed (73)
+      Tests  1 failed | 624 passed (625)
+   Start at  00:18:27
+   Duration  2.37s (transform 3.57s, setup 0ms, import 9.24s, tests 3.20s, environment 11.73s)
+
+--- eslint ---
+
+✖ 5 problems (0 errors, 5 warnings)
+
+--- tsc ---
+tsc ok
+--- next build ---
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+--- retry ---
+
+ Test Files  73 passed (73)
+      Tests  625 passed (625)
+   Start at  00:19:24
+   Duration  2.43s (transform 3.97s, setup 0ms, import 9.08s, tests 3.01s, environment 11.55s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 003 before/after (브라우저 계측) ===
+BEFORE (https://catchmeme.com) — /memes/e8ferq5u (리부트 서버, meme_sources 0건)
+  trust: "밈캐치 검수팀 확인 · 마지막 업데이트 2026년 7월 21일"   ← 근거 0건인데 검수 주장
+
+AFTER (로컬 next start, 동일 프로덕션 DB) — 세 상태 전부 확인
+  /memes/e8ferq5u  근거 0건   → "◌ 근거 출처 준비 중 — 이 문서는 아직 확인된 출처가
+                                연결되지 않았어요. 마지막 업데이트 2026년 7월 21일"
+                                + CTA "출처를 아시면 알려 주세요" (/submit?name=)
+  /memes/3fajbwre  맥락만 1건 → "▲ 맥락 출처 1개로 확인 — 원본은 아직 찾는 중이에요.
+                                · 마지막 업데이트 2026년 7월 16일"
+  /memes/z4ywt995  원본 5건   → "● 근거 출처 5개 확인 · 마지막 업데이트 2026년 7월 21일"
+
+회귀 확인: canonical 3개 route 모두 before와 동일. robots "noindex, follow" 동일.
+          JSON-LD script 4개 동일. <time datetime="..."> 소문자 속성으로 정상 출력.

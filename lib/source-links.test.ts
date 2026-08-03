@@ -5,6 +5,7 @@ import {
   isContextSourceUrl,
   preferredSourceUrl,
   sourceLinksWithContent,
+  summarizeEvidence,
 } from "@/lib/source-links";
 
 describe("citable sources", () => {
@@ -70,5 +71,30 @@ describe("source link selection", () => {
       { source_url: "https://namu.wiki/w/example", platform: "Community" },
     ]);
     expect(preferredSourceUrl(links)).toBe("https://www.youtube.com/watch?v=abcdefghijk");
+  });
+
+  it("counts evidence sources, separating primary from context wikis", () => {
+    expect(
+      summarizeEvidence([
+        { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube" },
+        { source_url: "https://namu.wiki/w/example", platform: "Community" },
+        { source_url: "https://ko.wikipedia.org/wiki/example", platform: "web" },
+      ])
+    ).toEqual({ total: 3, primary: 1, context: 2 });
+  });
+
+  it("ignores blank URLs and counts a repeated URL once", () => {
+    expect(
+      summarizeEvidence([
+        { source_url: "https://news.example.com/a", platform: "web" },
+        { source_url: "https://NEWS.example.com/a", platform: "web" },
+        { source_url: "   ", platform: "web" },
+        { source_url: null, platform: "web" },
+      ])
+    ).toEqual({ total: 1, primary: 1, context: 0 });
+  });
+
+  it("reports an empty source list as no evidence at all", () => {
+    expect(summarizeEvidence([])).toEqual({ total: 0, primary: 0, context: 0 });
   });
 });

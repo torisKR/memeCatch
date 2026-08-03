@@ -265,7 +265,8 @@
         "cls": 0.12,
         "inp": "not_run",
         "source": "local production build",
-        "clsExceedsTarget": true
+        "clsExceedsTarget": true,
+        "clsNote": "실행마다 다름 — 콜드 캐시 0.12 / 웜 캐시 0.00. 원인은 크기 미지정 쿠팡 광고 이미지(루프 012). 단일 측정값으로 다루지 말 것."
       }
     },
     "des001BeforeAfter": {
@@ -286,6 +287,14 @@
       "inp": "트레이스에 상호작용이 없어 측정되지 않음. 조작 시나리오 필요",
       "/explore": "루프 009 범위 밖",
       "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족"
+    },
+    "clsRootCause": {
+      "culprit": "unsized third-party ad image (img1a.coupangcdn.com)",
+      "sameAs": [
+        "DES-004"
+      ],
+      "blockedBy": "HG-005",
+      "foundInLoop": 12
     }
   },
   "accessibility": {

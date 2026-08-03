@@ -258,10 +258,11 @@
   해결 확신: 4
   예상 노력: 3
   우선순위 점수: 12.0
-  의존성: PERF-001 (완료)
-  완료 조건: 상세 route CLS ≤ 0.1. 외부 임베드·폰트·이미지 중 어느 것이 이동을 만드는지 지목하고 해당 요소에 크기를 고정한다.
-  검증 명령: `artifacts/renewal/loop-009/perf-baseline.md`의 재실행 절차
-  상태: ready
+  의존성: PERF-001 (완료) · **`DECISIONS.md` HG-005** — 루프 012에서 원인이 광고 도크로 밝혀져 게이트에 종속됨
+  완료 조건: HG-005 결정 후 확정. 도크 배치를 어떻게 정하든 **광고 컨테이너에 크기를 예약**해야 CLS가 잡힌다(서드파티 스크립트가 삽입하는 이미지라 컨테이너 `min-height` 고정이 현실적).
+  검증 명령: `artifacts/renewal/loop-009/perf-baseline.md`의 재실행 절차 — 단, **콜드 캐시 기준 최악값**으로 여러 회 측정할 것
+  상태: blocked
+  루프 012 조사 결과: DevTools `CLSCulprits`가 지목한 유일한 원인은 크기 미지정 쿠팡 광고 이미지(`img1a.coupangcdn.com/.../ajax-loader.gif`)다. `DES-004`와 원인이 같다. 또한 CLS가 실행마다 달랐다 — 콜드 0.12 / 웜 0.00. 루프 009의 0.12는 콜드 측정값이며 단일 측정값으로 다루면 안 된다.
 
 - [x] ID: A11Y-001
   문제: 접근성 자동 검사 도구가 없어 WCAG 2.2 AA 회귀를 확인할 수 없다. LOOP.md STEP 6의 `accessibility check`가 매 루프 `not_run`으로 남는다.

@@ -7,6 +7,7 @@ import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { EXPIRY_WARNING_DAYS, daysUntilExpiry } from "@/lib/billing/entitlements";
 import { PremiumGate } from "@/components/premium/premium-gate";
 import { CONTACT_EMAIL } from "@/lib/site";
+import type { UnifiPaymentHistoryItem } from "@/lib/billing/repository.server";
 
 
 export function PremiumDashboardContent({
@@ -14,11 +15,13 @@ export function PremiumDashboardContent({
   status,
   currentPeriodEnd,
   feed,
+  history = [],
 }: {
   isPremium: boolean;
   status: string | null;
   currentPeriodEnd: string | null;
   feed: ReactNode;
+  history?: UnifiPaymentHistoryItem[];
 }) {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
@@ -86,6 +89,35 @@ export function PremiumDashboardContent({
                 {copy.dashboard.extend}
               </button>
             </form>
+            {/* 결제 이력 — 실제 웹훅 이벤트만(미결제 시도는 제외). UX 감사 gap #4 */}
+            <h3 className="mt-6 border-t border-border pt-4 text-sm font-bold">
+              {copy.dashboard.historyTitle}
+            </h3>
+            {history.length === 0 ? (
+              <p className="mt-2 text-sm text-muted">{copy.dashboard.historyEmpty}</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {history.map((item) => (
+                  <li
+                    key={`${item.orderId}-${item.occurredAt}`}
+                    className="flex items-baseline justify-between gap-2 text-sm"
+                  >
+                    <time dateTime={item.occurredAt} className="text-muted">
+                      {new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "medium" }).format(
+                        new Date(item.occurredAt),
+                      )}
+                    </time>
+                    <span className="font-semibold tabular-nums">
+                      {item.status === "canceled"
+                        ? copy.dashboard.historyCanceled
+                        : item.amount !== null
+                          ? `$${(item.amount / 100).toFixed(2)}`
+                          : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <a
               href={`mailto:${CONTACT_EMAIL}?subject=MemeCatch%20Plus%20billing`}
               className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"

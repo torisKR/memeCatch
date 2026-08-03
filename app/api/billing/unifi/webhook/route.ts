@@ -46,9 +46,9 @@ export async function POST(request: Request) {
   const body = parseUnifiPayWebhookBody(rawBody);
   if (!body) return json({ ok: false, error: "invalid_payload" }, 400);
 
-  // 소유자는 체크아웃 시점에 저장한 linkId 바인딩으로만 찾는다.
-  const linkId = parseLinkIdFromOrderId(body.orderId);
-  if (!linkId) return json({ ok: true, ignored: true }, 200);
+  // body의 orderId는 어떤 거래를 확인할지 고르는 라우팅 힌트일 뿐이다.
+  const bodyLinkId = parseLinkIdFromOrderId(body.orderId);
+  if (!bodyLinkId) return json({ ok: true, ignored: true }, 200);
 
   try {
     const tx = await getUnifiPayTransaction(config, body.transactionId);
@@ -57,14 +57,25 @@ export async function POST(request: Request) {
       return json({ ok: true, ignored: true }, 200);
     }
 
+    // 귀속(누구에게 권한을 줄지)은 **HMAC 인증된 조회 결과의 orderId**로만 정한다.
+    // 본문 orderId를 그대로 믿으면, 실결제 1건의 transactionId를 아는 공격자가
+    // 자기 계정의 linkId를 body에 실어 보내 권한을 가로챌 수 있다(귀속 탈취).
+    // 조회 결과에 orderId가 없거나 본문과 어긋나면 권한을 만들지 않는다.
+    const linkId = parseLinkIdFromOrderId(tx.orderId);
+    if (!linkId || linkId !== bodyLinkId) {
+      return json({ ok: true, ignored: true, reason: "order_mismatch" }, 200);
+    }
+
     const status = mapUnifiPayStatus(tx.status);
     // CREATED/PENDING — 아직 결과가 아니다. 재시도는 무의미하므로 200.
     if (!status) return json({ ok: true, pending: tx.status }, 200);
 
     await processUnifiPaymentEvent({
       // 같은 거래의 같은 상태가 재전송돼도 한 번만 반영되도록 멱등 키를 만든다.
+      // linkId(인증 유래)를 포함해, 같은 거래가 다른 귀속으로 두 번 반영되는
+      // 경로를 원천 차단한다.
       eventKey: createHash("sha256")
-        .update(`unifi-pay:${tx.transactionId}:${tx.status}`)
+        .update(`unifi-pay:${tx.transactionId}:${tx.status}:${linkId}`)
         .digest("hex"),
       paymentId: linkId,
       status,

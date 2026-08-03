@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const { linkUrl, linkId } = await createUnifiPaymentLink(config, {
       requestId: buildRequestId(user.id, Date.now()),
       callbackPath: "/api/billing/unifi/webhook",
-      returnPath: "/premium",
+      returnPath: "/premium?checkout=return",
     });
 
     // 결제창으로 보내기 전에 소유자를 확정한다. 실패하면 결제를 시작하지 않는다.

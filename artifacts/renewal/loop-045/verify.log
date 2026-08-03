@@ -1,0 +1,10 @@
+=== LOOP 045 verify (Unifi + 밈 2건) ===
+2026-08-03T22:43:08Z
+ Test Files  77 passed (77)
+      Tests  634 passed (634)
+✖ 6 problems (0 errors, 6 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

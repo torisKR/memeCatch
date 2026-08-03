@@ -6,7 +6,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { selectPremiumSubscription } from "@/lib/billing/entitlements";
 import type { LatpeedMembershipEvent } from "@/lib/billing/latpeed.server";
-import type { UnifiSettlementEvent } from "@/lib/billing/unifi-webhook-handler";
+/** Unifi 결제 웹훅 정산 이벤트 — 웹훅 route가 인증 조회 결과로 조립한다. */
+export type UnifiSettlementEvent = {
+  eventKey: string;
+  paymentId: string;
+  status: "active" | "canceled";
+  amount: number | null;
+  occurredAt: string;
+  payload: Record<string, unknown>;
+};
 
 export type PremiumEntitlement = {
   signedIn: boolean;
@@ -91,18 +99,34 @@ export async function processUnifiPaymentEvent(
   return data;
 }
 
-/** verify 경로 전용 — 이 결제가 정말 이 사용자의 것인지 확인한다. */
-export async function isOwnUnifiPayment(paymentId: string): Promise<boolean> {
+/** 사용자 본인 결제 이력 — 실제 웹훅 이벤트만(미결제 intent 제외). */
+export type UnifiPaymentHistoryItem = {
+  orderId: string;
+  status: string;
+  amount: number | null;
+  occurredAt: string;
+};
+
+export async function listOwnUnifiPaymentHistory(
+  limit = 12,
+): Promise<UnifiPaymentHistoryItem[]> {
   const user = await getCurrentBillingUser();
-  if (!user) return false;
+  if (!user) return [];
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("billing_unifi_payments")
-    .select("user_id")
-    .eq("payment_id", paymentId)
-    .maybeSingle();
+    .from("billing_webhook_events")
+    .select("order_id, status, amount, occurred_at, received_at")
+    .eq("provider", "unifi")
+    .eq("matched_user_id", user.id)
+    .order("received_at", { ascending: false })
+    .limit(limit);
   if (error) throw error;
-  return data?.user_id === user.id;
+  return (data ?? []).map((row) => ({
+    orderId: row.order_id ?? "",
+    status: row.status ?? "",
+    amount: row.amount,
+    occurredAt: row.occurred_at ?? row.received_at,
+  }));
 }
 
 export async function getPremiumEntitlement(): Promise<PremiumEntitlement> {

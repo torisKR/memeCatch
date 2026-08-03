@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { MyFeed } from "@/components/my-feed";
+import { CheckoutReturnStatus } from "@/components/premium/checkout-return-status";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { PremiumDashboardContent } from "@/components/premium/premium-dashboard-content";
 import {
   getPremiumEntitlement,
+  listOwnUnifiPaymentHistory,
   registerCurrentBillingIdentity,
 } from "@/lib/billing/repository.server";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -54,12 +58,29 @@ export default async function PremiumPage() {
     (category): category is MemeCategory => category in CATEGORIES,
   );
 
+  const history = await listOwnUnifiPaymentHistory();
+  const copy = PREMIUM_COPY[locale];
+
   return (
-    <PremiumDashboardContent
-      isPremium={entitlement.isPremium}
-      status={entitlement.status}
-      currentPeriodEnd={entitlement.currentPeriodEnd}
-      feed={entitlement.isPremium ? <MyFeed interests={interests} locale={locale} /> : null}
-    />
+    <>
+      {/* 결제 복귀 폴링 — ?checkout=return일 때만 나타난다. useSearchParams라 Suspense 필요 */}
+      <Suspense fallback={null}>
+        <CheckoutReturnStatus
+          initiallyPremium={entitlement.isPremium}
+          copy={{
+            confirming: copy.dashboard.checkoutConfirming,
+            confirmed: copy.dashboard.checkoutConfirmed,
+            timeout: copy.dashboard.checkoutTimeout,
+          }}
+        />
+      </Suspense>
+      <PremiumDashboardContent
+        isPremium={entitlement.isPremium}
+        status={entitlement.status}
+        currentPeriodEnd={entitlement.currentPeriodEnd}
+        feed={entitlement.isPremium ? <MyFeed interests={interests} locale={locale} /> : null}
+        history={history}
+      />
+    </>
   );
 }

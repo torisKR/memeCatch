@@ -1,0 +1,87 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+/** 웹훅 재전송 간격(3s~30s 초반부)을 덮는 폴링 창 — 3초 × 20회 = 60초. */
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_TRIES = 20;
+
+export type CheckoutReturnCopy = {
+  confirming: string;
+  confirmed: string;
+  timeout: string;
+};
+
+/**
+ * 결제 복귀 상태 배너 — `?checkout=return`으로 돌아온 직후에만 나타난다.
+ *
+ * Unifi Pay 권한은 웹훅으로만 생기므로 복귀 시점엔 아직 반영 전일 수 있다.
+ * 이전에는 사용자가 수동 새로고침해야 했다(UX 감사 gap #1). 이 배너가
+ * /api/billing/entitlement를 짧게 폴링해 활성 전환을 감지하면 화면을 새로 그린다.
+ * 60초 안에 확인되지 않으면(웹훅 장기 지연) 새로고침 안내로 물러난다 —
+ * 권한 판정을 클라이언트가 지어내지 않고 서버 판정만 기다린다.
+ */
+export function CheckoutReturnStatus({
+  initiallyPremium,
+  copy,
+}: {
+  initiallyPremium: boolean;
+  copy: CheckoutReturnCopy;
+}) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const fromCheckout = searchParams.get("checkout") === "return";
+  const [phase, setPhase] = useState<"confirming" | "confirmed" | "timeout">(
+    initiallyPremium ? "confirmed" : "confirming",
+  );
+  const triesRef = useRef(0);
+
+  useEffect(() => {
+    if (!fromCheckout || phase !== "confirming") return;
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      triesRef.current += 1;
+      try {
+        const res = await fetch("/api/billing/entitlement", { cache: "no-store" });
+        if (!res.ok) throw new Error(String(res.status));
+        const data: { isPremium?: boolean } = await res.json();
+        if (cancelled) return;
+        if (data.isPremium) {
+          setPhase("confirmed");
+          clearInterval(timer);
+          // 서버 컴포넌트(대시보드)의 권한 상태를 다시 그린다.
+          router.refresh();
+          return;
+        }
+      } catch {
+        // 일시 오류는 다음 틱에 재시도 — 폴링 자체가 재시도 루프다.
+      }
+      if (triesRef.current >= POLL_MAX_TRIES) {
+        if (!cancelled) setPhase("timeout");
+        clearInterval(timer);
+      }
+    }, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [fromCheckout, phase, router]);
+
+  if (!fromCheckout) return null;
+
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className={`mx-auto mt-4 w-full max-w-5xl rounded-xl border px-4 py-3 text-sm font-semibold ${
+        phase === "confirmed"
+          ? "border-safety-green/40 bg-safety-green-bg text-safety-green"
+          : "border-border bg-surface-2 text-foreground"
+      }`}
+    >
+      <span aria-hidden>{phase === "confirmed" ? "●" : phase === "timeout" ? "▲" : "◌"}</span>{" "}
+      {copy[phase]}
+    </p>
+  );
+}

@@ -40,6 +40,12 @@ export type PremiumCopy = {
     expiringSoon: (days: number) => string;
     billingHelp: string;
     syncNote: string;
+    checkoutConfirming: string;
+    checkoutConfirmed: string;
+    checkoutTimeout: string;
+    historyTitle: string;
+    historyEmpty: string;
+    historyCanceled: string;
   };
   feed: {
     personalRadar: string;
@@ -133,6 +139,12 @@ const PREMIUM_COPY_BASE = {
       expiringSoon: (days: number) => days <= 0 ? "오늘 만료돼요. 지금 연장하면 이어서 쓸 수 있어요." : `${days}일 뒤 만료돼요. 미리 연장해 두세요.`,
       billingHelp: "취소·환불 문의",
       syncNote: "구매 직후 연결까지 잠시 걸릴 수 있어요. 같은 이메일을 사용했는지 확인해 주세요.",
+      checkoutConfirming: "결제를 확인하고 있어요… 웹훅 도착까지 잠시 걸릴 수 있어요.",
+      checkoutConfirmed: "결제가 확인됐어요! Plus 이용이 시작됐습니다.",
+      checkoutTimeout: "아직 결제 확인이 도착하지 않았어요. 잠시 뒤 새로고침해 주세요 — 결제는 안전하게 처리 중이에요.",
+      historyTitle: "결제 이력",
+      historyEmpty: "아직 결제 이력이 없어요.",
+      historyCanceled: "취소됨",
     },
     feed: {
       personalRadar: "나만의 트렌드 레이더",
@@ -224,6 +236,12 @@ const PREMIUM_COPY_BASE = {
       expiringSoon: (days: number) => days <= 0 ? "Your pass expires today. Extend now to keep access." : `Your pass expires in ${days} days. Extend it in advance.`,
       billingHelp: "Cancellation & refund help",
       syncNote: "Connection may take a moment after purchase. Make sure you used the same email.",
+      checkoutConfirming: "Confirming your payment… the webhook may take a moment.",
+      checkoutConfirmed: "Payment confirmed! Your Plus access has started.",
+      checkoutTimeout: "Confirmation hasn’t arrived yet. Please refresh shortly — your payment is being processed safely.",
+      historyTitle: "Payment history",
+      historyEmpty: "No payments yet.",
+      historyCanceled: "Canceled",
     },
     feed: {
       personalRadar: "Your personal trend radar",
@@ -315,6 +333,12 @@ const PREMIUM_COPY_BASE = {
       expiringSoon: (days: number) => days <= 0 ? "本日で期限が切れます。今すぐ延長すれば続けて利用できます。" : `あと${days}日で期限が切れます。早めに延長してください。`,
       billingHelp: "キャンセル・返金のお問い合わせ",
       syncNote: "購入後の連携には少し時間がかかる場合があります。同じメールアドレスを使用したか確認してください。",
+      checkoutConfirming: "決済を確認しています… 反映まで少しかかる場合があります。",
+      checkoutConfirmed: "決済が確認できました！Plusのご利用が始まりました。",
+      checkoutTimeout: "まだ確認が届いていません。しばらくして再読み込みしてください — 決済は安全に処理中です。",
+      historyTitle: "決済履歴",
+      historyEmpty: "決済履歴はまだありません。",
+      historyCanceled: "キャンセル",
     },
     feed: {
       personalRadar: "自分専用トレンドレーダー",
@@ -406,6 +430,12 @@ const PREMIUM_COPY_BASE = {
       expiringSoon: (days: number) => days <= 0 ? "使用权今天到期。立即续期即可继续使用。" : `使用权将在 ${days} 天后到期，建议提前续期。`,
       billingHelp: "取消与退款咨询",
       syncNote: "购买后关联可能需要一点时间。请确认使用了相同的邮箱。",
+      checkoutConfirming: "正在确认您的付款… 可能需要片刻。",
+      checkoutConfirmed: "付款已确认！Plus 已开始生效。",
+      checkoutTimeout: "确认尚未到达。请稍后刷新 — 您的付款正在安全处理中。",
+      historyTitle: "付款记录",
+      historyEmpty: "暂无付款记录。",
+      historyCanceled: "已取消",
     },
     feed: {
       personalRadar: "你的专属趋势雷达",

@@ -3,7 +3,7 @@ import { SkeletonBone } from "@/components/skeletons";
 /** 밈 관리 목록 로딩 — 헤더 + 검색 폼 + 테이블 행 스켈레톤 */
 export default function AdminMemesLoading() {
   return (
-    <div aria-busy="true" aria-label="불러오는 중" className="space-y-6">
+    <div role="status" aria-busy="true" aria-label="불러오는 중" className="space-y-6">
       <SkeletonBone className="h-8 w-32" />
 
       <div className="flex flex-wrap items-end gap-3">

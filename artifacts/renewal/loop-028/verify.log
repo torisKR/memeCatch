@@ -17,3 +17,12 @@ tsc ok
 ●  (SSG)      prerendered as static HTML (uses generateStaticParams)
 ƒ  (Dynamic)  server-rendered on demand
 
+=== LOOP 032 verify ===
+lib/a11y-contrast.test.ts(95,79): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+ Test Files  77 passed (77)
+      Tests  647 passed (647)
+✖ 6 problems (0 errors, 6 warnings)
+
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

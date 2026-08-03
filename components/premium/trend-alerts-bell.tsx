@@ -157,11 +157,18 @@ export function TrendAlertsBell() {
                           급상승 · 트렌드 {Math.round(alert.trend_score)}
                         </span>
                       </span>
+                      {/* generic span의 aria-label은 명세상 미지원 — 자식 텍스트가
+                          0이라 무시하는 스크린리더에서는 읽음/안 읽음 구분이 통째로
+                          사라진다(루프 016과 같은 유형). 점은 장식으로 두고 의미는
+                          sr-only 텍스트가 전한다. */}
                       {alert.read_at === null && (
-                        <span
-                          className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent"
-                          aria-label="안 읽음"
-                        />
+                        <>
+                          <span
+                            aria-hidden
+                            className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                          />
+                          <span className="sr-only">안 읽음</span>
+                        </>
                       )}
                     </Link>
                   </li>

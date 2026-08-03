@@ -377,11 +377,10 @@
   우선순위 점수: 22.5
   상태: ready
 
-- [ ] ID: A11Y-005
-  문제: generic 요소 aria-label이 7곳 더 있다(루프 016은 랭킹 1곳만 고침 — 3번째 재발 유형). 대표: `components/premium/trend-alerts-bell.tsx:161`의 안 읽음 점 — 자식 텍스트 0 + 아이콘 aria-hidden이라 상태가 스크린리더에서 완전 소실. 목록: `artifacts/renewal/loop-023/A11Y_GENERIC_ARIA_LABEL.md`
-  사용자 영향: 4 / 데이터/법적 위험: 2 / 트래픽 가중치: 2 / 해결 확신: 5 / 예상 노력: 2
-  우선순위 점수: 20.0
-  상태: ready
+- [x] ID: A11Y-005
+  문제: generic 요소 aria-label 잔존 — HIGH 1건(trend-alerts-bell 안 읽음 점: 자식 텍스트 0이라 스크린리더에서 상태 완전 소실) + LOW 6건(admin 로딩 스켈레톤). 3번째 재발 유형.
+  상태: done (루프 032)
+  결과: 안 읽음 점은 aria-hidden 장식 + sr-only 텍스트로 분리. admin 로딩 6파일은 `role="status"` 부여(라벨·aria-busy 동시 유효). **회귀 가드 신설** — role 없는 div/span의 aria-label을 전수 스캔하는 테스트를 `pnpm test`(=CI)에 추가, 재도입 시 파일:줄 지목 실패를 증명함(감사가 제안한 rg 패턴의 상시화).
 
 - [ ] ID: DQ-017
   문제: 링크 생존 표본 400건 검사(루프 024) — 부실률 2.5%(dead+private), 전체 외삽 ≈115건. 문제 링크의 56.5%가 나무위키에 몰렸고 timeout 11건은 전부 나무위키. **dead 확정 나무위키 5건**은 문서 삭제/이동 추정. 부수 발견: `meme_sources` 카운트가 anon 4,608 vs 관리자 5,717로 갈림 — RLS상 anon은 공개(approved/limited) 밈의 출처만 보므로, 차이 ≈1,109행은 비공개 밈의 출처로 설명된다.

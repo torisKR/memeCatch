@@ -3,7 +3,7 @@ import { SkeletonBone } from "@/components/skeletons";
 /** 제보 큐 로딩 — 헤더 + 제보 행 스켈레톤 */
 export default function AdminSubmissionsLoading() {
   return (
-    <div aria-busy="true" aria-label="불러오는 중" className="space-y-6">
+    <div role="status" aria-busy="true" aria-label="불러오는 중" className="space-y-6">
       <div>
         <SkeletonBone className="h-8 w-20" />
         <SkeletonBone className="mt-2 h-5 w-full max-w-lg" />

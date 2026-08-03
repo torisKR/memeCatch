@@ -82,4 +82,25 @@ describe("소스 안티패턴 (A11Y-002 회귀 가드)", () => {
 
     expect(offenders, "bg-accent-strong으로 바꾸세요").toEqual([]);
   });
+
+  it("role 없는 div/span에 aria-label을 달지 않는다", () => {
+    // 3번째 재발 유형(루프 016 랭킹 배지 → 루프 032 안 읽음 점·admin 로딩 6곳).
+    // generic role에는 aria-label이 명세상 미지원이라, 무시하는 스크린리더에서
+    // 정보가 통째로 사라진다. role을 명시하거나 sr-only 텍스트를 쓰라.
+    const offenders = sourceFiles("app")
+      .concat(sourceFiles("components"))
+      .flatMap((file) => {
+        const src = readFileSync(resolve(ROOT, file), "utf8");
+        const hits: string[] = [];
+        for (const m of src.matchAll(/<(?:div|span)\b[^>]{0,400}?aria-label=/gs)) {
+          if (!/\brole=/.test(m[0])) {
+            const line = src.slice(0, m.index).split("\n").length;
+            hits.push(`${file}:${line}`);
+          }
+        }
+        return hits;
+      });
+
+    expect(offenders, "role을 명시하거나 sr-only 텍스트로 바꾸세요").toEqual([]);
+  });
 });

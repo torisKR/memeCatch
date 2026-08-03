@@ -81,6 +81,26 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
             </div>
           </form>
 
+          {/* 예시 검색어 (LOOP.md §5) — 처음 온 사용자가 "무엇을 검색하는 곳인지"를
+              입력 없이 파악하게 한다. 실시간 인기어가 아니라 서비스의 검색 유형
+              (유행어·챌린지·추억 밈)을 하나씩 보여주는 고정 예시다 — 트래픽이 아직
+              낮아 인기어 집계가 표본 부족이고(랭킹 표본 경고와 같은 이유), 고정
+              예시는 개인정보·수집 이슈가 없다. */}
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-white/58">
+            <span>예시:</span>
+            {/* 세 예시 = 최신 챌린지 · 일상 유행어 · 추억 밈 — 전부 실제 공개 문서가
+                있는 검색어여야 한다(예시가 zero-result로 이어지면 역효과). */}
+            {["꼬셔야겠어 챌린지", "브금", "잘자 내꿈꿔"].map((q) => (
+              <Link
+                key={q}
+                href={`/search?q=${encodeURIComponent(q)}`}
+                className="inline-flex min-h-8 items-center rounded-full border border-white/25 px-3 font-medium text-white/85 transition-colors hover:border-white/60 hover:text-white"
+              >
+                {q}
+              </Link>
+            ))}
+          </p>
+
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/58">
             {totalCount > 0 && (
               <span>

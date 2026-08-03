@@ -1,0 +1,24 @@
+=== LOOP 016 verify ===
+2026-08-03T16:13:02Z
+      Tests  645 passed (645)
+   Start at  01:13:02
+   Duration  3.91s (transform 5.54s, setup 0ms, import 14.56s, tests 6.03s, environment 19.71s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 016 before/after — /rankings 순위 접근성 (LOOP.md §7 마지막 항목) ===
+before: <span aria-label="1위" class="...tabular-nums...">1</span>
+        generic role에 aria-label — 명세상 미지원. 무시하는 SR에선 맥락 없는 "1",
+        존중하는 쪽에선 구현에 따라 중복 읽힘.
+after : <span aria-hidden="true" class="...">1</span><span class="sr-only">1위</span>
+        시각 숫자는 장식, 의미는 sr-only 단일 경로. aria-label 잔존 0건 (SSR 확인).
+
+부수 판정: 게이트 D의 "SSR에 로딩 문구 잔존" 항목은 **결함 아님**으로 해소 —
+"랭킹을 불러오고 있어요"는 app/(default)/rankings/loading.tsx:17의 sr-only 텍스트로,
+Next 라우트 로딩 UI의 정상적인 접근성 알림이다. 실제 순위 콘텐츠는 SSR에 존재.

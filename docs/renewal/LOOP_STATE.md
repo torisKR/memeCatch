@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **015** — 종료. 게이트 없이 가능한 작업 0건 |
-| 선택 항목 | 분석 이벤트 커버리지 감사 + `RELEASE_CHECKLIST` 마감 |
+| 루프 번호 | **016** |
+| 선택 항목 | 체크리스트 잔여 검증 — 랭킹 순위 접근성 + SSR 로딩 문구 판정 |
 | 상태 | `human_gate` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-015/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-016/` |
 
 ## 전체 목표
 
@@ -333,9 +333,25 @@ LOOP.md 「분석 이벤트」와 `RELEASE_CHECKLIST` 유지가 backlog에 아�
 
 `RELEASE_CHECKLIST.md`를 루프 001 이후 처음으로 갱신해 5개 게이트 현황을 확정했다.
 
+## 완료된 작업 (루프 016 — 체크리스트 잔여 검증)
+
+backlog 밖에 남아 있던 `RELEASE_CHECKLIST` 게이트 C·D의 미검증 항목 중 실제 결함
+가능성이 있는 두 건을 검증했다.
+
+1. **순위 숫자 접근성 — 실제 결함, 수정.** `<span aria-label="1위">1</span>`은
+   generic role이라 ARIA 명세상 aria-label이 지원되지 않는다. 무시하는 스크린리더는
+   맥락 없는 "1"만 읽고, 존중하는 쪽도 구현에 따라 숫자와 라벨이 겹쳐 읽힌다.
+   → `aria-hidden` 숫자 + `sr-only` 「N위」로 분리. LOOP.md §7의 마지막 미충족
+   항목이 닫혔다.
+2. **SSR 로딩 문구 — 결함 아님으로 해소.** 「랭킹을 불러오고 있어요」는
+   `loading.tsx`의 `sr-only` 접근성 알림이고, 실제 순위 콘텐츠는 SSR HTML에
+   존재한다. 루프 001 기준선에서 의심 표시했던 항목을 정상으로 판정.
+
 ## 진행 중인 작업
 
-없음. **게이트 없이 진행 가능한 backlog가 0건이다.**
+없음. **게이트 없이 진행 가능한 backlog가 0건이다** (체크리스트 잔여 검증 항목 중
+keyboard-only·768×1024·200% 확대·reduced-motion·INP·e2e는 남아 있으나 전부 결함
+증거가 없는 검증 부채로, 우선순위상 게이트 결정 이후로 미룬다).
 
 ## 마지막 검증 결과 (2026-08-04 루프 014, `artifacts/renewal/loop-014/verify.log`)
 
@@ -390,4 +406,4 @@ DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린�
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ **거짓 완료 선언을 하지 않는다.** `quality:check` critical 4개가 여전히 위반이다 — 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 그대로다 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ✅ **완전 충족** — 남은 backlog 10건이 **전부** HUMAN_GATE(HG-001~HG-006) 대기다. 게이트 없이 할 수 있는 일이 0건이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 15 — 기본 상한 12 초과. 비게이트 작업을 전부 소진하고 종료 |
+| 반복 제한 | 16 — 기본 상한 12 초과 |

@@ -383,14 +383,20 @@ function RankItem({
         href={memePathFrom(meme.short_id, meme.slug)}
         className="flex min-h-11 items-start gap-3 rounded-2xl border border-border bg-surface p-4"
       >
+        {/* 숫자는 장식으로 두고 의미는 sr-only가 전한다.
+            이전에는 이 <span>에 aria-label="1위"를 달았지만, ARIA 명세상 generic
+            role에는 aria-label이 지원되지 않는다 — 무시하는 스크린리더에서는 맥락
+            없는 "1"만 읽히고, 존중하는 쪽에서도 구현에 따라 숫자와 라벨이 겹쳐 읽힐
+            수 있다. LOOP.md 「순위 숫자와 accessible name이 중복 읽히지 않는지」. */}
         <span
+          aria-hidden
           className={`w-7 shrink-0 pt-0.5 text-lg font-bold tabular-nums ${
             rank <= 3 ? "text-accent" : "text-muted"
           }`}
-          aria-label={`${rank}위`}
         >
           {rank}
         </span>
+        <span className="sr-only">{rank}위</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-base font-semibold">{meme.title}</span>
           {meme.summary && (

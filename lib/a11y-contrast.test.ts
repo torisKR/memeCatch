@@ -92,7 +92,8 @@ describe("소스 안티패턴 (A11Y-002 회귀 가드)", () => {
       .flatMap((file) => {
         const src = readFileSync(resolve(ROOT, file), "utf8");
         const hits: string[] = [];
-        for (const m of src.matchAll(/<(?:div|span)\b[^>]{0,400}?aria-label=/gs)) {
+        // [^>]는 개행도 매칭하므로 dotAll(s) 플래그가 필요 없다(타깃 ES2017 호환).
+        for (const m of src.matchAll(/<(?:div|span)\b[^>]{0,400}?aria-label=/g)) {
           if (!/\brole=/.test(m[0])) {
             const line = src.slice(0, m.index).split("\n").length;
             hits.push(`${file}:${line}`);

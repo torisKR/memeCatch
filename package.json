@@ -19,6 +19,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mts",
     "quality:check": "node scripts/quality-check.mts",
     "quality:report": "node scripts/quality-check.mts --json --fail-on=none",
     "import:koculture": "node scripts/import-koculture-memes.mjs",

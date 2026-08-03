@@ -63,7 +63,11 @@ type Props = { params: Promise<{ key: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
   const meme = await getMemeByShortId(shortIdFromParam(key));
-  if (!meme) return { title: "밈을 찾을 수 없어요" };
+  // 메타데이터 단계에서 404를 확정한다. 여기서 제목만 반환하면 응답이 200으로
+  // 스트리밍을 시작한 뒤라 본문의 notFound()가 상태 코드를 바꾸지 못해,
+  // 없는 문서가 200 + "찾을 수 없어요" 화면(soft-404)으로 나간다 — 검색엔진이
+  // 저품질 신호로 읽는다. (smoke가 /memes/zzzzzzzz 200 수신으로 검출)
+  if (!meme) notFound();
   const path = memePathFrom(meme.short_id, meme.slug);
   const availableLocales = (await getAvailableTranslationLocales(meme.id)).filter(
     isSeoContentLocale,

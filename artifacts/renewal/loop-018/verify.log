@@ -1,0 +1,37 @@
+=== LOOP 018 smoke ===
+2026-08-03T16:22:00Z
+
+> memecatch@0.1.0 smoke
+> node scripts/smoke.mts
+
+ok   / (200)
+ok   /rankings (200)
+ok   /explore (200)
+ok   /memes/uefmryky (200)
+ok   /memes/e8ferq5u (200)
+FAIL /memes/zzzzzzzz
+  - 404 기대, 200 수신(soft-200 의심)
+
+smoke 실패: 1/6
+=== smoke 재실행 (soft-404 수정 후) ===
+
+> memecatch@0.1.0 smoke
+> node scripts/smoke.mts
+
+ok   / (200)
+ok   /rankings (200)
+ok   /explore (200)
+ok   /memes/uefmryky (200)
+ok   /memes/e8ferq5u (200)
+FAIL /memes/zzzzzzzz
+  - 404 기대, 200 수신(soft-200 의심)
+
+smoke 실패: 1/6
+
+=== 전체 검증 ===
+      Tests  645 passed (645)
+   Start at  01:23:49
+   Duration  2.83s (transform 3.78s, setup 0ms, import 10.74s, tests 3.74s, environment 13.68s)
+
+✖ 5 problems (0 errors, 5 warnings)
+

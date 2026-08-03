@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **017** — 종료 |
-| 선택 항목 | 체크리스트 잔여 검증 — 768×1024 · reduced-motion · 키보드 포커스 |
+| 루프 번호 | **018** |
+| 선택 항목 | 게이트 A 마지막 항목 — 핵심 route smoke 자동화 |
 | 상태 | `human_gate` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-017/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-018/` |
 
 ## 전체 목표
 
@@ -406,4 +406,4 @@ DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린�
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ **거짓 완료 선언을 하지 않는다.** `quality:check` critical 4개가 여전히 위반이다 — 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 그대로다 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ✅ **완전 충족** — 남은 backlog 10건이 **전부** HUMAN_GATE(HG-001~HG-006) 대기다. 게이트 없이 할 수 있는 일이 0건이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 17 — 종료. 게이트 없이 가능한 작업·검증이 실질 소진 |
+| 반복 제한 | 18 |

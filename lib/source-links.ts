@@ -81,22 +81,44 @@ export type EvidenceSummary = {
   primary: number;
   /** 나무위키·위키백과 등 맥락 확인용 보조 출처 */
   context: number;
+  /**
+   * primary 중 서지 정보(제목 또는 작성자)가 있는 것.
+   *
+   * 루프 023 전수 확인: meme_sources 4,608행 중 2,876행(62.4%)이 title·creator
+   * 둘 다 null인 맨 URL이다. URL만 있는 행을 「원본·보도 확인」으로 세면 문서
+   * 안에서 그 출처가 무엇인지 확인할 수 없는데도 확인을 주장하게 된다 —
+   * citableSources()가 제목 없는 출처를 근거 목록에서 제외하는 것과 같은 원칙.
+   */
+  identifiedPrimary: number;
 };
 
-export function summarizeEvidence(sources: SourceLink[]): EvidenceSummary {
+/** 근거 요약 입력 — URL에 더해 서지 확인용 title/creator를 선택적으로 받는다. */
+export type EvidenceSourceInput = SourceLink & {
+  title?: string | null;
+  creator_name?: string | null;
+};
+
+export function summarizeEvidence(sources: EvidenceSourceInput[]): EvidenceSummary {
   const seen = new Set<string>();
   let primary = 0;
   let context = 0;
+  let identifiedPrimary = 0;
   for (const source of sources) {
     const url = cleanText(source.source_url);
     if (!url) continue;
     const key = url.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    if (isContextSourceUrl(url)) context += 1;
-    else primary += 1;
+    if (isContextSourceUrl(url)) {
+      context += 1;
+    } else {
+      primary += 1;
+      if (cleanText(source.title) || cleanText(source.creator_name)) {
+        identifiedPrimary += 1;
+      }
+    }
   }
-  return { total: seen.size, primary, context };
+  return { total: seen.size, primary, context, identifiedPrimary };
 }
 
 /** 원본·공식·보도 링크를 먼저 보여 주고, 없을 때만 맥락 출처를 폴백한다. */

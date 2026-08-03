@@ -1,0 +1,62 @@
+{
+  "checked": 80,
+  "byStatus": {
+    "ok": 70,
+    "dead": 1,
+    "blocked": 1,
+    "timeout": 8,
+    "private": 0
+  },
+  "deadUrls": [
+    {
+      "meme_id": "17351f0f-218c-4ec2-a318-7f8c238a3893",
+      "url": "https://namu.wiki/w/\ub11d\ucfe8\uc9f8 \uad74\ub7ec\uc628 \ub2f9\uc2e0",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "0bbcfa71-2133-4fc0-8f49-db60ab39368e",
+      "url": "https://namu.wiki/w/\uc774\uace4(\ub354 \ud0b9 : \uc601\uc6d0\uc758 \uad70\uc8fc)",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "a8e230db-b0c3-42d8-986a-07cdfc478aec",
+      "url": "https://namu.wiki/w/\ub3d9\ubc29\uc2e0\uae30 3\uc778-SM\uc5d4\ud130\ud14c\uc778\uba3c\ud2b8 \uc804\uc18d\uacc4\uc57d \ud574\uc9c0 \ubd84\uc7c1",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "36d82313-f0a0-4901-8096-d179e84ed50e",
+      "url": "https://www.ize.co.kr/news/articleView.html?idxno=72720",
+      "verdict": "dead"
+    },
+    {
+      "meme_id": "3ab879db-05a6-4abb-9622-2eebe73ef37c",
+      "url": "https://www.hankyung.com/society/article/201712050645Y",
+      "verdict": "blocked"
+    },
+    {
+      "meme_id": "8bc69650-121f-4854-aade-919deab6bc65",
+      "url": "https://namu.wiki/w/\ubd09\uc22d\uc544 \ud559\ub2f9(\uac1c\uadf8\ucf58\uc11c\ud2b8)",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "acabf048-c637-43de-bc54-f2159d2e679b",
+      "url": "https://namu.wiki/w/PICK ME",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "60b867ff-ae64-4324-bd11-ad7915da6168",
+      "url": "https://namu.wiki/w/\ud2b8\ub85c\ud53c\uce74\ub098 \uc2a4\ud30c\ud074\ub9c1",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "4273aa4b-b483-4dae-9a9c-50be1d2991f1",
+      "url": "https://namu.wiki/w/SKY \uce90\uc2ac",
+      "verdict": "timeout"
+    },
+    {
+      "meme_id": "fdc1f83f-d349-42e9-8b4d-e44f0f72e7b1",
+      "url": "https://namu.wiki/w/\uce58\uce74 \ub304\uc2a4",
+      "verdict": "timeout"
+    }
+  ]
+}

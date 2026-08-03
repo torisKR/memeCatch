@@ -42,19 +42,37 @@ describe("TrustNote", () => {
     expect(html).not.toContain("검수팀 확인");
   });
 
-  it("원본 출처가 있으면 확인한 근거 수를 센다", () => {
+  it("서지 정보가 있는 원본 출처는 확인한 근거 수를 센다", () => {
     const html = renderToStaticMarkup(
       <TrustNote
         {...base}
         sources={[
-          { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube" },
-          { source_url: "https://news.example.com/b", platform: "web" },
+          { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube", title: "원본 영상" },
+          { source_url: "https://news.example.com/b", platform: "web", creator_name: "기자" },
         ]}
       />
     );
 
     expect(html).toContain("근거 출처 2개 확인");
     expect(html).not.toContain("원본은 아직 찾는 중");
+    expect(html).not.toContain("서지 확인 중");
+  });
+
+  // DQ-013 (루프 023 전수: 출처 행의 62.4%가 title·creator 둘 다 null)
+  it("맨 URL뿐이면 원본·보도 확인을 주장하지 않는다", () => {
+    const html = renderToStaticMarkup(
+      <TrustNote
+        {...base}
+        sources={[
+          { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube" },
+        ]}
+      />
+    );
+
+    expect(html).toContain("출처 링크 1개 수집");
+    expect(html).toContain("서지 확인 중");
+    expect(html).not.toContain("근거 출처 1개 확인");
+    expect(html).not.toContain("원본·보도");
   });
 
   it("원본과 맥락이 섞이면 원본 개수를 따로 밝힌다", () => {
@@ -62,7 +80,7 @@ describe("TrustNote", () => {
       <TrustNote
         {...base}
         sources={[
-          { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube" },
+          { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube", title: "원본 영상" },
           { source_url: "https://namu.wiki/w/test", platform: "web" },
         ]}
       />

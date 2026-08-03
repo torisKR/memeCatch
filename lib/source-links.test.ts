@@ -76,11 +76,11 @@ describe("source link selection", () => {
   it("counts evidence sources, separating primary from context wikis", () => {
     expect(
       summarizeEvidence([
-        { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube" },
+        { source_url: "https://www.youtube.com/watch?v=a", platform: "YouTube", title: "원본" },
         { source_url: "https://namu.wiki/w/example", platform: "Community" },
         { source_url: "https://ko.wikipedia.org/wiki/example", platform: "web" },
       ])
-    ).toEqual({ total: 3, primary: 1, context: 2 });
+    ).toEqual({ total: 3, primary: 1, context: 2, identifiedPrimary: 1 });
   });
 
   it("ignores blank URLs and counts a repeated URL once", () => {
@@ -91,10 +91,21 @@ describe("source link selection", () => {
         { source_url: "   ", platform: "web" },
         { source_url: null, platform: "web" },
       ])
-    ).toEqual({ total: 1, primary: 1, context: 0 });
+    ).toEqual({ total: 1, primary: 1, context: 0, identifiedPrimary: 0 });
   });
 
   it("reports an empty source list as no evidence at all", () => {
-    expect(summarizeEvidence([])).toEqual({ total: 0, primary: 0, context: 0 });
+    expect(summarizeEvidence([])).toEqual({
+      total: 0, primary: 0, context: 0, identifiedPrimary: 0,
+    });
+
+    // DQ-013 — 제목 또는 작성자 중 하나만 있어도 '확인된' 원본으로 센다.
+    expect(
+      summarizeEvidence([
+        { source_url: "https://a.example.com/1", platform: "web", title: "기사" },
+        { source_url: "https://b.example.com/2", platform: "web", creator_name: "작성자" },
+        { source_url: "https://c.example.com/3", platform: "web", title: "  " },
+      ])
+    ).toEqual({ total: 3, primary: 3, context: 0, identifiedPrimary: 2 });
   });
 });

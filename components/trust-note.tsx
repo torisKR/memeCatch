@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { summarizeEvidence, type SourceLink } from "@/lib/source-links";
+import { summarizeEvidence, type EvidenceSourceInput } from "@/lib/source-links";
 
 /**
  * 신뢰 신호 — "이 설명을 무엇으로 확인했나"를 실제 근거 상태에 맞춰 말한다.
@@ -23,7 +23,7 @@ export function TrustNote({
   moderationStatus,
   title,
 }: {
-  sources: SourceLink[];
+  sources: EvidenceSourceInput[];
   updatedAt: string;
   moderationStatus: string;
   title: string;
@@ -58,10 +58,13 @@ export function TrustNote({
   }
 
   const isContextOnly = evidence.primary === 0;
+  // primary가 있어도 전부 제목·작성자 없는 맨 URL이면 「원본·보도 확인」을 주장하지
+  // 않는다(루프 023 — 그런 행이 출처 전체의 62.4%다). 링크가 있다는 사실만 말한다.
+  const isBareOnly = !isContextOnly && evidence.identifiedPrimary === 0;
 
   return (
     <p className="border-t border-border pt-3 text-sm text-muted">
-      <span aria-hidden>{isContextOnly ? "▲" : "●"}</span>{" "}
+      <span aria-hidden>{isContextOnly || isBareOnly ? "▲" : "●"}</span>{" "}
       {isContextOnly ? (
         <>
           <span className="font-semibold text-foreground">
@@ -69,12 +72,21 @@ export function TrustNote({
           </span>{" "}
           — 원본은 아직 찾는 중이에요.
         </>
+      ) : isBareOnly ? (
+        <>
+          <span className="font-semibold text-foreground">
+            출처 링크 {evidence.total}개 수집
+          </span>{" "}
+          — 어떤 자료인지 서지 확인 중이에요.
+        </>
       ) : (
         <>
           <span className="font-semibold text-foreground">
             근거 출처 {evidence.total}개 확인
           </span>
-          {evidence.context > 0 && <> (원본·보도 {evidence.primary}개)</>}
+          {evidence.total > evidence.identifiedPrimary && (
+            <> (원본·보도 {evidence.identifiedPrimary}개)</>
+          )}
         </>
       )}
       {moderationStatus === "limited" && <> · 출처 확인 중인 문서예요.</>} · 마지막

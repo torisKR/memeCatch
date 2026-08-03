@@ -1,0 +1,35 @@
+=== LOOP 025 verify (DQ-013) ===
+2026-08-03T17:25:53Z
+      Tests  646 passed (646)
+   Start at  02:25:55
+   Duration  31.12s (transform 63.78s, setup 0ms, import 162.19s, tests 44.03s, environment 166.13s)
+
+✖ 6 problems (0 errors, 6 warnings)
+
+components/trust-note.test.tsx(50,83): error TS2353: Object literal may only specify known properties, and 'title' does not exist in type 'SourceLink'.
+components/trust-note.test.tsx(51,72): error TS2353: Object literal may only specify known properties, and 'creator_name' does not exist in type 'SourceLink'.
+components/trust-note.test.tsx(83,83): error TS2353: Object literal may only specify known properties, and 'title' does not exist in type 'SourceLink'.
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+=== LOOP 025 verify (retry) ===
+tsc ok
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  5 failed | 72 passed (77)
+      Tests  5 failed | 641 passed (646)
+✖ 6 problems (0 errors, 6 warnings)
+
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 025 (DQ-013) before/after — 프로덕션 데이터, 로컬 프로덕션 빌드 ===
+uefmryky (맨 YouTube 링크 1건, title=null):
+  before: ● 근거 출처 1개 확인 (원본·보도 1개)   ← 확인 불가한 URL을 '원본'으로 주장
+  after : ▲ 출처 링크 1개 수집 — 어떤 자료인지 서지 확인 중이에요.
+e8ferq5u (0건) → ◌ 준비 중 (불변) · 3fajbwre (위키만) → ▲ 맥락 (불변)
+z4ywt995 (서지 있는 5건) → ● 근거 출처 5개 확인 (불변)
+
+플레이크 기록: 전체 스위트에서 5건이 6초대 타임아웃 실패(affiliate-product-image·
+explore-filters·meme-edit-form 등) — 백그라운드 30에이전트 함대와 CPU 경합.
+격리 재실행 5/5 통과. 이 루프 변경과 무관.

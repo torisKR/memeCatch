@@ -1,0 +1,25 @@
+=== LOOP 011 verify ===
+2026-08-03T15:55:50Z
+ Test Files  76 passed (76)
+      Tests  640 passed (640)
+   Start at  00:55:50
+   Duration  3.46s (transform 5.17s, setup 0ms, import 13.55s, tests 5.65s, environment 16.69s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 011 before/after — lighthouse (mobile, /memes/uefmryky) ===
+                    before   after
+  Accessibility        97  →  100
+  Agentic Browsing     96  →  100
+  color-contrast    ❌ 1건 →  ✅ 0건
+남은 실패는 전부 판정 완료 항목: is-crawlable(의도된 noindex),
+third-party-cookies(공식 임베드), errors-in-console(로컬 계측 아티팩트).
+
+핵심: --accent-strong(#d63c1b, white 대비 4.64:1)이 globals.css:12에 **이미** 있었다.
+브랜드 색을 바꾼 것이 아니라, 있는 접근성 토큰을 쓰지 않던 7곳을 고친 것이다.

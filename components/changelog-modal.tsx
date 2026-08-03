@@ -141,7 +141,7 @@ export function ChangelogModal() {
           ref={confirmRef}
           type="button"
           onClick={dismiss}
-          className="no-press mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
+          className="no-press mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
         >
           확인했어요
         </button>

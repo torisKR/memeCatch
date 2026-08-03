@@ -61,7 +61,7 @@ export default async function SupportPage() {
             <p className="text-sm text-muted">문의를 보내려면 로그인이 필요해요.</p>
             <Link
               href="/login?next=/support"
-              className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-accent px-6 text-sm font-bold text-white transition-transform active:scale-[0.98]"
+              className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-accent-strong px-6 text-sm font-bold text-white transition-transform active:scale-[0.98]"
             >
               로그인하고 문의하기
             </Link>

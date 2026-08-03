@@ -105,7 +105,7 @@ export function InquiryForm() {
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60 sm:w-auto sm:min-w-40"
+        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60 sm:w-auto sm:min-w-40"
       >
         {pending ? "보내는 중…" : "문의 보내기"}
       </button>

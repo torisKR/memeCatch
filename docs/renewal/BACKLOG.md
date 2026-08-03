@@ -183,7 +183,7 @@
   결과: `lib/labels.ts`에 `formatOriginYear(year, precision)` 추가 — `exact`·`year`일 때만 단정하고 그 외에는 「(추정)」을 붙인다. 데이터는 건드리지 않았고, 운영자가 정밀도를 올리면 자동으로 단정 표기로 복귀한다. `/memes/ra86attn` before “2004년생 밈” → after “2004년생 밈 (추정)”.
   남은 것: 같은 단정 표기가 `app/[locale]/memes/[key]/page.tsx:351`(4개 로케일 `copy.born`)과 카드·퀴즈·주간 브리핑의 연도 칩에도 있다 → DQ-011
 
-- [ ] ID: A11Y-002
+- [x] ID: A11Y-002
   문제: 브랜드 accent 위 흰 글자가 WCAG AA를 통과하지 못한다. 측정 2.82:1(전경 `#ffffff` / 배경 `#ff6b47` / 14px bold), 요구 4.5:1. 로컬·프로덕션 양쪽에서 동일하게 검출됐다(`body.theme-ink > div.fixed > div.relative > button.no-press`). 같은 조합이 다른 CTA에도 쓰이면 영향 범위가 넓다.
   사용자 영향: 4
   데이터/법적 위험: 2
@@ -194,7 +194,8 @@
   의존성: 없음 — 다만 브랜드 색을 건드리므로 확정 전 확인 필요
   완료 조건: 작은 굵은 글씨용 accent 대비가 4.5:1 이상이 된다. 선택지 — (A) accent를 어둡게, (B) accent 위 글자색을 어둡게, (C) 작은 텍스트 CTA 전용 `--accent-strong` 토큰 추가. 큰 텍스트(18.66px+ bold)는 3:1이라 현재도 통과하므로 전면 교체는 불필요하다.
   검증 명령: `lighthouse_audit {device:"mobile"}` — accessibility 위반 0건
-  상태: ready
+  상태: done (루프 011)
+  결과: **브랜드 색을 바꾸지 않았다.** `--accent-strong`(#d63c1b, white 대비 4.64:1)이 `app/globals.css:12`에 이미 정의돼 있었고 주석까지 “흰 글자 CTA 배경용”이라고 적혀 있었다 — 쓰이지 않고 있었을 뿐이다. `bg-accent` + `text-white` + 14px bold 조합 7곳을 `bg-accent-strong`으로 교체했다. Accessibility 97 → **100**, Agentic Browsing 96 → 100.
 
 - [ ] ID: A11Y-003
   문제: 접근성 검사가 CI에서 자동으로 돌지 않는다. DevTools MCP는 사람이 붙어 있는 세션 도구라 회귀를 자동으로 막지 못한다. 4개 route 중 1개만 측정된 상태이기도 하다.

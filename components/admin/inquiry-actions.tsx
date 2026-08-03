@@ -57,7 +57,7 @@ export function InquiryActions({
           type="button"
           disabled={pending || reply.trim().length === 0}
           onClick={() => run(() => answerInquiry({ inquiryId, reply }))}
-          className="inline-flex h-10 items-center justify-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {pending ? "저장 중…" : "답변 저장"}
         </button>

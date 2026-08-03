@@ -311,7 +311,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
             </p>
             <Link
               href="/premium"
-              className="inline-flex h-10 w-full items-center justify-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
+              className="inline-flex h-10 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
             >
               {copy.upgrade}
             </Link>
@@ -321,7 +321,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
             type="button"
             onClick={handleDownload}
             disabled={busy}
-            className="inline-flex h-11 w-full items-center justify-center rounded-full bg-accent px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+            className="inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
           >
             {busy ? copy.downloading : copy.download}
           </button>

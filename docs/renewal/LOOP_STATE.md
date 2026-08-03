@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **010** |
-| 선택 항목 | `A11Y-001` — 접근성 자동 검사 기준선 |
+| 루프 번호 | **011** |
+| 선택 항목 | `A11Y-002` — accent 위 흰 글자 대비 2.82:1 |
 | 상태 | `continue` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-010/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-011/` |
 
 ## 전체 목표
 
@@ -237,11 +237,29 @@ localhost에서 서비스돼 미디어가 교차 출처가 되고 CSP에 걸린�
 
 잔여: 4개 route 중 1개만 측정했고 CI 자동 실행은 되지 않는다 → `A11Y-003`.
 
+## 완료된 작업 (루프 011 — A11Y-002)
+
+브랜드 accent 위 흰 글자가 WCAG AA를 통과하지 못했다(2.82:1, 요구 4.5:1).
+
+**브랜드 색은 바꾸지 않았다.** 조사해 보니 `--accent-strong`(#d63c1b, white 대비
+4.64:1)이 `app/globals.css:12`에 **이미** 정의돼 있었고 주석까지 “흰 글자 CTA
+배경용”이라고 적혀 있었다 — 만들어 두고 쓰지 않던 토큰이었다.
+
+- `bg-accent` + `text-white` + 14px bold 조합 **7곳**을 `bg-accent-strong`으로 교체
+  (support 페이지, export-button ×2, changelog-modal, admin 2곳, inquiry-form)
+- `bg-accent-soft`는 영향 없음. 큰 텍스트(3:1 기준)는 원래 통과라 손대지 않았다.
+
+| | before | after |
+| --- | ---: | ---: |
+| Accessibility | 97 | **100** |
+| Agentic Browsing | 96 | **100** |
+| color-contrast 위반 | 1건 | **0건** |
+
 ## 진행 중인 작업
 
 없음.
 
-## 마지막 검증 결과 (2026-08-04 루프 010, `artifacts/renewal/loop-010/a11y-baseline.md`)
+## 마지막 검증 결과 (2026-08-04 루프 011, `artifacts/renewal/loop-011/verify.log`)
 
 | 검사 | 명령 | 결과 |
 | --- | --- | --- |
@@ -253,7 +271,7 @@ localhost에서 서비스돼 미디어가 교차 출처가 되고 CSP에 걸린�
 | 핵심 route smoke | 로컬 프로덕션 빌드 + 브라우저 계측 | ✅ 390×844·360×800·1440×900 계측 |
 | e2e 자동화 | — | `not_run` — e2e 프레임워크 미도입 |
 | 마이그레이션 dry-run | — | `not_run` — 루프 001~008 모두 스키마를 변경하지 않음 |
-| 접근성 자동 검사 | DevTools MCP lighthouse | ⚠️ 부분 — 상세 route Accessibility 97, 실제 위반 1건(`A11Y-002`). 3개 route·CI는 `not_run`(`A11Y-003`) |
+| 접근성 자동 검사 | DevTools MCP lighthouse | ✅ 상세 route Accessibility **100**, 위반 0건. 3개 route·CI 연동은 `not_run`(`A11Y-003`) |
 | 반응형 스크린샷 회귀 | 수동 계측 | ⚠️ 부분 — 390×844·360×800·1440×900 확인. 768×1024은 `not_run` |
 | metadata/canonical 검사 | — | `not_run` — 자동 검사 없음. 빌드 산출물 육안 확인만 |
 | 성능 회귀 검사 | Chrome DevTools MCP trace | ⚠️ 부분 — LCP/CLS 3개 route 측정. 홈·랭킹 목표 충족, 상세 CLS 0.12 초과(`PERF-002`). INP는 `not_run` |
@@ -275,10 +293,9 @@ localhost에서 서비스돼 미디어가 교차 출처가 되고 CSP에 걸린�
 
 ## 다음 후보 작업 3개
 
-1. **A11Y-002** (21.3) — accent 위 흰 글자 대비 2.82:1 → 4.5:1. 브랜드 색을 건드리므로
-   확정 전 확인이 필요하다.
-2. **PERF-002** (12.0) — 상세 CLS 0.12 → 0.1 이하.
-3. **DQ-011** (5.0) / **A11Y-003** (5.3) — 연도 표기 잔여 범위, CI 접근성 게이트.
+1. **PERF-002** (12.0) — 상세 CLS 0.12 → 0.1 이하.
+2. **A11Y-003** (5.3) — CI 접근성 게이트.
+3. **DQ-011** (5.0) — `[locale]` 상세·카드의 연도 단정 표기.
 
 **남은 고가치 항목은 전부 `HUMAN_GATE` 대기다** — DQ-002·DQ-003·DQ-004·DQ-006·
 DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린다.
@@ -293,4 +310,4 @@ DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린�
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ `quality:check` critical 4개 검사가 여전히 위반. 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 남아 있고 DQ-004는 `HG-004` 대기 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ⚠️ **임박** — HUMAN_GATE 5건이 고가치 항목 7건을 막고 있다. 게이트 없이 가능한 일은 A11Y-002·PERF-002·DQ-011·A11Y-003(합계 우선순위 43.6)뿐이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 10 / 12 |
+| 반복 제한 | 11 / 12 |

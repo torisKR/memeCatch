@@ -1,0 +1,18 @@
+=== LOOP 022 verify ===
+      Tests  645 passed (645)
+   Start at  01:35:10
+   Duration  3.22s (transform 4.33s, setup 0ms, import 11.24s, tests 4.73s, environment 17.76s)
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 022 결론: SRCH-001 기각 (구현→실측→되돌림) ===
+가설: zero-result에 오타 후보 제안이 필요하다 (§6)
+실측: search_memes RPC(ilike+trgm+초성+별칭)가 이미 오타·자연어 질의를 흡수 —
+  "잘자 내꿈꾸" / "브금테" / "브금 zzweird" / "잘자 내꿈꿔 뜻이 뭐야" 전부 결과 반환.
+  zero-result는 유사한 것이 전혀 없을 때만 발생("zzqqxx"), 그때는 제안할 후보도 없음.
+조치: 구현을 되돌림 (LOOP.md STEP 7 — 개선이 확인되지 않으면 되돌린다).

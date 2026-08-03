@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **009** |
-| 선택 항목 | `PERF-001` — Core Web Vitals 기준선 |
+| 루프 번호 | **010** |
+| 선택 항목 | `A11Y-001` — 접근성 자동 검사 기준선 |
 | 상태 | `continue` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-009/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-010/` |
 
 ## 전체 목표
 
@@ -216,11 +216,32 @@ after(로컬 프로덕션 빌드) LCP 1131ms·CLS **0.12**. CLS가 **43% 개선*
 미측정(`not_run`): INP(트레이스에 상호작용이 없음), `/explore`, 필드 지표(CrUX 데이터
 없음 — 트래픽 부족). 상세 CLS 0.12는 목표 초과라 `PERF-002`로 등록했다.
 
+## 완료된 작업 (루프 010 — A11Y-001)
+
+접근성 자동 검사도 루프 001부터 `not_run`이었다. PERF-001과 같은 방식으로 의존성
+없이 Chrome DevTools MCP의 `lighthouse_audit`으로 기준선을 잡았다.
+
+상세 route **Accessibility 97** (로컬·프로덕션 동일). 실제 위반은 1건이다.
+
+| 실패 항목 | 판정 |
+| --- | --- |
+| `color-contrast` 2.82:1 | **실제 결함** → `A11Y-002` |
+| `is-crawlable` | 의도된 동작 — 얇은 문서 noindex (DQ-002/HG-001) |
+| `third-party-cookies` | 알려진 트레이드오프 — 공식 임베드 |
+| `errors-in-console` 6건 | **로컬 계측 아티팩트** — 프로덕션은 0건 |
+
+**프로덕션을 함께 측정한 것이 중요했다.** 로컬 프리뷰는 `next start`가
+`.env.production`을 읽어 `NEXT_PUBLIC_SITE_URL`이 프로덕션을 가리키는데 페이지는
+localhost에서 서비스돼 미디어가 교차 출처가 되고 CSP에 걸린다. 프로덕션에서는 동일
+출처라 오류가 0건이다 — 대조하지 않았다면 없는 버그를 보고할 뻔했다.
+
+잔여: 4개 route 중 1개만 측정했고 CI 자동 실행은 되지 않는다 → `A11Y-003`.
+
 ## 진행 중인 작업
 
 없음.
 
-## 마지막 검증 결과 (2026-08-04 루프 008, `artifacts/renewal/loop-008/verify.log`)
+## 마지막 검증 결과 (2026-08-04 루프 010, `artifacts/renewal/loop-010/a11y-baseline.md`)
 
 | 검사 | 명령 | 결과 |
 | --- | --- | --- |
@@ -232,7 +253,7 @@ after(로컬 프로덕션 빌드) LCP 1131ms·CLS **0.12**. CLS가 **43% 개선*
 | 핵심 route smoke | 로컬 프로덕션 빌드 + 브라우저 계측 | ✅ 390×844·360×800·1440×900 계측 |
 | e2e 자동화 | — | `not_run` — e2e 프레임워크 미도입 |
 | 마이그레이션 dry-run | — | `not_run` — 루프 001~008 모두 스키마를 변경하지 않음 |
-| 접근성 자동 검사 | — | `not_run` — 도구 미도입 (BACKLOG `A11Y-001`) |
+| 접근성 자동 검사 | DevTools MCP lighthouse | ⚠️ 부분 — 상세 route Accessibility 97, 실제 위반 1건(`A11Y-002`). 3개 route·CI는 `not_run`(`A11Y-003`) |
 | 반응형 스크린샷 회귀 | 수동 계측 | ⚠️ 부분 — 390×844·360×800·1440×900 확인. 768×1024은 `not_run` |
 | metadata/canonical 검사 | — | `not_run` — 자동 검사 없음. 빌드 산출물 육안 확인만 |
 | 성능 회귀 검사 | Chrome DevTools MCP trace | ⚠️ 부분 — LCP/CLS 3개 route 측정. 홈·랭킹 목표 충족, 상세 CLS 0.12 초과(`PERF-002`). INP는 `not_run` |
@@ -254,10 +275,13 @@ after(로컬 프로덕션 빌드) LCP 1131ms·CLS **0.12**. CLS가 **43% 개선*
 
 ## 다음 후보 작업 3개
 
-1. **A11Y-001** (12.0) — 접근성 자동 검사 도입. 루프 009처럼 DevTools MCP를 쓰면
-   의존성 없이 가능할 수 있다.
+1. **A11Y-002** (21.3) — accent 위 흰 글자 대비 2.82:1 → 4.5:1. 브랜드 색을 건드리므로
+   확정 전 확인이 필요하다.
 2. **PERF-002** (12.0) — 상세 CLS 0.12 → 0.1 이하.
-3. **DQ-011** (5.0) — `[locale]` 상세·카드의 연도 단정 표기.
+3. **DQ-011** (5.0) / **A11Y-003** (5.3) — 연도 표기 잔여 범위, CI 접근성 게이트.
+
+**남은 고가치 항목은 전부 `HUMAN_GATE` 대기다** — DQ-002·DQ-003·DQ-004·DQ-006·
+DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린다.
 
 그 밖의 남은 항목(DQ-002·DQ-003·DQ-004·DQ-006·DQ-007·DQ-010·DES-004)은 전부
 `HUMAN_GATE` 대기다 — `DECISIONS.md`의 HG-001~HG-005 결정이 있어야 진행할 수 있다.
@@ -267,6 +291,6 @@ after(로컬 프로덕션 빌드) LCP 1131ms·CLS **0.12**. CLS가 **43% 개선*
 | 조건 | 충족 |
 | --- | --- |
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ `quality:check` critical 4개 검사가 여전히 위반. 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 남아 있고 DQ-004는 `HG-004` 대기 |
-| 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ⚠️ HUMAN_GATE 5건 대기. 다만 게이트 없이 진행 가능한 작업이 남아 루프는 계속 |
+| 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ⚠️ **임박** — HUMAN_GATE 5건이 고가치 항목 7건을 막고 있다. 게이트 없이 가능한 일은 A11Y-002·PERF-002·DQ-011·A11Y-003(합계 우선순위 43.6)뿐이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 9 / 12 |
+| 반복 제한 | 10 / 12 |

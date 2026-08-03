@@ -185,8 +185,8 @@
       "reason": "e2e 프레임워크 미도입"
     },
     "accessibility": {
-      "status": "not_run",
-      "reason": "자동 검사 도구 미도입 (BACKLOG A11Y-001)"
+      "status": "pass_with_exception",
+      "note": "상세 route Accessibility 97, 실제 위반 1건(color-contrast → A11Y-002). 4개 route 중 1개만 측정, CI 미연동(A11Y-003)."
     },
     "responsiveScreenshots": {
       "status": "not_run",
@@ -286,6 +286,58 @@
       "inp": "트레이스에 상호작용이 없어 측정되지 않음. 조작 시나리오 필요",
       "/explore": "루프 009 범위 밖",
       "fieldMetrics": "CrUX에 데이터 없음 — 트래픽 부족"
+    }
+  },
+  "accessibility": {
+    "measuredAt": "2026-08-04",
+    "method": "Chrome DevTools MCP lighthouse_audit · device=mobile · mode=navigation",
+    "routes": {
+      "/memes/[key]": {
+        "accessibility": 97,
+        "bestPractices": {
+          "local": 73,
+          "production": 77
+        },
+        "seo": 69,
+        "violations": 1
+      }
+    },
+    "violations": [
+      {
+        "id": "color-contrast",
+        "severity": "real",
+        "detail": "2.82:1 (#ffffff on #ff6b47, 14px bold) — WCAG AA requires 4.5:1",
+        "confirmedOn": [
+          "local production build",
+          "production"
+        ],
+        "backlog": "A11Y-002"
+      }
+    ],
+    "explainedFailures": [
+      {
+        "id": "is-crawlable",
+        "verdict": "intended",
+        "note": "얇은 문서 noindex (DQ-002/HG-001)"
+      },
+      {
+        "id": "third-party-cookies",
+        "verdict": "known tradeoff",
+        "note": "Instagram·TikTok 공식 임베드"
+      },
+      {
+        "id": "errors-in-console",
+        "verdict": "local measurement artifact",
+        "note": "프로덕션 0건. 로컬은 next start가 .env.production을 읽어 미디어가 교차 출처가 되며 CSP에 걸린다"
+      }
+    ],
+    "notRun": {
+      "routes": [
+        "/",
+        "/explore",
+        "/rankings"
+      ],
+      "ci": "DevTools MCP는 세션 도구라 CI 자동 실행 불가 → A11Y-003"
     }
   }
 }

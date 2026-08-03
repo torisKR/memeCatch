@@ -183,6 +183,32 @@
   결과: `lib/labels.ts`에 `formatOriginYear(year, precision)` 추가 — `exact`·`year`일 때만 단정하고 그 외에는 「(추정)」을 붙인다. 데이터는 건드리지 않았고, 운영자가 정밀도를 올리면 자동으로 단정 표기로 복귀한다. `/memes/ra86attn` before “2004년생 밈” → after “2004년생 밈 (추정)”.
   남은 것: 같은 단정 표기가 `app/[locale]/memes/[key]/page.tsx:351`(4개 로케일 `copy.born`)과 카드·퀴즈·주간 브리핑의 연도 칩에도 있다 → DQ-011
 
+- [ ] ID: A11Y-002
+  문제: 브랜드 accent 위 흰 글자가 WCAG AA를 통과하지 못한다. 측정 2.82:1(전경 `#ffffff` / 배경 `#ff6b47` / 14px bold), 요구 4.5:1. 로컬·프로덕션 양쪽에서 동일하게 검출됐다(`body.theme-ink > div.fixed > div.relative > button.no-press`). 같은 조합이 다른 CTA에도 쓰이면 영향 범위가 넓다.
+  사용자 영향: 4
+  데이터/법적 위험: 2
+  트래픽 가중치: 4
+  해결 확신: 4
+  예상 노력: 3
+  우선순위 점수: 21.3
+  의존성: 없음 — 다만 브랜드 색을 건드리므로 확정 전 확인 필요
+  완료 조건: 작은 굵은 글씨용 accent 대비가 4.5:1 이상이 된다. 선택지 — (A) accent를 어둡게, (B) accent 위 글자색을 어둡게, (C) 작은 텍스트 CTA 전용 `--accent-strong` 토큰 추가. 큰 텍스트(18.66px+ bold)는 3:1이라 현재도 통과하므로 전면 교체는 불필요하다.
+  검증 명령: `lighthouse_audit {device:"mobile"}` — accessibility 위반 0건
+  상태: ready
+
+- [ ] ID: A11Y-003
+  문제: 접근성 검사가 CI에서 자동으로 돌지 않는다. DevTools MCP는 사람이 붙어 있는 세션 도구라 회귀를 자동으로 막지 못한다. 4개 route 중 1개만 측정된 상태이기도 하다.
+  사용자 영향: 2
+  데이터/법적 위험: 2
+  트래픽 가중치: 2
+  해결 확신: 4
+  예상 노력: 3
+  우선순위 점수: 5.3
+  의존성: A11Y-001 (완료)
+  완료 조건: 4개 route가 CI에서 자동 검사되고 위반 수가 기준선 대비 악화되면 실패한다.
+  검증 명령: 신규 러너
+  상태: ready
+
 - [ ] ID: DQ-011
   문제: 루프 007이 한국어 상세의 연도 단정 표기만 고쳤다. 같은 주장이 다른 화면에도 남아 있다 — `app/[locale]/memes/[key]/page.tsx:351`의 `copy.born(origin_year)`(4개 로케일)와 `meme-guess-game.tsx:153`·`weekly-briefing.tsx:74`·`meme-card`/`meme-compact-card`의 연도 칩. 칩은 문장보다 약한 주장이지만 근거가 없기는 마찬가지다.
   사용자 영향: 2
@@ -236,7 +262,7 @@
   검증 명령: `artifacts/renewal/loop-009/perf-baseline.md`의 재실행 절차
   상태: ready
 
-- [ ] ID: A11Y-001
+- [x] ID: A11Y-001
   문제: 접근성 자동 검사 도구가 없어 WCAG 2.2 AA 회귀를 확인할 수 없다. LOOP.md STEP 6의 `accessibility check`가 매 루프 `not_run`으로 남는다.
   사용자 영향: 3
   데이터/법적 위험: 2
@@ -246,8 +272,10 @@
   우선순위 점수: 12.0
   의존성: 없음
   완료 조건: 핵심 4개 route(`/`, `/explore`, `/rankings`, `/memes/[key]`)에 대해 CI에서 돌아가는 자동 접근성 검사가 있고 위반 수가 기준선으로 기록된다.
-  검증 명령: 신규 스크립트
-  상태: ready
+  검증 명령: `artifacts/renewal/loop-010/a11y-baseline.md`의 재실행 절차
+  상태: done (루프 010, 부분)
+  결과: 의존성 추가 없이 Chrome DevTools MCP `lighthouse_audit`으로 측정. 상세 route Accessibility **97**(로컬·프로덕션 동일), 위반 1건 = `color-contrast` → A11Y-002. 프로덕션을 함께 측정해 로컬에서만 나온 CSP 콘솔 오류 6건이 계측 아티팩트임을 확인했다(프로덕션 0건) — 없는 버그를 보고할 뻔했다.
+  잔여: 4개 route 중 1개만 측정했고, CI 자동 실행은 되지 않는다(DevTools MCP는 세션 도구). CI 게이트가 필요하면 별도 러너 도입 필요 → A11Y-003.
 
 ---
 

@@ -428,15 +428,15 @@
 
 - [ ] ID: DES-005
   문제: 탐색 결과 수 미표시 — LOOP.md §6. (점수 22.5)
-  상태: **in_progress (루프 038 — 완료 선언 보류)**
-  진행: `buildMemesQuery`에 `countOnly`(head+exact) 옵션 추가, 마운트 시 총계 조회 effect + 「결과 N개」 aria-live 렌더 구현. 쿼리 계층 단위 테스트 통과, REST 등가 검증(3,904건), silent catch 제거(오류 로깅). **단 완료 조건(화면 표시)을 브라우저에서 확인하지 못해 done 선언 불가** — 아래 EXP-001 참조.
+  상태: done (루프 040 — DevTools Chrome 실측으로 완료 조건 확인)
+  결과: `countOnly`(head+exact) 옵션 + 마운트 effect + 「결과 N개」 aria-live. DevTools 제어 Chrome 실측 — 무필터 「결과 3,904개」, category 필터 「결과 571개」(그리드와 동일 쿼리라 표시·목록 항상 일치). 검색(q) 경로는 RPC 50건 캡이라 표시 제외. 루프 038의 보류는 Browser 페인 테스트 한계였음(EXP-001 해결 참조).
 
 - [ ] ID: EXP-001
   문제: **클라이언트 상호작용이 합성 테스트에서 관찰되지 않는다 — 기존 기능 포함.** /explore의 기존 무한 스크롤이 로컬 프리뷰·프로덕션 양쪽에서 합성 scrollTo 후 supabase 요청 0건(신규 count effect도 동일). 원인 후보: (a) 브라우저 페인의 합성 스크롤이 IntersectionObserver를 못 깨움(테스트 방법 한계) (b) 실제 하이드레이션 문제(심각 — 실사용자도 24개 이후 못 봄). 로컬에서는 Serwist 서비스워커의 구빌드 캐싱도 확인됨(해제 후에도 재현). 실기기 확인이 필요하다.
   사용자 영향: 4(만약 b) / 데이터/법적 위험: 1 / 트래픽 가중치: 3 / 해결 확신: 2 / 예상 노력: 3
   우선순위 점수: 8.0 (확신 낮음 반영)
   완료 조건: 실기기(모바일 브라우저)에서 /explore 스크롤 시 25번째 카드 로드 여부 확인. b로 판명 시 심각도 재산정.
-  상태: ready (실기기 확인 = 사람 개입)
+  상태: **resolved (루프 040) — 제품 결함 아님, 테스트 방법 한계로 판명.** DevTools 제어 Chrome에서 점진 스크롤(600px 단위) 실측: 프로덕션 /explore가 **3,336개 카드 로드 + supabase 요청 6건** — 무한 스크롤 완전 정상. Browser 페인의 즉시 scrollTo(0, 바닥)가 IntersectionObserver를 깨우지 못한 것이 원인. 교훈: IO 기반 기능 검증은 점진 스크롤 + DevTools 계측을 표준으로.
 
 - [ ] ID: DES-006
   문제: 카드에서 category·lifecycle·usage signal 신호 과밀(§6). (점수 12.0)

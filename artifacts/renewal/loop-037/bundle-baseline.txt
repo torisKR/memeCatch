@@ -1,0 +1,55 @@
+Route (app)                              Revalidate  Expire
+┌ ○ /                                            5m      1y
+├ ○ /_not-found
+├ ● /[locale]                                   10m      1y
+│ ├ /en                                         10m      1y
+│ ├ /ja                                         10m      1y
+│ ├ /zh                                         10m      1y
+│ └ /zh-tw                                      10m      1y
+├ ƒ /[locale]/llms-full.txt
+├ ƒ /[locale]/llms.txt
+├ ƒ /[locale]/memes/[key]
+├ ƒ /-/memes/-/opengraph-image
+├ ○ /about
+├ ƒ /admin
+├ ƒ /admin/inquiries
+├ ƒ /admin/memes
+├ ƒ /admin/memes/[id]
+├ ƒ /admin/reports
+├ ƒ /admin/sources
+├ ƒ /admin/submissions
+├ ƒ /admin/submissions/[id]
+├ ƒ /admin/subscriptions
+├ ƒ /admin/users
+├ ƒ /admin/users/[id]
+├ ƒ /api/billing/checkout
+├ ƒ /api/billing/latpeed/webhook
+├ ƒ /api/billing/unifi/checkout
+├ ƒ /api/billing/unifi/verify
+├ ƒ /api/billing/unifi/webhook
+├ ƒ /api/cron/adpick-hotdeals
+├ ƒ /api/cron/source-refresh
+├ ƒ /api/cron/trend-pulse
+├ ƒ /api/csp-report
+├ ƒ /api/media/[...path]
+├ ƒ /api/memes/[id]/trend
+├ ƒ /api/oembed
+├ ƒ /api/quiz
+├ ƒ /api/random-meme
+├ ƒ /api/trend-alerts
+├ ƒ /api/upload
+
+
+=== First Load JS 실측 (HTML 참조 스크립트 합, 2026-08-04) ===
+/                      scripts= 20 raw=  1056.0KB gzip=  323.0KB
+/rankings              scripts= 18 raw=  1015.3KB gzip=  309.2KB
+/explore               scripts= 19 raw=  1043.1KB gzip=  318.9KB
+/memes/uefmryky        scripts= 21 raw=  1039.9KB gzip=  318.4KB
+/search                scripts= 18 raw=  1025.9KB gzip=  313.3KB
+=== LOOP 037-038 verify ===
+ Test Files  77 passed (77)
+      Tests  647 passed (647)
+✖ 7 problems (1 error, 6 warnings)
+
+ƒ  (Dynamic)  server-rendered on demand
+

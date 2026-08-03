@@ -101,7 +101,8 @@ export const YEAR_RANGES: Record<string, [number, number]> = {
  */
 export function buildMemesQuery(
   supabase: SupabaseClient<Database>,
-  filters: ExploreFilters
+  filters: ExploreFilters,
+  options?: { countOnly?: boolean }
 ) {
   // 검색어가 있으면 search_memes RPC(trgm·초성·별칭 서버 처리) 결과 위에
   // 동일한 카테고리/정렬/페이지네이션을 얹는다. RPC는 setof memes라 필터 체이닝 가능.
@@ -135,7 +136,12 @@ export function buildMemesQuery(
 
   let q = supabase
     .from("memes")
-    .select(exploreSelect(filters.platform))
+    // countOnly면 행 없이 총계만 받는다(head) — §6 「결과 수 제공」용.
+    // select 문자열은 동일하게 유지해야 platform의 !inner 임베드 필터가 살아 있다.
+    .select(
+      exploreSelect(filters.platform),
+      options?.countOnly ? { count: "exact", head: true } : undefined,
+    )
     .in("moderation_status", ["approved", "limited"]);
   if (filters.platform) q = withPublicContent(q);
 
@@ -205,6 +211,31 @@ export function ExploreGrid({
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  // 결과 총계 (§6) — head 전용 카운트 쿼리로 채운다. 실패해도 목록엔 영향 없음.
+  const [total, setTotal] = useState<number | null>(null);
+
+  useEffect(() => {
+    // 검색 경로는 RPC 50건 캡이라 정확한 총계 불가 — 렌더 가드가 표시를 막는다
+    // (effect 안 동기 setState 금지 — 캐스케이드 렌더 방지 lint 준수).
+    if (filters.q) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { count } = await buildMemesQuery(createClient(), filters, {
+          countOnly: true,
+        });
+        if (!cancelled && typeof count === "number") setTotal(count);
+      } catch (err) {
+        // 총계는 부가 정보 — 실패해도 목록은 정상. 단 조용히 삼키면 회귀를 못 보므로
+        // 로그는 남긴다(silent-failure 금지).
+        console.error("explore 결과 수 조회 실패:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filters는 URL 파생 불변 객체
+  }, [filters.q, filters.platform, filters.categories.join(","), filters.difficulty, filters.lifecycle, filters.media, filters.year, filters.sort]);
 
   // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
@@ -325,6 +356,13 @@ export function ExploreGrid({
 
   return (
     <div>
+      {/* 결과 수 (§6) — head 카운트가 도착한 뒤에만 렌더. 검색(q) 경로는 RPC가
+          50건 캡이라 정확한 총계를 줄 수 없어 표시하지 않는다(부정확한 수 금지). */}
+      {total != null && !filters.q && (
+        <p aria-live="polite" className="mb-3 text-sm text-muted">
+          결과 <strong className="font-semibold text-foreground">{total.toLocaleString("ko-KR")}</strong>개
+        </p>
+      )}
       <ul className="grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4">
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">

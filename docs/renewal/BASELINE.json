@@ -295,6 +295,18 @@
       ],
       "blockedBy": "HG-005",
       "foundInLoop": 12
+    },
+    "firstLoadJs": {
+      "measuredAt": "2026-08-04",
+      "method": "HTML 참조 /_next/static/*.js 실측 합산 (로컬 프로덕션 빌드)",
+      "gzipKB": {
+        "/": 323.0,
+        "/rankings": 309.2,
+        "/explore": 318.9,
+        "/memes/[key]": 318.4,
+        "/search": 313.3
+      },
+      "note": "route 간 차이가 ~14KB뿐 — 공유 청크가 지배적. route별 축소는 공유 청크 분해가 선행돼야 함(PERF-004)"
     }
   },
   "accessibility": {

@@ -421,6 +421,39 @@
   상태: done (루프 031)
   결과: WebPage JSON-LD를 `isIndexableMeme()`으로 게이트 — 색인·광고와 같은 단일 기준(D-001 원칙). 브레드크럼·비디오 JSON-LD는 사실 서술이라 유지. 실측: noindex 문서(e8ferq5u·uefmryky) WebPageLD 0건·브레드크럼 유지, 색인 문서(jkd7vu6x) 정상 출력.
 
+- [x] ID: PERF-004
+  문제: route별 First Load JS 기준선 부재. (점수 24.0)
+  상태: done (루프 037)
+  결과: 실측 — gzip 기준 / 323.0 · /rankings 309.2 · /explore 318.9 · 상세 318.4 · /search 313.3 KB. route 간 차 ~14KB로 공유 청크가 지배적 → route별 축소는 공유 청크 분해가 선행 조건. `BASELINE.json`·`artifacts/renewal/loop-037/` 기록.
+
+- [ ] ID: DES-005
+  문제: 탐색 결과 수 미표시 — LOOP.md §6. (점수 22.5)
+  상태: **in_progress (루프 038 — 완료 선언 보류)**
+  진행: `buildMemesQuery`에 `countOnly`(head+exact) 옵션 추가, 마운트 시 총계 조회 effect + 「결과 N개」 aria-live 렌더 구현. 쿼리 계층 단위 테스트 통과, REST 등가 검증(3,904건), silent catch 제거(오류 로깅). **단 완료 조건(화면 표시)을 브라우저에서 확인하지 못해 done 선언 불가** — 아래 EXP-001 참조.
+
+- [ ] ID: EXP-001
+  문제: **클라이언트 상호작용이 합성 테스트에서 관찰되지 않는다 — 기존 기능 포함.** /explore의 기존 무한 스크롤이 로컬 프리뷰·프로덕션 양쪽에서 합성 scrollTo 후 supabase 요청 0건(신규 count effect도 동일). 원인 후보: (a) 브라우저 페인의 합성 스크롤이 IntersectionObserver를 못 깨움(테스트 방법 한계) (b) 실제 하이드레이션 문제(심각 — 실사용자도 24개 이후 못 봄). 로컬에서는 Serwist 서비스워커의 구빌드 캐싱도 확인됨(해제 후에도 재현). 실기기 확인이 필요하다.
+  사용자 영향: 4(만약 b) / 데이터/법적 위험: 1 / 트래픽 가중치: 3 / 해결 확신: 2 / 예상 노력: 3
+  우선순위 점수: 8.0 (확신 낮음 반영)
+  완료 조건: 실기기(모바일 브라우저)에서 /explore 스크롤 시 25번째 카드 로드 여부 확인. b로 판명 시 심각도 재산정.
+  상태: ready (실기기 확인 = 사람 개입)
+
+- [ ] ID: DES-006
+  문제: 카드에서 category·lifecycle·usage signal 신호 과밀(§6). (점수 12.0)
+  상태: ready
+
+- [ ] ID: A11Y-011
+  문제: 외부 embed iframe onError 폴백 부재(§8). (점수 6.0)
+  상태: ready
+
+- [ ] ID: DES-008
+  문제: Pretendard 서체 데드코드(§9). 실사용자 피해 낮음. (점수 4.0)
+  상태: ready
+
+- [ ] ID: DES-009
+  문제: DocStatusNote가 §4의 4필드 구조 미충족 — 설계안(incomplete-doc-v2.md) 존재하나 「마지막 검수」 필드 신설이 편집 표면 확장이라 게이트 후보. (점수 30.0)
+  상태: blocked (HUMAN_GATE 후보 — HG-009로 검토)
+
 > 루프 024의 전체 후보 10건·상세 근거는 `artifacts/renewal/loop-024/design-2-synthesis.md`·
 > `data-quality-2-synthesis.md` 참조. 신뢰 패널은 reader-first 안이 승자로 판정됨
 > (`trust-panel-verdict.md`) — 구현은 TrustNote 흡수·권리 문구 교체 조건부.

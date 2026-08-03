@@ -13,6 +13,12 @@ import {
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
 import { AdsenseScript } from "@/components/adsense-script";
+import {
+  RANKING_METHODS,
+  formatRollupDate,
+  isLowSample,
+  type RankingMethodKey,
+} from "@/lib/ranking/methods";
 
 /** 요청별 문서 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
 export const revalidate = 600;
@@ -91,9 +97,17 @@ async function loadRankings() {
   const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const { data: metricRows, error: metricErr } = await supabase
     .from("meme_trend_metrics")
-    .select("meme_id,views")
+    .select("meme_id,views,date")
     .gte("date", since);
   if (metricErr) throw metricErr;
+
+  // 마지막 집계일 — job_runs는 운영자 전용 RLS라 공개 화면에서 못 읽는다.
+  // meme_trend_metrics는 공개 읽기가 열려 있고, 그 최신 날짜가 곧 마지막 롤업이다.
+  const lastRollupDate =
+    (metricRows ?? []).reduce<string | null>(
+      (max, row) => (!max || row.date > max ? row.date : max),
+      null,
+    ) ?? null;
 
   const viewsById = new Map<string, number>();
   for (const row of metricRows ?? []) {
@@ -135,6 +149,10 @@ async function loadRankings() {
     today,
     weekly,
     comeback: (comebackRows ?? []) as MemeRow[],
+    lastRollupDate,
+    // 표본 판정 기준 — 1위 문서의 기간 내 조회 수. 세 탭 모두 같은 조회 데이터에서
+    // 파생되므로 한 값으로 판정한다.
+    topWeeklyViews: weekly[0]?.weeklyViews ?? 0,
   } as const;
 }
 
@@ -241,6 +259,11 @@ export default async function RankingsPage() {
           </div>
 
           <section aria-label="오늘의 급상승" className="mt-4 hidden peer-checked/today:block">
+            <MethodNote
+              method="today"
+              lastRollupDate={data.lastRollupDate}
+              topViews={data.topWeeklyViews}
+            />
             {data.today.length === 0 ? (
               <EmptyList message="오늘 급상승한 밈이 아직 없어요." />
             ) : (
@@ -253,6 +276,11 @@ export default async function RankingsPage() {
           </section>
 
           <section aria-label="이번 주 많이 본" className="mt-4 hidden peer-checked/week:block">
+            <MethodNote
+              method="weekly"
+              lastRollupDate={data.lastRollupDate}
+              topViews={data.topWeeklyViews}
+            />
             {data.weekly.length === 0 ? (
               <EmptyList message="이번 주 조회 집계가 아직 없어요. 내일 다시 확인해 보세요." />
             ) : (
@@ -270,6 +298,11 @@ export default async function RankingsPage() {
           </section>
 
           <section aria-label="다시 뜨는" className="mt-4 hidden peer-checked/again:block">
+            <MethodNote
+              method="comeback"
+              lastRollupDate={data.lastRollupDate}
+              topViews={data.topWeeklyViews}
+            />
             {data.comeback.length === 0 ? (
               <EmptyList message="다시 뜨는 추억 밈이 아직 없어요." />
             ) : (
@@ -283,6 +316,47 @@ export default async function RankingsPage() {
         </div>
       )}
     </main>
+  );
+}
+
+/**
+ * 산정 기준 공개 — 각 탭이 어떤 기간·산식으로 뽑혔는지, 마지막 집계는 언제인지,
+ * 그리고 표본이 순위를 지지하는지를 밝힌다.
+ *
+ * 표본 경고를 붙이는 이유: 2026-08 기준 최근 7일 총 조회가 308회라 상위권 간
+ * 격차가 조회 1~2회다. 그 상태의 "1위"를 단정적으로 보여 주면 없는 정밀도를
+ * 주장하게 된다. 트래픽이 임계치를 넘으면 이 경고는 자동으로 사라진다.
+ */
+function MethodNote({
+  method,
+  lastRollupDate,
+  topViews,
+}: {
+  method: RankingMethodKey;
+  lastRollupDate: string | null;
+  topViews: number;
+}) {
+  const { period, formula } = RANKING_METHODS[method];
+  const rollup = formatRollupDate(lastRollupDate);
+  const lowSample = isLowSample(topViews);
+
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
+      <p>
+        <span className="font-semibold text-foreground">집계 기간 {period}</span>
+        {rollup && <> · 마지막 집계 {rollup}</>}
+      </p>
+      <p className="mt-1">{formula}</p>
+      {lowSample && (
+        <p className="mt-2 flex items-start gap-1.5 font-medium text-foreground">
+          <span aria-hidden>▲</span>
+          <span>
+            표본 적음 — 기간 내 조회가 적어 순위 차이가 크지 않아요. 정확한 등수보다
+            어떤 밈이 올라왔는지를 봐 주세요.
+          </span>
+        </p>
+      )}
+    </div>
   );
 }
 

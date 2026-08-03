@@ -1,0 +1,26 @@
+=== LOOP 006 verify ===
+2026-08-03T15:35:59Z
+ RUN  v4.1.10 /Users/toris/projects/memecatch
+
+
+ Test Files  75 passed (75)
+      Tests  635 passed (635)
+   Start at  00:36:00
+   Duration  2.79s (transform 3.96s, setup 0ms, import 10.95s, tests 3.52s, environment 13.59s)
+
+
+✖ 5 problems (0 errors, 5 warnings)
+
+tsc ok
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+=== LOOP 006 before/after — /rankings ===
+                       before   after
+  산정 기간 표기          없음  →  "집계 기간 최근 3일" / "최근 7일" (탭별)
+  마지막 갱신 시각        없음  →  "마지막 집계 2026년 8월 4일" (DB max(date)와 일치)
+  탭별 산식 설명          없음  →  3개 탭 각각 한 문장
+  표본 부족 상태          없음  →  "▲ 표본 적음 — 기간 내 조회가 적어 순위 차이가
+                                   크지 않아요" (7일 총 조회 308회, 상위20 합계 107회)
+정규식 검사: hasPeriod=true hasRollup=true hasLowSample=true (기준선은 셋 다 false)

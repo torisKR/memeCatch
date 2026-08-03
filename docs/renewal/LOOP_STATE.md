@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **014** — 게이트 없이 가능한 작업 **전부 소진** |
-| 선택 항목 | `A11Y-003` — 접근성 회귀 CI 가드 |
+| 루프 번호 | **015** — 종료. 게이트 없이 가능한 작업 0건 |
+| 선택 항목 | 분석 이벤트 커버리지 감사 + `RELEASE_CHECKLIST` 마감 |
 | 상태 | `human_gate` |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-014/` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-015/` |
 
 ## 전체 목표
 
@@ -314,9 +314,28 @@ zh-TW  約在{year}年出現
 범위 조정: 4개 route 브라우저 감사는 CI 헤드리스 러너가 필요해 비용이 크다. 전면
 감사는 DevTools MCP `lighthouse_audit`(루프 010 절차)이 계속 담당한다.
 
+## 완료된 작업 (루프 015 — 분석 이벤트 감사 + 체크리스트 마감)
+
+루프 014에서 “READY 0”이라고 했지만 **backlog가 LOOP.md를 완전히 덮지 못하고 있었다.**
+LOOP.md 「분석 이벤트」와 `RELEASE_CHECKLIST` 유지가 backlog에 아예 없었다.
+
+**분석 이벤트: 13종 중 4종만 구현돼 있다.** 특히 `meme_source_opened`와
+`correction_report_started`가 없어, **루프 003(근거 표시 정직화 + 제보 CTA)과 루프
+006(표본 경고)이 참여를 해쳤는지 도왔는지 검증할 방법이 없다.** LOOP.md가 핵심
+지표로 꼽은 「상세 → 출처 확인」·「상세 → 정정 제보」가 정확히 비어 있는 칸이다.
+
+다만 이벤트 추가는 LOOP.md가 `HUMAN_GATE`로 규정한 「사용자 데이터 수집 범위 확대」다.
+→ 명세·개인정보 검토까지만 만들고 `HG-006`으로 올렸다. `ANL-001`·`ANL-002` 등록.
+
+**부수 발견(ANL-002):** 기존 `search_submit(query)`·`search_no_result(query)`가 **원문
+검색어를 그대로 GA4로 보낸다.** LOOP.md는 원문 검색어 저장 전 개인정보 검토를
+요구한다. 새 이벤트를 늘리는 것보다 이미 나가고 있는 이 값이 노출이 더 크다.
+
+`RELEASE_CHECKLIST.md`를 루프 001 이후 처음으로 갱신해 5개 게이트 현황을 확정했다.
+
 ## 진행 중인 작업
 
-없음. **게이트 없이 진행 가능한 backlog가 전부 소진됐다.**
+없음. **게이트 없이 진행 가능한 backlog가 0건이다.**
 
 ## 마지막 검증 결과 (2026-08-04 루프 014, `artifacts/renewal/loop-014/verify.log`)
 
@@ -354,7 +373,7 @@ zh-TW  約在{year}年出現
 
 **게이트 없이 진행 가능한 항목이 남아 있지 않다.**
 
-**남은 8건은 전부 `HUMAN_GATE` 대기다** — DQ-002·DQ-003·DQ-004·DQ-006·DQ-007·
+**남은 10건은 전부 `HUMAN_GATE` 대기다** — DQ-002·DQ-003·DQ-004·DQ-006·DQ-007·
 DQ-010·DES-004·**PERF-002**(루프 012에서 HG-005 종속으로 재분류)가 `DECISIONS.md`의
 HG-001~HG-005 결정을 기다린다.
 
@@ -369,6 +388,6 @@ DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린�
 | 조건 | 충족 |
 | --- | --- |
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ **거짓 완료 선언을 하지 않는다.** `quality:check` critical 4개가 여전히 위반이다 — 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 그대로다 |
-| 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ✅ **완전 충족** — 남은 backlog 8건이 **전부** HUMAN_GATE 대기다. 게이트 없이 할 수 있는 일이 0건이다 |
+| 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ✅ **완전 충족** — 남은 backlog 10건이 **전부** HUMAN_GATE(HG-001~HG-006) 대기다. 게이트 없이 할 수 있는 일이 0건이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 14 — 기본 상한 12 초과. 잔여 비게이트 작업을 마저 처리해 소진했다 |
+| 반복 제한 | 15 — 기본 상한 12 초과. 비게이트 작업을 전부 소진하고 종료 |

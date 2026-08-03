@@ -440,15 +440,15 @@
 
 - [ ] ID: DES-006
   문제: 카드에서 category·lifecycle·usage signal 신호 과밀(§6). (점수 12.0)
-  상태: ready
+  상태: blocked (루프 039 재분류) — 어떤 신호를 뺄지는 정보 우선순위 판단 = 디자인·편집 결정. 자동 확정 부적합, HG-009 후보로 DECISIONS 검토 대상.
 
-- [ ] ID: A11Y-011
+- [x] ID: A11Y-011
   문제: 외부 embed iframe onError 폴백 부재(§8). (점수 6.0)
-  상태: ready
+  상태: rejected (루프 039) — cross-origin iframe은 로드 실패를 onError로 신뢰성 있게 감지할 수 없다(브라우저가 오류를 불투명 처리). 실효 있는 대안은 availability 재검증 배치(DQ-016 계열)이며 이미 별도 항목으로 존재. 죽은 이벤트 핸들러 추가는 무의미.
 
-- [ ] ID: DES-008
-  문제: Pretendard 서체 데드코드(§9). 실사용자 피해 낮음. (점수 4.0)
-  상태: ready
+- [x] ID: DES-008
+  문제: Pretendard 서체 데드코드(§9). (점수 4.0)
+  상태: rejected (루프 039) — LOOP.md 절대규칙 12 「변경하지 않은 영역을 임의로 정리하지 않는다」에 저촉. 실사용자 영향 없는 데드코드 제거는 이 리뉴얼 범위 밖.
 
 - [ ] ID: DES-009
   문제: DocStatusNote가 §4의 4필드 구조 미충족 — 설계안(incomplete-doc-v2.md) 존재하나 「마지막 검수」 필드 신설이 편집 표면 확장이라 게이트 후보. (점수 30.0)

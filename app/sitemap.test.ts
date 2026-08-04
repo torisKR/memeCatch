@@ -127,6 +127,26 @@ describe("사이트맵 다국어 색인 계약", () => {
     expect(source).toMatch(/(?:SEO_ROUTE_LOCALES|buildHreflangLanguages)/);
   });
 
+  it("x-default는 reviewed en 문서를 우선하고 없으면 ko 원문을 유지한다", async () => {
+    useRows([
+      indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]),
+      indexableMeme(2, [reviewedTranslation("ja", "2026-03-01T00:00:00.000Z")]),
+    ]);
+
+    const entries = await sitemap();
+    const languagesOf = (predicate: (url: string) => boolean) =>
+      entries.find((entry) => predicate(entry.url) && entry.alternates?.languages)
+        ?.alternates?.languages as Record<string, string> | undefined;
+
+    const withEnglish = languagesOf((url) => url.includes("/memes/m1"));
+    expect(withEnglish?.["x-default"]).toBe(withEnglish?.en);
+    expect(withEnglish?.["x-default"]).toContain("/en/memes/");
+
+    const withoutEnglish = languagesOf((url) => url.includes("/memes/m2"));
+    expect(withoutEnglish?.en).toBeUndefined();
+    expect(withoutEnglish?.["x-default"]).toBe(withoutEnglish?.ko);
+  });
+
   it("번역 locale과 검수·원문 동기화·필수 필드를 조회한다", () => {
     expect(source).toContain("meme_translations");
 

@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **050** — 다국어 번역 배치 아티팩트 검증 및 재개 가능성 확보 |
-| 선택 항목 | 루프 050 `LOC-007` — 4개 로케일 번역 SQL 배치의 안전·완결성 검증 |
-| 상태 | `in_progress` — 부분 배치 440/1,520행, 외부 DB 적용은 별도 운영 단계 |
+| 루프 번호 | **051** — 브랜치 정합성 감사와 안전한 SEO/GEO 변경 병합 |
+| 선택 항목 | 루프 051 `BR-001` — 완료 루프·브랜치·production 배포 상태 대조 |
+| 상태 | `in_progress` — 브랜치 감사 완료, main 검증·production 재배포 진행 중 |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `main` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-050/` (loop-050은 현재 번역 배치 진행 중) |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-051/` |
 
 ## 전체 목표
 
@@ -605,3 +605,15 @@ LSP 서버(`typescript-language-server`, `biome`)는 이 실행 환경에 설치
 메타데이터만 추가한 `f63442f`로 재배포했고, production 상태 `READY`와 canonical 도메인
 스모크를 확인했다. 번역 SQL은 여전히 읽기 전용 오프라인 아티팩트이며 프로덕션 DB에는
 적용하지 않았다.
+
+## 루프 051 — 브랜치 정합성 감사와 안전한 SEO/GEO 병합 (2026-08-04)
+
+`git branch -a -vv`, 각 worktree 상태, `main`과의 조상 관계를 대조했다. 완료된 renewal·
+design·support 커밋은 모두 `main`의 조상이었다. 오래된 backup/brand 스냅샷과 loop-049
+기능을 제거하는 `claude/upbeat-mendeleev-ec2a57` 스냅샷은 병합하지 않았다. 생성된
+Playwright 로그와 untracked `pnpm-workspace.yaml`도 코드가 아니므로 가져오지 않았다.
+
+`claude/affectionate-poitras-578f4c` worktree에 남아 있던 안전한 변경만 이식했다. reviewed
+영어 번역이 있는 한국어 상세·sitemap의 `x-default`를 영어 URL로 연결하고, 번역이 없을
+때는 한국어 원문을 유지한다. canonical은 계속 한국어 원문으로 유지하며 테스트 11건을
+통과했다. 전체 감사 결과는 `artifacts/renewal/loop-051/branch-audit.json`에 남겼다.

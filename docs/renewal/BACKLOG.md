@@ -9,6 +9,20 @@
 
 ---
 
+- [x] ID: BR-001
+  문제: LOOP 완료 커밋과 worktree/브랜치 변경이 main 및 production에 모두 반영됐는지 한 번에 확인할 증적이 없었다.
+  사용자 영향: 3
+  데이터/법적 위험: 2
+  트래픽 가중치: 3
+  해결 확신: 5
+  예상 노력: 2
+  우선순위 점수: 22.5
+  의존성: 없음
+  완료 조건: 모든 브랜치의 조상 관계·dirty worktree·production 배포를 대조하고, 안전한 미커밋 SEO/GEO 변경만 main에 이식한다.
+  검증 명령: `git branch -a -vv` · `git worktree list` · `pnpm exec vitest run` · `pnpm exec tsc --noEmit`
+  상태: done (루프 051)
+  결과: 완료 루프는 main 조상으로 확인했고, 오래된 스냅샷·생성물은 제외했다. reviewed en이 있는 문서의 x-default만 영어로 연결하는 변경을 main에 이식했다.
+
 - [x] ID: DQ-005
   문제: `region_blocked` 대표 콘텐츠가 상세 페이지에서 그대로 렌더된다. `app/(default)/memes/[key]/page.tsx:134`의 `liveContents` 필터가 `availability !== "dead"`만 보고 `region_blocked`는 통과시킨다. 랭킹 게이트(`is_meme_rank_eligible`)와 품질 검사기는 둘 다 `region_blocked`를 제외하므로 화면만 기준이 다르다. 공개 문서 14건이 dead/region_blocked 대표 콘텐츠를 갖고 있다.
   사용자 영향: 3

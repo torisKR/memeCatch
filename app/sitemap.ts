@@ -97,7 +97,6 @@ function memeLanguages(
   const koreanPath = memePathFrom(meme.short_id, meme.slug);
   const languages: Record<string, string> = {
     ko: absolute(koreanPath),
-    "x-default": absolute(koreanPath),
   };
   for (const locale of SEO_CONTENT_LOCALES) {
     const translation = translations.get(locale);
@@ -110,7 +109,7 @@ function memeLanguages(
       ),
     );
   }
-  return languages;
+  return { ...languages, "x-default": languages.en ?? absolute(koreanPath) };
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

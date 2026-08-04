@@ -83,7 +83,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ).flatMap(({ locale, version }) =>
     version ? [{ locale, version }] : [],
   );
-  const languages = Object.fromEntries([
+  const hreflangs: Record<string, string> = Object.fromEntries([
     ["ko", path],
     ...localizedVersions.map(({ locale, version }) => [
       getHreflang(locale),
@@ -93,8 +93,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         version.slug,
       ),
     ]),
-    ["x-default", path],
   ]);
+  const languages = { ...hreflangs, "x-default": hreflangs.en ?? path };
   const description = `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
   return {
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)

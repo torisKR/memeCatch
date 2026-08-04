@@ -99,7 +99,9 @@ export default function PrivacyPage() {
           <p className="mt-3">
             본 서비스는 이용 통계 분석을 위해 <strong>Google 애널리틱스</strong>를
             사용합니다. 수집되는 정보는 익명화된 이용 행태(방문 페이지, 유입
-            경로, 기기 유형 등)이며 개인을 식별하지 않습니다.
+            경로, 기기 유형, 문서 내 출처 링크·정정 제보 링크 클릭 — 문서 ID와
+            플랫폼명만 기록하며 개인을 식별할 수 있는 정보는 포함하지 않습니다)이며
+            개인을 식별하지 않습니다.
           </p>
           <p className="mt-3">
             본 서비스는 광고 게재를 위해 <strong>Google AdSense</strong>를

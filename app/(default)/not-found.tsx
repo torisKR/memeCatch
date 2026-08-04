@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 /**
@@ -5,6 +6,16 @@ import Link from "next/link";
  * 큰 404 숫자 + 검색 폼으로 "다시 잡으러 가는" 다음 행동을 제시한다.
  * 서버 컴포넌트(모션 불필요) · 이모지 금지(SVG만) · rounded/border/surface 토큰 준수.
  */
+
+// HG-007 완화(B/D 결정, SEO-001): 없는 밈 URL이 Next 16 ISR 경로에서 notFound()를
+// 거쳐도 실제 404 상태코드가 아닌 200으로 응답하는 soft-404 결함이 있다(근본 수정은
+// Next 패치 대기). Next의 noindex 자동 주입은 "실제 404 상태코드" 조건부라 이 경로에서
+// 못 미덥다 — 그래서 상태코드와 무관하게 여기서 robots noindex를 명시한다. follow는
+// 유지: 페이지의 홈/탐색 링크로 크롤이 계속 전파돼야 한다.
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
+
 export default function NotFound() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-14 sm:py-20">

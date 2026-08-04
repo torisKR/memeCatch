@@ -38,7 +38,7 @@ import { SourceEvidence } from "@/components/source-evidence";
 import { TrustNote } from "@/components/trust-note";
 import { DocStatusNote } from "@/components/doc-status-note";
 import { AdsenseScript } from "@/components/adsense-script";
-import { isIndexableMeme } from "@/lib/content-depth";
+import { contentDepth, isIndexableMeme } from "@/lib/content-depth";
 import { isRenderableContent } from "@/lib/content-availability";
 import {
   getAvailableTranslationLocales,
@@ -181,10 +181,12 @@ export default async function MemeDetailPage({ params }: Props) {
         광고는 충실도 판정을 통과한 문서에서만 게재한다. 얇은 문서는 noindex로
         색인에서 빠지지만 사람은 여전히 도달하므로, 로더를 렌더하지 않아야
         "저품질 화면에 광고 게재"(게시자 정책 인벤토리 가치)를 피할 수 있다.
-        색인 판정과 같은 함수를 쓰므로 기준이 갈리지 않는다 — 문서가 채워지면
-        색인과 광고가 함께 돌아온다.
+        HG-001 C안(2026-08-04): 색인(sitemap·robots) 임계값만 MIN_PROSE_CHARS_INDEX(150자)로
+        낮췄다. 광고는 여기 반영하지 않고 contentDepth().isSubstantial(250자, 배너와 동일
+        기준)을 그대로 쓴다 — isIndexableMeme()과 더는 같은 함수가 아니므로 기준이
+        갈릴 수 있다(150~249자 문서는 색인엔 남지만 광고는 여전히 게재하지 않는다).
       */}
-      {isIndexableMeme(meme) && <AdsenseScript />}
+      {contentDepth(meme).isSubstantial && <AdsenseScript />}
       {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm + 브레드크럼 + 대표영상.
           WebPage JSON-LD는 색인 판정과 같은 조건으로 게이트한다 — 얇은 문서(96.3%)는
           noindex인데 구조화 데이터만 완성 문서처럼 나가면 LOOP.md §10「보강 중 문서의
@@ -309,7 +311,7 @@ export default async function MemeDetailPage({ params }: Props) {
           {/* 정리 중 안내 — content-depth가 '얇음'으로 본 문서에만. 방치된 스텁이 아니라
               확인된 만큼만 공개하는 관리 문서임을 밝히고 제보 경로를 연다.
               충실도 판정은 generateMetadata의 robots와 같은 입력(meme)을 쓴다. */}
-          <DocStatusNote meme={meme} title={meme.title} />
+          <DocStatusNote meme={meme} title={meme.title} shortId={meme.short_id} />
 
           {/* 판정 근거 한 블록 — 신호등 의미·usage_note·상황별 가이드·sentiment·caution 통합 */}
           <SafetyRationale
@@ -403,6 +405,7 @@ export default async function MemeDetailPage({ params }: Props) {
                   updatedAt={meme.updated_at}
                   moderationStatus={meme.moderation_status}
                   title={meme.title}
+                  shortId={meme.short_id}
                 />
               </div>
             </section>
@@ -413,7 +416,7 @@ export default async function MemeDetailPage({ params }: Props) {
 
           {/* 참고 자료 근거 목록 — 제목 있는 출처가 하나도 없으면 렌더하지 않는다.
               유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
-          <SourceEvidence sources={meme.meme_sources} />
+          <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
 
           {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
               권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}

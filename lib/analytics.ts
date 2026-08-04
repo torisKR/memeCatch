@@ -14,6 +14,10 @@
  *          | search_no_result(query) — 결과 0건 (search_submit과 함께 발사)
  *          | search_result_click(query, to) — 결과 카드 클릭
  *            ↳ 검색 성공률 = (result_click + suggest_click) / submit
+ *          | meme_source_opened(short_id, platform) — 상세의 근거 목록(SourceEvidence)
+ *            출처 링크 클릭. HG-006 B안 — 개인정보 무포함(문서 ID·정규화 플랫폼명만)
+ *          | correction_report_started(short_id, from) — 상세의 정정 제보 CTA 진입.
+ *            from=trust_note(근거 0건) | doc_status(얇은 문서). HG-006 B안
  */
 type GtagEvent =
   | "next_meme_click"
@@ -38,7 +42,9 @@ type GtagEvent =
   | "traffic_source"
   | "search_submit"
   | "search_result_click"
-  | "search_no_result";
+  | "search_no_result"
+  | "meme_source_opened"
+  | "correction_report_started";
 
 declare global {
   interface Window {

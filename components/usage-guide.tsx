@@ -36,6 +36,19 @@ export function parseUsageContext(context: Json): UsageContextRow[] {
     .filter((r): r is UsageContextRow => isSafetyLevel(r.level));
 }
 
+/**
+ * 「상황별 판정 미확인」 — 4칸이 전부 green이면 상황별로 나눠 확인한 흔적이 없다
+ * (같은 값이 캐릭터/생성 단계 기본값으로 남은 것으로 추정, HG-003 C안).
+ *
+ * 의도적으로 「전부 green」만 본다 — 「전부 동일값」 전체가 아니다. 4칸이 동일하게
+ * red/yellow/gray인 문서는 「어디서도 쓰지 마세요」라는 정당한 판정일 수 있고,
+ * 이미 확인된 경고를 미확인으로 낮추는 쪽이 근거 없는 green 표시보다 위험하다
+ * (비대칭 위험: 관대한 오판은 사용자가 손해를 보지만, 엄격한 반복은 비용이 없다).
+ */
+export function isUnverifiedUsageContext(rows: UsageContextRow[]): boolean {
+  return rows.length >= 2 && rows.every((r) => r.level === "green");
+}
+
 /** 상황별 가·불가 행 목록 — UsageGuide와 SafetyRationale이 공유(중복 마크업 금지) */
 export function UsageContextRows({ rows }: { rows: UsageContextRow[] }) {
   if (rows.length === 0) return null;

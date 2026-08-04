@@ -3,6 +3,7 @@ import type { Database, Json } from "@/lib/database.types";
 import { SafetyBadge } from "@/components/safety-badge";
 import {
   UsageContextRows,
+  isUnverifiedUsageContext,
   parseUsageContext,
   type UsageContextRow,
 } from "@/components/usage-guide";
@@ -105,7 +106,12 @@ export function SafetyRationale({
   note?: string | null;
   caution?: string | null;
 }) {
-  const rows = parseUsageContext(context);
+  const parsedRows = parseUsageContext(context);
+  // 상황별 확인 흔적이 없으면(4칸 전부 green) 상황별 행·문장을 만들지 않는다.
+  // 그대로 두면 생성 단계 기본값이 "직장에서·친구끼리·...는 무리 없이 통해요"라는
+  // 근거 없는 단정으로 렌더된다(HG-003 C안).
+  const isUnverified = isUnverifiedUsageContext(parsedRows);
+  const rows = isUnverified ? [] : parsedRows;
   const sentimentChip = SENTIMENT[sentiment].user;
   const isRisky = level === "red" || level === "yellow";
   const noteText = note?.trim() || null;
@@ -144,12 +150,28 @@ export function SafetyRationale({
         )}
       </div>
 
-      {/* (b) 상황별 가·불가 — usage_context */}
-      {rows.length > 0 && (
-        <div>
-          <h3 className="text-base font-bold">어디서 써도 될까요?</h3>
-          <UsageContextRows rows={rows} />
+      {/* (b) 상황별 가·불가 — usage_context. 미확인 상태면 확인된 것처럼 보이는
+          표 대신 무엇이 없는지 구체적으로 말한다(HG-003 C안). 새 색·글리프는
+          만들지 않는다 — doc-status-note.tsx와 같은 bg-surface-2/text-muted,
+          SAFETY_LEVELS.gray.icon의 기존 ◌ 글리프를 재사용한다. */}
+      {isUnverified ? (
+        <div className="rounded-xl bg-surface-2 p-4">
+          <h3 className="flex items-center gap-2 text-base font-bold">
+            <span aria-hidden>◌</span> 상황별 판정은 아직 확인 전이에요
+          </h3>
+          <p className="mt-1.5 text-base leading-relaxed text-muted">
+            직장·친구·가족·공개 SNS를 나눠서 확인한 기록이 아직 없어요. 위 등급은
+            문서 전체에 대한 판정이라 특정 상황에 그대로 적용된다고 보장하지 않아요.
+            확인이 끝나면 상황별로 나눠 보여드릴게요.
+          </p>
         </div>
+      ) : (
+        rows.length > 0 && (
+          <div>
+            <h3 className="text-base font-bold">어디서 써도 될까요?</h3>
+            <UsageContextRows rows={rows} />
+          </div>
+        )
       )}
 
       {/* (c) sentiment — 논쟁 상태도 판정 근거의 일부 */}

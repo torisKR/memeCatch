@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-04T03:45:05.747Z",
+  "generatedAt": "2026-08-04T04:57:25.781Z",
   "scope": {
     "moderationStatus": [
       "approved",
@@ -190,11 +190,10 @@
       "id": "DQ-M2-no-tags",
       "severity": "medium",
       "title": "태그 없음(탐색·관련 밈 품질 저하)",
-      "count": 3906,
-      "ratio": 1,
+      "count": 2887,
+      "ratio": 0.7391,
       "samples": [
         "ajvzf7pk",
-        "2au7br9f",
         "pp3tzbgm",
         "e2mge2nh",
         "y9azs4hb",
@@ -202,7 +201,8 @@
         "5233uzcz",
         "qw6c9fbu",
         "6tnvkf59",
-        "y3mzdfk9"
+        "y3mzdfk9",
+        "nac3mj5m"
       ]
     },
     {

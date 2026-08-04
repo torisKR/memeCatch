@@ -32,8 +32,11 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
   it("밈 상세는 충실도 판정을 통과한 문서에서만 로더를 렌더한다", () => {
     const page = read("app/(default)/memes/[key]/page.tsx");
 
-    // isIndexableMeme(meme) && <AdsenseScript /> — 색인 판정과 같은 기준을 쓴다.
-    expect(page).toMatch(/isIndexableMeme\(meme\)\s*&&\s*<AdsenseScript\s*\/>/);
+    // contentDepth(meme).isSubstantial && <AdsenseScript /> — HG-001 C안(2026-08-04):
+    // 색인(sitemap·robots)은 MIN_PROSE_CHARS_INDEX(150자)로 낮아졌지만, 광고는
+    // 배너(DocStatusNote)와 같은 MIN_PROSE_CHARS(250자) 기준을 그대로 쓴다 —
+    // isIndexableMeme(meme)과는 더 이상 같은 함수가 아니다.
+    expect(page).toMatch(/contentDepth\(meme\)\.isSubstantial\s*&&\s*<AdsenseScript\s*\/>/);
     // 조건 없이 렌더하는 자리가 있으면 얇은 문서에도 광고가 붙는다.
     expect(page.match(/<AdsenseScript\s*\/>/g)).toHaveLength(1);
   });

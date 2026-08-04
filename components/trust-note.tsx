@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { summarizeEvidence, type EvidenceSourceInput } from "@/lib/source-links";
+import { TrackedBlock } from "@/components/tracked-block";
 
 /**
  * 신뢰 신호 — "이 설명을 무엇으로 확인했나"를 실제 근거 상태에 맞춰 말한다.
@@ -22,11 +23,14 @@ export function TrustNote({
   updatedAt,
   moderationStatus,
   title,
+  shortId,
 }: {
   sources: EvidenceSourceInput[];
   updatedAt: string;
   moderationStatus: string;
   title: string;
+  /** 이 문서의 공개 short_id — 정정 제보 CTA 계측용(개인정보 아님). */
+  shortId: string;
 }) {
   const evidence = summarizeEvidence(sources);
   const updated = (
@@ -47,12 +51,18 @@ export function TrustNote({
           <span className="font-semibold text-foreground">근거 출처 준비 중</span> — 이
           문서는 아직 확인된 출처가 연결되지 않았어요. 마지막 업데이트 {updated}
         </p>
-        <Link
-          href={`/submit?name=${encodeURIComponent(title)}`}
-          className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
+        {/* 정정 제보 진입 계측(HG-006 B안) — 개인정보 없음: 문서 short_id + 진입 위치만. */}
+        <TrackedBlock
+          event="correction_report_started"
+          params={{ short_id: shortId, from: "trust_note" }}
         >
-          출처를 아시면 알려 주세요
-        </Link>
+          <Link
+            href={`/submit?name=${encodeURIComponent(title)}`}
+            className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
+          >
+            출처를 아시면 알려 주세요
+          </Link>
+        </TrackedBlock>
       </div>
     );
   }

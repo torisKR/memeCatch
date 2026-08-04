@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { contentDepth, type ContentDepthInput } from "@/lib/content-depth";
+import { TrackedBlock } from "@/components/tracked-block";
 
 /**
  * 정리 진행 중 안내 — lib/content-depth.ts가 '얇음'으로 판정한 문서에만 붙는다.
@@ -14,9 +15,12 @@ import { contentDepth, type ContentDepthInput } from "@/lib/content-depth";
 export function DocStatusNote({
   meme,
   title,
+  shortId,
 }: {
   meme: ContentDepthInput;
   title: string;
+  /** 이 문서의 공개 short_id — 정정 제보 CTA 계측용(개인정보 아님). */
+  shortId: string;
 }) {
   const depth = contentDepth(meme);
   if (!depth.isThin) return null;
@@ -53,12 +57,18 @@ export function DocStatusNote({
       <p className="mt-2 text-sm text-muted">
         「{title}」, 실제로 써 보셨다면 알려 주세요. 검수를 거쳐 이 문서에 반영해요.
       </p>
-      <Link
-        href={`/submit?name=${encodeURIComponent(title)}`}
-        className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-surface px-4 py-2.5 text-base font-semibold underline underline-offset-2 transition-colors hover:text-foreground"
+      {/* 정정 제보 진입 계측(HG-006 B안) — 개인정보 없음: 문서 short_id + 진입 위치만. */}
+      <TrackedBlock
+        event="correction_report_started"
+        params={{ short_id: shortId, from: "doc_status" }}
       >
-        아는 내용 제보하기
-      </Link>
+        <Link
+          href={`/submit?name=${encodeURIComponent(title)}`}
+          className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-surface px-4 py-2.5 text-base font-semibold underline underline-offset-2 transition-colors hover:text-foreground"
+        >
+          아는 내용 제보하기
+        </Link>
+      </TrackedBlock>
     </aside>
   );
 }

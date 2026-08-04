@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CategoryTag } from "@/components/category-tag";
-import { LifeGauge } from "@/components/life-gauge";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { SafetyBadge } from "@/components/safety-badge";
 import { memePathFrom } from "@/lib/labels";
@@ -80,9 +79,8 @@ export function MemeCard({
         <p className="line-clamp-2 min-h-[3.25em] break-keep text-sm leading-relaxed text-muted">
           {meme.summary}
         </p>
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-t border-border pt-2.5">
+        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border pt-2.5">
           <SafetyBadge level={meme.safety_level} />
-          <LifeGauge status={meme.lifecycle_status} size="sm" showLabel={false} />
         </div>
       </div>
     </Link>

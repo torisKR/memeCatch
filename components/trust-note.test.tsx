@@ -8,6 +8,7 @@ const base = {
   updatedAt: "2026-07-15T00:00:00.000Z",
   moderationStatus: "approved",
   title: "테스트 밈",
+  shortId: "pp3tzbgm",
 };
 
 describe("TrustNote", () => {

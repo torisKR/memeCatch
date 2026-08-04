@@ -47,6 +47,7 @@ type DetailCopy = {
   incompleteTitle: string;
   incompleteBody: string;
   context: string;
+  contextUnverified: string;
   contexts: Record<string, string>;
   safety: Record<SafetyLevel, string>;
 };
@@ -75,6 +76,7 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     incompleteTitle: "Source review is still in progress",
     incompleteBody: "This translation is current, but the underlying Korean entry does not yet meet the source and depth requirements for search indexing.",
     context: "By context",
+    contextUnverified: "Ratings by context haven't been confirmed yet.",
     contexts: { work: "At work", friends: "With friends", family: "With family", sns: "On public social media" },
     safety: { green: "Generally safe to use", yellow: "Context matters", gray: "Mostly dated", red: "Risky to use" },
   },
@@ -101,6 +103,7 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     incompleteTitle: "出典の確認を続けています",
     incompleteBody: "翻訳は最新ですが、韓国語の記事が検索登録に必要な出典・内容量の基準をまだ満たしていません。",
     context: "場面別",
+    contextUnverified: "場面別の判定はまだ確認前です。",
     contexts: { work: "職場で", friends: "友人同士で", family: "家族と", sns: "公開SNSで" },
     safety: { green: "基本的に使用可", yellow: "文脈に注意", gray: "やや古い表現", red: "使用は危険" },
   },
@@ -127,6 +130,7 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     incompleteTitle: "来源仍在审核中",
     incompleteBody: "翻译是最新的，但韩文词条尚未达到搜索收录所需的来源与内容深度标准。",
     context: "不同场景",
+    contextUnverified: "各场景的判定尚未经过确认。",
     contexts: { work: "职场", friends: "朋友之间", family: "与家人", sns: "公开社交平台" },
     safety: { green: "通常可以使用", yellow: "需要注意语境", gray: "大多已经过时", red: "使用风险较高" },
   },
@@ -153,6 +157,7 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     incompleteTitle: "來源仍在審核中",
     incompleteBody: "翻譯是最新的，但韓文詞條尚未達到搜尋收錄所需的來源與內容深度標準。",
     context: "不同情境",
+    contextUnverified: "各情境的判定尚未經過確認。",
     contexts: { work: "職場", friends: "朋友之間", family: "與家人", sns: "公開社群平台" },
     safety: { green: "通常可以使用", yellow: "需要注意語境", gray: "大多已經過時", red: "使用風險較高" },
   },
@@ -173,6 +178,13 @@ function usageContexts(value: unknown): [string, SafetyLevel][] {
     (entry): entry is [string, SafetyLevel] =>
       ["green", "yellow", "gray", "red"].includes(String(entry[1])),
   );
+}
+
+// KO 상세와 같은 규칙(components/usage-guide.tsx isUnverifiedUsageContext):
+// 유효 칸 2개 이상이 전부 green이면 상황별 확인 흔적이 없는 것으로 본다.
+// 로케일마다 다른 결론이 나오면 안 된다(HG-003 C안 §3.4).
+function isUnverifiedContexts(entries: [string, SafetyLevel][]): boolean {
+  return entries.length >= 2 && entries.every(([, level]) => level === "green");
 }
 
 async function getLanguageVersions(shortId: string, memeId: string, current: SeoContentLocale) {
@@ -247,7 +259,9 @@ export default async function LocalizedMemePage({ params }: Props) {
   const seo = getSeoCopy(locale);
   const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
   const sourceLinks = meme.meme_sources.filter((source) => source.source_url);
-  const contexts = usageContexts(meme.usage_context);
+  const allContexts = usageContexts(meme.usage_context);
+  const contextsUnverified = isUnverifiedContexts(allContexts);
+  const contexts = contextsUnverified ? [] : allContexts;
   const isMachine = meme.translation.status === "machine";
   const isStale = meme.translation.status === "stale" || !meme.translation.isCurrent;
   const needsReview = !isIndexableLocalizedMeme(meme);
@@ -411,18 +425,27 @@ export default async function LocalizedMemePage({ params }: Props) {
               <div className="relative">
                 <h2 id="meme-usage" className="text-2xl font-black tracking-tight">{copy.usage}</h2>
                 <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.usage_note}</p>
-                {contexts.length > 0 && (
+                {contextsUnverified ? (
                   <div className="mt-5 border-t border-border pt-4">
-                    <h3 className="text-sm font-bold">{copy.context}</h3>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {contexts.map(([context, level]) => (
-                        <div key={context} className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-                          <dt>{copy.contexts[context] ?? context}</dt>
-                          <dd className="font-semibold">{copy.safety[level]}</dd>
-                        </div>
-                      ))}
-                    </dl>
+                    <p className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm text-muted">
+                      <span aria-hidden>◌</span>
+                      {copy.contextUnverified}
+                    </p>
                   </div>
+                ) : (
+                  contexts.length > 0 && (
+                    <div className="mt-5 border-t border-border pt-4">
+                      <h3 className="text-sm font-bold">{copy.context}</h3>
+                      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {contexts.map(([context, level]) => (
+                          <div key={context} className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
+                            <dt>{copy.contexts[context] ?? context}</dt>
+                            <dd className="font-semibold">{copy.safety[level]}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )
                 )}
               </div>
             </section>

@@ -465,3 +465,32 @@ aria-hidden ⑥tilt-card rAF 언마운트 정리. 스타일 전용 계약 위반
 **잔여 디자인 부채(비차단)**: 색 토큰 문법 혼용(text-(--signal-cyan) vs
 text-signal-cyan), TiltCard/.tilt-3d 미사용(어휘로 보존, DESIGN.md §16 문서화),
 [locale] 출처 h2 위계 다운그레이드, CTN 축약 모호.
+
+---
+
+## 루프 047 — HUMAN_GATE 일괄 결정·실행 + 로컬 dev 완성 (2026-08-04)
+
+**결정**: 사용자 위임("너가 직접 판단해서 결정해줘")으로 HG-001~009 전부 확정 —
+DECISIONS.md 「결정 확정 (2026-08-04, 루프 047)」 표 참조.
+
+**실행 완료 (병렬 8 에이전트 + 오케스트레이터 DB 적용)**:
+- HG-001 C: MIN_PROSE_CHARS_INDEX=150 분리(사이트맵·robots·JSON-LD만) — 광고 게이트는
+  contentDepth().isSubstantial(250)로 명시 분리(숨은 결합 해체). 색인 증가는 배포 후 재측정.
+- HG-003 C: uniform-green(3,298건)만 「상황별 판정 미확인」 표시. uniform-red/yellow 12건
+  (지잡대·떼카 등)의 확정 경고는 보존 — 제안서 §3 규칙 그대로.
+- HG-004 C Phase1: R2 태그 backfill **프로덕션 적용 완료** — tags 22종·매핑 1,143행,
+  재실행 신규 0(멱등), DQ-M2 3,906→2,887, 색인 147 불변(예측 일치). 롤백 SQL은
+  artifacts/renewal/loop-047/tag-backfill-r2.sql 기준 제안서 §7. getRelatedMemes
+  태그 조회에 trend_score 정렬 추가(§10 후속 처리).
+- HG-005 C: 도크 실측 높이(131/151px) 스페이서 — SSR 첫 바이트부터 존재(CLS 해결 포함).
+- HG-006 B: meme_source_opened·correction_report_started 추가, 검색어 64자 절단,
+  /privacy 1줄 반영.
+- HG-007 B/D: not-found 경계에 robots noindex 명시(상태코드 무관 색인 차단).
+- HG-009(a) B: 카드에서 LifeGauge·SignalTrace 제거(안전+카테고리만).
+- dev 환경: supabase/seed.sql 12건(카테고리 6×2, lifecycle·safety 각 3×4) + db reset
+  검증 + NEXT_PUBLIC_SITE_URL 추가. 로컬 dev가 실콘텐츠로 렌더됨.
+
+**실행 보류(결정은 확정)**: HG-002 B(168건 재판정 — HG-003 재판정과 묶은 배치),
+HG-008 B(기준 명문화 선행), HG-009(b)(검수 시점 필드 신설 후).
+
+**게이트**: tsc 0 / eslint 0 / vitest 646/646 / build 64/64.

@@ -70,9 +70,66 @@ describe("contentDepth 판정", () => {
     }
   });
 
-  it("isIndexableMeme은 isSubstantial과 같은 답을 준다", () => {
+  it("충실한 밈·전형적인 얇은 밈에서는 isIndexableMeme과 isSubstantial이 같은 답을 준다", () => {
     expect(isIndexableMeme(substantialMeme())).toBe(true);
     expect(isIndexableMeme(thinMeme())).toBe(false);
+  });
+});
+
+/**
+ * HG-001 C안(2026-08-04) — 색인(사이트맵·robots) 임계값만 낮추고 배너·광고 판정은
+ * 현행 유지하기로 한 결정의 회귀 테스트. isIndexableMeme()은 MIN_PROSE_CHARS_INDEX(150),
+ * contentDepth().isSubstantial(배너·광고가 쓰는 값)은 MIN_PROSE_CHARS(250)를 쓴다 —
+ * 두 산문 하한 사이(150~249자)에서 반드시 갈라져야 한다. MIN_SCORE(5)는 공통.
+ */
+describe("색인 판정과 배너·광고 판정의 산문 하한 분리 (HG-001 C안)", () => {
+  it("산문 150~249자·점수 충족 문서는 색인엔 남지만 배너·광고 기준은 통과하지 못한다", () => {
+    // 정의 100(0점, BASIC 150 미만) + 유래 60(2점) + 출처 2개(2점) + 미디어 1개(1점) = 5점,
+    // 산문 160자 — MIN_PROSE_CHARS_INDEX(150) 이상, MIN_PROSE_CHARS(250) 미만.
+    const between: ContentDepthInput = {
+      description: chars(100),
+      origin: chars(60),
+      meme_sources: [
+        { source_url: "https://a.example/1" },
+        { source_url: "https://b.example/2" },
+      ],
+      meme_contents: [{ availability: "live", moderation_status: "approved" }],
+    };
+    const depth = contentDepth(between);
+
+    expect(depth.score).toBe(T.MIN_SCORE);
+    expect(depth.proseChars).toBe(160);
+    expect(depth.proseChars).toBeGreaterThanOrEqual(T.MIN_PROSE_CHARS_INDEX);
+    expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS);
+
+    // 색인(사이트맵·robots)은 150자 기준이라 통과.
+    expect(isIndexableMeme(between)).toBe(true);
+    // 배너(DocStatusNote)·광고(AdsenseScript)는 250자 기준을 그대로 쓰므로 미통과.
+    expect(depth.isSubstantial).toBe(false);
+    expect(depth.isThin).toBe(true);
+  });
+
+  it("산문 150자 미만이면 색인·배너·광고 모두 미통과다", () => {
+    // 정의 100(0점) + 유래 30(1점) + 출처 2개(2점) + 미디어 1개(1점) + 태그 3개(1점) = 5점,
+    // 산문 130자 — MIN_PROSE_CHARS_INDEX(150) 미만.
+    const under: ContentDepthInput = {
+      description: chars(100),
+      origin: chars(30),
+      meme_sources: [
+        { source_url: "https://a.example/1" },
+        { source_url: "https://b.example/2" },
+      ],
+      meme_contents: [{ availability: "live", moderation_status: "approved" }],
+      meme_tags_map: [{ tag_id: "a" }, { tag_id: "b" }, { tag_id: "c" }],
+    };
+    const depth = contentDepth(under);
+
+    expect(depth.score).toBe(T.MIN_SCORE);
+    expect(depth.proseChars).toBe(130);
+    expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS_INDEX);
+
+    expect(isIndexableMeme(under)).toBe(false);
+    expect(depth.isSubstantial).toBe(false);
   });
 });
 

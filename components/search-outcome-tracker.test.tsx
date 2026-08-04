@@ -88,11 +88,11 @@ describe("SearchOutcomeTracker", () => {
     expect(track).toHaveBeenCalledTimes(1);
   });
 
-  it("검색어가 길어도 GA4 상한(100자)을 넘기지 않는다", () => {
+  it("검색어가 길어도 HG-006 상한(64자)을 넘기지 않는다", () => {
     render(<SearchOutcomeTracker query={"가".repeat(300)} resultCount={1} />);
     advance(PAST_SETTLE);
 
     const [, params] = track.mock.calls[0] as [string, { query: string }];
-    expect(params.query).toHaveLength(100);
+    expect(params.query).toHaveLength(64);
   });
 });

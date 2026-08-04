@@ -14,14 +14,18 @@ describe("DocStatusNote", () => {
   it("조사 placeholder를 화면에 노출하지 않는다", () => {
     // 제목은 받침 유무·비한글 종결이 섞여 있다 — 어느 쪽이든 placeholder가 없어야 한다.
     for (const title of ["나빌레라", "탁걸리", "보아 - No.1", "12-3-30 챌린지"]) {
-      const html = renderToStaticMarkup(<DocStatusNote meme={thin} title={title} />);
+      const html = renderToStaticMarkup(
+        <DocStatusNote meme={thin} title={title} shortId="pp3tzbgm" />
+      );
       expect(html).not.toMatch(PARTICLE_PLACEHOLDER);
       expect(html).toContain(title);
     }
   });
 
   it("얇은 문서에서 무엇이 비었는지 구체적으로 지목한다", () => {
-    const html = renderToStaticMarkup(<DocStatusNote meme={thin} title="테스트 밈" />);
+    const html = renderToStaticMarkup(
+      <DocStatusNote meme={thin} title="테스트 밈" shortId="pp3tzbgm" />
+    );
 
     expect(html).toContain("아직 정리 중인 문서예요");
     expect(html).toContain("유래");
@@ -38,7 +42,9 @@ describe("DocStatusNote", () => {
     };
 
     expect(
-      renderToStaticMarkup(<DocStatusNote meme={substantial} title="충실한 밈" />)
+      renderToStaticMarkup(
+        <DocStatusNote meme={substantial} title="충실한 밈" shortId="pp3tzbgm" />
+      )
     ).toBe("");
   });
 });

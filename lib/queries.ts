@@ -239,6 +239,7 @@ export async function getRelatedMemes(
         .select(LIST_SELECT)
         .in("id", [...taggedIds])
         .in("moderation_status", [...PUBLIC_STATUSES])
+        .order("trend_score", { ascending: false })
         .limit(30);
       return data as MemeListItem[] | null;
     })();

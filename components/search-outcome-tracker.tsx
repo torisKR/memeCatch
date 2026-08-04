@@ -22,8 +22,11 @@ import { track } from "@/lib/analytics";
  */
 const SETTLE_MS = 900;
 
-/** GA4 파라미터 상한. 검색어는 사용자 입력이므로 반드시 잘라서 보낸다. */
-const MAX_QUERY_LENGTH = 100;
+/**
+ * GA4로 내보내는 검색어 상한.
+ * HG-006 개인정보 완화 — 원문 무제한 전송 중단, 64자로 절단해 보낸다.
+ */
+const MAX_QUERY_LENGTH = 64;
 
 export function SearchOutcomeTracker({
   query,

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { SafetyBadge } from "@/components/safety-badge";
-import { SignalTrace } from "@/components/signal-trace";
 import { memePathFrom } from "@/lib/labels";
 import type { MemeListItem } from "@/lib/queries";
 
@@ -59,8 +58,6 @@ export function MemeCompactCard({
         <p title={meme.title} className="line-clamp-2 text-sm font-extrabold leading-snug">
           {meme.title}
         </p>
-        {/* 시그니처 — 파형 모양이 곧 생애주기다(색 의존 없음) */}
-        <SignalTrace status={meme.lifecycle_status} className="w-full" />
         <SafetyBadge level={meme.safety_level} />
       </div>
     </Link>

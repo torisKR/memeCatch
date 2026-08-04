@@ -1,0 +1,25 @@
+{
+  "loop": "050",
+  "commit": "f63442ff53032533b1c5dae02f1165bad44d240f",
+  "deployment_id": "dpl_8HhCJwzZ3veXC7jcRMUbkarq4xHp",
+  "target": "production",
+  "ready_state": "READY",
+  "deployment_url": "https://memecatch-26najn5ct-ironjustlikethatgmailcoms-projects.vercel.app",
+  "aliases": [
+    "https://catchmeme.com",
+    "https://www.catchmeme.com",
+    "https://memecatch.vercel.app"
+  ],
+  "production_smoke": {
+    "base_url": "https://catchmeme.com",
+    "passed": "6/6",
+    "known_warning": "SEO-001: unknown meme key returns soft-200"
+  },
+  "seo_geo_checks": [
+    "/en, /ja, /zh, /zh-tw locale markers",
+    "/robots.txt GPTBot and ClaudeBot",
+    "/sitemap.xml locale URLs",
+    "/llms.txt locale links",
+    "/{locale}/memes/3bv6kw7c translated routes"
+  ]
+}

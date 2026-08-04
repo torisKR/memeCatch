@@ -595,6 +595,13 @@ SQL은 읽기 전용으로 검사했으며 프로덕션 Supabase에 적용하지
 | route smoke | `SMOKE_BASE_URL=http://localhost:3100 pnpm smoke` | ✅ 6/6, SEO-001 soft-404는 known issue |
 | 글로벌 SEO/GEO | 로케일·robots·sitemap·llms 읽기 검사 | ✅ en/ja/zh/zh-tw + GPTBot/ClaudeBot |
 | 데이터 품질 | `pnpm quality:report` (anon GET) | ✅ 리포트 갱신, critical 수치는 기준선과 동일 |
+| production 배포 | Vercel `dpl_8HhCJwzZ3veXC7jcRMUbkarq4xHp` | ✅ `READY`, `catchmeme.com` aliases, 증적 `artifacts/renewal/loop-050/deployment.json` |
 
 LSP 서버(`typescript-language-server`, `biome`)는 이 실행 환경에 설치되어 있지 않아
 자동 LSP 진단은 수행하지 못했다. TypeScript·ESLint·빌드·테스트 명령은 별도로 통과했다.
+
+배포 차이로 처음 production build가 실패했다. 로컬 `.codegraph` 심볼릭 링크가 Vercel
+업로드 목록에 포함되지만 대상 경로는 배포 환경에 없었다. `.vercelignore`에 해당 로컬
+메타데이터만 추가한 `f63442f`로 재배포했고, production 상태 `READY`와 canonical 도메인
+스모크를 확인했다. 번역 SQL은 여전히 읽기 전용 오프라인 아티팩트이며 프로덕션 DB에는
+적용하지 않았다.

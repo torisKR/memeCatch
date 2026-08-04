@@ -58,7 +58,7 @@
 - [x] 결정·trade-off가 `DECISIONS.md`에 기록됨 — D-001~D-004, HG-001~HG-006
 - [x] 검증 로그가 `artifacts/renewal/loop-NNN/`에 저장됨 — loop-001~015
 - [x] HUMAN_GATE 항목이 승인 없이 배포되지 않았다 — 게이트 항목은 전부 문서까지만
-- [x] push / merge / production deploy — `eebc3e2` pushed to `main`; Vercel `dpl_FLKYjAS452tXtPtthTMGM7NcmGyU` `READY`, `https://catchmeme.com` production smoke 6/6
+- [x] push / merge / production deploy — `36b1762` pushed to `main`; Vercel `dpl_8EGM72qLVPcNK3fLh3hrfcscyjvn` `READY`, `https://catchmeme.com` aliases active
 
 ## 게이트 F — 글로벌 번역 배치 (루프 050)
 

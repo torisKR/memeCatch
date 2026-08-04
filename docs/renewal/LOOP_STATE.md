@@ -9,7 +9,7 @@
 | --- | --- |
 | 루프 번호 | **051** — 브랜치 정합성 감사와 안전한 SEO/GEO 변경 병합 |
 | 선택 항목 | 루프 051 `BR-001` — 완료 루프·브랜치·production 배포 상태 대조 |
-| 상태 | `in_progress` — 브랜치 감사 완료, main 검증·production 재배포 진행 중 |
+| 상태 | `in_progress` — 브랜치 감사·main 병합·production 배포 완료; LOC-007 번역 완결은 별도 대기 |
 | 날짜 | 2026-08-04 |
 | 브랜치 | `main` |
 | 산출물 | `artifacts/renewal/loop-001/` ~ `loop-051/` |
@@ -617,3 +617,14 @@ Playwright 로그와 untracked `pnpm-workspace.yaml`도 코드가 아니므로 �
 영어 번역이 있는 한국어 상세·sitemap의 `x-default`를 영어 URL로 연결하고, 번역이 없을
 때는 한국어 원문을 유지한다. canonical은 계속 한국어 원문으로 유지하며 테스트 11건을
 통과했다. 전체 감사 결과는 `artifacts/renewal/loop-051/branch-audit.json`에 남겼다.
+
+| 검사 | 명령/증적 | 결과 |
+| --- | --- | --- |
+| 브랜치 감사 | `artifacts/renewal/loop-051/branch-audit.json` | ✅ 완료된 변경 조상·stale WIP·dirty worktree 대조 |
+| 전체 테스트 | `pnpm test` | ✅ 81 files / 669 tests |
+| 타입·lint | `pnpm exec tsc --noEmit` · `pnpm lint` | ✅ 타입 통과 / 0 errors / 6 기존 warnings |
+| production build | `pnpm build` | ✅ Next 16.2.10 / 65 static pages |
+| production deploy | Vercel `dpl_8EGM72qLVPcNK3fLh3hrfcscyjvn` | ✅ `READY`, `catchmeme.com` aliases |
+
+배포 증적은 `artifacts/renewal/loop-051/deployment.json`에 저장했다. 배포는 main 커밋
+`36b1762`에서 수행했으며, production DB에는 쓰기 작업을 하지 않았다.

@@ -519,3 +519,25 @@ generation-skipped.txt와 함께 기록). **DB 적용은 권한 분류기가 차
 
 **게이트**: tsc 0 / vitest 664/664 / build 64/64. 후속: en 상세 JSON-LD
 translationOfWork(타 세션 파일 잠금 해제 후), 잔여 미번역 상위 398건 배치.
+
+---
+
+## 루프 049 — Claude 다국어 번역 배치 + admin 번역 검수 시스템 (2026-08-04)
+
+**지시**: MLX 중단, Claude 직접 번역으로 전환("claude 로 모두 번역 교체해줘") + ja/zh/zh-tw
+확장 + admin 검수 화면 + 배포. 검수 승격은 사용자 포괄 승인("너가 직접 모든걸 승인해줘").
+
+**결과**: meme_translations reviewed **각 로케일 30건 × 4(en·ja·zh·zh-tw) = 120건** 프로덕션
+적용. 전부 provider='claude', model='claude-fable-5', prompt_version=12. MLX 5건은 Claude
+번역으로 교체(TWS·Seungkwan·Montjuic 오류 교정). 아티팩트: artifacts/renewal/loop-049/
+{en,ja,zh,zh-tw}-translations-claude.sql (평문 SQL·멱등).
+
+**admin**: /admin/translations 검수 큐 신설 — 기존 admin-translations 액션 재사용(경합 중복
+구현 회피), 원문 대조·편집·승인/반려/삭제·감사 로그·CAS. 테스트 17/17.
+
+**적용 방법 확립**: 긴 base64는 컨텍스트 전사 불가(loop-048 교훈) → 평문 SQL 2행 블록
+아티팩트 + Read→execute_sql 슬라이스 파이프라인. reviewed 승격은 m.updated_at =
+source_updated_at 신선도 가드 포함 일괄 UPDATE.
+
+**후속**: 각 로케일 31번째 행(구 스모크 machine 1건씩)은 admin 큐에서 처리. 미번역 상위
+문서 ~390건은 동일 파이프라인 반복.

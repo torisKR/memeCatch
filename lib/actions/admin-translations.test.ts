@@ -9,6 +9,8 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
 
 import {
+  deleteMemeTranslation,
+  listTranslationsForReview,
   markMemeTranslationStale,
   reviewMemeTranslation,
   saveMemeTranslation,
@@ -18,18 +20,27 @@ import {
 const SOURCE_UPDATED_AT = "2026-07-28T01:00:00.000Z";
 const EXPECTED_UPDATED_AT = "2026-07-28T01:05:00.000Z";
 
-function query(result: { data: unknown; error: { message: string } | null }) {
+function query(result: { data: unknown; error: { message: string } | null; count?: number }) {
   const builder = {
     select: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
     eq: vi.fn(),
+    order: vi.fn(),
+    range: vi.fn(),
     insert: vi.fn().mockResolvedValue(result),
     single: vi.fn().mockResolvedValue(result),
     maybeSingle: vi.fn().mockResolvedValue(result),
+    // 목록 조회는 terminal 메서드 없이 체이닝 끝에서 바로 await되므로 thenable로 만든다
+    // (실제 supabase-js PostgrestFilterBuilder와 동일한 계약).
+    then: (resolve: (value: typeof result) => void) => resolve(result),
   };
   builder.select.mockReturnValue(builder);
   builder.update.mockReturnValue(builder);
+  builder.delete.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
+  builder.order.mockReturnValue(builder);
+  builder.range.mockReturnValue(builder);
   return builder;
 }
 
@@ -179,5 +190,99 @@ describe("admin translation concurrency and audit", () => {
       error: "감사 로그를 기록하지 못했어요: RLS rejected insert",
     });
     expect(revalidatePath).toHaveBeenCalledWith("/admin/memes/meme-1");
+  });
+});
+
+describe("admin translation review queue", () => {
+  it("joins the source meme, applies filters, and paginates newest-first", async () => {
+    const profile = query({ data: { role: "operator" }, error: null });
+    const listing = query({
+      data: [
+        {
+          meme_id: "meme-1",
+          locale: "en",
+          status: "machine",
+          title: "Localized title",
+          summary: "Localized summary",
+          description: "Localized description",
+          origin: "Localized origin",
+          usage_note: null,
+          caution: null,
+          aliases: ["Alias"],
+          source_updated_at: SOURCE_UPDATED_AT,
+          translated_at: SOURCE_UPDATED_AT,
+          updated_at: EXPECTED_UPDATED_AT,
+          reviewed_at: null,
+          reviewed_by: null,
+          memes: {
+            title: "원문 제목",
+            summary: "원문 요약",
+            description: "원문 설명",
+            origin: "원문 유래",
+            usage_note: null,
+            caution: null,
+            short_id: "abc123",
+            updated_at: SOURCE_UPDATED_AT,
+          },
+        },
+      ],
+      error: null,
+      count: 1,
+    });
+    const supabase = operatorClient({
+      profiles: [profile],
+      meme_translations: [listing],
+    });
+    createClient.mockResolvedValue(supabase);
+
+    const result = await listTranslationsForReview({ locale: "en", status: "machine", page: 1 });
+
+    expect(listing.range).toHaveBeenCalledWith(0, 9);
+    expect(listing.eq).toHaveBeenCalledWith("locale", "en");
+    expect(listing.eq).toHaveBeenCalledWith("status", "machine");
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        page: 1,
+        pageSize: 10,
+        total: 1,
+        rows: [
+          expect.objectContaining({
+            memeId: "meme-1",
+            memeTitle: "원문 제목",
+            locale: "en",
+            status: "machine",
+            title: "Localized title",
+          }),
+        ],
+      },
+    });
+  });
+
+  it("deletes only the CAS-matched translation and audits it", async () => {
+    const context = contextQueries();
+    const mutation = query({ data: { meme_id: "meme-1" }, error: null });
+    const audit = query({ data: null, error: null });
+    const supabase = operatorClient({
+      profiles: [context.profile],
+      memes: [context.meme],
+      meme_translations: [context.translation, mutation],
+      admin_audit_log: [audit],
+    });
+    createClient.mockResolvedValue(supabase);
+
+    const result = await deleteMemeTranslation({
+      memeId: "meme-1",
+      locale: "en",
+      expectedTranslationUpdatedAt: EXPECTED_UPDATED_AT,
+    });
+
+    expect(mutation.delete).toHaveBeenCalled();
+    expect(mutation.eq).toHaveBeenCalledWith("updated_at", EXPECTED_UPDATED_AT);
+    expect(audit.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "meme_translation.delete" }),
+    );
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/translations");
+    expect(result).toEqual({ ok: true });
   });
 });

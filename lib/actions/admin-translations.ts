@@ -336,6 +336,201 @@ export async function reviewMemeTranslation(
   }
 }
 
+/* ── 번역 검수 큐 (전체 밈 대상 목록) ──────────────────────
+ * 메메 상세 페이지(/admin/memes/[id])는 밈 1건의 번역만 보여주므로,
+ * 검수 대기 중인 번역을 밈 전체에서 찾으려면 개별 페이지를 순회해야 했다.
+ * 아래는 그 갭을 메우는 읽기 전용 목록과, 큐 화면 전용 반려/삭제 액션이다.
+ * 저장·발행·stale 전환은 위의 검증된 CAS 로직을 그대로 재사용한다.
+ */
+
+export type TranslationReviewStatus = "machine" | "reviewed" | "stale";
+
+export type TranslationQueueRow = {
+  memeId: string;
+  memeTitle: string;
+  memeSummary: string;
+  memeDescription: string;
+  memeOrigin: string;
+  memeUsageNote: string | null;
+  memeCaution: string | null;
+  memeShortId: string;
+  memeUpdatedAt: string;
+  locale: SeoContentLocale;
+  status: TranslationReviewStatus;
+  title: string;
+  summary: string;
+  description: string;
+  origin: string;
+  usageNote: string | null;
+  caution: string | null;
+  aliases: string[];
+  sourceUpdatedAt: string;
+  translatedAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+};
+
+export type TranslationQueuePage = {
+  rows: TranslationQueueRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+export type TranslationQueueResult =
+  | { ok: true; data: TranslationQueuePage }
+  | { ok: false; error: string };
+
+const TRANSLATION_QUEUE_PAGE_SIZE = 10;
+
+/** 로케일·상태 필터 + 최신순 페이지네이션으로 검수 대상 번역을 모은다. */
+export async function listTranslationsForReview(
+  input: {
+    locale?: SeoContentLocale;
+    status?: TranslationReviewStatus;
+    page?: number;
+  } = {},
+): Promise<TranslationQueueResult> {
+  try {
+    const { supabase } = await requireOperator();
+    const page = Math.max(1, Math.trunc(input.page ?? 1));
+    const from = (page - 1) * TRANSLATION_QUEUE_PAGE_SIZE;
+    const to = from + TRANSLATION_QUEUE_PAGE_SIZE - 1;
+
+    let query = supabase
+      .from("meme_translations")
+      .select(
+        "meme_id, locale, status, title, summary, description, origin, usage_note, caution, aliases, source_updated_at, translated_at, updated_at, reviewed_at, reviewed_by, memes(title, summary, description, origin, usage_note, caution, short_id, updated_at)",
+        { count: "exact" },
+      )
+      .order("updated_at", { ascending: false })
+      .range(from, to);
+
+    if (input.locale) query = query.eq("locale", input.locale);
+    if (input.status) query = query.eq("status", input.status);
+
+    const { data, error, count } = await query;
+    if (error) return { ok: false, error: error.message };
+
+    const rows: TranslationQueueRow[] = (data ?? [])
+      .filter((row) => row.memes)
+      .map((row) => {
+        const meme = row.memes!;
+        return {
+          memeId: row.meme_id,
+          memeTitle: meme.title,
+          memeSummary: meme.summary,
+          memeDescription: meme.description,
+          memeOrigin: meme.origin,
+          memeUsageNote: meme.usage_note,
+          memeCaution: meme.caution,
+          memeShortId: meme.short_id,
+          memeUpdatedAt: meme.updated_at,
+          locale: row.locale as SeoContentLocale,
+          status: row.status as TranslationReviewStatus,
+          title: row.title,
+          summary: row.summary,
+          description: row.description,
+          origin: row.origin,
+          usageNote: row.usage_note,
+          caution: row.caution,
+          aliases: row.aliases,
+          sourceUpdatedAt: row.source_updated_at,
+          translatedAt: row.translated_at,
+          updatedAt: row.updated_at,
+          reviewedAt: row.reviewed_at,
+          reviewedBy: row.reviewed_by,
+        };
+      });
+
+    return {
+      ok: true,
+      data: { rows, page, pageSize: TRANSLATION_QUEUE_PAGE_SIZE, total: count ?? rows.length },
+    };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+/** 큐 화면 전용 반려 — DB 상태는 바꾸지 않고(그대로 재검수 대상) 사유만 감사 로그에 남긴다. */
+export async function rejectMemeTranslationDraft(input: {
+  memeId: string;
+  locale: SeoContentLocale;
+  expectedTranslationUpdatedAt: string;
+  reason: string;
+}): Promise<TranslationActionResult> {
+  try {
+    if (!input.memeId || !isSeoContentLocale(input.locale)) {
+      return { ok: false, error: "유효한 밈과 번역 언어가 필요해요." };
+    }
+    if (!input.reason.trim()) return { ok: false, error: "반려 사유를 입력해 주세요." };
+
+    const { supabase, uid } = await requireOperator();
+    const { meme, translation } = await loadTranslationContext(
+      supabase,
+      input.memeId,
+      input.locale,
+    );
+    if (translation.updated_at !== input.expectedTranslationUpdatedAt) {
+      return { ok: false, error: "번역이 변경되어 반려하지 못했어요. 새로고침해 주세요." };
+    }
+
+    await logAudit(supabase, uid, "meme_translation.reject", meme.id, input.locale, {
+      reason: input.reason.trim(),
+      status: translation.status,
+    });
+    revalidatePath("/admin/translations");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+/** 큐 화면 전용 삭제 — AI 초안이 쓸 수 없을 때 행 자체를 제거한다(CAS로 동시 수정 방지). */
+export async function deleteMemeTranslation(input: {
+  memeId: string;
+  locale: SeoContentLocale;
+  expectedTranslationUpdatedAt: string;
+}): Promise<TranslationActionResult> {
+  try {
+    if (!input.memeId || !isSeoContentLocale(input.locale)) {
+      return { ok: false, error: "유효한 밈과 번역 언어가 필요해요." };
+    }
+    const { supabase, uid } = await requireOperator();
+    const { meme, translation } = await loadTranslationContext(
+      supabase,
+      input.memeId,
+      input.locale,
+    );
+
+    const { data, error } = await supabase
+      .from("meme_translations")
+      .delete()
+      .eq("meme_id", input.memeId)
+      .eq("locale", input.locale)
+      .eq("updated_at", input.expectedTranslationUpdatedAt)
+      .select("meme_id")
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    if (!data) return { ok: false, error: "번역이 변경되어 삭제하지 못했어요. 새로고침해 주세요." };
+
+    await auditAndRevalidate(
+      supabase,
+      uid,
+      "meme_translation.delete",
+      meme,
+      input.locale,
+      translation.localized_slug,
+      { previous_status: translation.status },
+    );
+    revalidatePath("/admin/translations");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
 export async function markMemeTranslationStale(input: {
   memeId: string;
   locale: SeoContentLocale;

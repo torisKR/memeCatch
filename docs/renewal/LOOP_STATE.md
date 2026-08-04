@@ -595,7 +595,7 @@ SQL은 읽기 전용으로 검사했으며 프로덕션 Supabase에 적용하지
 | route smoke | `SMOKE_BASE_URL=http://localhost:3100 pnpm smoke` | ✅ 6/6, SEO-001 soft-404는 known issue |
 | 글로벌 SEO/GEO | 로케일·robots·sitemap·llms 읽기 검사 | ✅ en/ja/zh/zh-tw + GPTBot/ClaudeBot |
 | 데이터 품질 | `pnpm quality:report` (anon GET) | ✅ 리포트 갱신, critical 수치는 기준선과 동일 |
-| production 배포 | Vercel `dpl_8HhCJwzZ3veXC7jcRMUbkarq4xHp` | ✅ `READY`, `catchmeme.com` aliases, 증적 `artifacts/renewal/loop-050/deployment.json` |
+| production 배포 | Vercel `dpl_FLKYjAS452tXtPtthTMGM7NcmGyU` | ✅ `READY`, `catchmeme.com` aliases, 증적 `artifacts/renewal/loop-050/deployment.json` |
 
 LSP 서버(`typescript-language-server`, `biome`)는 이 실행 환경에 설치되어 있지 않아
 자동 LSP 진단은 수행하지 못했다. TypeScript·ESLint·빌드·테스트 명령은 별도로 통과했다.

@@ -1,10 +1,10 @@
 {
   "loop": "050",
-  "commit": "f63442ff53032533b1c5dae02f1165bad44d240f",
-  "deployment_id": "dpl_8HhCJwzZ3veXC7jcRMUbkarq4xHp",
+  "commit": "eebc3e20ddf5707432260af17ab5f3ac800e5abb",
+  "deployment_id": "dpl_FLKYjAS452tXtPtthTMGM7NcmGyU",
   "target": "production",
   "ready_state": "READY",
-  "deployment_url": "https://memecatch-26najn5ct-ironjustlikethatgmailcoms-projects.vercel.app",
+  "deployment_url": "https://memecatch-ecy4qajir-ironjustlikethatgmailcoms-projects.vercel.app",
   "aliases": [
     "https://catchmeme.com",
     "https://www.catchmeme.com",

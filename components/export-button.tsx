@@ -191,7 +191,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface-2 px-5 text-sm font-semibold text-foreground transition-transform active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)] inline-flex h-11 items-center gap-2 rounded-full border border-border bg-surface-2 px-5 text-sm font-semibold text-foreground transition-transform active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <span aria-hidden>⬇</span>
         {copy.open}
@@ -321,7 +321,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
             type="button"
             onClick={handleDownload}
             disabled={busy}
-            className="inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+            className="hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)] inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
           >
             {busy ? copy.downloading : copy.download}
           </button>

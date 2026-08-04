@@ -50,7 +50,7 @@ export function DonateCard() {
 
 function HeartGlyph() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-4 w-4 flame-rising-tip" fill="currentColor" aria-hidden>
       <path d="M12 21s-7.5-4.7-10-9.3C.5 8.6 2.6 5 6.2 5c2 0 3.7 1.1 4.6 2.7l1.2 2 1.2-2C14.1 6.1 15.8 5 17.8 5c3.6 0 5.7 3.6 4.2 6.7C19.5 16.3 12 21 12 21Z" />
     </svg>
   );

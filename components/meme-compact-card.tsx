@@ -25,7 +25,7 @@ export function MemeCompactCard({
   return (
     <Link
       href={memePathFrom(meme.short_id, meme.slug)}
-      className="group block h-full min-w-0 overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/55 hover:shadow-md active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
+      className="group holo-sheen block h-full min-w-0 overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-flame-500/55 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-surface-2">
         <MemeThumbnail
@@ -41,7 +41,7 @@ export function MemeCompactCard({
             {/* 계측 화면의 채널 번호처럼 — 모노스페이스 2자리 고정 */}
             <span
               aria-hidden
-              className={`absolute left-2 top-2 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums shadow-sm ${
+              className={`stat-mono absolute left-2 top-2 rounded-md px-1.5 py-0.5 text-[11px] font-bold shadow-sm ${
                 rank <= 3
                   ? "bg-accent-strong text-white"
                   : "border border-white/15 bg-ink/80 text-white/80 backdrop-blur-sm"

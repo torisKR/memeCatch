@@ -15,7 +15,7 @@ export function PremiumGate({ compact = false }: { compact?: boolean }) {
       </span>
       <h2 className="mt-3 text-xl font-black tracking-tight">{copy.dashboard.upgradeTitle}</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">{copy.dashboard.upgradeBody}</p>
-      <Link href="/pricing" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-strong px-5 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+      <Link href="/pricing" className="hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)] mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-strong px-5 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
         {copy.dashboard.viewPlans}
       </Link>
     </section>

@@ -32,7 +32,10 @@ export default async function Home() {
         <HomePathwaysSection />
 
         {trending.length > 0 && (
-          <section aria-labelledby="sec-trending" className="border-t border-border py-10 sm:py-12">
+          <section
+            aria-labelledby="sec-trending"
+            className="border-t border-border py-10 sm:py-12 [border-image:linear-gradient(90deg,transparent,var(--flame-500),transparent)_1]"
+          >
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">

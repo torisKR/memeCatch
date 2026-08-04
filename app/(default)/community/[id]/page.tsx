@@ -113,7 +113,7 @@ export default async function CommunityPostPage({ params }: Props) {
         </Link>
       </nav>
 
-      <article className="rounded-2xl border border-border bg-surface p-5">
+      <article className="hover-glow-flame rounded-2xl border border-border bg-surface p-5">
         <header>
           <h1 className="text-2xl font-extrabold leading-snug">{post.title}</h1>
           <p className="mt-2 flex items-center gap-2 text-sm text-muted">
@@ -137,7 +137,10 @@ export default async function CommunityPostPage({ params }: Props) {
 
       <section aria-label="댓글" className="space-y-4">
         <h2 className="text-lg font-bold">
-          댓글 {comments.length.toLocaleString("ko-KR")}
+          댓글{" "}
+          <span className="stat-mono text-(--signal-cyan)">
+            {comments.length.toLocaleString("ko-KR")}
+          </span>
         </h2>
 
         <CommunityCommentForm postId={post.id} />

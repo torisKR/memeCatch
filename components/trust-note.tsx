@@ -43,7 +43,7 @@ export function TrustNote({
     return (
       <div className="border-t border-border pt-3 text-sm text-muted">
         <p>
-          <span aria-hidden>◌</span>{" "}
+          <span aria-hidden>–</span>{" "}
           <span className="font-semibold text-foreground">근거 출처 준비 중</span> — 이
           문서는 아직 확인된 출처가 연결되지 않았어요. 마지막 업데이트 {updated}
         </p>
@@ -64,7 +64,14 @@ export function TrustNote({
 
   return (
     <p className="border-t border-border pt-3 text-sm text-muted">
-      <span aria-hidden>{isContextOnly || isBareOnly ? "▲" : "●"}</span>{" "}
+      {isContextOnly || isBareOnly ? (
+        <span aria-hidden>▲</span>
+      ) : (
+        <span
+          aria-hidden
+          className="signal-live inline-block size-1.5 rounded-full bg-(--signal-cyan) align-middle"
+        />
+      )}{" "}
       {isContextOnly ? (
         <>
           <span className="font-semibold text-foreground">
@@ -81,7 +88,7 @@ export function TrustNote({
         </>
       ) : (
         <>
-          <span className="font-semibold text-foreground">
+          <span className="stat-mono font-semibold text-foreground">
             근거 출처 {evidence.total}개 확인
           </span>
           {evidence.total > evidence.identifiedPrimary && (

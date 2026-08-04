@@ -27,7 +27,11 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
     <div className="mt-8 flex flex-col gap-10">
       {trending.length > 0 && (
         <Reveal as="section">
-          <h2 id="weekly-trending" className="text-xl font-extrabold tracking-tight">
+          <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+            <span aria-hidden className="signal-live size-1.5 rounded-full bg-(--signal-cyan)" />
+            Trending now
+          </p>
+          <h2 id="weekly-trending" className="mt-1 text-xl font-extrabold tracking-tight">
             지금 가장 뜨거운 밈
           </h2>
           <p className="mt-1 text-sm text-muted">
@@ -50,7 +54,10 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
 
       {fresh.length > 0 && (
         <Reveal as="section" delay={0.05}>
-          <h2 id="weekly-fresh" className="text-xl font-extrabold tracking-tight">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+            New entries
+          </p>
+          <h2 id="weekly-fresh" className="mt-1 text-xl font-extrabold tracking-tight">
             {SECTION_TITLES.fresh}
           </h2>
           <p className="mt-1 text-sm text-muted">
@@ -73,7 +80,10 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
 
       {categoryBreakdown.length > 0 && (
         <Reveal as="section" delay={0.1}>
-          <h2 id="weekly-categories" className="text-xl font-extrabold tracking-tight">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+            Category mix
+          </p>
+          <h2 id="weekly-categories" className="mt-1 text-xl font-extrabold tracking-tight">
             카테고리 하이라이트
           </h2>
           <p className="mt-1 text-sm text-muted">
@@ -84,7 +94,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
               <li key={category} className="flex items-center gap-3">
                 <CategoryTag category={category} className="shrink-0" />
                 <div
-                  className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full"
+                  className="instrument-grid h-2.5 min-w-0 flex-1 overflow-hidden rounded-full"
                   style={{ backgroundColor: "var(--surface-2)" }}
                   role="img"
                   aria-label={`${category} 비중 ${percentage}%`}
@@ -93,7 +103,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
                     className="h-full rounded-full"
                     style={{
                       width: `${Math.max(percentage, 4)}%`,
-                      backgroundColor: `var(--cat-${category}-text)`,
+                      background: "linear-gradient(90deg, var(--flame-400), var(--flame-600))",
                     }}
                   />
                 </div>

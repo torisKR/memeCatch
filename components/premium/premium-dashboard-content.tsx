@@ -57,73 +57,78 @@ export function PremiumDashboardContent({
       {isPremium ? (
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
           <div className="min-w-0 [&>*:first-child]:mt-0">{feed}</div>
-          <aside className="rounded-2xl border border-border bg-surface p-5 lg:sticky lg:top-20">
-            <h2 className="font-bold">{copy.dashboard.membershipStatus}</h2>
-            <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-safety-green">
-              <span aria-hidden className="h-2 w-2 rounded-full bg-current" />
-              {copy.dashboard.active}
-            </p>
-            {accessConfirmedThrough && (
-              <p className="mt-3 text-sm leading-relaxed text-muted">
-                {copy.dashboard.renews}<br />
-                <strong className="text-foreground">{accessConfirmedThrough}</strong>
+          <aside className="edge-signal holo-sheen relative overflow-hidden rounded-2xl p-5 lg:sticky lg:top-20">
+            {/* 계측 격자 — edge-signal의 background shorthand와 같은 노드에 두면
+                grid-line이 지워지므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). */}
+            <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+            <div className="relative">
+              <h2 className="font-bold">{copy.dashboard.membershipStatus}</h2>
+              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-safety-green">
+                <span aria-hidden className="h-2 w-2 rounded-full bg-current" />
+                {copy.dashboard.active}
               </p>
-            )}
+              {accessConfirmedThrough && (
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  {copy.dashboard.renews}<br />
+                  <strong className="text-foreground">{accessConfirmedThrough}</strong>
+                </p>
+              )}
 
-            {/* 자동 갱신이 없으므로 만료가 임박하면 직접 연장하도록 알린다. */}
-            {remainingDays !== null && remainingDays <= EXPIRY_WARNING_DAYS && (
-              <p
-                role="status"
-                className="mt-3 rounded-xl bg-safety-yellow-bg px-3 py-2 text-sm leading-relaxed text-safety-yellow"
-              >
-                {copy.dashboard.expiringSoon(remainingDays)}
-              </p>
-            )}
+              {/* 자동 갱신이 없으므로 만료가 임박하면 직접 연장하도록 알린다. */}
+              {remainingDays !== null && remainingDays <= EXPIRY_WARNING_DAYS && (
+                <p
+                  role="status"
+                  className="mt-3 rounded-xl bg-safety-yellow-bg px-3 py-2 text-sm leading-relaxed text-safety-yellow"
+                >
+                  {copy.dashboard.expiringSoon(remainingDays)}
+                </p>
+              )}
 
-            {/* 연장 = 새 결제. 체크아웃이 결제 링크를 다시 발급한다. */}
-            <form action="/api/billing/checkout" method="post" className="mt-4">
-              <button
-                type="submit"
-                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              {/* 연장 = 새 결제. 체크아웃이 결제 링크를 다시 발급한다. */}
+              <form action="/api/billing/checkout" method="post" className="mt-4">
+                <button
+                  type="submit"
+                  className="flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
+                  {copy.dashboard.extend}
+                </button>
+              </form>
+              {/* 결제 이력 — 실제 웹훅 이벤트만(미결제 시도는 제외). UX 감사 gap #4 */}
+              <h3 className="mt-6 border-t border-border pt-4 text-sm font-bold">
+                {copy.dashboard.historyTitle}
+              </h3>
+              {history.length === 0 ? (
+                <p className="mt-2 text-sm text-muted">{copy.dashboard.historyEmpty}</p>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {history.map((item) => (
+                    <li
+                      key={`${item.orderId}-${item.occurredAt}`}
+                      className="-mx-2 flex items-baseline justify-between gap-2 rounded-lg px-2 py-1 text-sm transition-colors hover:bg-surface-2"
+                    >
+                      <time dateTime={item.occurredAt} className="text-muted">
+                        {new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "medium" }).format(
+                          new Date(item.occurredAt),
+                        )}
+                      </time>
+                      <span className="stat-mono font-semibold text-accent-text">
+                        {item.status === "canceled"
+                          ? copy.dashboard.historyCanceled
+                          : item.amount !== null
+                            ? `$${(item.amount / 100).toFixed(2)}`
+                            : "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=MemeCatch%20Plus%20billing`}
+                className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                {copy.dashboard.extend}
-              </button>
-            </form>
-            {/* 결제 이력 — 실제 웹훅 이벤트만(미결제 시도는 제외). UX 감사 gap #4 */}
-            <h3 className="mt-6 border-t border-border pt-4 text-sm font-bold">
-              {copy.dashboard.historyTitle}
-            </h3>
-            {history.length === 0 ? (
-              <p className="mt-2 text-sm text-muted">{copy.dashboard.historyEmpty}</p>
-            ) : (
-              <ul className="mt-2 space-y-1.5">
-                {history.map((item) => (
-                  <li
-                    key={`${item.orderId}-${item.occurredAt}`}
-                    className="flex items-baseline justify-between gap-2 text-sm"
-                  >
-                    <time dateTime={item.occurredAt} className="text-muted">
-                      {new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "medium" }).format(
-                        new Date(item.occurredAt),
-                      )}
-                    </time>
-                    <span className="font-semibold tabular-nums">
-                      {item.status === "canceled"
-                        ? copy.dashboard.historyCanceled
-                        : item.amount !== null
-                          ? `$${(item.amount / 100).toFixed(2)}`
-                          : "—"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=MemeCatch%20Plus%20billing`}
-              className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              {copy.dashboard.billingHelp}
-            </a>
+                {copy.dashboard.billingHelp}
+              </a>
+            </div>
           </aside>
         </div>
       ) : (

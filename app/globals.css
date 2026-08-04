@@ -511,14 +511,16 @@ label[for] {
   .menu-pop { animation: none; }
 }
 
-/* flame 네온 글로우 호버 — 다크 글래스 카드·칩 공용. box-shadow/색만 전환(모션 아님) */
+/* flame 네온 글로우 호버 — 다크 글래스 카드·칩 공용. box-shadow/색만 전환(모션 아님).
+   hover 전용이다: 이 블록은 @layer 밖이라 :focus-visible까지 걸면 Tailwind
+   ring 유틸리티(box-shadow 기반)를 캐스케이드로 덮어 포커스 링을 지워버린다
+   (2026-08-04 a11y 리뷰 — 8개 지점 재발로 셀렉터에서 제거). */
 .hover-glow-flame {
   transition:
     box-shadow var(--dur-transition) var(--ease-out),
     border-color var(--dur-transition) var(--ease-out);
 }
-.hover-glow-flame:hover,
-.hover-glow-flame:focus-visible {
+.hover-glow-flame:hover {
   border-color: color-mix(in srgb, var(--flame-500) 55%, transparent);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--flame-500) 22%, transparent),
@@ -765,6 +767,93 @@ label[for] {
 }
 @media (prefers-reduced-motion: reduce) {
   .signal-flicker { animation: none; }
+}
+
+/* ══ Web3 인터랙티브 레이어 v2 (2026-08-04 리뉴얼) ═══════════════
+   Signal Desk 문법을 전 페이지 공용 어휘로 확장 — 글래스·시그널 엣지·
+   홀로 시머·3D 틸트. 브랜드 규칙 유지: 보라 금지, flame 오렌지 주색,
+   cyan은 라이브 신호 전용. 전부 transform/opacity/box-shadow만 전환하고
+   reduced-motion 가드를 건다(CLS·INP 예산 보호). */
+
+/* 글래스 패널 — 딥 잉크 위 반투명 표면 + 블러. 카드·시트·독 공용. */
+.glass-panel {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+/* 시그널 엣지 — flame→cyan 1px 그라디언트 보더(이중 배경 기법).
+   콘텐츠 박스에 영향 없음. 강조 카드·활성 상태 전용(과용 금지). */
+.edge-signal {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--flame-500) 60%, transparent),
+        color-mix(in srgb, var(--signal-cyan) 50%, transparent)
+      )
+      border-box;
+}
+
+/* 시그널 그라디언트 텍스트 — 타이틀의 포인트 단어 1곳 전용(과용 금지). */
+.text-signal {
+  background: linear-gradient(90deg, var(--flame-400) 10%, var(--signal-cyan) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 홀로 스윕 — hover/focus 시 하이라이트 밴드가 1회 스치고 지나간다.
+   ::after 오버레이라 레이아웃 불변. 대화형 카드·CTA 전용. */
+.holo-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.holo-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.13) 50%,
+    transparent 58%
+  );
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+.holo-sheen:hover::after,
+.holo-sheen:focus-visible::after,
+.holo-sheen:focus-within::after {
+  transition: transform 0.65s var(--ease-out);
+  transform: translateX(130%);
+}
+
+/* 3D 틸트 — components/ui/tilt-card.tsx가 --tilt-x/--tilt-y를 구동.
+   포인터 없는 기기·reduced-motion에선 평면 유지. */
+.tilt-3d {
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 180ms var(--ease-out);
+  will-change: transform;
+}
+
+/* 라이브 수치 — 관제 화면의 모노 숫자(랭킹·카운트·시세 공용). */
+.stat-mono {
+  font-family: var(--font-utility);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holo-sheen::after {
+    display: none;
+  }
+  .tilt-3d {
+    transform: none !important;
+    transition: none;
+  }
 }
 
 /* Plus(프리미엄) 구독자 — "광고 없는 경험".

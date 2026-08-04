@@ -310,45 +310,51 @@ export function ExploreGrid({
   // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음 (검색어가 있으면 반영)
   if (items.length === 0) {
     return (
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">
-        {/* 브랜드 빈 상태 일러스트 — 잉크 배경 원본을 screen 블렌드로 표면에 융화 */}
-        <img
-          src="/brand/state-empty-search.webp"
-          alt=""
-          width={1024}
-          height={768}
-          loading="lazy"
-          decoding="async"
-          className="mx-auto mb-2 w-48 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-56"
-        />
-        <p className="text-xl font-bold">
-          {filters.q ? (
-            <>
-              &lsquo;<span className="text-accent">{filters.q}</span>&rsquo; 검색
-              결과가 없어요
-            </>
-          ) : (
-            "이 조건의 밈이 아직 없어요"
-          )}
-        </p>
-        <p className="mt-1.5 text-base text-muted">
-          {filters.q
-            ? "다른 말로 검색하거나 필터를 풀어 보세요. 아직 없는 밈이면 제보해 주세요."
-            : "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."}
-        </p>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          <Link
-            href="/explore"
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
-          >
-            필터 초기화
-          </Link>
-          <Link
-            href="/submit"
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white active:scale-[0.97]"
-          >
-            밈 제보하기
-          </Link>
+      <div className="glass-panel relative mt-8 overflow-hidden rounded-2xl p-8 text-center">
+        {/* 계측 격자 — 정적 장식 레이어. glass-panel의 background shorthand와 같은 요소에
+            함께 두면 background-image가 덮여 사라지므로 별도 절대배치 레이어로 분리
+            (components/hero-web3.tsx와 동일 패턴). */}
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <div className="relative">
+          {/* 브랜드 빈 상태 일러스트 — 잉크 배경 원본을 screen 블렌드로 표면에 융화 */}
+          <img
+            src="/brand/state-empty-search.webp"
+            alt=""
+            width={1024}
+            height={768}
+            loading="lazy"
+            decoding="async"
+            className="mx-auto mb-2 w-48 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-56"
+          />
+          <p className="text-xl font-bold">
+            {filters.q ? (
+              <>
+                &lsquo;<span className="text-accent">{filters.q}</span>&rsquo; 검색
+                결과가 없어요
+              </>
+            ) : (
+              "이 조건의 밈이 아직 없어요"
+            )}
+          </p>
+          <p className="mt-1.5 text-base text-muted">
+            {filters.q
+              ? "다른 말로 검색하거나 필터를 풀어 보세요. 아직 없는 밈이면 제보해 주세요."
+              : "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."}
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <Link
+              href="/explore"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+            >
+              필터 초기화
+            </Link>
+            <Link
+              href="/submit"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white active:scale-[0.97]"
+            >
+              밈 제보하기
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -392,22 +398,29 @@ export function ExploreGrid({
       {failed && (
         <div
           role="alert"
-          className="mt-6 rounded-2xl border border-border bg-surface-2 p-6 text-center"
+          className="glass-panel relative mt-6 overflow-hidden rounded-2xl p-6 text-center"
         >
-          <p className="text-base font-semibold">더 불러오지 못했어요.</p>
-          <button
-            type="button"
-            onClick={loadMore}
-            className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
-          >
-            다시 시도
-          </button>
+          <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+          <div className="relative">
+            <p className="text-base font-semibold">더 불러오지 못했어요.</p>
+            <button
+              type="button"
+              onClick={loadMore}
+              className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+            >
+              다시 시도
+            </button>
+          </div>
         </div>
       )}
 
       {/* 끝 도달 */}
       {!hasMore && !loading && !failed && (
-        <p className="mt-8 text-center text-sm text-muted" aria-live="polite">
+        <p
+          className="mt-8 flex items-center justify-center gap-2 text-center text-sm text-muted"
+          aria-live="polite"
+        >
+          <span aria-hidden className="signal-live size-1.5 rounded-full bg-(--signal-cyan)" />
           끝까지 봤어요
         </p>
       )}

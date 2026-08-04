@@ -221,7 +221,7 @@ export default async function SlangPage() {
       )}
 
       <h1 className="text-3xl font-extrabold tracking-tight">
-        줄임말·유행어 사전
+        줄임말·<span className="text-signal">유행어</span> 사전
       </h1>
       {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록(GEO 톤) */}
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
@@ -232,7 +232,7 @@ export default async function SlangPage() {
       </p>
 
       {/* 세대 대조 한 줄 — 재미 요소(과하지 않게 한 줄만) */}
-      <p className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-medium text-muted">
+      <p className="hover-glow-flame mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-medium text-muted">
         <span aria-hidden className="text-accent">
           <svg
             viewBox="0 0 24 24"

@@ -38,16 +38,17 @@ export function StatusPanel({
   className?: string;
 }) {
   const signal = SIGNAL[tone];
+  // waiting·error는 신호가 살아 진행 중이라 라이브 점멸, missing(빈 상태)은 정적으로 둔다.
+  const isLive = tone !== "missing";
 
   return (
     <div
       role={role}
-      className={`relative overflow-hidden rounded-3xl border border-border bg-surface-2 px-6 py-7 text-center sm:px-8 sm:py-8 ${className}`}
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 52%)",
-      }}
+      className={`glass-panel relative overflow-hidden rounded-3xl px-6 py-7 text-center sm:px-8 sm:py-8 ${className}`}
     >
+      {/* 계측 격자 — glass-panel과 같은 노드에 두면 배경 shorthand가 grid-line을
+          지우므로 별도 레이어로 둔다(hero-web3.tsx 문법 재사용). 정적이라 성능 비용 없음. */}
+      <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
       <div className="relative mx-auto max-w-md">
         {art && (
           <img
@@ -65,7 +66,9 @@ export function StatusPanel({
             {[0, 1, 2].map((index) => (
               <span
                 key={index}
-                className="h-2 w-2 rounded-full"
+                className={`h-2 w-2 rounded-full ${
+                  index === signal.index && isLive ? "signal-live" : ""
+                }`}
                 style={{
                   backgroundColor: index === signal.index ? signal.color : "rgb(255 255 255 / 0.22)",
                 }}

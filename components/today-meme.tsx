@@ -51,6 +51,8 @@ export async function TodayMeme() {
   const meme = await loadTodayMeme();
   if (!meme) return null;
   const path = memePathFrom(meme.short_id, meme.slug);
+  // 표시용 소형 날짜(MM.DD) — hash(KST일자) 고정 노출이 "오늘 몇 일자" 기준인지 보조 표기.
+  const dayLabel = kstDayKey().slice(5).replace("-", ".");
 
   return (
       <section aria-labelledby="today-meme" className="mt-8">
@@ -60,11 +62,17 @@ export async function TodayMeme() {
               오늘
             </span>
             오늘의 밈
+            <span aria-hidden className="stat-mono text-xs font-normal text-muted">
+              {dayLabel}
+            </span>
           </h2>
           <ShareButton path={path} title={meme.title} label="공유" />
         </div>
         <TrackedBlock event="today_meme_click" className="mt-3">
-          <Link href={path} className="block transition-transform hover:-translate-y-0.5">
+          <Link
+            href={path}
+            className="edge-signal holo-sheen block rounded-2xl transition-transform hover:-translate-y-0.5"
+          >
             <AnswerCard meme={meme} />
           </Link>
         </TrackedBlock>

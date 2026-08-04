@@ -130,7 +130,9 @@ export function SafetyRationale({
               없을 때만 등급 공통 범례로 물러난다(고유 서술 우선). */}
       <div>
         <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <SafetyBadge level={level} />
+          <span className="stat-mono">
+            <SafetyBadge level={level} />
+          </span>
           <span className="text-base leading-relaxed">
             {verdict ?? LEVEL_MEANING[level]}
           </span>
@@ -173,7 +175,7 @@ export function SafetyRationale({
       {/* (d) caution — 구체 사유가 없으면 등급 일반 설명으로 폴백 */}
       {cautionText && (
         <div
-          className={`rounded-xl p-4 ${CAUTION_TONE[isRisky ? (level as "red" | "yellow") : "yellow"]}`}
+          className={`hover-glow-flame rounded-xl border border-transparent p-4 ${CAUTION_TONE[isRisky ? (level as "red" | "yellow") : "yellow"]}`}
         >
           <h3 className="flex items-center gap-2 text-base font-bold">
             <span aria-hidden>▲</span> 이건 조심해 주세요

@@ -152,15 +152,21 @@ export default async function TimelinePage() {
         />
       )}
 
-      <h1 className="text-3xl font-extrabold tracking-tight">한국 밈 연표</h1>
-      {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록(GEO 톤) */}
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
-        한국 밈의 역사는 1990년대 개그 프로그램 유행어에서 시작해, 2000년대
-        디시인사이드 짤방과 싸이월드 감성을 거쳐, 2010년대 급식체와 인터넷
-        방송 밈으로 확장됐고, 2020년대 들어서는 숏폼 챌린지가 중심이 됐어요.
-        이 페이지는 연도별 대표 밈을 모아, 각 시대를 상징하는 유행어와
-        챌린지가 언제 등장해 어떻게 이어져 왔는지 한눈에 보여줘요.
-      </p>
+      {/* Signal Desk 관제 라벨 — 홈·탐색·검색과 동일한 사이트 공용 어휘(instrument-grid는 정적 배경, 모션 없음) */}
+      <div className="instrument-grid rounded-2xl border border-border/70 p-5 sm:p-6">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+          Timeline signal
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">한국 밈 연표</h1>
+        {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록(GEO 톤) */}
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+          한국 밈의 역사는 1990년대 개그 프로그램 유행어에서 시작해, 2000년대
+          디시인사이드 짤방과 싸이월드 감성을 거쳐, 2010년대 급식체와 인터넷
+          방송 밈으로 확장됐고, 2020년대 들어서는 숏폼 챌린지가 중심이 됐어요.
+          이 페이지는 연도별 대표 밈을 모아, 각 시대를 상징하는 유행어와
+          챌린지가 언제 등장해 어떻게 이어져 왔는지 한눈에 보여줘요.
+        </p>
+      </div>
 
       {decades.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">

@@ -47,7 +47,7 @@ export function ShareButton({
         onClick={share}
         className={
           className ??
-          "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+          "hover-glow-flame inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
         }
       >
         <svg
@@ -65,7 +65,14 @@ export function ShareButton({
           <circle cx="17" cy="18" r="2.5" />
           <path d="m8.3 10.8 6.4-3.6M8.3 13.2l6.4 3.6" />
         </svg>
-        {copied ? "링크 복사됨!" : label}
+        {copied ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
+            링크 복사됨!
+          </span>
+        ) : (
+          label
+        )}
       </button>
       {/* 버튼 라벨이 이미 시각적으로 바뀌므로 스크린 리더 전용으로만 알림 */}
       <p role="status" aria-live="polite" className="sr-only">

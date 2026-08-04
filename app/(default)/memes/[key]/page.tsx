@@ -323,79 +323,88 @@ export default async function MemeDetailPage({ params }: Props) {
           {(meme.description || meme.origin) && (
             <section
               aria-labelledby="meme-about"
-              className="space-y-4 rounded-2xl border border-border bg-surface p-5"
+              className="glass-panel relative overflow-hidden rounded-2xl p-5"
             >
-              <h2 id="meme-about" className="sr-only">
-                뜻과 유래
-              </h2>
-              {meme.description && (
-                <div>
-                  <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>
-                  <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-                    {meme.description}
-                  </p>
-                </div>
-              )}
-              {meme.origin && (
-                <div>
-                  <h3 className="text-lg font-bold">어디서 시작됐어요?</h3>
-                  <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-                    {meme.origin}
-                  </p>
-                </div>
-              )}
-
-              {/* 분류·시기·태그 — 유래 유무와 무관하게 이 밈이 가진 실제 메타데이터라
-                  origin이 비어도 노출한다(있는 정보를 숨기지 않는다). */}
-              <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                  {CATEGORIES[meme.category].user}
-                </span>
-                {/* 연도는 정밀도와 함께 읽는다 — year_precision이 근거를 뒷받침하지
-                    못하면 「(추정)」을 붙여 단정하지 않는다. */}
-                {originYearLabel && (
-                  <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
-                    {originYearLabel}
-                  </span>
+              {/* 계측 격자 — glass-panel과 같은 노드에 두면 배경 shorthand가 grid-line을
+                  지우므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). 정적이라 성능 비용 없음. */}
+              <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+              <div className="relative space-y-4">
+                <h2 id="meme-about" className="sr-only">
+                  뜻과 유래
+                </h2>
+                {meme.description && (
+                  <div>
+                    <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>
+                    <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
+                      {meme.description}
+                    </p>
+                  </div>
                 )}
-                {tagNames.map((name) => (
-                  <span
-                    key={name}
-                    className="rounded-full bg-surface-2 px-2.5 py-1 font-medium"
-                  >
-                    #{name}
-                  </span>
-                ))}
-              </p>
+                {meme.origin && (
+                  <div>
+                    <h3 className="text-lg font-bold">어디서 시작됐어요?</h3>
+                    <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
+                      {meme.origin}
+                    </p>
+                  </div>
+                )}
 
-              {/* 상시 출처 인용 — E-E-A-T: 본문 주장 바로 아래에 근거 링크 */}
-              {sourceLinks.length > 0 && (
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                  <span className="font-semibold">출처:</span>
-                  {sourceLinks.slice(0, 3).map((s, i) => (
-                    <a
-                      key={s.source_url ?? i}
-                      href={s.source_url ?? "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2 transition-colors hover:text-foreground"
+                {/* 분류·시기·태그 — 유래 유무와 무관하게 이 밈이 가진 실제 메타데이터라
+                    origin이 비어도 노출한다(있는 정보를 숨기지 않는다). */}
+                <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                  <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
+                    {CATEGORIES[meme.category].user}
+                  </span>
+                  {/* 연도는 정밀도와 함께 읽는다 — year_precision이 근거를 뒷받침하지
+                      못하면 「(추정)」을 붙여 단정하지 않는다. */}
+                  {originYearLabel && (
+                    <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium">
+                      {originYearLabel}
+                    </span>
+                  )}
+                  {tagNames.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-full bg-surface-2 px-2.5 py-1 font-medium"
                     >
-                      {s.source_url?.includes("namu.wiki")
-                        ? "나무위키"
-                        : s.platform || "원문"}
-                      <span aria-hidden className="text-xs">↗</span>
-                    </a>
+                      #{name}
+                    </span>
                   ))}
                 </p>
-              )}
-              {/* 신뢰 신호 — 근거가 있는 만큼만 말한다. meme_sources만 넘긴다:
-                  sourceLinks에는 재생용 콘텐츠 URL이 섞여 있어 근거 수를 부풀린다. */}
-              <TrustNote
-                sources={meme.meme_sources}
-                updatedAt={meme.updated_at}
-                moderationStatus={meme.moderation_status}
-                title={meme.title}
-              />
+
+                {/* 상시 출처 인용 — E-E-A-T: 본문 주장 바로 아래에 근거 링크.
+                    모노 인덱스 스타일 — 관제 화면의 계측 라벨 문법(stat-mono 어휘)과 통일. */}
+                {sourceLinks.length > 0 && (
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1.5 font-mono text-xs text-muted">
+                    <span className="font-semibold uppercase tracking-[0.1em]">출처</span>
+                    {sourceLinks.slice(0, 3).map((s, i) => (
+                      <a
+                        key={s.source_url ?? i}
+                        href={s.source_url ?? "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-6 items-center gap-1 underline decoration-border underline-offset-2 transition-colors hover:text-foreground"
+                      >
+                        <span aria-hidden className="tabular-nums text-muted/70">
+                          0{i + 1}
+                        </span>
+                        {s.source_url?.includes("namu.wiki")
+                          ? "나무위키"
+                          : s.platform || "원문"}
+                        <span aria-hidden className="text-xs">↗</span>
+                      </a>
+                    ))}
+                  </p>
+                )}
+                {/* 신뢰 신호 — 근거가 있는 만큼만 말한다. meme_sources만 넘긴다:
+                    sourceLinks에는 재생용 콘텐츠 URL이 섞여 있어 근거 수를 부풀린다. */}
+                <TrustNote
+                  sources={meme.meme_sources}
+                  updatedAt={meme.updated_at}
+                  moderationStatus={meme.moderation_status}
+                  title={meme.title}
+                />
+              </div>
             </section>
           )}
 

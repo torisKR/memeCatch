@@ -8,6 +8,10 @@ const TONE: Record<SafetyLevel, string> = {
   red: "bg-safety-red-bg text-safety-red",
 };
 
+/** currentColor 기반 상시·정적 네온 테두리(hover 아님) — safety-pulse 마운트 글로우와 별개로 유지 */
+const NEON_RING =
+  "shadow-[0_0_0_1px_color-mix(in_srgb,currentColor_38%,transparent),0_0_10px_-2px_color-mix(in_srgb,currentColor_55%,transparent)]";
+
 /**
  * 사용 안전 신호등 배지 (T1 시그니처).
  * 색 원 + 아이콘(●▲◌✕) + 텍스트 병행 — 색만으로 구분 금지.
@@ -28,7 +32,7 @@ export function SafetyBadge({
   if (size === "lg") {
     return (
       <p
-        className={`safety-pulse flex min-h-14 items-center gap-3 rounded-2xl px-5 py-3.5 ${TONE[level]}`}
+        className={`safety-pulse instrument-grid flex min-h-14 items-center gap-3 rounded-2xl px-5 py-3.5 ${NEON_RING} ${TONE[level]}`}
       >
         <span
           aria-hidden
@@ -48,7 +52,7 @@ export function SafetyBadge({
   }
   return (
     <span
-      className={`safety-pulse inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${TONE[level]}`}
+      className={`safety-pulse inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${NEON_RING} ${TONE[level]}`}
     >
       <span aria-hidden className="leading-none">
         {s.icon}

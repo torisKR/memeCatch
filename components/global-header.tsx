@@ -25,7 +25,7 @@ export function GlobalHeader() {
   const { messages } = useLocale();
   return (
     <HideOnAdmin>
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
           {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
           <Link
@@ -65,7 +65,7 @@ export function GlobalHeader() {
                   placeholder={messages.searchPlaceholder}
                   autoComplete="off"
                   enterKeyHint="search"
-                  className="h-11 w-52 rounded-full border border-border bg-surface pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow,width] duration-200 focus:w-64 focus:border-accent focus:ring-4 focus:ring-accent/20"
+                  className="hover-glow-flame h-11 w-52 rounded-full border border-border bg-surface pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow,width] duration-200 focus:w-64 focus:border-accent focus:ring-4 focus:ring-accent/20"
                 />
               </div>
             </form>
@@ -77,7 +77,7 @@ export function GlobalHeader() {
             {/* 제보 강조 CTA — 데스크톱 전용(모바일은 하단탭 제보가 담당) */}
             <Link
               href="/submit"
-              className="hidden min-h-10 items-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
+              className="hover-glow-flame hidden min-h-10 items-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
             >
               {messages.submit}
             </Link>
@@ -86,7 +86,7 @@ export function GlobalHeader() {
             <Link
               href="/search"
               aria-label={messages.search}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95] lg:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-(--signal-cyan) hover:bg-surface-2 active:scale-[0.95] lg:hidden"
             >
               <SearchIcon className="h-5 w-5" />
             </Link>

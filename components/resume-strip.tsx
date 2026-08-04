@@ -47,7 +47,16 @@ export function ResumeStrip() {
   if (memes.length === 0) return null;
 
   return (
-    <HScrollSection headingId="resume-strip" heading="보던 밈 이어보기" className="mt-8">
+    <HScrollSection
+      headingId="resume-strip"
+      heading={
+        <span className="inline-flex items-center gap-2">
+          <span aria-hidden className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
+          보던 밈 이어보기
+        </span>
+      }
+      className="mt-8"
+    >
       <TrackedBlock event="resume_click">
         <ul className="flex w-max gap-3">
           {memes.map((meme) => (

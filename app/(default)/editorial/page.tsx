@@ -64,7 +64,10 @@ export default function EditorialPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-extrabold tracking-tight">편집 원칙</h1>
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+          Editorial
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">편집 원칙</h1>
         <p className="mt-2 text-sm text-muted">최종 개정: {EFFECTIVE}</p>
         <p className="mt-4 text-lg leading-relaxed text-muted">
           밈캐치는 &ldquo;이 밈, 지금 써도 되나&rdquo;에 답하는 사전입니다. 그

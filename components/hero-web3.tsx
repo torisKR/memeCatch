@@ -74,7 +74,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
               </div>
               <button
                 type="submit"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none"
+                className="holo-sheen inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none"
               >
                 검색하기 <span aria-hidden>→</span>
               </button>
@@ -94,7 +94,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
               <Link
                 key={q}
                 href={`/search?q=${encodeURIComponent(q)}`}
-                className="inline-flex min-h-11 items-center rounded-full border border-white/25 px-3 font-medium text-white/85 transition-colors hover:border-white/60 hover:text-white"
+                className="inline-flex min-h-11 items-center rounded-full border border-white/25 px-3 font-medium text-white/85 transition-colors hover:border-(--flame-400) hover:text-white"
               >
                 {q}
               </Link>
@@ -104,7 +104,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/58">
             {totalCount > 0 && (
               <span>
-                <strong className="font-mono text-white">
+                <strong className="stat-mono text-white">
                   {totalCount.toLocaleString("ko-KR")}
                 </strong>개 밈의 뜻·유래 기록 중
               </span>

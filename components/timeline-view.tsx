@@ -187,11 +187,23 @@ function YearRow({
   yearGroup: TimelineYear;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-5 lg:gap-6">
+    <div className="relative flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-5 lg:gap-6">
+      {/* 연도 좌측 신호선 — flame→투명 그라디언트(정적, 데스크톱 축 레이아웃 전용) */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 hidden w-px bg-gradient-to-b from-(--flame-500) to-transparent sm:block"
+      />
+
       {/* 연도 마커 — 데스크톱에서 좌측 축에 고정, 모바일에서 카드 위 라벨 */}
       <div className="flex shrink-0 items-center gap-2 sm:w-20 sm:flex-col sm:items-start sm:gap-0 sm:pt-1.5 lg:w-24">
-        <span className="whitespace-nowrap text-xl font-extrabold tabular-nums tracking-tight text-accent sm:text-2xl">
-          {yearGroup.year}
+        <span className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="signal-live size-1.5 shrink-0 rounded-full bg-(--flame-500)"
+          />
+          <span className="stat-mono whitespace-nowrap text-xl font-extrabold tracking-tight text-accent sm:text-2xl">
+            {yearGroup.year}
+          </span>
         </span>
         <span aria-hidden className="h-px flex-1 bg-border sm:hidden" />
       </div>

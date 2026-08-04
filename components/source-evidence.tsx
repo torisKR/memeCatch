@@ -28,41 +28,52 @@ export function SourceEvidence({ sources }: { sources: CitableSourceInput[] }) {
         아래 자료를 확인해 뜻·유래를 정리했어요. 원문에서 직접 확인할 수 있어요.
       </p>
       <ol className="mt-3 space-y-3">
-        {cited.map((source) => (
-          <li key={source.url} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-start gap-1 font-medium underline underline-offset-2 transition-colors hover:text-foreground"
-            >
-              {source.title}
-              <span aria-hidden className="text-xs">↗</span>
-            </a>
-            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-              {source.publisher && <span>{source.publisher}</span>}
-              {source.capturedAt && (
-                <>
-                  {source.publisher && <span aria-hidden>·</span>}
-                  <span>
-                    확인{" "}
-                    <time dateTime={source.capturedAt}>
-                      {new Date(source.capturedAt).toLocaleDateString("ko-KR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </time>
-                  </span>
-                </>
-              )}
-              {source.isContext && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span>맥락 확인용 보조 자료</span>
-                </>
-              )}
-            </p>
+        {cited.map((source, i) => (
+          <li
+            key={source.url}
+            className="instrument-grid flex gap-3 rounded-xl border border-border p-4"
+          >
+            <span aria-hidden className="stat-mono shrink-0 pt-0.5 text-xs text-muted">
+              #{String(i + 1).padStart(2, "0")}
+            </span>
+            <div className="min-w-0 flex-1">
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-start gap-1 font-medium underline decoration-border underline-offset-2 transition-colors hover:text-foreground hover:decoration-flame-500"
+              >
+                {source.title}
+                <span aria-hidden className="text-xs">↗</span>
+              </a>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                {source.publisher && <span>{source.publisher}</span>}
+                {source.capturedAt && (
+                  <>
+                    {source.publisher && <span aria-hidden>·</span>}
+                    <span>
+                      확인{" "}
+                      <time
+                        dateTime={source.capturedAt}
+                        className="stat-mono text-(--signal-cyan)"
+                      >
+                        {new Date(source.capturedAt).toLocaleDateString("ko-KR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </time>
+                    </span>
+                  </>
+                )}
+                {source.isContext && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span>맥락 확인용 보조 자료</span>
+                  </>
+                )}
+              </p>
+            </div>
           </li>
         ))}
       </ol>

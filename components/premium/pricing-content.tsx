@@ -23,8 +23,11 @@ export function PricingContent() {
         </p>
       </header>
 
-      <section className="mx-auto mt-10 max-w-xl rounded-3xl border border-accent/30 bg-surface p-6 shadow-lg sm:p-8" aria-labelledby="plus-plan-title">
-        <div className="flex items-start justify-between gap-4 sm:items-center">
+      <section className="edge-signal relative mx-auto mt-10 max-w-xl overflow-hidden rounded-3xl p-6 shadow-lg sm:p-8" aria-labelledby="plus-plan-title">
+        {/* 계측 격자 — edge-signal과 같은 노드에 두면 배경 shorthand가 grid-line을
+            지우므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). */}
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <div className="relative flex items-start justify-between gap-4 sm:items-center">
           <div className="min-w-0">
             <span className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-xs font-black tracking-wider text-accent-text">
               {copy.badge}
@@ -39,7 +42,7 @@ export function PricingContent() {
           </p>
         </div>
 
-        <ul className="mt-6 space-y-3">
+        <ul className="relative mt-6 space-y-3">
           {copy.pricing.features.slice(1).map((feature) => (
             <li key={feature.label} className="flex gap-3 text-sm leading-relaxed sm:text-base">
               <span aria-hidden className="mt-0.5 text-accent-text">✓</span>
@@ -51,13 +54,13 @@ export function PricingContent() {
         {/* 결제는 호스팅 결제창으로의 리다이렉트다. 어느 제공자(Unifi Pay·Latpeed)를
             쓸지는 서버가 환경변수로 정하므로 프론트는 하나의 폼만 유지한다.
             JS 없이도 동작하는 순수 form POST. */}
-        <form action="/api/billing/checkout" method="post" className="mt-7">
+        <form action="/api/billing/checkout" method="post" className="relative mt-7">
           <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
             {copy.pricing.checkout}
           </button>
         </form>
-        <p className="mt-3 text-center text-sm text-muted">{copy.pricing.launchNote}</p>
-        <p className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-muted">
+        <p className="relative mt-3 text-center text-sm text-muted">{copy.pricing.launchNote}</p>
+        <p className="relative mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-muted">
           {copy.pricing.sameEmail}
         </p>
       </section>
@@ -69,7 +72,7 @@ export function PricingContent() {
           {copy.pricing.comparisonTitle}
         </h2>
         <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
-          <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b border-border bg-surface-2 px-4 py-3 text-sm font-bold sm:grid-cols-[minmax(0,1fr)_8rem_8rem]">
+          <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] border-b-2 border-flame-500/70 bg-surface-2 px-4 py-3 text-sm font-bold sm:grid-cols-[minmax(0,1fr)_8rem_8rem]">
             <span className="sr-only">{copy.pricing.comparisonTitle}</span>
             <span className="text-center">{copy.pricing.freeName}</span>
             <span className="text-center text-accent-text">{copy.pricing.plusName}</span>

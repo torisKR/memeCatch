@@ -57,9 +57,16 @@ export function LanguageSelector() {
   }
 
   return (
-    <label className="relative grid h-11 min-w-[5.25rem] shrink-0 cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-bold text-foreground transition-colors hover:border-accent focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/20">
+    <label className="glass-panel relative grid h-11 min-w-[5.25rem] shrink-0 cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-1.5 rounded-full px-3 text-xs font-bold text-foreground transition-shadow hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_55%,transparent)] focus-within:ring-4 focus-within:ring-(--flame-500)/20">
       <span className="sr-only">{messages.language}</span>
-      <span aria-hidden className="text-sm leading-none">{LANGUAGE_FLAGS[locale]}</span>
+      <span aria-hidden className="relative text-sm leading-none">
+        {LANGUAGE_FLAGS[locale]}
+        {/* 활성 로케일 표시 — flame 닷(정적, 장식용) */}
+        <span
+          aria-hidden
+          className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-(--flame-500)"
+        />
+      </span>
       <span aria-hidden>{LANGUAGE_SHORT_NAMES[locale]}</span>
       <ChevronDown className="h-3.5 w-3.5 text-muted" aria-hidden />
       <select

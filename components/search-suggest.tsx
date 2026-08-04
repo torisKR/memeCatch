@@ -14,7 +14,7 @@ export type SearchSuggestion = {
 };
 
 const chipClass =
-  "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "hover-glow-flame inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3.5 text-sm font-medium text-muted hover:text-accent active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 /**
  * 검색 자동완성 드롭다운 (레인 B) — search-input.tsx가 상태/로직을 쥐고,
@@ -53,7 +53,7 @@ export function SearchSuggest({
   onSelectPopular: (term: string) => void;
 }) {
   return (
-    <div className="absolute inset-x-0 top-[calc(100%+8px)] z-20 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-surface p-2 shadow-xl">
+    <div className="glass-panel menu-pop absolute inset-x-0 top-[calc(100%+8px)] z-20 max-h-[70vh] overflow-y-auto rounded-2xl p-2 shadow-xl">
       {hasQuery ? (
         <ul id={listboxId} role="listbox" aria-label="자동완성 결과" className="flex flex-col gap-0.5">
           {suggestions.map((item, i) => (
@@ -64,8 +64,10 @@ export function SearchSuggest({
               aria-selected={i === activeIndex}
               onMouseEnter={() => onHoverIndex(i)}
               onClick={() => onSelect(item)}
-              className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 transition-colors ${
-                i === activeIndex ? "bg-surface-2" : "hover:bg-surface-2"
+              className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 transition-[background-color,border-color,opacity] ${
+                i === activeIndex
+                  ? "border-flame-500/50 bg-surface-2 opacity-100"
+                  : "border-transparent opacity-85 hover:border-border hover:bg-surface-2 hover:opacity-100"
               }`}
             >
               <span className="min-w-0 flex-1">

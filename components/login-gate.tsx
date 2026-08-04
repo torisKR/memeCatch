@@ -177,6 +177,10 @@ export function LoginGate({
             <div className="flex items-center gap-2">
               <BrandTile className="size-8" />
               <span className="text-base font-extrabold tracking-tight">밈캐치</span>
+              <span
+                aria-hidden
+                className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)"
+              />
             </div>
 
             <h2 id={titleId} className="mt-3 text-xl font-extrabold leading-snug">
@@ -222,7 +226,7 @@ export function LoginGate({
               </a>
               <Link
                 href={loginHref}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong px-4 text-base font-bold text-white transition-transform active:scale-[0.98]"
+                className="hover-glow-flame flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong px-4 text-base font-bold text-white transition-transform active:scale-[0.98]"
               >
                 이메일로 시작하기
               </Link>

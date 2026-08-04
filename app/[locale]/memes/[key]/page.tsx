@@ -386,34 +386,45 @@ export default async function LocalizedMemePage({ params }: Props) {
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
         <div className="space-y-6">
           {meme.description && (
-            <section aria-labelledby="meme-description" className="rounded-2xl border border-border bg-surface p-5 sm:p-7">
-              <h2 id="meme-description" className="text-2xl font-black tracking-tight">{copy.description}</h2>
-              <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.description}</p>
+            <section aria-labelledby="meme-description" className="glass-panel relative overflow-hidden rounded-2xl p-5 sm:p-7">
+              {/* 계측 격자 — glass-panel과 같은 노드에 두면 배경 shorthand가 grid-line을
+                  지우므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). 정적이라 성능 비용 없음. */}
+              <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+              <div className="relative">
+                <h2 id="meme-description" className="text-2xl font-black tracking-tight">{copy.description}</h2>
+                <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.description}</p>
+              </div>
             </section>
           )}
           {meme.origin && (
-            <section aria-labelledby="meme-origin" className="rounded-2xl border border-border bg-surface p-5 sm:p-7">
-              <h2 id="meme-origin" className="text-2xl font-black tracking-tight">{copy.origin}</h2>
-              <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.origin}</p>
+            <section aria-labelledby="meme-origin" className="glass-panel relative overflow-hidden rounded-2xl p-5 sm:p-7">
+              <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+              <div className="relative">
+                <h2 id="meme-origin" className="text-2xl font-black tracking-tight">{copy.origin}</h2>
+                <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.origin}</p>
+              </div>
             </section>
           )}
           {meme.usage_note && (
-            <section aria-labelledby="meme-usage" className="rounded-2xl border border-border bg-surface p-5 sm:p-7">
-              <h2 id="meme-usage" className="text-2xl font-black tracking-tight">{copy.usage}</h2>
-              <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.usage_note}</p>
-              {contexts.length > 0 && (
-                <div className="mt-5 border-t border-border pt-4">
-                  <h3 className="text-sm font-bold">{copy.context}</h3>
-                  <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {contexts.map(([context, level]) => (
-                      <div key={context} className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-                        <dt>{copy.contexts[context] ?? context}</dt>
-                        <dd className="font-semibold">{copy.safety[level]}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              )}
+            <section aria-labelledby="meme-usage" className="glass-panel relative overflow-hidden rounded-2xl p-5 sm:p-7">
+              <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+              <div className="relative">
+                <h2 id="meme-usage" className="text-2xl font-black tracking-tight">{copy.usage}</h2>
+                <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.usage_note}</p>
+                {contexts.length > 0 && (
+                  <div className="mt-5 border-t border-border pt-4">
+                    <h3 className="text-sm font-bold">{copy.context}</h3>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {contexts.map(([context, level]) => (
+                        <div key={context} className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
+                          <dt>{copy.contexts[context] ?? context}</dt>
+                          <dd className="font-semibold">{copy.safety[level]}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+              </div>
             </section>
           )}
           {meme.caution && (
@@ -426,7 +437,9 @@ export default async function LocalizedMemePage({ params }: Props) {
 
         {sourceLinks.length > 0 && (
           <aside className="rounded-2xl border border-border bg-surface-2 p-5 lg:sticky lg:top-20">
-            <h2 className="font-black">{copy.sources}</h2>
+            <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+              {copy.sources}
+            </h2>
             <ol className="mt-4 space-y-3">
               {sourceLinks.map((source, index) => (
                 <li key={source.id} className="text-sm">

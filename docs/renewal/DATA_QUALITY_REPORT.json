@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-03T17:53:34.770Z",
+  "generatedAt": "2026-08-04T03:45:05.747Z",
   "scope": {
     "moderationStatus": [
       "approved",
       "limited"
     ],
-    "documents": 3904
+    "documents": 3906
   },
   "depth": {
-    "substantial": 145,
+    "substantial": 147,
     "thin": 3759,
-    "substantialRatio": 0.0371,
+    "substantialRatio": 0.0376,
     "avgScore": 2.34,
     "avgProseChars": 173
   },
@@ -20,7 +20,7 @@
       "severity": "critical",
       "title": "공개 문서인데 근거 출처 URL이 하나도 없음",
       "count": 1330,
-      "ratio": 0.3407,
+      "ratio": 0.3405,
       "samples": [
         "pp3tzbgm",
         "y9azs4hb",
@@ -96,7 +96,7 @@
       "severity": "high",
       "title": "충실도 미달(색인 제외 + 정리 중 배너 노출) 문서",
       "count": 3759,
-      "ratio": 0.9629,
+      "ratio": 0.9624,
       "samples": [
         "pp3tzbgm",
         "e2mge2nh",
@@ -114,9 +114,11 @@
       "id": "DQ-H2-uniform-usage-context",
       "severity": "high",
       "title": "상황별 사용 신호가 전부 동일(기계적 기본값 의심)",
-      "count": 3310,
-      "ratio": 0.8478,
+      "count": 3312,
+      "ratio": 0.8479,
       "samples": [
+        "ajvzf7pk",
+        "2au7br9f",
         "pp3tzbgm",
         "e2mge2nh",
         "y9azs4hb",
@@ -124,18 +126,18 @@
         "qw6c9fbu",
         "6tnvkf59",
         "y3mzdfk9",
-        "nac3mj5m",
-        "s68r8urd",
-        "vm8c6egp"
+        "nac3mj5m"
       ]
     },
     {
       "id": "DQ-H3-no-representative-content",
       "severity": "high",
       "title": "렌더 가능한 대표 콘텐츠 없음",
-      "count": 2148,
-      "ratio": 0.5502,
+      "count": 2150,
+      "ratio": 0.5504,
       "samples": [
+        "ajvzf7pk",
+        "2au7br9f",
         "pp3tzbgm",
         "y9azs4hb",
         "bwucphub",
@@ -143,18 +145,18 @@
         "qw6c9fbu",
         "6tnvkf59",
         "y3mzdfk9",
-        "nac3mj5m",
-        "s68r8urd",
-        "vm8c6egp"
+        "nac3mj5m"
       ]
     },
     {
       "id": "DQ-H4-rights-unknown",
       "severity": "high",
       "title": "출처의 권리 근거가 unknown인 채로 공개",
-      "count": 292,
-      "ratio": 0.0748,
+      "count": 294,
+      "ratio": 0.0753,
       "samples": [
+        "ajvzf7pk",
+        "2au7br9f",
         "jxxnks9w",
         "2jaw8rkp",
         "cwuc96cy",
@@ -162,9 +164,7 @@
         "dsecykzp",
         "mt3hb97s",
         "67zvzczp",
-        "fsjdajrb",
-        "k7x4uevb",
-        "np6cgq8j"
+        "fsjdajrb"
       ]
     },
     {
@@ -172,7 +172,7 @@
       "severity": "medium",
       "title": "발생 연도 없음",
       "count": 222,
-      "ratio": 0.0569,
+      "ratio": 0.0568,
       "samples": [
         "bwucphub",
         "nac3mj5m",
@@ -190,9 +190,11 @@
       "id": "DQ-M2-no-tags",
       "severity": "medium",
       "title": "태그 없음(탐색·관련 밈 품질 저하)",
-      "count": 3904,
+      "count": 3906,
       "ratio": 1,
       "samples": [
+        "ajvzf7pk",
+        "2au7br9f",
         "pp3tzbgm",
         "e2mge2nh",
         "y9azs4hb",
@@ -200,9 +202,7 @@
         "5233uzcz",
         "qw6c9fbu",
         "6tnvkf59",
-        "y3mzdfk9",
-        "nac3mj5m",
-        "c9nswfg7"
+        "y3mzdfk9"
       ]
     },
     {

@@ -98,7 +98,7 @@ export function CommentForm({
         maxLength={MAX_LEN}
         rows={parentId ? 2 : 3}
         autoFocus={autoFocus}
-        className="w-full resize-y rounded-xl border border-border bg-surface p-3 text-base placeholder:text-muted focus:outline-none"
+        className="w-full resize-y rounded-xl border border-border bg-surface p-3 text-base placeholder:text-muted focus:border-signal-cyan focus:outline-none focus:ring-4 focus:ring-signal-cyan/20"
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
@@ -108,7 +108,7 @@ export function CommentForm({
         <button
           type="submit"
           disabled={isPending || !body.trim()}
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50"
+          className="hover-glow-flame holo-sheen inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50"
         >
           {isPending ? "남기는 중…" : parentId ? "답글 남기기" : "댓글 남기기"}
         </button>

@@ -16,10 +16,10 @@ export function CommunityGate({
   return (
     <section
       aria-label={title}
-      className="rounded-2xl border border-border bg-surface-2 p-6 text-center"
+      className="instrument-grid rounded-2xl border border-border bg-surface-2 p-6 text-center"
     >
       <svg
-        className="mx-auto h-8 w-8 text-muted"
+        className="mx-auto h-8 w-8 text-accent"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

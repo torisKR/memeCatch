@@ -230,29 +230,30 @@ export default async function RankingsPage() {
       )}
 
       {data && !data.fallback && (
-        <div className="mt-6">
+        <div className="instrument-grid mt-6 rounded-3xl border border-border/60 p-4 sm:p-6">
           {/* CSS 라디오 탭 — 클라이언트 상태나 JS 없이 서버 렌더 마크업으로 전환 */}
           <input type="radio" name="rank-tab" id="rank-tab-today" className="peer/today sr-only" defaultChecked />
           <input type="radio" name="rank-tab" id="rank-tab-week" className="peer/week sr-only" />
           <input type="radio" name="rank-tab" id="rank-tab-again" className="peer/again sr-only" />
 
-          {/* 실제 컨트롤은 위의 라디오 그룹 — 라벨은 시각적 탭 역할 */}
+          {/* 실제 컨트롤은 위의 라디오 그룹 — 라벨은 시각적 탭 역할.
+              활성 탭은 flame 언더라인(inset box-shadow) + 은은한 글로우로 표시한다. */}
           <div className="flex gap-2">
             <label
               htmlFor="rank-tab-today"
-              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-base font-medium text-muted peer-checked/today:border-accent peer-checked/today:bg-accent-soft peer-checked/today:font-semibold peer-checked/today:text-accent"
+              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-base font-medium text-muted transition-colors peer-checked/today:border-flame-500/70 peer-checked/today:bg-flame-500/10 peer-checked/today:font-semibold peer-checked/today:text-accent peer-checked/today:shadow-[inset_0_-2px_0_0_var(--flame-500),0_0_16px_-4px_var(--flame-500)]"
             >
               오늘의 급상승
             </label>
             <label
               htmlFor="rank-tab-week"
-              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-base font-medium text-muted peer-checked/week:border-accent peer-checked/week:bg-accent-soft peer-checked/week:font-semibold peer-checked/week:text-accent"
+              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-base font-medium text-muted transition-colors peer-checked/week:border-flame-500/70 peer-checked/week:bg-flame-500/10 peer-checked/week:font-semibold peer-checked/week:text-accent peer-checked/week:shadow-[inset_0_-2px_0_0_var(--flame-500),0_0_16px_-4px_var(--flame-500)]"
             >
               이번 주 많이 본
             </label>
             <label
               htmlFor="rank-tab-again"
-              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-base font-medium text-muted peer-checked/again:border-accent peer-checked/again:bg-accent-soft peer-checked/again:font-semibold peer-checked/again:text-accent"
+              className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-base font-medium text-muted transition-colors peer-checked/again:border-flame-500/70 peer-checked/again:bg-flame-500/10 peer-checked/again:font-semibold peer-checked/again:text-accent peer-checked/again:shadow-[inset_0_-2px_0_0_var(--flame-500),0_0_16px_-4px_var(--flame-500)]"
             >
               다시 뜨는
             </label>
@@ -377,11 +378,16 @@ function RankItem({
 }) {
   const safety = SAFETY_LEVELS[meme.safety_level as SafetyLevel];
   const life = LIFECYCLE_STATUS[meme.lifecycle_status as LifecycleStatus];
+  const isTopThree = rank <= 3;
   return (
     <li className="min-w-0">
       <Link
         href={memePathFrom(meme.short_id, meme.slug)}
-        className="flex min-h-11 items-start gap-3 rounded-2xl border border-border bg-surface p-4"
+        className={`flex min-h-11 items-start gap-3 rounded-2xl p-4 transition-colors ${
+          isTopThree
+            ? "edge-signal"
+            : "border border-border bg-surface hover:border-accent/40 hover:bg-surface-2"
+        }`}
       >
         {/* 숫자는 장식으로 두고 의미는 sr-only가 전한다.
             이전에는 이 <span>에 aria-label="1위"를 달았지만, ARIA 명세상 generic
@@ -390,8 +396,8 @@ function RankItem({
             수 있다. LOOP.md 「순위 숫자와 accessible name이 중복 읽히지 않는지」. */}
         <span
           aria-hidden
-          className={`w-7 shrink-0 pt-0.5 text-lg font-bold tabular-nums ${
-            rank <= 3 ? "text-accent" : "text-muted"
+          className={`stat-mono w-7 shrink-0 pt-0.5 text-lg font-bold ${
+            isTopThree ? "text-accent" : "text-muted"
           }`}
         >
           {rank}

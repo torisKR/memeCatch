@@ -17,7 +17,7 @@ import {
  */
 export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
   return (
-    <article className="relative rounded-2xl border border-border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md">
+    <article className="hover-glow-flame relative rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <header className="flex items-center gap-2 text-sm text-muted">
         <span className="font-semibold text-foreground">
           {post.profiles?.nickname ?? "익명"}
@@ -50,12 +50,16 @@ export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
       <footer className="mt-3 flex items-center gap-4 text-sm text-muted">
         <span className="inline-flex items-center gap-1">
           <HeartIcon className="h-4 w-4" />
-          {post.like_count.toLocaleString("ko-KR")}
+          <span className="stat-mono text-signal-cyan">
+            {post.like_count.toLocaleString("ko-KR")}
+          </span>
           <span className="sr-only">개 좋아요</span>
         </span>
         <span className="inline-flex items-center gap-1">
           <BubbleIcon className="h-4 w-4" />
-          {post.comment_count.toLocaleString("ko-KR")}
+          <span className="stat-mono text-signal-cyan">
+            {post.comment_count.toLocaleString("ko-KR")}
+          </span>
           <span className="sr-only">개 댓글</span>
         </span>
       </footer>

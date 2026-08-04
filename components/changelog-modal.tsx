@@ -117,41 +117,46 @@ export function ChangelogModal() {
         onClick={dismiss}
         className="absolute inset-0 cursor-default bg-black/50"
       />
-      <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl">
-        <p className="text-xs font-bold uppercase tracking-wide text-accent">새 소식</p>
-        <h2 id="changelog-title" className="mt-1 text-lg font-bold text-foreground">
-          밈캐치가 업데이트됐어요
-        </h2>
-        <div className="mt-3 max-h-[50dvh] space-y-4 overflow-y-auto">
-          {entries.map((entry) => (
-            <section key={entry.id}>
-              <h3 className="text-sm font-semibold text-foreground">
-                {entry.title}
-                <span className="ml-1.5 font-normal text-muted">{entry.date}</span>
-              </h3>
-              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm leading-relaxed text-muted">
-                {entry.items.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </section>
-          ))}
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface p-5 shadow-xl">
+        {/* 계측 격자 — glass-panel과 같은 노드에 두면 배경 shorthand가 grid-line을
+            지우므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). 정적. */}
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <div className="relative">
+          <p className="text-xs font-bold uppercase tracking-wide text-accent">새 소식</p>
+          <h2 id="changelog-title" className="mt-1 text-lg font-bold text-foreground">
+            밈캐치가 업데이트됐어요
+          </h2>
+          <div className="mt-3 max-h-[50dvh] space-y-4 overflow-y-auto">
+            {entries.map((entry) => (
+              <section key={entry.id}>
+                <h3 className="text-sm font-semibold text-foreground">
+                  {entry.title}
+                  <span className="stat-mono ml-1.5 font-normal text-muted">{entry.date}</span>
+                </h3>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm leading-relaxed text-muted">
+                  {entry.items.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+          <button
+            ref={confirmRef}
+            type="button"
+            onClick={dismiss}
+            className="no-press mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
+          >
+            확인했어요
+          </button>
+          <button
+            type="button"
+            onClick={snoozeToday}
+            className="no-press mt-2 inline-flex h-10 w-full items-center justify-center rounded-full px-4 text-sm font-semibold text-muted transition-colors hover:text-foreground"
+          >
+            오늘 하루 보지 않기
+          </button>
         </div>
-        <button
-          ref={confirmRef}
-          type="button"
-          onClick={dismiss}
-          className="no-press mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
-        >
-          확인했어요
-        </button>
-        <button
-          type="button"
-          onClick={snoozeToday}
-          className="no-press mt-2 inline-flex h-10 w-full items-center justify-center rounded-full px-4 text-sm font-semibold text-muted transition-colors hover:text-foreground"
-        >
-          오늘 하루 보지 않기
-        </button>
       </div>
     </div>
   );

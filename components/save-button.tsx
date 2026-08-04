@@ -123,7 +123,7 @@ export function SaveButton({ memeId }: { memeId: string }) {
         aria-pressed={saved}
         className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-colors ${
           saved
-            ? "border-accent bg-accent-soft text-accent"
+            ? "border-accent bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]"
             : "border-border bg-surface text-foreground"
         }`}
       >

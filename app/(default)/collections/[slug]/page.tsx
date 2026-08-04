@@ -183,7 +183,7 @@ export default async function CollectionPage({
           </div>
         </>
       ) : (
-        <p className="mt-8 rounded-2xl border border-border bg-surface p-6 text-base text-muted">
+        <p className="glass-panel instrument-grid mt-8 rounded-2xl p-6 text-base text-muted">
           이 모음은 준비 중이에요. 곧 채워질 거예요.
         </p>
       )}

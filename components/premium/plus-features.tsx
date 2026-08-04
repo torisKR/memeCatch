@@ -44,7 +44,7 @@ export function PlusFeatures({
                 >
                   <span
                     aria-hidden
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-black text-accent-text"
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-black text-accent-text shadow-[0_0_0_1px_var(--flame-500),0_0_10px_-2px_var(--flame-500)]"
                   >
                     {index + 1}
                   </span>
@@ -74,7 +74,7 @@ export function PlusFeatures({
                 role="region"
                 aria-labelledby={buttonId}
                 hidden={!isOpen}
-                className="px-5 pb-4 pl-14 text-sm leading-relaxed text-muted"
+                className="instrument-grid px-5 pb-4 pl-14 text-sm leading-relaxed text-muted"
               >
                 {feature.detail}
               </div>

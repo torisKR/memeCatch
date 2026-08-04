@@ -11,6 +11,8 @@ const badgeVariants = cva(
         default: "border-transparent bg-accent-soft text-accent-text",
         secondary: "border-transparent bg-foreground text-background",
         outline: "border-border bg-surface text-foreground",
+        // 실시간 신호 전용(라이브 카운트·시세 등) — cyan은 이 용도로만 사용
+        signal: "border-transparent bg-signal-cyan-soft text-signal-cyan",
       },
     },
     defaultVariants: {

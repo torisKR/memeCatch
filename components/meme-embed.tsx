@@ -413,7 +413,7 @@ function LiteSocialEmbed({
   // 테두리로 전달 — 디자인 시스템에서 사이드 스트라이프 악센트는 금지
   const sourceTape = (
     <div
-      className={`${frameWidthClass} flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm`}
+      className={`hover-glow-flame ${frameWidthClass} flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm`}
     >
       <span className="font-bold tracking-tight">{providerName}</span>
       {!isRepresentative && (
@@ -494,6 +494,7 @@ function LiteSocialEmbed({
             className="absolute inset-0 h-full w-full object-cover opacity-45 blur-[1px]"
           />
         )}
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
         <div className="absolute inset-0 animate-pulse bg-background/50 motion-reduce:animate-none" />
       </div>
     </div>
@@ -558,7 +559,7 @@ function LiteYouTube({
             className="h-full w-full object-cover"
           />
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-background/85 shadow-lg transition-transform group-hover:scale-105">
+            <span className="hover-glow-flame flex h-16 w-16 items-center justify-center rounded-full bg-background/85 shadow-lg transition-transform group-hover:scale-105">
               <svg
                 viewBox="0 0 24 24"
                 className="ml-1 h-7 w-7 text-accent"

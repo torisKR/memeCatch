@@ -74,7 +74,7 @@ export function SavedMetaEditor({
       {/* 현재 값 요약 */}
       <div className="flex flex-wrap items-center gap-1.5">
         {saved.collection && (
-          <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent-text">
+          <span className="stat-mono rounded-full bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent-text">
             {saved.collection}
           </span>
         )}
@@ -136,7 +136,7 @@ export function SavedMetaEditor({
               type="button"
               onClick={save}
               disabled={pending}
-              className="inline-flex min-h-9 items-center rounded-lg bg-accent-strong px-3 text-xs font-bold text-white disabled:opacity-60"
+              className="hover-glow-flame inline-flex min-h-9 items-center rounded-lg bg-accent-strong px-3 text-xs font-bold text-white disabled:opacity-60"
             >
               {pending ? "저장 중…" : "저장"}
             </button>

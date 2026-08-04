@@ -110,7 +110,7 @@ export default function CollectionsIndexPage() {
           return (
             <section key={group.key} aria-labelledby={`collection-group-${group.key}`}>
               <div className="grid gap-3 border-b border-border pb-4 sm:grid-cols-[8rem_1fr] sm:items-end">
-                <p className="font-mono text-xs font-semibold tracking-[0.14em] text-muted">
+                <p className="stat-mono text-xs font-semibold tracking-[0.14em] text-(--signal-cyan)">
                   0{groupIndex + 1} / {group.eyebrow}
                 </p>
                 <div className="flex flex-wrap items-end justify-between gap-2">
@@ -126,7 +126,7 @@ export default function CollectionsIndexPage() {
                   <li key={collection.slug} className="border-b border-border">
                     <Link
                       href={`/collections/${collection.slug}`}
-                      className="group grid min-h-28 gap-3 py-5 transition-colors hover:text-accent sm:grid-cols-[8rem_1fr_auto] sm:items-center"
+                      className="hover-glow-flame group grid min-h-28 gap-3 rounded-xl py-5 transition-colors hover:text-accent sm:grid-cols-[8rem_1fr_auto] sm:items-center"
                     >
                       <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
                         {collection.slug}

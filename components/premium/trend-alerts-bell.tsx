@@ -110,6 +110,8 @@ export function TrendAlertsBell() {
         <BellIcon className="h-5 w-5" />
         {unread > 0 && (
           <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-accent-foreground">
+            {/* 실시간 신호 점 — 숫자 자체는 점멸시키지 않고(가독성) 곁에 살아있음만 표시 */}
+            <span aria-hidden className="signal-live absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-(--signal-cyan)" />
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -144,10 +146,11 @@ export function TrendAlertsBell() {
                       className="flex items-start gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2"
                     >
                       <span
-                        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent"
+                        className="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent"
                         aria-hidden
                       >
                         <RisingIcon className="h-4 w-4" />
+                        <span className="signal-live absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-(--signal-cyan)" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">

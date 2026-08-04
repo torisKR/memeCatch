@@ -84,7 +84,12 @@ export default async function SupportPage() {
                 const status = inq.status as InquiryStatus;
                 const category = inq.category as InquiryCategory;
                 return (
-                  <li key={inq.id} className="rounded-2xl border border-border bg-surface p-4">
+                  <li
+                    key={inq.id}
+                    className={`rounded-2xl border border-border bg-surface p-4 ${
+                      inq.admin_reply ? "hover-glow-flame" : ""
+                    }`}
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${INQUIRY_STATUS_BADGE_CLASS[status]}`}

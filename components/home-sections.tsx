@@ -9,10 +9,14 @@ export function SafetySignalSection() {
   ][];
 
   return (
-    <section aria-labelledby="sec-safety" className="border-y border-border py-8 sm:py-10">
+    <section
+      aria-labelledby="sec-safety"
+      className="border-y border-border py-8 sm:py-10 [border-image:linear-gradient(90deg,transparent,var(--flame-500),transparent)_1]"
+    >
       <div className="grid gap-6 lg:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.65fr)] lg:items-center">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+          <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+            <span aria-hidden className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
             Usage signal
           </p>
           <h2 id="sec-safety" className="mt-1.5 text-2xl font-extrabold tracking-tight">
@@ -29,7 +33,7 @@ export function SafetySignalSection() {
           </Link>
         </div>
 
-        <ol className="grid overflow-hidden rounded-xl border border-border sm:grid-cols-4">
+        <ol className="instrument-grid grid overflow-hidden rounded-xl border border-border sm:grid-cols-4">
           {levels.map(([key, meta], index) => (
             <li
               key={key}
@@ -46,7 +50,7 @@ export function SafetySignalSection() {
                 {meta.icon}
               </span>
               <span className="min-w-0 sm:mt-3 sm:block">
-                <span className="block font-mono text-[10px] text-muted">0{index + 1}</span>
+                <span className="stat-mono block font-mono text-[10px] text-muted">0{index + 1}</span>
                 <span className="block font-bold">{meta.user}</span>
               </span>
             </li>
@@ -87,7 +91,8 @@ export function HomePathwaysSection() {
     <section aria-labelledby="sec-pathways" className="py-10 sm:py-12">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+          <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+            <span aria-hidden className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
             Browse by intent
           </p>
           <h2 id="sec-pathways" className="mt-1.5 text-2xl font-extrabold tracking-tight">
@@ -108,13 +113,13 @@ export function HomePathwaysSection() {
             <Link
               href={item.href}
               prefetch={item.href === "/timeline" ? false : undefined}
-              className={`group flex min-h-36 flex-col justify-between gap-6 px-1 py-5 transition-colors hover:text-accent lg:px-5 ${
+              className={`group hover-glow-flame holo-sheen flex min-h-36 flex-col justify-between gap-6 px-1 py-5 transition-colors hover:text-accent lg:px-5 ${
                 index === 0 ? "lg:pl-1" : ""
               }`}
             >
               <span className="flex items-center justify-between gap-3 font-mono text-[11px] font-semibold tracking-[0.14em] text-muted">
                 <span>{item.eyebrow}</span>
-                <span>{item.index}</span>
+                <span className="stat-mono">{item.index}</span>
               </span>
               <span>
                 <span className="flex items-center justify-between gap-3 text-xl font-extrabold text-foreground transition-colors group-hover:text-accent">
@@ -135,7 +140,10 @@ export function HomePathwaysSection() {
 
 export function SubmitCtaSection() {
   return (
-    <section aria-labelledby="sec-submit" className="border-t border-border py-10 sm:py-12">
+    <section
+      aria-labelledby="sec-submit"
+      className="border-t border-border py-10 sm:py-12 [border-image:linear-gradient(90deg,transparent,var(--flame-500),transparent)_1]"
+    >
       <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="border-l-2 border-accent pl-4">
           <h2 id="sec-submit" className="text-xl font-extrabold">

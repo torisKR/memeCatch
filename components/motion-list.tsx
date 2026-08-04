@@ -59,7 +59,7 @@ export function MotionList({
     visible: { transition: { staggerChildren: staggerDelay, delayChildren: 0.02 } },
   };
   const item: Variants = {
-    hidden: { opacity: 0, y: 12 },
+    hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE_OUT } },
   };
 

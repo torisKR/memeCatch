@@ -21,6 +21,8 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
   const reduce = useReducedMotion();
   const scrollerRef = useRef<HTMLUListElement | null>(null);
   const progressRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const dotRef = useRef<HTMLDivElement | null>(null);
   const pausedRef = useRef(false);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
@@ -45,8 +47,14 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
         raf = 0;
         const max = el.scrollWidth - el.clientWidth;
         const p = max > 0 ? el.scrollLeft / max : 0;
+        const filled = Math.max(0.04, p);
         if (progressRef.current) {
-          progressRef.current.style.transform = `scaleX(${Math.max(0.04, p)})`;
+          progressRef.current.style.transform = `scaleX(${filled})`;
+        }
+        // 선두 점 — 채움 바(scaleX)와 같은 비율로 트랙 실측 폭을 따라간다(transform만, 리플로우 없음).
+        if (dotRef.current) {
+          const trackW = trackRef.current?.clientWidth ?? 0;
+          dotRef.current.style.transform = `translate(${filled * trackW}px, -50%)`;
         }
         setAtStart(el.scrollLeft <= 4);
         setAtEnd(max > 0 && el.scrollLeft >= max - 4);
@@ -110,7 +118,7 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
   }, [reduce]);
 
   return (
-    <div className="group/carousel relative -mx-4 mt-3">
+    <div className="instrument-grid group/carousel relative -mx-4 mt-3">
       <ul
         ref={scrollerRef}
         className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -149,17 +157,26 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
       />
 
       {/* 차트 진행 바 — 스크롤 위치를 불꽃 그라디언트로 시각화 */}
-      <div className="mx-4 mt-1 h-1 overflow-hidden rounded-full bg-surface-2">
+      <div ref={trackRef} className="relative mx-4 mt-1">
+        <div className="h-1 overflow-hidden rounded-full bg-surface-2">
+          <div
+            ref={progressRef}
+            aria-hidden
+            className="h-full w-full origin-left rounded-full"
+            style={{
+              transform: "scaleX(0.04)",
+              background:
+                "linear-gradient(90deg, var(--flame-400), var(--flame-600))",
+              transition: "transform 150ms linear",
+            }}
+          />
+        </div>
+        {/* 선두 점 — 신호가 살아 있는 상태를 나타내는 cyan 펄스(정적 위치는 transform으로만 갱신) */}
         <div
-          ref={progressRef}
+          ref={dotRef}
           aria-hidden
-          className="h-full w-full origin-left rounded-full"
-          style={{
-            transform: "scaleX(0.04)",
-            background:
-              "linear-gradient(90deg, var(--flame-400), var(--flame-600))",
-            transition: "transform 150ms linear",
-          }}
+          className="signal-live pointer-events-none absolute left-0 top-1/2 size-1.5 rounded-full bg-signal-cyan"
+          style={{ transform: "translate(0px, -50%)" }}
         />
       </div>
     </div>
@@ -183,7 +200,7 @@ function CarouselButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface/95 text-foreground shadow-md backdrop-blur-sm transition-[opacity,transform] duration-200 hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-95 disabled:pointer-events-none disabled:opacity-0 md:flex ${
+      className={`hover-glow-flame absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface/95 text-foreground shadow-md backdrop-blur-sm transition-[opacity,transform] duration-200 hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-95 disabled:pointer-events-none disabled:opacity-0 md:flex ${
         dir === -1 ? "left-1" : "right-1"
       } opacity-0 focus-visible:opacity-100 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100`}
     >

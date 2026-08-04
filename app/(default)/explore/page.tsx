@@ -235,27 +235,34 @@ export default async function ExplorePage({
       <AdsenseScript />
       <div className="mx-auto max-w-6xl px-4 pt-8">
         <ExploreCollectionJsonLd />
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-          Discover
-        </p>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">밈 탐색</h1>
-            <p className="mt-1 text-base text-muted">
-              검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
-            </p>
+        <div className="hover-glow-flame rounded-2xl border border-border bg-surface px-4 py-5 md:px-6">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+            Discover
+          </p>
+          <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                밈 <span className="text-signal">탐색</span>
+              </h1>
+              <p className="mt-1 text-base text-muted">
+                검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
+              </p>
+            </div>
+            <Link
+              href="/collections"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
+            >
+              테마별 모음 <span aria-hidden className="ml-1">→</span>
+            </Link>
           </div>
-          <Link
-            href="/collections"
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
-          >
-            테마별 모음 <span aria-hidden className="ml-1">→</span>
-          </Link>
         </div>
 
         <ExploreFilters platformCounts={platformCounts} />
 
-        <section aria-label="밈 탐색 결과" className="mt-6">
+        <section
+          aria-label="밈 탐색 결과"
+          className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
+        >
           <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />
         </section>
       </div>

@@ -82,7 +82,10 @@ export async function ContinueStream({
   return (
     <section aria-labelledby="continue-stream" className="mt-2">
       <h2 id="continue-stream" className="text-xl font-bold">
-        이어서 볼 만한 밈
+        <span className="inline-flex items-center gap-2">
+          <span aria-hidden className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
+          이어서 볼 만한 밈
+        </span>
       </h2>
       <p className="mt-1 text-sm text-muted">
         비슷한 밈부터 — 스크롤을 멈추기 아까운 밈들이 끝없이 이어져요.

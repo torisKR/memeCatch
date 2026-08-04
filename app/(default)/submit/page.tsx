@@ -27,11 +27,22 @@ export default async function SubmitPage({
         </p>
 
         {/* 검수 프로세스 가시화 — 제보가 어떻게 처리되는지 (E-E-A-T 신뢰 신호) */}
-        <ol className="mt-4 flex items-center gap-1.5 text-[13px] font-medium text-muted" aria-label="검수 절차">
+        <ol
+          className="instrument-grid mt-4 flex items-center gap-1.5 rounded-2xl border border-border px-2.5 py-2 text-[13px] font-medium text-muted"
+          aria-label="검수 절차"
+        >
           {["제보", "사실 확인", "저작권 확인", "공개"].map((step, i) => (
             <li key={step} className="flex items-center gap-1.5">
               {i > 0 && <span aria-hidden className="text-border">→</span>}
-              <span className="rounded-full bg-surface-2 px-2.5 py-1">{step}</span>
+              <span
+                className={
+                  i === 0
+                    ? "rounded-full border border-flame-500/70 bg-flame-500/10 px-2.5 py-1 font-semibold text-accent"
+                    : "rounded-full bg-surface-2 px-2.5 py-1"
+                }
+              >
+                {step}
+              </span>
             </li>
           ))}
         </ol>

@@ -32,7 +32,7 @@ export function AnswerCard({
   return (
     <motion.section
       aria-label="정답 카드"
-      className="rounded-2xl border border-border bg-surface p-5 shadow-sm"
+      className="hover-glow-flame rounded-2xl border border-border bg-surface p-5 shadow-sm"
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
@@ -43,7 +43,7 @@ export function AnswerCard({
           <span aria-hidden className="size-1.5 rounded-full bg-(--signal-cyan)" />
           Life signal
         </span>
-        <span className="font-mono text-[11px] font-bold text-muted">
+        <span className="stat-mono text-[11px] font-bold text-muted">
           {LIFECYCLE_STATUS[meme.lifecycle_status].user}
         </span>
       </div>

@@ -247,7 +247,8 @@ export function GenerationVotes({ memeId }: { memeId: string }) {
               return (
                 <li key={g.value} className="flex items-center gap-3">
                   <span className="w-20 shrink-0 text-base font-medium">{g.label}</span>
-                  <span className="text-base text-muted">
+                  {/* 표본 부족 = 아직 신호 없음 → void 톤(장식 없는 flat 배지) */}
+                  <span className="rounded-full bg-void/10 px-2.5 py-0.5 text-base text-muted">
                     아직 표본이 부족해요 ({agg.total.toLocaleString("ko-KR")}표)
                   </span>
                 </li>
@@ -257,17 +258,22 @@ export function GenerationVotes({ memeId }: { memeId: string }) {
             return (
               <li key={g.value} className="flex items-center gap-3">
                 <span className="w-20 shrink-0 text-base font-medium">{g.label}</span>
+                {/* 라이브 집계 트랙: 계측 격자 + cyan 채움(실시간 신호 규칙) */}
                 <div
-                  className="h-3 flex-1 overflow-hidden rounded-full bg-surface-2"
+                  className="instrument-grid h-3 flex-1 overflow-hidden rounded-full bg-surface-2"
                   role="img"
                   aria-label={`${g.label} ${pct}%가 알아요 (${agg.total.toLocaleString("ko-KR")}표)`}
                 >
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: "var(--accent)" }}
+                    style={{
+                      width: `${pct}%`,
+                      background:
+                        "linear-gradient(90deg, color-mix(in srgb, var(--signal-cyan) 65%, var(--surface)) 0%, var(--signal-cyan) 100%)",
+                    }}
                   />
                 </div>
-                <span className="w-24 shrink-0 text-right text-base">
+                <span className="stat-mono w-24 shrink-0 text-right text-base">
                   <strong>{pct}%</strong>
                   <span className="text-sm text-muted"> 알아요</span>
                 </span>

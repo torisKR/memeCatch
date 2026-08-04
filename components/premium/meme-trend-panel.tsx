@@ -121,6 +121,7 @@ function LockedTeaser({ reason }: { reason: "signed_out" | "not_premium" }) {
       >
         <svg viewBox="0 0 320 96" className="h-24 w-full" fill="none">
           <path
+            className="signal-flicker"
             d="M0 78 L40 70 L80 74 L120 52 L160 58 L200 30 L240 36 L280 16 L320 22"
             stroke="var(--flame-400)"
             strokeOpacity=".35"

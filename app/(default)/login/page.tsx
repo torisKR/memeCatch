@@ -41,7 +41,7 @@ export default async function LoginPage({
           </div>
         </div>
 
-        <div className="lg:p-8">
+        <div className="instrument-grid lg:p-8">
           <LoginForm
             next={next}
             callbackError={callbackError}

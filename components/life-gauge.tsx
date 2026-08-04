@@ -33,7 +33,7 @@ export function LifeGauge({
     <span
       role="img"
       aria-label={`밈 생명 게이지: ${meta.user} (4칸 중 ${meta.flame}칸)`}
-      className={`inline-flex items-center gap-1.5 ${TONE[status]}`}
+      className={`inline-flex items-center gap-1.5 ${TONE[status]} ${size === "lg" ? "hover-glow-flame" : ""}`}
     >
       <span aria-hidden className="inline-flex items-end gap-0.5">
         {[0, 1, 2, 3].map((i) => {
@@ -43,11 +43,15 @@ export function LifeGauge({
           const flicker = rising
             ? `flame-rising${i === topLit ? " flame-rising-tip" : ""}`
             : "";
+          /* 비활성 칸 — 미세 격자 텍스처(정적). 기존 --grid-line 토큰 재사용, 아이콘 배율에 맞춰 6px. */
+          const texture = !lit
+            ? "bg-[linear-gradient(var(--grid-line)_1px,transparent_1px),linear-gradient(90deg,var(--grid-line)_1px,transparent_1px)] bg-[length:6px_6px]"
+            : "";
           return (
             <FlameIcon
               key={i}
               lit={lit}
-              className={`${flameSize} ${flicker} ${lit ? "" : "opacity-25"}`}
+              className={`${flameSize} ${flicker} ${lit ? "" : `opacity-25 ${texture}`}`}
               style={rising ? { animationDelay: `${(topLit - i) * 130}ms` } : undefined}
             />
           );

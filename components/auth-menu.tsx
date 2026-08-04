@@ -192,7 +192,7 @@ function LoggedInMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`${nickname}${isPremium ? ` · ${premiumCopy.badge}` : ""} · ${messages.accountMenu}`}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-strong text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="hover-glow-flame flex h-11 w-11 items-center justify-center rounded-full bg-accent-strong text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <span aria-hidden>{initial}</span>
       </button>
@@ -207,7 +207,7 @@ function LoggedInMenu({
             exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
             style={{ transformOrigin: "top right" }}
-            className="absolute right-0 top-[calc(100%+8px)] z-[100] w-64 rounded-2xl border border-border bg-surface p-2.5 shadow-lg"
+            className="instrument-grid absolute right-0 top-[calc(100%+8px)] z-[100] w-64 rounded-2xl border border-border bg-surface p-2.5 shadow-lg"
           >
             <div className="px-3 pb-2 pt-1">
               <p className="truncate text-sm font-semibold text-foreground">

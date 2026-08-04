@@ -40,9 +40,12 @@ export function UsageExamples({ examples }: { examples?: unknown }) {
       <ul className="mt-3 space-y-4">
         {rows.map((ex) => (
           <li key={`${ex.situation}:${ex.text}`}>
-            <p className="text-sm font-semibold text-muted">{ex.situation}</p>
+            {/* 상황 라벨 — 모노 태그칩 */}
+            <p className="stat-mono inline-flex w-fit items-center rounded-full border border-border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-muted">
+              {ex.situation}
+            </p>
             {/* 말풍선 — 왼쪽 위 모서리만 눌러 대화 버블 느낌 */}
-            <p className="mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-md bg-surface-2 px-4 py-2.5 text-base leading-relaxed">
+            <p className="hover-glow-flame mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-md bg-surface-2 px-4 py-2.5 text-base leading-relaxed">
               {ex.text}
             </p>
           </li>

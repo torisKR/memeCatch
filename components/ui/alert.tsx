@@ -9,7 +9,8 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "",
-        destructive: "border-safety-red/40 text-safety-red",
+        // 계측 패널 룩: 좌측 엣지 굵게 + 마운트 시 1회 신호 단속(flicker), reduced-motion 가드는 전역 유틸에 내장
+        destructive: "signal-flicker border-l-2 border-safety-red/40 text-safety-red",
       },
     },
     defaultVariants: {

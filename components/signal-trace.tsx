@@ -69,11 +69,13 @@ export function SignalTrace({
   const meta = LIFECYCLE_STATUS[status];
   const live = LIVE[status];
   const height = size === "lg" ? "h-14" : "h-5";
+  /* lg는 상세 카드처럼 계측 패널 자체가 되는 자리 — 배경에 격자 텍스처를 얹는다. */
+  const panel = size === "lg" ? "instrument-grid" : "";
 
   return (
     /* inline-flex는 내용 크기로 줄어들어 파형이 컨테이너를 못 채운다 —
        트레이스는 항상 주어진 폭을 다 쓰는 계측 눈금이므로 flex+w-full이 기본. */
-    <span className={`flex w-full min-w-0 items-center gap-2 ${className}`}>
+    <span className={`flex w-full min-w-0 items-center gap-2 ${panel} ${className}`}>
       <svg
         role="img"
         aria-label={`밈 신호: ${meta.user}`}
@@ -81,6 +83,17 @@ export function SignalTrace({
         preserveAspectRatio="none"
         className={`w-full min-w-14 shrink ${height} ${STROKE[status]}`}
       >
+        {/* 기준선 글로우 — cyan 미세 발광(정적, opacity만). 실시간 신호 어휘를 계측 눈금에 은은히 남긴다. */}
+        <line
+          x1="0"
+          y1={BASELINE}
+          x2={WIDTH}
+          y2={BASELINE}
+          className="text-(--signal-cyan)"
+          stroke="currentColor"
+          strokeWidth="3"
+          opacity="0.1"
+        />
         {/* 기준선 — 신호가 없을 때의 자리를 보여준다. */}
         <line
           x1="0"

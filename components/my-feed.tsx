@@ -68,12 +68,12 @@ export async function MyFeed({
   const title = hasInterests && !usedFallback ? copy.personalRadar : copy.fresh;
 
   return (
-    <Reveal as="section" className="mt-8">
+    <Reveal as="section" className="mt-8 instrument-grid">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-bold">{title}</h2>
         <Link
           href="/onboarding?next=/my"
-          className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-signal-cyan underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:rounded-md"
         >
           {hasInterests ? copy.editInterests : copy.setInterests}
         </Link>

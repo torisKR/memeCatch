@@ -28,7 +28,7 @@ export default async function CommunityNewPage() {
         <p className="mt-2 text-muted">
           밈 추천, 추억, 토론 — 뭐든 편하게 써 주세요. 밈을 첨부하면 함께 보여드려요.
         </p>
-        <div className="mt-6">
+        <div className="instrument-grid mt-6 rounded-2xl border border-border bg-surface p-5">
           <CommunityPostForm />
         </div>
       </div>

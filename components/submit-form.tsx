@@ -306,7 +306,8 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
 
         {/* 중복 검사 결과 */}
         {dupLoading && (
-          <p className="mt-2 text-sm text-muted" role="status">
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-muted" role="status">
+            <span aria-hidden className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
             비슷한 밈이 있는지 확인하는 중…
           </p>
         )}
@@ -509,7 +510,11 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
         {(pending || uploading) && (
           <span
             aria-hidden
-            className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+            className={
+              uploading
+                ? "signal-live size-2.5 rounded-full bg-(--signal-cyan)"
+                : "h-4 w-4 animate-spin rounded-full border-2 border-flame-200/40 border-t-white"
+            }
           />
         )}
         {uploading

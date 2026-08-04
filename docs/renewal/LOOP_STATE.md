@@ -435,3 +435,33 @@ DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린�
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ✅ **완전 충족** — 남은 backlog 10건이 **전부** HUMAN_GATE(HG-001~HG-006) 대기다. 게이트 없이 할 수 있는 일이 0건이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
 | 반복 제한 | 25 — READY: DQ-016b·LOC-002·A11Y-005 + audit-synthesis 후보 16건 triage 대기 |
+
+---
+
+## 루프 046 — Web3 인터랙티브 리뉴얼 v2 (2026-08-04, 병렬 50 에이전트)
+
+**SELECTED**: DES-WEB3-V2 — 사용자 직접 지시("web3 인터랙티브한 디자인으로 바꿔줄래?
+병렬 에이전트로 50개 할당해서 구현해줘"). Signal Desk 문법을 전 페이지 인터랙티브
+web3로 확장 — 보라 금지·flame 주색·cyan=실시간 신호 규칙은 유지.
+
+**편성**: 정찰 6(디자인 5 + 데이터 품질 재측정 1) → 구현 35(파일 소유권 분할, 충돌 0건)
+→ 검증 9(빌드·React·성능·a11y·코드·보안·카피·모션/CLS·문서). 총 50.
+
+**변경**: globals.css 신규 유틸 6종(.glass-panel/.edge-signal/.text-signal/.holo-sheen/
+.tilt-3d/.stat-mono) + 컴포넌트·페이지 ~100파일 스타일 전용 리뉴얼 + DESIGN.md §16.
+
+**검증 게이트**: tsc 0오류 · eslint 0오류/6경고(기준선 동일) · vitest 634/634 ·
+`next build --webpack` 성공(정적 64/64) · prod-preview(3100) 시각 QA 4 route.
+
+**리뷰 발견→해소**: ①comments 글래스 GPU 비용(HIGH)→블러 없는 반투명 ②.hover-glow-flame
+focus-visible이 Tailwind ring을 캐스케이드로 덮음(CRITICAL, 8지점)→셀렉터에서
+:focus-visible 제거(근본 수정) ③언레이어드 유틸이 hover 보더 무력화(language-selector)
+→shadow 기반 hover로 교체 ④"Live Signal" Title Case→Sentence case ⑤about 장식 인덱스
+aria-hidden ⑥tilt-card rAF 언마운트 정리. 스타일 전용 계약 위반 0건(보안 리뷰 확인).
+
+**데이터 품질 재측정**: critical 4지표 불변(무출처 1,330·dead 14·dup 38·alias 275),
+공개 밈 3,904→3,906(+2/7일). 편집 작업은 여전히 HG-001~009 대기.
+
+**잔여 디자인 부채(비차단)**: 색 토큰 문법 혼용(text-(--signal-cyan) vs
+text-signal-cyan), TiltCard/.tilt-3d 미사용(어휘로 보존, DESIGN.md §16 문서화),
+[locale] 출처 h2 위계 다운그레이드, CTN 축약 모호.

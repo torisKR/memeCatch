@@ -21,7 +21,12 @@ export function DailyTop10({ memes }: { memes: MemeListItem[] }) {
       headingId="daily-top10-heading"
       heading={
         <>
-          오늘 많이 본 밈 <span className="text-accent">TOP 10</span>
+          오늘 많이 본 밈 <span className="text-accent">TOP 10</span> <span
+            aria-hidden
+            className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/25 bg-signal-cyan-soft px-1.5 py-1 align-middle"
+          >
+            <span className="signal-live size-1.5 rounded-full bg-signal-cyan" />
+          </span>
         </>
       }
       className="mt-8"
@@ -29,7 +34,7 @@ export function DailyTop10({ memes }: { memes: MemeListItem[] }) {
       <MotionList
         as="ul"
         itemAs="li"
-        className="flex w-max gap-3"
+        className="instrument-grid flex w-max gap-3"
         itemClassName="w-36 min-w-0 shrink-0 snap-start sm:w-40"
       >
         {memes.slice(0, 10).map((meme, i) => (

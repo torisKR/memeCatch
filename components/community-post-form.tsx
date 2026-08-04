@@ -284,7 +284,7 @@ export function CommunityPostForm() {
           }}
           className={`mt-1.5 overflow-hidden rounded-xl border bg-surface transition-colors focus-within:ring-4 focus-within:ring-accent/20 ${
             dragOver
-              ? "border-dashed border-accent ring-4 ring-accent/20"
+              ? "border-dashed border-(--flame-500) shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_25%,transparent),0_0_20px_-4px_color-mix(in_srgb,var(--flame-500)_60%,transparent)]"
               : "border-border focus-within:border-accent"
           }`}
         >
@@ -294,7 +294,7 @@ export function CommunityPostForm() {
               type="button"
               onClick={() => setTab("write")}
               aria-pressed={tab === "write"}
-              className={`${toolbarBtn} ${tab === "write" ? "bg-surface-2 text-foreground" : ""}`}
+              className={`${toolbarBtn} ${tab === "write" ? "bg-surface-2 text-foreground shadow-[inset_0_-2px_0_0_var(--signal-cyan)]" : ""}`}
             >
               쓰기
             </button>
@@ -302,7 +302,7 @@ export function CommunityPostForm() {
               type="button"
               onClick={() => setTab("preview")}
               aria-pressed={tab === "preview"}
-              className={`${toolbarBtn} ${tab === "preview" ? "bg-surface-2 text-foreground" : ""}`}
+              className={`${toolbarBtn} ${tab === "preview" ? "bg-surface-2 text-foreground shadow-[inset_0_-2px_0_0_var(--signal-cyan)]" : ""}`}
             >
               미리보기
             </button>

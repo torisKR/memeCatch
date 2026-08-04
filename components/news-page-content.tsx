@@ -97,7 +97,10 @@ function AudienceSection({
         <div className="mt-5">
           <h3 className="text-lg font-bold">{audienceLabel}{copy.known}</h3>
           <p className="mt-1 text-sm text-muted">{copy.voteInfo}</p>
-          <TrackedBlock event="generation_news_click" className="mt-3">
+          <TrackedBlock
+            event="generation_news_click"
+            className="instrument-grid mt-3 rounded-2xl border border-border/60 p-3 sm:p-4"
+          >
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {highlights.map((item) => (
                 <li key={item.meme.id}>
@@ -148,7 +151,7 @@ function NewsBriefCard({ brief, locale }: { brief: MemeNewsBrief; locale: Locale
         ))}
       </ul>
       <div className="mt-4 border-t border-border pt-3 text-xs text-muted">
-        <p>{copy.verified} {brief.verifiedAt}</p>
+        <p className="stat-mono text-signal-cyan">{copy.verified} {brief.verifiedAt}</p>
         <a
           href={brief.sourceUrl}
           target="_blank"

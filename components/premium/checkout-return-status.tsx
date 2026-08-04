@@ -80,7 +80,9 @@ export function CheckoutReturnStatus({
           : "border-border bg-surface-2 text-foreground"
       }`}
     >
-      <span aria-hidden>{phase === "confirmed" ? "●" : phase === "timeout" ? "▲" : "◌"}</span>{" "}
+      <span aria-hidden className={phase === "confirming" ? "signal-live" : undefined}>
+        {phase === "confirmed" ? "●" : phase === "timeout" ? "▲" : "◌"}
+      </span>{" "}
       {copy[phase]}
     </p>
   );

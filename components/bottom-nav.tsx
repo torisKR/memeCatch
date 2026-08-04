@@ -26,7 +26,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={messages.mainNav}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-(--foreground)/10 bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-(--surface)/72 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
@@ -42,13 +42,14 @@ export function BottomNav() {
                   tab.emphasized
                     ? "text-accent-strong font-semibold"
                     : active
-                      ? "text-foreground font-semibold"
+                      ? "text-flame-400 font-semibold"
                       : "text-muted"
                 }`}
               >
                 <TabInner
                   icon={tab.icon}
                   emphasized={tab.emphasized}
+                  active={active}
                   label={
                     tab.href === "/"
                       ? ({ ko: "홈", ja: "ホーム", zh: "首页", "zh-tw": "首頁" } as Partial<Record<typeof locale, string>>)[locale] ?? "Home"
@@ -69,18 +70,30 @@ export function BottomNav() {
 function TabInner({
   icon: Icon,
   emphasized,
+  active,
   label,
 }: {
   icon: (props: { className?: string }) => React.ReactElement;
   emphasized?: boolean;
+  active?: boolean;
   label: string;
 }) {
   const { pending } = useLinkStatus();
-  const iconWrap = `h-5 w-5 ${emphasized ? "rounded-full bg-accent-soft p-0.5" : ""}`;
+  const iconWrap = `h-5 w-5 ${
+    emphasized
+      ? "rounded-full bg-accent-soft p-0.5 shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_50%,transparent),0_0_10px_1px_color-mix(in_srgb,var(--flame-500)_55%,transparent)]"
+      : ""
+  }`;
 
   return (
     <>
-      <span className="grid h-5 w-5 place-items-center">
+      <span className="relative grid h-5 w-5 place-items-center">
+        {active && !emphasized ? (
+          <span
+            aria-hidden
+            className="signal-live absolute -top-0.5 right-0 size-1.5 rounded-full bg-(--signal-cyan)"
+          />
+        ) : null}
         {pending ? (
           <svg
             className="h-5 w-5 animate-spin motion-reduce:animate-none"

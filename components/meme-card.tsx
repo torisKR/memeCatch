@@ -39,7 +39,7 @@ export function MemeCard({
   return (
     <Link
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
-      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/55 hover:shadow-md active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
+      className="group holo-sheen relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-flame-500/55 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
     >
       <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-surface-2">
         <MemeThumbnail
@@ -58,7 +58,7 @@ export function MemeCard({
         {rank != null && (
           <span
             aria-hidden
-            className={`pointer-events-none absolute bottom-2 left-2.5 text-[2.35rem] font-black italic leading-none tracking-tighter tabular-nums ${
+            className={`stat-mono pointer-events-none absolute bottom-2 left-2.5 text-[2.35rem] font-black italic leading-none tracking-tighter ${
               rank <= 3 ? "text-accent" : "text-white"
             }`}
             style={{ filter: "drop-shadow(0 1px 3px rgb(0 0 0 / 0.62))" }}

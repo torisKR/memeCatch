@@ -25,7 +25,7 @@ export function CategoryTag({
   const meta = CATEGORIES[category];
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-semibold leading-none ${TONE[category]} ${className}`}
+      className={`hover-glow-flame inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-transparent px-2.5 py-1 text-[13px] font-semibold leading-none ${TONE[category]} ${className}`}
     >
       <CategoryGlyph icon={meta.icon} className="size-3.5 shrink-0" />
       {meta.user}

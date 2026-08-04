@@ -195,6 +195,8 @@ export default async function LocalizedHomePage({ params }: Props) {
       />
 
       <section className="relative border-b border-border px-4 py-16 sm:py-24">
+        {/* 계측 격자 — ko 홈 HeroWeb3와 동일한 관제 톤(정적, 성능 비용 없음) */}
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
         <div
           aria-hidden
           lang="ko"
@@ -203,7 +205,7 @@ export default async function LocalizedHomePage({ params }: Props) {
           밈
         </div>
         <div className="relative mx-auto max-w-5xl">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
             {copy.eyebrow}
           </p>
           <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[1.06] tracking-[-0.035em] sm:text-6xl">
@@ -227,7 +229,7 @@ export default async function LocalizedHomePage({ params }: Props) {
         <section aria-labelledby="translation-desk" className="py-14 sm:py-20">
           <div className="grid gap-8 lg:grid-cols-[1.05fr_1.4fr] lg:gap-14">
             <div>
-              <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
                 {copy.desk}
               </p>
               <h2 id="translation-desk" className="mt-3 text-3xl font-black tracking-tight">

@@ -381,3 +381,31 @@ dot로 메신저 로고 문법에서 이탈.
 `public/brand/` — symbol.svg · favicon.svg · logo-h-light/dark.svg · logo-en.svg ·
 symbol-mono-black/white.svg / 앱: app/icon.svg · app/favicon.ico(16·32·48) ·
 app/apple-icon.png · public/icons/*(192·512·maskable, 안전영역 80%)
+
+---
+
+## 16. Web3 인터랙티브 레이어 v2 (2026-08-04)
+
+§15 Signal Desk 문법을 전 페이지 공용 어휘로 확장 구현 완료. `app/globals.css`
+"Web3 인터랙티브 레이어 v2" 블록에 6종 전역 유틸 추가.
+
+### 신규 전역 유틸 6종
+| 유틸 | 용도 | 비고 |
+|---|---|---|
+| `.glass-panel` | 글래스 표면(반투명+블러) | 카드·시트·독 공용 |
+| `.edge-signal` | flame→cyan 1px 그라디언트 보더 | `background` 단축 속성이라 `.instrument-grid`와 같은 요소에 못 씀 — 별도 레이어 필요 |
+| `.text-signal` | 타이틀 포인트 1단어 전용 그라디언트 텍스트 | 과용 금지 |
+| `.holo-sheen` | 호버/포커스 스윕(`::after`) | 대화형 카드·CTA 전용, 레이아웃 불변 |
+| `.tilt-3d` (+ `components/ui/tilt-card.tsx`) | 포인터 추종 3D 틸트 | rAF 스로틀(프레임당 1회), reduced-motion·비마우스 포인터는 평면 고정 |
+| `.stat-mono` | 계측 모노 숫자 | 랭킹·카운트·시세 공용 |
+
+### 적용 규칙
+- 보라 금지 유지(§8), flame 오렌지가 주색.
+- cyan(`--signal-cyan`)은 **실시간 신호 의미론 전용** — 장식색으로 쓰지 않는다.
+- 무한 스크롤 카드에 box-shadow transition 금지(INP 예산 보호) — hover 글로우는 정적 카드로 스코프.
+- 반복 리스트(카드 그리드 등)에 `backdrop-blur` 남용 주의 — 레이어 수 늘어나면 스크롤 성능 저하.
+- 신규 애니메이션은 `prefers-reduced-motion` 가드 필수.
+
+### 알려진 캐스케이드 함정 2개
+1. `.hover-glow-flame`의 `:focus-visible` box-shadow가 Tailwind `ring` 유틸의 box-shadow를 레이어 우선순위로 덮어써 포커스 링이 사라진다. `components/ui/button.tsx`는 이 때문에 `.hover-glow-flame`을 합성하지 않고 hover 전용 arbitrary box-shadow를 수동으로 스코프해 사용한다.
+2. `.edge-signal`과 `.instrument-grid`를 같은 요소에 동시 적용하면 `background` 단축 속성끼리 서로를 덮어써 격자 또는 그라디언트 보더 중 하나가 사라진다 — 동일 요소 병용 금지, 필요하면 래퍼로 레이어 분리.

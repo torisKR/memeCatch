@@ -228,7 +228,7 @@ export function PwaInstall() {
         className="fixed inset-x-0 bottom-16 z-50 px-4 md:bottom-4"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="mx-auto flex max-w-lg items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-lg">
+        <div className="glass-panel hover-glow-flame mx-auto flex max-w-lg items-center gap-3 rounded-2xl p-3 shadow-lg">
           <span
             aria-hidden
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"

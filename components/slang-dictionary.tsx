@@ -86,7 +86,7 @@ export function SlangDictionary({
     <div className="mt-6">
       <nav
         aria-label="연대 선택"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+        className="glass-panel -mx-4 flex gap-2 overflow-x-auto rounded-2xl px-4 py-2 sm:mx-0 sm:flex-wrap sm:px-3"
       >
         {eras.map((era) => {
           const current = era.key === active;
@@ -99,7 +99,7 @@ export function SlangDictionary({
               aria-current={current ? "page" : undefined}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.97] ${
                 current
-                  ? "border-accent-strong bg-accent-strong text-white"
+                  ? "hover-glow-flame border-flame-500 bg-accent-strong text-white"
                   : "border-border bg-surface text-muted hover:border-accent hover:text-accent"
               }`}
             >
@@ -128,8 +128,14 @@ export function SlangDictionary({
           <div className="flex items-baseline justify-between gap-3">
             <h2
               id={`slang-era-${era.key}`}
-              className="text-xl font-bold tracking-tight"
+              className="flex items-center gap-2 text-xl font-bold tracking-tight"
             >
+              {era.key === "risky" && (
+                <span
+                  aria-hidden
+                  className="signal-live h-2 w-2 shrink-0 rounded-full bg-safety-red"
+                />
+              )}
               {era.label} 유행어
             </h2>
             {era.terms.length > 0 && (
@@ -163,7 +169,7 @@ export function SlangDictionary({
                     className="group flex min-h-11 flex-col justify-center gap-0.5 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   >
                     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-bold leading-snug transition-colors group-hover:text-accent">
+                      <span className="font-bold leading-snug underline decoration-transparent underline-offset-4 transition-[color,text-decoration-color,text-underline-offset] group-hover:text-accent group-hover:decoration-flame-500 group-hover:underline-offset-2">
                         {term.title}
                       </span>
                       {term.year != null && (

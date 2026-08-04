@@ -404,12 +404,12 @@ export function AffiliateProductCarousel({
       <div className="mt-4 flex items-center gap-2">
         <CarouselPrevious
           aria-label={copy.previousProduct}
-          className="static size-11 translate-y-0"
+          className="hover-glow-flame static size-11 translate-y-0"
           onClick={handlePrevious}
         />
         <CarouselNext
           aria-label={copy.nextProduct}
-          className="static size-11 translate-y-0"
+          className="hover-glow-flame static size-11 translate-y-0"
           onClick={handleNext}
         />
         {canAutoScroll ? (
@@ -423,7 +423,7 @@ export function AffiliateProductCarousel({
             aria-pressed={isManuallyPaused}
             data-autoplay-state={isPlaying ? "playing" : "stopped"}
             onClick={handlePlayPause}
-            className="size-11 rounded-full"
+            className="hover-glow-flame size-11 rounded-full"
           >
             {isManuallyPaused ? (
               <Play aria-hidden="true" />

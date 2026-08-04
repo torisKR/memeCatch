@@ -94,7 +94,7 @@ export function RandomMemeButton() {
         aria-label={messages.random}
         aria-busy={loading}
         title={messages.random}
-        className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95]"
+        className="holo-sheen flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95]"
       >
         <svg
           viewBox="0 0 24 24"

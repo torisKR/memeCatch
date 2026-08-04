@@ -4,12 +4,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition outline-none disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-foreground text-background hover:bg-foreground/90",
-        secondary: "bg-accent-soft text-accent-text hover:bg-accent-soft/80",
+        // flame 글로우는 hover 전용(box-shadow arbitrary) — .hover-glow-flame(unlayered)을 그대로 합성하면
+        // focus-visible:ring의 box-shadow를 레이어 우선순위로 덮어써 포커스 링이 사라짐. hover에만 스코프.
+        default:
+          "bg-foreground text-background hover:bg-foreground/90 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]",
+        secondary:
+          "bg-accent-soft text-accent-text hover:bg-accent-soft/80 hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]",
         outline: "border border-border bg-surface text-foreground hover:bg-surface-2",
         ghost: "text-foreground hover:bg-surface-2",
         link: "text-accent-text underline-offset-4 hover:underline",

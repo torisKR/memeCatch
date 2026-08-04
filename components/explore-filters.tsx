@@ -53,7 +53,10 @@ const LIFECYCLE_ENTRIES = Object.entries(LIFECYCLE_STATUS) as [
 const chipBase =
   "inline-flex min-h-10 items-center rounded-full border px-3 text-sm font-medium transition-[color,border-color,background-color] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const chipOff = "border-border bg-surface text-muted hover:border-accent/60 hover:text-foreground";
-const chipOn = "border-accent bg-accent-soft font-semibold text-accent";
+// flame 보더 + 정적 glow(box-shadow는 transition 대상에서 제외 — 연타 토글 시 INP 보호,
+// chipBase의 transition-[color,border-color,background-color]와 반드시 동기화 유지)
+const chipOn =
+  "border-(--flame-500) bg-accent-soft font-semibold text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_25%,transparent),0_0_14px_-3px_color-mix(in_srgb,var(--flame-500)_55%,transparent)]";
 
 /** 검색과 결과 사이를 한 줄 도구막대로 정돈한 URL 동기화 필터. */
 export function ExploreFilters({
@@ -240,7 +243,7 @@ export function ExploreFilters({
           )}
           <button
             type="submit"
-            className="inline-flex h-9 items-center rounded-lg bg-accent-strong px-4 text-sm font-bold text-white transition-[filter] hover:brightness-110"
+            className="inline-flex h-9 items-center rounded-lg bg-accent-strong px-4 text-sm font-bold text-white shadow-[0_0_16px_-4px_color-mix(in_srgb,var(--flame-500)_60%,transparent)] transition-[filter] hover:brightness-110"
           >
             검색
           </button>
@@ -248,7 +251,7 @@ export function ExploreFilters({
       </form>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm">
+        <label className="glass-panel inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm">
           <span className="text-muted">정렬</span>
           <select
             value={sort}

@@ -20,7 +20,7 @@ export function WeeklyBriefing({ memes }: { memes: MemeListItem[] }) {
     <TrackedBlock event="briefing_click">
       <section
         aria-labelledby="sec-briefing"
-        className="mt-6 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
+        className="instrument-grid hover-glow-flame mt-6 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
       >
         <div className="flex items-center gap-2">
           <span
@@ -61,7 +61,7 @@ export function WeeklyBriefing({ memes }: { memes: MemeListItem[] }) {
               >
                 <span
                   aria-hidden
-                  className="w-5 shrink-0 text-center font-mono text-sm font-bold text-accent-text"
+                  className="stat-mono w-5 shrink-0 text-center text-sm font-bold text-(--signal-cyan)"
                 >
                   {i + 1}
                 </span>

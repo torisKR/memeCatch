@@ -89,12 +89,12 @@ export function CommunityLikeButton({
         aria-pressed={liked}
         className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-base font-semibold transition-colors active:scale-[0.97] ${
           liked
-            ? "border-accent bg-accent-soft text-accent"
+            ? "border-(--flame-500) bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_24px_-8px_color-mix(in_srgb,var(--flame-500)_45%,transparent)]"
             : "border-border bg-surface text-foreground"
         }`}
       >
         <HeartIcon className="h-5 w-5" filled={liked} />
-        좋아요 {count.toLocaleString("ko-KR")}
+        좋아요 <span className="stat-mono text-signal-cyan">{count.toLocaleString("ko-KR")}</span>
       </button>
       <LoginGate
         open={gateOpen}

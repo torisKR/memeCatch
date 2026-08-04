@@ -83,7 +83,7 @@ export function MyRecent() {
         <button
           type="button"
           onClick={clearAll}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline-offset-4 hover:text-foreground hover:underline hover:decoration-flame-500/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
         >
           {copy.clearAll}
         </button>

@@ -131,7 +131,8 @@ export function QuizApp() {
 function StartScreen({ onStart }: { onStart: (mode: QuizMode) => void }) {
   return (
     <section aria-label="밈력고사 시작" className="mt-6">
-      <div className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-8">
+      <div className="edge-signal relative overflow-hidden rounded-3xl p-5 shadow-sm sm:p-8">
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
         <p className="text-sm font-semibold text-accent-strong">10문항 스피드 퀴즈</p>
         {/* 페이지 h1("내 밈력은 몇 점?")과 문구 중복 방지 — 카드는 행동 안내에 집중 */}
         <h2 className="mt-1 text-2xl font-extrabold sm:text-3xl">
@@ -297,7 +298,7 @@ function QuestionScreen({
                   type="button"
                   onClick={() => onSelect(i)}
                   disabled={answered}
-                  className={`flex w-full min-h-11 items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm leading-relaxed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 sm:text-base ${stateClass} ${answered ? "" : "active:scale-[0.99]"}`}
+                  className={`flex w-full min-h-11 items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm leading-relaxed transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 sm:text-base ${stateClass} ${answered ? "" : "hover-glow-flame active:scale-[0.99]"}`}
                 >
                   <span
                     aria-hidden
@@ -407,7 +408,12 @@ function ResultScreen({
       <div className="rounded-3xl border border-border bg-surface p-5 text-center shadow-sm sm:p-8">
         <p className="text-sm font-semibold text-muted">나의 밈력</p>
         <p className="mt-1 text-5xl font-extrabold tabular-nums">
-          {score}
+          <span
+            className="stat-mono text-(--signal-cyan)"
+            style={{ filter: "drop-shadow(0 0 14px var(--signal-cyan))" }}
+          >
+            {score}
+          </span>
           <span className="text-2xl font-bold text-muted">/{total}</span>
         </p>
         <p className="mt-3 inline-flex items-center rounded-full bg-accent-soft px-4 py-1.5 text-base font-bold text-accent-strong">

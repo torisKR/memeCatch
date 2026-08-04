@@ -65,7 +65,7 @@ export function HeaderMenu() {
         aria-controls="header-menu-panel"
         aria-label={messages.menu}
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+        className={`flex h-11 w-11 items-center justify-center rounded-full border border-transparent transition-colors hover:border-(--signal-cyan) active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
           open ? "bg-surface-2 text-foreground" : "text-foreground hover:bg-surface-2"
         }`}
       >
@@ -82,7 +82,7 @@ export function HeaderMenu() {
         <nav
           id="header-menu-panel"
           aria-label={messages.menu}
-          className="menu-pop absolute right-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
+          className="menu-pop instrument-grid absolute right-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
         >
           <p
             aria-hidden
@@ -100,7 +100,7 @@ export function HeaderMenu() {
                     prefetch={item.prefetch}
                     onClick={() => setOpen(false)}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent ${
+                    className={`hover-glow-flame flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent ${
                       active
                         ? "bg-surface-2 font-semibold text-foreground"
                         : "font-medium text-foreground/85 hover:bg-surface-2 hover:text-foreground"
@@ -108,6 +108,12 @@ export function HeaderMenu() {
                   >
                     <span className={active ? "text-accent" : "text-muted"}>{item.icon}</span>
                     {item.label}
+                    {active && (
+                      <span
+                        aria-hidden
+                        className="signal-live ml-auto size-1.5 shrink-0 rounded-full bg-(--signal-cyan)"
+                      />
+                    )}
                   </Link>
                 </li>
               );
@@ -122,7 +128,7 @@ export function HeaderMenu() {
               track("random_meme");
               setOpen(false);
             }}
-            className="flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-foreground/85 transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+            className="hover-glow-flame flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-foreground/85 transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
           >
             <span className="text-muted">
               <DiceIcon />

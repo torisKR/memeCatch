@@ -51,7 +51,7 @@ export function MemeThumbnail({
     <div
       aria-hidden
       data-thumbnail-state="fallback"
-      className={`relative flex h-full w-full flex-col justify-end ${
+      className={`instrument-grid relative flex h-full w-full flex-col justify-end ${
         variant === "compact" ? "gap-1.5 p-3" : "gap-2 p-3.5"
       }`}
       style={{

@@ -113,7 +113,7 @@ function ArrowButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="grid size-9 cursor-pointer place-items-center rounded-full border border-border bg-surface text-foreground shadow-sm transition-colors hover:bg-surface-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-35"
+      className="hover-glow-flame grid size-9 cursor-pointer place-items-center rounded-full border border-border bg-surface text-foreground shadow-sm transition-colors hover:bg-surface-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-35"
     >
       <svg
         aria-hidden

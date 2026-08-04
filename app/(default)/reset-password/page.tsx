@@ -20,30 +20,35 @@ export default async function ResetPasswordPage() {
 
   return (
     <main className="mx-auto w-full max-w-sm px-4 py-12">
-      <h1 className="text-2xl font-bold tracking-tight">새 비밀번호 설정</h1>
+      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+        Reset
+      </p>
+      <h1 className="mt-1 text-2xl font-bold tracking-tight">새 비밀번호 설정</h1>
 
-      {user ? (
-        <>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            <span className="font-semibold text-foreground">{user.email}</span>{" "}
-            계정의 새 비밀번호를 정해 주세요.
-          </p>
-          <ResetPasswordForm />
-        </>
-      ) : (
-        <>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            재설정 링크가 만료됐거나 유효하지 않아요. 링크는 발송 후 1시간 동안만
-            쓸 수 있어요.
-          </p>
-          <Link
-            href="/forgot-password"
-            className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-accent-strong text-base font-bold text-white transition-transform active:scale-[0.98]"
-          >
-            재설정 메일 다시 받기
-          </Link>
-        </>
-      )}
+      <div className="glass-panel mt-5 rounded-2xl p-5">
+        {user ? (
+          <>
+            <p className="text-sm leading-relaxed text-muted">
+              <span className="font-semibold text-foreground">{user.email}</span>{" "}
+              계정의 새 비밀번호를 정해 주세요.
+            </p>
+            <ResetPasswordForm />
+          </>
+        ) : (
+          <>
+            <p className="text-sm leading-relaxed text-muted">
+              재설정 링크가 만료됐거나 유효하지 않아요. 링크는 발송 후 1시간 동안만
+              쓸 수 있어요.
+            </p>
+            <Link
+              href="/forgot-password"
+              className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-accent-strong text-base font-bold text-white transition-transform active:scale-[0.98]"
+            >
+              재설정 메일 다시 받기
+            </Link>
+          </>
+        )}
+      </div>
     </main>
   );
 }

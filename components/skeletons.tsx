@@ -2,7 +2,7 @@
 
 function Bone({ className = "" }: { className?: string }) {
   return (
-    <div aria-hidden className={`shimmer rounded-lg ${className}`} />
+    <div aria-hidden className={`shimmer instrument-grid rounded-lg ${className}`} />
   );
 }
 

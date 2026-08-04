@@ -30,10 +30,19 @@ function ContextNavInner() {
   const nextHref = safe(next);
   if (!prevHref && !nextHref) return null;
 
+  // 진행 바 — i/total을 정적 width%로 환산(트랜지션 없음 → CLS 없음). 파싱 실패 시 미표시.
+  const iNum = i ? Number(i) : NaN;
+  const totalNum = total ? Number(total) : NaN;
+  const hasProgress =
+    Number.isFinite(iNum) && Number.isFinite(totalNum) && totalNum > 0;
+  const progressPct = hasProgress
+    ? Math.min(100, Math.max(0, (iNum / totalNum) * 100))
+    : 0;
+
   return (
     <nav
       aria-label={`${col.title} 이어보기`}
-      className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+      className="relative flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
     >
       {prevHref ? (
         <Link
@@ -61,12 +70,23 @@ function ContextNavInner() {
         <Link
           href={nextHref}
           onClick={() => track("context_nav", { dir: "next", ctx })}
-          className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 font-semibold text-accent transition-colors hover:text-foreground"
+          className="hover-glow-flame inline-flex min-h-11 items-center gap-1 rounded-lg px-2 font-semibold text-accent transition-colors hover:text-foreground"
         >
           다음 <span aria-hidden>→</span>
         </Link>
       ) : (
         <span />
+      )}
+      {hasProgress && (
+        <span
+          aria-hidden
+          className="absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-signal-cyan-soft"
+        >
+          <span
+            className="block h-full rounded-full bg-signal-cyan"
+            style={{ width: `${progressPct}%` }}
+          />
+        </span>
       )}
     </nav>
   );

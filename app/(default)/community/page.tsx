@@ -75,7 +75,8 @@ export default async function CommunityPage({
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">커뮤니티</h1>
             {/* 이제 막 시작한 공간임을 정직하게 표시 */}
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
+            <span className="hover-glow-flame inline-flex items-center gap-1.5 rounded-full border border-transparent bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
+              <span aria-hidden className="signal-live size-1.5 rounded-full bg-(--signal-cyan)" />
               베타
             </span>
           </div>
@@ -131,7 +132,7 @@ export default async function CommunityPage({
         />
       )}
 
-      <ul className="mt-5 space-y-3">
+      <ul className="instrument-grid mt-5 space-y-3">
         {visible.map((post) => (
           <li key={post.id}>
             <CommunityPostCard post={post} />

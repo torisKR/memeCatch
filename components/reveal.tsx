@@ -19,7 +19,7 @@ export function Reveal({
   className,
   as = "div",
   delay = 0,
-  y = 16,
+  y = 10,
 }: {
   children: ReactNode;
   className?: string;

@@ -28,12 +28,15 @@ export const metadata: Metadata = {
 
 export default function QuizPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="ink-grid mx-auto max-w-5xl px-4 pb-14 pt-8">
       <AdsenseScript />
       <p className="text-sm font-semibold text-accent-strong">밈력고사</p>
       <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">
         내 밈력은 몇 점?
       </h1>
+      <p className="stat-mono mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+        Live signal
+      </p>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
         밈 사전 데이터로 자동 출제되는 밈 지식 퀴즈예요. 제목만 보고 진짜 뜻을
         맞혀 보세요.

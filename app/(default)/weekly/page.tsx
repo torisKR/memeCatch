@@ -80,7 +80,11 @@ export default async function WeeklyPage() {
         <span aria-hidden>›</span> 주간 결산
       </nav>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2.5">
+      <p className="mt-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+        Weekly report
+      </p>
+
+      <div className="mt-1 flex flex-wrap items-center gap-2.5">
         <h1 className="text-3xl font-extrabold tracking-tight">
           {range.year}년 {range.month}월 {range.weekOfMonth}주차 밈 결산
         </h1>

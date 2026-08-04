@@ -38,7 +38,7 @@ export function ProductsPageContent({
 
   return (
     <>
-      <header className="max-w-4xl rounded-2xl border border-border bg-cream p-6 shadow-md sm:p-9">
+      <header className="instrument-grid max-w-4xl rounded-2xl border border-border bg-cream p-6 shadow-md sm:p-9">
         <Badge className="shop-sticker border-border bg-surface text-foreground shadow-sm">
           {copy.productEyebrow}
         </Badge>

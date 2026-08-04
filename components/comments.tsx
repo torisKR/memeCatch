@@ -86,7 +86,7 @@ export function Comments({ memeId }: { memeId: string }) {
       {comments === null && !error && (
         <ul className="space-y-3" aria-hidden>
           {[0, 1, 2].map((i) => (
-            <li key={i} className="animate-pulse rounded-xl bg-surface-2 p-4">
+            <li key={i} className="instrument-grid animate-pulse rounded-xl bg-surface-2 p-4">
               <div className="h-4 w-24 rounded bg-border" />
               <div className="mt-2 h-4 w-full rounded bg-border" />
             </li>
@@ -162,8 +162,10 @@ function CommentItem({
   onPosted?: () => void;
 }) {
   const masked = comment.status !== "visible";
+  // 댓글은 무제한 조회 리스트 — backdrop-blur(.glass-panel)는 카드 수만큼
+  // GPU 비용이 누적되므로 블러 없는 반투명으로 같은 톤만 낸다(성능 리뷰 HIGH).
   return (
-    <article className="rounded-xl bg-surface-2 p-4">
+    <article className="rounded-xl border border-foreground/10 bg-surface-2/80 p-4">
       <header className="flex items-center gap-2 text-sm text-muted">
         <span className="font-semibold text-foreground">
           {comment.profiles?.nickname ?? "익명"}
@@ -239,7 +241,7 @@ function ReportButton({ targetId }: { targetId: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-muted"
+        className="hover-glow-flame inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-muted"
       >
         신고
       </button>

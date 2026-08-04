@@ -79,27 +79,39 @@ export default function AboutPage() {
 
         <section className="mt-10">
           <h2 className="text-xl font-bold">콘텐츠는 이렇게 검수됩니다</h2>
-          <ol className="mt-3 list-decimal space-y-2 pl-5 text-base leading-relaxed">
-            <li>
-              <strong>제보 접수</strong> — 누구나{" "}
-              <Link href="/submit" className="text-accent-text underline underline-offset-2">
-                밈 제보
-              </Link>
-              로 새 밈을 알려줄 수 있습니다.
+          <ol className="instrument-grid mt-4 grid gap-3 rounded-2xl border border-border/60 p-4 sm:grid-cols-2 sm:p-5">
+            <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
+              <p aria-hidden className="stat-mono text-sm font-bold text-accent">01</p>
+              <p className="mt-1.5">
+                <strong>제보 접수</strong> — 누구나{" "}
+                <Link href="/submit" className="text-accent-text underline underline-offset-2">
+                  밈 제보
+                </Link>
+                로 새 밈을 알려줄 수 있습니다.
+              </p>
             </li>
-            <li>
-              <strong>사실 확인</strong> — 유래·연도·의미를 복수 출처로
-              교차 확인합니다. 확인되지 않는 항목은 공개하지 않습니다.
+            <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
+              <p aria-hidden className="stat-mono text-sm font-bold text-accent">02</p>
+              <p className="mt-1.5">
+                <strong>사실 확인</strong> — 유래·연도·의미를 복수 출처로
+                교차 확인합니다. 확인되지 않는 항목은 공개하지 않습니다.
+              </p>
             </li>
-            <li>
-              <strong>저작권 확인</strong> — 임베드·링크가 원저작자 권리를
-              침해하지 않는지 확인합니다.
+            <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
+              <p aria-hidden className="stat-mono text-sm font-bold text-accent">03</p>
+              <p className="mt-1.5">
+                <strong>저작권 확인</strong> — 임베드·링크가 원저작자 권리를
+                침해하지 않는지 확인합니다.
+              </p>
             </li>
-            <li>
-              <strong>공개 및 갱신</strong> — 공개 후에도 유행 상태와 사용
-              안전도를 계속 갱신합니다. 제보는 보통 24~48시간 안에 등록 여부를
-              회신하며, 유래 확인에 자료가 더 필요하면 사흘까지 걸릴 수
-              있습니다.
+            <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
+              <p aria-hidden className="stat-mono text-sm font-bold text-accent">04</p>
+              <p className="mt-1.5">
+                <strong>공개 및 갱신</strong> — 공개 후에도 유행 상태와 사용
+                안전도를 계속 갱신합니다. 제보는 보통 24~48시간 안에 등록 여부를
+                회신하며, 유래 확인에 자료가 더 필요하면 사흘까지 걸릴 수
+                있습니다.
+              </p>
             </li>
           </ol>
           <p className="mt-4 text-base leading-relaxed">

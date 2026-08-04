@@ -78,7 +78,7 @@ describe("GlobalHeader", () => {
     const desktopSearch = html.match(/<form[^>]*role="search"[^>]*>/)?.[0];
     const compactSearch = html.match(/<a[^>]*href="\/search"[^>]*>/)?.[0];
     const languageControl = html.match(
-      /<label class="relative[^\"]*"[^>]*>.*?<select[^>]*aria-label="언어 선택"[^>]*>.*?<\/select>.*?<\/label>/,
+      /<label class="[^\"]*relative[^\"]*"[^>]*>.*?<select[^>]*aria-label="언어 선택"[^>]*>.*?<\/select>.*?<\/label>/,
     )?.[0];
     const languageSelect = languageControl?.match(
       /<select[^>]*aria-label="언어 선택"[^>]*>/,

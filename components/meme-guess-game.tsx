@@ -54,7 +54,7 @@ export function MemeGuessGame({ memes }: { memes: MemeListItem[] }) {
   return (
     <section
       aria-labelledby="sec-guess"
-      className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
+      className="hover-glow-flame mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
     >
       {/* 헤더 — 브랜드 불꽃 스캐너 모티프 + 진행 표시 */}
       <div className="flex items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-accent-soft/70 to-transparent px-5 py-3.5">
@@ -245,7 +245,7 @@ function ResultView({
       <p className="text-sm font-medium text-muted">감별 결과</p>
       <p className="mt-1 text-2xl font-extrabold leading-tight">
         {total}개 중{" "}
-        <span className="text-accent-text tabular-nums">{knewCount}개</span> 아는
+        <span className="text-(--signal-cyan) tabular-nums">{knewCount}개</span> 아는
         밈
       </p>
       <p className="mt-1.5 text-base leading-relaxed text-muted">{comment}</p>
@@ -254,7 +254,7 @@ function ResultView({
         <Link
           href="/quiz"
           prefetch={false}
-          className="inline-flex min-h-12 items-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="holo-sheen inline-flex min-h-12 items-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           밈력고사로 정식 측정 <span aria-hidden>&nbsp;→</span>
         </Link>

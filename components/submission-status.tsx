@@ -13,6 +13,18 @@ const STATUS_CLASSES: Record<SubmissionStatusKey, string> = {
   rejected: "bg-safety-red-bg text-safety-red",
 };
 
+/** 배지 미세 네온 — 신호등 색 그대로, 정적 box-shadow(모션 없음)만 추가 */
+const STATUS_GLOW: Record<SubmissionStatusKey, string> = {
+  pending:
+    "shadow-[0_0_0_1px_color-mix(in_srgb,var(--safety-gray)_30%,transparent),0_0_10px_-4px_color-mix(in_srgb,var(--safety-gray)_50%,transparent)]",
+  reviewing:
+    "shadow-[0_0_0_1px_color-mix(in_srgb,var(--safety-yellow)_30%,transparent),0_0_10px_-4px_color-mix(in_srgb,var(--safety-yellow)_50%,transparent)]",
+  approved:
+    "shadow-[0_0_0_1px_color-mix(in_srgb,var(--safety-green)_30%,transparent),0_0_10px_-4px_color-mix(in_srgb,var(--safety-green)_50%,transparent)]",
+  rejected:
+    "shadow-[0_0_0_1px_color-mix(in_srgb,var(--safety-red)_30%,transparent),0_0_10px_-4px_color-mix(in_srgb,var(--safety-red)_50%,transparent)]",
+};
+
 /** 상태별 짧은 라벨 (배지용) — pending의 긴 안내문은 별도 본문에서 사용 */
 const SHORT_LABELS: Record<SubmissionStatusKey, string> = {
   pending: "접수됨",
@@ -30,7 +42,7 @@ export function SubmissionStatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${STATUS_CLASSES[status]} ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${STATUS_CLASSES[status]} ${STATUS_GLOW[status]} ${className}`}
     >
       {SHORT_LABELS[status]}
     </span>

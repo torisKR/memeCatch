@@ -89,7 +89,7 @@ export function MeteredGate({ memeId }: { memeId: string }) {
       role="dialog"
       aria-modal="false"
       aria-labelledby="meter-title"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur md:inset-x-auto md:bottom-6 md:left-1/2 md:w-[min(28rem,calc(100vw-2rem))] md:-translate-x-1/2 md:rounded-2xl md:border"
+      className="hover-glow-flame fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur md:inset-x-auto md:bottom-6 md:left-1/2 md:w-[min(28rem,calc(100vw-2rem))] md:-translate-x-1/2 md:rounded-2xl md:border"
     >
       <div className="mx-auto max-w-2xl px-5 py-4">
         <p id="meter-title" className="text-base font-bold">

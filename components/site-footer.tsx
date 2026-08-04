@@ -29,7 +29,7 @@ export function SiteFooter() {
   const { messages } = useLocale();
   return (
     <HideOnAdmin>
-      <footer className="mt-16 border-t border-border bg-surface-2">
+      <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
         <div className="mx-auto max-w-5xl px-4 py-8">
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
@@ -37,7 +37,7 @@ export function SiteFooter() {
                 <li key={l.href}>
                   <Link
                     href={l.href}
-                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted transition-colors hover:text-foreground"
+                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] hover:text-foreground hover:decoration-flame-500 focus-visible:decoration-flame-500"
                   >
                     {messages[l.label]}
                   </Link>
@@ -49,7 +49,7 @@ export function SiteFooter() {
                     href={DONATE_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center gap-1 font-semibold text-accent transition-colors hover:brightness-90"
+                    className="hover-glow-flame inline-flex min-h-11 items-center gap-1 rounded-md font-semibold text-accent transition-colors hover:brightness-90"
                   >
                     <HeartGlyph />
                     {messages.donate}
@@ -76,7 +76,7 @@ export function SiteFooter() {
                 <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
               </div>
             </details>
-            <p className="mt-2">© {new Date().getFullYear()} {messages.brand}</p>
+            <p className="stat-mono mt-2">© {new Date().getFullYear()} {messages.brand}</p>
           </div>
         </div>
       </footer>

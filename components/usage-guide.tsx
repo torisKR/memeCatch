@@ -8,6 +8,14 @@ const TONE: Record<SafetyLevel, string> = {
   red: "bg-safety-red-bg text-safety-red",
 };
 
+/** 아이콘 앞 장식용 모노 상태코드 — aria-hidden, 판정 텍스트(TONE·s.user)는 불변 */
+const STATUS_CODE: Record<SafetyLevel, string> = {
+  green: "OK",
+  yellow: "CTN",
+  gray: "OLD",
+  red: "NG",
+};
+
 function isSafetyLevel(v: unknown): v is SafetyLevel {
   return typeof v === "string" && v in SAFETY_LEVELS;
 }
@@ -38,12 +46,15 @@ export function UsageContextRows({ rows }: { rows: UsageContextRow[] }) {
         return (
           <li
             key={key}
-            className="flex min-h-11 items-center justify-between gap-3 py-2"
+            className="hover-glow-flame flex min-h-11 items-center justify-between gap-3 rounded-lg py-2"
           >
             <span className="text-base font-medium">{USAGE_CONTEXTS[key]}</span>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}
             >
+              <span aria-hidden className="stat-mono text-[10px] font-bold tracking-wider">
+                {STATUS_CODE[level]}
+              </span>
               <span aria-hidden className="leading-none">
                 {s.icon}
               </span>

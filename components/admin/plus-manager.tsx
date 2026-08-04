@@ -25,6 +25,11 @@ function fmtDate(iso?: string | null): string {
   });
 }
 
+const PROVIDER_LABELS: Record<string, string> = {
+  unifi: "Unifi Pay",
+  latpeed: "Latpeed",
+};
+
 export function PlusManager() {
   const [email, setEmail] = useState("");
   const [months, setMonths] = useState(1);
@@ -165,13 +170,36 @@ export function PlusManager() {
                     ? "—"
                     : status.isManual
                       ? "수동 부여"
-                      : "결제"}
+                      : (PROVIDER_LABELS[status.provider ?? ""] ?? status.provider ?? "결제")}
                 </dd>
                 <dt className="text-muted">결제 이메일 연결</dt>
                 <dd className="text-right font-semibold">
                   {status.hasBillingIdentity ? "연결됨" : "미연결"}
                 </dd>
               </dl>
+
+              {/* 구독 이력 — provider·금액·기간 단위 (감사 gap #5) */}
+              {(status.subscriptions?.length ?? 0) > 0 && (
+                <details className="mt-4 border-t border-border pt-3">
+                  <summary className="cursor-pointer text-sm font-bold">
+                    구독 이력 ({status.subscriptions!.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1.5 text-sm">
+                    {status.subscriptions!.map((sub, i) => (
+                      <li key={i} className="flex items-baseline justify-between gap-2">
+                        <span className="text-muted">
+                          {sub.isManual ? "수동" : (PROVIDER_LABELS[sub.provider] ?? sub.provider)}
+                          {" · "}{sub.status}
+                        </span>
+                        <span className="font-semibold tabular-nums">
+                          {sub.amount != null ? `$${(sub.amount / 100).toFixed(2)}` : "—"}
+                          {" ~ "}{fmtDate(sub.currentPeriodEnd)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
 
               {/* 부여/해제 컨트롤 */}
               <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end">

@@ -806,6 +806,15 @@ export type PlusStatusView = {
   lastEventAt?: string | null;
   amount?: number | null;
   isManual?: boolean | null;
+  provider?: string | null;
+  subscriptions?: {
+    provider: string;
+    status: string;
+    amount: number | null;
+    currentPeriodEnd: string | null;
+    lastEventAt: string | null;
+    isManual: boolean;
+  }[];
 };
 
 function normalizeEmail(email: string): string {

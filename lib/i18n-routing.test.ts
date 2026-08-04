@@ -102,7 +102,8 @@ describe("SEO locale signals", () => {
         ko: "/memes/a1-name",
         en: "/en/memes/a1-name",
         ja: "/ja/memes/a1-name",
-        "x-default": "/memes/a1-name",
+        // 글로벌 피벗: x-default는 한국어가 아닌 영어 경로를 가리킨다.
+        "x-default": "/en/memes/a1-name",
       },
     });
     expect(metadata.openGraph).toMatchObject({

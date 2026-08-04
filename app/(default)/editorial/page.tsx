@@ -110,6 +110,37 @@ export default function EditorialPage() {
             뒤에 설명하는 &lsquo;쓰면 위험&rsquo; 신호를 달고 추천에서
             제외합니다. 설명하지 않는 것이 더 위험하다고 보기 때문입니다.
           </p>
+
+          <h3 className="mt-6 font-bold">밈이 아닌 것: 사건 기록</h3>
+          <p className="mt-2 text-base leading-relaxed">
+            <strong>밈이란 모방·변형되며 퍼지는 표현 양식</strong>입니다. 아무리
+            널리 알려지고 화제가 됐더라도, 사건·인물·작품·게임 용어 그
+            자체는 밈이 아니라 <strong>&lsquo;사건 기록&rsquo;</strong>으로
+            따로 분류합니다. 자체 검토에서 이런 경우가 세 갈래로 나뉘는 것을
+            확인했습니다.
+          </p>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-base leading-relaxed">
+            <li>
+              <strong>사건·인물 기록</strong> — 오디션 우승, 소비자 사건처럼
+              &ldquo;무슨 일이 있었나&rdquo;를 담은 항목
+            </li>
+            <li>
+              <strong>게임 고유명사</strong> — 특정 게임 안에서만 통하는 보스명·
+              서버명 같은 용어
+            </li>
+            <li>
+              <strong>곡·실존 인물</strong> — 발매곡 자체이거나 실존 인물을
+              가리키는 이름
+            </li>
+          </ul>
+          <p className="mt-3 text-base leading-relaxed">
+            이런 항목은 수록을 취소하지 않습니다. 검색 유입과 URL은 그대로
+            유지하되, 화면에{" "}
+            <span className="inline-flex items-center gap-1 rounded-full bg-safety-gray-bg px-2 py-0.5 text-sm font-semibold text-safety-gray">
+              밈이 아니라 인터넷 문화 사건 기록이에요
+            </span>{" "}
+            배지를 달아 밈 사전이 아니라는 사실을 먼저 밝힙니다.
+          </p>
         </section>
 
         <section className="mt-12">

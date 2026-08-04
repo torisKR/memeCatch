@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { DocClassNote } from "@/components/doc-class-note";
 import { SafetyBadge } from "@/components/safety-badge";
 import { SignalTrace } from "@/components/signal-trace";
 import { LIFECYCLE_STATUS, type SafetyLevel } from "@/lib/labels";
@@ -25,7 +26,10 @@ export function AnswerCard({
   meme: Pick<
     MemeRow,
     "title" | "summary" | "lifecycle_status" | "safety_level"
-  >;
+  > & {
+    /** 상세 조회(select("*"))에서만 실려 온다 — 목록·위젯 select에는 없어 optional. */
+    doc_class?: MemeRow["doc_class"];
+  };
 }) {
   const reduce = useReducedMotion();
 
@@ -62,6 +66,7 @@ export function AnswerCard({
       >
         {meme.summary}
       </p>
+      <DocClassNote docClass={meme.doc_class} />
       <div className="relative mt-4">
         {!reduce && (
           <motion.span

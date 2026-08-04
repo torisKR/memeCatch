@@ -9,7 +9,13 @@ import {
   LOCALE_HEADER,
   type Locale,
 } from "@/lib/i18n";
-import { isSeoContentLocale, parseLocalePath, stripLocalePath } from "@/lib/i18n-routing";
+import {
+  isSeoContentLocale,
+  localizePath,
+  parseLocalePath,
+  stripLocalePath,
+  type SeoContentLocale,
+} from "@/lib/i18n-routing";
 
 function localeFromPathname(pathname: string): Locale | null {
   const parsed = parseLocalePath(pathname);
@@ -20,6 +26,38 @@ function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): strin
   return locale ? stripLocalePath(pathname) : pathname;
 }
 
+// ponytail: substring UA sniff, not a maintained bot-UA list — swap for a
+// vetted crawler-detection package if false positives/negatives show up.
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp/i;
+
+export type LandingNegotiationInput = {
+  pathname: string;
+  cookieValue: string | undefined;
+  acceptLanguage: string | null;
+  userAgent: string | null;
+};
+
+/**
+ * 글로벌 피벗: 첫 방문(로케일 쿠키 없음) 루트 경로("/") 전용 언어 협상.
+ * ko 계열 선호·기존 쿠키·봇 UA는 그대로 두고, 그 외 방문자는 지원 SEO
+ * 로케일(en/ja/zh/zh-tw) 우선순위면 해당 로케일로, 그 외 비-ko 선호는 en으로
+ * 보낸다. 순수 함수로 분리해 proxy 밖에서 단위 테스트한다.
+ */
+export function resolveLandingRedirectLocale({
+  pathname,
+  cookieValue,
+  acceptLanguage,
+  userAgent,
+}: LandingNegotiationInput): SeoContentLocale | null {
+  if (pathname !== "/") return null;
+  if (cookieValue) return null;
+  if (userAgent && BOT_UA_PATTERN.test(userAgent)) return null;
+
+  const preferred = localeFromAcceptLanguage(acceptLanguage);
+  if (preferred === "ko") return null;
+  return isSeoContentLocale(preferred) ? preferred : "en";
+}
+
 /**
  * 로케일 헤더 전달과 인증 경로의 세션 갱신을 함께 처리한다.
  * 일반 페이지는 로케일 헤더만 설정하고 Supabase 호출은 인증 경로로 한정한다.
@@ -28,6 +66,25 @@ function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): strin
  * URL prefix는 공유·색인 가능한 선택이므로 쿠키에도 동기화한다.
  */
 export async function proxy(request: NextRequest) {
+  const landingLocale = resolveLandingRedirectLocale({
+    pathname: request.nextUrl.pathname,
+    cookieValue: request.cookies.get(LOCALE_COOKIE)?.value,
+    acceptLanguage: request.headers.get("accept-language"),
+    userAgent: request.headers.get("user-agent"),
+  });
+  if (landingLocale) {
+    const url = request.nextUrl.clone();
+    url.pathname = localizePath("/", landingLocale);
+    const response = NextResponse.redirect(url, 302);
+    response.headers.set("Vary", "Accept-Language");
+    response.cookies.set(LOCALE_COOKIE, landingLocale, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+    return response;
+  }
+
   const urlLocale = localeFromPathname(request.nextUrl.pathname);
   // `locale` is the UI preference passed to the app. The response body itself
   // is Korean unless the URL addresses an indexed translated document.

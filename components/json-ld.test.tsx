@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DefinedTermSetJsonLd,
   MemeBreadcrumbJsonLd,
+  MemeDefinedTermJsonLd,
   MemeWebPageJsonLd,
   WebSiteJsonLd,
 } from "@/components/json-ld";
@@ -81,6 +82,53 @@ describe("localized JSON-LD", () => {
     expect(data.url).toBe(
       `${SITE_URL}/zh-tw/memes/a1b2c3-%ED%95%9C%EA%B5%AD-%EB%B0%88`,
     );
+  });
+
+  it("renders a standalone top-level DefinedTerm using the meme summary as its definition", () => {
+    const data = readJsonLd(
+      <MemeDefinedTermJsonLd
+        name="갑분싸"
+        summary="갑자기 분위기가 싸해짐"
+        shortId="a1b2c3"
+        slug="갑분싸"
+      />,
+    );
+
+    expect(data).toMatchObject({
+      "@type": "DefinedTerm",
+      name: "갑분싸",
+      description: "갑자기 분위기가 싸해짐",
+      inLanguage: "ko",
+      inDefinedTermSet: {
+        "@type": "DefinedTermSet",
+        "@id": `${SITE_URL}#glossary`,
+        name: "밈캐치 밈 사전",
+        url: SITE_URL,
+      },
+    });
+  });
+
+  it("localizes the standalone DefinedTerm's inLanguage and glossary reference", () => {
+    const data = readJsonLd(
+      <MemeDefinedTermJsonLd
+        locale="en"
+        name="Gapbunssa"
+        summary="Sudden awkward silence in the room"
+        shortId="a1b2c3"
+        slug="gapbunssa"
+      />,
+    );
+
+    expect(data).toMatchObject({
+      "@type": "DefinedTerm",
+      inLanguage: "en",
+      url: `${SITE_URL}/en/memes/a1b2c3-gapbunssa`,
+      inDefinedTermSet: {
+        "@id": `${SITE_URL}/en#glossary`,
+        name: "MemeCatch Korean Meme Dictionary",
+        url: `${SITE_URL}/en`,
+      },
+    });
   });
 
   it("accepts explicit localized names and paths for breadcrumbs", () => {

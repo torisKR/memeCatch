@@ -217,6 +217,57 @@ export function MemeWebPageJsonLd({
   );
 }
 
+/**
+ * 밈 상세 — 독립 최상위 DefinedTerm(사전 항목) JSON-LD.
+ * MemeWebPageJsonLd의 mainEntity(WebPage에 중첩된 DefinedTerm)를 대체하지 않고
+ * 병렬로 추가한다 — 별도 <script> 블록의 최상위 @type이라 AI 인용·리치 결과
+ * 파서가 더 안정적으로 인식한다. description은 전체 설명이 아닌 요약(summary):
+ * 사전 항목다운 한 줄 정의를 유지한다.
+ * TODO(후속 범위): 번역본이 있으면 workTranslation/translationOfWork로
+ * 로케일 간 연결 — 이번 작업 범위 밖.
+ */
+export function MemeDefinedTermJsonLd({
+  name,
+  summary,
+  shortId,
+  slug,
+  locale = "ko",
+  path,
+  glossaryName,
+  glossaryPath,
+}: {
+  name: string;
+  summary: string;
+  shortId: string;
+  slug: string;
+  locale?: SeoRouteLocale;
+  path?: string;
+  glossaryName?: string;
+  glossaryPath?: string;
+}) {
+  const copy = getSeoCopy(locale);
+  const url = absoluteSiteUrl(path ?? localizedMemePath(locale, shortId, slug));
+  const localizedGlossaryUrl = absoluteSiteUrl(glossaryPath ?? localizedPath("/", locale));
+  return (
+    <Script
+      data={{
+        "@context": "https://schema.org",
+        "@type": "DefinedTerm",
+        name,
+        description: summary,
+        url,
+        inLanguage: toHrefLang(locale),
+        inDefinedTermSet: {
+          "@type": "DefinedTermSet",
+          "@id": `${localizedGlossaryUrl}#glossary`,
+          name: glossaryName ?? copy.glossaryName,
+          url: localizedGlossaryUrl,
+        },
+      }}
+    />
+  );
+}
+
 /** 밈 상세 — BreadcrumbList (홈 › 카테고리 › 밈) */
 export function MemeBreadcrumbJsonLd({
   category,

@@ -1,0 +1,18 @@
+2 of the 20 requested top-trend_score EN candidates were rejected by the
+translation pipeline's own language-purity validator (assertTargetLanguage in
+scripts/translate-memes-mlx-linked.mjs) after 3 retries each. Not inserted;
+not in en-translations-top20.sql. Both are short proper-noun titles where the
+model kept the Korean name verbatim instead of romanizing/translating it.
+
+short_id=ay8znvqu  title="마지막 승부·농구대잔치 열풍"  trend_score=323.36
+  error: title is not valid en text: requires substantial Latin letters
+  (Hangul=12, target Latin=0)
+
+short_id=x4zwc4wk  title="그래, 결심했어!"  trend_score=320.59
+  error: title is not valid en text: requires substantial Latin letters
+  (Hangul=6, target Latin=0)
+
+To fill these 2 slots: rerun scripts/translate-memes-mlx-linked.mjs (or the
+same local MLX call) for just these two short_ids, or write the titles by
+hand (e.g. "The Last Match" / K-basketball fever, "Yes, I've Decided!") and
+translate the rest of the fields the same way as the other 18.

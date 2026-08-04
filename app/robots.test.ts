@@ -53,4 +53,22 @@ describe("robots locale crawl policy", () => {
   it("advertises the single absolute sitemap URL", () => {
     expect(result.sitemap).toBe(`${SITE_URL}/sitemap.xml`);
   });
+
+  it("explicitly allows the major AI answer-engine crawlers", () => {
+    const aiBots = [
+      "GPTBot",
+      "ClaudeBot",
+      "Claude-Web",
+      "PerplexityBot",
+      "Google-Extended",
+      "CCBot",
+    ];
+
+    for (const bot of aiBots) {
+      const rule = rules.find((r) => values(r.userAgent).includes(bot));
+      expect(rule, bot).toBeDefined();
+      expect(values(rule?.allow), bot).toContain("/");
+      expect(values(rule?.disallow), bot).toEqual(disallows);
+    }
+  });
 });

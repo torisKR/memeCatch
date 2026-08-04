@@ -67,7 +67,8 @@ function homeLanguages(): Record<string, string> {
         absolute(localizedPath("/", locale)),
       ]),
     ),
-    "x-default": SITE_URL,
+    // 해외 주 타깃 전환(루프 048): 글로벌 기본 착지는 영어 홈.
+    "x-default": absolute(localizedPath("/", "en")),
   };
 }
 

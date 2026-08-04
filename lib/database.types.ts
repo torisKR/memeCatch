@@ -1074,6 +1074,7 @@ export type Database = {
           created_at: string
           description: string
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
+          doc_class: string
           id: string
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
           media_type: Database["public"]["Enums"]["media_type"]
@@ -1108,6 +1109,7 @@ export type Database = {
           created_at?: string
           description?: string
           difficulty?: Database["public"]["Enums"]["meme_difficulty"]
+          doc_class?: string
           id?: string
           lifecycle_status?: Database["public"]["Enums"]["lifecycle_status"]
           media_type?: Database["public"]["Enums"]["media_type"]
@@ -1142,6 +1144,7 @@ export type Database = {
           created_at?: string
           description?: string
           difficulty?: Database["public"]["Enums"]["meme_difficulty"]
+          doc_class?: string
           id?: string
           lifecycle_status?: Database["public"]["Enums"]["lifecycle_status"]
           media_type?: Database["public"]["Enums"]["media_type"]

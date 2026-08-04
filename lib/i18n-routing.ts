@@ -243,7 +243,7 @@ type BuildLocalizedMetadataOptions = {
   description?: string;
   /** 실제 공개 번역이 있는 로케일만 전달한다. 생략하면 hreflang을 만들지 않는다. */
   availableLocales?: readonly SeoRouteLocale[];
-  /** 언어 선택용 중립 URL이 없으면 한국어 원문 URL을 x-default로 쓰는 것이 기본이다. */
+  /** 언어 선택용 중립 URL이 없으면 영어 번역 URL을 x-default로 쓰는 것이 기본이다. */
   includeXDefault?: boolean;
 };
 
@@ -264,7 +264,8 @@ export function buildLocalizedMetadata({
   const languages = availableLocales
     ? {
         ...buildHreflangLanguages(pathname, availableLocales),
-        ...(includeXDefault ? { "x-default": localizePath(pathname, "ko") } : {}),
+        // 글로벌 피벗: 해외 방문자가 주 타깃이므로 x-default는 영어 경로를 가리킨다.
+        ...(includeXDefault ? { "x-default": localizePath(pathname, "en") } : {}),
       }
     : undefined;
 

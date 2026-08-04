@@ -30,7 +30,9 @@ export const metadata: Metadata = {
     canonical: "/",
     languages: {
       ...buildHreflangLanguages("/", SEO_ROUTE_LOCALES),
-      "x-default": "/",
+      // 해외 주 타깃 전환(루프 048): x-default = 영어 홈. 밈 상세는 en 번역
+      // reviewed 문서가 생길 때까지 ko 유지(placeholder를 가리키면 유해).
+      "x-default": "/en",
     },
   },
   openGraph: {

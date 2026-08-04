@@ -494,3 +494,28 @@ DECISIONS.md 「결정 확정 (2026-08-04, 루프 047)」 표 참조.
 HG-008 B(기준 명문화 선행), HG-009(b)(검수 시점 필드 신설 후).
 
 **게이트**: tsc 0 / eslint 0 / vitest 646/646 / build 64/64.
+
+---
+
+## 루프 048 — 글로벌 피벗 Phase 1 (2026-08-04, 병렬 9 에이전트)
+
+**지시**: 해외 K-밈 학습자 주 타깃·한국인 보조, SEO/GEO 구현, 영어 기반 노출.
+
+**구현·배포**: ① `/` 언어 협상(proxy.ts) — 비한국어 첫 방문 302→/en·/ja·/zh·/zh-tw,
+쿠키(memecatch_locale) 우선·봇 예외·Vary: Accept-Language ② hreflang x-default
+ko→en 전환(홈·전역 — 밈 상세는 en reviewed 생길 때까지 ko 유지) ③ robots.ts에
+GPTBot·ClaudeBot·Claude-Web·PerplexityBot·Google-Extended·CCBot 명시 허용
+④ ko 상세 최상위 DefinedTerm JSON-LD ⑤ HG-008 실행: doc_class 컬럼(prod 적용)+
+9건 event 재분류(prod 적용)+/editorial 기준 명문화+상세 배지 ⑥ 전역 크롬은 이미
+4로케일 완비 확인(무수정).
+
+**실측 발견**: 검수(reviewed) 영어 번역 0건이 국제화의 근본 병목 — /en 상세·
+sitemap 로케일 URL·llms-full 전부 이 게이트에 걸림. 동적 llms.txt 시스템은 기존재.
+
+**번역 배치**: MLX로 상위 18건 생성(artifacts/renewal/loop-048/en-translations-top20.sql,
+멱등·자가검증). 운영 검수 판정: 승인 10 / 보류 8(로마자 오변환·표기 오류 —
+generation-skipped.txt와 함께 기록). **DB 적용은 권한 분류기가 차단** — 사용자 실행 대기
+(SQL Editor에서 아티팩트 실행 후 승인 10건 reviewed 승격).
+
+**게이트**: tsc 0 / vitest 664/664 / build 64/64. 후속: en 상세 JSON-LD
+translationOfWork(타 세션 파일 잠금 해제 후), 잔여 미번역 상위 398건 배치.

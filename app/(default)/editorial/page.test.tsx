@@ -14,6 +14,9 @@ describe("smoke", () => {
     for (const s of ["공식 임베드", "최초 확인 출처", "저작권 위험 차단"]) {
       expect(html).toContain(s);
     }
+    expect(html).toContain("밈이 아니라 인터넷 문화 사건 기록이에요");
+    expect(html).toContain("사건·인물 기록");
+    expect(html).toContain("게임 고유명사");
     expect(html).toContain("toris@toris.kr");
     expect(html).toContain("/support");
     expect(html.length).toBeGreaterThan(8000);

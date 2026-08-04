@@ -7,12 +7,12 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 루프 번호 | **045** — 사용자 결정으로 게이트 해제: 밈 직접 공개 + Unifi 모듈 완성 |
-| 선택 항목 | 루프 022 SRCH-001 기각 → 023 병렬 감사(30 에이전트) → 025 `DQ-013` |
-| 상태 | `human_gate` — 게이트 없이 가능한 작업 0건 |
+| 루프 번호 | **050** — 다국어 번역 배치 아티팩트 검증 및 재개 가능성 확보 |
+| 선택 항목 | 루프 050 `LOC-007` — 4개 로케일 번역 SQL 배치의 안전·완결성 검증 |
+| 상태 | `in_progress` — 부분 배치 440/1,520행, 외부 DB 적용은 별도 운영 단계 |
 | 날짜 | 2026-08-04 |
-| 브랜치 | `renewal/loop-001` |
-| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-025/` (023 = 병렬 감사 산출물 7종 + HG 구현안 7건) |
+| 브랜치 | `main` |
+| 산출물 | `artifacts/renewal/loop-001/` ~ `loop-050/` (loop-050은 현재 번역 배치 진행 중) |
 
 ## 전체 목표
 
@@ -402,7 +402,7 @@ keyboard-only·768×1024·200% 확대·reduced-motion·INP·e2e는 남아 있으
 
 1. ~~무출처 공개 문서가 “검수팀 확인”을 주장~~ → **루프 003에서 해소.** 다만
    1,330건에 실제 근거를 붙이는 일은 그대로 남아 있다(편집 작업, DQ-007).
-2. **공개 문서의 96.3%가 충실도 미달**이라 색인 대상이 145건뿐이고, “아직 정리 중인
+2. **공개 문서의 96.2%가 충실도 미달**이라 색인 대상이 147건뿐이고, “아직 정리 중인
    문서예요” 배너가 사실상 전 문서에 뜬다. `components/doc-status-note.tsx`의 주석이
    경고한 “모든 문서에 붙는 순간 의미 없는 템플릿” 상태에 이미 도달했다.
 3. ~~모바일 상세 첫 뷰포트에 밈 정보가 0~~ → **루프 004에서 해소**(정답 카드 top 79px).
@@ -412,10 +412,20 @@ keyboard-only·768×1024·200% 확대·reduced-motion·INP·e2e는 남아 있으
    근거 연결 설비가 스키마에만 있고 운영되지 않는다.
 6. 로컬 `.env.production`의 `SUPABASE_SERVICE_ROLE_KEY`가 401을 반환한다(anon 키는
    정상 200). service_role을 쓰는 운영 스크립트가 지금 동작하지 않을 수 있다.
+7. 루프 050 번역 worklist는 1,520행을 목표로 하지만 현재 오프라인 SQL 아티팩트는
+   440행이다. 누락분은 번역 생성·검수 후 이어서 만들며, 부분 파일을 완결 배치로
+   오인하지 않도록 `translation:check:complete`를 별도 게이트로 둔다.
 
 ## 다음 후보 작업 3개
 
-**게이트 없이 진행 가능한 항목이 남아 있지 않다.**
+**현재 루프에서 진행 중인 항목은 `LOC-007` 번역 배치 검증이다.** 부분 SQL의 구조적
+검사는 완료했으며, 누락 1,080행의 생성·검수와 프로덕션 적용은 별도 운영 단계다.
+
+다음 후보는 다음 순서다.
+
+1. `LOC-007` — 나머지 1,080행 번역 생성 후 `pnpm translation:check:complete`
+2. `SEO-001` — Next 패치에서 soft-404 재검증(현재 known issue 유지)
+3. `HG-001~009`에 종속된 데이터 편집 — 운영자 승인·복구 절차 후에만 수행
 
 **남은 10건은 전부 `HUMAN_GATE` 대기다** — DQ-002·DQ-003·DQ-004·DQ-006·DQ-007·
 DQ-010·DES-004·**PERF-002**(루프 012에서 HG-005 종속으로 재분류)가 `DECISIONS.md`의
@@ -434,7 +444,7 @@ DQ-007·DQ-010·DES-004가 `DECISIONS.md`의 HG-001~HG-005 결정을 기다린�
 | 완료 (`CATCHMEME_RENEWAL_DONE`) | ❌ **거짓 완료 선언을 하지 않는다.** `quality:check` critical 4개가 여전히 위반이다 — 화면 쪽 critical(DQ-005·DQ-001)은 해소됐지만 데이터 쪽(무출처 1,330건·중복 38건·alias 275건)은 그대로다 |
 | 사람 결정 필요 (`CATCHMEME_HUMAN_DECISION_REQUIRED`) | ✅ **완전 충족** — 남은 backlog 10건이 **전부** HUMAN_GATE(HG-001~HG-006) 대기다. 게이트 없이 할 수 있는 일이 0건이다 |
 | 안전 중단 (`CATCHMEME_SAFETY_STOP`) | ❌ 해당 없음 |
-| 반복 제한 | 25 — READY: DQ-016b·LOC-002·A11Y-005 + audit-synthesis 후보 16건 triage 대기 |
+| 반복 제한 | 50 — `LOC-007` in_progress; 데이터 편집·soft-404는 기존 HUMAN_GATE/known issue 유지 |
 
 ---
 
@@ -541,3 +551,50 @@ source_updated_at 신선도 가드 포함 일괄 UPDATE.
 
 **후속**: 각 로케일 31번째 행(구 스모크 machine 1건씩)은 admin 큐에서 처리. 미번역 상위
 문서 ~390건은 동일 파이프라인 반복.
+
+## 루프 050 — 번역 SQL 배치 검증 게이트 (2026-08-04)
+
+**선택 근거**: 루프 049의 후속 번역 배치가 `worklist.json`에 380개 문서를 선언했지만,
+SQL 파일의 개수·중복·대상 문서·로케일 일치를 자동으로 확인하는 명령이 없었다. 번역
+텍스트를 새로 만들거나 프로덕션에 쓰지 않고, 운영자가 SQL Editor에 적용하기 전 안전성을
+검증할 수 있는 단일 수직 변경으로 범위를 고정했다.
+
+**구현**: `scripts/translation-batch-check.mjs`와 테스트를 추가했다.
+
+- `meme_translations` INSERT만 허용하고 `memes`·미디어·출처의 쓰기, 삭제·drop·truncate를
+  거부한다.
+- worklist 밖의 `meme_id`, 파일명과 행의 locale 불일치, 중복 `(meme_id, locale)`,
+  conflict guard 누락을 오류로 보고한다.
+- 기본 검사는 재개 가능한 **부분 배치**를 허용하고, `--require-complete`는 380×4
+  행이 모두 생길 때만 통과하는 최종 게이트로 분리했다.
+
+**현재 아티팩트 검증** (`translation-batch-check.json`):
+
+| locale | rows | missing from 380-doc worklist |
+| --- | ---: | ---: |
+| en | 120 | 260 |
+| ja | 140 | 240 |
+| zh | 88 | 292 |
+| zh-tw | 92 | 288 |
+| 합계 | **440 / 1,520** | **1,080** |
+
+SQL은 읽기 전용으로 검사했으며 프로덕션 Supabase에 적용하지 않았다. 완결 전에는
+`pnpm translation:check:complete`가 실패해야 하며, 이는 현재 의도된 상태다.
+
+## 루프 050 검증 결과 (2026-08-04)
+
+| 검사 | 명령 | 결과 |
+| --- | --- | --- |
+| 번역 checker 단위 | `node scripts/translation-batch-check.test.mjs` | ✅ safeguards 통과 |
+| 번역 부분 배치 | `pnpm translation:check` | ✅ 440/1,520행, 오류 0 |
+| 번역 완결 게이트 | `--require-complete` | ⚠️ 의도된 실패 — en 260 / ja 240 / zh 292 / zh-tw 288 누락 |
+| 전체 단위 테스트 | `pnpm test` | ✅ 80 files / 666 tests |
+| lint | `pnpm lint` | ✅ 0 errors / 6 기존 warnings |
+| 타입 | `pnpm exec tsc --noEmit` | ✅ 통과 |
+| 프로덕션 빌드 | 네트워크 조건 `pnpm build` | ✅ 성공 (65 static pages) |
+| route smoke | `SMOKE_BASE_URL=http://localhost:3100 pnpm smoke` | ✅ 6/6, SEO-001 soft-404는 known issue |
+| 글로벌 SEO/GEO | 로케일·robots·sitemap·llms 읽기 검사 | ✅ en/ja/zh/zh-tw + GPTBot/ClaudeBot |
+| 데이터 품질 | `pnpm quality:report` (anon GET) | ✅ 리포트 갱신, critical 수치는 기준선과 동일 |
+
+LSP 서버(`typescript-language-server`, `biome`)는 이 실행 환경에 설치되어 있지 않아
+자동 LSP 진단은 수행하지 못했다. TypeScript·ESLint·빌드·테스트 명령은 별도로 통과했다.

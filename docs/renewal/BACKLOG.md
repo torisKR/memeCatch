@@ -382,6 +382,22 @@
   의존성: meme_translations 공개(현재 0건 — 노출 0)
   상태: blocked
 
+- [ ] ID: LOC-007
+  문제: 루프 049의 후속 다국어 배치가 380개 문서 × 4개 로케일을 worklist에 선언했지만,
+    SQL 아티팩트의 중복·대상 문서·로케일 일치를 확인하는 자동 게이트가 없었다. 부분 파일을
+    수동 적용하면 누락·중복·잘못된 meme_id를 발견하기 어렵다.
+  사용자 영향: 3
+  데이터/법적 위험: 3
+  트래픽 가중치: 3
+  해결 확신: 5
+  예상 노력: 2
+  우선순위 점수: 22.5
+  의존성: 루프 049의 번역 worklist 및 운영자 SQL 적용 권한
+  완료 조건: 기본 검사가 440개 현재 행을 오류 없이 통과하고, 잔여 누락을 로케일별로 출력한다. 전체 배치 완료 시 `--require-complete`가 1,520행에서 통과한다.
+  검증 명령: `pnpm translation:check` · `pnpm translation:check:complete`
+  상태: in_progress
+  결과: 루프 050에서 checker·JSON 리포트 추가. 현재 440/1,520행이며 프로덕션 쓰기는 수행하지 않음.
+
 - [x] ID: A11Y-005
   문제: generic 요소 aria-label 잔존 — HIGH 1건(trend-alerts-bell 안 읽음 점: 자식 텍스트 0이라 스크린리더에서 상태 완전 소실) + LOW 6건(admin 로딩 스켈레톤). 3번째 재발 유형.
   상태: done (루프 032)

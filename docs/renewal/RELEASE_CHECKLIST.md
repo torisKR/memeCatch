@@ -1,16 +1,16 @@
 # RELEASE_CHECKLIST
 
 리뉴얼 범위를 배포로 확정하기 전에 통과해야 하는 목록.
-갱신: 루프 018 (2026-08-04) · 대상: 브랜치 `renewal/loop-001`, 커밋 18개
+갱신: 루프 050 (2026-08-04) · 대상: 브랜치 `main` · 로컬 검증 커밋 준비 중
 
 ## 게이트 A — 코드 검증 (매 루프 필수)
 
 - [x] `npx eslint` — 0 error (5 warning은 전부 기존 `no-img-element`)
 - [x] `npx tsc --noEmit` — 통과
-- [x] `npx vitest run` — 77 파일 / **645 통과** (기준선 597 → +48)
+- [x] `npx vitest run` — 80 파일 / **666 통과** (기준선 597 → +69)
 - [x] `npx next build --webpack` — 성공
 - [x] 변경된 코드에 회귀 테스트가 있다 — 루프 002·003·005·007·011·013·014 모두 신규 테스트 동반
-- [x] 핵심 route smoke 자동화 — `pnpm smoke` (scripts/smoke.mts, 의존성 0, 6개 route + 루프 003·006 회귀 마커). 첫 실행에서 soft-404 결함 검출 → SEO-001
+- [x] 핵심 route smoke 자동화 — 네트워크 연결 프로덕션 빌드에서 `SMOKE_BASE_URL=http://localhost:3100 pnpm smoke` **6/6 통과**. 단, 존재하지 않는 밈 URL의 200 soft-404는 SEO-001 known issue로 경고 유지
 
 ## 게이트 B — 데이터 품질
 
@@ -58,7 +58,14 @@
 - [x] 결정·trade-off가 `DECISIONS.md`에 기록됨 — D-001~D-004, HG-001~HG-006
 - [x] 검증 로그가 `artifacts/renewal/loop-NNN/`에 저장됨 — loop-001~015
 - [x] HUMAN_GATE 항목이 승인 없이 배포되지 않았다 — 게이트 항목은 전부 문서까지만
-- [x] push / merge / production deploy를 하지 않았다 — 로컬 커밋 15개만
+- [ ] push / merge / production deploy — 루프 050 검증 커밋 후 Vercel 연결 상태에 따라 수행
+
+## 게이트 F — 글로벌 번역 배치 (루프 050)
+
+- [x] 오프라인 번역 SQL checker가 worklist 밖 ID·중복·locale 불일치·위험한 쓰기를 차단한다
+- [x] 부분 배치 현황이 JSON 아티팩트로 남는다 — 440/1,520행
+- [ ] `pnpm translation:check:complete` — 1,080행 추가 생성 전에는 의도적으로 실패
+- [ ] 프로덕션 번역 적용 — 운영자 SQL Editor 실행 및 결과 확인 전에는 미적용
 
 ---
 

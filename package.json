@@ -23,6 +23,8 @@
     "quality:check": "node scripts/quality-check.mts",
     "quality:report": "node scripts/quality-check.mts --json --fail-on=none",
     "import:koculture": "node scripts/import-koculture-memes.mjs",
+    "translation:check": "node scripts/translation-batch-check.mjs --artifact-dir artifacts/renewal/loop-050 --worklist artifacts/renewal/loop-050/worklist.json",
+    "translation:check:complete": "node scripts/translation-batch-check.mjs --artifact-dir artifacts/renewal/loop-050 --worklist artifacts/renewal/loop-050/worklist.json --require-complete",
     "translate:memes:mlx-linked:test": "node scripts/translate-memes-mlx-linked.test.mjs",
     "translate:memes": "node scripts/translate-memes.mjs",
     "translate:memes:mlx-linked": "node scripts/translate-memes-mlx-linked.mjs"

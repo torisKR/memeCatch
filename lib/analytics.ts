@@ -8,6 +8,7 @@
  *          | weekly_click(레인 D: /weekly 카드 클릭) | my_recent_click(레인 C: MY 최근 본 밈 클릭)
  *          | timeline_click(레인 A: /timeline 카드 클릭) | search_suggest_click(레인 B: 검색 자동완성 클릭)
  *          | quiz_start(mode) | quiz_complete(score) | quiz_share — 밈력고사(/quiz) 퍼널
+ *          | global_daily_start(locale) | global_daily_complete(locale, score)
  *          | briefing_click(to) — 홈 주간 브리핑("이번 주 이것만") 내 링크 클릭
  *          | traffic_source — 세션 1회, 유입 경로 판별 결과(components/attribution-tracker.tsx)
  *          | search_submit(query, result_count) — 검색 결과가 실제로 렌더된 시점 1회
@@ -18,6 +19,15 @@
  *            출처 링크 클릭. HG-006 B안 — 개인정보 무포함(문서 ID·정규화 플랫폼명만)
  *          | correction_report_started(short_id, from) — 상세의 정정 제보 CTA 진입.
  *            from=trust_note(근거 0건) | doc_status(얇은 문서). HG-006 B안
+ *          | translation_priority_requested(locale, result)
+ *          | translation_ready_opened(locale)
+ *          | use_kit_copied(format)
+ *          | plus_pricing_view(locale, surface)
+ *          | plus_checkout_started(locale, surface)
+ *          | plus_checkout_returned(locale, state)
+ *          | plus_one_cut_ready(locale, count, entry_source?)
+ *          | plus_one_cut_prepared(locale, count, entry_source?)
+ *          | plus_receipt_saved(locale, channel, artifact_kind, already_recorded, entry_source?)
  */
 type GtagEvent =
   | "next_meme_click"
@@ -38,13 +48,24 @@ type GtagEvent =
   | "quiz_start"
   | "quiz_complete"
   | "quiz_share"
+  | "global_daily_start"
+  | "global_daily_complete"
   | "briefing_click"
   | "traffic_source"
   | "search_submit"
   | "search_result_click"
   | "search_no_result"
   | "meme_source_opened"
-  | "correction_report_started";
+  | "correction_report_started"
+  | "translation_priority_requested"
+  | "translation_ready_opened"
+  | "use_kit_copied"
+  | "plus_pricing_view"
+  | "plus_checkout_started"
+  | "plus_checkout_returned"
+  | "plus_one_cut_ready"
+  | "plus_one_cut_prepared"
+  | "plus_receipt_saved";
 
 declare global {
   interface Window {

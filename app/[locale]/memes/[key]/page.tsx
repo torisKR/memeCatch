@@ -13,12 +13,19 @@ import {
   localizedPath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
+import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
+import { ExportButton } from "@/components/export-button";
+import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
+import { MemeMarketPassport } from "@/components/meme-market-passport";
+import { SaveButton } from "@/components/save-button";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
   isIndexableLocalizedMeme,
 } from "@/lib/meme-translations";
 import { SITE_URL } from "@/lib/site";
+import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 
 export const revalidate = 600;
 
@@ -205,7 +212,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const shortId = shortIdFromParam(key);
   const meme = await getLocalizedMemeByShortId(shortId, locale);
-  if (!meme) return { title: DETAIL_COPY[locale].meaningTitle, robots: { index: false, follow: false } };
+  if (!meme) notFound();
 
   const versions = await getLanguageVersions(shortId, meme.id, locale);
   const indexableVersions = versions.filter(({ meme: version }) =>
@@ -214,13 +221,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const copy = DETAIL_COPY[locale];
   const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
   const koreanPath = localizedMemePath("ko", meme.short_id, meme.original.slug);
+  const englishVersion = indexableVersions.find(({ locale: versionLocale }) =>
+    versionLocale === "en",
+  )?.meme;
+  const xDefault = englishVersion
+    ? localizedMemePath("en", englishVersion.short_id, englishVersion.slug)
+    : koreanPath;
   const languages = Object.fromEntries([
     ["ko", koreanPath],
     ...indexableVersions.map(({ locale: versionLocale, meme: version }) => [
       getHreflang(versionLocale),
       localizedMemePath(versionLocale, version.short_id, version.slug),
     ]),
-    ["x-default", koreanPath],
+    ["x-default", xDefault],
   ]);
   const description = `${meme.title}: ${meme.summary}`;
   const metadata = buildLocalizedMetadata({
@@ -253,7 +266,10 @@ export default async function LocalizedMemePage({ params }: Props) {
   const meme = await getLocalizedMemeByShortId(shortId, locale);
   if (!meme) notFound();
 
-  const versions = await getLanguageVersions(shortId, meme.id, locale);
+  const [versions, marketPassport] = await Promise.all([
+    getLanguageVersions(shortId, meme.id, locale),
+    getMemeMarketPassport(meme.id, locale),
+  ]);
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);
@@ -397,6 +413,20 @@ export default async function LocalizedMemePage({ params }: Props) {
         </ul>
       </nav>
 
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,15rem)] lg:items-start">
+        <SaveButton memeId={meme.id} />
+        <TranslationPriorityButton
+          memeId={meme.id}
+          locale={locale}
+          translationStatus={meme.translation.status}
+          translationIsCurrent={meme.translation.isCurrent}
+        />
+        <ExportButton shortId={meme.short_id} />
+      </div>
+      <div className="mt-3">
+        <MemeUseKitEntry locale={locale} />
+      </div>
+
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
         <div className="space-y-6">
           {meme.description && (
@@ -456,6 +486,17 @@ export default async function LocalizedMemePage({ params }: Props) {
               <p className="mt-2 whitespace-pre-line leading-relaxed">{meme.caution}</p>
             </section>
           )}
+          <MemeUseKit
+            title={meme.title}
+            summary={meme.summary}
+            usageNote={meme.usage_note}
+            caution={meme.caution}
+            safetyLevel={meme.safety_level}
+            lifecycleStatus={meme.lifecycle_status}
+          />
+
+          <MemeMarketPassport passport={marketPassport} locale={locale} />
+          <MemeTrendPanel memeId={meme.id} />
         </div>
 
         {sourceLinks.length > 0 && (

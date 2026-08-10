@@ -1,71 +1,45 @@
 import Link from "next/link";
-import { createStaticClient } from "@/lib/supabase/server";
 import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
-import { type MemeCategory } from "@/lib/labels";
-import type { MemeListItem } from "@/lib/queries";
+import { loadPlusLocalizedFeed } from "@/lib/plus-localized-feed.server";
 import type { Locale } from "@/lib/i18n";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import {
+  usesEnglishContentFallback,
+} from "@/lib/plus-localized-feed";
+import type { MemeCategory } from "@/lib/labels";
 
 /**
  * MY — 관심 카테고리 맞춤 피드 (레인 C).
  * profiles.interests가 있으면 해당 카테고리 급상승 밈을, 없으면(또는 결과가 비면)
  * 최근 등록 밈으로 폴백하고 온보딩 유도 문구를 보여준다.
- * 공개 데이터만 읽으므로 createStaticClient(쿠키 미사용) 사용 — lib/queries.ts와 동일 원칙.
+ * 공개 데이터는 server-only 로더가 쿠키 없는 createStaticClient로만 읽는다.
  */
-
-const FEED_SELECT = "*, meme_contents(thumbnail_url, is_representative)";
-const PUBLIC_STATUSES = ["approved", "limited"] as const;
-const FEED_LIMIT = 6;
-
-async function getInterestFeed(categories: MemeCategory[]): Promise<MemeListItem[]> {
-  try {
-    const supabase = createStaticClient();
-    const { data, error } = await supabase
-      .from("memes")
-      .select(FEED_SELECT)
-      .in("category", categories)
-      .in("moderation_status", [...PUBLIC_STATUSES])
-      .order("trend_score", { ascending: false })
-      .limit(FEED_LIMIT);
-    if (error || !data) return [];
-    return data as MemeListItem[];
-  } catch {
-    return [];
-  }
-}
-
-async function getFreshFeed(): Promise<MemeListItem[]> {
-  try {
-    const supabase = createStaticClient();
-    const { data, error } = await supabase
-      .from("memes")
-      .select(FEED_SELECT)
-      .in("moderation_status", [...PUBLIC_STATUSES])
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .limit(FEED_LIMIT);
-    if (error || !data) return [];
-    return data as MemeListItem[];
-  } catch {
-    return [];
-  }
-}
 
 export async function MyFeed({
   interests,
   locale = "ko",
+  isPremium = false,
 }: {
   interests: MemeCategory[];
   locale?: Locale;
+  isPremium?: boolean;
 }) {
+  if (!isPremium) return null;
+
   const copy = PREMIUM_COPY[locale].feed;
   const hasInterests = interests.length > 0;
-  let memes = hasInterests ? await getInterestFeed(interests) : [];
-  const usedFallback = memes.length === 0;
-  if (usedFallback) memes = await getFreshFeed();
+  const result = await loadPlusLocalizedFeed({ interests, locale, isPremium });
+  const contentFallback = usesEnglishContentFallback(locale, result.contentLocale);
 
-  const title = hasInterests && !usedFallback ? copy.personalRadar : copy.fresh;
+  const title = hasInterests && !result.usedFresh ? copy.personalRadar : copy.fresh;
+  const emptyCopy =
+    result.state === "unavailable"
+      ? copy.localizedUnavailable
+      : result.state === "empty-coverage"
+        ? copy.localizedEmpty
+        : copy.empty;
 
   return (
     <Reveal as="section" className="mt-8 instrument-grid">
@@ -78,14 +52,19 @@ export async function MyFeed({
           {hasInterests ? copy.editInterests : copy.setInterests}
         </Link>
       </div>
-      {!hasInterests && (
+      {contentFallback && (
+        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+          {copy.englishContent}
+        </p>
+      )}
+      {!hasInterests && result.state !== "unavailable" && (
         <p className="mt-2 text-sm text-muted">
           {copy.fallback}
         </p>
       )}
-      {memes.length === 0 ? (
+      {result.items.length === 0 ? (
         <div className="mt-3 rounded-2xl border border-border bg-surface p-6 text-center">
-          <p className="text-muted">{copy.empty}</p>
+          <p className="text-muted">{emptyCopy}</p>
           <Link
             href="/explore"
             className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -100,8 +79,8 @@ export async function MyFeed({
           className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3"
           itemClassName="min-w-0"
         >
-          {memes.map((meme) => (
-            <MemeCard key={meme.id} meme={meme} />
+          {result.items.map((item) => (
+            <MemeCard key={item.meme.id} meme={item.meme} href={item.href} />
           ))}
         </MotionList>
       )}

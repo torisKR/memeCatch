@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { toBcp47, type Locale } from "@/lib/i18n";
+import { useLocale } from "@/lib/i18n-client";
+import { PREMIUM_COPY, type PremiumCopy } from "@/lib/i18n-premium";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * Plus 전용 밈 트렌드 추이 패널.
@@ -24,15 +28,29 @@ type Payload =
   | { locked: true; reason: "signed_out" | "not_premium" }
   | { locked: false; series: Point[] };
 
-const METRICS = [
-  { key: "trend_score", label: "트렌드 점수" },
-  { key: "views", label: "조회" },
-  { key: "reactions", label: "반응" },
-] as const;
+type MetricKey = "trend_score" | "views" | "reactions";
 
-type MetricKey = (typeof METRICS)[number]["key"];
+function trendMetrics(copy: PremiumCopy["trend"]) {
+  return [
+    { key: "trend_score" as const, label: copy.metricTrendScore },
+    { key: "views" as const, label: copy.metricViews },
+    { key: "reactions" as const, label: copy.metricReactions },
+  ];
+}
+
+export function trendPanelUpgradeHref(
+  reason: "signed_out" | "not_premium",
+  locale: Locale,
+): string {
+  const pricingPath = localizedStaticPath("/pricing", locale);
+  return reason === "signed_out"
+    ? `/login?next=${encodeURIComponent(pricingPath)}`
+    : pricingPath;
+}
 
 export function MemeTrendPanel({ memeId }: { memeId: string }) {
+  const { locale } = useLocale();
+  const copy = PREMIUM_COPY[locale].trend;
   const [data, setData] = useState<Payload | null>(null);
   const [failed, setFailed] = useState(false);
   const [metric, setMetric] = useState<MetricKey>("trend_score");
@@ -47,7 +65,9 @@ export function MemeTrendPanel({ memeId }: { memeId: string }) {
       if (loadedRef.current) return;
       loadedRef.current = true;
       fetch(`/api/memes/${memeId}/trend`, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("bad status"))))
+        .then((r) =>
+          r.ok ? r.json() : Promise.reject(new Error("bad status")),
+        )
         .then((json: Payload) => setData(json))
         .catch(() => setFailed(true));
     };
@@ -63,7 +83,7 @@ export function MemeTrendPanel({ memeId }: { memeId: string }) {
           io.disconnect();
         }
       },
-      { rootMargin: "200px 0px" }
+      { rootMargin: "200px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -77,18 +97,14 @@ export function MemeTrendPanel({ memeId }: { memeId: string }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="trend-panel-title" className="text-lg font-bold">
-          트렌드 추이
+          {copy.title}
         </h2>
         <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-text">
-          Plus
+          {copy.plusBadge}
         </span>
       </div>
 
-      {failed && (
-        <p className="mt-3 text-sm text-muted">
-          추이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
-        </p>
-      )}
+      {failed && <p className="mt-3 text-sm text-muted">{copy.failed}</p>}
 
       {!failed && data === null && (
         <div
@@ -97,22 +113,36 @@ export function MemeTrendPanel({ memeId }: { memeId: string }) {
         />
       )}
 
-      {data?.locked && <LockedTeaser reason={data.reason} />}
+      {data?.locked && (
+        <LockedTeaser reason={data.reason} copy={copy} locale={locale} />
+      )}
 
       {data && !data.locked && (
-        <TrendChart series={data.series} metric={metric} onMetric={setMetric} />
+        <TrendChart
+          series={data.series}
+          metric={metric}
+          onMetric={setMetric}
+          copy={copy}
+          locale={locale}
+        />
       )}
     </section>
   );
 }
 
-function LockedTeaser({ reason }: { reason: "signed_out" | "not_premium" }) {
+function LockedTeaser({
+  reason,
+  copy,
+  locale,
+}: {
+  reason: "signed_out" | "not_premium";
+  copy: PremiumCopy["trend"];
+  locale: Locale;
+}) {
   return (
     <div className="mt-3">
       <p className="text-sm leading-relaxed text-muted">
-        이 밈이 며칠에 걸쳐 어떻게 퍼졌는지 — 조회·반응·트렌드 점수의 일별
-        추이를 Plus에서 볼 수 있어요. 지금 뜨는 중인지, 이미 지나갔는지 한눈에
-        구분됩니다.
+        {copy.lockedDescription}
       </p>
       {/* 잠금 상태 시각화 — 실제 수치가 아닌 장식용 곡선 */}
       <div
@@ -131,15 +161,17 @@ function LockedTeaser({ reason }: { reason: "signed_out" | "not_premium" }) {
           />
         </svg>
         <div className="absolute inset-0 grid place-items-center bg-surface/60">
-          <span className="text-sm font-bold text-muted">Plus 전용</span>
+          <span className="text-sm font-bold text-muted">
+            {copy.lockedBadge}
+          </span>
         </div>
       </div>
       <Link
-        href={reason === "signed_out" ? "/login?next=/pricing" : "/pricing"}
+        href={trendPanelUpgradeHref(reason, locale)}
         prefetch={false}
         className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-5 text-sm font-bold text-white transition-transform active:scale-[0.97]"
       >
-        {reason === "signed_out" ? "로그인하고 보기" : "Plus로 추이 보기"}
+        {reason === "signed_out" ? copy.loginToView : copy.upgradeToView}
         <span aria-hidden>&nbsp;→</span>
       </Link>
     </div>
@@ -150,18 +182,19 @@ function TrendChart({
   series,
   metric,
   onMetric,
+  copy,
+  locale,
 }: {
   series: Point[];
   metric: MetricKey;
   onMetric: (m: MetricKey) => void;
+  copy: PremiumCopy["trend"];
+  locale: Locale;
 }) {
+  const gradientId = useId();
+
   if (series.length < 2) {
-    return (
-      <p className="mt-3 text-sm text-muted">
-        아직 추이를 그릴 만큼 데이터가 쌓이지 않았어요. 하루 한 번 기록되니 며칠
-        뒤 다시 확인해 주세요.
-      </p>
-    );
+    return <p className="mt-3 text-sm text-muted">{copy.noData}</p>;
   }
 
   const values = series.map((p) => Number(p[metric]) || 0);
@@ -174,20 +207,33 @@ function TrendChart({
   const toY = (v: number) => H - 8 - ((v - min) / span) * (H - 20);
 
   const line = values
-    .map((v, i) => `${i === 0 ? "M" : "L"}${(i * stepX).toFixed(1)} ${toY(v).toFixed(1)}`)
+    .map(
+      (v, i) =>
+        `${i === 0 ? "M" : "L"}${(i * stepX).toFixed(1)} ${toY(v).toFixed(1)}`,
+    )
     .join(" ");
   const area = `${line} L${W} ${H} L0 ${H} Z`;
 
   const first = values[0];
   const last = values[values.length - 1];
-  const delta = first === 0 ? (last > 0 ? 100 : 0) : ((last - first) / first) * 100;
-  const label = METRICS.find((m) => m.key === metric)?.label ?? "";
+  const delta =
+    first === 0 ? (last > 0 ? 100 : 0) : ((last - first) / first) * 100;
+  const metrics = trendMetrics(copy);
+  const label = metrics.find((item) => item.key === metric)?.label ?? "";
+  const number = new Intl.NumberFormat(toBcp47(locale));
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat(toBcp47(locale), {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(`${value}T12:00:00Z`));
+  const start = formatDate(series[0].date);
+  const end = formatDate(series[series.length - 1].date);
 
   return (
     <div className="mt-3">
       {/* 지표 전환 */}
       <div className="flex flex-wrap gap-2">
-        {METRICS.map((m) => (
+        {metrics.map((m) => (
           <button
             key={m.key}
             type="button"
@@ -207,19 +253,19 @@ function TrendChart({
       {/* 요약 */}
       <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-xl bg-surface-2 py-2.5">
-          <dt className="text-xs text-muted">현재</dt>
+          <dt className="text-xs text-muted">{copy.current}</dt>
           <dd className="mt-0.5 text-base font-bold tabular-nums">
-            {last.toLocaleString("ko-KR")}
+            {number.format(last)}
           </dd>
         </div>
         <div className="rounded-xl bg-surface-2 py-2.5">
-          <dt className="text-xs text-muted">기간 최고</dt>
+          <dt className="text-xs text-muted">{copy.periodHigh}</dt>
           <dd className="mt-0.5 text-base font-bold tabular-nums">
-            {max.toLocaleString("ko-KR")}
+            {number.format(max)}
           </dd>
         </div>
         <div className="rounded-xl bg-surface-2 py-2.5">
-          <dt className="text-xs text-muted">변화</dt>
+          <dt className="text-xs text-muted">{copy.change}</dt>
           <dd
             className={`mt-0.5 text-base font-bold tabular-nums ${
               delta > 0
@@ -241,17 +287,17 @@ function TrendChart({
           viewBox={`0 0 ${W} ${H}`}
           className="h-28 w-full"
           role="img"
-          aria-label={`${label} 추이 — ${series[0].date}부터 ${series[series.length - 1].date}까지, 현재 ${last}, 최고 ${max}`}
+          aria-label={copy.chartLabel(label, start, end, last, max)}
           preserveAspectRatio="none"
           fill="none"
         >
           <defs>
-            <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor="var(--accent)" stopOpacity=".22" />
               <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path d={area} fill="url(#trend-fill)" />
+          <path d={area} fill={`url(#${gradientId})`} />
           <path
             d={line}
             stroke="var(--accent)"
@@ -262,8 +308,8 @@ function TrendChart({
           />
         </svg>
         <figcaption className="mt-2 flex justify-between text-xs tabular-nums text-muted">
-          <span>{series[0].date}</span>
-          <span>{series[series.length - 1].date}</span>
+          <span>{start}</span>
+          <span>{end}</span>
         </figcaption>
       </figure>
     </div>

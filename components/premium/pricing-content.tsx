@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 import { PlusFeatures } from "@/components/premium/plus-features";
+import { track } from "@/lib/analytics";
 
 export function PricingContent() {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
+
+  useEffect(() => {
+    track("plus_pricing_view", { locale, surface: "pricing" });
+  }, [locale]);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:py-16">
@@ -54,7 +61,13 @@ export function PricingContent() {
         {/* 결제는 호스팅 결제창으로의 리다이렉트다. 어느 제공자(Unifi Pay·Latpeed)를
             쓸지는 서버가 환경변수로 정하므로 프론트는 하나의 폼만 유지한다.
             JS 없이도 동작하는 순수 form POST. */}
-        <form action="/api/billing/checkout" method="post" className="relative mt-7">
+        <form
+          action="/api/billing/checkout"
+          method="post"
+          className="relative mt-7"
+          onSubmit={() => track("plus_checkout_started", { locale, surface: "pricing" })}
+        >
+          <input type="hidden" name="locale" value={locale} />
           <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
             {copy.pricing.checkout}
           </button>
@@ -88,7 +101,7 @@ export function PricingContent() {
       </section>
 
       <p className="mt-10 text-center text-sm text-muted">
-        <Link href="/" className="underline underline-offset-4 hover:text-foreground">
+        <Link href={localizedStaticPath("/", locale)} className="underline underline-offset-4 hover:text-foreground">
           MemeCatch
         </Link>
       </p>

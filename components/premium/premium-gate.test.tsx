@@ -19,7 +19,7 @@ describe("PremiumGate", () => {
   it("explains that the personal radar is a Plus feature", () => {
     const html = renderToStaticMarkup(<PremiumGate />);
 
-    expect(html).toContain("自分専用トレンドレーダー");
-    expect(html).toContain('href="/pricing"');
+    expect(html).toContain("今日使う確認済みミーム1つから始める");
+    expect(html).toContain('href="/ja/pricing"');
   });
 });

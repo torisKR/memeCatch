@@ -1,7 +1,13 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LOCALE_COOKIE, LOCALE_HEADER } from "@/lib/i18n";
 import { proxy, resolveLandingRedirectLocale } from "@/proxy";
+
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: () => ({
+    auth: { getUser: async () => ({ data: { user: null } }) },
+  }),
+}));
 
 function publicRequest(
   pathname: string,
@@ -67,6 +73,13 @@ describe("proxy locale contract", () => {
     expect(response.headers.get("content-language")).toBe("zh-Hant");
     expect(forwardedLocale(response)).toBe("zh-tw");
     expect(response.cookies.get(LOCALE_COOKIE)?.value).toBe("zh-tw");
+  });
+
+  it("uses the export query locale for a localized card response", async () => {
+    const response = await proxy(publicRequest("/memes/m1/export?locale=en", { cookie: "ko" }));
+
+    expect(response.headers.get("content-language")).toBe("en");
+    expect(forwardedLocale(response)).toBe("ko");
   });
 });
 
@@ -240,5 +253,91 @@ describe("proxy landing redirect", () => {
 
     // Assert
     expect(response.headers.get("location")).toBeNull();
+  });
+});
+
+describe("proxy auth return path", () => {
+  it("preserves Daily Signal query params inside the login destination", async () => {
+    const response = await proxy(
+      publicRequest("/premium?focus=meme-1&locale=en&from=daily_signal"),
+    );
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe(
+      "/premium?focus=meme-1&locale=en&from=daily_signal",
+    );
+  });
+
+  it("preserves a Global Daily One-Cut query inside the login destination", async () => {
+    const response = await proxy(
+      publicRequest("/premium?focus=meme-1&locale=ja&from=global_daily"),
+    );
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe(
+      "/premium?focus=meme-1&locale=ja&from=global_daily",
+    );
+  });
+
+  it("preserves a validated Outcome Replay query inside the login destination", async () => {
+    const response = await proxy(
+      publicRequest("/premium?replay=meme-1&replay_locale=en&from=outcome_history"),
+    );
+
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe(
+      "/premium?replay=meme-1&replay_locale=en&from=outcome_history",
+    );
+  });
+
+  it("drops unknown Premium query params before building the login destination", async () => {
+    const response = await proxy(
+      publicRequest(
+        "/premium?focus=meme-1&locale=en&from=daily_signal&email=private@example.com",
+      ),
+    );
+
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe(
+      "/premium?focus=meme-1&locale=en&from=daily_signal",
+    );
+    expect(location.search).not.toContain("private@example.com");
+  });
+
+  it.each([
+    "/premium?focus=meme-1&locale=en",
+    "/premium?focus=meme-1&locale=en&from=other",
+    "/premium?focus=meme-1&locale=en&from=daily_signal&from=other",
+    "/premium?focus=meme-1&focus=meme-2&locale=en&from=daily_signal",
+    "/premium?focus=meme-1&locale=en&locale=ja&from=daily_signal",
+    "/premium?focus=meme-1&locale=en&from=global_daily&from=daily_signal",
+    "/premium?focus=meme-1&focus=meme-2&locale=en&from=global_daily",
+    "/premium?focus=meme-1&locale=en&locale=ja&from=global_daily",
+  ])("does not trust an invalid or duplicated Daily Signal marker: %s", async (path) => {
+    const response = await proxy(publicRequest(path));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe("/premium");
+  });
+
+  it.each([
+    "/premium?replay=meme-1&replay_locale=en",
+    "/premium?replay=meme-1&replay_locale=en&from=other",
+    "/premium?replay=meme-1&replay=meme-2&replay_locale=en&from=outcome_history",
+    "/premium?replay=meme-1&replay_locale=fr&from=outcome_history",
+  ])("does not trust an invalid or duplicated Outcome Replay marker: %s", async (path) => {
+    const response = await proxy(publicRequest(path));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe("/premium");
+  });
+
+  it("preserves only the checkout return marker for a checkout resume", async () => {
+    const response = await proxy(
+      publicRequest("/premium?checkout=return&email=private@example.com"),
+    );
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe("/premium?checkout=return");
   });
 });

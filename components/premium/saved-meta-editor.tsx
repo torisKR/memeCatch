@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n-client";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { MY_COPY } from "@/lib/i18n-my";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 저장 밈의 컬렉션(폴더)·메모 편집 — Plus 전용.
@@ -21,10 +25,15 @@ export function SavedMetaEditor({
   collection: string | null;
   note: string | null;
 }) {
+  const { locale } = useLocale();
+  const copy = MY_COPY[locale].saved.library.editor;
   const [open, setOpen] = useState(false);
   const [col, setCol] = useState(collection ?? "");
   const [memo, setMemo] = useState(note ?? "");
-  const [saved, setSaved] = useState<{ collection: string | null; note: string | null }>({
+  const [saved, setSaved] = useState<{
+    collection: string | null;
+    note: string | null;
+  }>({
     collection,
     note,
   });
@@ -36,13 +45,13 @@ export function SavedMetaEditor({
     return (
       <p className="mt-2 text-xs text-muted">
         <Link
-          href="/pricing"
+          href={localizedStaticPath("/pricing", locale)}
           prefetch={false}
           className="font-semibold text-accent-text hover:text-accent"
         >
-          Plus
+          {PREMIUM_COPY[locale].productName}
         </Link>
-        에서 폴더로 분류하고 메모를 남길 수 있어요.
+        {copy.freeHint}
       </p>
     );
   }
@@ -59,8 +68,8 @@ export function SavedMetaEditor({
       if (rpcError) {
         setError(
           rpcError.message.includes("plus_required")
-            ? "Plus 구독이 필요해요."
-            : "저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            ? copy.plusRequired
+            : copy.saveFailed,
         );
         return;
       }
@@ -84,7 +93,7 @@ export function SavedMetaEditor({
           aria-expanded={open}
           className="inline-flex min-h-9 items-center rounded-full px-2 text-xs font-semibold text-muted transition-colors hover:text-accent"
         >
-          {saved.collection || saved.note ? "폴더·메모 수정" : "폴더·메모 추가"}
+          {saved.collection || saved.note ? copy.edit : copy.add}
         </button>
       </div>
       {saved.note && !open && (
@@ -100,13 +109,13 @@ export function SavedMetaEditor({
               htmlFor={`col-${memeId}`}
               className="block text-xs font-semibold text-muted"
             >
-              폴더 (최대 40자)
+              {copy.collectionLabel}
             </label>
             <input
               id={`col-${memeId}`}
               value={col}
               onChange={(e) => setCol(e.target.value.slice(0, 40))}
-              placeholder="예: 이번 주 콘텐츠 후보"
+              placeholder={copy.collectionPlaceholder}
               className="mt-1 h-10 w-full rounded-lg border border-border bg-surface px-2.5 text-sm outline-none focus:border-accent"
             />
           </div>
@@ -115,14 +124,14 @@ export function SavedMetaEditor({
               htmlFor={`note-${memeId}`}
               className="block text-xs font-semibold text-muted"
             >
-              메모 (최대 500자)
+              {copy.noteLabel}
             </label>
             <textarea
               id={`note-${memeId}`}
               value={memo}
               onChange={(e) => setMemo(e.target.value.slice(0, 500))}
               rows={2}
-              placeholder="어디에 어떻게 쓸지 적어두세요"
+              placeholder={copy.notePlaceholder}
               className="mt-1 w-full resize-y rounded-lg border border-border bg-surface p-2.5 text-sm outline-none focus:border-accent"
             />
           </div>
@@ -138,7 +147,7 @@ export function SavedMetaEditor({
               disabled={pending}
               className="hover-glow-flame inline-flex min-h-9 items-center rounded-lg bg-accent-strong px-3 text-xs font-bold text-white disabled:opacity-60"
             >
-              {pending ? "저장 중…" : "저장"}
+              {pending ? copy.saving : copy.save}
             </button>
             <button
               type="button"
@@ -151,7 +160,7 @@ export function SavedMetaEditor({
               disabled={pending}
               className="inline-flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 text-xs font-semibold"
             >
-              취소
+              {copy.cancel}
             </button>
           </div>
         </div>

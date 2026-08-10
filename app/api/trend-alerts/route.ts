@@ -60,6 +60,9 @@ export async function POST(): Promise<Response> {
   if (!entitlement.signedIn) {
     return NextResponse.json({ error: "signed_out" }, { status: 401 });
   }
+  if (!entitlement.isPremium) {
+    return NextResponse.json({ error: "not_premium" }, { status: 403 });
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("mark_trend_alerts_read");

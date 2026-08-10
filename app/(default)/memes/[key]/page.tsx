@@ -15,6 +15,9 @@ import { AnswerCard } from "@/components/answer-card";
 import { SafetyRationale } from "@/components/safety-rationale";
 import { UsageExamples } from "@/components/usage-examples";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
+import { MemeUseKit } from "@/components/premium/meme-use-kit";
+import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
+import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { MeteredGate } from "@/components/metered-gate";
 import { AuthInvite } from "@/components/auth-invite";
 import { MemeEmbed } from "@/components/meme-embed";
@@ -50,7 +53,10 @@ import {
   getOpenGraphLocale,
   isSeoContentLocale,
   localizedMemePath,
+  SEO_CONTENT_LOCALES,
 } from "@/lib/i18n-routing";
+import { SITE_URL } from "@/lib/site";
+import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
@@ -97,6 +103,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const languages = { ...hreflangs, "x-default": hreflangs.en ?? path };
   const description = `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
   return {
+    metadataBase: new URL(SITE_URL),
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
     title: `${meme.title} 뜻`,
     description,
@@ -129,7 +136,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = meme.meme_tags_map
     .map((t) => t.tags?.name)
     .filter((n): n is string => !!n);
-  const [related, reactionCounts] = await Promise.all([
+  const [related, reactionCounts, marketPassport, availableTranslationLocales] = await Promise.all([
     // 첫 화면 링크 수를 줄이려 6개만 — 나머지 탐색은 하단 무한 스크롤이 담당한다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
@@ -137,7 +144,12 @@ export default async function MemeDetailPage({ params }: Props) {
       6
     ),
     getReactionCounts(meme.id),
+    getMemeMarketPassport(meme.id, "ko"),
+    getAvailableTranslationLocales(meme.id),
   ]);
+  const missingTranslationLocales = SEO_CONTENT_LOCALES.filter(
+    (locale) => !availableTranslationLocales.includes(locale),
+  );
 
   // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트
   // (is_meme_rank_eligible)와 같은 기준이라 "랭킹엔 못 오르는데 상세엔 뜨는"
@@ -294,6 +306,36 @@ export default async function MemeDetailPage({ params }: Props) {
             <ExportButton shortId={meme.short_id} />
           </div>
 
+          {missingTranslationLocales.length > 0 && (
+            <section
+              aria-labelledby="global-translation-title"
+              className="space-y-3 rounded-2xl border border-accent/25 bg-accent-soft/20 p-4"
+            >
+              <div>
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-text">
+                  글로벌 번역
+                </p>
+                <h2 id="global-translation-title" className="mt-1 text-lg font-black">
+                  이 밈을 다른 언어로 먼저 받아보세요
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  검수된 번역이 없는 언어만 표시합니다. Plus 사용자는 저장한 밈의 번역을 우선 검수 요청할 수 있어요.
+                </p>
+              </div>
+              <div className="grid gap-3 xl:grid-cols-2">
+                {missingTranslationLocales.map((locale) => (
+                  <TranslationPriorityButton
+                    key={locale}
+                    memeId={meme.id}
+                    locale={locale}
+                    translationStatus="missing"
+                    translationIsCurrent={false}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* 관련 TikTok·Instagram — 대표 아래 공개 사용 예시(비대표 임베드) */}
           {relatedSocialContents.length > 0 && (
             <section aria-labelledby="related-social-embeds" className="space-y-3">
@@ -424,6 +466,17 @@ export default async function MemeDetailPage({ params }: Props) {
 
           {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
           <UsageExamples examples={usageExamples} />
+
+          <MemeUseKit
+            title={meme.title}
+            summary={meme.summary}
+            usageNote={meme.usage_note}
+            caution={meme.caution}
+            safetyLevel={meme.safety_level}
+            lifecycleStatus={meme.lifecycle_status}
+          />
+
+          <MemeMarketPassport passport={marketPassport} locale="ko" />
 
           {/* 참고 자료 근거 목록 — 제목 있는 출처가 하나도 없으면 렌더하지 않는다.
               유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}

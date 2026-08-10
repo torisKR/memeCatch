@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePremium } from "@/lib/hooks/use-premium";
 import { memePathFrom } from "@/lib/labels";
+import { toBcp47 } from "@/lib/i18n";
+import { useLocale } from "@/lib/i18n-client";
+import { isSeoContentLocale, localizedMemePath } from "@/lib/i18n-routing";
+import { PREMIUM_COPY, type PremiumCopy } from "@/lib/i18n-premium";
 
 /**
  * A1 — Plus 트렌드 알림 벨.
@@ -36,8 +40,17 @@ type Payload = {
   unread: number;
 };
 
+/** Existing authenticated route: update interests, then return to the Plus dashboard. */
+export const TREND_ALERTS_INTERESTS_HREF = "/onboarding?next=/premium";
+
+export function trendAlertKindLabel(kind: string, copy: PremiumCopy["alerts"]): string {
+  return kind === "saved_rising" ? copy.savedRising : copy.categoryRising;
+}
+
 export function TrendAlertsBell() {
   const isPremium = usePremium();
+  const { locale } = useLocale();
+  const copy = PREMIUM_COPY[locale].alerts;
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -103,7 +116,7 @@ export function TrendAlertsBell() {
       <button
         type="button"
         onClick={toggle}
-        aria-label="트렌드 알림"
+        aria-label={copy.buttonLabel}
         aria-expanded={open}
         className="relative flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95]"
       >
@@ -120,19 +133,17 @@ export function TrendAlertsBell() {
       {open && (
         <div className="absolute right-0 top-full z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-background shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <span className="text-sm font-bold">트렌드 알림</span>
+            <span className="text-sm font-bold">{copy.title}</span>
             <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-muted">
-              PLUS
+              {copy.plusBadge}
             </span>
           </div>
 
           {loading && alerts.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-muted">불러오는 중…</p>
+            <p className="px-4 py-6 text-center text-sm text-muted">{copy.loading}</p>
           ) : alerts.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-muted">
-              아직 라이징 알림이 없어요.
-              <br />
-              관심 카테고리를 저장하면 급상승 밈을 알려드려요.
+              {copy.empty}
             </p>
           ) : (
             <ul className="max-h-96 overflow-y-auto">
@@ -141,7 +152,9 @@ export function TrendAlertsBell() {
                 return (
                   <li key={alert.id}>
                     <Link
-                      href={memePathFrom(meme.short_id, meme.slug)}
+                      href={isSeoContentLocale(locale)
+                        ? localizedMemePath(locale, meme.short_id, meme.slug)
+                        : memePathFrom(meme.short_id, meme.slug)}
                       onClick={() => setOpen(false)}
                       className="flex items-start gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2"
                     >
@@ -157,7 +170,8 @@ export function TrendAlertsBell() {
                           {meme.title}
                         </span>
                         <span className="mt-0.5 block text-xs text-muted">
-                          급상승 · 트렌드 {Math.round(alert.trend_score)}
+                          {trendAlertKindLabel(alert.kind, copy)}
+                          {" · "}{new Intl.NumberFormat(toBcp47(locale)).format(Math.round(alert.trend_score))}
                         </span>
                       </span>
                       {/* generic span의 aria-label은 명세상 미지원 — 자식 텍스트가
@@ -170,7 +184,7 @@ export function TrendAlertsBell() {
                             aria-hidden
                             className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent"
                           />
-                          <span className="sr-only">안 읽음</span>
+                          <span className="sr-only">{copy.unread}</span>
                         </>
                       )}
                     </Link>
@@ -181,11 +195,11 @@ export function TrendAlertsBell() {
           )}
 
           <Link
-            href="/my/interests"
+            href={TREND_ALERTS_INTERESTS_HREF}
             onClick={() => setOpen(false)}
             className="block border-t border-border px-4 py-3 text-center text-xs font-semibold text-accent transition-colors hover:bg-surface-2"
           >
-            관심 카테고리 설정
+            {copy.manageInterests}
           </Link>
         </div>
       )}

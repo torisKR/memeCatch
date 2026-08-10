@@ -16,6 +16,17 @@ import {
   stripLocalePath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import {
+  buildPlusActionPremiumPath,
+  buildPlusDailySignalPremiumPath,
+  isSafePlusDailySignalFocusId,
+  parsePlusActionPremiumSource,
+  parsePlusDailySignalLocale,
+} from "@/lib/plus-daily-signal-routing";
+import {
+  buildPlusOutcomeReplayPath,
+  parsePlusOutcomeReplayRequest,
+} from "@/lib/plus-outcome-replay-routing";
 
 function localeFromPathname(pathname: string): Locale | null {
   const parsed = parseLocalePath(pathname);
@@ -24,6 +35,46 @@ function localeFromPathname(pathname: string): Locale | null {
 
 function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): string {
   return locale ? stripLocalePath(pathname) : pathname;
+}
+
+function buildAuthReturnPath(path: string, searchParams: URLSearchParams): string {
+  if (path !== "/premium") return path;
+
+  const focus = searchParams.getAll("focus");
+  const source = searchParams.getAll("from");
+  const actionSource = source.length === 1 ? parsePlusActionPremiumSource(source[0]) : undefined;
+  if (
+    focus.length === 1 &&
+    isSafePlusDailySignalFocusId(focus[0]) &&
+    actionSource
+  ) {
+    const localeValues = searchParams.getAll("locale");
+    if (localeValues.length > 1) return path;
+    const locale =
+      localeValues.length === 1 ? parsePlusDailySignalLocale(localeValues[0]) : undefined;
+    return actionSource === "daily_signal"
+      ? buildPlusDailySignalPremiumPath(focus[0], locale)
+      : buildPlusActionPremiumPath(focus[0], locale, actionSource);
+  }
+
+  const replay = searchParams.getAll("replay");
+  const replayLocale = searchParams.getAll("replay_locale");
+  const replaySource = searchParams.getAll("from");
+  const replayRequest = parsePlusOutcomeReplayRequest({
+    shortId: replay,
+    locale: replayLocale,
+    source: replaySource.length === 1 ? replaySource[0] : replaySource,
+    focus: searchParams.has("focus") ? searchParams.getAll("focus") : undefined,
+    dailySignalLocale: searchParams.has("locale") ? searchParams.getAll("locale") : undefined,
+  });
+  if (replayRequest) {
+    return buildPlusOutcomeReplayPath(replayRequest.shortId, replayRequest.locale) ?? path;
+  }
+
+  const checkout = searchParams.getAll("checkout");
+  return checkout.length === 1 && checkout[0] === "return"
+    ? `${path}?checkout=return`
+    : path;
 }
 
 // ponytail: substring UA sniff, not a maintained bot-UA list — swap for a
@@ -88,7 +139,11 @@ export async function proxy(request: NextRequest) {
   const urlLocale = localeFromPathname(request.nextUrl.pathname);
   // `locale` is the UI preference passed to the app. The response body itself
   // is Korean unless the URL addresses an indexed translated document.
-  const contentLocale = urlLocale ?? DEFAULT_LOCALE;
+  const requestedExportLocale = request.nextUrl.pathname.endsWith("/export")
+    ? request.nextUrl.searchParams.get("locale")
+    : null;
+  const exportLocale = isSeoContentLocale(requestedExportLocale) ? requestedExportLocale : null;
+  const contentLocale = urlLocale ?? exportLocale ?? DEFAULT_LOCALE;
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
   const locale = urlLocale ?? (isLocale(cookieLocale)
     ? cookieLocale
@@ -111,6 +166,7 @@ export async function proxy(request: NextRequest) {
   let response = nextResponse();
 
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
+  const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
   const needsAuth = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
   if (!needsAuth) return response;
 
@@ -138,7 +194,8 @@ export async function proxy(request: NextRequest) {
   if (!user && (path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", path);
+    url.search = "";
+    url.searchParams.set("next", authReturnPath);
     return applyLocale(NextResponse.redirect(url));
   }
 
@@ -146,7 +203,8 @@ export async function proxy(request: NextRequest) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      url.searchParams.set("next", path);
+      url.search = "";
+      url.searchParams.set("next", authReturnPath);
       return applyLocale(NextResponse.redirect(url));
     }
     // 서버측 운영자 검증 (D-1: 클라이언트 라우팅 숨김은 보안이 아님)

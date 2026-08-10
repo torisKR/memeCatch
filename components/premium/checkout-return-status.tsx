@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Locale } from "@/lib/i18n";
+import { track } from "@/lib/analytics";
 
 /** 웹훅 재전송 간격(3s~30s 초반부)을 덮는 폴링 창 — 3초 × 20회 = 60초. */
 const POLL_INTERVAL_MS = 3000;
@@ -11,6 +14,7 @@ export type CheckoutReturnCopy = {
   confirming: string;
   confirmed: string;
   timeout: string;
+  startOneCut: string;
 };
 
 /**
@@ -24,9 +28,11 @@ export type CheckoutReturnCopy = {
  */
 export function CheckoutReturnStatus({
   initiallyPremium,
+  locale,
   copy,
 }: {
   initiallyPremium: boolean;
+  locale: Locale;
   copy: CheckoutReturnCopy;
 }) {
   const searchParams = useSearchParams();
@@ -36,6 +42,11 @@ export function CheckoutReturnStatus({
     initiallyPremium ? "confirmed" : "confirming",
   );
   const triesRef = useRef(0);
+
+  useEffect(() => {
+    if (!fromCheckout) return;
+    track("plus_checkout_returned", { locale, state: phase });
+  }, [fromCheckout, locale, phase]);
 
   useEffect(() => {
     if (!fromCheckout || phase !== "confirming") return;
@@ -71,19 +82,27 @@ export function CheckoutReturnStatus({
   if (!fromCheckout) return null;
 
   return (
-    <p
-      role="status"
-      aria-live="polite"
-      className={`mx-auto mt-4 w-full max-w-5xl rounded-xl border px-4 py-3 text-sm font-semibold ${
+    <div
+      className={`mx-auto mt-4 flex w-full max-w-5xl flex-col gap-3 rounded-xl border px-4 py-3 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between ${
         phase === "confirmed"
           ? "border-safety-green/40 bg-safety-green-bg text-safety-green"
           : "border-border bg-surface-2 text-foreground"
       }`}
     >
-      <span aria-hidden className={phase === "confirming" ? "signal-live" : undefined}>
-        {phase === "confirmed" ? "●" : phase === "timeout" ? "▲" : "◌"}
-      </span>{" "}
-      {copy[phase]}
-    </p>
+      <p role="status" aria-live="polite">
+        <span aria-hidden className={phase === "confirming" ? "signal-live" : undefined}>
+          {phase === "confirmed" ? "●" : phase === "timeout" ? "▲" : "◌"}
+        </span>{" "}
+        {copy[phase]}
+      </p>
+      {phase === "confirmed" && (
+        <Link
+          href="/premium#plus-global-action-inbox-title"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          {copy.startOneCut}
+        </Link>
+      )}
+    </div>
   );
 }

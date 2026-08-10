@@ -13,6 +13,7 @@ export const MIN_SUMMARY_LENGTH = 20;
 
 /** DB에서 받아온 문항 후보 밈 (memes 테이블 부분 선택) */
 export type QuizPoolMeme = {
+  id?: string;
   short_id: string;
   slug: string;
   title: string;
@@ -31,6 +32,7 @@ export type QuizQuestion = {
   answerIndex: number;
   /** 해설("이 밈 보러가기") 링크·연대 판정용 메타 */
   meme: {
+    id?: string;
     shortId: string;
     slug: string;
     title: string;
@@ -194,6 +196,7 @@ export function buildQuestions(
       options,
       answerIndex: options.indexOf(maskedAnswer),
       meme: {
+        id: answer.id,
         shortId: answer.short_id,
         slug: answer.slug,
         title: answer.title,

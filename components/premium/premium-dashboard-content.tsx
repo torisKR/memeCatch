@@ -1,13 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useLocale } from "@/lib/i18n-client";
 import { toBcp47 } from "@/lib/i18n";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { track } from "@/lib/analytics";
+import { GLOBAL_DAILY_COPY } from "@/lib/global-daily-challenge-copy";
+import { isGlobalDailyLocale } from "@/lib/global-daily-challenge";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 import { EXPIRY_WARNING_DAYS, daysUntilExpiry } from "@/lib/billing/entitlements";
 import { PremiumGate } from "@/components/premium/premium-gate";
 import { CONTACT_EMAIL } from "@/lib/site";
 import type { UnifiPaymentHistoryItem } from "@/lib/billing/repository.server";
+import type { PremiumPrimaryMission } from "@/lib/premium-primary-mission";
 
 
 export function PremiumDashboardContent({
@@ -16,23 +22,81 @@ export function PremiumDashboardContent({
   currentPeriodEnd,
   feed,
   history = [],
+  savedMemeCount = 0,
+  dailySignal = null,
+  globalScout = null,
+  globalDailyChallenge = null,
+  outcomeSnapshot = null,
+  outcomeHistory = null,
+  actionInbox = null,
+  primaryMission = "unavailable",
+  weeklyBrief = null,
+  dailySignalSettings = null,
+  translationFulfillment = null,
+  plusActionQueue = null,
+  savedReuseRadar = null,
+  savedContextWatch = null,
 }: {
   isPremium: boolean;
   status: string | null;
   currentPeriodEnd: string | null;
   feed: ReactNode;
   history?: UnifiPaymentHistoryItem[];
+  /** Server-derived count only; private saved-meme metadata never leaves the account scope. */
+  savedMemeCount?: number;
+  dailySignal?: ReactNode;
+  globalScout?: ReactNode;
+  globalDailyChallenge?: ReactNode;
+  outcomeSnapshot?: ReactNode;
+  outcomeHistory?: ReactNode;
+  actionInbox?: ReactNode;
+  primaryMission?: PremiumPrimaryMission;
+  weeklyBrief?: ReactNode;
+  dailySignalSettings?: ReactNode;
+  translationFulfillment?: ReactNode;
+  plusActionQueue?: ReactNode;
+  /** Server-rendered, owner-scoped Plus feature; no saved metadata is fetched client-side. */
+  savedReuseRadar?: ReactNode;
+  savedContextWatch?: ReactNode;
 }) {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
+  const dailyLocale = isGlobalDailyLocale(locale) ? locale : "en";
+  const dailyCopy = GLOBAL_DAILY_COPY[dailyLocale];
   const accessConfirmedThrough = currentPeriodEnd
     ? new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "long" }).format(new Date(currentPeriodEnd))
     : null;
   const remainingDays = daysUntilExpiry(currentPeriodEnd);
+  const unavailablePrimaryMission = (
+    <section
+      data-premium-primary-mission="unavailable"
+      className="mb-6 rounded-2xl border border-border bg-surface p-5"
+      aria-labelledby="premium-primary-mission-title"
+    >
+      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-text">
+        {copy.dashboard.primaryMissionUnavailable.eyebrow}
+      </p>
+      <h2 id="premium-primary-mission-title" className="mt-1 text-xl font-black tracking-tight">
+        {copy.dashboard.primaryMissionUnavailable.heading}
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-muted">
+        {copy.dashboard.primaryMissionUnavailable.body}
+      </p>
+    </section>
+  );
+  const primarySurface =
+    primaryMission === "action"
+      ? actionInbox ?? unavailablePrimaryMission
+      : primaryMission === "global_daily"
+        ? globalDailyChallenge ?? unavailablePrimaryMission
+        : primaryMission === "outcome"
+          ? outcomeSnapshot ?? unavailablePrimaryMission
+          : unavailablePrimaryMission;
 
   return (
     <main
       data-membership-status={status ?? "none"}
+      data-premium-primary-mission={primaryMission}
       className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-12"
     >
       <header className="rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-9">
@@ -56,7 +120,61 @@ export function PremiumDashboardContent({
 
       {isPremium ? (
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
-          <div className="min-w-0 [&>*:first-child]:mt-0">{feed}</div>
+          <div className="min-w-0 [&>*:first-child]:mt-0">
+            {primarySurface}
+            <details className="rounded-2xl border border-border bg-surface p-5">
+              <summary className="cursor-pointer text-base font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+                {copy.dashboard.moreTools}
+              </summary>
+              <div className="mt-5 space-y-6">
+                {primaryMission !== "action" && actionInbox}
+                {primaryMission !== "outcome" && outcomeSnapshot}
+                {primaryMission !== "global_daily" && globalDailyChallenge}
+                {outcomeHistory}
+                {!globalDailyChallenge && (
+                  <section
+                    aria-labelledby="global-daily-entry-title"
+                    className="rounded-2xl border border-accent/25 bg-accent-soft/30 p-5"
+                  >
+                    <p className="text-xs font-black tracking-[0.16em] text-accent-text">{dailyCopy.eyebrow}</p>
+                    <h2 id="global-daily-entry-title" className="mt-2 text-xl font-black tracking-tight">
+                      {dailyCopy.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">{dailyCopy.intro}</p>
+                    <Link
+                      href={localizedStaticPath("/daily", dailyLocale)}
+                      className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    >
+                      {isPremium ? dailyCopy.start : dailyCopy.upgrade}
+                    </Link>
+                  </section>
+                )}
+                {feed}
+                {dailySignal}
+                {globalScout}
+                {dailySignalSettings}
+                {translationFulfillment}
+                {weeklyBrief}
+                {plusActionQueue}
+                {savedReuseRadar}
+                {savedContextWatch ?? (
+                  <section
+                    className="rounded-2xl border border-border bg-surface p-5"
+                    aria-labelledby="saved-meme-watch-title"
+                  >
+                    <h2 id="saved-meme-watch-title" className="text-base font-bold">
+                      {copy.dashboard.savedMemeWatchTitle}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">
+                      {savedMemeCount > 0
+                        ? copy.dashboard.savedMemeWatchDescription(savedMemeCount)
+                        : copy.dashboard.savedMemeWatchEmpty}
+                    </p>
+                  </section>
+                )}
+              </div>
+            </details>
+          </div>
           <aside className="edge-signal holo-sheen relative overflow-hidden rounded-2xl p-5 lg:sticky lg:top-20">
             {/* 계측 격자 — edge-signal의 background shorthand와 같은 노드에 두면
                 grid-line이 지워지므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). */}
@@ -85,7 +203,13 @@ export function PremiumDashboardContent({
               )}
 
               {/* 연장 = 새 결제. 체크아웃이 결제 링크를 다시 발급한다. */}
-              <form action="/api/billing/checkout" method="post" className="mt-4">
+              <form
+                action="/api/billing/checkout"
+                method="post"
+                className="mt-4"
+                onSubmit={() => track("plus_checkout_started", { locale, surface: "dashboard_extend" })}
+              >
+                <input type="hidden" name="locale" value={locale} />
                 <button
                   type="submit"
                   className="flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -134,6 +258,7 @@ export function PremiumDashboardContent({
       ) : (
         <div className="mx-auto mt-8 max-w-2xl">
           <PremiumGate />
+          {outcomeHistory}
           <p className="mt-4 text-center text-sm leading-relaxed text-muted">{copy.dashboard.syncNote}</p>
           <p className="mt-2 text-center">
             <a

@@ -5,10 +5,17 @@ import { useRouter } from "next/navigation";
 import {
   markMemeTranslationStale,
   reviewMemeTranslation,
+  reviewMemeTranslationWithGpt,
   saveMemeTranslation,
 } from "@/lib/actions/admin-translations";
 import { LANGUAGE_NAMES } from "@/lib/i18n";
 import type { SeoContentLocale } from "@/lib/i18n-routing";
+
+const AI_RECOMMENDATION_COPY = {
+  approve: "발행 가능",
+  edit: "교정 후 발행",
+  reject: "발행 보류",
+} as const;
 
 export type MemeTranslationReviewRow = {
   locale: SeoContentLocale;
@@ -54,14 +61,17 @@ function TranslationEditor({
   memeId,
   memeUpdatedAt,
   translation,
+  hasOpenAiReviewKey,
 }: {
   memeId: string;
   memeUpdatedAt: string;
   translation: MemeTranslationReviewRow;
+  hasOpenAiReviewKey: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [aiReviewing, setAiReviewing] = useState(false);
   const [form, setForm] = useState({
     title: translation.title,
     summary: translation.summary,
@@ -74,6 +84,7 @@ function TranslationEditor({
   const fresh = sameInstant(translation.source_updated_at, memeUpdatedAt);
   const statusCopy = STATUS_COPY[translation.status];
   const prefix = `[${translation.locale}]`;
+  const busy = pending || aiReviewing;
 
   function set<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -111,6 +122,40 @@ function TranslationEditor({
       setMessage({ ok: true, text: successMessage });
       router.refresh();
     });
+  }
+
+  async function onAiReview() {
+    setMessage(null);
+    setAiReviewing(true);
+    try {
+      const result = await reviewMemeTranslationWithGpt({
+        memeId,
+        locale: translation.locale,
+        expectedTranslationUpdatedAt: translation.updated_at,
+      });
+      if (!result.ok) {
+        setMessage({ ok: false, text: result.error });
+        return;
+      }
+      const draft = result.data;
+      setForm((current) => ({
+        ...current,
+        title: draft.title,
+        summary: draft.summary,
+        description: draft.description,
+        origin: draft.origin,
+        usageNote: draft.usage_note,
+        caution: draft.caution,
+        aliases: draft.aliases.join(", "),
+      }));
+      const notes = draft.review_notes.slice(0, 2).join(" · ");
+      setMessage({
+        ok: true,
+        text: `GPT 검수 의견: ${AI_RECOMMENDATION_COPY[draft.recommendation]} · 신뢰도 ${draft.confidence}${notes ? ` · ${notes}` : ""}`,
+      });
+    } finally {
+      setAiReviewing(false);
+    }
   }
 
   const inputClass =
@@ -236,9 +281,19 @@ function TranslationEditor({
       )}
 
       <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+        <span title={hasOpenAiReviewKey ? undefined : "OPENAI_API_KEY 설정 필요"}>
+          <button
+            type="button"
+            disabled={busy || !hasOpenAiReviewKey}
+            onClick={onAiReview}
+            className="min-h-11 rounded-lg border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent-text disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {aiReviewing ? "GPT 검수 중…" : "GPT-5.6 Sol high 검수"}
+          </button>
+        </span>
         <button
           type="button"
-          disabled={pending}
+          disabled={busy}
           onClick={() =>
             run(
               () => saveMemeTranslation(actionInput()),
@@ -247,11 +302,11 @@ function TranslationEditor({
           }
           className="min-h-11 rounded-lg border border-border bg-surface-2 px-4 text-sm font-semibold disabled:opacity-50"
         >
-          {pending ? "처리 중…" : `${prefix} 초안 저장`}
+          {busy ? "처리 중…" : `${prefix} 초안 저장`}
         </button>
         <button
           type="button"
-          disabled={pending || !fresh}
+          disabled={busy || !fresh}
           onClick={() =>
             run(
               () => reviewMemeTranslation(actionInput()),
@@ -264,7 +319,7 @@ function TranslationEditor({
         </button>
         <button
           type="button"
-          disabled={pending || translation.status === "stale"}
+          disabled={busy || translation.status === "stale"}
           onClick={() =>
             run(
               () =>
@@ -289,10 +344,12 @@ export function MemeTranslationReview({
   memeId,
   memeUpdatedAt,
   translations,
+  hasOpenAiReviewKey = false,
 }: {
   memeId: string;
   memeUpdatedAt: string;
   translations: MemeTranslationReviewRow[];
+  hasOpenAiReviewKey?: boolean;
 }) {
   return (
     <section className="space-y-4" aria-labelledby="meme-translation-review-title">
@@ -316,6 +373,7 @@ export function MemeTranslationReview({
             memeId={memeId}
             memeUpdatedAt={memeUpdatedAt}
             translation={translation}
+            hasOpenAiReviewKey={hasOpenAiReviewKey}
           />
         ))
       )}

@@ -95,13 +95,14 @@ export default async function AdminMemeEditPage({
         memeId={meme.id}
         memeUpdatedAt={meme.updated_at}
         translations={translationsForReview}
+        hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
       />
 
       <AdminMemeContents contents={contents ?? []} memeTitle={meme.title} />
 
       <MemeEditForm
         memeId={meme.id}
-        hasAnthropicKey={Boolean(process.env.ANTHROPIC_API_KEY)}
+          hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
         initial={{
           title: meme.title,
           summary: meme.summary,

@@ -37,11 +37,11 @@ type Initial = {
 export function MemeEditForm({
   memeId,
   initial,
-  hasAnthropicKey,
+  hasOpenAiReviewKey,
 }: {
   memeId: string;
   initial: Initial;
-  hasAnthropicKey: boolean;
+  hasOpenAiReviewKey: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -139,18 +139,18 @@ export function MemeEditForm({
         </div>
         <span
           title={
-            hasAnthropicKey
-              ? "영문·혼합 언어 내용을 한국어 초안으로 해석해요."
-              : "AI 키가 없으면 한국어 위키백과의 공개 자료를 찾아 검수 초안을 만들어요."
+            hasOpenAiReviewKey
+              ? "GPT-5.6 Sol high가 영문·혼합 언어 내용을 한국어 검수 초안으로 정리해요."
+              : "OPENAI_API_KEY를 설정하면 GPT-5.6 Sol high 검수 초안을 사용할 수 있어요."
           }
         >
           <button
             type="button"
             onClick={translateForReview}
-            disabled={pending || translating}
+            disabled={pending || translating || !hasOpenAiReviewKey}
             className="min-h-11 rounded-lg border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent-text transition-colors hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {translating ? "한국어로 해석 중…" : "영문 내용 한국어로 해석"}
+            {translating ? "GPT 검수 중…" : "GPT-5.6 Sol high로 검수 초안"}
           </button>
         </span>
       </div>

@@ -149,7 +149,7 @@ export default async function SubmissionDetailPage({
           submissionTags={submission.tags}
           status={submission.status as "pending" | "reviewing"}
           claimedByMe={submission.claimed_by === user?.id}
-          hasAnthropicKey={Boolean(process.env.ANTHROPIC_API_KEY)}
+          hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
         />
       ) : (
         <p className="rounded-xl border border-border bg-surface-2 p-4 text-base text-muted">

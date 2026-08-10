@@ -13,8 +13,11 @@
  */
 import { execFile as execFileCallback } from "node:child_process";
 import { createHash } from "node:crypto";
+import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
+import { parseTranslationArtifacts } from "./translation-batch-check.mjs";
 
 const execFile = promisify(execFileCallback);
 
@@ -104,6 +107,9 @@ export function parseArgs(argv) {
     locale: null,
     limit: DEFAULT_LIMIT,
     apply: false,
+    emitArtifact: false,
+    artifactDir: null,
+    slice: null,
     sitemapUrl: DEFAULT_SITEMAP_URL,
     mlxEndpoint: DEFAULT_MLX_ENDPOINT,
     model: DEFAULT_MLX_MODEL,
@@ -117,6 +123,10 @@ export function parseArgs(argv) {
       options.apply = true;
       continue;
     }
+    if (arg === "--emit-artifact") {
+      options.emitArtifact = true;
+      continue;
+    }
     if (arg === "--help" || arg === "-h") {
       options.help = true;
       continue;
@@ -124,13 +134,15 @@ export function parseArgs(argv) {
     if (!arg.startsWith("--")) throw new Error(`unknown argument: ${arg}`);
 
     const name = arg.split("=", 1)[0];
-    if (!["--locale", "--limit", "--sitemap-url", "--mlx-endpoint", "--model"].includes(name)) {
+    if (!["--locale", "--limit", "--artifact-dir", "--slice", "--sitemap-url", "--mlx-endpoint", "--model"].includes(name)) {
       throw new Error(`unknown option: ${name}`);
     }
     const { value, consumed } = readOption(argv, index);
     index += consumed;
     if (name === "--locale") options.locale = value.toLowerCase();
     if (name === "--limit") options.limit = Number(value);
+    if (name === "--artifact-dir") options.artifactDir = value;
+    if (name === "--slice") options.slice = Number(value);
     if (name === "--sitemap-url") options.sitemapUrl = value;
     if (name === "--mlx-endpoint") options.mlxEndpoint = value;
     if (name === "--model") options.model = value;
@@ -142,6 +154,17 @@ export function parseArgs(argv) {
   }
   if (!Number.isInteger(options.limit) || options.limit < 1 || options.limit > MAX_LIMIT) {
     throw new Error(`--limit must be an integer between 1 and ${MAX_LIMIT}`);
+  }
+  if (options.apply && options.emitArtifact) {
+    throw new Error("--apply and --emit-artifact cannot be combined");
+  }
+  if (options.emitArtifact) {
+    if (!options.artifactDir) throw new Error("--emit-artifact requires --artifact-dir");
+    if (!Number.isInteger(options.slice) || options.slice < 0) {
+      throw new Error("--emit-artifact requires a non-negative integer --slice");
+    }
+  } else if (options.artifactDir !== null || options.slice !== null) {
+    throw new Error("--artifact-dir and --slice require --emit-artifact");
   }
   for (const [name, value] of [
     ["--sitemap-url", options.sitemapUrl],
@@ -168,8 +191,11 @@ function usage() {
     "Dry-run (default; no model call and no write):",
     "  pnpm translate:memes:mlx-linked -- --locale=en --limit=20",
     "",
-    "Apply:",
+    "Apply (writes linked Supabase; production authority required):",
     "  pnpm translate:memes:mlx-linked -- --locale=en --limit=20 --apply",
+    "",
+    "Offline artifact (local MLX + read-only linked query; never executes SQL):",
+    "  pnpm translate:memes:mlx-linked -- --locale=en --limit=20 --emit-artifact --artifact-dir artifacts/renewal/loop-050 --slice=20",
     "",
     `Locales: ${SUPPORTED_LOCALES.join(", ")}`,
   ].join("\n");
@@ -827,8 +853,19 @@ export function localizedSlug(title, fallback) {
   return slug || fallback;
 }
 
-export function buildAtomicInsertSql({ meme, locale, translation, model }) {
+export function buildAtomicInsertSql({
+  meme,
+  locale,
+  translation,
+  model,
+  provider = "mlx",
+  promptVersion = PROMPT_VERSION,
+}) {
   if (!SUPPORTED_LOCALES.includes(locale)) throw new Error("unsupported locale");
+  if (typeof provider !== "string" || !provider.trim()) throw new Error("provider must be a non-empty string");
+  if (!Number.isInteger(promptVersion) || promptVersion < 1) {
+    throw new Error("promptVersion must be a positive integer");
+  }
   const snapshot = meme.source_snapshot ?? sourceSnapshot(meme);
   const computedSourceHash = sourceSnapshotHash(snapshot);
   if (meme.source_snapshot_hash && meme.source_snapshot_hash !== computedSourceHash) {
@@ -849,7 +886,9 @@ export function buildAtomicInsertSql({ meme, locale, translation, model }) {
     source_usage_examples: snapshot.usage_examples,
     localized_slug: localizedSlug(translation.title, meme.slug),
     ...translation,
+    provider,
     model,
+    prompt_version: promptVersion,
   };
   const encodedPayload = encodeJsonBase64(payload);
   return `
@@ -879,7 +918,9 @@ with input as (
       caution text,
       aliases text[],
       usage_examples jsonb,
-      model text
+      provider text,
+      model text,
+      prompt_version integer
     )
 ),
 locked as materialized (
@@ -941,9 +982,9 @@ inserted as (
     usage_examples,
     'machine',
     source_updated_at,
-    'mlx',
+    provider,
     model,
-    ${PROMPT_VERSION},
+    prompt_version,
     now(),
     null,
     null
@@ -962,7 +1003,65 @@ export async function persistAtomicTranslation({ queryImpl = queryLinked, ...inp
   }
 }
 
-async function loadCandidates({ options, fetchImpl, queryImpl, isIndexableMeme }) {
+export function offlineArtifactFilename(locale, slice) {
+  if (!SUPPORTED_LOCALES.includes(locale)) throw new Error("unsupported locale");
+  if (!Number.isInteger(slice) || slice < 0) throw new Error("slice must be a non-negative integer");
+  return `${locale}-slice${slice}.sql`;
+}
+
+export function offlineArtifactHeader({ locale, model, slice }) {
+  return [
+    "-- MemeCatch machine translation drafts; not executed by this generator.",
+    "-- Apply only after human review through the existing operator process.",
+    `-- locale=${locale}; model=${model}; slice=${slice}; generated_at=${new Date().toISOString()}`,
+    "",
+  ].join("\n");
+}
+
+/**
+ * Initializes a resumable local SQL artifact and returns translations already
+ * present in that artifact directory for this locale. The exclusive create is
+ * deliberate: a later run must select a new slice instead of overwriting a
+ * reviewable draft.
+ */
+export async function prepareOfflineArtifact({ options, mkdirImpl = mkdir, writeFileImpl = writeFile }) {
+  await mkdirImpl(options.artifactDir, { recursive: true });
+  const existing = parseTranslationArtifacts(options.artifactDir);
+  if (existing.errors.length > 0) {
+    throw new Error(`existing translation artifact is invalid: ${existing.errors.join("; ")}`);
+  }
+  const existingMemeIds = new Set(
+    existing.records
+      .filter((record) => record.locale === options.locale)
+      .map((record) => record.memeId),
+  );
+  const path = resolve(options.artifactDir, offlineArtifactFilename(options.locale, options.slice));
+  try {
+    await writeFileImpl(path, offlineArtifactHeader({
+      locale: options.locale,
+      model: options.model,
+      slice: options.slice,
+    }), { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST") {
+      throw new Error(`offline artifact already exists: ${path}`);
+    }
+    throw error;
+  }
+  return { path, existingMemeIds };
+}
+
+export async function appendOfflineArtifactStatement({ path, sql, appendFileImpl = appendFile }) {
+  await appendFileImpl(path, `${sql};\n\n`, "utf8");
+}
+
+async function loadCandidates({
+  options,
+  fetchImpl,
+  queryImpl,
+  isIndexableMeme,
+  excludedMemeIds = new Set(),
+}) {
   const response = await fetchImpl(options.sitemapUrl, {
     headers: { "user-agent": "MemeCatch-Local-Translation-Batch/1.0" },
   });
@@ -973,7 +1072,11 @@ async function loadCandidates({ options, fetchImpl, queryImpl, isIndexableMeme }
   const rows = await queryImpl(buildCandidateSql(shortIds, options.locale));
   const allowedIds = new Set(shortIds);
   return rows
-    .filter((meme) => allowedIds.has(meme.short_id) && isIndexableMeme(meme))
+    .filter((meme) =>
+      allowedIds.has(meme.short_id) &&
+      !excludedMemeIds.has(String(meme.id).toLowerCase()) &&
+      isIndexableMeme(meme),
+    )
     .slice(0, options.limit)
     .map((meme) => {
       const snapshot = sourceSnapshot(meme);
@@ -997,19 +1100,24 @@ export async function run(argv = process.argv.slice(2), dependencies = {}) {
   const queryImpl = dependencies.queryImpl ?? queryLinked;
   const translateImpl = dependencies.translateImpl ?? requestMlxTranslation;
   const persistImpl = dependencies.persistImpl ?? persistAtomicTranslation;
+  const prepareArtifactImpl = dependencies.prepareArtifactImpl ?? prepareOfflineArtifact;
+  const appendArtifactImpl = dependencies.appendArtifactImpl ?? appendOfflineArtifactStatement;
   const isIndexableMeme = dependencies.isIndexableMeme ??
     (await import("../lib/content-depth.ts")).isIndexableMeme;
 
+  const artifact = options.emitArtifact
+    ? await prepareArtifactImpl({ options })
+    : null;
   const candidates = await loadCandidates({
     options,
     fetchImpl,
     queryImpl,
     isIndexableMeme,
+    excludedMemeIds: artifact?.existingMemeIds,
   });
-  logger.log(
-    `selected=${candidates.length} locale=${options.locale} mode=${options.apply ? "apply" : "dry-run"}`,
-  );
-  if (!options.apply) {
+  const mode = options.apply ? "apply" : options.emitArtifact ? "offline-artifact" : "dry-run";
+  logger.log(`selected=${candidates.length} locale=${options.locale} mode=${mode}`);
+  if (!options.apply && !options.emitArtifact) {
     logger.log("dry-run complete; no model calls or database writes were made");
     return { selected: candidates.length, translated: 0, failed: 0 };
   }
@@ -1026,15 +1134,28 @@ export async function run(argv = process.argv.slice(2), dependencies = {}) {
         locale: options.locale,
         meme,
       });
-      await persistImpl({
-        queryImpl,
-        meme,
-        locale: options.locale,
-        translation,
-        model: options.model,
-      });
+      if (artifact) {
+        await appendArtifactImpl({
+          path: artifact.path,
+          sql: buildAtomicInsertSql({
+            meme,
+            locale: options.locale,
+            translation,
+            model: options.model,
+          }),
+        });
+        logger.log(`${label} draft written`);
+      } else {
+        await persistImpl({
+          queryImpl,
+          meme,
+          locale: options.locale,
+          translation,
+          model: options.model,
+        });
+        logger.log(`${label} translated`);
+      }
       translated += 1;
-      logger.log(`${label} translated`);
     } catch (error) {
       failed += 1;
       const message = error instanceof Error ? error.message : "unknown error";

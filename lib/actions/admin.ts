@@ -14,6 +14,11 @@ import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
 import {
+  getOpenAiReviewModel,
+  OPENAI_REVIEW_REASONING_EFFORT,
+  requestOpenAiStructured,
+} from "@/lib/openai-review.server";
+import {
   isSeoContentLocale,
   localizedMemePath,
   SEO_CONTENT_LOCALES,
@@ -407,121 +412,11 @@ const KOREAN_REVIEW_SCHEMA = {
     caution: { type: "string", description: "한국어 주의 문구. 원문이 비어 있으면 빈 문자열" },
   },
 } as const;
-
-function containsHangul(value: string | null | undefined) {
-  return /[가-힣]/.test(value ?? "");
-}
-
-function firstSentence(value: string) {
-  const sentence = value.match(/^.*?[.!?。](?:\s|$)/)?.[0]?.trim() ?? value.trim();
-  return sentence.slice(0, 120);
-}
-
-/** API 키가 없는 환경에서도 운영자가 한국어 자료를 바탕으로 검수할 수 있는 보수적 폴백. */
-async function koreanWikipediaReviewDraft(meme: {
-  title: string;
-  summary: string;
-  description: string;
-  origin: string;
-  usage_note: string | null;
-  caution: string | null;
-}): Promise<KoreanReviewDraft | null> {
-  const commonHeaders = {
-    accept: "application/json",
-    "accept-language": "ko-KR,ko;q=0.9",
-    "user-agent": "MemeCatchReview/1.0 (+https://catchmeme.com/about)",
-  };
-
-  // Wikimedia에서 수집한 영문 표제는 먼저 언어 링크로 한국어 문서와 정확히 연결한다.
-  const languageLinkEndpoint = new URL("https://en.wikipedia.org/w/api.php");
-  languageLinkEndpoint.searchParams.set("action", "query");
-  languageLinkEndpoint.searchParams.set("titles", meme.title.slice(0, 180));
-  languageLinkEndpoint.searchParams.set("redirects", "1");
-  languageLinkEndpoint.searchParams.set("prop", "langlinks");
-  languageLinkEndpoint.searchParams.set("lllang", "ko");
-  languageLinkEndpoint.searchParams.set("lllimit", "1");
-  languageLinkEndpoint.searchParams.set("format", "json");
-  languageLinkEndpoint.searchParams.set("formatversion", "2");
-  languageLinkEndpoint.searchParams.set("origin", "*");
-
-  let linkedKoreanTitle: string | null = null;
-  try {
-    const linkResponse = await fetch(languageLinkEndpoint, {
-      headers: commonHeaders,
-      signal: AbortSignal.timeout(6_000),
-      cache: "no-store",
-    });
-    if (linkResponse.ok) {
-      const linkPayload = (await linkResponse.json()) as {
-        query?: { pages?: Array<{ langlinks?: Array<{ title?: string }> }> };
-      };
-      linkedKoreanTitle =
-        linkPayload.query?.pages?.[0]?.langlinks?.[0]?.title?.trim() ?? null;
-    }
-  } catch {
-    // 언어 링크 조회가 실패해도 아래 한국어 검색 폴백을 시도한다.
-  }
-
-  const endpoint = new URL("https://ko.wikipedia.org/w/api.php");
-  endpoint.searchParams.set("action", "query");
-  if (linkedKoreanTitle) {
-    endpoint.searchParams.set("titles", linkedKoreanTitle);
-  } else {
-    endpoint.searchParams.set("generator", "search");
-    endpoint.searchParams.set("gsrsearch", meme.title.slice(0, 120));
-    endpoint.searchParams.set("gsrnamespace", "0");
-    endpoint.searchParams.set("gsrlimit", "1");
-  }
-  endpoint.searchParams.set("prop", "extracts");
-  endpoint.searchParams.set("exintro", "1");
-  endpoint.searchParams.set("explaintext", "1");
-  endpoint.searchParams.set("exsentences", "5");
-  endpoint.searchParams.set("format", "json");
-  endpoint.searchParams.set("formatversion", "2");
-  endpoint.searchParams.set("origin", "*");
-
-  const response = await fetch(endpoint, {
-    headers: commonHeaders,
-    signal: AbortSignal.timeout(8_000),
-    cache: "no-store",
-  });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as {
-    query?: { pages?: Array<{ title?: string; extract?: string }> };
-  };
-  const page = payload.query?.pages?.find(
-    (candidate) => candidate.title?.trim() && candidate.extract?.trim()
-  );
-  if (!page?.title || !page.extract || !containsHangul(page.extract)) return null;
-
-  const extract = page.extract.trim().slice(0, 2_400);
-  return {
-    title: containsHangul(meme.title) ? meme.title : page.title.trim(),
-    summary: firstSentence(extract),
-    description: extract,
-    origin: containsHangul(meme.origin)
-      ? meme.origin
-      : `한국어 위키백과의 ‘${page.title.trim()}’ 문서를 참고했으며, 정확한 최초 유래는 추가 확인이 필요해요.`,
-    usage_note: containsHangul(meme.usage_note)
-      ? meme.usage_note!.trim()
-      : "상황과 상대를 고려해 사용해 주세요.",
-    caution: containsHangul(meme.caution)
-      ? meme.caution!.trim()
-      : "정확한 최초 출처와 연도는 추가 확인이 필요해요.",
-    review_basis: "korean_wikipedia",
-  };
-}
-
-/**
- * 기존 밈의 영문·혼합 언어 설명을 운영자 검수용 한국어 초안으로 바꾼다.
- * 결과를 자동 저장하지 않아 운영자가 사실관계와 고유명사를 확인한 뒤 저장할 수 있다.
- */
 export async function generateKoreanReviewDraft(
   memeId: string
 ): Promise<ActionResult<KoreanReviewDraft>> {
   try {
     const { supabase, uid } = await requireOperator();
-    const apiKey = process.env.ANTHROPIC_API_KEY;
 
     const { data: meme, error } = await supabase
       .from("memes")
@@ -530,71 +425,23 @@ export async function generateKoreanReviewDraft(
       .single();
     if (error || !meme) return { ok: false, error: "밈을 찾을 수 없어요." };
 
-    if (!apiKey) {
-      const fallbackDraft = await koreanWikipediaReviewDraft(meme);
-      if (!fallbackDraft) {
-        return {
-          ok: false,
-          error: "일치하는 한국어 자료를 찾지 못했어요. 직접 번역하거나 ANTHROPIC_API_KEY를 설정해 주세요.",
-        };
-      }
-      await logAudit(uid, "reference.generate_korean_review", "meme", memeId, {
-        source: "ko.wikipedia.org",
-        auto_saved: false,
-      });
-      return { ok: true, data: fallbackDraft };
-    }
-
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 4096,
-        system:
-          "당신은 한국 밈 사전 서비스 '밈캐치'의 한국어 편집자입니다. 입력에 영어 또는 혼합 언어가 있으면 자연스러운 한국어 해요체로 번역·정리합니다. " +
-          "고유명사, 작품명, 인물명, 서비스명은 널리 쓰이는 한국어 표기가 확인될 때만 바꾸고 그렇지 않으면 원문을 보존합니다. " +
-          "입력에 없는 사실, 연도, 원출처를 만들지 않습니다. 불확실한 내용은 단정하지 말고 '확인 중이에요' 또는 '~로 알려져 있어요'처럼 표시합니다. " +
-          "출력은 JSON 스키마의 문자열 값까지 한국어를 기본으로 하며 불가피한 고유명사만 원문을 허용합니다.",
-        messages: [
-          {
-            role: "user",
-            content:
-              "다음 밈 항목을 한국어 검수 초안으로 정리해 주세요. 자동 게시되지 않으며 운영자가 검토할 예정입니다.\n\n" +
-              JSON.stringify(meme, null, 2),
-          },
-        ],
-        output_config: { format: { type: "json_schema", schema: KOREAN_REVIEW_SCHEMA } },
-      }),
+    const draft = await requestOpenAiStructured<KoreanReviewFields>({
+      name: "korean_review_draft",
+      schema: KOREAN_REVIEW_SCHEMA,
+      instructions:
+        "당신은 한국 밈 사전 서비스 '밈캐치'의 한국어 편집자입니다. " +
+        "영어 또는 혼합 언어 항목을 자연스러운 한국어 해요체 검수 초안으로 정리합니다. " +
+        "고유명사, 작품명, 인물명, 서비스명은 널리 쓰이는 한국어 표기가 확실할 때만 바꾸고 그렇지 않으면 원문을 보존합니다. " +
+        "입력에 없는 사실, 연도, 원출처를 만들지 않습니다. 불확실한 내용은 단정하지 말고 확인이 필요하다고 표시합니다. " +
+        "자동 게시나 자동 저장을 하지 않으며 운영자가 사실관계와 고유명사를 최종 확인합니다.",
+      input:
+        "다음 밈 항목을 한국어 검수 초안으로 정리해 주세요.\n\n" +
+        JSON.stringify(meme, null, 2),
     });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return { ok: false, error: `한국어 초안 생성에 실패했어요 (${res.status}). ${body.slice(0, 200)}` };
-    }
-    const message: {
-      stop_reason?: string;
-      content?: { type: string; text?: string }[];
-    } = await res.json();
-    if (message.stop_reason === "refusal") {
-      return { ok: false, error: "AI가 이 항목의 한국어 초안 생성을 거절했어요. 직접 작성해 주세요." };
-    }
-    const textBlock = message.content?.find((block) => block.type === "text" && block.text);
-    if (!textBlock?.text) return { ok: false, error: "AI 응답이 비어 있어요. 다시 시도해 주세요." };
-
-    let draft: KoreanReviewFields;
-    try {
-      draft = JSON.parse(textBlock.text) as KoreanReviewFields;
-    } catch {
-      return { ok: false, error: "AI 응답을 해석하지 못했어요. 다시 시도해 주세요." };
-    }
-
     await logAudit(uid, "ai.generate_korean_review", "meme", memeId, {
-      model: "claude-sonnet-5",
+      model: getOpenAiReviewModel(),
+      reasoning_effort: OPENAI_REVIEW_REASONING_EFFORT,
       auto_saved: false,
     });
     return { ok: true, data: { ...draft, review_basis: "ai_translation" } };
@@ -680,8 +527,6 @@ export async function setDiscussionVisibility(input: {
   }
 }
 
-/* ── AI 초안 (Anthropic Messages API — fetch 직접 호출) ── */
-
 export type DraftResult = {
   summary: string;
   description: string;
@@ -716,8 +561,6 @@ const DRAFT_SCHEMA = {
 export async function generateDraft(submissionId: string): Promise<ActionResult<DraftResult>> {
   try {
     const { supabase, uid } = await requireOperator();
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return { ok: false, error: "ANTHROPIC_API_KEY 설정 필요" };
 
     const { data: submission } = await supabase
       .from("meme_submissions")
@@ -739,51 +582,22 @@ export async function generateDraft(submissionId: string): Promise<ActionResult<
       .filter((l) => l !== null)
       .join("\n");
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 4096,
-        system:
-          "당신은 한국 밈 사전 서비스 '밈캐치'의 운영 보조입니다. 제보된 밈 정보를 바탕으로 사전 항목 초안을 작성합니다. " +
-          "제보가 영어 또는 혼합 언어이면 먼저 의미를 자연스러운 한국어로 해석하고, 출력 문자열은 불가피한 고유명사를 제외하면 모두 한국어로 작성합니다. " +
-          "모든 문장은 해요체로 씁니다. 확실하지 않은 사실은 단정하지 말고 '~로 알려져 있어요'처럼 표현합니다. " +
-          "safety_level 기준: green=써도 됨, yellow=맥락 주의, gray=이미 유행이 지남, red=쓰면 위험(차별·혐오·논란). " +
-          "usage_context는 직장(work)·친구(friends)·가족(family)·공개 SNS(sns) 각각에서의 사용 안전도를 같은 기준으로 판단합니다.",
-        messages: [{ role: "user", content: userPrompt }],
-        output_config: { format: { type: "json_schema", schema: DRAFT_SCHEMA } },
-      }),
+    const draft = await requestOpenAiStructured<DraftResult>({
+      name: "meme_submission_review_draft",
+      schema: DRAFT_SCHEMA,
+      instructions:
+        "당신은 한국 밈 사전 서비스 '밈캐치'의 운영 보조입니다. 제보된 밈 정보를 바탕으로 한국어 검수 초안을 작성합니다. " +
+        "제보가 영어 또는 혼합 언어이면 먼저 의미를 자연스러운 한국어로 해석하고, 불가피한 고유명사를 제외한 출력은 모두 한국어 해요체로 작성합니다. " +
+        "입력에 없는 사실, 연도, 원출처를 만들지 않고 확실하지 않은 내용은 확인 필요성을 표시합니다. " +
+        "safety_level 기준: green=써도 됨, yellow=맥락 주의, gray=이미 유행이 지남, red=쓰면 위험(차별·혐오·논란). " +
+        "usage_context는 직장(work)·친구(friends)·가족(family)·공개 SNS(sns) 각각에서의 사용 안전도를 같은 기준으로 판단합니다. " +
+        "자동 게시나 자동 저장을 하지 않으며 운영자가 최종 사실관계와 저작권을 확인합니다.",
+      input: userPrompt,
     });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return { ok: false, error: `AI 호출에 실패했어요 (${res.status}). ${body.slice(0, 200)}` };
-    }
-    const message: {
-      stop_reason?: string;
-      content?: { type: string; text?: string }[];
-    } = await res.json();
-
-    if (message.stop_reason === "refusal") {
-      return { ok: false, error: "AI가 이 요청의 초안 생성을 거절했어요. 직접 작성해 주세요." };
-    }
-    const textBlock = message.content?.find((b) => b.type === "text" && b.text);
-    if (!textBlock?.text) return { ok: false, error: "AI 응답이 비어 있어요. 다시 시도해 주세요." };
-
-    let draft: DraftResult;
-    try {
-      draft = JSON.parse(textBlock.text) as DraftResult;
-    } catch {
-      return { ok: false, error: "AI 응답을 해석하지 못했어요. 다시 시도해 주세요." };
-    }
-
     await logAudit(uid, "ai.generate_draft", "meme_submission", submissionId, {
-      model: "claude-sonnet-5",
+      model: getOpenAiReviewModel(),
+      reasoning_effort: OPENAI_REVIEW_REASONING_EFFORT,
     });
     return { ok: true, data: draft };
   } catch (e) {

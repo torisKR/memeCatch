@@ -7,9 +7,16 @@ import {
   deleteMemeTranslation,
   rejectMemeTranslationDraft,
   reviewMemeTranslation,
+  reviewMemeTranslationWithGpt,
   type TranslationQueueRow,
 } from "@/lib/actions/admin-translations";
 import { LANGUAGE_NAMES } from "@/lib/i18n";
+
+const AI_RECOMMENDATION_COPY = {
+  approve: "발행 가능",
+  edit: "교정 후 발행",
+  reject: "발행 보류",
+} as const;
 
 /**
  * 번역 검수 큐 카드 — 원문(한국어)과 번역을 나란히 보여주고 승인/반려/삭제한다.
@@ -47,12 +54,19 @@ const TRANSLATION_FIELDS = [
   ["caution", "주의사항", 4],
 ] as const;
 
-function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
+function TranslationQueueCard({
+  row,
+  hasOpenAiReviewKey,
+}: {
+  row: TranslationQueueRow;
+  hasOpenAiReviewKey: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [reason, setReason] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [aiReviewing, setAiReviewing] = useState(false);
   const [form, setForm] = useState({
     title: row.title,
     summary: row.summary,
@@ -60,11 +74,13 @@ function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
     origin: row.origin,
     usageNote: row.usageNote ?? "",
     caution: row.caution ?? "",
+    aliases: row.aliases.join(", "),
   });
 
   const fresh = sameInstant(row.sourceUpdatedAt, row.memeUpdatedAt);
   const statusCopy = STATUS_COPY[row.status];
   const prefix = `[${row.memeShortId}/${row.locale}]`;
+  const busy = pending || aiReviewing;
 
   function set<K extends keyof typeof form>(field: K, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -101,10 +117,44 @@ function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
           origin: form.origin,
           usageNote: form.usageNote,
           caution: form.caution,
-          aliases: row.aliases,
+          aliases: form.aliases.split(",").map((alias) => alias.trim()).filter(Boolean),
         }),
       `${LANGUAGE_NAMES[row.locale]} 번역을 승인하고 발행했어요.`,
     );
+  }
+
+  async function onAiReview() {
+    setMessage(null);
+    setAiReviewing(true);
+    try {
+      const result = await reviewMemeTranslationWithGpt({
+        memeId: row.memeId,
+        locale: row.locale,
+        expectedTranslationUpdatedAt: row.updatedAt,
+      });
+      if (!result.ok) {
+        setMessage({ ok: false, text: result.error });
+        return;
+      }
+      const draft = result.data;
+      setForm((current) => ({
+        ...current,
+        title: draft.title,
+        summary: draft.summary,
+        description: draft.description,
+        origin: draft.origin,
+        usageNote: draft.usage_note,
+        caution: draft.caution,
+        aliases: draft.aliases.join(", "),
+      }));
+      const notes = draft.review_notes.slice(0, 2).join(" · ");
+      setMessage({
+        ok: true,
+        text: `GPT 검수 의견: ${AI_RECOMMENDATION_COPY[draft.recommendation]} · 신뢰도 ${draft.confidence}${notes ? ` · ${notes}` : ""}`,
+      });
+    } finally {
+      setAiReviewing(false);
+    }
   }
 
   function onReject() {
@@ -236,6 +286,15 @@ function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
               className={inputClass}
             />
           </label>
+          <label className="mt-2 block text-sm font-medium">
+            별칭 (쉼표로 구분)
+            <input
+              aria-label={`${prefix} 별칭`}
+              value={form.aliases}
+              onChange={(event) => set("aliases", event.target.value)}
+              className={inputClass}
+            />
+          </label>
           {TRANSLATION_FIELDS.map(([field, label, rows]) => (
             <label key={field} className="mt-2 block text-sm font-medium">
               {label}
@@ -271,17 +330,27 @@ function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
       </label>
 
       <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+        <span title={hasOpenAiReviewKey ? undefined : "OPENAI_API_KEY 설정 필요"}>
+          <button
+            type="button"
+            disabled={busy || !hasOpenAiReviewKey}
+            onClick={onAiReview}
+            className="min-h-11 rounded-lg border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent-text disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {aiReviewing ? "GPT 검수 중…" : "GPT-5.6 Sol high 검수"}
+          </button>
+        </span>
         <button
           type="button"
-          disabled={pending || !fresh}
+          disabled={busy || !fresh}
           onClick={onApprove}
           className="min-h-11 rounded-lg bg-safety-green px-4 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {pending ? "처리 중…" : "승인·발행"}
+          {busy ? "처리 중…" : "승인·발행"}
         </button>
         <button
           type="button"
-          disabled={pending}
+          disabled={busy}
           onClick={onReject}
           className="min-h-11 rounded-lg border border-safety-yellow bg-safety-yellow-bg px-4 text-sm font-semibold text-safety-yellow disabled:opacity-50"
         >
@@ -289,7 +358,7 @@ function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
         </button>
         <button
           type="button"
-          disabled={pending}
+          disabled={busy}
           onClick={onDelete}
           className={`min-h-11 rounded-lg border px-4 text-sm font-semibold disabled:opacity-50 ${
             confirmingDelete
@@ -304,11 +373,21 @@ function TranslationQueueCard({ row }: { row: TranslationQueueRow }) {
   );
 }
 
-export function TranslationReviewQueue({ rows }: { rows: TranslationQueueRow[] }) {
+export function TranslationReviewQueue({
+  rows,
+  hasOpenAiReviewKey = false,
+}: {
+  rows: TranslationQueueRow[];
+  hasOpenAiReviewKey?: boolean;
+}) {
   return (
     <div className="space-y-4">
       {rows.map((row) => (
-        <TranslationQueueCard key={`${row.memeId}:${row.locale}`} row={row} />
+        <TranslationQueueCard
+          key={`${row.memeId}:${row.locale}`}
+          row={row}
+          hasOpenAiReviewKey={hasOpenAiReviewKey}
+        />
       ))}
     </div>
   );

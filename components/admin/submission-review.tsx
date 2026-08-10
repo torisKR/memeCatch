@@ -28,14 +28,14 @@ export function SubmissionReview({
   submissionTags,
   status,
   claimedByMe,
-  hasAnthropicKey,
+  hasOpenAiReviewKey,
 }: {
   submissionId: string;
   submissionName: string;
   submissionTags: string[];
   status: "pending" | "reviewing";
   claimedByMe: boolean;
-  hasAnthropicKey: boolean;
+  hasOpenAiReviewKey: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -89,7 +89,7 @@ export function SubmissionReview({
       setSafetyLevel(d.safety_level);
       setUsageContext(d.usage_context);
       setMode("approve");
-      setMessage({ kind: "success", text: "한국어 AI 초안을 채웠어요. 내용을 검토하고 수정해 주세요." });
+      setMessage({ kind: "success", text: "GPT-5.6 Sol high 검수 초안을 채웠어요. 내용을 검토하고 수정해 주세요." });
     } finally {
       setDrafting(false);
     }
@@ -176,14 +176,14 @@ export function SubmissionReview({
             {pending ? "처리 중…" : "내가 검토하기 (claim)"}
           </button>
         )}
-        <span title={hasAnthropicKey ? undefined : "ANTHROPIC_API_KEY 설정 필요"}>
+        <span title={hasOpenAiReviewKey ? undefined : "OPENAI_API_KEY 설정 필요"}>
           <button
             type="button"
             onClick={draft}
-            disabled={busy || !hasAnthropicKey}
+            disabled={busy || !hasOpenAiReviewKey}
             className="min-h-11 rounded-lg border border-border bg-surface-2 px-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {drafting ? "한국어 초안 생성 중…" : "한국어 AI 초안 생성"}
+            {drafting ? "GPT 검수 중…" : "GPT-5.6 Sol high로 검수 초안"}
           </button>
         </span>
         <button

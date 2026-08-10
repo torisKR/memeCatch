@@ -59,8 +59,8 @@ describe("MemeEditForm Korean review", () => {
       },
     });
 
-    render(<MemeEditForm memeId="meme-1" initial={initial} hasAnthropicKey />);
-    fireEvent.click(screen.getByRole("button", { name: "영문 내용 한국어로 해석" }));
+    render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey />);
+    fireEvent.click(screen.getByRole("button", { name: "GPT-5.6 Sol high로 검수 초안" }));
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("극적인 프레리도그")).toBeTruthy();

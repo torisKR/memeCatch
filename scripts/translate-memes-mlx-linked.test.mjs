@@ -7,6 +7,8 @@ import {
   decodeJsonBase64,
   encodeJsonBase64,
   extractKoreanMemeShortIds,
+  offlineArtifactFilename,
+  offlineArtifactHeader,
   parseArgs,
   parseStrictTranslation,
   parseSupabaseCliJson,
@@ -20,6 +22,26 @@ const defaults = parseArgs(["--locale=en"]);
 assert.equal(defaults.apply, false, "dry-run must be the default");
 assert.equal(defaults.locale, "en");
 assert.equal(parseArgs(["--locale=zh-tw", "--apply", "--limit=3"]).apply, true);
+const artifactOptions = parseArgs([
+  "--locale=en",
+  "--limit=3",
+  "--emit-artifact",
+  "--artifact-dir=artifacts/renewal/loop-050",
+  "--slice=20",
+]);
+assert.equal(artifactOptions.emitArtifact, true);
+assert.equal(artifactOptions.slice, 20);
+assert.throws(() => parseArgs(["--locale=en", "--emit-artifact"]), /artifact-dir/);
+assert.throws(
+  () => parseArgs(["--locale=en", "--apply", "--emit-artifact", "--artifact-dir=x", "--slice=0"]),
+  /cannot be combined/,
+);
+assert.throws(() => parseArgs(["--locale=en", "--artifact-dir=x"]), /require --emit-artifact/);
+assert.equal(offlineArtifactFilename("zh-tw", 20), "zh-tw-slice20.sql");
+assert.match(
+  offlineArtifactHeader({ locale: "en", model: "test-model", slice: 20 }),
+  /not executed by this generator/,
+);
 assert.throws(() => parseArgs(["--locale=ko"]), /--locale/);
 assert.throws(() => parseArgs(["--locale=en", "--limit=0"]), /--limit/);
 assert.throws(() => parseArgs(["--locale=en", "--unknown=x"]), /unknown option/);
@@ -700,7 +722,6 @@ for (const field of [
 }
 assert.match(insertSql, /btrim\(i\.description\) <> ''/i);
 assert.match(insertSql, /'machine'/i);
-assert.match(insertSql, /'mlx'/i);
 assert.match(insertSql, /on conflict \(meme_id, locale\) do nothing/i);
 assert.match(insertSql, /count\(\*\)::int as inserted_count/i);
 assert.doesNotMatch(insertSql, /King-bat-ne/, "model output must be base64-encoded");
@@ -710,6 +731,30 @@ const decodedInsertPayload = decodeJsonBase64(encodedInsertPayload);
 assert.equal(decodedInsertPayload.source_snapshot_hash, snapshotHash);
 assert.deepEqual(decodedInsertPayload.source_aliases, sourceMeme.aliases);
 assert.deepEqual(decodedInsertPayload.source_usage_examples, sourceMeme.usage_examples);
+assert.equal(decodedInsertPayload.provider, "mlx");
+assert.equal(decodedInsertPayload.prompt_version, 11);
+const customProvenanceSql = buildAtomicInsertSql({
+  meme: { ...sourceMeme, source_snapshot: snapshot, source_snapshot_hash: snapshotHash },
+  locale: "en",
+  translation: validTranslation,
+  provider: "openai",
+  model: "gpt-5.6-luna",
+  promptVersion: 1,
+});
+const customPayload = decodeJsonBase64(customProvenanceSql.match(/decode\('([^']+)', 'base64'\)/)?.[1]);
+assert.equal(customPayload.provider, "openai");
+assert.equal(customPayload.model, "gpt-5.6-luna");
+assert.equal(customPayload.prompt_version, 1);
+assert.throws(
+  () => buildAtomicInsertSql({
+    meme: { ...sourceMeme, source_snapshot: snapshot, source_snapshot_hash: snapshotHash },
+    locale: "en",
+    translation: validTranslation,
+    model: "test-model",
+    provider: "",
+  }),
+  /provider/,
+);
 assert.throws(
   () => buildAtomicInsertSql({
     meme: { ...sourceMeme, source_snapshot: snapshot, source_snapshot_hash: "0".repeat(64) },
@@ -766,5 +811,73 @@ assert.deepEqual(dryRunResult, { selected: 1, translated: 0, failed: 0 });
 assert.equal(modelCalled, false, "dry-run must not call MLX");
 assert.equal(writeCalled, false, "dry-run must not write to Supabase");
 assert.doesNotMatch(logs.join("\n"), /원문 제목|원문 요약|충분한 설명/);
+
+const artifactStatements = [];
+const artifactResult = await run([
+  "--locale=en",
+  "--limit=1",
+  "--emit-artifact",
+  "--artifact-dir=/tmp/memecatch-translation-test",
+  "--slice=20",
+], {
+  fetchImpl: async () => ({
+    ok: true,
+    async text() {
+      return "<urlset><url><loc>https://catchmeme.com/memes/abc123-source</loc></url></urlset>";
+    },
+  }),
+  queryImpl: async () => [substantialCandidate],
+  isIndexableMeme: () => true,
+  translateImpl: async () => validTranslation,
+  persistImpl: async () => {
+    writeCalled = true;
+  },
+  prepareArtifactImpl: async () => ({
+    path: "/tmp/memecatch-translation-test/en-slice20.sql",
+    existingMemeIds: new Set(),
+  }),
+  appendArtifactImpl: async ({ path, sql }) => {
+    artifactStatements.push({ path, sql });
+  },
+  logger: { log() {}, error() {} },
+});
+assert.deepEqual(artifactResult, { selected: 1, translated: 1, failed: 0 });
+assert.equal(writeCalled, false, "offline artifact mode must not write to Supabase");
+assert.equal(artifactStatements.length, 1);
+assert.equal(artifactStatements[0].path, "/tmp/memecatch-translation-test/en-slice20.sql");
+assert.match(artifactStatements[0].sql, /insert into public\.meme_translations/i);
+assert.match(artifactStatements[0].sql, /source_snapshot_hash/i);
+
+let excludedModelCalled = false;
+const excludedResult = await run([
+  "--locale=en",
+  "--limit=1",
+  "--emit-artifact",
+  "--artifact-dir=/tmp/memecatch-translation-test",
+  "--slice=21",
+], {
+  fetchImpl: async () => ({
+    ok: true,
+    async text() {
+      return "<urlset><url><loc>https://catchmeme.com/memes/abc123-source</loc></url></urlset>";
+    },
+  }),
+  queryImpl: async () => [substantialCandidate],
+  isIndexableMeme: () => true,
+  translateImpl: async () => {
+    excludedModelCalled = true;
+    return validTranslation;
+  },
+  prepareArtifactImpl: async () => ({
+    path: "/tmp/memecatch-translation-test/en-slice21.sql",
+    existingMemeIds: new Set([String(substantialCandidate.id).toLowerCase()]),
+  }),
+  appendArtifactImpl: async () => {
+    throw new Error("an existing offline draft must not be emitted twice");
+  },
+  logger: { log() {}, error() {} },
+});
+assert.deepEqual(excludedResult, { selected: 0, translated: 0, failed: 0 });
+assert.equal(excludedModelCalled, false, "existing offline rows must be excluded before model calls");
 
 console.log("translate-memes MLX linked safeguards OK");

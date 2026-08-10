@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const refresh = vi.fn();
 const saveMemeTranslation = vi.fn();
 const reviewMemeTranslation = vi.fn();
+const reviewMemeTranslationWithGpt = vi.fn();
 const markMemeTranslationStale = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -15,6 +16,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/actions/admin-translations", () => ({
   saveMemeTranslation: (...args: unknown[]) => saveMemeTranslation(...args),
   reviewMemeTranslation: (...args: unknown[]) => reviewMemeTranslation(...args),
+  reviewMemeTranslationWithGpt: (...args: unknown[]) => reviewMemeTranslationWithGpt(...args),
   markMemeTranslationStale: (...args: unknown[]) => markMemeTranslationStale(...args),
 }));
 
@@ -54,6 +56,21 @@ beforeEach(() => {
   vi.clearAllMocks();
   saveMemeTranslation.mockResolvedValue({ ok: true });
   reviewMemeTranslation.mockResolvedValue({ ok: true });
+  reviewMemeTranslationWithGpt.mockResolvedValue({
+    ok: true,
+    data: {
+      title: "Lucky Vicky",
+      summary: "A positive way to reinterpret a setback.",
+      description: "A corrected localized explanation.",
+      origin: "The phrase spread from online comments.",
+      usage_note: "Use it for a lighthearted reframing.",
+      caution: "Do not dismiss serious problems.",
+      aliases: ["Lucky Vicky"],
+      recommendation: "edit",
+      confidence: "high",
+      review_notes: ["Check the proper noun before publishing."],
+    },
+  });
   markMemeTranslationStale.mockResolvedValue({ ok: true });
 });
 
@@ -154,6 +171,30 @@ describe("MemeTranslationReview", () => {
         expectedTranslationUpdatedAt: TRANSLATION_UPDATED_AT,
       });
     });
+  });
+
+  it("fills the translation form with a GPT review without publishing", async () => {
+    render(
+      <MemeTranslationReview
+        memeId="meme-4"
+        memeUpdatedAt={SOURCE_UPDATED_AT}
+        hasOpenAiReviewKey
+        translations={[translation()]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "GPT-5.6 Sol high 검수" }));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("A corrected localized explanation.")).toBeTruthy();
+    });
+    expect(screen.getByText(/교정 후 발행/)).toBeTruthy();
+    expect(reviewMemeTranslationWithGpt).toHaveBeenCalledWith({
+      memeId: "meme-4",
+      locale: "en",
+      expectedTranslationUpdatedAt: TRANSLATION_UPDATED_AT,
+    });
+    expect(reviewMemeTranslation).not.toHaveBeenCalled();
   });
 
   it("renders an explicit empty state before the translation batch creates drafts", () => {

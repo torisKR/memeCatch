@@ -15,8 +15,114 @@ export const SUPPORTED_LOCALES = ["en", "ja", "zh", "zh-tw"];
 const SQL_FILE_PATTERN = /^(en|ja|zh|zh-tw)-slice\d+\.sql$/;
 const INSERT_PATTERN =
   /insert\s+into\s+public\.meme_translations\b[\s\S]*?values\s*\(\s*'([0-9a-f-]{36})'\s*(?:::uuid)?\s*,\s*'([^']+)'/i;
+const ATOMIC_PAYLOAD_PATTERN =
+  /convert_from\(\s*decode\(\s*'([A-Za-z0-9+/=]+)'\s*,\s*'base64'\s*\)\s*,\s*'utf8'\s*\)::jsonb/gi;
 const FORBIDDEN_STATEMENT_PATTERN =
-  /\b(?:drop\s+table|truncate\s+table|delete\s+from|alter\s+table|insert\s+into\s+public\.(?:memes|meme_sources|meme_media)|update\s+public\.memes)\b/i;
+  /\b(?:drop\s+table|truncate\s+table|delete\s+from|alter\s+table|merge\s+into|insert\s+into\s+public\.(?!meme_translations\b)|update\s+public\.(?:memes|meme_translations))\b/i;
+const FORBIDDEN_CALL_PATTERN = /^\s*(?:call\b|select\s+(?:public\.)?rpc\s*\()/i;
+const REVIEW_PROMOTION_PATTERN =
+  /\b(?:status\s*=\s*['"]reviewed['"]|reviewed_at\s*=\s*(?!null\b)|reviewed_by\s*=\s*(?!null\b))\b|['"]reviewed['"]/i;
+
+function stripSqlLiterals(statement) {
+  return statement.replace(/'(?:''|[^'])*'/gu, "''");
+}
+
+function stripSqlComments(statement) {
+  return statement
+    .replace(/--[^\n]*/gu, "")
+    .replace(/\/\*[\s\S]*?\*\//gu, "")
+    .trim();
+}
+
+function splitSqlList(source) {
+  const parts = [];
+  let start = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let inString = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "'") {
+      if (inString && source[index + 1] === "'") {
+        index += 1;
+        continue;
+      }
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === "(") parenDepth += 1;
+    if (char === ")") parenDepth -= 1;
+    if (char === "[") bracketDepth += 1;
+    if (char === "]") bracketDepth -= 1;
+    if (char === "," && parenDepth === 0 && bracketDepth === 0) {
+      parts.push(source.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(source.slice(start).trim());
+  return parts;
+}
+
+function inspectLegacyInsertSafety(statement) {
+  const match = statement.match(
+    /insert\s+into\s+public\.meme_translations\s*\(([^)]*)\)\s*values\s*\(/i,
+  );
+  if (!match) {
+    return {
+      hasMachineStatus: /['"]machine['"]/i.test(statement),
+      hasReviewPromotion: REVIEW_PROMOTION_PATTERN.test(statement),
+    };
+  }
+  const valuesOpen = match.index + match[0].length - 1;
+  let depth = 0;
+  let inString = false;
+  let valuesClose = -1;
+  for (let index = valuesOpen; index < statement.length; index += 1) {
+    const char = statement[index];
+    if (char === "'") {
+      if (inString && statement[index + 1] === "'") {
+        index += 1;
+        continue;
+      }
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === "(") depth += 1;
+    if (char === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        valuesClose = index;
+        break;
+      }
+    }
+  }
+  if (valuesClose === -1) {
+    return {
+      hasMachineStatus: false,
+      hasReviewPromotion: true,
+    };
+  }
+  const columns = splitSqlList(match[1]).map((column) => column.replaceAll('"', "").trim().toLowerCase());
+  const values = splitSqlList(statement.slice(valuesOpen + 1, valuesClose));
+  if (columns.length !== values.length) {
+    return {
+      hasMachineStatus: false,
+      hasReviewPromotion: true,
+    };
+  }
+  const byColumn = new Map(columns.map((column, index) => [column, values[index].trim()]));
+  const status = byColumn.get("status") ?? "";
+  const reviewedAt = byColumn.get("reviewed_at") ?? "null";
+  const reviewedBy = byColumn.get("reviewed_by") ?? "null";
+  const isNull = (value) => /^null\b/iu.test(value);
+  return {
+    hasMachineStatus: /^'machine'(?:\s*::[a-z_]+)?$/iu.test(status),
+    hasReviewPromotion:
+      /^'reviewed'(?:\s*::[a-z_]+)?$/iu.test(status) || !isNull(reviewedAt) || !isNull(reviewedBy),
+  };
+}
 
 function usage() {
   return [
@@ -128,10 +234,24 @@ export function parseTranslationArtifacts(artifactDir) {
     .sort();
   const records = [];
   const errors = [];
+  const forbiddenMutations = [];
 
   for (const name of files) {
     const fileLocale = name.split("-slice", 1)[0];
     const source = readFileSync(resolve(root, name), "utf8");
+    for (const [statementIndex, rawStatement] of splitSqlStatements(source).entries()) {
+      const statement = stripSqlComments(stripSqlLiterals(rawStatement));
+      if (!statement) continue;
+      if (FORBIDDEN_STATEMENT_PATTERN.test(statement) || FORBIDDEN_CALL_PATTERN.test(statement)) {
+        const finding = { file: name, statementIndex: statementIndex + 1 };
+        forbiddenMutations.push(finding);
+        errors.push(`${name}: forbidden translation-table mutation detected in statement ${statementIndex + 1}`);
+      }
+    }
+    // Keep the legacy scanner intentionally permissive: historical artifacts
+    // include a few hand-authored strings whose quoting makes them unsuitable
+    // for the lightweight statement splitter below. The checker still reads
+    // every INSERT boundary exactly as it did before this atomic format.
     const insertStarts = [...source.matchAll(/\binsert\s+into\s+public\.meme_translations\b/gi)].map(
       (match) => match.index ?? 0,
     );
@@ -139,25 +259,71 @@ export function parseTranslationArtifacts(artifactDir) {
       const end = insertStarts[index + 1] ?? source.length;
       const statement = source.slice(start, end);
       const match = statement.match(INSERT_PATTERN);
-      if (!match) {
-        errors.push(`${name}: could not parse meme_id and locale from insert at byte ${start}`);
+      if (match) {
+        const [, memeId, locale] = match;
+        const safety = inspectLegacyInsertSafety(statement);
+        records.push({
+          file: name,
+          memeId: memeId.toLowerCase(),
+          locale,
+          fileLocale,
+          hasConflictGuard: /\bon\s+conflict\s*\(\s*meme_id\s*,\s*locale\s*\)/i.test(statement),
+          hasMachineStatus: safety.hasMachineStatus,
+          hasReviewPromotion: safety.hasReviewPromotion,
+          hasSourceSnapshotGuard: false,
+          statement,
+        });
         continue;
       }
-      const [, memeId, locale] = match;
-      records.push({
-        file: name,
-        memeId: memeId.toLowerCase(),
-        locale,
-        fileLocale,
-        hasConflictGuard: /\bon\s+conflict\s*\(\s*meme_id\s*,\s*locale\s*\)/i.test(statement),
-        statement,
-      });
+
+      // Atomic statements begin before INSERT, so their payload is decoded in
+      // the dedicated pass below rather than from this legacy insert boundary.
+      if (!/\bwith\s+input\s+as\s*\(/i.test(source.slice(Math.max(0, start - 20_000), start))) {
+        errors.push(`${name}: could not parse meme_id and locale from insert ${index + 1}`);
+      }
     }
-    if (FORBIDDEN_STATEMENT_PATTERN.test(source)) {
-      errors.push(`${name}: forbidden non-translation write detected`);
+
+    // The current offline generator writes a single SQL statement that
+    // encodes its source snapshot in a base64 JSON payload, then locks the
+    // current meme row before inserting. Decode only the local artifact so it
+    // receives the same worklist/locale/duplicate validation as older plain
+    // `VALUES` batches. It is not an external call and never executes SQL.
+    for (const [index, payloadMatch] of [...source.matchAll(ATOMIC_PAYLOAD_PATTERN)].entries()) {
+      const payloadOffset = payloadMatch.index ?? 0;
+      const startMarker = "\nwith input as";
+      const atomicStart = Math.max(0, source.lastIndexOf(startMarker, payloadOffset));
+      const nextAtomic = source.indexOf(startMarker, payloadOffset + payloadMatch[0].length);
+      const atomicStatement = source.slice(atomicStart, nextAtomic === -1 ? source.length : nextAtomic);
+      try {
+        if (!/\binsert\s+into\s+public\.meme_translations\b/i.test(atomicStatement)) {
+          throw new Error("payload is not paired with a meme_translations insert");
+        }
+        const payload = JSON.parse(Buffer.from(payloadMatch[1], "base64").toString("utf8"));
+        const memeId = String(payload?.meme_id ?? "");
+        const locale = String(payload?.locale ?? "");
+        if (!/^[0-9a-f-]{36}$/i.test(memeId) || !locale) {
+          throw new Error("payload lacks a valid meme_id or locale");
+        }
+        records.push({
+          file: name,
+          memeId: memeId.toLowerCase(),
+          locale,
+          fileLocale,
+          hasConflictGuard: /\bon\s+conflict\s*\(\s*meme_id\s*,\s*locale\s*\)/i.test(atomicStatement),
+          hasMachineStatus: /['"]machine['"]/i.test(atomicStatement),
+          hasReviewPromotion: REVIEW_PROMOTION_PATTERN.test(atomicStatement),
+          hasSourceSnapshotGuard:
+            /\bwhere\s+m\.updated_at\s*=\s*i\.source_updated_at/i.test(atomicStatement) &&
+            /\bm\.title\s+is\s+not\s+distinct\s+from\s+i\.source_title/i.test(atomicStatement),
+          statement: atomicStatement,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown payload error";
+        errors.push(`${name}: could not decode atomic translation payload ${index + 1}: ${message}`);
+      }
     }
   }
-  return { files, records, errors };
+  return { files, records, errors, forbiddenMutations };
 }
 
 export function validateTranslationBatch({ worklist, artifacts, requireComplete = false }) {
@@ -177,6 +343,8 @@ export function validateTranslationBatch({ worklist, artifacts, requireComplete 
     if (seen.has(key)) errors.push(`${record.file}: duplicate translation ${key}`);
     seen.add(key);
     if (!record.hasConflictGuard) errors.push(`${record.file}: ${key} has no conflict guard`);
+    if (!record.hasMachineStatus) errors.push(`${record.file}: ${key} is not a machine draft`);
+    if (record.hasReviewPromotion) errors.push(`${record.file}: ${key} attempts reviewed publication`);
     if (Object.hasOwn(counts, record.locale)) counts[record.locale] += 1;
   }
 
@@ -195,6 +363,8 @@ export function validateTranslationBatch({ worklist, artifacts, requireComplete 
   return {
     ok: errors.length === 0,
     files: artifacts.files,
+    forbiddenMutationCount: artifacts.forbiddenMutations?.length ?? 0,
+    forbiddenMutations: artifacts.forbiddenMutations ?? [],
     worklistTotal: worklist.total,
     expectedRows: expectedPerLocale * SUPPORTED_LOCALES.length,
     actualRows: artifacts.records.length,

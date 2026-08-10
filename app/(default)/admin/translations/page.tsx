@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import {
+  getTranslationCoverage,
+  listMissingMemeTranslations,
+  listTranslationPriorityQueue,
+  listTranslationSupplyPriorityQueue,
   listTranslationsForReview,
   type TranslationReviewStatus,
 } from "@/lib/actions/admin-translations";
 import { TranslationReviewQueue } from "@/components/admin/translation-review";
+import { TranslationPriorityQueue } from "@/components/admin/translation-priority-queue";
+import { TranslationCoveragePanel } from "@/components/admin/translation-coverage-panel";
+import { TranslationSupplyControlTower } from "@/components/admin/translation-supply-control-tower";
+import { MissingTranslationDraftPreview } from "@/components/admin/missing-translation-draft-preview";
 import { SEO_CONTENT_LOCALES, isSeoContentLocale, type SeoContentLocale } from "@/lib/i18n-routing";
 import { LANGUAGE_NAMES } from "@/lib/i18n";
+import { missingTranslationPriorityMemeIds } from "@/lib/translation-worklist";
 
 export const metadata = { title: "번역 검수" };
 
@@ -24,22 +33,45 @@ function isTranslationStatus(value: string): value is TranslationReviewStatus {
 export default async function AdminTranslationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ locale?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ locale?: string; status?: string; page?: string; focus?: string }>;
 }) {
   // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
   await requireOperatorPage("/admin/translations");
-  const { locale = "", status = "machine", page = "1" } = await searchParams;
+  const { locale = "", status = "machine", page = "1", focus = "" } = await searchParams;
   const localeFilter: SeoContentLocale | undefined = isSeoContentLocale(locale) ? locale : undefined;
   const statusFilter: TranslationReviewStatus | undefined = isTranslationStatus(status) ? status : undefined;
 
-  const result = await listTranslationsForReview({
-    locale: localeFilter,
-    status: statusFilter,
-    page: Number(page) || 1,
-  });
+  const [priorityResult, supplyPriorityResult] = await Promise.all([
+    listTranslationPriorityQueue(50, localeFilter),
+    listTranslationSupplyPriorityQueue(50),
+  ]);
+  const priorityMemeIds =
+    localeFilter && priorityResult.ok
+      ? missingTranslationPriorityMemeIds(priorityResult.data, localeFilter)
+      : [];
+  const [result, coverageResult, missingResult] = await Promise.all([
+    listTranslationsForReview({
+      locale: localeFilter,
+      status: statusFilter,
+      page: Number(page) || 1,
+    }),
+    getTranslationCoverage(),
+    localeFilter
+      ? listMissingMemeTranslations({
+          locale: localeFilter,
+          limit: 20,
+          focusMemeId: focus || undefined,
+          priorityMemeIds,
+        })
+      : Promise.resolve({ ok: true as const, data: [] }),
+  ]);
   if (!result.ok) throw new Error(`번역 검수 목록을 불러오지 못했어요: ${result.error}`);
 
   const { rows, page: currentPage, pageSize, total } = result.data;
+  const priorityRows = priorityResult.ok ? priorityResult.data : [];
+  const supplyPriorityRows = supplyPriorityResult.ok ? supplyPriorityResult.data : [];
+  const coverageRows = coverageResult.ok ? coverageResult.data : [];
+  const missingRows = missingResult.ok ? missingResult.data : [];
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   function pageHref(target: number) {
@@ -55,10 +87,36 @@ export default async function AdminTranslationsPage({
       <div>
         <h1 className="text-2xl font-bold">번역 검수</h1>
         <p className="mt-1.5 text-sm leading-relaxed text-muted">
-          오프라인 번역 배치가 만든 AI 초안을 밈 전체에서 모아 검수합니다. 승인하면 즉시
-          공개 발행되고, 반려는 사유만 감사 로그에 남긴 채 다시 검수 대기 상태로 둡니다.
+          오프라인 번역 배치가 만든 초안을 밈 전체에서 모아 검수합니다. GPT-5.6 Sol high가
+          원문과 번역을 대조해 교정본·신뢰도·발행 의견을 만들고, 공개 발행은 운영자가 최종
+          승인합니다.
         </p>
       </div>
+
+      <TranslationSupplyControlTower
+        coverageRows={coverageRows}
+        priorityRows={supplyPriorityRows}
+        coverageError={coverageResult.ok ? null : coverageResult.error}
+        priorityError={supplyPriorityResult.ok ? null : supplyPriorityResult.error}
+      />
+
+      <TranslationPriorityQueue
+        rows={priorityRows}
+        error={priorityResult.ok ? null : priorityResult.error}
+      />
+
+      <TranslationCoveragePanel
+        rows={coverageRows}
+        error={coverageResult.ok ? null : coverageResult.error}
+      />
+
+      <MissingTranslationDraftPreview
+        locale={localeFilter ?? null}
+        rows={missingRows}
+        initialError={missingResult.ok ? null : missingResult.error}
+        focusMemeId={focus || null}
+        priorityRows={priorityRows}
+      />
 
       <form method="GET" className="flex flex-wrap items-end gap-3">
         <label className="block">
@@ -106,7 +164,10 @@ export default async function AdminTranslationsPage({
         </div>
       ) : (
         <>
-          <TranslationReviewQueue rows={rows} />
+          <TranslationReviewQueue
+            rows={rows}
+            hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
+          />
           {totalPages > 1 && (
             <nav aria-label="페이지" className="flex items-center justify-center gap-3 pt-2">
               <Link

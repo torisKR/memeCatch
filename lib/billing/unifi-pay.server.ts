@@ -231,16 +231,36 @@ export async function getUnifiPayTransaction(
   const record = data as Record<string, unknown>;
   const status = typeof record.status === "string" ? record.status.toUpperCase() : "";
   if (!status) throw new Error("unifi_pay_status_invalid_response");
+  const responseTransactionId =
+    typeof record.transactionId === "string" ? record.transactionId.trim() : "";
+  const orderId = typeof record.orderId === "string" ? record.orderId.trim() : "";
+  const storeId = typeof record.storeId === "string" ? record.storeId.trim() : "";
+  const orderAmount =
+    typeof record.orderAmount === "number" && Number.isFinite(record.orderAmount)
+      ? record.orderAmount
+      : null;
+  const orderCurrencyCode =
+    typeof record.orderCurrencyCode === "string"
+      ? record.orderCurrencyCode.trim().toUpperCase()
+      : "";
+  if (
+    !responseTransactionId ||
+    responseTransactionId !== transactionId ||
+    !orderId ||
+    !storeId ||
+    orderAmount === null ||
+    !orderCurrencyCode
+  ) {
+    throw new Error("unifi_pay_status_invalid_response");
+  }
 
   return {
-    transactionId:
-      typeof record.transactionId === "string" ? record.transactionId : transactionId,
-    orderId: typeof record.orderId === "string" ? record.orderId : "",
-    storeId: typeof record.storeId === "string" ? record.storeId : "",
+    transactionId: responseTransactionId,
+    orderId,
+    storeId,
     status,
-    orderAmount: typeof record.orderAmount === "number" ? record.orderAmount : null,
-    orderCurrencyCode:
-      typeof record.orderCurrencyCode === "string" ? record.orderCurrencyCode : null,
+    orderAmount,
+    orderCurrencyCode,
   };
 }
 
@@ -252,13 +272,20 @@ export function isExpectedUnifiPayTransaction(
   tx: UnifiPayTransaction,
   config: UnifiPayConfig,
 ): boolean {
-  if (tx.storeId && tx.storeId !== config.storeId) return false;
-  if (tx.orderCurrencyCode && tx.orderCurrencyCode !== config.orderCurrencyCode) {
+  if (
+    !tx.transactionId.trim() ||
+    !tx.orderId.trim() ||
+    !tx.storeId.trim() ||
+    !tx.status.trim() ||
+    !tx.orderCurrencyCode?.trim() ||
+    tx.orderAmount === null ||
+    !Number.isFinite(tx.orderAmount)
+  ) {
     return false;
   }
-  if (tx.orderAmount !== null && Math.abs(tx.orderAmount - config.itemPrice) > 0.001) {
-    return false;
-  }
+  if (tx.storeId !== config.storeId) return false;
+  if (tx.orderCurrencyCode.toUpperCase() !== config.orderCurrencyCode) return false;
+  if (Math.abs(tx.orderAmount - config.itemPrice) > 0.001) return false;
   return true;
 }
 

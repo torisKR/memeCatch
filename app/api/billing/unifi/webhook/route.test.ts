@@ -90,14 +90,14 @@ describe("unifi webhook attribution", () => {
     expect(processUnifiPaymentEvent).not.toHaveBeenCalled();
   });
 
-  it("인증 조회가 orderId를 주지 않으면 귀속 불가로 무시한다", async () => {
+  it("인증 조회 결과의 orderId가 비어 있으면 권한을 만들지 않는다", async () => {
     getUnifiPayTransaction.mockResolvedValue({ ...CONFIRMED_TX, orderId: "" });
 
     const res = await POST(
       webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
     );
 
-    expect(await res.json()).toMatchObject({ ignored: true, reason: "order_mismatch" });
+    expect(await res.json()).toMatchObject({ ignored: true });
     expect(processUnifiPaymentEvent).not.toHaveBeenCalled();
   });
 
@@ -109,6 +109,34 @@ describe("unifi webhook attribution", () => {
     );
 
     expect(await res.json()).toMatchObject({ ignored: true });
+    expect(processUnifiPaymentEvent).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["store", { storeId: "" }],
+    ["currency", { orderCurrencyCode: "" }],
+    ["amount", { orderAmount: null }],
+  ])("필수 결제 필드가 비어 있으면 권한을 만들지 않는다 — %s", async (_field, patch) => {
+    getUnifiPayTransaction.mockResolvedValue({ ...CONFIRMED_TX, ...patch });
+
+    const res = await POST(
+      webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ignored: true });
+    expect(processUnifiPaymentEvent).not.toHaveBeenCalled();
+  });
+
+  it("provider status lookup failures are retryable 5xx responses", async () => {
+    getUnifiPayTransaction.mockRejectedValue(new Error("unifi_pay_status_invalid_response"));
+
+    const res = await POST(
+      webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
+    );
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ ok: false, error: "settlement_failed" });
     expect(processUnifiPaymentEvent).not.toHaveBeenCalled();
   });
 

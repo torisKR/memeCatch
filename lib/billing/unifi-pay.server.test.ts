@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 import {
   buildRequestId,
   getUnifiPayConfig,
+  getUnifiPayTransaction,
   isExpectedUnifiPayTransaction,
   mapUnifiPayStatus,
   parseLinkIdFromOrderId,
@@ -13,6 +14,10 @@ import {
   toMinorUnits,
   type UnifiPayConfig,
 } from "@/lib/billing/unifi-pay.server";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const CONFIG: UnifiPayConfig = {
   apiKey: "b6ef2f7c-3e74-438c-b456-689e821992be",
@@ -142,6 +147,70 @@ describe("isExpectedUnifiPayTransaction", () => {
       false,
     );
     expect(isExpectedUnifiPayTransaction({ ...tx, orderAmount: 1 }, CONFIG)).toBe(false);
+  });
+
+  it("rejects missing settlement identity and pricing fields", () => {
+    expect(isExpectedUnifiPayTransaction({ ...tx, transactionId: "" }, CONFIG)).toBe(false);
+    expect(isExpectedUnifiPayTransaction({ ...tx, orderId: "" }, CONFIG)).toBe(false);
+    expect(isExpectedUnifiPayTransaction({ ...tx, storeId: "" }, CONFIG)).toBe(false);
+    expect(isExpectedUnifiPayTransaction({ ...tx, orderAmount: null }, CONFIG)).toBe(false);
+    expect(isExpectedUnifiPayTransaction({ ...tx, orderCurrencyCode: null }, CONFIG)).toBe(false);
+  });
+});
+
+describe("getUnifiPayTransaction", () => {
+  it("fails closed when the provider omits any required settlement field", async () => {
+    const fields = [
+      "transactionId",
+      "orderId",
+      "storeId",
+      "orderAmount",
+      "orderCurrencyCode",
+    ];
+    for (const field of fields) {
+      const response = {
+        transactionId: "tx-1",
+        orderId: "LINK-abc-1",
+        storeId: "123",
+        status: "CONFIRMED",
+        orderAmount: 20,
+        orderCurrencyCode: "USD",
+      } as Record<string, unknown>;
+      delete response[field];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 200 }),
+        ),
+      );
+
+      await expect(getUnifiPayTransaction(CONFIG, "tx-1")).rejects.toThrow(
+        "unifi_pay_status_invalid_response",
+      );
+    }
+  });
+
+  it("rejects a provider transaction id that differs from the requested id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            transactionId: "tx-other",
+            orderId: "LINK-abc-1",
+            storeId: "123",
+            status: "CONFIRMED",
+            orderAmount: 20,
+            orderCurrencyCode: "USD",
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    await expect(getUnifiPayTransaction(CONFIG, "tx-1")).rejects.toThrow(
+      "unifi_pay_status_invalid_response",
+    );
   });
 });
 

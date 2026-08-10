@@ -1,0 +1,28 @@
+{
+  "loop": 94,
+  "selected": "LOC-012",
+  "surface": "/admin/translations",
+  "model": "gpt-5.6-sol",
+  "reasoning_effort": "high",
+  "store": false,
+  "response_format": "strict_json_schema",
+  "auto_save": false,
+  "auto_publish": false,
+  "contract_drift": "fail_closed_before_request",
+  "translation_supply_before": "448/1520",
+  "verification": {
+    "focused_tests": "4 files / 31 passed",
+    "full_tests": "160 files / 1046 passed",
+    "typecheck": "passed",
+    "lint": "0 errors / 7 existing warnings",
+    "build": "73/73 static pages",
+    "signed_out_admin": "307 to login",
+    "signed_out_plus_performance_api": "401 signed_out"
+  },
+  "production_actions": {
+    "openai_call": false,
+    "supabase_write": false,
+    "human_publication": false,
+    "deploy": false
+  }
+}

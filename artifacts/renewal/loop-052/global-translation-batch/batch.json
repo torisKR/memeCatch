@@ -1,0 +1,457 @@
+{
+  "generated_at": "2026-08-08T10:47:19.038Z",
+  "loop": "052",
+  "status": "machine_drafts_not_applied",
+  "provenance": {
+    "source_read": "linked Supabase CLI read-only query on 2026-08-08",
+    "authoring": "OpenAI gpt-5.6-luna agent draft",
+    "local_mlx": "unavailable at 127.0.0.1:8080; no MLX model call was made"
+  },
+  "application_safety": [
+    "Each statement confirms every Korean source field and updated_at before inserting.",
+    "Each statement is idempotent on (meme_id, locale).",
+    "All drafts are status=machine; reviewed-only public publication remains blocked pending human review."
+  ],
+  "rows": [
+    {
+      "locale": "en",
+      "short_id": "jgrnwbj7",
+      "meme_id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+      "source": {
+        "id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+        "short_id": "jgrnwbj7",
+        "slug": "너나-잘하세요",
+        "title": "너나 잘하세요",
+        "aliases": [
+          "금자씨 너나잘하세요"
+        ],
+        "summary": "영화 '친절한 금자씨'(2005) 이영애의 냉소적 대사이자 리액션 짤방",
+        "description": "출소한 금자씨에게 착하게 살라며 두부를 건네는 전도사에게 무표정하게 두부를 엎으며 던진 대사. 존댓말과 반말을 섞은 냉소적 어조가 화제를 모아 그해 여름 최고 유행어가 됐고, 이영애의 표정 캡처가 반박·비웃음용 리액션 짤방으로 널리 쓰였다.",
+        "origin": "영화 '친절한 금자씨'(박찬욱 감독, 2005) 속 이영애의 대사",
+        "usage_note": "훈계하는 상대에게 되받아치는 리액션으로 사용",
+        "caution": null,
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "잔소리 그만해, 너나 잘하세요"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "저 리액션 완전 너나잘하세요 짤 각"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "cd59c146bcbba24f5f4b2c4f89023e8dcbc5f101d2b4859dfe7279c7f15d7b2e",
+      "translation": {
+        "title": "Mind Your Own Business (Neona Jalhaseyo)",
+        "summary": "A sarcastic line delivered by Lee Young-ae in the 2005 film Sympathy for Lady Vengeance that is widely used as a reaction image.",
+        "description": "When a missionary offers tofu to Geum-ja after her release from prison and tells her to live kindly, she blankly overturns it and says this line. Its sardonic mix of polite and casual Korean became a major catchphrase that summer, while screenshots of Lee Young-ae's expression spread as reaction images for rebuttal or mockery.",
+        "origin": "Lee Young-ae's line in Park Chan-wook's 2005 film Sympathy for Lady Vengeance.",
+        "usage_note": "Used as a reaction when pushing back against someone who is lecturing you.",
+        "caution": null,
+        "aliases": [
+          "Mind Your Own Business",
+          "Lady Vengeance reaction image",
+          "금자씨 너나잘하세요"
+        ],
+        "usage_examples": [
+          {
+            "situation": "Chat",
+            "text": "Stop nagging me—mind your own business."
+          },
+          {
+            "situation": "Social comment",
+            "text": "That reaction is such a perfect mind-your-own-business image."
+          }
+        ]
+      },
+      "sql_file": "en-slice19.sql"
+    },
+    {
+      "locale": "en",
+      "short_id": "qkfk4w2b",
+      "meme_id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+      "source": {
+        "id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+        "short_id": "qkfk4w2b",
+        "slug": "꿈은-이루어진다",
+        "title": "꿈은 이루어진다",
+        "aliases": [
+          "꿈★은 이루어진다"
+        ],
+        "summary": "2002년 한일 월드컵 4강 신화를 상징하는 국민 슬로건",
+        "description": "2002년 한일 월드컵에서 한국 대표팀이 폴란드, 포르투갈, 이탈리아, 스페인을 연파하며 아시아 최초로 4강에 오르는 과정에서 응원 구호로 자리잡은 문구로, 이후 축구를 넘어 사회 전반에서 희망을 뜻하는 말로 인용됐다.",
+        "origin": "2002년 한일 월드컵 응원 현장과 방송 중계에서 확산된 구호.",
+        "usage_note": "희망적인 메시지를 전할 때 인용하기 좋음",
+        "caution": "없음",
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "포기하지 마, 꿈은 이루어진다"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "이 슬로건 아직도 힘이 된다"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "b175e81c4bd7604433a56a414451f37a4c76804f4c3192ee6516c8d124e6ad6a",
+      "translation": {
+        "title": "Dreams Do Come True",
+        "summary": "A nationwide slogan that came to symbolize South Korea's 2002 FIFA World Cup run to the semifinals.",
+        "description": "As South Korea beat Poland, Portugal, Italy, and Spain to become the first Asian team to reach the World Cup semifinals in 2002, this phrase took hold as a cheering chant. It has since been quoted beyond football as an expression of hope.",
+        "origin": "A chant that spread through 2002 FIFA World Cup cheering crowds and television broadcasts in South Korea.",
+        "usage_note": "A good quote for sharing a hopeful message.",
+        "caution": "No specific cautions.",
+        "aliases": [
+          "Dreams Do Come True",
+          "Korea 2002 World Cup slogan",
+          "꿈★은 이루어진다"
+        ],
+        "usage_examples": [
+          {
+            "situation": "Chat",
+            "text": "Do not give up—dreams do come true."
+          },
+          {
+            "situation": "Social comment",
+            "text": "This slogan still gives me strength."
+          }
+        ]
+      },
+      "sql_file": "en-slice19.sql"
+    },
+    {
+      "locale": "ja",
+      "short_id": "jgrnwbj7",
+      "meme_id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+      "source": {
+        "id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+        "short_id": "jgrnwbj7",
+        "slug": "너나-잘하세요",
+        "title": "너나 잘하세요",
+        "aliases": [
+          "금자씨 너나잘하세요"
+        ],
+        "summary": "영화 '친절한 금자씨'(2005) 이영애의 냉소적 대사이자 리액션 짤방",
+        "description": "출소한 금자씨에게 착하게 살라며 두부를 건네는 전도사에게 무표정하게 두부를 엎으며 던진 대사. 존댓말과 반말을 섞은 냉소적 어조가 화제를 모아 그해 여름 최고 유행어가 됐고, 이영애의 표정 캡처가 반박·비웃음용 리액션 짤방으로 널리 쓰였다.",
+        "origin": "영화 '친절한 금자씨'(박찬욱 감독, 2005) 속 이영애의 대사",
+        "usage_note": "훈계하는 상대에게 되받아치는 리액션으로 사용",
+        "caution": null,
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "잔소리 그만해, 너나 잘하세요"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "저 리액션 완전 너나잘하세요 짤 각"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "cd59c146bcbba24f5f4b2c4f89023e8dcbc5f101d2b4859dfe7279c7f15d7b2e",
+      "translation": {
+        "title": "「自分のことをちゃんとしなさい」（ネオナ・チャラセヨ）",
+        "summary": "映画『親切なクムジャさん』（2005年）でイ・ヨンエが放つ皮肉なせりふで、リアクション画像として使われる。",
+        "description": "出所したクムジャに豆腐を差し出し、善良に生きるよう諭す伝道師へ、彼女が無表情で豆腐をひっくり返して言うせりふ。敬語とくだけた言い方が混じる皮肉な口調がその年の夏に大きな流行語となり、イ・ヨンエの表情を切り取った画像は反論やあざけりのリアクション画像として広く使われた。",
+        "origin": "パク・チャヌク監督の2005年映画『親切なクムジャさん』でのイ・ヨンエのせりふ。",
+        "usage_note": "説教してくる相手に言い返すリアクションとして使う。",
+        "caution": null,
+        "aliases": [
+          "自分のことをちゃんとしなさい",
+          "クムジャさんのリアクション画像",
+          "금자씨 너나잘하세요"
+        ],
+        "usage_examples": [
+          {
+            "situation": "チャット",
+            "text": "説教はやめて、自分のことをちゃんとしなさい。"
+          },
+          {
+            "situation": "SNSコメント",
+            "text": "あのリアクション、完全に「自分のことをちゃんとしなさい」画像だ。"
+          }
+        ]
+      },
+      "sql_file": "ja-slice19.sql"
+    },
+    {
+      "locale": "ja",
+      "short_id": "qkfk4w2b",
+      "meme_id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+      "source": {
+        "id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+        "short_id": "qkfk4w2b",
+        "slug": "꿈은-이루어진다",
+        "title": "꿈은 이루어진다",
+        "aliases": [
+          "꿈★은 이루어진다"
+        ],
+        "summary": "2002년 한일 월드컵 4강 신화를 상징하는 국민 슬로건",
+        "description": "2002년 한일 월드컵에서 한국 대표팀이 폴란드, 포르투갈, 이탈리아, 스페인을 연파하며 아시아 최초로 4강에 오르는 과정에서 응원 구호로 자리잡은 문구로, 이후 축구를 넘어 사회 전반에서 희망을 뜻하는 말로 인용됐다.",
+        "origin": "2002년 한일 월드컵 응원 현장과 방송 중계에서 확산된 구호.",
+        "usage_note": "희망적인 메시지를 전할 때 인용하기 좋음",
+        "caution": "없음",
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "포기하지 마, 꿈은 이루어진다"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "이 슬로건 아직도 힘이 된다"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "b175e81c4bd7604433a56a414451f37a4c76804f4c3192ee6516c8d124e6ad6a",
+      "translation": {
+        "title": "夢はかなう",
+        "summary": "2002年日韓ワールドカップで韓国代表がベスト4へ進んだ快進撃を象徴する国民的なスローガン。",
+        "description": "2002年の日韓ワールドカップで韓国代表がポーランド、ポルトガル、イタリア、スペインを破り、アジア勢として初めてベスト4に進む過程で、この言葉は応援の掛け声として定着した。その後はサッカーに限らず、希望を表す言葉として引用されている。",
+        "origin": "2002年日韓ワールドカップの韓国の応援会場やテレビ中継で広まった掛け声。",
+        "usage_note": "希望を伝えたいときに引用しやすい。",
+        "caution": "特に注意点はありません。",
+        "aliases": [
+          "夢はかなう",
+          "2002年ワールドカップ韓国スローガン",
+          "꿈★은 이루어진다"
+        ],
+        "usage_examples": [
+          {
+            "situation": "チャット",
+            "text": "あきらめないで、夢はかなう。"
+          },
+          {
+            "situation": "SNSコメント",
+            "text": "このスローガンは今でも力をくれる。"
+          }
+        ]
+      },
+      "sql_file": "ja-slice19.sql"
+    },
+    {
+      "locale": "zh",
+      "short_id": "jgrnwbj7",
+      "meme_id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+      "source": {
+        "id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+        "short_id": "jgrnwbj7",
+        "slug": "너나-잘하세요",
+        "title": "너나 잘하세요",
+        "aliases": [
+          "금자씨 너나잘하세요"
+        ],
+        "summary": "영화 '친절한 금자씨'(2005) 이영애의 냉소적 대사이자 리액션 짤방",
+        "description": "출소한 금자씨에게 착하게 살라며 두부를 건네는 전도사에게 무표정하게 두부를 엎으며 던진 대사. 존댓말과 반말을 섞은 냉소적 어조가 화제를 모아 그해 여름 최고 유행어가 됐고, 이영애의 표정 캡처가 반박·비웃음용 리액션 짤방으로 널리 쓰였다.",
+        "origin": "영화 '친절한 금자씨'(박찬욱 감독, 2005) 속 이영애의 대사",
+        "usage_note": "훈계하는 상대에게 되받아치는 리액션으로 사용",
+        "caution": null,
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "잔소리 그만해, 너나 잘하세요"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "저 리액션 완전 너나잘하세요 짤 각"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "cd59c146bcbba24f5f4b2c4f89023e8dcbc5f101d2b4859dfe7279c7f15d7b2e",
+      "translation": {
+        "title": "“管好你自己”（Neona Jalhaseyo）",
+        "summary": "李英爱在2005年电影《亲切的金子》中说的一句讽刺台词，如今常被当作反应图使用。",
+        "description": "金子出狱后，一名传教士递给她豆腐并劝她善良生活；她面无表情地掀翻豆腐，说出这句话。敬语与随意语混杂的讽刺语气在当年夏天成为流行语，李英爱的表情截图也广泛用于反驳或嘲讽的反应图。",
+        "origin": "朴赞郁执导的2005年电影《亲切的金子》中李英爱的台词。",
+        "usage_note": "可用作回击说教对象时的反应。",
+        "caution": null,
+        "aliases": [
+          "管好你自己",
+          "《亲切的金子》反应图",
+          "금자씨 너나잘하세요"
+        ],
+        "usage_examples": [
+          {
+            "situation": "聊天",
+            "text": "别再唠叨了，管好你自己。"
+          },
+          {
+            "situation": "社交媒体评论",
+            "text": "那个反应完全就是“管好你自己”的表情包。"
+          }
+        ]
+      },
+      "sql_file": "zh-slice19.sql"
+    },
+    {
+      "locale": "zh",
+      "short_id": "qkfk4w2b",
+      "meme_id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+      "source": {
+        "id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+        "short_id": "qkfk4w2b",
+        "slug": "꿈은-이루어진다",
+        "title": "꿈은 이루어진다",
+        "aliases": [
+          "꿈★은 이루어진다"
+        ],
+        "summary": "2002년 한일 월드컵 4강 신화를 상징하는 국민 슬로건",
+        "description": "2002년 한일 월드컵에서 한국 대표팀이 폴란드, 포르투갈, 이탈리아, 스페인을 연파하며 아시아 최초로 4강에 오르는 과정에서 응원 구호로 자리잡은 문구로, 이후 축구를 넘어 사회 전반에서 희망을 뜻하는 말로 인용됐다.",
+        "origin": "2002년 한일 월드컵 응원 현장과 방송 중계에서 확산된 구호.",
+        "usage_note": "희망적인 메시지를 전할 때 인용하기 좋음",
+        "caution": "없음",
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "포기하지 마, 꿈은 이루어진다"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "이 슬로건 아직도 힘이 된다"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "b175e81c4bd7604433a56a414451f37a4c76804f4c3192ee6516c8d124e6ad6a",
+      "translation": {
+        "title": "梦想终会实现",
+        "summary": "象征韩国队在2002年韩日世界杯闯入四强的全民口号。",
+        "description": "2002年韩日世界杯上，韩国队先后战胜波兰、葡萄牙、意大利和西班牙，成为首支进入四强的亚洲球队。这句话在过程中成为助威口号，后来也超越足球，用来表达希望。",
+        "origin": "在2002年韩日世界杯的韩国助威现场和电视转播中广泛传播的口号。",
+        "usage_note": "适合引用来传递充满希望的信息。",
+        "caution": "没有特别的注意事项。",
+        "aliases": [
+          "梦想终会实现",
+          "2002年世界杯韩国口号",
+          "꿈★은 이루어진다"
+        ],
+        "usage_examples": [
+          {
+            "situation": "聊天",
+            "text": "不要放弃，梦想终会实现。"
+          },
+          {
+            "situation": "社交媒体评论",
+            "text": "这句口号至今仍给我力量。"
+          }
+        ]
+      },
+      "sql_file": "zh-slice19.sql"
+    },
+    {
+      "locale": "zh-tw",
+      "short_id": "jgrnwbj7",
+      "meme_id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+      "source": {
+        "id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+        "short_id": "jgrnwbj7",
+        "slug": "너나-잘하세요",
+        "title": "너나 잘하세요",
+        "aliases": [
+          "금자씨 너나잘하세요"
+        ],
+        "summary": "영화 '친절한 금자씨'(2005) 이영애의 냉소적 대사이자 리액션 짤방",
+        "description": "출소한 금자씨에게 착하게 살라며 두부를 건네는 전도사에게 무표정하게 두부를 엎으며 던진 대사. 존댓말과 반말을 섞은 냉소적 어조가 화제를 모아 그해 여름 최고 유행어가 됐고, 이영애의 표정 캡처가 반박·비웃음용 리액션 짤방으로 널리 쓰였다.",
+        "origin": "영화 '친절한 금자씨'(박찬욱 감독, 2005) 속 이영애의 대사",
+        "usage_note": "훈계하는 상대에게 되받아치는 리액션으로 사용",
+        "caution": null,
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "잔소리 그만해, 너나 잘하세요"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "저 리액션 완전 너나잘하세요 짤 각"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "cd59c146bcbba24f5f4b2c4f89023e8dcbc5f101d2b4859dfe7279c7f15d7b2e",
+      "translation": {
+        "title": "「管好你自己」（Neona Jalhaseyo）",
+        "summary": "李英愛在2005年電影《親切的金子》中說的一句諷刺台詞，如今常被當作反應圖使用。",
+        "description": "金子出獄後，一名傳教士遞給她豆腐並勸她善良生活；她面無表情地掀翻豆腐，說出這句話。敬語與隨意語混雜的諷刺語氣在當年夏天成為流行語，李英愛的表情截圖也廣泛用於反駁或嘲諷的反應圖。",
+        "origin": "朴贊郁執導的2005年電影《親切的金子》中李英愛的台詞。",
+        "usage_note": "可用作回擊說教對象時的反應。",
+        "caution": null,
+        "aliases": [
+          "管好你自己",
+          "《親切的金子》反應圖",
+          "금자씨 너나잘하세요"
+        ],
+        "usage_examples": [
+          {
+            "situation": "聊天",
+            "text": "別再嘮叨了，管好你自己。"
+          },
+          {
+            "situation": "社群留言",
+            "text": "那個反應完全就是「管好你自己」的迷因圖。"
+          }
+        ]
+      },
+      "sql_file": "zh-tw-slice19.sql"
+    },
+    {
+      "locale": "zh-tw",
+      "short_id": "qkfk4w2b",
+      "meme_id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+      "source": {
+        "id": "336adfe4-6111-46f4-bc3f-35a502e144a9",
+        "short_id": "qkfk4w2b",
+        "slug": "꿈은-이루어진다",
+        "title": "꿈은 이루어진다",
+        "aliases": [
+          "꿈★은 이루어진다"
+        ],
+        "summary": "2002년 한일 월드컵 4강 신화를 상징하는 국민 슬로건",
+        "description": "2002년 한일 월드컵에서 한국 대표팀이 폴란드, 포르투갈, 이탈리아, 스페인을 연파하며 아시아 최초로 4강에 오르는 과정에서 응원 구호로 자리잡은 문구로, 이후 축구를 넘어 사회 전반에서 희망을 뜻하는 말로 인용됐다.",
+        "origin": "2002년 한일 월드컵 응원 현장과 방송 중계에서 확산된 구호.",
+        "usage_note": "희망적인 메시지를 전할 때 인용하기 좋음",
+        "caution": "없음",
+        "usage_examples": [
+          {
+            "situation": "카톡",
+            "text": "포기하지 마, 꿈은 이루어진다"
+          },
+          {
+            "situation": "SNS 댓글",
+            "text": "이 슬로건 아직도 힘이 된다"
+          }
+        ],
+        "updated_at": "2026-07-15T15:30:00.191373+00"
+      },
+      "snapshot_hash": "b175e81c4bd7604433a56a414451f37a4c76804f4c3192ee6516c8d124e6ad6a",
+      "translation": {
+        "title": "夢想終會實現",
+        "summary": "象徵韓國隊在2002年日韓世界盃闖入四強的全民口號。",
+        "description": "2002年日韓世界盃上，韓國隊先後戰勝波蘭、葡萄牙、義大利和西班牙，成為首支進入四強的亞洲球隊。這句話在過程中成為助威口號，後來也超越足球，用來表達希望。",
+        "origin": "在2002年日韓世界盃的韓國助威現場和電視轉播中廣泛傳播的口號。",
+        "usage_note": "適合引用來傳達充滿希望的訊息。",
+        "caution": "沒有特別的注意事項。",
+        "aliases": [
+          "夢想終會實現",
+          "2002年世界盃韓國口號",
+          "꿈★은 이루어진다"
+        ],
+        "usage_examples": [
+          {
+            "situation": "聊天",
+            "text": "不要放棄，夢想終會實現。"
+          },
+          {
+            "situation": "社群留言",
+            "text": "這句口號至今仍給我力量。"
+          }
+        ]
+      },
+      "sql_file": "zh-tw-slice19.sql"
+    }
+  ]
+}

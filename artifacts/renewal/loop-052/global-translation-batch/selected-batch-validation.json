@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "files": [
+    "en-slice19.sql",
+    "ja-slice19.sql",
+    "zh-slice19.sql",
+    "zh-tw-slice19.sql"
+  ],
+  "worklistTotal": 2,
+  "expectedRows": 8,
+  "actualRows": 8,
+  "counts": {
+    "en": 2,
+    "ja": 2,
+    "zh": 2,
+    "zh-tw": 2
+  },
+  "missingCounts": {
+    "en": 0,
+    "ja": 0,
+    "zh": 0,
+    "zh-tw": 0
+  },
+  "missingSamples": {
+    "en": [],
+    "ja": [],
+    "zh": [],
+    "zh-tw": []
+  },
+  "errors": []
+}

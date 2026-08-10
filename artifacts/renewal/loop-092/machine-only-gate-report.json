@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "loop": 92,
+  "backlog_id": "LOC-007",
+  "git_head": "901b7f93b11945ff66471989fcc3ae985553fa97",
+  "artifact_dir": "artifacts/renewal/loop-050",
+  "status": "historical_artifact_rejected_by_machine_only_gate",
+  "production_write": false,
+  "auto_published": false,
+  "openai_call": false,
+  "rows": {
+    "actual": 448,
+    "expected": 1520,
+    "locale_counts": {
+      "en": 122,
+      "ja": 142,
+      "zh": 90,
+      "zh-tw": 94
+    },
+    "missing_counts": {
+      "en": 258,
+      "ja": 238,
+      "zh": 290,
+      "zh-tw": 286
+    }
+  },
+  "safety": {
+    "forbidden_mutation_count": 18,
+    "reviewed_promotion_record_count": 1,
+    "clean_machine_only_four_locale_fixture": true,
+    "source_lock_fixture": true,
+    "conflict_guard_fixture": true
+  },
+  "unsafe_files": [
+    "en-slice11.sql",
+    "en-slice14.sql",
+    "en-slice15.sql",
+    "en-slice7.sql",
+    "ja-slice10.sql",
+    "ja-slice11.sql",
+    "ja-slice2.sql",
+    "ja-slice6.sql",
+    "ja-slice8.sql",
+    "zh-slice10.sql",
+    "zh-slice18.sql",
+    "zh-slice5.sql",
+    "zh-slice8.sql",
+    "zh-tw-slice1.sql",
+    "zh-tw-slice14.sql",
+    "zh-tw-slice5.sql",
+    "zh-tw-slice6.sql",
+    "zh-tw-slice7.sql"
+  ]
+}

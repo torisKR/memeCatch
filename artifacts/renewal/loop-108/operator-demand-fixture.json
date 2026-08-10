@@ -1,0 +1,24 @@
+{
+  "rows": [
+    {
+      "meme_id": "fe1e62ef-0d0e-4deb-b7ac-930f3832047a",
+      "locale": "en",
+      "request_count": 3,
+      "latest_requested_at": "2026-08-09T01:00:00.000Z",
+      "status": "requested",
+      "translation_status": null,
+      "meme_updated_at": "2026-08-09T00:00:00.000Z",
+      "source_updated_at": "2026-08-09T00:00:00.000Z"
+    },
+    {
+      "meme_id": "e9a948ba-be09-45f7-9dc4-22f42124c27a",
+      "locale": "ja",
+      "request_count": 2,
+      "latest_requested_at": "2026-08-09T02:00:00.000Z",
+      "status": "in_review",
+      "translation_status": "machine",
+      "meme_updated_at": "2026-08-09T00:00:00.000Z",
+      "source_updated_at": "2026-08-09T00:00:00.000Z"
+    }
+  ]
+}

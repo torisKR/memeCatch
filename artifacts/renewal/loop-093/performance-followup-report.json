@@ -1,0 +1,43 @@
+{
+  "loop": 93,
+  "backlog_id": "PLUS-026",
+  "status": "code_complete",
+  "window": "recent_7_days_kst",
+  "max_items": 5,
+  "ordering": "missing_performance_first_then_completion_date_desc",
+  "write_boundary": {
+    "rpc": "record_plus_meme_use_performance",
+    "owner_scoped": true,
+    "active_plus_required": true,
+    "only_empty_note": true,
+    "max_note_length": 1000,
+    "direct_table_write": false
+  },
+  "client_fields": [
+    "receipt_id",
+    "completion_date",
+    "title",
+    "channel",
+    "locale",
+    "artifact_kind",
+    "performance_note"
+  ],
+  "excluded_client_fields": ["result_url", "private_note"],
+  "local_global_translation_baseline": {
+    "rows": 448,
+    "target_rows": 1520,
+    "missing_rows": 1072,
+    "locales": {"en": 122, "ja": 142, "zh": 90, "zh-tw": 94}
+  },
+  "verification": {
+    "focused_tests": {"files": 7, "tests": 25},
+    "all_tests": {"files": 160, "tests": 1045},
+    "typescript": "pass",
+    "lint_errors": 0,
+    "build_static_pages": 73,
+    "signed_out_premium": 307,
+    "signed_out_performance_api": 401
+  },
+  "production_write": false,
+  "production_release": false
+}

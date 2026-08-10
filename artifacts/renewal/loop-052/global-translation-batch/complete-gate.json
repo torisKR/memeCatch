@@ -1,0 +1,106 @@
+{
+  "ok": false,
+  "files": [
+    "en-slice0.sql",
+    "en-slice11.sql",
+    "en-slice14.sql",
+    "en-slice15.sql",
+    "en-slice19.sql",
+    "en-slice7.sql",
+    "en-slice8.sql",
+    "ja-slice1.sql",
+    "ja-slice10.sql",
+    "ja-slice11.sql",
+    "ja-slice19.sql",
+    "ja-slice2.sql",
+    "ja-slice3.sql",
+    "ja-slice6.sql",
+    "ja-slice8.sql",
+    "zh-slice10.sql",
+    "zh-slice18.sql",
+    "zh-slice19.sql",
+    "zh-slice5.sql",
+    "zh-slice7.sql",
+    "zh-slice8.sql",
+    "zh-slice9.sql",
+    "zh-tw-slice1.sql",
+    "zh-tw-slice14.sql",
+    "zh-tw-slice19.sql",
+    "zh-tw-slice5.sql",
+    "zh-tw-slice6.sql",
+    "zh-tw-slice7.sql",
+    "zh-tw-slice8.sql",
+    "zh-tw-slice9.sql"
+  ],
+  "worklistTotal": 380,
+  "expectedRows": 1520,
+  "actualRows": 448,
+  "counts": {
+    "en": 122,
+    "ja": 142,
+    "zh": 90,
+    "zh-tw": 94
+  },
+  "missingCounts": {
+    "en": 258,
+    "ja": 238,
+    "zh": 290,
+    "zh-tw": 286
+  },
+  "missingSamples": {
+    "en": [
+      "fe1e62ef-0d0e-4deb-b7ac-930f3832047a",
+      "e9a948ba-be09-45f7-9dc4-22f42124c27a",
+      "4f7cf03a-7cc5-4e2f-ac5e-3a15f5dd0180",
+      "f3060027-cdd8-4236-893a-15e438c992fb",
+      "fefce520-c551-46fc-963d-e9e527e02392",
+      "f4db1c4f-832f-41df-acdf-eee08345c763",
+      "f4b7170c-76d3-4144-a0a5-2bc23db98169",
+      "4ced8917-c746-4d22-bff5-bfc19d01f4fa",
+      "fcdf42f9-4e06-423e-8ed8-8fec72fa10e1",
+      "c2cd3366-1acd-4d9a-866a-542732c80fe8"
+    ],
+    "ja": [
+      "f3bcf369-937c-465d-bc94-957069a2eddc",
+      "52c381c5-800b-44db-b04b-971653620ce5",
+      "d5fbbcff-805a-4141-b203-6109d21823e9",
+      "bff1b60f-c247-4033-a8cb-806bcad0173b",
+      "c80ac83d-0002-4981-a1b8-93945a965e17",
+      "a90b8639-151a-45ee-9c5c-6d57601950c5",
+      "8ebb24a9-ac04-4129-b86f-4e17cc31d121",
+      "d82b66a8-25ea-4238-a48b-1f8ebb0862e2",
+      "62d6b185-cfac-4fa1-9e9b-8b7f33febf70",
+      "dbff1d5b-e6d6-4fcd-9564-48c4ce6de1e4"
+    ],
+    "zh": [
+      "f3bcf369-937c-465d-bc94-957069a2eddc",
+      "52c381c5-800b-44db-b04b-971653620ce5",
+      "d5fbbcff-805a-4141-b203-6109d21823e9",
+      "bff1b60f-c247-4033-a8cb-806bcad0173b",
+      "c80ac83d-0002-4981-a1b8-93945a965e17",
+      "a90b8639-151a-45ee-9c5c-6d57601950c5",
+      "8ebb24a9-ac04-4129-b86f-4e17cc31d121",
+      "d82b66a8-25ea-4238-a48b-1f8ebb0862e2",
+      "62d6b185-cfac-4fa1-9e9b-8b7f33febf70",
+      "dbff1d5b-e6d6-4fcd-9564-48c4ce6de1e4"
+    ],
+    "zh-tw": [
+      "f3bcf369-937c-465d-bc94-957069a2eddc",
+      "52c381c5-800b-44db-b04b-971653620ce5",
+      "d5fbbcff-805a-4141-b203-6109d21823e9",
+      "bff1b60f-c247-4033-a8cb-806bcad0173b",
+      "c80ac83d-0002-4981-a1b8-93945a965e17",
+      "a90b8639-151a-45ee-9c5c-6d57601950c5",
+      "8ebb24a9-ac04-4129-b86f-4e17cc31d121",
+      "d82b66a8-25ea-4238-a48b-1f8ebb0862e2",
+      "62d6b185-cfac-4fa1-9e9b-8b7f33febf70",
+      "dbff1d5b-e6d6-4fcd-9564-48c4ce6de1e4"
+    ]
+  },
+  "errors": [
+    "en: 258 worklist memes are missing",
+    "ja: 238 worklist memes are missing",
+    "zh: 290 worklist memes are missing",
+    "zh-tw: 286 worklist memes are missing"
+  ]
+}

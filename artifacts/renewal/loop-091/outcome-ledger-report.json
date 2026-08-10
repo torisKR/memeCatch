@@ -1,0 +1,34 @@
+{
+  "loop": 91,
+  "id": "PLUS-025",
+  "ok": true,
+  "scope": "private_plus_outcome_ledger",
+  "focused": {
+    "files": 6,
+    "tests": 51
+  },
+  "full": {
+    "testFiles": 155,
+    "tests": 1032,
+    "typecheck": "passed",
+    "lintErrors": 0,
+    "lintWarnings": 7,
+    "buildStaticPages": "73/73",
+    "diffCheck": "passed"
+  },
+  "contracts": {
+    "explicitReceiptOnly": true,
+    "atomicCompletionReceipt": true,
+    "ownerActivePlusBoundary": true,
+    "exactLocaleGate": true,
+    "privateSevenDaySummary": true,
+    "urlFetch": false,
+    "socialAutopost": false
+  },
+  "production": {
+    "migrationApplied": false,
+    "authenticatedSupabaseE2E": false,
+    "deployed": false,
+    "publicTranslationCoverage": "448/1520"
+  }
+}

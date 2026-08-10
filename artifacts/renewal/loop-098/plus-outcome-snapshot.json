@@ -1,0 +1,32 @@
+{
+  "loop": 98,
+  "selected": "PLUS-028",
+  "surface": "/premium",
+  "result": "outcome_snapshot_before_action_inbox",
+  "metrics": ["completed_today", "current_streak", "total_receipts", "awaiting_performance", "ratings"],
+  "states": ["ready", "empty", "unavailable"],
+  "locales": ["ko", "en", "ja", "zh", "zh-tw"],
+  "ui_only_locale_fallback": "en",
+  "privacy": {
+    "receipt_id": false,
+    "meme_id": false,
+    "result_url": false,
+    "performance_note": false,
+    "private_note": false
+  },
+  "verification": {
+    "focused_tests": "3 files / 13 passed",
+    "full_tests": "166 files / 1066 passed",
+    "typecheck": "passed",
+    "lint": "0 errors / 7 existing warnings",
+    "build": "77/77 static pages",
+    "signed_out_premium": "307 to login"
+  },
+  "production_actions": {
+    "supabase_write": false,
+    "migration_apply": false,
+    "openai_call": false,
+    "translation_publication": false,
+    "deploy": false
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "inputRows": 8,
+  "validRows": 8,
+  "memeCount": 2,
+  "localeCounts": {
+    "en": 2,
+    "ja": 2,
+    "zh": 2,
+    "zh-tw": 2
+  },
+  "missingLocalesByMeme": {},
+  "errors": [],
+  "filesWritten": []
+}

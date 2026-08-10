@@ -137,7 +137,9 @@ curl --fail-with-body \
 | `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
-| `ANTHROPIC_API_KEY` | (선택) 관리자 AI 설명 초안 생성 |
+| `OPENAI_API_KEY` | (선택) 관리자 GPT-5.6 Sol high 검수 초안 생성. 서버 전용 |
+| `OPENAI_REVIEW_MODEL` | 사용하지 않음. 관리자 검수는 `gpt-5.6-sol` + `high`로 고정 |
+| `OPENAI_REVIEW_BASE_URL` | (선택) OpenAI-compatible 검수 게이트웨이 주소. 기본값 `https://api.openai.com/v1` |
 | `R2_ACCOUNT_ID` | (선택) Cloudflare R2 — 제보 이미지 저장소. 서버 전용 |
 | `R2_ACCESS_KEY_ID` | (선택) R2 API 토큰 Access Key. 서버 전용 |
 | `R2_SECRET_ACCESS_KEY` | (선택) R2 API 토큰 Secret. 서버 전용 |

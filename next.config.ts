@@ -122,6 +122,11 @@ const SITE_ORIGIN =
 const CSP_REPORT_URI =
   process.env.CSP_REPORT_URI ?? `${SITE_ORIGIN}/api/csp-report`;
 
+const RELEASE_SHA = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.RELEASE_SHA;
+const RELEASE_HEADERS = RELEASE_SHA
+  ? [{ key: "X-MemeCatch-Release-Sha", value: RELEASE_SHA }]
+  : [];
+
 const CSP_VALUE = [
   ...CSP_DIRECTIVES,
   // report-uri: 레거시(넓은 호환) / report-to: Reporting API v1(아래 Reporting-Endpoints와 짝)
@@ -158,6 +163,7 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
+          ...RELEASE_HEADERS,
           // HSTS 보강 — Vercel 기본값(max-age=63072000)을 명시 헤더로 덮어써
           // includeSubDomains·preload까지 적용한다.
           {

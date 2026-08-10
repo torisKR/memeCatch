@@ -25,6 +25,13 @@
     "import:koculture": "node scripts/import-koculture-memes.mjs",
     "translation:check": "node scripts/translation-batch-check.mjs --artifact-dir artifacts/renewal/loop-050 --worklist artifacts/renewal/loop-050/worklist.json",
     "translation:check:complete": "node scripts/translation-batch-check.mjs --artifact-dir artifacts/renewal/loop-050 --worklist artifacts/renewal/loop-050/worklist.json --require-complete",
+    "translation:intake": "node scripts/translation-intake.mjs",
+    "translation:intake:test": "node scripts/translation-intake.test.mjs",
+    "translation:demand-report": "node scripts/translation-demand-report.mjs",
+    "translation:demand-report:test": "node scripts/translation-demand-report.test.mjs",
+    "plus:activation:local": "node scripts/plus-activation-local.mjs",
+    "plus:activation:preflight": "node scripts/plus-activation-preflight.mjs",
+    "plus:activation:preflight:test": "node scripts/plus-activation-preflight.test.mjs",
     "translate:memes:mlx-linked:test": "node scripts/translate-memes-mlx-linked.test.mjs",
     "translate:memes": "node scripts/translate-memes.mjs",
     "translate:memes:mlx-linked": "node scripts/translate-memes-mlx-linked.mjs"

@@ -1,6 +1,7 @@
 "use client";
 
 import { CategoryTag } from "@/components/category-tag";
+import type { SearchInputCopy } from "@/lib/i18n-global-search";
 import type { MemeCategory } from "@/lib/labels";
 
 /** 자동완성 항목 — search_memes RPC 반환분 중 드롭다운에 필요한 최소 필드만 */
@@ -36,6 +37,7 @@ export function SearchSuggest({
   onClearRecent,
   popularTerms,
   onSelectPopular,
+  copy,
 }: {
   hasQuery: boolean;
   loading: boolean;
@@ -51,11 +53,12 @@ export function SearchSuggest({
   onClearRecent: () => void;
   popularTerms: string[];
   onSelectPopular: (term: string) => void;
+  copy: SearchInputCopy;
 }) {
   return (
     <div className="glass-panel menu-pop absolute inset-x-0 top-[calc(100%+8px)] z-20 max-h-[70vh] overflow-y-auto rounded-2xl p-2 shadow-xl">
       {hasQuery ? (
-        <ul id={listboxId} role="listbox" aria-label="자동완성 결과" className="flex flex-col gap-0.5">
+        <ul id={listboxId} role="listbox" aria-label={copy.suggestionLabel} className="flex flex-col gap-0.5">
           {suggestions.map((item, i) => (
             <li
               key={item.id}
@@ -79,7 +82,7 @@ export function SearchSuggest({
           ))}
           {suggestions.length === 0 && (
             <li className="px-3 py-6 text-center text-sm text-muted">
-              {loading ? "검색 중…" : "일치하는 밈이 없어요"}
+              {loading ? copy.loading : copy.noMatches}
             </li>
           )}
         </ul>
@@ -88,13 +91,13 @@ export function SearchSuggest({
           {recent.length > 0 && (
             <div>
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-muted">최근 검색어</span>
+                <span className="text-xs font-bold text-muted">{copy.recent}</span>
                 <button
                   type="button"
                   onClick={onClearRecent}
                   className="min-h-11 text-xs font-medium text-muted underline-offset-2 hover:text-accent hover:underline"
                 >
-                  전체 지우기
+                  {copy.clearRecent}
                 </button>
               </div>
               <ul className="mt-1.5 flex flex-wrap gap-2">
@@ -111,7 +114,7 @@ export function SearchSuggest({
                       <button
                         type="button"
                         onClick={() => onRemoveRecent(term)}
-                        aria-label={`'${term}' 최근 검색어 삭제`}
+                        aria-label={`${copy.removeRecent} '${term}'`}
                         className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted/70 transition-colors hover:bg-surface-2 hover:text-foreground"
                       >
                         <svg
@@ -134,7 +137,7 @@ export function SearchSuggest({
           )}
           {popularTerms.length > 0 && (
             <div>
-              <span className="px-1 text-xs font-bold text-muted">인기 검색어</span>
+              <span className="px-1 text-xs font-bold text-muted">{copy.popular}</span>
               <ul className="mt-1.5 flex flex-wrap gap-2">
                 {popularTerms.map((term) => (
                   <li key={term}>
@@ -147,7 +150,7 @@ export function SearchSuggest({
             </div>
           )}
           {recent.length === 0 && popularTerms.length === 0 && (
-            <p className="px-1 py-4 text-center text-sm text-muted">밈 이름이나 초성으로 검색해보세요</p>
+            <p className="px-1 py-4 text-center text-sm text-muted">{copy.emptyHint}</p>
           )}
         </div>
       )}

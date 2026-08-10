@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -9,8 +9,13 @@ import {
   isIndexableLocalizedMeme,
   isTranslationCurrent,
   overlayMemeTranslation,
+  getLocalizedSearchMemesResult,
   type MemeTranslationRow,
 } from "@/lib/meme-translations";
+
+const createStaticClient = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 const SOURCE_UPDATED_AT = "2026-07-28T04:00:00.000Z";
 
@@ -86,6 +91,33 @@ function translation(
     ...overrides,
   };
 }
+
+function featuredRow(overrides: Partial<MemeTranslationRow> = {}) {
+  return {
+    ...translation(overrides),
+    memes: baseMeme(),
+  };
+}
+
+function mockTranslationQuery(response: { data: unknown; error: unknown }) {
+  const builder = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    in: vi.fn(),
+    overrideTypes: vi.fn(),
+  };
+  builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  builder.in.mockReturnValue(builder);
+  builder.overrideTypes.mockResolvedValue(response);
+  createStaticClient.mockReturnValue({
+    from: vi.fn().mockReturnValue(builder),
+  });
+}
+
+beforeEach(() => {
+  createStaticClient.mockReset();
+});
 
 describe("overlayMemeTranslation", () => {
   it("overlays localized prose and preserves the complete Korean original", () => {
@@ -207,5 +239,45 @@ describe("translation freshness and SEO eligibility", () => {
       "en",
     );
     expect(isIndexableLocalizedMeme(localized)).toBe(false);
+  });
+});
+
+describe("localized search lookup status", () => {
+  it("classifies an eligible reviewed row as active", async () => {
+    mockTranslationQuery({ data: [featuredRow()], error: null });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result.status).toBe("active");
+    expect(result.items.get("abc12345")?.title).toBe("Original meme");
+  });
+
+  it.each([
+    { label: "ineligible row", data: [featuredRow({ status: "machine" })] },
+    { label: "empty rows", data: [] },
+  ])("classifies $label as coverage-empty", async ({ data }) => {
+    mockTranslationQuery({ data, error: null });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result).toEqual({ items: new Map(), status: "coverage-empty" });
+  });
+
+  it("classifies a query error as unavailable", async () => {
+    mockTranslationQuery({ data: null, error: new Error("lookup failed") });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result).toEqual({ items: new Map(), status: "unavailable" });
+  });
+
+  it("classifies a thrown client error as unavailable", async () => {
+    createStaticClient.mockImplementation(() => {
+      throw new Error("client unavailable");
+    });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result).toEqual({ items: new Map(), status: "unavailable" });
   });
 });

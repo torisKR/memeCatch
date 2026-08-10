@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { memePathFrom } from "@/lib/labels";
 import { track } from "@/lib/analytics";
 import { SearchSuggest, type SearchSuggestion } from "@/components/search-suggest";
+import { GLOBAL_SEARCH_COPY, type SearchInputCopy } from "@/lib/i18n-global-search";
 
 const RECENT_KEY = "mc_recent_searches";
 const MAX_RECENT = 8;
@@ -34,9 +35,13 @@ function saveRecent(list: string[]) {
 export function SearchInput({
   initialQuery,
   popularTerms,
+  searchPath = "/search",
+  copy = GLOBAL_SEARCH_COPY.ko.input,
 }: {
   initialQuery: string;
   popularTerms: string[];
+  searchPath?: string;
+  copy?: SearchInputCopy;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(initialQuery);
@@ -68,10 +73,10 @@ export function SearchInput({
     if (trimmed === lastPushed.current) return;
     const timer = window.setTimeout(() => {
       lastPushed.current = trimmed;
-      router.replace(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
+      router.replace(trimmed ? `${searchPath}?q=${encodeURIComponent(trimmed)}` : searchPath);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [trimmed, router]);
+  }, [trimmed, router, searchPath]);
 
   // 자동완성 — 300ms 디바운스로 search_memes RPC 호출(브라우저 클라이언트)
   useEffect(() => {
@@ -136,7 +141,7 @@ export function SearchInput({
   function goToSearch(term: string) {
     const t = term.trim();
     lastPushed.current = t;
-    router.replace(t ? `/search?q=${encodeURIComponent(t)}` : "/search");
+    router.replace(t ? `${searchPath}?q=${encodeURIComponent(t)}` : searchPath);
   }
 
   function handleSelectSuggestion(item: SearchSuggestion) {
@@ -203,9 +208,7 @@ export function SearchInput({
           goToSearch(trimmed);
         }}
       >
-        <label htmlFor="search-q" className="sr-only">
-          밈 검색
-        </label>
+        <label htmlFor="search-q" className="sr-only">{copy.label}</label>
         <div className="relative">
           <svg
             viewBox="0 0 24 24"
@@ -227,7 +230,7 @@ export function SearchInput({
             onChange={(e) => setValue(e.target.value)}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder="무슨 밈인지 검색해보세요"
+            placeholder={copy.placeholder}
             autoComplete="off"
             enterKeyHint="search"
             autoFocus={!initialQuery}
@@ -258,6 +261,7 @@ export function SearchInput({
           onClearRecent={handleClearRecent}
           popularTerms={popularTerms}
           onSelectPopular={handleSelectPopular}
+          copy={copy}
         />
       )}
     </div>

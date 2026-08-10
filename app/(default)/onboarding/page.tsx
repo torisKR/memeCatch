@@ -3,11 +3,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 import { safeNext } from "@/lib/safe-redirect";
+import { getRequestLocale } from "@/lib/i18n-server";
+import { MY_COPY } from "@/lib/i18n-my";
 
-export const metadata: Metadata = {
-  title: "환영해요",
-  description: "관심 있는 밈을 알려 주시면 딱 맞는 밈을 먼저 보여드려요.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const copy = MY_COPY[locale].onboarding;
+
+  return { title: copy.title, description: copy.body };
+}
 
 export default async function OnboardingPage({
   searchParams,

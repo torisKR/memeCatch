@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import { PricingContent } from "@/components/premium/pricing-content";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { SEO_ROUTE_LOCALES, buildLocalizedMetadata } from "@/lib/i18n-routing";
 
-export const metadata: Metadata = {
-  title: "MemeCatch Plus",
-  description: "관심사 맞춤 밈 트렌드 레이더와 무제한 저장을 제공하는 밈캐치 30일 이용권입니다. 자동 갱신되지 않아요.",
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    title: "MemeCatch Plus",
-    description: "나만의 밈 트렌드 데스크를 시작하세요.",
-    url: "/pricing",
-  },
-};
+const copy = PREMIUM_COPY.ko.pricing;
+
+export const metadata: Metadata = buildLocalizedMetadata({
+  locale: "ko",
+  pathname: "/pricing",
+  title: `MemeCatch Plus — ${copy.title}`,
+  description: copy.intro,
+  availableLocales: SEO_ROUTE_LOCALES,
+});
 
 export default function PricingPage() {
   return <PricingContent />;

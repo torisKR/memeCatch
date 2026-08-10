@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 데스크톱 헤더 주 동선 링크 — "탐색"(/explore) 하나만 상시 노출.
@@ -13,12 +14,13 @@ import { useLocale } from "@/lib/i18n-client";
  * 이동 대기 상태는 useLinkStatus 스피너로 표시한다(바텀내비와 동일 신호).
  */
 export function ExploreNavLink() {
-  const { messages } = useLocale();
+  const { locale, messages } = useLocale();
   const pathname = usePathname();
-  const active = pathname.startsWith("/explore");
+  const href = localizedStaticPath("/explore", locale);
+  const active = pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
-      href="/explore"
+      href={href}
       aria-current={active ? "page" : undefined}
       className={`no-press hidden h-11 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex ${
         active

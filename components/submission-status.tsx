@@ -36,15 +36,18 @@ const SHORT_LABELS: Record<SubmissionStatusKey, string> = {
 export function SubmissionStatusBadge({
   status,
   className = "",
+  label,
 }: {
   status: SubmissionStatusKey;
   className?: string;
+  /** Localized override for contexts that already own the user-facing copy. */
+  label?: string;
 }) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${STATUS_CLASSES[status]} ${STATUS_GLOW[status]} ${className}`}
     >
-      {SHORT_LABELS[status]}
+      {label ?? SHORT_LABELS[status]}
     </span>
   );
 }

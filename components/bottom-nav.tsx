@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 const TABS: {
   href: string;
@@ -31,12 +32,16 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
         {TABS.map((tab) => {
+          const href =
+            tab.label === "brand" || tab.label === "explore"
+              ? localizedStaticPath(tab.href, locale)
+              : tab.href;
           const active =
-            tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+            href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <li key={tab.href} className="flex-1">
               <Link
-                href={tab.href}
+                href={href}
                 aria-current={active ? "page" : undefined}
                 className={`no-press flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
                   tab.emphasized

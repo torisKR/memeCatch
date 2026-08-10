@@ -17,11 +17,35 @@ import {
   loadCardFonts,
   renderMemeCard,
 } from "@/lib/meme-card";
+import {
+  hasRequiredTranslationFields,
+  isTranslationCurrent,
+  type MemeTranslationRow,
+} from "@/lib/meme-translations";
+import { isSeoContentLocale } from "@/lib/i18n-routing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_PREMIUM_SCALE = 3;
+
+type ExportTranslation = Pick<
+  MemeTranslationRow,
+  "meme_id" | "locale" | "status" | "title" | "summary" | "description" | "origin" | "source_updated_at"
+>;
+
+function errorResponse(error: string, status: number): Response {
+  return NextResponse.json(
+    { error },
+    {
+      status,
+      headers: {
+        "cache-control": "private, no-store",
+        "x-content-type-options": "nosniff",
+      },
+    },
+  );
+}
 
 /**
  * B2 — 밈 카드 이미지 내보내기.
@@ -37,6 +61,11 @@ export async function GET(
   const { key } = await params;
   const shortId = shortIdFromParam(key);
   const sp = req.nextUrl.searchParams;
+  const requestedLocale = sp.get("locale");
+  if (requestedLocale !== null && !isSeoContentLocale(requestedLocale)) {
+    return errorResponse("invalid_locale", 400);
+  }
+  const localizedLocale = isSeoContentLocale(requestedLocale) ? requestedLocale : null;
 
   const { isPremium } = await getPremiumEntitlement();
 
@@ -66,14 +95,40 @@ export async function GET(
 
   // --- 데이터 로드 ---
   const supabase = createStaticClient();
-  const { data: meme } = await supabase
+  const { data: meme, error: memeError } = await supabase
     .from("memes")
-    .select("title, summary, safety_level, lifecycle_status")
+    .select("id, title, summary, updated_at, safety_level, lifecycle_status")
     .eq("short_id", shortId)
+    .in("moderation_status", ["approved", "limited"])
     .maybeSingle();
+  if (memeError) return errorResponse("meme_unavailable", 503);
+  if (!meme) return errorResponse("not_found", 404);
 
-  const safetyLevel = (meme?.safety_level ?? "yellow") as SafetyLevel;
-  const lifecycleStatus = (meme?.lifecycle_status ?? "active") as LifecycleStatus;
+  let title = meme.title;
+  let summary = meme.summary;
+  if (localizedLocale) {
+    const { data: translation, error: translationError } = await supabase
+      .from("meme_translations")
+      .select("meme_id, locale, status, title, summary, description, origin, source_updated_at")
+      .eq("meme_id", meme.id)
+      .eq("locale", localizedLocale)
+      .eq("status", "reviewed")
+      .maybeSingle()
+      .overrideTypes<ExportTranslation, { merge: false }>();
+    if (translationError) return errorResponse("translation_unavailable", 503);
+    if (
+      !translation ||
+      !hasRequiredTranslationFields(translation) ||
+      !isTranslationCurrent(translation.source_updated_at, meme.updated_at)
+    ) {
+      return errorResponse("localized_translation_unavailable", 404);
+    }
+    title = translation.title;
+    summary = translation.summary;
+  }
+
+  const safetyLevel = meme.safety_level as SafetyLevel;
+  const lifecycleStatus = meme.lifecycle_status as LifecycleStatus;
   // 라벨 맵에 없는 값 방어(잘못된 enum이 들어와도 500 방지).
   const safeLevel = safetyLevel in SAFETY_LEVELS ? safetyLevel : "yellow";
   const safeStatus = lifecycleStatus in LIFECYCLE_STATUS ? lifecycleStatus : "active";
@@ -83,12 +138,18 @@ export async function GET(
 
   const element = renderMemeCard(
     {
-      title: meme?.title ?? "밈캐치",
-      summary: meme?.summary ?? "그 밈, 3초 안에 알려드려요",
+      title,
+      summary,
       safetyLevel: safeLevel,
       lifecycleStatus: safeStatus,
     },
-    { template, format, watermark, hasFont: fonts !== null },
+    {
+      template,
+      format,
+      watermark,
+      hasFont: fonts !== null,
+      locale: localizedLocale ?? "ko",
+    },
   );
 
   const filename = `memecatch-${shortId}-${template}-${format}${scale > 1 ? `@${scale}x` : ""}.png`;
@@ -104,7 +165,10 @@ export async function GET(
       : undefined,
     headers: {
       "content-disposition": `attachment; filename="${filename}"`,
-      "cache-control": "no-store",
+      "cache-control": "private, no-store",
+      "content-language": localizedLocale ?? "ko",
+      "vary": "Cookie",
+      "x-content-type-options": "nosniff",
     },
   });
 }

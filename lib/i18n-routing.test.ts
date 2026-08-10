@@ -8,8 +8,10 @@ import {
   getHreflang,
   getOpenGraphLocale,
   isSeoContentLocale,
+  isLocalizedStaticPath,
   localizedMemePath,
   localizedPath,
+  localizedStaticPath,
   parseLocalePath,
   stripLocalePath,
   toSeoBcp47,
@@ -55,6 +57,21 @@ describe("SEO locale routing", () => {
     expect(localizedMemePath("en", "a1b2c3", "원영적 사고")).toBe(
       "/en/memes/a1b2c3-%EC%9B%90%EC%98%81%EC%A0%81%20%EC%82%AC%EA%B3%A0",
     );
+  });
+
+  it("localizes only static routes that actually exist in every SEO locale", () => {
+    expect(isLocalizedStaticPath("/en/pricing?source=header")).toBe(true);
+    expect(isLocalizedStaticPath("/en/daily")).toBe(true);
+    expect(isLocalizedStaticPath("/en/search?q=돌아온")).toBe(true);
+    expect(isLocalizedStaticPath("/explore")).toBe(true);
+    expect(localizedStaticPath("/pricing", "en")).toBe("/en/pricing");
+    expect(localizedStaticPath("/daily", "ja")).toBe("/ja/daily");
+    expect(localizedStaticPath("/search", "en")).toBe("/en/search");
+    expect(localizedStaticPath("/explore", "zh-tw")).toBe("/zh-tw/explore");
+    expect(localizedStaticPath("/en/pricing?source=header", "ja")).toBe(
+      "/ja/pricing?source=header",
+    );
+    expect(localizedStaticPath("/pricing", "th")).toBe("/pricing");
   });
 });
 

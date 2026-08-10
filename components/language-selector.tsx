@@ -12,7 +12,9 @@ import {
 import { persistLocale, useLocale } from "@/lib/i18n-client";
 import {
   isSeoContentLocale,
+  isLocalizedStaticPath,
   localizedPath,
+  localizedStaticPath,
   parseLocalePath,
 } from "@/lib/i18n-routing";
 
@@ -33,6 +35,12 @@ export function localeDestination(pathname: string, nextLocale: Locale): string 
 
   if (nextLocale === "ko") return parsed.pathname;
 
+  // Home and Plus pricing have real translated static pages. Keep the user in
+  // the conversion flow instead of dropping them back at the home page.
+  if (isLocalizedStaticPath(parsed.pathname)) {
+    return localizedStaticPath(parsed.pathname, nextLocale);
+  }
+
   // Every SEO locale has a home page. A foreign detail (or any other route)
   // may not exist, so the global selector uses the guaranteed-safe home.
   return localizedPath("/", nextLocale);
@@ -51,7 +59,10 @@ export function LanguageSelector() {
 
   function changeLocale(nextLocale: Locale) {
     persistLocale(nextLocale);
-    const destination = localeDestination(pathname, nextLocale);
+    const destination = localeDestination(
+      `${pathname}${typeof window === "undefined" ? "" : window.location.search}`,
+      nextLocale,
+    );
     if (destination) router.push(destination);
     else router.refresh();
   }

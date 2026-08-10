@@ -23,6 +23,7 @@ const PUBLIC_STATUSES = ["approved", "limited"] as const;
 
 /** Google's per-sitemap protocol limit. */
 const MAX_SITEMAP_URLS = 50_000;
+const MIN_LOCALIZED_EXPLORE_ITEMS = 24;
 
 /**
  * 충실도 판정에 필요한 신호까지 함께 실어 온다.
@@ -70,6 +71,29 @@ function homeLanguages(): Record<string, string> {
     // 해외 주 타깃 전환(루프 048): 글로벌 기본 착지는 영어 홈.
     "x-default": absolute(localizedPath("/", "en")),
   };
+}
+
+/** Plus pricing is the other fully localized static conversion page. */
+function pricingLanguages(): Record<string, string> {
+  return {
+    ...Object.fromEntries(
+      SEO_ROUTE_LOCALES.map((locale) => [
+        toHrefLang(locale),
+        absolute(localizedPath("/pricing", locale)),
+      ]),
+    ),
+    "x-default": absolute(localizedPath("/pricing", "en")),
+  };
+}
+
+function exploreLanguages(locales: readonly SeoContentLocale[]): Record<string, string> {
+  const languages: Record<string, string> = {
+    ko: absolute("/explore"),
+  };
+  for (const locale of locales) {
+    languages[toHrefLang(locale)] = absolute(localizedPath("/explore", locale));
+  }
+  return { ...languages, "x-default": languages.en ?? languages.ko };
 }
 
 /** Only reviewed, exact-source, complete translations may become crawl targets. */
@@ -139,7 +163,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: { languages: homeLanguages() },
     }),
   );
+  const localizedPricingEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
+    (locale) => ({
+      url: absolute(localizedPath("/pricing", locale)),
+      lastModified: homeLastMod,
+      changeFrequency: "weekly" as const,
+      priority: 0.55,
+      alternates: { languages: pricingLanguages() },
+    }),
+  );
   const localizedHomeLastModified = new Map<SeoContentLocale, Date>();
+  const localizedExploreCounts = new Map<SeoContentLocale, number>();
 
   const entries: MetadataRoute.Sitemap = [
     {
@@ -150,6 +184,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: { languages: homeLanguages() },
     },
     ...localizedHomeEntries,
+    {
+      url: `${SITE_URL}/pricing`,
+      lastModified: homeLastMod,
+      changeFrequency: "weekly" as const,
+      priority: 0.55,
+      alternates: { languages: pricingLanguages() },
+    },
+    ...localizedPricingEntries,
     {
       url: `${SITE_URL}/collections`,
       lastModified: homeLastMod,
@@ -195,12 +237,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .order("id", { ascending: false })
       .range(from, from + PAGE - 1);
 
-    // 조회 실패를 조용히 삼키면 사이트맵이 정적 페이지 25개짜리로 쪼그라든 채
-    // 그대로 배포된다(밈 URL 0개). 색인 노출면 자체가 사라지는 사고라 로그를 남긴다.
-    // 제어 흐름은 그대로 — 부분 사이트맵이 예외로 페이지 전체를 죽이는 것보다 낫다.
     if (error) {
-      console.error(`[sitemap] 밈 조회 실패 (from=${from}):`, error.message);
-      break;
+      const message = `[sitemap] 밈 조회 실패 (from=${from}): ${error.message}`;
+      console.error(message);
+      throw new Error(message, { cause: error });
     }
     if (!data || data.length === 0) break;
 
@@ -209,6 +249,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const translations = reviewedTranslations(meme);
       const languages = memeLanguages(meme, translations);
       for (const [locale, translation] of translations) {
+        localizedExploreCounts.set(
+          locale,
+          (localizedExploreCounts.get(locale) ?? 0) + 1,
+        );
         const translationUpdatedAt = new Date(translation.updated_at);
         const currentLatest = localizedHomeLastModified.get(locale);
         if (
@@ -254,6 +298,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const [index, locale] of SEO_CONTENT_LOCALES.entries()) {
     localizedHomeEntries[index].lastModified =
       localizedHomeLastModified.get(locale) ?? homeLastMod;
+  }
+
+  const activeExploreLocales = SEO_CONTENT_LOCALES.filter(
+    (locale) => (localizedExploreCounts.get(locale) ?? 0) >= MIN_LOCALIZED_EXPLORE_ITEMS,
+  );
+  if (activeExploreLocales.length > 0) {
+    const languages = exploreLanguages(activeExploreLocales);
+    const koreanExplore = entries.find((entry) => entry.url === `${SITE_URL}/explore`);
+    if (koreanExplore) koreanExplore.alternates = { languages };
+    entries.push(
+      ...activeExploreLocales.map((locale) => ({
+        url: absolute(localizedPath("/explore", locale)),
+        lastModified: localizedHomeLastModified.get(locale) ?? homeLastMod,
+        changeFrequency: "daily" as const,
+        priority: 0.65,
+        alternates: { languages },
+      })),
+    );
   }
 
   return entries.slice(0, MAX_SITEMAP_URLS);

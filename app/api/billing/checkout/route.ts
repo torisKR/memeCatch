@@ -4,6 +4,8 @@ import {
   getUnifiPayConfig,
   toMinorUnits,
 } from "@/lib/billing/unifi-pay.server";
+import { isLocale } from "@/lib/i18n";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 import {
   createUnifiPaymentIntent,
   getCurrentBillingUser,
@@ -21,10 +23,20 @@ export const maxDuration = 15;
  * linkId ↔ user를 묶어두고, 웹훅의 orderId(LINK-{linkId}-...)로 역추적한다.
  */
 export async function POST(request: Request) {
+  let pricingPath = "/pricing";
+  try {
+    const formData = await request.formData();
+    const requestedLocale = formData.get("locale");
+    if (typeof requestedLocale === "string" && isLocale(requestedLocale)) {
+      pricingPath = localizedStaticPath("/pricing", requestedLocale);
+    }
+  } catch {
+  }
+
   const user = await getCurrentBillingUser();
   if (!user) {
     const login = new URL("/login", request.url);
-    login.searchParams.set("next", "/pricing");
+    login.searchParams.set("next", pricingPath);
     return Response.redirect(login, 303);
   }
 

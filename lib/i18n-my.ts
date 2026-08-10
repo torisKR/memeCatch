@@ -7,6 +7,22 @@ type MyCopy = {
   defaultNickname: string;
   avatarFallback: string;
   ageGroups: Record<"10s" | "20s" | "30s" | "40s" | "50s+", string>;
+  onboarding: {
+    step: string;
+    title: string;
+    body: string;
+    nicknameLabel: string;
+    nicknamePlaceholder: string;
+    interestsTitle: string;
+    interestsBody: string;
+    ageTitle: string;
+    optional: string;
+    ageBody: string;
+    notSelected: string;
+    skip: string;
+    submit: string;
+    submitting: string;
+  };
   greeting: (age?: string) => string;
   logout: string;
   loadError: string;
@@ -45,6 +61,44 @@ type MyCopy = {
     emptyTitle: string;
     emptyBody: string;
     explore: string;
+    library: {
+      title: string;
+      searchLabel: string;
+      searchPlaceholder: string;
+      safetyLabel: string;
+      allSafety: string;
+      apply: string;
+      clear: string;
+      results: (matches: number, total: number) => string;
+      emptyFilteredTitle: string;
+      emptyFilteredBody: string;
+      upgradeTitle: string;
+      upgradeBody: string;
+      upgradeAction: string;
+      brief: {
+        title: string;
+        body: string;
+        selectLabel: string;
+        selectPlaceholder: string;
+        download: string;
+        empty: string;
+        limitNote: string;
+      };
+      editor: {
+        freeHint: string;
+        edit: string;
+        add: string;
+        collectionLabel: string;
+        collectionPlaceholder: string;
+        noteLabel: string;
+        notePlaceholder: string;
+        saving: string;
+        save: string;
+        cancel: string;
+        plusRequired: string;
+        saveFailed: string;
+      };
+    };
   };
   recent: {
     title: string;
@@ -75,7 +129,24 @@ const MY_COPY_BASE = {
       "40s": "40대",
       "50s+": "50대 이상",
     },
-    greeting: (age) => age ? `${age} · 반가워요` : "반가워요, 오늘의 밈 찾아볼까요?",
+    onboarding: {
+      step: "1 / 1 단계",
+      title: "밈캐치에 오신 걸 환영해요",
+      body: "취향을 알려 주시면 딱 맞는 밈을 먼저 보여드려요. 지금 정하지 않아도 괜찮아요.",
+      nicknameLabel: "닉네임",
+      nicknamePlaceholder: "2~20자로 지어 주세요",
+      interestsTitle: "관심 있는 밈은 무엇인가요?",
+      interestsBody: "여러 개 골라도 돼요.",
+      ageTitle: "연령대",
+      optional: "선택",
+      ageBody: "비슷한 또래에게 인기인 밈을 추천하는 데만 써요.",
+      notSelected: "선택 안 함",
+      skip: "건너뛰기",
+      submit: "밈캐치 시작하기",
+      submitting: "저장 중…",
+    },
+    greeting: (age) =>
+      age ? `${age} · 반가워요` : "반가워요, 오늘의 밈 찾아볼까요?",
     logout: "로그아웃",
     loadError: "일부 정보를 불러오지 못했어요. 새로고침해 주세요.",
     dateLocale: "ko-KR",
@@ -120,6 +191,46 @@ const MY_COPY_BASE = {
       emptyTitle: "아직 저장한 밈이 없어요.",
       emptyBody: "궁금한 밈을 저장해 두면 여기서 다시 볼 수 있어요.",
       explore: "탐색하러 가기",
+      library: {
+        title: "내 밈 보관함",
+        searchLabel: "저장한 밈 검색",
+        searchPlaceholder: "제목이나 뜻으로 다시 찾기",
+        safetyLabel: "사용 신호",
+        allSafety: "모든 사용 신호",
+        apply: "적용",
+        clear: "필터 지우기",
+        results: (matches, total) =>
+          `${matches}개 결과 · 전체 ${total}개 저장됨`,
+        emptyFilteredTitle: "조건에 맞는 저장 밈이 없어요.",
+        emptyFilteredBody: "검색어를 바꾸거나 사용 신호 필터를 지워 보세요.",
+        upgradeTitle: "Plus로 내 밈 보관함을 검색하세요",
+        upgradeBody:
+          "저장한 밈을 제목·뜻·사용 신호로 빠르게 다시 찾아볼 수 있어요.",
+        upgradeAction: "Plus로 보관함 열기",
+        brief: {
+          title: "컬렉션 브리프 만들기",
+          body: "폴더의 밈을 뜻·사용 신호·주의·내 메모가 담긴 비공개 Markdown으로 내려받아요.",
+          selectLabel: "컬렉션",
+          selectPlaceholder: "내 컬렉션 선택",
+          download: "브리프 다운로드",
+          empty: "먼저 저장 밈에 폴더를 지정해 주세요.",
+          limitNote: "현재 검수된 공개 밈만 최대 100개 포함해요.",
+        },
+        editor: {
+          freeHint: "에서 폴더로 분류하고 메모를 남길 수 있어요.",
+          edit: "폴더·메모 수정",
+          add: "폴더·메모 추가",
+          collectionLabel: "폴더 (최대 40자)",
+          collectionPlaceholder: "예: 이번 주 콘텐츠 후보",
+          noteLabel: "메모 (최대 500자)",
+          notePlaceholder: "어디에 어떻게 쓸지 적어두세요",
+          saving: "저장 중…",
+          save: "저장",
+          cancel: "취소",
+          plusRequired: "Plus 구독이 필요해요.",
+          saveFailed: "저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        },
+      },
     },
     recent: {
       title: "최근 본 밈",
@@ -158,9 +269,29 @@ const MY_COPY_BASE = {
       "40s": "40s",
       "50s+": "50 and over",
     },
-    greeting: (age) => age ? `${age} · Welcome back` : "Welcome back—ready to find today’s memes?",
+    onboarding: {
+      step: "Step 1 of 1",
+      title: "Welcome to MemeCatch",
+      body: "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+      nicknameLabel: "Nickname",
+      nicknamePlaceholder: "Choose 2–20 characters",
+      interestsTitle: "Which memes interest you?",
+      interestsBody: "Choose as many as you like.",
+      ageTitle: "Age group",
+      optional: "optional",
+      ageBody: "We only use this to recommend memes popular with people around your age.",
+      notSelected: "Prefer not to say",
+      skip: "Skip for now",
+      submit: "Start MemeCatch",
+      submitting: "Saving…",
+    },
+    greeting: (age) =>
+      age
+        ? `${age} · Welcome back`
+        : "Welcome back—ready to find today’s memes?",
     logout: "Log out",
-    loadError: "We couldn’t load some of your information. Please refresh the page.",
+    loadError:
+      "We couldn’t load some of your information. Please refresh the page.",
     dateLocale: "en-US",
     nickname: {
       title: "Nickname",
@@ -170,7 +301,8 @@ const MY_COPY_BASE = {
       errors: {
         invalidLength: "Use between 2 and 20 characters for your nickname.",
         taken: "That nickname is already in use.",
-        saveFailed: "We couldn’t save your nickname. Please try again in a moment.",
+        saveFailed:
+          "We couldn’t save your nickname. Please try again in a moment.",
       },
     },
     interests: {
@@ -203,6 +335,46 @@ const MY_COPY_BASE = {
       emptyTitle: "You haven’t saved any memes yet.",
       emptyBody: "Save memes you want to revisit and they’ll appear here.",
       explore: "Explore memes",
+      library: {
+        title: "Your meme vault",
+        searchLabel: "Search saved memes",
+        searchPlaceholder: "Find a title or meaning again",
+        safetyLabel: "Use signal",
+        allSafety: "All use signals",
+        apply: "Apply",
+        clear: "Clear filters",
+        results: (matches, total) =>
+          `${matches} results · ${total} saved in total`,
+        emptyFilteredTitle: "No saved memes match these filters.",
+        emptyFilteredBody: "Try another search or clear the use-signal filter.",
+        upgradeTitle: "Search your meme vault with Plus",
+        upgradeBody: "Find saved memes again by title, meaning, or use signal.",
+        upgradeAction: "Open the Plus vault",
+        brief: {
+          title: "Build a collection brief",
+          body: "Download a private Markdown brief with meanings, use signals, cautions, and your notes.",
+          selectLabel: "Collection",
+          selectPlaceholder: "Choose a collection",
+          download: "Download brief",
+          empty: "Add a folder to a saved meme first.",
+          limitNote: "Includes up to 100 currently reviewed public memes.",
+        },
+        editor: {
+          freeHint:
+            " lets you organize saved memes into folders and add notes.",
+          edit: "Edit folder & note",
+          add: "Add folder & note",
+          collectionLabel: "Folder (up to 40 characters)",
+          collectionPlaceholder: "e.g. This week’s content ideas",
+          noteLabel: "Note (up to 500 characters)",
+          notePlaceholder: "Write where or how you want to use it",
+          saving: "Saving…",
+          save: "Save",
+          cancel: "Cancel",
+          plusRequired: "Plus is required.",
+          saveFailed: "We couldn’t save this. Please try again shortly.",
+        },
+      },
     },
     recent: {
       title: "Recently viewed",
@@ -217,7 +389,8 @@ const MY_COPY_BASE = {
     submissions: {
       title: "My submissions",
       emptyTitle: "You haven’t submitted a meme yet.",
-      emptyBody: "Tell us about a meme you discovered and we’ll review it before publishing.",
+      emptyBody:
+        "Tell us about a meme you discovered and we’ll review it before publishing.",
       first: "Submit your first meme",
       submittedAt: (date) => `Submitted ${date}`,
       rejectionReason: "Reason",
@@ -241,9 +414,29 @@ const MY_COPY_BASE = {
       "40s": "40代",
       "50s+": "50代以上",
     },
-    greeting: (age) => age ? `${age} · おかえりなさい` : "おかえりなさい。今日のミームを探してみませんか？",
+    onboarding: {
+      step: "1 / 1 ステップ",
+      title: "MemeCatchへようこそ",
+      body: "好みを教えていただければ、あなたに合うミームを先に表示します。今決めなくても大丈夫です。",
+      nicknameLabel: "ニックネーム",
+      nicknamePlaceholder: "2〜20文字で入力してください",
+      interestsTitle: "気になるミームは何ですか？",
+      interestsBody: "いくつ選んでも大丈夫です。",
+      ageTitle: "年齢層",
+      optional: "任意",
+      ageBody: "近い年齢層で人気のミームをおすすめするためだけに使います。",
+      notSelected: "選択しない",
+      skip: "今はスキップ",
+      submit: "MemeCatchを始める",
+      submitting: "保存中…",
+    },
+    greeting: (age) =>
+      age
+        ? `${age} · おかえりなさい`
+        : "おかえりなさい。今日のミームを探してみませんか？",
     logout: "ログアウト",
-    loadError: "一部の情報を読み込めませんでした。ページを再読み込みしてください。",
+    loadError:
+      "一部の情報を読み込めませんでした。ページを再読み込みしてください。",
     dateLocale: "ja-JP",
     nickname: {
       title: "ニックネーム",
@@ -253,14 +446,16 @@ const MY_COPY_BASE = {
       errors: {
         invalidLength: "ニックネームは2〜20文字で入力してください。",
         taken: "このニックネームはすでに使用されています。",
-        saveFailed: "ニックネームを保存できませんでした。しばらくしてからもう一度お試しください。",
+        saveFailed:
+          "ニックネームを保存できませんでした。しばらくしてからもう一度お試しください。",
       },
     },
     interests: {
       title: "興味のあるカテゴリー",
       edit: "編集",
       set: "設定する",
-      empty: "興味のあるカテゴリーを設定すると、好みに合うミームを先に表示します。",
+      empty:
+        "興味のあるカテゴリーを設定すると、好みに合うミームを先に表示します。",
     },
     customization: {
       title: "プロフィール装飾",
@@ -271,7 +466,8 @@ const MY_COPY_BASE = {
       save: "保存",
       saved: "プロフィール装飾を保存しました。",
       plusOnly: "これは Plus 専用機能です。",
-      saveFailed: "保存に失敗しました。しばらくしてからもう一度お試しください。",
+      saveFailed:
+        "保存に失敗しました。しばらくしてからもう一度お試しください。",
     },
     categories: {
       phrase: "ミーム用語",
@@ -286,6 +482,47 @@ const MY_COPY_BASE = {
       emptyTitle: "保存したミームはまだありません。",
       emptyBody: "気になるミームを保存すると、ここからいつでも見返せます。",
       explore: "ミームを探す",
+      library: {
+        title: "自分のミーム保管庫",
+        searchLabel: "保存したミームを検索",
+        searchPlaceholder: "タイトルや意味から探し直す",
+        safetyLabel: "使用シグナル",
+        allSafety: "すべての使用シグナル",
+        apply: "適用",
+        clear: "フィルターを解除",
+        results: (matches, total) => `${matches}件 · 合計${total}件を保存`,
+        emptyFilteredTitle: "条件に合う保存済みミームはありません。",
+        emptyFilteredBody:
+          "別の検索語にするか、使用シグナルのフィルターを解除してください。",
+        upgradeTitle: "Plusで自分のミーム保管庫を検索",
+        upgradeBody:
+          "保存したミームをタイトル・意味・使用シグナルからすばやく探し直せます。",
+        upgradeAction: "Plusの保管庫を開く",
+        brief: {
+          title: "コレクションブリーフを作成",
+          body: "意味・使用シグナル・注意点・自分のメモを含む非公開Markdownをダウンロードできます。",
+          selectLabel: "コレクション",
+          selectPlaceholder: "コレクションを選択",
+          download: "ブリーフをダウンロード",
+          empty: "まず保存したミームにフォルダを設定してください。",
+          limitNote: "現在確認済みの公開ミームを最大100件収録します。",
+        },
+        editor: {
+          freeHint: "なら、保存したミームをフォルダに整理してメモを残せます。",
+          edit: "フォルダ・メモを編集",
+          add: "フォルダ・メモを追加",
+          collectionLabel: "フォルダ（最大40文字）",
+          collectionPlaceholder: "例：今週のコンテンツ候補",
+          noteLabel: "メモ（最大500文字）",
+          notePlaceholder: "どこでどう使うかを書き留めましょう",
+          saving: "保存中…",
+          save: "保存",
+          cancel: "キャンセル",
+          plusRequired: "Plusへの登録が必要です。",
+          saveFailed:
+            "保存できませんでした。しばらくしてからもう一度お試しください。",
+        },
+      },
     },
     recent: {
       title: "最近見たミーム",
@@ -324,7 +561,24 @@ const MY_COPY_BASE = {
       "40s": "40多岁",
       "50s+": "50岁以上",
     },
-    greeting: (age) => age ? `${age} · 欢迎回来` : "欢迎回来，一起看看今天的迷因吧。",
+    onboarding: {
+      step: "第 1 步，共 1 步",
+      title: "欢迎来到 MemeCatch",
+      body: "告诉我们你的喜好，我们会优先展示相关迷因。现在不决定也没关系。",
+      nicknameLabel: "昵称",
+      nicknamePlaceholder: "请输入 2–20 个字符",
+      interestsTitle: "你对哪些迷因感兴趣？",
+      interestsBody: "可以选择多个。",
+      ageTitle: "年龄段",
+      optional: "可选",
+      ageBody: "仅用于推荐同龄人中受欢迎的迷因。",
+      notSelected: "暂不选择",
+      skip: "暂时跳过",
+      submit: "开始使用 MemeCatch",
+      submitting: "正在保存…",
+    },
+    greeting: (age) =>
+      age ? `${age} · 欢迎回来` : "欢迎回来，一起看看今天的迷因吧。",
     logout: "退出登录",
     loadError: "部分信息加载失败，请刷新页面。",
     dateLocale: "zh-CN",
@@ -369,6 +623,44 @@ const MY_COPY_BASE = {
       emptyTitle: "还没有收藏迷因。",
       emptyBody: "收藏感兴趣的迷因后，就可以在这里随时查看。",
       explore: "发现迷因",
+      library: {
+        title: "我的迷因收藏库",
+        searchLabel: "搜索收藏的迷因",
+        searchPlaceholder: "按标题或含义重新查找",
+        safetyLabel: "使用信号",
+        allSafety: "所有使用信号",
+        apply: "应用",
+        clear: "清除筛选",
+        results: (matches, total) => `${matches} 条结果 · 共收藏 ${total} 条`,
+        emptyFilteredTitle: "没有符合这些筛选条件的收藏迷因。",
+        emptyFilteredBody: "请尝试其他搜索词，或清除使用信号筛选。",
+        upgradeTitle: "使用 Plus 搜索你的迷因收藏库",
+        upgradeBody: "可按标题、含义或使用信号快速重新找到收藏的迷因。",
+        upgradeAction: "打开 Plus 收藏库",
+        brief: {
+          title: "制作收藏集简报",
+          body: "将收藏集中的含义、使用信号、注意事项和个人备注下载为私密 Markdown。",
+          selectLabel: "收藏集",
+          selectPlaceholder: "选择收藏集",
+          download: "下载简报",
+          empty: "请先为收藏的迷因设置文件夹。",
+          limitNote: "最多包含100条当前已审核的公开迷因。",
+        },
+        editor: {
+          freeHint: "可将收藏的迷因整理到文件夹并添加备注。",
+          edit: "编辑文件夹和备注",
+          add: "添加文件夹和备注",
+          collectionLabel: "文件夹（最多40个字符）",
+          collectionPlaceholder: "例如：本周内容候选",
+          noteLabel: "备注（最多500个字符）",
+          notePlaceholder: "记下在哪里、如何使用",
+          saving: "正在保存…",
+          save: "保存",
+          cancel: "取消",
+          plusRequired: "需要订阅 Plus。",
+          saveFailed: "无法保存，请稍后重试。",
+        },
+      },
     },
     recent: {
       title: "最近浏览",
@@ -399,4 +691,5 @@ const MY_COPY_BASE = {
   },
 } satisfies Record<"ko" | "en" | "ja" | "zh", MyCopy>;
 
-export const MY_COPY: Record<Locale, MyCopy> = withLocaleFallback<MyCopy>(MY_COPY_BASE);
+export const MY_COPY: Record<Locale, MyCopy> =
+  withLocaleFallback<MyCopy>(MY_COPY_BASE);

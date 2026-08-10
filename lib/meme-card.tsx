@@ -78,6 +78,92 @@ export const CARD_FORMATS = {
 
 export type CardFormat = keyof typeof CARD_FORMATS;
 
+export type MemeCardLocale = "ko" | "en" | "ja" | "zh" | "zh-tw";
+
+type MemeCardCopy = {
+  tagline: string;
+  safety: Record<SafetyLevel, string>;
+  lifecycle: Record<LifecycleStatus, string>;
+};
+
+const CARD_COPY = {
+  ko: {
+    tagline: "그 밈, 3초 안에 알려드려요",
+    safety: {
+      green: "써도 됨",
+      yellow: "맥락 주의",
+      gray: "이미 늦음",
+      red: "쓰면 위험",
+    },
+    lifecycle: {
+      rising: "급상승",
+      active: "유행 중",
+      cooling: "식는 중",
+      archived: "추억 밈",
+    },
+  },
+  en: {
+    tagline: "Korean Memes Explained",
+    safety: {
+      green: "Safe to use",
+      yellow: "Context needed",
+      gray: "Past its prime",
+      red: "Risky to use",
+    },
+    lifecycle: {
+      rising: "Rising",
+      active: "Active",
+      cooling: "Cooling",
+      archived: "Archived",
+    },
+  },
+  ja: {
+    tagline: "韓国ミームをわかりやすく解説",
+    safety: {
+      green: "使ってOK",
+      yellow: "文脈に注意",
+      gray: "旬を過ぎた",
+      red: "使用注意",
+    },
+    lifecycle: {
+      rising: "急上昇",
+      active: "流行中",
+      cooling: "落ち着き中",
+      archived: "懐かしミーム",
+    },
+  },
+  zh: {
+    tagline: "看懂韩国网络迷因",
+    safety: {
+      green: "可以使用",
+      yellow: "注意语境",
+      gray: "已经过时",
+      red: "谨慎使用",
+    },
+    lifecycle: {
+      rising: "上升中",
+      active: "流行中",
+      cooling: "降温中",
+      archived: "怀旧迷因",
+    },
+  },
+  "zh-tw": {
+    tagline: "看懂韓國網路迷因",
+    safety: {
+      green: "可以使用",
+      yellow: "注意語境",
+      gray: "已經過時",
+      red: "謹慎使用",
+    },
+    lifecycle: {
+      rising: "上升中",
+      active: "流行中",
+      cooling: "降溫中",
+      archived: "懷舊迷因",
+    },
+  },
+} as const satisfies Record<MemeCardLocale, MemeCardCopy>;
+
 export function isCardTemplate(v: string | null): v is CardTemplate {
   return v != null && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, v);
 }
@@ -131,9 +217,16 @@ export type MemeCardData = {
  */
 export function renderMemeCard(
   data: MemeCardData,
-  opts: { template: CardTemplate; format: CardFormat; watermark: boolean; hasFont: boolean },
+  opts: {
+    template: CardTemplate;
+    format: CardFormat;
+    watermark: boolean;
+    hasFont: boolean;
+    locale?: MemeCardLocale;
+  },
 ): ReactElement {
   const t = CARD_TEMPLATES[opts.template];
+  const copy = CARD_COPY[opts.locale ?? "ko"];
   const isStory = opts.format === "story";
   const safety = SAFETY_LEVELS[data.safetyLevel];
   const life = LIFECYCLE_STATUS[data.lifecycleStatus];
@@ -168,7 +261,7 @@ export function renderMemeCard(
         <div style={{ width: 20, height: 20, borderRadius: 9999, backgroundColor: t.accent }} />
         <div style={{ fontSize: isStory ? 42 : 34, fontWeight: 700, color: t.accent }}>밈캐치</div>
         <div style={{ fontSize: isStory ? 30 : 26, color: t.sub, marginLeft: 6 }}>
-          그 밈, 3초 안에 알려드려요
+          {copy.tagline}
         </div>
       </div>
 
@@ -210,7 +303,9 @@ export function renderMemeCard(
           }}
         >
           <div style={{ fontSize: 30, color: badgeFg }}>{safety.icon}</div>
-          <div style={{ fontSize: 32, fontWeight: 700, color: badgeFg }}>{safety.user}</div>
+          <div style={{ fontSize: 32, fontWeight: 700, color: badgeFg }}>
+            {copy.safety[data.safetyLevel]}
+          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -227,7 +322,9 @@ export function renderMemeCard(
               />
             ))}
           </div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: lifeFg }}>{life.user}</div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: lifeFg }}>
+            {copy.lifecycle[data.lifecycleStatus]}
+          </div>
         </div>
       </div>
 

@@ -139,6 +139,10 @@ export const SEO_LOCALE_COPY = SEO_COPY;
 
 const SEO_CONTENT_LOCALE_SET = new Set<string>(SEO_CONTENT_LOCALES);
 const SEO_ROUTE_LOCALE_SET = new Set<string>(SEO_ROUTE_LOCALES);
+// Only these non-detail routes have dedicated localized page implementations.
+// Keeping this list explicit prevents the language selector from generating
+// locale URLs that resolve to a 404 page.
+const LOCALIZED_STATIC_PATHS = new Set(["/", "/pricing", "/daily", "/search", "/explore"]);
 
 export function isSeoContentLocale(value: string | null | undefined): value is SeoContentLocale {
   return !!value && SEO_CONTENT_LOCALE_SET.has(value);
@@ -192,6 +196,24 @@ export function localizePath(value: string, locale: SeoRouteLocale): string {
 
 export function localizedPath(value: string, locale: SeoRouteLocale): string {
   return localizePath(value, locale);
+}
+
+/** Whether a route has a dedicated localized static page for every SEO locale. */
+export function isLocalizedStaticPath(value: string): boolean {
+  const { pathname } = splitPath(stripLocalePath(value));
+  return LOCALIZED_STATIC_PATHS.has(pathname);
+}
+
+/**
+ * Preserve a locale prefix only where a real localized static page exists.
+ * UI-only locales retain the unprefixed page and use the locale cookie.
+ */
+export function localizedStaticPath(value: string, locale: Locale): string {
+  const unprefixed = stripLocalePath(value);
+  if (isSeoContentLocale(locale) && isLocalizedStaticPath(unprefixed)) {
+    return localizePath(unprefixed, locale);
+  }
+  return unprefixed;
 }
 
 export function localizedMemePath(locale: SeoRouteLocale, shortId: string, slug: string): string {

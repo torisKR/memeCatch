@@ -8,6 +8,7 @@ import { HeaderMenu } from "@/components/header-menu";
 import { LanguageSelector } from "@/components/language-selector";
 import { TrendAlertsBell } from "@/components/premium/trend-alerts-bell";
 import { useLocale } from "@/lib/i18n-client";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 전역 헤더 — DESIGN.md §10 + 2026-07 IA 개편(검색·탐색 중심 제품형 내비).
@@ -22,14 +23,14 @@ import { useLocale } from "@/lib/i18n-client";
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
 export function GlobalHeader() {
-  const { messages } = useLocale();
+  const { locale, messages } = useLocale();
   return (
     <HideOnAdmin>
       <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
           {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
           <Link
-            href="/"
+            href={localizedStaticPath("/", locale)}
             aria-label={messages.home}
             className="group flex min-h-11 min-w-11 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
           >
@@ -49,7 +50,7 @@ export function GlobalHeader() {
           <div className="ml-auto flex items-center gap-2">
             {/* 데스크톱: 미니 검색바 */}
             <form
-              action="/search"
+              action={localizedStaticPath("/search", locale)}
               role="search"
               className="hidden lg:block"
             >
@@ -84,7 +85,7 @@ export function GlobalHeader() {
 
             {/* 모바일: 검색 아이콘 버튼 */}
             <Link
-              href="/search"
+              href={localizedStaticPath("/search", locale)}
               aria-label={messages.search}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-(--signal-cyan) hover:bg-surface-2 active:scale-[0.95] lg:hidden"
             >

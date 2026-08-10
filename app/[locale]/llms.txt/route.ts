@@ -27,7 +27,7 @@ type Copy = {
 const COPY: Record<SeoContentLocale, Copy> = {
   en: {
     summary: "A multilingual guide to Korean meme terms, challenge dances, songs, drama scenes, and meme videos, explaining meaning, origin, usage, and cultural risk.",
-    editorial: "Indexable translations are human-reviewed, current with the Korean source, and backed by substantial source material. Machine and outdated drafts are visible to readers but excluded from search and AI discovery feeds.",
+    editorial: "Indexable translations are human-reviewed, current with the Korean source, and backed by substantial source material. Machine and outdated drafts remain private to the operator workflow and are excluded from public pages, search, and AI discovery feeds.",
     entryPoints: "Key entry points",
     home: "Korean meme dictionary",
     full: "Full translated corpus for AI systems",
@@ -40,7 +40,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
   },
   ja: {
     summary: "韓国のミーム用語、チャレンジダンス、楽曲、ドラマシーン、ミーム動画の意味・由来・使い方・文化的な注意点を多言語で解説する辞典です。",
-    editorial: "検索登録される翻訳は、人が確認し、韓国語の原文と同期し、十分な出典を持つものに限ります。機械翻訳や古い下書きは読者向けに表示しても、検索・AI向けフィードからは除外します。",
+    editorial: "検索登録される翻訳は、人が確認し、韓国語の原文と同期し、十分な出典を持つものに限ります。機械翻訳や古い下書きは編集者向けの非公開ワークフローにとどまり、公開ページ・検索・AI向けフィードから除外します。",
     entryPoints: "主な入口",
     home: "韓国ミーム辞典",
     full: "AI向け翻訳全文コーパス",
@@ -53,7 +53,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
   },
   zh: {
     summary: "以多语言解释韩国梗语、舞蹈挑战、歌曲、电视剧场景和梗视频的含义、起源、用法与文化风险。",
-    editorial: "只有经过人工审核、与韩文原文同步且来源资料充足的翻译才会被收录。机器翻译和过期草稿可以供读者查看，但不会进入搜索和 AI 发现源。",
+    editorial: "只有经过人工审核、与韩文原文同步且来源资料充足的翻译才会被收录。机器翻译和过期草稿仅保留在编辑者的私有工作流中，不会出现在公开页面、搜索或 AI 发现源中。",
     entryPoints: "主要入口",
     home: "韩国迷因词典",
     full: "面向 AI 系统的完整翻译语料",
@@ -66,7 +66,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
   },
   "zh-tw": {
     summary: "以多語言解釋韓國梗語、舞蹈挑戰、歌曲、電視劇場景和梗影片的含義、起源、用法與文化風險。",
-    editorial: "只有經過人工審核、與韓文原文同步且來源資料充足的翻譯才會被收錄。機器翻譯和過期草稿可以供讀者查看，但不會進入搜尋和 AI 探索來源。",
+    editorial: "只有經過人工審核、與韓文原文同步且來源資料充足的翻譯才會被收錄。機器翻譯和過期草稿僅保留在編輯者的私有工作流中，不會出現在公開頁面、搜尋或 AI 探索來源中。",
     entryPoints: "主要入口",
     home: "韓國迷因辭典",
     full: "供 AI 系統使用的完整翻譯語料",

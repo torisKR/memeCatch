@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { selectPremiumSubscription } from "@/lib/billing/entitlements";
 import { useLocale } from "@/lib/i18n-client";
 import { withLocaleFallback, type Locale } from "@/lib/i18n";
+import { isSeoContentLocale, localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * B2 — 밈 카드 내보내기 UI.
@@ -19,6 +20,7 @@ import { withLocaleFallback, type Locale } from "@/lib/i18n";
 const COPY_BASE = {
   ko: {
     open: "카드 내보내기",
+    close: "닫기",
     title: "밈 카드로 저장",
     template: "템플릿",
     format: "크기",
@@ -38,6 +40,7 @@ const COPY_BASE = {
   },
   en: {
     open: "Export card",
+    close: "Close",
     title: "Save as meme card",
     template: "Template",
     format: "Size",
@@ -57,6 +60,7 @@ const COPY_BASE = {
   },
   ja: {
     open: "カード書き出し",
+    close: "閉じる",
     title: "ミームカードとして保存",
     template: "テンプレート",
     format: "サイズ",
@@ -76,6 +80,7 @@ const COPY_BASE = {
   },
   zh: {
     open: "导出卡片",
+    close: "关闭",
     title: "保存为梗卡片",
     template: "模板",
     format: "尺寸",
@@ -99,6 +104,11 @@ const COPY: Record<Locale, Record<string, string>> = withLocaleFallback<Record<s
 
 type Template = "classic" | "minimal" | "bold";
 type Format = "card" | "story";
+
+/** Premium export upsells keep users on the locale-specific public price page. */
+export function exportUpgradeHref(locale: Locale): string {
+  return localizedStaticPath("/pricing", locale);
+}
 
 export function ExportButton({ shortId }: { shortId: string }) {
   const { locale } = useLocale();
@@ -164,6 +174,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
     setError(false);
     try {
       const qs = new URLSearchParams({ template, format });
+      if (isSeoContentLocale(locale)) qs.set("locale", locale);
       if (premium && hiRes) qs.set("scale", "3");
       const res = await fetch(`/memes/${shortId}/export?${qs.toString()}`, {
         cache: "no-store",
@@ -210,7 +221,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            aria-label="닫기"
+            aria-label={copy.close}
             className="grid h-11 w-11 place-items-center rounded-full text-text-muted hover:bg-surface"
           >
             <span aria-hidden>✕</span>
@@ -310,7 +321,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
               {copy.upgradeHint}
             </p>
             <Link
-              href="/premium"
+              href={exportUpgradeHref(locale)}
               className="inline-flex h-10 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
             >
               {copy.upgrade}

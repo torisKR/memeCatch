@@ -5,25 +5,9 @@
  * jsonb라 형태를 신뢰할 수 없으므로 런타임 검증 후 최대 3개만 렌더.
  */
 
-export type UsageExample = { situation: string; text: string };
+import { parseUsageExamples } from "@/lib/usage-examples";
 
-const MAX_EXAMPLES = 3;
-
-function parseUsageExamples(value: unknown): UsageExample[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is UsageExample => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
-      const o = item as Record<string, unknown>;
-      return (
-        typeof o.situation === "string" &&
-        o.situation.trim().length > 0 &&
-        typeof o.text === "string" &&
-        o.text.trim().length > 0
-      );
-    })
-    .slice(0, MAX_EXAMPLES);
-}
+export type { UsageExample } from "@/lib/usage-examples";
 
 export function UsageExamples({ examples }: { examples?: unknown }) {
   const rows = parseUsageExamples(examples);

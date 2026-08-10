@@ -10,12 +10,19 @@ import {
 } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { memePathFrom, SUBMISSION_STATUS } from "@/lib/labels";
+import { memePathFrom } from "@/lib/labels";
+import { useLocale } from "@/lib/i18n-client";
+import { SUBMIT_COPY } from "@/lib/i18n-submit";
 import {
   submitMemeWithAttachment,
   type SubmitState,
 } from "@/app/(default)/submit/actions";
-import { uploadMemeImage, validateUploadFile, UPLOAD_ACCEPT } from "@/lib/upload";
+import {
+  MAX_UPLOAD_BYTES,
+  uploadMemeImage,
+  validateUploadFile,
+  UPLOAD_ACCEPT,
+} from "@/lib/upload";
 import { SubmissionStatusBadge } from "@/components/submission-status";
 import { ContentUrlPreview } from "@/components/content-url-preview";
 
@@ -39,14 +46,22 @@ const EMPTY_FIELDS: DraftFields = {
   tags: "",
 };
 
-type DupHit = { id: string; short_id: string; slug: string; title: string; summary: string };
+type DupHit = {
+  id: string;
+  short_id: string;
+  slug: string;
+  title: string;
+  summary: string;
+};
 
 const initialState: SubmitState = { status: "idle" };
 
 export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
+  const { locale } = useLocale();
+  const copy = SUBMIT_COPY[locale];
   const [state, formAction, pending] = useActionState(
     submitMemeWithAttachment,
-    initialState
+    initialState,
   );
   const [fields, setFields] = useState<DraftFields>({
     ...EMPTY_FIELDS,
@@ -87,7 +102,9 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           ...draft,
           name: defaultName || draft.name || "",
         });
-        if (Object.values(draft).some((v) => typeof v === "string" && v.trim())) {
+        if (
+          Object.values(draft).some((v) => typeof v === "string" && v.trim())
+        ) {
           setRestored(true);
         }
       }
@@ -155,7 +172,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           slug: m.slug,
           title: m.title,
           summary: m.summary,
-        }))
+        })),
       );
     }, 400);
     return () => clearTimeout(timer);
@@ -175,14 +192,18 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
       if (!file) return;
       const invalid = validateUploadFile(file);
       if (invalid) {
-        setUploadError(invalid);
+        setUploadError(
+          file.size > MAX_UPLOAD_BYTES
+            ? copy.errors.imageTooLarge
+            : copy.errors.imageType,
+        );
         e.target.value = "";
         return;
       }
       setAttachFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     },
-    []
+    [copy.errors],
   );
 
   const removeFile = useCallback(() => {
@@ -206,7 +227,13 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           try {
             const result = await uploadMemeImage(attachFile);
             if (!result.ok) {
-              setUploadError(result.error);
+              setUploadError(
+                result.code === "login_required"
+                  ? copy.errors.loginRequired
+                  : result.code === "rate_limited"
+                    ? copy.errors.rateLimited
+                    : copy.errors.imageUploadFailed,
+              );
               return;
             }
             uploadedRef.current = { file: attachFile, path: result.path };
@@ -219,18 +246,16 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
       }
       formAction(formData);
     },
-    [attachFile, formAction]
+    [attachFile, copy.errors, formAction],
   );
 
   const update = useCallback(
     (key: keyof DraftFields) =>
-      (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      ) => {
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const value = e.target.value;
         setFields((prev) => ({ ...prev, [key]: value }));
       },
-    []
+    [],
   );
 
   if (state.status === "success") {
@@ -239,25 +264,24 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
         aria-live="polite"
         className="rounded-2xl border border-border bg-surface p-6"
       >
-        <SubmissionStatusBadge status="pending" />
-        <h2 className="mt-3 text-xl font-bold">
-          {SUBMISSION_STATUS.pending.user}
-        </h2>
-        <p className="mt-2 text-muted">
-          제보해 주셔서 고마워요. 검토가 끝나면 MY에서 결과를 알려드려요.
-        </p>
+        <SubmissionStatusBadge
+          status="pending"
+          label={copy.form.successBadge}
+        />
+        <h2 className="mt-3 text-xl font-bold">{copy.form.successTitle}</h2>
+        <p className="mt-2 text-muted">{copy.form.successBody}</p>
         <div className="mt-6 flex flex-col gap-3">
           <Link
             href="/my"
             className="flex h-12 items-center justify-center rounded-xl bg-accent-strong text-base font-bold text-white"
           >
-            MY에서 제보 상태 보기
+            {copy.form.viewMy}
           </Link>
           <Link
             href="/submit"
             className="flex h-12 items-center justify-center rounded-xl border border-border bg-surface text-base font-semibold"
           >
-            다른 밈 제보하기
+            {copy.form.submitAnother}
           </Link>
         </div>
       </section>
@@ -270,20 +294,29 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
   return (
     <form action={handleSubmit} className="flex flex-col gap-5" noValidate>
       {restored && (
-        <p className="rounded-xl bg-surface-2 px-4 py-3 text-muted" role="status">
-          작성하던 내용을 불러왔어요.
+        <p
+          className="rounded-xl bg-surface-2 px-4 py-3 text-muted"
+          role="status"
+        >
+          {copy.form.restored}
         </p>
       )}
       {formError && (
-        <p role="alert" className="rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red">
+        <p
+          role="alert"
+          className="rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red"
+        >
           {formError}
         </p>
       )}
 
       <div>
         <label htmlFor={ids.name} className="mb-1.5 block font-medium">
-          밈 이름 <span className="text-safety-red" aria-hidden>*</span>
-          <span className="sr-only">(필수)</span>
+          {copy.form.nameLabel}{" "}
+          <span className="text-safety-red" aria-hidden>
+            *
+          </span>
+          <span className="sr-only">({copy.form.required})</span>
         </label>
         <input
           id={ids.name}
@@ -293,28 +326,41 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={100}
           value={fields.name}
           onChange={update("name")}
-          placeholder="예: 우당탕탕"
+          placeholder={copy.form.namePlaceholder}
           aria-invalid={!!fieldErrors.name}
           aria-describedby={fieldErrors.name ? `${ids.name}-error` : undefined}
           className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base placeholder:text-muted"
         />
         {fieldErrors.name && (
-          <p id={`${ids.name}-error`} role="alert" className="mt-1.5 text-sm text-safety-red">
+          <p
+            id={`${ids.name}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
             {fieldErrors.name}
           </p>
         )}
 
         {/* 중복 검사 결과 */}
         {dupLoading && (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-muted" role="status">
-            <span aria-hidden className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
-            비슷한 밈이 있는지 확인하는 중…
+          <p
+            className="mt-2 flex items-center gap-1.5 text-sm text-muted"
+            role="status"
+          >
+            <span
+              aria-hidden
+              className="signal-live size-1.5 shrink-0 rounded-full bg-(--signal-cyan)"
+            />
+            {copy.form.duplicateLoading}
           </p>
         )}
         {!dupLoading && dups.length > 0 && (
-          <div className="mt-2 rounded-xl bg-safety-yellow-bg px-4 py-3" role="status">
+          <div
+            className="mt-2 rounded-xl bg-safety-yellow-bg px-4 py-3"
+            role="status"
+          >
             <p className="font-medium text-safety-yellow">
-              이미 등록된 밈 아닌가요?
+              {copy.form.duplicateTitle}
             </p>
             <ul className="mt-2 flex flex-col gap-1">
               {dups.map((m) => (
@@ -328,16 +374,14 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-sm text-muted">
-              같은 밈이면 제보 대신 그 페이지에서 반응을 남겨 주세요.
-            </p>
+            <p className="mt-1 text-sm text-muted">{copy.form.duplicateBody}</p>
           </div>
         )}
       </div>
 
       <div>
         <label htmlFor={ids.seenAt} className="mb-1.5 block font-medium">
-          어디서 봤나요?
+          {copy.form.seenAtLabel}
         </label>
         <input
           id={ids.seenAt}
@@ -346,13 +390,19 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={200}
           value={fields.seenAt}
           onChange={update("seenAt")}
-          placeholder="예: 인스타 릴스, 회사 단톡방"
+          placeholder={copy.form.seenAtPlaceholder}
           aria-invalid={!!fieldErrors.seenAt}
-          aria-describedby={fieldErrors.seenAt ? `${ids.seenAt}-error` : undefined}
+          aria-describedby={
+            fieldErrors.seenAt ? `${ids.seenAt}-error` : undefined
+          }
           className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base placeholder:text-muted"
         />
         {fieldErrors.seenAt && (
-          <p id={`${ids.seenAt}-error`} role="alert" className="mt-1.5 text-sm text-safety-red">
+          <p
+            id={`${ids.seenAt}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
             {fieldErrors.seenAt}
           </p>
         )}
@@ -360,7 +410,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
 
       <div>
         <label htmlFor={ids.sourceUrl} className="mb-1.5 block font-medium">
-          원본 콘텐츠 링크
+          {copy.form.sourceUrlLabel}
         </label>
         <input
           id={ids.sourceUrl}
@@ -370,22 +420,28 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={500}
           value={fields.sourceUrl}
           onChange={update("sourceUrl")}
-          placeholder="YouTube·Shorts·Instagram·TikTok 링크"
+          placeholder={copy.form.sourceUrlPlaceholder}
           aria-invalid={!!fieldErrors.sourceUrl}
-          aria-describedby={fieldErrors.sourceUrl ? `${ids.sourceUrl}-error` : undefined}
+          aria-describedby={
+            fieldErrors.sourceUrl ? `${ids.sourceUrl}-error` : undefined
+          }
           className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base placeholder:text-muted"
         />
         {fieldErrors.sourceUrl && (
-          <p id={`${ids.sourceUrl}-error`} role="alert" className="mt-1.5 text-sm text-safety-red">
+          <p
+            id={`${ids.sourceUrl}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
             {fieldErrors.sourceUrl}
           </p>
         )}
-        <ContentUrlPreview url={fields.sourceUrl} />
+        <ContentUrlPreview url={fields.sourceUrl} copy={copy.preview} />
       </div>
 
       <div>
         <label htmlFor={ids.description} className="mb-1.5 block font-medium">
-          설명
+          {copy.form.descriptionLabel}
         </label>
         <textarea
           id={ids.description}
@@ -394,13 +450,19 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={2000}
           value={fields.description}
           onChange={update("description")}
-          placeholder="무슨 뜻인지, 어떻게 쓰이는지 아는 만큼 적어 주세요"
+          placeholder={copy.form.descriptionPlaceholder}
           aria-invalid={!!fieldErrors.description}
-          aria-describedby={fieldErrors.description ? `${ids.description}-error` : undefined}
+          aria-describedby={
+            fieldErrors.description ? `${ids.description}-error` : undefined
+          }
           className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base placeholder:text-muted"
         />
         {fieldErrors.description && (
-          <p id={`${ids.description}-error`} role="alert" className="mt-1.5 text-sm text-safety-red">
+          <p
+            id={`${ids.description}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
             {fieldErrors.description}
           </p>
         )}
@@ -408,7 +470,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
 
       <div>
         <label htmlFor={ids.guessReason} className="mb-1.5 block font-medium">
-          왜 유행하는 것 같나요?
+          {copy.form.guessLabel}
         </label>
         <textarea
           id={ids.guessReason}
@@ -417,13 +479,19 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={1000}
           value={fields.guessReason}
           onChange={update("guessReason")}
-          placeholder="추측이어도 좋아요. 검토에 큰 도움이 돼요"
+          placeholder={copy.form.guessPlaceholder}
           aria-invalid={!!fieldErrors.guessReason}
-          aria-describedby={fieldErrors.guessReason ? `${ids.guessReason}-error` : undefined}
+          aria-describedby={
+            fieldErrors.guessReason ? `${ids.guessReason}-error` : undefined
+          }
           className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base placeholder:text-muted"
         />
         {fieldErrors.guessReason && (
-          <p id={`${ids.guessReason}-error`} role="alert" className="mt-1.5 text-sm text-safety-red">
+          <p
+            id={`${ids.guessReason}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
             {fieldErrors.guessReason}
           </p>
         )}
@@ -431,7 +499,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
 
       <div>
         <label htmlFor={ids.tags} className="mb-1.5 block font-medium">
-          태그
+          {copy.form.tagsLabel}
         </label>
         <input
           id={ids.tags}
@@ -440,13 +508,17 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           maxLength={300}
           value={fields.tags}
           onChange={update("tags")}
-          placeholder="콤마로 구분 (예: 직장인, 유행어)"
+          placeholder={copy.form.tagsPlaceholder}
           aria-invalid={!!fieldErrors.tags}
           aria-describedby={fieldErrors.tags ? `${ids.tags}-error` : undefined}
           className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base placeholder:text-muted"
         />
         {fieldErrors.tags && (
-          <p id={`${ids.tags}-error`} role="alert" className="mt-1.5 text-sm text-safety-red">
+          <p
+            id={`${ids.tags}-error`}
+            role="alert"
+            className="mt-1.5 text-sm text-safety-red"
+          >
             {fieldErrors.tags}
           </p>
         )}
@@ -454,7 +526,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
 
       <div>
         <label htmlFor={ids.attachment} className="mb-1.5 block font-medium">
-          짤/캡처 이미지 첨부(선택)
+          {copy.form.attachmentLabel}
         </label>
         <input
           ref={fileInputRef}
@@ -471,7 +543,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           className="w-full cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-base text-muted file:mr-3 file:h-8 file:cursor-pointer file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-sm file:font-semibold file:text-foreground"
         />
         <p id={`${ids.attachment}-hint`} className="mt-1.5 text-sm text-muted">
-          JPG·PNG·WebP·GIF, 5MB 이하
+          {copy.form.attachmentHint}
         </p>
         {(uploadError || fieldErrors.attachment) && (
           <p
@@ -479,8 +551,8 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
             role="alert"
             className="mt-1.5 text-sm text-safety-red"
           >
-            {uploadError ?? fieldErrors.attachment} — 제보 보내기를 다시 눌러
-            재시도할 수 있어요
+            {uploadError ?? fieldErrors.attachment} —{" "}
+            {copy.form.attachmentRetry}
           </p>
         )}
         {attachFile && previewUrl && (
@@ -488,7 +560,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewUrl}
-              alt="첨부한 이미지 미리보기"
+              alt={copy.form.attachmentPreview}
               className="max-h-48 w-auto max-w-full rounded-xl border border-border object-contain"
             />
             <button
@@ -496,7 +568,7 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
               onClick={removeFile}
               className="flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold"
             >
-              제거
+              {copy.form.removeAttachment}
             </button>
           </div>
         )}
@@ -518,14 +590,12 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
           />
         )}
         {uploading
-          ? "이미지 올리는 중…"
+          ? copy.form.uploading
           : pending
-            ? "제보 보내는 중…"
-            : "제보 보내기"}
+            ? copy.form.submitting
+            : copy.form.submit}
       </button>
-      <p className="text-center text-sm text-muted">
-        작성 중인 내용은 이 기기에 자동으로 임시저장돼요.
-      </p>
+      <p className="text-center text-sm text-muted">{copy.form.draftHint}</p>
     </form>
   );
 }

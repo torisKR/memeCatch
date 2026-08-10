@@ -11,7 +11,12 @@ const CATEGORY_KEYS = [
   "challenge",
 ] as const;
 const SAFETY_KEYS = ["green", "yellow", "gray", "red"] as const;
-const SUBMISSION_KEYS = ["pending", "reviewing", "approved", "rejected"] as const;
+const SUBMISSION_KEYS = [
+  "pending",
+  "reviewing",
+  "approved",
+  "rejected",
+] as const;
 const AGE_KEYS = ["10s", "20s", "30s", "40s", "50s+"] as const;
 
 describe("MY_COPY", () => {
@@ -19,11 +24,17 @@ describe("MY_COPY", () => {
     const copy = MY_COPY[locale];
 
     expect(copy.defaultNickname).toBeTruthy();
+    expect(copy.onboarding.title).toBeTruthy();
+    expect(copy.onboarding.nicknamePlaceholder).toBeTruthy();
+    expect(copy.onboarding.submitting).toBeTruthy();
     expect(copy.greeting(copy.ageGroups["20s"])).toBeTruthy();
     expect(copy.greeting(undefined)).toBeTruthy();
     expect(copy.nickname.saved).toBeTruthy();
     expect(copy.interests.empty).toBeTruthy();
     expect(copy.saved.emptyBody).toBeTruthy();
+    expect(copy.saved.library.title).toBeTruthy();
+    expect(copy.saved.library.results(1, 2)).toBeTruthy();
+    expect(copy.saved.library.upgradeAction).toBeTruthy();
     expect(copy.recent.title).toBeTruthy();
     expect(copy.recent.clearAll).toBeTruthy();
     expect(copy.submissions.submittedAt("2026-07-18")).toContain("2026-07-18");
@@ -45,17 +56,24 @@ describe("MY_COPY", () => {
       );
 
       expect(fixedCopy).not.toMatch(/[\uac00-\ud7a3]/);
-      expect(copy.greeting(copy.ageGroups["20s"])).not.toMatch(/[\uac00-\ud7a3]/);
+      expect(copy.greeting(copy.ageGroups["20s"])).not.toMatch(
+        /[\uac00-\ud7a3]/,
+      );
       expect(copy.greeting(undefined)).not.toMatch(/[\uac00-\ud7a3]/);
-      expect(copy.submissions.submittedAt("2026-07-18")).not.toMatch(/[\uac00-\ud7a3]/);
+      expect(copy.submissions.submittedAt("2026-07-18")).not.toMatch(
+        /[\uac00-\ud7a3]/,
+      );
     },
   );
 
-  it.each(SUPPORTED_LOCALES)("localizes every nickname action error for %s", (locale) => {
-    const errors = MY_COPY[locale].nickname.errors;
+  it.each(SUPPORTED_LOCALES)(
+    "localizes every nickname action error for %s",
+    (locale) => {
+      const errors = MY_COPY[locale].nickname.errors;
 
-    expect(errors.invalidLength).toBeTruthy();
-    expect(errors.taken).toBeTruthy();
-    expect(errors.saveFailed).toBeTruthy();
-  });
+      expect(errors.invalidLength).toBeTruthy();
+      expect(errors.taken).toBeTruthy();
+      expect(errors.saveFailed).toBeTruthy();
+    },
+  );
 });

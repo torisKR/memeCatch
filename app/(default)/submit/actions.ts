@@ -3,11 +3,9 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
-import {
-  getOEmbed,
-  isSupportedOEmbedUrl,
-  OEmbedError,
-} from "@/lib/oembed";
+import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
+import { getRequestLocale } from "@/lib/i18n-server";
+import { SUBMIT_COPY, type SubmitCopy } from "@/lib/i18n-submit";
 
 export type SubmitFieldErrors = Partial<
   Record<
@@ -27,26 +25,34 @@ export type SubmitState =
   | { status: "error"; fieldErrors: SubmitFieldErrors; formError?: string }
   | { status: "success"; submissionId: string };
 
-const submitSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "밈 이름을 입력해 주세요")
-    .max(100, "이름은 100자 이내로 입력해 주세요"),
-  seenAt: z.string().trim().max(200, "200자 이내로 입력해 주세요"),
-  sourceUrl: z
-    .string()
-    .trim()
-    .max(500, "링크가 너무 길어요")
-    .refine(
-      (v) => v === "" || /^https:\/\/\S+\.\S+/.test(v),
-      "https:// 로 시작하는 링크만 넣을 수 있어요"
-    ),
-  description: z.string().trim().max(2000, "설명은 2000자 이내로 입력해 주세요"),
-  guessReason: z.string().trim().max(1000, "1000자 이내로 입력해 주세요"),
-  tags: z.string().trim().max(300, "태그가 너무 길어요"),
-  attachmentPath: z.string().trim().max(300).optional().default(""),
-});
+function createSubmitSchema(copy: SubmitCopy) {
+  const { errors } = copy;
+  return z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, errors.nameRequired)
+      .max(100, errors.nameTooLong),
+    seenAt: z.string().trim().max(200, errors.seenAtTooLong),
+    sourceUrl: z
+      .string()
+      .trim()
+      .max(500, errors.sourceUrlTooLong)
+      .refine(
+        (value) => value === "" || /^https:\/\/\S+\.\S+/.test(value),
+        errors.sourceUrlInvalid,
+      ),
+    description: z.string().trim().max(2000, errors.descriptionTooLong),
+    guessReason: z.string().trim().max(1000, errors.guessTooLong),
+    tags: z.string().trim().max(300, errors.tagsTooLong),
+    attachmentPath: z
+      .string()
+      .trim()
+      .max(300, errors.attachmentTooLong)
+      .optional()
+      .default(""),
+  });
+}
 
 function parseTags(raw: string): string[] {
   return Array.from(
@@ -54,8 +60,8 @@ function parseTags(raw: string): string[] {
       raw
         .split(",")
         .map((t) => t.trim())
-        .filter((t) => t.length > 0 && t.length <= 30)
-    )
+        .filter((t) => t.length > 0 && t.length <= 30),
+    ),
   ).slice(0, 10);
 }
 
@@ -65,17 +71,18 @@ function parseTags(raw: string): string[] {
  */
 export async function submitMemeWithAttachment(
   _prev: SubmitState,
-  formData: FormData
+  formData: FormData,
 ): Promise<SubmitState> {
+  const copy = SUBMIT_COPY[await getRequestLocale()];
   if (!flags.submissionsOpen) {
     return {
       status: "error",
       fieldErrors: {},
-      formError: "지금은 제보를 받지 않아요. 조금만 기다려 주세요",
+      formError: copy.errors.submissionsClosed,
     };
   }
 
-  const parsed = submitSchema.safeParse({
+  const parsed = createSubmitSchema(copy).safeParse({
     name: formData.get("name") ?? "",
     seenAt: formData.get("seenAt") ?? "",
     sourceUrl: formData.get("sourceUrl") ?? "",
@@ -102,26 +109,29 @@ export async function submitMemeWithAttachment(
     return {
       status: "error",
       fieldErrors: {},
-      formError: "로그인이 필요해요. 로그인 후 다시 시도해 주세요",
+      formError: copy.errors.loginRequired,
     };
   }
 
-  const { name, seenAt, sourceUrl, description, guessReason, tags, attachmentPath } =
-    parsed.data;
+  const {
+    name,
+    seenAt,
+    sourceUrl,
+    description,
+    guessReason,
+    tags,
+    attachmentPath,
+  } = parsed.data;
 
   // 지원 플랫폼 링크는 미리보기와 동일한 서버 검증을 다시 수행한다.
   // 클라이언트 미리보기는 우회될 수 있으므로 제출 시점을 신뢰 경계로 삼는다.
   if (sourceUrl && isSupportedOEmbedUrl(sourceUrl)) {
     try {
       await getOEmbed(sourceUrl);
-    } catch (error) {
-      const message =
-        error instanceof OEmbedError
-          ? error.message
-          : "콘텐츠를 확인하지 못했어요. 공개 링크인지 다시 확인해 주세요";
+    } catch {
       return {
         status: "error",
-        fieldErrors: { sourceUrl: message },
+        fieldErrors: { sourceUrl: copy.errors.sourceUnavailable },
       };
     }
   }
@@ -134,7 +144,7 @@ export async function submitMemeWithAttachment(
     return {
       status: "error",
       fieldErrors: {
-        attachment: "첨부 이미지 정보가 올바르지 않아요. 이미지를 다시 올려 주세요",
+        attachment: copy.errors.attachmentInvalid,
       },
     };
   }
@@ -156,21 +166,20 @@ export async function submitMemeWithAttachment(
       return {
         status: "error",
         fieldErrors: {},
-        formError:
-          "너무 빨라요 — 제보는 1시간에 5개까지만 보낼 수 있어요. 잠시 후 다시 시도해 주세요",
+        formError: copy.errors.rateLimited,
       };
     }
     if (error.message.includes("invalid_url")) {
       return {
         status: "error",
-        fieldErrors: { sourceUrl: "https:// 로 시작하는 링크만 넣을 수 있어요" },
+        fieldErrors: { sourceUrl: copy.errors.sourceUrlInvalid },
       };
     }
     if (error.message.includes("invalid_attachment_path")) {
       return {
         status: "error",
         fieldErrors: {
-          attachment: "첨부 이미지 정보가 올바르지 않아요. 이미지를 다시 올려 주세요",
+          attachment: copy.errors.attachmentInvalid,
         },
       };
     }
@@ -178,13 +187,13 @@ export async function submitMemeWithAttachment(
       return {
         status: "error",
         fieldErrors: {},
-        formError: "로그인이 필요해요. 로그인 후 다시 시도해 주세요",
+        formError: copy.errors.loginRequired,
       };
     }
     return {
       status: "error",
       fieldErrors: {},
-      formError: "제보 접수에 실패했어요. 잠시 후 다시 시도해 주세요",
+      formError: copy.errors.submitFailed,
     };
   }
 

@@ -9,6 +9,11 @@ vi.mock("@/lib/actions/auth", () => ({
   completeOnboarding: vi.fn(),
 }));
 
+vi.mock("@/lib/i18n-client", async () => {
+  const { getMessages } = await import("@/lib/i18n");
+  return { useLocale: () => ({ locale: "en", messages: getMessages("en") }) };
+});
+
 afterEach(cleanup);
 
 describe("OnboardingForm interests", () => {
@@ -23,18 +28,16 @@ describe("OnboardingForm interests", () => {
       />
     );
 
-    const labels = [
-      "밈 용어(유행어)",
-      "챌린지 댄스",
-      "노래",
-      "드라마 장면",
-      "밈 영상",
-    ];
+    expect(screen.getByRole("heading", { name: "Welcome to MemeCatch" })).toBeTruthy();
+    expect(screen.getByLabelText("Nickname")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Skip for now" })).toBeTruthy();
+
+    const labels = ["Meme terms", "Challenge dances", "Songs", "Drama scenes", "Meme videos"];
     for (const label of labels) {
       expect(screen.getByRole("button", { name: label })).toBeTruthy();
     }
 
-    const challengeDance = screen.getByRole("button", { name: "챌린지 댄스" });
+    const challengeDance = screen.getByRole("button", { name: "Challenge dances" });
     expect(challengeDance.getAttribute("aria-pressed")).toBe("true");
     expect(
       [...container.querySelectorAll<HTMLInputElement>('input[name="interests"]')]

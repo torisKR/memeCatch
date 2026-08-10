@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { SubmitCopy } from "@/lib/i18n-submit";
 
 type PreviewProvider =
   | "youtube"
@@ -89,7 +90,13 @@ function threadsDocument(html: string) {
   return `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${html}</body></html>`;
 }
 
-export function ContentUrlPreview({ url }: { url: string }) {
+export function ContentUrlPreview({
+  url,
+  copy,
+}: {
+  url: string;
+  copy: SubmitCopy["preview"];
+}) {
   const [state, setState] = useState<PreviewState>({ status: "idle" });
   const trimmedUrl = url.trim();
   const provider = detectProvider(trimmedUrl);
@@ -101,24 +108,20 @@ export function ContentUrlPreview({ url }: { url: string }) {
     setState({ status: "loading", url: trimmedUrl });
     try {
       const response = await fetch(
-        `/api/oembed?url=${encodeURIComponent(trimmedUrl)}`
+        `/api/oembed?url=${encodeURIComponent(trimmedUrl)}`,
       );
       const result = (await response.json()) as
         | PreviewData
         | { error?: string };
       if (!response.ok || !("provider" in result)) {
-        throw new Error(
-          "error" in result && result.error
-            ? result.error
-            : "공개 콘텐츠를 확인하지 못했어요."
-        );
+        throw new Error(copy.genericError);
       }
       const trusted =
         result.provider === "threads"
           ? typeof result.embedHtml === "string" && result.embedHtml.length > 0
           : isTrustedEmbedUrl(result.provider, result.embedUrl);
       if (result.provider !== provider || !trusted) {
-        throw new Error("안전한 미리보기 주소를 확인하지 못했어요.");
+        throw new Error(copy.unsafeError);
       }
       setState({ status: "ready", url: trimmedUrl, data: result });
     } catch (error) {
@@ -126,40 +129,32 @@ export function ContentUrlPreview({ url }: { url: string }) {
         status: "error",
         url: trimmedUrl,
         message:
-          error instanceof Error
-            ? error.message
-            : "콘텐츠를 확인하지 못했어요.",
+          error instanceof Error && error.message === copy.unsafeError
+            ? copy.unsafeError
+            : copy.genericError,
       });
     }
   }
 
   if (!trimmedUrl) {
-    return (
-      <p className="mt-2 text-sm text-muted">
-        YouTube·Shorts·Instagram·TikTok 링크를 붙이면 제출 전에 확인할 수 있어요.
-      </p>
-    );
+    return <p className="mt-2 text-sm text-muted">{copy.idle}</p>;
   }
 
   if (!provider) {
-    return (
-      <p className="mt-2 text-sm text-muted">
-        일반 출처 링크로 제출할 수 있어요. 영상 미리보기는 YouTube·Instagram·TikTok을 지원해요.
-      </p>
-    );
+    return <p className="mt-2 text-sm text-muted">{copy.unsupported}</p>;
   }
 
   const providerName = PROVIDER_NAMES[provider];
 
   return (
     <section
-      aria-label="콘텐츠 링크 미리보기"
+      aria-label={copy.label}
       className="mt-3 overflow-hidden rounded-2xl border border-border bg-surface"
     >
       <div className="flex items-center justify-between border-b border-border bg-surface-2 px-4 py-2.5">
         <p className="flex items-center gap-2 text-sm font-bold">
           <span className="h-2 w-2 rounded-full bg-accent" aria-hidden />
-          콘텐츠 신호 확인
+          {copy.checking}
         </p>
         <span className="rounded-full bg-background px-2.5 py-1 text-xs font-semibold text-muted">
           {providerName}
@@ -177,23 +172,21 @@ export function ContentUrlPreview({ url }: { url: string }) {
             </span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-safety-green">
-                공개 콘텐츠를 확인했어요
+                {copy.ready}
               </p>
               <p className="truncate text-sm text-muted">
-                {currentState.data.title || `${providerName} 콘텐츠`}
+                {currentState.data.title || copy.providerContent(providerName)}
                 {currentState.data.authorName
                   ? ` · ${currentState.data.authorName}`
                   : ""}
               </p>
             </div>
           </div>
-          <PreviewFrame data={currentState.data} />
+          <PreviewFrame data={currentState.data} copy={copy} />
         </div>
       ) : (
         <div className="p-4">
-          <p className="text-sm text-muted">
-            링크가 공개 상태이고 사이트 안에서 재생되는지 확인합니다.
-          </p>
+          <p className="text-sm text-muted">{copy.verifyBody}</p>
           <button
             type="button"
             onClick={checkPreview}
@@ -206,13 +199,11 @@ export function ContentUrlPreview({ url }: { url: string }) {
                 className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current"
               />
             )}
-            {currentState.status === "loading"
-              ? "공개 콘텐츠 확인 중…"
-              : "링크 확인하고 미리보기"}
+            {currentState.status === "loading" ? copy.verifying : copy.verify}
           </button>
           {currentState.status === "error" && (
             <p role="alert" className="mt-3 text-sm text-safety-red">
-              {currentState.message} 삭제·비공개·연령 제한 여부와 URL을 확인해 주세요.
+              {currentState.message} {copy.errorSuffix}
             </p>
           )}
         </div>
@@ -221,7 +212,13 @@ export function ContentUrlPreview({ url }: { url: string }) {
   );
 }
 
-function PreviewFrame({ data }: { data: PreviewData }) {
+function PreviewFrame({
+  data,
+  copy,
+}: {
+  data: PreviewData;
+  copy: SubmitCopy["preview"];
+}) {
   const isPortrait =
     data.provider === "tiktok" ||
     (data.provider === "youtube" &&
@@ -243,7 +240,7 @@ function PreviewFrame({ data }: { data: PreviewData }) {
             ? threadsDocument(data.embedHtml)
             : undefined
         }
-        title={`${PROVIDER_NAMES[data.provider]} 콘텐츠 미리보기`}
+        title={copy.frameTitle(PROVIDER_NAMES[data.provider])}
         sandbox={
           data.provider === "threads"
             ? "allow-scripts allow-popups allow-popups-to-escape-sandbox"

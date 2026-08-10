@@ -56,7 +56,10 @@ function reviewedTranslation(locale: string, updatedAt: string): Translation {
   };
 }
 
-function useRows(rows: ReturnType<typeof indexableMeme>[]) {
+function useRows(
+  rows: ReturnType<typeof indexableMeme>[],
+  queryError: { message: string } | null = null,
+) {
   createStaticClient.mockReturnValue({
     from: vi.fn(() => ({
       select: vi.fn((columns: string) => {
@@ -78,7 +81,7 @@ function useRows(rows: ReturnType<typeof indexableMeme>[]) {
           order: vi.fn(() => memeQuery),
           range: vi.fn(async (from: number, to: number) => ({
             data: rows.slice(from, to + 1),
-            error: null,
+            error: queryError,
           })),
         };
         return memeQuery;
@@ -101,7 +104,10 @@ describe("사이트맵 페이지네이션 안정성", () => {
     // 같은 타임스탬프). 단일 컬럼 정렬로 페이지를 나누면 쿼리마다 정렬이 달라져
     // 경계에서 같은 행을 다시 읽고 다른 행은 건너뛴다. 실제로 URL 2건이 중복
     // 등재되고 충실한 문서 1건이 누락된 적이 있다.
-    const paged = source.slice(source.indexOf(".order("), source.lastIndexOf(".range("));
+    const paged = source.slice(
+      source.indexOf(".order("),
+      source.lastIndexOf(".range("),
+    );
     expect(paged).toContain('.order("published_at"');
     expect(paged).toContain('.order("id"');
   });
@@ -110,6 +116,14 @@ describe("사이트맵 페이지네이션 안정성", () => {
     // 상세의 robots 판정과 같은 함수여야 "사이트맵엔 있는데 noindex" 모순이 없다.
     expect(source).toContain("isIndexableMeme");
   });
+
+  it("공개 밈 조회 실패를 부분 사이트맵 성공으로 숨기지 않는다", async () => {
+    useRows([], { message: "database unavailable" });
+
+    await expect(sitemap()).rejects.toThrow(
+      "[sitemap] 밈 조회 실패 (from=0): database unavailable",
+    );
+  });
 });
 
 describe("사이트맵 다국어 색인 계약", () => {
@@ -117,7 +131,49 @@ describe("사이트맵 다국어 색인 계약", () => {
     useRows([]);
     const entries = await sitemap();
 
-    expect(entries.filter((entry) => entry.url.endsWith("/collections"))).toHaveLength(1);
+    expect(
+      entries.filter((entry) => entry.url.endsWith("/collections")),
+    ).toHaveLength(1);
+  });
+
+  it("Plus 가격 전환 페이지를 모든 정적 SEO locale에 reciprocal alternates로 노출한다", async () => {
+    useRows([]);
+    const entries = await sitemap();
+    const pricingEntries = entries.filter((entry) =>
+      /\/pricing$/.test(entry.url),
+    );
+    const englishPricing = pricingEntries.find((entry) =>
+      entry.url.endsWith("/en/pricing"),
+    );
+
+    expect(pricingEntries).toHaveLength(5);
+    expect(englishPricing?.alternates?.languages).toMatchObject({
+      ko: expect.stringMatching(/\/pricing$/),
+      en: expect.stringMatching(/\/en\/pricing$/),
+      ja: expect.stringMatching(/\/ja\/pricing$/),
+      "zh-Hans": expect.stringMatching(/\/zh\/pricing$/),
+      "zh-Hant": expect.stringMatching(/\/zh-tw\/pricing$/),
+      "x-default": expect.stringMatching(/\/en\/pricing$/),
+    });
+  });
+
+  it("24개 이상 적격 문서가 있는 locale만 localized explore sitemap에 올린다", async () => {
+    useRows(
+      Array.from({ length: 24 }, (_, index) =>
+        indexableMeme(index, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]),
+      ),
+    );
+
+    const entries = await sitemap();
+    const englishExplore = entries.find((entry) => entry.url.endsWith("/en/explore"));
+
+    expect(entries.filter((entry) => entry.url.endsWith("/en/explore"))).toHaveLength(1);
+    expect(entries.filter((entry) => entry.url.endsWith("/ja/explore"))).toHaveLength(0);
+    expect(englishExplore?.alternates?.languages).toMatchObject({
+      ko: expect.stringMatching(/\/explore$/),
+      en: expect.stringMatching(/\/en\/explore$/),
+      "x-default": expect.stringMatching(/\/en\/explore$/),
+    });
   });
 
   it("각 URL에 localized alternates와 ko/x-default를 생성한다", () => {
@@ -135,8 +191,9 @@ describe("사이트맵 다국어 색인 계약", () => {
 
     const entries = await sitemap();
     const languagesOf = (predicate: (url: string) => boolean) =>
-      entries.find((entry) => predicate(entry.url) && entry.alternates?.languages)
-        ?.alternates?.languages as Record<string, string> | undefined;
+      entries.find(
+        (entry) => predicate(entry.url) && entry.alternates?.languages,
+      )?.alternates?.languages as Record<string, string> | undefined;
 
     const withEnglish = languagesOf((url) => url.includes("/memes/m1"));
     expect(withEnglish?.["x-default"]).toBe(withEnglish?.en);
@@ -176,12 +233,8 @@ describe("사이트맵 다국어 색인 계약", () => {
   it("현재 reviewed 번역 수정 시각을 localized URL과 해당 locale 홈에 쓴다", async () => {
     const newestEnglishUpdate = "2026-04-03T12:00:00.000Z";
     useRows([
-      indexableMeme(1, [
-        reviewedTranslation("en", "2026-03-01T00:00:00.000Z"),
-      ]),
-      indexableMeme(2, [
-        reviewedTranslation("en", newestEnglishUpdate),
-      ]),
+      indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]),
+      indexableMeme(2, [reviewedTranslation("en", newestEnglishUpdate)]),
       indexableMeme(3, [
         {
           ...reviewedTranslation("en", "2026-05-01T00:00:00.000Z"),

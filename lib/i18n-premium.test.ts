@@ -11,7 +11,34 @@ describe("PREMIUM_COPY", () => {
     expect(copy.pricing.checkout).toBeTruthy();
     expect(copy.dashboard.upgradeTitle).toBeTruthy();
     expect(copy.dashboard.billingHelp).toBeTruthy();
+    expect(copy.dashboard.savedMemeWatchTitle).toBeTruthy();
+    expect(copy.dashboard.savedMemeWatchDescription(2)).toContain("2");
+    expect(copy.dashboard.actionQueue.summary(2)).toContain("2");
+    expect(copy.dashboard.actionQueue.useNow.cta).toBeTruthy();
+    expect(copy.dashboard.actionInbox.outcome.ready(2)).toContain("2");
+    expect(copy.dashboard.actionInbox.outcome.prepared(2)).toContain("2");
+    expect(copy.dashboard.actionInbox.outcome.complete(2, 3)).toContain("2");
+    expect(copy.dashboard.actionInbox.creatorPack.shareAgain).toBeTruthy();
+    expect(copy.dashboard.actionInbox.creatorPack.downloadAgain).toBeTruthy();
+    expect(copy.dashboard.actionInbox.creatorPack.reusable(2)).toContain("2");
+    expect(copy.dashboard.weeklyBrief.summary(2)).toContain("2");
+    expect(copy.dashboard.weeklyBrief.openTrend).toBeTruthy();
+    expect(copy.dashboard.radar.title).toBeTruthy();
+    expect(copy.dashboard.radar.summary(2)).toContain("2");
+    expect(copy.dashboard.radar.readyNow.description).toBeTruthy();
+    expect(copy.dashboard.radar.lifecycle.rising).toBeTruthy();
     expect(copy.feed.personalRadar).toBeTruthy();
+    expect(copy.feed.englishContent).toBeTruthy();
+    expect(copy.feed.localizedEmpty).toBeTruthy();
+    expect(copy.feed.localizedUnavailable).toBeTruthy();
+    expect(copy.trend.title).toBeTruthy();
+    expect(copy.trend.chartLabel(copy.trend.metricViews, "1", "2", 3, 4)).toContain("3");
+    expect(copy.alerts.savedRising).toBeTruthy();
+    expect(copy.alerts.categoryRising).toBeTruthy();
+    expect(copy.kit.title).toBeTruthy();
+    expect(copy.kit.explainTitle).toBeTruthy();
+    expect(copy.kit.safety.green).toBeTruthy();
+    expect(copy.kit.lifecycle.rising).toBeTruthy();
     expect(copy.save.limitReached).toBeTruthy();
     expect(copy.save.upgrade).toBeTruthy();
     expect(copy.my.previousPage).toBeTruthy();
@@ -54,5 +81,35 @@ describe("PREMIUM_COPY", () => {
     const trendRadar = PREMIUM_COPY[locale].pricing.features[1];
 
     expect(trendRadar.free).not.toMatch(/미리보기|preview|プレビュー|预览/i);
+  });
+
+  it.each(["ko", "en", "ja", "zh", "zh-tw"] as const)("describes the daily signal value for %s", (locale) => {
+    expect(PREMIUM_COPY[locale].pricing.features.some((feature) => feature.label.includes("Daily Signal"))).toBe(true);
+  });
+
+  it.each(["ko", "en", "ja", "zh", "zh-tw"] as const)("describes Global Meme Daily for %s", (locale) => {
+    expect(PREMIUM_COPY[locale].pricing.features.some((feature) => feature.label === "Global Meme Daily")).toBe(true);
+  });
+
+  it("keeps a dedicated Traditional Chinese radar copy block", () => {
+    expect(PREMIUM_COPY["zh-tw"].feed).not.toBe(PREMIUM_COPY.zh.feed);
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox).not.toBe(PREMIUM_COPY.zh.dashboard.actionInbox);
+    expect(PREMIUM_COPY["zh-tw"].dashboard.weeklyBrief).not.toBe(PREMIUM_COPY.zh.dashboard.weeklyBrief);
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.heading).toContain("成果");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.weeklyBrief.title).toContain("本週");
+    expect(PREMIUM_COPY["zh-tw"].feed.englishContent).toContain("英文");
+    expect(PREMIUM_COPY["zh-tw"].feed.localizedEmpty).toContain("人工審核");
+    expect(PREMIUM_COPY["zh-tw"].feed.localizedUnavailable).toContain("載入");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.body).toContain("發布");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.channelRequired).toContain("選擇");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.exampleLabel).toContain("情境");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.examplePreview).toContain("審核");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.exampleUnavailable).toContain("使用範例");
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.exampleLabel).not.toBe(
+      PREMIUM_COPY.zh.dashboard.actionInbox.creatorPack.exampleLabel,
+    );
+    expect(PREMIUM_COPY["zh-tw"].dashboard.actionInbox.creatorPack.body).not.toBe(
+      PREMIUM_COPY.zh.dashboard.actionInbox.creatorPack.body,
+    );
   });
 });

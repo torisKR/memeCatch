@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { LoginGate } from "@/components/login-gate";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 export function getSaveFailure(message: string): "login" | "premium-limit" | "retry" {
   if (message.includes("login_required")) return "login";
@@ -135,7 +136,7 @@ export function SaveButton({ memeId }: { memeId: string }) {
       </p>
       {upgradeRequired && (
         <Link
-          href="/pricing"
+          href={localizedStaticPath("/pricing", locale)}
           className="mt-1 flex min-h-11 items-center justify-center rounded-xl text-sm font-bold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {copy.upgrade}

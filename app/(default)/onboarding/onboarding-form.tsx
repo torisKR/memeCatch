@@ -10,6 +10,8 @@ import {
   type MemeCategory,
 } from "@/lib/labels";
 import { completeOnboarding } from "@/lib/actions/auth";
+import { useLocale } from "@/lib/i18n-client";
+import { MY_COPY } from "@/lib/i18n-my";
 
 /**
  * 레인 C — 온보딩 폼(클라이언트). DESIGN.md §10 여정1 온보딩.
@@ -19,14 +21,7 @@ import { completeOnboarding } from "@/lib/actions/auth";
  * - motion 스태거 진입, prefers-reduced-motion 존중.
  */
 
-const AGE_GROUPS = [
-  { value: "10s", label: "10대" },
-  { value: "20s", label: "20대" },
-  { value: "30s", label: "30대" },
-  { value: "40s", label: "40대" },
-  { value: "50s+", label: "50대+" },
-  { value: "", label: "선택 안 함" },
-] as const;
+const AGE_GROUPS = ["10s", "20s", "30s", "40s", "50s+"] as const;
 
 export function OnboardingForm({
   next,
@@ -40,6 +35,9 @@ export function OnboardingForm({
   defaultAgeGroup: string;
 }) {
   const reduce = useReducedMotion();
+  const { locale } = useLocale();
+  const myCopy = MY_COPY[locale];
+  const copy = myCopy.onboarding;
   const nickId = useId();
   const [interests, setInterests] = useState<Set<MemeCategory>>(
     () =>
@@ -84,18 +82,17 @@ export function OnboardingForm({
     <motion.div variants={container} initial="hidden" animate="show">
       <motion.div variants={item} className="flex items-center gap-2">
         <BrandTile className="size-9" />
-        <span className="text-sm font-semibold text-muted">1 / 1 단계</span>
+        <span className="text-sm font-semibold text-muted">{copy.step}</span>
       </motion.div>
 
       <motion.h1
         variants={item}
         className="mt-4 text-[1.75rem] font-extrabold leading-tight"
       >
-        밈캐치에 오신 걸 환영해요
+        {copy.title}
       </motion.h1>
       <motion.p variants={item} className="mt-2 text-muted">
-        취향을 알려 주시면 딱 맞는 밈을 먼저 보여드려요. 지금 정하지 않아도
-        괜찮아요.
+        {copy.body}
       </motion.p>
 
       <form action={completeOnboarding} className="mt-8 flex flex-col gap-8">
@@ -109,7 +106,7 @@ export function OnboardingForm({
         {/* 닉네임 */}
         <motion.section variants={item}>
           <label htmlFor={nickId} className="mb-2 block font-bold">
-            닉네임
+            {copy.nicknameLabel}
           </label>
           <input
             id={nickId}
@@ -120,17 +117,17 @@ export function OnboardingForm({
             maxLength={20}
             required
             defaultValue={defaultNickname}
-            placeholder="2~20자로 지어 주세요"
+            placeholder={copy.nicknamePlaceholder}
             className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base text-foreground outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-accent/20"
           />
         </motion.section>
 
         {/* 관심 카테고리 */}
         <motion.section variants={item}>
-          <h2 className="font-bold">관심 있는 밈은 무엇인가요?</h2>
-          <p className="mt-1 text-sm text-muted">여러 개 골라도 돼요.</p>
+          <h2 className="font-bold">{copy.interestsTitle}</h2>
+          <p className="mt-1 text-sm text-muted">{copy.interestsBody}</p>
           <ul className="mt-3 flex flex-wrap gap-2">
-            {DISPLAY_CATEGORY_LIST.map(({ key, user, categories }) => {
+            {DISPLAY_CATEGORY_LIST.map(({ key, categories }) => {
               const legacyCategories = categories as readonly MemeCategory[];
               const active = legacyCategories.some((category) =>
                 interests.has(category)
@@ -147,7 +144,7 @@ export function OnboardingForm({
                         : "border-border bg-surface text-foreground hover:border-accent"
                     }`}
                   >
-                    {user}
+                    {myCopy.categories[legacyCategories[0] ?? "phrase"]}
                   </button>
                 </li>
               );
@@ -158,33 +155,33 @@ export function OnboardingForm({
         {/* 연령대 */}
         <motion.section variants={item}>
           <h2 className="font-bold">
-            연령대{" "}
-            <span className="font-normal text-muted">(선택)</span>
+            {copy.ageTitle}{" "}
+            <span className="font-normal text-muted">({copy.optional})</span>
           </h2>
           <p className="mt-1 text-sm text-muted">
-            비슷한 또래에게 인기인 밈을 추천하는 데만 써요.
+            {copy.ageBody}
           </p>
           <ul
             role="radiogroup"
-            aria-label="연령대"
+            aria-label={copy.ageTitle}
             className="mt-3 flex flex-wrap gap-2"
           >
-            {AGE_GROUPS.map((age) => {
-              const active = ageGroup === age.value;
+            {[...AGE_GROUPS, "" as const].map((age) => {
+              const active = ageGroup === age;
               return (
-                <li key={age.value || "none"}>
+                <li key={age || "none"}>
                   <button
                     type="button"
                     role="radio"
                     aria-checked={active}
-                    onClick={() => setAgeGroup(age.value)}
+                    onClick={() => setAgeGroup(age)}
                     className={`inline-flex min-h-11 items-center rounded-full border px-4 text-base font-medium transition-colors active:scale-[0.97] ${
                       active
                         ? "border-accent bg-accent-soft text-accent"
                         : "border-border bg-surface text-foreground hover:border-accent"
                     }`}
                   >
-                    {age.label}
+                    {age ? myCopy.ageGroups[age] : copy.notSelected}
                   </button>
                 </li>
               );
@@ -193,12 +190,12 @@ export function OnboardingForm({
         </motion.section>
 
         <motion.div variants={item} className="flex flex-col gap-3">
-          <SubmitButton />
+          <SubmitButton copy={copy} />
           <Link
             href={next}
             className="inline-flex min-h-11 items-center justify-center text-base font-medium text-muted underline underline-offset-4 hover:text-foreground"
           >
-            건너뛰기
+            {copy.skip}
           </Link>
         </motion.div>
       </form>
@@ -206,7 +203,11 @@ export function OnboardingForm({
   );
 }
 
-function SubmitButton() {
+function SubmitButton({
+  copy,
+}: {
+  copy: (typeof MY_COPY)["ko"]["onboarding"];
+}) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -220,7 +221,7 @@ function SubmitButton() {
           className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
         />
       )}
-      {pending ? "저장 중…" : "밈캐치 시작하기"}
+      {pending ? copy.submitting : copy.submit}
     </button>
   );
 }

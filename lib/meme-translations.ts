@@ -235,6 +235,56 @@ export const getLocalizedMemeByShortId = cache(async function getLocalizedMemeBy
   }
 });
 
+export type LocalizedSearchMemesStatus = "active" | "coverage-empty" | "unavailable";
+
+export type LocalizedSearchMemesResult = {
+  items: Map<string, LocalizedMemeDetail>;
+  status: LocalizedSearchMemesStatus;
+};
+
+export async function getLocalizedSearchMemesResult(
+  shortIds: readonly string[],
+  locale: Locale,
+): Promise<LocalizedSearchMemesResult> {
+  const items = new Map<string, LocalizedMemeDetail>();
+  if (locale === DEFAULT_LOCALE || shortIds.length === 0) {
+    return { items, status: "coverage-empty" };
+  }
+
+  const uniqueShortIds = [...new Set(shortIds.filter(Boolean))].slice(0, 50);
+  if (uniqueShortIds.length === 0) return { items, status: "coverage-empty" };
+
+  try {
+    const { data, error } = await createStaticClient()
+      .from("meme_translations")
+      .select(FEATURED_SELECT)
+      .eq("locale", locale)
+      .eq("status", "reviewed")
+      .in("memes.short_id", uniqueShortIds)
+      .in("memes.moderation_status", ["approved", "limited"])
+      .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
+    if (error || !data) return { items, status: "unavailable" };
+
+    for (const row of data) {
+      const localized = overlayMemeTranslation(row.memes, row, locale);
+      if (localized && isIndexableLocalizedMeme(localized)) {
+        items.set(localized.short_id, localized);
+      }
+    }
+  } catch {
+    return { items, status: "unavailable" };
+  }
+
+  return { items, status: items.size > 0 ? "active" : "coverage-empty" };
+}
+
+export async function getLocalizedSearchMemes(
+  shortIds: readonly string[],
+  locale: Locale,
+): Promise<Map<string, LocalizedMemeDetail>> {
+  return (await getLocalizedSearchMemesResult(shortIds, locale)).items;
+}
+
 /**
  * Highest-trending translations eligible for public discovery/GEO surfaces.
  * Fetch extra candidates before applying the current/depth checks so stale rows

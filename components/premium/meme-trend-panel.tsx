@@ -20,7 +20,6 @@ type Point = {
   views: number;
   reactions: number;
   comments: number;
-  shares: number;
   saves: number;
 };
 

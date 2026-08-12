@@ -87,7 +87,12 @@ export function MemeEditForm({
       });
       if (!res.ok) setMessage({ kind: "error", text: res.error });
       else {
-        setMessage({ kind: "success", text: "저장했어요." });
+        setMessage({
+          kind: "success",
+          text: res.data?.safetyReviewQueued
+            ? "내용을 저장하고 안전 등급 변경은 Radar 검수 대기열에 추가했어요."
+            : "저장했어요.",
+        });
         router.refresh();
       }
     });

@@ -348,40 +348,41 @@ export async function updateMeme(input: {
   sentiment: "funny" | "ironic" | "controversial" | "negative" | "wholesome";
   originYear: number | null;
   usageContext: UsageContext;
-}): Promise<ActionResult> {
+}): Promise<ActionResult<{ safetyReviewQueued: boolean }>> {
   try {
-    const { supabase, uid } = await requireOperator();
+    const { supabase } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     const revalidationIdentity = await loadMemeRevalidationIdentity(
       supabase,
       input.memeId,
     );
-    const { error } = await supabase
-      .from("memes")
-      .update({
-        title: input.title.trim(),
-        summary: input.summary.trim(),
-        description: input.description.trim(),
-        origin: input.origin.trim(),
-        usage_note: input.usageNote.trim() || null,
-        caution: input.caution.trim() || null,
-        aliases: input.aliases.map((a) => a.trim()).filter(Boolean),
-        safety_level: input.safetyLevel,
-        lifecycle_status: input.lifecycleStatus,
-        category: input.category,
-        difficulty: input.difficulty,
-        sentiment: input.sentiment,
-        origin_year: input.originYear,
-        usage_context: input.usageContext,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", input.memeId);
+    const { data: safetyReviewQueued, error } = await supabase.rpc(
+      "update_meme_with_safety_review",
+      {
+        p_meme_id: input.memeId,
+        p_proposed_level: input.safetyLevel,
+        p_content: {
+          title: input.title.trim(),
+          summary: input.summary.trim(),
+          description: input.description.trim(),
+          origin: input.origin.trim(),
+          usage_note: input.usageNote.trim() || null,
+          caution: input.caution.trim() || null,
+          aliases: input.aliases.map((alias) => alias.trim()).filter(Boolean),
+          lifecycle_status: input.lifecycleStatus,
+          category: input.category,
+          difficulty: input.difficulty,
+          sentiment: input.sentiment,
+          origin_year: input.originYear,
+          usage_context: input.usageContext,
+        },
+      },
+    );
     if (error) return { ok: false, error: error.message };
-    await logAudit(uid, "meme.update", "meme", input.memeId);
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);
-    return { ok: true };
+    return { ok: true, data: { safetyReviewQueued: safetyReviewQueued === true } };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
   }

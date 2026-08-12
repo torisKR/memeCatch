@@ -83,4 +83,15 @@ describe("MemeEditForm Korean review", () => {
       );
     });
   });
+
+  it("explains that a requested safety change is queued for review", async () => {
+    updateMeme.mockResolvedValue({ ok: true, data: { safetyReviewQueued: true } });
+
+    render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(
+      await screen.findByText("내용을 저장하고 안전 등급 변경은 Radar 검수 대기열에 추가했어요."),
+    ).toBeTruthy();
+  });
 });

@@ -42,7 +42,7 @@ export async function GET(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("meme_trend_metrics")
-    .select("date, trend_score, views, reactions, comments, shares, saves")
+    .select("date, trend_score, views, reactions, comments, saves")
     .eq("meme_id", id)
     .gte("date", since.toISOString().slice(0, 10))
     .order("date", { ascending: true });

@@ -16,7 +16,7 @@ export default async function AdminDashboardPage() {
 
   const stats = await getAdminStats();
 
-  const [pendingRes, reportsRes, sourcesRes, translationsRes, jobRes, viewsRes] = await Promise.all([
+  const [pendingRes, reportsRes, sourcesRes, safetyRes, translationsRes, jobRes, viewsRes] = await Promise.all([
     supabase
       .from("meme_submissions")
       .select("id", { count: "exact", head: true })
@@ -29,6 +29,10 @@ export default async function AdminDashboardPage() {
       .from("meme_media")
       .select("meme_id", { count: "exact", head: true })
       .eq("review_state", "pending"),
+    supabase
+      .from("safety_review_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
     supabase
       .from("meme_translations")
       .select("meme_id", { count: "exact", head: true })
@@ -93,6 +97,12 @@ export default async function AdminDashboardPage() {
       label: "번역 검수 대기",
       value: `${translationsRes.count ?? 0}건`,
       sub: "AI 초안이 검수를 기다리고 있어요",
+    },
+    {
+      href: "/admin/radar-safety",
+      label: "Radar 안전 검수",
+      value: `${safetyRes.count ?? 0}건`,
+      sub: "외부 신호의 등급 변경 제안이에요",
     },
     {
       href: null,

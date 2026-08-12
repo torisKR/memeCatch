@@ -212,6 +212,188 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_identities: {
+        Row: {
+          created_at: string
+          email: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_identities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          current_period_end: string
+          customer_email: string
+          external_order_id: string
+          last_event_at: string
+          provider: string
+          provider_product_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          current_period_end: string
+          customer_email: string
+          external_order_id: string
+          last_event_at: string
+          provider?: string
+          provider_product_id?: string | null
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          current_period_end?: string
+          customer_email?: string
+          external_order_id?: string
+          last_event_at?: string
+          provider?: string
+          provider_product_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_unifi_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          item_identifier: string
+          payment_id: string
+          test_mode: boolean
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          item_identifier: string
+          payment_id: string
+          test_mode: boolean
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          item_identifier?: string
+          payment_id?: string
+          test_mode?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_unifi_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_webhook_events: {
+        Row: {
+          amount: number | null
+          customer_email: string
+          event_key: string
+          event_type: string
+          id: string
+          matched_user_id: string | null
+          occurred_at: string
+          order_id: string
+          payload: Json
+          processed_at: string | null
+          processing_error: string | null
+          provider: string
+          provider_product_id: string | null
+          received_at: string
+          status: string
+        }
+        Insert: {
+          amount?: number | null
+          customer_email: string
+          event_key: string
+          event_type: string
+          id?: string
+          matched_user_id?: string | null
+          occurred_at: string
+          order_id: string
+          payload: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          provider_product_id?: string | null
+          received_at?: string
+          status: string
+        }
+        Update: {
+          amount?: number | null
+          customer_email?: string
+          event_key?: string
+          event_type?: string
+          id?: string
+          matched_user_id?: string | null
+          occurred_at?: string
+          order_id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          provider_product_id?: string | null
+          received_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_webhook_events_matched_user_id_fkey"
+            columns: ["matched_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_comments: {
         Row: {
           body: string
@@ -335,6 +517,42 @@ export type Database = {
           },
         ]
       }
+      connector_health: {
+        Row: {
+          connector_key: string
+          consecutive_failures: number
+          cursor_state: Json
+          last_checked_at: string
+          last_error: string | null
+          last_success_at: string | null
+          latency_ms: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          connector_key: string
+          consecutive_failures?: number
+          cursor_state?: Json
+          last_checked_at: string
+          last_error?: string | null
+          last_success_at?: string | null
+          latency_ms?: number | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          connector_key?: string
+          consecutive_failures?: number
+          cursor_state?: Json
+          last_checked_at?: string
+          last_error?: string | null
+          last_success_at?: string | null
+          latency_ms?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discussion_reactions: {
         Row: {
           discussion_id: string
@@ -422,6 +640,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      external_signals: {
+        Row: {
+          canonical_url: string | null
+          collected_at: string
+          connector_key: string
+          first_seen_at: string
+          hashtags: string[]
+          id: string
+          ingestion_version: number
+          korean_relevance: number | null
+          language: string | null
+          language_confidence: number | null
+          last_seen_at: string
+          metrics_json: Json
+          normalized_text_hash: string | null
+          observed_at: string
+          payload: Json
+          platform: string
+          platform_content_id: string
+          published_at: string | null
+          query_seed: string | null
+          raw_expires_at: string
+          retention_until: string
+          rights_mode: string
+          signal_kind: string
+          text: string | null
+        }
+        Insert: {
+          canonical_url?: string | null
+          collected_at?: string
+          connector_key: string
+          first_seen_at: string
+          hashtags?: string[]
+          id?: string
+          ingestion_version: number
+          korean_relevance?: number | null
+          language?: string | null
+          language_confidence?: number | null
+          last_seen_at: string
+          metrics_json?: Json
+          normalized_text_hash?: string | null
+          observed_at: string
+          payload?: Json
+          platform: string
+          platform_content_id: string
+          published_at?: string | null
+          query_seed?: string | null
+          raw_expires_at?: string
+          retention_until?: string
+          rights_mode?: string
+          signal_kind: string
+          text?: string | null
+        }
+        Update: {
+          canonical_url?: string | null
+          collected_at?: string
+          connector_key?: string
+          first_seen_at?: string
+          hashtags?: string[]
+          id?: string
+          ingestion_version?: number
+          korean_relevance?: number | null
+          language?: string | null
+          language_confidence?: number | null
+          last_seen_at?: string
+          metrics_json?: Json
+          normalized_text_hash?: string | null
+          observed_at?: string
+          payload?: Json
+          platform?: string
+          platform_content_id?: string
+          published_at?: string | null
+          query_seed?: string | null
+          raw_expires_at?: string
+          retention_until?: string
+          rights_mode?: string
+          signal_kind?: string
+          text?: string | null
+        }
+        Relationships: []
       }
       generation_votes: {
         Row: {
@@ -656,54 +955,6 @@ export type Database = {
           },
         ]
       }
-      meme_media: {
-        Row: {
-          created_at: string
-          meme_id: string
-          review_state: string
-          reviewed_at: string | null
-          reviewer_note: string | null
-          rights_basis: string
-          source_id: string
-          source_role: string
-        }
-        Insert: {
-          created_at?: string
-          meme_id: string
-          review_state?: string
-          reviewed_at?: string | null
-          reviewer_note?: string | null
-          rights_basis?: string
-          source_id: string
-          source_role?: string
-        }
-        Update: {
-          created_at?: string
-          meme_id?: string
-          review_state?: string
-          reviewed_at?: string | null
-          reviewer_note?: string | null
-          rights_basis?: string
-          source_id?: string
-          source_role?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meme_media_meme_id_fkey"
-            columns: ["meme_id"]
-            isOneToOne: false
-            referencedRelation: "memes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "meme_media_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "media_sources"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       meme_market_profiles: {
         Row: {
           caution: string | null
@@ -776,6 +1027,89 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meme_media: {
+        Row: {
+          created_at: string
+          meme_id: string
+          review_state: string
+          reviewed_at: string | null
+          reviewer_note: string | null
+          rights_basis: string
+          source_id: string
+          source_role: string
+        }
+        Insert: {
+          created_at?: string
+          meme_id: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewer_note?: string | null
+          rights_basis?: string
+          source_id: string
+          source_role?: string
+        }
+        Update: {
+          created_at?: string
+          meme_id?: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewer_note?: string | null
+          rights_basis?: string
+          source_id?: string
+          source_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_media_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_media_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "media_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meme_public_change_events: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          locale: string | null
+          meme_id: string
+          source_updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind: string
+          locale?: string | null
+          meme_id: string
+          source_updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          locale?: string | null
+          meme_id?: string
+          source_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_public_change_events_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
             referencedColumns: ["id"]
           },
         ]
@@ -861,6 +1195,61 @@ export type Database = {
           },
         ]
       }
+      meme_signal_links: {
+        Row: {
+          created_at: string
+          match_confidence: number
+          match_method: string
+          meme_id: string
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signal_id: string
+        }
+        Insert: {
+          created_at?: string
+          match_confidence: number
+          match_method: string
+          meme_id: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signal_id: string
+        }
+        Update: {
+          created_at?: string
+          match_confidence?: number
+          match_method?: string
+          meme_id?: string
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_signal_links_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_signal_links_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_signal_links_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "external_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meme_sources: {
         Row: {
           captured_at: string
@@ -898,6 +1287,57 @@ export type Database = {
             columns: ["meme_id"]
             isOneToOne: false
             referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meme_state_history: {
+        Row: {
+          changed_at: string
+          confidence: number
+          heat_score: number
+          id: number
+          meme_id: string
+          new_state: string
+          observation_id: string | null
+          old_state: string
+          reason: string
+        }
+        Insert: {
+          changed_at?: string
+          confidence: number
+          heat_score: number
+          id?: never
+          meme_id: string
+          new_state: string
+          observation_id?: string | null
+          old_state: string
+          reason: string
+        }
+        Update: {
+          changed_at?: string
+          confidence?: number
+          heat_score?: number
+          id?: never
+          meme_id?: string
+          new_state?: string
+          observation_id?: string | null
+          old_state?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_state_history_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_state_history_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "radar_trend_observations"
             referencedColumns: ["id"]
           },
         ]
@@ -1008,53 +1448,6 @@ export type Database = {
           },
         ]
       }
-      meme_trend_metrics: {
-        Row: {
-          comments: number
-          date: string
-          meme_id: string
-          reactions: number
-          reports: number
-          saves: number
-          shares: number
-          submissions: number
-          trend_score: number
-          views: number
-        }
-        Insert: {
-          comments?: number
-          date: string
-          meme_id: string
-          reactions?: number
-          reports?: number
-          saves?: number
-          shares?: number
-          submissions?: number
-          trend_score?: number
-          views?: number
-        }
-        Update: {
-          comments?: number
-          date?: string
-          meme_id?: string
-          reactions?: number
-          reports?: number
-          saves?: number
-          shares?: number
-          submissions?: number
-          trend_score?: number
-          views?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meme_trend_metrics_meme_id_fkey"
-            columns: ["meme_id"]
-            isOneToOne: false
-            referencedRelation: "memes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       meme_translations: {
         Row: {
           aliases: string[]
@@ -1142,34 +1535,46 @@ export type Database = {
           },
         ]
       }
-      meme_public_change_events: {
+      meme_trend_metrics: {
         Row: {
-          created_at: string
-          id: number
-          kind: string
-          locale: string | null
+          comments: number
+          date: string
           meme_id: string
-          source_updated_at: string
+          reactions: number
+          reports: number
+          saves: number
+          shares: number
+          submissions: number
+          trend_score: number
+          views: number
         }
         Insert: {
-          created_at?: string
-          id?: number
-          kind: string
-          locale?: string | null
+          comments?: number
+          date: string
           meme_id: string
-          source_updated_at?: string
+          reactions?: number
+          reports?: number
+          saves?: number
+          shares?: number
+          submissions?: number
+          trend_score?: number
+          views?: number
         }
         Update: {
-          created_at?: string
-          id?: number
-          kind?: string
-          locale?: string | null
+          comments?: number
+          date?: string
           meme_id?: string
-          source_updated_at?: string
+          reactions?: number
+          reports?: number
+          saves?: number
+          shares?: number
+          submissions?: number
+          trend_score?: number
+          views?: number
         }
         Relationships: [
           {
-            foreignKeyName: "meme_public_change_events_meme_id_fkey"
+            foreignKeyName: "meme_trend_metrics_meme_id_fkey"
             columns: ["meme_id"]
             isOneToOne: false
             referencedRelation: "memes"
@@ -1254,17 +1659,22 @@ export type Database = {
           description: string
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
           doc_class: string
+          era_type: string | null
           id: string
+          korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
           media_type: Database["public"]["Enums"]["media_type"]
+          meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
           origin_year: number | null
           published_at: string | null
+          revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
+          source_work_year: number | null
           submitted_by: string | null
           summary: string
           title: string
@@ -1274,12 +1684,7 @@ export type Database = {
           usage_context: Json
           usage_examples: Json | null
           usage_note: string | null
-          source_work_year: number | null
-          meme_first_seen_year: number | null
-          korea_viral_year: number | null
-          revival_years: number[]
           year_precision: string
-          era_type: string | null
         }
         Insert: {
           aliases?: string[]
@@ -1289,17 +1694,22 @@ export type Database = {
           description?: string
           difficulty?: Database["public"]["Enums"]["meme_difficulty"]
           doc_class?: string
+          era_type?: string | null
           id?: string
+          korea_viral_year?: number | null
           lifecycle_status?: Database["public"]["Enums"]["lifecycle_status"]
           media_type?: Database["public"]["Enums"]["media_type"]
+          meme_first_seen_year?: number | null
           moderation_status?: Database["public"]["Enums"]["moderation_status"]
           origin?: string
           origin_year?: number | null
           published_at?: string | null
+          revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
           slug: string
+          source_work_year?: number | null
           submitted_by?: string | null
           summary?: string
           title: string
@@ -1309,12 +1719,7 @@ export type Database = {
           usage_context?: Json
           usage_examples?: Json | null
           usage_note?: string | null
-          source_work_year?: number | null
-          meme_first_seen_year?: number | null
-          korea_viral_year?: number | null
-          revival_years?: number[]
           year_precision?: string
-          era_type?: string | null
         }
         Update: {
           aliases?: string[]
@@ -1324,17 +1729,22 @@ export type Database = {
           description?: string
           difficulty?: Database["public"]["Enums"]["meme_difficulty"]
           doc_class?: string
+          era_type?: string | null
           id?: string
+          korea_viral_year?: number | null
           lifecycle_status?: Database["public"]["Enums"]["lifecycle_status"]
           media_type?: Database["public"]["Enums"]["media_type"]
+          meme_first_seen_year?: number | null
           moderation_status?: Database["public"]["Enums"]["moderation_status"]
           origin?: string
           origin_year?: number | null
           published_at?: string | null
+          revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
           slug?: string
+          source_work_year?: number | null
           submitted_by?: string | null
           summary?: string
           title?: string
@@ -1344,12 +1754,7 @@ export type Database = {
           usage_context?: Json
           usage_examples?: Json | null
           usage_note?: string | null
-          source_work_year?: number | null
-          meme_first_seen_year?: number | null
-          korea_viral_year?: number | null
-          revival_years?: number[]
           year_precision?: string
-          era_type?: string | null
         }
         Relationships: [
           {
@@ -1361,322 +1766,79 @@ export type Database = {
           },
         ]
       }
-      billing_identities: {
+      notification_outbox: {
         Row: {
+          attempt_count: number
+          available_at: string
+          channel: string
+          claim_token: string | null
+          claimed_at: string | null
           created_at: string
-          email: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "billing_identities_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      billing_unifi_payments: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          item_identifier: string
-          payment_id: string
-          test_mode: boolean
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency: string
-          item_identifier: string
-          payment_id: string
-          test_mode: boolean
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          item_identifier?: string
-          payment_id?: string
-          test_mode?: boolean
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "billing_unifi_payments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      billing_subscriptions: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          current_period_end: string
-          customer_email: string
-          external_order_id: string
-          provider: string
-          provider_product_id: string | null
-          status: string
-          updated_at: string
-          user_id: string
-          last_event_at: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency?: string
-          current_period_end: string
-          customer_email: string
-          external_order_id: string
-          provider?: string
-          provider_product_id?: string | null
-          status: string
-          updated_at?: string
-          user_id: string
-          last_event_at: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          current_period_end?: string
-          customer_email?: string
-          external_order_id?: string
-          provider?: string
-          provider_product_id?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-          last_event_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "billing_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      billing_webhook_events: {
-        Row: {
-          amount: number | null
-          customer_email: string
-          event_key: string
-          event_type: string
+          dedupe_key: string
+          finished_at: string | null
           id: string
-          matched_user_id: string | null
-          occurred_at: string
-          order_id: string
+          last_error: string | null
+          max_attempts: number
+          meme_id: string | null
           payload: Json
-          processed_at: string | null
-          processing_error: string | null
-          provider: string
-          provider_product_id: string | null
-          received_at: string
+          retention_until: string
           status: string
+          topic: string
+          updated_at: string
+          user_id: string | null
         }
         Insert: {
-          amount?: number | null
-          customer_email: string
-          event_key: string
-          event_type: string
+          attempt_count?: number
+          available_at?: string
+          channel: string
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          dedupe_key: string
+          finished_at?: string | null
           id?: string
-          matched_user_id?: string | null
-          occurred_at: string
-          order_id: string
+          last_error?: string | null
+          max_attempts?: number
+          meme_id?: string | null
           payload: Json
-          processed_at?: string | null
-          processing_error?: string | null
-          provider?: string
-          provider_product_id?: string | null
-          received_at?: string
-          status: string
+          retention_until?: string
+          status?: string
+          topic: string
+          updated_at?: string
+          user_id?: string | null
         }
         Update: {
-          amount?: number | null
-          customer_email?: string
-          event_key?: string
-          event_type?: string
+          attempt_count?: number
+          available_at?: string
+          channel?: string
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          dedupe_key?: string
+          finished_at?: string | null
           id?: string
-          matched_user_id?: string | null
-          occurred_at?: string
-          order_id?: string
+          last_error?: string | null
+          max_attempts?: number
+          meme_id?: string | null
           payload?: Json
-          processed_at?: string | null
-          processing_error?: string | null
-          provider?: string
-          provider_product_id?: string | null
-          received_at?: string
+          retention_until?: string
           status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "billing_webhook_events_matched_user_id_fkey"
-            columns: ["matched_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          age_group: string | null
-          created_at: string
-          id: string
-          interests: string[]
-          nickname: string
-          role: Database["public"]["Enums"]["user_role"]
-          trust_score: number
-        }
-        Insert: {
-          age_group?: string | null
-          created_at?: string
-          id: string
-          interests?: string[]
-          nickname: string
-          role?: Database["public"]["Enums"]["user_role"]
-          trust_score?: number
-        }
-        Update: {
-          age_group?: string | null
-          created_at?: string
-          id?: string
-          interests?: string[]
-          nickname?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          trust_score?: number
-        }
-        Relationships: []
-      }
-      reports: {
-        Row: {
-          created_at: string
-          handled_by: string | null
-          id: string
-          reason: string
-          reporter_id: string
-          status: Database["public"]["Enums"]["report_status"]
-          target_id: string
-          target_type: Database["public"]["Enums"]["report_target"]
-        }
-        Insert: {
-          created_at?: string
-          handled_by?: string | null
-          id?: string
-          reason: string
-          reporter_id: string
-          status?: Database["public"]["Enums"]["report_status"]
-          target_id: string
-          target_type: Database["public"]["Enums"]["report_target"]
-        }
-        Update: {
-          created_at?: string
-          handled_by?: string | null
-          id?: string
-          reason?: string
-          reporter_id?: string
-          status?: Database["public"]["Enums"]["report_status"]
-          target_id?: string
-          target_type?: Database["public"]["Enums"]["report_target"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reports_handled_by_fkey"
-            columns: ["handled_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reports_reporter_id_fkey"
-            columns: ["reporter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profile_customizations: {
-        Row: {
-          accent_color: string | null
-          flair: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accent_color?: string | null
-          flair?: string | null
+          topic?: string
           updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accent_color?: string | null
-          flair?: string | null
-          updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "profile_customizations_user_id_fkey"
+            foreignKeyName: "notification_outbox_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      plus_digest_preferences: {
-        Row: {
-          enabled: boolean
-          locale: string
-          timezone: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          enabled?: boolean
-          locale?: string
-          timezone?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          enabled?: boolean
-          locale?: string
-          timezone?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "plus_digest_preferences_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1732,137 +1894,91 @@ export type Database = {
           },
         ]
       }
-      trend_alerts: {
+      plus_digest_preferences: {
         Row: {
-          created_at: string
-          id: number
-          kind: string
-          meme_id: string
-          read_at: string | null
-          trend_score: number
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          kind?: string
-          meme_id: string
-          read_at?: string | null
-          trend_score?: number
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          kind?: string
-          meme_id?: string
-          read_at?: string | null
-          trend_score?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "trend_alerts_meme_id_fkey"
-            columns: ["meme_id"]
-            isOneToOne: false
-            referencedRelation: "memes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "trend_alerts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      plus_saved_context_alerts: {
-        Row: {
-          created_at: string
-          event_id: number
-          id: number
-          read_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          event_id: number
-          id?: number
-          read_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: number
-          id?: number
-          read_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "plus_saved_context_alerts_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "meme_public_change_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "plus_saved_context_alerts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      plus_translation_requests: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          id: string
+          enabled: boolean
           locale: string
-          meme_id: string
-          status: string
+          timezone: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          locale: string
-          meme_id: string
-          status?: string
+          enabled?: boolean
+          locale?: string
+          timezone?: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          completed_at?: string | null
-          created_at?: string
-          id?: string
+          enabled?: boolean
           locale?: string
-          meme_id?: string
-          status?: string
+          timezone?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "plus_translation_requests_meme_id_fkey"
-            columns: ["meme_id"]
-            isOneToOne: false
-            referencedRelation: "memes"
+            foreignKeyName: "plus_digest_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      plus_global_daily_challenge_completions: {
+        Row: {
+          challenge_date: string
+          completed_at: string
+          locale: string
+          user_id: string
+        }
+        Insert: {
+          challenge_date: string
+          completed_at?: string
+          locale: string
+          user_id: string
+        }
+        Update: {
+          challenge_date?: string
+          completed_at?: string
+          locale?: string
+          user_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "plus_translation_requests_user_id_fkey"
+            foreignKeyName: "plus_global_daily_challenge_completions_challenge_date_fkey"
+            columns: ["challenge_date"]
+            isOneToOne: false
+            referencedRelation: "plus_global_daily_challenges"
+            referencedColumns: ["challenge_date"]
+          },
+          {
+            foreignKeyName: "plus_global_daily_challenge_completions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      plus_global_daily_challenges: {
+        Row: {
+          candidate_meme_ids: string[]
+          challenge_date: string
+          created_at: string
+        }
+        Insert: {
+          candidate_meme_ids: string[]
+          challenge_date: string
+          created_at?: string
+        }
+        Update: {
+          candidate_meme_ids?: string[]
+          challenge_date?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       plus_meme_use_completions: {
         Row: {
@@ -1973,6 +2089,436 @@ export type Database = {
           },
         ]
       }
+      plus_saved_context_alerts: {
+        Row: {
+          created_at: string
+          event_id: number
+          id: number
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: number
+          id?: never
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: number
+          id?: never
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plus_saved_context_alerts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "meme_public_change_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plus_saved_context_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plus_translation_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          locale: string
+          meme_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          locale: string
+          meme_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          locale?: string
+          meme_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plus_translation_requests_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plus_translation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_customizations: {
+        Row: {
+          accent_color: string | null
+          flair: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          flair?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          flair?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_customizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          age_group: string | null
+          created_at: string
+          id: string
+          interests: string[]
+          nickname: string
+          role: Database["public"]["Enums"]["user_role"]
+          trust_score: number
+        }
+        Insert: {
+          age_group?: string | null
+          created_at?: string
+          id: string
+          interests?: string[]
+          nickname: string
+          role?: Database["public"]["Enums"]["user_role"]
+          trust_score?: number
+        }
+        Update: {
+          age_group?: string | null
+          created_at?: string
+          id?: string
+          interests?: string[]
+          nickname?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          trust_score?: number
+        }
+        Relationships: []
+      }
+      radar_meme_state: {
+        Row: {
+          candidate_observations: number
+          candidate_state: string | null
+          confidence: number
+          current_state: string
+          heat_score: number
+          last_observation_id: string
+          meme_id: string
+          observed_at: string
+          required_observations: number
+          state_changed_at: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_observations?: number
+          candidate_state?: string | null
+          confidence: number
+          current_state: string
+          heat_score: number
+          last_observation_id: string
+          meme_id: string
+          observed_at: string
+          required_observations?: number
+          state_changed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_observations?: number
+          candidate_state?: string | null
+          confidence?: number
+          current_state?: string
+          heat_score?: number
+          last_observation_id?: string
+          meme_id?: string
+          observed_at?: string
+          required_observations?: number
+          state_changed_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_meme_state_last_observation_id_fkey"
+            columns: ["last_observation_id"]
+            isOneToOne: false
+            referencedRelation: "radar_trend_observations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radar_meme_state_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: true
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radar_trend_observations: {
+        Row: {
+          confidence: number
+          created_at: string
+          factors: Json
+          heat_score: number
+          id: string
+          meme_id: string
+          model_version: string
+          observed_at: string
+          recommended_state: string
+          retention_until: string
+          signal_id: string | null
+        }
+        Insert: {
+          confidence: number
+          created_at?: string
+          factors?: Json
+          heat_score: number
+          id?: string
+          meme_id: string
+          model_version: string
+          observed_at: string
+          recommended_state: string
+          retention_until?: string
+          signal_id?: string | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          factors?: Json
+          heat_score?: number
+          id?: string
+          meme_id?: string
+          model_version?: string
+          observed_at?: string
+          recommended_state?: string
+          retention_until?: string
+          signal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_trend_observations_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radar_trend_observations_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "external_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          handled_by: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          status: Database["public"]["Enums"]["report_status"]
+          target_id: string
+          target_type: Database["public"]["Enums"]["report_target"]
+        }
+        Insert: {
+          created_at?: string
+          handled_by?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          status?: Database["public"]["Enums"]["report_status"]
+          target_id: string
+          target_type: Database["public"]["Enums"]["report_target"]
+        }
+        Update: {
+          created_at?: string
+          handled_by?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          status?: Database["public"]["Enums"]["report_status"]
+          target_id?: string
+          target_type?: Database["public"]["Enums"]["report_target"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_handled_by_fkey"
+            columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          evidence: Json
+          id: number
+          meme_id: string
+          new_level: Database["public"]["Enums"]["safety_level"]
+          old_level: Database["public"]["Enums"]["safety_level"]
+          reason: string
+          review_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          evidence?: Json
+          id?: never
+          meme_id: string
+          new_level: Database["public"]["Enums"]["safety_level"]
+          old_level: Database["public"]["Enums"]["safety_level"]
+          reason: string
+          review_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          evidence?: Json
+          id?: never
+          meme_id?: string
+          new_level?: Database["public"]["Enums"]["safety_level"]
+          old_level?: Database["public"]["Enums"]["safety_level"]
+          reason?: string
+          review_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_history_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_history_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "safety_review_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_review_queue: {
+        Row: {
+          evidence: Json
+          id: string
+          meme_id: string
+          proposed_level: Database["public"]["Enums"]["safety_level"]
+          reason: string
+          requested_at: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_signal_id: string | null
+          status: string
+        }
+        Insert: {
+          evidence?: Json
+          id?: string
+          meme_id: string
+          proposed_level: Database["public"]["Enums"]["safety_level"]
+          reason: string
+          requested_at?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_signal_id?: string | null
+          status?: string
+        }
+        Update: {
+          evidence?: Json
+          id?: string
+          meme_id?: string
+          proposed_level?: Database["public"]["Enums"]["safety_level"]
+          reason?: string
+          requested_at?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_signal_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_review_queue_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_review_queue_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_review_queue_source_signal_id_fkey"
+            columns: ["source_signal_id"]
+            isOneToOne: false
+            referencedRelation: "external_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_memes: {
         Row: {
           collection: string | null
@@ -2009,6 +2555,187 @@ export type Database = {
           {
             foreignKeyName: "saved_memes_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seo_campaign_items: {
+        Row: {
+          baseline_28d: Json
+          baseline_90d: Json
+          batch: number
+          bucket: string
+          campaign_id: string
+          canonical: string
+          checklist: Json
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_request_id: string | null
+          content_version_at_selection: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          lock_version: number
+          meme_id: string
+          post_28d: Json | null
+          post_56d: Json | null
+          prior_28d: Json
+          reviewer: string | null
+          safe_primary_query: string | null
+          selection_reason: string
+          short_id: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          baseline_28d: Json
+          baseline_90d: Json
+          batch: number
+          bucket: string
+          campaign_id: string
+          canonical: string
+          checklist?: Json
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_request_id?: string | null
+          content_version_at_selection: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          lock_version?: number
+          meme_id: string
+          post_28d?: Json | null
+          post_56d?: Json | null
+          prior_28d: Json
+          reviewer?: string | null
+          safe_primary_query?: string | null
+          selection_reason: string
+          short_id: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          baseline_28d?: Json
+          baseline_90d?: Json
+          batch?: number
+          bucket?: string
+          campaign_id?: string
+          canonical?: string
+          checklist?: Json
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_request_id?: string | null
+          content_version_at_selection?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          lock_version?: number
+          meme_id?: string
+          post_28d?: Json | null
+          post_56d?: Json | null
+          prior_28d?: Json
+          reviewer?: string | null
+          safe_primary_query?: string | null
+          selection_reason?: string
+          short_id?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seo_campaign_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "seo_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seo_campaign_items_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seo_campaign_items_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seo_campaign_items_reviewer_fkey"
+            columns: ["reviewer"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seo_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          generator_commit: string
+          holdout_count: number
+          id: string
+          input_hash: string
+          manifest_hash: string
+          measure_28d_at: string | null
+          measure_56d_at: string | null
+          name: string
+          schema_version: string
+          scoring_version: string
+          seed: string
+          started_at: string | null
+          state: string
+          target_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          generator_commit: string
+          holdout_count: number
+          id: string
+          input_hash: string
+          manifest_hash: string
+          measure_28d_at?: string | null
+          measure_56d_at?: string | null
+          name: string
+          schema_version: string
+          scoring_version: string
+          seed: string
+          started_at?: string | null
+          state?: string
+          target_count: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          generator_commit?: string
+          holdout_count?: number
+          id?: string
+          input_hash?: string
+          manifest_hash?: string
+          measure_28d_at?: string | null
+          measure_56d_at?: string | null
+          name?: string
+          schema_version?: string
+          scoring_version?: string
+          seed?: string
+          started_at?: string | null
+          state?: string
+          target_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seo_campaigns_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2080,6 +2807,51 @@ export type Database = {
         }
         Relationships: []
       }
+      trend_alerts: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          meme_id: string
+          read_at: string | null
+          trend_score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind?: string
+          meme_id: string
+          read_at?: string | null
+          trend_score?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          meme_id?: string
+          read_at?: string | null
+          trend_score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_alerts_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trend_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       view_events: {
         Row: {
           created_at: string
@@ -2146,10 +2918,7 @@ export type Database = {
       }
     }
     Functions: {
-      admin_get_plus_status: {
-        Args: { p_email: string }
-        Returns: Json
-      }
+      admin_get_plus_status: { Args: { p_email: string }; Returns: Json }
       admin_set_plus_entitlement: {
         Args: { p_active: boolean; p_email: string; p_months?: number }
         Returns: Json
@@ -2157,6 +2926,14 @@ export type Database = {
       apply_affiliate_sync: {
         Args: { products: Json; run_id: string; synced_at: string }
         Returns: undefined
+      }
+      apply_safety_review: {
+        Args: {
+          p_decision: string
+          p_review_id: string
+          p_review_note?: string
+        }
+        Returns: boolean
       }
       cast_generation_vote: {
         Args: { p_age_group: string; p_meme_id: string; p_vote: string }
@@ -2179,6 +2956,57 @@ export type Database = {
           run_id: string
         }[]
       }
+      claim_notification_outbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          channel: string
+          claim_token: string
+          meme_id: string | null
+          outbox_id: string
+          payload: Json
+          topic: string
+          user_id: string | null
+        }[]
+      }
+      claim_plus_daily_signal_deliveries: {
+        Args: { p_delivery_date: string; p_limit?: number }
+        Returns: {
+          delivery_date: string
+          delivery_id: string
+          locale: string
+          status: string
+          user_id: string
+        }[]
+      }
+      claim_seo_campaign_item: {
+        Args: { p_batch?: number; p_campaign_id: string }
+        Returns: {
+          item_id: string
+          lock_version: number
+          meme_id: string
+        }[]
+      }
+      claim_translation_priority_request: {
+        Args: { p_locale: string; p_meme_id: string }
+        Returns: Json
+      }
+      complete_plus_global_daily_challenge: {
+        Args: { p_locale: string }
+        Returns: Json
+      }
+      complete_plus_meme_use: { Args: { p_meme_id: string }; Returns: Json }
+      complete_seo_campaign_item: {
+        Args: {
+          p_checklist: Json
+          p_content: Json
+          p_expected_content_version: string
+          p_expected_lock_version: number
+          p_item_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       compute_trend_scores: { Args: never; Returns: undefined }
       create_community_comment: {
         Args: { p_body: string; p_post_id: string }
@@ -2188,11 +3016,33 @@ export type Database = {
         Args: { p_body: string; p_meme_id?: string; p_title: string }
         Returns: string
       }
+      create_unifi_payment_intent: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_item_identifier: string
+          p_payment_id: string
+          p_test_mode: boolean
+        }
+        Returns: Json
+      }
+      enqueue_safety_review: {
+        Args: {
+          p_evidence?: Json
+          p_meme_id: string
+          p_proposed_level: Database["public"]["Enums"]["safety_level"]
+          p_reason: string
+          p_source_signal_id?: string
+        }
+        Returns: string
+      }
       extract_chosung: { Args: { input: string }; Returns: string }
       fail_affiliate_sync: {
         Args: { error_code: string; run_id: string }
         Returns: undefined
       }
+      fan_out_saved_context_alerts: { Args: never; Returns: number }
+      fan_out_trend_alerts: { Args: never; Returns: number }
       file_report: {
         Args: {
           p_reason: string
@@ -2200,6 +3050,25 @@ export type Database = {
           p_target_id: string
         }
         Returns: string
+      }
+      finish_notification_outbox: {
+        Args: {
+          p_claim_token: string
+          p_error?: string
+          p_outbox_id: string
+          p_retry_at?: string
+          p_succeeded: boolean
+        }
+        Returns: boolean
+      }
+      finish_plus_daily_signal_delivery: {
+        Args: {
+          p_delivery_id: string
+          p_error_code?: string | null
+          p_provider_message_id?: string | null
+          p_status: string
+        }
+        Returns: boolean
       }
       gen_short_id: { Args: never; Returns: string }
       get_daily_top_memes: {
@@ -2211,17 +3080,23 @@ export type Database = {
           created_at: string
           description: string
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
+          doc_class: string
+          era_type: string | null
           id: string
+          korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
           media_type: Database["public"]["Enums"]["media_type"]
+          meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
           origin_year: number | null
           published_at: string | null
+          revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
+          source_work_year: number | null
           submitted_by: string | null
           summary: string
           title: string
@@ -2229,7 +3104,9 @@ export type Database = {
           trend_score: number
           updated_at: string
           usage_context: Json
+          usage_examples: Json | null
           usage_note: string | null
+          year_precision: string
         }[]
         SetofOptions: {
           from: "*"
@@ -2241,34 +3118,72 @@ export type Database = {
       get_plus_global_daily_challenge: {
         Args: { p_challenge_date: string }
         Returns: {
-          challenge_date: string
           candidate_meme_ids: string[]
-          completed_at: string | null
-          completion_locale: string | null
+          challenge_date: string
+          completed_at: string
+          completion_locale: string
           current_streak: number
         }[]
       }
-      get_plus_meme_use_summary: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_plus_meme_use_outcome_summary: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_plus_meme_use_outcome_summary: { Args: never; Returns: Json }
+      get_plus_meme_use_summary: { Args: never; Returns: Json }
+      has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
       increment_view: {
         Args: { p_meme_id: string; p_session_hash: string }
         Returns: undefined
       }
-      has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
+      is_meme_rank_eligible: { Args: { p_meme_id: string }; Returns: boolean }
       is_operator: { Args: never; Returns: boolean }
+      list_translation_priority_queue:
+        | {
+            Args: { p_limit?: number }
+            Returns: {
+              latest_requested_at: string
+              locale: string
+              meme_id: string
+              meme_short_id: string
+              meme_slug: string
+              meme_summary: string
+              meme_title: string
+              meme_updated_at: string
+              request_count: number
+              source_updated_at: string
+              status: string
+              translation_status: string
+              translation_summary: string
+              translation_title: string
+              translation_updated_at: string
+            }[]
+          }
+        | {
+            Args: { p_limit: number; p_locale: string }
+            Returns: {
+              latest_requested_at: string
+              locale: string
+              meme_id: string
+              meme_short_id: string
+              meme_slug: string
+              meme_summary: string
+              meme_title: string
+              meme_updated_at: string
+              request_count: number
+              source_updated_at: string
+              status: string
+              translation_status: string
+              translation_summary: string
+              translation_title: string
+              translation_updated_at: string
+            }[]
+          }
+      mark_saved_context_alerts_read: { Args: never; Returns: number }
+      mark_trend_alerts_read: { Args: never; Returns: number }
+      meme_ranking_completeness: {
+        Args: { p_meme_id: string }
+        Returns: number
+      }
       post_comment: {
         Args: { p_body: string; p_meme_id: string; p_parent_id: string }
         Returns: string
-      }
-      record_affiliate_product_click: {
-        Args: { metric_date: string; product_id: string }
-        Returns: undefined
       }
       process_latpeed_membership_event: {
         Args: {
@@ -2289,27 +3204,72 @@ export type Database = {
           p_amount: number | null
           p_event_key: string
           p_occurred_at: string
-          p_payment_id: string
           p_payload: Json
+          p_payment_id: string
           p_status: string
         }
         Returns: Json
       }
-      create_unifi_payment_intent: {
-        Args: {
-          p_amount: number
-          p_currency: string
-          p_item_identifier: string
-          p_payment_id: string
-          p_test_mode: boolean
-        }
+      publish_seo_campaign: { Args: { p_manifest: Json }; Returns: string }
+      publish_seo_measurements: {
+        Args: { p_campaign_id: string; p_items: Json; p_window: string }
+        Returns: undefined
+      }
+      queue_plus_daily_signal_deliveries: {
+        Args: { p_delivery_date: string }
+        Returns: number
+      }
+      reconcile_latpeed_order: {
+        Args: { p_order_id: string; p_user_id: string }
         Returns: Json
       }
       reconcile_unifi_payment: {
         Args: { p_payment_id: string; p_user_id: string }
         Returns: Json
       }
+      record_affiliate_product_click: {
+        Args: { metric_date: string; product_id: string }
+        Returns: undefined
+      }
+      record_plus_meme_use_performance: {
+        Args: { p_performance_note: string; p_receipt_id: string }
+        Returns: Json
+      }
+      record_plus_meme_use_rating: {
+        Args: { p_performance_rating: string; p_receipt_id: string }
+        Returns: Json
+      }
+      record_plus_meme_use_receipt: {
+        Args: {
+          p_artifact_kind: string
+          p_channel: string
+          p_locale: string
+          p_meme_id: string
+          p_performance_note?: string | null
+          p_private_note?: string | null
+          p_result_url?: string | null
+        }
+        Returns: Json
+      }
+      record_radar_trend_observation: {
+        Args: {
+          p_confidence: number
+          p_factors?: Json
+          p_heat_score: number
+          p_meme_id: string
+          p_model_version: string
+          p_observed_at: string
+          p_recommended_state: string
+          p_required_observations?: number
+          p_signal_id: string | null
+        }
+        Returns: string
+      }
       register_billing_identity: { Args: never; Returns: Json }
+      request_plus_translation: {
+        Args: { p_locale: string; p_meme_id: string }
+        Returns: Json
+      }
       search_memes: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -2319,17 +3279,23 @@ export type Database = {
           created_at: string
           description: string
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
+          doc_class: string
+          era_type: string | null
           id: string
+          korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
           media_type: Database["public"]["Enums"]["media_type"]
+          meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
           origin_year: number | null
           published_at: string | null
+          revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
+          source_work_year: number | null
           submitted_by: string | null
           summary: string
           title: string
@@ -2337,7 +3303,9 @@ export type Database = {
           trend_score: number
           updated_at: string
           usage_context: Json
+          usage_examples: Json | null
           usage_note: string | null
+          year_precision: string
         }[]
         SetofOptions: {
           from: "*"
@@ -2345,6 +3313,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      set_plus_digest_preferences: {
+        Args: { p_enabled: boolean; p_locale: string }
+        Returns: Json
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -2380,99 +3352,20 @@ export type Database = {
         Returns: boolean
       }
       toggle_save: { Args: { p_meme_id: string }; Returns: boolean }
-      update_saved_meme: {
-        Args: { p_collection: string | null; p_meme_id: string; p_note: string | null }
-        Returns: Json
-      }
-      update_profile_customization: {
-        Args: { p_flair: string | null; p_accent: string | null }
-        Returns: Json
-      }
-      complete_plus_global_daily_challenge: {
-        Args: { p_locale: string }
-        Returns: Json
-      }
-      complete_plus_meme_use: {
-        Args: { p_meme_id: string }
-        Returns: Json
-      }
-      record_plus_meme_use_receipt: {
+      update_meme_with_safety_review: {
         Args: {
-          p_artifact_kind: string
-          p_channel: string
-          p_locale: string
+          p_content: Json
           p_meme_id: string
-          p_performance_note?: string | null
-          p_private_note?: string | null
-          p_result_url?: string | null
-        }
-        Returns: Json
-      }
-      record_plus_meme_use_performance: {
-        Args: { p_performance_note: string; p_receipt_id: string }
-        Returns: Json
-      }
-      record_plus_meme_use_rating: {
-        Args: { p_performance_rating: string; p_receipt_id: string }
-        Returns: Json
-      }
-      set_plus_digest_preferences: {
-        Args: { p_enabled: boolean; p_locale: string }
-        Returns: Json
-      }
-      queue_plus_daily_signal_deliveries: {
-        Args: { p_delivery_date: string }
-        Returns: number
-      }
-      claim_plus_daily_signal_deliveries: {
-        Args: { p_delivery_date: string; p_limit?: number }
-        Returns: {
-          delivery_date: string
-          delivery_id: string
-          locale: string
-          status: string
-          user_id: string
-        }[]
-      }
-      finish_plus_daily_signal_delivery: {
-        Args: {
-          p_delivery_id: string
-          p_error_code?: string | null
-          p_provider_message_id?: string | null
-          p_status: string
+          p_proposed_level: Database["public"]["Enums"]["safety_level"]
         }
         Returns: boolean
       }
-      fan_out_trend_alerts: { Args: Record<PropertyKey, never>; Returns: number }
-      mark_trend_alerts_read: { Args: Record<PropertyKey, never>; Returns: number }
-      fan_out_saved_context_alerts: { Args: Record<PropertyKey, never>; Returns: number }
-      mark_saved_context_alerts_read: { Args: Record<PropertyKey, never>; Returns: number }
-      request_plus_translation: {
-        Args: { p_locale: string; p_meme_id: string }
+      update_profile_customization: {
+        Args: { p_accent: string | null; p_flair: string | null }
         Returns: Json
       }
-      list_translation_priority_queue: {
-        Args: { p_limit?: number }
-        Returns: {
-          locale: string
-          meme_id: string
-          meme_short_id: string
-          meme_slug: string
-          meme_summary: string
-          meme_title: string
-          meme_updated_at: string
-          latest_requested_at: string
-          request_count: number
-          source_updated_at: string | null
-          status: string
-          translation_status: string | null
-          translation_summary: string | null
-          translation_title: string | null
-          translation_updated_at: string | null
-        }[]
-      }
-      claim_translation_priority_request: {
-        Args: { p_locale: string; p_meme_id: string }
+      update_saved_meme: {
+        Args: { p_collection: string | null; p_meme_id: string; p_note: string | null }
         Returns: Json
       }
     }

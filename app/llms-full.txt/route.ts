@@ -1,6 +1,7 @@
 import { createStaticClient } from "@/lib/supabase/server";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 import {
+  AI_MEME_DISPLAY_CATEGORY,
   DISPLAY_CATEGORY_LIST,
   SAFETY_LEVELS,
   memePathFrom,
@@ -95,6 +96,7 @@ export async function GET() {
       }
       const sections: string[] = [];
       for (const displayCategory of DISPLAY_CATEGORY_LIST) {
+        if (displayCategory.key === AI_MEME_DISPLAY_CATEGORY) continue;
         const arr = displayCategory.categories.flatMap(
           (category) => byCat.get(category) ?? []
         );
@@ -117,7 +119,7 @@ export async function GET() {
 
 > 한국 밈·유행어·챌린지 ${countLine}건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전.
 > 이 문서는 답변엔진이 링크 크롤링 없이도 인용할 수 있도록, 트렌드 상위 밈의 본문을 그대로 담은 것입니다.
-> 운영자 검수(사실 확인 → 저작권 확인)를 거친 항목만 포함하며, 원본 영상·이미지는 저장하지 않고 출처 링크로만 제공합니다.
+> 운영자 검수(사실 확인 → 저작권 확인)를 거친 항목만 포함하며, 제3자 원본 영상·이미지는 저장하지 않고 출처 링크로만 제공합니다.
 > 언어: 한국어(ko). 전체 밈 URL 목록은 ${SITE_URL}/sitemap.xml 을, 요약 인덱스는 ${SITE_URL}/llms.txt 를 참고하세요.
 
 ## Reviewed translations

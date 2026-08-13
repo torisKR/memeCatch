@@ -216,7 +216,7 @@ export default function EditorialPage() {
         <section className="mt-12">
           <h2 className="text-xl font-bold">4. 출처와 저작권</h2>
           <p className="mt-3 text-base leading-relaxed">
-            밈캐치는 <strong>원본 영상·이미지 파일을 저장하지 않습니다.</strong>{" "}
+            밈캐치는 <strong>제3자 원본 영상·이미지 파일을 저장하지 않습니다.</strong>{" "}
             원저작자가 올린 자리로 링크하거나, 플랫폼이 공식 제공하는 임베드로만
             보여 줍니다. 출처는 항목별로 원장에 기록하고, 저마다 어떤 역할인지와
             어떤 권리 근거로 노출하는지를 함께 남깁니다.

@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import {
+  AI_MEME_DISPLAY_CATEGORY,
   DISPLAY_CATEGORY_LIST,
   type MemeCategory,
 } from "@/lib/labels";
@@ -22,6 +23,9 @@ import { MY_COPY } from "@/lib/i18n-my";
  */
 
 const AGE_GROUPS = ["10s", "20s", "30s", "40s", "50s+"] as const;
+const INTEREST_CATEGORIES = DISPLAY_CATEGORY_LIST.filter(
+  ({ key }) => key !== AI_MEME_DISPLAY_CATEGORY,
+);
 
 export function OnboardingForm({
   next,
@@ -42,7 +46,7 @@ export function OnboardingForm({
   const [interests, setInterests] = useState<Set<MemeCategory>>(
     () =>
       new Set(
-        DISPLAY_CATEGORY_LIST.flatMap(({ categories }) =>
+        INTEREST_CATEGORIES.flatMap(({ categories }) =>
           categories.some((category) => defaultInterests.includes(category))
             ? [...categories]
             : []
@@ -127,7 +131,7 @@ export function OnboardingForm({
           <h2 className="font-bold">{copy.interestsTitle}</h2>
           <p className="mt-1 text-sm text-muted">{copy.interestsBody}</p>
           <ul className="mt-3 flex flex-wrap gap-2">
-            {DISPLAY_CATEGORY_LIST.map(({ key, categories }) => {
+            {INTEREST_CATEGORIES.map(({ key, categories }) => {
               const legacyCategories = categories as readonly MemeCategory[];
               const active = legacyCategories.some((category) =>
                 interests.has(category)

@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { DEFINITE_YEAR_PRECISIONS, formatOriginYear } from "./labels";
+import {
+  DEFINITE_YEAR_PRECISIONS,
+  expandDisplayCategoryTokens,
+  expandToLegacyCategories,
+  formatOriginYear,
+} from "./labels";
+
+describe("display categories", () => {
+  it("keeps AI memes as a tag-backed category instead of a DB enum", () => {
+    const display = expandDisplayCategoryTokens(["ai-meme"]);
+    expect(display).toEqual(["ai-meme"]);
+    expect(expandToLegacyCategories(display)).toEqual(["phrase", "image"]);
+  });
+});
 
 describe("formatOriginYear", () => {
   it("근거가 뒷받침하는 정밀도에서만 연도를 단정한다", () => {

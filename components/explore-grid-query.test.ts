@@ -53,6 +53,68 @@ describe("explore platform query", () => {
     expect(hasCall(calls, "eq", "meme_contents.moderation_status", "approved")).toBe(false);
   });
 
+  it("limits the AI meme display category to its exact topic tag", () => {
+    const { calls, client } = recorder();
+    buildMemesQuery(client, {
+      categories: [],
+      topicTag: "AI 밈",
+      sort: "trending",
+    });
+
+    expect(calls.find((call) => call.method === "select")?.args[0]).toContain(
+      "meme_tags_map!inner(tags!inner(name))",
+    );
+    expect(hasCall(calls, "eq", "meme_tags_map.tags.name", "AI 밈")).toBe(true);
+    expect(calls.some((call) => call.method === "in" && call.args[0] === "category")).toBe(false);
+  });
+
+  it("applies the AI topic restriction to search and count paths", () => {
+    const search = recorder();
+    buildMemesQuery(search.client, {
+      categories: [],
+      topicTag: "AI 밈",
+      sort: "trending",
+      q: "브레인롯",
+    });
+    expect(
+      search.calls.some(
+        (call) => call.method === "rpc" && call.args[0] === "search_ai_memes",
+      ),
+    ).toBe(true);
+    expect(search.calls.find((call) => call.method === "select")?.args[0]).not.toContain(
+      "meme_tags_map",
+    );
+
+    const count = recorder();
+    buildMemesQuery(
+      count.client,
+      { categories: [], topicTag: "AI 밈", sort: "trending" },
+      { countOnly: true },
+    );
+    expect(hasCall(count.calls, "eq", "meme_tags_map.tags.name", "AI 밈")).toBe(true);
+    expect(count.calls.find((call) => call.method === "select")?.args[1]).toEqual({
+      count: "exact",
+      head: true,
+    });
+  });
+
+  it("preserves the existing category query without a tag join", () => {
+    const { calls, client } = recorder();
+    buildMemesQuery(client, { categories: ["phrase"], sort: "trending" });
+
+    expect(calls.find((call) => call.method === "select")?.args[0]).not.toContain(
+      "meme_tags_map",
+    );
+    expect(
+      calls.some(
+        (call) =>
+          call.method === "in" &&
+          call.args[0] === "category" &&
+          JSON.stringify(call.args[1]) === JSON.stringify(["phrase"]),
+      ),
+    ).toBe(true);
+  });
+
   it("excludes Shorts from the regular YouTube filter", () => {
     const { calls, client } = recorder();
     buildMemesQuery(client, filters("youtube"));

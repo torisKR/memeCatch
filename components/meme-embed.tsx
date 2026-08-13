@@ -63,6 +63,24 @@ export function MemeEmbed({
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
 
+  if (isPlayable && content?.thumbnail_url && !content.url) {
+    return (
+      <figure>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={content.thumbnail_url}
+          alt={`${title} 대표 이미지`}
+          className="aspect-[4/3] w-full rounded-xl border border-border bg-surface-2 object-cover"
+        />
+        {content.caption && (
+          <figcaption className="mt-2 text-sm text-muted">
+            {content.caption}
+          </figcaption>
+        )}
+      </figure>
+    );
+  }
+
   if (isYouTube) {
     return (
       <figure>

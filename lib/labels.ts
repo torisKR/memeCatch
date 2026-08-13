@@ -47,6 +47,13 @@ export type MemeCategory = keyof typeof CATEGORIES;
 export type CategoryIcon = (typeof CATEGORIES)[MemeCategory]["icon"];
 
 export const DISPLAY_CATEGORIES = {
+  "ai-meme": {
+    key: "ai-meme",
+    user: "AI 밈",
+    tone: "cat-image",
+    icon: "frame" as const,
+    categories: ["phrase", "image"] as const,
+  },
   meme_term: {
     key: "meme_term",
     user: "밈 용어(유행어)",
@@ -84,6 +91,9 @@ export const DISPLAY_CATEGORIES = {
   },
 } as const;
 export type DisplayCategoryKey = keyof typeof DISPLAY_CATEGORIES;
+
+export const AI_MEME_DISPLAY_CATEGORY: DisplayCategoryKey = "ai-meme";
+export const AI_MEME_TOPIC_TAG = "AI 밈";
 
 const DISPLAY_BY_LEGACY_CATEGORY: Record<MemeCategory, DisplayCategoryKey> = {
   phrase: "meme_term",

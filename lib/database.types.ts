@@ -3270,6 +3270,50 @@ export type Database = {
         Args: { p_locale: string; p_meme_id: string }
         Returns: Json
       }
+      search_ai_memes: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          aliases: string[]
+          category: Database["public"]["Enums"]["meme_category"]
+          caution: string | null
+          created_at: string
+          description: string
+          difficulty: Database["public"]["Enums"]["meme_difficulty"]
+          doc_class: string
+          era_type: string | null
+          id: string
+          korea_viral_year: number | null
+          lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
+          media_type: Database["public"]["Enums"]["media_type"]
+          meme_first_seen_year: number | null
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
+          origin: string
+          origin_year: number | null
+          published_at: string | null
+          revival_years: number[]
+          safety_level: Database["public"]["Enums"]["safety_level"]
+          sentiment: Database["public"]["Enums"]["meme_sentiment"]
+          short_id: string
+          slug: string
+          source_work_year: number | null
+          submitted_by: string | null
+          summary: string
+          title: string
+          title_chosung: string | null
+          trend_score: number
+          updated_at: string
+          usage_context: Json
+          usage_examples: Json | null
+          usage_note: string | null
+          year_precision: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "memes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       search_memes: {
         Args: { p_limit?: number; p_query: string }
         Returns: {

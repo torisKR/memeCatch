@@ -48,4 +48,38 @@ describe("ExploreFilters", () => {
       { scroll: false },
     );
   });
+
+  it("shows AI memes and keeps the tag-backed category exclusive", async () => {
+    navigation.query = "category=meme_term";
+    const user = userEvent.setup();
+    render(
+      <ExploreFilters
+        platformCounts={{ youtube: 12, youtube_shorts: 8, tiktok: 4, instagram: 2 }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "필터 1" }));
+    await user.click(screen.getByRole("button", { name: "AI 밈" }));
+
+    expect(navigation.push).toHaveBeenCalledWith("/explore?category=ai-meme", {
+      scroll: false,
+    });
+  });
+
+  it("removes AI memes when selecting a format category", async () => {
+    navigation.query = "category=ai-meme";
+    const user = userEvent.setup();
+    render(
+      <ExploreFilters
+        platformCounts={{ youtube: 12, youtube_shorts: 8, tiktok: 4, instagram: 2 }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "필터 1" }));
+    await user.click(screen.getByRole("button", { name: "밈 용어(유행어)" }));
+
+    expect(navigation.push).toHaveBeenCalledWith("/explore?category=meme_term", {
+      scroll: false,
+    });
+  });
 });

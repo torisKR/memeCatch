@@ -6,6 +6,8 @@ import type { Database } from "@/lib/database.types";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import { LIST_COLUMNS, type MemeListItem } from "@/lib/queries";
 import {
+  AI_MEME_DISPLAY_CATEGORY,
+  AI_MEME_TOPIC_TAG,
   DIFFICULTY,
   LIFECYCLE_STATUS,
   expandDisplayCategoryTokens,
@@ -82,10 +84,12 @@ function one(
 
 function parseFilters(sp: RawParams): Filters {
   const rawQ = Array.isArray(sp.q) ? sp.q[0] : sp.q;
+  const displayCategories = expandDisplayCategoryTokens(asArray(sp.category));
   return {
-    categories: expandToLegacyCategories(
-      expandDisplayCategoryTokens(asArray(sp.category))
-    ),
+    categories: expandToLegacyCategories(displayCategories),
+    topicTag: displayCategories.includes(AI_MEME_DISPLAY_CATEGORY)
+      ? AI_MEME_TOPIC_TAG
+      : undefined,
     difficulty: one(sp.difficulty, DIFFICULTY_KEYS) as Filters["difficulty"],
     lifecycle: one(sp.lifecycle, LIFECYCLE_KEYS) as Filters["lifecycle"],
     media: one(sp.media, MEDIA_KEYS) as Filters["media"],
@@ -99,12 +103,21 @@ function parseFilters(sp: RawParams): Filters {
   };
 }
 
-function selectForPlatform(platform?: SocialPlatform) {
+function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
   // LIST_COLUMNS: 목록 카드가 읽는 컬럼만 — 장문 컬럼 과다 전송 방지(lib/queries.ts 참조)
-  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)`;
+  const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
+  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)${topic}`;
+}
+
+function withTopicTag<T extends {
+  eq: (column: string, value: string) => T;
+}>(query: T, topicTag?: string): T {
+  return topicTag
+    ? query.eq("meme_tags_map.tags.name", topicTag)
+    : query;
 }
 
 function withPublicContent<T extends {
@@ -141,7 +154,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
   // (components/explore-grid.tsx의 buildMemesQuery와 반드시 동기화).
   if (filters.q) {
     let sq = supabase
-      .rpc("search_memes", {
+      .rpc(filters.topicTag ? "search_ai_memes" : "search_memes", {
         p_query: filters.q,
         p_limit: SEARCH_LIMIT,
       })
@@ -168,9 +181,10 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
 
   let q = supabase
     .from("memes")
-    .select(selectForPlatform(filters.platform))
+    .select(selectForPlatform(filters.platform, filters.topicTag))
     .in("moderation_status", ["approved", "limited"]);
   if (filters.platform) q = withPublicContent(q);
+  q = withTopicTag(q, filters.topicTag);
 
   if (filters.categories.length > 0) q = q.in("category", filters.categories);
   if (filters.difficulty) q = q.eq("difficulty", filters.difficulty);
@@ -197,6 +211,7 @@ function filterKey(f: Filters): string {
   return [
     f.sort,
     [...f.categories].sort().join(","),
+    f.topicTag ?? "",
     f.difficulty ?? "",
     f.lifecycle ?? "",
     f.media ?? "",

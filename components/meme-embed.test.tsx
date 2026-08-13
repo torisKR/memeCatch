@@ -20,6 +20,29 @@ const tiktokContent = {
 };
 
 describe("MemeEmbed", () => {
+  it("renders a live project-owned representative image", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          platform: "MemeCatch",
+          content_id: null,
+          url: null,
+          thumbnail_url: "/ai-memes/ai-slop.jpg",
+          availability: "live",
+          caption: "AI 슬롭 — 밈캐치 편집 삽화",
+        }}
+        fallbackSourceUrl="https://www.merriam-webster.com/dictionary/slop"
+        title="AI 슬롭"
+        isRepresentative
+      />
+    );
+
+    expect(html).toContain('src="/ai-memes/ai-slop.jpg"');
+    expect(html).toContain('alt="AI 슬롭 대표 이미지"');
+    expect(html).toContain("AI 슬롭 — 밈캐치 편집 삽화");
+    expect(html).not.toContain("원본 콘텐츠는 출처에서 볼 수 있어요");
+  });
+
   it("renders YouTube Shorts as a playable video instead of a source fallback", () => {
     const html = renderToStaticMarkup(
       <MemeEmbed

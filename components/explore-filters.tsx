@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  AI_MEME_DISPLAY_CATEGORY,
   DISPLAY_CATEGORIES,
   DISPLAY_CATEGORY_LIST,
   DIFFICULTY,
@@ -130,8 +131,15 @@ export function ExploreFilters({
       if (!token) return;
       const next = new URLSearchParams(searchParams);
       const current = new Set(activeDisplayCategories);
-      if (current.has(token)) current.delete(token);
-      else current.add(token);
+      if (current.has(token)) {
+        current.delete(token);
+      } else if (token === AI_MEME_DISPLAY_CATEGORY) {
+        current.clear();
+        current.add(token);
+      } else {
+        current.delete(AI_MEME_DISPLAY_CATEGORY);
+        current.add(token);
+      }
       next.delete("category");
       for (const item of current) next.append("category", item);
       pushParams(next);

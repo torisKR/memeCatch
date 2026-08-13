@@ -29,6 +29,7 @@ export type SortKey = "trending" | "recent" | "popular" | "controversial";
 /** URL 쿼리 → 정규화된 탐색 필터 (enum 타입으로 좁혀 eq/in 타입 안전) */
 export type ExploreFilters = {
   categories: MemeCategory[];
+  topicTag?: string;
   difficulty?: Database["public"]["Enums"]["meme_difficulty"];
   lifecycle?: Database["public"]["Enums"]["lifecycle_status"];
   media?: Database["public"]["Enums"]["media_type"];
@@ -53,11 +54,20 @@ const MEME_LIST_COLUMNS =
 
 export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url)`;
 
-function exploreSelect(platform?: SocialPlatform) {
+function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
-  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)`;
+  const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
+  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)${topic}`;
+}
+
+function withTopicTag<T extends {
+  eq: (column: string, value: string) => T;
+}>(query: T, topicTag?: string): T {
+  return topicTag
+    ? query.eq("meme_tags_map.tags.name", topicTag)
+    : query;
 }
 
 function withPublicContent<T extends {
@@ -109,7 +119,7 @@ export function buildMemesQuery(
   // (RPC 내부 LIMIT 50 → 검색 결과는 최대 50건까지 무한스크롤)
   if (filters.q) {
     let sq = supabase
-      .rpc("search_memes", {
+      .rpc(filters.topicTag ? "search_ai_memes" : "search_memes", {
         p_query: filters.q,
         p_limit: SEARCH_LIMIT,
       })
@@ -139,11 +149,12 @@ export function buildMemesQuery(
     // countOnly면 행 없이 총계만 받는다(head) — §6 「결과 수 제공」용.
     // select 문자열은 동일하게 유지해야 platform의 !inner 임베드 필터가 살아 있다.
     .select(
-      exploreSelect(filters.platform),
+      exploreSelect(filters.platform, filters.topicTag),
       options?.countOnly ? { count: "exact", head: true } : undefined,
     )
     .in("moderation_status", ["approved", "limited"]);
   if (filters.platform) q = withPublicContent(q);
+  q = withTopicTag(q, filters.topicTag);
 
   if (filters.categories.length > 0) q = q.in("category", filters.categories);
   if (filters.difficulty) q = q.eq("difficulty", filters.difficulty);
@@ -235,7 +246,7 @@ export function ExploreGrid({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- filters는 URL 파생 불변 객체
-  }, [filters.q, filters.platform, filters.categories.join(","), filters.difficulty, filters.lifecycle, filters.media, filters.year, filters.sort]);
+  }, [filters.q, filters.platform, filters.topicTag, filters.categories.join(","), filters.difficulty, filters.lifecycle, filters.media, filters.year, filters.sort]);
 
   // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,

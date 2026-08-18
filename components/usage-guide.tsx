@@ -25,6 +25,23 @@ export type UsageContextRow = {
   level: SafetyLevel;
 };
 
+type CommercialContext = "personal" | "company" | "brand" | "advertising";
+
+export type CommercialUsageContextRow = {
+  key: CommercialContext;
+  label: string;
+  level: SafetyLevel;
+  reason: string;
+};
+
+const RISK: Record<SafetyLevel, number> = { green: 0, yellow: 1, gray: 2, red: 3 };
+const COMMERCIAL_CONTEXTS: Record<CommercialContext, { label: string; sources: UsageContextRow["key"][]; fallback: string }> = {
+  personal: { label: "개인", sources: ["friends", "family"], fallback: "친구·가족 판정 중 더 엄격한 신호를 적용했어요." },
+  company: { label: "회사", sources: ["work"], fallback: "직장 사용 판정을 적용했어요." },
+  brand: { label: "브랜드", sources: ["sns"], fallback: "공개 SNS 사용 판정을 적용했어요." },
+  advertising: { label: "광고", sources: ["work", "sns"], fallback: "직장·공개 SNS 판정 중 더 엄격한 신호를 적용했어요." },
+};
+
 /** usage_context jsonb({"work":"green",...}) → 검증된 상황별 행 목록 */
 export function parseUsageContext(context: Json): UsageContextRow[] {
   const raw =
@@ -49,25 +66,55 @@ export function isUnverifiedUsageContext(rows: UsageContextRow[]): boolean {
   return rows.length >= 2 && rows.every((r) => r.level === "green");
 }
 
+export function buildCommercialUsageContexts(
+  rows: UsageContextRow[],
+  note?: string | null,
+  caution?: string | null,
+): CommercialUsageContextRow[] {
+  const noteText = note?.trim() || null;
+  const cautionText = caution?.trim() || null;
+
+  return (Object.keys(COMMERCIAL_CONTEXTS) as CommercialContext[]).flatMap((key) => {
+    const config = COMMERCIAL_CONTEXTS[key];
+    const sourceRows = rows.filter((row) => config.sources.includes(row.key));
+    if (sourceRows.length === 0) return [];
+    const level = sourceRows.reduce((strictest, row) =>
+      RISK[row.level] > RISK[strictest] ? row.level : strictest, sourceRows[0].level);
+    const reason = level === "green"
+      ? noteText ?? config.fallback
+      : cautionText ?? noteText ?? config.fallback;
+    return [{ key, label: config.label, level, reason }];
+  });
+}
+
+function reviewDate(value?: string | null): string | null {
+  if (!value || Number.isNaN(Date.parse(value))) return null;
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
+}
+
 /** 상황별 가·불가 행 목록 — UsageGuide와 SafetyRationale이 공유(중복 마크업 금지) */
-export function UsageContextRows({ rows }: { rows: UsageContextRow[] }) {
+export function UsageContextRows({ rows }: { rows: CommercialUsageContextRow[] }) {
   if (rows.length === 0) return null;
   return (
     <ul className="mt-3 divide-y divide-border">
-      {rows.map(({ key, level }) => {
+      {rows.map(({ key, label, level, reason }) => {
         const s = SAFETY_LEVELS[level];
         return (
           <li
             key={key}
             className="hover-glow-flame flex min-h-11 items-center justify-between gap-3 rounded-lg py-2"
           >
-            <span className="text-base font-medium">{USAGE_CONTEXTS[key]}</span>
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}
-            >
-              <span aria-hidden className="stat-mono text-[10px] font-bold tracking-wider">
-                {STATUS_CODE[level]}
-              </span>
+            <span>
+              <span className="text-base font-medium">{label}</span>
+              <span className="mt-0.5 block text-sm text-muted">{reason}</span>
+            </span>
+            <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}>
+              <span aria-hidden className="stat-mono text-[10px] font-bold tracking-wider">{STATUS_CODE[level]}</span>
               <span aria-hidden className="leading-none">
                 {s.icon}
               </span>
@@ -88,11 +135,16 @@ export function UsageContextRows({ rows }: { rows: UsageContextRow[] }) {
 export function UsageGuide({
   context,
   note,
+  caution,
+  reviewedAt,
 }: {
   context: Json;
   note?: string | null;
+  caution?: string | null;
+  reviewedAt?: string | null;
 }) {
-  const rows = parseUsageContext(context);
+  const rows = buildCommercialUsageContexts(parseUsageContext(context), note, caution);
+  const reviewedOn = reviewDate(reviewedAt);
   if (rows.length === 0) return null;
 
   return (
@@ -104,7 +156,16 @@ export function UsageGuide({
         어디서 써도 될까요?
       </h2>
       <UsageContextRows rows={rows} />
-      {note && <p className="mt-3 text-base text-muted">{note}</p>}
+      <p className="mt-3 text-sm text-muted">
+        최근 검수일:{" "}
+        {reviewedOn ? (
+          <time dateTime={reviewedAt ?? undefined}>{reviewedOn}</time>
+        ) : (
+          "확인된 기록 없음"
+        )}
+      </p>
     </section>
   );
 }
+
+export { reviewDate };

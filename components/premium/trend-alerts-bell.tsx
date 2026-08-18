@@ -6,7 +6,7 @@ import { usePremium } from "@/lib/hooks/use-premium";
 import { memePathFrom } from "@/lib/labels";
 import { toBcp47 } from "@/lib/i18n";
 import { useLocale } from "@/lib/i18n-client";
-import { isSeoContentLocale, localizedMemePath } from "@/lib/i18n-routing";
+import { isSeoContentLocale, localizedMemePath, localizedStaticPath } from "@/lib/i18n-routing";
 import { PREMIUM_COPY, type PremiumCopy } from "@/lib/i18n-premium";
 
 /**
@@ -106,7 +106,17 @@ export function TrendAlertsBell() {
     }
   }, [open, load, payload]);
 
-  if (!isPremium) return null;
+  if (!isPremium) {
+    return (
+      <Link
+        href={localizedStaticPath("/pricing?source=alert_briefing_setup", locale)}
+        aria-label={`${copy.buttonLabel} · Plus`}
+        className="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-2 active:scale-[0.95]"
+      >
+        <BellIcon className="h-5 w-5" />
+      </Link>
+    );
+  }
 
   const unread = payload?.unread ?? 0;
   const alerts = (payload?.alerts ?? []).filter((a) => a.memes !== null);

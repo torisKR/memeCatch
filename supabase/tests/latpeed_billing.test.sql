@@ -1,6 +1,6 @@
 begin;
 
-select plan(84);
+select plan(85);
 
 -- Schema and least-privilege contract.
 select has_table('public', 'billing_identities', 'billing identities exist');
@@ -622,6 +622,15 @@ select is(
   'a rejected canceled-member save does not change stored data'
 );
 reset role;
+
+select throws_ok(
+  $$select public.process_latpeed_membership_event(
+    'closed-new-sale', 'MEMBERSHIP_PAYMENT', 'closed-new-sale-order', 'first@example.com',
+    'active', 3900, '2026-08-18 00:00:00+00', null, '{}'::jsonb
+  )$$,
+  '22023', 'latpeed_sales_closed',
+  'Latpeed remains reconciliation-only after the Unifi cutover'
+);
 
 select * from finish();
 rollback;

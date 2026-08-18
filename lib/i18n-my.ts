@@ -15,6 +15,12 @@ type MyCopy = {
     nicknamePlaceholder: string;
     interestsTitle: string;
     interestsBody: string;
+    purposeTitle: string;
+    purposeBody: string;
+    purposes: Record<"creator" | "brand" | "global", string>;
+    platformsTitle: string;
+    platformsBody: string;
+    platforms: Record<"instagram" | "tiktok" | "x" | "youtube", string>;
     ageTitle: string;
     optional: string;
     ageBody: string;
@@ -137,6 +143,12 @@ const MY_COPY_BASE = {
       nicknamePlaceholder: "2~20자로 지어 주세요",
       interestsTitle: "관심 있는 밈은 무엇인가요?",
       interestsBody: "여러 개 골라도 돼요.",
+      purposeTitle: "어디에 밈을 활용하나요?",
+      purposeBody: "가장 가까운 목적 하나를 골라 주세요.",
+      purposes: { creator: "콘텐츠 크리에이터", brand: "브랜드 팀", global: "글로벌 트렌드 탐색" },
+      platformsTitle: "주로 쓰는 플랫폼",
+      platformsBody: "여러 개 골라도 돼요.",
+      platforms: { instagram: "Instagram", tiktok: "TikTok", x: "X", youtube: "YouTube" },
       ageTitle: "연령대",
       optional: "선택",
       ageBody: "비슷한 또래에게 인기인 밈을 추천하는 데만 써요.",
@@ -277,6 +289,12 @@ const MY_COPY_BASE = {
       nicknamePlaceholder: "Choose 2–20 characters",
       interestsTitle: "Which memes interest you?",
       interestsBody: "Choose as many as you like.",
+      purposeTitle: "How will you use memes?",
+      purposeBody: "Choose the option closest to your goal.",
+      purposes: { creator: "Content creator", brand: "Brand team", global: "Global trend watcher" },
+      platformsTitle: "Preferred platforms",
+      platformsBody: "Choose as many as you like.",
+      platforms: { instagram: "Instagram", tiktok: "TikTok", x: "X", youtube: "YouTube" },
       ageTitle: "Age group",
       optional: "optional",
       ageBody: "We only use this to recommend memes popular with people around your age.",
@@ -422,6 +440,12 @@ const MY_COPY_BASE = {
       nicknamePlaceholder: "2〜20文字で入力してください",
       interestsTitle: "気になるミームは何ですか？",
       interestsBody: "いくつ選んでも大丈夫です。",
+      purposeTitle: "ミームを何に使いますか？",
+      purposeBody: "最も近い目的を1つ選んでください。",
+      purposes: { creator: "コンテンツクリエイター", brand: "ブランドチーム", global: "海外トレンド調査" },
+      platformsTitle: "よく使うプラットフォーム",
+      platformsBody: "複数選択できます。",
+      platforms: { instagram: "Instagram", tiktok: "TikTok", x: "X", youtube: "YouTube" },
       ageTitle: "年齢層",
       optional: "任意",
       ageBody: "近い年齢層で人気のミームをおすすめするためだけに使います。",
@@ -569,6 +593,12 @@ const MY_COPY_BASE = {
       nicknamePlaceholder: "请输入 2–20 个字符",
       interestsTitle: "你对哪些迷因感兴趣？",
       interestsBody: "可以选择多个。",
+      purposeTitle: "你会如何使用迷因？",
+      purposeBody: "请选择最符合你目标的一项。",
+      purposes: { creator: "内容创作者", brand: "品牌团队", global: "全球趋势观察" },
+      platformsTitle: "常用平台",
+      platformsBody: "可以选择多个。",
+      platforms: { instagram: "Instagram", tiktok: "TikTok", x: "X", youtube: "YouTube" },
       ageTitle: "年龄段",
       optional: "可选",
       ageBody: "仅用于推荐同龄人中受欢迎的迷因。",

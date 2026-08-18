@@ -163,7 +163,26 @@ describe("buildPlusWeeklyBriefCandidates", () => {
 });
 
 describe("buildPlusWeeklyDeltaBrief", () => {
-  it("returns only positive changes and excludes already surfaced ids", () => {
+  it("selects at most five saved or interest candidates with deterministic ties", () => {
+    const brief = buildPlusWeeklyDeltaBrief({
+      candidates: ["f", "b", "e", "a", "d", "c"].map((id, index) =>
+        candidate(id, { source: index % 2 === 0 ? "saved" : "interest" }),
+      ),
+      metrics: ["f", "b", "e", "a", "d", "c"].flatMap((id) => [
+        metric(id, "2026-08-01", 10),
+        metric(id, "2026-08-07", 20),
+      ]),
+      from: "2026-08-01",
+      to: "2026-08-07",
+    });
+
+    expect(brief.items.map((item) => item.memeId)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(new Set(brief.items.map((item) => item.source))).toEqual(
+      new Set(["saved", "interest"]),
+    );
+  });
+
+  it("keeps personalized candidates with history and excludes already surfaced ids", () => {
     const brief = buildPlusWeeklyDeltaBrief({
       candidates: [
         candidate("saved", { source: "saved" }),
@@ -188,6 +207,7 @@ describe("buildPlusWeeklyDeltaBrief", () => {
 
     expect(brief.items.map((item) => [item.memeId, item.delta])).toEqual([
       ["rising", 45],
+      ["flat", 0],
     ]);
     expect(brief.scannedCount).toBe(2);
     expect(brief.emptyReason).toBeNull();
@@ -205,7 +225,7 @@ describe("buildPlusWeeklyDeltaBrief", () => {
     expect(brief.emptyReason).toBe("insufficient_history");
   });
 
-  it("reports no change when history exists but all eligible candidates are flat or declining", () => {
+  it("fills the personalized brief with flat or declining items when nothing rose", () => {
     const brief = buildPlusWeeklyDeltaBrief({
       candidates: [candidate("flat"), candidate("declining")],
       metrics: [
@@ -218,8 +238,11 @@ describe("buildPlusWeeklyDeltaBrief", () => {
       to: "2026-08-07",
     });
 
-    expect(brief.items).toEqual([]);
-    expect(brief.emptyReason).toBe("no_change");
+    expect(brief.items.map((item) => [item.memeId, item.delta])).toEqual([
+      ["flat", 0],
+      ["declining", -20],
+    ]);
+    expect(brief.emptyReason).toBeNull();
   });
 });
 

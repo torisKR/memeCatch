@@ -3,7 +3,7 @@ import { isIndexableMeme } from "@/lib/content-depth";
 import type { SeoRouteLocale } from "@/lib/i18n-routing";
 import type { PlusLocalizedFeedSource } from "@/lib/plus-localized-feed";
 
-export const PLUS_WEEKLY_BRIEF_ITEM_LIMIT = 3;
+export const PLUS_WEEKLY_BRIEF_ITEM_LIMIT = 5;
 
 type CurrentLifecycle = Extract<LifecycleStatus, "rising" | "active">;
 
@@ -175,6 +175,7 @@ export type PlusWeeklyBriefItem = {
 };
 
 export type PlusWeeklyDeltaBrief = {
+  briefId: string;
   window: { from: string; to: string; timezone: "Asia/Seoul" };
   scannedCount: number;
   items: PlusWeeklyBriefItem[];
@@ -235,7 +236,6 @@ export function buildPlusWeeklyDeltaBrief({
       const first = series[0].trend_score;
       const last = series[series.length - 1].trend_score;
       const delta = last - first;
-      if (delta <= 0) return [];
       return [
         {
           memeId: candidate.id,
@@ -260,16 +260,15 @@ export function buildPlusWeeklyDeltaBrief({
     .slice(0, PLUS_WEEKLY_BRIEF_ITEM_LIMIT);
 
   return {
+    briefId: [from, to, ...items.map((item) => item.shortId)].join("_"),
     window: { from, to, timezone: "Asia/Seoul" },
     scannedCount: eligible.length,
     items,
     emptyReason:
       eligible.length === 0
         ? "no_candidates"
-        : items.length === 0
-          ? historyCandidateCount === 0
-            ? "insufficient_history"
-            : "no_change"
+        : items.length === 0 && historyCandidateCount === 0
+          ? "insufficient_history"
           : null,
   };
 }

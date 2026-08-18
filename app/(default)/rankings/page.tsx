@@ -24,10 +24,10 @@ import {
 export const revalidate = 600;
 
 const RANKINGS_DESCRIPTION =
-  "오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.";
+  "밈캐치 안에서 오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.";
 
 export const metadata: Metadata = {
-  title: "랭킹",
+  title: "밈캐치 내 급상승",
   description: RANKINGS_DESCRIPTION,
   alternates: { canonical: "/rankings" },
   // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "밈캐치",
     locale: "ko_KR",
-    title: "랭킹",
+    title: "밈캐치 내 급상승",
     description: RANKINGS_DESCRIPTION,
     url: "/rankings",
   },
@@ -173,8 +173,8 @@ export default async function RankingsPage() {
     <main className="mx-auto max-w-5xl px-4 py-6">
       <AdsenseScript />
       {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
-      <h1 className="text-2xl font-bold">랭킹</h1>
-      <p className="mt-1 text-base text-muted">지금 한국에서 도는 밈, 순위로 모아봤어요.</p>
+      <h1 className="text-2xl font-bold">밈캐치 내 급상승</h1>
+      <p className="mt-1 text-base text-muted">밈캐치 내부 조회·반응 신호를 기준으로 모았어요.</p>
 
       {!flags.communityEnabled && (
         <div

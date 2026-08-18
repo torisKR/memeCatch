@@ -8,14 +8,14 @@ import { localizedStaticPath } from "@/lib/i18n-routing";
 
 const TABS: {
   href: string;
-  label: "brand" | "explore" | "submit" | "community" | "my";
+  label: "brand" | "explore" | "submit" | "premium" | "my";
   icon: (props: { className?: string }) => React.ReactElement;
   emphasized?: boolean;
 }[] = [
   { href: "/", label: "brand", icon: HomeIcon },
   { href: "/explore", label: "explore", icon: CompassIcon },
   { href: "/submit", label: "submit", icon: PlusIcon, emphasized: true },
-  { href: "/community", label: "community", icon: ChatIcon },
+  { href: "/premium", label: "premium", icon: PremiumIcon },
   { href: "/my", label: "my", icon: UserIcon },
 ];
 
@@ -56,7 +56,9 @@ export function BottomNav() {
                   emphasized={tab.emphasized}
                   active={active}
                   label={
-                    tab.href === "/"
+                    tab.label === "premium"
+                      ? "Plus"
+                      : tab.href === "/"
                       ? ({ ko: "홈", ja: "ホーム", zh: "首页", "zh-tw": "首頁" } as Partial<Record<typeof locale, string>>)[locale] ?? "Home"
                       : messages[tab.label]
                   }
@@ -156,14 +158,10 @@ function PlusIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-function ChatIcon({ className }: { className?: string }) {
+function PremiumIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path
-        d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 15.5H10l-4 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 14V7A1.5 1.5 0 0 1 5 5.5Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="m12 3 2.4 5.1L20 9l-4 4.1.9 5.9-4.9-2.7L7.1 19l.9-5.9L4 9l5.6-.9L12 3Z" strokeLinejoin="round" />
     </svg>
   );
 }

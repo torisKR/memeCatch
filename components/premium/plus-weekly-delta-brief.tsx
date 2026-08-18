@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
 import type { Locale } from "@/lib/i18n";
 import { toBcp47 } from "@/lib/i18n";
 import { memePathFrom } from "@/lib/labels";
@@ -9,6 +12,7 @@ import {
 } from "@/lib/i18n-routing";
 import { resolvePlusContentLocale } from "@/lib/plus-localized-feed";
 import type { PlusWeeklyDeltaBrief } from "@/lib/plus-weekly-brief";
+import { track } from "@/lib/analytics";
 
 export function PlusWeeklyDeltaBrief({
   brief,
@@ -30,6 +34,12 @@ export function PlusWeeklyDeltaBrief({
   const numberFormatter = new Intl.NumberFormat(toBcp47(locale), {
     maximumFractionDigits: 0,
   });
+  useEffect(() => {
+    track("plus_weekly_brief_opened", {
+      brief_id: brief.briefId,
+      item_count: brief.items.length,
+    });
+  }, [brief.briefId, brief.items.length]);
 
   if (brief.items.length === 0) {
     return (
@@ -86,6 +96,14 @@ export function PlusWeeklyDeltaBrief({
             <li key={item.memeId}>
               <Link
                 href={`${href}#trend-panel-title`}
+                onClick={() =>
+                  track("plus_weekly_brief_clicked", {
+                    brief_id: brief.briefId,
+                    meme_id: item.memeId,
+                    position: index + 1,
+                    source: item.source,
+                  })
+                }
                 className="flex items-start gap-3 rounded-xl border border-border bg-surface-2 p-4 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-strong text-sm font-black text-white">
@@ -98,7 +116,9 @@ export function PlusWeeklyDeltaBrief({
                   </span>
                 </span>
                 <span className="shrink-0 self-center text-right text-xs font-bold text-accent-text">
-                  <span className="block">+{numberFormatter.format(item.delta)}</span>
+                  <span className="block">
+                    {item.delta > 0 ? "+" : ""}{numberFormatter.format(item.delta)}
+                  </span>
                   <span className="mt-1 block font-medium text-muted">{copy.openTrend}</span>
                 </span>
               </Link>

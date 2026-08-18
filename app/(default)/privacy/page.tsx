@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   robots: { index: true },
 };
 
-const EFFECTIVE = "2026년 7월 18일";
+const EFFECTIVE = "2026년 8월 18일";
 
 /** 개인정보처리방침 — 정보통신망법·개인정보보호법 기준 최소 필수 고지 */
 export default function PrivacyPage() {
@@ -27,13 +27,14 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>서비스 이용 중 생성</strong>: 제보·댓글·좋아요·저장 활동
-              기록, 관심 카테고리, 익명화된 조회 이벤트(세션 해시)
+              기록, 관심 카테고리, 가명 세션 식별자와 조회·공유·퀴즈·유입 이벤트
             </li>
             <li>
-              <strong>MemeCatch Plus 구매</strong>: 구매 이메일, Latpeed 주문·상품
-              식별자, 결제 상태·금액·발생 시각 — 멤버십 연동을 위해 Latpeed가
-              서명된 결제 알림으로 제공. 카드·계좌 등 결제수단 정보는 서비스가
-              직접 수집하거나 저장하지 않습니다.
+              <strong>MemeCatch Plus 구매</strong>: MemeCatch 계정 식별자, Unifi Pay
+              결제 링크·주문·거래 식별자, 결제 상태·금액·통화·발생 시각 — Unifi
+              Pay의 결제 알림을 받은 뒤 서버 간 거래 조회로 확인합니다. 지갑
+              비밀키 등 결제수단 인증정보는 서비스가 직접 수집하거나 저장하지
+              않습니다.
             </li>
             <li>
               <strong>자동 수집</strong>: 접속 로그, 쿠키(로그인 세션 유지
@@ -75,8 +76,15 @@ export default function PrivacyPage() {
             <li><strong>Vercel</strong> — 웹 호스팅·접속 로그</li>
             <li><strong>Cloudflare</strong> — 이미지 저장소(R2)</li>
             <li>
-              <strong>Latpeed</strong> — MemeCatch Plus 상품 판매·결제 처리 및
-              서명된 멤버십 상태 알림
+              <strong>Unifi Pay</strong> — 신규 MemeCatch Plus 30일 이용권의 결제
+              링크 제공, 스테이블코인 결제 처리 및 거래 상태 확인. 결제 요청 시
+              계정 식별자 일부에서 만든 가명 요청 식별자, 상품·금액·통화, 복귀·알림
+              주소를 암호화된 통신으로 전달하며, 거래 식별자·상태·통화·시각은 결제
+              확인과 법정 보존 기간 동안 보관합니다.
+            </li>
+            <li>
+              <strong>Latpeed</strong> — 기존 구매자의 주문·취소·환불 기록 보존과
+              권한 및 고객 문의 처리. 신규 Plus 결제에는 사용하지 않습니다.
             </li>
           </ul>
         </section>

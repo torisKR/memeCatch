@@ -105,6 +105,12 @@ export default async function AdminDashboardPage() {
       sub: "외부 신호의 등급 변경 제안이에요",
     },
     {
+      href: "/admin/growth",
+      label: "성장 운영",
+      value: "Top 100",
+      sub: "SEO 준비도와 영어 파일럿을 관리해요",
+    },
+    {
       href: null,
       label: "어제 배치 (trend_score)",
       value: batchLabel,

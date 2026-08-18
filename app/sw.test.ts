@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   config: undefined as SerwistOptions | undefined,
+  listeners: new Map<string, EventListenerOrEventListenerObject>(),
 }));
 
 vi.mock("serwist", async (importOriginal) => {
@@ -70,10 +71,14 @@ describe("service-worker runtime caching", () => {
   beforeEach(async () => {
     vi.resetModules();
     state.config = undefined;
+    state.listeners.clear();
     vi.stubEnv("NODE_ENV", "production");
     vi.stubGlobal("self", {
       __SW_MANIFEST: [],
       location: { origin: ORIGIN },
+      addEventListener: vi.fn((type: string, listener: EventListenerOrEventListenerObject) => {
+        state.listeners.set(type, listener);
+      }),
     });
     await import("@/app/sw");
   });
@@ -151,5 +156,10 @@ describe("service-worker runtime caching", () => {
       imageRequest("https://assets.example.com/brand.png"),
     );
     expect(unrelatedImage.handler).toMatchObject({ cacheName: "static-image-assets" });
+  });
+
+  it("registers push display and notification click handlers", () => {
+    expect(state.listeners.has("push")).toBe(true);
+    expect(state.listeners.has("notificationclick")).toBe(true);
   });
 });

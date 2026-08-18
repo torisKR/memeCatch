@@ -6,12 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { selectPremiumSubscription } from "@/lib/billing/entitlements";
 import type { LatpeedMembershipEvent } from "@/lib/billing/latpeed.server";
-/** Unifi 결제 웹훅 정산 이벤트 — 웹훅 route가 인증 조회 결과로 조립한다. */
 export type UnifiSettlementEvent = {
-  eventKey: string;
-  paymentId: string;
-  status: "active" | "canceled";
-  amount: number | null;
+  providerLinkId: string;
+  transactionId: string;
+  status: "CONFIRMED" | "FAILED" | "CANCELED";
   occurredAt: string;
   payload: Record<string, unknown>;
 };
@@ -61,25 +59,33 @@ export async function processLatpeedMembershipEvent(
   return data;
 }
 
-/**
- * Unifi 결제 의도 기록 — 로그인 사용자 컨텍스트로 호출해 payment_id ↔ user_id를
- * 결제 생성 시점에 고정한다. 이후 웹훅은 이 바인딩으로만 소유자를 찾는다.
- */
-export async function createUnifiPaymentIntent(input: {
-  paymentId: string;
-  itemIdentifier: string;
-  amount: number;
-  currency: string;
-  testMode: boolean;
-}): Promise<void> {
+export async function createBillingOrder(
+  requestId: string,
+  growthSessionId: string | null = null,
+): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_unifi_payment_intent", {
-    p_payment_id: input.paymentId,
-    p_item_identifier: input.itemIdentifier,
-    p_amount: input.amount,
-    p_currency: input.currency,
-    p_test_mode: input.testMode,
+  const { error } = await supabase.rpc("create_billing_order", {
+    p_request_id: requestId,
+    p_growth_session_id: growthSessionId,
   });
+  if (error) throw error;
+}
+
+export async function attachUnifiPaymentLink(
+  requestId: string,
+  providerLinkId: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("attach_unifi_payment_link", {
+    p_provider_link_id: providerLinkId,
+    p_request_id: requestId,
+  });
+  if (error) throw error;
+}
+
+export async function failBillingOrder(requestId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fail_billing_order", { p_request_id: requestId });
   if (error) throw error;
 }
 
@@ -87,11 +93,10 @@ export async function processUnifiPaymentEvent(
   event: UnifiSettlementEvent,
 ): Promise<unknown> {
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("process_unifi_payment_event", {
-    p_event_key: event.eventKey,
-    p_payment_id: event.paymentId,
+  const { data, error } = await admin.rpc("process_unifi_order_event", {
+    p_provider_link_id: event.providerLinkId,
+    p_transaction_id: event.transactionId,
     p_status: event.status,
-    p_amount: event.amount,
     p_occurred_at: event.occurredAt,
     p_payload: event.payload as Json,
   });

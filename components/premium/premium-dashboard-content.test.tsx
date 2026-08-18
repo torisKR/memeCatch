@@ -1,12 +1,23 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const track = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/i18n-client", async () => {
   const { getMessages } = await import("@/lib/i18n");
   return { useLocale: () => ({ locale: "zh", messages: getMessages("zh") }) };
 });
+vi.mock("@/lib/analytics", () => ({ track }));
 
 import { PremiumDashboardContent } from "@/components/premium/premium-dashboard-content";
+
+afterEach(() => {
+  cleanup();
+  track.mockReset();
+});
 
 describe("PremiumDashboardContent", () => {
   it("shows the active membership and its protected feed", () => {
@@ -44,6 +55,58 @@ describe("PremiumDashboardContent", () => {
     expect(html).toContain("开始第一题");
     expect(html).not.toContain("用 Plus 解锁今天的迷因");
     expect(html).toContain('href="/zh/daily"');
+  });
+
+  it("tracks an active-user extension intent without claiming a completed renewal", () => {
+    render(
+      <PremiumDashboardContent
+        isPremium
+        status="active"
+        currentPeriodEnd="2026-08-18T00:00:00+09:00"
+        feed={null}
+      />,
+    );
+
+    fireEvent.submit(screen.getByRole("button", { name: "延长使用权" }).closest("form")!);
+
+    expect(track).toHaveBeenCalledWith("plus_checkout_started", {
+      locale: "zh",
+      surface: "dashboard_extend",
+    });
+    expect(track).not.toHaveBeenCalledWith("renewal", expect.anything());
+  });
+
+  it("renders the 7, 3, 1, and 0-day repurchase states with a checkout form", () => {
+    vi.useFakeTimers();
+    const now = Date.parse("2026-08-01T00:00:00.000Z");
+    vi.setSystemTime(now);
+
+    for (const days of [7, 3, 1, 0]) {
+      const html = renderToStaticMarkup(
+        <PremiumDashboardContent
+          isPremium
+          status="active"
+          currentPeriodEnd={new Date(now + days * 86_400_000).toISOString()}
+          feed={null}
+        />,
+      );
+
+      expect(html).toContain(`data-expiry-reminder-day="${days}"`);
+      expect(html).toContain('action="/api/billing/checkout"');
+      expect(html).toContain('method="post"');
+      expect(html).toContain("延长使用权");
+    }
+
+    const betweenHtml = renderToStaticMarkup(
+      <PremiumDashboardContent
+        isPremium
+        status="active"
+        currentPeriodEnd={new Date(now + 5 * 86_400_000).toISOString()}
+        feed={null}
+      />,
+    );
+    expect(betweenHtml).not.toContain("data-expiry-reminder-day");
+    vi.useRealTimers();
   });
 
   it("can put the action surface before the historical outcome snapshot", () => {

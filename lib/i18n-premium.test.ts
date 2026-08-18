@@ -23,6 +23,10 @@ describe("PREMIUM_COPY", () => {
     expect(copy.dashboard.actionInbox.creatorPack.reusable(2)).toContain("2");
     expect(copy.dashboard.weeklyBrief.summary(2)).toContain("2");
     expect(copy.dashboard.weeklyBrief.openTrend).toBeTruthy();
+    expect(copy.trend.windowSummary(30)).toContain("30");
+    expect(copy.trend.observedEvidence(10, 20, 30, 4, 2)).toContain("10");
+    expect(copy.trend.sampleCoverage(2, 30, 7)).toContain("7");
+    expect(copy.trend.lastObserved("2026-08-18")).toContain("2026");
     expect(copy.dashboard.radar.title).toBeTruthy();
     expect(copy.dashboard.radar.summary(2)).toContain("2");
     expect(copy.dashboard.radar.readyNow.description).toBeTruthy();
@@ -50,10 +54,10 @@ describe("PREMIUM_COPY", () => {
   it("states the pass does not auto-renew", () => {
     // Unifi Pay에는 정기결제 API가 없다(1회 결제 = 30일 이용권). 자동 갱신을
     // 약속하면 오지 않을 갱신을 기다리게 만드는 거짓 안내가 된다.
-    expect(PREMIUM_COPY.ko.pricing.launchNote).toBe("30일 이용권 · 자동 갱신 없음");
-    expect(PREMIUM_COPY.en.pricing.launchNote).toBe("30-day pass · does not auto-renew");
-    expect(PREMIUM_COPY.ja.pricing.launchNote).toBe("30日間の利用券・自動更新なし");
-    expect(PREMIUM_COPY.zh.pricing.launchNote).toBe("30天使用权 · 不自动续费");
+    expect(PREMIUM_COPY.ko.pricing.launchNote).toContain("자동 갱신 없음");
+    expect(PREMIUM_COPY.en.pricing.launchNote).toContain("no auto-renewal");
+    expect(PREMIUM_COPY.ja.pricing.launchNote).toContain("自動更新なし");
+    expect(PREMIUM_COPY.zh.pricing.launchNote).toContain("不自动续费");
   });
 
   it.each(SUPPORTED_LOCALES)("never promises recurring billing for %s", (locale) => {
@@ -73,7 +77,8 @@ describe("PREMIUM_COPY", () => {
     "prices the pass in a currency Unifi Pay supports for %s",
     (locale) => {
       // Unifi Pay는 USD·JPY만 지원한다(KRW 불가).
-      expect(PREMIUM_COPY[locale].pricing.monthly).toBe("$20");
+      expect(PREMIUM_COPY[locale].pricing.monthly).toBe("$10");
+      expect(PREMIUM_COPY[locale].pricing.launchNote).toContain("USDT");
     },
   );
 

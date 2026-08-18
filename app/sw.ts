@@ -18,6 +18,36 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+type PushPayload = { title?: string; body?: string; url?: string; tag?: string };
+
+self.addEventListener("push", (event) => {
+  const payload = (event.data?.json() ?? {}) as PushPayload;
+  event.waitUntil(self.registration.showNotification(payload.title ?? "밈캐치", {
+    body: payload.body,
+    tag: payload.tag,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    data: { url: payload.url?.startsWith("/") ? payload.url : "/premium" },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const requested = new URL(event.notification.data?.url ?? "/premium", self.location.origin);
+  const target = requested.origin === self.location.origin
+    ? requested
+    : new URL("/premium", self.location.origin);
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const existing = windows.find((client) => new URL(client.url).origin === target.origin);
+    if (existing) {
+      await existing.navigate(target.href);
+      return existing.focus();
+    }
+    return self.clients.openWindow(target.href);
+  })());
+});
+
 /** Supabase 호스트 판별 — 프로덕션(*.supabase.co)과 로컬 개발 스택 모두 커버 */
 const SUPABASE_ORIGIN = (() => {
   try {

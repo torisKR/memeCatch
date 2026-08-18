@@ -28,7 +28,7 @@ vi.mock("@/lib/billing/unifi-pay.server", async (importOriginal) => {
       storeId: "store-1",
       serviceName: "MemeCatch",
       itemName: "MemeCatch Plus (30 days)",
-      itemPrice: 20,
+      itemPrice: 10,
       orderCurrencyCode: "USD",
       callbackBaseUrl: "https://catchmeme.com",
       returnBaseUrl: "https://catchmeme.com",
@@ -51,8 +51,9 @@ const CONFIRMED_TX = {
   orderId: "LINK-goodlink-abc",
   storeId: "store-1",
   status: "CONFIRMED",
-  orderAmount: 20,
+  orderAmount: 10,
   orderCurrencyCode: "USD",
+  payCurrencyCode: "USDT",
 };
 
 beforeEach(() => {
@@ -72,7 +73,9 @@ describe("unifi webhook attribution", () => {
     expect(await res.json()).toMatchObject({ ok: true, status: "active" });
     expect(processUnifiPaymentEvent).toHaveBeenCalledTimes(1);
     expect(processUnifiPaymentEvent.mock.calls[0][0]).toMatchObject({
-      paymentId: "goodlink",
+      providerLinkId: "goodlink",
+      transactionId: "tx_1",
+      status: "CONFIRMED",
     });
   });
 
@@ -140,17 +143,16 @@ describe("unifi webhook attribution", () => {
     expect(processUnifiPaymentEvent).not.toHaveBeenCalled();
   });
 
-  it("멱등 키에 인증 유래 linkId가 들어간다", async () => {
+  it("검증된 transactionId와 linkId를 원자적 DB 정산에 넘긴다", async () => {
     getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
 
     await POST(
       webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
     );
 
-    const { createHash } = await import("node:crypto");
-    const expected = createHash("sha256")
-      .update("unifi-pay:tx_1:CONFIRMED:goodlink")
-      .digest("hex");
-    expect(processUnifiPaymentEvent.mock.calls[0][0]).toMatchObject({ eventKey: expected });
+    expect(processUnifiPaymentEvent.mock.calls[0][0]).toMatchObject({
+      providerLinkId: "goodlink",
+      transactionId: "tx_1",
+    });
   });
 });

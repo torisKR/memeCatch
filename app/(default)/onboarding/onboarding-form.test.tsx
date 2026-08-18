@@ -25,12 +25,16 @@ describe("OnboardingForm interests", () => {
         defaultNickname="밈수집가"
         defaultInterests={["dance"]}
         defaultAgeGroup=""
+        defaultUsePurpose="brand"
+        defaultPreferredPlatforms={["instagram"]}
       />
     );
 
     expect(screen.getByRole("heading", { name: "Welcome to MemeCatch" })).toBeTruthy();
     expect(screen.getByLabelText("Nickname")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Skip for now" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Brand team" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("button", { name: "Instagram" }).getAttribute("aria-pressed")).toBe("true");
 
     const labels = ["Meme terms", "Challenge dances", "Songs", "Drama scenes", "Meme videos"];
     for (const label of labels) {
@@ -49,5 +53,12 @@ describe("OnboardingForm interests", () => {
 
     expect(challengeDance.getAttribute("aria-pressed")).toBe("false");
     expect(container.querySelectorAll('input[name="interests"]')).toHaveLength(0);
+
+    await user.click(screen.getByRole("radio", { name: "Global trend watcher" }));
+    await user.click(screen.getByRole("button", { name: "YouTube" }));
+    expect(container.querySelector<HTMLInputElement>('input[name="use_purpose"]')?.value).toBe("global");
+    expect(
+      [...container.querySelectorAll<HTMLInputElement>('input[name="preferred_platforms"]')].map((input) => input.value)
+    ).toEqual(["instagram", "youtube"]);
   });
 });

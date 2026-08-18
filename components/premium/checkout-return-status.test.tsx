@@ -79,13 +79,28 @@ describe("CheckoutReturnStatus", () => {
 
   it("shows the first One-Cut CTA only when the server already confirms Plus", () => {
     navigation.query = "checkout=return";
-    renderStatus(true);
+    const { rerender } = renderStatus(true);
 
     expect(screen.getByRole("status").textContent).toContain("Payment confirmed");
     expect(screen.getByRole("link", { name: "Start your first One-Cut" }).getAttribute("href")).toBe(
       "/premium#plus-global-action-inbox-title",
     );
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(track).toHaveBeenCalledWith("payment_confirmed", { locale: "en" });
+
+    rerender(
+      <CheckoutReturnStatus
+        initiallyPremium
+        locale="en"
+        copy={{
+          confirming: PREMIUM_COPY.en.dashboard.checkoutConfirming,
+          confirmed: PREMIUM_COPY.en.dashboard.checkoutConfirmed,
+          timeout: PREMIUM_COPY.en.dashboard.checkoutTimeout,
+          startOneCut: PREMIUM_COPY.en.dashboard.startOneCut,
+        }}
+      />,
+    );
+    expect(track.mock.calls.filter(([event]) => event === "payment_confirmed")).toHaveLength(1);
   });
 
   it("reveals the CTA after an entitlement poll confirms Plus and refreshes the server dashboard", async () => {
@@ -105,6 +120,7 @@ describe("CheckoutReturnStatus", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/billing/entitlement", { cache: "no-store" });
     expect(screen.getByRole("link", { name: "Start your first One-Cut" })).toBeTruthy();
     expect(navigation.refresh).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith("payment_confirmed", { locale: "en" });
   });
 
   it("keeps the Plus CTA hidden when an entitlement poll is rejected", async () => {

@@ -131,9 +131,10 @@ curl --fail-with-body \
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon(publishable) 키 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service_role 키 (배치·관리·시드) |
-| `LATPEED_MEMBERSHIP_URL` | MemeCatch Plus Latpeed 상품 URL. 서버 전용이며 결제 CTA가 이 URL로 이동 |
-| `LATPEED_WEBHOOK_SECRET` | Latpeed 상품별 웹훅 HMAC 시크릿. 서버 전용 |
-| `LATPEED_MEMBERSHIP_PRODUCT_ID` | (선택) 웹훅 payload의 상품 ID를 고정 검증할 때 사용 |
+| `UNIFI_PAY_API_KEY` / `UNIFI_PAY_API_SECRET` | Unifi Pay Direct 결제 링크 발급·거래 재검증용 서버 비밀값 |
+| `UNIFI_PAY_STORE_ID` | Unifi Pay 판매자 스토어 ID |
+| `UNIFI_PAY_CALLBACK_BASE_URL` | Unifi 콘솔 허용 목록에 등록한 HTTPS 콜백 기준 URL |
+| `UNIFI_PAY_ITEM_PRICE` | Plus 30일권 주문 금액. 기본값 `10` USD |
 | `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
@@ -160,21 +161,21 @@ Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 �
 - `meme_contents` / `meme_sources` — YouTube·TikTok·Instagram·Facebook·Threads 임베드와 출처 링크
 - `media_sources` / `meme_media` / `meme_claims` — 출처 수집 파이프라인 원장(운영자 전용, RLS)
 - `meme_submissions` · `reports` · `discussions` · `meme_reactions` · `saved_memes` · `generation_votes`
-- `profiles` — 닉네임·역할·관심 카테고리
-- `billing_identities` · `billing_subscriptions` · `billing_webhook_events` — Latpeed 결제 이메일 매칭·Plus 권한·서명 이벤트 감사 기록
+- `profiles` — 닉네임·역할·관심 카테고리·활용 목적·선호 플랫폼
+- `billing_orders` · `billing_subscriptions` · `billing_webhook_events` — 결제 주문 상태·Plus 권한·거래/환불 감사 기록
 - `meme_trend_metrics` · `view_events` — 트렌드 집계
 - `admin_audit_log` · `job_runs` — 운영 감사·배치 로그
 
 RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `post_comment` · `file_report` · `cast_generation_vote` · `increment_view` · `compute_trend_scores`
 
-### MemeCatch Plus / Latpeed 연결
+### MemeCatch Plus / Unifi Pay Direct 연결
 
-1. 사용자가 MemeCatch 로그인 이메일과 같은 이메일로 Latpeed에서 결제합니다.
-2. `POST /api/billing/checkout`이 현재 로그인 이메일을 서버에 등록한 뒤 Latpeed 상품으로 이동시킵니다.
-3. Latpeed 상품별 웹훅을 `https://catchmeme.com/api/billing/latpeed/webhook`에 연결합니다.
-4. 서버는 `X-Latpeed-Timestamp`와 `X-Latpeed-Signature` HMAC을 검증한 이벤트만 service-role RPC로 반영합니다. 성공 이벤트는 35일의 갱신 창을 부여하고, 취소·환불 이벤트는 즉시 권한을 회수합니다.
+1. 서버가 로그인 사용자 기준으로 `$10 USD` PENDING 주문과 고유 `requestId`를 먼저 생성합니다.
+2. Unifi Pay 결제 링크를 발급해 `providerLinkId`를 주문에 연결합니다. 구매자는 Unifi Wallet의 Kaia USDT로 결제합니다.
+3. `https://catchmeme.com/api/billing/unifi/webhook`은 알림 본문을 신뢰하지 않고 HMAC 인증된 상태 조회 API로 상점·금액·통화·거래 ID를 다시 검증합니다.
+4. 확인된 `transactionId`를 한 번만 반영해 기존 잔여기간 뒤로 Plus 30일을 연장합니다. 환불은 Unifi 콘솔에서 수동 처리한 뒤 service-role 정산 RPC로 원거래 권한과 감사 기록을 함께 갱신합니다.
 
-리다이렉트 쿼리나 브라우저 상태만으로 Plus 권한을 부여하지 않습니다. 상품별 웹훅 시크릿은 Vercel 서버 환경변수에만 저장하며 저장소에 커밋하지 않습니다.
+리다이렉트 쿼리나 브라우저 상태만으로 Plus 권한을 부여하지 않습니다. Unifi Pay API 비밀값은 Vercel 서버 환경변수에만 저장하며 저장소에 커밋하지 않습니다.
 
 ## 콘텐츠 정책
 

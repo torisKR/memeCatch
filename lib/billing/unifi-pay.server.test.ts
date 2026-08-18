@@ -26,7 +26,7 @@ const CONFIG: UnifiPayConfig = {
   storeId: "123",
   serviceName: "MemeCatch",
   itemName: "MemeCatch Plus (30 days)",
-  itemPrice: 20,
+  itemPrice: 10,
   orderCurrencyCode: "USD",
   callbackBaseUrl: "https://catchmeme.com",
   returnBaseUrl: "https://catchmeme.com",
@@ -133,11 +133,12 @@ describe("isExpectedUnifiPayTransaction", () => {
     orderId: "LINK-abc-1",
     storeId: "123",
     status: "CONFIRMED",
-    orderAmount: 20,
+    orderAmount: 10,
     orderCurrencyCode: "USD",
+    payCurrencyCode: "USDT",
   };
 
-  it("accepts our own $20 USD order", () => {
+  it("accepts our own $10 USD order paid in USDT", () => {
     expect(isExpectedUnifiPayTransaction(tx, CONFIG)).toBe(true);
   });
 
@@ -147,6 +148,7 @@ describe("isExpectedUnifiPayTransaction", () => {
       false,
     );
     expect(isExpectedUnifiPayTransaction({ ...tx, orderAmount: 1 }, CONFIG)).toBe(false);
+    expect(isExpectedUnifiPayTransaction({ ...tx, payCurrencyCode: "JPYC" }, CONFIG)).toBe(false);
   });
 
   it("rejects missing settlement identity and pricing fields", () => {
@@ -155,6 +157,7 @@ describe("isExpectedUnifiPayTransaction", () => {
     expect(isExpectedUnifiPayTransaction({ ...tx, storeId: "" }, CONFIG)).toBe(false);
     expect(isExpectedUnifiPayTransaction({ ...tx, orderAmount: null }, CONFIG)).toBe(false);
     expect(isExpectedUnifiPayTransaction({ ...tx, orderCurrencyCode: null }, CONFIG)).toBe(false);
+    expect(isExpectedUnifiPayTransaction({ ...tx, payCurrencyCode: null }, CONFIG)).toBe(false);
   });
 });
 
@@ -166,6 +169,7 @@ describe("getUnifiPayTransaction", () => {
       "storeId",
       "orderAmount",
       "orderCurrencyCode",
+      "payCurrencyCode",
     ];
     for (const field of fields) {
       const response = {
@@ -173,8 +177,9 @@ describe("getUnifiPayTransaction", () => {
         orderId: "LINK-abc-1",
         storeId: "123",
         status: "CONFIRMED",
-        orderAmount: 20,
+        orderAmount: 10,
         orderCurrencyCode: "USD",
+        payCurrencyCode: "USDT",
       } as Record<string, unknown>;
       delete response[field];
       vi.stubGlobal(
@@ -200,8 +205,9 @@ describe("getUnifiPayTransaction", () => {
             orderId: "LINK-abc-1",
             storeId: "123",
             status: "CONFIRMED",
-            orderAmount: 20,
+            orderAmount: 10,
             orderCurrencyCode: "USD",
+            payCurrencyCode: "USDT",
           }),
           { status: 200 },
         ),
@@ -222,9 +228,9 @@ describe("getUnifiPayConfig", () => {
     UNIFI_PAY_CALLBACK_BASE_URL: "https://catchmeme.com/",
   } as unknown as NodeJS.ProcessEnv;
 
-  it("defaults to $20 USD", () => {
+  it("defaults to $10 USD", () => {
     const config = getUnifiPayConfig(base);
-    expect(config?.itemPrice).toBe(20);
+    expect(config?.itemPrice).toBe(10);
     expect(config?.orderCurrencyCode).toBe("USD");
     // 뒤 슬래시를 지워야 경로를 이어붙일 때 //가 생기지 않는다.
     expect(config?.callbackBaseUrl).toBe("https://catchmeme.com");
@@ -237,16 +243,21 @@ describe("getUnifiPayConfig", () => {
     ).toBeNull();
   });
 
-  it("rejects currencies Unifi Pay does not support", () => {
-    // KRW는 지원하지 않는다(USD·JPY만).
+  it("rejects currencies outside the $10 USD product contract", () => {
     expect(
       getUnifiPayConfig({ ...base, UNIFI_PAY_CURRENCY: "KRW" } as NodeJS.ProcessEnv),
     ).toBeNull();
+    expect(
+      getUnifiPayConfig({ ...base, UNIFI_PAY_CURRENCY: "JPY" } as NodeJS.ProcessEnv),
+    ).toBeNull();
   });
 
-  it("rejects a non-positive price", () => {
+  it("rejects a price outside the $10 product contract", () => {
     expect(
       getUnifiPayConfig({ ...base, UNIFI_PAY_ITEM_PRICE: "0" } as NodeJS.ProcessEnv),
+    ).toBeNull();
+    expect(
+      getUnifiPayConfig({ ...base, UNIFI_PAY_ITEM_PRICE: "20" } as NodeJS.ProcessEnv),
     ).toBeNull();
   });
 });

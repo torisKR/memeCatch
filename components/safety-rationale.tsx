@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { SENTIMENT, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import type { Database, Json } from "@/lib/database.types";
 import { SafetyBadge } from "@/components/safety-badge";
 import {
   UsageContextRows,
+  buildCommercialUsageContexts,
   isUnverifiedUsageContext,
   parseUsageContext,
+  reviewDate,
   type UsageContextRow,
 } from "@/components/usage-guide";
 
@@ -99,12 +102,14 @@ export function SafetyRationale({
   context,
   note,
   caution,
+  reviewedAt,
 }: {
   level: SafetyLevel;
   sentiment: Sentiment;
   context: Json;
   note?: string | null;
   caution?: string | null;
+  reviewedAt?: string | null;
 }) {
   const parsedRows = parseUsageContext(context);
   // 상황별 확인 흔적이 없으면(4칸 전부 green) 상황별 행·문장을 만들지 않는다.
@@ -112,12 +117,14 @@ export function SafetyRationale({
   // 근거 없는 단정으로 렌더된다(HG-003 C안).
   const isUnverified = isUnverifiedUsageContext(parsedRows);
   const rows = isUnverified ? [] : parsedRows;
+  const commercialRows = buildCommercialUsageContexts(rows, note, caution);
   const sentimentChip = SENTIMENT[sentiment].user;
   const isRisky = level === "red" || level === "yellow";
   const noteText = note?.trim() || null;
   // 근거는 실제 데이터일 때만 — 사유가 없다고 등급 일반 문구로 채우지 않는다.
   const cautionText = caution?.trim() || null;
   const verdict = contextVerdict(rows);
+  const reviewedOn = reviewDate(reviewedAt);
 
   // 밈 고유 신호가 하나도 없으면 카드를 통째로 숨긴다. 남는 건 전 사이트 공통
   // 범례 한 줄뿐이라, 렌더하면 모든 상세가 같은 문장을 반복하는 빈 껍데기가 된다.
@@ -169,7 +176,21 @@ export function SafetyRationale({
         rows.length > 0 && (
           <div>
             <h3 className="text-base font-bold">어디서 써도 될까요?</h3>
-            <UsageContextRows rows={rows} />
+            <UsageContextRows rows={commercialRows} />
+            <p className="mt-3 text-sm text-muted">
+              최근 검수일:{" "}
+              {reviewedOn ? (
+                <time dateTime={reviewedAt ?? undefined}>{reviewedOn}</time>
+              ) : (
+                "확인된 기록 없음"
+              )}
+            </p>
+            <Link
+              href="/pricing?source=brand_company_safety"
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-bold text-accent-text underline underline-offset-4"
+            >
+              회사·브랜드 운영용 고급 안전 검수 보기
+            </Link>
           </div>
         )
       )}

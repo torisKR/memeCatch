@@ -145,6 +145,61 @@ describe("createLatpeedWebhookHandler", () => {
     expect(processEvent).not.toHaveBeenCalled();
   });
 
+  it("accepts a signed historical event at the former 5900 KRW price", async () => {
+    const processEvent = vi.fn().mockResolvedValue({ matched: true });
+    const body = JSON.stringify({
+      type: "MEMBERSHIP_PAYMENT",
+      payment: {
+        orderId: "legacy-order",
+        email: "member@example.com",
+        amount: 5900,
+        status: "SUCCESS",
+        date: "2026-07-18T10:00:00+09:00",
+      },
+    });
+    const handler = createLatpeedWebhookHandler({ secret, processEvent, now: () => now });
+
+    const response = await handler(signedRequest(body));
+
+    expect(response.status).toBe(200);
+    expect(processEvent).toHaveBeenCalledWith(expect.objectContaining({ amount: 5900 }));
+  });
+
+  it("rejects new Latpeed sales after the Unifi cutover", async () => {
+    const closedNow = Date.parse("2026-08-19T00:00:00.000Z");
+    const body = JSON.stringify({
+      type: "MEMBERSHIP_PAYMENT",
+      payment: {
+        orderId: "new-latpeed-order",
+        email: "member@example.com",
+        amount: 3900,
+        status: "SUCCESS",
+        date: "2026-08-19T00:00:00.000Z",
+      },
+    });
+    const timestamp = String(closedNow);
+    const signature = `sha256=${createHmac("sha256", secret)
+      .update(`${timestamp}.${body}`)
+      .digest("hex")}`;
+    const request = new Request("https://catchmeme.com/api/billing/latpeed/webhook", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-latpeed-timestamp": timestamp,
+        "x-latpeed-signature": signature,
+      },
+      body,
+    });
+    const processEvent = vi.fn();
+    const handler = createLatpeedWebhookHandler({ secret, processEvent, now: () => closedNow });
+
+    const response = await handler(request);
+
+    expect(response.status).toBe(410);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "sales_closed" });
+    expect(processEvent).not.toHaveBeenCalled();
+  });
+
   it("accepts a signed cancellation when Latpeed omits the amount", async () => {
     const processEvent = vi.fn().mockResolvedValue({ matched: true });
     const body = JSON.stringify({

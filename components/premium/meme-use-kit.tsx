@@ -44,6 +44,7 @@ export function MemeUseKit(facts: MemeUseKitFacts) {
       setCopied(id);
       setPrepared(true);
       track("use_kit_copied", { format: id });
+      track("copy", { format: id });
     } catch {
       setCopied(null);
       setCopyFailed(true);
@@ -51,6 +52,9 @@ export function MemeUseKit(facts: MemeUseKitFacts) {
   }
 
   if (!isPremium) {
+    const preview = items[0]!;
+    const locked = items.slice(1);
+
     return (
       <section
         aria-labelledby="meme-use-kit-title"
@@ -70,16 +74,41 @@ export function MemeUseKit(facts: MemeUseKitFacts) {
             {copy.plusBadge}
           </span>
         </div>
-        <div className="mt-4 rounded-xl border border-border bg-surface p-4">
+        <div className="mt-4 grid gap-3">
+          <article data-use-kit-item="free" className="rounded-xl border border-border bg-surface p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-bold">{preview.title}</h3>
+              <button
+                type="button"
+                onClick={() => void copyText(preview.id, preview.body)}
+                className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-bold text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {copied === preview.id ? copy.copied : copy.copy}
+              </button>
+            </div>
+            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-foreground">{preview.body}</p>
+          </article>
+          {locked.map((item) => (
+            <article key={item.id} data-use-kit-item="locked" className="rounded-xl border border-border bg-surface p-4">
+              <h3 className="font-bold">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{copy.lockedBody}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mt-3 rounded-xl border border-border bg-surface p-4">
           <h3 className="font-bold">{copy.lockedTitle}</h3>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{copy.lockedBody}</p>
           <Link
-            href={localizedStaticPath("/pricing", locale)}
+            href={localizedStaticPath("/pricing?source=use_kit_second_copy", locale)}
             className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             {copy.upgrade}
           </Link>
         </div>
+        {copyFailed && (
+          <p role="alert" className="mt-3 text-sm text-safety-red">
+            {copy.copyFailed}
+          </p>
+        )}
       </section>
     );
   }
@@ -94,6 +123,7 @@ export function MemeUseKit(facts: MemeUseKitFacts) {
         setCopied("shared");
         setPrepared(true);
         track("use_kit_copied", { format: "share" });
+        track("copy", { format: "share" });
         return;
       }
 
@@ -101,6 +131,7 @@ export function MemeUseKit(facts: MemeUseKitFacts) {
       setCopied("all");
       setPrepared(true);
       track("use_kit_copied", { format: "share_fallback" });
+      track("copy", { format: "share_fallback" });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setCopied(null);

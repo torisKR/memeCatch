@@ -190,6 +190,20 @@ export type PremiumCopy = {
     current: string;
     periodHigh: string;
     change: string;
+    windowSummary: (days: number) => string;
+    observedUp: string;
+    observedDown: string;
+    observedFlat: string;
+    observedInsufficient: string;
+    observedBasis: string;
+    observedEvidence: (start: number, end: number, views: number, reactions: number, saves: number) => string;
+    sampleCoverage: (samples: number, days: number, percent: number) => string;
+    confidenceHigh: string;
+    confidenceMedium: string;
+    confidenceLow: string;
+    confidenceInsufficient: string;
+    lastObserved: (date: string) => string;
+    lastObservedUnavailable: string;
     chartLabel: (metric: string, start: string, end: string, current: number, high: number) => string;
   };
   alerts: {
@@ -281,14 +295,14 @@ const PREMIUM_COPY_BASE = {
     menuLabel: "MemeCatch Plus",
     badge: "PLUS",
     pricing: {
-      eyebrow: "오늘 쓸 검수 밈을 바로 찾는 구독",
-      title: "검수된 밈을 오늘 바로 쓰는 Plus",
-      intro: "오늘의 검수 밈을 한 장 고르고, 게시용 카드로 준비한 뒤 실제 사용 기록까지 한곳에서 이어가세요.",
-      monthly: "$20",
-      perMonth: "/ 30일",
-      launchNote: "30일 이용권 · 자동 갱신 없음",
+      eyebrow: "검수형 밈 활용 도구",
+      title: "오늘 게시할 밈 3개와 플랫폼별 문구를 받으세요",
+      intro: "관심 분야에 맞는 밈, 회사·브랜드 계정 안전성, 급상승 알림까지 한곳에서 확인하세요.",
+      monthly: "$10",
+      perMonth: "USD / 30일",
+      launchNote: "30일 이용권 · 자동 갱신 없음 · 잔여기간 보존 · Kaia USDT 결제",
       checkout: "MemeCatch Plus 시작하기",
-      sameEmail: "결제가 끝나면 로그인한 계정에 30일 이용권이 자동으로 연결돼요. 만료되면 다시 결제해 연장할 수 있어요.",
+      sameEmail: "결제 금액은 $10 USD이며 Unifi Wallet의 Kaia USDT로 결제합니다. 남은 이용기간이 있으면 그 뒤로 30일 연장되고, 환불은 지원 문의 후 원결제 지갑으로 수동 처리됩니다.",
       freeName: "무료",
       plusName: "Plus",
       featuresTitle: "Plus로 무엇이 열리나요?",
@@ -310,7 +324,7 @@ const PREMIUM_COPY_BASE = {
         },
         {
           label: "밈 저장·재사용 레이더",
-          free: "30개",
+          free: "10개",
           plus: "무제한 + 재사용 레이더",
           detail:
             "마음에 든 밈을 저장해 두고 나중에 다시 찾아봐요. Plus는 무제한 저장은 물론 현재 유행과 사용 신호로 다시 꺼내볼 수 있어요.",
@@ -471,7 +485,7 @@ const PREMIUM_COPY_BASE = {
       weeklyBrief: {
         eyebrow: "PLUS WEEKLY BRIEF",
         title: "이번 주 달라진 밈",
-        summary: (count) => `개인 후보 ${count}개 중 지난 7일 실제 변화가 큰 밈만 추렸어요.`,
+        summary: (count) => `개인 후보 ${count}개 중 지난 7일 기록이 있는 밈을 최대 5개로 정리했어요.`,
         window: (from, to) => `${from}–${to} · KST`,
         sourceSaved: "저장한 밈에서 발견",
         sourceInterest: "관심사에서 발견",
@@ -535,6 +549,20 @@ const PREMIUM_COPY_BASE = {
       current: "현재",
       periodHigh: "기간 최고",
       change: "변화",
+      windowSummary: (days) => `${days}일 관측 요약`,
+      observedUp: "마지막 트렌드 점수가 첫 관측보다 높아요.",
+      observedDown: "마지막 트렌드 점수가 첫 관측보다 낮아요.",
+      observedFlat: "첫 관측과 마지막 트렌드 점수가 같아요.",
+      observedInsufficient: "비교할 날짜가 두 개 이상 필요해요.",
+      observedBasis: "관측 근거",
+      observedEvidence: (start, end, views, reactions, saves) => `관측값 ${start}→${end} · 조회 ${views} · 반응 ${reactions} · 저장 ${saves}`,
+      sampleCoverage: (samples, days, percent) => `표본 ${samples}/${days}일 · 커버리지 ${percent}%`,
+      confidenceHigh: "표본 신뢰도 높음",
+      confidenceMedium: "표본 신뢰도 보통",
+      confidenceLow: "표본 신뢰도 낮음",
+      confidenceInsufficient: "표본 신뢰도 판단 불가",
+      lastObserved: (date) => `마지막 관측일 ${date}`,
+      lastObservedUnavailable: "마지막 관측 기록 없음",
       chartLabel: (metric, start, end, current, high) => `${metric} 추이 — ${start}부터 ${end}까지, 현재 ${current}, 최고 ${high}`,
     },
     alerts: {
@@ -607,7 +635,7 @@ const PREMIUM_COPY_BASE = {
       saved: "MY에 저장했어요.",
       removed: "저장을 해제했어요.",
       retry: "잠시 후 다시 시도해 주세요.",
-      limitReached: "무료 저장 한도 30개를 모두 사용했어요.",
+      limitReached: "무료 저장 한도 10개를 모두 사용했어요.",
       upgrade: "Plus로 무제한 저장하기",
     },
     my: {
@@ -624,14 +652,14 @@ const PREMIUM_COPY_BASE = {
     menuLabel: "MemeCatch Plus",
     badge: "PLUS",
     pricing: {
-      eyebrow: "Spend less time deciding what to post",
-      title: "One reviewed meme, ready to use today",
-      intro: "Pick today’s reviewed meme, prepare a ready-to-post card, and keep the real-use record in one place.",
-      monthly: "$20",
-      perMonth: "/ 30 days",
-      launchNote: "30-day pass · does not auto-renew",
+      eyebrow: "A reviewed meme-use tool",
+      title: "Get three memes to post today, with platform-ready copy",
+      intro: "See memes matched to your interests, brand-use safety, and rising alerts in one place.",
+      monthly: "$10",
+      perMonth: "USD / 30 days",
+      launchNote: "30-day pass · no auto-renewal · remaining time preserved · pay with Kaia USDT",
       checkout: "Start MemeCatch Plus",
-      sameEmail: "Your 30-day pass is linked to the account you are signed in with. When it expires, pay again to extend.",
+      sameEmail: "The order is $10 USD and is paid with Kaia USDT through Unifi Wallet. Any remaining access is preserved before adding 30 days. Refunds are reviewed by support and sent manually to the original payment wallet.",
       freeName: "Free",
       plusName: "Plus",
       featuresTitle: "What do you unlock with Plus?",
@@ -653,7 +681,7 @@ const PREMIUM_COPY_BASE = {
         },
         {
           label: "Saved-meme reuse radar",
-          free: "30",
+          free: "10",
           plus: "Unlimited + radar",
           detail:
             "Save the memes you love and find them again later. Plus adds unlimited saves and resurfaces them with their current trend and usage signal.",
@@ -814,7 +842,7 @@ const PREMIUM_COPY_BASE = {
       weeklyBrief: {
         eyebrow: "PLUS WEEKLY BRIEF",
         title: "What changed this week",
-        summary: (count) => `We compared ${count} personal candidates and kept only meaningful seven-day movement.`,
+        summary: (count) => `We compared ${count} personal candidates and kept up to five with observed seven-day history.`,
         window: (from, to) => `${from}–${to} · KST`,
         sourceSaved: "Found in saved memes",
         sourceInterest: "Found in your interests",
@@ -878,6 +906,20 @@ const PREMIUM_COPY_BASE = {
       current: "Current",
       periodHigh: "Period high",
       change: "Change",
+      windowSummary: (days) => `${days}-day observed summary`,
+      observedUp: "The last trend score is higher than the first observed score.",
+      observedDown: "The last trend score is lower than the first observed score.",
+      observedFlat: "The first and last observed trend scores are equal.",
+      observedInsufficient: "At least two dated observations are needed.",
+      observedBasis: "Observed basis",
+      observedEvidence: (start, end, views, reactions, saves) => `Observed ${start}→${end} · views ${views} · reactions ${reactions} · saves ${saves}`,
+      sampleCoverage: (samples, days, percent) => `Samples ${samples}/${days} days · ${percent}% coverage`,
+      confidenceHigh: "High sample confidence",
+      confidenceMedium: "Medium sample confidence",
+      confidenceLow: "Low sample confidence",
+      confidenceInsufficient: "Insufficient samples for confidence",
+      lastObserved: (date) => `Last observed ${date}`,
+      lastObservedUnavailable: "No observed update yet",
       chartLabel: (metric, start, end, current, high) => `${metric} history — ${start} to ${end}; current ${current}, high ${high}`,
     },
     alerts: {
@@ -950,7 +992,7 @@ const PREMIUM_COPY_BASE = {
       saved: "Saved to MY.",
       removed: "Removed from saved memes.",
       retry: "Please try again in a moment.",
-      limitReached: "You have used all 30 free saves.",
+      limitReached: "You have used all 10 free saves.",
       upgrade: "Get unlimited saves with Plus",
     },
     my: {
@@ -967,14 +1009,14 @@ const PREMIUM_COPY_BASE = {
     menuLabel: "MemeCatch Plus",
     badge: "PLUS",
     pricing: {
-      eyebrow: "今日使う確認済みミームをすぐ見つける",
-      title: "確認済みミームを今日すぐ使えるPlus",
-      intro: "今日の確認済みミームを1つ選び、投稿用カードに準備して、実際に使った記録まで一か所でつなげます。",
-      monthly: "$20",
-      perMonth: "/ 30日",
-      launchNote: "30日間の利用券・自動更新なし",
+      eyebrow: "審査済みミーム活用ツール",
+      title: "今日投稿するミーム3つと媒体別コピーを受け取る",
+      intro: "関心分野に合うミーム、企業・ブランド利用時の安全性、急上昇通知をまとめて確認できます。",
+      monthly: "$10",
+      perMonth: "USD / 30日",
+      launchNote: "30日利用券・自動更新なし・残存期間を維持・Kaia USDT決済",
       checkout: "MemeCatch Plusを始める",
-      sameEmail: "決済が完了すると、ログイン中のアカウントに30日間の利用券が連携されます。期限が切れたら再度決済して延長できます。",
+      sameEmail: "注文額は10米ドルで、Unifi WalletのKaia USDTで支払います。残りの利用期間の後ろに30日が追加され、返金はサポート確認後に元の決済ウォレットへ手動で送金されます。",
       freeName: "無料",
       plusName: "Plus",
       featuresTitle: "Plusで何が使えるようになる？",
@@ -996,7 +1038,7 @@ const PREMIUM_COPY_BASE = {
         },
         {
           label: "保存ミーム・再活用レーダー",
-          free: "30件",
+          free: "10件",
           plus: "無制限 + 再活用レーダー",
           detail:
             "気に入ったミームを保存して後で見返せます。Plusでは無制限に保存でき、今の流行と使用シグナルに合わせて再び見つけられます。",
@@ -1157,7 +1199,7 @@ const PREMIUM_COPY_BASE = {
       weeklyBrief: {
         eyebrow: "PLUS WEEKLY BRIEF",
         title: "今週変化したミーム",
-        summary: (count) => `保存や興味に合う${count}件を比較し、7日間の変化が大きいものだけを表示します。`,
+        summary: (count) => `保存や興味に合う${count}件から、7日間の記録があるものを最大5件表示します。`,
         window: (from, to) => `${from}–${to} · KST`,
         sourceSaved: "保存したミームから",
         sourceInterest: "興味から",
@@ -1221,6 +1263,20 @@ const PREMIUM_COPY_BASE = {
       current: "現在",
       periodHigh: "期間最高",
       change: "変化",
+      windowSummary: (days) => `${days}日間の観測要約`,
+      observedUp: "最後のトレンドスコアは最初の観測値より高くなっています。",
+      observedDown: "最後のトレンドスコアは最初の観測値より低くなっています。",
+      observedFlat: "最初と最後のトレンドスコアは同じです。",
+      observedInsufficient: "比較には日付の異なる観測が2件以上必要です。",
+      observedBasis: "観測根拠",
+      observedEvidence: (start, end, views, reactions, saves) => `観測値 ${start}→${end} · 閲覧 ${views} · リアクション ${reactions} · 保存 ${saves}`,
+      sampleCoverage: (samples, days, percent) => `標本 ${samples}/${days}日 · カバー率 ${percent}%`,
+      confidenceHigh: "標本信頼度 高",
+      confidenceMedium: "標本信頼度 中",
+      confidenceLow: "標本信頼度 低",
+      confidenceInsufficient: "標本不足で信頼度を判定できません",
+      lastObserved: (date) => `最終観測日 ${date}`,
+      lastObservedUnavailable: "観測更新はまだありません",
       chartLabel: (metric, start, end, current, high) => `${metric}の推移 — ${start}から${end}まで、現在${current}、最高${high}`,
     },
     alerts: {
@@ -1293,7 +1349,7 @@ const PREMIUM_COPY_BASE = {
       saved: "MYに保存しました。",
       removed: "保存を解除しました。",
       retry: "しばらくしてからもう一度お試しください。",
-      limitReached: "無料保存枠30件をすべて使用しました。",
+      limitReached: "無料保存枠10件をすべて使用しました。",
       upgrade: "Plusで無制限に保存",
     },
     my: {
@@ -1310,14 +1366,14 @@ const PREMIUM_COPY_BASE = {
     menuLabel: "MemeCatch Plus",
     badge: "PLUS",
     pricing: {
-      eyebrow: "少花时间决定今天要用的迷因",
-      title: "今天就能使用的已审核迷因",
-      intro: "挑选今天的已审核迷因，准备成可直接发布的卡片，再在同一处记录实际使用结果。",
-      monthly: "$20",
-      perMonth: "/ 30天",
-      launchNote: "30天使用权 · 不自动续费",
+      eyebrow: "已审核的迷因使用工具",
+      title: "获取今天可发布的3个迷因及各平台文案",
+      intro: "在一处查看符合兴趣的迷因、企业与品牌使用安全性和热度提醒。",
+      monthly: "$10",
+      perMonth: "USD / 30天",
+      launchNote: "30天使用权 · 不自动续费 · 保留剩余天数 · 使用Kaia USDT支付",
       checkout: "开通 MemeCatch Plus",
-      sameEmail: "支付完成后，30天使用权会自动关联到您登录的账号。到期后可再次支付续期。",
+      sameEmail: "订单金额为10美元，并通过Unifi Wallet使用Kaia USDT支付。剩余使用期会被保留并顺延30天；退款经客服审核后手动退回原付款钱包。",
       freeName: "免费",
       plusName: "Plus",
       featuresTitle: "订阅 Plus 能解锁什么？",
@@ -1339,7 +1395,7 @@ const PREMIUM_COPY_BASE = {
         },
         {
           label: "收藏迷因与再利用雷达",
-          free: "30条",
+          free: "10条",
           plus: "无限 + 再利用雷达",
           detail:
             "收藏喜欢的迷因，之后随时回来查看。Plus 可无限收藏，并会按当前趋势和使用信号重新呈现给你。",
@@ -1500,7 +1556,7 @@ const PREMIUM_COPY_BASE = {
       weeklyBrief: {
         eyebrow: "PLUS WEEKLY BRIEF",
         title: "本周发生变化的迷因",
-        summary: (count) => `我们比较了符合你收藏或兴趣的 ${count} 个候选，只保留近 7 天有明显变化的内容。`,
+        summary: (count) => `我们比较了符合你收藏或兴趣的 ${count} 个候选，最多显示 5 个有近 7 天记录的内容。`,
         window: (from, to) => `${from}–${to} · KST`,
         sourceSaved: "来自已收藏迷因",
         sourceInterest: "来自你的兴趣",
@@ -1564,6 +1620,20 @@ const PREMIUM_COPY_BASE = {
       current: "当前",
       periodHigh: "期间最高",
       change: "变化",
+      windowSummary: (days) => `${days} 天观察摘要`,
+      observedUp: "最后的趋势分数高于首次观察值。",
+      observedDown: "最后的趋势分数低于首次观察值。",
+      observedFlat: "首次和最后的趋势分数相同。",
+      observedInsufficient: "至少需要两个不同日期的观察值。",
+      observedBasis: "观察依据",
+      observedEvidence: (start, end, views, reactions, saves) => `观察值 ${start}→${end} · 浏览 ${views} · 互动 ${reactions} · 收藏 ${saves}`,
+      sampleCoverage: (samples, days, percent) => `样本 ${samples}/${days} 天 · 覆盖率 ${percent}%`,
+      confidenceHigh: "样本可信度高",
+      confidenceMedium: "样本可信度中等",
+      confidenceLow: "样本可信度低",
+      confidenceInsufficient: "样本不足，无法判断可信度",
+      lastObserved: (date) => `最后观察日 ${date}`,
+      lastObservedUnavailable: "暂无观察更新",
       chartLabel: (metric, start, end, current, high) => `${metric}变化 — ${start} 至 ${end}，当前 ${current}，最高 ${high}`,
     },
     alerts: {
@@ -1636,7 +1706,7 @@ const PREMIUM_COPY_BASE = {
       saved: "已收藏到我的页面。",
       removed: "已取消收藏。",
       retry: "请稍后再试。",
-      limitReached: "30条免费收藏额度已用完。",
+      limitReached: "10条免费收藏额度已用完。",
       upgrade: "升级Plus无限收藏",
     },
     my: {

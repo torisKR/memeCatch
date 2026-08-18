@@ -8,6 +8,75 @@ import { LoginGate } from "@/components/login-gate";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { localizedStaticPath } from "@/lib/i18n-routing";
+import { track } from "@/lib/analytics";
+
+const SAVE_INTENT_KEY = "memecatch:save-intents:v1";
+const SAVE_INTENT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SAVE_INTENT_LIMIT = 10;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type SaveIntent = { memeId: string; createdAt: number };
+
+export function parseSaveIntents(raw: string | null, now = Date.now()): SaveIntent[] {
+  if (!raw) return [];
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!Array.isArray(value)) return [];
+    const deduped = new Map<string, SaveIntent>();
+    for (const item of value) {
+      if (
+        typeof item === "object" &&
+        item !== null &&
+        "memeId" in item &&
+        typeof item.memeId === "string" &&
+        UUID_RE.test(item.memeId) &&
+        "createdAt" in item &&
+        typeof item.createdAt === "number" &&
+        item.createdAt <= now &&
+        now - item.createdAt < SAVE_INTENT_TTL_MS
+      ) {
+        deduped.delete(item.memeId);
+        deduped.set(item.memeId, { memeId: item.memeId, createdAt: item.createdAt });
+      }
+    }
+    return [...deduped.values()].slice(-SAVE_INTENT_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+export function enqueueSaveIntent(
+  intents: SaveIntent[],
+  memeId: string,
+  now = Date.now()
+): SaveIntent[] {
+  if (!UUID_RE.test(memeId)) return intents;
+  return [
+    ...intents.filter(
+      (intent) => intent.memeId !== memeId && now - intent.createdAt < SAVE_INTENT_TTL_MS
+    ),
+    { memeId, createdAt: now },
+  ].slice(-SAVE_INTENT_LIMIT);
+}
+
+function isTerminalSaveError(error: { code?: string; message: string }) {
+  return error.code === "22P02" || error.code === "23503" || error.message.includes("premium_save_limit");
+}
+
+function readSaveIntents() {
+  try {
+    return parseSaveIntents(window.localStorage.getItem(SAVE_INTENT_KEY));
+  } catch {
+    return [];
+  }
+}
+
+function writeSaveIntents(intents: SaveIntent[]) {
+  try {
+    if (intents.length) window.localStorage.setItem(SAVE_INTENT_KEY, JSON.stringify(intents));
+    else window.localStorage.removeItem(SAVE_INTENT_KEY);
+  } catch {}
+}
 
 export function getSaveFailure(message: string): "login" | "premium-limit" | "retry" {
   if (message.includes("login_required")) return "login";
@@ -34,6 +103,19 @@ export function SaveButton({ memeId }: { memeId: string }) {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale].save;
 
+  function rememberGuestSave() {
+    const intents = readSaveIntents();
+    if (!intents.some((intent) => intent.memeId === memeId) && intents.length >= SAVE_INTENT_LIMIT) {
+      setNotice(copy.limitReached);
+      setUpgradeRequired(true);
+      setGateOpen(false);
+      return;
+    }
+    writeSaveIntents(enqueueSaveIntent(intents, memeId));
+    setSaved(true);
+    setGateOpen(true);
+  }
+
   useEffect(() => () => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
   }, []);
@@ -49,6 +131,16 @@ export function SaveButton({ memeId }: { memeId: string }) {
       if (cancelled) return;
       setLoggedIn(!!user);
       if (!user) return;
+
+      const queued = readSaveIntents();
+      const remaining: SaveIntent[] = [];
+      for (const intent of queued) {
+        const { error } = await supabase.rpc("save_meme", { p_meme_id: intent.memeId });
+        if (error && !isTerminalSaveError(error)) remaining.push(intent);
+        if (!error && intent.memeId === memeId) setSaved(true);
+      }
+      writeSaveIntents(remaining);
+
       const { data } = await supabase
         .from("saved_memes")
         .select("meme_id")
@@ -72,9 +164,10 @@ export function SaveButton({ memeId }: { memeId: string }) {
 
   async function toggle() {
     if (busy) return;
+    if (!saved) track("follow_click", { meme_id: memeId });
     // 비로그인 → 낙관적 토글 대신 로그인 유도 시트
     if (loggedIn === false) {
-      setGateOpen(true);
+      rememberGuestSave();
       return;
     }
     setBusy(true);
@@ -91,7 +184,7 @@ export function SaveButton({ memeId }: { memeId: string }) {
       const failure = getSaveFailure(error.message);
       if (failure === "login") {
         setLoggedIn(false);
-        setGateOpen(true);
+        rememberGuestSave();
         return;
       }
       if (failure === "premium-limit") {
@@ -136,7 +229,7 @@ export function SaveButton({ memeId }: { memeId: string }) {
       </p>
       {upgradeRequired && (
         <Link
-          href={localizedStaticPath("/pricing", locale)}
+          href={localizedStaticPath("/pricing?source=save_limit_11", locale)}
           className="mt-1 flex min-h-11 items-center justify-center rounded-xl text-sm font-bold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {copy.upgrade}

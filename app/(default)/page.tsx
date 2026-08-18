@@ -39,10 +39,10 @@ export default async function Home() {
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-                  Live ranking
+                  MemeCatch signal
                 </p>
                 <h2 id="sec-trending" className="mt-1.5 text-2xl font-extrabold tracking-tight">
-                  지금 뜨는 밈
+                  밈캐치 내 급상승
                 </h2>
               </div>
               <Link
@@ -50,7 +50,7 @@ export default async function Home() {
                 prefetch={false}
                 className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
               >
-                전체 랭킹 <span aria-hidden className="ml-1">→</span>
+                급상승 전체 보기 <span aria-hidden className="ml-1">→</span>
               </Link>
             </div>
 

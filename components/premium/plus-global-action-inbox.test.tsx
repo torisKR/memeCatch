@@ -160,7 +160,7 @@ describe("PlusGlobalActionInbox", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         );
       }
-      return new Response(new Blob(["png"]), { status: 200 });
+      return new Response("png", { status: 200, headers: { "content-type": "image/png" } });
     });
 
     render(
@@ -292,7 +292,7 @@ describe("PlusGlobalActionInbox", () => {
     });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockImplementation(async () => new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockImplementation(async () => new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -656,7 +656,7 @@ describe("PlusGlobalActionInbox", () => {
       configurable: true,
       value: vi.fn().mockReturnValue(true),
     });
-    vi.mocked(fetch).mockImplementation(async () => new Response(new Blob(["png"]), { status: 200 }));
+    vi.mocked(fetch).mockImplementation(async () => new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -731,7 +731,7 @@ describe("PlusGlobalActionInbox", () => {
       value: vi.fn(),
     });
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -779,7 +779,7 @@ describe("PlusGlobalActionInbox", () => {
     });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText: vi.fn().mockRejectedValue(new Error("clipboard blocked")) },
@@ -845,7 +845,7 @@ describe("PlusGlobalActionInbox", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         );
       }
-      return new Response(new Blob(["png"]), { status: 200 });
+      return new Response("png", { status: 200, headers: { "content-type": "image/png" } });
     });
 
     render(
@@ -912,7 +912,7 @@ describe("PlusGlobalActionInbox", () => {
       configurable: true,
       value: vi.fn(),
     });
-    vi.mocked(fetch).mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    vi.mocked(fetch).mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -955,7 +955,7 @@ describe("PlusGlobalActionInbox", () => {
       value: vi.fn().mockReturnValue(true),
     });
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -1003,7 +1003,7 @@ describe("PlusGlobalActionInbox", () => {
     });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     vi.mocked(fetch).mockImplementation(async (input) => {
-      if (String(input).includes("short0")) return new Response(new Blob(["png"]), { status: 200 });
+      if (String(input).includes("short0")) return new Response("png", { status: 200, headers: { "content-type": "image/png" } });
       throw new Error("export failed");
     });
 
@@ -1098,7 +1098,7 @@ describe("PlusGlobalActionInbox", () => {
       configurable: true,
       value: { writeText },
     });
-    fetchMock.mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -1157,7 +1157,7 @@ describe("PlusGlobalActionInbox", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         );
       }
-      return new Response(new Blob(["png"]), { status: 200 });
+      return new Response("png", { status: 200, headers: { "content-type": "image/png" } });
     });
 
     render(
@@ -1230,7 +1230,7 @@ describe("PlusGlobalActionInbox", () => {
     });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -1286,7 +1286,7 @@ describe("PlusGlobalActionInbox", () => {
     });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     vi.mocked(fetch).mockImplementation(
-      async () => new Response(new Blob(["png"]), { status: 200 }),
+      async () => new Response("png", { status: 200, headers: { "content-type": "image/png" } }),
     );
 
     render(
@@ -1368,7 +1368,7 @@ describe("PlusGlobalActionInbox", () => {
       value: vi.fn().mockReturnValue("blob:one-cut-example"),
     });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-    vi.mocked(fetch).mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    vi.mocked(fetch).mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
 
     render(
       <PlusGlobalActionInbox
@@ -1744,7 +1744,7 @@ describe("PlusGlobalActionInbox", () => {
 
   it("keeps the one-cut receipt unavailable until Creator Pack preparation succeeds", async () => {
     const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValue(new Response(new Blob(["png"]), { status: 200 }));
+    fetchMock.mockResolvedValue(new Response("png", { status: 200, headers: { "content-type": "image/png" } }));
     render(
       <PlusGlobalActionInbox
         mode="one_cut"
@@ -1862,7 +1862,7 @@ describe("PlusGlobalActionInbox", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         );
       }
-      return new Response(new Blob(["png"]), { status: 200 });
+      return new Response("png", { status: 200, headers: { "content-type": "image/png" } });
     });
     render(
       <PlusGlobalActionInbox
@@ -1954,7 +1954,7 @@ describe("PlusGlobalActionInbox", () => {
         }
         return new Response(JSON.stringify({ error: "completion_failed" }), { status: 500 });
       }
-      return new Response(new Blob(["png"]), { status: 200 });
+      return new Response("png", { status: 200, headers: { "content-type": "image/png" } });
     });
 
     render(

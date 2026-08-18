@@ -8,8 +8,8 @@ import { track } from "@/lib/analytics";
 
 /**
  * 헤더 우측 통합 메뉴 드롭다운 (2026-07 헤더 IA 개편).
- * 좌측 상시 내비를 탐색(주 동선) 하나로 줄이고, 보조 목적지(연표·커뮤니티·
- * 랭킹·소식·상품·랜덤)를 이 메뉴로 통합한다. 항목은 전부 i18n 키 보유분만.
+ * 좌측 상시 내비를 탐색(주 동선) 하나로 줄이고, 보조 목적지(연표·
+ * 랭킹·소식·랜덤)를 이 메뉴로 통합한다. 항목은 전부 i18n 키 보유분만.
  * 접근성: disclosure 패턴(button aria-expanded + nav) — 링크 목록엔 role=menu보다
  * 권장. ESC(버튼 포커스 복귀)·바깥 클릭·라우트 변경 시 닫힘. 포커스 트랩 불필요
  * (모달 아님, Tab 순서가 자연스럽게 패널을 통과).
@@ -50,10 +50,8 @@ export function HeaderMenu() {
     onClick?: () => void;
   }[] = [
     { href: "/timeline", label: messages.timeline, prefetch: false, icon: <TimelineIcon /> },
-    { href: "/community", label: messages.community, icon: <ChatIcon /> },
     { href: "/rankings", label: messages.rankings, prefetch: false, icon: <TrophyIcon /> },
     { href: "/news", label: messages.news, prefetch: false, icon: <NewsIcon /> },
-    { href: "/products", label: messages.products, prefetch: false, icon: <BagIcon /> },
   ];
 
   return (
@@ -167,15 +165,6 @@ function TimelineIcon() {
   );
 }
 
-function ChatIcon() {
-  return (
-    <svg {...iconProps()}>
-      <path d="M21 12a8 8 0 0 1-8 8H4l2.5-3A8 8 0 1 1 21 12Z" />
-      <path d="M9 11h6M9 14h3.5" />
-    </svg>
-  );
-}
-
 function TrophyIcon() {
   return (
     <svg {...iconProps()}>
@@ -191,15 +180,6 @@ function NewsIcon() {
     <svg {...iconProps()}>
       <path d="M5 4h14v16H5z" />
       <path d="M8 8h8M8 12h8M8 16h5" />
-    </svg>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg {...iconProps()}>
-      <path d="M5 8h14l-1 12H6L5 8Z" />
-      <path d="M9 9V6a3 3 0 0 1 6 0v3" />
     </svg>
   );
 }

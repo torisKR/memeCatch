@@ -1,9 +1,16 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const track = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics", () => ({ track }));
 import { PlusWeeklyDeltaBrief } from "@/components/premium/plus-weekly-delta-brief";
 import type { PlusWeeklyDeltaBrief as Brief } from "@/lib/plus-weekly-brief";
 
 const brief: Brief = {
+  briefId: "2026-08-01_2026-08-07_meme-key",
   window: { from: "2026-08-01", to: "2026-08-07", timezone: "Asia/Seoul" },
   scannedCount: 12,
   items: [
@@ -24,6 +31,11 @@ const brief: Brief = {
 };
 
 describe("PlusWeeklyDeltaBrief", () => {
+  afterEach(() => {
+    cleanup();
+    track.mockReset();
+  });
+
   it("shows the period change and locale-safe trend link", () => {
     const html = renderToStaticMarkup(
       <PlusWeeklyDeltaBrief brief={brief} locale="en" />,
@@ -73,12 +85,24 @@ describe("PlusWeeklyDeltaBrief", () => {
     expect(html).not.toContain("Moving meme");
   });
 
-  it("explains when history exists but the trend did not rise", () => {
-    const html = renderToStaticMarkup(
-      <PlusWeeklyDeltaBrief brief={{ ...brief, items: [], emptyReason: "no_change" }} locale="en" />,
-    );
+  it("tracks open and click with a weekly identity and no user data", () => {
+    render(<PlusWeeklyDeltaBrief brief={brief} locale="en" />);
 
-    expect(html).toContain("There are dated trend points, but no candidate has risen");
-    expect(html).not.toContain("No candidate has at least two dated trend points yet.");
+    expect(track).toHaveBeenCalledWith("plus_weekly_brief_opened", {
+      brief_id: "2026-08-01_2026-08-07_meme-key",
+      item_count: 1,
+    });
+
+    const link = screen.getByRole("link", { name: /Moving meme/ });
+    link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(link);
+
+    expect(track).toHaveBeenCalledWith("plus_weekly_brief_clicked", {
+      brief_id: "2026-08-01_2026-08-07_meme-key",
+      meme_id: "meme-id",
+      position: 1,
+      source: "saved",
+    });
+    expect(JSON.stringify(track.mock.calls)).not.toMatch(/email|user_id|saved_at/i);
   });
 });

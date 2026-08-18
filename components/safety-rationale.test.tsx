@@ -24,12 +24,37 @@ describe("SafetyRationale", () => {
       screen.getByText("친구끼리는 무리 없이 통하지만, 직장에서는 맥락을 가려야 해요.")
     ).toBeTruthy();
     expect(screen.queryByText(/상황을 가려 써야 하는 등급/)).toBeNull();
-    expect(screen.getByText("친한 사이 별명으로만")).toBeTruthy();
+    expect(screen.getAllByText("친한 사이 별명으로만").length).toBeGreaterThan(0);
     expect(screen.getByText("어디서 써도 될까요?")).toBeTruthy();
-    expect(screen.getByText("직장에서")).toBeTruthy();
-    expect(screen.getByText("공식 자리에서는 오해 소지")).toBeTruthy();
+    expect(screen.getByText("회사")).toBeTruthy();
+    expect(screen.getAllByText("공식 자리에서는 오해 소지").length).toBeGreaterThan(0);
     // sentiment도 근거의 일부로 노출
     expect(screen.getByText("논쟁 중")).toBeTruthy();
+  });
+
+  it("개인·회사·브랜드·광고 문맥에 근거와 실제 검수일을 표시한다", () => {
+    render(
+      <SafetyRationale
+        level="yellow"
+        sentiment="funny"
+        context={{ work: "yellow", friends: "green", family: "green", sns: "red" }}
+        note="사적인 대화에서 쓰는 표현"
+        caution="공개 상업 문맥에서는 오해 소지"
+        reviewedAt="2026-08-17T02:00:00.000Z"
+      />
+    );
+
+    for (const label of ["개인", "회사", "브랜드", "광고"]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    expect(screen.getAllByText("사적인 대화에서 쓰는 표현").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("공개 상업 문맥에서는 오해 소지").length).toBeGreaterThan(0);
+    expect(screen.getByText("2026년 8월 17일")).toBeTruthy();
+    expect(screen.getByText("2026년 8월 17일").closest("time")?.getAttribute("datetime"))
+      .toBe("2026-08-17T02:00:00.000Z");
+    expect(
+      screen.getByRole("link", { name: "회사·브랜드 운영용 고급 안전 검수 보기" }).getAttribute("href"),
+    ).toBe("/pricing?source=brand_company_safety");
   });
 
   it("caution이 없으면 등급 일반 문구로 채우지 않는다(근거 발명 금지)", () => {

@@ -31,7 +31,7 @@ export default async function OnboardingPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nickname, interests, age_group")
+    .select("nickname, interests, age_group, use_purpose, preferred_platforms")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -43,6 +43,8 @@ export default async function OnboardingPage({
           defaultNickname={profile?.nickname ?? ""}
           defaultInterests={profile?.interests ?? []}
           defaultAgeGroup={profile?.age_group ?? ""}
+          defaultUsePurpose={profile?.use_purpose ?? "creator"}
+          defaultPreferredPlatforms={profile?.preferred_platforms ?? []}
         />
       </div>
     </main>

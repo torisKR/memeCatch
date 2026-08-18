@@ -29,13 +29,13 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
             Signal desk · Korean meme dictionary
           </p>
           <h1 className="mt-5 max-w-2xl text-[2.65rem] font-black leading-[1.06] tracking-[-0.035em] sm:text-[3.8rem]">
-            그 밈, <span className="text-(--flame-400)">맥락까지</span>
+            그 밈, <span className="text-(--flame-400)">지금 써도 될지까지</span>
             <br />
             3초 안에.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-white/68 sm:text-lg">
-            뜻만 번역하지 않아요. 어디서 시작됐고, 언제 어떻게 써야 자연스러운지까지
-            한 번에 확인하세요.
+            뜻·유래·현재 안전성은 무료로 확인하세요. 상세의 무료 활용 문구 1개를 복사해
+            3분 안에 게시 준비를 끝낼 수 있어요.
           </p>
 
           <form action="/search" role="search" className="mt-8 max-w-2xl">

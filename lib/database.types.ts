@@ -241,6 +241,77 @@ export type Database = {
           },
         ]
       }
+      billing_orders: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          order_amount: number
+          order_currency: string
+          payment_asset: string
+          payment_network: string
+          plan: string
+          provider: string
+          provider_link_id: string | null
+          refund_transaction_id: string | null
+          refunded_at: string | null
+          request_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          order_amount?: number
+          order_currency?: string
+          payment_asset?: string
+          payment_network?: string
+          plan?: string
+          provider?: string
+          provider_link_id?: string | null
+          refund_transaction_id?: string | null
+          refunded_at?: string | null
+          request_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          order_amount?: number
+          order_currency?: string
+          payment_asset?: string
+          payment_network?: string
+          plan?: string
+          provider?: string
+          provider_link_id?: string | null
+          refund_transaction_id?: string | null
+          refunded_at?: string | null
+          request_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_subscriptions: {
         Row: {
           amount: number
@@ -389,6 +460,177 @@ export type Database = {
             foreignKeyName: "billing_webhook_events_matched_user_id_fkey"
             columns: ["matched_user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_approval_records: {
+        Row: {
+          created_at: string
+          decision: string
+          evaluation_id: string
+          id: string
+          note: string | null
+          owner_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          evaluation_id: string
+          id?: string
+          note?: string | null
+          owner_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          evaluation_id?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_approval_records_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: true
+            referencedRelation: "brand_fit_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_approval_records_evaluation_owner_fkey"
+            columns: ["evaluation_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "brand_fit_evaluations"
+            referencedColumns: ["id", "owner_id"]
+          },
+          {
+            foreignKeyName: "brand_approval_records_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_approval_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "brand_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_approval_records_workspace_owner_fkey"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "brand_workspaces"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      brand_fit_evaluations: {
+        Row: {
+          created_at: string
+          fit_score: number
+          id: string
+          matched_forbidden_expressions: string[]
+          meme_name: string
+          meme_path: string | null
+          owner_id: string
+          proposed_copy: string
+          rationale: string
+          risk_level: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          fit_score: number
+          id?: string
+          matched_forbidden_expressions?: string[]
+          meme_name: string
+          meme_path?: string | null
+          owner_id: string
+          proposed_copy: string
+          rationale: string
+          risk_level: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          fit_score?: number
+          id?: string
+          matched_forbidden_expressions?: string[]
+          meme_name?: string
+          meme_path?: string | null
+          owner_id?: string
+          proposed_copy?: string
+          rationale?: string
+          risk_level?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_fit_evaluations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_fit_evaluations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "brand_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_fit_evaluations_workspace_owner_fkey"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "brand_workspaces"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      brand_workspaces: {
+        Row: {
+          brand_context: string
+          brand_name: string
+          brand_tone: string
+          created_at: string
+          forbidden_expressions: string[]
+          id: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          brand_context: string
+          brand_name: string
+          brand_tone: string
+          created_at?: string
+          forbidden_expressions?: string[]
+          id?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          brand_context?: string
+          brand_name?: string
+          brand_tone?: string
+          created_at?: string
+          forbidden_expressions?: string[]
+          id?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_workspaces_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -755,6 +997,210 @@ export type Database = {
           {
             foreignKeyName: "generation_votes_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_english_pilot_landings: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          meme_id: string | null
+          operator_note: string
+          published_at: string | null
+          slot: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          meme_id?: string | null
+          operator_note?: string
+          published_at?: string | null
+          slot: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          meme_id?: string | null
+          operator_note?: string
+          published_at?: string | null
+          slot?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_english_pilot_landings_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_english_pilot_landings_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: true
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_events: {
+        Row: {
+          created_at: string
+          dedupe_key: string
+          event_name: string
+          format: string | null
+          id: string
+          locale: string | null
+          meme_id: string | null
+          metadata: Json
+          occurred_at: string
+          order_id: string | null
+          path: string | null
+          session_id: string | null
+          source: string
+          surface: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key: string
+          event_name: string
+          format?: string | null
+          id?: string
+          locale?: string | null
+          meme_id?: string | null
+          metadata?: Json
+          occurred_at?: string
+          order_id?: string | null
+          path?: string | null
+          session_id?: string | null
+          source: string
+          surface?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string
+          event_name?: string
+          format?: string | null
+          id?: string
+          locale?: string | null
+          meme_id?: string | null
+          metadata?: Json
+          occurred_at?: string
+          order_id?: string | null
+          path?: string | null
+          session_id?: string | null
+          source?: string
+          surface?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_events_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "billing_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_funnel_baselines: {
+        Row: {
+          captured_at: string
+          counts: Json
+          coverage_start: string | null
+          definition_version: number
+          id: string
+          is_complete: boolean
+          period_end: string
+          period_start: string
+          source: string
+        }
+        Insert: {
+          captured_at?: string
+          counts: Json
+          coverage_start?: string | null
+          definition_version?: number
+          id?: string
+          is_complete: boolean
+          period_end: string
+          period_start: string
+          source?: string
+        }
+        Update: {
+          captured_at?: string
+          counts?: Json
+          coverage_start?: string | null
+          definition_version?: number
+          id?: string
+          is_complete?: boolean
+          period_end?: string
+          period_start?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      growth_pilot_interviews: {
+        Row: {
+          conducted_by: string
+          created_at: string
+          evidence_url: string | null
+          id: string
+          interviewed_at: string
+          market: string
+          participant_reference: string
+          segment: string
+          summary: string
+        }
+        Insert: {
+          conducted_by: string
+          created_at?: string
+          evidence_url?: string | null
+          id?: string
+          interviewed_at: string
+          market: string
+          participant_reference: string
+          segment: string
+          summary: string
+        }
+        Update: {
+          conducted_by?: string
+          created_at?: string
+          evidence_url?: string | null
+          id?: string
+          interviewed_at?: string
+          market?: string
+          participant_reference?: string
+          segment?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_pilot_interviews_conducted_by_fkey"
+            columns: ["conducted_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1671,6 +2117,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
@@ -1706,6 +2153,7 @@ export type Database = {
           published_at?: string | null
           revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
+          safety_reviewed_at?: string | null
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
           slug: string
@@ -1741,6 +2189,7 @@ export type Database = {
           published_at?: string | null
           revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
+          safety_reviewed_at?: string | null
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
           slug?: string
@@ -1921,6 +2370,59 @@ export type Database = {
             foreignKeyName: "plus_digest_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plus_expiry_reminder_deliveries: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          current_period_end: string
+          error_code: string | null
+          id: string
+          locale: string
+          provider_message_id: string | null
+          reminder_days: number
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          current_period_end: string
+          error_code?: string | null
+          id?: string
+          locale?: string
+          provider_message_id?: string | null
+          reminder_days: number
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          current_period_end?: string
+          error_code?: string | null
+          id?: string
+          locale?: string
+          provider_message_id?: string | null
+          reminder_days?: number
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plus_expiry_reminder_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2212,8 +2714,10 @@ export type Database = {
           id: string
           interests: string[]
           nickname: string
+          preferred_platforms: string[]
           role: Database["public"]["Enums"]["user_role"]
           trust_score: number
+          use_purpose: string | null
         }
         Insert: {
           age_group?: string | null
@@ -2221,8 +2725,10 @@ export type Database = {
           id: string
           interests?: string[]
           nickname: string
+          preferred_platforms?: string[]
           role?: Database["public"]["Enums"]["user_role"]
           trust_score?: number
+          use_purpose?: string | null
         }
         Update: {
           age_group?: string | null
@@ -2230,8 +2736,10 @@ export type Database = {
           id?: string
           interests?: string[]
           nickname?: string
+          preferred_platforms?: string[]
           role?: Database["public"]["Enums"]["user_role"]
           trust_score?: number
+          use_purpose?: string | null
         }
         Relationships: []
       }
@@ -2881,6 +3389,47 @@ export type Database = {
           },
         ]
       }
+      web_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       generation_vote_stats: {
@@ -2935,6 +3484,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      attach_unifi_payment_link: {
+        Args: { p_provider_link_id: string; p_request_id: string }
+        Returns: Json
+      }
+      capture_growth_funnel_baseline: {
+        Args: { p_period_end?: string }
+        Returns: string
+      }
       cast_generation_vote: {
         Args: { p_age_group: string; p_meme_id: string; p_vote: string }
         Returns: undefined
@@ -2962,11 +3519,11 @@ export type Database = {
           attempt_count: number
           channel: string
           claim_token: string
-          meme_id: string | null
+          meme_id: string
           outbox_id: string
           payload: Json
           topic: string
-          user_id: string | null
+          user_id: string
         }[]
       }
       claim_plus_daily_signal_deliveries: {
@@ -2976,6 +3533,30 @@ export type Database = {
           delivery_id: string
           locale: string
           status: string
+          user_id: string
+        }[]
+      }
+      claim_plus_expiry_reminders: {
+        Args: { p_delivery_date: string; p_limit?: number }
+        Returns: {
+          current_period_end: string
+          delivery_id: string
+          locale: string
+          reminder_days: number
+          status: string
+          user_id: string
+        }[]
+      }
+      claim_saved_state_email_outbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          channel: string
+          claim_token: string
+          meme_id: string
+          outbox_id: string
+          payload: Json
+          topic: string
           user_id: string
         }[]
       }
@@ -2990,6 +3571,17 @@ export type Database = {
       claim_translation_priority_request: {
         Args: { p_locale: string; p_meme_id: string }
         Returns: Json
+      }
+      claim_web_push_outbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          claim_token: string
+          meme_id: string
+          outbox_id: string
+          payload: Json
+          user_id: string
+        }[]
       }
       complete_plus_global_daily_challenge: {
         Args: { p_locale: string }
@@ -3008,6 +3600,10 @@ export type Database = {
         Returns: string
       }
       compute_trend_scores: { Args: never; Returns: undefined }
+      create_billing_order: {
+        Args: { p_growth_session_id?: string | null; p_request_id: string }
+        Returns: Json
+      }
       create_community_comment: {
         Args: { p_body: string; p_post_id: string }
         Returns: string
@@ -3036,11 +3632,13 @@ export type Database = {
         }
         Returns: string
       }
+      enqueue_web_push_trend_alerts: { Args: never; Returns: number }
       extract_chosung: { Args: { input: string }; Returns: string }
       fail_affiliate_sync: {
         Args: { error_code: string; run_id: string }
         Returns: undefined
       }
+      fail_billing_order: { Args: { p_request_id: string }; Returns: Json }
       fan_out_saved_context_alerts: { Args: never; Returns: number }
       fan_out_trend_alerts: { Args: never; Returns: number }
       file_report: {
@@ -3070,7 +3668,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      finish_plus_expiry_reminder: {
+        Args: {
+          p_delivery_id: string
+          p_error_code?: string
+          p_provider_message_id?: string
+          p_status: string
+        }
+        Returns: boolean
+      }
       gen_short_id: { Args: never; Returns: string }
+      get_brand_workspace_bundle: { Args: never; Returns: Json }
       get_daily_top_memes: {
         Args: { p_limit?: number }
         Returns: {
@@ -3093,6 +3701,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
@@ -3115,6 +3724,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_growth_kpi_dashboard: { Args: never; Returns: Json }
+      get_growth_pilot_dashboard: { Args: never; Returns: Json }
+      get_growth_seo_related_counts: {
+        Args: { p_meme_ids: string[] }
+        Returns: {
+          meme_id: string
+          related_count: number
+        }[]
+      }
       get_plus_global_daily_challenge: {
         Args: { p_challenge_date: string }
         Returns: {
@@ -3127,10 +3745,34 @@ export type Database = {
       }
       get_plus_meme_use_outcome_summary: { Args: never; Returns: Json }
       get_plus_meme_use_summary: { Args: never; Returns: Json }
+      growth_kpi_average: {
+        Args: {
+          p_coverage_complete: boolean
+          p_denominator: number
+          p_incomplete_reason: string
+          p_numerator: number
+        }
+        Returns: Json
+      }
+      growth_kpi_ratio: {
+        Args: {
+          p_coverage_complete: boolean
+          p_denominator: number
+          p_incomplete_reason: string
+          p_numerator: number
+        }
+        Returns: Json
+      }
+      growth_kpi_unavailable: { Args: { p_reason: string }; Returns: Json }
       has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
+      has_web_push_subscription: { Args: never; Returns: boolean }
       increment_view: {
         Args: { p_meme_id: string; p_session_hash: string }
         Returns: undefined
+      }
+      is_growth_english_pilot_eligible: {
+        Args: { p_meme_id: string }
+        Returns: boolean
       }
       is_meme_rank_eligible: { Args: { p_meme_id: string }; Returns: boolean }
       is_operator: { Args: never; Returns: boolean }
@@ -3199,9 +3841,19 @@ export type Database = {
         }
         Returns: Json
       }
+      process_unifi_order_event: {
+        Args: {
+          p_occurred_at: string
+          p_payload: Json
+          p_provider_link_id: string
+          p_status: string
+          p_transaction_id: string
+        }
+        Returns: Json
+      }
       process_unifi_payment_event: {
         Args: {
-          p_amount: number | null
+          p_amount: number
           p_event_key: string
           p_occurred_at: string
           p_payload: Json
@@ -3219,6 +3871,10 @@ export type Database = {
         Args: { p_delivery_date: string }
         Returns: number
       }
+      queue_plus_expiry_reminders: {
+        Args: { p_delivery_date: string }
+        Returns: number
+      }
       reconcile_latpeed_order: {
         Args: { p_order_id: string; p_user_id: string }
         Returns: Json
@@ -3227,9 +3883,59 @@ export type Database = {
         Args: { p_payment_id: string; p_user_id: string }
         Returns: Json
       }
+      reconcile_unifi_refund: {
+        Args: {
+          p_occurred_at: string
+          p_original_transaction_id: string
+          p_payload: Json
+          p_refund_transaction_id: string
+        }
+        Returns: Json
+      }
       record_affiliate_product_click: {
         Args: { metric_date: string; product_id: string }
         Returns: undefined
+      }
+      record_brand_approval: {
+        Args: { p_decision: string; p_evaluation_id: string; p_note?: string }
+        Returns: string
+      }
+      record_growth_checkout_events: {
+        Args: { p_request_id: string; p_session_id?: string }
+        Returns: undefined
+      }
+      record_growth_event: {
+        Args: {
+          p_dedupe_key: string | null
+          p_event_name: string
+          p_format: string | null
+          p_locale: string | null
+          p_meme_id: string | null
+          p_metadata?: Json | null
+          p_occurred_at?: string
+          p_order_id: string | null
+          p_path: string | null
+          p_session_id: string | null
+          p_source: string
+          p_surface: string | null
+          p_user_id: string | null
+        }
+        Returns: string
+      }
+      record_growth_payment_event: {
+        Args: { p_transaction_id: string }
+        Returns: undefined
+      }
+      record_growth_pilot_interview: {
+        Args: {
+          p_evidence_url?: string
+          p_interviewed_at: string
+          p_market: string
+          p_participant_reference: string
+          p_segment: string
+          p_summary: string
+        }
+        Returns: string
       }
       record_plus_meme_use_performance: {
         Args: { p_performance_note: string; p_receipt_id: string }
@@ -3266,10 +3972,50 @@ export type Database = {
         Returns: string
       }
       register_billing_identity: { Args: never; Returns: Json }
+      remove_web_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: boolean
+      }
+      reproject_unifi_entitlements: {
+        Args: { p_event_at: string; p_user_id: string }
+        Returns: string
+      }
       request_plus_translation: {
         Args: { p_locale: string; p_meme_id: string }
         Returns: Json
       }
+      save_brand_fit_evaluation:
+        | {
+            Args: {
+              p_fit_score: number
+              p_meme_name: string
+              p_proposed_copy: string
+              p_rationale: string
+              p_risk_level: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_fit_score: number
+              p_meme_name: string
+              p_meme_path: string
+              p_proposed_copy: string
+              p_rationale: string
+              p_risk_level: string
+            }
+            Returns: string
+          }
+      save_brand_workspace: {
+        Args: {
+          p_brand_context: string
+          p_brand_name: string
+          p_brand_tone: string
+          p_forbidden_expressions: string[]
+        }
+        Returns: string
+      }
+      save_meme: { Args: { p_meme_id: string }; Returns: boolean }
       search_ai_memes: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -3292,6 +4038,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
@@ -3336,6 +4083,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
           slug: string
@@ -3358,9 +4106,27 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_growth_english_pilot_slot: {
+        Args: {
+          p_meme_id: string
+          p_operator_note?: string
+          p_slot: number
+          p_status: string
+        }
+        Returns: undefined
+      }
       set_plus_digest_preferences: {
         Args: { p_enabled: boolean; p_locale: string }
         Returns: Json
+      }
+      set_web_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: boolean
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -3409,7 +4175,11 @@ export type Database = {
         Returns: Json
       }
       update_saved_meme: {
-        Args: { p_collection: string | null; p_meme_id: string; p_note: string | null }
+        Args: {
+          p_collection: string | null
+          p_meme_id: string
+          p_note: string | null
+        }
         Returns: Json
       }
     }

@@ -14,6 +14,7 @@ export function PricingContent() {
 
   useEffect(() => {
     track("plus_pricing_view", { locale, surface: "pricing" });
+    track("paywall_view", { locale, surface: "pricing" });
   }, [locale]);
 
   return (
@@ -65,7 +66,10 @@ export function PricingContent() {
           action="/api/billing/checkout"
           method="post"
           className="relative mt-7"
-          onSubmit={() => track("plus_checkout_started", { locale, surface: "pricing" })}
+          onSubmit={() => {
+            track("plus_checkout_started", { locale, surface: "pricing" });
+            track("checkout_start", { locale, surface: "pricing" });
+          }}
         >
           <input type="hidden" name="locale" value={locale} />
           <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">

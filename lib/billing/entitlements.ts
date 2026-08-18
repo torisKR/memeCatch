@@ -61,8 +61,20 @@ export function daysUntilExpiry(
   return Math.max(0, Math.ceil((end - now) / 86_400_000));
 }
 
-/** 만료 임박 기준 — 이 안에 들면 연장 안내를 띄운다. */
-export const EXPIRY_WARNING_DAYS = 3;
+export const EXPIRY_REMINDER_DAYS = [7, 3, 1, 0] as const;
+export const EXPIRY_WARNING_DAYS = EXPIRY_REMINDER_DAYS[0];
+
+export type ExpiryReminderDay = (typeof EXPIRY_REMINDER_DAYS)[number];
+
+export function expiryReminderDay(
+  currentPeriodEnd: string | null,
+  now = Date.now(),
+): ExpiryReminderDay | null {
+  const days = daysUntilExpiry(currentPeriodEnd, now);
+  return days !== null && EXPIRY_REMINDER_DAYS.includes(days as ExpiryReminderDay)
+    ? (days as ExpiryReminderDay)
+    : null;
+}
 
 export function isExpiringSoon(
   currentPeriodEnd: string | null,

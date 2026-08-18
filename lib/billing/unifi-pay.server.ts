@@ -22,8 +22,8 @@ import { createHmac } from "node:crypto";
 const PREVIEW_BASE_URL = "https://app-api-pay.unifi.me";
 const REQUEST_TIMEOUT_MS = 10_000;
 
-/** MemeCatch Plus 요금 — $20 USD. Unifi Pay는 USD·JPY만 지원한다(KRW 불가). */
-const DEFAULT_ITEM_PRICE = 20;
+/** MemeCatch Plus 요금 — $10 USD. Unifi Pay는 USD·JPY만 지원한다(KRW 불가). */
+const DEFAULT_ITEM_PRICE = 10;
 
 export type UnifiPayConfig = {
   apiKey: string;
@@ -50,10 +50,10 @@ export function getUnifiPayConfig(
 
   const rawPrice = env.UNIFI_PAY_ITEM_PRICE?.trim();
   const itemPrice = rawPrice ? Number(rawPrice) : DEFAULT_ITEM_PRICE;
-  if (!Number.isFinite(itemPrice) || itemPrice <= 0) return null;
+  if (!Number.isFinite(itemPrice) || itemPrice !== DEFAULT_ITEM_PRICE) return null;
 
   const currency = (env.UNIFI_PAY_CURRENCY?.trim() || "USD").toUpperCase();
-  if (currency !== "USD" && currency !== "JPY") return null;
+  if (currency !== "USD") return null;
 
   return {
     apiKey,
@@ -215,6 +215,7 @@ export type UnifiPayTransaction = {
   status: string;
   orderAmount: number | null;
   orderCurrencyCode: string | null;
+  payCurrencyCode: string | null;
 };
 
 export async function getUnifiPayTransaction(
@@ -243,13 +244,18 @@ export async function getUnifiPayTransaction(
     typeof record.orderCurrencyCode === "string"
       ? record.orderCurrencyCode.trim().toUpperCase()
       : "";
+  const payCurrencyCode =
+    typeof record.payCurrencyCode === "string"
+      ? record.payCurrencyCode.trim().toUpperCase()
+      : "";
   if (
     !responseTransactionId ||
     responseTransactionId !== transactionId ||
     !orderId ||
     !storeId ||
     orderAmount === null ||
-    !orderCurrencyCode
+    !orderCurrencyCode ||
+    !payCurrencyCode
   ) {
     throw new Error("unifi_pay_status_invalid_response");
   }
@@ -261,6 +267,7 @@ export async function getUnifiPayTransaction(
     status,
     orderAmount,
     orderCurrencyCode,
+    payCurrencyCode,
   };
 }
 
@@ -278,6 +285,7 @@ export function isExpectedUnifiPayTransaction(
     !tx.storeId.trim() ||
     !tx.status.trim() ||
     !tx.orderCurrencyCode?.trim() ||
+    !tx.payCurrencyCode?.trim() ||
     tx.orderAmount === null ||
     !Number.isFinite(tx.orderAmount)
   ) {
@@ -285,6 +293,7 @@ export function isExpectedUnifiPayTransaction(
   }
   if (tx.storeId !== config.storeId) return false;
   if (tx.orderCurrencyCode.toUpperCase() !== config.orderCurrencyCode) return false;
+  if (tx.payCurrencyCode.toUpperCase() !== "USDT") return false;
   if (Math.abs(tx.orderAmount - config.itemPrice) > 0.001) return false;
   return true;
 }

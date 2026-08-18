@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   daysUntilExpiry,
+  expiryReminderDay,
   isExpiringSoon,
   isPremiumSubscription,
   selectPremiumSubscription,
@@ -125,7 +126,8 @@ describe("daysUntilExpiry", () => {
 describe("isExpiringSoon", () => {
   const now = Date.parse("2026-08-01T00:00:00.000Z");
 
-  it("warns inside the final three days", () => {
+  it("warns inside the final seven days", () => {
+    expect(isExpiringSoon("2026-08-08T00:00:00.000Z", now)).toBe(true);
     expect(isExpiringSoon("2026-08-03T00:00:00.000Z", now)).toBe(true);
     expect(isExpiringSoon("2026-08-01T00:00:00.000Z", now)).toBe(true);
   });
@@ -133,5 +135,19 @@ describe("isExpiringSoon", () => {
   it("stays quiet while there is plenty of time", () => {
     expect(isExpiringSoon("2026-08-20T00:00:00.000Z", now)).toBe(false);
     expect(isExpiringSoon(null, now)).toBe(false);
+  });
+});
+
+describe("expiryReminderDay", () => {
+  const now = Date.parse("2026-08-01T00:00:00.000Z");
+
+  it.each([7, 3, 1, 0] as const)("returns the %i-day repurchase state", (days) => {
+    const end = new Date(now + days * 86_400_000).toISOString();
+    expect(expiryReminderDay(end, now)).toBe(days);
+  });
+
+  it("stays quiet between scheduled reminder states", () => {
+    expect(expiryReminderDay("2026-08-06T00:00:00.000Z", now)).toBeNull();
+    expect(expiryReminderDay(null, now)).toBeNull();
   });
 });

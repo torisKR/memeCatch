@@ -49,7 +49,7 @@ describe("MemeUseKit", () => {
     expect(html).toContain("Caution: Check the context before posting.");
   });
 
-  it("offers an active Use Kit entry and keeps the free entry behind pricing", () => {
+  it("offers exactly one copyable free item and locks the remaining items", async () => {
     const active = renderToStaticMarkup(<MemeUseKitEntry locale="en" />);
     expect(active).toContain('data-meme-use-kit-entry="available"');
     expect(active).toContain('href="#meme-use-kit-title"');
@@ -60,7 +60,9 @@ describe("MemeUseKit", () => {
     expect(lockedEntry).toContain('data-meme-use-kit-entry="available"');
     expect(lockedEntry).toContain('href="#meme-use-kit-title"');
 
-    const lockedKit = renderToStaticMarkup(
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const { container } = render(
       <MemeUseKit
         title="Signal meme"
         summary="A documented meaning."
@@ -70,9 +72,18 @@ describe("MemeUseKit", () => {
         lifecycleStatus="active"
       />,
     );
-    expect(lockedKit).toContain('data-premium-kit="locked"');
-    expect(lockedKit).toContain('href="/en/pricing"');
-    expect(lockedKit).toContain("Unlock the use kit");
+    expect(container.querySelector('[data-premium-kit="locked"]')).toBeTruthy();
+    expect(container.querySelectorAll('[data-use-kit-item="free"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-use-kit-item="locked"]')).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Unlock the use kit" }).getAttribute("href")).toBe(
+      "/en/pricing?source=use_kit_second_copy",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("Signal meme: A documented meaning."));
+    expect(track).toHaveBeenCalledWith("use_kit_copied", { format: "explain" });
+    expect(track).toHaveBeenCalledWith("copy", { format: "explain" });
   });
 
   it("shows a session-only prepared state after copying and resets on remount", async () => {
@@ -97,6 +108,7 @@ describe("MemeUseKit", () => {
     });
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(track).toHaveBeenCalledWith("use_kit_copied", { format: "all" });
+    expect(track).toHaveBeenCalledWith("copy", { format: "all" });
 
     unmount();
     render(<MemeUseKit {...props} />);
@@ -121,6 +133,7 @@ describe("MemeUseKit", () => {
     fireEvent.click(screen.getByRole("button", { name: "Share" }));
     await waitFor(() => expect(screen.getByText("Ready to use. Send the format you need when you need it.")).toBeTruthy());
     expect(track).toHaveBeenCalledWith("use_kit_copied", { format: "share_fallback" });
+    expect(track).toHaveBeenCalledWith("copy", { format: "share_fallback" });
 
     cleanup();
     const failedWrite = vi.fn().mockRejectedValue(new Error("clipboard blocked"));

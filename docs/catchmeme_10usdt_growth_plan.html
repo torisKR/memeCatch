@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="CatchMeme의 10 USDT 구독 전환, 사용자 성장, 제품 로드맵과 실행 백로그를 정리한 기획서" />
+  <title>CatchMeme 10 USDT 성장·구독 실행 기획서</title>
+  <style>
+    :root {
+      --bg: #0a0d12;
+      --bg-soft: #10151d;
+      --panel: #141b24;
+      --panel-2: #192230;
+      --line: #2a3545;
+      --line-strong: #3b485c;
+      --text: #f5f7fb;
+      --muted: #a6b0bf;
+      --muted-2: #7f8a9a;
+      --accent: #ffd84d;
+      --accent-soft: rgba(255, 216, 77, 0.14);
+      --green: #55d98b;
+      --green-soft: rgba(85, 217, 139, 0.13);
+      --orange: #ffab5c;
+      --orange-soft: rgba(255, 171, 92, 0.13);
+      --red: #ff6f7d;
+      --red-soft: rgba(255, 111, 125, 0.13);
+      --blue: #78a9ff;
+      --blue-soft: rgba(120, 169, 255, 0.13);
+      --purple: #b89cff;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 12% -10%, rgba(255, 216, 77, 0.11), transparent 34%),
+        radial-gradient(circle at 92% 8%, rgba(120, 169, 255, 0.08), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      line-height: 1.68;
+      word-break: keep-all;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+
+    .progress-shell {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 1000;
+      height: 4px;
+      background: rgba(255,255,255,0.04);
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width .25s ease;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 80;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: rgba(10, 13, 18, 0.82);
+      backdrop-filter: blur(18px);
+    }
+    .topbar-inner {
+      width: min(calc(100% - 32px), var(--max));
+      min-height: 68px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 22px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: #121212;
+      background: var(--accent);
+      box-shadow: 0 8px 28px rgba(255,216,77,.18);
+    }
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--text);
+      background: var(--panel);
+      font-size: 14px;
+      font-weight: 800;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+    .btn.primary { color: #121212; background: var(--accent); border-color: var(--accent); }
+    .btn.ghost { background: transparent; }
+
+    .layout {
+      width: min(calc(100% - 32px), var(--max));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 34px;
+      align-items: start;
+    }
+
+    .side-nav {
+      position: sticky;
+      top: 92px;
+      margin-top: 28px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: rgba(20, 27, 36, .74);
+      box-shadow: var(--shadow);
+    }
+    .side-nav-title {
+      margin: 0 0 10px;
+      color: var(--muted-2);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .side-nav a {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 9px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      transition: color .15s ease, background .15s ease;
+    }
+    .side-nav a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+    .side-status {
+      margin-top: 16px;
+      padding: 13px;
+      border-radius: 12px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    main { min-width: 0; padding-bottom: 110px; }
+    section { scroll-margin-top: 92px; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      margin-top: 28px;
+      padding: 52px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(145deg, rgba(255,216,77,.10), transparent 38%),
+        linear-gradient(315deg, rgba(120,169,255,.09), transparent 36%),
+        var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "10";
+      position: absolute;
+      right: -12px;
+      bottom: -76px;
+      color: rgba(255,255,255,.025);
+      font-size: 280px;
+      font-weight: 1000;
+      letter-spacing: -.1em;
+      pointer-events: none;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 7px 11px;
+      border: 1px solid rgba(255,216,77,.32);
+      border-radius: 999px;
+      color: var(--accent);
+      background: rgba(255,216,77,.08);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, h4 { margin-top: 0; letter-spacing: -.04em; line-height: 1.18; }
+    h1 {
+      max-width: 850px;
+      margin-bottom: 18px;
+      font-size: clamp(38px, 6vw, 72px);
+      font-weight: 1000;
+    }
+    .hero-lead {
+      max-width: 790px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 21px);
+    }
+    .hero-metrics {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 32px;
+    }
+    .metric {
+      padding: 17px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 15px;
+      background: rgba(10,13,18,.45);
+    }
+    .metric-label { color: var(--muted-2); font-size: 12px; font-weight: 800; }
+    .metric-value { margin-top: 5px; font-size: 21px; font-weight: 950; letter-spacing: -.04em; }
+    .metric-value.accent { color: var(--accent); }
+
+    .section {
+      margin-top: 34px;
+      padding: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--panel);
+      box-shadow: 0 16px 52px rgba(0,0,0,.16);
+    }
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 25px;
+    }
+    .section-kicker {
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h2 { margin-bottom: 8px; font-size: clamp(29px, 4vw, 42px); }
+    .section-desc { max-width: 760px; margin: 0; color: var(--muted); }
+    h3 { margin-bottom: 12px; font-size: 23px; }
+    h4 { margin-bottom: 8px; font-size: 17px; }
+
+    .callout {
+      padding: 22px 24px;
+      border: 1px solid rgba(255,216,77,.24);
+      border-radius: 16px;
+      background: var(--accent-soft);
+    }
+    .callout strong { color: var(--accent); }
+    .callout p { margin: 7px 0 0; color: #d9dce3; }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: 16px;
+    }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      min-width: 0;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--bg-soft);
+    }
+    .card p:last-child { margin-bottom: 0; }
+    .card .icon {
+      width: 38px;
+      height: 38px;
+      margin-bottom: 15px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      font-size: 19px;
+    }
+    .card p { color: var(--muted); }
+    .card.emphasis { border-color: rgba(255,216,77,.28); background: linear-gradient(160deg, rgba(255,216,77,.08), var(--bg-soft)); }
+    .card.good { border-color: rgba(85,217,139,.24); }
+    .card.warn { border-color: rgba(255,171,92,.24); }
+    .card.danger { border-color: rgba(255,111,125,.24); }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.025);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .pill.accent { color: var(--accent); border-color: rgba(255,216,77,.25); background: var(--accent-soft); }
+    .pill.green { color: var(--green); border-color: rgba(85,217,139,.25); background: var(--green-soft); }
+    .pill.red { color: var(--red); border-color: rgba(255,111,125,.25); background: var(--red-soft); }
+
+    .quote {
+      margin: 0;
+      padding: 24px 26px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 16px 16px 0;
+      background: rgba(255,255,255,.035);
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.035em;
+    }
+    .quote small {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    .split-table {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .plan-panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--bg-soft);
+    }
+    .plan-panel header {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.025);
+    }
+    .plan-panel.paid { border-color: rgba(255,216,77,.32); }
+    .plan-panel.paid header { background: var(--accent-soft); }
+    .plan-panel ul { margin: 0; padding: 19px 22px 22px 43px; color: var(--muted); }
+    .plan-panel li + li { margin-top: 9px; }
+    .price {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 9px;
+    }
+    .price strong { color: var(--accent); font-size: 34px; letter-spacing: -.06em; }
+    .price span { color: var(--muted); font-size: 13px; font-weight: 700; }
+
+    .revenue-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .revenue-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--bg-soft);
+    }
+    .revenue-card .users { color: var(--muted-2); font-size: 12px; font-weight: 900; }
+    .revenue-card .amount { margin-top: 5px; color: var(--accent); font-size: 23px; font-weight: 950; }
+    .revenue-note { margin: 10px 0 0; color: var(--muted-2); font-size: 12px; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 18px;
+    }
+    .flow-step {
+      position: relative;
+      min-height: 122px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--bg-soft);
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 48%;
+      right: -18px;
+      z-index: 2;
+      color: var(--accent);
+      font-weight: 950;
+    }
+    .flow-num { color: var(--accent); font-size: 12px; font-weight: 950; }
+    .flow-step strong { display: block; margin-top: 7px; font-size: 15px; }
+    .flow-step p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    .funnel {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .funnel > div {
+      padding: 17px;
+      border-radius: 14px;
+      text-align: center;
+      color: var(--text);
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+    .funnel strong { display: block; font-size: 14px; }
+    .funnel small { color: var(--muted); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+    table { width: 100%; min-width: 780px; border-collapse: collapse; background: var(--bg-soft); }
+    th, td { padding: 15px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted-2); background: rgba(255,255,255,.025); font-size: 12px; letter-spacing: .04em; }
+    td { color: #dfe3ea; font-size: 14px; }
+    tr:last-child td { border-bottom: 0; }
+    td strong { color: var(--text); }
+    .priority { display: inline-flex; min-width: 34px; justify-content: center; padding: 3px 7px; border-radius: 8px; font-size: 11px; font-weight: 950; }
+    .p0 { color: var(--red); background: var(--red-soft); }
+    .p1 { color: var(--accent); background: var(--accent-soft); }
+    .p2 { color: var(--blue); background: var(--blue-soft); }
+
+    .timeline { display: grid; gap: 16px; }
+    .phase {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 20px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--bg-soft);
+    }
+    .phase-time { color: var(--accent); font-weight: 950; }
+    .phase h3 { margin-bottom: 8px; }
+    .phase ul { margin: 9px 0 0; padding-left: 20px; color: var(--muted); }
+    .phase li + li { margin-top: 6px; }
+
+    .copy-box {
+      position: relative;
+      padding: 24px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 17px;
+      background: var(--bg-soft);
+    }
+    .copy-label { color: var(--muted-2); font-size: 11px; font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
+    .copy-box h3 { margin: 12px 0 8px; font-size: 31px; }
+    .copy-box p { margin: 0; color: var(--muted); }
+    .copy-cta { display: inline-flex; margin-top: 18px; padding: 11px 16px; border-radius: 11px; color: #111; background: var(--accent); font-weight: 950; }
+    .copy-price { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--text); font-weight: 850; }
+
+    .decision-grid { display: grid; gap: 12px; }
+    .decision {
+      display: grid;
+      grid-template-columns: 1.1fr 1.5fr;
+      gap: 16px;
+      padding: 17px 19px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--bg-soft);
+    }
+    .decision strong { color: var(--accent); }
+    .decision span { color: var(--muted); }
+
+    .checklist-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .progress-label { color: var(--muted); font-size: 13px; font-weight: 800; }
+    .progress-label strong { color: var(--accent); }
+    .checklist { display: grid; gap: 10px; }
+    .check-item {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--bg-soft);
+      transition: opacity .15s ease, border-color .15s ease;
+    }
+    .check-item:has(input:checked) { opacity: .6; border-color: rgba(85,217,139,.22); }
+    .check-item input {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: var(--green);
+    }
+    .check-title { font-weight: 900; }
+    .check-desc { margin-top: 3px; color: var(--muted); font-size: 13px; }
+    .check-day { color: var(--muted-2); font-size: 11px; font-weight: 900; white-space: nowrap; }
+
+    .risk-row {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr 1.6fr;
+      gap: 14px;
+      padding: 17px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .risk-row:last-child { border-bottom: 0; }
+    .risk-row strong { color: var(--red); }
+    .risk-row span { color: var(--muted); }
+
+    pre {
+      max-width: 100%;
+      overflow: auto;
+      margin: 16px 0 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #090c10;
+      color: #dce2ec;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      margin-top: 34px;
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      text-align: center;
+      color: var(--muted);
+      background: var(--panel);
+    }
+    .footer strong { color: var(--text); }
+
+    @media (max-width: 1040px) {
+      .layout { grid-template-columns: 1fr; }
+      .side-nav { display: none; }
+      .hero-metrics, .grid-4, .revenue-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .flow-step:nth-child(3)::after { display: none; }
+      .funnel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner { min-height: 60px; }
+      .brand span:last-child { display: none; }
+      .top-actions .btn.ghost { display: none; }
+      .hero { padding: 30px 23px; }
+      .hero::after { font-size: 190px; bottom: -48px; }
+      .section { padding: 25px 20px; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+      .grid-2, .grid-3, .grid-4, .split-table, .revenue-grid { grid-template-columns: minmax(0, 1fr); }
+      .hero-metrics { grid-template-columns: 1fr 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .flow-step:not(:last-child)::after { content: "↓"; top: auto; bottom: -21px; right: 50%; }
+      .flow-step:nth-child(3)::after { display: block; }
+      .funnel { grid-template-columns: 1fr 1fr; }
+      .phase { grid-template-columns: 1fr; gap: 7px; }
+      .decision { grid-template-columns: 1fr; gap: 5px; }
+      .risk-row { grid-template-columns: 1fr; gap: 5px; }
+      .check-item { grid-template-columns: 28px minmax(0,1fr); }
+      .check-day { grid-column: 2; }
+    }
+
+    @media print {
+      :root {
+        --bg: #fff;
+        --bg-soft: #fff;
+        --panel: #fff;
+        --panel-2: #f5f6f8;
+        --line: #cfd4dc;
+        --line-strong: #aeb6c3;
+        --text: #15171b;
+        --muted: #4f5968;
+        --muted-2: #6d7683;
+        --accent: #9a7400;
+        --accent-soft: #fff8dc;
+        --green: #14763d;
+        --green-soft: #e9f7ef;
+        --orange: #9a5300;
+        --red: #a7212f;
+        --blue: #2057a6;
+      }
+      body { background: #fff; color: #15171b; font-size: 10.5pt; }
+      .progress-shell, .topbar, .side-nav { display: none !important; }
+      .layout { display: block; width: 100%; }
+      main { padding: 0; }
+      .hero, .section, .footer { box-shadow: none; break-inside: avoid; }
+      .hero { margin-top: 0; }
+      .section { margin-top: 20px; }
+      .hero::after { display: none; }
+      .btn { display: none; }
+      .check-item { break-inside: avoid; }
+      .table-wrap { overflow: visible; }
+      table { min-width: 0; font-size: 9pt; }
+      th, td { padding: 8px; }
+      a { text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-shell" aria-hidden="true"><div class="progress-bar" id="scrollProgress"></div></div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="문서 맨 위로">
+        <span class="brand-mark">C</span>
+        <span>CatchMeme 실행 기획서</span>
+      </a>
+      <div class="top-actions">
+        <button class="btn ghost" id="resetChecks" type="button">체크 초기화</button>
+        <button class="btn primary" type="button" onclick="window.print()">인쇄 · PDF 저장</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout" id="top">
+    <aside class="side-nav" aria-label="문서 목차">
+      <p class="side-nav-title">Contents</p>
+      <a href="#summary">1. 전략 요약</a>
+      <a href="#positioning">2. 방향성과 고객</a>
+      <a href="#product">3. 무료·유료 구조</a>
+      <a href="#pricing">4. 10 USDT 가격 정책</a>
+      <a href="#acquisition">5. 사용자 유입 퍼널</a>
+      <a href="#payment">6. USDT 결제 설계</a>
+      <a href="#roadmap">7. 90일 로드맵</a>
+      <a href="#backlog">8. 우선순위 백로그</a>
+      <a href="#kpi">9. KPI와 판단 규칙</a>
+      <a href="#copy">10. 화면 카피</a>
+      <a href="#risks">11. 리스크 관리</a>
+      <a href="#week1">12. 첫 7일 실행</a>
+      <div class="side-status">확정 가격<br><strong>10 USDT / 30일</strong></div>
+    </aside>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="eyebrow">Product Growth Plan · v1.0 · 2026-08-17</div>
+        <h1 id="hero-title">CatchMeme<br>10 USDT 성장·구독 실행 기획서</h1>
+        <p class="hero-lead">
+          CatchMeme를 단순한 밈 사전에서 <strong>“오늘 어떤 밈을, 어디서, 어떻게 써야 하는지 결정해 주는 검수형 밈 활용 도구”</strong>로 전환한다. 검색은 무료 유입 엔진으로 유지하고, 반복적인 의사결정·문구 제작·알림을 10 USDT 유료 가치로 만든다.
+        </p>
+        <div class="hero-metrics">
+          <div class="metric"><div class="metric-label">확정 상품</div><div class="metric-value accent">Plus 30일권</div></div>
+          <div class="metric"><div class="metric-label">확정 가격</div><div class="metric-value accent">10 USDT</div></div>
+          <div class="metric"><div class="metric-label">핵심 고객</div><div class="metric-value">크리에이터·마케터</div></div>
+          <div class="metric"><div class="metric-label">핵심 목표</div><div class="metric-value">반복 사용·재구매</div></div>
+        </div>
+      </section>
+
+      <section class="section" id="summary">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">01 · Executive Summary</div>
+            <h2>전략 요약</h2>
+            <p class="section-desc">기능을 늘리는 것이 아니라, 무료 유입과 유료 반복가치를 하나의 루프로 연결한다.</p>
+          </div>
+        </div>
+
+        <blockquote class="quote">
+          사용자는 “밈의 뜻” 때문에 들어오고, “지금 업무에 안전하게 쓸 수 있는 결과물” 때문에 결제한다.
+          <small>CatchMeme의 제품·콘텐츠·결제 의사결정은 이 문장을 기준으로 통일한다.</small>
+        </blockquote>
+
+        <div class="grid-4" style="margin-top:18px">
+          <article class="card emphasis">
+            <div class="icon">🔎</div>
+            <h3>무료 유입</h3>
+            <p>뜻·유래·출처·현재 상태를 공개해 검색 유입을 확보한다.</p>
+          </article>
+          <article class="card good">
+            <div class="icon">⚡</div>
+            <h3>첫 가치</h3>
+            <p>저장, 안전성 확인, 문구 복사 중 하나를 첫 방문에서 경험시킨다.</p>
+          </article>
+          <article class="card warn">
+            <div class="icon">🧰</div>
+            <h3>유료 실행</h3>
+            <p>개인화 추천, 플랫폼별 문구, 알림, 트렌드 추이를 Plus에 묶는다.</p>
+          </article>
+          <article class="card">
+            <div class="icon">🔁</div>
+            <h3>재구매</h3>
+            <p>자동갱신이 아니라 사용 성과와 만료 알림으로 30일권 재구매를 만든다.</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top:18px">
+          <strong>이번 분기의 핵심 범위</strong>
+          <p>사전·커뮤니티·쇼핑·퀴즈를 동시에 키우지 않는다. <b>밈 탐색 → 관심 등록 → 활용 문구 → 알림 → 10 USDT 결제</b>의 단일 루프에 집중한다.</p>
+        </div>
+      </section>
+
+      <section class="section" id="positioning">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">02 · Positioning</div>
+            <h2>방향성과 핵심 고객</h2>
+            <p class="section-desc">대중용 밈 사전은 유입 채널이고, 돈을 내는 고객은 밈을 콘텐츠 업무에 사용하는 사람이다.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <article class="card emphasis">
+            <div class="pill-row"><span class="pill accent">1순위</span><span class="pill">B2C Prosumer</span></div>
+            <h3 style="margin-top:15px">SNS 콘텐츠를 업무로 만드는 사람</h3>
+            <p>1인 크리에이터, 브랜드 SNS 담당자, 마케팅 대행사 실무자, 쇼핑몰 운영자, Shorts·Reels 기획자.</p>
+            <div class="pill-row">
+              <span class="pill">시간 절약</span>
+              <span class="pill">사고 방지</span>
+              <span class="pill">문구 제작</span>
+              <span class="pill">트렌드 알림</span>
+            </div>
+          </article>
+          <article class="card">
+            <div class="pill-row"><span class="pill">2순위</span><span class="pill">Global</span></div>
+            <h3 style="margin-top:15px">한국 밈이 필요한 해외 실무자</h3>
+            <p>K-content 마케터, 해외 크리에이터, Web3·게임 커뮤니티 운영자. USDT 결제와 영어판의 결합 가능성이 높다.</p>
+            <div class="pill-row">
+              <span class="pill">문화 맥락</span>
+              <span class="pill">직역 방지</span>
+              <span class="pill">브랜드 안전성</span>
+              <span class="pill">영문 활용문</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="grid-3" style="margin-top:16px">
+          <article class="card">
+            <h4>고객의 현재 문제</h4>
+            <p>“유행하는 것은 알겠는데 지금 써도 되는지, 내 계정에 맞는지, 어떤 문구로 써야 하는지 모르겠다.”</p>
+          </article>
+          <article class="card">
+            <h4>CatchMeme의 약속</h4>
+            <p>“오늘 사용할 밈을 3분 안에 고르고, 플랫폼별 문구를 복사해 게시한다.”</p>
+          </article>
+          <article class="card">
+            <h4>차별화 기준</h4>
+            <p>밈 개수보다 <b>최신 상태·상황별 위험도·출처·실제 활용 결과물</b>의 신뢰도를 우선한다.</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top:18px">
+          <strong>중단 또는 후순위</strong>
+          <p>독립 커뮤니티, 무관한 제휴 상품, 과도한 메뉴 확장, 활동량이 적은 전국 단위 랭킹 표현, 글로벌 퀴즈의 Plus 혼합 판매는 이번 90일 범위에서 제외한다.</p>
+        </div>
+      </section>
+
+      <section class="section" id="product">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">03 · Product Model</div>
+            <h2>무료와 유료의 경계</h2>
+            <p class="section-desc">정보 접근을 잠그지 않는다. 무료는 “이해”, 유료는 “의사결정·실행·반복”을 담당한다.</p>
+          </div>
+        </div>
+
+        <div class="split-table">
+          <article class="plan-panel">
+            <header>
+              <div class="pill-row"><span class="pill green">FREE</span></div>
+              <h3 style="margin:12px 0 0">검색 유입 엔진</h3>
+            </header>
+            <ul>
+              <li>밈 뜻·유래·출처</li>
+              <li>유행 상태와 기본 안전 신호</li>
+              <li>기본 사용 예시 1개</li>
+              <li>관련 밈·세대별 밈 탐색</li>
+              <li>관심 밈 10개 저장</li>
+              <li>주간 밈 브리핑</li>
+              <li>공유용 신호등 카드</li>
+            </ul>
+          </article>
+
+          <article class="plan-panel paid">
+            <header>
+              <div class="pill-row"><span class="pill accent">PLUS · 10 USDT</span></div>
+              <h3 style="margin:12px 0 0">업무용 밈 활용 도구</h3>
+              <div class="price"><strong>10 USDT</strong><span>/ 30일 · 자동갱신 없음</span></div>
+            </header>
+            <ul>
+              <li>관심 분야별 오늘의 밈 3개</li>
+              <li>Instagram·TikTok·X·YouTube용 문구</li>
+              <li>회사·브랜드·광고 등 상황별 안전성</li>
+              <li>30일/90일 트렌드 추이와 변화 이유</li>
+              <li>관심 밈 무제한 저장</li>
+              <li>급상승·식는 중·안전도 변경 알림</li>
+              <li>사용 기록, 재사용 레이더, 전체 활용 팩</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="grid-3" style="margin-top:16px">
+          <article class="card">
+            <h4>무료 공개 원칙</h4>
+            <p>검색 의도에 필요한 핵심 답변은 첫 화면에 제공한다. 뜻·유래를 잠그지 않는다.</p>
+          </article>
+          <article class="card emphasis">
+            <h4>유료 노출 원칙</h4>
+            <p>활용 팩의 20~30%를 미리 보여 주고, 두 번째 복사·고급 안전성·알림 설정에서 결제를 제안한다.</p>
+          </article>
+          <article class="card">
+            <h4>반복 가치 원칙</h4>
+            <p>매주 새로운 결과가 생기는 기능만 Plus에 포함한다. 정적 정보만으로는 재구매가 발생하지 않는다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="pricing">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">04 · Pricing</div>
+            <h2>10 USDT 가격 정책</h2>
+            <p class="section-desc">초기에는 상품을 하나로 단순화한다. 가격보다 “30일 동안 반복적으로 얻는 결과”를 명확히 설명한다.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <article class="card emphasis">
+            <div class="pill-row"><span class="pill accent">확정</span><span class="pill">단일 플랜</span></div>
+            <h3 style="margin-top:16px">CatchMeme Plus 30일권</h3>
+            <div class="price"><strong>10 USDT</strong><span>결제 완료 시점부터 30일</span></div>
+            <p>자동 결제가 아닌 선불 이용권으로 운영한다. 잔여 기간이 있으면 결제일이 아니라 기존 만료일 뒤로 30일을 연장한다.</p>
+          </article>
+          <article class="card">
+            <h3>결제 화면 필수 고지</h3>
+            <div class="pill-row">
+              <span class="pill green">30일 이용</span>
+              <span class="pill">자동갱신 없음</span>
+              <span class="pill">잔여기간 보존</span>
+              <span class="pill">USDT 네트워크 표시</span>
+            </div>
+            <p style="margin-top:15px">사용자는 가격보다 결제 방식에서 이탈할 가능성이 높다. 지원 네트워크, 예상 수량, 만료 시각, 환불 기준을 결제 버튼 가까이에 배치한다.</p>
+          </article>
+        </div>
+
+        <h3 style="margin-top:26px">월간 유료 사용자별 매출 시나리오</h3>
+        <div class="revenue-grid">
+          <div class="revenue-card"><div class="users">유료 사용자 50명</div><div class="amount">500 USDT</div></div>
+          <div class="revenue-card"><div class="users">유료 사용자 100명</div><div class="amount">1,000 USDT</div></div>
+          <div class="revenue-card"><div class="users">유료 사용자 300명</div><div class="amount">3,000 USDT</div></div>
+          <div class="revenue-card"><div class="users">유료 사용자 1,000명</div><div class="amount">10,000 USDT</div></div>
+        </div>
+        <p class="revenue-note">※ 결제대행 수수료, 환불, 세금, 프로모션 전 단순 매출 기준.</p>
+
+        <div class="callout" style="margin-top:20px">
+          <strong>후속 가격 실험</strong>
+          <p>30일권의 재구매 데이터가 2개 코호트 이상 확보된 뒤에만 90일권을 검토한다. 초기에는 10 USDT 단일 상품으로 결제·가치·재구매 문제를 분리해 측정한다.</p>
+        </div>
+      </section>
+
+      <section class="section" id="acquisition">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">05 · Acquisition & Conversion</div>
+            <h2>사용자 유입과 전환 퍼널</h2>
+            <p class="section-desc">모든 채널이 하나의 행동 루프로 합쳐져야 한다. 회원가입 자체가 아니라 저장·복사·알림을 활성화로 정의한다.</p>
+          </div>
+        </div>
+
+        <div class="funnel" aria-label="전환 퍼널">
+          <div><strong>검색·숏폼</strong><small>유입</small></div>
+          <div><strong>밈 상세</strong><small>3초 답변</small></div>
+          <div><strong>저장·복사</strong><small>첫 가치</small></div>
+          <div><strong>관심 설정</strong><small>개인화</small></div>
+          <div><strong>Plus 미리보기</strong><small>유료 의도</small></div>
+          <div><strong>10 USDT</strong><small>30일권</small></div>
+        </div>
+
+        <div class="grid-3" style="margin-top:18px">
+          <article class="card">
+            <h3>SEO</h3>
+            <p>상위 검색 랜딩 100개를 우선 개선한다. 제목·한 줄 뜻·유래·예문·안전 신호·관련 밈·canonical·OG를 완성한다.</p>
+            <div class="pill-row"><span class="pill">밈 뜻</span><span class="pill">유래</span><span class="pill">지금 써도 되나</span></div>
+          </article>
+          <article class="card">
+            <h3>숏폼</h3>
+            <p>“이 밈, 회사 계정에서 쓰면 위험합니다”처럼 뜻 설명보다 사용 판단을 전면에 둔다.</p>
+            <div class="pill-row"><span class="pill">Reels</span><span class="pill">Shorts</span><span class="pill">TikTok</span></div>
+          </article>
+          <article class="card">
+            <h3>공유 루프</h3>
+            <p>신호등 카드와 “내 브랜드 밈 적합도” 결과를 공유하게 만들고 상세 페이지로 유입을 회수한다.</p>
+            <div class="pill-row"><span class="pill">OG 카드</span><span class="pill">공유 링크</span><span class="pill">진단 결과</span></div>
+          </article>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <article class="card emphasis">
+            <h3>좋은 결제 노출 시점</h3>
+            <ul>
+              <li>활용 문구 두 번째 복사</li>
+              <li>관심 밈 10개 초과 저장</li>
+              <li>30일 이상 트렌드 그래프 조회</li>
+              <li>브랜드·회사 상황별 안전성 확인</li>
+              <li>급상승 알림 또는 주간 개인화 브리핑 설정</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>피해야 할 노출 방식</h3>
+            <ul>
+              <li>첫 방문 즉시 결제 모달</li>
+              <li>뜻·유래 전체 잠금</li>
+              <li>기능명만 나열한 가격 페이지</li>
+              <li>활동량이 적은 기능을 핵심 가치처럼 전면 배치</li>
+              <li>USDT 구매·지갑 이동 과정을 설명하지 않는 결제 화면</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="payment">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">06 · USDT Billing</div>
+            <h2>USDT 결제와 권한 설계</h2>
+            <p class="section-desc">브라우저 복귀 페이지가 아니라 서버 검증 결과를 결제 성공의 기준으로 삼는다.</p>
+          </div>
+        </div>
+
+        <div class="flow" aria-label="USDT 결제 처리 흐름">
+          <div class="flow-step"><span class="flow-num">01</span><strong>주문 생성</strong><p>사용자·플랜·금액을 서버에서 확정하고 PENDING 주문을 생성한다.</p></div>
+          <div class="flow-step"><span class="flow-num">02</span><strong>결제 링크</strong><p>고유 requestId와 서버 서명으로 결제 링크를 발급한다.</p></div>
+          <div class="flow-step"><span class="flow-num">03</span><strong>USDT 결제</strong><p>지원 네트워크와 예상 금액을 명확히 표시한다.</p></div>
+          <div class="flow-step"><span class="flow-num">04</span><strong>Webhook</strong><p>수신 이벤트는 처리 시작 신호일 뿐, 단독으로 권한을 주지 않는다.</p></div>
+          <div class="flow-step"><span class="flow-num">05</span><strong>거래 재조회</strong><p>상태·스토어·통화·금액·transactionId를 서버 간 조회로 검증한다.</p></div>
+          <div class="flow-step"><span class="flow-num">06</span><strong>30일 활성화</strong><p>멱등 트랜잭션으로 주문 확정과 entitlement 연장을 동시에 처리한다.</p></div>
+        </div>
+
+        <div class="grid-2" style="margin-top:20px">
+          <article class="card">
+            <h3>최소 데이터 모델</h3>
+            <pre>billing_order
+- id, user_id, plan_code
+- request_id UNIQUE
+- provider_link_id
+- transaction_id UNIQUE
+- order_amount = 10
+- order_currency = USDT
+- status: PENDING / CONFIRMED / FAILED / REFUNDED
+- confirmed_at, expires_at
+
+entitlement
+- user_id, plan_code
+- starts_at, ends_at
+- source_order_id
+- status</pre>
+          </article>
+          <article class="card">
+            <h3>필수 안전장치</h3>
+            <ul>
+              <li><b>금액은 클라이언트가 아니라 서버에서 결정</b></li>
+              <li>requestId와 transactionId에 UNIQUE 제약</li>
+              <li>Webhook 중복·순서 뒤바뀜을 허용하는 멱등 처리</li>
+              <li>결제 성공 페이지는 주문 상태를 조회만 함</li>
+              <li>기존 만료일이 미래라면 그 뒤로 30일 연장</li>
+              <li>환불 시 entitlement 회수와 감사 로그 유지</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top:18px">
+          <strong>상품 표현</strong>
+          <p>자동 반복 과금이 없다면 UI와 약관에서 “구독”보다 <b>Plus 30일 이용권</b>을 기본 명칭으로 사용한다. 마케팅 문구에서는 구독 서비스라고 설명할 수 있지만, 결제 조건은 선불·자동갱신 없음으로 명확히 고지한다.</p>
+        </div>
+      </section>
+
+      <section class="section" id="roadmap">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">07 · 90-Day Roadmap</div>
+            <h2>90일 실행 로드맵</h2>
+            <p class="section-desc">1인 개발 기준으로 기능보다 검증 순서를 최적화한다. 결제 시스템 완성보다 먼저 유료 가치가 반복 사용되는지 측정한다.</p>
+          </div>
+        </div>
+
+        <div class="timeline">
+          <article class="phase">
+            <div class="phase-time">0단계<br>1~3일</div>
+            <div>
+              <h3>범위 고정과 측정 기반</h3>
+              <ul>
+                <li>10 USDT / 30일 가격과 자동갱신 없음 확정</li>
+                <li>상품·커뮤니티 등 비핵심 메뉴 축소</li>
+                <li>랭킹 명칭을 “밈캐치 내 급상승”으로 변경</li>
+                <li>핵심 이벤트, 주문 상태, entitlement 로그 정의</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="phase">
+            <div class="phase-time">1단계<br>1~2주</div>
+            <div>
+              <h3>무료 퍼널과 결제 신뢰성</h3>
+              <ul>
+                <li>상세 첫 화면을 뜻 → 상태 → 안전성 → 예문 → CTA 순서로 재배치</li>
+                <li>Guest Follow 후 로그인 시 동기화</li>
+                <li>관심 분야·사용 플랫폼 온보딩</li>
+                <li>USDT 결제 주문, Webhook 검증, 30일 권한 연장</li>
+                <li>가격·약관·개인정보처리방침 문구 통일</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="phase">
+            <div class="phase-time">2단계<br>3~6주</div>
+            <div>
+              <h3>10 USDT를 정당화하는 반복 가치</h3>
+              <ul>
+                <li>플랫폼별 활용 문구와 상황별 안전성 매트릭스</li>
+                <li>오늘의 밈 3개와 주간 개인화 브리핑</li>
+                <li>관심 밈 상태 변경 이메일 알림</li>
+                <li>30일/90일 트렌드 변화 이유 표시</li>
+                <li>만료 7·3·1일 전 재구매 리마인드</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="phase">
+            <div class="phase-time">3단계<br>7~10주</div>
+            <div>
+              <h3>유입 확장과 공유 루프</h3>
+              <ul>
+                <li>상위 100개 검색 랜딩 완성도 개선</li>
+                <li>동적 OG 신호등 카드와 공유 추적</li>
+                <li>숏폼 제작 템플릿과 주 5회 발행 운영</li>
+                <li>무료 진단 도구 1개 출시</li>
+                <li>검색·공유·숏폼별 가입·활성·결제 효율 비교</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="phase">
+            <div class="phase-time">4단계<br>11~12주</div>
+            <div>
+              <h3>최적화와 다음 분기 결정</h3>
+              <ul>
+                <li>가격 페이지, paywall 시점, 로그인 타이밍 실험</li>
+                <li>첫 2개 유료 코호트의 사용량과 재구매 원인 분석</li>
+                <li>결제 이탈이 높으면 카드·간편결제 추가 여부 판단</li>
+                <li>해외 크리에이터 대상 영문 Plus 파일럿 여부 결정</li>
+                <li>90일권·Pro 플랜은 데이터 충족 시에만 설계</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="backlog">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">08 · Backlog</div>
+            <h2>우선순위 실행 백로그</h2>
+            <p class="section-desc">P0는 판매와 권한의 정확성, P1은 반복가치, P2는 확장이다.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>우선</th><th>작업</th><th>목적</th><th>완료 기준</th><th>크기</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="priority p0">P0</span></td><td><strong>10 USDT 가격 페이지</strong></td><td>상품 이해</td><td>가격·30일·자동갱신 없음·지원 네트워크가 첫 화면에 표시</td><td>S</td></tr>
+              <tr><td><span class="priority p0">P0</span></td><td><strong>주문·Webhook 멱등 처리</strong></td><td>중복 권한 방지</td><td>동일 transactionId 재수신 시 기간이 한 번만 연장</td><td>M</td></tr>
+              <tr><td><span class="priority p0">P0</span></td><td><strong>Entitlement 만료 로직</strong></td><td>권한 정확성</td><td>잔여기간 보존, 만료·환불·재결제 케이스 테스트 통과</td><td>M</td></tr>
+              <tr><td><span class="priority p0">P0</span></td><td><strong>핵심 이벤트 분석</strong></td><td>퍼널 측정</td><td>view → follow → copy → checkout → confirmed 연결 가능</td><td>M</td></tr>
+              <tr><td><span class="priority p0">P0</span></td><td><strong>상세 Above-fold 개편</strong></td><td>첫 가치 전달</td><td>모바일 첫 화면에 뜻·상태·안전성·CTA 노출</td><td>S</td></tr>
+              <tr><td><span class="priority p1">P1</span></td><td><strong>Guest Follow → OAuth</strong></td><td>가입 마찰 완화</td><td>비로그인 저장 후 로그인 시 중복 없이 동기화</td><td>M</td></tr>
+              <tr><td><span class="priority p1">P1</span></td><td><strong>활용 팩 미리보기</strong></td><td>유료 가치 증명</td><td>무료 1개 공개, 나머지 잠금, 복사 이벤트 수집</td><td>M</td></tr>
+              <tr><td><span class="priority p1">P1</span></td><td><strong>상황별 안전성</strong></td><td>차별화</td><td>개인·회사·브랜드·광고 4개 문맥에 이유와 최근 검수일 제공</td><td>M</td></tr>
+              <tr><td><span class="priority p1">P1</span></td><td><strong>주간 개인화 브리핑</strong></td><td>재방문</td><td>관심 분야 기반 밈 5개, 열람·클릭 추적</td><td>M</td></tr>
+              <tr><td><span class="priority p1">P1</span></td><td><strong>만료·재구매 알림</strong></td><td>갱신</td><td>7·3·1일 전 및 만료 당일 발송, 원클릭 결제 링크 제공</td><td>S</td></tr>
+              <tr><td><span class="priority p1">P1</span></td><td><strong>Top-100 SEO 개선</strong></td><td>유입 확대</td><td>고유 title·description·canonical·OG·관련 링크·완성도 점수</td><td>L</td></tr>
+              <tr><td><span class="priority p2">P2</span></td><td><strong>Web Push</strong></td><td>실시간 복귀</td><td>사용자 opt-in, 같은 밈 24시간 중복 방지</td><td>M</td></tr>
+              <tr><td><span class="priority p2">P2</span></td><td><strong>영문 Plus 파일럿</strong></td><td>USDT 적합 시장</td><td>영문 랜딩 20개, 해외 사용자 인터뷰 10건</td><td>L</td></tr>
+              <tr><td><span class="priority p2">P2</span></td><td><strong>브랜드 워크스페이스</strong></td><td>고단가 확장</td><td>브랜드 문맥 저장, 적합도·금지 표현·승인 기록</td><td>L</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="kpi">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">09 · KPI</div>
+            <h2>핵심 지표와 판단 규칙</h2>
+            <p class="section-desc">아래 수치는 업계 평균이 아니라 초기 제품 의사결정을 위한 내부 목표값이다.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>지표</th><th>초기 목표</th><th>해석</th></tr></thead>
+            <tbody>
+              <tr><td>Acquisition</td><td>검색 랜딩 CTR·Organic Session</td><td>주간 상승 추세</td><td>Top-100 개선 효과 확인</td></tr>
+              <tr><td>Activation</td><td>상세 → 저장/복사/관심등록</td><td>8% 이상</td><td>첫 화면 가치 전달 여부</td></tr>
+              <tr><td>Account</td><td>Follow 의도 → 로그인 완료</td><td>35% 이상</td><td>인증 마찰 여부</td></tr>
+              <tr><td>Conversion</td><td>Paywall → Checkout Start</td><td>8~12%</td><td>유료 가치·카피 적합성</td></tr>
+              <tr><td>Payment</td><td>Checkout Start → Confirmed</td><td>50% 이상</td><td>USDT 결제 마찰 측정</td></tr>
+              <tr><td>Paid</td><td>활성 사용자 → 결제</td><td>3~5%</td><td>제품·가격 종합 전환</td></tr>
+              <tr><td>Retention</td><td>D7 재방문</td><td>20% 이상</td><td>알림·브리핑 반복가치</td></tr>
+              <tr><td>Renewal</td><td>30일권 재구매</td><td>35% 이상</td><td>10 USDT 지속 가치</td></tr>
+              <tr><td>Usage</td><td>유료 사용자 문구 복사</td><td>월 5회 이상</td><td>핵심 유료 기능 사용량</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:24px">데이터 기반 결정 규칙</h3>
+        <div class="decision-grid">
+          <div class="decision"><strong>결제 완료율 &lt; 50%</strong><span>콘텐츠를 늘리지 말고 지원 네트워크, 결제 안내, 지갑 동선, 카드 결제 추가를 먼저 검토한다.</span></div>
+          <div class="decision"><strong>재구매율 &lt; 25%</strong><span>신규 유입 확대를 중단하고 개인화 추천·알림·활용 문구의 반복가치를 수정한다.</span></div>
+          <div class="decision"><strong>문구 복사 월 2회 미만</strong><span>문구 품질, 플랫폼 구분, 브랜드 톤 입력, 복사 UX를 우선 개선한다.</span></div>
+          <div class="decision"><strong>유입↑ · 활성화↓</strong><span>상세 첫 화면의 정보 위계와 CTA를 수정한다. SEO 트래픽 자체를 문제로 보지 않는다.</span></div>
+          <div class="decision"><strong>전환↑ · 유입↓</strong><span>Top-100 SEO, 숏폼, 공유 카드에 투입한다. 제품 범위를 늘리지 않는다.</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="copy">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">10 · Messaging</div>
+            <h2>홈·가격 페이지 권장 카피</h2>
+            <p class="section-desc">기능명이 아니라 사용자가 얻게 되는 결과를 앞에 둔다.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <article class="copy-box">
+            <div class="copy-label">Homepage Hero</div>
+            <h3>지금 써도 되는 밈인지,<br>3분 안에.</h3>
+            <p>뜻·유래·현재 유행·상황별 위험도·게시 문구까지 한 번에 확인하세요.</p>
+            <span class="copy-cta">무료로 밈 찾기</span>
+          </article>
+          <article class="copy-box">
+            <div class="copy-label">Plus Offer</div>
+            <h3>오늘 게시할 밈 3개와<br>플랫폼별 문구를 받으세요.</h3>
+            <p>관심 분야에 맞는 밈, 회사·브랜드 계정 안전성, 급상승 알림까지 제공합니다.</p>
+            <div class="copy-price">10 USDT / 30일 · 자동갱신 없음</div>
+          </article>
+        </div>
+
+        <div class="grid-3" style="margin-top:16px">
+          <article class="card"><h4>Paywall 제목</h4><p>이 밈을 실제 게시물로 바꿔보세요.</p></article>
+          <article class="card"><h4>갱신 제목</h4><p>지난 30일, 저장한 밈과 놓치지 않은 트렌드를 확인하세요.</p></article>
+          <article class="card"><h4>알림 CTA</h4><p>이 밈이 급상승하거나 위험도가 바뀌면 알려드릴게요.</p></article>
+        </div>
+      </section>
+
+      <section class="section" id="risks">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">11 · Risk Management</div>
+            <h2>주요 리스크와 대응</h2>
+            <p class="section-desc">가장 큰 위험은 개발 난도가 아니라 신뢰·반복가치·결제 마찰이다.</p>
+          </div>
+        </div>
+
+        <div>
+          <div class="risk-row"><strong>USDT 결제 마찰</strong><span>사용자가 거래소·지갑·네트워크를 이해해야 하므로 결제 시작 후 이탈이 발생할 수 있다.</span><span>네트워크·예상 수량·만료 시각을 선명하게 안내하고, 결제 완료율을 별도 KPI로 관리한다.</span></div>
+          <div class="risk-row"><strong>반복 가치 부족</strong><span>정적 사전 정보만으로는 30일 후 재구매 이유가 약하다.</span><span>개인화 추천, 상태 변경 알림, 주간 브리핑, 사용 기록을 Plus 핵심으로 둔다.</span></div>
+          <div class="risk-row"><strong>트렌드 신뢰도</strong><span>표본이 적은 내부 데이터를 전국 유행처럼 표현하면 브랜드 신뢰가 손상된다.</span><span>“밈캐치 내 급상승”, 표본 신뢰도, 마지막 업데이트, 변화 이유를 표시한다.</span></div>
+          <div class="risk-row"><strong>콘텐츠 검수 병목</strong><span>1인 운영에서 모든 밈을 같은 깊이로 유지하기 어렵다.</span><span>상위 100개와 유료 사용자 관심 밈을 우선 검수하고, 미완성 상태를 명시한다.</span></div>
+          <div class="risk-row"><strong>범위 확장</strong><span>커뮤니티·쇼핑·퀴즈·B2B를 동시에 개발하면 핵심 루프가 완성되지 않는다.</span><span>90일 동안 P0·P1 외 신규 기능을 동결하고, 데이터로 다음 분기를 결정한다.</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="week1">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">12 · First 7 Days</div>
+            <h2>첫 7일 실행 체크리스트</h2>
+            <p class="section-desc">체크 상태는 이 브라우저에 저장된다. 계획을 실제 작업판으로 사용할 수 있다.</p>
+          </div>
+        </div>
+
+        <div class="checklist-head">
+          <span class="progress-label">완료율 <strong id="completionText">0 / 10</strong></span>
+          <span class="pill accent" id="completionPercent">0%</span>
+        </div>
+
+        <div class="checklist" id="executionChecklist">
+          <label class="check-item"><input type="checkbox" data-key="day1-price"><span><div class="check-title">10 USDT 가격·상품 카피 확정</div><div class="check-desc">30일 이용권, 자동갱신 없음, 잔여기간 보존, 지원 네트워크를 가격 페이지와 결제 CTA에 반영.</div></span><span class="check-day">DAY 1</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day1-scope"><span><div class="check-title">비핵심 메뉴 축소</div><div class="check-desc">상품·독립 커뮤니티를 메인 내비게이션에서 제거하고 홈/탐색/Radar/MY/Plus 중심으로 정리.</div></span><span class="check-day">DAY 1</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day2-events"><span><div class="check-title">핵심 이벤트 스키마 적용</div><div class="check-desc">meme_view, follow_click, copy, paywall_view, checkout_start, payment_confirmed, renewal 이벤트 연결.</div></span><span class="check-day">DAY 2</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day2-baseline"><span><div class="check-title">현재 퍼널 기준값 저장</div><div class="check-desc">변경 전 7일 기준 유입·활성화·결제 시작·완료 수치를 기록해 비교 기준 확보.</div></span><span class="check-day">DAY 2</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day3-order"><span><div class="check-title">PENDING 주문과 멱등키 구현</div><div class="check-desc">금액 서버 확정, requestId UNIQUE, 결제 링크 발급 실패·재시도 처리.</div></span><span class="check-day">DAY 3</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day3-webhook"><span><div class="check-title">Webhook 거래 재검증 구현</div><div class="check-desc">transactionId UNIQUE, 상태·통화·금액 검증 후 주문 확정과 권한 연장을 한 트랜잭션으로 처리.</div></span><span class="check-day">DAY 3</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day4-entitlement"><span><div class="check-title">30일 권한·만료·환불 테스트</div><div class="check-desc">신규, 잔여기간 있음, 중복 Webhook, 만료, 환불 케이스 자동 테스트.</div></span><span class="check-day">DAY 4</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day5-detail"><span><div class="check-title">밈 상세 첫 화면 재배치</div><div class="check-desc">모바일 390×844 기준 뜻·상태·안전성·예문·관심등록 CTA가 빠르게 도달 가능해야 함.</div></span><span class="check-day">DAY 5</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day6-follow"><span><div class="check-title">Guest Follow와 온보딩 연결</div><div class="check-desc">로그인 전 저장, 로그인 후 동기화, 목적·관심 분야·플랫폼 3단계 개인화.</div></span><span class="check-day">DAY 6</span></label>
+          <label class="check-item"><input type="checkbox" data-key="day7-release"><span><div class="check-title">실결제 QA와 1차 배포</div><div class="check-desc">모바일·데스크톱, 성공·실패·취소·중복, 만료 표시, 분석 이벤트를 점검하고 배포.</div></span><span class="check-day">DAY 7</span></label>
+        </div>
+
+        <div class="callout" style="margin-top:20px">
+          <strong>첫 주의 성공 조건</strong>
+          <p>기능 개수보다 <b>10 USDT 결제가 한 번만 기록되고, 정확히 30일이 부여되며, 사용자가 첫 화면에서 유료 가치를 이해하는 상태</b>를 완성한다.</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <strong>CatchMeme 성장 원칙</strong><br>
+        더 많은 메뉴가 아니라 더 강한 루프. 더 많은 밈이 아니라 더 신뢰할 수 있는 판단. 더 복잡한 요금제가 아니라 10 USDT의 반복 가치.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const progress = document.getElementById('scrollProgress');
+      const updateScroll = () => {
+        const doc = document.documentElement;
+        const max = doc.scrollHeight - doc.clientHeight;
+        const value = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+        progress.style.width = value + '%';
+      };
+      document.addEventListener('scroll', updateScroll, { passive: true });
+      updateScroll();
+
+      const STORAGE_KEY = 'catchmeme-plan-checks-v1';
+      const checks = Array.from(document.querySelectorAll('#executionChecklist input[type="checkbox"]'));
+      const completionText = document.getElementById('completionText');
+      const completionPercent = document.getElementById('completionPercent');
+      const resetButton = document.getElementById('resetChecks');
+
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { saved = {}; }
+
+      checks.forEach((box) => {
+        box.checked = Boolean(saved[box.dataset.key]);
+        box.addEventListener('change', () => {
+          saved[box.dataset.key] = box.checked;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+          updateChecklist();
+        });
+      });
+
+      function updateChecklist() {
+        const completed = checks.filter((box) => box.checked).length;
+        const percent = checks.length ? Math.round((completed / checks.length) * 100) : 0;
+        completionText.textContent = completed + ' / ' + checks.length;
+        completionPercent.textContent = percent + '%';
+      }
+
+      resetButton.addEventListener('click', () => {
+        checks.forEach((box) => { box.checked = false; });
+        saved = {};
+        localStorage.removeItem(STORAGE_KEY);
+        updateChecklist();
+      });
+
+      updateChecklist();
+    }());
+  </script>
+</body>
+</html>

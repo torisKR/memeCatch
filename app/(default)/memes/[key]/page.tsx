@@ -24,8 +24,8 @@ import { MemeEmbed } from "@/components/meme-embed";
 import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
-import { SaveButton } from "@/components/save-button";
 import { ExportButton } from "@/components/export-button";
+import { ShareButton } from "@/components/share-button";
 import {
   MemeBreadcrumbJsonLd,
   MemeDefinedTermJsonLd,
@@ -131,6 +131,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const { key } = await params;
   const meme = await getMemeByShortId(shortIdFromParam(key));
   if (!meme) notFound();
+  const path = memePathFrom(meme.short_id, meme.slug);
 
   const tagIds = meme.meme_tags_map.map((t) => t.tag_id);
   const tagNames = meme.meme_tags_map
@@ -264,7 +265,12 @@ export default async function MemeDetailPage({ params }: Props) {
           첫 뷰포트(844px)에 이 밈의 뜻과 신호가 하나도 없었다는 뜻이다.
           카드를 그리드 밖으로 빼면 모바일은 "뜻 먼저, 영상 나중"(LOOP.md 정보 계층)이
           되고 데스크톱은 제목이 전체 폭을 쓰는 헤더가 된다. 2단 구조 자체는 그대로다. */}
-      <AnswerCard meme={meme} />
+      <div className="space-y-3">
+        <AnswerCard meme={meme} saveMemeId={meme.id} />
+        <div className="flex justify-end">
+          <ShareButton path={path} title={meme.title} label="공유" />
+        </div>
+      </div>
 
       {/* 상세 진입 유도 — 로그인/가입(로그아웃 방문자 전용, 클라이언트 판정으로 SSG·SEO
           불변). 컴포넌트 문서가 명시한 자리가 "정답 카드 직후"다. 이전에는 본문보다
@@ -294,17 +300,8 @@ export default async function MemeDetailPage({ params }: Props) {
             />
           </section>
 
-          {/* 감상과 함께 머무는 반응·저장 — 영상 옆에 붙어 스크롤을 따라간다 */}
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
-          {/* 저장 버튼 폭을 레이아웃(flex-1)으로 고정 — 라벨/알림 문구 변화로
-              고유 폭이 바뀌어도 행이 흔들리지 않는다. items-start로 알림 줄바꿈 시
-              이웃 버튼이 상하로 밀리는 것도 방지. */}
-          <div className="flex flex-wrap items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <SaveButton memeId={meme.id} />
-            </div>
-            <ExportButton shortId={meme.short_id} />
-          </div>
+          <ExportButton shortId={meme.short_id} />
 
           {missingTranslationLocales.length > 0 && (
             <section
@@ -373,6 +370,7 @@ export default async function MemeDetailPage({ params }: Props) {
             context={meme.usage_context}
             note={meme.usage_note}
             caution={meme.caution}
+            reviewedAt={meme.safety_reviewed_at}
           />
 
           {(meme.description || meme.origin) && (

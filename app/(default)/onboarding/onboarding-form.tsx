@@ -23,6 +23,8 @@ import { MY_COPY } from "@/lib/i18n-my";
  */
 
 const AGE_GROUPS = ["10s", "20s", "30s", "40s", "50s+"] as const;
+const USE_PURPOSES = ["creator", "brand", "global"] as const;
+const PLATFORMS = ["instagram", "tiktok", "x", "youtube"] as const;
 const INTEREST_CATEGORIES = DISPLAY_CATEGORY_LIST.filter(
   ({ key }) => key !== AI_MEME_DISPLAY_CATEGORY,
 );
@@ -32,11 +34,15 @@ export function OnboardingForm({
   defaultNickname,
   defaultInterests,
   defaultAgeGroup,
+  defaultUsePurpose,
+  defaultPreferredPlatforms,
 }: {
   next: string;
   defaultNickname: string;
   defaultInterests: string[];
   defaultAgeGroup: string;
+  defaultUsePurpose: string;
+  defaultPreferredPlatforms: string[];
 }) {
   const reduce = useReducedMotion();
   const { locale } = useLocale();
@@ -54,6 +60,14 @@ export function OnboardingForm({
       )
   );
   const [ageGroup, setAgeGroup] = useState<string>(defaultAgeGroup);
+  const [usePurpose, setUsePurpose] = useState(
+    USE_PURPOSES.includes(defaultUsePurpose as (typeof USE_PURPOSES)[number])
+      ? defaultUsePurpose
+      : "creator"
+  );
+  const [preferredPlatforms, setPreferredPlatforms] = useState(
+    () => new Set(defaultPreferredPlatforms.filter((value) => PLATFORMS.includes(value as (typeof PLATFORMS)[number])))
+  );
 
   function toggleInterest(categories: readonly MemeCategory[]) {
     setInterests((prev) => {
@@ -106,6 +120,10 @@ export function OnboardingForm({
           <input key={key} type="hidden" name="interests" value={key} />
         ))}
         <input type="hidden" name="age_group" value={ageGroup} />
+        <input type="hidden" name="use_purpose" value={usePurpose} />
+        {[...preferredPlatforms].map((platform) => (
+          <input key={platform} type="hidden" name="preferred_platforms" value={platform} />
+        ))}
 
         {/* 닉네임 */}
         <motion.section variants={item}>
@@ -124,6 +142,26 @@ export function OnboardingForm({
             placeholder={copy.nicknamePlaceholder}
             className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-base text-foreground outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-accent/20"
           />
+        </motion.section>
+
+        <motion.section variants={item}>
+          <h2 className="font-bold">{copy.purposeTitle}</h2>
+          <p className="mt-1 text-sm text-muted">{copy.purposeBody}</p>
+          <ul role="radiogroup" aria-label={copy.purposeTitle} className="mt-3 flex flex-wrap gap-2">
+            {USE_PURPOSES.map((purpose) => (
+              <li key={purpose}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={usePurpose === purpose}
+                  onClick={() => setUsePurpose(purpose)}
+                  className={`inline-flex min-h-11 items-center rounded-full border px-4 text-base font-medium transition-colors ${usePurpose === purpose ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-foreground hover:border-accent"}`}
+                >
+                  {copy.purposes[purpose]}
+                </button>
+              </li>
+            ))}
+          </ul>
         </motion.section>
 
         {/* 관심 카테고리 */}
@@ -149,6 +187,35 @@ export function OnboardingForm({
                     }`}
                   >
                     {myCopy.categories[legacyCategories[0] ?? "phrase"]}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </motion.section>
+
+        <motion.section variants={item}>
+          <h2 className="font-bold">{copy.platformsTitle}</h2>
+          <p className="mt-1 text-sm text-muted">{copy.platformsBody}</p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {PLATFORMS.map((platform) => {
+              const active = preferredPlatforms.has(platform);
+              return (
+                <li key={platform}>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() =>
+                      setPreferredPlatforms((current) => {
+                        const next = new Set(current);
+                        if (active) next.delete(platform);
+                        else next.add(platform);
+                        return next;
+                      })
+                    }
+                    className={`inline-flex min-h-11 items-center rounded-full border px-4 text-base font-medium transition-colors ${active ? "border-accent bg-accent-soft text-accent" : "border-border bg-surface text-foreground hover:border-accent"}`}
+                  >
+                    {copy.platforms[platform]}
                   </button>
                 </li>
               );

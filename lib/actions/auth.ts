@@ -111,18 +111,32 @@ const CATEGORIES = [
   "comment",
   "challenge",
 ] as const;
+const USE_PURPOSES = ["creator", "brand", "global"] as const;
+const PLATFORMS = ["instagram", "tiktok", "x", "youtube"] as const;
+
+function parseOnboardingPreferences(formData: FormData) {
+  const rawPurpose = String(formData.get("use_purpose") ?? "");
+  return {
+    interests: formData
+      .getAll("interests")
+      .map(String)
+      .filter((value) => (CATEGORIES as readonly string[]).includes(value)),
+    age_group: (AGE_GROUPS as readonly string[]).includes(String(formData.get("age_group") ?? ""))
+      ? String(formData.get("age_group"))
+      : null,
+    use_purpose: (USE_PURPOSES as readonly string[]).includes(rawPurpose) ? rawPurpose : "creator",
+    preferred_platforms: formData
+      .getAll("preferred_platforms")
+      .map(String)
+      .filter((value) => (PLATFORMS as readonly string[]).includes(value)),
+  };
+}
 
 /** 온보딩 — 관심 카테고리(다중) + 연령대(선택) 저장. Skip 가능. */
 export async function completeOnboarding(formData: FormData): Promise<void> {
   const next = safeNext(formData.get("next"));
-  const interests = formData
-    .getAll("interests")
-    .map(String)
-    .filter((c) => (CATEGORIES as readonly string[]).includes(c));
-  const rawAge = String(formData.get("age_group") ?? "");
-  const age_group = (AGE_GROUPS as readonly string[]).includes(rawAge)
-    ? rawAge
-    : null;
+  const preferences = parseOnboardingPreferences(formData);
+  const nickname = String(formData.get("nickname") ?? "").trim();
 
   const supabase = await createClient();
   const {
@@ -130,10 +144,14 @@ export async function completeOnboarding(formData: FormData): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await supabase
+  const { error } = await supabase
     .from("profiles")
-    .update({ interests, age_group })
+    .update({
+      ...preferences,
+      ...(nickname.length >= 2 && nickname.length <= 20 ? { nickname } : {}),
+    })
     .eq("id", user.id);
+  if (error) throw error;
 
   redirect(next);
 }

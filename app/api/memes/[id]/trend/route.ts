@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
+import { buildTrendChangeSummaries } from "@/lib/trend/change-summary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +53,11 @@ export async function GET(
   }
 
   return NextResponse.json(
-    { locked: false, series: data ?? [] },
+    {
+      locked: false,
+      series: data ?? [],
+      summaries: buildTrendChangeSummaries(data ?? []),
+    },
     { headers: { "cache-control": "no-store" } }
   );
 }

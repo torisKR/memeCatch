@@ -6,6 +6,7 @@ import { toBcp47, type Locale } from "@/lib/i18n";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY, type PremiumCopy } from "@/lib/i18n-premium";
 import { localizedStaticPath } from "@/lib/i18n-routing";
+import type { TrendChangeSummary } from "@/lib/trend/change-summary";
 
 /**
  * Plus 전용 밈 트렌드 추이 패널.
@@ -25,7 +26,7 @@ type Point = {
 
 type Payload =
   | { locked: true; reason: "signed_out" | "not_premium" }
-  | { locked: false; series: Point[] };
+  | { locked: false; series: Point[]; summaries: TrendChangeSummary[] };
 
 type MetricKey = "trend_score" | "views" | "reactions";
 
@@ -41,7 +42,7 @@ export function trendPanelUpgradeHref(
   reason: "signed_out" | "not_premium",
   locale: Locale,
 ): string {
-  const pricingPath = localizedStaticPath("/pricing", locale);
+  const pricingPath = localizedStaticPath("/pricing?source=trend_30d", locale);
   return reason === "signed_out"
     ? `/login?next=${encodeURIComponent(pricingPath)}`
     : pricingPath;
@@ -119,6 +120,7 @@ export function MemeTrendPanel({ memeId }: { memeId: string }) {
       {data && !data.locked && (
         <TrendChart
           series={data.series}
+          summaries={data.summaries}
           metric={metric}
           onMetric={setMetric}
           copy={copy}
@@ -179,12 +181,14 @@ function LockedTeaser({
 
 function TrendChart({
   series,
+  summaries,
   metric,
   onMetric,
   copy,
   locale,
 }: {
   series: Point[];
+  summaries: TrendChangeSummary[];
   metric: MetricKey;
   onMetric: (m: MetricKey) => void;
   copy: PremiumCopy["trend"];
@@ -230,8 +234,54 @@ function TrendChart({
 
   return (
     <div className="mt-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {summaries.map((summary) => {
+          const reason = summary.direction === "up"
+            ? copy.observedUp
+            : summary.direction === "down"
+              ? copy.observedDown
+              : summary.direction === "flat"
+                ? copy.observedFlat
+                : copy.observedInsufficient;
+          const confidence = summary.confidence === "high"
+            ? copy.confidenceHigh
+            : summary.confidence === "medium"
+              ? copy.confidenceMedium
+              : summary.confidence === "low"
+                ? copy.confidenceLow
+                : copy.confidenceInsufficient;
+          return (
+            <section key={summary.days} className="rounded-xl border border-border bg-surface-2 p-3">
+              <h3 className="text-sm font-bold">{copy.windowSummary(summary.days)}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{reason}</p>
+              {summary.direction !== "insufficient" && summary.startScore !== null && summary.endScore !== null && (
+                <p className="mt-2 text-xs font-semibold text-accent-text">
+                  <span className="block">{copy.observedBasis}</span>
+                  {copy.observedEvidence(
+                    summary.startScore,
+                    summary.endScore,
+                    summary.views,
+                    summary.reactions,
+                    summary.saves,
+                  )}
+                </p>
+              )}
+              <ul className="mt-2 space-y-1 text-xs text-muted">
+                <li>{confidence}</li>
+                <li>{copy.sampleCoverage(summary.sampleCount, summary.days, summary.coveragePercent)}</li>
+                <li>
+                  {summary.lastObservedAt
+                    ? copy.lastObserved(formatDate(summary.lastObservedAt))
+                    : copy.lastObservedUnavailable}
+                </li>
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+
       {/* 지표 전환 */}
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {metrics.map((m) => (
           <button
             key={m.key}

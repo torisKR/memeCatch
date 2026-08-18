@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
 };
 
-const EFFECTIVE = "2026년 7월 18일";
+const EFFECTIVE = "2026년 8월 18일";
 
 /** 이용약관 — 커뮤니티·제보 서비스 기준 최소 필수 조항 */
 export default function TermsPage() {
@@ -41,18 +41,21 @@ export default function TermsPage() {
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
             <li>
               Plus는 관심사 맞춤 트렌드 피드와 무제한 저장 기능을 제공하는
-              <strong> 30일 이용권</strong>입니다. 가격과 제공 기능은 구매 화면에
-              표시합니다.
+              <strong> 10 USDT 상당의 30일 이용권</strong>입니다. 실제 주문 금액과
+              제공 기능은 구매 화면에 표시합니다.
             </li>
             <li>
               <strong>자동 갱신되지 않습니다.</strong> 결제 1회당 30일 이용
               기간이 부여되며, 기간이 끝나면 별도 해지 절차 없이 Plus 기능이
-              종료됩니다. 계속 이용하려면 만료 전후에 다시 결제해 연장합니다.
+              종료됩니다. 계속 이용하려면 만료 전후에 다시 결제해야 하며, 남은
+              기간이 있으면 그 뒤에 30일이 이어서 부여됩니다.
               정기 결제를 위한 결제수단 정보는 보관하지 않습니다.
             </li>
             <li>
-              결제는 Unifi Pay에서 스테이블코인으로 처리되며, 결제 완료 시
-              결제를 시작한 MemeCatch 계정에 이용 기간이 자동으로 연결됩니다.
+              결제는 Unifi Pay에서 Kaia 네트워크의 USDT로 처리되며, 서버에서
+              거래 상태·상점·금액·통화를 확인한 뒤 결제를 시작한 MemeCatch
+              계정에 이용 기간이 연결됩니다. 결제창 복귀만으로 권한이 생기지
+              않습니다.
             </li>
             <li>
               <strong>환불</strong>은 결제 대행사 정책상 자동 처리가 지원되지

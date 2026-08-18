@@ -26,4 +26,29 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).toContain("global-translation-title");
     expect(source).toContain("getAvailableTranslationLocales(meme.id)");
   });
+
+  it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {
+    const answerCard = source.indexOf("<AnswerCard meme={meme} saveMemeId={meme.id} />");
+    const shareButton = source.indexOf('<ShareButton path={path} title={meme.title} label="공유" />');
+    const representativeContent = source.indexOf("<MemeEmbed", answerCard);
+
+    expect(answerCard).toBeGreaterThan(-1);
+    expect(shareButton).toBeGreaterThan(answerCard);
+    expect(shareButton).toBeLessThan(representativeContent);
+    expect(answerCard).toBeLessThan(representativeContent);
+    expect(source.match(/saveMemeId=\{meme\.id\}/g)).toHaveLength(1);
+    expect(source.match(/<ShareButton path=\{path\}/g)).toHaveLength(1);
+  });
+
+  it("무료 뜻·유래·기본 안전성은 Plus 잠금 밖에 둔다", () => {
+    const answerCard = source.indexOf("<AnswerCard meme={meme}");
+    const description = source.indexOf("{meme.description && (");
+    const origin = source.indexOf("{meme.origin && (");
+    const useKit = source.indexOf("<MemeUseKit");
+
+    expect(answerCard).toBeGreaterThan(-1);
+    expect(description).toBeGreaterThan(answerCard);
+    expect(origin).toBeGreaterThan(description);
+    expect(useKit).toBeGreaterThan(origin);
+  });
 });

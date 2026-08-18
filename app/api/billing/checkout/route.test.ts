@@ -2,15 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getCurrentBillingUser: vi.fn(),
-  createUnifiPaymentIntent: vi.fn(),
+  attachUnifiPaymentLink: vi.fn(),
+  createBillingOrder: vi.fn(),
+  failBillingOrder: vi.fn(),
   buildRequestId: vi.fn(),
   createUnifiPaymentLink: vi.fn(),
   getUnifiPayConfig: vi.fn(),
-  toMinorUnits: vi.fn(),
 }));
 
 vi.mock("@/lib/billing/repository.server", () => ({
-  createUnifiPaymentIntent: (...args: unknown[]) => mocks.createUnifiPaymentIntent(...args),
+  attachUnifiPaymentLink: (...args: unknown[]) => mocks.attachUnifiPaymentLink(...args),
+  createBillingOrder: (...args: unknown[]) => mocks.createBillingOrder(...args),
+  failBillingOrder: (...args: unknown[]) => mocks.failBillingOrder(...args),
   getCurrentBillingUser: (...args: unknown[]) => mocks.getCurrentBillingUser(...args),
 }));
 
@@ -18,7 +21,9 @@ vi.mock("@/lib/billing/unifi-pay.server", () => ({
   buildRequestId: (...args: unknown[]) => mocks.buildRequestId(...args),
   createUnifiPaymentLink: (...args: unknown[]) => mocks.createUnifiPaymentLink(...args),
   getUnifiPayConfig: (...args: unknown[]) => mocks.getUnifiPayConfig(...args),
-  toMinorUnits: (...args: unknown[]) => mocks.toMinorUnits(...args),
+}));
+vi.mock("@/lib/growth/events.server", () => ({
+  growthSessionIdFromRequest: () => null,
 }));
 
 import { POST } from "./route";
@@ -32,7 +37,42 @@ function request(locale?: string): Request {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getCurrentBillingUser.mockResolvedValue(null);
+  mocks.buildRequestId.mockReturnValue("MC-user-1");
+  mocks.createBillingOrder.mockResolvedValue(undefined);
+  mocks.createUnifiPaymentLink.mockResolvedValue({
+    linkId: "link-1",
+    linkUrl: "https://pay.example.com/link-1",
+  });
+  mocks.attachUnifiPaymentLink.mockResolvedValue(undefined);
+  mocks.failBillingOrder.mockResolvedValue(undefined);
+  mocks.getUnifiPayConfig.mockReturnValue({ itemPrice: 10, orderCurrencyCode: "USD" });
 });
+
+describe("billing checkout order lifecycle", () => {
+  it("creates the pending order before requesting a provider link", async () => {
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+
+    const response = await POST(request("en"));
+
+    expect(response.status).toBe(303);
+    expect(mocks.createBillingOrder).toHaveBeenCalledWith("MC-user-1", null);
+    expect(mocks.createBillingOrder.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.createUnifiPaymentLink.mock.invocationCallOrder[0],
+    );
+    expect(mocks.attachUnifiPaymentLink).toHaveBeenCalledWith("MC-user-1", "link-1");
+  });
+
+  it("marks the pending order failed when link issuance fails", async () => {
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+    mocks.createUnifiPaymentLink.mockRejectedValue(new Error("provider unavailable"));
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(mocks.failBillingOrder).toHaveBeenCalledWith("MC-user-1");
+  });
+});
+
 
 describe("billing checkout locale handoff", () => {
   it.each([

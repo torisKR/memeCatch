@@ -9,11 +9,12 @@ import { track } from "@/lib/analytics";
 import { GLOBAL_DAILY_COPY } from "@/lib/global-daily-challenge-copy";
 import { isGlobalDailyLocale } from "@/lib/global-daily-challenge";
 import { localizedStaticPath } from "@/lib/i18n-routing";
-import { EXPIRY_WARNING_DAYS, daysUntilExpiry } from "@/lib/billing/entitlements";
+import { expiryReminderDay } from "@/lib/billing/entitlements";
 import { PremiumGate } from "@/components/premium/premium-gate";
 import { CONTACT_EMAIL } from "@/lib/site";
 import type { UnifiPaymentHistoryItem } from "@/lib/billing/repository.server";
 import type { PremiumPrimaryMission } from "@/lib/premium-primary-mission";
+import { WebPushOptIn } from "@/components/premium/web-push-opt-in";
 
 
 export function PremiumDashboardContent({
@@ -66,7 +67,7 @@ export function PremiumDashboardContent({
   const accessConfirmedThrough = currentPeriodEnd
     ? new Intl.DateTimeFormat(toBcp47(locale), { dateStyle: "long" }).format(new Date(currentPeriodEnd))
     : null;
-  const remainingDays = daysUntilExpiry(currentPeriodEnd);
+  const reminderDay = expiryReminderDay(currentPeriodEnd);
   const unavailablePrimaryMission = (
     <section
       data-premium-primary-mission="unavailable"
@@ -157,6 +158,19 @@ export function PremiumDashboardContent({
                 {weeklyBrief}
                 {plusActionQueue}
                 {savedReuseRadar}
+                <WebPushOptIn />
+                <section className="rounded-2xl border border-border bg-surface p-5">
+                  <h2 className="text-base font-bold">브랜드 워크스페이스</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    브랜드 기준, 금지 표현, 밈 적합도와 승인 기록을 관리합니다.
+                  </p>
+                  <Link
+                    href="/premium/brand-workspace"
+                    className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  >
+                    워크스페이스 열기
+                  </Link>
+                </section>
                 {savedContextWatch ?? (
                   <section
                     className="rounded-2xl border border-border bg-surface p-5"
@@ -193,12 +207,13 @@ export function PremiumDashboardContent({
               )}
 
               {/* 자동 갱신이 없으므로 만료가 임박하면 직접 연장하도록 알린다. */}
-              {remainingDays !== null && remainingDays <= EXPIRY_WARNING_DAYS && (
+              {reminderDay !== null && (
                 <p
                   role="status"
+                  data-expiry-reminder-day={reminderDay}
                   className="mt-3 rounded-xl bg-safety-yellow-bg px-3 py-2 text-sm leading-relaxed text-safety-yellow"
                 >
-                  {copy.dashboard.expiringSoon(remainingDays)}
+                  {copy.dashboard.expiringSoon(reminderDay)}
                 </p>
               )}
 
@@ -207,7 +222,9 @@ export function PremiumDashboardContent({
                 action="/api/billing/checkout"
                 method="post"
                 className="mt-4"
-                onSubmit={() => track("plus_checkout_started", { locale, surface: "dashboard_extend" })}
+                onSubmit={() => {
+                  track("plus_checkout_started", { locale, surface: "dashboard_extend" });
+                }}
               >
                 <input type="hidden" name="locale" value={locale} />
                 <button

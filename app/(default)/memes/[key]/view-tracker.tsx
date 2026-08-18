@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { track } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 const SESSION_KEY = "mc_session_hash";
@@ -12,7 +13,14 @@ const RECENT_MAX = 6;
  * Wave 1(D2): 최근 본 밈 id를 localStorage에 기록(최신순, 최대 6) → 홈 "이어보기" 줄.
  */
 export function ViewTracker({ memeId }: { memeId: string }) {
+  const trackedMemeIds = useRef(new Set<string>());
+
   useEffect(() => {
+    if (!trackedMemeIds.current.has(memeId)) {
+      trackedMemeIds.current.add(memeId);
+      track("meme_view", { meme_id: memeId });
+    }
+
     try {
       let hash = window.localStorage.getItem(SESSION_KEY);
       if (!hash) {

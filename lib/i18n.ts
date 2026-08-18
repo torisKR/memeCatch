@@ -153,7 +153,7 @@ const CORE_MESSAGES = {
     savedMemes: "저장한 밈", logout: "로그아웃", greeting: "님, 어서 오세요", accountMenu: "내 계정",
     random: "아무 밈이나 보기", findingMeme: "밈을 찾고 있어요", language: "언어 설정", languageMenu: "언어 선택",
     footerNav: "사이트 정보", about: "밈캐치 소개", editorial: "편집 원칙", privacy: "개인정보처리방침", terms: "이용약관",
-    rankings: "랭킹",
+    rankings: "밈캐치 내 급상승",
     news: "세대별 밈 소식", products: "밈 상품", donate: "후원하기", legalSummary: "운영·저작권 안내",
     support: "고객센터",
     donateCardTitle: "이 사전, 도움이 되셨나요?",

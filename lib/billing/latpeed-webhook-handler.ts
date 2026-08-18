@@ -14,6 +14,7 @@ type Dependencies = {
 };
 
 const MAX_BODY_BYTES = 64 * 1024;
+const LATPEED_SALES_CLOSED_AT = Date.parse("2026-08-18T00:00:00.000Z");
 
 function json(body: unknown, status: number) {
   return Response.json(body, {
@@ -66,11 +67,18 @@ export function createLatpeedWebhookHandler({
     if (expectedProductId && event.productId !== expectedProductId) {
       return json({ ok: false, error: "unexpected_product" }, 403);
     }
+    const occurredAt = Date.parse(event.occurredAt);
+    if (event.status === "active" && occurredAt >= LATPEED_SALES_CLOSED_AT) {
+      return json({ ok: false, error: "sales_closed" }, 410);
+    }
+    const expectedAmounts = expectedAmount === 3_900
+      ? [3_900, 5_900]
+      : [expectedAmount];
     if (
-      (event.status === "active" && event.amount !== expectedAmount) ||
+      (event.status === "active" && !expectedAmounts.includes(event.amount ?? -1)) ||
       (event.status === "canceled" &&
         event.amount !== null &&
-        event.amount !== expectedAmount)
+        !expectedAmounts.includes(event.amount))
     ) {
       return json({ ok: false, error: "unexpected_amount" }, 400);
     }

@@ -42,10 +42,15 @@ export function CheckoutReturnStatus({
     initiallyPremium ? "confirmed" : "confirming",
   );
   const triesRef = useRef(0);
+  const paymentConfirmedTrackedRef = useRef(false);
 
   useEffect(() => {
     if (!fromCheckout) return;
     track("plus_checkout_returned", { locale, state: phase });
+    if (phase === "confirmed" && !paymentConfirmedTrackedRef.current) {
+      paymentConfirmedTrackedRef.current = true;
+      track("payment_confirmed", { locale });
+    }
   }, [fromCheckout, locale, phase]);
 
   useEffect(() => {

@@ -22,12 +22,16 @@
  *          | translation_priority_requested(locale, result)
  *          | translation_ready_opened(locale)
  *          | use_kit_copied(format)
+ *          | meme_view(meme_id) | follow_click(meme_id) | copy(format)
+ *          | paywall_view | checkout_start | payment_confirmed(locale) | renewal(locale, surface)
  *          | plus_pricing_view(locale, surface)
  *          | plus_checkout_started(locale, surface)
  *          | plus_checkout_returned(locale, state)
  *          | plus_one_cut_ready(locale, count, entry_source?)
  *          | plus_one_cut_prepared(locale, count, entry_source?)
  *          | plus_receipt_saved(locale, channel, artifact_kind, already_recorded, entry_source?)
+ *          | plus_weekly_brief_opened(brief_id, item_count)
+ *          | plus_weekly_brief_clicked(brief_id, position, source)
  */
 type GtagEvent =
   | "next_meme_click"
@@ -60,12 +64,60 @@ type GtagEvent =
   | "translation_priority_requested"
   | "translation_ready_opened"
   | "use_kit_copied"
+  | "meme_view"
+  | "follow_click"
+  | "copy"
+  | "paywall_view"
+  | "checkout_start"
+  | "payment_confirmed"
+  | "renewal"
   | "plus_pricing_view"
   | "plus_checkout_started"
   | "plus_checkout_returned"
   | "plus_one_cut_ready"
   | "plus_one_cut_prepared"
-  | "plus_receipt_saved";
+  | "plus_receipt_saved"
+  | "plus_weekly_brief_opened"
+  | "plus_weekly_brief_clicked";
+
+const DURABLE_GROWTH_EVENTS = new Set<GtagEvent>([
+  "meme_view",
+  "follow_click",
+  "copy",
+  "paywall_view",
+  "share_click",
+  "quiz_start",
+  "quiz_complete",
+  "traffic_source",
+  "plus_weekly_brief_opened",
+  "plus_weekly_brief_clicked",
+]);
+
+function sendDurableGrowthEvent(event: GtagEvent, params: Record<string, string | number>) {
+  if (typeof window === "undefined" || !DURABLE_GROWTH_EVENTS.has(event)) return;
+  try {
+    const key = "memecatch:growth-session:v1";
+    const stored = window.sessionStorage.getItem(key);
+    const sessionId = stored || crypto.randomUUID();
+    if (!stored) window.sessionStorage.setItem(key, sessionId);
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `mc_growth_session=${sessionId}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
+    const payload = JSON.stringify({
+      eventName: event,
+      path: window.location.pathname,
+      params,
+    });
+    const body = new Blob([payload], { type: "application/json" });
+    if (navigator.sendBeacon?.("/api/analytics/events", body)) return;
+    void fetch("/api/analytics/events", {
+      method: "POST",
+      body: payload,
+      keepalive: true,
+      headers: { "content-type": "application/json" },
+    }).catch(() => undefined);
+  } catch {
+  }
+}
 
 declare global {
   interface Window {
@@ -74,11 +126,13 @@ declare global {
 }
 
 export function track(event: GtagEvent, params?: Record<string, string | number>) {
+  const eventParams = params ?? {};
   try {
-    window.gtag?.("event", event, params ?? {});
+    window.gtag?.("event", event, eventParams);
   } catch {
     /* 분석 실패가 UX를 깨면 안 됨 */
   }
+  sendDurableGrowthEvent(event, eventParams);
 }
 
 /**

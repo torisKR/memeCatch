@@ -1,13 +1,10 @@
-import { createHash } from "node:crypto";
 import { processUnifiPaymentEvent } from "@/lib/billing/repository.server";
 import {
   getUnifiPayConfig,
   getUnifiPayTransaction,
   isExpectedUnifiPayTransaction,
-  mapUnifiPayStatus,
   parseLinkIdFromOrderId,
   parseUnifiPayWebhookBody,
-  toMinorUnits,
 } from "@/lib/billing/unifi-pay.server";
 
 export const runtime = "nodejs";
@@ -66,20 +63,21 @@ export async function POST(request: Request) {
       return json({ ok: true, ignored: true, reason: "order_mismatch" }, 200);
     }
 
-    const status = mapUnifiPayStatus(tx.status);
+    const providerStatus = tx.status.toUpperCase();
     // CREATED/PENDING — 아직 결과가 아니다. 재시도는 무의미하므로 200.
-    if (!status) return json({ ok: true, pending: tx.status }, 200);
+    if (
+      providerStatus !== "CONFIRMED" &&
+      providerStatus !== "FAILED" &&
+      providerStatus !== "CANCELED"
+    ) {
+      return json({ ok: true, pending: tx.status }, 200);
+    }
+    const status = providerStatus === "CONFIRMED" ? "active" : "canceled";
 
     await processUnifiPaymentEvent({
-      // 같은 거래의 같은 상태가 재전송돼도 한 번만 반영되도록 멱등 키를 만든다.
-      // linkId(인증 유래)를 포함해, 같은 거래가 다른 귀속으로 두 번 반영되는
-      // 경로를 원천 차단한다.
-      eventKey: createHash("sha256")
-        .update(`unifi-pay:${tx.transactionId}:${tx.status}:${linkId}`)
-        .digest("hex"),
-      paymentId: linkId,
-      status,
-      amount: tx.orderAmount === null ? null : toMinorUnits(tx.orderAmount),
+      providerLinkId: linkId,
+      transactionId: tx.transactionId,
+      status: providerStatus,
       occurredAt: new Date().toISOString(),
       payload: {
         provider: "unifi-pay",
@@ -89,6 +87,7 @@ export async function POST(request: Request) {
         providerStatus: tx.status,
         orderAmount: tx.orderAmount,
         orderCurrencyCode: tx.orderCurrencyCode,
+        payCurrencyCode: tx.payCurrencyCode,
       },
     });
 

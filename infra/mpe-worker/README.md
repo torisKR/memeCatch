@@ -77,8 +77,9 @@ Do not deploy the runtime stack until all checks below pass:
 6. Select at least two public subnets in different Availability Zones. Each must
    route `0.0.0.0/0` through an internet gateway because the service enables a
    public IP and has no NAT or VPC endpoint dependency.
-7. Confirm the OpenRouter account has sufficient balance for the configured STT
-   model and that Ox Alpha capacity is acceptable for production traffic.
+7. Confirm Ox Alpha image capacity is acceptable for production traffic. The
+   worker pins `stealth/ox-alpha` and rejects model overrides. It uses no
+   separate STT model; videos are analyzed from scene frames.
 
 ## Deploy the non-running runtime
 
@@ -107,6 +108,18 @@ aws cloudformation deploy \
 
 Review the task definition, service events, network configuration, secret ARN
 references, and log configuration while it is still at zero tasks.
+
+Before applying `20260826010000_mpe_ox_alpha_only.sql`, drain the legacy worker
+in this order:
+
+1. Set the ECS service `DesiredCount` to `0` and verify both desired and running
+   task counts are `0`.
+2. Query `processing_jobs` with `job_type = 'stt' and status = 'running'` and
+   verify the result count is `0`.
+3. Apply the migration. It fails with `running_stt_jobs_must_be_drained` if an
+   STT lease is still running, and must not be bypassed.
+4. Verify legacy STT segments were removed and affected candidates returned to
+   `FACT_CHECKING` before starting the Ox Alpha-only worker.
 
 ## Start or update the worker
 

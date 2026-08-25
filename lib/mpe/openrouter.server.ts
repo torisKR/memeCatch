@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const DEFAULT_MPE_MODEL = "stealth/ox-alpha";
-export const DEFAULT_MPE_TRANSCRIPTION_MODEL = "qwen/qwen3-asr-0.6b";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
 type JsonRecord = Record<string, unknown>;
@@ -39,11 +38,11 @@ export type MediaTextSegment = {
 };
 
 export function getMpeVisionModel() {
-  return process.env.OPENROUTER_MPE_MODEL?.trim() || DEFAULT_MPE_MODEL;
-}
-
-export function getMpeTranscriptionModel() {
-  return process.env.OPENROUTER_MPE_TRANSCRIPTION_MODEL?.trim() || DEFAULT_MPE_TRANSCRIPTION_MODEL;
+  const configured = process.env.OPENROUTER_MPE_MODEL?.trim();
+  if (configured && configured !== DEFAULT_MPE_MODEL) {
+    throw new Error(`OPENROUTER_MPE_MODEL must be ${DEFAULT_MPE_MODEL}`);
+  }
+  return DEFAULT_MPE_MODEL;
 }
 
 export function isOpenRouterConfigured() {
@@ -257,41 +256,4 @@ export async function requestOpenRouterStructured<T>(input: {
     ],
   }, "openrouter_structured_failed");
   return parseJsonObject(content, "openrouter_structured_invalid") as T;
-}
-
-function audioFormat(mimeType: string, filename: string) {
-  if (mimeType === "audio/wav" || /\.wav$/i.test(filename)) return "wav";
-  if (mimeType === "audio/mpeg" || /\.mp3$/i.test(filename)) return "mp3";
-  if (mimeType === "audio/webm" || /\.webm$/i.test(filename)) return "webm";
-  return "wav";
-}
-
-export async function transcribeAudioChunk(input: {
-  bytes: Uint8Array;
-  mimeType: string;
-  filename: string;
-  startMs: number;
-  endMs: number;
-}): Promise<MediaTextSegment[]> {
-  if (input.bytes.length === 0) return [];
-  const payload = await openRouterJson("/audio/transcriptions", {
-    model: getMpeTranscriptionModel(),
-    input_audio: {
-      data: Buffer.from(input.bytes).toString("base64"),
-      format: audioFormat(input.mimeType, input.filename),
-    },
-  }, "openrouter_transcription_failed", 120_000);
-  const record = asRecord(payload);
-  const text = typeof record?.text === "string" ? record.text.trim() : "";
-  if (!text) return [];
-  return [{
-    origin: "asr",
-    startMs: input.startMs,
-    endMs: input.endMs,
-    rawText: text,
-    normalizedText: text.normalize("NFKC").replace(/\s+/g, " ").trim(),
-    language: typeof record?.language === "string" ? record.language : null,
-    confidence: null,
-    boundingBox: null,
-  }];
 }

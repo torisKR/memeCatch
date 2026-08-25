@@ -7,6 +7,11 @@ const sql = readFileSync(
   "utf8",
 );
 
+const oxAlphaSql = readFileSync(
+  join(process.cwd(), "supabase/migrations/20260826010000_mpe_ox_alpha_only.sql"),
+  "utf8",
+);
+
 describe("MPE publish projection contract", () => {
   it("keeps projection internal and reachable only from the operator review RPC", () => {
     expect(sql).toMatch(
@@ -81,5 +86,51 @@ describe("MPE publish projection contract", () => {
     expect(sql).toMatch(/not exists \([\s\S]*from public\.meme_sources as existing[\s\S]*existing\.source_url = source\.canonical_url/);
     expect(sql).toMatch(/not exists \([\s\S]*from public\.meme_claims as existing[\s\S]*existing\.claim_text = evidence\.claim_text/);
     expect(sql).toMatch(/where candidate\.id = p_candidate_id[\s\S]*for update/);
+  });
+});
+
+describe("MPE Ox Alpha-only publish projection contract", () => {
+  it("accepts disabled audio STT only behind completed provider-backed Ox Alpha scene analysis", () => {
+    const visualGate = /job\.output_json = jsonb_build_object\([\s\S]*?'reason', 'audio_stt_disabled',[\s\S]*?'provider', 'openrouter',[\s\S]*?'model', 'stealth\/ox-alpha',[\s\S]*?'providerBacked', false,[\s\S]*?'segmentsWritten', 0,[\s\S]*?'audioDetected', true[\s\S]*?scene_job\.job_type = 'scene_frames'[\s\S]*?scene_job\.status = 'completed'[\s\S]*?scene_job\.output_json ->> 'provider' = 'openrouter'[\s\S]*?scene_job\.output_json ->> 'model' = 'stealth\/ox-alpha'[\s\S]*?scene_job\.output_json @> '\{"providerBacked":true\}'::jsonb[\s\S]*?jsonb_typeof\(scene_job\.output_json -> 'segmentsWritten'\) = 'number'/g;
+    expect(oxAlphaSql.match(visualGate)).toHaveLength(2);
+    expect(oxAlphaSql.match(/scene_job\.processor_version = '1\.1\.0'/g)).toHaveLength(2);
+    expect(oxAlphaSql.match(/inspect_job\.output_json -> 'hasAudio' = 'true'::jsonb/g)).toHaveLength(4);
+  });
+
+  it("never accepts completed STT or legacy scene-frame processors for publication", () => {
+    expect(oxAlphaSql).toMatch(
+      /job\.status = 'completed'[\s\S]*required\.job_type <> 'stt'[\s\S]*job\.processor_version = '1\.1\.0'/,
+    );
+    expect(oxAlphaSql).not.toContain('{"providerBacked":true,"audioDetected":true}');
+    expect(oxAlphaSql).not.toMatch(
+      /job\.job_type = 'stt'[\s\S]*job\.status = 'completed'[\s\S]*nullif\(btrim\(job\.output_json ->> 'provider'\)/,
+    );
+  });
+
+  it("rejects legacy STT claim evidence and excludes it from public claim projection", () => {
+    expect(oxAlphaSql).toMatch(
+      /join public\.text_segments as segment on segment\.id = evidence\.text_segment_id[\s\S]*segment\.origin = 'STT'[\s\S]*message = 'stt_evidence_not_publishable'/,
+    );
+    expect(oxAlphaSql).toMatch(
+      /insert into public\.meme_claims[\s\S]*where evidence\.candidate_id = p_candidate_id[\s\S]*not exists \([\s\S]*segment\.id = evidence\.text_segment_id[\s\S]*segment\.origin = 'STT'/,
+    );
+  });
+
+  it("retains FFmpeg-inspected no-audio publication support", () => {
+    expect(oxAlphaSql).toMatch(
+      /job\.status = 'skipped'[\s\S]*job\.output_json = jsonb_build_object\('reason', 'no_audio'\)[\s\S]*or job\.output_json = jsonb_build_object\([\s\S]*'reason', 'no_audio',[\s\S]*'segmentsWritten', 0,[\s\S]*'audioDetected', false[\s\S]*inspect_job\.job_type = 'inspect'[\s\S]*inspect_job\.status = 'completed'[\s\S]*inspect_job\.output_json -> 'hasAudio' = 'false'::jsonb/,
+    );
+  });
+
+  it("keeps the projection internal with its pinned search path", () => {
+    expect(oxAlphaSql).toMatch(
+      /create or replace function public\.project_mpe_candidate_publication\([\s\S]*security definer[\s\S]*set search_path = ''/,
+    );
+    expect(oxAlphaSql).toMatch(
+      /revoke all on function public\.project_mpe_candidate_publication\(uuid, text\)[\s\S]*from public, anon, authenticated, service_role/,
+    );
+    expect(oxAlphaSql).not.toMatch(
+      /grant execute on function public\.project_mpe_candidate_publication/,
+    );
   });
 });

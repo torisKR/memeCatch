@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   recognizeImageText,
   requestOpenRouterStructured,
-  transcribeAudioChunk,
 } from "./openrouter.server";
 
 function chatResponse(content: unknown, status = 200) {
@@ -65,7 +64,7 @@ describe("MPE OpenRouter adapter", () => {
       .rejects.toThrow("openrouter_ocr_invalid");
   });
 
-  it("requests structured drafts with the schema name and request-time model override", async () => {
+  it("rejects any structured-draft model other than Ox Alpha", async () => {
     vi.stubEnv("OPENROUTER_MPE_MODEL", "custom/structured-model");
     vi.stubEnv("OPENROUTER_BASE_URL", "https://router.test/v1/");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(chatResponse({ claims: [] }));
@@ -76,40 +75,8 @@ describe("MPE OpenRouter adapter", () => {
       instructions: "Use evidence only.",
       input: JSON.stringify({ evidence: [] }),
       maxOutputTokens: 123,
-    })).resolves.toEqual({ claims: [] });
-
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://router.test/v1/chat/completions");
-    const body = JSON.parse(String(init?.body));
-    expect(body).toMatchObject({
-      model: "custom/structured-model",
-      response_format: { type: "json_object" },
-      max_tokens: 123,
-    });
-    expect(body.messages[0].content).toContain("mpe_evidence_draft");
-    expect(body.messages[0].content).toContain('"required":["claims"]');
-  });
-
-  it("posts base64 audio JSON with default and overridden transcription models", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
-      JSON.stringify({ text: "  안녕   밈캐치 ", language: "ko" }),
-      { status: 200, headers: { "content-type": "application/json" } },
-    ));
-    await expect(transcribeAudioChunk({
-      bytes: Uint8Array.from([1, 2, 3]), mimeType: "audio/wav", filename: "chunk.wav", startMs: 0, endMs: 30_000,
-    })).resolves.toMatchObject([{ origin: "asr", normalizedText: "안녕 밈캐치", endMs: 30_000 }]);
-    let body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
-    expect(body).toEqual({
-      model: "qwen/qwen3-asr-0.6b",
-      input_audio: { data: "AQID", format: "wav" },
-    });
-
-    vi.stubEnv("OPENROUTER_MPE_TRANSCRIPTION_MODEL", "custom/asr");
-    await transcribeAudioChunk({
-      bytes: Uint8Array.from([4]), mimeType: "audio/mpeg", filename: "chunk.mp3", startMs: 0, endMs: 1,
-    });
-    body = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
-    expect(body).toEqual({ model: "custom/asr", input_audio: { data: "BA==", format: "mp3" } });
+    })).rejects.toThrow("OPENROUTER_MPE_MODEL must be stealth/ox-alpha");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("retries Chat Completions up to three attempts after shared-pool rate limits", async () => {
@@ -125,20 +92,6 @@ describe("MPE OpenRouter adapter", () => {
       input: "{}",
     })).resolves.toEqual({ claims: [] });
     expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  it("uses the same bounded retry for audio transcription", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(rateLimitResponse())
-      .mockResolvedValueOnce(new Response(JSON.stringify({ text: "retry success" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }));
-
-    await expect(transcribeAudioChunk({
-      bytes: Uint8Array.from([1]), mimeType: "audio/wav", filename: "chunk.wav", startMs: 0, endMs: 1,
-    })).resolves.toMatchObject([{ rawText: "retry success" }]);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it.each([502, 503, 504] as const)("retries transient HTTP %s responses", async (status) => {
@@ -231,8 +184,7 @@ describe("MPE OpenRouter adapter", () => {
 
     vi.stubEnv("OPENROUTER_API_KEY", "test-key");
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => rateLimitResponse({ error: "denied" }));
-    await expect(transcribeAudioChunk({
-      bytes: Uint8Array.from([1]), mimeType: "audio/wav", filename: "chunk.wav", startMs: 0, endMs: 1,
-    })).rejects.toThrow("openrouter_transcription_failed:429");
+    await expect(recognizeImageText({ bytes: Uint8Array.from([1]), mimeType: "image/png", frameMs: 0 }))
+      .rejects.toThrow("openrouter_ocr_failed:429");
   });
 });

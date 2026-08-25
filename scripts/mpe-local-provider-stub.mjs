@@ -19,12 +19,6 @@ createServer(async (request, response) => {
     return;
   }
 
-  if (request.url === "/v1/audio/transcriptions") {
-    await body(request);
-    json(response, { text: "로컬 음성 문구", language: "ko" });
-    return;
-  }
-
   if (request.url !== "/v1/chat/completions") {
     response.writeHead(404).end();
     return;

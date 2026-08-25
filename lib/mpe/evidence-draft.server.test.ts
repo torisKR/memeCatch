@@ -6,6 +6,7 @@ import {
   ensureEvidenceDraftProvider,
   prioritizeDraftEvidence,
   validateEvidenceDraft,
+  withoutSttDraftEvidence,
 } from "./evidence-draft.server";
 
 const evidence = [{
@@ -39,7 +40,7 @@ describe("MPE evidence draft", () => {
     ])).toThrow("invalid_claim_evidence");
   });
 
-  it("places OCR/STT evidence before ingestion metadata for provider citation", () => {
+  it("places visual text evidence before ingestion metadata for provider citation", () => {
     const ingestion = {
       id: "ingestion-1",
       kind: "ingestion" as const,
@@ -56,6 +57,18 @@ describe("MPE evidence draft", () => {
       confidence: 0.9,
       needsReview: true,
     }], ordered)).not.toThrow();
+  });
+
+  it("excludes and rejects legacy STT evidence before provider input or persistence", () => {
+    const legacy = { id: "qwen-segment", kind: "text_segment" as const, text: "구형 Qwen 전사", origin: "STT" };
+    expect(withoutSttDraftEvidence([...evidence, legacy])).toEqual(evidence);
+    expect(() => validateEvidenceDraft([{
+      field: "DEFINITION",
+      text: "구형 전사 기반 주장",
+      evidenceIds: [legacy.id],
+      confidence: 0.9,
+      needsReview: true,
+    }], [legacy])).toThrow("invalid_claim_evidence");
   });
 
   it("does not turn MIME or SHA metadata into an arbitrary title claim", () => {

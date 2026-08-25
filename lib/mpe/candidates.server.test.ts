@@ -6,6 +6,7 @@ import {
   MpeCandidateError,
   rankCandidateMatches,
   validateCandidateJobs,
+  withoutSttSegments,
 } from "./candidates.server";
 
 const source = {
@@ -17,6 +18,14 @@ const source = {
 };
 
 describe("MPE candidate match repository scoring", () => {
+  it("excludes legacy STT text from candidate matching inputs", () => {
+    expect(withoutSttSegments([
+      { origin: "OCR", raw_text: "화면 문구" },
+      { origin: "STT", raw_text: "구형 Qwen 전사" },
+      { origin: "stt", raw_text: "소문자 구형 전사" },
+    ])).toEqual([{ origin: "OCR", raw_text: "화면 문구" }]);
+  });
+
   it("allows candidate creation only after every required job is terminal and none failed", () => {
     expect(() => validateCandidateJobs("image", [
       { job_type: "inspect", status: "completed" },
@@ -26,9 +35,70 @@ describe("MPE candidate match repository scoring", () => {
     expect(() => validateCandidateJobs("video", [
       { job_type: "inspect", status: "completed", output_json: { hasAudio: false } },
       { job_type: "fingerprint", status: "completed" },
-      { job_type: "scene_frames", status: "completed" },
+      { job_type: "scene_frames", status: "completed", processor_version: "1.1.0", output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true, segmentsWritten: 0,
+      } },
       { job_type: "stt", status: "skipped", output_json: { reason: "no_audio" } },
     ])).not.toThrow();
+    expect(() => validateCandidateJobs("video", [
+      { job_type: "inspect", status: "completed", output_json: { hasAudio: true } },
+      { job_type: "fingerprint", status: "completed" },
+      { job_type: "scene_frames", status: "completed", processor_version: "1.1.0", output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true, segmentsWritten: 1,
+      } },
+      { job_type: "stt", status: "skipped", output_json: {
+        reason: "audio_stt_disabled", provider: "openrouter", model: "stealth/ox-alpha",
+        providerBacked: false, segmentsWritten: 0, audioDetected: true,
+      } },
+    ])).not.toThrow();
+    expect(() => validateCandidateJobs("video", [
+      { job_type: "inspect", status: "completed", output_json: { hasAudio: true } },
+      { job_type: "fingerprint", status: "completed" },
+      { job_type: "scene_frames", status: "completed", processor_version: "1.1.0", output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true, segmentsWritten: 1,
+      } },
+      { job_type: "stt", status: "completed", output_json: {
+        provider: "openrouter", model: "another/asr", providerBacked: true, segmentsWritten: 1, audioDetected: true,
+      } },
+    ])).toThrowError(new MpeCandidateError("processing_jobs_not_terminal", 409));
+    expect(() => validateCandidateJobs("video", [
+      { job_type: "inspect", status: "completed", output_json: { hasAudio: false } },
+      { job_type: "fingerprint", status: "completed" },
+      { job_type: "scene_frames", status: "completed", processor_version: "1.0.0", output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true, segmentsWritten: 1,
+      } },
+      { job_type: "stt", status: "skipped", output_json: {
+        reason: "no_audio", segmentsWritten: 0, audioDetected: false,
+      } },
+    ])).toThrowError(new MpeCandidateError("processing_jobs_not_terminal", 409));
+    expect(() => validateCandidateJobs("video", [
+      { job_type: "inspect", status: "completed", output_json: { hasAudio: false } },
+      { job_type: "fingerprint", status: "completed" },
+      { job_type: "scene_frames", status: "completed", processor_version: "1.1.0", output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true, segmentsWritten: 1,
+      } },
+      { job_type: "stt", status: "skipped", output_json: {
+        reason: "audio_stt_disabled", provider: "openrouter", model: "stealth/ox-alpha",
+        providerBacked: false, segmentsWritten: 0, audioDetected: true,
+      } },
+    ])).toThrowError(new MpeCandidateError("processing_jobs_not_terminal", 409));
+    expect(() => validateCandidateJobs("video", [
+      { job_type: "inspect", status: "completed", output_json: { hasAudio: true } },
+      { job_type: "fingerprint", status: "completed" },
+      { job_type: "scene_frames", status: "completed", processor_version: "1.1.0", output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true, segmentsWritten: 1,
+      } },
+      { job_type: "stt", status: "skipped", output_json: {
+        reason: "audio_stt_disabled", provider: "openrouter", model: "stealth/ox-alpha",
+        providerBacked: false, segmentsWritten: 0, audioDetected: true, extra: true,
+      } },
+    ])).toThrowError(new MpeCandidateError("processing_jobs_not_terminal", 409));
+    expect(() => validateCandidateJobs("video", [
+      { job_type: "inspect", status: "completed", output_json: { hasAudio: true } },
+      { job_type: "fingerprint", status: "completed" },
+      { job_type: "scene_frames", status: "completed" },
+      { job_type: "stt", status: "skipped", output_json: { reason: "audio_stt_disabled" } },
+    ])).toThrowError(new MpeCandidateError("processing_jobs_not_terminal", 409));
     expect(() => validateCandidateJobs("video", [
       { job_type: "inspect", status: "completed", output_json: { hasAudio: false } },
       { job_type: "fingerprint", status: "completed" },

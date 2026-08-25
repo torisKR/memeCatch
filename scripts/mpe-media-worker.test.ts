@@ -193,7 +193,7 @@ describe("MPE FFmpeg worker", () => {
     expect(rpcCalls[1][1]).toMatchObject({ p_status: "completed" });
   });
 
-  it("skips STT only for inspected no-audio media with the required provider marker", async () => {
+  it("skips STT for inspected no-audio media", async () => {
     const previousKey = process.env.OPENROUTER_API_KEY;
     process.env.OPENROUTER_API_KEY = "test-key";
     const source = await readFile(silentVideoPath);
@@ -224,15 +224,60 @@ describe("MPE FFmpeg worker", () => {
     }
     expect(rpcCalls[1]).toEqual(["complete_processing_job", expect.objectContaining({
       p_lease_token: "lease-stt", p_status: "skipped",
-      p_output_json: { reason: "no_audio" },
+      p_output_json: { reason: "no_audio", segmentsWritten: 0, audioDetected: false },
+    })]);
+  });
+
+  it("skips audio STT in Ox Alpha-only mode without a transcription request", async () => {
+    const source = await readFile(videoPath);
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const rpcCalls: Array<[string, Record<string, unknown>]> = [];
+    const client = {
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        rpcCalls.push([name, args]);
+        if (name === "claim_processing_job") return { data: [{ id: "stt-visual-1", ingestion_id: "ing-1", job_type: "stt", lease_token: "lease-stt-visual" }], error: null };
+        return { data: {}, error: null };
+      },
+      from: () => {
+        const query = {
+          select: () => query,
+          eq: () => query,
+          single: async () => ({ data: {
+            id: "ing-1", temporary_storage_key: "user-1/object", mime_type: "video/mp4",
+          }, error: null }),
+        };
+        return query;
+      },
+      storage: { from: () => ({ download: async () => ({ data: new Blob([source]), error: null }) }) },
+    };
+    try {
+      await expect(worker.processOneJob(client)).resolves.toBe(true);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      fetchMock.mockRestore();
+    }
+    expect(rpcCalls[1]).toEqual(["complete_processing_job", expect.objectContaining({
+      p_lease_token: "lease-stt-visual", p_status: "skipped",
+      p_output_json: {
+        reason: "audio_stt_disabled", provider: "openrouter", model: "stealth/ox-alpha",
+        providerBacked: false, segmentsWritten: 0, audioDetected: true,
+      },
     })]);
   });
 
   it("stores scene artifacts under the private user prefix with a unified DTO", async () => {
+    const previousKey = process.env.OPENROUTER_API_KEY;
+    process.env.OPENROUTER_API_KEY = "test-key";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ segments: [{
+        rawText: "화면 문구", normalizedText: "화면 문구", language: "ko", confidence: 0.99, boundingBox: null,
+      }] }) } }],
+    }), { status: 200, headers: { "content-type": "application/json" } }));
     const userId = "10000000-0000-4000-8000-000000000001";
     const ingestionId = "20000000-0000-4000-8000-000000000002";
     const source = await readFile(videoPath);
     const uploads: string[] = [];
+    const segments: Array<Record<string, unknown>> = [];
     const rpcCalls: Array<[string, Record<string, unknown>]> = [];
     const client = {
       rpc: async (name: string, args: Record<string, unknown>) => {
@@ -242,6 +287,9 @@ describe("MPE FFmpeg worker", () => {
       },
       from: (table: string) => {
         if (table === "media_fingerprints") return { upsert: async () => ({ error: null }) };
+        if (table === "text_segments") return {
+          insert: async (value: Array<Record<string, unknown>>) => { segments.push(...value); return { error: null }; },
+        };
         const query = {
           select: () => query,
           eq: () => query,
@@ -256,11 +304,21 @@ describe("MPE FFmpeg worker", () => {
         upload: async (key: string) => { uploads.push(key); return { error: null }; },
       }) },
     };
-    await expect(worker.processOneJob(client)).resolves.toBe(true);
+    try {
+      await expect(worker.processOneJob(client)).resolves.toBe(true);
+    } finally {
+      fetchMock.mockRestore();
+      if (previousKey === undefined) delete process.env.OPENROUTER_API_KEY;
+      else process.env.OPENROUTER_API_KEY = previousKey;
+    }
     expect(uploads[0]).toMatch(new RegExp(`^${userId}/${ingestionId}/frames/`));
+    expect(segments).not.toHaveLength(0);
+    expect(rpcCalls[0][1]).toMatchObject({ p_processor_version: "1.1.0" });
     expect(rpcCalls[1][1]).toMatchObject({
       p_lease_token: "lease-scene", p_status: "completed",
       p_output_json: {
+        provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true,
+        segmentsWritten: segments.length,
         artifacts: expect.arrayContaining([expect.objectContaining({
           kind: "representative_frame", storageKey: uploads[0], mimeType: "image/jpeg",
         })]),

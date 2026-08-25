@@ -4,13 +4,13 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
 const PROCESSOR_NAME = "mpe-media-worker";
-const PROCESSOR_VERSION = "1.0.0";
+const PROCESSOR_VERSION = "1.1.0";
 const BUCKET = "mpe-temporary";
 const JOB_LEASE_HEARTBEAT_MS = 4 * 60 * 1_000;
 const RENDER_PRESETS = {
@@ -332,9 +332,12 @@ async function runJob(supabase, job, ingestion, path, directory) {
     return { status: "completed", output: { sha256: ingestion.sha256, phash, audioFingerprint } };
   }
   if (job.job_type === "scene_frames") {
+    if (!process.env.OPENROUTER_API_KEY?.trim()) throw new Error("provider_not_configured");
+    const { recognizeImageText, getMpeVisionModel } = await import("../lib/mpe/openrouter.server.ts");
     const metadata = await inspectMedia(path);
     const times = await detectSceneTimes(path, metadata.durationMs);
     const frames = [];
+    let segmentsWritten = 0;
     for (const [index, frameMs] of times.entries()) {
       const bytes = await frameBytes(path, frameMs);
       const key = `${ingestion.user_id}/${ingestion.id}/frames/${String(index).padStart(3, "0")}.jpg`;
@@ -347,9 +350,15 @@ async function runJob(supabase, job, ingestion, path, directory) {
         ingestion_id: ingestion.id, fingerprint_type: "FRAME_PHASH", hash_value: phash,
         frame_ms: frameMs, processor_version: PROCESSOR_VERSION,
       });
+      const segments = await recognizeImageText({ bytes, mimeType: "image/jpeg", frameMs });
+      await insertSegments(supabase, ingestion.id, segments);
+      segmentsWritten += segments.length;
       frames.push({ kind: index === 0 ? "representative_frame" : "scene_frame", frameMs, storageKey: key, mimeType: "image/jpeg", phash });
     }
-    return { status: "completed", output: { artifacts: frames, representativeFrame: frames[0] ?? null } };
+    return { status: "completed", output: {
+      provider: "openrouter", model: getMpeVisionModel(), providerBacked: true, segmentsWritten,
+      artifacts: frames, representativeFrame: frames[0] ?? null,
+    } };
   }
   if (job.job_type === "ocr") {
     if (!process.env.OPENROUTER_API_KEY?.trim()) throw new Error("provider_not_configured");
@@ -365,22 +374,13 @@ async function runJob(supabase, job, ingestion, path, directory) {
   }
   if (job.job_type === "stt") {
     const metadata = await inspectMedia(path);
-    if (!metadata.hasAudio) return { status: "skipped", output: { reason: "no_audio" } };
-    if (!process.env.OPENROUTER_API_KEY?.trim()) throw new Error("provider_not_configured");
-    const { transcribeAudioChunk, getMpeTranscriptionModel } = await import("../lib/mpe/openrouter.server.ts");
-    const chunks = await extractAudioChunks(path, directory);
-    if (chunks.length === 0) throw new Error("audio_extraction_failed");
-    const segments = [];
-    for (const chunk of chunks) {
-      segments.push(...await transcribeAudioChunk({
-        bytes: new Uint8Array(await readFile(chunk.path)), mimeType: "audio/wav",
-        filename: basename(chunk.path), startMs: chunk.startMs, endMs: chunk.endMs,
-      }));
-    }
-    await insertSegments(supabase, ingestion.id, segments);
-    return { status: "completed", output: {
-      provider: "openrouter", model: getMpeTranscriptionModel(), providerBacked: true,
-      segmentsWritten: segments.length, audioDetected: true, chunkCount: chunks.length,
+    if (!metadata.hasAudio) return { status: "skipped", output: {
+      reason: "no_audio", segmentsWritten: 0, audioDetected: false,
+    } };
+    const { getMpeVisionModel } = await import("../lib/mpe/openrouter.server.ts");
+    return { status: "skipped", output: {
+      reason: "audio_stt_disabled", provider: "openrouter", model: getMpeVisionModel(),
+      providerBacked: false, segmentsWritten: 0, audioDetected: true,
     } };
   }
   if (job.job_type === "render") {

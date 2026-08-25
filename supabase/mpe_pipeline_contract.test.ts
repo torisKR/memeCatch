@@ -7,6 +7,11 @@ const sql = readFileSync(
   "utf8",
 );
 
+const oxAlphaSql = readFileSync(
+  join(process.cwd(), "supabase/migrations/20260826010000_mpe_ox_alpha_only.sql"),
+  "utf8",
+);
+
 const tables = [
   "media_ingestions",
   "processing_jobs",
@@ -256,5 +261,62 @@ describe("MPE pipeline migration contract", () => {
   it("supports text embedding jobs and fingerprints", () => {
     expect(sql).toMatch(/job_type in \([\s\S]*'text_embedding'/);
     expect(sql).toMatch(/fingerprint_type in \([\s\S]*'TEXT_EMBEDDING'/);
+  });
+});
+
+describe("MPE Ox Alpha-only completion contract", () => {
+  it("requires a drained STT worker before migration", () => {
+    expect(oxAlphaSql).toMatch(
+      /do \$migration_gate\$[\s\S]*job\.job_type = 'stt'[\s\S]*job\.status = 'running'[\s\S]*message = 'running_stt_jobs_must_be_drained'/,
+    );
+  });
+
+  it("removes legacy STT evidence before segments and returns affected candidates to review", () => {
+    const evidenceDelete = oxAlphaSql.indexOf("delete from public.claim_evidence as evidence");
+    const segmentDelete = oxAlphaSql.indexOf("delete from public.text_segments as segment");
+    expect(evidenceDelete).toBeGreaterThan(0);
+    expect(segmentDelete).toBeGreaterThan(evidenceDelete);
+    expect(oxAlphaSql).toMatch(
+      /create temporary table mpe_legacy_stt_candidates[\s\S]*evidence_segment\.origin = 'STT'[\s\S]*ingestion_segment\.origin = 'STT'/,
+    );
+    expect(oxAlphaSql).toMatch(
+      /delete from public\.review_decisions[\s\S]*delete from public\.candidate_matches[\s\S]*set draft_json = '\{\}'::jsonb,[\s\S]*review_status = 'FACT_CHECKING',[\s\S]*overall_confidence = null,[\s\S]*target_meme_id = null[\s\S]*delete from public\.text_segments[\s\S]*segment\.origin = 'STT'/,
+    );
+    expect(oxAlphaSql).toContain("message = 'published_stt_candidates_require_manual_remediation'");
+  });
+
+  it("accepts the supported no-audio markers or the exact disabled-audio STT marker", () => {
+    expect(oxAlphaSql).toMatch(
+      /v_job\.job_type = 'stt' and p_status = 'skipped'[\s\S]*p_output_json is distinct from jsonb_build_object\('reason', 'no_audio'\)[\s\S]*p_output_json is distinct from jsonb_build_object\([\s\S]*'reason', 'no_audio',[\s\S]*'segmentsWritten', 0,[\s\S]*'audioDetected', false[\s\S]*p_output_json is distinct from jsonb_build_object\([\s\S]*'reason', 'audio_stt_disabled',[\s\S]*'provider', 'openrouter',[\s\S]*'model', 'stealth\/ox-alpha',[\s\S]*'providerBacked', false,[\s\S]*'segmentsWritten', 0,[\s\S]*'audioDetected', true[\s\S]*message = 'invalid_no_audio_marker'/,
+    );
+    expect(oxAlphaSql).not.toContain("provider_not_configured");
+  });
+
+  it("normalizes only unleased queued or completed STT jobs and leaves running leases untouched", () => {
+    expect(oxAlphaSql).toMatch(
+      /update public\.processing_jobs as job[\s\S]*set status = 'skipped',[\s\S]*'reason', 'audio_stt_disabled',[\s\S]*where job\.job_type = 'stt'[\s\S]*job\.status in \('queued', 'completed'\)[\s\S]*job\.lease_token is null[\s\S]*inspect_job\.output_json -> 'hasAudio' = 'true'::jsonb/,
+    );
+    expect(oxAlphaSql).not.toMatch(
+      /update public\.processing_jobs as job[\s\S]*where job\.job_type = 'stt'[\s\S]*job\.status = 'running'/,
+    );
+  });
+
+  it("rejects completed STT and requeues legacy scene-frame analysis for processor 1.1.0", () => {
+    expect(oxAlphaSql).toContain("message = 'stt_completion_not_allowed'");
+    expect(oxAlphaSql).toMatch(
+      /update public\.processing_jobs as job[\s\S]*set status = 'queued',[\s\S]*where job\.job_type = 'scene_frames'[\s\S]*job\.status = 'completed'[\s\S]*job\.processor_version <> '1\.1\.0'/,
+    );
+    expect(oxAlphaSql).toMatch(
+      /v_job\.job_type in \('ocr', 'scene_frames'\)[\s\S]*p_output_json ->> 'provider' is distinct from 'openrouter'[\s\S]*p_output_json ->> 'model' is distinct from 'stealth\/ox-alpha'[\s\S]*v_job\.processor_version <> '1\.1\.0'/,
+    );
+  });
+
+  it("preserves the security-definer function boundary and service-only execution", () => {
+    expect(oxAlphaSql).toMatch(
+      /create or replace function public\.complete_processing_job\([\s\S]*security definer[\s\S]*set search_path = ''/,
+    );
+    expect(oxAlphaSql).toMatch(
+      /revoke all on function public\.complete_processing_job\(uuid, uuid, text, jsonb, text, numeric\)[\s\S]*from public, anon, authenticated;[\s\S]*grant execute on function public\.complete_processing_job\(uuid, uuid, text, jsonb, text, numeric\)[\s\S]*to service_role/,
+    );
   });
 });

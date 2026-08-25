@@ -27,6 +27,7 @@ export type DraftEvidence = {
   ingestionId?: string;
   sourceId?: string;
   textSegmentId?: string;
+  origin?: string | null;
 };
 
 type DirectUploadIngestion = {
@@ -71,7 +72,7 @@ export class EvidenceDraftError extends Error {
 export function validateEvidenceDraft(claims: unknown, evidence: DraftEvidence[]): MemeDraftClaim[] {
   const parsed = z.array(claimSchema).min(1).safeParse(claims);
   if (!parsed.success) throw new EvidenceDraftError("invalid_claim_schema", 422);
-  const validEvidence = new Map(evidence.filter((item) => item.text.trim()).map((item) => [item.id, item]));
+  const validEvidence = new Map(withoutSttDraftEvidence(evidence).filter((item) => item.text.trim()).map((item) => [item.id, item]));
   for (const claim of parsed.data) {
     if (claim.evidenceIds.some((id) => !validEvidence.has(id))
       || claim.evidenceIds.every((id) => validEvidence.get(id)?.kind === "ingestion")) {
@@ -79,6 +80,13 @@ export function validateEvidenceDraft(claims: unknown, evidence: DraftEvidence[]
     }
   }
   return parsed.data;
+}
+
+export function withoutSttDraftEvidence<T>(evidence: T[]): T[] {
+  return evidence.filter((item) => {
+    const origin = (item as { origin?: string | null }).origin;
+    return origin?.trim().toUpperCase() !== "STT";
+  });
 }
 
 export function buildDirectUploadEvidence(ingestion: DirectUploadIngestion): DraftEvidence | null {
@@ -135,7 +143,7 @@ export async function generateEvidenceDraft(candidateId: string, providedClient?
     ingestion.source_id
       ? client.from("media_sources").select("id, platform, canonical_url, channel_name, title").eq("id", ingestion.source_id).single()
       : Promise.resolve({ data: null, error: null }),
-    client.from("text_segments").select("id, raw_text, normalized_text").eq("ingestion_id", candidate.ingestion_id),
+    client.from("text_segments").select("id, raw_text, normalized_text, origin").eq("ingestion_id", candidate.ingestion_id).neq("origin", "STT"),
   ]);
   if (sourceError) throw new EvidenceDraftError("source_not_found", 404);
   if (segmentError) throw new EvidenceDraftError(`evidence_load_failed: ${segmentError.message}`);
@@ -147,10 +155,11 @@ export async function generateEvidenceDraft(candidateId: string, providedClient?
       sourceId: source.id,
       text: [source.platform, source.title, source.channel_name, source.canonical_url].filter(Boolean).join(" | "),
     }] : []),
-    ...(segments ?? []).map((segment) => ({
+    ...withoutSttDraftEvidence(segments ?? []).map((segment) => ({
       id: segment.id,
       kind: "text_segment" as const,
       textSegmentId: segment.id,
+      origin: segment.origin,
       text: segment.normalized_text || segment.raw_text,
     })),
     ...([buildDirectUploadEvidence(ingestion)].filter((item): item is DraftEvidence => item !== null)),

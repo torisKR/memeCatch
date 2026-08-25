@@ -88,8 +88,6 @@ Resources:
               Value: https://openrouter.ai/api/v1
             - Name: OPENROUTER_MPE_MODEL
               Value: stealth/ox-alpha
-            - Name: OPENROUTER_MPE_TRANSCRIPTION_MODEL
-              Value: qwen/qwen3-asr-0.6b
             - Name: MPE_WORKER_POLL_MS
               Value: "5000"
           Secrets:

@@ -86,12 +86,31 @@ export const MPE_CANDIDATE_MODEL_VERSION = "mpe-candidate-v1";
 export const MPE_CANDIDATE_PROMPT_VERSION = "mpe-evidence-v1";
 export const MPE_TEXT_EMBEDDING_VERSION = "mpe-text-embedding-v1";
 
-type CandidateJob = { job_type: string; status: string; error_code?: string | null; output_json?: unknown };
+const MPE_MEDIA_PROCESSOR_VERSION = "1.1.0";
+
+type CandidateJob = {
+  job_type: string;
+  status: string;
+  processor_version?: string;
+  error_code?: string | null;
+  output_json?: unknown;
+};
 
 function outputRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+export function withoutSttSegments<T extends { origin?: string | null }>(segments: T[]): T[] {
+  return segments.filter((segment) => segment.origin?.trim().toUpperCase() !== "STT");
+}
+
+function hasExactOutput(value: unknown, expected: Record<string, unknown>) {
+  const actual = outputRecord(value);
+  const keys = Object.keys(actual);
+  return keys.length === Object.keys(expected).length
+    && keys.every((key) => Object.hasOwn(expected, key) && actual[key] === expected[key]);
 }
 
 export function validateCandidateJobs(mediaKind: string, jobs: CandidateJob[]): void {
@@ -109,14 +128,42 @@ export function validateCandidateJobs(mediaKind: string, jobs: CandidateJob[]): 
   const inspectWithoutAudio = jobs.some((job) => job.job_type === "inspect"
     && job.status === "completed"
     && outputRecord(job.output_json).hasAudio === false);
+  const inspectWithAudio = jobs.some((job) => job.job_type === "inspect"
+    && job.status === "completed"
+    && outputRecord(job.output_json).hasAudio === true);
+  const visualOnlyVideo = jobs.some((job) => {
+    const output = outputRecord(job.output_json);
+    return job.job_type === "scene_frames"
+      && job.status === "completed"
+      && job.processor_version === MPE_MEDIA_PROCESSOR_VERSION
+      && output.provider === "openrouter"
+      && output.model === "stealth/ox-alpha"
+      && output.providerBacked === true
+      && typeof output.segmentsWritten === "number"
+      && Number.isInteger(output.segmentsWritten)
+      && output.segmentsWritten >= 0;
+  });
+  const noAudioSkipped = (job: CandidateJob) => job.status === "skipped"
+    && (hasExactOutput(job.output_json, { reason: "no_audio" })
+      || hasExactOutput(job.output_json, { reason: "no_audio", segmentsWritten: 0, audioDetected: false }))
+    && inspectWithoutAudio;
+  const audioSttDisabled = (job: CandidateJob) => job.status === "skipped"
+    && hasExactOutput(job.output_json, {
+      reason: "audio_stt_disabled",
+      provider: "openrouter",
+      model: "stealth/ox-alpha",
+      providerBacked: false,
+      segmentsWritten: 0,
+      audioDetected: true,
+    })
+    && inspectWithAudio
+    && visualOnlyVideo;
   if (required.some((jobType) => {
     const matching = jobs.filter((job) => job.job_type === jobType);
     return matching.length === 0 || matching.some((job) => {
-      if (job.status === "completed") return false;
-      return !(jobType === "stt"
-        && job.status === "skipped"
-        && outputRecord(job.output_json).reason === "no_audio"
-        && inspectWithoutAudio);
+      if (jobType === "scene_frames") return !visualOnlyVideo;
+      if (jobType === "stt") return !(noAudioSkipped(job) || audioSttDisabled(job));
+      return job.status !== "completed";
     });
   })) throw new MpeCandidateError("processing_jobs_not_terminal", 409);
 }
@@ -265,7 +312,7 @@ export async function createCandidateFromIngestion(input: {
   if (ingestionError || !ingestion) throw new MpeCandidateError("ingestion_not_found", 404);
   const { data: jobs, error: jobsError } = await client
     .from("processing_jobs")
-    .select("job_type, status, error_code, output_json")
+    .select("job_type, status, processor_version, error_code, output_json")
     .eq("ingestion_id", ingestion.id);
   throwDb(jobsError, "processing_jobs_load_failed");
   validateCandidateJobs(ingestion.media_kind, jobs ?? []);
@@ -318,13 +365,14 @@ export async function generateCandidateMatches(candidateId: string, providedClie
     ingestion.source_id
       ? client.from("media_sources").select("id, platform, external_id, channel_name, title").eq("id", ingestion.source_id).single()
       : Promise.resolve({ data: null, error: null }),
-    client.from("text_segments").select("raw_text, normalized_text").eq("ingestion_id", ingestion.id),
+    client.from("text_segments").select("raw_text, normalized_text, origin").eq("ingestion_id", ingestion.id).neq("origin", "STT"),
     client.from("media_fingerprints").select("fingerprint_type, hash_value, embedding").eq("ingestion_id", ingestion.id),
   ]);
   throwDb(sourceError, "source_load_failed");
   throwDb(segmentError, "segment_load_failed");
   throwDb(fingerprintError, "fingerprint_load_failed");
-  const query = [candidate.title, ...(segments ?? []).map((item) => item.normalized_text || item.raw_text)].join(" ").trim();
+  const currentSegments = withoutSttSegments(segments ?? []);
+  const query = [candidate.title, ...currentSegments.map((item) => item.normalized_text || item.raw_text)].join(" ").trim();
   const normalizedQuery = normalizeKoreanText(query);
   const embeddingFingerprint: Fingerprint = {
     fingerprint_type: "TEXT_EMBEDDING",
@@ -381,7 +429,7 @@ export async function generateCandidateMatches(candidateId: string, providedClie
   const sourceIds = (previousIngestions ?? []).flatMap((item) => item.source_id ? [item.source_id] : []);
   const [{ data: previousSources, error: previousSourceError }, { data: previousSegments, error: previousSegmentError }, { data: previousFingerprints, error: previousFingerprintError }] = await Promise.all([
     sourceIds.length ? client.from("media_sources").select("id, platform, external_id, channel_name, title").in("id", sourceIds) : Promise.resolve({ data: [], error: null }),
-    ingestionIds.length ? client.from("text_segments").select("ingestion_id, raw_text, normalized_text").in("ingestion_id", ingestionIds) : Promise.resolve({ data: [], error: null }),
+    ingestionIds.length ? client.from("text_segments").select("ingestion_id, raw_text, normalized_text, origin").in("ingestion_id", ingestionIds).neq("origin", "STT") : Promise.resolve({ data: [], error: null }),
     ingestionIds.length ? client.from("media_fingerprints").select("ingestion_id, fingerprint_type, hash_value, embedding").in("ingestion_id", ingestionIds) : Promise.resolve({ data: [], error: null }),
   ]);
   throwDb(previousSourceError, "candidate_source_load_failed");
@@ -393,7 +441,7 @@ export async function generateCandidateMatches(candidateId: string, providedClie
     title: candidate.title,
     rightsMode: ingestion.ingest_mode,
     source,
-    text: (segments ?? []).map((item) => item.normalized_text || item.raw_text),
+    text: currentSegments.map((item) => item.normalized_text || item.raw_text),
     fingerprints: currentFingerprints,
     memes: memes.map((meme) => {
       const ids = new Set((previousCandidates ?? []).filter((item) => item.target_meme_id === meme.id).map((item) => item.ingestion_id));
@@ -401,7 +449,7 @@ export async function generateCandidateMatches(candidateId: string, providedClie
       return {
         ...meme,
         sources: (previousSources ?? []).filter((item) => sources.has(item.id)),
-        text: (previousSegments ?? []).filter((item) => ids.has(item.ingestion_id)).map((item) => item.normalized_text || item.raw_text),
+        text: withoutSttSegments(previousSegments ?? []).filter((item) => ids.has(item.ingestion_id)).map((item) => item.normalized_text || item.raw_text),
         fingerprints: (previousFingerprints ?? []).filter((item) => ids.has(item.ingestion_id)),
       };
     }),

@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin", label: "대시보드", icon: GaugeIcon },
   { href: "/admin/submissions", label: "제보 큐", icon: InboxIcon },
   { href: "/admin/sources", label: "출처 검수", icon: LinkIcon },
+  { href: "/admin/mpe", label: "MPE 검수", icon: InboxIcon },
   { href: "/admin/radar-safety", label: "Radar 안전", icon: FlagIcon },
   { href: "/admin/memes", label: "밈 관리", icon: BookIcon },
   { href: "/admin/reports", label: "신고", icon: FlagIcon },

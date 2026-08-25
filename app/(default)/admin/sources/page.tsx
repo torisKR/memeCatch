@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
+import { SourceIngestionForm, type SourceIngestionMeme } from "@/components/admin/source-ingestion-form";
 import { SourceReviewCard } from "@/components/admin/source-review-card";
 import { memePathFrom } from "@/lib/labels";
 
@@ -46,16 +47,26 @@ export default async function AdminSourcesPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? "1") || 1);
 
-  const { data, count } = await supabase
-    .from("meme_media")
-    .select(
-      "meme_id, source_id, created_at, memes(title, slug, short_id, origin_year, source_work_year, korea_viral_year), media_sources(id, platform, external_id, canonical_url, title, channel_name, platform_published_at, duration_seconds, public_status, embeddable, license_code, thumbnail_url, removed_at)",
-      { count: "exact" },
-    )
-    .eq("review_state", "pending")
-    .order("created_at", { ascending: true })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    .returns<QueueRow[]>();
+  const [{ data, count }, { data: memes, error: memesError }] = await Promise.all([
+    supabase
+      .from("meme_media")
+      .select(
+        "meme_id, source_id, created_at, memes(title, slug, short_id, origin_year, source_work_year, korea_viral_year), media_sources(id, platform, external_id, canonical_url, title, channel_name, platform_published_at, duration_seconds, public_status, embeddable, license_code, thumbnail_url, removed_at)",
+        { count: "exact" },
+      )
+      .eq("review_state", "pending")
+      .order("created_at", { ascending: true })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+      .returns<QueueRow[]>(),
+    supabase
+      .from("memes")
+      .select("id, title, short_id")
+      .order("updated_at", { ascending: false })
+      .limit(200)
+      .returns<SourceIngestionMeme[]>(),
+  ]);
+
+  if (memesError) throw new Error(`밈 목록을 불러오지 못했어요: ${memesError.message}`);
 
   const rows = (data ?? []).filter((row) => row.memes && row.media_sources);
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
@@ -69,6 +80,8 @@ export default async function AdminSourcesPage({
           링크만 게시합니다. 승인 전에 공식 채널 여부와 연도를 반드시 확인하세요.
         </p>
       </div>
+
+      <SourceIngestionForm memes={memes ?? []} />
 
       <p className="text-sm text-muted">
         대기 중 <strong className="text-foreground">{(count ?? 0).toLocaleString("ko-KR")}</strong>건

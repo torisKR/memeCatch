@@ -1,14 +1,15 @@
-FROM node:24-bookworm-slim
+FROM node:24.19.0-alpine3.24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-noto-cjk \
-  && ffmpeg -hide_banner -filters 2>&1 | grep -Eq ' (ass|subtitles) +V->V' \
-  && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk \
+  && ffmpeg -hide_banner -filters 2>&1 | grep -Eq ' (ass|subtitles) +V->V'
 
 WORKDIR /app
-RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund @supabase/supabase-js@2.110.1 zod@4.4.3
+RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund @supabase/supabase-js@2.110.1 zod@4.4.3 \
+  && npm pkg set type=module
 
 COPY lib/mpe/media.ts lib/mpe/openrouter.server.ts ./lib/mpe/
 COPY scripts/mpe-media-worker.mjs ./scripts/mpe-media-worker.mjs
+
+USER node
 
 CMD ["node", "scripts/mpe-media-worker.mjs", "--watch"]

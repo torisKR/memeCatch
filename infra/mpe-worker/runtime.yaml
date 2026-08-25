@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Non-running ECS Fargate runtime for the MemeCatch production MPE worker. This
+  stack references externally provisioned credentials and defaults to zero tasks.
+
+Parameters:
+  ClusterName:
+    Type: String
+    Description: ECS cluster name from the MPE worker foundation stack.
+    MinLength: 1
+  ExecutionRoleArn:
+    Type: String
+    Description: ECS task execution role ARN from the foundation stack.
+    AllowedPattern: '^arn:(aws|aws-us-gov|aws-cn):iam::[0-9]{12}:role/.+$'
+  LogGroupName:
+    Type: String
+    Description: Existing CloudWatch Logs log group from the foundation stack.
+    MinLength: 1
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: No-ingress worker security group from the foundation stack.
+  PublicSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: First public subnet with an internet gateway route.
+  PublicSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Second public subnet in a different Availability Zone.
+  ImageUri:
+    Type: String
+    Description: Immutable ECR image URI pinned to a sha256 digest.
+    AllowedPattern: '^.+@sha256:[a-fA-F0-9]{64}$'
+    ConstraintDescription: Must be an image URI ending in @sha256:<64 hex characters>.
+  SupabaseUrl:
+    Type: String
+    Description: Production Supabase project URL. This value is not a credential.
+    AllowedPattern: '^https://.+$'
+    ConstraintDescription: Must be an HTTPS URL.
+  SupabaseServiceRoleKeyParameterArn:
+    Type: String
+    Description: Exact ARN of the existing Supabase service-role SecureString parameter.
+    AllowedPattern: '^arn:(aws|aws-us-gov|aws-cn):ssm:[a-z0-9-]+:[0-9]{12}:parameter/.+$'
+  OpenRouterApiKeyParameterArn:
+    Type: String
+    Description: Exact ARN of the existing OpenRouter API-key SecureString parameter.
+    AllowedPattern: '^arn:(aws|aws-us-gov|aws-cn):ssm:[a-z0-9-]+:[0-9]{12}:parameter/.+$'
+  DesiredCount:
+    Type: Number
+    Description: Number of worker tasks. Keep at zero until all production gates pass.
+    Default: 0
+    MinValue: 0
+    MaxValue: 10
+
+Rules:
+  RequireSeoulRegion:
+    Assertions:
+      - Assert: !Equals
+          - !Ref AWS::Region
+          - ap-northeast-2
+        AssertDescription: This production runtime must be deployed in ap-northeast-2.
+
+Resources:
+  MpeWorkerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: memecatch-mpe-worker
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: "1024"
+      Memory: "2048"
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ContainerDefinitions:
+        - Name: memecatch-mpe-worker
+          Image: !Ref ImageUri
+          Essential: true
+          Command:
+            - node
+            - scripts/mpe-media-worker.mjs
+            - --watch
+          StopTimeout: 120
+          Environment:
+            - Name: NEXT_PUBLIC_SUPABASE_URL
+              Value: !Ref SupabaseUrl
+            - Name: OPENROUTER_BASE_URL
+              Value: https://openrouter.ai/api/v1
+            - Name: OPENROUTER_MPE_MODEL
+              Value: stealth/ox-alpha
+            - Name: OPENROUTER_MPE_TRANSCRIPTION_MODEL
+              Value: qwen/qwen3-asr-0.6b
+            - Name: MPE_WORKER_POLL_MS
+              Value: "5000"
+          Secrets:
+            - Name: SUPABASE_SERVICE_ROLE_KEY
+              ValueFrom: !Ref SupabaseServiceRoleKeyParameterArn
+            - Name: OPENROUTER_API_KEY
+              ValueFrom: !Ref OpenRouterApiKeyParameterArn
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroupName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: worker
+
+  MpeWorkerService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: memecatch-mpe-worker
+      Cluster: !Ref ClusterName
+      TaskDefinition: !Ref MpeWorkerTaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      PlatformVersion: 1.4.0
+      EnableECSManagedTags: true
+      PropagateTags: SERVICE
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref SecurityGroupId
+          Subnets:
+            - !Ref PublicSubnet1Id
+            - !Ref PublicSubnet2Id
+
+Outputs:
+  TaskDefinitionArn:
+    Description: Registered MPE worker task definition revision ARN.
+    Value: !Ref MpeWorkerTaskDefinition
+  ServiceArn:
+    Description: ECS service ARN. The service runs no tasks while DesiredCount is zero.
+    Value: !GetAtt MpeWorkerService.ServiceArn
+  ServiceName:
+    Description: Stable ECS service name.
+    Value: memecatch-mpe-worker
+  ConfiguredDesiredCount:
+    Description: Desired task count configured by this stack update.
+    Value: !Ref DesiredCount
+  DeployedImageUri:
+    Description: Immutable image URI referenced by the task definition.
+    Value: !Ref ImageUri

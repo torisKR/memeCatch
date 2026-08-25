@@ -1,0 +1,14 @@
+FROM node:24-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-noto-cjk \
+  && ffmpeg -hide_banner -filters 2>&1 | grep -Eq ' (ass|subtitles) +V->V' \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund @supabase/supabase-js@2.110.1 zod@4.4.3
+
+COPY lib/mpe/media.ts lib/mpe/openrouter.server.ts ./lib/mpe/
+COPY scripts/mpe-media-worker.mjs ./scripts/mpe-media-worker.mjs
+
+CMD ["node", "scripts/mpe-media-worker.mjs", "--watch"]

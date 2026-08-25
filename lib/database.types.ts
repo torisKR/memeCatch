@@ -1300,6 +1300,67 @@ export type Database = {
         }
         Relationships: []
       }
+      source_ingestions: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          processing_rights_mode: string
+          source_id: string
+          status: string
+          submitted_by: string | null
+          target_meme_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          processing_rights_mode: string
+          source_id: string
+          status: string
+          submitted_by?: string | null
+          target_meme_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          processing_rights_mode?: string
+          source_id?: string
+          status?: string
+          submitted_by?: string | null
+          target_meme_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_ingestions_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "media_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_ingestions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_ingestions_target_meme_id_fkey"
+            columns: ["target_meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meme_claims: {
         Row: {
           claim_text: string
@@ -3430,6 +3491,525 @@ export type Database = {
           },
         ]
       }
+      candidate_matches: {
+        Row: {
+          audio_score: number | null
+          candidate_id: string
+          classification: string
+          created_at: string
+          evidence_json: Json
+          id: string
+          meme_id: string
+          overall_score: number
+          rank: number
+          text_score: number | null
+          visual_score: number | null
+        }
+        Insert: {
+          audio_score?: number | null
+          candidate_id: string
+          classification: string
+          created_at?: string
+          evidence_json?: Json
+          id?: string
+          meme_id: string
+          overall_score: number
+          rank: number
+          text_score?: number | null
+          visual_score?: number | null
+        }
+        Update: {
+          audio_score?: number | null
+          candidate_id?: string
+          classification?: string
+          created_at?: string
+          evidence_json?: Json
+          id?: string
+          meme_id?: string
+          overall_score?: number
+          rank?: number
+          text_score?: number | null
+          visual_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_matches_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "meme_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_matches_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_revisions: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          created_by: string | null
+          draft_json: Json
+          id: string
+          model_version: string
+          prompt_version: string
+          revision_number: number
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          created_by?: string | null
+          draft_json: Json
+          id?: string
+          model_version: string
+          prompt_version: string
+          revision_number: number
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          created_by?: string | null
+          draft_json?: Json
+          id?: string
+          model_version?: string
+          prompt_version?: string
+          revision_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_revisions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "meme_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_revisions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_evidence: {
+        Row: {
+          candidate_id: string
+          claim_field: string
+          claim_text: string
+          confidence: number | null
+          created_at: string
+          id: string
+          ingestion_id: string | null
+          review_status: string
+          source_id: string | null
+          text_segment_id: string | null
+        }
+        Insert: {
+          candidate_id: string
+          claim_field: string
+          claim_text: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          ingestion_id?: string | null
+          review_status?: string
+          source_id?: string | null
+          text_segment_id?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          claim_field?: string
+          claim_text?: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          ingestion_id?: string | null
+          review_status?: string
+          source_id?: string | null
+          text_segment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_evidence_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "meme_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_evidence_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "media_ingestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_evidence_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "media_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_evidence_text_segment_id_fkey"
+            columns: ["text_segment_id"]
+            isOneToOne: false
+            referencedRelation: "text_segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_fingerprints: {
+        Row: {
+          created_at: string
+          embedding: number[] | null
+          fingerprint_type: string
+          frame_ms: number | null
+          hash_value: string
+          id: string
+          ingestion_id: string
+          processor_version: string
+        }
+        Insert: {
+          created_at?: string
+          embedding?: number[] | null
+          fingerprint_type: string
+          frame_ms?: number | null
+          hash_value: string
+          id?: string
+          ingestion_id: string
+          processor_version: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: number[] | null
+          fingerprint_type?: string
+          frame_ms?: number | null
+          hash_value?: string
+          id?: string
+          ingestion_id?: string
+          processor_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_fingerprints_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "media_ingestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_ingestions: {
+        Row: {
+          byte_size: number
+          created_at: string
+          deleted_at: string | null
+          duration_ms: number | null
+          expires_at: string
+          height: number | null
+          id: string
+          ingest_mode: string
+          media_kind: string
+          mime_type: string
+          rights_basis: string | null
+          rights_attested_at: string
+          sha256: string
+          source_id: string | null
+          source_role: string | null
+          temporary_storage_key: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          byte_size: number
+          created_at?: string
+          deleted_at?: string | null
+          duration_ms?: number | null
+          expires_at: string
+          height?: number | null
+          id?: string
+          ingest_mode: string
+          media_kind: string
+          mime_type: string
+          rights_basis?: string | null
+          rights_attested_at: string
+          sha256: string
+          source_id?: string | null
+          source_role?: string | null
+          temporary_storage_key: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          byte_size?: number
+          created_at?: string
+          deleted_at?: string | null
+          duration_ms?: number | null
+          expires_at?: string
+          height?: number | null
+          id?: string
+          ingest_mode?: string
+          media_kind?: string
+          mime_type?: string
+          rights_basis?: string | null
+          rights_attested_at?: string
+          sha256?: string
+          source_id?: string | null
+          source_role?: string | null
+          temporary_storage_key?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_ingestions_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "media_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_ingestions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meme_candidates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          draft_json: Json
+          id: string
+          ingestion_id: string
+          meme_type: string
+          model_version: string
+          overall_confidence: number | null
+          prompt_version: string
+          review_status: string
+          target_meme_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          draft_json?: Json
+          id?: string
+          ingestion_id: string
+          meme_type: string
+          model_version: string
+          overall_confidence?: number | null
+          prompt_version: string
+          review_status?: string
+          target_meme_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          draft_json?: Json
+          id?: string
+          ingestion_id?: string
+          meme_type?: string
+          model_version?: string
+          overall_confidence?: number | null
+          prompt_version?: string
+          review_status?: string
+          target_meme_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_candidates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_candidates_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "media_ingestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_candidates_target_meme_id_fkey"
+            columns: ["target_meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processing_jobs: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          cost_units: number
+          created_at: string
+          error_code: string | null
+          id: string
+          ingestion_id: string
+          input_hash: string
+          job_type: string
+          lease_token: string | null
+          output_json: Json
+          processor_name: string
+          processor_version: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          cost_units?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          ingestion_id: string
+          input_hash: string
+          job_type: string
+          lease_token?: string | null
+          output_json?: Json
+          processor_name: string
+          processor_version: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          cost_units?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          ingestion_id?: string
+          input_hash?: string
+          job_type?: string
+          lease_token?: string | null
+          output_json?: Json
+          processor_name?: string
+          processor_version?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_jobs_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "media_ingestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_decisions: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          decision: string
+          id: string
+          reason: string | null
+          review_stage: string
+          reviewer_id: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          reason?: string | null
+          review_stage: string
+          reviewer_id: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          reason?: string | null
+          review_stage?: string
+          reviewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_decisions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "meme_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_decisions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      text_segments: {
+        Row: {
+          bounding_box_json: Json | null
+          confidence: number | null
+          created_at: string
+          end_ms: number | null
+          id: string
+          ingestion_id: string
+          language: string | null
+          normalized_text: string | null
+          origin: string
+          raw_text: string
+          start_ms: number | null
+        }
+        Insert: {
+          bounding_box_json?: Json | null
+          confidence?: number | null
+          created_at?: string
+          end_ms?: number | null
+          id?: string
+          ingestion_id: string
+          language?: string | null
+          normalized_text?: string | null
+          origin: string
+          raw_text: string
+          start_ms?: number | null
+        }
+        Update: {
+          bounding_box_json?: Json | null
+          confidence?: number | null
+          created_at?: string
+          end_ms?: number | null
+          id?: string
+          ingestion_id?: string
+          language?: string | null
+          normalized_text?: string | null
+          origin?: string
+          raw_text?: string
+          start_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "text_segments_ingestion_id_fkey"
+            columns: ["ingestion_id"]
+            isOneToOne: false
+            referencedRelation: "media_ingestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       generation_vote_stats: {
@@ -3971,6 +4551,26 @@ export type Database = {
         }
         Returns: string
       }
+      record_source_ingestion: {
+        Args: {
+          p_canonical_url: string
+          p_channel_name: string | null
+          p_external_id: string | null
+          p_metadata_expires_at: string
+          p_metadata_refreshed_at: string
+          p_platform: string
+          p_processing_rights_mode: string
+          p_submitted_by: string | null
+          p_target_meme_id: string | null
+          p_title: string | null
+        }
+        Returns: {
+          duplicate: boolean
+          ingestion_id: string
+          source_id: string
+          status: string
+        }[]
+      }
       register_billing_identity: { Args: never; Returns: Json }
       remove_web_push_subscription: {
         Args: { p_endpoint: string }
@@ -4181,6 +4781,159 @@ export type Database = {
           p_note: string | null
         }
         Returns: Json
+      }
+      claim_processing_job: {
+        Args: {
+          p_job_types?: string[]
+          p_processor_name: string
+          p_processor_version: string
+        }
+        Returns: Database["public"]["Tables"]["processing_jobs"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "processing_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      complete_processing_job: {
+        Args: {
+          p_cost_units?: number
+          p_error_code?: string
+          p_job_id: string
+          p_lease_token: string
+          p_output_json?: Json
+          p_status: string
+        }
+        Returns: Database["public"]["Tables"]["processing_jobs"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "processing_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_media_ingestion: {
+        Args: {
+          p_byte_size: number
+          p_duration_ms?: number
+          p_expires_at: string
+          p_height?: number
+          p_ingest_mode: string
+          p_media_kind: string
+          p_mime_type: string
+          p_rights_accepted: boolean
+          p_sha256: string
+          p_source_id: string | null
+          p_temporary_storage_key: string
+          p_width?: number
+        }
+        Returns: {
+          ingestion_id: string
+          job_ids: string[]
+        }[]
+      }
+      review_mpe_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_decision: string
+          p_reason?: string | null
+          p_stage: string
+        }
+        Returns: Database["public"]["Tables"]["meme_candidates"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "meme_candidates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      queue_mpe_render_job: {
+        Args: {
+          p_attribution: string
+          p_ingestion_id: string
+          p_preset: string
+          p_segments: Json
+        }
+        Returns: Database["public"]["Tables"]["processing_jobs"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "processing_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_mpe_candidate_evidence: {
+        Args: {
+          p_candidate_id: string
+          p_draft_json: Json
+          p_evidence: Json
+        }
+        Returns: Database["public"]["Tables"]["meme_candidates"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "meme_candidates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_mpe_candidate_matches: {
+        Args: { p_candidate_id: string; p_matches: Json }
+        Returns: Database["public"]["Tables"]["candidate_matches"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "candidate_matches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      review_mpe_claim: {
+        Args: {
+          p_candidate_id: string
+          p_claim_id: string
+          p_decision: string
+        }
+        Returns: Database["public"]["Tables"]["claim_evidence"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "claim_evidence"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reprocess_mpe_job: {
+        Args: { p_job_id: string }
+        Returns: Database["public"]["Tables"]["processing_jobs"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "processing_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_mpe_candidate_revision: {
+        Args: { p_candidate_id: string; p_draft_json: Json }
+        Returns: Database["public"]["Tables"]["meme_candidates"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "meme_candidates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_mpe_ingestion_source_rights: {
+        Args: {
+          p_ingestion_id: string
+          p_rights_basis: string
+          p_source_role: string
+        }
+        Returns: Database["public"]["Tables"]["media_ingestions"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "media_ingestions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

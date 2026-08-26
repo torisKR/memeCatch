@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 type WorkerModule = {
   inspectMedia(path: string): Promise<{ width: number | null; height: number | null; durationMs: number; hasAudio: boolean }>;
   detectSceneTimes(path: string, durationMs: number, threshold?: number): Promise<number[]>;
+  limitSceneOcrTimes(times: number[]): number[];
   perceptualHash(bytes: Uint8Array): string;
   framePerceptualHash(path: string, frameMs?: number): Promise<string>;
   extractAudioChunks(path: string, directory: string): Promise<Array<{ path: string; startMs: number; endMs: number }>>;
@@ -67,6 +68,10 @@ describe("MPE FFmpeg worker", () => {
     } finally {
       process.env.PATH = previousPath;
     }
+  });
+
+  it("limits video scene OCR to at most three frames", () => {
+    expect(worker.limitSceneOcrTimes([0, 500, 1_000, 1_500, 2_000])).toEqual([0, 500, 1_000]);
   });
 
   it("creates stable 8x8 grayscale hashes and audio chunks", async () => {
@@ -131,6 +136,50 @@ describe("MPE FFmpeg worker", () => {
     expect(rpcCalls[1]).toEqual(["complete_processing_job", expect.objectContaining({
       p_job_id: "job-1", p_lease_token: "lease-ocr", p_status: "failed", p_error_code: "provider_not_configured",
     })]);
+  });
+
+  it.each([
+    [{ message: "openrouter_daily_budget_exhausted" }, "openrouter_daily_budget_exhausted"],
+    [{ code: "42501", message: "operator_required" }, "openrouter_budget_reservation_failed"],
+  ])("records distinct reservation failure %s without provider fetch", async (reservationError, expectedCode) => {
+    const previousKey = process.env.OPENROUTER_API_KEY;
+    process.env.OPENROUTER_API_KEY = "test-key";
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const rpcCalls: Array<[string, Record<string, unknown>]> = [];
+    const client = {
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        rpcCalls.push([name, args]);
+        if (name === "claim_processing_job") return {
+          data: [{ id: "job-budget", ingestion_id: "ing-budget", job_type: "ocr", lease_token: "lease-budget" }],
+          error: null,
+        };
+        if (name === "reserve_openrouter_daily_request") return { data: null, error: reservationError };
+        return { data: {}, error: null };
+      },
+      from: () => {
+        const query = {
+          select: () => query,
+          eq: () => query,
+          single: async () => ({
+            data: { id: "ing-budget", temporary_storage_key: "user-1/object", mime_type: "image/png" },
+            error: null,
+          }),
+        };
+        return query;
+      },
+      storage: { from: () => ({
+        download: async () => ({ data: new Blob([Uint8Array.from([1])]), error: null }),
+      }) },
+    };
+    try {
+      await expect(worker.processOneJob(client)).resolves.toBe(true);
+    } finally {
+      if (previousKey === undefined) delete process.env.OPENROUTER_API_KEY;
+      else process.env.OPENROUTER_API_KEY = previousKey;
+    }
+    const completion = rpcCalls.find(([name]) => name === "complete_processing_job");
+    expect(completion?.[1]).toMatchObject({ p_status: "failed", p_error_code: expectedCode });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fails inspect on a real container mismatch before downstream completion", async () => {
@@ -314,7 +363,14 @@ describe("MPE FFmpeg worker", () => {
     expect(uploads[0]).toMatch(new RegExp(`^${userId}/${ingestionId}/frames/`));
     expect(segments).not.toHaveLength(0);
     expect(rpcCalls[0][1]).toMatchObject({ p_processor_version: "1.1.0" });
-    expect(rpcCalls[1][1]).toMatchObject({
+    const reservations = rpcCalls.filter(([name]) => name === "reserve_openrouter_daily_request");
+    expect(reservations).toHaveLength(uploads.length);
+    expect(reservations).toEqual(expect.arrayContaining([
+      ["reserve_openrouter_daily_request", { p_provider: "openrouter", p_model: "stealth/ox-alpha" }],
+    ]));
+    expect(uploads.length).toBeLessThanOrEqual(3);
+    const completion = rpcCalls.find(([name]) => name === "complete_processing_job");
+    expect(completion?.[1]).toMatchObject({
       p_lease_token: "lease-scene", p_status: "completed",
       p_output_json: {
         provider: "openrouter", model: "stealth/ox-alpha", providerBacked: true,

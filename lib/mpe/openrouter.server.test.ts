@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  classifyOpenRouterReservationError,
   recognizeImageText,
   requestOpenRouterStructured,
 } from "./openrouter.server";
@@ -8,6 +9,13 @@ import {
 function chatResponse(content: unknown, status = 200) {
   return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), {
     status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function chatTextResponse(content: string) {
+  return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+    status: 200,
     headers: { "content-type": "application/json" },
   });
 }
@@ -58,10 +66,140 @@ describe("MPE OpenRouter adapter", () => {
     });
   });
 
-  it("rejects OCR JSON that does not pass the server-side schema", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(chatResponse({ segments: [{ rawText: "missing fields" }] }));
+  it.each(["message", "code", "details"] as const)(
+    "recognizes the exact daily budget code from Supabase %s",
+    (field) => {
+      expect(classifyOpenRouterReservationError({ [field]: "openrouter_daily_budget_exhausted" }))
+        .toBe("openrouter_daily_budget_exhausted");
+      expect(classifyOpenRouterReservationError({ [field]: "openrouter_daily_budget_exhausted extra" }))
+        .toBe("openrouter_budget_reservation_failed");
+    },
+  );
+
+  it("retries once and rejects OCR JSON that repeatedly fails the server-side schema", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockImplementation(async () => chatResponse({ segments: [{ rawText: "missing fields" }] }));
     await expect(recognizeImageText({ bytes: Uint8Array.from([1]), mimeType: "image/png", frameMs: 0 }))
       .rejects.toThrow("openrouter_ocr_invalid");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("recovers from an invalid OCR schema with one bounded correction request", async () => {
+    const valid = { segments: [{
+      rawText: "밈", normalizedText: "밈", language: "ko", confidence: null, boundingBox: null,
+    }] };
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(chatResponse({ segments: [{ rawText: "missing fields" }] }))
+      .mockResolvedValueOnce(chatResponse(valid));
+
+    await expect(recognizeImageText({ bytes: Uint8Array.from([1]), mimeType: "image/png", frameMs: 0 }))
+      .resolves.toMatchObject([{ rawText: "밈", origin: "ocr" }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(JSON.parse(String(init?.body)).model).toBe("stealth/ox-alpha");
+    }
+    const correction = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+    expect(correction.messages.at(-1)?.content).toContain("previous response was invalid");
+  });
+
+  it.each([
+    ["fenced JSON", "```json\n{\"claims\":[]}\n```"],
+    ["surrounding text", "Here is the result:\n{\"claims\":[]}\nDone."],
+  ])("extracts a single JSON object from %s", async (_label, content) => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(chatTextResponse(content));
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).resolves.toEqual({ claims: [] });
+  });
+
+  it("rejects ambiguous structured output after one correction request", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockImplementation(async () => chatTextResponse('{"first":1} and {"second":2}'));
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).rejects.toThrow("openrouter_structured_invalid");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shares a four-request ceiling between transport and structure retries", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(rateLimitResponse())
+      .mockResolvedValueOnce(rateLimitResponse())
+      .mockResolvedValueOnce(chatTextResponse("not json"))
+      .mockResolvedValueOnce(rateLimitResponse());
+
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).rejects.toThrow("openrouter_structured_failed:429");
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("reserves once immediately before every actual provider request", async () => {
+    const reserveRequest = vi.fn().mockResolvedValue(undefined);
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(rateLimitResponse())
+      .mockResolvedValueOnce(chatResponse({ claims: [] }));
+
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+      reserveRequest,
+    })).resolves.toEqual({ claims: [] });
+    expect(reserveRequest).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(reserveRequest.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0]);
+    expect(reserveRequest.mock.invocationCallOrder[1]).toBeLessThan(fetchMock.mock.invocationCallOrder[1]);
+  });
+
+  it.each([
+    "openrouter_daily_budget_exhausted",
+    "openrouter_budget_reservation_failed",
+  ])("preserves safe reservation error %s without calling the provider", async (errorCode) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+      reserveRequest: async () => { throw new Error(errorCode); },
+    })).rejects.toThrow(errorCode);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("maps unknown reservation exceptions to a safe infrastructure error without fetching", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+      reserveRequest: async () => { throw new Error("database host secret detail"); },
+    })).rejects.toThrow("openrouter_budget_reservation_failed");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not retry daily quota rate limits", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      error: { message: "Free model daily limit exceeded" },
+    }), { status: 429, headers: { "content-type": "application/json" } }));
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).rejects.toThrow("openrouter_structured_failed:429");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects any structured-draft model other than Ox Alpha", async () => {

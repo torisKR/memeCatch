@@ -13,6 +13,7 @@ const PROCESSOR_NAME = "mpe-media-worker";
 const PROCESSOR_VERSION = "1.1.0";
 const BUCKET = "mpe-temporary";
 const JOB_LEASE_HEARTBEAT_MS = 4 * 60 * 1_000;
+const MAX_SCENE_OCR_FRAMES = 3;
 const RENDER_PRESETS = {
   vertical: { width: 1080, height: 1920, fontSize: 68 },
   square: { width: 1080, height: 1080, fontSize: 58 },
@@ -215,6 +216,21 @@ export async function detectSceneTimes(path, durationMs, threshold = 0.3) {
   return spaced;
 }
 
+export function limitSceneOcrTimes(times) {
+  return times.slice(0, MAX_SCENE_OCR_FRAMES);
+}
+
+async function reserveOpenRouterRequest(supabase) {
+  const { error } = await supabase.rpc("reserve_openrouter_daily_request", {
+    p_provider: "openrouter",
+    p_model: "stealth/ox-alpha",
+  });
+  if (error) {
+    const { classifyOpenRouterReservationError } = await import("../lib/mpe/openrouter.server.ts");
+    throw new Error(classifyOpenRouterReservationError(error));
+  }
+}
+
 export function perceptualHash(rawPixels) {
   if (rawPixels.length !== 64) throw new Error("phash_requires_8x8_gray");
   const average = rawPixels.reduce((sum, value) => sum + value, 0) / rawPixels.length;
@@ -335,7 +351,7 @@ async function runJob(supabase, job, ingestion, path, directory) {
     if (!process.env.OPENROUTER_API_KEY?.trim()) throw new Error("provider_not_configured");
     const { recognizeImageText, getMpeVisionModel } = await import("../lib/mpe/openrouter.server.ts");
     const metadata = await inspectMedia(path);
-    const times = await detectSceneTimes(path, metadata.durationMs);
+    const times = limitSceneOcrTimes(await detectSceneTimes(path, metadata.durationMs));
     const frames = [];
     let segmentsWritten = 0;
     for (const [index, frameMs] of times.entries()) {
@@ -350,7 +366,12 @@ async function runJob(supabase, job, ingestion, path, directory) {
         ingestion_id: ingestion.id, fingerprint_type: "FRAME_PHASH", hash_value: phash,
         frame_ms: frameMs, processor_version: PROCESSOR_VERSION,
       });
-      const segments = await recognizeImageText({ bytes, mimeType: "image/jpeg", frameMs });
+      const segments = await recognizeImageText({
+        bytes,
+        mimeType: "image/jpeg",
+        frameMs,
+        reserveRequest: () => reserveOpenRouterRequest(supabase),
+      });
       await insertSegments(supabase, ingestion.id, segments);
       segmentsWritten += segments.length;
       frames.push({ kind: index === 0 ? "representative_frame" : "scene_frame", frameMs, storageKey: key, mimeType: "image/jpeg", phash });
@@ -366,6 +387,7 @@ async function runJob(supabase, job, ingestion, path, directory) {
     const image = ingestion.mime_type === "image/gif" ? await frameBytes(path, 0) : new Uint8Array(await readFile(path));
     const segments = await recognizeImageText({
       bytes: image, mimeType: ingestion.mime_type === "image/gif" ? "image/jpeg" : ingestion.mime_type, frameMs: 0,
+      reserveRequest: () => reserveOpenRouterRequest(supabase),
     });
     await insertSegments(supabase, ingestion.id, segments);
     return { status: "completed", output: {

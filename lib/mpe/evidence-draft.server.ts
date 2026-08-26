@@ -2,12 +2,22 @@ import "server-only";
 
 import { z } from "zod";
 import {
+  classifyOpenRouterReservationError,
   isOpenRouterConfigured,
+  getMpeVisionModel,
+  OPENROUTER_BUDGET_RESERVATION_FAILED,
+  OPENROUTER_DAILY_BUDGET_EXHAUSTED,
   requestOpenRouterStructured,
 } from "@/lib/mpe/openrouter.server";
 import { createClient } from "@/lib/supabase/server";
 
 type MpeClient = Awaited<ReturnType<typeof createClient>>;
+type OpenRouterBudgetClient = {
+  rpc(name: "reserve_openrouter_daily_request", args: {
+    p_provider: "openrouter";
+    p_model: string;
+  }): PromiseLike<{ error: unknown }>;
+};
 
 const CLAIM_FIELDS = ["TITLE", "DEFINITION", "MEANING", "ORIGIN", "USAGE", "SAFETY"] as const;
 const claimSchema = z.object({
@@ -122,6 +132,25 @@ async function requireOperator(client: MpeClient) {
   return user;
 }
 
+export async function reserveEvidenceDraftRequest(client: MpeClient) {
+  const { error } = await (client as unknown as OpenRouterBudgetClient).rpc("reserve_openrouter_daily_request", {
+    p_provider: "openrouter",
+    p_model: getMpeVisionModel(),
+  });
+  if (error) throw new Error(classifyOpenRouterReservationError(error));
+}
+
+function evidenceDraftProviderError(error: unknown): EvidenceDraftError | null {
+  if (!(error instanceof Error)) return null;
+  if (error.message === OPENROUTER_DAILY_BUDGET_EXHAUSTED) {
+    return new EvidenceDraftError(OPENROUTER_DAILY_BUDGET_EXHAUSTED, 429);
+  }
+  if (error.message === OPENROUTER_BUDGET_RESERVATION_FAILED) {
+    return new EvidenceDraftError(OPENROUTER_BUDGET_RESERVATION_FAILED, 503);
+  }
+  return null;
+}
+
 export async function generateEvidenceDraft(candidateId: string, providedClient?: MpeClient) {
   const client = providedClient ?? await createClient();
   await requireOperator(client);
@@ -165,7 +194,9 @@ export async function generateEvidenceDraft(candidateId: string, providedClient?
     ...([buildDirectUploadEvidence(ingestion)].filter((item): item is DraftEvidence => item !== null)),
   ]);
 
-  const claims = validateEvidenceDraft((await requestOpenRouterStructured<{ claims?: unknown }>({
+  let draft: { claims?: unknown };
+  try {
+    draft = await requestOpenRouterStructured<{ claims?: unknown }>({
       name: "mpe_evidence_draft",
       schema: DRAFT_SCHEMA,
       instructions: [
@@ -177,7 +208,12 @@ export async function generateEvidenceDraft(candidateId: string, providedClient?
       ].join(" "),
       input: JSON.stringify({ title: candidate.title, evidence }),
       maxOutputTokens: 4096,
-    })).claims, evidence);
+      reserveRequest: () => reserveEvidenceDraftRequest(client),
+    });
+  } catch (error) {
+    throw evidenceDraftProviderError(error) ?? error;
+  }
+  const claims = validateEvidenceDraft(draft.claims, evidence);
 
   const evidenceById = new Map(evidence.map((item) => [item.id, item]));
   const rows = claims.flatMap((claim) => claim.evidenceIds.map((evidenceId) => {

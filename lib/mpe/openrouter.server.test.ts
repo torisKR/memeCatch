@@ -233,19 +233,25 @@ describe("MPE OpenRouter adapter", () => {
   });
 
   it("retries temporary upstream rate limits", async () => {
+    vi.useFakeTimers();
     const fetchMock = vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(JSON.stringify({
         error: { message: "Provider returned error", metadata: { raw: "stealth/ox-alpha is temporarily rate-limited upstream. Please retry shortly." } },
       }), { status: 429, headers: { "content-type": "application/json" } }))
       .mockResolvedValueOnce(chatResponse({ claims: [] }));
 
-    await expect(requestOpenRouterStructured({
+    const completion = expect(requestOpenRouterStructured({
       name: "mpe_evidence_draft",
       schema: { type: "object" },
       instructions: "Use evidence only.",
       input: "{}",
     })).resolves.toEqual({ claims: [] });
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await completion;
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 
   it.each([502, 503, 504] as const)("retries transient HTTP %s responses", async (status) => {

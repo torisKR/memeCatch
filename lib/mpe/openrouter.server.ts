@@ -108,6 +108,7 @@ function retryDelayMs(response: Response | null, attempt: number) {
     const date = Date.parse(retryAfter);
     if (Number.isFinite(date)) return Math.min(Math.max(0, date - Date.now()), MAX_RETRY_DELAY_MS);
   }
+  if (response?.status === 429) return Math.min(5_000 * (2 ** attempt), MAX_RETRY_DELAY_MS);
   return Math.min(250 * (2 ** attempt), 2_000);
 }
 

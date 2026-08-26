@@ -93,11 +93,11 @@ function providerErrorDetails(payload: unknown, secret: string) {
   return [message && `provider_message=${message}`, raw && `metadata_raw=${raw}`].filter(Boolean).join(" ");
 }
 
-function isSharedPoolRateLimit(payload: unknown) {
+function isRetryableRateLimit(payload: unknown) {
   const error = asRecord(asRecord(payload)?.error);
   const metadata = asRecord(error?.metadata);
   const values = [error?.message, metadata?.raw].filter((value): value is string => typeof value === "string");
-  return values.some((value) => /(?:upstream_provider_)?shared[_ -]?pool/i.test(value));
+  return values.some((value) => /(?:upstream_provider_)?shared[_ -]?pool|temporarily rate[- ]limited upstream/i.test(value));
 }
 
 function retryDelayMs(response: Response | null, attempt: number) {
@@ -162,7 +162,7 @@ async function openRouterJson(
     if (response.ok) return payload;
     if (
       (TRANSIENT_PROVIDER_STATUSES.has(response.status)
-        || (response.status === 429 && isSharedPoolRateLimit(payload)))
+        || (response.status === 429 && isRetryableRateLimit(payload)))
       && attempt < MAX_PROVIDER_ATTEMPTS - 1
       && budget.remaining > 0
     ) {

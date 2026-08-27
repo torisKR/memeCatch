@@ -153,6 +153,36 @@ describe("meme studio deterministic concepts", () => {
     expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining("secret"));
   });
 
+  it("records stable empty and invalid response codes", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.configured.mockReturnValue(true);
+    mocks.request
+      .mockRejectedValueOnce(new Error("openrouter_structured_failed_empty"))
+      .mockResolvedValueOnce({ concepts: { not: "an array" } });
+
+    await generateMemeConcepts({ topic: "고양이", tone: "hype", format: "caption" });
+    await generateMemeConcepts({ topic: "강아지", tone: "hype", format: "caption" });
+
+    expect(consoleError).toHaveBeenNthCalledWith(
+      1,
+      "meme_studio_ai_generation_failed",
+      "openrouter_structured_failed_empty",
+    );
+    expect(consoleError).toHaveBeenNthCalledWith(
+      2,
+      "meme_studio_ai_generation_failed",
+      "openrouter_structured_invalid",
+    );
+  });
+
+  it("requires exactly three valid AI concepts", async () => {
+    mocks.configured.mockReturnValue(true);
+    mocks.request.mockResolvedValueOnce({ concepts: [...aiConcepts, aiConcepts[0]] });
+
+    await expect(generateMemeConcepts({ topic: "고양이", tone: "hype", format: "caption" }))
+      .resolves.toMatchObject({ mode: "template" });
+  });
+
   it("normalizes typographic dashes from AI output before display", async () => {
     mocks.configured.mockReturnValue(true);
     mocks.request.mockResolvedValueOnce({

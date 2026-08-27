@@ -112,8 +112,13 @@ function isExpectedStudioAiFallback(error: unknown): boolean {
 
 function studioAiFailureCode(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
-  return message.match(/^openrouter_structured_(?:failed:(?:network_error|\d{3})|invalid|empty)/)?.[0]
-    ?? "unexpected";
+  const transport = message.match(
+    /^openrouter_structured_failed:(network_error|\d{3})(?:\s|$)/,
+  )?.[1];
+  if (transport) return `openrouter_structured_failed:${transport}`;
+  if (message === "openrouter_structured_failed_empty"
+      || message === "openrouter_structured_invalid") return message;
+  return "unexpected";
 }
 
 function isMemeConcept(value: unknown): value is MemeConcept {
@@ -288,9 +293,12 @@ export async function generateMemeConcepts(input: {
         maxOutputTokens: 2048,
         reserveRequest: () => reserveMemeStudioAiRequest(budgetClient),
       });
-      const rawConcepts = (result.concepts ?? []) as unknown[];
-      const concepts = rawConcepts.filter(isMemeConcept).slice(0, 3).map(normalizeMemeConcept);
-      if (concepts.length === 3) return { mode: "ai", concepts };
+      if (!Array.isArray(result.concepts)
+          || result.concepts.length !== 3
+          || !result.concepts.every(isMemeConcept)) {
+        throw new Error("openrouter_structured_invalid");
+      }
+      return { mode: "ai", concepts: result.concepts.map(normalizeMemeConcept) };
     } catch (error) {
       if (!isExpectedStudioAiFallback(error)) {
         console.error("meme_studio_ai_generation_failed", studioAiFailureCode(error));

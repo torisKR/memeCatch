@@ -1,6 +1,6 @@
 FROM node:24.19.0-alpine3.24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
 
-RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk \
+RUN apk add --no-cache --upgrade ca-certificates ffmpeg font-noto-cjk libcrypto3 libssl3 \
   && ffmpeg -hide_banner -filters 2>&1 | grep -Eq ' (ass|subtitles) +V->V'
 
 WORKDIR /app

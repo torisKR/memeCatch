@@ -37,4 +37,11 @@ describe("BottomNav", () => {
     navigation.pathname = "/admin/growth";
     expect(renderToStaticMarkup(<BottomNav />)).toBe("");
   });
+
+  it("marks Home current for the Vercel /index alias", () => {
+    navigation.pathname = "/index";
+    const html = renderToStaticMarkup(<BottomNav />);
+
+    expect(html.match(/<a href="\/"[^>]*aria-current="page"/)).toBeTruthy();
+  });
 });

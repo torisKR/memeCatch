@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const navigation = vi.hoisted(() => ({ pathname: "/products" }));
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => (
@@ -9,7 +11,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/products",
+  usePathname: () => navigation.pathname,
 }));
 
 vi.mock("motion/react", () => ({
@@ -33,6 +35,10 @@ vi.mock("@/lib/i18n-client", async (importOriginal) => {
 import { AuthMenu } from "@/components/auth-menu";
 
 describe("AuthMenu", () => {
+  beforeEach(() => {
+    navigation.pathname = "/products";
+  });
+
   it("keeps the unauthenticated login label on one line without shrinking", () => {
     const html = renderToStaticMarkup(<AuthMenu />);
     const loginLink = html.match(/<a[^>]*href="\/login\?next=%2Fproducts"[^>]*>/)?.[0];
@@ -40,5 +46,13 @@ describe("AuthMenu", () => {
     expect(loginLink).toContain("whitespace-nowrap");
     expect(loginLink).toContain("shrink-0");
     expect(html).toContain(">Log in</a>");
+  });
+
+  it("uses the canonical home path for the Vercel /index alias", () => {
+    navigation.pathname = "/index";
+
+    expect(renderToStaticMarkup(<AuthMenu />)).toContain(
+      'href="/login?next=%2F"',
+    );
   });
 });

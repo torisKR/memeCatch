@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { selectPremiumSubscription } from "@/lib/billing/entitlements";
+import { normalizePathname } from "@/lib/normalize-pathname";
 
 /**
  * 전역 헤더가 /admin 경로에서 숨도록 감싸는 클라이언트 게이트.
@@ -36,7 +37,7 @@ const AUTH_HINT_KEY = "mc_auth_nick";
 const PLUS_HINT_KEY = "mc_auth_plus";
 
 export function AuthMenu() {
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
   const reduce = useReducedMotion();
   // null = 아직 조회 전, string = 로그인, "" = 비로그인 확정
   const [nickname, setNickname] = useState<string | null>(null);

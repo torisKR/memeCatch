@@ -5,6 +5,7 @@ import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
 import { localizedStaticPath } from "@/lib/i18n-routing";
+import { normalizePathname } from "@/lib/normalize-pathname";
 
 const TABS: {
   href: string;
@@ -20,7 +21,7 @@ const TABS: {
 ];
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
   const { locale, messages } = useLocale();
   if (pathname.startsWith("/admin")) return null;
 

@@ -88,6 +88,9 @@ export async function reviewMpeCandidate(input: {
     });
     revalidatePath("/admin/mpe");
     revalidatePath(`/admin/mpe/${parsed.data.candidateId}`);
+    if (parsed.data.stage === "PUBLISH" && ["PUBLISHED", "LIMITED"].includes(parsed.data.decision)) {
+      revalidatePath("/global");
+    }
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error) };

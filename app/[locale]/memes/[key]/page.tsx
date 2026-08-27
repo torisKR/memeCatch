@@ -239,7 +239,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const metadata = buildLocalizedMetadata({
     locale,
     pathname: canonical,
-    title: `${meme.title} — ${copy.meaningTitle}`,
+    title: `${meme.title} · ${copy.meaningTitle}`,
     description,
   });
 
@@ -370,7 +370,7 @@ export default async function LocalizedMemePage({ params }: Props) {
         <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
           {meme.title}
         </h1>
-        <div className="mt-4 border-l-2 border-accent pl-4">
+        <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{copy.originalTitle}</p>
           <p lang="ko" dir="ltr" className="mt-1 text-lg font-bold">{meme.original.title}</p>
         </div>

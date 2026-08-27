@@ -6,6 +6,14 @@ const source = readFileSync(
   join(process.cwd(), "lib/actions/admin.ts"),
   "utf-8",
 );
+const sourceReview = readFileSync(
+  join(process.cwd(), "lib/actions/admin-sources.ts"),
+  "utf-8",
+);
+const mpeReview = readFileSync(
+  join(process.cwd(), "lib/actions/admin-mpe.ts"),
+  "utf-8",
+);
 
 function section(start: string, end: string) {
   return source.slice(source.indexOf(start), source.indexOf(end));
@@ -52,6 +60,36 @@ describe("canonical meme cache revalidation", () => {
   ])("wires %s into the shared invalidation contract", (action, next) => {
     expect(section(`export async function ${action}`, next)).toContain(
       "revalidateCanonicalMemePaths(",
+    );
+  });
+});
+
+describe("global feed cache revalidation", () => {
+  it("invalidates after a source is published, but not after rejection", () => {
+    const rejection = sourceReview.slice(
+      sourceReview.indexOf('if (input.decision === "reject")'),
+      sourceReview.indexOf("// ── 승인"),
+    );
+    const approval = sourceReview.slice(sourceReview.indexOf("// ── 승인"));
+
+    expect(rejection).not.toContain('revalidatePath("/global")');
+    expect(approval).toContain('revalidatePath("/global")');
+  });
+
+  it("invalidates only MPE publish decisions that project public content", () => {
+    const review = mpeReview.slice(
+      mpeReview.indexOf("export async function reviewMpeCandidate"),
+      mpeReview.indexOf("export async function saveMpeCandidateRevision"),
+    );
+
+    expect(review).toContain('parsed.data.stage === "PUBLISH"');
+    expect(review).toContain('["PUBLISHED", "LIMITED"].includes(parsed.data.decision)');
+    expect(review).toContain('revalidatePath("/global")');
+  });
+
+  it("invalidates after submission approval publishes a meme", () => {
+    expect(section("export async function approveSubmission", "/* ── 밈 관리")).toContain(
+      'revalidatePath("/global")',
     );
   });
 });

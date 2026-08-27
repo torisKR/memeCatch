@@ -12,6 +12,5 @@ LOG="output/source-discovery/$(date +%Y-%m-%d).log"
   echo "=== $(date '+%F %T') 일일 출처 발견 시작 ==="
   node scripts/discover-youtube-candidates.mjs --max=100
   node scripts/verify-youtube-pending.mjs
-  node scripts/auto-approve-source-candidates.mjs --limit=4000
-  echo "=== $(date '+%F %T') 완료 ==="
+  echo "=== $(date '+%F %T') 후보 수집·검증 완료 (pending, 운영자 검수 필요) ==="
 } >>"$LOG" 2>&1

@@ -24,6 +24,11 @@ if (!inputPath || !existsSync(resolve(inputPath))) {
 }
 const rest = createRestClient();
 
+function firstText(maxLength, ...values) {
+  const value = values.find((candidate) => typeof candidate === "string" && candidate.trim());
+  return value ? value.slice(0, maxLength) : null;
+}
+
 const seeds = [];
 for (const line of readFileSync(resolve(inputPath), "utf8").split("\n")) {
   if (!line.trim()) continue;
@@ -45,7 +50,6 @@ for (const meme of memes ?? []) {
 }
 
 const stats = { rows: seeds.length, valid: 0, noMeme: 0, badUrl: 0, linked: 0, dupMedia: 0 };
-const now = new Date().toISOString();
 // 같은 미디어가 /p/·/reel/ 등 다른 URL로 들어오는 경우 (platform, externalId) 중복 제거.
 // 단, 서로 다른 밈에 연결되는 것은 허용해야 하므로 (memeId, platform, externalId)로 제한한다.
 const seenPair = new Set();
@@ -86,8 +90,8 @@ for (const seed of seeds) {
         platform: normalized.platform,
         external_id: normalized.externalId,
         canonical_url: normalized.canonicalUrl,
-        title: typeof seed.video_title === "string" ? seed.video_title.slice(0, 500) : null,
-        channel_name: typeof seed.channel === "string" ? seed.channel.slice(0, 200) : null,
+        title: firstText(500, seed.video_title, seed.oembed_title),
+        channel_name: firstText(200, seed.channel, seed.oembed_author_name),
       }),
     });
     source = Array.isArray(inserted) ? inserted[0] : inserted;
@@ -102,9 +106,9 @@ for (const seed of seeds) {
   }
   if (!source?.id) continue;
 
-  await rest("meme_media", {
+  const linked = await rest("meme_media", {
     method: "POST",
-    headers: { Prefer: "resolution=ignore-duplicates" },
+    headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
     body: JSON.stringify({
       meme_id: memeId,
       source_id: source.id,
@@ -119,6 +123,10 @@ for (const seed of seeds) {
             : null,
     }),
   });
+  if (!(Array.isArray(linked) ? linked[0] : linked)) {
+    stats.dupMedia += 1;
+    continue;
+  }
   stats.linked += 1;
   if (stats.linked % 200 === 0) {
     console.error(`진행: 연결 ${stats.linked} / 전체 ${stats.rows}`);

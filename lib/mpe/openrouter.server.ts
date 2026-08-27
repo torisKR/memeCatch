@@ -276,10 +276,18 @@ async function requestValidatedJson<T>(input: {
   reserveRequest?: ReserveRequest;
 }) {
   const budget = { remaining: MAX_TOTAL_PROVIDER_REQUESTS };
+  const body = {
+    ...input.body,
+    model: getMpeVisionModel(),
+    provider: {
+      allow_fallbacks: false,
+      max_price: { prompt: 0, completion: 0, request: 0, image: 0 },
+    },
+  };
   for (let attempt = 0; attempt < MAX_STRUCTURE_ATTEMPTS; attempt += 1) {
     if (budget.remaining === 0) break;
     const content = await chatCompletion(
-      attempt === 0 ? input.body : correctionBody(input.body),
+      attempt === 0 ? body : correctionBody(body),
       input.transportErrorPrefix,
       budget,
       input.reserveRequest,
@@ -340,7 +348,6 @@ export async function recognizeImageText(input: {
 }): Promise<MediaTextSegment[]> {
   const parsed = await requestValidatedJson({
     body: {
-      model: getMpeVisionModel(),
       response_format: { type: "json_object" },
       messages: [
         {
@@ -389,7 +396,6 @@ export async function requestOpenRouterStructured<T>(input: {
 }): Promise<T> {
   return requestValidatedJson<T>({
     body: {
-      model: getMpeVisionModel(),
       response_format: { type: "json_object" },
       max_tokens: input.maxOutputTokens ?? 4_096,
       messages: [

@@ -14,11 +14,16 @@
  * 'original' 표시는 절대 자동으로 붙이지 않는다.
  * 애매한 후보는 pending으로 남긴다.
  *
- * 사용: node scripts/auto-approve-source-candidates.mjs [--dry-run] [--limit=500]
+ * 사용: node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve [--dry-run] [--limit=500]
  */
 import { createRestClient, restAll } from "./source-pipeline-rest.mjs";
 
 const args = process.argv.slice(2);
+const OPERATOR_CONFIRM_FLAG = "--operator-confirm-auto-approve";
+if (!args.includes(OPERATOR_CONFIRM_FLAG)) {
+  console.error(`거부: 이 스크립트는 운영자가 ${OPERATOR_CONFIRM_FLAG} 플래그로 직접 확인한 경우에만 실행합니다.`);
+  process.exit(2);
+}
 const DRY = args.includes("--dry-run");
 const limitArg = args.find((a) => a.startsWith("--limit="));
 const LIMIT = Math.max(1, Number(limitArg?.slice(8) ?? 2000));

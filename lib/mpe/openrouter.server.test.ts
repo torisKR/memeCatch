@@ -57,6 +57,10 @@ describe("MPE OpenRouter adapter", () => {
     expect(init?.headers).toMatchObject({ authorization: "Bearer test-key", "content-type": "application/json" });
     const body = JSON.parse(String(init?.body));
     expect(body).toMatchObject({ model: "stealth/ox-alpha", response_format: { type: "json_object" } });
+    expect(body.provider).toEqual({
+      allow_fallbacks: false,
+      max_price: { prompt: 0, completion: 0, request: 0, image: 0 },
+    });
     expect(body.messages[0]).toMatchObject({ role: "system" });
     expect(body.messages[0].content).toContain("mpe_ocr_segments");
     expect(body.messages[1].content[0]).toMatchObject({ type: "text" });
@@ -96,7 +100,12 @@ describe("MPE OpenRouter adapter", () => {
       .resolves.toMatchObject([{ rawText: "밈", origin: "ocr" }]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     for (const [, init] of fetchMock.mock.calls) {
-      expect(JSON.parse(String(init?.body)).model).toBe("stealth/ox-alpha");
+      const body = JSON.parse(String(init?.body));
+      expect(body.model).toBe("stealth/ox-alpha");
+      expect(body.provider).toEqual({
+        allow_fallbacks: false,
+        max_price: { prompt: 0, completion: 0, request: 0, image: 0 },
+      });
     }
     const correction = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
     expect(correction.messages.at(-1)?.content).toContain("previous response was invalid");
@@ -113,6 +122,24 @@ describe("MPE OpenRouter adapter", () => {
       instructions: "Use evidence only.",
       input: "{}",
     })).resolves.toEqual({ claims: [] });
+  });
+
+  it("applies the exact model and zero-cost provider guard to structured requests", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(chatResponse({ claims: [] }));
+
+    await requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(body.model).toBe("stealth/ox-alpha");
+    expect(body.provider).toEqual({
+      allow_fallbacks: false,
+      max_price: { prompt: 0, completion: 0, request: 0, image: 0 },
+    });
   });
 
   it("rejects ambiguous structured output after one correction request", async () => {

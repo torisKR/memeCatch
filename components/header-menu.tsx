@@ -3,6 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Dices,
+  Globe2,
+  Grid2X2,
+  Milestone,
+  Newspaper,
+  Trophy,
+  WandSparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { useLocale } from "@/lib/i18n-client";
 import { track } from "@/lib/analytics";
 
@@ -15,7 +25,7 @@ import { track } from "@/lib/analytics";
  * (모달 아님, Tab 순서가 자연스럽게 패널을 통과).
  */
 export function HeaderMenu() {
-  const { messages } = useLocale();
+  const { locale = "ko", messages } = useLocale();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -45,13 +55,24 @@ export function HeaderMenu() {
   const items: {
     href: string;
     label: string;
-    icon: React.ReactNode;
+    icon: LucideIcon;
     prefetch?: false;
-    onClick?: () => void;
   }[] = [
-    { href: "/timeline", label: messages.timeline, prefetch: false, icon: <TimelineIcon /> },
-    { href: "/rankings", label: messages.rankings, prefetch: false, icon: <TrophyIcon /> },
-    { href: "/news", label: messages.news, prefetch: false, icon: <NewsIcon /> },
+    {
+      href: "/global",
+      label: locale === "ko" ? "글로벌 피드" : "Global feed",
+      prefetch: false,
+      icon: Globe2,
+    },
+    {
+      href: "/studio",
+      label: locale === "ko" ? "밈 스튜디오" : "Meme studio (Korean)",
+      prefetch: false,
+      icon: WandSparkles,
+    },
+    { href: "/timeline", label: messages.timeline, prefetch: false, icon: Milestone },
+    { href: "/rankings", label: messages.rankings, prefetch: false, icon: Trophy },
+    { href: "/news", label: messages.news, prefetch: false, icon: Newspaper },
   ];
 
   return (
@@ -63,17 +84,11 @@ export function HeaderMenu() {
         aria-controls="header-menu-panel"
         aria-label={messages.menu}
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-11 w-11 items-center justify-center rounded-full border border-transparent transition-colors hover:border-(--signal-cyan) active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+        className={`flex h-11 w-11 items-center justify-center rounded-full border border-transparent transition-colors hover:border-(--signal-cyan) active:scale-[0.95] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
           open ? "bg-surface-2 text-foreground" : "text-foreground hover:bg-surface-2"
         }`}
       >
-        {/* 앱 그리드 도트 아이콘 — 햄버거보다 "목적지 모음" 의미에 가깝다 */}
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
-          <circle cx="7" cy="7" r="2" />
-          <circle cx="17" cy="7" r="2" />
-          <circle cx="7" cy="17" r="2" />
-          <circle cx="17" cy="17" r="2" />
-        </svg>
+        <Grid2X2 className="size-5" strokeWidth={1.8} aria-hidden />
       </button>
 
       {open && (
@@ -91,6 +106,7 @@ export function HeaderMenu() {
           <ul>
             {items.map((item) => {
               const active = pathname.startsWith(item.href);
+              const Icon = item.icon;
               return (
                 <li key={item.href}>
                   <Link
@@ -104,21 +120,18 @@ export function HeaderMenu() {
                         : "font-medium text-foreground/85 hover:bg-surface-2 hover:text-foreground"
                     }`}
                   >
-                    <span className={active ? "text-accent" : "text-muted"}>{item.icon}</span>
+                    <Icon
+                      className={active ? "size-[18px] text-accent" : "size-[18px] text-muted"}
+                      strokeWidth={1.8}
+                      aria-hidden
+                    />
                     {item.label}
-                    {active && (
-                      <span
-                        aria-hidden
-                        className="signal-live ml-auto size-1.5 shrink-0 rounded-full bg-(--signal-cyan)"
-                      />
-                    )}
                   </Link>
                 </li>
               );
             })}
           </ul>
           <div aria-hidden className="mx-3 my-1.5 h-px bg-border" />
-          {/* 랜덤 밈 — 기존 헤더 주사위 버튼을 메뉴로 이동(analytics 이벤트 유지) */}
           <Link
             href="/memes/random"
             prefetch={false}
@@ -128,70 +141,11 @@ export function HeaderMenu() {
             }}
             className="hover-glow-flame flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-foreground/85 transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
           >
-            <span className="text-muted">
-              <DiceIcon />
-            </span>
+            <Dices className="size-[18px] text-muted" strokeWidth={1.8} aria-hidden />
             {messages.random}
           </Link>
         </nav>
       )}
     </div>
-  );
-}
-
-/* 아이콘 — 중립 stroke SVG(이모지 금지 규칙), 하단탭·홈 카드와 동일 문법 */
-
-function iconProps(extra?: string) {
-  return {
-    viewBox: "0 0 24 24",
-    className: `h-[18px] w-[18px] ${extra ?? ""}`,
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-}
-
-function TimelineIcon() {
-  return (
-    <svg {...iconProps()}>
-      <path d="M4 12h16" />
-      <circle cx="7" cy="12" r="1.6" fill="currentColor" stroke="none" />
-      <circle cx="13" cy="12" r="1.6" fill="currentColor" stroke="none" />
-      <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function TrophyIcon() {
-  return (
-    <svg {...iconProps()}>
-      <path d="M8 21h8M12 17v4" />
-      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
-      <path d="M7 6H4a2 2 0 0 0 2 4h1M17 6h3a2 2 0 0 1-2 4h-1" />
-    </svg>
-  );
-}
-
-function NewsIcon() {
-  return (
-    <svg {...iconProps()}>
-      <path d="M5 4h14v16H5z" />
-      <path d="M8 8h8M8 12h8M8 16h5" />
-    </svg>
-  );
-}
-
-function DiceIcon() {
-  return (
-    <svg {...iconProps()}>
-      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
-      <circle cx="8.6" cy="8.6" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="15.4" cy="8.6" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="8.6" cy="15.4" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="15.4" cy="15.4" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
   );
 }

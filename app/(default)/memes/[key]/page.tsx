@@ -101,7 +101,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ]),
   ]);
   const languages = { ...hreflangs, "x-default": hreflangs.en ?? path };
-  const description = `${meme.title} 뜻과 유래 — ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
+  const description = `${meme.title} 뜻과 유래 · ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
   return {
     metadataBase: new URL(SITE_URL),
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
@@ -255,7 +255,7 @@ export default async function MemeDetailPage({ params }: Props) {
           className="flex min-h-11 items-center gap-2 rounded-xl bg-safety-yellow-bg px-4 py-2.5 text-base font-semibold text-safety-yellow"
         >
           <span aria-hidden>▲</span>
-          {MODERATION_STATUS.limited.user} — 정보가 바뀔 수 있어요.
+          {MODERATION_STATUS.limited.user} · 정보가 바뀔 수 있어요.
         </p>
       )}
 
@@ -271,11 +271,6 @@ export default async function MemeDetailPage({ params }: Props) {
           <ShareButton path={path} title={meme.title} label="공유" />
         </div>
       </div>
-
-      {/* 상세 진입 유도 — 로그인/가입(로그아웃 방문자 전용, 클라이언트 판정으로 SSG·SEO
-          불변). 컴포넌트 문서가 명시한 자리가 "정답 카드 직후"다. 이전에는 본문보다
-          위에 있어 첫 화면 410px를 가져갔다. */}
-      <AuthInvite />
 
       {/* 감상(좌)·정보(우) 2단 — 데스크톱은 영상을 고정하고 오른쪽 정보만 스크롤,
           모바일은 정답 카드 다음에 영상, 그다음 나머지 정보가 이어진다. */}
@@ -461,6 +456,8 @@ export default async function MemeDetailPage({ params }: Props) {
               </div>
             </section>
           )}
+
+          <AuthInvite />
 
           {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
           <UsageExamples examples={usageExamples} />

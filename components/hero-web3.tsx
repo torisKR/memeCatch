@@ -28,10 +28,14 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
             </span>
             Signal desk · Korean meme dictionary
           </p>
-          <h1 className="mt-5 max-w-2xl text-[2.65rem] font-black leading-[1.06] tracking-[-0.035em] sm:text-[3.8rem]">
-            그 밈, <span className="text-(--flame-400)">지금 써도 될지까지</span>
+          {/* 태그라인 — 각 의미 단위를 inline-block으로 고정해 좁은 화면에서도
+             파편("될지까지")으로 쪼개지지 않게 한다. 모바일은 3줄 스택을 전제해
+             크기·행간을 완화하고, sm+에서는 기존 2단 조판을 유지한다. */}
+          <h1 className="mt-5 max-w-2xl text-[2.5rem] font-black leading-[1.14] tracking-[-0.035em] sm:text-[3.8rem] sm:leading-[1.06]">
+            <span className="inline-block">그 밈,</span>{" "}
+            <span className="inline-block text-(--flame-400)">지금 써도 될지까지</span>
             <br />
-            3초 안에.
+            <span className="inline-block">3초 안에.</span>
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-white/68 sm:text-lg">
             뜻·유래·현재 안전성은 무료로 확인하세요. 상세의 무료 활용 문구 1개를 복사해

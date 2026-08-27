@@ -38,10 +38,7 @@ export default async function Home() {
           >
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-                  MemeCatch signal
-                </p>
-                <h2 id="sec-trending" className="mt-1.5 text-2xl font-extrabold tracking-tight">
+                <h2 id="sec-trending" className="text-2xl font-extrabold tracking-tight">
                   밈캐치 내 급상승
                 </h2>
               </div>

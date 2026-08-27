@@ -102,8 +102,10 @@ node scripts/import-source-candidates.mjs <candidates.jsonl> [--dry-run]
 node scripts/verify-youtube-pending.mjs [--limit=3000]
 node scripts/verify-oembed-sources.mjs [--limit=400]
 
-# 6) 자동 승인 — 공개+임베드 확인 + 제목/채널명 정확 일치분만 게시
-node scripts/auto-approve-source-candidates.mjs [--dry-run] [--limit=2000]
+# 6) `/admin/sources`에서 운영자가 후보를 직접 검수·승인해 게시
+
+# 예외적 수동 운영자 작업(일일 배치에서는 호출하지 않음)
+node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve [--dry-run] [--limit=2000]
 ```
 
 - `media_sources` — 플랫폼 콘텐츠 1건 = 1행(정규 URL·외부 ID·메타데이터·30일 갱신 시한)

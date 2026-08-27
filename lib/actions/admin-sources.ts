@@ -224,6 +224,7 @@ export async function reviewMemeSource(input: {
       link_only: linkOnly,
     });
     revalidatePath("/admin/sources");
+    revalidatePath("/global");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };

@@ -41,8 +41,8 @@ export function AnswerCard({
     <motion.section
       aria-label="정답 카드"
       className="hover-glow-flame rounded-2xl border border-border bg-surface p-5 shadow-sm"
-      initial={reduce ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={reduce ? false : { y: 12 }}
+      animate={{ y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* 판독 헤더 — 계측 화면의 채널 라벨. 지금 이 밈이 어느 단계인지 먼저 말한다. */}

@@ -323,6 +323,7 @@ export async function approveSubmission(input: {
     });
     revalidatePath("/admin/submissions");
     revalidatePath("/admin/memes");
+    revalidatePath("/global");
     revalidateCanonicalMemePaths(revalidationIdentity);
     return { ok: true, data: { memeId } };
   } catch (e) {

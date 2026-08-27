@@ -110,6 +110,12 @@ function isExpectedStudioAiFallback(error: unknown): boolean {
     || /^openrouter_structured_failed:(?:network_error|408|409|425|429|5\d\d)(?:\s|$)/.test(message);
 }
 
+function studioAiFailureCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  return message.match(/^openrouter_structured_(?:failed:(?:network_error|\d{3})|invalid|empty)/)?.[0]
+    ?? "unexpected";
+}
+
 function isMemeConcept(value: unknown): value is MemeConcept {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
@@ -287,7 +293,7 @@ export async function generateMemeConcepts(input: {
       if (concepts.length === 3) return { mode: "ai", concepts };
     } catch (error) {
       if (!isExpectedStudioAiFallback(error)) {
-        console.error("meme_studio_ai_generation_failed");
+        console.error("meme_studio_ai_generation_failed", studioAiFailureCode(error));
       }
     }
   }

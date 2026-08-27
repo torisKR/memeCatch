@@ -139,14 +139,17 @@ describe("meme studio deterministic concepts", () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it("records an unexpected AI failure without exposing its details", async () => {
+  it("records a stable AI failure code without exposing provider details", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.configured.mockReturnValue(true);
-    mocks.request.mockRejectedValueOnce(new Error("secret provider response"));
+    mocks.request.mockRejectedValueOnce(new Error("openrouter_structured_failed:402 provider_message=secret"));
 
     await expect(generateMemeConcepts({ topic: "고양이", tone: "hype", format: "caption" }))
       .resolves.toMatchObject({ mode: "template" });
-    expect(consoleError).toHaveBeenCalledWith("meme_studio_ai_generation_failed");
+    expect(consoleError).toHaveBeenCalledWith(
+      "meme_studio_ai_generation_failed",
+      "openrouter_structured_failed:402",
+    );
     expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining("secret"));
   });
 

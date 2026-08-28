@@ -27,6 +27,10 @@ import {
   buildPlusOutcomeReplayPath,
   parsePlusOutcomeReplayRequest,
 } from "@/lib/plus-outcome-replay-routing";
+import { shortIdFromParam } from "@/lib/labels";
+
+const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
+const MEME_LOOKUP_TIMEOUT_MS = 1_500;
 
 function localeFromPathname(pathname: string): Locale | null {
   const parsed = parseLocalePath(pathname);
@@ -168,7 +172,13 @@ export async function proxy(request: NextRequest) {
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
   const needsAuth = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
-  if (!needsAuth) return response;
+  const detailMatch = path.match(/^\/memes\/([^/]+)$/);
+  const detailKey = detailMatch?.[1] === "random" && !urlLocale ? null : detailMatch?.[1];
+  const fetchMode = request.headers.get("sec-fetch-mode");
+  const documentDetailKey = detailKey && (fetchMode === null || fetchMode === "navigate")
+    ? detailKey
+    : null;
+  if (!needsAuth && !documentDetailKey) return response;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -186,6 +196,34 @@ export async function proxy(request: NextRequest) {
       },
     }
   );
+
+  if (documentDetailKey) {
+    try {
+      const { data, error } = await supabase
+        .from("memes")
+        .select("id")
+        .eq("short_id", shortIdFromParam(documentDetailKey))
+        .in("moderation_status", [...PUBLIC_MEME_STATUSES])
+        .limit(1)
+        .abortSignal(AbortSignal.timeout(MEME_LOOKUP_TIMEOUT_MS));
+      if (error) {
+        console.warn("public_meme_existence_check_failed query_error");
+      }
+      if (!error && data?.length === 0) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/__missing_public_meme__";
+        return applyLocale(NextResponse.rewrite(url, {
+          status: 404,
+          request: { headers: requestHeaders },
+        }));
+      }
+    } catch {
+      // Fail open: a provider outage must not turn valid public content into a 404.
+      console.warn("public_meme_existence_check_failed request_error");
+    }
+  }
+
+  if (!needsAuth) return response;
 
   const {
     data: { user },

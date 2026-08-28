@@ -1,26 +1,54 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LOCALE_COOKIE, LOCALE_HEADER } from "@/lib/i18n";
 import { proxy, resolveLandingRedirectLocale } from "@/proxy";
+
+const supabaseMocks = vi.hoisted(() => ({
+  abortSignal: vi.fn(),
+  eq: vi.fn(),
+  from: vi.fn(),
+  in: vi.fn(),
+  limit: vi.fn(),
+  select: vi.fn(),
+}));
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({
     auth: { getUser: async () => ({ data: { user: null } }) },
+    from: supabaseMocks.from,
   }),
 }));
+
+beforeEach(() => {
+  supabaseMocks.abortSignal.mockReset().mockResolvedValue({ data: [{ id: "meme-1" }], error: null });
+  const query = {
+    select: supabaseMocks.select,
+    eq: supabaseMocks.eq,
+    in: supabaseMocks.in,
+    limit: supabaseMocks.limit,
+    abortSignal: supabaseMocks.abortSignal,
+  };
+  supabaseMocks.select.mockReset().mockReturnValue(query);
+  supabaseMocks.eq.mockReset().mockReturnValue(query);
+  supabaseMocks.in.mockReset().mockReturnValue(query);
+  supabaseMocks.limit.mockReset().mockReturnValue(query);
+  supabaseMocks.from.mockReset().mockReturnValue(query);
+});
 
 function publicRequest(
   pathname: string,
   {
     cookie,
     acceptLanguage,
+    fetchMode,
     userAgent,
-  }: { cookie?: string; acceptLanguage?: string; userAgent?: string } = {},
+  }: { cookie?: string; acceptLanguage?: string; fetchMode?: string; userAgent?: string } = {},
 ) {
   return new NextRequest(`https://catchmeme.test${pathname}`, {
     headers: {
       ...(cookie ? { cookie: `${LOCALE_COOKIE}=${cookie}` } : {}),
       ...(acceptLanguage ? { "accept-language": acceptLanguage } : {}),
+      ...(fetchMode ? { "sec-fetch-mode": fetchMode } : {}),
       ...(userAgent ? { "user-agent": userAgent } : {}),
     },
   });
@@ -80,6 +108,92 @@ describe("proxy locale contract", () => {
 
     expect(response.headers.get("content-language")).toBe("en");
     expect(forwardedLocale(response)).toBe("ko");
+  });
+});
+
+describe("proxy public meme existence check", () => {
+  it.each([
+    ["/memes/missing-meme", "ko"],
+    ["/en/memes/missing-meme", "en"],
+    ["/en/memes/random", "en"],
+  ])("rewrites a confirmed missing exact detail %s to a branded 404", async (path, language) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("content-language")).toBe(language);
+    expect(supabaseMocks.from).toHaveBeenCalledWith("memes");
+    expect(supabaseMocks.select).toHaveBeenCalledWith("id");
+    expect(supabaseMocks.eq).toHaveBeenCalledWith(
+      "short_id",
+      path.endsWith("/random") ? "random" : "missing",
+    );
+    expect(supabaseMocks.in).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
+    expect(supabaseMocks.limit).toHaveBeenCalledWith(1);
+    expect(supabaseMocks.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
+  });
+
+  it("skips the lookup for a cors RSC or prefetch request", async () => {
+    const response = await proxy(publicRequest("/en/memes/missing-meme", { fetchMode: "cors" }));
+
+    expect(response.status).toBe(200);
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "navigate"])("checks a document request with fetch mode %s", async (fetchMode) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+
+    const response = await proxy(publicRequest("/en/memes/missing-meme", { fetchMode }));
+
+    expect(response.status).toBe(404);
+    expect(supabaseMocks.from).toHaveBeenCalledWith("memes");
+  });
+
+  it.each([
+    "/memes/random",
+    "/memes/meme-1/export",
+    "/en/memes/meme-1/opengraph-image",
+  ])("does not query nested or reserved meme route %s", async (path) => {
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).toBe(200);
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { data: null, error: { message: "provider unavailable" } },
+    { data: [], error: { message: "timeout" } },
+  ])("fails open when the public lookup returns an error", async (result) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    supabaseMocks.abortSignal.mockResolvedValueOnce(result);
+
+    const response = await proxy(publicRequest("/memes/meme-1"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "public_meme_existence_check_failed query_error",
+    );
+    expect(warn.mock.calls.flat().join(" ")).not.toContain(result.error.message);
+    warn.mockRestore();
+  });
+
+  it("fails open when the public lookup throws", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const providerMessage = "network down";
+    supabaseMocks.abortSignal.mockRejectedValueOnce(new Error(providerMessage));
+
+    const response = await proxy(publicRequest("/memes/meme-1"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "public_meme_existence_check_failed request_error",
+    );
+    expect(warn.mock.calls.flat().join(" ")).not.toContain(providerMessage);
+    warn.mockRestore();
   });
 });
 

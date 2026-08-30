@@ -4,10 +4,10 @@
  * `{ "updatedAt": "2026-08-30T00:00:00.000Z", "nodes": { "plan": { "status": "pending", "verdict": null, "attempts": 0, "reason": "" } } }`.
  * User instruction: "Implement the smallest runner or checklist script that
  * records node state one-way (pending → running → judged)." and
- * "Do not delete/weaken tests". Tick 11: lock CLI rewind of a judged DAG
- * (state.json byte-identical) and cycle change-list heading completeness.
+ * "Do not delete/weaken tests". Tick 12 close-out: lock cycle-01..cycle-12
+ * files on disk (heading completeness alone would pass if a tick file were deleted).
  */
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -114,6 +114,14 @@ describe("graph-eng-run one-way state", () => {
     expect(judge.code).toBe(1);
     expect(judge.stdout).toMatch(/do not rewind/);
     expect(readFileSync(statePath, "utf8")).toBe(before);
+  });
+
+  it("keeps cycle-01 through cycle-12 change-lists on disk", () => {
+    const dir = join(process.cwd(), "artifacts/renewal/graph-eng");
+    for (let n = 1; n <= 12; n += 1) {
+      const name = `cycle-${String(n).padStart(2, "0")}.md`;
+      expect(existsSync(join(dir, name)), name).toBe(true);
+    }
   });
 
   it("every cycle change-list has required headings", () => {

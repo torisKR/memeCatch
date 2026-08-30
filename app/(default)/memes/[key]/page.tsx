@@ -6,7 +6,13 @@ import {
   formatOriginYear,
   shortIdFromParam,
 } from "@/lib/labels";
-import { houseOriginalPublicLabel, isHouseOriginal, originSectionHeading } from "@/lib/house-original";
+import {
+  aboutSectionHeading,
+  houseOriginalPublicLabel,
+  isHouseOriginal,
+  memeDetailMetadataDescription,
+  originSectionHeading,
+} from "@/lib/house-original";
 import {
   getMemeByShortId,
   getReactionCounts,
@@ -102,7 +108,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ]),
   ]);
   const languages = { ...hreflangs, "x-default": hreflangs.en ?? path };
-  const description = `${meme.title} 뜻과 유래 · ${meme.summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
+  const description = memeDetailMetadataDescription(
+    meme.title,
+    meme.summary,
+    meme.origin_kind,
+  );
   return {
     metadataBase: new URL(SITE_URL),
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
@@ -379,7 +389,7 @@ export default async function MemeDetailPage({ params }: Props) {
               <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
               <div className="relative space-y-4">
                 <h2 id="meme-about" className="sr-only">
-                  뜻과 유래
+                  {aboutSectionHeading(meme.origin_kind)}
                 </h2>
                 {meme.description && (
                   <div>

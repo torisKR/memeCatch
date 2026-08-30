@@ -23,4 +23,11 @@ describe("meme detail renewal", () => {
     expect(source).toContain("{originSectionHeading(meme.origin_kind)}");
     expect(source).not.toMatch(/<h3[^>]*>\s*어디서 시작됐어요\?/);
   });
+
+  it("uses aboutSectionHeading for sr-only about h2 and page metadata, not hardcoded folk 유래", () => {
+    expect(source).toContain("{aboutSectionHeading(meme.origin_kind)}");
+    expect(source).toContain("memeDetailMetadataDescription(");
+    expect(source).not.toMatch(/<h2[^>]*>\s*뜻과 유래/);
+    expect(source).not.toContain("뜻과 유래 ·");
+  });
 });

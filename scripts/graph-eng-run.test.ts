@@ -4,9 +4,10 @@
  * `{ "updatedAt": "2026-08-30T00:00:00.000Z", "nodes": { "plan": { "status": "pending", "verdict": null, "attempts": 0, "reason": "" } } }`.
  * User instruction: "Implement the smallest runner or checklist script that
  * records node state one-way (pending → running → judged)." and
- * "Do not delete/weaken tests".
+ * "Do not delete/weaken tests". Tick 11: lock CLI rewind of a judged DAG
+ * (state.json byte-identical) and cycle change-list heading completeness.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -14,8 +15,11 @@ import {
   applyJudge,
   applyStart,
   canStart,
+  cycleChangeListGaps,
+  DEFAULT_STATE_PATH,
   emptyGraph,
   MAX_FAIL_ATTEMPTS,
+  NODE_IDS,
   runCli,
 } from "./graph-eng-run.mts";
 
@@ -74,5 +78,59 @@ describe("graph-eng-run one-way state", () => {
     );
     expect(saved.nodes.judge.verdict).toBe("skip");
     expect(saved.nodes.judge.status).toBe("judged");
+  });
+
+  it("forbids skipping running: pending cannot be judged; running cannot restart", () => {
+    const now = "2026-08-31T02:00:00.000Z";
+    expect(() => applyJudge(emptyGraph(), "plan", "pass", "", now)).toThrow(
+      /must be running/,
+    );
+    const running = applyStart(emptyGraph(), "plan", now);
+    expect(running.nodes.plan.status).toBe("running");
+    expect(() => applyStart(running, "plan", now)).toThrow(/already running/);
+    expect(canStart(running, "plan").ok).toBe(false);
+  });
+
+  it("CLI refuses rewind of a judged DAG and leaves state.json unchanged", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "graph-eng-"));
+    dirs.push(cwd);
+    const judged = {
+      updatedAt: "2026-08-31T00:00:00.000Z",
+      nodes: Object.fromEntries(
+        NODE_IDS.map((id) => [
+          id,
+          { status: "judged", verdict: "pass", attempts: 0, reason: "locked" },
+        ]),
+      ),
+    };
+    const statePath = join(cwd, DEFAULT_STATE_PATH);
+    mkdirSync(join(cwd, "artifacts/renewal/graph-eng"), { recursive: true });
+    writeFileSync(statePath, `${JSON.stringify(judged, null, 2)}\n`);
+    const before = readFileSync(statePath, "utf8");
+    const start = runCli(["start", "plan"], cwd);
+    expect(start.code).toBe(1);
+    expect(start.stdout).toMatch(/do not rewind/);
+    const judge = runCli(["judge", "deploy", "pass"], cwd);
+    expect(judge.code).toBe(1);
+    expect(judge.stdout).toMatch(/do not rewind/);
+    expect(readFileSync(statePath, "utf8")).toBe(before);
+  });
+
+  it("every cycle change-list has required headings", () => {
+    const dir = join(process.cwd(), "artifacts/renewal/graph-eng");
+    const files = readdirSync(dir).filter((name) => /^cycle-\d+\.md$/.test(name));
+    expect(files.length).toBeGreaterThan(0);
+    for (const name of files) {
+      expect(cycleChangeListGaps(readFileSync(join(dir, name), "utf8")), name).toEqual(
+        [],
+      );
+    }
+    expect(cycleChangeListGaps("# incomplete")).toEqual([
+      "## Nodes",
+      "## Change-list",
+      "## Judge evidence",
+      "## Locked rules honored",
+      "## Next node for tick",
+    ]);
   });
 });

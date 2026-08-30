@@ -27,6 +27,15 @@ export const GRAPH_DOC_FALLBACK = "artifacts/renewal/graph-eng/graph-engineering
 export const DEFAULT_STATE_PATH = "artifacts/renewal/graph-eng/state.json";
 export const MAX_FAIL_ATTEMPTS = 3;
 
+/** Cycle change-list must include these heading prefixes (cycle-01 uses shorter titles). */
+export const CYCLE_REQUIRED_HEADINGS = [
+  "## Nodes",
+  "## Change-list",
+  "## Judge evidence",
+  "## Locked rules honored",
+  "## Next node for tick",
+] as const;
+
 export const NODE_IDS = ["plan", "design", "build", "judge", "deploy"] as const;
 export type NodeId = (typeof NODE_IDS)[number];
 
@@ -72,6 +81,10 @@ export function emptyGraph(): GraphState {
 
 export function isNodeId(value: string): value is NodeId {
   return (NODE_IDS as readonly string[]).includes(value);
+}
+
+export function cycleChangeListGaps(markdown: string): string[] {
+  return CYCLE_REQUIRED_HEADINGS.filter((heading) => !markdown.includes(heading));
 }
 
 export function parseGraphState(raw: unknown): GraphState {

@@ -19,7 +19,7 @@ Runner: `scripts/graph-eng-run.mts`
 | build | pass | Smallest product edits + one-way runner. 0 new npm deps. No factory / weekly cron / server PNG / Plus-cron-R2 reopen. |
 | D-094 | skip | `docs/renewal/DECISIONS.md` GateGuard + hook JSON block after 2 retries. Canonical paste remains in `artifacts/renewal/loop-148/house-original-t6.md`. |
 | judge | pass | Focused vitest 7 files / 51 tests. `pnpm exec tsc --noEmit` exit 0. ESLint on touched product files exit 0. No `*.test.*` deleted; diffs are additions only. `pnpm build` succeeded (89/89 pages). |
-| deploy | running | Local build green. Vercel linked (`prj_fWt03H8a0rZtoDuCxczV7NhM4OEd`). CLI user `ironjustlikethat-4318`. Preview deploy requested after judge+build pass. |
+| deploy | pass | Preview `https://memecatch-mmqjq35u1-ironjustlikethatgmailcoms-projects.vercel.app` (`dpl_HoM9E2DTzX5CUg7mARaq8UXi25gH`). Earlier cycle preview `https://memecatch-5rqf2ac25-ironjustlikethatgmailcoms-projects.vercel.app` (`dpl_Cb5h1YxZg5rx5WzrrZAaDCEsY1cB`). Not production. |
 
 ## Change-list
 

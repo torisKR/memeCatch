@@ -28,6 +28,8 @@ import {
   HOUSE_ORIGINAL_RIGHTS_BASIS,
   HOUSE_ORIGINAL_SOURCE_ROLE,
   houseOriginalCanonicalUrl,
+  houseOriginalOriginLooksLikeOperatorScratch,
+  houseOriginalOriginScratchError,
   houseOriginalPublicLabel,
   houseOriginalPublishErrorMessage,
   isHouseOriginal,
@@ -80,6 +82,7 @@ function errMessage(e: unknown): string {
 type MemeRevalidationIdentity = {
   short_id: string;
   slug: string;
+  origin_kind?: string | null;
   meme_translations: Array<{ locale: string; localized_slug: string }>;
 };
 
@@ -89,7 +92,7 @@ async function loadMemeRevalidationIdentity(
 ): Promise<MemeRevalidationIdentity | null> {
   const { data, error } = await supabase
     .from("memes")
-    .select("short_id, slug, meme_translations(locale, localized_slug)")
+    .select("short_id, slug, origin_kind, meme_translations(locale, localized_slug)")
     .eq("id", memeId)
     .maybeSingle();
   return error ? null : data;
@@ -357,6 +360,12 @@ export async function createHouseOriginal(input: {
     const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     if (!input.summary.trim()) return { ok: false, error: "한 줄 요약을 입력해 주세요." };
+    if (
+      houseOriginalOriginLooksLikeOperatorScratch(input.origin) ||
+      houseOriginalOriginLooksLikeOperatorScratch(input.description)
+    ) {
+      return { ok: false, error: houseOriginalOriginScratchError() };
+    }
 
     const baseRow = {
       title: input.title.trim(),
@@ -448,6 +457,13 @@ export async function updateMeme(input: {
       supabase,
       input.memeId,
     );
+    if (
+      isHouseOriginal(revalidationIdentity?.origin_kind) &&
+      (houseOriginalOriginLooksLikeOperatorScratch(input.origin) ||
+        houseOriginalOriginLooksLikeOperatorScratch(input.description))
+    ) {
+      return { ok: false, error: houseOriginalOriginScratchError() };
+    }
     const { data: safetyReviewQueued, error } = await supabase.rpc(
       "update_meme_with_safety_review",
       {

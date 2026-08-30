@@ -36,6 +36,7 @@ describe("HouseOriginalForm", () => {
     expect(screen.getByLabelText("어떻게 만들었나요?").getAttribute("aria-describedby")).toBe(
       "house-origin-hint",
     );
+    expect(screen.getByText("검수 메모나 게시 여부를 쓰지 말고", { exact: false })).toBeTruthy();
     expect(screen.getByText("인터넷 원출처나 연도를 지어내지 마세요.", { exact: false })).toBeTruthy();
     expect(screen.getByLabelText("제작 연도 (선택)")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("제목"), { target: { value: "자체 제작 밈" } });

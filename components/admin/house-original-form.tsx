@@ -6,6 +6,7 @@ import { createHouseOriginal } from "@/lib/actions/admin";
 import {
   HOUSE_ORIGINAL,
   houseOriginalOperatorPath,
+  houseOriginalOriginHint,
   houseOriginalPathNote,
   houseOriginalPathStepAriaCurrent,
   originYearFieldLabel,
@@ -136,7 +137,7 @@ export function HouseOriginalForm() {
         />
       </label>
       <p id="house-origin-hint" className="-mt-2 text-sm text-muted">
-        밈캐치가 이 형식을 만든 경위. 인터넷 원출처나 연도를 지어내지 마세요.
+        {houseOriginalOriginHint()}
       </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <SafetySelect

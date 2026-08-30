@@ -97,6 +97,35 @@ export function originYearFieldLabel(originKind: string | null | undefined): str
   return isHouseOriginal(originKind) ? "제작 연도" : "유행 시작 연도";
 }
 
+/** Guest-visible origin field hint. Ops process notes are not public copy. */
+export function houseOriginalOriginHint(): string {
+  return "밈캐치가 이 형식을 만든 경위. 검수 메모나 게시 여부를 쓰지 말고, 인터넷 원출처나 연도를 지어내지 마세요.";
+}
+
+export function houseOriginalOriginScratchError(): string {
+  return "제작 경위에 검수·게시 과정 메모가 들어가 있어요. 게스트에게 보이는 문장이니, 밈캐치가 어떻게 만들었는지만 적어 주세요.";
+}
+
+const HOUSE_ORIGIN_SCRATCH_MARKERS = [
+  "게시는 하지 않았다",
+  "pending으로 저장",
+  "사실 확인·권리 확인",
+  "권리 확인·게시는",
+  "moderation_status",
+  "house_rights_attested",
+] as const;
+
+/** True when house-original public copy still reads as operator scratch, not make-copy. */
+export function houseOriginalOriginLooksLikeOperatorScratch(text: string): boolean {
+  const t = text.replace(/\s+/g, " ");
+  if (!t.trim()) return false;
+  if (HOUSE_ORIGIN_SCRATCH_MARKERS.some((marker) => t.includes(marker))) return true;
+  if (/게시는\s*하지/.test(t)) return true;
+  if (/pending/i.test(t) && /저장/.test(t)) return true;
+  if (/사실 확인/.test(t) && /권리 확인/.test(t)) return true;
+  return false;
+}
+
 export function adminLinkedContentsEmptyCopy(originKind: string | null | undefined): string {
   if (isHouseOriginal(originKind)) {
     return "자체 제작은 SNS 후보 랭킹으로 들어오지 않습니다. 필요하면 운영자가 직접 임베드를 연결하세요. 자동 게시하지 않습니다.";

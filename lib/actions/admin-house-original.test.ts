@@ -148,6 +148,26 @@ describe("createHouseOriginal", () => {
       }),
     );
   });
+
+  it("rejects operator scratch origin copy before insert", async () => {
+    const { client, insert } = memesInsertClient(async () => {
+      throw new Error("insert should not run");
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    await expect(
+      createHouseOriginal({
+        ...createInput,
+        origin:
+          "밈캐치 운영자가 자체 제작 등록으로 제목·요약·제작 경위만 적어 pending으로 저장했다. 사실 확인·권리 확인·게시는 하지 않았다.",
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error:
+        "제작 경위에 검수·게시 과정 메모가 들어가 있어요. 게스트에게 보이는 문장이니, 밈캐치가 어떻게 만들었는지만 적어 주세요.",
+    });
+    expect(insert).not.toHaveBeenCalled();
+  });
 });
 
 describe("transitionMemeStatus house original gate", () => {

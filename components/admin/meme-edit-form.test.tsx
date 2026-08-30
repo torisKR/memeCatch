@@ -105,6 +105,10 @@ describe("MemeEditForm Korean review", () => {
       />,
     );
     expect(screen.getByLabelText("어떻게 만들었나요?")).toBeTruthy();
+    expect(screen.getByLabelText("어떻게 만들었나요?").getAttribute("aria-describedby")).toBe(
+      "house-origin-hint",
+    );
+    expect(screen.getByText("검수 메모나 게시 여부를 쓰지 말고", { exact: false })).toBeTruthy();
     expect(screen.queryByLabelText("유래")).toBeNull();
     expect(screen.getByLabelText("제작 연도")).toBeTruthy();
     expect(screen.queryByLabelText("유행 시작 연도")).toBeNull();

@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { generateKoreanReviewDraft, updateMeme } from "@/lib/actions/admin";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
-import { isHouseOriginal, originSectionHeading, originYearFieldLabel } from "@/lib/house-original";
+import {
+  houseOriginalOriginHint,
+  isHouseOriginal,
+  originSectionHeading,
+  originYearFieldLabel,
+} from "@/lib/house-original";
 import {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
@@ -204,8 +209,19 @@ export function MemeEditForm({
         <span className="mb-1 block text-base font-medium">
           {isHouseOriginal(originKind) ? originSectionHeading(originKind) : "유래"}
         </span>
-        <textarea value={form.origin} onChange={(e) => set("origin", e.target.value)} rows={4} className={inputCls} />
+        <textarea
+          value={form.origin}
+          onChange={(e) => set("origin", e.target.value)}
+          rows={4}
+          aria-describedby={isHouseOriginal(originKind) ? "house-origin-hint" : undefined}
+          className={inputCls}
+        />
       </label>
+      {isHouseOriginal(originKind) ? (
+        <p id="house-origin-hint" className="-mt-2 text-sm text-muted">
+          {houseOriginalOriginHint()}
+        </p>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="block">

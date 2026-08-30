@@ -11,6 +11,9 @@ import {
   memeDetailMetadataDescription,
   originSectionHeading,
   originYearFieldLabel,
+  houseOriginalOriginHint,
+  houseOriginalOriginLooksLikeOperatorScratch,
+  houseOriginalOriginScratchError,
   adminMemeListEmptyState,
   adminLinkedContentsEmptyCopy,
   houseOriginalOperatorPath,
@@ -168,6 +171,23 @@ describe("admin origin filter and empty copy", () => {
     expect(originYearFieldLabel("house_original")).toBe("제작 연도");
     expect(originYearFieldLabel("catalog")).toBe("유행 시작 연도");
     expect(originYearFieldLabel(undefined)).toBe("유행 시작 연도");
+  });
+
+  it("rejects operator scratch in house-original origin copy and keeps honest make-copy", () => {
+    expect(
+      houseOriginalOriginLooksLikeOperatorScratch(
+        "밈캐치 운영자가 자체 제작 등록으로 제목·요약·제작 경위만 적어 pending으로 저장했다. 사실 확인·권리 확인·게시는 하지 않았다.",
+      ),
+    ).toBe(true);
+    expect(houseOriginalOriginLooksLikeOperatorScratch("게시는 하지 않았다")).toBe(true);
+    expect(
+      houseOriginalOriginLooksLikeOperatorScratch(
+        "2026년 밈캐치가 자체 그래픽과 짧은 말장난으로 만들었다. 인터넷 원본을 긁지 않았다.",
+      ),
+    ).toBe(false);
+    expect(houseOriginalOriginLooksLikeOperatorScratch("")).toBe(false);
+    expect(houseOriginalOriginHint()).toContain("검수 메모나 게시 여부를 쓰지 말고");
+    expect(houseOriginalOriginScratchError()).toContain("어떻게 만들었는지만");
   });
 
   it("gives the house-original admin empty list a create CTA like guest explore empty → submit", () => {

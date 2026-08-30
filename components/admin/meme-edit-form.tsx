@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { generateKoreanReviewDraft, updateMeme } from "@/lib/actions/admin";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
-import { isHouseOriginal, originSectionHeading } from "@/lib/house-original";
+import { isHouseOriginal, originSectionHeading, originYearFieldLabel } from "@/lib/house-original";
 import {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
@@ -292,7 +292,7 @@ export function MemeEditForm({
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-base font-medium">유행 시작 연도</span>
+          <span className="mb-1 block text-base font-medium">{originYearFieldLabel(originKind)}</span>
           <input
             value={form.originYear}
             onChange={(e) => set("originYear", e.target.value)}

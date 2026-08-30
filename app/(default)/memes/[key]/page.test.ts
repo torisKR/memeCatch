@@ -43,7 +43,7 @@ describe("밈 상세 hreflang 계약", () => {
   it("무료 뜻·유래·기본 안전성은 Plus 잠금 밖에 둔다", () => {
     const answerCard = source.indexOf("<AnswerCard meme={meme}");
     const description = source.indexOf("{meme.description && (");
-    const origin = source.indexOf("{meme.origin && (");
+    const origin = source.indexOf("{(meme.origin || isHouseOriginal(meme.origin_kind)) && (");
     const useKit = source.indexOf("<MemeUseKit");
 
     expect(answerCard).toBeGreaterThan(-1);

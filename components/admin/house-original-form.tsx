@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createHouseOriginal } from "@/lib/actions/admin";
 import {
+  HOUSE_ORIGINAL,
   houseOriginalOperatorPath,
   houseOriginalPathNote,
   houseOriginalPathStepAriaCurrent,
+  originYearFieldLabel,
 } from "@/lib/house-original";
 import { CATEGORIES, DIFFICULTY, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import {
@@ -129,10 +131,13 @@ export function HouseOriginalForm() {
           value={origin}
           onChange={(e) => setOrigin(e.target.value)}
           rows={4}
-          placeholder="밈캐치가 이 형식을 만든 경위. 인터넷 원출처나 연도를 지어내지 마세요."
+          aria-describedby="house-origin-hint"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base"
         />
       </label>
+      <p id="house-origin-hint" className="-mt-2 text-sm text-muted">
+        밈캐치가 이 형식을 만든 경위. 인터넷 원출처나 연도를 지어내지 마세요.
+      </p>
       <div className="grid gap-3 sm:grid-cols-3">
         <SafetySelect
           label="신호등"
@@ -170,7 +175,9 @@ export function HouseOriginalForm() {
         </label>
       </div>
       <label className="block sm:max-w-xs">
-        <span className="mb-1 block text-base font-medium">제작 연도 (선택)</span>
+        <span className="mb-1 block text-base font-medium">
+          {originYearFieldLabel(HOUSE_ORIGINAL)} (선택)
+        </span>
         <input
           inputMode="numeric"
           value={originYear}

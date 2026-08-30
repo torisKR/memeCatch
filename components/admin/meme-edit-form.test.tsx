@@ -106,10 +106,13 @@ describe("MemeEditForm Korean review", () => {
     );
     expect(screen.getByLabelText("어떻게 만들었나요?")).toBeTruthy();
     expect(screen.queryByLabelText("유래")).toBeNull();
+    expect(screen.getByLabelText("제작 연도")).toBeTruthy();
+    expect(screen.queryByLabelText("유행 시작 연도")).toBeNull();
   });
 
   it("keeps the catalog origin field labeled 유래", () => {
     render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey={false} />);
     expect(screen.getByLabelText("유래")).toBeTruthy();
+    expect(screen.getByLabelText("유행 시작 연도")).toBeTruthy();
   });
 });

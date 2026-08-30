@@ -88,6 +88,13 @@ describe("MemeStatusControls house original attestation", () => {
     );
     expect(screen.getByRole("status").textContent).toContain("권리 근거");
     expect(screen.getByRole("checkbox")).toBeTruthy();
+    expect(screen.getByRole("checkbox").getAttribute("aria-required")).toBe("true");
+    expect(screen.getByRole("checkbox").getAttribute("aria-describedby")).toBe(
+      "house-original-rights-evidence",
+    );
+    expect((screen.getByRole("button", { name: "수동 게시" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it("shows the pending→fact→rights→manual publish path and rights source URL", () => {

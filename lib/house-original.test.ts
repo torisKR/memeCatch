@@ -8,6 +8,7 @@ import {
   isHouseOriginalRightsSource,
   parseAdminOriginFilter,
   originSectionHeading,
+  originYearFieldLabel,
   adminMemeListEmptyState,
   adminLinkedContentsEmptyCopy,
   houseOriginalOperatorPath,
@@ -142,6 +143,12 @@ describe("admin origin filter and empty copy", () => {
     expect(originSectionHeading("catalog")).toBe("어디서 시작됐어요?");
     expect(originSectionHeading("house_original")).toBe("어떻게 만들었나요?");
     expect(originSectionHeading(undefined)).toBe("어디서 시작됐어요?");
+  });
+
+  it("labels the year field as make-year for house originals and folk-year for catalog", () => {
+    expect(originYearFieldLabel("house_original")).toBe("제작 연도");
+    expect(originYearFieldLabel("catalog")).toBe("유행 시작 연도");
+    expect(originYearFieldLabel(undefined)).toBe("유행 시작 연도");
   });
 
   it("gives the house-original admin empty list a create CTA like guest explore empty → submit", () => {

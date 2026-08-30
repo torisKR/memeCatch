@@ -79,6 +79,11 @@ export function originSectionHeading(originKind: string | null | undefined): str
   return isHouseOriginal(originKind) ? "어떻게 만들었나요?" : "어디서 시작됐어요?";
 }
 
+/** Admin year field. Catalog keeps folk “first seen”; house originals are when CatchMeme made it. */
+export function originYearFieldLabel(originKind: string | null | undefined): string {
+  return isHouseOriginal(originKind) ? "제작 연도" : "유행 시작 연도";
+}
+
 export function adminLinkedContentsEmptyCopy(originKind: string | null | undefined): string {
   if (isHouseOriginal(originKind)) {
     return "자체 제작은 SNS 후보 랭킹으로 들어오지 않습니다. 필요하면 운영자가 직접 임베드를 연결하세요. 자동 게시하지 않습니다.";

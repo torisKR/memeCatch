@@ -68,6 +68,8 @@ export function MemeStatusControls({
   const targets = VALID_TRANSITIONS[currentStatus];
   const needsAttestation =
     houseOriginal && targets.some((to) => to === "approved" || to === "limited");
+  const publishBlocked =
+    houseOriginal && !hasRightsEvidence && currentStatus === "rights_checking";
 
   function run(to: ModerationStatus) {
     setError(null);
@@ -124,6 +126,7 @@ export function MemeStatusControls({
       )}
       {needsAttestation && !hasRightsEvidence && (
         <p
+          id="house-original-rights-evidence"
           role="status"
           className="rounded-lg border border-safety-yellow bg-safety-yellow-bg p-3 text-base text-safety-yellow"
         >
@@ -138,6 +141,9 @@ export function MemeStatusControls({
             type="checkbox"
             checked={attested}
             onChange={(e) => setAttested(e.target.checked)}
+            required
+            aria-required="true"
+            aria-describedby={publishBlocked ? "house-original-rights-evidence" : undefined}
             className="mt-1 size-4"
           />
           <span>
@@ -153,7 +159,7 @@ export function MemeStatusControls({
               <button
                 key={to}
                 type="button"
-                disabled={pending}
+                disabled={pending || publishBlocked}
                 onClick={() => setConfirmLimited(true)}
                 className="min-h-11 rounded-lg border border-safety-yellow bg-safety-yellow-bg px-4 text-base font-semibold text-safety-yellow disabled:opacity-50"
               >
@@ -166,7 +172,7 @@ export function MemeStatusControls({
             <button
               key={to}
               type="button"
-              disabled={pending}
+              disabled={pending || (publishBlocked && to === "approved")}
               onClick={() => run(to)}
               className={`min-h-11 rounded-lg px-4 text-base font-semibold disabled:opacity-50 ${
                 danger

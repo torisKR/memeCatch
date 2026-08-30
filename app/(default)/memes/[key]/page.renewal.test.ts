@@ -18,4 +18,9 @@ describe("meme detail renewal", () => {
     expect(authInvite).toBeLessThan(usageExamples);
     expect(source.match(/<AuthInvite \/>/g)).toHaveLength(1);
   });
+
+  it("uses originSectionHeading for the origin h3 instead of hardcoded folk 유래", () => {
+    expect(source).toContain("{originSectionHeading(meme.origin_kind)}");
+    expect(source).not.toMatch(/<h3[^>]*>\s*어디서 시작됐어요\?/);
+  });
 });

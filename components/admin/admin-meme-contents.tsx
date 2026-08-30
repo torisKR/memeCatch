@@ -1,4 +1,5 @@
 import { MemeEmbed } from "@/components/meme-embed";
+import { adminLinkedContentsEmptyCopy } from "@/lib/house-original";
 import type { MemeContentRow } from "@/lib/queries";
 
 type AdminContent = Pick<
@@ -21,9 +22,11 @@ type AdminContent = Pick<
 export function AdminMemeContents({
   contents,
   memeTitle,
+  originKind,
 }: {
   contents: AdminContent[];
   memeTitle: string;
+  originKind?: string | null;
 }) {
   return (
     <section className="space-y-3">
@@ -34,10 +37,7 @@ export function AdminMemeContents({
 
       {contents.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface-2 p-5">
-          <p className="text-base text-muted">
-            연결된 SNS 임베드가 아직 없어요. 검토 파이프라인에서 후보를 승격하면
-            여기에 표시돼요.
-          </p>
+          <p className="text-base text-muted">{adminLinkedContentsEmptyCopy(originKind)}</p>
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-6 md:grid-cols-2">

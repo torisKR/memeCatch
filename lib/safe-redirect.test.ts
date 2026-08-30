@@ -50,6 +50,9 @@ describe("withAllowlistedSearch", () => {
     expect(
       withAllowlistedSearch("/admin/memes", { focus: "unsourced", q: "봄", status: "approved" }),
     ).toBe("/admin/memes?focus=unsourced&q=%EB%B4%84&status=approved");
+    expect(
+      withAllowlistedSearch("/admin/memes", { origin: "house_original", status: "pending" }),
+    ).toBe("/admin/memes?status=pending&origin=house_original");
   });
 
   it("drops unknown keys, duplicates, and invalid values", () => {

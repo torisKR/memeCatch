@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createHouseOriginal } from "@/lib/actions/admin";
+import {
+  houseOriginalOperatorPath,
+  houseOriginalPathNote,
+} from "@/lib/house-original";
 import { CATEGORIES, DIFFICULTY, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import {
   CATEGORY_OPTIONS,
@@ -68,6 +72,16 @@ export function HouseOriginalForm() {
         자동 게시하지 않습니다. 저장하면 <strong>대기(pending)</strong>만 만들어지고, 사실 확인과
         권리 확인은 따로 진행합니다.
       </p>
+      <ol aria-label="자체 제작 검수 경로" className="grid gap-2 sm:grid-cols-4">
+        {houseOriginalOperatorPath("pending").map((step, i) => (
+          <li key={step.id} className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">
+            <span className="mr-1 tabular-nums">{i + 1}.</span>
+            {step.label}
+            <span className="ml-1 text-xs">({step.stateLabel})</span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-sm leading-relaxed text-muted">{houseOriginalPathNote()}</p>
       {error && (
         <p role="alert" className="rounded-lg bg-safety-red-bg p-3 text-base text-safety-red">
           {error}

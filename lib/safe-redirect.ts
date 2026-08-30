@@ -5,7 +5,7 @@
  */
 const APP_ORIGIN = "https://catchmeme.com";
 const AUTH_RETURN_QUERY_MAX_Q = 200;
-const AUTH_RETURN_QUERY_KEYS = ["focus", "q", "status"] as const;
+const AUTH_RETURN_QUERY_KEYS = ["focus", "q", "status", "origin"] as const;
 const AUTH_RETURN_STATUS_VALUES = new Set([
   "pending",
   "fact_checking",
@@ -87,6 +87,7 @@ function isAllowedAuthReturnValue(key: string, value: string): boolean {
   if (key === "focus") return value === "unsourced";
   if (key === "q") return value.length <= AUTH_RETURN_QUERY_MAX_Q;
   if (key === "status") return AUTH_RETURN_STATUS_VALUES.has(value);
+  if (key === "origin") return value === "house_original";
   return false;
 }
 

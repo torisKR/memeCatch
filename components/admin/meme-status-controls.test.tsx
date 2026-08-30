@@ -31,14 +31,14 @@ describe("MemeStatusControls house original attestation", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "게시 승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "수동 게시" }));
     expect((await screen.findByRole("alert")).textContent).toContain(
       "자체 제작 권리 확인에 동의해 주세요.",
     );
     expect(transitionMemeStatus).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "게시 승인" }));
+    fireEvent.click(screen.getByRole("button", { name: "수동 게시" }));
     await waitFor(() => {
       expect(transitionMemeStatus).toHaveBeenCalledWith({
         memeId: "meme-1",
@@ -62,5 +62,37 @@ describe("MemeStatusControls house original attestation", () => {
         attested: undefined,
       });
     });
+  });
+
+  it("shows a yellow evidence warning before approve when rights sources are missing", () => {
+    render(
+      <MemeStatusControls
+        memeId="meme-1"
+        currentStatus="rights_checking"
+        originKind="house_original"
+        hasRightsEvidence={false}
+      />,
+    );
+    expect(screen.getByRole("status").textContent).toContain("권리 근거");
+    expect(screen.getByRole("checkbox")).toBeTruthy();
+  });
+
+  it("shows the pending→fact→rights→manual publish path and rights source URL", () => {
+    render(
+      <MemeStatusControls
+        memeId="meme-1"
+        currentStatus="pending"
+        originKind="house_original"
+        rightsSourceUrl="https://catchmeme.com/memes/abcd1234-test"
+      />,
+    );
+    const path = screen.getByRole("list", { name: "자체 제작 검수 경로" });
+    expect(path.textContent).toContain("대기");
+    expect(path.textContent).toContain("사실 확인");
+    expect(path.textContent).toContain("권리 확인");
+    expect(path.textContent).toContain("수동 게시");
+    expect(screen.getByText("자동 게시하지 않습니다.", { exact: false })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "https://catchmeme.com/memes/abcd1234-test" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "게시 승인" })).toBeNull();
   });
 });

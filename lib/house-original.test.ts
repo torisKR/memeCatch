@@ -6,6 +6,13 @@ import {
   houseOriginalPublishErrorMessage,
   isHouseOriginal,
   isHouseOriginalRightsSource,
+  parseAdminOriginFilter,
+  originSectionHeading,
+  adminMemeListEmptyState,
+  adminLinkedContentsEmptyCopy,
+  houseOriginalOperatorPath,
+  houseOriginalPathNote,
+  houseOriginalTransitionLabel,
   trustCopyKind,
 } from "./house-original";
 
@@ -120,5 +127,61 @@ describe("house original copy helpers", () => {
     expect(
       houseOriginalPublishErrorMessage("invalid moderation transition: pending -> approved"),
     ).toBe("허용되지 않는 상태 전이예요. 현재 상태를 다시 확인해 주세요.");
+  });
+});
+
+describe("admin origin filter and empty copy", () => {
+  it("accepts only house_original as the origin query token", () => {
+    expect(parseAdminOriginFilter("house_original")).toBe("house_original");
+    expect(parseAdminOriginFilter("catalog")).toBeNull();
+    expect(parseAdminOriginFilter(undefined)).toBeNull();
+  });
+
+  it("keeps the folk origin heading for catalog and the make heading for house originals", () => {
+    expect(originSectionHeading("catalog")).toBe("어디서 시작됐어요?");
+    expect(originSectionHeading("house_original")).toBe("어떻게 만들었나요?");
+    expect(originSectionHeading(undefined)).toBe("어디서 시작됐어요?");
+  });
+
+  it("gives the house-original admin empty list a create CTA like guest explore empty → submit", () => {
+    const empty = adminMemeListEmptyState({ originFilter: "house_original", qualityQueue: false });
+    expect(empty.actionHref).toBe("/admin/memes/new");
+    expect(empty.actionLabel).toBe("자체 제작 등록");
+    expect(adminMemeListEmptyState({ originFilter: null, qualityQueue: false }).actionHref).toBeUndefined();
+  });
+
+  it("does not tell operators to wait for oEmbed ranking on house-original SNS empty", () => {
+    expect(adminLinkedContentsEmptyCopy("house_original")).not.toContain("검토 파이프라인");
+    expect(adminLinkedContentsEmptyCopy("catalog")).toContain("검토 파이프라인에서 후보를 승격");
+  });
+});
+
+describe("house original operator path", () => {
+  it("keeps attested publish upcoming until approved or limited", () => {
+    const pending = houseOriginalOperatorPath("pending");
+    expect(pending.map((s) => s.id)).toEqual([
+      "pending",
+      "fact_checking",
+      "rights_checking",
+      "attested_publish",
+    ]);
+    expect(pending[0]?.state).toBe("current");
+    expect(pending[3]?.state).toBe("upcoming");
+    expect(pending[3]?.label).toBe("수동 게시");
+
+    expect(houseOriginalOperatorPath("fact_checking")[1]?.state).toBe("current");
+    expect(houseOriginalOperatorPath("rights_checking")[2]?.state).toBe("current");
+    expect(houseOriginalOperatorPath("rights_checking")[3]?.state).toBe("upcoming");
+    expect(houseOriginalOperatorPath("approved").every((s) => s.state === "done")).toBe(true);
+    expect(houseOriginalOperatorPath("limited")[3]?.state).toBe("done");
+  });
+
+  it("does not auto-complete publish from create, and rejected blocks publish", () => {
+    expect(houseOriginalPathNote()).toContain("자동 게시하지 않습니다");
+    expect(houseOriginalOperatorPath("pending")[3]?.state).not.toBe("done");
+    expect(houseOriginalOperatorPath("rejected")[3]?.state).toBe("blocked");
+    expect(houseOriginalTransitionLabel("approved")).toBe("수동 게시");
+    expect(houseOriginalTransitionLabel("rights_checking")).toBe("권리 확인으로");
+    expect(houseOriginalTransitionLabel("fact_checking")).toBeNull();
   });
 });

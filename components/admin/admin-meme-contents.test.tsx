@@ -62,4 +62,13 @@ describe("AdminMemeContents", () => {
     expect(html).toContain("연결된 SNS 임베드가 아직 없어요");
     expect(html).not.toContain("<iframe");
   });
+
+  it("does not tell operators to wait for oEmbed ranking on house originals", () => {
+    const html = renderToStaticMarkup(
+      <AdminMemeContents contents={[]} memeTitle="자체 제작" originKind="house_original" />,
+    );
+
+    expect(html).toContain("SNS 후보 랭킹으로 들어오지 않습니다");
+    expect(html).not.toContain("검토 파이프라인");
+  });
 });

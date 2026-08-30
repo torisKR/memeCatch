@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
-import { ModerationBadge, SafetyBadge } from "@/components/admin/badges";
+import { ModerationBadge, OriginKindBadge, SafetyBadge } from "@/components/admin/badges";
 import { LIFECYCLE_STATUS, MODERATION_STATUS, type SafetyLevel } from "@/lib/labels";
 import type { ModerationStatus } from "@/components/admin/constants";
 import {
@@ -9,25 +9,31 @@ import {
   parseAdminMemeFocus,
   rankUnsourcedQualityQueue,
 } from "@/lib/admin-quality-queue";
+import {
+  adminMemeListEmptyState,
+  parseAdminOriginFilter,
+} from "@/lib/house-original";
 
 export const metadata = { title: "밈 관리" };
 
 const STATUS_FILTERS = Object.keys(MODERATION_STATUS) as ModerationStatus[];
 const MEME_LIST_COLUMNS =
-  "id, title, short_id, moderation_status, safety_level, lifecycle_status, trend_score, updated_at";
+  "id, title, short_id, moderation_status, safety_level, lifecycle_status, trend_score, updated_at, origin_kind";
 
 export default async function AdminMemesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; focus?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; focus?: string; origin?: string }>;
 }) {
-  const { q = "", status = "", focus: focusRaw } = await searchParams;
+  const { q = "", status = "", focus: focusRaw, origin: originRaw } = await searchParams;
   const { supabase } = await requireOperatorPage("/admin/memes", {
     q,
     status,
     focus: focusRaw,
+    origin: originRaw,
   });
   const focus = parseAdminMemeFocus(focusRaw);
+  const originFilter = parseAdminOriginFilter(originRaw);
   const qualityQueue = focus === ADMIN_UNSOURCED_FOCUS;
 
   let memes:
@@ -39,6 +45,7 @@ export default async function AdminMemesPage({
         safety_level: SafetyLevel;
         lifecycle_status: keyof typeof LIFECYCLE_STATUS;
         trend_score: number;
+        origin_kind: string | null;
       }>
     | null = null;
   let error: { message: string } | null = null;
@@ -54,6 +61,7 @@ export default async function AdminMemesPage({
     if (STATUS_FILTERS.includes(status as ModerationStatus)) {
       query = query.eq("moderation_status", status as ModerationStatus);
     }
+    if (originFilter) query = query.eq("origin_kind", originFilter);
     const result = await query;
     error = result.error;
     memes = rankUnsourcedQualityQueue(result.data ?? []);
@@ -67,12 +75,14 @@ export default async function AdminMemesPage({
     if (STATUS_FILTERS.includes(status as ModerationStatus)) {
       query = query.eq("moderation_status", status as ModerationStatus);
     }
+    if (originFilter) query = query.eq("origin_kind", originFilter);
     const result = await query;
     error = result.error;
     memes = result.data;
   }
 
   if (error) throw new Error(`밈 목록을 불러오지 못했어요: ${error.message}`);
+  const empty = adminMemeListEmptyState({ originFilter, qualityQueue });
 
   return (
     <div className="space-y-6">
@@ -130,6 +140,17 @@ export default async function AdminMemesPage({
             <option value={ADMIN_UNSOURCED_FOCUS}>무출처 공개 문서</option>
           </select>
         </label>
+        <label className="block">
+          <span className="mb-1 block text-base font-medium">출처 구분</span>
+          <select
+            name="origin"
+            defaultValue={originFilter ?? ""}
+            className="min-h-11 rounded-lg border border-border bg-surface px-3 text-base"
+          >
+            <option value="">전체</option>
+            <option value="house_original">자체 제작</option>
+          </select>
+        </label>
         <button
           type="submit"
           className="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white"
@@ -140,12 +161,16 @@ export default async function AdminMemesPage({
 
       {!memes || memes.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-10 text-center">
-          <p className="text-lg font-semibold">조건에 맞는 밈이 없어요</p>
-          <p className="mt-1 text-base text-muted">
-            {qualityQueue
-              ? "무출처 공개 문서가 없거나, 검색어·상태 필터를 바꿔 보세요."
-              : "검색어나 상태 필터를 바꿔 보세요."}
-          </p>
+          <p className="text-lg font-semibold">{empty.title}</p>
+          <p className="mt-1 text-base text-muted">{empty.body}</p>
+          {empty.actionHref && empty.actionLabel && (
+            <Link
+              href={empty.actionHref}
+              className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-accent-strong px-4 text-base font-semibold text-white"
+            >
+              {empty.actionLabel}
+            </Link>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -163,12 +188,15 @@ export default async function AdminMemesPage({
               {memes.map((m) => (
                 <tr key={m.id} className="border-b border-border last:border-b-0 hover:bg-surface-2">
                   <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/admin/memes/${m.id}`}
                       className="flex min-h-11 items-center font-semibold text-accent-text underline-offset-2 hover:underline"
                     >
                       {m.title}
                     </Link>
+                    <OriginKindBadge originKind={m.origin_kind} />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <ModerationBadge status={m.moderation_status as ModerationStatus} />

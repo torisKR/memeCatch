@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
-import { ModerationBadge } from "@/components/admin/badges";
+import { ModerationBadge, OriginKindBadge } from "@/components/admin/badges";
 import { AdminMemeContents } from "@/components/admin/admin-meme-contents";
 import { MemeEditForm } from "@/components/admin/meme-edit-form";
 import { MemeStatusControls } from "@/components/admin/meme-status-controls";
@@ -11,6 +11,7 @@ import {
 } from "@/components/admin/meme-translation-review";
 import { isSeoContentLocale } from "@/lib/i18n-routing";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
+import { isHouseOriginalRightsSource } from "@/lib/house-original";
 import type { ModerationStatus } from "@/components/admin/constants";
 
 export const metadata = { title: "밈 편집" };
@@ -28,7 +29,7 @@ export default async function AdminMemeEditPage({
   const { data: meme } = await supabase.from("memes").select("*").eq("id", id).single();
   if (!meme) notFound();
 
-  const [{ data: contents }, { data: translations }] = await Promise.all([
+  const [{ data: contents }, { data: translations }, { data: sources }] = await Promise.all([
     supabase
       .from("meme_contents")
       .select(
@@ -44,6 +45,10 @@ export default async function AdminMemeEditPage({
       )
       .eq("meme_id", id)
       .order("locale", { ascending: true }),
+    supabase
+      .from("meme_sources")
+      .select("source_url, source_role, rights_basis")
+      .eq("meme_id", id),
   ]);
 
   const translationsForReview: MemeTranslationReviewRow[] = (translations ?? [])
@@ -75,6 +80,7 @@ export default async function AdminMemeEditPage({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{meme.title}</h1>
           <ModerationBadge status={meme.moderation_status as ModerationStatus} />
+          <OriginKindBadge originKind={meme.origin_kind} />
           {["approved", "limited"].includes(meme.moderation_status) && (
             <Link
               href={memePathFrom(meme.short_id, meme.slug)}
@@ -90,6 +96,10 @@ export default async function AdminMemeEditPage({
         memeId={meme.id}
         currentStatus={meme.moderation_status as ModerationStatus}
         originKind={meme.origin_kind}
+        hasRightsEvidence={(sources ?? []).some(isHouseOriginalRightsSource)}
+        rightsSourceUrl={
+          (sources ?? []).find(isHouseOriginalRightsSource)?.source_url ?? null
+        }
       />
 
       <MemeTranslationReview
@@ -99,7 +109,11 @@ export default async function AdminMemeEditPage({
         hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
       />
 
-      <AdminMemeContents contents={contents ?? []} memeTitle={meme.title} />
+      <AdminMemeContents
+        contents={contents ?? []}
+        memeTitle={meme.title}
+        originKind={meme.origin_kind}
+      />
 
       <MemeEditForm
         memeId={meme.id}

@@ -3,7 +3,8 @@
  * 서버 컴포넌트에서도 사용 가능한 순수 컴포넌트.
  */
 
-import { SAFETY_LEVELS, MODERATION_STATUS, type SafetyLevel } from "@/lib/labels";
+import { SAFETY_LEVELS, MODERATION_STATUS, ORIGIN_KIND, type SafetyLevel } from "@/lib/labels";
+import { isHouseOriginal } from "@/lib/house-original";
 import type { ModerationStatus } from "./constants";
 
 export function SafetyBadge({ level }: { level: SafetyLevel }) {
@@ -45,6 +46,15 @@ export function OverdueBadge() {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-safety-red-bg px-2.5 py-0.5 text-sm font-semibold text-safety-red">
       <span aria-hidden>▲</span>48시간 초과
+    </span>
+  );
+}
+
+export function OriginKindBadge({ originKind }: { originKind: string | null | undefined }) {
+  if (!isHouseOriginal(originKind)) return null;
+  return (
+    <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-0.5 text-sm font-medium text-foreground">
+      {ORIGIN_KIND.house_original.admin}
     </span>
   );
 }

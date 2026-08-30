@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { transitionMemeStatus } from "@/lib/actions/admin";
 import { MODERATION_STATUS } from "@/lib/labels";
-import { isHouseOriginal } from "@/lib/house-original";
+import {
+  houseOriginalOperatorPath,
+  houseOriginalPathNote,
+  houseOriginalTransitionLabel,
+  isHouseOriginal,
+} from "@/lib/house-original";
 import {
   LIMITED_WARNING,
   TRANSITION_ACTION_LABELS,
@@ -17,10 +22,14 @@ export function MemeStatusControls({
   memeId,
   currentStatus,
   originKind = "catalog",
+  hasRightsEvidence = true,
+  rightsSourceUrl = null,
 }: {
   memeId: string;
   currentStatus: ModerationStatus;
   originKind?: string;
+  hasRightsEvidence?: boolean;
+  rightsSourceUrl?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -56,18 +65,85 @@ export function MemeStatusControls({
 
   if (targets.length === 0) {
     return (
-      <p className="rounded-xl border border-border bg-surface-2 p-4 text-base text-muted">
-        {MODERATION_STATUS[currentStatus].admin} 상태에서는 더 이상 전이할 수 없어요.
-      </p>
+      <section className="space-y-3 rounded-xl border border-border bg-surface p-5">
+        <h2 className="text-lg font-semibold">검수 상태 전이</h2>
+        {houseOriginal && (
+          <ol aria-label="자체 제작 검수 경로" className="grid gap-2 sm:grid-cols-4">
+            {houseOriginalOperatorPath(currentStatus).map((step, i) => (
+              <li
+                key={step.id}
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  step.state === "blocked"
+                    ? "bg-safety-red-bg text-safety-red"
+                    : "bg-surface-2 text-muted"
+                }`}
+              >
+                <span className="mr-1 tabular-nums">{i + 1}.</span>
+                {step.label}
+                <span className="ml-1 text-xs">({step.stateLabel})</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="rounded-xl border border-border bg-surface-2 p-4 text-base text-muted">
+          {MODERATION_STATUS[currentStatus].admin} 상태에서는 더 이상 전이할 수 없어요.
+        </p>
+      </section>
     );
   }
 
   return (
     <section className="space-y-3 rounded-xl border border-border bg-surface p-5">
       <h2 className="text-lg font-semibold">검수 상태 전이</h2>
+      {houseOriginal && (
+        <ol
+          aria-label="자체 제작 검수 경로"
+          className="grid gap-2 sm:grid-cols-4"
+        >
+          {houseOriginalOperatorPath(currentStatus).map((step, i) => (
+            <li
+              key={step.id}
+              className={`rounded-lg px-3 py-2 text-sm ${
+                step.state === "done"
+                  ? "bg-safety-green-bg text-safety-green"
+                  : step.state === "current"
+                    ? "bg-safety-yellow-bg text-safety-yellow"
+                    : step.state === "blocked"
+                      ? "bg-safety-red-bg text-safety-red"
+                      : "bg-surface-2 text-muted"
+              }`}
+            >
+              <span className="mr-1 tabular-nums">{i + 1}.</span>
+              {step.label}
+              <span className="ml-1 text-xs">({step.stateLabel})</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {houseOriginal && (
+        <p className="text-sm leading-relaxed text-muted">{houseOriginalPathNote()}</p>
+      )}
+      {houseOriginal && rightsSourceUrl && (
+        <p className="text-sm">
+          권리 출처:{" "}
+          <a href={rightsSourceUrl} className="break-all text-accent-text underline">
+            {rightsSourceUrl}
+          </a>
+        </p>
+      )}
       {error && (
         <p role="alert" className="rounded-lg bg-safety-red-bg p-3 text-base text-safety-red">
           {error}
+        </p>
+      )}
+      {needsAttestation && !hasRightsEvidence && (
+        <p
+          role="status"
+          className="rounded-lg border border-safety-yellow bg-safety-yellow-bg p-3 text-base text-safety-yellow"
+        >
+          <span aria-hidden className="mr-1">▲</span>
+          자체 제작 권리 근거(원본·제작 허가 출처)가 없어 게시할 수 없어요. 확인란만으로는
+          게시되지 않습니다.
         </p>
       )}
       {needsAttestation && (
@@ -114,7 +190,9 @@ export function MemeStatusControls({
                     : "border border-border bg-surface-2"
               }`}
             >
-              {TRANSITION_ACTION_LABELS[to]}
+              {houseOriginal
+                ? (houseOriginalTransitionLabel(to) ?? TRANSITION_ACTION_LABELS[to])
+                : TRANSITION_ACTION_LABELS[to]}
             </button>
           );
         })}

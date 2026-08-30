@@ -27,6 +27,11 @@ describe("HouseOriginalForm", () => {
     render(<HouseOriginalForm />);
 
     expect(screen.queryByRole("button", { name: "게시 승인" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "수동 게시" })).toBeNull();
+    expect(screen.getByRole("list", { name: "자체 제작 검수 경로" }).textContent).toContain(
+      "수동 게시",
+    );
+    expect(screen.getByText("운영자가 확인란을 치고 수동 게시합니다.", { exact: false })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("제목"), { target: { value: "자체 제작 밈" } });
     fireEvent.change(screen.getByLabelText("한 줄 요약"), { target: { value: "밈캐치가 만들었어요." } });
     fireEvent.click(screen.getByRole("button", { name: "대기로 저장" }));

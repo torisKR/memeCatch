@@ -21,9 +21,12 @@ export default async function AdminMemesPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; focus?: string }>;
 }) {
-  // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
-  const { supabase } = await requireOperatorPage("/admin/memes");
   const { q = "", status = "", focus: focusRaw } = await searchParams;
+  const { supabase } = await requireOperatorPage("/admin/memes", {
+    q,
+    status,
+    focus: focusRaw,
+  });
   const focus = parseAdminMemeFocus(focusRaw);
   const qualityQueue = focus === ADMIN_UNSOURCED_FOCUS;
 

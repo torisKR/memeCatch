@@ -454,4 +454,16 @@ describe("proxy auth return path", () => {
     const location = new URL(response.headers.get("location")!);
     expect(location.searchParams.get("next")).toBe("/premium?checkout=return");
   });
+
+  it("preserves the unsourced admin queue query inside the login destination", async () => {
+    const response = await proxy(
+      publicRequest("/admin/memes?focus=unsourced&email=private@example.com"),
+    );
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/admin/memes?focus=unsourced");
+    expect(location.search).not.toContain("private@example.com");
+  });
 });

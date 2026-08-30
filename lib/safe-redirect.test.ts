@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeNext } from "./safe-redirect";
+import { safeNext, withAllowlistedSearch } from "./safe-redirect";
 
 describe("safeNext", () => {
   it("preserves same-origin relative destinations", () => {
@@ -42,5 +42,27 @@ describe("safeNext", () => {
     expect(safeNext(null)).toBe("/");
     expect(safeNext({})).toBe("/");
     expect(safeNext("/explore\nhttps://evil.example")).toBe("/");
+  });
+});
+
+describe("withAllowlistedSearch", () => {
+  it("keeps allowlisted admin search on the login next path", () => {
+    expect(
+      withAllowlistedSearch("/admin/memes", { focus: "unsourced", q: "봄", status: "approved" }),
+    ).toBe("/admin/memes?focus=unsourced&q=%EB%B4%84&status=approved");
+  });
+
+  it("drops unknown keys, duplicates, and invalid values", () => {
+    expect(
+      withAllowlistedSearch("/admin/memes", {
+        focus: "unsourced",
+        email: "private@example.com",
+        status: "machine",
+        q: "",
+      }),
+    ).toBe("/admin/memes?focus=unsourced");
+    expect(
+      withAllowlistedSearch("/admin/memes", new URLSearchParams("focus=unsourced&focus=other")),
+    ).toBe("/admin/memes");
   });
 });

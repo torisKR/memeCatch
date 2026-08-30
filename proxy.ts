@@ -28,6 +28,7 @@ import {
   parsePlusOutcomeReplayRequest,
 } from "@/lib/plus-outcome-replay-routing";
 import { shortIdFromParam } from "@/lib/labels";
+import { withAllowlistedSearch } from "@/lib/safe-redirect";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
 const MEME_LOOKUP_TIMEOUT_MS = 1_500;
@@ -42,7 +43,9 @@ function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): strin
 }
 
 function buildAuthReturnPath(path: string, searchParams: URLSearchParams): string {
-  if (path !== "/premium") return path;
+  if (path !== "/premium") {
+    return path.startsWith("/admin") ? withAllowlistedSearch(path, searchParams) : path;
+  }
 
   const focus = searchParams.getAll("focus");
   const source = searchParams.getAll("from");

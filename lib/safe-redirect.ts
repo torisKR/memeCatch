@@ -4,6 +4,20 @@
  * change meaning after the value crosses a framework or browser boundary.
  */
 const APP_ORIGIN = "https://catchmeme.com";
+const AUTH_RETURN_QUERY_MAX_Q = 200;
+const AUTH_RETURN_QUERY_KEYS = ["focus", "q", "status"] as const;
+const AUTH_RETURN_STATUS_VALUES = new Set([
+  "pending",
+  "fact_checking",
+  "rights_checking",
+  "approved",
+  "limited",
+  "rejected",
+]);
+
+export type AuthReturnSearch =
+  | URLSearchParams
+  | Record<string, string | string[] | undefined>;
 
 /**
  * 인증을 마친 뒤 돌아갈 곳이 될 수 없는 경로들.
@@ -53,4 +67,49 @@ export function safeNext(raw: unknown): string {
   } catch {
     return "/";
   }
+}
+
+function asSearchParams(search: AuthReturnSearch | undefined): URLSearchParams {
+  if (!search) return new URLSearchParams();
+  if (search instanceof URLSearchParams) return search;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (typeof value === "string") params.append(key, value);
+    else if (Array.isArray(value)) {
+      for (const item of value) params.append(key, item);
+    }
+  }
+  return params;
+}
+
+function isAllowedAuthReturnValue(key: string, value: string): boolean {
+  if (!value || /[\u0000-\u001f\u007f]/.test(value)) return false;
+  if (key === "focus") return value === "unsourced";
+  if (key === "q") return value.length <= AUTH_RETURN_QUERY_MAX_Q;
+  if (key === "status") return AUTH_RETURN_STATUS_VALUES.has(value);
+  return false;
+}
+
+/**
+ * Keep only allowlisted query keys on a login `next` path.
+ * Unknown keys, duplicates, and invalid values are dropped so the return
+ * URL cannot carry open-ended user input into `/login?next=`.
+ */
+export function withAllowlistedSearch(
+  pathname: string,
+  search?: AuthReturnSearch,
+): string {
+  if (!pathname.startsWith("/") || pathname.startsWith("//") || pathname.includes("?")) {
+    return pathname;
+  }
+  const params = asSearchParams(search);
+  const kept = new URLSearchParams();
+  for (const key of AUTH_RETURN_QUERY_KEYS) {
+    const values = params.getAll(key);
+    if (values.length !== 1) continue;
+    if (!isAllowedAuthReturnValue(key, values[0])) continue;
+    kept.set(key, values[0]);
+  }
+  const query = kept.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }

@@ -6,6 +6,7 @@ import { createHouseOriginal } from "@/lib/actions/admin";
 import {
   houseOriginalOperatorPath,
   houseOriginalPathNote,
+  houseOriginalPathStepAriaCurrent,
 } from "@/lib/house-original";
 import { CATEGORIES, DIFFICULTY, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import {
@@ -74,7 +75,15 @@ export function HouseOriginalForm() {
       </p>
       <ol aria-label="자체 제작 검수 경로" className="grid gap-2 sm:grid-cols-4">
         {houseOriginalOperatorPath("pending").map((step, i) => (
-          <li key={step.id} className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">
+          <li
+            key={step.id}
+            aria-current={houseOriginalPathStepAriaCurrent(step.state)}
+            className={`rounded-lg px-3 py-2 text-sm ${
+              step.state === "current"
+                ? "bg-safety-yellow-bg text-safety-yellow"
+                : "bg-surface-2 text-muted"
+            }`}
+          >
             <span className="mr-1 tabular-nums">{i + 1}.</span>
             {step.label}
             <span className="ml-1 text-xs">({step.stateLabel})</span>

@@ -7,8 +7,10 @@ import { MODERATION_STATUS } from "@/lib/labels";
 import {
   houseOriginalOperatorPath,
   houseOriginalPathNote,
+  houseOriginalPathStepAriaCurrent,
   houseOriginalTransitionLabel,
   isHouseOriginal,
+  type HouseOriginalPathStepState,
 } from "@/lib/house-original";
 import {
   LIMITED_WARNING,
@@ -16,6 +18,31 @@ import {
   VALID_TRANSITIONS,
   type ModerationStatus,
 } from "./constants";
+
+function pathStepClass(state: HouseOriginalPathStepState): string {
+  if (state === "done") return "bg-safety-green-bg text-safety-green";
+  if (state === "current") return "bg-safety-yellow-bg text-safety-yellow";
+  if (state === "blocked") return "bg-safety-red-bg text-safety-red";
+  return "bg-surface-2 text-muted";
+}
+
+function HouseOriginalPath({ status }: { status: string }) {
+  return (
+    <ol aria-label="자체 제작 검수 경로" className="grid gap-2 sm:grid-cols-4">
+      {houseOriginalOperatorPath(status).map((step, i) => (
+        <li
+          key={step.id}
+          aria-current={houseOriginalPathStepAriaCurrent(step.state)}
+          className={`rounded-lg px-3 py-2 text-sm ${pathStepClass(step.state)}`}
+        >
+          <span className="mr-1 tabular-nums">{i + 1}.</span>
+          {step.label}
+          <span className="ml-1 text-xs">({step.stateLabel})</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 /** 유효한 전이만 버튼으로 노출. limited 전환은 주의 문구 확인, approved→limited는 노출 중단 원클릭 */
 export function MemeStatusControls({
@@ -67,24 +94,7 @@ export function MemeStatusControls({
     return (
       <section className="space-y-3 rounded-xl border border-border bg-surface p-5">
         <h2 className="text-lg font-semibold">검수 상태 전이</h2>
-        {houseOriginal && (
-          <ol aria-label="자체 제작 검수 경로" className="grid gap-2 sm:grid-cols-4">
-            {houseOriginalOperatorPath(currentStatus).map((step, i) => (
-              <li
-                key={step.id}
-                className={`rounded-lg px-3 py-2 text-sm ${
-                  step.state === "blocked"
-                    ? "bg-safety-red-bg text-safety-red"
-                    : "bg-surface-2 text-muted"
-                }`}
-              >
-                <span className="mr-1 tabular-nums">{i + 1}.</span>
-                {step.label}
-                <span className="ml-1 text-xs">({step.stateLabel})</span>
-              </li>
-            ))}
-          </ol>
-        )}
+        {houseOriginal && <HouseOriginalPath status={currentStatus} />}
         <p className="rounded-xl border border-border bg-surface-2 p-4 text-base text-muted">
           {MODERATION_STATUS[currentStatus].admin} 상태에서는 더 이상 전이할 수 없어요.
         </p>
@@ -95,31 +105,7 @@ export function MemeStatusControls({
   return (
     <section className="space-y-3 rounded-xl border border-border bg-surface p-5">
       <h2 className="text-lg font-semibold">검수 상태 전이</h2>
-      {houseOriginal && (
-        <ol
-          aria-label="자체 제작 검수 경로"
-          className="grid gap-2 sm:grid-cols-4"
-        >
-          {houseOriginalOperatorPath(currentStatus).map((step, i) => (
-            <li
-              key={step.id}
-              className={`rounded-lg px-3 py-2 text-sm ${
-                step.state === "done"
-                  ? "bg-safety-green-bg text-safety-green"
-                  : step.state === "current"
-                    ? "bg-safety-yellow-bg text-safety-yellow"
-                    : step.state === "blocked"
-                      ? "bg-safety-red-bg text-safety-red"
-                      : "bg-surface-2 text-muted"
-              }`}
-            >
-              <span className="mr-1 tabular-nums">{i + 1}.</span>
-              {step.label}
-              <span className="ml-1 text-xs">({step.stateLabel})</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {houseOriginal && <HouseOriginalPath status={currentStatus} />}
       {houseOriginal && (
         <p className="text-sm leading-relaxed text-muted">{houseOriginalPathNote()}</p>
       )}

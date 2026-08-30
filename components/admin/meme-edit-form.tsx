@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { generateKoreanReviewDraft, updateMeme } from "@/lib/actions/admin";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
+import { isHouseOriginal, originSectionHeading } from "@/lib/house-original";
 import {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
@@ -38,10 +39,12 @@ export function MemeEditForm({
   memeId,
   initial,
   hasOpenAiReviewKey,
+  originKind = "catalog",
 }: {
   memeId: string;
   initial: Initial;
   hasOpenAiReviewKey: boolean;
+  originKind?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -198,7 +201,9 @@ export function MemeEditForm({
         />
       </label>
       <label className="block">
-        <span className="mb-1 block text-base font-medium">유래</span>
+        <span className="mb-1 block text-base font-medium">
+          {isHouseOriginal(originKind) ? originSectionHeading(originKind) : "유래"}
+        </span>
         <textarea value={form.origin} onChange={(e) => set("origin", e.target.value)} rows={4} className={inputCls} />
       </label>
 

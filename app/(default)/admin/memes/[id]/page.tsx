@@ -117,7 +117,8 @@ export default async function AdminMemeEditPage({
 
       <MemeEditForm
         memeId={meme.id}
-          hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
+        originKind={meme.origin_kind}
+        hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
         initial={{
           title: meme.title,
           summary: meme.summary,

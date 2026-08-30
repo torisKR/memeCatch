@@ -94,4 +94,22 @@ describe("MemeEditForm Korean review", () => {
       await screen.findByText("내용을 저장하고 안전 등급 변경은 Radar 검수 대기열에 추가했어요."),
     ).toBeTruthy();
   });
+
+  it("uses the house-original make heading instead of folk 유래", () => {
+    render(
+      <MemeEditForm
+        memeId="meme-1"
+        initial={initial}
+        hasOpenAiReviewKey={false}
+        originKind="house_original"
+      />,
+    );
+    expect(screen.getByLabelText("어떻게 만들었나요?")).toBeTruthy();
+    expect(screen.queryByLabelText("유래")).toBeNull();
+  });
+
+  it("keeps the catalog origin field labeled 유래", () => {
+    render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey={false} />);
+    expect(screen.getByLabelText("유래")).toBeTruthy();
+  });
 });

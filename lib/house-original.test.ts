@@ -12,6 +12,7 @@ import {
   adminLinkedContentsEmptyCopy,
   houseOriginalOperatorPath,
   houseOriginalPathNote,
+  houseOriginalPathStepAriaCurrent,
   houseOriginalTransitionLabel,
   trustCopyKind,
 } from "./house-original";
@@ -182,6 +183,10 @@ describe("house original operator path", () => {
     expect(houseOriginalOperatorPath("rejected")[3]?.state).toBe("blocked");
     expect(houseOriginalTransitionLabel("approved")).toBe("수동 게시");
     expect(houseOriginalTransitionLabel("rights_checking")).toBe("권리 확인으로");
-    expect(houseOriginalTransitionLabel("fact_checking")).toBeNull();
+    expect(houseOriginalTransitionLabel("fact_checking")).toBe("사실 확인으로");
+    expect(houseOriginalPathStepAriaCurrent("current")).toBe("step");
+    expect(houseOriginalPathStepAriaCurrent("done")).toBeUndefined();
+    expect(houseOriginalPathStepAriaCurrent("upcoming")).toBeUndefined();
+    expect(houseOriginalPathStepAriaCurrent("blocked")).toBeUndefined();
   });
 });

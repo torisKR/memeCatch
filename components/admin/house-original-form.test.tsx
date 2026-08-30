@@ -31,6 +31,7 @@ describe("HouseOriginalForm", () => {
     expect(screen.getByRole("list", { name: "자체 제작 검수 경로" }).textContent).toContain(
       "수동 게시",
     );
+    expect(screen.getByRole("listitem", { current: "step" }).textContent).toContain("대기");
     expect(screen.getByText("운영자가 확인란을 치고 수동 게시합니다.", { exact: false })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("제목"), { target: { value: "자체 제작 밈" } });
     fireEvent.change(screen.getByLabelText("한 줄 요약"), { target: { value: "밈캐치가 만들었어요." } });

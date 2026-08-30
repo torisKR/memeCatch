@@ -179,10 +179,18 @@ export function houseOriginalPathNote(): string {
   return "대기 → 사실 확인 → 권리 확인 → 운영자가 확인란을 치고 수동 게시합니다. 자동 게시하지 않습니다.";
 }
 
+/** Current step only — screen readers skip completed/upcoming steps. */
+export function houseOriginalPathStepAriaCurrent(
+  state: HouseOriginalPathStepState,
+): "step" | undefined {
+  return state === "current" ? "step" : undefined;
+}
+
 /** House-original-only action labels. Catalog keeps TRANSITION_ACTION_LABELS. */
 export function houseOriginalTransitionLabel(to: string): string | null {
   if (to === "approved") return "수동 게시";
   if (to === "rights_checking") return "권리 확인으로";
+  if (to === "fact_checking") return "사실 확인으로";
   return null;
 }
 

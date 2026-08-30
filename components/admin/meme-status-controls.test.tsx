@@ -48,6 +48,19 @@ describe("MemeStatusControls house original attestation", () => {
     });
   });
 
+  it("marks the current path step for assistive tech on rights_checking", () => {
+    render(
+      <MemeStatusControls
+        memeId="meme-1"
+        currentStatus="rights_checking"
+        originKind="house_original"
+      />,
+    );
+    expect(screen.getByRole("listitem", { current: "step" }).textContent).toContain("권리 확인");
+    expect(screen.getByRole("button", { name: "수동 게시" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "사실 확인으로" })).toBeTruthy();
+  });
+
   it("does not require attestation on catalog transitions", async () => {
     transitionMemeStatus.mockResolvedValue({ ok: true });
     render(
@@ -91,6 +104,7 @@ describe("MemeStatusControls house original attestation", () => {
     expect(path.textContent).toContain("사실 확인");
     expect(path.textContent).toContain("권리 확인");
     expect(path.textContent).toContain("수동 게시");
+    expect(screen.getByRole("listitem", { current: "step" }).textContent).toContain("대기");
     expect(screen.getByText("자동 게시하지 않습니다.", { exact: false })).toBeTruthy();
     expect(screen.getByRole("link", { name: "https://catchmeme.com/memes/abcd1234-test" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "게시 승인" })).toBeNull();

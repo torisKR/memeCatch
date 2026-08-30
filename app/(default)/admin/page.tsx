@@ -111,6 +111,12 @@ export default async function AdminDashboardPage() {
       sub: "SEO 준비도와 영어 파일럿을 관리해요",
     },
     {
+      href: "/admin/memes?focus=unsourced",
+      label: "무출처 공개 문서",
+      value: "품질 큐",
+      sub: "트렌드 점수가 높은 무출처 문서부터 검수해요",
+    },
+    {
       href: null,
       label: "어제 배치 (trend_score)",
       value: batchLabel,

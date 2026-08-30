@@ -18,6 +18,7 @@ function row(over: Partial<Row> = {}): Row {
     origin_year: 2024,
     moderation_status: "approved",
     updated_at: "2026-08-01T00:00:00.000Z",
+    trend_score: 0,
     meme_sources: [
       { source_url: "https://example.com/a", copyright_status: "embeddable" },
     ],
@@ -107,5 +108,17 @@ describe("quality-check", () => {
     expect(report.depth.thin).toBe(1);
     expect(report.depth.substantial).toBe(0);
     expect(report.scope.documents).toBe(1);
+  });
+
+  test("C1 표본은 trend_score가 높은 문서를 앞에 둔다", () => {
+    const unsourced = (over: Partial<Row>) =>
+      row({ meme_sources: [], ...over });
+    const samples = buildChecks([
+      unsourced({ id: "low", short_id: "lowscore", trend_score: 1.1 }),
+      unsourced({ id: "high", short_id: "highscor", trend_score: 9.4 }),
+      unsourced({ id: "mid", short_id: "midscore", trend_score: 4.2 }),
+    ]).find((c) => c.id === "DQ-C1-published-without-source")?.samples;
+
+    expect(samples).toEqual(["highscor", "midscore", "lowscore"]);
   });
 });

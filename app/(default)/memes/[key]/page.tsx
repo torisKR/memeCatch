@@ -6,6 +6,7 @@ import {
   formatOriginYear,
   shortIdFromParam,
 } from "@/lib/labels";
+import { houseOriginalPublicLabel, isHouseOriginal } from "@/lib/house-original";
 import {
   getMemeByShortId,
   getReactionCounts,
@@ -391,6 +392,11 @@ export default async function MemeDetailPage({ params }: Props) {
                 {meme.origin && (
                   <div>
                     <h3 className="text-lg font-bold">어디서 시작됐어요?</h3>
+                    {isHouseOriginal(meme.origin_kind) && (
+                      <p className="mt-1.5 text-sm font-semibold text-foreground">
+                        {houseOriginalPublicLabel()}
+                      </p>
+                    )}
                     <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
                       {meme.origin}
                     </p>
@@ -452,6 +458,7 @@ export default async function MemeDetailPage({ params }: Props) {
                   moderationStatus={meme.moderation_status}
                   title={meme.title}
                   shortId={meme.short_id}
+                  originKind={meme.origin_kind}
                 />
               </div>
             </section>

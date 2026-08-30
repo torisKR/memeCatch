@@ -92,4 +92,12 @@ describe("global feed cache revalidation", () => {
       'revalidatePath("/global")',
     );
   });
+
+  it("does not walk house originals through fact/rights/approved in one request", () => {
+    const create = section("export async function createHouseOriginal", "export async function updateMeme");
+    expect(create).toContain('origin_kind: HOUSE_ORIGINAL');
+    expect(create).toContain('moderation_status: "pending"');
+    expect(create).not.toContain('["fact_checking", "rights_checking", "approved"]');
+    expect(create).not.toContain("revalidateCanonicalMemePaths(");
+  });
 });

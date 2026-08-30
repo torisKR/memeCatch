@@ -10,6 +10,7 @@ assert.match(source, /public_page_title/);
 assert.match(source, /public_page_author_name/);
 assert.match(source, /metadataWeight > previousWeight/);
 assert.match(source, /tiktok-newsroom/);
+assert.match(source, /tiktok-public-oembed/);
 assert.match(source, /official_tiktok_newsroom/);
 assert.match(source, /catalog_match_status === "unmapped"/);
 assert.match(source, /candidate is not mapped to a CatchMeme record/);

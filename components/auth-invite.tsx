@@ -13,8 +13,10 @@ import { createClient } from "@/lib/supabase/client";
  *   클라이언트에서만 하므로 클로킹이 아니며 색인·SSG에 영향이 없다.
  * - Googlebot에는 세션이 없어 항상 이 카드가 보이지만, 이는 정적 페이지의
  *   부가 안내일 뿐이라 순위에 무해하다.
- * - 로그인한 사용자에겐 아예 렌더하지 않는다(이미 전환된 사용자에게 무의미).
- * - 세션 확인 전(status="pending")에는 렌더하지 않아 깜빡임(FOUC)을 막는다.
+ * - 로그인한 사용자에겐 안내를 렌더하지 않는다(이미 전환된 사용자에게 무의미).
+ * - 세션 확인 전(status="pending")에는 **같은 카드 마크업을 invisible로 남겨**
+ *   게스트 확정 시 본문이 밀리지 않게 한다(PERF-002 / loop-023 HG-005 §3-B).
+ *   회원 확정 시에는 예약 자리가 사라져 작은 CLS가 남을 수 있다.
  *
  * MeteredGate(한도 초과 시 하단 시트)와 역할이 다르다: 이 카드는 상세 본문
  * 위쪽, 정답 카드 직후에 절제된 1회 인라인 안내로 부드럽게 가입을 권한다.
@@ -42,14 +44,14 @@ export function AuthInvite() {
     };
   }, []);
 
-  // 로그인 사용자·판정 전에는 렌더하지 않는다(SSG HTML은 동일, 깜빡임 방지)
-  if (status !== "guest") return null;
+  // 회원은 안내가 필요 없다. 판정 전에는 게스트 카드와 같은 높이를 예약한다.
+  if (status === "member") return null;
 
   const next = encodeURIComponent(pathname || "/");
-
-  return (
+  const card = (
     <aside
       aria-label="로그인 안내"
+      aria-hidden={status === "pending" || undefined}
       className="overflow-hidden rounded-2xl border border-accent/25 bg-accent-soft/50"
     >
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -73,12 +75,14 @@ export function AuthInvite() {
         <div className="flex shrink-0 gap-2">
           <Link
             href={`/login?next=${next}`}
+            tabIndex={status === "pending" ? -1 : undefined}
             className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-accent hover:text-accent sm:flex-none"
           >
             로그인
           </Link>
           <Link
             href={`/login?tab=signup&next=${next}`}
+            tabIndex={status === "pending" ? -1 : undefined}
             className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-accent-strong px-5 text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:flex-none"
           >
             회원가입
@@ -87,6 +91,16 @@ export function AuthInvite() {
       </div>
     </aside>
   );
+
+  if (status === "pending") {
+    return (
+      <div data-auth-invite="pending" className="invisible pointer-events-none select-none">
+        {card}
+      </div>
+    );
+  }
+
+  return card;
 }
 
 function SparkGlyph() {

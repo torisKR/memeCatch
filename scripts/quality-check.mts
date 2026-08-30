@@ -47,6 +47,7 @@ type Row = {
   origin_year: number | null;
   moderation_status: string;
   updated_at: string;
+  trend_score: number | null;
   meme_sources: { source_url: string | null; copyright_status: string }[];
   meme_contents: {
     availability: string;
@@ -68,7 +69,7 @@ type Check = {
 
 const SELECT = [
   "id,short_id,title,aliases,summary,description,origin,usage_note,caution",
-  "usage_context,usage_examples,origin_year,moderation_status,updated_at",
+  "usage_context,usage_examples,origin_year,moderation_status,updated_at,trend_score",
   "meme_sources(source_url,copyright_status)",
   "meme_contents(availability,moderation_status,is_representative,thumbnail_url)",
   "meme_tags_map(tag_id)",
@@ -158,6 +159,20 @@ function hasPlaceholder(row: Row): boolean {
   );
 }
 
+function trendScore(row: Row): number {
+  return typeof row.trend_score === "number" && Number.isFinite(row.trend_score)
+    ? row.trend_score
+    : 0;
+}
+
+/** 운영자 큐용 — 트래픽 가중치가 높은 위반을 표본 앞에 둔다(LOOP.md Phase 3). */
+function prioritizeHits(hits: Row[]): Row[] {
+  return [...hits].sort(
+    (a, b) =>
+      trendScore(b) - trendScore(a) || a.short_id.localeCompare(b.short_id),
+  );
+}
+
 export function buildChecks(rows: Row[]): Check[] {
   const total = rows.length || 1;
   const mk = (id: string, severity: Severity, title: string, hits: Row[]): Check => ({
@@ -166,7 +181,7 @@ export function buildChecks(rows: Row[]): Check[] {
     title,
     count: hits.length,
     ratio: Number((hits.length / total).toFixed(4)),
-    samples: hits.slice(0, SAMPLE_LIMIT).map((r) => r.short_id),
+    samples: prioritizeHits(hits).slice(0, SAMPLE_LIMIT).map((r) => r.short_id),
   });
 
   // 정규화 제목이 겹치는 그룹 — 검색·랭킹에 같은 밈이 두 번 노출된다.

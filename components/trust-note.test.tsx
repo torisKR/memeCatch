@@ -114,4 +114,23 @@ describe("TrustNote", () => {
     expect(html).toMatch(/<time [^>]*="2026-07-15T00:00:00\.000Z"/i);
     expect(html).toContain("2026년 7월 15일");
   });
+
+  it("자체 제작은 출처 0건이어도 카탈로그 빈 상태 CTA를 쓰지 않는다", () => {
+    const html = renderToStaticMarkup(
+      <TrustNote {...base} originKind="house_original" sources={[]} />,
+    );
+
+    expect(html).toContain("밈캐치 자체 제작");
+    expect(html).toContain("무단으로 쓰이면 알려 주세요");
+    expect(html).not.toContain("근거 출처 준비 중");
+    expect(html).not.toContain("출처를 아시면 알려 주세요");
+    expect(html).not.toContain("검수팀 확인");
+  });
+
+  it("카탈로그 0건 CTA는 originKind를 생략해도 그대로다", () => {
+    const html = renderToStaticMarkup(<TrustNote {...base} originKind="catalog" sources={[]} />);
+    expect(html).toContain("근거 출처 준비 중");
+    expect(html).toContain("출처를 아시면 알려 주세요");
+    expect(html).not.toContain("밈캐치 자체 제작");
+  });
 });

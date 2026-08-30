@@ -20,6 +20,13 @@ export const LIFECYCLE_STATUS = {
 } as const;
 export type LifecycleStatus = keyof typeof LIFECYCLE_STATUS;
 
+/** 출처 구분 — 카탈로그(인터넷 밈 문서) vs 밈캐치 자체 제작 */
+export const ORIGIN_KIND = {
+  catalog: { user: null, admin: "카탈로그" },
+  house_original: { user: "밈캐치 자체 제작", admin: "자체 제작" },
+} as const;
+export type OriginKind = keyof typeof ORIGIN_KIND;
+
 /** 검수 상태 — 관리자 전용 노출. 사용자에겐 '출처 확인 중'(limited)만 보임 */
 export const MODERATION_STATUS = {
   pending: { admin: "대기", token: "mod-pending" },

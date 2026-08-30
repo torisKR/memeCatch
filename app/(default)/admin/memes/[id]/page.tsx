@@ -89,6 +89,7 @@ export default async function AdminMemeEditPage({
       <MemeStatusControls
         memeId={meme.id}
         currentStatus={meme.moderation_status as ModerationStatus}
+        originKind={meme.origin_kind}
       />
 
       <MemeTranslationReview

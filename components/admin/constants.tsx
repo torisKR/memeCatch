@@ -18,8 +18,8 @@ export const VALID_TRANSITIONS: Record<ModerationStatus, ModerationStatus[]> = {
   pending: ["fact_checking", "rejected"],
   fact_checking: ["rights_checking", "rejected", "pending"],
   rights_checking: ["approved", "limited", "rejected", "fact_checking"],
-  limited: ["approved", "rejected", "fact_checking"],
-  approved: ["limited", "fact_checking"],
+  limited: ["approved", "rejected", "fact_checking", "rights_checking"],
+  approved: ["limited", "fact_checking", "rights_checking"],
   rejected: [],
 };
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { transitionMemeStatus } from "@/lib/actions/admin";
 import { MODERATION_STATUS } from "@/lib/labels";
+import { isHouseOriginal } from "@/lib/house-original";
 import {
   LIMITED_WARNING,
   TRANSITION_ACTION_LABELS,
@@ -15,21 +16,36 @@ import {
 export function MemeStatusControls({
   memeId,
   currentStatus,
+  originKind = "catalog",
 }: {
   memeId: string;
   currentStatus: ModerationStatus;
+  originKind?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmLimited, setConfirmLimited] = useState(false);
+  const [attested, setAttested] = useState(false);
+  const houseOriginal = isHouseOriginal(originKind);
 
   const targets = VALID_TRANSITIONS[currentStatus];
+  const needsAttestation =
+    houseOriginal && targets.some((to) => to === "approved" || to === "limited");
 
   function run(to: ModerationStatus) {
     setError(null);
     startTransition(async () => {
-      const res = await transitionMemeStatus({ memeId, to });
+      const publishing = to === "approved" || to === "limited";
+      if (houseOriginal && publishing && !attested) {
+        setError("자체 제작 권리 확인에 동의해 주세요.");
+        return;
+      }
+      const res = await transitionMemeStatus({
+        memeId,
+        to,
+        attested: houseOriginal && publishing ? true : undefined,
+      });
       if (!res.ok) setError(res.error);
       else {
         setConfirmLimited(false);
@@ -53,6 +69,20 @@ export function MemeStatusControls({
         <p role="alert" className="rounded-lg bg-safety-red-bg p-3 text-base text-safety-red">
           {error}
         </p>
+      )}
+      {needsAttestation && (
+        <label className="flex items-start gap-3 rounded-lg border border-border bg-surface-2 p-3 text-base">
+          <input
+            type="checkbox"
+            checked={attested}
+            onChange={(e) => setAttested(e.target.checked)}
+            className="mt-1 size-4"
+          />
+          <span>
+            이 항목은 밈캐치가 만들고 권리를 보유한 자체 제작이며, 제3자 초상·음원·로고를
+            포함하지 않음을 확인합니다.
+          </span>
+        </label>
       )}
       <div className="flex flex-wrap gap-2">
         {targets.map((to) => {

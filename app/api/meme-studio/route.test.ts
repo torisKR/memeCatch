@@ -38,4 +38,22 @@ describe("meme studio caption concept API", () => {
     expect(response.status).toBe(200);
     expect(mocks.generateMemeConcepts).toHaveBeenCalledWith({ topic: "고양이 밈", tone: "hype", format: "reaction" });
   });
+
+  it("never writes memes — Studio stays JSON-only", async () => {
+    mocks.generateMemeConcepts.mockResolvedValueOnce({ mode: "template", concepts: [{ caption: "테스트" }] });
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const source = readFileSync(join(process.cwd(), "app/api/meme-studio/route.ts"), "utf8");
+    expect(source).not.toMatch(/from\(["']memes["']\)/);
+    expect(source).not.toMatch(/supabase/);
+    expect(source).not.toMatch(/createClient|createAdminClient/);
+
+    const response = await POST(request({ topic: "고양이 밈", tone: "hype", format: "reaction" }));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      mode: "template",
+      concepts: [{ caption: "테스트" }],
+    });
+    expect(mocks.generateMemeConcepts).toHaveBeenCalledTimes(1);
+  });
 });

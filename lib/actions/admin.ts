@@ -23,6 +23,15 @@ import {
   localizedMemePath,
   SEO_CONTENT_LOCALES,
 } from "@/lib/i18n-routing";
+import {
+  HOUSE_ORIGINAL,
+  HOUSE_ORIGINAL_RIGHTS_BASIS,
+  HOUSE_ORIGINAL_SOURCE_ROLE,
+  houseOriginalCanonicalUrl,
+  houseOriginalPublicLabel,
+  houseOriginalPublishErrorMessage,
+  isHouseOriginal,
+} from "@/lib/house-original";
 
 type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -333,6 +342,88 @@ export async function approveSubmission(input: {
 
 /* ── 밈 관리 ─────────────────────────────────────────── */
 
+export async function createHouseOriginal(input: {
+  title: string;
+  summary: string;
+  description: string;
+  origin: string;
+  safetyLevel: SafetyLevel;
+  category: "phrase" | "dance" | "song" | "image" | "comment" | "challenge";
+  difficulty: "beginner" | "normal" | "deep";
+  originYear: number | null;
+  usageContext: UsageContext;
+}): Promise<ActionResult<{ memeId: string }>> {
+  try {
+    const { supabase, uid } = await requireOperator();
+    if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
+    if (!input.summary.trim()) return { ok: false, error: "한 줄 요약을 입력해 주세요." };
+
+    const baseRow = {
+      title: input.title.trim(),
+      summary: input.summary.trim(),
+      description: input.description.trim(),
+      origin: input.origin.trim(),
+      safety_level: input.safetyLevel,
+      category: input.category,
+      difficulty: input.difficulty,
+      origin_year: input.originYear,
+      usage_context: input.usageContext,
+      origin_kind: HOUSE_ORIGINAL,
+      moderation_status: "pending" as const,
+    };
+    let created: { id: string; short_id: string; slug: string } | null = null;
+    let insertError: string | null = null;
+    for (const slug of [slugify(input.title), `${slugify(input.title)}-${Date.now().toString(36)}`]) {
+      const { data, error } = await supabase
+        .from("memes")
+        .insert({ ...baseRow, slug })
+        .select("id, short_id, slug")
+        .single();
+      if (!error && data) {
+        created = data;
+        insertError = null;
+        break;
+      }
+      insertError = error?.message ?? "밈 생성에 실패했어요.";
+      if (error?.code !== "23505") break;
+    }
+    if (!created) {
+      return {
+        ok: false,
+        error: houseOriginalPublishErrorMessage(insertError ?? "밈 생성에 실패했어요."),
+      };
+    }
+
+    const { error: sourceError } = await supabase.from("meme_sources").insert({
+      meme_id: created.id,
+      platform: "catchmeme",
+      source_url: houseOriginalCanonicalUrl(created.short_id, created.slug),
+      title: houseOriginalPublicLabel(),
+      creator_name: "CatchMeme",
+      copyright_status: "embeddable",
+      source_role: HOUSE_ORIGINAL_SOURCE_ROLE,
+      rights_basis: HOUSE_ORIGINAL_RIGHTS_BASIS,
+    });
+    if (sourceError) {
+      return {
+        ok: false,
+        error: `자체 제작 항목은 만들어졌지만 권리 출처 연결에 실패했어요: ${sourceError.message} — 밈 관리에서 이어서 처리해 주세요. (id: ${created.id})`,
+      };
+    }
+
+    await logAudit(uid, "meme.create_house_original", "meme", created.id, {
+      title: input.title.trim(),
+      origin_kind: HOUSE_ORIGINAL,
+      moderation_status: "pending",
+    });
+    revalidatePath("/admin/memes");
+    revalidatePath(`/admin/memes/${created.id}`);
+    return { ok: true, data: { memeId: created.id } };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
 export async function updateMeme(input: {
   memeId: string;
   title: string;
@@ -455,25 +546,52 @@ export async function generateKoreanReviewDraft(
 export async function transitionMemeStatus(input: {
   memeId: string;
   to: "pending" | "fact_checking" | "rights_checking" | "approved" | "limited" | "rejected";
+  attested?: boolean;
 }): Promise<ActionResult> {
   try {
     const { supabase, uid } = await requireOperator();
-    const revalidationIdentity = await loadMemeRevalidationIdentity(
-      supabase,
-      input.memeId,
-    );
-    const { error } = await supabase
+    const { data: meme, error: loadError } = await supabase
       .from("memes")
-      .update({ moderation_status: input.to, updated_at: new Date().toISOString() })
-      .eq("id", input.memeId);
-    if (error) {
-      // 트리거의 invalid moderation transition 에러를 사용자 친화적으로
-      const msg = error.message.includes("invalid moderation transition")
-        ? "허용되지 않는 상태 전이예요. 현재 상태를 다시 확인해 주세요."
-        : error.message;
-      return { ok: false, error: msg };
+      .select("short_id, slug, origin_kind, meme_translations(locale, localized_slug)")
+      .eq("id", input.memeId)
+      .maybeSingle();
+    if (loadError) return { ok: false, error: loadError.message };
+    const revalidationIdentity = meme;
+
+    const publishingHouseOriginal =
+      isHouseOriginal(meme?.origin_kind) &&
+      (input.to === "approved" || input.to === "limited");
+
+    if (publishingHouseOriginal) {
+      if (input.attested !== true) {
+        return { ok: false, error: houseOriginalPublishErrorMessage("house_rights_attestation_required") };
+      }
+      const { error } = await supabase.rpc("publish_house_original", {
+        p_meme_id: input.memeId,
+        p_to: input.to,
+        p_attested: true,
+      });
+      if (error) {
+        return { ok: false, error: houseOriginalPublishErrorMessage(error.message) };
+      }
+    } else {
+      const { error } = await supabase
+        .from("memes")
+        .update({ moderation_status: input.to, updated_at: new Date().toISOString() })
+        .eq("id", input.memeId);
+      if (error) {
+        const msg = error.message.includes("invalid moderation transition")
+          ? "허용되지 않는 상태 전이예요. 현재 상태를 다시 확인해 주세요."
+          : houseOriginalPublishErrorMessage(error.message);
+        return { ok: false, error: msg };
+      }
     }
-    await logAudit(uid, "meme.transition", "meme", input.memeId, { to: input.to });
+
+    await logAudit(uid, "meme.transition", "meme", input.memeId, {
+      to: input.to,
+      attested: publishingHouseOriginal ? true : undefined,
+      origin_kind: meme?.origin_kind ?? null,
+    });
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);

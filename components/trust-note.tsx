@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { summarizeEvidence, type EvidenceSourceInput } from "@/lib/source-links";
 import { TrackedBlock } from "@/components/tracked-block";
+import { houseOriginalPublicLabel, trustCopyKind } from "@/lib/house-original";
 
 /**
  * 신뢰 신호 — "이 설명을 무엇으로 확인했나"를 실제 근거 상태에 맞춰 말한다.
@@ -10,7 +11,8 @@ import { TrackedBlock } from "@/components/tracked-block";
  * 확인을 주장하는 상태였다. 근거가 없으면 없다고 말하는 것이 이 컴포넌트의 존재
  * 이유다 — 부족함을 숨기지 않되 무엇이 부족한지 구체적으로 밝힌다.
  *
- * 세 상태만 쓴다(1인 운영이 유지할 수 있는 최소 단위):
+ * 네 상태만 쓴다(1인 운영이 유지할 수 있는 최소 단위):
+ *   자체 제작  → 밈캐치가 만든 밈. 인터넷 원본 부재를 결함으로 말하지 않는다.
  *   0건        → 근거 미연결. 검수 주장을 하지 않고 제보 경로를 연다.
  *   맥락 출처만 → 위키로 맥락만 확인. 원본은 아직 못 찾았다고 밝힌다.
  *   원본 있음   → 확인한 근거 수를 센다.
@@ -24,6 +26,7 @@ export function TrustNote({
   moderationStatus,
   title,
   shortId,
+  originKind,
 }: {
   sources: EvidenceSourceInput[];
   updatedAt: string;
@@ -31,6 +34,7 @@ export function TrustNote({
   title: string;
   /** 이 문서의 공개 short_id — 정정 제보 CTA 계측용(개인정보 아님). */
   shortId: string;
+  originKind?: string | null;
 }) {
   const evidence = summarizeEvidence(sources);
   const updated = (
@@ -42,6 +46,32 @@ export function TrustNote({
       })}
     </time>
   );
+
+  if (trustCopyKind(originKind) === "house_original") {
+    return (
+      <div className="border-t border-border pt-3 text-sm text-muted">
+        <p>
+          <span
+            aria-hidden
+            className="signal-live inline-block size-1.5 rounded-full bg-(--signal-cyan) align-middle"
+          />{" "}
+          <span className="font-semibold text-foreground">{houseOriginalPublicLabel()}</span>{" "}
+          — 밈캐치가 만들고 권리를 보유한 표현이에요. 마지막 업데이트 {updated}
+        </p>
+        <TrackedBlock
+          event="correction_report_started"
+          params={{ short_id: shortId, from: "trust_note_house_original" }}
+        >
+          <Link
+            href={`/submit?name=${encodeURIComponent(title)}`}
+            className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
+          >
+            다른 곳에서 이 표현이 무단으로 쓰이면 알려 주세요
+          </Link>
+        </TrackedBlock>
+      </div>
+    );
+  }
 
   if (evidence.total === 0) {
     return (

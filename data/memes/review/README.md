@@ -35,6 +35,15 @@ CatchMeme title matching, originality, or publication rights.
 catalog social crawl (YouTube Shorts, Instagram, TikTok). Companion ranking:
 `social-source-ranking-2010-2026-2026-07-16.jsonl`.
 
+`social-source-ranking-tiktok-public-oembed-2026-08-28.jsonl` ranks the 2026-08-28
+public TikTok oEmbed candidates (`tiktok-public-oembed-*.jsonl`). Scores are triage
+only; every row stays `needs_human_source_match` and is not a publication approval.
+
+`tiktok-oembed-high7-review-2026-08-29.jsonl` is the agent review ledger for that
+file's seven `high` rows. Passing inserts use the existing contextual promotion
+SQL (`tiktok-oembed-high7-promotions-2026-08-29.jsonl` / `.sql`); they do not
+flip meme moderation or claim originality.
+
 `new-meme-discovery-2010-2026-2026-07-16.md` covers **new** challenge/trend
 titles not already in verified/raw, plus Shorts candidates collected for a
 seed of those titles.

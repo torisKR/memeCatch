@@ -1765,6 +1765,8 @@ export type Database = {
           id: string
           meme_id: string
           platform: string
+          rights_basis: string | null
+          source_role: string | null
           source_url: string | null
           title: string | null
         }
@@ -1775,6 +1777,8 @@ export type Database = {
           id?: string
           meme_id: string
           platform: string
+          rights_basis?: string | null
+          source_role?: string | null
           source_url?: string | null
           title?: string | null
         }
@@ -1785,6 +1789,8 @@ export type Database = {
           id?: string
           meme_id?: string
           platform?: string
+          rights_basis?: string | null
+          source_role?: string | null
           source_url?: string | null
           title?: string | null
         }
@@ -2167,6 +2173,7 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
           doc_class: string
           era_type: string | null
+          house_rights_attested_at: string | null
           id: string
           korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
@@ -2174,6 +2181,7 @@ export type Database = {
           meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
+          origin_kind: string
           origin_year: number | null
           published_at: string | null
           revival_years: number[]
@@ -2203,6 +2211,7 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["meme_difficulty"]
           doc_class?: string
           era_type?: string | null
+          house_rights_attested_at?: string | null
           id?: string
           korea_viral_year?: number | null
           lifecycle_status?: Database["public"]["Enums"]["lifecycle_status"]
@@ -2210,6 +2219,7 @@ export type Database = {
           meme_first_seen_year?: number | null
           moderation_status?: Database["public"]["Enums"]["moderation_status"]
           origin?: string
+          origin_kind?: string
           origin_year?: number | null
           published_at?: string | null
           revival_years?: number[]
@@ -2239,6 +2249,7 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["meme_difficulty"]
           doc_class?: string
           era_type?: string | null
+          house_rights_attested_at?: string | null
           id?: string
           korea_viral_year?: number | null
           lifecycle_status?: Database["public"]["Enums"]["lifecycle_status"]
@@ -2246,6 +2257,7 @@ export type Database = {
           meme_first_seen_year?: number | null
           moderation_status?: Database["public"]["Enums"]["moderation_status"]
           origin?: string
+          origin_kind?: string
           origin_year?: number | null
           published_at?: string | null
           revival_years?: number[]
@@ -4270,6 +4282,7 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
           doc_class: string
           era_type: string | null
+          house_rights_attested_at: string | null
           id: string
           korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
@@ -4277,6 +4290,7 @@ export type Database = {
           meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
+          origin_kind: string
           origin_year: number | null
           published_at: string | null
           revival_years: number[]
@@ -4441,6 +4455,14 @@ export type Database = {
           p_status: string
         }
         Returns: Json
+      }
+      publish_house_original: {
+        Args: {
+          p_attested: boolean
+          p_meme_id: string
+          p_to: Database["public"]["Enums"]["moderation_status"]
+        }
+        Returns: boolean
       }
       publish_seo_campaign: { Args: { p_manifest: Json }; Returns: string }
       publish_seo_measurements: {
@@ -4627,6 +4649,7 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
           doc_class: string
           era_type: string | null
+          house_rights_attested_at: string | null
           id: string
           korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
@@ -4634,6 +4657,7 @@ export type Database = {
           meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
+          origin_kind: string
           origin_year: number | null
           published_at: string | null
           revival_years: number[]
@@ -4672,6 +4696,7 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["meme_difficulty"]
           doc_class: string
           era_type: string | null
+          house_rights_attested_at: string | null
           id: string
           korea_viral_year: number | null
           lifecycle_status: Database["public"]["Enums"]["lifecycle_status"]
@@ -4679,6 +4704,7 @@ export type Database = {
           meme_first_seen_year: number | null
           moderation_status: Database["public"]["Enums"]["moderation_status"]
           origin: string
+          origin_kind: string
           origin_year: number | null
           published_at: string | null
           revival_years: number[]

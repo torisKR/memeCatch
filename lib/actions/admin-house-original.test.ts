@@ -11,7 +11,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
-import { createHouseOriginal, transitionMemeStatus } from "./admin";
+import { createHouseOriginal, transitionMemeStatus, updateMeme } from "./admin";
 
 const operatorId = "10000000-0000-4000-8000-000000000001";
 const memeId = "20000000-0000-4000-8000-000000000002";
@@ -236,5 +236,121 @@ describe("transitionMemeStatus house original gate", () => {
       moderation_status: "approved",
       updated_at: expect.any(String),
     });
+  });
+});
+
+describe("updateMeme house original copy revert", () => {
+  const updateInput = {
+    memeId,
+    title: "자체 제작 테스트",
+    summary: "밈캐치가 만든 형식이에요.",
+    description: "설명",
+    origin: "2026년 밈캐치가 자체 그래픽으로 만들었다.",
+    usageNote: "",
+    caution: "",
+    aliases: [] as string[],
+    safetyLevel: "green" as const,
+    lifecycleStatus: "active" as const,
+    category: "phrase" as const,
+    difficulty: "beginner" as const,
+    sentiment: "funny" as const,
+    originYear: 2026,
+    usageContext: {
+      work: "green" as const,
+      friends: "green" as const,
+      family: "green" as const,
+      sns: "green" as const,
+    },
+  };
+
+  function updateClient(options: {
+    originKind: string;
+    previousStatus: string;
+    nextStatus: string;
+  }) {
+    const identityRead = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          short_id: "abcd1234",
+          slug: "test",
+          origin_kind: options.originKind,
+          moderation_status: options.previousStatus,
+          meme_translations: [],
+        },
+        error: null,
+      }),
+    };
+    identityRead.select.mockReturnValue(identityRead);
+    identityRead.eq.mockReturnValue(identityRead);
+
+    const afterRead = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { moderation_status: options.nextStatus },
+        error: null,
+      }),
+    };
+    afterRead.select.mockReturnValue(afterRead);
+    afterRead.eq.mockReturnValue(afterRead);
+
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    let memesCalls = 0;
+    const client = operatorClient({
+      rpc,
+      from: (table) => {
+        if (table !== "memes") throw new Error(`unexpected table ${table}`);
+        memesCalls += 1;
+        return memesCalls === 1 ? identityRead : afterRead;
+      },
+    });
+    return { client, rpc, afterRead };
+  }
+
+  it("returns revertedToRightsChecking when published copy edit falls back", async () => {
+    const { client, rpc, afterRead } = updateClient({
+      originKind: "house_original",
+      previousStatus: "approved",
+      nextStatus: "rights_checking",
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    await expect(updateMeme(updateInput)).resolves.toEqual({
+      ok: true,
+      data: { safetyReviewQueued: false, revertedToRightsChecking: true },
+    });
+    expect(rpc).toHaveBeenCalledWith(
+      "update_meme_with_safety_review",
+      expect.objectContaining({ p_meme_id: memeId }),
+    );
+    expect(afterRead.select).toHaveBeenCalled();
+  });
+
+  it("does not claim revert on catalog or unpublished house originals", async () => {
+    const catalog = updateClient({
+      originKind: "catalog",
+      previousStatus: "approved",
+      nextStatus: "approved",
+    });
+    mocks.createClient.mockResolvedValue(catalog.client);
+    await expect(updateMeme(updateInput)).resolves.toEqual({
+      ok: true,
+      data: { safetyReviewQueued: false, revertedToRightsChecking: false },
+    });
+    expect(catalog.afterRead.select).not.toHaveBeenCalled();
+
+    const pending = updateClient({
+      originKind: "house_original",
+      previousStatus: "pending",
+      nextStatus: "pending",
+    });
+    mocks.createClient.mockResolvedValue(pending.client);
+    await expect(updateMeme(updateInput)).resolves.toEqual({
+      ok: true,
+      data: { safetyReviewQueued: false, revertedToRightsChecking: false },
+    });
+    expect(pending.afterRead.select).not.toHaveBeenCalled();
   });
 });

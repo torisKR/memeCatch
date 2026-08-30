@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { generateKoreanReviewDraft, updateMeme } from "@/lib/actions/admin";
 import { CATEGORIES, DIFFICULTY, LIFECYCLE_STATUS, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import {
+  houseOriginalCopyRevertAnnouncement,
   houseOriginalOriginHint,
   isHouseOriginal,
   originSectionHeading,
@@ -97,9 +98,11 @@ export function MemeEditForm({
       else {
         setMessage({
           kind: "success",
-          text: res.data?.safetyReviewQueued
-            ? "내용을 저장하고 안전 등급 변경은 Radar 검수 대기열에 추가했어요."
-            : "저장했어요.",
+          text: res.data?.revertedToRightsChecking
+            ? houseOriginalCopyRevertAnnouncement()
+            : res.data?.safetyReviewQueued
+              ? "내용을 저장하고 안전 등급 변경은 Radar 검수 대기열에 추가했어요."
+              : "저장했어요.",
         });
         router.refresh();
       }

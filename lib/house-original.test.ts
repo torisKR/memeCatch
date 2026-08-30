@@ -20,6 +20,8 @@ import {
   houseOriginalPathNote,
   houseOriginalPathStepAriaCurrent,
   houseOriginalTransitionLabel,
+  didHouseOriginalCopyRevertPublish,
+  houseOriginalCopyRevertAnnouncement,
   trustCopyKind,
 } from "./house-original";
 
@@ -234,5 +236,47 @@ describe("house original operator path", () => {
     expect(houseOriginalPathStepAriaCurrent("done")).toBeUndefined();
     expect(houseOriginalPathStepAriaCurrent("upcoming")).toBeUndefined();
     expect(houseOriginalPathStepAriaCurrent("blocked")).toBeUndefined();
+  });
+
+  it("treats copy-edit of approved/limited as rights_checking current, not still published", () => {
+    expect(
+      didHouseOriginalCopyRevertPublish({
+        originKind: "house_original",
+        previousStatus: "approved",
+        nextStatus: "rights_checking",
+      }),
+    ).toBe(true);
+    expect(
+      didHouseOriginalCopyRevertPublish({
+        originKind: "house_original",
+        previousStatus: "limited",
+        nextStatus: "rights_checking",
+      }),
+    ).toBe(true);
+    expect(
+      didHouseOriginalCopyRevertPublish({
+        originKind: "house_original",
+        previousStatus: "approved",
+        nextStatus: "approved",
+      }),
+    ).toBe(false);
+    expect(
+      didHouseOriginalCopyRevertPublish({
+        originKind: "catalog",
+        previousStatus: "approved",
+        nextStatus: "rights_checking",
+      }),
+    ).toBe(false);
+    expect(
+      didHouseOriginalCopyRevertPublish({
+        originKind: "house_original",
+        previousStatus: "pending",
+        nextStatus: "rights_checking",
+      }),
+    ).toBe(false);
+    expect(houseOriginalCopyRevertAnnouncement()).toContain("권리 확인으로 돌아갔어요");
+    expect(houseOriginalCopyRevertAnnouncement()).toContain("다시 수동 게시");
+    expect(houseOriginalOperatorPath("rights_checking")[2]?.state).toBe("current");
+    expect(houseOriginalOperatorPath("rights_checking")[3]?.state).toBe("upcoming");
   });
 });

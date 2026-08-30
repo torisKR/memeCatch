@@ -114,6 +114,26 @@ describe("MemeEditForm Korean review", () => {
     expect(screen.queryByLabelText("유행 시작 연도")).toBeNull();
   });
 
+  it("announces rights_checking after copy-save on a published house original", async () => {
+    updateMeme.mockResolvedValue({
+      ok: true,
+      data: { safetyReviewQueued: false, revertedToRightsChecking: true },
+    });
+    render(
+      <MemeEditForm
+        memeId="meme-1"
+        initial={initial}
+        hasOpenAiReviewKey={false}
+        originKind="house_original"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("권리 확인으로 돌아갔어요");
+    expect(status.textContent).toContain("다시 수동 게시");
+    expect(status.textContent).not.toContain("Radar 검수 대기열");
+  });
+
   it("keeps the catalog origin field labeled 유래", () => {
     render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey={false} />);
     expect(screen.getByLabelText("유래")).toBeTruthy();

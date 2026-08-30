@@ -27,6 +27,7 @@ import {
   HOUSE_ORIGINAL,
   HOUSE_ORIGINAL_RIGHTS_BASIS,
   HOUSE_ORIGINAL_SOURCE_ROLE,
+  didHouseOriginalCopyRevertPublish,
   houseOriginalCanonicalUrl,
   houseOriginalOriginLooksLikeOperatorScratch,
   houseOriginalOriginScratchError,
@@ -83,6 +84,7 @@ type MemeRevalidationIdentity = {
   short_id: string;
   slug: string;
   origin_kind?: string | null;
+  moderation_status?: string | null;
   meme_translations: Array<{ locale: string; localized_slug: string }>;
 };
 
@@ -92,7 +94,7 @@ async function loadMemeRevalidationIdentity(
 ): Promise<MemeRevalidationIdentity | null> {
   const { data, error } = await supabase
     .from("memes")
-    .select("short_id, slug, origin_kind, meme_translations(locale, localized_slug)")
+    .select("short_id, slug, origin_kind, moderation_status, meme_translations(locale, localized_slug)")
     .eq("id", memeId)
     .maybeSingle();
   return error ? null : data;
@@ -449,7 +451,7 @@ export async function updateMeme(input: {
   sentiment: "funny" | "ironic" | "controversial" | "negative" | "wholesome";
   originYear: number | null;
   usageContext: UsageContext;
-}): Promise<ActionResult<{ safetyReviewQueued: boolean }>> {
+}): Promise<ActionResult<{ safetyReviewQueued: boolean; revertedToRightsChecking: boolean }>> {
   try {
     const { supabase } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
@@ -487,10 +489,34 @@ export async function updateMeme(input: {
       },
     );
     if (error) return { ok: false, error: error.message };
+    let revertedToRightsChecking = false;
+    if (
+      revalidationIdentity &&
+      isHouseOriginal(revalidationIdentity.origin_kind) &&
+      (revalidationIdentity.moderation_status === "approved" ||
+        revalidationIdentity.moderation_status === "limited")
+    ) {
+      const { data: after } = await supabase
+        .from("memes")
+        .select("moderation_status")
+        .eq("id", input.memeId)
+        .maybeSingle();
+      revertedToRightsChecking = didHouseOriginalCopyRevertPublish({
+        originKind: revalidationIdentity.origin_kind,
+        previousStatus: revalidationIdentity.moderation_status,
+        nextStatus: after?.moderation_status ?? null,
+      });
+    }
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);
-    return { ok: true, data: { safetyReviewQueued: safetyReviewQueued === true } };
+    return {
+      ok: true,
+      data: {
+        safetyReviewQueued: safetyReviewQueued === true,
+        revertedToRightsChecking,
+      },
+    };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
   }

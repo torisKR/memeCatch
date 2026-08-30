@@ -241,6 +241,24 @@ export function houseOriginalTransitionLabel(to: string): string | null {
   return null;
 }
 
+/** True when a published house original was sent back to rights_checking (copy/source trigger). */
+export function didHouseOriginalCopyRevertPublish(input: {
+  originKind: string | null | undefined;
+  previousStatus: string | null | undefined;
+  nextStatus: string | null | undefined;
+}): boolean {
+  return (
+    isHouseOriginal(input.originKind) &&
+    (input.previousStatus === "approved" || input.previousStatus === "limited") &&
+    input.nextStatus === "rights_checking"
+  );
+}
+
+/** Operator save announcement after that revert. Path current-step is rights_checking; publish is not done. */
+export function houseOriginalCopyRevertAnnouncement(): string {
+  return "저장했어요. 본문이 바뀌어 권리 확인으로 돌아갔어요. 다시 수동 게시해야 공개됩니다.";
+}
+
 export function houseOriginalPublishErrorMessage(raw: string): string {
   if (raw.includes("house_rights_attestation_required")) {
     return "자체 제작 권리 확인에 동의해 주세요.";

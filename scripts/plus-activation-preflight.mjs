@@ -8,6 +8,9 @@ import { pathToFileURL } from "node:url";
 const REQUEST_TIMEOUT_MS = 10_000;
 const RELEASE_SHA_HEADER = "x-memecatch-release-sha";
 const MAX_EVIDENCE_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+export const PRODUCTION_APP_ORIGIN = "https://catchmeme.com";
+export const PRODUCTION_SUPABASE_REF = "onjipuldngbdptldkpoe";
+export const PRODUCTION_SUPABASE_ORIGIN = `https://${PRODUCTION_SUPABASE_REF}.supabase.co`;
 
 // ACT-001의 첫 paid-value 경로가 실제로 사용하는 테이블만 core로 판정한다.
 // outcome_ratings는 테이블이 아니라 receipts의 column과 RPC를 추가하는 migration이다.
@@ -350,6 +353,12 @@ function ledgerFingerprint(value) {
   return createHash("sha256").update(JSON.stringify(normalizedLedger(value))).digest("hex");
 }
 
+function supabaseProjectRef(origin) {
+  const hostname = new URL(origin).hostname;
+  const match = hostname.match(/^([a-z0-9]{20})\.supabase\.co$/u);
+  return match?.[1] ?? (isLoopbackHost(hostname) ? null : undefined);
+}
+
 function validateClosureMatrix(matrix, { root, reasons, runId, commitSha }) {
   validateEvidenceArtifact(matrix?.artifact, "payment matrix", { root, reasons });
   for (const field of [
@@ -584,11 +593,36 @@ export function validateReleaseEvidence(
   }
 
   try {
-    if (normalizeBaseUrl(value.target, "release evidence target") !== target) {
+    const evidenceTarget = normalizeBaseUrl(value.target, "release evidence target");
+    if (evidenceTarget === PRODUCTION_APP_ORIGIN) {
+      reasons.push("release evidence target must not be the production app origin");
+    }
+    if (evidenceTarget !== target) {
       reasons.push("release evidence target does not match the preflight target");
     }
   } catch {
     reasons.push("release evidence target is invalid");
+  }
+
+  let supabaseOrigin = null;
+  try {
+    supabaseOrigin = normalizeBaseUrl(value.supabase?.origin, "release evidence Supabase origin");
+  } catch {
+    reasons.push("release evidence Supabase origin is invalid");
+  }
+  const supabaseRef = value.supabase?.ref;
+  if (typeof supabaseRef !== "string" || !/^[a-z0-9]{20}$/u.test(supabaseRef)) {
+    reasons.push("release evidence Supabase ref must be a 20-character project ref");
+  } else if (supabaseRef === PRODUCTION_SUPABASE_REF) {
+    reasons.push("release evidence Supabase ref must not be the production project");
+  }
+  if (supabaseOrigin) {
+    const originRef = supabaseProjectRef(supabaseOrigin);
+    if (originRef === undefined) {
+      reasons.push("release evidence Supabase origin must identify a Supabase project host");
+    } else if (originRef && originRef !== supabaseRef) {
+      reasons.push("release evidence Supabase ref does not match its origin host");
+    }
   }
 
   const payment = value.payment;
@@ -637,6 +671,7 @@ export function validateReleaseEvidence(
     ...(typeof value.commitSha === "string" ? { commitSha: value.commitSha.toLowerCase() } : {}),
     runId: typeof value.runId === "string" ? value.runId : null,
     target: typeof value.target === "string" ? value.target : null,
+    supabase: { origin: supabaseOrigin, ref: typeof supabaseRef === "string" ? supabaseRef : null },
     environment: value.environment ?? null,
     privacyReviewed: privacy?.reviewed === true
       && privacy?.providerDisclosure === true
@@ -701,12 +736,58 @@ export function validateClosureContinuity(prerequisite, closure) {
   if (prerequisite?.migrationLedger?.fingerprint !== closure?.migrationLedger?.fingerprint) {
     reasons.push("closure migration ledger does not match prerequisite evidence");
   }
+  if (
+    prerequisite?.supabase?.origin !== closure?.supabase?.origin
+    || prerequisite?.supabase?.ref !== closure?.supabase?.ref
+  ) {
+    reasons.push("closure Supabase target does not match prerequisite evidence");
+  }
   return {
     valid: reasons.length === 0,
     reasons,
     commitSha: closure?.commitSha ?? null,
     runId: closure?.runId ?? null,
     migrationLedgerFingerprint: closure?.migrationLedger?.fingerprint ?? null,
+  };
+}
+
+function bindReleaseEvidenceToSupabase(evidence, supabaseUrl) {
+  const reasons = [...(evidence?.reasons ?? [])];
+  if (evidence?.valid) {
+    if (!supabaseUrl) {
+      reasons.push("ACT001_PREFLIGHT_SUPABASE_URL is required to bind release evidence");
+    } else if (evidence.supabase?.origin !== supabaseUrl) {
+      reasons.push("release evidence Supabase origin does not match ACT001_PREFLIGHT_SUPABASE_URL");
+    } else {
+      const originRef = supabaseProjectRef(supabaseUrl);
+      if (originRef === undefined || (originRef && originRef !== evidence.supabase?.ref)) {
+        reasons.push("release evidence Supabase ref does not match ACT001_PREFLIGHT_SUPABASE_URL host");
+      }
+    }
+  }
+  return { ...evidence, valid: evidence?.valid === true && reasons.length === 0, reasons };
+}
+
+function blockedGates(reasons, stage) {
+  return {
+    ready: false,
+    reasons,
+    blockers: blockersFromReasons(reasons, stage),
+    coreSchema: {
+      missing: [],
+      unknown: [...CORE_RELATIONS],
+      accessUnknown: [...CORE_ACCESS_RELATIONS],
+      rpcMissing: [...CORE_RPCS],
+      authenticatedRpcMissing: [...AUTHENTICATED_RPCS],
+      serviceRpcMissing: [...SERVICE_ROLE_RPCS],
+      catalog: "not_requested",
+      serviceCatalog: "not_requested",
+    },
+    supportingDegraded: [...SUPPORTING_RELATIONS],
+    relationAccess: Object.fromEntries(
+      [...CORE_RELATIONS, ...SUPPORTING_RELATIONS].map((relation) => [relation, "unknown"]),
+    ),
+    runtimeReleaseShas: [],
   };
 }
 
@@ -825,15 +906,66 @@ export async function runPreflight({
 }) {
   if (!ACTIVATION_STAGES.includes(stage)) throw new Error(`unsupported activation stage: ${stage}`);
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl, "ACT001_PREFLIGHT_BASE_URL");
+  const normalizedSupabaseUrl = supabaseUrl
+    ? normalizeBaseUrl(supabaseUrl, "ACT001_PREFLIGHT_SUPABASE_URL")
+    : null;
+  const migrations = migrationReport(root);
+  const manifestPath = env.ACT001_EVIDENCE_MANIFEST ?? env.ACT001_PREFLIGHT_EVIDENCE;
+  const prerequisiteEvidence = bindReleaseEvidenceToSupabase(loadReleaseEvidence(
+    root,
+    manifestPath,
+    normalizedBaseUrl,
+    "prerequisite",
+    REQUIRED_MIGRATIONS,
+  ), normalizedSupabaseUrl);
+  const closureEvidence = stage === "closure"
+    ? bindReleaseEvidenceToSupabase(loadReleaseEvidence(
+        root,
+        env.ACT001_CLOSURE_EVIDENCE ?? manifestPath,
+        normalizedBaseUrl,
+        "closure",
+        REQUIRED_MIGRATIONS,
+      ), normalizedSupabaseUrl)
+    : null;
+  const releaseEvidence = stage === "closure" ? closureEvidence : prerequisiteEvidence;
+  const continuity = stage === "closure"
+    ? validateClosureContinuity(prerequisiteEvidence, closureEvidence)
+    : null;
+  const evidenceReasons = [
+    ...(prerequisiteEvidence.valid ? [] : prerequisiteEvidence.reasons),
+    ...(closureEvidence && !closureEvidence.valid ? closureEvidence.reasons : []),
+    ...(continuity && !continuity.valid ? continuity.reasons : []),
+  ];
+  if (evidenceReasons.length > 0) {
+    const privacy = privacyGate(root, releaseEvidence);
+    return {
+      stage,
+      target: normalizedBaseUrl,
+      supabase: {
+        configured: Boolean(supabaseUrl && supabaseAnonKey && supabaseJwt),
+        authenticatedPreview: false,
+        url: normalizedSupabaseUrl,
+        schemaCatalog: null,
+        serviceSchemaCatalog: null,
+      },
+      routes: [],
+      relations: [],
+      migrations,
+      releaseEvidence,
+      prerequisiteEvidence,
+      ...(closureEvidence ? { closureEvidence, continuity } : {}),
+      privacy,
+      gates: blockedGates([...new Set(evidenceReasons)], stage),
+      readOnly: true,
+      networkAccess: false,
+    };
+  }
   const routes = await Promise.all([
     probeRoute(normalizedBaseUrl, "/en/pricing"),
     probeRoute(normalizedBaseUrl, "/en/explore"),
     probeRoute(normalizedBaseUrl, "/premium"),
   ]);
   const configuredSupabase = Boolean(supabaseUrl && supabaseAnonKey && supabaseJwt);
-  const normalizedSupabaseUrl = configuredSupabase
-    ? normalizeBaseUrl(supabaseUrl, "ACT001_PREFLIGHT_SUPABASE_URL")
-    : null;
   const authenticatedSchemaCatalog = configuredSupabase
     ? await probeSchemaCatalog(normalizedSupabaseUrl, supabaseAnonKey, supabaseJwt)
     : {
@@ -859,28 +991,6 @@ export async function runPreflight({
         state: "unknown",
         error: "Supabase URL, anon key, and scoped preview JWT are required",
       }));
-  const migrations = migrationReport(root);
-  const manifestPath = env.ACT001_EVIDENCE_MANIFEST ?? env.ACT001_PREFLIGHT_EVIDENCE;
-  const prerequisiteEvidence = loadReleaseEvidence(
-    root,
-    manifestPath,
-    normalizedBaseUrl,
-    "prerequisite",
-    REQUIRED_MIGRATIONS,
-  );
-  const closureEvidence = stage === "closure"
-    ? loadReleaseEvidence(
-        root,
-        env.ACT001_CLOSURE_EVIDENCE ?? manifestPath,
-        normalizedBaseUrl,
-        "closure",
-        REQUIRED_MIGRATIONS,
-      )
-    : null;
-  const releaseEvidence = stage === "closure" ? closureEvidence : prerequisiteEvidence;
-  const continuity = stage === "closure"
-    ? validateClosureContinuity(prerequisiteEvidence, closureEvidence)
-    : null;
   const privacy = privacyGate(root, releaseEvidence);
   const gates = evaluateActivationPreflight({
     stage,
@@ -912,6 +1022,7 @@ export async function runPreflight({
     privacy,
     gates,
     readOnly: true,
+    networkAccess: true,
   };
 }
 

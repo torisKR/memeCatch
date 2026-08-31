@@ -4,6 +4,10 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import {
+  PRODUCTION_APP_ORIGIN,
+  PRODUCTION_SUPABASE_ORIGIN,
+} from "./plus-activation-preflight.mjs";
 
 const REQUIRED_CREDENTIALS = [
   "ACT001_PREVIEW_SUPABASE_ANON_KEY",
@@ -248,15 +252,17 @@ export function validatePreviewBoundary(manifest, env = process.env) {
     ));
   }
   if (
-    !productionApp
-    || !productionSupabase
+    productionApp !== PRODUCTION_APP_ORIGIN
+    || productionSupabase !== PRODUCTION_SUPABASE_ORIGIN
+    || manifestApp === PRODUCTION_APP_ORIGIN
+    || manifestSupabase === PRODUCTION_SUPABASE_ORIGIN
     || expectedPreviewApp === productionApp
     || expectedPreviewSupabase === productionSupabase
   ) {
     blockers.push(blocker(
       "ACT001_PRODUCTION_REFUSED",
-      "preview and production origins must be valid and distinct",
-      "Configure exact, distinct preview and production origins.",
+      "preview must be isolated from the canonical production origins",
+      "Configure the exact canonical production boundaries and distinct preview origins.",
       false,
     ));
   }

@@ -33,6 +33,8 @@
     "translation:demand-report": "node scripts/translation-demand-report.mjs",
     "translation:demand-report:test": "node scripts/translation-demand-report.test.mjs",
     "plus:activation:local": "node scripts/plus-activation-local.mjs",
+    "plus:activation:evidence": "node scripts/plus-activation-evidence.mjs",
+    "plus:activation:evidence:test": "node scripts/plus-activation-evidence.test.mjs",
     "plus:activation:preflight": "node scripts/plus-activation-preflight.mjs",
     "plus:activation:preflight:test": "node scripts/plus-activation-preflight.test.mjs",
     "plus:activation:preview": "node scripts/plus-activation-preview.mjs",

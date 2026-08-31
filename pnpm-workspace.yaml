@@ -1,0 +1,8 @@
+packages:
+  - .
+
+allowBuilds:
+  '@reown/appkit': false
+  core-js: false
+  sharp: false
+  unrs-resolver: false

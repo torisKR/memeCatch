@@ -48,6 +48,21 @@ artifacts/renewal/act-001/<sha12>-<utc>/
 
 ## 1. Prerequisite gate
 
+먼저 사람이 작성한 privacy review JSON을 입력으로 사용해 redacted prerequisite manifest를 생성한다. 생성기는 연결된 Supabase Preview의 원격 migration ledger만 CLI로 read-only 조회하고 migration 적용, 배포, 결제·closure 증적 생성은 하지 않으며 `payment.verified=false`를 유지한다. 현재 checkout은 clean RC의 non-production branch이고 `supabase/.temp/project-ref`가 격리 Preview ref와 일치해야 한다. Production에 연결된 checkout의 ledger는 거부한다.
+
+```bash
+ACT001_PREVIEW_APP_ORIGIN="https://<preview-app>" \
+ACT001_PREVIEW_SUPABASE_ORIGIN="https://<preview-ref>.supabase.co" \
+ACT001_PREVIEW_SUPABASE_REF="<preview-ref>" \
+ACT001_PRODUCTION_APP_ORIGIN="https://<production-app>" \
+ACT001_PRODUCTION_SUPABASE_ORIGIN="https://<production-ref>.supabase.co" \
+ACT001_PRODUCTION_SUPABASE_REF="<production-ref>" \
+ACT001_PRIVACY_REVIEW_JSON="/tmp/act001-privacy-review.json" \
+pnpm run plus:activation:evidence -- prepare --json
+```
+
+privacy review JSON은 `reviewed`, `providerDisclosure`, `outcomeDataDisclosure`, `retentionDisclosure`, `redacted`가 모두 `true`여야 한다. secret, JWT, API key 또는 credential 필드는 입력과 생성물에 포함하지 않는다. Production app/Supabase는 저장소의 canonical 경계와 같아야 하며 Preview ref·origin은 서로 일치해야 한다. 기본 출력은 gitignore된 `.local/act-001/<runId>/manifest.json`과 별도 `preview-manifest.json`이다. artifact source는 저장소 root 기준 상대 경로로 기록된다. `manifest.json` 절대 경로만 `ACT001_EVIDENCE_MANIFEST`에 주입하고 closure에도 같은 `supabase.origin/ref`를 유지한다.
+
 운영 셸에 다음 값만 주입한다. 값 자체는 `.env*`, shell history, artifact 또는 로그에 남기지 않는다.
 
 - `ACT001_PREFLIGHT_BASE_URL`: 격리 preview origin
@@ -71,10 +86,13 @@ READY 전에는 preview runner를 실행하지 않는다. prerequisite는 clean 
 
 runner를 시작하는 운영 셸에는 다음 preview 전용 credential을 별도로 주입한다.
 
+생성기가 만든 `preview-manifest.json`은 같은 run/SHA/origin이 고정된 runner 전용 초안이다. 실제 browser checkout과 사람이 검수한 fixture를 완료한 뒤 이 파일의 `memeId`, `payment`, `browserArtifact`만 redacted 값으로 채우고 절대 경로를 `ACT001_PREVIEW_MANIFEST`에 둔다. preflight용 `ACT001_EVIDENCE_MANIFEST`를 runner에 넘기지 않는다.
+
 - `ACT001_PREVIEW_APP_ORIGIN`: manifest `appUrl`과 정확히 같은 격리 preview app origin
 - `ACT001_PREVIEW_SUPABASE_ORIGIN`: manifest `supabaseUrl`과 정확히 같은 격리 preview Supabase origin
-- `ACT001_PRODUCTION_APP_ORIGIN`: preview와 달라야 하는 필수 production app origin 경계값
-- `ACT001_PRODUCTION_SUPABASE_ORIGIN`: preview와 달라야 하는 필수 production Supabase origin 경계값
+- `ACT001_PRODUCTION_APP_ORIGIN`: canonical production app origin `https://catchmeme.com`
+- `ACT001_PRODUCTION_SUPABASE_ORIGIN`: canonical production Supabase origin
+- `ACT001_PREVIEW_MANIFEST`: 생성 후 사람이 payment/fixture를 redacted 값으로 채운 runner 전용 `preview-manifest.json` 절대 경로
 - `ACT001_PREVIEW_SUPABASE_ANON_KEY`: manifest의 격리 preview Supabase anon key
 - `ACT001_PREVIEW_OWNER_JWT`: active owner 단기 JWT
 - `ACT001_PREVIEW_FREE_JWT`: entitlement가 없는 별도 사용자 JWT
@@ -86,7 +104,7 @@ runner를 시작하는 운영 셸에는 다음 preview 전용 credential을 별�
 preview origin 두 개는 manifest 값과 byte-for-byte 정규화 기준으로 정확히 일치하고, 필수 production origin 두 개와 각각 달라야 한다. 이 네 경계가 확인되기 전에는 credential을 사용하거나 matrix DB 접근을 시작하지 않는다. 네 사용자 JWT의 `sub`는 모두 달라야 한다. 두 service-role key는 브라우저로 전달하거나 artifact·명령 출력에 기록하지 않는다.
 
 ```bash
-pnpm run plus:activation:preview -- --manifest "$ACT001_EVIDENCE_MANIFEST" --json
+pnpm run plus:activation:preview -- --manifest "$ACT001_PREVIEW_MANIFEST" --json
 ```
 
 runner는 결제 주문·거래를 생성하거나 합성하지 않고 settlement/refund 상태를 변경하지 않으며 Unifi provider API를 독립 조회하지도 않는다. refund RPC는 authenticated 권한 거부를 확인하는 비변경 permission probe만 실행한다. 사람이 검토하고 SHA-256으로 manifest에 묶은 redacted `browser.md`의 실제 confirmed Unifi test identity와 이미 존재하는 DB/RLS 상태를 읽어 다음 경계를 검증한다.

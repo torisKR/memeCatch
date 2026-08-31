@@ -30,6 +30,8 @@ import {
 
 const RELEASE_SHA = "a".repeat(40);
 const PREVIEW_TARGET = "https://preview.example.test";
+const PREVIEW_SUPABASE_REF = "b".repeat(20);
+const PREVIEW_SUPABASE_ORIGIN = `https://${PREVIEW_SUPABASE_REF}.supabase.co`;
 const EVIDENCE_TIMESTAMP = new Date().toISOString();
 const evidenceRoot = mkdtempSync(join(tmpdir(), "memecatch-loop-130-"));
 mkdirSync(join(evidenceRoot, "artifacts"), { recursive: true });
@@ -107,6 +109,7 @@ const rawEvidence = {
   runId: "act001-test-run",
   environment: "preview",
   target: PREVIEW_TARGET,
+  supabase: { origin: PREVIEW_SUPABASE_ORIGIN, ref: PREVIEW_SUPABASE_REF },
   commitSha: RELEASE_SHA,
   workingTree: "clean",
   evidence: releaseArtifact,
@@ -270,6 +273,10 @@ assert.ok(validateClosureContinuity(
   prerequisiteEvidence,
   { ...validEvidence, runId: "another-run" },
 ).reasons.some((reason) => reason.includes("runId")));
+assert.ok(validateClosureContinuity(
+  prerequisiteEvidence,
+  { ...validEvidence, supabase: { ...validEvidence.supabase, ref: "c".repeat(20) } },
+).reasons.some((reason) => reason.includes("Supabase target")));
 
 assert.deepEqual(parseCliArgs(["prerequisite", "--json"]), {
   help: false,
@@ -501,8 +508,10 @@ function runCli(env, args = ["prerequisite"]) {
 }
 
 let redirectMode = false;
+let requestCount = 0;
 const validPreviewJwts = new Set(["preview-jwt", "secret-preview-jwt", "secret-service-key"]);
 const server = createServer((request, response) => {
+  requestCount += 1;
   assert.equal(request.method, "GET");
   if (request.url === "/rest/v1/") {
     if (!validPreviewJwts.has(request.headers.authorization?.replace("Bearer ", ""))) {
@@ -566,43 +575,102 @@ await new Promise((resolve, reject) => {
 try {
   const address = server.address();
   assert.ok(address && typeof address === "object");
+  const addressUrl = `http://127.0.0.1:${address.port}`;
+  mkdirSync(join(evidenceRoot, "app/(default)/privacy"), { recursive: true });
+  writeFileSync(
+    join(evidenceRoot, "app/(default)/privacy/page.tsx"),
+    "Unifi payment receipt outcome retention 보관 기간 파기",
+  );
+  mkdirSync(join(evidenceRoot, "supabase/migrations"), { recursive: true });
+  for (const migration of REQUIRED_MIGRATIONS) {
+    writeFileSync(join(evidenceRoot, "supabase/migrations", migration), "-- verified test migration\n");
+  }
+  const runtimePrerequisite = {
+    ...rawEvidence,
+    target: addressUrl,
+    supabase: { origin: addressUrl, ref: PREVIEW_SUPABASE_REF },
+    payment: { provider: "unifi", mode: "test" },
+  };
+  const runtimeClosure = {
+    ...rawEvidence,
+    target: addressUrl,
+    supabase: { origin: addressUrl, ref: PREVIEW_SUPABASE_REF },
+  };
+  writeFileSync(
+    join(evidenceRoot, "manifest.json"),
+    JSON.stringify({ prerequisite: runtimePrerequisite, closure: runtimeClosure }),
+  );
+  const runtimeEnv = { ACT001_EVIDENCE_MANIFEST: "manifest.json" };
+  const requestsBeforeInvalidEvidence = requestCount;
   const localReport = await runPreflight({
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    root: process.cwd(),
+    baseUrl: addressUrl,
+    root: evidenceRoot,
     env: {},
   });
-  assert.deepEqual(localReport.routes.map((route) => route.ok), [true, true, true]);
+  assert.deepEqual(localReport.routes, []);
   assert.equal(localReport.readOnly, true);
+  assert.equal(localReport.networkAccess, false);
+  assert.equal(requestCount, requestsBeforeInvalidEvidence);
   assert.equal(localReport.gates.ready, false);
-  assert.ok(localReport.gates.reasons.some((reason) => reason.includes("schema catalog")));
   assert.ok(localReport.gates.reasons.some((reason) => reason.includes("evidence manifest")));
 
-  const addressUrl = `http://127.0.0.1:${address.port}`;
+  const requestsBeforeMismatch = requestCount;
+  const targetMismatchReport = await runPreflight({
+    baseUrl: addressUrl,
+    supabaseUrl: `http://localhost:${address.port}`,
+    supabaseAnonKey: "public-key",
+    supabaseJwt: "preview-jwt",
+    root: evidenceRoot,
+    env: runtimeEnv,
+  });
+  assert.equal(targetMismatchReport.networkAccess, false);
+  assert.equal(requestCount, requestsBeforeMismatch);
+  assert.ok(targetMismatchReport.gates.reasons.some((reason) => reason.includes("Supabase origin does not match")));
+
+  writeFileSync(join(evidenceRoot, "production-manifest.json"), JSON.stringify({
+    prerequisite: { ...runtimePrerequisite, target: "https://catchmeme.com" },
+  }));
+  const requestsBeforeProductionTarget = requestCount;
+  const productionTargetReport = await runPreflight({
+    baseUrl: "https://catchmeme.com",
+    supabaseUrl: addressUrl,
+    supabaseAnonKey: "public-key",
+    supabaseJwt: "preview-jwt",
+    supabaseServiceRoleKey: "secret-service-key",
+    root: evidenceRoot,
+    env: { ACT001_EVIDENCE_MANIFEST: "production-manifest.json" },
+    stage: "prerequisite",
+  });
+  assert.equal(productionTargetReport.networkAccess, false);
+  assert.equal(requestCount, requestsBeforeProductionTarget);
+  assert.ok(productionTargetReport.gates.reasons.some((reason) => reason.includes("production app origin")));
+
   const authenticatedReport = await runPreflight({
     baseUrl: addressUrl,
     supabaseUrl: addressUrl,
     supabaseAnonKey: "public-key",
     supabaseJwt: "preview-jwt",
-    root: process.cwd(),
-    env: {},
+    supabaseServiceRoleKey: "secret-service-key",
+    root: evidenceRoot,
+    env: runtimeEnv,
   });
+  assert.equal(authenticatedReport.networkAccess, true);
   assert.equal(authenticatedReport.supabase.schemaCatalog.state, "available");
   assert.deepEqual(authenticatedReport.supabase.schemaCatalog.rpcs, [...AUTHENTICATED_RPCS].sort());
   assert.deepEqual(
     CORE_ACCESS_RELATIONS.map((relation) => authenticatedReport.gates.relationAccess[relation]),
     CORE_ACCESS_RELATIONS.map(() => "available"),
   );
-  assert.equal(authenticatedReport.gates.ready, false);
-  assert.ok(authenticatedReport.gates.reasons.some((reason) => reason.includes("service-role schema catalog")));
-  assert.ok(authenticatedReport.gates.reasons.some((reason) => reason.includes("evidence manifest")));
+  assert.equal(authenticatedReport.gates.ready, true);
 
   const invalidJwtReport = await runPreflight({
     baseUrl: addressUrl,
     supabaseUrl: addressUrl,
     supabaseAnonKey: "public-key",
     supabaseJwt: "expired-jwt",
-    root: process.cwd(),
-    env: {},
+    supabaseServiceRoleKey: "secret-service-key",
+    root: evidenceRoot,
+    env: runtimeEnv,
   });
   assert.equal(invalidJwtReport.supabase.schemaCatalog.state, "unknown");
   assert.equal(invalidJwtReport.gates.ready, false);
@@ -611,8 +679,12 @@ try {
   redirectMode = true;
   const redirectedReport = await runPreflight({
     baseUrl: addressUrl,
-    root: process.cwd(),
-    env: {},
+    supabaseUrl: addressUrl,
+    supabaseAnonKey: "public-key",
+    supabaseJwt: "preview-jwt",
+    supabaseServiceRoleKey: "secret-service-key",
+    root: evidenceRoot,
+    env: runtimeEnv,
   });
   assert.equal(redirectedReport.routes.find((route) => route.path === "/en/explore")?.status, 302);
   assert.equal(redirectedReport.routes.find((route) => route.path === "/en/explore")?.ok, false);
@@ -644,12 +716,31 @@ await new Promise((resolve, reject) => {
 try {
   const address = timeoutServer.address();
   assert.ok(address && typeof address === "object");
+  const timeoutUrl = `http://127.0.0.1:${address.port}`;
+  writeFileSync(join(evidenceRoot, "manifest.json"), JSON.stringify({
+    prerequisite: {
+      ...rawEvidence,
+      target: timeoutUrl,
+      supabase: { origin: timeoutUrl, ref: PREVIEW_SUPABASE_REF },
+      payment: { provider: "unifi", mode: "test" },
+    },
+    closure: {
+      ...rawEvidence,
+      target: timeoutUrl,
+      supabase: { origin: timeoutUrl, ref: PREVIEW_SUPABASE_REF },
+    },
+  }));
   process.env.ACT001_PREFLIGHT_TIMEOUT_MS = "100";
   const timedOutReport = await runPreflight({
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    root: process.cwd(),
-    env: {},
+    baseUrl: timeoutUrl,
+    supabaseUrl: timeoutUrl,
+    supabaseAnonKey: "public-key",
+    supabaseJwt: "preview-jwt",
+    supabaseServiceRoleKey: "secret-service-key",
+    root: evidenceRoot,
+    env: { ACT001_EVIDENCE_MANIFEST: "manifest.json" },
   });
+  assert.equal(timedOutReport.networkAccess, true);
   assert.ok(timedOutReport.routes.every((route) => route.ok === false && route.error));
 } finally {
   delete process.env.ACT001_PREFLIGHT_TIMEOUT_MS;

@@ -54,7 +54,7 @@ const boundaryEnv = {
   ACT001_PREVIEW_APP_ORIGIN: manifest.appUrl,
   ACT001_PREVIEW_SUPABASE_ORIGIN: manifest.supabaseUrl,
   ACT001_PRODUCTION_APP_ORIGIN: "https://catchmeme.com",
-  ACT001_PRODUCTION_SUPABASE_ORIGIN: "https://production-project.supabase.co",
+  ACT001_PRODUCTION_SUPABASE_ORIGIN: "https://onjipuldngbdptldkpoe.supabase.co",
 };
 
 assert.deepEqual(parsePreviewArgs(["--manifest", "manifest.json", "--json"]), {
@@ -88,6 +88,11 @@ assert.ok(validatePreviewBoundary({ ...manifest, payment: undefined }, boundaryE
 assert.ok(validatePreviewBoundary(manifest, {
   ...boundaryEnv,
   ACT001_PRODUCTION_SUPABASE_ORIGIN: manifest.supabaseUrl,
+}).some((item) => item.code === "ACT001_PRODUCTION_REFUSED"));
+assert.ok(validatePreviewBoundary({ ...manifest, appUrl: "https://catchmeme.com" }, {
+  ...boundaryEnv,
+  ACT001_PREVIEW_APP_ORIGIN: "https://catchmeme.com",
+  ACT001_PRODUCTION_APP_ORIGIN: "https://fake-production.example.test",
 }).some((item) => item.code === "ACT001_PRODUCTION_REFUSED"));
 assert.ok(validatePreviewBoundary({
   ...manifest,

@@ -9,9 +9,15 @@ import {
   MemeTranslationReview,
   type MemeTranslationReviewRow,
 } from "@/components/admin/meme-translation-review";
+import { ArtifactStudio } from "@/components/studio/artifact-studio";
 import { isSeoContentLocale } from "@/lib/i18n-routing";
-import { memePathFrom, type SafetyLevel } from "@/lib/labels";
-import { isHouseOriginalRightsSource } from "@/lib/house-original";
+import { memePathFrom, SAFETY_LEVELS, type SafetyLevel } from "@/lib/labels";
+import {
+  houseOriginalCanonicalUrl,
+  houseOriginalPublicLabel,
+  isHouseOriginal,
+  isHouseOriginalRightsSource,
+} from "@/lib/house-original";
 import type { ModerationStatus } from "@/components/admin/constants";
 
 export const metadata = { title: "밈 편집" };
@@ -114,6 +120,19 @@ export default async function AdminMemeEditPage({
         memeTitle={meme.title}
         originKind={meme.origin_kind}
       />
+
+      {isHouseOriginal(meme.origin_kind) && (
+        <ArtifactStudio
+          dictionaryOnly
+          dictionaryDefaults={{
+            name: meme.title,
+            summary: meme.summary,
+            safety: `${SAFETY_LEVELS[meme.safety_level as SafetyLevel].icon} ${SAFETY_LEVELS[meme.safety_level as SafetyLevel].user}`,
+            detailUrl: houseOriginalCanonicalUrl(meme.short_id, meme.slug),
+            source: houseOriginalPublicLabel(),
+          }}
+        />
+      )}
 
       <MemeEditForm
         memeId={meme.id}

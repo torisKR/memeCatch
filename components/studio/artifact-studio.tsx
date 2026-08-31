@@ -13,6 +13,12 @@ import {
 } from "@/components/studio/meme-artifacts";
 
 type ArtifactMode = "image" | "dictionary";
+type DictionaryArtifactData = { name: string; summary: string; safety: string; detailUrl: string; source: string };
+
+type ArtifactStudioProps = {
+  dictionaryOnly?: boolean;
+  dictionaryDefaults?: Partial<DictionaryArtifactData>;
+};
 
 const fieldClass = "mt-1.5 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none transition-colors focus:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none sm:text-sm";
 const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-[filter,opacity,transform] hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:active:scale-100 motion-reduce:transition-none";
@@ -121,10 +127,10 @@ function ImageArtifact({ rightsConfirmed }: { rightsConfirmed: boolean }) {
   );
 }
 
-function DictionaryArtifact({ rightsConfirmed }: { rightsConfirmed: boolean }) {
+function DictionaryArtifact({ rightsConfirmed, defaults }: { rightsConfirmed: boolean; defaults?: Partial<DictionaryArtifactData> }) {
   const [preset, setPreset] = useState<ImagePreset>("square");
   const [rendered, setRendered] = useState(false);
-  const [data, setData] = useState({ name: "", summary: "", safety: "", detailUrl: "", source: "" });
+  const [data, setData] = useState<DictionaryArtifactData>({ name: "", summary: "", safety: "", detailUrl: "", source: "", ...defaults });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detailUrlValid = isValidDetailUrl(data.detailUrl);
   const ready = data.name.trim().length > 0 && data.summary.trim().length > 0 && detailUrlValid && data.source.trim().length > 0;
@@ -161,9 +167,10 @@ function DictionaryArtifact({ rightsConfirmed }: { rightsConfirmed: boolean }) {
   );
 }
 
-export function ArtifactStudio() {
-  const [mode, setMode] = useState<ArtifactMode>("image");
+export function ArtifactStudio({ dictionaryOnly = false, dictionaryDefaults }: ArtifactStudioProps = {}) {
+  const [mode, setMode] = useState<ArtifactMode>(dictionaryOnly ? "dictionary" : "image");
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const dictionaryKey = JSON.stringify(dictionaryDefaults ?? {});
   return (
     <section className="rounded-2xl border border-border bg-background p-4 sm:p-6" aria-labelledby="artifact-studio-title">
       <h2 id="artifact-studio-title" className="text-2xl font-extrabold">내 콘텐츠 출력</h2>
@@ -173,14 +180,16 @@ export function ArtifactStudio() {
         <span>이 파일을 편집하고 출력할 권리가 있으며, 제3자의 권리를 침해하지 않음을 확인합니다.</span>
       </label>
       {!rightsConfirmed && <p role="status" className="mt-2 text-sm text-muted">렌더와 다운로드 전에 권리 확인이 필요합니다.</p>}
-      <div role="group" aria-label="출력 종류" className="my-5 flex flex-wrap gap-2">
-        {(["image", "dictionary"] as const).map((value) => (
-          <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={`min-h-11 rounded-full border px-4 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none ${mode === value ? "border-accent bg-accent-strong text-white" : "border-border bg-surface text-muted hover:border-accent hover:text-accent"}`}>
-            {value === "image" ? "이미지 밈" : "사전 카드"}
-          </button>
-        ))}
-      </div>
-      {mode === "image" ? <ImageArtifact rightsConfirmed={rightsConfirmed} /> : <DictionaryArtifact rightsConfirmed={rightsConfirmed} />}
+      {!dictionaryOnly && (
+        <div role="group" aria-label="출력 종류" className="my-5 flex flex-wrap gap-2">
+          {(["image", "dictionary"] as const).map((value) => (
+            <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={`min-h-11 rounded-full border px-4 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none ${mode === value ? "border-accent bg-accent-strong text-white" : "border-border bg-surface text-muted hover:border-accent hover:text-accent"}`}>
+              {value === "image" ? "이미지 밈" : "사전 카드"}
+            </button>
+          ))}
+        </div>
+      )}
+      {mode === "image" ? <ImageArtifact rightsConfirmed={rightsConfirmed} /> : <DictionaryArtifact key={dictionaryKey} rightsConfirmed={rightsConfirmed} defaults={dictionaryDefaults} />}
     </section>
   );
 }

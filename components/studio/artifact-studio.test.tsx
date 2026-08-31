@@ -151,6 +151,34 @@ describe("ArtifactStudio", () => {
     expect((screen.getByRole("button", { name: "PNG 내려받기" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("shows a prefilled dictionary workspace without image mode", () => {
+    const { rerender } = render(<ArtifactStudio dictionaryOnly dictionaryDefaults={{
+      name: "자체 제작 밈",
+      summary: "SNS 원본 없이 만든 밈",
+      safety: "친한 사이에서만 권장",
+      detailUrl: "https://catchmeme.com/memes/original",
+      source: "밈캐치 자체 제작",
+    }} />);
+
+    expect(screen.queryByRole("button", { name: "이미지 밈" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "사전 카드" })).toBeNull();
+    expect((screen.getByRole("textbox", { name: "밈 이름" }) as HTMLInputElement).value).toBe("자체 제작 밈");
+    expect((screen.getByRole("textbox", { name: "한 줄 정의" }) as HTMLTextAreaElement).value).toBe("SNS 원본 없이 만든 밈");
+    expect((screen.getByRole("textbox", { name: "사용 안전 신호" }) as HTMLInputElement).value).toBe("친한 사이에서만 권장");
+    expect((screen.getByRole("textbox", { name: "상세 URL" }) as HTMLInputElement).value).toBe("https://catchmeme.com/memes/original");
+    expect((screen.getByRole("textbox", { name: "사전 카드 출처 표기" }) as HTMLInputElement).value).toBe("밈캐치 자체 제작");
+
+    rerender(<ArtifactStudio dictionaryOnly dictionaryDefaults={{
+      name: "수정된 자체 제작 밈",
+      summary: "수정된 한 줄 정의",
+      safety: "써도 됨",
+      detailUrl: "https://catchmeme.com/memes/updated",
+      source: "밈캐치 자체 제작",
+    }} />);
+    expect((screen.getByRole("textbox", { name: "밈 이름" }) as HTMLInputElement).value).toBe("수정된 자체 제작 밈");
+    expect((screen.getByRole("textbox", { name: "한 줄 정의" }) as HTMLTextAreaElement).value).toBe("수정된 한 줄 정의");
+  });
+
   it("exposes only browser-rendered image outputs", () => {
     render(<ArtifactStudio />);
 

@@ -140,6 +140,17 @@ describe("Bedrock Meme Studio", () => {
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
   });
 
+  it("normalizes Nova's three-key concept object without another provider call", async () => {
+    const keyed = harness([response({
+      concepts: Object.fromEntries(concepts.map((concept, index) => [`idea${index + 1}`, concept])),
+    })]);
+    await expect(generateBedrockMemeConcepts(input, {
+      ...keyed,
+      env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
+    })).resolves.toMatchObject({ concepts });
+    expect(keyed.client.send).toHaveBeenCalledOnce();
+  });
+
   it("fails closed on invalid rates before any provider call", async () => {
     const h = harness();
     await expect(generateBedrockMemeConcepts(input, {

@@ -70,8 +70,15 @@ const conceptSchema = z.object({
   usage_context: z.string().trim().min(1).max(220),
 }).strict();
 
+const conceptsSchema = z.union([
+  z.array(conceptSchema).length(3),
+  z.record(z.string(), conceptSchema)
+    .refine((concepts) => Object.keys(concepts).length === 3)
+    .transform((concepts) => Object.values(concepts)),
+]);
+
 const responseSchema = z.object({
-  concepts: z.array(conceptSchema).length(3),
+  concepts: conceptsSchema,
 }).strict();
 
 const toneValues = new Set<BedrockMemeStudioInput["tone"]>([
@@ -88,6 +95,7 @@ const MAX_RATE_NANO_USD_PER_TOKEN = 1_000_000;
 const SYSTEM_PROMPT = [
   "You create original Korean meme copy for MemeCatch.",
   "Return JSON only with one object named concepts containing exactly 3 distinct objects.",
+  "Prefer concepts as a JSON array, never prose or Markdown.",
   "Each object must contain headline, caption, why_it_works, and usage_context strings.",
   "Do not quote real people, copy known meme captions, invent facts, target protected groups, or include harassment.",
   "Keep captions ready to publish and under 220 characters. Do not use Markdown.",

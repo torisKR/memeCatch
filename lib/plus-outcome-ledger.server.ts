@@ -45,6 +45,7 @@ type PlusOutcomeHistoryReceiptRow = {
   channel: string;
   locale: string;
   artifact_kind: string;
+  mode: string;
   performance_note: string | null;
   performance_rating: string | null;
   result_url?: string | null;
@@ -74,7 +75,7 @@ type PlusOutcomeHistoryMemeRow = {
 };
 
 const PLUS_OUTCOME_HISTORY_SELECT =
-  "id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, performance_note, performance_rating, result_url, memes(id, short_id, slug, title, summary, description, origin, usage_note, caution, aliases, updated_at, moderation_status, safety_level, lifecycle_status, usage_examples, meme_contents(availability, moderation_status), meme_sources(source_url), meme_tags_map(tag_id, tags(name)), meme_translations(meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at))";
+  "id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, mode, performance_note, performance_rating, result_url, memes(id, short_id, slug, title, summary, description, origin, usage_note, caution, aliases, updated_at, moderation_status, safety_level, lifecycle_status, usage_examples, meme_contents(availability, moderation_status), meme_sources(source_url), meme_tags_map(tag_id, tags(name)), meme_translations(meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at))";
 
 type PlusOutcomeHistoryLink = {
   href: string | null;
@@ -350,7 +351,7 @@ export async function loadPlusOutcomeFollowUps({
   const { data, error } = await supabase
     .from("plus_meme_use_receipts")
     .select(
-      "id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, performance_note, performance_rating",
+      "id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, mode, performance_note, performance_rating",
     )
     .gte("completion_date", fromDate)
     .lte("completion_date", toDate)
@@ -365,7 +366,7 @@ export async function loadPlusOutcomeFollowUps({
 
   const legacy = await supabase
     .from("plus_meme_use_receipts")
-    .select("id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, performance_note")
+    .select("id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, mode, performance_note")
     .gte("completion_date", fromDate)
     .lte("completion_date", toDate)
     .order("completion_date", { ascending: false })

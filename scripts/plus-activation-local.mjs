@@ -6,6 +6,7 @@ let baseUrl = process.env.LOCAL_SUPABASE_URL || "http://127.0.0.1:54321";
 const anonKey = process.env.LOCAL_SUPABASE_ANON_KEY?.trim();
 const serviceRoleKey = process.env.LOCAL_SUPABASE_SERVICE_ROLE_KEY?.trim();
 const memeId = "00000000-0000-0000-0000-000000000001";
+const untrustedMemeId = "00000000-0000-0000-0000-000000000002";
 const runId = randomUUID().replaceAll("-", "").slice(0, 10);
 const password = `Act001-${randomUUID()}aA1!`;
 const users = {
@@ -15,6 +16,7 @@ const users = {
 };
 const createdUserIds = [];
 let insertedTranslation = false;
+let createdSourceId = null;
 
 function fail(message) {
   throw new Error(message);
@@ -119,6 +121,19 @@ async function setPlus(email, active) {
   assert(data?.status === (active ? "active" : "canceled"), "local Plus status mismatch");
 }
 
+async function setOperator(userId) {
+  const rows = expectOk(
+    await request(`/rest/v1/profiles?id=eq.${userId}`, {
+      key: serviceRoleKey,
+      method: "PATCH",
+      headers: { prefer: "return=representation" },
+      body: { role: "operator" },
+    }),
+    "grant local operator role",
+  );
+  assert(Array.isArray(rows) && rows.length === 1 && rows[0].role === "operator", "local operator role was not granted");
+}
+
 async function signIn(user) {
   const result = await request("/auth/v1/token?grant_type=password", {
     key: anonKey,
@@ -189,6 +204,96 @@ async function prepareTranslation(activeUserId) {
   return sourceRows[0];
 }
 
+async function prepareTrustLedger(operatorToken) {
+  const originClaimText = `Human-reviewed local origin evidence for ACT-001 ${runId}.`;
+  const meaningClaimText = `Human-reviewed local meaning evidence for ACT-001 ${runId}.`;
+  const reviewerNote = `Local human fixture review for ACT-001 ${runId}; no AI or external access.`;
+  const sourceRows = expectOk(
+    await request("/rest/v1/media_sources", {
+      key: serviceRoleKey,
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: {
+        platform: "web",
+        external_id: `act001-${runId}`,
+        canonical_url: `https://local.test/act-001-trust/${runId}`,
+        title: "Local ACT-001 human trust fixture",
+        public_status: "public",
+        embeddable: true,
+      },
+    }),
+    "insert local trust source fixture",
+  );
+  assert(Array.isArray(sourceRows) && sourceRows.length === 1 && typeof sourceRows[0].id === "string", "local trust source fixture was not inserted");
+  createdSourceId = sourceRows[0].id;
+
+  const mediaRows = expectOk(
+    await request("/rest/v1/meme_media", {
+      key: serviceRoleKey,
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: { meme_id: memeId, source_id: createdSourceId },
+    }),
+    "insert local meme media fixture",
+  );
+  assert(Array.isArray(mediaRows) && mediaRows.length === 1, "local meme media fixture was not inserted");
+
+  const resolved = expectOk(
+    await rpc("resolve_trusted_one_cut_meme", operatorToken, {
+      p_meme_id: memeId,
+      p_source_id: createdSourceId,
+      p_origin_claim_text: originClaimText,
+      p_meaning_claim_text: meaningClaimText,
+      p_source_role: "secondary_reference",
+      p_rights_basis: "link_only",
+      p_disposition: "approved",
+      p_reviewer_note: reviewerNote,
+    }),
+    "resolve local trusted One-Cut fixture",
+  );
+  assert(
+    resolved?.trusted === true &&
+      resolved.meme_id === memeId &&
+      resolved.source_id === createdSourceId &&
+      typeof resolved.origin_claim_id === "string" &&
+      typeof resolved.meaning_claim_id === "string",
+    "operator resolver did not return the trusted fixture ledger",
+  );
+
+  const mediaReadBack = expectOk(
+    await request(
+      `/rest/v1/meme_media?select=source_role,rights_basis,review_state,reviewer_note&meme_id=eq.${memeId}&source_id=eq.${createdSourceId}`,
+      { key: anonKey, token: operatorToken },
+    ),
+    "read local trusted media ledger",
+  );
+  assert(
+    Array.isArray(mediaReadBack) &&
+      mediaReadBack.length === 1 &&
+      mediaReadBack[0].source_role === "secondary_reference" &&
+      mediaReadBack[0].rights_basis === "link_only" &&
+      mediaReadBack[0].review_state === "approved" &&
+      mediaReadBack[0].reviewer_note === reviewerNote,
+    "trusted media ledger read-back mismatch",
+  );
+  const claimReadBack = expectOk(
+    await request(
+      `/rest/v1/meme_claims?select=id,claim_type,claim_text,confidence,verified&meme_id=eq.${memeId}&source_id=eq.${createdSourceId}&order=claim_type.asc`,
+      { key: anonKey, token: operatorToken },
+    ),
+    "read local trusted claim ledger",
+  );
+  assert(
+    Array.isArray(claimReadBack) &&
+      claimReadBack.length === 2 &&
+      claimReadBack.every((claim) => claim.confidence === "high" && claim.verified === true) &&
+      claimReadBack.some((claim) => claim.claim_type === "origin" && claim.claim_text === originClaimText) &&
+      claimReadBack.some((claim) => claim.claim_type === "meaning" && claim.claim_text === meaningClaimText),
+    "trusted human claim ledger read-back mismatch",
+  );
+  console.log("PASS operator resolver approves a human-reviewed trusted One-Cut ledger");
+}
+
 async function cleanup() {
   const errors = [];
   const createdUserIdFilter = createdUserIds.join(",");
@@ -209,7 +314,69 @@ async function cleanup() {
       errors.push("translation fixture cleanup threw");
     }
   }
-  for (const userId of createdUserIds.reverse()) {
+  if (createdUserIdFilter) {
+    for (const [relation, label] of [
+      ["plus_meme_use_receipts", "receipt"],
+      ["plus_meme_use_completions", "completion"],
+      ["billing_subscriptions", "Plus entitlement"],
+    ]) {
+      try {
+        const deletion = await request(`/rest/v1/${relation}?user_id=in.(${createdUserIdFilter})`, {
+          key: serviceRoleKey,
+          method: "DELETE",
+        });
+        if (!deletion.response.ok) errors.push(`${label} fixture cleanup failed`);
+        const remaining = await request(
+          `/rest/v1/${relation}?select=*&user_id=in.(${createdUserIdFilter})`,
+          { key: serviceRoleKey },
+        );
+        if (!remaining.response.ok || !Array.isArray(remaining.data) || remaining.data.length !== 0) {
+          errors.push(`${label} fixture cleanup was not verified`);
+        }
+      } catch {
+        errors.push(`${label} fixture cleanup threw`);
+      }
+    }
+  }
+  if (createdSourceId) {
+    for (const [relation, label, filter] of [
+      ["meme_claims", "claim", `source_id=eq.${createdSourceId}`],
+      ["meme_media", "media", `source_id=eq.${createdSourceId}`],
+      ["media_sources", "source", `id=eq.${createdSourceId}`],
+    ]) {
+      try {
+        const deletion = await request(`/rest/v1/${relation}?${filter}`, {
+          key: serviceRoleKey,
+          method: "DELETE",
+        });
+        if (!deletion.response.ok) errors.push(`${label} fixture cleanup failed`);
+        const remaining = await request(`/rest/v1/${relation}?select=*&${filter}`, { key: serviceRoleKey });
+        if (!remaining.response.ok || !Array.isArray(remaining.data) || remaining.data.length !== 0) {
+          errors.push(`${label} fixture cleanup was not verified`);
+        }
+      } catch {
+        errors.push(`${label} fixture cleanup threw`);
+      }
+    }
+  }
+  if (createdUserIdFilter) {
+    try {
+      const deletion = await request(`/rest/v1/profiles?id=in.(${createdUserIdFilter})`, {
+        key: serviceRoleKey,
+        method: "DELETE",
+      });
+      if (!deletion.response.ok) errors.push("local profile cleanup failed");
+      const remaining = await request(`/rest/v1/profiles?select=id&id=in.(${createdUserIdFilter})`, {
+        key: serviceRoleKey,
+      });
+      if (!remaining.response.ok || !Array.isArray(remaining.data) || remaining.data.length !== 0) {
+        errors.push("local profile cleanup was not verified");
+      }
+    } catch {
+      errors.push("local profile cleanup threw");
+    }
+  }
+  for (const userId of [...createdUserIds].reverse()) {
     try {
       const deletion = await request(`/auth/v1/admin/users/${userId}`, {
         key: serviceRoleKey,
@@ -223,26 +390,6 @@ async function cleanup() {
       if (remaining.response.status !== 404) errors.push("local auth user cleanup was not verified");
     } catch {
       errors.push("local auth user cleanup threw");
-    }
-  }
-  if (serviceRoleKey) {
-    for (const [relation, label] of [
-      ["plus_meme_use_receipts", "receipt"],
-      ["plus_meme_use_completions", "completion"],
-    ]) {
-      try {
-        const remaining = await request(
-          `/rest/v1/${relation}?select=id&meme_id=eq.${memeId}&user_id=in.(${createdUserIdFilter})`,
-          {
-            key: serviceRoleKey,
-          },
-        );
-        if (!remaining.response.ok || !Array.isArray(remaining.data) || remaining.data.length !== 0) {
-          errors.push(`${label} fixture cleanup was not verified`);
-        }
-      } catch {
-        errors.push(`${label} fixture cleanup threw`);
-      }
     }
   }
   return errors;
@@ -260,10 +407,12 @@ async function run() {
   await createUser(users.other);
   await setPlus(users.active.email, true);
   await setPlus(users.other.email, true);
-  const source = await prepareTranslation(users.active.id);
+  await setOperator(users.active.id);
   const activeToken = await signIn(users.active);
   const freeToken = await signIn(users.free);
   const otherToken = await signIn(users.other);
+  await prepareTrustLedger(activeToken);
+  const source = await prepareTranslation(users.active.id);
 
   const receiptInput = {
     p_meme_id: memeId,
@@ -273,20 +422,45 @@ async function run() {
     p_result_url: "https://local.test/act-001",
     p_performance_note: null,
     p_private_note: "local-only verification",
+    p_mode: "one_cut",
   };
   const freeReceipt = await rpc("record_plus_meme_use_receipt", freeToken, receiptInput);
   assert(!freeReceipt.response.ok && freeReceipt.text.includes("plus_required"), "free user was not blocked");
   console.log("PASS free user is blocked by plus_required");
 
+  const untrustedStatus = expectOk(
+    await rpc("is_trusted_one_cut_meme", activeToken, { p_meme_id: untrustedMemeId }),
+    "check local untrusted One-Cut fixture",
+  );
+  assert(untrustedStatus === false, "local untrusted One-Cut fixture unexpectedly passed trust");
+  const untrustedReceipt = await rpc("record_plus_meme_use_receipt", activeToken, {
+    ...receiptInput,
+    p_meme_id: untrustedMemeId,
+    p_locale: "ko",
+  });
+  assert(
+    !untrustedReceipt.response.ok && untrustedReceipt.text.includes("meme_not_trusted_for_one_cut"),
+    "untrusted One-Cut receipt was not rejected",
+  );
+  console.log("PASS untrusted One-Cut receipt is rejected before completion");
+
   const firstReceipt = await rpc("record_plus_meme_use_receipt", activeToken, receiptInput);
   const firstData = expectOk(firstReceipt, "active Plus receipt creation");
-  assert(firstData?.completed === true && firstData?.already_recorded === false, "first receipt was not created");
+  assert(
+    firstData?.completed === true && firstData?.already_recorded === false && firstData?.mode === "one_cut",
+    "first trusted One-Cut receipt was not created with its mode",
+  );
   assert(typeof firstData.receipt_id === "string", "first receipt has no id");
-  console.log("PASS active Plus creates one reviewed/current English Creator Pack receipt");
+  console.log("PASS active Plus creates one trusted reviewed/current English One-Cut receipt");
 
   const secondReceipt = await rpc("record_plus_meme_use_receipt", activeToken, receiptInput);
   const secondData = expectOk(secondReceipt, "active Plus receipt retry");
-  assert(secondData?.already_recorded === true && secondData.receipt_id === firstData.receipt_id, "receipt retry was not idempotent");
+  assert(
+    secondData?.already_recorded === true &&
+      secondData.receipt_id === firstData.receipt_id &&
+      secondData.mode === "one_cut",
+    "receipt retry was not idempotent with its mode",
+  );
   console.log("PASS receipt retry is idempotent");
 
   const conflictingRetry = await rpc("record_plus_meme_use_receipt", activeToken, {
@@ -305,7 +479,7 @@ async function run() {
   console.log("PASS outcome summary reports one receipt and one pending performance follow-up");
 
   const ownerRows = expectOk(
-    await request(`/rest/v1/plus_meme_use_receipts?select=id,user_id,meme_id,locale,channel,artifact_kind,result_url`, {
+    await request(`/rest/v1/plus_meme_use_receipts?select=id,user_id,meme_id,locale,channel,artifact_kind,result_url,mode`, {
       key: anonKey,
       token: activeToken,
     }),
@@ -317,10 +491,11 @@ async function run() {
       ownerRows[0].user_id === users.active.id &&
       ownerRows[0].channel === receiptInput.p_channel &&
       ownerRows[0].artifact_kind === receiptInput.p_artifact_kind &&
-      ownerRows[0].result_url === receiptInput.p_result_url,
-    "active owner cannot read the canonical Creator Pack receipt",
+      ownerRows[0].result_url === receiptInput.p_result_url &&
+      ownerRows[0].mode === "one_cut",
+    "active owner cannot read the canonical One-Cut receipt and mode",
   );
-  console.log("PASS active owner reads exactly one own receipt");
+  console.log("PASS active owner reads exactly one own receipt with mode one_cut");
 
   const otherRows = expectOk(
     await request("/rest/v1/plus_meme_use_receipts?select=id,user_id,meme_id,locale,channel,artifact_kind,result_url", {
@@ -358,5 +533,6 @@ if (runError) {
   console.error(cleanupErrors.join("; "));
   process.exitCode = 1;
 } else {
+  console.log("PASS all local claim, media, source, receipt, completion, entitlement, profile, and auth fixtures are cleaned");
   console.log("ACT-001-lite PASS");
 }

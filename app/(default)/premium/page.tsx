@@ -80,7 +80,8 @@ import {
 import { plusDailySignalSince, type DailySignalLocale } from "@/lib/plus-daily-signal.server";
 import { resolvePremiumPrimaryMission } from "@/lib/premium-primary-mission";
 import {
-  buildPlusGlobalActionInbox,
+  buildTrustedPlusGlobalActionInbox,
+  type PlusGlobalActionInboxInput,
   type PlusGlobalActionInboxItem,
 } from "@/lib/plus-global-action-inbox";
 import { loadPlusGlobalActionInboxCompletion } from "@/lib/plus-global-action-inbox.server";
@@ -99,7 +100,14 @@ import {
   plusNextMoveDateWindow,
   projectSavedRevisitNextMoveItem,
 } from "@/lib/plus-next-move";
-import { loadPlusGlobalScout } from "@/lib/plus-global-scout.server";
+import {
+  loadPlusGlobalScout,
+  trustedPlusGlobalScoutMemeIds,
+} from "@/lib/plus-global-scout.server";
+import {
+  exportPlusTrustedEvidenceSet,
+  type PlusTrustedEvidenceSupabase,
+} from "@/lib/plus-trusted-evidence-exporter.server";
 import { loadPlusTranslationFulfillment } from "@/lib/plus-translation-fulfillment.server";
 import {
   buildPlusOutcomeReplayPath,
@@ -785,8 +793,8 @@ export default async function PremiumPage({
         interests,
       })
     : null;
-  const actionInbox = entitlement.isPremium
-    ? buildPlusGlobalActionInbox({
+  const actionInboxInput: PlusGlobalActionInboxInput | null = entitlement.isPremium
+    ? {
         locale: contentLocale,
         fulfillment: actionFulfillment,
         signals: actionSignalCandidates,
@@ -794,13 +802,32 @@ export default async function PremiumPage({
           dailySignalAlertsRes.error || actionSignalTranslationsRes.error
             ? "unavailable"
             : "available",
-      scout: globalScout ?? { status: "empty", dateKey: "", items: [] },
-      completion: actionCompletionRes,
-      preferredMemeId:
-        outcomeReplayItem?.memeId ?? globalDailyActionCandidate?.memeId ?? preferredMemeId,
-      replayItem: outcomeReplayItem ?? undefined,
-      globalDailyCandidate: globalDailyActionCandidate,
-    })
+        scout: globalScout ?? { status: "empty", dateKey: "", items: [] },
+        completion: actionCompletionRes,
+        preferredMemeId:
+          outcomeReplayItem?.memeId ?? globalDailyActionCandidate?.memeId ?? preferredMemeId,
+        replayItem: outcomeReplayItem ?? undefined,
+        globalDailyCandidate: globalDailyActionCandidate,
+      }
+    : null;
+  const trustedActionEvidence = actionInboxInput
+    ? await exportPlusTrustedEvidenceSet({
+        supabase: supabase as unknown as PlusTrustedEvidenceSupabase,
+        dateKey: actionInboxInput.scout.dateKey,
+        inbox: actionInboxInput,
+        knownTrustedMemeIds: globalScout
+          ? trustedPlusGlobalScoutMemeIds(globalScout)
+          : [],
+      })
+    : null;
+  const actionInbox = actionInboxInput
+    ? buildTrustedPlusGlobalActionInbox({
+        input: actionInboxInput,
+        trustedMemeIds:
+          trustedActionEvidence?.status === "unavailable"
+            ? null
+            : (trustedActionEvidence?.items ?? []).map((item) => item.memeId),
+      })
     : null;
   const globalDailyPromotionEntrySource =
     globalDailyActionCandidate && actionInbox?.items[0]?.memeId === globalDailyActionCandidate.memeId

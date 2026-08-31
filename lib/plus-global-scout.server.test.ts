@@ -3,7 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
-import { loadPlusGlobalScout, plusGlobalScoutDateKey } from "@/lib/plus-global-scout.server";
+import {
+  buildPlusGlobalScoutEvidenceDeck,
+  type PlusGlobalScoutSourceRow,
+} from "@/lib/plus-global-scout";
+import {
+  loadPlusGlobalScout,
+  plusGlobalScoutDateKey,
+  trustedPlusGlobalScoutMemeIds,
+} from "@/lib/plus-global-scout.server";
 
 const SOURCE_UPDATED_AT = "2026-08-09T00:00:00.000Z";
 
@@ -26,7 +34,7 @@ function query(result: { data: unknown; error: { message: string } | null }) {
   return builder;
 }
 
-function source() {
+function source(): PlusGlobalScoutSourceRow & { category: string } {
   return {
     id: "meme-1",
     short_id: "abc123",
@@ -73,15 +81,27 @@ function translation() {
   };
 }
 
-type FakeClient = { from: ReturnType<typeof vi.fn> };
+type FakeClient = {
+  from: ReturnType<typeof vi.fn>;
+  rpc: ReturnType<typeof vi.fn>;
+};
 
-function client(from: ReturnType<typeof query>[]): FakeClient {
+function client(
+  from: ReturnType<typeof query>[],
+  trust: (memeId: string) =>
+    | { data: unknown; error: unknown }
+    | Promise<{ data: unknown; error: unknown }> = () => ({
+    data: true,
+    error: null,
+  }),
+): FakeClient {
   return {
     from: vi.fn((table: string) => {
       const next = from.shift();
       if (!next) throw new Error(`Unexpected query for ${table}`);
       return next;
     }),
+    rpc: vi.fn(async (_name: string, args: { p_meme_id: string }) => trust(args.p_meme_id)),
   };
 }
 
@@ -201,6 +221,144 @@ describe("loadPlusGlobalScout", () => {
     });
     expect(japaneseTranslations.eq).toHaveBeenCalledWith("locale", "ja");
     expect(englishTranslations.eq).toHaveBeenCalledWith("locale", "en");
+  });
+
+  it("keeps only the first five trusted candidates in the existing evidence order", async () => {
+    const rows = Array.from({ length: 7 }, (_, index): PlusGlobalScoutSourceRow => ({
+      ...source(),
+      id: `meme-${index}`,
+      short_id: `short-${index}`,
+      slug: `meme-${index}`,
+      trend_score: 100 - index,
+    }));
+    const dateKey = plusGlobalScoutDateKey(new Date("2026-08-09T15:00:00.000Z"));
+    const ranked = buildPlusGlobalScoutEvidenceDeck({
+      locale: "ko",
+      dateKey,
+      sources: rows,
+      translations: [],
+    });
+    const rejectedId = ranked[0]?.id;
+    const sources = query({ data: rows, error: null });
+    const supabase = client([sources], (memeId) => ({
+      data: memeId !== rejectedId,
+      error: null,
+    }));
+
+    const result = await loadPlusGlobalScout({
+      supabase: supabase as never,
+      isPremium: true,
+      locale: "ko",
+      interests: [],
+      now: new Date("2026-08-09T15:00:00.000Z"),
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(
+      ranked.slice(1, 6).map((item) => item.id),
+    );
+    expect(result.items).toHaveLength(5);
+    expect(result.items.some((item) => item.id === rejectedId)).toBe(false);
+    expect(supabase.rpc).toHaveBeenCalledTimes(7);
+    expect(trustedPlusGlobalScoutMemeIds(result)).toEqual(
+      result.items.map((item) => item.id),
+    );
+  });
+
+  it("filters all bounded sources before filling the five-item deck past rank twenty", async () => {
+    const rows = Array.from({ length: 25 }, (_, index): PlusGlobalScoutSourceRow => ({
+      ...source(),
+      id: `meme-${index}`,
+      short_id: `short-${index}`,
+      slug: `meme-${index}`,
+      trend_score: 100 - index,
+    }));
+    const dateKey = plusGlobalScoutDateKey(new Date("2026-08-09T15:00:00.000Z"));
+    const originalTopTwenty = new Set(buildPlusGlobalScoutEvidenceDeck({
+      locale: "ko",
+      dateKey,
+      sources: rows,
+      translations: [],
+    }).map((item) => item.id));
+    const expectedMemeIds = rows
+      .map((row) => row.id)
+      .filter((memeId) => !originalTopTwenty.has(memeId));
+    const sources = query({ data: rows, error: null });
+    const supabase = client([sources], (memeId) => ({
+      data: !originalTopTwenty.has(memeId),
+      error: null,
+    }));
+
+    const result = await loadPlusGlobalScout({
+      supabase: supabase as never,
+      isPremium: true,
+      locale: "ko",
+      interests: [],
+      now: new Date("2026-08-09T15:00:00.000Z"),
+    });
+
+    expect(result.items).toHaveLength(5);
+    expect(result.items.map((item) => item.id).sort()).toEqual(expectedMemeIds.sort());
+    expect(supabase.rpc).toHaveBeenCalledTimes(25);
+  });
+
+  it("bounds trust concurrency to one evidence chunk and stops after five trusted items", async () => {
+    const rows = Array.from({ length: 60 }, (_, index): PlusGlobalScoutSourceRow => ({
+      ...source(),
+      id: `meme-${index}`,
+      short_id: `short-${index}`,
+      slug: `meme-${index}`,
+      trend_score: 100 - index,
+    }));
+    let active = 0;
+    let maxActive = 0;
+    const sources = query({ data: rows, error: null });
+    const supabase = client([sources], async () => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await Promise.resolve();
+      active -= 1;
+      return { data: true, error: null };
+    });
+
+    const result = await loadPlusGlobalScout({
+      supabase: supabase as never,
+      isPremium: true,
+      locale: "ko",
+      interests: [],
+      now: new Date("2026-08-09T15:00:00.000Z"),
+    });
+
+    expect(result.items).toHaveLength(5);
+    expect(supabase.rpc).toHaveBeenCalledTimes(20);
+    expect(maxActive).toBe(20);
+  });
+
+  it("fails closed when the trusted predicate errors or returns a non-boolean", async () => {
+    const failed = client([query({ data: [source()], error: null })], () => ({
+      data: null,
+      error: { message: "predicate failed" },
+    }));
+    await expect(
+      loadPlusGlobalScout({
+        supabase: failed as never,
+        isPremium: true,
+        locale: "ko",
+        interests: [],
+      }),
+    ).resolves.toMatchObject({ status: "unavailable", items: [] });
+
+    const malformed = client([query({ data: [source()], error: null })], () => ({
+      data: "true",
+      error: null,
+    }));
+    await expect(
+      loadPlusGlobalScout({
+        supabase: malformed as never,
+        isPremium: true,
+        locale: "ko",
+        interests: [],
+      }),
+    ).resolves.toMatchObject({ status: "unavailable", items: [] });
   });
 
   it("does not query English when the requested locale already has an eligible card", async () => {

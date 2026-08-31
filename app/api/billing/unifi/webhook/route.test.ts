@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * 웹훅 라우트의 보안 계약 검증 — 특히 귀속 탈취(attribution hijack) 차단.
@@ -61,7 +61,24 @@ beforeEach(() => {
   getUnifiPayTransaction.mockReset();
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("unifi webhook attribution", () => {
+  it("신규 checkout이 꺼져도 기존 결제 웹훅은 계속 정산한다", async () => {
+    vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", "false");
+    getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
+
+    const res = await POST(
+      webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, status: "active" });
+    expect(processUnifiPaymentEvent).toHaveBeenCalledTimes(1);
+  });
+
   it("정상 결제는 인증 조회의 orderId에서 파생한 linkId로 권한을 만든다", async () => {
     getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
 

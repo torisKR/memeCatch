@@ -35,6 +35,8 @@
     "plus:activation:local": "node scripts/plus-activation-local.mjs",
     "plus:activation:preflight": "node scripts/plus-activation-preflight.mjs",
     "plus:activation:preflight:test": "node scripts/plus-activation-preflight.test.mjs",
+    "plus:activation:preview": "node scripts/plus-activation-preview.mjs",
+    "plus:activation:preview:test": "node scripts/plus-activation-preview.test.mjs",
     "translate:memes:mlx-linked:test": "node scripts/translate-memes-mlx-linked.test.mjs",
     "translate:memes": "node scripts/translate-memes.mjs",
     "translate:memes:mlx-linked": "node scripts/translate-memes-mlx-linked.mjs"

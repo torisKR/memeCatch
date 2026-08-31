@@ -17,6 +17,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
 
+function isCheckoutEnabled() {
+  return process.env.UNIFI_PAY_CHECKOUT_ENABLED?.trim() === "true";
+}
+
 /**
  * 구독 결제 시작 — Unifi Pay 전용($10 USD).
  *
@@ -25,6 +29,13 @@ export const maxDuration = 15;
  * linkId ↔ user를 묶어두고, 웹훅의 orderId(LINK-{linkId}-...)로 역추적한다.
  */
 async function beginCheckout(request: Request, requestedLocale: FormDataEntryValue | string | null) {
+  if (!isCheckoutEnabled()) {
+    return Response.json(
+      { ok: false, error: "checkout_disabled" },
+      { status: 503, headers: { "cache-control": "no-store" } },
+    );
+  }
+
   let pricingPath = "/pricing";
   let locale: string | null = null;
   if (typeof requestedLocale === "string" && isLocale(requestedLocale)) {

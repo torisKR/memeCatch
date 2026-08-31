@@ -41,6 +41,7 @@ beforeEach(() => {
       already_completed: false,
       already_recorded: false,
       receipt_id: "22222222-2222-4222-8222-222222222222",
+      mode: "one_cut",
       completed_today_count: 1,
       current_streak: 2,
     },
@@ -78,6 +79,16 @@ describe("Plus Action Inbox completion API", () => {
   );
 
   it("keeps legacy bulk requests without mode compatible", async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        completed: true,
+        receipt_id: "22222222-2222-4222-8222-222222222222",
+        mode: "bulk",
+        completed_today_count: 1,
+        current_streak: 2,
+      },
+      error: null,
+    });
     const response = await POST(
       request({
         ...validBody,
@@ -92,6 +103,7 @@ describe("Plus Action Inbox completion API", () => {
       p_result_url: null,
       p_performance_note: null,
       p_private_note: null,
+      p_mode: "bulk",
     }));
   });
 
@@ -114,6 +126,7 @@ describe("Plus Action Inbox completion API", () => {
       p_channel: "threads",
       p_locale: "en",
       p_meme_id: memeId,
+      p_mode: "one_cut",
       p_performance_note: "좋은 반응",
       p_private_note: "첫 시도",
       p_result_url: "https://example.com/post/1",
@@ -123,6 +136,7 @@ describe("Plus Action Inbox completion API", () => {
       alreadyCompleted: false,
       alreadyRecorded: false,
       receiptId: "22222222-2222-4222-8222-222222222222",
+      mode: "one_cut",
       completedTodayCount: 1,
       currentStreak: 2,
     });
@@ -140,6 +154,29 @@ describe("Plus Action Inbox completion API", () => {
     const response = await POST(request({ ...validBody, channel: "x" }));
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({ error: "receipt_conflict" });
+  });
+
+  it("fails closed when the database rejects an untrusted One-Cut", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "meme_not_trusted_for_one_cut" } });
+    const response = await POST(request(validBody));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "meme_not_trusted_for_one_cut" });
+  });
+
+  it("rejects a receipt readback whose persisted mode differs from the request", async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        completed: true,
+        receipt_id: "22222222-2222-4222-8222-222222222222",
+        mode: "bulk",
+        completed_today_count: 1,
+        current_streak: 2,
+      },
+      error: null,
+    });
+    const response = await POST(request(validBody));
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "completion_failed" });
   });
 
   it("maps exact-locale validation failures without retrying the write", async () => {

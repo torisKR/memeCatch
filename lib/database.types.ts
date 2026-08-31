@@ -2600,6 +2600,7 @@ export type Database = {
           id: string
           locale: string
           meme_id: string
+          mode: string
           performance_note: string | null
           performance_rating: string | null
           private_note: string | null
@@ -2616,6 +2617,7 @@ export type Database = {
           id?: string
           locale: string
           meme_id: string
+          mode?: string
           performance_note?: string | null
           performance_rating?: string | null
           private_note?: string | null
@@ -2632,6 +2634,7 @@ export type Database = {
           id?: string
           locale?: string
           meme_id?: string
+          mode?: string
           performance_note?: string | null
           performance_rating?: string | null
           private_note?: string | null
@@ -4370,6 +4373,10 @@ export type Database = {
       }
       is_meme_rank_eligible: { Args: { p_meme_id: string }; Returns: boolean }
       is_operator: { Args: never; Returns: boolean }
+      is_trusted_one_cut_meme: {
+        Args: { p_meme_id: string }
+        Returns: boolean
+      }
       list_translation_priority_queue:
         | {
             Args: { p_limit?: number }
@@ -4553,9 +4560,23 @@ export type Database = {
           p_channel: string
           p_locale: string
           p_meme_id: string
+          p_mode?: string
           p_performance_note?: string | null
           p_private_note?: string | null
           p_result_url?: string | null
+        }
+        Returns: Json
+      }
+      resolve_trusted_one_cut_meme: {
+        Args: {
+          p_disposition: Database["public"]["Enums"]["moderation_status"]
+          p_meaning_claim_text: string
+          p_meme_id: string
+          p_origin_claim_text: string
+          p_reviewer_note: string
+          p_rights_basis: string
+          p_source_id: string
+          p_source_role: string
         }
         Returns: Json
       }

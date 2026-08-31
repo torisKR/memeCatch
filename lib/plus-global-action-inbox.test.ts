@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPlusGlobalActionEvidenceInbox,
   buildPlusGlobalActionInbox,
+  buildTrustedPlusGlobalActionInbox,
   type PlusGlobalActionInboxResult,
 } from "@/lib/plus-global-action-inbox";
 import type { PlusDailySignalCandidate } from "@/lib/plus-daily-signal.server";
@@ -199,6 +201,91 @@ describe("buildPlusGlobalActionInbox", () => {
     expect(forward.items).toHaveLength(5);
     expect(forward.items.map((item) => item.id)).toEqual(reverse.items.map((item) => item.id));
     expect(forward.items[0]?.href).toBe("/ja/memes/sig0-signal-0");
+  });
+
+  it("lets the internal evidence inbox request at most twenty with exact UI ordering parity", () => {
+    const signals = Array.from({ length: 24 }, (_, index) => signal(index));
+    const input = {
+      locale: "ja" as const,
+      fulfillment: { status: "empty" as const, items: [] },
+      signals,
+      signalStatus: "available" as const,
+      scout: { status: "empty" as const, dateKey: "2026-08-09", items: [] },
+      preferredMemeId: "m-signal-17",
+    };
+
+    const ui = buildPlusGlobalActionInbox({ ...input, limit: 99 });
+    const evidence = buildPlusGlobalActionEvidenceInbox({ ...input, limit: 99 });
+
+    expect(ui.items).toHaveLength(5);
+    expect(evidence.items).toHaveLength(20);
+    expect(evidence.items.slice(0, 5)).toEqual(ui.items);
+  });
+
+  it("filters fulfillment, signal, scout, replay, and Global Daily lanes by trusted meme id", () => {
+    const replayItem = {
+      id: "outcome-replay:replay1",
+      memeId: "m-replay",
+      shortId: "replay1",
+      slug: "replay",
+      title: "Replay",
+      summary: "Replay summary",
+      locale: "en" as const,
+      href: "/en/memes/replay1-replay",
+      shareText: "Replay",
+      kind: "outcome_replay" as const,
+      changedAt: null,
+      trendScore: 0,
+    };
+    const input = {
+      locale: "en" as const,
+      fulfillment: readyFulfillment,
+      signals: [savedSignal],
+      signalStatus: "available" as const,
+      scout,
+      replayItem,
+      preferredMemeId: "m-global",
+      globalDailyCandidate: {
+        memeId: "m-global",
+        shortId: "global1",
+        slug: "global",
+        title: "Global",
+        summary: "Global summary",
+        locale: "en" as const,
+        safetyLevel: "green" as const,
+        lifecycleStatus: "active" as const,
+        updatedAt: "2026-08-10T00:00:00.000Z",
+      },
+    };
+
+    const result = buildTrustedPlusGlobalActionInbox({
+      input,
+      trustedMemeIds: ["m-replay", "m-saved"],
+    });
+
+    expect(result.items.map((item) => item.memeId)).toEqual(["m-replay", "m-saved"]);
+    expect(result.items.some((item) => item.memeId === "m-ready")).toBe(false);
+    expect(result.items.some((item) => item.memeId === "m-scout")).toBe(false);
+    expect(result.items.some((item) => item.memeId === "m-global")).toBe(false);
+  });
+
+  it("maps a trusted predicate failure to an unavailable inbox", () => {
+    const result = buildTrustedPlusGlobalActionInbox({
+      input: {
+        locale: "en",
+        fulfillment: readyFulfillment,
+        signals: [savedSignal],
+        signalStatus: "available",
+        scout,
+      },
+      trustedMemeIds: null,
+    });
+
+    expect(result).toMatchObject({
+      status: "unavailable",
+      items: [],
+      unavailableLanes: ["translation_ready", "saved_signal", "new_reviewed"],
+    });
   });
 
   it("promotes a matching daily signal without trusting an unknown id", () => {

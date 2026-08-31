@@ -370,6 +370,7 @@ describe("Plus outcome ledger server loader", () => {
           channel: "threads",
           locale: "en",
           artifactKind: "creator_pack",
+          mode: "bulk",
           hasPerformanceNote: true,
           performanceRating: "hit",
           resultUrl: "https://private.example/post",
@@ -383,6 +384,7 @@ describe("Plus outcome ledger server loader", () => {
     expect(query.select.mock.calls[0][0]).toContain("meme_translations(");
     expect(query.select.mock.calls[0][0]).toContain("meme_contents(availability, moderation_status)");
     expect(query.select.mock.calls[0][0]).toContain("result_url");
+    expect(query.select.mock.calls[0][0]).toContain("mode");
     expect(query.select.mock.calls[0][0]).not.toContain("private_note");
     expect(query.limit).toHaveBeenCalledWith(50);
     expect(query.order).toHaveBeenNthCalledWith(1, "completion_date", { ascending: false });

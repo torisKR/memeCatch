@@ -45,6 +45,9 @@ const fixtures = vi.hoisted(() => {
     parsePlusOutcomeReplayRequest: vi.fn(),
     buildPlusOutcomeReplayPath: vi.fn(),
     buildPlusGlobalActionInbox: vi.fn(),
+    buildTrustedPlusGlobalActionInbox: vi.fn(),
+    exportPlusTrustedEvidenceSet: vi.fn(),
+    trustedPlusGlobalScoutMemeIds: vi.fn((): readonly string[] => []),
     buildPlusActionPremiumPath: vi.fn(),
     loadPlusGlobalActionInboxCompletion: vi.fn(),
   };
@@ -124,6 +127,7 @@ vi.mock("@/lib/plus-daily-signal-delivery.server", () => ({
 vi.mock("@/lib/plus-daily-signal.server", () => ({ plusDailySignalSince: () => "2026-08-01T00:00:00.000Z" }));
 vi.mock("@/lib/plus-global-action-inbox", () => ({
   buildPlusGlobalActionInbox: fixtures.buildPlusGlobalActionInbox,
+  buildTrustedPlusGlobalActionInbox: fixtures.buildTrustedPlusGlobalActionInbox,
 }));
 vi.mock("@/lib/plus-global-action-inbox.server", () => ({
   loadPlusGlobalActionInboxCompletion: fixtures.loadPlusGlobalActionInboxCompletion,
@@ -144,6 +148,10 @@ vi.mock("@/lib/plus-next-move", () => ({
 }));
 vi.mock("@/lib/plus-global-scout.server", () => ({
   loadPlusGlobalScout: vi.fn(async () => ({ status: "empty", dateKey: "", items: [] })),
+  trustedPlusGlobalScoutMemeIds: fixtures.trustedPlusGlobalScoutMemeIds,
+}));
+vi.mock("@/lib/plus-trusted-evidence-exporter.server", () => ({
+  exportPlusTrustedEvidenceSet: fixtures.exportPlusTrustedEvidenceSet,
 }));
 vi.mock("@/lib/plus-translation-fulfillment.server", () => ({
   loadPlusTranslationFulfillment: vi.fn(async () => ({ status: "empty", items: [] })),
@@ -210,6 +218,50 @@ describe("PremiumPage Global Daily loading", () => {
         completedTodayCount: 0,
         currentStreak: 0,
       },
+    });
+    fixtures.buildTrustedPlusGlobalActionInbox.mockImplementation(
+      ({ input, trustedMemeIds }: {
+        input: { completion: unknown };
+        trustedMemeIds: string[] | null;
+      }) => trustedMemeIds === null
+        ? {
+            status: "unavailable",
+            items: [],
+            unavailableLanes: ["translation_ready", "saved_signal", "new_reviewed"],
+            completion: input.completion,
+          }
+        : fixtures.buildPlusGlobalActionInbox(input),
+    );
+    fixtures.exportPlusTrustedEvidenceSet.mockImplementation(async ({ inbox }: {
+      inbox: {
+        fulfillment: { items: Array<{ memeId: string }> };
+        signals: Array<{ id: string }>;
+        scout: { items: Array<{ id: string }> };
+        replayItem?: { memeId: string };
+        globalDailyCandidate?: { memeId: string };
+      };
+    }) => {
+      const memeIds = [...new Set([
+        ...inbox.fulfillment.items.map((item) => item.memeId),
+        ...inbox.signals.map((item) => item.id),
+        ...inbox.scout.items.map((item) => item.id),
+        ...(inbox.replayItem ? [inbox.replayItem.memeId] : []),
+        ...(inbox.globalDailyCandidate ? [inbox.globalDailyCandidate.memeId] : []),
+      ])];
+      return {
+        schemaVersion: "plus-trusted-evidence-set-v1",
+        status: memeIds.length > 0 ? "active" : "empty",
+        dateKey: "2026-08-10",
+        locale: "en",
+        items: memeIds.map((memeId, index) => ({
+          rank: index + 1,
+          memeId,
+          kind: "new_reviewed",
+          locale: "en",
+          changedAt: null,
+          trendScore: 0,
+        })),
+      };
     });
     fixtures.loadPlusGlobalActionInboxCompletion.mockResolvedValue({
       status: "available",
@@ -355,6 +407,66 @@ describe("PremiumPage Global Daily loading", () => {
     const dashboard = Array.isArray(children) ? (children[1] as ElementLike | undefined) : undefined;
     const challenge = dashboard?.props?.globalDailyChallenge as ElementLike | null | undefined;
     expect(challenge?.props?.showReviewShelf).toBe(true);
+  });
+
+  it("uses the trusted evidence exporter as the real Action Inbox candidate boundary", async () => {
+    fixtures.getPremiumEntitlement.mockResolvedValue(entitlement(true));
+    fixtures.trustedPlusGlobalScoutMemeIds.mockReturnValueOnce(["meme-1"]);
+    fixtures.exportPlusTrustedEvidenceSet.mockResolvedValueOnce({
+      schemaVersion: "plus-trusted-evidence-set-v1",
+      status: "active",
+      dateKey: "2026-08-10",
+      locale: "en",
+      items: [{
+        rank: 1,
+        memeId: "meme-1",
+        kind: "new_reviewed",
+        locale: "en",
+        changedAt: "2026-08-10T00:00:00.000Z",
+        trendScore: 0,
+      }],
+    });
+
+    await PremiumPage({
+      searchParams: Promise.resolve({ focus: "meme-1", locale: "en", from: "global_daily" }),
+    });
+
+    const exporterInput = fixtures.exportPlusTrustedEvidenceSet.mock.calls[0]?.[0].inbox;
+    expect(exporterInput).toEqual(expect.objectContaining({
+      locale: "en",
+      preferredMemeId: "meme-1",
+      globalDailyCandidate: expect.objectContaining({ memeId: "meme-1" }),
+    }));
+    expect(fixtures.buildTrustedPlusGlobalActionInbox).toHaveBeenCalledWith({
+      input: exporterInput,
+      trustedMemeIds: ["meme-1"],
+    });
+    expect(fixtures.exportPlusTrustedEvidenceSet).toHaveBeenCalledWith(
+      expect.objectContaining({ knownTrustedMemeIds: ["meme-1"] }),
+    );
+  });
+
+  it("renders the Action Inbox unavailable when the trusted predicate fails", async () => {
+    fixtures.getPremiumEntitlement.mockResolvedValue(entitlement(true));
+    fixtures.exportPlusTrustedEvidenceSet.mockResolvedValueOnce({
+      schemaVersion: "plus-trusted-evidence-set-v1",
+      status: "unavailable",
+      dateKey: "2026-08-10",
+      locale: "en",
+      items: [],
+    });
+
+    const page = await PremiumPage({ searchParams: Promise.resolve({}) });
+
+    expect(fixtures.buildTrustedPlusGlobalActionInbox).toHaveBeenCalledWith(
+      expect.objectContaining({ trustedMemeIds: null }),
+    );
+    type ElementLike = { props?: Record<string, unknown> };
+    const children = (page as ElementLike).props?.children;
+    const dashboard = Array.isArray(children) ? (children[1] as ElementLike | undefined) : undefined;
+    const inbox = dashboard?.props?.actionInbox as ElementLike | null | undefined;
+    const result = inbox?.props?.result as { status?: string } | undefined;
+    expect(result?.status).toBe("unavailable");
   });
 
   it("keeps UI-only locales separate from the reviewed content locale", async () => {

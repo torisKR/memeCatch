@@ -2,11 +2,11 @@
 
 > 어떤 서비스가 무엇을 맡고, **왜 그렇게 정했는지**를 남긴다.
 > 특히 "AWS로 옮길까?"는 여러 번 다시 떠오르는 질문이라 실측 근거를 함께 기록한다.
-> 최종 갱신: 2026-07-19
+> 최종 갱신: 2026-08-31
 
 ## 한 줄 요약
 
-앱은 **Vercel**, 데이터·인증은 **Supabase**, 이미지는 **Cloudflare R2**, 결제는 **Latpeed**,
+앱은 **Vercel**, 데이터·인증은 **Supabase**, 이미지는 **Cloudflare R2**, 결제는 **Unifi Pay Direct**,
 메일 발송만 **AWS SES**. AWS는 기존 스택을 대체하지 않고 비어 있던 자리 하나를 채운다.
 
 ## 서비스 분담
@@ -16,10 +16,14 @@
 | 앱 호스팅·배포·크론 | Vercel | GitHub `main` 푸시 시 자동 배포. ISR/SSG 비중 높음(SEO) |
 | DB·인증·RLS·RPC | Supabase | 프로젝트 `onjipuldngbdptldkpoe` (ap-northeast-1) |
 | 밈 이미지·업로드 | Cloudflare R2 | `/api/media` 프록시 경유. aws4fetch로 SigV4 서명 |
-| 유료 멤버십 결제 | Latpeed | 웹훅 → `process_latpeed_membership_event` |
+| 유료 멤버십 결제 | Unifi Pay Direct | `billing_orders` → HMAC 상태 재조회 → `billing_subscriptions` |
 | **메일 발송** | **AWS SES** | 계정 `264144511402`, ap-northeast-2 |
 
 광고는 Google AdSense + 쿠팡 파트너스(하단 고정 도크).
+
+현재 결제 원장은 `billing_orders`이며, 확인된 거래만 `billing_subscriptions` 권한으로 반영한다. `billing_webhook_events`는 재전송과 감사 이력을 보존한다. 저장소에 남은 Latpeed 라우트·RPC·마이그레이션은 기존 주문 호환과 감사용 **legacy** 경로이며 신규 checkout의 기준이 아니다.
+
+신규 checkout은 서버 전용 `UNIFI_PAY_CHECKOUT_ENABLED`가 공백 제거 후 정확히 `true`일 때만 열린다. 플래그가 없거나 `false`이면 주문 생성을 fail-closed로 막되, 이미 생성된 주문의 웹훅 검증과 환불 정산은 계속 처리한다. 따라서 롤백은 이 플래그만 끄며 webhook/refund 경로를 함께 내리지 않는다.
 
 ## AWS는 무엇을 하고, 무엇을 하지 않는가
 
@@ -68,6 +72,10 @@ CatchMeme house originals (`origin_kind=house_original`) do not enter through oE
 `media_sources`/`meme_media`/`meme_claims` 원장은 RLS로 운영자만 열고, 승인된 행만 기존 `meme_contents`/`meme_sources`로 복사해 공개한다.
 YouTube 메타데이터는 30일 갱신·삭제 대응이 필요해 Vercel Cron(`/api/cron/source-refresh`, 17:00 UTC)이 7일 주기로 공개·임베드 상태를 재확인한다.
 YouTube 조회수 등 API 지표는 파생 점수에 쓰지 않는다(트렌드 점수는 자체 view_events만).
+
+### MPE AI 경계 (2026-08-31 갱신)
+
+MPE OCR·근거 초안은 `stealth/ox-alpha` 단일 모델, 호출 비용 `$0`만 허용한다. 유료 모델 폴백은 없고 실패 시 닫힌 상태로 남긴다. 결과는 운영자 검수 전 자동 공개하지 않으며, 외부 원본 이미지·영상·오디오는 영속 저장하지 않는다.
 
 ### 저장 계층(S3 IA) 전환을 넣지 않는다
 

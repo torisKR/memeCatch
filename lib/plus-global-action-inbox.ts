@@ -17,6 +17,7 @@ import type { LifecycleStatus, SafetyLevel } from "@/lib/labels";
 import type { UsageExample } from "@/lib/usage-examples";
 
 export const PLUS_GLOBAL_ACTION_INBOX_LIMIT = 5;
+export const PLUS_GLOBAL_ACTION_EVIDENCE_LIMIT = 20;
 
 export type PlusGlobalActionKind =
   | "outcome_replay"
@@ -106,12 +107,12 @@ const PRIORITY: Record<PlusGlobalActionKind, number> = {
   new_reviewed: 2,
 };
 
-function inboxLimit(limit: number | undefined): number {
+function inboxLimit(limit: number | undefined, maximum: number): number {
   if (limit === undefined || !Number.isFinite(limit)) {
-    return PLUS_GLOBAL_ACTION_INBOX_LIMIT;
+    return maximum;
   }
   return Math.min(
-    PLUS_GLOBAL_ACTION_INBOX_LIMIT,
+    maximum,
     Math.max(0, Math.trunc(limit)),
   );
 }
@@ -370,7 +371,7 @@ function scoutAction(item: PlusGlobalScoutItem): PlusGlobalActionInboxItem {
   };
 }
 
-export function buildPlusGlobalActionInbox({
+function buildPlusGlobalActionInboxWithMaximum({
   locale,
   fulfillment,
   signals,
@@ -381,7 +382,7 @@ export function buildPlusGlobalActionInbox({
   replayItem,
   globalDailyCandidate,
   limit,
-}: PlusGlobalActionInboxInput): PlusGlobalActionInboxResult {
+}: PlusGlobalActionInboxInput, maximum: number): PlusGlobalActionInboxResult {
   const actions = new Map<string, RankedAction>();
   addReadyTranslations(actions, fulfillment, locale);
   addSignals(actions, locale, signals);
@@ -418,7 +419,7 @@ export function buildPlusGlobalActionInbox({
         !completedSet.has(item.memeId) &&
         !(item.kind === "outcome_replay" && completionStatus === "unavailable"),
     )
-    .slice(0, inboxLimit(limit))
+    .slice(0, inboxLimit(limit, maximum))
     .map(({ item }) => item);
 
   return {
@@ -437,4 +438,63 @@ export function buildPlusGlobalActionInbox({
       currentStreak,
     },
   };
+}
+
+export function buildPlusGlobalActionInbox(
+  input: PlusGlobalActionInboxInput,
+): PlusGlobalActionInboxResult {
+  return buildPlusGlobalActionInboxWithMaximum(input, PLUS_GLOBAL_ACTION_INBOX_LIMIT);
+}
+
+export function buildPlusGlobalActionEvidenceInbox(
+  input: PlusGlobalActionInboxInput,
+): PlusGlobalActionInboxResult {
+  return buildPlusGlobalActionInboxWithMaximum(input, PLUS_GLOBAL_ACTION_EVIDENCE_LIMIT);
+}
+
+export function buildTrustedPlusGlobalActionInbox({
+  input,
+  trustedMemeIds,
+}: {
+  input: PlusGlobalActionInboxInput;
+  trustedMemeIds: readonly string[] | null;
+}): PlusGlobalActionInboxResult {
+  if (trustedMemeIds === null) {
+    return buildPlusGlobalActionInbox({
+      ...input,
+      fulfillment: { status: "unavailable", items: [] },
+      signals: [],
+      signalStatus: "unavailable",
+      scout: { status: "unavailable", dateKey: input.scout.dateKey, items: [] },
+      preferredMemeId: undefined,
+      replayItem: undefined,
+      globalDailyCandidate: undefined,
+    });
+  }
+
+  const trusted = new Set(trustedMemeIds);
+  return buildPlusGlobalActionInbox({
+    ...input,
+    fulfillment: {
+      ...input.fulfillment,
+      items: input.fulfillment.items.filter((item) => trusted.has(item.memeId)),
+    },
+    signals: input.signals.filter((item) => trusted.has(item.id)),
+    scout: {
+      ...input.scout,
+      items: input.scout.items.filter((item) => trusted.has(item.id)),
+    },
+    preferredMemeId:
+      input.preferredMemeId && trusted.has(input.preferredMemeId)
+        ? input.preferredMemeId
+        : undefined,
+    replayItem:
+      input.replayItem && trusted.has(input.replayItem.memeId)
+        ? input.replayItem
+        : undefined,
+    globalDailyCandidate:
+      input.globalDailyCandidate && trusted.has(input.globalDailyCandidate.memeId)
+        ? input.globalDailyCandidate
+        : undefined,
+  });
 }

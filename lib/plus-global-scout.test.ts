@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPlusGlobalScoutDeck,
+  buildPlusGlobalScoutEvidenceDeck,
   type PlusGlobalScoutSourceRow,
   type PlusGlobalScoutTranslationRow,
 } from "@/lib/plus-global-scout";
@@ -192,6 +193,25 @@ describe("buildPlusGlobalScoutDeck", () => {
     expect(new Set(deck.map((item) => item.id)).size).toBe(5);
     expect(build(rows, { limit: 2 })).toHaveLength(2);
     expect(build(rows, { limit: -1 })).toEqual([]);
+  });
+
+  it("lets the internal evidence deck request at most twenty with exact UI ordering parity", () => {
+    const rows = Array.from({ length: 24 }, (_, index) =>
+      source(`meme-${index}`, { trend_score: 100 - index }),
+    );
+    const input = {
+      locale: "ko" as const,
+      dateKey: "2026-08-09",
+      sources: rows,
+      translations: [],
+    };
+
+    const ui = buildPlusGlobalScoutDeck({ ...input, limit: 20 });
+    const evidence = buildPlusGlobalScoutEvidenceDeck({ ...input, limit: 99 });
+
+    expect(ui).toHaveLength(5);
+    expect(evidence).toHaveLength(20);
+    expect(evidence.slice(0, 5)).toEqual(ui);
   });
 
   it("preserves optional usage and caution without making them eligibility gates", () => {

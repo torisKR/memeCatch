@@ -36,6 +36,7 @@ function request(locale?: string): Request {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", "true");
   mocks.getCurrentBillingUser.mockResolvedValue(null);
   mocks.buildRequestId.mockReturnValue("MC-user-1");
   mocks.createBillingOrder.mockResolvedValue(undefined);
@@ -49,6 +50,34 @@ beforeEach(() => {
 });
 
 describe("billing checkout order lifecycle", () => {
+  it.each([undefined, "", "false", "TRUE", "true-ish"]) (
+    "fails closed when the checkout switch is %s",
+    async (value) => {
+      if (value === undefined) vi.unstubAllEnvs();
+      else vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", value);
+
+      mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+      const response = await POST(request("en"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({ ok: false, error: "checkout_disabled" });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(mocks.getCurrentBillingUser).not.toHaveBeenCalled();
+      expect(mocks.createBillingOrder).not.toHaveBeenCalled();
+      expect(mocks.createUnifiPaymentLink).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts an explicitly enabled switch after trimming", async () => {
+    vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", "  true  ");
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+
+    const response = await POST(request("en"));
+
+    expect(response.status).toBe(303);
+    expect(mocks.createBillingOrder).toHaveBeenCalledOnce();
+  });
+
   it("creates the pending order before requesting a provider link", async () => {
     mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
 

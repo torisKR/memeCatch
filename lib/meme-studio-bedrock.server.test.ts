@@ -7,10 +7,11 @@ import {
   BEDROCK_MEME_STUDIO_ERROR,
   BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS,
   BEDROCK_MEME_STUDIO_MODEL_ID,
+  BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS,
   createBedrockMemeStudioClient,
   generateBedrockMemeConcepts,
 } from "@/lib/meme-studio-bedrock.server";
-import { ConverseCommand, CountTokensCommand } from "@aws-sdk/client-bedrock-runtime";
+import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 
 const input = { topic: "월요일 출근", tone: "sarcastic", format: "caption" } as const;
 const concepts = [0, 1, 2].map((index) => ({
@@ -27,10 +28,10 @@ function response(body: unknown = { concepts }) {
   };
 }
 
-function harness(outputs: unknown[] = [{ inputTokens: 120 }, response()]) {
+function harness(outputs: unknown[] = [response()]) {
   const events: string[] = [];
   const send = vi.fn(async (command) => {
-    events.push(command instanceof CountTokensCommand ? "count" : "converse");
+    events.push(command instanceof ConverseCommand ? "converse" : "unknown");
     const next = outputs.shift();
     if (next instanceof Error) throw next;
     return next;
@@ -91,43 +92,48 @@ describe("Bedrock Meme Studio", () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
-  it("counts, reserves the worst case, then calls Converse once on the exact model", async () => {
+  it("does not reserve budget when Vercel OIDC role configuration is missing", async () => {
+    const reserveCost = vi.fn();
+    await expect(generateBedrockMemeConcepts(input, {
+      reserveCost,
+      env: { BEDROCK_MEME_STUDIO_ENABLED: "true", VERCEL: "1" },
+    })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.oidcRoleRequired });
+    expect(reserveCost).not.toHaveBeenCalled();
+  });
+
+  it("reserves the bounded worst case, then calls Converse once on the exact model", async () => {
     const h = harness();
     const result = await generateBedrockMemeConcepts(input, {
       ...h,
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
     });
-    expect(h.events).toEqual(["count", "reserve", "converse"]);
-    expect(h.client.send).toHaveBeenCalledTimes(2);
-    expect(h.client.send.mock.calls[0][0]).toBeInstanceOf(CountTokensCommand);
-    expect(h.client.send.mock.calls[0][0].input.modelId).toBe(BEDROCK_MEME_STUDIO_MODEL_ID);
-    expect(h.client.send.mock.calls[1][0]).toBeInstanceOf(ConverseCommand);
-    expect(h.client.send.mock.calls[1][0].input).toMatchObject({
+    expect(h.events).toEqual(["reserve", "converse"]);
+    expect(h.client.send).toHaveBeenCalledOnce();
+    expect(h.client.send.mock.calls[0][0]).toBeInstanceOf(ConverseCommand);
+    expect(h.client.send.mock.calls[0][0].input).toMatchObject({
       modelId: BEDROCK_MEME_STUDIO_MODEL_ID,
       inferenceConfig: { maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS },
     });
-    expect(h.reserveCost).toHaveBeenCalledWith(120 * 50 + 1_024 * 200);
+    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 50 + 1_024 * 200;
+    expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
       concepts,
       usage: { inputTokens: 120, outputTokens: 80, totalTokens: 200 },
-      reservedNanoUsd: 120 * 50 + 1_024 * 200,
+      reservedNanoUsd,
     });
   });
 
   it("accepts a full JSON fence but requires exactly three bounded concepts", async () => {
-    const fenced = harness([
-      { inputTokens: 10 },
-      {
-        ...response(),
-        output: { message: { content: [{ text: `\`\`\`json\n${JSON.stringify({ concepts })}\n\`\`\`` }] } },
-      },
-    ]);
+    const fenced = harness([{
+      ...response(),
+      output: { message: { content: [{ text: `\`\`\`json\n${JSON.stringify({ concepts })}\n\`\`\`` }] } },
+    }]);
     await expect(generateBedrockMemeConcepts(input, {
       ...fenced,
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
     })).resolves.toMatchObject({ concepts });
 
-    const invalid = harness([{ inputTokens: 10 }, response({ concepts: concepts.slice(0, 2) })]);
+    const invalid = harness([response({ concepts: concepts.slice(0, 2) })]);
     await expect(generateBedrockMemeConcepts(input, {
       ...invalid,
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
@@ -156,28 +162,18 @@ describe("Bedrock Meme Studio", () => {
   });
 
   it("stops after budget rejection and never calls Converse", async () => {
-    const h = harness([{ inputTokens: 10 }]);
+    const h = harness([]);
     h.reserveCost.mockRejectedValueOnce(new Error("private budget detail"));
     await expect(generateBedrockMemeConcepts(input, {
       ...h,
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.budgetRejected });
-    expect(h.events).toEqual(["count"]);
-    expect(h.client.send).toHaveBeenCalledOnce();
+    expect(h.events).toEqual([]);
+    expect(h.client.send).not.toHaveBeenCalled();
   });
 
   it("redacts provider failures into stable codes and never retries", async () => {
-    const countFailure = harness([new Error("credential secret")]);
-    await expect(generateBedrockMemeConcepts(input, {
-      ...countFailure,
-      env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
-    })).rejects.toEqual(expect.objectContaining({
-      code: BEDROCK_MEME_STUDIO_ERROR.countFailed,
-      message: BEDROCK_MEME_STUDIO_ERROR.countFailed,
-    }));
-    expect(countFailure.client.send).toHaveBeenCalledOnce();
-
-    const generationFailure = harness([{ inputTokens: 10 }, new Error("provider secret")]);
+    const generationFailure = harness([new Error("provider secret")]);
     await expect(generateBedrockMemeConcepts(input, {
       ...generationFailure,
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
@@ -185,6 +181,6 @@ describe("Bedrock Meme Studio", () => {
       code: BEDROCK_MEME_STUDIO_ERROR.generationFailed,
       message: BEDROCK_MEME_STUDIO_ERROR.generationFailed,
     }));
-    expect(generationFailure.client.send).toHaveBeenCalledTimes(2);
+    expect(generationFailure.client.send).toHaveBeenCalledOnce();
   });
 });

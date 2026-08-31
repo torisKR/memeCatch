@@ -53,20 +53,14 @@ resource "aws_iam_role" "vercel_bedrock" {
 
 data "aws_iam_policy_document" "bedrock_inference" {
   statement {
-    sid = "UseNovaMicroInferenceProfile"
-    actions = [
-      "bedrock:CountTokens",
-      "bedrock:InvokeModel",
-    ]
+    sid       = "UseNovaMicroInferenceProfile"
+    actions   = ["bedrock:InvokeModel"]
     resources = [local.bedrock_inference_profile_arn]
   }
 
   statement {
-    sid = "RouteNovaMicroProfileToFoundationModels"
-    actions = [
-      "bedrock:CountTokens",
-      "bedrock:InvokeModel",
-    ]
+    sid       = "RouteNovaMicroProfileToFoundationModels"
+    actions   = ["bedrock:InvokeModel"]
     resources = local.bedrock_foundation_model_arns
 
     condition {

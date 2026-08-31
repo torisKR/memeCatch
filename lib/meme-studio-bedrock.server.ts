@@ -3,7 +3,6 @@ import "server-only";
 import {
   BedrockRuntimeClient,
   ConverseCommand,
-  CountTokensCommand,
   type BedrockRuntimeClientConfig,
   type ConverseCommandInput,
 } from "@aws-sdk/client-bedrock-runtime";
@@ -13,13 +12,13 @@ import { z } from "zod";
 export const BEDROCK_MEME_STUDIO_MODEL_ID = "apac.amazon.nova-micro-v1:0";
 export const BEDROCK_MEME_STUDIO_DEFAULT_REGION = "ap-northeast-2";
 export const BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS = 1_024;
+export const BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS = 4_096;
 
 export const BEDROCK_MEME_STUDIO_ERROR = {
   disabled: "bedrock_meme_studio_disabled",
   oidcRoleRequired: "bedrock_meme_studio_oidc_role_required",
   invalidInput: "bedrock_meme_studio_invalid_input",
   invalidRate: "bedrock_meme_studio_invalid_rate",
-  countFailed: "bedrock_meme_studio_count_failed",
   budgetRejected: "bedrock_meme_studio_budget_rejected",
   generationFailed: "bedrock_meme_studio_generation_failed",
   invalidResponse: "bedrock_meme_studio_invalid_response",
@@ -49,7 +48,7 @@ export type BedrockMemeStudioInput = {
 };
 
 type Environment = Record<string, string | undefined>;
-type BedrockCommand = CountTokensCommand | ConverseCommand;
+type BedrockCommand = ConverseCommand;
 type BedrockClient = { send(command: BedrockCommand): Promise<unknown> };
 
 type Dependencies = {
@@ -85,7 +84,6 @@ const formatValues = new Set<BedrockMemeStudioInput["format"]>([
 const DEFAULT_INPUT_RATE_NANO_USD = 50;
 const DEFAULT_OUTPUT_RATE_NANO_USD = 200;
 const MAX_RATE_NANO_USD_PER_TOKEN = 1_000_000;
-const MAX_COUNTED_INPUT_TOKENS = 100_000;
 
 const SYSTEM_PROMPT = [
   "You create original Korean meme copy for MemeCatch.",
@@ -158,6 +156,10 @@ function error(code: BedrockMemeStudioErrorCode): BedrockMemeStudioError {
   return new BedrockMemeStudioError(code);
 }
 
+function safeTokenCount(value: unknown) {
+  return Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : 0;
+}
+
 export function createBedrockMemeStudioClient({
   env = process.env,
   createClient = (config) => new BedrockRuntimeClient(config),
@@ -186,23 +188,8 @@ export async function generateBedrockMemeConcepts(
   const inputRate = rate(env, "BEDROCK_NOVA_MICRO_INPUT_NANO_USD_PER_TOKEN", DEFAULT_INPUT_RATE_NANO_USD);
   const outputRate = rate(env, "BEDROCK_NOVA_MICRO_OUTPUT_NANO_USD_PER_TOKEN", DEFAULT_OUTPUT_RATE_NANO_USD);
   const bedrock = client ?? createBedrockMemeStudioClient({ env });
-
-  let counted: unknown;
-  try {
-    counted = await bedrock.send(new CountTokensCommand({
-      modelId: BEDROCK_MEME_STUDIO_MODEL_ID,
-      input: { converse: { messages: request.messages, system: request.system } },
-    }));
-  } catch {
-    throw error(BEDROCK_MEME_STUDIO_ERROR.countFailed);
-  }
-  const inputTokens = (counted as { inputTokens?: unknown } | undefined)?.inputTokens;
-  if (!Number.isSafeInteger(inputTokens) || (inputTokens as number) < 0
-      || (inputTokens as number) > MAX_COUNTED_INPUT_TOKENS) {
-    throw error(BEDROCK_MEME_STUDIO_ERROR.countFailed);
-  }
-
-  const reservedNanoUsd = (inputTokens as number) * inputRate
+  // ponytail: Nova Micro APAC rejects CountTokens; this bounded over-reservation stays until the model supports it.
+  const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * inputRate
     + BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS * outputRate;
   try {
     await reserveCost(reservedNanoUsd);
@@ -229,15 +216,12 @@ export async function generateBedrockMemeConcepts(
   if (!parsed?.success) throw error(BEDROCK_MEME_STUDIO_ERROR.invalidResponse);
 
   const usage = result.usage;
+  const inputTokens = safeTokenCount(usage?.inputTokens);
+  const outputTokens = safeTokenCount(usage?.outputTokens);
+  const totalTokens = safeTokenCount(usage?.totalTokens) || inputTokens + outputTokens;
   return {
     concepts: parsed.data.concepts,
-    usage: {
-      inputTokens: Number.isSafeInteger(usage?.inputTokens) ? usage!.inputTokens! : inputTokens as number,
-      outputTokens: Number.isSafeInteger(usage?.outputTokens) ? usage!.outputTokens! : 0,
-      totalTokens: Number.isSafeInteger(usage?.totalTokens)
-        ? usage!.totalTokens!
-        : (inputTokens as number) + (Number.isSafeInteger(usage?.outputTokens) ? usage!.outputTokens! : 0),
-    },
+    usage: { inputTokens, outputTokens, totalTokens },
     reservedNanoUsd,
   };
 }

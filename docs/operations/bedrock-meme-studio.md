@@ -6,11 +6,11 @@
 - 모델: `apac.amazon.nova-micro-v1:0`만 허용
 - 호출: 관리자 Meme Studio에서 한 번에 초안 3개 생성
 - 인증: Vercel Team OIDC 임시 자격증명만 사용하며 정적 AWS 키는 만들지 않는다.
-- 권한: `bedrock:CountTokens`, `bedrock:InvokeModel`만 허용한다.
+- 권한: `bedrock:InvokeModel`만 허용한다.
 
 ## 비용 경계
 
-앱 사용량 원장의 누적 예상 비용 `$100`이 동기식 하드 캡이다. 호출 전에 토큰과 비용을 예약하고 한도 도달 시 Bedrock 요청을 보내지 않아야 한다.
+앱 사용량 원장의 누적 예상 비용 `$100`이 동기식 하드 캡이다. Nova Micro APAC는 `CountTokens`를 지원하지 않으므로, 입력 경계보다 큰 4,096 토큰과 최대 출력 1,024 토큰 비용을 호출 전에 고정 예약한다. 한도 도달 시 Bedrock 요청을 보내지 않는다.
 
 `memecatch-bedrock-monthly` AWS Budget은 Bedrock 월 비용 80%와 100%에서 이메일을 보내는 지연형 보조 경보다. 결제 데이터 반영과 알림에는 시간이 걸릴 수 있으므로 하드 캡이나 kill switch로 취급하지 않는다. 기존 `memecatch-monthly` `$50` 전체 계정 Budget은 변경하지 않는다.
 

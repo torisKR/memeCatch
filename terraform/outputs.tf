@@ -49,3 +49,13 @@ output "mailer_iam_user" {
 output "aws_account_id" {
   value = data.aws_caller_identity.current.account_id
 }
+
+output "bedrock_vercel_role_arn" {
+  description = "Vercel의 서버 전용 AWS_ROLE_ARN 환경변수에 등록할 Bedrock OIDC 역할"
+  value       = aws_iam_role.vercel_bedrock.arn
+}
+
+output "bedrock_model_id" {
+  description = "앱이 InvokeModel과 CountTokens에 사용할 고정 Bedrock inference profile ID"
+  value       = local.bedrock_inference_profile_id
+}

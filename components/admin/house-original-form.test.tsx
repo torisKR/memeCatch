@@ -92,7 +92,7 @@ describe("HouseOriginalForm", () => {
 
     expect(await screen.findByText("$0 기본 템플릿 초안")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/meme-studio",
+      "/api/admin/meme-studio",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ topic: "회의 조기 종료", tone: "hype", format: "caption" }),
@@ -129,6 +129,77 @@ describe("HouseOriginalForm", () => {
       );
     });
     expect(push).toHaveBeenCalledWith("/admin/memes/meme-2");
+  });
+
+  it("saves one explicitly chosen Bedrock concept directly as pending with safe defaults", async () => {
+    const concepts = [0, 1, 2].map((index) => ({
+      headline: `Bedrock 초안 ${index + 1}`,
+      caption: `문구 ${index + 1}`,
+      why_it_works: `이유 ${index + 1}`,
+      usage_context: `활용 ${index + 1}`,
+    }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ mode: "ai", provider: "bedrock", concepts }),
+    }));
+    createHouseOriginal.mockResolvedValue({ ok: true, data: { memeId: "meme-bedrock" } });
+    render(<HouseOriginalForm />);
+
+    fireEvent.change(screen.getByLabelText("자체 밈 주제"), { target: { value: "칼퇴 성공" } });
+    fireEvent.click(screen.getByRole("button", { name: "자체 밈 초안 3개 만들기" }));
+
+    expect(await screen.findByText("AWS Bedrock 초안")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /대기로 바로 저장/ })).toHaveLength(3);
+    expect(createHouseOriginal).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "“Bedrock 초안 2” 대기로 바로 저장" }));
+    await waitFor(() => {
+      expect(createHouseOriginal).toHaveBeenCalledTimes(1);
+      expect(createHouseOriginal).toHaveBeenCalledWith({
+        title: "Bedrock 초안 2",
+        summary: "문구 2",
+        description: "왜 통하나요? 이유 2\n\n추천 활용: 활용 2",
+        origin: expect.stringContaining("외부 SNS 원본이나 제3자 미디어를 사용하지 않았습니다."),
+        safetyLevel: "yellow",
+        category: "phrase",
+        difficulty: "normal",
+        originYear: new Date().getFullYear(),
+        usageContext: {
+          work: "yellow",
+          friends: "green",
+          family: "yellow",
+          sns: "yellow",
+        },
+      });
+    });
+    expect(push).toHaveBeenCalledWith("/admin/memes/meme-bedrock");
+  });
+
+  it("keeps the chosen concept visible when direct pending save fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: "template",
+        concepts: [0, 1, 2].map((index) => ({
+          headline: `초안 ${index + 1}`,
+          caption: `문구 ${index + 1}`,
+          why_it_works: "이유",
+          usage_context: "활용",
+        })),
+      }),
+    }));
+    createHouseOriginal.mockResolvedValue({ ok: false, error: "저장 실패" });
+    render(<HouseOriginalForm />);
+
+    fireEvent.change(screen.getByLabelText("자체 밈 주제"), { target: { value: "저장 실패" } });
+    fireEvent.click(screen.getByRole("button", { name: "자체 밈 초안 3개 만들기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "“초안 1” 대기로 바로 저장" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("저장 실패");
+    expect(screen.getByText("초안 1")).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("discards generated drafts when their topic changes", async () => {

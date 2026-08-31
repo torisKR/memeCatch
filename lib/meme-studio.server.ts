@@ -1,19 +1,16 @@
 import "server-only";
 
 import {
-  DEFAULT_MPE_MODEL,
-  getMpeVisionModel,
-  isOpenRouterConfigured,
-  OPENROUTER_BUDGET_RESERVATION_FAILED,
-  OPENROUTER_DAILY_BUDGET_EXHAUSTED,
-  requestOpenRouterStructured,
-} from "@/lib/mpe/openrouter.server";
+  BEDROCK_MEME_STUDIO_MODEL_ID,
+  BedrockMemeStudioError,
+  generateBedrockMemeConcepts,
+} from "@/lib/meme-studio-bedrock.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * AI 밈 스튜디오 서버 로직.
- * 무료 Ox Alpha와 운영 일일 예산 예약만 사용한다. AI 미설정, 예산 소진,
- * 일시 실패에는 결정적 템플릿으로 폴백해 사용자가 항상 결과를 받게 한다.
+ * 공개 스튜디오는 항상 결정적 템플릿만 사용한다. 비용이 발생하는 생성기는
+ * 인증된 관리자 API에서만 별도 호출한다.
  */
 
 export const MEME_TONES = ["wholesome", "sarcastic", "absurd", "hype"] as const;
@@ -33,93 +30,16 @@ export type MemeConcept = {
   usage_context: string;
 };
 
-const CONCEPTS_SCHEMA = {
-  type: "object",
-  properties: {
-    concepts: {
-      type: "array",
-      minItems: 3,
-      maxItems: 3,
-      items: {
-        type: "object",
-        properties: {
-          headline: { type: "string" },
-          caption: { type: "string" },
-          why_it_works: { type: "string" },
-          usage_context: { type: "string" },
-        },
-        required: ["headline", "caption", "why_it_works", "usage_context"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["concepts"],
-  additionalProperties: false,
-} as const;
-
-const AI_INSTRUCTIONS = [
-  "You are a Korean meme copywriter for MemeCatch, a global meme dictionary.",
-  "Given a topic, tone, and format, write exactly 3 distinct, ready-to-post Korean meme captions.",
-  "The requested format must visibly change the output: image-macro uses short top/bottom copy, reaction uses a reaction line, caption uses a post caption.",
-  "Rules:",
-  "- Keep each caption under 220 characters and safe for public feeds (no slurs, no targeted harassment).",
-  "- Reference widely recognizable internet humor patterns; do not invent fake statistics or quotes.",
-  "- 'why_it_works' must explain the comedic mechanism in one sentence.",
-  "- 'usage_context' must name where/when to post it (e.g., group chat, quote-tweet, story).",
-].join(" ");
+export type MemeStudioResult =
+  | { mode: "ai"; provider: "bedrock"; concepts: MemeConcept[] }
+  | { mode: "template"; concepts: MemeConcept[] };
 
 type MemeStudioBudgetClient = {
-  rpc(name: "reserve_meme_studio_daily_ai_request", args: {
-    p_provider: "openrouter";
-    p_model: string;
+  rpc(name: "reserve_bedrock_meme_studio_budget", args: {
+    p_model_profile: string;
+    p_estimated_cost_nano_usd: number;
   }): PromiseLike<{ error: unknown }>;
 };
-
-function reservationErrorValues(error: unknown): string[] {
-  if (typeof error !== "object" || error === null) return [];
-  const record = error as Record<string, unknown>;
-  return [record.code, record.message, record.details]
-    .filter((value): value is string => typeof value === "string");
-}
-
-async function reserveMemeStudioAiRequest(client: MemeStudioBudgetClient) {
-  const { error } = await client.rpc("reserve_meme_studio_daily_ai_request", {
-    p_provider: "openrouter",
-    p_model: getMpeVisionModel(),
-  });
-  if (!error) return;
-
-  const values = reservationErrorValues(error);
-  if (values.includes("meme_studio_daily_ai_budget_exhausted")) {
-    throw new Error(OPENROUTER_DAILY_BUDGET_EXHAUSTED);
-  }
-  if (values.includes("PGRST202")
-      || values.some((value) => /reserve_meme_studio_daily_ai_request/i.test(value))) {
-    console.error("meme_studio_ai_quota_rpc_missing");
-    throw new Error(OPENROUTER_BUDGET_RESERVATION_FAILED);
-  }
-
-  console.error("meme_studio_ai_quota_reservation_failed");
-  throw new Error(OPENROUTER_BUDGET_RESERVATION_FAILED);
-}
-
-function isExpectedStudioAiFallback(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : "";
-  return message === OPENROUTER_DAILY_BUDGET_EXHAUSTED
-    || message === OPENROUTER_BUDGET_RESERVATION_FAILED
-    || /^openrouter_structured_failed:(?:network_error|408|409|425|429|5\d\d)(?:\s|$)/.test(message);
-}
-
-function studioAiFailureCode(error: unknown): string {
-  const message = error instanceof Error ? error.message : "";
-  const transport = message.match(
-    /^openrouter_structured_failed:(network_error|\d{3})(?:\s|$)/,
-  )?.[1];
-  if (transport) return `openrouter_structured_failed:${transport}`;
-  if (message === "openrouter_structured_failed_empty"
-      || message === "openrouter_structured_invalid") return message;
-  return "unexpected";
-}
 
 function isMemeConcept(value: unknown): value is MemeConcept {
   if (typeof value !== "object" || value === null) return false;
@@ -264,49 +184,49 @@ function buildTemplateConcepts(topic: string, tone: MemeTone, format: MemeFormat
 /* 공개 진입점                                                         */
 /* ------------------------------------------------------------------ */
 
-export function isMemeStudioAiEnabled(): boolean {
-  if (!isOpenRouterConfigured()) return false;
-  try {
-    return getMpeVisionModel() === DEFAULT_MPE_MODEL;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * 밈 컨셉 3개 생성. AI를 우선하고 실패하면 템플릿으로 폴백한다.
- * 반환 mode로 호출부(API 라우트 → 클라이언트)가 폴백 안내를 표시할 수 있다.
+ * 공개 스튜디오용 밈 컨셉 3개 생성. 외부 AI를 호출하지 않는다.
  */
 export async function generateMemeConcepts(input: {
   topic: string;
   tone: MemeTone;
   format: MemeFormat;
-}): Promise<{ mode: "ai" | "template"; concepts: MemeConcept[] }> {
-  if (isMemeStudioAiEnabled()) {
-    try {
-      const budgetClient = createAdminClient() as unknown as MemeStudioBudgetClient;
-      const result = await requestOpenRouterStructured<{ concepts?: unknown }>({
-        name: "meme_concepts",
-        schema: CONCEPTS_SCHEMA,
-        instructions: AI_INSTRUCTIONS,
-        input: JSON.stringify(input),
-        maxOutputTokens: 2048,
-        reserveRequest: () => reserveMemeStudioAiRequest(budgetClient),
-      });
-      if (!Array.isArray(result.concepts)
-          || result.concepts.length !== 3
-          || !result.concepts.every(isMemeConcept)) {
-        throw new Error("openrouter_structured_invalid");
-      }
-      return { mode: "ai", concepts: result.concepts.map(normalizeMemeConcept) };
-    } catch (error) {
-      if (!isExpectedStudioAiFallback(error)) {
-        console.error("meme_studio_ai_generation_failed", studioAiFailureCode(error));
-      }
-    }
-  }
+}): Promise<MemeStudioResult> {
   return {
     mode: "template",
     concepts: buildTemplateConcepts(input.topic, input.tone, input.format).map(normalizeMemeConcept),
   };
+}
+
+export async function generateAdminMemeConcepts(input: {
+  topic: string;
+  tone: MemeTone;
+  format: MemeFormat;
+}): Promise<MemeStudioResult> {
+  try {
+    const budgetClient = createAdminClient() as unknown as MemeStudioBudgetClient;
+    const result = await generateBedrockMemeConcepts(input, {
+      reserveCost: async (reservedNanoUsd) => {
+        const { error } = await budgetClient.rpc("reserve_bedrock_meme_studio_budget", {
+          p_model_profile: BEDROCK_MEME_STUDIO_MODEL_ID,
+          p_estimated_cost_nano_usd: reservedNanoUsd,
+        });
+        if (error) throw new Error("bedrock_budget_rejected");
+      },
+    });
+    if (result.concepts.length !== 3 || !result.concepts.every(isMemeConcept)) {
+      throw new Error("bedrock_meme_studio_invalid_response");
+    }
+    return {
+      mode: "ai",
+      provider: "bedrock",
+      concepts: result.concepts.map(normalizeMemeConcept),
+    };
+  } catch (error) {
+    console.error(
+      "meme_studio_bedrock_fallback",
+      error instanceof BedrockMemeStudioError ? error.code : "unexpected",
+    );
+    return generateMemeConcepts(input);
+  }
 }

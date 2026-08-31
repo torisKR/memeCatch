@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { MemeStudioApp } from "@/components/studio/meme-studio-app";
-import { isMemeStudioAiEnabled } from "@/lib/meme-studio.server";
 
 export const metadata: Metadata = {
   title: "밈 스튜디오",
@@ -24,7 +23,7 @@ export default function StudioPage() {
           </p>
         </header>
 
-        <MemeStudioApp aiEnabled={isMemeStudioAiEnabled()} />
+        <MemeStudioApp aiEnabled={false} />
       </div>
     </main>
   );

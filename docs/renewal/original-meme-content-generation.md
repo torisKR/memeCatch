@@ -8,6 +8,17 @@ Grounding: `LOOP.md` rules 4–6, `docs/architecture.md` source pipeline, `docs/
 
 **Recommended default (this review):** ship the **minimal version** below. Do not build a generation factory. Scope reduction is explicit, not silent.
 
+### 2026-08-31 Bedrock generation override
+
+This section supersedes the older “do not add Bedrock” notes below for the house-original draft path only.
+
+- The admin house-original form may call Amazon Bedrock Nova Micro through the APAC inference profile `apac.amazon.nova-micro-v1:0` and returns exactly three Korean drafts. Review is intentionally minimal: the operator can save a selected draft directly, but the row is still created as `pending`.
+- The public Studio remains template-only and must not call Bedrock or consume the Bedrock budget.
+- The application enforces a non-resetting lifetime hard cap of **$100** before invocation. AWS Budgets is a delayed secondary alert, not the hard stop.
+- Static AWS access keys are forbidden. Vercel uses OIDC to assume a least-privilege role in `ap-northeast-2`.
+- Draft generation never publishes automatically and never stores third-party original media.
+- MPE is unchanged and isolated from this exception: `stealth/ox-alpha` only, **$0**, paid fallback prohibited, ECS `DesiredCount=0` until separately activated.
+
 ---
 
 ## Problem
@@ -223,7 +234,7 @@ Studio already generates three Korean captions and does not persist them:
 
 `generateDraft` already forbids auto-save. For house originals, if an operator wants a draft: new prompt “you are drafting CatchMeme-owned copy; do not invent an internet origin, first-seen year, or third-party rights holder.” Return JSON to the form. Same audit event family. No `memes` write inside the model helper.
 
-Do not add Bedrock, a second OpenRouter product surface, or a keep-forever render worker.
+Bedrock is allowed only for the admin house-original draft exception defined above. Do not connect it to public Studio, MPE, automatic publication, or a keep-forever render worker.
 
 ### Public surface
 
@@ -345,7 +356,7 @@ A QA-oriented copy of routes/interactions is also written under `~/.gstack/proje
 
 - Create/transition are single-row admin writes. No list N+1 introduced if the admin detail page already loads `meme_sources` in the same round-trip it needs for attestation UI. If it does not, **one** extra select by `meme_id`, not per-source chatty loops.
 - Do not load all memes to filter `origin_kind` in memory. Admin list: optional `?origin=house_original` query on the existing 100-row list.
-- Studio AI: existing hourly rate limit (cap on requests per IP per window) and daily budget reservation. House draft should share that budget, not open a second unlimited key.
+- Public Studio: existing hourly rate limit and template-only generation. Admin house drafts use the isolated Bedrock lifetime budget; they do not share an unlimited key or bypass the $100 hard cap.
 - TrustNote is render-time, no extra public query if `origin_kind` is selected with the meme row (it already `select`s the meme).
 - No new cache. `revalidatePath` already used after transition.
 - Do not generate PNGs on the server in v1 (CPU on Vercel). Dictionary card stays client-side until a later R2 slice.
@@ -378,7 +389,7 @@ Lake score: 8/8 recommendations chose the complete **minimal** option over a pla
 | Plus Creator Pack generating dictionary rows | Pack is subscriber export of reviewed catalog facts |
 | AI backfill of DQ-002 thin catalog docs | Different problem; would be unlicensed-looking slop |
 | User Studio → public `memes` insert | UGC publication without operator fact/rights |
-| Image-generation API / Bedrock | Innovation token; rights unclear |
+| Image-generation API / Bedrock media generation | Rights unclear; the approved Bedrock exception is text-only admin drafting |
 | Weekly cron “ship a house meme” | Posts when nobody is watching |
 | Changing safety-scale math (HG-002/003) | Separate HUMAN_GATE data work |
 | Translation auto-publication | Existing human translation gate |

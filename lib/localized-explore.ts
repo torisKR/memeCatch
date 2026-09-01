@@ -25,7 +25,7 @@ export type LocalizedExploreTranslationRow = MemeTranslationRow & {
 const TRANSLATION_COLUMNS =
   "meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at" as const;
 const EXPLORE_SELECT =
-  `${TRANSLATION_COLUMNS}, memes!inner(*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)))` as const;
+  `${TRANSLATION_COLUMNS}, memes!inner(*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state))` as const;
 const PUBLIC_CANDIDATE_LIMIT = 1_200;
 const PUBLIC_RESULT_LIMIT = 24;
 

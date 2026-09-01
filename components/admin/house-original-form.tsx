@@ -14,6 +14,7 @@ import {
 } from "@/lib/house-original";
 import { CATEGORIES, DIFFICULTY, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import type { MemeConcept, MemeFormat, MemeTone } from "@/lib/meme-studio.server";
+import { getMemeCountry, MEME_COUNTRIES, type MemeCountryCode } from "@/lib/meme-country";
 import {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
@@ -59,6 +60,7 @@ export function HouseOriginalForm() {
   const [topic, setTopic] = useState("");
   const [tone, setTone] = useState<MemeTone>("hype");
   const [format, setFormat] = useState<MemeFormat>("caption");
+  const [country, setCountry] = useState<MemeCountryCode>("KR");
   const [studioLoading, setStudioLoading] = useState(false);
   const [studioError, setStudioError] = useState<string | null>(null);
   const [studioResult, setStudioResult] = useState<StudioResult | null>(null);
@@ -86,7 +88,7 @@ export function HouseOriginalForm() {
       const response = await fetch("/api/admin/meme-studio", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ topic: cleanTopic, tone, format }),
+        body: JSON.stringify({ topic: cleanTopic, tone, format, country }),
       });
       const payload = (await response.json().catch(() => null)) as StudioResponse | null;
       if (!response.ok || !payload || "error" in payload) {
@@ -108,11 +110,14 @@ export function HouseOriginalForm() {
 
   function conceptInput(concept: MemeConcept) {
     const cleanTopic = sanitizeStudioText(topic.trim());
+    const conceptCountry = getMemeCountry(concept.country_code) ?? getMemeCountry(country)!;
     return {
       title: sanitizeStudioText(concept.headline).replace(/\s+/g, " ").trim(),
       summary: sanitizeStudioText(concept.caption).replace(/\s+/g, " ").trim(),
-      description: `왜 통하나요? ${sanitizeStudioText(concept.why_it_works).trim()}\n\n추천 활용: ${sanitizeStudioText(concept.usage_context).trim()}`,
-      origin: `밈캐치가 "${cleanTopic}" 주제로 문구를 자체 기획해 만든 밈입니다. 외부 SNS 원본이나 제3자 미디어를 사용하지 않았습니다.`,
+      description: `현지 맥락: ${sanitizeStudioText(concept.cultural_anchor).trim()}\n\n비주얼: ${sanitizeStudioText(concept.visual_brief).trim()}\n\n왜 통하나요? ${sanitizeStudioText(concept.why_it_works).trim()}\n\n추천 활용: ${sanitizeStudioText(concept.usage_context).trim()}`,
+      origin: `밈캐치가 ${conceptCountry.label}의 "${cleanTopic}" 주제로 문구를 자체 기획해 만든 밈입니다. 외부 SNS 원본이나 제3자 미디어를 사용하지 않았습니다.`,
+      country: concept.country_code,
+      localTitle: sanitizeStudioText(concept.local_caption).replace(/\s+/g, " ").trim(),
       safetyLevel: "yellow" as const,
       category: format === "caption" ? "phrase" as const : "image" as const,
       difficulty: "normal" as const,
@@ -166,6 +171,10 @@ export function HouseOriginalForm() {
         difficulty,
         originYear: year,
         usageContext,
+        country,
+        localTitle: selectedConcept === null
+          ? title
+          : studioResult?.concepts[selectedConcept]?.local_caption ?? title,
       });
       if (!res.ok) {
         setError(res.error);
@@ -207,8 +216,8 @@ export function HouseOriginalForm() {
         <div>
           <h2 className="text-lg font-bold">SNS 없이 자체 초안 만들기</h2>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            주제만 입력하면 Bedrock 초안 3개를 만듭니다. $100 생성 예산을 사용할 수 없거나
-            일시 장애가 나면 기본 템플릿으로 전환하며, 초안을 고르기 전에는 저장하지 않습니다.
+            주제와 국가를 고르면 Bedrock 초안 3개를 만듭니다. 생성 예산을 사용할 수 없거나
+            일시 장애가 나면 저장 가능한 초안을 만들지 않으며, 초안을 고르기 전에는 저장하지 않습니다.
           </p>
         </div>
         <label className="block">
@@ -225,7 +234,23 @@ export function HouseOriginalForm() {
             className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base"
           />
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">밈 국가</span>
+            <select
+              value={country}
+              onChange={(e) => {
+                setCountry(e.target.value as MemeCountryCode);
+                resetGeneratedConcepts();
+              }}
+              disabled={studioLoading}
+              className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base"
+            >
+              {Object.values(MEME_COUNTRIES).map((option) => (
+                <option key={option.code} value={option.code}>{option.label}</option>
+              ))}
+            </select>
+          </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium">초안 분위기</span>
             <select
@@ -292,8 +317,20 @@ export function HouseOriginalForm() {
                   }`}
                 >
                   <h3 className="font-bold">{sanitizeStudioText(concept.headline)}</h3>
+                  <p className="mt-1 text-xs font-semibold text-accent-text">
+                    {getMemeCountry(concept.country_code)?.label ?? concept.country_code}
+                  </p>
                   <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
                     {sanitizeStudioText(concept.caption)}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed">
+                    <strong>현지 문구:</strong> {sanitizeStudioText(concept.local_caption)}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    <strong>현지 맥락:</strong> {sanitizeStudioText(concept.cultural_anchor)}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    <strong>비주얼:</strong> {sanitizeStudioText(concept.visual_brief)}
                   </p>
                   <p className="mt-2 text-xs leading-relaxed text-muted">
                     {sanitizeStudioText(concept.why_it_works)}

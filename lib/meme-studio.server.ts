@@ -6,6 +6,7 @@ import {
   generateBedrockMemeConcepts,
 } from "@/lib/meme-studio-bedrock.server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
 /**
  * AI 밈 스튜디오 서버 로직.
@@ -20,10 +21,14 @@ export type MemeTone = (typeof MEME_TONES)[number];
 export type MemeFormat = (typeof MEME_FORMATS)[number];
 
 export type MemeConcept = {
+  country_code: MemeCountryCode;
   /** 카드 상단 한 줄 요약 */
   headline: string;
   /** 바로 복사해 쓸 수 있는 캡션 본문 */
   caption: string;
+  local_caption: string;
+  cultural_anchor: string;
+  visual_brief: string;
   /** 이 캡션이 통하는 이유 한 줄 */
   why_it_works: string;
   /** 어떤 상황에서 쓰면 좋은지 */
@@ -46,9 +51,14 @@ function isMemeConcept(value: unknown): value is MemeConcept {
   const record = value as Record<string, unknown>;
   return (
     typeof record.headline === "string" &&
+    typeof record.country_code === "string" &&
+    isMemeCountryCode(record.country_code) &&
     record.headline.trim().length > 0 &&
     typeof record.caption === "string" &&
     record.caption.trim().length > 0 &&
+    typeof record.local_caption === "string" &&
+    typeof record.cultural_anchor === "string" &&
+    typeof record.visual_brief === "string" &&
     typeof record.why_it_works === "string" &&
     typeof record.usage_context === "string"
   );
@@ -57,14 +67,19 @@ function isMemeConcept(value: unknown): value is MemeConcept {
 function normalizeMemeConcept(concept: MemeConcept): MemeConcept {
   const normalize = (value: string) => value.replace(/[\u2013\u2014]/g, "-");
   return {
+    country_code: concept.country_code,
     headline: normalize(concept.headline),
     caption: normalize(concept.caption),
+    local_caption: normalize(concept.local_caption),
+    cultural_anchor: normalize(concept.cultural_anchor),
+    visual_brief: normalize(concept.visual_brief),
     why_it_works: normalize(concept.why_it_works),
     usage_context: normalize(concept.usage_context),
   };
 }
 
-type TemplateFn = (topic: string, format: MemeFormat) => MemeConcept;
+type TemplateConcept = Pick<MemeConcept, "headline" | "caption" | "why_it_works" | "usage_context">;
+type TemplateFn = (topic: string, format: MemeFormat) => TemplateConcept;
 
 const TONE_TEMPLATES: Record<MemeTone, TemplateFn[]> = {
   wholesome: [
@@ -150,7 +165,7 @@ const TONE_TEMPLATES: Record<MemeTone, TemplateFn[]> = {
 };
 
 /** 토픽 길이로 시작 인덱스를 돌려 같은 입력이면 같은 결과, 다른 입력이면 다른 조합. */
-function buildTemplateConcepts(topic: string, tone: MemeTone, format: MemeFormat): MemeConcept[] {
+function buildTemplateConcepts(topic: string, tone: MemeTone, format: MemeFormat): TemplateConcept[] {
   const templates = TONE_TEMPLATES[tone];
   const start = topic.length % templates.length;
   const ordered = [...templates.slice(start), ...templates.slice(0, start)];
@@ -191,10 +206,18 @@ export async function generateMemeConcepts(input: {
   topic: string;
   tone: MemeTone;
   format: MemeFormat;
+  country?: MemeCountryCode;
 }): Promise<MemeStudioResult> {
+  const country = getMemeCountry(input.country ?? "KR") ?? getMemeCountry("KR")!;
   return {
     mode: "template",
-    concepts: buildTemplateConcepts(input.topic, input.tone, input.format).map(normalizeMemeConcept),
+    concepts: buildTemplateConcepts(input.topic, input.tone, input.format).map((concept) => normalizeMemeConcept({
+      ...concept,
+      country_code: country.code,
+      local_caption: concept.caption,
+      cultural_anchor: `${country.label} 현지 맥락은 게시 전에 확인해 주세요.`,
+      visual_brief: "텍스트 중심의 단순한 자체 제작 카드",
+    })),
   };
 }
 
@@ -202,31 +225,27 @@ export async function generateAdminMemeConcepts(input: {
   topic: string;
   tone: MemeTone;
   format: MemeFormat;
+  country: MemeCountryCode;
 }): Promise<MemeStudioResult> {
-  try {
-    const budgetClient = createAdminClient() as unknown as MemeStudioBudgetClient;
-    const result = await generateBedrockMemeConcepts(input, {
-      reserveCost: async (reservedNanoUsd) => {
-        const { error } = await budgetClient.rpc("reserve_bedrock_meme_studio_budget", {
-          p_model_profile: BEDROCK_MEME_STUDIO_MODEL_ID,
-          p_estimated_cost_nano_usd: reservedNanoUsd,
-        });
-        if (error) throw new Error("bedrock_budget_rejected");
-      },
-    });
-    if (result.concepts.length !== 3 || !result.concepts.every(isMemeConcept)) {
-      throw new Error("bedrock_meme_studio_invalid_response");
-    }
-    return {
-      mode: "ai",
-      provider: "bedrock",
-      concepts: result.concepts.map(normalizeMemeConcept),
-    };
-  } catch (error) {
-    console.error(
-      "meme_studio_bedrock_fallback",
-      error instanceof BedrockMemeStudioError ? error.code : "unexpected",
-    );
-    return generateMemeConcepts(input);
+  const budgetClient = createAdminClient() as unknown as MemeStudioBudgetClient;
+  const result = await generateBedrockMemeConcepts(input, {
+    reserveCost: async (reservedNanoUsd) => {
+      const { error } = await budgetClient.rpc("reserve_bedrock_meme_studio_budget", {
+        p_model_profile: BEDROCK_MEME_STUDIO_MODEL_ID,
+        p_estimated_cost_nano_usd: reservedNanoUsd,
+      });
+      if (error) throw new Error("bedrock_budget_rejected");
+    },
+  });
+  if (
+    result.concepts.length !== 3 ||
+    !result.concepts.every((concept) => isMemeConcept(concept) && concept.country_code === input.country)
+  ) {
+    throw new BedrockMemeStudioError("bedrock_meme_studio_invalid_response");
   }
+  return {
+    mode: "ai",
+    provider: "bedrock",
+    concepts: result.concepts.map(normalizeMemeConcept),
+  };
 }

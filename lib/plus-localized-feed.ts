@@ -5,6 +5,7 @@ import {
 } from "@/lib/i18n-routing";
 import type { Locale } from "@/lib/i18n";
 import { memePathFrom } from "@/lib/labels";
+import type { MemeOriginProfile } from "@/lib/meme-country";
 import type { MemeContentRow, MemeListItem, MemeRow, MemeSourceRow } from "@/lib/queries";
 
 export const PLUS_LOCALIZED_FEED_LIMIT = 6;
@@ -41,6 +42,7 @@ export type PlusLocalizedFeedSource = Pick<
   >;
   meme_sources: Array<Pick<MemeSourceRow, "source_url">>;
   meme_tags_map: Array<{ tag_id: string }>;
+  meme_market_profiles?: MemeOriginProfile[];
 };
 
 export type PlusLocalizedFeedTranslation = {
@@ -195,6 +197,7 @@ function toCardMeme(
     media_type: source.media_type,
     origin_year: source.origin_year,
     trend_score: source.trend_score,
+    meme_market_profiles: source.meme_market_profiles,
     meme_contents: source.meme_contents.map((content) => ({
       thumbnail_url: content.thumbnail_url,
       is_representative: content.is_representative,

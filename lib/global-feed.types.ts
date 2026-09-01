@@ -4,6 +4,7 @@
  * server-only 의존이 없으므로 양쪽에서 값·타입 모두 import 가능하다.
  */
 import type { SocialPlatform } from "@/lib/source-platform";
+import type { MemeCountryCode } from "@/lib/meme-country";
 
 /** 피드 탭 키. YouTube 탭은 youtube + youtube_shorts를 함께 담는다. */
 export type FeedPlatformKey = "youtube" | "tiktok" | "instagram";
@@ -22,6 +23,7 @@ export type GlobalFeedItem = {
   media_type: string;
   origin_year: number | null;
   trend_score: number | null;
+  origin_country_code: MemeCountryCode | null;
   /** 대표 콘텐츠의 플랫폼(youtube/youtube_shorts/tiktok/instagram) */
   platform: SocialPlatform;
   content_url: string | null;

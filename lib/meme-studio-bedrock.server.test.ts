@@ -13,17 +13,21 @@ import {
 } from "@/lib/meme-studio-bedrock.server";
 import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 
-const input = { topic: "월요일 출근", tone: "sarcastic", format: "caption" } as const;
+const input = { topic: "월요일 출근", tone: "sarcastic", format: "caption", country: "US" } as const;
 const concepts = [0, 1, 2].map((index) => ({
+  country_code: "US" as const,
   headline: `제목 ${index}`,
   caption: `캡션 ${index}`,
+  local_caption: `Local caption ${index}`,
+  cultural_anchor: "미국 직장인의 월요일 커피 루틴",
+  visual_brief: "텅 빈 머그컵과 노트북",
   why_it_works: "반전이 있어서 웃긴다.",
   usage_context: "단체 채팅방에서 쓴다.",
 }));
 
 function response(body: unknown = { concepts }) {
   return {
-    output: { message: { content: [{ text: JSON.stringify(body) }] } },
+    output: { message: { content: [{ toolUse: { name: "submit_meme_concepts", input: body } }] } },
     usage: { inputTokens: 120, outputTokens: 80, totalTokens: 200 },
   };
 }
@@ -112,8 +116,20 @@ describe("Bedrock Meme Studio", () => {
     expect(h.client.send.mock.calls[0][0]).toBeInstanceOf(ConverseCommand);
     expect(h.client.send.mock.calls[0][0].input).toMatchObject({
       modelId: BEDROCK_MEME_STUDIO_MODEL_ID,
-      inferenceConfig: { maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS },
+      inferenceConfig: { maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS, temperature: 0 },
+      toolConfig: {
+        toolChoice: { tool: { name: "submit_meme_concepts" } },
+        tools: [{ toolSpec: { name: "submit_meme_concepts" } }],
+      },
     });
+    const serializedRequest = JSON.stringify(h.client.send.mock.calls[0][0].input);
+    expect(serializedRequest).toContain("미국");
+    expect(serializedRequest).toContain("English");
+    expect(serializedRequest).toContain('"enum":["US"]');
+    expect(h.client.send.mock.calls[0][0].input.toolConfig?.tools[0].toolSpec?.inputSchema.json)
+      .not.toHaveProperty("additionalProperties");
+    expect(serializedRequest).toContain("three different cultural anchors");
+    expect(serializedRequest).toContain("swapping in another country name");
     const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 50 + 1_024 * 200;
     expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
@@ -123,16 +139,7 @@ describe("Bedrock Meme Studio", () => {
     });
   });
 
-  it("accepts a full JSON fence but requires exactly three bounded concepts", async () => {
-    const fenced = harness([{
-      ...response(),
-      output: { message: { content: [{ text: `\`\`\`json\n${JSON.stringify({ concepts })}\n\`\`\`` }] } },
-    }]);
-    await expect(generateBedrockMemeConcepts(input, {
-      ...fenced,
-      env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
-    })).resolves.toMatchObject({ concepts });
-
+  it("requires one forced tool result containing exactly three strict concepts", async () => {
     const invalid = harness([response({ concepts: concepts.slice(0, 2) })]);
     await expect(generateBedrockMemeConcepts(input, {
       ...invalid,
@@ -140,15 +147,17 @@ describe("Bedrock Meme Studio", () => {
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
   });
 
-  it("normalizes Nova's three-key concept object without another provider call", async () => {
-    const keyed = harness([response({
-      concepts: Object.fromEntries(concepts.map((concept, index) => [`idea${index + 1}`, concept])),
+  it("rejects a concept for a different country without another provider call", async () => {
+    const mismatch = harness([response({
+      concepts: concepts.map((concept, index) => index === 1
+        ? { ...concept, country_code: "JP" }
+        : concept),
     })]);
     await expect(generateBedrockMemeConcepts(input, {
-      ...keyed,
+      ...mismatch,
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
-    })).resolves.toMatchObject({ concepts });
-    expect(keyed.client.send).toHaveBeenCalledOnce();
+    })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
+    expect(mismatch.client.send).toHaveBeenCalledOnce();
   });
 
   it("fails closed on invalid rates before any provider call", async () => {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { SafetyBadge } from "@/components/safety-badge";
 import type {
@@ -97,7 +98,10 @@ function ReadyFeed({ items }: { items: GlobalFeedItem[] }) {
           className="group grid min-w-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent md:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)]"
         >
           <div className="min-w-0 border-b border-border md:border-b-0 md:border-r">
-            <div className="aspect-[16/10] overflow-hidden bg-surface-2">
+            <div className="relative aspect-[16/10] overflow-hidden bg-surface-2">
+              <div className="absolute left-3 top-3 z-10">
+                <CountryFlagBadge code={lead.origin_country_code} />
+              </div>
               <MemeThumbnail
                 src={lead.thumbnail_url}
                 title={lead.title}
@@ -139,12 +143,15 @@ function ReadyFeed({ items }: { items: GlobalFeedItem[] }) {
                   className="group flex h-full min-w-0 flex-col focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
                 >
                   <div
-                    className={`overflow-hidden bg-surface-2 ${
+                    className={`relative overflow-hidden bg-surface-2 ${
                       index % 4 === 0 || index % 4 === 3
                         ? "aspect-[16/10]"
                         : "aspect-[4/3]"
                     }`}
                   >
+                    <div className="absolute left-3 top-3 z-10">
+                      <CountryFlagBadge code={item.origin_country_code} />
+                    </div>
                     <MemeThumbnail
                       src={item.thumbnail_url}
                       title={item.title}

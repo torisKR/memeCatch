@@ -35,6 +35,7 @@ import {
   houseOriginalPublishErrorMessage,
   isHouseOriginal,
 } from "@/lib/house-original";
+import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
 type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -357,11 +358,16 @@ export async function createHouseOriginal(input: {
   difficulty: "beginner" | "normal" | "deep";
   originYear: number | null;
   usageContext: UsageContext;
+  country: MemeCountryCode;
+  localTitle?: string;
 }): Promise<ActionResult<{ memeId: string }>> {
   try {
     const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     if (!input.summary.trim()) return { ok: false, error: "한 줄 요약을 입력해 주세요." };
+    if (!isMemeCountryCode(input.country)) return { ok: false, error: "밈 국가를 확인해 주세요." };
+    const country = getMemeCountry(input.country);
+    if (!country) return { ok: false, error: "밈 국가를 확인해 주세요." };
     if (
       houseOriginalOriginLooksLikeOperatorScratch(input.origin) ||
       houseOriginalOriginLooksLikeOperatorScratch(input.description)
@@ -422,10 +428,28 @@ export async function createHouseOriginal(input: {
       };
     }
 
+    const { error: marketProfileError } = await supabase.from("meme_market_profiles").insert({
+      meme_id: created.id,
+      market_code: country.code,
+      language_tag: country.languageTag,
+      role: "origin",
+      local_title: input.localTitle?.trim() || input.title.trim(),
+      review_state: "reviewed",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: uid,
+    });
+    if (marketProfileError) {
+      return {
+        ok: false,
+        error: `자체 제작 항목과 권리 출처는 만들어졌지만 국가 프로필 연결에 실패했어요: ${marketProfileError.message} — 밈 관리에서 이어서 처리해 주세요. (id: ${created.id})`,
+      };
+    }
+
     await logAudit(uid, "meme.create_house_original", "meme", created.id, {
       title: input.title.trim(),
       origin_kind: HOUSE_ORIGINAL,
       moderation_status: "pending",
+      country: country.code,
     });
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${created.id}`);

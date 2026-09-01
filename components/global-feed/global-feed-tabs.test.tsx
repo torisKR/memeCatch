@@ -40,6 +40,7 @@ const item: GlobalFeedItem = {
   media_type: "video",
   origin_year: 2026,
   trend_score: 91,
+  origin_country_code: "US",
   platform: "tiktok",
   content_url: "https://www.tiktok.com/@creator/video/1",
   thumbnail_url: "https://example.com/meme.jpg",
@@ -90,6 +91,8 @@ describe("GlobalFeedTabs", () => {
     );
     expect(ready).toContain("Open Korean detail");
     expect(ready).toContain("data-global-feed-platform");
+    expect(ready).toContain('data-country-code="US"');
+    expect(ready).toContain('aria-label="미국 밈"');
     expect(empty).toContain("No reviewed Instagram picks yet");
     expect(error).toContain('role="alert"');
     expect(error).toContain("No placeholder memes were substituted.");
@@ -99,5 +102,18 @@ describe("GlobalFeedTabs", () => {
       "youtube",
     );
     expect(resolveGlobalFeedPlatform("unknown")).toBe("youtube");
+  });
+
+  it("renders the shared unknown-country fallback on every feed card", () => {
+    const unknown = { ...item, id: "meme-2", origin_country_code: null };
+    const html = renderToStaticMarkup(
+      <GlobalFeedTabs
+        activeKey="tiktok"
+        feed={{ status: "ready", items: [unknown, unknown] }}
+      />,
+    );
+
+    expect(html.match(/data-country-code="UNKNOWN"/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="출처 국가 미확인"');
   });
 });

@@ -85,7 +85,7 @@ export type LocalizedMemeListItem = LocalizedMemeDetail;
 const TRANSLATION_COLUMNS =
   "meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at" as const;
 
-const FEATURED_SELECT = `${TRANSLATION_COLUMNS}, memes!inner(*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)))` as const;
+const FEATURED_SELECT = `${TRANSLATION_COLUMNS}, memes!inner(*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state))` as const;
 
 type FeaturedTranslationRow = MemeTranslationRow & {
   memes: MemeDetail;
@@ -339,7 +339,7 @@ export const getAvailableTranslationLocales = cache(async function getAvailableT
         supabase
           .from("memes")
           .select(
-            "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url),meme_contents(availability,moderation_status),meme_tags_map(tag_id)",
+            "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url),meme_contents(availability,moderation_status),meme_tags_map(tag_id),meme_market_profiles(market_code, role, review_state)",
           )
           .eq("id", memeId)
           .in("moderation_status", ["approved", "limited"])

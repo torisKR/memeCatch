@@ -8,6 +8,7 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { z } from "zod";
+import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
 export const BEDROCK_MEME_STUDIO_MODEL_ID = "apac.amazon.nova-micro-v1:0";
 export const BEDROCK_MEME_STUDIO_DEFAULT_REGION = "ap-northeast-2";
@@ -35,8 +36,12 @@ export class BedrockMemeStudioError extends Error {
 }
 
 export type BedrockMemeConcept = {
+  country_code: MemeCountryCode;
   headline: string;
   caption: string;
+  local_caption: string;
+  cultural_anchor: string;
+  visual_brief: string;
   why_it_works: string;
   usage_context: string;
 };
@@ -45,6 +50,7 @@ export type BedrockMemeStudioInput = {
   topic: string;
   tone: "wholesome" | "sarcastic" | "absurd" | "hype";
   format: "image-macro" | "reaction" | "caption";
+  country: MemeCountryCode;
 };
 
 type Environment = Record<string, string | undefined>;
@@ -64,21 +70,18 @@ type ClientDependencies = {
 };
 
 const conceptSchema = z.object({
+  country_code: z.string().refine(isMemeCountryCode),
   headline: z.string().trim().min(1).max(80),
   caption: z.string().trim().min(1).max(220),
+  local_caption: z.string().trim().min(1).max(220),
+  cultural_anchor: z.string().trim().min(1).max(220),
+  visual_brief: z.string().trim().min(1).max(220),
   why_it_works: z.string().trim().min(1).max(220),
   usage_context: z.string().trim().min(1).max(220),
 }).strict();
 
-const conceptsSchema = z.union([
-  z.array(conceptSchema).length(3),
-  z.record(z.string(), conceptSchema)
-    .refine((concepts) => Object.keys(concepts).length === 3)
-    .transform((concepts) => Object.values(concepts)),
-]);
-
 const responseSchema = z.object({
-  concepts: conceptsSchema,
+  concepts: z.array(conceptSchema).length(3),
 }).strict();
 
 const toneValues = new Set<BedrockMemeStudioInput["tone"]>([
@@ -92,13 +95,26 @@ const DEFAULT_INPUT_RATE_NANO_USD = 50;
 const DEFAULT_OUTPUT_RATE_NANO_USD = 200;
 const MAX_RATE_NANO_USD_PER_TOKEN = 1_000_000;
 
+const TOOL_NAME = "submit_meme_concepts";
+const COUNTRY_BRIEFS: Record<MemeCountryCode, string> = {
+  KR: "Possible everyday anchors: commuting, study or work schedules, convenience-store habits, delivery routines, and group-chat timing.",
+  US: "Possible everyday anchors: workplace video calls, school or college life, errands or road trips, sports watch gatherings, and group chats.",
+  JP: "Possible everyday anchors: rail commuting, convenience-store routines, school clubs, office etiquette, and online fandom communities.",
+  GB: "Possible everyday anchors: queues, rail commuting, weather small talk, pub or football watch gatherings, and dry group-chat banter.",
+  BR: "Possible everyday anchors: family or group chats, commuting, football watch gatherings, neighborhood routines, and expressive online reactions.",
+  MX: "Possible everyday anchors: family chats, commuting, street-food breaks, weekend gatherings, and school or work routines.",
+  CN: "Possible everyday anchors: commuting, group chats, online shopping, study or work schedules, and food-delivery routines.",
+  TW: "Possible everyday anchors: scooter or rail commuting, night-market outings, convenience-store routines, and school or work chats.",
+  DE: "Possible everyday anchors: rail commuting, appointments, household routines, club schedules, and work chats.",
+  FR: "Possible everyday anchors: cafe or bakery routines, commuting, lunch breaks, student or work life, and group-chat banter.",
+};
 const SYSTEM_PROMPT = [
-  "You create original Korean meme copy for MemeCatch.",
-  "Return JSON only with one object named concepts containing exactly 3 distinct objects.",
-  "Prefer concepts as a JSON array, never prose or Markdown.",
-  "Each object must contain headline, caption, why_it_works, and usage_context strings.",
-  "Do not quote real people, copy known meme captions, invent facts, target protected groups, or include harassment.",
-  "Keep captions ready to publish and under 220 characters. Do not use Markdown.",
+  "You create three original, culturally specific meme concepts for MemeCatch.",
+  "Use a concrete everyday or internet-culture anchor from the requested country and give each concept a distinct setup and punchline.",
+  "caption must be a natural Korean adaptation of the joke, not a literal translation; local_caption must sound native in the requested local language.",
+  "Silently reject and replace any concept that would still work unchanged after swapping in another country name.",
+  "Do not restate the title as the joke. Avoid stereotypes, invented facts, known meme captions or templates, brands, celebrities, copyrighted characters, protected-group targeting, and harassment.",
+  `Submit exactly three concepts through the forced ${TOOL_NAME} tool and do not answer with prose.`,
 ].join(" ");
 
 function enabled(env: Environment) {
@@ -121,13 +137,18 @@ function rate(env: Environment, name: string, fallback: number) {
 
 function normalizedInput(input: BedrockMemeStudioInput): BedrockMemeStudioInput {
   const topic = input.topic.trim().replace(/\s+/g, " ");
-  if (!topic || topic.length > 120 || !toneValues.has(input.tone) || !formatValues.has(input.format)) {
+  if (
+    !topic || topic.length > 120 || !toneValues.has(input.tone) ||
+    !formatValues.has(input.format) || !isMemeCountryCode(input.country)
+  ) {
     throw new BedrockMemeStudioError(BEDROCK_MEME_STUDIO_ERROR.invalidInput);
   }
   return { ...input, topic };
 }
 
 function requestFor(input: BedrockMemeStudioInput): ConverseCommandInput {
+  const country = getMemeCountry(input.country);
+  if (!country) throw new BedrockMemeStudioError(BEDROCK_MEME_STUDIO_ERROR.invalidInput);
   return {
     modelId: BEDROCK_MEME_STUDIO_MODEL_ID,
     system: [{ text: SYSTEM_PROMPT }],
@@ -138,26 +159,65 @@ function requestFor(input: BedrockMemeStudioInput): ConverseCommandInput {
           topic: input.topic,
           tone: input.tone,
           format: input.format,
+          country_code: country.code,
+          country_name_ko: country.label,
+          local_language: country.localLanguage,
+          country_brief: COUNTRY_BRIEFS[country.code],
+          quality_bar: [
+            "Use three different cultural anchors and three different joke structures.",
+            "Each caption must contain a clear setup and a surprising but understandable punchline.",
+            "Keep the cultural detail observational and topic-relevant, never a claim about all people in the country.",
+            "Make the Korean adaptation immediately usable without explaining the translation.",
+          ],
           count: 3,
         }),
       }],
     }],
     inferenceConfig: {
       maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS,
-      temperature: 0.8,
-      topP: 0.9,
+      temperature: 0,
+    },
+    toolConfig: {
+      tools: [{
+        toolSpec: {
+          name: TOOL_NAME,
+          description: "Submit exactly three original meme concepts for the requested country.",
+          inputSchema: {
+            json: {
+              type: "object",
+              required: ["concepts"],
+              properties: {
+                concepts: {
+                  type: "array",
+                  minItems: 3,
+                  maxItems: 3,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: [
+                      "country_code", "headline", "caption", "local_caption",
+                      "cultural_anchor", "visual_brief", "why_it_works", "usage_context",
+                    ],
+                    properties: {
+                      country_code: { type: "string", enum: [country.code] },
+                      headline: { type: "string", minLength: 1, maxLength: 80 },
+                      caption: { type: "string", minLength: 1, maxLength: 220 },
+                      local_caption: { type: "string", minLength: 1, maxLength: 220 },
+                      cultural_anchor: { type: "string", minLength: 1, maxLength: 220 },
+                      visual_brief: { type: "string", minLength: 1, maxLength: 220 },
+                      why_it_works: { type: "string", minLength: 1, maxLength: 220 },
+                      usage_context: { type: "string", minLength: 1, maxLength: 220 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }],
+      toolChoice: { tool: { name: TOOL_NAME } },
     },
   };
-}
-
-function parsedJson(text: string): unknown {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  try {
-    return JSON.parse(fenced?.[1] ?? trimmed);
-  } catch {
-    throw new BedrockMemeStudioError(BEDROCK_MEME_STUDIO_ERROR.invalidResponse);
-  }
 }
 
 function error(code: BedrockMemeStudioErrorCode): BedrockMemeStudioError {
@@ -213,15 +273,17 @@ export async function generateBedrockMemeConcepts(
   }
 
   const result = response as {
-    output?: { message?: { content?: Array<{ text?: string }> } };
+    output?: { message?: { content?: Array<{ toolUse?: { name?: string; input?: unknown } }> } };
     usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
   };
-  const text = result.output?.message?.content
-    ?.map((block) => block.text ?? "")
-    .join("")
-    .trim();
-  const parsed = text ? responseSchema.safeParse(parsedJson(text)) : null;
-  if (!parsed?.success) throw error(BEDROCK_MEME_STUDIO_ERROR.invalidResponse);
+  const toolUses = result.output?.message?.content
+    ?.flatMap((block) => block.toolUse ? [block.toolUse] : []) ?? [];
+  const parsed = toolUses.length === 1 && toolUses[0].name === TOOL_NAME
+    ? responseSchema.safeParse(toolUses[0].input)
+    : null;
+  if (!parsed?.success || parsed.data.concepts.some((concept) => concept.country_code !== input.country)) {
+    throw error(BEDROCK_MEME_STUDIO_ERROR.invalidResponse);
+  }
 
   const usage = result.usage;
   const inputTokens = safeTokenCount(usage?.inputTokens);

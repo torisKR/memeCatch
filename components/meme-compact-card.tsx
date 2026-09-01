@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
+import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { SafetyBadge } from "@/components/safety-badge";
 import { memePathFrom } from "@/lib/labels";
 import type { MemeListItem } from "@/lib/queries";
+import { originCountryCode } from "@/lib/meme-country";
 
 /** 가로 선반용 카드. 자동 모션 없이 내용과 순위만 빠르게 훑도록 유지한다. */
 export function MemeCompactCard({
@@ -20,6 +22,7 @@ export function MemeCompactCard({
       ?.thumbnail_url ??
     contents.find((content) => content.thumbnail_url)?.thumbnail_url ??
     null;
+  const countryCode = originCountryCode(meme.meme_market_profiles);
 
   return (
     <Link
@@ -35,22 +38,28 @@ export function MemeCompactCard({
           priority={priority}
           variant="compact"
         />
-        {rank != null && (
-          <>
-            {/* 계측 화면의 채널 번호처럼 — 모노스페이스 2자리 고정 */}
-            <span
-              aria-hidden
-              className={`stat-mono absolute left-2 top-2 rounded-md px-1.5 py-0.5 text-[11px] font-bold shadow-sm ${
-                rank <= 3
-                  ? "bg-accent-strong text-white"
-                  : "border border-white/15 bg-ink/80 text-white/80 backdrop-blur-sm"
-              }`}
-            >
-              {String(rank).padStart(2, "0")}
-            </span>
-            <span className="sr-only">{rank}위</span>
-          </>
-        )}
+        <div
+          data-country-flag-position="top-left"
+          className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2"
+        >
+          <CountryFlagBadge code={countryCode} />
+          {rank != null && (
+            <>
+              {/* 계측 화면의 채널 번호처럼 — 모노스페이스 2자리 고정 */}
+              <span
+                aria-hidden
+                className={`stat-mono rounded-md px-1.5 py-0.5 text-[11px] font-bold shadow-sm ${
+                  rank <= 3
+                    ? "bg-accent-strong text-white"
+                    : "border border-white/15 bg-ink/80 text-white/80 backdrop-blur-sm"
+                }`}
+              >
+                {String(rank).padStart(2, "0")}
+              </span>
+              <span className="sr-only">{rank}위</span>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col items-start gap-2 p-3">

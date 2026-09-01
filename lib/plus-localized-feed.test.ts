@@ -48,6 +48,9 @@ function source(
     ],
     meme_sources: [{ source_url: `https://example.com/${number}` }],
     meme_tags_map: [{ tag_id: "tag-1" }, { tag_id: "tag-2" }, { tag_id: "tag-3" }],
+    meme_market_profiles: [
+      { market_code: "US", role: "origin", review_state: "reviewed" },
+    ],
     ...overrides,
   };
 }
@@ -91,7 +94,13 @@ describe("Plus localized feed projection", () => {
     expect(result).toMatchObject({ state: "active" });
     expect(result.items[0]).toMatchObject({
       href: "/memes/short-1-source-1",
-      meme: { title: "한국어 밈 1", summary: "한국어 요약 1" },
+      meme: {
+        title: "한국어 밈 1",
+        summary: "한국어 요약 1",
+        meme_market_profiles: [
+          { market_code: "US", role: "origin", review_state: "reviewed" },
+        ],
+      },
     });
   });
 

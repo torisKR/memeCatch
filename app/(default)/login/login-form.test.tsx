@@ -17,6 +17,8 @@ vi.mock("@/lib/actions/auth", () => ({ signIn: vi.fn(), signUp: vi.fn() }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth }) }));
 
 import { LoginForm } from "./login-form";
+import { LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { LocaleProvider } from "@/lib/i18n-client";
 
 type TestWallet = {
   address: `0x${string}`;
@@ -41,6 +43,16 @@ function wallet(chainId = "0x2019"): TestWallet {
   };
 }
 
+function renderLogin(locale: Locale = "ko", next = "/saved") {
+  document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
+  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/`;
+  return render(
+    <LocaleProvider initialLocale={locale}>
+      <LoginForm next={next} />
+    </LocaleProvider>,
+  );
+}
+
 beforeEach(() => {
   auth.signInWithWeb3.mockReset();
   router.replace.mockReset();
@@ -50,12 +62,13 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
   delete (window as Window & { klaytn?: TestWallet }).klaytn;
 });
 
 describe("LoginForm Kaia Wallet", () => {
   it("explains when the Kaia provider is unavailable", async () => {
-    render(<LoginForm next="/saved" />);
+    renderLogin();
 
     fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
 
@@ -66,7 +79,7 @@ describe("LoginForm Kaia Wallet", () => {
   it("blocks authentication outside Kaia Mainnet", async () => {
     const provider = wallet("0x1");
     setWallet(provider);
-    render(<LoginForm next="/saved" />);
+    renderLogin();
 
     fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
 
@@ -82,7 +95,7 @@ describe("LoginForm Kaia Wallet", () => {
       data: { session: { access_token: "test" } },
       error: null,
     });
-    render(<LoginForm next="//evil.example" />);
+    renderLogin("ko", "//evil.example");
 
     fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
 
@@ -103,11 +116,43 @@ describe("LoginForm Kaia Wallet", () => {
     auth.signInWithWeb3.mockRejectedValue(
       Object.assign(new Error("User rejected the request"), { code: 4001 }),
     );
-    render(<LoginForm next="/saved" />);
+    renderLogin();
 
     fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
 
     expect(await screen.findByText(/Kaia Wallet 서명이 취소됐어요/)).toBeTruthy();
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("renders the English login UI and unavailable-wallet error", async () => {
+    renderLogin("en");
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Kaia Wallet" }));
+
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+    expect(await screen.findByText(/Kaia Wallet was not found/)).toBeTruthy();
+  });
+
+  it("renders the Japanese Kaia button and wrong-chain error", async () => {
+    setWallet(wallet("0x1"));
+    renderLogin("ja");
+
+    fireEvent.click(screen.getByRole("button", { name: "Kaia Walletでログイン" }));
+
+    expect(await screen.findByText(/Kaia Mainnetに切り替えて/)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
+  it("uses the Chinese fallback for zh-tw Kaia rejection copy", async () => {
+    setWallet(wallet());
+    auth.signInWithWeb3.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+    renderLogin("zh-tw");
+
+    fireEvent.click(screen.getByRole("button", { name: "使用 Kaia Wallet 登录" }));
+
+    expect(await screen.findByText(/Kaia Wallet 签名已取消/)).toBeTruthy();
   });
 });

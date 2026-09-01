@@ -56,6 +56,6 @@ output "bedrock_vercel_role_arn" {
 }
 
 output "bedrock_model_id" {
-  description = "앱이 Converse에 사용할 고정 Bedrock global inference profile ID"
+  description = "앱이 Converse에 사용할 고정 Claude Haiku 4.5 global inference profile ID"
   value       = local.bedrock_inference_profile_id
 }

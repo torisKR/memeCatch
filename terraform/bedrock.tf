@@ -1,7 +1,7 @@
 locals {
-  bedrock_inference_profile_id  = "global.amazon.nova-2-lite-v1:0"
+  bedrock_inference_profile_id  = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
   bedrock_inference_profile_arn = "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${local.bedrock_inference_profile_id}"
-  bedrock_foundation_model_arn  = "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0"
+  bedrock_foundation_model_arn  = "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
   vercel_oidc_host              = "oidc.vercel.com/${var.vercel_team_slug}"
   vercel_audience               = "https://vercel.com/${var.vercel_team_slug}"
 }
@@ -44,13 +44,13 @@ resource "aws_iam_role" "vercel_bedrock" {
 
 data "aws_iam_policy_document" "bedrock_inference" {
   statement {
-    sid       = "UseNova2LiteGlobalInferenceProfile"
+    sid       = "UseClaudeHaiku45GlobalInferenceProfile"
     actions   = ["bedrock:InvokeModel"]
     resources = [local.bedrock_inference_profile_arn]
   }
 
   statement {
-    sid       = "RouteGlobalProfileToNova2LiteFoundationModel"
+    sid       = "RouteGlobalProfileToClaudeHaiku45FoundationModel"
     actions   = ["bedrock:InvokeModel"]
     resources = [local.bedrock_foundation_model_arn]
 
@@ -63,7 +63,7 @@ data "aws_iam_policy_document" "bedrock_inference" {
 }
 
 resource "aws_iam_role_policy" "bedrock_inference" {
-  name   = "nova-2-lite-global-inference-only"
+  name   = "claude-haiku-4-5-global-inference-only"
   role   = aws_iam_role.vercel_bedrock.id
   policy = data.aws_iam_policy_document.bedrock_inference.json
 }

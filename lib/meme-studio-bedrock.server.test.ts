@@ -8,6 +8,7 @@ import {
   BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS,
   BEDROCK_MEME_STUDIO_MODEL_ID,
   BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS,
+  BEDROCK_MEME_STUDIO_TEMPERATURE,
   createBedrockMemeStudioClient,
   generateBedrockMemeConcepts,
 } from "@/lib/meme-studio-bedrock.server";
@@ -47,8 +48,8 @@ function harness(outputs: unknown[] = [response()]) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("Bedrock Meme Studio", () => {
-  it("pins the global Nova 2 Lite inference profile", () => {
-    expect(BEDROCK_MEME_STUDIO_MODEL_ID).toBe("global.amazon.nova-2-lite-v1:0");
+  it("pins the global Claude Haiku 4.5 inference profile", () => {
+    expect(BEDROCK_MEME_STUDIO_MODEL_ID).toBe("global.anthropic.claude-haiku-4-5-20251001-v1:0");
   });
 
   it("requires the explicit enable flag", async () => {
@@ -120,7 +121,10 @@ describe("Bedrock Meme Studio", () => {
     expect(h.client.send.mock.calls[0][0]).toBeInstanceOf(ConverseCommand);
     expect(h.client.send.mock.calls[0][0].input).toMatchObject({
       modelId: BEDROCK_MEME_STUDIO_MODEL_ID,
-      inferenceConfig: { maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS, temperature: 0 },
+      inferenceConfig: {
+        maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS,
+        temperature: BEDROCK_MEME_STUDIO_TEMPERATURE,
+      },
       toolConfig: {
         toolChoice: { tool: { name: "submit_meme_concepts" } },
         tools: [{ toolSpec: { name: "submit_meme_concepts" } }],
@@ -139,7 +143,7 @@ describe("Bedrock Meme Studio", () => {
     expect(serializedRequest).toContain("Do not add sports");
     expect(serializedRequest).toContain("swapping in another country name");
     expect(serializedRequest).toContain("Korean headline containing Hangul");
-    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 300 + 1_024 * 2_500;
+    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 1_000 + 1_024 * 5_000;
     expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
       concepts,
@@ -213,7 +217,7 @@ describe("Bedrock Meme Studio", () => {
       ...h,
       env: {
         BEDROCK_MEME_STUDIO_ENABLED: "true",
-        BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: "2499",
+        BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: "4999",
       },
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidRate });
     expect(h.client.send).not.toHaveBeenCalled();

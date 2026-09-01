@@ -10,10 +10,11 @@ import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { z } from "zod";
 import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
-export const BEDROCK_MEME_STUDIO_MODEL_ID = "global.amazon.nova-2-lite-v1:0";
+export const BEDROCK_MEME_STUDIO_MODEL_ID = "global.anthropic.claude-haiku-4-5-20251001-v1:0";
 export const BEDROCK_MEME_STUDIO_DEFAULT_REGION = "ap-northeast-2";
 export const BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS = 1_024;
 export const BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS = 4_096;
+export const BEDROCK_MEME_STUDIO_TEMPERATURE = 0.4;
 
 export const BEDROCK_MEME_STUDIO_ERROR = {
   disabled: "bedrock_meme_studio_disabled",
@@ -94,8 +95,8 @@ const formatValues = new Set<BedrockMemeStudioInput["format"]>([
   "image-macro", "reaction", "caption",
 ]);
 
-const DEFAULT_INPUT_RATE_NANO_USD = 300;
-const DEFAULT_OUTPUT_RATE_NANO_USD = 2_500;
+const DEFAULT_INPUT_RATE_NANO_USD = 1_000;
+const DEFAULT_OUTPUT_RATE_NANO_USD = 5_000;
 const MAX_RATE_NANO_USD_PER_TOKEN = 1_000_000;
 
 const TOOL_NAME = "submit_meme_concepts";
@@ -185,7 +186,7 @@ function requestFor(input: BedrockMemeStudioInput): ConverseCommandInput {
     }],
     inferenceConfig: {
       maxTokens: BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS,
-      temperature: 0,
+      temperature: BEDROCK_MEME_STUDIO_TEMPERATURE,
     },
     toolConfig: {
       tools: [{

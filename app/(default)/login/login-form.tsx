@@ -3,6 +3,7 @@
 import { useActionState, useId, useState } from "react";
 import { BrandTile } from "@/components/brand-mark";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AnimatePresence,
   motion,
@@ -11,6 +12,7 @@ import {
 } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
+import { safeNext } from "@/lib/safe-redirect";
 
 /**
  * 레인 C — 로그인/가입 폼(클라이언트). DESIGN.md §10 인증.
@@ -23,6 +25,27 @@ import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
 
 type Mode = "login" | "signup";
 type Provider = "kakao" | "google";
+type KaiaEventMap = {
+  accountsChanged(accounts: `0x${string}`[]): void;
+  chainChanged(chainId: string): void;
+  connect(connectInfo: { chainId: string }): void;
+  disconnect(error: { code: number; message: string }): void;
+  message(message: { type: string; data: unknown }): void;
+};
+type KaiaProvider = {
+  address: `0x${string}`;
+  request(args: { method: string; params?: unknown }): Promise<unknown>;
+  on<Event extends keyof KaiaEventMap>(
+    event: Event,
+    listener: KaiaEventMap[Event],
+  ): void;
+  removeListener<Event extends keyof KaiaEventMap>(
+    event: Event,
+    listener: KaiaEventMap[Event],
+  ): void;
+};
+
+const KAIA_MAINNET_CHAIN_ID = "0x2019";
 
 const PROVIDER_LABEL: Record<Provider, string> = {
   kakao: "카카오",
@@ -38,13 +61,15 @@ export function LoginForm({
   callbackError?: boolean;
   initialMode?: Mode;
 }) {
+  const router = useRouter();
   const reduce = useReducedMotion();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [oauthBusy, setOauthBusy] = useState<Provider | null>(null);
+  const [walletBusy, setWalletBusy] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
   async function startOAuth(provider: Provider) {
-    if (oauthBusy) return;
+    if (oauthBusy || walletBusy) return;
     setOauthBusy(provider);
     setOauthNotice(null);
     const label = PROVIDER_LABEL[provider];
@@ -68,6 +93,54 @@ export function LoginForm({
       setOauthNotice(
         `${label} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.`
       );
+    }
+  }
+
+  async function startKaiaWalletLogin() {
+    if (walletBusy || oauthBusy) return;
+    const wallet = (window as Window & { klaytn?: KaiaProvider }).klaytn;
+    if (!wallet) {
+      setOauthNotice(
+        "Kaia Wallet을 찾지 못했어요. Kaia Wallet을 설치하거나 지갑 브라우저에서 다시 시도해 주세요.",
+      );
+      return;
+    }
+
+    setWalletBusy(true);
+    setOauthNotice(null);
+    try {
+      const chainId = await wallet.request({ method: "eth_chainId" });
+      if (
+        typeof chainId !== "string" ||
+        chainId.toLowerCase() !== KAIA_MAINNET_CHAIN_ID
+      ) {
+        setOauthNotice("Kaia Mainnet으로 네트워크를 변경한 뒤 다시 시도해 주세요.");
+        return;
+      }
+
+      const { data, error } = await createClient().auth.signInWithWeb3({
+        chain: "ethereum",
+        wallet,
+        statement: "Sign in to MemeCatch with Kaia Wallet.",
+      });
+      if (error) throw error;
+      if (!data.session) throw new Error("Kaia Wallet session was not created");
+
+      router.replace(safeNext(next));
+      router.refresh();
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? error.code
+          : undefined;
+      const message = error instanceof Error ? error.message : "";
+      setOauthNotice(
+        code === 4001 || /reject|denied|cancel/i.test(message)
+          ? "Kaia Wallet 서명이 취소됐어요. 로그인하려면 다시 시도해 주세요."
+          : "Kaia Wallet 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      );
+    } finally {
+      setWalletBusy(false);
     }
   }
 
@@ -111,8 +184,29 @@ export function LoginForm({
       <div className="mt-6 flex flex-col gap-2.5">
         <button
           type="button"
+          onClick={startKaiaWalletLogin}
+          disabled={walletBusy || !!oauthBusy}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+        >
+          {walletBusy ? (
+            <Spinner className="border-white/40 border-t-white" />
+          ) : (
+            <span
+              aria-hidden
+              className="grid size-5 place-items-center rounded-full bg-white text-xs font-black text-black"
+            >
+              K
+            </span>
+          )}
+          Kaia Wallet로 로그인
+        </button>
+        <p className="px-1 text-xs text-muted">
+          지갑 로그인은 기존 이메일 계정과 자동으로 연결되지 않아요.
+        </p>
+        <button
+          type="button"
           onClick={() => startOAuth("kakao")}
-          disabled={!!oauthBusy}
+          disabled={!!oauthBusy || walletBusy}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 text-base font-semibold text-[#191600] transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {oauthBusy === "kakao" ? (
@@ -125,7 +219,7 @@ export function LoginForm({
         <button
           type="button"
           onClick={() => startOAuth("google")}
-          disabled={!!oauthBusy}
+          disabled={!!oauthBusy || walletBusy}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-base font-semibold text-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {oauthBusy === "google" ? (

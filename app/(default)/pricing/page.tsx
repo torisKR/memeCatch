@@ -14,5 +14,6 @@ export const metadata: Metadata = buildLocalizedMetadata({
 });
 
 export default function PricingPage() {
-  return <PricingContent />;
+  const checkoutEnabled = process.env.UNIFI_PAY_CHECKOUT_ENABLED?.trim() === "true";
+  return <PricingContent checkoutEnabled={checkoutEnabled} />;
 }

@@ -17,7 +17,7 @@ import { PricingContent } from "@/components/premium/pricing-content";
 
 describe("PricingContent", () => {
   it("renders a localized comparison and POST checkout action", () => {
-    const html = renderToStaticMarkup(<PricingContent />);
+    const html = renderToStaticMarkup(<PricingContent checkoutEnabled />);
 
     expect(html).toContain("Get three memes to post today, with platform-ready copy");
     expect(html).toContain("Saved-meme reuse radar");
@@ -35,5 +35,14 @@ describe("PricingContent", () => {
     expect(html).toContain("original payment wallet");
     expect(html).toContain("shrink-0 text-right");
     expect(html).toContain("whitespace-nowrap");
+  });
+
+  it("does not render a checkout form while new purchases are disabled", () => {
+    const html = renderToStaticMarkup(<PricingContent checkoutEnabled={false} />);
+
+    expect(html).not.toContain('action="/api/billing/checkout"');
+    expect(html).not.toContain('<form');
+    expect(html).toContain("New purchases are temporarily unavailable.");
+    expect(html).toContain("disabled");
   });
 });

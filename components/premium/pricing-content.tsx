@@ -2,13 +2,22 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { withLocaleFallback } from "@/lib/i18n";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 import { PlusFeatures } from "@/components/premium/plus-features";
 import { track } from "@/lib/analytics";
 
-export function PricingContent() {
+const CHECKOUT_UNAVAILABLE = withLocaleFallback({
+  ko: "신규 결제는 현재 잠시 중단되어 있습니다.",
+  en: "New purchases are temporarily unavailable.",
+  ja: "新規のお支払いは現在一時停止しています。",
+  zh: "新购买目前暂时不可用。",
+  "zh-tw": "新購買目前暫時無法使用。",
+});
+
+export function PricingContent({ checkoutEnabled }: { checkoutEnabled: boolean }) {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
 
@@ -59,23 +68,35 @@ export function PricingContent() {
           ))}
         </ul>
 
-        {/* 결제는 호스팅 결제창으로의 리다이렉트다. 어느 제공자(Unifi Pay·Latpeed)를
-            쓸지는 서버가 환경변수로 정하므로 프론트는 하나의 폼만 유지한다.
-            JS 없이도 동작하는 순수 form POST. */}
-        <form
-          action="/api/billing/checkout"
-          method="post"
-          className="relative mt-7"
-          onSubmit={() => {
-            track("plus_checkout_started", { locale, surface: "pricing" });
-            track("checkout_start", { locale, surface: "pricing" });
-          }}
-        >
-          <input type="hidden" name="locale" value={locale} />
-          <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-            {copy.pricing.checkout}
-          </button>
-        </form>
+        {checkoutEnabled ? (
+          <form
+            action="/api/billing/checkout"
+            method="post"
+            className="relative mt-7"
+            onSubmit={() => {
+              track("plus_checkout_started", { locale, surface: "pricing" });
+              track("checkout_start", { locale, surface: "pricing" });
+            }}
+          >
+            <input type="hidden" name="locale" value={locale} />
+            <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+              {copy.pricing.checkout}
+            </button>
+          </form>
+        ) : (
+          <div className="relative mt-7">
+            <button
+              type="button"
+              disabled
+              className="flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-surface-2 px-5 text-base font-bold text-muted"
+            >
+              {copy.pricing.checkout}
+            </button>
+            <p className="mt-3 text-center text-sm font-medium text-muted" role="status">
+              {CHECKOUT_UNAVAILABLE[locale]}
+            </p>
+          </div>
+        )}
         <p className="relative mt-3 text-center text-sm text-muted">{copy.pricing.launchNote}</p>
         <p className="relative mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-muted">
           {copy.pricing.sameEmail}

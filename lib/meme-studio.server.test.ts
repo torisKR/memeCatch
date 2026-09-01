@@ -28,13 +28,13 @@ import {
 
 const concepts = [0, 1, 2].map((index) => ({
   country_code: "US" as const,
-  headline: `AI ${index}`,
-  caption: `caption ${index}`,
+  headline: `AI 제목 ${index}`,
+  caption: `한국어 문구 ${index}`,
   local_caption: `local ${index}`,
-  cultural_anchor: "US internet culture",
-  visual_brief: "simple original card",
-  why_it_works: "reason",
-  usage_context: "context",
+  cultural_anchor: "미국 인터넷 문화",
+  visual_brief: "단순한 자체 제작 카드",
+  why_it_works: "공감되는 이유",
+  usage_context: "단체 채팅",
 }));
 
 beforeEach(() => {

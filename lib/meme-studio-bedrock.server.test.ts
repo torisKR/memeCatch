@@ -130,6 +130,7 @@ describe("Bedrock Meme Studio", () => {
       .not.toHaveProperty("additionalProperties");
     expect(serializedRequest).toContain("three different cultural anchors");
     expect(serializedRequest).toContain("swapping in another country name");
+    expect(serializedRequest).toContain("Korean headline containing Hangul");
     const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 50 + 1_024 * 200;
     expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
@@ -158,6 +159,35 @@ describe("Bedrock Meme Studio", () => {
       env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
     expect(mismatch.client.send).toHaveBeenCalledOnce();
+  });
+
+  it("rejects foreign concepts without Korean fields or with duplicated localization", async () => {
+    const englishOnly = harness([response({
+      concepts: concepts.map((concept) => ({
+        ...concept,
+        headline: "English headline",
+        caption: "English caption",
+        cultural_anchor: "workplace video calls",
+        visual_brief: "a laptop",
+        why_it_works: "shared experience",
+        usage_context: "group chat",
+      })),
+    })]);
+    await expect(generateBedrockMemeConcepts(input, {
+      ...englishOnly,
+      env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
+    })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
+
+    const duplicated = harness([response({
+      concepts: concepts.map((concept) => ({
+        ...concept,
+        local_caption: concept.caption,
+      })),
+    })]);
+    await expect(generateBedrockMemeConcepts(input, {
+      ...duplicated,
+      env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
+    })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
   });
 
   it("fails closed on invalid rates before any provider call", async () => {

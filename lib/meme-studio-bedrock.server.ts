@@ -69,15 +69,18 @@ type ClientDependencies = {
   oidcCredentialsProvider?: typeof awsCredentialsProvider;
 };
 
+const koreanText = (max: number) => z.string().trim().min(1).max(max)
+  .refine((value) => /[가-힣]/.test(value));
+
 const conceptSchema = z.object({
   country_code: z.string().refine(isMemeCountryCode),
-  headline: z.string().trim().min(1).max(80),
-  caption: z.string().trim().min(1).max(220),
+  headline: koreanText(80),
+  caption: koreanText(220),
   local_caption: z.string().trim().min(1).max(220),
-  cultural_anchor: z.string().trim().min(1).max(220),
-  visual_brief: z.string().trim().min(1).max(220),
-  why_it_works: z.string().trim().min(1).max(220),
-  usage_context: z.string().trim().min(1).max(220),
+  cultural_anchor: koreanText(220),
+  visual_brief: koreanText(220),
+  why_it_works: koreanText(220),
+  usage_context: koreanText(220),
 }).strict();
 
 const responseSchema = z.object({
@@ -112,6 +115,8 @@ const SYSTEM_PROMPT = [
   "You create three original, culturally specific meme concepts for MemeCatch.",
   "Use a concrete everyday or internet-culture anchor from the requested country and give each concept a distinct setup and punchline.",
   "caption must be a natural Korean adaptation of the joke, not a literal translation; local_caption must sound native in the requested local language.",
+  "headline, caption, cultural_anchor, visual_brief, why_it_works, and usage_context MUST be written in Korean and MUST contain Hangul. local_caption is the only field written in the requested local language.",
+  "For non-Korean countries, caption and local_caption must not be identical.",
   "Silently reject and replace any concept that would still work unchanged after swapping in another country name.",
   "Do not restate the title as the joke. Avoid stereotypes, invented facts, known meme captions or templates, brands, celebrities, copyrighted characters, protected-group targeting, and harassment.",
   `Submit exactly three concepts through the forced ${TOOL_NAME} tool and do not answer with prose.`,
@@ -200,13 +205,13 @@ function requestFor(input: BedrockMemeStudioInput): ConverseCommandInput {
                     ],
                     properties: {
                       country_code: { type: "string", enum: [country.code] },
-                      headline: { type: "string", minLength: 1, maxLength: 80 },
-                      caption: { type: "string", minLength: 1, maxLength: 220 },
-                      local_caption: { type: "string", minLength: 1, maxLength: 220 },
-                      cultural_anchor: { type: "string", minLength: 1, maxLength: 220 },
-                      visual_brief: { type: "string", minLength: 1, maxLength: 220 },
-                      why_it_works: { type: "string", minLength: 1, maxLength: 220 },
-                      usage_context: { type: "string", minLength: 1, maxLength: 220 },
+                      headline: { type: "string", minLength: 1, maxLength: 80, description: "Korean headline containing Hangul." },
+                      caption: { type: "string", minLength: 1, maxLength: 220, description: "Natural Korean adaptation containing Hangul, with a clear setup and punchline." },
+                      local_caption: { type: "string", minLength: 1, maxLength: 220, description: `Native ${country.localLanguage} version of the joke. For non-Korean countries it must differ from caption.` },
+                      cultural_anchor: { type: "string", minLength: 1, maxLength: 220, description: "Korean explanation of the specific local cultural anchor, containing Hangul." },
+                      visual_brief: { type: "string", minLength: 1, maxLength: 220, description: "Korean description of an original, brand-free visual, containing Hangul." },
+                      why_it_works: { type: "string", minLength: 1, maxLength: 220, description: "Korean explanation of why the joke works, containing Hangul." },
+                      usage_context: { type: "string", minLength: 1, maxLength: 220, description: "Korean usage context containing Hangul." },
                     },
                   },
                 },
@@ -281,7 +286,13 @@ export async function generateBedrockMemeConcepts(
   const parsed = toolUses.length === 1 && toolUses[0].name === TOOL_NAME
     ? responseSchema.safeParse(toolUses[0].input)
     : null;
-  if (!parsed?.success || parsed.data.concepts.some((concept) => concept.country_code !== input.country)) {
+  if (
+    !parsed?.success ||
+    parsed.data.concepts.some((concept) =>
+      concept.country_code !== input.country ||
+      (input.country !== "KR" && concept.caption.trim() === concept.local_caption.trim())
+    )
+  ) {
     throw error(BEDROCK_MEME_STUDIO_ERROR.invalidResponse);
   }
 

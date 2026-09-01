@@ -147,6 +147,11 @@ describe("getGlobalFeed", () => {
       "meme_market_profiles.review_state",
       "reviewed",
     );
+    expect(feedQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "meme_market_profiles!inner(market_code, role, review_state)",
+      ),
+    );
     expect(feedQuery.order.mock.calls).toEqual([
       ["trend_score", { ascending: false }],
       ["id", { ascending: true }],

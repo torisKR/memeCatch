@@ -139,7 +139,7 @@ export async function getGlobalFeed(
       const { data, error } = await supabase
         .from("memes")
         .select(
-          `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative), meme_market_profiles(market_code, role, review_state)`
+          `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative), meme_market_profiles!inner(market_code, role, review_state)`
         )
         .eq("moderation_status", "approved")
         .in("meme_contents.platform", storedPlatforms)

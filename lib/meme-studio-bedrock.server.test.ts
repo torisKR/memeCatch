@@ -132,8 +132,11 @@ describe("Bedrock Meme Studio", () => {
     expect(serializedRequest).toContain('"enum":["US"]');
     expect(h.client.send.mock.calls[0][0].input.toolConfig?.tools[0].toolSpec?.inputSchema.json)
       .not.toHaveProperty("additionalProperties");
-    expect(serializedRequest).toContain("three different cultural anchors");
+    expect(serializedRequest).toContain("shareable punchlines");
     expect(serializedRequest).toContain("reject and replace topic drift");
+    expect(serializedRequest).toContain("Never introduce a different activity");
+    expect(serializedRequest).toContain("expectation-versus-reality");
+    expect(serializedRequest).toContain("Do not add sports");
     expect(serializedRequest).toContain("swapping in another country name");
     expect(serializedRequest).toContain("Korean headline containing Hangul");
     const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 300 + 1_024 * 2_500;

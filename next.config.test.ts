@@ -47,3 +47,11 @@ describe("service-worker image CSP", () => {
     expect(connectDirective).toContain("...REMOTE_MEME_THUMBNAIL_SOURCES");
   });
 });
+
+describe("release SHA response header", () => {
+  it("falls back to RELEASE_SHA when a CLI deployment has an empty Git SHA", () => {
+    expect(source).toContain(
+      "process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim()",
+    );
+  });
+});

@@ -12,7 +12,7 @@ import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/m
 
 export const BEDROCK_MEME_STUDIO_MODEL_ID = "global.anthropic.claude-haiku-4-5-20251001-v1:0";
 export const BEDROCK_MEME_STUDIO_DEFAULT_REGION = "ap-northeast-2";
-export const BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS = 1_024;
+export const BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS = 2_048;
 export const BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS = 4_096;
 export const BEDROCK_MEME_STUDIO_TEMPERATURE = 0.4;
 

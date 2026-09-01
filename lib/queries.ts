@@ -328,17 +328,19 @@ export async function getReactionCounts(
 }
 
 /** 검색 — search_memes RPC (trgm + 초성 + aliases 통합, 서버가 전부 처리) */
-export async function searchMemes(query: string, limit = 20): Promise<MemeRow[]> {
+export async function searchMemes(query: string, limit = 20): Promise<MemeListItem[]> {
   const q = query.trim();
   if (!q) return [];
   try {
     const supabase = createStaticClient();
-    const { data, error } = await supabase.rpc("search_memes", {
-      p_query: q,
-      p_limit: limit,
-    });
+    const { data, error } = await supabase
+      .rpc("search_memes", {
+        p_query: q,
+        p_limit: limit,
+      })
+      .select(LIST_SELECT);
     if (error || !data) return [];
-    return data as MemeRow[];
+    return data as MemeListItem[];
   } catch {
     return [];
   }

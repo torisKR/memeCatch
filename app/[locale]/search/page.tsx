@@ -22,7 +22,7 @@ import {
   shouldOfferLocalizedSearchRecovery,
   type LocalizedSearchRecoveryStatus,
 } from "@/lib/localized-search-recovery";
-import { getTrendingMemes, searchMemes, type MemeRow } from "@/lib/queries";
+import { getTrendingMemes, searchMemes, type MemeListItem } from "@/lib/queries";
 import { SearchInput } from "@/app/(default)/search/search-input";
 
 type Props = {
@@ -52,7 +52,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
   const { q } = await searchParams;
   const query = (typeof q === "string" ? q : "").trim();
   const [results, trending] = await Promise.all([
-    query ? searchMemes(query) : Promise.resolve([] as MemeRow[]),
+    query ? searchMemes(query) : Promise.resolve([] as MemeListItem[]),
     getTrendingMemes(8),
   ]);
   const localizedSearch = await getLocalizedSearchMemesResult(
@@ -84,7 +84,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
     localizedStatus: localizedResultStatus,
   });
 
-  function cardHref(meme: MemeRow, localized: LocalizedMemeDetail | undefined) {
+  function cardHref(meme: MemeListItem, localized: LocalizedMemeDetail | undefined) {
     return localized
       ? localizedMemePath(contentLocale, localized.short_id, localized.slug)
       : memePathFrom(meme.short_id, meme.slug);

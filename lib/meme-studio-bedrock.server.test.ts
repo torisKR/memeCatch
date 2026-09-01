@@ -143,7 +143,7 @@ describe("Bedrock Meme Studio", () => {
     expect(serializedRequest).toContain("Do not add sports");
     expect(serializedRequest).toContain("swapping in another country name");
     expect(serializedRequest).toContain("Korean headline containing Hangul");
-    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 1_000 + 1_024 * 5_000;
+    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 1_000 + 2_048 * 5_000;
     expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
       concepts,

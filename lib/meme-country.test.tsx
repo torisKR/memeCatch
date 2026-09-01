@@ -1,9 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const createStaticClient = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { MemeCard } from "@/components/meme-card";
 import { countryFlag, originCountryCode } from "@/lib/meme-country";
-import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
+import { LIST_SELECT, searchMemes, type MemeListItem } from "@/lib/queries";
 
 const meme = {
   id: "us-meme",
@@ -56,5 +59,20 @@ describe("meme country display", () => {
     expect(LIST_SELECT).toContain(
       "meme_market_profiles(market_code, role, review_state)",
     );
+  });
+
+  it("loads the reviewed origin relation for search result cards", async () => {
+    const select = vi.fn().mockResolvedValue({ data: [meme], error: null });
+    const rpc = vi.fn(() => ({ select }));
+    createStaticClient.mockReturnValue({ rpc });
+
+    const results = await searchMemes("미국 밈");
+
+    expect(rpc).toHaveBeenCalledWith("search_memes", {
+      p_query: "미국 밈",
+      p_limit: 20,
+    });
+    expect(select).toHaveBeenCalledWith(LIST_SELECT);
+    expect(results[0]?.meme_market_profiles?.[0]?.market_code).toBe("US");
   });
 });

@@ -3,21 +3,21 @@ alter table public.bedrock_meme_studio_lifetime_budget
   drop constraint bedrock_meme_studio_lifetime_budget_model_check;
 alter table public.bedrock_meme_studio_lifetime_budget
   add constraint bedrock_meme_studio_lifetime_budget_model_check
-  check (model_profile = 'global.amazon.nova-2-lite-v1:0');
+  check (model_profile = 'global.anthropic.claude-haiku-4-5-20251001-v1:0');
 insert into public.bedrock_meme_studio_lifetime_budget (
   model_profile, reserved_nano_usd, request_count
 ) values (
-  'global.amazon.nova-2-lite-v1:0', 20000000000, 7
+  'global.anthropic.claude-haiku-4-5-20251001-v1:0', 20000000000, 7
 );
 
 alter table public.bedrock_meme_studio_lifetime_budget
   drop constraint bedrock_meme_studio_lifetime_budget_model_check;
 update public.bedrock_meme_studio_lifetime_budget
-   set model_profile = 'global.anthropic.claude-haiku-4-5-20251001-v1:0'
- where model_profile = 'global.amazon.nova-2-lite-v1:0';
+   set model_profile = 'global.anthropic.claude-sonnet-5'
+ where model_profile = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 alter table public.bedrock_meme_studio_lifetime_budget
   add constraint bedrock_meme_studio_lifetime_budget_model_check
-  check (model_profile = 'global.anthropic.claude-haiku-4-5-20251001-v1:0');
+  check (model_profile = 'global.anthropic.claude-sonnet-5');
 
 begin;
 
@@ -27,18 +27,18 @@ select plan(20);
 
 select is(
   (select model_profile from public.bedrock_meme_studio_lifetime_budget),
-  'global.anthropic.claude-haiku-4-5-20251001-v1:0',
-  'the migration moves the Nova 2 Lite ledger to Claude Haiku 4.5'
+  'global.anthropic.claude-sonnet-5',
+  'the migration moves the Claude Haiku 4.5 ledger to Claude Sonnet 5'
 );
 select is(
   (select reserved_nano_usd from public.bedrock_meme_studio_lifetime_budget),
   20000000000::bigint,
-  'the migration preserves the Nova 2 Lite reserved balance'
+  'the migration preserves the Haiku reserved balance'
 );
 select is(
   (select request_count from public.bedrock_meme_studio_lifetime_budget),
   7::bigint,
-  'the migration preserves the Nova 2 Lite request count'
+  'the migration preserves the Haiku request count'
 );
 
 select ok(
@@ -69,7 +69,7 @@ select ok(
 set local role anon;
 select throws_ok(
   $$select public.reserve_bedrock_meme_studio_budget(
-    'global.anthropic.claude-haiku-4-5-20251001-v1:0', 1
+    'global.anthropic.claude-sonnet-5', 1
   )$$,
   '42501',
   'permission denied for function reserve_bedrock_meme_studio_budget',
@@ -80,7 +80,7 @@ reset role;
 set local role authenticated;
 select throws_ok(
   $$select public.reserve_bedrock_meme_studio_budget(
-    'global.anthropic.claude-haiku-4-5-20251001-v1:0', 1
+    'global.anthropic.claude-sonnet-5', 1
   )$$,
   '42501',
   'permission denied for function reserve_bedrock_meme_studio_budget',
@@ -92,15 +92,15 @@ select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 set local role service_role;
 select throws_ok(
   $$select public.reserve_bedrock_meme_studio_budget(
-    'global.amazon.nova-2-lite-v1:0', 1
+    'global.anthropic.claude-haiku-4-5-20251001-v1:0', 1
   )$$,
   '22023',
   'bedrock_meme_studio_model_profile_required',
-  'the former Nova 2 Lite profile is rejected'
+  'the former Claude Haiku 4.5 profile is rejected'
 );
 select is(
   public.reserve_bedrock_meme_studio_budget(
-    'global.anthropic.claude-haiku-4-5-20251001-v1:0', 10000000000
+    'global.anthropic.claude-sonnet-5', 10000000000
   ),
   30000000000::bigint,
   'service_role can reserve against the migrated ledger'
@@ -139,7 +139,7 @@ select ok(
   extensions.dblink_send_query(
     'budget_a',
     $$select public.reserve_bedrock_meme_studio_budget(
-      'global.anthropic.claude-haiku-4-5-20251001-v1:0', 35000000000
+      'global.anthropic.claude-sonnet-5', 35000000000
     )$$
   ) = 1,
   'the first concurrent reservation starts'
@@ -148,7 +148,7 @@ select ok(
   extensions.dblink_send_query(
     'budget_b',
     $$select public.reserve_bedrock_meme_studio_budget(
-      'global.anthropic.claude-haiku-4-5-20251001-v1:0', 35000000000
+      'global.anthropic.claude-sonnet-5', 35000000000
     )$$
   ) = 1,
   'the second concurrent reservation starts'
@@ -184,7 +184,7 @@ select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 set local role service_role;
 select throws_ok(
   $$select public.reserve_bedrock_meme_studio_budget(
-    'global.anthropic.claude-haiku-4-5-20251001-v1:0', 1
+    'global.anthropic.claude-sonnet-5', 1
   )$$,
   'P0001',
   'bedrock_meme_studio_lifetime_budget_exhausted',

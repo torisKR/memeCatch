@@ -105,6 +105,7 @@ function ReadyFeed({ items }: { items: GlobalFeedItem[] }) {
               <MemeThumbnail
                 src={lead.thumbnail_url}
                 title={lead.title}
+                fallbackCaption={lead.summary}
                 category={lead.category as MemeCategory}
                 originYear={lead.origin_year}
                 priority
@@ -155,6 +156,7 @@ function ReadyFeed({ items }: { items: GlobalFeedItem[] }) {
                     <MemeThumbnail
                       src={item.thumbnail_url}
                       title={item.title}
+                      fallbackCaption={item.summary}
                       category={item.category as MemeCategory}
                       originYear={item.origin_year}
                       priority={index < 2}

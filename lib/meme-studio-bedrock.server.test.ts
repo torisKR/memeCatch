@@ -20,7 +20,7 @@ const concepts = [0, 1, 2].map((index) => ({
   headline: `제목 ${index}`,
   caption: `캡션 ${index}`,
   local_caption: `Local caption ${index}`,
-  cultural_anchor: "미국 직장인의 월요일 커피 루틴",
+  cultural_anchor: `미국 직장인의 월요일 업무 루틴 ${index}`,
   visual_brief: "텅 빈 머그컵과 노트북",
   why_it_works: "반전이 있어서 웃긴다.",
   usage_context: "단체 채팅방에서 쓴다.",
@@ -48,8 +48,8 @@ function harness(outputs: unknown[] = [response()]) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("Bedrock Meme Studio", () => {
-  it("pins the global Claude Haiku 4.5 inference profile", () => {
-    expect(BEDROCK_MEME_STUDIO_MODEL_ID).toBe("global.anthropic.claude-haiku-4-5-20251001-v1:0");
+  it("pins the global Claude Sonnet 5 inference profile", () => {
+    expect(BEDROCK_MEME_STUDIO_MODEL_ID).toBe("global.anthropic.claude-sonnet-5");
   });
 
   it("requires the explicit enable flag", async () => {
@@ -143,7 +143,9 @@ describe("Bedrock Meme Studio", () => {
     expect(serializedRequest).toContain("Do not add sports");
     expect(serializedRequest).toContain("swapping in another country name");
     expect(serializedRequest).toContain("Korean headline containing Hangul");
-    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 1_000 + 2_048 * 5_000;
+    expect(serializedRequest).toContain("production-ready art direction");
+    expect(serializedRequest).toContain("visually and comedically distinct");
+    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 3_000 + 2_048 * 15_000;
     expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
       concepts,
@@ -202,6 +204,21 @@ describe("Bedrock Meme Studio", () => {
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
   });
 
+  it("rejects duplicate captions or cultural anchors", async () => {
+    for (const field of ["caption", "cultural_anchor"] as const) {
+      const duplicated = harness([response({
+        concepts: concepts.map((concept, index) => index === 2
+          ? { ...concept, [field]: concepts[0][field] }
+          : concept),
+      })]);
+      await expect(generateBedrockMemeConcepts(input, {
+        ...duplicated,
+        env: { BEDROCK_MEME_STUDIO_ENABLED: "true" },
+      })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidResponse });
+      expect(duplicated.client.send).toHaveBeenCalledOnce();
+    }
+  });
+
   it("fails closed on invalid rates before any provider call", async () => {
     const h = harness();
     await expect(generateBedrockMemeConcepts(input, {
@@ -217,7 +234,7 @@ describe("Bedrock Meme Studio", () => {
       ...h,
       env: {
         BEDROCK_MEME_STUDIO_ENABLED: "true",
-        BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: "4999",
+        BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: "14999",
       },
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidRate });
     expect(h.client.send).not.toHaveBeenCalled();

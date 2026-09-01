@@ -49,6 +49,7 @@ export function MemeCard({
         <MemeThumbnail
           src={thumb}
           title={meme.title}
+          fallbackCaption={meme.summary}
           category={meme.category}
           originYear={meme.origin_year}
           priority={priority}

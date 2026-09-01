@@ -35,6 +35,7 @@ export function LocalizedExploreCard({
           <MemeThumbnail
             src={thumbnail}
             title={meme.title}
+            fallbackCaption={meme.summary}
             category={meme.category}
             originYear={meme.origin_year}
             priority={priority}

@@ -1,7 +1,7 @@
 locals {
-  bedrock_inference_profile_id  = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+  bedrock_inference_profile_id  = "global.anthropic.claude-sonnet-5"
   bedrock_inference_profile_arn = "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${local.bedrock_inference_profile_id}"
-  bedrock_foundation_model_arn  = "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
+  bedrock_foundation_model_arn  = "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5"
   vercel_oidc_host              = "oidc.vercel.com/${var.vercel_team_slug}"
   vercel_audience               = "https://vercel.com/${var.vercel_team_slug}"
 }
@@ -44,13 +44,13 @@ resource "aws_iam_role" "vercel_bedrock" {
 
 data "aws_iam_policy_document" "bedrock_inference" {
   statement {
-    sid       = "UseClaudeHaiku45GlobalInferenceProfile"
+    sid       = "UseClaudeSonnet5GlobalInferenceProfile"
     actions   = ["bedrock:InvokeModel"]
     resources = [local.bedrock_inference_profile_arn]
   }
 
   statement {
-    sid       = "RouteGlobalProfileToClaudeHaiku45FoundationModel"
+    sid       = "RouteGlobalProfileToClaudeSonnet5FoundationModel"
     actions   = ["bedrock:InvokeModel"]
     resources = [local.bedrock_foundation_model_arn]
 
@@ -77,7 +77,7 @@ resource "aws_budgets_budget" "bedrock" {
 
   cost_filter {
     name   = "Service"
-    values = ["Amazon Bedrock"]
+    values = ["Amazon Bedrock", "AWS Marketplace"]
   }
 
   notification {

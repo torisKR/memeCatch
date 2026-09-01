@@ -10,7 +10,7 @@ import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { z } from "zod";
 import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
-export const BEDROCK_MEME_STUDIO_MODEL_ID = "global.anthropic.claude-haiku-4-5-20251001-v1:0";
+export const BEDROCK_MEME_STUDIO_MODEL_ID = "global.anthropic.claude-sonnet-5";
 export const BEDROCK_MEME_STUDIO_DEFAULT_REGION = "ap-northeast-2";
 export const BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS = 2_048;
 export const BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS = 4_096;
@@ -95,8 +95,8 @@ const formatValues = new Set<BedrockMemeStudioInput["format"]>([
   "image-macro", "reaction", "caption",
 ]);
 
-const DEFAULT_INPUT_RATE_NANO_USD = 1_000;
-const DEFAULT_OUTPUT_RATE_NANO_USD = 5_000;
+const DEFAULT_INPUT_RATE_NANO_USD = 3_000;
+const DEFAULT_OUTPUT_RATE_NANO_USD = 15_000;
 const MAX_RATE_NANO_USD_PER_TOKEN = 1_000_000;
 
 const TOOL_NAME = "submit_meme_concepts";
@@ -116,6 +116,8 @@ const SYSTEM_PROMPT = [
   "You create three original, culturally specific meme concepts for MemeCatch.",
   "Every concept must center on the requested topic; reject and replace topic drift before submitting.",
   "Use a concrete everyday or internet-culture anchor from the requested country and give each concept a distinct setup and punchline.",
+  "Make every visual brief production-ready: specify an original subject, composition, camera or framing, expression or action, setting, lighting, color direction, and readable text placement without naming protected characters or brands.",
+  "The three concepts must be visibly distinct at thumbnail size; do not reuse captions, cultural anchors, subjects, compositions, or joke beats.",
   "Write captions as short, shareable punchlines, not explanations or cultural summaries.",
   "caption must be a natural Korean adaptation of the joke, not a literal translation; local_caption must sound native in the requested local language.",
   "headline, caption, cultural_anchor, visual_brief, why_it_works, and usage_context MUST be written in Korean and MUST contain Hangul. local_caption is the only field written in the requested local language.",
@@ -179,6 +181,8 @@ function requestFor(input: BedrockMemeStudioInput): ConverseCommandInput {
             "Keep the cultural detail observational and topic-relevant, never a claim about all people in the country.",
             "The cultural anchor must name a concrete local behavior or artifact, not a vague idea such as time management.",
             "Make the Korean adaptation immediately usable without explaining the translation.",
+            "Write each visual brief as a production-ready art direction that can be handed directly to an illustrator or image model, including subject, composition, framing, expression or action, setting, lighting, color direction, and safe text placement.",
+            "Make all three concepts visually and comedically distinct; never repeat a caption, cultural anchor, primary subject, composition, or punchline structure.",
           ],
           count: 3,
         }),
@@ -215,7 +219,7 @@ function requestFor(input: BedrockMemeStudioInput): ConverseCommandInput {
                       caption: { type: "string", minLength: 1, maxLength: 220, description: "Natural Korean adaptation containing Hangul, with a clear setup and punchline." },
                       local_caption: { type: "string", minLength: 1, maxLength: 220, description: `Native ${country.localLanguage} version of the joke. For non-Korean countries it must differ from caption.` },
                       cultural_anchor: { type: "string", minLength: 1, maxLength: 220, description: "Korean explanation of the specific local cultural anchor, containing Hangul." },
-                      visual_brief: { type: "string", minLength: 1, maxLength: 220, description: "Korean description of an original, brand-free visual, containing Hangul." },
+                      visual_brief: { type: "string", minLength: 1, maxLength: 220, description: "Production-ready Korean art direction for an original, brand-free visual: subject, composition, framing, action, setting, lighting, color, and text placement; must contain Hangul." },
                       why_it_works: { type: "string", minLength: 1, maxLength: 220, description: "Korean explanation of why the joke works, containing Hangul." },
                       usage_context: { type: "string", minLength: 1, maxLength: 220, description: "Korean usage context containing Hangul." },
                     },
@@ -291,8 +295,13 @@ export async function generateBedrockMemeConcepts(
   const parsed = toolUses.length === 1 && toolUses[0].name === TOOL_NAME
     ? responseSchema.safeParse(toolUses[0].input)
     : null;
+  const normalizedDistinct = (values: string[]) =>
+    new Set(values.map((value) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase())).size
+      === values.length;
   if (
     !parsed?.success ||
+    !normalizedDistinct(parsed.data.concepts.map((concept) => concept.caption)) ||
+    !normalizedDistinct(parsed.data.concepts.map((concept) => concept.cultural_anchor)) ||
     parsed.data.concepts.some((concept) =>
       concept.country_code !== input.country ||
       (input.country !== "KR" && concept.caption.trim() === concept.local_caption.trim())

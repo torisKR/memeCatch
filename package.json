@@ -19,6 +19,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "content:review-international-origins": "node scripts/review-international-meme-origins.mjs",
     "smoke": "node scripts/smoke.mts",
     "mpe:worker": "node scripts/mpe-media-worker.mjs --watch",
     "mpe:worker:once": "node scripts/mpe-media-worker.mjs",

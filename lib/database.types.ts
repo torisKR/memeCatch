@@ -4479,6 +4479,15 @@ export type Database = {
         }
         Returns: Json
       }
+      set_meme_origin_country_with_evidence: {
+        Args: {
+          p_evidence_source_id: string
+          p_local_title: string
+          p_market_code: string
+          p_meme_id: string
+        }
+        Returns: Json
+      }
       publish_seo_campaign: { Args: { p_manifest: Json }; Returns: string }
       publish_seo_measurements: {
         Args: { p_campaign_id: string; p_items: Json; p_window: string }

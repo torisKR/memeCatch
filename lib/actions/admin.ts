@@ -128,6 +128,26 @@ function revalidateCanonicalMemePaths(meme: MemeRevalidationIdentity | null) {
   for (const path of paths) revalidatePath(path);
 }
 
+function revalidateCountryCardPaths(meme: MemeRevalidationIdentity) {
+  for (const path of [
+    "/",
+    "/global",
+    "/explore",
+    "/daily",
+    "/rankings",
+    "/weekly",
+    "/timeline",
+    "/news",
+  ]) {
+    revalidatePath(path);
+  }
+  revalidatePath("/collections/[slug]", "page");
+  for (const locale of SEO_CONTENT_LOCALES) {
+    revalidatePath(`/${locale}/explore`);
+  }
+  revalidateCanonicalMemePaths(meme);
+}
+
 /* ── 제보 큐 ─────────────────────────────────────────── */
 
 export async function claimSubmission(submissionId: string): Promise<ActionResult> {
@@ -456,6 +476,61 @@ export async function createHouseOriginal(input: {
     return { ok: true, data: { memeId: created.id } };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
+  }
+}
+
+export async function setMemeOriginCountry(input: {
+  memeId: string;
+  country: MemeCountryCode;
+  localTitle: string;
+}): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireOperator();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.memeId)) {
+      return { ok: false, error: "밈 식별자를 확인해 주세요." };
+    }
+    if (!isMemeCountryCode(input.country)) {
+      return { ok: false, error: "밈 국가를 확인해 주세요." };
+    }
+    const localTitle = input.localTitle.trim();
+    if (!localTitle || localTitle.length > 300) {
+      return { ok: false, error: "현지 제목은 1~300자로 입력해 주세요." };
+    }
+    const meme = await loadMemeRevalidationIdentity(supabase, input.memeId);
+    if (!meme) return { ok: false, error: "밈을 찾을 수 없어요." };
+
+    const { error } = await supabase.rpc("set_meme_origin_country", {
+      p_meme_id: input.memeId,
+      p_market_code: input.country,
+      p_local_title: localTitle,
+    });
+    if (error) {
+      const code = error.message;
+      if (code.includes("operator_required")) {
+        return { ok: false, error: "운영자 권한이 없어요." };
+      }
+      if (code.includes("meme_not_found")) {
+        return { ok: false, error: "밈을 찾을 수 없어요." };
+      }
+      if (code.includes("invalid_market_code")) {
+        return { ok: false, error: "밈 국가를 확인해 주세요." };
+      }
+      if (code.includes("invalid_local_title")) {
+        return { ok: false, error: "현지 제목은 1~300자로 입력해 주세요." };
+      }
+      return { ok: false, error: "출처 국가를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
+    }
+
+    revalidatePath("/admin/memes");
+    revalidatePath(`/admin/memes/${input.memeId}`);
+    revalidateCountryCardPaths(meme);
+    return { ok: true };
+  } catch (e) {
+    const message = errMessage(e);
+    if (message === "로그인이 필요해요." || message === "운영자 권한이 없어요.") {
+      return { ok: false, error: message };
+    }
+    return { ok: false, error: "출처 국가를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
   }
 }
 

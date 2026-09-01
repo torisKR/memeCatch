@@ -1,18 +1,9 @@
 locals {
-  bedrock_inference_profile_id  = "apac.amazon.nova-micro-v1:0"
+  bedrock_inference_profile_id  = "global.amazon.nova-2-lite-v1:0"
   bedrock_inference_profile_arn = "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${local.bedrock_inference_profile_id}"
-  bedrock_foundation_model_arns = [
-    for region in [
-      "ap-northeast-1",
-      "ap-northeast-2",
-      "ap-northeast-3",
-      "ap-south-1",
-      "ap-southeast-1",
-      "ap-southeast-2",
-    ] : "arn:aws:bedrock:${region}::foundation-model/amazon.nova-micro-v1:0"
-  ]
-  vercel_oidc_host = "oidc.vercel.com/${var.vercel_team_slug}"
-  vercel_audience  = "https://vercel.com/${var.vercel_team_slug}"
+  bedrock_foundation_model_arn  = "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0"
+  vercel_oidc_host              = "oidc.vercel.com/${var.vercel_team_slug}"
+  vercel_audience               = "https://vercel.com/${var.vercel_team_slug}"
 }
 
 resource "aws_iam_openid_connect_provider" "vercel" {
@@ -53,15 +44,15 @@ resource "aws_iam_role" "vercel_bedrock" {
 
 data "aws_iam_policy_document" "bedrock_inference" {
   statement {
-    sid       = "UseNovaMicroInferenceProfile"
+    sid       = "UseNova2LiteGlobalInferenceProfile"
     actions   = ["bedrock:InvokeModel"]
     resources = [local.bedrock_inference_profile_arn]
   }
 
   statement {
-    sid       = "RouteNovaMicroProfileToFoundationModels"
+    sid       = "RouteGlobalProfileToNova2LiteFoundationModel"
     actions   = ["bedrock:InvokeModel"]
-    resources = local.bedrock_foundation_model_arns
+    resources = [local.bedrock_foundation_model_arn]
 
     condition {
       test     = "StringEquals"
@@ -72,7 +63,7 @@ data "aws_iam_policy_document" "bedrock_inference" {
 }
 
 resource "aws_iam_role_policy" "bedrock_inference" {
-  name   = "nova-micro-inference-only"
+  name   = "nova-2-lite-global-inference-only"
   role   = aws_iam_role.vercel_bedrock.id
   policy = data.aws_iam_policy_document.bedrock_inference.json
 }

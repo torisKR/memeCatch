@@ -47,6 +47,10 @@ function harness(outputs: unknown[] = [response()]) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("Bedrock Meme Studio", () => {
+  it("pins the global Nova 2 Lite inference profile", () => {
+    expect(BEDROCK_MEME_STUDIO_MODEL_ID).toBe("global.amazon.nova-2-lite-v1:0");
+  });
+
   it("requires the explicit enable flag", async () => {
     const h = harness();
     await expect(generateBedrockMemeConcepts(input, { ...h, env: {} }))
@@ -129,9 +133,10 @@ describe("Bedrock Meme Studio", () => {
     expect(h.client.send.mock.calls[0][0].input.toolConfig?.tools[0].toolSpec?.inputSchema.json)
       .not.toHaveProperty("additionalProperties");
     expect(serializedRequest).toContain("three different cultural anchors");
+    expect(serializedRequest).toContain("reject and replace topic drift");
     expect(serializedRequest).toContain("swapping in another country name");
     expect(serializedRequest).toContain("Korean headline containing Hangul");
-    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 50 + 1_024 * 200;
+    const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * 300 + 1_024 * 2_500;
     expect(h.reserveCost).toHaveBeenCalledWith(reservedNanoUsd);
     expect(result).toEqual({
       concepts,
@@ -196,7 +201,7 @@ describe("Bedrock Meme Studio", () => {
       ...h,
       env: {
         BEDROCK_MEME_STUDIO_ENABLED: "true",
-        BEDROCK_NOVA_MICRO_INPUT_NANO_USD_PER_TOKEN: "1000001",
+        BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN: "1000001",
       },
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidRate });
     expect(h.client.send).not.toHaveBeenCalled();
@@ -205,7 +210,7 @@ describe("Bedrock Meme Studio", () => {
       ...h,
       env: {
         BEDROCK_MEME_STUDIO_ENABLED: "true",
-        BEDROCK_NOVA_MICRO_OUTPUT_NANO_USD_PER_TOKEN: "199",
+        BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: "2499",
       },
     })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.invalidRate });
     expect(h.client.send).not.toHaveBeenCalled();

@@ -12,7 +12,7 @@ Grounding: `LOOP.md` rules 4–6, `docs/architecture.md` source pipeline, `docs/
 
 This section supersedes the older “do not add Bedrock” notes below for the house-original draft path only.
 
-- The admin house-original form may call Amazon Bedrock Nova Micro through the APAC inference profile `apac.amazon.nova-micro-v1:0` and returns exactly three Korean drafts. Review is intentionally minimal: the operator can save a selected draft directly, but the row is still created as `pending`.
+- The admin house-original form may call Amazon Bedrock Nova 2 Lite through the global inference profile `global.amazon.nova-2-lite-v1:0` and returns exactly three Korean drafts. Review is intentionally minimal: the operator can save a selected draft directly, but the row is still created as `pending`.
 - The public Studio remains template-only and must not call Bedrock or consume the Bedrock budget.
 - The application enforces a non-resetting lifetime hard cap of **$100** before invocation. AWS Budgets is a delayed secondary alert, not the hard stop.
 - Static AWS access keys are forbidden. Vercel uses OIDC to assume a least-privilege role in `ap-northeast-2`.

@@ -10,7 +10,7 @@ import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { z } from "zod";
 import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
-export const BEDROCK_MEME_STUDIO_MODEL_ID = "apac.amazon.nova-micro-v1:0";
+export const BEDROCK_MEME_STUDIO_MODEL_ID = "global.amazon.nova-2-lite-v1:0";
 export const BEDROCK_MEME_STUDIO_DEFAULT_REGION = "ap-northeast-2";
 export const BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS = 1_024;
 export const BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS = 4_096;
@@ -94,8 +94,8 @@ const formatValues = new Set<BedrockMemeStudioInput["format"]>([
   "image-macro", "reaction", "caption",
 ]);
 
-const DEFAULT_INPUT_RATE_NANO_USD = 50;
-const DEFAULT_OUTPUT_RATE_NANO_USD = 200;
+const DEFAULT_INPUT_RATE_NANO_USD = 300;
+const DEFAULT_OUTPUT_RATE_NANO_USD = 2_500;
 const MAX_RATE_NANO_USD_PER_TOKEN = 1_000_000;
 
 const TOOL_NAME = "submit_meme_concepts";
@@ -113,6 +113,7 @@ const COUNTRY_BRIEFS: Record<MemeCountryCode, string> = {
 };
 const SYSTEM_PROMPT = [
   "You create three original, culturally specific meme concepts for MemeCatch.",
+  "Every concept must center on the requested topic; reject and replace topic drift before submitting.",
   "Use a concrete everyday or internet-culture anchor from the requested country and give each concept a distinct setup and punchline.",
   "caption must be a natural Korean adaptation of the joke, not a literal translation; local_caption must sound native in the requested local language.",
   "headline, caption, cultural_anchor, visual_brief, why_it_works, and usage_context MUST be written in Korean and MUST contain Hangul. local_caption is the only field written in the requested local language.",
@@ -258,10 +259,9 @@ export async function generateBedrockMemeConcepts(
   if (!enabled(env)) throw error(BEDROCK_MEME_STUDIO_ERROR.disabled);
 
   const request = requestFor(normalizedInput(input));
-  const inputRate = rate(env, "BEDROCK_NOVA_MICRO_INPUT_NANO_USD_PER_TOKEN", DEFAULT_INPUT_RATE_NANO_USD);
-  const outputRate = rate(env, "BEDROCK_NOVA_MICRO_OUTPUT_NANO_USD_PER_TOKEN", DEFAULT_OUTPUT_RATE_NANO_USD);
+  const inputRate = rate(env, "BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN", DEFAULT_INPUT_RATE_NANO_USD);
+  const outputRate = rate(env, "BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN", DEFAULT_OUTPUT_RATE_NANO_USD);
   const bedrock = client ?? createBedrockMemeStudioClient({ env });
-  // ponytail: Nova Micro APAC rejects CountTokens; this bounded over-reservation stays until the model supports it.
   const reservedNanoUsd = BEDROCK_MEME_STUDIO_RESERVED_INPUT_TOKENS * inputRate
     + BEDROCK_MEME_STUDIO_MAX_OUTPUT_TOKENS * outputRate;
   try {

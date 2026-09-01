@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/meme-studio-bedrock.server", () => ({
-  BEDROCK_MEME_STUDIO_MODEL_ID: "apac.amazon.nova-micro-v1:0",
+  BEDROCK_MEME_STUDIO_MODEL_ID: "global.amazon.nova-2-lite-v1:0",
   BedrockMemeStudioError: class extends Error {
     constructor(readonly code: string) {
       super(code);
@@ -76,7 +76,7 @@ describe("meme studio concepts", () => {
       expect.any(Object),
     );
     expect(mocks.rpc).toHaveBeenCalledWith("reserve_bedrock_meme_studio_budget", {
-      p_model_profile: "apac.amazon.nova-micro-v1:0",
+      p_model_profile: "global.amazon.nova-2-lite-v1:0",
       p_estimated_cost_nano_usd: 123_456,
     });
   });

@@ -23,3 +23,21 @@ describe("billing legal copy", () => {
     expect(html).toContain("결제창 복귀만으로 권한이 생기지 않습니다");
   });
 });
+
+describe("social login legal copy", () => {
+  it("discloses the TikTok account and optional video data the app handles", () => {
+    const html = renderToStaticMarkup(<PrivacyPage />);
+
+    expect(html).toContain("TikTok 앱 전용 계정 식별자(open_id)");
+    expect(html).toContain("표시 이름");
+    expect(html).toContain("프로필 사진");
+    expect(html).toContain("공개 영상 ID·제목·설명·공유 URL");
+    expect(html).toContain("액세스 토큰은 요청 처리 중에만 사용하고 저장하지 않습니다");
+  });
+
+  it("names TikTok as an available social login provider", () => {
+    const html = renderToStaticMarkup(<TermsPage />);
+
+    expect(html).toContain("소셜 로그인(카카오·구글·TikTok)");
+  });
+});

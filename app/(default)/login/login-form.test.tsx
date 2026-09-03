@@ -5,15 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const auth = vi.hoisted(() => ({ signInWithWeb3: vi.fn() }));
 const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
+const dappPortal = vi.hoisted(() => ({ init: vi.fn() }));
+const serverActions = vi.hoisted(() => ({ signIn: vi.fn(), signUp: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@linenext/dapp-portal-sdk", () => ({
+  default: { init: dappPortal.init },
+}));
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   motion: { div: "div", span: "span" },
   useReducedMotion: () => true,
 }));
 vi.mock("@/components/brand-mark", () => ({ BrandTile: () => <span /> }));
-vi.mock("@/lib/actions/auth", () => ({ signIn: vi.fn(), signUp: vi.fn() }));
+vi.mock("@/lib/actions/auth", () => serverActions);
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth }) }));
 
 import { LoginForm } from "./login-form";
@@ -54,23 +59,111 @@ function renderLogin(locale: Locale = "ko", next = "/saved") {
 }
 
 beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "");
   auth.signInWithWeb3.mockReset();
+  dappPortal.init.mockReset();
   router.replace.mockReset();
   router.refresh.mockReset();
+  serverActions.signIn.mockReset();
+  serverActions.signUp.mockReset();
   setWallet(undefined);
+});
+
+describe("LoginForm signup notice", () => {
+  it("announces the generic signup result accessibly", async () => {
+    const notice = "가입 요청을 접수했어요. 가입 가능한 이메일이면 안내 메일을 확인하거나 로그인해 주세요.";
+    serverActions.signUp.mockResolvedValue({ notice });
+    render(
+      <LocaleProvider initialLocale="ko">
+        <LoginForm next="/saved" initialMode="signup" />
+      </LocaleProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("닉네임"), {
+      target: { value: "밈메이커" },
+    });
+    fireEvent.change(screen.getByLabelText("이메일"), {
+      target: { value: "new@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("비밀번호"), {
+      target: { value: "password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "가입하고 시작하기" }));
+
+    const message = await screen.findByText(notice);
+    expect(message.getAttribute("role")).toBe("status");
+    expect(message.getAttribute("aria-live")).toBe("polite");
+  });
 });
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllEnvs();
   document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
   delete (window as Window & { klaytn?: TestWallet }).klaytn;
 });
 
 describe("LoginForm Kaia Wallet", () => {
+  it("initializes Unifi Wallet, validates its account, and signs in with its provider", async () => {
+    vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "public-client-id");
+    const provider = wallet();
+    provider.request.mockResolvedValue([
+      "0x0000000000000000000000000000000000000001",
+    ]);
+    const getWalletProvider = vi.fn(() => provider);
+    dappPortal.init.mockResolvedValue({ getWalletProvider });
+    auth.signInWithWeb3.mockResolvedValue({
+      data: { session: { access_token: "test" } },
+      error: null,
+    });
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/saved"));
+    expect(dappPortal.init).toHaveBeenCalledWith({
+      clientId: "public-client-id",
+      chainId: "8217",
+    });
+    expect(getWalletProvider).toHaveBeenCalledOnce();
+    expect(provider.request).toHaveBeenCalledWith({
+      method: "kaia_requestAccounts",
+    });
+    expect(auth.signInWithWeb3).toHaveBeenCalledWith(expect.objectContaining({
+      chain: "ethereum",
+      statement: "Sign in to MemeCatch with Kaia Wallet.",
+    }));
+    const loginWallet = auth.signInWithWeb3.mock.calls[0][0].wallet;
+    await expect(loginWallet.request({ method: "eth_requestAccounts" })).resolves.toEqual([
+      "0x0000000000000000000000000000000000000001",
+    ]);
+    await expect(loginWallet.request({ method: "eth_chainId" })).resolves.toBe("0x2019");
+    await loginWallet.request({ method: "personal_sign", params: ["message", "address"] });
+    expect(provider.request).toHaveBeenLastCalledWith({
+      method: "personal_sign",
+      params: ["message", "address"],
+    });
+  });
+
+  it("rejects an invalid Unifi Wallet account before authentication", async () => {
+    vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "public-client-id");
+    const provider = wallet();
+    provider.request.mockResolvedValue(["not-an-address"]);
+    dappPortal.init.mockResolvedValue({
+      getWalletProvider: () => provider,
+    });
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    expect(await screen.findByText(/Kaia Wallet 로그인에 실패했어요/)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
   it("explains when the Kaia provider is unavailable", async () => {
     renderLogin();
 
-    fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
 
     expect(await screen.findByText(/Kaia Wallet을 찾지 못했어요/)).toBeTruthy();
     expect(auth.signInWithWeb3).not.toHaveBeenCalled();
@@ -81,7 +174,7 @@ describe("LoginForm Kaia Wallet", () => {
     setWallet(provider);
     renderLogin();
 
-    fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
 
     expect(await screen.findByText(/Kaia Mainnet으로 네트워크를 변경/)).toBeTruthy();
     expect(provider.request).toHaveBeenCalledWith({ method: "eth_chainId" });
@@ -97,7 +190,7 @@ describe("LoginForm Kaia Wallet", () => {
     });
     renderLogin("ko", "//evil.example");
 
-    fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     expect(auth.signInWithWeb3).toHaveBeenCalledWith({
@@ -118,7 +211,7 @@ describe("LoginForm Kaia Wallet", () => {
     );
     renderLogin();
 
-    fireEvent.click(screen.getByRole("button", { name: "Kaia Wallet로 로그인" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
 
     expect(await screen.findByText(/Kaia Wallet 서명이 취소됐어요/)).toBeTruthy();
     expect(router.replace).not.toHaveBeenCalled();
@@ -127,7 +220,7 @@ describe("LoginForm Kaia Wallet", () => {
   it("renders the English login UI and unavailable-wallet error", async () => {
     renderLogin("en");
 
-    fireEvent.click(screen.getByRole("button", { name: "Continue with Kaia Wallet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Unifi Wallet" }));
 
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeTruthy();
     expect(screen.getByLabelText("Email")).toBeTruthy();
@@ -138,7 +231,7 @@ describe("LoginForm Kaia Wallet", () => {
     setWallet(wallet("0x1"));
     renderLogin("ja");
 
-    fireEvent.click(screen.getByRole("button", { name: "Kaia Walletでログイン" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Walletでログイン" }));
 
     expect(await screen.findByText(/Kaia Mainnetに切り替えて/)).toBeTruthy();
     expect(auth.signInWithWeb3).not.toHaveBeenCalled();
@@ -151,7 +244,7 @@ describe("LoginForm Kaia Wallet", () => {
     );
     renderLogin("zh-tw");
 
-    fireEvent.click(screen.getByRole("button", { name: "使用 Kaia Wallet 登录" }));
+    fireEvent.click(screen.getByRole("button", { name: "使用 Unifi Wallet 登录" }));
 
     expect(await screen.findByText(/Kaia Wallet 签名已取消/)).toBeTruthy();
   });

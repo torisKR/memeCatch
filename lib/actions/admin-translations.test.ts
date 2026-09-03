@@ -70,6 +70,7 @@ function query(result: { data: unknown; error: { message: string } | null; count
 function operatorClient(
   tableQueries: Record<string, ReturnType<typeof query>[]>,
   rpc = vi.fn(),
+  isOperator = true,
 ) {
   return {
     auth: {
@@ -80,7 +81,9 @@ function operatorClient(
       if (!next) throw new Error(`Unexpected query for ${table}`);
       return next;
     }),
-    rpc,
+    rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
+      ? Promise.resolve({ data: isOperator, error: null })
+      : rpc(name, args)),
   };
 }
 
@@ -261,7 +264,7 @@ describe("translation coverage desk", () => {
 
   it("does not turn a query failure or non-operator session into zero coverage", async () => {
     const profile = query({ data: { role: "member" }, error: null });
-    const supabase = operatorClient({ profiles: [profile] });
+    const supabase = operatorClient({ profiles: [profile] }, vi.fn(), false);
     createClient.mockResolvedValue(supabase);
 
     await expect(getTranslationCoverage()).resolves.toEqual({ ok: false, error: "운영자 권한이 없어요." });
@@ -271,14 +274,14 @@ describe("translation coverage desk", () => {
 describe("missing translation draft preview", () => {
   it("rejects a non-operator before listing missing translations", async () => {
     const profile = query({ data: { role: "member" }, error: null });
-    const supabase = operatorClient({ profiles: [profile] });
+    const supabase = operatorClient({ profiles: [profile] }, vi.fn(), false);
     createClient.mockResolvedValue(supabase);
 
     await expect(listMissingMemeTranslations({ locale: "en" })).resolves.toEqual({
       ok: false,
       error: "운영자 권한이 없어요.",
     });
-    expect(supabase.from).toHaveBeenCalledTimes(1);
+    expect(supabase.from).not.toHaveBeenCalled();
     expect(requestOpenAiStructured).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
   });

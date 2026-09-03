@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics";
 describe("durable growth tracking", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    document.cookie = "mc_growth_session=; Max-Age=0; Path=/";
     Object.defineProperty(navigator, "sendBeacon", {
       configurable: true,
       value: vi.fn(() => true),
@@ -34,6 +35,8 @@ describe("durable growth tracking", () => {
     const body = await payload.text();
     expect(body).not.toContain("private beacon payload");
     expect(body).not.toContain('"query"');
+    expect(sessionStorage.length).toBe(0);
+    expect(document.cookie).not.toContain("mc_growth_session=");
   });
 
   it.each([

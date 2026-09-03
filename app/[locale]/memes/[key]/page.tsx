@@ -19,6 +19,7 @@ import { ExportButton } from "@/components/export-button";
 import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { SaveButton } from "@/components/save-button";
+import { ShareButton } from "@/components/share-button";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
@@ -47,6 +48,9 @@ type DetailCopy = {
   language: string;
   korean: string;
   reviewed: string;
+  share: string;
+  shareCopied: string;
+  shareCopiedStatus: string;
   machineTitle: string;
   machineBody: string;
   staleTitle: string;
@@ -76,6 +80,9 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     language: "Available languages",
     korean: "Korean original",
     reviewed: "Human-reviewed translation",
+    share: "Share",
+    shareCopied: "Link copied!",
+    shareCopiedStatus: "Link copied.",
     machineTitle: "Machine-translated draft",
     machineBody: "This translation is visible for reference, but it has not been reviewed by an editor and is not indexed by search engines.",
     staleTitle: "Translation needs an update",
@@ -103,6 +110,9 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     language: "ほかの言語",
     korean: "韓国語の原文",
     reviewed: "人が確認した翻訳",
+    share: "共有",
+    shareCopied: "リンクをコピーしました！",
+    shareCopiedStatus: "リンクをコピーしました。",
     machineTitle: "機械翻訳の下書き",
     machineBody: "参考用に公開していますが、編集者による確認前のため、検索エンジンには登録されません。",
     staleTitle: "翻訳の更新が必要です",
@@ -130,6 +140,9 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     language: "其他语言",
     korean: "韩文原文",
     reviewed: "人工审核翻译",
+    share: "分享",
+    shareCopied: "链接已复制！",
+    shareCopiedStatus: "链接已复制。",
     machineTitle: "机器翻译草稿",
     machineBody: "此翻译仅供参考，尚未经过编辑审核，因此不会被搜索引擎收录。",
     staleTitle: "翻译需要更新",
@@ -157,6 +170,9 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
     language: "其他語言",
     korean: "韓文原文",
     reviewed: "人工審核翻譯",
+    share: "分享",
+    shareCopied: "連結已複製！",
+    shareCopiedStatus: "連結已複製。",
     machineTitle: "機器翻譯草稿",
     machineBody: "此翻譯僅供參考，尚未經過編輯審核，因此不會被搜尋引擎收錄。",
     staleTitle: "翻譯需要更新",
@@ -426,6 +442,18 @@ export default async function LocalizedMemePage({ params }: Props) {
       <div className="mt-3">
         <MemeUseKitEntry locale={locale} />
       </div>
+      {!needsReview && (
+        <div className="mt-3 flex justify-end">
+          <ShareButton
+            path={canonical}
+            title={meme.title}
+            label={copy.share}
+            copiedLabel={copy.shareCopied}
+            copiedStatus={copy.shareCopiedStatus}
+            siteName={seo.siteName}
+          />
+        </div>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
         <div className="space-y-6">

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,6 +11,7 @@ const USER_ENDPOINT =
 type TikTokTokenResponse = {
   access_token?: string;
   open_id?: string;
+  scope?: string;
   error?: string;
   error_description?: string;
 };
@@ -47,6 +48,19 @@ export function getTikTokRedirectUri() {
 
 export function getTikTokClientKey() {
   return process.env.TIKTOK_CLIENT_KEY ?? null;
+}
+
+export function isValidTikTokOAuthState(
+  expected: string | undefined,
+  returned: string | null,
+) {
+  if (!expected || !returned) return false;
+  const expectedBytes = Buffer.from(expected);
+  const returnedBytes = Buffer.from(returned);
+  return (
+    expectedBytes.length === returnedBytes.length &&
+    timingSafeEqual(expectedBytes, returnedBytes)
+  );
 }
 
 function isPublicTikTokUrl(value: string | undefined): value is string {
@@ -86,7 +100,16 @@ async function exchangeCode(code: string, redirectUri: string) {
   if (!response.ok || !result?.access_token || !result.open_id) {
     throw new Error(result?.error_description ?? "TikTok token exchange failed");
   }
-  return { accessToken: result.access_token, openId: result.open_id };
+  const scopes = new Set(
+    (result.scope ?? "")
+      .split(",")
+      .map((scope) => scope.trim())
+      .filter(Boolean),
+  );
+  if (!scopes.has("user.info.basic")) {
+    throw new Error("TikTok basic profile permission was not granted");
+  }
+  return { accessToken: result.access_token, openId: result.open_id, scopes };
 }
 
 async function fetchTikTokUser(accessToken: string, expectedOpenId: string) {
@@ -105,21 +128,65 @@ async function fetchTikTokUser(accessToken: string, expectedOpenId: string) {
   return user;
 }
 
+async function reserveTikTokIdentity(
+  admin: ReturnType<typeof createAdminClient>,
+  providerSubject: string,
+) {
+  const candidateEmail = `${randomBytes(32).toString("hex")}@auth.memecatch.internal`;
+  const { error: insertError } = await admin
+    .from("tiktok_provider_identities")
+    .insert({ provider_subject: providerSubject, internal_email: candidateEmail });
+  if (insertError && insertError.code !== "23505") {
+    throw new Error("Supabase TikTok identity reservation failed");
+  }
+
+  const { data, error } = await admin
+    .from("tiktok_provider_identities")
+    .select("internal_email, user_id")
+    .eq("provider_subject", providerSubject)
+    .maybeSingle();
+  if (error || !data) {
+    throw new Error("Supabase TikTok identity reservation failed");
+  }
+  return data;
+}
+
+async function bindTikTokIdentity(
+  admin: ReturnType<typeof createAdminClient>,
+  providerSubject: string,
+  userId: string,
+) {
+  const { error: updateError } = await admin
+    .from("tiktok_provider_identities")
+    .update({ user_id: userId, updated_at: new Date().toISOString() })
+    .eq("provider_subject", providerSubject)
+    .is("user_id", null);
+  if (updateError) throw new Error("Supabase TikTok identity binding failed");
+
+  const { data, error } = await admin
+    .from("tiktok_provider_identities")
+    .select("user_id")
+    .eq("provider_subject", providerSubject)
+    .maybeSingle();
+  if (error || data?.user_id !== userId) {
+    throw new Error("Supabase TikTok identity binding failed");
+  }
+}
+
 /** TikTok 신원을 내부 Supabase 사용자로 연결하고 현재 응답에 세션 쿠키를 설정한다. */
 export async function signInWithTikTokCode(code: string, redirectUri: string) {
-  const { accessToken, openId } = await exchangeCode(code, redirectUri);
+  const { accessToken, openId, scopes } = await exchangeCode(code, redirectUri);
   const tiktokUser = await fetchTikTokUser(accessToken, openId);
 
-  // TikTok open_id 원문을 이메일 식별자에 노출하지 않는다.
-  const subject = createHash("sha256").update(openId).digest("hex").slice(0, 40);
-  const email = `tiktok_${subject}@auth.memecatch.internal`;
+  const subject = createHash("sha256").update(openId).digest("hex");
   const nickname = tiktokUser.display_name?.trim().slice(0, 20) || `틱톡러_${subject.slice(0, 6)}`;
 
   const admin = createAdminClient();
+  const identity = await reserveTikTokIdentity(admin, subject);
   const { data: link, error: linkError } =
     await admin.auth.admin.generateLink({
       type: "magiclink",
-      email,
+      email: identity.internal_email,
       options: {
         data: {
           nickname,
@@ -142,7 +209,14 @@ export async function signInWithTikTokCode(code: string, redirectUri: string) {
     throw new Error("Supabase TikTok session failed");
   }
 
-  return { accessToken, userId: sessionData.user.id };
+  try {
+    await bindTikTokIdentity(admin, subject, sessionData.user.id);
+  } catch {
+    await supabase.auth.signOut();
+    throw new Error("Supabase TikTok identity binding failed");
+  }
+
+  return { accessToken, userId: sessionData.user.id, scopes };
 }
 
 /**

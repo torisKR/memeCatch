@@ -50,12 +50,8 @@ async function requireOperator() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") throw new Error("운영자 권한이 없어요.");
+  const { data: isOperator } = await supabase.rpc("is_operator");
+  if (!isOperator) throw new Error("운영자 권한이 없어요.");
   return { supabase, uid: user.id };
 }
 
@@ -68,13 +64,46 @@ async function logAudit(
   detail?: Record<string, unknown>
 ) {
   const admin = createAdminClient();
-  await admin.from("admin_audit_log").insert({
+  const { error } = await admin.from("admin_audit_log").insert({
     actor_id: actorId,
     action,
     entity_type: entityType,
     entity_id: entityId,
     detail: (detail ?? null) as Json,
   });
+  if (error) throw new Error("감사 로그 저장에 실패했어요.");
+}
+
+async function logAuditOutcome(
+  actorId: string,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  outcome: "intent" | "completed" | "failed",
+  detail?: Record<string, unknown>,
+) {
+  await logAudit(actorId, `${action}.${outcome}`, entityType, entityId, detail);
+}
+
+async function finalizeAudit(
+  actorId: string,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  detail?: Record<string, unknown>,
+) {
+  try {
+    await logAuditOutcome(
+      actorId,
+      action,
+      entityType,
+      entityId,
+      "completed",
+      detail,
+    );
+  } catch {
+    console.error({ event: "admin_audit_completion_pending", action });
+  }
 }
 
 function errMessage(e: unknown): string {
@@ -773,14 +802,52 @@ export async function setDiscussionVisibility(input: {
   try {
     const { uid } = await requireOperator();
     const admin = createAdminClient();
-    const { error } = await admin
-      .from("discussions")
-      .update({ status: input.status })
-      .eq("id", input.discussionId);
-    if (error) return { ok: false, error: error.message };
-    await logAudit(uid, "discussion.set_status", "discussion", input.discussionId, {
-      status: input.status,
-    });
+    const action = "discussion.set_status";
+    const detail = { status: input.status };
+    await logAuditOutcome(
+      uid,
+      action,
+      "discussion",
+      input.discussionId,
+      "intent",
+      detail,
+    );
+    const { error } = await (async () => {
+      try {
+        return await admin
+          .from("discussions")
+          .update({ status: input.status })
+          .eq("id", input.discussionId);
+      } catch (cause) {
+        await logAuditOutcome(
+          uid,
+          action,
+          "discussion",
+          input.discussionId,
+          "failed",
+          detail,
+        );
+        throw cause;
+      }
+    })();
+    if (error) {
+      await logAuditOutcome(
+        uid,
+        action,
+        "discussion",
+        input.discussionId,
+        "failed",
+        detail,
+      );
+      return { ok: false, error: error.message };
+    }
+    await finalizeAudit(
+      uid,
+      action,
+      "discussion",
+      input.discussionId,
+      detail,
+    );
     revalidatePath("/admin/reports");
     return { ok: true };
   } catch (e) {
@@ -933,12 +1000,44 @@ export async function setUserPlus(input: {
       ? Math.max(1, Math.min(Math.trunc(input.months ?? 1), 36))
       : 1;
     const admin = createAdminClient();
-    const { data, error } = await admin.rpc("admin_set_plus_entitlement", {
-      p_email: normalized,
-      p_active: input.active,
-      p_months: months,
-    });
+    const action = input.active ? "plus.grant" : "plus.revoke";
+    const detail = { email: normalized, active: input.active, months };
+    await logAuditOutcome(
+      uid,
+      action,
+      "billing_subscription",
+      null,
+      "intent",
+      detail,
+    );
+    const { data, error } = await (async () => {
+      try {
+        return await admin.rpc("admin_set_plus_entitlement", {
+          p_email: normalized,
+          p_active: input.active,
+          p_months: months,
+        });
+      } catch (cause) {
+        await logAuditOutcome(
+          uid,
+          action,
+          "billing_subscription",
+          null,
+          "failed",
+          detail,
+        );
+        throw cause;
+      }
+    })();
     if (error) {
+      await logAuditOutcome(
+        uid,
+        action,
+        "billing_subscription",
+        null,
+        "failed",
+        detail,
+      );
       const msg = error.message.includes("user_not_found")
         ? "해당 이메일의 가입 계정을 찾을 수 없어요. (사용자가 먼저 로그인·가입해야 해요.)"
         : error.message.includes("invalid_email")
@@ -947,12 +1046,12 @@ export async function setUserPlus(input: {
       return { ok: false, error: msg };
     }
     const result = data as { userId?: string } | null;
-    await logAudit(
+    await finalizeAudit(
       uid,
-      input.active ? "plus.grant" : "plus.revoke",
+      action,
       "billing_subscription",
       result?.userId ?? null,
-      { email: normalized, active: input.active, months }
+      detail,
     );
     revalidatePath("/admin/subscriptions");
     const { data: latest } = await admin.rpc("admin_get_plus_status", {

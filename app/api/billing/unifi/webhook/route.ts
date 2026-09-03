@@ -1,4 +1,7 @@
-import { processUnifiPaymentEvent } from "@/lib/billing/repository.server";
+import {
+  hasUnifiPaymentLink,
+  processUnifiPaymentEvent,
+} from "@/lib/billing/repository.server";
 import {
   getUnifiPayConfig,
   getUnifiPayTransaction,
@@ -6,12 +9,17 @@ import {
   parseLinkIdFromOrderId,
   parseUnifiPayWebhookBody,
 } from "@/lib/billing/unifi-pay.server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
 
 const MAX_BODY_BYTES = 16 * 1024;
+const MAX_TRANSACTION_ID_LENGTH = 256;
+const MAX_ORDER_ID_LENGTH = 512;
+const MAX_LINK_ID_LENGTH = 200;
+const WEBHOOK_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
 function json(body: unknown, status: number) {
   return Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -42,12 +50,34 @@ export async function POST(request: Request) {
 
   const body = parseUnifiPayWebhookBody(rawBody);
   if (!body) return json({ ok: false, error: "invalid_payload" }, 400);
+  if (
+    body.transactionId.length > MAX_TRANSACTION_ID_LENGTH ||
+    body.orderId.length > MAX_ORDER_ID_LENGTH
+  ) {
+    return json({ ok: false, error: "invalid_identifier" }, 400);
+  }
 
   // body의 orderId는 어떤 거래를 확인할지 고르는 라우팅 힌트일 뿐이다.
   const bodyLinkId = parseLinkIdFromOrderId(body.orderId);
   if (!bodyLinkId) return json({ ok: true, ignored: true }, 200);
+  if (bodyLinkId.length > MAX_LINK_ID_LENGTH) {
+    return json({ ok: false, error: "invalid_identifier" }, 400);
+  }
 
   try {
+    if (!(await hasUnifiPaymentLink(bodyLinkId))) {
+      return json({ ok: true, ignored: true, reason: "unknown_payment_link" }, 200);
+    }
+    const limit = rateLimit(`unifi-webhook:${bodyLinkId}`, WEBHOOK_RATE_LIMIT);
+    if (!limit.ok) {
+      return Response.json(
+        { ok: false, error: "settlement_throttled" },
+        {
+          status: 503,
+          headers: { "cache-control": "no-store", "retry-after": String(limit.retryAfterSec) },
+        },
+      );
+    }
     const tx = await getUnifiPayTransaction(config, body.transactionId);
     // 우리 거래가 아니거나 금액·통화·상점이 다르면 권한을 만들지 않는다.
     if (!tx || !isExpectedUnifiPayTransaction(tx, config)) {
@@ -82,7 +112,7 @@ export async function POST(request: Request) {
       payload: {
         provider: "unifi-pay",
         transactionId: tx.transactionId,
-        orderId: body.orderId,
+        orderId: tx.orderId,
         linkId,
         providerStatus: tx.status,
         orderAmount: tx.orderAmount,

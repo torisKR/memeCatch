@@ -47,9 +47,7 @@ export default async function MyPage({
       getPremiumEntitlement(),
       getRequestLocale(),
       supabase
-        .from("profiles")
-        .select("nickname, interests, age_group")
-        .eq("id", user.id)
+        .rpc("get_my_profile")
         .single(),
       supabase
         .from("profile_customizations")

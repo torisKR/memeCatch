@@ -33,8 +33,8 @@ async function operatorClient() {
   const client = await createClient();
   const { data: { user } } = await client.auth.getUser();
   if (!user) return { ok: false as const, response: Response.json({ ok: false, error: "signed_out" }, { status: 401 }) };
-  const { data: profile } = await client.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "operator") {
+  const { data: isOperator } = await client.rpc("is_operator");
+  if (!isOperator) {
     return { ok: false as const, response: Response.json({ ok: false, error: "operator_required" }, { status: 403 }) };
   }
   return { ok: true as const, client };

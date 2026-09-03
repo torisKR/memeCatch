@@ -29,12 +29,8 @@ async function requireOperator() {
   } = await supabase.auth.getUser();
   if (!user) throw new ActionError("로그인이 필요해요.");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") {
+  const { data: isOperator } = await supabase.rpc("is_operator");
+  if (!isOperator) {
     throw new ActionError("운영자 권한이 없어요.");
   }
 

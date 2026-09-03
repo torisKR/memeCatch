@@ -35,7 +35,7 @@ type KaiaEventMap = {
   message(message: { type: string; data: unknown }): void;
 };
 type KaiaProvider = {
-  address: `0x${string}`;
+  address: string;
   request(args: { method: string; params?: unknown }): Promise<unknown>;
   on<Event extends keyof KaiaEventMap>(
     event: Event,
@@ -48,6 +48,8 @@ type KaiaProvider = {
 };
 
 const KAIA_MAINNET_CHAIN_ID = "0x2019";
+const UNIFI_MAINNET_CHAIN_ID = "8217";
+const KAIA_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/i;
 
 export function LoginForm({
   next,
@@ -93,22 +95,62 @@ export function LoginForm({
 
   async function startKaiaWalletLogin() {
     if (walletBusy || oauthBusy) return;
-    const wallet = (window as Window & { klaytn?: KaiaProvider }).klaytn;
-    if (!wallet) {
-      setOauthNotice(copy.kaiaUnavailable);
-      return;
-    }
 
     setWalletBusy(true);
     setOauthNotice(null);
     try {
-      const chainId = await wallet.request({ method: "eth_chainId" });
-      if (
-        typeof chainId !== "string" ||
-        chainId.toLowerCase() !== KAIA_MAINNET_CHAIN_ID
-      ) {
-        setOauthNotice(copy.kaiaWrongChain);
-        return;
+      const unifiClientId = process.env.NEXT_PUBLIC_UNIFI_CLIENT_ID?.trim();
+      let wallet: KaiaProvider;
+
+      if (unifiClientId) {
+        const { default: DappPortalSDK } = await import(
+          "@linenext/dapp-portal-sdk"
+        );
+        const sdk = await DappPortalSDK.init({
+          clientId: unifiClientId,
+          chainId: UNIFI_MAINNET_CHAIN_ID,
+        });
+        const sdkWallet = sdk.getWalletProvider();
+        const accounts = await sdkWallet.request({
+          method: "kaia_requestAccounts",
+        });
+        if (
+          !Array.isArray(accounts) ||
+          typeof accounts[0] !== "string" ||
+          !KAIA_ADDRESS_PATTERN.test(accounts[0])
+        ) {
+          throw new Error("Unifi Wallet returned an invalid account address");
+        }
+        const account = accounts[0];
+        wallet = {
+          address: account,
+          request: ({ method, params }) => {
+            if (method === "eth_requestAccounts") return Promise.resolve([account]);
+            if (method === "eth_chainId") return Promise.resolve(KAIA_MAINNET_CHAIN_ID);
+            if (params !== undefined && !Array.isArray(params)) {
+              throw new Error("Unifi Wallet received invalid request parameters");
+            }
+            return sdkWallet.request({ method, params });
+          },
+          on: () => undefined,
+          removeListener: () => undefined,
+        };
+      } else {
+        const fallback = (window as Window & { klaytn?: KaiaProvider }).klaytn;
+        if (!fallback) {
+          setOauthNotice(copy.kaiaUnavailable);
+          return;
+        }
+
+        const chainId = await fallback.request({ method: "eth_chainId" });
+        if (
+          typeof chainId !== "string" ||
+          chainId.toLowerCase() !== KAIA_MAINNET_CHAIN_ID
+        ) {
+          setOauthNotice(copy.kaiaWrongChain);
+          return;
+        }
+        wallet = fallback;
       }
 
       const { data, error } = await createClient().auth.signInWithWeb3({
@@ -361,6 +403,15 @@ function FormError({ message }: { message?: string }) {
   );
 }
 
+function FormNotice({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p role="status" aria-live="polite" className="rounded-xl bg-surface-2 px-4 py-3 text-foreground">
+      {message}
+    </p>
+  );
+}
+
 function SubmitButton({
   pending,
   label,
@@ -454,6 +505,7 @@ function SignUpForm({ next }: { next: string }) {
   return (
     <form action={action} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
+      <FormNotice message={state?.notice} />
       <FormError message={state?.formError} />
       <Field id={nickId} label={copy.nickname} error={state?.fieldErrors?.nickname}>
         <input

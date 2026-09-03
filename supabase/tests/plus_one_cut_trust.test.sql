@@ -238,6 +238,16 @@ select is(
   'the legacy call persists bulk mode'
 );
 
+insert into public.memes (
+  id, title, slug, summary, description, origin, moderation_status
+)
+select
+  ('00000000-0000-0000-0000-' || lpad(fixture.n::text, 12, '0'))::uuid,
+  'Untrusted fixture ' || fixture.n,
+  'untrusted-fixture-' || fixture.n,
+  'summary', 'description', 'origin', 'approved'
+from generate_series(1, 12) as fixture(n);
+
 insert into public.plus_global_daily_challenges (challenge_date, candidate_meme_ids)
 select
   (now() at time zone 'Asia/Seoul')::date,

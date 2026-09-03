@@ -136,6 +136,7 @@ describe("MPE evidence draft", () => {
         return query;
       },
       rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === "is_operator") return { data: true, error: null };
         rpcCalls.push([name, args]);
         return { data: {}, error: null };
       },
@@ -179,9 +180,12 @@ describe("MPE evidence draft", () => {
         };
         return query;
       },
-      rpc: async (name: string) => name === "reserve_openrouter_daily_request"
-        ? { data: null, error: rpcError }
-        : { data: {}, error: null },
+      rpc: async (name: string) => {
+        if (name === "is_operator") return { data: true, error: null };
+        return name === "reserve_openrouter_daily_request"
+          ? { data: null, error: rpcError }
+          : { data: {}, error: null };
+      },
     };
 
     await expect(generateEvidenceDraft("candidate-1", client as never)).rejects.toMatchObject({ message, status });

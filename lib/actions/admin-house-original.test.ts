@@ -20,25 +20,12 @@ type FromHandler = (table: string) => unknown;
 
 function operatorClient(options: {
   from: FromHandler;
-  rpc?: ReturnType<typeof vi.fn>;
+  rpc?: (name: string, args?: unknown) => unknown;
   user?: { id: string } | null;
   role?: string;
 }) {
-  const profile = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    single: vi.fn().mockResolvedValue({
-      data: { role: options.role ?? "operator" },
-      error: null,
-    }),
-  };
-  profile.select.mockReturnValue(profile);
-  profile.eq.mockReturnValue(profile);
-
-  const from: FromHandler = (table) => {
-    if (table === "profiles") return profile;
-    return options.from(table);
-  };
+  const from: FromHandler = (table) => options.from(table);
+  const rpc = options.rpc ?? vi.fn();
 
   return {
     auth: {
@@ -47,7 +34,9 @@ function operatorClient(options: {
       }),
     },
     from,
-    rpc: options.rpc ?? vi.fn(),
+    rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
+      ? Promise.resolve({ data: (options.role ?? "operator") === "operator", error: null })
+      : rpc(name, args)),
   };
 }
 
@@ -144,7 +133,7 @@ describe("createHouseOriginal", () => {
     expect(insert).not.toHaveBeenCalledWith(
       expect.objectContaining({ house_rights_attested_at: expect.anything() }),
     );
-    expect(client.rpc).not.toHaveBeenCalled();
+    expect(client.rpc).toHaveBeenCalledWith("is_operator");
     expect(sourcesInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         meme_id: memeId,

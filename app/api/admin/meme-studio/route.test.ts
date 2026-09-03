@@ -19,16 +19,9 @@ vi.mock("@/lib/meme-country", () => ({
 import { POST } from "./route";
 
 function authClient(user: { id: string } | null, role?: string) {
-  const profile = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    single: vi.fn().mockResolvedValue({ data: role ? { role } : null, error: null }),
-  };
-  profile.select.mockReturnValue(profile);
-  profile.eq.mockReturnValue(profile);
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }) },
-    from: vi.fn().mockReturnValue(profile),
+    rpc: vi.fn().mockResolvedValue({ data: role === "operator", error: null }),
   };
 }
 

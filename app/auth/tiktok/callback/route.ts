@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   getTikTokRedirectUri,
   importTikTokVideosAsSubmissions,
+  isValidTikTokOAuthState,
   signInWithTikTokCode,
 } from "@/lib/tiktok-auth.server";
 import { safeNext } from "@/lib/safe-redirect";
@@ -18,9 +19,7 @@ export async function GET(request: NextRequest) {
   let importedCount: number | null = null;
   let importFailed = false;
   if (
-    expectedState &&
-    returnedState &&
-    expectedState === returnedState &&
+    isValidTikTokOAuthState(expectedState, returnedState) &&
     code &&
     redirectUri &&
     !request.nextUrl.searchParams.has("error")
@@ -29,7 +28,9 @@ export async function GET(request: NextRequest) {
       const session = await signInWithTikTokCode(code, redirectUri);
       success = true;
       if (importVideos) {
-        try {
+        if (!session.scopes.has("video.list")) {
+          importFailed = true;
+        } else try {
           importedCount = await importTikTokVideosAsSubmissions(session);
         } catch {
           importFailed = true;

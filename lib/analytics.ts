@@ -97,12 +97,6 @@ const DURABLE_GROWTH_EVENTS = new Set<GtagEvent>([
 function sendDurableGrowthEvent(event: GtagEvent, params: Record<string, string | number>) {
   if (typeof window === "undefined" || !DURABLE_GROWTH_EVENTS.has(event)) return;
   try {
-    const key = "memecatch:growth-session:v1";
-    const stored = window.sessionStorage.getItem(key);
-    const sessionId = stored || crypto.randomUUID();
-    if (!stored) window.sessionStorage.setItem(key, sessionId);
-    const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `mc_growth_session=${sessionId}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
     const payload = JSON.stringify({
       eventName: event,
       path: window.location.pathname,

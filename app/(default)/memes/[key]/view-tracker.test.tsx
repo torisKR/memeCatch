@@ -5,18 +5,15 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const track = vi.hoisted(() => vi.fn());
-const rpc = vi.hoisted(() => vi.fn(() => Promise.resolve({ data: null, error: null })));
 
 vi.mock("@/lib/analytics", () => ({ track }));
-vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc }) }));
 
 import { ViewTracker } from "@/app/(default)/memes/[key]/view-tracker";
 
 beforeEach(() => {
   localStorage.clear();
   track.mockReset();
-  rpc.mockClear();
-  vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000000");
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 202 })));
 });
 
 afterEach(() => {
@@ -50,5 +47,11 @@ describe("ViewTracker", () => {
       ["meme_view", { meme_id: "meme-a" }],
       ["meme_view", { meme_id: "meme-b" }],
     ]);
+    expect(fetch).toHaveBeenLastCalledWith("/api/memes/view", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ memeId: "meme-b" }),
+      keepalive: true,
+    });
   });
 });

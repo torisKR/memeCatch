@@ -63,7 +63,7 @@ export function GenerationVotes({ memeId }: { memeId: string }) {
     setUserId(user?.id ?? null);
     if (user) {
       const [{ data: profile }, { data: mine }] = await Promise.all([
-        supabase.from("profiles").select("age_group").eq("id", user.id).single(),
+        supabase.rpc("get_my_profile").single(),
         supabase
           .from("generation_votes")
           .select("vote, age_group")

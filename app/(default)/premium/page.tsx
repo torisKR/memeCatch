@@ -328,11 +328,7 @@ export default async function PremiumPage({
     outcomeHistoryRes,
     globalDailyChallengeRes,
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("interests")
-      .eq("id", user.id)
-      .maybeSingle(),
+    supabase.rpc("get_my_profile").maybeSingle(),
     listOwnUnifiPaymentHistory(),
     entitlement.isPremium
       ? supabase.from("saved_memes").select("meme_id", { count: "exact", head: true })

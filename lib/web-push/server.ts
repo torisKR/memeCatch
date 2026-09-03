@@ -34,6 +34,39 @@ type ClaimedPush = {
 
 type VapidConfig = { publicKey: string; privateKey: string; subject: string };
 
+const WEB_PUSH_ORIGINS = new Set([
+  "https://fcm.googleapis.com",
+  "https://push.services.mozilla.com",
+  "https://updates.push.services.mozilla.com",
+]);
+const MAX_SUBSCRIPTIONS_PER_USER = 5;
+const MAX_DELIVERY_BATCH = 25;
+
+export function isSupportedWebPushEndpoint(endpoint: string): boolean {
+  if (endpoint.length < 20 || endpoint.length > 2048 || /\s/.test(endpoint)) return false;
+  try {
+    const url = new URL(endpoint);
+    const providerPath = (
+      url.origin === "https://fcm.googleapis.com"
+      && (url.pathname.startsWith("/fcm/send/") || url.pathname.startsWith("/wp/"))
+    ) || (
+      (url.origin === "https://push.services.mozilla.com"
+        || url.origin === "https://updates.push.services.mozilla.com")
+      && url.pathname.startsWith("/wpush/")
+    ) || url.hostname.endsWith(".push.apple.com");
+    return url.protocol === "https:"
+      && url.username === ""
+      && url.password === ""
+      && url.port === ""
+      && url.hash === ""
+      && url.pathname !== "/"
+      && (WEB_PUSH_ORIGINS.has(url.origin) || url.hostname.endsWith(".push.apple.com"))
+      && providerPath;
+  } catch {
+    return false;
+  }
+}
+
 function base64url(value: Buffer | string): string {
   return Buffer.from(value).toString("base64url");
 }
@@ -136,6 +169,9 @@ export async function sendWebPush(
   payload: PushMessage,
   config: VapidConfig,
 ): Promise<Response> {
+  if (!isSupportedWebPushEndpoint(subscription.endpoint)) {
+    throw new Error("invalid_push_endpoint");
+  }
   return fetch(subscription.endpoint, {
     method: "POST",
     headers: {
@@ -146,6 +182,7 @@ export async function sendWebPush(
       urgency: "normal",
     },
     body: encodePayload(payload, subscription),
+    redirect: "error",
     signal: AbortSignal.timeout(10_000),
   });
 }
@@ -158,7 +195,10 @@ export async function runWebPushDelivery(limit = 5) {
   const { data: queued, error: enqueueError } = await admin.rpc("enqueue_web_push_trend_alerts");
   if (enqueueError) return { status: "failed" as const, queued: 0, delivered: 0, failed: 0, error: "enqueue_failed" };
 
-  const { data, error: claimError } = await admin.rpc("claim_web_push_outbox", { p_limit: limit });
+  const deliveryLimit = Number.isFinite(limit)
+    ? Math.max(1, Math.min(Math.trunc(limit), MAX_DELIVERY_BATCH))
+    : 5;
+  const { data, error: claimError } = await admin.rpc("claim_web_push_outbox", { p_limit: deliveryLimit });
   if (claimError) return { status: "failed" as const, queued: Number(queued ?? 0), delivered: 0, failed: 0, error: "claim_failed" };
 
   const outcomes = await Promise.all(((data ?? []) as ClaimedPush[]).map(async (item) => {
@@ -171,19 +211,21 @@ export async function runWebPushDelivery(limit = 5) {
     let deliveryError: string | null = subscriptionError?.message ?? (payload ? null : "invalid_payload");
     let liveSubscriptions = 0;
     if (!deliveryError) {
-      const subscriptionOutcomes = await Promise.all((subscriptions ?? []).map(async (subscription) => {
-        try {
-          const response = await sendWebPush(subscription, payload!, config);
-          if (response.status === 404 || response.status === 410) {
-            await admin.from("web_push_subscriptions").delete().eq("endpoint", subscription.endpoint);
-            return null;
+      const subscriptionOutcomes = await Promise.all((subscriptions ?? [])
+        .slice(0, MAX_SUBSCRIPTIONS_PER_USER)
+        .map(async (subscription) => {
+          try {
+            const response = await sendWebPush(subscription, payload!, config);
+            if (response.status === 404 || response.status === 410) {
+              await admin.from("web_push_subscriptions").delete().eq("endpoint", subscription.endpoint);
+              return null;
+            }
+            if (!response.ok) throw new Error(`push_${response.status}`);
+            return true;
+          } catch (cause) {
+            return cause instanceof Error ? cause.message : "push_failed";
           }
-          if (!response.ok) throw new Error(`push_${response.status}`);
-          return true;
-        } catch (cause) {
-          return cause instanceof Error ? cause.message : "push_failed";
-        }
-      }));
+        }));
       liveSubscriptions = subscriptionOutcomes.filter((outcome) => outcome === true).length;
       deliveryError = subscriptionOutcomes.find((outcome) => typeof outcome === "string") ?? null;
     }

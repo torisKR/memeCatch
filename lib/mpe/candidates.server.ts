@@ -287,8 +287,8 @@ export function discoverHashCandidateIds(
 async function requireOperator(client: MpeClient) {
   const { data: { user } } = await client.auth.getUser();
   if (!user) throw new MpeCandidateError("signed_out", 401);
-  const { data: profile } = await client.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "operator") throw new MpeCandidateError("operator_required", 403);
+  const { data: isOperator } = await client.rpc("is_operator");
+  if (!isOperator) throw new MpeCandidateError("operator_required", 403);
   return user;
 }
 

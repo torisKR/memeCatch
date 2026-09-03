@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -67,6 +67,31 @@ describe("MPE FFmpeg worker", () => {
       await expect(worker.detectSceneTimes(videoPath, 2_000)).rejects.toThrow();
     } finally {
       process.env.PATH = previousPath;
+    }
+  });
+
+  it("terminates an unresponsive ffprobe at the configured timeout", async () => {
+    const binDirectory = join(directory, "hanging-bin");
+    await mkdir(binDirectory);
+    const ffprobe = join(binDirectory, "ffprobe");
+    await writeFile(ffprobe, "#!/bin/sh\nwhile :; do :; done\n", "utf8");
+    await chmod(ffprobe, 0o755);
+    const previousPath = process.env.PATH;
+    const previousTimeout = process.env.MPE_FFPROBE_TIMEOUT_MS;
+    process.env.PATH = binDirectory;
+    process.env.MPE_FFPROBE_TIMEOUT_MS = "50";
+    try {
+      const timeoutWorker = await import(
+        `${new URL("./mpe-media-worker.mjs", import.meta.url).href}?timeout=${Date.now()}`
+      ) as unknown as Pick<WorkerModule, "inspectMedia">;
+      await expect(timeoutWorker.inspectMedia(videoPath)).rejects.toMatchObject({
+        killed: true,
+        signal: "SIGKILL",
+      });
+    } finally {
+      process.env.PATH = previousPath;
+      if (previousTimeout === undefined) delete process.env.MPE_FFPROBE_TIMEOUT_MS;
+      else process.env.MPE_FFPROBE_TIMEOUT_MS = previousTimeout;
     }
   });
 

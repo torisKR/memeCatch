@@ -23,11 +23,7 @@ export async function requireOperatorPage(
   } = await supabase.auth.getUser();
   const next = withAllowlistedSearch(nextPath, search);
   if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") redirect("/");
+  const { data: isOperator } = await supabase.rpc("is_operator");
+  if (!isOperator) redirect("/");
   return { supabase, user };
 }

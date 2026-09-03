@@ -22,12 +22,8 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "signed_out" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") {
+  const { data: isOperator } = await supabase.rpc("is_operator");
+  if (!isOperator) {
     return Response.json({ error: "operator_required" }, { status: 403 });
   }
 

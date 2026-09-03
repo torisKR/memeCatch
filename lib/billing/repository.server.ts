@@ -60,11 +60,13 @@ export async function processLatpeedMembershipEvent(
 }
 
 export async function createBillingOrder(
+  userId: string,
   requestId: string,
   growthSessionId: string | null = null,
 ): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("create_billing_order", {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("server_create_billing_order", {
+    p_user_id: userId,
     p_request_id: requestId,
     p_growth_session_id: growthSessionId,
   });
@@ -72,21 +74,37 @@ export async function createBillingOrder(
 }
 
 export async function attachUnifiPaymentLink(
+  userId: string,
   requestId: string,
   providerLinkId: string,
 ): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("attach_unifi_payment_link", {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("server_attach_unifi_payment_link", {
+    p_user_id: userId,
     p_provider_link_id: providerLinkId,
     p_request_id: requestId,
   });
   if (error) throw error;
 }
 
-export async function failBillingOrder(requestId: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("fail_billing_order", { p_request_id: requestId });
+export async function failBillingOrder(userId: string, requestId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("server_fail_billing_order", {
+    p_user_id: userId,
+    p_request_id: requestId,
+  });
   if (error) throw error;
+}
+
+export async function hasUnifiPaymentLink(providerLinkId: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("billing_orders")
+    .select("id")
+    .eq("provider_link_id", providerLinkId)
+    .maybeSingle();
+  if (error) throw error;
+  return data !== null;
 }
 
 export async function processUnifiPaymentEvent(

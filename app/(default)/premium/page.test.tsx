@@ -25,6 +25,7 @@ const fixtures = vi.hoisted(() => {
       getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
     },
     from: vi.fn(() => query),
+    rpc: vi.fn(() => query),
   };
 
   return {

@@ -30,9 +30,7 @@ export default async function OnboardingPage({
   }
 
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("nickname, interests, age_group, use_purpose, preferred_platforms")
-    .eq("id", user.id)
+    .rpc("get_my_profile")
     .maybeSingle();
 
   return (

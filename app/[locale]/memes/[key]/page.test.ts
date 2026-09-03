@@ -33,4 +33,14 @@ describe("localized meme detail metadata", () => {
     expect(source).toContain("<MemeUseKitEntry locale={locale} />");
     expect(source).toContain("<MemeUseKit");
   });
+
+  it("offers the localized canonical share action only after editorial review", () => {
+    expect(source).toContain('import { ShareButton } from "@/components/share-button";');
+    expect(source).toContain("{!needsReview && (\n        <div className=\"mt-3 flex justify-end\">");
+    expect(source).toContain("path={canonical}");
+    expect(source).toContain("label={copy.share}");
+    expect(source).toContain("copiedLabel={copy.shareCopied}");
+    expect(source).toContain("copiedStatus={copy.shareCopiedStatus}");
+    expect(source).toContain("siteName={seo.siteName}");
+  });
 });

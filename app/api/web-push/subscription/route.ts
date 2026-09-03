@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { createClient } from "@/lib/supabase/server";
+import { isSupportedWebPushEndpoint } from "@/lib/web-push/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +26,11 @@ function subscription(value: unknown) {
     typeof keys !== "object" || keys === null || Array.isArray(keys)
   ) return null;
   const keyRecord = keys as Record<string, unknown>;
-  if (typeof keyRecord.p256dh !== "string" || typeof keyRecord.auth !== "string") return null;
+  if (
+    !isSupportedWebPushEndpoint(input.endpoint)
+    || typeof keyRecord.p256dh !== "string"
+    || typeof keyRecord.auth !== "string"
+  ) return null;
   return { endpoint: input.endpoint, p256dh: keyRecord.p256dh, auth: keyRecord.auth };
 }
 

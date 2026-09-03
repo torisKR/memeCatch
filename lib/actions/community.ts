@@ -146,11 +146,7 @@ export async function castGenerationVote(
     data: { user },
   } = await supabase.auth.getUser();
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("age_group")
-      .eq("id", user.id)
-      .single();
+    const { data: profile } = await supabase.rpc("get_my_profile").single();
     if (profile && profile.age_group == null) {
       await supabase
         .from("profiles")

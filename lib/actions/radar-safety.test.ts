@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
-  profileSingle: vi.fn(),
+  isOperator: vi.fn(),
   rpc: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -11,12 +11,9 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mocks.getUser },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ single: mocks.profileSingle })),
-      })),
-    })),
-    rpc: mocks.rpc,
+    rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
+      ? mocks.isOperator()
+      : mocks.rpc(name, args)),
   })),
 }));
 import { applyRadarSafetyReview } from "./radar-safety";
@@ -27,7 +24,7 @@ describe("applyRadarSafetyReview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getUser.mockResolvedValue({ data: { user: { id: "operator-1" } } });
-    mocks.profileSingle.mockResolvedValue({ data: { role: "operator" } });
+    mocks.isOperator.mockResolvedValue({ data: true, error: null });
     mocks.rpc.mockResolvedValue({ data: true, error: null });
   });
 
@@ -54,7 +51,7 @@ describe("applyRadarSafetyReview", () => {
   });
 
   it("requires an operator for every invocation", async () => {
-    mocks.profileSingle.mockResolvedValue({ data: { role: "user" } });
+    mocks.isOperator.mockResolvedValue({ data: false, error: null });
 
     const result = await applyRadarSafetyReview({
       reviewId,

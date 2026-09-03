@@ -14,6 +14,10 @@ const mpeReview = readFileSync(
   join(process.cwd(), "lib/actions/admin-mpe.ts"),
   "utf-8",
 );
+const userAdmin = readFileSync(
+  join(process.cwd(), "lib/actions/admin-users.ts"),
+  "utf-8",
+);
 
 function section(start: string, end: string) {
   return source.slice(source.indexOf(start), source.indexOf(end));
@@ -99,5 +103,65 @@ describe("global feed cache revalidation", () => {
     expect(create).toContain('moderation_status: "pending"');
     expect(create).not.toContain('["fact_checking", "rights_checking", "approved"]');
     expect(create).not.toContain("revalidateCanonicalMemePaths(");
+  });
+});
+
+describe("admin audit durability", () => {
+  it.each([
+    ["content admin", source],
+    ["user admin", userAdmin],
+  ])("fails the action when the %s audit insert fails", (_name, actionSource) => {
+    const start = actionSource.indexOf("async function logAudit");
+    const end = actionSource.indexOf("function errMessage", start);
+    const helper = actionSource.slice(start, end);
+
+    expect(helper).toContain('const { error } = await admin.from("admin_audit_log").insert');
+    expect(helper).toContain('if (error) throw new Error("감사 로그 저장에 실패했어요.")');
+  });
+
+  it.each([
+    ["setUserPassword", "sendPasswordReset", "updateUserById"],
+    ["sendPasswordReset", "setUserRole", "resetPasswordForEmail"],
+    ["setUserRole", "", '.update({ role: input.role })'],
+  ])("wraps %s with intent and completion/failure outcomes", (action, next, mutation) => {
+    const start = userAdmin.indexOf(`export async function ${action}`);
+    const end = next ? userAdmin.indexOf(`export async function ${next}`, start) : userAdmin.length;
+    const actionBody = userAdmin.slice(start, end);
+
+    expect(actionBody.indexOf('"intent"')).toBeLessThan(actionBody.indexOf(mutation));
+    expect(actionBody.indexOf("finalizeAudit(")).toBeGreaterThan(actionBody.indexOf(mutation));
+    expect(actionBody).toContain('"failed"');
+  });
+
+  it("audits Plus entitlement intent before its mutation and outcome afterward", () => {
+    const actionBody = source.slice(source.indexOf("export async function setUserPlus"));
+    const mutation = actionBody.indexOf('admin.rpc("admin_set_plus_entitlement"');
+
+    expect(actionBody.indexOf('"intent"')).toBeLessThan(mutation);
+    expect(actionBody.indexOf("finalizeAudit(")).toBeGreaterThan(mutation);
+    expect(actionBody).toContain('"failed"');
+  });
+
+  it("audits discussion visibility around the service-role mutation", () => {
+    const actionBody = section(
+      "export async function setDiscussionVisibility",
+      "export type DraftResult",
+    );
+    const mutation = actionBody.indexOf('.from("discussions")');
+
+    expect(actionBody.indexOf('"intent"')).toBeLessThan(mutation);
+    expect(actionBody.indexOf("finalizeAudit(")).toBeGreaterThan(mutation);
+    expect(actionBody).toContain('"failed"');
+  });
+
+  it.each([
+    ["content admin", source],
+    ["user admin", userAdmin],
+  ])("sanitizes %s completion reconciliation telemetry", (_name, actionSource) => {
+    const start = actionSource.indexOf("async function finalizeAudit");
+    const end = actionSource.indexOf("function errMessage", start);
+    const helper = actionSource.slice(start, end);
+
+    expect(helper).toContain('console.error({ event: "admin_audit_completion_pending", action })');
   });
 });

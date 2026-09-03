@@ -72,6 +72,30 @@ export type Database = {
           },
         ]
       }
+      tiktok_provider_identities: {
+        Row: {
+          created_at: string
+          internal_email: string
+          provider_subject: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          internal_email: string
+          provider_subject: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          internal_email?: string
+          provider_subject?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       affiliate_product_daily_metrics: {
         Row: {
           clicks: number
@@ -3442,18 +3466,21 @@ export type Database = {
           id: number
           meme_id: string
           session_hash: string
+          viewed_on: string
         }
         Insert: {
           created_at?: string
           id?: never
           meme_id: string
           session_hash: string
+          viewed_on?: string
         }
         Update: {
           created_at?: string
           id?: never
           meme_id?: string
           session_hash?: string
+          viewed_on?: string
         }
         Relationships: [
           {
@@ -4083,6 +4110,18 @@ export type Database = {
         Args: { p_provider_link_id: string; p_request_id: string }
         Returns: Json
       }
+      server_attach_unifi_payment_link: {
+        Args: { p_provider_link_id: string; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      server_create_billing_order: {
+        Args: { p_growth_session_id?: string | null; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      server_fail_billing_order: {
+        Args: { p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
       capture_growth_funnel_baseline: {
         Args: { p_period_end?: string }
         Returns: string
@@ -4362,6 +4401,16 @@ export type Database = {
       }
       growth_kpi_unavailable: { Args: { p_reason: string }; Returns: Json }
       has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          age_group: string | null
+          interests: string[]
+          nickname: string
+          preferred_platforms: string[]
+          use_purpose: string | null
+        }[]
+      }
       has_web_push_subscription: { Args: never; Returns: boolean }
       increment_view: {
         Args: { p_meme_id: string; p_session_hash: string }

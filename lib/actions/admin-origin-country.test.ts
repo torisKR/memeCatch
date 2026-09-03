@@ -17,14 +17,6 @@ const operatorId = "10000000-0000-4000-8000-000000000001";
 const memeId = "20000000-0000-4000-8000-000000000002";
 
 function client(rpcError: { message: string } | null = null) {
-  const profile = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    single: vi.fn().mockResolvedValue({ data: { role: "operator" }, error: null }),
-  };
-  profile.select.mockReturnValue(profile);
-  profile.eq.mockReturnValue(profile);
-
   const meme = {
     select: vi.fn(),
     eq: vi.fn(),
@@ -49,11 +41,12 @@ function client(rpcError: { message: string } | null = null) {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: operatorId } } }),
     },
     from: vi.fn((table: string) => {
-      if (table === "profiles") return profile;
       if (table === "memes") return meme;
       throw new Error(`unexpected table ${table}`);
     }),
-    rpc,
+    rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
+      ? Promise.resolve({ data: true, error: null })
+      : rpc(name, args)),
   };
   return { supabase, rpc };
 }

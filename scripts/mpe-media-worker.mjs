@@ -12,6 +12,8 @@ const exec = promisify(execFile);
 const PROCESSOR_NAME = "mpe-media-worker";
 const PROCESSOR_VERSION = "1.1.0";
 const BUCKET = "mpe-temporary";
+const FFMPEG_TIMEOUT_MS = configuredTimeout("MPE_FFMPEG_TIMEOUT_MS", 20 * 60_000);
+const FFPROBE_TIMEOUT_MS = configuredTimeout("MPE_FFPROBE_TIMEOUT_MS", 30_000);
 const JOB_LEASE_HEARTBEAT_MS = 4 * 60 * 1_000;
 const MAX_SCENE_OCR_FRAMES = 3;
 const RENDER_PRESETS = {
@@ -19,6 +21,16 @@ const RENDER_PRESETS = {
   square: { width: 1080, height: 1080, fontSize: 58 },
   link: { width: 1200, height: 630, fontSize: 42 },
 };
+
+function configuredTimeout(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function mediaExec(command, args, options = {}) {
+  const timeout = command === "ffprobe" ? FFPROBE_TIMEOUT_MS : FFMPEG_TIMEOUT_MS;
+  return exec(command, args, { ...options, timeout, killSignal: "SIGKILL" });
+}
 
 function assTime(milliseconds) {
   const centiseconds = Math.max(0, Math.floor(milliseconds / 10));
@@ -119,7 +131,7 @@ async function renderOverlayPng(path, preset, options) {
 }
 
 async function hasAssFilter() {
-  const { stdout } = await exec("ffmpeg", ["-hide_banner", "-filters"]);
+  const { stdout } = await mediaExec("ffmpeg", ["-hide_banner", "-filters"]);
   return /\b(?:ass|subtitles)\s+V->V\b/.test(stdout);
 }
 
@@ -153,7 +165,7 @@ async function renderWithPngOverlays(inputPath, outputPath, input, preset, direc
     "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", outputPath,
   );
-  await exec("ffmpeg", args, { maxBuffer: 16 * 1024 * 1024 });
+  await mediaExec("ffmpeg", args, { maxBuffer: 16 * 1024 * 1024 });
 }
 
 export async function renderVideoArtifact(inputPath, outputPath, value) {
@@ -167,7 +179,7 @@ export async function renderVideoArtifact(inputPath, outputPath, value) {
       `pad=${preset.width}:${preset.height}:(ow-iw)/2:(oh-ih)/2:black`,
       `subtitles=filename='${filterPath(assPath)}'`,
     ].join(",");
-    await exec("ffmpeg", [
+    await mediaExec("ffmpeg", [
       "-hide_banner", "-loglevel", "error", "-y", "-i", inputPath,
       "-map", "0:v:0", "-map", "0:a?", "-vf", videoFilter,
       "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
@@ -180,7 +192,7 @@ export async function renderVideoArtifact(inputPath, outputPath, value) {
 }
 
 export async function inspectMedia(path) {
-  const { stdout } = await exec("ffprobe", [
+  const { stdout } = await mediaExec("ffprobe", [
     "-v", "error", "-show_streams", "-show_format", "-of", "json", path,
   ], { maxBuffer: 4 * 1024 * 1024 });
   const payload = JSON.parse(stdout);
@@ -201,7 +213,7 @@ export async function inspectMedia(path) {
 
 export async function detectSceneTimes(path, durationMs, threshold = 0.3) {
   if (durationMs <= 0) return [0];
-  const { stderr } = await exec("ffmpeg", [
+  const { stderr } = await mediaExec("ffmpeg", [
     "-hide_banner", "-i", path, "-vf", `select=gt(scene\\,${threshold}),showinfo`,
     "-vsync", "vfr", "-f", "null", "-",
   ], { maxBuffer: 16 * 1024 * 1024 });
@@ -245,7 +257,7 @@ async function frameBytes(path, frameMs, format = "mjpeg") {
   args.push("-i", path, "-frames:v", "1");
   if (format === "gray") args.push("-vf", "scale=8:8,format=gray", "-f", "rawvideo", "pipe:1");
   else args.push("-q:v", "3", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1");
-  const { stdout } = await exec("ffmpeg", args, { encoding: "buffer", maxBuffer: 12 * 1024 * 1024 });
+  const { stdout } = await mediaExec("ffmpeg", args, { encoding: "buffer", maxBuffer: 12 * 1024 * 1024 });
   return new Uint8Array(stdout);
 }
 
@@ -256,7 +268,7 @@ export async function framePerceptualHash(path, frameMs = 0) {
 export async function extractAudioChunks(path, directory, chunkSeconds = 30) {
   const metadata = await inspectMedia(path);
   if (!metadata.hasAudio) return [];
-  await exec("ffmpeg", [
+  await mediaExec("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000",
     "-f", "segment", "-segment_time", String(chunkSeconds), "-c:a", "pcm_s16le", join(directory, "audio-%03d.wav"),
   ], { maxBuffer: 8 * 1024 * 1024 });
@@ -269,7 +281,7 @@ export async function extractAudioChunks(path, directory, chunkSeconds = 30) {
 }
 
 export async function normalizedAudioFingerprint(path) {
-  const { stdout } = await exec("ffmpeg", [
+  const { stdout } = await mediaExec("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-i", path, "-vn", "-ac", "1", "-ar", "8000",
     "-f", "s16le", "pipe:1",
   ], { encoding: "buffer", maxBuffer: 64 * 1024 * 1024 });

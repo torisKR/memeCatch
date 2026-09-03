@@ -15,6 +15,9 @@ export type AuthState = {
 } | null;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INTERNAL_AUTH_DOMAIN = "@auth.memecatch.internal";
+const SIGNUP_NOTICE =
+  "가입 요청을 접수했어요. 가입 가능한 이메일이면 안내 메일을 확인하거나 로그인해 주세요.";
 
 export async function signIn(
   _prev: AuthState,
@@ -23,7 +26,6 @@ export async function signIn(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const next = safeNext(formData.get("next"));
-
   const fieldErrors: NonNullable<AuthState>["fieldErrors"] = {};
   if (!email) fieldErrors.email = "이메일을 입력해 주세요";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
@@ -51,7 +53,6 @@ export async function signUp(
   const nickname = String(formData.get("nickname") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = safeNext(formData.get("next"));
 
   const fieldErrors: NonNullable<AuthState>["fieldErrors"] = {};
   if (nickname.length < 2 || nickname.length > 20) {
@@ -59,47 +60,30 @@ export async function signUp(
   }
   if (!email) fieldErrors.email = "이메일을 입력해 주세요";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
+  else if (email.toLowerCase().endsWith(INTERNAL_AUTH_DOMAIN)) {
+    fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
+  }
   if (password.length < 6) fieldErrors.password = "비밀번호는 6자 이상이어야 해요";
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, values: { email, nickname } };
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { nickname } },
-  });
-
-  if (error) {
-    if (/already registered/i.test(error.message)) {
-      return {
-        formError: "이미 가입된 이메일이에요. 로그인해 주세요",
-        values: { email, nickname },
-      };
-    }
-    if (/database error/i.test(error.message)) {
-      return {
-        fieldErrors: { nickname: "이미 사용 중인 닉네임이에요. 다른 닉네임을 지어 주세요" },
-        values: { email, nickname },
-      };
-    }
-    return {
-      formError: "가입에 실패했어요. 잠시 후 다시 시도해 주세요",
-      values: { email, nickname },
-    };
+  let providerFailed = false;
+  try {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nickname } },
+    });
+    providerFailed = !!error;
+  } catch {
+    providerFailed = true;
   }
-
-  // 이메일 확인이 켜져 있는 환경 대비 (로컬은 confirm off → 즉시 세션)
-  if (!data.session) {
-    return {
-      formError: "가입 확인 메일을 보냈어요. 메일함을 확인해 주세요",
-      values: { email, nickname },
-    };
-  }
-
-  // 가입 완료 → 온보딩(관심 카테고리·연령대)으로. 온보딩에서 next로 복귀.
-  redirect(`/onboarding?next=${encodeURIComponent(next)}`);
+  if (providerFailed) console.error({ event: "auth_signup_provider_failed" });
+  const { error: signOutError } = await supabase.auth.signOut();
+  if (signOutError) throw new Error("가입 세션 정리에 실패했어요.");
+  return { notice: SIGNUP_NOTICE, values: { email, nickname } };
 }
 
 const AGE_GROUPS = ["10s", "20s", "30s", "40s", "50s+"] as const;

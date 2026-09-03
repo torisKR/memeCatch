@@ -248,13 +248,8 @@ export async function proxy(request: NextRequest) {
       url.searchParams.set("next", authReturnPath);
       return applyLocale(NextResponse.redirect(url));
     }
-    // 서버측 운영자 검증 (D-1: 클라이언트 라우팅 숨김은 보안이 아님)
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    if (profile?.role !== "operator") {
+    const { data: isOperator } = await supabase.rpc("is_operator");
+    if (!isOperator) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return applyLocale(NextResponse.redirect(url));

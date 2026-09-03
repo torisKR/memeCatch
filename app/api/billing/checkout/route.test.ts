@@ -85,11 +85,11 @@ describe("billing checkout order lifecycle", () => {
     const response = await POST(request("en"));
 
     expect(response.status).toBe(303);
-    expect(mocks.createBillingOrder).toHaveBeenCalledWith("MC-user-1", null);
+    expect(mocks.createBillingOrder).toHaveBeenCalledWith("user-1", "MC-user-1", null);
     expect(mocks.createBillingOrder.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.createUnifiPaymentLink.mock.invocationCallOrder[0],
     );
-    expect(mocks.attachUnifiPaymentLink).toHaveBeenCalledWith("MC-user-1", "link-1");
+    expect(mocks.attachUnifiPaymentLink).toHaveBeenCalledWith("user-1", "MC-user-1", "link-1");
   });
 
   it("marks the pending order failed when link issuance fails", async () => {
@@ -103,7 +103,7 @@ describe("billing checkout order lifecycle", () => {
     const response = await POST(request());
 
     expect(response.status).toBe(502);
-    expect(mocks.failBillingOrder).toHaveBeenCalledWith("MC-user-1");
+    expect(mocks.failBillingOrder).toHaveBeenCalledWith("user-1", "MC-user-1");
     expect(log).toHaveBeenCalledWith({
       code: "provider_link_failed",
       requestId: "MC-user-1",

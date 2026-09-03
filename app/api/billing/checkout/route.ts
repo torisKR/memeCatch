@@ -83,7 +83,7 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
   const requestId = buildRequestId(user.id, Date.now());
   let stage: CheckoutStage = "create_order";
   try {
-    await createBillingOrder(requestId, growthSessionIdFromRequest(request));
+    await createBillingOrder(user.id, requestId, growthSessionIdFromRequest(request));
     stage = "create_link";
     const returnPath = `${locale ? `/${locale}` : ""}/premium?checkout=return`;
     const { linkUrl, linkId } = await createUnifiPaymentLink(config, {
@@ -92,11 +92,11 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
       returnPath,
     });
     stage = "attach_link";
-    await attachUnifiPaymentLink(requestId, linkId);
+    await attachUnifiPaymentLink(user.id, requestId, linkId);
 
     return Response.redirect(linkUrl, 303);
   } catch (error) {
-    await failBillingOrder(requestId).catch(() => undefined);
+    await failBillingOrder(user.id, requestId).catch(() => undefined);
     console.error({
       code: checkoutFailureCode(error, stage),
       requestId,

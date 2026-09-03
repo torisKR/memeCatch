@@ -30,7 +30,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-xl font-bold">제2조 (회원)</h2>
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
-            <li>소셜 로그인(카카오·구글) 또는 이메일로 가입할 수 있습니다.</li>
+            <li>소셜 로그인(카카오·구글·TikTok) 또는 이메일로 가입할 수 있습니다.</li>
             <li>회원은 언제든지 탈퇴할 수 있으며, 탈퇴 처리는 문의처를 통해 요청할 수 있습니다.</li>
             <li>타인의 계정 도용, 부정 이용 시 이용이 제한될 수 있습니다.</li>
           </ul>

@@ -22,8 +22,21 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-bold">1. 수집하는 개인정보와 방법</h2>
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
             <li>
-              <strong>회원가입(소셜 로그인)</strong>: 이메일 주소, 소셜 계정
-              식별자(카카오·구글), 닉네임 — 이용자가 로그인 시 직접 제공
+              <strong>회원가입(카카오·구글 소셜 로그인)</strong>: 이메일 주소,
+              소셜 계정 식별자, 닉네임 — 이용자가 로그인 시 직접 제공
+            </li>
+            <li>
+              <strong>회원가입(TikTok 로그인)</strong>: TikTok 앱 전용 계정
+              식별자(open_id), 표시 이름, 프로필 사진 — 로그인 시 TikTok에서
+              제공받습니다. 계정 식별자는 일방향 변환한 값만 저장하며 TikTok
+              계정의 이메일 주소는 제공받지 않습니다.
+            </li>
+            <li>
+              <strong>TikTok 공개 영상 가져오기(선택)</strong>: 공개 영상
+              ID·제목·설명·공유 URL — 이용자가 video.list 권한을 허용한 경우
+              최신 공개 영상 최대 20개를 검수 대기 제보로 저장합니다. 로그인과
+              영상 가져오기에 사용하는 TikTok 액세스 토큰은 요청 처리 중에만
+              사용하고 저장하지 않습니다.
             </li>
             <li>
               <strong>서비스 이용 중 생성</strong>: 제보·댓글·좋아요·저장 활동
@@ -47,6 +60,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-bold">2. 이용 목적</h2>
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
             <li>회원 식별·로그인 상태 유지</li>
+            <li>이용자가 선택한 TikTok 공개 영상을 검수 대기 제보로 가져오기</li>
             <li>제보 검수·커뮤니티 운영·부정 이용 방지</li>
             <li>저장한 밈·관심 카테고리 등 개인화 기능 제공</li>
             <li>유료 멤버십 구매 확인·권한 제공·취소 및 환불 문의 처리</li>
@@ -66,15 +80,23 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold">4. 처리 위탁 및 국외 이전</h2>
+          <h2 className="text-xl font-bold">
+            4. 처리 위탁·외부 서비스 및 국외 이전
+          </h2>
           <p className="mt-3">
-            서비스 운영을 위해 아래 업체에 개인정보 처리를 위탁하며, 데이터는
-            해당 인프라의 해외 리전에 저장될 수 있습니다.
+            서비스 운영을 위해 아래 업체에 개인정보 처리를 위탁하거나 외부
+            서비스를 이용하며, 데이터는 해당 서비스의 해외 리전에서 처리될 수
+            있습니다.
           </p>
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
             <li><strong>Supabase</strong> — 데이터베이스·인증·저장소</li>
             <li><strong>Vercel</strong> — 웹 호스팅·접속 로그</li>
             <li><strong>Cloudflare</strong> — 이미지 저장소(R2)</li>
+            <li>
+              <strong>TikTok</strong> — 소셜 로그인 인증과 이용자가 선택한 공개
+              영상 목록 제공. 사용자가 허용한 TikTok 계정·영상 정보만 암호화된
+              통신으로 제공받으며, 액세스 토큰은 저장하지 않습니다.
+            </li>
             <li>
               <strong>Unifi Pay</strong> — 신규 MemeCatch Plus 30일 이용권의 결제
               링크 제공, 스테이블코인 결제 처리 및 거래 상태 확인. 결제 요청 시

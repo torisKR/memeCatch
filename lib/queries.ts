@@ -9,6 +9,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
 import type { Audience } from "@/lib/meme-commerce";
+import type { MemeOriginProfile } from "@/lib/meme-country";
 
 export type MemeRow = Database["public"]["Tables"]["memes"]["Row"];
 export type MemeContentRow = Database["public"]["Tables"]["meme_contents"]["Row"];
@@ -41,12 +42,14 @@ export type MemeListItem = Pick<MemeRow, MemeListColumn> & {
   meme_contents?: (Pick<MemeContentRow, "thumbnail_url" | "is_representative"> &
     Partial<Pick<MemeContentRow, "platform" | "url">>)[];
   meme_sources?: Pick<MemeSourceRow, "platform" | "source_url">[];
+  meme_market_profiles?: MemeOriginProfile[];
 };
 
 export type MemeDetail = MemeRow & {
   meme_contents: MemeContentRow[];
   meme_sources: MemeSourceRow[];
   meme_tags_map: { tag_id: string; tags: { name: string } | null }[];
+  meme_market_profiles?: MemeOriginProfile[];
 };
 
 export type GenerationHighlight = {
@@ -57,7 +60,7 @@ export type GenerationHighlight = {
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 export const LIST_SELECT =
-  `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative)` as const;
+  `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)` as const;
 
 /** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
@@ -195,7 +198,7 @@ export const getMemeByShortId = cache(
       const supabase = createStaticClient();
       const { data, error } = await supabase
         .from("memes")
-        .select("*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name))")
+        .select("*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state)")
         .eq("short_id", shortId)
         .in("moderation_status", [...PUBLIC_STATUSES])
         .maybeSingle();
@@ -325,17 +328,19 @@ export async function getReactionCounts(
 }
 
 /** 검색 — search_memes RPC (trgm + 초성 + aliases 통합, 서버가 전부 처리) */
-export async function searchMemes(query: string, limit = 20): Promise<MemeRow[]> {
+export async function searchMemes(query: string, limit = 20): Promise<MemeListItem[]> {
   const q = query.trim();
   if (!q) return [];
   try {
     const supabase = createStaticClient();
-    const { data, error } = await supabase.rpc("search_memes", {
-      p_query: q,
-      p_limit: limit,
-    });
+    const { data, error } = await supabase
+      .rpc("search_memes", {
+        p_query: q,
+        p_limit: limit,
+      })
+      .select(LIST_SELECT);
     if (error || !data) return [];
-    return data as MemeRow[];
+    return data as MemeListItem[];
   } catch {
     return [];
   }

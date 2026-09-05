@@ -1,16 +1,21 @@
 import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import {
-  growthSessionIdFromRequest,
+  growthNetworkHash,
+  isGrowthRateLimitError,
   recordClientGrowthEvent,
+  resolveGrowthSession,
   type ClientGrowthEvent,
 } from "@/lib/growth/events.server";
 import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 16 * 1024;
+const IP_RATE_LIMIT = { limit: 120, windowMs: 60_000 } as const;
+const SESSION_RATE_LIMIT = { limit: 60, windowMs: 60_000 } as const;
 const CLIENT_EVENTS = new Set<ClientGrowthEvent["eventName"]>([
   "meme_view",
   "follow_click",
@@ -36,6 +41,26 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "origin_not_allowed" }, { status: 403 });
   }
 
+  const ipLimit = rateLimit(`analytics:ip:${getClientIp(request)}`, IP_RATE_LIMIT);
+  if (!ipLimit.ok) {
+    return Response.json({ ok: false, error: "rate_limited" }, {
+      status: 429,
+      headers: { "retry-after": String(ipLimit.retryAfterSec) },
+    });
+  }
+
+  const session = resolveGrowthSession(request);
+  if (!session) {
+    return Response.json({ ok: false, error: "analytics_unavailable" }, { status: 503 });
+  }
+  const sessionLimit = rateLimit(`analytics:session:${session.sessionId}`, SESSION_RATE_LIMIT);
+  if (!sessionLimit.ok) {
+    return Response.json({ ok: false, error: "rate_limited" }, {
+      status: 429,
+      headers: { "retry-after": String(sessionLimit.retryAfterSec) },
+    });
+  }
+
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
     return Response.json({ ok: false, error: "payload_too_large" }, { status: 413 });
@@ -57,11 +82,9 @@ export async function POST(request: Request) {
 
   const body = payload as Record<string, unknown>;
   const eventName = body.eventName;
-  const sessionId = growthSessionIdFromRequest(request);
   if (
     typeof eventName !== "string" ||
-    !CLIENT_EVENTS.has(eventName as ClientGrowthEvent["eventName"]) ||
-    !sessionId
+    !CLIENT_EVENTS.has(eventName as ClientGrowthEvent["eventName"])
   ) {
     return Response.json({ ok: false, error: "invalid_event" }, { status: 400 });
   }
@@ -91,7 +114,7 @@ export async function POST(request: Request) {
     : null;
   const identity = memeId ?? (briefId ? `${briefId}:${position ?? "open"}` : null)
     ?? format ?? surface ?? path ?? "event";
-  const dedupeKey = `client:${sessionId}:${eventName}:${identity}:${minuteBucket}`.slice(0, 220);
+  const dedupeKey = `client:${session.sessionId}:${eventName}:${identity}:${minuteBucket}`.slice(0, 220);
   const metadataKeys = new Set([
     "result", "state", "channel", "brief_id", "meme_id", "item_count", "position",
     "source", "method", "to", "mode", "score", "medium", "resolved_by",
@@ -107,18 +130,35 @@ export async function POST(request: Request) {
     return typeof value === "number" && Number.isFinite(value) ? [[key, value]] : [];
   }).slice(0, 12)) as Record<string, string | number>;
 
-  await recordClientGrowthEvent({
-    eventName: eventName as ClientGrowthEvent["eventName"],
-    sessionId,
-    userId: user?.id ?? null,
-    memeId,
-    surface,
-    format,
-    locale,
-    path,
-    dedupeKey,
-    metadata,
-  });
+  const networkHash = growthNetworkHash(getClientIp(request));
+  if (!networkHash) {
+    return Response.json({ ok: false, error: "analytics_unavailable" }, { status: 503 });
+  }
+  try {
+    await recordClientGrowthEvent({
+      eventName: eventName as ClientGrowthEvent["eventName"],
+      sessionId: session.sessionId,
+      userId: user?.id ?? null,
+      memeId,
+      surface,
+      format,
+      locale,
+      path,
+      dedupeKey,
+      metadata,
+    }, networkHash);
+  } catch (error) {
+    if (isGrowthRateLimitError(error)) {
+      return Response.json({ ok: false, error: "rate_limited" }, {
+        status: 429,
+        headers: { "retry-after": "60" },
+      });
+    }
+    throw error;
+  }
 
-  return Response.json({ ok: true }, { status: 202 });
+  return Response.json({ ok: true }, {
+    status: 202,
+    headers: session.setCookie ? { "set-cookie": session.setCookie } : undefined,
+  });
 }

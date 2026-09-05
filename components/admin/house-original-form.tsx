@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { sanitizeStudioText } from "@/components/studio/meme-artifacts";
 import { createHouseOriginal } from "@/lib/actions/admin";
 import {
   HOUSE_ORIGINAL,
@@ -12,6 +13,8 @@ import {
   originYearFieldLabel,
 } from "@/lib/house-original";
 import { CATEGORIES, DIFFICULTY, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
+import type { MemeConcept, MemeFormat, MemeTone } from "@/lib/meme-studio.server";
+import { getMemeCountry, MEME_COUNTRIES, type MemeCountryCode } from "@/lib/meme-country";
 import {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
@@ -21,6 +24,26 @@ import {
 import { SafetySelect } from "./safety-select";
 
 type UsageContextState = Record<(typeof USAGE_CONTEXT_KEYS)[number], SafetyLevel>;
+
+const TONE_OPTIONS: { value: MemeTone; label: string }[] = [
+  { value: "wholesome", label: "다정하게" },
+  { value: "sarcastic", label: "시니컬하게" },
+  { value: "absurd", label: "황당하게" },
+  { value: "hype", label: "신나게" },
+];
+
+const FORMAT_OPTIONS: { value: MemeFormat; label: string }[] = [
+  { value: "image-macro", label: "이미지 문구" },
+  { value: "reaction", label: "리액션" },
+  { value: "caption", label: "게시물 캡션" },
+];
+
+type StudioResult = {
+  mode: "ai" | "template";
+  provider?: "bedrock";
+  concepts: MemeConcept[];
+};
+type StudioResponse = StudioResult | { error: string };
 
 export function HouseOriginalForm() {
   const router = useRouter();
@@ -34,12 +57,100 @@ export function HouseOriginalForm() {
   const [category, setCategory] = useState<(typeof CATEGORY_OPTIONS)[number]>("phrase");
   const [difficulty, setDifficulty] = useState<(typeof DIFFICULTY_OPTIONS)[number]>("normal");
   const [originYear, setOriginYear] = useState("");
+  const [topic, setTopic] = useState("");
+  const [tone, setTone] = useState<MemeTone>("hype");
+  const [format, setFormat] = useState<MemeFormat>("caption");
+  const [country, setCountry] = useState<MemeCountryCode>("KR");
+  const [studioLoading, setStudioLoading] = useState(false);
+  const [studioError, setStudioError] = useState<string | null>(null);
+  const [studioResult, setStudioResult] = useState<StudioResult | null>(null);
+  const [selectedConcept, setSelectedConcept] = useState<number | null>(null);
+  const [directSavingConcept, setDirectSavingConcept] = useState<number | null>(null);
   const [usageContext, setUsageContext] = useState<UsageContextState>({
     work: "yellow",
     friends: "green",
     family: "yellow",
     sns: "yellow",
   });
+
+  function resetGeneratedConcepts() {
+    setStudioResult(null);
+    setSelectedConcept(null);
+    setStudioError(null);
+  }
+
+  async function generateConcepts() {
+    const cleanTopic = topic.trim();
+    if (cleanTopic.length < 2 || studioLoading) return;
+    setStudioLoading(true);
+    setStudioError(null);
+    try {
+      const response = await fetch("/api/admin/meme-studio", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ topic: cleanTopic, tone, format, country }),
+      });
+      const payload = (await response.json().catch(() => null)) as StudioResponse | null;
+      if (!response.ok || !payload || "error" in payload) {
+        setStudioError(
+          response.status === 429
+            ? "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+            : "초안을 만들지 못했습니다. 입력을 확인하고 다시 시도해 주세요.",
+        );
+        return;
+      }
+      setStudioResult(payload);
+      setSelectedConcept(null);
+    } catch {
+      setStudioError("네트워크 연결을 확인한 뒤 다시 시도해 주세요.");
+    } finally {
+      setStudioLoading(false);
+    }
+  }
+
+  function conceptInput(concept: MemeConcept) {
+    const cleanTopic = sanitizeStudioText(topic.trim());
+    const conceptCountry = getMemeCountry(concept.country_code) ?? getMemeCountry(country)!;
+    return {
+      title: sanitizeStudioText(concept.headline).replace(/\s+/g, " ").trim(),
+      summary: sanitizeStudioText(concept.caption).replace(/\s+/g, " ").trim(),
+      description: `현지 맥락: ${sanitizeStudioText(concept.cultural_anchor).trim()}\n\n비주얼: ${sanitizeStudioText(concept.visual_brief).trim()}\n\n왜 통하나요? ${sanitizeStudioText(concept.why_it_works).trim()}\n\n추천 활용: ${sanitizeStudioText(concept.usage_context).trim()}`,
+      origin: `밈캐치가 ${conceptCountry.label}의 "${cleanTopic}" 주제로 문구를 자체 기획해 만든 밈입니다. 외부 SNS 원본이나 제3자 미디어를 사용하지 않았습니다.`,
+      country: concept.country_code,
+      localTitle: sanitizeStudioText(concept.local_caption).replace(/\s+/g, " ").trim(),
+      safetyLevel: "yellow" as const,
+      category: format === "caption" ? "phrase" as const : "image" as const,
+      difficulty: "normal" as const,
+      originYear: new Date().getFullYear(),
+      usageContext,
+    };
+  }
+
+  function applyConcept(concept: MemeConcept, index: number) {
+    const input = conceptInput(concept);
+    setTitle(input.title);
+    setSummary(input.summary);
+    setDescription(input.description);
+    setOrigin(input.origin);
+    setOriginYear(String(input.originYear));
+    setCategory(input.category);
+    setSelectedConcept(index);
+    setError(null);
+  }
+
+  function saveConceptDirectly(concept: MemeConcept, index: number) {
+    setError(null);
+    setDirectSavingConcept(index);
+    startTransition(async () => {
+      const res = await createHouseOriginal(conceptInput(concept));
+      if (!res.ok) {
+        setError(res.error);
+        setDirectSavingConcept(null);
+        return;
+      }
+      router.push(`/admin/memes/${res.data?.memeId}`);
+    });
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +171,10 @@ export function HouseOriginalForm() {
         difficulty,
         originYear: year,
         usageContext,
+        country,
+        localTitle: selectedConcept === null
+          ? title
+          : studioResult?.concepts[selectedConcept]?.local_caption ?? title,
       });
       if (!res.ok) {
         setError(res.error);
@@ -94,6 +209,158 @@ export function HouseOriginalForm() {
         ))}
       </ol>
       <p className="text-sm leading-relaxed text-muted">{houseOriginalPathNote()}</p>
+      <section
+        aria-label="자체 밈 초안 생성"
+        className="space-y-3 rounded-xl border border-accent bg-accent-soft p-4"
+      >
+        <div>
+          <h2 className="text-lg font-bold">SNS 없이 자체 초안 만들기</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            주제와 국가를 고르면 Bedrock 초안 3개를 만듭니다. 생성 예산을 사용할 수 없거나
+            일시 장애가 나면 저장 가능한 초안을 만들지 않으며, 초안을 고르기 전에는 저장하지 않습니다.
+          </p>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">자체 밈 주제</span>
+          <input
+            value={topic}
+            onChange={(e) => {
+              setTopic(e.target.value);
+              resetGeneratedConcepts();
+            }}
+            disabled={studioLoading}
+            maxLength={120}
+            placeholder="예: 회의가 5분 일찍 끝난 날"
+            className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base"
+          />
+        </label>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">밈 국가</span>
+            <select
+              value={country}
+              onChange={(e) => {
+                setCountry(e.target.value as MemeCountryCode);
+                resetGeneratedConcepts();
+              }}
+              disabled={studioLoading}
+              className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base"
+            >
+              {Object.values(MEME_COUNTRIES).map((option) => (
+                <option key={option.code} value={option.code}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">초안 분위기</span>
+            <select
+              value={tone}
+              onChange={(e) => {
+                setTone(e.target.value as MemeTone);
+                resetGeneratedConcepts();
+              }}
+              disabled={studioLoading}
+              className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base"
+            >
+              {TONE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">초안 형식</span>
+            <select
+              value={format}
+              onChange={(e) => {
+                setFormat(e.target.value as MemeFormat);
+                resetGeneratedConcepts();
+              }}
+              disabled={studioLoading}
+              className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base"
+            >
+              {FORMAT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={() => void generateConcepts()}
+          disabled={topic.trim().length < 2 || studioLoading}
+          className="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50"
+        >
+          {studioLoading ? "초안 만드는 중…" : "자체 밈 초안 3개 만들기"}
+        </button>
+        {studioError && (
+          <p role="alert" className="rounded-lg bg-safety-red-bg p-3 text-sm text-safety-red">
+            {studioError}
+          </p>
+        )}
+        {studioResult && (
+          <div aria-live="polite" className="space-y-3">
+            <p className="text-sm font-semibold text-accent-text">
+              {studioResult.mode === "ai" && studioResult.provider === "bedrock"
+                ? "AWS Bedrock 초안"
+                : "$0 기본 템플릿 초안"}
+            </p>
+            <div className="grid gap-3 lg:grid-cols-3">
+              {studioResult.concepts.map((concept, index) => (
+                <article
+                  key={`${concept.headline}-${index}`}
+                  className={`rounded-lg border bg-surface p-3 ${
+                    selectedConcept === index ? "border-accent" : "border-border"
+                  }`}
+                >
+                  <h3 className="font-bold">{sanitizeStudioText(concept.headline)}</h3>
+                  <p className="mt-1 text-xs font-semibold text-accent-text">
+                    {getMemeCountry(concept.country_code)?.label ?? concept.country_code}
+                  </p>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
+                    {sanitizeStudioText(concept.caption)}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed">
+                    <strong>현지 문구:</strong> {sanitizeStudioText(concept.local_caption)}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    <strong>현지 맥락:</strong> {sanitizeStudioText(concept.cultural_anchor)}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    <strong>비주얼:</strong> {sanitizeStudioText(concept.visual_brief)}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    {sanitizeStudioText(concept.why_it_works)}
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveConceptDirectly(concept, index)}
+                      disabled={pending}
+                      aria-label={`“${sanitizeStudioText(concept.headline)}” 대기로 바로 저장`}
+                      className="min-h-11 rounded-lg bg-accent-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {directSavingConcept === index ? "대기로 저장 중…" : "대기로 바로 저장"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyConcept(concept, index)}
+                      disabled={pending}
+                      aria-label={`“${sanitizeStudioText(concept.headline)}” 초안 사용`}
+                      className="min-h-11 rounded-lg border border-accent px-3 text-sm font-semibold text-accent-text disabled:opacity-50"
+                    >
+                      {selectedConcept === index ? "아래 항목에 적용됨" : "수정 후 저장"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
       {error && (
         <p role="alert" className="rounded-lg bg-safety-red-bg p-3 text-base text-safety-red">
           {error}

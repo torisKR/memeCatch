@@ -33,3 +33,21 @@ variable "enable_media_cdn" {
   type        = bool
   default     = false
 }
+
+variable "vercel_team_slug" {
+  description = "Vercel Team issuer mode에서 OIDC issuer와 audience에 쓰는 팀 slug"
+  type        = string
+  default     = "ironjustlikethatgmailcoms-projects"
+}
+
+variable "vercel_project_name" {
+  description = "Bedrock 역할을 assume할 수 있는 Vercel 프로젝트 이름"
+  type        = string
+  default     = "memecatch"
+}
+
+variable "bedrock_budget_usd" {
+  description = "Bedrock 월별 비용 지연 경보 한도. 호출 전 차단은 앱 사용량 원장이 담당한다."
+  type        = number
+  default     = 100
+}

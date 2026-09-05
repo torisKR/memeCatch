@@ -33,5 +33,6 @@ export default async function LocalizedPricingPage({ params }: Props) {
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) notFound();
 
-  return <PricingContent />;
+  const checkoutEnabled = process.env.UNIFI_PAY_CHECKOUT_ENABLED?.trim() === "true";
+  return <PricingContent checkoutEnabled={checkoutEnabled} />;
 }

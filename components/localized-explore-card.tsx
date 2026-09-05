@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
+import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { getSeoCopy, localizedMemePath, type SeoContentLocale } from "@/lib/i18n-routing";
 import type { LocalizedMemeListItem } from "@/lib/meme-translations";
 import type { LocalizedExploreCopy } from "@/lib/i18n-global-explore";
+import { originCountryCode } from "@/lib/meme-country";
 
 export function LocalizedExploreCard({
   locale,
@@ -21,6 +23,7 @@ export function LocalizedExploreCard({
     meme.meme_contents.find((content) => content.thumbnail_url)?.thumbnail_url ??
     null;
   const safety = meme.safety_level as keyof typeof copy.safety;
+  const countryCode = originCountryCode(meme.meme_market_profiles);
 
   return (
     <li className="min-w-0">
@@ -32,13 +35,20 @@ export function LocalizedExploreCard({
           <MemeThumbnail
             src={thumbnail}
             title={meme.title}
+            fallbackCaption={meme.summary}
             category={meme.category}
             originYear={meme.origin_year}
             priority={priority}
           />
-          <span className="absolute left-3 top-3 rounded-full border border-white/30 bg-black/55 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
-            {getSeoCopy(locale).categories[meme.category]}
-          </span>
+          <div
+            data-country-flag-position="top-left"
+            className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5"
+          >
+            <CountryFlagBadge code={countryCode} />
+            <span className="rounded-full border border-white/30 bg-black/55 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
+              {getSeoCopy(locale).categories[meme.category]}
+            </span>
+          </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-col p-4">
           <p className="line-clamp-2 min-h-[3.25rem] text-xl font-black leading-snug tracking-tight">

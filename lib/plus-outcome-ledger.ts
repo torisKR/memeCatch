@@ -20,17 +20,20 @@ export const PLUS_OUTCOME_ARTIFACT_KINDS = [
   "other",
 ] as const;
 export const PLUS_OUTCOME_RATINGS = ["hit", "neutral", "miss"] as const;
+export const PLUS_OUTCOME_MODES = ["bulk", "one_cut"] as const;
 
 export type PlusOutcomeLocale = (typeof PLUS_OUTCOME_LOCALES)[number];
 export type PlusOutcomeChannel = (typeof PLUS_OUTCOME_CHANNELS)[number];
 export type PlusOutcomeArtifactKind = (typeof PLUS_OUTCOME_ARTIFACT_KINDS)[number];
 export type PlusOutcomeRating = (typeof PLUS_OUTCOME_RATINGS)[number];
+export type PlusOutcomeMode = (typeof PLUS_OUTCOME_MODES)[number];
 export type PlusOutcomeSummaryStatus = "locked" | "empty" | "ready" | "unavailable";
 
 const localeSet = new Set<string>(PLUS_OUTCOME_LOCALES);
 const channelSet = new Set<string>(PLUS_OUTCOME_CHANNELS);
 const artifactKindSet = new Set<string>(PLUS_OUTCOME_ARTIFACT_KINDS);
 const ratingSet = new Set<string>(PLUS_OUTCOME_RATINGS);
+const modeSet = new Set<string>(PLUS_OUTCOME_MODES);
 
 export function isPlusOutcomeLocale(value: unknown): value is PlusOutcomeLocale {
   return typeof value === "string" && localeSet.has(value);
@@ -46,6 +49,10 @@ export function isPlusOutcomeArtifactKind(value: unknown): value is PlusOutcomeA
 
 export function isPlusOutcomeRating(value: unknown): value is PlusOutcomeRating {
   return typeof value === "string" && ratingSet.has(value);
+}
+
+export function isPlusOutcomeMode(value: unknown): value is PlusOutcomeMode {
+  return typeof value === "string" && modeSet.has(value);
 }
 
 export type PlusOutcomeBreakdown<Key extends string> = {
@@ -88,6 +95,7 @@ export type PlusOutcomeFollowUpItem = {
   channel: PlusOutcomeChannel;
   locale: PlusOutcomeLocale;
   artifactKind: PlusOutcomeArtifactKind;
+  mode?: PlusOutcomeMode;
   performanceNote: string | null;
   performanceRating: PlusOutcomeRating | null;
 };
@@ -352,6 +360,7 @@ export function createPlusOutcomeFollowUpFallback(
 function parseFollowUpRow(value: unknown): PlusOutcomeFollowUpItem | null {
   if (!isRecord(value)) return null;
   const completionDate = parseDate(value.completion_date);
+  const mode = value.mode === undefined ? "bulk" : value.mode;
   if (
     typeof value.id !== "string" ||
     value.id.trim() === "" ||
@@ -363,6 +372,7 @@ function parseFollowUpRow(value: unknown): PlusOutcomeFollowUpItem | null {
     !isPlusOutcomeChannel(value.channel) ||
     !isPlusOutcomeLocale(value.locale) ||
     !isPlusOutcomeArtifactKind(value.artifact_kind) ||
+    !isPlusOutcomeMode(mode) ||
     (value.performance_note !== null && typeof value.performance_note !== "string") ||
     (value.performance_rating !== null && !isPlusOutcomeRating(value.performance_rating))
   ) {
@@ -377,6 +387,7 @@ function parseFollowUpRow(value: unknown): PlusOutcomeFollowUpItem | null {
     channel: value.channel,
     locale: value.locale,
     artifactKind: value.artifact_kind,
+    mode,
     performanceNote: value.performance_note,
     performanceRating: value.performance_rating,
   };
@@ -439,6 +450,7 @@ function parseHistoryRow(value: unknown): PlusOutcomeHistoryLedgerItem | null {
     channel: parsed.channel,
     locale: parsed.locale,
     artifactKind: parsed.artifactKind,
+    mode: parsed.mode,
     performanceRating: parsed.performanceRating,
     hasPerformanceNote: Boolean(parsed.performanceNote),
     ...(resultUrl ? { resultUrl } : {}),
@@ -483,6 +495,7 @@ export function buildPlusOutcomeHistory(
       channel: row.channel,
       locale: row.locale,
       artifactKind: row.artifactKind,
+      mode: row.mode,
       performanceRating: row.performanceRating,
       hasPerformanceNote: row.hasPerformanceNote,
       href: row.href,

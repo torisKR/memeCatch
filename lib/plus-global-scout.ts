@@ -11,6 +11,7 @@ export const PLUS_GLOBAL_SCOUT_LOCALES = [
 ] as const;
 
 export const PLUS_GLOBAL_SCOUT_LIMIT = 5;
+export const PLUS_GLOBAL_SCOUT_EVIDENCE_LIMIT = 20;
 
 export type PlusGlobalScoutStatus = "active" | "empty" | "unavailable";
 
@@ -126,9 +127,9 @@ function dailyRank(dateKey: string, id: string): number {
   return hash >>> 0;
 }
 
-function deckLimit(limit: number | undefined): number {
-  if (limit === undefined || !Number.isFinite(limit)) return PLUS_GLOBAL_SCOUT_LIMIT;
-  return Math.min(PLUS_GLOBAL_SCOUT_LIMIT, Math.max(0, Math.trunc(limit)));
+function deckLimit(limit: number | undefined, maximum: number): number {
+  if (limit === undefined || !Number.isFinite(limit)) return maximum;
+  return Math.min(maximum, Math.max(0, Math.trunc(limit)));
 }
 
 function isEligibleSource(
@@ -194,13 +195,13 @@ function contentForLocale(
   };
 }
 
-export function buildPlusGlobalScoutDeck({
+function buildPlusGlobalScoutDeckWithMaximum({
   locale,
   dateKey,
   sources,
   translations,
   limit,
-}: BuildPlusGlobalScoutDeckInput): PlusGlobalScoutItem[] {
+}: BuildPlusGlobalScoutDeckInput, maximum: number): PlusGlobalScoutItem[] {
   const items = sources.flatMap((source): PlusGlobalScoutItem[] => {
     if (!isEligibleSource(source)) return [];
     const content = contentForLocale(source, translations, locale);
@@ -232,5 +233,17 @@ export function buildPlusGlobalScoutDeck({
       seen.add(item.id);
       return true;
     })
-    .slice(0, deckLimit(limit));
+    .slice(0, deckLimit(limit, maximum));
+}
+
+export function buildPlusGlobalScoutDeck(
+  input: BuildPlusGlobalScoutDeckInput,
+): PlusGlobalScoutItem[] {
+  return buildPlusGlobalScoutDeckWithMaximum(input, PLUS_GLOBAL_SCOUT_LIMIT);
+}
+
+export function buildPlusGlobalScoutEvidenceDeck(
+  input: BuildPlusGlobalScoutDeckInput,
+): PlusGlobalScoutItem[] {
+  return buildPlusGlobalScoutDeckWithMaximum(input, PLUS_GLOBAL_SCOUT_EVIDENCE_LIMIT);
 }

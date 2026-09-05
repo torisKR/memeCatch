@@ -35,6 +35,7 @@ describe("Plus outcome follow-up", () => {
         channel: "instagram",
         locale: "en",
         artifactKind: "creator_pack",
+        mode: "bulk",
         performanceNote: null,
         performanceRating: null,
       },

@@ -10,6 +10,7 @@ import {
   type SocialPlatform,
 } from "@/lib/source-platform";
 import type { GlobalFeedItem } from "@/lib/global-feed.types";
+import { originCountryCode, type MemeOriginProfile } from "@/lib/meme-country";
 
 /**
  * 글로벌 피드 — 플랫폼별 공개 밈 콘텐츠 조회.
@@ -58,6 +59,7 @@ type FeedRow = {
   origin_year: number | null;
   trend_score: number | null;
   meme_contents: FeedContentRow[];
+  meme_market_profiles: MemeOriginProfile[];
 };
 
 /** 목록 카드가 실제로 읽는 컬럼만 명시 — 전송량 절감(lib/queries.ts LIST_COLUMNS과 동일 컬럼셋). */
@@ -137,12 +139,14 @@ export async function getGlobalFeed(
       const { data, error } = await supabase
         .from("memes")
         .select(
-          `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative)`
+          `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative), meme_market_profiles!inner(market_code, role, review_state)`
         )
         .eq("moderation_status", "approved")
         .in("meme_contents.platform", storedPlatforms)
         .eq("meme_contents.moderation_status", "approved")
         .eq("meme_contents.availability", "live")
+        .eq("meme_market_profiles.role", "origin")
+        .eq("meme_market_profiles.review_state", "reviewed")
         .order("trend_score", { ascending: false })
         .order("id", { ascending: true })
         .range(from, from + FEED_BATCH_SIZE - 1);
@@ -187,6 +191,7 @@ export async function getGlobalFeed(
           media_type: raw.media_type,
           origin_year: raw.origin_year,
           trend_score: raw.trend_score,
+          origin_country_code: originCountryCode(raw.meme_market_profiles),
           platform: content.platform,
           content_url: content.url,
           thumbnail_url: content.thumbnail_url,

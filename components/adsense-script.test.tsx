@@ -23,6 +23,18 @@ describe("AdsenseScript", () => {
  * 아래 두 불변조건이 깨지면 저품질 화면에 광고가 되돌아온다.
  */
 describe("광고 로더 게재 통제 (정책 불변조건)", () => {
+  it("요청된 게시자 ID와 안전한 로더 속성을 유지한다", () => {
+    const loader = read("components/adsense-script.tsx");
+
+    expect(read("public/ads.txt").trim()).toBe(
+      "google.com, pub-5744832247312120, DIRECT, f08c47fec0942fa0",
+    );
+    expect(loader).toContain(
+      "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}",
+    );
+    expect(loader).toContain('crossOrigin="anonymous"');
+  });
+
   it("로더 URL은 adsense-script.tsx 한 곳에만 존재한다", () => {
     // 전역 레이아웃 등 다른 곳에서 직접 로드하면 화면 단위 통제가 무너진다.
     expect(read("components/adsense-script.tsx")).toContain("adsbygoogle.js");

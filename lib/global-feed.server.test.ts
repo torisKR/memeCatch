@@ -59,6 +59,7 @@ function row(
     media_type: "video",
     origin_year: 2026,
     trend_score: 100,
+    meme_market_profiles: [],
     meme_contents: [
       {
         platform,
@@ -141,6 +142,16 @@ describe("getGlobalFeed", () => {
       "approved",
     );
     expect(feedQuery.eq).toHaveBeenCalledWith("meme_contents.availability", "live");
+    expect(feedQuery.eq).toHaveBeenCalledWith("meme_market_profiles.role", "origin");
+    expect(feedQuery.eq).toHaveBeenCalledWith(
+      "meme_market_profiles.review_state",
+      "reviewed",
+    );
+    expect(feedQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "meme_market_profiles!inner(market_code, role, review_state)",
+      ),
+    );
     expect(feedQuery.order.mock.calls).toEqual([
       ["trend_score", { ascending: false }],
       ["id", { ascending: true }],
@@ -155,6 +166,40 @@ describe("getGlobalFeed", () => {
     ]);
     expect(ledgerQuery.eq).toHaveBeenCalledWith("media_sources.embeddable", true);
     expect(ledgerQuery.is).toHaveBeenCalledWith("media_sources.removed_at", null);
+  });
+
+  it("returns only a reviewed origin country code and otherwise keeps the fallback null", async () => {
+    const feedQuery = query({
+      data: [
+        row("reviewed", "TikTok", {
+          meme_market_profiles: [
+            { market_code: "US", role: "origin", review_state: "reviewed" },
+          ],
+        }),
+        row("unknown", "TikTok", {
+          meme_market_profiles: [
+            { market_code: "KR", role: "active", review_state: "reviewed" },
+          ],
+        }),
+      ],
+      error: null,
+    });
+    const ledgerQuery = query({
+      data: [
+        approvedSource("reviewed", "tiktok"),
+        approvedSource("unknown", "tiktok"),
+      ],
+      error: null,
+    });
+    createStaticClient.mockReturnValue({ from: vi.fn(() => feedQuery) });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => ledgerQuery) });
+
+    const result = await getGlobalFeed(["tiktok"], 2);
+
+    expect(result.items.map((feedItem) => feedItem.origin_country_code)).toEqual([
+      "US",
+      null,
+    ]);
   });
 
   it("drops unapproved or unavailable child content and deduplicates parent rows", async () => {

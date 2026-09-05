@@ -11,12 +11,18 @@ export function ShareButton({
   path,
   title,
   label = "공유",
+  copiedLabel = "링크 복사됨!",
+  copiedStatus = "링크가 복사되었어요.",
+  siteName = "밈캐치",
   className,
 }: {
   /** 사이트 내부 경로 (예: /memes/abc-밈) */
   path: string;
   title: string;
   label?: string;
+  copiedLabel?: string;
+  copiedStatus?: string;
+  siteName?: string;
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -29,7 +35,7 @@ export function ShareButton({
     track("share_click", { method, to: path });
     try {
       if (canNativeShare) {
-        await navigator.share({ title: `${title} — 밈캐치`, url });
+        await navigator.share({ title: `${title} — ${siteName}`, url });
         return;
       }
       await navigator.clipboard.writeText(url);
@@ -68,7 +74,7 @@ export function ShareButton({
         {copied ? (
           <span className="inline-flex items-center gap-1.5">
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-(--signal-cyan)" />
-            링크 복사됨!
+            {copiedLabel}
           </span>
         ) : (
           label
@@ -76,7 +82,7 @@ export function ShareButton({
       </button>
       {/* 버튼 라벨이 이미 시각적으로 바뀌므로 스크린 리더 전용으로만 알림 */}
       <p role="status" aria-live="polite" className="sr-only">
-        {copied ? "링크가 복사되었어요." : ""}
+        {copied ? copiedStatus : ""}
       </p>
     </>
   );

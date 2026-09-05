@@ -3,16 +3,29 @@ import "server-only";
 import type { MemeCategory } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import {
-  buildPlusGlobalScoutDeck,
+  buildPlusGlobalScoutEvidenceDeck,
+  PLUS_GLOBAL_SCOUT_LIMIT,
   type PlusGlobalScoutLocale,
   type PlusGlobalScoutResult,
   type PlusGlobalScoutSourceRow,
   type PlusGlobalScoutTranslationRow,
 } from "@/lib/plus-global-scout";
+import {
+  loadTrustedOneCutMemeIds,
+  type PlusTrustedEvidenceSupabase,
+} from "@/lib/plus-trusted-evidence-exporter.server";
 
 export const PLUS_GLOBAL_SCOUT_SOURCE_LIMIT = 240;
 
 export type PlusGlobalScoutSupabase = Awaited<ReturnType<typeof createClient>>;
+
+const trustedScoutMemeIds = new WeakMap<PlusGlobalScoutResult, readonly string[]>();
+
+export function trustedPlusGlobalScoutMemeIds(
+  result: PlusGlobalScoutResult,
+): readonly string[] {
+  return trustedScoutMemeIds.get(result) ?? [];
+}
 
 function isPlusGlobalScoutLocale(value: string): value is PlusGlobalScoutLocale {
   return value === "ko" || value === "en" || value === "ja" || value === "zh" || value === "zh-tw";
@@ -88,14 +101,19 @@ export async function loadPlusGlobalScout({
     return { status: "unavailable", dateKey, items: [] } satisfies PlusGlobalScoutResult;
   }
 
-  let items = buildPlusGlobalScoutDeck({
-    locale,
-    dateKey,
-    sources,
-    translations: translationResult.rows,
-  });
+  let evidenceLocale = locale;
+  let evidenceTranslations = translationResult.rows;
 
-  if (items.length === 0 && locale !== "ko" && locale !== "en") {
+  if (
+    buildPlusGlobalScoutEvidenceDeck({
+      locale: evidenceLocale,
+      dateKey,
+      sources,
+      translations: evidenceTranslations,
+    }).length === 0 &&
+    locale !== "ko" &&
+    locale !== "en"
+  ) {
     const fallbackTranslationResult = await loadPlusGlobalScoutTranslations(
       supabase,
       sources.map((source) => source.id),
@@ -104,19 +122,66 @@ export async function loadPlusGlobalScout({
     if (fallbackTranslationResult.unavailable) {
       return { status: "unavailable", dateKey, items: [] } satisfies PlusGlobalScoutResult;
     }
-    items = buildPlusGlobalScoutDeck({
-      locale: "en",
-      dateKey,
-      sources,
-      translations: fallbackTranslationResult.rows,
-    });
+    evidenceLocale = "en";
+    evidenceTranslations = fallbackTranslationResult.rows;
   }
 
-  return {
+  const items = await loadTrustedPlusGlobalScoutItems({
+    supabase: supabase as unknown as PlusTrustedEvidenceSupabase,
+    locale: evidenceLocale,
+    dateKey,
+    sources,
+    translations: evidenceTranslations,
+  });
+  if (!items) {
+    return { status: "unavailable", dateKey, items: [] } satisfies PlusGlobalScoutResult;
+  }
+
+  const result = {
     status: items.length > 0 ? "active" : "empty",
     dateKey,
     items,
   } satisfies PlusGlobalScoutResult;
+  trustedScoutMemeIds.set(result, items.map((item) => item.id));
+  return result;
+}
+
+async function loadTrustedPlusGlobalScoutItems({
+  supabase,
+  locale,
+  dateKey,
+  sources,
+  translations,
+}: {
+  supabase: PlusTrustedEvidenceSupabase;
+  locale: PlusGlobalScoutLocale;
+  dateKey: string;
+  sources: readonly PlusGlobalScoutSourceRow[];
+  translations: readonly PlusGlobalScoutTranslationRow[];
+}): Promise<PlusGlobalScoutResult["items"] | null> {
+  let remainingSources = [...sources];
+  const trustedItems: PlusGlobalScoutResult["items"] = [];
+
+  while (remainingSources.length > 0 && trustedItems.length < PLUS_GLOBAL_SCOUT_LIMIT) {
+    const ranked = buildPlusGlobalScoutEvidenceDeck({
+      locale,
+      dateKey,
+      sources: remainingSources,
+      translations,
+    });
+    if (ranked.length === 0) break;
+
+    const rankedIds = new Set(ranked.map((item) => item.id));
+    remainingSources = remainingSources.filter((source) => !rankedIds.has(source.id));
+    const trustedMemeIds = await loadTrustedOneCutMemeIds(
+      supabase,
+      ranked.map((item) => item.id),
+    );
+    if (!trustedMemeIds) return null;
+    trustedItems.push(...ranked.filter((item) => trustedMemeIds.has(item.id)));
+  }
+
+  return trustedItems.slice(0, PLUS_GLOBAL_SCOUT_LIMIT);
 }
 
 async function loadPlusGlobalScoutTranslations(

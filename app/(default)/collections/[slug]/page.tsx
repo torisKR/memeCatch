@@ -42,7 +42,7 @@ export async function generateMetadata({
   };
 }
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative)";
+const SELECT = "*, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)";
 const LIMIT = 24;
 
 async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {

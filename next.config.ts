@@ -122,7 +122,8 @@ const SITE_ORIGIN =
 const CSP_REPORT_URI =
   process.env.CSP_REPORT_URI ?? `${SITE_ORIGIN}/api/csp-report`;
 
-const RELEASE_SHA = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.RELEASE_SHA;
+const RELEASE_SHA =
+  process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim();
 const RELEASE_HEADERS = RELEASE_SHA
   ? [{ key: "X-MemeCatch-Release-Sha", value: RELEASE_SHA }]
   : [];

@@ -8,6 +8,7 @@ import {
   MAX_VIDEO_UPLOAD_BYTES,
 } from "@/lib/upload-shared";
 import { rateLimit } from "@/lib/rate-limit";
+import { MediaValidationError, validateMedia } from "@/lib/mpe/media";
 
 /**
  * 제보 이미지 업로드 — 서버 전용 경로.
@@ -53,12 +54,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "too_large" }, { status: 400 });
   }
 
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try {
+    validateMedia(bytes, file.type);
+  } catch (error) {
+    if (error instanceof MediaValidationError) {
+      return NextResponse.json({ ok: false, error: "invalid_type" }, { status: 400 });
+    }
+    throw error;
+  }
+
   const objectPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
   const fullPath = `meme-uploads/${objectPath}`;
 
   if (r2Configured()) {
-    const buf = await file.arrayBuffer();
-    const ok = await r2Put(fullPath, buf, file.type);
+    const ok = await r2Put(fullPath, bytes.buffer, file.type);
     if (!ok) {
       return NextResponse.json({ ok: false, error: "upload_failed" }, { status: 502 });
     }

@@ -36,6 +36,8 @@ function request(locale?: string): Request {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
+  vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", "true");
   mocks.getCurrentBillingUser.mockResolvedValue(null);
   mocks.buildRequestId.mockReturnValue("MC-user-1");
   mocks.createBillingOrder.mockResolvedValue(undefined);
@@ -49,27 +51,83 @@ beforeEach(() => {
 });
 
 describe("billing checkout order lifecycle", () => {
+  it.each([undefined, "", "false", "TRUE", "true-ish"]) (
+    "fails closed when the checkout switch is %s",
+    async (value) => {
+      if (value === undefined) vi.unstubAllEnvs();
+      else vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", value);
+
+      mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+      const response = await POST(request("en"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({ ok: false, error: "checkout_disabled" });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(mocks.getCurrentBillingUser).not.toHaveBeenCalled();
+      expect(mocks.createBillingOrder).not.toHaveBeenCalled();
+      expect(mocks.createUnifiPaymentLink).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts an explicitly enabled switch after trimming", async () => {
+    vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", "  true  ");
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+
+    const response = await POST(request("en"));
+
+    expect(response.status).toBe(303);
+    expect(mocks.createBillingOrder).toHaveBeenCalledOnce();
+  });
+
   it("creates the pending order before requesting a provider link", async () => {
     mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
 
     const response = await POST(request("en"));
 
     expect(response.status).toBe(303);
-    expect(mocks.createBillingOrder).toHaveBeenCalledWith("MC-user-1", null);
+    expect(mocks.createBillingOrder).toHaveBeenCalledWith("user-1", "MC-user-1", null);
     expect(mocks.createBillingOrder.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.createUnifiPaymentLink.mock.invocationCallOrder[0],
     );
-    expect(mocks.attachUnifiPaymentLink).toHaveBeenCalledWith("MC-user-1", "link-1");
+    expect(mocks.attachUnifiPaymentLink).toHaveBeenCalledWith("user-1", "MC-user-1", "link-1");
   });
 
   it("marks the pending order failed when link issuance fails", async () => {
     mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
-    mocks.createUnifiPaymentLink.mockRejectedValue(new Error("provider unavailable"));
+    vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "release-123");
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.createUnifiPaymentLink.mockRejectedValue(
+      new Error("unifi_pay_link_failed_401 secret-provider-body"),
+    );
 
     const response = await POST(request());
 
     expect(response.status).toBe(502);
-    expect(mocks.failBillingOrder).toHaveBeenCalledWith("MC-user-1");
+    expect(mocks.failBillingOrder).toHaveBeenCalledWith("user-1", "MC-user-1");
+    expect(log).toHaveBeenCalledWith({
+      code: "provider_link_failed",
+      requestId: "MC-user-1",
+      releaseSha: "release-123",
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("secret-provider-body");
+    log.mockRestore();
+  });
+
+  it("logs an allowlisted provider code without exposing the raw error", async () => {
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.createUnifiPaymentLink.mockRejectedValue(new Error("unifi_pay_link_failed_401"));
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(log).toHaveBeenCalledWith({
+      code: "provider_http_error",
+      requestId: "MC-user-1",
+      releaseSha: "unknown",
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("unifi_pay_link_failed_401");
+    log.mockRestore();
   });
 });
 

@@ -36,7 +36,7 @@
 - **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
 - **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
 - **배포**: Vercel (GitHub 연동 자동 배포)
-- **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Latpeed · **메일**: AWS SES
+- **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Unifi Pay Direct · **메일**: AWS SES
 
 > 어떤 서비스가 무엇을 맡고 **왜 그렇게 정했는지**(특히 "AWS로 옮길까?"에 대한 실측 근거와
 > 결정 기록)는 [`docs/architecture.md`](./docs/architecture.md)에 정리돼 있습니다.
@@ -63,8 +63,8 @@ pnpm install
 supabase start
 supabase db reset          # 스키마 마이그레이션 적용
 
-# 환경변수 — supabase start 출력값으로 .env.local 작성
-cp .env.example .env.local  # NEXT_PUBLIC_SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY 채우기
+# 환경변수 — .env.local은 사용하지 않고 dev/prod를 물리적으로 분리
+cp .env.example .env.development  # supabase start의 로컬 값만 채우기
 
 pnpm dev                    # http://localhost:3000
 ```
@@ -139,6 +139,7 @@ curl --fail-with-body \
 | `UNIFI_PAY_STORE_ID` | Unifi Pay 판매자 스토어 ID |
 | `UNIFI_PAY_CALLBACK_BASE_URL` | Unifi 콘솔 허용 목록에 등록한 HTTPS 콜백 기준 URL |
 | `UNIFI_PAY_ITEM_PRICE` | Plus 30일권 주문 금액. 기본값 `10` USD |
+| `UNIFI_PAY_CHECKOUT_ENABLED` | 신규 checkout 전용 서버 플래그. 공백 제거 후 정확히 `true`일 때만 허용 |
 | `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
@@ -180,6 +181,7 @@ RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `p
 4. 확인된 `transactionId`를 한 번만 반영해 기존 잔여기간 뒤로 Plus 30일을 연장합니다. 환불은 Unifi 콘솔에서 수동 처리한 뒤 service-role 정산 RPC로 원거래 권한과 감사 기록을 함께 갱신합니다.
 
 리다이렉트 쿼리나 브라우저 상태만으로 Plus 권한을 부여하지 않습니다. Unifi Pay API 비밀값은 Vercel 서버 환경변수에만 저장하며 저장소에 커밋하지 않습니다.
+`UNIFI_PAY_CHECKOUT_ENABLED`가 없거나 `false`이면 신규 주문만 차단합니다. 기존 주문의 웹훅 검증과 환불 정산은 계속 동작해야 하며 이 플래그를 읽지 않습니다. 과거 Latpeed 라우트·테이블은 이전 결제 감사와 호환을 위한 legacy 경로이지 신규 결제의 기준이 아닙니다.
 
 ## 콘텐츠 정책
 

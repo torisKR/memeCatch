@@ -29,16 +29,9 @@ import { EvidenceDraftError } from "@/lib/mpe/evidence-draft.server";
 const candidateId = "10000000-0000-4000-8000-000000000001";
 
 function authClient(user: { id: string } | null, role?: string) {
-  const profile = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    single: vi.fn().mockResolvedValue({ data: role ? { role } : null, error: null }),
-  };
-  profile.select.mockReturnValue(profile);
-  profile.eq.mockReturnValue(profile);
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }) },
-    from: vi.fn().mockReturnValue(profile),
+    rpc: vi.fn().mockResolvedValue({ data: role === "operator", error: null }),
   };
 }
 
@@ -57,7 +50,7 @@ describe("admin MPE candidates API", () => {
     const signedOut = authClient(null);
     mocks.createClient.mockResolvedValueOnce(signedOut);
     expect((await POST(post({ candidateId }))).status).toBe(401);
-    expect(signedOut.from).not.toHaveBeenCalled();
+    expect(signedOut.rpc).not.toHaveBeenCalled();
 
     mocks.createClient.mockResolvedValueOnce(authClient({ id: "member" }, "user"));
     expect((await POST(post({ candidateId }))).status).toBe(403);

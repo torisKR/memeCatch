@@ -5,13 +5,20 @@ import { ModerationBadge, OriginKindBadge } from "@/components/admin/badges";
 import { AdminMemeContents } from "@/components/admin/admin-meme-contents";
 import { MemeEditForm } from "@/components/admin/meme-edit-form";
 import { MemeStatusControls } from "@/components/admin/meme-status-controls";
+import { MemeOriginCountryForm } from "@/components/admin/meme-origin-country-form";
 import {
   MemeTranslationReview,
   type MemeTranslationReviewRow,
 } from "@/components/admin/meme-translation-review";
+import { ArtifactStudio } from "@/components/studio/artifact-studio";
 import { isSeoContentLocale } from "@/lib/i18n-routing";
-import { memePathFrom, type SafetyLevel } from "@/lib/labels";
-import { isHouseOriginalRightsSource } from "@/lib/house-original";
+import { memePathFrom, SAFETY_LEVELS, type SafetyLevel } from "@/lib/labels";
+import {
+  houseOriginalCanonicalUrl,
+  houseOriginalPublicLabel,
+  isHouseOriginal,
+  isHouseOriginalRightsSource,
+} from "@/lib/house-original";
 import type { ModerationStatus } from "@/components/admin/constants";
 
 export const metadata = { title: "밈 편집" };
@@ -29,7 +36,12 @@ export default async function AdminMemeEditPage({
   const { data: meme } = await supabase.from("memes").select("*").eq("id", id).single();
   if (!meme) notFound();
 
-  const [{ data: contents }, { data: translations }, { data: sources }] = await Promise.all([
+  const [
+    { data: contents },
+    { data: translations },
+    { data: sources },
+    { data: originProfiles, error: originProfilesError },
+  ] = await Promise.all([
     supabase
       .from("meme_contents")
       .select(
@@ -49,7 +61,16 @@ export default async function AdminMemeEditPage({
       .from("meme_sources")
       .select("source_url, source_role, rights_basis")
       .eq("meme_id", id),
+    supabase
+      .from("meme_market_profiles")
+      .select("market_code, language_tag, local_title, review_state")
+      .eq("meme_id", id)
+      .eq("role", "origin")
+      .order("created_at", { ascending: true }),
   ]);
+  if (originProfilesError) {
+    throw new Error("출처 국가 프로필을 불러오지 못했어요.");
+  }
 
   const translationsForReview: MemeTranslationReviewRow[] = (translations ?? [])
     .filter(
@@ -102,6 +123,12 @@ export default async function AdminMemeEditPage({
         }
       />
 
+      <MemeOriginCountryForm
+        memeId={meme.id}
+        memeTitle={meme.title}
+        profiles={originProfiles ?? []}
+      />
+
       <MemeTranslationReview
         memeId={meme.id}
         memeUpdatedAt={meme.updated_at}
@@ -114,6 +141,19 @@ export default async function AdminMemeEditPage({
         memeTitle={meme.title}
         originKind={meme.origin_kind}
       />
+
+      {isHouseOriginal(meme.origin_kind) && (
+        <ArtifactStudio
+          dictionaryOnly
+          dictionaryDefaults={{
+            name: meme.title,
+            summary: meme.summary,
+            safety: `${SAFETY_LEVELS[meme.safety_level as SafetyLevel].icon} ${SAFETY_LEVELS[meme.safety_level as SafetyLevel].user}`,
+            detailUrl: houseOriginalCanonicalUrl(meme.short_id, meme.slug),
+            source: houseOriginalPublicLabel(),
+          }}
+        />
+      )}
 
       <MemeEditForm
         memeId={meme.id}

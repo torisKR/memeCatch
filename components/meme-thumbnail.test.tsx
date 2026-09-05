@@ -12,6 +12,7 @@ describe("MemeThumbnail", () => {
       <MemeThumbnail
         src="https://i.ytimg.com/vi/broken/hqdefault.jpg"
         title="테스트 밈"
+        fallbackCaption="해외에서도 바로 이해되는 짧은 상황 반전"
         category="phrase"
         originYear={2026}
       />,
@@ -23,6 +24,7 @@ describe("MemeThumbnail", () => {
 
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("테스트 밈")).not.toBeNull();
+    expect(screen.getByText("해외에서도 바로 이해되는 짧은 상황 반전")).not.toBeNull();
     expect(document.querySelector('[data-thumbnail-state="fallback"]')).not.toBeNull();
 
     rerender(

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * 웹훅 라우트의 보안 계약 검증 — 특히 귀속 탈취(attribution hijack) 차단.
@@ -9,12 +9,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const processUnifiPaymentEvent = vi.fn().mockResolvedValue({ matched: true });
 const getUnifiPayTransaction = vi.fn();
+const hasUnifiPaymentLink = vi.fn();
+const rateLimit = vi.fn();
 
 // unifi-pay.server가 "server-only"를 import한다 — 테스트 환경에선 no-op으로 대체.
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/billing/repository.server", () => ({
+  hasUnifiPaymentLink: (...args: unknown[]) => hasUnifiPaymentLink(...args),
   processUnifiPaymentEvent: (...args: unknown[]) => processUnifiPaymentEvent(...args),
+}));
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => rateLimit(...args),
 }));
 
 vi.mock("@/lib/billing/unifi-pay.server", async (importOriginal) => {
@@ -59,9 +65,97 @@ const CONFIRMED_TX = {
 beforeEach(() => {
   processUnifiPaymentEvent.mockClear();
   getUnifiPayTransaction.mockReset();
+  hasUnifiPaymentLink.mockReset();
+  hasUnifiPaymentLink.mockResolvedValue(true);
+  rateLimit.mockReset();
+  rateLimit.mockReturnValue({ ok: true });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("unifi webhook attribution", () => {
+  it("bounds repeated one-link abuse before calling the provider and requests a retry", async () => {
+    rateLimit.mockReturnValue({ ok: false, retryAfterSec: 60 });
+
+    const res = await POST(
+      webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
+    );
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("60");
+    expect(hasUnifiPaymentLink).toHaveBeenCalledWith("goodlink");
+    expect(rateLimit).toHaveBeenCalledWith("unifi-webhook:goodlink", {
+      limit: 30,
+      windowMs: 60_000,
+    });
+    expect(getUnifiPayTransaction).not.toHaveBeenCalled();
+  });
+
+  it("does not share a global throttle across distinct known payment links", async () => {
+    getUnifiPayTransaction.mockImplementation(
+      (_config: unknown, transactionId: string) => Promise.resolve({
+        ...CONFIRMED_TX,
+        transactionId,
+        orderId: `LINK-${transactionId}-provider`,
+      }),
+    );
+
+    for (let index = 0; index < 31; index += 1) {
+      const linkId = `tx_${index}`;
+      const res = await POST(
+        webhookRequest({
+          transactionId: linkId,
+          orderId: `LINK-${linkId}-body`,
+          status: "CONFIRMED",
+        }),
+      );
+      expect(res.status).toBe(200);
+    }
+
+    expect(getUnifiPayTransaction).toHaveBeenCalledTimes(31);
+    expect(new Set(rateLimit.mock.calls.map(([key]) => key))).toHaveProperty("size", 31);
+  });
+
+  it("rejects oversized identifiers before local or provider lookup", async () => {
+    const res = await POST(
+      webhookRequest({
+        transactionId: "t".repeat(257),
+        orderId: "LINK-goodlink-abc",
+        status: "CONFIRMED",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(hasUnifiPaymentLink).not.toHaveBeenCalled();
+    expect(getUnifiPayTransaction).not.toHaveBeenCalled();
+  });
+
+  it("ignores unknown payment links without calling the provider", async () => {
+    hasUnifiPaymentLink.mockResolvedValue(false);
+
+    const res = await POST(
+      webhookRequest({ transactionId: "tx_1", orderId: "LINK-unknown-abc", status: "CONFIRMED" }),
+    );
+
+    expect(await res.json()).toMatchObject({ ignored: true, reason: "unknown_payment_link" });
+    expect(getUnifiPayTransaction).not.toHaveBeenCalled();
+  });
+
+  it("신규 checkout이 꺼져도 기존 결제 웹훅은 계속 정산한다", async () => {
+    vi.stubEnv("UNIFI_PAY_CHECKOUT_ENABLED", "false");
+    getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
+
+    const res = await POST(
+      webhookRequest({ transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, status: "active" });
+    expect(processUnifiPaymentEvent).toHaveBeenCalledTimes(1);
+  });
+
   it("정상 결제는 인증 조회의 orderId에서 파생한 linkId로 권한을 만든다", async () => {
     getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
 
@@ -153,6 +247,22 @@ describe("unifi webhook attribution", () => {
     expect(processUnifiPaymentEvent.mock.calls[0][0]).toMatchObject({
       providerLinkId: "goodlink",
       transactionId: "tx_1",
+    });
+  });
+
+  it("감사 payload에는 무서명 body가 아니라 provider orderId를 저장한다", async () => {
+    getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
+
+    await POST(
+      webhookRequest({
+        transactionId: "tx_1",
+        orderId: "LINK-goodlink-untrusted",
+        status: "CONFIRMED",
+      }),
+    );
+
+    expect(processUnifiPaymentEvent.mock.calls[0][0]).toMatchObject({
+      payload: { orderId: "LINK-goodlink-abc" },
     });
   });
 });

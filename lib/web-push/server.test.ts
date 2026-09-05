@@ -10,7 +10,7 @@ vi.mock("server-only", () => ({}));
 const createAdminClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient }));
 
-import { runWebPushDelivery, sendWebPush } from "./server";
+import { isSupportedWebPushEndpoint, runWebPushDelivery, sendWebPush } from "./server";
 
 function hmac(key: Buffer, value: Buffer): Buffer {
   return createHmac("sha256", key).update(value).digest();
@@ -26,6 +26,62 @@ afterEach(() => {
 });
 
 describe("web push transport", () => {
+  it("accepts browser push services and rejects private or disguised endpoints", () => {
+    expect(isSupportedWebPushEndpoint("https://fcm.googleapis.com/fcm/send/one")).toBe(true);
+    expect(isSupportedWebPushEndpoint("https://fcm.googleapis.com/wp/one")).toBe(true);
+    expect(isSupportedWebPushEndpoint("https://updates.push.services.mozilla.com/wpush/v2/one")).toBe(true);
+    expect(isSupportedWebPushEndpoint("https://web.push.apple.com/Q-one")).toBe(true);
+    expect(isSupportedWebPushEndpoint("https://127.0.0.1/push")).toBe(false);
+    expect(isSupportedWebPushEndpoint("https://fcm.googleapis.com.evil.test/push")).toBe(false);
+    expect(isSupportedWebPushEndpoint("https://user@fcm.googleapis.com/push")).toBe(false);
+    expect(isSupportedWebPushEndpoint("https://fcm.googleapis.com:8443/push")).toBe(false);
+    expect(isSupportedWebPushEndpoint("https://fcm.googleapis.com/v1/projects/project/messages:send")).toBe(false);
+    expect(isSupportedWebPushEndpoint("https://fcm.googleapis.com/push\n")).toBe(false);
+  });
+
+  it("rejects unsupported endpoints before the network sink", async () => {
+    const subscriber = createECDH("prime256v1");
+    subscriber.generateKeys();
+    const vapid = createECDH("prime256v1");
+    vapid.generateKeys();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(sendWebPush({
+      endpoint: "https://127.0.0.1/push",
+      p256dh: subscriber.getPublicKey().toString("base64url"),
+      auth: randomBytes(16).toString("base64url"),
+    }, { title: "blocked" }, {
+      publicKey: vapid.getPublicKey().toString("base64url"),
+      privateKey: vapid.getPrivateKey().toString("base64url"),
+      subject: "mailto:ops@example.test",
+    })).rejects.toThrow("invalid_push_endpoint");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("forbids redirects at the network sink", async () => {
+    const subscriber = createECDH("prime256v1");
+    subscriber.generateKeys();
+    const vapid = createECDH("prime256v1");
+    vapid.generateKeys();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.redirect).toBe("error");
+      throw new TypeError("fetch failed: redirect mode is error");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(sendWebPush({
+      endpoint: "https://fcm.googleapis.com/fcm/send/redirect",
+      p256dh: subscriber.getPublicKey().toString("base64url"),
+      auth: randomBytes(16).toString("base64url"),
+    }, { title: "redirect" }, {
+      publicKey: vapid.getPublicKey().toString("base64url"),
+      privateKey: vapid.getPrivateKey().toString("base64url"),
+      subject: "mailto:ops@example.test",
+    })).rejects.toThrow("redirect mode is error");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("sends an RFC 8291 encrypted payload with a VAPID token", async () => {
     const subscriber = createECDH("prime256v1");
     subscriber.generateKeys();
@@ -40,7 +96,7 @@ describe("web push transport", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await sendWebPush({
-      endpoint: "https://push.example.test/message/one",
+      endpoint: "https://fcm.googleapis.com/fcm/send/one",
       p256dh: subscriber.getPublicKey().toString("base64url"),
       auth: auth.toString("base64url"),
     }, {
@@ -59,7 +115,8 @@ describe("web push transport", () => {
     expect(headers.authorization).toMatch(/^vapid t=[^.]+\.[^.]+\.[^,]+, k=/);
     const jwt = headers.authorization.match(/t=([^,]+)/)?.[1];
     const claims = JSON.parse(Buffer.from(jwt!.split(".")[1]!, "base64url").toString()) as { aud: string };
-    expect(claims.aud).toBe("https://push.example.test");
+    expect(claims.aud).toBe("https://fcm.googleapis.com");
+    expect(init?.redirect).toBe("error");
 
     const body = Buffer.from(init?.body as Buffer);
     const salt = body.subarray(0, 16);
@@ -86,7 +143,7 @@ describe("web push transport", () => {
     const vapid = createECDH("prime256v1");
     vapid.generateKeys();
     const subscription = {
-      endpoint: "https://push.example.test/message/batch",
+      endpoint: "https://fcm.googleapis.com/fcm/send/batch",
       p256dh: subscriber.getPublicKey().toString("base64url"),
       auth: randomBytes(16).toString("base64url"),
     };
@@ -133,5 +190,37 @@ describe("web push transport", () => {
     });
     expect(peak).toBe(2);
     expect(rpc).toHaveBeenCalledWith("claim_web_push_outbox", { p_limit: 5 });
+  });
+
+  it("bounds the claimed batch and legacy subscription fan-out", async () => {
+    const subscriber = createECDH("prime256v1");
+    subscriber.generateKeys();
+    const vapid = createECDH("prime256v1");
+    vapid.generateKeys();
+    const subscriptions = Array.from({ length: 8 }, (_, index) => ({
+      endpoint: `https://fcm.googleapis.com/fcm/send/${index}`,
+      p256dh: subscriber.getPublicKey().toString("base64url"),
+      auth: randomBytes(16).toString("base64url"),
+    }));
+    const rpc = vi.fn(async (name: string) => name === "claim_web_push_outbox"
+      ? { data: [{ outbox_id: "one", user_id: "user", payload: { title: "one" }, claim_token: "claim", attempt_count: 1 }], error: null }
+      : { data: name === "enqueue_web_push_trend_alerts" ? 1 : true, error: null });
+    createAdminClient.mockReturnValue({
+      rpc,
+      from: () => ({
+        select: () => ({ eq: async () => ({ data: subscriptions, error: null }) }),
+        delete: () => ({ eq: async () => ({ error: null }) }),
+      }),
+    });
+    vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", vapid.getPublicKey().toString("base64url"));
+    vi.stubEnv("VAPID_PRIVATE_KEY", vapid.getPrivateKey().toString("base64url"));
+    vi.stubEnv("VAPID_SUBJECT", "mailto:ops@example.test");
+    const fetchMock = vi.fn(async () => new Response(null, { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runWebPushDelivery(1_000);
+
+    expect(rpc).toHaveBeenCalledWith("claim_web_push_outbox", { p_limit: 25 });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 });

@@ -127,8 +127,8 @@ export function prioritizeDraftEvidence(evidence: DraftEvidence[]): DraftEvidenc
 async function requireOperator(client: MpeClient) {
   const { data: { user } } = await client.auth.getUser();
   if (!user) throw new EvidenceDraftError("signed_out", 401);
-  const { data: profile } = await client.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "operator") throw new EvidenceDraftError("operator_required", 403);
+  const { data: isOperator } = await client.rpc("is_operator");
+  if (!isOperator) throw new EvidenceDraftError("operator_required", 403);
   return user;
 }
 

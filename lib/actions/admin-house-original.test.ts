@@ -20,25 +20,12 @@ type FromHandler = (table: string) => unknown;
 
 function operatorClient(options: {
   from: FromHandler;
-  rpc?: ReturnType<typeof vi.fn>;
+  rpc?: (name: string, args?: unknown) => unknown;
   user?: { id: string } | null;
   role?: string;
 }) {
-  const profile = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    single: vi.fn().mockResolvedValue({
-      data: { role: options.role ?? "operator" },
-      error: null,
-    }),
-  };
-  profile.select.mockReturnValue(profile);
-  profile.eq.mockReturnValue(profile);
-
-  const from: FromHandler = (table) => {
-    if (table === "profiles") return profile;
-    return options.from(table);
-  };
+  const from: FromHandler = (table) => options.from(table);
+  const rpc = options.rpc ?? vi.fn();
 
   return {
     auth: {
@@ -47,7 +34,9 @@ function operatorClient(options: {
       }),
     },
     from,
-    rpc: options.rpc ?? vi.fn(),
+    rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
+      ? Promise.resolve({ data: (options.role ?? "operator") === "operator", error: null })
+      : rpc(name, args)),
   };
 }
 
@@ -58,16 +47,19 @@ function memesInsertClient(insertImpl: () => Promise<{ data: unknown; error: { c
     }),
   }));
   const sourcesInsert = vi.fn().mockResolvedValue({ error: null });
+  const marketProfilesInsert = vi.fn().mockResolvedValue({ error: null });
   return {
     client: operatorClient({
       from: (table) => {
         if (table === "memes") return { insert };
         if (table === "meme_sources") return { insert: sourcesInsert };
+        if (table === "meme_market_profiles") return { insert: marketProfilesInsert };
         throw new Error(`unexpected table ${table}`);
       },
     }),
     insert,
     sourcesInsert,
+    marketProfilesInsert,
   };
 }
 
@@ -81,6 +73,8 @@ const createInput = {
   difficulty: "beginner" as const,
   originYear: 2026,
   usageContext: { work: "green" as const, friends: "green" as const, family: "green" as const, sns: "green" as const },
+  country: "US" as const,
+  localTitle: "Original local title",
 };
 
 beforeEach(() => {
@@ -118,7 +112,7 @@ describe("createHouseOriginal", () => {
   });
 
   it("inserts pending house_original only and does not walk status", async () => {
-    const { client, insert, sourcesInsert } = memesInsertClient(async () => ({
+    const { client, insert, sourcesInsert, marketProfilesInsert } = memesInsertClient(async () => ({
       data: { id: memeId, short_id: "abcd1234", slug: "자체-제작-테스트" },
       error: null,
     }));
@@ -139,7 +133,7 @@ describe("createHouseOriginal", () => {
     expect(insert).not.toHaveBeenCalledWith(
       expect.objectContaining({ house_rights_attested_at: expect.anything() }),
     );
-    expect(client.rpc).not.toHaveBeenCalled();
+    expect(client.rpc).toHaveBeenCalledWith("is_operator");
     expect(sourcesInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         meme_id: memeId,
@@ -147,6 +141,43 @@ describe("createHouseOriginal", () => {
         rights_basis: "creator_permission",
       }),
     );
+    expect(marketProfilesInsert).toHaveBeenCalledWith({
+      meme_id: memeId,
+      market_code: "US",
+      language_tag: "en-US",
+      role: "origin",
+      local_title: "Original local title",
+      review_state: "reviewed",
+      reviewed_at: expect.any(String),
+      reviewed_by: operatorId,
+    });
+  });
+
+  it("returns a partial-create error when the reviewed origin profile cannot be linked", async () => {
+    const { client, marketProfilesInsert } = memesInsertClient(async () => ({
+      data: { id: memeId, short_id: "abcd1234", slug: "자체-제작-테스트" },
+      error: null,
+    }));
+    marketProfilesInsert.mockResolvedValueOnce({ error: { message: "profile failed" } });
+    mocks.createClient.mockResolvedValue(client);
+
+    await expect(createHouseOriginal(createInput)).resolves.toEqual({
+      ok: false,
+      error: `자체 제작 항목과 권리 출처는 만들어졌지만 국가 프로필 연결에 실패했어요: profile failed — 밈 관리에서 이어서 처리해 주세요. (id: ${memeId})`,
+    });
+  });
+
+  it("rejects an unsupported country before creating the meme", async () => {
+    const { client, insert } = memesInsertClient(async () => {
+      throw new Error("insert should not run");
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    await expect(createHouseOriginal({
+      ...createInput,
+      country: "ZZ" as "US",
+    })).resolves.toEqual({ ok: false, error: "밈 국가를 확인해 주세요." });
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("rejects operator scratch origin copy before insert", async () => {

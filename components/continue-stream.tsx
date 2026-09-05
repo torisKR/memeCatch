@@ -4,7 +4,7 @@ import type { MemeCategory } from "@/lib/labels";
 import { ExploreGrid } from "@/components/explore-grid";
 import { TrackedBlock } from "@/components/tracked-block";
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative)";
+const SELECT = "*, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)";
 
 /**
  * 첫 화면에 렌더할 카드 수 상한. 상세는 '문서'라서 본문 대비 링크 비율이 중요하다 —

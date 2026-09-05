@@ -19,10 +19,6 @@ function actionClient(options: {
   rpcError?: string;
   job?: { id: string; status: string; ingestion_id: string; media_ingestions: { user_id: string } } | null;
 } = {}) {
-  const profile = { select: vi.fn(), eq: vi.fn(), single: vi.fn().mockResolvedValue({ data: { role: options.role ?? "operator" }, error: null }) };
-  profile.select.mockReturnValue(profile);
-  profile.eq.mockReturnValue(profile);
-
   const jobRead = { select: vi.fn(), eq: vi.fn(), single: vi.fn().mockResolvedValue({ data: options.job, error: options.job === null ? { message: "missing" } : null }) };
   jobRead.select.mockReturnValue(jobRead);
   jobRead.eq.mockReturnValue(jobRead);
@@ -31,13 +27,18 @@ function actionClient(options: {
   jobUpdate.eq.mockReturnValue(jobUpdate);
 
   const from = vi.fn((table: string) => {
-    if (table === "profiles") return profile;
     if (table === "processing_jobs") return options.job === undefined ? jobUpdate : jobRead;
     throw new Error(`unexpected table ${table}`);
   });
   const rpc = vi.fn().mockResolvedValue({ data: {}, error: options.rpcError ? { message: options.rpcError } : null });
   return {
-    client: { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: options.user === undefined ? { id: "10000000-0000-4000-8000-000000000001" } : options.user } }) }, from, rpc },
+    client: {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: options.user === undefined ? { id: "10000000-0000-4000-8000-000000000001" } : options.user } }) },
+      from,
+      rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
+        ? Promise.resolve({ data: (options.role ?? "operator") === "operator", error: null })
+        : rpc(name, args)),
+    },
     rpc,
     jobRead,
     jobUpdate,

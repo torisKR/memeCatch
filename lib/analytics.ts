@@ -11,9 +11,10 @@
  *          | global_daily_start(locale) | global_daily_complete(locale, score)
  *          | briefing_click(to) — 홈 주간 브리핑("이번 주 이것만") 내 링크 클릭
  *          | traffic_source — 세션 1회, 유입 경로 판별 결과(components/attribution-tracker.tsx)
- *          | search_submit(query, result_count) — 검색 결과가 실제로 렌더된 시점 1회
- *          | search_no_result(query) — 결과 0건 (search_submit과 함께 발사)
- *          | search_result_click(query, to) — 결과 카드 클릭
+ *          | search_submit(result_count) — 검색 결과가 실제로 렌더된 시점 1회
+ *          | search_no_result — 결과 0건 (search_submit과 함께 발사)
+ *          | search_result_click(to) — 결과 카드 클릭
+ *            ↳ 호출부가 전달한 raw query는 공통 track() 경계에서 제거
  *            ↳ 검색 성공률 = (result_click + suggest_click) / submit
  *          | meme_source_opened(short_id, platform) — 상세의 근거 목록(SourceEvidence)
  *            출처 링크 클릭. HG-006 B안 — 개인정보 무포함(문서 ID·정규화 플랫폼명만)
@@ -96,12 +97,6 @@ const DURABLE_GROWTH_EVENTS = new Set<GtagEvent>([
 function sendDurableGrowthEvent(event: GtagEvent, params: Record<string, string | number>) {
   if (typeof window === "undefined" || !DURABLE_GROWTH_EVENTS.has(event)) return;
   try {
-    const key = "memecatch:growth-session:v1";
-    const stored = window.sessionStorage.getItem(key);
-    const sessionId = stored || crypto.randomUUID();
-    if (!stored) window.sessionStorage.setItem(key, sessionId);
-    const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `mc_growth_session=${sessionId}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
     const payload = JSON.stringify({
       eventName: event,
       path: window.location.pathname,
@@ -126,7 +121,10 @@ declare global {
 }
 
 export function track(event: GtagEvent, params?: Record<string, string | number>) {
-  const eventParams = params ?? {};
+  // 검색어는 민감 정보가 될 수 있다. 호출부가 실수로 query를 계속 전달해도
+  // GA와 durable ledger 어느 쪽에도 도달하지 않도록 단일 경계에서 제거한다.
+  const eventParams = { ...(params ?? {}) };
+  delete eventParams.query;
   try {
     window.gtag?.("event", event, eventParams);
   } catch {

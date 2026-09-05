@@ -52,14 +52,14 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url)`;
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
   const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url)${topic}`;
+  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {

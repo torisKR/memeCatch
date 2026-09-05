@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(19);
 
 insert into auth.users (
   id, email, email_confirmed_at, raw_user_meta_data, created_at, updated_at
@@ -10,22 +10,41 @@ insert into auth.users (
   'growth-billing@example.com', now(), '{}'::jsonb, now(), now()
 );
 
-select set_config(
-  'request.jwt.claims',
-  '{"sub":"44444444-4444-4444-8444-444444444444","role":"authenticated","email":"growth-billing@example.com"}',
-  true
+select ok(
+  not has_function_privilege('authenticated', 'public.create_billing_order(text, uuid)', 'execute'),
+  'authenticated cannot create billing orders directly'
 );
-set local role authenticated;
+select ok(
+  not has_function_privilege('authenticated', 'public.attach_unifi_payment_link(text, text)', 'execute'),
+  'authenticated cannot attach provider links directly'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.fail_billing_order(text)', 'execute'),
+  'authenticated cannot fail billing orders directly'
+);
+set local role service_role;
 select lives_ok(
-  $$select public.create_billing_order('growth-order-a', '55555555-5555-4555-8555-555555555555')$$,
+  $$select public.server_create_billing_order(
+    '44444444-4444-4444-8444-444444444444',
+    'growth-order-a',
+    '55555555-5555-4555-8555-555555555555'
+  )$$,
   'order A and checkout event commit together'
 );
 select lives_ok(
-  $$select public.create_billing_order('growth-order-b', '55555555-5555-4555-8555-555555555555')$$,
+  $$select public.server_create_billing_order(
+    '44444444-4444-4444-8444-444444444444',
+    'growth-order-b',
+    '55555555-5555-4555-8555-555555555555'
+  )$$,
   'order B and checkout event commit together'
 );
-select public.attach_unifi_payment_link('growth-order-a', 'growth-link-a');
-select public.attach_unifi_payment_link('growth-order-b', 'growth-link-b');
+select public.server_attach_unifi_payment_link(
+  '44444444-4444-4444-8444-444444444444', 'growth-order-a', 'growth-link-a'
+);
+select public.server_attach_unifi_payment_link(
+  '44444444-4444-4444-8444-444444444444', 'growth-order-b', 'growth-link-b'
+);
 reset role;
 
 select public.process_unifi_order_event(
@@ -33,6 +52,14 @@ select public.process_unifi_order_event(
 );
 select public.process_unifi_order_event(
   'growth-link-a', 'growth-tx-a', 'CONFIRMED', now() - interval '2 minutes', '{}'::jsonb
+);
+select throws_ok(
+  $$select public.process_unifi_order_event(
+    'growth-link-a', 'growth-tx-different', 'CONFIRMED', now(), '{}'::jsonb
+  )$$,
+  '22023',
+  'transaction_id_immutable',
+  'the first transaction id cannot be replaced'
 );
 set constraints reproject_unifi_entitlements_after_order_change immediate;
 

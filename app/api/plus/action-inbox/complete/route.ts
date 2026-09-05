@@ -110,6 +110,8 @@ function errorCode(error: { message?: string } | null): string {
   if (message.includes("locale_unavailable")) return "locale_unavailable";
   if (message.includes("invalid_channel")) return "invalid_channel";
   if (message.includes("invalid_artifact_kind")) return "invalid_artifact_kind";
+  if (message.includes("invalid_mode")) return "invalid_mode";
+  if (message.includes("meme_not_trusted_for_one_cut")) return "meme_not_trusted_for_one_cut";
   if (message.includes("invalid_result_url")) return "invalid_result_url";
   if (message.includes("performance_note_too_long")) return "invalid_note";
   if (message.includes("private_note_too_long")) return "invalid_note";
@@ -143,6 +145,7 @@ export async function POST(request: Request): Promise<Response> {
     p_channel: input.channel,
     p_locale: input.locale,
     p_meme_id: input.memeId,
+    p_mode: input.mode,
     p_performance_note: input.performanceNote,
     p_private_note: input.privateNote,
     p_result_url: input.resultUrl,
@@ -155,7 +158,7 @@ export async function POST(request: Request): Promise<Response> {
         ? 403
         : code === "receipt_conflict"
           ? 409
-        : code === "invalid_meme" || code.startsWith("invalid_")
+        : code === "invalid_meme" || code === "meme_not_trusted_for_one_cut" || code.startsWith("invalid_")
           ? 400
           : code === "locale_unavailable"
             ? 422
@@ -167,6 +170,7 @@ export async function POST(request: Request): Promise<Response> {
     !isRecord(data) ||
     data.completed !== true ||
     typeof data.receipt_id !== "string" ||
+    data.mode !== input.mode ||
     !nonNegativeInteger(data.completed_today_count) ||
     !nonNegativeInteger(data.current_streak)
   ) {
@@ -179,6 +183,7 @@ export async function POST(request: Request): Promise<Response> {
       alreadyCompleted: data.already_completed === true,
       alreadyRecorded: data.already_recorded === true,
       receiptId: data.receipt_id,
+      mode: data.mode,
       completedTodayCount: data.completed_today_count,
       currentStreak: data.current_streak,
     },

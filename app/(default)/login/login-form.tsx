@@ -3,6 +3,7 @@
 import { useActionState, useId, useState } from "react";
 import { BrandTile } from "@/components/brand-mark";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AnimatePresence,
   motion,
@@ -11,6 +12,9 @@ import {
 } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
+import { LOGIN_COPY } from "@/lib/i18n-login";
+import { useLocale } from "@/lib/i18n-client";
+import { safeNext } from "@/lib/safe-redirect";
 
 /**
  * 레인 C — 로그인/가입 폼(클라이언트). DESIGN.md §10 인증.
@@ -23,11 +27,29 @@ import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
 
 type Mode = "login" | "signup";
 type Provider = "kakao" | "google";
-
-const PROVIDER_LABEL: Record<Provider, string> = {
-  kakao: "카카오",
-  google: "구글",
+type KaiaEventMap = {
+  accountsChanged(accounts: `0x${string}`[]): void;
+  chainChanged(chainId: string): void;
+  connect(connectInfo: { chainId: string }): void;
+  disconnect(error: { code: number; message: string }): void;
+  message(message: { type: string; data: unknown }): void;
 };
+type KaiaProvider = {
+  address: string;
+  request(args: { method: string; params?: unknown }): Promise<unknown>;
+  on<Event extends keyof KaiaEventMap>(
+    event: Event,
+    listener: KaiaEventMap[Event],
+  ): void;
+  removeListener<Event extends keyof KaiaEventMap>(
+    event: Event,
+    listener: KaiaEventMap[Event],
+  ): void;
+};
+
+const KAIA_MAINNET_CHAIN_ID = "0x2019";
+const UNIFI_MAINNET_CHAIN_ID = "8217";
+const KAIA_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/i;
 
 export function LoginForm({
   next,
@@ -38,16 +60,20 @@ export function LoginForm({
   callbackError?: boolean;
   initialMode?: Mode;
 }) {
+  const router = useRouter();
+  const { locale } = useLocale();
+  const copy = LOGIN_COPY[locale];
   const reduce = useReducedMotion();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [oauthBusy, setOauthBusy] = useState<Provider | null>(null);
+  const [walletBusy, setWalletBusy] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
   async function startOAuth(provider: Provider) {
-    if (oauthBusy) return;
+    if (oauthBusy || walletBusy) return;
     setOauthBusy(provider);
     setOauthNotice(null);
-    const label = PROVIDER_LABEL[provider];
+    const label = copy.providerNames[provider];
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
@@ -59,15 +85,97 @@ export function LoginForm({
       // 성공 시 Supabase가 브라우저를 자동으로 리다이렉트한다.
       if (error) {
         setOauthBusy(null);
-        setOauthNotice(
-          `${label} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.`
-        );
+        setOauthNotice(copy.oauthUnavailable(label));
       }
     } catch {
       setOauthBusy(null);
+      setOauthNotice(copy.oauthUnavailable(label));
+    }
+  }
+
+  async function startKaiaWalletLogin() {
+    if (walletBusy || oauthBusy) return;
+
+    setWalletBusy(true);
+    setOauthNotice(null);
+    try {
+      const unifiClientId = process.env.NEXT_PUBLIC_UNIFI_CLIENT_ID?.trim();
+      let wallet: KaiaProvider;
+
+      if (unifiClientId) {
+        const { default: DappPortalSDK } = await import(
+          "@linenext/dapp-portal-sdk"
+        );
+        const sdk = await DappPortalSDK.init({
+          clientId: unifiClientId,
+          chainId: UNIFI_MAINNET_CHAIN_ID,
+        });
+        const sdkWallet = sdk.getWalletProvider();
+        const accounts = await sdkWallet.request({
+          method: "kaia_requestAccounts",
+        });
+        if (
+          !Array.isArray(accounts) ||
+          typeof accounts[0] !== "string" ||
+          !KAIA_ADDRESS_PATTERN.test(accounts[0])
+        ) {
+          throw new Error("Unifi Wallet returned an invalid account address");
+        }
+        const account = accounts[0];
+        wallet = {
+          address: account,
+          request: ({ method, params }) => {
+            if (method === "eth_requestAccounts") return Promise.resolve([account]);
+            if (method === "eth_chainId") return Promise.resolve(KAIA_MAINNET_CHAIN_ID);
+            if (params !== undefined && !Array.isArray(params)) {
+              throw new Error("Unifi Wallet received invalid request parameters");
+            }
+            return sdkWallet.request({ method, params });
+          },
+          on: () => undefined,
+          removeListener: () => undefined,
+        };
+      } else {
+        const fallback = (window as Window & { klaytn?: KaiaProvider }).klaytn;
+        if (!fallback) {
+          setOauthNotice(copy.kaiaUnavailable);
+          return;
+        }
+
+        const chainId = await fallback.request({ method: "eth_chainId" });
+        if (
+          typeof chainId !== "string" ||
+          chainId.toLowerCase() !== KAIA_MAINNET_CHAIN_ID
+        ) {
+          setOauthNotice(copy.kaiaWrongChain);
+          return;
+        }
+        wallet = fallback;
+      }
+
+      const { data, error } = await createClient().auth.signInWithWeb3({
+        chain: "ethereum",
+        wallet,
+        statement: "Sign in to MemeCatch with Kaia Wallet.",
+      });
+      if (error) throw error;
+      if (!data.session) throw new Error("Kaia Wallet session was not created");
+
+      router.replace(safeNext(next));
+      router.refresh();
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? error.code
+          : undefined;
+      const message = error instanceof Error ? error.message : "";
       setOauthNotice(
-        `${label} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.`
+        code === 4001 || /reject|denied|cancel/i.test(message)
+          ? copy.kaiaRejected
+          : copy.kaiaGenericError,
       );
+    } finally {
+      setWalletBusy(false);
     }
   }
 
@@ -86,16 +194,16 @@ export function LoginForm({
     <motion.div variants={enter} initial="hidden" animate="show">
       <div className="flex items-center gap-2">
         <BrandTile className="size-9" />
-        <span className="text-lg font-extrabold tracking-tight">밈캐치</span>
+        <span className="text-lg font-extrabold tracking-tight">{copy.brand}</span>
       </div>
 
       <h1 className="mt-6 text-[1.75rem] font-extrabold leading-tight">
-        {mode === "login" ? "다시 만나서 반가워요" : "밈캐치에 어서 오세요"}
+        {mode === "login" ? copy.loginTitle : copy.signupTitle}
       </h1>
       <p className="mt-2 text-muted">
         {mode === "login"
-          ? "로그인하면 밈 저장과 제보를 이어서 할 수 있어요."
-          : "가입하면 밈을 저장하고 직접 제보할 수 있어요."}
+          ? copy.loginDescription
+          : copy.signupDescription}
       </p>
 
       {callbackError && (
@@ -103,7 +211,7 @@ export function LoginForm({
           role="alert"
           className="mt-4 rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red"
         >
-          로그인 링크가 만료됐거나 잘못됐어요. 다시 로그인해 주세요.
+          {copy.callbackError}
         </p>
       )}
 
@@ -111,8 +219,29 @@ export function LoginForm({
       <div className="mt-6 flex flex-col gap-2.5">
         <button
           type="button"
+          onClick={startKaiaWalletLogin}
+          disabled={walletBusy || !!oauthBusy}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+        >
+          {walletBusy ? (
+            <Spinner className="border-white/40 border-t-white" />
+          ) : (
+            <span
+              aria-hidden
+              className="grid size-5 place-items-center rounded-full bg-white text-xs font-black text-black"
+            >
+              K
+            </span>
+          )}
+          {copy.kaiaButton}
+        </button>
+        <p className="px-1 text-xs text-muted">
+          {copy.kaiaAccountNotice}
+        </p>
+        <button
+          type="button"
           onClick={() => startOAuth("kakao")}
-          disabled={!!oauthBusy}
+          disabled={!!oauthBusy || walletBusy}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 text-base font-semibold text-[#191600] transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {oauthBusy === "kakao" ? (
@@ -120,12 +249,12 @@ export function LoginForm({
           ) : (
             <KakaoMark className="h-5 w-5" />
           )}
-          카카오로 시작하기
+          {copy.kakaoButton}
         </button>
         <button
           type="button"
           onClick={() => startOAuth("google")}
-          disabled={!!oauthBusy}
+          disabled={!!oauthBusy || walletBusy}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-base font-semibold text-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {oauthBusy === "google" ? (
@@ -133,14 +262,14 @@ export function LoginForm({
           ) : (
             <GoogleMark className="h-5 w-5" />
           )}
-          구글로 시작하기
+          {copy.googleButton}
         </button>
         <a
           href={`/auth/tiktok?next=${encodeURIComponent(next)}`}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98]"
         >
           <TikTokMark className="h-5 w-5" />
-          TikTok으로 시작하기
+          {copy.tiktokButton}
         </a>
       </div>
 
@@ -151,20 +280,20 @@ export function LoginForm({
       {/* 구분선 */}
       <div className="my-5 flex items-center gap-3" aria-hidden>
         <span className="h-px flex-1 bg-border" />
-        <span className="text-sm text-muted">또는 이메일로</span>
+        <span className="text-sm text-muted">{copy.emailDivider}</span>
         <span className="h-px flex-1 bg-border" />
       </div>
 
       {/* 로그인/가입 탭 */}
       <div
         role="tablist"
-        aria-label="로그인 방법 선택"
+        aria-label={copy.tabListLabel}
         className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1"
       >
         {(
           [
-            ["login", "로그인"],
-            ["signup", "가입하기"],
+            ["login", copy.loginTab],
+            ["signup", copy.signupTab],
           ] as const
         ).map(([key, label]) => {
           const selected = mode === key;
@@ -216,7 +345,7 @@ export function LoginForm({
 
       <p className="mt-8 text-center text-muted">
         <Link href="/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground">
-          로그인 없이 둘러보기
+          {copy.browseWithoutLogin}
         </Link>
       </p>
     </motion.div>
@@ -274,6 +403,15 @@ function FormError({ message }: { message?: string }) {
   );
 }
 
+function FormNotice({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p role="status" aria-live="polite" className="rounded-xl bg-surface-2 px-4 py-3 text-foreground">
+      {message}
+    </p>
+  );
+}
+
 function SubmitButton({
   pending,
   label,
@@ -296,6 +434,8 @@ function SubmitButton({
 }
 
 function SignInForm({ next }: { next: string }) {
+  const { locale } = useLocale();
+  const copy = LOGIN_COPY[locale];
   const [state, action, pending] = useActionState<AuthState, FormData>(
     signIn,
     null
@@ -307,7 +447,7 @@ function SignInForm({ next }: { next: string }) {
     <form action={action} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
       <FormError message={state?.formError} />
-      <Field id={emailId} label="이메일" error={state?.fieldErrors?.email}>
+      <Field id={emailId} label={copy.email} error={state?.fieldErrors?.email}>
         <input
           id={emailId}
           name="email"
@@ -323,7 +463,7 @@ function SignInForm({ next }: { next: string }) {
           className={inputClass}
         />
       </Field>
-      <Field id={pwId} label="비밀번호" error={state?.fieldErrors?.password}>
+      <Field id={pwId} label={copy.password} error={state?.fieldErrors?.password}>
         <input
           id={pwId}
           name="password"
@@ -336,18 +476,24 @@ function SignInForm({ next }: { next: string }) {
           className={inputClass}
         />
       </Field>
-      <SubmitButton pending={pending} label="로그인" pendingLabel="로그인 중…" />
+      <SubmitButton
+        pending={pending}
+        label={copy.loginSubmit}
+        pendingLabel={copy.loginPending}
+      />
       <Link
         href="/forgot-password"
         className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-accent-text transition-colors hover:text-accent"
       >
-        비밀번호를 잊으셨나요?
+        {copy.forgotPassword}
       </Link>
     </form>
   );
 }
 
 function SignUpForm({ next }: { next: string }) {
+  const { locale } = useLocale();
+  const copy = LOGIN_COPY[locale];
   const [state, action, pending] = useActionState<AuthState, FormData>(
     signUp,
     null
@@ -359,8 +505,9 @@ function SignUpForm({ next }: { next: string }) {
   return (
     <form action={action} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
+      <FormNotice message={state?.notice} />
       <FormError message={state?.formError} />
-      <Field id={nickId} label="닉네임" error={state?.fieldErrors?.nickname}>
+      <Field id={nickId} label={copy.nickname} error={state?.fieldErrors?.nickname}>
         <input
           id={nickId}
           name="nickname"
@@ -368,7 +515,7 @@ function SignUpForm({ next }: { next: string }) {
           autoComplete="nickname"
           maxLength={20}
           defaultValue={state?.values?.nickname}
-          placeholder="2~20자로 지어 주세요"
+          placeholder={copy.nicknamePlaceholder}
           aria-invalid={!!state?.fieldErrors?.nickname}
           aria-describedby={
             state?.fieldErrors?.nickname ? `${nickId}-error` : undefined
@@ -376,7 +523,7 @@ function SignUpForm({ next }: { next: string }) {
           className={inputClass}
         />
       </Field>
-      <Field id={emailId} label="이메일" error={state?.fieldErrors?.email}>
+      <Field id={emailId} label={copy.email} error={state?.fieldErrors?.email}>
         <input
           id={emailId}
           name="email"
@@ -392,13 +539,13 @@ function SignUpForm({ next }: { next: string }) {
           className={inputClass}
         />
       </Field>
-      <Field id={pwId} label="비밀번호" error={state?.fieldErrors?.password}>
+      <Field id={pwId} label={copy.password} error={state?.fieldErrors?.password}>
         <input
           id={pwId}
           name="password"
           type="password"
           autoComplete="new-password"
-          placeholder="6자 이상"
+          placeholder={copy.newPasswordPlaceholder}
           aria-invalid={!!state?.fieldErrors?.password}
           aria-describedby={
             state?.fieldErrors?.password ? `${pwId}-error` : undefined
@@ -408,8 +555,8 @@ function SignUpForm({ next }: { next: string }) {
       </Field>
       <SubmitButton
         pending={pending}
-        label="가입하고 시작하기"
-        pendingLabel="가입 중…"
+        label={copy.signupSubmit}
+        pendingLabel={copy.signupPending}
       />
     </form>
   );

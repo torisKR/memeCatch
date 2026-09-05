@@ -17,6 +17,32 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
 
+function isCheckoutEnabled() {
+  return process.env.UNIFI_PAY_CHECKOUT_ENABLED?.trim() === "true";
+}
+
+type CheckoutStage = "create_order" | "create_link" | "attach_link";
+type CheckoutFailureCode =
+  | "order_create_failed"
+  | "provider_link_failed"
+  | "provider_http_error"
+  | "provider_invalid_response"
+  | "provider_missing_fields"
+  | "provider_timeout"
+  | "link_attach_failed";
+
+function checkoutFailureCode(error: unknown, stage: CheckoutStage): CheckoutFailureCode {
+  if (error instanceof Error) {
+    if (error.name === "AbortError") return "provider_timeout";
+    if (/^unifi_pay_link_failed_\d{3}$/.test(error.message)) return "provider_http_error";
+    if (error.message === "unifi_pay_link_invalid_response") return "provider_invalid_response";
+    if (error.message === "unifi_pay_link_missing_fields") return "provider_missing_fields";
+  }
+  if (stage === "create_order") return "order_create_failed";
+  if (stage === "attach_link") return "link_attach_failed";
+  return "provider_link_failed";
+}
+
 /**
  * 구독 결제 시작 — Unifi Pay 전용($10 USD).
  *
@@ -25,6 +51,13 @@ export const maxDuration = 15;
  * linkId ↔ user를 묶어두고, 웹훅의 orderId(LINK-{linkId}-...)로 역추적한다.
  */
 async function beginCheckout(request: Request, requestedLocale: FormDataEntryValue | string | null) {
+  if (!isCheckoutEnabled()) {
+    return Response.json(
+      { ok: false, error: "checkout_disabled" },
+      { status: 503, headers: { "cache-control": "no-store" } },
+    );
+  }
+
   let pricingPath = "/pricing";
   let locale: string | null = null;
   if (typeof requestedLocale === "string" && isLocale(requestedLocale)) {
@@ -48,19 +81,27 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
   }
 
   const requestId = buildRequestId(user.id, Date.now());
+  let stage: CheckoutStage = "create_order";
   try {
-    await createBillingOrder(requestId, growthSessionIdFromRequest(request));
+    await createBillingOrder(user.id, requestId, growthSessionIdFromRequest(request));
+    stage = "create_link";
     const returnPath = `${locale ? `/${locale}` : ""}/premium?checkout=return`;
     const { linkUrl, linkId } = await createUnifiPaymentLink(config, {
       requestId,
       callbackPath: "/api/billing/unifi/webhook",
       returnPath,
     });
-    await attachUnifiPaymentLink(requestId, linkId);
+    stage = "attach_link";
+    await attachUnifiPaymentLink(user.id, requestId, linkId);
 
     return Response.redirect(linkUrl, 303);
-  } catch {
-    await failBillingOrder(requestId).catch(() => undefined);
+  } catch (error) {
+    await failBillingOrder(user.id, requestId).catch(() => undefined);
+    console.error({
+      code: checkoutFailureCode(error, stage),
+      requestId,
+      releaseSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || "unknown",
+    });
     return Response.json(
       { ok: false, error: "checkout_failed" },
       { status: 502, headers: { "cache-control": "no-store" } },

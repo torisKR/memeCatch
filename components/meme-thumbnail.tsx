@@ -13,6 +13,7 @@ import type { MemeCategory } from "@/lib/labels";
 export function MemeThumbnail({
   src,
   title,
+  fallbackCaption,
   category,
   originYear,
   priority = false,
@@ -20,6 +21,7 @@ export function MemeThumbnail({
 }: {
   src: string | null;
   title: string;
+  fallbackCaption?: string;
   category: MemeCategory;
   originYear?: number | null;
   priority?: boolean;
@@ -69,12 +71,19 @@ export function MemeThumbnail({
         <path d="M10.6 4.9C6.8 7.1 4.6 10.3 4.6 14.2c0 2.8 1.7 4.6 4 4.6 2 0 3.6-1.5 3.6-3.6 0-2-1.4-3.3-3.2-3.3-.3 0-.7 0-.9.1.4-2 2.1-4 4-5.2L10.6 4.9Zm8.9 0c-3.9 2.2-6 5.4-6 9.3 0 2.8 1.7 4.6 4 4.6 2 0 3.5-1.5 3.5-3.6 0-2-1.3-3.3-3.1-3.3-.3 0-.7 0-.9.1.4-2 2-4 4-5.2L19.5 4.9Z" />
       </svg>
       <span
-        className={`relative line-clamp-4 font-extrabold leading-snug ${
+        className={`relative line-clamp-3 font-extrabold leading-snug ${
           variant === "compact" ? "text-base" : "text-xl"
         }`}
       >
         {title}
       </span>
+      {fallbackCaption && (
+        <span className={`relative line-clamp-3 leading-snug opacity-80 ${
+          variant === "compact" ? "text-xs" : "text-sm"
+        }`}>
+          {fallbackCaption}
+        </span>
+      )}
       {variant === "card" && originYear != null && (
         <span className="relative inline-flex items-center self-end rounded-full border border-current/30 px-2 py-0.5 text-[11px] font-bold tabular-nums tracking-tight">
           {originYear}

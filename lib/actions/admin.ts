@@ -35,6 +35,7 @@ import {
   houseOriginalPublishErrorMessage,
   isHouseOriginal,
 } from "@/lib/house-original";
+import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
 type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -49,12 +50,8 @@ async function requireOperator() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") throw new Error("운영자 권한이 없어요.");
+  const { data: isOperator } = await supabase.rpc("is_operator");
+  if (!isOperator) throw new Error("운영자 권한이 없어요.");
   return { supabase, uid: user.id };
 }
 
@@ -67,13 +64,46 @@ async function logAudit(
   detail?: Record<string, unknown>
 ) {
   const admin = createAdminClient();
-  await admin.from("admin_audit_log").insert({
+  const { error } = await admin.from("admin_audit_log").insert({
     actor_id: actorId,
     action,
     entity_type: entityType,
     entity_id: entityId,
     detail: (detail ?? null) as Json,
   });
+  if (error) throw new Error("감사 로그 저장에 실패했어요.");
+}
+
+async function logAuditOutcome(
+  actorId: string,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  outcome: "intent" | "completed" | "failed",
+  detail?: Record<string, unknown>,
+) {
+  await logAudit(actorId, `${action}.${outcome}`, entityType, entityId, detail);
+}
+
+async function finalizeAudit(
+  actorId: string,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  detail?: Record<string, unknown>,
+) {
+  try {
+    await logAuditOutcome(
+      actorId,
+      action,
+      entityType,
+      entityId,
+      "completed",
+      detail,
+    );
+  } catch {
+    console.error({ event: "admin_audit_completion_pending", action });
+  }
 }
 
 function errMessage(e: unknown): string {
@@ -125,6 +155,26 @@ function revalidateCanonicalMemePaths(meme: MemeRevalidationIdentity | null) {
   }
 
   for (const path of paths) revalidatePath(path);
+}
+
+function revalidateCountryCardPaths(meme: MemeRevalidationIdentity) {
+  for (const path of [
+    "/",
+    "/global",
+    "/explore",
+    "/daily",
+    "/rankings",
+    "/weekly",
+    "/timeline",
+    "/news",
+  ]) {
+    revalidatePath(path);
+  }
+  revalidatePath("/collections/[slug]", "page");
+  for (const locale of SEO_CONTENT_LOCALES) {
+    revalidatePath(`/${locale}/explore`);
+  }
+  revalidateCanonicalMemePaths(meme);
 }
 
 /* ── 제보 큐 ─────────────────────────────────────────── */
@@ -357,11 +407,16 @@ export async function createHouseOriginal(input: {
   difficulty: "beginner" | "normal" | "deep";
   originYear: number | null;
   usageContext: UsageContext;
+  country: MemeCountryCode;
+  localTitle?: string;
 }): Promise<ActionResult<{ memeId: string }>> {
   try {
     const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     if (!input.summary.trim()) return { ok: false, error: "한 줄 요약을 입력해 주세요." };
+    if (!isMemeCountryCode(input.country)) return { ok: false, error: "밈 국가를 확인해 주세요." };
+    const country = getMemeCountry(input.country);
+    if (!country) return { ok: false, error: "밈 국가를 확인해 주세요." };
     if (
       houseOriginalOriginLooksLikeOperatorScratch(input.origin) ||
       houseOriginalOriginLooksLikeOperatorScratch(input.description)
@@ -422,16 +477,89 @@ export async function createHouseOriginal(input: {
       };
     }
 
+    const { error: marketProfileError } = await supabase.from("meme_market_profiles").insert({
+      meme_id: created.id,
+      market_code: country.code,
+      language_tag: country.languageTag,
+      role: "origin",
+      local_title: input.localTitle?.trim() || input.title.trim(),
+      review_state: "reviewed",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: uid,
+    });
+    if (marketProfileError) {
+      return {
+        ok: false,
+        error: `자체 제작 항목과 권리 출처는 만들어졌지만 국가 프로필 연결에 실패했어요: ${marketProfileError.message} — 밈 관리에서 이어서 처리해 주세요. (id: ${created.id})`,
+      };
+    }
+
     await logAudit(uid, "meme.create_house_original", "meme", created.id, {
       title: input.title.trim(),
       origin_kind: HOUSE_ORIGINAL,
       moderation_status: "pending",
+      country: country.code,
     });
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${created.id}`);
     return { ok: true, data: { memeId: created.id } };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
+  }
+}
+
+export async function setMemeOriginCountry(input: {
+  memeId: string;
+  country: MemeCountryCode;
+  localTitle: string;
+}): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireOperator();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.memeId)) {
+      return { ok: false, error: "밈 식별자를 확인해 주세요." };
+    }
+    if (!isMemeCountryCode(input.country)) {
+      return { ok: false, error: "밈 국가를 확인해 주세요." };
+    }
+    const localTitle = input.localTitle.trim();
+    if (!localTitle || localTitle.length > 300) {
+      return { ok: false, error: "현지 제목은 1~300자로 입력해 주세요." };
+    }
+    const meme = await loadMemeRevalidationIdentity(supabase, input.memeId);
+    if (!meme) return { ok: false, error: "밈을 찾을 수 없어요." };
+
+    const { error } = await supabase.rpc("set_meme_origin_country", {
+      p_meme_id: input.memeId,
+      p_market_code: input.country,
+      p_local_title: localTitle,
+    });
+    if (error) {
+      const code = error.message;
+      if (code.includes("operator_required")) {
+        return { ok: false, error: "운영자 권한이 없어요." };
+      }
+      if (code.includes("meme_not_found")) {
+        return { ok: false, error: "밈을 찾을 수 없어요." };
+      }
+      if (code.includes("invalid_market_code")) {
+        return { ok: false, error: "밈 국가를 확인해 주세요." };
+      }
+      if (code.includes("invalid_local_title")) {
+        return { ok: false, error: "현지 제목은 1~300자로 입력해 주세요." };
+      }
+      return { ok: false, error: "출처 국가를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
+    }
+
+    revalidatePath("/admin/memes");
+    revalidatePath(`/admin/memes/${input.memeId}`);
+    revalidateCountryCardPaths(meme);
+    return { ok: true };
+  } catch (e) {
+    const message = errMessage(e);
+    if (message === "로그인이 필요해요." || message === "운영자 권한이 없어요.") {
+      return { ok: false, error: message };
+    }
+    return { ok: false, error: "출처 국가를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
   }
 }
 
@@ -674,14 +802,52 @@ export async function setDiscussionVisibility(input: {
   try {
     const { uid } = await requireOperator();
     const admin = createAdminClient();
-    const { error } = await admin
-      .from("discussions")
-      .update({ status: input.status })
-      .eq("id", input.discussionId);
-    if (error) return { ok: false, error: error.message };
-    await logAudit(uid, "discussion.set_status", "discussion", input.discussionId, {
-      status: input.status,
-    });
+    const action = "discussion.set_status";
+    const detail = { status: input.status };
+    await logAuditOutcome(
+      uid,
+      action,
+      "discussion",
+      input.discussionId,
+      "intent",
+      detail,
+    );
+    const { error } = await (async () => {
+      try {
+        return await admin
+          .from("discussions")
+          .update({ status: input.status })
+          .eq("id", input.discussionId);
+      } catch (cause) {
+        await logAuditOutcome(
+          uid,
+          action,
+          "discussion",
+          input.discussionId,
+          "failed",
+          detail,
+        );
+        throw cause;
+      }
+    })();
+    if (error) {
+      await logAuditOutcome(
+        uid,
+        action,
+        "discussion",
+        input.discussionId,
+        "failed",
+        detail,
+      );
+      return { ok: false, error: error.message };
+    }
+    await finalizeAudit(
+      uid,
+      action,
+      "discussion",
+      input.discussionId,
+      detail,
+    );
     revalidatePath("/admin/reports");
     return { ok: true };
   } catch (e) {
@@ -834,12 +1000,44 @@ export async function setUserPlus(input: {
       ? Math.max(1, Math.min(Math.trunc(input.months ?? 1), 36))
       : 1;
     const admin = createAdminClient();
-    const { data, error } = await admin.rpc("admin_set_plus_entitlement", {
-      p_email: normalized,
-      p_active: input.active,
-      p_months: months,
-    });
+    const action = input.active ? "plus.grant" : "plus.revoke";
+    const detail = { email: normalized, active: input.active, months };
+    await logAuditOutcome(
+      uid,
+      action,
+      "billing_subscription",
+      null,
+      "intent",
+      detail,
+    );
+    const { data, error } = await (async () => {
+      try {
+        return await admin.rpc("admin_set_plus_entitlement", {
+          p_email: normalized,
+          p_active: input.active,
+          p_months: months,
+        });
+      } catch (cause) {
+        await logAuditOutcome(
+          uid,
+          action,
+          "billing_subscription",
+          null,
+          "failed",
+          detail,
+        );
+        throw cause;
+      }
+    })();
     if (error) {
+      await logAuditOutcome(
+        uid,
+        action,
+        "billing_subscription",
+        null,
+        "failed",
+        detail,
+      );
       const msg = error.message.includes("user_not_found")
         ? "해당 이메일의 가입 계정을 찾을 수 없어요. (사용자가 먼저 로그인·가입해야 해요.)"
         : error.message.includes("invalid_email")
@@ -848,12 +1046,12 @@ export async function setUserPlus(input: {
       return { ok: false, error: msg };
     }
     const result = data as { userId?: string } | null;
-    await logAudit(
+    await finalizeAudit(
       uid,
-      input.active ? "plus.grant" : "plus.revoke",
+      action,
       "billing_subscription",
       result?.userId ?? null,
-      { email: normalized, active: input.active, months }
+      detail,
     );
     revalidatePath("/admin/subscriptions");
     const { data: latest } = await admin.rpc("admin_get_plus_status", {

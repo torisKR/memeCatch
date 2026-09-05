@@ -22,12 +22,8 @@ async function requireOperator() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") throw new Error("운영자 권한이 없어요.");
+  const { data: isOperator } = await supabase.rpc("is_operator");
+  if (!isOperator) throw new Error("운영자 권한이 없어요.");
   return { uid: user.id };
 }
 
@@ -38,13 +34,37 @@ async function logAudit(
   detail?: Record<string, unknown>
 ) {
   const admin = createAdminClient();
-  await admin.from("admin_audit_log").insert({
+  const { error } = await admin.from("admin_audit_log").insert({
     actor_id: actorId,
     action,
     entity_type: "user",
     entity_id: entityId,
     detail: (detail ?? null) as Json,
   });
+  if (error) throw new Error("감사 로그 저장에 실패했어요.");
+}
+
+async function logAuditOutcome(
+  actorId: string,
+  action: string,
+  entityId: string | null,
+  outcome: "intent" | "completed" | "failed",
+  detail?: Record<string, unknown>,
+) {
+  await logAudit(actorId, `${action}.${outcome}`, entityId, detail);
+}
+
+async function finalizeAudit(
+  actorId: string,
+  action: string,
+  entityId: string | null,
+  detail?: Record<string, unknown>,
+) {
+  try {
+    await logAuditOutcome(actorId, action, entityId, "completed", detail);
+  } catch {
+    console.error({ event: "admin_audit_completion_pending", action });
+  }
 }
 
 function errMessage(e: unknown): string {
@@ -285,13 +305,23 @@ export async function setUserPassword(input: {
     if (input.password.length < 8) {
       return { ok: false, error: "비밀번호는 8자 이상으로 정해 주세요." };
     }
+    await logAuditOutcome(uid, "user.password_set", input.userId, "intent");
     const admin = createAdminClient();
-    const { error } = await admin.auth.admin.updateUserById(input.userId, {
-      password: input.password,
-    });
-    if (error) return { ok: false, error: error.message };
-    // 비밀번호 값 자체는 절대 로그에 남기지 않는다
-    await logAudit(uid, "user.password_set", input.userId);
+    const { error } = await (async () => {
+      try {
+        return await admin.auth.admin.updateUserById(input.userId, {
+          password: input.password,
+        });
+      } catch (cause) {
+        await logAuditOutcome(uid, "user.password_set", input.userId, "failed");
+        throw cause;
+      }
+    })();
+    if (error) {
+      await logAuditOutcome(uid, "user.password_set", input.userId, "failed");
+      return { ok: false, error: error.message };
+    }
+    await finalizeAudit(uid, "user.password_set", input.userId);
     revalidatePath(`/admin/users/${input.userId}`);
     return { ok: true };
   } catch (e) {
@@ -305,12 +335,23 @@ export async function sendPasswordReset(
 ): Promise<ActionResult> {
   try {
     const { uid } = await requireOperator();
+    await logAuditOutcome(uid, "user.password_reset_sent", null, "intent", { email });
     const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://catchmeme.com"}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
-    });
-    if (error) return { ok: false, error: error.message };
-    await logAudit(uid, "user.password_reset_sent", null, { email });
+    const { error } = await (async () => {
+      try {
+        return await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://catchmeme.com"}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+        });
+      } catch (cause) {
+        await logAuditOutcome(uid, "user.password_reset_sent", null, "failed", { email });
+        throw cause;
+      }
+    })();
+    if (error) {
+      await logAuditOutcome(uid, "user.password_reset_sent", null, "failed", { email });
+      return { ok: false, error: error.message };
+    }
+    await finalizeAudit(uid, "user.password_reset_sent", null, { email });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
@@ -330,13 +371,32 @@ export async function setUserRole(input: {
         error: "자기 자신의 운영자 권한은 해제할 수 없어요(잠금 방지).",
       };
     }
+    await logAuditOutcome(uid, "user.role_set", input.userId, "intent", {
+      role: input.role,
+    });
     const admin = createAdminClient();
-    const { error } = await admin
-      .from("profiles")
-      .update({ role: input.role })
-      .eq("id", input.userId);
-    if (error) return { ok: false, error: error.message };
-    await logAudit(uid, "user.role_set", input.userId, { role: input.role });
+    const { error } = await (async () => {
+      try {
+        return await admin
+          .from("profiles")
+          .update({ role: input.role })
+          .eq("id", input.userId);
+      } catch (cause) {
+        await logAuditOutcome(uid, "user.role_set", input.userId, "failed", {
+          role: input.role,
+        });
+        throw cause;
+      }
+    })();
+    if (error) {
+      await logAuditOutcome(uid, "user.role_set", input.userId, "failed", {
+        role: input.role,
+      });
+      return { ok: false, error: error.message };
+    }
+    await finalizeAudit(uid, "user.role_set", input.userId, {
+      role: input.role,
+    });
     revalidatePath(`/admin/users/${input.userId}`);
     revalidatePath("/admin/users");
     return { ok: true };

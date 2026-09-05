@@ -12,5 +12,11 @@ describe("HeroWeb3", () => {
     expect(html).toContain("무료 활용 문구 1개");
     expect(html).toContain("3분 안에 게시 준비");
     expect(html).toContain('action="/search"');
+    expect(html).toContain('name="q"');
+    expect(html).toContain('for="home-search"');
+    expect(html).toContain("오늘 본 그 밈,");
+    expect(html).toContain("맥락까지 한눈에.");
+    expect(html).toContain("1,200");
+    expect(html).not.toContain("animate-ping");
   });
 });

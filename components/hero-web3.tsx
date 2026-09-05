@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { SignalTrace } from "@/components/signal-trace";
 import { LiveCaretInput } from "@/components/ui/live-caret-input";
 import { LIFECYCLE_STATUS, type LifecycleStatus } from "@/lib/labels";
@@ -19,27 +20,17 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
         className="instrument-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_80%_70%_at_30%_40%,#000,transparent)]"
       />
       <div className="relative mx-auto grid max-w-6xl items-stretch lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-        <div className="flex flex-col justify-center px-4 py-12 sm:py-16 lg:py-20 lg:pr-14">
-          <p className="flex items-center gap-2.5 font-mono text-xs font-semibold uppercase tracking-[0.15em] text-white/65">
-            {/* 수신 중 표시 — 사전이 지금도 신호를 받고 있다는 상태 */}
-            <span aria-hidden className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-(--signal-cyan) opacity-60 motion-reduce:hidden" />
-              <span className="relative inline-flex size-2 rounded-full bg-(--signal-cyan)" />
-            </span>
-            Signal desk · Korean meme dictionary
+        <div className="flex flex-col justify-center px-4 py-10 sm:py-14 lg:py-16 lg:pr-12">
+          <p className="text-sm font-semibold tracking-wide text-(--flame-300)">
+            한국부터 해외까지, 밈의 뜻과 유래
           </p>
-          {/* 태그라인 — 각 의미 단위를 inline-block으로 고정해 좁은 화면에서도
-             파편("될지까지")으로 쪼개지지 않게 한다. 모바일은 3줄 스택을 전제해
-             크기·행간을 완화하고, sm+에서는 기존 2단 조판을 유지한다. */}
-          <h1 className="mt-5 max-w-2xl text-[2.5rem] font-black leading-[1.14] tracking-[-0.035em] sm:text-[3.8rem] sm:leading-[1.06]">
-            <span className="inline-block">그 밈,</span>{" "}
-            <span className="inline-block text-(--flame-400)">지금 써도 될지까지</span>
-            <br />
-            <span className="inline-block">3초 안에.</span>
+          <h1 className="mt-5 text-[clamp(2rem,4.2vw,3.25rem)] font-black leading-[1.16] tracking-[-0.035em]">
+            <span className="block">오늘 본 그 밈,</span>
+            <span className="block text-(--flame-400)">맥락까지 한눈에.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/68 sm:text-lg">
-            뜻·유래·현재 안전성은 무료로 확인하세요. 상세의 무료 활용 문구 1개를 복사해
-            3분 안에 게시 준비를 끝낼 수 있어요.
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/70">
+            지금 써도 될지까지, 뜻·유래·현재 안전성은 무료로 확인하세요.
+            무료 활용 문구 1개로 3분 안에 게시 준비를 시작하세요.
           </p>
 
           <form action="/search" role="search" className="mt-8 max-w-2xl">
@@ -48,18 +39,10 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
             </label>
             <div className="grid gap-2 rounded-2xl bg-white p-2 shadow-[0_16px_50px_-22px_rgba(0,0,0,0.9)] sm:grid-cols-[1fr_auto]">
               <div className="relative">
-                <svg
-                  viewBox="0 0 24 24"
+                <Search
                   aria-hidden
                   className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-5 -translate-y-1/2 text-neutral-500"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-3.5-3.5" />
-                </svg>
+                />
                 {/* 캐럿을 브랜드 신호로 — 입력하는 순간에도 Signal Desk 언어가
                    이어진다. 네이티브 input이 그대로 남아 있어 form 제출·IME·
                    스크린리더는 기존과 동일하게 동작한다. */}
@@ -90,7 +73,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
               (유행어·챌린지·추억 밈)을 하나씩 보여주는 고정 예시다 — 트래픽이 아직
               낮아 인기어 집계가 표본 부족이고(랭킹 표본 경고와 같은 이유), 고정
               예시는 개인정보·수집 이슈가 없다. */}
-          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-white/58">
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 text-sm text-white/65">
             <span>예시:</span>
             {/* 세 예시 = 최신 챌린지 · 일상 유행어 · 추억 밈 — 전부 실제 공개 문서가
                 있는 검색어여야 한다(예시가 zero-result로 이어지면 역효과). */}
@@ -98,14 +81,14 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
               <Link
                 key={q}
                 href={`/search?q=${encodeURIComponent(q)}`}
-                className="inline-flex min-h-11 items-center rounded-full border border-white/25 px-3 font-medium text-white/85 transition-colors hover:border-(--flame-400) hover:text-white"
+                className="inline-flex min-h-11 items-center font-medium text-white/85 underline decoration-white/25 underline-offset-4 transition-colors hover:text-(--flame-300)"
               >
                 {q}
               </Link>
             ))}
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/58">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-sm text-white/65">
             {totalCount > 0 && (
               <span>
                 <strong className="stat-mono text-white">
@@ -122,7 +105,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
           </div>
         </div>
 
-        <div className="relative hidden min-h-[34rem] overflow-hidden border-l border-white/10 lg:block">
+        <div className="relative hidden overflow-hidden border-l border-white/10 lg:block">
           <picture>
             <source srcSet="/brand/hero-signal-desk.avif" type="image/avif" />
             {/* 정적 브랜드 자산은 public 경로와 고정 크기를 사용한다.

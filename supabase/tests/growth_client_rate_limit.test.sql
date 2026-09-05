@@ -30,6 +30,11 @@ select ok(
 
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
+-- Preview may already contain expired counters from legitimate smoke traffic.
+create temporary table growth_stale_before on commit drop as
+select count(*) as stale_count from public.growth_client_rate_limits
+ where minute_bucket < date_trunc('minute', now()) - interval '24 hours';
+
 insert into public.growth_client_rate_limits (
   scope, bucket_key, minute_bucket, event_count
 )
@@ -62,7 +67,7 @@ reset role;
 select is(
   (select count(*) from public.growth_client_rate_limits
     where minute_bucket < date_trunc('minute', now()) - interval '24 hours'),
-  1::bigint,
+  (select stale_count + 1 from pg_temp.growth_stale_before),
   'one RPC removes at most one hundred indexed stale buckets'
 );
 select is(

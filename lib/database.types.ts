@@ -4318,6 +4318,18 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_admin_activity_dashboard: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_hour_date: string
+          p_user_id?: string
+          p_subscribers_only?: boolean
+          p_users_page?: number
+          p_views_page?: number
+        }
+        Returns: Json
+      }
       get_growth_kpi_dashboard: { Args: never; Returns: Json }
       get_growth_pilot_dashboard: { Args: never; Returns: Json }
       get_growth_seo_related_counts: {

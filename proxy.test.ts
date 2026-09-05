@@ -7,6 +7,8 @@ const supabaseMocks = vi.hoisted(() => ({
   abortSignal: vi.fn(),
   eq: vi.fn(),
   from: vi.fn(),
+  getUser: vi.fn(),
+  rpc: vi.fn(),
   in: vi.fn(),
   limit: vi.fn(),
   select: vi.fn(),
@@ -14,12 +16,15 @@ const supabaseMocks = vi.hoisted(() => ({
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({
-    auth: { getUser: async () => ({ data: { user: null } }) },
+    auth: { getUser: supabaseMocks.getUser },
     from: supabaseMocks.from,
+    rpc: supabaseMocks.rpc,
   }),
 }));
 
 beforeEach(() => {
+  supabaseMocks.getUser.mockReset().mockResolvedValue({ data: { user: null } });
+  supabaseMocks.rpc.mockReset().mockResolvedValue({ data: false, error: null });
   supabaseMocks.abortSignal.mockReset().mockResolvedValue({ data: [{ id: "meme-1" }], error: null });
   const query = {
     select: supabaseMocks.select,
@@ -33,6 +38,44 @@ beforeEach(() => {
   supabaseMocks.in.mockReset().mockReturnValue(query);
   supabaseMocks.limit.mockReset().mockReturnValue(query);
   supabaseMocks.from.mockReset().mockReturnValue(query);
+});
+
+describe("proxy operator authorization", () => {
+  it("removes private dashboard filters when a non-operator is redirected to the public site", async () => {
+    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
+    const response = await proxy(publicRequest("/admin/activity?userId=81000000-0000-4000-8000-000000000003&subscribersOnly=1"));
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.pathname).toBe("/");
+    expect(destination.search).toBe("");
+  });
+
+  it("redirects an authenticated non-operator without reading profiles.role", async () => {
+    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
+
+    const response = await proxy(publicRequest("/admin"));
+
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/");
+    expect(supabaseMocks.rpc).toHaveBeenCalledWith("is_operator");
+    expect(supabaseMocks.from).not.toHaveBeenCalledWith("profiles");
+  });
+
+  it("allows an authenticated operator through the RPC authorization boundary", async () => {
+    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "operator-1" } } });
+    supabaseMocks.rpc.mockResolvedValueOnce({ data: true, error: null });
+
+    const response = await proxy(publicRequest("/admin"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(supabaseMocks.rpc).toHaveBeenCalledWith("is_operator");
+  });
+
+  it("rejects an operator lookup error even if data is truthy", async () => {
+    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "operator-1" } } });
+    supabaseMocks.rpc.mockResolvedValueOnce({ data: true, error: { message: "unavailable" } });
+    const response = await proxy(publicRequest("/admin/activity"));
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/");
+  });
 });
 
 function publicRequest(

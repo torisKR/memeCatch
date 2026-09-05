@@ -40,7 +40,7 @@ assert.match(unsafe.errors.join("\n"), /no conflict guard/);
 const real = parseTranslationArtifacts("artifacts/renewal/loop-050");
 assert.ok(real.forbiddenMutations.length > 0, "historical self-promotion SQL must be inventoried");
 assert.ok(
-  real.errors.some((error) => error.includes("forbidden translation-table mutation")),
+  real.errors.some((error) => error.includes("non-whitelisted SQL")),
   "historical mutation must fail the safety gate",
 );
 assert.equal(real.records.length, 448);
@@ -58,9 +58,19 @@ try {
   );
   writeFileSync(join(unsafeDir, "en-slice2.sql"), "call public.review_translation_batch();\n");
   writeFileSync(join(unsafeDir, "en-slice3.sql"), "select public.rpc('review_translation_batch');\n");
+  writeFileSync(join(unsafeDir, "en-slice4.sql"), "update public.profiles set role='operator';\n");
+  writeFileSync(join(unsafeDir, "en-slice5.sql"), "grant all on public.profiles to anon;\n");
+  writeFileSync(
+    join(unsafeDir, "en-slice6.sql"),
+    "with elevated as (update public.profiles set role='operator' returning id) insert into public.meme_translations (meme_id, locale, status) values ('00000000-0000-0000-0000-000000000001', 'en', 'machine') on conflict (meme_id, locale) do nothing;\n",
+  );
+  writeFileSync(
+    join(unsafeDir, "en-slice7.sql"),
+    "insert into public.meme_translations (meme_id, locale, status) values ('00000000-0000-0000-0000-000000000001', 'en', public.promote_operator()) on conflict (meme_id, locale) do nothing;\n",
+  );
   const unsafeArtifact = parseTranslationArtifacts(unsafeDir);
-  assert.equal(unsafeArtifact.forbiddenMutations.length, 3);
-  assert.match(unsafeArtifact.errors.join("\n"), /forbidden translation-table mutation/);
+  assert.equal(unsafeArtifact.forbiddenMutations.length, 7);
+  assert.match(unsafeArtifact.errors.join("\n"), /non-whitelisted SQL/);
   assert.equal(unsafeArtifact.records[0].hasReviewPromotion, true);
   const unsafeReport = validateTranslationBatch({
     worklist,

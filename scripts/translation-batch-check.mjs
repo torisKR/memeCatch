@@ -17,9 +17,24 @@ const INSERT_PATTERN =
   /insert\s+into\s+public\.meme_translations\b[\s\S]*?values\s*\(\s*'([0-9a-f-]{36})'\s*(?:::uuid)?\s*,\s*'([^']+)'/i;
 const ATOMIC_PAYLOAD_PATTERN =
   /convert_from\(\s*decode\(\s*'([A-Za-z0-9+/=]+)'\s*,\s*'base64'\s*\)\s*,\s*'utf8'\s*\)::jsonb/gi;
-const FORBIDDEN_STATEMENT_PATTERN =
-  /\b(?:drop\s+table|truncate\s+table|delete\s+from|alter\s+table|merge\s+into|insert\s+into\s+public\.(?!meme_translations\b)|update\s+public\.(?:memes|meme_translations))\b/i;
-const FORBIDDEN_CALL_PATTERN = /^\s*(?:call\b|select\s+(?:public\.)?rpc\s*\()/i;
+const MUTATION_PATTERN = /\b(?:insert\s+into|update|delete\s+from|merge\s+into)\b/gi;
+const ADMIN_SQL_PATTERN =
+  /\b(?:alter|analyze|call|comment\s+on|copy|create|do(?=\s+\$)|drop|execute|grant|listen|notify|prepare|refresh|reindex|reset|revoke|security\s+label|set|truncate|vacuum)\b/i;
+const ALLOWED_SQL_FUNCTIONS = new Set([
+  "as",
+  "btrim",
+  "convert_from",
+  "conflict",
+  "count",
+  "decode",
+  "in",
+  "jsonb_to_record",
+  "length",
+  "materialized",
+  "now",
+  "values",
+  "x",
+]);
 const REVIEW_PROMOTION_PATTERN =
   /\b(?:status\s*=\s*['"]reviewed['"]|reviewed_at\s*=\s*(?!null\b)|reviewed_by\s*=\s*(?!null\b))\b|['"]reviewed['"]/i;
 
@@ -32,6 +47,34 @@ function stripSqlComments(statement) {
     .replace(/--[^\n]*/gu, "")
     .replace(/\/\*[\s\S]*?\*\//gu, "")
     .trim();
+}
+
+/** Allow only the two translation INSERT shapes emitted by this repository. */
+export function isAllowedTranslationStatement(statement) {
+  const normalized = stripSqlComments(stripSqlLiterals(statement)).replace(/^;+|;+$/g, "").trim();
+  if (!normalized) return true;
+
+  const isLegacyInsert = /^insert\s+into\s+public\.meme_translations\b/i.test(normalized);
+  const isAtomicInsert = /^with\s+input\s+as\s*\(/i.test(normalized);
+  if (!isLegacyInsert && !isAtomicInsert) return false;
+  if (ADMIN_SQL_PATTERN.test(normalized)) return false;
+
+  const mutations = [...normalized.matchAll(MUTATION_PATTERN)].map((match) => match[0].toLowerCase());
+  if (mutations.length !== 1 || mutations[0] !== "insert into") return false;
+  const insertTargets = [...normalized.matchAll(/\binsert\s+into\s+([^\s(]+)/gi)].map((match) =>
+    match[1].toLowerCase(),
+  );
+  if (insertTargets.length !== 1 || insertTargets[0] !== "public.meme_translations") return false;
+
+  // Function calls can have side effects in PostgreSQL, including through a
+  // SECURITY DEFINER function. Accept only the built-ins and record alias used
+  // by the checked legacy and atomic generators.
+  const calls = [...normalized.matchAll(/\b([a-z_][a-z0-9_.]*)\s*\(/gi)].map((match) =>
+    match[1].toLowerCase(),
+  );
+  return calls.every(
+    (call) => call === "public.meme_translations" || (!call.includes(".") && ALLOWED_SQL_FUNCTIONS.has(call)),
+  );
 }
 
 function splitSqlList(source) {
@@ -240,12 +283,10 @@ export function parseTranslationArtifacts(artifactDir) {
     const fileLocale = name.split("-slice", 1)[0];
     const source = readFileSync(resolve(root, name), "utf8");
     for (const [statementIndex, rawStatement] of splitSqlStatements(source).entries()) {
-      const statement = stripSqlComments(stripSqlLiterals(rawStatement));
-      if (!statement) continue;
-      if (FORBIDDEN_STATEMENT_PATTERN.test(statement) || FORBIDDEN_CALL_PATTERN.test(statement)) {
+      if (!isAllowedTranslationStatement(rawStatement)) {
         const finding = { file: name, statementIndex: statementIndex + 1 };
         forbiddenMutations.push(finding);
-        errors.push(`${name}: forbidden translation-table mutation detected in statement ${statementIndex + 1}`);
+        errors.push(`${name}: non-whitelisted SQL detected in statement ${statementIndex + 1}`);
       }
     }
     // Keep the legacy scanner intentionally permissive: historical artifacts

@@ -41,6 +41,14 @@ beforeEach(() => {
 });
 
 describe("proxy operator authorization", () => {
+  it("removes private dashboard filters when a non-operator is redirected to the public site", async () => {
+    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
+    const response = await proxy(publicRequest("/admin/activity?userId=81000000-0000-4000-8000-000000000003&subscribersOnly=1"));
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.pathname).toBe("/");
+    expect(destination.search).toBe("");
+  });
+
   it("redirects an authenticated non-operator without reading profiles.role", async () => {
     supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
 

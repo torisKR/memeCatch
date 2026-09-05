@@ -252,6 +252,7 @@ export async function proxy(request: NextRequest) {
     if (!isOperator) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
+      url.search = "";
       return applyLocale(NextResponse.redirect(url));
     }
   }

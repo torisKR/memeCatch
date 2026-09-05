@@ -96,6 +96,9 @@ vi.mock("@/lib/billing/repository.server", () => ({
 }));
 vi.mock("@/lib/i18n-server", () => ({ getRequestLocale: fixtures.getRequestLocale }));
 vi.mock("@/lib/meme-translations", () => ({ getLocalizedMemeByShortId: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => fixtures.supabase,
+}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: fixtures.createClient }));
 vi.mock("@/lib/labels", () => ({ CATEGORIES: {} }));
 vi.mock("@/lib/saved-reuse-radar", () => ({

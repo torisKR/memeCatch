@@ -27,6 +27,7 @@ import {
   registerCurrentBillingIdentity,
 } from "@/lib/billing/repository.server";
 import { getRequestLocale } from "@/lib/i18n-server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   isGlobalDailyLocale,
   isValidGlobalDailyQuestion,
@@ -608,9 +609,10 @@ export default async function PremiumPage({
   const weeklyWindow = kstDateWindow();
   const dailySignalSince = plusDailySignalSince();
   const weeklyCandidateIds = weeklyCandidates.map((candidate) => candidate.id);
+  const admin = createAdminClient();
   const [weeklyMetricsRes, trendAlertsRes, dailySignalAlertsRes, contextAlertsRes] = await Promise.all([
     weeklyCandidateIds.length
-      ? supabase
+      ? admin
           .from("meme_trend_metrics")
           .select("meme_id, date, trend_score")
           .in("meme_id", weeklyCandidateIds)

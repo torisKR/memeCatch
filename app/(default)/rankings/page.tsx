@@ -3,6 +3,7 @@ import { RankingsJsonLd } from "@/components/json-ld";
 import { StatusPanel } from "@/components/status-panel";
 import Link from "next/link";
 import { createStaticClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { flags } from "@/lib/flags";
 import {
   LIFECYCLE_STATUS,
@@ -59,6 +60,7 @@ const MEME_FIELDS =
 
 async function loadRankings() {
   const supabase = createStaticClient();
+  const admin = createAdminClient();
 
   // 오늘의 급상승: trend_score 상위 + rising 우선 (limited는 추천 표면에서 제외)
   const { data: top, count, error: topErr } = await supabase
@@ -95,14 +97,14 @@ async function loadRankings() {
 
   // 이번 주 많이 본: meme_trend_metrics 최근 7일 views 합산
   const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const { data: metricRows, error: metricErr } = await supabase
+  const { data: metricRows, error: metricErr } = await admin
     .from("meme_trend_metrics")
     .select("meme_id,views,date")
     .gte("date", since);
   if (metricErr) throw metricErr;
 
   // 마지막 집계일 — job_runs는 운영자 전용 RLS라 공개 화면에서 못 읽는다.
-  // meme_trend_metrics는 공개 읽기가 열려 있고, 그 최신 날짜가 곧 마지막 롤업이다.
+  // 원시 추이 데이터도 Plus 전용이므로 서버에서 최신 롤업 날짜만 계산한다.
   const lastRollupDate =
     (metricRows ?? []).reduce<string | null>(
       (max, row) => (!max || row.date > max ? row.date : max),

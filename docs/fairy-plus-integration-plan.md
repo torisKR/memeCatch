@@ -7,9 +7,9 @@
 - Blocked: direct-click traffic through Explee first emails/follow-ups; the product prohibits links in those messages. No outreach has been sent.
 - Completed: verify application/database behavior and browser/API flows.
 - Completed: clarify crypto checkout and implement authenticated, idempotent Fairy donation handling using the documented contract.
-- Completed: per the owner's instruction, repurpose the unused LoveTrip project as `밈캐치 (MemeCatch)` / `@memecatch`; saved title, description and slug verified after reload. Existing donations were zero and no webhook was configured. Its inactive state was preserved.
+- Completed: per the owner's instruction, repurpose the unused LoveTrip project as `밈캐치 (MemeCatch)` / `@memecatch`; saved title, description and slug verified after reload. Existing donations were zero and no webhook was configured. It was initially left inactive, then activated after the production integration passed checks.
 - Completed: apply the Fairy migration to the production database (provider migration version 20260906054257); confirmed zero payment records and service-role-only grant permissions.
-- In progress: configure the signing secret, deploy and activate Fairy with the approved KRW 15,000 threshold.
+- Completed: configure the production signing secret and approved KRW 15,000 threshold, deploy, confirm provider TEST delivery HTTP 200, and activate the public Fairy project.
 
 ## Constraints
 
@@ -23,7 +23,7 @@
 ## Contract and activation
 
 1. Use the renamed project at `https://fairy.hada.io/dashboard/projects/@memecatch/basic`. The owner's choice of LoveTrip resolved the ten-project creation limit without deletion. Activate this project when the benefit and webhook are ready. Its old `@lovetrip` public URL no longer applies.
-2. Apply `supabase/migrations/20260906120000_fairy_plus.sql` after reviewing the existing billing migrations. It adds private intent/payment tables and service-role RPCs; ordinary clients cannot grant Plus.
+2. Apply `supabase/migrations/20260906054257_fairy_plus.sql` after reviewing the existing billing migrations. It adds private intent/payment tables and service-role RPCs; ordinary clients cannot grant Plus.
 3. Set `FAIRY_PROJECT_SLUG` to the actual public slug without `@`, `FAIRY_WEBHOOK_SECRET` to that project's secret, and `FAIRY_PLUS_MIN_AMOUNT_KRW` to the agreed integer threshold. Leave `FAIRY_PLUS_ENABLED=false` until ready. The approved threshold is 15000.
 4. Configure the project's webhook URL as `https://catchmeme.com/api/billing/fairy/webhook`. Set `FAIRY_PLUS_ENABLED=true` and rebuild/redeploy with all four variables. Pricing pages only display the option when the full configuration is valid. The server uses the same threshold when creating intents.
 5. Send Fairy's test webhook; a valid signed `source=test` event must return 200 with `ignored=test_event` and grant nothing. Then verify an owner-authorized real qualifying donation, receipt, account entitlement, duplicate delivery and refund reconciliation before claiming live settlement works.
@@ -46,7 +46,7 @@ Explee then explicitly rejected a generated direct URL with: "Links are not allo
 
 At inspection, Explee showed zero sends/replies/interested leads/spend, no payment card on file, and six review-stage campaigns. Saved copy does not establish traffic or conversion results. Auto-replies were paused pending a booking link; do not supply a placeholder link.
 
-## Local verification
+## Earlier local verification
 
 - 96 focused application tests passed, including existing billing handlers, Fairy signature/auth/config gates, pricing and CSP checks. Scoped ESLint and TypeScript passed.
 - The new migration was applied to a temporary schema-only copy of local Supabase, then Fairy (32), growth billing (15), and Latpeed billing (85) pgTAP assertions all passed: 132 total. The temporary database was dropped; the shared and production databases were not changed.
@@ -65,3 +65,15 @@ At inspection, Explee showed zero sends/replies/interested leads/spend, no payme
 - https://explee.com/app-auto-gtm/p/33603
 
 Vercel marketplace discovery returned Stripe for payments; the user explicitly selected Fairy, so the existing Fairy account and its native webhook are the integration source.
+
+## Production verification (2026-09-06)
+
+- Production URL: https://catchmeme.com/pricing. Fairy public project: https://fairy.hada.io/@memecatch, live with the support form visible.
+- Deployment: `dpl_HsBaZfcSZASjo31EQdRKda5TJyBZ`; application commit: `04d0a7b3b1c35caa8ca6862f92078ecddbad0b15`, based on the then-live `114ec578c50b99300139f1e10f4f93edf673568d`. Source is isolated on local branch `codex/fairy-plus-release`; no remote push or main merge was performed. Later changes to this branch only align the migration filename with Supabase history and record delivery evidence.
+- Production migration version: `20260906054257`; service-role-only grant RPC verified.
+- 96 related tests, scoped lint, TypeScript and Vercel production build passed on the isolated application source. No unrelated dirty security work was deployed.
+- Production pricing returns 200 and displays the 15,000 KRW form; CSP permits Fairy. Anonymous checkout returns 303 to localized login, cross-origin checkout returns 403, invalid signatures return 401. A valid signed TEST event returns 200/ignored without granting a subscription.
+- Fairy native delivery history confirms `payment.completed` TEST, HTTP 200. The provider UI does not expose the response body in that delivery row.
+- Final browser QA after activation: account-link submission redirects to Fairy with an opaque intent, project title and actual donation form; no project-not-found message or observed console/CSP error. The server-stored intent carries minimum_amount=15000.
+- No monetary payment or refund was made. Real settlement and a paid donor entitlement remain unverified.
+- Temporary signing-secret transfer files were removed after Vercel configuration.

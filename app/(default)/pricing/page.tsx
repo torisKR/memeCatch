@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PricingContent } from "@/components/premium/pricing-content";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { SEO_ROUTE_LOCALES, buildLocalizedMetadata } from "@/lib/i18n-routing";
+import { getFairyConfig } from "@/lib/billing/fairy.server";
 
 const copy = PREMIUM_COPY.ko.pricing;
 
@@ -14,5 +15,5 @@ export const metadata: Metadata = buildLocalizedMetadata({
 });
 
 export default function PricingPage() {
-  return <PricingContent />;
+  return <PricingContent fairyMinimumAmount={getFairyConfig()?.minimumAmount} />;
 }

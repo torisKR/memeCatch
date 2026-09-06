@@ -12,6 +12,8 @@ export type PremiumCopy = {
     perMonth: string;
     launchNote: string;
     checkout: string;
+    paymentSteps: readonly string[];
+    freeExplore: string;
     sameEmail: string;
     freeName: string;
     plusName: string;
@@ -301,7 +303,13 @@ const PREMIUM_COPY_BASE = {
       monthly: "$10",
       perMonth: "USD / 30일",
       launchNote: "30일 이용권 · 자동 갱신 없음 · 잔여기간 보존 · Kaia USDT 결제",
-      checkout: "MemeCatch Plus 시작하기",
+      checkout: "Kaia USDT로 MemeCatch Plus 결제하기",
+      paymentSteps: [
+        "MemeCatch에 로그인하세요.",
+        "Unifi Wallet에 Kaia 네트워크의 USDT를 준비하세요.",
+        "결제를 완료한 뒤 돌아오면 Plus 상태를 확인할 수 있어요.",
+      ],
+      freeExplore: "무료 밈 둘러보기",
       sameEmail: "결제 금액은 $10 USD이며 Unifi Wallet의 Kaia USDT로 결제합니다. 남은 이용기간이 있으면 그 뒤로 30일 연장되고, 환불은 지원 문의 후 원결제 지갑으로 수동 처리됩니다.",
       freeName: "무료",
       plusName: "Plus",
@@ -658,7 +666,13 @@ const PREMIUM_COPY_BASE = {
       monthly: "$10",
       perMonth: "USD / 30 days",
       launchNote: "30-day pass · no auto-renewal · remaining time preserved · pay with Kaia USDT",
-      checkout: "Start MemeCatch Plus",
+      checkout: "Pay with Kaia USDT",
+      paymentSteps: [
+        "Sign in to MemeCatch.",
+        "Prepare USDT on Kaia in Unifi Wallet.",
+        "Finish payment, then return to see your Plus status.",
+      ],
+      freeExplore: "Explore free memes",
       sameEmail: "The order is $10 USD and is paid with Kaia USDT through Unifi Wallet. Any remaining access is preserved before adding 30 days. Refunds are reviewed by support and sent manually to the original payment wallet.",
       freeName: "Free",
       plusName: "Plus",
@@ -1015,7 +1029,13 @@ const PREMIUM_COPY_BASE = {
       monthly: "$10",
       perMonth: "USD / 30日",
       launchNote: "30日利用券・自動更新なし・残存期間を維持・Kaia USDT決済",
-      checkout: "MemeCatch Plusを始める",
+      checkout: "Kaia USDTで支払う",
+      paymentSteps: [
+        "MemeCatchにログインしてください。",
+        "Unifi WalletでKaiaネットワークのUSDTを準備してください。",
+        "支払いを完了して戻ると、Plusの状態を確認できます。",
+      ],
+      freeExplore: "無料ミームを見る",
       sameEmail: "注文額は10米ドルで、Unifi WalletのKaia USDTで支払います。残りの利用期間の後ろに30日が追加され、返金はサポート確認後に元の決済ウォレットへ手動で送金されます。",
       freeName: "無料",
       plusName: "Plus",
@@ -1372,7 +1392,13 @@ const PREMIUM_COPY_BASE = {
       monthly: "$10",
       perMonth: "USD / 30天",
       launchNote: "30天使用权 · 不自动续费 · 保留剩余天数 · 使用Kaia USDT支付",
-      checkout: "开通 MemeCatch Plus",
+      checkout: "使用 Kaia USDT 支付",
+      paymentSteps: [
+        "登录 MemeCatch。",
+        "在 Unifi Wallet 中准备 Kaia 网络上的 USDT。",
+        "完成支付并返回，即可查看 Plus 状态。",
+      ],
+      freeExplore: "免费浏览迷因",
       sameEmail: "订单金额为10美元，并通过Unifi Wallet使用Kaia USDT支付。剩余使用期会被保留并顺延30天；退款经客服审核后手动退回原付款钱包。",
       freeName: "免费",
       plusName: "Plus",

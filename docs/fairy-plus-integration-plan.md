@@ -69,7 +69,7 @@ Vercel marketplace discovery returned Stripe for payments; the user explicitly s
 ## Production verification (2026-09-06)
 
 - Production URL: https://catchmeme.com/pricing. Fairy public project: https://fairy.hada.io/@memecatch, live with the support form visible.
-- Deployment: `dpl_HsBaZfcSZASjo31EQdRKda5TJyBZ`; application commit: `04d0a7b3b1c35caa8ca6862f92078ecddbad0b15`, based on the then-live `114ec578c50b99300139f1e10f4f93edf673568d`. Source is isolated on local branch `codex/fairy-plus-release`; no remote push or main merge was performed. Later changes to this branch only align the migration filename with Supabase history and record delivery evidence.
+- Deployment: `dpl_HsBaZfcSZASjo31EQdRKda5TJyBZ`; application commit: `04d0a7b3b1c35caa8ca6862f92078ecddbad0b15`, based on the then-live `114ec578c50b99300139f1e10f4f93edf673568d`. At initial activation, source was isolated on local branch `codex/fairy-plus-release` without a remote push. Later documentation changes align the migration filename with Supabase history and record delivery evidence. The owner subsequently authorized publishing this release to `main` and deploying through the connected Git integration.
 - Production migration version: `20260906054257`; service-role-only grant RPC verified.
 - 96 related tests, scoped lint, TypeScript and Vercel production build passed on the isolated application source. No unrelated dirty security work was deployed.
 - Production pricing returns 200 and displays the 15,000 KRW form; CSP permits Fairy. Anonymous checkout returns 303 to localized login, cross-origin checkout returns 403, invalid signatures return 401. A valid signed TEST event returns 200/ignored without granting a subscription.

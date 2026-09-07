@@ -1,10 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
-
-/** 후원 — Fairy(GeekNews) 프로필. 1인 운영, 광고와 함께 서비스 유지 재원. */
-const DONATE_URL = "https://fairy.hada.io/@toris-dev";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 후원 카드 — 고관여 지점(밈 상세 본문을 다 읽은 시점)에 자연스럽게 노출.
@@ -13,7 +12,7 @@ const DONATE_URL = "https://fairy.hada.io/@toris-dev";
  * i18n(useLocale)·GA(donate_click) 연동.
  */
 export function DonateCard() {
-  const { messages } = useLocale();
+  const { messages, locale } = useLocale();
   return (
     <aside
       aria-label={messages.donate}
@@ -32,15 +31,13 @@ export function DonateCard() {
             {messages.donateCardBody}
           </p>
           <TrackedBlock event="donate_click" className="mt-3 inline-flex">
-            <a
-              href={DONATE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={`${localizedStaticPath("/pricing", locale)}#fairy-support-title`}
               className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-strong px-5 text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <HeartGlyph />
               {messages.donate}
-            </a>
+            </Link>
           </TrackedBlock>
         </div>
       </div>

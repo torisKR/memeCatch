@@ -75,6 +75,12 @@ export default async function AdminDashboardPage() {
 
   const tiles = [
     {
+      href: "/admin/activity",
+      label: "사용자 활동",
+      value: "조회·구독 분석",
+      sub: "사용자별 조회 콘텐츠와 일별·시간별 활동을 확인해요",
+    },
+    {
       href: "/admin/submissions",
       label: "대기 제보",
       value: `${pendingRes.count ?? 0}건`,

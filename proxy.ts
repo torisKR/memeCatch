@@ -248,10 +248,12 @@ export async function proxy(request: NextRequest) {
       url.searchParams.set("next", authReturnPath);
       return applyLocale(NextResponse.redirect(url));
     }
-    const { data: isOperator } = await supabase.rpc("is_operator");
-    if (!isOperator) {
+    // 서버측 운영자 검증 (D-1: 클라이언트 라우팅 숨김은 보안이 아님)
+    const { data: isOperator, error: operatorError } = await supabase.rpc("is_operator");
+    if (operatorError || isOperator !== true) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
+      url.search = "";
       return applyLocale(NextResponse.redirect(url));
     }
   }

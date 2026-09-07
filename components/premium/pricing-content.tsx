@@ -8,6 +8,7 @@ import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 import { PlusFeatures } from "@/components/premium/plus-features";
 import { track } from "@/lib/analytics";
+import { FairySupportOption } from "@/components/premium/fairy-support-option";
 
 const CHECKOUT_UNAVAILABLE = withLocaleFallback({
   ko: "신규 결제는 현재 잠시 중단되어 있습니다.",
@@ -17,7 +18,13 @@ const CHECKOUT_UNAVAILABLE = withLocaleFallback({
   "zh-tw": "新購買目前暫時無法使用。",
 });
 
-export function PricingContent({ checkoutEnabled }: { checkoutEnabled: boolean }) {
+export function PricingContent({
+  checkoutEnabled = false,
+  fairyMinimumAmount,
+}: {
+  checkoutEnabled?: boolean;
+  fairyMinimumAmount?: number;
+} = {}) {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
 
@@ -69,20 +76,39 @@ export function PricingContent({ checkoutEnabled }: { checkoutEnabled: boolean }
         </ul>
 
         {checkoutEnabled ? (
-          <form
-            action="/api/billing/checkout"
-            method="post"
-            className="relative mt-7"
-            onSubmit={() => {
-              track("plus_checkout_started", { locale, surface: "pricing" });
-              track("checkout_start", { locale, surface: "pricing" });
-            }}
-          >
-            <input type="hidden" name="locale" value={locale} />
-            <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-              {copy.pricing.checkout}
-            </button>
-          </form>
+          <>
+            {/* 결제는 호스팅 결제창으로의 리다이렉트다. 어느 제공자(Unifi Pay·Latpeed)를
+                쓸지는 서버가 환경변수로 정하므로 프론트는 하나의 폼만 유지한다.
+                JS 없이도 동작하는 순수 form POST. */}
+            <form
+              action="/api/billing/checkout"
+              method="post"
+              className="relative mt-7"
+              onSubmit={() => {
+                track("plus_checkout_started", { locale, surface: "pricing" });
+                track("checkout_start", { locale, surface: "pricing" });
+              }}
+            >
+              <input type="hidden" name="locale" value={locale} />
+              <button type="submit" className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent-strong px-5 text-base font-bold text-white shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+                {copy.pricing.checkout}
+              </button>
+            </form>
+            <ol className="relative mt-5 space-y-2 text-sm leading-relaxed text-muted" aria-label={copy.pricing.checkout}>
+              {copy.pricing.paymentSteps.map((step, index) => (
+                <li key={step} className="flex gap-3">
+                  <span aria-hidden className="font-bold text-accent-text">{index + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+            <Link
+              href={localizedStaticPath("/explore", locale)}
+              className="relative mt-5 block text-center text-sm font-semibold text-accent-text underline underline-offset-4 hover:text-foreground"
+            >
+              {copy.pricing.freeExplore}
+            </Link>
+          </>
         ) : (
           <div className="relative mt-7">
             <button
@@ -102,6 +128,8 @@ export function PricingContent({ checkoutEnabled }: { checkoutEnabled: boolean }
           {copy.pricing.sameEmail}
         </p>
       </section>
+
+      {fairyMinimumAmount !== undefined && <FairySupportOption minimumAmount={fairyMinimumAmount} />}
 
       <PlusFeatures features={copy.pricing.features} heading={copy.pricing.featuresTitle} />
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PricingContent } from "@/components/premium/pricing-content";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { getFairyConfig } from "@/lib/billing/fairy.server";
 import {
   SEO_ROUTE_LOCALES,
   buildLocalizedMetadata,
@@ -34,5 +35,10 @@ export default async function LocalizedPricingPage({ params }: Props) {
   if (!isSeoContentLocale(locale)) notFound();
 
   const checkoutEnabled = process.env.UNIFI_PAY_CHECKOUT_ENABLED?.trim() === "true";
-  return <PricingContent checkoutEnabled={checkoutEnabled} />;
+  return (
+    <PricingContent
+      checkoutEnabled={checkoutEnabled}
+      fairyMinimumAmount={getFairyConfig()?.minimumAmount}
+    />
+  );
 }

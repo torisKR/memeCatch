@@ -4,19 +4,26 @@ set -e
 URL="https://onjipuldngbdptldkpoe.supabase.co"
 KEY=$(grep -E '^SUPABASE_SERVICE_ROLE_KEY=' ~/projects/memecatch/.env | head -1 | cut -d= -f2- | tr -d '"'"'"' \r')
 [ -z "$KEY" ] && { echo "키 없음"; exit 1; }
-export MC_SEED_SERVICE_ROLE_KEY="$KEY"
-CODE=$(printf 'silent\noutput = "/dev/null"\nwrite-out = "%%{http_code}"\nheader = "apikey: %s"\nheader = "Authorization: Bearer %s"\n' "$KEY" "$KEY" \
-  | curl --config - "$URL/rest/v1/memes?select=id&limit=1")
+CODE=$(python3 - "$URL" 3<<<"$KEY" <<'PY'
+import os,sys,urllib.error,urllib.request
+url,key=sys.argv[1],os.fdopen(3).read().rstrip("\n")
+req=urllib.request.Request(url+"/rest/v1/memes?select=id&limit=1",
+    headers={"apikey":key,"Authorization":"Bearer "+key})
+try:
+    print(urllib.request.urlopen(req).status)
+except urllib.error.HTTPError as e:
+    print(e.code)
+PY
+)
 [ "$CODE" != "200" ] && { echo "키가 원격에 $CODE 반환 — memeCatch 프로젝트 service_role 키인지 확인"; exit 1; }
 echo "키 인증 OK, REST bulk 삽입 시작..."
 # raw JSONL → PostgREST JSON 배열 → bulk POST (service_role, RLS 우회)
 node scripts/jsonl-to-postgrest.mjs data/memes/raw /tmp/mc-rows.json
 TOTAL=$(python3 -c "import json;print(len(json.load(open('/tmp/mc-rows.json'))))")
 echo "총 $TOTAL 행, 200건씩 배치 POST"
-python3 - "$URL" <<'PY'
+python3 - "$URL" 3<<<"$KEY" <<'PY'
 import json,os,sys,urllib.request
-url=sys.argv[1]
-key=os.environ["MC_SEED_SERVICE_ROLE_KEY"]
+url,key=sys.argv[1],os.fdopen(3).read().rstrip("\n")
 rows=json.load(open('/tmp/mc-rows.json'))
 ins=0
 for i in range(0,len(rows),200):

@@ -4090,6 +4090,21 @@ export type Database = {
     }
     Functions: {
       admin_get_plus_status: { Args: { p_email: string }; Returns: Json }
+      create_fairy_billing_intent: {
+        Args: { p_min_amount: number; p_project_slug: string; p_user_id: string }
+        Returns: string
+      }
+      process_fairy_payment: {
+        Args: {
+          p_amount: number
+          p_intent_id: string
+          p_occurred_at: string
+          p_project_slug: string
+          p_payment_id: string
+        }
+        Returns: Json
+      }
+      revoke_fairy_payment: { Args: { p_payment_id: string; p_reason: string }; Returns: Json }
       admin_set_plus_entitlement: {
         Args: { p_active: boolean; p_email: string; p_months?: number }
         Returns: Json
@@ -4359,6 +4374,18 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_admin_activity_dashboard: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_hour_date: string
+          p_user_id?: string
+          p_subscribers_only?: boolean
+          p_users_page?: number
+          p_views_page?: number
+        }
+        Returns: Json
       }
       get_growth_kpi_dashboard: { Args: never; Returns: Json }
       get_growth_pilot_dashboard: { Args: never; Returns: Json }

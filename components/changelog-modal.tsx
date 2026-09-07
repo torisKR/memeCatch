@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CHANGELOG, LATEST_CHANGELOG_ID, type ChangelogEntry } from "@/lib/changelog";
 
@@ -138,6 +139,15 @@ export function ChangelogModal() {
                     <li key={i}>{item}</li>
                   ))}
                 </ul>
+                {entry.action && (
+                  <Link
+                    href={entry.action.href}
+                    onClick={dismiss}
+                    className="mt-2 inline-flex min-h-11 items-center rounded-lg text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {entry.action.label}
+                  </Link>
+                )}
               </section>
             ))}
           </div>

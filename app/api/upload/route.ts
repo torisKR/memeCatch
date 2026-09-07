@@ -8,6 +8,7 @@ import {
   MAX_VIDEO_UPLOAD_BYTES,
 } from "@/lib/upload-shared";
 import { rateLimit } from "@/lib/rate-limit";
+import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
 import { MediaValidationError, validateMedia } from "@/lib/mpe/media";
 
 /**
@@ -36,7 +37,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const form = await req.formData().catch(() => null);
+  let form: FormData | null = null;
+  try {
+    form = await readBoundedFormData(req, MAX_VIDEO_UPLOAD_BYTES + 128 * 1024);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ ok: false, error: "too_large" }, { status: 413 });
+    }
+  }
   const file = form?.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ ok: false, error: "no_file" }, { status: 400 });

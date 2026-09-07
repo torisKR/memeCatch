@@ -68,6 +68,23 @@ const excludeUrlFiles = args.filter((a) => a.startsWith("--exclude-urls=")).map(
 
 const UA =
   "Mozilla/5.0 (compatible; CatchMemeSourceCollector/1.0; +https://catchmeme.com)";
+const ARTICLE_HOSTS = new Set([
+  "allkpop.com", "bbc.com", "billboard.com", "koreaboo.com", "nme.com",
+  "papermag.com", "rollingstone.com", "soompi.com", "theguardian.com", "variety.com",
+]);
+
+function isAllowedArticleUrl(raw) {
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    return url.protocol === "https:"
+      && !url.username
+      && !url.password
+      && [...ARTICLE_HOSTS].some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+  } catch {
+    return false;
+  }
+}
 
 const MEDIA_QUERIES = [
   'site:billboard.com "tiktok.com/@" challenge OR dance',
@@ -248,7 +265,7 @@ function extractArticleUrlsFromSearch(file) {
               : [];
     for (const item of list) {
       const u = item?.url ?? item?.link ?? item?.metadata?.sourceURL;
-      if (typeof u === "string" && /^https:\/\//i.test(u)) urls.add(u.split("#")[0]);
+      if (typeof u === "string" && isAllowedArticleUrl(u)) urls.add(u.split("#")[0]);
     }
   } catch {
     // human-readable firecrawl search dump
@@ -257,14 +274,15 @@ function extractArticleUrlsFromSearch(file) {
     }
     for (const m of raw.matchAll(/https:\/\/[^\s"'<>]+/g)) {
       const u = m[0].replace(/[.,;)]+$/, "");
-      if (!/tiktok\.com|instagram\.com|facebook\.com|google\./i.test(u)) urls.add(u);
+      if (isAllowedArticleUrl(u)) urls.add(u);
     }
   }
   // drop platform posts — those are handled separately
   return [...urls].filter((u) => {
     try {
       const host = new URL(u).hostname.replace(/^www\./, "");
-      return !["tiktok.com", "instagram.com", "vm.tiktok.com"].includes(host);
+      return !["tiktok.com", "instagram.com", "vm.tiktok.com"].includes(host)
+        && isAllowedArticleUrl(u);
     } catch {
       return false;
     }
@@ -272,15 +290,28 @@ function extractArticleUrlsFromSearch(file) {
 }
 
 async function fetchArticleHtml(url) {
-  const response = await fetch(url, {
-    headers: {
-      accept: "text/html,application/xhtml+xml",
-      "accept-language": "en-US,en;q=0.9,ko;q=0.7",
-      "user-agent": UA,
-    },
-    redirect: "follow",
-    signal: AbortSignal.timeout(14_000),
-  });
+  if (!isAllowedArticleUrl(url)) throw new Error("article host not allowed");
+  let current = url;
+  let response;
+  for (let redirects = 0; redirects <= 4; redirects += 1) {
+    response = await fetch(current, {
+      headers: {
+        accept: "text/html,application/xhtml+xml",
+        "accept-language": "en-US,en;q=0.9,ko;q=0.7",
+        "user-agent": UA,
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(14_000),
+    });
+    if (response.status < 300 || response.status >= 400) break;
+    const location = response.headers.get("location");
+    if (!location) throw new Error("article redirect missing location");
+    current = new URL(location, current).toString();
+    if (!isAllowedArticleUrl(current)) throw new Error("article redirect host not allowed");
+  }
+  if (!response || (response.status >= 300 && response.status < 400)) {
+    throw new Error("too many article redirects");
+  }
   const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok || !contentType.toLowerCase().includes("text/html")) {
     throw new Error(`article HTTP ${response.status}`);
@@ -460,7 +491,7 @@ async function main() {
   if (existsSync(seedFile)) {
     for (const line of readFileSync(seedFile, "utf8").split("\n")) {
       const t = line.trim();
-      if (t.startsWith("https://")) articleUrls.add(t.split("#")[0]);
+      if (isAllowedArticleUrl(t)) articleUrls.add(t.split("#")[0]);
     }
   }
 

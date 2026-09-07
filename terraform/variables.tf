@@ -25,7 +25,6 @@ variable "monthly_budget_usd" {
 variable "budget_alert_email" {
   description = "예산 경보 수신 이메일"
   type        = string
-  default     = "ironjustlikethat@gmail.com"
 }
 
 variable "enable_media_cdn" {

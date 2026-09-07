@@ -4,6 +4,7 @@ import { StatusPanel } from "@/components/status-panel";
 import Link from "next/link";
 import { createStaticClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { flags } from "@/lib/flags";
 import {
   LIFECYCLE_STATUS,
@@ -58,9 +59,8 @@ type MemeRow = Pick<
 const MEME_FIELDS =
   "id,short_id,slug,title,summary,safety_level,lifecycle_status,trend_score,published_at";
 
-async function loadRankings() {
+async function loadRankings(includeWeeklyMetrics: boolean) {
   const supabase = createStaticClient();
-  const admin = createAdminClient();
 
   // 오늘의 급상승: trend_score 상위 + rising 우선 (limited는 추천 표면에서 제외)
   const { data: top, count, error: topErr } = await supabase
@@ -96,23 +96,27 @@ async function loadRankings() {
     .slice(0, 20);
 
   // 이번 주 많이 본: meme_trend_metrics 최근 7일 views 합산
-  const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const { data: metricRows, error: metricErr } = await admin
-    .from("meme_trend_metrics")
-    .select("meme_id,views,date")
-    .gte("date", since);
-  if (metricErr) throw metricErr;
+  let metricRows: { meme_id: string; views: number | null; date: string }[] = [];
+  if (includeWeeklyMetrics) {
+    const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const { data, error } = await createAdminClient()
+      .from("meme_trend_metrics")
+      .select("meme_id,views,date")
+      .gte("date", since);
+    if (error) throw error;
+    metricRows = data ?? [];
+  }
 
   // 마지막 집계일 — job_runs는 운영자 전용 RLS라 공개 화면에서 못 읽는다.
   // 원시 추이 데이터도 Plus 전용이므로 서버에서 최신 롤업 날짜만 계산한다.
   const lastRollupDate =
-    (metricRows ?? []).reduce<string | null>(
+    metricRows.reduce<string | null>(
       (max, row) => (!max || row.date > max ? row.date : max),
       null,
     ) ?? null;
 
   const viewsById = new Map<string, number>();
-  for (const row of metricRows ?? []) {
+  for (const row of metricRows) {
     viewsById.set(row.meme_id, (viewsById.get(row.meme_id) ?? 0) + (row.views ?? 0));
   }
   const weeklyIds = [...viewsById.entries()]
@@ -150,6 +154,7 @@ async function loadRankings() {
     fallback: null,
     today,
     weekly,
+    weeklyLocked: !includeWeeklyMetrics,
     comeback: (comebackRows ?? []) as MemeRow[],
     lastRollupDate,
     // 표본 판정 기준 — 1위 문서의 기간 내 조회 수. 세 탭 모두 같은 조회 데이터에서
@@ -162,7 +167,8 @@ export default async function RankingsPage() {
   let data: Awaited<ReturnType<typeof loadRankings>> | null = null;
   let failed = false;
   try {
-    data = await loadRankings();
+    const entitlement = await getPremiumEntitlement();
+    data = await loadRankings(entitlement.isPremium);
   } catch {
     failed = true;
   }
@@ -284,7 +290,14 @@ export default async function RankingsPage() {
               lastRollupDate={data.lastRollupDate}
               topViews={data.topWeeklyViews}
             />
-            {data.weekly.length === 0 ? (
+            {data.weeklyLocked ? (
+              <div className="rounded-xl border border-border bg-surface-2 p-5 text-center">
+                <p className="font-semibold">이번 주 조회 순위는 Plus에서 볼 수 있어요.</p>
+                <Link className="mt-3 inline-flex min-h-11 items-center text-accent underline" href="/pricing">
+                  Plus 보기
+                </Link>
+              </div>
+            ) : data.weekly.length === 0 ? (
               <EmptyList message="이번 주 조회 집계가 아직 없어요. 내일 다시 확인해 보세요." />
             ) : (
               <ol className="grid gap-2 lg:grid-cols-2 lg:gap-x-8">

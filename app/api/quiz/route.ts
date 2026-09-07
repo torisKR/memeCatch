@@ -16,6 +16,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const POOL_SIZE = 300;
+const SHORT_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 const MODE_YEAR_FILTER: Record<QuizMode, { gte?: number; lte?: number }> = {
   all: {},
   now: { gte: 2020 },
@@ -26,6 +27,12 @@ function parseMode(value: string | null): QuizMode {
   return value === "now" || value === "retro" ? value : "all";
 }
 
+function randomShortId(): string {
+  return Array.from({ length: 8 }, () =>
+    SHORT_ID_ALPHABET[Math.floor(Math.random() * SHORT_ID_ALPHABET.length)]
+  ).join("");
+}
+
 export async function GET(request: Request) {
   const mode = parseMode(new URL(request.url).searchParams.get("mode"));
   const yearFilter = MODE_YEAR_FILTER[mode];
@@ -33,32 +40,38 @@ export async function GET(request: Request) {
   try {
     const supabase = createStaticClient();
 
-    // 1) 대상 밈 수 — 랜덤 오프셋 상한 계산용
-    let countQuery = supabase
-      .from("memes")
-      .select("id", { count: "exact", head: true })
-      .eq("moderation_status", "approved");
-    if (yearFilter.gte !== undefined)
-      countQuery = countQuery.gte("origin_year", yearFilter.gte);
-    if (yearFilter.lte !== undefined)
-      countQuery = countQuery.lte("origin_year", yearFilter.lte);
-    const { count, error: countError } = await countQuery;
-    if (countError || !count) throw countError ?? new Error("no memes");
-
-    // 2) 랜덤 오프셋에서 풀 300개 — 안정 정렬(short_id) 위에서 창만 이동
-    const offset = Math.floor(Math.random() * Math.max(1, count - POOL_SIZE + 1));
+    const pivot = randomShortId();
     let poolQuery = supabase
       .from("memes")
       .select("short_id, slug, title, summary, category, origin_year, safety_level")
-      .eq("moderation_status", "approved");
+      .eq("moderation_status", "approved")
+      .gte("short_id", pivot);
     if (yearFilter.gte !== undefined)
       poolQuery = poolQuery.gte("origin_year", yearFilter.gte);
     if (yearFilter.lte !== undefined)
       poolQuery = poolQuery.lte("origin_year", yearFilter.lte);
-    const { data, error } = await poolQuery
+    const { data: first, error } = await poolQuery
       .order("short_id", { ascending: true })
-      .range(offset, offset + POOL_SIZE - 1);
-    if (error || !data) throw error ?? new Error("empty pool");
+      .limit(POOL_SIZE);
+    if (error || !first) throw error ?? new Error("empty pool");
+
+    let data = first;
+    if (data.length < POOL_SIZE) {
+      let wrapQuery = supabase
+        .from("memes")
+        .select("short_id, slug, title, summary, category, origin_year, safety_level")
+        .eq("moderation_status", "approved")
+        .lt("short_id", pivot);
+      if (yearFilter.gte !== undefined)
+        wrapQuery = wrapQuery.gte("origin_year", yearFilter.gte);
+      if (yearFilter.lte !== undefined)
+        wrapQuery = wrapQuery.lte("origin_year", yearFilter.lte);
+      const wrapped = await wrapQuery
+        .order("short_id", { ascending: true })
+        .limit(POOL_SIZE - data.length);
+      if (wrapped.error) throw wrapped.error;
+      data = [...data, ...(wrapped.data ?? [])];
+    }
 
     // 3) 요약 20자+ 필터·같은 카테고리 오답 3개·보기 셔플은 순수 로직에 위임
     const questions = buildQuestions(data as QuizPoolMeme[], QUIZ_SIZE);

@@ -1,0 +1,120 @@
+{
+  "date_kst": "2026-09-05",
+  "campaign": "zero_budget_pilot_202609",
+  "status": "resource_published_recruitment_open_threads_direct_reload_error",
+  "paid_ads_or_new_tool_purchases": 0,
+  "preflight": {
+    "community_author": "운영자",
+    "community_recent_titles_checked": 10,
+    "threads_account": "@toris.kr",
+    "threads_recent_posts_checked": 5,
+    "same_campaign_duplicate_found": false
+  },
+  "resource": {
+    "url": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77",
+    "title": "SNS에 밈을 쓰기 전 확인할 5가지",
+    "local_source": "2026-09-05-meme-checklist.md",
+    "author": "운영자",
+    "created_at_from_html": "2026-09-05T06:38:28.888452+00:00",
+    "browser_publish_and_direct_reopen_observed": true,
+    "anonymous_http_status": 200,
+    "anonymous_final_url": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77",
+    "canonical": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77",
+    "robots_meta": [],
+    "body_sections_verified": {
+      "SNS에 밈을 쓰기 전 확인할 5가지": true,
+      "뜻을 내 말로 설명할 수 있나요?": true,
+      "상대와의 관계에 맞나요?": true,
+      "농담이 빠져도 전달할 내용이 남나요?": true,
+      "유래와 사용 맥락의 근거를 확인했나요?": true,
+      "사용할 이미지·영상의 이용 조건도 확인했나요?": true,
+      "복사해서 쓰는 빈칸": true,
+      "예시 1.": true,
+      "예시 2.": true,
+      "1인 1회 무료": true
+    },
+    "article_links": [
+      "https://catchmeme.com/memes/3fajbwre",
+      "https://catchmeme.com/memes/r2fg5gqv",
+      "https://catchmeme.com/",
+      "https://catchmeme.com/editorial"
+    ],
+    "anonymous_checked_at_kst": "2026-09-05T15:39:28+09:00",
+    "created_at_kst": "2026-09-05T15:38:28.888452+09:00",
+    "source_body_chars": 1479,
+    "source_body_sha256": "1d1a79e4d7027320d738fb408df4889540d36cc3462503dd8dd42cfe5450423a",
+    "browser_exact_form_input_verified": true,
+    "browser_all_source_lines_present_after_reopen": true,
+    "browser_source_lines_missing": [],
+    "comment_count_at_browser_check": 0
+  },
+  "recruitment": {
+    "status": "published_content_verified_direct_reload_error",
+    "target_capacity": 5,
+    "confirmed_participants": 0,
+    "post_url": "https://www.threads.com/@toris.kr/post/Dc5V3smCZPW",
+    "account_handle": "@toris.kr",
+    "body": "밈을 넣은 게시물, 올리기 전에 이 5가지만 확인해 보세요.\n\n뜻·상대와의 관계·기본 문장·출처·이미지 이용 조건.\n복사해서 쓰는 무료 확인표와 예시 2개를 밈캐치에 공개했습니다.\n\nhttps://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_pilot_202609&utm_content=checklist_recruit\n\n콘텐츠 만드는 분 5명과 함께 써보려 합니다. 공개 가능한 상황 하나를 답글로 남겨주시면, 1인 1회 무료로 표현 후보 최대 2개와 맥락·출처를 정리해 드릴게요.\n\n어떤 글에서 밈을 고르기 어려우셨나요?",
+    "body_character_count": 390,
+    "landing_url": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_pilot_202609&utm_content=checklist_recruit",
+    "landing_http_check": {
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_pilot_202609&utm_content=checklist_recruit",
+      "all_utm_preserved": true,
+      "checked_at_kst": "2026-09-05T15:40:33+09:00"
+    },
+    "published_at_kst": "2026-09-05T15:41+09:00",
+    "timestamp_precision": "minute",
+    "timestamp_source": "Korean profile and post-detail UI, observed by Aside",
+    "prepublish_exact_text_match": true,
+    "topic_field_empty": true,
+    "account_and_post_body_verified": true,
+    "decoded_posted_link_target": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_pilot_202609&utm_content=checklist_recruit",
+    "all_four_utm_parameters_preserved": true,
+    "posted_permalink_href": "/@toris.kr/post/Dc5V3smCZPW",
+    "reply_state_at_post_detail_check": "아직 답글이 없습니다",
+    "reply_count_at_post_detail_check": 0,
+    "direct_permalink_check": {
+      "url": "https://www.threads.com/@toris.kr/post/Dc5V3smCZPW",
+      "stable_render_verified": false,
+      "error": "문제가 발생했습니다. 나중에 다시 시도해보세요.",
+      "retry_button_clicks": 1,
+      "retry_wait_seconds": 3,
+      "retry_result": "same_error"
+    },
+    "profile_post_still_present_after_direct_reload_error": true,
+    "profile_rechecked_at_kst": "2026-09-05T15:43+09:00"
+  },
+  "measurement": {
+    "views_24h": null,
+    "link_visits_24h": null,
+    "substantive_replies_24h": null,
+    "views_72h": null,
+    "link_visits_72h": null,
+    "substantive_replies_72h": null,
+    "ga4_collection_verified": false
+  },
+  "limits": [
+    "HTTP verification proves public response, not browser clipboard behavior or search indexing.",
+    "Verification visits are not customer traffic.",
+    "Participant ledger is empty; five places offered does not mean five people recruited.",
+    "Threads profile and post-detail content were verified, but direct URL navigation and one retry ended in a Threads error. Stable direct rendering is not claimed.",
+    "The Threads error is scoped to this browser session; publication failure or all-visitor impact is not inferred.",
+    "No 24-hour/72-hour outcomes, verified customer visits, or revenue are claimed.",
+    "No applicant responses were present at the post-detail check; later responses have not been continuously monitored."
+  ],
+  "new_publications_this_execution": {
+    "community_resource": 1,
+    "threads_recruitment": 1
+  },
+  "next_steps": {
+    "campaign_24h_review_due_kst": "2026-09-06T15:41+09:00",
+    "campaign_72h_review_due_kst": "2026-09-08T15:41+09:00",
+    "participant_followup_rule": "3 to 7 days after actual assisted use; no participant-specific due date exists yet",
+    "participant_ledger": "2026-09-05-pilot-participants.csv",
+    "background_monitoring_or_schedules_configured": false,
+    "current_dependency": "Await actual applicant replies before personalized assistance or reuse interviews",
+    "later_partner_outreach_dependency": "Actual reuse cases from pilot participants"
+  },
+  "recorded_at_kst": "2026-09-05T15:44:55+09:00"
+}

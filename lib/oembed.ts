@@ -185,7 +185,8 @@ export function parseOEmbedTarget(rawUrl: string): ProviderTarget {
 }
 
 async function readJson(response: Response): Promise<UpstreamOEmbed> {
-  const data = (await response.json().catch(() => null)) as
+  const raw = await readBoundedText(response, 256 * 1024).catch(() => "");
+  const data = (raw ? JSON.parse(raw) : null) as
     | UpstreamOEmbed
     | { error?: { message?: string } }
     | null;
@@ -299,7 +300,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
   const data = await readJson(response);
 
   if (target.provider === "threads") {
-    if (typeof data.html !== "string" || !data.html.trim()) {
+    if (typeof data.html !== "string" || !data.html.trim() || data.html.length > 50_000) {
       throw new OEmbedError(
         "Threads 임베드 HTML을 확인하지 못했습니다.",
         "UPSTREAM_ERROR",
@@ -340,3 +341,4 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
     authorName: safeText(data.author_name),
   };
 }
+import { readBoundedText } from "@/lib/request-body";

@@ -25,6 +25,10 @@ export type SubmitState =
   | { status: "error"; fieldErrors: SubmitFieldErrors; formError?: string }
   | { status: "success"; submissionId: string };
 
+type SubmissionQuotaRpc = (
+  name: "reserve_submission_attempt",
+) => PromiseLike<{ error: { code?: string } | null }>;
+
 function createSubmitSchema(copy: SubmitCopy) {
   const { errors } = copy;
   return z.object({
@@ -123,6 +127,27 @@ export async function submitMemeWithAttachment(
     attachmentPath,
   } = parsed.data;
 
+  if (
+    attachmentPath !== "" &&
+    !attachmentPath.startsWith(`meme-uploads/${user.id}/`)
+  ) {
+    return {
+      status: "error",
+      fieldErrors: { attachment: copy.errors.attachmentInvalid },
+    };
+  }
+
+  const { error: quotaError } = await (supabase.rpc as unknown as SubmissionQuotaRpc)(
+    "reserve_submission_attempt",
+  );
+  if (quotaError) {
+    return {
+      status: "error",
+      fieldErrors: {},
+      formError: quotaError.code === "P0429" ? copy.errors.rateLimited : copy.errors.submitFailed,
+    };
+  }
+
   // 지원 플랫폼 링크는 미리보기와 동일한 서버 검증을 다시 수행한다.
   // 클라이언트 미리보기는 우회될 수 있으므로 제출 시점을 신뢰 경계로 삼는다.
   if (sourceUrl && isSupportedOEmbedUrl(sourceUrl)) {
@@ -134,19 +159,6 @@ export async function submitMemeWithAttachment(
         fieldErrors: { sourceUrl: copy.errors.sourceUnavailable },
       };
     }
-  }
-
-  // 첨부 경로는 자기 폴더 프리픽스만 허용 (RPC에서도 재검증)
-  if (
-    attachmentPath !== "" &&
-    !attachmentPath.startsWith(`meme-uploads/${user.id}/`)
-  ) {
-    return {
-      status: "error",
-      fieldErrors: {
-        attachment: copy.errors.attachmentInvalid,
-      },
-    };
   }
 
   // p_seen_at/p_url/p_guess는 SQL에서 nullable text지만 생성 타입은 string으로 좁혀짐 — null 전달은 유효

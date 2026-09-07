@@ -31,6 +31,19 @@ export async function GET(
   const output = safeOutput(data.output_json);
   let downloadUrl: string | null = null;
   if (data.job_type === "render" && data.status === "completed") {
+    const { data: ingestion, error: ingestionError } = await createAdminClient()
+      .from("media_ingestions")
+      .select("expires_at, deleted_at")
+      .eq("id", data.ingestion_id)
+      .maybeSingle();
+    if (
+      ingestionError ||
+      !ingestion ||
+      ingestion.deleted_at ||
+      new Date(ingestion.expires_at).getTime() <= Date.now()
+    ) {
+      return Response.json({ ok: false, error: "artifact_expired" }, { status: 410 });
+    }
     const artifactKey = typeof data.output_json === "object" && data.output_json !== null && !Array.isArray(data.output_json)
       ? (data.output_json as Record<string, unknown>).artifactKey
       : null;

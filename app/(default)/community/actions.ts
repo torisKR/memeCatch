@@ -17,6 +17,7 @@ export type CommunityActionResult<T = null> =
         | "invalid_input"
         | "login_required"
         | "rate_limited"
+        | "community_disabled"
         | "not_found"
         | "server_error";
       message: string;
@@ -40,6 +41,13 @@ function mapRpcError(err: { message?: string; code?: string }): Extract<
       error: "rate_limited",
       message:
         "잠깐만요 — 짧은 시간에 너무 많이 작성했어요. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+  if (msg.includes("community_disabled")) {
+    return {
+      ok: false,
+      error: "community_disabled",
+      message: "커뮤니티 기능이 잠시 중단됐어요.",
     };
   }
   if (msg.includes("post_not_found")) {

@@ -1,0 +1,25 @@
+{
+  "verified_at": "2026-09-06T06:08:59.856910+00:00",
+  "commit": "6a2f396ef65662b51a8eab3d474b897b2196be37",
+  "deployment_id": "dpl_2EU4hqMgHvJVN8xgDz55vB7dMgfs",
+  "production_url": "https://catchmeme.com",
+  "deployment_url": "https://memecatch-fv2yzqb1j-ironjustlikethatgmailcoms-projects.vercel.app",
+  "checks": {
+    "pricing": true,
+    "anonymous_login": true,
+    "cross_origin_rejected": true,
+    "unsigned_callback_rejected": true
+  },
+  "application_tests_passed": 96,
+  "typecheck": "passed",
+  "lint": "passed",
+  "real_payment_performed": false,
+  "browser_qa": {
+    "result": "passed",
+    "signed_in_checkout_to_fairy_form": true,
+    "intent_payload_present": true,
+    "console_errors": 0,
+    "csp_errors": 0,
+    "payment_performed": false
+  }
+}

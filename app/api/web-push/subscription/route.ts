@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedText } from "@/lib/request-body";
 import { isSupportedWebPushEndpoint } from "@/lib/web-push/server";
 
 export const runtime = "nodejs";
@@ -15,6 +16,14 @@ function noStore() {
 
 function rpcFor(client: Awaited<ReturnType<typeof createClient>>): Rpc {
   return client.rpc.bind(client) as unknown as Rpc;
+}
+
+async function body(request: Request): Promise<unknown> {
+  try {
+    return JSON.parse(await readBoundedText(request, 8 * 1024));
+  } catch {
+    return null;
+  }
 }
 
 function subscription(value: unknown) {
@@ -54,7 +63,7 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const input = subscription(await request.json().catch(() => null));
+  const input = subscription(await body(request));
   if (!input) return NextResponse.json({ error: "invalid_subscription" }, { status: 400, headers: noStore() });
 
   const entitlement = await getPremiumEntitlement();
@@ -73,7 +82,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  const value = await request.json().catch(() => null);
+  const value = await body(request);
   const endpoint = typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>).endpoint
     : null;

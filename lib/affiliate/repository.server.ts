@@ -112,10 +112,15 @@ export async function getActiveAffiliateRedirect(
 export async function recordAffiliateProductClick(
   id: string,
   date: string,
+  principalHash: string,
 ): Promise<void> {
-  const { error } = await createAdminClient().rpc(
+  type ClickRpc = (
+    name: "record_affiliate_product_click",
+    args: { product_id: string; metric_date: string; principal_hash: string },
+  ) => PromiseLike<{ error: unknown }>;
+  const { error } = await (createAdminClient().rpc as unknown as ClickRpc)(
     "record_affiliate_product_click",
-    { product_id: id, metric_date: date },
+    { product_id: id, metric_date: date, principal_hash: principalHash },
   );
   if (error) throw new Error("DB_CLICK_ERROR");
 }

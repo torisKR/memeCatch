@@ -230,8 +230,8 @@ export async function runPlusExpiryReminders({
   });
   if (!deliveryUrl || !fromEmail) return emptyResult("not_configured");
   try {
-    const protocol = new URL(deliveryUrl).protocol;
-    if (protocol !== "http:" && protocol !== "https:") return emptyResult("not_configured");
+    const parsedUrl = new URL(deliveryUrl);
+    if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password) return emptyResult("not_configured");
   } catch {
     return emptyResult("not_configured");
   }

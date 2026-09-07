@@ -9,6 +9,7 @@ import {
   sign,
 } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeWebPushEndpoint } from "@/lib/web-push/endpoint";
 
 type PushSubscription = { endpoint: string; p256dh: string; auth: string };
 type PushMessage = { title: string; body?: string; url?: string; tag?: string };
@@ -43,6 +44,7 @@ const MAX_SUBSCRIPTIONS_PER_USER = 5;
 const MAX_DELIVERY_BATCH = 25;
 
 export function isSupportedWebPushEndpoint(endpoint: string): boolean {
+  if (!normalizeWebPushEndpoint(endpoint)) return false;
   if (endpoint.length < 20 || endpoint.length > 2048 || /\s/.test(endpoint)) return false;
   try {
     const url = new URL(endpoint);

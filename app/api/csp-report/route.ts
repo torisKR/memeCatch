@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { readBoundedText, RequestBodyTooLargeError } from "@/lib/request-body";
 
 /**
  * CSP 위반 리포트 수집 엔드포인트 — enforce 전환의 안전 롤아웃을 위해 실측 데이터를
@@ -44,11 +45,11 @@ export async function POST(req: Request) {
         headers: { "retry-after": String(limit.retryAfterSec) },
       });
     }
-    const contentLength = Number(req.headers.get("content-length"));
-    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    const contentType = req.headers.get("content-type")?.split(";", 1)[0]?.trim();
+    if (contentType !== "application/reports+json" && contentType !== "application/csp-report") {
       return new NextResponse(null, { status: 204 });
     }
-    const raw = await req.text();
+    const raw = await readBoundedText(req, MAX_BODY_BYTES);
     if (!raw) return new NextResponse(null, { status: 204 });
     if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
       return new NextResponse(null, { status: 204 });
@@ -77,8 +78,10 @@ export async function POST(req: Request) {
         `[CSP-VIOLATION] disposition=${disposition} directive="${directive}" blocked="${blocked}" doc="${document}"`,
       );
     }
-  } catch {
-    // 파싱 실패는 무시 — 리포트 수집은 best-effort
+  } catch (error) {
+    if (!(error instanceof RequestBodyTooLargeError)) {
+      // 파싱 실패는 무시 — 리포트 수집은 best-effort
+    }
   }
   // 리포트 API는 응답 바디가 필요 없다. 항상 204로 종료.
   return new NextResponse(null, { status: 204 });

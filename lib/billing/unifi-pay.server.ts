@@ -205,7 +205,16 @@ export async function createUnifiPaymentLink(
   const linkUrl = typeof record.linkUrl === "string" ? record.linkUrl : "";
   const linkId = typeof record.linkId === "string" ? record.linkId : "";
   if (!linkUrl || !linkId) throw new Error("unifi_pay_link_missing_fields");
-  return { linkUrl, linkId };
+  const link = new URL(linkUrl);
+  const expectedHostname = new URL(config.baseUrl).hostname.replace(/^app-api-/, "");
+  if (
+    link.protocol !== "https:" ||
+    link.hostname !== expectedHostname ||
+    link.username ||
+    link.password ||
+    (link.port && link.port !== "443")
+  ) throw new Error("unifi_pay_link_untrusted_origin");
+  return { linkUrl: link.toString(), linkId };
 }
 
 export type UnifiPayTransaction = {

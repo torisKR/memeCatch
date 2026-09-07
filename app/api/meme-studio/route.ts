@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { readBoundedJson } from "@/lib/request-body";
+import { createClient } from "@/lib/supabase/server";
 import {
   generateMemeConcepts,
   MEME_FORMATS,
@@ -21,7 +23,7 @@ const RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 } as const;
 export async function POST(request: Request) {
   let payload: unknown;
   try {
-    payload = await request.json();
+    payload = await readBoundedJson(request, 4 * 1024);
   } catch {
     return NextResponse.json({ error: "JSON 요청 본문이 올바르지 않습니다." }, { status: 400 });
   }
@@ -43,7 +45,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await generateMemeConcepts(parsed.data);
+    const { data: { user } } = await (await createClient()).auth.getUser();
+    const result = await generateMemeConcepts(parsed.data, Boolean(user));
     return NextResponse.json(result, { headers: { "cache-control": "no-store" } });
   } catch {
     return NextResponse.json(

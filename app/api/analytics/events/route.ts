@@ -9,6 +9,7 @@ import {
 import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { readBoundedJson, RequestBodyTooLargeError } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ function bounded(value: unknown, max: number): string | null {
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   const allowedOrigins = new Set([new URL(request.url).origin, new URL(SITE_URL).origin]);
-  if (origin && !allowedOrigins.has(origin)) {
+  if (!origin || !allowedOrigins.has(origin)) {
     return Response.json({ ok: false, error: "origin_not_allowed" }, { status: 403 });
   }
 
@@ -61,19 +62,13 @@ export async function POST(request: Request) {
     });
   }
 
-  const contentLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    return Response.json({ ok: false, error: "payload_too_large" }, { status: 413 });
-  }
-
   let payload: unknown;
   try {
-    const rawBody = await request.text();
-    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+    payload = await readBoundedJson(request, MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
       return Response.json({ ok: false, error: "payload_too_large" }, { status: 413 });
     }
-    payload = JSON.parse(rawBody);
-  } catch {
     return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
   }
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -101,6 +96,10 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError && !isAuthSessionMissingError(authError)) {
     return Response.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
+  }
+  const principalSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!principalSecret) {
+    return Response.json({ ok: false, error: "analytics_unavailable" }, { status: 503 });
   }
 
   const surface = bounded(params.surface, 80);

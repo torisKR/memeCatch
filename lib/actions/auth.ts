@@ -18,6 +18,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INTERNAL_AUTH_DOMAIN = "@auth.memecatch.internal";
 const SIGNUP_NOTICE =
   "가입 요청을 접수했어요. 가입 가능한 이메일이면 안내 메일을 확인하거나 로그인해 주세요.";
+const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
 
 export async function signIn(
   _prev: AuthState,
@@ -63,7 +64,9 @@ export async function signUp(
   else if (email.toLowerCase().endsWith(INTERNAL_AUTH_DOMAIN)) {
     fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
   }
-  if (password.length < 6) fieldErrors.password = "비밀번호는 6자 이상이어야 해요";
+  if (!STRONG_PASSWORD_RE.test(password)) {
+    fieldErrors.password = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
+  }
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, values: { email, nickname } };
   }
@@ -183,8 +186,8 @@ export async function updatePassword(
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (password.length < 6) {
-    return { fieldErrors: { password: "비밀번호는 6자 이상이어야 해요" } };
+  if (!STRONG_PASSWORD_RE.test(password)) {
+    return { fieldErrors: { password: "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요" } };
   }
   if (password !== confirm) {
     return { fieldErrors: { password: "두 비밀번호가 서로 달라요" } };

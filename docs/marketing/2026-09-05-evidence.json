@@ -1,0 +1,169 @@
+{
+  "date_kst": "2026-09-05",
+  "scope": "zero_budget_202609 strategy and first Threads publication",
+  "publication_status": "published_content_verified_direct_reload_error",
+  "new_posts_published": 1,
+  "paid_ads_or_new_tool_purchases": 0,
+  "aside_attempts": [
+    {
+      "surface": "CLI default account",
+      "result": "Encountered invalidated oauth token for user, failing request"
+    },
+    {
+      "surface": "CLI explicit account u0",
+      "result": "Encountered invalidated oauth token for user, failing request"
+    },
+    {
+      "surface": "Aside app natural-language task",
+      "task_id": "UtSXgFlQEuyUQKsF",
+      "result": "There was an error in ChatGPT server: Encountered invalidated oauth token for user, failing request"
+    },
+    {
+      "surface": "Aside CLI natural-language session after user continuation",
+      "task_id": "QIEX4GBezrZsvgLe",
+      "result": "Existing authentication worked. Published one post, verified account/body/decoded link target, then observed a Threads error during direct permalink reload and one retry.",
+      "model_or_provider_changed": false
+    }
+  ],
+  "existing_post_not_new_work": "https://news.hada.io/topic?id=31583",
+  "http_checks": [
+    {
+      "post_id": "p01_intro_ko",
+      "requested_url": "https://catchmeme.com/?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p01_intro_ko",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/en?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p01_intro_ko",
+      "title": "MemeCatch — Korean Memes Explained",
+      "canonical": "https://catchmeme.com/en",
+      "description": "Understand Korean memes, slang, and challenges: what they mean, where they came from, and whether they are still safe to use.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    },
+    {
+      "post_id": "p02_bgm_ko",
+      "requested_url": "https://catchmeme.com/memes/3fajbwre?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p02_bgm_ko",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/memes/3fajbwre?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p02_bgm_ko",
+      "title": "브금 뜻 | 밈캐치",
+      "canonical": "https://catchmeme.com/memes/3fajbwre-%EB%B8%8C%EA%B8%88",
+      "description": "브금 뜻과 유래 · 배경음악(BGM)을 소리 나는 대로 적은 말. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    },
+    {
+      "post_id": "p03_context_ko",
+      "requested_url": "https://catchmeme.com/editorial?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p03_context_ko",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/editorial?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p03_context_ko",
+      "title": "편집 원칙 | 밈캐치",
+      "canonical": "https://catchmeme.com/editorial",
+      "description": "밈캐치가 밈을 수록하는 기준, 사용 안전 신호를 매기는 근거, 사실확인·저작권 검수 절차와 오류 정정 요청 방법을 공개합니다.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    },
+    {
+      "post_id": "p04_goodnight_ko",
+      "requested_url": "https://catchmeme.com/memes/r2fg5gqv?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p04_goodnight_ko",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/memes/r2fg5gqv?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p04_goodnight_ko",
+      "title": "잘자 내꿈꿔 뜻 | 밈캐치",
+      "canonical": "https://catchmeme.com/memes/r2fg5gqv-%EC%9E%98%EC%9E%90-%EB%82%B4%EA%BF%88%EA%BF%94",
+      "description": "잘자 내꿈꿔 뜻과 유래 · 1999~2000년 CF에서 유래해 인사말로 자리잡은 유행어. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    },
+    {
+      "post_id": "p05_translation_ko",
+      "requested_url": "https://catchmeme.com/en?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p05_translation_ko",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/en?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p05_translation_ko",
+      "title": "MemeCatch — Korean Memes Explained",
+      "canonical": "https://catchmeme.com/en",
+      "description": "Understand Korean memes, slang, and challenges: what they mean, where they came from, and whether they are still safe to use.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    },
+    {
+      "post_id": "p05_translation_en",
+      "requested_url": "https://catchmeme.com/en?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p05_translation_en",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/en?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p05_translation_en",
+      "title": "MemeCatch — Korean Memes Explained",
+      "canonical": "https://catchmeme.com/en",
+      "description": "Understand Korean memes, slang, and challenges: what they mean, where they came from, and whether they are still safe to use.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    },
+    {
+      "post_id": "p06_feedback_ko",
+      "requested_url": "https://catchmeme.com/?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p06_feedback_ko",
+      "http_status": 200,
+      "final_url": "https://catchmeme.com/en?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p06_feedback_ko",
+      "title": "MemeCatch — Korean Memes Explained",
+      "canonical": "https://catchmeme.com/en",
+      "description": "Understand Korean memes, slang, and challenges: what they mean, where they came from, and whether they are still safe to use.",
+      "utm_preserved": true,
+      "ga_script_declared": false,
+      "verified_at": "2026-09-05T13:40:59+09:00"
+    }
+  ],
+  "verification_limits": [
+    "Publishing, post-publication content, and the initial direct permalink response were observed; a stable direct permalink render failed with a Threads error after one retry.",
+    "The error is an observation from this browser session, not proof that every visitor is affected or that publication failed.",
+    "GA4 collection and actual attribution reports remain unverified; preserved UTM values do not prove analytics collection.",
+    "24-hour and 72-hour views, link visits, substantive replies, conversions, and revenue are unmeasured.",
+    "Clipboard, new-login flow, payment, and entitlement activation were not tested.",
+    "Verification visits are not customer traffic.",
+    "P02 through P06 and the alternate English draft remain unpublished and unscheduled."
+  ],
+  "official_references": [
+    "https://help.x.com/en/rules-and-policies/x-automation",
+    "https://about.fb.com/news/2024/10/find-your-community-with-new-threads-educational-insights/",
+    "https://about.fb.com/news/2025/03/new-threads-features-more-personalized-experience-you-control/amp/",
+    "https://news.hada.io/blog/show"
+  ],
+  "publication": {
+    "post_id": "p01_intro_ko",
+    "account_handle": "@toris.kr",
+    "post_url": "https://www.threads.com/@toris.kr/post/Dc5JOU4CSse",
+    "published_at_kst": "2026-09-05T13:51+09:00",
+    "timestamp_precision": "minute",
+    "timestamp_source": "Korean profile UI immediately after publishing, observed by Aside",
+    "body": "밈 뜻은 알겠는데, 내 게시물에 써도 될지는 또 다른 문제더라고요.\n\n밈의 뜻·유래·사용 맥락을 찾아보는 ‘밈캐치’를 만들고 있습니다. 사전 설명은 무료로 읽을 수 있어요.\n\n뜻부터 살펴보고, 사용 안내와 출처도 함께 확인해 보세요. 정리 중인 내용은 페이지에 표시합니다.\n\nhttps://catchmeme.com/?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p01_intro_ko\n\n콘텐츠 만들 때 뜻보다 쓰임새가 더 헷갈렸던 밈이 있나요?",
+    "body_character_count": 304,
+    "decoded_posted_link_target": "https://catchmeme.com/?utm_source=threads&utm_medium=social&utm_campaign=zero_budget_202609&utm_content=p01_intro_ko",
+    "link_wrapped_by_threads_redirect": true,
+    "all_four_utm_parameters_preserved_in_posted_link": true,
+    "prepublish_exact_text_match": true,
+    "topic_field_empty": true,
+    "postpublish_account_and_body_parts_match": true,
+    "permalink_observed_from_timestamp_href": "/@toris.kr/post/Dc5JOU4CSse",
+    "direct_permalink_check": {
+      "requested_and_initially_opened_url": "https://www.threads.com/@toris.kr/post/Dc5JOU4CSse",
+      "initial_response_shows_expected_account_and_body": true,
+      "initial_ssr_displayed_time": "2026. 9. 4. 오후 9:51",
+      "stable_render_verified": false,
+      "final_error": "문제가 발생했습니다. 나중에 다시 시도해보세요.",
+      "retry_button_clicks": 1,
+      "retry_wait_seconds": 3,
+      "retry_result": "same_error",
+      "timestamp_display_difference_cause_verified": false
+    },
+    "recorded_at_kst": "2026-09-05T13:55:14+09:00"
+  },
+  "browser_checks": {
+    "aside_task_id": "QIEX4GBezrZsvgLe",
+    "korean_landing_title": "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    "korean_landing_rendered": true,
+    "profile_edit_and_composer_confirmed_for": "@toris.kr",
+    "duplicate_check_scope": "Five recent non-pinned posts only; no identical MemeCatch promotion observed",
+    "full_profile_search": "Threads error; full-history duplicate search not completed",
+    "utm_observation": "An early snapshot URL omitted source/campaign, while actual tab inventory and decoded published link retained all four values. Actual parameter stripping is not confirmed.",
+    "link_preview_language": "English title: MemeCatch — Korean Memes Explained"
+  }
+}

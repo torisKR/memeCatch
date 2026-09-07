@@ -43,7 +43,11 @@ describe("product redirect handler", () => {
     );
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(repository.recordClick).toHaveBeenCalledOnce();
-    expect(repository.recordClick).toHaveBeenCalledWith(productId, "2026-07-13");
+    expect(repository.recordClick).toHaveBeenCalledWith(
+      productId,
+      "2026-07-13",
+      expect.stringMatching(/^[0-9a-f]{64}$/),
+    );
   });
 
   it("redirects an invalid UUID to the products page without querying", async () => {

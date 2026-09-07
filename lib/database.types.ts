@@ -4606,6 +4606,11 @@ export type Database = {
         Args: { p_request_id: string; p_session_id?: string }
         Returns: undefined
       }
+      reserve_client_growth_event: {
+        Args: { p_principal_hash: string }
+        Returns: undefined
+      }
+      reserve_oembed_request: { Args: never; Returns: undefined }
       record_growth_event: {
         Args: {
           p_dedupe_key: string | null

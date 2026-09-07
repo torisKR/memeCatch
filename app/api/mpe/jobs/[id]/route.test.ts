@@ -55,7 +55,20 @@ describe("MPE job status API", () => {
       error_code: null, started_at: "start", completed_at: "end", created_at: "created",
     }));
     const createSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed.example/render" }, error: null });
-    mocks.createAdminClient.mockReturnValue({ storage: { from: vi.fn(() => ({ createSignedUrl })) } });
+    const ingestionQuery = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { expires_at: "2999-01-01T00:00:00.000Z", deleted_at: null },
+        error: null,
+      }),
+    };
+    ingestionQuery.select.mockReturnValue(ingestionQuery);
+    ingestionQuery.eq.mockReturnValue(ingestionQuery);
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => ingestionQuery),
+      storage: { from: vi.fn(() => ({ createSignedUrl })) },
+    });
 
     const response = await GET(new Request("http://localhost"), { params: Promise.resolve({ id: "job-1" }) });
     expect(response.status).toBe(200);

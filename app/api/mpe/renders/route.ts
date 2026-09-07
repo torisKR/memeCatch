@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedJson } from "@/lib/request-body";
 
 const segmentSchema = z.object({
   startMs: z.number().int().min(0).max(21_600_000),
@@ -44,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const payload = await request.json().catch(() => null);
+  const payload = await readBoundedJson(request, 64 * 1024).catch(() => null);
   const parsed = requestSchema.safeParse(payload);
   if (!parsed.success) return Response.json({ ok: false, error: "invalid_render_request" }, { status: 400 });
 

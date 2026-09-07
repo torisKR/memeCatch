@@ -10,23 +10,38 @@ import { memePathFrom } from "@/lib/labels";
  */
 export const dynamic = "force-dynamic";
 
+const SHORT_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+
+function randomShortId(): string {
+  return Array.from({ length: 8 }, () =>
+    SHORT_ID_ALPHABET[Math.floor(Math.random() * SHORT_ID_ALPHABET.length)]
+  ).join("");
+}
+
 export async function GET() {
   const fallback = "/explore";
   try {
     const supabase = createStaticClient();
-    const { count } = await supabase
-      .from("memes")
-      .select("id", { count: "exact", head: true })
-      .eq("moderation_status", "approved");
-    if (!count) return NextResponse.json({ path: fallback }, { headers: { "Cache-Control": "no-store" } });
-
-    const offset = Math.floor(Math.random() * count);
-    const { data } = await supabase
+    const pivot = randomShortId();
+    let { data } = await supabase
       .from("memes")
       .select("short_id, slug")
       .eq("moderation_status", "approved")
-      .range(offset, offset)
-      .single();
+      .gte("short_id", pivot)
+      .order("short_id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!data) {
+      const wrapped = await supabase
+        .from("memes")
+        .select("short_id, slug")
+        .eq("moderation_status", "approved")
+        .lt("short_id", pivot)
+        .order("short_id", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      data = wrapped.data;
+    }
     if (!data) return NextResponse.json({ path: fallback }, { headers: { "Cache-Control": "no-store" } });
 
     return NextResponse.json(

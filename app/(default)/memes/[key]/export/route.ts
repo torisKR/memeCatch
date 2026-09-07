@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextResponse, type NextRequest } from "next/server";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import {
   SAFETY_LEVELS,
@@ -28,6 +28,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_PREMIUM_SCALE = 3;
+
+type ExportQuotaClient = {
+  rpc(name: "reserve_meme_export"): PromiseLike<{ error: { code?: string } | null }>;
+};
 
 type ExportTranslation = Pick<
   MemeTranslationRow,
@@ -67,7 +71,17 @@ export async function GET(
   }
   const localizedLocale = isSeoContentLocale(requestedLocale) ? requestedLocale : null;
 
-  const { isPremium } = await getPremiumEntitlement();
+  const { signedIn, isPremium } = await getPremiumEntitlement();
+  if (!signedIn) return errorResponse("signed_out", 401);
+
+  const supabase = await createClient();
+  const { error: quotaError } = await (supabase as unknown as ExportQuotaClient).rpc(
+    "reserve_meme_export",
+  );
+  if (quotaError) {
+    const limited = quotaError.code === "P0429";
+    return errorResponse(limited ? "rate_limited" : "quota_unavailable", limited ? 429 : 503);
+  }
 
   // --- 옵션 파싱 + 엔타이틀먼트 게이팅 ---
   const templateParam = sp.get("template");
@@ -94,7 +108,6 @@ export async function GET(
   const watermark = !isPremium;
 
   // --- 데이터 로드 ---
-  const supabase = createStaticClient();
   const { data: meme, error: memeError } = await supabase
     .from("memes")
     .select("id, title, summary, updated_at, safety_level, lifecycle_status")

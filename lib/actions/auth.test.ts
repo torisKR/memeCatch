@@ -64,7 +64,7 @@ describe("signUp", () => {
     const form = new FormData();
     form.set("nickname", "Meme Maker");
     form.set("email", email);
-    form.set("password", "password");
+    form.set("password", "Password1234");
     return form;
   }
 

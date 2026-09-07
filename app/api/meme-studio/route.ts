@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { readBoundedJson } from "@/lib/request-body";
-import { createClient } from "@/lib/supabase/server";
 import {
   generateMemeConcepts,
   MEME_FORMATS,
@@ -45,8 +44,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { data: { user } } = await (await createClient()).auth.getUser();
-    const result = await generateMemeConcepts(parsed.data, Boolean(user));
+    const result = await generateMemeConcepts(parsed.data);
     return NextResponse.json(result, { headers: { "cache-control": "no-store" } });
   } catch {
     return NextResponse.json(

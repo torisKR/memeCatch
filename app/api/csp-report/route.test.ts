@@ -42,6 +42,7 @@ describe("CSP report API", () => {
 
     const response = await POST(new Request("https://catchmeme.com/api/csp-report", {
       method: "POST",
+      headers: { "content-type": "application/reports+json" },
       body: JSON.stringify(reports),
     }));
 

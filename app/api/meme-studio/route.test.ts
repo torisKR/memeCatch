@@ -7,9 +7,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/rate-limit", () => ({ getClientIp: () => "127.0.0.1", rateLimit: mocks.rateLimit }));
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
-}));
 vi.mock("@/lib/meme-studio.server", () => ({
   MEME_TONES: ["wholesome", "sarcastic", "absurd", "hype"],
   MEME_FORMATS: ["image-macro", "reaction", "caption"],
@@ -41,7 +38,6 @@ describe("meme studio caption concept API", () => {
     expect(response.status).toBe(200);
     expect(mocks.generateMemeConcepts).toHaveBeenCalledWith(
       { topic: "고양이 밈", tone: "hype", format: "reaction" },
-      false,
     );
   });
 

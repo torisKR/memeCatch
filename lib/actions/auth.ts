@@ -15,6 +15,7 @@ export type AuthState = {
 } | null;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
 
 export async function signIn(
   _prev: AuthState,
@@ -59,7 +60,9 @@ export async function signUp(
   }
   if (!email) fieldErrors.email = "이메일을 입력해 주세요";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
-  if (password.length < 6) fieldErrors.password = "비밀번호는 6자 이상이어야 해요";
+  if (!STRONG_PASSWORD_RE.test(password)) {
+    fieldErrors.password = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
+  }
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, values: { email, nickname } };
   }
@@ -72,12 +75,6 @@ export async function signUp(
   });
 
   if (error) {
-    if (/already registered/i.test(error.message)) {
-      return {
-        formError: "이미 가입된 이메일이에요. 로그인해 주세요",
-        values: { email, nickname },
-      };
-    }
     if (/database error/i.test(error.message)) {
       return {
         fieldErrors: { nickname: "이미 사용 중인 닉네임이에요. 다른 닉네임을 지어 주세요" },
@@ -199,8 +196,8 @@ export async function updatePassword(
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (password.length < 6) {
-    return { fieldErrors: { password: "비밀번호는 6자 이상이어야 해요" } };
+  if (!STRONG_PASSWORD_RE.test(password)) {
+    return { fieldErrors: { password: "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요" } };
   }
   if (password !== confirm) {
     return { fieldErrors: { password: "두 비밀번호가 서로 달라요" } };

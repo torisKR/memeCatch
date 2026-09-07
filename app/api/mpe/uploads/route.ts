@@ -7,6 +7,7 @@ import {
 import { MediaValidationError, validateMedia, VIDEO_UPLOAD_LIMIT } from "@/lib/mpe/media";
 import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,14 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const form = await request.formData().catch(() => null);
+  let form: FormData | null = null;
+  try {
+    form = await readBoundedFormData(request, VIDEO_UPLOAD_LIMIT + 128 * 1024);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return Response.json({ ok: false, error: "file_too_large" }, { status: 413 });
+    }
+  }
   const file = form?.get("file");
   if (!(file instanceof File)) return Response.json({ ok: false, error: "file_required" }, { status: 400 });
   if (!parseRights(form?.get("rightsDeclaration") ?? null)) {

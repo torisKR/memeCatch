@@ -5,6 +5,7 @@ import { OnboardingForm } from "./onboarding-form";
 import { safeNext } from "@/lib/safe-redirect";
 import { getRequestLocale } from "@/lib/i18n-server";
 import { MY_COPY } from "@/lib/i18n-my";
+import { getOwnProfile } from "@/lib/profile-access";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
@@ -29,11 +30,7 @@ export default async function OnboardingPage({
     redirect(`/login?next=${encodeURIComponent(`/onboarding?next=${next}`)}`);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("nickname, interests, age_group, use_purpose, preferred_platforms")
-    .eq("id", user.id)
-    .maybeSingle();
+  const profile = await getOwnProfile(supabase);
 
   return (
     <main className="instrument-grid mx-auto w-full max-w-5xl px-4 py-10">

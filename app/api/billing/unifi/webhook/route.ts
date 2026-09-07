@@ -1,4 +1,4 @@
-import { processUnifiPaymentEvent } from "@/lib/billing/repository.server";
+import { hasPendingUnifiPaymentLink, processUnifiPaymentEvent } from "@/lib/billing/repository.server";
 import {
   getUnifiPayConfig,
   getUnifiPayTransaction,
@@ -6,6 +6,7 @@ import {
   parseLinkIdFromOrderId,
   parseUnifiPayWebhookBody,
 } from "@/lib/billing/unifi-pay.server";
+import { readBoundedText, RequestBodyTooLargeError } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,13 +32,14 @@ export async function POST(request: Request) {
   const config = getUnifiPayConfig();
   if (!config) return json({ ok: false, error: "webhook_not_configured" }, 503);
 
-  const contentLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    return json({ ok: false, error: "payload_too_large" }, 413);
-  }
-  const rawBody = await request.text();
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
-    return json({ ok: false, error: "payload_too_large" }, 413);
+  let rawBody: string;
+  try {
+    rawBody = await readBoundedText(request, MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json({ ok: false, error: "payload_too_large" }, 413);
+    }
+    return json({ ok: false, error: "invalid_payload" }, 400);
   }
 
   const body = parseUnifiPayWebhookBody(rawBody);
@@ -46,6 +48,9 @@ export async function POST(request: Request) {
   // body의 orderId는 어떤 거래를 확인할지 고르는 라우팅 힌트일 뿐이다.
   const bodyLinkId = parseLinkIdFromOrderId(body.orderId);
   if (!bodyLinkId) return json({ ok: true, ignored: true }, 200);
+  if (!(await hasPendingUnifiPaymentLink(bodyLinkId))) {
+    return json({ ok: true, ignored: true }, 200);
+  }
 
   try {
     const tx = await getUnifiPayTransaction(config, body.transactionId);

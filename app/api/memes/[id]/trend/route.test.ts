@@ -10,15 +10,23 @@ vi.mock("@/lib/billing/repository.server", () => ({
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          gte: () => ({
-            order: async () => ({ data: state.data, error: null }),
+    from: (table: string) => table === "memes"
+      ? {
+          select: () => ({
+            eq: () => ({
+              in: () => ({ maybeSingle: async () => ({ data: { id: "00000000-0000-4000-8000-000000000001" }, error: null }) }),
+            }),
           }),
-        }),
-      }),
-    }),
+        }
+      : {
+          select: () => ({
+            eq: () => ({
+              gte: () => ({
+                order: async () => ({ data: state.data, error: null }),
+              }),
+            }),
+          }),
+        },
   }),
 }));
 

@@ -89,6 +89,19 @@ export async function failBillingOrder(requestId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function hasPendingUnifiPaymentLink(providerLinkId: string): Promise<boolean> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString();
+  const { data, error } = await createAdminClient()
+    .from("billing_orders")
+    .select("id")
+    .eq("provider_link_id", providerLinkId)
+    .eq("status", "PENDING")
+    .gte("created_at", cutoff)
+    .limit(1);
+  if (error) throw error;
+  return Boolean(data?.length);
+}
+
 export async function processUnifiPaymentEvent(
   event: UnifiSettlementEvent,
 ): Promise<unknown> {

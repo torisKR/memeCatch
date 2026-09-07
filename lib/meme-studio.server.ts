@@ -281,8 +281,8 @@ export async function generateMemeConcepts(input: {
   topic: string;
   tone: MemeTone;
   format: MemeFormat;
-}): Promise<{ mode: "ai" | "template"; concepts: MemeConcept[] }> {
-  if (isMemeStudioAiEnabled()) {
+}, allowAi = true): Promise<{ mode: "ai" | "template"; concepts: MemeConcept[] }> {
+  if (allowAi && isMemeStudioAiEnabled()) {
     try {
       const budgetClient = createAdminClient() as unknown as MemeStudioBudgetClient;
       const result = await requestOpenRouterStructured<{ concepts?: unknown }>({

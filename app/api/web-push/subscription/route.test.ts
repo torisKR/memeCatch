@@ -26,13 +26,13 @@ describe("web push subscription route", () => {
       method: "POST",
       headers: { "content-type": "application/json", "user-agent": "test-browser" },
       body: JSON.stringify({
-        endpoint: "https://push.example.test/subscription/one",
+        endpoint: "https://fcm.googleapis.com/subscription/one",
         keys: { p256dh: "a".repeat(87), auth: "b".repeat(22) },
       }),
     }));
     expect(response.status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledWith("set_web_push_subscription", {
-      p_endpoint: "https://push.example.test/subscription/one",
+      p_endpoint: "https://fcm.googleapis.com/subscription/one",
       p_p256dh: "a".repeat(87),
       p_auth: "b".repeat(22),
       p_user_agent: "test-browser",
@@ -50,7 +50,7 @@ describe("web push subscription route", () => {
   });
 
   it("removes only the authenticated user's matching browser subscription", async () => {
-    const endpoint = "https://push.example.test/subscription/one";
+    const endpoint = "https://fcm.googleapis.com/subscription/one";
     const response = await DELETE(new Request("https://memecatch.test/api/web-push/subscription", {
       method: "DELETE",
       headers: { "content-type": "application/json" },

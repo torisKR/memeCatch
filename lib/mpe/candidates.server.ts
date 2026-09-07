@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isOperator } from "@/lib/profile-access";
 import {
   cosineSimilarity,
   deterministicTextEmbedding,
@@ -287,8 +288,7 @@ export function discoverHashCandidateIds(
 async function requireOperator(client: MpeClient) {
   const { data: { user } } = await client.auth.getUser();
   if (!user) throw new MpeCandidateError("signed_out", 401);
-  const { data: profile } = await client.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "operator") throw new MpeCandidateError("operator_required", 403);
+  if (!(await isOperator(client))) throw new MpeCandidateError("operator_required", 403);
   return user;
 }
 

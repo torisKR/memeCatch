@@ -1,7 +1,17 @@
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ error: "로그인이 필요해요.", code: "SIGNED_OUT" }, { status: 401 });
+  }
+  const { error: quotaError } = await supabase.rpc("reserve_oembed_request");
+  if (quotaError) {
+    return Response.json({ error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.", code: "RATE_LIMITED" }, { status: 429 });
+  }
   // 남용 억제 — IP당 분당 20회 (인스턴스 로컬 best-effort, lib/rate-limit.ts 참고)
   const rl = rateLimit(`oembed:${getClientIp(request)}`, {
     limit: 20,
@@ -19,7 +29,7 @@ export async function GET(request: Request) {
     const result = await getOEmbed(url);
     return Response.json(result, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        "Cache-Control": "private, max-age=3600",
       },
     });
   } catch (error) {

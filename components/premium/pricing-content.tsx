@@ -7,8 +7,9 @@ import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 import { PlusFeatures } from "@/components/premium/plus-features";
 import { track } from "@/lib/analytics";
+import { FairySupportOption } from "@/components/premium/fairy-support-option";
 
-export function PricingContent() {
+export function PricingContent({ fairyMinimumAmount }: { fairyMinimumAmount?: number } = {}) {
   const { locale } = useLocale();
   const copy = PREMIUM_COPY[locale];
 
@@ -76,11 +77,27 @@ export function PricingContent() {
             {copy.pricing.checkout}
           </button>
         </form>
+        <ol className="relative mt-5 space-y-2 text-sm leading-relaxed text-muted" aria-label={copy.pricing.checkout}>
+          {copy.pricing.paymentSteps.map((step, index) => (
+            <li key={step} className="flex gap-3">
+              <span aria-hidden className="font-bold text-accent-text">{index + 1}.</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+        <Link
+          href={localizedStaticPath("/explore", locale)}
+          className="relative mt-5 block text-center text-sm font-semibold text-accent-text underline underline-offset-4 hover:text-foreground"
+        >
+          {copy.pricing.freeExplore}
+        </Link>
         <p className="relative mt-3 text-center text-sm text-muted">{copy.pricing.launchNote}</p>
         <p className="relative mt-4 rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-muted">
           {copy.pricing.sameEmail}
         </p>
       </section>
+
+      {fairyMinimumAmount !== undefined && <FairySupportOption minimumAmount={fairyMinimumAmount} />}
 
       <PlusFeatures features={copy.pricing.features} heading={copy.pricing.featuresTitle} />
 

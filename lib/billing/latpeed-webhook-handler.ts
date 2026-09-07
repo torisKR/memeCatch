@@ -3,6 +3,7 @@ import {
   verifyLatpeedWebhookSignature,
   type LatpeedMembershipEvent,
 } from "@/lib/billing/latpeed.server";
+import { readBoundedText, RequestBodyTooLargeError } from "@/lib/request-body";
 
 type Dependencies = {
   secret: string;
@@ -34,16 +35,16 @@ export function createLatpeedWebhookHandler({
   return async function handleLatpeedWebhook(request: Request): Promise<Response> {
     if (!secret) return json({ ok: false, error: "webhook_not_configured" }, 503);
 
-    const contentLength = Number(request.headers.get("content-length"));
-    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-      return json({ ok: false, error: "payload_too_large" }, 413);
-    }
-
     const timestamp = request.headers.get("x-latpeed-timestamp") ?? "";
     const signature = request.headers.get("x-latpeed-signature") ?? "";
-    const rawBody = await request.text();
-    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
-      return json({ ok: false, error: "payload_too_large" }, 413);
+    let rawBody: string;
+    try {
+      rawBody = await readBoundedText(request, MAX_BODY_BYTES);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return json({ ok: false, error: "payload_too_large" }, 413);
+      }
+      return json({ ok: false, error: "invalid_payload" }, 400);
     }
 
     if (

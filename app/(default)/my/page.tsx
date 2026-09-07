@@ -14,6 +14,7 @@ import {
   savedLibraryHref,
   savedLibraryTitleFilter,
 } from "@/lib/saved-library";
+import { getOwnProfile } from "@/lib/profile-access";
 
 const FREE_SAVE_LIMIT = 30;
 
@@ -46,11 +47,10 @@ export default async function MyPage({
     await Promise.all([
       getPremiumEntitlement(),
       getRequestLocale(),
-      supabase
-        .from("profiles")
-        .select("nickname, interests, age_group")
-        .eq("id", user.id)
-        .single(),
+      getOwnProfile(supabase).then(
+        (data) => ({ data, error: null }),
+        (error: Error) => ({ data: null, error }),
+      ),
       supabase
         .from("profile_customizations")
         .select("flair, accent_color")

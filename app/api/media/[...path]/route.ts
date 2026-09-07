@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { r2Configured, r2Get } from "@/lib/r2.server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * 업로드·썸네일 이미지 조회 프록시
@@ -24,19 +26,45 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
+  if (key.startsWith("meme-uploads/")) {
+    const ownerId = path[1];
+    const client = await createClient();
+    const { data: { user } } = await client.auth.getUser();
+    if (user?.id !== ownerId) {
+      const { data } = await createAdminClient()
+        .from("meme_submissions")
+        .select("id")
+        .eq("attachment_path", key)
+        .eq("status", "approved")
+        .limit(1);
+      if (!data?.length) return new NextResponse("Not found", { status: 404 });
+    }
+  }
+
   if (r2Configured()) {
     const res = await r2Get(key);
     if (!res.ok) return new NextResponse("Not found", { status: 404 });
     return new NextResponse(res.body, {
       headers: {
         "Content-Type": res.headers.get("Content-Type") ?? "application/octet-stream",
-        // 업로드 키가 uuid라 내용 불변 — 강캐시
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": key.startsWith("meme-thumbs/")
+          ? "public, max-age=31536000, immutable"
+          : "private, no-store",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   }
 
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base) return new NextResponse("Not found", { status: 404 });
-  return NextResponse.redirect(`${base}/storage/v1/object/public/${key}`, 302);
+  const [bucket, ...objectParts] = path;
+  const { data, error } = await createAdminClient().storage
+    .from(bucket)
+    .download(objectParts.join("/"));
+  if (error || !data) return new NextResponse("Not found", { status: 404 });
+  return new NextResponse(data.stream(), {
+    headers: {
+      "Content-Type": data.type || "application/octet-stream",
+      "Cache-Control": "private, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }

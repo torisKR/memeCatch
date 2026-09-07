@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
+import { getOwnProfile } from "@/lib/profile-access";
 
 export type ActionResult<T = null> =
   | { ok: true; data: T }
@@ -42,6 +43,7 @@ function mapRpcError(err: { message?: string; code?: string }): Extract<
       message: "잠깐만요 — 짧은 시간에 너무 많이 작성했어요. 잠시 후 다시 시도해 주세요.",
     };
   }
+  if (msg.includes("community_disabled")) return DISABLED;
   return {
     ok: false,
     error: "server_error",
@@ -146,11 +148,7 @@ export async function castGenerationVote(
     data: { user },
   } = await supabase.auth.getUser();
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("age_group")
-      .eq("id", user.id)
-      .single();
+    const profile = await getOwnProfile(supabase);
     if (profile && profile.age_group == null) {
       await supabase
         .from("profiles")

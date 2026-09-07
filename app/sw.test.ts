@@ -123,7 +123,7 @@ describe("service-worker runtime caching", () => {
     }
   });
 
-  it("preserves runtime caching for non-document API and static assets", () => {
+  it("keeps API responses network-only and preserves static asset caching", () => {
     const apiRoute = firstMatchingRoute(
       new Request(`${ORIGIN}/api/memes`, {
         headers: { RSC: "1", "Next-Router-Prefetch": "1" },
@@ -133,8 +133,7 @@ describe("service-worker runtime caching", () => {
 
     // defaultCache can resolve Serwist through a separate ESM module instance,
     // so constructor identity is not stable after resetModules().
-    expect(apiRoute.handler.constructor.name).toBe("NetworkFirst");
-    expect(apiRoute.handler).toMatchObject({ cacheName: "apis" });
+    expect(apiRoute.handler.constructor.name).toBe("NetworkOnly");
     expect(imageRoute.handler).toMatchObject({ cacheName: "static-image-assets" });
   });
 

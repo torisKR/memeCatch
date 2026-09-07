@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readBoundedText, RequestBodyTooLargeError } from "@/lib/request-body";
 
 /**
  * CSP 위반 리포트 수집 엔드포인트 — enforce 전환의 안전 롤아웃을 위해 실측 데이터를
@@ -12,6 +13,10 @@ import { NextResponse } from "next/server";
  */
 export const dynamic = "force-dynamic";
 
+const MAX_REPORT_BYTES = 16 * 1024;
+const MAX_REPORTS = 10;
+const MAX_FIELD_LENGTH = 300;
+
 type CspFields = {
   "document-uri"?: string;
   "blocked-uri"?: string;
@@ -22,28 +27,44 @@ type CspFields = {
 
 export async function POST(req: Request) {
   try {
-    const raw = await req.text();
+    const contentType = req.headers.get("content-type")?.split(";", 1)[0]?.trim();
+    if (contentType !== "application/reports+json" && contentType !== "application/csp-report") {
+      return new NextResponse(null, { status: 204 });
+    }
+    const raw = await readBoundedText(req, MAX_REPORT_BYTES);
     if (!raw) return new NextResponse(null, { status: 204 });
 
     const parsed: unknown = JSON.parse(raw);
     // Reporting API v1은 배열, 레거시는 단일 객체 → 배열로 정규화
-    const items = Array.isArray(parsed) ? parsed : [parsed];
+    const items = (Array.isArray(parsed) ? parsed : [parsed]).slice(0, MAX_REPORTS);
 
     for (const item of items) {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) continue;
       const rec = item as Record<string, unknown>;
       // v1: { type, body: {...} } / 레거시: { "csp-report": {...} }
-      const body = (rec.body ?? rec["csp-report"] ?? rec) as CspFields;
-      const blocked = body["blocked-uri"] ?? "(unknown)";
+      const candidate = rec.body ?? rec["csp-report"] ?? rec;
+      if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) continue;
+      const body = candidate as CspFields;
+      const field = (value: unknown, fallback: string) =>
+        typeof value === "string"
+          ? value.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, MAX_FIELD_LENGTH)
+          : fallback;
+      const blocked = field(body["blocked-uri"], "(unknown)");
       const directive =
-        body["effective-directive"] ?? body["violated-directive"] ?? "(unknown)";
-      const disposition = body.disposition ?? "enforce";
+        field(body["effective-directive"] ?? body["violated-directive"], "(unknown)");
+      const disposition = field(body.disposition, "enforce");
       // 콘솔(Vercel 로그)로만 남긴다 — 외부 저장/전송 없음
-      console.warn(
-        `[CSP-VIOLATION] disposition=${disposition} directive="${directive}" blocked="${blocked}" doc="${body["document-uri"] ?? "-"}"`,
-      );
+      console.warn("[CSP-VIOLATION]", {
+        disposition,
+        directive,
+        blocked,
+        document: field(body["document-uri"], "-"),
+      });
     }
-  } catch {
-    // 파싱 실패는 무시 — 리포트 수집은 best-effort
+  } catch (error) {
+    if (!(error instanceof RequestBodyTooLargeError)) {
+      // 파싱 실패는 무시 — 리포트 수집은 best-effort
+    }
   }
   // 리포트 API는 응답 바디가 필요 없다. 항상 204로 종료.
   return new NextResponse(null, { status: 204 });

@@ -166,7 +166,10 @@ export async function runSavedStateChangeEmails({
     return { status: "not_configured" as const, delivered: 0, failed: 0 };
   }
   try {
-    if (!/^https?:$/.test(new URL(deliveryUrl).protocol)) throw new Error("invalid_delivery_url");
+    const parsedUrl = new URL(deliveryUrl);
+    if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password) {
+      throw new Error("invalid_delivery_url");
+    }
   } catch {
     return { status: "not_configured" as const, delivered: 0, failed: 0 };
   }

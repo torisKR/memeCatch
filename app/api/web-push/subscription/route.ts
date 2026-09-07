@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedText } from "@/lib/request-body";
+import { normalizeWebPushEndpoint } from "@/lib/web-push/endpoint";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +28,16 @@ function subscription(value: unknown) {
   ) return null;
   const keyRecord = keys as Record<string, unknown>;
   if (typeof keyRecord.p256dh !== "string" || typeof keyRecord.auth !== "string") return null;
-  return { endpoint: input.endpoint, p256dh: keyRecord.p256dh, auth: keyRecord.auth };
+  const endpoint = normalizeWebPushEndpoint(input.endpoint);
+  return endpoint ? { endpoint, p256dh: keyRecord.p256dh, auth: keyRecord.auth } : null;
+}
+
+async function body(request: Request): Promise<unknown> {
+  try {
+    return JSON.parse(await readBoundedText(request, 8 * 1024));
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(): Promise<Response> {
@@ -49,7 +60,7 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const input = subscription(await request.json().catch(() => null));
+  const input = subscription(await body(request));
   if (!input) return NextResponse.json({ error: "invalid_subscription" }, { status: 400, headers: noStore() });
 
   const entitlement = await getPremiumEntitlement();
@@ -68,7 +79,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  const value = await request.json().catch(() => null);
+  const value = await body(request);
   const endpoint = typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>).endpoint
     : null;

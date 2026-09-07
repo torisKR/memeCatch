@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { isOperator } from "@/lib/profile-access";
 
 export type RadarSafetyActionResult =
   | { ok: true }
@@ -29,12 +30,7 @@ async function requireOperator() {
   } = await supabase.auth.getUser();
   if (!user) throw new ActionError("로그인이 필요해요.");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") {
+  if (!(await isOperator(supabase))) {
     throw new ActionError("운영자 권한이 없어요.");
   }
 

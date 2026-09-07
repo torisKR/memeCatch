@@ -10,6 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isOperator } from "@/lib/profile-access";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
@@ -49,12 +50,7 @@ async function requireOperator() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") throw new Error("운영자 권한이 없어요.");
+  if (!(await isOperator(supabase))) throw new Error("운영자 권한이 없어요.");
   return { supabase, uid: user.id };
 }
 
@@ -67,13 +63,14 @@ async function logAudit(
   detail?: Record<string, unknown>
 ) {
   const admin = createAdminClient();
-  await admin.from("admin_audit_log").insert({
+  const { error } = await admin.from("admin_audit_log").insert({
     actor_id: actorId,
     action,
     entity_type: entityType,
     entity_id: entityId,
     detail: (detail ?? null) as Json,
   });
+  if (error) throw new Error("감사 로그를 기록하지 못했어요.");
 }
 
 function errMessage(e: unknown): string {

@@ -10,6 +10,7 @@ import { isSeoContentLocale, localizedMemePath } from "@/lib/i18n-routing";
 import { memePathFrom, type LifecycleStatus, type SafetyLevel } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedFormData, readBoundedJson } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,13 +75,13 @@ function parseLocale(value: unknown): Locale {
 async function parseRequest(request: Request): Promise<BriefRequest | null> {
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readBoundedJson(request, 8 * 1024).catch(() => null) as Record<string, unknown> | null;
     const collection = parseField(body?.collection, 40);
     if (!collection) return null;
     return { collection, locale: parseLocale(body?.locale) };
   }
 
-  const form = await request.formData().catch(() => null);
+  const form = await readBoundedFormData(request, 8 * 1024).catch(() => null);
   if (!form) return null;
   const collection = parseField(form.get("collection"), 40);
   if (!collection) return null;

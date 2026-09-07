@@ -8,12 +8,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const processUnifiPaymentEvent = vi.fn().mockResolvedValue({ matched: true });
+const hasPendingUnifiPaymentLink = vi.fn().mockResolvedValue(true);
 const getUnifiPayTransaction = vi.fn();
 
 // unifi-pay.server가 "server-only"를 import한다 — 테스트 환경에선 no-op으로 대체.
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/billing/repository.server", () => ({
+  hasPendingUnifiPaymentLink: (...args: unknown[]) => hasPendingUnifiPaymentLink(...args),
   processUnifiPaymentEvent: (...args: unknown[]) => processUnifiPaymentEvent(...args),
 }));
 
@@ -58,6 +60,7 @@ const CONFIRMED_TX = {
 
 beforeEach(() => {
   processUnifiPaymentEvent.mockClear();
+  hasPendingUnifiPaymentLink.mockClear();
   getUnifiPayTransaction.mockReset();
 });
 

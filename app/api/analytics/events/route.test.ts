@@ -34,6 +34,7 @@ function request(body: unknown, origin = "https://catchmeme.com") {
 describe("growth analytics ingestion", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-secret");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "10000000-0000-4000-8000-000000000001" } }, error: null });
     mocks.record.mockResolvedValue(undefined);
   });
@@ -51,6 +52,7 @@ describe("growth analytics ingestion", () => {
       eventName: "meme_view",
       userId: "10000000-0000-4000-8000-000000000001",
       memeId: "30000000-0000-4000-8000-000000000003",
+      principalHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       sessionId: "20000000-0000-4000-8000-000000000002",
     }));
   });

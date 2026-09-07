@@ -5,6 +5,7 @@ import { HideOnAdmin } from "@/components/auth-menu";
 import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
 import { CONTACT_EMAIL } from "@/lib/site";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 전역 푸터 — E-E-A-T 신뢰 신호(운영 주체·문의·정책 링크·저작권 안내).
@@ -22,11 +23,8 @@ const FOOTER_LINKS = [
   { href: "/support", label: "support" },
 ] as const;
 
-/** 후원 — Fairy(GeekNews) 프로필. 광고와 함께 서비스 유지 재원 */
-const DONATE_URL = "https://fairy.hada.io/@toris-dev";
-
 export function SiteFooter() {
-  const { messages } = useLocale();
+  const { messages, locale } = useLocale();
   return (
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
@@ -45,15 +43,13 @@ export function SiteFooter() {
               ))}
               <li>
                 <TrackedBlock event="donate_click" className="inline-flex">
-                  <a
-                    href={DONATE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href={`${localizedStaticPath("/pricing", locale)}#fairy-support-title`}
                     className="hover-glow-flame inline-flex min-h-11 items-center gap-1 rounded-md font-semibold text-accent transition-colors hover:brightness-90"
                   >
                     <HeartGlyph />
                     {messages.donate}
-                  </a>
+                  </Link>
                 </TrackedBlock>
               </li>
             </ul>

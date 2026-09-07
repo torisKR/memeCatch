@@ -9,6 +9,7 @@ import {
   sign,
 } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeWebPushEndpoint } from "@/lib/web-push/endpoint";
 
 type PushSubscription = { endpoint: string; p256dh: string; auth: string };
 type PushMessage = { title: string; body?: string; url?: string; tag?: string };
@@ -16,10 +17,10 @@ type ErrorValue = { message: string } | null;
 type RpcResult = PromiseLike<{ data: unknown; error: ErrorValue }>;
 type Rpc = (name: string, args?: Record<string, unknown>) => RpcResult;
 type SubscriptionQuery = {
-  select(columns: string): { eq(column: string, value: string): PromiseLike<{
+  select(columns: string): { eq(column: string, value: string): { limit(count: number): PromiseLike<{
     data: PushSubscription[] | null;
     error: ErrorValue;
-  }> };
+  }> } };
   delete(): { eq(column: string, value: string): PromiseLike<{ error: ErrorValue }> };
 };
 type Admin = { rpc: Rpc; from(table: string): SubscriptionQuery };
@@ -136,7 +137,9 @@ export async function sendWebPush(
   payload: PushMessage,
   config: VapidConfig,
 ): Promise<Response> {
-  return fetch(subscription.endpoint, {
+  const endpoint = normalizeWebPushEndpoint(subscription.endpoint);
+  if (!endpoint) throw new Error("invalid_push_endpoint");
+  return fetch(endpoint, {
     method: "POST",
     headers: {
       authorization: `vapid t=${vapidToken(subscription.endpoint, config)}, k=${config.publicKey}`,
@@ -146,6 +149,7 @@ export async function sendWebPush(
       urgency: "normal",
     },
     body: encodePayload(payload, subscription),
+    redirect: "error",
     signal: AbortSignal.timeout(10_000),
   });
 }
@@ -166,7 +170,8 @@ export async function runWebPushDelivery(limit = 5) {
     const { data: subscriptions, error: subscriptionError } = await admin
       .from("web_push_subscriptions")
       .select("endpoint, p256dh, auth")
-      .eq("user_id", item.user_id);
+      .eq("user_id", item.user_id)
+      .limit(5);
 
     let deliveryError: string | null = subscriptionError?.message ?? (payload ? null : "invalid_payload");
     let liveSubscriptions = 0;

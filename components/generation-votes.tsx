@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { flags } from "@/lib/flags";
 import { CommunityGate } from "@/components/community-gate";
 import { castGenerationVote } from "@/lib/actions/community";
+import { getOwnProfile } from "@/lib/profile-access";
 
 /** 표본 20표 미만인 세대는 분포 비노출 (기획 확정) */
 const MIN_SAMPLE = 20;
@@ -62,8 +63,8 @@ export function GenerationVotes({ memeId }: { memeId: string }) {
     const user = auth.user;
     setUserId(user?.id ?? null);
     if (user) {
-      const [{ data: profile }, { data: mine }] = await Promise.all([
-        supabase.from("profiles").select("age_group").eq("id", user.id).single(),
+      const [profile, { data: mine }] = await Promise.all([
+        getOwnProfile(supabase),
         supabase
           .from("generation_votes")
           .select("vote, age_group")

@@ -110,7 +110,7 @@ const CSP_DIRECTIVES = [
   // 결제는 폼 POST → 303으로 호스팅 결제창으로 보내는 흐름이다. 브라우저는
   // form-action을 리다이렉트 체인에도 적용하므로, 결제 호스트가 없으면 제출이
   // 그대로 취소된다(구독 버튼이 아무 반응 없어 보이는 원인).
-  "form-action 'self' https://app.unifi.me https://latpeed.com https://www.latpeed.com",
+  "form-action 'self' https://app.unifi.me https://latpeed.com https://www.latpeed.com https://fairy.hada.io",
   "frame-ancestors 'self'",
 ];
 

@@ -307,7 +307,7 @@ export async function runPlusDailySignal({
   if (!deliveryUrl || !fromEmail) return emptyResult("not_configured");
   try {
     const parsedUrl = new URL(deliveryUrl);
-    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") return emptyResult("not_configured");
+    if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password) return emptyResult("not_configured");
   } catch {
     return emptyResult("not_configured");
   }

@@ -15,6 +15,7 @@ export type ClientGrowthEvent = {
     | "traffic_source"
     | "plus_weekly_brief_opened"
     | "plus_weekly_brief_clicked";
+  principalHash: string;
   sessionId: string;
   userId: string | null;
   memeId: string | null;
@@ -45,6 +46,10 @@ export function growthSessionIdFromRequest(request: Request): string | null {
 
 export async function recordClientGrowthEvent(event: ClientGrowthEvent): Promise<void> {
   const admin = createAdminClient();
+  const { error: quotaError } = await admin.rpc("reserve_client_growth_event", {
+    p_principal_hash: event.principalHash,
+  });
+  if (quotaError) throw quotaError;
   const { error } = await admin.rpc("record_growth_event", {
     p_event_name: event.eventName,
     p_source: "client",

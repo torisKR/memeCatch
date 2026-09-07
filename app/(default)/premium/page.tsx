@@ -65,6 +65,7 @@ import {
   type PlusWeeklyBriefTranslation,
   type PlusWeeklyBriefCoverageState,
 } from "@/lib/plus-weekly-brief";
+import { getOwnProfile } from "@/lib/profile-access";
 import {
   buildSavedContextWatch,
   SAVED_CONTEXT_WATCH_ITEM_LIMIT,
@@ -307,7 +308,7 @@ export default async function PremiumPage({
   }
 
   const [
-    { data: profile },
+    profile,
     history,
     savedMemes,
     savedRadarRes,
@@ -321,11 +322,7 @@ export default async function PremiumPage({
     outcomeHistoryRes,
     globalDailyChallengeRes,
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("interests")
-      .eq("id", user.id)
-      .maybeSingle(),
+    getOwnProfile(supabase),
     listOwnUnifiPaymentHistory(),
     entitlement.isPremium
       ? supabase.from("saved_memes").select("meme_id", { count: "exact", head: true })

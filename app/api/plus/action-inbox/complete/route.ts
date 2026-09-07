@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedJson } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ function optionalText(value: unknown, maxLength: number): string | null | undefi
 }
 
 async function parseOutcomeInput(request: Request): Promise<OutcomeInput | null> {
-  const body = await request.json().catch(() => null);
+  const body = await readBoundedJson(request, 8 * 1024).catch(() => null);
   if (!isRecord(body) || !isUuid(body.memeId)) return null;
   if (
     typeof body.locale !== "string" ||

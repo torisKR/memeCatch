@@ -37,10 +37,23 @@ export async function GET(
     );
   }
 
+  const admin = createAdminClient();
+  const { data: meme, error: memeError } = await admin
+    .from("memes")
+    .select("id")
+    .eq("id", id)
+    .in("moderation_status", ["approved", "limited"])
+    .maybeSingle();
+  if (memeError) {
+    return NextResponse.json({ error: "query_failed" }, { status: 500 });
+  }
+  if (!meme) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - MAX_DAYS);
 
-  const admin = createAdminClient();
   const { data, error } = await admin
     .from("meme_trend_metrics")
     .select("date, trend_score, views, reactions, comments, saves")

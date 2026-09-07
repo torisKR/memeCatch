@@ -153,7 +153,7 @@ describe("MPE FFmpeg worker", () => {
           data: [{ id: "job-budget", ingestion_id: "ing-budget", job_type: "ocr", lease_token: "lease-budget" }],
           error: null,
         };
-        if (name === "reserve_openrouter_daily_request") return { data: null, error: reservationError };
+        if (name === "reserve_openrouter_user_request") return { data: null, error: reservationError };
         return { data: {}, error: null };
       },
       from: () => {
@@ -161,7 +161,7 @@ describe("MPE FFmpeg worker", () => {
           select: () => query,
           eq: () => query,
           single: async () => ({
-            data: { id: "ing-budget", temporary_storage_key: "user-1/object", mime_type: "image/png" },
+            data: { id: "ing-budget", user_id: "user-1", temporary_storage_key: "user-1/object", mime_type: "image/png" },
             error: null,
           }),
         };
@@ -363,10 +363,14 @@ describe("MPE FFmpeg worker", () => {
     expect(uploads[0]).toMatch(new RegExp(`^${userId}/${ingestionId}/frames/`));
     expect(segments).not.toHaveLength(0);
     expect(rpcCalls[0][1]).toMatchObject({ p_processor_version: "1.1.0" });
-    const reservations = rpcCalls.filter(([name]) => name === "reserve_openrouter_daily_request");
+    const reservations = rpcCalls.filter(([name]) => name === "reserve_openrouter_user_request");
     expect(reservations).toHaveLength(uploads.length);
     expect(reservations).toEqual(expect.arrayContaining([
-      ["reserve_openrouter_daily_request", { p_provider: "openrouter", p_model: "stealth/ox-alpha" }],
+      ["reserve_openrouter_user_request", {
+        p_user_id: userId,
+        p_provider: "openrouter",
+        p_model: "stealth/ox-alpha",
+      }],
     ]));
     expect(uploads.length).toBeLessThanOrEqual(3);
     const completion = rpcCalls.find(([name]) => name === "complete_processing_job");

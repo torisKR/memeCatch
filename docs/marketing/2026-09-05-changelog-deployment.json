@@ -1,0 +1,29 @@
+{
+  "status": "production_verified",
+  "verified_at_kst": "2026-09-05T18:12:27.271524+09:00",
+  "commit": "957630261eca365e2281ebfb2737dce8a69bad5f",
+  "branch": "main",
+  "deployment_id": "dpl_UKnx5mwGWhBAEHnaLzZAiktFQU86",
+  "deployment_url": "https://memecatch-pjdk6vy42-ironjustlikethatgmailcoms-projects.vercel.app",
+  "production_url": "https://catchmeme.com",
+  "target": "production",
+  "ready_state": "READY",
+  "aliases": [
+    "catchmeme.com",
+    "www.catchmeme.com"
+  ],
+  "previous_deployment_id": "dpl_FGxwE9QSGgwbziaS3er71iB2NLFk",
+  "checks": {
+    "focused_tests_passed": 8,
+    "eslint": "passed",
+    "production_build": "passed",
+    "production_popup": "passed",
+    "production_cta_navigation": "passed",
+    "read_acknowledgement_and_reload": "passed",
+    "browser_preferences_restored": true,
+    "browser_console_errors": 0,
+    "browser_page_errors": 0
+  },
+  "resource_url": "https://catchmeme.com/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77",
+  "screenshot": "/Users/toris/.aside/u/0/sessions/2026-09-05_3GzXOb5FeJt3enCH/tmp/catchmeme-changelog-smoke.png"
+}

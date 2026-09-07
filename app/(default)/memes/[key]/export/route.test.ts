@@ -19,6 +19,7 @@ vi.mock("@/lib/billing/repository.server", () => ({
   getPremiumEntitlement: () => getPremiumEntitlement(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({ from, rpc: async () => ({ error: null }) }),
   createStaticClient: () => ({ from }),
 }));
 vi.mock("@/lib/meme-card", () => ({

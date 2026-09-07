@@ -9,6 +9,15 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
+const MEDIA_COMMAND_TIMEOUT_MS = 90_000;
+
+function runMediaCommand(file, args, options = {}) {
+  return exec(file, args, {
+    timeout: MEDIA_COMMAND_TIMEOUT_MS,
+    killSignal: "SIGKILL",
+    ...options,
+  });
+}
 const PROCESSOR_NAME = "mpe-media-worker";
 const PROCESSOR_VERSION = "1.1.0";
 const BUCKET = "mpe-temporary";
@@ -119,7 +128,7 @@ async function renderOverlayPng(path, preset, options) {
 }
 
 async function hasAssFilter() {
-  const { stdout } = await exec("ffmpeg", ["-hide_banner", "-filters"]);
+  const { stdout } = await runMediaCommand("ffmpeg", ["-hide_banner", "-filters"]);
   return /\b(?:ass|subtitles)\s+V->V\b/.test(stdout);
 }
 
@@ -153,7 +162,7 @@ async function renderWithPngOverlays(inputPath, outputPath, input, preset, direc
     "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", outputPath,
   );
-  await exec("ffmpeg", args, { maxBuffer: 16 * 1024 * 1024 });
+  await runMediaCommand("ffmpeg", args, { maxBuffer: 16 * 1024 * 1024 });
 }
 
 export async function renderVideoArtifact(inputPath, outputPath, value) {
@@ -167,7 +176,7 @@ export async function renderVideoArtifact(inputPath, outputPath, value) {
       `pad=${preset.width}:${preset.height}:(ow-iw)/2:(oh-ih)/2:black`,
       `subtitles=filename='${filterPath(assPath)}'`,
     ].join(",");
-    await exec("ffmpeg", [
+    await runMediaCommand("ffmpeg", [
       "-hide_banner", "-loglevel", "error", "-y", "-i", inputPath,
       "-map", "0:v:0", "-map", "0:a?", "-vf", videoFilter,
       "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
@@ -180,7 +189,7 @@ export async function renderVideoArtifact(inputPath, outputPath, value) {
 }
 
 export async function inspectMedia(path) {
-  const { stdout } = await exec("ffprobe", [
+  const { stdout } = await runMediaCommand("ffprobe", [
     "-v", "error", "-show_streams", "-show_format", "-of", "json", path,
   ], { maxBuffer: 4 * 1024 * 1024 });
   const payload = JSON.parse(stdout);
@@ -201,7 +210,7 @@ export async function inspectMedia(path) {
 
 export async function detectSceneTimes(path, durationMs, threshold = 0.3) {
   if (durationMs <= 0) return [0];
-  const { stderr } = await exec("ffmpeg", [
+  const { stderr } = await runMediaCommand("ffmpeg", [
     "-hide_banner", "-i", path, "-vf", `select=gt(scene\\,${threshold}),showinfo`,
     "-vsync", "vfr", "-f", "null", "-",
   ], { maxBuffer: 16 * 1024 * 1024 });
@@ -220,8 +229,9 @@ export function limitSceneOcrTimes(times) {
   return times.slice(0, MAX_SCENE_OCR_FRAMES);
 }
 
-async function reserveOpenRouterRequest(supabase) {
-  const { error } = await supabase.rpc("reserve_openrouter_daily_request", {
+async function reserveOpenRouterRequest(supabase, userId) {
+  const { error } = await supabase.rpc("reserve_openrouter_user_request", {
+    p_user_id: userId,
     p_provider: "openrouter",
     p_model: "stealth/ox-alpha",
   });
@@ -245,7 +255,7 @@ async function frameBytes(path, frameMs, format = "mjpeg") {
   args.push("-i", path, "-frames:v", "1");
   if (format === "gray") args.push("-vf", "scale=8:8,format=gray", "-f", "rawvideo", "pipe:1");
   else args.push("-q:v", "3", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1");
-  const { stdout } = await exec("ffmpeg", args, { encoding: "buffer", maxBuffer: 12 * 1024 * 1024 });
+  const { stdout } = await runMediaCommand("ffmpeg", args, { encoding: "buffer", maxBuffer: 12 * 1024 * 1024 });
   return new Uint8Array(stdout);
 }
 
@@ -256,7 +266,7 @@ export async function framePerceptualHash(path, frameMs = 0) {
 export async function extractAudioChunks(path, directory, chunkSeconds = 30) {
   const metadata = await inspectMedia(path);
   if (!metadata.hasAudio) return [];
-  await exec("ffmpeg", [
+  await runMediaCommand("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000",
     "-f", "segment", "-segment_time", String(chunkSeconds), "-c:a", "pcm_s16le", join(directory, "audio-%03d.wav"),
   ], { maxBuffer: 8 * 1024 * 1024 });
@@ -269,7 +279,7 @@ export async function extractAudioChunks(path, directory, chunkSeconds = 30) {
 }
 
 export async function normalizedAudioFingerprint(path) {
-  const { stdout } = await exec("ffmpeg", [
+  const { stdout } = await runMediaCommand("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-i", path, "-vn", "-ac", "1", "-ar", "8000",
     "-f", "s16le", "pipe:1",
   ], { encoding: "buffer", maxBuffer: 64 * 1024 * 1024 });
@@ -309,8 +319,13 @@ async function insertFingerprint(supabase, row) {
 
 async function runJob(supabase, job, ingestion, path, directory) {
   if (job.job_type === "cleanup") {
-    const { error: storageError } = await supabase.storage.from(BUCKET).remove([ingestion.temporary_storage_key]);
-    if (storageError) throw new Error("storage_delete_failed");
+    const bucket = supabase.storage.from(BUCKET);
+    const derived = await listStorageObjectKeys(bucket, `${ingestion.user_id}/${ingestion.id}`);
+    const keys = [ingestion.temporary_storage_key, ...derived];
+    for (let offset = 0; offset < keys.length; offset += 100) {
+      const { error: storageError } = await bucket.remove(keys.slice(offset, offset + 100));
+      if (storageError) throw new Error("storage_delete_failed");
+    }
     const { error: updateError } = await supabase.from("media_ingestions")
       .update({ deleted_at: new Date().toISOString() }).eq("id", ingestion.id);
     if (updateError) throw new Error("cleanup_record_failed");
@@ -370,7 +385,7 @@ async function runJob(supabase, job, ingestion, path, directory) {
         bytes,
         mimeType: "image/jpeg",
         frameMs,
-        reserveRequest: () => reserveOpenRouterRequest(supabase),
+        reserveRequest: () => reserveOpenRouterRequest(supabase, ingestion.user_id),
       });
       await insertSegments(supabase, ingestion.id, segments);
       segmentsWritten += segments.length;
@@ -387,7 +402,7 @@ async function runJob(supabase, job, ingestion, path, directory) {
     const image = ingestion.mime_type === "image/gif" ? await frameBytes(path, 0) : new Uint8Array(await readFile(path));
     const segments = await recognizeImageText({
       bytes: image, mimeType: ingestion.mime_type === "image/gif" ? "image/jpeg" : ingestion.mime_type, frameMs: 0,
-      reserveRequest: () => reserveOpenRouterRequest(supabase),
+      reserveRequest: () => reserveOpenRouterRequest(supabase, ingestion.user_id),
     });
     await insertSegments(supabase, ingestion.id, segments);
     return { status: "completed", output: {
@@ -407,6 +422,9 @@ async function runJob(supabase, job, ingestion, path, directory) {
   }
   if (job.job_type === "render") {
     if (ingestion.media_kind !== "video") throw new Error("render_requires_video");
+    const metadata = await inspectMedia(path);
+    const { validateProbedMedia } = await import("../lib/mpe/media.ts");
+    validateProbedMedia(ingestion.mime_type, metadata);
     const request = validateRenderInput(job.output_json);
     const artifactKey = typeof job.output_json?.artifactKey === "string" ? job.output_json.artifactKey : "";
     const expectedPrefix = `${ingestion.user_id}/${ingestion.id}/renders/`;
@@ -418,7 +436,7 @@ async function runJob(supabase, job, ingestion, path, directory) {
       contentType: "video/mp4", upsert: true,
     });
     if (error) throw new Error("artifact_upload_failed");
-    const metadata = await inspectMedia(outputPath);
+    const renderedMetadata = await inspectMedia(outputPath);
     return {
       status: "completed",
       output: {
@@ -427,7 +445,7 @@ async function runJob(supabase, job, ingestion, path, directory) {
         mimeType: "video/mp4",
         width: dimensions.width,
         height: dimensions.height,
-        durationMs: metadata.durationMs,
+        durationMs: renderedMetadata.durationMs,
         artifacts: [{ kind: "rendered_media", storageKey: artifactKey, mimeType: "video/mp4" }],
       },
     };
@@ -590,6 +608,19 @@ async function listAllStorageEntries(bucket, prefix) {
     if ((data?.length ?? 0) < pageSize) return entries;
   }
   throw new Error("orphan_scan_limit_exceeded");
+}
+
+async function listStorageObjectKeys(bucket, prefix, depth = 0) {
+  if (typeof bucket.list !== "function") return [];
+  if (depth > 4) throw new Error("storage_prefix_depth_exceeded");
+  const entries = await listAllStorageEntries(bucket, prefix);
+  const keys = [];
+  for (const entry of entries) {
+    const key = `${prefix}/${entry.name}`;
+    if (entry.id) keys.push(key);
+    else keys.push(...await listStorageObjectKeys(bucket, key, depth + 1));
+  }
+  return keys;
 }
 
 export async function cleanupOrphanOriginals(supabase, olderThanMs = 60 * 60 * 1_000) {

@@ -40,7 +40,7 @@ describe("web push transport", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await sendWebPush({
-      endpoint: "https://push.example.test/message/one",
+      endpoint: "https://fcm.googleapis.com/message/one",
       p256dh: subscriber.getPublicKey().toString("base64url"),
       auth: auth.toString("base64url"),
     }, {
@@ -59,7 +59,7 @@ describe("web push transport", () => {
     expect(headers.authorization).toMatch(/^vapid t=[^.]+\.[^.]+\.[^,]+, k=/);
     const jwt = headers.authorization.match(/t=([^,]+)/)?.[1];
     const claims = JSON.parse(Buffer.from(jwt!.split(".")[1]!, "base64url").toString()) as { aud: string };
-    expect(claims.aud).toBe("https://push.example.test");
+    expect(claims.aud).toBe("https://fcm.googleapis.com");
 
     const body = Buffer.from(init?.body as Buffer);
     const salt = body.subarray(0, 16);
@@ -86,7 +86,7 @@ describe("web push transport", () => {
     const vapid = createECDH("prime256v1");
     vapid.generateKeys();
     const subscription = {
-      endpoint: "https://push.example.test/message/batch",
+      endpoint: "https://fcm.googleapis.com/message/batch",
       p256dh: subscriber.getPublicKey().toString("base64url"),
       auth: randomBytes(16).toString("base64url"),
     };
@@ -107,7 +107,7 @@ describe("web push transport", () => {
     createAdminClient.mockReturnValue({
       rpc,
       from: () => ({
-        select: () => ({ eq: async () => ({ data: [subscription], error: null }) }),
+        select: () => ({ eq: () => ({ limit: async () => ({ data: [subscription], error: null }) }) }),
         delete: () => ({ eq: async () => ({ error: null }) }),
       }),
     });

@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/rate-limit", () => ({ getClientIp: () => "127.0.0.1", rateLimit: mocks.rateLimit }));
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
+}));
 vi.mock("@/lib/meme-studio.server", () => ({
   MEME_TONES: ["wholesome", "sarcastic", "absurd", "hype"],
   MEME_FORMATS: ["image-macro", "reaction", "caption"],
@@ -36,7 +39,10 @@ describe("meme studio caption concept API", () => {
     mocks.generateMemeConcepts.mockResolvedValueOnce({ mode: "template", concepts: [] });
     const response = await POST(request({ topic: "  고양이 밈  ", tone: "hype", format: "reaction" }));
     expect(response.status).toBe(200);
-    expect(mocks.generateMemeConcepts).toHaveBeenCalledWith({ topic: "고양이 밈", tone: "hype", format: "reaction" });
+    expect(mocks.generateMemeConcepts).toHaveBeenCalledWith(
+      { topic: "고양이 밈", tone: "hype", format: "reaction" },
+      false,
+    );
   });
 
   it("never writes memes — Studio stays JSON-only", async () => {
@@ -45,8 +51,6 @@ describe("meme studio caption concept API", () => {
     const { join } = await import("node:path");
     const source = readFileSync(join(process.cwd(), "app/api/meme-studio/route.ts"), "utf8");
     expect(source).not.toMatch(/from\(["']memes["']\)/);
-    expect(source).not.toMatch(/supabase/);
-    expect(source).not.toMatch(/createClient|createAdminClient/);
 
     const response = await POST(request({ topic: "고양이 밈", tone: "hype", format: "reaction" }));
     expect(response.status).toBe(200);

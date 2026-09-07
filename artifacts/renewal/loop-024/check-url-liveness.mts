@@ -6,8 +6,7 @@
  * Checks each URL and returns structured results
  */
 
-import { execSync } from 'child_process'
-import { readFileSync } from 'fs'
+import { execFileSync } from 'child_process'
 
 const SUPABASE_URL = 'https://onjipuldngbdptldkpoe.supabase.co'
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9uamlwdWxkbmdiZHB0bGRrcG9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzczNTksImV4cCI6MjA5OTAxMzM1OX0.V2Jcyz9OuQwg8DDxR8QK6n78YPyJY-XTYE3hOS-VneM'
@@ -70,8 +69,7 @@ async function checkYouTube(url: string): Promise<'ok' | 'dead' | 'private'> {
 async function checkUrl(url: string): Promise<'ok' | 'dead' | 'blocked' | 'timeout'> {
   try {
     // Try HEAD first
-    const command = `curl -sIL -m 8 -o /dev/null -w '%{http_code}' "${url}"`
-    const code = execSync(command, {
+    const code = execFileSync('curl', ['-sIL', '-m', '8', '-o', '/dev/null', '-w', '%{http_code}', url], {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     }).trim()

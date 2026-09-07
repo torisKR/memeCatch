@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { isGlobalDailyLocale, type GlobalDailyLocale } from "@/lib/global-daily-challenge";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedJson } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function parseLocale(request: Request): Promise<GlobalDailyLocale | null> {
-  const body = await request.json().catch(() => null);
+  const body = await readBoundedJson(request, 2 * 1024).catch(() => null);
   if (!isRecord(body) || typeof body.locale !== "string" || !isGlobalDailyLocale(body.locale)) {
     return null;
   }

@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/database.types";
+import { isOperator } from "@/lib/profile-access";
 
 type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -22,12 +23,7 @@ async function requireOperator() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") throw new Error("운영자 권한이 없어요.");
+  if (!(await isOperator(supabase))) throw new Error("운영자 권한이 없어요.");
   return { uid: user.id };
 }
 

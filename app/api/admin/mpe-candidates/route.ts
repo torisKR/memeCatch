@@ -11,6 +11,8 @@ import {
   generateEvidenceDraft,
 } from "@/lib/mpe/evidence-draft.server";
 import { createClient } from "@/lib/supabase/server";
+import { isOperator } from "@/lib/profile-access";
+import { readBoundedJson } from "@/lib/request-body";
 
 const candidateIdSchema = z.uuid();
 const postSchema = z.union([
@@ -33,8 +35,7 @@ async function operatorClient() {
   const client = await createClient();
   const { data: { user } } = await client.auth.getUser();
   if (!user) return { ok: false as const, response: Response.json({ ok: false, error: "signed_out" }, { status: 401 }) };
-  const { data: profile } = await client.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "operator") {
+  if (!(await isOperator(client))) {
     return { ok: false as const, response: Response.json({ ok: false, error: "operator_required" }, { status: 403 }) };
   }
   return { ok: true as const, client };
@@ -65,7 +66,7 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   const auth = await operatorClient();
   if (!auth.ok) return auth.response;
-  const parsed = postSchema.safeParse(await request.json().catch(() => null));
+  const parsed = postSchema.safeParse(await readBoundedJson(request, 4 * 1024).catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, error: "invalid_input" }, { status: 400 });
   try {
     if (parsed.data.action === "create") {

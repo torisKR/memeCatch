@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readBoundedText } from "../request-body.ts";
 
 export const DEFAULT_MPE_MODEL = "stealth/ox-alpha";
 export const OPENROUTER_DAILY_BUDGET_EXHAUSTED = "openrouter_daily_budget_exhausted";
@@ -23,12 +24,12 @@ const boundingBoxSchema = z.object({
 
 const ocrResponseSchema = z.object({
   segments: z.array(z.object({
-    rawText: z.string(),
-    normalizedText: z.string(),
-    language: z.string().nullable(),
+    rawText: z.string().max(2000),
+    normalizedText: z.string().max(2000),
+    language: z.string().max(35).nullable(),
     confidence: z.number().min(0).max(1).nullable(),
     boundingBox: boundingBoxSchema.nullable(),
-  }).strict()),
+  }).strict()).max(200),
 }).strict();
 
 export type MediaTextSegment = {
@@ -61,7 +62,15 @@ function apiKey() {
 }
 
 function baseUrl() {
-  return (process.env.OPENROUTER_BASE_URL?.trim() || "https://openrouter.ai/api/v1").replace(/\/+$/, "");
+  const configured = (process.env.OPENROUTER_BASE_URL?.trim() || "https://openrouter.ai/api/v1").replace(/\/+$/, "");
+  const url = new URL(configured);
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    (process.env.NODE_ENV === "production" && url.origin !== "https://openrouter.ai")
+  ) throw new Error("invalid_openrouter_base_url");
+  return url.toString().replace(/\/+$/, "");
 }
 
 export function classifyOpenRouterReservationError(error: unknown) {
@@ -159,7 +168,8 @@ async function openRouterJson(
       const details = sanitizeProviderText(error instanceof Error ? error.message : error, secret);
       throw new Error(`${errorPrefix}:network_error${details ? ` ${details}` : ""}`);
     }
-    const payload = (await response.json().catch(() => null)) as unknown;
+    const raw = await readBoundedText(response, 512 * 1024).catch(() => "");
+    const payload = raw ? JSON.parse(raw) as unknown : null;
     if (response.ok) return payload;
     if (
       (TRANSIENT_PROVIDER_STATUSES.has(response.status)
@@ -349,6 +359,7 @@ export async function recognizeImageText(input: {
   const parsed = await requestValidatedJson({
     body: {
       response_format: { type: "json_object" },
+      max_tokens: 2_000,
       messages: [
         {
           role: "system",

@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 
 import { isValidAdpickBuyUrl } from "@/lib/affiliate/adpick-hotdeal";
+import { getClientIp } from "@/lib/rate-limit";
 
 export type ProductRedirectRepository = {
   getActiveRedirect(id: string): Promise<string | null>;
-  recordClick(id: string, date: string): Promise<void>;
+  recordClick(id: string, date: string, principalHash: string): Promise<void>;
 };
 
 type RedirectContext = {
@@ -53,7 +55,10 @@ export function createProductRedirectHandler(
     }
 
     try {
-      await repository.recordClick(parsedId.data, getSeoulDate(now()));
+      const principalHash = createHash("sha256")
+        .update(getClientIp(request))
+        .digest("hex");
+      await repository.recordClick(parsedId.data, getSeoulDate(now()), principalHash);
     } catch {
       // A metrics failure must not prevent a validated purchase redirect.
     }

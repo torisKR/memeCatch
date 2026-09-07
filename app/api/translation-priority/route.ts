@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { isSeoContentLocale, type SeoContentLocale } from "@/lib/i18n-routing";
 import { createClient } from "@/lib/supabase/server";
+import { readBoundedJson } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,7 +93,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const input = parseInput(await request.json().catch(() => null));
+  const input = parseInput(await readBoundedJson(request, 4 * 1024).catch(() => null));
   if (!input) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers: noStore() });
   }

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ingestSource, SourceIngestionError } from "@/lib/sources/ingest.server";
 import { createClient } from "@/lib/supabase/server";
+import { isOperator } from "@/lib/profile-access";
+import { readBoundedJson } from "@/lib/request-body";
 
 const inputSchema = z.object({
   url: z.string().trim().min(1).max(2_048),
@@ -16,16 +18,11 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, error: "signed_out" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "operator") {
+  if (!(await isOperator(supabase))) {
     return Response.json({ ok: false, error: "operator_required" }, { status: 403 });
   }
 
-  const parsed = inputSchema.safeParse(await request.json().catch(() => null));
+  const parsed = inputSchema.safeParse(await readBoundedJson(request, 4 * 1024).catch(() => null));
   if (!parsed.success) {
     return Response.json({ ok: false, error: "invalid_input" }, { status: 400 });
   }

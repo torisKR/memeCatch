@@ -90,7 +90,11 @@ const serwist = new Serwist({
     ],
   },
   runtimeCaching: [
-    // 1) Supabase·인증은 절대 캐시하지 않는다
+    {
+      matcher: ({ url, sameOrigin }) =>
+        sameOrigin && /^\/api(?:\/|$)/.test(url.pathname),
+      handler: new NetworkOnly(),
+    },
     {
       matcher: ({ url }) => isSupabaseOrAuth(url),
       handler: new NetworkOnly(),

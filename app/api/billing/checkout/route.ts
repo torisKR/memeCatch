@@ -12,6 +12,7 @@ import {
   getCurrentBillingUser,
 } from "@/lib/billing/repository.server";
 import { growthSessionIdFromRequest } from "@/lib/growth/events.server";
+import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,7 +61,14 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
 
     return Response.redirect(linkUrl, 303);
   } catch {
-    await failBillingOrder(requestId).catch(() => undefined);
+    try {
+      await failBillingOrder(requestId);
+    } catch {
+      return Response.json(
+        { ok: false, error: "checkout_cleanup_failed" },
+        { status: 503, headers: { "cache-control": "no-store" } },
+      );
+    }
     return Response.json(
       { ok: false, error: "checkout_failed" },
       { status: 502, headers: { "cache-control": "no-store" } },
@@ -71,9 +79,12 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
 export async function POST(request: Request) {
   let requestedLocale: FormDataEntryValue | null = null;
   try {
-    const formData = await request.formData();
+    const formData = await readBoundedFormData(request, 4 * 1024);
     requestedLocale = formData.get("locale");
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return Response.json({ ok: false, error: "payload_too_large" }, { status: 413 });
+    }
   }
   return beginCheckout(request, requestedLocale);
 }

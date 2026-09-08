@@ -29,19 +29,11 @@ begin
   -- create more than one live, unconsumed intent.
   perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0));
 
-  delete from public.fairy_billing_intents intents
-   where intents.user_id = p_user_id
-     and intents.expires_at <= now()
-     and not exists (
-       select 1 from public.fairy_payments payments where payments.intent_id = intents.id
-     );
-
   select intents.id into v_id
     from public.fairy_billing_intents intents
    where intents.user_id = p_user_id
      and intents.project_slug = v_slug
      and intents.minimum_amount = p_min_amount
-     and intents.expires_at > now()
      and not exists (
        select 1 from public.fairy_payments payments where payments.intent_id = intents.id
      )

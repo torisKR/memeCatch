@@ -4,7 +4,7 @@ grant usage on schema extensions to public;
 grant all on table public.fairy_billing_intents, public.fairy_payments,
   public.billing_subscriptions, public.billing_orders, public.profiles to service_role;
 set local search_path = extensions, public;
-select plan(34);
+select plan(38);
 
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
 values ('66666666-6666-4666-8666-666666666666', 'fairy-test@example.com', now(), '{}'::jsonb, now(), now());
@@ -170,6 +170,31 @@ select extensions.throws_ok($$select public.revoke_fairy_payment('donation-ok', 
 
 select is((select has_table_privilege('anon', 'public.fairy_payments', 'select')), false, 'anonymous reads are revoked');
 select is((select has_function_privilege('anon', 'public.process_fairy_payment(text,text,uuid,integer,timestamptz)', 'execute')), false, 'anonymous execution is revoked');
+
+reset role;
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
+values ('88888888-8888-4888-8888-888888888888', 'fairy-delayed@example.invalid', now(), '{}'::jsonb, now(), now());
+create temporary table delayed_intent as
+select public.create_fairy_billing_intent('88888888-8888-4888-8888-888888888888', 'memecatch', 1000) as id;
+update public.fairy_billing_intents
+set created_at = now() - interval '40 minutes', expires_at = now() - interval '10 minutes'
+where id = (select id from delayed_intent);
+select is(
+  public.create_fairy_billing_intent('88888888-8888-4888-8888-888888888888', 'memecatch', 1000),
+  (select id from delayed_intent), 'expired outstanding intent is reused for delayed reconciliation'
+);
+select is(
+  (select count(*) from public.fairy_billing_intents where user_id = '88888888-8888-4888-8888-888888888888'),
+  1::bigint, 'expiry does not grow outstanding intents'
+);
+select is(
+  public.process_fairy_payment('delayed-payment', 'memecatch', (select id from delayed_intent), 1000, now() - interval '20 minutes')->>'status',
+  'qualified', 'delayed payment qualifies after checkout retry'
+);
+select is(
+  public.process_fairy_payment('delayed-payment', 'memecatch', (select id from delayed_intent), 1000, now() - interval '20 minutes')->>'duplicate',
+  'true', 'delayed payment replay remains idempotent'
+);
 
 select * from finish();
 rollback;

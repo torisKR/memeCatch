@@ -38,7 +38,14 @@ begin
        select 1 from public.fairy_payments payments where payments.intent_id = intents.id
      )
    order by intents.created_at desc
-   limit 1;
+   limit 1
+   for update;
+
+  if v_id is not null and exists (
+    select 1 from public.fairy_payments where intent_id = v_id
+  ) then
+    v_id := null;
+  end if;
 
   if v_id is null then
     insert into public.fairy_billing_intents (user_id, project_slug, minimum_amount)

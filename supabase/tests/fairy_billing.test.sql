@@ -4,7 +4,7 @@ grant usage on schema extensions to public;
 grant all on table public.fairy_billing_intents, public.fairy_payments,
   public.billing_subscriptions, public.billing_orders, public.profiles to service_role;
 set local search_path = extensions, public;
-select plan(32);
+select plan(34);
 
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
 values ('66666666-6666-4666-8666-666666666666', 'fairy-test@example.com', now(), '{}'::jsonb, now(), now());
@@ -26,7 +26,11 @@ select lives_ok(
 );
 select lives_ok(
   $$select public.create_fairy_billing_intent('66666666-6666-4666-8666-666666666666', 'memecatch', 1000)$$,
-  'each checkout receives a distinct intent'
+  'repeated checkout reuses the live intent'
+);
+select is(
+  (select count(*) from public.fairy_billing_intents where user_id = '66666666-6666-4666-8666-666666666666'),
+  1::bigint, 'repeated checkout does not grow the intent table'
 );
 
 select extensions.throws_ok(
@@ -40,10 +44,16 @@ select public.process_fairy_payment(
 );
 select is((select status from public.fairy_payments where payment_id = 'donation-under'), 'ignored', 'under minimum is persisted as ignored');
 select is((select count(*) from public.billing_subscriptions where provider = 'fairy'), 0::bigint, 'under minimum never grants Plus');
+select lives_ok(
+  $$select public.create_fairy_billing_intent('66666666-6666-4666-8666-666666666666', 'memecatch', 1000)$$,
+  'a consumed intent is replaced for a later checkout'
+);
 
 select public.process_fairy_payment(
   'donation-ok', 'memecatch',
-  (select id from public.fairy_billing_intents order by id desc limit 1), 1000, now()
+  (select intents.id from public.fairy_billing_intents intents
+    where not exists (select 1 from public.fairy_payments payments where payments.intent_id = intents.id)
+    order by intents.created_at desc limit 1), 1000, now()
 );
 select is((select status from public.fairy_payments where payment_id = 'donation-ok'), 'qualified', 'minimum donation qualifies');
 select is((select status from public.billing_subscriptions where provider = 'fairy' and external_order_id = 'donation-ok'), 'active', 'qualified donation is active');

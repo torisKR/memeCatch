@@ -40,7 +40,7 @@
 
 ## 반영과 검증
 
-먼저 `20260905034152_admin_activity_dashboard.sql`을 대상 DB에 적용하고 앱을 배포한다. 같은 migration에서 원장 시간 범위 집계용 부분 인덱스를 추가하므로 큰 운영 원장에서는 실행 시간과 잠금을 확인한다. 기존 운영 결제·콘텐츠 생성 설정은 변경하지 않는다.
+먼저 `20260905034152_admin_activity_dashboard.sql`을 대상 DB에 적용하고 앱을 배포한다. 같은 migration에서 원장 시간 범위 집계용 부분 인덱스를 추가하므로 큰 운영 원장에서는 실행 시간과 잠금을 확인한다. 기존 운영 결제·콘텐츠 생성 설정과 운영 배포 게이트·checkout 비활성 정책을 유지한다.
 
 ```sh
 pnpm exec vitest run components/admin/activity-dashboard.test.tsx
@@ -59,7 +59,6 @@ git diff --check
 ## 2026-09-05 통합 브랜치 검증 기록 (운영 분리 전)
 
 아래 기록은 통합 브랜치 `7a54da6e03732bfc2bd2e004205075128782cdd0` 기준이다. 운영 릴리스는 기존 원격 main `5f34b8c0c0178a0ebdd52d073db0353b5a5b2735`에서 대시보드만 분리하여 별도로 검증한다. 앞선 26개 변경 및 대시보드 외 migration은 이번 운영 반영에 포함하지 않는다.
-
 - 전체 Vitest: 290개 파일, 1,977개 테스트 통과. 대시보드 11개 및 proxy 회귀 테스트 포함.
 - SQL: 로컬 Supabase 57/57, Preview `hsuqapozawtxhycvcgjm` 57/57 통과. Preview 테스트 후 합성 계정 0개, 기존 client 이벤트 1개 유지 확인.
 - TypeScript, production build, `git diff --check` 통과. 전체 lint 오류 0건, 기존 경고 7건 유지. 빌드의 기존 `metadataBase` 경고는 별도다.
@@ -68,7 +67,6 @@ git diff --check
 - 390px 모바일에서 document 너비 390px, 표 영역만 내부 스크롤. 관리자 문서 외부 script/iframe 0개, 브라우저 콘솔 오류 0건.
 - Supabase advisor의 대시보드 관련 항목 0건. 기존 `meme_reaction_counts`, `generation_vote_stats` 뷰의 `security_definer_view` 항목은 이번 변경이 만든 것이 아니며 별도 검토 대상으로 유지한다. 이 기록은 저장소 전체 보안 완료나 운영 배포 완료를 뜻하지 않는다.
 - Preview migration ledger는 최종 저장소 버전 `20260905034152`로 정규화했다. 운영 DB에는 적용하지 않았다.
-
 ## 2026-09-05 대시보드 단독 운영 후보
 
 - 원격 main 기준 재검증: Vitest 270개 파일 / 1,821개 테스트, focused 63개, 로컬 SQL 57개, TypeScript, production build, `git diff --check` 통과. lint는 기존 경고 7개, 오류 0개다.

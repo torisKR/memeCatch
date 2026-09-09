@@ -48,4 +48,30 @@ describe("ExploreGrid", () => {
     expect(item).not.toBeNull();
     expect(item?.style.opacity).not.toBe("0");
   });
+
+  it("renders an empty state with a submit path when there are no results", () => {
+    render(
+      <ExploreGrid
+        initial={[]}
+        filters={{ categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.getByText("이 조건의 밈이 아직 없어요")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
+      "/submit",
+    );
+  });
+
+  it("names a zero-result search query in the empty state", () => {
+    render(
+      <ExploreGrid
+        initial={[]}
+        filters={{ q: "없는밈", categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.getByText(/검색 결과가 없어요/)).toBeTruthy();
+    expect(screen.getByText("없는밈")).toBeTruthy();
+  });
 });

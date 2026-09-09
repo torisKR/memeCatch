@@ -8,6 +8,7 @@ import { DEFAULT_LOCALE } from "@/lib/i18n";
 import {
   SEO_ROUTE_LOCALES,
   buildHreflangLanguages,
+  localizePath,
   toOpenGraphLocale,
 } from "@/lib/i18n-routing";
 import "../globals.css";
@@ -30,7 +31,8 @@ export const metadata: Metadata = {
     canonical: "/",
     languages: {
       ...buildHreflangLanguages("/", SEO_ROUTE_LOCALES),
-      "x-default": "/",
+      // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다(buildLocalizedMetadata와 동일 규칙).
+      "x-default": localizePath("/", "en"),
     },
   },
   openGraph: {

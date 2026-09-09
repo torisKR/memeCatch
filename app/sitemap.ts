@@ -67,7 +67,8 @@ function homeLanguages(): Record<string, string> {
         absolute(localizedPath("/", locale)),
       ]),
     ),
-    "x-default": SITE_URL,
+    // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다.
+    "x-default": absolute(localizedPath("/", "en")),
   };
 }
 
@@ -96,7 +97,6 @@ function memeLanguages(
   const koreanPath = memePathFrom(meme.short_id, meme.slug);
   const languages: Record<string, string> = {
     ko: absolute(koreanPath),
-    "x-default": absolute(koreanPath),
   };
   for (const locale of SEO_CONTENT_LOCALES) {
     const translation = translations.get(locale);
@@ -109,7 +109,9 @@ function memeLanguages(
       ),
     );
   }
-  return languages;
+  // 해외 주 타깃 전환: x-default는 영어 문서. reviewed en 번역이 없으면 ko 원문 유지
+  // (존재하지 않는 /en URL을 가리키면 유해).
+  return { ...languages, "x-default": languages.en ?? absolute(koreanPath) };
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

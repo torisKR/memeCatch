@@ -271,6 +271,22 @@ export function LoginForm({
           <TikTokMark className="h-5 w-5" />
           {copy.tiktokButton}
         </a>
+        <p className="px-1 text-xs leading-relaxed text-muted">
+          {copy.socialConsent}{" "}
+          <Link
+            href="/terms"
+            className="font-semibold text-accent-text underline-offset-4 hover:underline"
+          >
+            {copy.termsLink}
+          </Link>
+          {" · "}
+          <Link
+            href="/privacy"
+            className="font-semibold text-accent-text underline-offset-4 hover:underline"
+          >
+            {copy.privacyLink}
+          </Link>
+        </p>
       </div>
 
       <p role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-muted">
@@ -416,15 +432,17 @@ function SubmitButton({
   pending,
   label,
   pendingLabel,
+  disabled = false,
 }: {
   pending: boolean;
   label: string;
   pendingLabel: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
     >
       {pending && <Spinner className="border-white/40 border-t-white" />}
@@ -498,9 +516,11 @@ function SignUpForm({ next }: { next: string }) {
     signUp,
     null
   );
+  const [agreed, setAgreed] = useState(false);
   const nickId = useId();
   const emailId = useId();
   const pwId = useId();
+  const consentId = useId();
 
   return (
     <form action={action} className="flex flex-col gap-4" noValidate>
@@ -553,8 +573,36 @@ function SignUpForm({ next }: { next: string }) {
           className={inputClass}
         />
       </Field>
+      <label htmlFor={consentId} className="flex items-start gap-2.5 text-sm leading-relaxed text-muted">
+        <input
+          id={consentId}
+          name="agree"
+          type="checkbox"
+          required
+          checked={agreed}
+          onChange={(event) => setAgreed(event.target.checked)}
+          className="mt-1 size-4 shrink-0 rounded border-border accent-accent-strong"
+        />
+        <span>
+          {copy.signupConsent}{" "}
+          <Link
+            href="/terms"
+            className="font-semibold text-accent-text underline-offset-4 hover:underline"
+          >
+            {copy.termsLink}
+          </Link>
+          {" · "}
+          <Link
+            href="/privacy"
+            className="font-semibold text-accent-text underline-offset-4 hover:underline"
+          >
+            {copy.privacyLink}
+          </Link>
+        </span>
+      </label>
       <SubmitButton
         pending={pending}
+        disabled={!agreed}
         label={copy.signupSubmit}
         pendingLabel={copy.signupPending}
       />

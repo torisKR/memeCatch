@@ -109,4 +109,15 @@ describe("Plus Meme Vault", () => {
     expect(html).toContain('href="/ja/pricing"');
     expect(html).not.toContain('name="saved_q"');
   });
+
+  it("exposes a withdrawal request path on My", () => {
+    locale.value = "en";
+    const html = renderMyContent();
+
+    expect(html).toContain("Delete account");
+    expect(html).toContain("Request account deletion");
+    expect(html).toContain('href="/support"');
+    expect(html).toContain("Email a request");
+    expect(html).toContain("mailto:toris@toris.kr");
+  });
 });

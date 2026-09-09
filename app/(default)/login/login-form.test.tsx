@@ -88,11 +88,32 @@ describe("LoginForm signup notice", () => {
     fireEvent.change(screen.getByLabelText("비밀번호"), {
       target: { value: "password" },
     });
+    fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "가입하고 시작하기" }));
 
     const message = await screen.findByText(notice);
     expect(message.getAttribute("role")).toBe("status");
     expect(message.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("keeps email signup disabled until terms and privacy are accepted", () => {
+    render(
+      <LocaleProvider initialLocale="ko">
+        <LoginForm next="/saved" initialMode="signup" />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getAllByRole("link", { name: "이용약관" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "개인정보처리방침" }).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/소셜 로그인을 시작하면 이용약관과 개인정보처리방침에 동의/),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "가입하고 시작하기" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "가입하고 시작하기" }));
+    expect(serverActions.signUp).not.toHaveBeenCalled();
   });
 });
 

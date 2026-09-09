@@ -41,8 +41,10 @@ export default function TermsPage() {
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
             <li>
               Plus는 관심사 맞춤 트렌드 피드와 무제한 저장 기능을 제공하는
-              <strong> 10 USDT 상당의 30일 이용권</strong>입니다. 실제 주문 금액과
-              제공 기능은 구매 화면에 표시합니다.
+              <strong> 30일 이용권</strong>입니다. Unifi Pay에서는
+              <strong> 10 USDT 상당</strong>으로 결제하고, 한국에서는 Fairy 후원
+              (카드·간편결제)으로도 같은 기간의 Plus를 받을 수 있습니다. 실제
+              주문 금액과 제공 기능은 구매 화면에 표시합니다.
             </li>
             <li>
               <strong>자동 갱신되지 않습니다.</strong> 결제 1회당 30일 이용
@@ -52,10 +54,12 @@ export default function TermsPage() {
               정기 결제를 위한 결제수단 정보는 보관하지 않습니다.
             </li>
             <li>
-              결제는 Unifi Pay에서 Kaia 네트워크의 USDT로 처리되며, 서버에서
-              거래 상태·상점·금액·통화를 확인한 뒤 결제를 시작한 MemeCatch
-              계정에 이용 기간이 연결됩니다. 결제창 복귀만으로 권한이 생기지
-              않습니다.
+              결제는 Unifi Pay에서 Kaia 네트워크의 USDT로 처리하거나, 한국
+              이용자는 Fairy 후원(카드·간편결제)으로 30일 Plus를 받을 수
+              있습니다. Unifi 결제는 서버에서 거래 상태·상점·금액·통화를 확인한
+              뒤, Fairy 후원은 연결된 계정과 최소 금액을 확인한 뒤 결제를 시작한
+              MemeCatch 계정에 이용 기간이 연결됩니다. 결제창 복귀만으로 권한이
+              생기지 않습니다.
             </li>
             <li>
               <strong>환불</strong>은 결제 대행사 정책상 자동 처리가 지원되지

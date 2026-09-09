@@ -9,6 +9,7 @@ import {
   isIndexableLocalizedMeme,
   isTranslationCurrent,
   overlayMemeTranslation,
+  getLocalizedFeaturedMemes,
   getLocalizedSearchMemesResult,
   type MemeTranslationRow,
 } from "@/lib/meme-translations";
@@ -31,6 +32,7 @@ type TestMeme = ContentDepthInput & {
   caution: string | null;
   aliases: string[];
   usage_examples?: unknown;
+  meme_market_profiles?: { market_code: string; role: string; review_state: string }[];
   updated_at: string;
 };
 
@@ -56,6 +58,9 @@ function baseMeme(overrides: Partial<TestMeme> = {}): TestMeme {
     ],
     meme_contents: [{ availability: "live", moderation_status: "approved" }],
     meme_tags_map: [{ tag_id: "a" }, { tag_id: "b" }, { tag_id: "c" }],
+    meme_market_profiles: [
+      { market_code: "KR", role: "origin", review_state: "reviewed" },
+    ],
     updated_at: SOURCE_UPDATED_AT,
     ...overrides,
   };
@@ -104,11 +109,15 @@ function mockTranslationQuery(response: { data: unknown; error: unknown }) {
     select: vi.fn(),
     eq: vi.fn(),
     in: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
     overrideTypes: vi.fn(),
   };
   builder.select.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
   builder.in.mockReturnValue(builder);
+  builder.order.mockReturnValue(builder);
+  builder.limit.mockReturnValue(builder);
   builder.overrideTypes.mockResolvedValue(response);
   createStaticClient.mockReturnValue({
     from: vi.fn().mockReturnValue(builder),
@@ -279,5 +288,48 @@ describe("localized search lookup status", () => {
     const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
 
     expect(result).toEqual({ items: new Map(), status: "unavailable" });
+  });
+});
+
+describe("localized featured Korean origin", () => {
+  it("keeps KR-origin translations and skips unknown or non-Korean origin", async () => {
+    const korean = featuredRow();
+    const american = {
+      ...translation({
+        meme_id: "00000000-0000-4000-8000-000000000002",
+        localized_slug: "gyat-meme",
+        title: "Gyat meme",
+      }),
+      memes: baseMeme({
+        id: "00000000-0000-4000-8000-000000000002",
+        short_id: "gyat0001",
+        slug: "gyat",
+        title: "Gyat",
+        meme_market_profiles: [
+          { market_code: "US", role: "origin", review_state: "reviewed" },
+        ],
+      }),
+    };
+    const unknown = {
+      ...translation({
+        meme_id: "00000000-0000-4000-8000-000000000003",
+        localized_slug: "unknown-meme",
+        title: "Unknown origin meme",
+      }),
+      memes: baseMeme({
+        id: "00000000-0000-4000-8000-000000000003",
+        short_id: "unkn0001",
+        slug: "unknown",
+        title: "Unknown",
+        meme_market_profiles: [],
+      }),
+    };
+    mockTranslationQuery({ data: [american, unknown, korean], error: null });
+
+    const featured = await getLocalizedFeaturedMemes("en", 12);
+
+    expect(featured).toHaveLength(1);
+    expect(featured[0]?.short_id).toBe("abc12345");
+    expect(featured[0]?.title).toBe("Original meme");
   });
 });

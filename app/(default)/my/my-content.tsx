@@ -26,6 +26,7 @@ import { MY_COPY } from "@/lib/i18n-my";
 import { SavedMetaEditor } from "@/components/premium/saved-meta-editor";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 import { savedLibraryHref } from "@/lib/saved-library";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export type SavedMeme = {
   id: string;
@@ -411,6 +412,30 @@ export function MyContent({
                 {copy.customization.plusOnly}
               </p>
             )}
+          </motion.section>
+
+          <motion.section
+            {...section}
+            className="rounded-2xl border border-border bg-surface p-5"
+          >
+            <h2 className="text-lg font-bold">{copy.accountDelete.title}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              {copy.accountDelete.body}
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              <Link
+                href="/support"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
+              >
+                {copy.accountDelete.request}
+              </Link>
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md"
+              >
+                {copy.accountDelete.mail}
+              </a>
+            </div>
           </motion.section>
         </aside>
 

@@ -291,7 +291,13 @@ export default async function PremiumPage({
       ? buildPlusOutcomeReplayPath(outcomeReplayShortId, outcomeReplayLocale) ?? "/premium"
       : "/premium";
 
-  if (!entitlement.signedIn) redirect(`/login?next=${encodeURIComponent(premiumPath)}`);
+  if (!entitlement.signedIn) {
+    redirect(
+      premiumPath === "/premium"
+        ? "/pricing"
+        : `/login?next=${encodeURIComponent(premiumPath)}`,
+    );
+  }
 
   const supabase = await createClient();
   const {

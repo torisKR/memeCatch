@@ -36,7 +36,7 @@
 - **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
 - **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
 - **배포**: Vercel (GitHub 연동 자동 배포)
-- **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Unifi Pay Direct · **메일**: AWS SES
+- **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Unifi Pay Direct · Fairy · **메일**: AWS SES
 
 > 어떤 서비스가 무엇을 맡고 **왜 그렇게 정했는지**(특히 "AWS로 옮길까?"에 대한 실측 근거와
 > 결정 기록)는 [`docs/architecture.md`](./docs/architecture.md)에 정리돼 있습니다.
@@ -140,6 +140,10 @@ curl --fail-with-body \
 | `UNIFI_PAY_CALLBACK_BASE_URL` | Unifi 콘솔 허용 목록에 등록한 HTTPS 콜백 기준 URL |
 | `UNIFI_PAY_ITEM_PRICE` | Plus 30일권 주문 금액. 기본값 `10` USD |
 | `UNIFI_PAY_CHECKOUT_ENABLED` | 신규 checkout 전용 서버 플래그. 공백 제거 후 정확히 `true`일 때만 허용 |
+| `FAIRY_PLUS_ENABLED` | 한국 Fairy 후원 Plus 경로. 공백 제거 후 정확히 `true`일 때만 허용 |
+| `FAIRY_PROJECT_SLUG` | Fairy 프로젝트 슬러그 (`fairy.hada.io/@…`) |
+| `FAIRY_WEBHOOK_SECRET` | Fairy `payment.completed` 웹훅 HMAC 비밀값. 서버 전용 |
+| `FAIRY_PLUS_MIN_AMOUNT_KRW` | Plus 30일을 부여하는 최소 후원 금액(원). 정수 |
 | `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
@@ -173,15 +177,25 @@ Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 �
 
 RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `post_comment` · `file_report` · `cast_generation_vote` · `increment_view` · `compute_trend_scores`
 
-### MemeCatch Plus / Unifi Pay Direct 연결
+### MemeCatch Plus / Unifi Pay · Fairy
+
+한국에서 카드·간편결제로 Plus를 받으려면 Fairy 후원을 사용합니다. Unifi Pay는 Kaia USDT 경로입니다. 두 경로 모두 웹훅을 `catchmeme.com`에서 검증한 뒤에만 권한을 부여합니다.
+
+**Fairy (한국 접근 경로)**
+
+1. 로그인한 사용자가 `/pricing`에서 계정을 연결하면 Fairy 후원 링크가 발급됩니다.
+2. 최소 금액 이상의 후원이 완료되면 `https://catchmeme.com/api/billing/fairy/webhook`이 서명된 `payment.completed` 이벤트를 확인합니다.
+3. 연결된 계정에 Plus 30일을 부여합니다. 일반 후원 링크(계정 미연결)는 Plus로 자동 전환되지 않습니다.
+
+**Unifi Pay Direct (USDT)**
 
 1. 서버가 로그인 사용자 기준으로 `$10 USD` PENDING 주문과 고유 `requestId`를 먼저 생성합니다.
 2. Unifi Pay 결제 링크를 발급해 `providerLinkId`를 주문에 연결합니다. 구매자는 Unifi Wallet의 Kaia USDT로 결제합니다.
 3. `https://catchmeme.com/api/billing/unifi/webhook`은 알림 본문을 신뢰하지 않고 HMAC 인증된 상태 조회 API로 상점·금액·통화·거래 ID를 다시 검증합니다.
 4. 확인된 `transactionId`를 한 번만 반영해 기존 잔여기간 뒤로 Plus 30일을 연장합니다. 환불은 Unifi 콘솔에서 수동 처리한 뒤 service-role 정산 RPC로 원거래 권한과 감사 기록을 함께 갱신합니다.
 
-리다이렉트 쿼리나 브라우저 상태만으로 Plus 권한을 부여하지 않습니다. Unifi Pay API 비밀값은 Vercel 서버 환경변수에만 저장하며 저장소에 커밋하지 않습니다.
-`UNIFI_PAY_CHECKOUT_ENABLED`가 없거나 `false`이면 신규 주문만 차단합니다. 기존 주문의 웹훅 검증과 환불 정산은 계속 동작해야 하며 이 플래그를 읽지 않습니다. 과거 Latpeed 라우트·테이블은 이전 결제 감사와 호환을 위한 legacy 경로이지 신규 결제의 기준이 아닙니다.
+리다이렉트 쿼리나 브라우저 상태만으로 Plus 권한을 부여하지 않습니다. Unifi Pay·Fairy API 비밀값은 Vercel 서버 환경변수에만 저장하며 저장소에 커밋하지 않습니다.
+`UNIFI_PAY_CHECKOUT_ENABLED`가 없거나 `false`이면 신규 Unifi 주문만 차단합니다. 기존 주문의 웹훅 검증과 환불 정산은 계속 동작해야 하며 이 플래그를 읽지 않습니다. `FAIRY_PLUS_ENABLED`가 `true`가 아니면 Fairy 후원 경로를 열지 않습니다. 과거 Latpeed 라우트·테이블은 이전 결제 감사와 호환을 위한 legacy 경로이지 신규 결제의 기준이 아닙니다.
 
 ## 콘텐츠 정책
 

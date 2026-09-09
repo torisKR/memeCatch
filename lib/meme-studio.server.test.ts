@@ -51,6 +51,28 @@ describe("meme studio concepts", () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
   });
 
+  it("chooses 이/가 and 을/를 from the topic's Hangul batchim", async () => {
+    const noBatchim = await generateMemeConcepts({
+      topic: "옥동자",
+      tone: "sarcastic",
+      format: "caption",
+    });
+    const noBatchimCaptions = noBatchim.concepts.map((concept) => concept.caption).join("\n");
+    expect(noBatchimCaptions).toContain("옥동자가");
+    expect(noBatchimCaptions).toContain("옥동자를");
+    expect(noBatchimCaptions).not.toContain("옥동자이");
+    expect(noBatchimCaptions).not.toContain("옥동자을");
+
+    const batchim = await generateMemeConcepts({
+      topic: "라면",
+      tone: "sarcastic",
+      format: "caption",
+    });
+    const batchimCaptions = batchim.concepts.map((concept) => concept.caption).join("\n");
+    expect(batchimCaptions).toContain("라면이");
+    expect(batchimCaptions).toContain("라면을");
+  });
+
   it("changes public output for requested tone and format while keeping exactly 3 concepts", async () => {
     const image = await generateMemeConcepts({ topic: "고양이", tone: "hype", format: "image-macro" });
     const reaction = await generateMemeConcepts({ topic: "고양이", tone: "sarcastic", format: "reaction" });

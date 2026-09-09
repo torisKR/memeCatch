@@ -14,6 +14,7 @@ import {
   type MemeDetail,
 } from "@/lib/queries";
 import { createStaticClient } from "@/lib/supabase/server";
+import { originCountryCode } from "@/lib/meme-country";
 
 export type TranslationStatus = "machine" | "reviewed" | "stale";
 
@@ -287,8 +288,8 @@ export async function getLocalizedSearchMemes(
 
 /**
  * Highest-trending translations eligible for public discovery/GEO surfaces.
- * Fetch extra candidates before applying the current/depth checks so stale rows
- * do not unnecessarily shrink the requested result set.
+ * Fetch extra candidates before applying the current/depth/Korean-origin
+ * checks so stale or non-Korean rows do not unnecessarily shrink the result.
  */
 export async function getLocalizedFeaturedMemes(
   locale: Locale,
@@ -296,7 +297,7 @@ export async function getLocalizedFeaturedMemes(
 ): Promise<LocalizedMemeListItem[]> {
   if (locale === DEFAULT_LOCALE || limit <= 0) return [];
   const safeLimit = Math.min(Math.floor(limit), 400);
-  const candidateLimit = Math.min(Math.max(safeLimit * 3, 36), 1_200);
+  const candidateLimit = Math.min(Math.max(safeLimit * 8, 96), 1_200);
 
   try {
     const { data, error } = await createStaticClient()
@@ -312,6 +313,7 @@ export async function getLocalizedFeaturedMemes(
 
     const localized: LocalizedMemeListItem[] = [];
     for (const row of data) {
+      if (originCountryCode(row.memes.meme_market_profiles) !== "KR") continue;
       const meme = overlayMemeTranslation(row.memes, row, locale);
       if (!meme || !isIndexableLocalizedMeme(meme)) continue;
       localized.push(meme);

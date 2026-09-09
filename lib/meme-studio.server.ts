@@ -7,6 +7,7 @@ import {
 } from "@/lib/meme-studio-bedrock.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
+import { withKoreanParticle } from "@/lib/korean-particles";
 
 /**
  * AI 밈 스튜디오 서버 로직.
@@ -105,19 +106,19 @@ const TONE_TEMPLATES: Record<MemeTone, TemplateFn[]> = {
   sarcastic: [
     (topic) => ({
       headline: "사내 공지 말투",
-      caption: `기쁜 소식입니다. 이제 ${topic}이 제 성격 전부가 됐습니다. 인사팀에도 알렸습니다.`,
+      caption: `기쁜 소식입니다. 이제 ${withKoreanParticle(topic, "이/가")} 제 성격 전부가 됐습니다. 인사팀에도 알렸습니다.`,
       why_it_works: "격식 있는 사내 공지 말투로 과몰입 자체를 웃음거리로 만든다.",
       usage_context: "새로운 관심사에 빠졌다고 인용 게시할 때 좋다.",
     }),
     (topic) => ({
       headline: "마지못한 전문가",
-      caption: `제가 규칙을 만든 건 아니고요, 그냥 ${topic}을 너무 많이 알아 버린 대가를 치르는 중입니다.`,
+      caption: `제가 규칙을 만든 건 아니고요, 그냥 ${withKoreanParticle(topic, "을/를")} 너무 많이 알아 버린 대가를 치르는 중입니다.`,
       why_it_works: "책임은 피하면서도 별난 지식을 슬쩍 자랑하는 모순이 웃음을 만든다.",
       usage_context: "단체 채팅에서 같은 설정을 세 번째 설명한 뒤 쓰기 좋다.",
     }),
     (topic) => ({
       headline: "무표정 상태 보고",
-      caption: `${topic}이 잠깐의 유행인 척한 지 47일째.`,
+      caption: `${withKoreanParticle(topic, "이/가")} 잠깐의 유행인 척한 지 47일째.`,
       why_it_works: "가짜 날짜 세기가 부정을 반복되는 농담으로 바꾼다.",
       usage_context: "매일 올리는 기록이나 프로필 근처의 짧은 농담에 어울린다.",
     }),
@@ -125,7 +126,7 @@ const TONE_TEMPLATES: Record<MemeTone, TemplateFn[]> = {
   absurd: [
     (topic) => ({
       headline: "정신없는 예언",
-      caption: `고대인들은 ${topic}을 경고했다. 우리는 끝내 듣지 않았다.`,
+      caption: `고대인들은 ${withKoreanParticle(topic, "을/를")} 경고했다. 우리는 끝내 듣지 않았다.`,
       why_it_works: "평범한 대상을 신화처럼 무겁게 다루는 대비가 황당한 웃음을 만든다.",
       usage_context: "피드를 내리다 갑자기 던지는 혼돈의 게시물에 어울린다.",
     }),
@@ -145,19 +146,19 @@ const TONE_TEMPLATES: Record<MemeTone, TemplateFn[]> = {
   hype: [
     (topic) => ({
       headline: "경기장 아나운서",
-      caption: `여러분, 드디어 ${topic.toUpperCase()}이 등장했습니다!`,
+      caption: `여러분, 드디어 ${withKoreanParticle(topic.toUpperCase(), "이/가")} 등장했습니다!`,
       why_it_works: "힘찬 중계 말투가 작은 소식도 주인공의 등장처럼 느끼게 한다.",
       usage_context: "출시일, 승리 인증, 스포츠 반응 글에 어울린다.",
     }),
     (topic) => ({
       headline: "올해의 순간",
-      caption: `지금 이 순간, ${topic}이 공식적으로 올해의 장면이 됐고 우리는 그 안에 살고 있다.`,
+      caption: `지금 이 순간, ${withKoreanParticle(topic, "이/가")} 공식적으로 올해의 장면이 됐고 우리는 그 안에 살고 있다.`,
       why_it_works: "현장 시점과 최상급 표현을 결합해 유행의 중심에 있다는 느낌을 준다.",
       usage_context: "인기 음원과 함께 올리는 스토리에 어울린다.",
     }),
     (topic) => ({
       headline: "유행 예언 인증",
-      caption: `이건 캡처해 둬. ${topic}이 뜨기 전에 먼저 알아봤으니까.`,
+      caption: `이건 캡처해 둬. ${withKoreanParticle(topic, "이/가")} 뜨기 전에 먼저 알아봤으니까.`,
       why_it_works: "미리 알았다는 선언이 나중에 돌아볼 수 있는 유쾌한 증거가 된다.",
       usage_context: "마침내 유행이 커졌을 때 인용 게시하기 좋다.",
     }),

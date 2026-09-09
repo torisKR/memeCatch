@@ -33,6 +33,10 @@ type LoginCopy = {
   signupPending: string;
   forgotPassword: string;
   browseWithoutLogin: string;
+  termsLink: string;
+  privacyLink: string;
+  socialConsent: string;
+  signupConsent: string;
 };
 
 const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
@@ -69,6 +73,10 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     signupPending: "가입 중…",
     forgotPassword: "비밀번호를 잊으셨나요?",
     browseWithoutLogin: "로그인 없이 둘러보기",
+    termsLink: "이용약관",
+    privacyLink: "개인정보처리방침",
+    socialConsent: "소셜 로그인을 시작하면 이용약관과 개인정보처리방침에 동의하게 됩니다.",
+    signupConsent: "이용약관과 개인정보처리방침에 동의합니다.",
   },
   en: {
     brand: "MemeCatch",
@@ -103,6 +111,10 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     signupPending: "Creating account…",
     forgotPassword: "Forgot your password?",
     browseWithoutLogin: "Browse without logging in",
+    termsLink: "Terms of Service",
+    privacyLink: "Privacy Policy",
+    socialConsent: "Starting social login means you agree to the Terms of Service and Privacy Policy.",
+    signupConsent: "I agree to the Terms of Service and Privacy Policy.",
   },
   ja: {
     brand: "MemeCatch",
@@ -137,6 +149,10 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     signupPending: "作成中…",
     forgotPassword: "パスワードをお忘れですか？",
     browseWithoutLogin: "ログインせずに見る",
+    termsLink: "利用規約",
+    privacyLink: "プライバシーポリシー",
+    socialConsent: "ソーシャルログインを始めると、利用規約とプライバシーポリシーに同意したことになります。",
+    signupConsent: "利用規約とプライバシーポリシーに同意します。",
   },
   zh: {
     brand: "MemeCatch",
@@ -171,6 +187,10 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     signupPending: "正在创建…",
     forgotPassword: "忘记密码？",
     browseWithoutLogin: "不登录直接浏览",
+    termsLink: "服务条款",
+    privacyLink: "隐私政策",
+    socialConsent: "开始社交登录即表示你同意服务条款和隐私政策。",
+    signupConsent: "我同意服务条款和隐私政策。",
   },
 };
 

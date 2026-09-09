@@ -45,9 +45,10 @@ export default function PrivacyPage() {
             <li>
               <strong>MemeCatch Plus 구매</strong>: MemeCatch 계정 식별자, Unifi Pay
               결제 링크·주문·거래 식별자, 결제 상태·금액·통화·발생 시각 — Unifi
-              Pay의 결제 알림을 받은 뒤 서버 간 거래 조회로 확인합니다. 지갑
-              비밀키 등 결제수단 인증정보는 서비스가 직접 수집하거나 저장하지
-              않습니다.
+              Pay의 결제 알림을 받은 뒤 서버 간 거래 조회로 확인합니다. Fairy 후원으로
+              Plus를 받는 경우 후원 결제 식별자, 후원 금액, 계정 연결용 의도 식별자를
+              확인합니다. 지갑 비밀키 등 결제수단 인증정보는 서비스가 직접 수집하거나
+              저장하지 않습니다.
             </li>
             <li>
               <strong>자동 수집</strong>: 접속 로그, 쿠키(로그인 세션 유지
@@ -103,6 +104,12 @@ export default function PrivacyPage() {
               계정 식별자 일부에서 만든 가명 요청 식별자, 상품·금액·통화, 복귀·알림
               주소를 암호화된 통신으로 전달하며, 거래 식별자·상태·통화·시각은 결제
               확인과 법정 보존 기간 동안 보관합니다.
+            </li>
+            <li>
+              <strong>Fairy</strong> — 한국에서 카드·간편결제로 MemeCatch Plus 30일
+              이용권을 후원하는 경로. 계정 연결용 의도 식별자와 결제 식별자·금액을
+              암호화된 통신으로 확인하며, 알림은 catchmeme.com의 Fairy 웹훅으로
+              수신합니다. 결제수단 정보는 서비스가 직접 수집하지 않습니다.
             </li>
             <li>
               <strong>Latpeed</strong> — 기존 구매자의 주문·취소·환불 기록 보존과

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
-import { localizedStaticPath } from "@/lib/i18n-routing";
+import { localizedStaticPath, stripLocalePath } from "@/lib/i18n-routing";
 import { normalizePathname } from "@/lib/normalize-pathname";
+import { usePremium } from "@/lib/hooks/use-premium";
 
 const TABS: {
   href: string;
@@ -16,14 +17,19 @@ const TABS: {
   { href: "/", label: "brand", icon: HomeIcon },
   { href: "/explore", label: "explore", icon: CompassIcon },
   { href: "/submit", label: "submit", icon: PlusIcon, emphasized: true },
-  { href: "/premium", label: "premium", icon: PremiumIcon },
+  { href: "/pricing", label: "premium", icon: PremiumIcon },
   { href: "/my", label: "my", icon: UserIcon },
 ];
 
 export function BottomNav() {
   const pathname = normalizePathname(usePathname());
   const { locale, messages } = useLocale();
+  const isPremium = usePremium();
   if (pathname.startsWith("/admin")) return null;
+  const currentPath = stripLocalePath(pathname);
+  const plusHref = isPremium
+    ? "/premium"
+    : localizedStaticPath("/pricing", locale);
 
   return (
     <nav
@@ -34,11 +40,18 @@ export function BottomNav() {
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
         {TABS.map((tab) => {
           const href =
-            tab.label === "brand" || tab.label === "explore"
-              ? localizedStaticPath(tab.href, locale)
-              : tab.href;
+            tab.label === "premium"
+              ? plusHref
+              : tab.label === "brand" || tab.label === "explore"
+                ? localizedStaticPath(tab.href, locale)
+                : tab.href;
           const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+            tab.label === "premium"
+              ? currentPath.startsWith("/premium") ||
+                currentPath.startsWith("/pricing")
+              : href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(href);
           return (
             <li key={tab.href} className="flex-1">
               <Link

@@ -31,6 +31,12 @@ type MyCopy = {
   };
   greeting: (age?: string) => string;
   logout: string;
+  accountDelete: {
+    title: string;
+    body: string;
+    request: string;
+    mail: string;
+  };
   loadError: string;
   dateLocale: string;
   nickname: {
@@ -160,6 +166,12 @@ const MY_COPY_BASE = {
     greeting: (age) =>
       age ? `${age} · 반가워요` : "반가워요, 오늘의 밈 찾아볼까요?",
     logout: "로그아웃",
+    accountDelete: {
+      title: "계정 탈퇴",
+      body: "계정 삭제를 원하면 고객센터에서 ‘계정/로그인’으로 요청해 주세요. 약관에 따라 문의처 이메일로도 요청할 수 있습니다.",
+      request: "탈퇴 요청하기",
+      mail: "이메일로 요청",
+    },
     loadError: "일부 정보를 불러오지 못했어요. 새로고침해 주세요.",
     dateLocale: "ko-KR",
     nickname: {
@@ -308,6 +320,12 @@ const MY_COPY_BASE = {
         ? `${age} · Welcome back`
         : "Welcome back—ready to find today’s memes?",
     logout: "Log out",
+    accountDelete: {
+      title: "Delete account",
+      body: "To close your account, send a request from Support using the Account/login category. You can also email the contact address in the Terms.",
+      request: "Request account deletion",
+      mail: "Email a request",
+    },
     loadError:
       "We couldn’t load some of your information. Please refresh the page.",
     dateLocale: "en-US",
@@ -459,6 +477,12 @@ const MY_COPY_BASE = {
         ? `${age} · おかえりなさい`
         : "おかえりなさい。今日のミームを探してみませんか？",
     logout: "ログアウト",
+    accountDelete: {
+      title: "アカウント削除",
+      body: "アカウント削除はサポートの「アカウント/ログイン」から申請してください。利用規約の問い合わせ先メールでも受け付けます。",
+      request: "削除を申請する",
+      mail: "メールで申請",
+    },
     loadError:
       "一部の情報を読み込めませんでした。ページを再読み込みしてください。",
     dateLocale: "ja-JP",
@@ -610,6 +634,12 @@ const MY_COPY_BASE = {
     greeting: (age) =>
       age ? `${age} · 欢迎回来` : "欢迎回来，一起看看今天的迷因吧。",
     logout: "退出登录",
+    accountDelete: {
+      title: "注销账户",
+      body: "如需注销账户，请在客服中心选择“账户/登录”提交申请。也可以按服务条款中的联系邮箱发送请求。",
+      request: "申请注销",
+      mail: "通过邮件申请",
+    },
     loadError: "部分信息加载失败，请刷新页面。",
     dateLocale: "zh-CN",
     nickname: {

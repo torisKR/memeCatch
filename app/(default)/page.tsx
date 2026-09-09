@@ -27,28 +27,29 @@ export default async function Home() {
       <DefinedTermSetJsonLd />
       <HeroWeb3 totalCount={totalCount} />
 
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="mx-auto flex max-w-6xl flex-col gap-14 px-4 py-14 sm:gap-16 sm:py-16">
         {trending.length > 0 && (
           <section
             aria-labelledby="sec-trending"
-            className="py-10 sm:py-12"
+            className="rounded-2xl border border-border bg-surface px-5 py-8 shadow-sm sm:px-8 sm:py-10"
           >
             <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 id="sec-trending" className="text-2xl font-extrabold tracking-tight">
+                <p className="text-sm font-bold text-accent-text">지금 발견되는 밈</p>
+                <h2 id="sec-trending" className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
                   밈캐치 내 급상승
                 </h2>
               </div>
               <Link
                 href="/rankings"
                 prefetch={false}
-                className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text transition-colors duration-200 hover:text-accent motion-reduce:transition-none"
               >
                 급상승 전체 보기 <span aria-hidden className="ml-1">→</span>
               </Link>
             </div>
 
-            <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {trending.map((meme, index) => (
                 <li key={meme.id} className="min-w-0">
                   <MemeCompactCard meme={meme} rank={index + 1} priority={index < 2} />

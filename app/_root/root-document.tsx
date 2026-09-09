@@ -43,7 +43,7 @@ export function RootDocument({
       dir={getDocumentDirection(locale)}
       suppressHydrationWarning
     >
-      <body className="theme-ink flex min-h-dvh flex-col pb-16 md:pb-0">
+      <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>
           <LocaleDocumentSync />
           <LocaleAutoDetect />

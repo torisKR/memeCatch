@@ -36,22 +36,28 @@ export function FairySupportOption({ minimumAmount }: { minimumAmount: number })
   const { locale } = useLocale();
   const copy = locale === "ko" || locale === "ja" || locale === "zh" ? COPY[locale] : COPY.en;
   return (
-    <section className="mx-auto mt-6 max-w-xl rounded-3xl border border-border bg-surface p-6 sm:p-8" aria-labelledby="fairy-support-title">
-      <h2 id="fairy-support-title" className="text-xl font-bold">{copy.title}</h2>
-      <p className="mt-3 text-sm leading-relaxed text-muted">
-        {copy.detail.replace("{amount}", minimumAmount.toLocaleString("en-US"))}
-      </p>
-      <p className="mt-2 text-sm text-muted">{copy.note}</p>
-      <form action="/api/billing/fairy/checkout" method="post" className="mt-4"
-        onSubmit={() => track("donate_click", { locale, surface: "plus_fairy_checkout" })}>
-        <input type="hidden" name="locale" value={locale} />
-        <button type="submit" className="min-h-12 w-full rounded-xl border border-accent px-4 py-3 font-bold text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-          {copy.checkout}
-        </button>
-      </form>
-      <Link href={localizedStaticPath("/premium", locale)} className="mt-3 inline-flex min-h-11 items-center text-sm underline underline-offset-4">
-        {copy.status}
-      </Link>
+    <section className="mx-auto mt-8 max-w-3xl rounded-2xl border border-border bg-surface-2 p-6 sm:p-8" aria-labelledby="fairy-support-title">
+      <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(15rem,0.72fr)] sm:items-end">
+        <div>
+          <h2 id="fairy-support-title" className="text-xl font-black tracking-[-0.02em] sm:text-2xl">{copy.title}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            {copy.detail.replace("{amount}", minimumAmount.toLocaleString("en-US"))}
+          </p>
+          <p className="mt-3 border-l-2 border-accent pl-3 text-sm font-medium leading-relaxed text-muted">{copy.note}</p>
+        </div>
+        <div>
+          <form action="/api/billing/fairy/checkout" method="post"
+            onSubmit={() => track("donate_click", { locale, surface: "plus_fairy_checkout" })}>
+            <input type="hidden" name="locale" value={locale} />
+            <button type="submit" className="min-h-12 w-full rounded-xl border border-accent bg-surface px-4 py-3 font-bold text-accent-text transition-[background-color,transform] hover:bg-accent-soft active:scale-[0.98] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              {copy.checkout}
+            </button>
+          </form>
+          <Link href={localizedStaticPath("/premium", locale)} className="mt-2 flex min-h-11 items-center justify-center text-center text-sm font-medium text-muted underline underline-offset-4 hover:text-foreground">
+            {copy.status}
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }

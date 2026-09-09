@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   SEO_LOCALE_CONFIG,
@@ -167,7 +168,7 @@ export default async function LocalizedHomePage({ params }: Props) {
     <main
       lang={config.documentLanguage}
       dir={config.direction}
-      className="relative isolate overflow-hidden bg-background pb-16 text-foreground"
+      className="bg-background pb-20 text-foreground"
     >
       <JsonLd
         data={{
@@ -194,45 +195,52 @@ export default async function LocalizedHomePage({ params }: Props) {
         }}
       />
 
-      <section className="relative border-b border-border px-4 py-16 sm:py-24">
-        {/* 계측 격자 — ko 홈 HeroWeb3와 동일한 관제 톤(정적, 성능 비용 없음) */}
-        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
-        <div
-          aria-hidden
-          lang="ko"
-          className="pointer-events-none absolute -right-8 -top-16 select-none text-[16rem] font-black leading-none text-accent opacity-[0.07] sm:right-[8%] sm:text-[24rem]"
-        >
-          밈
-        </div>
-        <div className="relative mx-auto max-w-5xl">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            {copy.eyebrow}
-          </p>
-          <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[1.06] tracking-[-0.035em] sm:text-6xl">
-            {copy.title}
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
-            {copy.intro}
-          </p>
-          {firstHref && (
-            <Link
-              href={firstHref}
-              className="mt-8 inline-flex min-h-12 items-center rounded-full bg-accent-strong px-6 font-bold text-white transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
-            >
-              {copy.primaryCta} <span aria-hidden className="ml-2">→</span>
-            </Link>
-          )}
+      <section className="border-b border-border px-4 py-8 sm:py-12 lg:py-16">
+        <div className="mx-auto grid max-w-6xl overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_70px_-48px_color-mix(in_srgb,var(--accent)_45%,transparent)] lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
+          <div className="flex flex-col justify-center p-6 sm:p-10 lg:p-12">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-text">
+              {copy.eyebrow}
+            </p>
+            <h1 className="mt-5 max-w-3xl text-balance text-4xl font-black leading-[1.06] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+              {copy.title}
+            </h1>
+            <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-muted sm:text-lg">
+              {copy.intro}
+            </p>
+            {firstHref && (
+              <Link
+                href={firstHref}
+                className="mt-8 inline-flex min-h-12 w-fit items-center rounded-xl bg-accent-strong px-6 font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+              >
+                {copy.primaryCta} <span aria-hidden className="ml-2">→</span>
+              </Link>
+            )}
+          </div>
+          <div className="relative min-h-72 overflow-hidden border-t border-border bg-surface-2 lg:min-h-[34rem] lg:border-l lg:border-t-0">
+            <Image
+              src="/brand/meme-culture-renewal.webp"
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 42vw, 100vw"
+              preload
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+            <p className="absolute bottom-5 left-5 rounded-xl border border-white/20 bg-black/60 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+              {copy.desk}
+            </p>
+          </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-5xl px-4">
+      <div className="mx-auto max-w-6xl px-4">
         <section aria-labelledby="translation-desk" className="py-14 sm:py-20">
-          <div className="grid gap-8 lg:grid-cols-[1.05fr_1.4fr] lg:gap-14">
-            <div>
-              <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
+          <div className="grid gap-8 rounded-2xl border border-border bg-surface p-6 sm:p-9 lg:grid-cols-[0.9fr_1.35fr] lg:gap-14 lg:p-12">
+            <div className="lg:py-2">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-text">
                 {copy.desk}
               </p>
-              <h2 id="translation-desk" className="mt-3 text-3xl font-black tracking-tight">
+              <h2 id="translation-desk" className="mt-4 text-3xl font-black tracking-[-0.035em] sm:text-4xl">
                 {copy.explainerTitle}
               </h2>
               <p className="mt-4 leading-relaxed text-muted">{copy.explainerBody}</p>
@@ -243,41 +251,41 @@ export default async function LocalizedHomePage({ params }: Props) {
                 [copy.origin, copy.originBody],
                 [copy.safety, copy.safetyBody],
               ].map(([term, description]) => (
-                <div key={term} className="grid gap-1 py-5 sm:grid-cols-[8rem_1fr] sm:gap-5">
-                  <dt className="font-bold text-foreground">{term}</dt>
-                  <dd className="text-muted">{description}</dd>
+                <div key={term} className="grid gap-2 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6">
+                  <dt className="font-black text-foreground">{term}</dt>
+                  <dd className="leading-relaxed text-muted">{description}</dd>
                 </div>
               ))}
             </dl>
           </div>
         </section>
 
-        <section aria-labelledby="featured-memes" className="border-t border-border py-14 sm:py-20">
-          <div className="max-w-3xl">
-            <h2 id="featured-memes" className="text-3xl font-black tracking-tight">
+        <section aria-labelledby="featured-memes" className="py-14 sm:py-20">
+          <div className="grid gap-3 border-t border-border pt-8 sm:grid-cols-[minmax(0,0.9fr)_minmax(18rem,1.1fr)] sm:items-end sm:gap-10">
+            <h2 id="featured-memes" className="text-3xl font-black tracking-[-0.035em] sm:text-4xl">
               {copy.featured}
             </h2>
-            <p className="mt-3 leading-relaxed text-muted">{copy.featuredIntro}</p>
+            <p className="leading-relaxed text-muted">{copy.featuredIntro}</p>
           </div>
 
           {featured.length > 0 ? (
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featured.map((meme) => (
                 <li key={meme.id}>
                   <Link
                     href={localizedMemePath(locale, meme.short_id, meme.slug)}
-                    className="group flex h-full min-h-56 flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm transition hover:-translate-y-1 hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="group flex h-full min-h-60 flex-col rounded-2xl border border-border bg-surface p-6 shadow-[0_16px_45px_-38px_color-mix(in_srgb,var(--foreground)_35%,transparent)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent hover:shadow-[0_22px_55px_-38px_color-mix(in_srgb,var(--accent)_55%,transparent)] motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   >
                     <span className="text-xs font-bold uppercase tracking-[0.12em] text-accent">
                       {seo.categories[meme.category]}
                     </span>
-                    <h3 className="mt-3 text-xl font-black leading-snug tracking-tight group-hover:text-accent">
+                    <h3 className="mt-4 text-xl font-black leading-snug tracking-[-0.025em] transition-colors group-hover:text-accent">
                       {meme.title}
                     </h3>
                     <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted">
                       {meme.summary}
                     </p>
-                    <span className="mt-auto pt-6 text-sm font-bold">
+                    <span className="mt-auto pt-8 text-sm font-bold text-foreground">
                       {copy.read} <span aria-hidden>→</span>
                     </span>
                   </Link>
@@ -291,10 +299,12 @@ export default async function LocalizedHomePage({ params }: Props) {
           )}
         </section>
 
-        <aside className="rounded-3xl border border-border bg-surface-2 p-6 sm:p-9">
-          <h2 className="text-2xl font-black tracking-tight">{copy.methodTitle}</h2>
-          <p className="mt-3 max-w-3xl leading-relaxed text-muted">{copy.methodBody}</p>
-          <p className="mt-5 font-mono text-xs text-muted">
+        <aside className="grid gap-6 rounded-2xl border border-border bg-surface-2 p-6 sm:p-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:p-12">
+          <div>
+            <h2 className="text-2xl font-black tracking-[-0.025em] sm:text-3xl">{copy.methodTitle}</h2>
+            <p className="mt-4 max-w-3xl leading-relaxed text-muted">{copy.methodBody}</p>
+          </div>
+          <p className="font-mono text-xs text-muted">
             <a className="underline underline-offset-4 hover:text-foreground" href={`/${locale}/llms.txt`}>
               llms.txt
             </a>

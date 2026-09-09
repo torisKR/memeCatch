@@ -27,7 +27,7 @@ export function MemeCompactCard({
   return (
     <Link
       href={memePathFrom(meme.short_id, meme.slug)}
-      className="group holo-sheen block h-full min-w-0 overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-flame-500/55 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
+      className="group block h-full min-w-0 overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/60 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-surface-2">
         <MemeThumbnail

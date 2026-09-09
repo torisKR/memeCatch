@@ -27,7 +27,7 @@ export function GlobalHeader() {
   return (
     <HideOnAdmin>
       <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
-        <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1.5 sm:flex-nowrap sm:py-0">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0">
           <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
             {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
             <Link
@@ -35,7 +35,7 @@ export function GlobalHeader() {
               aria-label={messages.home}
               className="group flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
             >
-              <BrandTile className="size-8 shadow-[0_4px_14px_color-mix(in_srgb,var(--accent)_24%,transparent)] transition-transform duration-300 group-hover:-rotate-6" />
+              <BrandTile className="size-8" />
               {/* 브랜드명은 모바일에서도 노출(신규 방문자 브랜드 인지) — 도메인 서브라벨만 sm+ */}
               <span className="flex shrink-0 flex-col whitespace-nowrap leading-none">
                 <span className="text-lg font-extrabold tracking-[-0.045em]">{messages.brand}</span>
@@ -70,7 +70,7 @@ export function GlobalHeader() {
                   placeholder={messages.searchPlaceholder}
                   autoComplete="off"
                   enterKeyHint="search"
-                  className="hover-glow-flame h-11 w-52 rounded-full border border-border bg-surface pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow,width] duration-200 focus:w-64 focus:border-accent focus:ring-4 focus:ring-accent/20"
+                  className="h-11 w-48 rounded-xl border border-border bg-surface-2 pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20 xl:w-60"
                 />
               </div>
             </form>
@@ -78,7 +78,7 @@ export function GlobalHeader() {
             {/* 제보 강조 CTA — 데스크톱 전용(모바일은 하단탭 제보가 담당) */}
             <Link
               href="/submit"
-              className="hover-glow-flame hidden min-h-10 items-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
+              className="hidden min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
             >
               {messages.submit}
             </Link>
@@ -87,7 +87,7 @@ export function GlobalHeader() {
             <Link
               href={localizedStaticPath("/search", locale)}
               aria-label={messages.search}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-transparent text-foreground transition-colors hover:border-(--signal-cyan) hover:bg-surface-2 active:scale-[0.95] lg:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-foreground transition-colors hover:border-border hover:bg-surface-2 lg:hidden"
             >
               <SearchIcon className="h-5 w-5" />
             </Link>

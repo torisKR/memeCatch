@@ -61,7 +61,8 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
               src="/brand/meme-culture-renewal.webp"
               alt="밈 이미지 카드 더미를 돋보기로 살펴보는 장면"
               fill
-              priority
+              loading="eager"
+              fetchPriority="high"
               sizes="(min-width: 1024px) 38vw, 100vw"
               className="object-cover"
             />

@@ -222,7 +222,8 @@ export default async function LocalizedHomePage({ params }: Props) {
               alt=""
               fill
               sizes="(min-width: 1024px) 42vw, 100vw"
-              preload
+              loading="eager"
+              fetchPriority="high"
               className="absolute inset-0 h-full w-full object-cover"
             />
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />

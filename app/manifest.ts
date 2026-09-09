@@ -19,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     orientation: "portrait",
     theme_color: "#ff5c38",
-    background_color: "#0f0f12", // 전 사이트 다크(잉크) 통일 — 스플래시도 잉크 톤
+    background_color: "#fdfcfa",
     categories: ["entertainment", "education", "social"],
     icons: [
       {

@@ -27,5 +27,9 @@ export const SHARED_ROOT_METADATA: Metadata = {
 export const ROOT_VIEWPORT: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f0f12",
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fdfcfa" },
+    { media: "(prefers-color-scheme: dark)", color: "#131316" },
+  ],
 };

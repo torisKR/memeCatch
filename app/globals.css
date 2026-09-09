@@ -102,6 +102,7 @@
 }
 
 html {
+  color-scheme: light dark;
   font-family: var(--font-sans);
 }
 

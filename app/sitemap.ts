@@ -68,7 +68,7 @@ function homeLanguages(): Record<string, string> {
         absolute(localizedPath("/", locale)),
       ]),
     ),
-    // 해외 주 타깃 전환(루프 048): 글로벌 기본 착지는 영어 홈.
+    // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다.
     "x-default": absolute(localizedPath("/", "en")),
   };
 }
@@ -133,6 +133,8 @@ function memeLanguages(
       ),
     );
   }
+  // 해외 주 타깃 전환: x-default는 영어 문서. reviewed en 번역이 없으면 ko 원문 유지
+  // (존재하지 않는 /en URL을 가리키면 유해).
   return { ...languages, "x-default": languages.en ?? absolute(koreanPath) };
 }
 

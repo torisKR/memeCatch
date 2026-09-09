@@ -107,6 +107,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ),
     ]),
   ]);
+  // 해외 주 타깃 전환: x-default는 영어 문서. en 번역이 없으면 ko 원문 유지
+  // (존재하지 않는 /en URL을 가리키면 유해).
   const languages = { ...hreflangs, "x-default": hreflangs.en ?? path };
   const description = memeDetailMetadataDescription(
     meme.title,

@@ -230,6 +230,33 @@ describe("사이트맵 다국어 색인 계약", () => {
     }
   });
 
+  it("x-default는 영어 문서를 가리키고, en 번역이 없으면 ko 원문을 유지한다", async () => {
+    // 해외 주 타깃 전환 — 언어 미상 방문자의 기본 문서는 영어다. 단, reviewed en
+    // 번역이 없는 밈에서 /en URL을 가리키면 존재하지 않는 문서를 신고하는 셈이라
+    // ko 원문을 유지한다.
+    useRows([
+      indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]),
+      indexableMeme(2, [reviewedTranslation("ja", "2026-03-01T00:00:00.000Z")]),
+    ]);
+
+    const entries = await sitemap();
+    const languagesOf = (predicate: (url: string) => boolean) =>
+      entries.find((entry) => predicate(entry.url) && entry.alternates?.languages)
+        ?.alternates?.languages as Record<string, string> | undefined;
+
+    const home = languagesOf((url) => !url.includes("/memes/"));
+    expect(home?.["x-default"]).toBe(home?.en);
+    expect(home?.["x-default"]).toMatch(/\/en$/);
+
+    const withEnglish = languagesOf((url) => url.includes("/memes/m1"));
+    expect(withEnglish?.["x-default"]).toBe(withEnglish?.en);
+    expect(withEnglish?.["x-default"]).toContain("/en/memes/");
+
+    const withoutEnglish = languagesOf((url) => url.includes("/memes/m2"));
+    expect(withoutEnglish?.en).toBeUndefined();
+    expect(withoutEnglish?.["x-default"]).toBe(withoutEnglish?.ko);
+  });
+
   it("현재 reviewed 번역 수정 시각을 localized URL과 해당 locale 홈에 쓴다", async () => {
     const newestEnglishUpdate = "2026-04-03T12:00:00.000Z";
     useRows([

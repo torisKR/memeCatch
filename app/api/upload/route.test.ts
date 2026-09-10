@@ -2,13 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
+  createAdminClient: vi.fn(),
   r2Configured: vi.fn(() => false),
   r2Put: vi.fn(),
   rateLimit: vi.fn(() => ({ ok: true })),
+  rpc: vi.fn(),
   storageUpload: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("@/lib/r2.server", () => ({
   r2Configured: mocks.r2Configured,
   r2Put: mocks.r2Put,
@@ -29,13 +32,27 @@ beforeEach(() => {
   mocks.r2Configured.mockReturnValue(false);
   mocks.rateLimit.mockReturnValue({ ok: true });
   mocks.storageUpload.mockResolvedValue({ data: { path: "user-1/file.png" }, error: null });
+  mocks.rpc.mockResolvedValue({ error: null });
   mocks.createClient.mockResolvedValue({
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
+    rpc: mocks.rpc,
+  });
+  mocks.createAdminClient.mockReturnValue({
     storage: { from: () => ({ upload: mocks.storageUpload }) },
   });
 });
 
 describe("community upload API", () => {
+  it("stops before storage when the durable quota is exhausted", async () => {
+    mocks.rpc.mockResolvedValueOnce({ error: { message: "api_rate_limited" } });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(429);
+    expect(mocks.storageUpload).not.toHaveBeenCalled();
+    expect(mocks.r2Put).not.toHaveBeenCalled();
+  });
+
   it("rejects a declared image whose bytes are another media type", async () => {
     const response = await POST(request("image/jpeg"));
 

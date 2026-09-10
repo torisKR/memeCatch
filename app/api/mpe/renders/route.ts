@@ -24,12 +24,15 @@ const requestSchema = z.object({
 });
 
 type RenderRpcClient = {
-  rpc(name: "queue_mpe_render_job", args: {
+  rpc(name: "queue_metered_mpe_render_job", args: {
     p_ingestion_id: string;
     p_segments: Array<{ startMs: number; endMs: number; text: string }>;
     p_preset: "vertical" | "square" | "link";
     p_attribution: string;
-  }): Promise<{ data: { id: string; status: string } | null; error: unknown }>;
+  }): Promise<{
+    data: { id: string; status: string } | null;
+    error: { message: string } | null;
+  }>;
 };
 
 export async function POST(request: Request): Promise<Response> {
@@ -49,12 +52,15 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = requestSchema.safeParse(payload);
   if (!parsed.success) return Response.json({ ok: false, error: "invalid_render_request" }, { status: 400 });
 
-  const { data, error } = await (supabase as unknown as RenderRpcClient).rpc("queue_mpe_render_job", {
+  const { data, error } = await (supabase as unknown as RenderRpcClient).rpc("queue_metered_mpe_render_job", {
     p_ingestion_id: parsed.data.ingestionId,
     p_segments: parsed.data.segments,
     p_preset: parsed.data.preset,
     p_attribution: parsed.data.attribution,
   });
+  if (error?.message.includes("api_rate_limited")) {
+    return Response.json({ ok: false, error: "rate_limited" }, { status: 429 });
+  }
   if (error || !data) return Response.json({ ok: false, error: "render_not_available" }, { status: 400 });
 
   return Response.json({

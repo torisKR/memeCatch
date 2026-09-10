@@ -18,7 +18,10 @@ vi.mock("@/lib/rate-limit", () => ({ rateLimit: mocks.rateLimit }));
 
 import { POST } from "./route";
 
-function client(user: { id: string } | null, rpc = vi.fn()) {
+function client(
+  user: { id: string } | null,
+  rpc = vi.fn().mockResolvedValue({ error: null }),
+) {
   return { auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) }, rpc };
 }
 
@@ -68,22 +71,36 @@ describe("MPE upload API", () => {
   });
 
   it("stores validated bytes and creates processing jobs", async () => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: [{ ingestion_id: "ingestion-1", job_ids: ["job-1", "job-2"] }], error: null,
-    });
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({
+        data: [{ ingestion_id: "ingestion-1", job_ids: ["job-1", "job-2"] }], error: null,
+      });
     mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
     const response = await POST(uploadRequest());
     expect(response.status).toBe(201);
     expect(mocks.put).toHaveBeenCalledWith(
       expect.stringMatching(/^user-1\//), expect.any(ArrayBuffer), "image/png",
     );
-    expect(rpc).toHaveBeenCalledWith("create_media_ingestion", expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith("create_metered_media_ingestion", expect.objectContaining({
       p_ingest_mode: "USER_UPLOADED", p_rights_accepted: true, p_media_kind: "image",
     }));
   });
 
+  it("stops before temporary storage when the durable quota is exhausted", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: { message: "api_rate_limited" } });
+    mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
+
+    const response = await POST(uploadRequest());
+
+    expect(response.status).toBe(429);
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
   it("deletes the temporary object when the DB transaction fails", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: null, error: new Error("db") });
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error("db") });
     mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
     const response = await POST(uploadRequest());
     expect(response.status).toBe(500);
@@ -91,7 +108,9 @@ describe("MPE upload API", () => {
   });
 
   it("returns a distinct error when orphan cleanup also fails", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: null, error: new Error("db") });
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error("db") });
     mocks.remove.mockRejectedValueOnce(new Error("storage"));
     mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
     const response = await POST(uploadRequest());

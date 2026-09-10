@@ -10,7 +10,10 @@ vi.mock("@/lib/rate-limit", () => ({ rateLimit: mocks.rateLimit }));
 
 import { POST } from "./route";
 
-function client(user: { id: string } | null, rpc = vi.fn()) {
+function client(
+  user: { id: string } | null,
+  rpc = vi.fn().mockResolvedValue({ error: null }),
+) {
   return { auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) }, rpc };
 }
 
@@ -53,12 +56,22 @@ describe("MPE render queue API", () => {
     mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
     const response = await POST(request(valid));
     expect(response.status).toBe(202);
-    expect(rpc).toHaveBeenCalledWith("queue_mpe_render_job", {
+    expect(rpc).toHaveBeenCalledWith("queue_metered_mpe_render_job", {
       p_ingestion_id: valid.ingestionId,
       p_segments: valid.segments,
       p_preset: "vertical",
       p_attribution: "직접 촬영 · @creator",
     });
     await expect(response.json()).resolves.toEqual({ ok: true, data: { jobId: "job-1", status: "queued" } });
+  });
+
+  it("stops before queueing when the durable quota is exhausted", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: { message: "api_rate_limited" } });
+    mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
+
+    const response = await POST(request(valid));
+
+    expect(response.status).toBe(429);
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 });

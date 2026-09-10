@@ -97,6 +97,18 @@ describe("MPE upload API", () => {
     expect(mocks.put).not.toHaveBeenCalled();
   });
 
+  it("cleans up and returns 429 when the ingestion quota is exhausted", async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "api_rate_limited" } });
+    mocks.createClient.mockResolvedValueOnce(client({ id: "user-1" }, rpc));
+
+    const response = await POST(uploadRequest());
+
+    expect(response.status).toBe(429);
+    expect(mocks.remove).toHaveBeenCalledWith(mocks.put.mock.calls[0][0]);
+  });
+
   it("deletes the temporary object when the DB transaction fails", async () => {
     const rpc = vi.fn()
       .mockResolvedValueOnce({ error: null })

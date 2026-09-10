@@ -26,7 +26,10 @@ type RpcClient = {
     p_width: null;
     p_height: null;
     p_duration_ms: null;
-  }): Promise<{ data: Array<{ ingestion_id: string; job_ids: string[] }> | null; error: unknown }>;
+  }): Promise<{
+    data: Array<{ ingestion_id: string; job_ids: string[] }> | null;
+    error: { message: string } | null;
+  }>;
 };
 
 type QuotaRpcClient = {
@@ -130,6 +133,9 @@ export async function POST(request: Request): Promise<Response> {
     } catch {
       await recordTemporaryCleanupFailure(storageKey, user.id).catch(() => undefined);
       return Response.json({ ok: false, error: "ingestion_failed_cleanup_failed" }, { status: 500 });
+    }
+    if (error?.message.includes("api_rate_limited")) {
+      return Response.json({ ok: false, error: "rate_limited" }, { status: 429 });
     }
     return Response.json({ ok: false, error: "ingestion_failed" }, { status: 500 });
   }

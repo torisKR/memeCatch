@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { r2Configured, r2Put } from "@/lib/r2.server";
 import {
   ALLOWED_IMAGE_TYPES,
@@ -10,6 +11,11 @@ import {
 import { rateLimit } from "@/lib/rate-limit";
 import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
 import { MediaValidationError, validateMedia } from "@/lib/mpe/media";
+
+type QuotaRpcClient = {
+  rpc(name: "reserve_api_request", args: { p_action: "upload" }):
+    Promise<{ error: { message: string } | null }>;
+};
 
 /**
  * 제보 이미지 업로드 — 서버 전용 경로.
@@ -34,6 +40,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { ok: false, error: "rate_limited" },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
+  const { error: quotaError } = await (supabase as unknown as QuotaRpcClient).rpc(
+    "reserve_api_request",
+    { p_action: "upload" },
+  );
+  if (quotaError) {
+    const limited = quotaError.message.includes("api_rate_limited");
+    return NextResponse.json(
+      { ok: false, error: limited ? "rate_limited" : "rate_limit_unavailable" },
+      { status: limited ? 429 : 503 },
     );
   }
 
@@ -84,7 +102,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 폴백: Supabase Storage (RLS 정책 — 자기 폴더만 insert 가능)
-  const { data, error } = await supabase.storage
+  const { data, error } = await createAdminClient().storage
     .from("meme-uploads")
     .upload(objectPath, file, {
       contentType: file.type,

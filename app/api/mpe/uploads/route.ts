@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 
 const rightsSchema = z.object({ accepted: z.literal(true) });
 type RpcClient = {
-  rpc(name: "create_media_ingestion", args: {
+  rpc(name: "create_metered_media_ingestion", args: {
     p_source_id: string | null;
     p_ingest_mode: "USER_UPLOADED";
     p_mime_type: string;
@@ -26,7 +26,15 @@ type RpcClient = {
     p_width: null;
     p_height: null;
     p_duration_ms: null;
-  }): Promise<{ data: Array<{ ingestion_id: string; job_ids: string[] }> | null; error: unknown }>;
+  }): Promise<{
+    data: Array<{ ingestion_id: string; job_ids: string[] }> | null;
+    error: { message: string } | null;
+  }>;
+};
+
+type QuotaRpcClient = {
+  rpc(name: "reserve_api_request", args: { p_action: "mpe_upload_storage" }):
+    Promise<{ error: { message: string } | null }>;
 };
 
 function parseRights(value: FormDataEntryValue | null) {
@@ -49,6 +57,18 @@ export async function POST(request: Request): Promise<Response> {
       status: 429,
       headers: { "retry-after": String(limit.retryAfterSec) },
     });
+  }
+
+  const { error: quotaError } = await (supabase as unknown as QuotaRpcClient).rpc(
+    "reserve_api_request",
+    { p_action: "mpe_upload_storage" },
+  );
+  if (quotaError) {
+    const limited = quotaError.message.includes("api_rate_limited");
+    return Response.json(
+      { ok: false, error: limited ? "rate_limited" : "rate_limit_unavailable" },
+      { status: limited ? 429 : 503 },
+    );
   }
 
   let form: FormData | null = null;
@@ -92,7 +112,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, error: "upload_failed" }, { status: 502 });
   }
 
-  const { data, error } = await (supabase as unknown as RpcClient).rpc("create_media_ingestion", {
+  const { data, error } = await (supabase as unknown as RpcClient).rpc("create_metered_media_ingestion", {
     p_source_id: null,
     p_ingest_mode: "USER_UPLOADED",
     p_mime_type: media.mimeType,
@@ -113,6 +133,9 @@ export async function POST(request: Request): Promise<Response> {
     } catch {
       await recordTemporaryCleanupFailure(storageKey, user.id).catch(() => undefined);
       return Response.json({ ok: false, error: "ingestion_failed_cleanup_failed" }, { status: 500 });
+    }
+    if (error?.message.includes("api_rate_limited")) {
+      return Response.json({ ok: false, error: "rate_limited" }, { status: 429 });
     }
     return Response.json({ ok: false, error: "ingestion_failed" }, { status: 500 });
   }

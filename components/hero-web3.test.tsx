@@ -17,8 +17,8 @@ describe("HeroWeb3", () => {
     expect(html).toContain("오늘 본 그 밈,");
     expect(html).toContain("맥락까지 한눈에.");
     expect(html).toContain("1,200");
-    expect(html).toContain("%2Fbrand%2Fmeme-culture-renewal.webp");
-    expect(html).toContain('fetchPriority="high"');
+    expect(html).toContain("catch-mascot");
+    expect(html).toContain("캐치가 신호를 찾고 있어요");
     expect(html).toContain('aria-label="밈 발견 바로가기"');
     expect(html).not.toContain("animate-ping");
     expect(html).not.toContain("instrument-grid");

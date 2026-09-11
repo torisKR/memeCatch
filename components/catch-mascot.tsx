@@ -21,12 +21,21 @@ export function CatchMascot({ className = "", size = "md", state = "idle" }: Cat
   return (
     <div
       aria-hidden="true"
+      data-catch-size={size}
+      data-catch-state={state}
       className={`catch-mascot catch-mascot-${size} catch-mascot-${state} ${className}`.trim()}
       style={SIZE_STYLES[size]}
     >
       <div className="catch-mascot-signal catch-mascot-signal-a" />
       <div className="catch-mascot-signal catch-mascot-signal-b" />
-      <svg className="catch-mascot-art" viewBox="0 0 320 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        aria-hidden="true"
+        className="catch-mascot-art"
+        focusable="false"
+        viewBox="0 0 320 280"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <defs>
           <linearGradient id={bodyGradientId} x1="72" y1="48" x2="230" y2="230" gradientUnits="userSpaceOnUse">
             <stop stopColor="var(--accent)" />
@@ -42,6 +51,18 @@ export function CatchMascot({ className = "", size = "md", state = "idle" }: Cat
         </defs>
 
         <ellipse cx="160" cy="250" rx="78" ry="12" fill="var(--accent-strong)" opacity="0.13" />
+        <g className="catch-mascot-scan" aria-hidden="true">
+          <path d="M228 66 273 45M238 88l51-4M241 111l43 13" stroke="var(--accent)" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="274" cy="45" r="4" fill="var(--accent-strong)" />
+          <circle cx="289" cy="84" r="4" fill="var(--accent-strong)" />
+          <circle cx="284" cy="124" r="4" fill="var(--accent-strong)" />
+        </g>
+        <g className="catch-mascot-context" aria-hidden="true">
+          <rect x="227" y="35" width="68" height="47" rx="10" fill="var(--surface)" stroke="var(--accent-strong)" strokeWidth="3" />
+          <path d="M239 50h34M239 61h23" stroke="var(--accent-strong)" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="282" cy="61" r="7" fill="var(--safety-green)" />
+          <path d="m279 61 2 2 4-5" stroke="var(--surface)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
         <g className="catch-mascot-bob" filter={`url(#${shadowFilterId})`}>
           <path
             d="M217 70c-17-23-43-37-72-37-51 0-92 41-92 92 0 45 32 83 75 91l-13 29 30-21c39 0 73-24 87-58"

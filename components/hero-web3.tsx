@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
+import { CatchMascot } from "@/components/catch-mascot";
 import { LiveCaretInput } from "@/components/ui/live-caret-input";
 
 const EXAMPLE_SEARCHES = ["꼬셔야겠어 챌린지", "브금", "잘자 내꿈꿔"] as const;
@@ -56,16 +56,12 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
             </form>
           </div>
 
-          <div className="relative aspect-[3/2] max-h-72 overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm sm:max-h-80 lg:max-h-[34rem]">
-            <Image
-              src="/brand/meme-culture-renewal.webp"
-              alt="밈 이미지 카드 더미를 돋보기로 살펴보는 장면"
-              fill
-              loading="eager"
-              fetchPriority="high"
-              sizes="(min-width: 1024px) 38vw, 100vw"
-              className="object-cover"
-            />
+          <div className="relative grid aspect-[3/2] max-h-72 place-items-center overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm sm:max-h-80 lg:max-h-[34rem]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,var(--accent-soft),transparent_52%)]" />
+            <CatchMascot size="lg" state="discovering" />
+            <p className="absolute bottom-4 left-4 rounded-xl bg-surface/85 px-3 py-2 text-xs font-bold text-accent-text backdrop-blur-sm">
+              캐치가 신호를 찾고 있어요
+            </p>
           </div>
         </div>
       </section>

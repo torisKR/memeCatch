@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 const inputSchema = z.object({
   url: z.string().trim().min(1).max(2_048),
   targetMemeId: z.uuid().optional(),
+  retry: z.boolean().optional(),
 });
 
 export async function POST(request: Request): Promise<Response> {
@@ -26,6 +27,10 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, error: "invalid_input" }, { status: 400 });
   }
 
+  if (parsed.data.retry !== true && parsed.data.retry !== undefined) {
+    return Response.json({ ok: false, error: "invalid_retry" }, { status: 400 });
+  }
+
   try {
     return Response.json(
       { ok: true, data: await ingestSource(parsed.data, user.id) },
@@ -33,8 +38,20 @@ export async function POST(request: Request): Promise<Response> {
     );
   } catch (error) {
     if (error instanceof SourceIngestionError) {
-      return Response.json({ ok: false, error: error.message }, { status: error.status });
+      return Response.json(
+        {
+          ok: false,
+          error: error.message,
+          code: error.code,
+          retryable: error.retryable,
+          ...(error.nextRetryAt ? { nextRetryAt: error.nextRetryAt } : {}),
+        },
+        { status: error.status },
+      );
     }
-    return Response.json({ ok: false, error: "ingestion_failed" }, { status: 500 });
+    return Response.json(
+      { ok: false, error: "수집 기록을 저장하지 못했습니다.", code: "db_failure", retryable: true },
+      { status: 503 },
+    );
   }
 }

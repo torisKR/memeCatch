@@ -5,9 +5,21 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/oembed", () => ({ getOEmbed: mocks.getOEmbed }));
+vi.mock("@/lib/oembed", () => ({
+  getOEmbed: mocks.getOEmbed,
+  OEmbedError: class extends Error {
+    constructor(
+      message: string,
+      readonly code: "INVALID_URL" | "UNSUPPORTED_PROVIDER" | "UPSTREAM_ERROR",
+      readonly status: number,
+    ) {
+      super(message);
+    }
+  },
+}));
 
 import { ingestSource } from "./ingest.server";
+import { OEmbedError } from "@/lib/oembed";
 
 type Admin = NonNullable<Parameters<typeof ingestSource>[2]>;
 
@@ -26,12 +38,16 @@ function adminClient(options: {
   meme?: unknown;
   rpcData?: unknown;
   rpcError?: { message: string } | null;
+  resolutionError?: boolean;
 }) {
   const from = vi.fn().mockReturnValue(selectQuery(options.meme ?? null));
-  const rpc = vi.fn().mockResolvedValue({
-    data: options.rpcData ?? null,
-    error: options.rpcError ?? null,
-  });
+  const rpc = vi.fn().mockImplementation((name: string) => Promise.resolve(
+    name === "resolve_source_acquisition_failure"
+      ? { data: options.resolutionError ? null : [{ resolved: true }], error: options.resolutionError ? { message: "cleanup failed" } : null }
+      : name === "record_source_acquisition_failure"
+        ? { data: [{ attempt_count: 1, next_retry_at: null, recorded: true }], error: null }
+      : { data: options.rpcData ?? null, error: options.rpcError ?? null },
+  ));
   return { client: { from, rpc } as unknown as Admin, from, rpc };
 }
 
@@ -74,7 +90,7 @@ describe("source ingestion", () => {
       duplicate: false,
     });
     expect(from).not.toHaveBeenCalled();
-    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenCalledWith("record_source_ingestion", expect.objectContaining({
       p_platform: source.platform,
       p_external_id: source.external_id,
@@ -109,7 +125,7 @@ describe("source ingestion", () => {
     expect(mocks.getOEmbed).toHaveBeenCalledWith(source.canonical_url);
     expect(from).toHaveBeenCalledOnce();
     expect(from).toHaveBeenCalledWith("memes");
-    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenCalledWith("record_source_ingestion", expect.objectContaining({
       p_target_meme_id: memeId,
     }));
@@ -140,7 +156,7 @@ describe("source ingestion", () => {
       duplicate: true,
     });
     expect(from).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 
   it("stops before metadata and RPC when the target meme is missing", async () => {
@@ -170,6 +186,45 @@ describe("source ingestion", () => {
 
     expect(from).toHaveBeenCalledTimes(1);
     expect(from).toHaveBeenCalledWith("memes");
-    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it("classifies an upstream 502 as retryable without treating it as deletion", async () => {
+    const { client } = adminClient({ meme: { id: memeId } });
+    mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("provider unavailable", "UPSTREAM_ERROR", 502));
+
+    await expect(ingestSource({ url: source.canonical_url, targetMemeId: memeId }, userId, client))
+      .rejects.toMatchObject({ code: "provider_transient", retryable: true, status: 502 });
+  });
+
+  it("keeps an upstream 404 uncertain rather than classifying it as deletion", async () => {
+    const { client } = adminClient({ meme: { id: memeId } });
+    mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("not available", "UPSTREAM_ERROR", 404));
+
+    await expect(ingestSource({ url: source.canonical_url, targetMemeId: memeId }, userId, client))
+      .rejects.toMatchObject({ code: "provider_uncertain", retryable: false, status: 404 });
+  });
+
+  it("classifies metadata mismatch as a permanent validation failure", async () => {
+    const { client } = adminClient({ meme: { id: memeId } });
+    mocks.getOEmbed.mockResolvedValueOnce({
+      contentId: "different-id",
+      title: source.title,
+      authorName: source.channel_name,
+    });
+
+    await expect(ingestSource({ url: source.canonical_url, targetMemeId: memeId }, userId, client))
+      .rejects.toMatchObject({ code: "metadata_mismatch", retryable: false });
+  });
+
+  it("returns successful intake with a recovery cleanup warning", async () => {
+    const { client } = adminClient({
+      rpcData: [{ ingestion_id: "70000000-0000-4000-8000-000000000007", status: "linked", duplicate: false }],
+      resolutionError: true,
+    });
+
+    const result = await ingestSource({ url: source.canonical_url }, userId, client);
+
+    expect(result).toMatchObject({ status: "linked", warning: "recovery_resolution_failed" });
   });
 });

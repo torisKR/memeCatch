@@ -215,7 +215,7 @@ export async function detectSceneTimes(path, durationMs, threshold = 0.3) {
   if (durationMs <= 0) return [0];
   const { stderr } = await mediaExec("ffmpeg", [
     "-hide_banner", "-i", path, "-vf", `select=gt(scene\\,${threshold}),showinfo`,
-    "-vsync", "vfr", "-f", "null", "-",
+    "-fps_mode", "vfr", "-f", "null", "-",
   ], { maxBuffer: 16 * 1024 * 1024 });
   const values = [...stderr.matchAll(/pts_time:([0-9.]+)/g)]
     .map((match) => Math.round(Number(match[1]) * 1_000))

@@ -60,6 +60,13 @@ describe("MPE FFmpeg worker", () => {
     expect(first.some((ms) => ms >= 900 && ms <= 1_100)).toBe(true);
   });
 
+  it("uses the installed FFmpeg scene extraction compatibility mode", async () => {
+    const help = await exec("ffmpeg", ["-hide_banner", "-h", "full"]);
+    expect(help.stdout).toContain("-fps_mode");
+    expect(help.stdout).not.toContain("Unrecognized option 'vsync'");
+    await expect(worker.detectSceneTimes(videoPath, 2_000, 0.2)).resolves.toContain(0);
+  });
+
   it("fails scene detection when FFmpeg cannot run", async () => {
     const previousPath = process.env.PATH;
     process.env.PATH = "";

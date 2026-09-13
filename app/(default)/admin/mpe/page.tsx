@@ -94,7 +94,7 @@ export default async function AdminMpePage() {
                   </div>
                   <p className="mt-3 text-sm text-muted">
                     작업 {Object.entries(jobs).map(([status, count]) => `${status} ${count}`).join(" · ") || "없음"}
-                    {candidate.overall_confidence === null ? "" : ` · 후보 신뢰도 ${Math.round(candidate.overall_confidence * 100)}%`}
+                    {candidate.overall_confidence === null ? "" : ` · 자동 분석 참고값 ${Math.round(candidate.overall_confidence * 100)}%`}
                   </p>
                 </Link>
               </li>

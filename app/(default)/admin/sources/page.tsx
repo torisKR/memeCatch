@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { SourceIngestionForm, type SourceIngestionMeme } from "@/components/admin/source-ingestion-form";
 import { SourceReviewCard } from "@/components/admin/source-review-card";
+import { SourceRecoveryPanel } from "@/components/admin/source-recovery-panel";
 import { memePathFrom } from "@/lib/labels";
+import { listActiveSourceAcquisitionRecovery, type SourceAcquisitionRecoveryDto } from "@/lib/sources/recovery.server";
 
 export const metadata = { title: "출처 검수" };
 export const dynamic = "force-dynamic";
@@ -68,6 +70,14 @@ export default async function AdminSourcesPage({
 
   if (memesError) throw new Error(`밈 목록을 불러오지 못했어요: ${memesError.message}`);
 
+  let recoveryEntries: SourceAcquisitionRecoveryDto[] = [];
+  let recoveryError: string | null = null;
+  try {
+    recoveryEntries = await listActiveSourceAcquisitionRecovery();
+  } catch (error) {
+    recoveryError = error instanceof Error ? error.message : "복구 상태 조회 오류";
+  }
+
   const rows = (data ?? []).filter((row) => row.memes && row.media_sources);
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
@@ -82,6 +92,7 @@ export default async function AdminSourcesPage({
       </div>
 
       <SourceIngestionForm memes={memes ?? []} />
+      <SourceRecoveryPanel entries={recoveryEntries} memes={memes ?? []} loadError={recoveryError} />
 
       <p className="text-sm text-muted">
         대기 중 <strong className="text-foreground">{(count ?? 0).toLocaleString("ko-KR")}</strong>건

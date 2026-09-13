@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { SourceIngestionErrorCode } from "@/lib/sources/ingestion-errors";
 
 export type SourceIngestionMeme = {
   id: string;
@@ -15,6 +16,13 @@ type IngestionData = {
   canonicalUrl: string;
   rightsMode: string;
   duplicate: boolean;
+  warning?: "recovery_resolution_failed";
+};
+
+type IngestionFailure = {
+  code: SourceIngestionErrorCode;
+  error: string;
+  retryable: boolean;
 };
 
 function ingestionData(payload: unknown): IngestionData | null {
@@ -34,10 +42,17 @@ function ingestionData(payload: unknown): IngestionData | null {
   return data as IngestionData;
 }
 
-function ingestionError(payload: unknown) {
+function ingestionFailure(payload: unknown): IngestionFailure | null {
   if (!payload || typeof payload !== "object") return null;
-  const error = (payload as Record<string, unknown>).error;
-  return typeof error === "string" ? error : null;
+  const record = payload as Record<string, unknown>;
+  const error = record.error;
+  const code = record.code;
+  const retryable = record.retryable;
+  if (typeof error !== "string") return null;
+  if (typeof code !== "string" || typeof retryable !== "boolean") {
+    return { code: "db_failure", error, retryable: false };
+  }
+  return { error, code: code as SourceIngestionErrorCode, retryable };
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -66,35 +81,56 @@ export function SourceIngestionForm({ memes }: { memes: SourceIngestionMeme[] })
   const [targetMemeId, setTargetMemeId] = useState("");
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<IngestionData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<IngestionFailure | null>(null);
+  const [failedInput, setFailedInput] = useState<{ url: string; targetMemeId: string } | null>(null);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit(event?: React.FormEvent<HTMLFormElement>, retry = false) {
+    event?.preventDefault();
     if (pending) return;
+    if (retry && (!failedInput || failedInput.url !== url || failedInput.targetMemeId !== targetMemeId)) {
+      setFailure({
+        code: "provider_transient",
+        error: "입력한 URL 또는 연결할 밈이 바뀌었어요. 현재 값으로 다시 시도해 주세요.",
+        retryable: false,
+      });
+      return;
+    }
 
     setPending(true);
-    setError(null);
+    setFailure(null);
     setResult(null);
 
     try {
       const response = await fetch("/api/admin/source-ingestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, targetMemeId }),
+        body: JSON.stringify({ url, targetMemeId, ...(retry ? { retry: true } : {}) }),
       });
       const payload: unknown = await response.json();
       const data = ingestionData(payload);
 
       if (!response.ok || !data) {
-        setError(ingestionError(payload) ?? "출처를 수집하지 못했어요.");
+        const nextFailure = ingestionFailure(payload) ?? {
+          code: "db_failure" as const,
+          error: "출처를 수집하지 못했어요. 잠시 후 다시 시도해 주세요.",
+          retryable: true,
+        };
+        setFailure(nextFailure);
+        setFailedInput({ url, targetMemeId });
         return;
       }
 
       setResult(data);
+      setFailedInput(null);
       setUrl("");
       router.refresh();
     } catch {
-      setError("출처를 수집하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setFailure({
+        code: "provider_transient",
+        error: "출처를 수집하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.",
+        retryable: true,
+      });
+      setFailedInput({ url, targetMemeId });
     } finally {
       setPending(false);
     }
@@ -111,8 +147,8 @@ export function SourceIngestionForm({ memes }: { memes: SourceIngestionMeme[] })
         </p>
       </div>
 
-      <form onSubmit={submit} className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)_auto] lg:items-end">
-        <label className="block">
+      <form onSubmit={submit} className="mt-4 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)_auto] lg:items-end">
+        <label className="block min-w-0 overflow-hidden" style={{ width: "100%" }}>
           <span className="mb-1 block text-base font-medium">SNS URL</span>
           <input
             type="url"
@@ -121,17 +157,18 @@ export function SourceIngestionForm({ memes }: { memes: SourceIngestionMeme[] })
             placeholder="https://www.youtube.com/watch?v=…"
             required
             autoComplete="url"
-            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 text-base"
+            className="min-h-11 w-full max-w-full rounded-lg border border-border bg-background px-3 text-base"
           />
         </label>
 
-        <label className="block">
+        <label className="block min-w-0 overflow-hidden" style={{ width: "100%" }}>
           <span className="mb-1 block text-base font-medium">연결할 밈</span>
           <select
             value={targetMemeId}
             onChange={(event) => setTargetMemeId(event.target.value)}
             required
-            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 text-base"
+            style={{ width: "100%", maxWidth: "100%", minWidth: 0 }}
+            className="min-h-11 min-w-0 w-full max-w-full appearance-none rounded-lg border border-border bg-background px-3 text-base"
           >
             <option value="">밈을 선택하세요</option>
             {memes.map((meme) => (
@@ -157,17 +194,33 @@ export function SourceIngestionForm({ memes }: { memes: SourceIngestionMeme[] })
         </p>
       )}
 
-      {error && (
-        <p role="alert" className="mt-4 rounded-lg bg-safety-red-bg p-3 text-sm text-safety-red">
-          {error}
-        </p>
+      {failure && (
+        <div role="alert" className="mt-4 rounded-lg bg-safety-red-bg p-3 text-sm text-safety-red">
+          <p>{failure.error}</p>
+          <p className="mt-1 text-xs">자동 메타데이터 확인 결과일 뿐, 원본성이나 권리를 승인한 것은 아니에요.</p>
+          {failure.retryable && failedInput && (
+            <button
+              type="button"
+              onClick={() => void submit(undefined, true)}
+              disabled={pending}
+              className="mt-3 min-h-11 rounded-lg border border-current px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pending ? "다시 확인 중…" : "같은 입력으로 다시 확인"}
+            </button>
+          )}
+        </div>
       )}
 
       {result && (
         <div role="status" className="mt-4 rounded-lg bg-safety-green-bg p-3 text-sm text-safety-green">
           <p className="font-semibold">
-            {result.duplicate ? "이미 등록된 출처예요." : "검수 대기에 추가했어요."}
+            {result.duplicate ? "이미 등록된 출처예요." : "검수 대기 후보를 만들었어요."}
           </p>
+          {result.warning === "recovery_resolution_failed" && (
+            <p className="mt-2 rounded-lg bg-safety-yellow-bg p-3 text-sm text-safety-yellow">
+              출처 접수는 성공했어요. 다만 이전 복구 기록 정리가 완료되지 않았어요. 이 성공한 접수를 다시 제출하지 말고, 아래 복구 상태에서 운영자가 확인해 주세요.
+            </p>
+          )}
           <dl className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[max-content_1fr]">
             <dt>플랫폼</dt>
             <dd>{PLATFORM_LABELS[result.platform] ?? result.platform}</dd>
@@ -175,6 +228,12 @@ export function SourceIngestionForm({ memes }: { memes: SourceIngestionMeme[] })
             <dd>{RIGHTS_MODE_LABELS[result.rightsMode] ?? result.rightsMode}</dd>
             <dt>상태</dt>
             <dd>{statusLabel(result)}</dd>
+            {!result.duplicate && (
+              <>
+                <dt>다음 단계</dt>
+                <dd>운영자 검수 후에만 공개돼요.</dd>
+              </>
+            )}
             <dt>정규 URL</dt>
             <dd className="min-w-0">
               <a

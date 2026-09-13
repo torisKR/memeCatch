@@ -18,6 +18,7 @@ import {
   type RightsBasis,
   type SourceRole,
 } from "@/lib/sources/review";
+import { MpeReviewTransparency } from "./mpe-review-transparency";
 
 export type MpeReviewStatus =
   | "FACT_CHECKING"
@@ -212,7 +213,7 @@ export function MpeReviewConsole(props: MpeReviewConsoleProps) {
               {props.candidate.memeType} · {STATUS_LABEL[props.candidate.reviewStatus]}
               {props.candidate.overallConfidence === null
                 ? ""
-                : ` · 신뢰도 ${Math.round(props.candidate.overallConfidence * 100)}%`}
+                : ` · 자동 분석 참고값 ${Math.round(props.candidate.overallConfidence * 100)}%`}
             </p>
           </div>
           <span className="rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">
@@ -235,6 +236,10 @@ export function MpeReviewConsole(props: MpeReviewConsoleProps) {
             공식 출처 열기
           </a>
         )}
+        <MpeReviewTransparency
+          draft={props.candidate.draft}
+          confidence={props.candidate.overallConfidence}
+        />
       </section>
 
       <section className="rounded-xl border border-border bg-surface p-5">

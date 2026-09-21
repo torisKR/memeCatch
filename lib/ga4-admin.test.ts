@@ -68,6 +68,39 @@ describe("authorized GA4 reporting", () => {
     expect(fetchMock.mock.calls.every(([, init]) => init.cache === "no-store" && init.redirect === "error" && init.signal)).toBe(true);
     expect(JSON.stringify(result)).not.toContain("test-token");
   });
+  it("loads dashboard periods, today sessions and ranked breakdowns with one token", async () => {
+    token();
+    const dimension = (name: string, value: string) => ({ ...response(), dimensionHeaders: [{ name }], rows: [{ ...response().rows[0], dimensionValues: [{ value }] }], rowCount: 42 });
+    fetchMock.mockResolvedValueOnce(ok(response()))
+      .mockResolvedValueOnce(ok(response(true)))
+      .mockResolvedValueOnce(ok(response(false, ["7", "12", "19", "21"])))
+      .mockResolvedValueOnce(ok(dimension("sessionDefaultChannelGroup", "Organic Search")))
+      .mockResolvedValueOnce(ok(dimension("pagePath", "/memes/test")));
+    const result = await getAdminGA4Report("dashboard");
+    expect(result).toMatchObject({ status: "ready", today: { sessions: 12 }, channels: [{ name: "Organic Search", sessions: 10 }], pages: [{ name: "/memes/test", screenPageViews: 15 }] });
+    const requests = fetchMock.mock.calls.slice(1).map(([, init]) => JSON.parse(init.body));
+    expect(requests[0].dateRanges).toEqual([{ startDate: "14daysAgo", endDate: "yesterday" }]);
+    expect(requests[1].limit).toBe("14");
+    expect(requests[2].dateRanges).toEqual([{ startDate: "today", endDate: "today" }]);
+    expect(requests[3].orderBys).toEqual([{ metric: { metricName: "sessions" }, desc: true }]);
+    expect(requests[4].orderBys).toEqual([{ metric: { metricName: "screenPageViews" }, desc: true }]);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(requireOperatorPage).toHaveBeenCalledWith("/admin");
+  });
+  it("keeps today's traffic visible when the historical period is empty", async () => {
+    token();
+    for (const daily of [false, true]) fetchMock.mockResolvedValueOnce(ok({ ...response(daily), rows: [], rowCount: 0 }));
+    fetchMock.mockResolvedValueOnce(ok(response()));
+    for (const name of ["sessionDefaultChannelGroup", "pagePath"]) fetchMock.mockResolvedValueOnce(ok({ ...response(), dimensionHeaders: [{ name }], rows: [], rowCount: 0 }));
+    expect(await getAdminGA4Report("dashboard")).toMatchObject({ status: "ready", today: { sessions: 10 }, daily: [], historicalEmpty: true });
+  });
+  it("does not replace empty today with zero sessions", async () => {
+    token();
+    fetchMock.mockResolvedValueOnce(ok(response())).mockResolvedValueOnce(ok(response(true)))
+      .mockResolvedValueOnce(ok({ ...response(), rows: [], rowCount: 0 }));
+    for (const name of ["sessionDefaultChannelGroup", "pagePath"]) fetchMock.mockResolvedValueOnce(ok({ ...response(), dimensionHeaders: [{ name }], rows: [], rowCount: 0 }));
+    expect(await getAdminGA4Report("dashboard")).toMatchObject({ status: "ready", today: null });
+  });
   it("keeps returned zero metrics as genuine data", async () => {
     token();
     fetchMock.mockResolvedValueOnce(ok(response(false, ["0", "0", "0", "0"]))).mockResolvedValueOnce(ok(response(true, ["0", "0", "0", "0"])));

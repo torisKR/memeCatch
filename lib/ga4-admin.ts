@@ -20,7 +20,11 @@ export type GA4Report =
   | { status: "empty" }
   | {
       status: "ready";
-      totals: GA4Metrics;
+      totals: GA4Metrics | null;
+      historicalEmpty?: boolean;
+      today?: GA4Metrics | null;
+      channels?: (GA4Metrics & { name: string })[];
+      pages?: (GA4Metrics & { name: string })[];
       daily: (GA4Metrics & { date: string })[];
       timeZone: string | null;
       thresholded: boolean;
@@ -71,20 +75,23 @@ async function googleJson(url: string, init: RequestInit, tokenRequest = false):
   }
 }
 
-function parseReport(input: unknown, daily: boolean) {
+function parseReport(input: unknown, dimension = "", limit = 1) {
+  const daily = dimension === "date";
+  const ranked = dimension !== "" && !daily;
   const parsed = reportSchema.safeParse(input);
   if (!parsed.success) throw new ReportFailure("invalid_response");
   const report = parsed.data;
   if (report.metricHeaders.map((h) => h.name).join() !== METRICS.join()
-    || (report.dimensionHeaders ?? []).map((h) => h.name).join() !== (daily ? "date" : "")) {
+    || (report.dimensionHeaders ?? []).map((h) => h.name).join() !== dimension) {
     throw new ReportFailure("invalid_response");
   }
   const rows = report.rows ?? [];
-  if ((report.rowCount !== undefined && report.rowCount !== rows.length)
-    || rows.length > (daily ? 28 : 1)) throw new ReportFailure("invalid_response");
+  if ((report.rowCount !== undefined && (ranked ? report.rowCount < rows.length : report.rowCount !== rows.length))
+    || rows.length > limit) throw new ReportFailure("invalid_response");
   for (const row of rows) {
     if (row.metricValues.length !== METRICS.length
-      || (daily && (row.dimensionValues?.length !== 1 || !/^\d{8}$/.test(row.dimensionValues[0].value)))) {
+      || (dimension && row.dimensionValues?.length !== 1)
+      || (daily && !/^\d{8}$/.test(row.dimensionValues![0].value))) {
       throw new ReportFailure("invalid_response");
     }
   }
@@ -101,9 +108,9 @@ function metrics(values: { value: number }[]): GA4Metrics {
 }
 
 /** Authorized DAL; no public API, no credentials or raw upstream errors leave this module. */
-export async function getAdminGA4Report(): Promise<GA4Report> {
+export async function getAdminGA4Report(mode: "analytics" | "dashboard" = "analytics"): Promise<GA4Report> {
   // Keep redirects outside the error boundary and authorization before config/network access.
-  await requireOperatorPage("/admin/analytics");
+  await requireOperatorPage(mode === "dashboard" ? "/admin" : "/admin/analytics");
   const missing = REQUIRED_ENV.filter((name) => !process.env[name]?.trim());
   if (missing.length) return { status: "missing_config", missing };
 
@@ -141,34 +148,44 @@ export async function getAdminGA4Report(): Promise<GA4Report> {
     }, true));
     if (!token.success) throw new ReportFailure("invalid_response");
 
-    const run = async (daily: boolean) => parseReport(await googleJson(
+    const days = mode === "dashboard" ? 14 : 28;
+    const run = async (dimension = "", today = false, sort?: string) => parseReport(await googleJson(
       `https://analyticsdata.googleapis.com/v1beta/properties/${property}:runReport`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token.data.access_token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          dateRanges: [{ startDate: "28daysAgo", endDate: "yesterday" }],
+          dateRanges: [{ startDate: today ? "today" : `${days}daysAgo`, endDate: today ? "today" : "yesterday" }],
           metrics: METRICS.map((name) => ({ name })),
-          dimensions: daily ? [{ name: "date" }] : [],
-          ...(daily ? { orderBys: [{ dimension: { dimensionName: "date" } }] } : {}),
-          limit: daily ? "28" : "1",
+          dimensions: dimension ? [{ name: dimension }] : [],
+          ...(sort ? { orderBys: [{ metric: { metricName: sort }, desc: true }] } : dimension === "date" ? { orderBys: [{ dimension: { dimensionName: "date" } }] } : {}),
+          limit: String(dimension === "date" ? days : dimension ? 10 : 1),
           keepEmptyRows: true,
         }),
       },
-    ), daily);
+    ), dimension, dimension === "date" ? days : dimension ? 10 : 1);
     // A distinct undimensioned report avoids double-counting active users across dates.
-    const [summary, daily] = await Promise.all([run(false), run(true)]);
-    if (!summary.rows.length && !daily.rows.length) return { status: "empty" };
-    if (!summary.rows.length || !daily.rows.length) throw new ReportFailure("invalid_response");
+    const [summary, daily, today, channels, pages] = await Promise.all([
+      run(), run("date"),
+      ...(mode === "dashboard" ? [run("", true), run("sessionDefaultChannelGroup", false, "sessions"), run("pagePath", false, "screenPageViews")] : []),
+    ]);
+    if (!summary.rows.length && !daily.rows.length && !today?.rows.length) return { status: "empty" };
+    if (!!summary.rows.length !== !!daily.rows.length) throw new ReportFailure("invalid_response");
     return {
       status: "ready",
-      totals: metrics(summary.rows[0].metricValues),
+      totals: summary.rows.length ? metrics(summary.rows[0].metricValues) : null,
+      historicalEmpty: !summary.rows.length,
+      ...(mode === "dashboard" ? {
+        today: today?.rows.length ? metrics(today.rows[0].metricValues) : null,
+        channels: channels?.rows.map((row) => ({ name: row.dimensionValues![0].value, ...metrics(row.metricValues) })) ?? [],
+        pages: pages?.rows.map((row) => ({ name: row.dimensionValues![0].value, ...metrics(row.metricValues) })) ?? [],
+      } : {}),
       daily: daily.rows.map((row) => {
         const date = row.dimensionValues![0].value;
         return { date: `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`, ...metrics(row.metricValues) };
       }),
       timeZone: summary.metadata?.timeZone ?? null,
-      thresholded: summary.metadata?.subjectToThresholding === true || daily.metadata?.subjectToThresholding === true,
+      thresholded: [summary, daily, today, channels, pages].some((report) => report?.metadata?.subjectToThresholding === true),
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
   withAllowlistedSearch,
@@ -13,7 +14,8 @@ import {
  * 통과 시 세션 supabase 클라이언트와 user를 반환해 페이지가 재사용한다.
  * (Server Action 쪽은 lib/actions/admin.ts의 requireOperator가 동일 검증을 수행)
  */
-export async function requireOperatorPage(
+// Request-scoped memoization: page and authorized DAL share the same check.
+export const requireOperatorPage = cache(async function requireOperatorPage(
   nextPath: string = "/admin",
   search?: AuthReturnSearch,
 ) {
@@ -26,4 +28,4 @@ export async function requireOperatorPage(
   const { data: isOperator, error: operatorError } = await supabase.rpc("is_operator");
   if (operatorError || isOperator !== true) redirect("/");
   return { supabase, user };
-}
+});

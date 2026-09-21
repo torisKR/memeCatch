@@ -3,6 +3,8 @@ import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hoursAgoIso } from "@/components/admin/constants";
 import { getAdminStats } from "@/lib/actions/admin-stats";
+import { getAdminGA4Report } from "@/lib/ga4-admin";
+import { GA4DashboardPanel } from "@/components/admin/ga4-dashboard-panel";
 import { memePathFrom } from "@/lib/labels";
 
 export const metadata = { title: "대시보드" };
@@ -14,7 +16,7 @@ export default async function AdminDashboardPage() {
   const admin = createAdminClient();
   const dayAgo = hoursAgoIso(24);
 
-  const stats = await getAdminStats();
+  const [stats, ga4] = await Promise.all([getAdminStats(), getAdminGA4Report("dashboard")]);
 
   const [pendingRes, reportsRes, sourcesRes, safetyRes, translationsRes, jobRes, viewsRes] = await Promise.all([
     supabase
@@ -138,33 +140,19 @@ export default async function AdminDashboardPage() {
     },
   ];
 
-  // 어제 대비 증감 — 0에서 시작하면 비율이 의미 없으므로 절대값도 함께 보여준다
-  const dv = stats.today.views - stats.yesterday.views;
-  const ds = stats.today.sessions - stats.yesterday.sessions;
-  const maxViews = Math.max(1, ...stats.last14.map((d) => d.views));
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">대시보드</h1>
+      <GA4DashboardPanel report={ga4} />
 
-      {/* 오늘 지표 (KST) */}
+      {/* DB 운영 지표 — GA4 방문 지표와 분리 */}
       <section aria-labelledby="today-stats" className="space-y-3">
         <h2 id="today-stats" className="text-lg font-bold">
-          오늘 <span className="text-sm font-normal text-muted">(한국시간 기준)</span>
+          서비스 운영 <span className="text-sm font-normal text-muted">(DB 기준)</span>
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="오늘 방문 세션"
-            value={stats.today.sessions.toLocaleString("ko-KR")}
-            delta={ds}
-            sub={`어제 ${stats.yesterday.sessions.toLocaleString("ko-KR")}`}
-          />
-          <StatCard
-            label="오늘 밈 조회"
-            value={stats.today.views.toLocaleString("ko-KR")}
-            delta={dv}
-            sub={`어제 ${stats.yesterday.views.toLocaleString("ko-KR")}`}
-          />
+
           <StatCard
             label="전체 회원"
             value={stats.totals.users.toLocaleString("ko-KR")}
@@ -182,39 +170,12 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* 최근 14일 추이 */}
-      <section aria-labelledby="trend-14" className="rounded-xl border border-border bg-surface p-5">
-        <h2 id="trend-14" className="text-lg font-bold">
-          최근 14일 조회 추이
-        </h2>
-        {stats.last14.every((d) => d.views === 0) ? (
-          <p className="mt-2 text-sm text-muted">
-            아직 집계된 조회가 없어요. 방문이 생기면 여기에 쌓입니다.
-          </p>
-        ) : (
-          <div className="mt-4 flex items-end gap-1" style={{ height: 96 }}>
-            {stats.last14.map((d) => (
-              <div key={d.date} className="group relative flex-1">
-                <div
-                  className="w-full rounded-t bg-accent-strong/80"
-                  style={{ height: `${Math.round((d.views / maxViews) * 88)}px`, minHeight: d.views > 0 ? 3 : 1 }}
-                  title={`${d.date} · 조회 ${d.views} · 세션 ${d.sessions}`}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="mt-2 flex justify-between text-xs tabular-nums text-muted">
-          <span>{stats.last14[0]?.date}</span>
-          <span>{stats.last14[stats.last14.length - 1]?.date}</span>
-        </div>
-      </section>
 
       {/* 인기 밈 */}
       {stats.topMemes.length > 0 && (
         <section aria-labelledby="top-memes" className="rounded-xl border border-border bg-surface p-5">
           <h2 id="top-memes" className="text-lg font-bold">
-            최근 14일 인기 밈
+            최근 14일 인기 밈 · DB view_events 기준
           </h2>
           <ol className="mt-3 divide-y divide-border">
             {stats.topMemes.map((m, i) => (

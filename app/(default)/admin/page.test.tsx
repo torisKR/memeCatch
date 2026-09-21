@@ -1,0 +1,28 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
+vi.mock("@/app/(default)/admin/require-operator", () => ({ requireOperatorPage: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/actions/admin-stats", () => ({ getAdminStats: vi.fn() }));
+vi.mock("@/lib/ga4-admin", () => ({ getAdminGA4Report: vi.fn() }));
+import { requireOperatorPage } from "./require-operator";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminStats } from "@/lib/actions/admin-stats";
+import { getAdminGA4Report } from "@/lib/ga4-admin";
+import Page from "./page";
+it("uses GA4 for traffic and preserves operational DB metrics without DB traffic fallback", async () => {
+  const query: Record<string, unknown> = {};
+  for (const name of ["from", "select", "eq", "gt", "order", "limit"]) query[name] = vi.fn(() => query);
+  query.maybeSingle = vi.fn(async () => ({ data: null }));
+  vi.mocked(requireOperatorPage).mockResolvedValue({ supabase: query } as never);
+  vi.mocked(createAdminClient).mockReturnValue(query as never);
+  vi.mocked(getAdminStats).mockResolvedValue({ today: { views: 999999, sessions: 888888 }, yesterday: { views: 0, sessions: 0 }, last14: [{ date: "2026-09-21", views: 999999, sessions: 888888 }], totals: { users: 42, newUsers7d: 2, plusActive: 3, savedMemes: 4, communityPosts: 5 }, topMemes: [] });
+  vi.mocked(getAdminGA4Report).mockResolvedValue({ status: "error", reason: "quota" });
+  const html = renderToStaticMarkup(await Page());
+  expect(getAdminGA4Report).toHaveBeenCalledWith("dashboard");
+  expect(html).toContain("할당량");
+  expect(html).toContain("전체 회원");
+  expect(html).toContain("42");
+  expect(html).not.toContain("999,999");
+  expect(html).not.toContain("888,888");
+});

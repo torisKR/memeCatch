@@ -15,6 +15,7 @@ const errors = {
 };
 
 export function GA4ReportPanel({ report }: { report: GA4Report }) {
+  if (report.status === "ready" && !report.totals) return <GA4ReportPanel report={{ status: "empty" }} />;
   if (report.status !== "ready") {
     return (
       <section role="status" className="space-y-3 rounded-xl border border-border bg-surface p-5">
@@ -31,7 +32,7 @@ export function GA4ReportPanel({ report }: { report: GA4Report }) {
     <p className="text-sm text-muted">속성 시간대: {report.timeZone ?? "제공되지 않음"} · 조회 시각: {report.fetchedAt}</p>
     {report.thresholded && <p role="status" className="rounded-lg border border-border p-3 text-sm">Google 개인정보 보호 기준에 따라 일부 데이터가 제한될 수 있어요.</p>}
     <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => <div key={key} className="rounded-xl border border-border bg-surface p-4"><dt className="text-sm text-muted">{labels[key]}</dt><dd className="mt-2 text-2xl font-bold tabular-nums">{report.totals[key].toLocaleString("ko-KR")}</dd></div>)}
+      {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => <div key={key} className="rounded-xl border border-border bg-surface p-4"><dt className="text-sm text-muted">{labels[key]}</dt><dd className="mt-2 text-2xl font-bold tabular-nums">{report.totals![key].toLocaleString("ko-KR")}</dd></div>)}
     </dl>
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
       <table className="w-full text-left text-sm">

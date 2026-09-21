@@ -22,6 +22,14 @@ import LocalizedRootLayout, {
 } from "@/app/[locale]/layout";
 
 describe("multiple root layouts", () => {
+  it("does not render the Coupang banner or its reserved space", () => {
+    const html = renderToStaticMarkup(
+      KoreanRootLayout({ children: <main>content</main> }),
+    );
+    expect(html).not.toContain("coupang.com");
+    expect(html).not.toContain("h-[131px]");
+    expect(html).not.toContain("md:h-[151px]");
+  });
   it("정적 기본 로케일(ko) 문서를 서버 렌더한다 — ISR 유지", () => {
     const messages = getMessages("ko");
 

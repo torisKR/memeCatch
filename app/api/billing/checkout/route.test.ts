@@ -29,7 +29,10 @@ vi.mock("@/lib/growth/events.server", () => ({
 import { POST } from "./route";
 
 function request(locale?: string): Request {
-  const init: RequestInit = { method: "POST" };
+  const init: RequestInit = {
+    method: "POST",
+    headers: { origin: "https://catchmeme.com" },
+  };
   if (locale !== undefined) init.body = new URLSearchParams({ locale });
   return new Request("https://catchmeme.com/api/billing/checkout", init);
 }
@@ -51,6 +54,18 @@ beforeEach(() => {
 });
 
 describe("billing checkout order lifecycle", () => {
+  it("rejects a cross-origin checkout before reading cookie-backed auth", async () => {
+    const response = await POST(new Request("https://catchmeme.com/api/billing/checkout", {
+      method: "POST",
+      headers: { origin: "https://evil.example" },
+    }));
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "invalid_origin" });
+    expect(mocks.getCurrentBillingUser).not.toHaveBeenCalled();
+  });
+
   it.each([undefined, "", "false", "TRUE", "true-ish"]) (
     "fails closed when the checkout switch is %s",
     async (value) => {
@@ -90,6 +105,30 @@ describe("billing checkout order lifecycle", () => {
       mocks.createUnifiPaymentLink.mock.invocationCallOrder[0],
     );
     expect(mocks.attachUnifiPaymentLink).toHaveBeenCalledWith("user-1", "MC-user-1", "link-1");
+  });
+
+  it("does not redirect to payment when link ownership cannot be persisted", async () => {
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+    mocks.attachUnifiPaymentLink.mockRejectedValue(new Error("database unavailable"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const response = await POST(request("en"));
+      expect(response.status).toBe(502);
+      expect(response.headers.get("location")).toBeNull();
+      expect(mocks.failBillingOrder).toHaveBeenCalledWith("user-1", "MC-user-1");
+    } finally { log.mockRestore(); }
+  });
+
+  it("does not issue a payment link when the pending order cannot be created", async () => {
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+    mocks.createBillingOrder.mockRejectedValue(new Error("database unavailable"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const response = await POST(request("en"));
+      expect(response.status).toBe(502);
+      expect(mocks.createUnifiPaymentLink).not.toHaveBeenCalled();
+      expect(mocks.attachUnifiPaymentLink).not.toHaveBeenCalled();
+    } finally { log.mockRestore(); }
   });
 
   it("marks the pending order failed when link issuance fails", async () => {
@@ -133,6 +172,20 @@ describe("billing checkout order lifecycle", () => {
 
 
 describe("billing checkout locale handoff", () => {
+  it.each([
+    ["ko", "/premium?checkout=return"],
+    ["en", "/premium?checkout=return"],
+    ["ja", "/premium?checkout=return"],
+    ["zh", "/premium?checkout=return"],
+    ["zh-tw", "/premium?checkout=return"],
+  ])("returns %s buyers to an existing localized premium route", async (locale, returnPath) => {
+    mocks.getCurrentBillingUser.mockResolvedValue({ id: "user-1" });
+    const response = await POST(request(locale));
+    expect(response.status).toBe(303);
+    expect(mocks.createUnifiPaymentLink).toHaveBeenCalledWith(
+      expect.anything(), expect.objectContaining({ returnPath }),
+    );
+  });
   it.each([
     ["ko", "/pricing"],
     ["en", "/en/pricing"],

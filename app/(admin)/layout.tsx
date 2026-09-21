@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function PrivateAdminDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="theme-ink bg-background text-foreground">
+      <body className="bg-background text-foreground">
         <AdminLayout>{children}</AdminLayout>
       </body>
     </html>

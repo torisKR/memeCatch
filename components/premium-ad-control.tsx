@@ -9,7 +9,6 @@ import { usePremium } from "@/lib/hooks/use-premium";
  * 전 사이트 ISR 레이아웃을 dynamic으로 강등시키지 않으려면 서버에서 프리미엄을 판별할 수
  * 없으므로, 클라이언트에서만 판별해 <html data-premium="1">을 토글한다.
  * - AdSense Auto Ads가 주입한 요소 → globals.css가 이 속성으로 숨김
- * - 쿠팡 배너(CoupangDock) → 컴포넌트 자체가 프리미엄이면 렌더하지 않음
  */
 export function PremiumAdControl() {
   const isPremium = usePremium();

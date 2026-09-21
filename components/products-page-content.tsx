@@ -62,7 +62,6 @@ export function ProductsPageContent({
         </AlertDescription>
       </Alert>
 
-      {/* 쿠팡 배너는 전역 푸터로 이동(전 페이지 하단) — 중복 노출 방지 */}
       <AffiliateProductGrid data={storefront} locale={locale} />
 
       {/* 에디터 픽 — 활성 상품만 노출, 전부 만료면 섹션 자체를 숨긴다 */}

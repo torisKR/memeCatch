@@ -120,17 +120,17 @@ declare global {
   }
 }
 
-export function track(event: GtagEvent, params?: Record<string, string | number>) {
+export function track(event: GtagEvent, params?: Record<string, string | number>, destination: "both" | "ga" | "durable" = "both") {
   // 검색어는 민감 정보가 될 수 있다. 호출부가 실수로 query를 계속 전달해도
   // GA와 durable ledger 어느 쪽에도 도달하지 않도록 단일 경계에서 제거한다.
   const eventParams = { ...(params ?? {}) };
   delete eventParams.query;
   try {
-    window.gtag?.("event", event, eventParams);
+    if (destination !== "durable") window.gtag?.("event", event, eventParams);
   } catch {
     /* 분석 실패가 UX를 깨면 안 됨 */
   }
-  sendDurableGrowthEvent(event, eventParams);
+  if (destination !== "ga") sendDurableGrowthEvent(event, eventParams);
 }
 
 /**

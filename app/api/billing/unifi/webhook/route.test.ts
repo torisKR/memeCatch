@@ -173,6 +173,18 @@ describe("unifi webhook attribution", () => {
     });
   });
 
+  it("acknowledges a verified redelivery when the settlement RPC reports a duplicate", async () => {
+    getUnifiPayTransaction.mockResolvedValue(CONFIRMED_TX);
+    processUnifiPaymentEvent.mockResolvedValueOnce({ duplicate: true, matched: true });
+    const res = await POST(webhookRequest({
+      transactionId: "tx_1", orderId: "LINK-goodlink-abc", status: "CONFIRMED",
+    }));
+    expect(res.status).toBe(200);
+    expect(processUnifiPaymentEvent).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      providerLinkId: "goodlink", transactionId: "tx_1", status: "CONFIRMED",
+    }));
+  });
+
   it("귀속 탈취를 차단한다 — body linkId가 인증 조회의 orderId와 다르면 무시", async () => {
     // 공격: 실결제 tx_1(정당한 링크 goodlink)의 transactionId를 알아낸 뒤,
     // 자기 계정의 linkId(evillink)를 body orderId에 실어 보낸다.

@@ -41,6 +41,9 @@ describe("admin activity boundaries", () => {
   it("uses an isolated no-referrer document without marketing chrome or external scripts", () => {
     const html = renderToStaticMarkup(<PrivateAdminDocument><p>private activity</p></PrivateAdminDocument>);
     expect(html).toContain("private activity");
+    // Match the shared admin layout's system-selected light/dark tokens.
+    expect(html).not.toContain("theme-ink");
+    expect(html).toContain('class="bg-background text-foreground"');
     expect(html).not.toMatch(/<iframe|<script|<footer|googletagmanager|ads-partners/);
     expect(privateMetadata.referrer).toBe("no-referrer");
     expect(privateMetadata.robots).toEqual({ index: false, follow: false });

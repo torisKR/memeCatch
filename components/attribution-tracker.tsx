@@ -92,10 +92,15 @@ export function AttributionTracker() {
     if (isNewUser) writeStored(localStore, FIRST_TOUCH_KEY, firstTouch);
     writeStored(sessionStore, SESSION_TOUCH_KEY, sessionTouch);
 
-    // ── 4. GA4 전송 ────────────────────────────────────────
-    // 저장(위)은 GA 차단 환경에서도 남겨야 하므로 동기로 끝내고,
-    // 전송만 gtag 준비 이후로 미룬다.
+    // Durable acquisition must not depend on optional/blocked GA.
     const landingPage = window.location.pathname.slice(0, 100);
+    const acquisitionParams = {
+      ...toGtagParams(sessionTouch),
+      ...toGtagParams(firstTouch, "first_"),
+      landing_page: landingPage,
+      is_returning: isNewUser ? "false" : "true",
+    };
+    if (sessionExpired) track("traffic_source", acquisitionParams, "durable");
 
     return whenGtagReady(() => {
       // 4-1) 내장 캠페인 필드 — 표준 보고서의 Direct 오분류를 되살린다.
@@ -116,13 +121,7 @@ export function AttributionTracker() {
       // 4-3) 원본 기록 — 세션당 1회.
       //      판별 근거(resolved_by)를 함께 남겨야 수치를 나중에 검증할 수 있다.
       if (sessionExpired) {
-        track("traffic_source", {
-          ...toGtagParams(sessionTouch),
-          ...toGtagParams(firstTouch, "first_"),
-          landing_page: landingPage,
-          // 첫 방문인지 재방문인지 — 재방문 채널 분석의 출발점
-          is_returning: isNewUser ? "false" : "true",
-        });
+        track("traffic_source", acquisitionParams, "ga");
       }
     });
   }, []);

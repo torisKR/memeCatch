@@ -3,7 +3,6 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { AttributionTracker } from "@/components/attribution-tracker";
 import { BottomNav } from "@/components/bottom-nav";
 import { ChangelogModal } from "@/components/changelog-modal";
-import { CoupangDock } from "@/components/coupang-dock";
 import { GlobalHeader } from "@/components/global-header";
 import { NavProgress } from "@/components/nav-progress";
 import { PremiumAdControl } from "@/components/premium-ad-control";
@@ -50,18 +49,13 @@ export function RootDocument({
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>
-          {GA_ID && (
-            <>
-              <GoogleAnalytics gaId={GA_ID} />
-              <AttributionTracker />
-            </>
-          )}
+          {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
+          <AttributionTracker />
           <OrganizationJsonLd />
           <GlobalHeader />
           <div className="flex-1">{children}</div>
           <SiteFooter />
           <PremiumAdControl />
-          <CoupangDock />
           <BottomNav />
           <PwaInstall />
           <ChangelogModal />

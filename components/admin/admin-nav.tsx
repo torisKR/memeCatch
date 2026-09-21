@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/admin", label: "대시보드", icon: GaugeIcon },
   { href: "/admin/activity", label: "사용자 활동", icon: UsersIcon },
+  { href: "/admin/analytics", label: "GA4 리포트", icon: GaugeIcon },
   { href: "/admin/submissions", label: "제보 큐", icon: InboxIcon },
   { href: "/admin/sources", label: "출처 검수", icon: LinkIcon },
   { href: "/admin/mpe", label: "MPE 검수", icon: InboxIcon },

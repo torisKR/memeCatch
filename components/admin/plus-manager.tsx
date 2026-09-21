@@ -179,27 +179,31 @@ export function PlusManager() {
               </dl>
 
               {/* 구독 이력 — provider·금액·기간 단위 (감사 gap #5) */}
-              {(status.subscriptions?.length ?? 0) > 0 && (
-                <details className="mt-4 border-t border-border pt-3">
-                  <summary className="cursor-pointer text-sm font-bold">
-                    구독 이력 ({status.subscriptions!.length})
-                  </summary>
-                  <ul className="mt-2 space-y-1.5 text-sm">
-                    {status.subscriptions!.map((sub, i) => (
-                      <li key={i} className="flex items-baseline justify-between gap-2">
-                        <span className="text-muted">
-                          {sub.isManual ? "수동" : (PROVIDER_LABELS[sub.provider] ?? sub.provider)}
-                          {" · "}{sub.status}
-                        </span>
-                        <span className="font-semibold tabular-nums">
-                          {sub.amount != null ? `$${(sub.amount / 100).toFixed(2)}` : "—"}
-                          {" ~ "}{fmtDate(sub.currentPeriodEnd)}
-                        </span>
-                      </li>
+              <div className="mt-4 overflow-x-auto rounded-xl border border-border" role="region" aria-label="구독 이력 표" tabIndex={0}>
+                <table className="w-full min-w-[480px] text-left text-sm">
+                  <caption className="px-3 py-3 text-left font-bold">구독 이력</caption>
+                  <thead className="border-y border-border bg-surface-2 text-muted">
+                    <tr>
+                      {["부여 방식", "구독 상태", "금액", "유효 기간"].map((label) => (
+                        <th key={label} scope="col" className="px-3 py-3">{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(status.subscriptions ?? []).map((sub, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-3">{sub.isManual ? "수동" : (PROVIDER_LABELS[sub.provider] ?? sub.provider)}</td>
+                        <td className="px-3 py-3">{sub.status}</td>
+                        <td className="px-3 py-3 tabular-nums">{sub.amount != null ? `$${(sub.amount / 100).toFixed(2)}` : "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-3 tabular-nums">{fmtDate(sub.currentPeriodEnd)}</td>
+                      </tr>
                     ))}
-                  </ul>
-                </details>
-              )}
+                    {!status.subscriptions?.length && (
+                      <tr><td colSpan={4} className="px-3 py-6 text-center text-muted">구독 이력이 없습니다.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
               {/* 부여/해제 컨트롤 */}
               <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end">

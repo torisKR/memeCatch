@@ -3,7 +3,7 @@ import {
   createUnifiPaymentLink,
   getUnifiPayConfig,
 } from "@/lib/billing/unifi-pay.server";
-import { isLocale } from "@/lib/i18n";
+import { isLocale, type Locale } from "@/lib/i18n";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 import {
   attachUnifiPaymentLink,
@@ -12,6 +12,7 @@ import {
   getCurrentBillingUser,
 } from "@/lib/billing/repository.server";
 import { growthSessionIdFromRequest } from "@/lib/growth/events.server";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
   }
 
   let pricingPath = "/pricing";
-  let locale: string | null = null;
+  let locale: Locale = "ko";
   if (typeof requestedLocale === "string" && isLocale(requestedLocale)) {
     locale = requestedLocale;
     pricingPath = localizedStaticPath("/pricing", requestedLocale);
@@ -85,7 +86,7 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
   try {
     await createBillingOrder(user.id, requestId, growthSessionIdFromRequest(request));
     stage = "create_link";
-    const returnPath = `${locale ? `/${locale}` : ""}/premium?checkout=return`;
+    const returnPath = `${localizedStaticPath("/premium", locale)}?checkout=return`;
     const { linkUrl, linkId } = await createUnifiPaymentLink(config, {
       requestId,
       callbackPath: "/api/billing/unifi/webhook",
@@ -110,6 +111,12 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
 }
 
 export async function POST(request: Request) {
+  if (!hasTrustedOrigin(request)) {
+    return Response.json(
+      { ok: false, error: "invalid_origin" },
+      { status: 403, headers: { "cache-control": "no-store" } },
+    );
+  }
   let requestedLocale: FormDataEntryValue | null = null;
   try {
     const formData = await request.formData();

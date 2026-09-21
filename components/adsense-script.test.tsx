@@ -27,7 +27,7 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
     const loader = read("components/adsense-script.tsx");
 
     expect(read("public/ads.txt").trim()).toBe(
-      "google.com, pub-5744832247312120, DIRECT, f08c47fec0942fa0",
+      "google.com, pub-3004906966180197, DIRECT, f08c47fec0942fa0",
     );
     expect(loader).toContain(
       "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}",

@@ -27,9 +27,9 @@ npm run preview
 
 운영 이벤트 서버는 `https://catchmeme.com/api/mcp-operator`입니다. 공개 검색 앱과 별도로 운영자 로그인에 연결되는 OAuth 2.1 인증을 사용합니다. 기존 밈캐치 운영자 권한을 확인하고 CI 실패·main 변경·이슈 변경만 구독합니다. 코드 쓰기 권한은 없습니다. ChatGPT CIMD, PKCE S256, 정확한 redirect/resource 검증, 일회성 인증 코드와 갱신 토큰 교체를 지원합니다.
 
-Vercel 함수는 Supabase `mcp_operator_state`에 암호화된 구독·전송 큐·인증 상태를 저장합니다. 일반 사용자와 익명 사용자는 이 테이블과 상태 함수에 접근할 수 없습니다. 처리 잠금은 90초이며, 만료되거나 다른 소유자의 잠금으로 상태를 덮어쓸 수 없습니다. 전송은 요청 종료 뒤 최대 2건, 재시도는 `/api/cron/mcp-events`가 5분 간격으로 수행합니다. 중복 방지와 유한 구독 만료는 별도 프로세스 없이 유지됩니다.
+Vercel 함수는 Supabase `mcp_operator_state`에 암호화된 구독·전송 큐·인증 상태를 저장합니다. 일반 사용자와 익명 사용자는 이 테이블과 상태 함수에 접근할 수 없습니다. 처리 잠금은 90초이며, 만료되거나 다른 소유자의 잠금으로 상태를 덮어쓸 수 없습니다. 전송은 요청 종료 뒤 최대 2건, 재시도는 기존 Supabase Cron이 `/api/cron/mcp-events`를 5분 간격으로 호출합니다. Vercel Hobby의 하루 1회 제한에 맞춰 별도 Vercel cron은 등록하지 않습니다. 재시도 토큰은 Supabase Vault와 Vercel 비밀 환경 변수에 저장합니다. 중복 방지와 유한 구독 만료는 별도 프로세스 없이 유지됩니다.
 
-운영 환경 변수는 `MCP_EVENT_STATE_KEY`(32바이트 base64), `MCP_GITHUB_WEBHOOK_SECRET`, `MCP_EVENT_CALLBACK_ORIGINS`, 기존 `CRON_SECRET`입니다. `.env.example`의 `EVENT_*` 값은 아래 단독 서버용입니다. 운영 키를 소스나 채팅에 복사하지 않습니다. 상태 키를 변경하면 기존 구독과 OAuth 토큰을 복구할 수 없으므로 보존해야 합니다.
+운영 환경 변수는 `MCP_EVENT_STATE_KEY`(32바이트 base64), `MCP_GITHUB_WEBHOOK_SECRET`, `MCP_EVENT_CALLBACK_ORIGINS`, `MCP_EVENT_RETRY_TOKEN`(Vault의 `memecatch_mcp_retry_token`과 동일)입니다. `.env.example`의 `EVENT_*` 값은 아래 단독 서버용입니다. 운영 키를 소스나 채팅에 복사하지 않습니다. 상태 키를 변경하면 기존 구독과 OAuth 토큰을 복구할 수 없으므로 보존해야 합니다.
 
 GitHub 웹훅 주소는 `https://catchmeme.com/api/mcp-operator/github`이며 `workflow_run`, `push`, `issues`만 선택합니다. 정확한 ChatGPT callback origin은 실제 구독 요청에서 확인한 후 허용합니다. 와일드카드를 사용하지 않습니다. 운영 배포·웹훅 수신·계정 OAuth 연결·challenge 검증·실제 AI 시작은 각각 확인해야 합니다. 코드 및 DB 검증만으로 실제 AI 시작 완료를 표시하지 않습니다.
 

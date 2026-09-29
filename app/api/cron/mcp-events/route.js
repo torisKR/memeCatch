@@ -4,8 +4,8 @@ import { same, json } from '@/integrations/memecatch-chatgpt/src/http.mjs';
 export const runtime='nodejs';
 export const maxDuration=30;
 export async function GET(request) {
-  const secret=process.env.CRON_SECRET;
-  if(!secret || !same(request.headers.get('authorization'),`Bearer ${secret}`)) return json({error:'Unauthorized.'},401);
+  const secrets=[process.env.MCP_EVENT_RETRY_TOKEN,process.env.CRON_SECRET].filter(Boolean);
+  if(!secrets.some(secret=>same(request.headers.get('authorization'),`Bearer ${secret}`))) return json({error:'Unauthorized.'},401);
   try {
     const store=databaseStore(createAdminClient()); const result=await store.withBroker(broker=>broker.drain(2));
     await store.cleanup();

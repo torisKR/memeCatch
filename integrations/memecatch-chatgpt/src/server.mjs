@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { Corpus } from './corpus.mjs';
 import { EventBroker, EventError, verifyGithub, normalizeGithub } from './events.mjs';
 
-import { dispatch as dispatchProtocol, validateRequest, VERSION, LEGACY, error } from './protocol.mjs';
+import { dispatch as dispatchProtocol, validateRequest, isLegacyRequest, VERSION, error } from './protocol.mjs';
 const html = readFileSync(new URL('../ui/app.html',import.meta.url),'utf8');
 export async function dispatch(message,context) { return dispatchProtocol(message,{uiHtml:html,...context}); }
 
@@ -45,11 +45,11 @@ export function makeServer({corpus=new Corpus(),broker=null,operatorToken='',git
       if (path!=='/mcp') { sendJson(res,404,{error:'Not found.'}); return; }
       try { message=JSON.parse(raw); } catch { throw error(-32700,'Invalid JSON.',undefined,400); }
       validateRequest(message,req.headers);
-      if (message.method.startsWith('events/') && req.headers['mcp-protocol-version']!==VERSION) throw error(-32022,'MCP Events requires 2026-07-28.',{supportedVersions:[VERSION]},400);
+      if (message.method.startsWith('events/') && req.headers['mcp-protocol-version']!==VERSION) throw error(-32022,'MCP Events requires 2026-07-28.',{supported:[VERSION],requested:req.headers['mcp-protocol-version'] || '2025-03-26'},400);
       if (message.id===undefined) { res.writeHead(202); res.end(); return; }
       const owner=authenticated(req,operatorToken);
       const result=await dispatch(message,{corpus,broker,owner});
-      if (req.headers['mcp-protocol-version']===LEGACY || message.method==='initialize') delete result.resultType;
+      if (isLegacyRequest(message,req.headers)) delete result.resultType;
       sendJson(res,200,{jsonrpc:'2.0',id:message.id,result});
     } catch (e) {
       const known=e.code!=null;

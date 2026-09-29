@@ -36,3 +36,20 @@ test('HTTP protocol validates version/headers, origin, authentication and legacy
   body=await response.json();assert.equal(body.result.protocolVersion,'2025-11-25');assert.equal(body.result.resultType,undefined);
   response=await rpc('does/not/exist');assert.equal(response.status,404);
 });
+
+test('legacy clients negotiate their own version, retrieve UI and work without a version header',async(t)=>{
+  const server=makeServer({corpus:corpus()});
+  server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const endpoint=`http://127.0.0.1:${server.address().port}/mcp`;
+  const post=(message,version)=>fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',...(version?{'MCP-Protocol-Version':version}:{})},body:JSON.stringify(message)});
+  for(const version of ['2025-03-26','2025-06-18','2025-11-25']){
+    let response=await post({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:version,clientInfo:{name:'legacy-client',version:'1'},capabilities:{}}});
+    let body=await response.json();assert.equal(response.status,200);assert.equal(body.result.protocolVersion,version);assert.equal(body.result.resultType,undefined);
+    response=await post({jsonrpc:'2.0',method:'notifications/initialized'},version);assert.equal(response.status,202);
+    response=await post({jsonrpc:'2.0',id:2,method:'tools/list',params:{}},version);body=await response.json();assert.equal(response.status,200);assert.ok(body.result.tools.some(tool=>tool.name==='open_memecatch'));assert.equal(body.result.resultType,undefined);
+    response=await post({jsonrpc:'2.0',id:3,method:'resources/read',params:{uri:'ui://memecatch/app-v1.html'}},version);body=await response.json();assert.equal(response.status,200);assert.match(body.result.contents[0].text,/ui\/initialize/);assert.equal(body.result.resultType,undefined);
+  }
+  let response=await post({jsonrpc:'2.0',id:4,method:'tools/list',params:{}});assert.equal(response.status,200);assert.equal((await response.json()).result.resultType,undefined);
+  response=await post({jsonrpc:'2.0',id:5,method:'tools/list',params:{}},'2099-01-01');assert.equal(response.status,400);assert.ok((await response.json()).error.data.supported.includes('2025-03-26'));
+  response=await post({jsonrpc:'2.0',id:6,method:'tools/list',params:{_meta:meta}});assert.equal(response.status,400);assert.equal((await response.json()).error.code,-32020);
+});

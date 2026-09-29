@@ -44,3 +44,44 @@ describe("public MemeCatch MCP endpoint", () => {
     expect((await POST(large)).status).toBe(413);
   });
 });
+
+
+describe("ChatGPT registration through legacy MCP clients", () => {
+  function legacyRequest(message: Record<string, unknown>, version?: string) {
+    return new Request("https://catchmeme.com/api/mcp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...(version ? { "MCP-Protocol-Version": version } : {}) },
+      body: JSON.stringify(message),
+    });
+  }
+  it.each(["2025-03-26", "2025-06-18", "2025-11-25"])("negotiates %s and serves tools and the app resource", async (version) => {
+    const { POST } = await import("./route.js");
+    let response = await POST(legacyRequest({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: version, clientInfo: { name: "registration-client", version: "1" }, capabilities: {} } }));
+    let body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.result.protocolVersion).toBe(version);
+    expect(body.result.resultType).toBeUndefined();
+    expect((await POST(legacyRequest({ jsonrpc: "2.0", method: "notifications/initialized" }, version))).status).toBe(202);
+    response = await POST(legacyRequest({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, version));
+    body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.result.tools.map((tool: { name: string }) => tool.name)).toContain("open_memecatch");
+    expect(body.result.resultType).toBeUndefined();
+    response = await POST(legacyRequest({ jsonrpc: "2.0", id: 3, method: "resources/read", params: { uri: "ui://memecatch/app-v1.html" } }, version));
+    body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.result.contents[0].text).toContain("ui/initialize");
+    expect(body.result.resultType).toBeUndefined();
+  });
+  it("accepts omitted version headers for legacy clients and rejects unsupported explicit versions", async () => {
+    const { POST } = await import("./route.js");
+    const response = await POST(legacyRequest({ jsonrpc: "2.0", id: 4, method: "tools/list", params: {} }));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.resultType).toBeUndefined();
+    const unsupported = await POST(legacyRequest({ jsonrpc: "2.0", id: 5, method: "tools/list", params: {} }, "2099-01-01"));
+    expect(unsupported.status).toBe(400);
+    expect((await unsupported.json()).error.data.supported).toContain("2025-03-26");
+    const modernWithoutHeader = await POST(legacyRequest({ jsonrpc: "2.0", id: 6, method: "tools/list", params: { _meta: meta } }));
+    expect(modernWithoutHeader.status).toBe(400);
+  });
+});

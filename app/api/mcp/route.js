@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Corpus } from "../../../integrations/memecatch-chatgpt/src/corpus.mjs";
-import { dispatch, validateRequest, VERSION, LEGACY } from "../../../integrations/memecatch-chatgpt/src/protocol.mjs";
+import { dispatch, validateRequest, isLegacyRequest, VERSION } from "../../../integrations/memecatch-chatgpt/src/protocol.mjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -42,7 +42,7 @@ export async function POST(request) {
     if (message.method.startsWith("events/")) return Response.json({ jsonrpc: "2.0", ...(message.id != null ? { id: message.id } : {}), error: { code: -32601, message: "Events require the separately authenticated persistent server." } }, { status: 404, headers: responseHeaders });
     if (message.id === undefined) return new Response(null, { status: 202, headers: responseHeaders });
     const result = await dispatch(message, { corpus, broker: null, owner: null, uiHtml });
-    if (headers["mcp-protocol-version"] === LEGACY || message.method === "initialize") delete result.resultType;
+    if (isLegacyRequest(message, headers)) delete result.resultType;
     return Response.json({ jsonrpc: "2.0", id: message.id, result }, { headers: responseHeaders });
   } catch (error) {
     const known = Number.isInteger(error.code);

@@ -10,7 +10,7 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 | --- | --- | --- |
 | 프로젝트 작업공간 | 밈캐치 프로젝트 생성, 지침·운영 텍스트 자료 저장 | 새 ChatGPT Space 전용 기능 활성화 확인 |
 | Plugin Extension | 공개 MCP 운영 배포, 계정에 밈캐치 설치·연결 완료, 읽기 도구 3개 확인; 연결 테스트 19개 통과, 현재 대화의 실제 도구 호출 확인 | 사이드바·대화 패널 전체 렌더링 확인 |
-| MCP Events | OAuth 운영자 서버·Supabase 영속 상태·재시도 구현, 운영 DB 적용·권한·잠금 검증 완료 | main 배포, GitHub 웹훅·ChatGPT OAuth·구독 연결, 실제 AI 시작 확인 |
+| MCP Events | OAuth 운영자 서버 운영 배포, Supabase 영속 상태·권한·잠금 검증, GitHub 웹훅 ping 202 수신, DB 5분 재시도 활성화 | ChatGPT 운영 앱 설치·OAuth·구독 활성화 승인, 실제 AI 시작 확인 |
 | Codex Cloud | 기존 memeCatch Cloud 환경의 저장소 연결 확인, 초기화·유지 스크립트 저장 | 클라우드 설치·실행 승인과 테스트·복구 확인 |
 | Living Pages | 라이브러리에 편집 가능한 밈캐치 운영 현황 생성, AI 원본 갱신 도구 준비 | 원본 갱신 1회 승인 후 실제 새 버전 확인; Space 기능 여부 별도 확인 |
 | dot | 실제 로그인 계정에서 Dots 접근 불가 화면 확인 | 계정에 기능이 제공된 후 네이티브 dot 생성·실행 |
@@ -21,11 +21,13 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 
 ‘만들기’ 실패는 실제 생성 응답에서 `PerRequestReadResourceResult`의 `ttlMs`와 `cacheScope` 누락으로 확인했다. 공개 UI·도구 목록에 캐시 정책을 추가한 후 앱 생성과 연결이 성공했다. 이전 MCP 버전 초기 연결도 호환된다.
 
-검증: 앱 테스트 358개 파일·2,580개 테스트, 연결 패키지 13개 테스트, 타입 검사, 빌드 통과. 최신 수정 파일 린트 오류는 없다. 전체 린트의 기존 이미지 관련 경고 6개는 별도로 남아 있다. 이 문서는 기능 수정 커밋의 검증 기록이며, 뒤이은 문서 커밋으로 main SHA가 달라질 수 있다.
+검증: 앱 테스트 358개 파일·2,580개 테스트, 연결 패키지 19개 테스트, 타입 검사, 빌드 통과. 최신 수정 파일 린트 오류는 없다. 전체 린트의 기존 이미지 관련 경고 6개는 별도로 남아 있다. 이 문서는 기능 수정 커밋의 검증 기록이며, 뒤이은 문서 커밋으로 main SHA가 달라질 수 있다.
 
 운영 DB: 상품 테이블·등록 RPC가 이미 적용돼 있음을 확인했다. 누락됐던 `retire_legacy_unifi_intent_rpc`, `security_rls_admin_hardening`도 적용했고, 브라우저의 구형 결제 함수 실행 불가, 프로필 권한 필드 보호, 익명 관리자 함수 실행 불가, 위조된 문의 답변 삽입 차단을 다시 조회해 확인했다.
 
 남은 계정 기능: 실제 Dots 화면에는 지역 및 Pro 플랜 접근 제한이 표시됐다. 현재 계정에 Dots 접근이 제공되지 않는다. Codex Cloud Legacy의 기존 memeCatch 환경(ID `6a792f0f86b081918b22485f136d0757`)에 `torisKR/memeCatch`가 연결돼 있고, 초기화·유지 스크립트를 저장했다. 설치 및 실제 클라우드 실행은 승인 대기다. 라이브러리에는 편집 가능한 ‘밈캐치 운영 현황’을 만들었고, ChatGPT가 원본을 갱신하는 도구의 ‘한 번만 허용’ 화면까지 준비했다. 새 버전 저장은 아직 확인하지 않았다. 새 Space 기능 전체 활성화 및 실제 문서 자동 갱신 완료와 구분한다.
+
+운영 Events 배포: `e69dcc0`까지 main 및 origin/main에 반영했고, Vercel 배포 `dpl_HN95RuQXqYvey3TJv9jgm37HMaS4`가 Ready 상태다. catchmeme.com 및 www.catchmeme.com에 연결됐다. 운영 OAuth/CIMD 메타데이터의 200 응답, private MCP·웹훅·재시도 주소의 무인증 401 차단을 확인했다. GitHub 웹훅 ID `689047284`는 workflow_run·push·issues만 활성화했고 실제 ping 수신은 202였다. Supabase 예약 작업 `memecatch-mcp-events`는 5분 간격으로 활성화돼 있다. Vercel Hobby의 cron 실행 제한을 해결하기 위해 기존 DB 예약 실행과 Vault 토큰을 사용한다. ChatGPT 등록 화면에서도 CIMD, 정확한 redirect/resource와 `memecatch:monitor` 범위를 자동 감지했다. 실제 운영자 OAuth 로그인, 구독 callback challenge, 이벤트로 AI 시작은 아직 확인하지 않았다.
 
 ## dot 운영 업무
 

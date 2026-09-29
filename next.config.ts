@@ -157,6 +157,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],
+    "/api/mcp-operator": ["./integrations/memecatch-chatgpt/ui/app.html"],
   },
   // x-powered-by 헤더 제거 — 프레임워크 버전 노출 방지
   poweredByHeader: false,

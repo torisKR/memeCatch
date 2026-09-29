@@ -9,15 +9,15 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 | 기능 | 현재 상태 | 남은 실제 연결 |
 | --- | --- | --- |
 | 프로젝트 작업공간 | 밈캐치 프로젝트 생성, 지침·운영 텍스트 자료 저장 | 새 ChatGPT Space 전용 기능 활성화 확인 |
-| Plugin Extension | 공개 MCP 운영 배포, 계정에 밈캐치 설치·연결 완료, 읽기 도구 3개 확인; 플러그인 테스트 13개 통과 | ChatGPT 대화에서 도구 호출·사이드바·대화 패널 렌더링 확인 |
-| MCP Events | 서명·콜백 검증·중복 방지·암호화 상태 저장·재전송 코드 준비 | 영속 서버 배포, GitHub 웹훅·인증·ChatGPT 구독 연결, 실제 AI 시작 확인 |
-| Codex Cloud | 실제 저장소에 맞춘 환경 초기화 스크립트 준비 | Cloud 환경 생성, 저장소 권한 연결, 지속 환경 복구 확인 |
-| Living Pages | 운영 문서 내용 준비; 일반 텍스트 소스는 저장됨 | 네이티브 Page 생성, 업데이트 작업 연결 |
+| Plugin Extension | 공개 MCP 운영 배포, 계정에 밈캐치 설치·연결 완료, 읽기 도구 3개 확인; 연결 테스트 19개 통과, 현재 대화의 실제 도구 호출 확인 | 사이드바·대화 패널 전체 렌더링 확인 |
+| MCP Events | OAuth 운영자 서버·Supabase 영속 상태·재시도 구현, 운영 DB 적용·권한·잠금 검증 완료 | main 배포, GitHub 웹훅·ChatGPT OAuth·구독 연결, 실제 AI 시작 확인 |
+| Codex Cloud | 기존 memeCatch Cloud 환경의 저장소 연결 확인, 초기화·유지 스크립트 저장 | 클라우드 설치·실행 승인과 테스트·복구 확인 |
+| Living Pages | 라이브러리에 편집 가능한 밈캐치 운영 현황 생성, AI 원본 갱신 도구 준비 | 원본 갱신 1회 승인 후 실제 새 버전 확인; Space 기능 여부 별도 확인 |
 | dot | 실제 로그인 계정에서 Dots 접근 불가 화면 확인 | 계정에 기능이 제공된 후 네이티브 dot 생성·실행 |
 
 기능 수정 배포 검증: `44588ccae4988d263d70b26d4f755105d09f9f0c`를 main과 origin/main에 반영했고 Vercel production이 Ready 상태로 완료됐다. https://catchmeme.com 및 https://www.catchmeme.com에 연결됐다. 공개 서버의 Events는 꺼져 있다. 운영 MCP의 초기 연결·도구 목록·UI 읽기와 공개 본문 검색을 확인했고, 공개 본문 400개 항목에서 사딸라 결과를 받았다. 전체 사전 검색은 아니다.
 
-계정 설치: 개인용 밈캐치가 ‘설치됨’과 ‘연결됨’으로 표시됨을 확인했다. 실제 앱 ID는 `app_6abc25cbe7ec8191a395e5a623abb2a6`이며, `search_memes`, `get_meme`, `open_memecatch` 읽기 도구 3개가 등록됐다. 설치 상세: https://chatgpt.com/plugins/plugin_asdk_app_6abc25cbe7ec8191a395e5a623abb2a6?directoryTab=personal . 서버 주소는 https://catchmeme.com/api/mcp 이고 인증 없음으로 공개 데이터만 조회한다. ChatGPT 대화 도구 실행과 내부 패널 렌더링은 아직 검증하지 않았다.
+계정 설치: 개인용 밈캐치가 ‘설치됨’과 ‘연결됨’으로 표시됨을 확인했다. 실제 앱 ID는 `app_6abc25cbe7ec8191a395e5a623abb2a6`이며, `search_memes`, `get_meme`, `open_memecatch` 읽기 도구 3개가 등록됐다. 설치 상세: https://chatgpt.com/plugins/plugin_asdk_app_6abc25cbe7ec8191a395e5a623abb2a6?directoryTab=personal . 서버 주소는 https://catchmeme.com/api/mcp 이고 인증 없음으로 공개 데이터만 조회한다. 현재 대화에서 실제 공개 도구 실행과 사딸라 결과를 확인했다. 내부 패널 전체 렌더링은 별도 확인이 남아 있다.
 
 ‘만들기’ 실패는 실제 생성 응답에서 `PerRequestReadResourceResult`의 `ttlMs`와 `cacheScope` 누락으로 확인했다. 공개 UI·도구 목록에 캐시 정책을 추가한 후 앱 생성과 연결이 성공했다. 이전 MCP 버전 초기 연결도 호환된다.
 
@@ -25,7 +25,7 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 
 운영 DB: 상품 테이블·등록 RPC가 이미 적용돼 있음을 확인했다. 누락됐던 `retire_legacy_unifi_intent_rpc`, `security_rls_admin_hardening`도 적용했고, 브라우저의 구형 결제 함수 실행 불가, 프로필 권한 필드 보호, 익명 관리자 함수 실행 불가, 위조된 문의 답변 삽입 차단을 다시 조회해 확인했다.
 
-남은 계정 기능: 실제 Dots 화면에는 ‘Dots aren’t available in your region yet’와 ‘Your Pro plan doesn’t have access to dots yet’가 표시됐다. 현재 계정에 Dots 접근이 제공되지 않는다. Cloud 개발환경과 네이티브 Living Page의 생성은 완료하지 않았고, 웹에서 확인한 Cloud computer 설정은 클라우드 브라우징 권한·쿠키 설정이었다. 일반 프로젝트의 운영 텍스트 소스는 Living Page 자동 갱신과 구분한다. 최신 계정 설치 결과도 프로젝트에 별도 소스로 저장했다.
+남은 계정 기능: 실제 Dots 화면에는 지역 및 Pro 플랜 접근 제한이 표시됐다. 현재 계정에 Dots 접근이 제공되지 않는다. Codex Cloud Legacy의 기존 memeCatch 환경(ID `6a792f0f86b081918b22485f136d0757`)에 `torisKR/memeCatch`가 연결돼 있고, 초기화·유지 스크립트를 저장했다. 설치 및 실제 클라우드 실행은 승인 대기다. 라이브러리에는 편집 가능한 ‘밈캐치 운영 현황’을 만들었고, ChatGPT가 원본을 갱신하는 도구의 ‘한 번만 허용’ 화면까지 준비했다. 새 버전 저장은 아직 확인하지 않았다. 새 Space 기능 전체 활성화 및 실제 문서 자동 갱신 완료와 구분한다.
 
 ## dot 운영 업무
 

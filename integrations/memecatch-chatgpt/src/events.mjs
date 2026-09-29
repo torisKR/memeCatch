@@ -34,7 +34,8 @@ export const publicIPv4 = address => isIP(address) === 4 && !nonPublic.check(add
 export function callbackUrl(value, allowedOrigins) {
   let url;
   try { url = new URL(value); } catch { throw new EventError('Invalid callback URL.'); }
-  if (url.protocol !== 'https:' || url.port && url.port !== '443' || url.username || url.password || url.hash || value.length > 2000 || isIP(url.hostname) || !allowedOrigins.includes(url.origin)) throw new EventError('Callback must use an explicitly allowed HTTPS origin.');
+  if (url.protocol !== 'https:' || url.port && url.port !== '443' || url.username || url.password || url.hash || value.length > 2000 || isIP(url.hostname)) throw new EventError('Callback must use an explicitly allowed HTTPS origin.');
+  if (!allowedOrigins.includes(url.origin)) throw new EventError('Callback origin must be explicitly allowed.', 'origin_not_allowed');
   return url;
 }
 
@@ -72,10 +73,15 @@ export function listEvents() {
 }
 
 export class EventBroker {
-  constructor({ path, key, callbackOrigins, send = sendPinned, now = Date.now }) {
+  constructor({ path, key, callbackOrigins, send = sendPinned, now = Date.now, state, onSave }) {
     if (!Buffer.isBuffer(key) || key.length !== 32) throw new Error('Event state key must contain 32 bytes.');
-    this.path = path; this.key = key; this.origins = callbackOrigins; this.send = send; this.now = now; this.running = false;
+    this.onSave = onSave; this.path = path; this.key = key; this.origins = callbackOrigins; this.send = send; this.now = now; this.running = false;
     this.state = { version: 1, subscriptions: {}, queue: [], seen: {} };
+    if (state) {
+      if (state.version !== 1 || !state.subscriptions || !Array.isArray(state.queue) || !state.seen) throw new Error('Invalid event state.');
+      this.state = state;
+      return;
+    }
     try {
       const file = JSON.parse(readFileSync(path,'utf8'));
       const decipher = createDecipheriv('aes-256-gcm',key,Buffer.from(file.iv,'base64'));
@@ -85,6 +91,7 @@ export class EventBroker {
     } catch (error) { if (error.code !== 'ENOENT') throw new Error('Cannot decrypt event state. Preserve the state file and restore the correct key.'); }
   }
   save() {
+    if (this.onSave) { this.onSave(); return; }
     const iv = randomBytes(12); const cipher = createCipheriv('aes-256-gcm',this.key,iv);
     const data = Buffer.concat([cipher.update(JSON.stringify(this.state),'utf8'),cipher.final()]);
     mkdirSync(dirname(this.path),{recursive:true,mode:0o700});
@@ -149,26 +156,31 @@ export class EventBroker {
     }
     this.state.queue = this.state.queue.filter(q=>this.state.subscriptions[q.subscriptionId] && q.expiresAt>now);
   }
-  async drain() {
-    if (this.running) return;
+  async drain(limit = Infinity) {
+    const result = { attempted: 0, accepted: 0 };
+    if (this.running) return result;
     this.running = true;
     try {
       this.prune(); this.save();
       for (const item of [...this.state.queue]) {
+        if (result.attempted>=limit) break;
         if (item.nextAt>this.now()) continue;
         const subscription = this.state.subscriptions[item.subscriptionId];
         if (!subscription || subscription.expiresAt<=this.now()) { this.prune(); this.save(); continue; }
+        result.attempted++;
         let status = 0;
         try {
           const reply = await this.send(subscription.url,signedHeaders(subscription.secret,item.eventId,item.body,subscription.id,this.now(),subscription.previousUntil>this.now()?subscription.previousSecret:undefined),item.body,this.origins);
           status = reply.status;
         } catch {}
+        if (status>=200 && status<300) result.accepted++;
         if (status === 410) { delete this.state.subscriptions[subscription.id]; this.state.queue = this.state.queue.filter(q=>q.subscriptionId !== subscription.id); }
         else if (status>=200 && status<300 || status===413 || ++item.attempts>=MAX_ATTEMPTS) this.state.queue = this.state.queue.filter(q=>q!==item);
         else item.nextAt = this.now()+30_000*2**(item.attempts-1);
         this.save();
       }
     } finally { this.running = false; }
+    return result;
   }
 }
 

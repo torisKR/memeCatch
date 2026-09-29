@@ -1,5 +1,5 @@
 {
   "memecatch": {
-    "url": "http://127.0.0.1:8787/mcp"
+    "url": "https://catchmeme.com/api/mcp"
   }
 }

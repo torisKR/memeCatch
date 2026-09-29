@@ -20,7 +20,7 @@ npm run preview
 - 운영 앱의 공개 MCP 주소: `https://catchmeme.com/api/mcp` — 실제 배포/응답 검증 결과는 운영 허브 참조.
 - MCP 2.0: `2026-07-28`; 도구/리소스에 한해 `2025-11-25` 호환 경로도 제공.
 - UI 도구 `open_memecatch`: `_meta.ui.resourceUri`, 사이드바 `global` 및 대화 패널 `thread` 진입점.
-- `.mcp.json`은 로컬 서버 테스트 설정입니다. ChatGPT의 원격 등록에는 검증된 HTTPS 운영 주소를 사용합니다.
+- `.mcp.json`은 배포된 HTTPS 운영 주소를 기본으로 사용합니다. 로컬 서버 테스트 설정은 `.mcp.local.json`에 있습니다.
 - `.app.json`의 앱 ID는 실제 등록 후 받은 ID로만 작성합니다. 가짜 ID는 포함하지 않았습니다.
 
 ## 이벤트 연결

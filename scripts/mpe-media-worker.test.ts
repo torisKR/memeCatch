@@ -61,7 +61,10 @@ describe("MPE FFmpeg worker", () => {
   });
 
   it("uses the installed FFmpeg scene extraction compatibility mode", async () => {
-    const help = await exec("ffmpeg", ["-hide_banner", "-h", "full"]);
+    // Ubuntu's codec/filter help exceeds Node's default 1 MiB capture limit.
+    const help = await exec("ffmpeg", ["-hide_banner", "-h", "full"], {
+      maxBuffer: 4 * 1024 * 1024,
+    });
     expect(help.stdout).toContain("-fps_mode");
     expect(help.stdout).not.toContain("Unrecognized option 'vsync'");
     await expect(worker.detectSceneTimes(videoPath, 2_000, 0.2)).resolves.toContain(0);

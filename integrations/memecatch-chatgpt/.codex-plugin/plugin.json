@@ -1,6 +1,6 @@
 {
   "name": "memecatch",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "한국 밈의 뜻·유래·사용 주의를 검색하는 밈캐치 앱과 운영 이벤트 연결",
   "mcpServers": "./.mcp.json",
   "skills": "./skills/",

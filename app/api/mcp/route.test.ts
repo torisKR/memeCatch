@@ -85,3 +85,19 @@ describe("ChatGPT registration through legacy MCP clients", () => {
     expect(modernWithoutHeader.status).toBe(400);
   });
 });
+
+describe("ChatGPT app import cache contract", () => {
+  it("publishes valid cache policy for MCP 2 app discovery and UI import", async () => {
+    const { POST } = await import("./route.js");
+    for (const [method, params] of [["tools/list", {}], ["resources/list", {}], ["resources/read", { uri: "ui://memecatch/app-v1.html" }]] as const) {
+      const response = await POST(request(method, params));
+      const body = await response.json();
+      expect(response.status).toBe(200);
+      expect(body.error).toBeUndefined();
+      expect(body.result.resultType).toBe("complete");
+      expect(body.result.cacheScope).toBe("public");
+      expect(Number.isSafeInteger(body.result.ttlMs)).toBe(true);
+      expect(body.result.ttlMs).toBeGreaterThanOrEqual(0);
+    }
+  });
+});

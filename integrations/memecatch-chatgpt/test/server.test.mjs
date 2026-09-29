@@ -53,3 +53,13 @@ test('legacy clients negotiate their own version, retrieve UI and work without a
   response=await post({jsonrpc:'2.0',id:5,method:'tools/list',params:{}},'2099-01-01');assert.equal(response.status,400);assert.ok((await response.json()).error.data.supported.includes('2025-03-26'));
   response=await post({jsonrpc:'2.0',id:6,method:'tools/list',params:{_meta:meta}});assert.equal(response.status,400);assert.equal((await response.json()).error.code,-32020);
 });
+
+test('public resource responses include the required MCP 2 cache contract',async()=>{
+  const ctx={corpus:corpus(),broker:null,owner:null};
+  for(const [method,params] of [['tools/list',{}],['resources/list',{}],['resources/read',{uri:'ui://memecatch/app-v1.html'}]]){
+    const result=await dispatch({method,params:{...params,_meta:meta}},ctx);
+    assert.equal(result.resultType,'complete');
+    assert.equal(result.cacheScope,'public');
+    assert.ok(Number.isSafeInteger(result.ttlMs) && result.ttlMs>=0);
+  }
+});

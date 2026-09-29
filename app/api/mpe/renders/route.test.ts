@@ -20,7 +20,7 @@ function client(
 function request(body: unknown) {
   return new Request("http://localhost/api/mpe/renders", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -35,6 +35,18 @@ const valid = {
 beforeEach(() => vi.clearAllMocks());
 
 describe("MPE render queue API", () => {
+  it("rejects a cross-origin render before authentication or queueing", async () => {
+    const response = await POST(new Request("http://localhost/api/mpe/renders", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify(valid),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "invalid_origin" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
   it("requires authentication before queueing", async () => {
     const rpc = vi.fn();
     mocks.createClient.mockResolvedValueOnce(client(null, rpc));

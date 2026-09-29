@@ -1,5 +1,52 @@
-import { describe, expect, it } from "vitest";
-import { localeDestination } from "@/components/language-selector";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const navigation = vi.hoisted(() => ({ pathname: "/" }));
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock("@/lib/i18n-client", async () => {
+  const { getMessages } = await import("@/lib/i18n");
+  return {
+    persistLocale: vi.fn(),
+    useLocale: () => ({ locale: "ko", messages: getMessages("ko") }),
+  };
+});
+
+import {
+  LanguageSelector,
+  localeDestination,
+} from "@/components/language-selector";
+import { SUPPORTED_LOCALES } from "@/lib/i18n";
+
+function renderedLocaleOptions(pathname: string) {
+  navigation.pathname = pathname;
+  const html = renderToStaticMarkup(<LanguageSelector />);
+  return Array.from(html.matchAll(/<option[^>]*value="([^"]+)"[^>]*>/g), (match) => match[1]);
+}
+
+describe("LanguageSelector", () => {
+  beforeEach(() => {
+    navigation.pathname = "/";
+  });
+
+  it.each(["/", "/index", "/en", "/ja", "/zh", "/zh-tw"])(
+    "offers only editorial home locales on %s",
+    (pathname) => {
+      expect(renderedLocaleOptions(pathname)).toEqual(["ko", "en", "ja", "zh", "zh-tw"]);
+    },
+  );
+
+  it.each(["/products", "/community", "/en/search"])(
+    "keeps every UI locale on non-home route %s",
+    (pathname) => {
+      expect(renderedLocaleOptions(pathname)).toEqual(SUPPORTED_LOCALES);
+    },
+  );
+});
 
 describe("localeDestination", () => {
   it.each([
@@ -31,6 +78,19 @@ describe("localeDestination", () => {
     );
     expect(localeDestination("/search?q=%EC%9B%90%EC%98%81", "en")).toBe(
       "/en/search?q=%EC%9B%90%EC%98%81",
+    );
+  });
+
+  it("removes an obsolete lang query while preserving other query parameters", () => {
+    expect(localeDestination("/?lang=ko", "en")).toBe("/en");
+    expect(localeDestination("/?campaign=fall&lang=ko&q=memes", "en")).toBe(
+      "/en?campaign=fall&q=memes",
+    );
+  });
+
+  it("routes in place to remove lang before applying a UI-only locale", () => {
+    expect(localeDestination("/products?tab=saved&lang=ko", "th")).toBe(
+      "/products?tab=saved",
     );
   });
 

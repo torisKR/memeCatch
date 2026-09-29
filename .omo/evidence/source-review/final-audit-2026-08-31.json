@@ -1,0 +1,30 @@
+{
+  "production_project_ref": "onjipuldngbdptldkpoe",
+  "repository_sha": "cc615732f0f49e17b1eb5a0da93c5492724732e1",
+  "review_started_at": "2026-08-31T10:28:25.349Z",
+  "pending_rows": 0,
+  "audit_rows": 2116,
+  "approved_rows": 126,
+  "rejected_rows": 1990,
+  "approved_source_projections": 126,
+  "approved_content_projections": 126,
+  "rejected_public_projections": 0,
+  "by_platform": {
+    "youtube": {
+      "approved": 108,
+      "rejected": 1466
+    },
+    "youtube_shorts": {
+      "approved": 16,
+      "rejected": 485
+    },
+    "instagram": {
+      "approved": 0,
+      "rejected": 22
+    },
+    "tiktok": {
+      "approved": 2,
+      "rejected": 17
+    }
+  }
+}

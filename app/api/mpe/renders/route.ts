@@ -3,6 +3,7 @@ import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { readBoundedJson } from "@/lib/request-body";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 const segmentSchema = z.object({
   startMs: z.number().int().min(0).max(21_600_000),
@@ -36,6 +37,9 @@ type RenderRpcClient = {
 };
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return Response.json({ ok: false, error: "invalid_origin" }, { status: 403 });
+  }
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ ok: false, error: "signed_out" }, { status: 401 });

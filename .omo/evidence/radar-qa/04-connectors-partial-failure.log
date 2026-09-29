@@ -1,0 +1,11 @@
+
+ RUN  v4.1.10 /Users/toris/projects/memecatch
+
+ ✓ lib/trend/radar-connectors.server.test.ts > runRadarConnectors > isolates one failure, attempts every connector, and returns durable health rows 4ms
+ ✓ lib/trend/radar-connectors.server.test.ts > runRadarConnectors > reports ok when all connectors succeed and failed when all fail 0ms
+ ✓ lib/trend/radar-connectors.server.test.ts > runRadarConnectors > rejects a connector signal tagged as another platform without stopping peers 0ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  16:06:12
+   Duration  115ms (transform 23ms, setup 0ms, import 33ms, tests 5ms, environment 0ms)

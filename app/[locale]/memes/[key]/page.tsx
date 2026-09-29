@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { shortIdFromParam, type SafetyLevel } from "@/lib/labels";
 import {
   SEO_LOCALE_CONFIG,
@@ -21,12 +21,18 @@ import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
 import {
+  MemeBreadcrumbJsonLd,
+  MemeDefinedTermJsonLd,
+  MemeWebPageJsonLd,
+} from "@/components/json-ld";
+import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
   isIndexableLocalizedMeme,
 } from "@/lib/meme-translations";
-import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
+import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { publicSourceUrl } from "@/lib/source-links";
 
 export const revalidate = 600;
 
@@ -186,15 +192,6 @@ const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = {
   },
 };
 
-function JsonLd({ data }: { data: object }) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }}
-    />
-  );
-}
-
 function usageContexts(value: unknown): [string, SafetyLevel][] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   return Object.entries(value).filter(
@@ -229,6 +226,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const shortId = shortIdFromParam(key);
   const meme = await getLocalizedMemeByShortId(shortId, locale);
   if (!meme) notFound();
+  const redirectPath = canonicalMemeRedirectPath(key, {
+    shortId: meme.short_id,
+    slug: meme.slug,
+    locale,
+  });
+  if (redirectPath) permanentRedirect(redirectPath);
 
   const versions = await getLanguageVersions(shortId, meme.id, locale);
   const indexableVersions = versions.filter(({ meme: version }) =>
@@ -281,6 +284,12 @@ export default async function LocalizedMemePage({ params }: Props) {
   const shortId = shortIdFromParam(key);
   const meme = await getLocalizedMemeByShortId(shortId, locale);
   if (!meme) notFound();
+  const redirectPath = canonicalMemeRedirectPath(key, {
+    shortId: meme.short_id,
+    slug: meme.slug,
+    locale,
+  });
+  if (redirectPath) permanentRedirect(redirectPath);
 
   const [versions, marketPassport] = await Promise.all([
     getLanguageVersions(shortId, meme.id, locale),
@@ -290,14 +299,16 @@ export default async function LocalizedMemePage({ params }: Props) {
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);
   const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
-  const sourceLinks = meme.meme_sources.filter((source) => source.source_url);
+  const sourceLinks = meme.meme_sources.flatMap((source) => {
+    const url = publicSourceUrl(source.source_url);
+    return url ? [{ ...source, source_url: url }] : [];
+  });
   const allContexts = usageContexts(meme.usage_context);
   const contextsUnverified = isUnverifiedContexts(allContexts);
   const contexts = contextsUnverified ? [] : allContexts;
   const isMachine = meme.translation.status === "machine";
   const isStale = meme.translation.status === "stale" || !meme.translation.isCurrent;
   const needsReview = !isIndexableLocalizedMeme(meme);
-  const datePublished = meme.published_at ?? meme.created_at;
 
   return (
     <article
@@ -305,49 +316,39 @@ export default async function LocalizedMemePage({ params }: Props) {
       dir={config.direction}
       className="mx-auto max-w-5xl px-4 py-8 pb-16 text-foreground"
     >
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "WebPage",
-              "@id": `${SITE_URL}${canonical}#webpage`,
-              url: `${SITE_URL}${canonical}`,
-              name: meme.title,
-              description: meme.summary,
-              inLanguage: config.bcp47,
-              datePublished,
-              dateModified: meme.translation.updatedAt,
-              publisher: { "@id": `${SITE_URL}#org` },
-              speakable: {
-                "@type": "SpeakableSpecification",
-                cssSelector: ["h1", "#meme-summary"],
-              },
-              mainEntity: { "@id": `${SITE_URL}${canonical}#term` },
-            },
-            {
-              "@type": "DefinedTerm",
-              "@id": `${SITE_URL}${canonical}#term`,
-              name: meme.title,
-              alternateName: meme.original.title,
-              description: meme.description || meme.summary,
-              url: `${SITE_URL}${canonical}`,
-              inLanguage: config.bcp47,
-              inDefinedTermSet: {
-                "@type": "DefinedTermSet",
-                "@id": `${SITE_URL}/${locale}#glossary`,
-                name: seo.glossaryName,
-              },
-            },
-            {
-              "@type": "BreadcrumbList",
-              itemListElement: [
-                { "@type": "ListItem", position: 1, name: copy.home, item: `${SITE_URL}${localizedPath("/", locale)}` },
-                { "@type": "ListItem", position: 2, name: meme.title, item: `${SITE_URL}${canonical}` },
-              ],
-            },
-          ],
-        }}
+      {!needsReview && (
+        <>
+          <MemeWebPageJsonLd
+            locale={locale}
+            path={canonical}
+            name={meme.title}
+            summary={meme.summary}
+            description={meme.description}
+            shortId={meme.short_id}
+            slug={meme.slug}
+            datePublished={meme.published_at}
+            dateModified={meme.translation.updatedAt}
+            sources={sourceLinks}
+          />
+          <MemeDefinedTermJsonLd
+            locale={locale}
+            path={canonical}
+            name={meme.title}
+            summary={meme.summary}
+            shortId={meme.short_id}
+            slug={meme.slug}
+          />
+        </>
+      )}
+      <MemeBreadcrumbJsonLd
+        locale={locale}
+        path={canonical}
+        homeName={copy.home}
+        categoryName={seo.categories[meme.category]}
+        category={meme.category}
+        name={meme.title}
+        shortId={meme.short_id}
+        slug={meme.slug}
       />
 
       <nav aria-label="Breadcrumb" className="mb-8 text-sm text-muted">
@@ -536,7 +537,7 @@ export default async function LocalizedMemePage({ params }: Props) {
               {sourceLinks.map((source, index) => (
                 <li key={source.id} className="text-sm">
                   <a
-                    href={source.source_url!}
+                    href={source.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold underline decoration-border underline-offset-4 hover:text-accent"

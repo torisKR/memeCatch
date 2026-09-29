@@ -28,12 +28,50 @@ import {
   parsePlusOutcomeReplayRequest,
 } from "@/lib/plus-outcome-replay-routing";
 import { shortIdFromParam } from "@/lib/labels";
+import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
 const MEME_LOOKUP_TIMEOUT_MS = 1_500;
+const PUBLIC_MEME_CANONICAL_SELECT =
+  "id, short_id, slug, updated_at, meme_translations(locale, status, localized_slug, source_updated_at)" as const;
 
-function localeFromPathname(pathname: string): Locale | null {
+type PublicMemeCanonicalRow = {
+  id: string;
+  short_id: string;
+  slug: string;
+  updated_at: string;
+  meme_translations: Array<{
+    locale: string;
+    status: string;
+    localized_slug: string | null;
+    source_updated_at: string;
+  }>;
+};
+
+function sameStoredRevision(left: string, right: string): boolean {
+  const leftTime = Date.parse(left);
+  const rightTime = Date.parse(right);
+  return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime === rightTime;
+}
+
+function canonicalSlugForDocument(
+  meme: PublicMemeCanonicalRow,
+  locale: SeoContentLocale | null,
+): string | null {
+  if (!locale) return meme.slug;
+
+  const translation = meme.meme_translations.find(
+    (candidate) =>
+      candidate.locale === locale &&
+      candidate.status === "reviewed" &&
+      sameStoredRevision(candidate.source_updated_at, meme.updated_at),
+  );
+  if (!translation) return null;
+  return translation.localized_slug?.trim() || meme.slug;
+}
+
+function localeFromPathname(pathname: string): SeoContentLocale | null {
   const parsed = parseLocalePath(pathname);
   return parsed.hadLocalePrefix && isSeoContentLocale(parsed.locale) ? parsed.locale : null;
 }
@@ -204,11 +242,14 @@ export async function proxy(request: NextRequest) {
     try {
       const { data, error } = await supabase
         .from("memes")
-        .select("id")
+        .select(PUBLIC_MEME_CANONICAL_SELECT)
         .eq("short_id", shortIdFromParam(documentDetailKey))
         .in("moderation_status", [...PUBLIC_MEME_STATUSES])
         .limit(1)
-        .abortSignal(AbortSignal.timeout(MEME_LOOKUP_TIMEOUT_MS));
+        .abortSignal(AbortSignal.timeout(MEME_LOOKUP_TIMEOUT_MS)) as {
+          data: PublicMemeCanonicalRow[] | null;
+          error: { message: string } | null;
+        };
       if (error) {
         console.warn("public_meme_existence_check_failed query_error");
       }
@@ -219,6 +260,20 @@ export async function proxy(request: NextRequest) {
           status: 404,
           request: { headers: requestHeaders },
         }));
+      }
+      const meme = !error ? data?.[0] : null;
+      const canonicalSlug = meme ? canonicalSlugForDocument(meme, urlLocale) : null;
+      if (meme && canonicalSlug) {
+        const destination = canonicalMemeRedirectPath(documentDetailKey, {
+          shortId: meme.short_id,
+          slug: canonicalSlug,
+          locale: urlLocale ?? "ko",
+        }, "encoded");
+        if (destination) {
+          const url = request.nextUrl.clone();
+          url.pathname = destination;
+          return applyLocale(NextResponse.redirect(url, 308));
+        }
       }
     } catch {
       // Fail open: a provider outage must not turn valid public content into a 404.

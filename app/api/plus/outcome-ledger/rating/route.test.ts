@@ -17,7 +17,7 @@ const receiptId = "11111111-1111-4111-8111-111111111111";
 function request(body: unknown) {
   return new Request("http://localhost/api/plus/outcome-ledger/rating", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -36,6 +36,19 @@ beforeEach(() => {
 });
 
 describe("Plus outcome rating API", () => {
+  it("rejects a cross-origin update before parsing or entitlement checks", async () => {
+    const response = await POST(new Request("http://localhost/api/plus/outcome-ledger/rating", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ receiptId, performanceRating: "hit" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(getPremiumEntitlement).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed ratings before RPC", async () => {
     expect((await POST(request({ receiptId, performanceRating: "" }))).status).toBe(400);
     expect((await POST(request({ receiptId, performanceRating: "great" }))).status).toBe(400);

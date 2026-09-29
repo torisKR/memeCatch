@@ -3,6 +3,7 @@ import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { isGlobalDailyLocale, type GlobalDailyLocale } from "@/lib/global-daily-challenge";
 import { createClient } from "@/lib/supabase/server";
 import { readBoundedJson } from "@/lib/request-body";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,9 @@ function errorCode(error: { message?: string } | null) {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid_origin" }, { status: 403, headers: headers() });
+  }
   const locale = await parseLocale(request);
   if (!locale) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers: headers() });

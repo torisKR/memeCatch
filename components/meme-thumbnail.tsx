@@ -1,7 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { MemeCategory } from "@/lib/labels";
+
+const OWNED_MEDIA_HOSTS = new Set(["catchmeme.com", "www.catchmeme.com"]);
+
+function thumbnailSrcForBrowser(src: string | null): string | null {
+  if (!src) return null;
+
+  try {
+    const url = new URL(src);
+    const isOwnedMedia =
+      url.protocol === "https:" &&
+      url.username === "" &&
+      url.password === "" &&
+      url.port === "" &&
+      OWNED_MEDIA_HOSTS.has(url.hostname) &&
+      url.pathname.startsWith("/api/media/");
+
+    return isOwnedMedia ? `${url.pathname}${url.search}${url.hash}` : src;
+  } catch {
+    return src;
+  }
+}
 
 /**
  * 카드 썸네일의 실패 경계를 한곳에서 처리한다.
@@ -27,22 +48,32 @@ export function MemeThumbnail({
   priority?: boolean;
   variant?: "card" | "compact";
 }) {
+  const imageSrc = thumbnailSrcForBrowser(src);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const canRenderImage = Boolean(src && failedSrc !== src);
+  const canRenderImage = Boolean(imageSrc && failedSrc !== imageSrc);
+  const handleImageRef = useCallback(
+    (image: HTMLImageElement | null) => {
+      if (image?.complete && image.naturalWidth === 0) {
+        setFailedSrc(imageSrc);
+      }
+    },
+    [imageSrc],
+  );
 
-  if (canRenderImage && src) {
+  if (canRenderImage && imageSrc) {
     return (
       // 원격 도메인이 다양해 next/image remotePatterns 대신 img를 사용한다.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
+        ref={handleImageRef}
+        src={imageSrc}
         alt=""
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : undefined}
         decoding="async"
         referrerPolicy="no-referrer"
         draggable={false}
-        onError={() => setFailedSrc(src)}
+        onError={() => setFailedSrc(imageSrc)}
         data-thumbnail-state="image"
         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
       />
@@ -78,7 +109,7 @@ export function MemeThumbnail({
         {title}
       </span>
       {fallbackCaption && (
-        <span className={`relative line-clamp-3 leading-snug opacity-80 ${
+        <span className={`relative line-clamp-3 leading-snug ${
           variant === "compact" ? "text-xs" : "text-sm"
         }`}>
           {fallbackCaption}

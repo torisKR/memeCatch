@@ -3,13 +3,14 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import { CommunityPostCard } from "@/components/community-post-card";
+import { CommunityPageIntro } from "@/components/community-page-intro";
 import { StatusPanel } from "@/components/status-panel";
+import { CatchMascot } from "@/components/catch-mascot";
 import {
   POSTS_PAGE_SIZE,
   POST_SELECT,
   type CommunityPostRow,
 } from "./shared";
-import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * 레인 3 — 커뮤니티 글 목록 (최신순, 서버 컴포넌트 + 페이지네이션).
@@ -69,31 +70,7 @@ export default async function CommunityPage({
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
-      <AdsenseScript />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">커뮤니티</h1>
-            {/* 이제 막 시작한 공간임을 정직하게 표시 */}
-            <span className="hover-glow-flame inline-flex items-center gap-1.5 rounded-full border border-transparent bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
-              <span aria-hidden className="signal-live size-1.5 rounded-full bg-(--signal-cyan)" />
-              베타
-            </span>
-          </div>
-          <p className="mt-1 text-base text-muted">
-            밈 추천·추억·토론 — 뭐든 편하게 이야기해요.
-          </p>
-        </div>
-        <Link
-          href="/community/new"
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-[0.97]"
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          글쓰기
-        </Link>
-      </div>
+      <CommunityPageIntro />
 
       {failed && (
         <StatusPanel
@@ -102,34 +79,65 @@ export default async function CommunityPage({
           tone="error"
           label="연결 신호 확인 중"
           title="글을 불러오지 못했어요"
-          description="연결이 잠시 끊겼어요. 바로 다시 불러올 수 있어요."
+          description="연결이 잠시 끊겼어요. 다시 시도하거나 먼저 글을 남겨 주세요."
           actions={
-            <Link
-              href="/community"
-              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent"
-            >
-              다시 불러오기
-            </Link>
+            <>
+              <Link
+                href="/community"
+                className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                다시 불러오기
+              </Link>
+              <Link
+                href="/community/new"
+                className="inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none"
+              >
+                글쓰기
+              </Link>
+              <Link
+                href="/explore?sort=recent"
+                className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                최신 밈 보기
+              </Link>
+            </>
           }
         />
       )}
 
       {!failed && visible.length === 0 && (
-        <StatusPanel
-          className="mt-6"
+        <section
           role="status"
-          label="첫 신호 대기 중"
-          title="아직 글이 없어요"
-          description="첫 글을 남기고 밈 이야기를 시작해 보세요."
-          actions={
-            <Link
-              href="/community/new"
-              className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
-            >
-              첫 글 쓰러 가기
-            </Link>
-          }
-        />
+          aria-labelledby="community-empty-title"
+          className="relative mt-5 grid overflow-hidden rounded-3xl border border-border bg-surface sm:grid-cols-[minmax(0,1fr)_13rem]"
+        >
+          <div className="px-5 py-7 sm:px-8 sm:py-9">
+            <p className="text-sm font-bold text-accent-text">첫 이야기를 기다리고 있어요</p>
+            <h2 id="community-empty-title" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+              아직 글이 없어요
+            </h2>
+            <p className="mt-2 max-w-xl text-base leading-relaxed text-muted">
+              요즘 눈에 띈 밈이나 기억나는 장면을 남기고 대화를 시작해 보세요.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link
+                href="/community/new"
+                className="inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-5 text-sm font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none"
+              >
+                첫 글 쓰기
+              </Link>
+              <Link
+                href="/explore?sort=recent"
+                className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                최신 밈 둘러보기
+              </Link>
+            </div>
+          </div>
+          <div aria-hidden className="hidden place-items-center bg-ink sm:grid">
+            <CatchMascot size="sm" state="help" />
+          </div>
+        </section>
       )}
 
       <ul className="instrument-grid mt-5 space-y-3">

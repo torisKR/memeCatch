@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
-import { CatchMascot } from "@/components/catch-mascot";
 import { LiveCaretInput } from "@/components/ui/live-caret-input";
 
 const EXAMPLE_SEARCHES = ["꼬셔야겠어 챌린지", "브금", "잘자 내꿈꿔"] as const;
@@ -8,22 +7,21 @@ const EXAMPLE_SEARCHES = ["꼬셔야겠어 챌린지", "브금", "잘자 내꿈�
 export function HeroWeb3({ totalCount }: { totalCount: number }) {
   return (
     <>
-      <section aria-label="밈 검색" className="bg-background text-foreground">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:py-16 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)] lg:items-center lg:gap-14 lg:py-20">
-          <div>
-            <p className="text-sm font-bold text-accent-text">
-              한국부터 해외까지, 밈의 뜻과 유래
+      <section aria-labelledby="home-hero-title" className="bg-background text-foreground">
+        <div className="mx-auto grid max-w-6xl gap-7 px-4 py-8 sm:gap-9 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:items-center lg:gap-12 lg:py-14">
+          <div className="max-w-2xl">
+            <p className="text-sm font-bold tracking-wide text-accent-text">
+              뜻 · 유래 · 사용 맥락
             </p>
-            <h1 className="mt-4 max-w-2xl text-[clamp(2.5rem,5.4vw,4.75rem)] font-black leading-[1.05] tracking-[-0.045em]">
-              <span className="block">오늘 본 그 밈,</span>
-              <span className="block text-accent-text">맥락까지 한눈에.</span>
+            <h1 id="home-hero-title" className="mt-3 max-w-xl text-[clamp(2.25rem,5vw,3.75rem)] font-black leading-[1.08] tracking-[-0.045em]">
+              밈의 뜻부터,
+              <span className="block text-accent-text">지금 쓸 맥락까지.</span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-              지금 써도 될지까지, 뜻·유래·현재 안전성은 무료로 확인하세요.
-              무료 활용 문구 1개로 3분 안에 게시 준비를 시작하세요.
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
+              유행어와 밈의 뜻, 유래, 지금 사용해도 좋을지 확인해 보세요.
             </p>
 
-            <form action="/search" role="search" className="mt-8 max-w-2xl">
+            <form action="/search" role="search" className="mt-6 max-w-2xl">
               <label htmlFor="home-search" className="sr-only">
                 밈 검색
               </label>
@@ -56,20 +54,40 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
             </form>
           </div>
 
-          <div className="relative grid aspect-[3/2] max-h-72 place-items-center overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm sm:max-h-80 lg:max-h-[34rem]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,var(--accent-soft),transparent_52%)]" />
-            <CatchMascot size="lg" state="discovering" />
-            <p className="absolute bottom-4 left-4 rounded-xl bg-surface/85 px-3 py-2 text-xs font-bold text-accent-text backdrop-blur-sm">
-              캐치가 신호를 찾고 있어요
-            </p>
-          </div>
+          <figure className="relative hidden aspect-[2752/1536] overflow-hidden rounded-3xl border border-border bg-ink shadow-xl lg:block">
+            <picture className="absolute inset-0 block size-full">
+              <source
+                media="(min-width: 1024px)"
+                type="image/avif"
+                srcSet="/brand/hero-signal-v2.avif"
+              />
+              <source
+                media="(min-width: 1024px)"
+                type="image/webp"
+                srcSet="/brand/hero-signal-v2.webp"
+              />
+              <img
+                src="/brand/hero-signal-v2.webp"
+                alt=""
+                width={2752}
+                height={1536}
+                loading="lazy"
+                decoding="async"
+                className="size-full object-cover"
+              />
+            </picture>
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink/65 via-transparent to-transparent" />
+            <figcaption className="absolute bottom-4 left-5 max-w-[80%] text-sm font-semibold text-white sm:bottom-6 sm:left-7 sm:text-base">
+              밈의 신호를 포착하고, 맥락을 함께 기록합니다.
+            </figcaption>
+          </figure>
         </div>
       </section>
 
       <section aria-label="밈 발견 바로가기" className="border-y border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="mr-1 font-semibold text-muted">예시:</span>
+            <span className="mr-1 font-semibold text-muted">바로 찾아보기</span>
             {EXAMPLE_SEARCHES.map((query) => (
               <Link
                 key={query}

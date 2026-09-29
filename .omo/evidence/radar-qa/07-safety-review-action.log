@@ -1,0 +1,13 @@
+
+ RUN  v4.1.10 /Users/toris/projects/memecatch
+
+ ✓ lib/actions/radar-safety.test.ts > applyRadarSafetyReview > validates input before accessing Supabase 1ms
+ ✓ lib/actions/radar-safety.test.ts > applyRadarSafetyReview > rejects decisions outside the RPC contract 0ms
+ ✓ lib/actions/radar-safety.test.ts > applyRadarSafetyReview > requires an operator for every invocation 0ms
+ ✓ lib/actions/radar-safety.test.ts > applyRadarSafetyReview > applies through the review RPC, audits, and revalidates 1ms
+ ✓ lib/actions/radar-safety.test.ts > applyRadarSafetyReview > does not audit or revalidate an already handled review 0ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  16:06:29
+   Duration  132ms (transform 21ms, setup 0ms, import 65ms, tests 4ms, environment 0ms)

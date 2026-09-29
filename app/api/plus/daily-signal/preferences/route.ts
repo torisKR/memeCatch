@@ -3,6 +3,7 @@ import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { isDailySignalLocale } from "@/lib/plus-daily-signal-delivery.server";
 import { createClient } from "@/lib/supabase/server";
 import { readBoundedJson } from "@/lib/request-body";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,6 +59,9 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid_origin" }, { status: 403, headers: noStore() });
+  }
   const input = parseInput(await readBoundedJson(request, 2 * 1024).catch(() => null));
   if (!input) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers: noStore() });

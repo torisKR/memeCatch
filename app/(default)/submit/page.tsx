@@ -7,7 +7,10 @@ import { SUBMIT_COPY } from "@/lib/i18n-submit";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
-  return SUBMIT_COPY[locale].metadata;
+  return {
+    ...SUBMIT_COPY[locale].metadata,
+    robots: { index: false, follow: false },
+  };
 }
 
 export default async function SubmitPage({

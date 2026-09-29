@@ -17,7 +17,7 @@ export type CitableSource = {
   title: string;
   /** 발행처 — 작성자명이 있으면 우선, 없으면 플랫폼명 */
   publisher: string | null;
-  /** 밈캐치가 이 출처를 확인한 시점(발행일이 아니다 — 원문 발행일은 수집하지 않는다) */
+  /** 저장된 수집 시점. 원문 발행일이나 사실 검증 완료일을 뜻하지 않는다. */
   capturedAt: string | null;
   /** 원본·보도가 아니라 맥락 확인용 위키인가 */
   isContext: boolean;
@@ -25,6 +25,43 @@ export type CitableSource = {
 
 function cleanText(value?: string | null): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** Public citation links only. This validates syntax; it does not fetch or certify a source. */
+export function publicSourceUrl(value?: string | null): string | null {
+  if (typeof value !== "string" || value.length > 2048 || /[\u0000-\u001f\u007f\\]/.test(value)) return null;
+  try {
+    const url = new URL(value.trim());
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port) return null;
+    // Sources use public domain names. Literal IPs and local/reserved suffixes are not evidence links.
+    if (!host.includes('.') || /^[\d.]+$/.test(host) || host.includes(':') || host.startsWith('[')) return null;
+    if (['localhost', 'local', 'internal', 'invalid', 'test', 'example', 'onion', 'home.arpa'].some(
+      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+    )) return null;
+    if (!host.split('.').every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))) return null;
+    url.hostname = host;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+/** Preserve resource/query case; anchors on the same document do not create independent evidence. */
+function sourceDocumentKey(url: string): string {
+  return url.split('#')[0];
+}
+
+/** A stored date is not a reviewed date. Invalid, impossible or future timestamps are omitted. */
+export function evidenceTimestamp(value?: string | null, now = Date.now()): string | null {
+  const text = cleanText(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:0\d|1[0-4]):[0-5]\d))?$/.exec(text);
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) return null;
+  const time = Date.parse(text);
+  return Number.isFinite(time) && time <= now ? text : null;
 }
 
 /**
@@ -36,17 +73,17 @@ export function citableSources(sources: CitableSourceInput[]): CitableSource[] {
   const seen = new Set<string>();
   const out: CitableSource[] = [];
   for (const source of sources) {
-    const url = cleanText(source.source_url);
+    const url = publicSourceUrl(source.source_url);
     const title = cleanText(source.title);
     if (!url || !title) continue;
-    const key = url.toLowerCase();
+    const key = sourceDocumentKey(url);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({
       url,
       title,
       publisher: cleanText(source.creator_name) || cleanText(source.platform) || null,
-      capturedAt: cleanText(source.captured_at) || null,
+      capturedAt: evidenceTimestamp(source.captured_at),
       isContext: isContextSourceUrl(url),
     });
   }
@@ -77,7 +114,7 @@ export function isContextSourceUrl(rawUrl?: string | null) {
 export type EvidenceSummary = {
   /** URL 기준 중복 제거한 근거 출처 수 */
   total: number;
-  /** 원본·공식·보도 — 맥락 위키가 아닌 출처 */
+  /** 맥락 위키가 아닌 일반 출처 수. 이름은 호환성 유지용이며 1차 자료 인증이 아니다. */
   primary: number;
   /** 나무위키·위키백과 등 맥락 확인용 보조 출처 */
   context: number;
@@ -104,9 +141,9 @@ export function summarizeEvidence(sources: EvidenceSourceInput[]): EvidenceSumma
   let context = 0;
   let identifiedPrimary = 0;
   for (const source of sources) {
-    const url = cleanText(source.source_url);
+    const url = publicSourceUrl(source.source_url);
     if (!url) continue;
-    const key = url.toLowerCase();
+    const key = sourceDocumentKey(url);
     if (seen.has(key)) continue;
     seen.add(key);
     if (isContextSourceUrl(url)) {
@@ -124,7 +161,7 @@ export function summarizeEvidence(sources: EvidenceSourceInput[]): EvidenceSumma
 /** 원본·공식·보도 링크를 먼저 보여 주고, 없을 때만 맥락 출처를 폴백한다. */
 export function preferredSourceUrl(sources: SourceLink[]) {
   const urls = sources
-    .map((source) => source.source_url)
+    .map((source) => publicSourceUrl(source.source_url))
     .filter((url): url is string => Boolean(url));
   return urls.find((url) => !isContextSourceUrl(url)) ?? urls[0] ?? null;
 }
@@ -140,10 +177,12 @@ export function sourceLinksWithContent(
 ) {
   const seen = new Set<string>();
   return [...contents.map((content) => ({ source_url: content.url, platform: content.platform })), ...sources]
-    .filter((source) => {
-      const url = source.source_url;
-      if (!url || seen.has(url)) return false;
-      seen.add(url);
-      return true;
+    .flatMap((source) => {
+      const url = publicSourceUrl(source.source_url);
+      if (!url) return [];
+      const key = sourceDocumentKey(url);
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [{ ...source, source_url: url }];
     });
 }

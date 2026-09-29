@@ -11,6 +11,13 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: () => createClient() }))
 
 import { POST } from "./route";
 
+function request(origin = "http://localhost") {
+  return new Request("http://localhost/api/saved-context-alerts", {
+    method: "POST",
+    headers: { origin },
+  });
+}
+
 beforeEach(() => {
   getPremiumEntitlement.mockReset();
   rpc.mockReset();
@@ -18,10 +25,19 @@ beforeEach(() => {
 });
 
 describe("saved context alert read marking", () => {
+  it("rejects a cross-origin read mark before entitlement checks", async () => {
+    const response = await POST(request("https://evil.example"));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(getPremiumEntitlement).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("does not allow signed-out visitors to mark alerts", async () => {
     getPremiumEntitlement.mockResolvedValue({ signedIn: false, isPremium: false });
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(401);
     expect(rpc).not.toHaveBeenCalled();
@@ -30,7 +46,7 @@ describe("saved context alert read marking", () => {
   it("keeps the endpoint Plus-only", async () => {
     getPremiumEntitlement.mockResolvedValue({ signedIn: true, isPremium: false });
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(403);
     expect(rpc).not.toHaveBeenCalled();
@@ -40,7 +56,7 @@ describe("saved context alert read marking", () => {
     getPremiumEntitlement.mockResolvedValue({ signedIn: true, isPremium: true });
     rpc.mockResolvedValue({ data: 3, error: null });
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(200);
     expect(rpc).toHaveBeenCalledWith("mark_saved_context_alerts_read");

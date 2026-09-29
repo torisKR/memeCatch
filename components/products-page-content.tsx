@@ -9,6 +9,9 @@ import type { AffiliateStorefrontData } from "@/lib/affiliate/types";
 import { useLocale } from "@/lib/i18n-client";
 import { PAGE_COPY } from "@/lib/i18n-pages";
 import { isMemeProductActive, MEME_PRODUCTS } from "@/lib/meme-commerce";
+import Link from "next/link";
+import { CreatorProductCard } from "@/components/creator-products/creator-product-card";
+import type { PublicCreatorProduct } from "@/lib/creator-products";
 
 /**
  * /products 본문 — 로케일 의존 카피(PAGE_COPY)를 클라이언트로 분리한 컴포넌트.
@@ -22,8 +25,12 @@ import { isMemeProductActive, MEME_PRODUCTS } from "@/lib/meme-commerce";
  */
 export function ProductsPageContent({
   storefront,
+  creatorProducts,
+  creatorProductsError,
 }: {
   storefront: AffiliateStorefrontData;
+  creatorProducts: PublicCreatorProduct[];
+  creatorProductsError: boolean;
 }) {
   const { locale } = useLocale();
   const copy = PAGE_COPY[locale];
@@ -86,6 +93,23 @@ export function ProductsPageContent({
           </TrackedBlock>
         </section>
       )}
+
+      <section className="mt-16" aria-labelledby="creator-products-title">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-2xl">
+            <Badge className="border-border bg-accent-soft text-accent-text">크리에이터 마켓</Badge>
+            <h2 id="creator-products-title" className="mt-3 text-2xl font-extrabold tracking-tight">크리에이터가 직접 소개하는 밈 상품</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted">등록된 상품은 검토 후 공개돼요. 판매와 결제는 각 판매처에서 진행하며 홍보 관계를 카드에 표시해요.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/products/new" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-strong px-4 py-2 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">내 상품 등록하기</Link>
+            <Link href="/products/mine" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">내 등록 상품</Link>
+          </div>
+        </div>
+        {creatorProductsError ? <p role="alert" className="mt-5 rounded-xl border border-safety-red bg-safety-red-bg p-4 text-base text-safety-red">크리에이터 상품을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>
+          : creatorProducts.length === 0 ? <p className="mt-5 rounded-xl border border-border bg-surface p-6 text-base text-muted">아직 공개된 크리에이터 상품이 없어요. 상품을 등록하고 소개해 보세요.</p>
+          : <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{creatorProducts.map((product) => <li key={product.id} className="min-w-0"><CreatorProductCard product={product} /></li>)}</ul>}
+      </section>
     </>
   );
 }

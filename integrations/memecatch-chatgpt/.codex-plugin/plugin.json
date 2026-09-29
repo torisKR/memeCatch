@@ -1,0 +1,14 @@
+{
+  "name": "memecatch",
+  "version": "0.1.0",
+  "description": "한국 밈의 뜻·유래·사용 주의를 검색하는 밈캐치 앱과 운영 이벤트 연결",
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "밈캐치",
+    "shortDescription": "밈의 뜻과 맥락, 사용 주의를 함께 확인하세요.",
+    "longDescription": "밈캐치의 공개 본문에서 밈을 검색하고 상세 설명을 표시합니다. 공개된 일부 항목을 검색하며, 전체 사전은 밈캐치 사이트에서 확인할 수 있습니다.",
+    "websiteURL": "https://catchmeme.com",
+    "privacyPolicyURL": "https://catchmeme.com/privacy"
+  }
+}

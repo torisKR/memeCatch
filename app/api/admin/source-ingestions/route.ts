@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ingestSource, SourceIngestionError } from "@/lib/sources/ingest.server";
 import { createClient } from "@/lib/supabase/server";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 const inputSchema = z.object({
   url: z.string().trim().min(1).max(2_048),
@@ -9,6 +10,9 @@ const inputSchema = z.object({
 });
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return Response.json({ ok: false, error: "invalid_origin" }, { status: 403 });
+  }
   const supabase = await createClient();
   const {
     data: { user },

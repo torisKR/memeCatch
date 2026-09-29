@@ -152,7 +152,8 @@ describe("MemeEmbed", () => {
     );
 
     expect(html).not.toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
-    expect(html).toContain("출처에서 원본 보기");
+    expect(html).toContain("원본 맥락은 출처에서 확인할 수 있어요.");
+    expect(html).toContain("출처에서 원본 맥락 보기");
   });
 
   it("does not embed a region_blocked TikTok source", () => {
@@ -165,7 +166,29 @@ describe("MemeEmbed", () => {
     );
 
     expect(html).not.toContain("www.tiktok.com/player/v1/6833754937747361025");
-    expect(html).toContain("출처에서 원본 보기");
+    expect(html).toContain("원본 콘텐츠는 현재 확인할 수 없지만");
+    expect(html).not.toContain("출처 상태 확인하기");
+  });
+
+  it("does not present a confirmed unavailable source as currently playable", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          platform: "YouTube",
+          content_id: "abcdefghijk",
+          url: "https://www.youtube.com/watch?v=abcdefghijk",
+          thumbnail_url: null,
+          availability: "dead",
+          caption: null,
+        }}
+        title="사라진 밈"
+        isRepresentative
+      />,
+    );
+
+    expect(html).not.toContain("youtube-nocookie.com/embed");
+    expect(html).toContain("원본 콘텐츠는 현재 확인할 수 없지만");
+    expect(html).not.toContain("원본 콘텐츠는 출처에서 볼 수 있어요");
   });
 
   it("loads Instagram immediately without a click gate", async () => {
@@ -205,5 +228,38 @@ describe("MemeEmbed", () => {
     expect(frame.className).toContain("max-w-[540px]");
     expect(screen.queryByText(/재생하면/)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps Threads srcDoc popups inside the iframe sandbox", async () => {
+    const threadsContent = {
+      ...tiktokContent,
+      platform: "Threads",
+      content_id: "abc123",
+      url: "https://www.threads.net/@memecatch/post/abc123",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        provider: "threads",
+        sourceUrl: threadsContent.url,
+        embedUrl: null,
+        embedHtml: '<blockquote><a href="https://example.com">post</a></blockquote>',
+        contentId: threadsContent.content_id,
+        title: null,
+        authorName: null,
+      }),
+    }));
+
+    render(
+      <MemeEmbed
+        content={threadsContent}
+        title="Threads 밈"
+        isRepresentative={false}
+      />
+    );
+
+    const frame = await screen.findByTitle("Threads 밈 — Threads 관련 콘텐츠");
+    await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("blockquote"));
+    expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-popups");
   });
 });

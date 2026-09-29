@@ -26,13 +26,13 @@ describe("SafetyRationale", () => {
     expect(screen.queryByText(/상황을 가려 써야 하는 등급/)).toBeNull();
     expect(screen.getAllByText("친한 사이 별명으로만").length).toBeGreaterThan(0);
     expect(screen.getByText("어디서 써도 될까요?")).toBeTruthy();
-    expect(screen.getByText("회사")).toBeTruthy();
+    expect(screen.getByText("직장에서")).toBeTruthy();
     expect(screen.getAllByText("공식 자리에서는 오해 소지").length).toBeGreaterThan(0);
     // sentiment도 근거의 일부로 노출
     expect(screen.getByText("논쟁 중")).toBeTruthy();
   });
 
-  it("개인·회사·브랜드·광고 문맥에 근거와 실제 검수일을 표시한다", () => {
+  it("직장·친구·가족·SNS 문맥의 원래 판정과 실제 검수일을 표시한다", () => {
     render(
       <SafetyRationale
         level="yellow"
@@ -44,7 +44,7 @@ describe("SafetyRationale", () => {
       />
     );
 
-    for (const label of ["개인", "회사", "브랜드", "광고"]) {
+    for (const label of ["직장에서", "친구끼리", "자녀·가족과", "공개 SNS에서"]) {
       expect(screen.getByText(label)).toBeTruthy();
     }
     expect(screen.getAllByText("사적인 대화에서 쓰는 표현").length).toBeGreaterThan(0);

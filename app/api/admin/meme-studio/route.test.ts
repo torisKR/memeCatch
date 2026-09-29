@@ -28,7 +28,7 @@ function authClient(user: { id: string } | null, role?: string) {
 function request(body: unknown) {
   return new Request("http://localhost/api/admin/meme-studio", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -36,6 +36,18 @@ function request(body: unknown) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("admin meme studio API", () => {
+  it("rejects a cross-origin request before reading cookie-backed auth", async () => {
+    const response = await POST(new Request("http://localhost/api/admin/meme-studio", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ topic: "퇴근 밈", tone: "hype", format: "caption", country: "KR" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
   it("rejects signed-out and non-operator callers before Bedrock generation", async () => {
     mocks.createClient.mockResolvedValueOnce(authClient(null));
     expect((await POST(request({ topic: "퇴근 밈", tone: "hype", format: "caption", country: "KR" }))).status)

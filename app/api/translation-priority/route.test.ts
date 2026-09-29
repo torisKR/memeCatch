@@ -16,7 +16,7 @@ import { GET, POST } from "./route";
 function request(body: unknown) {
   return new Request("http://localhost/api/translation-priority", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -38,6 +38,19 @@ beforeEach(() => {
 });
 
 describe("translation priority API", () => {
+  it("rejects a cross-origin request before parsing or entitlement checks", async () => {
+    const response = await POST(new Request("http://localhost/api/translation-priority", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ memeId: "meme-1", locale: "en" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(getPremiumEntitlement).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("keeps signed-out and free accounts out of the request RPC", async () => {
     getPremiumEntitlement.mockResolvedValueOnce({ signedIn: false, isPremium: false });
     await expect(POST(request({ memeId: "meme-1", locale: "en" }))).resolves.toHaveProperty("status", 401);

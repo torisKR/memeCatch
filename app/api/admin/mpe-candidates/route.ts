@@ -11,6 +11,7 @@ import {
   generateEvidenceDraft,
 } from "@/lib/mpe/evidence-draft.server";
 import { createClient } from "@/lib/supabase/server";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 const candidateIdSchema = z.uuid();
 const postSchema = z.union([
@@ -63,6 +64,9 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return Response.json({ ok: false, error: "invalid_origin" }, { status: 403 });
+  }
   const auth = await operatorClient();
   if (!auth.ok) return auth.response;
   const parsed = postSchema.safeParse(await request.json().catch(() => null));

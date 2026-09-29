@@ -20,6 +20,10 @@ const eslintConfig = defineConfig([
     // 로컬 패키지 저장소와 격리 작업트리는 앱 소스가 아니다.
     ".pnpm-store/**",
     ".worktrees/**",
+    ".local/**",
+    ".codex/plugins/**",
+    ".omo/**",
+    ".omx/**",
   ]),
 ]);
 

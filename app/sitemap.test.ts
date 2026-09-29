@@ -59,6 +59,13 @@ function reviewedTranslation(locale: string, updatedAt: string): Translation {
 function useRows(
   rows: ReturnType<typeof indexableMeme>[],
   queryError: { message: string } | null = null,
+  latestResult: {
+    data: { published_at: string | null } | null;
+    error: { message: string } | null;
+  } = {
+    data: { published_at: "2026-01-01T00:00:00.000Z" },
+    error: null,
+  },
 ) {
   createStaticClient.mockReturnValue({
     from: vi.fn(() => ({
@@ -68,10 +75,8 @@ function useRows(
             in: vi.fn(() => homeQuery),
             order: vi.fn(() => homeQuery),
             limit: vi.fn(() => homeQuery),
-            single: vi.fn(async () => ({
-              data: { published_at: "2026-01-01T00:00:00.000Z" },
-              error: null,
-            })),
+            single: vi.fn(async () => latestResult),
+            maybeSingle: vi.fn(async () => latestResult),
           };
           return homeQuery;
         }
@@ -123,6 +128,75 @@ describe("사이트맵 페이지네이션 안정성", () => {
     await expect(sitemap()).rejects.toThrow(
       "[sitemap] 밈 조회 실패 (from=0): database unavailable",
     );
+  });
+
+  it("최신 공개일 조회 실패도 정상 사이트맵이나 현재 시각으로 숨기지 않는다", async () => {
+    useRows([], null, {
+      data: null,
+      error: { message: "latest unavailable" },
+    });
+
+    await expect(sitemap()).rejects.toThrow(
+      "[sitemap] 최신 공개일 조회 실패: latest unavailable",
+    );
+  });
+});
+
+describe("사이트맵 날짜 진실성", () => {
+  it("정적·정책·가격·모음 URL에 최신 밈 날짜를 복사하지 않는다", async () => {
+    useRows([]);
+    const entries = await sitemap();
+    const staticPaths = [
+      "/pricing",
+      "/en/pricing",
+      "/collections",
+      "/collections/2020s",
+      "/about",
+      "/privacy",
+      "/terms",
+    ];
+
+    for (const pathname of staticPaths) {
+      const entry = entries.find((candidate) =>
+        new URL(candidate.url).pathname === pathname,
+      );
+      expect(entry?.lastModified, pathname).toBeUndefined();
+    }
+  });
+
+  it("공개 데이터가 비어 있으면 요청 시각을 lastModified로 만들지 않는다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2035-12-31T23:59:59.000Z"));
+    useRows([], null, { data: null, error: null });
+
+    const entries = await sitemap();
+
+    expect(entries.every((entry) => entry.lastModified === undefined)).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ["존재하지 않는 날짜", "2026-02-30T00:00:00.000Z"],
+    ["미래 날짜", "2026-03-01T00:00:00.000Z"],
+  ])("%s인 공개일과 밈·번역 수정일은 lastModified에서 생략한다", async (_label, storedDate) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"));
+    try {
+      const translation = reviewedTranslation("en", storedDate);
+      translation.source_updated_at = storedDate;
+      useRows(
+        [{ ...indexableMeme(1, [translation]), updated_at: storedDate }],
+        null,
+        { data: { published_at: storedDate }, error: null },
+      );
+
+      const entries = await sitemap();
+      const datedEntries = entries.filter((entry) => entry.lastModified !== undefined);
+
+      expect(datedEntries).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

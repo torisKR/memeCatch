@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProductsPageContent } from "@/components/products-page-content";
 import { getAffiliateStorefront } from "@/lib/affiliate/repository.server";
 import { PAGE_COPY } from "@/lib/i18n-pages";
-import { AdsenseScript } from "@/components/adsense-script";
+import { getPublicCreatorProducts } from "@/lib/creator-products/server";
 
 /**
  * ISR 로케일 함정 주의: 여기서 getRequestLocale()(=headers())를 읽으면 페이지가
@@ -30,7 +30,10 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function ProductsPage() {
-  const storefront = await getAffiliateStorefront();
+  const [storefront, creatorListings] = await Promise.all([
+    getAffiliateStorefront(),
+    getPublicCreatorProducts(),
+  ]);
   // JSON-LD — Product/Offer 타입을 쓰지 않는다(의도적). 우리는 판매자가 아닌
   // 제휴 링크 디렉터리라 Google 판매자 목록이 요구하는 gtin·brand·availability·
   // 반품정책·배송정보·리뷰를 정직하게 제공할 수 없고(제3자 판매처 소관),
@@ -53,14 +56,17 @@ export default async function ProductsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
-      <AdsenseScript />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <ProductsPageContent storefront={storefront} />
+      <ProductsPageContent
+        storefront={storefront}
+        creatorProducts={creatorListings.products}
+        creatorProductsError={creatorListings.error}
+      />
     </main>
   );
 }

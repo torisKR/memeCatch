@@ -35,6 +35,14 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
     expect(loader).toContain('crossOrigin="anonymous"');
   });
 
+  it("실광고는 개발/미리보기 환경과 비검증 도메인에서 차단한다", () => {
+    const loader = read("components/adsense-script.tsx");
+    expect(loader).toContain("isConfiguredAdsenseClient(ADSENSE_CLIENT)");
+    expect(loader).toContain('process.env.NODE_ENV !== "production"');
+    expect(loader).toContain('process.env.VERCEL_ENV !== "production"');
+    expect(loader).toContain("<AdsenseHostGate>");
+  });
+
   it("로더 URL은 adsense-script.tsx 한 곳에만 존재한다", () => {
     // 전역 레이아웃 등 다른 곳에서 직접 로드하면 화면 단위 통제가 무너진다.
     expect(read("components/adsense-script.tsx")).toContain("adsbygoogle.js");
@@ -48,7 +56,7 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
     // 색인(sitemap·robots)은 MIN_PROSE_CHARS_INDEX(150자)로 낮아졌지만, 광고는
     // 배너(DocStatusNote)와 같은 MIN_PROSE_CHARS(250자) 기준을 그대로 쓴다 —
     // isIndexableMeme(meme)과는 더 이상 같은 함수가 아니다.
-    expect(page).toMatch(/contentDepth\(meme\)\.isSubstantial\s*&&\s*<AdsenseScript\s*\/>/);
+    expect(page).toMatch(/isAdsenseContentEligible\(meme\)\s*&&\s*<AdsenseScript\s*\/>/);
     // 조건 없이 렌더하는 자리가 있으면 얇은 문서에도 광고가 붙는다.
     expect(page.match(/<AdsenseScript\s*\/>/g)).toHaveLength(1);
   });
@@ -62,6 +70,10 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
       "app/(default)/support/page.tsx",
       "app/(default)/search/page.tsx",
       "app/(default)/offline/page.tsx",
+      "app/(default)/products/page.tsx",
+      "app/(default)/quiz/page.tsx",
+      "app/(default)/community/page.tsx",
+      "app/(default)/community/[id]/page.tsx",
     ]) {
       expect(read(p), p).not.toContain("AdsenseScript");
     }

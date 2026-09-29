@@ -8,6 +8,15 @@ const source = readFileSync(
 );
 
 describe("localized meme detail metadata", () => {
+  it("redirects short-only and stale aliases to the current localized canonical slug", () => {
+    expect(source).toContain('import { notFound, permanentRedirect } from "next/navigation";');
+    expect(source).toContain("canonicalMemeRedirectPath(key");
+    expect(source).toContain("if (redirectPath) permanentRedirect(redirectPath);");
+    expect(source.indexOf("if (!meme) notFound();")).toBeLessThan(
+      source.indexOf("canonicalMemeRedirectPath(key"),
+    );
+  });
+
   it("uses the reviewed English page as x-default when available", () => {
     expect(source).toContain("const englishVersion = indexableVersions.find");
     expect(source).toContain('["x-default", xDefault]');
@@ -42,5 +51,20 @@ describe("localized meme detail metadata", () => {
     expect(source).toContain("copiedLabel={copy.shareCopied}");
     expect(source).toContain("copiedStatus={copy.shareCopiedStatus}");
     expect(source).toContain("siteName={seo.siteName}");
+  });
+
+  it("uses shared guarded JSON-LD with no database-created publication fallback", () => {
+    expect(source).toContain("<MemeWebPageJsonLd");
+    expect(source).toContain("datePublished={meme.published_at}");
+    expect(source).toContain("dateModified={meme.translation.updatedAt}");
+    expect(source).toContain("sources={sourceLinks}");
+    expect(source).not.toContain("meme.published_at ?? meme.created_at");
+  });
+
+  it("renders only public safe source URLs, keeping JSON-LD citations within the visible list", () => {
+    expect(source).toContain("publicSourceUrl(source.source_url)");
+    expect(source).toContain("source_url: url");
+    expect(source).toContain("href={source.source_url}");
+    expect(source).not.toContain("href={source.source_url!}");
   });
 });

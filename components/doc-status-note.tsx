@@ -64,6 +64,7 @@ export function DocStatusNote({
       >
         <Link
           href={`/submit?name=${encodeURIComponent(title)}`}
+          rel="nofollow"
           className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-surface px-4 py-2.5 text-base font-semibold underline underline-offset-2 transition-colors hover:text-foreground"
         >
           아는 내용 제보하기

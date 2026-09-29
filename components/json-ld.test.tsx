@@ -4,6 +4,7 @@ import {
   DefinedTermSetJsonLd,
   MemeBreadcrumbJsonLd,
   MemeDefinedTermJsonLd,
+  MemeVideoJsonLd,
   MemeWebPageJsonLd,
   WebSiteJsonLd,
 } from "@/components/json-ld";
@@ -159,5 +160,66 @@ describe("localized JSON-LD", () => {
         item: `${SITE_URL}/ja/memes/custom`,
       },
     ]);
+  });
+
+  it("emits only citable public sources and valid stored evidence dates", () => {
+    const data = readJsonLd(
+      <MemeWebPageJsonLd
+        name="A meme"
+        summary="Meaning"
+        description="Full explanation"
+        shortId="a1b2c3"
+        slug="test"
+        datePublished="not-a-date"
+        dateModified="2099-01-01T00:00:00Z"
+        sources={[
+          {
+            source_url: "https://news.example.org/article",
+            title: "Reported context",
+            captured_at: "2026-07-01T12:00:00Z",
+          },
+          { source_url: "javascript:alert(1)", title: "Unsafe" },
+          { source_url: "https://news.example.org/untitled", title: null },
+        ]}
+      />,
+    );
+
+    expect(data.citation).toEqual(["https://news.example.org/article"]);
+    expect(data).not.toHaveProperty("datePublished");
+    expect(data).not.toHaveProperty("dateModified");
+  });
+
+  it("omits VideoObject when uploadDate is absent, invalid, or in the future", () => {
+    const props = {
+      name: "A meme",
+      description: "Meaning",
+      videoId: "video-id",
+    };
+
+    expect(renderToStaticMarkup(<MemeVideoJsonLd {...props} />)).toBe("");
+    expect(
+      renderToStaticMarkup(<MemeVideoJsonLd {...props} uploadDate="not-a-date" />),
+    ).toBe("");
+    expect(
+      renderToStaticMarkup(
+        <MemeVideoJsonLd {...props} uploadDate="2099-01-01T00:00:00Z" />,
+      ),
+    ).toBe("");
+  });
+
+  it("preserves a valid source-derived VideoObject upload date", () => {
+    const data = readJsonLd(
+      <MemeVideoJsonLd
+        name="A meme"
+        description="Meaning"
+        videoId="video-id"
+        uploadDate="2026-07-01T12:00:00Z"
+      />,
+    );
+
+    expect(data).toMatchObject({
+      "@type": "VideoObject",
+      uploadDate: "2026-07-01T12:00:00Z",
+    });
   });
 });

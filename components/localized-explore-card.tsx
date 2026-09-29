@@ -41,13 +41,13 @@ export function LocalizedExploreCard({
             priority={priority}
           />
           <div
-            data-country-flag-position="top-left"
-            className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5"
+            data-country-flag-position="top-right"
+            className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2"
           >
-            <CountryFlagBadge code={countryCode} />
             <span className="rounded-full border border-white/30 bg-black/55 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
               {getSeoCopy(locale).categories[meme.category]}
             </span>
+            <CountryFlagBadge code={countryCode} locale={locale} />
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-col p-4">

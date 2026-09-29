@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   CATEGORIES,
   MODERATION_STATUS,
@@ -28,7 +28,6 @@ import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { MeteredGate } from "@/components/metered-gate";
 import { AuthInvite } from "@/components/auth-invite";
 import { MemeEmbed } from "@/components/meme-embed";
-import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
 import { ExportButton } from "@/components/export-button";
@@ -36,7 +35,6 @@ import { ShareButton } from "@/components/share-button";
 import {
   MemeBreadcrumbJsonLd,
   MemeDefinedTermJsonLd,
-  MemeVideoJsonLd,
   MemeWebPageJsonLd,
 } from "@/components/json-ld";
 import { memePathFrom } from "@/lib/labels";
@@ -44,13 +42,14 @@ import { DonateCard } from "@/components/donate-card";
 import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
 import { ContextNav } from "@/components/context-nav";
-import { preferredSourceUrl, sourceLinksWithContent } from "@/lib/source-links";
 import { SourceEvidence } from "@/components/source-evidence";
 import { TrustNote } from "@/components/trust-note";
 import { DocStatusNote } from "@/components/doc-status-note";
 import { AdsenseScript } from "@/components/adsense-script";
-import { contentDepth, isIndexableMeme } from "@/lib/content-depth";
+import { isAdsenseContentEligible } from "@/lib/adsense-policy";
+import { isIndexableMeme } from "@/lib/content-depth";
 import { isRenderableContent } from "@/lib/content-availability";
+import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
@@ -64,6 +63,7 @@ import {
 } from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
+import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 
 /** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
 export const revalidate = 600;
@@ -82,6 +82,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // 없는 문서가 200 + "찾을 수 없어요" 화면(soft-404)으로 나간다 — 검색엔진이
   // 저품질 신호로 읽는다. (smoke가 /memes/zzzzzzzz 200 수신으로 검출)
   if (!meme) notFound();
+  const redirectPath = canonicalMemeRedirectPath(key, {
+    shortId: meme.short_id,
+    slug: meme.slug,
+    locale: "ko",
+  });
+  if (redirectPath) permanentRedirect(redirectPath);
   const path = memePathFrom(meme.short_id, meme.slug);
   const availableLocales = (await getAvailableTranslationLocales(meme.id)).filter(
     isSeoContentLocale,
@@ -144,6 +150,12 @@ export default async function MemeDetailPage({ params }: Props) {
   const { key } = await params;
   const meme = await getMemeByShortId(shortIdFromParam(key));
   if (!meme) notFound();
+  const redirectPath = canonicalMemeRedirectPath(key, {
+    shortId: meme.short_id,
+    slug: meme.slug,
+    locale: "ko",
+  });
+  if (redirectPath) permanentRedirect(redirectPath);
   const path = memePathFrom(meme.short_id, meme.slug);
 
   const tagIds = meme.meme_tags_map.map((t) => t.tag_id);
@@ -168,9 +180,12 @@ export default async function MemeDetailPage({ params }: Props) {
   // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트
   // (is_meme_rank_eligible)와 같은 기준이라 "랭킹엔 못 오르는데 상세엔 뜨는"
   // 콘텐츠가 생기지 않는다.
+  const delivery = resolveMemeDelivery({
+    contents: meme.meme_contents,
+    sources: meme.meme_sources,
+  });
+  const representative = delivery.representative;
   const liveContents = meme.meme_contents.filter(isRenderableContent);
-  const representative =
-    liveContents.find((c) => c.is_representative) ?? liveContents[0] ?? null;
   // TikTok·Instagram 등 비대표 임베드 — 대표 영상 아래 "관련 콘텐츠"로 노출
   const relatedSocialContents = liveContents
     .filter(
@@ -179,8 +194,8 @@ export default async function MemeDetailPage({ params }: Props) {
         ["tiktok", "instagram"].includes(String(c.platform ?? "").toLowerCase()),
     )
     .slice(0, 4);
-  const sourceLinks = sourceLinksWithContent(meme.meme_sources, meme.meme_contents);
-  const fallbackSourceUrl = preferredSourceUrl(sourceLinks);
+  const sourceLinks = delivery.sourceLinks;
+  const fallbackSourceUrl = delivery.fallbackSourceUrl;
   // usage_examples 컬럼·데이터는 에이전트 D가 추가 중 — DB 타입 재생성 전까지
   // 옵셔널 캐스팅 1곳으로 안전 처리(컴포넌트가 런타임 검증, 없으면 null 렌더)
   const usageExamples = (meme as typeof meme & { usage_examples?: unknown })
@@ -193,15 +208,6 @@ export default async function MemeDetailPage({ params }: Props) {
     (meme as typeof meme & { year_precision?: string | null }).year_precision,
   );
 
-  const representativePlatform = sourcePlatformFromReference({
-    platform: representative?.platform,
-    url: representative?.url,
-  });
-  const isYouTubeRep =
-    (representativePlatform === "youtube" ||
-      representativePlatform === "youtube_shorts") &&
-    !!representative?.content_id;
-
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">
       {/*
@@ -213,13 +219,13 @@ export default async function MemeDetailPage({ params }: Props) {
         기준)을 그대로 쓴다 — isIndexableMeme()과 더는 같은 함수가 아니므로 기준이
         갈릴 수 있다(150~249자 문서는 색인엔 남지만 광고는 여전히 게재하지 않는다).
       */}
-      {contentDepth(meme).isSubstantial && <AdsenseScript />}
+      {isAdsenseContentEligible(meme) && <AdsenseScript />}
       {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm(중첩) + 독립 최상위
-          DefinedTerm(사전 항목) + 브레드크럼 + 대표영상. 독립 DefinedTerm은 mainEntity를
+          DefinedTerm(사전 항목) + 브레드크럼. 독립 DefinedTerm은 mainEntity를
           대체하지 않는 병렬 블록 — components/json-ld.tsx MemeDefinedTermJsonLd 참고.
           WebPage JSON-LD는 색인 판정과 같은 조건으로 게이트한다 — 얇은 문서(96.3%)는
           noindex인데 구조화 데이터만 완성 문서처럼 나가면 LOOP.md §10「보강 중 문서의
-          metadata 과장 금지」위반이다. 브레드크럼·비디오는 사실 서술이라 유지. */}
+          metadata 과장 금지」위반이다. 브레드크럼은 탐색 관계만 서술하므로 유지. */}
       {isIndexableMeme(meme) && (
         <>
           <MemeWebPageJsonLd
@@ -228,8 +234,9 @@ export default async function MemeDetailPage({ params }: Props) {
             description={meme.description}
             shortId={meme.short_id}
             slug={meme.slug}
-            datePublished={meme.published_at ?? meme.created_at}
+            datePublished={meme.published_at}
             dateModified={meme.updated_at}
+            sources={meme.meme_sources}
           />
           <MemeDefinedTermJsonLd
             name={meme.title}
@@ -245,16 +252,6 @@ export default async function MemeDetailPage({ params }: Props) {
         shortId={meme.short_id}
         slug={meme.slug}
       />
-      {isYouTubeRep && (
-        <MemeVideoJsonLd
-          name={meme.title}
-          description={meme.summary}
-          videoId={representative.content_id!}
-          thumbnailUrl={representative.thumbnail_url}
-          uploadDate={meme.created_at}
-          caption={representative.caption}
-        />
-      )}
       <ViewTracker memeId={meme.id} />
       {/* 미터링 게이트 — 서버는 동일 HTML을 주고 방문자 본인 기록으로만 판단(클로킹 아님) */}
       <MeteredGate memeId={meme.id} />
@@ -301,6 +298,7 @@ export default async function MemeDetailPage({ params }: Props) {
             <MemeEmbed
               content={representative}
               fallbackSourceUrl={fallbackSourceUrl}
+              fallbackReason={delivery.fallbackReason}
               title={meme.title}
               isRepresentative={representative?.is_representative ?? true}
               category={meme.category}

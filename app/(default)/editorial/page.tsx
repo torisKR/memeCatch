@@ -204,7 +204,7 @@ export default function EditorialPage() {
           </ol>
           <p className="mt-4 text-base leading-relaxed">
             확인에 실패한 항목은 반려하고 공개하지 않습니다.{" "}
-            <Link href="/submit" className="text-accent-text underline underline-offset-2">
+            <Link href="/submit" rel="nofollow" className="text-accent-text underline underline-offset-2">
               제보
             </Link>
             해 주신 밈은 보통 24~48시간 안에 등록 여부를 회신하며, 유래 확인에

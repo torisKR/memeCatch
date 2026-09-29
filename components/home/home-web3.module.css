@@ -1,0 +1,383 @@
+.page {
+  --web3-ink: #121215;
+  --web3-ink-soft: #1b1b20;
+  --web3-paper: #f3f2ed;
+  --web3-line: #cbc8bf;
+  --web3-orange: #ff5c38;
+  --web3-orange-dark: #a52b13;
+  background: var(--web3-paper);
+  color: var(--web3-ink);
+}
+
+.anchorTarget { scroll-margin-top: 8.5rem; }
+.buttonIcon { width: 1rem; height: 1rem; }
+
+.editorialSection,
+.signalsSection,
+.pathwaysSection,
+.editorialTrust {
+  position: relative;
+  color: var(--web3-ink);
+  /* These editorial panels are deliberately light, including under a dark site preference. */
+  --foreground: #121215;
+  --muted: #57545b;
+  --accent-text: #a52b13;
+  --background: #f3f2ed;
+  --surface: #fffaf3;
+  --surface-2: #e8e6df;
+  --border: #bcb8ae;
+  color-scheme: light;
+}
+
+.editorialSection {
+  padding: 0;
+  background: var(--web3-paper);
+}
+
+.discoveryNumber {
+  position: absolute;
+  top: clamp(2rem, 4vw, 4rem);
+  right: max(1rem, calc((100vw - 76rem) / 2));
+  z-index: 1;
+  margin: 0;
+  color: #79766f;
+  pointer-events: none;
+}
+
+.emptyAssist {
+  display: flex;
+  width: min(100% - 2rem, 72rem);
+  margin: clamp(-4rem, -5vw, -2rem) auto 0;
+  padding: 0 0 clamp(3.5rem, 7vw, 6rem);
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emptyAssist p {
+  max-width: 48rem;
+  margin: 0;
+  color: #5c5953;
+  line-height: 1.7;
+}
+
+.recentSignalRail {
+  width: min(100% - 2rem, 72rem);
+  margin: clamp(-3rem, -4vw, -1.5rem) auto 0;
+  padding: 0 0 clamp(3.5rem, 7vw, 6rem);
+  border-top: 1px solid var(--web3-line);
+}
+
+.recentSignalRail > p {
+  margin: 0;
+  padding: 1rem 0 0.7rem;
+  color: #67635c;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.recentSignalRail ul {
+  display: flex;
+  margin: 0;
+  padding: 0 0 0.25rem;
+  gap: 0.65rem;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.recentSignalRail li {
+  display: flex;
+  min-width: min(19rem, 82vw);
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--web3-line);
+  background: rgb(255 255 255 / 0.34);
+}
+
+.recentSignalRail li > span:first-child {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectionInner { width: min(100%, 76rem); margin-inline: auto; }
+
+.sectionNumber {
+  display: block;
+  margin-bottom: -0.35rem;
+  color: #76726b;
+  font-size: clamp(4.5rem, 11vw, 9.5rem);
+  font-weight: 900;
+  letter-spacing: -0.09em;
+  line-height: 0.75;
+  user-select: none;
+}
+
+.signalsSection {
+  padding: 0 1rem clamp(5rem, 9vw, 8rem);
+  background: var(--web3-paper);
+}
+
+.signalsFrame {
+  position: relative;
+  width: min(100%, 76rem);
+  margin-inline: auto;
+  padding-top: 2.25rem;
+  border-top: 1px solid var(--web3-line);
+}
+
+.signalsFrame > :global(section) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pathwaysSection {
+  overflow: hidden;
+  padding: clamp(5rem, 10vw, 9rem) 1rem;
+  background: #dedbd3;
+}
+
+.pathwaysHeader { display: grid; max-width: 51rem; gap: 1rem; }
+
+.sectionTitle {
+  max-width: 18ch;
+  margin: 0;
+  font-size: clamp(2.7rem, 6vw, 5.25rem);
+  font-weight: 900;
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.sectionDescription {
+  max-width: 38rem;
+  margin: 0;
+  color: #5c5953;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.pathwayGrid {
+  display: grid;
+  margin-top: clamp(2.5rem, 6vw, 5rem);
+  grid-template-columns: minmax(0, 1.18fr) minmax(18rem, 0.82fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.pathwayCard {
+  position: relative;
+  display: flex;
+  min-height: 31rem;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 4vw, 3.25rem);
+  border-radius: 1.75rem;
+  color: #f5f3ee;
+  text-decoration: none;
+  isolation: isolate;
+  transition: transform 220ms ease;
+}
+
+.pathwayCard:hover { transform: translateY(-0.3rem); }
+.pathwayCard:active { transform: translateY(-0.05rem); }
+.communityCard { background: var(--web3-ink-soft); }
+
+.productsCard {
+  min-height: 25rem;
+  margin-top: 6rem;
+  background: var(--web3-orange);
+  color: #21120d;
+}
+
+.cardTop,
+.cardBody { position: relative; z-index: 2; }
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cardIcon { width: 2rem; height: 2rem; }
+
+.cardMark {
+  max-width: 13rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.communityCard .cardMark { color: #a9a59e; }
+.productsCard .cardMark { color: #30190f; }
+
+.cardTitle {
+  display: block;
+  max-width: 10ch;
+  font-size: clamp(2.6rem, 5vw, 4.7rem);
+  font-weight: 900;
+  letter-spacing: -0.065em;
+  line-height: 0.96;
+}
+
+.cardDescription {
+  display: block;
+  max-width: 31rem;
+  margin-top: 1rem;
+  color: #bdb9b2;
+  line-height: 1.65;
+}
+
+.productsCard .cardDescription { color: #30190f; }
+
+.cardAction {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 1.4rem;
+  font-weight: 850;
+}
+
+.communityMotif,
+.productsMotif { position: absolute; z-index: 1; pointer-events: none; }
+
+.communityMotif {
+  top: 12%;
+  right: -7rem;
+  width: 23rem;
+  aspect-ratio: 1;
+  border: 1px solid rgb(255 255 255 / 0.17);
+  border-radius: 50%;
+  box-shadow:
+    -6rem 4rem 0 -1px var(--web3-ink-soft),
+    -6rem 4rem 0 0 rgb(255 92 56 / 0.76),
+    -11rem -2rem 0 -1px var(--web3-ink-soft),
+    -11rem -2rem 0 0 rgb(255 255 255 / 0.13);
+}
+
+.productsMotif {
+  top: 20%;
+  right: -4rem;
+  width: 18rem;
+  aspect-ratio: 1;
+  border: 1.35rem solid rgb(33 18 13 / 0.2);
+  border-right-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-28deg);
+}
+
+.contributionBar {
+  display: grid;
+  margin-top: 1rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid #aaa69e;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 2rem;
+  align-items: center;
+}
+
+.contributionBar p { margin: 0; font-weight: 800; }
+.contributionLinks { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+
+.contributionLink,
+.contributionLinkStrong {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  color: var(--web3-ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: #9d9990;
+  text-underline-offset: 0.3rem;
+}
+
+.contributionLinkStrong { color: var(--web3-orange-dark); text-decoration-color: #dc7e68; }
+
+.editorialTrust {
+  padding: clamp(5rem, 10vw, 9rem) 1rem;
+  background: var(--web3-paper);
+}
+
+.trustGrid {
+  display: grid;
+  width: min(100%, 76rem);
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 0.72fr) minmax(20rem, 1.28fr);
+  gap: clamp(2rem, 7vw, 7rem);
+  align-items: end;
+}
+
+.trustCopy { padding-top: 2rem; border-top: 1px solid var(--web3-line); }
+
+.trustTitle {
+  max-width: 20ch;
+  margin: 0;
+  font-size: clamp(2.3rem, 4.7vw, 4.4rem);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.trustDescription {
+  max-width: 42rem;
+  margin: 1.4rem 0 0;
+  color: #5c5953;
+  line-height: 1.75;
+}
+
+.trustLinks {
+  display: flex;
+  margin: 2rem 0 0;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  list-style: none;
+}
+
+.trustLink {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  color: var(--web3-ink);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: #a7a39a;
+  text-underline-offset: 0.35rem;
+}
+
+@media (max-width: 47.99rem) {
+  .anchorTarget { scroll-margin-top: 11rem; }
+  .sectionNumber { margin-bottom: 0.5rem; }
+  .pathwayGrid,
+  .trustGrid { grid-template-columns: minmax(0, 1fr); }
+
+  .pathwayCard,
+  .productsCard { min-height: 25rem; margin-top: 0; }
+
+  .contributionBar { grid-template-columns: minmax(0, 1fr); }
+  .trustGrid { align-items: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pathwayCard { transition: none; }
+
+  .pathwayCard:hover,
+  .pathwayCard:active { transform: none; }
+}

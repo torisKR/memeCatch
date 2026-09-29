@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "normalizedText": "meme",
+  "hashtags": [
+    "meme",
+    "밈"
+  ],
+  "dedupeHash": "c39434d8a90fdf67d67cc4fbcec884fd4b2028398697ce10e4bb827c37c29101",
+  "youtubeExcluded": [
+    "youtube",
+    "youtube_shorts"
+  ],
+  "hysteresisFinal": {
+    "state": "archive",
+    "consecutiveHigh": 0,
+    "consecutiveLow": 0
+  }
+}

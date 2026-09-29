@@ -49,6 +49,7 @@ function wallet(chainId = "0x2019"): TestWallet {
 }
 
 function renderLogin(locale: Locale = "ko", next = "/saved") {
+  window.history.replaceState({}, "", "/login");
   document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
   document.cookie = `${LOCALE_COOKIE}=${locale}; path=/`;
   return render(
@@ -121,6 +122,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
   document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
+  window.history.replaceState({}, "", "/");
   delete (window as Window & { klaytn?: TestWallet }).klaytn;
 });
 

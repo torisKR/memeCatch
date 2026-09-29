@@ -3,6 +3,21 @@ import { r2Configured, r2Get } from "@/lib/r2.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+const SAFE_MEDIA_TYPES: Record<string, string> = {
+  gif: "image/gif",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  mp4: "video/mp4",
+  png: "image/png",
+  webm: "video/webm",
+  webp: "image/webp",
+};
+
+function safeMediaType(key: string) {
+  const extension = key.match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase();
+  return extension ? SAFE_MEDIA_TYPES[extension] ?? null : null;
+}
+
 /**
  * 업로드·썸네일 이미지 조회 프록시
  * - /api/media/meme-uploads/{userId}/{uuid}.{ext} — 사용자 업로드
@@ -18,11 +33,12 @@ export async function GET(
 ) {
   const { path } = await ctx.params;
   const key = path.join("/");
+  const contentType = safeMediaType(key);
   // meme-uploads/ = 사용자 업로드, meme-thumbs/ = 소셜(TikTok·IG) 썸네일 재호스팅
   // (원본 CDN이 만료 서명 URL이라 수집 시점에 R2로 영구화 — 카드 미리보기용)
   const allowed =
     key.startsWith("meme-uploads/") || key.startsWith("meme-thumbs/");
-  if (!allowed || key.includes("..")) {
+  if (!allowed || key.includes("..") || !contentType) {
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -46,7 +62,9 @@ export async function GET(
     if (!res.ok) return new NextResponse("Not found", { status: 404 });
     return new NextResponse(res.body, {
       headers: {
-        "Content-Type": res.headers.get("Content-Type") ?? "application/octet-stream",
+        // 저장소 메타데이터는 직접 신뢰하지 않는다. 같은 출처에서 HTML 등 활성
+        // 콘텐츠로 응답되면 저장형 XSS가 되므로, 허용 확장자에 대응하는 MIME으로 고정한다.
+        "Content-Type": contentType,
         "Cache-Control": key.startsWith("meme-thumbs/")
           ? "public, max-age=31536000, immutable"
           : "private, no-store",
@@ -62,7 +80,7 @@ export async function GET(
   if (error || !data) return new NextResponse("Not found", { status: 404 });
   return new NextResponse(data.stream(), {
     headers: {
-      "Content-Type": data.type || "application/octet-stream",
+      "Content-Type": contentType,
       "Cache-Control": "private, max-age=300",
       "X-Content-Type-Options": "nosniff",
     },

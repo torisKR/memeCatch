@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { createClient } from "@/lib/supabase/server";
 import { readBoundedJson } from "@/lib/request-body";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,6 +128,9 @@ function nonNegativeInteger(value: unknown): value is number {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid_origin" }, { status: 403, headers: headers() });
+  }
   const input = await parseOutcomeInput(request);
   if (!input) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400, headers: headers() });

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
 const premium = vi.hoisted(() => ({ value: false }));
+const currentLocale = vi.hoisted(() => ({ value: "ko" as "ko" | "en" }));
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => <a {...props}>{children}</a>,
@@ -15,7 +16,12 @@ vi.mock("@/lib/hooks/use-premium", () => ({
 }));
 vi.mock("@/lib/i18n-client", async () => {
   const { getMessages } = await import("@/lib/i18n");
-  return { useLocale: () => ({ locale: "ko", messages: getMessages("ko") }) };
+  return {
+    useLocale: () => ({
+      locale: currentLocale.value,
+      messages: getMessages(currentLocale.value),
+    }),
+  };
 });
 
 import { BottomNav } from "./bottom-nav";
@@ -24,20 +30,69 @@ describe("BottomNav", () => {
   beforeEach(() => {
     navigation.pathname = "/";
     premium.value = false;
+    currentLocale.value = "ko";
   });
 
-  it("keeps the core mobile destinations without Community", () => {
+  it("keeps all existing destinations and adds products as a seventh persistent tab", () => {
     navigation.pathname = "/pricing";
     const html = renderToStaticMarkup(<BottomNav />);
 
     expect(html).toContain('aria-label="주 내비게이션"');
     expect(html).toContain('href="/"');
-    expect(html).toContain('href="/explore"');
+    expect(html).toContain('href="/explore?sort=recent"');
+    expect(html).toContain('href="/community"');
+    expect(html).toContain('href="/products"');
     expect(html).toContain('href="/submit"');
-    expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="/my"');
-    expect(html).not.toContain('href="/community"');
-    expect(html.match(/<a href="\/pricing"[^>]*aria-current="page"/)).toBeTruthy();
+    expect(html).toContain('href="/pricing"');
+    expect(html).toContain("min-h-14");
+    expect(html).toContain("whitespace-nowrap");
+    expect(html.match(/<li class="flex min-w-11 flex-1">/g)).toHaveLength(7);
+    expect(html.match(/<a [^>]*class="[^"]*min-h-14 min-w-11/g)).toHaveLength(7);
+    expect(html).toContain("min-w-[19.25rem]");
+    expect(html.match(/<a href="\/community"[^>]*aria-current="page"/)).toBeFalsy();
+  });
+
+  it("marks community and latest destinations current, including their nested routes", () => {
+    navigation.pathname = "/community/new";
+    const communityHtml = renderToStaticMarkup(<BottomNav />);
+    expect(communityHtml.match(/<a href="\/community"[^>]*aria-current="page"/)).toBeTruthy();
+
+    navigation.pathname = "/explore";
+    const latestHtml = renderToStaticMarkup(<BottomNav />);
+    expect(latestHtml.match(/<a href="\/explore\?sort=recent"[^>]*aria-current="page"/)).toBeTruthy();
+
+    navigation.pathname = "/products/new";
+    const productsHtml = renderToStaticMarkup(<BottomNav />);
+    expect(productsHtml.match(/<a href="\/products"[^>]*aria-current="page"/)).toBeTruthy();
+  });
+
+  it("keeps localized static links while products remains available at its real unprefixed route", () => {
+    currentLocale.value = "en";
+    navigation.pathname = "/en/explore";
+    const html = renderToStaticMarkup(<BottomNav />);
+
+    expect(html).toContain('href="/en"');
+    expect(html).toContain('href="/en/explore?sort=recent"');
+    expect(html).toContain('href="/products"');
+    expect(html.match(/<a href="\/en\/explore\?sort=recent"[^>]*aria-current="page"/)).toBeTruthy();
+  });
+
+  it("uses readable foreground colors for small active and submit labels", () => {
+    navigation.pathname = "/explore";
+    const html = renderToStaticMarkup(<BottomNav />);
+    const activeLink = html.match(/<a href="\/explore\?sort=recent"[^>]*>/)?.[0];
+    const submitLink = html.match(/<a href="\/submit"[^>]*>/)?.[0];
+    expect(activeLink).toContain("text-accent-text");
+    expect(submitLink).toContain("text-accent-text");
+  });
+
+  it("preserves nofollow on Submit and MY without adding it to Products", () => {
+    const html = renderToStaticMarkup(<BottomNav />);
+
+    expect(html.match(/<a href="\/submit" rel="nofollow"/)).toBeTruthy();
+    expect(html.match(/<a href="\/my" rel="nofollow"/)).toBeTruthy();
+    expect(html.match(/<a href="\/products" rel=/)).toBeFalsy();
   });
 
   it("sends Plus subscribers to the premium dashboard", () => {

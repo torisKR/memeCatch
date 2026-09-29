@@ -84,7 +84,7 @@ export default function AboutPage() {
               <p aria-hidden className="stat-mono text-sm font-bold text-accent">01</p>
               <p className="mt-1.5">
                 <strong>제보 접수</strong> — 누구나{" "}
-                <Link href="/submit" className="text-accent-text underline underline-offset-2">
+                <Link href="/submit" rel="nofollow" className="text-accent-text underline underline-offset-2">
                   밈 제보
                 </Link>
                 로 새 밈을 알려줄 수 있습니다.
@@ -184,7 +184,7 @@ export default function AboutPage() {
             </li>
             <li>
               <strong>
-                <Link href="/submit" className="text-accent-text underline underline-offset-2">
+                <Link href="/submit" rel="nofollow" className="text-accent-text underline underline-offset-2">
                   밈 제보
                 </Link>
               </strong>{" "}

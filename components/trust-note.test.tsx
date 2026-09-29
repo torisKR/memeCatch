@@ -38,12 +38,12 @@ describe("TrustNote", () => {
       />
     );
 
-    expect(html).toContain("맥락 출처 1개로 확인");
+    expect(html).toContain("맥락 자료 1개 연결");
     expect(html).toContain("원본은 아직 찾는 중");
     expect(html).not.toContain("검수팀 확인");
   });
 
-  it("서지 정보가 있는 원본 출처는 확인한 근거 수를 센다", () => {
+  it("서지 정보가 있는 출처는 연결된 자료 수만 센다", () => {
     const html = renderToStaticMarkup(
       <TrustNote
         {...base}
@@ -54,7 +54,7 @@ describe("TrustNote", () => {
       />
     );
 
-    expect(html).toContain("근거 출처 2개 확인");
+    expect(html).toContain("근거 링크 2개 연결");
     expect(html).not.toContain("원본은 아직 찾는 중");
     expect(html).not.toContain("서지 확인 중");
   });
@@ -76,7 +76,7 @@ describe("TrustNote", () => {
     expect(html).not.toContain("원본·보도");
   });
 
-  it("원본과 맥락이 섞이면 원본 개수를 따로 밝힌다", () => {
+  it("일반 자료와 맥락 자료를 구분하되 원본 인증을 주장하지 않는다", () => {
     const html = renderToStaticMarkup(
       <TrustNote
         {...base}
@@ -87,8 +87,9 @@ describe("TrustNote", () => {
       />
     );
 
-    expect(html).toContain("근거 출처 2개 확인");
-    expect(html).toContain("원본·보도 1개");
+    expect(html).toContain("근거 링크 2개 연결");
+    expect(html).toContain("서지 정보가 있는 일반 자료 1개");
+    expect(html).not.toContain("원본·보도");
   });
 
   it("limited 문서는 출처 확인 중임을 함께 알린다", () => {

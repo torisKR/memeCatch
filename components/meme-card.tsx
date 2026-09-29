@@ -5,7 +5,7 @@ import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { SafetyBadge } from "@/components/safety-badge";
 import { memePathFrom } from "@/lib/labels";
 import type { MemeListItem, MemeRow } from "@/lib/queries";
-import { originCountryCode } from "@/lib/meme-country";
+import { originCountryCode, type MemeCountryLocale } from "@/lib/meme-country";
 import {
   SOURCE_PLATFORM_META,
   type SocialPlatform,
@@ -23,12 +23,14 @@ export function MemeCard({
   priority = false,
   rank,
   sourcePlatform,
+  locale = "ko",
 }: {
   meme: MemeRow | MemeListItem;
   href?: string;
   priority?: boolean;
   rank?: number;
   sourcePlatform?: SocialPlatform;
+  locale?: MemeCountryLocale;
 }) {
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
   const thumb =
@@ -55,12 +57,17 @@ export function MemeCard({
           priority={priority}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
-          <div data-country-flag-position="top-left" className="flex flex-col items-start gap-1.5">
-            <CountryFlagBadge code={countryCode} />
+        <div
+          data-country-flag-position="top-right"
+          className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5"
+        >
+          <div className="min-w-0">
             <CategoryTag category={meme.category} className="shadow-sm" />
           </div>
-          {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
+          <div className="flex min-w-0 flex-col items-end gap-1.5">
+            <CountryFlagBadge code={countryCode} locale={locale} />
+            {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
+          </div>
         </div>
 
         {rank != null && (

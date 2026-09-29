@@ -7,6 +7,7 @@ import {
 } from "@/lib/meme-studio.server";
 import { createClient } from "@/lib/supabase/server";
 import { isMemeCountryCode } from "@/lib/meme-country";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 const bodySchema = z.object({
   topic: z.string().trim().min(2).max(120),
@@ -16,6 +17,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return Response.json({ error: "invalid_origin" }, { status: 403 });
+  }
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

@@ -87,6 +87,7 @@ function useRows(rows: LocalizedExploreTranslationRow[], error: { message: strin
     overrideTypes: vi.fn(async () => ({ data: rows, error })),
   };
   createStaticClient.mockReturnValue({ from: vi.fn(() => query) });
+  return query;
 }
 
 beforeEach(() => {
@@ -94,6 +95,47 @@ beforeEach(() => {
 });
 
 describe("getLocalizedExploreMemes", () => {
+  it("keeps the default trend ordering unchanged", async () => {
+    const query = useRows([]);
+
+    await getLocalizedExploreMemes("en");
+
+    expect(query.order.mock.calls).toEqual([
+      ["trend_score", {
+        referencedTable: "memes",
+        ascending: false,
+        nullsFirst: false,
+      }],
+      ["meme_id", { ascending: false }],
+    ]);
+  });
+
+  it("orders recent candidates by translation update time before the candidate limit", async () => {
+    const older = meme(40);
+    const newer = meme(41);
+    const query = useRows([
+      {
+        ...translation(newer, { locale: "ja", updated_at: "2026-09-20T00:00:00.000Z" }),
+        memes: newer,
+      },
+      {
+        ...translation(older, { locale: "ja", updated_at: "2026-09-01T00:00:00.000Z" }),
+        memes: older,
+      },
+    ]);
+
+    const result = await getLocalizedExploreMemes("ja", "recent");
+
+    expect(query.order.mock.calls).toEqual([
+      ["updated_at", { ascending: false, nullsFirst: false }],
+      ["meme_id", { ascending: false }],
+    ]);
+    expect(query.order.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      query.limit.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
+    expect(result.items.map((item) => item.id)).toEqual([newer.id, older.id]);
+  });
+
   it("returns an active deck only after 24 strict eligible rows pass", async () => {
     const rows = Array.from({ length: 24 }, (_, index) => {
       const base = meme(index);

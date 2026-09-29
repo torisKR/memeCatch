@@ -4,6 +4,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import { evidenceTimestamp } from "@/lib/source-links";
 import {
   SEO_CONTENT_LOCALES,
   SEO_ROUTE_LOCALES,
@@ -55,6 +56,15 @@ type SitemapMemeRow = ContentDepthInput & {
   updated_at: string;
   meme_translations: SitemapTranslationRow[];
 };
+
+function validDate(value: string | null | undefined): Date | undefined {
+  const timestamp = evidenceTimestamp(value);
+  return timestamp ? new Date(timestamp) : undefined;
+}
+
+function lastModified(date: Date | undefined): { lastModified: Date } | Record<string, never> {
+  return date ? { lastModified: date } : {};
+}
 
 function absolute(pathname: string): string {
   return `${SITE_URL}${pathname === "/" ? "" : pathname}`;
@@ -141,25 +151,31 @@ function memeLanguages(
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createStaticClient();
 
-  // 홈 lastmod — 빌드 시각(new Date) 대신 실제 콘텐츠 변경 시점(최신 밈 공개일)
-  let homeLastMod = new Date();
+  // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
+  // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
+  let homeLastMod: Date | undefined;
   try {
-    const { data: latest } = await supabase
+    const { data: latest, error } = await supabase
       .from("memes")
       .select("published_at")
       .in("moderation_status", [...PUBLIC_STATUSES])
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(1)
-      .single();
-    if (latest?.published_at) homeLastMod = new Date(latest.published_at);
-  } catch {
-    /* 실패 시 현재 시각 유지 */
+      .maybeSingle();
+    if (error) {
+      throw new Error(`[sitemap] 최신 공개일 조회 실패: ${error.message}`, {
+        cause: error,
+      });
+    }
+    homeLastMod = validDate(latest?.published_at);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("[sitemap]")) throw error;
+    throw new Error("[sitemap] 최신 공개일 조회 실패", { cause: error });
   }
 
   const localizedHomeEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
     (locale) => ({
       url: absolute(localizedPath("/", locale)),
-      lastModified: homeLastMod,
       changeFrequency: "daily" as const,
       priority: 0.8,
       alternates: { languages: homeLanguages() },
@@ -168,7 +184,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const localizedPricingEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
     (locale) => ({
       url: absolute(localizedPath("/pricing", locale)),
-      lastModified: homeLastMod,
       changeFrequency: "weekly" as const,
       priority: 0.55,
       alternates: { languages: pricingLanguages() },
@@ -180,7 +195,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
-      lastModified: homeLastMod,
+      ...lastModified(homeLastMod),
       changeFrequency: "hourly",
       priority: 1,
       alternates: { languages: homeLanguages() },
@@ -188,7 +203,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localizedHomeEntries,
     {
       url: `${SITE_URL}/pricing`,
-      lastModified: homeLastMod,
       changeFrequency: "weekly" as const,
       priority: 0.55,
       alternates: { languages: pricingLanguages() },
@@ -196,22 +210,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localizedPricingEntries,
     {
       url: `${SITE_URL}/collections`,
-      lastModified: homeLastMod,
       changeFrequency: "daily" as const,
       priority: 0.75,
     },
     // 테마별 모음 허브
     ...COLLECTIONS.map((c) => ({
       url: `${SITE_URL}/collections/${c.slug}`,
-      lastModified: homeLastMod,
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),
     // 주요 정적 페이지 — 탐색·커뮤니티·정책
-    ...(["/explore", "/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/editorial", "/privacy", "/terms"] as const).map(
+    {
+      url: `${SITE_URL}/explore`,
+      ...lastModified(homeLastMod),
+      changeFrequency: "daily" as const,
+      priority: 0.6,
+    },
+    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/editorial", "/privacy", "/terms"] as const).map(
       (path) => ({
         url: `${SITE_URL}${path}`,
-        lastModified: homeLastMod,
         changeFrequency: "daily" as const,
         priority: 0.6,
       })
@@ -255,10 +272,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           locale,
           (localizedExploreCounts.get(locale) ?? 0) + 1,
         );
-        const translationUpdatedAt = new Date(translation.updated_at);
+        const translationUpdatedAt = validDate(translation.updated_at);
         const currentLatest = localizedHomeLastModified.get(locale);
         if (
-          !Number.isNaN(translationUpdatedAt.getTime()) &&
+          translationUpdatedAt &&
           (!currentLatest || translationUpdatedAt > currentLatest)
         ) {
           localizedHomeLastModified.set(locale, translationUpdatedAt);
@@ -266,9 +283,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
 
       if (entries.length < MAX_SITEMAP_URLS) {
+        const updatedAt = validDate(meme.updated_at);
         entries.push({
           url: `${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}`,
-          lastModified: new Date(meme.updated_at),
+          ...lastModified(updatedAt),
           changeFrequency: "weekly",
           priority: 0.8,
           alternates: { languages },
@@ -287,7 +305,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
               translation.localized_slug || meme.slug,
             ),
           ),
-          lastModified: new Date(translation.updated_at),
+          ...lastModified(validDate(translation.updated_at)),
           changeFrequency: "weekly",
           priority: 0.75,
           alternates: { languages },
@@ -298,8 +316,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   for (const [index, locale] of SEO_CONTENT_LOCALES.entries()) {
-    localizedHomeEntries[index].lastModified =
-      localizedHomeLastModified.get(locale) ?? homeLastMod;
+    localizedHomeEntries[index].lastModified = localizedHomeLastModified.get(locale);
   }
 
   const activeExploreLocales = SEO_CONTENT_LOCALES.filter(
@@ -312,7 +329,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push(
       ...activeExploreLocales.map((locale) => ({
         url: absolute(localizedPath("/explore", locale)),
-        lastModified: localizedHomeLastModified.get(locale) ?? homeLastMod,
+        ...lastModified(localizedHomeLastModified.get(locale)),
         changeFrequency: "daily" as const,
         priority: 0.65,
         alternates: { languages },

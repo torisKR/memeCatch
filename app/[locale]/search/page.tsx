@@ -127,6 +127,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
                       <MemeCard
                         meme={localized ?? meme}
                         href={cardHref(meme, localized)}
+                        locale={contentLocale}
                       />
                     </div>
                   </li>
@@ -180,6 +181,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
           actions={
             <Link
               href={`/submit?name=${encodeURIComponent(query)}`}
+              rel="nofollow"
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
             >
               {copy.submit(query)}
@@ -203,6 +205,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
                     <MemeCard
                       meme={localized ?? meme}
                       href={localized ? localizedMemePath(contentLocale, localized.short_id, localized.slug) : memePathFrom(meme.short_id, meme.slug)}
+                      locale={contentLocale}
                     />
                   </div>
                 </li>

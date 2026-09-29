@@ -67,9 +67,13 @@ vi.mock("@/lib/affiliate/repository.server", () => ({
     isStale: true,
   })),
 }));
+vi.mock("@/lib/creator-products/server", () => ({
+  getPublicCreatorProducts: vi.fn(async () => ({ products: [], error: false })),
+}));
 
 import ProductsPage from "@/app/(default)/products/page";
 import { getAffiliateStorefront } from "@/lib/affiliate/repository.server";
+import { getPublicCreatorProducts } from "@/lib/creator-products/server";
 import { LocaleProvider } from "@/lib/i18n-client";
 import { isMemeProductActive, MEME_PRODUCTS } from "@/lib/meme-commerce";
 import { PAGE_COPY } from "@/lib/i18n-pages";
@@ -152,5 +156,29 @@ describe("ProductsPage", () => {
     expect(script).not.toContain('"offers"');
     expect(script).not.toContain('"price"');
     expect(script).not.toContain('"priceCurrency"');
+  });
+
+  it("keeps creator promotions visibly separate and labels the external seller relationship", async () => {
+    vi.mocked(getPublicCreatorProducts).mockResolvedValueOnce({
+      products: [{
+        id: "creator-product-1",
+        title: "밈 티셔츠",
+        description: "크리에이터가 직접 디자인한 상품입니다.",
+        external_url: "https://shop.example.com/meme-shirt",
+        image_path: "creator-products/user-id/image.png",
+        price: null,
+        category: "apparel",
+        relationship_disclosure: "creator",
+      }],
+      error: false,
+    });
+
+    const html = await renderProductsPage();
+    expect(html).toContain("크리에이터 마켓");
+    expect(html).toContain("크리에이터가 직접 소개하는 밈 상품");
+    expect(html).toContain("크리에이터 홍보");
+    expect(html).toContain("크리에이터 제작");
+    expect(html).toContain("https://shop.example.com/meme-shirt");
+    expect(html).toContain("rel=\"sponsored noopener noreferrer\"");
   });
 });

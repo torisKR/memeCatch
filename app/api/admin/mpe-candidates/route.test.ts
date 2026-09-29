@@ -38,7 +38,7 @@ function authClient(user: { id: string } | null, role?: string) {
 function post(body: unknown) {
   return new Request("http://localhost/api/admin/mpe-candidates", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -46,6 +46,18 @@ function post(body: unknown) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("admin MPE candidates API", () => {
+  it("rejects a cross-origin POST before reading cookie-backed auth", async () => {
+    const response = await POST(new Request("http://localhost/api/admin/mpe-candidates", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ candidateId }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "invalid_origin" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
   it("rejects signed-out and non-operator callers before generation", async () => {
     const signedOut = authClient(null);
     mocks.createClient.mockResolvedValueOnce(signedOut);

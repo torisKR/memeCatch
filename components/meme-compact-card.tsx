@@ -40,13 +40,11 @@ export function MemeCompactCard({
           variant="compact"
         />
         <div
-          data-country-flag-position="top-left"
+          data-country-flag-position="top-right"
           className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2"
         >
-          <CountryFlagBadge code={countryCode} />
-          {rank != null && (
-            <>
-              {/* 계측 화면의 채널 번호처럼 — 모노스페이스 2자리 고정 */}
+          <div className="min-w-0">
+            {rank != null && (
               <span
                 aria-hidden
                 className={`stat-mono rounded-md px-1.5 py-0.5 text-[11px] font-bold shadow-sm ${
@@ -57,9 +55,12 @@ export function MemeCompactCard({
               >
                 {String(rank).padStart(2, "0")}
               </span>
-              <span className="sr-only">{rank}위</span>
-            </>
-          )}
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col items-end gap-1.5">
+            <CountryFlagBadge code={countryCode} />
+            {rank != null && <span className="sr-only">{rank}위</span>}
+          </div>
         </div>
       </div>
 

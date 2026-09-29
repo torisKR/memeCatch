@@ -22,10 +22,36 @@ beforeEach(() => {
 });
 
 describe("web push subscription route", () => {
+  it("rejects cross-origin subscription changes before parsing or entitlement checks", async () => {
+    const response = await POST(new Request("https://memecatch.test/api/web-push/subscription", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({}),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(mocks.entitlement).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-origin subscription removal before parsing or entitlement checks", async () => {
+    const response = await DELETE(new Request("https://memecatch.test/api/web-push/subscription", {
+      method: "DELETE",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ endpoint: "https://fcm.googleapis.com/fcm/send/one" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(mocks.entitlement).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
   it("stores only an authenticated Plus user's browser subscription", async () => {
     const response = await POST(new Request("https://memecatch.test/api/web-push/subscription", {
       method: "POST",
-      headers: { "content-type": "application/json", "user-agent": "test-browser" },
+      headers: { "content-type": "application/json", "user-agent": "test-browser", origin: "https://memecatch.test" },
       body: JSON.stringify({
         endpoint: "https://fcm.googleapis.com/fcm/send/one",
         keys: { p256dh: "a".repeat(87), auth: "b".repeat(22) },
@@ -47,7 +73,7 @@ describe("web push subscription route", () => {
   ])("rejects an unsupported endpoint before persistence: %s", async (endpoint) => {
     const response = await POST(new Request("https://memecatch.test/api/web-push/subscription", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: "https://memecatch.test" },
       body: JSON.stringify({
         endpoint,
         keys: { p256dh: "a".repeat(87), auth: "b".repeat(22) },
@@ -60,7 +86,7 @@ describe("web push subscription route", () => {
   it("refuses to remove other browser subscriptions without an exact endpoint", async () => {
     const response = await DELETE(new Request("https://memecatch.test/api/web-push/subscription", {
       method: "DELETE",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: "https://memecatch.test" },
       body: JSON.stringify({ endpoint: null }),
     }));
     expect(response.status).toBe(400);
@@ -71,7 +97,7 @@ describe("web push subscription route", () => {
     const endpoint = "https://fcm.googleapis.com/fcm/send/one";
     const response = await DELETE(new Request("https://memecatch.test/api/web-push/subscription", {
       method: "DELETE",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: "https://memecatch.test" },
       body: JSON.stringify({ endpoint }),
     }));
     expect(response.status).toBe(200);

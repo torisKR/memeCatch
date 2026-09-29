@@ -1,4 +1,6 @@
 import Script from "next/script";
+import { AdsenseHostGate } from "@/components/adsense-host-gate";
+import { isConfiguredAdsenseClient } from "@/lib/adsense-policy";
 
 /** env(ca-pub-…)가 없으면 광고를 아예 로드하지 않는다(미리보기·로컬). */
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
@@ -23,15 +25,22 @@ const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
  *                  검색 결과, 정책·소개 문서.
  */
 export function AdsenseScript() {
-  if (!ADSENSE_CLIENT) return null;
+  // Auto Ads executes globally and can survive client-side navigation into excluded
+  // screens. Default to verification-only mode until the operator explicitly enables
+  // it after checking approval, consent and account-side page exclusions.
+  // Ownership verification remains in server-rendered google-adsense-account metadata.
+  if (process.env.ADSENSE_AUTO_ADS_ENABLED !== "true") return null;
+  if (!isConfiguredAdsenseClient(ADSENSE_CLIENT) || process.env.NODE_ENV !== "production" ||
+      (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return null;
 
   return (
-    <Script
-      id="adsense"
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-      crossOrigin="anonymous"
-      // afterInteractive — lazyOnload면 AdSense 심사 크롤러가 광고 코드를 감지 못할 수 있음
-      strategy="afterInteractive"
-    />
+    <AdsenseHostGate>
+      <Script
+        id="adsense"
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
+    </AdsenseHostGate>
   );
 }

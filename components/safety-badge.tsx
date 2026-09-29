@@ -1,6 +1,9 @@
-import { SAFETY_LEVELS, type SafetyLevel } from "@/lib/labels";
+import { SafetyIcon } from "@/components/safety-icon";
+import type { Locale } from "@/lib/i18n";
+import type { SafetyLevel } from "@/lib/labels";
+import { getSafetySignalCopy } from "@/lib/safety-copy";
 
-/** 색+아이콘+텍스트 병행 (색약 대응) — 문구·아이콘은 labels.ts가 단일 소스 */
+/** 색+모양+텍스트 병행 (색약 대응) */
 const TONE: Record<SafetyLevel, string> = {
   green: "bg-safety-green-bg text-safety-green",
   yellow: "bg-safety-yellow-bg text-safety-yellow",
@@ -14,7 +17,7 @@ const NEON_RING =
 
 /**
  * 사용 안전 신호등 배지 (T1 시그니처).
- * 색 원 + 아이콘(●▲◌✕) + 텍스트 병행 — 색만으로 구분 금지.
+ * 색 + 서로 다른 SVG 모양 + 텍스트 병행 — 색만으로 구분 금지.
  * 마운트 시 해당 신호등 색으로 글로우 펄스 1회(.safety-pulse, currentColor 기반).
  * reduced-motion은 globals.css에서 무효화.
  */
@@ -22,13 +25,16 @@ export function SafetyBadge({
   level,
   size = "sm",
   note,
+  locale = "ko",
 }: {
   level: SafetyLevel;
   size?: "sm" | "lg";
   /** lg 전용 짧은 사용 설명(usage_note 등). 없으면 미노출 */
   note?: string;
+  locale?: Locale;
 }) {
-  const s = SAFETY_LEVELS[level];
+  const copy = getSafetySignalCopy(locale);
+  const signal = copy.levels[level];
   if (size === "lg") {
     return (
       <p
@@ -38,11 +44,11 @@ export function SafetyBadge({
           aria-hidden
           className="grid size-9 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,currentColor_14%,transparent)] text-2xl leading-none"
         >
-          {s.icon}
+          <SafetyIcon level={level} className="size-6" />
         </span>
         <span className="flex min-w-0 flex-col">
-          <span className="text-sm font-medium opacity-80">사용 안전 신호등</span>
-          <span className="text-xl font-bold leading-tight">{s.user}</span>
+          <span className="text-sm font-medium opacity-80">{copy.badgeTitle}</span>
+          <span className="text-xl font-bold leading-tight">{signal.label}</span>
           {note && (
             <span className="mt-0.5 text-sm font-medium opacity-70">{note}</span>
           )}
@@ -55,9 +61,9 @@ export function SafetyBadge({
       className={`safety-pulse inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold ${NEON_RING} ${TONE[level]}`}
     >
       <span aria-hidden className="leading-none">
-        {s.icon}
+        <SafetyIcon level={level} className="size-4" />
       </span>
-      {s.user}
+      {signal.label}
     </span>
   );
 }

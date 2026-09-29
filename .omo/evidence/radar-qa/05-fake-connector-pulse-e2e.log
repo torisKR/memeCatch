@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/toris/projects/memecatch
+
+ ✓ lib/trend/radar-pulse.server.test.ts > runRadarPulse > persists every signal but excludes YouTube from scoring and only enqueues safety review 13ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  16:06:16
+   Duration  144ms (transform 30ms, setup 0ms, import 43ms, tests 14ms, environment 0ms)

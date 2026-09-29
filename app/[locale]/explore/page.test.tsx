@@ -8,7 +8,7 @@ const getLocalizedExploreMemes = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/localized-explore", () => ({ getLocalizedExploreMemes }));
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 
-import LocalizedExplorePage from "@/app/[locale]/explore/page";
+import LocalizedExplorePage, { generateMetadata } from "@/app/[locale]/explore/page";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
 
 const locales = ["en", "ja", "zh", "zh-tw"] as const;
@@ -48,5 +48,38 @@ describe("localized Explore coverage-empty action", () => {
 
       expect(html).not.toContain("data-localized-explore-original-action");
     }
+  });
+
+  it("routes only the supported recent query, including the first array item", async () => {
+    const cases: [string | string[], "recent" | undefined][] = [
+      ["recent", "recent"],
+      [["recent", "trending"], "recent"],
+      ["trending", undefined],
+      [["trending", "recent"], undefined],
+    ];
+
+    for (const [sort, expected] of cases) {
+      getLocalizedExploreMemes.mockResolvedValueOnce({ items: [], status: "coverage-empty" });
+
+      await LocalizedExplorePage({
+        params: Promise.resolve({ locale: "en" }),
+        searchParams: Promise.resolve({ sort }),
+      });
+
+      expect(getLocalizedExploreMemes).toHaveBeenLastCalledWith("en", expected);
+    }
+  });
+
+  it("keeps recent-query metadata canonical and noindex", async () => {
+    getLocalizedExploreMemes.mockResolvedValueOnce({ items: [], status: "coverage-empty" });
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en" }),
+      searchParams: Promise.resolve({ sort: "recent" }),
+    });
+
+    expect(getLocalizedExploreMemes).toHaveBeenCalledWith("en", "recent");
+    expect(metadata.alternates).toEqual({ canonical: "/en/explore" });
+    expect(metadata.robots).toEqual({ index: false, follow: true });
   });
 });

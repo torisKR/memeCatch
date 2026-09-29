@@ -20,6 +20,12 @@ function expand(key: Buffer, info: string | Buffer, length: number): Buffer {
   return hmac(key, Buffer.concat([Buffer.from(info), Buffer.from([1])])).subarray(0, length);
 }
 
+function serializeP256PrivateKey(key: ReturnType<typeof createECDH>): string {
+  const privateKey = key.getPrivateKey();
+  if (privateKey.length > 32) throw new Error("invalid_test_p256_private_key");
+  return Buffer.concat([Buffer.alloc(32 - privateKey.length), privateKey]).toString("base64url");
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -53,7 +59,7 @@ describe("web push transport", () => {
       auth: randomBytes(16).toString("base64url"),
     }, { title: "blocked" }, {
       publicKey: vapid.getPublicKey().toString("base64url"),
-      privateKey: vapid.getPrivateKey().toString("base64url"),
+      privateKey: serializeP256PrivateKey(vapid),
       subject: "mailto:ops@example.test",
     })).rejects.toThrow("invalid_push_endpoint");
     expect(fetchMock).not.toHaveBeenCalled();
@@ -76,17 +82,19 @@ describe("web push transport", () => {
       auth: randomBytes(16).toString("base64url"),
     }, { title: "redirect" }, {
       publicKey: vapid.getPublicKey().toString("base64url"),
-      privateKey: vapid.getPrivateKey().toString("base64url"),
+      privateKey: serializeP256PrivateKey(vapid),
       subject: "mailto:ops@example.test",
     })).rejects.toThrow("redirect mode is error");
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("sends an RFC 8291 encrypted payload with a VAPID token", async () => {
+  it("sends an RFC 8291 encrypted payload when the VAPID scalar has leading zero bytes", async () => {
     const subscriber = createECDH("prime256v1");
     subscriber.generateKeys();
     const vapid = createECDH("prime256v1");
-    vapid.generateKeys();
+    vapid.setPrivateKey(Buffer.from([1]));
+    const vapidPrivateKey = serializeP256PrivateKey(vapid);
+    expect(Buffer.from(vapidPrivateKey, "base64url")).toHaveLength(32);
     const auth = randomBytes(16);
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       void input;
@@ -105,7 +113,7 @@ describe("web push transport", () => {
       url: "/memes/abc",
     }, {
       publicKey: vapid.getPublicKey().toString("base64url"),
-      privateKey: vapid.getPrivateKey().toString("base64url"),
+      privateKey: vapidPrivateKey,
       subject: "mailto:ops@example.test",
     });
 
@@ -169,7 +177,7 @@ describe("web push transport", () => {
       }),
     });
     vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", vapid.getPublicKey().toString("base64url"));
-    vi.stubEnv("VAPID_PRIVATE_KEY", vapid.getPrivateKey().toString("base64url"));
+    vi.stubEnv("VAPID_PRIVATE_KEY", serializeP256PrivateKey(vapid));
     vi.stubEnv("VAPID_SUBJECT", "mailto:ops@example.test");
     let active = 0;
     let peak = 0;
@@ -213,7 +221,7 @@ describe("web push transport", () => {
       }),
     });
     vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", vapid.getPublicKey().toString("base64url"));
-    vi.stubEnv("VAPID_PRIVATE_KEY", vapid.getPrivateKey().toString("base64url"));
+    vi.stubEnv("VAPID_PRIVATE_KEY", serializeP256PrivateKey(vapid));
     vi.stubEnv("VAPID_SUBJECT", "mailto:ops@example.test");
     const fetchMock = vi.fn(async () => new Response(null, { status: 201 }));
     vi.stubGlobal("fetch", fetchMock);

@@ -18,7 +18,7 @@ import { GET, POST } from "./route";
 function request(body: unknown) {
   return new Request("http://localhost/api/plus/daily-signal/preferences", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -35,6 +35,19 @@ beforeEach(() => {
 });
 
 describe("Plus Daily Signal preference API", () => {
+  it("rejects a cross-origin preference before parsing or entitlement checks", async () => {
+    const response = await POST(new Request("http://localhost/api/plus/daily-signal/preferences", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ enabled: true, locale: "en" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(getPremiumEntitlement).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("keeps signed-out users out of the preference RPC", async () => {
     getPremiumEntitlement.mockResolvedValueOnce({ signedIn: false, isPremium: false });
     const response = await POST(request({ enabled: true, locale: "en" }));

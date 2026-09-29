@@ -153,6 +153,7 @@ export function SubmitCtaSection() {
         </div>
         <Link
           href="/submit"
+          rel="nofollow"
           className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none"
         >
           밈 제보하기 <ArrowRight aria-hidden className="size-4" />

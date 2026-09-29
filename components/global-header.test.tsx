@@ -103,4 +103,51 @@ describe("GlobalHeader", () => {
       expect(html).toContain('aria-label="언어 선택"');
     },
   );
+
+  it("shows direct desktop entry points for latest memes, community, and products", () => {
+    const html = renderToStaticMarkup(<GlobalHeader />);
+
+    expect(html).toContain('href="/explore?sort=recent"');
+    expect(html).toContain('href="/community"');
+    expect(html).toContain('href="/products"');
+  });
+
+  it("keeps the tablet header on one row without shrinking its controls below their touch targets", () => {
+    const html = renderToStaticMarkup(<GlobalHeader />);
+    const submitLink = html.match(/<a[^>]*href="\/submit"[^>]*>/)?.[0];
+    const compactSearch = html.match(/<a[^>]*href="\/search"[^>]*>/)?.[0];
+    const discoveryNav = html.match(/<nav[^>]*aria-label="주요 발견"[^>]*>/)?.[0];
+    const discoveryLinks = [
+      ...html.matchAll(
+        /<a[^>]*href="(?:\/explore\?sort=recent|\/community|\/products)"[^>]*>/g,
+      ),
+    ].map(([link]) => link);
+
+    expect(html).toContain("gap-x-2");
+    expect(html).toContain("lg:gap-x-3");
+    expect(html).toContain("sm:shrink-0");
+    expect(html).toContain("*:shrink-0");
+    expect(submitLink).toContain('rel="nofollow"');
+    expect(submitLink).toContain("hidden");
+    expect(submitLink).toContain("lg:inline-flex");
+    expect(submitLink).not.toContain("md:inline-flex");
+    expect(compactSearch).toContain("h-11 w-11 shrink-0");
+    expect(discoveryNav).toContain("shrink-0");
+    expect(discoveryNav).toContain("gap-0.5");
+    expect(discoveryNav).toContain("lg:gap-1");
+    expect(discoveryLinks).toHaveLength(3);
+    for (const link of discoveryLinks) {
+      expect(link).toContain("min-h-11");
+      expect(link).toContain("shrink-0");
+      expect(link).toContain("whitespace-nowrap");
+      expect(link).toContain("px-2 lg:px-3");
+    }
+  });
+
+  it("marks the current desktop destination active on nested community routes", () => {
+    navigation.pathname = "/community/new";
+    const html = renderToStaticMarkup(<GlobalHeader />);
+
+    expect(html.match(/<a href="\/community" aria-current="page"/)).toBeTruthy();
+  });
 });

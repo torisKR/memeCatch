@@ -11,6 +11,7 @@ import {
 import { rateLimit } from "@/lib/rate-limit";
 import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
 import { MediaValidationError, validateMedia } from "@/lib/mpe/media";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 type QuotaRpcClient = {
   rpc(name: "reserve_api_request", args: { p_action: "upload" }):
@@ -26,6 +27,9 @@ type QuotaRpcClient = {
  * 클라이언트는 R2 키를 전혀 알지 못한다(서버 env로만 서명).
  */
 export async function POST(req: NextRequest) {
+  if (!hasTrustedOrigin(req)) {
+    return NextResponse.json({ ok: false, error: "invalid_origin" }, { status: 403 });
+  }
   const supabase = await createClient();
   const {
     data: { user },

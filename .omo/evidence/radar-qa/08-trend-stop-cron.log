@@ -1,0 +1,11 @@
+
+ RUN  v4.1.10 /Users/toris/projects/memecatch
+
+ ✓ app/api/cron/trend-pulse/route.test.ts > trend pulse cron route > requires the exact cron bearer token 10ms
+ ✓ app/api/cron/trend-pulse/route.test.ts > trend pulse cron route > surfaces a stopped scoring pipeline as 502 1ms
+ ✓ app/api/cron/trend-pulse/route.test.ts > trend pulse cron route > is the one scheduled owner of the sequential trend pipeline 1ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  16:06:34
+   Duration  101ms (transform 14ms, setup 0ms, import 22ms, tests 13ms, environment 0ms)

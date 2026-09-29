@@ -9,7 +9,10 @@ import {
   isSeoContentLocale,
   localizedStaticPath,
 } from "@/lib/i18n-routing";
-import { getLocalizedExploreMemes } from "@/lib/localized-explore";
+import {
+  getLocalizedExploreMemes,
+  type LocalizedExploreSort,
+} from "@/lib/localized-explore";
 import { SITE_URL } from "@/lib/site";
 
 type RawParams = Record<string, string | string[] | undefined>;
@@ -25,14 +28,17 @@ function hasQuery(params: RawParams): boolean {
   );
 }
 
+function parseSort(params: RawParams): LocalizedExploreSort | undefined {
+  const value = Array.isArray(params.sort) ? params.sort[0] : params.sort;
+  return value === "recent" ? "recent" : undefined;
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
 
-  const [query, result] = await Promise.all([
-    searchParams,
-    getLocalizedExploreMemes(locale),
-  ]);
+  const query = await searchParams;
+  const result = await getLocalizedExploreMemes(locale, parseSort(query));
   const copy = LOCALIZED_EXPLORE_COPY[locale];
   const indexable = result.status === "active" && !hasQuery(query);
 
@@ -79,10 +85,8 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) notFound();
 
-  const [query, result] = await Promise.all([
-    searchParams,
-    getLocalizedExploreMemes(locale),
-  ]);
+  const query = await searchParams;
+  const result = await getLocalizedExploreMemes(locale, parseSort(query));
   const copy = LOCALIZED_EXPLORE_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
   const showCards = result.items.length > 0;

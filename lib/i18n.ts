@@ -160,7 +160,7 @@ const CORE_MESSAGES = {
     donateCardBody: "밈캐치는 1인이 광고·후원으로 운영하는 비영리 밈 사전이에요. 커피 한 잔이면 다음 밈도 계속 기록할 수 있어요.",
     legal1: "밈캐치는 한국 밈·유행어의 뜻과 유래를 기록하는 사전 서비스입니다. 모든 제보는 운영자 검수(사실 확인 → 저작권 확인)를 거쳐 공개됩니다.",
     legal2: "제3자 원본 영상·이미지는 저장하지 않고 출처 링크·임베드로만 제공하며, 각 콘텐츠의 저작권은 원저작자에게 있습니다. 문의·삭제 요청:",
-    mainNav: "주 내비게이션", menu: "메뉴",
+    mainNav: "주 내비게이션", discoveryNav: "주요 발견", menu: "메뉴",
   },
   en: {
     brand: "MemeCatch", home: "MemeCatch home", search: "Search memes", searchPlaceholder: "Search memes",
@@ -175,7 +175,7 @@ const CORE_MESSAGES = {
     donateCardBody: "MemeCatch is a non-profit meme dictionary run by one person on ads and donations. A coffee keeps the next meme documented.",
     legal1: "MemeCatch is a dictionary that documents the meaning and origin of Korean memes and trending expressions. Submissions are published only after fact and copyright review.",
     legal2: "We do not store original videos or images; we only provide source links and embeds. Copyright remains with each creator. Contact or removal requests:",
-    mainNav: "Main navigation", menu: "Menu",
+    mainNav: "Main navigation", discoveryNav: "Discover", menu: "Menu",
   },
   ja: {
     brand: "MemeCatch", home: "MemeCatch ホーム", search: "ミームを検索", searchPlaceholder: "ミームを検索",
@@ -190,7 +190,7 @@ const CORE_MESSAGES = {
     donateCardBody: "MemeCatchは個人が広告と支援で運営する非営利ミーム辞典です。コーヒー一杯で次のミームも記録し続けられます。",
     legal1: "MemeCatchは韓国のミームや流行語の意味と由来を記録する辞典サービスです。投稿は事実・著作権の確認後に公開されます。",
     legal2: "元の動画・画像は保存せず、出典リンクと埋め込みのみを提供します。著作権は各制作者に帰属します。お問い合わせ・削除依頼：",
-    mainNav: "メインナビゲーション", menu: "メニュー",
+    mainNav: "メインナビゲーション", discoveryNav: "見つける", menu: "メニュー",
   },
   zh: {
     brand: "MemeCatch", home: "MemeCatch 首页", search: "搜索迷因", searchPlaceholder: "搜索迷因",
@@ -205,7 +205,7 @@ const CORE_MESSAGES = {
     donateCardBody: "MemeCatch 是个人以广告和支持运营的非营利迷因词典。一杯咖啡就能让下一个迷因继续被记录。",
     legal1: "MemeCatch 是记录韩国迷因和流行语含义及来源的词典服务。所有投稿均经事实与版权审核后发布。",
     legal2: "我们不保存原始视频或图片，仅提供来源链接和嵌入内容。版权归各创作者所有。咨询或删除请求：",
-    mainNav: "主导航", menu: "菜单",
+    mainNav: "主导航", discoveryNav: "发现", menu: "菜单",
   },
 } as const;
 
@@ -242,7 +242,7 @@ const EXTRA_MESSAGES: Record<Exclude<Locale, TranslatedLocale>, Partial<Messages
     donateCardBody: "MemeCatch 是個人以廣告和支持營運的非營利迷因詞典。一杯咖啡就能讓下一個迷因繼續被記錄。",
     legal1: "MemeCatch 是記錄韓國迷因和流行語含義及來源的詞典服務。所有投稿均經事實與版權審核後發布。",
     legal2: "我們不保存原始影片或圖片，僅提供來源連結和嵌入內容。版權歸各創作者所有。諮詢或刪除請求：",
-    mainNav: "主導覽",
+    mainNav: "主導覽", discoveryNav: "探索", menu: "選單",
   },
   th: {
     home: "หน้าแรก MemeCatch", search: "ค้นหามีม", searchPlaceholder: "ค้นหามีม",

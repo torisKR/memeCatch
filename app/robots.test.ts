@@ -39,7 +39,7 @@ describe("robots locale crawl policy", () => {
   });
 
   it("blocks private and non-content paths with or without a locale prefix", () => {
-    const privatePaths = ["/admin", "/my", "/api/", "/go/", "/auth/"];
+    const privatePaths = ['/admin', '/my', '/api/', '/go/', '/auth/', '/submit', '/login', '/premium'];
 
     for (const pathname of privatePaths) {
       expect(isDisallowed(pathname), pathname).toBe(true);

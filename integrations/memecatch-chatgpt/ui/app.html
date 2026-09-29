@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>밈캐치 — 뜻과 맥락을 함께</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:var(--color-background-primary,#fffdf8);color:var(--color-text-primary,#222);font-family:var(--font-sans,system-ui,-apple-system,sans-serif);line-height:1.65}main{max-width:860px;margin:auto;padding:28px 24px 38px}header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:24px}.brand{font-size:26px;font-weight:850;letter-spacing:-1px}.brand span{color:#bc4208}.caption{font-size:12px;color:var(--color-text-secondary,#6b655e)}h1{font-size:clamp(26px,5vw,38px);line-height:1.25;letter-spacing:-1.6px;margin:20px 0 12px}.intro{max-width:560px;color:var(--color-text-secondary,#625a52);margin:0 0 24px}form{display:flex;gap:8px}input{min-width:0;flex:1;border:1px solid #bfb6ac;border-radius:12px;padding:14px 16px;font-size:16px;background:var(--color-background-primary,#fff);color:inherit}button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:#bc4208;color:white;font-weight:650}button:disabled{opacity:.6;cursor:wait}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #147ba8;outline-offset:3px}.options{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0 20px}.options input{flex:none;min-width:auto;accent-color:#bc4208}#status{font-size:13px;color:var(--color-text-secondary,#625a52);min-height:22px;margin-bottom:12px}.results{display:grid;gap:12px}article{border:1px solid var(--color-border-primary,#ddd5ca);border-radius:14px;padding:20px;background:var(--color-background-secondary,#fff)}.row{display:flex;align-items:start;justify-content:space-between;gap:12px}h2{font-size:19px;line-height:1.45;letter-spacing:-.4px;margin:0 0 8px}.badge{flex:none;font-size:11px;padding:4px 8px;border-radius:6px;background:#f1eee7;color:#51483d;max-width:42%}.safe{background:#e4f2e7;color:#235936}.context{background:#fff0c8;color:#715009}.outdated{background:#eeeaf7;color:#5d4a7b}.risky{background:#ffe5dd;color:#882e1a}article p{font-size:14px;margin:8px 0}details{margin-top:12px;border-top:1px solid var(--color-border-primary,#ede7df);padding-top:10px}summary{font-size:13px;font-weight:650;cursor:pointer;color:#bc4208}dl{font-size:13px;margin:12px 0}dt{font-weight:700;margin-top:12px}dd{margin:4px 0;white-space:pre-wrap}a{color:#a63908}.source{background:none;color:#a63908;padding:0;font-size:13px;text-decoration:underline}.empty{padding:30px 0}.scope{font-size:12px;color:var(--color-text-secondary,#6b655e);padding-top:20px;margin-top:18px;border-top:1px solid var(--color-border-primary,#e1d9d0)}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.mode{font-size:11px;border:1px solid #d7cabc;padding:3px 8px;border-radius:20px;color:#6b655e}@media(max-width:480px){main{padding:20px 16px}article{padding:16px}.badge{max-width:45%}form button{padding:10px 12px}.brand{font-size:23px}}@media(prefers-color-scheme:dark){body{background:var(--color-background-primary,#191815);color:var(--color-text-primary,#f5eee6)}article,input{background:var(--color-background-secondary,#24211d);color:inherit;border-color:var(--color-border-primary,#514a40)}.intro,.caption,#status,.scope{color:var(--color-text-secondary,#c6baac)}summary,.source,a{color:#ef9a69}}
+</style>
+</head>
+<body><main>
+<header><div><div class="brand">밈<span>캐치</span></div><div class="caption">MEMECATCH · 뜻과 맥락을 함께</div></div><span class="mode" id="mode">연결 확인 중</span></header>
+<h1>이 밈, 어떤 뜻일까?</h1><p class="intro">뜻과 유래부터 쓰기 전 주의할 점까지.<br>밈캐치의 공개 사전에서 함께 찾아보세요.</p>
+<form id="search"><label class="sr" for="query">밈 이름 또는 관련 단어</label><input id="query" placeholder="예: 사딸라, 홍시맛, 두 개의 심장" maxlength="160" autocomplete="off"><button id="submit" type="submit">찾아보기</button></form>
+<label class="options"><input id="risky" type="checkbox">위험·안전도 미확인 항목도 설명을 위해 보기</label>
+<div id="status" role="status" aria-live="polite"></div><div id="results" class="results"></div>
+<footer class="scope"><div id="scope">공개 본문 일부를 검색합니다. 전체 사전과 최신 내용은 밈캐치에서 확인하세요.</div><div id="fetched"></div><p><a id="all" href="https://catchmeme.com/search" target="_blank" rel="noopener noreferrer">밈캐치에서 전체 사전 검색 ↗</a></p></footer>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const preview = window.parent === window && location.pathname === '/preview';
+  let nextId=1, connected=false, searchVersion=0;
+  const pending=new Map();
+  function notify(method,params) { window.parent.postMessage({jsonrpc:'2.0',method,params},'*'); }
+  function request(method,params) {
+    const id=nextId++;
+    return new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>{pending.delete(id);reject(new Error('연결 시간이 초과됐습니다. 다시 시도해 주세요.'));},15000);
+      pending.set(id,{resolve,reject,timeout});
+      window.parent.postMessage({jsonrpc:'2.0',id,method,params},'*');
+    });
+  }
+  const validUrl = value => {try{const u=new URL(value);return u.origin==='https://catchmeme.com'&&!u.username&&!u.password&&/^\/memes\/[a-z0-9]{3,36}-[^/]+$/i.test(u.pathname)&&!u.search&&!u.hash?u.href:null;}catch{return null;}};
+  function element(tag,text,className) {const el=document.createElement(tag);if(text!=null)el.textContent=text;if(className)el.className=className;return el;}
+  async function openLink(url) {if(preview)window.open(url,'_blank','noopener,noreferrer');else{try{await request('ui/open-link',{url});}catch(e){$('status').textContent=e.message;}}}
+  function hostContext(context) {if(context?.theme)document.documentElement.style.colorScheme=context.theme;}
+  function render(data) {
+    if(!data||!Array.isArray(data.memes))throw new Error('검색 결과를 읽지 못했습니다.');
+    $('results').replaceChildren();
+    $('status').textContent=data.memes.length?`${data.matched ?? data.memes.length}개 결과 · 공개 본문 ${data.corpusSize}개 항목에서 검색`:'공개 본문에서 찾지 못했어요. 전체 사전에서도 검색해 보세요.';
+    for(const meme of data.memes.slice(0,12)) {
+      const url=validUrl(meme.url);if(!url)continue;
+      const article=element('article');const row=element('div',null,'row');
+      row.append(element('h2',meme.title));
+      row.append(element('span',meme.safety || '사용 안전도 정보 없음',`badge ${['safe','context','outdated','risky'].includes(meme.safetyCode)?meme.safetyCode:''}`));
+      article.append(row,element('p',meme.summary));
+      const details=element('details');details.append(element('summary','유래와 사용 주의 자세히 보기'));
+      const list=element('dl');
+      for(const [label,value] of [['설명',meme.description],['유래',meme.origin],['사용법·주의',meme.usage],['시기',meme.year],['별칭',meme.aliases]])if(value)list.append(element('dt',label),element('dd',value));
+      const source=element('button','밈캐치 원문 보기 ↗','source');source.type='button';source.addEventListener('click',()=>openLink(url));details.append(list,source);article.append(details);
+      $('results').append(article);
+    }
+    $('scope').textContent=data.scope || '밈캐치 공개 본문 일부를 검색합니다.';
+    const date=new Date(data.fetchedAt);$('fetched').textContent=Number.isNaN(date.getTime())?'':`본문 확인: ${date.toLocaleString('ko-KR')}`;
+    $('all').href=`https://catchmeme.com/search?q=${encodeURIComponent($('query').value)}`;
+  }
+  async function callSearch() {
+    if(!preview&&!connected)throw new Error('ChatGPT 앱 연결을 기다려 주세요.');
+    const args={query:$('query').value,limit:6,includeRisky:$('risky').checked};
+    if(preview) {
+      const result=await fetch('/mcp',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':'search_memes'},body:JSON.stringify({jsonrpc:'2.0',id:nextId++,method:'tools/call',params:{name:'search_memes',arguments:args,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientInfo':{name:'memecatch-preview',version:'0.1.0'},'io.modelcontextprotocol/clientCapabilities':{}}}})});
+      const body=await result.json();if(body.error)throw new Error(body.error.message);return body.result;
+    }
+    return request('tools/call',{name:'search_memes',arguments:args});
+  }
+  async function search() {
+    const version=++searchVersion;$('submit').disabled=true;$('status').textContent='밈을 찾고 있어요…';
+    try{const result=await callSearch();if(version!==searchVersion)return;if(result.isError)throw new Error(result.content?.[0]?.text || '검색에 실패했습니다.');render(result.structuredContent);}
+    catch(e){if(version===searchVersion){$('results').replaceChildren();$('status').textContent=e.message;}}
+    finally{if(version===searchVersion)$('submit').disabled=false;}
+  }
+  $('search').addEventListener('submit',e=>{e.preventDefault();search();});
+  $('risky').addEventListener('change',search);
+  $('all').addEventListener('click',e=>{if(!preview){e.preventDefault();openLink(e.currentTarget.href);}});
+  window.addEventListener('message',event=>{
+    if(event.source!==window.parent||event.data?.jsonrpc!=='2.0')return;
+    const msg=event.data;
+    if(msg.id!=null&&pending.has(msg.id)){const entry=pending.get(msg.id);pending.delete(msg.id);clearTimeout(entry.timeout);msg.error?entry.reject(new Error(msg.error.message || '연결 요청 실패')):entry.resolve(msg.result);return;}
+    if(msg.method==='ui/notifications/tool-input') {const a=msg.params?.arguments;if(typeof a?.query==='string')$('query').value=a.query.slice(0,160);if(typeof a?.includeRisky==='boolean')$('risky').checked=a.includeRisky;}
+    if(msg.method==='ui/notifications/tool-result') {try{if(msg.params?.isError)throw new Error(msg.params.content?.[0]?.text || '검색 실패');render(msg.params.structuredContent);}catch(e){$('status').textContent=e.message;}}
+    if(msg.method==='ui/notifications/host-context-changed')hostContext(msg.params);
+    if(msg.method==='ui/notifications/tool-cancelled'){$('status').textContent='검색이 취소됐습니다.';$('submit').disabled=false;}
+    if(msg.method==='ui/resource-teardown'&&msg.id!=null)window.parent.postMessage({jsonrpc:'2.0',id:msg.id,result:{}},'*');
+  });
+  if(preview){$('mode').textContent='로컬 미리보기';connected=true;search();}
+  else {
+    $('status').textContent='ChatGPT 앱 연결 중…';
+    request('ui/initialize',{protocolVersion:'2026-01-26',appInfo:{name:'memecatch-ui',version:'0.1.0'},appCapabilities:{availableDisplayModes:['inline','fullscreen']}}).then(result=>{connected=true;hostContext(result.hostContext);$('mode').textContent='밈 사전';$('status').textContent='밈 이름을 입력해 보세요.';notify('ui/notifications/initialized',{});const observer=new ResizeObserver(()=>notify('ui/notifications/size-changed',{height:document.body.scrollHeight}));observer.observe(document.body);}).catch(e=>{$('mode').textContent='연결 필요';$('status').textContent=e.message;});
+  }
+})();
+</script></body></html>

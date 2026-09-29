@@ -28,6 +28,7 @@ type OEmbedResponse = {
 export function MemeEmbed({
   content,
   fallbackSourceUrl,
+  fallbackReason = null,
   title,
   isRepresentative = true,
   category,
@@ -38,6 +39,7 @@ export function MemeEmbed({
     "platform" | "content_id" | "url" | "thumbnail_url" | "availability" | "caption"
   > | null;
   fallbackSourceUrl?: string | null;
+  fallbackReason?: "confirmed_unavailable" | "no_playback_reference" | null;
   title: string;
   isRepresentative?: boolean;
   /** 폴백 타이포 히어로의 카테고리 틴트·라벨 칩 — 미전달 시 중립(surface-2) 톤 */
@@ -52,13 +54,17 @@ export function MemeEmbed({
   // 재생 가능 여부는 lib/content-availability.ts 단일 판정 — dead와 region_blocked를
   // 함께 제외한다. 불가 판정이면 아래 폴백 카드가 출처 링크를 대신 제시한다.
   const isPlayable = isAvailableContent(content);
+  const effectiveFallbackReason =
+    fallbackReason ?? (content && !isPlayable ? "confirmed_unavailable" : null);
   const isYouTube =
     content != null &&
     (sourcePlatform === "youtube" || sourcePlatform === "youtube_shorts") &&
     !!content.content_id &&
     isPlayable;
 
-  const sourceUrl = content?.url ?? fallbackSourceUrl ?? null;
+  const sourceUrl = isPlayable
+    ? content?.url ?? fallbackSourceUrl ?? null
+    : fallbackSourceUrl ?? null;
   const socialProvider = isPlayable
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
@@ -119,7 +125,6 @@ export function MemeEmbed({
     );
   }
 
-  // 출처가 있으면 "확인 가능" 톤, 정말 없을 때만 "소실" 톤 — 오해 방지
   if (sourceUrl) {
     const isContextSource = isContextSourceUrl(sourceUrl);
     return (
@@ -127,11 +132,15 @@ export function MemeEmbed({
         <p className="text-base font-semibold">
           {isContextSource
             ? "원본 맥락은 출처에서 확인할 수 있어요."
+            : effectiveFallbackReason === "confirmed_unavailable"
+              ? "원본 콘텐츠는 현재 확인할 수 없어요."
             : "원본 콘텐츠는 출처에서 볼 수 있어요."}
         </p>
         <p className="mt-1 text-sm leading-relaxed">
           {isContextSource
             ? "이 링크는 원본을 복제하지 않고 유래와 맥락을 설명하는 참고 출처예요."
+            : effectiveFallbackReason === "confirmed_unavailable"
+              ? "플랫폼에서 내려갔거나 접근할 수 없어 임베드하지 않아요. 뜻과 맥락은 아래 설명에 남아 있어요."
             : "저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요."}
         </p>
         <a
@@ -140,7 +149,11 @@ export function MemeEmbed({
           rel="noopener noreferrer"
           className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold text-foreground transition-colors hover:border-accent hover:text-accent"
         >
-          {isContextSource ? "출처에서 원본 맥락 보기" : "출처에서 원본 보기"}
+            {isContextSource
+              ? "출처에서 원본 맥락 보기"
+              : effectiveFallbackReason === "confirmed_unavailable"
+                ? "출처 상태 확인하기"
+                : "출처에서 원본 보기"}
           <span aria-hidden>↗</span>
         </a>
       </TypoFallbackHero>
@@ -150,11 +163,14 @@ export function MemeEmbed({
   return (
     <TypoFallbackHero title={title} category={category} originYear={originYear}>
       <p className="text-base font-semibold">
-        원본은 사라졌지만, 뜻과 맥락은 여기 남아 있어요.
+        {effectiveFallbackReason === "confirmed_unavailable"
+          ? "원본 콘텐츠는 현재 확인할 수 없지만, 뜻과 맥락은 여기 남아 있어요."
+          : "원본을 아직 연결하지 못했지만, 뜻과 맥락은 여기 남아 있어요."}
       </p>
       <p className="mt-1 text-sm leading-relaxed">
-        플랫폼에서 내려갔거나 임베드가 어려운 콘텐츠예요. 아래 설명이 이 밈의
-        기록이에요.
+        {effectiveFallbackReason === "confirmed_unavailable"
+          ? "플랫폼에서 내려갔거나 접근할 수 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."
+          : "아직 재생 가능한 원본 링크가 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."}
       </p>
     </TypoFallbackHero>
   );
@@ -461,7 +477,7 @@ function LiteSocialEmbed({
           title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
           sandbox={
             provider === "threads"
-              ? "allow-scripts allow-popups allow-popups-to-escape-sandbox"
+              ? "allow-scripts allow-popups"
               : "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
           }
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"

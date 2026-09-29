@@ -107,6 +107,24 @@ export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
   }
 }
 
+/** Newly published records, distinct from origin-year/trend-based recommendations. */
+export async function getRecentlyPublishedMemes(limit = 6): Promise<MemeListItem[]> {
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("memes")
+      .select(LIST_SELECT)
+      .in("moderation_status", [...PUBLIC_STATUSES])
+      .not("published_at", "is", null)
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: true })
+      .limit(limit);
+    return error || !data ? [] : data as MemeListItem[];
+  } catch {
+    return [];
+  }
+}
+
 /** 지금 알아도 충분한 밈 — difficulty=beginner */
 export async function getBeginnerMemes(limit = 8): Promise<MemeListItem[]> {
   try {

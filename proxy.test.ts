@@ -14,6 +14,19 @@ const supabaseMocks = vi.hoisted(() => ({
   select: vi.fn(),
 }));
 
+const BASE_UPDATED_AT = "2026-09-20T00:00:00Z";
+
+function publicMemeRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "meme-1",
+    short_id: "meme",
+    slug: "1",
+    updated_at: BASE_UPDATED_AT,
+    meme_translations: [],
+    ...overrides,
+  };
+}
+
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({
     auth: { getUser: supabaseMocks.getUser },
@@ -25,7 +38,10 @@ vi.mock("@supabase/ssr", () => ({
 beforeEach(() => {
   supabaseMocks.getUser.mockReset().mockResolvedValue({ data: { user: null } });
   supabaseMocks.rpc.mockReset().mockResolvedValue({ data: false, error: null });
-  supabaseMocks.abortSignal.mockReset().mockResolvedValue({ data: [{ id: "meme-1" }], error: null });
+  supabaseMocks.abortSignal.mockReset().mockResolvedValue({
+    data: [publicMemeRow()],
+    error: null,
+  });
   const query = {
     select: supabaseMocks.select,
     eq: supabaseMocks.eq,
@@ -156,6 +172,120 @@ describe("proxy locale contract", () => {
 
 describe("proxy public meme existence check", () => {
   it.each([
+    ["/memes/gjq95suv", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
+    ["/memes/gjq95suv-old-slug", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
+  ])("308-redirects a confirmed Korean alias %s to its stored canonical path", async (path, expected) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [publicMemeRow({ short_id: "gjq95suv", slug: "한국-밈" })],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).toBe(308);
+    expect(new URL(response.headers.get("location")!).pathname).toBe(expected);
+  });
+
+  it.each([
+    "/memes/gjq95suv-current",
+    "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88",
+  ])("does not redirect an exact canonical key %s", async (path) => {
+    const slug = path.includes("gjq95suv-current") ? "current" : "한국-밈";
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [publicMemeRow({ short_id: "gjq95suv", slug })],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("308-redirects a localized alias to the current stored localized slug", async () => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [
+        publicMemeRow({
+          short_id: "gjq95suv",
+          slug: "한국-밈",
+          meme_translations: [
+            {
+              locale: "ja",
+              status: "reviewed",
+              localized_slug: "現在の名前",
+              source_updated_at: BASE_UPDATED_AT,
+            },
+          ],
+        }),
+      ],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest("/ja/memes/gjq95suv-old"));
+
+    expect(response.status).toBe(308);
+    expect(new URL(response.headers.get("location")!).pathname).toBe(
+      "/ja/memes/gjq95suv-%E7%8F%BE%E5%9C%A8%E3%81%AE%E5%90%8D%E5%89%8D",
+    );
+  });
+
+  it.each([
+    { name: "missing", memeTranslations: [] },
+    {
+      name: "stale",
+      memeTranslations: [{
+        locale: "ja",
+        status: "stale",
+        localized_slug: "古い名前",
+        source_updated_at: BASE_UPDATED_AT,
+      }],
+    },
+    {
+      name: "outdated",
+      memeTranslations: [{
+        locale: "ja",
+        status: "reviewed",
+        localized_slug: "古い名前",
+        source_updated_at: "2026-09-01T00:00:00Z",
+      }],
+    },
+  ])("does not redirect an unavailable localized document ($name)", async ({ memeTranslations }) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [
+        publicMemeRow({
+          short_id: "gjq95suv",
+          slug: "한국-밈",
+          meme_translations: memeTranslations,
+        }),
+      ],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest("/ja/memes/gjq95suv-old"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("fails open without canonicalizing an alias when lookup fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: null,
+      error: { message: "provider unavailable" },
+    });
+
+    const response = await proxy(publicRequest("/memes/gjq95suv-wrong"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "public_meme_existence_check_failed query_error",
+    );
+    warn.mockRestore();
+  });
+
+  it.each([
     ["/memes/missing-meme", "ko"],
     ["/en/memes/missing-meme", "en"],
     ["/en/memes/random", "en"],
@@ -168,7 +298,9 @@ describe("proxy public meme existence check", () => {
     expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
     expect(response.headers.get("content-language")).toBe(language);
     expect(supabaseMocks.from).toHaveBeenCalledWith("memes");
-    expect(supabaseMocks.select).toHaveBeenCalledWith("id");
+    expect(supabaseMocks.select).toHaveBeenCalledWith(
+      "id, short_id, slug, updated_at, meme_translations(locale, status, localized_slug, source_updated_at)",
+    );
     expect(supabaseMocks.eq).toHaveBeenCalledWith(
       "short_id",
       path.endsWith("/random") ? "random" : "missing",

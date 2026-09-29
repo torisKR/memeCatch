@@ -92,7 +92,8 @@ describe("GlobalFeedTabs", () => {
     expect(ready).toContain("Open Korean detail");
     expect(ready).toContain("data-global-feed-platform");
     expect(ready).toContain('data-country-code="US"');
-    expect(ready).toContain('aria-label="미국 밈"');
+    expect(ready).toContain("United States");
+    expect(ready).toContain('data-country-state="reviewed"');
     expect(empty).toContain("No reviewed Instagram picks yet");
     expect(error).toContain('role="alert"');
     expect(error).toContain("No placeholder memes were substituted.");
@@ -114,6 +115,7 @@ describe("GlobalFeedTabs", () => {
     );
 
     expect(html.match(/data-country-code="UNKNOWN"/g)).toHaveLength(2);
-    expect(html).toContain('aria-label="출처 국가 미확인"');
+    expect(html).toContain("Origin unconfirmed");
+    expect(html).toContain('data-country-state="unconfirmed"');
   });
 });

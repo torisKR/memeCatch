@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(24);
 
 insert into auth.users (
   id, email, email_confirmed_at, raw_user_meta_data, created_at, updated_at
@@ -21,6 +21,43 @@ select ok(
 select ok(
   not has_function_privilege('authenticated', 'public.fail_billing_order(text)', 'execute'),
   'authenticated cannot fail billing orders directly'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.create_unifi_payment_intent(text,text,integer,text,boolean)',
+    'execute'
+  ),
+  'anonymous callers cannot bind legacy provider payment ids'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.create_unifi_payment_intent(text,text,integer,text,boolean)',
+    'execute'
+  ),
+  'authenticated callers cannot pre-claim legacy provider payment ids'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.process_unifi_order_event(text,text,text,timestamp with time zone,jsonb)',
+    'execute'
+  ),
+  'authenticated callers cannot forge or replay settlement RPCs'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.process_unifi_order_event(text,text,text,timestamp with time zone,jsonb)',
+    'execute'
+  ),
+  'the trusted service role retains settlement access'
+);
+select is(
+  has_table_privilege('anon', 'public.billing_orders', 'select'),
+  false,
+  'anonymous callers cannot read billing orders'
 );
 set local role service_role;
 select lives_ok(

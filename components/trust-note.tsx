@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { summarizeEvidence, type EvidenceSourceInput } from "@/lib/source-links";
+import { evidenceTimestamp, summarizeEvidence, type EvidenceSourceInput } from "@/lib/source-links";
 import { TrackedBlock } from "@/components/tracked-block";
 import { houseOriginalPublicLabel, trustCopyKind } from "@/lib/house-original";
 
@@ -14,8 +14,8 @@ import { houseOriginalPublicLabel, trustCopyKind } from "@/lib/house-original";
  * 네 상태만 쓴다(1인 운영이 유지할 수 있는 최소 단위):
  *   자체 제작  → 밈캐치가 만든 밈. 인터넷 원본 부재를 결함으로 말하지 않는다.
  *   0건        → 근거 미연결. 검수 주장을 하지 않고 제보 경로를 연다.
- *   맥락 출처만 → 위키로 맥락만 확인. 원본은 아직 못 찾았다고 밝힌다.
- *   원본 있음   → 확인한 근거 수를 센다.
+ *   맥락 출처만 → 위키 자료가 연결돼 있음을 밝힌다.
+ *   일반 출처 있음 → 연결된 자료 수만 센다. 제목만으로 원본·보도 검증을 주장하지 않는다.
  *
  * 충실도('보강 중')는 바로 위 DocStatusNote가 이미 크게 말하고 있어 여기서
  * 반복하지 않는다. 같은 사실을 두 번 쓰면 둘 다 배경이 된다.
@@ -37,15 +37,17 @@ export function TrustNote({
   originKind?: string | null;
 }) {
   const evidence = summarizeEvidence(sources);
-  const updated = (
-    <time dateTime={updatedAt}>
-      {new Date(updatedAt).toLocaleDateString("ko-KR", {
+  const storedUpdate = evidenceTimestamp(updatedAt);
+  const updated = storedUpdate ? (
+    <time dateTime={storedUpdate}>
+      {new Date(storedUpdate).toLocaleDateString("ko-KR", {
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: "Asia/Seoul",
       })}
     </time>
-  );
+  ) : <span>기록 미확인</span>;
 
   if (trustCopyKind(originKind) === "house_original") {
     return (
@@ -64,6 +66,7 @@ export function TrustNote({
         >
           <Link
             href={`/submit?name=${encodeURIComponent(title)}`}
+            rel="nofollow"
             className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
           >
             다른 곳에서 이 표현이 무단으로 쓰이면 알려 주세요
@@ -88,6 +91,7 @@ export function TrustNote({
         >
           <Link
             href={`/submit?name=${encodeURIComponent(title)}`}
+            rel="nofollow"
             className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
           >
             출처를 아시면 알려 주세요
@@ -115,7 +119,7 @@ export function TrustNote({
       {isContextOnly ? (
         <>
           <span className="font-semibold text-foreground">
-            맥락 출처 {evidence.context}개로 확인
+            맥락 자료 {evidence.context}개 연결
           </span>{" "}
           — 원본은 아직 찾는 중이에요.
         </>
@@ -129,10 +133,10 @@ export function TrustNote({
       ) : (
         <>
           <span className="stat-mono font-semibold text-foreground">
-            근거 출처 {evidence.total}개 확인
+            근거 링크 {evidence.total}개 연결
           </span>
           {evidence.total > evidence.identifiedPrimary && (
-            <> (원본·보도 {evidence.identifiedPrimary}개)</>
+            <> (서지 정보가 있는 일반 자료 {evidence.identifiedPrimary}개)</>
           )}
         </>
       )}

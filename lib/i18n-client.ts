@@ -3,6 +3,7 @@
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
 import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, localeFromLanguageTag, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
+import { normalizePathname } from "@/lib/normalize-pathname";
 
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
@@ -18,9 +19,27 @@ function localeFromPathname(pathname: string): Locale | null {
   return parsed.hadLocalePrefix && isSeoContentLocale(parsed.locale) ? parsed.locale : null;
 }
 
+function localeFromSearch(search: string): Locale | null {
+  const value = new URLSearchParams(search).get("lang");
+  return isLocale(value) ? value : null;
+}
+
+/** URL-owned locale choices must stay aligned with the server-rendered page. */
+function localeFromCurrentUrl(): Locale | null {
+  const prefixedLocale = localeFromPathname(window.location.pathname);
+  if (prefixedLocale) return prefixedLocale;
+
+  const queryLocale = localeFromSearch(window.location.search);
+  if (queryLocale) return queryLocale;
+
+  return normalizePathname(window.location.pathname) === "/"
+    ? DEFAULT_LOCALE
+    : null;
+}
+
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
-  const urlLocale = localeFromPathname(window.location.pathname);
+  const urlLocale = localeFromCurrentUrl();
   if (urlLocale) return urlLocale;
   const value = document.cookie.split("; ").find((item) => item.startsWith(`${LOCALE_COOKIE}=`))?.split("=")[1];
   return isLocale(value) ? value : DEFAULT_LOCALE;
@@ -77,7 +96,7 @@ export function LocaleAutoDetect() {
     try {
       // A locale URL is an explicit, shareable choice. Do not overwrite it with
       // the browser preference during hydration.
-      if (localeFromPathname(window.location.pathname)) return;
+      if (localeFromCurrentUrl()) return;
       const hasCookie = document.cookie
         .split("; ")
         .some((item) => item.startsWith(`${LOCALE_COOKIE}=`));

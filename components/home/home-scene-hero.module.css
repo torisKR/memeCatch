@@ -1,0 +1,65 @@
+/* The same GPU scene becomes part of the landing, not a second boxed demo. */
+.hero[data-renderer] {
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #f5f2eb;
+}
+.hero [data-home-scene-stage] {
+  height: clamp(280px, 33vw, 430px);
+  overflow: hidden;
+  background: transparent;
+}
+.hero [data-scene-ambient] {
+  background: radial-gradient(ellipse at 55% 50%, rgb(255 100 51 / 9%), transparent 65%);
+}
+.hero [data-scene-brand],
+.hero [data-scene-backplate] {
+  display: none;
+}
+.hero [data-scene-control-dock] {
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 18px;
+  padding: 12px;
+  background: #151718;
+}
+.hero [data-scene-control-dock] fieldset > div {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.hero [data-scene-signal] {
+  min-height: 48px;
+  justify-content: center;
+  padding: 7px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.hero [data-scene-signal] svg { width: 18px; height: 18px; }
+.hero [role="status"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.hero [role="status"] p { margin: 0; font-size: 12px; }
+.hero [role="status"] > p:first-child > span { display: none; }
+.hero [data-scene-control-dock] summary { font-size: 11px; }
+.hero [data-scene-control-dock] summary > span:last-child { font-size: 10px; }
+.hero [data-scene-playback],
+.hero [data-scene-reset] { background: #242729; }
+@media (max-width: 639px) {
+  .hero [data-home-scene-stage] { height: 290px; }
+  .hero [data-scene-control-dock] { border-radius: 14px; padding: 10px; }
+  .hero [data-scene-signal] { flex-direction: column; gap: 4px; min-height: 60px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero *, .hero *::before, .hero *::after {
+    scroll-behavior: auto;
+    animation: none;
+    transition-duration: 0s;
+  }
+}

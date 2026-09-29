@@ -1,23 +1,35 @@
 import {
-  countryFlag,
   getMemeCountry,
+  localizedMemeCountryLabel,
+  ORIGIN_COUNTRY_LABELS,
+  UNCONFIRMED_ORIGIN_LABELS,
   type MemeCountryCode,
+  type MemeCountryLocale,
 } from "@/lib/meme-country";
 
-export function CountryFlagBadge({ code }: { code: MemeCountryCode | null }) {
+export function CountryFlagBadge({
+  code,
+  locale = "ko",
+}: {
+  code: MemeCountryCode | null;
+  locale?: MemeCountryLocale;
+}) {
   const country = code ? getMemeCountry(code) : null;
-  const label = country ? `${country.label} 밈` : "출처 국가 미확인";
+  const label = country
+    ? localizedMemeCountryLabel(country.code, locale)
+    : UNCONFIRMED_ORIGIN_LABELS[locale];
+  const accessibleLabel = country ? `${ORIGIN_COUNTRY_LABELS[locale]}: ${label}` : label;
 
   return (
     <span
-      role="img"
-      aria-label={label}
       title={label}
       data-country-code={code ?? "UNKNOWN"}
       data-country-flag={code ?? "unknown"}
-      className="relative z-10 inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/70 bg-white/95 text-xl leading-none shadow-md"
+      data-country-state={country ? "reviewed" : "unconfirmed"}
+      className="relative z-10 inline-flex min-h-8 max-w-[min(52vw,12rem)] min-w-0 shrink-0 items-center rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-bold leading-tight text-foreground shadow-md"
     >
-      <span aria-hidden>{countryFlag(code)}</span>
+      <span className="sr-only">{accessibleLabel}</span>
+      <span aria-hidden="true" className="truncate">{label}</span>
     </span>
   );
 }

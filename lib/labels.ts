@@ -220,5 +220,9 @@ export function memePathFrom(shortId: string, slug: string) {
   return `/memes/${shortId}-${encodeURIComponent(slug)}`;
 }
 export function shortIdFromParam(param: string) {
-  return decodeURIComponent(param).split("-")[0];
+  try {
+    return decodeURIComponent(param).split("-")[0];
+  } catch {
+    return param.split("-")[0];
+  }
 }

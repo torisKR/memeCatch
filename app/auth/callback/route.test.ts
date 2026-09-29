@@ -50,4 +50,24 @@ describe("auth callback redirect", () => {
 
     expect(response.headers.get("location")).toBe("https://catchmeme.com/");
   });
+
+  it("does not trust the request origin when building the success redirect", async () => {
+    const response = await GET(
+      new NextRequest("https://evil.example/auth/callback?code=ok&next=%2Fexplore"),
+    );
+
+    expect(response.headers.get("location")).toBe("https://catchmeme.com/explore");
+  });
+
+  it("does not trust the request origin when building the error redirect", async () => {
+    mocks.exchangeCodeForSession.mockResolvedValueOnce({ error: new Error("invalid code") });
+
+    const response = await GET(
+      new NextRequest("https://evil.example/auth/callback?code=bad"),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://catchmeme.com/login?error=auth",
+    );
+  });
 });

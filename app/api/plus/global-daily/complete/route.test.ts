@@ -15,7 +15,7 @@ import { POST } from "./route";
 function request(body: unknown) {
   return new Request("http://localhost/api/plus/global-daily/complete", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -36,6 +36,19 @@ beforeEach(() => {
 });
 
 describe("Global Meme Daily completion API", () => {
+  it("rejects a cross-origin completion before parsing or entitlement checks", async () => {
+    const response = await POST(new Request("http://localhost/api/plus/global-daily/complete", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ locale: "en" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_origin" });
+    expect(getPremiumEntitlement).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid input before checking the completion RPC", async () => {
     const response = await POST(request({ locale: "fr", date: "2026-08-09", memeId: "fake" }));
     expect(response.status).toBe(400);

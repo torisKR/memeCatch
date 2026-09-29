@@ -2,3 +2,6 @@
 .codex
 .omo
 .env*
+.vercel
+.next
+node_modules

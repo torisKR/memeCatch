@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { QuizApp } from "@/components/quiz-app";
-import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * /quiz — 밈력고사. 문서는 완전 정적 셸(○)이고 문항은 시작 시
@@ -29,7 +28,6 @@ export const metadata: Metadata = {
 export default function QuizPage() {
   return (
     <main className="ink-grid mx-auto max-w-5xl px-4 pb-14 pt-8">
-      <AdsenseScript />
       <p className="text-sm font-semibold text-accent-strong">밈력고사</p>
       <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">
         내 밈력은 몇 점?

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "개인정보처리방침",
   description: "밈캐치 개인정보처리방침 — 수집 항목, 이용 목적, 보관 기간, 이용자 권리.",
   alternates: { canonical: "/privacy" },
-  robots: { index: true },
+  robots: { index: true, follow: true },
 };
 
 const EFFECTIVE = "2026년 8월 18일";

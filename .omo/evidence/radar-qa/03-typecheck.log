@@ -1,0 +1,4 @@
+
+COMMAND: pnpm exec tsc --noEmit --pretty false
+EXIT_CODE: 0
+RESULT: TypeScript check passed with no diagnostics.

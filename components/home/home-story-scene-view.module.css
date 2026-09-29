@@ -1,0 +1,99 @@
+.scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  color: #f6f2e9;
+  pointer-events: none;
+}
+.stage {
+  position: absolute;
+  inset: 22% 0 22%;
+  overflow: clip;
+  pointer-events: auto;
+}
+.canvas, .fallback { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 180ms ease; }
+.hidden { opacity: 0; pointer-events: none; }
+.toolbar {
+  position: absolute;
+  z-index: 15;
+  right: clamp(1rem, 3vw, 3rem);
+  bottom: 0.7rem;
+  left: clamp(1rem, 3vw, 3rem);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  pointer-events: none;
+}
+.control {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid #686666;
+  border-radius: 99px;
+  background: #151619;
+  color: #f3eee4;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.control:hover { background: #2b2422; border-color: #ff9f7a; }
+.control:focus-visible, .signals button:focus-visible, .choice:focus-within { outline: 2px solid #ffb68c; outline-offset: 3px; }
+.control:disabled { opacity: 0.5; cursor: default; }
+.disclosure { position: relative; pointer-events: auto; }
+.disclosure summary { list-style: none; }
+.disclosure summary::-webkit-details-marker { display: none; }
+.disclosure[open] summary { border-color: #ff956c; }
+.panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.6rem);
+  width: min(360px, calc(100vw - 2rem));
+  max-height: min(480px, calc(100svh - 12rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.1rem;
+  border: 1px solid #615450;
+  border-radius: 1rem;
+  background: #191b1e;
+  box-shadow: 0 18px 50px #0007;
+  text-align: start;
+}
+.panel fieldset { min-width: 0; margin: 0 0 1rem; padding: 0; border: 0; }
+.panel legend { margin-bottom: 0.6rem; color: #d1c8bd; font-size: 0.7rem; font-weight: 700; }
+.panel p { margin: 0 0 0.75rem; font-size: 0.75rem; line-height: 1.6; }
+.choices { display: flex; gap: 0.3rem; }
+.choice { position: relative; flex: 1; }
+.choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.choice span { display: flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.3rem; border: 1px solid #66605b; border-radius: 0.5rem; font-size: 0.75rem; }
+.choice input:checked + span { background: #ffab83; color: #261913; border-color: #ffab83; }
+.choice input:disabled + span { opacity: 0.5; }
+.signals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
+.signals button { display: flex; min-height: 44px; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid #646363; border-radius: 0.6rem; background: #222528; color: #eeeae4; font-size: 0.73rem; text-align: start; cursor: pointer; }
+.signals button[aria-pressed="true"] { border-color: #ffb895; background: #433026; }
+.signals button[data-level="green"] { color: #b0e6c3; }
+.signals button[data-level="yellow"] { color: #ffda86; }
+.signals button[data-level="red"] { color: #ffac97; }
+.signalIcon { width: 1.15rem; height: 1.15rem; flex-shrink: 0; }
+.notice { color: #c1b7ad; }
+.progress { width: min(28rem, 48%); margin-inline: auto; color: #d4cfc5; }
+.progress[hidden] { display: none; }
+.progressText { display: block; text-align: center; font-size: 0.64rem; line-height: 1.35; }
+.track { display: block; height: 2px; margin-top: 0.5rem; overflow: hidden; background: #5a504b; }
+.track > span { display: block; height: 100%; background: #ffab80; transform: scaleX(var(--scene-scroll-progress, 0)); transform-origin: left; }
+.playback { width: 44px; padding: 0; margin-left: auto; }
+@media (max-width: 47.99rem) {
+  .stage { inset-block: 24% 26%; }
+  .toolbar { gap: 0.5rem; }
+  .control { padding-inline: 0.7rem; font-size: 0.7rem; }
+  .progress { width: 22%; }
+  .progressText { display: none; }
+  .track { margin-top: 0; }
+  .playback { padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .canvas, .fallback { transition: none; } }

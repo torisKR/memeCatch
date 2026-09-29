@@ -9,6 +9,11 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import { SEO_CONTENT_LOCALES } from "@/lib/i18n-routing";
+import {
+  loadApprovedIndexableMemes,
+  publicationExportUnavailableResponse,
+} from "@/lib/publication-export";
+import type { ContentDepthInput } from "@/lib/content-depth";
 
 /**
  * llms-full.txt — AI 시스템용 사이트 "전체 본문" (https://llmstxt.org 규격의 full 변형).
@@ -20,7 +25,8 @@ export const revalidate = 3600;
 
 const MAX_MEMES = 400;
 
-type Row = {
+type Row = ContentDepthInput & {
+  id: string;
   title: string;
   short_id: string;
   slug: string;
@@ -63,53 +69,47 @@ function memeBlock(m: Row): string {
 }
 
 export async function GET() {
-  let bodyMemes = "";
-  let countLine = "3,000+";
+  let memes: Row[];
+  let eligibleCount: number;
 
   try {
-    const supabase = createStaticClient();
-    const [{ data: memes }, { count }] = await Promise.all([
-      supabase
-        .from("memes")
-        .select(
-          "title, short_id, slug, summary, description, origin, origin_year, usage_note, aliases, category, safety_level"
-        )
-        // llms.txt / sitemap.ts와 동일 기준(approved만) — 카운트·URL 정합 유지
-        .eq("moderation_status", "approved")
-        .order("trend_score", { ascending: false })
-        .limit(MAX_MEMES),
-      supabase
-        .from("memes")
-        .select("id", { count: "exact", head: true })
-        .eq("moderation_status", "approved"),
-    ]);
-
-    if (count) countLine = count.toLocaleString("en-US");
-
-    if (memes?.length) {
-      // 카테고리별로 묶어 사람이 읽어도 자연스럽게
-      const byCat = new Map<MemeCategory, Row[]>();
-      for (const m of memes as Row[]) {
-        const arr = byCat.get(m.category) ?? [];
-        arr.push(m);
-        byCat.set(m.category, arr);
-      }
-      const sections: string[] = [];
-      for (const displayCategory of DISPLAY_CATEGORY_LIST) {
-        if (displayCategory.key === AI_MEME_DISPLAY_CATEGORY) continue;
-        const arr = displayCategory.categories.flatMap(
-          (category) => byCat.get(category) ?? []
-        );
-        if (!arr?.length) continue;
-        sections.push(
-          `## ${displayCategory.user}\n\n${arr.map(memeBlock).join("\n\n")}`
-        );
-      }
-      bodyMemes = sections.join("\n\n");
-    }
-  } catch {
-    // DB 실패 시 안내 본문만 제공
+    const result = await loadApprovedIndexableMemes<Row>(createStaticClient(), {
+      select:
+        "id, title, short_id, slug, summary, description, origin, origin_year," +
+        " usage_note, caution, aliases, category, safety_level, usage_examples," +
+        " meme_sources(source_url), meme_contents(availability, moderation_status)," +
+        " meme_tags_map(tag_id)",
+      primaryOrder: "trend_score",
+      limit: MAX_MEMES,
+      countAll: true,
+    });
+    memes = result.rows;
+    eligibleCount = result.eligibleCount;
+  } catch (error) {
+    console.error("[llms-full.txt] publication export failed", error);
+    return publicationExportUnavailableResponse();
   }
+
+  // 카테고리별로 묶어 사람이 읽어도 자연스럽게
+  const byCat = new Map<MemeCategory, Row[]>();
+  for (const meme of memes) {
+    const categoryRows = byCat.get(meme.category) ?? [];
+    categoryRows.push(meme);
+    byCat.set(meme.category, categoryRows);
+  }
+  const sections: string[] = [];
+  for (const displayCategory of DISPLAY_CATEGORY_LIST) {
+    if (displayCategory.key === AI_MEME_DISPLAY_CATEGORY) continue;
+    const categoryRows = displayCategory.categories.flatMap(
+      (category) => byCat.get(category) ?? [],
+    );
+    if (!categoryRows.length) continue;
+    sections.push(
+      `## ${displayCategory.user}\n\n${categoryRows.map(memeBlock).join("\n\n")}`,
+    );
+  }
+  const bodyMemes = sections.join("\n\n");
+  const countLine = eligibleCount.toLocaleString("en-US");
 
   const safetyLegend = (Object.keys(SAFETY_LEVELS) as SafetyLevel[])
     .map((k) => `- ${SAFETY_LEVELS[k].icon} ${SAFETY_LEVELS[k].user}`)
@@ -119,7 +119,7 @@ export async function GET() {
 
 > 한국 밈·유행어·챌린지 ${countLine}건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전.
 > 이 문서는 답변엔진이 링크 크롤링 없이도 인용할 수 있도록, 트렌드 상위 밈의 본문을 그대로 담은 것입니다.
-> 운영자 검수(사실 확인 → 저작권 확인)를 거친 항목만 포함하며, 제3자 원본 영상·이미지는 저장하지 않고 출처 링크로만 제공합니다.
+> 공개 승인 상태이고 사이트의 콘텐츠 충실도 기준을 통과한 항목만 포함합니다. 이는 독립적인 사실 검증 완료를 뜻하지 않으며, 제3자 원본 영상·이미지는 저장하지 않고 출처 링크로만 제공합니다.
 > 언어: 한국어(ko). 전체 밈 URL 목록은 ${SITE_URL}/sitemap.xml 을, 요약 인덱스는 ${SITE_URL}/llms.txt 를 참고하세요.
 
 ## Reviewed translations

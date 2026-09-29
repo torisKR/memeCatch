@@ -4,8 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 const createStaticClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 import { CountryFlagBadge } from "@/components/country-flag-badge";
+import { MemeCompactCard } from "@/components/meme-compact-card";
 import { MemeCard } from "@/components/meme-card";
-import { countryFlag, originCountryCode } from "@/lib/meme-country";
+import { localizedMemeCountryLabel, originCountryCode } from "@/lib/meme-country";
 import { LIST_SELECT, searchMemes, type MemeListItem } from "@/lib/queries";
 
 const meme = {
@@ -30,20 +31,29 @@ describe("meme country display", () => {
   it("renders the reviewed US origin as a top-left flag", () => {
     const html = renderToStaticMarkup(<MemeCard meme={meme} />);
 
-    expect(countryFlag("US")).toBe("🇺🇸");
-    expect(html).toContain('data-country-flag-position="top-left"');
+    expect(html).toContain('data-country-flag-position="top-right"');
     expect(html).toContain('data-country-flag="US"');
-    expect(html).toContain("미국 밈");
+    expect(html).toContain("미국");
   });
 
   it("uses an accessible globe when the origin is unknown", () => {
     const html = renderToStaticMarkup(<CountryFlagBadge code={null} />);
 
-    expect(html).toContain("🌐");
-    expect(html).toContain('role="img"');
+    expect(html).not.toContain("🌐");
     expect(html).toContain("출처 국가 미확인");
     expect(html).toContain('data-country-code="UNKNOWN"');
-    expect(html).toContain('data-country-flag="unknown"');
+    expect(html).toContain('data-country-state="unconfirmed"');
+  });
+
+  it("uses localized unconfirmed-origin copy across compact and localized cards", () => {
+    const compactHtml = renderToStaticMarkup(
+      <MemeCompactCard meme={{ ...meme, meme_market_profiles: [] }} />,
+    );
+    const localizedHtml = renderToStaticMarkup(<CountryFlagBadge code={null} locale="en" />);
+
+    expect(compactHtml).toContain("출처 국가 미확인");
+    expect(localizedHtml).toContain("Origin unconfirmed");
+    expect(localizedHtml).not.toContain("🌐");
   });
 
   it("ignores unreviewed and non-origin market profiles", () => {
@@ -53,6 +63,21 @@ describe("meme country display", () => {
         { market_code: "US", role: "adaptation", review_state: "reviewed" },
       ]),
     ).toBeNull();
+  });
+
+  it("localizes reviewed country names without changing origin evidence", () => {
+    expect(localizedMemeCountryLabel("US", "en")).toBe("United States");
+    expect(localizedMemeCountryLabel("KR", "ja")).toBe("韓国");
+  });
+
+  it("keeps Korean as the default card locale and localizes explicit card locales", () => {
+    const korean = renderToStaticMarkup(<MemeCard meme={meme} />);
+    const english = renderToStaticMarkup(<MemeCard meme={meme} locale="en" />);
+    const japanese = renderToStaticMarkup(<MemeCard meme={meme} locale="ja" />);
+
+    expect(korean).toContain("미국");
+    expect(english).toContain("United States");
+    expect(japanese).toContain("アメリカ");
   });
 
   it("loads the reviewed origin relation in shared list queries", () => {

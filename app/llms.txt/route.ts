@@ -3,41 +3,64 @@ import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
 import { DISPLAY_CATEGORY_LIST, memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { SEO_CONTENT_LOCALES } from "@/lib/i18n-routing";
+import {
+  loadApprovedIndexableMemes,
+  publicationExportUnavailableResponse,
+} from "@/lib/publication-export";
+import type { ContentDepthInput } from "@/lib/content-depth";
 
 
 /** llms.txt — AI 시스템용 사이트 안내 (https://llmstxt.org 규격). 1시간 재검증 */
 export const revalidate = 3600;
 
+type LlmsIndexRow = ContentDepthInput & {
+  id: string;
+  title: string;
+  summary: string;
+  short_id: string;
+  slug: string;
+};
+
+function inlineMarkdown(value: string): string {
+  return value
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\\/g, "\\\\")
+    .replace(/([\[\]])/g, "\\$1");
+}
+
 export async function GET() {
-  let trendingBlock = "";
-  let countLine = "3,000+";
+  let trending: LlmsIndexRow[];
+  let eligibleCount: number;
   try {
-    const supabase = createStaticClient();
-    const [{ data: trending }, { count }] = await Promise.all([
-      supabase
-        .from("memes")
-        .select("title, summary, short_id, slug")
-        .eq("moderation_status", "approved")
-        .order("trend_score", { ascending: false })
-        .limit(15),
-      supabase
-        .from("memes")
-        .select("id", { count: "exact", head: true })
-        // sitemap.ts와 동일 기준(approved만) — llms.txt 카운트와 사이트맵 URL 수 정합 유지
-        .eq("moderation_status", "approved"),
-    ]);
-    if (count) countLine = count.toLocaleString("en-US");
-    if (trending?.length) {
-      trendingBlock = trending
-        .map(
-          (m) =>
-            `- [${m.title}](${SITE_URL}${memePathFrom(m.short_id, m.slug)}): ${m.summary}`
-        )
-        .join("\n");
-    }
-  } catch {
-    // DB 실패 시 정적 본문만 제공
+    const result = await loadApprovedIndexableMemes<LlmsIndexRow>(
+      createStaticClient(),
+      {
+        select:
+          "id, title, summary, short_id, slug, description, origin, usage_note," +
+          " caution, usage_examples, meme_sources(source_url)," +
+          " meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
+        primaryOrder: "trend_score",
+        limit: 15,
+        countAll: true,
+      },
+    );
+    trending = result.rows;
+    eligibleCount = result.eligibleCount;
+  } catch (error) {
+    console.error("[llms.txt] publication export failed", error);
+    return publicationExportUnavailableResponse();
   }
+
+  const countLine = eligibleCount.toLocaleString("en-US");
+  const trendingBlock = trending.length
+    ? trending
+        .map(
+          (meme) =>
+            `- [${inlineMarkdown(meme.title)}](${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}): ${inlineMarkdown(meme.summary)}`,
+        )
+        .join("\n")
+    : "";
 
   const categories = DISPLAY_CATEGORY_LIST
     .map(({ key, user }) => `- [${user}](${SITE_URL}/explore?category=${key})`)
@@ -47,7 +70,7 @@ export async function GET() {
 
 > 한국 밈·유행어·챌린지 ${countLine}건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전.
 > 각 밈은 "무슨 뜻인가 / 어디서 시작됐나 / 지금 써도 되는가(신호등)" 구조로 정리되어 있으며,
-> 운영자 검수(사실 확인 → 저작권 확인)를 거쳐 공개됩니다. 언어: 한국어(ko).
+> 공개 승인 상태이고 사이트의 콘텐츠 충실도 기준을 통과한 항목만 포함합니다. 이는 독립적인 사실 검증 완료를 뜻하지 않습니다. 언어: 한국어(ko).
 > English summary: MemeCatch explains Korean memes, slang, and challenges with meaning, origin, usage context, safety signals, and source attribution.
 
 ## 다국어 / Languages

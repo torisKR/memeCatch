@@ -8,6 +8,15 @@ const source = readFileSync(
 );
 
 describe("밈 상세 hreflang 계약", () => {
+  it("존재하는 short-only·오래된 slug 별칭은 저장된 canonical 경로로 영구 이동한다", () => {
+    expect(source).toContain('import { notFound, permanentRedirect } from "next/navigation";');
+    expect(source).toContain("canonicalMemeRedirectPath(key");
+    expect(source).toContain("if (redirectPath) permanentRedirect(redirectPath);");
+    expect(source.indexOf("if (!meme) notFound();")).toBeLessThan(
+      source.indexOf("canonicalMemeRedirectPath(key"),
+    );
+  });
+
   it("x-default는 en 번역이 있으면 영어 문서, 없으면 ko 원문을 가리킨다", () => {
     expect(source).toContain('"x-default": hreflangs.en ?? path');
   });
@@ -50,5 +59,16 @@ describe("밈 상세 hreflang 계약", () => {
     expect(description).toBeGreaterThan(answerCard);
     expect(origin).toBeGreaterThan(description);
     expect(useKit).toBeGreaterThan(origin);
+  });
+
+  it("WebPage에는 실제 게시일과 화면에 표시되는 저장 출처만 전달하고 DB 생성일은 대체값으로 쓰지 않는다", () => {
+    expect(source).toContain("datePublished={meme.published_at}");
+    expect(source).toContain("sources={meme.meme_sources}");
+    expect(source).not.toContain("datePublished={meme.published_at ?? meme.created_at}");
+  });
+
+  it("원본 업로드 시각이 없는 대표 영상에는 VideoObject를 만들지 않는다", () => {
+    expect(source).not.toContain("<MemeVideoJsonLd");
+    expect(source).not.toContain("uploadDate={meme.created_at}");
   });
 });

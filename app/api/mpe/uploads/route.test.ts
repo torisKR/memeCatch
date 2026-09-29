@@ -31,7 +31,11 @@ function uploadRequest(options: { rights?: boolean; type?: string; bytes?: numbe
     Uint8Array.from(options.bytes ?? [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   ], "meme.png", { type: options.type ?? "image/png" }));
   form.set("rightsDeclaration", JSON.stringify({ accepted: options.rights ?? true }));
-  return new Request("http://localhost/api/mpe/uploads", { method: "POST", body: form });
+  return new Request("http://localhost/api/mpe/uploads", {
+    method: "POST",
+    headers: { origin: "http://localhost" },
+    body: form,
+  });
 }
 
 beforeEach(() => {
@@ -42,6 +46,19 @@ beforeEach(() => {
 });
 
 describe("MPE upload API", () => {
+  it("rejects a cross-origin upload before authentication or storage", async () => {
+    const response = await POST(new Request("http://localhost/api/mpe/uploads", {
+      method: "POST",
+      headers: { origin: "https://evil.example" },
+      body: new FormData(),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "invalid_origin" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
   it("requires authentication and an accepted rights declaration", async () => {
     mocks.createClient.mockResolvedValueOnce(client(null));
     expect((await POST(uploadRequest())).status).toBe(401);
@@ -64,7 +81,11 @@ describe("MPE upload API", () => {
     const request = uploadRequest();
     const form = await request.formData();
     form.set("sourceId", "10000000-0000-4000-8000-000000000001");
-    const response = await POST(new Request(request.url, { method: "POST", body: form }));
+    const response = await POST(new Request(request.url, {
+      method: "POST",
+      headers: { origin: "http://localhost" },
+      body: form,
+    }));
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: "source_not_allowed" });
     expect(mocks.put).not.toHaveBeenCalled();

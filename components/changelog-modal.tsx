@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CHANGELOG, LATEST_CHANGELOG_ID, type ChangelogEntry } from "@/lib/changelog";
+import { stripLocalePath } from "@/lib/i18n-routing";
+import { normalizePathname } from "@/lib/normalize-pathname";
 
 const STORAGE_KEY = "mc:changelog:last-seen";
 const SNOOZE_KEY = "mc:changelog:snooze-until";
@@ -21,17 +23,27 @@ function localToday(): string {
  * - 키 없음(첫 노출·기존 방문자 포함): 최신 1건만 노출 후 확인 시 기록.
  *   (이전의 "조용히 기록" 방식은 기능 도입 시점의 모든 기존 사용자에게
  *    첫 공지를 숨겨버리는 버그였다)
+ * - 홈(모든 언어)에서는 3D/검색을 가리지 않는다. 읽음 처리는 하지 않아
+ *   다른 페이지에서는 기존대로 공지를 확인할 수 있다.
  * - /admin, /login, /auth, /onboarding 경로에서는 띄우지 않음
  * - "오늘 하루 보지 않기": 확인 기록 없이 로컬 날짜만 기록 — 당일 재노출 안 함,
  *   다음 날부터는 아직 확인 전 소식이면 다시 노출
  */
 export function ChangelogModal() {
   const pathname = usePathname();
+  // A fresh route owns its delay and in-memory notice. Remounting also cleans
+  // up the prior timer/scroll lock without changing persisted read/snooze data.
+  return <RouteChangelogModal key={pathname} pathname={pathname} />;
+}
+
+function RouteChangelogModal({ pathname }: { pathname: string }) {
+  const contentPath = stripLocalePath(normalizePathname(pathname));
+  const isHome = contentPath === "/" || contentPath === "/index";
   const [entries, setEntries] = useState<ChangelogEntry[] | null>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!LATEST_CHANGELOG_ID) return;
+    if (!LATEST_CHANGELOG_ID || isHome) return;
     if (
       pathname.startsWith("/admin") ||
       pathname.startsWith("/login") ||
@@ -63,7 +75,7 @@ export function ChangelogModal() {
     if (unseen.length === 0) return;
     const t = window.setTimeout(() => setEntries(unseen), OPEN_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [pathname]);
+  }, [pathname, isHome]);
 
   const dismiss = useCallback(() => {
     if (LATEST_CHANGELOG_ID) {
@@ -88,7 +100,7 @@ export function ChangelogModal() {
 
   // 열림 상태 — 포커스 이동, ESC 닫기, 배경 스크롤 잠금
   useEffect(() => {
-    if (!entries) return;
+    if (!entries || isHome) return;
     confirmRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss();
@@ -100,9 +112,9 @@ export function ChangelogModal() {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [entries, dismiss]);
+  }, [entries, dismiss, isHome]);
 
-  if (!entries) return null;
+  if (!entries || isHome) return null;
 
   return (
     <div

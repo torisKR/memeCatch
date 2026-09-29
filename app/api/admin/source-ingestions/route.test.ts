@@ -27,7 +27,7 @@ import { SourceIngestionError } from "@/lib/sources/ingest.server";
 function request(body: unknown) {
   return new Request("http://localhost/api/admin/source-ingestions", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }
@@ -44,6 +44,18 @@ beforeEach(() => {
 });
 
 describe("admin source ingestion API", () => {
+  it("rejects a cross-origin request before reading cookie-backed auth", async () => {
+    const response = await POST(new Request("http://localhost/api/admin/source-ingestions", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ url: "https://www.youtube.com/watch?v=abcdefghijk" }),
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "invalid_origin" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
   it("rejects signed-out and non-operator callers before ingestion or upstream work", async () => {
     const signedOut = authClient(null);
     mocks.createClient.mockResolvedValueOnce(signedOut);

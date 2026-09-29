@@ -5,6 +5,7 @@ import {
   type MemeCategory,
 } from "@/lib/labels";
 import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
+import { citableSources, evidenceTimestamp, type CitableSourceInput } from "@/lib/source-links";
 import {
   absoluteSiteUrl,
   getSeoCopy,
@@ -151,6 +152,7 @@ export function MemeWebPageJsonLd({
   slug,
   datePublished,
   dateModified,
+  sources = [],
   locale = "ko",
   path,
   siteName,
@@ -165,6 +167,7 @@ export function MemeWebPageJsonLd({
   slug: string;
   datePublished: string | null;
   dateModified: string | null;
+  sources?: CitableSourceInput[];
   locale?: SeoRouteLocale;
   path?: string;
   siteName?: string;
@@ -178,6 +181,9 @@ export function MemeWebPageJsonLd({
   const localizedGlossaryUrl = absoluteSiteUrl(
     glossaryPath ?? sitePath ?? localizedPath("/", locale),
   );
+  const published = evidenceTimestamp(datePublished);
+  const modified = evidenceTimestamp(dateModified);
+  const citations = citableSources(sources).map((source) => source.url);
   return (
     <Script
       data={{
@@ -187,8 +193,9 @@ export function MemeWebPageJsonLd({
         description: summary,
         url,
         inLanguage: toHrefLang(locale),
-        ...(datePublished ? { datePublished } : {}),
-        ...(dateModified ? { dateModified } : {}),
+        ...(published ? { datePublished: published } : {}),
+        ...(modified ? { dateModified: modified } : {}),
+        ...(citations.length ? { citation: citations } : {}),
         isPartOf: {
           "@type": "WebSite",
           name: siteName ?? copy.siteName,
@@ -342,18 +349,12 @@ export function MemeVideoJsonLd({
   description: string;
   videoId: string;
   thumbnailUrl?: string | null;
-  /**
-   * 밈 페이지 게시일(근사값). 한때 "원본 업로드일이 아니라 오정보"라는 이유로
-   * 생략했으나, 서치콘솔이 uploadDate 누락을 '심각한 문제'로 판정해(비디오
-   * 색인 요건) 복원한다 — 이 페이지에 영상이 게시된 날짜로서의 근사값이며,
-   * 원본 업로드일 컬럼이 생기면 교체한다.
-   */
+  /** 실제 원본 영상의 저장된 업로드 시각. 페이지/DB 생성일로 대체하지 않는다. */
   uploadDate?: string | null;
   caption?: string | null;
 }) {
-  // uploadDate는 VideoObject 필수 항목 — 없이 내보내면 서치콘솔이 무효 항목으로 판정한다.
-  // 값이 없으면 '잘못된 마크업'보다 '마크업 없음'이 낫다.
-  if (!uploadDate) return null;
+  const published = evidenceTimestamp(uploadDate);
+  if (!published) return null;
 
   return (
     <Script
@@ -365,7 +366,7 @@ export function MemeVideoJsonLd({
         thumbnailUrl: thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
         contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        uploadDate,
+        uploadDate: published,
       }}
     />
   );

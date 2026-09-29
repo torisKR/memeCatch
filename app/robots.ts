@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { SEO_CONTENT_LOCALES, localizedPath } from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
 
-const PRIVATE_PATHS = ["/admin", "/my", "/api/", "/go/", "/auth/"] as const;
+const PRIVATE_PATHS = ['/admin', '/my', '/api/', '/go/', '/auth/', '/submit', '/login', '/premium'] as const;
 
 const DISALLOWED_PATHS = [
   ...PRIVATE_PATHS,

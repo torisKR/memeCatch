@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
-import { ExploreNavLink } from "@/components/explore-nav-link";
+import { HeaderDiscoveryLinks } from "@/components/header-discovery-links";
 import { BrandTile } from "@/components/brand-mark";
 import { HeaderMenu } from "@/components/header-menu";
 import { LanguageSelector } from "@/components/language-selector";
@@ -12,7 +12,7 @@ import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 전역 헤더 — DESIGN.md §10 + 2026-07 IA 개편(검색·탐색 중심 제품형 내비).
- * 좌: 워드마크 + 언어 선택 + 주 동선 "탐색".
+ * 좌: 워드마크 + 언어 선택 + 최신 밈·커뮤니티·상품 바로가기.
  * 우: 검색(모바일=아이콘, 데스크톱=미니 검색바) → 제보 강조 CTA →
  *     로그인/프로필(<AuthMenu/>) → 통합 메뉴 드롭다운(<HeaderMenu/> — 연표·
  *     랭킹·소식·랜덤).
@@ -27,8 +27,8 @@ export function GlobalHeader() {
   return (
     <HideOnAdmin>
       <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
-        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0">
-          <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
+          <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto">
             {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
             <Link
               href={localizedStaticPath("/", locale)}
@@ -48,10 +48,10 @@ export function GlobalHeader() {
             <LanguageSelector />
           </div>
 
-          {/* 데스크톱 탐색 링크 — 모바일은 하단탭에 탐색이 있어 md 이상만 노출 */}
-          <ExploreNavLink />
+          {/* 데스크톱 주요 목적지 — 모바일은 하단 탭과 홈 바로가기로 제공 */}
+          <HeaderDiscoveryLinks />
 
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap sm:justify-start">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:flex-nowrap sm:justify-start *:shrink-0">
             {/* 데스크톱: 미니 검색바 */}
             <form
               action={localizedStaticPath("/search", locale)}
@@ -75,10 +75,11 @@ export function GlobalHeader() {
               </div>
             </form>
 
-            {/* 제보 강조 CTA — 데스크톱 전용(모바일은 하단탭 제보가 담당) */}
+            {/* 제보 강조 CTA — lg+ 전용(모바일·태블릿은 하단탭/메뉴 제보가 담당) */}
             <Link
               href="/submit"
-              className="hidden min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
+              rel="nofollow"
+              className="hidden min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:inline-flex"
             >
               {messages.submit}
             </Link>
@@ -87,7 +88,7 @@ export function GlobalHeader() {
             <Link
               href={localizedStaticPath("/search", locale)}
               aria-label={messages.search}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-foreground transition-colors hover:border-border hover:bg-surface-2 lg:hidden"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-transparent text-foreground transition-colors hover:border-border hover:bg-surface-2 lg:hidden"
             >
               <SearchIcon className="h-5 w-5" />
             </Link>

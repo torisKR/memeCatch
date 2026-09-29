@@ -1,0 +1,141 @@
+
+> memecatch@0.1.0 build /Users/toris/projects/memecatch
+> next build --webpack
+
+▲ Next.js 16.2.10 (webpack)
+- Environments: .env.production
+- Experiments (use with caution):
+  ✓ globalNotFound
+
+  Creating an optimized production build ...
+✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+✓ Compiled successfully in 6.4s
+  Running TypeScript ...
+  Finished TypeScript in 8.5s ...
+  Collecting page data using 14 workers ...
+  Generating static pages using 14 workers (0/81) ...
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+  Generating static pages using 14 workers (20/81)
+  Generating static pages using 14 workers (40/81)
+  Generating static pages using 14 workers (60/81)
+✓ Generating static pages using 14 workers (81/81) in 1507ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)                               Revalidate  Expire
+┌ ○ /                                             5m      1y
+├ ○ /_not-found
+├ ● /[locale]                                    10m      1y
+│ ├ /en                                          10m      1y
+│ ├ /ja                                          10m      1y
+│ ├ /zh                                          10m      1y
+│ └ /zh-tw                                       10m      1y
+├ ƒ /[locale]/daily
+├ ƒ /[locale]/explore
+├ ƒ /[locale]/llms-full.txt
+├ ƒ /[locale]/llms.txt
+├ ƒ /[locale]/memes/[key]
+├ ƒ /-/memes/-/opengraph-image
+├ ● /[locale]/pricing
+│ ├ /en/pricing
+│ ├ /ja/pricing
+│ ├ /zh/pricing
+│ └ /zh-tw/pricing
+├ ƒ /[locale]/search
+├ ○ /about
+├ ƒ /admin
+├ ƒ /admin/inquiries
+├ ƒ /admin/memes
+├ ƒ /admin/memes/[id]
+├ ƒ /admin/radar-safety
+├ ƒ /admin/reports
+├ ƒ /admin/sources
+├ ƒ /admin/submissions
+├ ƒ /admin/submissions/[id]
+├ ƒ /admin/subscriptions
+├ ƒ /admin/translations
+├ ƒ /admin/users
+├ ƒ /admin/users/[id]
+├ ƒ /api/billing/checkout
+├ ƒ /api/billing/entitlement
+├ ƒ /api/billing/latpeed/webhook
+├ ƒ /api/billing/unifi/webhook
+├ ƒ /api/cron/adpick-hotdeals
+├ ƒ /api/cron/plus-daily-signal
+├ ƒ /api/cron/source-refresh
+├ ƒ /api/cron/trend-pulse
+├ ƒ /api/csp-report
+├ ƒ /api/media/[...path]
+├ ƒ /api/memes/[id]/trend
+├ ƒ /api/oembed
+├ ƒ /api/plus/action-inbox/complete
+├ ƒ /api/plus/collection-brief
+├ ƒ /api/plus/daily-signal/preferences
+├ ƒ /api/plus/global-daily/complete
+├ ƒ /api/plus/outcome-ledger/performance
+├ ƒ /api/plus/outcome-ledger/rating
+├ ƒ /api/quiz
+├ ƒ /api/random-meme
+├ ƒ /api/saved-context-alerts
+├ ƒ /api/translation-priority
+├ ƒ /api/trend-alerts
+├ ƒ /api/upload
+├ ○ /apple-icon.png
+├ ƒ /auth/callback
+├ ƒ /auth/tiktok
+├ ƒ /auth/tiktok/callback
+├ ○ /collections
+├ ● /collections/[slug]                           1h      1y
+│ ├ /collections/2020s                            1h      1y
+│ ├ /collections/2010s                            1h      1y
+│ ├ /collections/2000s                            1h      1y
+│ └ [+9 more paths]
+├ ƒ /community
+├ ƒ /community/[id]
+├ ƒ /community/new
+├ ƒ /daily
+├ ○ /editorial
+├ ƒ /explore
+├ ○ /feed.xml                                     1h      1y
+├ ○ /forgot-password
+├ ƒ /go/products/[id]
+├ ○ /icon.svg
+├ ○ /llms-full.txt                                1h      1y
+├ ○ /llms.txt                                     1h      1y
+├ ƒ /login
+├ ○ /manifest.webmanifest
+├ ● /memes/[key]
+├ ƒ /memes/[key]/export
+├ ƒ /memes/[key]/opengraph-image-k2cx9c
+├ ƒ /memes/random
+├ ƒ /my
+├ ○ /news                                        30m      1y
+├ ○ /offline
+├ ƒ /onboarding
+├ ○ /opengraph-image
+├ ƒ /premium
+├ ○ /pricing
+├ ○ /privacy
+├ ○ /products                                     1h      1y
+├ ○ /quiz
+├ ○ /rankings                                    10m      1y
+├ ƒ /reset-password
+├ ○ /robots.txt
+├ ƒ /search
+├ ○ /sitemap.xml                                  1h      1y
+├ ○ /slang                                        1h      1y
+├ ƒ /submit
+├ ƒ /support
+├ ○ /terms
+├ ○ /timeline                                     1h      1y
+└ ○ /weekly                                       1h      1y
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand

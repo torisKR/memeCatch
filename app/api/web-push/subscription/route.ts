@@ -3,6 +3,7 @@ import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { createClient } from "@/lib/supabase/server";
 import { readBoundedText } from "@/lib/request-body";
 import { isSupportedWebPushEndpoint } from "@/lib/web-push/server";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +64,9 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid_origin" }, { status: 403, headers: noStore() });
+  }
   const input = subscription(await body(request));
   if (!input) return NextResponse.json({ error: "invalid_subscription" }, { status: 400, headers: noStore() });
 
@@ -82,6 +86,9 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function DELETE(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid_origin" }, { status: 403, headers: noStore() });
+  }
   const value = await body(request);
   const endpoint = typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>).endpoint

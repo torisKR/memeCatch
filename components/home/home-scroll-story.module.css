@@ -1,0 +1,24 @@
+.cue {
+  --scene-scroll-progress: 0;
+  margin: 0 0 12px;
+  padding: 0 8px;
+  color: #c6c8cc;
+}
+.cue[hidden] { display: none; }
+.cue > p { margin: 0 0 10px; max-width: 52ch; font-size: 12px; line-height: 1.5; }
+.line { height: 2px; overflow: hidden; background: #3b3532; }
+.line > span { display: block; height: 100%; background: #ffad87; transform-origin: left; transform: scaleX(var(--scene-scroll-progress)); }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; list-style: none; margin: 8px 0 0; padding: 0; }
+.steps li { display: flex; align-items: baseline; gap: 6px; color: #b6b5b2; font-size: 11px; font-weight: 700; }
+.steps li span { font-size: 9px; font-variant-numeric: tabular-nums; }
+.cue:not([data-phase]) .steps li:first-child,
+.cue[data-phase="0"] .steps li:first-child,
+.cue[data-phase="1"] .steps li:nth-child(2),
+.cue[data-phase="2"] .steps li:nth-child(3) { color: #ffc1a4; }
+@media (max-width: 639px) {
+  .cue { margin: 0 12px 12px; padding: 0; }
+  .cue > p { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .line > span { transform: none; background: #595350; }
+}

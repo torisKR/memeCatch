@@ -1837,6 +1837,11 @@ export const PREMIUM_COPY: Record<Locale, PremiumCopy> = {
       actionInbox: ZH_TW_ACTION_INBOX_COPY,
       weeklyBrief: ZH_TW_WEEKLY_BRIEF_COPY,
     },
+    alerts: {
+      ...PREMIUM_COPY_WITH_FALLBACK["zh-tw"].alerts,
+      buttonLabel: "趨勢提醒",
+      title: "趨勢提醒",
+    },
     feed: ZH_TW_FEED_COPY,
   },
 };

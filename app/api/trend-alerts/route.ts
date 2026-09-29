@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +56,10 @@ export async function GET(): Promise<Response> {
 /**
  * 알림 읽음 처리 — mark_trend_alerts_read()는 auth.uid() 스코프에서만 동작(security definer).
  */
-export async function POST(): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
+  }
   const entitlement = await getPremiumEntitlement();
   if (!entitlement.signedIn) {
     return NextResponse.json({ error: "signed_out" }, { status: 401 });

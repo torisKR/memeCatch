@@ -4,14 +4,14 @@ import { TrackedBlock } from "@/components/tracked-block";
 
 /**
  * "무엇을 근거로 썼나" — 이 문서가 참조한 출처를 서지 정보(제목·발행처·확인일)와
- * 함께 명시하는 근거 목록. 유래 문단 아래의 짧은 인라인 링크와 달리, 심사자·독자가
- * 주장과 출처를 1:1로 대조할 수 있게 펼쳐 보여 준다(E-E-A-T).
+ * 함께 명시하는 자료 목록. 링크 목록은 개별 주장에 대한 검증 완료나
+ * 독립적인 1차 출처임을 인증하지 않는다.
  *
  * 원칙:
  *  - 제목이 있는 출처만 싣는다. URL만 있는 항목은 근거 목록이 되지 못한다
  *    (제목을 URL에서 지어내지 않는다 — 없는 사실 생성 금지).
  *  - 실을 게 하나도 없으면 섹션 자체를 렌더하지 않는다(빈 헤딩 금지).
- *  - 날짜는 '발행일'이 아니라 밈캐치가 확인한 '확인일'로만 표기한다.
+ *  - 날짜는 '발행일'이나 '검증일'이 아닌 저장된 '수집 기록'으로 표기한다.
  *    원문 발행일은 수집하지 않으므로 발행일이라 적으면 사실 왜곡이 된다.
  */
 export function SourceEvidence({
@@ -34,7 +34,7 @@ export function SourceEvidence({
         이 문서가 참고한 자료
       </h2>
       <p className="mt-1 text-sm text-muted">
-        아래 자료를 확인해 뜻·유래를 정리했어요. 원문에서 직접 확인할 수 있어요.
+        이 문서에 연결된 참고 자료예요. 링크 수와 수집 기록은 독립적인 사실 검증이나 원본 확인을 뜻하지 않아요. 원문과 설명을 함께 비교해 주세요.
       </p>
       <ol className="mt-3 space-y-3">
         {cited.map((source, i) => (
@@ -70,7 +70,7 @@ export function SourceEvidence({
                   <>
                     {source.publisher && <span aria-hidden>·</span>}
                     <span>
-                      확인{" "}
+                      수집 기록{" "}
                       <time
                         dateTime={source.capturedAt}
                         className="stat-mono text-(--signal-cyan)"
@@ -79,6 +79,7 @@ export function SourceEvidence({
                           year: "numeric",
                           month: "long",
                           day: "numeric",
+                          timeZone: "Asia/Seoul",
                         })}
                       </time>
                     </span>

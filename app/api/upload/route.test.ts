@@ -24,7 +24,11 @@ import { POST } from "./route";
 function request(type = "image/png", bytes = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) {
   const form = new FormData();
   form.set("file", new File([Uint8Array.from(bytes)], "meme.png", { type }));
-  return new NextRequest("http://localhost/api/upload", { method: "POST", body: form });
+  return new NextRequest("http://localhost/api/upload", {
+    method: "POST",
+    headers: { origin: "http://localhost" },
+    body: form,
+  });
 }
 
 beforeEach(() => {
@@ -43,6 +47,20 @@ beforeEach(() => {
 });
 
 describe("community upload API", () => {
+  it("rejects a cross-origin upload before authentication or storage", async () => {
+    const form = new FormData();
+    const response = await POST(new NextRequest("http://localhost/api/upload", {
+      method: "POST",
+      headers: { origin: "https://evil.example" },
+      body: form,
+    }));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "invalid_origin" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.storageUpload).not.toHaveBeenCalled();
+  });
+
   it("stops before storage when the durable quota is exhausted", async () => {
     mocks.rpc.mockResolvedValueOnce({ error: { message: "api_rate_limited" } });
 

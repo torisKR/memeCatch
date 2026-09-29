@@ -11,12 +11,24 @@ import {
 } from "@/lib/i18n";
 import { persistLocale, useLocale } from "@/lib/i18n-client";
 import {
+  SEO_ROUTE_LOCALES,
   isSeoContentLocale,
   isLocalizedStaticPath,
   localizedPath,
   localizedStaticPath,
   parseLocalePath,
 } from "@/lib/i18n-routing";
+import { normalizePathname } from "@/lib/normalize-pathname";
+
+function withoutLangQuery(value: string): string {
+  const url = new URL(value, "https://memecatch.test");
+  url.searchParams.delete("lang");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function isHomePath(pathname: string): boolean {
+  return normalizePathname(parseLocalePath(pathname).pathname) === "/";
+}
 
 /**
  * Return the route needed to apply a locale, or `null` when the cookie-driven
@@ -25,12 +37,16 @@ import {
  * may link directly between translated details.
  */
 export function localeDestination(pathname: string, nextLocale: Locale): string | null {
-  const parsed = parseLocalePath(pathname);
+  const pathnameWithoutLang = withoutLangQuery(pathname);
+  const parsed = parseLocalePath(pathnameWithoutLang);
 
   // UI-only locales have no URL prefix. Drop an existing SEO prefix only when
-  // necessary; otherwise preserve the current route and update in place.
+  // necessary. A stale lang query also requires navigation so it cannot
+  // override the newly persisted locale on refresh.
   if (!isSeoContentLocale(nextLocale) && nextLocale !== "ko") {
-    return parsed.hadLocalePrefix ? parsed.pathname : null;
+    return parsed.hadLocalePrefix || pathnameWithoutLang !== pathname
+      ? parsed.pathname
+      : null;
   }
 
   if (nextLocale === "ko") return parsed.pathname;
@@ -56,6 +72,7 @@ export function LanguageSelector() {
   const router = useRouter();
   const pathname = usePathname();
   const { locale, messages } = useLocale();
+  const availableLocales = isHomePath(pathname) ? SEO_ROUTE_LOCALES : SUPPORTED_LOCALES;
 
   function changeLocale(nextLocale: Locale) {
     persistLocale(nextLocale);
@@ -86,7 +103,7 @@ export function LanguageSelector() {
         aria-label={messages.languageMenu}
         className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
       >
-        {SUPPORTED_LOCALES.map((item) => (
+        {availableLocales.map((item) => (
           <option key={item} value={item}>
             {LANGUAGE_FLAGS[item]} {LANGUAGE_NAMES[item]}
           </option>

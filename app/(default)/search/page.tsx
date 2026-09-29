@@ -87,6 +87,7 @@ export default async function SearchPage({ searchParams }: Props) {
           actions={
             <Link
               href={`/submit?name=${encodeURIComponent(query)}`}
+              rel="nofollow"
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
             >
               &lsquo;{query}&rsquo; 제보하기

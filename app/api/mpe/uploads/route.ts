@@ -8,6 +8,7 @@ import { MediaValidationError, validateMedia, VIDEO_UPLOAD_LIMIT } from "@/lib/m
 import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
+import { hasTrustedOrigin } from "@/lib/origin";
 
 export const runtime = "nodejs";
 
@@ -47,6 +48,9 @@ function parseRights(value: FormDataEntryValue | null) {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!hasTrustedOrigin(request)) {
+    return Response.json({ ok: false, error: "invalid_origin" }, { status: 403 });
+  }
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ ok: false, error: "signed_out" }, { status: 401 });

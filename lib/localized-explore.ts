@@ -12,6 +12,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 import type { SeoContentLocale } from "@/lib/i18n-routing";
 
 export type LocalizedExploreStatus = "active" | "coverage-empty" | "unavailable";
+export type LocalizedExploreSort = "recent";
 
 export type LocalizedExploreResult = {
   items: LocalizedMemeListItem[];
@@ -31,19 +32,26 @@ const PUBLIC_RESULT_LIMIT = 24;
 
 export const getLocalizedExploreMemes = cache(async function getLocalizedExploreMemes(
   locale: SeoContentLocale,
+  sort?: LocalizedExploreSort,
 ): Promise<LocalizedExploreResult> {
   try {
-    const { data, error } = await createStaticClient()
+    const candidates = createStaticClient()
       .from("meme_translations")
       .select(EXPLORE_SELECT)
       .eq("locale", locale)
       .eq("status", "reviewed")
-      .in("memes.moderation_status", ["approved", "limited"])
-      .order("trend_score", {
-        referencedTable: "memes",
-        ascending: false,
-        nullsFirst: false,
-      })
+      .in("memes.moderation_status", ["approved", "limited"]);
+    const ordered = sort === "recent"
+      ? candidates.order("updated_at", {
+          ascending: false,
+          nullsFirst: false,
+        })
+      : candidates.order("trend_score", {
+          referencedTable: "memes",
+          ascending: false,
+          nullsFirst: false,
+        });
+    const { data, error } = await ordered
       .order("meme_id", { ascending: false })
       .limit(PUBLIC_CANDIDATE_LIMIT)
       .overrideTypes<LocalizedExploreTranslationRow[], { merge: false }>();

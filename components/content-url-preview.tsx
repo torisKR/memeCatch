@@ -243,7 +243,7 @@ function PreviewFrame({
         title={copy.frameTitle(PROVIDER_NAMES[data.provider])}
         sandbox={
           data.provider === "threads"
-            ? "allow-scripts allow-popups allow-popups-to-escape-sandbox"
+            ? "allow-scripts allow-popups"
             : "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
         }
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"

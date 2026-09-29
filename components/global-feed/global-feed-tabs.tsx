@@ -99,8 +99,8 @@ function ReadyFeed({ items }: { items: GlobalFeedItem[] }) {
         >
           <div className="min-w-0 border-b border-border md:border-b-0 md:border-r">
             <div className="relative aspect-[16/10] overflow-hidden bg-surface-2">
-              <div className="absolute left-3 top-3 z-10">
-                <CountryFlagBadge code={lead.origin_country_code} />
+              <div className="absolute right-3 top-3 z-10">
+                <CountryFlagBadge code={lead.origin_country_code} locale="en" />
               </div>
               <MemeThumbnail
                 src={lead.thumbnail_url}
@@ -150,8 +150,8 @@ function ReadyFeed({ items }: { items: GlobalFeedItem[] }) {
                         : "aspect-[4/3]"
                     }`}
                   >
-                    <div className="absolute left-3 top-3 z-10">
-                      <CountryFlagBadge code={item.origin_country_code} />
+                    <div className="absolute right-3 top-3 z-10">
+                      <CountryFlagBadge code={item.origin_country_code} locale="en" />
                     </div>
                     <MemeThumbnail
                       src={item.thumbnail_url}

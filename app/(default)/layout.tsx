@@ -7,8 +7,6 @@ import {
 import { DEFAULT_LOCALE } from "@/lib/i18n";
 import {
   SEO_ROUTE_LOCALES,
-  buildHreflangLanguages,
-  localizePath,
   toOpenGraphLocale,
 } from "@/lib/i18n-routing";
 import "../globals.css";
@@ -26,14 +24,6 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "밈캐치",
-  },
-  alternates: {
-    canonical: "/",
-    languages: {
-      ...buildHreflangLanguages("/", SEO_ROUTE_LOCALES),
-      // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다.
-      "x-default": localizePath("/", "en"),
-    },
   },
   openGraph: {
     type: "website",

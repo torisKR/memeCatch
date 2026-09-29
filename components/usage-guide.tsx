@@ -1,5 +1,8 @@
 import { SAFETY_LEVELS, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
+import { SafetyIcon } from "@/components/safety-icon";
+
+export { SafetySignalGuide } from "@/components/safety-legend";
 
 const TONE: Record<SafetyLevel, string> = {
   green: "bg-safety-green-bg text-safety-green",
@@ -25,21 +28,18 @@ export type UsageContextRow = {
   level: SafetyLevel;
 };
 
-type CommercialContext = "personal" | "company" | "brand" | "advertising";
-
 export type CommercialUsageContextRow = {
-  key: CommercialContext;
+  key: UsageContextRow["key"];
   label: string;
   level: SafetyLevel;
   reason: string;
 };
 
-const RISK: Record<SafetyLevel, number> = { green: 0, yellow: 1, gray: 2, red: 3 };
-const COMMERCIAL_CONTEXTS: Record<CommercialContext, { label: string; sources: UsageContextRow["key"][]; fallback: string }> = {
-  personal: { label: "개인", sources: ["friends", "family"], fallback: "친구·가족 판정 중 더 엄격한 신호를 적용했어요." },
-  company: { label: "회사", sources: ["work"], fallback: "직장 사용 판정을 적용했어요." },
-  brand: { label: "브랜드", sources: ["sns"], fallback: "공개 SNS 사용 판정을 적용했어요." },
-  advertising: { label: "광고", sources: ["work", "sns"], fallback: "직장·공개 SNS 판정 중 더 엄격한 신호를 적용했어요." },
+const CONTEXT_REASON_FALLBACK: Record<UsageContextRow["key"], string> = {
+  work: "직장에서의 사용 맥락을 기준으로 한 판정이에요.",
+  friends: "친구끼리의 사용 맥락을 기준으로 한 판정이에요.",
+  family: "자녀·가족과의 사용 맥락을 기준으로 한 판정이에요.",
+  sns: "공개 SNS에서의 사용 맥락을 기준으로 한 판정이에요.",
 };
 
 /** usage_context jsonb({"work":"green",...}) → 검증된 상황별 행 목록 */
@@ -74,17 +74,14 @@ export function buildCommercialUsageContexts(
   const noteText = note?.trim() || null;
   const cautionText = caution?.trim() || null;
 
-  return (Object.keys(COMMERCIAL_CONTEXTS) as CommercialContext[]).flatMap((key) => {
-    const config = COMMERCIAL_CONTEXTS[key];
-    const sourceRows = rows.filter((row) => config.sources.includes(row.key));
-    if (sourceRows.length === 0) return [];
-    const level = sourceRows.reduce((strictest, row) =>
-      RISK[row.level] > RISK[strictest] ? row.level : strictest, sourceRows[0].level);
-    const reason = level === "green"
-      ? noteText ?? config.fallback
-      : cautionText ?? noteText ?? config.fallback;
-    return [{ key, label: config.label, level, reason }];
-  });
+  return rows.map(({ key, level }) => ({
+    key,
+    label: USAGE_CONTEXTS[key],
+    level,
+    reason: level === "green"
+      ? noteText ?? CONTEXT_REASON_FALLBACK[key]
+      : cautionText ?? noteText ?? CONTEXT_REASON_FALLBACK[key],
+  }));
 }
 
 function reviewDate(value?: string | null): string | null {
@@ -103,7 +100,6 @@ export function UsageContextRows({ rows }: { rows: CommercialUsageContextRow[] }
   return (
     <ul className="mt-3 divide-y divide-border">
       {rows.map(({ key, label, level, reason }) => {
-        const s = SAFETY_LEVELS[level];
         return (
           <li
             key={key}
@@ -116,9 +112,9 @@ export function UsageContextRows({ rows }: { rows: CommercialUsageContextRow[] }
             <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}>
               <span aria-hidden className="stat-mono text-[10px] font-bold tracking-wider">{STATUS_CODE[level]}</span>
               <span aria-hidden className="leading-none">
-                {s.icon}
+                <SafetyIcon level={level} className="size-4" />
               </span>
-              {s.user}
+              {SAFETY_LEVELS[level].user}
             </span>
           </li>
         );

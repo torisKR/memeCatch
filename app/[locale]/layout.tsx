@@ -33,7 +33,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ...buildLocalizedMetadata({
       locale,
       pathname: "/",
-      availableLocales: ["ko", ...SEO_CONTENT_LOCALES],
     }),
   };
 }

@@ -53,7 +53,18 @@ Vercel의 공개 `/api/mcp`는 검색·UI용이며 이벤트 기능을 광고하
 
 등록 시 UI 리소스의 `ttlMs`/`cacheScope`를 요구하는 MCP 2 클라이언트와 2025년 MCP 초기 연결을 모두 지원합니다. 운영 Events의 계정 인증·구독과 Page 자동 실행 결과는 별도로 확인하며, 현재 완료 상태는 `operator-hub.md`를 참조하세요.
 
-`operator-hub.md`에는 프로젝트, Cloud, Living Pages, dot의 준비 내용과 현재 연결 상태를 기록합니다. 실제 밈캐치 Space와 네이티브 운영 Page를 생성했고 원본 AI 편집을 검증했습니다. 매시간 자동 갱신은 활성화했지만 첫 실행 결과는 미확인입니다. Cloud 설치와 전체 테스트는 실제 Cloud 환경에서 통과했습니다. 2026-09-30 KST에 기존 운영자 계정의 OAuth 연결을 완료했고, ChatGPT 앱에 실제 이벤트 3개가 표시됩니다. 현재 새 대화에는 네이티브 구독 생성 기능이 노출되지 않아 실제 구독·콜백 검증·AI 시작은 남아 있습니다.
+`operator-hub.md`에는 프로젝트, Cloud, Living Pages, dot의 실제 연결 상태와 각 검증 범위를 기록합니다. Work의 Page 읽기 오류는 복구됐고, 실제 Auto update 작업의 원본 편집과 최초 검증 기록 저장을 확인했습니다. 이번 실행에는 Page 목록 읽기를 한 번 승인 지원했으며 향후 무인 반복 실행은 별도 확인이 필요합니다. 기존 매시간 controller는 활성 상태입니다. Cloud 설치와 전체 테스트는 기존 환경에서 통과했습니다. 운영 OAuth와 이벤트 3개 목록은 확인했지만, 새 비공개 플러그인 Work에서도 실제 이벤트 구독 기능이 노출되지 않아 구독·콜백 검증·이벤트 AI 시작은 미완료입니다.
+
+## 계정에 등록한 운영 플러그인 소스
+
+`plugins/memecatch-operator/`는 실제 [밈캐치 운영 워크플로](https://chatgpt.com/plugins/plugins_6abc944451bc819195e72c8645b5ee8b)를 생성한 소스입니다. 기존 OAuth 앱 connector와 monitor-memecatch 스킬을 포함하며 새 자격 증명을 담지 않습니다. 루트 `plugin.json`은 Agent Plugins 1.0 형식이고 OpenAI 앱·UI 설정은 `extensions.com.openai`에 선언합니다. `.codex-plugin/plugin.json`은 같은 이름·버전·앱·UI의 호환성 manifest입니다. 네이티브 업로드 ZIP은 아래처럼 이름이 같은 디렉터리 하나로 구성해야 합니다. `.codex-plugin/plugin.json`만 ZIP 루트에 둔 이전 형식은 현재 네이티브 생성에서 허용되지 않았습니다.
+
+```sh
+cd integrations/memecatch-chatgpt/plugins
+zip -r memecatch-operator-portable.zip memecatch-operator
+```
+
+이미 생성된 비공개 플러그인이 있으므로 새로 생성하거나 같은 목적의 앱·이벤트 예약을 중복 등록하지 않습니다. 운영 Page 이외의 코드 수정·배포·외부 메시지·권한 확대는 이 스킬의 승인 범위에 포함하지 않습니다.
 
 ## 참고한 공식 규격
 

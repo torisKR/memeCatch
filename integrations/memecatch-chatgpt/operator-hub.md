@@ -1,6 +1,6 @@
 # 밈캐치 AI 운영 허브
 
-확인 기준: 2026-09-30 KST. 실제 활성화된 기능과 준비된 코드를 구분한다.
+계정·Pages 확인 기준: 2026-09-30 14:10 KST. 아래 배포·Cloud 검사는 각 기록의 시각과 커밋을 따른다. 실제 활성화된 기능과 준비된 코드를 구분한다.
 
 서비스: https://catchmeme.com
 저장소: https://github.com/torisKR/memeCatch
@@ -9,10 +9,10 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 | 기능 | 현재 상태 | 남은 실제 연결 |
 | --- | --- | --- |
 | 프로젝트 작업공간 | 실제 밈캐치 Space 생성, 운영 Pages 문서 연결, 기존 프로젝트 보존 | 운영 문서에서 연결 상태 관리 |
-| Plugin Extension | 공개 MCP 운영 배포, 계정에 밈캐치 설치·연결 완료, 읽기 도구 3개 확인; 연결 테스트 19개 통과, 현재 대화의 실제 도구 호출 확인 | 사이드바·대화 패널 전체 렌더링 확인 |
-| MCP Events | 운영자 OAuth 연결 완료, ChatGPT 앱에 이벤트 3개 표시, 실제 events/list 응답 200 | 현재 대화에 네이티브 구독 생성 기능이 없어 구독·callback·AI 시작 미완료 |
+| Plugin Extension | 공개 앱 설치·연결과 읽기 도구 3개, 새 비공개 운영 워크플로 생성·저장 소스 4개·기존 운영 앱 연결됨 확인 | 공개 앱 사이드바·대화 패널 전체 렌더링 확인 |
+| MCP Events | 운영자 OAuth·이벤트 3개 목록·GitHub 수신·서버 저장 확인 | 새 플러그인 Work에서도 운영 connector 이벤트 없음. 실제 구독 0건·callback·이벤트 AI 시작 미완료 |
 | Codex Cloud | 기존 Cloud 환경에서 설치·타입 검사·358개 파일 2,580개 테스트·MCP 19개 통과 | 재접속 후 작업 파일 보존은 별도 확인 |
-| Living Pages | 네이티브 Pages 원본 AI 편집 확인, 매시간 자동 갱신 활성화 | 첫 자동 실행은 요청 접수됐으나 결과 화면을 열 수 없어 완료 미확인 |
+| Living Pages | 실제 Auto update 원본 읽기·수정·최초 검증 기록 저장, 매시간 활성 | 이번 목록 읽기는 한 번 승인 지원. 향후 무인 반복 실행은 미검증이며 승인 설정 선택 대기 |
 | dot | 실제 로그인 계정에서 Dots 접근 불가 화면 확인 | 계정에 기능이 제공된 후 네이티브 dot 생성·실행 |
 
 기능 수정 배포 검증: `44588ccae4988d263d70b26d4f755105d09f9f0c`를 main과 origin/main에 반영했고 Vercel production이 Ready 상태로 완료됐다. https://catchmeme.com 및 https://www.catchmeme.com에 연결됐다. 공개 서버의 Events는 꺼져 있다. 운영 MCP의 초기 연결·도구 목록·UI 읽기와 공개 본문 검색을 확인했고, 공개 본문 400개 항목에서 사딸라 결과를 받았다. 전체 사전 검색은 아니다.
@@ -27,9 +27,13 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 
 계정 연결: 사용자 승인에 따라 **밈캐치 운영** 앱을 등록했다. 앱 ID는 `app_6abc3a67a5cc8191bb8378b5b0a74c54`이며, 서버 주소는 https://catchmeme.com/api/mcp-operator 이다. 기존 운영자 계정으로 로그인한 뒤 OAuth 승인과 실제 ChatGPT 토큰 교환을 완료했다. 앱 상세 화면에 연결된 계정이 표시되고 유효한 access/refresh 상태도 확인했다. OAuth 승인 HTML의 Referrer-Policy를 same-origin으로 설정하고 CSP form-action에 등록된 ChatGPT 리다이렉트만 허용한 수정은 `22c56c6`으로 main에 배포했다. POST Origin 검증은 유지하며 JSON과 인증 코드 리다이렉트는 no-referrer를 유지한다. 관련 14개 검사(새 승인 경로 6개 포함), MCP 19개 검사, 타입 검사와 변경 파일 린트가 통과했다. 이 OAuth 수정은 기존 Cloud 전체 검사 이후 별도로 로컬 검증했다. 서버를 다시 검색한 뒤 ChatGPT 앱 상세에 memecatch.ci_failed·memecatch.main_updated·memecatch.issue_changed가 표시되고 운영 로그의 server/discover 및 events/list가 200임을 확인했다. 새 ChatGPT 대화에서 이벤트 자동화를 요청했으나 현재 세션에 네이티브 구독 생성 도구가 노출되지 않았다. 예약 UI도 시간 기반 설정만 제공했다. 실제 구독 ID·callback challenge·이벤트에 의한 AI 시작은 미확인이다. callback origin은 실제 인증된 구독 요청에서 확인한 뒤 정확한 값만 허용한다.
 
+네이티브 운영 플러그인: [밈캐치 운영 워크플로](https://chatgpt.com/plugins/plugins_6abc944451bc819195e72c8645b5ee8b)를 현재 계정에 비공개로 생성했다. release는 `pluginrel_6abc9445e760819195e55c4c27319fd6`이다. 루트 `plugin.json`의 Agent Plugins 1.0 형식과 `extensions.com.openai.apps`의 실제 기존 connector `connector_6abc3a67a5cc8191bb8378b5b0a74c54`를 사용했다. 계정 UI에서 운영 앱 연결됨과 monitor-memecatch 스킬을 확인했고 저장된 소스 4개를 읽어 검증했다. 소스는 `plugins/memecatch-operator/`에 보존하며 새 인증 정보나 권한 확대는 포함하지 않는다.
+
+실제 이벤트 발견: 새 운영 플러그인을 선택한 Work에서도 list_event_sources는 Gmail·Slack·GitHub만 반환하고 정확한 운영 connector의 discover_webhook_schema는 `This connector has no available webhook events.`를 반환했다. 별도의 MCP Events 구독·조회·host callback 발급 기능은 노출되지 않았다. GitHub의 네이티브 스키마는 pull_request뿐이며 main push·CI 실패·일반 이슈의 대체로 만들지 않았다. 2026-09-30 14:05 KST 서버 저장소를 읽어 실제 구독 0건·대기 전달 0건·수신 이벤트 5건을 확인했다. 실제 callback origin·subscription ID·challenge·AI 시작은 미확인이다.
+
 실제 Space: https://chatgpt.com/space/page_6abc3aacb2f88191a6b9ee00733cd4ba . Space ID는 `page_space_16e721f95a988191bb788ae168abc24a`이다. 운영 문서: https://chatgpt.com/space/page_c86babf98ec88191925bbd838c767f48 . 이 네이티브 Page의 기존 본문을 AI가 수정했고 새 내용을 다시 읽어 확인했다. 이전 라이브러리 메모의 원본 교체는 `Invalid Library replacement request`로 실패해 보존했다.
 
-자동 갱신: Page의 네이티브 매시간 갱신을 활성화했다. 실제 controller ID는 `Automation_42d21f6524b08191a3fe417fb729a3b9`, 첫 요청 ID는 `01a0ef4e-187f-7ec7-b95f-583bfee09342`이다. 활성 설정과 요청 접수는 확인했으나, 실행 채팅을 열 수 없고 durable 실행 호스트를 읽지 못해 첫 자동 수정 완료는 확인하지 못했다. 변화가 없으면 조용히 유지하도록 문서의 Agent Instructions에 저장했다. 동일 계정의 GitHub 연결로 main 운영 허브를 실제 읽을 수 있음도 확인했다.
+자동 갱신: 기존 controller `Automation_42d21f6524b08191a3fe417fb729a3b9`와 60분 일정을 보존했다. Work의 원본 읽기 `page_freshness_unavailable` 오류는 복구됐다. 실제 [Auto update 실행 대화](https://chatgpt.com/c/6abc8c5d-6768-83e8-80a2-abeb14a31419)가 List Page Automations 승인 대기에서 멈추고 일시정지되는 것을 확인했다. 기존 작업을 다시 활성화하고 승인된 Page의 목록 읽기를 한 번 허용한 뒤, 새 요청 `01a0f0ad-9ef0-75c5-93d3-5190bd3db31a`의 실제 작업이 운영 근거 두 곳을 수정하고 최초 자동 갱신 검증 기록을 저장했다. 원본 시퀀스 11에 일반 본문의 검증 기록이 있으며 이 확인 대화에서 수동으로 추가하지 않았다. 완료된 실행 대화와 원본을 재조회했다. 시퀀스 12에는 새 플러그인 등록 결과와 한 번의 승인 지원·향후 무인 반복 실행의 차이를 기록했다. 매시간 설정은 활성 상태지만 향후 사람 승인 없이 반복되는지는 미검증이다. ChatGPT Space 플러그인의 계정 전체 Pages에 적용되는 승인 모드 변경은 사용자 선택 대기이며 설정을 변경하지 않았다. 변화가 없으면 조용히 유지하는 native Agent Instructions도 보존했다.
 
 Cloud 실행: 기존 Codex Cloud Legacy 환경 `6a792f0f86b081918b22485f136d0757`에서 Node 24·pnpm 11.6.0·FFmpeg와 CJK 글꼴을 설치했다. 고정 의존성 설치, 타입 검사, 전체 테스트 358개 파일·2,580개와 MCP 19개를 통과했고 인터랙티브 세션이 연결됐다. 초기 Corepack 다운로드 문제는 npm 설치로 해결했다. Ubuntu의 FFmpeg 도움말이 기본 출력 한도를 넘는 검사 오류는 `c58e821`에서 4 MiB로 조정했고 호환성 판정은 유지했다. 캐시와 유지 스크립트는 저장돼 있으나 장기 VM·작업 파일 보존은 별도 검증 사항이다. 현재 계정의 dot 이용 제한은 그대로다.
 

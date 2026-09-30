@@ -1,6 +1,6 @@
 # 밈캐치 AI 운영 허브
 
-계정·Pages 확인 기준: 2026-09-30 15:16 KST. 아래 배포·Cloud 검사는 각 기록의 시각과 커밋을 따른다. 실제 활성화된 기능과 준비된 코드를 구분한다.
+계정·Pages 확인 기준: 2026-09-30 15:33 KST. 아래 배포·Cloud 검사는 각 기록의 시각과 커밋을 따른다. 실제 활성화된 기능과 준비된 코드를 구분한다.
 
 서비스: https://catchmeme.com
 저장소: https://github.com/torisKR/memeCatch
@@ -12,7 +12,7 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 | Plugin Extension | 공개 앱 설치·연결과 읽기 도구 3개, 새 비공개 운영 워크플로 생성·저장 소스 4개·기존 운영 앱 연결됨 확인 | 공개 앱 사이드바·대화 패널 전체 렌더링 확인 |
 | MCP Events | 운영자 OAuth·이벤트 3개 목록·GitHub 수신·서버 저장 확인 | 새 플러그인 Work에서도 운영 connector 이벤트 없음. 실제 구독 0건·callback·이벤트 AI 시작 미완료 |
 | Codex Cloud | 기존 Cloud 환경에서 설치·타입 검사·358개 파일 2,580개 테스트·MCP 19개 통과 | 재접속 후 작업 파일 보존은 별도 확인 |
-| Living Pages | 실제 Auto update 원본 읽기·수정 1회 확인, 매시간 일정 보존·현재 승인 대기로 일시정지 | 14:34 KST 예약 실행이 다시 목록 읽기 승인을 요구함. 승인된 Space 전용 설정 저장은 오류로 실패했으며 무인 반복 실행은 미검증 |
+| Living Pages | 실제 Auto update 원본 읽기·수정 1회 확인, 기존 매시간 작업 재개 | 기본 권한을 낮은 위험 도구 허용으로 저장하고 Space 상속 확인. 새 예약 실행의 승인 없는 원본 읽기·수정은 확인 중 |
 | dot | 실제 로그인 계정에서 Dots 접근 불가 화면 확인 | 계정에 기능이 제공된 후 네이티브 dot 생성·실행 |
 
 기능 수정 배포 검증: `44588ccae4988d263d70b26d4f755105d09f9f0c`를 main과 origin/main에 반영했고 Vercel production이 Ready 상태로 완료됐다. https://catchmeme.com 및 https://www.catchmeme.com에 연결됐다. 공개 서버의 Events는 꺼져 있다. 운영 MCP의 초기 연결·도구 목록·UI 읽기와 공개 본문 검색을 확인했고, 공개 본문 400개 항목에서 사딸라 결과를 받았다. 전체 사전 검색은 아니다.
@@ -33,7 +33,7 @@ ChatGPT 프로젝트: https://chatgpt.com/g/g-p-6abc0a9ec9c4819192be24414bb9b9dd
 
 실제 Space: https://chatgpt.com/space/page_6abc3aacb2f88191a6b9ee00733cd4ba . Space ID는 `page_space_16e721f95a988191bb788ae168abc24a`이다. 운영 문서: https://chatgpt.com/space/page_c86babf98ec88191925bbd838c767f48 . 이 네이티브 Page의 기존 본문을 AI가 수정했고 새 내용을 다시 읽어 확인했다. 이전 라이브러리 메모의 원본 교체는 `Invalid Library replacement request`로 실패해 보존했다.
 
-자동 갱신: 기존 controller `Automation_42d21f6524b08191a3fe417fb729a3b9`와 60분 일정을 보존했다. Work의 원본 읽기 `page_freshness_unavailable` 오류는 복구됐다. 실제 [Auto update 실행 대화](https://chatgpt.com/c/6abc8c5d-6768-83e8-80a2-abeb14a31419)가 List Page Automations 승인 대기에서 멈추고 일시정지되는 것을 확인했다. 기존 작업을 다시 활성화하고 승인된 Page의 목록 읽기를 한 번 허용한 뒤, 새 요청 `01a0f0ad-9ef0-75c5-93d3-5190bd3db31a`의 실제 작업이 운영 근거 두 곳을 수정하고 최초 자동 갱신 검증 기록을 저장했다. 원본 시퀀스 11에 일반 본문의 검증 기록이 있으며 이 확인 대화에서 수동으로 추가하지 않았다. 완료된 실행 대화와 원본을 재조회했다. 시퀀스 12에는 새 플러그인 등록 결과와 한 번의 승인 지원·향후 무인 반복 실행의 차이를 기록했다. 14:34 KST의 다음 예약 실행도 List Page Automations 승인을 요구해 15:16 KST 확인 시 작업은 일시정지 상태다. 사용자는 계정의 다른 Pages에도 적용되는 ChatGPT Space 한 앱의 승인 모드 변경을 승인했다. 하지만 직접 계정 설정 도구와 ChatGPT 내부 Work 모두 앱별 review_important_actions 저장에서 AssertionError / UNKNOWN을 반환했다. 실패 후 재조회한 Space는 Use my default, 전체 기본 설정은 Always ask로 유지된다. 다른 플러그인에도 영향을 주는 전체 기본 설정 변경은 별도 범위 선택 대기다. 원본 Page 시퀀스 17에 실제 상태를 반영했으며 향후 무인 반복 실행은 미검증이다. [설정 확인 대화](https://chatgpt.com/c/6abca88e-c720-83e8-a11e-6766b146aecc)에서 실제 결과를 확인할 수 있다. 변화가 없으면 조용히 유지하는 native Agent Instructions도 보존했다.
+자동 갱신: 기존 controller `Automation_42d21f6524b08191a3fe417fb729a3b9`와 60분 일정을 보존했다. Work의 원본 읽기 `page_freshness_unavailable` 오류는 복구됐다. 실제 [Auto update 실행 대화](https://chatgpt.com/c/6abc8c5d-6768-83e8-80a2-abeb14a31419)가 List Page Automations 승인 대기에서 멈추고 일시정지되는 것을 확인했다. 기존 작업을 다시 활성화하고 승인된 Page의 목록 읽기를 한 번 허용한 뒤, 새 요청 `01a0f0ad-9ef0-75c5-93d3-5190bd3db31a`의 실제 작업이 운영 근거 두 곳을 수정하고 최초 자동 갱신 검증 기록을 저장했다. 원본 시퀀스 11에 일반 본문의 검증 기록이 있으며 이 확인 대화에서 수동으로 추가하지 않았다. 완료된 실행 대화와 원본을 재조회했다. 시퀀스 12에는 새 플러그인 등록 결과와 한 번의 승인 지원·향후 무인 반복 실행의 차이를 기록했다. 14:34 KST의 다음 예약 실행도 List Page Automations 승인을 요구해 일시정지됐고 15:31 KST에 화면에서 동일 작업을 다시 시작했다. 기존 ID·60분 일정·활성 상태를 재조회했고 다음 예약은 15:33 KST로 표시된다. 사용자는 계정의 다른 Pages에도 적용되는 ChatGPT Space 한 앱의 승인 모드 변경을 승인했다. 하지만 직접 계정 설정 도구와 ChatGPT 내부 Work 모두 앱별 review_important_actions 저장에서 AssertionError / UNKNOWN을 반환했다. 그 실패 후에는 Space가 Use my default, 전체 기본 설정이 Always ask로 유지됐다. 이후 사용자가 컴퓨터 화면으로 진행하라고 요청해 15:30 KST에 설정 UI에서 기본 권한을 위험도가 낮은 도구 허용(review_important_actions)으로 변경했다. 저장된 UI 표시와 설정 재조회 모두 성공했고 Space는 기본 설정을 상속해 Allow low-risk actions가 적용된다. 기본 설정을 따르는 다른 플러그인에도 적용되며 민감한 도구는 거부될 수 있다. 원본 Page 시퀀스 20에 저장·재개 결과를 반영했고 새 예약 실행의 승인 없는 원본 읽기·수정은 확인 중이다. OAuth 범위나 인증 정보는 변경하지 않았다. [설정 확인 대화](https://chatgpt.com/c/6abca88e-c720-83e8-a11e-6766b146aecc)에서 실제 결과를 확인할 수 있다. 변화가 없으면 조용히 유지하는 native Agent Instructions도 보존했다.
 
 Cloud 실행: 기존 Codex Cloud Legacy 환경 `6a792f0f86b081918b22485f136d0757`에서 Node 24·pnpm 11.6.0·FFmpeg와 CJK 글꼴을 설치했다. 고정 의존성 설치, 타입 검사, 전체 테스트 358개 파일·2,580개와 MCP 19개를 통과했고 인터랙티브 세션이 연결됐다. 초기 Corepack 다운로드 문제는 npm 설치로 해결했다. Ubuntu의 FFmpeg 도움말이 기본 출력 한도를 넘는 검사 오류는 `c58e821`에서 4 MiB로 조정했고 호환성 판정은 유지했다. 캐시와 유지 스크립트는 저장돼 있으나 장기 VM·작업 파일 보존은 별도 검증 사항이다. 현재 계정의 dot 이용 제한은 그대로다.
 

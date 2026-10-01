@@ -178,6 +178,8 @@ export async function reviewMemeSource(input: {
         title: source.title,
         creator_name: source.channel_name,
         copyright_status: linkOnly ? "unknown" : "embeddable",
+        source_role: sourceRole,
+        rights_basis: rightsBasis,
       });
       if (error) return { ok: false, error: `출처 링크 게시 실패: ${error.message}` };
     }

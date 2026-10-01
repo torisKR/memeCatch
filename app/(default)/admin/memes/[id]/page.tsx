@@ -7,6 +7,10 @@ import { MemeEditForm } from "@/components/admin/meme-edit-form";
 import { MemeStatusControls } from "@/components/admin/meme-status-controls";
 import { MemeOriginCountryForm } from "@/components/admin/meme-origin-country-form";
 import {
+  CatalogProvenancePanel,
+  type CatalogProvenanceSource,
+} from "@/components/admin/catalog-provenance-panel";
+import {
   MemeTranslationReview,
   type MemeTranslationReviewRow,
 } from "@/components/admin/meme-translation-review";
@@ -40,6 +44,8 @@ export default async function AdminMemeEditPage({
     { data: contents },
     { data: translations },
     { data: sources },
+    { data: provenanceSources, error: provenanceError },
+    { data: tagRows, error: tagsError },
     { data: originProfiles, error: originProfilesError },
   ] = await Promise.all([
     supabase
@@ -62,6 +68,16 @@ export default async function AdminMemeEditPage({
       .select("source_url, source_role, rights_basis")
       .eq("meme_id", id),
     supabase
+      .from("meme_media")
+      .select("source_id, source_role, rights_basis, review_state, reviewer_note, media_sources(canonical_url, title, platform)")
+      .eq("meme_id", id)
+      .order("created_at", { ascending: true })
+      .returns<CatalogProvenanceSource[]>(),
+    supabase
+      .from("meme_tags_map")
+      .select("tags(name)")
+      .eq("meme_id", id),
+    supabase
       .from("meme_market_profiles")
       .select("market_code, language_tag, local_title, review_state")
       .eq("meme_id", id)
@@ -70,6 +86,9 @@ export default async function AdminMemeEditPage({
   ]);
   if (originProfilesError) {
     throw new Error("출처 국가 프로필을 불러오지 못했어요.");
+  }
+  if (provenanceError || tagsError) {
+    throw new Error("등록 근거를 불러오지 못했어요.");
   }
 
   const translationsForReview: MemeTranslationReviewRow[] = (translations ?? [])
@@ -122,6 +141,19 @@ export default async function AdminMemeEditPage({
           (sources ?? []).find(isHouseOriginalRightsSource)?.source_url ?? null
         }
       />
+
+      {!isHouseOriginal(meme.origin_kind) && (
+        <CatalogProvenancePanel
+          dates={{
+            sourceWorkYear: meme.source_work_year,
+            memeFirstSeenYear: meme.meme_first_seen_year,
+            koreaViralYear: meme.korea_viral_year,
+            yearPrecision: meme.year_precision,
+          }}
+          tags={(tagRows ?? []).flatMap((row) => row.tags?.name ? [row.tags.name] : [])}
+          sources={provenanceSources ?? []}
+        />
+      )}
 
       <MemeOriginCountryForm
         memeId={meme.id}

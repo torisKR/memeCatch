@@ -9,6 +9,7 @@ import { PremiumAdControl } from "@/components/premium-ad-control";
 import { PwaInstall } from "@/components/pwa-install";
 import { SiteFooter } from "@/components/site-footer";
 import { OrganizationJsonLd } from "@/components/json-ld";
+import { PublicWebMcpTools } from "@/components/webmcp/public-tools";
 import {
   LocaleAutoDetect,
   LocaleDocumentSync,
@@ -44,6 +45,7 @@ export function RootDocument({
     >
       <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
         <LocaleProvider initialLocale={locale}>
+          <PublicWebMcpTools />
           <LocaleDocumentSync />
           <LocaleAutoDetect />
           <Suspense fallback={null}>

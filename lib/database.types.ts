@@ -2190,6 +2190,7 @@ export type Database = {
       memes: {
         Row: {
           aliases: string[]
+          catalog_registration_key: string | null
           category: Database["public"]["Enums"]["meme_category"]
           caution: string | null
           created_at: string
@@ -2228,6 +2229,7 @@ export type Database = {
         }
         Insert: {
           aliases?: string[]
+          catalog_registration_key?: string | null
           category?: Database["public"]["Enums"]["meme_category"]
           caution?: string | null
           created_at?: string
@@ -2266,6 +2268,7 @@ export type Database = {
         }
         Update: {
           aliases?: string[]
+          catalog_registration_key?: string | null
           category?: Database["public"]["Enums"]["meme_category"]
           caution?: string | null
           created_at?: string
@@ -4089,6 +4092,11 @@ export type Database = {
       }
     }
     Functions: {
+      register_catalog_meme: { Args: { p_input: Json }; Returns: Json }
+      find_catalog_meme_duplicates: {
+        Args: { p_source_urls: string[]; p_title: string }
+        Returns: Json
+      }
       admin_get_plus_status: { Args: { p_email: string }; Returns: Json }
       create_fairy_billing_intent: {
         Args: { p_min_amount: number; p_project_slug: string; p_user_id: string }

@@ -88,12 +88,20 @@ export default async function AdminMemesPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-bold">밈 관리</h1>
-        <Link
-          href="/admin/memes/new"
-          className="inline-flex min-h-11 items-center rounded-lg bg-accent-strong px-4 text-base font-semibold text-white"
-        >
-          자체 제작 등록
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/memes/catalog/new"
+            className="inline-flex min-h-11 items-center rounded-lg bg-accent-strong px-4 text-base font-semibold text-white"
+          >
+            외부 밈 정식 등록
+          </Link>
+          <Link
+            href="/admin/memes/new"
+            className="inline-flex min-h-11 items-center rounded-lg border border-border bg-surface px-4 text-base font-semibold"
+          >
+            자체 제작 등록
+          </Link>
+        </div>
       </div>
 
       {qualityQueue && (

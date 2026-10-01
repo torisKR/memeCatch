@@ -179,8 +179,9 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=(), tools=(self)",
           },
+          { key: "Origin-Agent-Cluster", value: "?1" },
           // CSP — 기본 enforce로 XSS/데이터 유출 1차 방어(위 allowlist 주석 참고).
           // ⚠️ 서비스 장애 주의(1): unsafe-inline은 유지하므로 JSON-LD·AdSense·Next
           //    런타임 인라인은 계속 동작한다. enforce가 새로 차단하는 것은 "allowlist에

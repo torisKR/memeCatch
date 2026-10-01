@@ -62,6 +62,7 @@ export function MemeStatusControls({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmLimited, setConfirmLimited] = useState(false);
+  const [confirmApproved, setConfirmApproved] = useState(false);
   const [attested, setAttested] = useState(false);
   const houseOriginal = isHouseOriginal(originKind);
 
@@ -87,6 +88,7 @@ export function MemeStatusControls({
       if (!res.ok) setError(res.error);
       else {
         setConfirmLimited(false);
+        setConfirmApproved(false);
         router.refresh();
       }
     });
@@ -173,7 +175,7 @@ export function MemeStatusControls({
               key={to}
               type="button"
               disabled={pending || (publishBlocked && to === "approved")}
-              onClick={() => run(to)}
+              onClick={() => to === "approved" && !houseOriginal ? setConfirmApproved(true) : run(to)}
               className={`min-h-11 rounded-lg px-4 text-base font-semibold disabled:opacity-50 ${
                 danger
                   ? "border border-safety-red bg-safety-red-bg text-safety-red"
@@ -189,6 +191,33 @@ export function MemeStatusControls({
           );
         })}
       </div>
+
+      {confirmApproved && (
+        <div className="rounded-lg border border-accent-strong bg-surface-2 p-4">
+          <p className="text-base text-foreground">
+            이 항목을 공개하면 사용자 검색·탐색·상세 페이지에 노출될 수 있어요. 사실과 권리
+            검수가 끝났는지 확인한 뒤 수동 게시해 주세요.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run("approved")}
+              className="min-h-11 rounded-lg bg-accent-strong px-4 text-base font-semibold text-white disabled:opacity-50"
+            >
+              {pending ? "게시 중…" : "확인하고 게시"}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setConfirmApproved(false)}
+              className="min-h-11 rounded-lg border border-border bg-surface px-4 text-base"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
 
       {confirmLimited && (
         <div className="rounded-lg border border-safety-yellow bg-safety-yellow-bg p-4">

@@ -68,6 +68,8 @@ describe("MemeStatusControls house original attestation", () => {
     );
     expect(screen.queryByRole("checkbox")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "게시 승인" }));
+    expect(transitionMemeStatus).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "확인하고 게시" }));
     await waitFor(() => {
       expect(transitionMemeStatus).toHaveBeenCalledWith({
         memeId: "meme-1",

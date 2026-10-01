@@ -3,7 +3,6 @@ import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { SourceIngestionForm, type SourceIngestionMeme } from "@/components/admin/source-ingestion-form";
 import { SourceReviewCard } from "@/components/admin/source-review-card";
 import { SourceRecoveryPanel } from "@/components/admin/source-recovery-panel";
-import { memePathFrom } from "@/lib/labels";
 import { listActiveSourceAcquisitionRecovery, type SourceAcquisitionRecoveryDto } from "@/lib/sources/recovery.server";
 
 export const metadata = { title: "출처 검수" };
@@ -111,7 +110,7 @@ export default async function AdminSourcesPage({
               <li key={`${row.meme_id}:${row.source_id}`}>
                 <div className="mb-2 flex flex-wrap items-baseline gap-2 text-sm">
                   <Link
-                    href={memePathFrom(meme.short_id, meme.slug)}
+                    href={`/admin/memes/${row.meme_id}`}
                     className="font-semibold hover:text-accent"
                   >
                     {meme.title}

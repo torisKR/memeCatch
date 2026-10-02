@@ -7,7 +7,8 @@
  * 감사 로그(admin_audit_log)는 operator INSERT 정책이 없으므로 service-role로 기록한다.
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
@@ -132,6 +133,7 @@ async function loadMemeRevalidationIdentity(
 
 /** 한국어 원문/공개 상태를 소비하는 모든 public artifact를 즉시 갱신한다. */
 function revalidateCanonicalMemePaths(meme: MemeRevalidationIdentity | null) {
+  revalidateTag(PUBLIC_COUNT_CACHE_TAG, { expire: 0 });
   const paths = new Set(["/", "/sitemap.xml", "/llms.txt", "/llms-full.txt"]);
 
   for (const locale of SEO_CONTENT_LOCALES) {

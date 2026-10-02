@@ -796,4 +796,30 @@ describe("MPE FFmpeg worker", () => {
     });
     expect({ iterations, maintenance, waits }).toEqual({ iterations: 2, maintenance: 3, waits: 2 });
   });
+
+  it("backs off empty queue claims within a cap and resets after processing a job", async () => {
+    const outcomes = [false, false, false, false, true, false];
+    const waits: number[] = [];
+    await worker.watchForJobs({}, {
+      pollMs: 2_000, maxIdlePollMs: 8_000,
+      shouldStop: () => !outcomes.length,
+      processJob: async () => outcomes.shift(),
+      maintain: async () => {}, now: () => 0,
+      wait: async (ms: number) => { waits.push(ms); },
+    });
+    expect(waits).toEqual([2_000, 4_000, 8_000, 8_000, 2_000]);
+  });
+
+  it("does not delay queued work and supports an explicit fixed polling cap", async () => {
+    const outcomes = [true, true, false, false];
+    const waits: number[] = [];
+    await worker.watchForJobs({}, {
+      pollMs: 1_000, maxIdlePollMs: 1_000,
+      shouldStop: () => !outcomes.length,
+      processJob: async () => outcomes.shift(),
+      maintain: async () => {}, now: () => 0,
+      wait: async (ms: number) => { waits.push(ms); },
+    });
+    expect(waits).toEqual([1_000, 1_000]);
+  });
 });

@@ -47,5 +47,37 @@ describe("media proxy", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("image/png");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=300");
+  });
+
+  it("allows CDN caching of public thumbnails in the Storage fallback", async () => {
+    mocks.r2Configured.mockReturnValue(false);
+    const download = vi.fn().mockResolvedValue({ data: new Blob(["image"]), error: null });
+    mocks.createAdminClient.mockReturnValue({ storage: { from: () => ({ download }) } });
+    const response = await request(["meme-thumbs", "provider", "thumb.png"]);
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=300");
+    expect(response.headers.get("Content-Type")).toBe("image/png");
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
+  it("never caches private uploads in the Storage fallback", async () => {
+    mocks.r2Configured.mockReturnValue(false);
+    mocks.createClient.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: "owner" } } }) } });
+    mocks.createAdminClient.mockReturnValue({ storage: { from: () => ({ download: async () => ({ data: new Blob(["image"]), error: null }) }) } });
+    const response = await request(["meme-uploads", "owner", "image.png"]);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("denies unapproved uploads before either storage provider", async () => {
+    mocks.r2Configured.mockReturnValue(false);
+    mocks.createClient.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: null } }) } });
+    const chain = { select: vi.fn(), eq: vi.fn(), limit: vi.fn().mockResolvedValue({ data: [] }) };
+    chain.select.mockReturnValue(chain); chain.eq.mockReturnValue(chain);
+    const download = vi.fn();
+    mocks.createAdminClient.mockReturnValue({ from: () => chain, storage: { from: () => ({ download }) } });
+    expect((await request(["meme-uploads", "owner", "image.png"])).status).toBe(404);
+    expect(download).not.toHaveBeenCalled();
+    expect(mocks.r2Get).not.toHaveBeenCalled();
   });
 });

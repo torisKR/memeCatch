@@ -4093,6 +4093,10 @@ export type Database = {
     }
     Functions: {
       register_catalog_meme: { Args: { p_input: Json }; Returns: Json }
+      get_social_platform_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: { platform: string; meme_count: number }[]
+      }
       find_catalog_meme_duplicates: {
         Args: { p_source_urls: string[]; p_title: string }
         Returns: Json

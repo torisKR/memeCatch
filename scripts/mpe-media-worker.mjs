@@ -647,7 +647,10 @@ export async function runMaintenance(supabase) {
 }
 
 export async function watchForJobs(supabase, options = {}) {
-  const pollMs = Math.max(1_000, options.pollMs ?? 2_000);
+  const pollMs = Number.isFinite(options.pollMs)
+    ? Math.min(60_000, Math.max(1_000, options.pollMs)) : 2_000;
+  const maxIdlePollMs = Math.max(pollMs, Number.isFinite(options.maxIdlePollMs)
+    ? Math.min(300_000, options.maxIdlePollMs) : 30_000);
   const maintenanceMs = options.maintenanceMs ?? 60_000;
   const shouldStop = options.shouldStop ?? (() => false);
   const processJob = options.processJob ?? processOneJob;
@@ -656,13 +659,19 @@ export async function watchForJobs(supabase, options = {}) {
   const now = options.now ?? Date.now;
   await maintain(supabase);
   let lastMaintenance = now();
+  let idlePollMs = pollMs;
   while (!shouldStop()) {
     const processed = await processJob(supabase);
     if (now() - lastMaintenance >= maintenanceMs) {
       await maintain(supabase);
       lastMaintenance = now();
     }
-    if (!processed) await wait(pollMs);
+    if (processed) {
+      idlePollMs = pollMs;
+    } else {
+      await wait(idlePollMs);
+      idlePollMs = Math.min(maxIdlePollMs, idlePollMs * 2);
+    }
   }
 }
 
@@ -683,7 +692,8 @@ async function main() {
     process.once("SIGTERM", () => { stopping = true; });
     process.once("SIGINT", () => { stopping = true; });
     const pollMs = Math.max(1_000, Number(process.env.MPE_WORKER_POLL_MS) || 2_000);
-    await watchForJobs(supabase, { pollMs, shouldStop: () => stopping });
+    const maxIdlePollMs = Math.max(pollMs, Number(process.env.MPE_WORKER_MAX_IDLE_POLL_MS) || 30_000);
+    await watchForJobs(supabase, { pollMs, maxIdlePollMs, shouldStop: () => stopping });
   } else if (process.argv.includes("--drain")) {
     await runMaintenance(supabase);
     while (await processOneJob(supabase)) continue;

@@ -46,7 +46,9 @@
 - **RLS 기본 deny** — 모든 쓰기는 `security definer` RPC 경유(반응·저장·제보·신고·댓글). 서버 관리 컬럼은 클라이언트 쓰기 차단.
 - **한국어 검색** — Postgres 기본 파서가 한국어를 못 다뤄, `pg_trgm` + 초성 generated column + 별칭(aliases)으로 구현.
 - **트렌드 점수** — `ln(1+x)` 정규화 + 72h 윈도 + 신규 부스트, `pg_cron` 일배치(KST 00:30).
-- **경로 없는 요청별 다국어 SSR** — Proxy가 쿠키·국가·`Accept-Language`를 검증해 요청 헤더로 전달하고, root layout이 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 SSR합니다. 이 선택은 locale-prefixed URL 대신 문서 페이지의 Full Route Cache/ISR을 의도적으로 포기합니다. 서비스 워커도 문서 내비게이션과 클라이언트 전환·refresh·prefetch의 RSC payload를 `NetworkOnly`로 처리해 URL이 같은 다른 로케일·세션의 응답을 재사용하지 않으며, 정적 자산·API·미디어 캐시는 유지합니다. 공개 데이터 쿼리는 계속 쿠키 없는 `createStaticClient`를 사용하고, 별도 정적/재검증 Route Handler와 명시된 데이터 캐시는 유지합니다.
+- **경로 없는 요청별 다국어 SSR** — Proxy가 쿠키·국가·`Accept-Language`를 검증해 요청 헤더로 전달하고, root layout이 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 SSR합니다. 이 선택은 locale-prefixed URL 대신 문서 페이지의 Full Route Cache/ISR을 의도적으로 포기합니다. 서비스 워커도 문서 내비게이션과 클라이언트 전환·refresh·prefetch의 RSC payload를 `NetworkOnly`로 처리해 URL이 같은 다른 로케일·세션의 응답을 재사용하지 않으며, 정적 자산·API·미디어 캐시는 유지합니다. 공개 데이터 쿼리는 계속 쿠키 없는 `createStaticClient`를 사용하고, 별도 정적/재검증 Route Handler와 명시된 데이터 캐시는 유지합니다. 탐색 플랫폼 수량은 RLS를 유지하는 `get_social_platform_counts` 집계 RPC의 익명 GET 응답만 300초 캐시하며, 관리자 공개 상태 변경·출처 승인 때 즉시 만료합니다. 로그인·일반 행 조회·다른 RPC는 이 캐시에 들어가지 않습니다.
+
+MPE worker는 빈 큐를 만나면 기본 2초에서 최대 30초까지 지수적으로 대기합니다. 작업을 처리하면 다시 2초로 돌아오며, 큐에 작업이 계속 있으면 대기하지 않습니다. `MPE_WORKER_POLL_MS`와 `MPE_WORKER_MAX_IDLE_POLL_MS`로 조정하고 동일한 값으로 고정 간격을 선택할 수 있습니다. 새 작업의 idle 상태 발견 지연은 기본 최대 약 30초이며, 이미 실행 중인 worker에는 재시작 후 적용됩니다.
 - **디자인 시스템** — [`DESIGN.md`](./DESIGN.md) 참조. 불꽃 오렌지 브랜드 + 카테고리 소프트 틴트(WCAG AA) + prefers-reduced-motion 존중.
 
 ## 로컬 개발

@@ -8,7 +8,8 @@
  * 모든 액션에서 is_operator를 재확인한다 (D-1 — lib/actions/admin.ts와 동일 규약).
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/database.types";
@@ -223,6 +224,7 @@ export async function reviewMemeSource(input: {
     });
     revalidatePath("/admin/sources");
     revalidatePath("/global");
+    revalidateTag(PUBLIC_COUNT_CACHE_TAG, { expire: 0 });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };

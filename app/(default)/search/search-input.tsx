@@ -7,6 +7,7 @@ import { memePathFrom } from "@/lib/labels";
 import { track } from "@/lib/analytics";
 import { SearchSuggest, type SearchSuggestion } from "@/components/search-suggest";
 import { GLOBAL_SEARCH_COPY, type SearchInputCopy } from "@/lib/i18n-global-search";
+import { createSearchSuggestionCache, SEARCH_SUGGESTION_COLUMNS } from "@/lib/search-suggestions";
 
 const RECENT_KEY = "mc_recent_searches";
 const MAX_RECENT = 8;
@@ -45,6 +46,7 @@ export function SearchInput({
 }) {
   const router = useRouter();
   const [value, setValue] = useState(initialQuery);
+  const [isComposing, setIsComposing] = useState(false);
   const lastPushed = useRef(initialQuery);
 
   const [open, setOpen] = useState(false);
@@ -55,6 +57,7 @@ export function SearchInput({
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const supabase = useMemo(() => createClient(), []);
+  const suggestionCache = useMemo(() => createSearchSuggestionCache(), []);
   const uid = useId();
   const listboxId = `search-suggest-listbox-${uid}`;
   const optionId = useCallback((i: number) => `search-suggest-option-${uid}-${i}`, [uid]);
@@ -70,17 +73,17 @@ export function SearchInput({
 
   // URL(?q=) 동기화 — 기존 동작 유지(직접 이동 폴백 겸 결과 목록 갱신)
   useEffect(() => {
-    if (trimmed === lastPushed.current) return;
+    if (isComposing || trimmed === lastPushed.current) return;
     const timer = window.setTimeout(() => {
       lastPushed.current = trimmed;
       router.replace(trimmed ? `${searchPath}?q=${encodeURIComponent(trimmed)}` : searchPath);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [trimmed, router, searchPath]);
+  }, [trimmed, router, searchPath, isComposing]);
 
-  // 자동완성 — 300ms 디바운스로 search_memes RPC 호출(브라우저 클라이언트)
+  // 열린 자동완성만 조회하고, 같은 입력은 30초 동안 최대 32개까지 재사용한다.
   useEffect(() => {
-    if (!hasQuery) {
+    if (!hasQuery || !open || isComposing) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       setActiveIndex(-1);
@@ -88,35 +91,43 @@ export function SearchInput({
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     const timer = window.setTimeout(() => {
+      const cached = suggestionCache.get(trimmed);
+      if (cached) {
+        setSuggestions(cached);
+        setActiveIndex(-1);
+        setLoading(false);
+        return;
+      }
       supabase
         .rpc("search_memes", { p_query: trimmed, p_limit: 6 })
+        .select(SEARCH_SUGGESTION_COLUMNS)
+        .abortSignal(controller.signal)
         .then(({ data, error }) => {
-          if (cancelled) return;
+          if (cancelled || controller.signal.aborted) return;
           setLoading(false);
           setActiveIndex(-1);
           if (error || !data) {
             setSuggestions([]);
             return;
           }
-          setSuggestions(
-            data.map((row) => ({
-              id: row.id,
-              short_id: row.short_id,
-              slug: row.slug,
-              title: row.title,
-              summary: row.summary,
-              category: row.category,
-            }))
-          );
+          suggestionCache.set(trimmed, data);
+          setSuggestions(data);
+        }, () => {
+          if (cancelled || controller.signal.aborted) return;
+          setLoading(false);
+          setActiveIndex(-1);
+          setSuggestions([]);
         });
     }, 300);
     return () => {
       cancelled = true;
+      controller.abort();
       window.clearTimeout(timer);
     };
-  }, [trimmed, hasQuery, supabase]);
+  }, [trimmed, hasQuery, open, isComposing, supabase, suggestionCache]);
 
   // 바깥 클릭 시 드롭다운 닫힘
   useEffect(() => {
@@ -177,6 +188,12 @@ export function SearchInput({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    // Safari may report isComposing=false on the IME confirmation Enter,
+    // while retaining the IME keyCode (229). Neither path submits or selects.
+    if (isComposing || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) {
+      if (e.key === "Enter") e.preventDefault();
+      return;
+    }
     if (!open || !hasQuery) return;
     if (e.key === "ArrowDown") {
       if (suggestions.length === 0) return;
@@ -203,6 +220,7 @@ export function SearchInput({
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
+          if (isComposing) return;
           recordRecent(trimmed);
           setOpen(false);
           goToSearch(trimmed);
@@ -227,7 +245,20 @@ export function SearchInput({
             name="q"
             type="search"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next.trim() !== trimmed) {
+                setSuggestions([]);
+                setActiveIndex(-1);
+              }
+              setValue(next);
+            }}
+            onCompositionStart={() => {
+              setIsComposing(true);
+              setSuggestions([]);
+              setActiveIndex(-1);
+            }}
+            onCompositionEnd={() => setIsComposing(false)}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder={copy.placeholder}

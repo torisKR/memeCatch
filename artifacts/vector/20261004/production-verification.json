@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Asia/Seoul",
+  "featureCommit": "d9b0c1b4d5e9f37a57705655f6e0e7fd91a41929",
+  "initialActivatedDeployment": "dpl_J2tmRn8Zo2FiSiVDRCbFPVwnHxso",
+  "domain": "https://catchmeme.com",
+  "snapshotScope": "Initial activation before the documentation-only main push",
+  "model": {
+    "profile": "multilingual-e5-small-v1",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "dtype": "fp32",
+    "dimensions": 384,
+    "pythonOnnxCompatibility": "model-compatibility.json"
+  },
+  "migration": {
+    "version": "20261003123428",
+    "vectorVersion": "0.8.2",
+    "status": "applied",
+    "existingHistoryRepaired": false,
+    "cliCatalogCacheWarning": "pg-delta certificate cache warning; exit0 and remote objects/history verified"
+  },
+  "database": {
+    "total_memes": 5018,
+    "public_memes": 4378,
+    "indexed": 4378,
+    "missing_public": 0,
+    "stale": 0,
+    "nonpublic_vectors": 0,
+    "database_bytes": 178367635,
+    "companion_bytes": 9191424
+  },
+  "index": {
+    "trialIndexed": 5,
+    "backfillIndexed": 4373,
+    "backfillElapsedSeconds": 557.13,
+    "threads": 1,
+    "stale": 0,
+    "repeatIndexed": 0,
+    "repeatStale": 0
+  },
+  "permissions": {
+    "rls": true,
+    "privateRestStatus": 406,
+    "anonymousIndexerStatus": 401,
+    "anonymousMatchStatus": 200,
+    "allReturnedParentsPublic": true,
+    "writesServiceOnly": true,
+    "searchSecurityInvoker": true
+  },
+  "runtime": {
+    "httpsSignedStatus": 200,
+    "unsignedStatus": 401,
+    "maxQueryChars": 120,
+    "maxQuerySuccess": true,
+    "initializationCpuMs": [
+      4899,
+      5300
+    ],
+    "initializationRssBytes": [
+      1622355968,
+      1606881280
+    ],
+    "initializationMaxRssKiB": [
+      1897172,
+      1884028
+    ],
+    "memoryScope": "init-time high-water mark; no sustained or concurrent-load guarantee"
+  },
+  "exactSearch": {
+    "role": "anon",
+    "executionMs": 55.852,
+    "returned": 12,
+    "sampleCount": 1,
+    "networkExcluded": true,
+    "p95Measured": false
+  },
+  "http": {
+    "allFourQueriesHybrid": true,
+    "firstRequestElapsedMs": 20825,
+    "subsequentElapsedMs": [
+      1360,
+      1246,
+      924
+    ],
+    "repeatElapsedMs": 756,
+    "overlongStatus": 400,
+    "untrustedOriginStatus": 403
+  },
+  "quality": {
+    "sampleSize": 4,
+    "publicExpectedTargets": 3,
+    "expectedTop5": 1,
+    "targetRanksWithin40": {
+      "TMI": 1,
+      "손민수": 24,
+      "어쩔티비": null
+    },
+    "rickrollingExcluded": "rejected",
+    "generalAccuracyEstimate": false,
+    "followup": "Broader Korean reference dataset and document/retrieval/ranking evaluation"
+  },
+  "browser": {
+    "dedicatedChromium": true,
+    "explicitSearchOnly": true,
+    "studioQueryReset": true,
+    "cancelIgnoresLateResponse": true,
+    "rightsNote": true,
+    "adminLoginBoundary": true,
+    "unsupportedBrowserFallback": true,
+    "webmcpRealApiViaRegistrationShim": true,
+    "nativeAiSession": false,
+    "imagesAdsMediaAndOtherWritesBlocked": true
+  },
+  "operations": {
+    "newCredentialsIssued": false,
+    "paidInfrastructureCreated": false,
+    "redisConnected": false,
+    "automaticReindexQueue": false,
+    "monthlyUsageKnown": false,
+    "otherProjectServicesOrTabsTouched": false
+  }
+}

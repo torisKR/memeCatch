@@ -1,6 +1,20 @@
 # 밈 콘텐츠 제작을 위한 검색 기반과 다음 단계
 
-2026-10-04(Asia/Seoul) 기준 구현·운영 안내. 운영 읽기 조회에서 전체 밈 5,018건, 공개 `approved`/`limited` 4,378건을 확인했다. **이번 벡터 마이그레이션·운영 backfill·배포는 아직 대기(PENDING)** 상태다. 실제 실행 이후의 테스트 결과와 완료 여부는 작업 보고서에서 별도로 확인한다.
+2026-10-04(Asia/Seoul) 기준 **운영 활성화를 완료했다.** 기존 Supabase에 신규 마이그레이션 `20261003123428`을 적용하고 공개 `approved`/`limited` 밈 4,378건을 색인했다. 누락·stale·비공개 벡터는 각각 0건, 전체 밈은 5,018건으로 유지됐다. 동일 FP32 모델을 제공하는 Vercel HTTPS 경로를 검증한 뒤 `catchmeme.com`으로 전환했다. 기능 버전은 `d9b0c1b`, 최초 활성화 배포는 `dpl_J2tmRn8Zo2FiSiVDRCbFPVwnHxso`이며 아래 수치는 해당 배포의 검증 시점 스냅샷이다.
+
+| 운영 검증 | 실제 결과 |
+| --- | --- |
+| DB·벡터 테이블 | 전체 178,367,635 bytes(약178.4MB), companion table 9,191,424 bytes. DB 무료500MB의 약35.7%이며 월간 전송·함수 잔여량은 미확인 |
+| 색인·재실행 | 시험5건 + 단일CPU backfill4,373건, backfill557.13초. 재실행 indexed0/stale0 |
+| HTTPS·오류 경계 | 서명된 자기 HTTPS 추론200, 서명 없음401, 외부Origin403, 길이 초과400, 최대120자 추론 성공 |
+| Linux 모델 초기화 | 2개 인스턴스 CPU4.899~5.300초, RSS1.607~1.622GB, 초기화 시점 최대RSS1.929~1.943GB. 장기·동시 부하 peak나 안정성 보장은 아님 |
+| 실제 검색 | 운영4개 질의 모두 hybrid200. 첫 전체HTTP20.825초, 이후0.924~1.360초, 동일질의0.756초. 모델 CPU만의 시간이 아님 |
+| 익명 exact 검색 | 4,378건에서 read-only EXPLAIN Execution Time55.852ms, 12개 결과. 1회 warm 표본이며 p95·부하 결과가 아님 |
+| 실제 운영 브라우저 | 명시적 검색·Studio·취소/늦은 응답·권리 안내·관리자 로그인 경계 통과. WebMCP 미지원 fallback 및 등록 shim→실제API 통과; 네이티브AI 세션 미검증 |
+
+**순위 품질은 추가 튜닝이 필요하다.** 사전에 정한 4개 상황 중 TMI만 기대 결과가 상위5개에 있었다. 원시40개 후보에서 손민수는24위, 어쩔티비는40위 밖이었다. Rickrolling은 운영에서 rejected여서 공개 검색에서 제외되는 것이 맞았다. 공개 대상인 표본3개에서 top5 성공1개라는 작은 탐색 결과를 전체 정확도로 일반화하지 않는다. 이름·별칭 검색을 유지하고, 이후 더 넓은 한국어 상황 평가 세트로 문서 구성·후보 검색·순위 병합을 비교한다. 이번 활성화에서 작은 표본에 맞춘 순위 변경이나 검수 상태 변경은 하지 않았다.
+
+재현 가능한 기록은 `artifacts/vector/20261004/production-verification.json`, 모델 일치는 `model-compatibility.json`, 비용 시나리오는 `artifacts/cost/20261002/free-tier-report.html`에 있다.
 
 ## 이번에 구현한 범위
 
@@ -136,7 +150,7 @@ Deployment Protection이 적용된 배포에서는 **기존 자동화용** `VERC
    ```
 
    배포 대상 소스 목록을 기준으로 별도 임시 폴더에 준비한다. 새 구현 파일은 배포 대상에 명시적으로 포함하고 개발용 `.local` 캐시·`.env`·DB 백업·개인 에이전트 폴더를 통째로 업로드하지 않는다. 모델은 해당 staging의 빌드 단계에서 준비하여 `/v1/embeddings` 함수에만 포함한다. 기존 Vercel 프로젝트·계정 연결을 유지하고 새 프로젝트나 유료 제공자를 생성하지 않는다.
-2. **도메인을 전환하지 않은 보호된 production 배포에서 검증한다.** 기존 프로젝트에 CLI의 `--prod --skip-domain`으로 배포해 운영 환경의 자격증명·Protection·2 GB 함수 조건을 사용하되 `catchmeme.com` 도메인은 기존 배포에 유지한다. 의미 검색 flag도 `false`로 유지한다. 이 배포의 URL에서 정상 서명·실패 서명·미설정 secret·잘못된 입력·자기 HTTPS 연결을 검증한다. 실제 한국어 입력을 Python FP32와 비교하고 Vercel Linux 함수의 cold/warm 지연·최대 RSS·CPU를 기록한다. **로컬 Mac에서 관측한 약 1.66 GB RSS는 Vercel Linux의 2 GB 조건을 통과했다는 증거가 아니다.** 이 단계가 통과하기 전에는 운영 벡터 DB 쓰기를 진행하지 않는다.
+2. **도메인을 전환하지 않은 보호된 production 배포에서 검증한다.** 기존 프로젝트에 CLI의 `--prod --skip-domain`으로 배포해 운영 환경의 자격증명·Protection·2 GB 함수 조건을 사용하되 `catchmeme.com` 도메인은 기존 배포에 유지한다. 기존 공개 도메인의 의미 검색 설정은 유지한다. 보호된 후보 배포에만 검증용 의미 검색 flag를 켜 자기 HTTPS 호출을 확인한다. 이 배포의 URL에서 정상 서명·실패 서명·미설정 secret·잘못된 입력·자기 HTTPS 연결을 검증한다. 실제 한국어 입력을 Python FP32와 비교하고 Vercel Linux 함수의 cold/warm 지연·최대 RSS·CPU를 기록한다. **로컬 Mac에서 관측한 약 1.66 GB RSS는 Vercel Linux의 2 GB 조건을 통과했다는 증거가 아니다.** 이 단계가 통과하기 전에는 운영 벡터 DB 쓰기를 진행하지 않는다.
 
    bundled 호출자는 최대 30초, 기존 외부 제공자 연결은 6초를 기다린다. 제한 시간이 끝나도 이미 시작된 native 추론이 즉시 취소된다고 보장하지 않는다. 초기화 실패 후 재시도는 30초 뒤의 새 요청에서 가능하다.
 3. **검증된 경로가 확보된 뒤 신규 SQL만 적용한다.** 기존 Supabase 프로젝트의 vector 확장·schema·migration history와 이번 버전을 조회하고 아직 없는 이번 신규 마이그레이션만 적용한다. `private`를 REST exposed schemas에 추가하거나 기존 migration history를 repair하지 않는다. 기존 RLS·운영자 권한도 확대하지 않는다.
@@ -151,7 +165,7 @@ Deployment Protection이 적용된 배포에서는 **기존 자동화용** `VERC
 
 Vercel Hobby는 CPU 추론이 포함된 **전체 앱 합산**으로 Active CPU 4시간·Provisioned Memory 360 GB시간을 공유한다. Hobby 함수는 2 GB·1 vCPU이며, 표준 Node 번들 250 MB를 넘는 FP32 모델은 Fluid compute·Active CPU가 켜진 Large Functions Beta(최대 5 GB)를 사용해야 한다. 기존 프로젝트는 `VERCEL_SUPPORT_LARGE_FUNCTIONS=1`로 참여할 수 있지만 실제 플랫폼 적용과 배포 크기를 확인해야 한다. 기능을 추가해 비용이나 서버 부하가 줄었다고 보장하지 않는다. 캐시 적중을 제외한 질의당 실측 CPU가 `t`초라면 `14,400 / t`는 이 기능만 계산한 이론적 상한이며 기존 앱·cold start 사용량을 빼야 한다. [Vercel 함수 한도](https://vercel.com/docs/functions/limitations), [Hobby 사용량](https://vercel.com/docs/plans/hobby)
 
-**재색인은 자동 백그라운드 작업이 아니다.** 제목·별칭·설명·기원·활용 문서나 검수 상태가 바뀌면 기존 벡터가 무효화되고, 운영자가 인덱서를 다시 실행할 때까지 해당 의미 후보·관련 추천이 빠질 수 있다. 관리자는 정기적으로 누락·stale 건수와 변경량을 확인하고 제한된 색인을 실행한다. 자동 큐·재시도·주기 작업은 후속 구현으로 남긴다. 현재 이 문서의 마이그레이션·backfill·배포 상태는 모두 대기이며 실제 수행 결과로 갱신해야 한다.
+**재색인은 자동 백그라운드 작업이 아니다.** 제목·별칭·설명·기원·활용 문서나 검수 상태가 바뀌면 기존 벡터가 무효화되고, 운영자가 인덱서를 다시 실행할 때까지 해당 의미 후보·관련 추천이 빠질 수 있다. 관리자는 정기적으로 누락·stale 건수와 변경량을 확인하고 제한된 색인을 실행한다. 자동 큐·재시도·주기 작업은 후속 구현으로 남긴다. 초기 운영 마이그레이션·backfill·배포는 완료했으며 이후 변경분의 재색인은 이 수동 운영 절차를 따른다.
 
 ## 이후 제작 파이프라인 기획
 

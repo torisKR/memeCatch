@@ -34,11 +34,11 @@
   "review": {
     "p0": 0,
     "p1": 0,
-    "documentationOrderCorrection": "required before commit"
+    "documentationOrderCorrection": "completed before feature commit"
   },
   "production": {
-    "migration": "pending",
-    "index": "pending",
-    "deployment": "pending"
+    "migration": "applied: 20261003123428",
+    "index": "4378 public vectors; missing/stale/nonpublic 0",
+    "deployment": "activated; see production-verification.json"
   }
 }

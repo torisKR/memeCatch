@@ -4093,6 +4093,22 @@ export type Database = {
     }
     Functions: {
       register_catalog_meme: { Args: { p_input: Json }; Returns: Json }
+      match_meme_embeddings: {
+        Args: { p_embedding: number[]; p_limit?: number; p_exclude_meme_id?: string }
+        Returns: { meme_id: string; similarity: number }[]
+      }
+      related_meme_embeddings: {
+        Args: { p_meme_id: string; p_limit?: number }
+        Returns: { meme_id: string; similarity: number }[]
+      }
+      list_meme_embedding_jobs: {
+        Args: { p_after?: string; p_limit?: number }
+        Returns: { meme_id: string; document: string; source_hash: string }[]
+      }
+      store_meme_embedding: {
+        Args: { p_meme_id: string; p_source_hash: string; p_embedding: number[] }
+        Returns: boolean
+      }
       get_social_platform_counts: {
         Args: Record<PropertyKey, never>
         Returns: { platform: string; meme_count: number }[]

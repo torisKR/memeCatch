@@ -14,5 +14,8 @@ overrides:
 allowBuilds:
   '@reown/appkit': false
   core-js: false
+  # CPU native binaries ship in the tarball; skip optional CUDA downloads.
+  onnxruntime-node: false
+  protobufjs: false
   sharp: false
   unrs-resolver: false

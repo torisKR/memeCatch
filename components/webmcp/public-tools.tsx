@@ -12,7 +12,7 @@ export function PublicWebMcpTools() {
     const controller = new AbortController();
     void registerWebMcpTools(
       modelContext,
-      createPublicWebMcpTools((path) => router.push(path)),
+      createPublicWebMcpTools((path) => router.push(path), controller.signal),
       controller.signal,
     ).catch(() => undefined);
     return () => controller.abort();

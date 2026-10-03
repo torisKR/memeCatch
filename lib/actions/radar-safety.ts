@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -66,6 +67,9 @@ export async function applyRadarSafetyReview(input: {
     if (error) throw new ActionError("안전 등급 검수 처리에 실패했어요.");
     if (applied !== true) {
       return { ok: false, error: "이미 처리된 검수 요청이에요." };
+    }
+    if (parsed.data.decision === "approved") {
+      revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
     }
     revalidatePath("/admin/radar-safety");
     return { ok: true };

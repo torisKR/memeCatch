@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArtifactStudio } from "@/components/studio/artifact-studio";
 import { sanitizeStudioText } from "@/components/studio/meme-artifacts";
 import type { MemeConcept, MemeFormat, MemeTone } from "@/lib/meme-studio.server";
+import { MemeReferenceSearch } from "@/components/meme-reference-search";
 
 const TONE_OPTIONS: { value: MemeTone; label: string; hint: string }[] = [
   { value: "wholesome", label: "다정하게", hint: "따뜻함 · 응원" },
@@ -220,6 +221,7 @@ export function MemeStudioApp({ aiEnabled }: { aiEnabled: boolean }) {
             ? "Ox Alpha 아이디어 생성이 준비되어 있습니다."
             : "기본 템플릿으로 아이디어를 만듭니다."}
         </p>
+        <MemeReferenceSearch query={topic} variant="studio" />
       </section>
 
       <section aria-label="생성된 밈 아이디어" aria-live="polite" aria-busy={loading} className="min-w-0">

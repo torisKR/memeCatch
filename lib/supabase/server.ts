@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/database.types";
 import { createPublicCountFetch } from "@/lib/supabase/public-count-cache";
+import { createPublicCatalogFetch } from "@/lib/supabase/public-catalog-cache";
 
 type RetryConfigurableClient = {
   rest: { retry?: boolean };
@@ -40,8 +41,8 @@ export async function createClient() {
   );
 }
 
-/** 인증 쿠키를 읽지 않는다. 공개 플랫폼 집계만 명시적으로 Data Cache에 넣는다. */
-export function createStaticClient(options: { cachePublicCounts?: boolean } = {}) {
+/** 인증 쿠키 없이 공개 집계/목록만 선택적으로 Data Cache에 넣는다. */
+export function createStaticClient(options: { cachePublicCounts?: boolean; cachePublicCatalog?: boolean } = {}) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const client = createServerClient<Database>(
     supabaseUrl,
@@ -50,6 +51,8 @@ export function createStaticClient(options: { cachePublicCounts?: boolean } = {}
       cookies: { getAll: () => [], setAll: () => {} },
       ...(options.cachePublicCounts ? {
         global: { fetch: createPublicCountFetch(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!) },
+      } : options.cachePublicCatalog ? {
+        global: { fetch: createPublicCatalogFetch(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!) },
       } : {}),
     }
   );

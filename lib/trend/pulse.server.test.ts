@@ -10,8 +10,10 @@ const mocks = vi.hoisted(() => {
     from: vi.fn(() => ({ insert })),
     createConfiguredRadarConnectors: vi.fn(() => ({})),
     runRadarPulse: vi.fn(),
+    revalidateTag: vi.fn(),
   };
 });
+vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({ rpc: mocks.rpc, from: mocks.from }),
@@ -45,6 +47,7 @@ describe("runTrendPulse", () => {
       error: "compute:score failed",
     });
     expect(rpc).toHaveBeenCalledOnce();
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
     expect(from).toHaveBeenCalledWith("job_runs");
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({ job_name: "compute_trend_scores", ok: false }),
@@ -67,6 +70,7 @@ describe("runTrendPulse", () => {
       "fan_out_trend_alerts",
       "fan_out_saved_context_alerts",
     ]);
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
   });
 
   it("keeps legacy fanouts running when configured Radar fails", async () => {
@@ -88,5 +92,11 @@ describe("runTrendPulse", () => {
       "fan_out_trend_alerts",
       "fan_out_saved_context_alerts",
     ]);
+  });
+
+  it("invalidates successful scoring even if later fanout fails", async () => {
+    rpc.mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: { message: "fanout failed" } });
+    await expect(runTrendPulse()).resolves.toMatchObject({ status: "failed", error: "fanout:fanout failed" });
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
   });
 });

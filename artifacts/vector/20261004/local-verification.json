@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Asia/Seoul",
+  "tests": {
+    "files": 379,
+    "passed": 2925,
+    "workerCount": 1
+  },
+  "pythonTests": 12,
+  "modelPreparationTests": 8,
+  "typecheck": "passed",
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 6
+  },
+  "build": {
+    "status": "passed",
+    "database": "local",
+    "workers": 1,
+    "staticPageGeneration": 107,
+    "embeddingTraceBytes": 657448590,
+    "modelIncludedInOtherFunctions": false
+  },
+  "http": {
+    "unsignedEmbeddingStatus": 401,
+    "signedEmbeddingStatus": 200,
+    "dimensions": 384,
+    "pythonCosine": 0.9999999999997045
+  },
+  "browser": {
+    "result": "local-browser.json",
+    "webmcpNativeAiSession": false
+  },
+  "review": {
+    "p0": 0,
+    "p1": 0,
+    "documentationOrderCorrection": "required before commit"
+  },
+  "production": {
+    "migration": "pending",
+    "index": "pending",
+    "deployment": "pending"
+  }
+}

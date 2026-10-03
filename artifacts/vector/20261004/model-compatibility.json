@@ -1,0 +1,41 @@
+{
+  "profile": "multilingual-e5-small-v1",
+  "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "dtype": "fp32",
+  "observations": [
+    {
+      "query": "친구가 옷이나 취향을 그대로 따라 하는 상황",
+      "cosine": 0.9999999999995806,
+      "maxDifference": 1.5459954738616943e-07,
+      "elapsedMs": 1580.519917,
+      "cpuMs": 2263.098,
+      "rssBytes": 1657290752
+    },
+    {
+      "query": "상대가 원치 않는 개인정보를 너무 많이 말하는 상황",
+      "cosine": 0.999999999999704,
+      "maxDifference": 1.1548399925231934e-07,
+      "elapsedMs": 7.6277919999999995,
+      "cpuMs": 8.257,
+      "rssBytes": 1657536512
+    },
+    {
+      "query": "기대한 영상 대신 갑자기 노래로 속이는 링크 장난",
+      "cosine": 0.9999999999996181,
+      "maxDifference": 1.30385160446167e-07,
+      "elapsedMs": 10.799959000000172,
+      "cpuMs": 10.24,
+      "rssBytes": 1654325248
+    },
+    {
+      "query": "관심 없다는 듯 약올리는 유치한 대답",
+      "cosine": 0.9999999999993937,
+      "maxDifference": 1.5273690223693848e-07,
+      "elapsedMs": 10.951458000000002,
+      "cpuMs": 13.765,
+      "rssBytes": 1649737728
+    }
+  ],
+  "cachedElapsedMs": 0.039416999999957625,
+  "maxRssKiB": 1630320
+}

@@ -1,7 +1,24 @@
 .codegraph
-.codex
-.omo
-.env*
 .vercel
 .next
 node_modules
+# 배포 소스에서 로컬 작업물·자격증명·대용량 캐시 제외
+.local/
+.claude/
+.worktrees/
+.omx/
+.omo/
+.codex/
+.agents/
+.aws/
+.pnpm-store/
+.playwright-mcp/
+.playwright-cli/
+.firecrawl/
+.gjc/
+.gstack/
+terraform/
+artifacts/
+output/
+.env*
+*.tsbuildinfo

@@ -9,6 +9,7 @@
  */
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -225,6 +226,7 @@ export async function reviewMemeSource(input: {
     revalidatePath("/admin/sources");
     revalidatePath("/global");
     revalidateTag(PUBLIC_COUNT_CACHE_TAG, { expire: 0 });
+    revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };

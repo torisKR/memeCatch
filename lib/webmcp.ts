@@ -15,8 +15,66 @@ export const WEBMCP_NAV_SECTIONS = {
 const oneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
   typeof value === "string" && allowed.includes(value);
 
-function error(code: string, message: string): WebMcpResult<never> {
-  return { ok: false, error: { code, message, retryable: false } };
+function error(code: string, message: string, retryable = false): WebMcpResult<never> {
+  return { ok: false, error: { code, message, retryable } };
+}
+
+function referenceResult(value: unknown, limit: number): MemeReferenceResult | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if ((record.mode !== "hybrid" && record.mode !== "keyword") || !Array.isArray(record.items)
+    || record.items.length > limit || (record.reason !== undefined
+      && !oneOf(record.reason, ["disabled", "model_unavailable", "index_empty", "rpc_unavailable"]))) return null;
+  const items: MemeReference[] = [];
+  for (const item of record.items) {
+    if (!item || typeof item !== "object") return null;
+    const row = item as Record<string, unknown>;
+    if (typeof row.id !== "string" || !row.id.trim()
+      || typeof row.short_id !== "string" || !/^[A-Za-z0-9]{1,32}$/.test(row.short_id)
+      || typeof row.slug !== "string" || !row.slug.trim()
+      || typeof row.title !== "string" || !row.title.trim() || typeof row.summary !== "string") return null;
+    items.push({ id: row.id, short_id: row.short_id, slug: row.slug, title: row.title, summary: row.summary });
+  }
+  return { mode: record.mode, ...(record.reason === undefined ? {} : { reason: record.reason as MemeReferenceResult["reason"] }), items };
+}
+
+async function searchReferences(
+  input: Record<string, unknown>, executionSignal: AbortSignal, lifecycleSignal?: AbortSignal,
+): Promise<WebMcpResult<MemeReferenceResult>> {
+  if (executionSignal.aborted || lifecycleSignal?.aborted) return error("cancelled", "요청이 취소됐어요.");
+  if (Object.keys(input).some((key) => key !== "query" && key !== "limit")) return error("invalid_input", "검색어와 결과 개수만 입력해 주세요.");
+  const query = typeof input.query === "string" ? input.query.trim() : "";
+  if (query.length < 2 || query.length > 120) return error("invalid_query", "검색어는 2~120자로 입력해 주세요.");
+  const limit = input.limit === undefined ? 12 : input.limit;
+  if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 20) return error("invalid_limit", "결과 개수는 1~20의 정수로 입력해 주세요.");
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  executionSignal.addEventListener("abort", cancel, { once: true });
+  lifecycleSignal?.addEventListener("abort", cancel, { once: true });
+  try {
+    const response = await fetch("/api/memes/semantic-search", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query, limit }), cache: "no-store", redirect: "error", signal: controller.signal,
+    });
+    if (controller.signal.aborted) return error("cancelled", "요청이 취소됐어요.");
+    if (!response.ok) {
+      if (response.status === 429) return error("rate_limited", "검색 요청이 많아요. 잠시 후 다시 시도해 주세요.", true);
+      if (response.status === 403) return error("forbidden", "이 페이지에서는 검색 요청을 사용할 수 없어요.");
+      if (response.status === 400) return error("invalid_query", "검색어와 결과 개수를 확인해 주세요.");
+      return error("search_unavailable", "참고 밈 검색을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.", response.status >= 500);
+    }
+    const value: unknown = await response.json().catch(() => undefined);
+    if (controller.signal.aborted) return error("cancelled", "요청이 취소됐어요.");
+    const data = referenceResult(value, limit);
+    return data ? { ok: true, data } : error("invalid_response", "검색 결과 형식이 올바르지 않아요.");
+  } catch {
+    return controller.signal.aborted
+      ? error("cancelled", "요청이 취소됐어요.")
+      : error("search_unavailable", "참고 밈 검색을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.", true);
+  } finally {
+    executionSignal.removeEventListener("abort", cancel);
+    lifecycleSignal?.removeEventListener("abort", cancel);
+  }
 }
 
 function navigateResult(navigate: (path: string) => void, path: string) {
@@ -24,7 +82,7 @@ function navigateResult(navigate: (path: string) => void, path: string) {
   return { ok: true, data: { navigatedTo: path } } satisfies WebMcpResult<{ navigatedTo: string }>;
 }
 
-export function createPublicWebMcpTools(navigate: (path: string) => void): WebMcpTool[] {
+export function createPublicWebMcpTools(navigate: (path: string) => void, lifecycleSignal?: AbortSignal): WebMcpTool[] {
   return [
     {
       name: "memecatch.navigate",
@@ -61,6 +119,21 @@ export function createPublicWebMcpTools(navigate: (path: string) => void): WebMc
         }
         return navigateResult(navigate, `/search?q=${encodeURIComponent(query.trim())}`);
       },
+    },
+    {
+      name: "memecatch.search_references",
+      title: "상황·의미로 참고 밈 검색",
+      description: "상황이나 의미에 맞는 공개 밈을 검색하고 JSON 결과를 반환합니다. 의미 검색이 준비되지 않으면 이름·별칭 검색 결과를 반환합니다. 참고 자료이며 재사용 권한은 별도로 확인해야 합니다.",
+      inputSchema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          query: { type: "string", minLength: 2, maxLength: 120 },
+          limit: { type: "integer", minimum: 1, maximum: 20, default: 12 },
+        },
+        required: ["query"],
+      },
+      annotations: { readOnlyHint: true, consequentialHint: false, untrustedContentHint: true },
+      execute: async (input, { signal }) => searchReferences(input, signal, lifecycleSignal),
     },
     {
       name: "memecatch.filter_memes",
@@ -137,3 +210,4 @@ export async function registerWebMcpTools(
     await modelContext.registerTool(tool, { signal });
   }
 }
+import type { MemeReference, MemeReferenceResult } from "@/lib/meme-vectors";

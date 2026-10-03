@@ -1,6 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -89,6 +91,8 @@ export async function reviewMpeCandidate(input: {
     revalidatePath("/admin/mpe");
     revalidatePath(`/admin/mpe/${parsed.data.candidateId}`);
     if (parsed.data.stage === "PUBLISH" && ["PUBLISHED", "LIMITED"].includes(parsed.data.decision)) {
+      revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+      revalidateTag(PUBLIC_COUNT_CACHE_TAG, { expire: 0 });
       revalidatePath("/global");
     }
     return { ok: true };

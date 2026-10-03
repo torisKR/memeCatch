@@ -4,10 +4,11 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   createAdminClient: vi.fn(),
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, revalidateTag: mocks.revalidateTag }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
@@ -73,6 +74,8 @@ describe("MPE admin actions", () => {
       p_decision: "LIMITED",
       p_reason: "권리 범위 제한",
     });
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-social-platform-counts", { expire: 0 });
   });
 
   it("blocks stage skipping before calling the RPC", async () => {

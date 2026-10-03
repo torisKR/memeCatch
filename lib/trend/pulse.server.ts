@@ -1,4 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { createConfiguredRadarConnectors } from "@/lib/trend/radar-platform-connectors.server";
 import { runRadarPulse, type RadarPulseResult } from "@/lib/trend/radar-pulse.server";
 import { createRadarRepository } from "@/lib/trend/radar-repository.server";
@@ -48,6 +50,7 @@ export async function runTrendPulse(): Promise<TrendPulseResult> {
     };
   }
 
+  revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
   const connectors = createConfiguredRadarConnectors();
   let radar: (RadarPulseResult & { error?: string }) | undefined;
   if (Object.keys(connectors).length) {

@@ -8,6 +8,7 @@ import { StatusPanel } from "@/components/status-panel";
 import { TrackedBlock } from "@/components/tracked-block";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { SearchInput } from "./search-input";
+import { MemeReferenceSearch } from "@/components/meme-reference-search";
 
 const SEARCH_DESCRIPTION =
   "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
@@ -52,6 +53,7 @@ export default async function SearchPage({ searchParams }: Props) {
       <div className="relative mt-5">
         <SearchInput initialQuery={query} popularTerms={popularTerms} />
       </div>
+      {query && <MemeReferenceSearch query={query} variant="search" />}
 
       {/* 검색 성공률 계측 — 결과가 실제로 렌더된 시점 기준(입력 중간 상태 제외) */}
       <SearchOutcomeTracker query={query} resultCount={results.length} />

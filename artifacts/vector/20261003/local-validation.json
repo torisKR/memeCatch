@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-03",
+  "scope": "local implementation and validation; no production migration or activation",
+  "model": {
+    "id": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "profile": "multilingual-e5-small-v1",
+    "dimensions": 384,
+    "max_tokens": 512,
+    "document_max_chars": 6900,
+    "compute": "existing Python environment; CPU one thread"
+  },
+  "database": {
+    "local_existing_meme_rows": 22,
+    "local_public_indexed": 17,
+    "companion_total_bytes": 90112,
+    "first_index": {
+      "indexed": 17,
+      "stale": 0
+    },
+    "repeat_index": {
+      "indexed": 0,
+      "stale": 0
+    },
+    "new_local_migration_record": "20261003123428",
+    "production_modified": false
+  },
+  "tests": {
+    "vitest": {
+      "files": 376,
+      "tests": 2801,
+      "passed": true,
+      "workers": 1
+    },
+    "python": {
+      "tests": 5,
+      "passed": true
+    },
+    "sql": {
+      "passed": true,
+      "fixtures_rolled_back": true
+    },
+    "typecheck": true,
+    "changed_file_lint": true,
+    "diff_check": true,
+    "production_build": {
+      "passed": true,
+      "static_pages": 106,
+      "workers": 1,
+      "warnings": [
+        "existing metadataBase warning"
+      ]
+    }
+  },
+  "korean_quality": {
+    "local_public_documents": 17,
+    "queries": 4,
+    "keyword_results_each": 0,
+    "hybrid_expected_top5": 4,
+    "hybrid_expected_top1": 3,
+    "expected": [
+      {
+        "title": "손민수",
+        "rank": 2
+      },
+      {
+        "title": "TMI 태그",
+        "rank": 1
+      },
+      {
+        "title": "Never Gonna Give You Up (릭롤)",
+        "rank": 1
+      },
+      {
+        "title": "어쩔티비",
+        "rank": 1
+      }
+    ],
+    "note": "small exploratory fixture evaluation; not production accuracy or throughput benchmark"
+  },
+  "browser": {
+    "engine": "dedicated Chromium 152",
+    "explicit_search": true,
+    "cancel_late_response": true,
+    "studio_query_reset": true,
+    "rights_note": true,
+    "admin_login_boundary": true,
+    "actual_provider_outage_keyword_fallback": true,
+    "stored_vector_related_without_model": true,
+    "unsupported_webmcp_fallback": true,
+    "webmcp_registration_shim_real_api": true,
+    "native_ai_session_tested": false,
+    "external_images_ads_media_and_other_writes_blocked": true,
+    "report_calculator": true
+  },
+  "cleanup": {
+    "qa_app_port4106_stopped": true,
+    "qa_model_port8766_stopped": true,
+    "other_projects_or_services_changed": false
+  },
+  "blockers": [
+    "Production requires an existing reachable HTTPS embedding endpoint with identical fixed model/profile, prefixes, pooling and dimensions.",
+    "Production migration/backfill/activation and deployment remain pending."
+  ]
+}

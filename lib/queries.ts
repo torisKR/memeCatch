@@ -1,11 +1,12 @@
 /**
  * 레인 B — 공개 화면 읽기 쿼리 모음.
- * 전부 인증 쿠키 없는 createStaticClient 기반이지만, 이 선택 자체는 데이터를 캐시하지 않는다.
+ * 인증 쿠키 없는 createStaticClient 기반. 공개 목록/검색만 60초 Data Cache에 옵트인한다.
  * React cache로 감싼 함수만 한 번의 서버 렌더 요청 안에서 중복 호출을 제거한다.
  * 쓰기는 절대 여기서 하지 않는다(쓰기는 RPC — 클라이언트 컴포넌트에서 호출).
  */
 import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
+import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
 import type { Audience } from "@/lib/meme-commerce";
@@ -65,7 +66,7 @@ export const LIST_SELECT =
 /** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
   try {
-    const supabase = createStaticClient();
+    const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
       .select(LIST_SELECT)
@@ -90,7 +91,7 @@ export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
  */
 export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
   try {
-    const supabase = createStaticClient();
+    const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
       .select(LIST_SELECT)
@@ -110,7 +111,7 @@ export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
 /** Newly published records, distinct from origin-year/trend-based recommendations. */
 export async function getRecentlyPublishedMemes(limit = 6): Promise<MemeListItem[]> {
   try {
-    const supabase = createStaticClient();
+    const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
       .select(LIST_SELECT)
@@ -128,7 +129,7 @@ export async function getRecentlyPublishedMemes(limit = 6): Promise<MemeListItem
 /** 지금 알아도 충분한 밈 — difficulty=beginner */
 export async function getBeginnerMemes(limit = 8): Promise<MemeListItem[]> {
   try {
-    const supabase = createStaticClient();
+    const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
       .select(LIST_SELECT)
@@ -231,7 +232,8 @@ export const getMemeByShortId = cache(
 /** 관련 밈 — 같은 태그 우선, 부족하면 같은 카테고리에서 연도 근접순으로 채움 (최대 4개) */
 /**
  * 관련 밈 — CEO 플랜 Wave 1 스코어링:
- *   태그 공유 여부×3 + 동일 카테고리×2 + |연도차|≤2×1, 동점 시 trend_score 내림차순.
+ *   태그 공유 여부×3 + 동일 카테고리×2 + 의미 후보×2 + |연도차|≤2×1,
+ *   동점 시 trend_score 내림차순. 의미 검색 미설정 시 기존 점수를 유지한다.
  * 후보 풀: 태그 공유 밈(최대 30) ∪ 동일 카테고리 상위 24 ∪ 연도 인접(±2) 상위 12.
  */
 export async function getRelatedMemes(
@@ -242,6 +244,18 @@ export async function getRelatedMemes(
   try {
     const supabase = createStaticClient();
     const taggedIds = new Set<string>();
+    const semanticIds = new Set<string>();
+    const semanticPromise = (async (): Promise<MemeListItem[] | null> => {
+      try {
+        const ids = await getSemanticRelatedMemeIds(meme.id, limit);
+        if (!ids.length) return null;
+        const { data, error } = await supabase.from("memes").select(LIST_SELECT)
+          .in("id", ids).in("moderation_status", [...PUBLIC_STATUSES]);
+        if (error) return null;
+        for (const id of ids) semanticIds.add(id);
+        return data as MemeListItem[] | null;
+      } catch { return null; }
+    })();
 
     // 태그맵→태그밈 2단계 체인만 진짜 의존 관계 — 체인을 async IIFE로 묶어
     // sameCat·nearYear 조회와 병렬 실행한다(직렬 4회 → 병렬, 대기 시간 단축).
@@ -291,10 +305,11 @@ export async function getRelatedMemes(
       return data as MemeListItem[] | null;
     })();
 
-    const [tagged, sameCat, nearYear] = await Promise.all([
+    const [tagged, sameCat, nearYear, semantic] = await Promise.all([
       taggedPromise,
       sameCatPromise,
       nearYearPromise,
+      semanticPromise,
     ]);
 
     // 병합 순서는 기존 직렬 버전과 동일하게 유지: 태그밈 → 동일 카테고리 → 연도 인접
@@ -305,10 +320,12 @@ export async function getRelatedMemes(
     collect(tagged);
     collect(sameCat);
     collect(nearYear);
+    collect(semantic);
 
     const score = (m: MemeListItem) =>
       (taggedIds.has(m.id) ? 3 : 0) +
       (m.category === meme.category ? 2 : 0) +
+      (semanticIds.has(m.id) ? 2 : 0) +
       (meme.origin_year != null &&
       m.origin_year != null &&
       Math.abs(m.origin_year - meme.origin_year) <= 2
@@ -350,13 +367,14 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
   const q = query.trim();
   if (!q) return [];
   try {
-    const supabase = createStaticClient();
+    const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .rpc("search_memes", {
         p_query: q,
         p_limit: limit,
-      })
-      .select(LIST_SELECT);
+      }, { get: true })
+      .select(LIST_SELECT)
+      .in("moderation_status", [...PUBLIC_STATUSES]);
     if (error || !data) return [];
     return data as MemeListItem[];
   } catch {
@@ -387,7 +405,7 @@ export async function getSlangTermsByYearRange(
   limit = 60
 ): Promise<SlangTermRow[]> {
   try {
-    const supabase = createStaticClient();
+    const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
       .select(

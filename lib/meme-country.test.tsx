@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 
 const createStaticClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
@@ -87,7 +88,8 @@ describe("meme country display", () => {
   });
 
   it("loads the reviewed origin relation for search result cards", async () => {
-    const select = vi.fn().mockResolvedValue({ data: [meme], error: null });
+    const publicFilter = vi.fn().mockResolvedValue({ data: [meme], error: null });
+    const select = vi.fn(() => ({ in: publicFilter }));
     const rpc = vi.fn(() => ({ select }));
     createStaticClient.mockReturnValue({ rpc });
 
@@ -96,8 +98,9 @@ describe("meme country display", () => {
     expect(rpc).toHaveBeenCalledWith("search_memes", {
       p_query: "미국 밈",
       p_limit: 20,
-    });
+    }, { get: true });
     expect(select).toHaveBeenCalledWith(LIST_SELECT);
+    expect(publicFilter).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
     expect(results[0]?.meme_market_profiles?.[0]?.market_code).toBe("US");
   });
 });

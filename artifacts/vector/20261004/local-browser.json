@@ -1,0 +1,11 @@
+{
+  "unsupported_browser_fallback": true,
+  "search_hybrid_explicit_only": true,
+  "search_top_title": "TMI 태그",
+  "rights_note": true,
+  "cancel_ignores_late_response": true,
+  "studio_explicit_search_and_query_reset": true,
+  "admin_login_boundary": true,
+  "webmcp_real_api_via_registered_tool": true,
+  "webmcp_model_context": "registration shim; no native AI session"
+}

@@ -8,6 +8,7 @@
  */
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -134,6 +135,7 @@ async function loadMemeRevalidationIdentity(
 /** 한국어 원문/공개 상태를 소비하는 모든 public artifact를 즉시 갱신한다. */
 function revalidateCanonicalMemePaths(meme: MemeRevalidationIdentity | null) {
   revalidateTag(PUBLIC_COUNT_CACHE_TAG, { expire: 0 });
+  revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
   const paths = new Set(["/", "/sitemap.xml", "/llms.txt", "/llms-full.txt"]);
 
   for (const locale of SEO_CONTENT_LOCALES) {

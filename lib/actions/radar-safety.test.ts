@@ -5,9 +5,10 @@ const mocks = vi.hoisted(() => ({
   isOperator: vi.fn(),
   rpc: vi.fn(),
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, revalidateTag: mocks.revalidateTag }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mocks.getUser },
@@ -77,6 +78,7 @@ describe("applyRadarSafetyReview", () => {
       p_review_note: "증거 원문 확인 완료",
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/radar-safety");
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
   });
 
   it("does not audit or revalidate an already handled review", async () => {
@@ -90,5 +92,6 @@ describe("applyRadarSafetyReview", () => {
 
     expect(result).toEqual({ ok: false, error: "이미 처리된 검수 요청이에요." });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
   });
 });

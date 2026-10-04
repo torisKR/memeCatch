@@ -50,6 +50,7 @@ beforeEach(async () => {
   mocks.fetch.mockRejectedValue(new Error("Network access is forbidden in this unit test"));
   vi.stubGlobal("fetch", mocks.fetch);
   vi.stubEnv("MEME_EMBEDDING_RUNTIME", "bundled");
+  vi.stubEnv("VERCEL", "");
   now = 1_791_061_200_000;
   vi.spyOn(Date, "now").mockImplementation(() => now);
   runtime = await import("./meme-embedding-runtime.server");
@@ -228,4 +229,137 @@ describe("bundled FP32 embedding runtime", () => {
     expect(mocks.extractor).toHaveBeenCalledTimes(2);
     expect(mocks.pipeline).toHaveBeenCalledOnce();
   });
+});
+
+describe("internal catalog passage embeddings", () => {
+  const document = "밈 제목 기원과 사용 사례를 설명하는 원문";
+
+  it.each(["", "remote", undefined])("does not load assets when the bundled runtime is disabled", async (mode) => {
+    vi.stubEnv("MEME_EMBEDDING_RUNTIME", mode);
+    expect(await runtime.embedBundledMemePassage(document)).toBeNull();
+    expect(mocks.readFile).not.toHaveBeenCalled();
+    expect(mocks.pipeline).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["", " ", "\t\n", "\u00a0", "일".repeat(6901), "😀".repeat(6901)])(
+    "rejects blank or oversized SQL documents before loading", async (value) => {
+      expect(await runtime.embedBundledMemePassage(value)).toBeNull();
+      expect(mocks.readFile).not.toHaveBeenCalled();
+      expect(mocks.pipeline).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["밈", "일".repeat(6900), "😀".repeat(6900)])(
+    "accepts nonblank documents within the 6900 Unicode codepoint bound", async (value) => {
+      expect(await runtime.embedBundledMemePassage(value)).toEqual(vector());
+      expect(mocks.extractor).toHaveBeenCalledExactlyOnceWith(`passage: ${value}`, { pooling: "mean", normalize: true });
+    },
+  );
+
+  it("uses the pinned query pipeline while preserving exact document text with the E5 passage prefix", async () => {
+    const exact = "  Ａ 밈 기원\n사용 사례  ";
+    expect(await runtime.embedBundledMemePassage(exact)).toEqual(vector());
+    expect(mocks.pipeline).toHaveBeenCalledExactlyOnceWith("feature-extraction", model, {
+      local_files_only: true, revision, device: "cpu", dtype: "fp32",
+      session_options: {
+        intraOpNumThreads: 1, interOpNumThreads: 1,
+        executionMode: "sequential", graphOptimizationLevel: "all",
+      },
+    });
+    expect(mocks.extractor.tokenizer.model_max_length).toBe(512);
+    expect(mocks.extractor).toHaveBeenCalledExactlyOnceWith(`passage: ${exact}`, { pooling: "mean", normalize: true });
+    expect(mocks.env.allowRemoteModels).toBe(false);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not cache successful passages between indexing calls", async () => {
+    const first = await runtime.embedBundledMemePassage(document);
+    first![0] = 0;
+    expect(await runtime.embedBundledMemePassage(document)).toEqual(vector());
+    expect(mocks.extractor).toHaveBeenCalledTimes(2);
+    expect(mocks.pipeline).toHaveBeenCalledOnce();
+  });
+
+  it("deduplicates identical passages only while in flight and gives each caller its own vector", async () => {
+    const read = deferred<string>();
+    mocks.readFile.mockReturnValueOnce(read.promise);
+    const first = runtime.embedBundledMemePassage(document);
+    const duplicate = runtime.embedBundledMemePassage(document);
+    expect(mocks.readFile).toHaveBeenCalledOnce();
+    read.resolve(JSON.stringify(manifest()));
+    const [a, b] = await Promise.all([first, duplicate]);
+    expect(a).toEqual(vector());
+    expect(b).toEqual(vector());
+    expect(a).not.toBe(b);
+    a![0] = 0;
+    expect(b).toEqual(vector());
+    expect(mocks.extractor).toHaveBeenCalledOnce();
+    await runtime.embedBundledMemePassage(document);
+    expect(mocks.extractor).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["query", "passage"])("shares one in-flight CPU slot when %s work is active", async (active) => {
+    const inference = deferred<ReturnType<typeof output>>();
+    mocks.extractor.mockReturnValueOnce(inference.promise);
+    const first = active === "query"
+      ? runtime.embedBundledMemeInput(input) : runtime.embedBundledMemePassage(document);
+    await vi.waitFor(() => expect(mocks.extractor).toHaveBeenCalledOnce());
+    expect(await runtime.embedBundledMemePassage("다른 원문")).toBeNull();
+    expect(await runtime.embedBundledMemeInput("query: 다른 검색")).toBeNull();
+    inference.resolve(output());
+    expect(await first).toEqual(vector());
+    expect(await runtime.embedBundledMemePassage("다른 원문")).toEqual(vector());
+    expect(mocks.pipeline).toHaveBeenCalledOnce();
+    expect(mocks.extractor).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps query and passage prefixes and cached results separate", async () => {
+    const text = "일상 업무";
+    expect(await runtime.embedBundledMemeInput(`query: ${text}`)).toEqual(vector());
+    expect(await runtime.embedBundledMemePassage(text)).toEqual(vector());
+    expect(await runtime.embedBundledMemeInput(`query: ${text}`)).toEqual(vector());
+    expect(await runtime.embedBundledMemePassage(text)).toEqual(vector());
+    expect(mocks.extractor.mock.calls.map(([value]) => value)).toEqual([
+      `query: ${text}`, `passage: ${text}`, `passage: ${text}`,
+    ]);
+    expect(mocks.pipeline).toHaveBeenCalledOnce();
+    expect(await runtime.embedBundledMemeInput(`passage: ${text}`)).toBeNull();
+  });
+
+  it("does not evict cached queries while processing more than 64 unique passages", async () => {
+    await runtime.embedBundledMemeInput(input);
+    for (let index = 0; index < 65; index++) await runtime.embedBundledMemePassage(`색인 원문 ${index}`);
+    await runtime.embedBundledMemeInput(input);
+    expect(mocks.extractor).toHaveBeenCalledTimes(66);
+  });
+
+  it("clears failed passage work so a new passage or query can retry", async () => {
+    mocks.extractor.mockRejectedValueOnce(new Error("private native path")).mockResolvedValue(output());
+    expect(await runtime.embedBundledMemePassage(document)).toBeNull();
+    expect(await runtime.embedBundledMemeInput(input)).toEqual(vector());
+    expect(await runtime.embedBundledMemePassage(document)).toEqual(vector());
+    expect(mocks.extractor).toHaveBeenCalledTimes(3);
+    expect(mocks.pipeline).toHaveBeenCalledOnce();
+  });
+
+  it("shares the existing 30-second initialization backoff across passage and query work", async () => {
+    mocks.pipeline.mockRejectedValueOnce(new Error("native initialization unavailable"));
+    expect(await runtime.embedBundledMemePassage(document)).toBeNull();
+    now += 29_999;
+    expect(await runtime.embedBundledMemeInput(input)).toBeNull();
+    expect(mocks.pipeline).toHaveBeenCalledOnce();
+    now += 1;
+    expect(await runtime.embedBundledMemePassage(document)).toEqual(vector());
+    expect(mocks.pipeline).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([null, undefined, [], [1], Array(384).fill(0), Array(384).fill(Infinity)].map((embedding) => ({ embedding })))(
+    "rejects invalid passage vectors and releases the in-flight slot", async ({ embedding }) => {
+      mocks.extractor.mockResolvedValueOnce({ tolist: () => [embedding] }).mockResolvedValueOnce(output());
+      expect(await runtime.embedBundledMemePassage(document)).toBeNull();
+      expect(await runtime.embedBundledMemePassage(document)).toEqual(vector());
+      expect(mocks.extractor).toHaveBeenCalledTimes(2);
+    },
+  );
 });

@@ -61,13 +61,26 @@ export async function embedBundledMemeInput(input: string): Promise<number[] | n
   if (process.env.MEME_EMBEDDING_RUNTIME !== "bundled" || !input.startsWith("query: ")) return null;
   const query = input.slice(7);
   if (query.length < 2 || query.length > 120 || query !== query.normalize("NFKC").trim()) return null;
-  const cached = cache.get(input);
-  if (cached && cached.expires > Date.now()) {
+  return runBundledMemeInput(input, true);
+}
+
+/** Internal catalog indexing only; callers supply the exact SQL document, never a prefixed input. */
+export async function embedBundledMemePassage(document: string): Promise<number[] | null> {
+  if (process.env.MEME_EMBEDDING_RUNTIME !== "bundled"
+    || !document.trim() || Array.from(document).length > 6900) return null;
+  return runBundledMemeInput(`passage: ${document}`, false);
+}
+
+async function runBundledMemeInput(input: string, cacheQuery: boolean): Promise<number[] | null> {
+  if (cacheQuery) {
+    const cached = cache.get(input);
+    if (cached && cached.expires > Date.now()) {
+      cache.delete(input);
+      cache.set(input, cached);
+      return [...cached.vector];
+    }
     cache.delete(input);
-    cache.set(input, cached);
-    return [...cached.vector];
   }
-  cache.delete(input);
   if (pending.has(input)) return pending.get(input)!.then((vector) => vector ? [...vector] : null);
   if (pending.size >= 1) return null;
   const operation = (async () => {
@@ -76,8 +89,10 @@ export async function embedBundledMemeInput(input: string): Promise<number[] | n
       const output = await extractor(input, { pooling: "mean", normalize: true });
       const vector: unknown = output.tolist()[0];
       if (!isMemeVector(vector)) return null;
-      cache.set(input, { vector: [...vector], expires: Date.now() + 300_000 });
-      while (cache.size > 64) cache.delete(cache.keys().next().value!);
+      if (cacheQuery) {
+        cache.set(input, { vector: [...vector], expires: Date.now() + 300_000 });
+        while (cache.size > 64) cache.delete(cache.keys().next().value!);
+      }
       return vector;
     } catch { return null; }
   })().finally(() => pending.delete(input));

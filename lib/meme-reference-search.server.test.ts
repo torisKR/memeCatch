@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ keyword: vi.fn(), embed: vi.fn(), enabled: vi.fn(), rpc: vi.fn(), from: vi.fn() }));
+const mocks = vi.hoisted(() => ({ keyword: vi.fn(), embed: vi.fn(), enabled: vi.fn(), rpc: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/queries", () => ({ searchMemes: mocks.keyword }));
 vi.mock("@/lib/meme-vector-lookup.server", () => ({ embedMemeQuery: mocks.embed, semanticSearchEnabled: mocks.enabled }));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient: () => ({ rpc: mocks.rpc, from: mocks.from }) }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient: () => ({ rpc: mocks.rpc }) }));
 import { searchMemeReferences } from "./meme-reference-search.server";
 
 const row = (id: string) => ({ id, short_id: id, slug: id, title: id, summary: "요약" });
@@ -21,6 +21,7 @@ describe("public meme reference retrieval", () => {
     }
     expect(mocks.keyword).not.toHaveBeenCalled();
     expect(mocks.embed).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
   it("keeps lexical retrieval and a minimal DTO when disabled", async () => {
     mocks.enabled.mockReturnValue(false);
@@ -41,21 +42,16 @@ describe("public meme reference retrieval", () => {
     mocks.rpc.mockResolvedValue(reply);
     expect(await searchMemeReferences("일상")).toEqual({ mode: "keyword", reason, items: [row("keyword")] });
   });
-  it("rereads public metadata, preserves SQL rank, and fuses both rankings", async () => {
-    mocks.keyword.mockResolvedValue([row("both"), row("keyword")]);
-    mocks.rpc.mockResolvedValue({ data: [{ meme_id: "semantic" }, { meme_id: "both" }, { meme_id: "hidden" }], error: null });
-    const filters = vi.fn().mockReturnThis();
-    const chain = { select: vi.fn().mockReturnThis(), in: filters, then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [row("both"), row("semantic")], error: null }).then(resolve) };
-    mocks.from.mockReturnValue(chain);
-    const result = await searchMemeReferences("일상", 3);
-    expect(result.mode).toBe("hybrid");
-    expect(result.items.map((item) => item.id)).toEqual(["both", "semantic", "keyword"]);
-    expect(filters).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
-    expect(chain.select).toHaveBeenCalledWith("id,short_id,slug,title,summary");
-    expect(result.items.some((item) => item.id === "hidden")).toBe(false);
+  it("preserves SQL rank, strips extra fields, and uses one database request", async () => {
+    mocks.rpc.mockResolvedValue({ data: [row("intent"), { ...row("name"), private_note: "never return", embedding: [1] }], error: null });
+    expect(await searchMemeReferences("  친구 취향 따라하기  ", 2)).toEqual({ mode: "hybrid", items: [row("intent"), row("name")] });
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("search_meme_references", {
+      p_query: "친구 취향 따라하기", p_embedding: [1, ...Array(383).fill(0)], p_limit: 2,
+    });
+    expect(mocks.keyword).not.toHaveBeenCalled();
   });
-  it("returns keyword results if SQL throws", async () => {
+  it("returns keyword results if SQL throws without exposing diagnostics", async () => {
     mocks.rpc.mockRejectedValue(new Error("private diagnostic"));
-    expect((await searchMemeReferences("일상")).reason).toBe("rpc_unavailable");
+    expect(await searchMemeReferences("일상")).toEqual({ mode: "keyword", reason: "rpc_unavailable", items: [row("keyword")] });
   });
 });

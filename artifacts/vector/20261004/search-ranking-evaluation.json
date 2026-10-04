@@ -1,0 +1,3910 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-10-04T00:58:04Z",
+  "model": {
+    "name": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "profile": "multilingual-e5-small-v1",
+    "dimensions": 384
+  },
+  "snapshot": {
+    "captured_at_utc": "2026-10-04T00:53:44Z",
+    "public_rows": 4378,
+    "fixture_sha256": "0f90f03d8e4f90e55c35c2201a3fa48a68f026e0852adb83a58f7d37adcf016a"
+  },
+  "evaluation": {
+    "queries": 48,
+    "dev": 24,
+    "holdout": 24,
+    "target_disjoint_splits": true,
+    "labels": "Agent-authored provisional relevant sets; duplicate public definitions accepted; no independent human relevance review.",
+    "recall_at_20_scope": "Fused ranking before final display cap12; hit_at_12 records display-cap success.",
+    "selection": "Selected only on dev nDCG@5 then MRR@10/Recall@20; ties prefer weight1 then k20.",
+    "selection_frozen_at_utc": "2026-10-04T00:58:04Z",
+    "natural_intents_per_split": 12,
+    "named_forms_per_split": 12,
+    "holdout_variants_reported": "Baseline and one dev-selected token variant only; do not retune on holdout.",
+    "query_inference_reused_across_variants": true
+  },
+  "scorer": {
+    "token_cap": 12,
+    "stopwords": [
+      "같은",
+      "것",
+      "그냥",
+      "너무",
+      "누가",
+      "때",
+      "뜻",
+      "많이",
+      "말",
+      "밈",
+      "사람",
+      "상황",
+      "수",
+      "어떤",
+      "어떻게",
+      "없는",
+      "이렇게",
+      "있는",
+      "정말",
+      "찾기",
+      "찾아",
+      "추천",
+      "하고",
+      "하는",
+      "하는데",
+      "행동"
+    ],
+    "particles": [
+      "으로",
+      "에서",
+      "에게",
+      "한테",
+      "처럼",
+      "까지",
+      "부터",
+      "보다",
+      "라고",
+      "하고",
+      "와",
+      "과",
+      "을",
+      "를",
+      "은",
+      "는",
+      "이",
+      "가",
+      "의",
+      "에",
+      "도",
+      "만"
+    ],
+    "field_weights": {
+      "title_or_alias": 3,
+      "summary": 2,
+      "description_or_origin_or_usage_note": 1
+    },
+    "document_caps": {
+      "description": 3000,
+      "origin": 1500,
+      "usage_note": 1000
+    },
+    "name_priority": "2 exact compact title/alias; 1 literal compact contains or raw initial consonants; pins before RRF"
+  },
+  "dev_variants": {
+    "baseline_limit12_rrf60": {
+      "all": {
+        "mrr_at_10": 0.547619,
+        "ndcg_at_5": 0.552577,
+        "recall_at_20": 0.625,
+        "hit_at_12": 0.625
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.220238,
+        "ndcg_at_5": 0.219244,
+        "recall_at_20": 0.333333,
+        "hit_at_12": 0.333333
+      },
+      "named_forms": {
+        "mrr_at_10": 0.875,
+        "ndcg_at_5": 0.885911,
+        "recall_at_20": 0.916667,
+        "hit_at_12": 0.916667
+      }
+    },
+    "overfetch_rrf60": {
+      "all": {
+        "mrr_at_10": 0.547619,
+        "ndcg_at_5": 0.552577,
+        "recall_at_20": 0.666667,
+        "hit_at_12": 0.625
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.220238,
+        "ndcg_at_5": 0.219244,
+        "recall_at_20": 0.416667,
+        "hit_at_12": 0.333333
+      },
+      "named_forms": {
+        "mrr_at_10": 0.875,
+        "ndcg_at_5": 0.885911,
+        "recall_at_20": 0.916667,
+        "hit_at_12": 0.916667
+      }
+    },
+    "tokens_pins_rrf20_lex0.75": {
+      "all": {
+        "mrr_at_10": 0.588194,
+        "ndcg_at_5": 0.607475,
+        "recall_at_20": 0.833333,
+        "hit_at_12": 0.791667
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.259722,
+        "ndcg_at_5": 0.276461,
+        "recall_at_20": 0.666667,
+        "hit_at_12": 0.583333
+      },
+      "named_forms": {
+        "mrr_at_10": 0.916667,
+        "ndcg_at_5": 0.938488,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    },
+    "tokens_pins_rrf20_lex1": {
+      "all": {
+        "mrr_at_10": 0.592824,
+        "ndcg_at_5": 0.607475,
+        "recall_at_20": 0.833333,
+        "hit_at_12": 0.833333
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.268981,
+        "ndcg_at_5": 0.276461,
+        "recall_at_20": 0.666667,
+        "hit_at_12": 0.666667
+      },
+      "named_forms": {
+        "mrr_at_10": 0.916667,
+        "ndcg_at_5": 0.938488,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    },
+    "tokens_pins_rrf20_lex1.25": {
+      "all": {
+        "mrr_at_10": 0.587202,
+        "ndcg_at_5": 0.607475,
+        "recall_at_20": 0.833333,
+        "hit_at_12": 0.833333
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.257738,
+        "ndcg_at_5": 0.276461,
+        "recall_at_20": 0.666667,
+        "hit_at_12": 0.666667
+      },
+      "named_forms": {
+        "mrr_at_10": 0.916667,
+        "ndcg_at_5": 0.938488,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    },
+    "tokens_pins_rrf60_lex0.75": {
+      "all": {
+        "mrr_at_10": 0.602083,
+        "ndcg_at_5": 0.633763,
+        "recall_at_20": 0.791667,
+        "hit_at_12": 0.791667
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.2875,
+        "ndcg_at_5": 0.329038,
+        "recall_at_20": 0.583333,
+        "hit_at_12": 0.583333
+      },
+      "named_forms": {
+        "mrr_at_10": 0.916667,
+        "ndcg_at_5": 0.938488,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    },
+    "tokens_pins_rrf60_lex1": {
+      "all": {
+        "mrr_at_10": 0.606713,
+        "ndcg_at_5": 0.633763,
+        "recall_at_20": 0.833333,
+        "hit_at_12": 0.833333
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.296759,
+        "ndcg_at_5": 0.329038,
+        "recall_at_20": 0.666667,
+        "hit_at_12": 0.666667
+      },
+      "named_forms": {
+        "mrr_at_10": 0.916667,
+        "ndcg_at_5": 0.938488,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    },
+    "tokens_pins_rrf60_lex1.25": {
+      "all": {
+        "mrr_at_10": 0.602083,
+        "ndcg_at_5": 0.633763,
+        "recall_at_20": 0.791667,
+        "hit_at_12": 0.791667
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.2875,
+        "ndcg_at_5": 0.329038,
+        "recall_at_20": 0.583333,
+        "hit_at_12": 0.583333
+      },
+      "named_forms": {
+        "mrr_at_10": 0.916667,
+        "ndcg_at_5": 0.938488,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    }
+  },
+  "selected_variant": {
+    "name": "tokens_pins_rrf60_lex1",
+    "source": "tokens",
+    "limit": 40,
+    "k": 60,
+    "weight": 1.0,
+    "pins": true,
+    "original_ties": false
+  },
+  "holdout": {
+    "baseline": {
+      "all": {
+        "mrr_at_10": 0.488013,
+        "ndcg_at_5": 0.499678,
+        "recall_at_20": 0.708333,
+        "hit_at_12": 0.708333
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.103009,
+        "ndcg_at_5": 0.124357,
+        "recall_at_20": 0.416667,
+        "hit_at_12": 0.416667
+      },
+      "named_forms": {
+        "mrr_at_10": 0.873016,
+        "ndcg_at_5": 0.875,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    },
+    "selected": {
+      "all": {
+        "mrr_at_10": 0.577778,
+        "ndcg_at_5": 0.594244,
+        "recall_at_20": 0.791667,
+        "hit_at_12": 0.75
+      },
+      "natural_intents": {
+        "mrr_at_10": 0.266667,
+        "ndcg_at_5": 0.304059,
+        "recall_at_20": 0.583333,
+        "hit_at_12": 0.5
+      },
+      "named_forms": {
+        "mrr_at_10": 0.888889,
+        "ndcg_at_5": 0.884429,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0
+      }
+    }
+  },
+  "targets": {
+    "tmi": [
+      {
+        "id": "bb1092a2-03e0-480c-b7ea-88fffced6930",
+        "title": "TMI"
+      }
+    ],
+    "sonminsu": [
+      {
+        "id": "c2aa793f-c292-402c-a276-61846b44b168",
+        "title": "손민수(하다)"
+      }
+    ],
+    "gapbunsSa": [
+      {
+        "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+        "title": "갑분싸"
+      }
+    ],
+    "gatsaeng": [
+      {
+        "id": "c13f4398-f06c-4b6e-9a58-ba46a4b43c6b",
+        "title": "갓생"
+      }
+    ],
+    "flex": [
+      {
+        "id": "1cb92516-676f-4049-879e-1e02ebfd5472",
+        "title": "플렉스"
+      },
+      {
+        "id": "bd044371-59e1-417f-8209-4cf93069c7c2",
+        "title": "플렉스 (Flex)"
+      }
+    ],
+    "chwijon": [
+      {
+        "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+        "title": "취존"
+      }
+    ],
+    "eojjeltv": [
+      {
+        "id": "2b710e30-2681-4b5d-a944-d0e057e9e3af",
+        "title": "어쩔티비 저쩔티비"
+      }
+    ],
+    "kingbad": [
+      {
+        "id": "7c937fce-a65d-4003-9ac3-c77fe694d98d",
+        "title": "킹받네"
+      },
+      {
+        "id": "c9ae0e8f-e0ab-4ba5-aabe-e78fcd351a77",
+        "title": "킹받다"
+      }
+    ],
+    "sbuljae": [
+      {
+        "id": "4ac44118-2802-4a40-8cc6-d1f15a568122",
+        "title": "스불재"
+      }
+    ],
+    "naeronambul": [
+      {
+        "id": "40f1ba71-8b93-4561-a4ad-d602bf5252b0",
+        "title": "내로남불"
+      }
+    ],
+    "jungkkukma": [
+      {
+        "id": "bf3cdc61-3fc9-48a3-8957-9ccd43e3c28f",
+        "title": "중꺾마"
+      }
+    ],
+    "joddaetgoal": [
+      {
+        "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+        "title": "좋댓구알"
+      }
+    ]
+  },
+  "query_results": [
+    {
+      "id": "tmi-1",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "literal",
+      "query": "TMI",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "bb1092a2-03e0-480c-b7ea-88fffced6930",
+            "title": "TMI"
+          },
+          {
+            "id": "422e39b3-8e54-4268-be5e-fa0795c70b42",
+            "title": "Don&#039;t Start Now"
+          },
+          {
+            "id": "5defe0c3-58ef-4d75-b7c0-bb6a5e20622f",
+            "title": "Mike O&#039;Hearn"
+          },
+          {
+            "id": "e41d5f52-41a4-4f33-9adf-ab067d99bba3",
+            "title": "Your AI Slop Bores Me"
+          },
+          {
+            "id": "6c8fb74a-875e-4573-ad7b-4f6ad37b896c",
+            "title": "Na Yina"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "bb1092a2-03e0-480c-b7ea-88fffced6930",
+            "title": "TMI"
+          },
+          {
+            "id": "422e39b3-8e54-4268-be5e-fa0795c70b42",
+            "title": "Don&#039;t Start Now"
+          },
+          {
+            "id": "5defe0c3-58ef-4d75-b7c0-bb6a5e20622f",
+            "title": "Mike O&#039;Hearn"
+          },
+          {
+            "id": "e41d5f52-41a4-4f33-9adf-ab067d99bba3",
+            "title": "Your AI Slop Bores Me"
+          },
+          {
+            "id": "6c8fb74a-875e-4573-ad7b-4f6ad37b896c",
+            "title": "Na Yina"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tmi-2",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "alias",
+      "query": "티엠아이",
+      "baseline": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "321c3670-de0f-449d-b01f-e693b5a43033",
+            "title": "(여자)아이들 TOMBOY 챌린지"
+          },
+          {
+            "id": "bb1092a2-03e0-480c-b7ea-88fffced6930",
+            "title": "TMI"
+          },
+          {
+            "id": "5dc1df67-5b5d-4820-bc70-9cd56f8b41b3",
+            "title": "지미유"
+          },
+          {
+            "id": "c3668649-11ac-430a-8dc8-4bda6e002588",
+            "title": "퉁퉁퉁 사후르"
+          },
+          {
+            "id": "b9ba111d-4e1b-4ca2-bfa4-eef48da7d0df",
+            "title": "너 T야 밈"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "321c3670-de0f-449d-b01f-e693b5a43033",
+            "title": "(여자)아이들 TOMBOY 챌린지"
+          },
+          {
+            "id": "bb1092a2-03e0-480c-b7ea-88fffced6930",
+            "title": "TMI"
+          },
+          {
+            "id": "5dc1df67-5b5d-4820-bc70-9cd56f8b41b3",
+            "title": "지미유"
+          },
+          {
+            "id": "c3668649-11ac-430a-8dc8-4bda6e002588",
+            "title": "퉁퉁퉁 사후르"
+          },
+          {
+            "id": "b9ba111d-4e1b-4ca2-bfa4-eef48da7d0df",
+            "title": "너 T야 밈"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tmi-3",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "intent",
+      "query": "회의에서 어제 먹은 점심 메뉴까지 길게 설명하는 동료",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "8dbc6ec3-d5d9-4e7e-a1a6-d327b2e43385",
+            "title": "회의를 위한 회의"
+          },
+          {
+            "id": "5c80675e-59c5-4714-a363-bad9a4fcc7e0",
+            "title": "밥 뭇나"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          },
+          {
+            "id": "deb0f94c-ca7c-4f2e-8c07-8c6ad804f68f",
+            "title": "장원영 OO (밤티의 반대말)"
+          },
+          {
+            "id": "7c2aa8a3-a219-4411-ba9d-06b27088bf16",
+            "title": "우리 사이에 그런 게 어딨어"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "8dbc6ec3-d5d9-4e7e-a1a6-d327b2e43385",
+            "title": "회의를 위한 회의"
+          },
+          {
+            "id": "8312812c-d71d-4dcb-8af6-f2a4674de2eb",
+            "title": "요기요 도치피치피보족"
+          },
+          {
+            "id": "04c6a174-874c-4937-91cd-9461017b3fd5",
+            "title": "야근각"
+          },
+          {
+            "id": "dfa43e34-48ac-4be1-8779-d410c27aafe2",
+            "title": "점메추"
+          },
+          {
+            "id": "3aad488f-aca3-4047-bb74-e41759abbd0a",
+            "title": "저메추"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tmi-4",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "굳이 듣지 않아도 되는 사소한 사생활 얘기를 계속 늘어놓을 때",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "ee7df0e7-3463-43d7-bedd-050bfebd2ee5",
+            "title": "여기서 이러시면 안됩니다(생활의 발견)"
+          },
+          {
+            "id": "3e872580-5746-4827-9f31-3d949c3e0bbb",
+            "title": "사생팬"
+          },
+          {
+            "id": "253abeb7-8938-410c-af68-3a5c97f74f22",
+            "title": "여기서 이러시면 안됩니다"
+          },
+          {
+            "id": "96243d88-1cd0-4362-bbb0-bfd5fc83e630",
+            "title": "생활의 발견 '여기서 이러시면 안됩니다'"
+          },
+          {
+            "id": "66b067db-d5c7-404d-ab44-b89de039b138",
+            "title": "그런데 말입니다"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.25,
+        "ndcg_at_5": 0.43067655807339306,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 4,
+        "top5": [
+          {
+            "id": "3e872580-5746-4827-9f31-3d949c3e0bbb",
+            "title": "사생팬"
+          },
+          {
+            "id": "dc1d2615-0d02-491a-9987-5be504edc3d7",
+            "title": "~에 계속 남고 싶지 않아?"
+          },
+          {
+            "id": "b6e6889f-3d36-4c51-8b4e-a65d4fda3280",
+            "title": "이모티콘 지름신"
+          },
+          {
+            "id": "bb1092a2-03e0-480c-b7ea-88fffced6930",
+            "title": "TMI"
+          },
+          {
+            "id": "71a1a83f-598f-471a-bc80-d8c1988e3955",
+            "title": "디 익(The Ick)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sonminsu-1",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "literal",
+      "query": "손민수",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c2aa793f-c292-402c-a276-61846b44b168",
+            "title": "손민수(하다)"
+          },
+          {
+            "id": "7e21c8da-615d-42ab-86d7-834538c8b39b",
+            "title": "추구미·도달가능미"
+          },
+          {
+            "id": "d24d06c7-2e31-4ee5-b767-12a631fe3a1c",
+            "title": "좋다 (쑥부르스)"
+          },
+          {
+            "id": "db13d94c-26ef-499a-a6e9-e46741853196",
+            "title": "손웅정 기본기 어록"
+          },
+          {
+            "id": "a354b38e-fa59-40a3-bc34-ab1d5a1d3e01",
+            "title": "훈수충"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c2aa793f-c292-402c-a276-61846b44b168",
+            "title": "손민수(하다)"
+          },
+          {
+            "id": "7e21c8da-615d-42ab-86d7-834538c8b39b",
+            "title": "추구미·도달가능미"
+          },
+          {
+            "id": "d24d06c7-2e31-4ee5-b767-12a631fe3a1c",
+            "title": "좋다 (쑥부르스)"
+          },
+          {
+            "id": "db13d94c-26ef-499a-a6e9-e46741853196",
+            "title": "손웅정 기본기 어록"
+          },
+          {
+            "id": "a354b38e-fa59-40a3-bc34-ab1d5a1d3e01",
+            "title": "훈수충"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sonminsu-2",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "spacing",
+      "query": "손 민 수",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c2aa793f-c292-402c-a276-61846b44b168",
+            "title": "손민수(하다)"
+          },
+          {
+            "id": "d24d06c7-2e31-4ee5-b767-12a631fe3a1c",
+            "title": "좋다 (쑥부르스)"
+          },
+          {
+            "id": "8355f911-5cd5-4283-b598-3bf1508de3b4",
+            "title": "알파고 이세돌 '신의 한 수'"
+          },
+          {
+            "id": "c713b651-e92b-4811-b73a-f6eaac15df31",
+            "title": "손은 눈보다 빠르다"
+          },
+          {
+            "id": "db13d94c-26ef-499a-a6e9-e46741853196",
+            "title": "손웅정 기본기 어록"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c2aa793f-c292-402c-a276-61846b44b168",
+            "title": "손민수(하다)"
+          },
+          {
+            "id": "7e21c8da-615d-42ab-86d7-834538c8b39b",
+            "title": "추구미·도달가능미"
+          },
+          {
+            "id": "d24d06c7-2e31-4ee5-b767-12a631fe3a1c",
+            "title": "좋다 (쑥부르스)"
+          },
+          {
+            "id": "8355f911-5cd5-4283-b598-3bf1508de3b4",
+            "title": "알파고 이세돌 '신의 한 수'"
+          },
+          {
+            "id": "c713b651-e92b-4811-b73a-f6eaac15df31",
+            "title": "손은 눈보다 빠르다"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sonminsu-3",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "intent",
+      "query": "좋아하는 연예인이 입은 옷과 같은 제품을 따라 사는 팬",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "34621734-c704-4935-bfed-7f0362298f86",
+            "title": "입덕"
+          },
+          {
+            "id": "31d79b28-24cf-4d5a-9e0f-7a40a370838e",
+            "title": "컴백홈"
+          },
+          {
+            "id": "6b28450d-2c07-4e8d-8017-49dc7fe00e96",
+            "title": "삽니다"
+          },
+          {
+            "id": "8d1cd361-71a9-48ee-92c7-0cc578678726",
+            "title": "조공"
+          },
+          {
+            "id": "3e872580-5746-4827-9f31-3d949c3e0bbb",
+            "title": "사생팬"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.1111111111111111,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 9,
+        "top5": [
+          {
+            "id": "5c635261-4bd9-42ac-b559-861090be3822",
+            "title": "잡덕"
+          },
+          {
+            "id": "0959de22-26e0-4a84-879a-20ab2804deb5",
+            "title": "따름 챌린지"
+          },
+          {
+            "id": "34621734-c704-4935-bfed-7f0362298f86",
+            "title": "입덕"
+          },
+          {
+            "id": "31d79b28-24cf-4d5a-9e0f-7a40a370838e",
+            "title": "컴백홈"
+          },
+          {
+            "id": "4d6f4b92-b3ec-4ee4-b31a-275ace6cbc07",
+            "title": "널 좋아하는 마음이 커졌어 막 공룡만 해"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sonminsu-4",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "옆 사람의 스타일과 소지품을 똑같이 흉내 내는 모습을 부르는 말",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "84bca70f-56fb-4baa-9515-f262c065ff87",
+            "title": "덕메"
+          },
+          {
+            "id": "3f38363c-52e1-420e-ab0a-7d613f9f38a9",
+            "title": "행님아"
+          },
+          {
+            "id": "45224042-cf1c-44ab-bb49-35d3fe7c06c8",
+            "title": "물렸다"
+          },
+          {
+            "id": "e260e613-73d8-462f-a3e6-d50b87f71a30",
+            "title": "훈남/훈녀"
+          },
+          {
+            "id": "f43904c7-cc75-4498-b024-594030ada0c8",
+            "title": "완내스"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "f43904c7-cc75-4498-b024-594030ada0c8",
+            "title": "완내스"
+          },
+          {
+            "id": "c2aa793f-c292-402c-a276-61846b44b168",
+            "title": "손민수(하다)"
+          },
+          {
+            "id": "73daf025-eeaa-4397-81ce-e5a93b7a8bfb",
+            "title": "음성변조 목소리 개그"
+          },
+          {
+            "id": "84bca70f-56fb-4baa-9515-f262c065ff87",
+            "title": "덕메"
+          },
+          {
+            "id": "12914e50-ea2f-41b7-a03b-2a2adb707975",
+            "title": "후드에서 살아남기"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gapbunsSa-1",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "literal",
+      "query": "갑분싸",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+            "title": "갑분싸"
+          },
+          {
+            "id": "59e3f717-5c49-4af3-a101-4d5bb93a1200",
+            "title": "알테쉬"
+          },
+          {
+            "id": "06431e2e-a7b9-474e-9f56-04694d3794d7",
+            "title": "라비쉬"
+          },
+          {
+            "id": "6b0692f2-6296-41a7-8d89-046a62a4c211",
+            "title": "갑질 손님 참교육 스케치코미디"
+          },
+          {
+            "id": "d6b0df49-0158-4947-9bb4-95fb9b631796",
+            "title": "분깨미"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+            "title": "갑분싸"
+          },
+          {
+            "id": "59e3f717-5c49-4af3-a101-4d5bb93a1200",
+            "title": "알테쉬"
+          },
+          {
+            "id": "06431e2e-a7b9-474e-9f56-04694d3794d7",
+            "title": "라비쉬"
+          },
+          {
+            "id": "6b0692f2-6296-41a7-8d89-046a62a4c211",
+            "title": "갑질 손님 참교육 스케치코미디"
+          },
+          {
+            "id": "d6b0df49-0158-4947-9bb4-95fb9b631796",
+            "title": "분깨미"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gapbunsSa-2",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "chosung",
+      "query": "ㄱㅂㅆ",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+            "title": "갑분싸"
+          },
+          {
+            "id": "a1da7d6a-c5a3-4175-a913-345b97542b94",
+            "title": "ㄱㅈㄱㅇㅇ"
+          },
+          {
+            "id": "7e18a17e-e5ff-4f0a-8afd-9fa17b5d30ee",
+            "title": "그 잡채"
+          },
+          {
+            "id": "1975afe6-6207-4570-bda7-5dc47a969407",
+            "title": "한 장 정도(ㅎㅈㅈㄷ)"
+          },
+          {
+            "id": "2f84b9ed-d6bd-4df0-af9c-e3dd606b8996",
+            "title": "운은진짜"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+            "title": "갑분싸"
+          },
+          {
+            "id": "a1da7d6a-c5a3-4175-a913-345b97542b94",
+            "title": "ㄱㅈㄱㅇㅇ"
+          },
+          {
+            "id": "7e18a17e-e5ff-4f0a-8afd-9fa17b5d30ee",
+            "title": "그 잡채"
+          },
+          {
+            "id": "1975afe6-6207-4570-bda7-5dc47a969407",
+            "title": "한 장 정도(ㅎㅈㅈㄷ)"
+          },
+          {
+            "id": "2f84b9ed-d6bd-4df0-af9c-e3dd606b8996",
+            "title": "운은진짜"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gapbunsSa-3",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "intent",
+      "query": "다 같이 웃다가 한 사람의 농담 때문에 대화가 멈춘 순간",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "253abeb7-8938-410c-af68-3a5c97f74f22",
+            "title": "여기서 이러시면 안됩니다"
+          },
+          {
+            "id": "5d5a39cd-8ad4-4ef1-8d32-9538f3fb321d",
+            "title": "당신 말이 옳습니다"
+          },
+          {
+            "id": "ba05f984-546a-4414-aa3c-127f42f454ec",
+            "title": "골반통신"
+          },
+          {
+            "id": "2b749cf0-e54f-4977-b854-05cd0136e294",
+            "title": "동서식품 미떼 핫초코 혼자왔니"
+          },
+          {
+            "id": "9db765d8-bfd6-4dc6-ad51-a372f7d67c59",
+            "title": "신서유기 '구글이 움직여도 못 지운다'"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "9db765d8-bfd6-4dc6-ad51-a372f7d67c59",
+            "title": "신서유기 '구글이 움직여도 못 지운다'"
+          },
+          {
+            "id": "253abeb7-8938-410c-af68-3a5c97f74f22",
+            "title": "여기서 이러시면 안됩니다"
+          },
+          {
+            "id": "6113d756-8c44-492f-ad6b-1e822091a44d",
+            "title": "간 때문이야"
+          },
+          {
+            "id": "5d5a39cd-8ad4-4ef1-8d32-9538f3fb321d",
+            "title": "당신 말이 옳습니다"
+          },
+          {
+            "id": "653eedcb-56c3-43c5-a3ba-8233ab7e41e4",
+            "title": "우생순"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gapbunsSa-4",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "즐거운 모임에서 엉뚱한 발언이 나와 분위기가 어색해졌을 때",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+            "title": "갑분싸"
+          },
+          {
+            "id": "d19e9f6b-b563-47e6-899f-50469a169296",
+            "title": "아마, 이랬을 것입니다"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          },
+          {
+            "id": "3f61d4cc-fca7-4578-9924-eab12fd4ff36",
+            "title": "아으~"
+          },
+          {
+            "id": "7c00a2a7-490d-4c84-9053-66ad425a6b14",
+            "title": "지못미"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "163245f2-0684-497c-a400-087c8f8dd8ff",
+            "title": "갑분싸"
+          },
+          {
+            "id": "637430be-3672-43ed-adec-57746c984c6e",
+            "title": "사이다"
+          },
+          {
+            "id": "a407563f-f266-4cea-b025-c898709e8340",
+            "title": "희진적 사고"
+          },
+          {
+            "id": "de418258-bb48-41d9-9868-4f310a972d5d",
+            "title": "팀바팀"
+          },
+          {
+            "id": "1cf36886-6e50-4d86-976a-fa3d817f37c2",
+            "title": "안세영 발언"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gatsaeng-1",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "literal",
+      "query": "갓생",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c13f4398-f06c-4b6e-9a58-ba46a4b43c6b",
+            "title": "갓생"
+          },
+          {
+            "id": "da3a0e2e-6aa5-43d7-a029-2f13c0ea0207",
+            "title": "갓생템"
+          },
+          {
+            "id": "e5d64508-e9fa-4736-bfe7-1945e033590c",
+            "title": "곰뚜리"
+          },
+          {
+            "id": "a7fe1cc9-3e16-4e1a-be09-067a71e65834",
+            "title": "50번 점프 챌린지"
+          },
+          {
+            "id": "609fcca5-2b10-4b47-8452-5a3c34b108eb",
+            "title": "현우진 갓우진"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c13f4398-f06c-4b6e-9a58-ba46a4b43c6b",
+            "title": "갓생"
+          },
+          {
+            "id": "da3a0e2e-6aa5-43d7-a029-2f13c0ea0207",
+            "title": "갓생템"
+          },
+          {
+            "id": "a7fe1cc9-3e16-4e1a-be09-067a71e65834",
+            "title": "50번 점프 챌린지"
+          },
+          {
+            "id": "e5d64508-e9fa-4736-bfe7-1945e033590c",
+            "title": "곰뚜리"
+          },
+          {
+            "id": "e25afca0-f65b-494c-99ac-8fd7de3eb9a2",
+            "title": "100일 운동 챌린지"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gatsaeng-2",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "spacing",
+      "query": "갓 생",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c13f4398-f06c-4b6e-9a58-ba46a4b43c6b",
+            "title": "갓생"
+          },
+          {
+            "id": "609fcca5-2b10-4b47-8452-5a3c34b108eb",
+            "title": "현우진 갓우진"
+          },
+          {
+            "id": "18f0dd14-0edd-4298-96cd-871c99896aac",
+            "title": "갓벽"
+          },
+          {
+            "id": "da3a0e2e-6aa5-43d7-a029-2f13c0ea0207",
+            "title": "갓생템"
+          },
+          {
+            "id": "8c7cff9d-c747-4fb5-991b-7660bb0be480",
+            "title": "갓물주"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c13f4398-f06c-4b6e-9a58-ba46a4b43c6b",
+            "title": "갓생"
+          },
+          {
+            "id": "da3a0e2e-6aa5-43d7-a029-2f13c0ea0207",
+            "title": "갓생템"
+          },
+          {
+            "id": "a7fe1cc9-3e16-4e1a-be09-067a71e65834",
+            "title": "50번 점프 챌린지"
+          },
+          {
+            "id": "609fcca5-2b10-4b47-8452-5a3c34b108eb",
+            "title": "현우진 갓우진"
+          },
+          {
+            "id": "18f0dd14-0edd-4298-96cd-871c99896aac",
+            "title": "갓벽"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gatsaeng-3",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "intent",
+      "query": "아침 운동과 공부 계획을 지키며 하루를 알차게 보내는 생활",
+      "baseline": {
+        "mrr_at_10": 0.14285714285714285,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 7,
+        "top5": [
+          {
+            "id": "a9fd21c7-2bd4-4551-a530-cee10116a0b0",
+            "title": "오하운"
+          },
+          {
+            "id": "a7fe1cc9-3e16-4e1a-be09-067a71e65834",
+            "title": "50번 점프 챌린지"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          },
+          {
+            "id": "42dda0df-7912-49e9-b65b-4cfb7ec7b6a1",
+            "title": "오운완"
+          },
+          {
+            "id": "42b5ffcf-5305-409d-9a8e-867e5c9cf03a",
+            "title": "순공시간"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.16666666666666666,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 6,
+        "top5": [
+          {
+            "id": "a9fd21c7-2bd4-4551-a530-cee10116a0b0",
+            "title": "오하운"
+          },
+          {
+            "id": "a7fe1cc9-3e16-4e1a-be09-067a71e65834",
+            "title": "50번 점프 챌린지"
+          },
+          {
+            "id": "42dda0df-7912-49e9-b65b-4cfb7ec7b6a1",
+            "title": "오운완"
+          },
+          {
+            "id": "e25afca0-f65b-494c-99ac-8fd7de3eb9a2",
+            "title": "100일 운동 챌린지"
+          },
+          {
+            "id": "e8a66b9e-19d7-4170-ac86-c9cfd0f1f5ae",
+            "title": "아보하"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gatsaeng-4",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "미루지 않고 작은 목표를 꾸준히 실천하는 부지런한 일상",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "51ed8159-aeb4-486b-b716-b916b5e203d4",
+            "title": "그냥 하는 거지"
+          },
+          {
+            "id": "e7cd5606-1d10-43fc-87eb-a71a6d5f5413",
+            "title": "다이어트는 내일부터"
+          },
+          {
+            "id": "e8a66b9e-19d7-4170-ac86-c9cfd0f1f5ae",
+            "title": "아보하"
+          },
+          {
+            "id": "2a0ae5db-b91b-4456-804e-e7dee5f96256",
+            "title": "리추얼 라이프"
+          },
+          {
+            "id": "550c15e3-a1b6-48af-af32-9e4885aaf1e1",
+            "title": "핫걸워크"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.3333333333333333,
+        "ndcg_at_5": 0.5,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 3,
+        "top5": [
+          {
+            "id": "e8a66b9e-19d7-4170-ac86-c9cfd0f1f5ae",
+            "title": "아보하"
+          },
+          {
+            "id": "550c15e3-a1b6-48af-af32-9e4885aaf1e1",
+            "title": "핫걸워크"
+          },
+          {
+            "id": "c13f4398-f06c-4b6e-9a58-ba46a4b43c6b",
+            "title": "갓생"
+          },
+          {
+            "id": "1efedfe1-62c5-4ea8-98aa-21855e45be1b",
+            "title": "소확행"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-1",
+      "target": "flex",
+      "split": "dev",
+      "kind": "literal",
+      "query": "플렉스",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "1cb92516-676f-4049-879e-1e02ebfd5472",
+            "title": "플렉스"
+          },
+          {
+            "id": "bd044371-59e1-417f-8209-4cf93069c7c2",
+            "title": "플렉스 (Flex)"
+          },
+          {
+            "id": "fb6ee02c-e440-449c-b4a7-7f701ecd2ea2",
+            "title": "오마카세 열풍"
+          },
+          {
+            "id": "f2990e9c-f50f-427c-a237-69e6899fec60",
+            "title": "플레기 다레기"
+          },
+          {
+            "id": "78443dba-61f7-45c0-9806-ae55ff29c49f",
+            "title": "무한도전 못친소 페스티벌"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "1cb92516-676f-4049-879e-1e02ebfd5472",
+            "title": "플렉스"
+          },
+          {
+            "id": "bd044371-59e1-417f-8209-4cf93069c7c2",
+            "title": "플렉스 (Flex)"
+          },
+          {
+            "id": "b6e6889f-3d36-4c51-8b4e-a65d4fda3280",
+            "title": "이모티콘 지름신"
+          },
+          {
+            "id": "fb6ee02c-e440-449c-b4a7-7f701ecd2ea2",
+            "title": "오마카세 열풍"
+          },
+          {
+            "id": "08cb8d2a-14c1-4fb9-8711-91e1e7d7cade",
+            "title": "스몰럭셔리"
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-2",
+      "target": "flex",
+      "split": "dev",
+      "kind": "alias",
+      "query": "flex",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "1cb92516-676f-4049-879e-1e02ebfd5472",
+            "title": "플렉스"
+          },
+          {
+            "id": "bd044371-59e1-417f-8209-4cf93069c7c2",
+            "title": "플렉스 (Flex)"
+          },
+          {
+            "id": "422e39b3-8e54-4268-be5e-fa0795c70b42",
+            "title": "Don&#039;t Start Now"
+          },
+          {
+            "id": "5defe0c3-58ef-4d75-b7c0-bb6a5e20622f",
+            "title": "Mike O&#039;Hearn"
+          },
+          {
+            "id": "f2990e9c-f50f-427c-a237-69e6899fec60",
+            "title": "플레기 다레기"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "1cb92516-676f-4049-879e-1e02ebfd5472",
+            "title": "플렉스"
+          },
+          {
+            "id": "bd044371-59e1-417f-8209-4cf93069c7c2",
+            "title": "플렉스 (Flex)"
+          },
+          {
+            "id": "422e39b3-8e54-4268-be5e-fa0795c70b42",
+            "title": "Don&#039;t Start Now"
+          },
+          {
+            "id": "5defe0c3-58ef-4d75-b7c0-bb6a5e20622f",
+            "title": "Mike O&#039;Hearn"
+          },
+          {
+            "id": "f2990e9c-f50f-427c-a237-69e6899fec60",
+            "title": "플레기 다레기"
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-3",
+      "target": "flex",
+      "split": "dev",
+      "kind": "intent",
+      "query": "비싼 물건을 사서 돈을 크게 썼다고 자랑하는 모습",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "8918abfe-1e96-4b53-9682-7192f1108db5",
+            "title": "전액 현금 매입"
+          },
+          {
+            "id": "0692cfda-284e-4f7d-87e4-4f01ddf44b94",
+            "title": "만수르 리트윗 짤"
+          },
+          {
+            "id": "4db1ecbc-d657-41c0-b11f-60599c927909",
+            "title": "이상민 68억 빚"
+          },
+          {
+            "id": "31e6e9a4-2474-4fa0-a916-92e119879ae2",
+            "title": "이태리 장인이 한땀한땀"
+          },
+          {
+            "id": "9a096780-3773-459d-9a84-c36e4b4caf36",
+            "title": "추르르르"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "0a2b9f5a-634b-4e2c-bfd2-e29179bdb9fe",
+            "title": "무릎에 사서 어깨에 팔아라"
+          },
+          {
+            "id": "0692cfda-284e-4f7d-87e4-4f01ddf44b94",
+            "title": "만수르 리트윗 짤"
+          },
+          {
+            "id": "b0e5ef90-72fa-4ecd-af86-dbd817d8c5f8",
+            "title": "청호나이스 우리집은 얼음 나온다"
+          },
+          {
+            "id": "4bb73f91-3803-45ef-b798-7c916495a0a0",
+            "title": "돈복사"
+          },
+          {
+            "id": "8918abfe-1e96-4b53-9682-7192f1108db5",
+            "title": "전액 현금 매입"
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-4",
+      "target": "flex",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "월급날 친구들 밥값을 한꺼번에 내며 통 크게 소비할 때",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "fd1100c8-e37a-430d-9716-4eb82c0612db",
+            "title": "텅장"
+          },
+          {
+            "id": "9b5dea7c-7417-47c4-a0f6-d8fc26f91c3e",
+            "title": "갑통알"
+          },
+          {
+            "id": "7375eb1d-4d7b-4988-b768-0e2e44e387f0",
+            "title": "월급루팡"
+          },
+          {
+            "id": "8ec37e07-986c-487d-9d42-9b88acc2f813",
+            "title": "월급은 통장을 스칠 뿐"
+          },
+          {
+            "id": "69e55229-de63-49ff-bfe7-a0603606ffa1",
+            "title": "돌밥돌밥"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "0fdfe272-f701-46a4-a0ba-04662a3b2aec",
+            "title": "셋로그"
+          },
+          {
+            "id": "fd1100c8-e37a-430d-9716-4eb82c0612db",
+            "title": "텅장"
+          },
+          {
+            "id": "6fd99b45-cd99-4b9f-9aa4-5c5eaafc0613",
+            "title": "로또청약"
+          },
+          {
+            "id": "9b5dea7c-7417-47c4-a0f6-d8fc26f91c3e",
+            "title": "갑통알"
+          },
+          {
+            "id": "7375eb1d-4d7b-4988-b768-0e2e44e387f0",
+            "title": "월급루팡"
+          }
+        ]
+      }
+    },
+    {
+      "id": "chwijon-1",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "literal",
+      "query": "취존",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          },
+          {
+            "id": "fbfcd972-8e05-4535-aeef-4c4f9ddcbf99",
+            "title": "취집"
+          },
+          {
+            "id": "80f1d712-db4b-42f2-8058-f70051dc2e36",
+            "title": "취향저격"
+          },
+          {
+            "id": "ac97a7d2-2277-4b87-a16d-5da07ab8298b",
+            "title": "입덕각"
+          },
+          {
+            "id": "8f8d7c53-5913-47d7-9687-9b45eac4d28b",
+            "title": "다주하다"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          },
+          {
+            "id": "fbfcd972-8e05-4535-aeef-4c4f9ddcbf99",
+            "title": "취집"
+          },
+          {
+            "id": "80f1d712-db4b-42f2-8058-f70051dc2e36",
+            "title": "취향저격"
+          },
+          {
+            "id": "ac97a7d2-2277-4b87-a16d-5da07ab8298b",
+            "title": "입덕각"
+          },
+          {
+            "id": "8f8d7c53-5913-47d7-9687-9b45eac4d28b",
+            "title": "다주하다"
+          }
+        ]
+      }
+    },
+    {
+      "id": "chwijon-2",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "chosung",
+      "query": "ㅊㅈ",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "76d155cd-d975-409b-8a57-2bb5f3d4dbc5",
+            "title": "선친자 신드롬(선재 업고 튀어)"
+          },
+          {
+            "id": "1975afe6-6207-4570-bda7-5dc47a969407",
+            "title": "한 장 정도(ㅎㅈㅈㄷ)"
+          },
+          {
+            "id": "93226e72-f245-4d17-a54f-7e227dbf7574",
+            "title": "삼시세끼 차줌마"
+          },
+          {
+            "id": "6c86df1c-3496-487a-8bac-0fd8644c8eb5",
+            "title": "오오심상치않은데?(ㅇㅇㅅㅅㅊㅇㅇㄷ)"
+          },
+          {
+            "id": "82bdf0ee-fada-437b-9c80-157923d27395",
+            "title": "충주맨"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "13d53ba8-ca18-41d6-b4ff-0b1e70c0c7c5",
+            "title": "얼굴 천재"
+          },
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          },
+          {
+            "id": "10cd5b61-ad44-461f-a69d-26d2e5152c36",
+            "title": "전청조 I am 신뢰에요 밈"
+          },
+          {
+            "id": "1214b86f-5d30-4634-95b5-ebe30aae08c4",
+            "title": "구본길 사브르 단체전 3연패"
+          },
+          {
+            "id": "16dfdd4d-fd56-404a-a594-7b86e15999c2",
+            "title": "최종병기(이영호)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "chwijon-3",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "intent",
+      "query": "나는 좋아하지 않지만 친구가 좋아하는 음악을 존중해 주기",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          },
+          {
+            "id": "62d6b185-cfac-4fa1-9e9b-8b7f33febf70",
+            "title": "친구의 친구를 사랑했네"
+          },
+          {
+            "id": "a3169b4f-3190-4fc9-828b-09356daa15fc",
+            "title": "영크크"
+          },
+          {
+            "id": "16b1f1f2-ce35-4d5c-b859-0fe0b8fb8fd1",
+            "title": "아이유 제제 논란"
+          },
+          {
+            "id": "cfee16be-e1d6-46ee-bd67-d2ca43440fc1",
+            "title": "친구 - 니가 가라, 하와이"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.2,
+        "ndcg_at_5": 0.38685280723454163,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 5,
+        "top5": [
+          {
+            "id": "84bca70f-56fb-4baa-9515-f262c065ff87",
+            "title": "덕메"
+          },
+          {
+            "id": "cfee16be-e1d6-46ee-bd67-d2ca43440fc1",
+            "title": "친구 - 니가 가라, 하와이"
+          },
+          {
+            "id": "62d6b185-cfac-4fa1-9e9b-8b7f33febf70",
+            "title": "친구의 친구를 사랑했네"
+          },
+          {
+            "id": "d6bfa9a6-7073-49ad-9673-1265ae4432fc",
+            "title": "미니홈피 BGM"
+          },
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          }
+        ]
+      }
+    },
+    {
+      "id": "chwijon-4",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "서로 취미가 달라도 이상하다고 놀리지 말고 인정하자는 말",
+      "baseline": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "7c2aa8a3-a219-4411-ba9d-06b27088bf16",
+            "title": "우리 사이에 그런 게 어딨어"
+          },
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          },
+          {
+            "id": "53d1c1e9-0d0a-4ef0-912d-08d5f981fab2",
+            "title": "천재는 노력하는 자를 이길 수 없다"
+          },
+          {
+            "id": "4c1a4d63-f9a1-4cd8-ac9d-e02a2f45be58",
+            "title": "MBTI 감별사"
+          },
+          {
+            "id": "deb0f94c-ca7c-4f2e-8c07-8c6ad804f68f",
+            "title": "장원영 OO (밤티의 반대말)"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "028e350a-b718-4989-8b1a-ee6be26e6fef",
+            "title": "취존"
+          },
+          {
+            "id": "208bd08e-1ccb-45e2-af13-53f11d732eee",
+            "title": "달라달라 챌린지"
+          },
+          {
+            "id": "7c2aa8a3-a219-4411-ba9d-06b27088bf16",
+            "title": "우리 사이에 그런 게 어딨어"
+          },
+          {
+            "id": "3079361a-a04c-4735-98dd-fbc73de361c6",
+            "title": "밟지 말고 밟으세요"
+          },
+          {
+            "id": "135096f2-eb02-4ebd-b3e8-5dae4b61ae56",
+            "title": "여시"
+          }
+        ]
+      }
+    },
+    {
+      "id": "eojjeltv-1",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "어쩔티비",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "2b710e30-2681-4b5d-a944-d0e057e9e3af",
+            "title": "어쩔티비 저쩔티비"
+          },
+          {
+            "id": "795c0069-7cec-47a5-8873-b184d28d7aed",
+            "title": "근데 어쩔건데?"
+          },
+          {
+            "id": "6c86df1c-3496-487a-8bac-0fd8644c8eb5",
+            "title": "오오심상치않은데?(ㅇㅇㅅㅅㅊㅇㅇㄷ)"
+          },
+          {
+            "id": "56f3030d-a1fa-4722-b7f6-cdcf8a6046c3",
+            "title": "띠용 띠용 김띠용사건"
+          },
+          {
+            "id": "65311c05-7ab4-40ea-bfc0-227b5efc870e",
+            "title": "곱버스"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "2b710e30-2681-4b5d-a944-d0e057e9e3af",
+            "title": "어쩔티비 저쩔티비"
+          },
+          {
+            "id": "795c0069-7cec-47a5-8873-b184d28d7aed",
+            "title": "근데 어쩔건데?"
+          },
+          {
+            "id": "6c86df1c-3496-487a-8bac-0fd8644c8eb5",
+            "title": "오오심상치않은데?(ㅇㅇㅅㅅㅊㅇㅇㄷ)"
+          },
+          {
+            "id": "56f3030d-a1fa-4722-b7f6-cdcf8a6046c3",
+            "title": "띠용 띠용 김띠용사건"
+          },
+          {
+            "id": "65311c05-7ab4-40ea-bfc0-227b5efc870e",
+            "title": "곱버스"
+          }
+        ]
+      }
+    },
+    {
+      "id": "eojjeltv-2",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "spacing",
+      "query": "어쩔 티비",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "2b710e30-2681-4b5d-a944-d0e057e9e3af",
+            "title": "어쩔티비 저쩔티비"
+          },
+          {
+            "id": "795c0069-7cec-47a5-8873-b184d28d7aed",
+            "title": "근데 어쩔건데?"
+          },
+          {
+            "id": "6c86df1c-3496-487a-8bac-0fd8644c8eb5",
+            "title": "오오심상치않은데?(ㅇㅇㅅㅅㅊㅇㅇㄷ)"
+          },
+          {
+            "id": "cadeda5b-7995-4089-a3bc-4d24e3d3e38b",
+            "title": "능지"
+          },
+          {
+            "id": "1975afe6-6207-4570-bda7-5dc47a969407",
+            "title": "한 장 정도(ㅎㅈㅈㄷ)"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "2b710e30-2681-4b5d-a944-d0e057e9e3af",
+            "title": "어쩔티비 저쩔티비"
+          },
+          {
+            "id": "795c0069-7cec-47a5-8873-b184d28d7aed",
+            "title": "근데 어쩔건데?"
+          },
+          {
+            "id": "29a8275d-1179-4d0b-a78d-b59098e2c3e5",
+            "title": "엽기적인 그녀 \"견우야 미안해\""
+          },
+          {
+            "id": "6c86df1c-3496-487a-8bac-0fd8644c8eb5",
+            "title": "오오심상치않은데?(ㅇㅇㅅㅅㅊㅇㅇㄷ)"
+          },
+          {
+            "id": "cadeda5b-7995-4089-a3bc-4d24e3d3e38b",
+            "title": "능지"
+          }
+        ]
+      }
+    },
+    {
+      "id": "eojjeltv-3",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "상대의 지적에 성의 없이 대꾸하며 대화를 약 올리는 반응",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "4c1a4d63-f9a1-4cd8-ac9d-e02a2f45be58",
+            "title": "MBTI 감별사"
+          },
+          {
+            "id": "2ea0f823-6f17-40d5-b75f-6f145840081f",
+            "title": "유재석 어록"
+          },
+          {
+            "id": "253abeb7-8938-410c-af68-3a5c97f74f22",
+            "title": "여기서 이러시면 안됩니다"
+          },
+          {
+            "id": "b8c3856f-a3e9-4025-8d83-da8445bd3592",
+            "title": "됐어! 나 빈정 상했어!(감수성)"
+          },
+          {
+            "id": "057e5e6d-30c8-45a2-aa68-023c692a7a8d",
+            "title": "너나 잘하세요"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": 30,
+        "top5": [
+          {
+            "id": "4c1a4d63-f9a1-4cd8-ac9d-e02a2f45be58",
+            "title": "MBTI 감별사"
+          },
+          {
+            "id": "f2615313-3719-40b7-8854-d551005eb9df",
+            "title": "궁예질"
+          },
+          {
+            "id": "f6592f48-1e94-469c-883e-e5ca44feaba8",
+            "title": "오바다"
+          },
+          {
+            "id": "3e9ff056-896b-426f-90e7-2e4ba00cc5aa",
+            "title": "좆문가"
+          },
+          {
+            "id": "30db33a2-376a-4e5d-9cb4-583b2b594afc",
+            "title": "문신 반응 몰카 상황극"
+          }
+        ]
+      }
+    },
+    {
+      "id": "eojjeltv-4",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "듣기 싫은 말을 받았을 때 그래서 어쩌라고 하며 유치하게 받아칠 때",
+      "baseline": {
+        "mrr_at_10": 0.1111111111111111,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 9,
+        "top5": [
+          {
+            "id": "eb241c79-423b-4f00-96a1-748f12238f34",
+            "title": "안습"
+          },
+          {
+            "id": "2d0a2f35-73ea-49cd-b0af-2b85656a83f2",
+            "title": "정줄놓"
+          },
+          {
+            "id": "c65f04a5-a1ba-4457-b8b0-f08980036098",
+            "title": "됐어! 나 빈정 상했어!"
+          },
+          {
+            "id": "d19e9f6b-b563-47e6-899f-50469a169296",
+            "title": "아마, 이랬을 것입니다"
+          },
+          {
+            "id": "2ea0f823-6f17-40d5-b75f-6f145840081f",
+            "title": "유재석 어록"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "2b710e30-2681-4b5d-a944-d0e057e9e3af",
+            "title": "어쩔티비 저쩔티비"
+          },
+          {
+            "id": "2ea0f823-6f17-40d5-b75f-6f145840081f",
+            "title": "유재석 어록"
+          },
+          {
+            "id": "eb241c79-423b-4f00-96a1-748f12238f34",
+            "title": "안습"
+          },
+          {
+            "id": "2d0a2f35-73ea-49cd-b0af-2b85656a83f2",
+            "title": "정줄놓"
+          },
+          {
+            "id": "4a292578-34a8-45d7-9c5c-12c345d5bcd3",
+            "title": "수능 듣기평가 비행기 이착륙 금지"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kingbad-1",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "킹받다",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c9ae0e8f-e0ab-4ba5-aabe-e78fcd351a77",
+            "title": "킹받다"
+          },
+          {
+            "id": "7c937fce-a65d-4003-9ac3-c77fe694d98d",
+            "title": "킹받네"
+          },
+          {
+            "id": "bba7d176-16f5-4e14-ac89-dbac82439bea",
+            "title": "킹리적갓심"
+          },
+          {
+            "id": "f5673d1e-1cf8-4b79-a601-1c084c322648",
+            "title": "킹왕짱"
+          },
+          {
+            "id": "bb49adfb-3c6c-4984-ac70-e46927710515",
+            "title": "직인다"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "7c937fce-a65d-4003-9ac3-c77fe694d98d",
+            "title": "킹받네"
+          },
+          {
+            "id": "c9ae0e8f-e0ab-4ba5-aabe-e78fcd351a77",
+            "title": "킹받다"
+          },
+          {
+            "id": "bba7d176-16f5-4e14-ac89-dbac82439bea",
+            "title": "킹리적갓심"
+          },
+          {
+            "id": "f5673d1e-1cf8-4b79-a601-1c084c322648",
+            "title": "킹왕짱"
+          },
+          {
+            "id": "bb49adfb-3c6c-4984-ac70-e46927710515",
+            "title": "직인다"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kingbad-2",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "chosung",
+      "query": "ㅋㅂㄷ",
+      "baseline": {
+        "mrr_at_10": 0.14285714285714285,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 7,
+        "top5": [
+          {
+            "id": "1e46bfd2-bcc3-4c67-bea2-b6832d5c3fa0",
+            "title": "빅뱅 거짓말 커버댄스"
+          },
+          {
+            "id": "535d323d-bf6c-422d-b04b-a6b8febd6303",
+            "title": "우왕ㅋ굳ㅋ"
+          },
+          {
+            "id": "a83689ea-5ece-4168-b6e1-53f11e383cb1",
+            "title": "네카라쿠배당토"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "69a96510-019d-41ca-8d97-8ac91a727b3b",
+            "title": "최애의 아이 '아이돌' 커버댄스 챌린지"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 0.6131471927654584,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "c9ae0e8f-e0ab-4ba5-aabe-e78fcd351a77",
+            "title": "킹받다"
+          },
+          {
+            "id": "1e46bfd2-bcc3-4c67-bea2-b6832d5c3fa0",
+            "title": "빅뱅 거짓말 커버댄스"
+          },
+          {
+            "id": "69a96510-019d-41ca-8d97-8ac91a727b3b",
+            "title": "최애의 아이 '아이돌' 커버댄스 챌린지"
+          },
+          {
+            "id": "a83689ea-5ece-4168-b6e1-53f11e383cb1",
+            "title": "네카라쿠배당토"
+          },
+          {
+            "id": "535d323d-bf6c-422d-b04b-a6b8febd6303",
+            "title": "우왕ㅋ굳ㅋ"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kingbad-3",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "별것 아닌데 묘하게 신경을 건드려 화가 나는 상황",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "529bd7e8-7224-478c-94d7-0827c5f7df0f",
+            "title": "느낌 아니까"
+          },
+          {
+            "id": "a697f937-5696-48f3-8265-3f5228f49548",
+            "title": "원영적 사고(럭키비키)"
+          },
+          {
+            "id": "047d7cbe-e9cd-4729-86eb-9cc18cb80099",
+            "title": "MIROH 암오케 밈"
+          },
+          {
+            "id": "86b93fb8-bfc2-4c81-bf4b-46dd2b39b389",
+            "title": "XX 되는 상상함"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "f394a8b0-54a5-4615-90b5-de7507365ae6",
+            "title": "화가 머리 끝까지 나네(화:120)"
+          },
+          {
+            "id": "2291f701-0b71-4008-b71d-d9ea92f8daf8",
+            "title": "나는 솔로 16기 영숙 논란"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "2d60b321-8c03-44f1-9a9d-643d578ddf95",
+            "title": "나는 자연인이다"
+          },
+          {
+            "id": "529bd7e8-7224-478c-94d7-0827c5f7df0f",
+            "title": "느낌 아니까"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kingbad-4",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "친구의 얄미운 장난에 짜증이 나지만 웃음도 나오는 감정",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "fa959422-df6e-439a-996d-7fdb1d246674",
+            "title": "갈테야테야"
+          },
+          {
+            "id": "4c1a4d63-f9a1-4cd8-ac9d-e02a2f45be58",
+            "title": "MBTI 감별사"
+          },
+          {
+            "id": "529bd7e8-7224-478c-94d7-0827c5f7df0f",
+            "title": "느낌 아니까"
+          },
+          {
+            "id": "148613ed-2e04-4250-aca5-979cb6cbe208",
+            "title": "ㅎㄷㄷ"
+          },
+          {
+            "id": "94e74eac-01a4-45e8-86e6-0122cdaa2d10",
+            "title": "달달하다"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "9eaf384a-e3bd-4793-9796-78f87570d53d",
+            "title": "우리 친구 아이가"
+          },
+          {
+            "id": "092d2a35-3216-4336-aa97-8e658af0e923",
+            "title": "달콤술사 웃음소리"
+          },
+          {
+            "id": "cfee16be-e1d6-46ee-bd67-d2ca43440fc1",
+            "title": "친구 - 니가 가라, 하와이"
+          },
+          {
+            "id": "b23078eb-1c67-4571-a6d9-74cbdab23e35",
+            "title": "이라이라 챌린지"
+          },
+          {
+            "id": "a9b23f6b-1065-4837-94a5-1da19b1206b5",
+            "title": "OO삐 (삐에로 말장난)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sbuljae-1",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "스불재",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "4ac44118-2802-4a40-8cc6-d1f15a568122",
+            "title": "스불재"
+          },
+          {
+            "id": "1f70d79a-f68d-405d-917e-3376b630d710",
+            "title": "ㅇㄱㄹㅇ"
+          },
+          {
+            "id": "3e3b85d4-0171-41cd-a817-afa1f9e66093",
+            "title": "가불기"
+          },
+          {
+            "id": "ae443504-3a1a-476e-8f5b-2fe9b19e5d1c",
+            "title": "불미스러운 일이 일어났어요"
+          },
+          {
+            "id": "a17fe5d5-d8e0-412d-b956-c3f1f555282c",
+            "title": "성불(김도)"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "4ac44118-2802-4a40-8cc6-d1f15a568122",
+            "title": "스불재"
+          },
+          {
+            "id": "1f70d79a-f68d-405d-917e-3376b630d710",
+            "title": "ㅇㄱㄹㅇ"
+          },
+          {
+            "id": "3e3b85d4-0171-41cd-a817-afa1f9e66093",
+            "title": "가불기"
+          },
+          {
+            "id": "ae443504-3a1a-476e-8f5b-2fe9b19e5d1c",
+            "title": "불미스러운 일이 일어났어요"
+          },
+          {
+            "id": "a17fe5d5-d8e0-412d-b956-c3f1f555282c",
+            "title": "성불(김도)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sbuljae-2",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "alias",
+      "query": "스스로 불러온 재앙",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "4ac44118-2802-4a40-8cc6-d1f15a568122",
+            "title": "스불재"
+          },
+          {
+            "id": "ab15216b-2d25-4dd1-9b01-59134550a5e5",
+            "title": "나는 완전히 붕괴됐어요"
+          },
+          {
+            "id": "d98e52dc-7e9e-4f33-a91f-888ad7676f23",
+            "title": "지드래곤 홈 스윗 홈 챌린지"
+          },
+          {
+            "id": "7e18a17e-e5ff-4f0a-8afd-9fa17b5d30ee",
+            "title": "그 잡채"
+          },
+          {
+            "id": "5b172174-6157-42c2-99c7-82f88e182417",
+            "title": "범내려온다 (Feel the Rhythm of Korea)"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "4ac44118-2802-4a40-8cc6-d1f15a568122",
+            "title": "스불재"
+          },
+          {
+            "id": "ab15216b-2d25-4dd1-9b01-59134550a5e5",
+            "title": "나는 완전히 붕괴됐어요"
+          },
+          {
+            "id": "33517c40-7b48-43c2-8dd4-1c8056aa4e1b",
+            "title": "대2병"
+          },
+          {
+            "id": "2feaeff1-da24-48be-8720-e52804a86115",
+            "title": "르르땅"
+          },
+          {
+            "id": "3206bb75-9623-4aed-bb8d-75cef59e4418",
+            "title": "던지기"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sbuljae-3",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "본인이 벌인 일 때문에 결국 자기 자신이 곤란해진 결과",
+      "baseline": {
+        "mrr_at_10": 0.125,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 8,
+        "top5": [
+          {
+            "id": "758cef01-7f96-4fd5-87e3-2387b8e7dda6",
+            "title": "자기 직업 불법적으로 말하기"
+          },
+          {
+            "id": "eb241c79-423b-4f00-96a1-748f12238f34",
+            "title": "안습"
+          },
+          {
+            "id": "dc917417-e025-44e4-9323-8ce25f8d0da5",
+            "title": "그가 매수했습니다"
+          },
+          {
+            "id": "c50c617b-33cc-4471-9c7b-7d64b6c5bc3c",
+            "title": "잉여"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "758cef01-7f96-4fd5-87e3-2387b8e7dda6",
+            "title": "자기 직업 불법적으로 말하기"
+          },
+          {
+            "id": "4ac44118-2802-4a40-8cc6-d1f15a568122",
+            "title": "스불재"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "2518a5b8-c494-4a05-bd79-b613106737bd",
+            "title": "눈부시지 않나? 나한테서 나오는 아우라!"
+          },
+          {
+            "id": "9e84f3e7-d1d9-45fc-a302-aa9a40e710f4",
+            "title": "나 OO년생 OOO인데 밈"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sbuljae-4",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "귀찮다고 일을 미뤘다가 마감 직전에 고생하게 된 상황",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "5167d161-77fb-433b-b696-b44acb875772",
+            "title": "너무 불미스러운 일이 일어났어요"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "376059f2-d25e-4564-a796-2eab2a3c4902",
+            "title": "거 미안하게 됐수다"
+          },
+          {
+            "id": "2801b41e-41da-47bb-a7d7-fd20bfcaa158",
+            "title": "공무원 폭력성 실험 밈"
+          },
+          {
+            "id": "ae443504-3a1a-476e-8f5b-2fe9b19e5d1c",
+            "title": "불미스러운 일이 일어났어요"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "a4c5e94c-2a94-4d9e-a6b8-86d8be8cf767",
+            "title": "취소해라 방금 그 말"
+          },
+          {
+            "id": "90817511-a516-4472-a8f2-6722f251ac2f",
+            "title": "조용한 퇴사"
+          },
+          {
+            "id": "3b971406-e8fd-4031-a24a-c5d986a3840e",
+            "title": "막나귀"
+          },
+          {
+            "id": "258111e3-330d-4ad2-95d4-54edb7ca6420",
+            "title": "최종_진짜최종 파일명 밈"
+          },
+          {
+            "id": "51ed8159-aeb4-486b-b716-b916b5e203d4",
+            "title": "그냥 하는 거지"
+          }
+        ]
+      }
+    },
+    {
+      "id": "naeronambul-1",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "내로남불",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "40f1ba71-8b93-4561-a4ad-d602bf5252b0",
+            "title": "내로남불"
+          },
+          {
+            "id": "aeae0cd9-a02f-4150-971e-aff44469b9a3",
+            "title": "저 푸른 초원 위에"
+          },
+          {
+            "id": "3e3b85d4-0171-41cd-a817-afa1f9e66093",
+            "title": "가불기"
+          },
+          {
+            "id": "fcac30bb-d905-4621-b6c1-efb9757b10d0",
+            "title": "파도를 보되 바람을 보지 못했다"
+          },
+          {
+            "id": "bae747f8-56c2-42e1-b6ee-a079d905c4f8",
+            "title": "빛나리 타잔송"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "40f1ba71-8b93-4561-a4ad-d602bf5252b0",
+            "title": "내로남불"
+          },
+          {
+            "id": "aeae0cd9-a02f-4150-971e-aff44469b9a3",
+            "title": "저 푸른 초원 위에"
+          },
+          {
+            "id": "3e3b85d4-0171-41cd-a817-afa1f9e66093",
+            "title": "가불기"
+          },
+          {
+            "id": "fcac30bb-d905-4621-b6c1-efb9757b10d0",
+            "title": "파도를 보되 바람을 보지 못했다"
+          },
+          {
+            "id": "bae747f8-56c2-42e1-b6ee-a079d905c4f8",
+            "title": "빛나리 타잔송"
+          }
+        ]
+      }
+    },
+    {
+      "id": "naeronambul-2",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "spacing",
+      "query": "내 로 남 불",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "40f1ba71-8b93-4561-a4ad-d602bf5252b0",
+            "title": "내로남불"
+          },
+          {
+            "id": "aeae0cd9-a02f-4150-971e-aff44469b9a3",
+            "title": "저 푸른 초원 위에"
+          },
+          {
+            "id": "21eb1f8d-8724-4731-b0b4-41372a57af55",
+            "title": "형은 신이야"
+          },
+          {
+            "id": "10cd5b61-ad44-461f-a69d-26d2e5152c36",
+            "title": "전청조 I am 신뢰에요 밈"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "40f1ba71-8b93-4561-a4ad-d602bf5252b0",
+            "title": "내로남불"
+          },
+          {
+            "id": "aeae0cd9-a02f-4150-971e-aff44469b9a3",
+            "title": "저 푸른 초원 위에"
+          },
+          {
+            "id": "21eb1f8d-8724-4731-b0b4-41372a57af55",
+            "title": "형은 신이야"
+          },
+          {
+            "id": "10cd5b61-ad44-461f-a69d-26d2e5152c36",
+            "title": "전청조 I am 신뢰에요 밈"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          }
+        ]
+      }
+    },
+    {
+      "id": "naeronambul-3",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "같은 실수를 자기가 하면 괜찮고 남이 하면 비난하는 태도",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "d358079f-4110-4421-9293-4224dd35e1da",
+            "title": "양시론"
+          },
+          {
+            "id": "a697f937-5696-48f3-8265-3f5228f49548",
+            "title": "원영적 사고(럭키비키)"
+          },
+          {
+            "id": "fa8ccde4-ba7a-4abe-bdf2-45ce16084dd9",
+            "title": "고3병"
+          },
+          {
+            "id": "51ed8159-aeb4-486b-b716-b916b5e203d4",
+            "title": "그냥 하는 거지"
+          },
+          {
+            "id": "c50c617b-33cc-4471-9c7b-7d64b6c5bc3c",
+            "title": "잉여"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": 19,
+        "top5": [
+          {
+            "id": "76ad94a2-b1a3-44c8-9703-bfbac85e3dda",
+            "title": "포기하면 편해"
+          },
+          {
+            "id": "529bd7e8-7224-478c-94d7-0827c5f7df0f",
+            "title": "느낌 아니까"
+          },
+          {
+            "id": "0a04b4c2-c501-49b0-8b9e-99aebf4dbf45",
+            "title": "나만 아니면 돼"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "4021449f-fbf3-4f13-b954-6e316dd1e5bf",
+            "title": "○○하면 그만이야"
+          }
+        ]
+      }
+    },
+    {
+      "id": "naeronambul-4",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "본인에게는 너그럽고 다른 사람에게만 엄격한 이중 기준",
+      "baseline": {
+        "mrr_at_10": 0.25,
+        "ndcg_at_5": 0.43067655807339306,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 4,
+        "top5": [
+          {
+            "id": "13d53ba8-ca18-41d6-b4ff-0b1e70c0c7c5",
+            "title": "얼굴 천재"
+          },
+          {
+            "id": "e260e613-73d8-462f-a3e6-d50b87f71a30",
+            "title": "훈남/훈녀"
+          },
+          {
+            "id": "debb4c21-5496-4060-9b8c-7036ddf80b33",
+            "title": "엄친아/엄친딸"
+          },
+          {
+            "id": "40f1ba71-8b93-4561-a4ad-d602bf5252b0",
+            "title": "내로남불"
+          },
+          {
+            "id": "0f0cfd71-f7d4-4c60-9f02-6c6f591fe7fc",
+            "title": "인싸/아싸"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 11,
+        "top5": [
+          {
+            "id": "0d27f2d2-6c18-40b8-8270-c649a683a67d",
+            "title": "당신 누구야"
+          },
+          {
+            "id": "13d53ba8-ca18-41d6-b4ff-0b1e70c0c7c5",
+            "title": "얼굴 천재"
+          },
+          {
+            "id": "deb0f94c-ca7c-4f2e-8c07-8c6ad804f68f",
+            "title": "장원영 OO (밤티의 반대말)"
+          },
+          {
+            "id": "8cd525a3-828f-43c8-8bb1-41fecad04eab",
+            "title": "애정남 애매합니다잉"
+          },
+          {
+            "id": "9ede9ee8-6374-4782-b114-bf74c0b50db6",
+            "title": "애정남(애매한 것을 정해주는 남자)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "jungkkukma-1",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "중꺾마",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "bf3cdc61-3fc9-48a3-8957-9ccd43e3c28f",
+            "title": "중꺾마"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "772cee8a-7df9-4b33-816f-fc297ea0ad05",
+            "title": "중요한 것은 꺾이지 않는 마음"
+          },
+          {
+            "id": "7789b2ce-4b01-4d85-9dcb-42d2e8bb9301",
+            "title": "고구마"
+          },
+          {
+            "id": "de418258-bb48-41d9-9868-4f310a972d5d",
+            "title": "팀바팀"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.3333333333333333,
+        "ndcg_at_5": 0.5,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 3,
+        "top5": [
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "772cee8a-7df9-4b33-816f-fc297ea0ad05",
+            "title": "중요한 것은 꺾이지 않는 마음"
+          },
+          {
+            "id": "bf3cdc61-3fc9-48a3-8957-9ccd43e3c28f",
+            "title": "중꺾마"
+          },
+          {
+            "id": "a92c42ce-bcec-429b-88da-0f6351b95cf3",
+            "title": "데일리 코리안"
+          },
+          {
+            "id": "7789b2ce-4b01-4d85-9dcb-42d2e8bb9301",
+            "title": "고구마"
+          }
+        ]
+      }
+    },
+    {
+      "id": "jungkkukma-2",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "alias",
+      "query": "중요한 것은 꺾이지 않는 마음",
+      "baseline": {
+        "mrr_at_10": 0.3333333333333333,
+        "ndcg_at_5": 0.5,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 3,
+        "top5": [
+          {
+            "id": "772cee8a-7df9-4b33-816f-fc297ea0ad05",
+            "title": "중요한 것은 꺾이지 않는 마음"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "bf3cdc61-3fc9-48a3-8957-9ccd43e3c28f",
+            "title": "중꺾마"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          },
+          {
+            "id": "51ed8159-aeb4-486b-b716-b916b5e203d4",
+            "title": "그냥 하는 거지"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.3333333333333333,
+        "ndcg_at_5": 0.5,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 3,
+        "top5": [
+          {
+            "id": "772cee8a-7df9-4b33-816f-fc297ea0ad05",
+            "title": "중요한 것은 꺾이지 않는 마음"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "bf3cdc61-3fc9-48a3-8957-9ccd43e3c28f",
+            "title": "중꺾마"
+          },
+          {
+            "id": "1b2089a2-1dc5-4bc7-ad17-26ef30c22e8d",
+            "title": "동결건조 밈"
+          },
+          {
+            "id": "517ec2c5-2e14-41b5-928c-39de19b5e31c",
+            "title": "네 마음이 흔들리는 것이다"
+          }
+        ]
+      }
+    },
+    {
+      "id": "jungkkukma-3",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "어려운 경기에서도 포기하지 않고 끝까지 버티자는 응원",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "48428d31-fdb6-4f9f-be2b-ff7319474845",
+            "title": "끝날 때까지 끝난 게 아니다"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "a3bb54e6-f29d-4176-898e-d89ca23ee825",
+            "title": "가즈아"
+          },
+          {
+            "id": "b5a172b2-cf5a-44e1-86c9-90859db9d12c",
+            "title": "국방부 시계는 거꾸로 매달아도 간다"
+          },
+          {
+            "id": "5fd2625c-c5a0-4ba2-84f2-a51a5b8a4e0a",
+            "title": "나이키 그런데도 끝까지 하겠다는 거야"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": 37,
+        "top5": [
+          {
+            "id": "5fd2625c-c5a0-4ba2-84f2-a51a5b8a4e0a",
+            "title": "나이키 그런데도 끝까지 하겠다는 거야"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "b7ecce21-184a-49f4-957a-b834d25b60b0",
+            "title": "얼불노"
+          },
+          {
+            "id": "bb983020-bf14-4cce-ac21-4da3f261bd23",
+            "title": "KIA타이거즈 남행열차 응원가"
+          },
+          {
+            "id": "82b24473-0051-403f-b060-d724ad114f61",
+            "title": "김성근 감독 응원가 밈"
+          }
+        ]
+      }
+    },
+    {
+      "id": "jungkkukma-4",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "실패가 계속되어도 마음을 놓지 말고 다시 도전하자는 다짐",
+      "baseline": {
+        "mrr_at_10": 0.0,
+        "ndcg_at_5": 0.0,
+        "recall_at_20": 0.0,
+        "hit_at_12": 0.0,
+        "first_relevant_rank": null,
+        "top5": [
+          {
+            "id": "b7ecce21-184a-49f4-957a-b834d25b60b0",
+            "title": "얼불노"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          },
+          {
+            "id": "772cee8a-7df9-4b33-816f-fc297ea0ad05",
+            "title": "중요한 것은 꺾이지 않는 마음"
+          },
+          {
+            "id": "48428d31-fdb6-4f9f-be2b-ff7319474845",
+            "title": "끝날 때까지 끝난 게 아니다"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.2,
+        "ndcg_at_5": 0.38685280723454163,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 5,
+        "top5": [
+          {
+            "id": "772cee8a-7df9-4b33-816f-fc297ea0ad05",
+            "title": "중요한 것은 꺾이지 않는 마음"
+          },
+          {
+            "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+            "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다"
+          },
+          {
+            "id": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+            "title": "중요한 건 꺾이지 않는 마음"
+          },
+          {
+            "id": "797d400a-c415-4901-8943-a09e69417a56",
+            "title": "다시 갈게요(ㄷㅅㄱㄱㅇ)"
+          },
+          {
+            "id": "bf3cdc61-3fc9-48a3-8957-9ccd43e3c28f",
+            "title": "중꺾마"
+          }
+        ]
+      }
+    },
+    {
+      "id": "joddaetgoal-1",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "좋댓구알",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "66e5a4a3-7eae-49b2-a907-d377c923143f",
+            "title": "알잘딱깔센"
+          },
+          {
+            "id": "deb0f94c-ca7c-4f2e-8c07-8c6ad804f68f",
+            "title": "장원영 OO (밤티의 반대말)"
+          },
+          {
+            "id": "cb3f1951-667b-4a2c-843b-8238f7b573d0",
+            "title": "오히려 좋아"
+          },
+          {
+            "id": "c4e90204-2333-4bf2-9494-91d8774daebd",
+            "title": "베스트댓글(베댓)"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "66e5a4a3-7eae-49b2-a907-d377c923143f",
+            "title": "알잘딱깔센"
+          },
+          {
+            "id": "deb0f94c-ca7c-4f2e-8c07-8c6ad804f68f",
+            "title": "장원영 OO (밤티의 반대말)"
+          },
+          {
+            "id": "cb3f1951-667b-4a2c-843b-8238f7b573d0",
+            "title": "오히려 좋아"
+          },
+          {
+            "id": "c4e90204-2333-4bf2-9494-91d8774daebd",
+            "title": "베스트댓글(베댓)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "joddaetgoal-2",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "spacing",
+      "query": "좋 댓 구 알",
+      "baseline": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "66e5a4a3-7eae-49b2-a907-d377c923143f",
+            "title": "알잘딱깔센"
+          },
+          {
+            "id": "cb3f1951-667b-4a2c-843b-8238f7b573d0",
+            "title": "오히려 좋아"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "3309aa6c-833b-46d3-ae2a-4cde9947accf",
+            "title": "절 대 알 려 주 지 마"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "66e5a4a3-7eae-49b2-a907-d377c923143f",
+            "title": "알잘딱깔센"
+          },
+          {
+            "id": "cb3f1951-667b-4a2c-843b-8238f7b573d0",
+            "title": "오히려 좋아"
+          },
+          {
+            "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+            "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+          },
+          {
+            "id": "3309aa6c-833b-46d3-ae2a-4cde9947accf",
+            "title": "절 대 알 려 주 지 마"
+          }
+        ]
+      }
+    },
+    {
+      "id": "joddaetgoal-3",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "영상 마지막에 좋아요와 댓글과 구독을 부탁하는 말",
+      "baseline": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "56c6860c-2db5-43d6-b47a-00692a73a396",
+            "title": "구독과 좋아요 부탁드립니다"
+          },
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "e790cc2d-4057-4485-8a14-3aeb61d251a7",
+            "title": "3줄요약"
+          },
+          {
+            "id": "deb0f94c-ca7c-4f2e-8c07-8c6ad804f68f",
+            "title": "장원영 OO (밤티의 반대말)"
+          },
+          {
+            "id": "68d88c75-f14b-4b09-8793-d82fd022e2db",
+            "title": "알고리즘의 선택을 받아 왔습니다"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 1.0,
+        "ndcg_at_5": 1.0,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 1,
+        "top5": [
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "56c6860c-2db5-43d6-b47a-00692a73a396",
+            "title": "구독과 좋아요 부탁드립니다"
+          },
+          {
+            "id": "68d88c75-f14b-4b09-8793-d82fd022e2db",
+            "title": "알고리즘의 선택을 받아 왔습니다"
+          },
+          {
+            "id": "e790cc2d-4057-4485-8a14-3aeb61d251a7",
+            "title": "3줄요약"
+          },
+          {
+            "id": "4974449f-d369-4f5a-bb4d-95fee471dc5c",
+            "title": "스윙스 우사인 볼트 어록"
+          }
+        ]
+      }
+    },
+    {
+      "id": "joddaetgoal-4",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "유튜버가 시청자에게 알림 설정까지 함께 눌러 달라고 요청할 때",
+      "baseline": {
+        "mrr_at_10": 0.25,
+        "ndcg_at_5": 0.43067655807339306,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 4,
+        "top5": [
+          {
+            "id": "56c6860c-2db5-43d6-b47a-00692a73a396",
+            "title": "구독과 좋아요 부탁드립니다"
+          },
+          {
+            "id": "68d88c75-f14b-4b09-8793-d82fd022e2db",
+            "title": "알고리즘의 선택을 받아 왔습니다"
+          },
+          {
+            "id": "8a1ed1af-3fe3-47b9-b12f-c6180195b15b",
+            "title": "시참"
+          },
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "b027e4d2-4e17-4ffc-ab4b-6dd8e23913a6",
+            "title": "재채기가 나온다 아 안 나온다"
+          }
+        ]
+      },
+      "selected": {
+        "mrr_at_10": 0.5,
+        "ndcg_at_5": 0.6309297535714575,
+        "recall_at_20": 1.0,
+        "hit_at_12": 1.0,
+        "first_relevant_rank": 2,
+        "top5": [
+          {
+            "id": "56c6860c-2db5-43d6-b47a-00692a73a396",
+            "title": "구독과 좋아요 부탁드립니다"
+          },
+          {
+            "id": "18581caa-bbef-49a5-a1c5-c909fbf57cee",
+            "title": "좋댓구알"
+          },
+          {
+            "id": "8a1ed1af-3fe3-47b9-b12f-c6180195b15b",
+            "title": "시참"
+          },
+          {
+            "id": "14e4834f-e38d-494b-9e48-3884eb538e3f",
+            "title": "카스테라(하스 켜라)"
+          },
+          {
+            "id": "c91fee9a-2b70-4336-a6b0-0aefdd77adc8",
+            "title": "카톡왔숑"
+          }
+        ]
+      }
+    }
+  ],
+  "policy_probes": [
+    {
+      "id": "policy-rickroll",
+      "excluded_from_relevance_metrics": true,
+      "forbidden_named_target_returned": false,
+      "top5": [
+        {
+          "id": "151e1812-a038-4152-8527-8a9df04f9a07",
+          "title": "안 나오면 쳐들어간다"
+        },
+        {
+          "id": "b4f0b1e9-86f8-4d14-9c7a-29436f4028e8",
+          "title": "일하는 중에 갑자기 몸이 안 좋아졌어요"
+        },
+        {
+          "id": "7a58b0aa-cf72-46b0-9a79-eccbf62ffab2",
+          "title": "리중딱"
+        },
+        {
+          "id": "4bd930b0-e8ec-41da-b8f7-058c147bd727",
+          "title": "삼각함수송"
+        },
+        {
+          "id": "1ba8d1eb-2e55-400b-9f07-7273aa35145d",
+          "title": "아무래도 난 챌린지(다이너마이트)"
+        }
+      ]
+    }
+  ],
+  "timing": {
+    "capture_seconds": 25.783885042008478,
+    "inference_seconds": 7.173952832177747
+  },
+  "limitations": [
+    "One bounded public capture, not one database transaction; the catalog can change between metadata and RPC reads.",
+    "Score gains are not production accuracy guarantees.",
+    "Candidate overfetch uses keyword20 and semantic40; vector/profile/document construction unchanged.",
+    "Final SQL RPC parity and actual deployed HTTP behavior require separate verification.",
+    "No full corpus, query vectors, credentials, or private rows are stored in this tracked report."
+  ],
+  "sql_verification": {
+    "rpc": "search_meme_references",
+    "role": "service_role",
+    "model_calls": 0,
+    "retuned": false,
+    "requested_limit": 20,
+    "complete": true,
+    "public_filter_required": true,
+    "recorded_at_utc": "2026-10-04T00:59:28Z",
+    "verified_queries": 48,
+    "matched_queries": 48,
+    "mismatched_queries": 0,
+    "checks": [
+      {
+        "query_id": "tmi-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 1708.622
+      },
+      {
+        "query_id": "tmi-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 466.407
+      },
+      {
+        "query_id": "tmi-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 540.305
+      },
+      {
+        "query_id": "tmi-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 495.895
+      },
+      {
+        "query_id": "sonminsu-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 457.915
+      },
+      {
+        "query_id": "sonminsu-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 465.779
+      },
+      {
+        "query_id": "sonminsu-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 666.905
+      },
+      {
+        "query_id": "sonminsu-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 590.206
+      },
+      {
+        "query_id": "gapbunsSa-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 512.104
+      },
+      {
+        "query_id": "gapbunsSa-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 427.17
+      },
+      {
+        "query_id": "gapbunsSa-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 508.548
+      },
+      {
+        "query_id": "gapbunsSa-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 461.852
+      },
+      {
+        "query_id": "gatsaeng-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 411.45
+      },
+      {
+        "query_id": "gatsaeng-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 441.831
+      },
+      {
+        "query_id": "gatsaeng-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 535.346
+      },
+      {
+        "query_id": "gatsaeng-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 432.853
+      },
+      {
+        "query_id": "flex-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 399.464
+      },
+      {
+        "query_id": "flex-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 418.441
+      },
+      {
+        "query_id": "flex-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 524.327
+      },
+      {
+        "query_id": "flex-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 461.135
+      },
+      {
+        "query_id": "chwijon-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 404.529
+      },
+      {
+        "query_id": "chwijon-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 402.612
+      },
+      {
+        "query_id": "chwijon-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 472.306
+      },
+      {
+        "query_id": "chwijon-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 432.367
+      },
+      {
+        "query_id": "eojjeltv-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 383.938
+      },
+      {
+        "query_id": "eojjeltv-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 422.835
+      },
+      {
+        "query_id": "eojjeltv-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 492.999
+      },
+      {
+        "query_id": "eojjeltv-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 489.849
+      },
+      {
+        "query_id": "kingbad-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 516.124
+      },
+      {
+        "query_id": "kingbad-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 411.208
+      },
+      {
+        "query_id": "kingbad-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 497.26
+      },
+      {
+        "query_id": "kingbad-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 497.625
+      },
+      {
+        "query_id": "sbuljae-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 390.933
+      },
+      {
+        "query_id": "sbuljae-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 405.452
+      },
+      {
+        "query_id": "sbuljae-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 482.703
+      },
+      {
+        "query_id": "sbuljae-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 415.938
+      },
+      {
+        "query_id": "naeronambul-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 428.807
+      },
+      {
+        "query_id": "naeronambul-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 436.473
+      },
+      {
+        "query_id": "naeronambul-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 467.107
+      },
+      {
+        "query_id": "naeronambul-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 458.75
+      },
+      {
+        "query_id": "jungkkukma-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 392.77
+      },
+      {
+        "query_id": "jungkkukma-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 417.886
+      },
+      {
+        "query_id": "jungkkukma-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 424.245
+      },
+      {
+        "query_id": "jungkkukma-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 435.61
+      },
+      {
+        "query_id": "joddaetgoal-1",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 481.585
+      },
+      {
+        "query_id": "joddaetgoal-2",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 466.612
+      },
+      {
+        "query_id": "joddaetgoal-3",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 494.445
+      },
+      {
+        "query_id": "joddaetgoal-4",
+        "matches_exact_ids": true,
+        "expected_count": 20,
+        "actual_count": 20,
+        "http_elapsed_ms": 514.147
+      }
+    ],
+    "http_latency_ms": {
+      "includes_network": true,
+      "p50": 461.135,
+      "p95": 590.206,
+      "max": 1708.622,
+      "total": 23463.667
+    }
+  }
+}

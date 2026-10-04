@@ -157,6 +157,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
     "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
+    "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],
     "/api/mcp-operator": ["./integrations/memecatch-chatgpt/ui/app.html"],
   },

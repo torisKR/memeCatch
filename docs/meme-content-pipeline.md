@@ -12,9 +12,20 @@
 | 익명 exact 검색 | 4,378건에서 read-only EXPLAIN Execution Time55.852ms, 12개 결과. 1회 warm 표본이며 p95·부하 결과가 아님 |
 | 실제 운영 브라우저 | 명시적 검색·Studio·취소/늦은 응답·권리 안내·관리자 로그인 경계 통과. WebMCP 미지원 fallback 및 등록 shim→실제API 통과; 네이티브AI 세션 미검증 |
 
-**순위 품질은 추가 튜닝이 필요하다.** 사전에 정한 4개 상황 중 TMI만 기대 결과가 상위5개에 있었다. 원시40개 후보에서 손민수는24위, 어쩔티비는40위 밖이었다. Rickrolling은 운영에서 rejected여서 공개 검색에서 제외되는 것이 맞았다. 공개 대상인 표본3개에서 top5 성공1개라는 작은 탐색 결과를 전체 정확도로 일반화하지 않는다. 이름·별칭 검색을 유지하고, 이후 더 넓은 한국어 상황 평가 세트로 문서 구성·후보 검색·순위 병합을 비교한다. 이번 활성화에서 작은 표본에 맞춘 순위 변경이나 검수 상태 변경은 하지 않았다.
+**최초 활성화 당시 순위 품질은 추가 튜닝이 필요했다.** 사전에 정한 4개 상황 중 TMI만 기대 결과가 상위5개에 있었다. 원시40개 후보에서 손민수는24위, 어쩔티비는40위 밖이었다. Rickrolling은 운영에서 rejected여서 공개 검색에서 제외되는 것이 맞았다. 공개 대상인 표본3개에서 top5 성공1개라는 작은 탐색 결과를 전체 정확도로 일반화하지 않는다. 이름·별칭 검색을 유지하고, 이후 더 넓은 한국어 상황 평가 세트로 문서 구성·후보 검색·순위 병합을 비교한다. 이번 활성화에서 작은 표본에 맞춘 순위 변경이나 검수 상태 변경은 하지 않았다.
 
-재현 가능한 기록은 `artifacts/vector/20261004/production-verification.json`, 모델 일치는 `model-compatibility.json`, 비용 시나리오는 `artifacts/cost/20261002/free-tier-report.html`에 있다.
+추가 튜닝은 공개12개 주제·48개 자체 작성 질의를 주제별로 개발24개/holdout24개로 나누어 평가했다. 개발 세트에서만 선택한 설정은 단어 후보40개+의미 후보40개, 제목·별칭·초성 우선, RRF k60·동일 가중치다. 고정 모델과 색인 문서 구성은 변경하지 않았다.
+
+| 별도 holdout24개 | 기존 | 선택 설정 |
+| --- | --- | --- |
+| nDCG@5 | 0.499678 | 0.594244 |
+| MRR@10 | 0.488013 | 0.577778 |
+| Recall@20(화면12개 제한 전) | 0.708333 | 0.791667 |
+| 화면12개 안에서 기대 대상 발견 | 0.708333 | 0.750000 |
+
+자연어12개만의 nDCG@5는0.124357→0.304059이며 이름·별칭 형태12개의 화면 발견율은 두 설정 모두1.0이었다. 자체 작성 relevance와 작은 표본의 결과이므로 전체 검색 정확도나 독립 사용자 평가로 일반화하지 않는다. 자연어 실패 사례는 여전히 남는다. 후보만 늘린 개발 비교는 nDCG를 개선하지 못했다. 정상 의미 검색은 새로운 `search_meme_references` 읽기 전용 RPC 하나로 순위와 공개 최소 메타데이터를 반환하여 기존 최대3회의 논리 DB 호출을1회로 줄인다. 모델·RPC 장애 시 기존 이름·별칭 조회로 복귀한다.
+
+재현 가능한 최초 운영 기록은 `artifacts/vector/20261004/production-verification.json`, 모델 일치는 `model-compatibility.json`, 튜닝 평가와 고정 질의는 `search-ranking-evaluation.json` 및 `scripts/fixtures/meme-reference-queries.json`, 비용 시나리오는 `artifacts/cost/20261002/free-tier-report.html`에 있다.
 
 ## 이번에 구현한 범위
 
@@ -27,11 +38,11 @@
 | 공개 카탈로그 벡터 | `private.meme_semantic_embeddings`, 밈당 384차원 벡터 하나, 모델 프로필 고정 |
 | 의미 후보 조회 | `match_meme_embeddings`, cosine 순위, 공개 `approved`/`limited`만, 최대 40건 |
 | 관련 밈 | `related_meme_embeddings`, 저장된 벡터 재사용, 모델 서버 호출 없음 |
-| 검색·Studio | 사용자가 참고 검색 버튼을 눌렀을 때만 의미 검색 요청, 이름·별칭 결과와 reciprocal rank fusion으로 결합 |
+| 검색·Studio | 사용자가 참고 검색 버튼을 눌렀을 때만 의미 검색 요청, 단어40+의미40 후보를 한 RPC에서 RRF로 결합하고 이름·별칭·초성을 우선 |
 | 실패 시 처리 | 기능 꺼짐·모델 장애·미적용 RPC·빈 인덱스는 기존 이름·별칭 검색으로 복귀 |
 | 변경 처리 | 원문 필드 또는 검수 상태 변경 시 벡터 제거; 유행 점수·`updated_at`만 바뀌면 유지 |
 | 저장 보호 | 서버 원문 해시 재검증과 부모 행 잠금으로 오래된 생성 결과 저장 방지 |
-| 작업 제한 | 서비스 전용 RPC, 배치 최대 100개·실행당 최대 100배치(총 10,000개), 기본 25개·1배치, 처리 후 종료 |
+| 작업 제한 | 일일 cron25개·90초·동시 실행 lease; 수동 Python은 배치 최대100개·실행당 최대100배치이며 처리 후 종료 |
 
 DB 테이블은 REST에 노출하지 않는 `private` 스키마에 있다. 익명·일반 사용자·운영자에게 공개 상태인 부모 밈의 벡터만 읽도록 RLS를 적용한다. 쓰기는 기존 `service_role`을 사용하는 인덱서만 가능하다. 공개 검색 결과에는 벡터와 원문 전체를 보내지 않는다. 외부 밈을 자체 제작으로 분류하거나 검색 결과를 재사용 허가로 취급하지 않는다.
 
@@ -54,7 +65,7 @@ dtype         = fp32
 
 운영 질의용 ONNX 파일은 `scripts/prepare-meme-embedding-model.mjs`가 **빌드 전에** `.local/embedding-models/intfloat/multilingual-e5-small`에 준비한다. 고정 revision의 root `config.json`, `tokenizer.json`, `tokenizer_config.json`, `special_tokens_map.json`, `onnx/model.onnx`만 내려받고 파일 크기·공식 체크섬을 검사한다. root와 `onnx` 디렉터리의 tokenizer 파일은 동일한 체크섬이다. FP32 ONNX의 SHA-256은 `ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665`이다. 검증된 파일은 재사용하고 실패·취소 시 임시 파일을 정리한다. 전체 성공 후 `manifest.json`에 모델·revision·FP32·384차원과 파일별 SHA-256·크기를 원자적으로 기록한다.
 
-Next.js의 파일 추적은 이 모델 자산을 `/v1/embeddings` 함수에만 포함한다. 런타임은 manifest를 확인하고 로컬 FP32 파일만 로드하며 원격 모델 다운로드를 차단한다. 동일 모델의 ONNX와 Python 결과도 실제 한국어 질의의 벡터·검색 순위 비교를 통과한 뒤 활성화한다. 양자화 모델이나 다른 revision으로 조용히 대체하지 않는다.
+Next.js의 파일 추적은 이 모델 자산을 `/v1/embeddings` 질의 함수와 `/api/cron/meme-embeddings` 변경분 색인 함수에만 포함한다. 두 함수는 각각 CPU 하나·동시 추론 한 건으로 실행하며 페이지 함수에는 모델을 싣지 않는다. 런타임은 manifest를 확인하고 로컬 FP32 파일만 로드하며 원격 모델 다운로드를 차단한다. 동일 모델의 ONNX와 Python 결과도 실제 한국어 질의의 벡터·검색 순위 비교를 통과한 뒤 활성화한다. 양자화 모델이나 다른 revision으로 조용히 대체하지 않는다.
 
 기존 MPE의 `mpe-text-embedding-v1` fingerprint는 별도 흐름이다. 그 벡터나 비공개 업로드 자료를 이번 공개 카탈로그 벡터에 섞지 않는다.
 
@@ -149,7 +160,7 @@ Deployment Protection이 적용된 배포에서는 **기존 자동화용** `VERC
    node scripts/prepare-meme-embedding-model.mjs --check
    ```
 
-   배포 대상 소스 목록을 기준으로 별도 임시 폴더에 준비한다. 새 구현 파일은 배포 대상에 명시적으로 포함하고 개발용 `.local` 캐시·`.env`·DB 백업·개인 에이전트 폴더를 통째로 업로드하지 않는다. 모델은 해당 staging의 빌드 단계에서 준비하여 `/v1/embeddings` 함수에만 포함한다. 기존 Vercel 프로젝트·계정 연결을 유지하고 새 프로젝트나 유료 제공자를 생성하지 않는다.
+   배포 대상 소스 목록을 기준으로 별도 임시 폴더에 준비한다. 새 구현 파일은 배포 대상에 명시적으로 포함하고 개발용 `.local` 캐시·`.env`·DB 백업·개인 에이전트 폴더를 통째로 업로드하지 않는다. 모델은 해당 staging의 빌드 단계에서 준비하여 `/v1/embeddings`와 `/api/cron/meme-embeddings` 함수에만 포함한다. 기존 Vercel 프로젝트·계정 연결을 유지하고 새 프로젝트나 유료 제공자를 생성하지 않는다.
 2. **도메인을 전환하지 않은 보호된 production 배포에서 검증한다.** 기존 프로젝트에 CLI의 `--prod --skip-domain`으로 배포해 운영 환경의 자격증명·Protection·2 GB 함수 조건을 사용하되 `catchmeme.com` 도메인은 기존 배포에 유지한다. 기존 공개 도메인의 의미 검색 설정은 유지한다. 보호된 후보 배포에만 검증용 의미 검색 flag를 켜 자기 HTTPS 호출을 확인한다. 이 배포의 URL에서 정상 서명·실패 서명·미설정 secret·잘못된 입력·자기 HTTPS 연결을 검증한다. 실제 한국어 입력을 Python FP32와 비교하고 Vercel Linux 함수의 cold/warm 지연·최대 RSS·CPU를 기록한다. **로컬 Mac에서 관측한 약 1.66 GB RSS는 Vercel Linux의 2 GB 조건을 통과했다는 증거가 아니다.** 이 단계가 통과하기 전에는 운영 벡터 DB 쓰기를 진행하지 않는다.
 
    bundled 호출자는 최대 30초, 기존 외부 제공자 연결은 6초를 기다린다. 제한 시간이 끝나도 이미 시작된 native 추론이 즉시 취소된다고 보장하지 않는다. 초기화 실패 후 재시도는 30초 뒤의 새 요청에서 가능하다.
@@ -165,7 +176,19 @@ Deployment Protection이 적용된 배포에서는 **기존 자동화용** `VERC
 
 Vercel Hobby는 CPU 추론이 포함된 **전체 앱 합산**으로 Active CPU 4시간·Provisioned Memory 360 GB시간을 공유한다. Hobby 함수는 2 GB·1 vCPU이며, 표준 Node 번들 250 MB를 넘는 FP32 모델은 Fluid compute·Active CPU가 켜진 Large Functions Beta(최대 5 GB)를 사용해야 한다. 기존 프로젝트는 `VERCEL_SUPPORT_LARGE_FUNCTIONS=1`로 참여할 수 있지만 실제 플랫폼 적용과 배포 크기를 확인해야 한다. 기능을 추가해 비용이나 서버 부하가 줄었다고 보장하지 않는다. 캐시 적중을 제외한 질의당 실측 CPU가 `t`초라면 `14,400 / t`는 이 기능만 계산한 이론적 상한이며 기존 앱·cold start 사용량을 빼야 한다. [Vercel 함수 한도](https://vercel.com/docs/functions/limitations), [Hobby 사용량](https://vercel.com/docs/plans/hobby)
 
-**재색인은 자동 백그라운드 작업이 아니다.** 제목·별칭·설명·기원·활용 문서나 검수 상태가 바뀌면 기존 벡터가 무효화되고, 운영자가 인덱서를 다시 실행할 때까지 해당 의미 후보·관련 추천이 빠질 수 있다. 관리자는 정기적으로 누락·stale 건수와 변경량을 확인하고 제한된 색인을 실행한다. 자동 큐·재시도·주기 작업은 후속 구현으로 남긴다. 초기 운영 마이그레이션·backfill·배포는 완료했으며 이후 변경분의 재색인은 이 수동 운영 절차를 따른다.
+## 변경분 자동 재색인
+
+제목·별칭·요약·설명·기원·활용 안내 또는 검수 상태가 바뀌면 기존 trigger가 해당 벡터를 제거한다. 공개 상태인데 벡터가 없는 행 자체를 처리 대기열로 사용하므로 새 작업 행을 중복 생성하지 않는다. 유행 점수·날짜 갱신은 기존 벡터를 유지한다.
+
+`/api/cron/meme-embeddings`는 매일 UTC18:30(한국03:30) 실행하며 최대25문서·90초 작업 예산으로 변경분만 순차 처리한다. Hobby cron은 하루 한 번이고 지정 시각부터 최대59분 늦게 실행될 수 있다. 따라서 즉시 재색인이나 대량 변경의 당일 완료를 보장하지 않는다. 하루 변경량이25건을 넘으면 잔량을 확인하고 기존 Python 인덱서로 제한된 추가 실행을 한다. [Vercel 공식 cron 한도](https://vercel.com/docs/cron-jobs/usage-and-pricing)
+
+기존 `CRON_SECRET`의 Bearer 인증을 검증하고 `MEME_EMBEDDING_REINDEX_ENABLED=true`인 GET만 정기 작업을 시작한다. 이 flag는 기본 비활성화이며 배포 모델 검증 뒤에 별도로 켠다. 수동 POST는 기존 서버 전용 `SUPABASE_SERVICE_ROLE_KEY`를 검증하며 새로운 토큰을 발급하지 않는다. 공개 사용자·일반 로그인·WebMCP 도구에 색인 실행 권한을 제공하지 않는다. POST의 빈 요청은 수동 변경분 처리이며, 정확히 `{"validate_model":true}`인 작은 요청만 고정된 긴 문서로 배포 모델을 검사한다. 이 검사는 문서나 벡터를 응답하지 않고 DB를 변경하지 않는다. 공개 `/v1/embeddings`에는 문서 입력을 허용하지 않는다.
+
+서비스 전용 `acquire_meme_embedding_run`은180초 lease를 원자적으로 획득한다. 중복 요청은 추론·저장 없이 종료한다. 실행 중 원문 또는 공개 상태가 바뀌면 기존 hash 재검증으로 stale 결과를 거부하며 다음 실행에 남긴다. 실패 시 lease를 해제하고15→30→60분 backoff를 기록한다. 함수 강제 종료 시 lease 만료 뒤 다시 시작할 수 있다. 매일 cron은 별도 자동 재시도 없이 다음 예약 실행을 사용한다.
+
+`meme_embedding_backlog()`는 서비스 전용으로 대기 수·최근 indexed/stale/remaining·실패 횟수·retry_after만 반환한다. 원문·밈 ID·벡터·lease owner는 반환하지 않는다. 운영 점검에서 missing/stale/비공개 벡터를 확인하고, 반복 실패 또는 늘어나는 대기열을 먼저 조사한다. 빈 대기열은 모델을 초기화하지 않아 추론 비용이 발생하지 않는다.
+
+고정 FP32 모델의512토큰 passage를 실제 보호된 Vercel Linux 함수에서 검사한 뒤 정기 작업을 활성화한다. 질의120자 검증이나 로컬 Mac의 메모리 수치만으로 긴 문서의2GB 함수 적합성을 판정하지 않는다.
 
 ## 이후 제작 파이프라인 기획
 

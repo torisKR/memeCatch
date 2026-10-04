@@ -1,0 +1,465 @@
+{
+  "schema_version": 1,
+  "authorship": "Manually authored Korean query drafts by the coding agent; provisional relevance labels, not independent human review.",
+  "evaluation_contract": {
+    "model_profile": "multilingual-e5-small-v1",
+    "model": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "dimensions": 384,
+    "public_statuses": [
+      "approved",
+      "limited"
+    ],
+    "split_rule": "All queries for a target remain in one split; no expected target overlaps dev and holdout.",
+    "previous_four_smoke_queries_used_for_tuning": false
+  },
+  "targets": [
+    {
+      "key": "tmi",
+      "canonical_title": "TMI",
+      "split": "dev",
+      "acceptable_titles": [
+        "TMI"
+      ]
+    },
+    {
+      "key": "sonminsu",
+      "canonical_title": "손민수",
+      "split": "dev",
+      "acceptable_titles": [
+        "손민수(하다)"
+      ]
+    },
+    {
+      "key": "gapbunsSa",
+      "canonical_title": "갑분싸",
+      "split": "dev",
+      "acceptable_titles": [
+        "갑분싸"
+      ]
+    },
+    {
+      "key": "gatsaeng",
+      "canonical_title": "갓생",
+      "split": "dev",
+      "acceptable_titles": [
+        "갓생"
+      ]
+    },
+    {
+      "key": "flex",
+      "canonical_title": "플렉스",
+      "split": "dev",
+      "acceptable_titles": [
+        "플렉스",
+        "플렉스(Flex)"
+      ]
+    },
+    {
+      "key": "chwijon",
+      "canonical_title": "취존",
+      "split": "dev",
+      "acceptable_titles": [
+        "취존"
+      ]
+    },
+    {
+      "key": "eojjeltv",
+      "canonical_title": "어쩔티비",
+      "split": "holdout",
+      "acceptable_titles": [
+        "어쩔티비 저쩔티비"
+      ]
+    },
+    {
+      "key": "kingbad",
+      "canonical_title": "킹받다",
+      "split": "holdout",
+      "acceptable_titles": [
+        "킹받다",
+        "킹받네"
+      ]
+    },
+    {
+      "key": "sbuljae",
+      "canonical_title": "스불재",
+      "split": "holdout",
+      "acceptable_titles": [
+        "스불재"
+      ]
+    },
+    {
+      "key": "naeronambul",
+      "canonical_title": "내로남불",
+      "split": "holdout",
+      "acceptable_titles": [
+        "내로남불"
+      ]
+    },
+    {
+      "key": "jungkkukma",
+      "canonical_title": "중꺾마",
+      "split": "holdout",
+      "acceptable_titles": [
+        "중꺾마"
+      ]
+    },
+    {
+      "key": "joddaetgoal",
+      "canonical_title": "좋댓구알",
+      "split": "holdout",
+      "acceptable_titles": [
+        "좋댓구알"
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "tmi-1",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "literal",
+      "query": "TMI"
+    },
+    {
+      "id": "tmi-2",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "alias",
+      "query": "티엠아이"
+    },
+    {
+      "id": "tmi-3",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "intent",
+      "query": "회의에서 어제 먹은 점심 메뉴까지 길게 설명하는 동료"
+    },
+    {
+      "id": "tmi-4",
+      "target": "tmi",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "굳이 듣지 않아도 되는 사소한 사생활 얘기를 계속 늘어놓을 때"
+    },
+    {
+      "id": "sonminsu-1",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "literal",
+      "query": "손민수"
+    },
+    {
+      "id": "sonminsu-2",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "spacing",
+      "query": "손 민 수"
+    },
+    {
+      "id": "sonminsu-3",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "intent",
+      "query": "좋아하는 연예인이 입은 옷과 같은 제품을 따라 사는 팬"
+    },
+    {
+      "id": "sonminsu-4",
+      "target": "sonminsu",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "옆 사람의 스타일과 소지품을 똑같이 흉내 내는 모습을 부르는 말"
+    },
+    {
+      "id": "gapbunsSa-1",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "literal",
+      "query": "갑분싸"
+    },
+    {
+      "id": "gapbunsSa-2",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "chosung",
+      "query": "ㄱㅂㅆ"
+    },
+    {
+      "id": "gapbunsSa-3",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "intent",
+      "query": "다 같이 웃다가 한 사람의 농담 때문에 대화가 멈춘 순간"
+    },
+    {
+      "id": "gapbunsSa-4",
+      "target": "gapbunsSa",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "즐거운 모임에서 엉뚱한 발언이 나와 분위기가 어색해졌을 때"
+    },
+    {
+      "id": "gatsaeng-1",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "literal",
+      "query": "갓생"
+    },
+    {
+      "id": "gatsaeng-2",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "spacing",
+      "query": "갓 생"
+    },
+    {
+      "id": "gatsaeng-3",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "intent",
+      "query": "아침 운동과 공부 계획을 지키며 하루를 알차게 보내는 생활"
+    },
+    {
+      "id": "gatsaeng-4",
+      "target": "gatsaeng",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "미루지 않고 작은 목표를 꾸준히 실천하는 부지런한 일상"
+    },
+    {
+      "id": "flex-1",
+      "target": "flex",
+      "split": "dev",
+      "kind": "literal",
+      "query": "플렉스"
+    },
+    {
+      "id": "flex-2",
+      "target": "flex",
+      "split": "dev",
+      "kind": "alias",
+      "query": "flex"
+    },
+    {
+      "id": "flex-3",
+      "target": "flex",
+      "split": "dev",
+      "kind": "intent",
+      "query": "비싼 물건을 사서 돈을 크게 썼다고 자랑하는 모습"
+    },
+    {
+      "id": "flex-4",
+      "target": "flex",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "월급날 친구들 밥값을 한꺼번에 내며 통 크게 소비할 때"
+    },
+    {
+      "id": "chwijon-1",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "literal",
+      "query": "취존"
+    },
+    {
+      "id": "chwijon-2",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "chosung",
+      "query": "ㅊㅈ"
+    },
+    {
+      "id": "chwijon-3",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "intent",
+      "query": "나는 좋아하지 않지만 친구가 좋아하는 음악을 존중해 주기"
+    },
+    {
+      "id": "chwijon-4",
+      "target": "chwijon",
+      "split": "dev",
+      "kind": "paraphrase",
+      "query": "서로 취미가 달라도 이상하다고 놀리지 말고 인정하자는 말"
+    },
+    {
+      "id": "eojjeltv-1",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "어쩔티비"
+    },
+    {
+      "id": "eojjeltv-2",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "spacing",
+      "query": "어쩔 티비"
+    },
+    {
+      "id": "eojjeltv-3",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "상대의 지적에 성의 없이 대꾸하며 대화를 약 올리는 반응"
+    },
+    {
+      "id": "eojjeltv-4",
+      "target": "eojjeltv",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "듣기 싫은 말을 받았을 때 그래서 어쩌라고 하며 유치하게 받아칠 때"
+    },
+    {
+      "id": "kingbad-1",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "킹받다"
+    },
+    {
+      "id": "kingbad-2",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "chosung",
+      "query": "ㅋㅂㄷ"
+    },
+    {
+      "id": "kingbad-3",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "별것 아닌데 묘하게 신경을 건드려 화가 나는 상황"
+    },
+    {
+      "id": "kingbad-4",
+      "target": "kingbad",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "친구의 얄미운 장난에 짜증이 나지만 웃음도 나오는 감정"
+    },
+    {
+      "id": "sbuljae-1",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "스불재"
+    },
+    {
+      "id": "sbuljae-2",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "alias",
+      "query": "스스로 불러온 재앙"
+    },
+    {
+      "id": "sbuljae-3",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "본인이 벌인 일 때문에 결국 자기 자신이 곤란해진 결과"
+    },
+    {
+      "id": "sbuljae-4",
+      "target": "sbuljae",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "귀찮다고 일을 미뤘다가 마감 직전에 고생하게 된 상황"
+    },
+    {
+      "id": "naeronambul-1",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "내로남불"
+    },
+    {
+      "id": "naeronambul-2",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "spacing",
+      "query": "내 로 남 불"
+    },
+    {
+      "id": "naeronambul-3",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "같은 실수를 자기가 하면 괜찮고 남이 하면 비난하는 태도"
+    },
+    {
+      "id": "naeronambul-4",
+      "target": "naeronambul",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "본인에게는 너그럽고 다른 사람에게만 엄격한 이중 기준"
+    },
+    {
+      "id": "jungkkukma-1",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "중꺾마"
+    },
+    {
+      "id": "jungkkukma-2",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "alias",
+      "query": "중요한 것은 꺾이지 않는 마음"
+    },
+    {
+      "id": "jungkkukma-3",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "어려운 경기에서도 포기하지 않고 끝까지 버티자는 응원"
+    },
+    {
+      "id": "jungkkukma-4",
+      "target": "jungkkukma",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "실패가 계속되어도 마음을 놓지 말고 다시 도전하자는 다짐"
+    },
+    {
+      "id": "joddaetgoal-1",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "literal",
+      "query": "좋댓구알"
+    },
+    {
+      "id": "joddaetgoal-2",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "spacing",
+      "query": "좋 댓 구 알"
+    },
+    {
+      "id": "joddaetgoal-3",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "intent",
+      "query": "영상 마지막에 좋아요와 댓글과 구독을 부탁하는 말"
+    },
+    {
+      "id": "joddaetgoal-4",
+      "target": "joddaetgoal",
+      "split": "holdout",
+      "kind": "paraphrase",
+      "query": "유튜버가 시청자에게 알림 설정까지 함께 눌러 달라고 요청할 때"
+    }
+  ],
+  "policy_probes": [
+    {
+      "id": "policy-rickroll",
+      "query": "링크를 눌렀는데 갑자기 릭 애슬리 노래가 나오는 장난",
+      "forbidden_target_names": [
+        "릭롤",
+        "Rickrolling"
+      ],
+      "included_in_relevance_metrics": false
+    }
+  ]
+}

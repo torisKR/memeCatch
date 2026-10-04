@@ -21,7 +21,7 @@
 <tr><td>공개 한국어 모델·실행 위치</td><td>MIT <code>intfloat/multilingual-e5-small</code>의 revision <code>614241f622f53c4eeff9890bdc4f31cfecc418b3</code>, FP32·384차원을 고정합니다. query:/passage: 접두어, mean pooling, 정규화, 최대 512토큰을 동일하게 사용합니다. 색인 원문은 제목·별칭·요약·설명·기원·사용 문맥이며 총 6,900자까지입니다. 카탈로그 색인은 기존 Python 환경의 CPU 한 스레드, 질의 추론은 Vercel Node의 전용 HTTPS 함수에서 실행합니다. 모델 라이선스와 API 구독료가 없는 것과 CPU·메모리 사용량이 없는 것은 다릅니다.</td></tr>
 <tr><td>검색과 Studio</td><td>검색의 “상황·의미로 찾기”, Studio의 “제작 참고 밈 찾기”, 읽기 전용 WebMCP <code>memecatch.search_references</code>. 이름·별칭 결과와 RRF로 병합합니다. 입력 중 의미 검색은 호출하지 않고 명시적 실행·취소·입력 변경·오류·대체 결과를 처리합니다.</td></tr>
 <tr><td>상세 관련 밈</td><td>저장된 공개 밈 벡터를 재사용합니다. 상세 방문마다 모델을 호출하지 않습니다. 기존 태그·카테고리·연도 점수와 결합하며 벡터 조회 실패 시 기존 후보를 유지합니다.</td></tr>
-<tr><td>처리량 제한과 캐시</td><td>색인은 기본25·최대100건씩, 기본1·최대100 batches(총 최대10,000건), 모델 batch 최대4건을 순차 처리합니다. 모델은 필요한 경우 한 번 초기화하고 keyset으로 다음 묶음을 조회합니다. 이미 저장된 행은 건너뛰고 stale hash 저장을 거부하며 저장 실패 때 중단해 재실행으로 이어갑니다. 원문/공개 상태 변경은 벡터를 무효화하고 운영자가 수동으로 재색인할 때까지 의미 검색에서 제외합니다. 자동 백그라운드 색인 큐는 추가하지 않았습니다. 검색 클라이언트 캐시는 성공 응답만 프로세스별 5분·64개, 진행 중 최대16개 요청을 중복 제거합니다. 별도 bundled 추론 함수는 CPU 한 스레드·동시에 추론 한 건, 성공 캐시 5분·64개와 동일 요청 중복 제거를 사용합니다. API는 2~120자·최대20결과·2KB 입력·프로세스별 분당20회 제한과 no-store 응답입니다. 분산 전체 제한을 보장하지 않습니다.</td></tr>
+<tr><td>처리량 제한과 캐시</td><td>색인은 기본25·최대100건씩, 기본1·최대100 batches(총 최대10,000건), 모델 batch 최대4건을 순차 처리합니다. 모델은 필요한 경우 한 번 초기화하고 keyset으로 다음 묶음을 조회합니다. 이미 저장된 행은 건너뛰고 stale hash 저장을 거부하며 저장 실패 때 중단해 재실행으로 이어갑니다. 원문/공개 상태 변경은 벡터를 무효화해 갱신 전까지 의미 검색에서 제외합니다. 최초 활성화에서는 운영자가 수동으로 재색인했습니다. 후속 일일 변경분 처리의 구현·검증 상태는 아래 별도 영역에 기록합니다. 검색 클라이언트 캐시는 성공 응답만 프로세스별 5분·64개, 진행 중 최대16개 요청을 중복 제거합니다. 별도 bundled 추론 함수는 CPU 한 스레드·동시에 추론 한 건, 성공 캐시 5분·64개와 동일 요청 중복 제거를 사용합니다. API는 2~120자·최대20결과·2KB 입력·프로세스별 분당20회 제한과 no-store 응답입니다. 분산 전체 제한을 보장하지 않습니다.</td></tr>
 <tr><td>기존 흐름</td><td>이름·초성·별칭 검색, 외부 밈/자체 제작의 구분, 검수·수동 게시, 로그인·관리자 경계는 유지합니다. 기존 MPE의 64차원 문자 trigram hash는 학습된 의미 벡터가 아니므로 이번 384차원 모델과 섞지 않습니다. 높은 유사도는 권리 허가나 사실 확인이 아닙니다.</td></tr>
 </tbody></table></div>
 <h3 style="margin-top:24px">성능과 용량 판단</h3><p>전체 5,018건 모두에 384차원 float32 벡터를 저장한다고 가정하면 <b>벡터 값만 약 7.71MB(7.35MiB)</b>입니다. 행·PK·확장·WAL·인덱스는 별도이므로 실제 증가량이나 RAM 사용량으로 해석하지 않습니다. 로컬 17건 companion table의 전체 크기는 90,112 bytes였으며 운영 DB의 측정값이 아닙니다.</p>
@@ -56,6 +56,40 @@
 <h3>이후 제작 파이프라인</h3><div class="steps"><div class="step"><b>01 참고·기획</b>밈/출처 선택 → 근거 있는 대본·장면 계획</div><div class="step"><b>02 내 자산·렌더</b>소유 원본 → 비공개 초안 → 렌더·미리보기</div><div class="step"><b>03 검수·게시</b>권리·사실 확인 → 영상/채널/공개 범위의 명시적 승인</div><div class="step"><b>04 사이트·성과</b>플랫폼 ID·URL → 임베드 검수·수동 공개 → 집계</div></div>
 <p style="margin-top:16px">벡터의 확장 순서는 공개 밈 참고 검색 → 기획 자료 → 내 소유 자산 → 대본·자막 chunk 검색입니다. 비공개 제작 자산은 별도 owner 권한과 인덱스를 설계합니다. YouTube 업로드·예약 게시·새 OAuth 권한·자동 공개는 후속 구현이며 이번 변경에 포함하지 않습니다. 먼저 한 영상의 전체 수동 경로를 검증한 뒤 중복 방지·취소·실패 재시도·비용 한도를 갖춘 작업 큐를 단계별로 붙입니다.</p>
 <p class="small">근거: <a href="https://supabase.com/docs/guides/ai/semantic-search">Supabase 의미 검색</a>, <a href="https://supabase.com/docs/guides/ai/hybrid-search">하이브리드 검색</a>, <a href="https://github.com/pgvector/pgvector">pgvector exact/approximate 검색</a>, <a href="https://huggingface.co/intfloat/multilingual-e5-small">한국어 E5 모델 카드</a>. 재현 절차는 저장소의 <code>docs/meme-content-pipeline.md</code>에 있습니다.</p></section>
+
+<section id="search-ranking-delta"><h2>후속 구현: 검색 순위 조정·변경분 재색인</h2>
+<p><span class="badge unknown">소규모 평가 완료 · Linux 검증·운영 반영 확인 대기</span></p>
+<p>최초 운영 활성화의 수치와 별도로, 검색 순위와 변경 후 벡터 갱신을 보완하는 구현입니다. 고정 FP32 모델·revision·384차원 프로필·query:/passage: 접두어·최대512토큰은 유지합니다. 아래의 요청 수는 코드 경로의 논리적 DB 요청을 뜻하며 CPU·지연·무료 한도 개선률이나 운영 배포 완료를 뜻하지 않습니다.</p>
+<div class="table-wrap"><table><thead><tr><th>검색 변경</th><th>적용 범위·평가 경계</th></tr></thead><tbody>
+<tr><td>검색 RPC 통합 · 정상 경로 3→1</td><td>이름·별칭 조회, 의미 후보 조회, 결과 상세 필드 재조회로 나뉘던 정상 의미 검색 경로를 한 검색 RPC로 합칩니다. SQL에서 후보와 공개 결과 필드를 함께 반환합니다. 모델 추론 함수 호출은 별도이며, 오류·미적용 환경의 대체 경로까지 항상1회라고 보장하지 않습니다. DB 내부 실행 계획·CPU·전송 바이트는 별도로 측정해야 합니다.</td></tr>
+<tr><td>이름 일치·상황 검색 순위</td><td>이름·별칭 후보 최대40개와 의미 후보 최대40개를 RRF로 병합하고 정확한 이름 일치를 우선합니다. 공개 검수 필터·기존 권한을 유지하며 평가를 위해 밈의 원문·검수 상태를 바꾸지 않습니다. 후보80개는 반환 결과 개수나 별도 DB 요청80회를 뜻하지 않습니다.</td></tr>
+<tr><td>잠정 품질 평가 · 48질의</td><td id="ranking-evaluation-state">직접 작성한48질의·12개 기대 대상에서 개발24개와 대상이 겹치지 않는 holdout24개를 비교했습니다. 대상마다 이름2개·자연어 상황2개 질의를 작성했고 허용 가능한 중복 밈 정답 정의를 포함합니다. 개발 세트에서 고정한 RRF k60·이름 가중치1·의미 가중치1을 holdout에 그대로 적용했습니다. 실제 유입 로그나 독립·맹검 평가가 아니므로 정확도·일반화 성능을 보장하지 않습니다.</td></tr>
+</tbody></table></div>
+<h3 style="margin-top:24px">동결된 holdout24개 결과 · 직접 작성한 소규모 평가</h3>
+<div class="table-wrap"><table><thead><tr><th>평가 항목</th><th>변경 전</th><th>변경 후</th></tr></thead><tbody>
+<tr><td>전체24개 · MRR@10</td><td>0.488013</td><td>0.577778</td></tr>
+<tr><td>전체24개 · nDCG@5</td><td>0.499678</td><td>0.594244</td></tr>
+<tr><td>전체24개 · Recall@20</td><td>70.83%</td><td>79.17%</td></tr>
+<tr><td>전체24개 · Hit@12</td><td>70.83%</td><td>75.00%</td></tr>
+<tr><td>자연어 상황12개 · nDCG@5</td><td>0.124357</td><td>0.304059</td></tr>
+<tr><td>자연어 상황12개 · Hit@12</td><td>41.67%</td><td>50.00%</td></tr>
+<tr><td>이름12개 · Hit@12</td><td>100%</td><td>100%</td></tr>
+</tbody></table></div>
+<p class="small" style="margin-top:12px">Hit는 기대 후보가 지정한 상위 개수에 포함된 질의 비율입니다. MRR·nDCG는 순위 품질 점수이며 위 비율을 서비스 정확도로 해석하지 않습니다. 자연어 상황의 절반은 여전히 상위12개에서 기대 후보를 찾지 못했으므로 개선이 더 필요합니다. 모델 프로필·색인 문서는 변경하지 않아 전체 재색인을 수행할 필요는 없습니다. 결과 근거: <code>artifacts/vector/20261004/search-ranking-evaluation.json</code>. 새 RPC의 운영 SQL 결과 일치·지연은 아직 별도 확인 중입니다.</p>
+<h3 style="margin-top:24px">일일 변경분 처리와 비용 경계</h3>
+<div class="table-wrap"><table><thead><tr><th>구현한 경계</th><th>동작·한계</th></tr></thead><tbody>
+<tr><td>일일 예약 · 기본 비활성</td><td><code>30 18 * * *</code>: 매일 UTC18:30, Asia/Seoul 다음 날03:30. 예정 자동 실행 플래그 <code>MEME_EMBEDDING_REINDEX_ENABLED</code>의 기본값은 off이며 활성화 증거 확인 전에는 운영 자동 처리가 켜졌다고 표시하지 않습니다.</td></tr>
+<tr><td>Vercel Hobby 예약 한도</td><td>2026-10-04 확인한 공식 문서상 모든 플랜의 프로젝트당 cron100개이며 Hobby는 각 작업이 하루1회, 시간 단위 정밀도(±59분)입니다. 과거의2개 제한을 적용하지 않습니다. 03:30 정각 실행이나 변경 직후 갱신을 보장하지 않습니다. cron도 기존 함수 호출·CPU·메모리 무료량을 함께 소비합니다.</td></tr>
+<tr><td>처리량·중복 실행 제한</td><td>공개 대상 중 벡터가 누락된 변경분만 한 번에 최대25문서, 작업 예산90초·route 상한120초·DB lease180초로 순차 처리합니다. 작업이 남거나 모델·저장 실패가 있으면 상태와 남은 수량을 반환하고 이후 예약 또는 권한 있는 수동 재실행으로 이어갑니다. 변경량이 하루25건을 넘으면 갱신 지연이 쌓일 수 있습니다.</td></tr>
+<tr><td>변경 중 저장·빈 대기열</td><td>원문 hash를 다시 검증해 추론 중 바뀐 문서의 오래된 벡터 저장을 거부합니다. 원문·공개 상태 변경으로 무효화된 벡터는 갱신 전 의미 검색에서 제외합니다. pending0이면 모델을 초기화하지 않아 빈 실행의 추론 비용을 피하지만 backlog·lease·상태 기록 등 DB·함수 사용까지0이 되지는 않습니다.</td></tr>
+<tr><td>기존 서버 인증 유지</td><td><code>GET /api/cron/meme-embeddings</code>는 기존 <code>CRON_SECRET</code>, 명시적 운영자 <code>POST</code>는 기존 서버 전용 Supabase service key를 검증합니다. 공개·로그인 사용자에게 색인 권한을 주지 않고 새 토큰을 만들지 않습니다. 운영자 모델 probe와 수동 실행은 예약 플래그와 구분합니다.</td></tr>
+<tr><td>30일 예약 실행의 자원 가정</td><td>하루1회·매회 route 상한120초·할당2GiB라는 단순 예산 가정은 <code>30 × 120초 × 2GiB = 2GiB·시간</code> 규모로 월360GB·시간 포함량의1% 미만입니다. 같은120초 동안1CPU가 전부 활성이라는 상한 가정은 <code>30 × 120초 = 3,600초 = 1시간</code>, 앱 전체 CPU4시간의25%입니다. 실제 빈 작업·cold/warm·동시 실행·인스턴스 유지와는 다르며 실측 비용이나 보장 처리량이 아닙니다. 웹·검색·다른 cron이 같은 무료량을 사용하므로 잔여량 확인이 필요합니다.</td></tr>
+<tr><td>Linux 512토큰 활성화 조건</td><td id="delta-linux-state">실제 Linux2GB 함수에서 동일 FP32 모델의 최대512토큰 passage를 cold/warm 실행해 peak RSS·시간·실패를 확인한 뒤 예약 플래그 활성화를 판단합니다. 기존 짧은 query의 RSS만으로 긴 문서 색인의 메모리 안전성을 확정하지 않습니다. 검증 결과는 대기 중이며 실패하면 자동 예약을 비활성 상태로 유지합니다.</td></tr>
+<tr><td>후속 로컬 검증</td><td id="ranking-validation-state">전체 Vitest381개 파일·2,974개 테스트와 targeted93개, <code>tsc --noEmit</code>, Next production 빌드107페이지(워커1개) 통과. targeted와 전체 테스트 수를 합산하지 않습니다. 최신 전체 lint 결과는 아직 확인 대기이며 실제 운영/Linux 확인과 구분합니다.</td></tr>
+<tr><td>이번 후속 운영 반영</td><td id="delta-production-state">신규 SQL <code>20261004002839</code> 검색 RPC와 <code>20261004002846</code> 재색인 lease를 운영에 적용하고 원격 객체·이력을 확인했습니다. 전체 밈5,018·공개4,378·색인4,378·stale0으로 데이터 수는 유지됐습니다. CLI의 certificate-file 경고는 적용 성공 후 표시됐으며 객체·이력은 별도로 검증했습니다. 새 RPC의48질의 결과 일치·지연, 배포 버전·READY, 예약 플래그와 인증·오류 smoke는 아직 확인 대기입니다. 위 최초 활성화 배포의 성공과 이번 후속 변경의 운영 적용을 구분합니다.</td></tr>
+</tbody></table></div>
+<p class="small" style="margin-top:14px">근거: <a href="https://supabase.com/docs/guides/ai/hybrid-search">Supabase 하이브리드 검색과 RRF</a>, <a href="https://vercel.com/docs/cron-jobs/usage-and-pricing">Vercel cron 사용량·가격·현재 예약 한도</a>. 새 Redis 연결·유료 서비스는 추가하지 않았으며 월간 egress·CPU·메모리 잔여량은 계속 미확인입니다. 아래 계산기의 예시값은 이번 RPC 통합이나 재색인 구현으로 자동 보정하지 않습니다.</p>
+</section>
 
 <div class="grid">
 <div class="card"><span class="badge">색인 후 운영 SQL</span><span class="metric">178.4 / 500MB</span><div class="bar" aria-label="DB 무료 한도의 약 35.7퍼센트 사용"><span style="width:35.7%"></span></div><p class="small">pg_database_size:178,367,635 bytes. 500MB를 십진 단위로 비교한 약35.7%입니다. 벡터 테이블9.19MB이며 월간 전송·CPU 잔여량은 별도 확인이 필요합니다. Usage 과금 지표와 차이가 날 수 있습니다.</p></div>

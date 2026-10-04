@@ -1,0 +1,374 @@
+{
+  "schema_version": 1,
+  "scope": "검색 튜닝·변경분 재색인 최초 검증 스냅샷; 이후 보고서 전용 커밋의 배포 ID와 구분",
+  "feature_commit": "976432950667cf35f8145a3d2f30d109ca21d5c5",
+  "project_ref": "onjipuldngbdptldkpoe",
+  "candidate_deployment": "dpl_9CWXoyj4odkGsyswDbEwGys1FHG9",
+  "scheduled_flag_project_setting": true,
+  "migrations": [
+    "20261004002839",
+    "20261004002846"
+  ],
+  "database": {
+    "total_memes": 5018,
+    "public_memes": 4378,
+    "indexed": 4378,
+    "stale": 0,
+    "nonpublic_vectors": 0,
+    "database_bytes": 178785427,
+    "vector_bytes": 9191424,
+    "pending": 0,
+    "lease_active": false,
+    "lease_until": null,
+    "last_status": "succeeded",
+    "last_started_at": "2026-10-04 01:19:20.291947+00",
+    "last_finished_at": "2026-10-04 01:19:23.06846+00",
+    "last_indexed": 0,
+    "last_stale": 0,
+    "last_remaining": 0,
+    "consecutive_failures": 0,
+    "failed_runs": 0,
+    "retry_after": null,
+    "last_error_code": null
+  },
+  "checks": {
+    "vitest_files": 381,
+    "vitest_tests": 2974,
+    "targeted_tests_subset": 93,
+    "python_indexer_tests": 12,
+    "python_evaluator_tests": 8,
+    "typecheck": "passed",
+    "lint_errors": 0,
+    "lint_existing_warnings": 6,
+    "build_static_pages": 107,
+    "build_workers": 1,
+    "local_sql_fixtures": "both passed in BEGIN/ROLLBACK"
+  },
+  "cron": {
+    "path": "/api/cron/meme-embeddings",
+    "schedule_utc": "30 18 * * *",
+    "timezone_display": "Asia/Seoul",
+    "display_time": "03:30",
+    "max_documents": 25,
+    "work_budget_seconds": 90,
+    "route_max_seconds": 120,
+    "lease_seconds": 180
+  },
+  "candidate_linux": {
+    "base": "https://memecatch-5ywsnhpys-ironjustlikethatgmailcoms-projects.vercel.app",
+    "unauthorized": {
+      "http_status": 401,
+      "elapsed_ms": 2055,
+      "response": {
+        "ok": false,
+        "error": "UNAUTHORIZED"
+      }
+    },
+    "cold_passage": {
+      "http_status": 200,
+      "elapsed_ms": 5981,
+      "response": {
+        "profile": "multilingual-e5-small-v1",
+        "dimensions": 384,
+        "elapsed_ms": 5714,
+        "rss_bytes": 1727787008,
+        "peak_rss_bytes": 1949433856,
+        "heap_used_bytes": 206595320,
+        "platform": "linux"
+      }
+    },
+    "warm_passage": {
+      "http_status": 200,
+      "elapsed_ms": 1451,
+      "response": {
+        "profile": "multilingual-e5-small-v1",
+        "dimensions": 384,
+        "elapsed_ms": 770,
+        "rss_bytes": 1351147520,
+        "peak_rss_bytes": 1949433856,
+        "heap_used_bytes": 206660296,
+        "platform": "linux"
+      }
+    },
+    "reindex": {
+      "http_status": 200,
+      "elapsed_ms": 3277,
+      "response": {
+        "ok": true,
+        "status": "succeeded",
+        "indexed": 0,
+        "stale": 0,
+        "remaining": 0,
+        "errorCode": null
+      }
+    }
+  },
+  "candidate_http": {
+    "base": "https://memecatch-5ywsnhpys-ironjustlikethatgmailcoms-projects.vercel.app",
+    "search": [
+      {
+        "query": "필요하지 않은 개인 정보를 너무 많이 말하는 사람",
+        "status": 200,
+        "elapsedMs": 10643,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "TMI",
+          "뇌피셜",
+          "실시간 정보에 접근할 수 없습니다",
+          "자기 직업 불법적으로 말하기",
+          "[속보]/[단독] 드립"
+        ]
+      },
+      {
+        "query": "친구의 옷과 취향을 그대로 따라 하는 행동",
+        "status": 200,
+        "elapsedMs": 1369,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "취존",
+          "취저",
+          "친구 - 니가 가라, 하와이",
+          "우리 친구 아이가",
+          "손민수(하다)"
+        ]
+      },
+      {
+        "query": "다른 영상을 기대했는데 갑자기 노래로 속이는 장난",
+        "status": 200,
+        "elapsedMs": 1447,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "인주 앨리스",
+          "일하는 중에 갑자기 몸이 안 좋아졌어요",
+          "장원영 OO (밤티의 반대말)",
+          "갑분싸",
+          "크랜베리 드림스(Cranberry Dreams)"
+        ]
+      },
+      {
+        "query": "관심 없다는 듯 상대방을 약올리는 유치한 대답",
+        "status": 200,
+        "elapsedMs": 1208,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "제가 닥터스트레인지가 아니라서 대답을 못 드리겠어요",
+          "많관부",
+          "노답",
+          "궁예질",
+          "천재는 노력하는 자를 이길 수 없다"
+        ]
+      },
+      {
+        "query": "필요하지 않은 개인 정보를 너무 많이 말하는 사람",
+        "status": 200,
+        "elapsedMs": 1352,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "TMI",
+          "뇌피셜",
+          "실시간 정보에 접근할 수 없습니다",
+          "자기 직업 불법적으로 말하기",
+          "[속보]/[단독] 드립"
+        ]
+      }
+    ],
+    "boundaries": [
+      {
+        "path": "/v1/embeddings",
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/api/memes/semantic-search",
+        "status": 400,
+        "expected": 400
+      },
+      {
+        "path": "/api/memes/semantic-search",
+        "status": 403,
+        "expected": 403
+      }
+    ]
+  },
+  "candidate_browser": {
+    "base": "https://memecatch-5ywsnhpys-ironjustlikethatgmailcoms-projects.vercel.app",
+    "unsupported_browser_fallback": true,
+    "search_hybrid_explicit_only": true,
+    "search_top_title": "TMI",
+    "rights_note": true,
+    "cancel_ignores_late_response": true,
+    "studio_explicit_search_and_query_reset": true,
+    "admin_login_boundary": true,
+    "webmcp_top_title": "TMI",
+    "webmcp_real_api_via_registered_tool": true,
+    "webmcp_model_context": "registration shim; no native AI session"
+  },
+  "production_linux": {
+    "base": "https://catchmeme.com",
+    "unauthorized": {
+      "http_status": 401,
+      "elapsed_ms": 2126,
+      "response": {
+        "ok": false,
+        "error": "UNAUTHORIZED"
+      }
+    },
+    "cold_passage": {
+      "http_status": 200,
+      "elapsed_ms": 8558,
+      "response": {
+        "profile": "multilingual-e5-small-v1",
+        "dimensions": 384,
+        "elapsed_ms": 6729,
+        "rss_bytes": 1696006144,
+        "peak_rss_bytes": 1961758720,
+        "heap_used_bytes": 205855128,
+        "platform": "linux"
+      }
+    },
+    "warm_passage": {
+      "http_status": 200,
+      "elapsed_ms": 1405,
+      "response": {
+        "profile": "multilingual-e5-small-v1",
+        "dimensions": 384,
+        "elapsed_ms": 856,
+        "rss_bytes": 1339265024,
+        "peak_rss_bytes": 1961758720,
+        "heap_used_bytes": 209415184,
+        "platform": "linux"
+      }
+    },
+    "reindex": {
+      "http_status": 200,
+      "elapsed_ms": 3679,
+      "response": {
+        "ok": true,
+        "status": "succeeded",
+        "indexed": 0,
+        "stale": 0,
+        "remaining": 0,
+        "errorCode": null
+      }
+    }
+  },
+  "production_http": {
+    "base": "https://catchmeme.com",
+    "search": [
+      {
+        "query": "필요하지 않은 개인 정보를 너무 많이 말하는 사람",
+        "status": 200,
+        "elapsedMs": 8214,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "TMI",
+          "뇌피셜",
+          "실시간 정보에 접근할 수 없습니다",
+          "자기 직업 불법적으로 말하기",
+          "[속보]/[단독] 드립"
+        ]
+      },
+      {
+        "query": "친구의 옷과 취향을 그대로 따라 하는 행동",
+        "status": 200,
+        "elapsedMs": 1017,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "취존",
+          "취저",
+          "친구 - 니가 가라, 하와이",
+          "우리 친구 아이가",
+          "손민수(하다)"
+        ]
+      },
+      {
+        "query": "다른 영상을 기대했는데 갑자기 노래로 속이는 장난",
+        "status": 200,
+        "elapsedMs": 8087,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "인주 앨리스",
+          "일하는 중에 갑자기 몸이 안 좋아졌어요",
+          "장원영 OO (밤티의 반대말)",
+          "갑분싸",
+          "크랜베리 드림스(Cranberry Dreams)"
+        ]
+      },
+      {
+        "query": "관심 없다는 듯 상대방을 약올리는 유치한 대답",
+        "status": 200,
+        "elapsedMs": 1254,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "제가 닥터스트레인지가 아니라서 대답을 못 드리겠어요",
+          "많관부",
+          "노답",
+          "궁예질",
+          "천재는 노력하는 자를 이길 수 없다"
+        ]
+      },
+      {
+        "query": "필요하지 않은 개인 정보를 너무 많이 말하는 사람",
+        "status": 200,
+        "elapsedMs": 862,
+        "mode": "hybrid",
+        "reason": null,
+        "titles": [
+          "TMI",
+          "뇌피셜",
+          "실시간 정보에 접근할 수 없습니다",
+          "자기 직업 불법적으로 말하기",
+          "[속보]/[단독] 드립"
+        ]
+      }
+    ],
+    "boundaries": [
+      {
+        "path": "/v1/embeddings",
+        "status": 401,
+        "expected": 401
+      },
+      {
+        "path": "/api/memes/semantic-search",
+        "status": 400,
+        "expected": 400
+      },
+      {
+        "path": "/api/memes/semantic-search",
+        "status": 403,
+        "expected": 403
+      }
+    ]
+  },
+  "report_browser": {
+    "file": "/Users/toris/projects/memecatch/artifacts/cost/20261002/free-tier-report.html",
+    "browser": "isolated real Chromium",
+    "numeric_inputs": 17,
+    "calculator_changes_and_restores": true,
+    "duplicate_ids": 0,
+    "page_errors": []
+  },
+  "candidate_environment_reindex_enabled": false,
+  "production_deployment": "dpl_3BnwhCKkhAuBF6LorNG85ux7XU7u",
+  "production_ready": true,
+  "production_alias": "catchmeme.com",
+  "production_alias_deployment": "dpl_3BnwhCKkhAuBF6LorNG85ux7XU7u",
+  "production_cron": {
+    "enabled": true,
+    "definitions_count": 9,
+    "path": "/api/cron/meme-embeddings",
+    "schedule_utc": "30 18 * * *",
+    "host": "memecatch-j8wkuq8qh-ironjustlikethatgmailcoms-projects.vercel.app",
+    "first_scheduled_run_observed": false,
+    "next_expected_local_window": "2026-10-05 03:30 전후 Asia/Seoul; Hobby per-hour precision (±59min)"
+  }
+}

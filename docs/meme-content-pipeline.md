@@ -23,9 +23,13 @@
 | Recall@20(화면12개 제한 전) | 0.708333 | 0.791667 |
 | 화면12개 안에서 기대 대상 발견 | 0.708333 | 0.750000 |
 
-자연어12개만의 nDCG@5는0.124357→0.304059이며 이름·별칭 형태12개의 화면 발견율은 두 설정 모두1.0이었다. 자체 작성 relevance와 작은 표본의 결과이므로 전체 검색 정확도나 독립 사용자 평가로 일반화하지 않는다. 자연어 실패 사례는 여전히 남는다. 후보만 늘린 개발 비교는 nDCG를 개선하지 못했다. 정상 의미 검색은 새로운 `search_meme_references` 읽기 전용 RPC 하나로 순위와 공개 최소 메타데이터를 반환하여 기존 최대3회의 논리 DB 호출을1회로 줄인다. 모델·RPC 장애 시 기존 이름·별칭 조회로 복귀한다.
+자연어12개만의 nDCG@5는0.124357→0.304059이며 이름·별칭 형태12개의 화면 발견율은 두 설정 모두1.0이었다. 자체 작성 relevance와 작은 표본의 결과이므로 전체 검색 정확도나 독립 사용자 평가로 일반화하지 않는다. 자연어 실패 사례는 여전히 남는다. 후보만 늘린 개발 비교는 nDCG를 개선하지 못했다. 저장된 질의 벡터를 사용한 실제 운영 RPC 검증에서48개 질의의 상위20개 ID 순서가 오프라인 설정과 모두 일치했다. 순차 HTTP(네트워크 포함) p50/p95는461/590ms였으며 DB 자체 실행 시간이나 동시 부하 지연은 아니다. 정상 의미 검색은 새로운 `search_meme_references` 읽기 전용 RPC 하나로 순위와 공개 최소 메타데이터를 반환하여 기존 최대3회의 논리 DB 호출을1회로 줄인다. 모델·RPC 장애 시 기존 이름·별칭 조회로 복귀한다.
 
 재현 가능한 최초 운영 기록은 `artifacts/vector/20261004/production-verification.json`, 모델 일치는 `model-compatibility.json`, 튜닝 평가와 고정 질의는 `search-ranking-evaluation.json` 및 `scripts/fixtures/meme-reference-queries.json`, 비용 시나리오는 `artifacts/cost/20261002/free-tier-report.html`에 있다.
+
+추가 튜닝과 변경분 자동 재색인도 운영에 반영했다. 기능 커밋은 `9764329`, 최초 튜닝 활성화 배포는 `dpl_3BnwhCKkhAuBF6LorNG85ux7XU7u`이며 READY·`catchmeme.com` alias·실제 cron9개 중 새 색인 경로를 확인했다. 운영 도메인의 수동 변경분 실행은 succeeded/indexed0/stale0/remaining0이었다. 공개4,378건이 모두 색인됐고 stale·비공개 벡터·대기·활성 lease는0이었다. DB는178,785,427bytes, 벡터 companion은9,191,424bytes였다.
+
+정기 예약은 한국03:30에 최대25건을 처리하도록 활성화했다. 첫 예약 실행은2026-10-05 한국03:30 전후이며 Hobby의 시간 단위 정밀도(±59분)가 적용된다. 검증 당시 아직 도래 전이었다. 모델과 문서 계약이 같으므로 전체 재색인을 반복하지 않았다. 최초 튜닝 운영 스냅샷과 실제 브라우저·모델·검증 결과는 `artifacts/vector/20261004/ranking-production-verification.json`에 기록했다. 이후 보고서 전용 커밋의 배포 ID와 이 최초 검증 ID는 구분한다.
 
 ## 이번에 구현한 범위
 
@@ -180,7 +184,7 @@ Vercel Hobby는 CPU 추론이 포함된 **전체 앱 합산**으로 Active CPU 4
 
 제목·별칭·요약·설명·기원·활용 안내 또는 검수 상태가 바뀌면 기존 trigger가 해당 벡터를 제거한다. 공개 상태인데 벡터가 없는 행 자체를 처리 대기열로 사용하므로 새 작업 행을 중복 생성하지 않는다. 유행 점수·날짜 갱신은 기존 벡터를 유지한다.
 
-`/api/cron/meme-embeddings`는 매일 UTC18:30(한국03:30) 실행하며 최대25문서·90초 작업 예산으로 변경분만 순차 처리한다. Hobby cron은 하루 한 번이고 지정 시각부터 최대59분 늦게 실행될 수 있다. 따라서 즉시 재색인이나 대량 변경의 당일 완료를 보장하지 않는다. 하루 변경량이25건을 넘으면 잔량을 확인하고 기존 Python 인덱서로 제한된 추가 실행을 한다. [Vercel 공식 cron 한도](https://vercel.com/docs/cron-jobs/usage-and-pricing)
+`/api/cron/meme-embeddings`는 매일 UTC18:30(한국03:30) 실행하며 최대25문서·90초 작업 예산으로 변경분만 순차 처리한다. Hobby cron은 하루 한 번이고 시간 단위 정밀도(±59분)로 실행된다. 따라서 즉시 재색인이나 대량 변경의 당일 완료를 보장하지 않는다. 하루 변경량이25건을 넘으면 잔량을 확인하고 기존 Python 인덱서로 제한된 추가 실행을 한다. [Vercel 공식 cron 한도](https://vercel.com/docs/cron-jobs/usage-and-pricing)
 
 기존 `CRON_SECRET`의 Bearer 인증을 검증하고 `MEME_EMBEDDING_REINDEX_ENABLED=true`인 GET만 정기 작업을 시작한다. 이 flag는 기본 비활성화이며 배포 모델 검증 뒤에 별도로 켠다. 수동 POST는 기존 서버 전용 `SUPABASE_SERVICE_ROLE_KEY`를 검증하며 새로운 토큰을 발급하지 않는다. 공개 사용자·일반 로그인·WebMCP 도구에 색인 실행 권한을 제공하지 않는다. POST의 빈 요청은 수동 변경분 처리이며, 정확히 `{"validate_model":true}`인 작은 요청만 고정된 긴 문서로 배포 모델을 검사한다. 이 검사는 문서나 벡터를 응답하지 않고 DB를 변경하지 않는다. 공개 `/v1/embeddings`에는 문서 입력을 허용하지 않는다.
 
@@ -188,7 +192,7 @@ Vercel Hobby는 CPU 추론이 포함된 **전체 앱 합산**으로 Active CPU 4
 
 `meme_embedding_backlog()`는 서비스 전용으로 대기 수·최근 indexed/stale/remaining·실패 횟수·retry_after만 반환한다. 원문·밈 ID·벡터·lease owner는 반환하지 않는다. 운영 점검에서 missing/stale/비공개 벡터를 확인하고, 반복 실패 또는 늘어나는 대기열을 먼저 조사한다. 빈 대기열은 모델을 초기화하지 않아 추론 비용이 발생하지 않는다.
 
-고정 FP32 모델의512토큰 passage를 실제 보호된 Vercel Linux 함수에서 검사한 뒤 정기 작업을 활성화한다. 질의120자 검증이나 로컬 Mac의 메모리 수치만으로 긴 문서의2GB 함수 적합성을 판정하지 않는다.
+고정 FP32 모델의512토큰 passage(고정6,900자 입력)를 실제 보호된 Vercel Linux 함수에서 검사했다. cold/warm 모두200, 모델 내부 경과5,714/770ms, peak RSS1,949,433,856bytes로2GiB 아래였다. 이는 두 번의 검증 표본이며 장시간·동시 부하 안정성을 보장하지 않는다. 동일 배포의 변경분 실행은 succeeded/indexed0/stale0/remaining0으로 현재 누락이 없음을 재확인했다. 운영 도메인에서도 cold/warm200, 내부6,729/856ms, peak RSS1,961,758,720bytes를 확인하고 정기 예약을 활성화했다. 네 번의 모델 검사와 실제 예약 실행 관측은 구분하며 첫 예약 실행은 아직 미관측이다. 질의120자 검증이나 로컬 Mac의 메모리 수치만으로 긴 문서의2GB 함수 적합성을 판정하지 않는다.
 
 ## 이후 제작 파이프라인 기획
 

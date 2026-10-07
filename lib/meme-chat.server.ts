@@ -8,7 +8,7 @@ import { localizedMemePath } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
 import { isIndexableMeme } from "@/lib/content-depth";
 import { memeTitleKey } from "../scripts/meme-title-key.mjs";
-import { memeChatRequestSchema, type MemeChatItem, type MemeChatLocale, type MemeChatRequest, type MemeChatResult } from "@/lib/meme-chat";
+import { memeChatRequestSchema, type MemeChatItem, type MemeChatLocale, type MemeChatProgress, type MemeChatRequest, type MemeChatResult } from "@/lib/meme-chat";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_CACHE = 32;
@@ -294,13 +294,28 @@ function generatedResult(value: Generated, facts: Fact[], locale: MemeChatLocale
   };
 }
 
-export async function answerMemeQuestion(input: MemeChatRequest, signal?: AbortSignal): Promise<MemeChatResult> {
+export async function answerMemeQuestion(
+  input: MemeChatRequest,
+  signal?: AbortSignal,
+  onProgress?: (progress: MemeChatProgress) => void,
+): Promise<MemeChatResult> {
   const { question, locale } = memeChatRequestSchema.parse(input);
   assertActive(signal);
+  const reportProgress = (progress: MemeChatProgress) => {
+    assertActive(signal);
+    try {
+      if (onProgress) void Promise.resolve(onProgress(progress)).catch(() => {});
+    }
+    catch { /* Observers cannot interrupt an otherwise valid answer. */ }
+    assertActive(signal);
+  };
+  reportProgress({ stage: "reading" });
+  reportProgress({ stage: "searching" });
   const references = await withCancellation(searchMemeReferences(question, 4), signal);
   assertActive(signal);
   const ids = [...new Set(references.items.map(({ id }) => id).filter((id) => UUID.test(id)))].slice(0, 4);
   const facts = exactTitleFacts(question, await hydrate(ids, locale, signal));
+  reportProgress({ stage: "found", count: facts.length });
   const fallback = retrieved(facts, locale, references.mode);
   const config = generationConfig();
   if (!facts.length || !config) return fallback;
@@ -316,8 +331,9 @@ export async function answerMemeQuestion(input: MemeChatRequest, signal?: AbortS
   answers.delete(key);
   let job = jobs.get(key);
   if (job?.controller.signal.aborted) job = undefined;
+  if (!job && jobs.size >= MAX_CACHE) return fallback;
+  reportProgress({ stage: "answering" });
   if (!job) {
-    if (jobs.size >= MAX_CACHE) return fallback;
     const controller = new AbortController();
     const next: Job = { controller, waiters: 0, promise: Promise.resolve(null) };
     next.promise = generate(question, locale, facts, config, controller.signal).then((value) => {

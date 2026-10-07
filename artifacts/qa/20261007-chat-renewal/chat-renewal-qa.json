@@ -1,0 +1,2557 @@
+{
+  "base": "http://localhost:31131",
+  "isolation": "new headless Chrome for Testing process, nonpersistent context; no existing user tabs accessed",
+  "simulation": {
+    "label": "Injected in-page fetch and native ReadableStream; no backend/model call",
+    "exitFrame": {
+      "count": 1,
+      "exists": true,
+      "ariaHidden": "true",
+      "inert": true,
+      "pointerEvents": "none",
+      "focusedLabel": "밈캐치 챗봇 열기",
+      "focusInside": false
+    },
+    "events": [
+      {
+        "type": "progress",
+        "stage": "reading",
+        "elapsedMs": 5600
+      },
+      {
+        "type": "progress",
+        "stage": "searching",
+        "elapsedMs": 5809
+      },
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 0,
+        "elapsedMs": 6016
+      },
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 1,
+        "elapsedMs": 6225
+      },
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 2,
+        "elapsedMs": 6471
+      },
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 3,
+        "elapsedMs": 6676
+      },
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 4,
+        "elapsedMs": 6896
+      },
+      {
+        "type": "progress",
+        "stage": "answering",
+        "elapsedMs": 7092
+      }
+    ],
+    "staleAttempts": [
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 4,
+        "elapsedMs": 7516
+      },
+      {
+        "type": "result",
+        "mode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 0,
+        "answerLength": 31,
+        "hrefs": [],
+        "elapsedMs": 7516
+      }
+    ],
+    "calls": 1,
+    "renderedStatuses": [
+      {
+        "stage": "pending",
+        "text": "밈 자료를 찾고 있어요…",
+        "source": "simulated",
+        "elapsedMs": 5396
+      },
+      {
+        "stage": "reading",
+        "text": "질문을 확인하고 있어요",
+        "source": "simulated",
+        "elapsedMs": 5603
+      },
+      {
+        "stage": "searching",
+        "text": "관련 밈을 찾고 있어요",
+        "source": "simulated",
+        "elapsedMs": 5812
+      },
+      {
+        "stage": "found",
+        "text": "관련 밈 자료를 찾지 못했어요",
+        "source": "simulated",
+        "elapsedMs": 6018
+      },
+      {
+        "stage": "found",
+        "text": "밈 자료 1개를 찾았어요",
+        "source": "simulated",
+        "elapsedMs": 6228
+      },
+      {
+        "stage": "found",
+        "text": "밈 자료 2개를 찾았어요",
+        "source": "simulated",
+        "elapsedMs": 6475
+      },
+      {
+        "stage": "found",
+        "text": "밈 자료 3개를 찾았어요",
+        "source": "simulated",
+        "elapsedMs": 6679
+      },
+      {
+        "stage": "found",
+        "text": "밈 자료 4개를 찾았어요",
+        "source": "simulated",
+        "elapsedMs": 6898
+      },
+      {
+        "stage": "answering",
+        "text": "답변을 준비하고 있어요밈 자료 4개를 찾았어요",
+        "source": "simulated",
+        "elapsedMs": 7095
+      }
+    ]
+  },
+  "live": {
+    "label": "One actual localhost chat submission using the existing backend; no answer substituted",
+    "response": {
+      "status": 200,
+      "contentType": "application/x-ndjson; charset=utf-8",
+      "elapsedMs": 11513
+    },
+    "wireEvents": [
+      {
+        "type": "progress",
+        "stage": "reading",
+        "elapsedMs": 11516
+      },
+      {
+        "type": "progress",
+        "stage": "searching",
+        "elapsedMs": 11516
+      },
+      {
+        "type": "progress",
+        "stage": "found",
+        "count": 1,
+        "elapsedMs": 12015
+      },
+      {
+        "type": "progress",
+        "stage": "answering",
+        "elapsedMs": 12015
+      },
+      {
+        "type": "result",
+        "mode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 1,
+        "answerLength": 296,
+        "hrefs": [
+          "/memes/pqth6a5d-TMI"
+        ],
+        "elapsedMs": 18596
+      }
+    ],
+    "alert": null,
+    "terminal": {
+      "type": "result",
+      "mode": "generated",
+      "retrievalMode": "keyword",
+      "referenceCount": 1,
+      "answerLength": 296,
+      "hrefs": [
+        "/memes/pqth6a5d-TMI"
+      ],
+      "elapsedMs": 18596
+    },
+    "wireStages": [
+      "reading",
+      "searching",
+      "found",
+      "answering"
+    ],
+    "renderedStatuses": [
+      {
+        "stage": "pending",
+        "text": "밈 자료를 찾고 있어요…",
+        "source": "real",
+        "elapsedMs": 10744
+      },
+      {
+        "stage": "searching",
+        "text": "관련 밈을 찾고 있어요",
+        "source": "real",
+        "elapsedMs": 11520
+      },
+      {
+        "stage": "answering",
+        "text": "답변을 준비하고 있어요밈 자료 1개를 찾았어요",
+        "source": "real",
+        "elapsedMs": 12018
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "actual blocking notices dismissed",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "01-desktop-launcher: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "opening chat does not send request",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "privacy and AI disclosure preserved",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "02-desktop-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "02-desktop-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "02-desktop-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "03-mobile-launcher: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "04-mobile-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "04-mobile-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 312.5,
+        "width": 358,
+        "height": 383.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "04-mobile-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 312.5,
+        "width": 358,
+        "height": 383.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated fetch never reaches backend",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "before first event: generic pending copy is honest",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "04b-mobile-simulated-pending: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "04b-mobile-simulated-pending: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "04b-mobile-simulated-pending: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated reading/None: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated reading/None: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated reading/None: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated reading/None: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "05-mobile-simulated-reading: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "05-mobile-simulated-reading: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "05-mobile-simulated-reading: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated searching/None: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated searching/None: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated searching/None: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated searching/None: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "06-mobile-simulated-searching: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "06-mobile-simulated-searching: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "06-mobile-simulated-searching: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated found/0: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/0: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/0: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/0: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "07-mobile-simulated-found-0: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "07-mobile-simulated-found-0: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "07-mobile-simulated-found-0: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated found/1: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/1: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/1: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/1: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "08-mobile-simulated-found-1: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "08-mobile-simulated-found-1: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "08-mobile-simulated-found-1: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated found/2: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/2: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/2: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/2: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "09-mobile-simulated-found-2: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "09-mobile-simulated-found-2: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "09-mobile-simulated-found-2: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated found/3: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/3: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/3: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/3: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "10-mobile-simulated-found-3: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "10-mobile-simulated-found-3: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "10-mobile-simulated-found-3: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated found/4: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/4: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/4: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated found/4: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "11-mobile-simulated-found-4: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "11-mobile-simulated-found-4: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "11-mobile-simulated-found-4: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "simulated answering/None: stream delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated answering/None: actual event controls status",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated answering/None: textbox disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "simulated answering/None: send disabled while pending",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "12-mobile-simulated-answering: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "12-mobile-simulated-answering: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 150.0625,
+        "width": 358,
+        "height": 545.9375,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "12-mobile-simulated-answering: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 150.0625,
+        "width": 358,
+        "height": 545.9375,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "exit frame remains available for animation",
+      "passed": true,
+      "evidence": {
+        "count": 1,
+        "exists": true,
+        "ariaHidden": "true",
+        "inert": true,
+        "pointerEvents": "none",
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "focusInside": false
+      }
+    },
+    {
+      "name": "exit frame aria-hidden immediately",
+      "passed": true,
+      "evidence": {
+        "count": 1,
+        "exists": true,
+        "ariaHidden": "true",
+        "inert": true,
+        "pointerEvents": "none",
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "focusInside": false
+      }
+    },
+    {
+      "name": "exit frame inert immediately",
+      "passed": true,
+      "evidence": {
+        "count": 1,
+        "exists": true,
+        "ariaHidden": "true",
+        "inert": true,
+        "pointerEvents": "none",
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "focusInside": false
+      }
+    },
+    {
+      "name": "exit returns focus immediately",
+      "passed": true,
+      "evidence": {
+        "count": 1,
+        "exists": true,
+        "ariaHidden": "true",
+        "inert": true,
+        "pointerEvents": "none",
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "focusInside": false
+      }
+    },
+    {
+      "name": "13-mobile-exit-frame: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "exit eventually removes DOM",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "closing aborts stream and cancels reader",
+      "passed": true,
+      "evidence": {
+        "aborted": true,
+        "cancelled": true
+      }
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "cancelled late progress absent after reopen",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "cancelled late result absent after reopen",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "reopen leaves textbox enabled",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "clear makes no request",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "rapid close/reopen has one panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "rapid close/reopen stays open",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "higher modal Escape preserves chat",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "higher modal Escape preserves focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "Escape returns focus to launcher",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "PWA marker hides chat launcher",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "PWA marker removal restores launcher",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "14-small-320x568-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 320,
+        "height": 568
+      }
+    },
+    {
+      "name": "14-small-320x568-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 108,
+        "width": 288,
+        "height": 312,
+        "right": 304,
+        "bottom": 420,
+        "scrollWidth": 286,
+        "clientWidth": 286,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "14-small-320x568-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 108,
+        "width": 288,
+        "height": 312,
+        "right": 304,
+        "bottom": 420,
+        "scrollWidth": 286,
+        "clientWidth": 286,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "15-dark-desktop-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "15-dark-desktop-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 1048.13671875,
+        "y": 416.77252197265625,
+        "width": 367.86328125,
+        "height": 383.35748291015625,
+        "right": 1416,
+        "bottom": 800.1300048828125,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "15-dark-desktop-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 1048.13671875,
+        "y": 416.77252197265625,
+        "width": 367.86328125,
+        "height": 383.35748291015625,
+        "right": 1416,
+        "bottom": 800.1300048828125,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "reduced motion media active",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "reduced motion has no infinite running animation",
+      "passed": true,
+      "evidence": {
+        "media": true,
+        "infiniteAnimations": 0,
+        "animations": []
+      }
+    },
+    {
+      "name": "16-reduced-motion-mobile: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "16-reduced-motion-mobile: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 312.5,
+        "width": 358,
+        "height": 383.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "16-reduced-motion-mobile: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 312.5,
+        "width": 358,
+        "height": 383.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "17-live-mobile-pending: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "17-live-mobile-pending: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "17-live-mobile-pending: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "17-live-mobile-searching: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "17-live-mobile-searching: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "17-live-mobile-searching: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 202.5,
+        "width": 358,
+        "height": 493.5,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "17-live-mobile-answering: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "17-live-mobile-answering: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 150.0625,
+        "width": 358,
+        "height": 545.9375,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "17-live-mobile-answering: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 150.0625,
+        "width": 358,
+        "height": 545.9375,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "exactly one real network chat submission",
+      "passed": true,
+      "evidence": [
+        {
+          "ordinal": 1,
+          "question": "TMI",
+          "locale": "ko",
+          "accept": "application/x-ndjson"
+        }
+      ]
+    },
+    {
+      "name": "actual chat request asks for streaming",
+      "passed": true,
+      "evidence": [
+        {
+          "ordinal": 1,
+          "question": "TMI",
+          "locale": "ko",
+          "accept": "application/x-ndjson"
+        }
+      ]
+    },
+    {
+      "name": "actual response is successful",
+      "passed": true,
+      "evidence": {
+        "status": 200,
+        "contentType": "application/x-ndjson; charset=utf-8",
+        "elapsedMs": 11513
+      }
+    },
+    {
+      "name": "actual result mode valid",
+      "passed": true,
+      "evidence": {
+        "type": "result",
+        "mode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 1,
+        "answerLength": 296,
+        "hrefs": [
+          "/memes/pqth6a5d-TMI"
+        ],
+        "elapsedMs": 18596
+      }
+    },
+    {
+      "name": "actual reference hrefs remain local",
+      "passed": true,
+      "evidence": {
+        "type": "result",
+        "mode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 1,
+        "answerLength": 296,
+        "hrefs": [
+          "/memes/pqth6a5d-TMI"
+        ],
+        "elapsedMs": 18596
+      }
+    },
+    {
+      "name": "successful live request reenables input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "18-live-mobile-result: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "18-live-mobile-result: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 108,
+        "width": 358,
+        "height": 588,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "18-live-mobile-result: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 16,
+        "y": 108,
+        "width": 358,
+        "height": 588,
+        "right": 374,
+        "bottom": 696,
+        "scrollWidth": 356,
+        "clientWidth": 356,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "19-live-desktop-result: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "19-live-desktop-result: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 224,
+        "width": 368,
+        "height": 576,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "19-live-desktop-result: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 224,
+        "width": 368,
+        "height": 576,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "exactly one in-page simulated submit",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "exactly one in-page real submit",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual blocking notices dismissed",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual changelog dismissed through confirmation",
+      "passed": true,
+      "evidence": [
+        {
+          "path": "/explore",
+          "control": "확인했어요"
+        }
+      ]
+    },
+    {
+      "name": "actual blocking notices dismissed",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "20-locale-ko-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "20-locale-ko-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "20-locale-ko-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "ko: locale opening makes no request",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual blocking notices dismissed",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "20-locale-en-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "20-locale-en-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "20-locale-en-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "en: locale opening makes no request",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual blocking notices dismissed",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ja: opening focuses input",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ja: one chat panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "20-locale-ja-open: no horizontal document overflow",
+      "passed": true,
+      "evidence": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "name": "20-locale-ja-open: panel inside viewport",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "20-locale-ja-open: panel has no horizontal overflow",
+      "passed": true,
+      "evidence": {
+        "x": 1048,
+        "y": 416.5,
+        "width": 368,
+        "height": 383.5,
+        "right": 1416,
+        "bottom": 800,
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "ariaHidden": null,
+        "inert": false
+      }
+    },
+    {
+      "name": "ja: locale opening makes no request",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual blocking notices dismissed",
+      "passed": true,
+      "evidence": null
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "01-desktop-launcher.png",
+      "source": "actual UI, no chat request",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": null,
+        "progress": null,
+        "characterStates": [
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "02-desktop-open.png",
+      "source": "actual UI, no chat request",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 1048,
+          "y": 416.5,
+          "width": 368,
+          "height": 383.5,
+          "right": 1416,
+          "bottom": 800,
+          "scrollWidth": 366,
+          "clientWidth": 366,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_R_r9etbH2_",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "03-mobile-launcher.png",
+      "source": "actual UI, no chat request",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": null,
+        "progress": null,
+        "characterStates": [
+          "idle"
+        ],
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "04-mobile-open.png",
+      "source": "actual UI, no chat request",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 312.5,
+          "width": 358,
+          "height": 383.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_R_r9etbH2_",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "04b-mobile-simulated-pending.png",
+      "source": "simulated stream, no progress event delivered",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "pending",
+        "characterStates": [
+          "idle",
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "05-mobile-simulated-reading.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "reading",
+        "characterStates": [
+          "idle",
+          "reading",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "reading"
+      }
+    },
+    {
+      "file": "06-mobile-simulated-searching.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "searching",
+        "characterStates": [
+          "idle",
+          "searching",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "searching"
+      }
+    },
+    {
+      "file": "07-mobile-simulated-found-0.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "found",
+        "characterStates": [
+          "idle",
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "found",
+        "count": 0
+      }
+    },
+    {
+      "file": "08-mobile-simulated-found-1.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "found",
+        "characterStates": [
+          "idle",
+          "found",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "found",
+        "count": 1
+      }
+    },
+    {
+      "file": "09-mobile-simulated-found-2.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "found",
+        "characterStates": [
+          "idle",
+          "found",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "found",
+        "count": 2
+      }
+    },
+    {
+      "file": "10-mobile-simulated-found-3.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "found",
+        "characterStates": [
+          "idle",
+          "found",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "found",
+        "count": 3
+      }
+    },
+    {
+      "file": "11-mobile-simulated-found-4.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "found",
+        "characterStates": [
+          "idle",
+          "found",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "found",
+        "count": 4
+      }
+    },
+    {
+      "file": "12-mobile-simulated-answering.png",
+      "source": "simulated NDJSON event",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 150.0625,
+          "width": 358,
+          "height": 545.9375,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "answering",
+        "characterStates": [
+          "idle",
+          "answering",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "answering"
+      }
+    },
+    {
+      "file": "13-mobile-exit-frame.png",
+      "source": "actual exit after simulated pending request",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": null,
+        "progress": null,
+        "characterStates": [
+          "idle"
+        ],
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "count": 1,
+        "exists": true,
+        "ariaHidden": "true",
+        "inert": true,
+        "pointerEvents": "none",
+        "focusedLabel": "밈캐치 챗봇 열기",
+        "focusInside": false
+      }
+    },
+    {
+      "file": "14-small-320x568-open.png",
+      "source": "actual UI, no additional request",
+      "geometry": {
+        "viewport": {
+          "width": 320,
+          "height": 568
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 108,
+          "width": 288,
+          "height": 312,
+          "right": 304,
+          "bottom": 420,
+          "scrollWidth": 286,
+          "clientWidth": 286,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_r_8_",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "15-dark-desktop-open.png",
+      "source": "actual UI, no additional request",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 1048.13671875,
+          "y": 416.77252197265625,
+          "width": 367.86328125,
+          "height": 383.35748291015625,
+          "right": 1416,
+          "bottom": 800.1300048828125,
+          "scrollWidth": 366,
+          "clientWidth": 366,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_r_8_",
+        "reducedMotion": false,
+        "colorScheme": "dark"
+      },
+      "notes": null
+    },
+    {
+      "file": "16-reduced-motion-mobile.png",
+      "source": "actual UI, reduced-motion media",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 312.5,
+          "width": 358,
+          "height": 383.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_r_8_",
+        "reducedMotion": true,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "17-live-mobile-pending.png",
+      "source": "actual backend stream",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "pending",
+        "characterStates": [
+          "idle",
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "pending",
+        "status": "밈 자료를 찾고 있어요…"
+      }
+    },
+    {
+      "file": "17-live-mobile-searching.png",
+      "source": "actual backend stream",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 202.5,
+          "width": 358,
+          "height": 493.5,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "searching",
+        "characterStates": [
+          "idle",
+          "searching",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "searching",
+        "status": "관련 밈을 찾고 있어요"
+      }
+    },
+    {
+      "file": "17-live-mobile-answering.png",
+      "source": "actual backend stream",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 150.0625,
+          "width": 358,
+          "height": 545.9375,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": "answering",
+        "characterStates": [
+          "idle",
+          "answering",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "stage": "answering",
+        "status": "답변을 준비하고 있어요밈 자료 1개를 찾았어요"
+      }
+    },
+    {
+      "file": "18-live-mobile-result.png",
+      "source": "actual backend terminal result",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 16,
+          "y": 108,
+          "width": 358,
+          "height": 588,
+          "right": 374,
+          "bottom": 696,
+          "scrollWidth": 356,
+          "clientWidth": 356,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "type": "result",
+        "mode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 1,
+        "answerLength": 296,
+        "hrefs": [
+          "/memes/pqth6a5d-TMI"
+        ],
+        "elapsedMs": 18596
+      }
+    },
+    {
+      "file": "19-live-desktop-result.png",
+      "source": "actual backend terminal result",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 1048,
+          "y": 224,
+          "width": 368,
+          "height": 576,
+          "right": 1416,
+          "bottom": 800,
+          "scrollWidth": 366,
+          "clientWidth": 366,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "BODY",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": {
+        "type": "result",
+        "mode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 1,
+        "answerLength": 296,
+        "hrefs": [
+          "/memes/pqth6a5d-TMI"
+        ],
+        "elapsedMs": 18596
+      }
+    },
+    {
+      "file": "20-locale-ko-open.png",
+      "source": "actual localized UI, no chat submit",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 1048,
+          "y": 416.5,
+          "width": 368,
+          "height": 383.5,
+          "right": 1416,
+          "bottom": 800,
+          "scrollWidth": 366,
+          "clientWidth": 366,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_R_r9etbH2_",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "20-locale-en-open.png",
+      "source": "actual localized UI, no chat submit",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 1048,
+          "y": 416.5,
+          "width": 368,
+          "height": 383.5,
+          "right": 1416,
+          "bottom": 800,
+          "scrollWidth": 366,
+          "clientWidth": 366,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_R_r9etbH2_",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    },
+    {
+      "file": "20-locale-ja-open.png",
+      "source": "actual localized UI, no chat submit",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "panel": {
+          "x": 1048,
+          "y": 416.5,
+          "width": 368,
+          "height": 383.5,
+          "right": 1416,
+          "bottom": 800,
+          "scrollWidth": 366,
+          "clientWidth": 366,
+          "ariaHidden": null,
+          "inert": false
+        },
+        "progress": null,
+        "characterStates": [
+          "idle",
+          "idle"
+        ],
+        "focusedLabel": "_R_r9etbH2_",
+        "reducedMotion": false,
+        "colorScheme": "light"
+      },
+      "notes": null
+    }
+  ],
+  "pageErrors": [
+    "Invalid or unexpected token"
+  ],
+  "blockedWrites": [
+    {
+      "method": "POST",
+      "host": "localhost",
+      "path": "/api/analytics/events",
+      "reason": "non-chat browser write blocked"
+    }
+  ],
+  "networkChatRequests": [
+    {
+      "ordinal": 1,
+      "question": "TMI",
+      "locale": "ko",
+      "accept": "application/x-ndjson"
+    }
+  ],
+  "actualNoticesDismissed": [
+    {
+      "path": "/explore",
+      "control": "확인했어요"
+    }
+  ],
+  "failures": [
+    {
+      "step": "actual changelog dismissal and five locales",
+      "error": "Locator.wait_for: Timeout 20000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"dialog\", name=\"问问MemeCatch\", exact=True) to be visible\n"
+    }
+  ],
+  "elapsedSeconds": 58.88,
+  "rapidCloseReopen": {
+    "count": 1,
+    "ariaHidden": "true",
+    "inert": true
+  },
+  "reducedMotion": {
+    "media": true,
+    "infiniteAnimations": 0,
+    "animations": []
+  },
+  "passed": false,
+  "failureDOM": "- banner:\n  - link \"MemeCatch 首页\":\n    - /url: /zh\n    - text: MemeCatch catchmeme.com\n  - text: 语言\n  - combobox \"选择语言\":\n    - option \"🇰🇷 한국어\"\n    - option \"🇺🇸 English\"\n    - option \"🇯🇵 日本語\"\n    - option \"🇨🇳 中文(简体)\" [selected]\n    - option \"🇹🇼 中文(繁體)\"\n  - navigation \"发现\":\n    - link \"最新\":\n      - /url: /zh/explore?sort=recent\n    - link \"社区\":\n      - /url: /community\n    - link \"迷因好物\":\n      - /url: /products\n  - search:\n    - text: 搜索迷因\n    - searchbox \"搜索迷因\"\n  - link \"投稿\":\n    - /url: /submit\n  - link \"趋势提醒 · Plus\":\n    - /url: /zh/pricing?source=alert_briefing_setup\n  - link \"登录\":\n    - /url: /login?next=%2Fzh\n  - button \"菜单\"\n- main:\n  - region \"首页故事章节\":\n    - navigation \"首页故事章节\":\n      - list:\n        - listitem:\n          - link \"发现\":\n            - /url: \"#home-story-discover\"\n        - listitem:\n          - link \"语境\":\n            - /url: \"#home-story-context\"\n        - listitem:\n          - link \"参与\":\n            - /url: \"#home-story-participate\"\n      - link \"跳到最新迷因\":\n        - /url: \"#home-latest\"\n    - region \"找到迷因，沿着线索读懂含义。\":\n      - paragraph: 01 · DISCOVER\n      - heading \"找到迷因，沿着线索读懂含义。\" [level=1]\n      - paragraph: 从名称、记得的词句或画面出发，搜索你想了解的韩国迷因与流行语。\n      - search \"搜索迷因\":\n        - text: 搜索迷因\n        - searchbox \"搜索迷因\"\n        - button \"搜索\"\n    - figure \"以橙色立体场景串联迷因的发现、语境与参与\":\n      - group: 场景控制\n      - text: 向下滚动展开图层，向上滚动重新聚合。 以橙色立体场景串联迷因的发现、语境与参与\n    - region \"转发之前，先读懂它周围的语境。\":\n      - paragraph: 02 · CONTEXT\n      - heading \"转发之前，先读懂它周围的语境。\" [level=2]\n      - paragraph: 结合含义、来源与当前使用提示，了解同一个表达在不同场景中会如何变化。\n      - link \"查看四种使用提示\":\n        - /url: \"#home-signals\"\n    - region \"理解之后，一起补充下一段故事。\":\n      - paragraph: 03 · PARTICIPATE\n      - heading \"理解之后，一起补充下一段故事。\" [level=2]\n      - paragraph: 在社区分享你发现的使用场景，或浏览清楚标明卖家关联关系的迷因商品。\n      - link \"前往社区\":\n        - /url: /community\n      - link \"浏览迷因商品\":\n        - /url: /products\n  - region \"从现有解释开始\":\n    - region \"浏览最新整理的迷因解释。\":\n      - paragraph: 近期发现\n      - heading \"浏览最新整理的迷因解释。\" [level=2]\n      - paragraph: 选择分类或输入关键词，在这里显示的近期条目中找到适合开始阅读的解释。\n      - heading \"暂无可显示的近期条目\" [level=3]\n      - paragraph: 有新的公开解释后，真实条目会显示在这里。\n    - paragraph: 现在无法显示最近的条目。可能尚无已发布的内容，也可能是临时连接问题。请稍后重试或使用搜索。\n    - link \"搜索资料库\":\n      - /url: /zh/search\n  - region \"如何看懂使用提示\":\n    - paragraph: 发布前确认语境\n    - heading \"如何看懂使用提示\" [level=2]\n    - paragraph: 每个图形概括了已审核用例中的语境和流行时机。\n    - list:\n      - listitem:\n        - group: 可以使用 在日常语境中通常容易理解\n      - listitem:\n        - group: 注意语境 对象和场合可能改变含义\n      - listitem:\n        - group: 已经过时 流行时机很可能已经过去\n      - listitem:\n        - group: 使用有风险 与有害或争议语境有关\n    - paragraph: 这些提示是基于已审核用例的编辑建议，不保证在所有场合都安全、获准或被接受。\n  - region \"加入讨论，或浏览迷因相关商品。\":\n    - heading \"加入讨论，或浏览迷因相关商品。\" [level=2]\n    - paragraph: 继续前往 MemeCatch 的韩语社区和商品目录。\n    - link \"通过讨论补充语境 社区 分享你在哪里看到这个迷因，以及还需要补充哪些语境。 前往社区\":\n      - /url: /community\n    - link \"清楚标明卖家与关联关系 迷因商品 浏览标明卖家与关联关系的迷因相关商品。 浏览商品\":\n      - /url: /products\n    - paragraph: 有想补充的语境吗？\n    - link \"发起讨论\":\n      - /url: /community/new\n    - link \"提交迷因\":\n      - /url: /submit\n    - link \"登记迷因商品\":\n      - /url: /products/new\n  - complementary \"阅读解释时，也能查看整理标准。\":\n    - heading \"阅读解释时，也能查看整理标准。\" [level=2]\n    - paragraph: 使用提示是帮助理解语境的编辑信息，不代表法律许可，也不保证实时安全。\n    - navigation \"编辑信息\":\n      - list:\n        - listitem:\n          - link \"编辑原则\":\n            - /url: /editorial\n        - listitem:\n          - link \"关于 MemeCatch\":\n            - /url: /about\n        - listitem:\n          - link \"隐私政策\":\n            - /url: /privacy\n- contentinfo:\n  - navigation \"网站信息\":\n    - list:\n      - listitem:\n        - link \"关于 MemeCatch\":\n          - /url: /about\n      - listitem:\n        - link \"编辑准则\":\n          - /url: /editorial\n      - listitem:\n        - link \"隐私政策\":\n          - /url: /privacy\n      - listitem:\n        - link \"使用条款\":\n          - /url: /terms\n      - listitem:\n        - link \"排行榜\":\n          - /url: /rankings\n      - listitem:\n        - link \"分年龄迷因资讯\":\n          - /url: /news\n      - listitem:\n        - link \"迷因好物\":\n          - /url: /products\n      - listitem:\n        - link \"投稿\":\n          - /url: /submit\n      - listitem:\n        - link \"客服中心\":\n          - /url: /support\n      - listitem:\n        - link \"支持我们\":\n          - /url: /zh/pricing#fairy-support-title\n  - group:\n    - paragraph: MemeCatch 是记录韩国迷因和流行语含义及来源的词典服务。所有投稿均经事实与版权审核后发布。\n    - paragraph:\n      - text: 我们不保存原始视频或图片，仅提供来源链接和嵌入内容。版权归各创作者所有。咨询或删除请求：\n      - link \"toris@toris.kr\":\n        - /url: mailto:toris@toris.kr\n  - paragraph: © 2026 MemeCatch\n- button \"打开MemeCatch聊天\"",
+  "failureChatQA": {
+    "simulatedCalls": 0,
+    "realCalls": 0,
+    "events": [],
+    "domProgress": [],
+    "response": null
+  }
+}

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { MemeChatProgress } from "./meme-chat";
 
 const mocks = vi.hoisted(() => ({
   search: vi.fn(), read: vi.fn(), createStaticClient: vi.fn(),
@@ -69,6 +70,121 @@ afterEach(() => {
 });
 
 describe("public grounded meme answers", () => {
+  it("reports actual reading, public retrieval and generation in order without exposing facts", async () => {
+    const progress: MemeChatProgress[] = [];
+    const timing: Array<{ stage: MemeChatProgress["stage"]; searches: number; reads: number; generations: number }> = [];
+    const observe = (event: MemeChatProgress) => {
+      progress.push(event);
+      timing.push({ stage: event.stage, searches: mocks.search.mock.calls.length,
+        reads: mocks.read.mock.calls.length, generations: mocks.fetch.mock.calls.length });
+    };
+    expect((await (await load())(input, undefined, observe)).mode).toBe("generated");
+    expect(progress).toEqual([
+      { stage: "reading" }, { stage: "searching" }, { stage: "found", count: 1 }, { stage: "answering" },
+    ]);
+    expect(timing).toEqual([
+      { stage: "reading", searches: 0, reads: 0, generations: 0 },
+      { stage: "searching", searches: 0, reads: 0, generations: 0 },
+      { stage: "found", searches: 1, reads: 1, generations: 0 },
+      { stage: "answering", searches: 1, reads: 1, generations: 0 },
+    ]);
+    expect(mocks.search).toHaveBeenCalledTimes(1);
+    expect(mocks.read).toHaveBeenCalledTimes(2);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(progress)).not.toContain(input.question);
+    expect(JSON.stringify(progress)).not.toContain(ID);
+  });
+
+  it.each(["retrieval", "hydration"])("reports zero public results after empty %s without announcing generation", async (stage) => {
+    if (stage === "retrieval") mocks.search.mockResolvedValue({ mode: "keyword", items: [] });
+    else mocks.read.mockResolvedValue({ data: [], error: null });
+    const progress = vi.fn();
+    expect((await (await load())(input, undefined, progress)).mode).toBe("empty");
+    expect(progress.mock.calls.map(([event]) => event)).toEqual([
+      { stage: "reading" }, { stage: "searching" }, { stage: "found", count: 0 },
+    ]);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("counts only public hydrated exact-title matches and bounds the reported count to four", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: [...data, row({ id: "50000000-0000-0000-0000-000000000005" })] });
+    mocks.read.mockResolvedValue({ data: [...data, row({ id: "50000000-0000-0000-0000-000000000005" })], error: null });
+    const answer = await load();
+    const exact = vi.fn();
+    const broad = vi.fn();
+    await answer({ ...input, question: "TMI" }, undefined, exact);
+    await answer(input, undefined, broad);
+    expect(exact.mock.calls.map(([event]) => event)).toEqual([
+      { stage: "reading" }, { stage: "searching" }, { stage: "found", count: 1 },
+    ]);
+    expect(broad.mock.calls.at(-1)).toEqual([{ stage: "found", count: 4 }]);
+    mocks.read.mockResolvedValue({ data: data.map((item) => ({ ...item, moderation_status: "pending" })), error: null });
+    const hidden = vi.fn();
+    await answer(input, undefined, hidden);
+    expect(hidden.mock.calls.at(-1)).toEqual([{ stage: "found", count: 0 }]);
+  });
+
+  it("returns cached generation immediately without a simulated answering stage", async () => {
+    const answer = await load();
+    const first = await answer(input);
+    const progress = vi.fn();
+    expect(await answer(input, undefined, progress)).toEqual(first);
+    expect(progress.mock.calls.map(([event]) => event)).toEqual([
+      { stage: "reading" }, { stage: "searching" }, { stage: "found", count: 1 },
+    ]);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.read).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not let a failing progress observer interrupt a valid answer", async () => {
+    const progress = vi.fn(() => { throw new Error("observer secret"); });
+    expect((await (await load())(input, undefined, progress)).mode).toBe("generated");
+    expect(progress).toHaveBeenCalledTimes(4);
+    expect(mocks.warn).not.toHaveBeenCalled();
+  });
+
+  it.each(["promise", "thenable"])("consumes rejected %s progress observers without logging their errors", async (kind) => {
+    const rejectObserver = vi.fn();
+    const progress = vi.fn(() => {
+      const error = new Error("private asynchronous observer error");
+      if (kind === "promise") {
+        rejectObserver();
+        return Promise.reject(error);
+      }
+      return { then(_resolve: unknown, reject: (reason: Error) => void) { rejectObserver(); reject(error); } };
+    });
+    expect((await (await load())(input, undefined, progress)).mode).toBe("generated");
+    expect(rejectObserver).toHaveBeenCalledTimes(4);
+    expect(mocks.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not wait for asynchronous progress observers", async () => {
+    const progress = vi.fn(() => new Promise<void>(() => {}));
+    expect((await (await load())(input, undefined, progress)).mode).toBe("generated");
+    expect(progress).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not publish progress before question validation or after retrieval cancellation", async () => {
+    const answer = await load();
+    const progress = vi.fn();
+    await expect(answer({ ...input, question: "x" }, undefined, progress)).rejects.toThrow();
+    expect(progress).not.toHaveBeenCalled();
+    let finish: (value: { mode: "keyword"; items: ReturnType<typeof row>[] }) => void = () => {};
+    mocks.search.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const controller = new AbortController();
+    const work = answer(input, controller.signal, progress);
+    const rejection = expect(work).rejects.toMatchObject({ name: "AbortError" });
+    controller.abort();
+    await rejection;
+    finish({ mode: "keyword", items: [row()] });
+    await Promise.resolve();
+    expect(progress.mock.calls.map(([event]) => event)).toEqual([{ stage: "reading" }, { stage: "searching" }]);
+    expect(mocks.read).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it("uses anon fresh RLS facts, bounded context and only zero-price structured generation", async () => {
     const answer = await load();
     const result = await answer(input);
@@ -496,16 +612,24 @@ describe("public grounded meme answers", () => {
     let finish: (value: Response) => void = () => { throw new Error("fetch not started"); };
     mocks.fetch.mockImplementation(() => new Promise<Response>((resolve) => { finish = resolve; }));
     const controller = new AbortController();
-    const first = answer(input, controller.signal);
+    const firstProgress = vi.fn();
+    const sharedProgress = vi.fn();
+    const first = answer(input, controller.signal, firstProgress);
     const firstRejection = expect(first).rejects.toMatchObject({ name: "AbortError" });
-    const second = answer(input);
-    await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
+    const second = answer(input, undefined, sharedProgress);
+    await vi.waitFor(() => expect(sharedProgress).toHaveBeenCalledWith({ stage: "answering" }));
+    const stages = [{ stage: "reading" }, { stage: "searching" }, { stage: "found", count: 1 }, { stage: "answering" }];
+    expect(firstProgress.mock.calls.map(([event]) => event)).toEqual(stages);
+    expect(sharedProgress.mock.calls.map(([event]) => event)).toEqual(stages);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
     const fetchSignal = mocks.fetch.mock.calls[0][1].signal as AbortSignal;
     controller.abort();
     await firstRejection;
     expect(fetchSignal.aborted).toBe(false);
     finish(response());
     expect((await second).mode).toBe("generated");
+    expect(firstProgress).toHaveBeenCalledTimes(4);
+    expect(sharedProgress).toHaveBeenCalledTimes(4);
   });
 
   it("cancels shared generation when its last caller leaves", async () => {

@@ -1,0 +1,61 @@
+{
+  "scope": "Fresh isolated browser, locale/navigation recovery only; no chat submission",
+  "checks": [
+    {
+      "locale": "zh",
+      "focusedInput": true,
+      "onePanel": true,
+      "overflow": false,
+      "geometry": {
+        "x": 1048,
+        "y": 458.75,
+        "width": 368,
+        "height": 341.25
+      },
+      "passed": true
+    },
+    {
+      "locale": "zh-tw",
+      "focusedInput": true,
+      "onePanel": true,
+      "overflow": false,
+      "geometry": {
+        "x": 1048,
+        "y": 458.75,
+        "width": 368,
+        "height": 341.25
+      },
+      "passed": true
+    },
+    {
+      "loginHidden": true,
+      "passed": true
+    },
+    {
+      "browserLocaleAutoDetect": "en-US on shared /explore",
+      "documentLanguage": "en",
+      "passed": true
+    }
+  ],
+  "pageErrors": [
+    {
+      "path": "/explore",
+      "message": "Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid H",
+      "stack": "Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <LoadingBoundaryProvider loading={[...]}>\n      <SegmentViewNode type=\"layout\" pagePath=\"(default)/...\">\n        <SegmentTrieNode>\n        <link>\n        <KoreanRootLayout>\n          <RootDocument>\n            <html lang=\"ko\" dir=\"ltr\" suppressHydrationWarning={true}>\n              <body className=\"flex min-h...\">\n                <LocaleProvider initialLocale=\"ko\">\n                  <PublicWebMcpTools>\n                  <LocaleDocumentSync>\n                  <LocaleAutoDetect>\n                  <Suspense>\n                  <AttributionTracker>\n                  <script>\n                  <GlobalHeader>\n                  <div>\n                  <SiteFooter>\n                  <PremiumAdControl>\n                  <BottomNav>\n                  <Suspense fallback={null}>\n                    <MemeChatbot>\n                      <MemeChatPanel locale=\"en\">\n                        <div className=\"fixed bott...\">\n                          <AnimatePresence>\n                          <button\n                            ref={{current:null}}\n                            type=\"button\"\n+                           aria-label=\"Open MemeCatch chat\"\n-                           aria-label=\"밈캐치 챗봇 열기\"\n                            aria-expanded={false}\n                            aria-controls={undefined}\n                            onClick={function onClick}\n                            className=\"meme-chatbot_launcher__PX7Wh flex h-16 w-16 shrink-0 items-center justify-cente...\"\n                          >\n                            <span className=\"meme-chatbot_launcherPrompt__JvR9j\" aria-hidden=\"true\">\n+                             Curious about a meme?\n-                             밈이 궁금할 땐\n                            ...\n                  ...\n\n    at throwOnHydrationMismatch (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@16.3.4_@babel+core@7.29.7_@types+node@20.19.43_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:5525:11)\n    at prepareToHydrateHostInstance (webpack-internal:///(app-pages-browser)/../../node_modules/.pnpm/next@16.3.4_@babel+core@7.29.7_@types+node@20.19.43_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.developme"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "path": "/zh",
+      "text": "Failed to load resource: net::ERR_FAILED"
+    }
+  ],
+  "screenshots": [
+    "21-followup-locale-zh-open.png",
+    "21-followup-locale-zh-tw-open.png",
+    "22-followup-browser-autolocale-en.png"
+  ],
+  "blockedChatRequests": [],
+  "actualNoticesDismissed": [],
+  "passed": false
+}

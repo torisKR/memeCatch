@@ -22,3 +22,10 @@ export type MemeChatResult = {
   retrievalMode: "hybrid" | "keyword";
   items: MemeChatItem[];
 };
+export type MemeChatProgress =
+  | { stage: "reading" | "searching" | "answering" }
+  | { stage: "found"; count: number };
+export type MemeChatStreamEvent =
+  | { type: "progress"; progress: MemeChatProgress }
+  | { type: "result"; result: MemeChatResult }
+  | { type: "error"; error: "request_cancelled" | "request_timed_out" | "search_unavailable" };

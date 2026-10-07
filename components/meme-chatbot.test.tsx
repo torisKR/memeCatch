@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MemeChatResult } from "@/lib/meme-chat";
+import type { MemeChatProgress, MemeChatResult } from "@/lib/meme-chat";
 import { MEME_CHAT_COPY } from "@/lib/meme-chat-copy";
 import { MemeChatbot } from "./meme-chatbot";
 
@@ -12,6 +14,20 @@ vi.mock("@/lib/i18n-client", () => ({ useLocale: () => ({ locale: navigation.loc
 
 const fetchMock = vi.fn<typeof fetch>();
 const copy = MEME_CHAT_COPY.ko;
+const motionPreferenceListeners = new Set<() => void>();
+const motionPreference = {
+  matches: false,
+  media: "(prefers-reduced-motion: reduce)",
+  addListener: (listener: () => void) => motionPreferenceListeners.add(listener),
+  removeListener: (listener: () => void) => motionPreferenceListeners.delete(listener),
+  addEventListener: (_event: string, listener: () => void) => motionPreferenceListeners.add(listener),
+  removeEventListener: (_event: string, listener: () => void) => motionPreferenceListeners.delete(listener),
+};
+
+function setReducedMotion(matches: boolean) {
+  motionPreference.matches = matches;
+  motionPreferenceListeners.forEach((listener) => listener());
+}
 
 function result(overrides: Partial<MemeChatResult> = {}): MemeChatResult {
   return {
@@ -41,6 +57,24 @@ function deferredResponse() {
   return { promise, resolve };
 }
 
+function streamedResponse() {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const cancel = vi.fn();
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(value) { controller = value; },
+    cancel,
+  });
+  const send = (event: unknown) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+  return {
+    response: new Response(stream, { headers: { "Content-Type": "application/x-ndjson" } }),
+    progress: (progress: MemeChatProgress) => send({ type: "progress", progress }),
+    finish: (value: MemeChatResult) => { send({ type: "result", result: value }); controller.close(); },
+    fail: (error: string) => { send({ type: "error", error }); controller.close(); },
+    cancel,
+  };
+}
+
 function openChat() {
   fireEvent.click(screen.getByRole("button", { name: copy.open }));
   return screen.getByRole("textbox", { name: copy.question });
@@ -59,6 +93,8 @@ beforeEach(() => {
   navigation.locale = "ko";
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
+  vi.stubGlobal("matchMedia", vi.fn(() => motionPreference));
+  setReducedMotion(false);
 });
 
 afterEach(() => {
@@ -69,6 +105,195 @@ afterEach(() => {
 });
 
 describe("MemeChatbot", () => {
+  it.each([
+    ["/explore", "en", "ko", "en"],
+    ["/explore", "zh-tw", "ko", "zh-tw"],
+    ["/explore", "th", "ko", "en"],
+    ["/ja/explore", "en", "ja", "ja"],
+    ["/en/explore", "zh-tw", "en", "en"],
+    ["/zh-tw/explore", "en", "zh-tw", "zh-tw"],
+  ] as const)("hydrates %s when the preferred locale becomes %s before chat hydration", async (pathname, preference, serverLocale, expectedLocale) => {
+    navigation.pathname = pathname;
+    navigation.locale = "ko";
+    const host = document.createElement("div");
+    host.innerHTML = renderToString(<MemeChatbot />);
+    expect(within(host).getByRole("button", { name: MEME_CHAT_COPY[serverLocale].open })).toBeTruthy();
+    document.body.append(host);
+    navigation.locale = preference;
+    const onRecoverableError = vi.fn();
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      await act(async () => { root = hydrateRoot(host, <MemeChatbot />, { onRecoverableError }); });
+      const localizedCopy = MEME_CHAT_COPY[expectedLocale];
+      const launcher = within(host).getByRole("button", { name: localizedCopy.open });
+      expect(onRecoverableError).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+      fireEvent.click(launcher);
+      expect(within(host).getByRole("dialog", { name: localizedCopy.title })).toBeTruthy();
+      expect(within(host).getByText(localizedCopy.disclosure)).toBeTruthy();
+      fetchMock.mockResolvedValue(response(result()));
+      fireEvent.change(within(host).getByRole("textbox"), { target: { value: "손민수" } });
+      await act(async () => { fireEvent.submit(within(host).getByRole("form")); });
+      expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).locale).toBe(expectedLocale);
+    } finally {
+      await act(async () => { root?.unmount(); });
+      host.remove();
+    }
+  });
+
+  it("shows question confirmation while headers are delayed, only after local validation", async () => {
+    const request = deferredResponse();
+    fetchMock.mockReturnValue(request.promise);
+    const { container } = render(<MemeChatbot />);
+    openChat();
+    for (const invalidQuestion of ["가", "가".repeat(121)]) {
+      typeQuestion(invalidQuestion);
+      await submit();
+      expect(screen.getByRole("alert").textContent).toBe(copy.invalid);
+      expect(screen.queryByRole("status")).toBeNull();
+      expect(container.querySelector('[data-character-state="reading"]')).toBeNull();
+      expect(fetchMock).not.toHaveBeenCalled();
+    }
+    typeQuestion("  손민수  ");
+    await submit();
+    expect(screen.getByRole("status").textContent).toBe(copy.reading);
+    expect(container.querySelector('[data-chat-progress="reading"] [data-character-state="reading"]')).toBeTruthy();
+    expect(screen.queryByText(copy.found.replace("{count}", "1"))).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await act(async () => { request.resolve(response(result())); });
+    expect(screen.getByText(result().answer)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("shows real reading, search completion, and answer progress without another request", async () => {
+    const stream = streamedResponse();
+    fetchMock.mockResolvedValue(stream.response);
+    const { container } = render(<MemeChatbot />);
+    openChat();
+    typeQuestion();
+    await submit();
+    expect(screen.getByRole("status").textContent).toBe(copy.reading);
+    expect(screen.queryByText(copy.found.replace("{count}", "2"))).toBeNull();
+    await act(async () => { stream.progress({ stage: "reading" }); });
+    expect(screen.getByRole("status").textContent).toBe(copy.reading);
+    expect(container.querySelector('[data-character-state="reading"]')).toBeTruthy();
+    await act(async () => { stream.progress({ stage: "searching" }); });
+    expect(screen.getByRole("status").textContent).toBe(copy.searching);
+    expect(container.querySelector('[data-character-state="searching"]')).toBeTruthy();
+    await act(async () => { stream.progress({ stage: "found", count: 2 }); });
+    expect(screen.getByRole("status").textContent).toBe(copy.found.replace("{count}", "2"));
+    expect(container.querySelector('[data-character-state="found"]')).toBeTruthy();
+    await act(async () => { stream.progress({ stage: "answering" }); });
+    expect(screen.getByRole("status").textContent).toBe(copy.answering);
+    expect(screen.getByText(copy.found.replace("{count}", "2"))).toBeTruthy();
+    expect(container.querySelector('[data-character-state="answering"]')).toBeTruthy();
+    expect(screen.getByRole("status").closest('[role="log"]')).toBeNull();
+    await act(async () => { stream.finish(result()); });
+    expect(screen.getByText(result().answer)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ Accept: "application/x-ndjson" });
+  });
+
+  it("reports a completed search with no references without claiming a match", async () => {
+    const stream = streamedResponse();
+    fetchMock.mockResolvedValue(stream.response);
+    const { container } = render(<MemeChatbot />);
+    openChat();
+    typeQuestion();
+    await submit();
+    await act(async () => { stream.progress({ stage: "found", count: 0 }); });
+    expect(screen.getByRole("status").textContent).toBe(copy.noReferences);
+    expect(container.querySelector('[data-chat-progress="found"] [data-character-state="idle"]')).toBeTruthy();
+    expect(container.querySelector('[data-character-state="found"]')).toBeNull();
+    await act(async () => { stream.progress({ stage: "answering" }); });
+    expect(screen.getByText(copy.noReferences)).toBeTruthy();
+    expect(screen.getByText(copy.noReferences).querySelector("svg")).toBeNull();
+    await act(async () => { stream.finish(result({ mode: "empty", items: [] })); });
+    expect(screen.getByText(copy.empty)).toBeTruthy();
+  });
+
+  it.each([["request_timed_out", "timeout"], ["search_unavailable", "unavailable"]] as const)(
+    "maps the streamed %s terminal error and keeps the draft",
+    async (error, label) => {
+      const stream = streamedResponse();
+      fetchMock.mockResolvedValue(stream.response);
+      render(<MemeChatbot />);
+      openChat();
+      typeQuestion();
+      await submit();
+      await act(async () => { stream.fail(error); });
+      expect(screen.getByRole("alert").textContent).toBe(copy[label]);
+      expect(screen.queryByRole("status")).toBeNull();
+      expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("친구를 따라 하는 밈");
+    },
+  );
+
+  it("makes the exiting panel inaccessible immediately, removes it, and restores focus", async () => {
+    render(<MemeChatbot />);
+    openChat();
+    const panel = screen.getByRole("dialog");
+    fireEvent.click(within(panel).getByRole("button", { name: copy.close }));
+    const launcher = screen.getByRole("button", { name: copy.open });
+    expect(launcher.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(launcher);
+    expect(panel.getAttribute("aria-hidden")).toBe("true");
+    expect(panel.hasAttribute("inert")).toBe(true);
+    expect(panel.style.pointerEvents).toBe("none");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => { expect(document.body.contains(panel)).toBe(false); });
+  });
+
+  it("reopens during exit without leaving an inert or duplicate panel or losing the draft", async () => {
+    render(<MemeChatbot />);
+    openChat();
+    typeQuestion();
+    const panel = screen.getByRole("dialog");
+    fireEvent.click(within(panel).getByRole("button", { name: copy.close }));
+    const input = openChat();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByRole("dialog").hasAttribute("inert")).toBe(false);
+    expect(screen.getByRole("dialog").getAttribute("aria-hidden")).toBeNull();
+    expect(document.activeElement).toBe(input);
+    expect((input as HTMLTextAreaElement).value).toBe("친구를 따라 하는 밈");
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("opens without a transform and removes promptly when reduced motion is requested", async () => {
+    setReducedMotion(true);
+    render(<MemeChatbot />);
+    const input = openChat();
+    const panel = screen.getByRole("dialog");
+    expect(panel.style.transform).toBe("none");
+    expect(panel.style.opacity).toBe("1");
+    expect(document.activeElement).toBe(input);
+    fireEvent.click(within(panel).getByRole("button", { name: copy.close }));
+    await waitFor(() => { expect(document.body.contains(panel)).toBe(false); }, { timeout: 100 });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: copy.open }));
+  });
+
+  it("cancels the response reader on clear and starts a fresh request without stale progress", async () => {
+    const stream = streamedResponse();
+    const retry = deferredResponse();
+    fetchMock.mockResolvedValueOnce(stream.response).mockReturnValueOnce(retry.promise);
+    const { container } = render(<MemeChatbot />);
+    openChat();
+    typeQuestion();
+    await submit();
+    await act(async () => { stream.progress({ stage: "found", count: 3 }); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: copy.clear })); });
+    expect(stream.cancel).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(container.querySelector('[data-character-state="found"]')).toBeNull();
+    typeQuestion("새로운 밈 질문");
+    await submit();
+    expect(screen.getByRole("status").textContent).toBe(copy.reading);
+    expect(screen.queryByText(copy.found.replace("{count}", "3"))).toBeNull();
+    await act(async () => { retry.resolve(response(result())); });
+  });
+
   it("only requests an answer on explicit submit and displays catalog references honestly", async () => {
     fetchMock.mockResolvedValue(response(result()));
     render(<MemeChatbot />);
@@ -157,7 +382,7 @@ describe("MemeChatbot", () => {
     await submit();
     await act(async () => { first.resolve(response(result({ answer: "오래된 답변" }))); });
     expect(screen.queryByText("오래된 답변")).toBeNull();
-    expect(screen.getByRole("status").textContent).toBe(copy.pending);
+    expect(screen.getByRole("status").textContent).toBe(copy.reading);
     await act(async () => { second.resolve(response(result({ answer: "새 답변" }))); });
     expect(screen.getByText("새 답변")).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();

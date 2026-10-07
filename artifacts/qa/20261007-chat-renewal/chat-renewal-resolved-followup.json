@@ -1,0 +1,309 @@
+{
+  "scope": "Resolved follow-up after frontend fix; isolated browsers; zero live chat submissions",
+  "originalEvidencePreserved": [
+    "chat-renewal-qa.json",
+    "chat-renewal-locale-followup.json",
+    "99-failure.png"
+  ],
+  "checks": [
+    {
+      "name": "actual notices dismissed: /",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: reading copy before HTTP response",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: reading character displays book",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: no response delivered",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: input disabled while reading",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: close aborts unresolved fetch",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: focus returns to launcher",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: late progress ignored",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: late result ignored",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: cancelled promise ignores late response",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "deferred headers: reopened input enabled",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual notices dismissed: /",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ko: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual notices dismissed: /en",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual notices dismissed: /ja",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ja: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ja: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "ja: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual notices dismissed: /zh",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "zh: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "zh: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "zh: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual notices dismissed: /zh-tw",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "zh-tw: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "zh-tw: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "zh-tw: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "same-context five-route sweep has no parsing or hydration errors",
+      "passed": true,
+      "evidence": []
+    },
+    {
+      "name": "login chat hidden: 밈캐치 챗봇 열기",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "login chat hidden: Open MemeCatch chat",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "login chat hidden: MemeCatchチャットを開く",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "login chat hidden: 打开MemeCatch聊天",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "login chat hidden: 開啟MemeCatch聊天",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "actual notices dismissed: /explore",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: input focus",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: single panel",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "en: no document overflow",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "fresh en-US auto-detect selects English",
+      "passed": true,
+      "evidence": null
+    },
+    {
+      "name": "fresh en-US auto-detect has no hydration error",
+      "passed": true,
+      "evidence": []
+    },
+    {
+      "name": "resolved follow-up makes zero network chat attempts",
+      "passed": true,
+      "evidence": []
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "23-resolved-mobile-reading-before-headers.png",
+      "source": "simulated fetch, unresolved response headers; actual initial reading UI"
+    },
+    {
+      "file": "24-resolved-zh-tw-desktop.png",
+      "source": "actual localized UI after same-context five-route sweep"
+    },
+    {
+      "file": "25-resolved-fresh-en-US-autolocale.png",
+      "source": "actual fresh en-US browser on shared /explore after hydration fix"
+    }
+  ],
+  "pageErrors": [],
+  "blockedWrites": [
+    {
+      "method": "POST",
+      "host": "localhost",
+      "path": "/api/analytics/events"
+    },
+    {
+      "method": "POST",
+      "host": "localhost",
+      "path": "/api/analytics/events"
+    }
+  ],
+  "networkChatAttempts": [],
+  "actualNoticesDismissed": [
+    {
+      "path": "/explore",
+      "control": "확인했어요"
+    }
+  ],
+  "deferredHeaders": {
+    "label": "Simulated in-page fetch promise; no HTTP response is delivered before cancellation",
+    "beforeCancel": {
+      "calls": 1,
+      "headersDelivered": false,
+      "stage": "reading",
+      "character": "reading"
+    },
+    "afterCancel": {
+      "calls": 1,
+      "aborted": true,
+      "staleHeaderAttempts": 1
+    }
+  },
+  "passed": true
+}

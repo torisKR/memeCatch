@@ -16,7 +16,7 @@ function row(overrides: Record<string, unknown> = {}) {
   return {
     id: ID, short_id: "abc12345", slug: "테스트-밈", title: "테스트 밈", summary: "공개 기록의 요약",
     description: "공개 자료 설명", origin: "알려진 맥락", usage_note: "친구와 사용", caution: "맥락 확인",
-    origin_year: 2020, year_precision: "estimated", moderation_status: "approved", updated_at: updated,
+    origin_year: 2020, year_precision: "approximate", moderation_status: "approved", updated_at: updated,
     meme_sources: [{ source_url: "https://www.wikipedia.org/wiki/Meme", title: "출처 문서", platform: "web" }],
     meme_translations: [], ...overrides,
   };
@@ -26,6 +26,7 @@ function response(content: unknown = { answer: "공개 자료에 근거한 요�
 }
 async function load() { return (await import("./meme-chat.server")).answerMemeQuestion; }
 const input = { question: "어떤 밈을 사용해", locale: "ko" as const };
+const timingNote = "미상·추정으로 기록된 연도와 자료보다 세밀한 발생·유행 날짜는 확정된 정보가 아니에요.";
 
 beforeEach(() => {
   vi.resetModules();
@@ -206,6 +207,82 @@ describe("public grounded meme answers", () => {
       expect(mocks.fetch.mock.calls[0][1].body).not.toContain("INELIGIBLE");
       expect(mocks.fetch.mock.calls[0][1].body).not.toContain("Translated");
     });
+
+  it.each(["unknown", "approximate", "decade", "year"])(
+    "adds a fixed precision boundary for cited %s timing even with external sources", async (precision) => {
+      mocks.read.mockResolvedValue({ data: [row({
+        year_precision: precision, origin_year: precision === "unknown" ? null : 2018,
+        origin: "자료에는 2018년부터 유행했다고 적혀 있다.",
+      })], error: null });
+      mocks.fetch.mockResolvedValue(response({ answer: "2018년부터 유행한 밈입니다.", citationIds: [ID] }));
+      const result = await (await load())(input);
+      expect(result.mode).toBe("generated");
+      expect(result.items[0].sources).toHaveLength(1);
+      expect(result.answer).toContain(timingNote);
+      expect(result.answer.split(timingNote)).toHaveLength(2);
+    });
+
+  it("does not add a precision boundary to exact cited timing", async () => {
+    mocks.read.mockResolvedValue({ data: [row({ year_precision: "exact" })], error: null });
+    const result = await (await load())(input);
+    expect(result.mode).toBe("generated");
+    expect(result.answer).not.toContain(timingNote);
+  });
+
+  it("does not add a timing boundary when cited records contain no origin or year", async () => {
+    mocks.read.mockResolvedValue({ data: [row({ year_precision: "unknown", origin_year: null, origin: "" })], error: null });
+    expect((await (await load())(input)).answer).not.toContain(timingNote);
+  });
+
+  it("keeps source and timing boundaries independent for unsourced uncertain timing", async () => {
+    mocks.read.mockResolvedValue({ data: [row({ year_precision: "unknown", origin_year: null, meme_sources: [] })], error: null });
+    const result = await (await load())(input);
+    expect(result.answer).toContain("외부 출처가 없는 항목의 기원과 연도는 추가 확인이 필요해요.");
+    expect(result.answer).toContain(timingNote);
+    expect(result.answer.split(timingNote)).toHaveLength(2);
+  });
+
+  it("bases the precision boundary only on the actual cited records", async () => {
+    const data = [row({ year_precision: "exact" }), row({ id: OTHER, year_precision: "unknown", origin_year: null })];
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())(input);
+    expect(result.items.map(({ id }) => id)).toEqual([ID]);
+    expect(result.answer).not.toContain(timingNote);
+  });
+
+  it.each([
+    ["ko", timingNote],
+    ["en", "Years marked unknown or approximate, and origin or popularity dates more precise than the records, are not confirmed facts."],
+    ["ja", "不明・推定と記録された年や、資料より細かい発生・流行の日付は、確定した情報ではありません。"],
+    ["zh", "标为未知或推测的年份，以及比资料更精确的起源、流行日期，都不是已确认的信息。"],
+    ["zh-tw", "標為未知或推測的年份，以及比資料更精確的起源、流行日期，都不是已確認的資訊。"],
+  ] as const)("localizes the server precision boundary in %s independently of source presence", async (locale, note) => {
+    mocks.read.mockResolvedValue({ data: [row({ year_precision: "unknown", origin_year: null, origin: "2018년 유행 기록" })], error: null });
+    const result = await (await load())({ ...input, locale });
+    expect(result.items[0].sources).toHaveLength(1);
+    expect(result.answer).toContain(note);
+  });
+
+  it("applies the boundary on a cached answer and uses freshly changed precision", async () => {
+    mocks.read.mockResolvedValue({ data: [row({ year_precision: "unknown", origin_year: null, origin: "2018년 유행 기록" })], error: null });
+    const answer = await load();
+    const first = await answer(input);
+    const cached = await answer(input);
+    expect(first.answer).toContain(timingNote);
+    expect(cached.answer).toBe(first.answer);
+    expect(cached.answer.split(timingNote)).toHaveLength(2);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    mocks.read.mockResolvedValue({ data: [row({ year_precision: "exact", origin_year: 2018 })], error: null });
+    expect((await answer(input)).answer).not.toContain(timingNote);
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not duplicate the fixed timing boundary when the generated answer already includes it", async () => {
+    mocks.fetch.mockResolvedValue(response({ answer: `요약입니다.\n${timingNote}`, citationIds: [ID] }));
+    const result = await (await load())(input);
+    expect(result.answer.split(timingNote)).toHaveLength(2);
+  });
 
   it("caches a successful answer but hydrates public facts on every request", async () => {
     const answer = await load();

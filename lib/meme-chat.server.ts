@@ -121,12 +121,12 @@ async function hydrate(ids: string[], locale: MemeChatLocale, signal?: AbortSign
   return ids.flatMap((id) => facts.has(id) ? [facts.get(id)!] : []);
 }
 
-const COPY: Record<MemeChatLocale, { empty: string; retrieved: string; noSources: string }> = {
-  ko: { empty: "공개 밈 자료에서 관련 항목을 찾지 못했어요. 밈 이름이나 구체적인 상황으로 다시 질문해 주세요.", retrieved: "검색된 공개 자료의 요약이에요. 자세한 맥락은 각 밈에서 확인해 주세요.", noSources: "외부 출처가 없는 항목의 기원과 연도는 추가 확인이 필요해요." },
-  en: { empty: "No related public meme records were found. Try a meme name or a more specific situation.", retrieved: "These are summaries from public search results. Check each meme for its full context.", noSources: "Records without external sources need further verification of their origins and dates." },
-  ja: { empty: "関連する公開ミーム資料が見つかりませんでした。名前や具体的な状況で再度質問してください。", retrieved: "公開検索結果の要約です。詳しい背景は各ミームで確認してください。", noSources: "外部出典のない項目の由来と年代は追加確認が必要です。" },
-  zh: { empty: "没有找到相关的公开梗资料。请尝试梗名称或更具体的场景。", retrieved: "以下是公开搜索结果的摘要。完整背景请查看各个条目。", noSources: "没有外部来源的条目，其起源和年份需要进一步核实。" },
-  "zh-tw": { empty: "沒有找到相關的公開迷因資料。請嘗試名稱或更具體的情境。", retrieved: "以下是公開搜尋結果的摘要。完整背景請查看各個條目。", noSources: "沒有外部來源的條目，其起源和年份需要進一步核實。" },
+const COPY: Record<MemeChatLocale, { empty: string; retrieved: string; noSources: string; timingUncertainty: string }> = {
+  ko: { empty: "공개 밈 자료에서 관련 항목을 찾지 못했어요. 밈 이름이나 구체적인 상황으로 다시 질문해 주세요.", retrieved: "검색된 공개 자료의 요약이에요. 자세한 맥락은 각 밈에서 확인해 주세요.", noSources: "외부 출처가 없는 항목의 기원과 연도는 추가 확인이 필요해요.", timingUncertainty: "미상·추정으로 기록된 연도와 자료보다 세밀한 발생·유행 날짜는 확정된 정보가 아니에요." },
+  en: { empty: "No related public meme records were found. Try a meme name or a more specific situation.", retrieved: "These are summaries from public search results. Check each meme for its full context.", noSources: "Records without external sources need further verification of their origins and dates.", timingUncertainty: "Years marked unknown or approximate, and origin or popularity dates more precise than the records, are not confirmed facts." },
+  ja: { empty: "関連する公開ミーム資料が見つかりませんでした。名前や具体的な状況で再度質問してください。", retrieved: "公開検索結果の要約です。詳しい背景は各ミームで確認してください。", noSources: "外部出典のない項目の由来と年代は追加確認が必要です。", timingUncertainty: "不明・推定と記録された年や、資料より細かい発生・流行の日付は、確定した情報ではありません。" },
+  zh: { empty: "没有找到相关的公开梗资料。请尝试梗名称或更具体的场景。", retrieved: "以下是公开搜索结果的摘要。完整背景请查看各个条目。", noSources: "没有外部来源的条目，其起源和年份需要进一步核实。", timingUncertainty: "标为未知或推测的年份，以及比资料更精确的起源、流行日期，都不是已确认的信息。" },
+  "zh-tw": { empty: "沒有找到相關的公開迷因資料。請嘗試名稱或更具體的情境。", retrieved: "以下是公開搜尋結果的摘要。完整背景請查看各個條目。", noSources: "沒有外部來源的條目，其起源和年份需要進一步核實。", timingUncertainty: "標為未知或推測的年份，以及比資料更精確的起源、流行日期，都不是已確認的資訊。" },
 };
 function retrieved(facts: Fact[], locale: MemeChatLocale, retrievalMode: MemeChatResult["retrievalMode"]): MemeChatResult {
   const copy = COPY[locale];
@@ -246,9 +246,16 @@ function waitForJob(job: Job, signal?: AbortSignal): Promise<Generated | null> {
 }
 
 function generatedResult(value: Generated, facts: Fact[], locale: MemeChatLocale, retrievalMode: MemeChatResult["retrievalMode"]): MemeChatResult {
-  const items = facts.filter(({ item }) => value.citationIds.includes(item.id)).map(({ item }) => item);
+  const citedFacts = facts.filter(({ item }) => value.citationIds.includes(item.id));
+  const items = citedFacts.map(({ item }) => item);
+  const copy = COPY[locale];
+  const notices = [
+    ...(items.some((item) => !item.sources.length) ? [copy.noSources] : []),
+    ...(citedFacts.some((fact) => fact.yearPrecision !== "exact"
+      && (fact.originYear !== null || fact.origin.length > 0)) ? [copy.timingUncertainty] : []),
+  ].filter((notice) => !value.answer.includes(notice));
   return {
-    answer: [value.answer, ...(items.some((item) => !item.sources.length) ? [COPY[locale].noSources] : [])].join("\n"),
+    answer: [value.answer, ...notices].join("\n"),
     mode: "generated", retrievalMode, items,
   };
 }

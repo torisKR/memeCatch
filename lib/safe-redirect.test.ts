@@ -46,6 +46,27 @@ describe("safeNext", () => {
 });
 
 describe("withAllowlistedSearch", () => {
+  it("keeps a bounded submission name without carrying private or admin filters", () => {
+    const name = "zzqxv7239 & 회귀테스트";
+    const result = withAllowlistedSearch("/submit", {
+      name,
+      email: "private@example.com",
+      q: "admin query",
+    });
+    expect(result).toBe(`/submit?${new URLSearchParams({ name })}`);
+    expect(safeNext(result)).toBe(result);
+    expect(withAllowlistedSearch("/admin/memes", { name })).toBe("/admin/memes");
+  });
+
+  it.each([
+    { name: ["first", "second"] },
+    { name: "x".repeat(101) },
+    { name: "unsafe\nname" },
+    { name: "" },
+  ])("drops an invalid or duplicated submission name: %j", (search) => {
+    expect(withAllowlistedSearch("/submit", search)).toBe("/submit");
+  });
+
   it("keeps allowlisted admin search on the login next path", () => {
     expect(
       withAllowlistedSearch("/admin/memes", { focus: "unsourced", q: "봄", status: "approved" }),

@@ -14,7 +14,7 @@ import {
   localizedPath,
   type SeoRouteLocale,
 } from "@/lib/i18n-routing";
-import type { SafetyLevel } from "@/lib/labels";
+import type { MemeCategory, SafetyLevel } from "@/lib/labels";
 
 export type HomeEntry = {
   id: string;
@@ -22,6 +22,8 @@ export type HomeEntry = {
   title: string;
   summary: string;
   categoryLabel: string;
+  category?: MemeCategory;
+  thumbnailUrl?: string | null;
   originalTitle?: string;
   safetyLevel: SafetyLevel;
 };

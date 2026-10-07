@@ -546,6 +546,23 @@ describe("proxy landing redirect", () => {
 });
 
 describe("proxy auth return path", () => {
+  it("preserves the searched meme name through submission login", async () => {
+    const name = "zzqxv7239 & 회귀테스트";
+    const query = new URLSearchParams({ name, email: "private@example.com", q: "other" });
+    const response = await proxy(publicRequest(`/submit?${query}`));
+    const location = new URL(response.headers.get("location")!);
+    expect(response.status).toBe(307);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe(`/submit?${new URLSearchParams({ name })}`);
+    expect(location.search).not.toContain("private");
+  });
+
+  it("drops duplicated names before submission login", async () => {
+    const response = await proxy(publicRequest("/submit?name=first&name=second"));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe("/submit");
+  });
+
   it("preserves Daily Signal query params inside the login destination", async () => {
     const response = await proxy(
       publicRequest("/premium?focus=meme-1&locale=en&from=daily_signal"),

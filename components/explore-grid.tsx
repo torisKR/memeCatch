@@ -320,6 +320,10 @@ export function ExploreGrid({
 
   // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음 (검색어가 있으면 반영)
   if (items.length === 0) {
+    const submissionQuery = filters.q?.trim();
+    const submissionHref = submissionQuery
+      ? `/submit?${new URLSearchParams({ name: submissionQuery }).toString()}`
+      : "/submit";
     return (
       <div className="glass-panel relative mt-8 overflow-hidden rounded-2xl p-8 text-center">
         {/* 계측 격자 — 정적 장식 레이어. glass-panel의 background shorthand와 같은 요소에
@@ -360,7 +364,7 @@ export function ExploreGrid({
               필터 초기화
             </Link>
             <Link
-              href="/submit"
+              href={submissionHref}
               rel="nofollow"
               className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white active:scale-[0.97]"
             >

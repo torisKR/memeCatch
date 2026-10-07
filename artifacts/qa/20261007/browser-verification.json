@@ -1,0 +1,114 @@
+{
+  "discovery": {
+    "base": "http://127.0.0.1:3177",
+    "semantic_calls_without_explicit_action": 0,
+    "thumbnail_image_case": "unit tested; current six recent rows have no image metadata",
+    "webmcp_navigation": "registration shim with real app router; no native AI session",
+    "database_mutations": "blocked by own browser route guard",
+    "existing_browser_tabs": "not accessed",
+    "screens": [
+      {
+        "step": "05-local-home-thumbnails",
+        "url": "http://127.0.0.1:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "06-local-home-empty-full-search",
+        "url": "http://127.0.0.1:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "07-local-search-result",
+        "url": "http://127.0.0.1:3177/search?q=TMI",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "08-local-search-history",
+        "url": "http://127.0.0.1:3177/search?q=%EC%86%90%EB%AF%BC%EC%88%98",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "09-local-explore-empty-prefill",
+        "url": "http://127.0.0.1:3177/explore?q=zzqxv7239%20%26%20%ED%9A%8C%EA%B7%80%ED%85%8C%EC%8A%A4%ED%8A%B8",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "10-local-submit-login-context",
+        "url": "http://127.0.0.1:3177/login?next=%2Fsubmit%3Fname%3Dzzqxv7239%2B%2526%2B%25ED%259A%258C%25EA%25B7%2580%25ED%2585%258C%25EC%258A%25A4%25ED%258A%25B8",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "11-local-desktop-home-thumbnails",
+        "url": "http://127.0.0.1:3177/",
+        "overflow": false,
+        "pageErrors": []
+      }
+    ]
+  },
+  "rag": {
+    "base": "http://localhost:3177",
+    "chat_requests": 1,
+    "page_errors": [],
+    "open_without_requests": true,
+    "keyboard_escape_focus_return": true,
+    "higher_modal_escape": "simulated DOM modal preserves chat and focus",
+    "pwa_banner": "simulated DOM banner hides chat",
+    "small_mobile": "320x568 fits",
+    "clear_without_request": true,
+    "login_hidden": true,
+    "existing_tabs": "not accessed",
+    "database_mutations": "browser guard blocks other POSTs",
+    "screens": [
+      {
+        "step": "12-chat-mobile-launcher",
+        "url": "http://localhost:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "13-chat-mobile-answer",
+        "url": "http://localhost:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "14-chat-desktop-answer",
+        "url": "http://localhost:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "16-chat-small-mobile",
+        "url": "http://localhost:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "17-chat-dark-desktop",
+        "url": "http://localhost:3177/",
+        "overflow": false,
+        "pageErrors": []
+      },
+      {
+        "step": "15-chat-english-open",
+        "url": "http://localhost:3177/en/explore",
+        "overflow": false,
+        "pageErrors": []
+      }
+    ],
+    "responses": [
+      {
+        "httpStatus": 200,
+        "answerMode": "generated",
+        "retrievalMode": "keyword",
+        "referenceCount": 1
+      }
+    ]
+  }
+}

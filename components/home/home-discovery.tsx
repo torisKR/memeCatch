@@ -7,8 +7,9 @@ import { mountCardPointerSurface } from "@/components/home/card-pointer-surface"
 import styles from "@/components/home/home-discovery.module.css";
 import type { HomeEntry } from "@/components/home/home-experience";
 import { SafetyBadge } from "@/components/safety-badge";
+import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
-import type { SeoRouteLocale } from "@/lib/i18n-routing";
+import { localizedPath, type SeoRouteLocale } from "@/lib/i18n-routing";
 
 type HomeDiscoveryProps = {
   locale: SeoRouteLocale;
@@ -24,10 +25,11 @@ const CARD_ARTWORK_VARIANTS = ["orbit", "cutout", "signal", "frame"] as const;
 
 type CardArtworkVariant = (typeof CARD_ARTWORK_VARIANTS)[number];
 
-function CardArtwork({ variant }: { variant: CardArtworkVariant }) {
+function CardArtwork({ variant, entry }: { variant: CardArtworkVariant; entry: HomeEntry }) {
   return (
-    <span className={styles.cardArtwork} data-card-artwork={variant}>
-      <svg viewBox="0 0 320 180" aria-hidden="true" focusable="false">
+    <span className={styles.cardArtwork}>
+      <MemeThumbnail src={entry.thumbnailUrl ?? null} title={entry.title} category={entry.category ?? "phrase"} fallback={(
+      <svg viewBox="0 0 320 180" aria-hidden="true" focusable="false" data-card-artwork={variant}>
         {variant === "orbit" ? (
           <>
             <rect className={styles.artIvory} width="320" height="180" />
@@ -65,6 +67,7 @@ function CardArtwork({ variant }: { variant: CardArtworkVariant }) {
           </>
         ) : null}
       </svg>
+      )} />
     </span>
   );
 }
@@ -91,6 +94,8 @@ function discoveryRevision(locale: SeoRouteLocale, entries: readonly HomeEntry[]
       entry.title,
       entry.summary,
       entry.categoryLabel,
+      entry.category,
+      entry.thumbnailUrl,
       entry.originalTitle,
       entry.safetyLevel,
     ]),
@@ -108,6 +113,9 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
     [entries],
   );
   const normalizedQuery = normalizeSearchText(query);
+  const archiveQuery = query.normalize("NFKC").trim();
+  const searchPath = localizedPath("/search", locale);
+  const archiveHref = `${searchPath}?${new URLSearchParams({ q: archiveQuery })}`;
   const filteredEntries = useMemo<IndexedEntry[]>(() => entries
     .map((entry, position) => ({ entry, position }))
     .filter(({ entry }) => {
@@ -159,7 +167,7 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
       ) : (
         <>
           <div className={styles.tools}>
-            <div className={styles.searchArea} role="search" aria-label={copy.searchLabel}>
+            <form className={styles.searchArea} role="search" aria-label={copy.searchLabel} action={searchPath} method="get">
               <label className={styles.searchLabel} htmlFor={`home-discovery-search-${locale}`}>
                 {copy.searchLabel}
               </label>
@@ -167,6 +175,8 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
                 id={`home-discovery-search-${locale}`}
                 className={styles.searchInput}
                 type="search"
+                name="q"
+                maxLength={120}
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value);
@@ -177,7 +187,12 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
                 aria-describedby={scopeId}
               />
               <p id={scopeId} className={styles.searchScope}>{copy.searchScope}</p>
-            </div>
+              {archiveQuery ? (
+                <Link className={styles.searchArchive} href={archiveHref} prefetch={false}>
+                  {copy.searchArchive(archiveQuery)} <span aria-hidden>↗</span>
+                </Link>
+              ) : null}
+            </form>
 
             <div className={styles.categoryArea}>
               <p className={styles.categoryHeading}>{copy.categoryLabel}</p>
@@ -227,7 +242,7 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
                         <span className={styles.categoryBadge}>{entry.categoryLabel}</span>
                         <SafetyBadge level={entry.safetyLevel} locale={locale} />
                       </span>
-                      <CardArtwork variant={CARD_ARTWORK_VARIANTS[position % CARD_ARTWORK_VARIANTS.length]!} />
+                      <CardArtwork variant={CARD_ARTWORK_VARIANTS[position % CARD_ARTWORK_VARIANTS.length]!} entry={entry} />
                       <span className={styles.cardBody}>
                         <span className={styles.cardTitle}>{entry.title}</span>
                         <span className={styles.cardSummary}>{entry.summary}</span>

@@ -224,6 +224,7 @@ export function PwaInstall() {
       {/* 하단 배너 — 바텀 내비 위 */}
       <div
         role="region"
+        data-pwa-install-banner
         aria-label="앱 설치 안내"
         className="fixed inset-x-0 bottom-16 z-50 px-4 md:bottom-4"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

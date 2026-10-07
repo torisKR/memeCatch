@@ -73,5 +73,21 @@ describe("ExploreGrid", () => {
 
     expect(screen.getByText(/검색 결과가 없어요/)).toBeTruthy();
     expect(screen.getByText("없는밈")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
+      "/submit?name=%EC%97%86%EB%8A%94%EB%B0%88",
+    );
+  });
+
+  it("encodes a trimmed zero-result query in the submission path", () => {
+    render(
+      <ExploreGrid
+        initial={[]}
+        filters={{ q: "  고양이 & 강아지  ", categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
+      "/submit?name=%EA%B3%A0%EC%96%91%EC%9D%B4+%26+%EA%B0%95%EC%95%84%EC%A7%80",
+    );
   });
 });

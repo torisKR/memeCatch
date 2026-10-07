@@ -293,6 +293,36 @@ describe("HomeDiscovery", () => {
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it.each(SEO_ROUTE_LOCALES)("offers full archive search without making a request for %s", async (locale) => {
+    const user = userEvent.setup();
+    const copy = HOME_DISCOVERY_COPY[locale];
+    render(<HomeDiscovery locale={locale} entries={entries} />);
+    await user.type(screen.getByRole("searchbox", { name: copy.searchLabel }), "  ＴＭＩ & 냥  ");
+    const link = screen.getByRole("link", { name: copy.searchArchive("TMI & 냥") });
+    expect(link.getAttribute("href")).toBe(`${locale === "ko" ? "" : `/${locale}`}/search?q=TMI+%26+%EB%83%A5`);
+    expect(screen.getByText(copy.noResultsTitle)).toBeTruthy();
+    expect(link.closest("form")?.getAttribute("method")).toBe("get");
+    expect(screen.getByRole("searchbox", { name: copy.searchLabel }).getAttribute("name")).toBe("q");
+  });
+
+  it("renders a real representative thumbnail and keeps the original art when it fails", () => {
+    const { container } = render(<HomeDiscovery locale="en" entries={[
+      { ...entries[0]!, thumbnailUrl: "https://images.example.com/cat.jpg", category: "image" },
+      entries[1]!,
+    ]} />);
+    const cards = container.querySelectorAll<HTMLAnchorElement>("a[data-interactive-card]");
+    const image = cards[0]!.querySelector("img")!;
+    expect(image.getAttribute("src")).toBe("https://images.example.com/cat.jpg");
+    expect(image.getAttribute("loading")).toBe("lazy");
+    expect(image.getAttribute("alt")).toBe("");
+    expect(cards[0]!.querySelector("[data-card-artwork]")).toBeNull();
+    expect(cards[1]!.querySelector("[data-card-artwork]")?.getAttribute("data-card-artwork")).toBe("cutout");
+    fireEvent.error(image);
+    expect(cards[0]!.querySelector("img")).toBeNull();
+    expect(cards[0]!.querySelector("[data-card-artwork]")?.getAttribute("data-card-artwork")).toBe("orbit");
+    expect(cards[0]!.textContent).toContain(entries[0]!.title);
+  });
+
   it("cycles a deterministic preview through real linked records", async () => {
     const user = userEvent.setup();
     render(<HomeDiscovery locale="en" entries={entries} />);

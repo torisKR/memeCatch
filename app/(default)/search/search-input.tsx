@@ -11,6 +11,7 @@ import { createSearchSuggestionCache, SEARCH_SUGGESTION_COLUMNS } from "@/lib/se
 
 const RECENT_KEY = "mc_recent_searches";
 const MAX_RECENT = 8;
+const MAX_ISSUED_QUERIES = 8;
 
 function loadRecent(): string[] {
   try {
@@ -48,6 +49,9 @@ export function SearchInput({
   const [value, setValue] = useState(initialQuery);
   const [isComposing, setIsComposing] = useState(false);
   const lastPushed = useRef(initialQuery);
+  const lastInitialQuery = useRef(initialQuery);
+  const issuedQueries = useRef<string[]>([]);
+  const suggestionRequest = useRef<AbortController | null>(null);
 
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -65,21 +69,50 @@ export function SearchInput({
   const trimmed = value.trim();
   const hasQuery = trimmed.length > 0;
 
+  function rememberIssuedQuery(query: string) {
+    issuedQueries.current = [...issuedQueries.current, query].slice(-MAX_ISSUED_QUERIES);
+  }
+
   // 최근 검색어는 localStorage 기반 — 마운트 후 클라이언트에서만 읽어 하이드레이션 불일치 방지
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecent(loadRecent());
   }, []);
 
-  // URL(?q=) 동기화 — 기존 동작 유지(직접 이동 폴백 겸 결과 목록 갱신)
+  // URL(?q=) 동기화 — 직접 입력은 300ms 뒤 URL로 보내고, 뒤로/앞으로 가기처럼
+  // 서버가 새 initialQuery를 주면 로컬 초안과 대기 중인 이동을 먼저 폐기한다.
   useEffect(() => {
+    const initialChanged = lastInitialQuery.current !== initialQuery;
+    lastInitialQuery.current = initialQuery;
+    const nextInitial = initialQuery.trim();
+    if (initialChanged) {
+      const issuedIndex = issuedQueries.current.indexOf(nextInitial);
+      if (issuedIndex >= 0) {
+        issuedQueries.current = [
+          ...issuedQueries.current.slice(0, issuedIndex),
+          ...issuedQueries.current.slice(issuedIndex + 1),
+        ];
+      } else {
+        issuedQueries.current = [];
+        lastPushed.current = nextInitial;
+        suggestionRequest.current?.abort();
+        suggestionRequest.current = null;
+        setValue(initialQuery);
+        setSuggestions([]);
+        setActiveIndex(-1);
+        setLoading(false);
+        setIsComposing(false);
+        return;
+      }
+    }
     if (isComposing || trimmed === lastPushed.current) return;
     const timer = window.setTimeout(() => {
       lastPushed.current = trimmed;
+      rememberIssuedQuery(trimmed);
       router.replace(trimmed ? `${searchPath}?q=${encodeURIComponent(trimmed)}` : searchPath);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [trimmed, router, searchPath, isComposing]);
+  }, [initialQuery, trimmed, router, searchPath, isComposing]);
 
   // 열린 자동완성만 조회하고, 같은 입력은 30초 동안 최대 32개까지 재사용한다.
   useEffect(() => {
@@ -92,6 +125,7 @@ export function SearchInput({
     }
     let cancelled = false;
     const controller = new AbortController();
+    suggestionRequest.current = controller;
     setLoading(true);
     const timer = window.setTimeout(() => {
       const cached = suggestionCache.get(trimmed);
@@ -125,6 +159,7 @@ export function SearchInput({
     return () => {
       cancelled = true;
       controller.abort();
+      if (suggestionRequest.current === controller) suggestionRequest.current = null;
       window.clearTimeout(timer);
     };
   }, [trimmed, hasQuery, open, isComposing, supabase, suggestionCache]);
@@ -152,6 +187,7 @@ export function SearchInput({
   function goToSearch(term: string) {
     const t = term.trim();
     lastPushed.current = t;
+    rememberIssuedQuery(t);
     router.replace(t ? `${searchPath}?q=${encodeURIComponent(t)}` : searchPath);
   }
 

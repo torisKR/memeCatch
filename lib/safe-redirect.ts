@@ -5,6 +5,7 @@
  */
 const APP_ORIGIN = "https://catchmeme.com";
 const AUTH_RETURN_QUERY_MAX_Q = 200;
+const AUTH_RETURN_QUERY_MAX_NAME = 100;
 const AUTH_RETURN_QUERY_KEYS = ["focus", "q", "status", "origin"] as const;
 const AUTH_RETURN_STATUS_VALUES = new Set([
   "pending",
@@ -86,6 +87,7 @@ function isAllowedAuthReturnValue(key: string, value: string): boolean {
   if (!value || /[\u0000-\u001f\u007f]/.test(value)) return false;
   if (key === "focus") return value === "unsourced";
   if (key === "q") return value.length <= AUTH_RETURN_QUERY_MAX_Q;
+  if (key === "name") return value.length <= AUTH_RETURN_QUERY_MAX_NAME;
   if (key === "status") return AUTH_RETURN_STATUS_VALUES.has(value);
   if (key === "origin") return value === "house_original";
   return false;
@@ -105,7 +107,8 @@ export function withAllowlistedSearch(
   }
   const params = asSearchParams(search);
   const kept = new URLSearchParams();
-  for (const key of AUTH_RETURN_QUERY_KEYS) {
+  const keys = pathname === "/submit" ? ["name"] : AUTH_RETURN_QUERY_KEYS;
+  for (const key of keys) {
     const values = params.getAll(key);
     if (values.length !== 1) continue;
     if (!isAllowedAuthReturnValue(key, values[0])) continue;

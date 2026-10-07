@@ -7,6 +7,7 @@ export type HomeDiscoveryCopy = {
   searchLabel: string;
   searchPlaceholder: string;
   searchScope: string;
+  searchArchive: (query: string) => string;
   categoryLabel: string;
   allCategories: string;
   resultsLabel: string;
@@ -34,6 +35,7 @@ export const HOME_DISCOVERY_COPY: Record<SeoRouteLocale, HomeDiscoveryCopy> = {
     searchLabel: "최근 항목 필터",
     searchPlaceholder: "제목, 설명, 카테고리 찾기",
     searchScope: "이 검색은 전체 아카이브가 아니라 아래의 최근 공개 항목 안에서만 찾습니다.",
+    searchArchive: (query) => `전체 밈에서 “${query}” 찾기`,
     categoryLabel: "카테고리로 필터",
     allCategories: "전체",
     resultsLabel: "필터된 최근 항목",
@@ -59,6 +61,7 @@ export const HOME_DISCOVERY_COPY: Record<SeoRouteLocale, HomeDiscoveryCopy> = {
     searchLabel: "Filter this recent set",
     searchPlaceholder: "Find a title, summary, or category",
     searchScope: "This filter searches only the recent set shown below, not the whole archive.",
+    searchArchive: (query) => `Search all memes for “${query}”`,
     categoryLabel: "Filter by category",
     allCategories: "All",
     resultsLabel: "Filtered recent entries",
@@ -84,6 +87,7 @@ export const HOME_DISCOVERY_COPY: Record<SeoRouteLocale, HomeDiscoveryCopy> = {
     searchLabel: "最近の記事を絞り込む",
     searchPlaceholder: "タイトル・解説・カテゴリーを検索",
     searchScope: "この検索の対象は全アーカイブではなく、下に表示された最近の記事だけです。",
+    searchArchive: (query) => `全ミームから「${query}」を検索`,
     categoryLabel: "カテゴリーで絞り込む",
     allCategories: "すべて",
     resultsLabel: "絞り込んだ最近の記事",
@@ -109,6 +113,7 @@ export const HOME_DISCOVERY_COPY: Record<SeoRouteLocale, HomeDiscoveryCopy> = {
     searchLabel: "筛选近期条目",
     searchPlaceholder: "查找标题、说明或分类",
     searchScope: "此筛选只搜索下方显示的近期条目，不会搜索整个资料库。",
+    searchArchive: (query) => `在全部迷因中搜索“${query}”`,
     categoryLabel: "按分类筛选",
     allCategories: "全部",
     resultsLabel: "筛选后的近期条目",
@@ -134,6 +139,7 @@ export const HOME_DISCOVERY_COPY: Record<SeoRouteLocale, HomeDiscoveryCopy> = {
     searchLabel: "篩選近期項目",
     searchPlaceholder: "查找標題、說明或分類",
     searchScope: "此篩選只搜尋下方顯示的近期項目，不會搜尋整個資料庫。",
+    searchArchive: (query) => `在全部迷因中搜尋「${query}」`,
     categoryLabel: "按分類篩選",
     allCategories: "全部",
     resultsLabel: "篩選後的近期項目",

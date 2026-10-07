@@ -57,6 +57,10 @@ export default async function LocalizedHomePage({ params }: Props) {
     categoryLabel: seo.categories[meme.category],
     originalTitle: meme.original.title,
     safetyLevel: meme.safety_level,
+    category: meme.category,
+    thumbnailUrl: meme.meme_contents?.find((content) => content.is_representative && content.thumbnail_url)?.thumbnail_url
+      ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
+      ?? null,
   }));
 
   return (

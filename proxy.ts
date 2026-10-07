@@ -82,7 +82,9 @@ function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): strin
 
 function buildAuthReturnPath(path: string, searchParams: URLSearchParams): string {
   if (path !== "/premium") {
-    return path.startsWith("/admin") ? withAllowlistedSearch(path, searchParams) : path;
+    return path.startsWith("/admin") || path === "/submit"
+      ? withAllowlistedSearch(path, searchParams)
+      : path;
   }
 
   const focus = searchParams.getAll("focus");

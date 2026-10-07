@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import type { MemeCategory } from "@/lib/labels";
 
 const OWNED_MEDIA_HOSTS = new Set(["catchmeme.com", "www.catchmeme.com"]);
@@ -39,6 +39,7 @@ export function MemeThumbnail({
   originYear,
   priority = false,
   variant = "card",
+  fallback,
 }: {
   src: string | null;
   title: string;
@@ -47,6 +48,7 @@ export function MemeThumbnail({
   originYear?: number | null;
   priority?: boolean;
   variant?: "card" | "compact";
+  fallback?: ReactNode;
 }) {
   const imageSrc = thumbnailSrcForBrowser(src);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -79,6 +81,8 @@ export function MemeThumbnail({
       />
     );
   }
+
+  if (fallback !== undefined) return <>{fallback}</>;
 
   return (
     <div

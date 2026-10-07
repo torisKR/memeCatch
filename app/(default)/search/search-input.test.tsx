@@ -47,6 +47,57 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("SearchInput request budget", () => {
+  it("applies browser history query changes without replaying a pending local draft", async () => {
+    const view = render(<SearchInput initialQuery="처음" popularTerms={[]} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.change(input, { target: { value: "작성 중" } });
+    await tick(100);
+    view.rerender(<SearchInput initialQuery="뒤로 간 검색" popularTerms={[]} />);
+
+    expect((input as HTMLInputElement).value).toBe("뒤로 간 검색");
+    await tick(300);
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+
+  it("ignores out-of-order confirmations of its own live query replacements", async () => {
+    const view = render(<SearchInput initialQuery="old" popularTerms={[]} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.change(input, { target: { value: "a" } });
+    await tick();
+    fireEvent.change(input, { target: { value: "ab" } });
+    await tick();
+    expect(mocks.replace).toHaveBeenNthCalledWith(1, "/search?q=a");
+    expect(mocks.replace).toHaveBeenNthCalledWith(2, "/search?q=ab");
+
+    view.rerender(<SearchInput initialQuery="a" popularTerms={[]} />);
+    expect((input as HTMLInputElement).value).toBe("ab");
+    view.rerender(<SearchInput initialQuery="ab" popularTerms={[]} />);
+    expect((input as HTMLInputElement).value).toBe("ab");
+
+    view.rerender(<SearchInput initialQuery="a" popularTerms={[]} />);
+    expect((input as HTMLInputElement).value).toBe("a");
+  });
+
+  it("aborts obsolete suggestions and shows recent searches when history clears the query", async () => {
+    window.localStorage.setItem("mc_recent_searches", JSON.stringify(["최근 검색"]));
+    const view = render(<SearchInput initialQuery="이전 검색" popularTerms={[]} />);
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    await tick();
+
+    view.rerender(<SearchInput initialQuery="" popularTerms={[]} />);
+
+    expect((input as HTMLInputElement).value).toBe("");
+    expect(requests[0].abortSignal.mock.calls[0][0].aborted).toBe(true);
+    expect(screen.getByRole("button", { name: "최근 검색" })).toBeTruthy();
+    await act(async () => { requests[0].resolve(result("낡은 결과")); });
+    expect(screen.queryByText("낡은 결과")).toBeNull();
+    await tick();
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+
   it("keeps a loaded query idle until focus opens the suggestions", async () => {
     render(<SearchInput initialQuery="밈" popularTerms={[]} />);
     await tick();

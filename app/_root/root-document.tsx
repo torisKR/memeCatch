@@ -4,6 +4,7 @@ import { AttributionTracker } from "@/components/attribution-tracker";
 import { BottomNav } from "@/components/bottom-nav";
 import { ChangelogModal } from "@/components/changelog-modal";
 import { GlobalHeader } from "@/components/global-header";
+import { MemeChatbot } from "@/components/meme-chatbot";
 import { NavProgress } from "@/components/nav-progress";
 import { PremiumAdControl } from "@/components/premium-ad-control";
 import { PwaInstall } from "@/components/pwa-install";
@@ -59,6 +60,9 @@ export function RootDocument({
           <SiteFooter />
           <PremiumAdControl />
           <BottomNav />
+          <Suspense fallback={null}>
+            <MemeChatbot />
+          </Suspense>
           <PwaInstall />
           <ChangelogModal />
         </LocaleProvider>

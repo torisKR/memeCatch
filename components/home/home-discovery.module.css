@@ -101,6 +101,25 @@
   line-height: 1.5;
 }
 
+.searchArchive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-top: 0.35rem;
+  color: var(--discovery-ink);
+  font-weight: 800;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.searchArchive:focus-visible {
+  outline: 2px solid var(--discovery-orange);
+  outline-offset: 3px;
+}
+
 .categoryHeading {
   margin-bottom: 0.7rem;
   color: var(--discovery-ink);

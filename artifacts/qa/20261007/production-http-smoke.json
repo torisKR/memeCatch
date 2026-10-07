@@ -1,0 +1,24 @@
+[
+  {
+    "check": "search",
+    "status": 200,
+    "elapsedMs": 2104
+  },
+  {
+    "check": "admin",
+    "status": 307,
+    "elapsedMs": 121,
+    "location": "/login?next=%2Fadmin"
+  },
+  {
+    "check": "submit",
+    "status": 307,
+    "elapsedMs": 104,
+    "location": "/login?next=%2Fsubmit%3Fname%3Dzzqxv7239%2B%2526%2B%25ED%259A%258C%25EA%25B7%2580%25ED%2585%258C%25EC%258A%25A4%25ED%258A%25B8"
+  },
+  {
+    "check": "embedding-unauthorized",
+    "status": 401,
+    "elapsedMs": 1933
+  }
+]

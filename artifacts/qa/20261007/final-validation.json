@@ -1,0 +1,40 @@
+{
+  "sourceCommit": "a3166020487783032acfbf53193819cbcb3f2128",
+  "checkedAt": "2026-10-07",
+  "tests": {
+    "files": 386,
+    "passed": 3176,
+    "durationSeconds": 57.95
+  },
+  "browser": {
+    "localGenerated": true,
+    "retrievalMode": "keyword",
+    "desktop": true,
+    "mobile": true,
+    "smallMobile": "320x568",
+    "dark": true,
+    "errors": 0,
+    "overflow": 0
+  },
+  "review": {
+    "ui": "approved",
+    "backend": "approved",
+    "admin": "approved"
+  },
+  "typecheck": "passed",
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 6
+  },
+  "build": {
+    "passed": true,
+    "staticPages": 108,
+    "workers": 1,
+    "localSemanticEnabled": false,
+    "metadataBaseWarning": true
+  },
+  "scriptLint": "passed",
+  "productionBrowserArtifact": "production-browser-verification.json",
+  "generationDiagnosticsArtifact": "generation-diagnostics.json",
+  "productionGenerationFinal": "not_confirmed; retrieved fallback returned"
+}

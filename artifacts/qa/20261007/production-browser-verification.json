@@ -1,0 +1,56 @@
+{
+  "base": "https://catchmeme.com",
+  "chat_requests": 1,
+  "page_errors": [],
+  "open_without_requests": true,
+  "keyboard_escape_focus_return": true,
+  "higher_modal_escape": "simulated DOM modal preserves chat and focus",
+  "pwa_banner": "simulated DOM banner hides chat",
+  "small_mobile": "320x568 fits",
+  "clear_without_request": true,
+  "login_hidden": true,
+  "existing_tabs": "not accessed",
+  "database_mutations": "browser guard blocks other POSTs",
+  "codeSha": "a3166020487783032acfbf53193819cbcb3f2128",
+  "deploymentId": "dpl_5kC5DDBLF19RzoNX2uoc9rvwnUz2",
+  "screens": [
+    {
+      "step": "12-chat-mobile-launcher",
+      "url": "https://catchmeme.com/",
+      "overflow": false
+    },
+    {
+      "step": "13-chat-mobile-answer",
+      "url": "https://catchmeme.com/",
+      "overflow": false
+    },
+    {
+      "step": "14-chat-desktop-answer",
+      "url": "https://catchmeme.com/",
+      "overflow": false
+    },
+    {
+      "step": "16-chat-small-mobile",
+      "url": "https://catchmeme.com/",
+      "overflow": false
+    },
+    {
+      "step": "17-chat-dark-desktop",
+      "url": "https://catchmeme.com/",
+      "overflow": false
+    },
+    {
+      "step": "15-chat-english-open",
+      "url": "https://catchmeme.com/en/explore",
+      "overflow": false
+    }
+  ],
+  "responses": [
+    {
+      "httpStatus": 200,
+      "answerMode": "retrieved",
+      "retrievalMode": "hybrid",
+      "referenceCount": 1
+    }
+  ]
+}

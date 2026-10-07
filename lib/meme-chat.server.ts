@@ -7,6 +7,7 @@ import { citableSources } from "@/lib/source-links";
 import { localizedMemePath } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
 import { isIndexableMeme } from "@/lib/content-depth";
+import { memeTitleKey } from "../scripts/meme-title-key.mjs";
 import { memeChatRequestSchema, type MemeChatItem, type MemeChatLocale, type MemeChatRequest, type MemeChatResult } from "@/lib/meme-chat";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,6 +39,7 @@ const rowSchema = z.object({
 });
 type Fact = {
   item: MemeChatItem;
+  titleKeys: string[];
   description: string;
   origin: string;
   usageNote: string;
@@ -47,6 +49,8 @@ type Fact = {
   revision: string;
 };
 type Generated = { answer: string; citationIds: string[] };
+type GenerationFailureReason = "http_error" | "timeout" | "aborted" | "network_error"
+  | "malformed_payload" | "invalid_schema" | "invalid_citations" | "unsafe_answer" | "nonstop" | "context_limit";
 type Job = { controller: AbortController; promise: Promise<Generated | null>; waiters: number };
 const answers = new Map<string, { expires: number; value: Generated }>();
 const jobs = new Map<string, Job>();
@@ -104,6 +108,7 @@ async function hydrate(ids: string[], locale: MemeChatLocale, signal?: AbortSign
     const content = translation ?? row;
     const slug = text(translation?.localized_slug ?? row.slug, 300);
     facts.set(row.id, {
+      titleKeys: [...new Set([memeTitleKey(row.title), ...(translation ? [memeTitleKey(translation.title)] : [])])].filter(Boolean),
       item: {
         id: row.id, short_id: row.short_id, slug,
         title: text(content.title, 160), summary: text(content.summary, 240),
@@ -119,6 +124,13 @@ async function hydrate(ids: string[], locale: MemeChatLocale, signal?: AbortSign
     });
   }
   return ids.flatMap((id) => facts.has(id) ? [facts.get(id)!] : []);
+}
+
+function exactTitleFacts(question: string, facts: Fact[]): Fact[] {
+  const key = memeTitleKey(question);
+  if (!key) return facts;
+  const matches = facts.filter((fact) => fact.titleKeys.includes(key));
+  return matches.length ? matches : facts;
 }
 
 const COPY: Record<MemeChatLocale, { empty: string; retrieved: string; noSources: string; timingUncertainty: string }> = {
@@ -186,13 +198,21 @@ function modelContext(question: string, locale: MemeChatLocale, facts: Fact[]): 
   return context.length <= 6000 ? context : build(true);
 }
 async function generate(question: string, locale: MemeChatLocale, facts: Fact[], config: GenerationConfig, signal: AbortSignal): Promise<Generated | null> {
+  const timeout = AbortSignal.timeout(12_000);
+  const unavailable = (reason: GenerationFailureReason, status?: number): null => {
+    console.warn("[meme-chat] generation unavailable", {
+      provider: config.provider, reason,
+      ...(status !== undefined && Number.isInteger(status) && status >= 100 && status <= 599 ? { status } : {}),
+    });
+    return null;
+  };
   try {
     const context = modelContext(question, locale, facts);
-    if (context.length > 6000) return null;
+    if (context.length > 6000) return unavailable("context_limit");
     const response = await fetch(config.endpoint, {
       method: "POST", redirect: "error", cache: "no-store",
       headers: { ...config.headers, "content-type": "application/json" },
-      signal: AbortSignal.any([signal, AbortSignal.timeout(12_000)]),
+      signal: AbortSignal.any([signal, timeout]),
       body: JSON.stringify({
         model: config.model, stream: false,
         ...(config.provider === "openrouter" ? {
@@ -212,16 +232,30 @@ async function generate(question: string, locale: MemeChatLocale, facts: Fact[],
         } },
       }),
     });
-    if (!response.ok) return null;
-    const payload: unknown = await response.json();
+    if (!response.ok) return unavailable("http_error", response.status);
+    let payload: unknown;
+    try { payload = await response.json(); }
+    catch (error) {
+      if (timeout.aborted || signal.aborted) throw error;
+      return unavailable("malformed_payload");
+    }
     const envelope = z.object({ choices: z.array(z.object({ finish_reason: z.string(), message: z.object({ content: z.string() }) })).min(1) }).safeParse(payload);
-    if (!envelope.success || envelope.data.choices[0].finish_reason !== "stop") return null;
-    const result = generatedSchema.safeParse(JSON.parse(envelope.data.choices[0].message.content));
-    if (!result.success || new Set(result.data.citationIds).size !== result.data.citationIds.length
-      || result.data.citationIds.some((id) => !facts.some(({ item }) => item.id === id))
-      || /(?:[a-z][a-z0-9+.-]*:\/\/|www\.|javascript:|data:|mailto:|<[^>]*>|\[[^\]]+\]\s*\(|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?=\/|\s|$))/i.test(result.data.answer)) return null;
+    if (!envelope.success) return unavailable("malformed_payload");
+    if (envelope.data.choices[0].finish_reason !== "stop") return unavailable("nonstop");
+    let output: unknown;
+    try { output = JSON.parse(envelope.data.choices[0].message.content); }
+    catch { return unavailable("malformed_payload"); }
+    const result = generatedSchema.safeParse(output);
+    if (!result.success) return unavailable("invalid_schema");
+    if (new Set(result.data.citationIds).size !== result.data.citationIds.length
+      || result.data.citationIds.some((id) => !facts.some(({ item }) => item.id === id))) return unavailable("invalid_citations");
+    if (/(?:[a-z][a-z0-9+.-]*:\/\/|www\.|javascript:|data:|mailto:|<[^>]*>|\[[^\]]+\]\s*\(|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?=\/|\s|$))/i.test(result.data.answer)) return unavailable("unsafe_answer");
     return result.data;
-  } catch { return null; }
+  } catch (error) {
+    if (signal.aborted) return null;
+    return unavailable(timeout.aborted ? "timeout"
+      : error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError") ? "aborted" : "network_error");
+  }
 }
 
 function waitForJob(job: Job, signal?: AbortSignal): Promise<Generated | null> {
@@ -266,7 +300,7 @@ export async function answerMemeQuestion(input: MemeChatRequest, signal?: AbortS
   const references = await withCancellation(searchMemeReferences(question, 4), signal);
   assertActive(signal);
   const ids = [...new Set(references.items.map(({ id }) => id).filter((id) => UUID.test(id)))].slice(0, 4);
-  const facts = await hydrate(ids, locale, signal);
+  const facts = exactTitleFacts(question, await hydrate(ids, locale, signal));
   const fallback = retrieved(facts, locale, references.mode);
   const config = generationConfig();
   if (!facts.length || !config) return fallback;
@@ -301,7 +335,7 @@ export async function answerMemeQuestion(input: MemeChatRequest, signal?: AbortS
   const generated = await waitForJob(job, signal);
   assertActive(signal);
   // Public visibility is checked after the model's wait, including generation fallback.
-  const current = await hydrate(ids, locale, signal);
+  const current = exactTitleFacts(question, await hydrate(facts.map(({ item }) => item.id), locale, signal));
   if (!generated) return retrieved(current, locale, references.mode);
   const currentFingerprint = createHash("sha256").update(JSON.stringify(current)).digest("hex");
   if (currentFingerprint !== fingerprint) return retrieved(current, locale, references.mode);

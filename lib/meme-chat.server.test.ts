@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   search: vi.fn(), read: vi.fn(), createStaticClient: vi.fn(),
   from: vi.fn(), select: vi.fn(), filter: vi.fn(), order: vi.fn(),
-  limit: vi.fn(), eq: vi.fn(), abortSignal: vi.fn(), fetch: vi.fn(),
+  limit: vi.fn(), eq: vi.fn(), abortSignal: vi.fn(), fetch: vi.fn(), warn: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/meme-reference-search.server", () => ({ searchMemeReferences: mocks.search }));
@@ -20,6 +20,14 @@ function row(overrides: Record<string, unknown> = {}) {
     meme_sources: [{ source_url: "https://www.wikipedia.org/wiki/Meme", title: "출처 문서", platform: "web" }],
     meme_translations: [], ...overrides,
   };
+}
+function candidates() {
+  return [
+    row({ title: "TMI" }),
+    row({ id: OTHER, title: "Don’t Start Now", short_id: "other123", slug: "other" }),
+    row({ id: "30000000-0000-0000-0000-000000000003", title: "Mike O’Hearn", short_id: "third123", slug: "third" }),
+    row({ id: "40000000-0000-0000-0000-000000000004", title: "Your AI Slop Bores Me", short_id: "fourth12", slug: "fourth" }),
+  ];
 }
 function response(content: unknown = { answer: "공개 자료에 근거한 요약입니다.", citationIds: [ID] }, finish = "stop") {
   return Response.json({ choices: [{ finish_reason: finish, message: { content: JSON.stringify(content) } }] });
@@ -41,6 +49,7 @@ beforeEach(() => {
   vi.stubEnv("MEME_CHAT_API_KEY", "");
   vi.stubEnv("VERCEL", "");
   vi.stubGlobal("fetch", mocks.fetch);
+  vi.spyOn(console, "warn").mockImplementation(mocks.warn);
   mocks.search.mockResolvedValue({ mode: "hybrid", items: [row()] });
   mocks.read.mockResolvedValue({ data: [row()], error: null });
   const query = {
@@ -84,6 +93,132 @@ describe("public grounded meme answers", () => {
     expect(payload.messages[0].content).toContain("UNTRUSTED");
     expect(payload.messages[1].content.length).toBeLessThanOrEqual(6000);
     expect(mocks.read).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["TMI", "TMI?", "ｔｍｉ"])("uses only an exact public title match for %s context, citations and results", async (question) => {
+    const data = candidates();
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question });
+    expect(result.items.map(({ id }) => id)).toEqual([ID]);
+    expect(result.mode).toBe("generated");
+    const payload = JSON.parse(mocks.fetch.mock.calls[0][1].body);
+    expect(JSON.parse(payload.messages[1].content).facts.map(({ id }: { id: string }) => id)).toEqual([ID]);
+    expect(payload.response_format.json_schema.schema.properties.citationIds.items.enum).toEqual([ID]);
+  });
+
+  it("narrows retrieval fallback using actual hydrated titles instead of stale search metadata", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const metadata = candidates();
+    const data = metadata.map((item, index) => ({ ...item, title: index === 0 ? "Changed title" : index === 1 ? "TMI" : item.title }));
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: metadata });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question: "TMI" });
+    expect(result.mode).toBe("retrieved");
+    expect(result.items.map(({ id }) => id)).toEqual([OTHER]);
+    expect(result.answer).not.toContain("Changed title");
+    expect(mocks.warn).not.toHaveBeenCalled();
+  });
+
+  it.each(["?!", "TMI는 어떤 밈이야"])("keeps the four public candidates when no nonempty full-question key matches: %s", async (question) => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    if (question === "?!") data[0].title = "!!!";
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    expect((await (await load())({ ...input, question })).items).toHaveLength(4);
+  });
+
+  it("matches complete public titles rather than their truncated display text", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    data[0].title = `TMI${"!".repeat(160)}different`;
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    expect((await (await load())({ ...input, question: "TMI" })).items).toHaveLength(4);
+  });
+
+  it("never narrows to a nonpublic exact title", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    data[0].moderation_status = "pending";
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question: "TMI" });
+    expect(result.items).toHaveLength(3);
+    expect(result.items.map(({ id }) => id)).not.toContain(ID);
+  });
+
+  it("uses canonical and eligible localized titles as exact keys without adding keys to model context", async () => {
+    const data = candidates();
+    data[0] = row({ title: "티엠아이", description: "설명".repeat(200), origin: "기원".repeat(30), meme_translations: [{
+      locale: "en", status: "reviewed", localized_slug: "too-much-information", title: "Too Much Information", summary: "English summary",
+      description: "English description", origin: "Known context", usage_note: null, caution: null,
+      source_updated_at: updated, updated_at: updated,
+    }] });
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const answer = await load();
+    for (const question of ["티엠아이", "Too Much Information"]) {
+      const result = await answer({ ...input, question, locale: "en" });
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].title).toBe("Too Much Information");
+      const context = JSON.parse(JSON.parse(mocks.fetch.mock.calls.at(-1)![1].body).messages[1].content);
+      expect(context.facts).toHaveLength(1);
+      expect(context.facts[0]).not.toHaveProperty("titleKeys");
+    }
+  });
+
+  it("never uses an unreviewed translation as a matching key", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    data[0] = row({ title: "Other canonical title", description: "설명".repeat(200), origin: "기원".repeat(30), meme_translations: [{
+      locale: "en", status: "machine", localized_slug: "tmi", title: "TMI", summary: "Unreviewed",
+      description: "Unreviewed", origin: "Unreviewed", usage_note: null, caution: null,
+      source_updated_at: updated, updated_at: updated,
+    }] });
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question: "TMI", locale: "en" });
+    expect(result.items).toHaveLength(4);
+    expect(result.items[0].title).toBe("Other canonical title");
+  });
+
+  it("rehydrates only exact selected ids and returns empty when their public visibility is revoked", async () => {
+    const data = candidates();
+    const refreshed = data.map((item, index) => ({ ...item, ...(index === 0 ? { moderation_status: "pending" } : index === 1 ? { title: "TMI" } : {}) }));
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValueOnce({ data, error: null }).mockResolvedValueOnce({ data: refreshed, error: null });
+    const result = await (await load())({ ...input, question: "TMI" });
+    expect(result.mode).toBe("empty");
+    expect(result.items).toEqual([]);
+    expect(result.answer).not.toContain("공개 자료에 근거한");
+    expect(mocks.filter.mock.calls.filter(([column]) => column === "id").at(-1)).toEqual(["id", [ID]]);
+  });
+
+  it("returns the selected fresh public fact when generation fails and its title changes", async () => {
+    const data = candidates();
+    const refreshed = data.map((item, index) => ({ ...item, title: index === 0 ? "Changed title" : index === 1 ? "TMI" : item.title }));
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValueOnce({ data, error: null }).mockResolvedValueOnce({ data: refreshed, error: null });
+    mocks.fetch.mockResolvedValue(Response.json({ error: "private provider payload" }, { status: 503 }));
+    const result = await (await load())({ ...input, question: "TMI" });
+    expect(result.mode).toBe("retrieved");
+    expect(result.items.map(({ id }) => id)).toEqual([ID]);
+    expect(result.items[0].title).toBe("Changed title");
+  });
+
+  it("fingerprints only the selected exact facts for cached generation", async () => {
+    const data = candidates();
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const answer = await load();
+    const first = await answer({ ...input, question: "TMI" });
+    mocks.read.mockResolvedValue({ data: data.map((item, index) => index ? { ...item, summary: "changed irrelevant candidate" } : item), error: null });
+    const cached = await answer({ ...input, question: "TMI" });
+    expect(cached).toEqual(first);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.warn).not.toHaveBeenCalled();
   });
 
   it("excludes private, malformed and unrelated rows and unsafe/bare source links", async () => {
@@ -134,6 +269,7 @@ describe("public grounded meme answers", () => {
     const result = await (await load())(input);
     expect(result.mode).toBe("retrieved");
     expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.warn).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -160,6 +296,48 @@ describe("public grounded meme answers", () => {
     expect(result.mode).toBe("retrieved");
     expect(result.items).toHaveLength(1);
     expect(result.answer).not.toContain("evil.org");
+  });
+
+  it("logs only a fixed provider reason and valid HTTP status for generation failures", async () => {
+    const data = row({ title: "SECRET_TITLE", summary: "SECRET_CONTEXT", meme_sources: [{ source_url: "https://www.wikipedia.org/SECRET_SOURCE", title: "SECRET_SOURCE" }] });
+    mocks.read.mockResolvedValue({ data: [data], error: null });
+    mocks.fetch.mockResolvedValue(Response.json({ error: "SECRET_BODY", api_key: "test-key", reason: "REMOTE_UNTRUSTED_REASON" }, { status: 429 }));
+    const result = await (await load())({ ...input, question: "SECRET_QUESTION" });
+    expect(result.mode).toBe("retrieved");
+    expect(mocks.warn).toHaveBeenCalledExactlyOnceWith("[meme-chat] generation unavailable", { provider: "openrouter", reason: "http_error", status: 429 });
+    const logged = JSON.stringify(mocks.warn.mock.calls);
+    for (const secret of ["SECRET", "REMOTE_UNTRUSTED_REASON", "test-key", "https", ID]) expect(logged).not.toContain(secret);
+  });
+
+  it.each([NaN, 0, 999])("does not include an invalid HTTP status in diagnostics: %s", async (status) => {
+    mocks.fetch.mockResolvedValue({ ok: false, status });
+    await (await load())(input);
+    expect(mocks.warn).toHaveBeenCalledExactlyOnceWith("[meme-chat] generation unavailable", { provider: "openrouter", reason: "http_error" });
+  });
+
+  it.each([
+    { reason: "malformed_payload", make: () => new Response("SECRET_BODY", { headers: { "content-type": "application/json" } }) },
+    { reason: "malformed_payload", make: () => Response.json({ error: "SECRET_BODY" }) },
+    { reason: "malformed_payload", make: () => Response.json({ choices: [{ finish_reason: "stop", message: { content: "SECRET_MODEL_OUTPUT" } }] }) },
+    { reason: "invalid_schema", make: () => response({ answer: "", citationIds: [ID] }) },
+    { reason: "invalid_citations", make: () => response({ answer: "SECRET_MODEL_OUTPUT", citationIds: [OTHER] }) },
+    { reason: "unsafe_answer", make: () => response({ answer: "https://SECRET_MODEL_OUTPUT.org", citationIds: [ID] }) },
+    { reason: "nonstop", make: () => response({ answer: "SECRET_MODEL_OUTPUT", citationIds: [ID] }, "SECRET_FINISH_REASON") },
+  ])("logs the fixed $reason category without untrusted model content", async ({ reason, make }) => {
+    mocks.fetch.mockResolvedValue(make());
+    expect((await (await load())(input)).mode).toBe("retrieved");
+    expect(mocks.warn).toHaveBeenCalledExactlyOnceWith("[meme-chat] generation unavailable", { provider: "openrouter", reason });
+    expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain("SECRET");
+  });
+
+  it.each([
+    { error: new Error("SECRET_NETWORK_ERROR"), reason: "network_error" },
+    { error: new DOMException("SECRET_ABORT_ERROR", "AbortError"), reason: "aborted" },
+  ])("logs provider transport failures as a fixed $reason without their messages", async ({ error, reason }) => {
+    mocks.fetch.mockRejectedValue(error);
+    expect((await (await load())(input)).mode).toBe("retrieved");
+    expect(mocks.warn).toHaveBeenCalledExactlyOnceWith("[meme-chat] generation unavailable", { provider: "openrouter", reason });
+    expect(JSON.stringify(mocks.warn.mock.calls)).not.toContain("SECRET");
   });
 
   it("does not cache generation failures, truncated responses or provider errors", async () => {
@@ -343,6 +521,8 @@ describe("public grounded meme answers", () => {
     controller.abort();
     await rejection;
     expect(fetchSignal.aborted).toBe(true);
+    await Promise.resolve();
+    expect(mocks.warn).not.toHaveBeenCalled();
   });
 
   it("cancels during the existing shared retrieval before any generation starts", async () => {
@@ -367,6 +547,7 @@ describe("public grounded meme answers", () => {
     expect(AbortSignal.timeout).toHaveBeenCalledWith(12_000);
     timeout.abort();
     expect((await work).mode).toBe("retrieved");
+    expect(mocks.warn).toHaveBeenCalledExactlyOnceWith("[meme-chat] generation unavailable", { provider: "openrouter", reason: "timeout" });
   });
 
   it("bounds the LRU to 32 successful answers and expires answers after 60 seconds", async () => {

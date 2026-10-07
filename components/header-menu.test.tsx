@@ -45,6 +45,7 @@ describe("HeaderMenu", () => {
     expect(screen.queryByRole("link", { name: "커뮤니티" })).toBeNull();
     expect(screen.queryByRole("link", { name: "밈 상품" })).toBeNull();
     expect(screen.getByRole("link", { name: "연표" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "밈카드" }).getAttribute("href")).toBe("/meme-cards");
     expect(screen.getByRole("link", { name: "밈캐치 내 급상승" })).toBeTruthy();
 
     await user.keyboard("{Escape}");

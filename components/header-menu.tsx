@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Dices,
+  Layers3,
   Globe2,
   Grid2X2,
   Milestone,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n-client";
 import { track } from "@/lib/analytics";
+import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
 
 /**
  * 헤더 우측 통합 메뉴 드롭다운 (2026-07 헤더 IA 개편).
@@ -58,6 +60,7 @@ export function HeaderMenu() {
     icon: LucideIcon;
     prefetch?: false;
   }[] = [
+    { href: "/meme-cards", label: MEME_CARDS_COPY[locale].nav, prefetch: false, icon: Layers3 },
     {
       href: "/global",
       label: locale === "ko" ? "글로벌 피드" : "Global feed",

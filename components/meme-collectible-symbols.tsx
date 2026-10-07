@@ -1,0 +1,78 @@
+import type { ReactNode } from "react";
+
+/** Small original line illustrations from the catalog's semantic art vocabulary. */
+export function MemeCollectibleSymbol({ symbol }: { symbol: string }) {
+  let shape: ReactNode;
+  switch (symbol) {
+    case "frame": shape = <><rect x="1" y="2" width="30" height="28" rx="2" fill="var(--card-accent)"/><rect x="5" y="6" width="22" height="20" fill="var(--card-paper)"/><path d="m7 24 7-10 5 7 5-5 2 8"/><circle cx="22" cy="11" r="2" fill="var(--card-accent)"/><path d="m2 3 3 3m25-3-3 3M2 29l3-3m25 3-3-3"/></>; break;
+    case "ice-cream": shape = <><path d="m7 16 9 15 9-15Z" fill="var(--card-accent)"/><path d="M4 16q-3-9 6-9 4-12 12-4 9 2 6 13Z" fill="var(--card-paper)"/><path d="m10 21 10 5m-5-8 7 4"/></>; break;
+    case "camera": shape = <><path d="M1 10h8l4-5h9l3 5h6v19H1Z" fill="var(--card-accent)"/><circle cx="17" cy="19" r="7" fill="var(--card-paper)"/><circle cx="5" cy="14" r="1"/></>; break;
+    case "arrow-down": shape = <path d="M16 2v28m-11-9 11 9 11-9" stroke="var(--card-accent)" strokeWidth="4"/>; break;
+    case "boat": shape = <><path d="m2 21 28-1-5 8H8Z" fill="var(--card-accent)"/><path d="M16 20V1L4 16h25L16 1M1 31q5-4 10 0t10 0 11 0"/></>; break;
+    case "box": shape = <><path d="m1 10 15-8 15 8v15l-15 6-15-6Zm0 0 15 8 15-8M16 18v13" fill="var(--card-accent)"/><path d="m8 6 16 8"/></>; break;
+    case "bread": shape = <><path d="M6 15C-7-2 39-5 26 15v15H6Z" fill="var(--card-accent)"/><path d="M11 26V13q5-13 11 0v13Zm4-11v2m4 4v2"/></>; break;
+    case "bucket": shape = <><path d="M4 9h24l-4 21H8Z" fill="var(--card-accent)"/><path d="M6 9C8-3 24-3 26 9M4 15q10 13 23 0"/></>; break;
+    case "cookie": shape = <><path d="M31 16q-1 19-19 14Q-3 27 2 11 6-2 18 2q-2 10 13 14Z" fill="var(--card-accent)"/><circle cx="10" cy="10" r="2"/><circle cx="8" cy="21" r="2"/><circle cx="20" cy="24" r="2"/></>; break;
+    case "droplet": shape = <path d="M16 1 5 17q-9 15 11 14 19-1 9-14Z" fill="var(--card-accent)"/>; break;
+    case "letters": shape = <><path d="M2 24 8 5l7 19M4 17h9m7-12v19h11m-11-10h9"/><path d="M1 30h30" stroke="var(--card-accent)"/></>; break;
+    case "needle": shape = <><path d="M5 29 21 3q9-6 9 2L5 29Z"/><path d="m23 4 3 2m-3 4q12 9 2 18" stroke="var(--card-accent)"/></>; break;
+    case "shield": shape = <><path d="M1 6 16 1l15 5-2 16-13 9L3 22Z" fill="var(--card-paper)"/><path d="m9 15 6 7 11-15" stroke="var(--card-accent)" strokeWidth="3"/></>; break;
+    case "spring": shape = <><path d="M4 29h24M4 3h24m-18 3 16 5-16 5 16 5-16 5" stroke="var(--card-accent)" strokeWidth="3"/></>; break;
+    case "ice": shape = <><path d="m2 10 13-8 15 8v15l-13 6-15-8Zm0 0 15 7 13-7M17 17v14" fill="var(--card-paper)"/><path d="M9 10v5m14 4v6" stroke="var(--card-accent)"/></>; break;
+    case "coin": shape = <><circle cx="16" cy="16" r="14" fill="var(--card-accent)"/><circle cx="16" cy="16" r="10"/><path d="M16 6v20m6-15q-15-7-11 4l10 4q0 9-11 3"/></>; break;
+    case "bulb": shape = <><path d="M10 22C-9 1 37-8 23 21l-4 3h-7Z" fill="var(--card-accent)"/><path d="M11 27h10m-8 4h6M16 24V13l-4-3m4 3 5-4"/></>; break;
+    case "brain": shape = <><path d="M16 5q-8-9-11 1-8 3-2 10-7 9 4 11 5 9 9 1 6 8 11-1 9-4 3-11 5-8-2-10-3-10-12-1Z" fill="var(--card-paper)"/><path d="M16 5v23M6 7l4 4-4 6m20-10-5 5 5 6m-19 5 5-4m8 5 5-4" stroke="var(--card-accent)"/></>; break;
+    case "door": shape = <><path d="M4 30V2h24v28M8 30V6l15-3v24Z" fill="var(--card-accent)"/><path d="M0 31h31m-13-14h1"/></>; break;
+    case "moon": shape = <><path d="M25 2C-2 1-7 35 26 30 12 24 11 14 25 2Z" fill="var(--card-accent)"/><path d="m26 7 3 4 2-4m-8 11 4 1"/></>; break;
+    case "flame": shape = <><path d="M16 1C15 12 5 6 4 20-1 33 35 37 29 18l-5-8-3 8Q15 13 16 1Z" fill="var(--card-accent)"/><path d="M16 18q-13 12 0 13 10-2 0-13" fill="var(--card-paper)"/></>; break;
+    case "envelope": shape = <><rect x="1" y="5" width="30" height="22" rx="3" fill="var(--card-paper)"/><path d="m2 6 14 12L30 6M2 26l11-10m18 10L20 16" stroke="var(--card-accent)"/></>; break;
+    case "pen": case "pencil": shape = <><path d="m7 24 4-9L24 2l6 6-13 14-10 2Z" fill="var(--card-accent)"/><path d="m11 15 6 7m5-17 6 6"/></>; break;
+    case "apple": shape = <><path d="M16 11C6 3 1 14 7 24q8 11 11 1 10 9 13-5 3-16-15-9Z" fill="var(--card-accent)"/><path d="m16 10 3-8m0 1q7-1 8 5"/></>; break;
+    case "pineapple": shape = <><path d="m9 11-4-8 9 5 3-8 4 8 8-5-5 8" fill="var(--card-accent)"/><rect x="8" y="11" width="17" height="20" rx="8"/><path d="m9 15 12 13m-12-7 7 8m-3-16 12 13m-15-1 12-12m-9 17 11-12"/></>; break;
+    case "music-note": shape = <><path d="M12 25V7l17-4v18M12 12l17-4"/><ellipse cx="7" cy="25" rx="5" ry="4" fill="var(--card-accent)"/><ellipse cx="24" cy="21" rx="5" ry="4" fill="var(--card-accent)"/></>; break;
+    case "footsteps": shape = <><ellipse cx="9" cy="9" rx="5" ry="7" transform="rotate(-20 9 9)" fill="var(--card-accent)"/><path d="m6 21 4-1"/><ellipse cx="23" cy="18" rx="5" ry="7" transform="rotate(20 23 18)" fill="var(--card-accent)"/><path d="m20 30 4 1"/></>; break;
+    case "wave": case "signal": shape = <><path d="M2 14q5-7 10 0t10 0 10 0M2 24q5-7 10 0t10 0 10 0"/><path d="m13 3 3-2 3 2" stroke="var(--card-accent)"/></>; break;
+    case "hands": shape = <><path d="m4 28 9-8-1-14 4-3 4 3v11l4-5 5 3-3 12-9 4Z" fill="var(--card-accent)"/><path d="M5 12 2 9m5-3V2m17 3 3-3"/></>; break;
+    case "confetti": case "spark": shape = <><path d="m16 1 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z" fill="var(--card-accent)"/><path d="m3 3 3 2m21 24 3 3"/></>; break;
+    case "star": shape = <path d="m16 1 4 10 11 1-8 7 2 11-9-6-10 6 3-11-8-7 11-1Z" fill="var(--card-accent)"/>; break;
+    case "heart": shape = <path d="M16 29C-8 13 5-5 16 9c12-14 25 4 0 20Z" fill="var(--card-accent)"/>; break;
+    case "path": case "fork-path": shape = <><path d="M16 31V18L4 5m12 13L28 5M2 11V3h8m14 0h7v8"/><path d="m4 28 5-4" stroke="var(--card-accent)"/></>; break;
+    case "flag": shape = <><path d="M5 31V2l23 5-23 6" fill="var(--card-accent)"/><path d="M1 31h13"/></>; break;
+    case "shark": shape = <><path d="M1 17q10-10 21-4l8-6-2 12 3 6-11-3Q8 29 1 17Z" fill="var(--card-accent)"/><path d="m12 12 5-10 4 10"/><circle cx="6" cy="17" r="1" fill="var(--card-ink)"/></>; break;
+    case "cup": shape = <><path d="M4 10h20l-2 17H6Z" fill="var(--card-accent)"/><path d="M24 13q11 0 5 10h-6M1 31h27m-19-27V1m8 3V1"/></>; break;
+    case "whisk": shape = <><path d="m21 2-8 13q-17 6-5 14 12 2 12-12L28 5Z"/><path d="m13 15-7 11m12-10-8 12" stroke="var(--card-accent)"/></>; break;
+    case "foam": case "steam": shape = <><path d="M2 25q-1-8 7-7 2-13 10-7 9-6 12 14Z" fill="var(--card-accent)"/><path d="M8 6V2m15 5 2-4"/></>; break;
+    case "dog": shape = <><path d="m5 10-3 13 8-3m18-10 3 13-8-3" fill="var(--card-accent)"/><path d="M7 11q10-15 19 0v12q-10 14-19 0Z" fill="var(--card-paper)"/><path d="m12 23 5 3 5-3m-11-8v2m12-2v2"/></>; break;
+    case "cat": shape = <><path d="m5 12 1-10 9 7 9-7 3 10q8 16-12 18Q-3 28 5 12Z" fill="var(--card-accent)"/><path d="m9 17 3 1m7 0 3-1m-8 5h3m-12 0H1m26 0h4"/></>; break;
+    case "penguin": shape = <><ellipse cx="16" cy="17" rx="11" ry="14" fill="var(--card-ink)"/><ellipse cx="16" cy="21" rx="7" ry="9" fill="var(--card-paper)"/><path d="m13 11 3 3 3-3Z" fill="var(--card-accent)"/><circle cx="11" cy="8" r="1" fill="var(--card-paper)"/><circle cx="21" cy="8" r="1" fill="var(--card-paper)"/></>; break;
+    case "speech": shape = <><path d="M2 3h28v19H14l-8 8v-8H2Z" fill="var(--card-accent)"/><path d="M7 9h17M7 15h11"/></>; break;
+    case "smile": case "face": shape = <><circle cx="16" cy="16" r="14" fill="var(--card-paper)"/><path d="M10 10v3m12-3v3m-13 7q7 10 14 0"/><path d="M5 17h4m14 0h4" stroke="var(--card-accent)"/></>; break;
+    case "teardrop": shape = <path d="M16 2C5 17-2 28 16 31c18-3 11-14 0-29Z" fill="var(--card-accent)"/>; break;
+    case "question": shape = <><path d="M6 9C4-3 29-2 25 12l-9 7v4"/><circle cx="16" cy="29" r="2" fill="var(--card-accent)"/></>; break;
+    case "quote": shape = <><path d="M3 20V10h10v10H3l4-8m12 8V10h10v10H19l4-8" fill="var(--card-accent)"/><path d="m3 27 7-7m9 7 7-7"/></>; break;
+    case "exchange": shape = <><path d="M2 10h26m-8-7 9 7-9 7M30 25H4m8-7-9 7 9 6"/><circle cx="4" cy="3" r="1" fill="var(--card-accent)"/></>; break;
+    case "chip": shape = <><rect x="7" y="7" width="18" height="18" rx="3" fill="var(--card-accent)"/><path d="M12 1v6m8-6v6M12 25v6m8-6v6M1 12h6m-6 8h6m18-8h6m-6 8h6"/></>; break;
+    case "screen": shape = <><rect x="2" y="3" width="28" height="20" rx="3" fill="var(--card-paper)"/><path d="M16 23v7m-8 0h16m-16-15 6-6 9 7" stroke="var(--card-accent)"/></>; break;
+    case "controller": shape = <><path d="M7 9h19q5 0 6 13l-6 5-7-7h-6l-7 7-6-5Q1 9 7 9Z" fill="var(--card-accent)"/><path d="M9 12v9m-4-5h9m9-3h1m3 5h1"/></>; break;
+    case "pixel": shape = <><path d="M2 2h9v9H2Zm19 0h9v9h-9ZM12 12h9v9h-9ZM2 21h9v9H2Zm19 0h9v9h-9Z" fill="var(--card-accent)"/></>; break;
+    case "trophy": shape = <><path d="M9 2h14v12q-7 10-14 0Z" fill="var(--card-accent)"/><path d="M9 5H2q-2 12 9 9m12-9h7q2 12-9 9M16 21v9m-8 0h16"/></>; break;
+    case "bowl": shape = <><path d="M1 15h30q-2 14-15 14T1 15Z" fill="var(--card-accent)"/><path d="M4 10q4-7 8 0t8 0 8 0M9 31h14"/></>; break;
+    case "spoon": shape = <><ellipse cx="22" cy="7" rx="6" ry="7" fill="var(--card-accent)"/><path d="m18 12-13 17" strokeWidth="4"/></>; break;
+    case "fork": shape = <><path d="M19 2 8 15l7 7L28 8M8 15 2 29m11-18 6 6m-2-11 7 6"/></>; break;
+    case "check": shape = <><circle cx="16" cy="16" r="14"/><path d="m7 16 7 7L26 9" stroke="var(--card-accent)" strokeWidth="4"/></>; break;
+    case "clock": shape = <><circle cx="16" cy="16" r="14" fill="var(--card-paper)"/><path d="M16 5v12l8 5" stroke="var(--card-accent)" strokeWidth="3"/></>; break;
+    case "briefcase": shape = <><rect x="2" y="10" width="28" height="20" rx="3" fill="var(--card-accent)"/><path d="M10 10V3h12v7M2 18h28m-14 0v5"/></>; break;
+    case "desk": shape = <><path d="M1 15h30M5 15v16m22-16v16"/><rect x="9" y="1" width="15" height="10" fill="var(--card-accent)"/><path d="M16 11v4"/></>; break;
+    case "mirror": shape = <><ellipse cx="16" cy="12" rx="10" ry="11" fill="var(--card-paper)"/><path d="M16 23v8m-5-27-3 7m10-6-5 10" stroke="var(--card-accent)"/></>; break;
+    case "hanger": shape = <><path d="M13 7q-2-8 7-5 7 3-4 10L2 24q14 9 29 0L16 12"/></>; break;
+    case "microphone": shape = <><rect x="10" y="1" width="12" height="19" rx="6" fill="var(--card-accent)"/><path d="M5 11v4q1 20 22 0v-4M16 26v5m-6 0h12m3-26H12m-2 5h12"/></>; break;
+    case "ball": shape = <><circle cx="16" cy="16" r="14" fill="var(--card-paper)"/><path d="m16 8 7 5-3 8h-8l-3-8Z" fill="var(--card-accent)"/><path d="m16 8 1-6m6 11 6-3m-9 11 4 6m-12-6-5 6m2-14-6-3"/></>; break;
+    case "book": shape = <><path d="M2 4q7-4 14 3 7-7 14-3v24q-7-4-14 2-7-6-14-2Z" fill="var(--card-paper)"/><path d="M16 7v23M6 11h5m-5 6h5m10-6h5" stroke="var(--card-accent)"/></>; break;
+    case "ruler": shape = <><path d="m1 24 23-23 7 7-23 23Z" fill="var(--card-accent)"/><path d="m7 19 4 4m2-10 4 4m2-10 4 4"/></>; break;
+    case "map": shape = <><path d="m1 4 10-3 11 5 9-3v25l-9 3-11-5-10 3Z" fill="var(--card-paper)"/><path d="M11 1v25m11-20v25M5 9l14 13 7-9" stroke="var(--card-accent)"/></>; break;
+    case "plane": shape = <path d="m1 13 12 3L26 2l5 3-9 16 8 6-4 3-11-7-8 7-4-2 5-8Z" fill="var(--card-accent)"/>; break;
+    case "cake": shape = <><path d="m3 13 20-11 6 13-16 6Z" fill="var(--card-accent)"/><path d="m3 13 10 8 16-6v11l-16 5-10-7Zm0 5 10 8 16-6"/></>; break;
+    default: throw new Error(`Unsupported meme card art symbol: ${symbol}`);
+  }
+  return <g data-symbol={symbol} fill="none" stroke="var(--card-ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{shape}</g>;
+}

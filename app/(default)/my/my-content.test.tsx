@@ -120,4 +120,15 @@ describe("Plus Meme Vault", () => {
     expect(html).toContain("Email a request");
     expect(html).toContain("mailto:toris@toris.kr");
   });
+
+  it("keeps the free meme card slot beside the existing feed and saved library", () => {
+    locale.value = "en";
+    const html = renderMyContent({ isPremium: false, memeCards: <section id="meme-cards">28 free cards</section>, myFeed: <div>existing premium gate</div> });
+    expect(html).toContain("28 free cards");
+    expect(html).toContain("existing premium gate");
+    expect(html).toContain('href="#meme-cards"');
+    expect(html).toContain('id="saved"');
+    expect(html).toContain("Request account deletion");
+    expect(html).not.toContain('name="saved_q"');
+  });
 });

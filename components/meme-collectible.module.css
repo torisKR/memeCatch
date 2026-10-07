@@ -1,0 +1,72 @@
+.page { max-width: 1120px; margin: 0 auto; padding: 36px 20px 72px; }
+.hero { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; padding: 36px; border: 1px solid var(--border); border-radius: 24px; background: radial-gradient(ellipse at 90% 10%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 65%), var(--surface); overflow: hidden; }
+.eyebrow { font: 700 11px/1.5 monospace; letter-spacing: .15em; color: var(--accent-text); }
+.hero h1 { margin: 12px 0; max-width: 680px; font-size: clamp(28px, 4vw, 46px); line-height: 1.18; font-weight: 850; letter-spacing: -.045em; word-break: keep-all; }
+.hero p { max-width: 640px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+.heroLinks { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.heroMark { display: flex; width: 110px; height: 146px; align-items: center; justify-content: center; border: 2px solid #ef8248; border-radius: 11px; background: #fff3dc; color: #b54121; box-shadow: 8px 8px 0 #e96e35; transform: rotate(9deg); font: 900 47px/1 monospace; }
+.freeBadge, .ownedBadge { display: inline-flex; align-items: center; border-radius: 99px; padding: 5px 10px; background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 750; }
+.sectionHeading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px; margin: 32px 0 16px; }
+.sectionHeading h2 { font-size: 21px; font-weight: 800; letter-spacing: -.03em; }
+.sectionHeading p, .small { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.filters { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.filters label { display: flex; flex: 1; min-width: 160px; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; }
+.filters input, .filters select { height: 46px; width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--foreground); padding: 0 12px; font-family: inherit; font-size: 16px; font-weight: 400; line-height: 1.4; }
+.filters label:has(select) { max-width: 220px; }
+.primaryButton, .secondaryButton, .textButton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 10px; padding: 10px 17px; text-decoration: none; text-align: center; font-size: 14px; line-height: 1.5; font-weight: 750; cursor: pointer; }
+.primaryButton { border: 1px solid var(--accent-strong); background: var(--accent-strong); color: #fff; }
+.secondaryButton { border: 1px solid var(--border); background: var(--surface); color: var(--foreground); }
+.textButton { padding-inline: 8px; color: var(--accent-text); text-decoration: underline; text-underline-offset: 4px; }
+.primaryButton:disabled, .secondaryButton:disabled { opacity: .55; cursor: wait; }
+.primaryButton:focus-visible, .secondaryButton:focus-visible, .textButton:focus-visible, .filters input:focus-visible, .filters select:focus-visible, .catalogButton:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.grid li { min-width: 0; }
+.catalogButton { position: relative; display: block; width: 100%; text-align: left; border-radius: 16px; cursor: pointer; transition: transform .18s, filter .18s; }
+.catalogButton:hover { transform: translateY(-5px); filter: drop-shadow(0 9px 9px #0002); }
+.catalogButton[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 4px; }
+.catalogButton .ownedBadge { position: absolute; top: 9px; right: 9px; background: #252c32; color: #fff3dc; z-index: 1; border: 1px solid #fff3dc; }
+.card { position: relative; aspect-ratio: 3 / 4.2; min-width: 0; padding: 9px; border: 1px solid #b87b4c; border-radius: 16px; color: var(--card-ink); background: linear-gradient(125deg, #f4c875, #fff5c9 20%, #eaa358 50%, #f9d899 72%, #cc873e); box-shadow: inset 0 0 0 2px #fff6df88, 0 4px 9px #0002; }
+.card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, transparent 16%, #fff4 21%, transparent 27%, transparent 67%, #fff3 72%, transparent 78%); }
+.cardInner { position: relative; display: flex; height: 100%; flex-direction: column; overflow: hidden; border: 1px solid var(--card-ink); border-radius: 9px; padding: 12px; background: var(--card-paper); }
+.cardTop, .cardBottom { display: flex; justify-content: space-between; gap: 8px; font: 700 9px/1.5 monospace; letter-spacing: .04em; }
+.cardTop { padding-bottom: 7px; border-bottom: 1px solid var(--card-ink); }
+.art { display: block; width: 100%; height: auto; min-height: 0; flex: 1; margin-block: 7px; }
+.cardType { display: flex; justify-content: space-between; font: 700 9px/1.4 monospace; text-transform: uppercase; opacity: .75; }
+.cardTitle { font-size: clamp(19px, 2vw, 29px); font-weight: 900; line-height: 1.18; letter-spacing: -.04em; margin-block: 6px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cardSummary { font-size: 11px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cardBottom { margin-top: 9px; padding-top: 7px; border-top: 1px solid var(--card-ink); font-size: 8px; }
+.compact .cardTitle { font-size: clamp(16px, 1.8vw, 23px); }
+.compact .cardInner { padding: 9px; }
+.compact .cardSummary { font-size: 10px; }
+.compact .cardTop, .compact .cardBottom, .compact .cardType { font-size: 7px; }
+.reveal { scroll-margin-top: 92px; display: grid; grid-template-columns: minmax(260px, 360px) 1fr; align-items: center; gap: 40px; margin-top: 28px; padding: 30px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); }
+.scratchCard { position: relative; width: 100%; }
+.scratchCanvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 16px; touch-action: none; cursor: crosshair; }
+.scratchControls { margin-top: 14px; text-align: center; }
+.scratchControls p { font-size: 12px; line-height: 1.6; color: var(--muted); }
+.progress { margin: 4px 0 9px; font-variant-numeric: tabular-nums; }
+.revealedStatus { margin-top: 14px; text-align: center; font-size: 13px; font-weight: 700; color: var(--accent-text); }
+.revealDetails h2 { font-size: 30px; font-weight: 850; line-height: 1.25; margin: 13px 0 15px; overflow-wrap: anywhere; }
+.revealDetails > p { font-size: 15px; color: var(--muted); line-height: 1.85; }
+.revealActions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; max-width: 380px; margin-top: 23px; }
+.revealActions .small { margin-top: 4px; }
+.notice { min-height: 20px; margin-block: 10px; font-size: 13px; color: var(--accent-text); line-height: 1.65; }
+.empty { padding: 32px 18px; border: 1px dashed var(--border); border-radius: 16px; text-align: center; }
+.empty h3 { font-size: 18px; font-weight: 750; margin-bottom: 8px; }
+.empty p { color: var(--muted); line-height: 1.7; font-size: 14px; margin-bottom: 15px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 26px; }
+.pagination span { color: var(--muted); font-size: 13px; }
+.collection { margin-top: 32px; scroll-margin-top: 96px; }
+.collection .sectionHeading { margin-top: 0; }
+.collection .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.collection .filters { gap: 8px; }
+.collection .filters label { min-width: 120px; }
+.collection .cardTitle { font-size: 16px; }
+.hiddenCard { display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; height: 100%; min-height: 260px; aspect-ratio: 3/4.2; padding: 18px; border-radius: 16px; border: 1px dashed var(--border); background: var(--surface); text-align: center; color: var(--muted); }
+.hiddenCard strong { font-size: 16px; color: var(--foreground); }
+.hiddenCard p { font-size: 12px; line-height: 1.7; }
+.claimedDate { margin-top: 6px; font-size: 11px; color: var(--muted); }
+.collectionNav { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } .reveal { gap: 26px; padding: 24px; } }
+@media (max-width: 620px) { .page { padding: 22px 16px 48px; } .hero { padding: 25px 21px; grid-template-columns: 1fr; } .heroMark { display: none; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .reveal { grid-template-columns: 1fr; gap: 24px; padding: 22px 18px; } .scratchArea { width: min(100%, 320px); margin-inline: auto; } .revealDetails h2 { font-size: 26px; } .cardTitle { font-size: 21px; } .filters label:has(select) { max-width: none; } .filters .primaryButton { flex: 1; } .collection .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .catalogButton { transition: none; } .catalogButton:hover { transform: none; } }

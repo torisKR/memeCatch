@@ -1,0 +1,1413 @@
+{
+  "invalidIdentityMemeIds": [
+    "cae83765-e662-4a7f-8862-d09b0651fd46",
+    "c68ed00e-b1cf-4678-a3d1-3a934722dcef",
+    "8e55875b-c692-4aaf-b818-3a1af74752e2",
+    "71dc32b4-1105-4e0d-b14d-f00b541ec66a",
+    "b7be9078-e456-40ea-9914-83a432368b87",
+    "a9fd21c7-2bd4-4551-a530-cee10116a0b0",
+    "39e0af08-6363-4808-b3b1-f4a04adbef74",
+    "8306ad62-965c-4760-8593-1820598e6566",
+    "214d80d8-10de-45a1-a00a-a725b02d398f",
+    "08cb8d2a-14c1-4fb9-8711-91e1e7d7cade",
+    "6093bde3-ea3e-4479-b227-060952ae2219",
+    "867e54c4-70ae-4311-ab68-382bffea9e0b",
+    "02075a74-77bf-4b96-bc0f-d40027e5ec6c",
+    "21c79dfc-ab7c-4fe0-b6c4-46c09ca529ec",
+    "420b6e49-aa45-4c60-83b1-ee58852a1d26",
+    "d358079f-4110-4421-9293-4224dd35e1da",
+    "7dfb16fb-3c28-4ade-bdba-9547d0baa948",
+    "cc5c3550-379a-4022-8b40-809f897dfcd0",
+    "c82d5e65-b4c4-4c50-a790-9b6752aaf7aa",
+    "f2097461-c485-4a86-ae79-098843be87e3",
+    "b60ebadf-ae95-49d6-b818-4e13c3be9af8",
+    "9a8bb23f-a896-4a5e-9687-6b8241bc6ec2",
+    "a1f50310-2ced-40b1-9bd6-6a35244f1556",
+    "4c27e804-3375-41f4-ad9e-51c382c7d18a",
+    "928a9c34-9307-4302-937f-d87e0db3993a",
+    "2ec48ba1-31cf-45dd-8f65-9e3d2c1a806c",
+    "04d7cacc-664c-4f72-852a-9dd39c30801b",
+    "1764d9d9-5e0b-4e15-be17-593991e90f17",
+    "fe027d1f-8e8c-4f10-8137-81fd63441c86",
+    "e6ddf09d-54be-489f-8578-6f89427a2d03"
+  ],
+  "reviewedEquivalenceFamilies": [
+    {
+      "reviewedTitles": [
+        "헤이마마 챌린지",
+        "노제 헤이마마 챌린지",
+        "스우파 Hey Mama 관크 챌린지"
+      ],
+      "memeIds": [
+        "07c54d12-212d-495c-905c-44953a331332",
+        "e16d8d02-612c-4da1-8c03-4e240f9d1b08",
+        "a3d787c9-7a74-4c96-af60-2a4fa9baeb25"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "핑크퐁 아기상어",
+        "아기상어 챌린지",
+        "아기상어 (핑크퐁)"
+      ],
+      "memeIds": [
+        "201f4f0f-1bc3-4fe8-81ec-ea3987b578cc",
+        "9266e072-5ccb-4386-99cd-14e631972eff",
+        "feed6dfa-b073-46b7-9694-e281f3307e6d"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "사딸라 짤",
+        "야인시대 사딸라"
+      ],
+      "memeIds": [
+        "4a073528-5ce5-4e29-8840-83800d182048",
+        "3c245c3f-c667-49f9-a5c5-2d31bb044af6"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "복불복",
+        "1박2일 복불복"
+      ],
+      "memeIds": [
+        "d06d6176-f9bb-402b-87e5-059f2e51e96e",
+        "49bbae18-5287-4135-88ed-96964eab3276"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "런닝맨 기린",
+        "기린(이광수 별명)"
+      ],
+      "memeIds": [
+        "9d94a755-95c6-461b-99be-08e923b9c37e",
+        "6971f574-afe4-43c5-bd5e-cb0d5e279fff"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "퀸카 챌린지",
+        "(여자)아이들 퀸카(Queencard) 챌린지"
+      ],
+      "memeIds": [
+        "05a5bc96-ab4b-4d25-a775-bb7ccf0161e6",
+        "5d177a51-135e-4d86-964f-8ba267b219d3"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "그뤠잇 스튜핏",
+        "김생민의 영수증"
+      ],
+      "memeIds": [
+        "88271f0f-e995-4fb6-8a75-21913913b4da",
+        "9bc8d24e-55a4-49f7-8c89-6eaf4b10ab5f"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "친구 니가 가라 하와이",
+        "니가 가라 하와이"
+      ],
+      "memeIds": [
+        "7d173515-c0a3-4f9c-b143-2cffa0f2b179",
+        "16fe0d7e-68ae-41e2-907d-e530a362ec4c"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "니들이 게맛을 알아",
+        "니들이 게맛을 알어"
+      ],
+      "memeIds": [
+        "7cbf907c-ea53-457d-8857-985ab4d15061",
+        "b5793fc6-6442-48ae-9001-29840648c5e0"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "BTS Dynamite 챌린지",
+        "다이너마이트 챌린지"
+      ],
+      "memeIds": [
+        "78f25e59-06f8-4ff0-a981-4e7af8d3b272",
+        "61650a9c-7637-4e33-b67c-28e2881368be"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "Magnetic 챌린지",
+        "마그네틱 챌린지"
+      ],
+      "memeIds": [
+        "39762e80-4585-4dc6-bf05-54882f8ee5f8",
+        "9f4f96fc-f514-49d4-9ded-71394b80d16f"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "모기송",
+        "모기송(만다린)"
+      ],
+      "memeIds": [
+        "df764e35-81a6-4b73-872a-45b0e090f6ca",
+        "08c63f2b-ee51-4db9-a11a-0abfd57f319a"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "스테이씨 파피 챌린지",
+        "스테이씨 파피(Poppy) 챌린지"
+      ],
+      "memeIds": [
+        "b6fa4214-a0e0-48ba-ab85-38582dc62f72",
+        "5c3d02ed-62a6-4c07-80b4-971dd69baf9f"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "애정남 (애정한 것을 정해주는 남자)",
+        "애정남(애매한 것을 정해주는 남자)",
+        "애정남"
+      ],
+      "memeIds": [
+        "9ede9ee8-6374-4782-b114-bf74c0b50db6",
+        "abed7411-3347-45fd-a403-f46296175f4d"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "얼마면 돼(가을동화)",
+        "얼마면 돼, 얼마면 되는데"
+      ],
+      "memeIds": [
+        "915a89c1-3539-45b0-9150-215d8b735181",
+        "de40c608-caf3-4060-b8de-3163536fbd17"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "원더걸스 Nobody 쌍권총춤",
+        "원더걸스 Nobody 총알춤"
+      ],
+      "memeIds": [
+        "dd416b95-980b-4228-8744-86822258849c",
+        "ba486bf8-141f-4d93-b6a4-6915824895f9"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "럭키비키",
+        "원영적 사고 / 럭키비키"
+      ],
+      "memeIds": [
+        "1a4ab02f-f81c-477b-ab2d-66bf0df8cc27",
+        "8dd824b9-2c9b-4920-b6ac-0c9aac673790"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "자기 직업 불법적으로 말하기",
+        "조폭처럼 직업 소개 밈"
+      ],
+      "memeIds": [
+        "758cef01-7f96-4fd5-87e3-2387b8e7dda6",
+        "0f0f75c1-b241-4aa6-b786-1d87c4f2b1a1"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "첫눈 챌린지",
+        "첫눈이 내려와 챌린지"
+      ],
+      "memeIds": [
+        "bc55f399-7a35-4b8b-9ad0-3e71592b6387",
+        "86d06803-fca8-4471-9aad-03f7339cd868"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "캔디",
+        "H.O.T. 캔디"
+      ],
+      "memeIds": [
+        "0ce20d98-7b86-4d20-90df-232997a7d61e",
+        "880c7149-2d93-407f-aa19-582e4fe309d4"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "큐피드 챌린지",
+        "피프티피프티 큐피드 챌린지"
+      ],
+      "memeIds": [
+        "73e23497-f290-4a59-9ecb-78ec91f1a4c4",
+        "a5e406bc-8028-46f3-a321-26e30df3e042"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "여러분 부자되세요",
+        "BC카드 CF - 여러분, 부자 되세요"
+      ],
+      "memeIds": [
+        "dbf9fd54-4004-4f60-9359-da71e795c667",
+        "2a7466a0-9f22-47b6-9cfb-56ba58955516"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "갈갈이 삼형제 - 무를 주세요",
+        "갈갈이 삼형제"
+      ],
+      "memeIds": [
+        "f7001a00-0875-4fb1-badf-5c4842a96b48",
+        "d574e4cd-eaeb-453a-9994-020e2b0a6f7d"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "곽철용(타짜)",
+        "곽철용 묻고 더블로 가",
+        "타짜 묻고 더블로 가"
+      ],
+      "memeIds": [
+        "a3c28d97-fe77-4f0b-b830-82d61a84ec00",
+        "3503a91f-a8f6-47cc-9b92-473f9b05d0ff",
+        "58f00f5d-1412-4961-b27c-2176d3570896"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "김국진 여보세요~",
+        "국진이빵·여보세요"
+      ],
+      "memeIds": [
+        "5953fa25-3963-48fd-8c8d-7d253e5d0fbb",
+        "7b7d3874-e632-4cb7-b6c8-2061120d3962"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "개그콘서트 달인",
+        "김병만의 달인"
+      ],
+      "memeIds": [
+        "67cd33e9-f0d5-404a-acf2-f2133f2392ad",
+        "faf8d51e-559f-4726-99e6-6e223074d39a"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "히딩크 \"나는 아직 배가 고프다\"",
+        "나는 아직도 배가 고프다"
+      ],
+      "memeIds": [
+        "1f6a0eef-6fe0-4508-a3ab-8abe3ced086a",
+        "690dc638-a92f-4558-9d8b-33ad1151500f"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "환승연애2 내일 봬요 누나",
+        "내일봬요누나"
+      ],
+      "memeIds": [
+        "dc34eb4c-060f-45e9-b18b-5ab2c4f87443",
+        "a845f84a-5000-439e-9343-f71f778fb71b"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "나 지금 떨고 있니",
+        "모래시계 나 지금 떨고 있니"
+      ],
+      "memeIds": [
+        "1dc99a5a-1f16-4e2d-aa79-256e6b4af31c",
+        "95241a13-c117-44a3-92e3-d77eedbffa24"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "오징어게임 무궁화꽃이피었습니다 챌린지",
+        "무궁화 꽃이 피었습니다 챌린지"
+      ],
+      "memeIds": [
+        "0a9b5498-c7ef-4a8f-9bc2-8e5e6dde6173",
+        "00bbe2bf-46b1-43b6-b342-90e0fb412c35"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "삐끼삐끼 챌린지",
+        "삐끼삐끼 춤"
+      ],
+      "memeIds": [
+        "5a70b638-0aa4-4135-a57f-c57918a535cf",
+        "04a9117d-599a-4380-aec0-7875b2253316"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "와(이정현)",
+        "와(Wa)"
+      ],
+      "memeIds": [
+        "0c373d06-7973-42bc-92d5-ccec2688d22a",
+        "318ae73b-8264-4c8d-82d2-398b8b3b4149"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "텔미 신드롬",
+        "원더걸스 텔미",
+        "원더걸스 Tell Me 꼭지점춤"
+      ],
+      "memeIds": [
+        "be3bf6d1-ec0c-4784-9b5f-ec8b10dd2ac8",
+        "9dc4a279-00f8-4272-a03d-650db0874473"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "흑백요리사 이븐하게",
+        "이 채소는 이 채소의 익힘 정도가"
+      ],
+      "memeIds": [
+        "8e1f7229-f9c5-48be-9f5d-fe0c7a18a061",
+        "30c21f34-75e2-4d3e-8b01-8d9a9a6c5f95"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "절대태보해",
+        "조혜련의 태보 다이어트"
+      ],
+      "memeIds": [
+        "a69e3954-e8b9-4b52-a42c-44c35b63f7ce",
+        "84368d52-985d-4b2f-8302-1f3c80fe51e8"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "나훈아 테스형",
+        "테스형"
+      ],
+      "memeIds": [
+        "f70818a6-9b56-4041-bb69-0cf41f967fdc",
+        "8c30c56f-ee28-4706-b85d-8570bc2e5183"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "골든 챌린지",
+        "Golden(케이팝 데몬헌터스)"
+      ],
+      "memeIds": [
+        "72c439f8-f01c-4b4a-951d-c850d502b638",
+        "3a48e9dd-eb2d-48c9-900d-65e81863bf7f"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "산타벌스(우원재)",
+        "산타는 없거든"
+      ],
+      "memeIds": [
+        "dc79df59-07b2-4291-8f6b-b5b157955380",
+        "a2ffd116-6b3a-416b-9995-2990f74acaca"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "돈쭐"
+      ],
+      "memeIds": [
+        "3c63be9a-20e2-4fcc-a0fa-1e5539926e53",
+        "5cfa0a41-59c8-4456-99fe-598b8f7a4a1d",
+        "95a6d1df-0a08-4fe2-a9fe-1b7fefa3f10e"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "견우야"
+      ],
+      "memeIds": [
+        "29a8275d-1179-4d0b-a78d-b59098e2c3e5",
+        "8a8efd6e-fa2c-4b78-b4d0-e1c8af74b56c"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "묻지마 다쳐"
+      ],
+      "memeIds": [
+        "7389d6d2-2ad3-4773-82ff-efde23fb5946",
+        "4e9ad69b-06b0-46a2-b718-c75fedee5f0b"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "사랑은 움직이는 거야"
+      ],
+      "memeIds": [
+        "32be1eca-08de-468e-ae74-acaa7aeec547",
+        "6779f2de-700e-4e82-aeec-badde4f958e7"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "썸"
+      ],
+      "memeIds": [
+        "49aeb206-3dde-406e-b23a-c9af81e61c8f",
+        "a853a130-8689-4287-8006-cedc4b00f7ca"
+      ]
+    },
+    {
+      "reviewedTitles": [
+        "국민 프로듀서 / PICK ME"
+      ],
+      "memeIds": [
+        "19bab8cf-6148-4a66-886f-4c64c1546093",
+        "ab2c1117-9844-4b24-8c8a-c6ff07e887ac"
+      ]
+    }
+  ],
+  "conservativeSourceEquivalences": [
+    {
+      "source": "youtube:BiorIyrjTHc",
+      "titles": [
+        "PICK ME (국민 프로듀서)",
+        "Pick Me 픽미업"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:78lNnCitcBM",
+      "titles": [
+        "Boom Boom Bass 챌린지",
+        "RIIZE Boom Boom Bass 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:ePpPVE-GGJw",
+      "titles": [
+        "TT 눈물 포즈",
+        "TT 표정·손가락 챌린지 (트와이스)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:Sh51GwiT2xY",
+      "titles": [
+        "귀하게 자란 내가",
+        "귀하게 자란 내가 이런 걸"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:NIld_iEc67s",
+      "titles": [
+        "나야 나(PICK ME) 신드롬",
+        "나야나(PRODUCE 101 시즌2)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:BiorIyrjTHc",
+      "titles": [
+        "PICK ME (국민 프로듀서)",
+        "나야나(프로듀스101)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:Z-0WcGUAJ28",
+      "titles": [
+        "~했잖아 그럼 ~ 안 왔어",
+        "너가 자기야 미안해 했잖아"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:4KZJzEU-RrM",
+      "titles": [
+        "대~한민국 박수 응원",
+        "대~한민국 짝짝짝짝짝"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:IHNzOHi8sJs",
+      "titles": [
+        "뚜두뚜두 신드롬",
+        "뚜두뚜두 챌린지(블랙핑크)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:Vvfz3FGxdVs",
+      "titles": [
+        "3!4!",
+        "룰라 3!4!"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:SSMuzZcYbww",
+      "titles": [
+        "강변북로 가요제",
+        "무한도전 강변북로가요제"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:RA-l1g4Mrq0",
+      "titles": [
+        "문상훈 예측 신조어",
+        "문상훈 예측 신조어(테무인간 등)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:9J_9o-ob5hA",
+      "titles": [
+        "박막례 할머니",
+        "박막례 할머니 유튜브"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:9_gIMZxV-Bk",
+      "titles": [
+        "맨발의 투혼",
+        "박세리 키즈"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:rQ9dHHY99wA",
+      "titles": [
+        "고구마",
+        "사이다"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:1EN8spg6PSg",
+      "titles": [
+        "삼둥이 '대한민국만세'",
+        "삼둥이 신드롬"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:Vvfz3FGxdVs",
+      "titles": [
+        "3!4!",
+        "삼사(3! 4!) 구호"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:D3ZFtSoWtRc",
+      "titles": [
+        "마미손 소년점프",
+        "소년점프"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:SK6Sm2Ki9tI",
+      "titles": [
+        "신호등",
+        "신호등 색깔 밈"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:ESKfHHtiSjs",
+      "titles": [
+        "다시 여기 바닷가 챌린지",
+        "싹쓰리"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:07EzMbVH3QE",
+      "titles": [
+        "아이브 Heya 챌린지",
+        "아이브 해야(HEYA) 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:ekr2nIex040",
+      "titles": [
+        "APT. 아파트 챌린지",
+        "아파트 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:F0B7HDiY-10",
+      "titles": [
+        "After LIKE 챌린지",
+        "애프터 라이크 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:OBERys7Dtt4",
+      "titles": [
+        "god - 어머님께",
+        "어머님께"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:u_ziPVJyO1o",
+      "titles": [
+        "얼음 뮤지컬 챌린지",
+        "얼음(제프프)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:4kBQYiyxjJo",
+      "titles": [
+        "Poison",
+        "엄정화 '포이즌'"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:jWQx2f-CErU",
+      "titles": [
+        "Whiplash 챌린지",
+        "에스파 Whiplash 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:mbq4II_EOvE",
+      "titles": [
+        "나는 가수다 임재범 신드롬",
+        "여러분(임재범, 나는가수다)"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:ByirCSSopew",
+      "titles": [
+        "무궁화 꽃이 피었습니다 챌린지",
+        "영희 인형 신드롬"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:fE2h3lGlOsk",
+      "titles": [
+        "ITZY Wannabe 챌린지",
+        "왔다 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:RA-l1g4Mrq0",
+      "titles": [
+        "문상훈 예측 신조어",
+        "위쑤시개"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:YvZ_rdHwmFo",
+      "titles": [
+        "몰래카메라",
+        "이경규 몰래카메라"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:7ggXa28ADLE",
+      "titles": [
+        "H.O.T. 데뷔 신드롬",
+        "전사의 후예"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:ugczDUSWGL8",
+      "titles": [
+        "조규성 신드롬",
+        "조규성 혓바닥 세리머니"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:xfqBQ2XhBCg",
+      "titles": [
+        "SPOT! 챌린지",
+        "지코 SPOT!(feat. JENNIE) 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:q3xy4p2JTfU",
+      "titles": [
+        "서태지와 아이들 컴백홈 현상",
+        "컴백홈"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:TlFrIH6GQhk",
+      "titles": [
+        "Golden(케이팝 데몬헌터스)",
+        "케데헌 Golden 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:MHCBoNhQmCk",
+      "titles": [
+        "순정",
+        "코요태 '순정'"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:rTKqSmX9XhQ",
+      "titles": [
+        "(여자)아이들 클락션 챌린지",
+        "클락션 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:lqAx6wPGalU",
+      "titles": [
+        "무한도전 토토가",
+        "토요일 토요일은 가수다"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:rjW9E1BR_30",
+      "titles": [
+        "파묘 - 겁나 험한 것",
+        "파묘(흑역사 발굴) 신조어"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:gQlMMD8auMs",
+      "titles": [
+        "블랙핑크 Pink Venom",
+        "핑크베놈 챌린지"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:BSLgJxFc4UA",
+      "titles": [
+        "젝스키스 '학원별곡'",
+        "학원별곡"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:wADKjfLo_5c",
+      "titles": [
+        "허니버터칩 대란",
+        "허니버터칩 품절대란"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:2iaiuOQM458",
+      "titles": [
+        "벤투호 위대한 도전",
+        "황희찬 결승골 세리머니"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:2iaiuOQM458",
+      "titles": [
+        "벤투호 위대한 도전",
+        "황희찬 웃통 탈의 세리머니"
+      ],
+      "identityClaim": false
+    },
+    {
+      "source": "youtube:t7X8qhESIfs",
+      "titles": [
+        "원더걸스 텔미",
+        "후크송 열풍"
+      ],
+      "identityClaim": false
+    }
+  ],
+  "schemaVersion": 1,
+  "snapshotDate": "2026-10-07",
+  "sourceProject": "onjipuldngbdptldkpoe",
+  "eligibleSnapshotRows": 3423,
+  "conservativeConceptClusters": 3188,
+  "reusableReferencedCandidateClusters": 1305,
+  "cards": 1000,
+  "historicalMediaCards": 440,
+  "newEditorialReferenceCards": [
+    {
+      "cardId": "mc-0007",
+      "memeId": "0931374f-8d6a-4d49-b697-cedfbe7f0c39",
+      "title": "도지(Doge)",
+      "url": "https://knowyourmeme.com/memes/doge"
+    },
+    {
+      "cardId": "mc-0008",
+      "memeId": "8b1aff85-7538-460e-8a6c-0085f7241539",
+      "title": "하이드 더 페인 해롤드",
+      "url": "https://knowyourmeme.com/memes/hide-the-pain-harold"
+    },
+    {
+      "cardId": "mc-0012",
+      "memeId": "dbe93730-0dbd-4ef0-a318-92c7e775caf3",
+      "title": "새삥 챌린지 (지코)",
+      "url": "https://kozofficial.com/artist/profile/ZICO"
+    },
+    {
+      "cardId": "mc-0129",
+      "memeId": "c596875d-67b5-4870-ab42-0cb7ad01b0a8",
+      "title": "추앙해요",
+      "url": "https://www.hankyung.com/article/202204116665H"
+    },
+    {
+      "cardId": "mc-0133",
+      "memeId": "c0f30121-a3b1-408b-b37b-533a985bf19e",
+      "title": "레네게이드 댄스(Renegade Dance)",
+      "url": "https://www.teenvogue.com/story/jalaiah-harmon-renegade-creator-viral-dance"
+    },
+    {
+      "cardId": "mc-0139",
+      "memeId": "10439134-67ec-4ebb-92f8-125b50103aab",
+      "title": "야 4885 너지",
+      "url": "https://star.ohmynews.com/NWS_Web/OhmyStar/at_pg.aspx?CNTN_CD=A0002634824"
+    },
+    {
+      "cardId": "mc-0144",
+      "memeId": "986563be-6cf5-4b37-83f5-8d444af773c3",
+      "title": "외력과 내력의 싸움",
+      "url": "https://tvn.cjenm.com/ko/mymister/character/"
+    },
+    {
+      "cardId": "mc-0991",
+      "memeId": "b8ba1572-a8f9-4747-b06b-87831df93af5",
+      "title": "~가되 밈",
+      "url": "https://blog.hsad.co.kr/3469"
+    }
+  ],
+  "categoryCounts": {
+    "song": 63,
+    "dance": 130,
+    "phrase": 530,
+    "challenge": 79,
+    "image": 82,
+    "comment": 116
+  },
+  "artMotifCounts": {
+    "pen-pineapple": 1,
+    "dance": 181,
+    "celebration": 39,
+    "sport": 36,
+    "animal": 26,
+    "food": 50,
+    "reaction": 139,
+    "choice": 24,
+    "office": 11,
+    "chat": 347,
+    "fashion": 11,
+    "technology": 19,
+    "travel": 5,
+    "music": 43,
+    "study": 16,
+    "gaming": 52
+  },
+  "compositionCounts": {
+    "exchange": 184,
+    "burst": 30,
+    "frame": 476,
+    "rhythm": 168,
+    "stack": 43,
+    "split": 31,
+    "rise": 41,
+    "orbit": 27
+  },
+  "collapsedEligibleRows": 199,
+  "selectionRules": [
+    "Current approved + green + published only; existing catalog records only.",
+    "One card per reviewed title/concept family; conservative concrete source correlation can suppress another card without asserting aliases.",
+    "Prioritize historical media and concrete public concept references; no trend-score or invented fame metric.",
+    "Exclude generic product/news/sport achievements and songs without reusable meme, dance, phrase or parody cues.",
+    "No invented meme records, dates, licenses, odds, rarity or scarcity."
+  ],
+  "limitations": [
+    "Stored source references have not all been independently revisited.",
+    "An existing approved record is not a measured global fame verdict.",
+    "Catalog covers Korean internet slang, reaction formats and dance challenges as well as global image memes.",
+    "Procedural symbols reinterpret meaning and do not reproduce reference photographs or character artwork."
+  ],
+  "sampleCards": [
+    {
+      "id": "mc-0001",
+      "memeId": "48653a33-c3d5-4ee4-9670-330c1a145118",
+      "title": "PPAP (펜-파인애플-애플-펜)",
+      "art": {
+        "motif": "pen-pineapple",
+        "symbols": [
+          "pen",
+          "apple",
+          "pineapple"
+        ],
+        "composition": "exchange",
+        "subject": "PPAP (펜-파인애플-애플-펜): pen + apple + pineapple"
+      },
+      "referenceUrls": [
+        "https://namu.wiki/w/PPAP(펜-파인애플-애플-펜)",
+        "https://www.youtube.com/watch?v=Ct6BUPvE2sM"
+      ],
+      "evidenceKind": "catalog-reference"
+    },
+    {
+      "id": "mc-0002",
+      "memeId": "c91ddd65-5ef0-473d-b01c-7d1c3512c4c9",
+      "title": "강남스타일",
+      "art": {
+        "motif": "dance",
+        "symbols": [
+          "footsteps",
+          "music-note",
+          "wave"
+        ],
+        "composition": "exchange",
+        "subject": "강남스타일: footsteps + music-note + wave"
+      },
+      "referenceUrls": [
+        "https://www.youtube.com/watch?v=9bZkp7q19f0"
+      ],
+      "evidenceKind": "historical-media"
+    },
+    {
+      "id": "mc-0003",
+      "memeId": "3c0f766f-2de6-446d-9cef-2a1d8771c4e4",
+      "title": "무야호",
+      "art": {
+        "motif": "celebration",
+        "symbols": [
+          "hands",
+          "confetti",
+          "spark"
+        ],
+        "composition": "burst",
+        "subject": "무야호: hands + confetti + spark"
+      },
+      "referenceUrls": [
+        "https://www.youtube.com/watch?v=pTux20Yl3yE"
+      ],
+      "evidenceKind": "historical-media"
+    },
+    {
+      "id": "mc-0004",
+      "memeId": "8e975be3-2469-4c4a-a776-a84dbae6ed0b",
+      "title": "중요한 건 꺾이지 않는 마음",
+      "art": {
+        "motif": "sport",
+        "symbols": [
+          "heart",
+          "path",
+          "flag"
+        ],
+        "composition": "exchange",
+        "subject": "중요한 건 꺾이지 않는 마음: heart + path + flag"
+      },
+      "referenceUrls": [
+        "https://namu.wiki/w/%EC%A4%91%EC%9A%94%ED%95%9C%20%EA%B2%83%EC%9D%80%20%EA%BA%BE%EC%9D%B4%EC%A7%80%20%EC%95%8A%EB%8A%94%20%EB%A7%88%EC%9D%8C",
+        "https://www.youtube.com/watch?v=mvqYV2zvksU"
+      ],
+      "evidenceKind": "catalog-reference"
+    },
+    {
+      "id": "mc-0005",
+      "memeId": "201f4f0f-1bc3-4fe8-81ec-ea3987b578cc",
+      "title": "핑크퐁 아기상어",
+      "art": {
+        "motif": "animal",
+        "symbols": [
+          "shark",
+          "wave",
+          "music-note"
+        ],
+        "composition": "exchange",
+        "subject": "핑크퐁 아기상어: shark + wave + music-note"
+      },
+      "referenceUrls": [
+        "https://www.youtube.com/watch?v=XqZsoesa55w"
+      ],
+      "evidenceKind": "historical-media"
+    },
+    {
+      "id": "mc-0006",
+      "memeId": "d3242db4-ee77-4a99-8cc7-f36a7536fe12",
+      "title": "달고나커피 챌린지",
+      "art": {
+        "motif": "food",
+        "symbols": [
+          "cup",
+          "whisk",
+          "foam"
+        ],
+        "composition": "frame",
+        "subject": "달고나커피 챌린지: cup + whisk + foam"
+      },
+      "referenceUrls": [
+        "https://www.youtube.com/watch?v=gUUQVGF5dlc",
+        "https://www.tiktok.com/@thatdudecancook/video/7218248232969751850"
+      ],
+      "evidenceKind": "historical-media"
+    },
+    {
+      "id": "mc-0007",
+      "memeId": "0931374f-8d6a-4d49-b697-cedfbe7f0c39",
+      "title": "도지(Doge)",
+      "art": {
+        "motif": "animal",
+        "symbols": [
+          "dog",
+          "speech",
+          "spark"
+        ],
+        "composition": "frame",
+        "subject": "도지(Doge): dog + speech + spark"
+      },
+      "referenceUrls": [
+        "https://knowyourmeme.com/memes/doge"
+      ],
+      "evidenceKind": "curation-reference"
+    },
+    {
+      "id": "mc-0008",
+      "memeId": "8b1aff85-7538-460e-8a6c-0085f7241539",
+      "title": "하이드 더 페인 해롤드",
+      "art": {
+        "motif": "reaction",
+        "symbols": [
+          "smile",
+          "teardrop",
+          "cup"
+        ],
+        "composition": "exchange",
+        "subject": "하이드 더 페인 해롤드: smile + teardrop + cup"
+      },
+      "referenceUrls": [
+        "https://knowyourmeme.com/memes/hide-the-pain-harold"
+      ],
+      "evidenceKind": "curation-reference"
+    },
+    {
+      "id": "mc-0009",
+      "memeId": "1590c603-7e17-47d5-bc85-49093360de78",
+      "title": "머선129",
+      "art": {
+        "motif": "reaction",
+        "symbols": [
+          "question",
+          "face",
+          "spark"
+        ],
+        "composition": "exchange",
+        "subject": "머선129: question + face + spark"
+      },
+      "referenceUrls": [
+        "https://www.youtube.com/watch?v=pmeM07VRH5Y"
+      ],
+      "evidenceKind": "historical-media"
+    },
+    {
+      "id": "mc-0010",
+      "memeId": "07c54d12-212d-495c-905c-44953a331332",
+      "title": "헤이마마 챌린지",
+      "art": {
+        "motif": "dance",
+        "symbols": [
+          "footsteps",
+          "music-note",
+          "wave"
+        ],
+        "composition": "rhythm",
+        "subject": "헤이마마 챌린지: footsteps + music-note + wave"
+      },
+      "referenceUrls": [
+        "https://namu.wiki/w/%EC%8A%A4%ED%8A%B8%EB%A6%BF%20%EC%9A%B0%EB%A8%BC%20%ED%8C%8C%EC%9D%B4%ED%84%B0",
+        "https://www.youtube.com/watch?v=s4R-ImbDnpc",
+        "https://www.tiktok.com/@yellyerikim/video/7007761119129390338"
+      ],
+      "evidenceKind": "catalog-reference"
+    }
+  ],
+  "manifestFileSha256": "4fd16c2718c11220d45a9c9dbd4b982a26f3a637f6706b279806fa21fbba955b",
+  "manifestCanonicalSha256": "24f6374ce3858829785c3031c65e5d22fe15fd6bed08b1468042d9bbe132d341",
+  "seedSha256": "33cd4c0be13384c19dcbeeaf7ecaac59e3028dfcf88c7544a5bfcb16dcfd551c",
+  "review": {
+    "status": "passed-independent-curation-review",
+    "previousFileSha256": "92bd86cb362ee4481f3dc37ecdfdac948924fb272403881564acb20036ec0f87",
+    "addedCards": 23,
+    "removedCards": 23,
+    "modifiedEditorialRows": 55,
+    "decisions": [
+      "Excluded ambiguous Turbo 회오리춤, wrong-origin 형광등100개, ordinary 양시론, generic Get Up song record, generic 2% product, malformed 애정남 title, mixed Tell Me 꼭지점춤 identity and mixed 비대위 안돼 identity.",
+      "Excluded all flagged unspecified show anthologies, achievement/profile/product marketing rows and four generic song/group-success records.",
+      "Selected correct existing eligible 애정남 representative. Retained existing eligible 야4885/외력·내력/추앙해요 only with locally corrected captions and replacement editorial references; no existing database source rows changed.",
+      "Conservative legacy-video correlation considers all concrete null-title stored clip references. Topic pages correlate only exact curated concept keys, never broad show/person/game umbrella pages. Source-only correlation suppresses extra cards but does not populate aliasKeys.",
+      "Added recognizable independent formats from existing eligible rows including Renegade/Savage/Say So, Fanum Tax, Minecraft villager sound, 민초단 debate, 농협은행 wordplay and SSG 쓱. Added Renegade creator interview as a local editorial reference.",
+      "Removed unverified rank/poll/record origin claims from selected captions; preserved plain definitions and reuse cues."
+    ],
+    "reviewedManifestFileSha256": "4fd16c2718c11220d45a9c9dbd4b982a26f3a637f6706b279806fa21fbba955b",
+    "reviewedManifestCanonicalSha256": "24f6374ce3858829785c3031c65e5d22fe15fd6bed08b1468042d9bbe132d341",
+    "verdict": "No remaining concrete curation blockers after full-catalog title/caption/alias review and subsequent UUID-based replacement and metadata diff reviews.",
+    "finalDelta": {
+      "previousManifestFileSha256": "b0de38099e3367faa0d3c614f1361f7e1aea06110ff634effed7435990d1fb81",
+      "removedCards": 1,
+      "addedCards": 1,
+      "modifiedCaptionReferenceRows": 1,
+      "removedMemeId": "cae83765-e662-4a7f-8862-d09b0651fd46",
+      "addedMemeId": "e91345bf-e355-40d2-b7da-b44dbdfe44dc",
+      "correctedCaptionMemeId": "b8ba1572-a8f9-4747-b06b-87831df93af5"
+    },
+    "limits": [
+      "The review clears concrete identity, caption, reference mismatch, generic filler and art-semantics findings in this catalog.",
+      "It does not independently revisit every stored source URL or measure universal fame.",
+      "Original procedural symbols and seeded layouts share a composition system; the catalog is not 1000 individually drawn illustrations."
+    ]
+  },
+  "proceduralArt": {
+    "distinctArtSeeds": 1000,
+    "distinctMotifAndSymbolSets": 66,
+    "distinctMotifSymbolCompositions": 153,
+    "symbolVocabulary": [
+      "apple",
+      "arrow-down",
+      "ball",
+      "boat",
+      "book",
+      "bowl",
+      "box",
+      "brain",
+      "bread",
+      "briefcase",
+      "bucket",
+      "bulb",
+      "cake",
+      "camera",
+      "cat",
+      "check",
+      "chip",
+      "clock",
+      "coin",
+      "confetti",
+      "controller",
+      "cookie",
+      "cup",
+      "desk",
+      "dog",
+      "door",
+      "droplet",
+      "envelope",
+      "exchange",
+      "face",
+      "flag",
+      "flame",
+      "foam",
+      "footsteps",
+      "fork",
+      "fork-path",
+      "frame",
+      "hands",
+      "hanger",
+      "heart",
+      "ice",
+      "ice-cream",
+      "letters",
+      "map",
+      "microphone",
+      "mirror",
+      "moon",
+      "music-note",
+      "needle",
+      "path",
+      "pen",
+      "pencil",
+      "penguin",
+      "pineapple",
+      "pixel",
+      "plane",
+      "question",
+      "quote",
+      "ruler",
+      "screen",
+      "shark",
+      "shield",
+      "signal",
+      "smile",
+      "spark",
+      "speech",
+      "spoon",
+      "spring",
+      "star",
+      "steam",
+      "teardrop",
+      "trophy",
+      "wave",
+      "whisk"
+    ],
+    "claim": "Original procedural card compositions using shared semantic symbols; not 1000 individually drawn illustrations."
+  },
+  "editorialCaptions": {
+    "localOnly": true,
+    "existingMemeRowsUpdated": 0,
+    "curatedOverrides": [
+      {
+        "memeId": "984b4bc5-357d-4334-8632-0086d6697368",
+        "title": "열심히 일한 당신, 떠나라",
+        "caption": "일한 뒤 쉬거나 여행을 떠나자고 권하는 현대카드의 광고 문구"
+      },
+      {
+        "memeId": "bc55f399-7a35-4b8b-9ad0-3e71592b6387",
+        "title": "첫눈 챌린지",
+        "caption": "엑소의 첫눈에 맞춰 팔과 발의 포인트 동작을 따라 추는 챌린지"
+      },
+      {
+        "memeId": "5387f745-6904-4c28-b50f-cab8a34613e6",
+        "title": "ㅋㅋㅋ 표기",
+        "caption": "웃음소리를 자음으로 반복해서 적는 온라인 표현"
+      },
+      {
+        "memeId": "d26a44a9-4473-47f1-b617-f5da510b0ba7",
+        "title": "포트나이트 디폴트 댄스 밈",
+        "caption": "포트나이트의 기본 춤 동작을 현실에서 따라 하거나 영상에 합성하는 밈"
+      },
+      {
+        "memeId": "5343de61-4dc2-4c1a-a4e5-9ec8822b61e8",
+        "title": "위아래 직캠 역주행",
+        "caption": "EXID 위아래의 포인트 안무를 직캠과 함께 따라 하는 댄스 형식"
+      },
+      {
+        "memeId": "c596875d-67b5-4870-ab42-0cb7ad01b0a8",
+        "title": "추앙해요",
+        "caption": "나의 해방일지에서 염미정이 구씨에게 추앙을 요청하는 대사"
+      },
+      {
+        "memeId": "10439134-67ec-4ebb-92f8-125b50103aab",
+        "title": "야 4885 너지",
+        "caption": "상대를 알아봤을 때 흉내 내는 영화 추격자의 대사"
+      },
+      {
+        "memeId": "986563be-6cf5-4b37-83f5-8d444af773c3",
+        "title": "외력과 내력의 싸움",
+        "caption": "나의 아저씨에서 박동훈이 버티는 힘을 외력과 내력에 빗대어 설명하는 대사"
+      },
+      {
+        "memeId": "ebc3d28d-f54e-4015-bbf5-a3981b0eaf86",
+        "title": "비상대책위원회 '고래'",
+        "caption": "비상대책위원회에서 김준현이 말끝을 늘여 반문하는 개그 대사"
+      },
+      {
+        "memeId": "4c0bd284-99fa-4901-9dd4-2ee0659216e4",
+        "title": "하나마나송",
+        "caption": "반복되는 리듬에 상황에 맞는 말을 얹어 부르는 무한도전의 노래 패러디"
+      },
+      {
+        "memeId": "e8325074-b47a-421d-9492-fdc47a01d05a",
+        "title": "블랙핑크 How You Like That 챌린지",
+        "caption": "블랙핑크의 How You Like That에 맞춰 포인트 안무를 따라 추는 챌린지"
+      },
+      {
+        "memeId": "73e23497-f290-4a59-9ecb-78ec91f1a4c4",
+        "title": "큐피드 챌린지",
+        "caption": "피프티피프티의 Cupid 후렴에 맞춰 손동작을 따라 추는 챌린지"
+      },
+      {
+        "memeId": "321c3670-de0f-449d-b01f-e693b5a43033",
+        "title": "(여자)아이들 TOMBOY 챌린지",
+        "caption": "(여자)아이들의 TOMBOY에 맞춰 포인트 안무를 따라 추는 챌린지"
+      },
+      {
+        "memeId": "5953fa25-3963-48fd-8c8d-7d253e5d0fbb",
+        "title": "김국진 여보세요~",
+        "caption": "김국진이 말끝을 길게 늘여 건네는 여보세요 인사말 패러디"
+      },
+      {
+        "memeId": "80ec8a9f-99c5-4a1c-bc5a-a5b0142b564c",
+        "title": "비상대책위원회 '야 안돼'",
+        "caption": "개그콘서트 비상대책위원회에서 난감한 제안을 단호하게 거절하는 반복 대사"
+      },
+      {
+        "memeId": "b4a9ed0a-ae8f-49a4-a30a-18f01ce5ff26",
+        "title": "어차피 우승은 송민호",
+        "caption": "쇼미더머니에서 송민호의 우승을 예상하던 말을 바꿔 쓰는 표현"
+      },
+      {
+        "memeId": "ce1f76e4-39ad-44d1-96cf-b9e05480a075",
+        "title": "파리의 연인 - 이 안에 너 있다",
+        "caption": "마음속에 상대가 있다는 뜻을 전하는 파리의 연인 속 고백 대사"
+      },
+      {
+        "memeId": "6c97667f-c9df-4781-b3d9-6891410e7bd0",
+        "title": "멘붕",
+        "caption": "멘탈 붕괴를 줄여 당황하거나 정신이 혼란스러운 상태를 표현하는 말"
+      },
+      {
+        "memeId": "7aefb4d6-1875-4fe0-a559-3506242535da",
+        "title": "슬릭백 챌린지",
+        "caption": "발이 땅에 닿지 않는 것처럼 옆으로 미끄러져 이동하는 착시 댄스"
+      },
+      {
+        "memeId": "24b008b4-644e-47c1-92e2-fc85c8320995",
+        "title": "여우가 범의 허리를 끊었다",
+        "caption": "영화 파묘의 상징적인 대사를 상황에 빗대어 흉내 내는 표현"
+      },
+      {
+        "memeId": "4e364a52-0680-499a-9fb9-b0934f2eed6b",
+        "title": "엽기 신드롬",
+        "caption": "기괴하거나 어이없는 사진과 이야기를 엽기라고 부르는 인터넷 표현"
+      },
+      {
+        "memeId": "367762b0-f5ed-47f1-8999-72cf8b2b9d29",
+        "title": "버억",
+        "caption": "먹기 전이나 맛있게 먹은 뒤에 흥을 돋우며 외치는 추임새"
+      },
+      {
+        "memeId": "e4d07af6-d024-4546-a3a9-ed92bc25cf4f",
+        "title": "핫식스 청춘차렷",
+        "caption": "청춘에게 기운을 내라고 외치는 핫식스의 광고 문구"
+      }
+    ]
+  },
+  "validation": {
+    "standaloneNodeTests": {
+      "passed": 5,
+      "failed": 0
+    },
+    "catalogCards": 1000,
+    "uniqueMemeIds": 1000,
+    "uniqueConceptKeys": 1000,
+    "uniqueArtSeeds": 1000,
+    "uniqueCuratedAliasKeys": 1041,
+    "sharedConcreteLegacyYouTubeClips": 0,
+    "productionDatabaseWritesByCatalogAgent": 0
+  }
+}

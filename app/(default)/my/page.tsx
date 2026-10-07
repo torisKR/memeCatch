@@ -7,6 +7,8 @@ import { PremiumGate } from "@/components/premium/premium-gate";
 import { MyContent, type SavedMeme, type MySubmission } from "./my-content";
 import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { getRequestLocale } from "@/lib/i18n-server";
+import { getMemeCardCollectionPage } from "@/lib/meme-collectible.server";
+import { MemeCollectibleCollection } from "@/components/meme-collectible-collection";
 import {
   applySavedLibraryEntitlement,
   SAVED_LIBRARY_PAGE_SIZE,
@@ -41,6 +43,12 @@ export default async function MyPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/my");
+
+  const memeCardsPromise = user.is_anonymous
+    ? Promise.resolve({ page: null, error: true, loginRequired: true })
+    : getMemeCardCollectionPage(supabase, user.id, { page: 1 })
+      .then((page) => ({ page, error: false, loginRequired: false }))
+      .catch(() => ({ page: null, error: true, loginRequired: false }));
 
   const [entitlement, locale, profileRes, customRes, subsRes] =
     await Promise.all([
@@ -182,6 +190,7 @@ export default async function MyPage({
         }
       : null,
   }));
+  const memeCards = await memeCardsPromise;
 
   return (
     <MyContent
@@ -206,6 +215,7 @@ export default async function MyPage({
       savedSafety={savedFilters.safety}
       savedPage={savedFilters.page}
       savedPageCount={savedPageCount}
+      memeCards={<MemeCollectibleCollection key={user.id} ownerUserId={user.id} initialPage={memeCards.page} initialError={memeCards.error} initialLoginRequired={memeCards.loginRequired} />}
       myFeed={
         entitlement.isPremium ? (
           <MyFeed interests={knownInterests} locale={locale} isPremium />

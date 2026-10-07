@@ -27,6 +27,7 @@ import { SavedMetaEditor } from "@/components/premium/saved-meta-editor";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 import { savedLibraryHref } from "@/lib/saved-library";
 import { CONTACT_EMAIL } from "@/lib/site";
+import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
 
 export type SavedMeme = {
   id: string;
@@ -94,6 +95,7 @@ export function MyContent({
   savedPage,
   savedPageCount,
   myFeed,
+  memeCards,
 }: {
   nickname: string;
   ageGroup: string | null;
@@ -120,6 +122,8 @@ export function MyContent({
   savedPageCount: number;
   /** 관심 카테고리 맞춤 피드 — 서버 컴포넌트(components/my-feed.tsx)를 페이지에서 슬롯으로 전달 */
   myFeed: ReactNode;
+  /** Free private meme card collection; independent of the Plus saved library. */
+  memeCards?: ReactNode;
 }) {
   const reduce = useReducedMotion();
   const { locale } = useLocale();
@@ -443,6 +447,14 @@ export function MyContent({
         <div className="min-w-0 flex-1 [&>*:first-child]:mt-0">
           {/* 관심 카테고리 맞춤 피드 — 서버 컴포넌트 슬롯 */}
           {myFeed}
+
+          {memeCards && <>
+            <nav aria-label={copy.saved.title} className="mt-6 flex flex-wrap gap-3 border-b border-border pb-3">
+              <Link href="#meme-cards" className="inline-flex min-h-11 items-center rounded-xl bg-accent-soft px-4 text-sm font-bold text-accent-text">{MEME_CARDS_COPY[locale].nav}</Link>
+              <Link href="#saved" className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold">{copy.saved.title}</Link>
+            </nav>
+            {memeCards}
+          </>}
 
           {/* 저장한 밈 — Plus Meme Vault는 기존 RLS 저장 라이브러리를 검색·안전 신호로 다시 찾게 한다. */}
           <section id="saved" className="mt-8 scroll-mt-24">

@@ -34,6 +34,58 @@ export type Database = {
   }
   public: {
     Tables: {
+      meme_collectible_cards: {
+        Row: {
+          id: string
+          card_no: number
+          meme_id: string | null
+          edition: number
+          art_seed: number
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id: string
+          card_no: number
+          meme_id?: string | null
+          edition?: number
+          art_seed: number
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          card_no?: number
+          meme_id?: string | null
+          edition?: number
+          art_seed?: number
+          active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_collectible_cards_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: true
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_meme_cards: {
+        Row: { user_id: string; card_id: string; created_at: string }
+        Insert: { user_id: string; card_id: string; created_at?: string }
+        Update: { user_id?: string; card_id?: string; created_at?: string }
+        Relationships: [
+          {
+            foreignKeyName: "user_meme_cards_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "meme_collectible_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_audit_log: {
         Row: {
           action: string

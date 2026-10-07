@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createScratchCoverage, memeCardReturnHref, scratchPoint, SCRATCH_REVEAL_RATIO } from "./meme-collectible-ui";
+import { createScratchCoverage, memeCardReturnHref, readRevealedMemeCard, scratchPoint, SCRATCH_REVEAL_RATIO } from "./meme-collectible-ui";
+import type { MemeCollectibleCard } from "./meme-collectible";
 
 describe("scratch area", () => {
   it("maps scaled pointer coordinates and rejects strokes outside the card", () => {
@@ -35,5 +36,19 @@ describe("card login return", () => {
     expect(params.get("page")).toBe("3");
     expect(params.has("claim")).toBe(false);
     expect(memeCardReturnHref("https://bad.test", 1)).toBe("/meme-cards");
+  });
+});
+describe("revealed card response boundary", () => {
+  const card: MemeCollectibleCard = { id: "mc-0001", cardNo: 1, edition: 1, artSeed: 42, memeId: "meme-a", title: "PPAP", slug: "ppap", href: "/memes/abcdef-ppap", summary: "노래", category: "song", originYear: 2016, thumbnailUrl: null, artMotif: "pen-pineapple", artSymbols: ["pen", "apple", "pineapple"], artComposition: "exchange" };
+  it("accepts the matching eligible shape and rejects a different card or unsafe links", () => {
+    expect(readRevealedMemeCard({ card }, card.id)).toEqual(card);
+    for (const href of ["javascript:alert(1)", "//evil.test", "https://evil.test", "/memes/abc?redirect=evil", "/memes/../admin", "/memes/%2e%2e", "/memes/a\\b", "/memes/a\nb"]) expect(readRevealedMemeCard({ card: { ...card, href } }, card.id)).toBeNull();
+    expect(readRevealedMemeCard({ card }, "mc-0002")).toBeNull();
+  });
+  it("accepts actual encoded meme slugs with parentheses and apostrophes", () => {
+    for (const href of ["/memes/3qc4nr6p-PPAP-(%ED%8E%9C-%ED%8C%8C%EC%9D%B8%EC%95%A0%ED%94%8C-%EC%95%A0%ED%94%8C-%ED%8E%9C)", "/memes/abcd-it's-fine"]) expect(readRevealedMemeCard({ card: { ...card, href } }, card.id)?.href).toBe(href);
+  });
+  it("rejects malformed art, numbering and empty data before rendering", () => {
+    for (const malformed of [null, {}, { card: null }, { card: { ...card, cardNo: 2 } }, { card: { ...card, artMotif: "bogus" } }, { card: { ...card, artSymbols: [] } }, { card: { ...card, title: "" } }]) expect(readRevealedMemeCard(malformed, card.id)).toBeNull();
   });
 });

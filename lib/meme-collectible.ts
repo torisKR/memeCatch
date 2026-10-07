@@ -36,6 +36,13 @@ export type MemeCardCatalogPage = {
   hasMore: boolean;
 };
 
+/** Discovery stays sealed until the viewer explicitly reveals a card. */
+export type MemeCardSeal = { id: string };
+
+export type MemeCardDiscoveryPage = Omit<MemeCardCatalogPage, "cards"> & {
+  cards: MemeCardSeal[];
+};
+
 /** Hidden content retains ownership without revealing its former title or text. */
 export type OwnedMemeCollectibleCard =
   | (MemeCollectibleCard & { available: true; claimedAt: string })

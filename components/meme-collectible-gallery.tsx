@@ -3,23 +3,30 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MEME_CARD_TARGET_COUNT, type MemeCardCatalogPage, type MemeCollectibleCard } from "@/lib/meme-collectible";
-import { memeCardCatalogHref, memeCardReturnHref } from "@/lib/meme-collectible-ui";
+import { MEME_CARD_TARGET_COUNT, type MemeCardDiscoveryPage, type MemeCardSeal, type MemeCollectibleCard } from "@/lib/meme-collectible";
+import { memeCardCatalogHref, memeCardReturnHref, readRevealedMemeCard } from "@/lib/meme-collectible-ui";
 import { useLocale } from "@/lib/i18n-client";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
-import { MY_COPY } from "@/lib/i18n-my";
-import { MemeCollectibleArt } from "./meme-collectible-art";
+import { MemeCollectibleSeal } from "./meme-collectible-seal";
 import { MemeCollectibleScratch } from "./meme-collectible-scratch";
 import styles from "./meme-collectible.module.css";
 
-export function MemeCollectibleGallery({ catalog, initialSelected = null, initialRevealed = false, selectedMissing = false, query = "", category = "" }: {
-  catalog: MemeCardCatalogPage; initialSelected?: MemeCollectibleCard | null; initialRevealed?: boolean; selectedMissing?: boolean; query?: string; category?: string;
+export function MemeCollectibleGallery({ catalog, initialSelected = null, initialCard = null, initialRevealed = false, selectedMissing = false }: {
+  catalog: MemeCardDiscoveryPage; initialSelected?: MemeCardSeal | null; initialCard?: MemeCollectibleCard | null; initialRevealed?: boolean; selectedMissing?: boolean;
 }) {
   const { locale } = useLocale();
   const copy = MEME_CARDS_COPY[locale];
-  const categories = MY_COPY[locale].categories;
   const [selected, setSelected] = useState(initialSelected);
-  const [revealed, setRevealed] = useState(Boolean(initialSelected && initialRevealed));
+  const [card, setCard] = useState(initialRevealed && initialSelected?.id === initialCard?.id ? initialCard : null);
+  const [revealed, setRevealed] = useState(Boolean(initialSelected && initialCard && initialSelected.id === initialCard.id && initialRevealed));
+  const [seals, setSeals] = useState(catalog.cards);
+  const [selectionVersion, setSelectionVersion] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [contentError, setContentError] = useState<"failure" | "unavailable" | null>(null);
+  const contentRequest = useRef<AbortController | null>(null);
+  const contentEpoch = useRef(0);
+  const revealWanted = useRef(false);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const [userId, setUserId] = useState<string | null | undefined>(undefined);
   const [authFailed, setAuthFailed] = useState(false);
   const [owned, setOwned] = useState<Set<string>>(new Set());
@@ -32,6 +39,8 @@ export function MemeCollectibleGallery({ catalog, initialSelected = null, initia
   const ownershipEpoch = useRef(0);
   const verifiedUser = useRef<string | null | undefined>(undefined);
   const refreshAuth = useRef<(() => Promise<void>) | null>(null);
+
+  useEffect(() => () => { contentEpoch.current++; contentRequest.current?.abort(); }, []);
 
   useEffect(() => {
     let alive = true;
@@ -100,15 +109,48 @@ export function MemeCollectibleGallery({ catalog, initialSelected = null, initia
     return () => controller.abort();
   }, [userId, visibleIds]);
 
-  function changeSelection(card: MemeCollectibleCard | null) {
+  function changeSelection(seal: MemeCardSeal | null) {
     operation.current++; claimRequest.current?.abort(); claiming.current = false;
-    setBusy(false); setNotice(null); setSelected(card); setRevealed(false);
-    window.history.replaceState(null, "", card ? memeCardReturnHref(card.id, catalog.page, false, query, category) : memeCardCatalogHref(catalog.page, query, category));
+    contentEpoch.current++; contentRequest.current?.abort(); contentRequest.current = null; revealWanted.current = false;
+    setBusy(false); setNotice(null); setSelected(seal); setCard(null); setRevealed(false); setLoading(false); setContentError(null); setSelectionVersion(version => version + 1);
+    window.history.replaceState(null, "", seal ? memeCardReturnHref(seal.id, catalog.page, false) : memeCardCatalogHref(catalog.page));
+    if (seal) window.requestAnimationFrame(() => { document.getElementById("reveal")?.scrollIntoView?.({ block: "start", behavior: "instant" }); titleRef.current?.focus({ preventScroll: true }); });
+  }
+  function completeReveal(id: string) {
+    setRevealed(true);
+    window.history.replaceState(null, "", memeCardReturnHref(id, catalog.page, true));
+    window.requestAnimationFrame(() => titleRef.current?.focus({ preventScroll: true }));
+  }
+  async function loadCard() {
+    if (!selected || card || contentRequest.current || contentError === "unavailable") return;
+    const id = selected.id;
+    const epoch = ++contentEpoch.current;
+    const controller = new AbortController(); contentRequest.current = controller;
+    setLoading(true); setContentError(null);
+    try {
+      const response = await fetch(`/api/meme-cards/${id}`, { cache: "no-store", signal: controller.signal });
+      if (controller.signal.aborted || contentEpoch.current !== epoch) return;
+      if (response.status === 404) { setContentError("unavailable"); return; }
+      if (!response.ok) throw new Error("reveal_failed");
+      const result = readRevealedMemeCard(await response.json(), id);
+      if (controller.signal.aborted || contentEpoch.current !== epoch) return;
+      if (!result) throw new Error("invalid_reveal_result");
+      setCard(result);
+      if (revealWanted.current) completeReveal(id);
+    } catch { if (!controller.signal.aborted && contentEpoch.current === epoch) setContentError("failure"); }
+    finally { if (contentEpoch.current === epoch) { setLoading(false); contentRequest.current = null; } }
   }
   function reveal() {
-    if (!selected) return;
-    setRevealed(true);
-    window.history.replaceState(null, "", memeCardReturnHref(selected.id, catalog.page, true, query, category));
+    if (!selected || revealed || contentError === "unavailable") return;
+    revealWanted.current = true;
+    if (card) completeReveal(selected.id); else if (!contentError) void loadCard();
+  }
+  function shuffle() {
+    setSeals(previous => {
+      const next = [...previous];
+      for (let i = next.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [next[i], next[j]] = [next[j], next[i]]; }
+      return next;
+    });
   }
   async function claim() {
     if (!selected || !revealed || !userId || claiming.current || owned.has(selected.id) || notice === "unavailable") return;
@@ -135,20 +177,22 @@ export function MemeCollectibleGallery({ catalog, initialSelected = null, initia
   return <main className={styles.page}>
     <header className={styles.hero}>
       <div><span className={styles.eyebrow}>{copy.eyebrow}</span><h1>{copy.title}</h1><p>{copy.description}</p><div className={styles.heroLinks}><span className={styles.freeBadge}>{copy.free}</span><Link href="/my#meme-cards" className={styles.textButton}>{copy.my} ↗</Link></div></div>
-      <div className={styles.heroMark} aria-hidden>m.</div>
+      <div className={styles.heroMark} aria-hidden>m<span>↗</span></div>
     </header>
     {selectedMissing && !selected && <p role="status" className={styles.notice}>{copy.selectedMissing}</p>}
     {selected && <section id="reveal" className={styles.reveal} aria-labelledby="meme-card-reveal-title" data-card-id={selected.id} data-revealed={revealed}>
-      <MemeCollectibleScratch key={selected.id} card={selected} revealed={revealed} onReveal={reveal}/>
+      <MemeCollectibleScratch key={`${selected.id}:${selectionVersion}`} cardId={selected.id} card={card} revealed={revealed} loading={loading} unavailable={contentError === "unavailable"} onStart={() => void loadCard()} onReveal={reveal}/>
       <div className={styles.revealDetails}>
-        <span className={styles.eyebrow}>NO. {String(selected.cardNo).padStart(4, "0")} / {MEME_CARD_TARGET_COUNT}</span>
-        <h2 id="meme-card-reveal-title">{revealed ? selected.title : copy.revealTitle}</h2>
-        <p>{revealed ? selected.summary : copy.scratch}</p>
+        <span className={styles.eyebrow}>{revealed && card ? `NO. ${String(card.cardNo).padStart(4, "0")} / ${MEME_CARD_TARGET_COUNT}` : copy.sealed}</span>
+        <h2 id="meme-card-reveal-title" ref={titleRef} tabIndex={-1}>{revealed && card ? card.title : copy.revealTitle}</h2>
+        <p>{revealed && card ? card.summary : copy.scratchHint}</p>
+        {loading && <p className={styles.loading} role="status"><span/>{copy.revealLoading}</p>}
+        {contentError && <div className={styles.notice} role="alert"><p>{contentError === "failure" ? copy.revealLoadFailure : copy.unavailable}</p>{contentError === "failure" && <button type="button" className={styles.secondaryButton} onClick={() => void loadCard()}>{copy.retry}</button>}</div>}
         <div className={styles.revealActions}>
-          {revealed && (selectedOwned ? <><span className={styles.ownedBadge}>{copy.owned} ✓</span><Link href="/my#meme-cards" className={styles.primaryButton}>{copy.my}</Link></> : userId === null ? <Link className={styles.primaryButton} href={`/login?next=${encodeURIComponent(memeCardReturnHref(selected.id, catalog.page, true, query, category))}`}>{copy.loginClaim}</Link> : authFailed ? <><p role="alert" className={styles.notice}>{copy.authFailure}</p><button type="button" className={styles.secondaryButton} onClick={() => void refreshAuth.current?.()}>{copy.retry}</button></> : <button type="button" className={styles.primaryButton} onClick={claim} disabled={busy || userId === undefined || notice === "unavailable"}>{busy ? copy.claiming : userId === undefined ? copy.checking : notice === "failure" ? copy.retry : copy.claim}</button>)}
+          {revealed && (selectedOwned ? <><span className={styles.ownedBadge}>{copy.owned} ✓</span><Link href="/my#meme-cards" className={styles.primaryButton}>{copy.my}</Link></> : userId === null ? <Link className={styles.primaryButton} href={`/login?next=${encodeURIComponent(memeCardReturnHref(selected.id, catalog.page, true))}`}>{copy.loginClaim}</Link> : authFailed ? <><p role="alert" className={styles.notice}>{copy.authFailure}</p><button type="button" className={styles.secondaryButton} onClick={() => void refreshAuth.current?.()}>{copy.retry}</button></> : <button type="button" className={styles.primaryButton} onClick={claim} disabled={busy || userId === undefined || notice === "unavailable"}>{busy ? copy.claiming : userId === undefined ? copy.checking : notice === "failure" ? copy.retry : copy.claim}</button>)}
           {revealed && !selectedOwned && <p className={styles.small}>{copy.loginHint}</p>}
           {notice && <p className={styles.notice} role="alert">{copy[notice]}</p>}
-          {revealed && <Link href={selected.href} className={styles.secondaryButton}>{copy.details} ↗</Link>}
+          {revealed && card && <Link href={card.href} className={styles.secondaryButton}>{copy.details} ↗</Link>}
           <button type="button" className={styles.textButton} onClick={() => changeSelection(null)}>{copy.cancel}</button>
           <p className={styles.small}>{copy.originalArt}<br/>{copy.rights}</p>
         </div>
@@ -156,14 +200,9 @@ export function MemeCollectibleGallery({ catalog, initialSelected = null, initia
     </section>}
     <section aria-labelledby="meme-card-catalog-title">
       <div className={styles.sectionHeading}><h2 id="meme-card-catalog-title">{copy.catalog}</h2><p>{copy.availableCount(catalog.total)}</p></div>
-      <form action="/meme-cards" method="get" className={styles.filters}>
-        <label>{copy.search}<input name="query" defaultValue={query} maxLength={80} placeholder={copy.searchPlaceholder}/></label>
-        <label>{copy.category}<select name="category" defaultValue={category}><option value="">{copy.all}</option>{["phrase", "dance", "song", "image", "comment", "challenge"].map(value => <option key={value} value={value}>{categories[value as keyof typeof categories]}</option>)}</select></label>
-        <button className={styles.primaryButton} type="submit">{copy.apply}</button>
-        {(query || category) && <Link className={styles.textButton} href="/meme-cards">{copy.clear}</Link>}
-      </form>
-      {catalog.cards.length ? <ul className={styles.grid}>{catalog.cards.map(card => <li key={card.id}><button type="button" data-card-id={card.id} className={styles.catalogButton} aria-label={`${card.title} · ${copy.choose}`} aria-pressed={selected?.id === card.id} onClick={() => { changeSelection(card); window.requestAnimationFrame(() => document.getElementById("reveal")?.scrollIntoView?.({ block: "start", behavior: "instant" })); }}><MemeCollectibleArt card={card} compact/>{Boolean(userId) && owned.has(card.id) && <span className={styles.ownedBadge}>{copy.owned}</span>}</button></li>)}</ul> : <div className={styles.empty}><h3>{copy.noResults}</h3><p>{copy.noResultsBody}</p><Link href="/meme-cards" className={styles.secondaryButton}>{copy.clear}</Link></div>}
-      {pages > 1 && <nav className={styles.pagination} aria-label={copy.catalog}>{catalog.page > 1 && <Link className={styles.secondaryButton} href={memeCardCatalogHref(catalog.page - 1, query, category)}>{copy.previous}</Link>}<span>{copy.page(catalog.page, pages)}</span>{catalog.hasMore && <Link className={styles.secondaryButton} href={memeCardCatalogHref(catalog.page + 1, query, category)}>{copy.next}</Link>}</nav>}
+      <div className={styles.discoveryTools}><p>{copy.discoveryHint}</p><button type="button" className={styles.secondaryButton} onClick={shuffle} disabled={seals.length < 2}>{copy.shuffle} ↻</button></div>
+      {seals.length ? <ul className={styles.grid}>{seals.map((seal, index) => <li key={seal.id}><button type="button" data-card-id={seal.id} className={styles.catalogButton} aria-label={copy.sealedChoice(index + 1)} aria-pressed={selected?.id === seal.id} onClick={() => changeSelection(seal)}><MemeCollectibleSeal compact label={copy.foilTitle} hint={copy.foilHint}/>{Boolean(userId) && owned.has(seal.id) && <span className={styles.ownedBadge}>{copy.owned}</span>}</button></li>)}</ul> : <div className={styles.empty}><h3>{copy.noResults}</h3><p>{copy.noResultsBody}</p></div>}
+      {pages > 1 && <nav className={styles.pagination} aria-label={copy.catalog}>{catalog.page > 1 && <Link className={styles.secondaryButton} href={memeCardCatalogHref(catalog.page - 1)}>{copy.previous}</Link>}<span>{copy.page(catalog.page, pages)}</span>{catalog.hasMore && <Link className={styles.secondaryButton} href={memeCardCatalogHref(catalog.page + 1)}>{copy.next}</Link>}</nav>}
     </section>
   </main>;
 }

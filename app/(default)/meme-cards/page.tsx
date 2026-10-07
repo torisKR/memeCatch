@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { MemeCollectibleGallery } from "@/components/meme-collectible-gallery";
 import { getMemeCardCatalogPage, getMemeCollectibleCard } from "@/lib/meme-collectible.server";
-import { isMemeCardId, parseMemeCardPageOptions } from "@/lib/meme-collectible";
+import { isMemeCardId, parseMemeCardPage, type MemeCardDiscoveryPage } from "@/lib/meme-collectible";
 
 export const metadata: Metadata = {
   title: "밈카드",
@@ -11,16 +11,26 @@ export const metadata: Metadata = {
 
 export default async function MemeCardsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
-  const params = new URLSearchParams();
-  for (const key of ["page", "query", "category"]) {
-    const value = sp[key];
-    if (typeof value === "string") params.set(key, value);
-  }
-  const options = parseMemeCardPageOptions(params) ?? { page: 1 };
+  const page = parseMemeCardPage(typeof sp.page === "string" ? sp.page : null) ?? 1;
   const cardId = isMemeCardId(sp.card) ? sp.card : null;
   const [catalog, selected] = await Promise.all([
-    getMemeCardCatalogPage(options),
+    getMemeCardCatalogPage({ page }),
     cardId ? getMemeCollectibleCard(cardId) : Promise.resolve(null),
   ]);
-  return <MemeCollectibleGallery key={`${catalog.page}:${options.query ?? ""}:${options.category ?? ""}:${cardId ?? ""}:${sp.revealed === "1"}`} catalog={catalog} initialSelected={selected} initialRevealed={sp.revealed === "1"} selectedMissing={Boolean(cardId && !selected)} query={options.query} category={options.category}/>;
+  const discovery: MemeCardDiscoveryPage = {
+    cards: catalog.cards.map(({ id }) => ({ id })),
+    total: catalog.total,
+    page: catalog.page,
+    pageSize: catalog.pageSize,
+    hasMore: catalog.hasMore,
+  };
+  const initialRevealed = Boolean(selected && sp.revealed === "1");
+  return <MemeCollectibleGallery
+    key={`${catalog.page}:${cardId ?? ""}:${initialRevealed}`}
+    catalog={discovery}
+    initialSelected={selected ? { id: selected.id } : null}
+    initialCard={initialRevealed ? selected : null}
+    initialRevealed={initialRevealed}
+    selectedMissing={Boolean(cardId && !selected)}
+  />;
 }

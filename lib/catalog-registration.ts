@@ -5,6 +5,7 @@ import {
 } from "@/lib/sources/review";
 import { normalizeSourceUrl } from "@/lib/sources/url";
 import { publicSourceUrl } from "@/lib/source-links";
+import { memeTitleKey } from "../scripts/meme-title-key.mjs";
 
 export const CATALOG_SOURCE_PLATFORMS = [
   "youtube",
@@ -79,6 +80,14 @@ export const catalogRegistrationSchema = z
     sources: z.array(catalogSourceSchema).min(2).max(8),
   })
   .superRefine((value, ctx) => {
+    const titleKey = memeTitleKey(value.title);
+    if (titleKey && memeTitleKey(value.summary) === titleKey) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["summary"],
+        message: "밈의 뜻이나 사용 상황을 덧붙인 요약을 입력해 주세요.",
+      });
+    }
     const urls = value.sources.map((source) => normalizeCatalogSourceUrl(source.url));
     if (new Set(urls).size !== urls.length) {
       ctx.addIssue({

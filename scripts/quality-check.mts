@@ -7,8 +7,8 @@
  *
  * 설계 원칙 (LOOP.md「자동 검수 도구」):
  *   - GET만 보낸다. 쓰기 경로가 코드에 없다.
- *   - 충실도 판정은 lib/content-depth.ts를 그대로 재사용한다. sitemap·robots와
- *     같은 함수를 쓰므로 "색인에서 빠진 문서 수"와 리포트 수치가 갈리지 않는다.
+ *   - 충실도는 lib/content-depth.ts의 정리 중 배너·광고 기준(250자·점수 5)을 쓴다.
+ *     SEO 색인은 별도의 150자 기준이므로 충실도 미달을 색인 제외로 해석하지 않는다.
  *   - PostgREST 헬퍼는 scripts/source-pipeline-rest.mjs를 재사용한다.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -16,6 +16,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { restAll } from "./source-pipeline-rest.mjs";
 import { contentDepth } from "../lib/content-depth.ts";
+import { publicSourceUrl } from "../lib/source-links.ts";
+import { memeTitleKey } from "./meme-title-key.mjs";
 import {
   UNAVAILABLE_STATUSES,
   isRenderableContent,
@@ -120,9 +122,9 @@ function createReadOnlyClient(env: NodeJS.ProcessEnv) {
   };
 }
 
-/** 공백·문장부호를 지우고 소문자화 — "사실상 같은 제목"을 한 키로 모은다. */
+/** 등록·수입 검사와 같은 NFKC 키로 "사실상 같은 제목"을 모은다. */
 function normalizeTitle(title: string): string {
-  return title.toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
+  return memeTitleKey(title);
 }
 
 function text(value: unknown): string {
@@ -135,7 +137,9 @@ function hasRenderableRepresentative(row: Row): boolean {
 }
 
 function sourceUrls(row: Row): string[] {
-  return row.meme_sources.map((s) => text(s.source_url)).filter(Boolean);
+  return row.meme_sources
+    .map((s) => publicSourceUrl(s.source_url))
+    .filter((url): url is string => url !== null);
 }
 
 /** 4개 상황 신호가 전부 같은 값 — 기계적 기본값이 남아 있다는 신호. */
@@ -188,15 +192,22 @@ export function buildChecks(rows: Row[]): Check[] {
   const byNormTitle = new Map<string, Row[]>();
   for (const r of rows) {
     const key = normalizeTitle(r.title);
+    if (!key) continue;
     byNormTitle.set(key, [...(byNormTitle.get(key) ?? []), r]);
   }
   const dupRows = [...byNormTitle.values()].filter((g) => g.length > 1).flat();
 
   // 다른 문서의 정식 제목을 alias로 들고 있는 문서 — 검색 결과가 서로를 가린다.
-  const titleIndex = new Map(rows.map((r) => [normalizeTitle(r.title), r.id]));
+  const titleIndex = new Map<string, string>();
+  for (const r of rows) {
+    const key = normalizeTitle(r.title);
+    if (key) titleIndex.set(key, r.id);
+  }
   const aliasCollisions = rows.filter((r) =>
     (r.aliases ?? []).some((a) => {
-      const other = titleIndex.get(normalizeTitle(a));
+      const key = normalizeTitle(a);
+      if (!key) return false;
+      const other = titleIndex.get(key);
       return other !== undefined && other !== r.id;
     }),
   );
@@ -205,7 +216,7 @@ export function buildChecks(rows: Row[]): Check[] {
     mk(
       "DQ-C1-published-without-source",
       "critical",
-      "공개 문서인데 근거 출처 URL이 하나도 없음",
+      "공개 문서인데 유효한 공개 근거 출처 URL이 없음",
       rows.filter((r) => sourceUrls(r).length === 0),
     ),
     mk(
@@ -235,7 +246,7 @@ export function buildChecks(rows: Row[]): Check[] {
     mk(
       "DQ-H1-thin-document",
       "high",
-      "충실도 미달(색인 제외 + 정리 중 배너 노출) 문서",
+      "충실도 미달(250자·점수 5 기준, 정리 중 배너·광고 제한) 문서",
       rows.filter((r) => contentDepth(r).isThin),
     ),
     mk(
@@ -257,6 +268,15 @@ export function buildChecks(rows: Row[]): Check[] {
       rows.filter((r) => r.meme_sources.some((s) => s.copyright_status === "unknown")),
     ),
     mk(
+      "DQ-H5-summary-repeats-title",
+      "high",
+      "요약이 정규화된 제목을 반복해 뜻·사용 상황을 설명하지 않음",
+      rows.filter((r) => {
+        const titleKey = normalizeTitle(r.title);
+        return Boolean(titleKey) && normalizeTitle(text(r.summary)) === titleKey;
+      }),
+    ),
+    mk(
       "DQ-M1-origin-year-missing",
       "medium",
       "발생 연도 없음",
@@ -274,6 +294,14 @@ export function buildChecks(rows: Row[]): Check[] {
       "공개 본문에 템플릿·조사 placeholder 잔존",
       rows.filter(hasPlaceholder),
     ),
+    mk(
+      "DQ-M4-invalid-source-url",
+      "medium",
+      "공개 근거로 표시할 수 없는 출처 URL 포함",
+      rows.filter((r) => r.meme_sources.some(
+        (s) => text(s.source_url) !== "" && publicSourceUrl(s.source_url) === null,
+      )),
+    ),
   ];
 }
 
@@ -287,7 +315,7 @@ export function buildReport(rows: Row[]) {
     generatedAt: new Date().toISOString(),
     scope: { moderationStatus: [...PUBLIC_STATUSES], documents: rows.length },
     depth: {
-      // lib/content-depth.ts 기준 — sitemap·robots 판정과 같은 값이다.
+      // 정리 중 배너·광고 기준(250자·점수 5). SEO 색인의 150자 기준과 다르다.
       substantial,
       thin: rows.length - substantial,
       substantialRatio: Number((substantial / divisor).toFixed(4)),

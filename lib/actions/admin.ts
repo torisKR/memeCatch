@@ -8,6 +8,7 @@
  */
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { after } from "next/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { createClient } from "@/lib/supabase/server";
@@ -44,6 +45,10 @@ type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 type UsageContext = Record<"work" | "friends" | "family" | "sns", SafetyLevel>;
+
+type SubmissionApprovalResult =
+  | { ok: true; data: { memeId: string; warning?: string } }
+  | { ok: false; error: string; createdMemeId?: string };
 
 /** 운영자 인증 확인 — 통과 시 operator 세션 클라이언트와 uid 반환 */
 async function requireOperator() {
@@ -258,7 +263,7 @@ export async function approveSubmission(input: {
   originYear: number | null;
   tags: string[];
   usageContext: UsageContext;
-}): Promise<ActionResult<{ memeId: string }>> {
+}): Promise<SubmissionApprovalResult> {
   try {
     const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
@@ -270,9 +275,16 @@ export async function approveSubmission(input: {
       .eq("id", input.submissionId)
       .single();
     if (subErr || !submission) return { ok: false, error: "제보를 찾을 수 없어요." };
+    if (submission.status !== "pending" && submission.status !== "reviewing") {
+      return {
+        ok: false,
+        error: "이미 처리된 제보예요. 제보와 밈 관리에서 처리 결과를 확인해 주세요.",
+      };
+    }
 
-    // 1) 밈 생성 (운영자 RLS로 직접 INSERT 가능 — moderation_status 기본값 pending)
+    // 1) 밈 생성 — 출처가 저장되기 전에는 공개 상태로 전이하지 않는다.
     const baseRow = {
+      moderation_status: "pending" as const,
       title: input.title.trim(),
       summary: input.summary.trim(),
       description: input.description.trim(),
@@ -304,21 +316,7 @@ export async function approveSubmission(input: {
     }
     if (!memeId) return { ok: false, error: insertError ?? "밈 생성에 실패했어요." };
 
-    // 2) 검수 상태 전이 — 트리거가 역행을 차단하므로 순서대로 전진
-    for (const status of ["fact_checking", "rights_checking", "approved"] as const) {
-      const { error } = await supabase
-        .from("memes")
-        .update({ moderation_status: status, updated_at: new Date().toISOString() })
-        .eq("id", memeId);
-      if (error) {
-        return {
-          ok: false,
-          error: `밈은 생성됐지만 상태 전이(${status})에 실패했어요: ${error.message} — 밈 관리에서 이어서 처리해 주세요.`,
-        };
-      }
-    }
-
-    // 3) 출처 기록
+    // 2) 제보에 출처가 있으면 pending 밈에 먼저 저장한다.
     if (submission.source_url) {
       let platform = "web";
       try {
@@ -326,12 +324,48 @@ export async function approveSubmission(input: {
       } catch {
         /* URL 파싱 실패 시 web 유지 */
       }
-      await supabase.from("meme_sources").insert({
-        meme_id: memeId,
-        platform,
-        source_url: submission.source_url,
-      });
+      let sourceStored = false;
+      try {
+        const { error } = await supabase.from("meme_sources").insert({
+          meme_id: memeId,
+          platform,
+          source_url: submission.source_url,
+        });
+        sourceStored = !error;
+      } catch {
+        // 전송 실패도 pending 밈의 복구 안내로 처리한다.
+      }
+      if (!sourceStored) {
+        return {
+          ok: false,
+          error: `출처 저장에 실패해 생성된 밈을 대기 상태로 유지했어요. 승인을 다시 실행하지 말고 밈 관리에서 출처를 저장하고 검수를 이어서 처리해 주세요. (밈 ID: ${memeId})`,
+          createdMemeId: memeId,
+        };
+      }
+    }
 
+    // 3) 검수 상태 전이 — 트리거가 역행을 차단하므로 순서대로 전진
+    for (const status of ["fact_checking", "rights_checking", "approved"] as const) {
+      let transitioned = false;
+      try {
+        const { error } = await supabase
+          .from("memes")
+          .update({ moderation_status: status, updated_at: new Date().toISOString() })
+          .eq("id", memeId);
+        transitioned = !error;
+      } catch {
+        // 응답이 불명확해도 이미 생성된 밈을 다시 만들지 않도록 복구 ID를 반환한다.
+      }
+      if (!transitioned) {
+        return {
+          ok: false,
+          error: `밈은 생성됐지만 상태 전이(${status})에 실패했어요. 다시 승인하지 말고 밈 관리에서 상태를 확인하고 검수를 이어서 처리해 주세요. (밈 ID: ${memeId})`,
+          createdMemeId: memeId,
+        };
+      }
+    }
+
+    if (submission.source_url) {
       // 지원 플랫폼 제보는 승인과 함께 대표 임베드 콘텐츠로 연결한다.
       // 원본 파일을 복제하지 않고 플랫폼의 공식 플레이어만 사용한다.
       if (isSupportedOEmbedUrl(submission.source_url)) {
@@ -379,21 +413,78 @@ export async function approveSubmission(input: {
       }
     }
 
-    // 5) 제보 상태 갱신
-    await supabase
-      .from("meme_submissions")
-      .update({ status: "approved", updated_at: new Date().toISOString() })
-      .eq("id", input.submissionId);
+    // 5) 이미 공개된 밈은 제보/감사 저장 실패로 생성 실패를 반환하지 않는다.
+    // 이 작업은 원자적이지 않으므로 복구할 식별자와 재승인 금지 안내를 남긴다.
+    const reconciliation: string[] = [];
+    let submissionUpdatePending = false;
+    try {
+      const { data: updatedSubmission, error } = await supabase
+        .from("meme_submissions")
+        .update({ status: "approved", updated_at: new Date().toISOString() })
+        .eq("id", input.submissionId)
+        .select("id")
+        .maybeSingle();
+      submissionUpdatePending = Boolean(error || !updatedSubmission);
+    } catch {
+      submissionUpdatePending = true;
+    }
+    if (submissionUpdatePending) {
+      reconciliation.push("제보 상태 저장");
+      console.error({
+        event: "submission_approval_reconciliation_pending",
+        submission_id: input.submissionId,
+        meme_id: memeId,
+        step: "submission_status",
+      });
+    }
 
-    await logAudit(uid, "submission.approve", "meme_submission", input.submissionId, {
-      meme_id: memeId,
-      title: input.title.trim(),
-    });
-    revalidatePath("/admin/submissions");
-    revalidatePath("/admin/memes");
-    revalidatePath("/global");
-    revalidateCanonicalMemePaths(revalidationIdentity);
-    return { ok: true, data: { memeId } };
+    try {
+      await logAudit(uid, "submission.approve", "meme_submission", input.submissionId, {
+        meme_id: memeId,
+        title: input.title.trim(),
+        submission_status_update_pending: submissionUpdatePending,
+      });
+    } catch {
+      reconciliation.push("감사 기록 저장");
+      console.error({
+        event: "submission_approval_reconciliation_pending",
+        submission_id: input.submissionId,
+        meme_id: memeId,
+        step: "audit",
+      });
+    }
+    const invalidateApproval = () => {
+      revalidatePath("/admin/submissions");
+      revalidatePath("/admin/memes");
+      revalidatePath("/global");
+      revalidateCanonicalMemePaths(revalidationIdentity);
+    };
+    if (reconciliation.length > 0) {
+      // 즉시 재검증은 현재 RSC를 갱신해 경고 UI를 제거하므로 응답 후 처리한다.
+      try {
+        after(() => {
+          try {
+            invalidateApproval();
+          } catch {
+            console.error({ event: "submission_approval_cache_revalidation_pending" });
+          }
+        });
+      } catch {
+        // 예약 실패도 이미 공개된 밈의 성공 결과를 뒤집지 않는다.
+        console.error({ event: "submission_approval_cache_revalidation_pending" });
+      }
+    } else {
+      invalidateApproval();
+    }
+    return {
+      ok: true,
+      data: {
+        memeId,
+        ...(reconciliation.length > 0 ? {
+          warning: `밈은 이미 게시됐지만 ${reconciliation.join(" 및 ")}에 실패했어요. 다시 승인하지 말고 제보와 밈 관리에서 저장 상태를 확인해 주세요. (제보 ID: ${input.submissionId}, 밈 ID: ${memeId})`,
+        } : {}),
+      },
+    };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
   }

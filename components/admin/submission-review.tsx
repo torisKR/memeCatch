@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   approveSubmission,
@@ -39,8 +39,10 @@ export function SubmissionReview({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ kind: "error" | "success" | "warning"; text: string } | null>(null);
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
+  const approvalStopped = useRef(false);
+  const [savedMeme, setSavedMeme] = useState<{ id: string; published: boolean } | null>(null);
 
   // 승인 폼 상태
   const [title, setTitle] = useState(submissionName);
@@ -97,6 +99,7 @@ export function SubmissionReview({
 
   function approve(e: React.FormEvent) {
     e.preventDefault();
+    if (approvalStopped.current) return;
     setMessage(null);
     startTransition(async () => {
       const year = originYear.trim() ? Number(originYear) : null;
@@ -117,8 +120,22 @@ export function SubmissionReview({
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         usageContext,
       });
-      if (!res.ok) setMessage({ kind: "error", text: res.error });
-      else router.push("/admin/submissions");
+      if (!res.ok) {
+        if (res.createdMemeId) {
+          // 부분 저장 실패도 같은 화면에서 다시 생성하지 않고 기존 밈을 복구한다.
+          approvalStopped.current = true;
+          setSavedMeme({ id: res.createdMemeId, published: false });
+        }
+        setMessage({ kind: "error", text: res.error });
+      } else {
+        approvalStopped.current = true;
+        setSavedMeme({ id: res.data.memeId, published: true });
+        if (res.data?.warning) {
+          setMessage({ kind: "warning", text: res.data.warning });
+        } else {
+          router.push("/admin/submissions");
+        }
+      }
     });
   }
 
@@ -144,7 +161,7 @@ export function SubmissionReview({
     });
   }
 
-  const busy = pending || drafting;
+  const busy = pending || drafting || savedMeme !== null;
   const inputCls =
     "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base focus:outline-none";
 
@@ -154,15 +171,27 @@ export function SubmissionReview({
 
       {message && (
         <p
-          role="status"
+          role={message.kind === "warning" ? "alert" : "status"}
           className={`rounded-lg p-3 text-base ${
             message.kind === "error"
               ? "bg-safety-red-bg text-safety-red"
-              : "bg-safety-green-bg text-safety-green"
+              : message.kind === "warning"
+                ? "bg-safety-yellow-bg text-safety-yellow"
+                : "bg-safety-green-bg text-safety-green"
           }`}
         >
           {message.text}
         </p>
+      )}
+      {savedMeme && (message?.kind === "warning" || message?.kind === "error") && (
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-base">
+          <a href={`/admin/memes/${savedMeme.id}`} className="text-accent-text underline">
+            {savedMeme.published ? "게시된 밈 관리" : "등록된 밈 관리"} (ID: {savedMeme.id})
+          </a>
+          <a href={`/admin/submissions/${submissionId}`} className="text-accent-text underline">
+            제보 상태 확인 (ID: {submissionId})
+          </a>
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2">

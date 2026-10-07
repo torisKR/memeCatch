@@ -71,6 +71,37 @@ describe("catalog registration contract", () => {
     expect(result.success).toBe(false);
   });
 
+  it.each([
+    ["테스트 밈", "테스트 밈"],
+    ["나야 들기름", "나야, 들기름!"],
+    ["AI 밈", "ＡＩ 밈★"],
+    ["Distracted Boyfriend", "DISTRACTED BOYFRIEND"],
+  ])("rejects a summary that repeats the normalized title: %s", (title, summary) => {
+    const result = catalogRegistrationSchema.safeParse({ ...input, title, summary });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ["summary"] }));
+    }
+  });
+
+  it("accepts a meaningful summary about an AI refusal phrase without treating it as an error response", () => {
+    const result = catalogRegistrationSchema.safeParse({
+      ...input,
+      title: "실시간 정보에 접근할 수 없습니다",
+      summary: "챗GPT가 최신 정보 질문에 답하지 못할 때 쓰는 정형 문구를 패러디해요.",
+      description: '챗GPT의 "실시간 정보에 접근할 수 없습니다"라는 답변을 흉내 내 최신 소식을 모르는 상황에 사용해요.',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts added context even when the summary contains the title", () => {
+    expect(catalogRegistrationSchema.safeParse({
+      ...input,
+      title: "나야 들기름",
+      summary: "나야 들기름은 자신을 익살스럽게 소개할 때 쓰는 말이에요.",
+    }).success).toBe(true);
+  });
+
   it("rejects a social platform that does not match the source URL", () => {
     const result = catalogRegistrationSchema.safeParse({
       ...input,

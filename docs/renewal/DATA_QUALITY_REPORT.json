@@ -1,151 +1,241 @@
 {
-  "generatedAt": "2026-09-09T15:37:39.729Z",
+  "generatedAt": "2026-10-07T04:58:00.231Z",
   "scope": {
     "moderationStatus": [
       "approved",
       "limited"
     ],
-    "documents": 17
+    "documents": 4394
   },
   "depth": {
-    "substantial": 8,
-    "thin": 9,
-    "substantialRatio": 0.4706,
-    "avgScore": 5.06,
-    "avgProseChars": 349
+    "substantial": 169,
+    "thin": 4225,
+    "substantialRatio": 0.0385,
+    "avgScore": 2.25,
+    "avgProseChars": 160
   },
   "checks": [
     {
       "id": "DQ-C1-published-without-source",
       "severity": "critical",
-      "title": "공개 문서인데 근거 출처 URL이 하나도 없음",
-      "count": 8,
-      "ratio": 0.4706,
+      "title": "공개 문서인데 유효한 공개 근거 출처 URL이 없음",
+      "count": 1786,
+      "ratio": 0.4065,
       "samples": [
-        "devseed04",
-        "devseed08",
-        "devseed09",
-        "devseed12",
-        "devseed02",
-        "devseed07",
-        "devseed10",
-        "devseed05"
+        "2nj2eqr5",
+        "cduhxdw2",
+        "3w2jh5xq",
+        "7bu98y3w",
+        "23vrggux",
+        "27rjrzvu",
+        "27zs8e4n",
+        "2a8d4uk8",
+        "2j63hdhs",
+        "2kh534pq"
       ]
     },
     {
       "id": "DQ-C2-dead-representative",
       "severity": "critical",
       "title": "대표 콘텐츠가 dead/region_blocked인데 계속 공개 중",
-      "count": 0,
-      "ratio": 0,
-      "samples": []
+      "count": 36,
+      "ratio": 0.0082,
+      "samples": [
+        "2ctjk9t6",
+        "jycwhhwk",
+        "3vqp7qzr",
+        "7yaqepcn",
+        "f384zwnp",
+        "f68h34zc",
+        "j5pv6xs2",
+        "mt943cz2",
+        "yp9aj4pw",
+        "345hhqyt"
+      ]
     },
     {
       "id": "DQ-C3-duplicate-canonical-title",
       "severity": "critical",
       "title": "정규화 후 제목이 겹치는 공개 문서(중복 노출)",
-      "count": 0,
-      "ratio": 0,
-      "samples": []
+      "count": 40,
+      "ratio": 0.0091,
+      "samples": [
+        "872yt2wg",
+        "2djmbuqb",
+        "dthdz8ts",
+        "vbm992y5",
+        "bzm4w8vy",
+        "v2kq6jp9",
+        "2eu27rzb",
+        "4vcnfmsx",
+        "abp29ywg",
+        "aw9bunnq"
+      ]
     },
     {
       "id": "DQ-C4-alias-title-collision",
       "severity": "critical",
       "title": "다른 공개 문서의 정식 제목을 alias로 보유",
-      "count": 0,
-      "ratio": 0,
-      "samples": []
+      "count": 294,
+      "ratio": 0.0669,
+      "samples": [
+        "46x2hg97",
+        "6mcwe79h",
+        "etesjj5w",
+        "872yt2wg",
+        "dthdz8ts",
+        "jd9t24mf",
+        "3xv7rk9v",
+        "jehcehhf",
+        "rf3dt6mp",
+        "zsfh8dr5"
+      ]
     },
     {
       "id": "DQ-H1-thin-document",
       "severity": "high",
-      "title": "충실도 미달(색인 제외 + 정리 중 배너 노출) 문서",
-      "count": 9,
-      "ratio": 0.5294,
+      "title": "충실도 미달(250자·점수 5 기준, 정리 중 배너·광고 제한) 문서",
+      "count": 4225,
+      "ratio": 0.9615,
       "samples": [
-        "devseed04",
-        "devseed08",
-        "devseed01",
-        "devseed09",
-        "devseed12",
-        "devseed02",
-        "devseed07",
-        "devseed10",
-        "devseed05"
+        "6y2ze2tp",
+        "xedax3m5",
+        "5u8q26cc",
+        "46x2hg97",
+        "6mcwe79h",
+        "uefmryky",
+        "nrk9ryzn",
+        "sxshbu5b",
+        "etesjj5w",
+        "g76rc5fs"
       ]
     },
     {
       "id": "DQ-H2-uniform-usage-context",
       "severity": "high",
       "title": "상황별 사용 신호가 전부 동일(기계적 기본값 의심)",
-      "count": 1,
-      "ratio": 0.0588,
+      "count": 3786,
+      "ratio": 0.8616,
       "samples": [
-        "devseed05"
+        "6y2ze2tp",
+        "xedax3m5",
+        "5u8q26cc",
+        "46x2hg97",
+        "r2fg5gqv",
+        "6mcwe79h",
+        "uefmryky",
+        "nrk9ryzn",
+        "n8x6kv6e",
+        "rst6agpj"
       ]
     },
     {
       "id": "DQ-H3-no-representative-content",
       "severity": "high",
       "title": "렌더 가능한 대표 콘텐츠 없음",
-      "count": 12,
-      "ratio": 0.7059,
+      "count": 2192,
+      "ratio": 0.4989,
       "samples": [
-        "devseed04",
-        "devseed08",
-        "devseed01",
-        "devseed09",
-        "devseed06",
-        "devseed12",
-        "devseed02",
-        "devseed07",
-        "devseed10",
-        "devseed05"
+        "2ctjk9t6",
+        "huuwcwma",
+        "n4srdru6",
+        "bv8mem48",
+        "vpcfycm4",
+        "gjq95suv",
+        "wg65waqu",
+        "z3buhgaz",
+        "2g7q4e2w",
+        "q7cjtg8h"
       ]
     },
     {
       "id": "DQ-H4-rights-unknown",
       "severity": "high",
       "title": "출처의 권리 근거가 unknown인 채로 공개",
-      "count": 3,
-      "ratio": 0.1765,
+      "count": 303,
+      "ratio": 0.069,
       "samples": [
-        "devseed01",
-        "devseed06",
-        "devseed11"
+        "46x2hg97",
+        "chmhpbjd",
+        "4s37dzvz",
+        "7xrfcr9u",
+        "6dqfb248",
+        "a97cbw2z",
+        "bcwf87dz",
+        "cgjjtebh",
+        "fwvx7k7r",
+        "g5v4hxww"
+      ]
+    },
+    {
+      "id": "DQ-H5-summary-repeats-title",
+      "severity": "high",
+      "title": "요약이 정규화된 제목을 반복해 뜻·사용 상황을 설명하지 않음",
+      "count": 462,
+      "ratio": 0.1051,
+      "samples": [
+        "109689d9",
+        "130da743",
+        "183055d4",
+        "3b8c17ee",
+        "52e27c50",
+        "55537201",
+        "55fe6378",
+        "5c038e32",
+        "5cf48b5c",
+        "6d87773e"
       ]
     },
     {
       "id": "DQ-M1-origin-year-missing",
       "severity": "medium",
       "title": "발생 연도 없음",
-      "count": 0,
-      "ratio": 0,
-      "samples": []
+      "count": 684,
+      "ratio": 0.1557,
+      "samples": [
+        "z4ywt995",
+        "2phh45vr",
+        "5jdu64h5",
+        "htbcwa4t",
+        "mb2v8an9",
+        "njcuh7z6",
+        "kcer9phh",
+        "n7kbv6zf",
+        "2wx8euze",
+        "5jywq93d"
+      ]
     },
     {
       "id": "DQ-M2-no-tags",
       "severity": "medium",
       "title": "태그 없음(탐색·관련 밈 품질 저하)",
-      "count": 12,
-      "ratio": 0.7059,
+      "count": 3358,
+      "ratio": 0.7642,
       "samples": [
-        "devseed04",
-        "devseed08",
-        "devseed01",
-        "devseed09",
-        "devseed06",
-        "devseed12",
-        "devseed02",
-        "devseed07",
-        "devseed10",
-        "devseed05"
+        "6y2ze2tp",
+        "46x2hg97",
+        "r2fg5gqv",
+        "uefmryky",
+        "nrk9ryzn",
+        "rst6agpj",
+        "sxshbu5b",
+        "etesjj5w",
+        "f2u4n8u2",
+        "3qc4nr6p"
       ]
     },
     {
       "id": "DQ-M3-placeholder-text",
       "severity": "medium",
       "title": "공개 본문에 템플릿·조사 placeholder 잔존",
+      "count": 0,
+      "ratio": 0,
+      "samples": []
+    },
+    {
+      "id": "DQ-M4-invalid-source-url",
+      "severity": "medium",
+      "title": "공개 근거로 표시할 수 없는 출처 URL 포함",
       "count": 0,
       "ratio": 0,
       "samples": []

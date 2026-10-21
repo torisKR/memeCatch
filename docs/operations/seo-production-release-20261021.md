@@ -41,7 +41,7 @@
 - TypeScript `--noEmit --incremental false`: 통과.
 - 애플리케이션 ESLint: 오류 0, 기존 이미지 경고 6.
 - Next.js 16.3.4 webpack 프로덕션 빌드: 종료 0, 정적 페이지 111개 생성.
-- QA 도구 Node 테스트: 29개 통과.
+- QA 도구 Node 테스트: 최종 32개 통과.
 - `git diff --cached --check`: 통과.
 - 스테이징된 diff Gitleaks 검사: 비밀정보 발견 없음.
 
@@ -60,8 +60,59 @@
 
 ## 배포 상태
 
-운영 staged 배포·검증·승격은 아직 진행 전이다. 실제 배포 ID와 운영 도메인 확인 결과는
-완료 후 이 절에 추가한다. 검증 실패 시 기존 운영 도메인 연결을 유지한다.
+- **운영 승격 완료:** 2026-10-21 17:26:24 KST.
+- 운영 URL: https://catchmeme.com/
+- 배포 ID: `dpl_4N7QybBodrEVeZJiRbPxsW2S3i36`, `READY`.
+- 실제 배포한 앱/패키징 커밋: `d56cb138f2bdb77c5fb9137c0e730dba5d8e4116`.
+  주요 기능 커밋은 `bb4d3eafcec18248710d5b9fcfdecb2e847ea226`이다.
+- Git archive로 고정한 소스의 원격 업로드 파일 1,279개를 SHA-1로 대조했다.
+  스테이징 diff와 실제 앱 업로드 대상의 Gitleaks 검사는 모두 통과했다.
+- 처음 구성한 미연결 배포는 상위 작업 폴더의 예전 Git 식별자가 자동 첨부돼 중단했다.
+  저장소 밖의 동일 archive와 명시적 커밋 정보로 재배포했으며 이전 운영 도메인은
+  검증 완료 전까지 계속 기존 READY 배포를 유지했다. 이 작업의 중복 preview도 중단했다.
+- Vercel 팀 공유 설정·환경변수·키·결제·광고 계정은 변경하지 않았다.
+  기존 automation 접근 자격만 staged 브라우저 검사에 사용했고, 새 키를 만들지 않았다.
+  모드 0600 임시 접근 파일은 검증 후 삭제했다. 운영 공개 검사는 우회 자격 없이 수행했다.
+- `main`은 변경하지 않았다. 릴리스 브랜치의 수동 운영 배포이며, 불완전한 기본 Git
+  자동 배포가 기존 배포별 안전 설정을 덮어쓰지 않도록 별도 승격했다.
+
+### 운영 브라우저 증거
+
+- 로그인하지 않은 격리 Chrome에서 홈·읽기 가이드·소개·탐색·새삥 상세를
+  320×568, 375×812, 390×844(reduced motion), 1440×900으로 확인했다.
+- **20개 화면 모두 HTTP 200**, 응답의 release 식별자가 배포 커밋과 일치했다.
+  가로 넘침 0, 광고 스크립트 0, JSON-LD 파싱 오류 0이다.
+- 모션 감소 5개 화면에서 실행 애니메이션 0개, 설정 일치를 확인했다.
+- 데스크톱 Enter로 유래·자료를 펼치고 출처 링크에 초점을 옮겼다.
+  무JavaScript에서도 서버 HTML의 제목·요약·JSON-LD가 유지됐다.
+- 콘솔 error·런타임·네트워크·자동화 control 오류는 모두 0개다. 기존
+  Permissions-Policy `tools` origin-trial 등 warning 21개는 남는다.
+- QA 도구는 실제 카드의 `li` 링크만 세도록 정정했다. 미리보기 링크를 카드로
+  오인하던 검사 오류를 앱 오류로 보고하지 않는다. 탐색은 요청한 interactive 문서와
+  보이는 H1을 함께 기다린다. 무JS DOM snapshot의 정확한 stale-node 오류만 기존
+  제한 안에서 재시도하며, 네트워크·권한·애플리케이션 오류는 숨기지 않는다.
+  최종 무JS 검사에서 해당 문서 전환 race가 1회 재시도됐다.
+- Aside 공개 브라우저에서도 `/`, `/robots.txt`, `/sitemap.xml`, `/llms.txt`,
+  도마도마 상세, `/explore?page=2`의 200을 확인했다. 새삥 GET 검색은 실제 상세 링크를
+  반환했고, 홈의 AI 전송 문구는 없으며 canonical/ko/x-default는 한국어 홈이다.
+  사이트맵 XML의 loc는 1,032개, 한국어 llms 안내 대상은 441개로 관찰됐다.
+  이는 페이지 공개 조건 통과 수이며 독립적 사실·권리 검수 완료 건수가 아니다.
+- 새삥 원본 iframe 1개와 제작 `VideoObject` 0개를 구분했다. 공개 제작 영상의 실제
+  양성 재생 검증은 이번에도 수행하지 않았다. 영상 업로드·공개는 하지 않았다.
+- 기존 `%` 포함 오류 문서는 staged sitemap에서 찾지 못해 실제 해당 URL 응답은
+  미검증이다. 인코딩 경계 회귀 테스트와 운영 표본의 실제 HTTP 검증을 구분한다.
+- 홈 responseStart 359ms라는 Aside 단일 관찰은 cold-cache/p95 개선 증거가 아니다.
+  responseEnd가 미기록돼 전체 완료 시간으로 보고하지 않는다.
+
+상세 보고서는 로컬 `.local/seo-release-20261021/`에 보관한다:
+
+- `staged-complete-browser/publisher-page-qa-LV0jDW/report.json`
+- `production-browser/publisher-page-qa-2pGeZs/report.json`
+- `promotion-result.json`, `runtime-log-summary.json`, `upload-safety.json`
+
+운영 DB 마이그레이션·콘텐츠 일괄 교정·사람 검수 자동 승인·AdSense 재심사 제출은
+수행하지 않았다. 새 Google Rich Results Test URL 검사를 이번 릴리스에서 다시 실행하지
+않았으며, 앞선 코드 모드 결과와 이번 운영 화면/JSON-LD 검증은 구분한다.
 
 ## 검증·롤백 계약
 

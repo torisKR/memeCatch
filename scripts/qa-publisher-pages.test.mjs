@@ -8,12 +8,47 @@ import {
   isAdvertisingUrl,
   isExpectedNoJsScriptFailure,
   isExpectedBlockedAnalytics,
+  isStaleDocumentNodeError,
   parsePublisherArgs,
   validateLocalPublisherOrigin,
   validateMemePath,
   validatePublisherOrigin,
   validatePublisherPage,
 } from "./qa-publisher-pages.mjs";
+
+test("no-JavaScript snapshot retries only the exact stale CDP document-node race", () => {
+  assert.equal(isStaleDocumentNodeError(new Error(JSON.stringify({ code: -32000, message: "Could not find node with given id" }))), true);
+  for (const error of [
+    new Error("network unavailable"),
+    new Error(JSON.stringify({ code: -32001, message: "Could not find node with given id" })),
+    new Error(JSON.stringify({ code: -32000, message: "Permission denied" })),
+    new Error("Application render failed"),
+  ]) assert.equal(isStaleDocumentNodeError(error), false);
+});
+
+test("home QA counts actual list cards rather than the preview and archive links", async () => {
+  const { JSDOM } = await import("jsdom");
+  const source = readFileSync(new URL("./qa-publisher-pages.mjs", import.meta.url), "utf8");
+  const selector = source.match(/const cards=\[\.\.\.document\.querySelectorAll\('([^']+)'\)/)?.[1];
+  assert.ok(selector, "The browser collector must declare its card selector");
+  const dom = new JSDOM(`<section data-home-section="recent-content">
+    <ol><li><a href="/memes/card"><span class="cardSummary">A real summary</span></a></li></ol>
+    <aside><a href="/memes/card">Open this pick</a></aside>
+    <a href="/memes/another">Other navigation</a>
+  </section>`);
+  const cards = [...dom.window.document.querySelectorAll(selector)];
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].querySelector('[class*="cardSummary"]').textContent, "A real summary");
+  dom.window.close();
+});
+
+test("navigation waits for the requested interactive document without waiting on unrelated embeds", () => {
+  const source = readFileSync(new URL("./qa-publisher-pages.mjs", import.meta.url), "utf8");
+  const navigation = source.slice(source.indexOf("async function navigate(route)"), source.indexOf("async function bootstrapProtectionCookie"));
+  assert.ok(navigation.includes("document.readyState !== 'loading' && location.pathname ==="));
+  assert.ok(navigation.includes("node.getClientRects().length > 0"));
+  assert.ok(!navigation.includes("document.readyState === 'complete'"));
+});
 
 test("publisher QA accepts only the exact legacy local relay and canonical production origin", () => {
   assert.equal(validatePublisherOrigin(LOCAL_PUBLISHER_ORIGIN), LOCAL_PUBLISHER_ORIGIN);

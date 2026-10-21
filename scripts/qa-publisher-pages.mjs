@@ -20,6 +20,13 @@ import {
 export const LOCAL_PUBLISHER_ORIGIN = "http://127.0.0.1:3012";
 export const PRODUCTION_PUBLISHER_ORIGIN = "https://catchmeme.com";
 export const ADSENSE_ACCOUNT = "ca-pub-3004906966180197";
+
+export function isStaleDocumentNodeError(error) {
+  try {
+    const detail = JSON.parse(error instanceof Error ? error.message : String(error));
+    return detail.code === -32000 && detail.message === "Could not find node with given id";
+  } catch { return false; }
+}
 const DEFAULT_ARTIFACT_ROOT = fileURLToPath(new URL("../.local/", import.meta.url));
 const ROUTES = ["/", "/guides/reading-memes", "/about", "/explore"];
 const VIEWPORTS = [
@@ -386,7 +393,9 @@ export async function runPublisherQa(options) {
     async function navigate(route) {
       currentRoute = route;
       await cdp("Page.navigate", { url: options.origin + route });
-      await waitFor("document.readyState === 'complete'", `Page did not load: ${route}`);
+      // A slow third-party image/embed may keep `complete` pending after the
+      // document is usable. Still require the requested document and visible H1.
+      await waitFor(`document.readyState !== 'loading' && location.pathname === ${JSON.stringify(route)}`, `Page did not load: ${route}`);
       await waitFor(`location.pathname === ${JSON.stringify(route)} && [...document.querySelectorAll('h1')].some(node => node.getClientRects().length > 0)`, `Page did not render its visible heading: ${route}`);
       await delay(200);
     }
@@ -437,9 +446,17 @@ export async function runPublisherQa(options) {
       try {
         await cdp("Page.navigate", { url: options.origin + route });
         let html = "";
+        let staleDocumentNodeRetries = 0;
         for (let attempt = 0; attempt < 80; attempt++) {
-          const root = await cdp("DOM.getDocument", { depth: -1, pierce: true });
-          html = (await cdp("DOM.getOuterHTML", { nodeId: root.root.nodeId })).outerHTML ?? "";
+          try {
+            const root = await cdp("DOM.getDocument", { depth: -1, pierce: true });
+            html = (await cdp("DOM.getOuterHTML", { nodeId: root.root.nodeId })).outerHTML ?? "";
+          } catch (error) {
+            if (!isStaleDocumentNodeError(error)) throw error;
+            staleDocumentNodeRetries++;
+            await delay(100);
+            continue;
+          }
           if (/<h1(?:\s|>)/i.test(html) && /id=["']meme-summary["']/i.test(html)) break;
           await delay(100);
         }
@@ -448,6 +465,7 @@ export async function runPublisherQa(options) {
           heading: /<h1(?:\s|>)/i.test(html),
           summary: /id=["']meme-summary["']/i.test(html),
           jsonLd: /type=["']application\/ld\+json["']/i.test(html),
+          staleDocumentNodeRetries,
         };
         if (!result.heading || !result.summary || !result.jsonLd) throw new Error(`${route} no-JavaScript SSR is missing its answer or JSON-LD`);
         return result;
@@ -467,7 +485,7 @@ export async function runPublisherQa(options) {
         if (route === "/") await waitFor("document.querySelector('[data-home-section=\"recent-content\"] a[href^=\"/memes/\"]') || document.querySelector('[data-home-recommendations]')", "Home did not finish rendering entries or an honest empty state", 300);
         if (route === "/explore") await waitFor("[...document.querySelectorAll('a[href^=\"/memes/\"]')].some(node => node.getClientRects().length > 0)", "Explore did not finish rendering visible public entries", 300);
         const document = documentResponses.findLast((response) => response.route === route);
-        const observed = await evaluate(`(()=>{const body=document.body.innerText;const cards=[...document.querySelectorAll('[data-home-section="recent-content"] a[href^="/memes/"]')];const playback=document.querySelector('[data-scene-playback]');const playbackStyle=playback?getComputedStyle(playback):null;const isDetail=location.pathname.startsWith('/memes/');const pathOf=(selector)=>{const href=document.querySelector(selector)?.href;if(!href)return null;try{return new URL(href).pathname}catch{return null}};const scripts=[...document.querySelectorAll('script[type="application/ld+json"]')];const roots=[];let jsonLdParseErrors=0;for(const script of scripts){try{roots.push(JSON.parse(script.textContent||''))}catch{jsonLdParseErrors++}}const nodes=[];const walk=(value)=>{if(Array.isArray(value)){value.forEach(walk);return}if(!value||typeof value!=='object')return;nodes.push(value);if(Array.isArray(value['@graph']))value['@graph'].forEach(walk)};roots.forEach(walk);const videos=nodes.filter(node=>node['@type']==='VideoObject');const matches=videos.filter(video=>{if(typeof video['@id']!=='string'||typeof video.name!=='string'||typeof video.thumbnailUrl!=='string'||typeof video.uploadDate!=='string'||typeof video.embedUrl!=='string')return false;let fragment;let videoId;try{fragment=new URL(video['@id']).hash.slice(1);videoId=new URL(video.embedUrl).pathname.match(/^\\/embed\\/([A-Za-z0-9_-]{11})$/)?.[1]}catch{return false}if(!fragment||!videoId||fragment!==('produced-video-'+videoId))return false;const item=document.getElementById(fragment);const frame=item?.querySelector('iframe');const heading=item?.querySelector('h3');if(!item||!frame||frame.getClientRects().length===0||frame.title!==video.name||heading?.textContent?.trim()!==video.name)return false;try{return new URL(frame.src).pathname==='/embed/'+videoId}catch{return false}});const story=document.querySelector('details#meme-story');const sources=document.querySelector('#meme-sources details');const examples=document.querySelector('#meme-examples');const media=document.querySelector('#meme-media');return {
+        const observed = await evaluate(`(()=>{const body=document.body.innerText;const cards=[...document.querySelectorAll('[data-home-section="recent-content"] li a[href^="/memes/"]')];const playback=document.querySelector('[data-scene-playback]');const playbackStyle=playback?getComputedStyle(playback):null;const isDetail=location.pathname.startsWith('/memes/');const pathOf=(selector)=>{const href=document.querySelector(selector)?.href;if(!href)return null;try{return new URL(href).pathname}catch{return null}};const scripts=[...document.querySelectorAll('script[type="application/ld+json"]')];const roots=[];let jsonLdParseErrors=0;for(const script of scripts){try{roots.push(JSON.parse(script.textContent||''))}catch{jsonLdParseErrors++}}const nodes=[];const walk=(value)=>{if(Array.isArray(value)){value.forEach(walk);return}if(!value||typeof value!=='object')return;nodes.push(value);if(Array.isArray(value['@graph']))value['@graph'].forEach(walk)};roots.forEach(walk);const videos=nodes.filter(node=>node['@type']==='VideoObject');const matches=videos.filter(video=>{if(typeof video['@id']!=='string'||typeof video.name!=='string'||typeof video.thumbnailUrl!=='string'||typeof video.uploadDate!=='string'||typeof video.embedUrl!=='string')return false;let fragment;let videoId;try{fragment=new URL(video['@id']).hash.slice(1);videoId=new URL(video.embedUrl).pathname.match(/^\\/embed\\/([A-Za-z0-9_-]{11})$/)?.[1]}catch{return false}if(!fragment||!videoId||fragment!==('produced-video-'+videoId))return false;const item=document.getElementById(fragment);const frame=item?.querySelector('iframe');const heading=item?.querySelector('h3');if(!item||!frame||frame.getClientRects().length===0||frame.title!==video.name||heading?.textContent?.trim()!==video.name)return false;try{return new URL(frame.src).pathname==='/embed/'+videoId}catch{return false}});const story=document.querySelector('details#meme-story');const sources=document.querySelector('#meme-sources details');const examples=document.querySelector('#meme-examples');const media=document.querySelector('#meme-media');return {
           heading:(document.querySelector('h1')?.textContent||'').replace(/\s+/g,' ').trim(),
           headingCount:document.querySelectorAll('h1').length,
           metaAccount:document.querySelector('meta[name="google-adsense-account"]')?.content||null,

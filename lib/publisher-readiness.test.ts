@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PUBLISHER_REVIEW_CHECKLIST_KEYS,
   PUBLISHER_READINESS_MAX_PAGE,
   PUBLISHER_READINESS_PAGE_SIZE,
   buildPublisherReadinessPage,
   classifyPublisherReadiness,
+  publisherReadinessFingerprint,
   parsePublisherReadinessFocus,
   parsePublisherReadinessPage,
   type PublisherReadinessRow,
@@ -30,8 +32,23 @@ function row(overrides: Partial<PublisherReadinessRow> = {}): PublisherReadiness
     ],
     moderation_status: "approved",
     published_at: "2026-09-20T00:00:00.000Z",
-    meme_sources: [{ source_url: "https://news.example.org/source" }],
-    meme_contents: [{ availability: "live", moderation_status: "approved" }],
+    updated_at: "2026-09-20T00:00:00.000Z",
+    safety_level: "safe",
+    safety_reviewed_at: "2026-09-20T00:00:00.000Z",
+    house_rights_attested_at: null,
+    meme_sources: [{
+      source_url: "https://news.example.org/source",
+      source_role: "origin_evidence",
+      rights_basis: "link_only",
+      copyright_status: "embeddable",
+      captured_at: "2026-09-20T00:00:00.000Z",
+    }],
+    meme_contents: [{
+      url: "https://news.example.org/source",
+      content_id: "source",
+      availability: "live",
+      moderation_status: "approved",
+    }],
     meme_tags_map: [{ tag_id: "one" }, { tag_id: "two" }, { tag_id: "three" }],
     ...overrides,
   };
@@ -61,12 +78,16 @@ describe("publisher readiness input parsing", () => {
 });
 
 describe("classifyPublisherReadiness", () => {
-  it("reports no issues for a complete record without claiming external approval", () => {
+  it("reports no automatic content gaps but keeps human review explicitly unconfirmed", () => {
     const result = classifyPublisherReadiness(row(), NOW);
 
-    expect(result.issues).toEqual([]);
+    expect(result.issueCodes).toEqual(["review"]);
+    expect(result.review.status).toBe("unreviewed");
     expect(result.safeSourceUrls).toEqual(["https://news.example.org/source"]);
     expect(result.depth.isSubstantial).toBe(true);
+    expect(result.rights.status).toBe("confirmed_delivery");
+    expect(result.media.status).toBe("renderable");
+    expect(result.safety.status).toBe("current");
     expect(JSON.stringify(result)).not.toMatch(/google.?approved|구글.?승인/i);
   });
 
@@ -93,11 +114,237 @@ describe("classifyPublisherReadiness", () => {
       NOW,
     );
 
-    expect(result.issueCodes).toEqual(["source", "summary", "date", "depth"]);
+    expect(result.issueCodes).toEqual([
+      "source",
+      "rights",
+      "summary",
+      "date",
+      "depth",
+      "stale",
+      "review",
+    ]);
     expect(result.safeSourceUrls).toEqual([]);
     expect(result.depth.signals.sourceCount).toBe(0);
     expect(result.issues.every((issue) => issue.explanation && issue.action)).toBe(true);
     expect(JSON.stringify(result)).not.toContain("user:secret");
+  });
+
+  it("separates unknown, restricted, and delivery-confirmed rights without claiming ownership", () => {
+    const unknown = classifyPublisherReadiness(
+      row({
+        meme_sources: [{
+          source_url: "https://example.org/source",
+          source_role: null,
+          rights_basis: null,
+          copyright_status: "unknown",
+          captured_at: "2026-09-20T00:00:00.000Z",
+        }],
+      }),
+      NOW,
+    );
+    expect(unknown.rights.status).toBe("unknown");
+
+    const linkOnly = classifyPublisherReadiness(
+      row({
+        meme_sources: [{
+          source_url: "https://example.org/source",
+          source_role: "origin_evidence",
+          rights_basis: "link_only",
+          copyright_status: "unknown",
+          captured_at: "2026-09-20T00:00:00.000Z",
+        }],
+      }),
+      NOW,
+    );
+    expect(linkOnly.rights.status).toBe("confirmed_delivery");
+
+    const restricted = classifyPublisherReadiness(
+      row({
+        meme_sources: [{
+          source_url: "https://example.org/source",
+          source_role: "origin_evidence",
+          rights_basis: "link_only",
+          copyright_status: "permission_needed",
+          captured_at: "2026-09-20T00:00:00.000Z",
+        }],
+      }),
+      NOW,
+    );
+    expect(restricted.rights.status).toBe("restricted");
+    expect(JSON.stringify(restricted.rights)).not.toMatch(/소유권|ownership/i);
+  });
+
+  it("flags unavailable or unapproved media separately from an absent optional embed", () => {
+    const absent = classifyPublisherReadiness(row({ meme_contents: [] }), NOW);
+    expect(absent.media.status).toBe("absent");
+    expect(absent.issueCodes).not.toContain("media");
+
+    const blocked = classifyPublisherReadiness(
+      row({ meme_contents: [{
+        url: "https://example.org/dead",
+        content_id: "dead",
+        availability: "dead",
+        moderation_status: "approved",
+      }] }),
+      NOW,
+    );
+    expect(blocked.media.status).toBe("unavailable");
+    expect(blocked.issueCodes).toContain("media");
+  });
+
+  it("counts only live and approved media as verified and holds mixed media sets", () => {
+    const result = classifyPublisherReadiness(
+      row({
+        meme_contents: [
+          {
+            url: "https://example.org/live",
+            content_id: "live",
+            availability: "live",
+            moderation_status: "approved",
+          },
+          {
+            url: "https://example.org/unchecked",
+            content_id: "unchecked",
+            availability: "unchecked",
+            moderation_status: "approved",
+          },
+          {
+            url: "https://example.org/pending",
+            content_id: "pending",
+            availability: "live",
+            moderation_status: "pending",
+          },
+          {
+            url: "https://example.org/dead",
+            content_id: "dead",
+            availability: "dead",
+            moderation_status: "approved",
+          },
+        ],
+      }),
+      NOW,
+    );
+
+    expect(result.media).toEqual({
+      status: "partial",
+      renderableCount: 1,
+      uncheckedCount: 2,
+      unavailableCount: 1,
+    });
+    expect(result.issueCodes).toContain("media");
+  });
+
+  it.each([
+    [{ availability: "unchecked", moderation_status: "approved" }, "unchecked"],
+    [{ availability: null, moderation_status: "approved" }, "unchecked"],
+    [{ availability: "live", moderation_status: "pending" }, "unchecked"],
+  ])("does not certify non-live or unapproved media %j", (content, status) => {
+    const result = classifyPublisherReadiness(
+      row({ meme_contents: [{ url: "https://example.org/media", content_id: "media", ...content }] }),
+      NOW,
+    );
+
+    expect(result.media.renderableCount).toBe(0);
+    expect(result.media.status).toBe(status);
+    expect(result.issueCodes).toContain("media");
+  });
+
+  it("marks safety and source verification as stale without treating the source as deleted", () => {
+    const result = classifyPublisherReadiness(
+      row({
+        updated_at: "2026-09-25T00:00:00.000Z",
+        safety_reviewed_at: "2026-09-20T00:00:00.000Z",
+        meme_sources: [{
+          source_url: "https://example.org/source",
+          source_role: "origin_evidence",
+          rights_basis: "link_only",
+          copyright_status: "embeddable",
+          captured_at: "2025-01-01T00:00:00.000Z",
+        }],
+      }),
+      NOW,
+    );
+    expect(result.safety.status).toBe("stale");
+    expect(result.sourceFreshness).toMatchObject({ status: "stale", unavailableCount: 0 });
+    expect(result.issueCodes).toEqual(expect.arrayContaining(["safety", "stale"]));
+  });
+
+  it("flags template titles and copied core prose as review holds, not automatic plagiarism claims", () => {
+    const repeated = prose(180);
+    const result = classifyPublisherReadiness(
+      row({
+        title: "새삥 밈 뜻과 유래 | 밈캐치",
+        description: repeated,
+        origin: repeated,
+      }),
+      NOW,
+    );
+    expect(result.issueCodes).toEqual(expect.arrayContaining(["template", "copy"]));
+    expect(result.issues.find((issue) => issue.code === "copy")?.explanation).toContain("동일하거나 중복");
+    expect(JSON.stringify(result.issues)).not.toContain("표절 확정");
+  });
+
+  it("accepts a current all-true human checklist while preserving other diagnostics", () => {
+    const current = row();
+    const fingerprint = publisherReadinessFingerprint(current);
+    const checklist = Object.fromEntries(
+      PUBLISHER_REVIEW_CHECKLIST_KEYS.map((key) => [key, true]),
+    ) as Record<(typeof PUBLISHER_REVIEW_CHECKLIST_KEYS)[number], true>;
+    const result = classifyPublisherReadiness(current, NOW, {
+      fingerprint,
+      checklist,
+      note: "출처와 자체 해설을 직접 확인함",
+      reviewedAt: "2026-09-28T05:00:00.000Z",
+    });
+
+    expect(result.review.status).toBe("current");
+    expect(result.issueCodes).not.toContain("review");
+  });
+
+  it("invalidates a prior review when core prose, normalized sources, rights, or safety change", () => {
+    const original = row();
+    const fingerprint = publisherReadinessFingerprint(original);
+    const changed = row({ summary: "검수 뒤 변경된 요약" });
+    const checklist = Object.fromEntries(
+      PUBLISHER_REVIEW_CHECKLIST_KEYS.map((key) => [key, true]),
+    ) as Record<(typeof PUBLISHER_REVIEW_CHECKLIST_KEYS)[number], true>;
+    const result = classifyPublisherReadiness(changed, NOW, {
+      fingerprint,
+      checklist,
+      note: "이전 검수",
+      reviewedAt: "2026-09-28T05:00:00.000Z",
+    });
+
+    expect(result.review.status).toBe("stale");
+    expect(result.issueCodes).toContain("review");
+  });
+
+  it("normalizes equivalent publication instants and preserves invalid raw publication values in the fingerprint", () => {
+    const compact = row({ published_at: "2026-09-20T00:00:00Z" });
+    const milliseconds = row({ published_at: "2026-09-20T00:00:00.000Z" });
+    const changed = row({ published_at: "2026-09-21T00:00:00.000Z" });
+    const invalidA = row({ published_at: "not-a-date" });
+    const invalidB = row({ published_at: "still-not-a-date" });
+
+    expect(publisherReadinessFingerprint(compact)).toBe(publisherReadinessFingerprint(milliseconds));
+    expect(publisherReadinessFingerprint(compact)).not.toBe(publisherReadinessFingerprint(changed));
+    expect(publisherReadinessFingerprint(invalidA)).not.toBe(publisherReadinessFingerprint(invalidB));
+  });
+
+  it("invalidates a review when the publication instant changes", () => {
+    const original = row({ published_at: "2026-09-20T00:00:00Z" });
+    const changed = row({ published_at: "2026-09-21T00:00:00Z" });
+    const checklist = Object.fromEntries(
+      PUBLISHER_REVIEW_CHECKLIST_KEYS.map((key) => [key, true]),
+    ) as Record<(typeof PUBLISHER_REVIEW_CHECKLIST_KEYS)[number], true>;
+    const result = classifyPublisherReadiness(changed, NOW, {
+      fingerprint: publisherReadinessFingerprint(original),
+      checklist,
+      note: "게시 시각 변경 전 검수",
+      reviewedAt: "2026-09-28T05:00:00.000Z",
+    });
+
+    expect(result.review.status).toBe("stale");
   });
 
   it.each([
@@ -196,5 +443,17 @@ describe("buildPublisherReadinessPage", () => {
     expect(report.displayedCount).toBe(1);
     expect(report.items[0].id).toBe("meme-2");
     expect(report.totalPublic).toBe(200);
+  });
+
+  it("flags page-local duplicate summaries without changing publication state", () => {
+    const duplicate = "서로 다른 문서에서 반복된 충분히 긴 공통 설명".repeat(8);
+    const report = buildPublisherReadinessPage(
+      [row({ id: "meme-1", summary: duplicate }), row({ id: "meme-2", summary: duplicate })],
+      { page: 1, totalPublic: 2, focus: "copy", now: NOW },
+    );
+
+    expect(report.items).toHaveLength(2);
+    expect(report.items.every((item) => item.issueCodes.includes("copy"))).toBe(true);
+    expect(report.items.every((item) => item.moderationStatus === "approved")).toBe(true);
   });
 });

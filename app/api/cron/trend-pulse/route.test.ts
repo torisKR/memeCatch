@@ -48,7 +48,7 @@ describe("trend pulse cron route", () => {
     });
   });
 
-  it("is the one scheduled owner of the sequential trend pipeline", () => {
+  it("keeps internal popularity on the existing daily Vercel schedule", () => {
     const config = JSON.parse(readFileSync("vercel.json", "utf8")) as {
       crons: Array<{ path: string; schedule: string }>;
     };

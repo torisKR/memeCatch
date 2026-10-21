@@ -6,21 +6,28 @@ vi.mock("@/lib/rate-limit", () => ({ getClientIp: () => "qa", rateLimit: mocks.r
 import { POST } from "./route";
 
 const result = { answer: "검색된 공개 자료입니다.", mode: "retrieved", retrievalMode: "keyword", items: [] };
-function request(body: unknown, options: { origin?: string; length?: string; signal?: AbortSignal; accept?: string } = {}) {
+function request(body: unknown, options: {
+  origin?: string; length?: string; signal?: AbortSignal; accept?: string; oidcToken?: string;
+} = {}) {
   return new Request("http://localhost/api/memes/chat", {
     method: "POST", headers: { origin: options.origin ?? "http://localhost", "content-type": "application/json",
       ...(options.length ? { "content-length": options.length } : {}),
-      ...(options.accept ? { accept: options.accept } : {}) },
+      ...(options.accept ? { accept: options.accept } : {}),
+      ...(options.oidcToken ? { "x-vercel-oidc-token": options.oidcToken } : {}) },
     body: typeof body === "string" ? body : JSON.stringify(body),
     signal: options.signal,
   });
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv("VERCEL", "");
   mocks.rate.mockReturnValue({ ok: true });
   mocks.answer.mockResolvedValue(result);
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 async function streamEvents(response: Response): Promise<MemeChatStreamEvent[]> {
   return (await response.text()).trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
@@ -190,6 +197,19 @@ describe("bounded public meme chat API", () => {
     expect(mocks.rate).toHaveBeenNthCalledWith(1, "meme-chat:ip:qa", { limit: 5, windowMs: 600_000 });
     expect(mocks.rate).toHaveBeenNthCalledWith(2, "meme-chat:instance", { limit: 20, windowMs: 60_000 });
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+  it.each([false, true])("ignores legacy Gateway OIDC headers for %s streaming", async (streaming) => {
+    const oidcToken = "eyJ.vercel-server-oidc.signature";
+    const response = await POST(request({ question: "질문" }, {
+      oidcToken,
+      ...(streaming ? { accept: "application/x-ndjson" } : {}),
+    }));
+    expect(response.status).toBe(200);
+    expect(mocks.answer).toHaveBeenCalledWith(
+      { question: "질문", locale: "ko" }, expect.any(AbortSignal),
+      ...(streaming ? [expect.any(Function)] : []),
+    );
+    expect(await response.text()).not.toContain(oidcToken);
   });
   it.each(["ip", "instance"])("respects %s rate ceiling and includes retry time", async (scope) => {
     if (scope === "instance") mocks.rate.mockReturnValueOnce({ ok: true });

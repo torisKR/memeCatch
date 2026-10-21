@@ -14,12 +14,14 @@ import {
   publicationExportUnavailableResponse,
 } from "@/lib/publication-export";
 import type { ContentDepthInput } from "@/lib/content-depth";
+import { parseUsageExamples } from "@/lib/usage-examples";
+import { publicationMarkdownText } from "@/lib/publication-markdown";
 
 /**
  * llms-full.txt — AI 시스템용 사이트 "전체 본문" (https://llmstxt.org 규격의 full 변형).
  * llms.txt가 요약 인덱스라면, 여기는 밈별 뜻·유래·사용 안전도까지 담은 완결 콘텐츠를 제공해
  * 답변엔진(ChatGPT/Perplexity 등)이 링크를 크롤링하지 않고도 정확히 인용할 수 있게 한다.
- * 크기 제어를 위해 트렌드 상위 순으로 상한을 둔다(전체 URL은 sitemap.xml로 안내).
+ * 크기 제어를 위해 최근 등록 순으로 상한을 둔다(전체 URL은 sitemap.xml로 안내).
  */
 export const revalidate = 3600;
 
@@ -38,18 +40,19 @@ type Row = ContentDepthInput & {
   aliases: string[] | null;
   category: MemeCategory;
   safety_level: SafetyLevel;
+  published_at: string | null;
+  moderation_status: "approved";
 };
 
 function oneLine(v: string | null | undefined): string {
-  if (!v) return "";
-  return v.replace(/\s+/g, " ").trim();
+  return publicationMarkdownText(v);
 }
 
 function memeBlock(m: Row): string {
   const safety = SAFETY_LEVELS[m.safety_level];
   const url = `${SITE_URL}${memePathFrom(m.short_id, m.slug)}`;
   const lines: string[] = [];
-  lines.push(`### ${m.title}`);
+  lines.push(`### ${oneLine(m.title)}`);
   lines.push(`- URL: ${url}`);
   lines.push(
     `- 사용 안전도: ${safety?.icon ?? ""} ${safety?.user ?? m.safety_level}`
@@ -62,9 +65,16 @@ function memeBlock(m: Row): string {
   const desc = oneLine(m.description);
   if (desc) lines.push(`- 설명: ${desc}`);
   const origin = oneLine(m.origin);
-  if (origin) lines.push(`- 유래: ${origin}`);
+  if (origin) lines.push(`- 유래(편집 설명): ${origin}`);
   const usage = oneLine(m.usage_note);
-  if (usage) lines.push(`- 사용법·주의: ${usage}`);
+  if (usage) lines.push(`- 사용법: ${usage}`);
+  const caution = oneLine(m.caution);
+  if (caution) lines.push(`- 주의: ${caution}`);
+  for (const example of parseUsageExamples(m.usage_examples)) {
+    lines.push(
+      `- 활용 예 · ${oneLine(example.situation)}: ${oneLine(example.text)}`,
+    );
+  }
   return lines.join("\n");
 }
 
@@ -75,11 +85,11 @@ export async function GET() {
   try {
     const result = await loadApprovedIndexableMemes<Row>(createStaticClient(), {
       select:
-        "id, title, short_id, slug, summary, description, origin, origin_year," +
-        " usage_note, caution, aliases, category, safety_level, usage_examples," +
-        " meme_sources(source_url), meme_contents(availability, moderation_status)," +
+        "id, title, short_id, slug, summary, published_at, moderation_status," +
+        " description, origin, origin_year, usage_note, caution, aliases," +
+        " category, safety_level, usage_examples, meme_sources(*), meme_contents(*)," +
         " meme_tags_map(tag_id)",
-      primaryOrder: "trend_score",
+      primaryOrder: "published_at",
       limit: MAX_MEMES,
       countAll: true,
     });
@@ -117,9 +127,10 @@ export async function GET() {
 
   const body = `# 밈캐치 (MemeCatch) — 전체 본문
 
-> 한국 밈·유행어·챌린지 ${countLine}건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전.
-> 이 문서는 답변엔진이 링크 크롤링 없이도 인용할 수 있도록, 트렌드 상위 밈의 본문을 그대로 담은 것입니다.
+> 한국 밈·유행어·챌린지 ${countLine}건의 뜻·유래·사용 안전도를 기록하는 밈 사전.
+> 이 문서는 답변엔진이 링크 크롤링 없이도 참고할 수 있도록, 최근 등록된 검수 항목 최대 ${MAX_MEMES}건의 공개 본문을 담습니다.
 > 공개 승인 상태이고 사이트의 콘텐츠 충실도 기준을 통과한 항목만 포함합니다. 이는 독립적인 사실 검증 완료를 뜻하지 않으며, 제3자 원본 영상·이미지는 저장하지 않고 출처 링크로만 제공합니다.
+> 유래는 편집 설명이며, 연결된 출처 URL 자체가 해당 유래 주장을 독립적으로 입증한다는 뜻은 아닙니다.
 > 언어: 한국어(ko). 전체 밈 URL 목록은 ${SITE_URL}/sitemap.xml 을, 요약 인덱스는 ${SITE_URL}/llms.txt 를 참고하세요.
 
 ## Reviewed translations

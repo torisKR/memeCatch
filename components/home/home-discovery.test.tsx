@@ -117,7 +117,7 @@ describe("HomeDiscovery", () => {
         expect(html).toContain(entry.summary);
         expect(html).toContain(`href="${entry.href}"`);
       }
-      expect(html).toContain(copy.searchScope);
+      expect(html).not.toContain('type="search"');
       expect(html).toContain(copy.resultStatus(3, 3));
       expect(html).toContain(copy.previewTitle);
       expect(html).not.toMatch(/likes|users online|minted/iu);
@@ -242,19 +242,19 @@ describe("HomeDiscovery", () => {
     expect(card.getAttribute("style")).toBeNull();
   });
 
-  it("normalizes Unicode and reports the exact filtered count", async () => {
+  it("reports the exact category-filtered count without duplicating home search", async () => {
     const user = userEvent.setup();
     render(<HomeDiscovery locale="en" entries={entries} />);
 
-    await user.type(screen.getByRole("searchbox", { name: "Filter this recent set" }), "cat");
+    await user.click(screen.getByRole("button", { name: "Phrase" }));
 
-    expect(within(getDeck()).getAllByRole("listitem")).toHaveLength(2);
-    expect(screen.getByRole("status").textContent).toBe("Showing 2 of 3 recent entries.");
+    expect(within(getDeck()).getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByRole("status").textContent).toBe("Showing 1 of 3 recent entries.");
     expect(within(getDeck()).getByText("ＣＡＴ 밈")).toBeTruthy();
-    expect(within(getDeck()).getByText("Cat reaction video")).toBeTruthy();
+    expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
-  it("derives category chips from records and combines category and text filters", async () => {
+  it("derives category chips from records and preserves their safety-bearing links", async () => {
     const user = userEvent.setup();
     render(<HomeDiscovery locale="en" entries={entries} />);
 
@@ -267,42 +267,33 @@ describe("HomeDiscovery", () => {
     ]);
 
     await user.click(within(categoryGroup).getByRole("button", { name: "Phrase" }));
-    await user.type(screen.getByRole("searchbox", { name: "Filter this recent set" }), "냥");
 
     expect(within(getDeck()).getAllByRole("listitem")).toHaveLength(1);
     expect(within(getDeck()).getByText("ＣＡＴ 밈")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe("Showing 1 of 3 recent entries.");
   });
 
-  it("offers a localized no-results state that clears both filters", async () => {
+  it("restores every real record when the all-categories chip is selected", async () => {
     const user = userEvent.setup();
     render(<HomeDiscovery locale="en" entries={entries} />);
 
     await user.click(screen.getByRole("button", { name: "Challenge" }));
-    await user.type(screen.getByRole("searchbox", { name: "Filter this recent set" }), "not-here");
-
-    expect(screen.queryByRole("list", { name: "Filtered recent entries" })).toBeNull();
-    expect(screen.getByText("No recent entries match")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toBe("Showing 0 of 3 recent entries.");
-
-    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(within(getDeck()).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(getDeck()).getByText("Dance loop")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "All" }));
 
     expect(within(getDeck()).getAllByRole("listitem")).toHaveLength(3);
-    expect((screen.getByRole("searchbox", { name: "Filter this recent set" }) as HTMLInputElement).value)
-      .toBe("");
+    expect(screen.getByRole("status").textContent).toBe("Showing 3 of 3 recent entries.");
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it.each(SEO_ROUTE_LOCALES)("offers full archive search without making a request for %s", async (locale) => {
-    const user = userEvent.setup();
+  it.each(SEO_ROUTE_LOCALES)("keeps archive search in the single home search for %s", (locale) => {
     const copy = HOME_DISCOVERY_COPY[locale];
     render(<HomeDiscovery locale={locale} entries={entries} />);
-    await user.type(screen.getByRole("searchbox", { name: copy.searchLabel }), "  ＴＭＩ & 냥  ");
-    const link = screen.getByRole("link", { name: copy.searchArchive("TMI & 냥") });
-    expect(link.getAttribute("href")).toBe(`${locale === "ko" ? "" : `/${locale}`}/search?q=TMI+%26+%EB%83%A5`);
-    expect(screen.getByText(copy.noResultsTitle)).toBeTruthy();
-    expect(link.closest("form")?.getAttribute("method")).toBe("get");
-    expect(screen.getByRole("searchbox", { name: copy.searchLabel }).getAttribute("name")).toBe("q");
+    expect(screen.queryByRole("searchbox", { name: copy.searchLabel })).toBeNull();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.getByRole("list", { name: copy.resultsLabel }).querySelectorAll('li'))
+      .toHaveLength(entries.length);
   });
 
   it("renders a real representative thumbnail and keeps the original art when it fails", () => {

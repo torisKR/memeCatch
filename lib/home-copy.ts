@@ -27,7 +27,10 @@ export type HomeCopy = {
     originalLabel: string;
     empty: string;
     emptyAction: string;
+    unavailable?: string;
+    unavailableAction?: string;
     all: string;
+    guide?: string;
   };
   pathways: {
     eyebrow: string;
@@ -50,24 +53,27 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
   ko: {
     hero: {
       eyebrow: "뜻 · 유래 · 사용 맥락",
-      title: "밈의 뜻을 찾고, 쓸 맥락까지 확인하세요.",
-      intro: "처음 본 유행어부터 익숙한 짤까지, 뜻과 출처를 읽고 네 가지 사용 신호로 맥락을 살펴보세요.",
+      title: "지금 궁금한 밈, 한눈에.",
+      intro: "뜻·출처·사용 맥락을 짧게 확인하세요.",
       searchLabel: "밈 검색",
-      searchPlaceholder: "궁금한 밈이나 유행어를 검색하세요",
+      searchPlaceholder: "밈 이름이나 상황으로 검색",
       searchButton: "검색",
       sceneLabel: "오렌지색 입체 말풍선 심벌과 금속 카드, 네 가지 맥락 신호를 조작하는 스튜디오",
       pauseScene: "장면 멈추기",
       playScene: "장면 재생하기",
     },
     recent: {
-      eyebrow: "최근 기록",
-      title: "새로 정리된 밈",
-      description: "지금 읽을 수 있도록 공개된 설명에서 최근 항목을 모았습니다.",
+      eyebrow: "편집 추천",
+      title: "출처와 설명을 갖춘 밈",
+      description: "제목이 있는 공개 출처와 충분한 설명을 함께 갖춘 항목만 최근 공개순으로 골랐습니다.",
       read: "뜻과 유래 읽기",
       originalLabel: "원문",
-      empty: "지금은 최근 항목을 표시할 수 없습니다. 공개 항목이 없거나 연결이 원활하지 않을 수 있어요. 잠시 후 다시 열거나 밈 검색을 이용해 주세요.",
+      empty: "현재 편집 추천 기준을 통과한 공개 항목이 없습니다. 전체 밈 검색에서 다른 설명을 찾아보세요.",
       emptyAction: "밈 검색하기",
+      unavailable: "추천 항목을 불러오지 못했습니다. 연결이 복구되면 다시 표시됩니다.",
+      unavailableAction: "전체 밈 검색하기",
       all: "전체 밈 보기",
+      guide: "밈 설명 읽는 법",
     },
     pathways: {
       eyebrow: "함께 만드는 밈 사전",
@@ -102,8 +108,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
   en: {
     hero: {
       eyebrow: "Meaning · origin · usage context",
-      title: "Find the meme. Understand the moment around it.",
-      intro: "Look up Korean memes and slang, trace where they came from, and use four practical signals to read the context before you repeat them.",
+      title: "Korean memes, explained.",
+      intro: "Check the meaning, source, and usage context in one place.",
       searchLabel: "Search memes",
       searchPlaceholder: "Search a Korean meme or phrase",
       searchButton: "Search",
@@ -154,8 +160,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
   ja: {
     hero: {
       eyebrow: "意味・由来・使用文脈",
-      title: "ミームを探して、使う前に文脈まで理解する。",
-      intro: "韓国のミームや流行語の意味と由来を調べ、4つの使用シグナルで今の文脈を確認できます。",
+      title: "韓国ミームを、ひと目で。",
+      intro: "意味・出典・使用文脈を簡潔に確認できます。",
       searchLabel: "ミームを検索",
       searchPlaceholder: "韓国のミームや流行語を検索",
       searchButton: "検索",
@@ -206,8 +212,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
   zh: {
     hero: {
       eyebrow: "含义・来源・使用语境",
-      title: "找到迷因，也读懂使用它的语境。",
-      intro: "搜索韩国迷因和流行语，了解它们的含义与来源，并用四种使用提示判断当前语境。",
+      title: "一眼看懂韩国迷因。",
+      intro: "简洁查看含义、来源和使用语境。",
       searchLabel: "搜索迷因",
       searchPlaceholder: "搜索韩国迷因或流行语",
       searchButton: "搜索",
@@ -258,8 +264,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
   "zh-tw": {
     hero: {
       eyebrow: "含義・來源・使用語境",
-      title: "找到迷因，也讀懂使用它的語境。",
-      intro: "搜尋韓國迷因和流行語，了解它們的含義與來源，並用四種使用提示判斷當前語境。",
+      title: "一眼看懂韓國迷因。",
+      intro: "簡潔查看含義、來源和使用情境。",
       searchLabel: "搜尋迷因",
       searchPlaceholder: "搜尋韓國迷因或流行語",
       searchButton: "搜尋",

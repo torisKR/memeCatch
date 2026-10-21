@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { sanitizeStudioText } from "@/components/studio/meme-artifacts";
 import { createHouseOriginal } from "@/lib/actions/admin";
 import {
+  CONTENT_PIPELINE_IMPORT_MAX_BYTES,
+  ContentPipelineImportError,
+  parseContentPipelineImport,
+  type ContentPipelineCard,
+} from "@/lib/content-pipeline-import";
+import {
   HOUSE_ORIGINAL,
   houseOriginalOperatorPath,
   houseOriginalOriginHint,
@@ -49,6 +55,8 @@ export function HouseOriginalForm() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [importedCard, setImportedCard] = useState<ContentPipelineCard | null>(null);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
@@ -77,6 +85,43 @@ export function HouseOriginalForm() {
     setStudioResult(null);
     setSelectedConcept(null);
     setStudioError(null);
+  }
+
+  async function importLocalDraft(event: React.ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+
+    setError(null);
+    setImportNotice(null);
+    if (file.size > CONTENT_PIPELINE_IMPORT_MAX_BYTES) {
+      setError("JSON 파일은 100KB 이하여야 합니다.");
+      return;
+    }
+
+    try {
+      const draft = parseContentPipelineImport(await file.text());
+      setTitle(draft.title);
+      setSummary(draft.summary);
+      setDescription(draft.description);
+      setOrigin(draft.origin);
+      setSafetyLevel(draft.safetyLevel);
+      setCategory(draft.category);
+      setDifficulty(draft.difficulty);
+      setOriginYear(String(draft.originYear));
+      setCountry(draft.country);
+      setUsageContext(draft.usageContext);
+      setImportedCard(draft.card);
+      resetGeneratedConcepts();
+      setImportNotice("검토를 통과한 로컬 초안을 불러왔습니다. 내용을 확인한 뒤 대기로 저장해 주세요.");
+    } catch (cause) {
+      setError(
+        cause instanceof ContentPipelineImportError
+          ? cause.message
+          : "JSON 초안을 불러오지 못했습니다. 파일을 확인해 주세요.",
+      );
+    }
   }
 
   async function generateConcepts() {
@@ -209,6 +254,52 @@ export function HouseOriginalForm() {
         ))}
       </ol>
       <p className="text-sm leading-relaxed text-muted">{houseOriginalPathNote()}</p>
+      <section
+        aria-label="로컬 생성 초안 가져오기"
+        className="space-y-3 rounded-xl border border-border bg-surface-2 p-4"
+      >
+        <div>
+          <h2 className="text-lg font-bold">OpenCodex 로컬 초안 가져오기</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            로컬에서 생성하고 검토를 통과한 JSON만 항목에 채웁니다. 가져오기만으로 저장하거나
+            게시하지 않으며, 아래 내용을 운영자가 확인한 뒤 대기로 저장합니다.
+          </p>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium">초안 JSON 파일 (최대 100KB)</span>
+          <input
+            type="file"
+            accept="application/json,.json"
+            onChange={(event) => void importLocalDraft(event)}
+            disabled={pending}
+            className="block min-h-11 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+          />
+        </label>
+        {importNotice && (
+          <p role="status" className="rounded-lg bg-safety-green-bg p-3 text-sm text-safety-green">
+            {importNotice}
+          </p>
+        )}
+        {importedCard && (
+          <aside
+            aria-label="가져온 카드 문구·아트 방향·제작 설정"
+            className="space-y-2 rounded-lg border border-border bg-surface p-3"
+          >
+            <h3 className="text-sm font-bold">
+              카드 문구·아트 방향·제작 설정 (초안 설명에 함께 저장)
+            </h3>
+            <p className="whitespace-pre-line text-sm font-semibold">{importedCard.caption}</p>
+            <p className="text-sm leading-relaxed text-muted">{importedCard.visualBrief}</p>
+            <p className="break-all font-mono text-xs leading-relaxed text-muted">
+              제작 설정: {JSON.stringify({
+                motif: importedCard.motif,
+                symbols: importedCard.symbols,
+                composition: importedCard.composition,
+              })}
+            </p>
+          </aside>
+        )}
+      </section>
       <section
         aria-label="자체 밈 초안 생성"
         className="space-y-3 rounded-xl border border-accent bg-accent-soft p-4"

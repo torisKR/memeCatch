@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemeEmbed } from "./meme-embed";
@@ -79,19 +79,8 @@ describe("MemeEmbed", () => {
     expect(html).not.toContain("재생하면");
   });
 
-  it("loads a non-representative TikTok embed immediately in a viewport-sized frame", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        provider: "tiktok",
-        sourceUrl: tiktokContent.url,
-        embedUrl: "https://www.tiktok.com/player/v1/6833754937747361025",
-        embedHtml: null,
-        contentId: tiktokContent.content_id,
-        title: "심쿵",
-        authorName: "퀸이슬",
-      }),
-    });
+  it("renders TikTok immediately without requesting the login-only oEmbed endpoint", () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     render(
@@ -103,8 +92,10 @@ describe("MemeEmbed", () => {
     );
 
     const frame = screen.getByTitle("심쿵 — TikTok 관련 콘텐츠");
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(frame.getAttribute("src")).toContain(
+      "www.tiktok.com/player/v1/6833754937747361025"
+    );
     expect(frame.className).toContain("h-[min(72svh,680px)]");
     expect(frame.className).toContain("max-w-[382px]");
     expect(screen.getByText("밈 사용 예시")).toBeTruthy();
@@ -152,7 +143,7 @@ describe("MemeEmbed", () => {
     );
 
     expect(html).not.toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
-    expect(html).toContain("원본 맥락은 출처에서 확인할 수 있어요.");
+    expect(html).toContain("맥락 자료 링크가 있어요.");
     expect(html).toContain("출처에서 원본 맥락 보기");
   });
 
@@ -166,7 +157,8 @@ describe("MemeEmbed", () => {
     );
 
     expect(html).not.toContain("www.tiktok.com/player/v1/6833754937747361025");
-    expect(html).toContain("원본 콘텐츠는 현재 확인할 수 없지만");
+    expect(html).toContain("원본 콘텐츠 재생 불가.");
+    expect(html).not.toContain("뜻과 맥락은 여기 남아 있어요");
     expect(html).not.toContain("출처 상태 확인하기");
   });
 
@@ -187,29 +179,19 @@ describe("MemeEmbed", () => {
     );
 
     expect(html).not.toContain("youtube-nocookie.com/embed");
-    expect(html).toContain("원본 콘텐츠는 현재 확인할 수 없지만");
-    expect(html).not.toContain("원본 콘텐츠는 출처에서 볼 수 있어요");
+    expect(html).toContain("원본 콘텐츠 재생 불가.");
+    expect(html).not.toContain("원본 링크가 있어요.");
+    expect(html).not.toContain("아래 설명이 이 밈의 기록이에요");
   });
 
-  it("loads Instagram immediately without a click gate", async () => {
+  it("renders Instagram immediately without requesting the login-only oEmbed endpoint", () => {
     const instagramContent = {
       ...tiktokContent,
       platform: "Instagram",
       content_id: "DGYAH_wviX0",
       url: "https://www.instagram.com/reel/DGYAH_wviX0/",
     };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        provider: "instagram",
-        sourceUrl: instagramContent.url,
-        embedUrl: "https://www.instagram.com/reel/DGYAH_wviX0/embed/captioned/",
-        embedHtml: null,
-        contentId: instagramContent.content_id,
-        title: null,
-        authorName: null,
-      }),
-    });
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     render(
@@ -223,43 +205,75 @@ describe("MemeEmbed", () => {
     const frame = screen.getByTitle(
       "검정고무신 애니메이션 — Instagram 관련 콘텐츠"
     );
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(frame.getAttribute("src")).toBe(
+      "https://www.instagram.com/reel/DGYAH_wviX0/embed/captioned/"
+    );
     expect(frame.className).toContain("max-w-[540px]");
     expect(screen.queryByText(/재생하면/)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("keeps Threads srcDoc popups inside the iframe sandbox", async () => {
-    const threadsContent = {
-      ...tiktokContent,
-      platform: "Threads",
-      content_id: "abc123",
-      url: "https://www.threads.net/@memecatch/post/abc123",
-    };
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        provider: "threads",
-        sourceUrl: threadsContent.url,
-        embedUrl: null,
-        embedHtml: '<blockquote><a href="https://example.com">post</a></blockquote>',
-        contentId: threadsContent.content_id,
-        title: null,
-        authorName: null,
-      }),
-    }));
+  it.each([
+    ["Facebook", "https://www.facebook.com/watch/?v=123", "Facebook 밈"],
+    ["Threads", "https://www.threads.net/@memecatch/post/abc123", "Threads 밈"],
+  ])(
+    "uses an honest link fallback for %s without a public provider request",
+    (platform, url, title) => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
 
-    render(
+      render(
+        <MemeEmbed
+          content={{
+            ...tiktokContent,
+            platform,
+            content_id: "abc123",
+            url,
+          }}
+          title={title}
+          isRepresentative={false}
+        />
+      );
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(screen.queryByTitle(new RegExp(title))).toBeNull();
+      expect(
+        screen
+          .getByRole("link", { name: /출처에서 원본 보기/ })
+          .getAttribute("href")
+      ).toBe(url);
+      expect(screen.getByText("원본 링크가 있어요.")).toBeTruthy();
+    }
+  );
+
+  it("updates the immediate iframe when the source identity changes", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { rerender } = render(
+      <MemeEmbed content={tiktokContent} title="첫 영상" isRepresentative={false} />
+    );
+
+    expect(
+      screen.getByTitle("첫 영상 — TikTok 관련 콘텐츠").getAttribute("src")
+    ).toContain(tiktokContent.content_id);
+
+    rerender(
       <MemeEmbed
-        content={threadsContent}
-        title="Threads 밈"
+        content={{
+          ...tiktokContent,
+          content_id: "7512345678901234567",
+          url: "https://www.tiktok.com/@coco.midnight/video/7512345678901234567",
+        }}
+        title="둘째 영상"
         isRepresentative={false}
       />
     );
 
-    const frame = await screen.findByTitle("Threads 밈 — Threads 관련 콘텐츠");
-    await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("blockquote"));
-    expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-popups");
+    expect(screen.queryByTitle("첫 영상 — TikTok 관련 콘텐츠")).toBeNull();
+    expect(
+      screen.getByTitle("둘째 영상 — TikTok 관련 콘텐츠").getAttribute("src")
+    ).toContain("7512345678901234567");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

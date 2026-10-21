@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   LocaleAutoDetect,
   LocaleDocumentSync,
   LocaleProvider,
+  persistLocale,
   useLocale,
 } from "@/lib/i18n-client";
 import { LOCALE_COOKIE } from "@/lib/i18n";
@@ -53,7 +54,74 @@ describe("LocaleProvider URL precedence", () => {
 
   afterEach(() => {
     cleanup();
+    setLocation("/");
+    persistLocale("ko");
     clearLocaleCookie();
+  });
+
+  it("lets the Korean detail URL replace a persisted English detail locale", () => {
+    setLocation("/en/memes/english-detail");
+    render(
+      <LocaleProvider initialLocale="en">
+        <LocaleDocumentSync />
+        <LocaleProbe />
+      </LocaleProvider>,
+    );
+    act(() => persistLocale("en"));
+    cleanup();
+
+    setLocation("/memes/korean-detail");
+    renderProvider();
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(document.documentElement.lang).toBe("ko");
+
+    act(() => window.dispatchEvent(new Event("memecatch:locale-change")));
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(document.documentElement.lang).toBe("ko");
+  });
+
+  it("does not carry a same-route explicit locale into another Korean detail URL", () => {
+    setLocation("/memes/first-detail");
+    renderProvider();
+    act(() => persistLocale("en"));
+    expect(screen.getByLabelText("active locale").textContent).toBe("en");
+    cleanup();
+
+    setLocation("/memes/second-detail");
+    renderProvider();
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(document.documentElement.lang).toBe("ko");
+  });
+
+  it("keeps an explicit locale selection active on the current Korean detail URL", () => {
+    setLocation("/memes/current-detail");
+    renderProvider();
+
+    act(() => persistLocale("en"));
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("en");
+    expect(document.documentElement.lang).toBe("en");
+  });
+
+  it("keeps the selected locale when navigation reaches its prefixed detail URL", () => {
+    setLocation("/memes/current-detail");
+    renderProvider();
+    act(() => persistLocale("en"));
+    cleanup();
+
+    setLocation("/en/memes/current-detail");
+    render(
+      <LocaleProvider initialLocale="en">
+        <LocaleDocumentSync />
+        <LocaleProbe />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("en");
+    expect(document.documentElement.lang).toBe("en");
   });
 
   it.each(["/?lang=ko", "/", "/index"])(

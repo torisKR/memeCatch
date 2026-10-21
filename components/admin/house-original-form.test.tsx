@@ -16,6 +16,57 @@ vi.mock("@/lib/actions/admin", () => ({
 
 import { HouseOriginalForm } from "./house-original-form";
 
+function localImportArtifact() {
+  const draft = {
+    title: "로컬 초안 제목",
+    summary: "로컬에서 생성하고 독립 검토까지 마친 자체 제작 밈 요약",
+    description:
+      "하루의 업무를 모두 마친 사람이 화면의 마지막 체크 표시를 누르는 장면을 담는다. 체크가 끝나는 순간 화면 아래에서 커다란 퇴근 버튼이 올라오고, 주변의 알림 조각은 조용히 사라진다. 핵심 문구는 ‘오늘 할 일 완료, 이제 퇴근 버튼만 누르면 됨’이다. 실제 시스템 기능을 설명하는 문구가 아니라 하루의 작은 성취를 게임의 마지막 단계처럼 표현한 말장난이다. 바쁜 날 끝에 동료와 가볍게 성취감을 나누는 상황을 위해 밈캐치가 자체 기획했다. 버튼이 활성화되기 전에는 작은 체크 표시들이 차례로 켜지고, 마지막 체크가 끝나면 화면 전체의 색이 차분한 회색에서 밝은 초록색으로 바뀐다. 남은 일을 재촉하기보다 오늘 끝낸 일에 잠시 만족하는 태도를 가볍게 보여 준다.",
+    origin: "밈캐치가 하루 업무 완료의 성취감을 게임의 마지막 버튼에 비유해 자체 기획한 창작 문구입니다.",
+    usageNote: "업무를 마친 직후 동료나 친구에게 가볍게 성취감을 알리는 메신저와 게시물에 사용합니다.",
+    caution: "실제 퇴근 승인이나 업무 완료를 확인하는 시스템 기능으로 오해하지 않도록 사용합니다.",
+    examples: [
+      { context: "work", text: "오늘 할 일 완료. 이제 퇴근 버튼만 누르면 됨." },
+      { context: "friends", text: "나 오늘 퇴근 버튼 정시에 누른다." },
+    ],
+    card: {
+      caption: "오늘 할 일 완료\n퇴근 버튼 활성화",
+      visualBrief:
+        "짙은 화면 위에 밈캐치 자체 도형으로 만든 체크 표시와 커다란 둥근 퇴근 버튼을 배치한다. 버튼을 누르는 손과 사라지는 알림 조각을 함께 그린다.",
+      motif: "office",
+      symbols: ["screen", "briefcase", "spark"],
+      composition: "frame",
+    },
+  };
+  return {
+    schemaVersion: 1,
+    kind: "house_original",
+    status: "draft",
+    generatedAt: "2025-12-31T23:30:00.000Z",
+    provider: "opencodex",
+    topic: "하루 업무를 모두 마친 순간",
+    review: { decision: "pass", issues: [] },
+    draft,
+    adminDraft: {
+      title: draft.title,
+      summary: draft.summary,
+      description: `${draft.description}\n\n활용: ${draft.usageNote}\n\n자체 작성 예문:\n${draft.examples.map((example) => `${example.context}: ${example.text}`).join("\n")}\n\n주의: ${draft.caution}\n\n카드 문구: ${draft.card.caption}\n\n비주얼: ${draft.card.visualBrief}\n\n카드 제작 설정: ${JSON.stringify({ motif: draft.card.motif, symbols: draft.card.symbols, composition: draft.card.composition })}`,
+      origin: draft.origin,
+      safetyLevel: "yellow",
+      category: "image",
+      difficulty: "normal",
+      originYear: 2025,
+      country: "KR",
+      usageContext: {
+        work: "yellow",
+        friends: "green",
+        family: "yellow",
+        sns: "yellow",
+      },
+    },
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -258,6 +309,104 @@ describe("HouseOriginalForm", () => {
 
     fireEvent.change(screen.getByLabelText("자체 밈 주제"), { target: { value: "바뀐 주제" } });
     expect(screen.queryByRole("button", { name: "“초안 1” 초안 사용" })).toBeNull();
+    expect(createHouseOriginal).not.toHaveBeenCalled();
+  });
+
+  it("imports a reviewed local JSON draft without fetching or saving", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    createHouseOriginal.mockResolvedValue({ ok: true, data: { memeId: "meme-imported" } });
+    render(<HouseOriginalForm />);
+
+    const artifact = {
+      ...localImportArtifact(),
+      moderationStatus: "approved",
+      publishImmediately: true,
+      runtimeOverrides: { safetyLevel: "green", country: "US" },
+    };
+    const file = new File([JSON.stringify(artifact)], "draft.json", {
+      type: "application/json",
+    });
+    Object.defineProperty(file, "text", {
+      value: async () => JSON.stringify(artifact),
+    });
+    const input = screen.getByLabelText("초안 JSON 파일 (최대 100KB)") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect((screen.getByLabelText("제목") as HTMLInputElement).value).toBe("로컬 초안 제목");
+    });
+    expect((screen.getByLabelText("한 줄 요약") as HTMLInputElement).value).toBe(
+      artifact.adminDraft.summary,
+    );
+    expect((screen.getByLabelText("분류") as HTMLSelectElement).value).toBe("image");
+    expect((screen.getByLabelText("밈 국가") as HTMLSelectElement).value).toBe("KR");
+    expect(screen.getByRole("status").textContent).toContain("대기로 저장");
+    expect(screen.getByRole("complementary", { name: "가져온 카드 문구·아트 방향·제작 설정" }).textContent).toContain(
+      artifact.draft.card.caption,
+    );
+    expect(screen.getByRole("complementary", { name: "가져온 카드 문구·아트 방향·제작 설정" }).textContent).toContain(
+      artifact.draft.card.visualBrief,
+    );
+    expect(
+      screen.getByRole("complementary", { name: "가져온 카드 문구·아트 방향·제작 설정" })
+        .textContent,
+    ).toContain(JSON.stringify({
+      motif: artifact.draft.card.motif,
+      symbols: artifact.draft.card.symbols,
+      composition: artifact.draft.card.composition,
+    }));
+    expect(screen.getByText("카드 문구·아트 방향·제작 설정 (초안 설명에 함께 저장)")).toBeTruthy();
+    expect(input.value).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(createHouseOriginal).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "대기로 저장" }));
+    await waitFor(() => {
+      expect(createHouseOriginal).toHaveBeenCalledWith({
+        ...artifact.adminDraft,
+        localTitle: "로컬 초안 제목",
+      });
+    });
+    const savedDraft = createHouseOriginal.mock.calls[0]?.[0];
+    expect(savedDraft.description).toContain(`카드 문구: ${artifact.draft.card.caption}`);
+    expect(savedDraft.description).toContain(`비주얼: ${artifact.draft.card.visualBrief}`);
+    expect(savedDraft.description).toContain(`카드 제작 설정: ${JSON.stringify({
+      motif: artifact.draft.card.motif,
+      symbols: artifact.draft.card.symbols,
+      composition: artifact.draft.card.composition,
+    })}`);
+    expect(savedDraft).not.toHaveProperty("card");
+    expect(push).toHaveBeenCalledWith("/admin/memes/meme-imported");
+  });
+
+  it("rejects protected fields in imported admin drafts and resets the file input", async () => {
+    render(<HouseOriginalForm />);
+    const safeArtifact = localImportArtifact();
+    const artifact = {
+      ...safeArtifact,
+      adminDraft: {
+        ...safeArtifact.adminDraft,
+        moderationStatus: "approved",
+        rightsAttested: true,
+      },
+    };
+    const file = new File([JSON.stringify(artifact)], "unsafe.json", {
+      type: "application/json",
+    });
+    Object.defineProperty(file, "text", {
+      value: async () => JSON.stringify(artifact),
+    });
+    const input = screen.getByLabelText("초안 JSON 파일 (최대 100KB)") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "허용되지 않은 게시·권리 설정",
+    );
+    expect(input.value).toBe("");
+    expect((screen.getByLabelText("제목") as HTMLInputElement).value).toBe("");
     expect(createHouseOriginal).not.toHaveBeenCalled();
   });
 });

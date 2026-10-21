@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchInput } from "./search-input";
+import { consumeMemeIntentSubmit, MEME_INTENT_SUBMIT_EVENT } from "@/lib/meme-intent-submit.client";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), replace: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks }));
@@ -30,6 +31,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   requests.length = 0;
   window.localStorage.clear();
+  window.sessionStorage.clear();
   mocks.rpc.mockImplementation(() => {
     let resolve!: (result: Result) => void;
     let reject!: (error: Error) => void;
@@ -47,6 +49,56 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("SearchInput request budget", () => {
+  it("signals Laya routing only on an explicit valid submit", () => {
+    const listener = vi.fn();
+    window.addEventListener(MEME_INTENT_SUBMIT_EVENT, listener);
+    render(<SearchInput initialQuery="" popularTerms={[]} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.change(input, { target: { value: "친구 취향을 따라 할 때" } });
+    expect(listener).not.toHaveBeenCalled();
+    expect(consumeMemeIntentSubmit("친구 취향을 따라 할 때", "ko")).toBe(false);
+
+    fireEvent.submit(screen.getByRole("search"));
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(consumeMemeIntentSubmit("친구 취향을 따라 할 때", "ko")).toBe(true);
+    window.removeEventListener(MEME_INTENT_SUBMIT_EVENT, listener);
+  });
+
+  it("keeps a localized submit on its existing search route without a Korean AI marker", () => {
+    const listener = vi.fn();
+    window.addEventListener(MEME_INTENT_SUBMIT_EVENT, listener);
+    render(
+      <SearchInput
+        initialQuery=""
+        popularTerms={[]}
+        searchPath="/en/search"
+        locale="en"
+        copy={{
+          label: "Search memes",
+          placeholder: "Search",
+          suggestionLabel: "Suggestions",
+          loading: "Loading",
+          noMatches: "No matches",
+          recent: "Recent",
+          clearRecent: "Clear",
+          popular: "Popular",
+          emptyHint: "Search by name",
+          removeRecent: "Remove",
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "a meme for work" } });
+    fireEvent.submit(screen.getByRole("search"));
+
+    expect(mocks.replace).toHaveBeenCalledWith("/en/search?q=a%20meme%20for%20work");
+    expect(listener).not.toHaveBeenCalled();
+    expect(window.sessionStorage.length).toBe(0);
+    expect(consumeMemeIntentSubmit("a meme for work", "ko")).toBe(false);
+    window.removeEventListener(MEME_INTENT_SUBMIT_EVENT, listener);
+  });
+
   it("applies browser history query changes without replaying a pending local draft", async () => {
     const view = render(<SearchInput initialQuery="처음" popularTerms={[]} />);
     const input = screen.getByRole("combobox");

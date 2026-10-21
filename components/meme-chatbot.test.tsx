@@ -302,6 +302,7 @@ describe("MemeChatbot", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(input);
     expect(screen.getByText(copy.disclosure)).toBeTruthy();
+    expect(screen.getByRole("link", { name: copy.privacyPolicy }).getAttribute("href")).toBe("/privacy");
     typeQuestion("  친구를 따라 하는 밈  ");
     expect(fetchMock).not.toHaveBeenCalled();
     await submit();
@@ -334,6 +335,35 @@ describe("MemeChatbot", () => {
     expect(screen.queryByText(copy.references)).toBeNull();
   });
 
+  it("accepts and does not render the bounded intent decision metadata", async () => {
+    fetchMock.mockResolvedValue(response(result({
+      decision: { intent: "situation", source: "fallback" },
+    })));
+    render(<MemeChatbot />);
+    openChat();
+    typeQuestion();
+    await submit();
+    expect(screen.getByText(result().answer)).toBeTruthy();
+    expect(screen.queryByText("situation")).toBeNull();
+    expect(screen.queryByText("fallback")).toBeNull();
+  });
+
+  it.each([
+    { intent: "situation", source: "laya" },
+    { intent: "execute_command", source: "fallback" },
+    { intent: "situation", source: "untrusted-provider" },
+    { intent: "situation", source: "fallback", reason: "made_up_reason" },
+    { intent: "situation", source: "fallback", reason: "x".repeat(161) },
+  ])("rejects malformed decision metadata without rendering provider content", async (decision) => {
+    fetchMock.mockResolvedValue(response({ ...result(), decision }));
+    render(<MemeChatbot />);
+    openChat();
+    typeQuestion();
+    await submit();
+    expect(screen.getByRole("alert").textContent).toBe(copy.unavailable);
+    expect(screen.queryByText(String(decision.intent))).toBeNull();
+  });
+
   it("renders text safely and removes unsafe source and meme URLs", async () => {
     const unsafeText = '<img src=x onerror="alert(1)"><script>alert(1)</script>';
     const item = result().items[0];
@@ -358,7 +388,10 @@ describe("MemeChatbot", () => {
     expect(screen.getByText(unsafeText)).toBeTruthy();
     expect(screen.getByText("<script>title</script>")).toBeTruthy();
     expect(container.querySelector("script, img")).toBeNull();
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      item.sources[0].url,
+      "/privacy",
+    ]);
     expect(screen.queryByText("unsafe js")).toBeNull();
     expect(screen.queryByText("unsafe local")).toBeNull();
     expect(screen.queryByText("unsafe credentials")).toBeNull();

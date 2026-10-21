@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { createStaticClient } = vi.hoisted(() => ({
   createStaticClient: vi.fn(),
 }));
+const filterPublicMemeMedia = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/sources/public-links.server", () => ({ filterPublicMemeMedia }));
 
 import type { MemeDetail } from "@/lib/queries";
 import {
@@ -83,7 +85,7 @@ function useRows(rows: LocalizedExploreTranslationRow[], error: { message: strin
     eq: vi.fn(() => query),
     in: vi.fn(() => query),
     order: vi.fn(() => query),
-    limit: vi.fn(() => query),
+    range: vi.fn(() => query),
     overrideTypes: vi.fn(async () => ({ data: rows, error })),
   };
   createStaticClient.mockReturnValue({ from: vi.fn(() => query) });
@@ -92,6 +94,8 @@ function useRows(rows: LocalizedExploreTranslationRow[], error: { message: strin
 
 beforeEach(() => {
   createStaticClient.mockReset();
+  filterPublicMemeMedia.mockReset();
+  filterPublicMemeMedia.mockImplementation(async (input) => input);
 });
 
 describe("getLocalizedExploreMemes", () => {
@@ -131,7 +135,7 @@ describe("getLocalizedExploreMemes", () => {
       ["meme_id", { ascending: false }],
     ]);
     expect(query.order.mock.invocationCallOrder.at(-1)).toBeLessThan(
-      query.limit.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+      query.range.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
     );
     expect(result.items.map((item) => item.id)).toEqual([newer.id, older.id]);
   });
@@ -148,16 +152,30 @@ describe("getLocalizedExploreMemes", () => {
     expect(result.status).toBe("active");
     expect(result.items).toHaveLength(24);
     expect(result.items[0]?.slug).toBe("translated-meme0");
+    expect(result.page).toBe(1);
+    expect(result.hasPrevious).toBe(false);
   });
 
   it("separates coverage-empty from an unavailable source", async () => {
     useRows([]);
     const empty = await getLocalizedExploreMemes("ja");
-    expect(empty).toEqual({ items: [], status: "coverage-empty" });
+    expect(empty).toEqual({
+      items: [],
+      status: "coverage-empty",
+      page: 1,
+      hasPrevious: false,
+      hasNext: false,
+    });
 
     useRows([], { message: "database unavailable" });
     const unavailable = await getLocalizedExploreMemes("zh");
-    expect(unavailable).toEqual({ items: [], status: "unavailable" });
+    expect(unavailable).toEqual({
+      items: [],
+      status: "unavailable",
+      page: 1,
+      hasPrevious: false,
+      hasNext: false,
+    });
   });
 
   it("excludes stale and incomplete rows without weakening the source gate", async () => {
@@ -172,5 +190,69 @@ describe("getLocalizedExploreMemes", () => {
 
     expect(result.status).toBe("coverage-empty");
     expect(result.items).toHaveLength(0);
+  });
+
+  it("scans bounded candidate windows and returns the requested eligible page without gaps", async () => {
+    const rows = Array.from({ length: 55 }, (_, index) => {
+      const base = meme(index);
+      return { ...translation(base), memes: base };
+    });
+    const query = useRows(rows);
+
+    const result = await getLocalizedExploreMemes("en", undefined, 2);
+
+    expect(query.range).toHaveBeenCalledWith(0, 71);
+    expect(result.items.map((item) => item.id)).toEqual(
+      rows.slice(24, 48).map((row) => row.memes.id),
+    );
+    expect(result.page).toBe(2);
+    expect(result.hasPrevious).toBe(true);
+    expect(result.hasNext).toBe(true);
+  });
+
+  it("clamps an exhausted page to the last eligible page", async () => {
+    const rows = Array.from({ length: 30 }, (_, index) => {
+      const base = meme(index);
+      return { ...translation(base), memes: base };
+    });
+    useRows(rows);
+
+    const result = await getLocalizedExploreMemes("en", undefined, 9);
+
+    expect(result.page).toBe(2);
+    expect(result.items).toHaveLength(6);
+    expect(result.hasPrevious).toBe(true);
+    expect(result.hasNext).toBe(false);
+  });
+
+  it("excludes hidden, produced-only and ledger-failed media before card eligibility", async () => {
+    const hidden = meme(80);
+    hidden.description = "d".repeat(150);
+    hidden.origin = "o".repeat(30);
+    hidden.usage_note = null;
+    hidden.caution = null;
+    hidden.usage_examples = [];
+    hidden.meme_sources = [
+      { source_url: "https://www.youtube.com/watch?v=source00001" },
+      { source_url: "https://www.youtube.com/watch?v=source00002" },
+    ] as never;
+    hidden.meme_contents = [{
+      url: "https://www.youtube.com/watch?v=content0001",
+      platform: "youtube",
+      content_id: "content0001",
+      availability: "live",
+      moderation_status: "approved",
+    }] as never;
+    hidden.meme_tags_map = [] as never;
+    useRows([{ ...translation(hidden), memes: hidden }]);
+    filterPublicMemeMedia.mockResolvedValue({
+      sources: hidden.meme_sources,
+      contents: [],
+    });
+
+    const result = await getLocalizedExploreMemes("en");
+
+    expect(result.status).toBe("coverage-empty");
+    expect(filterPublicMemeMedia).toHaveBeenCalledOnce();
   });
 });

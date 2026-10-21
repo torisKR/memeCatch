@@ -21,4 +21,6 @@ terraform/
 artifacts/
 output/
 .env*
+**/.mcp.json
+**/.mcp.local.json
 *.tsbuildinfo

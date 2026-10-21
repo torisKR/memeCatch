@@ -381,3 +381,151 @@
   .pathwayCard:hover,
   .pathwayCard:active { transform: none; }
 }
+
+/* Laya single-search home: reviewed minimal class dependency merge. */
+.hero {
+  display: grid;
+  width: min(100% - 2rem, 72rem);
+  margin-inline: auto;
+  padding-block: clamp(1.75rem, 4vw, 2.5rem);
+  gap: clamp(1rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--border);
+}
+
+.heroCopy { max-width: 34rem; }
+
+.heroTitle {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.heroIntro {
+  max-width: 42rem;
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.searchForm { width: 100%; max-width: 42rem; }
+
+.searchLabel {
+  display: block;
+  margin-bottom: 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.searchShell {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.searchShell:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.searchIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 1rem;
+  color: var(--muted);
+}
+
+.searchInput {
+  min-width: 0;
+  min-height: 3rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0.8rem 0.75rem;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.searchInput::placeholder { color: var(--muted); }
+
+.searchButton {
+  min-height: 2.75rem;
+  margin-right: 0.4rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: var(--accent);
+  padding-inline: 1rem;
+  color: white;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.searchButton:focus-visible,
+.textLink:focus-visible,
+.primaryLink:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.recentSection {
+  width: min(100% - 2rem, 72rem);
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 3vw, 2rem);
+}
+
+.emptyState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+}
+
+.emptyState p {
+  max-width: 48rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.textLink,
+.primaryLink {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--accent-text);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+.recentActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.primaryLink svg { width: 1rem; height: 1rem; }
+
+@media (min-width: 48rem) {
+  .hero {
+    grid-template-columns: minmax(0, 0.95fr) minmax(22rem, 1.05fr);
+    align-items: center;
+  }
+}

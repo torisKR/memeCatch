@@ -134,7 +134,7 @@ describe("SafetyRationale", () => {
     expect(b.textContent).not.toBe(first);
   });
 
-  it("4칸 전부 green이면 상황별 표를 감추고 미확인으로 표시한다", () => {
+  it("4칸 전부 green이면 근거 없는 확신 대신 짧은 미확인 안내와 검수일을 표시한다", () => {
     // Arrange + Act
     render(
       <SafetyRationale
@@ -142,11 +142,12 @@ describe("SafetyRationale", () => {
         sentiment="funny"
         context={{ work: "green", friends: "green", family: "green", sns: "green" }}
         note="아무 데서나 편하게 써요"
-        caution={null}
+        caution="공식 자리에서는 맥락을 다시 확인하세요"
+        reviewedAt="2026-08-17T02:00:00.000Z"
       />
     );
     // Assert
-    expect(screen.getByText(/상황별 판정은 아직 확인 전이에요/)).toBeTruthy();
+    expect(screen.getByText("상황별 사용 맥락은 아직 확인되지 않았어요.")).toBeTruthy();
     // 확인되지 않은 단정 문장이 사라져야 한다
     expect(
       screen.queryByText(
@@ -154,8 +155,13 @@ describe("SafetyRationale", () => {
       )
     ).toBeNull();
     expect(screen.queryByText("어디서 써도 될까요?")).toBeNull();
-    // 등급 공통 범례로 물러난다
-    expect(screen.getByText(/부정적 맥락 없이 널리 쓰이는 것으로 확인된 등급/)).toBeTruthy();
+    expect(screen.queryByText(/부정적 맥락 없이 널리 쓰이는 것으로 확인된 등급/)).toBeNull();
+    expect(screen.queryByText(/상황별 판정은 아직 확인 전이에요/)).toBeNull();
+    expect(screen.queryByText(/직장·친구·가족·공개 SNS를 나눠서/)).toBeNull();
+    expect(screen.getByText("공식 자리에서는 맥락을 다시 확인하세요")).toBeTruthy();
+    expect(screen.getByText("2026년 8월 17일")).toBeTruthy();
+    expect(screen.getByText("2026년 8월 17일").closest("time")?.getAttribute("datetime"))
+      .toBe("2026-08-17T02:00:00.000Z");
   });
 
   it("등급이 gray인데 4칸 전부 green이면 모순 문장을 렌더하지 않는다", () => {
@@ -171,9 +177,8 @@ describe("SafetyRationale", () => {
     );
     // Assert
     expect(screen.queryByText(/무리 없이 통해요/)).toBeNull();
-    expect(
-      screen.getByText(/유행이 지나 지금 쓰면 어색하게 들릴 수 있는 등급/)
-    ).toBeTruthy();
+    expect(screen.getByText("상황별 사용 맥락은 아직 확인되지 않았어요.")).toBeTruthy();
+    expect(screen.queryByText(/유행이 지나 지금 쓰면 어색하게 들릴 수 있는 등급/)).toBeNull();
   });
 
   it("4칸이 동일해도 green이 아니면 상황별 표를 유지한다(확인된 경고를 낮추지 않는다)", () => {

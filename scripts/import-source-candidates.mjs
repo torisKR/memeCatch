@@ -1,136 +1,292 @@
 #!/usr/bin/env node
 /**
- * 후보 JSONL → 출처 검수 큐(media_sources + meme_media pending) 적재.
- *
- * TikTok/Instagram은 공개 검색 API가 없어, 기존 oEmbed 수집기가 검증한
- * 후보 JSONL을 그대로 검수 큐에 올린다. YouTube 후보 JSONL도 같은 형식이면 된다.
- *
- * 입력 형식(한 줄당 하나):
- *   {"meme_title": "심쿵", "source_url": "https://www.tiktok.com/@.../video/..."}
- *   {"meme_id": "uuid", "source_url": "https://youtu.be/...", "note": "제보"}
- *
- * 사용: node scripts/import-source-candidates.mjs <candidates.jsonl> [--dry-run]
+ * 운영자가 확보한 Instagram/TikTok 공개 URL을 검수 대기열에 제한적으로 등록한다.
+ * 기본은 계획 모드이며 provider 호출이나 DB 쓰기를 하지 않는다.
+ * 실행은 `--execute --limit=1 --meme-id=<uuid>`로 단일 밈·단일 후보에만 허용한다.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { closeSync, openSync, readSync } from "node:fs";
 import { resolve } from "node:path";
-import { createRestClient, restAll } from "./source-pipeline-rest.mjs";
+import { pathToFileURL } from "node:url";
+
+import { createRestClient, restAll as defaultRestAll, loadEnv } from "./source-pipeline-rest.mjs";
 import { normalizeSourceUrl } from "./source-url.mjs";
 
-const [inputPath, ...args] = process.argv.slice(2);
-const DRY = args.includes("--dry-run");
-if (!inputPath || !existsSync(resolve(inputPath))) {
-  console.error("usage: node scripts/import-source-candidates.mjs <candidates.jsonl> [--dry-run]");
-  process.exit(2);
-}
-const rest = createRestClient();
+const MAX_LIMIT = 2;
+const MAX_INPUT_BYTES = 256 * 1024;
+const MAX_INPUT_LINES = 1_000;
+const MAX_LINE_BYTES = 8 * 1024;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+const ELIGIBLE_MODERATION = new Set(["approved", "limited"]);
 
-function firstText(maxLength, ...values) {
-  const value = values.find((candidate) => typeof candidate === "string" && candidate.trim());
-  return value ? value.slice(0, maxLength) : null;
-}
-
-const seeds = [];
-for (const line of readFileSync(resolve(inputPath), "utf8").split("\n")) {
-  if (!line.trim()) continue;
-  try {
-    seeds.push(JSON.parse(line));
-  } catch {
-    // 깨진 줄은 후보로 만들지 않는다.
+function parseLimit(value, fallback = MAX_LIMIT) {
+  const parsed = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_LIMIT) {
+    throw new Error(`--limit must be an integer from 1 to ${MAX_LIMIT}`);
   }
+  return parsed;
 }
 
-// 제목 → 밈 id 해석용 맵
-const memes = await restAll(rest, "memes?select=id,title,aliases");
-const byTitle = new Map();
-for (const meme of memes ?? []) {
-  byTitle.set(String(meme.title).replace(/\s+/g, "").toLowerCase(), meme.id);
-  for (const alias of meme.aliases ?? []) {
-    byTitle.set(String(alias).replace(/\s+/g, "").toLowerCase(), meme.id);
+export function parseArgs(argv) {
+  let inputPath = null;
+  let execute = false;
+  let memeId = null;
+  let limit = MAX_LIMIT;
+  let hasLimit = false;
+  const seen = new Set();
+  for (const arg of argv) {
+    if (!arg.startsWith("--")) {
+      if (inputPath !== null) throw new Error("exactly one JSONL input path is required");
+      inputPath = arg;
+      continue;
+    }
+    const key = arg.startsWith("--limit=")
+      ? "--limit"
+      : arg.startsWith("--meme-id=")
+        ? "--meme-id"
+        : arg;
+    if (!["--execute", "--limit", "--meme-id"].includes(key) || seen.has(key)) {
+      throw new Error(`Unknown or repeated argument: ${arg}`);
+    }
+    seen.add(key);
+    if (key === "--execute") execute = true;
+    if (key === "--limit") {
+      hasLimit = true;
+      limit = parseLimit(arg.slice("--limit=".length));
+    }
+    if (key === "--meme-id") {
+      memeId = arg.slice("--meme-id=".length);
+      if (!UUID_PATTERN.test(memeId)) throw new Error("--meme-id must be a UUID");
+    }
   }
+  if (!inputPath) throw new Error("a JSONL input path is required");
+  if (execute && (!hasLimit || limit !== 1 || !memeId)) {
+    throw new Error("--execute requires --limit=1 and --meme-id=<uuid>");
+  }
+  return { inputPath, execute, limit, memeId };
 }
 
-const stats = { rows: seeds.length, valid: 0, noMeme: 0, badUrl: 0, linked: 0, dupMedia: 0 };
-// 같은 미디어가 /p/·/reel/ 등 다른 URL로 들어오는 경우 (platform, externalId) 중복 제거.
-// 단, 서로 다른 밈에 연결되는 것은 허용해야 하므로 (memeId, platform, externalId)로 제한한다.
-const seenPair = new Set();
-
-for (const seed of seeds) {
-  const memeId =
-    typeof seed.meme_id === "string"
-      ? seed.meme_id
-      : byTitle.get(String(seed.meme_title ?? "").replace(/\s+/g, "").toLowerCase());
-  if (!memeId) {
-    stats.noMeme += 1;
-    continue;
+export function parseCandidateText(text) {
+  if (typeof text !== "string" || Buffer.byteLength(text, "utf8") > MAX_INPUT_BYTES) {
+    throw new Error(`input must be at most ${MAX_INPUT_BYTES} bytes`);
   }
+  const lines = text.split("\n");
+  if (lines.length > MAX_INPUT_LINES) throw new Error(`input must be at most ${MAX_INPUT_LINES} lines`);
+  const rows = [];
+  let malformed = 0;
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    if (Buffer.byteLength(line, "utf8") > MAX_LINE_BYTES) {
+      malformed += 1;
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(line);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) malformed += 1;
+      else rows.push(parsed);
+    } catch {
+      malformed += 1;
+    }
+  }
+  return { rows, malformed };
+}
+
+function candidateFromSeed(seed, scopedMemeId) {
+  if (typeof seed.meme_id !== "string" || seed.meme_id !== scopedMemeId) return null;
   const normalized = normalizeSourceUrl(seed.source_url ?? "");
-  if (!normalized) {
-    stats.badUrl += 1;
-    continue;
-  }
-  const pairKey = `${memeId}${normalized.platform}${normalized.externalId}`;
-  if (seenPair.has(pairKey)) {
-    stats.dupMedia += 1;
-    continue;
-  }
-  seenPair.add(pairKey);
-  stats.valid += 1;
-  if (DRY) {
-    console.log(`[dry-run] ${seed.meme_title ?? memeId} ← ${normalized.canonicalUrl}`);
-    continue;
-  }
+  if (!normalized || !["instagram", "tiktok"].includes(normalized.platform)) return null;
+  return {
+    memeId: scopedMemeId,
+    platform: normalized.platform,
+    externalId: normalized.externalId,
+    canonicalUrl: normalized.canonicalUrl,
+    reviewerNote: typeof seed.note === "string" && seed.note.trim()
+      ? seed.note.trim().slice(0, 500)
+      : null,
+  };
+}
 
-  // 기존 행의 메타데이터를 덮지 않도록 신규만 삽입하고, 충돌 시 id만 다시 읽는다.
-  let source = null;
-  try {
+function pairKey(candidate) {
+  return `${candidate.memeId}\u0000${candidate.platform}\u0000${candidate.externalId}`;
+}
+
+async function readExactEligibleMeme({ rest, restAll, memeId }) {
+  if (!UUID_PATTERN.test(memeId ?? "")) return null;
+  const rows = await restAll(
+    rest,
+    `memes?select=id,doc_class,moderation_status,category,media_type&id=eq.${encodeURIComponent(memeId)}&limit=2`,
+  );
+  if (rows.length !== 1) return null;
+  const meme = rows[0];
+  return (
+    meme.id === memeId &&
+    meme.doc_class === "meme" &&
+    meme.category !== "phrase" &&
+    (meme.media_type === "video" || meme.media_type === "embed") &&
+    ELIGIBLE_MODERATION.has(meme.moderation_status)
+  )
+    ? meme
+    : null;
+}
+
+async function existingIdentity({ rest, restAll, candidate }) {
+  const identityRows = await restAll(
+    rest,
+    `media_sources?select=id,platform,external_id,canonical_url&platform=eq.${candidate.platform}&external_id=eq.${encodeURIComponent(candidate.externalId)}&limit=2`,
+  );
+  if (identityRows.length > 0) return true;
+  const canonicalRows = await restAll(
+    rest,
+    `media_sources?select=id,platform,external_id,canonical_url&canonical_url=eq.${encodeURIComponent(candidate.canonicalUrl)}&limit=2`,
+  );
+  return canonicalRows.length > 0;
+}
+
+export async function importSourceCandidates({
+  rest,
+  restAll = defaultRestAll,
+  seeds,
+  malformed = 0,
+  execute = false,
+  limit = MAX_LIMIT,
+  memeId,
+}) {
+  const boundedLimit = parseLimit(limit);
+  if (execute && (boundedLimit !== 1 || !UUID_PATTERN.test(memeId ?? ""))) {
+    throw new Error("candidate execution requires one UUID-scoped meme");
+  }
+  const stats = {
+    mode: execute ? "execute" : "plan",
+    rows: seeds.length,
+    malformed,
+    selected: 0,
+    invalid: 0,
+    ineligibleMeme: 0,
+    duplicateInput: 0,
+    duplicateStored: 0,
+    wouldInsert: 0,
+    inserted: 0,
+    linked: 0,
+    dbWrites: 0,
+    providerCalls: 0,
+  };
+  if (!UUID_PATTERN.test(memeId ?? "")) {
+    stats.ineligibleMeme = 1;
+    return stats;
+  }
+  const meme = await readExactEligibleMeme({ rest, restAll, memeId });
+  if (!meme) {
+    stats.ineligibleMeme = 1;
+    return stats;
+  }
+  const seen = new Set();
+  const candidates = [];
+  for (const seed of seeds) {
+    const candidate = candidateFromSeed(seed, memeId);
+    if (!candidate) {
+      stats.invalid += 1;
+      continue;
+    }
+    const key = pairKey(candidate);
+    if (seen.has(key)) {
+      stats.duplicateInput += 1;
+      continue;
+    }
+    seen.add(key);
+    candidates.push(candidate);
+    if (candidates.length >= boundedLimit) break;
+  }
+  stats.selected = candidates.length;
+  for (const candidate of candidates) {
+    if (await existingIdentity({ rest, restAll, candidate })) {
+      stats.duplicateStored += 1;
+      continue;
+    }
+    stats.wouldInsert += 1;
+    if (!execute) continue;
     const inserted = await rest("media_sources?on_conflict=canonical_url", {
       method: "POST",
       headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
       body: JSON.stringify({
-        platform: normalized.platform,
-        external_id: normalized.externalId,
-        canonical_url: normalized.canonicalUrl,
-        title: firstText(500, seed.video_title, seed.oembed_title),
-        channel_name: firstText(200, seed.channel, seed.oembed_author_name),
+        platform: candidate.platform,
+        external_id: candidate.externalId,
+        canonical_url: candidate.canonicalUrl,
       }),
     });
-    source = Array.isArray(inserted) ? inserted[0] : inserted;
-  } catch {
-    // (platform, external_id) 충돌: 동일 미디어가 다른 canonical_url로 존재 → 기존 행 재사용
+    stats.dbWrites += 1;
+    const source = Array.isArray(inserted) ? inserted[0] : inserted;
+    if (!(
+      source?.id &&
+      source.platform === candidate.platform &&
+      source.external_id === candidate.externalId &&
+      source.canonical_url === candidate.canonicalUrl
+    )) {
+      stats.duplicateStored += 1;
+      continue;
+    }
+    stats.inserted += 1;
+    const linked = await rest("meme_media", {
+      method: "POST",
+      headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
+      body: JSON.stringify({
+        meme_id: candidate.memeId,
+        source_id: source.id,
+        source_role: "usage_example",
+        rights_basis: "unknown",
+        review_state: "pending",
+        reviewer_note: candidate.reviewerNote,
+      }),
+    });
+    stats.dbWrites += 1;
+    if (Array.isArray(linked) ? linked[0] : linked) stats.linked += 1;
+    else stats.duplicateStored += 1;
   }
-  if (!source?.id) {
-    const existing = await rest(
-      `media_sources?select=id&or=(canonical_url.eq.${encodeURIComponent(normalized.canonicalUrl)},and(platform.eq.${normalized.platform},external_id.eq.${normalized.externalId}))&limit=1`
-    );
-    source = Array.isArray(existing) ? existing[0] : existing;
-  }
-  if (!source?.id) continue;
+  return stats;
+}
 
-  const linked = await rest("meme_media", {
-    method: "POST",
-    headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
-    body: JSON.stringify({
-      meme_id: memeId,
-      source_id: source.id,
-      source_role: "usage_example",
-      rights_basis: "unknown",
-      review_state: "pending",
-      reviewer_note:
-        typeof seed.note === "string"
-          ? seed.note.slice(0, 500)
-          : typeof seed.collection_note === "string"
-            ? seed.collection_note.slice(0, 500)
-            : null,
-    }),
-  });
-  if (!(Array.isArray(linked) ? linked[0] : linked)) {
-    stats.dupMedia += 1;
-    continue;
+export function readBoundedInput(inputPath) {
+  const absolute = resolve(inputPath);
+  let descriptor;
+  try {
+    descriptor = openSync(absolute, "r");
+  } catch {
+    throw new Error("input file does not exist or cannot be read");
   }
-  stats.linked += 1;
-  if (stats.linked % 200 === 0) {
-    console.error(`진행: 연결 ${stats.linked} / 전체 ${stats.rows}`);
+  try {
+    const buffer = Buffer.allocUnsafe(MAX_INPUT_BYTES + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const bytesRead = readSync(descriptor, buffer, total, buffer.length - total, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    if (total > MAX_INPUT_BYTES) throw new Error(`input must be at most ${MAX_INPUT_BYTES} bytes`);
+    return parseCandidateText(buffer.subarray(0, total).toString("utf8"));
+  } finally {
+    closeSync(descriptor);
   }
 }
 
-console.log(JSON.stringify({ dryRun: DRY, ...stats }));
+export async function main(argv = process.argv.slice(2)) {
+  const options = parseArgs(argv);
+  const input = readBoundedInput(options.inputPath);
+  const env = loadEnv();
+  const rest = createRestClient(env);
+  const stats = await importSourceCandidates({
+    rest,
+    seeds: input.rows,
+    malformed: input.malformed,
+    execute: options.execute,
+    limit: options.limit,
+    memeId: options.memeId,
+  });
+  console.log(JSON.stringify(stats));
+  return stats;
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isMain) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : "source candidate import failed");
+    process.exitCode = 1;
+  });
+}

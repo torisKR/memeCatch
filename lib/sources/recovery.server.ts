@@ -67,11 +67,25 @@ export type SourceAcquisitionRecoveryDto = {
   readonly resolvedAt: string | null;
 };
 
+type RecoveryRpcResult = {
+  data: unknown;
+  error: { message: string } | null;
+  count?: number | null;
+};
+
+type RecoveryRpcCall = PromiseLike<RecoveryRpcResult> & {
+  eq?: (column: string, value: NonNullable<unknown>) => RecoveryRpcCall;
+  in?: (column: string, values: readonly NonNullable<unknown>[]) => RecoveryRpcCall;
+  not?: (column: string, operator: string, value: unknown) => RecoveryRpcCall;
+  lte?: (column: string, value: NonNullable<unknown>) => RecoveryRpcCall;
+  or?: (filters: string) => RecoveryRpcCall;
+  limit?: (count: number) => RecoveryRpcCall;
+  order?: (column: string, options: { ascending: true }) => RecoveryRpcCall;
+  select?: (columns: string) => RecoveryRpcCall;
+};
+
 type RecoveryRpc = {
-  rpc(name: string, args: Record<string, unknown>): PromiseLike<{
-    data: unknown;
-    error: { message: string } | null;
-  }>;
+  rpc(name: string, args: Record<string, unknown>, options?: { count: "exact"; head: true }): RecoveryRpcCall;
 };
 
 function recoveryRecord(data: unknown): Record<string, unknown> | null {
@@ -206,10 +220,143 @@ export async function listDueSourceAcquisitionRecovery(
   return recoveryDtos(data);
 }
 
-export async function listActiveSourceAcquisitionRecovery(
+export function isSourceAcquisitionRecoveryCircuitOpen(recovery: {
+  attemptCount: number;
+  lastErrorCode: SourceIngestionErrorCode;
+}) {
+  return recovery.attemptCount >= (recovery.lastErrorCode === "db_failure" ? 2 : 3);
+}
+
+const ELIGIBLE_DUE_FILTER =
+  "and(last_error_code.eq.db_failure,attempt_count.lt.2),and(last_error_code.neq.db_failure,attempt_count.lt.3)";
+const CIRCUIT_OPEN_FILTER =
+  "and(last_error_code.eq.db_failure,attempt_count.gte.2),and(last_error_code.neq.db_failure,attempt_count.gte.3)";
+
+function dueRecoveryQuery(
+  now: Date,
+  filter: string,
+  admin: RecoveryRpc,
+  options?: { count: "exact"; head: true },
+): RecoveryRpcCall {
+  const query = options
+    ? admin.rpc("list_active_source_acquisition_recovery", {}, options)
+    : admin.rpc("list_active_source_acquisition_recovery", {});
+  const not = query.not;
+  const lte = query.lte;
+  const or = query.or;
+  if (
+    typeof not !== "function" ||
+    typeof lte !== "function" ||
+    typeof or !== "function"
+  ) {
+    throw new Error("source_recovery_query_failed");
+  }
+  const sourceLinked = not.call(query, "source_id", "is", null);
+  if (typeof sourceLinked.lte !== "function") {
+    throw new Error("source_recovery_query_failed");
+  }
+  const due = sourceLinked.lte("next_retry_at", now.toISOString());
+  if (typeof due.or !== "function") {
+    throw new Error("source_recovery_query_failed");
+  }
+  return due.or(filter);
+}
+
+export async function listEligibleDueSourceAcquisitionRecovery(
+  now: Date,
+  limit: number,
   admin: RecoveryRpc = createAdminClient(),
 ): Promise<SourceAcquisitionRecoveryDto[]> {
-  const { data, error } = await admin.rpc("list_active_source_acquisition_recovery", {});
+  const boundedLimit = Math.max(1, Math.min(limit, 500));
+  const query = dueRecoveryQuery(now, ELIGIBLE_DUE_FILTER, admin);
+  if (typeof query.in !== "function" || typeof query.order !== "function" || typeof query.limit !== "function") {
+    throw new Error("source_recovery_query_failed");
+  }
+  // Deferred social adapters must not consume the supported provider queue.
+  const { data, error } = await query.in("platform", ["youtube", "youtube_shorts"])
+    .order!("next_retry_at", { ascending: true })
+    .order!("source_key", { ascending: true })
+    .limit!(boundedLimit);
   if (error) throw new Error("source_recovery_query_failed");
-  return recoveryDtos(data);
+  const rows = recoveryDtos(data);
+  if (
+    !Array.isArray(data) ||
+    rows.length !== data.length ||
+    rows.length > boundedLimit ||
+    rows.some((row) => (
+      row.sourceId === null ||
+      (row.platform !== "youtube" && row.platform !== "youtube_shorts") ||
+      row.nextRetryAt === null ||
+      !Number.isFinite(Date.parse(row.nextRetryAt)) ||
+      Date.parse(row.nextRetryAt) > now.getTime() ||
+      isSourceAcquisitionRecoveryCircuitOpen(row)
+    ))
+  ) {
+    throw new Error("source_recovery_query_invalid");
+  }
+  return rows;
+}
+
+export async function countDueSourceAcquisitionCircuits(
+  now: Date,
+  admin: RecoveryRpc = createAdminClient(),
+): Promise<number> {
+  const query = dueRecoveryQuery(now, CIRCUIT_OPEN_FILTER, admin, { count: "exact", head: true });
+  if (typeof query.select !== "function") throw new Error("source_recovery_query_failed");
+  const { count, error } = await query.select("source_key");
+  if (error || typeof count !== "number" || !Number.isInteger(count) || count < 0) {
+    throw new Error("source_recovery_query_failed");
+  }
+  return count;
+}
+
+export async function listActiveSourceAcquisitionRecovery(
+  admin: RecoveryRpc = createAdminClient(),
+  sourceId?: string,
+): Promise<SourceAcquisitionRecoveryDto[]> {
+  const query = admin.rpc("list_active_source_acquisition_recovery", {});
+  let request: PromiseLike<RecoveryRpcResult> = query;
+  if (sourceId !== undefined) {
+    if (typeof query.eq !== "function") {
+      throw new Error("source_recovery_query_failed");
+    }
+    request = query.eq("source_id", sourceId);
+  }
+  const { data, error } = await request;
+  if (error) throw new Error("source_recovery_query_failed");
+  const rows = recoveryDtos(data);
+  if (
+    !Array.isArray(data) ||
+    rows.length !== data.length ||
+    (sourceId !== undefined && rows.some((row) => row.sourceId !== sourceId))
+  ) {
+    throw new Error("source_recovery_query_invalid");
+  }
+  return rows;
+}
+
+export async function listActiveSourceAcquisitionRecoveryForSources(
+  admin: RecoveryRpc,
+  sourceIds: readonly string[],
+): Promise<SourceAcquisitionRecoveryDto[]> {
+  const selectedSourceIds = [...new Set(sourceIds)];
+  if (selectedSourceIds.length === 0) return [];
+
+  const query = admin.rpc("list_active_source_acquisition_recovery", {});
+  if (typeof query.in !== "function") {
+    throw new Error("source_recovery_query_failed");
+  }
+  const { data, error } = await query.in("source_id", selectedSourceIds);
+  if (error) throw new Error("source_recovery_query_failed");
+
+  const allowed = new Set(selectedSourceIds);
+  const rows = recoveryDtos(data);
+  if (
+    !Array.isArray(data) ||
+    rows.length !== data.length ||
+    rows.some((row) => row.sourceId === null || !allowed.has(row.sourceId))
+  ) {
+    throw new Error("source_recovery_query_invalid");
+  }
+  return rows;
 }

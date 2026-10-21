@@ -18,7 +18,9 @@ export function MemeCollectibleScratch({ cardId, card, revealed, loading = false
   const stageRef = useRef<HTMLDivElement>(null);
   const dustRef = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onStart, onReveal });
+  const revealRequested = useRef(revealed);
   useEffect(() => { callbacks.current = { onStart, onReveal }; }, [onStart, onReveal]);
+  useEffect(() => { revealRequested.current = revealed; }, [cardId, revealed]);
   const [progress, setProgress] = useState(0);
   const [started, setStarted] = useState(false);
   const [coverVisible, setCoverVisible] = useState(!revealed);
@@ -81,9 +83,16 @@ export function MemeCollectibleScratch({ cardId, card, revealed, loading = false
       for (const [from, to] of strokes) drawStroke(from, to);
       canvas!.style.background = "transparent"; canvas!.dataset.canvasState = "ready";
     }
+    function pointFor(event: PointerEvent) {
+      const point = scratchPoint(event.clientX, event.clientY, canvas!.getBoundingClientRect());
+      if (!point) return null;
+      const pressure = event.pointerType === "mouse" ? .5 : Math.max(.15, event.pressure || .35);
+      const scale = .82 + pressure * .46;
+      return { ...point, radiusX: point.radiusX * scale, radiusY: point.radiusY * scale };
+    }
     function follow(event: PointerEvent) {
       if (completed) return;
-      const point = scratchPoint(event.clientX, event.clientY, canvas!.getBoundingClientRect());
+      const point = pointFor(event);
       if (!point) { stage!.dataset.pointer = "false"; return; }
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -91,6 +100,7 @@ export function MemeCollectibleScratch({ cardId, card, revealed, loading = false
         stage!.style.setProperty("--scratch-y", `${point.y * 100}%`);
         stage!.style.setProperty("--tilt-x", `${motion?.matches ? 0 : (point.y - .5) * -6}deg`);
         stage!.style.setProperty("--tilt-y", `${motion?.matches ? 0 : (point.x - .5) * 6}deg`);
+        stage!.style.setProperty("--scratch-brush-scale", `${point.radiusX / .075}`);
         stage!.dataset.pointer = "true";
       });
     }
@@ -112,17 +122,25 @@ export function MemeCollectibleScratch({ cardId, card, revealed, loading = false
       if (activePointer !== null && canvas!.hasPointerCapture?.(activePointer)) canvas!.releasePointerCapture(activePointer);
       activePointer = null; previous = null; stage!.dataset.dragging = "false";
     }
-    function scratch(event: PointerEvent) {
+    function scratchSample(event: PointerEvent) {
       follow(event);
       if (completed || activePointer !== event.pointerId) return;
-      const point = scratchPoint(event.clientX, event.clientY, canvas!.getBoundingClientRect());
+      const point = pointFor(event);
       if (!point) { previous = null; return; }
       if (!began) { began = true; setStarted(true); callbacks.current.onStart(); }
       const from = previous ?? point;
       strokes.push([from, point]); drawStroke(from, point); dust(point, event);
       const ratio = coverage.mark(from, point);
       previous = point; setProgress(Math.floor(ratio * 100));
-      if (ratio >= SCRATCH_REVEAL_RATIO) { completed = true; end(); stage!.dataset.pointer = "false"; callbacks.current.onReveal(); }
+      if (ratio >= SCRATCH_REVEAL_RATIO) { completed = true; revealRequested.current = true; setProgress(Math.ceil(SCRATCH_REVEAL_RATIO * 100)); end(); stage!.dataset.pointer = "false"; callbacks.current.onReveal(); }
+    }
+    function scratch(event: PointerEvent) {
+      const samples = event.getCoalescedEvents?.() ?? [];
+      if (!samples.length) { scratchSample(event); return; }
+      for (const sample of samples) {
+        scratchSample(sample);
+        if (completed) break;
+      }
     }
     function start(event: PointerEvent) {
       if (completed || activePointer !== null || (event.pointerType === "mouse" && event.button !== 0) || !width) return;
@@ -138,12 +156,22 @@ export function MemeCollectibleScratch({ cardId, card, revealed, loading = false
   }, [cardId, revealed, unavailable, copy.foilTitle, copy.foilHint]);
 
   const normalizedProgress = Math.min(100, Math.round(progress / SCRATCH_REVEAL_RATIO));
-  return <div className={styles.scratchArea} data-card-id={cardId} data-scratch-progress={progress} data-revealed={revealed} data-scratch-state={revealed ? "revealed" : unavailable ? "error" : loading ? "loading" : started ? "scratching" : "sealed"}>
+  function revealWithKeyboard() {
+    if (revealed || loading || unavailable || revealRequested.current) return;
+    revealRequested.current = true;
+    setStarted(true);
+    setProgress(Math.ceil(SCRATCH_REVEAL_RATIO * 100));
+    callbacks.current.onStart();
+    callbacks.current.onReveal();
+  }
+  const nearReveal = normalizedProgress >= 70;
+  return <div className={styles.scratchArea} data-card-id={cardId} data-scratch-progress={progress} data-revealed={revealed} data-near-reveal={nearReveal} data-scratch-state={revealed ? "revealed" : unavailable ? "error" : loading ? "loading" : started ? "scratching" : "sealed"}>
     <div ref={stageRef} className={styles.scratchCard} data-complete={revealed} data-pointer="false" data-dragging="false">
       {(revealed || started) && card ? <div aria-hidden={!revealed}><MemeCollectibleArt card={card}/></div> : <MemeCollectibleSeal label={copy.foilTitle} hint={copy.foilHint}/>}
-      {coverVisible && <canvas ref={canvasRef} className={styles.scratchCanvas} aria-label={copy.scratch} aria-hidden={revealed} data-complete={revealed} data-canvas-state="pending" data-testid="scratch-canvas"/>}
+      {coverVisible && <canvas ref={canvasRef} className={styles.scratchCanvas} role="button" tabIndex={revealed || unavailable ? -1 : 0} aria-label={`${copy.scratch}. ${copy.reveal}`} aria-disabled={loading || unavailable} aria-hidden={revealed} data-complete={revealed} data-canvas-state="pending" data-testid="scratch-canvas" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); revealWithKeyboard(); } }}/>}
       {!revealed && <><div className={styles.scratchShimmer} data-scratch-shimmer aria-hidden="true"/><div className={styles.scratchBrush} data-scratch-brush aria-hidden="true"/><div ref={dustRef} className={styles.scratchDust} data-scratch-dust aria-hidden="true"/></>}
+      {revealed && <div className={styles.scratchRevealBurst} aria-hidden="true"/>}
     </div>
-    {!revealed ? <div className={styles.scratchControls}><div className={styles.progressTrack} role="progressbar" aria-label={copy.revealProgress} aria-valuenow={normalizedProgress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${normalizedProgress}%` }}/></div><p className={styles.progress}>{copy.revealProgress} {normalizedProgress}%</p><button type="button" className={styles.textButton} disabled={loading || unavailable} onClick={() => { callbacks.current.onStart(); callbacks.current.onReveal(); }}>{copy.reveal}</button></div> : <p className={styles.revealedStatus} role="status">✦ {copy.revealed}</p>}
+    {!revealed ? <div className={styles.scratchControls}><div className={styles.progressTrack} role="progressbar" aria-label={copy.revealProgress} aria-valuenow={normalizedProgress} aria-valuetext={`${normalizedProgress}%`} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${normalizedProgress}%` }}/></div><p className={styles.progress}>{copy.revealProgress} <strong>{normalizedProgress}%</strong></p><button type="button" className={styles.textButton} disabled={loading || unavailable} onClick={revealWithKeyboard}>{copy.reveal}</button></div> : <p className={styles.revealedStatus} role="status">✦ {copy.revealed}</p>}
   </div>;
 }

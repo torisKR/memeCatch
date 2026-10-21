@@ -16,6 +16,10 @@ import {
   type RadarObservation,
   type RadarState,
 } from "@/lib/trend/radar";
+import {
+  discoverTrendCandidates,
+  type DiscoveredTrendCandidate,
+} from "@/lib/trend/candidate-discovery";
 
 export type RadarMeme = RadarEntity & {
   state: RadarState;
@@ -32,6 +36,7 @@ export interface RadarRepository {
     rows: Awaited<ReturnType<typeof runRadarConnectors>>["health"],
   ): Promise<void>;
   persistSignals(signals: readonly NormalizedRadarSignal[]): Promise<PersistedRadarSignal[]>;
+  persistDiscoveredCandidates?(candidates: readonly DiscoveredTrendCandidate[]): Promise<void>;
   persistMatch(input: {
     memeId: string;
     signalId: string;
@@ -62,34 +67,41 @@ export type RadarPulseResult = {
   pendingMatches: number;
   observations: number;
   safetyReviews: number;
+  discoveredCandidates: number;
 };
 
 const AUTOMATIC_MATCH_CONFIDENCE = 0.9;
 
-function metric(signal: PersistedRadarSignal, name: string): number {
+function metric(signal: PersistedRadarSignal, name: string): number | null {
   const value = signal.metrics?.[name];
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function observation(signal: PersistedRadarSignal, confidence: number): RadarObservation {
+function observation(signal: PersistedRadarSignal, confidence: number): RadarObservation | null {
+  const volume = metric(signal, "volume");
+  const velocity = metric(signal, "velocity");
+  const engagement = metric(signal, "engagement");
+  if (volume === null || velocity === null || engagement === null) return null;
   return {
     platform: signal.platform,
     observedAt: signal.observedAt,
-    volume: metric(signal, "volume"),
-    velocity: metric(signal, "velocity"),
-    engagement: metric(signal, "engagement"),
+    volume,
+    velocity,
+    engagement,
     sourceReliability: confidence,
   };
 }
 
 function isSafetyReviewSignal(signal: PersistedRadarSignal): boolean {
-  return metric(signal, "risk") >= 0.7 || metric(signal, "reports") >= 20;
+  return (metric(signal, "risk") ?? -1) >= 0.7 || (metric(signal, "reports") ?? -1) >= 20;
 }
 
 export async function runRadarPulse(input: {
   connectors: RadarConnectorRegistry;
   repository: RadarRepository;
   now?: () => Date;
+  discoveryEnabled?: boolean;
+  dailyCandidateLimit?: number;
 }): Promise<RadarPulseResult> {
   const previousState = await input.repository.loadConnectorState();
   const connectorRun = await runRadarConnectors({
@@ -100,6 +112,20 @@ export async function runRadarPulse(input: {
   const signals = await input.repository.persistSignals(connectorRun.signals);
   await input.repository.persistConnectorHealth(connectorRun.health);
   const memes = await input.repository.loadMemes();
+  const discoveryEnabled = input.discoveryEnabled ?? process.env.RADAR_DISCOVERY_ENABLED === "true";
+  const configuredLimit = Number(
+    input.dailyCandidateLimit ?? process.env.RADAR_DISCOVERY_DAILY_CANDIDATE_LIMIT ?? 150,
+  );
+  const dailyCandidateLimit = Number.isFinite(configuredLimit)
+    ? Math.min(150, Math.max(0, Math.floor(configuredLimit)))
+    : 150;
+  const discoveredCandidates = discoveryEnabled
+    ? discoverTrendCandidates({
+        signals,
+        knownNames: memes.flatMap((meme) => [meme.canonicalName, ...meme.aliases]),
+      }).slice(0, dailyCandidateLimit)
+    : [];
+  await input.repository.persistDiscoveredCandidates?.(discoveredCandidates);
   const matched = new Map<string, Array<{ signal: PersistedRadarSignal; confidence: number }>>();
   let automaticMatches = 0;
   let pendingMatches = 0;
@@ -143,8 +169,14 @@ export async function runRadarPulse(input: {
     const matches = matched.get(meme.id);
     if (!matches?.length) continue;
 
+    const comparableObservations = matches.flatMap(({ signal, confidence }) => {
+      const comparable = observation(signal, confidence);
+      return comparable ? [comparable] : [];
+    });
+    if (!comparableObservations.length) continue;
+
     const score = calculateRadarSignal({
-      observations: matches.map(({ signal, confidence }) => observation(signal, confidence)),
+      observations: comparableObservations,
       referenceAt: input.now?.() ?? new Date(),
     });
     if (!score.aggregationObservations.length) continue;
@@ -155,7 +187,9 @@ export async function runRadarPulse(input: {
       score.confidence,
     );
     const latest = matches
-      .filter(({ signal }) => isRadarAggregationPlatform(signal.platform))
+      .filter(({ signal, confidence }) =>
+        isRadarAggregationPlatform(signal.platform) && observation(signal, confidence) !== null,
+      )
       .sort((left, right) =>
         right.signal.observedAt.localeCompare(left.signal.observedAt),
       )[0].signal;
@@ -181,5 +215,6 @@ export async function runRadarPulse(input: {
     pendingMatches,
     observations,
     safetyReviews,
+    discoveredCandidates: discoveredCandidates.length,
   };
 }

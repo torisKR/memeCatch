@@ -34,6 +34,12 @@ const report: PublisherReadinessReport = {
       publicHref: "/memes/abc12345-dangerous",
       sourceWorkflowHref: "/admin/sources",
       safeSourceUrls: [],
+      fingerprint: "fingerprint",
+      rights: { status: "unknown", confirmedCount: 0, unknownCount: 0, restrictedCount: 0 },
+      media: { status: "absent", renderableCount: 0, uncheckedCount: 0, unavailableCount: 0 },
+      safety: { status: "unknown", reviewedAt: null },
+      sourceFreshness: { status: "absent", staleCount: 0, unavailableCount: 0 },
+      review: { status: "unreviewed", reviewedAt: null, note: null },
       depth: {
         score: 0,
         proseChars: 2,
@@ -50,7 +56,7 @@ const report: PublisherReadinessReport = {
           tagCount: 0,
         },
       },
-      issueCodes: ["source", "summary", "date", "depth"],
+      issueCodes: ["source", "summary", "date", "depth", "review"],
       issues: [
         {
           code: "source",
@@ -124,6 +130,21 @@ describe("publisher readiness page", () => {
     expect(html).toContain("직접 확인");
     expect(html).toContain("실시간 계정 상태를 표시하지 않습니다");
     expect(html).not.toMatch(/승인 완료|승인되었습니다|Google-approved/i);
+  });
+
+  it("shows rights, renderability, safety, and fingerprinted human-review status as internal diagnostics", async () => {
+    const html = renderToStaticMarkup(
+      await Page({ searchParams: Promise.resolve({ page: "2", focus: "source" }) }),
+    );
+
+    expect(html).toContain("권리/전달 근거");
+    expect(html).toContain("공개 미디어");
+    expect(html).toContain("안전 검수");
+    expect(html).toContain("사람 검수 미완료");
+    expect(html).toContain("광고 검수 보류 진단");
+    expect(html).toContain('name="expectedFingerprint"');
+    expect(html).toContain('value="fingerprint"');
+    expect(html).not.toContain("공개 중단");
   });
 
   it("propagates a loader error rather than rendering an empty pass", async () => {

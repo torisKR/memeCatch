@@ -17,8 +17,8 @@ describe("TrustNote", () => {
 
     // DQ-001의 핵심 — 공개 문서 1,330건이 근거 없이 검수를 주장하고 있었다.
     expect(html).not.toContain("검수팀 확인");
-    expect(html).toContain("근거 출처 준비 중");
-    expect(html).toContain("출처를 아시면 알려 주세요");
+    expect(html).toContain("출처 미연결");
+    expect(html).toContain("출처 정보 제보하기");
     expect(html).toContain("/submit?name=");
   });
 
@@ -27,7 +27,7 @@ describe("TrustNote", () => {
       <TrustNote {...base} sources={[{ source_url: "   ", platform: "web" }]} />
     );
 
-    expect(html).toContain("근거 출처 준비 중");
+    expect(html).toContain("출처 미연결");
   });
 
   it("맥락 위키만 있으면 원본 미확인 상태를 밝힌다", () => {
@@ -39,7 +39,7 @@ describe("TrustNote", () => {
     );
 
     expect(html).toContain("맥락 자료 1개 연결");
-    expect(html).toContain("원본은 아직 찾는 중");
+    expect(html).toContain("원본 링크 없음");
     expect(html).not.toContain("검수팀 확인");
   });
 
@@ -55,8 +55,8 @@ describe("TrustNote", () => {
     );
 
     expect(html).toContain("근거 링크 2개 연결");
-    expect(html).not.toContain("원본은 아직 찾는 중");
-    expect(html).not.toContain("서지 확인 중");
+    expect(html).not.toContain("원본 링크 없음");
+    expect(html).not.toContain("제목·작성자 미확인");
   });
 
   // DQ-013 (루프 023 전수: 출처 행의 62.4%가 title·creator 둘 다 null)
@@ -70,8 +70,7 @@ describe("TrustNote", () => {
       />
     );
 
-    expect(html).toContain("출처 링크 1개 수집");
-    expect(html).toContain("서지 확인 중");
+    expect(html).toContain("출처 링크 1개 (제목·작성자 미확인)");
     expect(html).not.toContain("근거 출처 1개 확인");
     expect(html).not.toContain("원본·보도");
   });
@@ -101,7 +100,7 @@ describe("TrustNote", () => {
       />
     );
 
-    expect(html).toContain("출처 확인 중인 문서예요");
+    expect(html).toContain("제한 공개");
   });
 
   it("마지막 업데이트는 기계 판독 가능한 datetime을 함께 남긴다", () => {
@@ -122,16 +121,16 @@ describe("TrustNote", () => {
     );
 
     expect(html).toContain("밈캐치 자체 제작");
-    expect(html).toContain("무단으로 쓰이면 알려 주세요");
-    expect(html).not.toContain("근거 출처 준비 중");
-    expect(html).not.toContain("출처를 아시면 알려 주세요");
+    expect(html).toContain("이 표현에 대한 정보를 제보해 주세요");
+    expect(html).not.toContain("출처 미연결");
+    expect(html).not.toContain("출처 정보 제보하기");
     expect(html).not.toContain("검수팀 확인");
   });
 
   it("카탈로그 0건 CTA는 originKind를 생략해도 그대로다", () => {
     const html = renderToStaticMarkup(<TrustNote {...base} originKind="catalog" sources={[]} />);
-    expect(html).toContain("근거 출처 준비 중");
-    expect(html).toContain("출처를 아시면 알려 주세요");
+    expect(html).toContain("출처 미연결");
+    expect(html).toContain("출처 정보 제보하기");
     expect(html).not.toContain("밈캐치 자체 제작");
   });
 });

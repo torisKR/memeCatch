@@ -50,7 +50,7 @@ describe("official social Radar connectors", () => {
     const url = new URL(String(fetch.mock.calls[0]?.[0]));
 
     expect(url.searchParams.get("query")).toContain("-has:media");
-    expect(url.searchParams.get("tweet.fields")).toBe("created_at,lang");
+    expect(url.searchParams.get("tweet.fields")).toBe("created_at,lang,author_id");
     expect(url.searchParams.has("expansions")).toBe(false);
     expect(result.signals[0]).toMatchObject({
       platform: "x",
@@ -178,5 +178,6 @@ describe("official social Radar connectors", () => {
 
     expect(result.signals).toHaveLength(1);
     expect(result.signals[0]?.platformContentId).toBe("ig-1");
+    expect(result.signals[0]?.metrics).toEqual({});
   });
 });

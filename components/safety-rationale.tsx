@@ -13,23 +13,6 @@ import {
 
 type Sentiment = Database["public"]["Enums"]["meme_sentiment"];
 
-/**
- * 등급별 판정 기준 한 줄 — 밈 개별 사실이 아니라 신호등 산정 규칙 설명.
- * 개별 근거는 usage_note·caution 필드만 사용(별도 '근거' 데이터 발명 금지).
- *
- * 이 문장은 전 사이트 공통 범례라 **그 자체로는 이 카드를 정당화하지 못한다**.
- * 밈 고유 신호(usage_context·usage_note·caution)가 하나도 없으면 카드를 렌더하지
- * 않는다 — 모든 문서에 같은 문장만 남는 빈 템플릿이 되기 때문이다.
- */
-const LEVEL_MEANING: Record<SafetyLevel, string> = {
-  green:
-    "커뮤니티 사용례에서 부정적 맥락 없이 널리 쓰이는 것으로 확인된 등급이에요.",
-  yellow:
-    "맥락에 따라 오해나 불쾌감을 줄 수 있어 상황을 가려 써야 하는 등급이에요.",
-  gray: "유행이 지나 지금 쓰면 어색하게 들릴 수 있는 등급이에요.",
-  red: "비하·혐오 등 부정적 맥락과 결합해 사용 자체를 권하지 않는 등급이에요.",
-};
-
 /** 등급별 서술어 — 상황 이름과 결합해 밈별 판정 문장을 만든다. */
 const LEVEL_CLAUSE: Record<SafetyLevel, string> = {
   green: "무리 없이 통하지만",
@@ -139,15 +122,15 @@ export function SafetyRationale({
         이 판정의 근거
       </h2>
 
-      {/* (a) 등급 + 판정 문장. usage_context가 있으면 이 밈 전용 문장을 쓰고,
-              없을 때만 등급 공통 범례로 물러난다(고유 서술 우선). */}
+      {/* (a) 등급 + 판정 문장. 확인된 usage_context가 없으면 등급을 근거로
+              안전성을 단정하지 않고, 맥락 미확인 상태만 짧게 알린다. */}
       <div>
         <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <span className="stat-mono">
             <SafetyBadge level={level} />
           </span>
           <span className="text-base leading-relaxed">
-            {verdict ?? LEVEL_MEANING[level]}
+            {verdict ?? "상황별 사용 맥락은 아직 확인되지 않았어요."}
           </span>
         </p>
         {noteText && (
@@ -155,24 +138,15 @@ export function SafetyRationale({
             {noteText}
           </p>
         )}
+        {!verdict && reviewedOn && (
+          <p className="mt-2 text-sm text-muted">
+            최근 검수일: <time dateTime={reviewedAt ?? undefined}>{reviewedOn}</time>
+          </p>
+        )}
       </div>
 
-      {/* (b) 상황별 가·불가 — usage_context. 미확인 상태면 확인된 것처럼 보이는
-          표 대신 무엇이 없는지 구체적으로 말한다(HG-003 C안). 새 색·글리프는
-          만들지 않는다 — doc-status-note.tsx와 같은 bg-surface-2/text-muted,
-          SAFETY_LEVELS.gray.icon의 기존 ◌ 글리프를 재사용한다. */}
-      {isUnverified ? (
-        <div className="rounded-xl bg-surface-2 p-4">
-          <h3 className="flex items-center gap-2 text-base font-bold">
-            <span aria-hidden>◌</span> 상황별 판정은 아직 확인 전이에요
-          </h3>
-          <p className="mt-1.5 text-base leading-relaxed text-muted">
-            직장·친구·가족·공개 SNS를 나눠서 확인한 기록이 아직 없어요. 위 등급은
-            문서 전체에 대한 판정이라 특정 상황에 그대로 적용된다고 보장하지 않아요.
-            확인이 끝나면 상황별로 나눠 보여드릴게요.
-          </p>
-        </div>
-      ) : (
+      {/* (b) 상황별 가·불가 — 확인된 usage_context가 있을 때만 행을 만든다. */}
+      {!isUnverified && (
         rows.length > 0 && (
           <div>
             <h3 className="text-base font-bold">어디서 써도 될까요?</h3>
@@ -215,7 +189,7 @@ export function SafetyRationale({
         </p>
       )}
 
-      {/* (d) caution — 구체 사유가 없으면 등급 일반 설명으로 폴백 */}
+      {/* (d) caution — 저장된 구체 사유가 있을 때만 표시 */}
       {cautionText && (
         <div
           className={`hover-glow-flame rounded-xl border border-transparent p-4 ${CAUTION_TONE[isRisky ? (level as "red" | "yellow") : "yellow"]}`}

@@ -29,7 +29,9 @@ function catalogCard(index = 0): MemeCollectibleCard {
 describe("original meme card art", () => {
   it("implements every semantic symbol in the server-only 1000-card manifest", () => {
     const symbols = new Set(catalog.cards.flatMap(card => card.art.symbols));
-    expect(symbols.size).toBe(74);
+    expect(symbols.size).toBe(76);
+    expect(symbols.has("dance-follow")).toBe(true);
+    expect(symbols.has("repeat")).toBe(true);
     for (const symbol of symbols) {
       const html = renderToStaticMarkup(<svg><MemeCollectibleSymbol symbol={symbol}/></svg>);
       expect(html).toContain(`data-symbol="${symbol}"`);

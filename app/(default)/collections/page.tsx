@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdsenseScript } from "@/components/adsense-script";
 import { COLLECTIONS, type CollectionDef } from "@/lib/collections";
 import { SITE_URL } from "@/lib/site";
 
@@ -55,7 +54,6 @@ const orderedCollections = GROUPS.flatMap((group) =>
 export default function CollectionsIndexPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 pt-8">
-      <AdsenseScript />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

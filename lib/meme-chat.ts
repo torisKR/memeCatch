@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MemeIntentDecision } from "@/lib/meme-intent";
 
 export const MEME_CHAT_LOCALES = ["ko", "en", "ja", "zh", "zh-tw"] as const;
 export type MemeChatLocale = (typeof MEME_CHAT_LOCALES)[number];
@@ -21,6 +22,7 @@ export type MemeChatResult = {
   mode: "generated" | "retrieved" | "empty";
   retrievalMode: "hybrid" | "keyword";
   items: MemeChatItem[];
+  decision?: MemeIntentDecision;
 };
 export type MemeChatProgress =
   | { stage: "reading" | "searching" | "answering" }

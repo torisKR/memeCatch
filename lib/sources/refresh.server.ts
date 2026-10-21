@@ -4,19 +4,25 @@ import "server-only";
  * 출처 메타데이터 재확인 잡.
  *
  * - YouTube/Shorts: videos.list 배치(50개)로 공개·임베드·라이선스 상태 갱신.
- *   조회되지 않는 ID는 삭제로 보고 removed_at을 찍고 제목·썸네일 캐시를 지운다.
- * - TikTok/Instagram: 공개 oEmbed로 생존 여부만 확인한다(스크래핑·다운로드 없음).
+ *   응답에서 빠진 ID는 삭제로 단정하지 않고 검수 가능한 실패로 보존한다.
+ * - TikTok/Instagram: 승인된 식별 검증 어댑터가 없어 기존 상태를 보존하고 검수를 미룬다.
  * - 공개 게시물(meme_contents)의 availability를 출처 상태와 동기화한다.
  *   임베드 불가·삭제 출처는 공개 화면에서 자동으로 숨겨진다.
  */
 
-import { getOEmbed, OEmbedError } from "@/lib/oembed";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
+import {
+  isYouTubePlatform,
+  normalizeSourceUrl,
+  type MediaSourcePlatform,
+} from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
 import {
-  listDueSourceAcquisitionRecovery,
+  countDueSourceAcquisitionCircuits,
+  isSourceAcquisitionRecoveryCircuitOpen,
   listActiveSourceAcquisitionRecovery,
+  listActiveSourceAcquisitionRecoveryForSources,
+  listEligibleDueSourceAcquisitionRecovery,
   recordSourceAcquisitionFailure,
   resolveSourceAcquisitionFailure,
   sourceAcquisitionKey,
@@ -24,8 +30,31 @@ import {
 
 const LIVENESS_INTERVAL_DAYS = 7;
 const METADATA_TTL_DAYS = 30;
-const YOUTUBE_BATCH_LIMIT = 300;
-const OEMBED_BATCH_LIMIT = 60;
+const SOURCE_REFRESH_LIMIT = 20;
+const YOUTUBE_RUN_LIMIT = 10;
+const OEMBED_RUN_LIMIT = 2;
+const RUN_BUDGET_MS = 45_000;
+const MIN_YOUTUBE_START_BUDGET_MS = 20_000;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type DatabaseOperation =
+  | "source_metadata_update"
+  | "contents_identity_update"
+  | "contents_url_update";
+
+class DatabaseOperationError extends Error {
+  readonly diagnostic: string;
+
+  constructor(operation: DatabaseOperation, error: unknown) {
+    super(operation);
+    const code = error && typeof error === "object" && "code" in error
+      ? String(error.code).toUpperCase()
+      : "";
+    this.diagnostic = /^[0-9A-Z]{5}$/.test(code)
+      ? `${operation}:${code}`
+      : operation;
+  }
+}
 
 type MediaSourceRow = {
   id: string;
@@ -47,259 +76,418 @@ function daysFromNow(days: number) {
   return new Date(Date.now() + days * 86_400_000).toISOString();
 }
 
+function sourceUrlAliases(source: MediaSourceRow, externalId: string) {
+  const normalized = normalizeSourceUrl(source.canonical_url);
+  const aliases = new Set([source.canonical_url]);
+  if (normalized) aliases.add(normalized.canonicalUrl);
+  if (isYouTubePlatform(source.platform)) {
+    aliases.add(`https://www.youtube.com/watch?v=${externalId}`);
+    aliases.add(`https://www.youtube.com/shorts/${externalId}`);
+    aliases.add(`https://youtu.be/${externalId}`);
+  }
+  return [...aliases];
+}
+
 async function syncMemeContentsAvailability(
   admin: ReturnType<typeof createAdminClient>,
   source: MediaSourceRow,
+  externalId: string,
   availability: "live" | "dead" | "region_blocked",
 ) {
-  // 백필이 정규 URL과 content_id를 맞춰두었다는 전제로 둘 다 매칭한다.
-  const { error } = await admin
+  const platforms = isYouTubePlatform(source.platform)
+    ? [DISPLAY_PLATFORM.youtube, DISPLAY_PLATFORM.youtube_shorts]
+    : [DISPLAY_PLATFORM[source.platform]];
+  // YouTube와 Shorts는 동일 ID 공간이다. 빈 ID로 넓은 업데이트를 만들지 않는다.
+  const idUpdate = await admin
     .from("meme_contents")
     .update({ availability })
-    .eq("platform", DISPLAY_PLATFORM[source.platform])
-    .eq("content_id", source.external_id ?? "")
+    .in("platform", platforms)
+    .eq("content_id", externalId)
     .eq("type", "embed");
-  if (error) throw new Error("source_content_availability_update_failed");
+  if (idUpdate.error) throw new DatabaseOperationError("contents_identity_update", idUpdate.error);
+
+  const urlUpdate = await admin
+    .from("meme_contents")
+    .update({ availability })
+    .in("platform", platforms)
+    .in("url", sourceUrlAliases(source, externalId))
+    .eq("type", "embed");
+  if (urlUpdate.error) throw new DatabaseOperationError("contents_url_update", urlUpdate.error);
+}
+
+function sourceExternalId(source: MediaSourceRow): string | null {
+  const normalized = normalizeSourceUrl(source.canonical_url);
+  if (!normalized) return null;
+  const samePlatform = isYouTubePlatform(source.platform)
+    ? isYouTubePlatform(normalized.platform)
+    : normalized.platform === source.platform;
+  if (!samePlatform) return null;
+
+  const stored = source.external_id?.trim() || null;
+  if (stored && stored !== normalized.externalId) return null;
+  return normalized.externalId;
+}
+
+function recoverySourceKey(source: MediaSourceRow, externalId: string | null) {
+  return externalId
+    ? sourceAcquisitionKey(source.platform, externalId)
+    : `${source.platform}:source:${source.id}`;
+}
+
+function selectRefreshRows(
+  recoveryRows: MediaSourceRow[],
+  freshRows: MediaSourceRow[],
+  limit: number,
+) {
+  const recoveryReserve = Math.floor(limit / 2);
+  const selectedRecovery = recoveryRows.slice(0, recoveryReserve);
+  const selectedFresh = freshRows.slice(0, limit - selectedRecovery.length);
+  let remaining = limit - selectedRecovery.length - selectedFresh.length;
+
+  if (remaining > 0) {
+    selectedRecovery.push(...recoveryRows.slice(selectedRecovery.length, selectedRecovery.length + remaining));
+    remaining = limit - selectedRecovery.length - selectedFresh.length;
+  }
+  if (remaining > 0) {
+    selectedFresh.push(...freshRows.slice(selectedFresh.length, selectedFresh.length + remaining));
+  }
+
+  return [...selectedRecovery, ...selectedFresh];
 }
 
 async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
+  recoverySourceIds: ReadonlySet<string>,
+  deadlineAt: number,
 ) {
-  const ids = rows
-    .map((row) => row.external_id)
-    .filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-
   const attemptStartedAt = new Date();
   const attemptIdBySource = new Map(rows.map((row) => [row.id, `refresh:${row.id}:${attemptStartedAt.toISOString()}`]));
-  let statuses: Awaited<ReturnType<typeof fetchYouTubeVideoStatuses>>;
-  try {
-    statuses = await fetchYouTubeVideoStatuses(ids);
-  } catch (error) {
-    for (const row of rows) {
-      if (!row.external_id) continue;
-      await recordSourceAcquisitionFailure({
-        sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-        idempotencyKey: attemptIdBySource.get(row.id) ?? `refresh:${row.id}:${attemptStartedAt.toISOString()}`,
-        platform: row.platform,
-        externalId: row.external_id,
-        canonicalUrl: row.canonical_url,
-        code: "provider_transient",
-        attempt: 1,
-        occurredAt: attemptStartedAt,
-        sourceId: row.id,
-      }, admin);
-    }
-    throw error;
-  }
-  const now = new Date().toISOString();
+  const externalIdBySource = new Map(rows.map((row) => [row.id, sourceExternalId(row)]));
+  const ids = [...new Set(externalIdBySource.values())].filter((id): id is string => Boolean(id));
   let removed = 0;
   let hidden = 0;
   let failed = 0;
+  let checked = 0;
+  let deferred = 0;
   const errors: string[] = [];
 
-  for (const row of rows) {
-    const status = row.external_id ? statuses.get(row.external_id) : undefined;
+  const recordFailure = async (
+    row: MediaSourceRow,
+    code: "provider_transient" | "provider_uncertain" | "db_failure",
+  ) => {
+    const externalId = externalIdBySource.get(row.id) ?? null;
+    await recordSourceAcquisitionFailure({
+      sourceKey: recoverySourceKey(row, externalId),
+      idempotencyKey: attemptIdBySource.get(row.id) ?? `refresh:${row.id}:${attemptStartedAt.toISOString()}`,
+      platform: row.platform,
+      externalId,
+      canonicalUrl: row.canonical_url,
+      code,
+      attempt: 1,
+      occurredAt: attemptStartedAt,
+      sourceId: row.id,
+    }, admin);
+  };
 
-    try {
-    if (!status) {
-      // 삭제·비공개 전환: 제목·썸네일 캐시를 지우고 게시 임베드를 내린다.
-      const { error } = await admin
-        .from("media_sources")
-        .update({
-          removed_at: now,
-          last_checked_at: now,
-          title: null,
-          thumbnail_url: null,
-          metadata_expires_at: null,
-        })
-        .eq("id", row.id);
-      if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "dead");
-      if (row.external_id) {
-        await resolveSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          attemptIdempotencyKey: attemptIdBySource.get(row.id) ?? "",
-          attemptStartedAt,
-          resolvedAt: new Date(now),
-        }, admin);
-      }
-      removed += 1;
+  for (const row of rows) {
+    if (externalIdBySource.get(row.id)) continue;
+    if (Date.now() >= deadlineAt) {
+      deferred += 1;
       continue;
     }
-
-    const embeddable = status.privacyStatus === "public" && status.embeddable === true;
-    const regionBlocked = status.regionBlocked?.includes("KR") === true;
-
-    const { error } = await admin
-      .from("media_sources")
-      .update({
-        title: status.title,
-        channel_name: status.channelTitle,
-        channel_id: status.channelId,
-        platform_published_at: status.publishedAt,
-        duration_seconds: status.durationSeconds,
-        public_status: status.privacyStatus ?? "unknown",
-        embeddable,
-        license_code: status.license,
-        made_for_kids: status.madeForKids,
-        thumbnail_url: status.thumbnailUrl,
-        metadata_refreshed_at: now,
-        metadata_expires_at: daysFromNow(METADATA_TTL_DAYS),
-        last_checked_at: now,
-      })
-      .eq("id", row.id);
-    if (error) throw new Error("source_refresh_update_failed");
-
-    if (!embeddable) {
-      await syncMemeContentsAvailability(admin, row, "dead");
-      hidden += 1;
-    } else if (regionBlocked) {
-      await syncMemeContentsAvailability(admin, row, "region_blocked");
-    } else {
-      await syncMemeContentsAvailability(admin, row, "live");
-    }
-    if (row.external_id) {
-      await resolveSourceAcquisitionFailure({
-        sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-        attemptIdempotencyKey: attemptIdBySource.get(row.id) ?? "",
-        attemptStartedAt,
-        resolvedAt: new Date(now),
-      }, admin);
-    }
-    } catch (error) {
-      failed += 1;
-      const message = error instanceof Error ? error.message : "source_refresh_failed";
-      errors.push(message);
-      if (!row.external_id) continue;
-      try {
-        await recordSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          idempotencyKey: attemptIdBySource.get(row.id) ?? `refresh:${row.id}:${attemptStartedAt.toISOString()}`,
-          platform: row.platform,
-          externalId: row.external_id,
-          canonicalUrl: row.canonical_url,
-          code: "db_failure",
-          attempt: 1,
-          occurredAt: attemptStartedAt,
-          sourceId: row.id,
-        }, admin);
-      } catch (recoveryError) {
-        errors.push(recoveryError instanceof Error ? recoveryError.message : "source_recovery_record_failed");
-      }
+    checked += 1;
+    failed += 1;
+    errors.push("source_identity_uncertain");
+    try {
+      await recordFailure(row, "provider_uncertain");
+    } catch {
+      errors.push("source_recovery_record_failed");
     }
   }
 
-  return { checked: rows.length, removed, hidden, failed, errors };
-}
+  if (ids.length === 0) return { checked, removed, hidden, failed, deferred, errors };
 
-async function refreshOEmbedSources(
-  admin: ReturnType<typeof createAdminClient>,
-  rows: MediaSourceRow[],
-) {
+  if (deadlineAt - Date.now() < MIN_YOUTUBE_START_BUDGET_MS) {
+    deferred += rows.length - checked - deferred;
+    return { checked, removed, hidden, failed, deferred, errors };
+  }
+
+  let statuses: Awaited<ReturnType<typeof fetchYouTubeVideoStatuses>>;
+  try {
+    statuses = await fetchYouTubeVideoStatuses(ids);
+  } catch {
+    for (const row of rows) {
+      if (!externalIdBySource.get(row.id)) continue;
+      if (Date.now() >= deadlineAt) {
+        deferred += rows.length - checked - deferred;
+        break;
+      }
+      checked += 1;
+      failed += 1;
+      try {
+        await recordFailure(row, "provider_transient");
+      } catch {
+        errors.push("source_recovery_record_failed");
+      }
+    }
+    errors.push("youtube_provider_transient");
+    return { checked, removed, hidden, failed, deferred, errors };
+  }
   const now = new Date().toISOString();
-  let checked = 0;
-  let removed = 0;
 
   for (const row of rows) {
-    const attemptStartedAt = new Date();
-    const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
+    const externalId = externalIdBySource.get(row.id);
+    if (!externalId) continue;
+    if (Date.now() >= deadlineAt) {
+      deferred += rows.length - checked - deferred;
+      break;
+    }
+    checked += 1;
+    const status = statuses.get(externalId);
+
     try {
-      const oembed = await getOEmbed(row.canonical_url);
-      const { error } = await admin
-        .from("media_sources")
-        .update({
-          title: oembed.title,
-          channel_name: oembed.authorName,
-          embeddable: true,
-          last_checked_at: now,
-          metadata_refreshed_at: now,
-          metadata_expires_at: daysFromNow(METADATA_TTL_DAYS),
-        })
-        .eq("id", row.id);
-      if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "live");
-      if (row.external_id) {
-        await resolveSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          attemptIdempotencyKey,
-          attemptStartedAt,
-          resolvedAt: new Date(now),
-        }, admin);
+      if (!status) {
+        failed += 1;
+        errors.push("youtube_status_omitted");
+        await recordFailure(row, "provider_uncertain");
+        continue;
       }
-    } catch (error) {
-      if (error instanceof OEmbedError && error.status === 404) {
-        const { error: sourceError } = await admin
+
+      const explicitlyDeleted = status.uploadStatus === "deleted";
+      const explicitlyUnavailable =
+        explicitlyDeleted ||
+        status.privacyStatus === "private" ||
+        status.privacyStatus === "unlisted" ||
+        status.embeddable === false;
+      const regionBlocked =
+        status.regionBlocked?.includes("KR") === true ||
+        (Array.isArray(status.regionAllowed) &&
+          status.regionAllowed.length > 0 &&
+          !status.regionAllowed.includes("KR"));
+
+      const canRestorePublicPlayback =
+        status.privacyStatus === "public" && status.embeddable === true;
+      if (!explicitlyUnavailable && !regionBlocked && !canRestorePublicPlayback) {
+        failed += 1;
+        errors.push("youtube_status_uncertain");
+        await recordFailure(row, "provider_uncertain");
+        continue;
+      }
+
+      if (explicitlyDeleted) {
+        const { error } = await admin
           .from("media_sources")
           .update({
             removed_at: now,
             last_checked_at: now,
             title: null,
+            channel_name: null,
+            channel_id: null,
+            platform_published_at: null,
+            duration_seconds: null,
+            public_status: "unknown",
+            embeddable: false,
+            license_code: null,
+            made_for_kids: null,
             thumbnail_url: null,
+            metadata_refreshed_at: null,
             metadata_expires_at: null,
           })
           .eq("id", row.id);
-        if (sourceError) throw new Error("source_refresh_update_failed");
-        await syncMemeContentsAvailability(admin, row, "dead");
+        if (error) throw new DatabaseOperationError("source_metadata_update", error);
+        await syncMemeContentsAvailability(admin, row, externalId, "dead");
         removed += 1;
-      } else if (row.external_id) {
-        await recordSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          idempotencyKey: attemptIdempotencyKey,
-          platform: row.platform,
-          externalId: row.external_id,
-          canonicalUrl: row.canonical_url,
-          code: error instanceof Error && error.message === "source_refresh_update_failed"
-            ? "db_failure"
-            : "provider_transient",
-          attempt: 1,
-          occurredAt: attemptStartedAt,
-          sourceId: row.id,
+      } else {
+        const { error } = await admin
+          .from("media_sources")
+          .update({
+            title: status.title,
+            channel_name: status.channelTitle,
+            channel_id: status.channelId,
+            platform_published_at: status.publishedAt,
+            duration_seconds: status.durationSeconds,
+            public_status: status.privacyStatus ?? "unknown",
+            embeddable: explicitlyUnavailable || regionBlocked ? false : true,
+            license_code: status.license,
+            made_for_kids: status.madeForKids,
+            thumbnail_url: status.thumbnailUrl,
+            metadata_refreshed_at: now,
+            metadata_expires_at: daysFromNow(METADATA_TTL_DAYS),
+            last_checked_at: now,
+          })
+          .eq("id", row.id);
+        if (error) throw new DatabaseOperationError("source_metadata_update", error);
+
+        if (explicitlyUnavailable) {
+          await syncMemeContentsAvailability(admin, row, externalId, "dead");
+          hidden += 1;
+        } else if (regionBlocked) {
+          await syncMemeContentsAvailability(admin, row, externalId, "region_blocked");
+          hidden += 1;
+        } else {
+          await syncMemeContentsAvailability(admin, row, externalId, "live");
+        }
+      }
+      if (recoverySourceIds.has(row.id)) {
+        await resolveSourceAcquisitionFailure({
+          sourceKey: recoverySourceKey(row, externalId),
+          attemptIdempotencyKey: attemptIdBySource.get(row.id) ?? "",
+          attemptStartedAt,
+          resolvedAt: new Date(now),
         }, admin);
       }
-      // 일시 오류(502·네트워크)는 다음 실행으로 미룬다 — last_checked_at을 건드리지 않는다.
+    } catch (error) {
+      failed += 1;
+      errors.push(error instanceof DatabaseOperationError ? error.diagnostic : "source_refresh_failed");
+      try {
+        await recordFailure(row, "db_failure");
+      } catch {
+        errors.push("source_recovery_record_failed");
+      }
     }
-    checked += 1;
   }
 
-  return { checked, removed };
+  return { checked, removed, hidden, failed, deferred, errors };
+}
+
+function deferUnverifiedSocialSources(rows: MediaSourceRow[]) {
+  return {
+    checked: 0,
+    removed: 0,
+    hidden: 0,
+    failed: 0,
+    deferred: rows.length,
+    errors: rows.map((row) => `${row.platform}_verification_unavailable`),
+  };
 }
 
 export type SourceRefreshResult = {
   status: "ok" | "partial" | "failed";
-  youtube: { checked: number; removed: number; hidden: number; failed: number; errors: string[] };
-  oembed: { checked: number; removed: number };
+  circuitOpen: number;
+  youtube: { checked: number; removed: number; hidden: number; failed: number; deferred: number; errors: string[] };
+  oembed: { checked: number; removed: number; hidden: number; failed: number; deferred: number; errors: string[] };
   error?: string;
 };
 
-export async function runSourceRefresh(): Promise<SourceRefreshResult> {
+type SourceRefreshCandidateRpcResult = PromiseLike<{
+  data: unknown[] | null;
+  error: { message: string } | null;
+}>;
+
+type SourceRefreshCandidateRpc = {
+  rpc(
+    name: "list_source_refresh_candidates",
+    args: {
+      p_stale_before: string;
+      p_platforms: readonly MediaSourcePlatform[];
+      p_limit: number;
+    },
+  ): SourceRefreshCandidateRpcResult;
+};
+
+function listSourceRefreshCandidates(
+  admin: ReturnType<typeof createAdminClient>,
+  staleBefore: string,
+  platforms: readonly MediaSourcePlatform[],
+  limit: number,
+) {
+  return (admin as unknown as SourceRefreshCandidateRpc).rpc(
+    "list_source_refresh_candidates",
+    {
+      p_stale_before: staleBefore,
+      p_platforms: platforms,
+      p_limit: limit,
+    },
+  );
+}
+
+export async function runSourceRefresh(options: { sourceId?: string } = {}): Promise<SourceRefreshResult> {
+  const sourceId = options.sourceId;
+  if (sourceId !== undefined && !UUID_PATTERN.test(sourceId)) {
+    throw new Error("source_refresh_invalid_source_id");
+  }
+  const deadlineAt = Date.now() + RUN_BUDGET_MS;
   const admin = createAdminClient();
-  const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
-  const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
-  const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
+  const refreshStartedAt = new Date();
   const staleBefore = new Date(
     Date.now() - LIVENESS_INTERVAL_DAYS * 86_400_000,
   ).toISOString();
 
-  const { data: stale, error: selectError } = await admin
-    .from("media_sources")
-    .select("id, platform, external_id, canonical_url, embeddable, removed_at")
-    .is("removed_at", null)
-    .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`)
-    .order("last_checked_at", { ascending: true, nullsFirst: true })
-    .limit(YOUTUBE_BATCH_LIMIT + OEMBED_BATCH_LIMIT);
+  let staleYouTube: unknown[] | null = [];
+  let staleOEmbed: unknown[] | null = [];
+  let youtubeSelectError: { message: string } | null = null;
+  let oembedSelectError: { message: string } | null = null;
 
+  if (sourceId) {
+    const { data, error } = await admin
+      .from("media_sources")
+      .select("id, platform, external_id, canonical_url, embeddable, removed_at")
+      .eq("id", sourceId)
+      .limit(1);
+    const scopedRows = ((data ?? []) as MediaSourceRow[]).filter(
+      (row) => row.id === sourceId && row.removed_at === null,
+    );
+    staleYouTube = scopedRows.filter((row) => isYouTubePlatform(row.platform));
+    staleOEmbed = scopedRows.filter((row) => row.platform === "tiktok" || row.platform === "instagram");
+    youtubeSelectError = error;
+  } else {
+    const youtubeSelection = await listSourceRefreshCandidates(
+      admin,
+      staleBefore,
+      ["youtube", "youtube_shorts"],
+      YOUTUBE_RUN_LIMIT,
+    );
+    staleYouTube = youtubeSelection.data;
+    youtubeSelectError = youtubeSelection.error;
+
+    const oembedSelection = await listSourceRefreshCandidates(
+      admin,
+      staleBefore,
+      ["tiktok", "instagram"],
+      OEMBED_RUN_LIMIT,
+    );
+    staleOEmbed = oembedSelection.data;
+    oembedSelectError = oembedSelection.error;
+  }
+
+  const selectError = youtubeSelectError ?? oembedSelectError;
   if (selectError) {
     return {
       status: "failed",
-      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0 },
+      circuitOpen: 0,
+      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, deferred: 0, errors: [] },
+      oembed: { checked: 0, removed: 0, hidden: 0, failed: 0, deferred: 0, errors: [] },
       error: selectError.message,
     };
   }
 
-  const { data: dueRows, error: dueError } = dueSourceIds.length
+  const scopedRows = [...((staleYouTube ?? []) as MediaSourceRow[]), ...((staleOEmbed ?? []) as MediaSourceRow[])];
+  const selectedActiveRecovery = sourceId
+    ? (await listActiveSourceAcquisitionRecovery(admin, sourceId))
+        .filter((row) => row.sourceId === sourceId)
+    : await listActiveSourceAcquisitionRecoveryForSources(
+        admin,
+        [...new Set(scopedRows.map((row) => row.id))],
+      );
+  const dueRecovery = sourceId
+    ? selectedActiveRecovery.filter((row) => (
+        row.nextRetryAt !== null &&
+        Date.parse(row.nextRetryAt) <= refreshStartedAt.getTime() &&
+        !isSourceAcquisitionRecoveryCircuitOpen(row)
+      ))
+    : await listEligibleDueSourceAcquisitionRecovery(refreshStartedAt, SOURCE_REFRESH_LIMIT, admin);
+  const circuitOpen = sourceId
+    ? selectedActiveRecovery.filter((row) => (
+        row.nextRetryAt !== null &&
+        Date.parse(row.nextRetryAt) <= refreshStartedAt.getTime() &&
+        isSourceAcquisitionRecoveryCircuitOpen(row)
+      )).length
+    : await countDueSourceAcquisitionCircuits(refreshStartedAt, admin);
+  const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
+  const { data: dueRows, error: dueError } = sourceId
+    ? { data: scopedRows.filter((row) => dueSourceIds.includes(row.id)), error: null }
+    : dueSourceIds.length
     ? await admin
         .from("media_sources")
         .select("id, platform, external_id, canonical_url, embeddable, removed_at")
@@ -308,44 +496,58 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   if (dueError) {
     return {
       status: "failed",
-      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0 },
+      circuitOpen,
+      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, deferred: 0, errors: [] },
+      oembed: { checked: 0, removed: 0, hidden: 0, failed: 0, deferred: 0, errors: [] },
       error: dueError.message,
     };
   }
+  const activeRecovery = [...selectedActiveRecovery, ...dueRecovery];
   const recoveryBySourceId = new Map(activeRecovery.flatMap((row) => row.sourceId ? [[row.sourceId, row] as const] : []));
-  const candidateRows = [...new Map([...(stale ?? []), ...(dueRows ?? [])].map((row) => [row.id, row])).values()];
-  const nowMs = Date.now();
-  const rows = candidateRows.filter((row) => {
-    const recovery = recoveryBySourceId.get(row.id);
-    return !recovery || (recovery.nextRetryAt !== null && Date.parse(recovery.nextRetryAt) <= nowMs);
-  }) as MediaSourceRow[];
-  const youtubeRows = rows
-    .filter((row) => isYouTubePlatform(row.platform))
-    .slice(0, YOUTUBE_BATCH_LIMIT);
-  const oembedRows = rows
-    .filter(
-      (row) => row.platform === "tiktok" || row.platform === "instagram",
-    )
-    .slice(0, OEMBED_BATCH_LIMIT);
+  const recoverySourceIds = new Set([
+    ...recoveryBySourceId.keys(),
+    ...dueSourceIds,
+  ]);
+  const dueRowById = new Map((dueRows ?? []).map((row) => [row.id, row as MediaSourceRow]));
+  const recoveryRows = dueSourceIds.flatMap((id) => {
+    const row = dueRowById.get(id);
+    return row ? [row] : [];
+  });
+  const freshYouTubeRows = ((staleYouTube ?? []) as MediaSourceRow[]).filter(
+    (row) => isYouTubePlatform(row.platform) && !recoveryBySourceId.has(row.id),
+  );
+  const freshOEmbedRows = ((staleOEmbed ?? []) as MediaSourceRow[]).filter(
+    (row) => (row.platform === "tiktok" || row.platform === "instagram") && !recoveryBySourceId.has(row.id),
+  );
+  const youtubeRows = selectRefreshRows(
+    recoveryRows.filter((row) => isYouTubePlatform(row.platform)),
+    freshYouTubeRows,
+    YOUTUBE_RUN_LIMIT,
+  );
+  const oembedRows = selectRefreshRows(
+    recoveryRows.filter((row) => row.platform === "tiktok" || row.platform === "instagram"),
+    freshOEmbedRows,
+    OEMBED_RUN_LIMIT,
+  );
 
-  let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-  let oembed = { checked: 0, removed: 0 };
+  let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, deferred: 0, errors: [] as string[] };
+  let oembed = { checked: 0, removed: 0, hidden: 0, failed: 0, deferred: 0, errors: [] as string[] };
   let firstError: string | undefined;
 
   try {
-    youtube = await refreshYouTubeSources(admin, youtubeRows);
+    youtube = await refreshYouTubeSources(admin, youtubeRows, recoverySourceIds, deadlineAt);
   } catch (error) {
     firstError = error instanceof Error ? error.message : String(error);
   }
   try {
-    oembed = await refreshOEmbedSources(admin, oembedRows);
+    oembed = deferUnverifiedSocialSources(oembedRows);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
 
   const result: SourceRefreshResult = {
-    status: firstError || youtube.failed > 0 || oembed.checked < oembedRows.length ? "partial" : "ok",
+    status: firstError || circuitOpen > 0 || youtube.failed > 0 || oembed.failed > 0 || youtube.deferred > 0 || oembed.deferred > 0 ? "partial" : "ok",
+    circuitOpen,
     youtube,
     oembed,
     ...(firstError ? { error: firstError } : {}),

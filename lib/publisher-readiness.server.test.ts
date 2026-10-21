@@ -14,7 +14,7 @@ function queryResult(result: {
   error: { message: string } | null;
 }) {
   const query: Record<string, ReturnType<typeof vi.fn>> = {};
-  for (const method of ["select", "in", "order", "range", "returns"]) {
+  for (const method of ["select", "eq", "in", "order", "range", "limit", "returns"]) {
     query[method] = vi.fn(() => query);
   }
   query.then = vi.fn((resolve: (value: typeof result) => unknown) => Promise.resolve(resolve(result)));
@@ -53,6 +53,71 @@ describe("listPublisherReadinessPage", () => {
     expect(client.upsert).not.toHaveBeenCalled();
     expect(client.delete).not.toHaveBeenCalled();
     expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("hydrates only matching bounded review audit rows and leaves writes disabled", async () => {
+    const meme = {
+      id: "00000000-0000-4000-8000-000000000001",
+      short_id: "abc12345",
+      slug: "reviewed",
+      title: "검수 밈",
+      summary: "검수 요약",
+      description: "가".repeat(420),
+      origin: "나".repeat(80),
+      usage_note: "다".repeat(60),
+      caution: "라".repeat(50),
+      usage_examples: [],
+      moderation_status: "approved",
+      published_at: "2026-09-20T00:00:00.000Z",
+      updated_at: "2026-09-20T00:00:00.000Z",
+      safety_level: "safe",
+      safety_reviewed_at: "2026-09-20T00:00:00.000Z",
+      house_rights_attested_at: null,
+      meme_sources: [],
+      meme_contents: [],
+      meme_tags_map: [],
+    };
+    const memeQuery = queryResult({ data: [meme], count: 1, error: null });
+    const auditResult = {
+      data: [{
+        entity_id: meme.id,
+        created_at: "2026-09-28T05:00:00.000Z",
+        detail: {
+          version: 1,
+          fingerprint: "0".repeat(64),
+          checklist: {
+            meaningContext: true,
+            sourceClaims: true,
+            rightsDelivery: true,
+            safetyContext: true,
+            ownHumanValue: true,
+          },
+          note: "prior",
+        },
+      }],
+      count: null,
+      error: null,
+    };
+    const auditQuery = queryResult(auditResult);
+    const client = {
+      from: vi.fn((table: string) => table === "memes" ? memeQuery : auditQuery),
+      insert: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+      rpc: vi.fn(),
+    };
+
+    const report = await listPublisherReadinessPage(client as never, { page: 1 });
+
+    expect(client.from).toHaveBeenNthCalledWith(1, "memes");
+    expect(client.from).toHaveBeenNthCalledWith(2, "admin_audit_log");
+    expect(auditQuery.eq).toHaveBeenCalledWith("entity_type", "meme");
+    expect(auditQuery.eq).toHaveBeenCalledWith("action", "publisher.readiness.review");
+    expect(auditQuery.in).toHaveBeenCalledWith("entity_id", [meme.id]);
+    expect(auditQuery.limit).toHaveBeenCalledWith(1000);
+    expect(report.items[0].review.status).toBe("stale");
+    expect(client.insert).not.toHaveBeenCalled();
   });
 
   it("throws a read error instead of returning an empty success", async () => {

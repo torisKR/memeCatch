@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ staticClient: vi.fn(), authClient: vi.fn(), cachedClient: vi.fn(), art: vi.fn(), caption: vi.fn() }));
+const mocks = vi.hoisted(() => ({ staticClient: vi.fn(), authClient: vi.fn(), cachedClient: vi.fn(), editorial: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.staticClient, createClient: mocks.authClient }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.cachedClient }));
-vi.mock("@/lib/meme-collectible-catalog", () => ({ getMemeCardArtDirection: mocks.art, getMemeCardEditorialCaption: mocks.caption }));
+vi.mock("@/lib/meme-collectible-catalog", () => ({ getAlignedMemeCardEditorialPresentation: mocks.editorial }));
 
 import { GET } from "./route";
 
 const row = {
   id: "mc-0001", card_no: 1, meme_id: "meme-a", edition: 1, art_seed: 42, active: true,
   memes: {
-    id: "meme-a", short_id: "abc123", title: "PPAP", slug: "ppap", category: "song", origin_year: 2016,
+    id: "meme-a", short_id: "abc123", title: "PPAP", slug: "ppap", summary: "Live PPAP summary", category: "song", origin_year: 2016,
     moderation_status: "approved", safety_level: "green", published_at: "2026-01-01T00:00:00Z",
   },
 };
@@ -32,8 +32,10 @@ function requestCard(id = "mc-0001") {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.art.mockReturnValue({ motif: "pen-pineapple", symbols: ["pen", "pineapple"], composition: "exchange" });
-  mocks.caption.mockReturnValue("Reviewed reveal caption");
+  mocks.editorial.mockReturnValue({
+    art: { motif: "pen-pineapple", symbols: ["pen", "pineapple"], composition: "exchange" },
+    caption: "Reviewed reveal caption",
+  });
 });
 
 describe("anonymous meme card reveal endpoint", () => {
@@ -75,7 +77,7 @@ describe("anonymous meme card reveal endpoint", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({ error: "card_unavailable" });
-    expect(mocks.art).not.toHaveBeenCalled();
+    expect(mocks.editorial).not.toHaveBeenCalled();
   });
 
   it("checks current eligibility again after a previously revealed card is withdrawn", async () => {

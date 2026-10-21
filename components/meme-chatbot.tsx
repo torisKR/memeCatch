@@ -2,10 +2,13 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
+import { MessageCircle, X } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
 import { parseLocalePath } from "@/lib/i18n-routing";
 import type { MemeChatItem, MemeChatLocale, MemeChatProgress, MemeChatResult } from "@/lib/meme-chat";
+import { MEME_INTENTS, MEME_INTENT_REASONS, type MemeIntentDecision } from "@/lib/meme-intent";
 import { MEME_CHAT_COPY } from "@/lib/meme-chat-copy";
 import { MemeChatStreamError, readMemeChatResponse } from "@/lib/meme-chat-stream";
 import { publicSourceUrl } from "@/lib/source-links";
@@ -15,6 +18,8 @@ import styles from "./meme-chatbot.module.css";
 const CHAT_LOCALES = new Set<string>(["ko", "en", "ja", "zh", "zh-tw"]);
 const HIDDEN_PATHS = ["/admin", "/auth", "/login", "/signup", "/forgot-password", "/reset-password"];
 const MAX_TURNS = 6;
+const CHAT_INTENTS = new Set<string>(MEME_INTENTS);
+const CHAT_INTENT_REASONS = new Set<string>(MEME_INTENT_REASONS);
 
 function subscribeToPwaBanner(onChange: () => void) {
   const observer = new MutationObserver(onChange);
@@ -53,11 +58,22 @@ function isChatItem(value: unknown): value is MemeChatItem {
 }
 
 function isChatResult(value: unknown): value is MemeChatResult {
+  const decision = value && isRecord(value) ? value.decision : undefined;
   return isRecord(value) &&
     typeof value.answer === "string" && value.answer.length <= 12000 &&
     (value.mode === "generated" || value.mode === "retrieved" || value.mode === "empty") &&
     (value.retrievalMode === "hybrid" || value.retrievalMode === "keyword") &&
+    (decision === undefined || isIntentDecision(decision)) &&
     Array.isArray(value.items) && value.items.length <= 12 && value.items.every(isChatItem);
+}
+
+function isIntentDecision(value: unknown): value is MemeIntentDecision {
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value);
+  return keys.every((key) => key === "intent" || key === "source" || key === "reason")
+    && CHAT_INTENTS.has(String(value.intent))
+    && value.source === "fallback"
+    && (value.reason === undefined || (typeof value.reason === "string" && CHAT_INTENT_REASONS.has(value.reason)));
 }
 
 function safeMemeHref(value: string): string | null {
@@ -322,7 +338,12 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
             )}
           </div>
           <form onSubmit={submitQuestion} aria-label={copy.question} className="shrink-0 border-t border-border px-4 pb-3 pt-3">
-            <p className="mb-2 text-xs leading-relaxed text-muted">{copy.disclosure}</p>
+            <p className="mb-2 text-xs leading-relaxed text-muted">
+              <span>{copy.disclosure}</span>{" "}
+              <Link href="/privacy" className="underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                {copy.privacyPolicy}
+              </Link>
+            </p>
             {error && <p role="alert" className="mb-2 text-sm leading-relaxed text-accent-text">{copy[error]}</p>}
             <label htmlFor={inputId} className="sr-only">{copy.question}</label>
             <textarea ref={inputRef} id={inputId} rows={2} value={question} maxLength={120} disabled={pending}
@@ -343,10 +364,8 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
       </AnimatePresence>
       <button ref={launcherRef} type="button" aria-label={open ? copy.close : copy.open} aria-expanded={open} aria-controls={open ? panelId : undefined}
         onClick={() => { if (open) closePanel(); else setOpen(true); }}
-        className={`${styles.launcher} flex h-16 w-16 shrink-0 items-center justify-center border border-accent/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent`}>
-        <span className={styles.launcherPrompt} aria-hidden="true">{open ? copy.close : copy.launcherHint}</span>
-        <MemeChatCharacter size={58} />
-        {open && <span className={styles.launcherClose} aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="m4 4 8 8m0-8-8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></span>}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
+        {open ? <X aria-hidden className="size-5" /> : <MessageCircle aria-hidden className="size-5" />}
       </button>
     </div>
   );

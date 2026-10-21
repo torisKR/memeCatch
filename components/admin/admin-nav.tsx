@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/admin/publisher-readiness", label: "퍼블리셔 준비도", icon: BookIcon },
   { href: "/admin/sources", label: "출처 검수", icon: LinkIcon },
   { href: "/admin/mpe", label: "MPE 검수", icon: InboxIcon },
+  { href: "/admin/trend-candidates", label: "외부 확산 후보", icon: RadarIcon },
   { href: "/admin/radar-safety", label: "Radar 안전", icon: FlagIcon },
   { href: "/admin/memes", label: "밈 관리", icon: BookIcon },
   { href: "/admin/reports", label: "신고", icon: FlagIcon },
@@ -123,6 +124,16 @@ function ArrowLeftIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M19 12H5m6-6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function RadarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 4v8l5 3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

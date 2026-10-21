@@ -11,8 +11,8 @@ const getLocalizedSearchMemesResult = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/queries", () => ({ searchMemes, getTrendingMemes }));
 vi.mock("@/lib/meme-translations", () => ({ getLocalizedSearchMemesResult }));
 vi.mock("@/app/(default)/search/search-input", () => ({
-  SearchInput: ({ initialQuery }: { initialQuery: string }) => (
-    <form role="search">
+  SearchInput: ({ initialQuery, locale }: { initialQuery: string; locale: string }) => (
+    <form role="search" data-search-locale={locale}>
       <input value={initialQuery} readOnly />
     </form>
   ),
@@ -75,6 +75,7 @@ describe("localized search recovery action", () => {
         `href="${memePathFrom(sourceMeme.short_id, sourceMeme.slug)}#global-translation-title"`,
       );
       expect(html).toContain(GLOBAL_SEARCH_COPY[locale].translationOptions);
+      expect(html).toContain(`data-search-locale="${locale}"`);
     }
   });
 
@@ -114,6 +115,9 @@ describe("localized search recovery action", () => {
 
     expect(html).not.toContain("data-localized-search-original-action");
     expect(html).not.toContain("data-localized-search-translation-options-action");
-    expect(html).toContain('<form role="search">');
+    expect(html).toContain(`<form role="search" data-search-locale="${locale}">`);
+    expect(html).toContain('data-search-no-exact-match="true"');
+    expect(html).not.toContain('state-empty-search.webp');
+    expect(html).not.toContain(GLOBAL_SEARCH_COPY[locale].noResultTitle);
   });
 });

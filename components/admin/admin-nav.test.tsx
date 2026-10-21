@@ -34,4 +34,11 @@ describe("AdminNav", () => {
     expect(html).toContain("퍼블리셔 준비도");
     expect(html).toMatch(/<a href="\/admin\/publisher-readiness" aria-current="page"/);
   });
+
+  it("links to the external spread review queue and marks it active", () => {
+    navigation.pathname = "/admin/trend-candidates";
+    const html = renderToStaticMarkup(<AdminNav />);
+    expect(html).toContain("외부 확산 후보");
+    expect(html).toMatch(/<a href="\/admin\/trend-candidates" aria-current="page"/);
+  });
 });

@@ -1,3 +1,5 @@
+import type { MemeIntentDecision } from "@/lib/meme-intent";
+
 export const MEME_VECTOR_PROFILE = "multilingual-e5-small-v1";
 export const MEME_VECTOR_DIMENSIONS = 384;
 export type MemeReference = { id: string; short_id: string; slug: string; title: string; summary: string };
@@ -5,6 +7,7 @@ export type MemeReferenceResult = {
   mode: "hybrid" | "keyword";
   reason?: "disabled" | "model_unavailable" | "index_empty" | "rpc_unavailable";
   items: MemeReference[];
+  decision?: MemeIntentDecision;
 };
 
 export function isMemeVector(value: unknown): value is number[] {

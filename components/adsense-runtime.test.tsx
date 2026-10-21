@@ -17,6 +17,12 @@ async function productionLoader() {
 }
 
 describe("review-safe automatic advertising", () => {
+  it.each(["false", "0", "TRUE", "1"])("does not render an ad loader for non-opt-in value %s", async (value) => {
+    vi.stubEnv("ADSENSE_AUTO_ADS_ENABLED", value);
+    const Loader = await productionLoader();
+    expect(Loader()).toBeNull();
+  });
+
   it("does not start a persistent Auto Ads runtime unless an operator explicitly opts in", async () => {
     vi.stubEnv("ADSENSE_AUTO_ADS_ENABLED", "");
     const Loader = await productionLoader();

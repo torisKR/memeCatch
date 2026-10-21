@@ -19,6 +19,7 @@ type ConnectorConfig = {
 
 type XPost = {
   id: string;
+  author_id?: string;
   text: string;
   created_at?: string;
   lang?: string;
@@ -30,6 +31,7 @@ type ThreadsPost = {
   media_type?: "TEXT" | "TEXT_POST" | string;
   permalink?: string;
   timestamp?: string;
+  username?: string;
 };
 
 type InstagramMedia = {
@@ -40,6 +42,7 @@ type InstagramMedia = {
   timestamp?: string;
   like_count?: number;
   comments_count?: number;
+  username?: string;
 };
 
 function required(name: string): string {
@@ -65,10 +68,13 @@ async function json<T>(request: Promise<Response>): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function metrics(input?: Record<string, number>): Record<string, number> {
+function rawMetrics(input?: Record<string, number | undefined>): Record<string, number> {
   if (!input) return {};
-  const engagement = Object.values(input).reduce((sum, value) => sum + value, 0);
-  return { engagement: Math.min(100, Math.log1p(engagement) * 15) };
+  return Object.fromEntries(
+    Object.entries(input).filter((entry): entry is [string, number] =>
+      typeof entry[1] === "number" && Number.isFinite(entry[1]) && entry[1] >= 0,
+    ),
+  );
 }
 
 export function createXTextConnector(config: ConnectorConfig = {}): RadarConnector<"x"> {
@@ -83,7 +89,7 @@ export function createXTextConnector(config: ConnectorConfig = {}): RadarConnect
         "query",
         `(${querySeeds.map((term) => `\"${term}\"`).join(" OR ")}) lang:ko -is:retweet -has:media`,
       );
-      url.searchParams.set("tweet.fields", "created_at,lang");
+      url.searchParams.set("tweet.fields", "created_at,lang,author_id");
       url.searchParams.set("max_results", "25");
       if (cursor) url.searchParams.set("since_id", cursor);
       const body = await json<{ data?: XPost[]; meta?: { newest_id?: string } }>(
@@ -97,6 +103,7 @@ export function createXTextConnector(config: ConnectorConfig = {}): RadarConnect
         signals: (body.data ?? []).map<RawRadarSignal>((post) => ({
           platform: "x",
           platformContentId: post.id,
+          creatorKey: post.author_id ? `x:${post.author_id}` : undefined,
           canonicalUrl: `https://x.com/i/web/status/${post.id}`,
           signalKind: "text_mention",
           text: post.text,
@@ -132,7 +139,7 @@ export function createThreadsTextConnector(
           url.searchParams.set("search_type", "RECENT");
           url.searchParams.set("search_mode", "KEYWORD");
           url.searchParams.set("media_type", "TEXT");
-          url.searchParams.set("fields", "id,text,media_type,permalink,timestamp");
+          url.searchParams.set("fields", "id,text,media_type,permalink,timestamp,username");
           url.searchParams.set("limit", "100");
           const body = await json<{ data?: ThreadsPost[] }>(
             request(url, {
@@ -150,6 +157,7 @@ export function createThreadsTextConnector(
             .map<RawRadarSignal>((post) => ({
               platform: "threads",
               platformContentId: post.id,
+              creatorKey: post.username ? `threads:${post.username}` : undefined,
               canonicalUrl: post.permalink!,
               signalKind: "text_mention",
               querySeed,
@@ -210,7 +218,7 @@ export function createInstagramHashtagConnector(
           mediaUrl.searchParams.set("user_id", userId);
           mediaUrl.searchParams.set(
             "fields",
-            "id,caption,media_type,permalink,timestamp,like_count,comments_count",
+            "id,caption,media_type,permalink,timestamp,like_count,comments_count,username",
           );
           mediaUrl.searchParams.set("limit", "50");
           const media = await json<{ data?: InstagramMedia[] }>(
@@ -223,6 +231,7 @@ export function createInstagramHashtagConnector(
           collected.push(...(media.data ?? []).filter((item) => item.permalink && item.timestamp).map<RawRadarSignal>((item) => ({
             platform: "instagram",
             platformContentId: item.id,
+            creatorKey: item.username ? `instagram:${item.username}` : undefined,
             canonicalUrl: item.permalink!,
             signalKind: "instagram_media",
             querySeed,
@@ -231,9 +240,9 @@ export function createInstagramHashtagConnector(
             publishedAt: item.timestamp,
             observedAt: item.timestamp!,
             collectedAt: attemptedAt,
-            metrics: metrics({
-              likes: item.like_count ?? 0,
-              comments: item.comments_count ?? 0,
+            metrics: rawMetrics({
+              likes: item.like_count,
+              comments: item.comments_count,
             }),
             rightsMode: "api_metadata",
             metadata: { media_type: item.media_type ?? null },

@@ -129,6 +129,12 @@ export default async function AdminMemeEditPage({
               공개 페이지 보기
             </Link>
           )}
+          <Link
+            href={`/admin/sources?memeId=${encodeURIComponent(meme.id)}`}
+            className="flex min-h-11 items-center text-base text-accent-text underline"
+          >
+            영상 출처 추가
+          </Link>
         </div>
       </div>
 

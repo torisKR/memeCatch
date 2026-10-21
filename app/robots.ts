@@ -2,7 +2,19 @@ import type { MetadataRoute } from "next";
 import { SEO_CONTENT_LOCALES, localizedPath } from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
 
-const PRIVATE_PATHS = ['/admin', '/my', '/api/', '/go/', '/auth/', '/submit', '/login', '/premium'] as const;
+const PRIVATE_PATHS = [
+  "/admin",
+  "/my",
+  "/api/",
+  "/go/",
+  "/auth/",
+  "/submit",
+  "/login",
+  "/premium",
+  "/community/new",
+  "/products/new",
+  "/products/mine",
+] as const;
 
 const DISALLOWED_PATHS = [
   ...PRIVATE_PATHS,
@@ -11,21 +23,30 @@ const DISALLOWED_PATHS = [
   ),
 ];
 
-/**
- * GEO 결정(글로벌 피벗): 와일드카드(*) 규칙이 이미 이 봇들을 막지 않지만,
- * 답변엔진(ChatGPT·Claude·Perplexity·Gemini)이 인용하려면 명시적 허용 신호가
- * 필요하다는 판단으로 별도 규칙을 추가한다. 이후 와일드카드가 좁아져도 AI
- * 크롤러 접근이 실수로 막히지 않도록 하는 안전장치이기도 하다. 정책은
- * 와일드카드와 동일(PRIVATE_PATHS만 차단, 나머지 전체 허용) — 기존 차단 경로는
- * 그대로 유지한다.
- */
-const AI_CRAWLER_USER_AGENTS = [
-  "GPTBot", // OpenAI (ChatGPT)
-  "ClaudeBot", // Anthropic (Claude)
-  "Claude-Web", // Anthropic (Claude 실시간 조회)
-  "PerplexityBot", // Perplexity
-  "Google-Extended", // Google (Gemini/AI Overviews 학습)
-  "CCBot", // Common Crawl (다수 AI 학습 데이터셋의 원천)
+/** 검색 색인·검색 답변 인용용 크롤러. 공개 문서만 읽고 운영 경로는 보지 못한다. */
+const SEARCH_CRAWLER_USER_AGENTS = [
+  "Googlebot",
+  "Bingbot",
+  "OAI-SearchBot",
+  "PerplexityBot",
+  "Claude-SearchBot",
+] as const;
+
+/** 사용자가 요청한 현재 페이지 조회. 모델 학습용 크롤링과 구분한다. */
+const USER_FETCH_USER_AGENTS = [
+  "ChatGPT-User",
+  "Perplexity-User",
+  "Claude-User",
+] as const;
+
+/** 모델 학습·데이터셋 수집용 크롤러는 허용하지 않는다. */
+const MODEL_TRAINING_USER_AGENTS = [
+  "GPTBot",
+  "ClaudeBot",
+  "CCBot",
+  // Google-Extended opt-out은 Google 검색 색인이나 AI Overviews 포함 여부를
+  // 제어하지 않는다. Gemini 모델 개선·grounding 사용에 관한 별도 토큰이다.
+  "Google-Extended",
 ] as const;
 
 export default function robots(): MetadataRoute.Robots {
@@ -38,9 +59,19 @@ export default function robots(): MetadataRoute.Robots {
         disallow: DISALLOWED_PATHS,
       },
       {
-        userAgent: [...AI_CRAWLER_USER_AGENTS],
+        userAgent: [...SEARCH_CRAWLER_USER_AGENTS, ...USER_FETCH_USER_AGENTS],
         allow: "/",
         disallow: DISALLOWED_PATHS,
+      },
+      {
+        // AdSense 문맥 크롤러도 공개 문서만 확인하며 관리자·API 경로는 제외한다.
+        userAgent: "Mediapartners-Google",
+        allow: "/",
+        disallow: DISALLOWED_PATHS,
+      },
+      {
+        userAgent: [...MODEL_TRAINING_USER_AGENTS],
+        disallow: "/",
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

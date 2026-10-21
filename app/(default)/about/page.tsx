@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 const ABOUT_DESCRIPTION =
-  "밈캐치는 한국 밈·유행어 3,000여 건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전입니다. 콘텐츠 검수 원칙과 운영 방침을 소개합니다.";
+  "밈캐치는 한국 밈·유행어의 뜻·유래·사용 맥락을 기록하는 밈 사전입니다. 공개 범위와 편집 완성도의 차이, 출처·저작권 원칙과 운영 방침을 소개합니다.";
 
 export const metadata: Metadata = {
   title: "소개",
@@ -28,8 +28,10 @@ export default function AboutPage() {
         <h1 className="text-3xl font-extrabold tracking-tight">밈캐치 소개</h1>
         <p className="mt-3 text-lg leading-relaxed text-muted">
           밈캐치는 한국 밈·유행어·챌린지의 <strong className="text-foreground">뜻·유래·지금 써도
-          되는지</strong>를 한 번에 알려주는 실시간 밈 사전입니다. 1990년대부터
-          오늘까지 3,000여 건의 밈을 기록하고 있습니다.
+          되는지</strong>를 한 번에 살펴볼 수 있게 정리하는 밈 사전입니다. 오래된
+          표현부터 최근 챌린지까지 공개 카탈로그에 기록하되, 공개되어 있다는
+          사실이 모든 항목의 유래·용례·권리 검토가 같은 깊이로 끝났다는 뜻은
+          아닙니다. 근거가 부족한 부분은 단정하지 않고 보완 상태를 표시합니다.
         </p>
 
         <section className="mt-10">
@@ -52,10 +54,10 @@ export default function AboutPage() {
           </p>
           <ul className="mt-4 space-y-3 text-base leading-relaxed">
             <li>
-              <strong>🚦 사용 안전 신호등</strong> — 밈마다 &ldquo;써도 됨 / 맥락
-              주의 / 이미 늦음 / 쓰면 위험&rdquo;을 표시합니다. 직장·친구·가족·SNS
-              상황별 가이드도 함께 제공합니다. 등급만 던지지 않고 상세의
-              &lsquo;이 판정의 근거&rsquo;에서 왜 그렇게 판정했는지를 밝히며,
+              <strong>사용 안전 신호</strong> — 사용 맥락과 주의점을 별도로
+              안내합니다. 유행이 지났다는 사실과 사용 위험은 별개입니다.
+              상황별 근거가 있는 항목은 상세의 &lsquo;사용할 때 참고하세요&rsquo;에서
+              설명을 볼 수 있고, 확인되지 않은 상황을 안전하다고 단정하지 않습니다.
               어떤 기준으로 등급을 나누는지는{" "}
               <Link href="/editorial" className="text-accent-text underline underline-offset-2">
                 편집 원칙
@@ -63,16 +65,17 @@ export default function AboutPage() {
               에 공개해 두었습니다.
             </li>
             <li>
-              <strong>🔥 밈 생명 게이지</strong> — 급상승부터 추억 밈까지, 밈의
-              생애주기를 실시간 조회 데이터 기반으로 보여줍니다. &ldquo;아직
-              뜨거운 밈인지, 이미 식은 밈인지&rdquo;를 감이 아니라 추이로
-              확인할 수 있습니다.
+              <strong>밈의 흐름과 관찰 범위</strong> — 밈캐치 안의 조회·저장 반응,
+              최근 등록, 외부 확산을 구분합니다. 외부 확산 근거가 확인된 항목은
+              조사 범위와 마지막 확인 시각을 함께 표시합니다. 내부 인기도나
+              오래된 누적 조회수만으로 지금 전체 SNS에서 유행한다고 말하지 않습니다.
             </li>
             <li>
               <strong>출처 중심</strong> — 원본 영상·이미지를 무단 저장하지 않고
-              유튜브 임베드·출처 링크로만 연결합니다. 공개한 뒤에도 링크가
-              살아 있는지 주기적으로 확인해, 원저작자가 내린 영상은 저희
-              화면에서도 자동으로 내려갑니다.
+              공식 임베드나 출처 링크를 우선합니다. 다만 출처 링크가 있다는
+              사실만으로 재사용 허락이나 라이선스가 생기는 것은 아닙니다.
+              게시자가 영상을 내리거나 주소를 바꾸면 임베드·수집 링크가 일시적으로
+              보이지 않을 수 있으며, 확인된 문제는 정정 또는 비노출 처리합니다.
             </li>
           </ul>
         </section>
@@ -93,24 +96,26 @@ export default function AboutPage() {
             <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
               <p aria-hidden className="stat-mono text-sm font-bold text-accent">02</p>
               <p className="mt-1.5">
-                <strong>사실 확인</strong> — 유래·연도·의미를 복수 출처로
-                교차 확인합니다. 확인되지 않는 항목은 공개하지 않습니다.
+                <strong>사실 확인</strong> — 뜻·유래·연도처럼 항목별로 확인 가능한
+                범위를 구분합니다. 가능한 경우 서로 독립된 자료를 교차 확인하고,
+                한 자료만 있거나 최초 발원지를 특정할 수 없으면 그 한계를 화면에
+                남깁니다.
               </p>
             </li>
             <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
               <p aria-hidden className="stat-mono text-sm font-bold text-accent">03</p>
               <p className="mt-1.5">
-                <strong>저작권 확인</strong> — 임베드·링크가 원저작자 권리를
-                침해하지 않는지 확인합니다.
+                <strong>권리 확인</strong> — 공식 공개 임베드인지, 단순 참고 링크인지,
+                밈캐치가 직접 만든 설명·도안인지 구분합니다. 링크의 존재를 사용
+                허락으로 간주하지 않으며 원본 파일을 복제해 보관하지 않습니다.
               </p>
             </li>
             <li className="rounded-xl border border-border bg-surface p-4 text-base leading-relaxed">
               <p aria-hidden className="stat-mono text-sm font-bold text-accent">04</p>
               <p className="mt-1.5">
-                <strong>공개 및 갱신</strong> — 공개 후에도 유행 상태와 사용
-                안전도를 계속 갱신합니다. 제보는 보통 24~48시간 안에 등록 여부를
-                회신하며, 유래 확인에 자료가 더 필요하면 사흘까지 걸릴 수
-                있습니다.
+                <strong>공개 및 갱신</strong> — 공개 카탈로그와 편집 완료 상태를
+                같은 뜻으로 다루지 않습니다. 보완이 필요한 항목은 제한 상태나
+                확인 안내를 붙이고, 정정 제보와 새 근거를 검토해 내용을 갱신합니다.
               </p>
             </li>
           </ol>
@@ -120,7 +125,18 @@ export default function AboutPage() {
             <Link href="/editorial" className="text-accent-text underline underline-offset-2">
               편집 원칙
             </Link>
-            에 전부 공개해 두었습니다.
+            에 정리해 두었습니다.
+          </p>
+          <p className="mt-4 text-base leading-relaxed">
+            직접 출처를 살펴보려면{" "}
+            <Link
+              href="/guides/reading-memes"
+              className="text-accent-text underline underline-offset-2"
+            >
+              밈의 원본과 사용 맥락을 확인하는 방법
+            </Link>
+            을 참고해 주세요. 사전 항목의 링크가 사라졌을 때 무엇을 확인해야
+            하는지도 함께 설명합니다.
           </p>
         </section>
 

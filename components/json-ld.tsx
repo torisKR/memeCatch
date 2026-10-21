@@ -1,11 +1,13 @@
 import {
-  CATEGORIES,
+  DISPLAY_CATEGORIES,
   memePathFrom,
   resolveDisplayCategory,
   type MemeCategory,
 } from "@/lib/labels";
 import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
 import { citableSources, evidenceTimestamp, type CitableSourceInput } from "@/lib/source-links";
+import type { PublicMemeProducedVideo } from "@/lib/video-production/public.server";
+import { parseProducedVideoMetadata, producedVideoEmbedUrl } from "@/lib/video-production/video-schema.mjs";
 import {
   absoluteSiteUrl,
   getSeoCopy,
@@ -53,7 +55,7 @@ export function OrganizationJsonLd() {
         url: SITE_URL,
         logo: `${SITE_URL}/icons/icon-512.png`,
         description:
-          "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 알려주는 한국 밈 실시간 사전.",
+          "밈·유행어·챌린지의 뜻과 유래, 사용 맥락과 참고 자료를 정리하는 한국 밈 사전.",
         email: CONTACT_EMAIL,
         // 운영 주체를 명시 — 1인 운영임을 구조화 데이터에서도 숨기지 않는다.
         founder: {
@@ -134,15 +136,13 @@ export function DefinedTermSetJsonLd({
         name: name ?? copy.glossaryName,
         description: description ?? copy.glossaryDescription,
         url: glossaryUrl,
-        inLanguage: toHrefLang(locale),
       }}
     />
   );
 }
 
 /**
- * 밈 상세 — WebPage 래퍼(datePublished/dateModified/speakable) +
- * mainEntity로 DefinedTerm(@id #glossary 참조). 기존 단독 DefinedTerm을 대체.
+ * 밈 상세 — WebPage 래퍼. mainEntity는 별도 DefinedTerm의 안정적인 @id를 참조한다.
  */
 export function MemeWebPageJsonLd({
   name,
@@ -157,8 +157,6 @@ export function MemeWebPageJsonLd({
   path,
   siteName,
   sitePath,
-  glossaryName,
-  glossaryPath,
 }: {
   name: string;
   summary: string;
@@ -178,9 +176,6 @@ export function MemeWebPageJsonLd({
   const copy = getSeoCopy(locale);
   const url = absoluteSiteUrl(path ?? localizedMemePath(locale, shortId, slug));
   const localizedSiteUrl = absoluteSiteUrl(sitePath ?? localizedPath("/", locale));
-  const localizedGlossaryUrl = absoluteSiteUrl(
-    glossaryPath ?? sitePath ?? localizedPath("/", locale),
-  );
   const published = evidenceTimestamp(datePublished);
   const modified = evidenceTimestamp(dateModified);
   const citations = citableSources(sources).map((source) => source.url);
@@ -189,8 +184,9 @@ export function MemeWebPageJsonLd({
       data={{
         "@context": "https://schema.org",
         "@type": "WebPage",
+        "@id": `${url}#webpage`,
         name,
-        description: summary,
+        description: description.trim() || summary,
         url,
         inLanguage: toHrefLang(locale),
         ...(published ? { datePublished: published } : {}),
@@ -202,23 +198,10 @@ export function MemeWebPageJsonLd({
           url: localizedSiteUrl,
         },
         publisher: { "@id": `${SITE_URL}#org` },
-        // 정답 카드(밈명+한 줄 뜻) — "3초 안에 알려드려요" 컨셉과 일치하는 음성 답변 대상
-        speakable: {
-          "@type": "SpeakableSpecification",
-          cssSelector: ["h1", "#meme-summary"],
-        },
         mainEntity: {
-          "@type": "DefinedTerm",
-          name,
-          description: description || summary,
-          url,
-          inDefinedTermSet: {
-            "@type": "DefinedTermSet",
-            "@id": `${localizedGlossaryUrl}#glossary`,
-            name: glossaryName ?? copy.glossaryName,
-            url: localizedGlossaryUrl,
-          },
+          "@id": `${url}#term`,
         },
+        breadcrumb: { "@id": `${url}#breadcrumb` },
       }}
     />
   );
@@ -226,10 +209,7 @@ export function MemeWebPageJsonLd({
 
 /**
  * 밈 상세 — 독립 최상위 DefinedTerm(사전 항목) JSON-LD.
- * MemeWebPageJsonLd의 mainEntity(WebPage에 중첩된 DefinedTerm)를 대체하지 않고
- * 병렬로 추가한다 — 별도 <script> 블록의 최상위 @type이라 AI 인용·리치 결과
- * 파서가 더 안정적으로 인식한다. description은 전체 설명이 아닌 요약(summary):
- * 사전 항목다운 한 줄 정의를 유지한다.
+ * WebPage.mainEntity가 이 노드의 @id를 참조하며, 화면의 한 줄 요약을 정의로 쓴다.
  * TODO(후속 범위): 번역본이 있으면 workTranslation/translationOfWork로
  * 로케일 간 연결 — 이번 작업 범위 밖.
  */
@@ -260,10 +240,10 @@ export function MemeDefinedTermJsonLd({
       data={{
         "@context": "https://schema.org",
         "@type": "DefinedTerm",
+        "@id": `${url}#term`,
         name,
         description: summary,
         url,
-        inLanguage: toHrefLang(locale),
         inDefinedTermSet: {
           "@type": "DefinedTermSet",
           "@id": `${localizedGlossaryUrl}#glossary`,
@@ -306,11 +286,20 @@ export function MemeBreadcrumbJsonLd({
     explorePath ?? localizedPath(`/explore?category=${displayCategory}`, locale),
   );
   const memeUrl = absoluteSiteUrl(path ?? localizedMemePath(locale, shortId, slug));
+  const displayCategoryName = {
+    "ai-meme": DISPLAY_CATEGORIES["ai-meme"].user,
+    meme_term: copy.categories.phrase,
+    challenge_dance: copy.categories.challenge,
+    song: copy.categories.song,
+    drama_scene: copy.categories.comment,
+    meme_video: copy.categories.image,
+  }[displayCategory];
   return (
     <Script
       data={{
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
+        "@id": `${memeUrl}#breadcrumb`,
         itemListElement: [
           {
             "@type": "ListItem",
@@ -321,7 +310,7 @@ export function MemeBreadcrumbJsonLd({
           {
             "@type": "ListItem",
             position: 2,
-            name: categoryName ?? copy.categories[category] ?? CATEGORIES[category].user,
+            name: categoryName ?? displayCategoryName,
             item: localizedExploreUrl,
           },
           {
@@ -336,39 +325,24 @@ export function MemeBreadcrumbJsonLd({
   );
 }
 
-/** 밈 상세 — 대표 유튜브 영상 VideoObject (실존 임베드가 있을 때만) */
-export function MemeVideoJsonLd({
-  name,
-  description,
-  videoId,
-  thumbnailUrl,
-  uploadDate,
-  caption,
-}: {
-  name: string;
-  description: string;
-  videoId: string;
-  thumbnailUrl?: string | null;
-  /** 실제 원본 영상의 저장된 업로드 시각. 페이지/DB 생성일로 대체하지 않는다. */
-  uploadDate?: string | null;
-  caption?: string | null;
-}) {
-  const published = evidenceTimestamp(uploadDate);
-  if (!published) return null;
-
+/** Own explanatory video only: persisted public playback proof, never an origin citation. */
+export function MemeProducedVideoJsonLd({ video, path }: { video: PublicMemeProducedVideo; path: string }) {
+  if (video.privacy_status !== "public" || video.public_embed_verified !== true) return null;
+  const metadata = parseProducedVideoMetadata(video.schema_metadata, video.youtube_video_id);
+  const embedUrl = producedVideoEmbedUrl(video.youtube_video_id);
+  if (!metadata || !embedUrl) return null;
   return (
-    <Script
-      data={{
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
-        name: `${name} — 대표 영상`,
-        description: caption || description,
-        thumbnailUrl: thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
-        contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        uploadDate: published,
-      }}
-    />
+    <Script data={{
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      "@id": `${absoluteSiteUrl(path)}#produced-video-${video.youtube_video_id}`,
+      name: metadata.name,
+      ...(metadata.description ? { description: metadata.description } : {}),
+      thumbnailUrl: metadata.thumbnailUrl,
+      uploadDate: metadata.uploadDate,
+      embedUrl,
+      publisher: { "@id": `${SITE_URL}#org` },
+    }} />
   );
 }
 
@@ -398,7 +372,7 @@ export function RankingsJsonLd({
 }
 
 /** /explore — CollectionPage (무한 스크롤이라 전수 ItemList는 과대표현 → 페이지 선언만) */
-export function ExploreCollectionJsonLd() {
+export function ExploreCollectionJsonLd({ path = "/explore" }: { path?: string } = {}) {
   return (
     <Script
       data={{
@@ -407,7 +381,7 @@ export function ExploreCollectionJsonLd() {
         name: "밈 탐색",
         description:
           "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.",
-        url: `${SITE_URL}/explore`,
+        url: absoluteSiteUrl(path),
         inLanguage: "ko",
         isPartOf: { "@type": "WebSite", name: "밈캐치", url: SITE_URL },
       }}
@@ -489,7 +463,7 @@ export function ForumPostingJsonLd({
         },
         interactionStatistic: {
           "@type": "InteractionCounter",
-          interactionType: "https://schema.org/LikeAction",
+          interactionType: { "@type": "LikeAction" },
           userInteractionCount: likeCount,
         },
         commentCount,

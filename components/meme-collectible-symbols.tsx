@@ -31,6 +31,8 @@ export function MemeCollectibleSymbol({ symbol }: { symbol: string }) {
     case "pineapple": shape = <><path d="m9 11-4-8 9 5 3-8 4 8 8-5-5 8" fill="var(--card-accent)"/><rect x="8" y="11" width="17" height="20" rx="8"/><path d="m9 15 12 13m-12-7 7 8m-3-16 12 13m-15-1 12-12m-9 17 11-12"/></>; break;
     case "music-note": shape = <><path d="M12 25V7l17-4v18M12 12l17-4"/><ellipse cx="7" cy="25" rx="5" ry="4" fill="var(--card-accent)"/><ellipse cx="24" cy="21" rx="5" ry="4" fill="var(--card-accent)"/></>; break;
     case "footsteps": shape = <><ellipse cx="9" cy="9" rx="5" ry="7" transform="rotate(-20 9 9)" fill="var(--card-accent)"/><path d="m6 21 4-1"/><ellipse cx="23" cy="18" rx="5" ry="7" transform="rotate(20 23 18)" fill="var(--card-accent)"/><path d="m20 30 4 1"/></>; break;
+    case "dance-follow": shape = <><circle cx="9" cy="8" r="3" fill="var(--card-accent)"/><circle cx="23" cy="8" r="3" fill="var(--card-accent)"/><path d="M9 12v9L4 30m5-9 6 9m-6-16-6 5m6-4 6 4M23 12v9l-5 9m5-9 6 9m-6-7-6-4m6-5 6 5"/><path d="M12 5q4-5 8 0m-3-3 3 3-3 3" stroke="var(--card-accent)"/></>; break;
+    case "repeat": shape = <><path d="M6 11Q12 1 24 7l4 4m0 0V4m0 7h-7M26 21q-6 10-18 4l-4-4m0 0v7m0-7h7"/><circle cx="16" cy="16" r="3" fill="var(--card-accent)"/></>; break;
     case "wave": case "signal": shape = <><path d="M2 14q5-7 10 0t10 0 10 0M2 24q5-7 10 0t10 0 10 0"/><path d="m13 3 3-2 3 2" stroke="var(--card-accent)"/></>; break;
     case "hands": shape = <><path d="m4 28 9-8-1-14 4-3 4 3v11l4-5 5 3-3 12-9 4Z" fill="var(--card-accent)"/><path d="M5 12 2 9m5-3V2m17 3 3-3"/></>; break;
     case "confetti": case "spark": shape = <><path d="m16 1 4 11 11 4-11 4-4 11-4-11-11-4 11-4Z" fill="var(--card-accent)"/><path d="m3 3 3 2m21 24 3 3"/></>; break;

@@ -5,6 +5,9 @@ const projections = new Set([
   "id,short_id,slug,title,summary,category,safety_level,lifecycle_status,media_type,origin_year,trend_score,meme_contents(thumbnail_url,is_representative),meme_market_profiles(market_code,role,review_state)",
   "id,short_id,slug,title,summary,safety_level,origin_year,trend_score",
 ]);
+const trendSummaryProjection = "meme_id,external_state,reason,evidence_scope,independent_use_count,external_score,confidence,evidence_links,last_verified_at,stale_after";
+const trendMemeProjection = "id,short_id,slug,title,summary,moderation_status";
+const producedVideoProjection = "meme_id,production_id,youtube_video_id,content_id,caption,privacy_status,site_linked_at,public_embed_verified,video_name,video_description,video_thumbnail_url,video_upload_date";
 const publicStatuses = "in.(approved,limited)";
 const boundedLimit = (value: string | null) => value !== null
   && /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 100;
@@ -24,11 +27,28 @@ export function createPublicCatalogFetch(supabaseUrl: string, anonKey: string): 
     const search = url.pathname === "/rest/v1/rpc/search_memes"
       && query.length >= 2 && query.length <= 80
       && boundedLimit(url.searchParams.get("p_limit"));
-    const eligible = url.origin === origin && url.href.length <= 4096
-      && method === "GET" && (list || search)
+    const publicCatalogRead = (list || search)
       && projections.has(projection)
       && url.searchParams.getAll("moderation_status").length === 1
-      && url.searchParams.get("moderation_status") === publicStatuses
+      && url.searchParams.get("moderation_status") === publicStatuses;
+    const trendSummaryRead = url.pathname === "/rest/v1/public_meme_trend_summaries"
+      && projection === trendSummaryProjection
+      && (
+        /^eq\.[0-9a-f-]{36}$/iu.test(url.searchParams.get("meme_id") ?? "")
+        || boundedLimit(url.searchParams.get("limit"))
+      );
+    const trendMemeRead = url.pathname === "/rest/v1/memes"
+      && projection === trendMemeProjection
+      && url.searchParams.get("moderation_status") === "eq.approved"
+      && /^in\.\([0-9a-f,-]{36,295}\)$/iu.test(url.searchParams.get("id") ?? "");
+    const producedVideoRead = url.pathname === "/rest/v1/public_meme_produced_videos"
+      && projection === producedVideoProjection
+      && /^eq\.[0-9a-f-]{36}$/iu.test(url.searchParams.get("meme_id") ?? "")
+      && url.searchParams.get("order") === "site_linked_at.desc";
+    const eligible = url.origin === origin && url.href.length <= 4096
+      && method === "GET" && (
+        publicCatalogRead || trendSummaryRead || trendMemeRead || producedVideoRead
+      )
       && headers.get("apikey") === anonKey
       && headers.get("authorization") === `Bearer ${anonKey}`
       && (!headers.has("accept-profile") || headers.get("accept-profile") === "public")

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
@@ -22,7 +24,17 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
-import { AdsenseScript } from "@/components/adsense-script";
+import {
+  EXPLORE_PAGE_SIZE,
+  EXPLORE_SEARCH_LIMIT,
+  buildExplorePageHref,
+  clampExplorePage,
+  exploreCanonicalPath,
+  explorePageOffset,
+  hasExploreFacet,
+  isCanonicalExplorePageParam,
+  parseExplorePage,
+} from "@/lib/explore-pagination";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -37,24 +49,8 @@ import { AdsenseScript } from "@/components/adsense-script";
 const EXPLORE_DESCRIPTION =
   "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.";
 
-export const metadata: Metadata = {
-  title: "밈 탐색",
-  description: EXPLORE_DESCRIPTION,
-  alternates: { canonical: "/explore" },
-  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
-    title: "밈 탐색",
-    description: EXPLORE_DESCRIPTION,
-    url: "/explore",
-  },
-};
-
-// components/explore-grid.tsx의 PAGE_SIZE와 동일하게 유지
-const PAGE_SIZE = 24;
-const SEARCH_LIMIT = 50; // components/explore-grid.tsx의 SEARCH_LIMIT과 동일
+const PAGE_SIZE = EXPLORE_PAGE_SIZE;
+const SEARCH_LIMIT = EXPLORE_SEARCH_LIMIT;
 const YEAR_RANGES: Record<string, [number, number]> = {
   "2020s": [2020, 2029],
   "2010s": [2010, 2019],
@@ -68,6 +64,32 @@ const YEAR_KEYS = Object.keys(YEAR_RANGES);
 const SORT_KEYS: SortKey[] = ["trending", "recent", "popular", "controversial"];
 
 type RawParams = Record<string, string | string[] | undefined>;
+
+type ExplorePageResult = {
+  initial: MemeListItem[];
+  page: number;
+  hasMore: boolean;
+  failed: boolean;
+  redirectToPage?: number;
+};
+
+function serializeRawParams(params: RawParams): string {
+  const entries: Array<[string, string[]]> = [];
+  for (const key of Object.keys(params).sort()) {
+    const value = params[key];
+    if (value === undefined) continue;
+    entries.push([key, Array.isArray(value) ? value : [value]]);
+  }
+  return JSON.stringify(entries);
+}
+
+function deserializeRawParams(serialized: string): RawParams {
+  return Object.fromEntries(
+    (JSON.parse(serialized) as Array<[string, string[]]>).map(
+      ([key, values]) => [key, values.length === 1 ? values[0] : values],
+    ),
+  );
+}
 
 function asArray(v: string | string[] | undefined): string[] {
   if (Array.isArray(v)) return v;
@@ -149,7 +171,11 @@ function withPlatform<T extends {
   return query;
 }
 
-function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
+function buildQuery(
+  supabase: SupabaseClient<Database>,
+  filters: Filters,
+  options?: { count?: "exact"; head?: boolean },
+) {
   // 검색어가 있으면 search_memes RPC 위에 동일 필터/정렬을 얹는다
   // (components/explore-grid.tsx의 buildMemesQuery와 반드시 동기화).
   if (filters.q) {
@@ -181,7 +207,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
 
   let q = supabase
     .from("memes")
-    .select(selectForPlatform(filters.platform, filters.topicTag))
+    .select(selectForPlatform(filters.platform, filters.topicTag), options)
     .in("moderation_status", ["approved", "limited"]);
   if (filters.platform) q = withPublicContent(q);
   q = withTopicTag(q, filters.topicTag);
@@ -221,6 +247,114 @@ function filterKey(f: Filters): string {
   ].join("|");
 }
 
+const getExplorePageResult = cache(async function getExplorePageResult(
+  serializedParams: string,
+): Promise<ExplorePageResult> {
+  const params = deserializeRawParams(serializedParams);
+  const filters = parseFilters(params);
+  const requestedPage = parseExplorePage(params.page);
+  try {
+    const supabase = createStaticClient();
+    if (filters.q) {
+      const { data, error } = await buildQuery(supabase, filters).range(
+        0,
+        SEARCH_LIMIT - 1,
+      );
+      if (error) throw error;
+      const allRows = (data ?? []) as unknown as MemeListItem[];
+      const page = clampExplorePage(requestedPage, allRows.length);
+      if (page !== requestedPage) {
+        return { initial: [], page, hasMore: false, failed: false, redirectToPage: page };
+      }
+      const offset = explorePageOffset(page);
+      return {
+        initial: allRows.slice(offset, offset + PAGE_SIZE),
+        page,
+        hasMore: offset + PAGE_SIZE < allRows.length,
+        failed: false,
+      };
+    }
+
+    const { data, count, error } = await buildQuery(supabase, filters, {
+      count: "exact",
+    }).range(
+      explorePageOffset(requestedPage),
+      explorePageOffset(requestedPage) + PAGE_SIZE,
+    );
+    if (error?.code === "PGRST103" && requestedPage > 1) {
+      const countResult = await buildQuery(supabase, filters, {
+        count: "exact",
+        head: true,
+      });
+      if (countResult.error) throw countResult.error;
+      const page = clampExplorePage(requestedPage, countResult.count ?? 0);
+      return { initial: [], page, hasMore: false, failed: false, redirectToPage: page };
+    }
+    if (error) throw error;
+
+    const page = typeof count === "number"
+      ? clampExplorePage(requestedPage, count)
+      : requestedPage;
+    if (page !== requestedPage) {
+      return { initial: [], page, hasMore: false, failed: false, redirectToPage: page };
+    }
+
+    const rows = (data ?? []) as unknown as MemeListItem[];
+    return {
+      initial: rows.slice(0, PAGE_SIZE),
+      page,
+      hasMore: typeof count === "number"
+        ? explorePageOffset(page) + PAGE_SIZE < count
+        : rows.length > PAGE_SIZE,
+      failed: false,
+    };
+  } catch {
+    return {
+      initial: [],
+      page: requestedPage,
+      hasMore: false,
+      failed: true,
+    };
+  }
+});
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<RawParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const requestedPage = parseExplorePage(params.page);
+  const canonicalPageParam = isCanonicalExplorePageParam(params.page);
+  const pageResult = requestedPage > 1 && canonicalPageParam
+    ? await getExplorePageResult(serializeRawParams(params))
+    : undefined;
+  const page = pageResult?.redirectToPage ?? pageResult?.page ?? requestedPage;
+  const needsRedirect = !canonicalPageParam || pageResult?.redirectToPage !== undefined;
+  const indexable = !needsRedirect
+    && !hasExploreFacet(params)
+    && pageResult?.failed !== true;
+  const canonical = hasExploreFacet(params)
+    ? "/explore"
+    : exploreCanonicalPath("/explore", page);
+  const pageTitle = page > 1 && indexable ? `밈 탐색 ${page}페이지` : "밈 탐색";
+
+  return {
+    title: pageTitle,
+    description: EXPLORE_DESCRIPTION,
+    alternates: { canonical },
+    robots: indexable ? { index: true, follow: true } : { index: false, follow: true },
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: pageTitle,
+      description: EXPLORE_DESCRIPTION,
+      url: canonical,
+    },
+  };
+}
+
 export default async function ExplorePage({
   searchParams,
 }: {
@@ -228,40 +362,38 @@ export default async function ExplorePage({
 }) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
+  const requestedPage = parseExplorePage(sp.page);
 
-  const [initial, platformCounts] = await Promise.all([
-    (async (): Promise<MemeListItem[]> => {
-      try {
-        const supabase = createStaticClient();
-        const { data } = await buildQuery(supabase, filters).range(
-          0,
-          PAGE_SIZE - 1
-        );
-        return (data ?? []) as unknown as MemeListItem[];
-      } catch {
-        return [];
-      }
-    })(),
+  if (!isCanonicalExplorePageParam(sp.page)) {
+    redirect(buildExplorePageHref("/explore", sp, requestedPage));
+  }
+
+  const [pageResult, platformCounts] = await Promise.all([
+    getExplorePageResult(serializeRawParams(sp)),
     getSocialPlatformCounts(),
   ]);
+  if (pageResult.redirectToPage) {
+    redirect(buildExplorePageHref("/explore", sp, pageResult.redirectToPage));
+  }
+  const previousHref = pageResult.page > 1
+    ? buildExplorePageHref("/explore", sp, pageResult.page - 1)
+    : undefined;
+  const nextHref = pageResult.hasMore
+    ? buildExplorePageHref("/explore", sp, pageResult.page + 1)
+    : undefined;
 
   return (
     <main className="bg-background pb-14 text-foreground">
-      <AdsenseScript />
       <div className="mx-auto max-w-6xl px-4 pt-8">
-        <ExploreCollectionJsonLd />
-        <div className="hover-glow-flame rounded-2xl border border-border bg-surface px-4 py-5 md:px-6">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            Discover
-          </p>
-          <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+        {!hasExploreFacet(sp) && (
+          <ExploreCollectionJsonLd path={exploreCanonicalPath("/explore", pageResult.page)} />
+        )}
+        <div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight">
-                밈 <span className="text-signal">탐색</span>
+                밈 탐색
               </h1>
-              <p className="mt-1 text-base text-muted">
-                검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
-              </p>
             </div>
             <Link
               href="/collections"
@@ -270,15 +402,41 @@ export default async function ExplorePage({
               테마별 모음 <span aria-hidden className="ml-1">→</span>
             </Link>
           </div>
+          <nav aria-label="밈 자료 바로가기" className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
+            <Link href="/timeline" className="underline decoration-border underline-offset-4 hover:text-accent">밈 연표</Link>
+            <Link href="/weekly" className="underline decoration-border underline-offset-4 hover:text-accent">주간 정리</Link>
+            <Link href="/guides/reading-memes" className="underline decoration-border underline-offset-4 hover:text-accent">밈 읽기 가이드</Link>
+          </nav>
         </div>
 
         <ExploreFilters platformCounts={platformCounts} />
 
         <section
           aria-label="밈 탐색 결과"
-          className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
+          className="mt-6"
         >
-          <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />
+          <ExploreGrid
+            key={`${filterKey(filters)}|page:${pageResult.page}`}
+            initial={pageResult.initial}
+            filters={filters}
+            initialOffset={explorePageOffset(pageResult.page) + PAGE_SIZE}
+            hasMoreInitial={pageResult.hasMore}
+          />
+          {(previousHref || nextHref) && (
+            <nav aria-label="밈 탐색 페이지" className="mt-8 flex items-center justify-between gap-3">
+              {previousHref ? (
+                <Link href={previousHref} rel="prev" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-bold hover:border-accent hover:text-accent">
+                  ← 이전 페이지
+                </Link>
+              ) : <span />}
+              <span className="text-sm text-muted">{pageResult.page}페이지</span>
+              {nextHref ? (
+                <Link href={nextHref} rel="next" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-bold hover:border-accent hover:text-accent">
+                  다음 페이지 →
+                </Link>
+              ) : <span />}
+            </nav>
+          )}
         </section>
       </div>
     </main>

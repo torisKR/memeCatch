@@ -1,30 +1,50 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { HomeExperience } from "@/components/home/home-experience";
 import {
-  SEO_CONTENT_LOCALES,
   SEO_LOCALE_CONFIG,
   buildLocalizedMetadata,
   getSeoCopy,
   isSeoContentLocale,
   localizedMemePath,
+  type SeoContentLocale,
 } from "@/lib/i18n-routing";
-import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
+import { getLocalizedFeaturedMemesResult } from "@/lib/meme-translations";
 import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 600;
 
 type Props = { params: Promise<{ locale: string }> };
 
+const getLocalizedHomeCoverage = cache((locale: SeoContentLocale) =>
+  getLocalizedFeaturedMemesResult(locale, 24),
+);
+
+async function requireLocalizedHomeCoverage(locale: SeoContentLocale) {
+  const result = await getLocalizedHomeCoverage(locale);
+  if (result.status === "unavailable") {
+    throw new Error(`[localized-home] translation coverage unavailable: ${locale}`);
+  }
+  return result;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
 
-  return buildLocalizedMetadata({
+  const coverage = await requireLocalizedHomeCoverage(locale);
+  const hasCoverage = coverage.status === "active";
+
+  const metadata = buildLocalizedMetadata({
     locale,
     pathname: "/",
-    availableLocales: ["ko", ...SEO_CONTENT_LOCALES],
+    ...(hasCoverage ? { availableLocales: ["ko", locale] } : {}),
   });
+  return {
+    ...metadata,
+    ...(hasCoverage ? {} : { robots: { index: false, follow: true } }),
+  };
 }
 
 function JsonLd({ data }: { data: object }) {
@@ -40,8 +60,8 @@ export default async function LocalizedHomePage({ params }: Props) {
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) notFound();
 
-  const available = await getLocalizedFeaturedMemes(locale, 24);
-  const featured = [...available]
+  const coverage = await requireLocalizedHomeCoverage(locale);
+  const featured = [...coverage.items]
     .sort(
       (left, right) =>
         Date.parse(right.translation.updatedAt) - Date.parse(left.translation.updatedAt),
@@ -69,8 +89,9 @@ export default async function LocalizedHomePage({ params }: Props) {
       dir={config.direction}
       className="bg-background text-foreground"
     >
-      <JsonLd
-        data={{
+      {coverage.status === "active" && (
+        <JsonLd
+          data={{
           "@context": "https://schema.org",
           "@graph": [
             {
@@ -91,8 +112,9 @@ export default async function LocalizedHomePage({ params }: Props) {
               inLanguage: config.bcp47,
             },
           ],
-        }}
-      />
+          }}
+        />
+      )}
       <HomeExperience locale={locale} entries={entries} />
     </main>
   );

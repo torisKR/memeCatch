@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const getUser = vi.hoisted(() => vi.fn());
 const maybeSingle = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
+const localeState = vi.hoisted(() => ({ locale: "ko" as "ko" | "en" }));
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -17,7 +18,7 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/memes/test" }));
-vi.mock("@/lib/i18n-client", () => ({ useLocale: () => ({ locale: "ko" }) }));
+vi.mock("@/lib/i18n-client", () => ({ useLocale: () => localeState }));
 vi.mock("@/components/login-gate", () => ({ LoginGate: () => null }));
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
 import {
@@ -26,8 +27,10 @@ import {
   getSaveFailure,
   parseSaveIntents,
 } from "@/components/save-button";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 
 beforeEach(() => {
+  localeState.locale = "ko";
   localStorage.clear();
   getUser.mockReset().mockResolvedValue({ data: { user: { id: "user-1" } } });
   maybeSingle.mockReset().mockResolvedValue({ data: null });
@@ -45,6 +48,26 @@ describe("getSaveFailure", () => {
 });
 
 describe("guest save intent queue", () => {
+  it("keeps the localized label in compact controls outside Korean pages", () => {
+    localeState.locale = "en";
+    render(<SaveButton memeId="00000000-0000-4000-8000-000000000099" compact />);
+    expect(screen.getByRole("button", { name: PREMIUM_COPY.en.save.saveButton })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
+  });
+  it("renders the compact control at touch-target height without taking the full row", () => {
+    render(
+      <SaveButton
+        memeId="00000000-0000-4000-8000-000000000099"
+        compact
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "저장" });
+    expect(button.className).toContain("min-h-11");
+    expect(button.className).toContain("w-auto");
+    expect(button.className).not.toContain("w-full");
+  });
+
   it("deduplicates, caps at ten, and drops expired or invalid entries", () => {
     const now = Date.UTC(2026, 7, 17);
     const ids = Array.from({ length: 11 }, (_, index) =>

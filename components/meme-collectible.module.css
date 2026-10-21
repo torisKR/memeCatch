@@ -42,19 +42,25 @@
 .compact .cardTop, .compact .cardBottom, .compact .cardType { font-size: 7px; }
 .reveal { scroll-margin-top: 92px; display: grid; grid-template-columns: minmax(260px, 360px) 1fr; align-items: center; gap: 48px; margin-top: 28px; padding: 36px; border: 1px solid var(--border); border-radius: 28px; background: radial-gradient(ellipse at 0% 30%,#adbed318,transparent 60%),var(--surface); }
 .scratchArea { perspective: 1100px; }
-.scratchCard { position: relative; isolation: isolate; width: 100%; --scratch-x: 50%; --scratch-y: 50%; --tilt-x: 0deg; --tilt-y: 0deg; transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); transition: transform .16s ease-out; }
+.scratchCard { position: relative; isolation: isolate; width: 100%; --scratch-x: 50%; --scratch-y: 50%; --scratch-brush-scale: 1; --tilt-x: 0deg; --tilt-y: 0deg; transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); transition: transform .16s ease-out; }
+.scratchCard[data-dragging="true"] { transition-duration: .06s; }
 .scratchCanvas { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; border-radius: 20px; touch-action: none; cursor: none; background: #d1d8df; opacity: 1; transition: opacity .35s ease,filter .35s ease; }
+.scratchCanvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 5px; }
 .scratchCanvas[data-complete="true"] { opacity: 0; filter: blur(5px); pointer-events: none; }
 .scratchCard[data-complete="true"] { --tilt-x: 0deg !important; --tilt-y: 0deg !important; animation: cardRevealed .55s cubic-bezier(.16,1,.3,1) both; }
 .scratchShimmer { position: absolute; z-index: 3; inset: 0; border-radius: 20px; pointer-events: none; background: radial-gradient(ellipse at var(--scratch-x) var(--scratch-y),#ffffff60,transparent 58%); mix-blend-mode: soft-light; opacity: .25; transition: opacity .18s; }
 .scratchCard[data-pointer="true"] .scratchShimmer { opacity: .8; }
-.scratchBrush { position: absolute; z-index: 4; left: var(--scratch-x); top: var(--scratch-y); width: 15%; aspect-ratio: 1; border-radius: 50%; border: 1px solid #ffffffd0; box-shadow: 0 0 0 4px #ffffff20,0 2px 12px #26334625,inset 0 0 12px #ffffff40; transform: translate(-50%,-50%); pointer-events: none; opacity: 0; transition: opacity .15s,scale .15s; }
+.scratchBrush { position: absolute; z-index: 4; left: var(--scratch-x); top: var(--scratch-y); width: 15%; aspect-ratio: 1; border-radius: 50%; border: 1px solid #ffffffd0; background: radial-gradient(circle,#fff0 38%,#ffffff38 42%,#fff0 66%); box-shadow: 0 0 0 4px #ffffff20,0 2px 12px #26334625,inset 0 0 12px #ffffff40; transform: translate(-50%,-50%) scale(var(--scratch-brush-scale)); pointer-events: none; opacity: 0; transition: opacity .1s,transform .08s ease-out; }
 .scratchCard[data-pointer="true"] .scratchBrush { opacity: 1; }
-.scratchCard[data-dragging="true"] .scratchBrush { scale: .88; border-color: #fff; }
+.scratchCard[data-dragging="true"] .scratchBrush { border-color: #fff; box-shadow: 0 0 0 7px #ffffff2e,0 3px 16px #26334635,inset 0 0 15px #ffffff65; }
 .scratchDust { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
 .scratchDust span { position: absolute; width: 5px; height: 3px; border-radius: 1px; background: #e5e8f1; box-shadow: 0 1px 2px #26334640; animation: foilDust .52s ease-out both; }
-.progressTrack { height: 4px; border-radius: 99px; background: var(--border); overflow: hidden; margin-bottom: 10px; }
-.progressTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#8aa8c6,#a2a1cb,#8fbbb1); transition: width .14s; }
+.scratchRevealBurst { position: absolute; z-index: 6; inset: 10%; border: 2px solid #fff9; border-radius: 18px; pointer-events: none; animation: scratchRevealBurst .58s cubic-bezier(.16,1,.3,1) both; }
+.progressTrack { height: 8px; border-radius: 99px; background: color-mix(in srgb,var(--border) 82%,transparent); overflow: hidden; margin-bottom: 10px; box-shadow: inset 0 1px 2px #17202b18; transition: box-shadow .2s,transform .2s; }
+.progressTrack span { position: relative; display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#7699ba,#a29fd2 52%,#76b4a7); box-shadow: 0 0 10px #8aa8c680; transition: width .1s ease-out; }
+.progressTrack span::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg,transparent 25%,#ffffffb8 50%,transparent 75%); transform: translateX(-100%); }
+.scratchArea[data-scratch-state="scratching"] .progressTrack span::after { animation: scratchProgressShine 1.25s ease-in-out infinite; }
+.scratchArea[data-near-reveal="true"] .progressTrack { box-shadow: 0 0 0 3px #a2a1cb24,0 0 18px #8fbbb14d; transform: scaleY(1.2); }
 .loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 .loading span { width: 8px; height: 8px; border-radius: 50%; background: #8faaa6; animation: softPulse 1s ease-in-out infinite alternate; }
 .discoveryTools { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
@@ -78,10 +84,13 @@
 .sealCompact .sealFooter > span { font-size: 10px; }
 @keyframes foilDust { from { opacity: .9; transform: translate(0,0) rotate(0); } to { opacity: 0; transform: translate(var(--dust-x),var(--dust-y)) rotate(var(--dust-turn)); } }
 @keyframes cardRevealed { from { transform: scale(.97); filter: brightness(1.12); } to { transform: scale(1); filter: brightness(1); } }
+@keyframes scratchRevealBurst { from { opacity: .9; transform: scale(.82); box-shadow: 0 0 0 0 #fff7; } to { opacity: 0; transform: scale(1.16); box-shadow: 0 0 0 20px #fff0; } }
+@keyframes scratchProgressShine { 0%,35% { transform: translateX(-100%); } 75%,100% { transform: translateX(100%); } }
 @keyframes softPulse { from { opacity: .35; } to { opacity: 1; } }
 .scratchControls { margin-top: 14px; text-align: center; }
 .scratchControls p { font-size: 12px; line-height: 1.6; color: var(--muted); }
 .progress { margin: 4px 0 9px; font-variant-numeric: tabular-nums; }
+.progress strong { color: var(--foreground); font-size: 14px; }
 .revealedStatus { margin-top: 14px; text-align: center; font-size: 13px; font-weight: 700; color: var(--accent-text); }
 .revealDetails h2 { font-size: 30px; font-weight: 850; line-height: 1.25; margin: 13px 0 15px; overflow-wrap: anywhere; }
 .revealDetails > p { font-size: 15px; color: var(--muted); line-height: 1.85; }
@@ -106,4 +115,4 @@
 .collectionNav { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
 @media (max-width: 900px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } .reveal { gap: 26px; padding: 24px; } }
 @media (max-width: 620px) { .page { padding: 22px 16px 80px; } .hero { padding: 25px 21px; grid-template-columns: 1fr; } .heroMark { display: none; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .reveal { grid-template-columns: 1fr; gap: 24px; padding: 22px 18px; } .scratchArea { width: min(100%, 320px); margin-inline: auto; } .revealDetails h2 { font-size: 26px; } .cardTitle { font-size: 21px; } .filters label:has(select) { max-width: none; } .filters .primaryButton { flex: 1; } .collection .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .discoveryTools { align-items: start; } .discoveryTools p { max-width: 55%; } .discoveryTools button { flex-shrink: 0; font-size: 12px; padding: 9px 12px; } .sealCompact .sealInner { padding: 8px; } .sealCompact .sealOrbit > span { font-size: 60px; } .sealCompact .sealFooter strong { font-size: 14px; } .sealCompact .sealFooter > span { font-size: 9px; } .sealCompact .sealFooter i { margin-top: 5px; } }
-@media (prefers-reduced-motion: reduce) { .catalogButton,.scratchCard,.scratchCanvas,.scratchBrush,.scratchShimmer,.progressTrack span { transition: none; } .catalogButton:hover,.scratchCard { transform: none; } .scratchCard[data-complete="true"],.loading span { animation: none; } .scratchDust,.scratchBrush { display: none; } }
+@media (prefers-reduced-motion: reduce) { .catalogButton,.scratchCard,.scratchCanvas,.scratchBrush,.scratchShimmer,.progressTrack,.progressTrack span { transition: none; } .catalogButton:hover,.scratchCard { transform: none; } .scratchCard[data-complete="true"],.loading span,.progressTrack span::after,.scratchRevealBurst { animation: none; } .scratchDust,.scratchBrush,.scratchRevealBurst { display: none; } }

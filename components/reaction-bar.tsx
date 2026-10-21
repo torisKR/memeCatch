@@ -39,7 +39,7 @@ export function ReactionBar({
   // null = 아직 모름(마운트 인증 확인 전)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotion() === true;
   const pathname = usePathname();
 
   // 로그인 여부 (커뮤니티 활성 시에만 필요 — 비활성이면 조회 생략)
@@ -138,6 +138,7 @@ export function ReactionBar({
           const active = mine.has(key);
           const count = counts[key] ?? 0;
           const tick = popTicks[key] ?? 0;
+          const pulseTick = pulseTicks[key] ?? 0;
           return (
             <motion.button
               key={key}
@@ -146,7 +147,7 @@ export function ReactionBar({
               title={readOnly ? "준비 중" : undefined}
               aria-disabled={readOnly}
               aria-pressed={readOnly ? undefined : active}
-              whileTap={reduce ? undefined : { scale: 0.97 }}
+              whileTap={{ scale: reduce ? 1 : 0.97 }}
               className={`hover-glow-flame inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-base font-medium transition-colors ${
                 active
                   ? "border-accent bg-accent-soft text-accent"
@@ -158,9 +159,9 @@ export function ReactionBar({
                 key={tick}
                 aria-hidden
                 className="inline-block"
-                initial={reduce ? false : { scale: 1.3 }}
+                initial={!reduce && tick > 0 ? { scale: 1.3 } : false}
                 animate={{ scale: 1 }}
-                transition={POP_SPRING}
+                transition={reduce ? { duration: 0 } : POP_SPRING}
               >
                 {meta.emoji}
               </motion.span>
@@ -175,26 +176,42 @@ export function ReactionBar({
                     <AnimatePresence mode="popLayout" initial={false}>
                       <motion.span
                         key={count}
-                        initial={reduce ? false : { y: -10, opacity: 0 }}
+                        initial={
+                          !reduce && tick > 0
+                            ? { y: -10, opacity: 0 }
+                            : false
+                        }
                         animate={{ y: 0, opacity: 1 }}
                         exit={reduce ? { opacity: 0 } : { y: 10, opacity: 0 }}
-                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        transition={
+                          reduce
+                            ? { duration: 0 }
+                            : { duration: 0.18, ease: "easeOut" }
+                        }
                       >
                         {count}
                       </motion.span>
                     </AnimatePresence>
                   </span>
                   {/* 카운트 증가 시 1회성 cyan 언더라인 펄스 — "지금 반영됨" 신호(opacity만) */}
-                  {!reduce && (
-                    <motion.span
-                      key={pulseTicks[key] ?? 0}
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-(--signal-cyan)"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0, 1, 0] }}
-                      transition={{ duration: 0.6, ease: "easeOut" }}
-                    />
-                  )}
+                  <motion.span
+                    key={pulseTick}
+                    aria-hidden
+                    data-reaction-pulse={key}
+                    className="pointer-events-none absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-(--signal-cyan)"
+                    style={{ opacity: 0 }}
+                    initial={false}
+                    animate={
+                      !reduce && pulseTick > 0
+                        ? { opacity: [0, 1, 0] }
+                        : { opacity: 0 }
+                    }
+                    transition={
+                      reduce
+                        ? { duration: 0 }
+                        : { duration: 0.6, ease: "easeOut" }
+                    }
+                  />
                 </span>
               )}
             </motion.button>

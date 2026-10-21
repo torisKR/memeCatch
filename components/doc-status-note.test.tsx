@@ -27,10 +27,32 @@ describe("DocStatusNote", () => {
       <DocStatusNote meme={thin} title="테스트 밈" shortId="pp3tzbgm" />
     );
 
-    expect(html).toContain("아직 정리 중인 문서예요");
+    expect(html).toContain("추가 확인이 필요한 내용");
     expect(html).toContain("유래");
     expect(html).toContain("출처");
     expect(html).toContain("/submit?name=");
+    expect(html).not.toContain("아직 정리 중인 문서예요");
+    expect(html).not.toContain("단계적으로 공개");
+  });
+
+  it("누락 목록이 비어도 일반적인 보강 문구를 만들지 않는다", () => {
+    const html = renderToStaticMarkup(
+      <DocStatusNote
+        meme={{
+          description: "짧은 설명",
+          origin: "확인된 유래",
+          usage_examples: [{ situation: "친구", text: "짧은 예문" }],
+          meme_sources: [{ source_url: "https://example.com/source" }],
+          meme_contents: [],
+        }}
+        title="테스트 밈"
+        shortId="pp3tzbgm"
+      />
+    );
+
+    expect(html).toBe("");
+    expect(html).not.toContain("아직 내용을 보강하는 중이에요");
+    expect(html).not.toContain("추측으로 채우지");
   });
 
   it("충실한 문서에는 아예 렌더하지 않는다", () => {

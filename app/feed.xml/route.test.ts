@@ -29,8 +29,13 @@ function row(
     usage_note: null,
     caution: null,
     usage_examples: [],
-    meme_sources: [],
-    meme_contents: [],
+    moderation_status: "approved",
+    meme_sources: [] as Array<{ source_url: string; production_id?: string | null }>,
+    meme_contents: [] as Array<{
+      availability: string;
+      moderation_status: string;
+      production_id?: string | null;
+    }>,
     meme_tags_map: [],
   };
 }
@@ -144,5 +149,29 @@ describe("RSS publication export", () => {
     expect(response.status).toBe(200);
     expect(body).not.toContain("<item>");
     expect(body).not.toContain("<lastBuildDate>");
+  });
+
+  it("does not let produced-only media make a boundary-thin item eligible", async () => {
+    const producedOnly = row(77, false);
+    producedOnly.description = "d".repeat(150);
+    producedOnly.origin = "o".repeat(30);
+    producedOnly.meme_sources = [
+      { source_url: "https://example.com/source-a" },
+      { source_url: "https://example.com/source-b" },
+    ];
+    producedOnly.meme_contents = [
+      {
+        availability: "live",
+        moderation_status: "approved",
+        production_id: "produced-video-1",
+      },
+    ];
+    const query = useRows([producedOnly]);
+
+    const body = await (await GET()).text();
+
+    expect(body).not.toContain("Meme 77</title>");
+    expect(query.select).toHaveBeenCalledWith(expect.stringContaining("meme_sources(*)"));
+    expect(query.select).toHaveBeenCalledWith(expect.stringContaining("meme_contents(*)"));
   });
 });

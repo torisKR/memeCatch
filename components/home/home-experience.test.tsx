@@ -8,43 +8,9 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("@/components/home/home-scene", () => ({
-  HomeScene: ({
-    label,
-    className,
-    locale,
-    variant,
-  }: {
-    label?: string;
-    className?: string;
-    locale?: string;
-    variant?: string;
-  }) => (
-    <figure
-      data-scene
-      data-scene-variant={variant}
-      data-interactive-locale={locale}
-      className={className}
-    >
-      {label}
-    </figure>
-  ),
-}));
-
-vi.mock("@/components/usage-guide", () => ({
-  SafetySignalGuide: ({ locale = "ko" }: { locale?: SeoRouteLocale }) => (
-    <section data-signal-guide={locale}>Signal guide</section>
-  ),
-}));
-
-import {
-  HomeExperience,
-  type HomeEntry,
-} from "@/components/home/home-experience";
+import { HomeExperience, type HomeEntry } from "@/components/home/home-experience";
 import { HOME_COPY, HOME_LOCALES } from "@/lib/home-copy";
-import { HOME_IMMERSIVE_COPY } from "@/lib/home-immersive-copy";
-import type { SeoRouteLocale } from "@/lib/i18n-routing";
-import { getSafetySignalCopy } from "@/lib/safety-copy";
+import type { PublicMemeTrendSummary } from "@/lib/trend/public-evidence.server";
 
 const entry: HomeEntry = {
   id: "published-entry",
@@ -56,8 +22,24 @@ const entry: HomeEntry = {
   safetyLevel: "green",
 };
 
+const trend: PublicMemeTrendSummary = {
+  memeId: "trend-1",
+  href: "/memes/TREND1/verified-trend",
+  title: "Verified trend",
+  summary: "Published summary",
+  state: "rising",
+  reason: "Independent uses increased in a comparable observation window.",
+  evidenceScope: "Public YouTube results",
+  independentUseCount: 4,
+  score: null,
+  confidence: 0.8,
+  lastVerifiedAt: "2026-10-18T01:00:00.000Z",
+  stale: false,
+  evidenceLinks: [{ label: "Source", url: "https://www.youtube.com/watch?v=abc" }],
+};
+
 describe("HomeExperience", () => {
-  it.each(HOME_LOCALES)("keeps the shared story and downstream section order for %s", (locale) => {
+  it.each(HOME_LOCALES)("keeps a compact search and recent-content flow for %s", (locale) => {
     const html = renderToStaticMarkup(
       <HomeExperience locale={locale} entries={[entry]} />,
     );
@@ -65,69 +47,65 @@ describe("HomeExperience", () => {
       (match) => match[1],
     );
 
-    expect(sectionOrder).toEqual([
-      "hero-search",
-      "recent-content",
-      "usage-signals",
-      "pathways",
-      "editorial-trust",
-    ]);
-    expect(html).toContain('id="home-top"');
-    expect(html.match(/data-home-scroll-track=/g)).toHaveLength(1);
-    expect(html.match(/data-home-scroll-pin=/g)).toHaveLength(1);
-    expect(html).toContain('id="home-story-discover"');
-    expect(html).toContain('id="home-story-context"');
-    expect(html).toContain('id="home-story-participate"');
-    expect(html).toContain('id="home-latest"');
-    expect(html).toContain('id="home-signals"');
-    expect(html).toContain('id="home-pathways"');
-    expect(html).toContain('id="home-editorial"');
-    for (const anchor of [
-      "#home-story-discover",
-      "#home-story-context",
-      "#home-story-participate",
-      "#home-latest",
-      "#home-signals",
-    ]) {
-      expect(html).toContain(`href="${anchor}"`);
-    }
+    expect(sectionOrder).toEqual(["hero-search", "recent-content"]);
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain(`action="${locale === "ko" ? "/search" : `/${locale}/search`}"`);
-    expect(html).toContain('href="/community"');
-    expect(html).toContain('href="/products"');
-    expect(html).toContain('href="/community/new"');
-    expect(html).toContain('href="/submit"');
-    expect(html).toContain('href="/products/new"');
-    expect(html).toContain(
-      `href="${locale === "ko" ? "/explore?sort=recent" : `/${locale}/explore?sort=recent`}"`,
-    );
+    expect(html).toContain('method="get"');
+    expect(html.match(/role="search"/g)).toHaveLength(1);
+    expect(html).toContain(`href="${locale === "ko" ? "/explore?sort=recent" : `/${locale}/explore?sort=recent`}"`);
+    expect(html).toContain(entry.title);
     expect(html).toContain('data-safety-icon="green"');
-    expect(html).toContain(getSafetySignalCopy(locale).levels.green.label);
-    expect(html).toContain('data-signal-guide=');
-    expect(html).toContain(HOME_IMMERSIVE_COPY[locale].chapters[0].title);
+    expect(html).not.toContain("data-home-scroll-track");
+    expect(html).not.toContain("data-home-artwork");
+    expect(html).not.toContain('data-home-section="pathways"');
+    expect(html).not.toContain('data-home-section="editorial-trust"');
   });
 
-  it.each(HOME_LOCALES)("uses one persistent story scene for %s", (locale) => {
-    const html = renderToStaticMarkup(<HomeExperience locale={locale} entries={[]} />);
-    expect(html.match(/data-scene="true"/g)).toHaveLength(1);
-    expect(html).toContain(`data-interactive-locale="${locale}"`);
-    expect(html).toContain('data-scene-variant="story"');
-    expect(html).not.toMatch(/data-scene[^>]*class="[^"]*(?:h-56|lg:h-80|xl:h-96)/);
-    expect(html).toContain('data-home-artwork="immersive-story"');
+  it("separates verified external spread from the recently published list", () => {
+    const html = renderToStaticMarkup(
+      <HomeExperience locale="ko" entries={[entry]} externalTrends={[trend]} />,
+    );
+    const sectionOrder = [...html.matchAll(/data-home-section="([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+
+    expect(sectionOrder).toEqual(["hero-search", "external-trends", "recent-content"]);
+    expect(html).toContain("지금 확산 근거가 확인된 밈");
+    expect(html).toContain("Verified trend");
+    expect(html).toContain("독립 사용례 4건");
+    expect(html).toContain("관찰 범위: Public YouTube results");
   });
 
-  it("renders meaningful published content and an honest empty state", () => {
-    const populated = renderToStaticMarkup(
-      <HomeExperience locale="en" entries={[entry]} />,
-    );
-    const empty = renderToStaticMarkup(
-      <HomeExperience locale="en" entries={[]} />,
+  it("uses a short Korean first-screen promise", () => {
+    const html = renderToStaticMarkup(<HomeExperience locale="ko" entries={[entry]} />);
+
+    expect(html).toContain("지금 궁금한 밈, 한눈에.");
+    expect(html).not.toContain("밈의 뜻을 찾고, 쓸 맥락까지 확인하세요.");
+    expect(html).toContain("출처와 설명을 갖춘 밈을 살펴보세요.");
+    expect(html).toContain("제목이 있는 공개 출처와 충분한 설명");
+    expect(html).toContain("밈 이름이나 상황으로 검색");
+    expect(html).toContain("검색어는 등록된 공개 밈 자료 안에서만 찾아요.");
+    expect(html).not.toContain("AI 서비스");
+    expect(html).not.toContain("Boundless");
+  });
+
+  it("does not offer Korean-only AI routing on translated home pages", () => {
+    const html = renderToStaticMarkup(<HomeExperience locale="en" entries={[entry]} />);
+
+    expect(html).not.toContain("AI 서비스");
+    expect(html).not.toContain("개인정보는 입력하지 마세요");
+  });
+
+  it("renders honest empty and unavailable states without placeholder cards", () => {
+    const empty = renderToStaticMarkup(<HomeExperience locale="en" entries={[]} />);
+    const unavailable = renderToStaticMarkup(
+      <HomeExperience locale="ko" entries={[]} entryState="unavailable" />,
     );
 
-    expect(populated).toContain(entry.title);
-    expect(populated).toContain(entry.summary);
-    expect(populated).toContain('href="/memes/ABC123/published-entry"');
     expect(empty).toContain(HOME_COPY.en.recent.empty);
-    expect(empty).toContain('href="/en/search"');
+    expect(empty).toContain('data-home-recommendations="empty"');
+    expect(empty).not.toContain("data-thumbnail-state");
+    expect(unavailable).toContain('data-home-recommendations="unavailable"');
+    expect(unavailable).not.toContain('data-home-recommendations="empty"');
   });
 });

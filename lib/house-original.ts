@@ -79,6 +79,11 @@ export function originSectionHeading(originKind: string | null | undefined): str
   return isHouseOriginal(originKind) ? "어떻게 만들었나요?" : "어디서 시작됐어요?";
 }
 
+/** 공개 상세의 짧은 제작 배경 제목. 관리자 입력 라벨은 originSectionHeading을 유지한다. */
+export function publicOriginSectionHeading(originKind: string | null | undefined): string {
+  return isHouseOriginal(originKind) ? "제작 배경" : "어디서 시작됐어요?";
+}
+
 /** Guest about-section label (sr-only h2 + metadata phrase). Catalog keeps folk 유래. */
 export function aboutSectionHeading(originKind: string | null | undefined): string {
   return isHouseOriginal(originKind) ? "뜻과 제작" : "뜻과 유래";

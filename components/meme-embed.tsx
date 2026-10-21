@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { CATEGORIES, type MemeCategory } from "@/lib/labels";
 import type { MemeContentRow } from "@/lib/queries";
 import { isAvailableContent } from "@/lib/content-availability";
@@ -9,20 +9,17 @@ import { sourcePlatformFromReference } from "@/lib/source-platform";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
-type OEmbedResponse = {
-  provider: SocialProvider;
+type ImmediateSocialEmbed = {
+  provider: "tiktok" | "instagram";
   sourceUrl: string;
-  embedUrl: string | null;
-  embedHtml: string | null;
-  contentId: string | null;
-  title: string | null;
-  authorName: string | null;
+  embedUrl: string;
 };
 
 /**
  * 대표 콘텐츠 임베드.
  * - YouTube + content_id + availability≠dead → lite embed(클릭 시 iframe, sandbox, 지연 로드)
- * - TikTok/Instagram/Facebook/Threads → 서버 oEmbed 검증 후 공식 플레이어 자동 로드
+ * - TikTok/Instagram → 공개 URL에서 공식 플레이어 주소를 결정해 즉시 로드
+ * - Facebook/Threads → 저장된 안전한 임베드가 없으면 출처 링크로 폴백
  * - 그 외 / 원본 소실 → 폴백 카드 "원본은 사라졌지만…" + 출처 링크
  */
 export function MemeEmbed({
@@ -68,6 +65,10 @@ export function MemeEmbed({
   const socialProvider = isPlayable
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
+  const socialEmbed =
+    socialProvider && sourceUrl
+      ? immediateSocialEmbed(socialProvider, sourceUrl)
+      : null;
 
   if (isPlayable && content?.thumbnail_url && !content.url) {
     return (
@@ -106,14 +107,12 @@ export function MemeEmbed({
     );
   }
 
-  if (socialProvider && sourceUrl) {
+  if (socialEmbed) {
     return (
       <figure>
         <LiteSocialEmbed
-          provider={socialProvider}
-          sourceUrl={sourceUrl}
+          embed={socialEmbed}
           title={title}
-          thumbnailUrl={content?.thumbnail_url}
           isRepresentative={isRepresentative}
         />
         {content?.caption && (
@@ -131,17 +130,17 @@ export function MemeEmbed({
       <TypoFallbackHero title={title} category={category} originYear={originYear}>
         <p className="text-base font-semibold">
           {isContextSource
-            ? "원본 맥락은 출처에서 확인할 수 있어요."
+            ? "맥락 자료 링크가 있어요."
             : effectiveFallbackReason === "confirmed_unavailable"
-              ? "원본 콘텐츠는 현재 확인할 수 없어요."
-            : "원본 콘텐츠는 출처에서 볼 수 있어요."}
+              ? "원본 콘텐츠 재생 불가."
+            : "원본 링크가 있어요."}
         </p>
         <p className="mt-1 text-sm leading-relaxed">
           {isContextSource
-            ? "이 링크는 원본을 복제하지 않고 유래와 맥락을 설명하는 참고 출처예요."
+            ? "원본 대신 유래와 맥락을 확인하는 참고 출처입니다."
             : effectiveFallbackReason === "confirmed_unavailable"
-              ? "플랫폼에서 내려갔거나 접근할 수 없어 임베드하지 않아요. 뜻과 맥락은 아래 설명에 남아 있어요."
-            : "저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요."}
+              ? "비공개이거나 접근할 수 없어 임베드하지 않습니다."
+            : "원본을 복제하지 않고 출처 링크로 연결합니다."}
         </p>
         <a
           href={sourceUrl}
@@ -164,13 +163,13 @@ export function MemeEmbed({
     <TypoFallbackHero title={title} category={category} originYear={originYear}>
       <p className="text-base font-semibold">
         {effectiveFallbackReason === "confirmed_unavailable"
-          ? "원본 콘텐츠는 현재 확인할 수 없지만, 뜻과 맥락은 여기 남아 있어요."
-          : "원본을 아직 연결하지 못했지만, 뜻과 맥락은 여기 남아 있어요."}
+          ? "원본 콘텐츠 재생 불가."
+          : "재생 가능한 원본 링크 없음."}
       </p>
       <p className="mt-1 text-sm leading-relaxed">
         {effectiveFallbackReason === "confirmed_unavailable"
-          ? "플랫폼에서 내려갔거나 접근할 수 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."
-          : "아직 재생 가능한 원본 링크가 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."}
+          ? "비공개이거나 접근할 수 없는 콘텐츠입니다."
+          : "현재 연결된 출처가 없습니다."}
       </p>
     </TypoFallbackHero>
   );
@@ -270,27 +269,10 @@ function getSocialProvider(
   return null;
 }
 
-function isTrustedEmbedUrl(provider: SocialProvider, rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-    if (url.protocol !== "https:") return false;
-    if (provider === "tiktok") {
-      return url.hostname === "www.tiktok.com" && url.pathname.startsWith("/player/v1/");
-    }
-    if (provider === "instagram") {
-      return url.hostname === "www.instagram.com" && url.pathname.endsWith("/embed/captioned/");
-    }
-    if (provider === "threads") return false;
-    return url.hostname === "www.facebook.com" && url.pathname.startsWith("/plugins/");
-  } catch {
-    return false;
-  }
-}
-
 function immediateSocialEmbed(
   provider: SocialProvider,
   sourceUrl: string
-): OEmbedResponse | null {
+): ImmediateSocialEmbed | null {
   try {
     const url = new URL(sourceUrl);
     if (url.protocol !== "https:" || url.username || url.password) return null;
@@ -302,10 +284,6 @@ function immediateSocialEmbed(
         provider,
         sourceUrl,
         embedUrl: `https://www.tiktok.com/player/v1/${contentId}?description=1&music_info=1`,
-        embedHtml: null,
-        contentId,
-        title: null,
-        authorName: null,
       };
     }
 
@@ -316,10 +294,6 @@ function immediateSocialEmbed(
         provider,
         sourceUrl,
         embedUrl: `https://www.instagram.com/${match[1]}/${match[2]}/embed/captioned/`,
-        embedHtml: null,
-        contentId: match[2],
-        title: null,
-        authorName: null,
       };
     }
 
@@ -330,117 +304,29 @@ function immediateSocialEmbed(
 }
 
 function LiteSocialEmbed({
-  provider,
-  sourceUrl,
+  embed,
   title,
-  thumbnailUrl,
   isRepresentative,
 }: {
-  provider: SocialProvider;
-  sourceUrl: string;
+  embed: ImmediateSocialEmbed;
   title: string;
-  thumbnailUrl?: string | null;
   isRepresentative: boolean;
 }) {
-  const [embed, setEmbed] = useState<OEmbedResponse | null>(() =>
-    immediateSocialEmbed(provider, sourceUrl)
-  );
-  const [error, setError] = useState<string | null>(null);
-  // 마운트 시점에 이미 렌더 가능한 임베드가 있었는지 — 있으면 IO 대기 없이 즉시 검증 fetch
-  const hasImmediateEmbedRef = useRef(embed != null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { provider, sourceUrl } = embed;
 
   const providerName = {
     tiktok: "TikTok",
     instagram: "Instagram",
-    facebook: "Facebook",
-    threads: "Threads",
   }[provider];
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-
-    async function loadEmbed() {
-      setEmbed(immediateSocialEmbed(provider, sourceUrl));
-      setError(null);
-      try {
-        const response = await fetch(
-          `/api/oembed?url=${encodeURIComponent(sourceUrl)}`,
-          { signal: controller.signal }
-        );
-        const data = (await response.json()) as OEmbedResponse | { error?: string };
-        if (!response.ok || !("embedUrl" in data)) {
-          throw new Error("error" in data ? data.error : undefined);
-        }
-        const hasTrustedEmbed =
-          provider === "threads"
-            ? typeof data.embedHtml === "string" && data.embedHtml.length > 0
-            : typeof data.embedUrl === "string" &&
-              isTrustedEmbedUrl(provider, data.embedUrl);
-        if (data.provider !== provider || !hasTrustedEmbed) {
-          throw new Error("안전한 임베드 주소를 확인하지 못했습니다.");
-        }
-        if (active) setEmbed(data);
-      } catch (loadError) {
-        if (!active || controller.signal.aborted) return;
-        setError(
-          loadError instanceof Error && loadError.message
-            ? loadError.message
-            : "콘텐츠를 불러오지 못했습니다."
-        );
-      }
-    }
-
-    // 이미 즉시 렌더된 임베드가 있으면(서버 제공 프롭 hydration) 뷰포트 대기 없이 바로 검증
-    // fetch. 그 외에는 뷰포트 ~200px 근처에 들어올 때까지 /api/oembed 호출을 미뤄
-    // 스크롤 안 하는 사용자의 불필요한 네트워크·서버 부하를 막는다(LiteYouTube의
-    // loading=lazy와 같은 취지, IO로 fetch 자체를 지연).
-    if (
-      hasImmediateEmbedRef.current ||
-      typeof IntersectionObserver === "undefined" ||
-      !containerRef.current
-    ) {
-      void loadEmbed();
-      return () => {
-        active = false;
-        controller.abort();
-      };
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        io.disconnect();
-        void loadEmbed();
-      },
-      { rootMargin: "200px" }
-    );
-    io.observe(containerRef.current);
-
-    return () => {
-      active = false;
-      controller.abort();
-      io.disconnect();
-    };
-  }, [provider, sourceUrl]);
 
   const frameWidthClass =
     provider === "tiktok"
       ? "mx-auto w-full max-w-[382px]"
-      : provider === "instagram"
-        ? "mx-auto w-full max-w-[540px]"
-        : provider === "threads"
-          ? "mx-auto w-full max-w-[540px]"
-          : "mx-auto w-full max-w-[540px]";
+      : "mx-auto w-full max-w-[540px]";
   const frameHeightClass =
     provider === "tiktok"
       ? "h-[min(72svh,680px)]"
-      : provider === "instagram"
-        ? "h-[min(72svh,720px)]"
-        : provider === "threads"
-          ? "h-[min(72svh,700px)]"
-          : "h-[min(68svh,600px)]";
+      : "h-[min(72svh,720px)]";
   const frameClass = `${frameWidthClass} ${frameHeightClass}`;
 
   // 플랫폼 구분은 사이드 스트라이프(색상 강조 보더) 대신 라벨 텍스트 + 은은한 전체
@@ -464,73 +350,20 @@ function LiteSocialEmbed({
     </div>
   );
 
-  if (embed) {
-    const threadsDocument = embed.embedHtml
-      ? `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${embed.embedHtml}</body></html>`
-      : undefined;
-    return (
-      <div ref={containerRef} className="space-y-2">
-        {sourceTape}
-        <iframe
-          src={embed.embedUrl ?? undefined}
-          srcDoc={threadsDocument}
-          title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
-          sandbox={
-            provider === "threads"
-              ? "allow-scripts allow-popups"
-              : "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
-          }
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          // 서드파티 임베드 내부가 흰 배경이라 다크 모드에서도 흰 컨테이너 유지 — 내부/외부 불일치 방지
-          className={`${frameClass} block rounded-2xl border border-border bg-white shadow-sm`}
-        />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div ref={containerRef} className="space-y-2">
-        {sourceTape}
-        <div className="mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center">
-          <p role="alert" className="text-sm text-muted">
-            {error}
-          </p>
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
-          >
-            {providerName}에서 보기 <span aria-hidden>↗</span>
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div ref={containerRef} className="space-y-2">
+    <div className="space-y-2">
       {sourceTape}
-      <div
-        role="status"
-        aria-label={`${providerName} 콘텐츠 불러오는 중`}
-        className={`${frameClass} relative overflow-hidden rounded-2xl border border-border bg-surface-2`}
-      >
-        {thumbnailUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-45 blur-[1px]"
-          />
-        )}
-        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
-        <div className="absolute inset-0 animate-pulse bg-background/50 motion-reduce:animate-none" />
-      </div>
+      <iframe
+        src={embed.embedUrl}
+        title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+        // 서드파티 임베드 내부가 흰 배경이라 다크 모드에서도 흰 컨테이너 유지 — 내부/외부 불일치 방지
+        className={`${frameClass} block rounded-2xl border border-border bg-white shadow-sm`}
+      />
     </div>
   );
 }

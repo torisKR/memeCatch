@@ -5,10 +5,12 @@ const mocks = vi.hoisted(() => ({
   search: vi.fn(), read: vi.fn(), createStaticClient: vi.fn(),
   from: vi.fn(), select: vi.fn(), filter: vi.fn(), order: vi.fn(),
   limit: vi.fn(), eq: vi.fn(), abortSignal: vi.fn(), fetch: vi.fn(), warn: vi.fn(),
+  filterPublicMedia: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/meme-reference-search.server", () => ({ searchMemeReferences: mocks.search }));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
+vi.mock("@/lib/sources/public-links.server", () => ({ filterPublicMemeMedia: mocks.filterPublicMedia }));
 
 const ID = "10000000-0000-0000-0000-000000000001";
 const OTHER = "20000000-0000-0000-0000-000000000002";
@@ -61,6 +63,7 @@ beforeEach(() => {
   for (const method of [mocks.select, mocks.filter, mocks.order, mocks.limit, mocks.eq, mocks.abortSignal]) method.mockReturnValue(query);
   mocks.from.mockReturnValue(query);
   mocks.createStaticClient.mockReturnValue({ from: mocks.from });
+  mocks.filterPublicMedia.mockImplementation(async (input) => input);
   mocks.fetch.mockImplementation(async () => response());
 });
 afterEach(() => {
@@ -70,6 +73,22 @@ afterEach(() => {
 });
 
 describe("public grounded meme answers", () => {
+  it("uses a schema-compatible source relation projection and preserves legacy public citations", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const legacySource = {
+      source_url: "https://www.youtube.com/watch?v=legacy12345",
+      title: "기존 공개 원자료",
+      platform: "youtube",
+    };
+    mocks.read.mockResolvedValue({ data: [row({ meme_sources: [legacySource] })], error: null });
+
+    const result = await (await load())(input);
+
+    expect(mocks.select).toHaveBeenCalledWith(expect.stringContaining("meme_sources(*)"));
+    expect(mocks.select.mock.calls[0][0]).not.toContain("meme_sources(source_url,title,platform,production_id)");
+    expect(result.items[0].sources).toEqual([{ url: legacySource.source_url, label: legacySource.title }]);
+  });
+
   it("reports actual reading, public retrieval and generation in order without exposing facts", async () => {
     const progress: MemeChatProgress[] = [];
     const timing: Array<{ stage: MemeChatProgress["stage"]; searches: number; reads: number; generations: number }> = [];
@@ -190,7 +209,11 @@ describe("public grounded meme answers", () => {
     const result = await answer(input);
     expect(result.mode).toBe("generated");
     expect(result.items[0].href).toBe("/memes/abc12345-%ED%85%8C%EC%8A%A4%ED%8A%B8-%EB%B0%88");
-    expect(mocks.search).toHaveBeenCalledWith(input.question, 4);
+    expect(mocks.search).toHaveBeenCalledWith(input.question, 4, {
+      intentRouting: true,
+      locale: input.locale,
+      signal: undefined,
+    });
     expect(mocks.createStaticClient).toHaveBeenCalledWith();
     expect(mocks.from).toHaveBeenCalledWith("memes");
     expect(mocks.filter).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
@@ -357,6 +380,54 @@ describe("public grounded meme answers", () => {
     expect(result.answer).toContain("추가 확인");
   });
 
+  it("uses the public-media ledger once per hydration and excludes hidden or produced source links", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const publicSource = {
+      source_url: "https://www.youtube.com/watch?v=public12345",
+      title: "공개 원자료",
+      platform: "youtube",
+      production_id: null,
+    };
+    const hiddenSource = {
+      source_url: "https://www.youtube.com/watch?v=private1234",
+      title: "비공개 원자료",
+      platform: "youtube",
+      production_id: null,
+    };
+    const producedSource = {
+      source_url: "https://www.youtube.com/watch?v=produced123",
+      title: "자체 제작물",
+      platform: "youtube",
+      production_id: "production-1",
+    };
+    const secondPublicSource = {
+      source_url: "https://www.youtube.com/watch?v=public67890",
+      title: "두 번째 공개 원자료",
+      platform: "youtube",
+      production_id: null,
+    };
+    const data = [
+      row({ meme_sources: [publicSource, hiddenSource, producedSource] }),
+      row({ id: OTHER, short_id: "other123", slug: "other", title: "두 번째 밈", meme_sources: [secondPublicSource] }),
+    ];
+    mocks.search.mockResolvedValue({ mode: "hybrid", items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    mocks.filterPublicMedia.mockImplementation(async ({ sources, contents }) => ({
+      sources: sources.filter((source: typeof publicSource) => source.source_url !== hiddenSource.source_url),
+      contents,
+    }));
+
+    const result = await (await load())(input);
+
+    expect(mocks.filterPublicMedia).toHaveBeenCalledExactlyOnceWith({
+      sources: expect.arrayContaining([publicSource, hiddenSource, producedSource, secondPublicSource]),
+      contents: [],
+    });
+    expect(result.items[0].sources).toEqual([{ url: publicSource.source_url, label: publicSource.title }]);
+    expect(JSON.stringify(result)).not.toContain(hiddenSource.source_url);
+    expect(JSON.stringify(result)).not.toContain(producedSource.source_url);
+  });
+
   it("does not hydrate or call a model for an empty retrieval", async () => {
     mocks.search.mockResolvedValue({ mode: "keyword", items: [] });
     expect((await (await load())(input)).mode).toBe("empty");
@@ -386,6 +457,163 @@ describe("public grounded meme answers", () => {
     expect(result.mode).toBe("retrieved");
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(mocks.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not generate with a provider key when the opt-in flag is unset or mistyped", async () => {
+    delete process.env.MEME_CHAT_GENERATION_ENABLED;
+    const answer = await load();
+    expect((await answer(input)).mode).toBe("retrieved");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+
+    vi.resetModules();
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "TRUE");
+    expect((await (await load())(input)).mode).toBe("retrieved");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      intent: "meaning",
+      question: "TMI 뜻",
+      answer: ["TMI", "공개 기록의 요약"],
+      absent: ["알려진 맥락", "친구와 사용", "맥락 확인"],
+    },
+    {
+      intent: "origin",
+      question: "TMI 유래",
+      answer: ["TMI", "알려진 맥락", timingNote],
+      absent: ["친구와 사용", "맥락 확인"],
+    },
+    {
+      intent: "usage",
+      question: "TMI 사용법",
+      answer: ["TMI", "친구와 사용", "맥락 확인"],
+      absent: ["알려진 맥락"],
+    },
+  ] as const)("formats a concise reviewed-record $intent answer without generation", async ({ intent, question, answer, absent }) => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    mocks.search.mockResolvedValue({
+      mode: "hybrid",
+      decision: { intent, source: "fallback", reason: "local_only" },
+      items: candidates(),
+    });
+    mocks.read.mockResolvedValue({ data: candidates(), error: null });
+    const result = await (await load())({ ...input, question });
+    expect(result.mode).toBe("retrieved");
+    expect(result.decision).toEqual({ intent, source: "fallback", reason: "local_only" });
+    expect(result.items).toHaveLength(1);
+    for (const value of answer) expect(result.answer).toContain(value);
+    for (const value of absent) expect(result.answer).not.toContain(value);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["meaning", "새삥 뜻"],
+    ["origin", "새삥 유래"],
+    ["usage", "새삥 사용법"],
+  ] as const)("does not turn two similar approved titles into one definitive %s answer", async (intent, question) => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = [
+      row({ title: "새삥 챌린지", summary: "첫 번째 공개 요약" }),
+      row({ id: OTHER, title: "새삥 챌린지 (지코)", short_id: "other123", slug: "other", summary: "두 번째 공개 요약" }),
+    ];
+    mocks.search.mockResolvedValue({ mode: "hybrid", decision: { intent, source: "fallback", reason: "local_only" }, items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question });
+    expect(result.mode).toBe("retrieved");
+    expect(result.items.map(({ title }) => title)).toEqual(["새삥 챌린지", "새삥 챌린지 (지코)"]);
+    expect(result.answer).toContain("정확한 이름을 하나로 확인하기 어려워요");
+    expect(result.answer).not.toContain("첫 번째 공개 요약");
+    expect(result.answer).not.toContain("두 번째 공개 요약");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("answers the requested field when a full canonical title before the intent phrase is uniquely exact", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = [
+      row({ title: "새삥 챌린지", summary: "첫 번째 공개 요약" }),
+      row({ id: OTHER, title: "새삥 챌린지 (지코)", short_id: "other123", slug: "other",
+        summary: "지코 새삥의 공개 요약", origin: "지코 관련 공개 기원", usage_note: "지코 챌린지 사용법" }),
+    ];
+    mocks.search.mockResolvedValue({ mode: "hybrid", decision: { intent: "meaning", source: "fallback", reason: "local_only" }, items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question: "새삥 챌린지 (지코) 뜻" });
+    expect(result.items.map(({ id }) => id)).toEqual([OTHER]);
+    expect(result.answer).toContain("지코 새삥의 공개 요약");
+    expect(result.answer).not.toContain("첫 번째 공개 요약");
+    expect(result.answer).not.toContain("지코 관련 공개 기원");
+    expect(result.answer).not.toContain("지코 챌린지 사용법");
+    expect(result.answer).not.toContain("정확한 이름을 하나로 확인하기 어려워요");
+  });
+
+  it("keeps a unique exact subject answer for a question with a trailing meaning phrase", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    mocks.search.mockResolvedValue({ mode: "hybrid", decision: { intent: "meaning", source: "fallback" }, items: data });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())({ ...input, question: "TMI 뜻" });
+    expect(result.items.map(({ id }) => id)).toEqual([ID]);
+    expect(result.answer).toContain("TMI: 공개 기록의 요약");
+    expect(result.answer).not.toContain("정확한 이름을 하나로 확인하기 어려워요");
+  });
+
+  it("limits situation recommendations to three public records and only uses their reviewed summaries", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    const data = candidates();
+    mocks.search.mockResolvedValue({
+      mode: "hybrid",
+      decision: { intent: "situation", source: "fallback", reason: "local_only" },
+      items: data,
+    });
+    mocks.read.mockResolvedValue({ data, error: null });
+    const result = await (await load())(input);
+    expect(result.items).toHaveLength(3);
+    expect(result.items.map(({ id }) => id)).toEqual(data.slice(0, 3).map(({ id }) => id));
+    for (const item of data.slice(0, 3)) {
+      expect(result.answer).toContain(item.title);
+      expect(result.answer).toContain(item.summary);
+    }
+    expect(result.answer).not.toContain(data[3].title);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["unclear", "out_of_scope"] as const)("returns a fixed clarification for %s without leaking search candidates", async (intent) => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "false");
+    mocks.search.mockResolvedValue({
+      mode: "hybrid",
+      decision: { intent, source: "fallback", reason: "local_only" },
+      items: [row({ title: "SEARCH_CANDIDATE_SECRET" })],
+    });
+    mocks.read.mockResolvedValue({ data: [row({ title: "SEARCH_CANDIDATE_SECRET" })], error: null });
+    const result = await (await load())(input);
+    expect(result.mode).toBe("empty");
+    expect(result.items).toEqual([]);
+    expect(result.answer).toContain(intent === "unclear" ? "밈 이름" : "밈의 뜻");
+    expect(JSON.stringify(result)).not.toContain("SEARCH_CANDIDATE_SECRET");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("short-circuits an out-of-scope decision before public hydration or enabled generation", async () => {
+    vi.stubEnv("MEME_CHAT_GENERATION_ENABLED", "true");
+    mocks.search.mockResolvedValue({
+      mode: "hybrid",
+      decision: { intent: "out_of_scope", source: "fallback", reason: "local_only" },
+      items: [row({ title: "SUSPECT_GENERATOR_INPUT" })],
+    });
+    const progress = vi.fn();
+    const result = await (await load())({ ...input, question: "계정 결제 문제" }, undefined, progress);
+    expect(result).toMatchObject({
+      mode: "empty",
+      items: [],
+      decision: { intent: "out_of_scope", source: "fallback", reason: "local_only" },
+    });
+    expect(result.answer).toContain("밈의 뜻");
+    expect(JSON.stringify(result)).not.toContain("SUSPECT_GENERATOR_INPUT");
+    expect(progress.mock.calls.map(([event]) => event)).toEqual([
+      { stage: "reading" }, { stage: "searching" }, { stage: "found", count: 0 },
+    ]);
+    expect(mocks.read).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it.each([

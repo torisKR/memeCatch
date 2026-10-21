@@ -32,6 +32,42 @@ async function submit() {
 }
 
 describe("SourceIngestionForm", () => {
+  it("preselects a known URL target without fetching and safely ignores an unavailable target", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { rerender } = render(
+      <SourceIngestionForm memes={memes} initialTargetMemeId="meme-2" />,
+    );
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "연결할 밈" }).value).toBe("meme-2");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    rerender(
+      <SourceIngestionForm key="unavailable" memes={memes} initialTargetMemeId="missing" />,
+    );
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "연결할 밈" }).value).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps an operator choice on same-target refresh and adopts a new server-navigation target", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <SourceIngestionForm key="target:meme-1" memes={memes} initialTargetMemeId="meme-1" />,
+    );
+    const select = screen.getByRole<HTMLSelectElement>("combobox", { name: "연결할 밈" });
+    await user.selectOptions(select, "meme-2");
+
+    rerender(
+      <SourceIngestionForm key="target:meme-1" memes={memes} initialTargetMemeId="meme-1" />,
+    );
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "연결할 밈" }).value).toBe("meme-2");
+
+    rerender(
+      <SourceIngestionForm key="target:meme-2" memes={memes} initialTargetMemeId="meme-2" />,
+    );
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "연결할 밈" }).value).toBe("meme-2");
+  });
+
   it("submits a supported URL with the required target meme and shows the pending result", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -141,6 +177,25 @@ describe("SourceIngestionForm", () => {
     const retry = await screen.findByRole("button", { name: "같은 입력으로 다시 확인" });
     await user.clear(screen.getByRole("textbox", { name: "SNS URL" }));
     await user.type(screen.getByRole("textbox", { name: "SNS URL" }), "https://youtu.be/changed");
+    await user.click(retry);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("입력한 URL 또는 연결할 밈이 바뀌었어요. 현재 값으로 다시 시도해 주세요.")).toBeTruthy();
+  });
+
+  it("does not retry after the operator changes the target meme", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ ok: false, error: "일시적으로 확인할 수 없어요.", code: "provider_transient", retryable: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<SourceIngestionForm memes={memes} initialTargetMemeId="meme-1" />);
+    await user.type(screen.getByRole("textbox", { name: "SNS URL" }), "https://youtu.be/abc123");
+    await user.click(screen.getByRole("button", { name: "검수 후보 만들기" }));
+    const retry = await screen.findByRole("button", { name: "같은 입력으로 다시 확인" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "연결할 밈" }), "meme-2");
     await user.click(retry);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);

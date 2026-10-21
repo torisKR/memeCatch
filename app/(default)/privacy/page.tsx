@@ -127,6 +127,37 @@ export default function PrivacyPage() {
           </p>
         </section>
 
+        <section className="rounded-2xl border border-border bg-surface-2 p-5">
+          <h2 className="text-xl font-bold">
+            YouTube API 서비스 보충 안내 (2026년 10월 14일)
+          </h2>
+          <p className="mt-3">
+            밈캐치는 YouTube API Services(YouTube API 서비스)를 사용해 공개 영상
+            후보의 영상 ID·URL, 제목·설명, 채널 식별자, 게시 시각, 재생 시간, 공개 통계,
+            공개·임베드 가능 상태를 확인합니다. 이 원자료는 운영자 검수용으로만
+            수집하며, 수집만으로 밈 문서나 트렌드 순위에 자동 공개하지 않습니다.
+          </p>
+          <p className="mt-3">
+            공개 API 원자료는 30일 이내에 갱신하거나 삭제하며, 삭제·비공개로
+            확인된 항목은 검수 근거에서 제외합니다. 이 공개 원자료 수집 기능은
+            이용자의 YouTube 계정 OAuth 정보·비공개 시청 기록을 수집하지 않고,
+            영상·음성 파일을 다운로드하거나 재업로드하지 않습니다.
+          </p>
+          <p className="mt-3">
+            YouTube 플레이어를 불러오면 Google과 YouTube가 이용자의 기기·네트워크
+            정보나 쿠키 등을 설정에 따라 처리할 수 있습니다. 자세한 내용은{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent-text underline underline-offset-2"
+            >
+              Google 개인정보처리방침
+            </a>
+            을 확인하세요.
+          </p>
+        </section>
+
         <section>
           <h2 className="text-xl font-bold">6. 쿠키 및 광고</h2>
           <p className="mt-3">

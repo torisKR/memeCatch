@@ -206,7 +206,8 @@ describe("GlobalDailyChallenge", () => {
 
     expect(document.querySelector("[data-global-daily-next-step]")).toBeNull();
     expect(document.querySelector("[data-global-daily-market-passport]")).toBeTruthy();
-    expect(screen.getByText("このミームはどこで、どう使われる？")).toBeTruthy();
+    expect(screen.getByText("今日の3つを復習")).toBeTruthy();
+    expect(document.querySelector("[data-market-passport]")).toBeNull();
     expect(screen.getByRole("link", { name: "活用キットを開く: Global One" }).getAttribute("href")).toBe(
       "/ja/memes/one-global-one#meme-use-kit-title",
     );

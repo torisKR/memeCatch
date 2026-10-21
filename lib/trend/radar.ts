@@ -28,6 +28,7 @@ export type RadarObservation = {
 export type RawRadarSignal = {
   platform: RadarPlatform;
   platformContentId: string;
+  creatorKey?: string;
   canonicalUrl: string;
   signalKind?: "text_mention" | "instagram_media" | "content_observation";
   querySeed?: string;

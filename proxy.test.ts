@@ -57,6 +57,29 @@ beforeEach(() => {
 });
 
 describe("proxy operator authorization", () => {
+  it("keeps one normalized source-recovery target through the anonymous login redirect", async () => {
+    const response = await proxy(
+      publicRequest("/admin/sources?memeId=A0000000-0000-4000-8000-00000000000F"),
+    );
+    const destination = new URL(response.headers.get("location")!);
+
+    expect(destination.pathname).toBe("/login");
+    expect(destination.searchParams.get("next")).toBe(
+      "/admin/sources?memeId=a0000000-0000-4000-8000-00000000000f",
+    );
+  });
+
+  it.each([
+    "/admin/sources?memeId=not-a-uuid",
+    "/admin/sources?memeId=a0000000-0000-4000-8000-00000000000f&memeId=b0000000-0000-4000-8000-00000000000e",
+  ])("drops unsafe source targeting from the anonymous login redirect: %s", async (path) => {
+    const response = await proxy(publicRequest(path));
+    const destination = new URL(response.headers.get("location")!);
+
+    expect(destination.pathname).toBe("/login");
+    expect(destination.searchParams.get("next")).toBe("/admin/sources");
+  });
+
   it("removes private dashboard filters when a non-operator is redirected to the public site", async () => {
     supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
     const response = await proxy(publicRequest("/admin/activity?userId=81000000-0000-4000-8000-000000000003&subscribersOnly=1"));
@@ -171,25 +194,25 @@ describe("proxy locale contract", () => {
 });
 
 describe("proxy public meme existence check", () => {
-  it.each([
-    ["/memes/gjq95suv", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
-    ["/memes/gjq95suv-old-slug", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
-  ])("308-redirects a confirmed Korean alias %s to its stored canonical path", async (path, expected) => {
+  it("307-redirects a confirmed Korean short-id route to its stored canonical path", async () => {
     supabaseMocks.abortSignal.mockResolvedValueOnce({
       data: [publicMemeRow({ short_id: "gjq95suv", slug: "한국-밈" })],
       error: null,
     });
 
-    const response = await proxy(publicRequest(path));
+    const response = await proxy(publicRequest("/memes/gjq95suv"));
 
-    expect(response.status).toBe(308);
-    expect(new URL(response.headers.get("location")!).pathname).toBe(expected);
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get("location")!).pathname).toBe(
+      "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88",
+    );
   });
 
   it.each([
     "/memes/gjq95suv-current",
     "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88",
-  ])("does not redirect an exact canonical key %s", async (path) => {
+    "/memes/gjq95suv-old-slug",
+  ])("renders any slugged Korean alias without redirecting %s", async (path) => {
     const slug = path.includes("gjq95suv-current") ? "current" : "한국-밈";
     supabaseMocks.abortSignal.mockResolvedValueOnce({
       data: [publicMemeRow({ short_id: "gjq95suv", slug })],
@@ -202,7 +225,34 @@ describe("proxy public meme existence check", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
-  it("308-redirects a localized alias to the current stored localized slug", async () => {
+  it("307-redirects a localized short-id route to the current stored localized slug", async () => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [
+        publicMemeRow({
+          short_id: "gjq95suv",
+          slug: "한국-밈",
+          meme_translations: [
+            {
+              locale: "ja",
+              status: "reviewed",
+              localized_slug: "現在の名前",
+              source_updated_at: BASE_UPDATED_AT,
+            },
+          ],
+        }),
+      ],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest("/ja/memes/gjq95suv"));
+
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get("location")!).pathname).toBe(
+      "/ja/memes/gjq95suv-%E7%8F%BE%E5%9C%A8%E3%81%AE%E5%90%8D%E5%89%8D",
+    );
+  });
+
+  it("renders a stale localized slug alias without redirecting", async () => {
     supabaseMocks.abortSignal.mockResolvedValueOnce({
       data: [
         publicMemeRow({
@@ -223,10 +273,50 @@ describe("proxy public meme existence check", () => {
 
     const response = await proxy(publicRequest("/ja/memes/gjq95suv-old"));
 
-    expect(response.status).toBe(308);
-    expect(new URL(response.headers.get("location")!).pathname).toBe(
-      "/ja/memes/gjq95suv-%E7%8F%BE%E5%9C%A8%E3%81%AE%E5%90%8D%E5%89%8D",
-    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it.each([
+    "/memes/89b37mrx-%EC%83%88%EC%82%A5%20%EC%B1%8C%EB%A6%B0%EC%A7%80%20(%EC%A7%80%EC%BD%94)",
+    "/memes/89b37mrx-%EC%83%88%EC%82%A5%20%EC%B1%8C%EB%A6%B0%EC%A7%80%20%28%EC%A7%80%EC%BD%94%29",
+    "/memes/89b37mrx-%EC%83%88%EC%8B%B9%20%EC%B1%8C%EB%A6%B0%EC%A7%80%20(%EC%A7%80%EC%BD%94)",
+  ])("renders encoded spaces and parenthesis variants without a redirect loop: %s", async (path) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [publicMemeRow({ short_id: "89b37mrx", slug: "새삭 챌린지 (지코)" })],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it.each([
+    ["/memes/du9b878j-2%25-%EB%B6%80%EC%A1%B1%ED%95%A0-%EB%95%8C", "du9b878j", "/memes/du9b878j-encoded-slug"],
+    ["/ja/memes/y45pq3d3-2%25-title", "y45pq3d3", "/ja/memes/y45pq3d3-encoded-slug"],
+  ])("internally routes a literal-percent slug without changing its public URL: %s", async (path, shortId, destination) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [publicMemeRow({ short_id: shortId, slug: "2%-부족할-때" })],
+      error: null,
+    });
+    const response = await proxy(publicRequest(`${path}?ctx=test`));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    const rewrite = new URL(response.headers.get("x-middleware-rewrite")!);
+    expect(rewrite.pathname).toBe(destination);
+    expect(rewrite.searchParams.get("ctx")).toBe("test");
+  });
+
+  it("also protects percent-slug client navigations, but does not bypass the missing-page check", async () => {
+    const request = publicRequest("/memes/du9b878j-2%25-title");
+    request.headers.set("sec-fetch-mode", "cors");
+    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+    const response = await proxy(request);
+    expect(response.status).toBe(404);
+    expect(new URL(response.headers.get("x-middleware-rewrite")!).pathname).toBe("/__missing_public_meme__");
   });
 
   it.each([
@@ -372,8 +462,8 @@ describe("proxy public meme existence check", () => {
   });
 });
 
-// 순수 협상 함수 단위 테스트 — 글로벌 피벗: 첫 방문 비한국어 브라우저는 "/en"(또는
-// 지원 로케일)으로 보내고, ko 선호·기존 쿠키·봇 UA·비루트 경로는 리다이렉트하지 않는다.
+// 루트 URL은 한국어 canonical 문서다. Accept-Language는 UI 선호에만 전달하며
+// URL 협상이나 리다이렉트에 사용하지 않는다.
 describe("resolveLandingRedirectLocale", () => {
   it("does not redirect a Korean-preferring browser away from the root", () => {
     // Arrange
@@ -391,7 +481,7 @@ describe("resolveLandingRedirectLocale", () => {
     expect(result).toBeNull();
   });
 
-  it("redirects a first-time English-preferring browser to en", () => {
+  it("keeps an English-preferring first visit on the Korean root", () => {
     // Arrange
     const input = {
       pathname: "/",
@@ -404,14 +494,14 @@ describe("resolveLandingRedirectLocale", () => {
     const result = resolveLandingRedirectLocale(input);
 
     // Assert
-    expect(result).toBe("en");
+    expect(result).toBeNull();
   });
 
   it.each([
-    ["ja-JP,ja;q=0.9", "ja"],
-    ["zh-CN,zh;q=0.9", "zh"],
-    ["zh-TW,zh-Hant;q=0.9", "zh-tw"],
-  ] as const)("routes a %s preference straight to its supported SEO locale (%s)", (acceptLanguage, expected) => {
+    "ja-JP,ja;q=0.9",
+    "zh-CN,zh;q=0.9",
+    "zh-TW,zh-Hant;q=0.9",
+  ] as const)("does not hide the Korean root from a %s browser", (acceptLanguage) => {
     // Arrange
     const input = { pathname: "/", cookieValue: undefined, acceptLanguage, userAgent: "Mozilla/5.0" };
 
@@ -419,10 +509,10 @@ describe("resolveLandingRedirectLocale", () => {
     const result = resolveLandingRedirectLocale(input);
 
     // Assert
-    expect(result).toBe(expected);
+    expect(result).toBeNull();
   });
 
-  it("falls back to en for a preferred language without a dedicated SEO route", () => {
+  it("keeps an unsupported language preference on the Korean root", () => {
     // Arrange
     const input = {
       pathname: "/",
@@ -435,7 +525,7 @@ describe("resolveLandingRedirectLocale", () => {
     const result = resolveLandingRedirectLocale(input);
 
     // Assert
-    expect(result).toBe("en");
+    expect(result).toBeNull();
   });
 
   it("does not redirect once a locale cookie already exists, even if it is ko (cookie priority)", () => {
@@ -494,18 +584,19 @@ describe("resolveLandingRedirectLocale", () => {
 });
 
 describe("proxy landing redirect", () => {
-  it("302-redirects a first-time non-Korean browser from / to /en with cookie and Vary set", async () => {
-    // Arrange
-    const request = publicRequest("/", { acceptLanguage: "en-US,en;q=0.9" });
+  it.each([
+    ["no Accept-Language", undefined, "ko"],
+    ["English", "en-US,en;q=0.9", "en"],
+    ["Japanese", "ja-JP,ja;q=0.9", "ja"],
+  ] as const)("serves / as Korean without a locale cookie for %s", async (_label, acceptLanguage, uiLocale) => {
+    const response = await proxy(publicRequest("/", { acceptLanguage }));
 
-    // Act
-    const response = await proxy(request);
-
-    // Assert
-    expect(response.status).toBe(302);
-    expect(new URL(response.headers.get("location")!).pathname).toBe("/en");
-    expect(response.headers.get("vary")).toBe("Accept-Language");
-    expect(response.cookies.get(LOCALE_COOKIE)?.value).toBe("en");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("content-language")).toBe("ko");
+    expect(forwardedLocale(response)).toBe(uiLocale);
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("vary")).toBeNull();
   });
 
   it("does not redirect a Korean-preferring browser landing on /", async () => {
@@ -546,6 +637,43 @@ describe("proxy landing redirect", () => {
 });
 
 describe("proxy auth return path", () => {
+  it.each([
+    ["/community/new?email=private@example.com", "/community/new"],
+    ["/products/mine?status=approved", "/products/mine"],
+    ["/products/new?email=private@example.com", "/products/new"],
+    [
+      "/products/new?edit=A0000000-0000-4000-8000-00000000000F&email=private@example.com",
+      "/products/new?edit=a0000000-0000-4000-8000-00000000000f",
+    ],
+  ])("redirects an anonymous private editor before rendering: %s", async (path, next) => {
+    const response = await proxy(publicRequest(path));
+    const location = new URL(response.headers.get("location")!);
+
+    expect(response.status).toBe(307);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe(next);
+    expect(location.search).not.toContain("private@example.com");
+  });
+
+  it.each([
+    "/products/new?edit=not-a-uuid",
+    "/products/new?edit=a0000000-0000-4000-8000-00000000000f&edit=b0000000-0000-4000-8000-00000000000e",
+  ])("drops unsafe creator-product edit targeting before login: %s", async (path) => {
+    const response = await proxy(publicRequest(path));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.searchParams.get("next")).toBe("/products/new");
+  });
+
+  it.each(["/community/new", "/products/new", "/products/mine"])(
+    "allows an authenticated user to keep rendering %s",
+    async (path) => {
+      supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
+      const response = await proxy(publicRequest(path));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    },
+  );
+
   it("preserves the searched meme name through submission login", async () => {
     const name = "zzqxv7239 & 회귀테스트";
     const query = new URLSearchParams({ name, email: "private@example.com", q: "other" });

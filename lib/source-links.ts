@@ -1,4 +1,9 @@
-export type SourceLink = { source_url?: string | null; platform?: string | null };
+export type SourceLink = {
+  source_url?: string | null;
+  platform?: string | null;
+  /** Internal production projection marker; never treated as origin evidence. */
+  production_id?: string | null;
+};
 
 /**
  * 근거 목록에 실을 수 있는 출처 — URL만 있는 링크와 달리 "무엇을 근거로 삼았는지"를

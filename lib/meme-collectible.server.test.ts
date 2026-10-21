@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
-const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn(), createPublicClient: vi.fn(), motif: vi.fn(), caption: vi.fn() }));
+const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn(), createPublicClient: vi.fn(), editorial: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.createPublicClient }));
-vi.mock("@/lib/meme-collectible-catalog", () => ({ getMemeCardArtDirection: mocks.motif, getMemeCardEditorialCaption: mocks.caption }));
+vi.mock("@/lib/meme-collectible-catalog", () => ({ getAlignedMemeCardEditorialPresentation: mocks.editorial }));
 
 import {
   claimMemeCollectibleCard, getMemeCardAuthenticatedUser, getMemeCardCatalogPage,
@@ -46,8 +46,10 @@ const card = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.motif.mockReturnValue({ motif: "pen-pineapple", symbols: ["pen", "pineapple"], composition: "exchange" });
-  mocks.caption.mockReturnValue("Editorially reviewed card caption");
+  mocks.editorial.mockReturnValue({
+    art: { motif: "pen-pineapple", symbols: ["pen", "pineapple"], composition: "exchange" },
+    caption: "Editorially reviewed card caption",
+  });
 });
 
 describe("collectible card repository", () => {
@@ -58,8 +60,7 @@ describe("collectible card repository", () => {
     const page = await getMemeCardCatalogPage({ page: 2 });
     expect(page).toMatchObject({ total: 1000, pageSize: 24, hasMore: true, page: 2 });
     expect(page.cards[0]).toMatchObject({ id: "mc-0001", artMotif: "pen-pineapple", thumbnailUrl: null, href: "/memes/abc123-ppap", summary: "Editorially reviewed card caption" });
-    expect(JSON.stringify(page)).not.toContain(card.memes.summary);
-    expect(fixture.records[0].calls.find((call) => call.method === "select")?.args[0]).not.toContain("summary");
+    expect(fixture.records[0].calls.find((call) => call.method === "select")?.args[0]).toContain("summary");
     expect(fixture.records[0].calls).toEqual(expect.arrayContaining([
       { method: "eq", args: ["active", true] }, { method: "eq", args: ["memes.moderation_status", "approved"] },
       { method: "eq", args: ["memes.safety_level", "green"] }, { method: "not", args: ["memes.published_at", "is", null] },
@@ -71,6 +72,28 @@ describe("collectible card repository", () => {
     await config.global.fetch("https://database.example/rest/v1/meme_collectible_cards", { method: "GET" });
     expect(fetchMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cache: "force-cache", next: { revalidate: 60, tags: ["meme-collectible-catalog", "public-meme-catalog"] } }));
     vi.unstubAllGlobals();
+  });
+
+  it("uses the live meme summary and category-safe art when frozen editorial identity no longer matches", async () => {
+    mocks.editorial.mockReturnValueOnce(null);
+    const mismatched = {
+      ...card,
+      memes: { ...card.memes, title: "Different live meme", summary: "Summary from the currently linked meme", category: "image" },
+    };
+    mocks.createStaticClient.mockReturnValue(clientFixture([{ data: mismatched }]).client);
+
+    const result = await getMemeCollectibleCard("mc-0001");
+
+    expect(mocks.editorial).toHaveBeenCalledWith("mc-0001", "meme-a", "Different live meme");
+    expect(result).toMatchObject({
+      id: "mc-0001",
+      memeId: "meme-a",
+      title: "Different live meme",
+      summary: "Summary from the currently linked meme",
+      artMotif: "reaction",
+      artSymbols: ["frame", "camera", "spark"],
+      artComposition: "frame",
+    });
   });
 
   it("never exposes primed cached content after a live withdrawal and reconciles the current availability count", async () => {

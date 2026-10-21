@@ -58,7 +58,7 @@ export function TrustNote({
             className="signal-live inline-block size-1.5 rounded-full bg-(--signal-cyan) align-middle"
           />{" "}
           <span className="font-semibold text-foreground">{houseOriginalPublicLabel()}</span>{" "}
-          — 밈캐치가 만들고 권리를 보유한 표현이에요. 마지막 업데이트 {updated}
+          — 밈캐치 자체 제작. 마지막 업데이트 {updated}
         </p>
         <TrackedBlock
           event="correction_report_started"
@@ -69,7 +69,7 @@ export function TrustNote({
             rel="nofollow"
             className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
           >
-            다른 곳에서 이 표현이 무단으로 쓰이면 알려 주세요
+            이 표현에 대한 정보를 제보해 주세요
           </Link>
         </TrackedBlock>
       </div>
@@ -81,8 +81,8 @@ export function TrustNote({
       <div className="border-t border-border pt-3 text-sm text-muted">
         <p>
           <span aria-hidden>–</span>{" "}
-          <span className="font-semibold text-foreground">근거 출처 준비 중</span> — 이
-          문서는 아직 확인된 출처가 연결되지 않았어요. 마지막 업데이트 {updated}
+          <span className="font-semibold text-foreground">출처 미연결</span> · 마지막
+          업데이트 {updated}
         </p>
         {/* 정정 제보 진입 계측(HG-006 B안) — 개인정보 없음: 문서 short_id + 진입 위치만. */}
         <TrackedBlock
@@ -94,7 +94,7 @@ export function TrustNote({
             rel="nofollow"
             className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
           >
-            출처를 아시면 알려 주세요
+            출처 정보 제보하기
           </Link>
         </TrackedBlock>
       </div>
@@ -121,14 +121,13 @@ export function TrustNote({
           <span className="font-semibold text-foreground">
             맥락 자료 {evidence.context}개 연결
           </span>{" "}
-          — 원본은 아직 찾는 중이에요.
+          · 원본 링크 없음
         </>
       ) : isBareOnly ? (
         <>
           <span className="font-semibold text-foreground">
-            출처 링크 {evidence.total}개 수집
-          </span>{" "}
-          — 어떤 자료인지 서지 확인 중이에요.
+            출처 링크 {evidence.total}개 (제목·작성자 미확인)
+          </span>
         </>
       ) : (
         <>
@@ -140,8 +139,7 @@ export function TrustNote({
           )}
         </>
       )}
-      {moderationStatus === "limited" && <> · 출처 확인 중인 문서예요.</>} · 마지막
-      업데이트 {updated}
+      {moderationStatus === "limited" && <> · 제한 공개</>} · 마지막 업데이트 {updated}
     </p>
   );
 }

@@ -9,7 +9,7 @@ import type { HomeEntry } from "@/components/home/home-experience";
 import { SafetyBadge } from "@/components/safety-badge";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
 import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
-import { localizedPath, type SeoRouteLocale } from "@/lib/i18n-routing";
+import type { SeoRouteLocale } from "@/lib/i18n-routing";
 
 type HomeDiscoveryProps = {
   locale: SeoRouteLocale;
@@ -113,9 +113,6 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
     [entries],
   );
   const normalizedQuery = normalizeSearchText(query);
-  const archiveQuery = query.normalize("NFKC").trim();
-  const searchPath = localizedPath("/search", locale);
-  const archiveHref = `${searchPath}?${new URLSearchParams({ q: archiveQuery })}`;
   const filteredEntries = useMemo<IndexedEntry[]>(() => entries
     .map((entry, position) => ({ entry, position }))
     .filter(({ entry }) => {
@@ -127,7 +124,6 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
     ? filteredEntries[previewIndex % filteredEntries.length]
     : undefined;
   const titleId = `home-discovery-title-${locale}`;
-  const scopeId = `home-discovery-scope-${locale}`;
 
   useEffect(() => {
     const deck = deckRef.current;
@@ -167,33 +163,6 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
       ) : (
         <>
           <div className={styles.tools}>
-            <form className={styles.searchArea} role="search" aria-label={copy.searchLabel} action={searchPath} method="get">
-              <label className={styles.searchLabel} htmlFor={`home-discovery-search-${locale}`}>
-                {copy.searchLabel}
-              </label>
-              <input
-                id={`home-discovery-search-${locale}`}
-                className={styles.searchInput}
-                type="search"
-                name="q"
-                maxLength={120}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setPreviewIndex(0);
-                }}
-                placeholder={copy.searchPlaceholder}
-                autoComplete="off"
-                aria-describedby={scopeId}
-              />
-              <p id={scopeId} className={styles.searchScope}>{copy.searchScope}</p>
-              {archiveQuery ? (
-                <Link className={styles.searchArchive} href={archiveHref} prefetch={false}>
-                  {copy.searchArchive(archiveQuery)} <span aria-hidden>↗</span>
-                </Link>
-              ) : null}
-            </form>
-
             <div className={styles.categoryArea}>
               <p className={styles.categoryHeading}>{copy.categoryLabel}</p>
               <div className={styles.chips} role="group" aria-label={copy.categoryLabel}>

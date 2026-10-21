@@ -8,6 +8,7 @@ import { normalizePathname } from "@/lib/normalize-pathname";
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
 const LocaleContext = createContext<LocaleContextValue | null>(null);
+let explicitSelection: { locale: Locale; url: string } | null = null;
 
 function createLocaleContextValue(locale: Locale) {
   return { locale, messages: getMessages(locale) };
@@ -24,6 +25,17 @@ function localeFromSearch(search: string): Locale | null {
   return isLocale(value) ? value : null;
 }
 
+function currentUrlKey(): string {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
+function explicitLocaleForCurrentUrl(): Locale | null {
+  if (!explicitSelection) return null;
+  if (explicitSelection.url === currentUrlKey()) return explicitSelection.locale;
+  explicitSelection = null;
+  return null;
+}
+
 /** URL-owned locale choices must stay aligned with the server-rendered page. */
 function localeFromCurrentUrl(): Locale | null {
   const prefixedLocale = localeFromPathname(window.location.pathname);
@@ -32,13 +44,16 @@ function localeFromCurrentUrl(): Locale | null {
   const queryLocale = localeFromSearch(window.location.search);
   if (queryLocale) return queryLocale;
 
-  return normalizePathname(window.location.pathname) === "/"
+  const pathname = normalizePathname(window.location.pathname);
+  return pathname === "/" || pathname.startsWith("/memes/")
     ? DEFAULT_LOCALE
     : null;
 }
 
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
+  const explicitLocale = explicitLocaleForCurrentUrl();
+  if (explicitLocale) return explicitLocale;
   const urlLocale = localeFromCurrentUrl();
   if (urlLocale) return urlLocale;
   const value = document.cookie.split("; ").find((item) => item.startsWith(`${LOCALE_COOKIE}=`))?.split("=")[1];
@@ -117,6 +132,7 @@ export function LocaleAutoDetect() {
 }
 
 export function persistLocale(locale: Locale) {
+  explicitSelection = { locale, url: currentUrlKey() };
   document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
   document.documentElement.lang = getDocumentLanguage(locale);
   document.documentElement.dir = getDocumentDirection(locale);

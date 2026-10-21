@@ -9,7 +9,6 @@ import {
   SlangDictionaryFromQuery,
   type SlangEra,
 } from "@/components/slang-dictionary";
-import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * /slang — 줄임말·유행어 사전 (연대별 브라우징).
@@ -195,7 +194,6 @@ export default async function SlangPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
-      <AdsenseScript />
       {schemaTerms.length > 0 && (
         <script
           type="application/ld+json"

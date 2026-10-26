@@ -11,6 +11,7 @@ import {
   type QuizMode,
   type QuizQuestion,
 } from "@/lib/quiz";
+import { downloadOrShareQuizCard } from "@/lib/quiz-card";
 
 /**
  * 밈력고사 클라이언트 플로우 — 시작(모드 선택) → 진행(10문항, 즉시 정오답
@@ -371,6 +372,8 @@ function ResultScreen({
   onChangeMode: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [savingImage, setSavingImage] = useState(false);
+  const [imageNotice, setImageNotice] = useState<string | null>(null);
 
   const total = questions.length;
   const score = answers.reduce(
@@ -386,6 +389,31 @@ function ResultScreen({
   const wrong = questions
     .map((q, i) => ({ q, picked: answers[i] }))
     .filter(({ q, picked }) => picked !== q.answerIndex);
+
+  async function saveCardImage() {
+    setSavingImage(true);
+    setImageNotice(null);
+    try {
+      const res = await downloadOrShareQuizCard({
+        score,
+        total,
+        grade,
+        era,
+        mode,
+        questions,
+        answers,
+      });
+      if (res.downloaded) {
+        setImageNotice("성적표 이미지가 다운로드되었습니다!");
+        setTimeout(() => setImageNotice(null), 3000);
+      }
+    } catch {
+      setImageNotice("이미지 저장 중 오류가 발생했습니다.");
+      setTimeout(() => setImageNotice(null), 3000);
+    } finally {
+      setSavingImage(false);
+    }
+  }
 
   async function share() {
     const text = `나의 밈력 ${score}점 — 밈력고사에서 측정해보세요 ${SITE_URL}/quiz`;
@@ -429,11 +457,20 @@ function ResultScreen({
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
-            onClick={share}
+            onClick={saveCardImage}
+            disabled={savingImage}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-strong px-5 font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
+            <ImageIcon />
+            {savingImage ? "성적표 생성 중..." : "성적표 이미지 저장 (인스타/카톡)"}
+          </button>
+          <button
+            type="button"
+            onClick={share}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-5 font-semibold transition-colors hover:border-accent hover:text-accent"
+          >
             <ShareIcon />
-            {copied ? "복사됨!" : "결과 공유"}
+            {copied ? "링크 복사됨!" : "링크 복사"}
           </button>
           <button
             type="button"
@@ -450,6 +487,11 @@ function ResultScreen({
             모드 변경
           </button>
         </div>
+        {imageNotice && (
+          <p className="mt-3 text-sm font-semibold text-safety-green">
+            {imageNotice}
+          </p>
+        )}
       </div>
 
       {wrong.length > 0 && (
@@ -533,6 +575,25 @@ function ShareIcon() {
       <circle cx="17" cy="6" r="2.5" />
       <circle cx="17" cy="18" r="2.5" />
       <path d="m8.3 10.8 6.4-3.6M8.3 13.2l6.4 3.6" />
+    </svg>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect width="18" height="18" x="3" y="3" rx="3" ry="3" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
     </svg>
   );
 }

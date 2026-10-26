@@ -310,49 +310,46 @@ export async function downloadOrShareQuizCard(
 
   const canvas = await renderQuizCardCanvas(data);
 
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        reject(new Error("Failed to create image blob"));
-        return;
-      }
-
-      const filename = `밈력고사_성적표_${data.grade.label}_${data.score}점.png`;
-      const file = new File([blob], filename, { type: "image/png" });
-
-      // 모바일 웹 셰어 API 지원 시 (인스타 스토리, 카톡, 사진 저장 등 시트 열림)
-      if (
-        typeof navigator !== "undefined" &&
-        typeof navigator.share === "function"
-      ) {
-        try {
-          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
-              text: `나의 밈력 ${data.score}점! 밈력고사에서 측정해보세요 👉 ${SITE_URL}/quiz`,
-            });
-            resolve({ shared: true, downloaded: false });
-            return;
-          }
-        } catch {
-          // 사용자가 취소한 경우 등
-          resolve({ shared: false, downloaded: false });
-          return;
-        }
-      }
-
-      // PC 브라우저 또는 파일 공유 미지원 환경: 직접 다운로드 트리거
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      resolve({ shared: false, downloaded: true });
-    }, "image/png");
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/png");
   });
+
+  if (!blob) {
+    throw new Error("Failed to create image blob");
+  }
+
+  const filename = `밈력고사_성적표_${data.grade.label}_${data.score}점.png`;
+  const file = new File([blob], filename, { type: "image/png" });
+
+  // 모바일 웹 셰어 API 지원 시 (인스타 스토리, 카톡, 사진 저장 등 시트 열림)
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function"
+  ) {
+    try {
+      if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
+          text: `나의 밈력 ${data.score}점! 밈력고사에서 측정해보세요 👉 ${SITE_URL}/quiz`,
+        });
+        return { shared: true, downloaded: false };
+      }
+    } catch {
+      // 사용자가 취소한 경우 등
+      return { shared: false, downloaded: false };
+    }
+  }
+
+  // PC 브라우저 또는 파일 공유 미지원 환경: 직접 다운로드 트리거
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  return { shared: false, downloaded: true };
 }

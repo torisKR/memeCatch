@@ -15,13 +15,33 @@ export interface QuizCardData {
 }
 
 /**
+ * 둥근 사각형 그리기 헬퍼 (표준 arcTo 사용으로 런타임 호환성 및 타입 안전성 보장)
+ */
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/**
  * 1080 x 1920 (9:16 인스타 스토리 및 모바일 최적화 규격)
  * 고해상도 밈력고사 성적표 캔버스 렌더링
  */
 export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanvasElement> {
-  if (typeof document !== "undefined" && "fonts" in document) {
+  if (typeof document !== "undefined" && document.fonts) {
     try {
-      await (document as any).fonts?.ready;
+      await document.fonts.ready;
     } catch {
       // 폰트 로드 실패 시 시스템 기본 폰트로 안전 폴백
     }
@@ -56,19 +76,8 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   ctx.fillStyle = cyanGlow;
   ctx.fillRect(0, 0, width, height);
 
-  // 둥근 사각형 그리기 헬퍼 (표준 arcTo 사용으로 호환성 및 타입 안전성 보장)
-  function drawRoundedRect(x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
   // 4. 브랜드 배지 (x: 80, y: 100)
-  drawRoundedRect(80, 100, 280, 60, 30);
+  drawRoundedRect(ctx, 80, 100, 280, 60, 30);
   ctx.fillStyle = "#1c1c24";
   ctx.fill();
   ctx.lineWidth = 2;
@@ -109,7 +118,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   const cardW = 920;
   const cardH = 1200;
 
-  drawRoundedRect(cardX, cardY, cardW, cardH, 44);
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 44);
   ctx.fillStyle = "#181820";
   ctx.fill();
   ctx.lineWidth = 2;
@@ -137,7 +146,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   ctx.restore();
 
   // 등급 라벨 필 (Badge)
-  drawRoundedRect(cardX + 50, cardY + 60, 320, 68, 34);
+  drawRoundedRect(ctx, cardX + 50, cardY + 60, 320, 68, 34);
   ctx.fillStyle = "#331c17";
   ctx.fill();
   ctx.lineWidth = 2;
@@ -172,7 +181,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   for (let i = 0; i < data.total; i++) {
     const isCorrect = i < data.answers.length && data.answers[i] === data.questions[i]?.answerIndex;
     const bx = cardX + 50 + i * (barWidth + barGap);
-    drawRoundedRect(bx, barY, barWidth, barHeight, 7);
+    drawRoundedRect(ctx, bx, barY, barWidth, barHeight, 7);
     ctx.fillStyle = isCorrect ? "#22d3ee" : "#343442";
     ctx.fill();
   }
@@ -180,7 +189,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   // 등급 코멘트 박스
   const commentY = cardY + 380;
   const commentH = 130;
-  drawRoundedRect(cardX + 50, commentY, cardW - 100, commentH, 24);
+  drawRoundedRect(ctx, cardX + 50, commentY, cardW - 100, commentH, 24);
   ctx.fillStyle = "#22222c";
   ctx.fill();
 
@@ -200,7 +209,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   ctx.fillText("당신의 밈 감성 연대:", cardX + 50, eraY);
 
   const eraText = data.era ? `${data.era} 🕶️` : "전 연대 통달 ⚡";
-  drawRoundedRect(cardX + 320, eraY - 26, 260, 52, 16);
+  drawRoundedRect(ctx, cardX + 320, eraY - 26, 260, 52, 16);
   ctx.fillStyle = "#2c2214";
   ctx.fill();
   ctx.lineWidth = 1.5;
@@ -241,7 +250,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
     const mx = cardX + 50 + col * (colWidth + 20);
     const my = listStartY + row * 74;
 
-    drawRoundedRect(mx, my, colWidth, 58, 16);
+    drawRoundedRect(ctx, mx, my, colWidth, 58, 16);
     ctx.fillStyle = "#1f1f28";
     ctx.fill();
 
@@ -270,7 +279,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
 
   // 6. 하단 바이럴 배너 (CTA)
   const ctaY = 1560;
-  drawRoundedRect(80, ctaY, 920, 180, 36);
+  drawRoundedRect(ctx, 80, ctaY, 920, 180, 36);
   ctx.fillStyle = "#ff5c38";
   ctx.fill();
 
@@ -312,20 +321,20 @@ export async function downloadOrShareQuizCard(
       const file = new File([blob], filename, { type: "image/png" });
 
       // 모바일 웹 셰어 API 지원 시 (인스타 스토리, 카톡, 사진 저장 등 시트 열림)
-      const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
       if (
-        nav &&
-        typeof nav.canShare === "function" &&
-        nav.canShare({ files: [file] })
+        typeof navigator !== "undefined" &&
+        typeof navigator.share === "function"
       ) {
         try {
-          await nav.share({
-            files: [file],
-            title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
-            text: `나의 밈력 ${data.score}점! 밈력고사에서 측정해보세요 👉 ${SITE_URL}/quiz`,
-          });
-          resolve({ shared: true, downloaded: false });
-          return;
+          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
+              text: `나의 밈력 ${data.score}점! 밈력고사에서 측정해보세요 👉 ${SITE_URL}/quiz`,
+            });
+            resolve({ shared: true, downloaded: false });
+            return;
+          }
         } catch {
           // 사용자가 취소한 경우 등
           resolve({ shared: false, downloaded: false });

@@ -35,6 +35,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context not available");
+  const context: CanvasRenderingContext2D = ctx;
 
   // 1. 다크 잉크 배경 (#0f0f13)
   ctx.fillStyle = "#0f0f13";
@@ -58,16 +59,16 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
 
   // 둥근 사각형 그리기 헬퍼
   function drawRoundedRect(x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    if (typeof ctx.roundRect === "function") {
-      ctx.roundRect(x, y, w, h, r);
+    context.beginPath();
+    if (typeof context.roundRect === "function") {
+      context.roundRect(x, y, w, h, r);
     } else {
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
+      context.moveTo(x + r, y);
+      context.arcTo(x + w, y, x + w, y + h, r);
+      context.arcTo(x + w, y + h, x, y + h, r);
+      context.arcTo(x, y + h, x, y, r);
+      context.arcTo(x, y, x + w, y, r);
+      context.closePath();
     }
   }
 

@@ -19,9 +19,9 @@ export interface QuizCardData {
  * 고해상도 밈력고사 성적표 캔버스 렌더링
  */
 export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanvasElement> {
-  if (typeof document !== "undefined" && document.fonts) {
+  if (typeof document !== "undefined" && "fonts" in document) {
     try {
-      await document.fonts.ready;
+      await (document as any).fonts?.ready;
     } catch {
       // 폰트 로드 실패 시 시스템 기본 폰트로 안전 폴백
     }
@@ -35,7 +35,6 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context not available");
-  const context: CanvasRenderingContext2D = ctx;
 
   // 1. 다크 잉크 배경 (#0f0f13)
   ctx.fillStyle = "#0f0f13";
@@ -57,19 +56,15 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   ctx.fillStyle = cyanGlow;
   ctx.fillRect(0, 0, width, height);
 
-  // 둥근 사각형 그리기 헬퍼
+  // 둥근 사각형 그리기 헬퍼 (표준 arcTo 사용으로 호환성 및 타입 안전성 보장)
   function drawRoundedRect(x: number, y: number, w: number, h: number, r: number) {
-    context.beginPath();
-    if (typeof context.roundRect === "function") {
-      context.roundRect(x, y, w, h, r);
-    } else {
-      context.moveTo(x + r, y);
-      context.arcTo(x + w, y, x + w, y + h, r);
-      context.arcTo(x + w, y + h, x, y + h, r);
-      context.arcTo(x, y + h, x, y, r);
-      context.arcTo(x, y, x + w, y, r);
-      context.closePath();
-    }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
 
   // 4. 브랜드 배지 (x: 80, y: 100)
@@ -317,13 +312,14 @@ export async function downloadOrShareQuizCard(
       const file = new File([blob], filename, { type: "image/png" });
 
       // 모바일 웹 셰어 API 지원 시 (인스타 스토리, 카톡, 사진 저장 등 시트 열림)
+      const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
       if (
-        typeof navigator !== "undefined" &&
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
+        nav &&
+        typeof nav.canShare === "function" &&
+        nav.canShare({ files: [file] })
       ) {
         try {
-          await navigator.share({
+          await nav.share({
             files: [file],
             title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
             text: `나의 밈력 ${data.score}점! 밈력고사에서 측정해보세요 👉 ${SITE_URL}/quiz`,

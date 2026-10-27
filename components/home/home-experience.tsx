@@ -7,6 +7,7 @@ import {
 import { HomeDiscovery } from "@/components/home/home-discovery";
 import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
 import styles from "@/components/home/home-web3.module.css";
+import { TranslatedEditionHint } from "@/components/home/translated-edition-hint";
 import { SafetySignalGuide } from "@/components/usage-guide";
 import { HOME_COPY } from "@/lib/home-copy";
 import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
@@ -44,6 +45,7 @@ export function HomeExperience({
 
   return (
     <div className={styles.page}>
+      {locale === "ko" && <TranslatedEditionHint />}
       <HomeImmersiveStory locale={locale} />
 
       <section

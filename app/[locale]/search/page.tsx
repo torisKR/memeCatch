@@ -12,6 +12,7 @@ import {
   isSeoContentLocale,
   localizedMemePath,
   localizedStaticPath,
+  type SeoContentLocale,
 } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
 import {
@@ -28,6 +29,25 @@ import { SearchInput } from "@/app/(default)/search/search-input";
 type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ q?: string | string[] }>;
+};
+
+const NO_EXACT_MATCH_COPY: Record<SeoContentLocale, { title: string; description: string }> = {
+  en: {
+    title: "No exact name or alias match.",
+    description: "Try another spelling, or send us this search term to review.",
+  },
+  ja: {
+    title: "名前・別名の一致はありません。",
+    description: "別の表記を試すか、この検索語を情報提供してください。",
+  },
+  zh: {
+    title: "没有匹配的名称或别名。",
+    description: "可尝试其他写法，或提交这个搜索词供我们核实。",
+  },
+  "zh-tw": {
+    title: "沒有符合的名稱或別名。",
+    description: "可嘗試其他寫法，或提交這個搜尋詞供我們查核。",
+  },
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -50,7 +70,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
   const contentLocale = isSeoContentLocale(locale) ? locale : notFound();
 
   const { q } = await searchParams;
-  const query = (typeof q === "string" ? q : "").trim();
+  const query = (Array.isArray(q) ? q[0] ?? "" : q ?? "").trim();
   const [results, trending] = await Promise.all([
     query ? searchMemes(query) : Promise.resolve([] as MemeListItem[]),
     getTrendingMemes(8),
@@ -61,6 +81,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
   );
   const localizedByShortId = localizedSearch.items;
   const copy = GLOBAL_SEARCH_COPY[contentLocale];
+  const noExactMatchCopy = NO_EXACT_MATCH_COPY[contentLocale];
   const popularTerms = trending.map((meme) => meme.title);
   const needsFallback = !query || results.length === 0;
   const firstOriginalResult = results[0] ?? null;
@@ -103,6 +124,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
           popularTerms={popularTerms}
           searchPath={localizedStaticPath("/search", contentLocale)}
           copy={copy.input}
+          locale={contentLocale}
         />
       </div>
 
@@ -171,23 +193,23 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
       )}
 
       {query && results.length === 0 && (
-        <StatusPanel
-          className="mt-6"
+        <aside
+          data-search-no-exact-match
           role="status"
-          tone="missing"
-          label={copy.noResultLabel}
-          title={copy.noResultTitle}
-          description={copy.noResultDescription}
-          actions={
-            <Link
-              href={`/submit?name=${encodeURIComponent(query)}`}
-              rel="nofollow"
-              className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
-            >
-              {copy.submit(query)}
-            </Link>
-          }
-        />
+          className="mt-4 flex flex-col gap-3 rounded-2xl border border-border/70 bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-sm font-semibold">{noExactMatchCopy.title}</p>
+            <p className="mt-0.5 text-xs text-muted">{noExactMatchCopy.description}</p>
+          </div>
+          <Link
+            href={`/submit?name=${encodeURIComponent(query)}`}
+            rel="nofollow"
+            className="inline-flex min-h-9 shrink-0 items-center justify-center self-start rounded-full border border-border px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent sm:self-auto"
+          >
+            {copy.submit(query)}
+          </Link>
+        </aside>
       )}
 
       {needsFallback && trending.length > 0 && (

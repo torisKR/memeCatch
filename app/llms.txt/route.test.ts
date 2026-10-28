@@ -16,6 +16,8 @@ function row(index: number, indexable: boolean) {
     summary: `Summary ${index}`,
     short_id: `m${index}`,
     slug: `meme-${index}`,
+    published_at: "2026-10-20T00:00:00.000Z",
+    moderation_status: "approved",
     description: indexable ? "d".repeat(400) : "thin",
     origin: indexable ? "o".repeat(60) : "",
     usage_note: null,
@@ -72,7 +74,7 @@ describe("llms.txt publication export", () => {
     expect(body).not.toContain("[Meme 0]");
     expect(query.range).toHaveBeenNthCalledWith(1, 0, 999);
     expect(query.range).toHaveBeenNthCalledWith(2, 1000, 1999);
-    expect(query.order).toHaveBeenCalledWith("trend_score", { ascending: false });
+    expect(query.order).toHaveBeenCalledWith("published_at", { ascending: false, nullsFirst: false });
     expect(query.order).toHaveBeenCalledWith("id", { ascending: false });
   });
 
@@ -111,5 +113,29 @@ describe("llms.txt publication export", () => {
     expect(body).toContain("공개 승인 상태");
     expect(body).toContain("콘텐츠 충실도 기준");
     expect(body).not.toContain("사실 확인 → 저작권 확인");
+  });
+
+  it("does not label the internally ordered list as a real-time external trend", async () => {
+    useRows([]);
+
+    const body = await (await GET()).text();
+
+    expect(body).toContain("최근 등록된 검수 참고 항목");
+    expect(body).not.toContain("## 지금 뜨는 밈");
+    expect(body).not.toContain("실시간 밈 사전");
+  });
+
+  it("escapes stored Markdown control syntax in titles and summaries", async () => {
+    const unsafe = row(1, true);
+    unsafe.title = "Title\n# injected ](https://evil.example)";
+    unsafe.summary = "`summary` <script>alert(1)</script>";
+    useRows([unsafe]);
+
+    const body = await (await GET()).text();
+
+    expect(body).not.toContain("\n# injected");
+    expect(body).not.toContain("<script>");
+    expect(body).not.toContain("](https://evil.example)");
+    expect(body).toContain("\\# injected");
   });
 });

@@ -2,12 +2,10 @@ import { Suspense } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AttributionTracker } from "@/components/attribution-tracker";
 import { BottomNav } from "@/components/bottom-nav";
-import { ChangelogModal } from "@/components/changelog-modal";
 import { GlobalHeader } from "@/components/global-header";
 import { MemeChatbot } from "@/components/meme-chatbot";
 import { NavProgress } from "@/components/nav-progress";
 import { PremiumAdControl } from "@/components/premium-ad-control";
-import { PwaInstall } from "@/components/pwa-install";
 import { SiteFooter } from "@/components/site-footer";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { PublicWebMcpTools } from "@/components/webmcp/public-tools";
@@ -63,8 +61,6 @@ export function RootDocument({
           <Suspense fallback={null}>
             <MemeChatbot />
           </Suspense>
-          <PwaInstall />
-          <ChangelogModal />
         </LocaleProvider>
       </body>
     </html>

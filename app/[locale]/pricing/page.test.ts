@@ -22,7 +22,7 @@ describe("localized Plus pricing metadata", () => {
         ja: "/ja/pricing",
         "zh-Hans": "/zh/pricing",
         "zh-Hant": "/zh-tw/pricing",
-        "x-default": "/en/pricing",
+        "x-default": "/pricing",
       },
     });
     expect(metadata.openGraph).toMatchObject({

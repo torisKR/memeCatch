@@ -15,8 +15,12 @@ function decodedRouteKey(value: string): string | null {
 }
 
 /**
- * Returns a same-site canonical destination for a valid meme alias, or null
- * when the requested route key already identifies the canonical document.
+ * Expands the stable short-id route to the current display slug.
+ *
+ * Slugged aliases deliberately remain renderable. Slugs are editable data, so
+ * permanently redirecting an old slug to the current slug can create a browser
+ * cached redirect loop when the stored slug changes again. Canonical metadata
+ * still consolidates every slugged alias onto the current document URL.
  */
 export function canonicalMemeRedirectPath(
   requestedKey: string,
@@ -24,12 +28,8 @@ export function canonicalMemeRedirectPath(
   inputEncoding: "decoded" | "encoded" = "decoded",
 ): string | null {
   const canonicalPath = localizedMemePath(meme.locale, meme.shortId, meme.slug);
-  const canonicalKey = canonicalPath.slice(canonicalPath.lastIndexOf("/") + 1);
-  const canonicalDecodedKey = decodedRouteKey(canonicalKey);
   // Page params are already decoded by Next; only the proxy sees encoded URL segments.
   // Decoding page params again incorrectly accepts double-encoded aliases as canonical.
   const comparableKey = inputEncoding === "encoded" ? decodedRouteKey(requestedKey) : requestedKey;
-  const isCanonical = comparableKey !== null && comparableKey === canonicalDecodedKey;
-
-  return isCanonical ? null : canonicalPath;
+  return comparableKey === meme.shortId ? canonicalPath : null;
 }

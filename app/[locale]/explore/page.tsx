@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LocalizedExploreCard } from "@/components/localized-explore-card";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
 import {
@@ -14,6 +14,13 @@ import {
   type LocalizedExploreSort,
 } from "@/lib/localized-explore";
 import { SITE_URL } from "@/lib/site";
+import {
+  buildExplorePageHref,
+  exploreCanonicalPath,
+  hasExploreFacet,
+  isCanonicalExplorePageParam,
+  parseExplorePage,
+} from "@/lib/explore-pagination";
 
 type RawParams = Record<string, string | string[] | undefined>;
 
@@ -21,12 +28,6 @@ type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<RawParams>;
 };
-
-function hasQuery(params: RawParams): boolean {
-  return Object.values(params).some((value) =>
-    Array.isArray(value) ? value.some(Boolean) : Boolean(value),
-  );
-}
 
 function parseSort(params: RawParams): LocalizedExploreSort | undefined {
   const value = Array.isArray(params.sort) ? params.sort[0] : params.sort;
@@ -38,17 +39,29 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
 
   const query = await searchParams;
-  const result = await getLocalizedExploreMemes(locale, parseSort(query));
+  const requestedPage = parseExplorePage(query.page);
+  const pathname = `/${locale}/explore`;
+  const result = await getLocalizedExploreMemes(locale, parseSort(query), requestedPage);
   const copy = LOCALIZED_EXPLORE_COPY[locale];
-  const indexable = result.status === "active" && !hasQuery(query);
+  const needsRedirect = !isCanonicalExplorePageParam(query.page)
+    || result.page !== requestedPage;
+  const indexable = !needsRedirect
+    && result.status === "active"
+    && !hasExploreFacet(query)
+  const canonical = hasExploreFacet(query)
+    ? pathname
+    : exploreCanonicalPath(pathname, result.page);
+  const base = buildLocalizedMetadata({
+    locale,
+    pathname: "/explore",
+    title: copy.title,
+    description: copy.description,
+  });
 
   return {
-    ...buildLocalizedMetadata({
-      locale,
-      pathname: "/explore",
-      title: copy.title,
-      description: copy.description,
-    }),
+    ...base,
+    alternates: { ...base.alternates, canonical },
+    openGraph: { ...base.openGraph, url: canonical },
     robots: indexable ? { index: true, follow: true } : { index: false, follow: true },
   };
 }
@@ -57,12 +70,14 @@ function ExploreJsonLd({
   locale,
   name,
   description,
+  page,
 }: {
   locale: string;
   name: string;
   description: string;
+  page: number;
 }) {
-  const url = `${SITE_URL}/${locale}/explore`;
+  const url = `${SITE_URL}${exploreCanonicalPath(`/${locale}/explore`, page)}`;
   return (
     <script
       type="application/ld+json"
@@ -86,11 +101,25 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
   if (!isSeoContentLocale(locale)) notFound();
 
   const query = await searchParams;
-  const result = await getLocalizedExploreMemes(locale, parseSort(query));
+  const pathname = `/${locale}/explore`;
+  const requestedPage = parseExplorePage(query.page);
+  if (!isCanonicalExplorePageParam(query.page)) {
+    redirect(buildExplorePageHref(pathname, query, requestedPage));
+  }
+  const result = await getLocalizedExploreMemes(locale, parseSort(query), requestedPage);
+  if (result.page !== requestedPage) {
+    redirect(buildExplorePageHref(pathname, query, result.page));
+  }
   const copy = LOCALIZED_EXPLORE_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
   const showCards = result.items.length > 0;
-  const isIndexable = result.status === "active" && !hasQuery(query);
+  const isIndexable = result.status === "active" && !hasExploreFacet(query);
+  const previousHref = result.hasPrevious
+    ? buildExplorePageHref(pathname, query, result.page - 1)
+    : undefined;
+  const nextHref = result.hasNext
+    ? buildExplorePageHref(pathname, query, result.page + 1)
+    : undefined;
 
   return (
     <main
@@ -99,7 +128,7 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
       className="bg-background pb-16 text-foreground"
     >
       {isIndexable && (
-        <ExploreJsonLd locale={locale} name={copy.title} description={copy.description} />
+        <ExploreJsonLd locale={locale} name={copy.title} description={copy.description} page={result.page} />
       )}
       <section className="border-b border-border px-4 py-12 sm:py-16">
         <div className="mx-auto max-w-5xl">
@@ -172,6 +201,22 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
               />
             ))}
           </ul>
+        )}
+
+        {(previousHref || nextHref) && (
+          <nav aria-label={copy.pageLabel(result.page)} className="mt-8 flex items-center justify-between gap-3">
+            {previousHref ? (
+              <Link href={previousHref} rel="prev" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-bold hover:border-accent hover:text-accent">
+                ← {copy.previousPage}
+              </Link>
+            ) : <span />}
+            <span className="text-sm text-muted">{copy.pageLabel(result.page)}</span>
+            {nextHref ? (
+              <Link href={nextHref} rel="next" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-bold hover:border-accent hover:text-accent">
+                {copy.nextPage} →
+              </Link>
+            ) : <span />}
+          </nav>
         )}
       </section>
     </main>

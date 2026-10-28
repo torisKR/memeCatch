@@ -76,6 +76,51 @@ describe("withAllowlistedSearch", () => {
     ).toBe("/admin/memes?status=pending&origin=house_original");
   });
 
+  it("keeps only one valid source-recovery meme UUID and normalizes it", () => {
+    expect(
+      withAllowlistedSearch("/admin/sources", {
+        memeId: "A0000000-0000-4000-8000-00000000000F",
+        page: "3",
+        q: "must-not-cross-routes",
+      }),
+    ).toBe("/admin/sources?memeId=a0000000-0000-4000-8000-00000000000f");
+    expect(
+      withAllowlistedSearch("/admin/memes", {
+        memeId: "a0000000-0000-4000-8000-00000000000f",
+      }),
+    ).toBe("/admin/memes");
+  });
+
+  it("keeps only one valid creator-product edit UUID", () => {
+    expect(
+      withAllowlistedSearch("/products/new", {
+        edit: "A0000000-0000-4000-8000-00000000000F",
+        email: "private@example.com",
+      }),
+    ).toBe("/products/new?edit=a0000000-0000-4000-8000-00000000000f");
+    expect(
+      withAllowlistedSearch("/products/mine", {
+        edit: "a0000000-0000-4000-8000-00000000000f",
+      }),
+    ).toBe("/products/mine");
+  });
+
+  it.each([
+    { edit: "not-a-uuid" },
+    { edit: "" },
+    { edit: ["a0000000-0000-4000-8000-00000000000f", "b0000000-0000-4000-8000-00000000000e"] },
+  ])("drops invalid or duplicated product edit targeting: %j", (search) => {
+    expect(withAllowlistedSearch("/products/new", search)).toBe("/products/new");
+  });
+
+  it.each([
+    { memeId: "not-a-uuid" },
+    { memeId: "" },
+    { memeId: ["a0000000-0000-4000-8000-00000000000f", "b0000000-0000-4000-8000-00000000000e"] },
+  ])("drops invalid or duplicated source-recovery targeting: %j", (search) => {
+    expect(withAllowlistedSearch("/admin/sources", search)).toBe("/admin/sources");
+  });
+
   it("drops unknown keys, duplicates, and invalid values", () => {
     expect(
       withAllowlistedSearch("/admin/memes", {

@@ -7,6 +7,8 @@ const APP_ORIGIN = "https://catchmeme.com";
 const AUTH_RETURN_QUERY_MAX_Q = 200;
 const AUTH_RETURN_QUERY_MAX_NAME = 100;
 const AUTH_RETURN_QUERY_KEYS = ["focus", "q", "status", "origin"] as const;
+const AUTH_RETURN_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const AUTH_RETURN_STATUS_VALUES = new Set([
   "pending",
   "fact_checking",
@@ -107,10 +109,24 @@ export function withAllowlistedSearch(
   }
   const params = asSearchParams(search);
   const kept = new URLSearchParams();
-  const keys = pathname === "/submit" ? ["name"] : AUTH_RETURN_QUERY_KEYS;
+  const keys = pathname === "/submit"
+    ? ["name"]
+    : pathname === "/admin/sources"
+      ? ["memeId"]
+      : pathname === "/products/new"
+        ? ["edit"]
+      : AUTH_RETURN_QUERY_KEYS;
   for (const key of keys) {
     const values = params.getAll(key);
     if (values.length !== 1) continue;
+    if (pathname === "/admin/sources" && key === "memeId") {
+      if (AUTH_RETURN_UUID_RE.test(values[0])) kept.set(key, values[0].toLowerCase());
+      continue;
+    }
+    if (pathname === "/products/new" && key === "edit") {
+      if (AUTH_RETURN_UUID_RE.test(values[0])) kept.set(key, values[0].toLowerCase());
+      continue;
+    }
     if (!isAllowedAuthReturnValue(key, values[0])) continue;
     kept.set(key, values[0]);
   }

@@ -15,6 +15,9 @@ import {
 } from "@/lib/queries";
 import { createStaticClient } from "@/lib/supabase/server";
 import { originCountryCode } from "@/lib/meme-country";
+import { resolveMemeDelivery } from "@/lib/meme-delivery";
+import { publicEditorialEligibilityInput } from "@/lib/meme-public-detail";
+import { filterPublicMemeMedia } from "@/lib/sources/public-links.server";
 
 export type TranslationStatus = "machine" | "reviewed" | "stale";
 
@@ -87,10 +90,14 @@ const TRANSLATION_COLUMNS =
   "meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at" as const;
 
 const FEATURED_SELECT = `${TRANSLATION_COLUMNS}, memes!inner(*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state))` as const;
+const FEATURED_CANDIDATE_PAGE_SIZE = 200;
+const MAX_FEATURED_CANDIDATES = 50_000;
 
 type FeaturedTranslationRow = MemeTranslationRow & {
   memes: MemeDetail;
 };
+
+export type PublicLocalizedTranslationRow = FeaturedTranslationRow;
 
 type AvailabilityBaseRow = Omit<LocalizableMeme, "short_id">;
 
@@ -266,11 +273,12 @@ export async function getLocalizedSearchMemesResult(
       .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
     if (error || !data) return { items, status: "unavailable" };
 
-    for (const row of data) {
-      const localized = overlayMemeTranslation(row.memes, row, locale);
-      if (localized && isIndexableLocalizedMeme(localized)) {
-        items.set(localized.short_id, localized);
-      }
+    const localizedRows = await projectPublicLocalizedTranslationRows(
+      data,
+      locale,
+    );
+    for (const localized of localizedRows) {
+      items.set(localized.short_id, localized);
     }
   } catch {
     return { items, status: "unavailable" };
@@ -291,38 +299,139 @@ export async function getLocalizedSearchMemes(
  * Fetch extra candidates before applying the current/depth/Korean-origin
  * checks so stale or non-Korean rows do not unnecessarily shrink the result.
  */
+export type LocalizedFeaturedMemesStatus =
+  | "active"
+  | "coverage-empty"
+  | "unavailable";
+
+export type LocalizedFeaturedMemesResult = {
+  items: LocalizedMemeListItem[];
+  status: LocalizedFeaturedMemesStatus;
+};
+
+export type LocalizedPublicationScope = "reader" | "approved-only";
+
+export async function projectPublicLocalizedTranslationRows(
+  rows: readonly PublicLocalizedTranslationRow[],
+  locale: Locale,
+  options: { koreanOriginOnly?: boolean; limit?: number } = {},
+): Promise<LocalizedMemeListItem[]> {
+  if (options.limit !== undefined && options.limit <= 0) return [];
+  const upperBound = rows.flatMap((row) => {
+    if (
+      options.koreanOriginOnly &&
+      originCountryCode(row.memes.meme_market_profiles) !== "KR"
+    ) {
+      return [];
+    }
+    const localized = overlayMemeTranslation(row.memes, row, locale);
+    return localized && isIndexableLocalizedMeme(localized) ? [row] : [];
+  });
+  if (upperBound.length === 0) return [];
+
+  const publicMedia = await filterPublicMemeMedia({
+    sources: upperBound.flatMap((row) => row.memes.meme_sources ?? []),
+    contents: upperBound.flatMap((row) => row.memes.meme_contents ?? []),
+  });
+  const publicSources = new Set(publicMedia.sources);
+  const publicContents = new Set(publicMedia.contents);
+  const projected: LocalizedMemeListItem[] = [];
+  const limit = options.limit === undefined
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, Math.floor(options.limit));
+
+  for (const row of upperBound) {
+    const delivery = resolveMemeDelivery({
+      sources: (row.memes.meme_sources ?? []).filter((source) => publicSources.has(source)),
+      contents: (row.memes.meme_contents ?? []).filter((content) => publicContents.has(content)),
+    });
+    const publicDepth = publicEditorialEligibilityInput({
+      meme: row.memes,
+      originalSources: delivery.originalSources,
+      renderableContents: delivery.renderableContents,
+    });
+    if (!isIndexableMeme(publicDepth)) continue;
+
+    const projectedBase: MemeDetail = {
+      ...row.memes,
+      description: publicDepth.description ?? "",
+      meme_sources: [...delivery.originalSources],
+      meme_contents: [...delivery.renderableContents],
+    };
+    const localized = overlayMemeTranslation(projectedBase, row, locale);
+    if (!localized || !isIndexableLocalizedMeme(localized)) continue;
+    projected.push(localized);
+    if (projected.length >= limit) break;
+  }
+
+  return projected;
+}
+
+export async function getLocalizedFeaturedMemesResult(
+  locale: Locale,
+  limit = 12,
+  scope: LocalizedPublicationScope = "reader",
+): Promise<LocalizedFeaturedMemesResult> {
+  if (locale === DEFAULT_LOCALE || limit <= 0) {
+    return { items: [], status: "coverage-empty" };
+  }
+  const safeLimit = Math.min(Math.floor(limit), 400);
+
+  try {
+    const localized: LocalizedMemeListItem[] = [];
+    for (
+      let from = 0;
+      from < MAX_FEATURED_CANDIDATES;
+      from += FEATURED_CANDIDATE_PAGE_SIZE
+    ) {
+      const to = from + FEATURED_CANDIDATE_PAGE_SIZE - 1;
+      const { data, error } = await createStaticClient()
+        .from("meme_translations")
+        .select(FEATURED_SELECT)
+        .eq("locale", locale)
+        .eq("status", "reviewed")
+        .in(
+          "memes.moderation_status",
+          scope === "approved-only" ? ["approved"] : ["approved", "limited"],
+        )
+        .order("trend_score", {
+          referencedTable: "memes",
+          ascending: false,
+        })
+        .order("meme_id", { ascending: false })
+        .range(from, to)
+        .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
+      if (error || !data) return { items: [], status: "unavailable" };
+
+      const pageItems = await projectPublicLocalizedTranslationRows(data, locale, {
+        koreanOriginOnly: true,
+        limit: safeLimit - localized.length,
+      });
+      localized.push(...pageItems);
+      if (localized.length >= safeLimit) {
+        return { items: localized, status: "active" };
+      }
+      if (data.length < FEATURED_CANDIDATE_PAGE_SIZE) {
+        return {
+          items: localized,
+          status: localized.length > 0 ? "active" : "coverage-empty",
+        };
+      }
+    }
+
+    // A full final page means more candidates may exist. Do not describe a
+    // bounded, incomplete scan as genuine empty coverage.
+    return { items: [], status: "unavailable" };
+  } catch {
+    return { items: [], status: "unavailable" };
+  }
+}
+
 export async function getLocalizedFeaturedMemes(
   locale: Locale,
   limit = 12,
 ): Promise<LocalizedMemeListItem[]> {
-  if (locale === DEFAULT_LOCALE || limit <= 0) return [];
-  const safeLimit = Math.min(Math.floor(limit), 400);
-  const candidateLimit = Math.min(Math.max(safeLimit * 8, 96), 1_200);
-
-  try {
-    const { data, error } = await createStaticClient()
-      .from("meme_translations")
-      .select(FEATURED_SELECT)
-      .eq("locale", locale)
-      .eq("status", "reviewed")
-      .in("memes.moderation_status", ["approved", "limited"])
-      .order("trend_score", { referencedTable: "memes", ascending: false })
-      .limit(candidateLimit)
-      .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
-    if (error || !data) return [];
-
-    const localized: LocalizedMemeListItem[] = [];
-    for (const row of data) {
-      if (originCountryCode(row.memes.meme_market_profiles) !== "KR") continue;
-      const meme = overlayMemeTranslation(row.memes, row, locale);
-      if (!meme || !isIndexableLocalizedMeme(meme)) continue;
-      localized.push(meme);
-      if (localized.length === safeLimit) break;
-    }
-    return localized;
-  } catch {
-    return [];
-  }
+  return (await getLocalizedFeaturedMemesResult(locale, limit)).items;
 }
 
 /**

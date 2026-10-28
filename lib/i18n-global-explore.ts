@@ -7,6 +7,9 @@ export type LocalizedExploreCopy = {
   intro: string;
   read: string;
   home: string;
+  previousPage: string;
+  nextPage: string;
+  pageLabel: (page: number) => string;
   originalExplore: string;
   originalLabel: string;
   safetyLabel: string;
@@ -26,6 +29,9 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
     intro: "Only current, human-reviewed translations of substantial public entries appear here.",
     read: "Read the explanation",
     home: "Back to home",
+    previousPage: "Previous page",
+    nextPage: "Next page",
+    pageLabel: (page) => `Page ${page}`,
     originalExplore: "Explore Korean originals",
     originalLabel: "Korean original",
     safetyLabel: "Usage signal",
@@ -43,6 +49,9 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
     intro: "内容が充実し、人が確認した最新の翻訳だけを公開しています。",
     read: "解説を読む",
     home: "ホームに戻る",
+    previousPage: "前のページ",
+    nextPage: "次のページ",
+    pageLabel: (page) => `${page}ページ`,
     originalExplore: "韓国語の原文を探す",
     originalLabel: "韓国語の原題",
     safetyLabel: "使用シグナル",
@@ -60,6 +69,9 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
     intro: "这里只发布内容完整、经过人工审核且保持最新的翻译。",
     read: "阅读解释",
     home: "返回首页",
+    previousPage: "上一页",
+    nextPage: "下一页",
+    pageLabel: (page) => `第 ${page} 页`,
     originalExplore: "探索韩语原文",
     originalLabel: "韩文原名",
     safetyLabel: "使用提示",
@@ -77,6 +89,9 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
     intro: "這裡只發布內容完整、經過人工審核且保持最新的翻譯。",
     read: "閱讀解釋",
     home: "返回首頁",
+    previousPage: "上一頁",
+    nextPage: "下一頁",
+    pageLabel: (page) => `第 ${page} 頁`,
     originalExplore: "探索韓語原文",
     originalLabel: "韓文原名",
     safetyLabel: "使用提示",

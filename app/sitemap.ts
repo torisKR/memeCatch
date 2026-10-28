@@ -3,8 +3,13 @@ import { SITE_URL } from "@/lib/site";
 import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
-import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
-import { evidenceTimestamp } from "@/lib/source-links";
+import { isIndexableMeme, type DepthContentRef, type DepthTagRef } from "@/lib/content-depth";
+import { evidenceTimestamp, type SourceLink } from "@/lib/source-links";
+import { resolveMemeDelivery } from "@/lib/meme-delivery";
+import { publicEditorialEligibilityInput } from "@/lib/meme-public-detail";
+import { filterPublicMemeMedia } from "@/lib/sources/public-links.server";
+import { isTranslationCurrent } from "@/lib/meme-translations";
+import { originCountryCode, type MemeOriginProfile } from "@/lib/meme-country";
 import {
   SEO_CONTENT_LOCALES,
   SEO_ROUTE_LOCALES,
@@ -33,9 +38,14 @@ const MIN_LOCALIZED_EXPLORE_ITEMS = 24;
  * 그 밈은 점수가 낮게 나와 조용히 색인에서 빠지므로 컬럼 변경 시 양쪽을 함께 본다.
  */
 const DEPTH_SELECT =
-  "short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples," +
-  " meme_sources(source_url), meme_contents(availability, moderation_status)," +
+  "short_id, slug, updated_at, title, summary, published_at, moderation_status, description, origin, usage_note, caution, usage_examples," +
+  // Same relation DTOs as detail queries: older local schemas may not yet have
+  // optional production_id columns. Explicitly selecting a missing column would
+  // turn the entire sitemap into a 500; `*` includes it only where installed.
+  // These rows stay server-side; only eligible canonical URLs are serialized.
+  " meme_sources(*), meme_contents(*)," +
   " meme_tags_map(tag_id)," +
+  " meme_market_profiles(market_code, role, review_state)," +
   " meme_translations(locale, status, localized_slug, source_updated_at, updated_at, title, summary, description, origin)";
 
 type SitemapTranslationRow = {
@@ -50,10 +60,19 @@ type SitemapTranslationRow = {
   origin: string;
 };
 
-type SitemapMemeRow = ContentDepthInput & {
+type SitemapMemeRow = Parameters<typeof publicEditorialEligibilityInput>[0]["meme"] & {
   short_id: string;
   slug: string;
   updated_at: string;
+  meme_tags_map: DepthTagRef[] | null;
+  meme_market_profiles: MemeOriginProfile[] | null;
+  meme_sources: SourceLink[];
+  meme_contents: (DepthContentRef & {
+    url?: string | null;
+    platform?: string | null;
+    content_id?: string | null;
+    production_id?: string | null;
+  })[];
   meme_translations: SitemapTranslationRow[];
 };
 
@@ -70,17 +89,12 @@ function absolute(pathname: string): string {
   return `${SITE_URL}${pathname === "/" ? "" : pathname}`;
 }
 
-function homeLanguages(): Record<string, string> {
-  return {
-    ...Object.fromEntries(
-      SEO_ROUTE_LOCALES.map((locale) => [
-        toHrefLang(locale),
-        absolute(localizedPath("/", locale)),
-      ]),
-    ),
-    // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다.
-    "x-default": absolute(localizedPath("/", "en")),
-  };
+function homeLanguages(locales: readonly SeoContentLocale[]): Record<string, string> {
+  const languages: Record<string, string> = { ko: absolute("/") };
+  for (const locale of locales) {
+    languages[toHrefLang(locale)] = absolute(localizedPath("/", locale));
+  }
+  return { ...languages, "x-default": languages.ko };
 }
 
 /** Plus pricing is the other fully localized static conversion page. */
@@ -92,7 +106,7 @@ function pricingLanguages(): Record<string, string> {
         absolute(localizedPath("/pricing", locale)),
       ]),
     ),
-    "x-default": absolute(localizedPath("/pricing", "en")),
+    "x-default": absolute("/pricing"),
   };
 }
 
@@ -103,7 +117,7 @@ function exploreLanguages(locales: readonly SeoContentLocale[]): Record<string, 
   for (const locale of locales) {
     languages[toHrefLang(locale)] = absolute(localizedPath("/explore", locale));
   }
-  return { ...languages, "x-default": languages.en ?? languages.ko };
+  return { ...languages, "x-default": languages.ko };
 }
 
 /** Only reviewed, exact-source, complete translations may become crawl targets. */
@@ -113,7 +127,7 @@ function reviewedTranslations(meme: SitemapMemeRow): Map<SeoContentLocale, Sitem
     if (!isSeoContentLocale(translation.locale)) continue;
     const isReviewedAndCurrent =
       translation.status === "reviewed" &&
-      translation.source_updated_at === meme.updated_at &&
+      isTranslationCurrent(translation.source_updated_at, meme.updated_at) &&
       Boolean(translation.title?.trim()) &&
       Boolean(translation.summary?.trim()) &&
       Boolean(translation.description?.trim()) &&
@@ -143,9 +157,7 @@ function memeLanguages(
       ),
     );
   }
-  // 해외 주 타깃 전환: x-default는 영어 문서. reviewed en 번역이 없으면 ko 원문 유지
-  // (존재하지 않는 /en URL을 가리키면 유해).
-  return { ...languages, "x-default": languages.en ?? absolute(koreanPath) };
+  return { ...languages, "x-default": absolute(koreanPath) };
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -173,14 +185,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     throw new Error("[sitemap] 최신 공개일 조회 실패", { cause: error });
   }
 
-  const localizedHomeEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
-    (locale) => ({
-      url: absolute(localizedPath("/", locale)),
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-      alternates: { languages: homeLanguages() },
-    }),
-  );
   const localizedPricingEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
     (locale) => ({
       url: absolute(localizedPath("/pricing", locale)),
@@ -190,17 +194,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
   const localizedHomeLastModified = new Map<SeoContentLocale, Date>();
+  const localizedExploreLastModified = new Map<SeoContentLocale, Date>();
+  const localizedHomeCounts = new Map<SeoContentLocale, number>();
   const localizedExploreCounts = new Map<SeoContentLocale, number>();
 
+  const rootEntry: MetadataRoute.Sitemap[number] = {
+    url: SITE_URL,
+    ...lastModified(homeLastMod),
+    changeFrequency: "hourly",
+    priority: 1,
+  };
   const entries: MetadataRoute.Sitemap = [
-    {
-      url: SITE_URL,
-      ...lastModified(homeLastMod),
-      changeFrequency: "hourly",
-      priority: 1,
-      alternates: { languages: homeLanguages() },
-    },
-    ...localizedHomeEntries,
+    rootEntry,
     {
       url: `${SITE_URL}/pricing`,
       changeFrequency: "weekly" as const,
@@ -226,7 +231,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/editorial", "/privacy", "/terms"] as const).map(
+    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/guides/reading-memes", "/editorial", "/privacy", "/terms"] as const).map(
       (path) => ({
         url: `${SITE_URL}${path}`,
         changeFrequency: "daily" as const,
@@ -263,20 +268,69 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     if (!data || data.length === 0) break;
 
-    for (const meme of data as unknown as SitemapMemeRow[]) {
-      if (!isIndexableMeme(meme)) continue;
+    // Raw rows are only a cheap upper bound. As on the detail page, hidden,
+    // unplayable and produced media must not grant index eligibility. The
+    // score is additive: if public prose/tags alone pass, removal of any media
+    // cannot change that verdict. Only boundary rows need ledger lookups.
+    const candidates = (data as unknown as SitemapMemeRow[]).filter(isIndexableMeme);
+    const independentlyIndexable = new Set(candidates.filter((meme) =>
+      isIndexableMeme(publicEditorialEligibilityInput({
+        meme,
+        originalSources: [],
+        renderableContents: [],
+      })),
+    ));
+    const dependentCandidates = candidates.filter((meme) => !independentlyIndexable.has(meme));
+    // The shared helper batches refs (200 IDs / 25 legacy TikTok IDs per lane),
+    // with at most three concurrent lanes. This is one helper call per DB page,
+    // not necessarily a single database request.
+    const publicMedia = dependentCandidates.length > 0
+      ? await filterPublicMemeMedia({
+        sources: dependentCandidates.flatMap((meme) => meme.meme_sources ?? []),
+        contents: dependentCandidates.flatMap((meme) => meme.meme_contents ?? []),
+      })
+      : { sources: [], contents: [] };
+    const publicSources = new Set(publicMedia.sources);
+    const publicContents = new Set(publicMedia.contents);
+
+    for (const meme of candidates) {
+      if (!independentlyIndexable.has(meme)) {
+        const delivery = resolveMemeDelivery({
+          sources: (meme.meme_sources ?? []).filter((source) => publicSources.has(source)),
+          contents: (meme.meme_contents ?? []).filter((content) => publicContents.has(content)),
+        });
+        const publicDepthInput = publicEditorialEligibilityInput({
+          meme,
+          originalSources: delivery.originalSources,
+          renderableContents: delivery.renderableContents,
+        });
+        if (!isIndexableMeme(publicDepthInput)) continue;
+      }
       const translations = reviewedTranslations(meme);
       const languages = memeLanguages(meme, translations);
+      const provesKoreanHomeCoverage = originCountryCode(meme.meme_market_profiles) === "KR";
       for (const [locale, translation] of translations) {
         localizedExploreCounts.set(
           locale,
           (localizedExploreCounts.get(locale) ?? 0) + 1,
         );
         const translationUpdatedAt = validDate(translation.updated_at);
-        const currentLatest = localizedHomeLastModified.get(locale);
+        const currentExploreLatest = localizedExploreLastModified.get(locale);
         if (
           translationUpdatedAt &&
-          (!currentLatest || translationUpdatedAt > currentLatest)
+          (!currentExploreLatest || translationUpdatedAt > currentExploreLatest)
+        ) {
+          localizedExploreLastModified.set(locale, translationUpdatedAt);
+        }
+        if (!provesKoreanHomeCoverage) continue;
+        localizedHomeCounts.set(
+          locale,
+          (localizedHomeCounts.get(locale) ?? 0) + 1,
+        );
+        const currentHomeLatest = localizedHomeLastModified.get(locale);
+        if (
+          translationUpdatedAt &&
+          (!currentHomeLatest || translationUpdatedAt > currentHomeLatest)
         ) {
           localizedHomeLastModified.set(locale, translationUpdatedAt);
         }
@@ -315,9 +369,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (data.length < PAGE) break;
   }
 
-  for (const [index, locale] of SEO_CONTENT_LOCALES.entries()) {
-    localizedHomeEntries[index].lastModified = localizedHomeLastModified.get(locale);
-  }
+  const activeHomeLocales = SEO_CONTENT_LOCALES.filter(
+    (locale) => (localizedHomeCounts.get(locale) ?? 0) > 0,
+  );
+  const rootLanguages = homeLanguages(activeHomeLocales);
+  rootEntry.alternates = { languages: rootLanguages };
+  entries.splice(
+    1,
+    0,
+    ...activeHomeLocales.map((locale) => ({
+      url: absolute(localizedPath("/", locale)),
+      ...lastModified(localizedHomeLastModified.get(locale)),
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+      alternates: { languages: rootLanguages },
+    })),
+  );
 
   const activeExploreLocales = SEO_CONTENT_LOCALES.filter(
     (locale) => (localizedExploreCounts.get(locale) ?? 0) >= MIN_LOCALIZED_EXPLORE_ITEMS,
@@ -329,7 +396,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push(
       ...activeExploreLocales.map((locale) => ({
         url: absolute(localizedPath("/explore", locale)),
-        ...lastModified(localizedHomeLastModified.get(locale)),
+        ...lastModified(localizedExploreLastModified.get(locale)),
         changeFrequency: "daily" as const,
         priority: 0.65,
         alternates: { languages },

@@ -39,9 +39,12 @@ describe("multiple root layouts", () => {
 
     expect(html).toMatch(/^<html lang="ko" dir="ltr">/);
     expect(html).toContain(`aria-label="${messages.home}"`);
-    // 언어 선택기는 전 라우트 상시 노출 — 첫 방문은 LocaleAutoDetect가
-    // 브라우저 언어로 자동 설정하고, 수동 변경은 쿠키로 유지된다.
-    expect(html).toContain(`aria-label="${messages.languageMenu}"`);
+    // 보조 동선과 언어 선택기는 닫힌 통합 메뉴 안에 있다. SSR에는 로케일에 맞는
+    // 메뉴 트리거만 노출하고, 실제 선택기는 메뉴를 열었을 때 HeaderMenu 테스트가 검증한다.
+    expect(html).toContain(`aria-label="${messages.menu}"`);
+    expect(html).toContain('aria-controls="header-menu-panel"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain(`aria-label="${messages.languageMenu}"`);
     expect(html).toContain(`aria-label="${messages.footerNav}"`);
     expect(html).toContain(`aria-label="${messages.mainNav}"`);
     expect(html).toContain(`>${messages.about}</a>`);
@@ -79,7 +82,10 @@ describe("multiple root layouts", () => {
 
     expect(html).toMatch(new RegExp(`^<html lang="${lang}" dir="ltr">`));
     expect(html).toContain(`aria-label="${messages.home}"`);
-    expect(html).toContain(`aria-label="${messages.languageMenu}"`);
+    expect(html).toContain(`aria-label="${messages.menu}"`);
+    expect(html).toContain('aria-controls="header-menu-panel"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain(`aria-label="${messages.languageMenu}"`);
     expect(html).not.toContain("locale-document-bootstrap");
   });
 

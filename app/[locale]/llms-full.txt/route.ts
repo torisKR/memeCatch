@@ -4,8 +4,12 @@ import {
   localizedMemePath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
-import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
+import { getLocalizedFeaturedMemesResult } from "@/lib/meme-translations";
+import { publicationExportUnavailableResponse } from "@/lib/publication-export";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
+import { parseUsageExamples } from "@/lib/usage-examples";
+import { citableSources } from "@/lib/source-links";
+import { publicationMarkdownText } from "@/lib/publication-markdown";
 
 export const revalidate = 3600;
 
@@ -18,7 +22,9 @@ type Copy = {
   origin: string;
   usage: string;
   caution: string;
+  examples: string;
   sources: string;
+  sourceCaveat: string;
   updated: string;
   attribution: string;
   noValue: string;
@@ -37,7 +43,9 @@ const COPY: Record<SeoContentLocale, Copy> = {
     origin: "Origin",
     usage: "Usage",
     caution: "Caution",
+    examples: "Usage examples",
     sources: "Sources",
+    sourceCaveat: "Source links are references for checking the underlying material; their presence alone does not independently verify an origin claim.",
     updated: "Translation updated",
     attribution: "For attribution, cite the localized entry URL and retain its Korean title. Use the listed source URLs to distinguish primary material from contextual references.",
     noValue: "Not specified",
@@ -54,7 +62,9 @@ const COPY: Record<SeoContentLocale, Copy> = {
     origin: "由来",
     usage: "使い方",
     caution: "注意点",
+    examples: "使用例",
     sources: "出典",
+    sourceCaveat: "出典リンクは原資料を確認するための参考です。リンクがあるだけで由来の説明が独立して検証済みになるわけではありません。",
     updated: "翻訳更新日",
     attribution: "引用時は各言語の記事URLを示し、韓国語の原題も残してください。掲載した出典URLで一次資料と文脈資料を区別してください。",
     noValue: "記載なし",
@@ -71,7 +81,9 @@ const COPY: Record<SeoContentLocale, Copy> = {
     origin: "起源",
     usage: "用法",
     caution: "注意事项",
+    examples: "使用示例",
     sources: "来源",
+    sourceCaveat: "来源链接用于核对原始材料；仅有链接并不代表起源说法已经得到独立验证。",
     updated: "翻译更新时间",
     attribution: "引用时请使用对应语言的词条 URL，并保留韩文原名。请通过列出的来源 URL 区分一手资料与背景参考。",
     noValue: "未注明",
@@ -88,7 +100,9 @@ const COPY: Record<SeoContentLocale, Copy> = {
     origin: "起源",
     usage: "用法",
     caution: "注意事項",
+    examples: "使用範例",
     sources: "來源",
+    sourceCaveat: "來源連結用於核對原始材料；僅有連結並不代表起源說法已獲獨立驗證。",
     updated: "翻譯更新時間",
     attribution: "引用時請使用對應語言的詞條 URL，並保留韓文原名。請透過列出的來源 URL 區分第一手資料與背景參考。",
     noValue: "未註明",
@@ -99,7 +113,8 @@ const COPY: Record<SeoContentLocale, Copy> = {
 };
 
 function prose(value: string | null | undefined, fallback: string) {
-  return value?.trim() ? value.trim() : fallback;
+  const safe = publicationMarkdownText(value);
+  return safe || publicationMarkdownText(fallback);
 }
 
 export async function GET(
@@ -109,23 +124,32 @@ export async function GET(
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) return new Response("Not found\n", { status: 404 });
 
-  const [memes, copy] = await Promise.all([
-    getLocalizedFeaturedMemes(locale, 400),
+  const [result, copy] = await Promise.all([
+    getLocalizedFeaturedMemesResult(locale, 400, "approved-only"),
     Promise.resolve(COPY[locale]),
   ]);
+  if (result.status === "unavailable") {
+    return publicationExportUnavailableResponse();
+  }
+  const memes = result.items;
   const entries = memes.map((meme) => {
     const url = `${SITE_URL}${localizedMemePath(locale, meme.short_id, meme.slug)}`;
-    const sources = meme.meme_sources
-      .filter((source) => source.source_url)
+    const sources = citableSources(meme.meme_sources)
       .map(
         (source) =>
-          `- [${prose(source.title || source.platform, copy.sources)}](${source.source_url})`,
+          `- [${prose(source.title, copy.sources)}](${source.url})${source.publisher ? ` — ${prose(source.publisher, copy.sources)}` : ""}`,
+      )
+      .join("\n");
+    const examples = parseUsageExamples(meme.usage_examples)
+      .map(
+        (example) =>
+          `- ${prose(example.situation, copy.noValue)}: ${prose(example.text, copy.noValue)}`,
       )
       .join("\n");
 
-    return `## ${meme.title}
+    return `## ${prose(meme.title, copy.noValue)}
 URL: ${url}
-${copy.original}: ${meme.original.title}
+${copy.original}: ${prose(meme.original.title, copy.noValue)}
 ${copy.summary}: ${prose(meme.summary, copy.noValue)}
 
 ### ${copy.description}
@@ -140,10 +164,14 @@ ${prose(meme.usage_note, copy.noValue)}
 ### ${copy.caution}
 ${prose(meme.caution, copy.noValue)}
 
+### ${copy.examples}
+${examples || `- ${copy.noValue}`}
+
 ### ${copy.sources}
 ${sources || `- ${copy.noValue}`}
+${copy.sourceCaveat}
 
-${copy.updated}: ${meme.translation.updatedAt}`;
+${copy.updated}: ${publicationMarkdownText(meme.translation.updatedAt)}`;
   });
 
   const body = `# MemeCatch — llms-full (${locale})

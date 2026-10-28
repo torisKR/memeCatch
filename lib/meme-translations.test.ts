@@ -10,13 +10,16 @@ import {
   isTranslationCurrent,
   overlayMemeTranslation,
   getLocalizedFeaturedMemes,
+  getLocalizedFeaturedMemesResult,
   getLocalizedSearchMemesResult,
   type MemeTranslationRow,
 } from "@/lib/meme-translations";
 
 const createStaticClient = vi.hoisted(() => vi.fn());
+const filterPublicMemeMedia = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/sources/public-links.server", () => ({ filterPublicMemeMedia }));
 
 const SOURCE_UPDATED_AT = "2026-07-28T04:00:00.000Z";
 
@@ -111,6 +114,7 @@ function mockTranslationQuery(response: { data: unknown; error: unknown }) {
     in: vi.fn(),
     order: vi.fn(),
     limit: vi.fn(),
+    range: vi.fn(),
     overrideTypes: vi.fn(),
   };
   builder.select.mockReturnValue(builder);
@@ -118,14 +122,45 @@ function mockTranslationQuery(response: { data: unknown; error: unknown }) {
   builder.in.mockReturnValue(builder);
   builder.order.mockReturnValue(builder);
   builder.limit.mockReturnValue(builder);
+  builder.range.mockReturnValue(builder);
   builder.overrideTypes.mockResolvedValue(response);
   createStaticClient.mockReturnValue({
     from: vi.fn().mockReturnValue(builder),
   });
+  return builder;
+}
+
+function mockPagedTranslationQuery(
+  page: (index: number) => { data: unknown; error: unknown },
+) {
+  let pageIndex = -1;
+  const builder = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    in: vi.fn(),
+    order: vi.fn(),
+    range: vi.fn(),
+    overrideTypes: vi.fn(),
+  };
+  builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  builder.in.mockReturnValue(builder);
+  builder.order.mockReturnValue(builder);
+  builder.range.mockImplementation(() => {
+    pageIndex += 1;
+    return builder;
+  });
+  builder.overrideTypes.mockImplementation(async () => page(pageIndex));
+  createStaticClient.mockReturnValue({
+    from: vi.fn().mockReturnValue(builder),
+  });
+  return builder;
 }
 
 beforeEach(() => {
   createStaticClient.mockReset();
+  filterPublicMemeMedia.mockReset();
+  filterPublicMemeMedia.mockImplementation(async (input) => input);
 });
 
 describe("overlayMemeTranslation", () => {
@@ -289,6 +324,79 @@ describe("localized search lookup status", () => {
 
     expect(result).toEqual({ items: new Map(), status: "unavailable" });
   });
+
+  it.each(["private", "unlisted", "removed", "ledger-failed"])(
+    "removes a search row whose indexability depends on %s media",
+    async () => {
+    const hidden = featuredRow();
+    hidden.memes = baseMeme({
+      description: "d".repeat(150),
+      origin: "o".repeat(30),
+      usage_note: null,
+      caution: null,
+      usage_examples: [],
+      meme_sources: [
+        { source_url: "https://www.youtube.com/watch?v=source00001" },
+        { source_url: "https://www.youtube.com/watch?v=source00002" },
+      ],
+      meme_contents: [{
+        url: "https://www.youtube.com/watch?v=content0001",
+        platform: "youtube",
+        content_id: "content0001",
+        availability: "live",
+        moderation_status: "approved",
+      }],
+      meme_tags_map: [],
+    } as never);
+    mockTranslationQuery({ data: [hidden], error: null });
+    filterPublicMemeMedia.mockResolvedValue({
+      sources: hidden.memes.meme_sources,
+      contents: [],
+    });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result).toEqual({ items: new Map(), status: "coverage-empty" });
+    },
+  );
+
+  it("removes produced media before deciding search eligibility", async () => {
+    const produced = featuredRow();
+    produced.memes = baseMeme({
+      description: "d".repeat(150),
+      origin: "o".repeat(30),
+      usage_note: null,
+      caution: null,
+      usage_examples: [],
+      meme_sources: [
+        { source_url: "https://example.com/source-a" },
+        { source_url: "https://example.com/source-b" },
+      ],
+      meme_contents: [{
+        availability: "live",
+        moderation_status: "approved",
+        production_id: "production-1",
+      }],
+      meme_tags_map: [],
+    } as never);
+    mockTranslationQuery({ data: [produced], error: null });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result).toEqual({ items: new Map(), status: "coverage-empty" });
+  });
+
+  it("returns only projected public media in localized search card fields", async () => {
+    const strong = featuredRow();
+    mockTranslationQuery({ data: [strong], error: null });
+    filterPublicMemeMedia.mockResolvedValue({ sources: [], contents: [] });
+
+    const result = await getLocalizedSearchMemesResult(["abc12345"], "en");
+
+    expect(result.status).toBe("active");
+    expect(result.items.get("abc12345")?.meme_sources).toEqual([]);
+    expect(result.items.get("abc12345")?.meme_contents).toEqual([]);
+  });
 });
 
 describe("localized featured Korean origin", () => {
@@ -331,5 +439,103 @@ describe("localized featured Korean origin", () => {
     expect(featured).toHaveLength(1);
     expect(featured[0]?.short_id).toBe("abc12345");
     expect(featured[0]?.title).toBe("Original meme");
+  });
+
+  it("does not publish a translation whose Korean source only passes via hidden media", async () => {
+    const hiddenMedia = featuredRow();
+    hiddenMedia.memes = baseMeme({
+      description: "d".repeat(150),
+      origin: "o".repeat(30),
+      usage_note: null,
+      caution: null,
+      usage_examples: [],
+      meme_sources: [
+        { source_url: "https://www.youtube.com/watch?v=source00001" },
+        { source_url: "https://www.youtube.com/watch?v=source00002" },
+      ],
+      meme_contents: [
+        {
+          url: "https://www.youtube.com/watch?v=content0001",
+          platform: "youtube",
+          content_id: "content0001",
+          availability: "live",
+          moderation_status: "approved",
+        },
+      ],
+      meme_tags_map: [],
+    } as never);
+    mockTranslationQuery({ data: [hiddenMedia], error: null });
+    filterPublicMemeMedia.mockResolvedValue({
+      sources: hiddenMedia.memes.meme_sources,
+      contents: [],
+    });
+
+    const result = await getLocalizedFeaturedMemesResult("en", 12);
+
+    expect(result).toEqual({ items: [], status: "coverage-empty" });
+    expect(filterPublicMemeMedia).toHaveBeenCalledOnce();
+  });
+
+  it("reports a featured query failure instead of disguising it as empty coverage", async () => {
+    mockTranslationQuery({ data: null, error: new Error("query failed") });
+
+    await expect(getLocalizedFeaturedMemesResult("en", 12)).resolves.toEqual({
+      items: [],
+      status: "unavailable",
+    });
+  });
+
+  it("defaults reader surfaces to approved plus limited and lets AI feeds request approved only", async () => {
+    const query = mockTranslationQuery({ data: [], error: null });
+
+    await getLocalizedFeaturedMemesResult("en", 12);
+    expect(query.in).toHaveBeenCalledWith("memes.moderation_status", ["approved", "limited"]);
+
+    query.in.mockClear();
+    await getLocalizedFeaturedMemesResult("en", 12, "approved-only");
+    expect(query.in).toHaveBeenCalledWith("memes.moderation_status", ["approved"]);
+  });
+
+  it("continues past a full ineligible page and finds a later reviewed item", async () => {
+    const ineligiblePage = Array.from({ length: 200 }, () =>
+      featuredRow({ status: "machine" }));
+    const eligible = featuredRow();
+    const query = mockPagedTranslationQuery((index) => index === 0
+      ? { data: ineligiblePage, error: null }
+      : { data: [eligible], error: null });
+
+    const result = await getLocalizedFeaturedMemesResult("en", 1);
+
+    expect(result.status).toBe("active");
+    expect(result.items[0]?.short_id).toBe("abc12345");
+    expect(query.range).toHaveBeenNthCalledWith(1, 0, 199);
+    expect(query.range).toHaveBeenNthCalledWith(2, 200, 399);
+    expect(query.order).toHaveBeenCalledWith("meme_id", { ascending: false });
+  });
+
+  it("returns unavailable when a later candidate page fails", async () => {
+    const ineligiblePage = Array.from({ length: 200 }, () =>
+      featuredRow({ status: "machine" }));
+    mockPagedTranslationQuery((index) => index === 0
+      ? { data: ineligiblePage, error: null }
+      : { data: null, error: new Error("later page failed") });
+
+    await expect(getLocalizedFeaturedMemesResult("en", 1)).resolves.toEqual({
+      items: [],
+      status: "unavailable",
+    });
+  });
+
+  it("returns unavailable when the bounded scan is exhausted without corpus exhaustion", async () => {
+    const fullPage = Array.from({ length: 200 }, () =>
+      featuredRow({ status: "machine" }));
+    const query = mockPagedTranslationQuery(() => ({ data: fullPage, error: null }));
+
+    await expect(getLocalizedFeaturedMemesResult("en", 1)).resolves.toEqual({
+      items: [],
+      status: "unavailable",
+    });
+    expect(query.range).toHaveBeenCalledTimes(250);
+    expect(query.range).toHaveBeenLastCalledWith(49_800, 49_999);
   });
 });

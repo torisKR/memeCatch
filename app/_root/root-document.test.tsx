@@ -15,3 +15,12 @@ it("mounts durable acquisition even when GA has no measurement ID", async () => 
   const { AttributionTracker } = await import("@/components/attribution-tracker");
   expect(includesComponent(RootDocument({ locale: "ko", children: null }), AttributionTracker)).toBe(true);
 });
+
+it("does not interrupt reading with automatic release or install popups", async () => {
+  const { RootDocument } = await import("./root-document");
+  const { ChangelogModal } = await import("@/components/changelog-modal");
+  const { PwaInstall } = await import("@/components/pwa-install");
+  const document = RootDocument({ locale: "ko", children: null });
+  expect(includesComponent(document, ChangelogModal)).toBe(false);
+  expect(includesComponent(document, PwaInstall)).toBe(false);
+});

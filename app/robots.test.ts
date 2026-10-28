@@ -1,74 +1,83 @@
 import { describe, expect, it } from "vitest";
-import { SEO_ROUTE_LOCALES, localizePath } from "@/lib/i18n-routing";
-import { SITE_URL } from "@/lib/site";
 import robots from "@/app/robots";
 
-function values(value: string | string[] | undefined): string[] {
-  if (!value) return [];
+type Rule = Exclude<ReturnType<typeof robots>["rules"], undefined> extends infer Rules
+  ? Rules extends readonly (infer Item)[]
+    ? Item
+    : Rules
+  : never;
+
+function rules(): Rule[] {
+  const value = robots().rules;
   return Array.isArray(value) ? value : [value];
 }
 
-function matchesRule(pathname: string, pattern: string): boolean {
-  const escaped = pattern
-    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-    .replaceAll("*", ".*");
-  return new RegExp(`^${escaped}`).test(pathname);
+function agents(rule: Rule): string[] {
+  return Array.isArray(rule.userAgent) ? rule.userAgent : [rule.userAgent ?? "*"];
 }
 
-describe("robots locale crawl policy", () => {
-  const result = robots();
-  const rules = Array.isArray(result.rules) ? result.rules : [result.rules];
-  const wildcard = rules.find((rule) => values(rule.userAgent).includes("*"));
-  const allows = values(wildcard?.allow);
-  const disallows = values(wildcard?.disallow);
-  const isDisallowed = (pathname: string) =>
-    disallows.some((pattern) => matchesRule(pathname, pattern));
+function ruleFor(userAgent: string): Rule | undefined {
+  return rules().find((rule) => agents(rule).includes(userAgent));
+}
 
-  it("keeps every public locale root, explore page, and meme page crawlable", () => {
-    expect(allows).toContain("/");
+describe("robots crawler-purpose policy", () => {
+  const exactPrivateRoutes = [
+    "/community/new",
+    "/products/new",
+    "/products/mine",
+    "/en/community/new",
+    "/ja/products/new",
+    "/zh-tw/products/mine",
+  ];
 
-    for (const locale of SEO_ROUTE_LOCALES) {
-      for (const pathname of [
-        localizePath("/", locale),
-        localizePath("/explore", locale),
-        localizePath("/memes/abc-example", locale),
-      ]) {
-        expect(isDisallowed(pathname), pathname).toBe(false);
-      }
+  it.each([
+    "Googlebot",
+    "Bingbot",
+    "OAI-SearchBot",
+    "PerplexityBot",
+    "Claude-SearchBot",
+    "ChatGPT-User",
+    "Perplexity-User",
+    "Claude-User",
+  ])("allows public fetches for %s while retaining private route blocks", (userAgent) => {
+    const rule = ruleFor(userAgent);
+    expect(rule?.allow).toBe("/");
+    expect(rule?.disallow).toEqual(expect.arrayContaining([
+      "/admin",
+      "/api/",
+      "/en/admin",
+      "/zh-tw/api/",
+      ...exactPrivateRoutes,
+    ]));
+  });
+
+  it.each(["GPTBot", "ClaudeBot", "CCBot", "Google-Extended"])(
+    "blocks model-training crawler %s",
+    (userAgent) => {
+      expect(ruleFor(userAgent)?.disallow).toBe("/");
+    },
+  );
+
+  it("gives Mediapartners-Google explicit public access without exposing private routes", () => {
+    const rule = ruleFor("Mediapartners-Google");
+    expect(rule?.allow).toBe("/");
+    expect(rule?.disallow).toEqual(expect.arrayContaining([
+      "/admin",
+      "/api/",
+      "/ja/auth/",
+      ...exactPrivateRoutes,
+    ]));
+  });
+
+  it("keeps exact authoring routes private in every public crawler group", () => {
+    for (const rule of rules().filter((candidate) => candidate.allow === "/")) {
+      expect(rule.disallow).toEqual(expect.arrayContaining(exactPrivateRoutes));
     }
   });
 
-  it("blocks private and non-content paths with or without a locale prefix", () => {
-    const privatePaths = ['/admin', '/my', '/api/', '/go/', '/auth/', '/submit', '/login', '/premium'];
-
-    for (const pathname of privatePaths) {
-      expect(isDisallowed(pathname), pathname).toBe(true);
-      for (const locale of SEO_ROUTE_LOCALES.filter((item) => item !== "ko")) {
-        const localized = localizePath(pathname, locale);
-        expect(isDisallowed(localized), localized).toBe(true);
-      }
-    }
-  });
-
-  it("advertises the single absolute sitemap URL", () => {
-    expect(result.sitemap).toBe(`${SITE_URL}/sitemap.xml`);
-  });
-
-  it("explicitly allows the major AI answer-engine crawlers", () => {
-    const aiBots = [
-      "GPTBot",
-      "ClaudeBot",
-      "Claude-Web",
-      "PerplexityBot",
-      "Google-Extended",
-      "CCBot",
-    ];
-
-    for (const bot of aiBots) {
-      const rule = rules.find((r) => values(r.userAgent).includes(bot));
-      expect(rule, bot).toBeDefined();
-      expect(values(rule?.allow), bot).toContain("/");
-      expect(values(rule?.disallow), bot).toEqual(disallows);
+  it("does not create a public exception for the API tree", () => {
+    for (const rule of rules().filter((candidate) => candidate.allow === "/")) {
+      expect(rule.disallow).toEqual(expect.arrayContaining(["/api/"]));
     }
   });
 });

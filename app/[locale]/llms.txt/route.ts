@@ -5,8 +5,10 @@ import {
   localizedMemePath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
-import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
+import { getLocalizedFeaturedMemesResult } from "@/lib/meme-translations";
+import { publicationExportUnavailableResponse } from "@/lib/publication-export";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
+import { publicationMarkdownText } from "@/lib/publication-markdown";
 
 export const revalidate = 3600;
 
@@ -27,7 +29,7 @@ type Copy = {
 const COPY: Record<SeoContentLocale, Copy> = {
   en: {
     summary: "A multilingual guide to Korean meme terms, challenge dances, songs, drama scenes, and meme videos, explaining meaning, origin, usage, and cultural risk.",
-    editorial: "Indexable translations are human-reviewed, current with the Korean source, and backed by substantial source material. Machine and outdated drafts remain private to the operator workflow and are excluded from public pages, search, and AI discovery feeds.",
+    editorial: "Indexable translations are human-reviewed, current with the Korean source, and based on a Korean entry that meets the public content-depth criteria. Source links are references, not independent verification. Machine and outdated drafts remain private to the operator workflow and are excluded from public pages, search, and AI discovery feeds.",
     entryPoints: "Key entry points",
     home: "Korean meme dictionary",
     full: "Full translated corpus for AI systems",
@@ -40,7 +42,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
   },
   ja: {
     summary: "韓国のミーム用語、チャレンジダンス、楽曲、ドラマシーン、ミーム動画の意味・由来・使い方・文化的な注意点を多言語で解説する辞典です。",
-    editorial: "検索登録される翻訳は、人が確認し、韓国語の原文と同期し、十分な出典を持つものに限ります。機械翻訳や古い下書きは編集者向けの非公開ワークフローにとどまり、公開ページ・検索・AI向けフィードから除外します。",
+    editorial: "検索登録される翻訳は、人が確認し、韓国語の原文と同期し、公開コンテンツの充実度基準を満たす韓国語記事に基づくものに限ります。出典リンクは参考であり、独立した検証済みの印ではありません。機械翻訳や古い下書きは編集者向けの非公開ワークフローにとどまり、公開ページ・検索・AI向けフィードから除外します。",
     entryPoints: "主な入口",
     home: "韓国ミーム辞典",
     full: "AI向け翻訳全文コーパス",
@@ -53,7 +55,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
   },
   zh: {
     summary: "以多语言解释韩国梗语、舞蹈挑战、歌曲、电视剧场景和梗视频的含义、起源、用法与文化风险。",
-    editorial: "只有经过人工审核、与韩文原文同步且来源资料充足的翻译才会被收录。机器翻译和过期草稿仅保留在编辑者的私有工作流中，不会出现在公开页面、搜索或 AI 发现源中。",
+    editorial: "只有经过人工审核、与韩文原文同步，且对应韩文词条符合公开内容完整度标准的翻译才会被收录。来源链接仅供参考，并不代表独立验证。机器翻译和过期草稿仅保留在编辑者的私有工作流中，不会出现在公开页面、搜索或 AI 发现源中。",
     entryPoints: "主要入口",
     home: "韩国迷因词典",
     full: "面向 AI 系统的完整翻译语料",
@@ -66,7 +68,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
   },
   "zh-tw": {
     summary: "以多語言解釋韓國梗語、舞蹈挑戰、歌曲、電視劇場景和梗影片的含義、起源、用法與文化風險。",
-    editorial: "只有經過人工審核、與韓文原文同步且來源資料充足的翻譯才會被收錄。機器翻譯和過期草稿僅保留在編輯者的私有工作流中，不會出現在公開頁面、搜尋或 AI 探索來源中。",
+    editorial: "只有經過人工審核、與韓文原文同步，且對應韓文詞條符合公開內容完整度標準的翻譯才會被收錄。來源連結僅供參考，並不代表獨立驗證。機器翻譯和過期草稿僅保留在編輯者的私有工作流中，不會出現在公開頁面、搜尋或 AI 探索來源中。",
     entryPoints: "主要入口",
     home: "韓國迷因辭典",
     full: "供 AI 系統使用的完整翻譯語料",
@@ -80,7 +82,7 @@ const COPY: Record<SeoContentLocale, Copy> = {
 };
 
 function singleLine(value: string) {
-  return value.replace(/\s+/g, " ").trim();
+  return publicationMarkdownText(value);
 }
 
 export async function GET(
@@ -90,10 +92,14 @@ export async function GET(
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) return new Response("Not found\n", { status: 404 });
 
-  const [featured, copy] = await Promise.all([
-    getLocalizedFeaturedMemes(locale, 15),
+  const [result, copy] = await Promise.all([
+    getLocalizedFeaturedMemesResult(locale, 15, "approved-only"),
     Promise.resolve(COPY[locale]),
   ]);
+  if (result.status === "unavailable") {
+    return publicationExportUnavailableResponse();
+  }
+  const featured = result.items;
   const seo = getSeoCopy(locale);
   const featuredBlock = featured.length
     ? featured

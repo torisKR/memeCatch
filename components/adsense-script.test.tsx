@@ -52,11 +52,14 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
   it("밈 상세는 충실도 판정을 통과한 문서에서만 로더를 렌더한다", () => {
     const page = read("app/(default)/memes/[key]/page.tsx");
 
-    // contentDepth(meme).isSubstantial && <AdsenseScript /> — HG-001 C안(2026-08-04):
+    // 공개 가능한 출처·미디어만 남긴 publicDepthInput의 충실도를 검사한다.
+    // 원시 meme을 직접 검사하면 비공개·재생 불가 미디어가 광고 자격에 섞일 수 있다.
     // 색인(sitemap·robots)은 MIN_PROSE_CHARS_INDEX(150자)로 낮아졌지만, 광고는
     // 배너(DocStatusNote)와 같은 MIN_PROSE_CHARS(250자) 기준을 그대로 쓴다 —
     // isIndexableMeme(meme)과는 더 이상 같은 함수가 아니다.
-    expect(page).toMatch(/isAdsenseContentEligible\(meme\)\s*&&\s*<AdsenseScript\s*\/>/);
+    expect(page).toMatch(/const publicDepthInput = publicEditorialEligibilityInput\(\{[\s\S]*?originalSources: delivery\.originalSources,[\s\S]*?renderableContents: delivery\.renderableContents,[\s\S]*?\}\);/);
+    expect(page).toMatch(/isAdsenseContentEligible\(publicDepthInput\)\s*&&\s*<AdsenseScript\s*\/>/);
+    expect(page).not.toMatch(/isAdsenseContentEligible\(meme\)/);
     // 조건 없이 렌더하는 자리가 있으면 얇은 문서에도 광고가 붙는다.
     expect(page.match(/<AdsenseScript\s*\/>/g)).toHaveLength(1);
   });
@@ -74,6 +77,21 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
       "app/(default)/quiz/page.tsx",
       "app/(default)/community/page.tsx",
       "app/(default)/community/[id]/page.tsx",
+    ]) {
+      expect(read(p), p).not.toContain("AdsenseScript");
+    }
+  });
+
+  it("목록·탐색 허브와 빈 컬렉션 화면에는 로더를 두지 않는다", () => {
+    for (const p of [
+      "app/(default)/explore/page.tsx",
+      "app/(default)/slang/page.tsx",
+      "app/(default)/timeline/page.tsx",
+      "app/(default)/rankings/page.tsx",
+      "app/(default)/news/page.tsx",
+      "app/(default)/weekly/page.tsx",
+      "app/(default)/collections/page.tsx",
+      "app/(default)/collections/[slug]/page.tsx",
     ]) {
       expect(read(p), p).not.toContain("AdsenseScript");
     }

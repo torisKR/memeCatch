@@ -1,4 +1,9 @@
 import { contentDepth, type ContentDepthInput } from "./content-depth";
+import {
+  citableSources,
+  evidenceTimestamp,
+  type CitableSourceInput,
+} from "./source-links";
 
 /** Public publisher identity verified against the site's ads.txt and AdSense account. */
 export const ADSENSE_PUBLISHER_ID = "pub-3004906966180197";
@@ -19,10 +24,12 @@ export function isLiveAdOrigin(value: string): boolean {
   }
 }
 
-type EditorialAdContent = ContentDepthInput & {
+type EditorialAdContent = Omit<ContentDepthInput, "meme_sources"> & {
   moderation_status?: string | null;
+  published_at?: string | null;
   title?: string | null;
   summary?: string | null;
+  meme_sources?: CitableSourceInput[] | null;
 };
 
 /**
@@ -32,9 +39,12 @@ type EditorialAdContent = ContentDepthInput & {
  */
 export function isAdsenseContentEligible(content: EditorialAdContent | null | undefined): boolean {
   if (!content || content.moderation_status !== "approved") return false;
+  if (!evidenceTimestamp(content.published_at)) return false;
   const title = content.title?.trim();
   const summary = content.summary?.trim();
   if (!title || !summary || title.toLocaleLowerCase() === summary.toLocaleLowerCase()) return false;
-  const depth = contentDepth(content);
+  const sources = citableSources(content.meme_sources ?? [])
+    .map(({ url: source_url }) => ({ source_url }));
+  const depth = contentDepth({ ...content, meme_sources: sources });
   return depth.isSubstantial && depth.signals.sourceCount > 0;
 }

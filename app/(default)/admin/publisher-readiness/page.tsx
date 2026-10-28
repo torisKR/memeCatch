@@ -10,6 +10,7 @@ import {
 } from "@/lib/publisher-readiness";
 import { listPublisherReadinessPage } from "@/lib/publisher-readiness.server";
 import { evidenceTimestamp } from "@/lib/source-links";
+import { PublisherReadinessReviewForm } from "./review-form";
 
 export const metadata: Metadata = {
   title: "퍼블리셔 준비도",
@@ -20,9 +21,43 @@ export const dynamic = "force-dynamic";
 
 const FOCUS_LABELS: Record<PublisherReadinessFocus, string> = {
   source: "공개 출처 없음",
+  rights: "권리/전달 근거 확인",
   summary: "요약 없음/제목 반복",
   date: "게시일 확인 필요",
   depth: "고유 설명 부족",
+  media: "공개 미디어 확인",
+  safety: "안전 검수 확인",
+  stale: "삭제·오래된 출처 확인",
+  template: "템플릿형 제목 확인",
+  copy: "중복 문단 확인",
+  review: "사람 검수 확인",
+};
+
+const RIGHTS_LABELS: Record<PublisherReadinessItem["rights"]["status"], string> = {
+  confirmed_delivery: "전달 근거 확인",
+  restricted: "제한 있음",
+  unknown: "미확인",
+  absent: "출처 없음",
+};
+
+const MEDIA_LABELS: Record<PublisherReadinessItem["media"]["status"], string> = {
+  renderable: "재생·표시 가능",
+  partial: "일부 확인 필요",
+  unchecked: "검수 미완료",
+  unavailable: "삭제·지역 제한",
+  absent: "미디어 없음",
+};
+
+const SAFETY_LABELS: Record<PublisherReadinessItem["safety"]["status"], string> = {
+  current: "현재 지문 기준 확인",
+  stale: "콘텐츠 변경 뒤 재확인 필요",
+  unknown: "미확인",
+};
+
+const REVIEW_LABELS: Record<PublisherReadinessItem["review"]["status"], string> = {
+  current: "사람 검수 완료",
+  stale: "사람 검수 만료",
+  unreviewed: "사람 검수 미완료",
 };
 
 type SearchParams = {
@@ -66,9 +101,9 @@ export default async function PublisherReadinessPage({
       <header className="space-y-2">
         <h1 className="text-2xl font-bold">퍼블리셔 준비도</h1>
         <p className="max-w-3xl text-sm leading-relaxed text-muted">
-          공개 중인 approved/limited 문서를 100개씩 읽어 출처, 요약, 게시일, 고유 설명의
-          편집 보완점을 찾습니다. 이 진단은 내부 운영 기준이며 외부 심사 결과를 예측하거나
-          보장하지 않습니다.
+          공개 중인 approved/limited 문서를 100개씩 읽어 광고 심사 준비에 필요한 편집·권리·안전
+          보완점을 찾습니다. 모든 항목은 광고 검수 보류 진단이며 게시 상태·색인·외부 승인
+          판정을 자동으로 변경하지 않습니다.
         </p>
       </header>
 
@@ -230,6 +265,13 @@ function ReadinessCard({ item }: { item: PublisherReadinessItem }) {
         </div>
       ) : null}
 
+      <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <Diagnostic label="권리/전달 근거" value={RIGHTS_LABELS[item.rights.status]} />
+        <Diagnostic label="공개 미디어" value={MEDIA_LABELS[item.media.status]} />
+        <Diagnostic label="안전 검수" value={SAFETY_LABELS[item.safety.status]} />
+        <Diagnostic label="사람 검수" value={REVIEW_LABELS[item.review.status]} />
+      </dl>
+
       {item.issues.length === 0 ? (
         <p className="mt-4 text-sm text-muted">
           이 페이지에서 검사하는 네 가지 내부 보완점은 발견되지 않았습니다. 외부 심사나 사실 검증의
@@ -246,6 +288,38 @@ function ReadinessCard({ item }: { item: PublisherReadinessItem }) {
           ))}
         </ul>
       )}
+
+      {item.review.status === "current" ? (
+        <div className="mt-4 rounded-lg border border-border bg-surface-2 p-3 text-sm">
+          <strong>현재 지문 검수 완료</strong>
+          <p className="mt-1 text-muted">
+            {item.review.reviewedAt ? formatPublicationDate(item.review.reviewedAt) : "시각 확인 필요"}
+            {item.review.note ? ` · ${item.review.note}` : ""}
+          </p>
+        </div>
+      ) : (
+        <details className="mt-4 rounded-lg border border-border bg-surface-2 p-3">
+          <summary className="cursor-pointer text-sm font-semibold">사람 검수 기록하기</summary>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            이 기록은 관리자 진단과 활성화 전 배치 확인에만 사용합니다. 공개 상태, 색인, 광고 활성화를
+            자동 변경하거나 독창성을 자동 인증하지 않습니다. 핵심 본문·출처·권리·안전 정보가 바뀌면
+            현재 검수는 만료됩니다.
+          </p>
+          <PublisherReadinessReviewForm
+            memeId={item.id}
+            expectedFingerprint={item.fingerprint}
+          />
+        </details>
+      )}
     </li>
+  );
+}
+
+function Diagnostic({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-surface-2 p-3">
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="mt-1 font-semibold">{value}</dd>
+    </div>
   );
 }

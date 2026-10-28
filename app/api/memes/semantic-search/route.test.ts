@@ -12,6 +12,15 @@ beforeEach(() => {
   mocks.search.mockResolvedValue({ mode: "keyword", reason: "disabled", items: [] });
 });
 describe("bounded readonly semantic API", () => {
+  it("ignores legacy Gateway credentials from headers and the request body", async () => {
+    const input = request({ query: "친구 따라 할 때", intentRouting: true, oidcToken: "body-forged-token" });
+    input.headers.set("x-vercel-oidc-token", "runtime-header-token");
+    const response = await POST(input);
+    const context = mocks.search.mock.calls[0][2];
+    expect(context).toEqual({ intentRouting: true, locale: "ko", signal: expect.any(AbortSignal) });
+    expect(JSON.stringify(context)).not.toContain("token");
+    expect(await response.text()).not.toContain("token");
+  });
   it("rejects foreign origins before work", async () => {
     expect((await POST(request({ query: "일상" }, "https://foreign.example"))).status).toBe(403);
     expect(mocks.search).not.toHaveBeenCalled();
@@ -33,6 +42,15 @@ describe("bounded readonly semantic API", () => {
     const response = await POST(request({ query: "일상" }));
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("25");
+    expect(mocks.search).not.toHaveBeenCalled();
+  });
+  it("opts into routing only on explicit submit and forwards request context, never supplied identity", async () => {
+    const response = await POST(request({ query: "  친구 따라 할 때  ", intentRouting: true, locale: "ko", clientKey: "forged" }));
+    expect(response.status).toBe(200);
+    expect(mocks.search).toHaveBeenCalledWith("친구 따라 할 때", 12, { intentRouting: true, locale: "ko", signal: expect.any(AbortSignal) });
+  });
+  it.each([{ query: "새삥", intentRouting: "true" }, { query: "새삥", intentRouting: true, locale: "xx" }])("rejects malformed routing options", async body => {
+    expect((await POST(request(body))).status).toBe(400);
     expect(mocks.search).not.toHaveBeenCalled();
   });
   it("does not expose server errors", async () => {

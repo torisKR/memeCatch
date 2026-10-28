@@ -11,6 +11,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const MODEL_ID = "intfloat/multilingual-e5-small";
 export const MODEL_REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3";
 export const DEFAULT_MODEL_DIRECTORY = fileURLToPath(new URL(`../.local/embedding-models/${MODEL_ID}/`, import.meta.url));
+const MAX_RATE_LIMIT_RETRIES = 2;
+const MAX_RETRY_DELAY_MS = 60_000;
+const HTTP_DATE_PATTERN = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/;
 
 // Official Hub tree metadata at MODEL_REVISION. Git-tracked files use Git blob SHA-1;
 // LFS files use SHA-256 of their actual contents, never the small LFS pointer.
@@ -78,9 +81,42 @@ function trustedDownloadUrl(value) {
   return url;
 }
 
-async function fetchModelFile(file, fetchImpl, signal) {
+function retryAfterDelay(value, now) {
+  if (value === null) return null;
+  const normalized = value.trim();
+  if (/^\d+$/.test(normalized)) {
+    const seconds = Number(normalized);
+    return Number.isSafeInteger(seconds) ? seconds * 1_000 : Number.POSITIVE_INFINITY;
+  }
+  if (!HTTP_DATE_PATTERN.test(normalized)) return null;
+  const date = Date.parse(normalized);
+  return Number.isFinite(date) && new Date(date).toUTCString() === normalized
+    ? Math.max(0, date - now) : null;
+}
+
+async function abortableWait(delay, signal) {
+  signal?.throwIfAborted();
+  if (delay === 0) return;
+  await new Promise((resolveWait, rejectWait) => {
+    let timer;
+    const onAbort = () => {
+      clearTimeout(timer);
+      rejectWait(signal.reason ?? new Error("model_download_interrupted"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) return onAbort();
+    timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolveWait();
+    }, delay);
+  });
+}
+
+async function fetchModelFile(file, fetchImpl, signal, waitImpl, nowImpl) {
   let url = trustedDownloadUrl(`https://huggingface.co/${MODEL_ID}/resolve/${MODEL_REVISION}/${file.path}`);
-  for (let redirects = 0; redirects <= 5; redirects++) {
+  let redirects = 0;
+  let rateLimitRetries = 0;
+  while (true) {
     const response = await fetchImpl(url.href, {
       redirect: "manual", credentials: "omit", signal,
       headers: { Accept: "application/octet-stream" },
@@ -95,7 +131,19 @@ async function fetchModelFile(file, fetchImpl, signal) {
       const location = response.headers.get("location");
       await response.body?.cancel();
       if (!location || redirects === 5) throw new Error("model_redirect_limit");
+      redirects++;
       url = trustedDownloadUrl(new URL(location, url).href);
+      continue;
+    }
+    if (response.status === 429) {
+      const delay = retryAfterDelay(response.headers.get("retry-after"), nowImpl())
+        ?? Math.min(5_000 * (2 ** rateLimitRetries), MAX_RETRY_DELAY_MS);
+      await response.body?.cancel();
+      if (delay > MAX_RETRY_DELAY_MS) throw new Error(`model_retry_after_exceeds_limit:${file.path}:429`);
+      if (rateLimitRetries === MAX_RATE_LIMIT_RETRIES) throw new Error(`model_download_http_429:${file.path}`);
+      rateLimitRetries++;
+      await waitImpl(delay, signal);
+      signal?.throwIfAborted();
       continue;
     }
     if (!response.ok || !response.body) {
@@ -104,15 +152,14 @@ async function fetchModelFile(file, fetchImpl, signal) {
     }
     return response;
   }
-  throw new Error("model_redirect_limit");
 }
 
-async function downloadFile(directory, file, fetchImpl, signal) {
+async function downloadFile(directory, file, fetchImpl, signal, waitImpl, nowImpl) {
   const destination = join(directory, file.path);
   await mkdir(dirname(destination), { recursive: true });
   const temporary = await mkdtemp(join(dirname(destination), ".model-download-"));
   try {
-    const response = await fetchModelFile(file, fetchImpl, signal);
+    const response = await fetchModelFile(file, fetchImpl, signal, waitImpl, nowImpl);
     const length = response.headers.get("content-length");
     if (length && !response.headers.get("content-encoding") && Number(length) !== file.size) {
       await response.body.cancel();
@@ -182,7 +229,8 @@ export async function checkModel({ directory = DEFAULT_MODEL_DIRECTORY, files = 
     manifest: { path: "manifest.json", status: await verifyManifest(directory, results) } };
 }
 
-export async function prepareModel({ directory = DEFAULT_MODEL_DIRECTORY, files = MODEL_FILES, fetchImpl = globalThis.fetch, signal } = {}) {
+export async function prepareModel({ directory = DEFAULT_MODEL_DIRECTORY, files = MODEL_FILES,
+  fetchImpl = globalThis.fetch, signal, waitImpl = abortableWait, nowImpl = Date.now } = {}) {
   // Validate all destinations before making any network request or filesystem mutation.
   files.forEach(validateFile);
   const results = [];
@@ -194,7 +242,8 @@ export async function prepareModel({ directory = DEFAULT_MODEL_DIRECTORY, files 
       continue;
     }
     const timeout = AbortSignal.timeout(15 * 60 * 1000);
-    const downloaded = await downloadFile(directory, file, fetchImpl, signal ? AbortSignal.any([signal, timeout]) : timeout);
+    const downloaded = await downloadFile(directory, file, fetchImpl,
+      signal ? AbortSignal.any([signal, timeout]) : timeout, waitImpl, nowImpl);
     results.push({ ...downloaded, path: file.path, status: "downloaded" });
   }
   await mkdir(directory, { recursive: true });

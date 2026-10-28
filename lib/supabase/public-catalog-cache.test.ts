@@ -44,6 +44,54 @@ describe("public catalog Data Cache boundary", () => {
     expect(fetch.mock.calls[0][1].cache).toBe("force-cache");
   });
 
+  it("caches only the bounded public trend projection and its approved meme lookup", async () => {
+    const fetch = vi.fn().mockImplementation(async () => new Response("[]", { headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetch);
+    const supabase = createSupabaseClient("https://test.supabase.co", "anon-key", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { fetch: createPublicCatalogFetch("https://test.supabase.co", "anon-key") },
+    });
+    const memeId = "11111111-1111-4111-8111-111111111111";
+    await supabase
+      .from("public_meme_trend_summaries")
+      .select("meme_id, external_state, reason, evidence_scope, independent_use_count, external_score, confidence, evidence_links, last_verified_at, stale_after")
+      .eq("meme_id", memeId)
+      .maybeSingle();
+    await supabase
+      .from("memes")
+      .select("id, short_id, slug, title, summary, moderation_status")
+      .in("id", [memeId])
+      .eq("moderation_status", "approved");
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    for (const [, options] of fetch.mock.calls) {
+      expect(options).toMatchObject({
+        method: "GET",
+        cache: "force-cache",
+        next: { revalidate: 60, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+      });
+    }
+  });
+
+  it("caches the reviewed produced-video public projection used by static meme details", async () => {
+    const fetch = vi.fn().mockImplementation(async () => new Response("[]", { headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetch);
+    const supabase = createSupabaseClient("https://test.supabase.co", "anon-key", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { fetch: createPublicCatalogFetch("https://test.supabase.co", "anon-key") },
+    });
+    await supabase
+      .from("public_meme_produced_videos")
+      .select("meme_id, production_id, youtube_video_id, content_id, caption, privacy_status, site_linked_at, public_embed_verified, video_name, video_description, video_thumbnail_url, video_upload_date")
+      .eq("meme_id", "11111111-1111-4111-8111-111111111111")
+      .order("site_linked_at", { ascending: false });
+
+    expect(fetch.mock.calls[0][1]).toMatchObject({
+      cache: "force-cache",
+      next: { revalidate: 60, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+    });
+  });
+
   it.each([
     [url({ select: "*,meme_contents(*)" }), { headers }],
     [url({ moderation_status: "in.(pending,approved)" }), { headers }],

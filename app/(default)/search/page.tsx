@@ -4,14 +4,13 @@ import { SECTION_TITLES } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { getTrendingMemes, searchMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
-import { StatusPanel } from "@/components/status-panel";
 import { TrackedBlock } from "@/components/tracked-block";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { SearchInput } from "./search-input";
 import { MemeReferenceSearch } from "@/components/meme-reference-search";
 
 const SEARCH_DESCRIPTION =
-  "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
+  "밈 이름·초성·별칭을 바로 찾고, 상황에 맞는 관련 밈도 별도로 살펴보세요.";
 
 export const metadata: Metadata = {
   title: "검색",
@@ -36,7 +35,7 @@ type Props = {
 
 export default async function SearchPage({ searchParams }: Props) {
   const { q } = await searchParams;
-  const query = (typeof q === "string" ? q : "").trim();
+  const query = (Array.isArray(q) ? q[0] ?? "" : q ?? "").trim();
   const results = query ? await searchMemes(query) : [];
   const needsFallback = !query || results.length === 0;
   // 인기 검색어(입력창 하단 칩)와 폴백 그리드가 같은 급상승 쿼리를 공유한다 — 별도 쿼리 추가 금지.
@@ -49,12 +48,15 @@ export default async function SearchPage({ searchParams }: Props) {
         Search
       </p>
       <h1 className="mt-1 text-2xl font-bold">밈 검색</h1>
-      <p className="mt-1 text-base text-muted">이름·초성·별칭으로 바로 찾아보세요.</p>
+      <p className="mt-1 text-base text-muted">
+        이름·초성·별칭을 찾거나 상황으로 관련 밈을 살펴보세요.
+      </p>
       <div className="relative mt-5">
         <SearchInput initialQuery={query} popularTerms={popularTerms} />
       </div>
-      {query && <MemeReferenceSearch query={query} variant="search" />}
-
+      <p className="mt-2 text-xs leading-relaxed text-muted">
+        검색어는 등록된 공개 밈 자료 안에서만 찾아요.
+      </p>
       {/* 검색 성공률 계측 — 결과가 실제로 렌더된 시점 기준(입력 중간 상태 제외) */}
       <SearchOutcomeTracker query={query} resultCount={results.length} />
 
@@ -79,22 +81,32 @@ export default async function SearchPage({ searchParams }: Props) {
       )}
 
       {query && results.length === 0 && (
-        <StatusPanel
-          className="mt-6"
+        <aside
+          data-search-no-exact-match
           role="status"
-          tone="missing"
-          label="아직 미포착"
-          title="이 밈, 저희도 아직 몰라요"
-          description="제보해 주시면 뜻과 유래를 정리해서 알려드려요."
-          actions={
-            <Link
-              href={`/submit?name=${encodeURIComponent(query)}`}
-              rel="nofollow"
-              className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]"
-            >
-              &lsquo;{query}&rsquo; 제보하기
-            </Link>
-          }
+          className="mt-4 flex flex-col gap-3 rounded-2xl border border-border/70 bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-sm font-semibold">이름·별칭으로 일치하는 밈은 없어요.</p>
+            <p className="mt-0.5 text-xs text-muted">아래 상황·의미 검색은 별도로 확인해요.</p>
+          </div>
+          <Link
+            href={`/submit?name=${encodeURIComponent(query)}`}
+            rel="nofollow"
+            className="inline-flex min-h-9 shrink-0 items-center justify-center self-start rounded-full border border-border px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent sm:self-auto"
+          >
+            이 검색어 제보
+          </Link>
+        </aside>
+      )}
+
+      {query && (
+        <MemeReferenceSearch
+          query={query}
+          variant="search"
+          locale="ko"
+          autoIntentRouting
+          excludeIds={results.map((meme) => meme.id)}
         />
       )}
 

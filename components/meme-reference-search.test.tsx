@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemeReferenceSearch } from "./meme-reference-search";
 import { memePathFrom } from "@/lib/labels";
+import { recordMemeIntentSubmit, signalMemeIntentSubmit } from "@/lib/meme-intent-submit.client";
 
 const item = {
   id: "reference-1", short_id: "abcdefgh", slug: "참고-밈", title: "참고 밈", summary: "직장인의 월요일",
@@ -24,10 +26,100 @@ function deferred() {
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
+  window.sessionStorage.clear();
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("explicit meme reference search", () => {
+  it("consumes one matching home submit and never replays it on remount", async () => {
+    fetchMock.mockResolvedValue(response({
+      mode: "hybrid",
+      items: [item],
+      decision: { intent: "situation", source: "fallback" },
+    }));
+    recordMemeIntentSubmit("친구 취향을 따라 할 때", "ko");
+    const view = render(
+      <StrictMode>
+        <MemeReferenceSearch query="친구 취향을 따라 할 때" variant="search" locale="ko" autoIntentRouting />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByRole("link", { name: /참고 밈/ })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith("/api/memes/semantic-search", expect.objectContaining({
+      body: JSON.stringify({
+        query: "친구 취향을 따라 할 때",
+        limit: 12,
+        intentRouting: true,
+        locale: "ko",
+      }),
+    }));
+
+    view.unmount();
+    render(<MemeReferenceSearch query="친구 취향을 따라 할 때" variant="search" locale="ko" autoIntentRouting />);
+    await act(async () => {});
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("responds to a same-page explicit submit but not typing or another query", async () => {
+    fetchMock.mockResolvedValue(response({ mode: "hybrid", items: [item] }));
+    render(<MemeReferenceSearch query="월요일 출근" variant="search" locale="ko" autoIntentRouting />);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    signalMemeIntentSubmit("금요일 퇴근", "ko");
+    expect(fetchMock).not.toHaveBeenCalled();
+    signalMemeIntentSubmit("월요일 출근", "ko");
+
+    expect(await screen.findByRole("link")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps studio requests manual and free of intent routing", async () => {
+    fetchMock.mockResolvedValue(response({ mode: "hybrid", items: [] }));
+    recordMemeIntentSubmit("고양이 출근", "ko");
+    render(<MemeReferenceSearch query="고양이 출근" variant="studio" locale="ko" autoIntentRouting />);
+    await act(async () => {});
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "제작 참고 밈 찾기" }));
+    await screen.findByText("참고할 밈을 찾지 못했어요. 다른 검색어로 찾아보세요.");
+    expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({ query: "고양이 출근", limit: 12 }));
+  });
+
+  it("deduplicates semantic items already rendered by the server search", async () => {
+    fetchMock.mockResolvedValue(response({
+      mode: "hybrid",
+      items: [item, { ...item, id: "reference-2", title: "추가 밈" }],
+      decision: { intent: "situation", source: "fallback" },
+    }));
+    render(
+      <MemeReferenceSearch
+        query="월요일 출근"
+        variant="search"
+        locale="ko"
+        excludeIds={[item.id]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "상황·의미로 찾기" }));
+
+    expect(await screen.findByRole("link", { name: /추가 밈/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /참고 밈/ })).toBeNull();
+  });
+
+  it("explains when every extra item is already in the server-rendered results", async () => {
+    fetchMock.mockResolvedValue(response({
+      mode: "keyword",
+      items: [item],
+      decision: { intent: "lookup", source: "fallback", reason: "exact_match" },
+    }));
+    render(
+      <MemeReferenceSearch query="월요일 출근" variant="search" excludeIds={[item.id]} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "상황·의미로 찾기" }));
+
+    expect(await screen.findByText("위 기본 검색 결과와 겹치는 항목은 다시 표시하지 않았어요.")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByText("의미 검색이 준비되지 않아 이름·별칭 검색 결과를 보여드려요.")).toBeNull();
+  });
+
   it("never requests on render or query change and sends a bounded request on click", async () => {
     const view = render(<MemeReferenceSearch query="월요일 출근" />);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -38,7 +130,9 @@ describe("explicit meme reference search", () => {
     expect((await screen.findByRole("link", { name: /참고 밈/ })).getAttribute("href"))
       .toBe(memePathFrom(item.short_id, item.slug));
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith("/api/memes/semantic-search", expect.objectContaining({
-      method: "POST", body: JSON.stringify({ query: "퇴근하고 싶은 상황", limit: 12 }), cache: "no-store",
+      method: "POST", body: JSON.stringify({
+        query: "퇴근하고 싶은 상황", limit: 12, intentRouting: true, locale: "ko",
+      }), cache: "no-store",
       headers: { "content-type": "application/json" }, signal: expect.any(AbortSignal),
     }));
     expect(screen.getByText("참고 자료이며 재사용 권한은 별도로 확인해 주세요.")).toBeTruthy();
@@ -158,6 +252,19 @@ describe("explicit meme reference search", () => {
     fetchMock.mockResolvedValue(response({ mode: "hybrid", items: [{ ...item, short_id: "../../evil" }] }));
     render(<MemeReferenceSearch query="월요일 출근" />);
     fireEvent.click(screen.getByRole("button"));
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("rejects retired Laya decision metadata", async () => {
+    fetchMock.mockResolvedValue(response({
+      mode: "hybrid",
+      items: [item],
+      decision: { intent: "situation", source: "laya" },
+    }));
+    render(<MemeReferenceSearch query="월요일 출근" />);
+    fireEvent.click(screen.getByRole("button"));
+
     await screen.findByRole("alert");
     expect(screen.queryByRole("link")).toBeNull();
   });

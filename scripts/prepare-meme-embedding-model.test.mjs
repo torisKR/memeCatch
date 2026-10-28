@@ -15,6 +15,13 @@ function fixture(path = "onnx/model.onnx", content = "small FP32 fixture", algor
   return { data, file: { path, size: data.length, algorithm, digest: hash.update(data).digest("hex") } };
 }
 
+function rateLimitedResponse(retryAfter, onCancel = () => {}) {
+  return new Response(new ReadableStream({ cancel: onCancel }), {
+    status: 429,
+    headers: retryAfter === undefined ? undefined : { "retry-after": retryAfter },
+  });
+}
+
 async function temporary(run) {
   const directory = await mkdtemp(join(tmpdir(), "memecatch-model-test-"));
   try { await run(directory); } finally { await rm(directory, { recursive: true, force: true }); }
@@ -103,6 +110,196 @@ test("rejects corrupted, truncated, oversized and interrupted transfers without 
   }
 });
 
+test("retries HTTP 429 twice on the same URL and respects Retry-After seconds and dates", async () => {
+  await temporary(async (directory) => {
+    const { data, file } = fixture();
+    const now = Date.parse("2026-10-14T00:00:00.000Z");
+    const requests = [];
+    const waits = [];
+    let cancelledBodies = 0;
+    const fetchImpl = async (url) => {
+      requests.push(url);
+      if (requests.length === 1) return rateLimitedResponse("2", () => { cancelledBodies++; });
+      if (requests.length === 2) {
+        return new Response(null, { status: 302, headers: { location: "https://us.aws.cdn.hf.co/model" } });
+      }
+      if (requests.length === 3) {
+        return rateLimitedResponse(new Date(now + 3_000).toUTCString(), () => { cancelledBodies++; });
+      }
+      return new Response(data);
+    };
+    const result = await prepareModel({
+      directory,
+      files: [file],
+      fetchImpl,
+      nowImpl: () => now,
+      waitImpl: async (delay, signal) => {
+        signal?.throwIfAborted();
+        assert.equal(cancelledBodies, waits.length + 1);
+        waits.push(delay);
+      },
+    });
+    assert.equal(result.files[0].status, "downloaded");
+    assert.deepEqual(waits, [2_000, 3_000]);
+    assert.equal(cancelledBodies, 2);
+    assert.equal(requests[0], requests[1]);
+    assert.equal(requests[2], requests[3]);
+    assert.notEqual(requests[1], requests[2]);
+    await assertNoStaging(directory);
+  });
+});
+
+test("fails closed when Retry-After exceeds 60 seconds without retrying early", async () => {
+  await temporary(async (directory) => {
+    const { file } = fixture();
+    let requests = 0;
+    let waits = 0;
+    await assert.rejects(prepareModel({
+      directory,
+      files: [file],
+      fetchImpl: async () => {
+        requests++;
+        return rateLimitedResponse("61");
+      },
+      waitImpl: async () => { waits++; },
+    }), /model_retry_after_exceeds_limit/);
+    assert.equal(requests, 1);
+    assert.equal(waits, 0);
+    await assertNoStaging(directory);
+  });
+});
+
+test("uses bounded backoff when Retry-After is missing or invalid", async () => {
+  await temporary(async (directory) => {
+    const { data, file } = fixture();
+    const waits = [];
+    let requests = 0;
+    const result = await prepareModel({
+      directory,
+      files: [file],
+      fetchImpl: async () => {
+        requests++;
+        if (requests === 1) return rateLimitedResponse();
+        if (requests === 2) return rateLimitedResponse("not-a-delay");
+        return new Response(data);
+      },
+      waitImpl: async (delay, signal) => {
+        signal?.throwIfAborted();
+        waits.push(delay);
+      },
+    });
+    assert.equal(result.files[0].status, "downloaded");
+    assert.equal(requests, 3);
+    assert.deepEqual(waits, [5_000, 10_000]);
+    await assertNoStaging(directory);
+  });
+});
+
+test("treats fractional, negative and non-date Retry-After values as malformed", async () => {
+  for (const retryAfter of ["1.5", "-1", "header-garbage"]) {
+    await temporary(async (directory) => {
+      const { data, file } = fixture();
+      const waits = [];
+      let requests = 0;
+      const result = await prepareModel({
+        directory,
+        files: [file],
+        fetchImpl: async () => {
+          requests++;
+          return requests === 1 ? rateLimitedResponse(retryAfter) : new Response(data);
+        },
+        waitImpl: async (delay, signal) => {
+          signal?.throwIfAborted();
+          waits.push(delay);
+        },
+      });
+      assert.equal(result.files[0].status, "downloaded");
+      assert.equal(requests, 2);
+      assert.deepEqual(waits, [5_000]);
+      await assertNoStaging(directory);
+    });
+  }
+});
+
+test("allows an exact 60 second Retry-After boundary", async () => {
+  await temporary(async (directory) => {
+    const { data, file } = fixture();
+    const waits = [];
+    let requests = 0;
+    const result = await prepareModel({
+      directory,
+      files: [file],
+      fetchImpl: async () => {
+        requests++;
+        return requests === 1 ? rateLimitedResponse("60") : new Response(data);
+      },
+      waitImpl: async (delay, signal) => {
+        signal?.throwIfAborted();
+        waits.push(delay);
+      },
+    });
+    assert.equal(result.files[0].status, "downloaded");
+    assert.equal(requests, 2);
+    assert.deepEqual(waits, [60_000]);
+    await assertNoStaging(directory);
+  });
+});
+
+test("aborting during a rate-limit wait prevents every subsequent fetch", async () => {
+  await temporary(async (directory) => {
+    const { file } = fixture();
+    const controller = new AbortController();
+    let requests = 0;
+    let bodyCancelled = false;
+    await assert.rejects(prepareModel({
+      directory,
+      files: [file],
+      signal: controller.signal,
+      fetchImpl: async () => {
+        requests++;
+        return rateLimitedResponse("1", () => { bodyCancelled = true; });
+      },
+      waitImpl: async (_delay, signal) => {
+        controller.abort(new Error("test_rate_limit_abort"));
+        signal.throwIfAborted();
+      },
+    }), /test_rate_limit_abort/);
+    assert.equal(requests, 1);
+    assert.equal(bodyCancelled, true);
+    await assertNoStaging(directory);
+  });
+});
+
+test("exhausted HTTP 429 retries preserve the old asset and manifest and clean staging", async () => {
+  await temporary(async (directory) => {
+    const { file } = fixture();
+    await mkdir(join(directory, "onnx"));
+    const oldAsset = Buffer.from("existing corrupt file");
+    const oldManifest = Buffer.from('{"existing":true}\n');
+    await writeFile(join(directory, file.path), oldAsset);
+    await writeFile(join(directory, "manifest.json"), oldManifest);
+    let requests = 0;
+    const waits = [];
+    await assert.rejects(prepareModel({
+      directory,
+      files: [file],
+      fetchImpl: async () => {
+        requests++;
+        return rateLimitedResponse("0");
+      },
+      waitImpl: async (delay, signal) => {
+        signal?.throwIfAborted();
+        waits.push(delay);
+      },
+    }), /model_download_http_429/);
+    assert.equal(requests, 3);
+    assert.deepEqual(waits, [0, 0]);
+    assert.deepEqual(await readFile(join(directory, file.path)), oldAsset);
+    assert.deepEqual(await readFile(join(directory, "manifest.json")), oldManifest);
+    await assertNoStaging(directory);
+  });
+});
+
 test("blocks untrusted redirect hosts, insecure URLs, credentials, ports and loops", async () => {
   for (const location of ["https://evil.example/model", "https://us.aws.cdn.hf.co.evil.example/model", "http://huggingface.co/model", "https://user:password@huggingface.co/model", "https://huggingface.co:444/model", "https://127.0.0.1/model"]) {
     await temporary(async (directory) => {
@@ -130,7 +327,18 @@ test("blocks untrusted redirect hosts, insecure URLs, credentials, ports and loo
 test("rejects a changed revision, unsafe paths and symlink reuse", async () => {
   await temporary(async (directory) => {
     const { data, file } = fixture("config.json");
-    await assert.rejects(prepareModel({ directory, files: [file], fetchImpl: async () => new Response(data, { headers: { "x-repo-commit": "another-revision" } }) }), /model_revision_mismatch/);
+    let revisionRequests = 0;
+    await assert.rejects(prepareModel({ directory, files: [file], fetchImpl: async () => {
+      revisionRequests++;
+      return new Response(data, { headers: { "x-repo-commit": "another-revision" } });
+    } }), /model_revision_mismatch/);
+    assert.equal(revisionRequests, 1);
+    let notFoundRequests = 0;
+    await assert.rejects(prepareModel({ directory, files: [file], fetchImpl: async () => {
+      notFoundRequests++;
+      return new Response("missing", { status: 404 });
+    } }), /model_download_http_404/);
+    assert.equal(notFoundRequests, 1);
     await assert.rejects(prepareModel({ directory, files: [{ ...file, path: "../escape" }], fetchImpl: () => { throw new Error("unexpected_network"); } }), /invalid_model_file_manifest/);
     await writeFile(join(directory, "original"), data);
     await symlink(join(directory, "original"), join(directory, file.path));

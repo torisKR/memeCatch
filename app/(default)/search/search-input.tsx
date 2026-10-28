@@ -8,6 +8,7 @@ import { track } from "@/lib/analytics";
 import { SearchSuggest, type SearchSuggestion } from "@/components/search-suggest";
 import { GLOBAL_SEARCH_COPY, type SearchInputCopy } from "@/lib/i18n-global-search";
 import { createSearchSuggestionCache, SEARCH_SUGGESTION_COLUMNS } from "@/lib/search-suggestions";
+import { signalMemeIntentSubmit } from "@/lib/meme-intent-submit.client";
 
 const RECENT_KEY = "mc_recent_searches";
 const MAX_RECENT = 8;
@@ -39,11 +40,13 @@ export function SearchInput({
   popularTerms,
   searchPath = "/search",
   copy = GLOBAL_SEARCH_COPY.ko.input,
+  locale = "ko",
 }: {
   initialQuery: string;
   popularTerms: string[];
   searchPath?: string;
   copy?: SearchInputCopy;
+  locale?: string;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(initialQuery);
@@ -259,6 +262,7 @@ export function SearchInput({
           if (isComposing) return;
           recordRecent(trimmed);
           setOpen(false);
+          if (locale === "ko") signalMemeIntentSubmit(trimmed, locale);
           goToSearch(trimmed);
         }}
       >

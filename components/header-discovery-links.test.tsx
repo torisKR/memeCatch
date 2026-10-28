@@ -27,5 +27,10 @@ describe("HeaderDiscoveryLinks", () => {
 
     expect(screen.getByRole("navigation", { name: "探索" })).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "주요 발견" })).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "首頁" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "趨勢" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "社群" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "迷因好物" })).toBeNull();
   });
 });

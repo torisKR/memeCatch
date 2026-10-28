@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { HideOnAdmin } from "@/components/auth-menu";
-import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
 import { CONTACT_EMAIL } from "@/lib/site";
-import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 전역 푸터 — E-E-A-T 신뢰 신호(운영 주체·문의·정책 링크·저작권 안내).
@@ -16,21 +14,17 @@ const FOOTER_LINKS = [
   { href: "/editorial", label: "editorial" },
   { href: "/privacy", label: "privacy" },
   { href: "/terms", label: "terms" },
-  { href: "/rankings", label: "rankings" },
-  { href: "/news", label: "news" },
-  { href: "/products", label: "products" },
-  { href: "/submit", label: "submit" },
   { href: "/support", label: "support" },
 ] as const;
 
 export function SiteFooter() {
-  const { messages, locale } = useLocale();
+  const { messages } = useLocale();
   return (
     <HideOnAdmin>
-      <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
-        <div className="mx-auto max-w-5xl px-4 py-8">
+      <footer className="mt-16 border-t border-border bg-surface">
+        <div className="mx-auto max-w-5xl px-4 py-7">
           <nav aria-label={messages.footerNav}>
-            <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
               {FOOTER_LINKS.map((l) => (
                 <li key={l.href}>
                   <Link
@@ -41,38 +35,20 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <TrackedBlock event="donate_click" className="inline-flex">
-                  <Link
-                    href={`${localizedStaticPath("/pricing", locale)}#fairy-support-title`}
-                    className="hover-glow-flame inline-flex min-h-11 items-center gap-1 rounded-md font-semibold text-accent transition-colors hover:brightness-90"
-                  >
-                    <HeartGlyph />
-                    {messages.donate}
-                  </Link>
-                </TrackedBlock>
-              </li>
             </ul>
           </nav>
-          <div className="mt-3 text-[13px] leading-relaxed text-muted">
-            {/*
-              고지 문구는 문서에 정확히 한 번만 출력한다. 예전에는 모바일용
-              <details>와 데스크톱용 <div>에 같은 문단을 각각 렌더하고 CSS로
-              한쪽만 보여줬는데, HTML에는 두 벌이 그대로 담겨 크롤러·심사
-              도구에는 같은 문단이 연속 2회 반복되는 중복 텍스트로 읽혔다.
-              지금은 하나만 렌더하고, summary만 모바일에서 노출해 접을 수
-              있게 한다(기본 펼침 — 본문이 상호작용 뒤에 숨지 않게).
-            */}
-            <details className="group" open>
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-medium text-foreground sm:hidden [&::-webkit-details-marker]:hidden">
+          <div className="mt-2 text-[13px] leading-relaxed text-muted">
+            {/* 권리 고지는 문서에 한 번만 렌더하고 필요할 때 펼친다. */}
+            <details className="group max-w-3xl">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-medium text-foreground [&::-webkit-details-marker]:hidden">
                 {messages.legalSummary}
                 <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" />
               </summary>
-              <div className="space-y-1.5 pb-2 sm:pb-0">
+              <div className="space-y-1.5 pb-2">
                 <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
               </div>
             </details>
-            <p className="stat-mono mt-2">© {new Date().getFullYear()} {messages.brand}</p>
+            <p className="mt-1 text-xs">© {new Date().getFullYear()} {messages.brand}</p>
           </div>
         </div>
       </footer>
@@ -112,19 +88,6 @@ function ChevronDown({ className }: { className?: string }) {
       aria-hidden
     >
       <path d="m7 10 5 5 5-5" />
-    </svg>
-  );
-}
-
-function HeartGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d="M12 21s-7.5-4.7-10-9.3C.5 8.6 2.6 5 6.2 5c2 0 3.7 1.1 4.6 2.7l1.2 2 1.2-2C14.1 6.1 15.8 5 17.8 5c3.6 0 5.7 3.6 4.2 6.7C19.5 16.3 12 21 12 21Z" />
     </svg>
   );
 }

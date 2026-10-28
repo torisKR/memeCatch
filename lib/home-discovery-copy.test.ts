@@ -41,13 +41,13 @@ describe("HOME_DISCOVERY_COPY", () => {
     }
   });
 
-  it("keeps the recent-set search scope explicit instead of claiming archive search", () => {
+  it("keeps each displayed-set search scope explicit instead of claiming archive search", () => {
     const scopeCopy = SEO_ROUTE_LOCALES.map(
       (locale) => HOME_DISCOVERY_COPY[locale].searchScope,
     ).join(" ");
 
     expect(scopeCopy).not.toMatch(/search(?:es)? (?:the )?(?:entire|whole) archive/iu);
     expect(HOME_DISCOVERY_COPY.en.searchScope).toContain("recent set");
-    expect(HOME_DISCOVERY_COPY.ko.searchScope).toContain("최근");
+    expect(HOME_DISCOVERY_COPY.ko.searchScope).toContain("편집 추천 항목 안에서만");
   });
 });

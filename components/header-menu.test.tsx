@@ -14,7 +14,10 @@ vi.mock("next/link", () => ({
     return <a {...anchorProps}>{children}</a>;
   },
 }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
 vi.mock("@/lib/i18n-client", async () => {
   const { getMessages } = await import("@/lib/i18n");
@@ -35,18 +38,20 @@ describe("HeaderMenu", () => {
 
   afterEach(cleanup);
 
-  it("keeps the reduced first-week menu without product or community links", async () => {
+  it("moves secondary destinations and language selection into the menu", async () => {
     const user = userEvent.setup();
     render(<HeaderMenu />);
 
     await user.click(screen.getByRole("button", { name: "메뉴" }));
 
     expect(screen.getByRole("navigation", { name: "메뉴" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "커뮤니티" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "밈 상품" })).toBeNull();
+    expect(screen.getByRole("link", { name: "커뮤니티" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "밈 상품" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "제보" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Plus" }).getAttribute("href")).toBe("/pricing");
     expect(screen.getByRole("link", { name: "연표" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "밈카드" }).getAttribute("href")).toBe("/meme-cards");
-    expect(screen.getByRole("link", { name: "밈캐치 내 급상승" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "언어 선택" })).toBeTruthy();
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("navigation", { name: "메뉴" })).toBeNull();

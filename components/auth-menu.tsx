@@ -36,14 +36,33 @@ const AUTH_HINT_KEY = "mc_auth_nick";
 /** Plus 멤버십 힌트 — 구독자는 재방문 시 헤더 PLUS 배지를 즉시 그린다. */
 const PLUS_HINT_KEY = "mc_auth_plus";
 
+function hydrationSafeLoginPathname(pathname: string): string {
+  const detail = pathname.match(
+    /^(\/(?:(?:en|ja|zh|zh-tw)\/)?memes\/[a-z0-9]{8})(?:-.*)?$/,
+  );
+  return detail?.[1] ?? pathname;
+}
+
 export function AuthMenu() {
-  const pathname = normalizePathname(usePathname());
+  const routePathname = normalizePathname(usePathname());
+  // Proxy rewrites can give usePathname() a different value on the server and
+  // in the browser. For detail routes, the short-id-only URL is stable across
+  // both values and still resolves to the same document without JavaScript.
+  // Other routes retain their original login return path on the first render.
+  const [pathname, setPathname] = useState(() =>
+    hydrationSafeLoginPathname(routePathname),
+  );
   const reduce = useReducedMotion();
   // null = 아직 조회 전, string = 로그인, "" = 비로그인 확정
   const [nickname, setNickname] = useState<string | null>(null);
   // 헤더 PLUS 배지 노출 여부 — billing_subscriptions self-read로 확정.
   const [isPremium, setIsPremium] = useState(false);
   const { messages } = useLocale();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- rewrite-safe hydration requires a stable first render
+    setPathname(routePathname);
+  }, [routePathname]);
 
   useEffect(() => {
     let alive = true;

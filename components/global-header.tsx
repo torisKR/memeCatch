@@ -5,18 +5,13 @@ import { AuthMenu, HideOnAdmin } from "@/components/auth-menu";
 import { HeaderDiscoveryLinks } from "@/components/header-discovery-links";
 import { BrandTile } from "@/components/brand-mark";
 import { HeaderMenu } from "@/components/header-menu";
-import { LanguageSelector } from "@/components/language-selector";
-import { TrendAlertsBell } from "@/components/premium/trend-alerts-bell";
 import { useLocale } from "@/lib/i18n-client";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
- * 전역 헤더 — DESIGN.md §10 + 2026-07 IA 개편(검색·탐색 중심 제품형 내비).
- * 좌: 워드마크 + 언어 선택 + 최신 밈·커뮤니티·상품 바로가기.
- * 우: 검색(모바일=아이콘, 데스크톱=미니 검색바) → 제보 강조 CTA →
- *     로그인/프로필(<AuthMenu/>) → 통합 메뉴 드롭다운(<HeaderMenu/> — 연표·
- *     랭킹·소식·랜덤).
- * 연표 상시 링크와 주사위 버튼은 드롭다운으로 이동해 바를 정리했다.
+ * 전역 헤더 — 탐색과 검색만 기본 노출한다.
+ * 제보·커뮤니티·제품·언어 같은 보조 동선은 HeaderMenu로 모아 모든 화면에서
+ * 한 줄 높이를 유지한다.
  *
  * 요청 로케일은 layout의 LocaleProvider가 주입해 첫 SSR부터 문서 언어와 맞춘다.
  * 인증 세션은 AuthMenu가 클라이언트에서 별도로 조회해 전역 SSR을 막지 않는다.
@@ -27,32 +22,21 @@ export function GlobalHeader() {
   return (
     <HideOnAdmin>
       <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
-        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
-          <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto">
-            {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
-            <Link
-              href={localizedStaticPath("/", locale)}
-              aria-label={messages.home}
-              className="group flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl py-1 pr-1 transition-transform active:scale-[0.97]"
-            >
-              <BrandTile className="size-8" />
-              {/* 브랜드명은 모바일에서도 노출(신규 방문자 브랜드 인지) — 도메인 서브라벨만 sm+ */}
-              <span className="flex shrink-0 flex-col whitespace-nowrap leading-none">
-                <span className="text-lg font-extrabold tracking-[-0.045em]">{messages.brand}</span>
-                <span className="mt-1 hidden font-mono text-[8px] font-semibold uppercase tracking-[0.13em] text-muted sm:block">
-                  catchmeme.com
-                </span>
-              </span>
-            </Link>
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-nowrap items-center gap-2 px-3 sm:px-6">
+          <Link
+            href={localizedStaticPath("/", locale)}
+            aria-label={messages.home}
+            className="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl pr-1 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <BrandTile className="size-7 sm:size-8" />
+            <span className="shrink-0 whitespace-nowrap text-base font-extrabold tracking-[-0.045em] sm:text-lg">
+              {messages.brand}
+            </span>
+          </Link>
 
-            <LanguageSelector />
-          </div>
-
-          {/* 데스크톱 주요 목적지 — 모바일은 하단 탭과 홈 바로가기로 제공 */}
           <HeaderDiscoveryLinks />
 
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:flex-nowrap sm:justify-start *:shrink-0">
-            {/* 데스크톱: 미니 검색바 */}
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <form
               action={localizedStaticPath("/search", locale)}
               role="search"
@@ -75,16 +59,6 @@ export function GlobalHeader() {
               </div>
             </form>
 
-            {/* 제보 강조 CTA — lg+ 전용(모바일·태블릿은 하단탭/메뉴 제보가 담당) */}
-            <Link
-              href="/submit"
-              rel="nofollow"
-              className="hidden min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:inline-flex"
-            >
-              {messages.submit}
-            </Link>
-
-            {/* 모바일: 검색 아이콘 버튼 */}
             <Link
               href={localizedStaticPath("/search", locale)}
               aria-label={messages.search}
@@ -93,12 +67,7 @@ export function GlobalHeader() {
               <SearchIcon className="h-5 w-5" />
             </Link>
 
-            {/* Plus 구독자에게만 렌더된다(내부에서 usePremium 가드) */}
-            <TrendAlertsBell />
-
             <AuthMenu />
-
-            {/* 통합 메뉴 드롭다운 — 연표·랭킹·소식·랜덤 */}
             <HeaderMenu />
           </div>
         </div>

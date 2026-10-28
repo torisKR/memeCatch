@@ -1,21 +1,15 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  MessagesSquare,
-  ShoppingBag,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
+
 import { HomeDiscovery } from "@/components/home/home-discovery";
-import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
-import styles from "@/components/home/home-web3.module.css";
+import { HomeSearch } from "@/components/home/home-search";
+import { HomeTrendDiscovery } from "@/components/home/home-trend-discovery";
 import { TranslatedEditionHint } from "@/components/home/translated-edition-hint";
-import { SafetySignalGuide } from "@/components/usage-guide";
+import styles from "@/components/home/home-web3.module.css";
 import { HOME_COPY } from "@/lib/home-copy";
-import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
-import {
-  localizedPath,
-  type SeoRouteLocale,
-} from "@/lib/i18n-routing";
+import { localizedPath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { MemeCategory, SafetyLevel } from "@/lib/labels";
+import type { PublicMemeTrendSummary } from "@/lib/trend/public-evidence.server";
 
 export type HomeEntry = {
   id: string;
@@ -32,160 +26,83 @@ export type HomeEntry = {
 export function HomeExperience({
   locale,
   entries,
+  entryState = "ready",
+  externalTrends = [],
 }: {
   locale: SeoRouteLocale;
   entries: readonly HomeEntry[];
+  entryState?: "ready" | "unavailable";
+  externalTrends?: readonly PublicMemeTrendSummary[];
 }) {
   const copy = HOME_COPY[locale];
-  const web3 = HOME_WEB3_COPY[locale];
   const searchPath = localizedPath("/search", locale);
   const explorePath = localizedPath("/explore?sort=recent", locale);
-  const pathwaysTitleId = `home-pathways-title-${locale}`;
-  const trustTitleId = `home-trust-title-${locale}`;
 
   return (
     <div className={styles.page}>
       {locale === "ko" && <TranslatedEditionHint />}
-      <HomeImmersiveStory locale={locale} />
+      <section
+        id="home-top"
+        data-home-section="hero-search"
+        className={styles.hero}
+        aria-labelledby={`home-title-${locale}`}
+      >
+        <div className={styles.heroCopy}>
+          <h1 id={`home-title-${locale}`} className={styles.heroTitle}>
+            {copy.hero.title}
+          </h1>
+          <p className={styles.heroIntro}>{copy.hero.intro}</p>
+        </div>
+
+        <HomeSearch
+          locale={locale}
+          action={searchPath}
+          label={copy.hero.searchLabel}
+          placeholder={copy.hero.searchPlaceholder}
+          button={copy.hero.searchButton}
+        />
+      </section>
+
+      <HomeTrendDiscovery locale={locale} entries={externalTrends} />
 
       <section
         id="home-latest"
         data-home-section="recent-content"
         aria-label={copy.recent.title}
-        className={`${styles.editorialSection} ${styles.anchorTarget}`}
+        className={styles.recentSection}
       >
-        <span aria-hidden className={`${styles.sectionNumber} ${styles.discoveryNumber}`}>01</span>
-        <HomeDiscovery locale={locale} entries={entries} />
-        {entries.length > 0 ? (
-          <div className={styles.recentSignalRail}>
-            <Link href={explorePath} className={styles.contributionLinkStrong}>
-              {copy.recent.all} <ArrowRight aria-hidden className={styles.buttonIcon} />
-            </Link>
-          </div>
+        {entryState === "ready" ? (
+          <HomeDiscovery locale={locale} entries={entries} />
         ) : (
-          <div className={styles.emptyAssist}>
-            <p>{copy.recent.empty}</p>
-            <Link href={searchPath} className={styles.contributionLinkStrong}>
-              {copy.recent.emptyAction}
+          <div
+            className={styles.emptyState}
+            data-home-recommendations="unavailable"
+            role="status"
+          >
+            <p>{copy.recent.unavailable ?? copy.recent.empty}</p>
+            <Link href={searchPath} className={styles.textLink}>
+              {copy.recent.unavailableAction ?? copy.recent.emptyAction}
             </Link>
           </div>
         )}
-      </section>
 
-      <section
-        id="home-signals"
-        data-home-section="usage-signals"
-        className={`${styles.signalsSection} ${styles.anchorTarget}`}
-      >
-        <div className={styles.signalsFrame}>
-          <span aria-hidden className={styles.sectionNumber}>02</span>
-          <SafetySignalGuide locale={locale} />
-        </div>
-      </section>
-
-      <section
-        id="home-pathways"
-        data-home-section="pathways"
-        aria-labelledby={pathwaysTitleId}
-        className={`${styles.pathwaysSection} ${styles.anchorTarget}`}
-      >
-        <div className={styles.sectionInner}>
-          <header className={styles.pathwaysHeader}>
-            <span aria-hidden className={styles.sectionNumber}>03</span>
-            <h2 id={pathwaysTitleId} className={styles.sectionTitle}>
-              {copy.pathways.title}
-            </h2>
-            <p className={styles.sectionDescription}>{copy.pathways.description}</p>
-          </header>
-
-          <div className={styles.pathwayGrid}>
-            <Link
-              href="/community"
-              className={`${styles.pathwayCard} ${styles.communityCard}`}
-            >
-              <span aria-hidden className={styles.communityMotif} />
-              <span className={styles.cardTop}>
-                <MessagesSquare aria-hidden className={styles.cardIcon} />
-                <span className={styles.cardMark}>{web3.pathways.communityMark}</span>
-              </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardTitle}>{copy.pathways.community.title}</span>
-                <span className={styles.cardDescription}>
-                  {copy.pathways.community.description}
-                </span>
-                <span className={styles.cardAction}>
-                  {copy.pathways.community.action}
-                  <ArrowRight aria-hidden className={styles.buttonIcon} />
-                </span>
-              </span>
-            </Link>
-
-            <Link
-              href="/products"
-              className={`${styles.pathwayCard} ${styles.productsCard}`}
-            >
-              <span aria-hidden className={styles.productsMotif} />
-              <span className={styles.cardTop}>
-                <ShoppingBag aria-hidden className={styles.cardIcon} />
-                <span className={styles.cardMark}>{web3.pathways.productsMark}</span>
-              </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardTitle}>{copy.pathways.products.title}</span>
-                <span className={styles.cardDescription}>
-                  {copy.pathways.products.description}
-                </span>
-                <span className={styles.cardAction}>
-                  {copy.pathways.products.action}
-                  <ArrowRight aria-hidden className={styles.buttonIcon} />
-                </span>
-              </span>
+        {entryState === "ready" && entries.length === 0 ? (
+          <div className={styles.emptyState} data-home-recommendations="empty">
+            <p>{copy.recent.empty}</p>
+            <Link href={searchPath} className={styles.textLink}>
+              {copy.recent.emptyAction}
             </Link>
           </div>
+        ) : null}
 
-          <div className={styles.contributionBar}>
-            <p>{copy.pathways.contributionLabel}</p>
-            <div className={styles.contributionLinks}>
-              <Link href="/community/new" className={styles.contributionLink}>
-                {copy.pathways.community.createAction}
-              </Link>
-              <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
-                {copy.pathways.submitAction}
-              </Link>
-              <Link href="/products/new" className={styles.contributionLinkStrong}>
-                {copy.pathways.products.createAction}
-              </Link>
-            </div>
+        {entries.length > 0 ? (
+          <div className={styles.recentActions}>
+            <Link href={explorePath} className={styles.primaryLink}>
+              {copy.recent.all} <ArrowRight aria-hidden />
+            </Link>
           </div>
-        </div>
+        ) : null}
       </section>
-
-      <aside
-        id="home-editorial"
-        data-home-section="editorial-trust"
-        aria-labelledby={trustTitleId}
-        className={`${styles.editorialTrust} ${styles.anchorTarget}`}
-      >
-        <div className={styles.trustGrid}>
-          <span aria-hidden className={styles.sectionNumber}>04</span>
-          <div className={styles.trustCopy}>
-            <h2 id={trustTitleId} className={styles.trustTitle}>
-              {copy.trust.title}
-            </h2>
-            <p className={styles.trustDescription}>{copy.trust.description}</p>
-            <nav aria-label={copy.trust.eyebrow}>
-              <ul className={styles.trustLinks}>
-                {copy.trust.links.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className={styles.trustLink}>
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </div>
-      </aside>
     </div>
   );
 }

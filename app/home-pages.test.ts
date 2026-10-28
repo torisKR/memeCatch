@@ -12,15 +12,16 @@ describe("home route integration", () => {
     expect(localizedPage).toContain("locale={locale}");
   });
 
-  it("uses publication recency for Korean cards and passes real safety levels on both routes", () => {
-    expect(koreanPage).toContain("getRecentlyPublishedMemes(6)");
+  it("uses the quality-first editorial selector for Korean cards and passes real safety levels on both routes", () => {
+    expect(koreanPage).toContain("getEditorialHomeMemes(6)");
+    expect(koreanPage).toContain("entryState={editorial.status}");
     expect(koreanPage).not.toContain("getLatestMemes");
     expect(koreanPage).toContain("safetyLevel: meme.safety_level");
     expect(localizedPage).toContain("safetyLevel: meme.safety_level");
   });
 
-  it("preserves the Korean ad loader and both JSON-LD surfaces", () => {
-    expect(koreanPage).toContain("<AdsenseScript />");
+  it("keeps ads off the Korean home and preserves both JSON-LD surfaces", () => {
+    expect(koreanPage).not.toContain("AdsenseScript");
     expect(koreanPage).toContain("<WebSiteJsonLd />");
     expect(koreanPage).toContain("<DefinedTermSetJsonLd />");
     expect(localizedPage).toContain('type="application/ld+json"');
@@ -29,11 +30,13 @@ describe("home route integration", () => {
   });
 
   it("preserves canonical and complete home hreflang metadata", () => {
-    expect(koreanPage).toContain('canonical: "/"');
+    expect(koreanPage).toContain("export async function generateMetadata");
     expect(koreanPage).toContain("buildHreflangLanguages");
-    expect(koreanPage).toContain('"x-default": localizePath("/", "en")');
+    expect(koreanPage).toContain('"x-default": "/"');
+    expect(koreanPage).toContain("getLocalizedFeaturedMemesResult");
     expect(localizedPage).toContain("buildLocalizedMetadata");
-    expect(localizedPage).toContain('availableLocales: ["ko", ...SEO_CONTENT_LOCALES]');
+    expect(localizedPage).toContain('availableLocales: ["ko", locale]');
+    expect(localizedPage).toContain("getLocalizedFeaturedMemesResult");
   });
 
   it("does not retain the divergent translation-desk layout or review claims", () => {

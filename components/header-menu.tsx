@@ -4,24 +4,24 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Dices,
+  CirclePlus,
   Layers3,
-  Globe2,
-  Grid2X2,
+  Menu,
   Milestone,
-  Newspaper,
-  Trophy,
-  WandSparkles,
+  ShoppingBag,
+  Star,
+  Users,
   type LucideIcon,
 } from "lucide-react";
+import { LanguageSelector } from "@/components/language-selector";
 import { useLocale } from "@/lib/i18n-client";
-import { track } from "@/lib/analytics";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
- * 헤더 우측 통합 메뉴 드롭다운 (2026-07 헤더 IA 개편).
- * 좌측 상시 내비를 탐색(주 동선) 하나로 줄이고, 보조 목적지(연표·
- * 랭킹·소식·랜덤)를 이 메뉴로 통합한다. 항목은 전부 i18n 키 보유분만.
+ * 헤더 우측 통합 메뉴 드롭다운.
+ * 기본 바에서는 탐색·검색만 보여 주고 참여, 제품, 언어 등 보조 목적지를
+ * 이 메뉴에 모은다.
  * 접근성: disclosure 패턴(button aria-expanded + nav) — 링크 목록엔 role=menu보다
  * 권장. ESC(버튼 포커스 복귀)·바깥 클릭·라우트 변경 시 닫힘. 포커스 트랩 불필요
  * (모달 아님, Tab 순서가 자연스럽게 패널을 통과).
@@ -60,22 +60,12 @@ export function HeaderMenu() {
     icon: LucideIcon;
     prefetch?: false;
   }[] = [
+    { href: "/submit", label: messages.submit, prefetch: false, icon: CirclePlus },
+    { href: "/community", label: messages.community, prefetch: false, icon: Users },
     { href: "/meme-cards", label: MEME_CARDS_COPY[locale].nav, prefetch: false, icon: Layers3 },
-    {
-      href: "/global",
-      label: locale === "ko" ? "글로벌 피드" : "Global feed",
-      prefetch: false,
-      icon: Globe2,
-    },
-    {
-      href: "/studio",
-      label: locale === "ko" ? "밈 스튜디오" : "Meme studio (Korean)",
-      prefetch: false,
-      icon: WandSparkles,
-    },
     { href: "/timeline", label: messages.timeline, prefetch: false, icon: Milestone },
-    { href: "/rankings", label: messages.rankings, prefetch: false, icon: Trophy },
-    { href: "/news", label: messages.news, prefetch: false, icon: Newspaper },
+    { href: "/products", label: messages.products, prefetch: false, icon: ShoppingBag },
+    { href: localizedStaticPath("/pricing", locale), label: "Plus", prefetch: false, icon: Star },
   ];
 
   return (
@@ -87,25 +77,19 @@ export function HeaderMenu() {
         aria-controls="header-menu-panel"
         aria-label={messages.menu}
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-11 w-11 items-center justify-center rounded-full border border-transparent transition-colors hover:border-(--signal-cyan) active:scale-[0.95] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+        className={`flex h-11 w-11 items-center justify-center rounded-xl border border-transparent transition-colors active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
           open ? "bg-surface-2 text-foreground" : "text-foreground hover:bg-surface-2"
         }`}
       >
-        <Grid2X2 className="size-5" strokeWidth={1.8} aria-hidden />
+        <Menu className="size-5" strokeWidth={2} aria-hidden />
       </button>
 
       {open && (
         <nav
           id="header-menu-panel"
           aria-label={messages.menu}
-          className="menu-pop instrument-grid absolute right-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
+          className="menu-pop absolute right-0 top-[calc(100%+8px)] z-50 w-72 rounded-2xl border border-border bg-surface p-2 shadow-lg"
         >
-          <p
-            aria-hidden
-            className="px-3 pb-1.5 pt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted"
-          >
-            Menu
-          </p>
           <ul>
             {items.map((item) => {
               const active = pathname.startsWith(item.href);
@@ -117,7 +101,7 @@ export function HeaderMenu() {
                     prefetch={item.prefetch}
                     onClick={() => setOpen(false)}
                     aria-current={active ? "page" : undefined}
-                    className={`hover-glow-flame flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent ${
+                    className={`flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent ${
                       active
                         ? "bg-surface-2 font-semibold text-foreground"
                         : "font-medium text-foreground/85 hover:bg-surface-2 hover:text-foreground"
@@ -134,19 +118,10 @@ export function HeaderMenu() {
               );
             })}
           </ul>
-          <div aria-hidden className="mx-3 my-1.5 h-px bg-border" />
-          <Link
-            href="/memes/random"
-            prefetch={false}
-            onClick={() => {
-              track("random_meme");
-              setOpen(false);
-            }}
-            className="hover-glow-flame flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-foreground/85 transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
-          >
-            <Dices className="size-[18px] text-muted" strokeWidth={1.8} aria-hidden />
-            {messages.random}
-          </Link>
+          <div className="mt-1 flex items-center justify-between gap-3 border-t border-border px-3 py-2">
+            <span className="text-sm font-medium text-muted">{messages.language}</span>
+            <LanguageSelector />
+          </div>
         </nav>
       )}
     </div>

@@ -87,7 +87,7 @@ describe("GlobalHeader", () => {
     const discoveryNav = html.match(/<nav[^>]*aria-label="주요 발견"[^>]*>.*?<\/nav>/)?.[0];
     const discoveryLinks = [
       ...(discoveryNav ?? "").matchAll(
-        /<a[^>]*href="(?:\/|\/explore\?sort=recent)"[^>]*>/g,
+        /<a[^>]*href="(?:\/|\/explore)"[^>]*>/g,
       ),
     ].map(([link]) => link);
 
@@ -106,6 +106,6 @@ describe("GlobalHeader", () => {
     navigation.pathname = "/explore/topics";
     const html = renderToStaticMarkup(<GlobalHeader />);
 
-    expect(html.match(/<a href="\/explore\?sort=recent" aria-current="page"/)).toBeTruthy();
+    expect(html.match(/<a href="\/explore" aria-current="page"/)).toBeTruthy();
   });
 });

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 const DESTINATIONS = [
-  { href: "/explore?sort=recent", label: "최신 밈" },
+  { href: "/explore", label: "밈" },
   { href: "/community", label: "커뮤니티" },
   { href: "/products", label: "밈 상품" },
 ] as const;

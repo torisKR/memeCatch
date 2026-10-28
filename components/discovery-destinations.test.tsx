@@ -7,7 +7,7 @@ describe("DiscoveryDestinations", () => {
     const html = renderToStaticMarkup(<DiscoveryDestinations />);
 
     expect(html).toContain('aria-label="바로 가기"');
-    expect(html).toContain('href="/explore?sort=recent"');
+    expect(html).toContain('href="/explore"');
     expect(html).toContain('href="/community"');
     expect(html).toContain('href="/products"');
     expect(html).toContain('href="/community/new"');

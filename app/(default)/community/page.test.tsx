@@ -44,7 +44,7 @@ describe("Community discovery states", () => {
     );
 
     expect(html).toContain('href="/community/new"');
-    expect(html).toContain('href="/explore?sort=recent"');
+    expect(html).toContain('href="/explore"');
     expect(html).toContain("첫 글 쓰기");
   });
 

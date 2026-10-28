@@ -36,7 +36,7 @@ export function HomeExperience({
 }) {
   const copy = HOME_COPY[locale];
   const searchPath = localizedPath("/search", locale);
-  const explorePath = localizedPath("/explore?sort=recent", locale);
+  const explorePath = localizedPath("/explore", locale);
 
   return (
     <div className={styles.page}>

@@ -51,7 +51,7 @@ describe("HomeExperience", () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain(`action="${locale === "ko" ? "/search" : `/${locale}/search`}"`);
     expect(html).toContain('method="get"');
-    expect(html).toContain(`href="${locale === "ko" ? "/explore?sort=recent" : `/${locale}/explore?sort=recent`}"`);
+    expect(html).toContain(`href="${locale === "ko" ? "/explore" : `/${locale}/explore`}"`);
     expect(html).toContain(entry.title);
     expect(html).toContain('data-safety-icon="green"');
     expect(html).not.toContain("data-home-scroll-track");

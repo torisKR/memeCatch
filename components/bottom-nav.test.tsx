@@ -33,7 +33,7 @@ describe("BottomNav", () => {
 
     expect(html).toContain('aria-label="주 내비게이션"');
     expect(html).toContain('href="/"');
-    expect(html).toContain('href="/explore?sort=recent"');
+    expect(html).toContain('href="/explore"');
     expect(html).toContain('href="/community"');
     expect(html).toContain('href="/my"');
     expect(html).not.toContain('href="/products"');
@@ -54,7 +54,7 @@ describe("BottomNav", () => {
 
     navigation.pathname = "/explore";
     const latestHtml = renderToStaticMarkup(<BottomNav />);
-    expect(latestHtml.match(/<a href="\/explore\?sort=recent"[^>]*aria-current="page"/)).toBeTruthy();
+    expect(latestHtml.match(/<a href="\/explore"[^>]*aria-current="page"/)).toBeTruthy();
   });
 
   it("keeps localized static links", () => {
@@ -63,14 +63,14 @@ describe("BottomNav", () => {
     const html = renderToStaticMarkup(<BottomNav />);
 
     expect(html).toContain('href="/en"');
-    expect(html).toContain('href="/en/explore?sort=recent"');
-    expect(html.match(/<a href="\/en\/explore\?sort=recent"[^>]*aria-current="page"/)).toBeTruthy();
+    expect(html).toContain('href="/en/explore"');
+    expect(html.match(/<a href="\/en\/explore"[^>]*aria-current="page"/)).toBeTruthy();
   });
 
   it("uses readable foreground colors for the active label", () => {
     navigation.pathname = "/explore";
     const html = renderToStaticMarkup(<BottomNav />);
-    const activeLink = html.match(/<a href="\/explore\?sort=recent"[^>]*>/)?.[0];
+    const activeLink = html.match(/<a href="\/explore"[^>]*>/)?.[0];
     expect(activeLink).toContain("text-accent-text");
   });
 

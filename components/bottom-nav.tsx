@@ -13,7 +13,7 @@ const TABS: {
   icon: (props: { className?: string }) => React.ReactElement;
 }[] = [
   { href: "/", label: "brand", icon: HomeIcon },
-  { href: "/explore?sort=recent", label: "latest", icon: CompassIcon },
+  { href: "/explore", label: "latest", icon: CompassIcon },
   { href: "/community", label: "community", icon: CommunityIcon },
   { href: "/my", label: "my", icon: UserIcon },
 ];
@@ -78,7 +78,7 @@ function homeLabel(locale: ReturnType<typeof useLocale>["locale"]) {
 
 function latestLabel(locale: ReturnType<typeof useLocale>["locale"]) {
   return (
-    ({ ko: "최신", en: "Latest", ja: "最新", zh: "最新", "zh-tw": "最新" } as Partial<Record<typeof locale, string>>)[locale] ?? "Latest"
+    ({ ko: "밈", en: "Memes", ja: "ミーム", zh: "梗图", "zh-tw": "迷因" } as Partial<Record<typeof locale, string>>)[locale] ?? "Memes"
   );
 }
 

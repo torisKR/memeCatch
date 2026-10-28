@@ -95,10 +95,10 @@ export default async function CommunityPage({
                 글쓰기
               </Link>
               <Link
-                href="/explore?sort=recent"
+                href="/explore"
                 className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                최신 밈 보기
+                밈 보기
               </Link>
             </>
           }
@@ -127,10 +127,10 @@ export default async function CommunityPage({
                 첫 글 쓰기
               </Link>
               <Link
-                href="/explore?sort=recent"
+                href="/explore"
                 className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                최신 밈 둘러보기
+                밈 둘러보기
               </Link>
             </div>
           </div>

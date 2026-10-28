@@ -1,5 +1,57 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/index.html"
+    },
+    {
+      "source": "/product",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/product.html"
+    },
+    {
+      "source": "/pricing",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/pricing.html"
+    },
+    {
+      "source": "/terms",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/terms.html"
+    },
+    {
+      "source": "/privacy",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/privacy.html"
+    },
+    {
+      "source": "/refund",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/refund.html"
+    },
+    {
+      "source": "/robots.txt",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/sitemap.xml"
+    },
+    {
+      "source": "/review.css",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/review.css"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "plus.catchmeme.com" }],
+      "destination": "/paddle-review/404.html"
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/adpick-hotdeals",

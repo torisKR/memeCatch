@@ -75,10 +75,18 @@ function statusLabel(result: IngestionData) {
   return "검수 대기";
 }
 
-export function SourceIngestionForm({ memes }: { memes: SourceIngestionMeme[] }) {
+export function SourceIngestionForm({
+  memes,
+  initialTargetMemeId = "",
+}: {
+  memes: SourceIngestionMeme[];
+  initialTargetMemeId?: string;
+}) {
   const router = useRouter();
   const [url, setUrl] = useState("");
-  const [targetMemeId, setTargetMemeId] = useState("");
+  const [targetMemeId, setTargetMemeId] = useState(() =>
+    memes.some((meme) => meme.id === initialTargetMemeId) ? initialTargetMemeId : "",
+  );
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<IngestionData | null>(null);
   const [failure, setFailure] = useState<IngestionFailure | null>(null);

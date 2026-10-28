@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { z } from "zod";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { SourceIngestionForm, type SourceIngestionMeme } from "@/components/admin/source-ingestion-form";
 import { SourceReviewCard } from "@/components/admin/source-review-card";
@@ -9,6 +10,18 @@ export const metadata = { title: "출처 검수" };
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 30;
+const MEME_ID_SCHEMA = z.uuid();
+
+type SearchParams = {
+  page?: string | string[];
+  memeId?: string | string[];
+};
+
+function pageHref(page: number, memeId: string | null): string {
+  const params = new URLSearchParams({ page: String(page) });
+  if (memeId) params.set("memeId", memeId);
+  return `/admin/sources?${params.toString()}`;
+}
 
 type QueueRow = {
   meme_id: string;
@@ -42,13 +55,20 @@ type QueueRow = {
 export default async function AdminSourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
-  const { supabase } = await requireOperatorPage("/admin/sources");
-  const { page: pageParam } = await searchParams;
+  const rawSearch = await searchParams;
+  const { supabase } = await requireOperatorPage("/admin/sources", rawSearch);
+  const pageParam = typeof rawSearch.page === "string" ? rawSearch.page : undefined;
   const page = Math.max(1, Number(pageParam ?? "1") || 1);
+  const normalizedMemeId =
+    typeof rawSearch.memeId === "string" ? rawSearch.memeId.toLowerCase() : null;
+  const requestedMemeId =
+    normalizedMemeId && MEME_ID_SCHEMA.safeParse(normalizedMemeId).success
+      ? normalizedMemeId
+      : null;
 
-  const [{ data, count }, { data: memes, error: memesError }] = await Promise.all([
+  const [{ data, count, error: queueError }, { data: memes, error: memesError }] = await Promise.all([
     supabase
       .from("meme_media")
       .select(
@@ -67,7 +87,41 @@ export default async function AdminSourcesPage({
       .returns<SourceIngestionMeme[]>(),
   ]);
 
+  if (queueError) throw new Error(`출처 검수 대기열을 불러오지 못했어요: ${queueError.message}`);
   if (memesError) throw new Error(`밈 목록을 불러오지 못했어요: ${memesError.message}`);
+
+  const recentMemes = memes ?? [];
+  let targetMeme = requestedMemeId
+    ? recentMemes.find((meme) => meme.id === requestedMemeId) ?? null
+    : null;
+  let targetFeedback: string | null = null;
+  let targetFormKey = "target:manual";
+
+  if (rawSearch.memeId !== undefined && !requestedMemeId) {
+    targetFeedback = "복구할 밈 주소가 올바르지 않아요. 연결 대상을 비웠습니다.";
+    targetFormKey = "target:invalid";
+  } else if (requestedMemeId && !targetMeme) {
+    const { data: exactMeme, error: exactMemeError } = await supabase
+      .from("memes")
+      .select("id, title, short_id")
+      .eq("id", requestedMemeId)
+      .maybeSingle<SourceIngestionMeme>();
+
+    if (exactMemeError) {
+      targetFeedback = "요청한 밈을 확인하지 못했어요. 연결 대상을 비운 채 다시 시도해 주세요.";
+      targetFormKey = `target:error:${requestedMemeId}`;
+    } else if (!exactMeme || exactMeme.id !== requestedMemeId) {
+      targetFeedback = "요청한 밈을 찾지 못했어요. 연결 대상을 비웠습니다.";
+      targetFormKey = `target:missing:${requestedMemeId}`;
+    } else {
+      targetMeme = exactMeme;
+    }
+  }
+
+  if (targetMeme) targetFormKey = `target:${targetMeme.id}`;
+  const ingestionMemes = targetMeme
+    ? [targetMeme, ...recentMemes.filter((meme) => meme.id !== targetMeme.id)]
+    : recentMemes;
 
   let recoveryEntries: SourceAcquisitionRecoveryDto[] = [];
   let recoveryError: string | null = null;
@@ -90,8 +144,18 @@ export default async function AdminSourcesPage({
         </p>
       </div>
 
-      <SourceIngestionForm memes={memes ?? []} />
-      <SourceRecoveryPanel entries={recoveryEntries} memes={memes ?? []} loadError={recoveryError} />
+      {targetFeedback && (
+        <p role="alert" className="rounded-xl bg-safety-yellow-bg px-4 py-3 text-sm text-safety-yellow">
+          {targetFeedback}
+        </p>
+      )}
+
+      <SourceIngestionForm
+        key={targetFormKey}
+        memes={ingestionMemes}
+        initialTargetMemeId={targetMeme?.id}
+      />
+      <SourceRecoveryPanel entries={recoveryEntries} memes={ingestionMemes} loadError={recoveryError} />
 
       <p className="text-sm text-muted">
         대기 중 <strong className="text-foreground">{(count ?? 0).toLocaleString("ko-KR")}</strong>건
@@ -136,7 +200,7 @@ export default async function AdminSourcesPage({
       {totalPages > 1 && (
         <nav className="flex items-center gap-3 text-sm" aria-label="페이지 이동">
           {page > 1 && (
-            <Link href={`/admin/sources?page=${page - 1}`} className="text-accent hover:underline">
+            <Link href={pageHref(page - 1, requestedMemeId)} className="text-accent hover:underline">
               ← 이전
             </Link>
           )}
@@ -144,7 +208,7 @@ export default async function AdminSourcesPage({
             {page} / {totalPages}
           </span>
           {page < totalPages && (
-            <Link href={`/admin/sources?page=${page + 1}`} className="text-accent hover:underline">
+            <Link href={pageHref(page + 1, requestedMemeId)} className="text-accent hover:underline">
               다음 →
             </Link>
           )}

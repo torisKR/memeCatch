@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 import {
   MAX_RETRY_DELAY_MS,
   buildRecoveryFailure,
+  listActiveSourceAcquisitionRecovery,
   recordSourceAcquisitionFailure,
   resolveSourceAcquisitionFailure,
   retryDelayMs,
@@ -12,6 +13,20 @@ import {
 } from "./recovery.server";
 
 describe("source acquisition recovery", () => {
+  const recoveryRow = (sourceId: string, index = 0) => ({
+    source_key: `youtube:video${String(index).padStart(6, "0")}`,
+    source_id: sourceId,
+    platform: "youtube",
+    external_id: `video${String(index).padStart(6, "0")}`,
+    canonical_url: `https://www.youtube.com/watch?v=video${String(index).padStart(6, "0")}`,
+    attempt_count: 1,
+    next_retry_at: "2026-09-12T00:10:00.000Z",
+    last_error_code: "db_failure",
+    last_error_retryable: true,
+    last_attempted_at: "2026-09-12T00:00:00.000Z",
+    resolved_at: null,
+  });
+
   it("uses deterministic bounded exponential retry timing", () => {
     expect(retryDelayMs(1)).toBe(5 * 60 * 1_000);
     expect(retryDelayMs(2)).toBe(10 * 60 * 1_000);
@@ -132,5 +147,67 @@ describe("source acquisition recovery", () => {
       p_source_id: "40000000-0000-4000-8000-000000000004",
       p_attempted_at: "2026-09-12T00:05:00.000Z",
     }));
+  });
+
+  it("uses a source-scoped RPC filter instead of losing the target after 1,000 unrelated rows", async () => {
+    const targetSourceId = "40000000-0000-4000-8000-000000000004";
+    const unrelatedRows = Array.from({ length: 1_001 }, (_, index) =>
+      recoveryRow(`50000000-0000-4000-8000-${String(index).padStart(12, "0")}`, index));
+    const targetRow = recoveryRow(targetSourceId, 1_001);
+    const eq = vi.fn().mockResolvedValue({ data: [targetRow], error: null });
+    const unfilteredResult = { data: unrelatedRows.slice(0, 1_000), error: null };
+    const query = {
+      eq,
+      then: (resolve: (value: typeof unfilteredResult) => unknown) =>
+        Promise.resolve(unfilteredResult).then(resolve),
+    };
+    const rpc = vi.fn().mockReturnValue(query);
+
+    const result = await listActiveSourceAcquisitionRecovery({ rpc }, targetSourceId);
+
+    expect(rpc).toHaveBeenCalledWith("list_active_source_acquisition_recovery", {});
+    expect(eq).toHaveBeenCalledWith("source_id", targetSourceId);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sourceId).toBe(targetSourceId);
+  });
+
+  it("preserves the zero-argument active-recovery RPC for scheduled refreshes", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
+
+    await listActiveSourceAcquisitionRecovery({ rpc });
+
+    expect(rpc).toHaveBeenCalledWith("list_active_source_acquisition_recovery", {});
+  });
+
+  it("fails closed when the scoped recovery lookup returns a database error", async () => {
+    const result = { data: [], error: null };
+    const rpc = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: [recoveryRow("40000000-0000-4000-8000-000000000004")],
+        error: { message: "database unavailable" },
+      }),
+      then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve),
+    });
+
+    await expect(listActiveSourceAcquisitionRecovery(
+      { rpc },
+      "40000000-0000-4000-8000-000000000004",
+    )).rejects.toThrow("source_recovery_query_failed");
+  });
+
+  it("fails closed if a scoped query returns a different source", async () => {
+    const result = { data: [], error: null };
+    const rpc = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({
+        data: [recoveryRow("50000000-0000-4000-8000-000000000005")],
+        error: null,
+      }),
+      then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve),
+    });
+
+    await expect(listActiveSourceAcquisitionRecovery(
+      { rpc },
+      "40000000-0000-4000-8000-000000000004",
+    )).rejects.toThrow("source_recovery_query_invalid");
   });
 });

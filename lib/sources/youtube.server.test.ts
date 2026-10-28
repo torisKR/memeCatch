@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  fetchYouTubeVideoStatuses,
   isPublishableCandidate,
   parseIso8601Duration,
 } from "./youtube.server";
@@ -84,6 +85,62 @@ describe("fetchYouTubeVideoStatuses", () => {
       /403/,
     );
   });
+
+  it.each([
+    ["items 누락", {}],
+    ["items가 배열이 아님", { items: null }],
+    ["요청하지 않은 ID", { items: [{ id: "unexpected-id" }] }],
+  ])("성공 HTTP의 잘못된 %s 응답을 삭제로 해석하지 않고 거부한다", async (_label, body) => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
+
+    await expect(fetchYouTubeVideoStatuses(["abcdefghijk"])).rejects.toThrow(
+      "youtube_videos_response_invalid",
+    );
+  });
+
+  it("uploadStatus와 지역 allowed-list를 보존한다", async () => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      items: [{
+        id: "abcdefghijk",
+        contentDetails: { regionRestriction: { allowed: ["US", "JP"] } },
+        status: { uploadStatus: "deleted", privacyStatus: "private", embeddable: false },
+      }],
+    })));
+
+    const result = await fetchYouTubeVideoStatuses(["abcdefghijk"]);
+    expect(result.get("abcdefghijk")).toMatchObject({
+      uploadStatus: "deleted",
+      regionAllowed: ["US", "JP"],
+    });
+  });
+
+  it("narrows malformed status enums and booleans to null", async () => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      items: [{
+        id: "abcdefghijk",
+        contentDetails: { regionRestriction: { blocked: ["KR", 7], allowed: "US" } },
+        status: {
+          uploadStatus: "invented",
+          privacyStatus: "members-only",
+          embeddable: "yes",
+          madeForKids: "no",
+        },
+      }],
+    })));
+
+    const result = await fetchYouTubeVideoStatuses(["abcdefghijk"]);
+    expect(result.get("abcdefghijk")).toMatchObject({
+      uploadStatus: null,
+      privacyStatus: null,
+      embeddable: null,
+      madeForKids: null,
+      regionBlocked: null,
+      regionAllowed: null,
+    });
+  });
 });
 
 describe("isPublishableCandidate", () => {
@@ -98,6 +155,8 @@ describe("isPublishableCandidate", () => {
     license: null,
     madeForKids: null,
     regionBlocked: null,
+    regionAllowed: null,
+    uploadStatus: null,
   };
 
   it("공개+임베드 가능만 승격한다", () => {

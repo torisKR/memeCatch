@@ -9,10 +9,12 @@ const source = { source_url: "https://news.example.com/a", title: "An article", 
 const base = { updatedAt: "2026-07-01T12:00:00Z", moderationStatus: "approved", title: "A meme", shortId: "abcd1234" };
 
 describe("truthful visible provenance", () => {
-  it("calls a collection date a collection date, not a fact-check certification", () => {
+  it("labels captured_at as a collection date without inventing a connection or verification date", () => {
     const html = renderToStaticMarkup(<SourceEvidence sources={[source]} shortId="abcd1234" />);
-    expect(html).toContain("수집 기록");
-    expect(html).toContain("독립적인 사실 검증");
+    expect(html).toContain("자료 수집일");
+    expect(html).toContain("2026년 7월 1일");
+    expect(html).not.toContain("연결일");
+    expect(html).not.toContain("독립적인 사실 검증");
     expect(html).not.toContain("아래 자료를 확인해 뜻·유래를 정리했어요");
   });
   it("does not certify non-wiki sources just because they have titles", () => {

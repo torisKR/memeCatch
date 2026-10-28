@@ -7,7 +7,7 @@ import "server-only";
  * - 영상·음원·자막·썸네일 파일은 절대 다운로드하지 않는다(메타데이터만).
  * - 조회수·좋아요는 요청하지 않는다 — 파생 지표 생성이 정책상 제한된다.
  * - 공개 데이터는 30일 안에 갱신하거나 삭제해야 한다(metadata_expires_at 참조).
- * - search.list는 호출당 100 단위라 발견(후보 생성)에만 쓰고,
+ * - search.list는 별도 일일 Search Queries 버킷에서 요청당 1회이며 발견에만 쓰고,
  *   상태 재확인은 videos.list(호출당 1 단위, 최대 50 ID)만 사용한다.
  */
 
@@ -23,10 +23,12 @@ export type YouTubeVideoStatus = {
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   privacyStatus: "public" | "private" | "unlisted" | null;
+  uploadStatus: "deleted" | "failed" | "processed" | "rejected" | "uploaded" | null;
   license: string | null;
   embeddable: boolean | null;
   madeForKids: boolean | null;
   regionBlocked: string[] | null;
+  regionAllowed: string[] | null;
 };
 
 type YouTubeVideosApiResponse = {
@@ -41,10 +43,11 @@ type YouTubeVideosApiResponse = {
     };
     contentDetails?: {
       duration?: string;
-      regionRestriction?: { blocked?: string[] };
+      regionRestriction?: { blocked?: string[]; allowed?: string[] };
     };
     status?: {
       privacyStatus?: "public" | "private" | "unlisted";
+      uploadStatus?: "deleted" | "failed" | "processed" | "rejected" | "uploaded";
       license?: string;
       embeddable?: boolean;
       madeForKids?: boolean;
@@ -77,10 +80,55 @@ function apiKey(): string {
 
 async function readJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`YouTube API HTTP ${response.status}: ${body.slice(0, 300)}`);
+    throw new Error(`YouTube API HTTP ${response.status}`);
   }
-  return response.json() as Promise<T>;
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new Error("youtube_api_response_invalid");
+  }
+}
+
+function videoItems(
+  data: YouTubeVideosApiResponse,
+  requestedIds: readonly string[],
+): NonNullable<YouTubeVideosApiResponse["items"]> {
+  if (!data || typeof data !== "object" || !Array.isArray(data.items)) {
+    throw new Error("youtube_videos_response_invalid");
+  }
+  const requested = new Set(requestedIds);
+  const seen = new Set<string>();
+  for (const item of data.items) {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      typeof item.id !== "string" ||
+      !item.id ||
+      !requested.has(item.id) ||
+      seen.has(item.id)
+    ) {
+      throw new Error("youtube_videos_response_invalid");
+    }
+    seen.add(item.id);
+  }
+  return data.items;
+}
+
+function knownValue<const T extends readonly string[]>(
+  value: unknown,
+  allowed: T,
+): T[number] | null {
+  return typeof value === "string" && allowed.includes(value) ? value : null;
+}
+
+function booleanValue(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function stringArray(value: unknown): string[] | null {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string")
+    ? value
+    : null;
 }
 
 function mapVideo(item: NonNullable<YouTubeVideosApiResponse["items"]>[number]) {
@@ -96,17 +144,26 @@ function mapVideo(item: NonNullable<YouTubeVideosApiResponse["items"]>[number]) 
     publishedAt: item.snippet?.publishedAt ?? null,
     thumbnailUrl,
     durationSeconds: parseIso8601Duration(item.contentDetails?.duration),
-    privacyStatus: item.status?.privacyStatus ?? null,
+    privacyStatus: knownValue(
+      item.status?.privacyStatus,
+      ["public", "private", "unlisted"] as const,
+    ),
+    uploadStatus: knownValue(
+      item.status?.uploadStatus,
+      ["deleted", "failed", "processed", "rejected", "uploaded"] as const,
+    ),
     license: item.status?.license ?? null,
-    embeddable: item.status?.embeddable ?? null,
-    madeForKids: item.status?.madeForKids ?? null,
-    regionBlocked: item.contentDetails?.regionRestriction?.blocked ?? null,
+    embeddable: booleanValue(item.status?.embeddable),
+    madeForKids: booleanValue(item.status?.madeForKids),
+    regionBlocked: stringArray(item.contentDetails?.regionRestriction?.blocked),
+    regionAllowed: stringArray(item.contentDetails?.regionRestriction?.allowed),
   } satisfies YouTubeVideoStatus;
 }
 
 /**
  * videos.list 일괄 상태 확인. 50개씩 배치한다.
- * 반환 Map에 없는 ID는 삭제·비공개 전환 등으로 조회되지 않는 것이다.
+ * 반환 Map에 없는 ID는 공개 API만으로 원인을 확정할 수 없으므로 호출자가
+ * 삭제·비공개로 단정하지 않고 검수 대기 상태로 다뤄야 한다.
  */
 export async function fetchYouTubeVideoStatuses(
   ids: string[],
@@ -127,7 +184,7 @@ export async function fetchYouTubeVideoStatuses(
       signal: AbortSignal.timeout(15_000),
     });
     const data = await readJson<YouTubeVideosApiResponse>(response);
-    for (const item of data.items ?? []) {
+    for (const item of videoItems(data, batch)) {
       const mapped = mapVideo(item);
       if (mapped) result.set(mapped.id, mapped);
     }

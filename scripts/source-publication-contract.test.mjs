@@ -6,6 +6,10 @@ const daily = readFileSync(new URL("./daily-source-discovery.sh", import.meta.ur
 assert.doesNotMatch(daily, /auto-approve-source-candidates/);
 assert.match(daily, /discover-youtube-candidates/);
 assert.match(daily, /verify-youtube-pending/);
+assert.match(daily, /set -euo pipefail/);
+assert.match(daily, /discover-youtube-candidates\.mjs --plan-only --max=20/);
+assert.match(daily, /verify-youtube-pending\.mjs --plan-only --limit=50/);
+assert.doesNotMatch(daily, /--execute|--operator-confirm-auto-approve/);
 
 const direct = spawnSync(process.execPath, [new URL("./auto-approve-source-candidates.mjs", import.meta.url).pathname], {
   encoding: "utf8",

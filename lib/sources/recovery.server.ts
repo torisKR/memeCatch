@@ -67,11 +67,17 @@ export type SourceAcquisitionRecoveryDto = {
   readonly resolvedAt: string | null;
 };
 
+type RecoveryRpcResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type RecoveryRpcCall = PromiseLike<RecoveryRpcResult> & {
+  eq?: (column: string, value: NonNullable<unknown>) => PromiseLike<RecoveryRpcResult>;
+};
+
 type RecoveryRpc = {
-  rpc(name: string, args: Record<string, unknown>): PromiseLike<{
-    data: unknown;
-    error: { message: string } | null;
-  }>;
+  rpc(name: string, args: Record<string, unknown>): RecoveryRpcCall;
 };
 
 function recoveryRecord(data: unknown): Record<string, unknown> | null {
@@ -208,8 +214,21 @@ export async function listDueSourceAcquisitionRecovery(
 
 export async function listActiveSourceAcquisitionRecovery(
   admin: RecoveryRpc = createAdminClient(),
+  sourceId?: string,
 ): Promise<SourceAcquisitionRecoveryDto[]> {
-  const { data, error } = await admin.rpc("list_active_source_acquisition_recovery", {});
+  const query = admin.rpc("list_active_source_acquisition_recovery", {});
+  let request: PromiseLike<RecoveryRpcResult> = query;
+  if (sourceId !== undefined) {
+    if (typeof query.eq !== "function") {
+      throw new Error("source_recovery_query_failed");
+    }
+    request = query.eq("source_id", sourceId);
+  }
+  const { data, error } = await request;
   if (error) throw new Error("source_recovery_query_failed");
-  return recoveryDtos(data);
+  const rows = recoveryDtos(data);
+  if (sourceId !== undefined && rows.some((row) => row.sourceId !== sourceId)) {
+    throw new Error("source_recovery_query_invalid");
+  }
+  return rows;
 }

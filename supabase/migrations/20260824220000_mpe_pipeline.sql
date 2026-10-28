@@ -623,6 +623,17 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'candidate_not_found';
   end if;
+  if v_candidate.review_status <> 'FACT_CHECKING' then
+    raise exception using errcode = '55000', message = 'claim_review_stage_closed';
+  end if;
+  if exists (
+    select 1
+      from public.claim_evidence as evidence
+     where evidence.candidate_id = p_candidate_id
+       and evidence.review_status <> 'PENDING'
+  ) then
+    raise exception using errcode = '55000', message = 'reviewed_claims_exist';
+  end if;
 
   select ingestion.source_id
     into v_candidate_source_id
@@ -1056,6 +1067,15 @@ begin
   end if;
 
   if v_job.job_type not in ('render', 'cleanup') then
+    if exists (
+      select 1
+        from public.meme_candidates as candidate
+       where candidate.ingestion_id = v_job.ingestion_id
+         and candidate.review_status <> 'FACT_CHECKING'
+    ) then
+      raise exception using errcode = '55000', message = 'candidate_review_stage_closed';
+    end if;
+
     if v_job.job_type in ('ocr', 'stt') and exists (
       select 1
         from public.processing_jobs as derived

@@ -56,6 +56,8 @@ function errorMessage(error: unknown) {
     job_not_found: "처리 작업을 찾을 수 없어요.",
     job_not_terminal: "완료·실패·건너뜀 작업만 재처리할 수 있어요.",
     operator_required: "운영자 권한이 없어요.",
+    reviewed_claims_exist: "이미 검토된 주장이 있어 초안을 덮어쓸 수 없어요.",
+    candidate_review_stage_closed: "이미 검수가 진행되었거나 완료된 후보는 재처리할 수 없어요.",
   };
   return known[error.message] ?? error.message;
 }

@@ -250,7 +250,68 @@ describe("MPE evidence draft", () => {
       },
     };
 
-    await expect(generateEvidenceDraft("candidate-1", client as never)).rejects.toMatchObject({ message, status });
-    expect(fetchMock).not.toHaveBeenCalled();
+   await expect(generateEvidenceDraft("candidate-1", client as never)).rejects.toMatchObject({ message, status });
+   expect(fetchMock).not.toHaveBeenCalled();
+ });
+
+  it("rejects draft generation when the candidate review stage is closed", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "router-key");
+    const client = {
+      auth: { getUser: async () => ({ data: { user: { id: "operator-1" } } }) },
+      from: (table: string) => {
+        const query = {
+          select: () => query,
+          eq: () => query,
+          neq: () => query,
+          single: async () => {
+            if (table === "profiles") return { data: { role: "operator" }, error: null };
+            if (table === "meme_candidates") return { data: { id: "candidate-1", ingestion_id: "ingestion-1", title: "초안", review_status: "RIGHTS_CHECKING" }, error: null };
+            return { data: null, error: null };
+          },
+        };
+        return query;
+      },
+      rpc: async (name: string) => name === "is_operator" ? { data: true, error: null } : { data: {}, error: null },
+    };
+
+    await expect(generateEvidenceDraft("candidate-1", client as never)).rejects.toMatchObject({
+      message: "claim_review_stage_closed",
+      status: 409,
+    });
+  });
+
+  it("rejects draft generation when reviewed claims already exist to prevent content destruction", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "router-key");
+    const client = {
+      auth: { getUser: async () => ({ data: { user: { id: "operator-1" } } }) },
+      from: (table: string) => {
+        const query = {
+          select: () => query,
+          eq: () => query,
+          neq: () => query,
+          single: async () => {
+            if (table === "profiles") return { data: { role: "operator" }, error: null };
+            if (table === "meme_candidates") return { data: { id: "candidate-1", ingestion_id: "ingestion-1", title: "초안", review_status: "FACT_CHECKING" }, error: null };
+            if (table === "media_ingestions") return { data: {
+              id: "ingestion-1", source_id: null, ingest_mode: "USER_UPLOADED", mime_type: "image/png",
+              sha256: "a".repeat(64), rights_attested_at: "2026-08-26T00:00:00.000Z",
+            }, error: null };
+            return { data: null, error: null };
+          },
+          then: (resolve: (value: unknown) => unknown) => resolve(table === "claim_evidence"
+            ? { data: [{ id: "claim-1" }], error: null }
+            : table === "text_segments"
+              ? { data: [{ id: "segment-1", raw_text: "화면 문구", normalized_text: "화면 문구", origin: "OCR" }], error: null }
+              : { data: null, error: null }),
+        };
+        return query;
+      },
+      rpc: async (name: string) => name === "is_operator" ? { data: true, error: null } : { data: {}, error: null },
+    };
+
+    await expect(generateEvidenceDraft("candidate-1", client as never)).rejects.toMatchObject({
+      message: "reviewed_claims_exist",
+      status: 409,
+    });
   });
 });

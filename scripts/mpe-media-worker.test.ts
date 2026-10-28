@@ -1,7 +1,9 @@
 import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -14,7 +16,14 @@ type WorkerModule = {
   extractAudioChunks(path: string, directory: string): Promise<Array<{ path: string; startMs: number; endMs: number }>>;
   normalizedAudioFingerprint(path: string): Promise<string>;
   buildAssDocument(input: unknown): string;
-  renderVideoArtifact(inputPath: string, outputPath: string, input: unknown): Promise<{ width: number; height: number }>;
+  prepareLicensedFontEnvironment(fontPath: string, fontFamily: string, options?: {
+    commandExecutor?: (command: string, args: string[], options: Record<string, unknown>) => Promise<unknown>;
+  }): Promise<{ root: string; configPath: string; fontPath: string; fontFamily: string; sourceHash: string }>;
+  layoutLicensedCaptionLines(text: string, options: { width: number; fontSize: number; maxLines?: number }): string[];
+  renderOverlayPng(path: string, preset: { width: number; height: number; fontSize: number }, options: unknown): Promise<void>;
+  renderVideoArtifact(inputPath: string, outputPath: string, input: unknown): Promise<{ width: number; height: number;
+    captionLayoutVerified?: boolean;
+    fontSelection?: { verified: boolean; family: string; renderer: string; sha256: string } }>;
   processOneJob(client: unknown, options?: { heartbeatIntervalMs?: number }): Promise<boolean>;
   queueExpiredCleanupJobs(client: unknown): Promise<number>;
   cleanupOrphanOriginals(client: unknown, olderThanMs?: number): Promise<{ deleted: number; failed: number }>;
@@ -22,6 +31,8 @@ type WorkerModule = {
 };
 
 const exec = promisify(execFile);
+const require = createRequire(import.meta.url);
+const GEIST_FONT_PATH = join(dirname(require.resolve("next/package.json")), "dist/compiled/@vercel/og/Geist-Regular.ttf");
 let directory = "";
 let videoPath = "";
 let silentVideoPath = "";
@@ -137,6 +148,132 @@ describe("MPE FFmpeg worker", () => {
 
     await expect(worker.renderVideoArtifact(videoPath, outputPath, input)).resolves.toEqual({ width: 1200, height: 630 });
     await expect(worker.inspectMedia(outputPath)).resolves.toMatchObject({ width: 1200, height: 630, hasAudio: true });
+  });
+
+  it.runIf(existsSync("/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf"))(
+    "isolates and reports licensed font selection evidence", async () => {
+      const fontPath = "/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf";
+      const outputPath = join(directory, "rendered-noto.mp4");
+      const input = {
+        preset: "link", attribution: "검수 자료", fontPath, fontFamily: "Noto Sans CJK KR",
+        segments: [{ startMs: 0, endMs: 1_800, text: "검증된 한글 자막" }],
+      };
+      expect(worker.buildAssDocument(input)).toContain("Style: Caption,Noto Sans CJK KR,");
+      await expect(worker.renderVideoArtifact(videoPath, outputPath, input)).resolves.toEqual({
+        width: 1200, height: 630,
+        captionLayoutVerified: true,
+        fontSelection: { verified: true, family: "Noto Sans CJK KR",
+          renderer: expect.stringMatching(/^(?:libass|pango-fontconfig)$/u),
+          sha256: "6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a" },
+      });
+      await expect(worker.inspectMedia(outputPath)).resolves.toMatchObject({ width: 1200, height: 630, hasAudio: true });
+    }, 20_000,
+  );
+
+  it.runIf(existsSync("/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf") && existsSync(GEIST_FONT_PATH))(
+    "uses the isolated selected font bytes and keeps overlay backgrounds transparent", async () => {
+      const notoPath = join(directory, "overlay-noto.png");
+      const geistPath = join(directory, "overlay-geist.png");
+      const moduleUrl = new URL("./mpe-media-worker.mjs", import.meta.url).href;
+      const renderInFreshProcess = async (outputPath: string, fontPath: string, fontFamily: string) => {
+        const script = `import { renderOverlayPng } from ${JSON.stringify(moduleUrl)}; await renderOverlayPng(${JSON.stringify(outputPath)}, { width: 1200, height: 630, fontSize: 42 }, { caption: "MemeCatch FONTFILE glyph proof 2026", fontPath: ${JSON.stringify(fontPath)}, fontFamily: ${JSON.stringify(fontFamily)} });`;
+        await exec(process.execPath, ["--input-type=module", "-e", script], {
+          env: { ...process.env, FONTCONFIG_FILE: "", FONTCONFIG_PATH: "" },
+        });
+      };
+      await Promise.all([
+        renderInFreshProcess(notoPath, "/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf", "Noto Sans CJK KR"),
+        renderInFreshProcess(geistPath, GEIST_FONT_PATH, "Geist"),
+      ]);
+      const [noto, geist] = await Promise.all([readFile(notoPath), readFile(geistPath)]);
+      expect(noto.byteLength).toBeGreaterThan(0);
+      expect(geist.byteLength).toBeGreaterThan(0);
+      expect(noto.equals(geist)).toBe(false);
+      const { getSharp } = await import("next/dist/server/image-optimizer.js");
+      const sharp = getSharp(1, false);
+      const { data, info } = await sharp(noto).raw().toBuffer({ resolveWithObject: true });
+      expect(info.channels).toBe(4);
+      expect(data[3]).toBe(0);
+      expect(data.some((value, index) => index % 4 === 3 && value > 0)).toBe(true);
+    }, 15_000,
+  );
+
+  it.runIf(existsSync("/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf"))(
+    "preserves explicit Korean caption breaks and keeps licensed glyphs inside safe margins", async () => {
+      expect(typeof worker.layoutLicensedCaptionLines).toBe("function");
+      expect(worker.layoutLicensedCaptionLines("스맨파 리더 계급 미션곡\n지코 프로듀싱", {
+        width: 928,
+        fontSize: 68,
+      })).toEqual(["스맨파 리더 계급 미션곡", "지코 프로듀싱"]);
+      expect(worker.layoutLicensedCaptionLines("원곡·원본 안무 미사용 자체 그래픽으로 설명", {
+        width: 928,
+        fontSize: 68,
+      }).some((line) => [...line].length === 1)).toBe(false);
+
+      const outputPath = join(directory, "licensed-safe-caption.png");
+      await worker.renderOverlayPng(outputPath, { width: 1080, height: 1920, fontSize: 68 }, {
+        caption: "스맨파 리더 계급 미션곡\n지코 프로듀싱",
+        fontPath: "/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf",
+        fontFamily: "Noto Sans CJK KR",
+      });
+      const { getSharp } = await import("next/dist/server/image-optimizer.js");
+      const sharp = getSharp(1, false);
+      const { data, info } = await sharp(await readFile(outputPath)).raw().toBuffer({ resolveWithObject: true });
+      const opaqueColumns = Array.from({ length: info.width }, (_, x) => x).filter((x) => {
+        for (let y = 0; y < info.height; y += 1) if (data[(y * info.width + x) * info.channels + 3] > 0) return true;
+        return false;
+      });
+      expect(Math.min(...opaqueColumns)).toBeGreaterThanOrEqual(64);
+      expect(Math.max(...opaqueColumns)).toBeLessThanOrEqual(1015);
+    }, 15_000,
+  );
+
+  it.runIf(existsSync("/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf"))(
+    "keeps two and three line licensed vertical captions inside the reserved lower region", async () => {
+      const { getSharp } = await import("next/dist/server/image-optimizer.js");
+      const sharp = getSharp(1, false);
+      for (const [index, caption] of [
+        "스맨파 리더 계급 미션곡\n지코 프로듀싱",
+        "첫 번째 자막 줄\n두 번째 자막 줄\n세 번째 자막 줄",
+      ].entries()) {
+        const outputPath = join(directory, `vertical-caption-${index}.png`);
+        await worker.renderOverlayPng(outputPath, { width: 1080, height: 1920, fontSize: 68 }, {
+          caption,
+          fontPath: "/private/tmp/memecatch-noto.v6dEgC/NotoSansCJKkr-Regular.otf",
+          fontFamily: "Noto Sans CJK KR",
+        });
+        const { data, info } = await sharp(await readFile(outputPath)).raw().toBuffer({ resolveWithObject: true });
+        const opaqueRows = Array.from({ length: info.height }, (_, y) => y).filter((y) => {
+          for (let x = 0; x < info.width; x += 1) if (data[(y * info.width + x) * info.channels + 3] > 0) return true;
+          return false;
+        });
+        expect(Math.min(...opaqueRows)).toBeGreaterThanOrEqual(1590);
+        expect(Math.max(...opaqueRows)).toBeLessThanOrEqual(1800);
+      }
+    }, 20_000,
+  );
+
+  it("rejects unsafe font-family syntax before media commands", () => {
+    expect(() => worker.buildAssDocument({
+      preset: "link", attribution: "검수 자료", fontPath: "/tmp/font.otf", fontFamily: "Noto,Arial",
+      segments: [{ startMs: 0, endMs: 900, text: "자막" }],
+    })).toThrow("invalid_render_font");
+  });
+
+  it("bounds fc-match and cleans the isolated font root when selection fails", async () => {
+    let isolatedRoot = "";
+    let receivedOptions: Record<string, unknown> = {};
+    const commandExecutor = async (_command: string, _args: string[], options: Record<string, unknown>) => {
+      receivedOptions = options;
+      isolatedRoot = String((options.env as Record<string, unknown>).FONTCONFIG_PATH);
+      const error = new Error("simulated_fc_match_timeout") as Error & { code?: string };
+      error.code = "ETIMEDOUT";
+      throw error;
+    };
+    await expect(worker.prepareLicensedFontEnvironment(GEIST_FONT_PATH, "Geist", { commandExecutor }))
+      .rejects.toThrow("simulated_fc_match_timeout");
+    expect(receivedOptions).toMatchObject({ timeout: 30_000, killSignal: "SIGKILL", maxBuffer: 1024 * 1024 });
+    await expect(stat(isolatedRoot)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("fails OCR without an API key and records a provider error", async () => {

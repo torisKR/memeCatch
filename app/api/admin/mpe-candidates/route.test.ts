@@ -145,4 +145,30 @@ describe("admin MPE candidates API", () => {
     await expect(response.json()).resolves.toEqual({ ok: false, error: "draft_provider_not_configured" });
     expect(mocks.discardCreatedCandidate).toHaveBeenCalledWith(candidateId, client);
   });
+
+  it("returns existing candidate data without regenerating matches or draft when created is false", async () => {
+    const client = authClient({ id: "operator" }, "operator");
+    mocks.createClient.mockResolvedValueOnce(client);
+    mocks.createCandidateFromIngestion.mockResolvedValueOnce({
+      created: false,
+      candidate: { id: candidateId, review_status: "FACT_CHECKING", draft_json: { title: "기존 초안" } },
+    });
+    mocks.listCandidateMatches.mockResolvedValueOnce([{ rank: 1, classification: "RELATED" }]);
+
+    const response = await POST(post({
+      action: "create",
+      ingestionId: "20000000-0000-4000-8000-000000000002",
+      title: "이미 생성된 밈",
+      memeType: "PHRASE",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.generateCandidateMatches).not.toHaveBeenCalled();
+    expect(mocks.generateEvidenceDraft).not.toHaveBeenCalled();
+    expect(mocks.listCandidateMatches).toHaveBeenCalledWith(candidateId, client);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      data: { created: false, draft: { title: "기존 초안" }, matches: [{ rank: 1 }] },
+    });
+  });
 });

@@ -100,16 +100,25 @@ function evidenceDraftProviderError(error: unknown): EvidenceDraftError | null {
   return null;
 }
 
+const inFlightDrafts = new Map<string, Promise<{ mode: "ai"; claims: MemeDraftClaim[] }>>();
+
 export async function generateEvidenceDraft(candidateId: string, providedClient?: MpeClient) {
+  const existing = inFlightDrafts.get(candidateId);
+  if (existing) return existing;
+
+  const execution = (async () => {
   const client = providedClient ?? await createClient();
   await requireOperator(client);
   ensureEvidenceDraftProvider();
   const { data: candidate, error: candidateError } = await client
     .from("meme_candidates")
-    .select("id, ingestion_id, title")
+    .select("id, ingestion_id, title, review_status")
     .eq("id", candidateId)
     .single();
   if (candidateError || !candidate) throw new EvidenceDraftError("candidate_not_found", 404);
+  if (candidate.review_status && candidate.review_status !== "FACT_CHECKING") {
+    throw new EvidenceDraftError("claim_review_stage_closed", 409);
+  }
 
   const { data: ingestion, error: ingestionError } = await client
     .from("media_ingestions")
@@ -117,14 +126,19 @@ export async function generateEvidenceDraft(candidateId: string, providedClient?
     .eq("id", candidate.ingestion_id)
     .single();
   if (ingestionError || !ingestion) throw new EvidenceDraftError("ingestion_not_found", 404);
-  const [{ data: source, error: sourceError }, { data: segments, error: segmentError }] = await Promise.all([
+  const [{ data: source, error: sourceError }, { data: segments, error: segmentError }, { data: reviewedClaims, error: claimsError }] = await Promise.all([
     ingestion.source_id
       ? client.from("media_sources").select("id, platform, canonical_url, channel_name, title").eq("id", ingestion.source_id).single()
       : Promise.resolve({ data: null, error: null }),
     client.from("text_segments").select("id, raw_text, normalized_text, origin").eq("ingestion_id", candidate.ingestion_id).neq("origin", "STT"),
+    client.from("claim_evidence").select("id").eq("candidate_id", candidateId).neq("review_status", "PENDING"),
   ]);
   if (sourceError) throw new EvidenceDraftError("source_not_found", 404);
   if (segmentError) throw new EvidenceDraftError(`evidence_load_failed: ${segmentError.message}`);
+  if (claimsError) throw new EvidenceDraftError(`evidence_load_failed: ${claimsError.message}`);
+  if (reviewedClaims && reviewedClaims.length > 0) {
+    throw new EvidenceDraftError("reviewed_claims_exist", 409);
+  }
 
   const evidence = prioritizeDraftEvidence([
     ...(source ? [{
@@ -199,4 +213,12 @@ export async function generateEvidenceDraft(candidateId: string, providedClient?
   });
   if (replaceError) throw new EvidenceDraftError(`draft_replace_failed: ${replaceError.message}`);
   return { mode: "ai" as const, claims };
+  })();
+
+  inFlightDrafts.set(candidateId, execution);
+  try {
+    return await execution;
+  } finally {
+    inFlightDrafts.delete(candidateId);
+  }
 }

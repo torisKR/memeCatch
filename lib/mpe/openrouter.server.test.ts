@@ -369,9 +369,57 @@ describe("MPE OpenRouter adapter", () => {
     await expect(recognizeImageText({ bytes: Uint8Array.from([1]), mimeType: "image/png", frameMs: 0 }))
       .rejects.toThrow("OPENROUTER_API_KEY 설정 필요");
 
-    vi.stubEnv("OPENROUTER_API_KEY", "test-key");
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => rateLimitResponse({ error: "denied" }));
-    await expect(recognizeImageText({ bytes: Uint8Array.from([1]), mimeType: "image/png", frameMs: 0 }))
-      .rejects.toThrow("openrouter_ocr_failed:429");
+   vi.stubEnv("OPENROUTER_API_KEY", "test-key");
+   vi.spyOn(globalThis, "fetch").mockImplementation(async () => rateLimitResponse({ error: "denied" }));
+   await expect(recognizeImageText({ bytes: Uint8Array.from([1]), mimeType: "image/png", frameMs: 0 }))
+     .rejects.toThrow("openrouter_ocr_failed:429");
+ });
+
+  it("retries and classifies non-JSON HTML body on HTTP 200", async () => {
+    const htmlResponse = () => new Response("<html><head><title>Error</title></head><body>Bad Gateway</body></html>", {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => htmlResponse());
+
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).rejects.toThrow("openrouter_structured_failed:invalid_json");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("classifies provider error returned inside HTTP 200 response body", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      error: { message: "Model is currently overloaded" },
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).rejects.toThrow("openrouter_structured_failed:provider_error provider_message=Model is currently overloaded");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries HTTP 502 with non-JSON HTML body without throwing SyntaxError", async () => {
+    const html502 = new Response("<html>Bad Gateway 502</html>", {
+      status: 502,
+      headers: { "content-type": "text/html", "retry-after": "0" },
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(html502)
+      .mockResolvedValueOnce(chatResponse({ claims: [] }));
+
+    await expect(requestOpenRouterStructured({
+      name: "mpe_evidence_draft",
+      schema: { type: "object" },
+      instructions: "Use evidence only.",
+      input: "{}",
+    })).resolves.toEqual({ claims: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -2,9 +2,9 @@ import { createClient } from "@supabase/supabase-js";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -21,6 +21,105 @@ const RENDER_PRESETS = {
   square: { width: 1080, height: 1080, fontSize: 58 },
   link: { width: 1200, height: 630, fontSize: 42 },
 };
+export async function prepareLicensedFontEnvironment(fontPath, fontFamily, { commandExecutor = exec } = {}) {
+  if (!fontPath || !fontFamily) throw new Error("sharp_font_identity_required");
+  if (typeof commandExecutor !== "function") throw new Error("invalid_font_command_executor");
+  const fontMetadata = await stat(fontPath);
+  const requestedExtension = extname(fontPath).toLowerCase();
+  if (!fontMetadata.isFile() || fontMetadata.size <= 0 || fontMetadata.size > 80 * 1024 * 1024
+      || ![".otf", ".ttf", ".ttc"].includes(requestedExtension)) throw new Error("invalid_render_font_file");
+  const root = await mkdtemp(join(tmpdir(), "memecatch-fontconfig-"));
+  try {
+    const cacheDirectory = join(root, "cache");
+    const fontsDirectory = join(root, "fonts");
+    const configPath = join(root, "fonts.conf");
+    await Promise.all([mkdir(cacheDirectory, { recursive: true }), mkdir(fontsDirectory, { recursive: true })]);
+    const pinnedFontPath = join(fontsDirectory, `licensed-font${requestedExtension}`);
+    await copyFile(fontPath, pinnedFontPath);
+    const sourceHash = createHash("sha256").update(await readFile(pinnedFontPath)).digest("hex");
+    const pathText = (value) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    await writeFile(configPath,
+      `<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd"><fontconfig><dir>${pathText(fontsDirectory)}</dir><cachedir>${pathText(cacheDirectory)}</cachedir></fontconfig>`,
+      "utf8");
+    const environment = { ...process.env, FONTCONFIG_FILE: configPath, FONTCONFIG_PATH: root };
+    const { stdout } = await commandExecutor(process.env.FC_MATCH_PATH || "fc-match",
+      ["--format", "%{file}\n%{family}\n", fontFamily], { env: environment, encoding: "utf8",
+        timeout: 30_000, killSignal: "SIGKILL", maxBuffer: 1024 * 1024 });
+    const [selectedPath, selectedFamily = ""] = stdout.trim().split(/\r?\n/u);
+    if (resolve(selectedPath || "") !== resolve(pinnedFontPath)
+        || !selectedFamily.split(",").map((value) => value.trim()).includes(fontFamily)) {
+      throw new Error("licensed_font_selection_unverified");
+    }
+    return Object.freeze({ root, configPath, fontPath: pinnedFontPath, fontFamily, sourceHash });
+  } catch (error) {
+    await rm(root, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+export async function renderLicensedTextPng(text, options) {
+  const { fontEnvironment, size, width, align = "left", color = "#ffffff", weight = "Bold" } = options;
+  if (!fontEnvironment?.configPath || typeof text !== "string" || !text || text.length > 2_000
+      || text.split("\n").length > 12 || !Number.isInteger(size) || size < 1 || size > 200
+      || !Number.isInteger(width) || width < 1 || width > 4_096 || !["left", "center", "right"].includes(align)
+      || !/^#[0-9a-f]{6}$/iu.test(color) || !/^[A-Za-z -]{1,30}$/u.test(weight)) {
+    throw new Error("invalid_licensed_text_render");
+  }
+  const directory = await mkdtemp(join(fontEnvironment.root, "text-"));
+  const outputPath = join(directory, "text.pgm");
+  try {
+    await exec(process.env.PANGO_VIEW_PATH || "pango-view", [
+      "--backend=ft2", "--no-display", "--no-auto-dir", "--pixels", "--background=black", "--foreground=white",
+      `--font=${fontEnvironment.fontFamily} ${weight} ${size}`,
+      `--width=${width}`, `--align=${align}`, "--margin=0", `--output=${outputPath}`, `--text=${text}`,
+    ], { env: { ...process.env, FONTCONFIG_FILE: fontEnvironment.configPath, FONTCONFIG_PATH: fontEnvironment.root },
+      timeout: 30_000, killSignal: "SIGKILL", maxBuffer: 1024 * 1024 });
+    const pgm = await readFile(outputPath);
+    let offset = 0;
+    const token = () => {
+      while (offset < pgm.length) {
+        if (pgm[offset] === 35) {
+          while (offset < pgm.length && pgm[offset] !== 10) offset += 1;
+        } else if (pgm[offset] === 9 || pgm[offset] === 10 || pgm[offset] === 13 || pgm[offset] === 32) offset += 1;
+        else break;
+      }
+      const start = offset;
+      while (offset < pgm.length && ![9, 10, 13, 32].includes(pgm[offset])) offset += 1;
+      return pgm.subarray(start, offset).toString("ascii");
+    };
+    if (token() !== "P5") throw new Error("licensed_text_render_invalid_mask");
+    const maskWidth = Number(token());
+    const maskHeight = Number(token());
+    const maximum = Number(token());
+    if (!Number.isInteger(maskWidth) || maskWidth <= 0 || maskWidth > 4_096
+        || !Number.isInteger(maskHeight) || maskHeight <= 0 || maskHeight > 4_096 || maximum !== 255) {
+      throw new Error("licensed_text_render_invalid_mask");
+    }
+    if (pgm[offset] === 13 && pgm[offset + 1] === 10) offset += 2;
+    else if ([9, 10, 13, 32].includes(pgm[offset])) offset += 1;
+    const mask = pgm.subarray(offset);
+    if (mask.byteLength !== maskWidth * maskHeight) {
+      throw new Error("licensed_text_render_invalid_mask");
+    }
+    const red = Number.parseInt(color.slice(1, 3), 16);
+    const green = Number.parseInt(color.slice(3, 5), 16);
+    const blue = Number.parseInt(color.slice(5, 7), 16);
+    const rgba = Buffer.alloc(mask.byteLength * 4);
+    for (let index = 0; index < mask.byteLength; index += 1) {
+      const pixel = index * 4;
+      rgba[pixel] = red;
+      rgba[pixel + 1] = green;
+      rgba[pixel + 2] = blue;
+      // The FT2 backend writes a white background and dark glyph coverage in PGM output.
+      rgba[pixel + 3] = 255 - mask[index];
+    }
+    const { getSharp } = await import("next/dist/server/image-optimizer.js");
+    const sharp = getSharp(1, false);
+    return sharp(rgba, { raw: { width: maskWidth, height: maskHeight, channels: 4 } }).png().toBuffer();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
 
 function configuredTimeout(name, fallback) {
   const value = Number(process.env[name]);
@@ -60,12 +159,18 @@ function validateRenderInput(value) {
   });
   const attribution = typeof value.attribution === "string" ? value.attribution.trim() : "";
   if (!attribution || attribution.length > 500) throw new Error("invalid_render_attribution");
-  return { preset: value.preset, segments, attribution };
+  const fontPath = typeof value.fontPath === "string" ? value.fontPath.trim() : "";
+  const fontFamily = typeof value.fontFamily === "string" ? value.fontFamily.trim() : "";
+  if (Boolean(fontPath) !== Boolean(fontFamily)) throw new Error("invalid_render_font");
+  if (fontPath && (!isAbsolute(fontPath) || /[\r\n\0]/u.test(fontPath)
+      || !/^[\p{L}\p{N} ._-]{1,100}$/u.test(fontFamily))) throw new Error("invalid_render_font");
+  return { preset: value.preset, segments, attribution, fontPath: fontPath || null, fontFamily: fontFamily || null };
 }
 
 export function buildAssDocument(value) {
   const input = validateRenderInput(value);
   const preset = RENDER_PRESETS[input.preset];
+  const fontFamily = input.fontFamily ?? "Arial";
   const captionMargin = Math.round(preset.height * 0.1);
   const footerSize = Math.max(22, Math.round(preset.fontSize * 0.48));
   const lines = [
@@ -78,9 +183,9 @@ export function buildAssDocument(value) {
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: Caption,Arial,${preset.fontSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H90000000,-1,0,0,0,100,100,0,0,1,4,2,2,70,70,${captionMargin},1`,
-    `Style: Source,Arial,${footerSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H70000000,-1,0,0,0,100,100,0,0,1,3,1,1,28,28,24,1`,
-    `Style: Watermark,Arial,${footerSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H70000000,-1,0,0,0,100,100,0,0,1,3,1,3,28,28,24,1`,
+    `Style: Caption,${fontFamily},${preset.fontSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H90000000,-1,0,0,0,100,100,0,0,1,4,2,2,70,70,${captionMargin},1`,
+    `Style: Source,${fontFamily},${footerSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H70000000,-1,0,0,0,100,100,0,0,1,3,1,1,28,28,24,1`,
+    `Style: Watermark,${fontFamily},${footerSize},&H00FFFFFF,&H00FFFFFF,&H00101010,&H70000000,-1,0,0,0,100,100,0,0,1,3,1,3,28,28,24,1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -115,12 +220,141 @@ function captionLines(text, maxCharacters) {
   return lines.slice(0, 3);
 }
 
-async function renderOverlayPng(path, preset, options) {
+function textDisplayWidth(value) {
+  return [...value].reduce((width, character) => width + (/[\x00-\xff]/u.test(character) ? 0.58 : 1), 0);
+}
+
+export function layoutLicensedCaptionLines(text, { width, fontSize, maxLines = 3 }) {
+  if (typeof text !== "string" || !text.trim() || !Number.isFinite(width) || width <= 0
+      || !Number.isFinite(fontSize) || fontSize <= 0 || !Number.isInteger(maxLines) || maxLines < 1) {
+    throw new Error("invalid_licensed_caption_layout");
+  }
+  const maxWidth = width / fontSize;
+  const lines = [];
+  for (const paragraph of text.replaceAll("\r", "").split("\n")) {
+    let current = "";
+    for (const token of paragraph.trim().split(/\s+/u).filter(Boolean)) {
+      const candidate = current ? `${current} ${token}` : token;
+      if (!current || textDisplayWidth(candidate) <= maxWidth) {
+        current = candidate;
+        continue;
+      }
+      lines.push(current);
+      current = token;
+    }
+    if (current) lines.push(current);
+  }
+  if (lines.length < 1 || lines.length > maxLines || lines.some((line) => textDisplayWidth(line) > maxWidth)) {
+    throw new Error("licensed_caption_exceeds_safe_layout");
+  }
+  return lines;
+}
+
+async function alphaBounds(input, sharp) {
+  const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let minX = info.width;
+  let minY = info.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (data[(y * info.width + x) * info.channels + 3] === 0) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  if (maxX < minX || maxY < minY) throw new Error("licensed_text_render_empty");
+  return { minX, minY, maxX, maxY, width: info.width, height: info.height };
+}
+
+export async function renderOverlayPng(path, preset, options) {
+  const ownsFontEnvironment = Boolean(options.fontPath && !options.fontEnvironment);
+  const fontEnvironment = options.fontEnvironment
+    ?? (options.fontPath ? await prepareLicensedFontEnvironment(options.fontPath, options.fontFamily) : null);
   const { getSharp } = await import("next/dist/server/image-optimizer.js");
-  const sharp = getSharp(1);
+  const sharp = getSharp(1, false);
   const footerSize = Math.max(22, Math.round(preset.fontSize * 0.48));
-  const caption = options.caption ? captionLines(options.caption, Math.max(12, Math.floor(preset.width / (preset.fontSize * 0.58)))) : [];
+  const captionMargin = Math.max(72, Math.ceil(preset.fontSize * 1.1));
+  const captionWidth = preset.width - (captionMargin * 2);
+  const caption = options.caption && !options.fontPath
+    ? captionLines(options.caption, Math.max(12, Math.floor(preset.width / (preset.fontSize * 0.58))))
+    : [];
   const captionStart = preset.height - Math.round(preset.height * 0.13) - (caption.length - 1) * preset.fontSize * 1.15;
+  if (options.fontPath) {
+    try {
+      const layers = [];
+      const outlined = async (text, { left, top, bottom, region, width, size, align, outline = 4, safeMargin = 0 }) => {
+        const [outlineInput, foregroundInput] = await Promise.all([
+          renderLicensedTextPng(text, { fontEnvironment, size, width, align, color: "#101010" }),
+          renderLicensedTextPng(text, { fontEnvironment, size, width, align, color: "#ffffff" }),
+        ]);
+        const bounds = await alphaBounds(foregroundInput, sharp);
+        const resolvedTop = region
+          ? Math.round(region.top + ((region.bottom - region.top - bounds.height) / 2))
+          : (Number.isFinite(bottom) ? Math.round(bottom - bounds.height) : top);
+        const actualMinX = left + bounds.minX - outline;
+        const actualMaxX = left + bounds.maxX + outline;
+        const actualMinY = resolvedTop + bounds.minY - outline;
+        const actualMaxY = resolvedTop + bounds.maxY + outline;
+        if (!Number.isInteger(resolvedTop) || actualMinX < safeMargin || actualMaxX >= preset.width - safeMargin
+            || actualMinY < 0 || actualMaxY >= preset.height
+            || (region && (actualMinY < region.top || actualMaxY > region.bottom))) {
+          throw new Error("licensed_text_out_of_safe_bounds");
+        }
+        for (const [dx, dy] of [[-outline, 0], [outline, 0], [0, -outline], [0, outline]]) {
+          layers.push({ input: outlineInput, left: left + dx, top: resolvedTop + dy });
+        }
+        layers.push({ input: foregroundInput, left, top: resolvedTop });
+      };
+      if (options.caption) {
+        const verticalRegion = preset.width === 1080 && preset.height === 1920
+          ? { top: 1590, bottom: 1800 }
+          : null;
+        let rendered = false;
+        const minimumSize = verticalRegion ? 42 : preset.fontSize;
+        for (let size = preset.fontSize; size >= minimumSize; size -= 2) {
+          let licensedLines;
+          try {
+            licensedLines = layoutLicensedCaptionLines(options.caption, { width: captionWidth, fontSize: size });
+          } catch (error) {
+            if (verticalRegion && error?.message === "licensed_caption_exceeds_safe_layout") continue;
+            throw error;
+          }
+          try {
+            await outlined(licensedLines.join("\n"), {
+              left: captionMargin,
+              ...(verticalRegion
+                ? { region: verticalRegion }
+                : { bottom: preset.height - Math.round(preset.height * 0.13) }),
+              width: captionWidth,
+              size,
+              align: "center",
+              safeMargin: 64,
+            });
+            rendered = true;
+            break;
+          } catch (error) {
+            if (verticalRegion && error?.message === "licensed_text_out_of_safe_bounds") continue;
+            throw error;
+          }
+        }
+        if (!rendered) throw new Error("licensed_caption_exceeds_reserved_region");
+      }
+      if (options.footer) {
+        await outlined(`출처: ${options.footer}`, { left: 28, top: preset.height - footerSize - 28,
+          width: Math.floor(preset.width * 0.6), size: footerSize, align: "left", outline: 2, safeMargin: 24 });
+        await outlined("MemeCatch · 밈캐치", { left: Math.floor(preset.width * 0.55), top: preset.height - footerSize - 28,
+          width: Math.floor(preset.width * 0.45) - 28, size: footerSize, align: "right", outline: 2, safeMargin: 24 });
+      }
+      await sharp({ create: { width: preset.width, height: preset.height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+        .composite(layers).png().toFile(path);
+    } finally {
+      if (ownsFontEnvironment) await rm(fontEnvironment.root, { recursive: true, force: true });
+    }
+    return;
+  }
   const captionSvg = caption.map((line, index) => `<text x="${preset.width / 2}" y="${captionStart + index * preset.fontSize * 1.15}" text-anchor="middle" class="caption">${xmlText(line)}</text>`).join("");
   const footer = options.footer ? [
     `<text x="28" y="${preset.height - 24}" text-anchor="start" class="footer">${xmlText(`출처: ${options.footer}`)}</text>`,
@@ -137,11 +371,13 @@ async function hasAssFilter() {
 
 async function renderWithPngOverlays(inputPath, outputPath, input, preset, directory) {
   const footerPath = join(directory, "footer.png");
-  await renderOverlayPng(footerPath, preset, { footer: input.attribution });
+  await renderOverlayPng(footerPath, preset, { footer: input.attribution,
+    fontPath: input.fontPath, fontFamily: input.fontFamily, fontEnvironment: input.fontEnvironment });
   const captionPaths = [];
   for (const [index, segment] of input.segments.entries()) {
     const path = join(directory, `caption-${String(index).padStart(3, "0")}.png`);
-    await renderOverlayPng(path, preset, { caption: segment.text });
+    await renderOverlayPng(path, preset, { caption: segment.text,
+      fontPath: input.fontPath, fontFamily: input.fontFamily, fontEnvironment: input.fontEnvironment });
     captionPaths.push(path);
   }
   const args = ["-hide_banner", "-loglevel", "error", "-y", "-i", inputPath, "-loop", "1", "-i", footerPath];
@@ -172,23 +408,46 @@ export async function renderVideoArtifact(inputPath, outputPath, value) {
   const input = validateRenderInput(value);
   const preset = RENDER_PRESETS[input.preset];
   const assPath = join(dirname(outputPath), "captions.ass");
-  await writeFile(assPath, buildAssDocument(input), "utf8");
-  if (await hasAssFilter()) {
+  let fontDirectory = null;
+  let fontEnvironment = null;
+  let renderInput = input;
+  try {
+    if (input.fontPath) {
+      fontEnvironment = await prepareLicensedFontEnvironment(input.fontPath, input.fontFamily);
+      fontDirectory = dirname(fontEnvironment.fontPath);
+      renderInput = { ...input, fontPath: fontEnvironment.fontPath, fontEnvironment };
+    }
+    await writeFile(assPath, buildAssDocument(renderInput), "utf8");
+    const assAvailable = await hasAssFilter();
+    if (assAvailable && !fontDirectory) {
     const videoFilter = [
       `scale=${preset.width}:${preset.height}:force_original_aspect_ratio=decrease`,
       `pad=${preset.width}:${preset.height}:(ow-iw)/2:(oh-ih)/2:black`,
-      `subtitles=filename='${filterPath(assPath)}'`,
+      `subtitles=filename='${filterPath(assPath)}'${fontDirectory ? `:fontsdir='${filterPath(fontDirectory)}'` : ""}`,
     ].join(",");
-    await mediaExec("ffmpeg", [
-      "-hide_banner", "-loglevel", "error", "-y", "-i", inputPath,
+    const { stderr = "" } = await mediaExec("ffmpeg", [
+      "-hide_banner", "-loglevel", fontDirectory ? "verbose" : "error", "-y", "-i", inputPath,
       "-map", "0:v:0", "-map", "0:a?", "-vf", videoFilter,
       "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", outputPath,
     ], { maxBuffer: 16 * 1024 * 1024 });
-  } else {
-    await renderWithPngOverlays(inputPath, outputPath, input, preset, dirname(outputPath));
+    if (fontDirectory) {
+      const loadedFont = stderr.includes(renderInput.fontPath);
+      const selectedFamily = stderr.split(/\r?\n/u).some((line) => line.includes("fontselect:") && line.includes(input.fontFamily));
+      if (!loadedFont || !selectedFamily) throw new Error("licensed_font_selection_unverified");
+    }
+    } else {
+      await renderWithPngOverlays(inputPath, outputPath, renderInput, preset, dirname(outputPath));
+    }
+    return { width: preset.width, height: preset.height,
+      ...(fontDirectory ? {
+        captionLayoutVerified: true,
+        fontSelection: { verified: true, family: input.fontFamily,
+          renderer: "pango-fontconfig", sha256: fontEnvironment.sourceHash },
+      } : {}) };
+  } finally {
+    if (fontEnvironment) await rm(fontEnvironment.root, { recursive: true, force: true });
   }
-  return { width: preset.width, height: preset.height };
 }
 
 export async function inspectMedia(path) {

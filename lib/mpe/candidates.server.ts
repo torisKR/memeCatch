@@ -296,11 +296,17 @@ function throwDb(error: { message: string } | null, fallback: string) {
   if (error) throw new MpeCandidateError(`${fallback}: ${error.message}`);
 }
 
+const inFlightCandidateCreations = new Map<string, Promise<{ candidate: Record<string, unknown>; created: boolean }>>();
+
 export async function createCandidateFromIngestion(input: {
   ingestionId: string;
   title: string;
   memeType: string;
 }, providedClient?: MpeClient, providedAdmin?: AdminClient) {
+  const existingPromise = inFlightCandidateCreations.get(input.ingestionId);
+  if (existingPromise) return existingPromise;
+
+  const execution: Promise<{ candidate: Record<string, unknown>; created: boolean }> = (async () => {
   const client = providedClient ?? await createClient();
   const user = await requireOperator(client);
   const admin = providedAdmin ?? createAdminClient();
@@ -340,18 +346,35 @@ export async function createCandidateFromIngestion(input: {
   throwDb(insertError, "candidate_create_failed");
   if (!candidate) throw new MpeCandidateError("candidate_create_failed");
   return { candidate, created: true };
+  })();
+
+  inFlightCandidateCreations.set(input.ingestionId, execution);
+  try {
+    return await execution;
+  } finally {
+  inFlightCandidateCreations.delete(input.ingestionId);
+  }
 }
 
+const inFlightMatchGenerations = new Map<string, Promise<unknown>>();
+
 export async function generateCandidateMatches(candidateId: string, providedClient?: MpeClient, providedAdmin?: AdminClient) {
+  const existingPromise = inFlightMatchGenerations.get(candidateId);
+  if (existingPromise) return existingPromise;
+
+  const execution = (async () => {
   const client = providedClient ?? await createClient();
   await requireOperator(client);
   const admin = providedAdmin ?? createAdminClient();
   const { data: candidate, error: candidateError } = await client
     .from("meme_candidates")
-    .select("id, ingestion_id, title")
+    .select("id, ingestion_id, title, review_status")
     .eq("id", candidateId)
     .single();
   if (candidateError || !candidate) throw new MpeCandidateError("candidate_not_found", 404);
+  if (["APPROVED", "LIMITED", "REJECTED"].includes(candidate.review_status)) {
+    throw new MpeCandidateError("candidate_review_stage_closed", 409);
+  }
 
   const { data: ingestion, error: ingestionError } = await client
     .from("media_ingestions")
@@ -455,7 +478,7 @@ export async function generateCandidateMatches(candidateId: string, providedClie
     }),
   });
 
-  const { data: savedMatches, error: replaceError } = await client.rpc("replace_mpe_candidate_matches", {
+  const { error: replaceError } = await client.rpc("replace_mpe_candidate_matches", {
     p_candidate_id: candidateId,
     p_matches: matches.map((match) => ({
       meme_id: match.meme_id,
@@ -469,7 +492,15 @@ export async function generateCandidateMatches(candidateId: string, providedClie
     })),
   });
   throwDb(replaceError, "candidate_match_replace_failed");
-  return savedMatches ?? [];
+  return await listCandidateMatches(candidateId, client);
+  })();
+
+  inFlightMatchGenerations.set(candidateId, execution);
+  try {
+    return await execution;
+  } finally {
+    inFlightMatchGenerations.delete(candidateId);
+  }
 }
 
 export async function listCandidateMatches(candidateId: string, providedClient?: MpeClient) {

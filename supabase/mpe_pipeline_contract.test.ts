@@ -135,6 +135,7 @@ describe("MPE pipeline migration contract", () => {
     expect(sql).toMatch(
       /create or replace function public\.reprocess_mpe_job\(p_job_id uuid\)[\s\S]*job\.status not in \('completed', 'failed', 'skipped'\)[\s\S]*status = 'queued',[\s\S]*output_json = '\{\}'::jsonb/,
     );
+    expect(sql).toContain("message = 'candidate_review_stage_closed'");
     expect(sql).toMatch(
       /v_job\.job_type = 'inspect'[\s\S]*message = 'downstream_job_running'[\s\S]*delete from public\.processing_jobs[\s\S]*'text_embedding'[\s\S]*v_job\.job_type not in \('render', 'cleanup'\)[\s\S]*delete from public\.claim_evidence[\s\S]*delete from public\.candidate_matches[\s\S]*set draft_json = '\{\}'::jsonb,[\s\S]*review_status = 'FACT_CHECKING'[\s\S]*delete from public\.text_segments[\s\S]*delete from public\.media_fingerprints/,
     );
@@ -153,6 +154,7 @@ describe("MPE pipeline migration contract", () => {
     expect(sql).toMatch(
       /replace_mpe_candidate_evidence[\s\S]*for update;[\s\S]*select ingestion\.source_id[\s\S]*delete from public\.claim_evidence[\s\S]*candidate_evidence_source_mismatch[\s\S]*candidate_evidence_segment_mismatch[\s\S]*insert into public\.claim_evidence[\s\S]*set draft_json = p_draft_json/,
     );
+    expect(sql).toContain("message = 'reviewed_claims_exist'");
     expect(sql).toMatch(
       /grant execute on function public\.replace_mpe_candidate_matches\(uuid, jsonb\)[\s\S]*to authenticated, service_role/,
     );

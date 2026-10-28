@@ -165,14 +165,44 @@ async function openRouterJson(
         await wait(retryDelayMs(null, attempt));
         continue;
       }
-      const details = sanitizeProviderText(error instanceof Error ? error.message : error, secret);
-      throw new Error(`${errorPrefix}:network_error${details ? ` ${details}` : ""}`);
+     const details = sanitizeProviderText(error instanceof Error ? error.message : error, secret);
+     throw new Error(`${errorPrefix}:network_error${details ? ` ${details}` : ""}`);
+   }
+   const raw = await readBoundedText(response, 512 * 1024).catch(() => "");
+    let payload: unknown = null;
+    try {
+      payload = raw ? JSON.parse(raw) as unknown : null;
+    } catch {
+      payload = null;
     }
-    const raw = await readBoundedText(response, 512 * 1024).catch(() => "");
-    const payload = raw ? JSON.parse(raw) as unknown : null;
-    if (response.ok) return payload;
-    if (
-      (TRANSIENT_PROVIDER_STATUSES.has(response.status)
+   const payloadRecord = asRecord(payload);
+   const providerError = asRecord(payloadRecord?.error);
+
+    if (response.ok) {
+      if (providerError) {
+        if (
+          isRetryableRateLimit(payload)
+          && attempt < MAX_PROVIDER_ATTEMPTS - 1
+          && budget.remaining > 0
+        ) {
+          await wait(retryDelayMs(response, attempt));
+          continue;
+        }
+        const details = providerErrorDetails(payload, secret);
+        throw new Error(`${errorPrefix}:provider_error${details ? ` ${details}` : ""}`);
+      }
+      if (!payloadRecord) {
+        if (attempt < MAX_PROVIDER_ATTEMPTS - 1 && budget.remaining > 0) {
+          await wait(retryDelayMs(response, attempt));
+          continue;
+        }
+        const snippet = sanitizeProviderText(raw, secret);
+        throw new Error(`${errorPrefix}:invalid_json${snippet ? ` ${snippet}` : ""}`);
+      }
+      return payloadRecord;
+    }
+   if (
+     (TRANSIENT_PROVIDER_STATUSES.has(response.status)
         || (response.status === 429 && isRetryableRateLimit(payload)))
       && attempt < MAX_PROVIDER_ATTEMPTS - 1
       && budget.remaining > 0

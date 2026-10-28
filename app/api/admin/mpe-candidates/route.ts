@@ -78,7 +78,14 @@ export async function POST(request: Request): Promise<Response> {
         title: parsed.data.title,
         memeType: parsed.data.memeType,
       }, auth.client);
-      const candidateId = created.candidate.id;
+      const candidateId = String(created.candidate.id);
+      if (!created.created) {
+        const matches = await listCandidateMatches(candidateId, auth.client);
+        return Response.json(
+          { ok: true, data: { ...created, matches, draft: created.candidate.draft_json } },
+          { headers: { "cache-control": "no-store" } },
+        );
+      }
       try {
         const matches = await generateCandidateMatches(candidateId, auth.client);
         const draft = await generateEvidenceDraft(candidateId, auth.client);

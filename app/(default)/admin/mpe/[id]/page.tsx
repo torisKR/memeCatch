@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { MpeReviewConsole, type MpeReviewConsoleProps, type MpeReviewStatus } from "@/components/admin/mpe-review-console";
@@ -84,7 +83,7 @@ type ClaimRow = {
   confidence: number | null;
   review_status: string;
   media_sources: { canonical_url: string } | null;
-  text_segments: { origin: string; start_ms: number | null; raw_text: string } | null;
+  text_segments: { id: string; origin: string; start_ms: number | null; raw_text: string } | null;
 };
 
 type RevisionRow = {
@@ -161,11 +160,25 @@ export default async function AdminMpeDetailPage({ params }: { params: Promise<{
     supabase.from("text_segments").select("id, origin, start_ms, end_ms, raw_text, normalized_text, confidence").eq("ingestion_id", ingestion.id).order("start_ms", { ascending: true, nullsFirst: true }).order("id").returns<SegmentRow[]>(),
     supabase.from("media_fingerprints").select("id, fingerprint_type, hash_value, frame_ms").eq("ingestion_id", ingestion.id).order("frame_ms", { ascending: true, nullsFirst: false }).returns<FingerprintRow[]>(),
     supabase.from("candidate_matches").select("id, rank, overall_score, classification, memes(title)").eq("candidate_id", candidate.id).neq("classification", "SEPARATE").order("rank").limit(5).returns<MatchRow[]>(),
-    supabase.from("claim_evidence").select("id, claim_field, claim_text, confidence, review_status, media_sources(canonical_url), text_segments(origin, start_ms, raw_text)").eq("candidate_id", candidate.id).order("created_at").returns<ClaimRow[]>(),
+    supabase.from("claim_evidence").select("id, claim_field, claim_text, confidence, review_status, media_sources(canonical_url), text_segments(id, origin, start_ms, raw_text)").eq("candidate_id", candidate.id).order("created_at").returns<ClaimRow[]>(),
     supabase.from("candidate_revisions").select("id, revision_number, draft_json, model_version, prompt_version, created_at").eq("candidate_id", candidate.id).order("revision_number", { ascending: false }).limit(5).returns<RevisionRow[]>(),
   ]);
   const firstError = [jobsResult.error, segmentsResult.error, fingerprintsResult.error, matchesResult.error, claimsResult.error, revisionsResult.error].find(Boolean);
   if (firstError) throw new Error(`MPE 검수 자료를 불러오지 못했어요: ${firstError.message}`);
+
+  const { data: queueRows, error: queueError } = await supabase
+    .from("meme_candidates")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(500)
+    .returns<Array<{ id: string }>>();
+  if (queueError) throw new Error(`MPE 검수 큐 순서를 불러오지 못했어요: ${queueError.message}`);
+  const queueIds = (queueRows ?? []).map((row) => row.id);
+  const queueIndex = queueIds.indexOf(candidate.id);
+  const queue = {
+    previousId: queueIndex > 0 ? queueIds[queueIndex - 1] : null,
+    nextId: queueIndex >= 0 && queueIndex < queueIds.length - 1 ? queueIds[queueIndex + 1] : null,
+  };
 
   const jobs = jobsResult.data ?? [];
   const artifacts = await signFrameArtifacts(artifactsFromJobs(jobs), ingestion.user_id, ingestion.id);
@@ -239,9 +252,27 @@ export default async function AdminMpeDetailPage({ params }: { params: Promise<{
       confidence: claim.confidence ?? 0,
       reviewStatus: claim.review_status,
       evidence: [
-        claim.text_segments ? `${claim.text_segments.origin} ${claim.text_segments.start_ms ?? 0}ms: ${claim.text_segments.raw_text}` : null,
-        claim.media_sources?.canonical_url ?? null,
-      ].filter((value): value is string => Boolean(value)),
+        claim.text_segments
+          ? {
+              kind: "text_segment" as const,
+              segmentId: claim.text_segments.id,
+              origin: claim.text_segments.origin,
+              startMs: claim.text_segments.start_ms,
+              text: claim.text_segments.raw_text,
+              url: null,
+            }
+          : null,
+        claim.media_sources?.canonical_url
+          ? {
+              kind: "source" as const,
+              segmentId: null,
+              origin: null,
+              startMs: null,
+              text: claim.media_sources.canonical_url,
+              url: claim.media_sources.canonical_url,
+            }
+          : null,
+      ].filter((item): item is NonNullable<typeof item> => item !== null),
     })),
     revisions: (revisionsResult.data ?? []).map((revision) => ({
       id: revision.id,
@@ -251,11 +282,11 @@ export default async function AdminMpeDetailPage({ params }: { params: Promise<{
       promptVersion: revision.prompt_version,
       createdAt: revision.created_at,
     })),
+    queue,
   };
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/mpe" className="inline-flex min-h-11 items-center text-sm text-muted hover:text-foreground">← MPE 검수 큐로</Link>
       <MpeReviewConsole {...props} />
     </div>
   );

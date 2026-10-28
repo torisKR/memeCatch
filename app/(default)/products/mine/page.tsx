@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getMyCreatorProducts } from "@/lib/creator-products/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "내가 등록한 상품 · 밈캐치" };
+export const metadata: Metadata = {
+  title: "내가 등록한 상품 · 밈캐치",
+  robots: { index: false, follow: true },
+};
 const statuses = { pending: "검토 대기", approved: "공개 중", rejected: "반려됨" } as const;
 
 export default async function MyCreatorProductsPage() {

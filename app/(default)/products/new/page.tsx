@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CreatorProductForm } from "@/components/creator-products/creator-product-form";
 import { createClient } from "@/lib/supabase/server";
 import { getMyCreatorProducts } from "@/lib/creator-products/server";
 
-export const metadata = { title: "상품 등록 · 밈캐치" };
+export const metadata: Metadata = {
+  title: "상품 등록 · 밈캐치",
+  robots: { index: false, follow: true },
+};
 
 export default async function NewCreatorProductPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const params = await searchParams;

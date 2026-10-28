@@ -14,11 +14,11 @@ import "../globals.css";
 export const metadata: Metadata = {
   ...SHARED_ROOT_METADATA,
   title: {
-    default: "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    default: "밈캐치 — 밈의 뜻과 트렌드를 한눈에",
     template: "%s | 밈캐치",
   },
   description:
-    "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지. 한국 밈의 실시간 사전, 밈캐치.",
+    "밈·유행어·챌린지의 뜻과 유래, 사용 맥락을 확인하세요. 최근 정리한 밈과 근거가 확인된 확산 소식을 구분해 보여드립니다.",
   applicationName: "밈캐치",
   appleWebApp: {
     capable: true,
@@ -27,9 +27,9 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    title: "밈캐치 — 밈의 뜻과 트렌드를 한눈에",
     description:
-      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
+      "밈의 뜻·유래·사용 맥락과 확인된 확산 근거를 한곳에서 살펴보세요.",
     siteName: "밈캐치",
     locale: "ko_KR",
     alternateLocale: SEO_ROUTE_LOCALES.filter((locale) => locale !== "ko").map(

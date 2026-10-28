@@ -111,6 +111,27 @@ export default function TermsPage() {
           </p>
         </section>
 
+        <section className="rounded-2xl border border-border bg-surface-2 p-5">
+          <h2 className="text-xl font-bold">
+            YouTube API 서비스 보충 안내 (2026년 10월 14일)
+          </h2>
+          <p className="mt-3">
+            서비스의 YouTube 출처 확인·공식 플레이어 기능은 YouTube API
+            Services(YouTube API 서비스)를 사용합니다. 해당 기능을 이용하면{" "}
+            <a
+              href="https://www.youtube.com/t/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent-text underline underline-offset-2"
+            >
+              YouTube 이용약관
+            </a>
+            에도 동의하는 것으로 봅니다. YouTube 콘텐츠와 플레이어에는 YouTube의
+            정책과 권리 관계가 적용되며, 공개 영상 후보는 운영자 검수 전에는 밈
+            문서나 트렌드 순위에 자동 공개되지 않습니다.
+          </p>
+        </section>
+
         <section>
           <h2 className="text-xl font-bold">제7조 (문의 및 분쟁)</h2>
           <p className="mt-3">

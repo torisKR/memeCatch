@@ -48,7 +48,11 @@ export function AffiliateProductCard({
             </Badge>
             {/* 피드별 배지 — 핫딜은 실시간 광고, 쇼핑메이트 추천은 추천 라벨 */}
             <Badge variant="secondary">
-              {product.sourceType === "recommend" ? copy.recommendBadge : copy.liveBadge}
+              {product.sourceType === "seasonal"
+                ? copy.seasonalBadge
+                : product.sourceType === "recommend"
+                  ? copy.recommendBadge
+                  : copy.liveBadge}
             </Badge>
           </div>
         </div>

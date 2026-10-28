@@ -41,6 +41,7 @@ export function ProductsPageContent({
   const availableLinkCount =
     storefront.hotdeals.length +
     storefront.recommended.length +
+    storefront.seasonal.length +
     activeEditorial.length;
 
   return (

@@ -38,10 +38,22 @@ export function AffiliateProductGrid({
         </p>
       ) : null}
 
+      {/* 시즌 큐레이션 — 애드픽 상품검색으로 고른 계절 상품 */}
+      {data.seasonal.length > 0 ? (
+        <StaticProductSection
+          sectionId="seasonal-products"
+          className="mt-6"
+          title={copy.seasonalTitle}
+          description={copy.seasonalDescription}
+          products={data.seasonal}
+          locale={locale}
+        />
+      ) : null}
+
       {data.popular.length > 0 ? (
         <StaticProductSection
           sectionId="popular-products"
-          className="mt-6"
+          className={data.seasonal.length > 0 ? "mt-12" : "mt-6"}
           title={copy.popularTitle}
           description={copy.popularDescription}
           products={data.popular}
@@ -53,7 +65,9 @@ export function AffiliateProductGrid({
       {data.recommended.length > 0 ? (
         <StaticProductSection
           sectionId="recommend-products"
-          className={data.popular.length > 0 ? "mt-12" : "mt-6"}
+          className={
+            data.seasonal.length > 0 || data.popular.length > 0 ? "mt-12" : "mt-6"
+          }
           title={copy.recommendTitle}
           description={copy.recommendDescription}
           products={data.recommended}
@@ -64,7 +78,9 @@ export function AffiliateProductGrid({
       <HotdealProductSection
         sectionId="hotdeal-products"
         className={
-          data.popular.length > 0 || data.recommended.length > 0
+          data.seasonal.length > 0 ||
+          data.popular.length > 0 ||
+          data.recommended.length > 0
             ? "mt-12"
             : "mt-6"
         }

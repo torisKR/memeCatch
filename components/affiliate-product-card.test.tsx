@@ -122,6 +122,35 @@ describe("AffiliateProductCard", () => {
 });
 
 describe("AffiliateProductGrid", () => {
+  it("renders seasonal picks first with a seasonal badge", () => {
+    const seasonalProduct = {
+      ...product,
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      sourceType: "seasonal" as const,
+      productName: "겨울 극세사 담요",
+    };
+    const html = renderToStaticMarkup(
+      <AffiliateProductGrid
+        locale="ko"
+        data={{
+          hotdeals: [product],
+          recommended: [],
+          seasonal: [seasonalProduct],
+          popular: [],
+          lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
+          isStale: false,
+        }}
+      />,
+    );
+
+    expect(html).toContain(PAGE_COPY.ko.seasonalTitle);
+    expect(html).toContain(PAGE_COPY.ko.seasonalBadge);
+    expect(html).toContain("/go/products/550e8400-e29b-41d4-a716-446655440001");
+    expect(html.indexOf(PAGE_COPY.ko.seasonalTitle)).toBeLessThan(
+      html.indexOf(PAGE_COPY.ko.liveAdTitle),
+    );
+  });
+
   it("renders popular products only when present and before hotdeals", () => {
     const withoutPopular = renderToStaticMarkup(
       <AffiliateProductGrid
@@ -129,6 +158,7 @@ describe("AffiliateProductGrid", () => {
         data={{
           hotdeals: [product],
           recommended: [],
+          seasonal: [],
           popular: [],
           lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
           isStale: false,
@@ -144,6 +174,7 @@ describe("AffiliateProductGrid", () => {
         data={{
           hotdeals: [product],
           recommended: [],
+          seasonal: [],
           popular: [product],
           lastSuccessfulSyncAt: "2026-07-13T00:00:00.000Z",
           isStale: false,
@@ -162,6 +193,7 @@ describe("AffiliateProductGrid", () => {
         data={{
           hotdeals: [],
           recommended: [],
+          seasonal: [],
           popular: [],
           lastSuccessfulSyncAt: null,
           isStale: false,
@@ -180,6 +212,7 @@ describe("AffiliateProductGrid", () => {
         data={{
           hotdeals: [product],
           recommended: [],
+          seasonal: [],
           popular: [],
           lastSuccessfulSyncAt: "2026-07-01T00:00:00.000Z",
           isStale: true,
@@ -199,6 +232,7 @@ describe("AffiliateProductGrid", () => {
         data={{
           hotdeals: [product],
           recommended: [],
+          seasonal: [],
           popular: [],
           lastSuccessfulSyncAt: null,
           isStale: false,

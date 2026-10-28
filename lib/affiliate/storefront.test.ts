@@ -79,4 +79,20 @@ describe("buildAffiliateStorefront", () => {
 
     expect(data.isStale).toBe(true);
   });
+
+  it("splits seasonal curation from the synced hotdeal feed", () => {
+    const data = buildAffiliateStorefront(
+      [
+        ...products,
+        { ...products[0], id: "seasonal-1", sourceType: "seasonal", sourceRank: 0 },
+      ],
+      [],
+      "2026-07-12T00:00:00.000Z",
+      new Date("2026-07-13T00:00:00.000Z"),
+    );
+
+    expect(data.seasonal.map((item) => item.id)).toEqual(["seasonal-1"]);
+    expect(data.hotdeals.map((item) => item.id)).toEqual(["source-1", "source-2"]);
+    expect(data.recommended).toEqual([]);
+  });
 });

@@ -2,6 +2,7 @@ import "server-only";
 
 import { buildAffiliateStorefront } from "@/lib/affiliate/storefront";
 import type {
+  AffiliateProductSourceType,
   AffiliateSourceType,
   NormalizedAffiliateProduct,
 } from "@/lib/affiliate/types";
@@ -60,7 +61,7 @@ export async function getAffiliateStorefront(): Promise<AffiliateStorefrontData>
     const products = (productsResult.data ?? []).map((product) => ({
       id: product.id,
       provider: product.provider as "adpick",
-      sourceType: product.source_type as AffiliateSourceType,
+      sourceType: product.source_type as AffiliateProductSourceType,
       externalKey: product.external_key,
       themeCode: product.theme_code,
       themeTitle: product.theme_title,

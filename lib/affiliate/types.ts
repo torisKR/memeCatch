@@ -1,6 +1,8 @@
 export type AffiliateProvider = "adpick";
 /** hotdeal = 실시간 핫딜 크롤링 피드, recommend = 쇼핑메이트 추천상품 피드 */
 export type AffiliateSourceType = "hotdeal" | "recommend";
+/** seasonal = 애드픽 MCP 상품검색으로 고른 시즌 큐레이션(일일 동기화 대상 아님) */
+export type AffiliateProductSourceType = AffiliateSourceType | "seasonal";
 
 export type NormalizedAffiliateProduct = {
   provider: AffiliateProvider;
@@ -24,9 +26,10 @@ export type NormalizedAffiliateProduct = {
 
 export type AffiliateStorefrontProduct = Omit<
   NormalizedAffiliateProduct,
-  "commissionLabel" | "affiliateUrl" | "syncedAt"
+  "sourceType" | "commissionLabel" | "affiliateUrl" | "syncedAt"
 > & {
   id: string;
+  sourceType: AffiliateProductSourceType;
   clickCount7d: number;
 };
 
@@ -34,6 +37,8 @@ export type AffiliateStorefrontData = {
   hotdeals: AffiliateStorefrontProduct[];
   /** 쇼핑메이트 추천상품(sdk_shopping.php) — 핫딜과 별도 피드 */
   recommended: AffiliateStorefrontProduct[];
+  /** 시즌 큐레이션(source_type='seasonal') — 수동 큐레이션, 일일 동기화가 끄지 않음 */
+  seasonal: AffiliateStorefrontProduct[];
   popular: AffiliateStorefrontProduct[];
   lastSuccessfulSyncAt: string | null;
   isStale: boolean;

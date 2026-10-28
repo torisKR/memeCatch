@@ -43,8 +43,12 @@ export default async function ProductsPage() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "밈 상품 모음",
-    // 핫딜 + 쇼핑메이트 추천 두 피드를 하나의 ItemList로 기술
-    itemListElement: [...storefront.hotdeals, ...storefront.recommended].map(
+    // 시즌 큐레이션 + 핫딜 + 쇼핑메이트 추천 피드를 하나의 ItemList로 기술
+    itemListElement: [
+      ...storefront.seasonal,
+      ...storefront.hotdeals,
+      ...storefront.recommended,
+    ].map(
       (product, index) => ({
         "@type": "ListItem",
         position: index + 1,

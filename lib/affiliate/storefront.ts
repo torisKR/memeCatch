@@ -46,6 +46,7 @@ export function buildAffiliateStorefront(
   // 피드 분리: hotdeal(실시간 핫딜) / recommend(쇼핑메이트 추천) — 인기는 통합
   const hotdeals = withClicks.filter((p) => p.sourceType === "hotdeal");
   const recommended = withClicks.filter((p) => p.sourceType === "recommend");
+  const seasonal = withClicks.filter((p) => p.sourceType === "seasonal");
   const popular = withClicks
     .filter((product) => product.clickCount7d > 0)
     .sort(
@@ -62,6 +63,7 @@ export function buildAffiliateStorefront(
   return {
     hotdeals,
     recommended,
+    seasonal,
     popular,
     lastSuccessfulSyncAt,
     isStale:

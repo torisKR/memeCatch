@@ -17,10 +17,11 @@ const defaultProps = {
 
 describe("MemeThumbnail", () => {
   it.each(["phrase", "dance", "song", "image", "comment", "challenge"] as const)(
-    "preserves full-opacity category text contrast for %s fallback captions",
+    "uses a calm title-only fallback for %s",
     (category) => {
       render(<MemeThumbnail src={null} title="대체 제목" fallbackCaption="대체 설명" category={category} />);
-      expect(screen.getByText("대체 설명").className).not.toMatch(/opacity-/);
+      expect(screen.getByText("대체 제목")).toBeTruthy();
+      expect(screen.queryByText("대체 설명")).toBeNull();
     },
   );
 
@@ -41,7 +42,7 @@ describe("MemeThumbnail", () => {
 
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("테스트 밈")).not.toBeNull();
-    expect(screen.getByText("해외에서도 바로 이해되는 짧은 상황 반전")).not.toBeNull();
+    expect(screen.queryByText("해외에서도 바로 이해되는 짧은 상황 반전")).toBeNull();
     expect(document.querySelector('[data-thumbnail-state="fallback"]')).not.toBeNull();
 
     rerender(
@@ -104,7 +105,7 @@ describe("MemeThumbnail", () => {
 
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("테스트 밈")).toBeTruthy();
-    expect(screen.getByText("이미 로드에 실패한 이미지")).toBeTruthy();
+    expect(screen.queryByText("이미 로드에 실패한 이미지")).toBeNull();
     expect(
       container.querySelector('[data-thumbnail-state="fallback"]'),
     ).toBeTruthy();

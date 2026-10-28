@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* QA artifacts can contain browser sockets; they are not application class sources. */
+@source not "../artifacts";
+
 /* ── 밈캐치 디자인 토큰 (라이트/다크 쌍 — 디자인 리뷰 Pass 5/6) ── */
 :root {
   --background: #fdfcfa;

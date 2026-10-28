@@ -1,28 +1,173 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { CATEGORIES, type MemeCategory } from "@/lib/labels";
 import type { MemeContentRow } from "@/lib/queries";
 import { isAvailableContent } from "@/lib/content-availability";
 import { isContextSourceUrl } from "@/lib/source-links";
 import { sourcePlatformFromReference } from "@/lib/source-platform";
+import { getSeoCopy, type SeoRouteLocale } from "@/lib/i18n-routing";
+
+type EmbedCopy = {
+  contextTitle: string;
+  unavailableTitle: string;
+  sourceTitle: string;
+  contextBody: string;
+  unavailableBody: string;
+  sourceBody: string;
+  contextCta: string;
+  unavailableCta: string;
+  sourceCta: string;
+  noSourceTitle: string;
+  unavailableContentBody: string;
+  noSourceBody: string;
+  relatedContent: string;
+  aroundYear: (year: number) => string;
+  imageAlt: (title: string) => string;
+  usageExample: string;
+  openPost: string;
+  representativeContent: string;
+  representativeVideo: string;
+  relatedVideo: string;
+  play: (label: string) => string;
+};
+
+/** 다국어 상세 페이지에서 한국어 안내 문구가 섞이지 않도록 로케일별 문구를 둔다. */
+const EMBED_COPY: Record<SeoRouteLocale, EmbedCopy> = {
+  ko: {
+    contextTitle: "맥락 자료 링크가 있어요.",
+    unavailableTitle: "원본 콘텐츠 재생 불가.",
+    sourceTitle: "원본 링크가 있어요.",
+    contextBody: "원본 대신 유래와 맥락을 확인하는 참고 출처입니다.",
+    unavailableBody: "비공개이거나 접근할 수 없어 임베드하지 않습니다.",
+    sourceBody: "원본을 복제하지 않고 출처 링크로 연결합니다.",
+    contextCta: "출처에서 원본 맥락 보기",
+    unavailableCta: "출처 상태 확인하기",
+    sourceCta: "출처에서 원본 보기",
+    noSourceTitle: "재생 가능한 원본 링크 없음.",
+    unavailableContentBody: "비공개이거나 접근할 수 없는 콘텐츠입니다.",
+    noSourceBody: "현재 연결된 출처가 없습니다.",
+    relatedContent: "관련 콘텐츠",
+    aroundYear: (year) => `${year}년 무렵`,
+    imageAlt: (title) => `${title} 대표 이미지`,
+    usageExample: "밈 사용 예시",
+    openPost: "게시물 열기",
+    representativeContent: "대표 콘텐츠",
+    representativeVideo: "대표 영상",
+    relatedVideo: "관련 영상",
+    play: (label) => `${label} 재생`,
+  },
+  en: {
+    contextTitle: "Context source available.",
+    unavailableTitle: "The original can't be played.",
+    sourceTitle: "Original link available.",
+    contextBody: "A reference that explains the origin and context, not the original post.",
+    unavailableBody: "It is private or unavailable, so we don't embed it.",
+    sourceBody: "We link to the source instead of copying the original.",
+    contextCta: "See the context at the source",
+    unavailableCta: "Check the source",
+    sourceCta: "See the original at the source",
+    noSourceTitle: "No playable original link.",
+    unavailableContentBody: "This content is private or unavailable.",
+    noSourceBody: "No source is linked yet.",
+    relatedContent: "Related content",
+    aroundYear: (year) => `around ${year}`,
+    imageAlt: (title) => `${title} main image`,
+    usageExample: "Usage example",
+    openPost: "Open post",
+    representativeContent: "main content",
+    representativeVideo: "main video",
+    relatedVideo: "related video",
+    play: (label) => `Play ${label}`,
+  },
+  ja: {
+    contextTitle: "背景資料へのリンクがあります。",
+    unavailableTitle: "元のコンテンツは再生できません。",
+    sourceTitle: "元のリンクがあります。",
+    contextBody: "元の投稿ではなく、由来と背景を確認するための参考資料です。",
+    unavailableBody: "非公開またはアクセスできないため、埋め込みません。",
+    sourceBody: "元のコンテンツは複製せず、出典へリンクします。",
+    contextCta: "出典で背景を見る",
+    unavailableCta: "出典を確認する",
+    sourceCta: "出典で元を見る",
+    noSourceTitle: "再生できる元のリンクはありません。",
+    unavailableContentBody: "非公開またはアクセスできないコンテンツです。",
+    noSourceBody: "まだ出典が登録されていません。",
+    relatedContent: "関連コンテンツ",
+    aroundYear: (year) => `${year}年ごろ`,
+    imageAlt: (title) => `${title}の代表画像`,
+    usageExample: "使用例",
+    openPost: "投稿を開く",
+    representativeContent: "代表コンテンツ",
+    representativeVideo: "代表動画",
+    relatedVideo: "関連動画",
+    play: (label) => `${label}を再生`,
+  },
+  zh: {
+    contextTitle: "有背景资料链接。",
+    unavailableTitle: "原内容无法播放。",
+    sourceTitle: "有原始链接。",
+    contextBody: "这是说明来源和背景的参考资料，不是原始帖子。",
+    unavailableBody: "内容为私密或无法访问，因此不嵌入。",
+    sourceBody: "我们不复制原内容，只链接到出处。",
+    contextCta: "到出处查看背景",
+    unavailableCta: "查看出处状态",
+    sourceCta: "到出处查看原内容",
+    noSourceTitle: "没有可播放的原始链接。",
+    unavailableContentBody: "该内容为私密或无法访问。",
+    noSourceBody: "目前还没有关联出处。",
+    relatedContent: "相关内容",
+    aroundYear: (year) => `约${year}年`,
+    imageAlt: (title) => `${title}代表图片`,
+    usageExample: "使用示例",
+    openPost: "打开帖子",
+    representativeContent: "代表内容",
+    representativeVideo: "代表视频",
+    relatedVideo: "相关视频",
+    play: (label) => `播放${label}`,
+  },
+  "zh-tw": {
+    contextTitle: "有背景資料連結。",
+    unavailableTitle: "原內容無法播放。",
+    sourceTitle: "有原始連結。",
+    contextBody: "這是說明來源和背景的參考資料，不是原始貼文。",
+    unavailableBody: "內容為私密或無法存取，因此不嵌入。",
+    sourceBody: "我們不複製原內容，只連結到出處。",
+    contextCta: "到出處查看背景",
+    unavailableCta: "查看出處狀態",
+    sourceCta: "到出處查看原內容",
+    noSourceTitle: "沒有可播放的原始連結。",
+    unavailableContentBody: "該內容為私密或無法存取。",
+    noSourceBody: "目前還沒有關聯出處。",
+    relatedContent: "相關內容",
+    aroundYear: (year) => `約${year}年`,
+    imageAlt: (title) => `${title}代表圖片`,
+    usageExample: "使用範例",
+    openPost: "開啟貼文",
+    representativeContent: "代表內容",
+    representativeVideo: "代表影片",
+    relatedVideo: "相關影片",
+    play: (label) => `播放${label}`,
+  },
+};
+
+function categoryLabel(locale: SeoRouteLocale, category: MemeCategory): string {
+  return locale === "ko" ? CATEGORIES[category].user : getSeoCopy(locale).categories[category];
+}
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
-type OEmbedResponse = {
-  provider: SocialProvider;
+type ImmediateSocialEmbed = {
+  provider: "tiktok" | "instagram";
   sourceUrl: string;
-  embedUrl: string | null;
-  embedHtml: string | null;
-  contentId: string | null;
-  title: string | null;
-  authorName: string | null;
+  embedUrl: string;
 };
 
 /**
  * 대표 콘텐츠 임베드.
  * - YouTube + content_id + availability≠dead → lite embed(클릭 시 iframe, sandbox, 지연 로드)
- * - TikTok/Instagram/Facebook/Threads → 서버 oEmbed 검증 후 공식 플레이어 자동 로드
+ * - TikTok/Instagram → 공개 URL에서 공식 플레이어 주소를 결정해 즉시 로드
+ * - Facebook/Threads → 저장된 안전한 임베드가 없으면 출처 링크로 폴백
  * - 그 외 / 원본 소실 → 폴백 카드 "원본은 사라졌지만…" + 출처 링크
  */
 export function MemeEmbed({
@@ -33,6 +178,7 @@ export function MemeEmbed({
   isRepresentative = true,
   category,
   originYear,
+  locale = "ko",
 }: {
   content: Pick<
     MemeContentRow,
@@ -46,7 +192,10 @@ export function MemeEmbed({
   category?: MemeCategory | null;
   /** 폴백 타이포 히어로의 등장연도 칩 — 미전달 시 칩 생략 */
   originYear?: number | null;
+  /** 안내 문구 언어. 다국어 상세 페이지는 반드시 전달한다. */
+  locale?: SeoRouteLocale;
 }) {
+  const copy = EMBED_COPY[locale];
   const sourcePlatform = sourcePlatformFromReference({
     platform: content?.platform,
     url: content?.url,
@@ -68,6 +217,10 @@ export function MemeEmbed({
   const socialProvider = isPlayable
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
+  const socialEmbed =
+    socialProvider && sourceUrl
+      ? immediateSocialEmbed(socialProvider, sourceUrl)
+      : null;
 
   if (isPlayable && content?.thumbnail_url && !content.url) {
     return (
@@ -75,7 +228,7 @@ export function MemeEmbed({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={content.thumbnail_url}
-          alt={`${title} 대표 이미지`}
+          alt={copy.imageAlt(title)}
           className="aspect-[4/3] w-full rounded-xl border border-border bg-surface-2 object-cover"
         />
         {content.caption && (
@@ -96,6 +249,7 @@ export function MemeEmbed({
           thumbnailUrl={content.thumbnail_url}
           isShort={content.url?.includes("/shorts/") ?? false}
           isRepresentative={isRepresentative}
+          copy={copy}
         />
         {content.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -106,15 +260,14 @@ export function MemeEmbed({
     );
   }
 
-  if (socialProvider && sourceUrl) {
+  if (socialEmbed) {
     return (
       <figure>
         <LiteSocialEmbed
-          provider={socialProvider}
-          sourceUrl={sourceUrl}
+          embed={socialEmbed}
           title={title}
-          thumbnailUrl={content?.thumbnail_url}
           isRepresentative={isRepresentative}
+          copy={copy}
         />
         {content?.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -128,20 +281,20 @@ export function MemeEmbed({
   if (sourceUrl) {
     const isContextSource = isContextSourceUrl(sourceUrl);
     return (
-      <TypoFallbackHero title={title} category={category} originYear={originYear}>
+      <TypoFallbackHero title={title} category={category} originYear={originYear} locale={locale}>
         <p className="text-base font-semibold">
           {isContextSource
-            ? "원본 맥락은 출처에서 확인할 수 있어요."
+            ? copy.contextTitle
             : effectiveFallbackReason === "confirmed_unavailable"
-              ? "원본 콘텐츠는 현재 확인할 수 없어요."
-            : "원본 콘텐츠는 출처에서 볼 수 있어요."}
+              ? copy.unavailableTitle
+            : copy.sourceTitle}
         </p>
         <p className="mt-1 text-sm leading-relaxed">
           {isContextSource
-            ? "이 링크는 원본을 복제하지 않고 유래와 맥락을 설명하는 참고 출처예요."
+            ? copy.contextBody
             : effectiveFallbackReason === "confirmed_unavailable"
-              ? "플랫폼에서 내려갔거나 접근할 수 없어 임베드하지 않아요. 뜻과 맥락은 아래 설명에 남아 있어요."
-            : "저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요."}
+              ? copy.unavailableBody
+            : copy.sourceBody}
         </p>
         <a
           href={sourceUrl}
@@ -150,10 +303,10 @@ export function MemeEmbed({
           className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold text-foreground transition-colors hover:border-accent hover:text-accent"
         >
             {isContextSource
-              ? "출처에서 원본 맥락 보기"
+              ? copy.contextCta
               : effectiveFallbackReason === "confirmed_unavailable"
-                ? "출처 상태 확인하기"
-                : "출처에서 원본 보기"}
+                ? copy.unavailableCta
+                : copy.sourceCta}
           <span aria-hidden>↗</span>
         </a>
       </TypoFallbackHero>
@@ -161,100 +314,45 @@ export function MemeEmbed({
   }
 
   return (
-    <TypoFallbackHero title={title} category={category} originYear={originYear}>
+    <TypoFallbackHero title={title} category={category} originYear={originYear} locale={locale}>
       <p className="text-base font-semibold">
         {effectiveFallbackReason === "confirmed_unavailable"
-          ? "원본 콘텐츠는 현재 확인할 수 없지만, 뜻과 맥락은 여기 남아 있어요."
-          : "원본을 아직 연결하지 못했지만, 뜻과 맥락은 여기 남아 있어요."}
+          ? copy.unavailableTitle
+          : copy.noSourceTitle}
       </p>
       <p className="mt-1 text-sm leading-relaxed">
         {effectiveFallbackReason === "confirmed_unavailable"
-          ? "플랫폼에서 내려갔거나 접근할 수 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."
-          : "아직 재생 가능한 원본 링크가 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."}
+          ? copy.unavailableContentBody
+          : copy.noSourceBody}
       </p>
     </TypoFallbackHero>
   );
 }
 
-/**
- * 타이포 폴백 히어로 — 임베드 불가·원본 소실 밈의 대표 콘텐츠 영역.
- * 밈 제목을 대형 타이포 주인공으로 세우고 카테고리 틴트(--cat-*-bg/-text, 다크값
- * 존재·AA 대비)로 채운다. 장식은 히어로 §12 문법의 미세 그리드 + 큰따옴표
- * 워터마크(정적, 저불투명). category 미전달 시 중립 surface-2 톤으로 동일 구조.
- */
+/** 재생 불가 상태는 출처로 이어지는 작은 안내로 표시한다. */
 function TypoFallbackHero({
   title,
   category,
   originYear,
+  locale,
   children,
 }: {
   title: string;
   category?: MemeCategory | null;
   originYear?: number | null;
+  locale: SeoRouteLocale;
   children: React.ReactNode;
 }) {
-  const catMeta = category ? CATEGORIES[category] : null;
+  const copy = EMBED_COPY[locale];
   return (
-    <div
-      className={`relative overflow-hidden rounded-2xl border border-border p-6 sm:p-10 ${
-        catMeta ? "" : "bg-surface-2"
-      }`}
-      style={
-        category
-          ? {
-              background: `var(--cat-${category}-bg)`,
-              color: `var(--cat-${category}-text)`,
-            }
-          : undefined
-      }
-    >
-      {/* 미세 그리드 — currentColor 기반, radial 마스크로 좌상단만 은은히 */}
-      <div
-        aria-hidden
-        className="typo-hero-grid pointer-events-none absolute inset-0"
-      />
-      {/* 큰따옴표 워터마크 — "인용될 만한 말"이라는 사전 정체성 장식 */}
-      <QuoteGlyph className="pointer-events-none absolute -right-3 -top-5 h-28 w-28 opacity-[0.09] sm:h-36 sm:w-36" />
-      <div className="relative flex min-h-44 flex-col justify-center">
-        {(catMeta || originYear != null) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {catMeta && <HeroChip>{catMeta.user}</HeroChip>}
-            {/* 「년 등장」은 단정이다. year_precision이 3,904건 전부 unknown이라
-                근거가 없고, 같은 정보를 4개 로케일은 이미 "around/ごろ/约在"로
-                헤지하고 있다(app/[locale]/memes/[key]/page.tsx). 한국어만 단정할
-                이유가 없어 「무렵」으로 맞춘다. 정밀도를 prop으로 넘기지 않는 이유는
-                이 칩이 압축 라벨이고, 「무렵」은 정밀도가 올라가도 여전히 참이기 때문. */}
-            {originYear != null && <HeroChip>{originYear}년 무렵</HeroChip>}
-          </div>
-        )}
-        <p
-          className={`break-keep text-3xl font-black leading-tight tracking-tight sm:text-4xl ${
-            catMeta || originYear != null ? "mt-3" : ""
-          }`}
-        >
-          {title}
-        </p>
-        <div className="mt-4 max-w-prose">{children}</div>
-      </div>
+    <div className="rounded-xl border border-border bg-surface-2 p-5">
+      <p className="text-xs text-muted">
+        {category ? categoryLabel(locale, category) : copy.relatedContent}
+        {originYear != null && <span> · {copy.aroundYear(originYear)}</span>}
+      </p>
+      <p className="mt-2 text-base font-semibold">{title}</p>
+      <div className="mt-3 text-sm">{children}</div>
     </div>
-  );
-}
-
-/** 폴백 히어로 메타 칩 — currentColor(카테고리 텍스트 토큰) 기반, AA 유지 */
-function HeroChip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-current/30 px-2.5 py-1 text-xs font-bold tracking-tight">
-      {children}
-    </span>
-  );
-}
-
-/** 큰따옴표 SVG(이모지 금지 규칙) — fill: currentColor */
-function QuoteGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
-      <path d="M10.6 4.9C6.8 7.1 4.6 10.3 4.6 14.2c0 2.8 1.7 4.6 4 4.6 2 0 3.6-1.5 3.6-3.6 0-2-1.4-3.3-3.2-3.3-.3 0-.7 0-.9.1.4-2 2.1-4 4-5.2L10.6 4.9Zm8.9 0c-3.9 2.2-6 5.4-6 9.3 0 2.8 1.7 4.6 4 4.6 2 0 3.5-1.5 3.5-3.6 0-2-1.3-3.3-3.1-3.3-.3 0-.7 0-.9.1.4-2 2-4 4-5.2L19.5 4.9Z" />
-    </svg>
   );
 }
 
@@ -270,27 +368,10 @@ function getSocialProvider(
   return null;
 }
 
-function isTrustedEmbedUrl(provider: SocialProvider, rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-    if (url.protocol !== "https:") return false;
-    if (provider === "tiktok") {
-      return url.hostname === "www.tiktok.com" && url.pathname.startsWith("/player/v1/");
-    }
-    if (provider === "instagram") {
-      return url.hostname === "www.instagram.com" && url.pathname.endsWith("/embed/captioned/");
-    }
-    if (provider === "threads") return false;
-    return url.hostname === "www.facebook.com" && url.pathname.startsWith("/plugins/");
-  } catch {
-    return false;
-  }
-}
-
 function immediateSocialEmbed(
   provider: SocialProvider,
   sourceUrl: string
-): OEmbedResponse | null {
+): ImmediateSocialEmbed | null {
   try {
     const url = new URL(sourceUrl);
     if (url.protocol !== "https:" || url.username || url.password) return null;
@@ -302,10 +383,6 @@ function immediateSocialEmbed(
         provider,
         sourceUrl,
         embedUrl: `https://www.tiktok.com/player/v1/${contentId}?description=1&music_info=1`,
-        embedHtml: null,
-        contentId,
-        title: null,
-        authorName: null,
       };
     }
 
@@ -316,10 +393,6 @@ function immediateSocialEmbed(
         provider,
         sourceUrl,
         embedUrl: `https://www.instagram.com/${match[1]}/${match[2]}/embed/captioned/`,
-        embedHtml: null,
-        contentId: match[2],
-        title: null,
-        authorName: null,
       };
     }
 
@@ -330,117 +403,31 @@ function immediateSocialEmbed(
 }
 
 function LiteSocialEmbed({
-  provider,
-  sourceUrl,
+  embed,
   title,
-  thumbnailUrl,
   isRepresentative,
+  copy,
 }: {
-  provider: SocialProvider;
-  sourceUrl: string;
+  embed: ImmediateSocialEmbed;
   title: string;
-  thumbnailUrl?: string | null;
   isRepresentative: boolean;
+  copy: EmbedCopy;
 }) {
-  const [embed, setEmbed] = useState<OEmbedResponse | null>(() =>
-    immediateSocialEmbed(provider, sourceUrl)
-  );
-  const [error, setError] = useState<string | null>(null);
-  // 마운트 시점에 이미 렌더 가능한 임베드가 있었는지 — 있으면 IO 대기 없이 즉시 검증 fetch
-  const hasImmediateEmbedRef = useRef(embed != null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { provider, sourceUrl } = embed;
 
   const providerName = {
     tiktok: "TikTok",
     instagram: "Instagram",
-    facebook: "Facebook",
-    threads: "Threads",
   }[provider];
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-
-    async function loadEmbed() {
-      setEmbed(immediateSocialEmbed(provider, sourceUrl));
-      setError(null);
-      try {
-        const response = await fetch(
-          `/api/oembed?url=${encodeURIComponent(sourceUrl)}`,
-          { signal: controller.signal }
-        );
-        const data = (await response.json()) as OEmbedResponse | { error?: string };
-        if (!response.ok || !("embedUrl" in data)) {
-          throw new Error("error" in data ? data.error : undefined);
-        }
-        const hasTrustedEmbed =
-          provider === "threads"
-            ? typeof data.embedHtml === "string" && data.embedHtml.length > 0
-            : typeof data.embedUrl === "string" &&
-              isTrustedEmbedUrl(provider, data.embedUrl);
-        if (data.provider !== provider || !hasTrustedEmbed) {
-          throw new Error("안전한 임베드 주소를 확인하지 못했습니다.");
-        }
-        if (active) setEmbed(data);
-      } catch (loadError) {
-        if (!active || controller.signal.aborted) return;
-        setError(
-          loadError instanceof Error && loadError.message
-            ? loadError.message
-            : "콘텐츠를 불러오지 못했습니다."
-        );
-      }
-    }
-
-    // 이미 즉시 렌더된 임베드가 있으면(서버 제공 프롭 hydration) 뷰포트 대기 없이 바로 검증
-    // fetch. 그 외에는 뷰포트 ~200px 근처에 들어올 때까지 /api/oembed 호출을 미뤄
-    // 스크롤 안 하는 사용자의 불필요한 네트워크·서버 부하를 막는다(LiteYouTube의
-    // loading=lazy와 같은 취지, IO로 fetch 자체를 지연).
-    if (
-      hasImmediateEmbedRef.current ||
-      typeof IntersectionObserver === "undefined" ||
-      !containerRef.current
-    ) {
-      void loadEmbed();
-      return () => {
-        active = false;
-        controller.abort();
-      };
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        io.disconnect();
-        void loadEmbed();
-      },
-      { rootMargin: "200px" }
-    );
-    io.observe(containerRef.current);
-
-    return () => {
-      active = false;
-      controller.abort();
-      io.disconnect();
-    };
-  }, [provider, sourceUrl]);
 
   const frameWidthClass =
     provider === "tiktok"
       ? "mx-auto w-full max-w-[382px]"
-      : provider === "instagram"
-        ? "mx-auto w-full max-w-[540px]"
-        : provider === "threads"
-          ? "mx-auto w-full max-w-[540px]"
-          : "mx-auto w-full max-w-[540px]";
+      : "mx-auto w-full max-w-[540px]";
   const frameHeightClass =
     provider === "tiktok"
       ? "h-[min(72svh,680px)]"
-      : provider === "instagram"
-        ? "h-[min(72svh,720px)]"
-        : provider === "threads"
-          ? "h-[min(72svh,700px)]"
-          : "h-[min(68svh,600px)]";
+      : "h-[min(72svh,720px)]";
   const frameClass = `${frameWidthClass} ${frameHeightClass}`;
 
   // 플랫폼 구분은 사이드 스트라이프(색상 강조 보더) 대신 라벨 텍스트 + 은은한 전체
@@ -451,7 +438,7 @@ function LiteSocialEmbed({
     >
       <span className="font-bold tracking-tight">{providerName}</span>
       {!isRepresentative && (
-        <span className="text-muted">밈 사용 예시</span>
+        <span className="text-muted">{copy.usageExample}</span>
       )}
       <a
         href={sourceUrl}
@@ -459,78 +446,25 @@ function LiteSocialEmbed({
         rel="noopener noreferrer"
         className="ml-auto inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
-        게시물 열기 <span aria-hidden>↗</span>
+        {copy.openPost} <span aria-hidden>↗</span>
       </a>
     </div>
   );
 
-  if (embed) {
-    const threadsDocument = embed.embedHtml
-      ? `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${embed.embedHtml}</body></html>`
-      : undefined;
-    return (
-      <div ref={containerRef} className="space-y-2">
-        {sourceTape}
-        <iframe
-          src={embed.embedUrl ?? undefined}
-          srcDoc={threadsDocument}
-          title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
-          sandbox={
-            provider === "threads"
-              ? "allow-scripts allow-popups"
-              : "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
-          }
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          // 서드파티 임베드 내부가 흰 배경이라 다크 모드에서도 흰 컨테이너 유지 — 내부/외부 불일치 방지
-          className={`${frameClass} block rounded-2xl border border-border bg-white shadow-sm`}
-        />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div ref={containerRef} className="space-y-2">
-        {sourceTape}
-        <div className="mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center">
-          <p role="alert" className="text-sm text-muted">
-            {error}
-          </p>
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
-          >
-            {providerName}에서 보기 <span aria-hidden>↗</span>
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div ref={containerRef} className="space-y-2">
+    <div className="space-y-2">
       {sourceTape}
-      <div
-        role="status"
-        aria-label={`${providerName} 콘텐츠 불러오는 중`}
-        className={`${frameClass} relative overflow-hidden rounded-2xl border border-border bg-surface-2`}
-      >
-        {thumbnailUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-45 blur-[1px]"
-          />
-        )}
-        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
-        <div className="absolute inset-0 animate-pulse bg-background/50 motion-reduce:animate-none" />
-      </div>
+      <iframe
+        src={embed.embedUrl}
+        title={`${title} — ${providerName} ${isRepresentative ? copy.representativeContent : copy.relatedContent}`}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+        // 서드파티 임베드 내부가 흰 배경이라 다크 모드에서도 흰 컨테이너 유지 — 내부/외부 불일치 방지
+        className={`${frameClass} block rounded-2xl border border-border bg-white shadow-sm`}
+      />
     </div>
   );
 }
@@ -541,12 +475,14 @@ function LiteYouTube({
   thumbnailUrl,
   isShort,
   isRepresentative,
+  copy,
 }: {
   videoId: string;
   title: string;
   thumbnailUrl?: string | null;
   isShort: boolean;
   isRepresentative: boolean;
+  copy: EmbedCopy;
 }) {
   const [playing, setPlaying] = useState(false);
   const thumb =
@@ -571,7 +507,7 @@ function LiteYouTube({
         <iframe
           // autoplay는 파사드를 눌러 들어온 경우에만 — 대표 영상 최초 렌더는 자동재생 없음
           src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?rel=0${playing ? "&autoplay=1" : ""}`}
-          title={`${title} — ${isRepresentative ? "대표 영상" : "관련 영상"}`}
+          title={`${title} — ${isRepresentative ? copy.representativeVideo : copy.relatedVideo}`}
           sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
           allow="autoplay; encrypted-media; picture-in-picture"
           allowFullScreen
@@ -582,7 +518,7 @@ function LiteYouTube({
         <button
           type="button"
           onClick={() => setPlaying(true)}
-          aria-label={`${title} ${isRepresentative ? "대표 영상" : "관련 영상"} 재생`}
+          aria-label={copy.play(`${title} ${isRepresentative ? copy.representativeVideo : copy.relatedVideo}`)}
           className="group relative block h-full w-full"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -30,8 +30,21 @@ describe("MemeCard", () => {
     const html = renderToStaticMarkup(<MemeCard meme={meme} />);
 
     expect(html).toContain("테스트 밈");
+    expect(html).toContain("급상승");
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).not.toContain("safety-pulse");
+    expect(html).not.toContain("출처 국가 미확인");
     expect(html).not.toContain("YouTube");
     expect(html).not.toContain("영상");
+  });
+
+  it("keeps the summary to one scan line and renders rank as a compact label", () => {
+    const html = renderToStaticMarkup(<MemeCard meme={meme} rank={2} />);
+
+    expect(html).toContain("line-clamp-1");
+    expect(html).toContain("2위");
+    expect(html).not.toContain("text-[2.35rem]");
   });
 
   it("shows one source only when a platform filter provides that context", () => {

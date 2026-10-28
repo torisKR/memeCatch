@@ -90,7 +90,13 @@ export function getSaveFailure(message: string): "login" | "premium-limit" | "re
  * 사용자별 초기 저장 상태는 공개 문서 SSR과 분리해 클라이언트에서 조회.
  * 비로그인 상태에서 탭하면 로그인 유도 시트(LoginGate)를 연다.
  */
-export function SaveButton({ memeId }: { memeId: string }) {
+export function SaveButton({
+  memeId,
+  compact = false,
+}: {
+  memeId: string;
+  compact?: boolean;
+}) {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -210,27 +216,47 @@ export function SaveButton({ memeId }: { memeId: string }) {
   }
 
   return (
-    <div>
+    <div className={compact ? "relative flex-none" : undefined}>
       <button
         type="button"
         onClick={toggle}
         aria-pressed={saved}
-        className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-colors ${
+        className={`inline-flex min-h-11 items-center justify-center gap-2 border font-semibold transition-colors ${
+          compact
+            ? "w-auto rounded-full px-3 text-sm"
+            : "w-full rounded-xl px-4 text-base"
+        } ${
           saved
-            ? "border-accent bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]"
+            ? compact
+              ? "border-accent bg-accent-soft text-accent"
+              : "border-accent bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]"
             : "border-border bg-surface text-foreground"
         }`}
       >
-        <BookmarkIcon className="h-5 w-5" filled={saved} />
-        {saved ? copy.savedButton : copy.saveButton}
+        <BookmarkIcon className={compact ? "size-4" : "size-5"} filled={saved} />
+        {compact && locale === "ko" ? (saved ? "저장됨" : "저장") : saved ? copy.savedButton : copy.saveButton}
       </button>
-      <p role="status" aria-live="polite" className="mt-1 min-h-5 text-center text-sm text-muted">
+      <p
+        role="status"
+        aria-live="polite"
+        className={
+          compact
+            ? notice
+              ? "absolute right-0 top-full z-20 mt-1 whitespace-nowrap rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-muted shadow-sm"
+              : "sr-only"
+            : "mt-1 min-h-5 text-center text-sm text-muted"
+        }
+      >
         {notice}
       </p>
       {upgradeRequired && (
         <Link
           href={localizedStaticPath("/pricing?source=save_limit_11", locale)}
-          className="mt-1 flex min-h-11 items-center justify-center rounded-xl text-sm font-bold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className={
+            compact
+              ? "absolute right-0 top-[calc(100%+2.25rem)] z-20 flex min-h-11 whitespace-nowrap rounded-xl border border-border bg-surface px-3 text-sm font-bold text-accent-text shadow-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              : "mt-1 flex min-h-11 items-center justify-center rounded-xl text-sm font-bold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          }
         >
           {copy.upgrade}
         </Link>

@@ -26,6 +26,24 @@ beforeEach(() => {
 });
 
 describe("oEmbed route quota", () => {
+  it("keeps the authoring preview endpoint signed-in only", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null } });
+
+    const response = await GET(
+      new Request(
+        "https://memecatch.test/api/oembed?url=https://www.instagram.com/reel/example/"
+      )
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({
+      error: "로그인이 필요해요.",
+      code: "SIGNED_OUT",
+    });
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.getOEmbed).not.toHaveBeenCalled();
+  });
+
   it("reserves the durable quota before provider work", async () => {
     const response = await GET(new Request("https://memecatch.test/api/oembed?url=https://youtube.com/watch?v=x"));
     expect(response.status).toBe(200);

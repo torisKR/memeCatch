@@ -2,14 +2,26 @@ import Link from "next/link";
 import { CategoryTag } from "@/components/category-tag";
 import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
-import { SafetyBadge } from "@/components/safety-badge";
-import { memePathFrom } from "@/lib/labels";
+import { SafetyIcon } from "@/components/safety-icon";
+import {
+  LIFECYCLE_STATUS,
+  SAFETY_LEVELS,
+  memePathFrom,
+  type SafetyLevel,
+} from "@/lib/labels";
 import type { MemeListItem, MemeRow } from "@/lib/queries";
 import { originCountryCode, type MemeCountryLocale } from "@/lib/meme-country";
 import {
   SOURCE_PLATFORM_META,
   type SocialPlatform,
 } from "@/lib/source-platform";
+
+const SAFETY_TONE: Record<SafetyLevel, string> = {
+  green: "bg-safety-green-bg text-safety-green",
+  yellow: "bg-safety-yellow-bg text-safety-yellow",
+  gray: "bg-safety-gray-bg text-safety-gray",
+  red: "bg-safety-red-bg text-safety-red",
+};
 
 /**
  * 기본 탐색 카드.
@@ -45,13 +57,12 @@ export function MemeCard({
   return (
     <Link
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
-      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/60 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors duration-200 hover:border-accent/60 motion-reduce:transition-none focus-visible:outline-offset-4"
     >
-      <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-surface-2">
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-surface-2">
         <MemeThumbnail
           src={thumb}
           title={meme.title}
-          fallbackCaption={meme.summary}
           category={meme.category}
           originYear={meme.origin_year}
           priority={priority}
@@ -59,44 +70,53 @@ export function MemeCard({
 
         <div
           data-country-flag-position="top-right"
-          className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5"
+          className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2"
         >
           <div className="min-w-0">
-            <CategoryTag category={meme.category} className="shadow-sm" />
+            <CategoryTag category={meme.category} />
           </div>
-          <div className="flex min-w-0 flex-col items-end gap-1.5">
-            <CountryFlagBadge code={countryCode} locale={locale} />
-            {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
-          </div>
+          {(countryCode || sourcePlatform) && (
+            <div className="flex min-w-0 flex-col items-end gap-1.5">
+              {countryCode && <CountryFlagBadge code={countryCode} locale={locale} />}
+              {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
+            </div>
+          )}
         </div>
 
         {rank != null && (
           <span
-            aria-hidden
-            className={`stat-mono pointer-events-none absolute bottom-2 left-2.5 text-[2.35rem] font-black italic leading-none tracking-tighter ${
-              rank <= 3 ? "text-accent" : "text-white"
+            className={`pointer-events-none absolute bottom-2 left-2 inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-xs font-extrabold tabular-nums ${
+              rank <= 3
+                ? "border-accent/30 bg-surface/95 text-accent"
+                : "border-border bg-surface/95 text-foreground"
             }`}
-            style={{ filter: "drop-shadow(0 1px 3px rgb(0 0 0 / 0.62))" }}
           >
-            {rank}
+            {rank}위
           </span>
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5">
-        {rank != null && <span className="sr-only">{rank}위</span>}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
         {/* line-clamp로 잘린 긴 제목의 전체 텍스트 접근 경로(title 툴팁) — LOOP.md §6 */}
         <p
           title={meme.title}
-          className="line-clamp-2 min-h-[2.75em] break-keep text-lg font-extrabold leading-snug"
+          className="line-clamp-2 break-keep text-base font-extrabold leading-snug"
         >
           {meme.title}
         </p>
-        <p className="line-clamp-2 min-h-[3.25em] break-keep text-sm leading-relaxed text-muted">
+        <p className="line-clamp-1 break-keep text-sm leading-relaxed text-muted">
           {meme.summary}
         </p>
-        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border pt-2.5">
-          <SafetyBadge level={meme.safety_level} />
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-2">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${SAFETY_TONE[meme.safety_level]}`}
+          >
+            <SafetyIcon level={meme.safety_level} className="size-3.5" />
+            {SAFETY_LEVELS[meme.safety_level].user}
+          </span>
+          <span className="text-xs font-semibold text-muted">
+            {LIFECYCLE_STATUS[meme.lifecycle_status].user}
+          </span>
         </div>
       </div>
     </Link>

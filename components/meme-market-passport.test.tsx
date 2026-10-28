@@ -62,7 +62,7 @@ describe("MemeMarketPassport", () => {
     expect(html).toContain('data-market-variant-count="1"');
   });
 
-  it("shows a truthful empty variant state", () => {
+  it("does not render a successful but completely empty passport", () => {
     const html = renderToStaticMarkup(
       <MemeMarketPassport
         locale="ja"
@@ -83,8 +83,45 @@ describe("MemeMarketPassport", () => {
       />,
     );
 
-    expect(html).toContain("確認済みの現地バリエーションはまだありません");
-    expect(html).toContain('data-market-profile-count="0"');
+    expect(html).toBe("");
+  });
+
+  it("does not render an empty variants panel when reviewed profiles exist", () => {
+    const html = renderToStaticMarkup(
+      <MemeMarketPassport
+        locale="ko"
+        passport={{
+          origin: {
+            memeId: "meme-1",
+            marketCode: "KR",
+            languageTag: "ko",
+            role: "origin",
+            localTitle: "원문",
+            localAliases: [],
+            usageNote: "친구끼리 사용",
+            caution: null,
+          },
+          profiles: [
+            {
+              memeId: "meme-1",
+              marketCode: "KR",
+              languageTag: "ko",
+              role: "origin",
+              localTitle: "원문",
+              localAliases: [],
+              usageNote: "친구끼리 사용",
+              caution: null,
+            },
+          ],
+          variants: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain("원문");
+    expect(html).toContain("친구끼리 사용");
+    expect(html).not.toContain("연결된 현지 변형");
+    expect(html).not.toContain("아직 검수된 현지 변형 연결이 없어요");
   });
 
   it("keeps an unavailable read distinct from a successful empty passport", () => {
@@ -102,6 +139,8 @@ describe("MemeMarketPassport", () => {
 
     expect(html).toContain('data-market-passport="unavailable"');
     expect(html).toContain("Global market data is unavailable");
+    expect(html.match(/Please check again soon/g)).toHaveLength(1);
+    expect(html).not.toContain("Where does this meme travel?");
     expect(html).not.toContain("No reviewed local variant is connected yet.");
   });
 });

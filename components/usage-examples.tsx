@@ -16,20 +16,20 @@ export function UsageExamples({ examples }: { examples?: unknown }) {
   return (
     <section
       aria-labelledby="usage-examples-title"
-      className="rounded-2xl border border-border bg-surface p-5"
+      className="space-y-3"
     >
-      <h2 id="usage-examples-title" className="text-lg font-bold">
+      <h2 id="usage-examples-title" className="text-base font-bold">
         이렇게 써보세요
       </h2>
       <ul className="mt-3 space-y-4">
         {rows.map((ex) => (
           <li key={`${ex.situation}:${ex.text}`}>
             {/* 상황 라벨 — 모노 태그칩 */}
-            <p className="stat-mono inline-flex w-fit items-center rounded-full border border-border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-muted">
+            <p className="text-xs font-medium text-muted">
               {ex.situation}
             </p>
             {/* 말풍선 — 왼쪽 위 모서리만 눌러 대화 버블 느낌 */}
-            <p className="hover-glow-flame mt-1.5 w-fit max-w-full rounded-2xl rounded-tl-md bg-surface-2 px-4 py-2.5 text-base leading-relaxed">
+            <p className="mt-1.5 w-fit max-w-full rounded-xl bg-surface-2 px-4 py-2.5 text-sm leading-7">
               {ex.text}
             </p>
           </li>

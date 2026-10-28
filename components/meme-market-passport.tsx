@@ -26,6 +26,27 @@ export function MemeMarketPassport({
   locale: Locale;
 }) {
   const copy = getCopy(locale);
+
+  if (passport.dataStatus === "unavailable") {
+    return (
+      <section
+        aria-labelledby="meme-market-passport-unavailable-title"
+        data-market-passport="unavailable"
+        data-market-profile-count={passport.profiles.length}
+        data-market-variant-count={passport.variants.length}
+        className="rounded-2xl border border-safety-yellow/30 bg-safety-yellow-bg/40 p-5"
+        role="status"
+      >
+        <h2 id="meme-market-passport-unavailable-title" className="font-bold">
+          {copy.unavailableTitle}
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted">{copy.unavailableBody}</p>
+      </section>
+    );
+  }
+
+  if (passport.profiles.length === 0 && passport.variants.length === 0) return null;
+
   return (
     <section
       aria-labelledby="meme-market-passport-title"
@@ -41,80 +62,68 @@ export function MemeMarketPassport({
         {copy.title}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        {passport.dataStatus === "unavailable" ? copy.unavailableBody : copy.description}
+        {copy.description}
       </p>
 
-      {passport.dataStatus === "unavailable" ? (
-        <div className="mt-5 rounded-xl border border-safety-yellow/30 bg-safety-yellow-bg/40 p-4" role="status">
-          <h3 className="font-bold">{copy.unavailableTitle}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted">{copy.unavailableBody}</p>
-        </div>
-      ) : (
-        <>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {passport.profiles.map((profile) => (
-              <article
-                key={`${profile.marketCode}-${profile.role}`}
-                className="rounded-xl border border-border bg-surface p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold text-muted">
-                      {roleLabel(profile.role, copy)}
-                    </p>
-                    <h3 className="mt-1 font-bold">
-                      {marketName(profile.marketCode, copy.marketNames)}
-                    </h3>
-                  </div>
-                  <span className="rounded-full bg-accent-soft px-2 py-1 text-xs font-semibold text-accent-text">
-                    {profile.marketCode}
-                  </span>
+      {passport.profiles.length > 0 && (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {passport.profiles.map((profile) => (
+            <article
+              key={`${profile.marketCode}-${profile.role}`}
+              className="rounded-xl border border-border bg-surface p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-muted">
+                    {roleLabel(profile.role, copy)}
+                  </p>
+                  <h3 className="mt-1 font-bold">
+                    {marketName(profile.marketCode, copy.marketNames)}
+                  </h3>
                 </div>
-                <p className="mt-3 text-sm font-semibold">{profile.localTitle}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {copy.language}: {profile.languageTag}
-                </p>
-                {profile.usageNote && (
-                  <p className="mt-3 text-sm leading-relaxed">
-                    <strong>{copy.usage}:</strong> {profile.usageNote}
-                  </p>
-                )}
-                {profile.caution && (
-                  <p className="mt-2 text-sm leading-relaxed text-safety-yellow">
-                    <strong>{copy.caution}:</strong> {profile.caution}
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
-
-          <div className="mt-6 border-t border-border pt-5">
-            <h3 className="font-bold">{copy.variantTitle}</h3>
-            <p className="mt-1 text-sm text-muted">{copy.variantDescription}</p>
-            {passport.variants.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-border bg-surface px-3 py-3 text-sm text-muted">
-                {copy.noVariants}
+                <span className="rounded-full bg-accent-soft px-2 py-1 text-xs font-semibold text-accent-text">
+                  {profile.marketCode}
+                </span>
+              </div>
+              <p className="mt-3 text-sm font-semibold">{profile.localTitle}</p>
+              <p className="mt-1 text-xs text-muted">
+                {copy.language}: {profile.languageTag}
               </p>
-            ) : (
-              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                {passport.variants.map((variant) => (
-                  <li key={variant.id}>
-                    <Link
-                      href={variant.targetHref}
-                      className="block rounded-xl border border-border bg-surface px-3 py-3 transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      <span className="block text-xs font-semibold text-muted">
-                        {relationLabel(variant.relation, copy.relations)}
-                      </span>
-                      <span className="mt-1 block font-semibold">{variant.targetTitle}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </>
+              {profile.usageNote && (
+                <p className="mt-3 text-sm leading-relaxed">
+                  <strong>{copy.usage}:</strong> {profile.usageNote}
+                </p>
+              )}
+              {profile.caution && (
+                <p className="mt-2 text-sm leading-relaxed text-safety-yellow">
+                  <strong>{copy.caution}:</strong> {profile.caution}
+                </p>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
+      {passport.variants.length > 0 && (
+        <div className="mt-6 border-t border-border pt-5">
+          <h3 className="font-bold">{copy.variantTitle}</h3>
+          <p className="mt-1 text-sm text-muted">{copy.variantDescription}</p>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {passport.variants.map((variant) => (
+              <li key={variant.id}>
+                <Link
+                  href={variant.targetHref}
+                  className="block rounded-xl border border-border bg-surface px-3 py-3 transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <span className="block text-xs font-semibold text-muted">
+                    {relationLabel(variant.relation, copy.relations)}
+                  </span>
+                  <span className="mt-1 block font-semibold">{variant.targetTitle}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );

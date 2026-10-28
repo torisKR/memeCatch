@@ -4,6 +4,9 @@
  */
 
 import type { SafetyLevel } from "@/lib/labels";
+import type { Database } from "@/lib/database.types";
+
+export type MemeMediaType = Database["public"]["Enums"]["media_type"];
 
 export type ModerationStatus =
   | "pending"
@@ -47,6 +50,16 @@ export const CATEGORY_OPTIONS = [
   "comment",
   "challenge",
 ] as const;
+
+export const MEDIA_TYPE_OPTIONS = ["image", "video", "audio", "text", "embed"] as const satisfies readonly MemeMediaType[];
+
+export const MEDIA_TYPE_ADMIN_LABELS: Record<MemeMediaType, string> = {
+  image: "이미지",
+  video: "영상",
+  audio: "오디오",
+  text: "텍스트",
+  embed: "외부 임베드",
+};
 
 export const DIFFICULTY_OPTIONS = ["beginner", "normal", "deep"] as const;
 

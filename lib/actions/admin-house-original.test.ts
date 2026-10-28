@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
@@ -16,6 +16,7 @@ import { createHouseOriginal, transitionMemeStatus, updateMeme } from "./admin";
 
 const operatorId = "10000000-0000-4000-8000-000000000001";
 const memeId = "20000000-0000-4000-8000-000000000002";
+const originalMediaClassificationFlag = process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED;
 
 type FromHandler = (table: string) => unknown;
 
@@ -80,9 +81,18 @@ const createInput = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED;
   mocks.createAdminClient.mockReturnValue({
     from: vi.fn().mockReturnValue({ insert: vi.fn().mockResolvedValue({ error: null }) }),
   });
+});
+
+afterEach(() => {
+  if (originalMediaClassificationFlag === undefined) {
+    delete process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED;
+  } else {
+    process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED = originalMediaClassificationFlag;
+  }
 });
 
 describe("createHouseOriginal", () => {
@@ -340,6 +350,75 @@ describe("updateMeme house original copy revert", () => {
     });
     return { client, rpc, afterRead };
   }
+
+  it("keeps legacy edits free of a media_type key when the field is omitted", async () => {
+    const { client, rpc } = updateClient({
+      originKind: "catalog",
+      previousStatus: "approved",
+      nextStatus: "approved",
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    await expect(updateMeme(updateInput)).resolves.toEqual({
+      ok: true,
+      data: { safetyReviewQueued: false, revertedToRightsChecking: false },
+    });
+    const rpcArgs = rpc.mock.calls[0]?.[1] as { p_content: Record<string, unknown> };
+    expect(rpcArgs.p_content).not.toHaveProperty("media_type");
+  });
+
+  it("rejects an explicit media type while the rollout flag is off before auth or RPC", async () => {
+    await expect(updateMeme({ ...updateInput, mediaType: "video" })).resolves.toEqual({
+      ok: false,
+      error: "미디어 분류 편집이 아직 활성화되지 않았어요.",
+    });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid media type before auth or RPC", async () => {
+    process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED = "true";
+    await expect(
+      updateMeme({ ...updateInput, mediaType: "document" as "video" }),
+    ).resolves.toEqual({ ok: false, error: "미디어 분류를 확인해 주세요." });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
+  it("requires an authenticated operator before forwarding an enabled media type", async () => {
+    process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED = "true";
+    const signedOut = operatorClient({
+      user: null,
+      from: () => {
+        throw new Error("unexpected");
+      },
+    });
+    mocks.createClient.mockResolvedValue(signedOut);
+
+    await expect(updateMeme({ ...updateInput, mediaType: "video" })).resolves.toEqual({
+      ok: false,
+      error: "로그인이 필요해요.",
+    });
+    expect(signedOut.rpc).not.toHaveBeenCalled();
+  });
+
+  it("forwards an enabled media type through the existing review RPC", async () => {
+    process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED = "true";
+    const { client, rpc } = updateClient({
+      originKind: "catalog",
+      previousStatus: "approved",
+      nextStatus: "approved",
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    await expect(updateMeme({ ...updateInput, mediaType: "video" })).resolves.toEqual({
+      ok: true,
+      data: { safetyReviewQueued: false, revertedToRightsChecking: false },
+    });
+    expect(rpc).toHaveBeenCalledWith("update_meme_with_safety_review", {
+      p_meme_id: memeId,
+      p_proposed_level: "green",
+      p_content: expect.objectContaining({ media_type: "video" }),
+    });
+  });
 
   it("returns revertedToRightsChecking when published copy edit falls back", async () => {
     const { client, rpc, afterRead } = updateClient({

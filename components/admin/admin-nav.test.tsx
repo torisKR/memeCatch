@@ -34,4 +34,11 @@ describe("AdminNav", () => {
     expect(html).toContain("퍼블리셔 준비도");
     expect(html).toMatch(/<a href="\/admin\/publisher-readiness" aria-current="page"/);
   });
+
+  it("links to video production and publishing and marks it active", () => {
+    navigation.pathname = "/admin/video-productions";
+    const html = renderToStaticMarkup(<AdminNav />);
+    expect(html).toContain("영상 제작·발행");
+    expect(html).toMatch(/<a href="\/admin\/video-productions" aria-current="page"/);
+  });
 });

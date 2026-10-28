@@ -10,6 +10,7 @@ import {
   aboutSectionHeading,
   memeDetailMetadataDescription,
   originSectionHeading,
+  publicOriginSectionHeading,
   originYearFieldLabel,
   houseOriginalOriginHint,
   houseOriginalOriginLooksLikeOperatorScratch,
@@ -149,6 +150,8 @@ describe("admin origin filter and empty copy", () => {
   it("keeps the folk origin heading for catalog and the make heading for house originals", () => {
     expect(originSectionHeading("catalog")).toBe("어디서 시작됐어요?");
     expect(originSectionHeading("house_original")).toBe("어떻게 만들었나요?");
+    expect(publicOriginSectionHeading("house_original")).toBe("제작 배경");
+    expect(publicOriginSectionHeading("catalog")).toBe("어디서 시작됐어요?");
     expect(originSectionHeading(undefined)).toBe("어디서 시작됐어요?");
   });
 

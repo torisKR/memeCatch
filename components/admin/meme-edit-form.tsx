@@ -15,10 +15,13 @@ import {
   CATEGORY_OPTIONS,
   DIFFICULTY_OPTIONS,
   LIFECYCLE_OPTIONS,
+  MEDIA_TYPE_ADMIN_LABELS,
+  MEDIA_TYPE_OPTIONS,
   SAFETY_OPTIONS,
   SENTIMENT_ADMIN_LABELS,
   SENTIMENT_OPTIONS,
   USAGE_CONTEXT_KEYS,
+  type MemeMediaType,
 } from "./constants";
 import { SafetySelect } from "./safety-select";
 
@@ -35,6 +38,7 @@ type Initial = {
   safetyLevel: SafetyLevel;
   lifecycleStatus: (typeof LIFECYCLE_OPTIONS)[number];
   category: (typeof CATEGORY_OPTIONS)[number];
+  mediaType: MemeMediaType;
   difficulty: (typeof DIFFICULTY_OPTIONS)[number];
   sentiment: (typeof SENTIMENT_OPTIONS)[number];
   originYear: number | null;
@@ -46,11 +50,13 @@ export function MemeEditForm({
   initial,
   hasOpenAiReviewKey,
   originKind = "catalog",
+  mediaTypeEditingEnabled = false,
 }: {
   memeId: string;
   initial: Initial;
   hasOpenAiReviewKey: boolean;
   originKind?: string | null;
+  mediaTypeEditingEnabled?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -89,6 +95,7 @@ export function MemeEditForm({
         safetyLevel: form.safetyLevel,
         lifecycleStatus: form.lifecycleStatus,
         category: form.category,
+        ...(mediaTypeEditingEnabled ? { mediaType: form.mediaType } : {}),
         difficulty: form.difficulty,
         sentiment: form.sentiment,
         originYear: year,
@@ -281,6 +288,27 @@ export function MemeEditForm({
               </option>
             ))}
           </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-base font-medium">미디어 분류</span>
+          <select
+            value={form.mediaType}
+            onChange={(e) => set("mediaType", e.target.value as MemeMediaType)}
+            disabled={!mediaTypeEditingEnabled}
+            aria-describedby="media-type-rollout-hint"
+            className={selectCls}
+          >
+            {MEDIA_TYPE_OPTIONS.map((mediaType) => (
+              <option key={mediaType} value={mediaType}>
+                {MEDIA_TYPE_ADMIN_LABELS[mediaType]}
+              </option>
+            ))}
+          </select>
+          <span id="media-type-rollout-hint" className="mt-1 block text-sm text-muted">
+            {mediaTypeEditingEnabled
+              ? "뜻·사용 예와 원문을 확인해 분류해 주세요. 영상으로 바꿔도 출처는 자동 승인·공개되지 않아요."
+              : "미디어 분류 편집은 로컬 검증 후 단계적으로 활성화돼요."}
+          </span>
         </label>
         <label className="block">
           <span className="mb-1 block text-base font-medium">난이도</span>

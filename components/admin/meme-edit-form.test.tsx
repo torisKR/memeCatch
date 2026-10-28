@@ -33,6 +33,7 @@ const initial = {
   safetyLevel: "green" as const,
   lifecycleStatus: "archived" as const,
   category: "image" as const,
+  mediaType: "image" as const,
   difficulty: "beginner" as const,
   sentiment: "funny" as const,
   originYear: 2007,
@@ -59,7 +60,14 @@ describe("MemeEditForm Korean review", () => {
       },
     });
 
-    render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey />);
+    render(
+      <MemeEditForm
+        memeId="meme-1"
+        initial={initial}
+        hasOpenAiReviewKey
+        mediaTypeEditingEnabled
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "GPT-5.6 Sol high로 검수 초안" }));
 
     await waitFor(() => {
@@ -67,6 +75,7 @@ describe("MemeEditForm Korean review", () => {
     });
     expect(screen.getByDisplayValue("놀라운 순간에 쓰는 짧은 반응 영상이에요.")).toBeTruthy();
     expect(screen.getByText(/사실관계와 고유명사를 확인한 뒤 저장/)).toBeTruthy();
+    expect((screen.getByRole("combobox", { name: /미디어 분류/ }) as HTMLSelectElement).value).toBe("image");
     expect(updateMeme).not.toHaveBeenCalled();
 
     updateMeme.mockResolvedValue({ ok: true });
@@ -79,8 +88,43 @@ describe("MemeEditForm Korean review", () => {
           title: "극적인 프레리도그",
           summary: "놀라운 순간에 쓰는 짧은 반응 영상이에요.",
           caution: "최초 업로드 출처는 확인 중이에요.",
+          mediaType: "image",
         })
       );
+    });
+  });
+
+  it("keeps media classification disabled and omits it from legacy saves by default", async () => {
+    updateMeme.mockResolvedValue({ ok: true });
+    render(<MemeEditForm memeId="meme-1" initial={initial} hasOpenAiReviewKey={false} />);
+
+    expect((screen.getByRole("combobox", { name: /미디어 분류/ }) as HTMLSelectElement).disabled).toBe(true);
+    expect(screen.getByText("미디어 분류 편집은 로컬 검증 후 단계적으로 활성화돼요.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => expect(updateMeme).toHaveBeenCalledOnce());
+    expect(updateMeme.mock.calls[0]?.[0]).not.toHaveProperty("mediaType");
+  });
+
+  it("sends an enabled media choice only after the operator saves", async () => {
+    updateMeme.mockResolvedValue({ ok: true });
+    render(
+      <MemeEditForm
+        memeId="meme-1"
+        initial={initial}
+        hasOpenAiReviewKey={false}
+        mediaTypeEditingEnabled
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: /미디어 분류/ }), {
+      target: { value: "video" },
+    });
+    expect(updateMeme).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(updateMeme).toHaveBeenCalledWith(expect.objectContaining({ mediaType: "video" }));
     });
   });
 

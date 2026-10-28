@@ -14,7 +14,7 @@ import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
-import type { Json } from "@/lib/database.types";
+import type { Database, Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
 import {
   getOpenAiReviewModel,
@@ -45,6 +45,13 @@ type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 type UsageContext = Record<"work" | "friends" | "family" | "sns", SafetyLevel>;
+type MemeMediaType = Database["public"]["Enums"]["media_type"];
+
+const MEME_MEDIA_TYPES = ["image", "video", "audio", "text", "embed"] as const satisfies readonly MemeMediaType[];
+
+function isMemeMediaType(value: unknown): value is MemeMediaType {
+  return typeof value === "string" && MEME_MEDIA_TYPES.includes(value as MemeMediaType);
+}
 
 type SubmissionApprovalResult =
   | { ok: true; data: { memeId: string; warning?: string } }
@@ -670,12 +677,22 @@ export async function updateMeme(input: {
   safetyLevel: SafetyLevel;
   lifecycleStatus: "rising" | "active" | "cooling" | "archived";
   category: "phrase" | "dance" | "song" | "image" | "comment" | "challenge";
+  mediaType?: MemeMediaType;
   difficulty: "beginner" | "normal" | "deep";
   sentiment: "funny" | "ironic" | "controversial" | "negative" | "wholesome";
   originYear: number | null;
   usageContext: UsageContext;
 }): Promise<ActionResult<{ safetyReviewQueued: boolean; revertedToRightsChecking: boolean }>> {
   try {
+    if (input.mediaType !== undefined && !isMemeMediaType(input.mediaType)) {
+      return { ok: false, error: "미디어 분류를 확인해 주세요." };
+    }
+    if (
+      input.mediaType !== undefined &&
+      process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED !== "true"
+    ) {
+      return { ok: false, error: "미디어 분류 편집이 아직 활성화되지 않았어요." };
+    }
     const { supabase } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     const revalidationIdentity = await loadMemeRevalidationIdentity(
@@ -704,6 +721,7 @@ export async function updateMeme(input: {
           aliases: input.aliases.map((alias) => alias.trim()).filter(Boolean),
           lifecycle_status: input.lifecycleStatus,
           category: input.category,
+          ...(input.mediaType !== undefined ? { media_type: input.mediaType } : {}),
           difficulty: input.difficulty,
           sentiment: input.sentiment,
           origin_year: input.originYear,

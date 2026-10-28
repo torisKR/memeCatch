@@ -129,6 +129,12 @@ export default async function AdminMemeEditPage({
               공개 페이지 보기
             </Link>
           )}
+          <Link
+            href={`/admin/sources?memeId=${encodeURIComponent(meme.id)}`}
+            className="flex min-h-11 items-center text-base text-accent-text underline"
+          >
+            영상 출처 추가
+          </Link>
         </div>
       </div>
 
@@ -191,6 +197,7 @@ export default async function AdminMemeEditPage({
         memeId={meme.id}
         originKind={meme.origin_kind}
         hasOpenAiReviewKey={Boolean(process.env.OPENAI_API_KEY?.trim())}
+        mediaTypeEditingEnabled={process.env.ADMIN_MEDIA_CLASSIFICATION_ENABLED === "true"}
         initial={{
           title: meme.title,
           summary: meme.summary,
@@ -202,6 +209,7 @@ export default async function AdminMemeEditPage({
           safetyLevel: meme.safety_level,
           lifecycleStatus: meme.lifecycle_status,
           category: meme.category,
+          mediaType: meme.media_type,
           difficulty: meme.difficulty,
           sentiment: meme.sentiment,
           originYear: meme.origin_year,

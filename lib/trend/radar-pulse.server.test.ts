@@ -77,7 +77,7 @@ describe("runRadarPulse", () => {
       expect.objectContaining({
         memeId: "meme-1",
         factors: {
-          platforms: ["instagram", "threads"],
+          platforms: ["instagram"],
           excluded_platforms: ["youtube"],
         },
       }),
@@ -126,6 +126,70 @@ describe("runRadarPulse", () => {
       }),
     ).resolves.toMatchObject({ observations: 0, automaticMatches: 1 });
     expect(recordObservation).not.toHaveBeenCalled();
+  });
+
+  it("does not turn missing metrics into observed zeroes", async () => {
+    const connectors = {
+      threads: {
+        platform: "threads",
+        collect: vi.fn(async () => ({
+          signals: [signal("threads", { volume: 30 })],
+        })),
+      },
+    } as unknown as RadarConnectorRegistry;
+    const recordObservation = vi.fn().mockResolvedValue(undefined);
+    const repository: RadarRepository = {
+      loadConnectorState: vi.fn().mockResolvedValue({}),
+      loadMemes: vi.fn().mockResolvedValue([
+        { id: "meme-1", canonicalName: "고양이 밈", aliases: ["냥밈"], state: "candidate" },
+      ]),
+      persistConnectorHealth: vi.fn().mockResolvedValue(undefined),
+      persistSignals: vi.fn(async (signals: readonly NormalizedRadarSignal[]) =>
+        signals.map((value) => ({ ...value, id: "signal-partial" })),
+      ),
+      persistMatch: vi.fn().mockResolvedValue(undefined),
+      recordObservation,
+      enqueueSafetyReview: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await expect(runRadarPulse({ connectors, repository })).resolves.toMatchObject({
+      persistedSignals: 1,
+      automaticMatches: 1,
+      observations: 0,
+    });
+    expect(recordObservation).not.toHaveBeenCalled();
+  });
+
+  it("persists repeated collected expressions only when discovery is explicitly enabled", async () => {
+    const discovered = vi.fn().mockResolvedValue(undefined);
+    const connectors = {
+      threads: {
+        platform: "threads",
+        collect: vi.fn(async () => ({ signals: [
+          { ...signal("threads", {}), platformContentId: "one", creatorKey: "threads:u1", hashtags: ["새표현"] },
+          { ...signal("threads", {}), platformContentId: "two", creatorKey: "threads:u2", hashtags: ["새표현"] },
+        ] })),
+      },
+    } as unknown as RadarConnectorRegistry;
+    const repository: RadarRepository = {
+      loadConnectorState: vi.fn().mockResolvedValue({}),
+      loadMemes: vi.fn().mockResolvedValue([]),
+      persistConnectorHealth: vi.fn().mockResolvedValue(undefined),
+      persistSignals: vi.fn(async (signals: readonly NormalizedRadarSignal[]) =>
+        signals.map((value, index) => ({ ...value, id: `signal-${index}` })),
+      ),
+      persistDiscoveredCandidates: discovered,
+      persistMatch: vi.fn().mockResolvedValue(undefined),
+      recordObservation: vi.fn().mockResolvedValue(undefined),
+      enqueueSafetyReview: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await expect(runRadarPulse({ connectors, repository, discoveryEnabled: true })).resolves.toMatchObject({
+      discoveredCandidates: 1,
+    });
+    expect(discovered).toHaveBeenCalledWith([
+      expect.objectContaining({ normalizedPhrase: "새표현", observedContentCount: 2 }),
+    ]);
   });
 
   it("does not advance connector cursors when signal persistence fails", async () => {

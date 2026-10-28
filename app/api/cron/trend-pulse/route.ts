@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * 일일 트렌드 펄스 cron (vercel.json crons에 등록).
+ * 내부 인기의 일일 펄스 cron. 외부 후보의 6시간 주기는 Supabase가 담당한다.
  * Bearer CRON_SECRET 인증 — lib/affiliate/cron-handler.ts와 동일 규약.
  */
 export async function GET(request: Request): Promise<Response> {

@@ -16,6 +16,7 @@ import type {
   RadarMeme,
   RadarRepository,
 } from "@/lib/trend/radar-pulse.server";
+import { buildEvidenceContentKey } from "@/lib/trend/external-evidence";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -60,6 +61,12 @@ function signalInsert(signal: NormalizedRadarSignal): TablesInsert<"external_sig
     platform: signal.platform,
     connector_key: signal.platform,
     platform_content_id: signal.platformContentId,
+    creator_key: signal.creatorKey,
+    canonical_identity_key: buildEvidenceContentKey({
+      platform: signal.platform,
+      platformContentId: signal.platformContentId,
+      url: signal.canonicalUrl,
+    }),
     signal_kind: signal.signalKind ?? "content_observation",
     canonical_url: signal.canonicalUrl,
     query_seed: signal.querySeed,
@@ -137,12 +144,13 @@ export function createRadarRepository(
           onConflict: "platform,platform_content_id",
           ignoreDuplicates: true,
         })
-        .select("id,platform,platform_content_id,signal_kind,canonical_url,query_seed,text,hashtags,published_at,observed_at,collected_at,metrics_json,language,language_confidence,korean_relevance,normalized_text_hash,ingestion_version,rights_mode,payload,raw_expires_at");
+        .select("id,platform,platform_content_id,creator_key,signal_kind,canonical_url,query_seed,text,hashtags,published_at,observed_at,collected_at,metrics_json,language,language_confidence,korean_relevance,normalized_text_hash,ingestion_version,rights_mode,payload,raw_expires_at");
       if (error) fail("RADAR_SIGNAL_WRITE_FAILED");
       return (data ?? []).map<PersistedRadarSignal>((row) => ({
         id: row.id,
         platform: row.platform,
         platformContentId: row.platform_content_id,
+        creatorKey: row.creator_key ?? undefined,
         canonicalUrl: row.canonical_url ?? "",
         signalKind: row.signal_kind as NormalizedRadarSignal["signalKind"],
         querySeed: row.query_seed ?? undefined,
@@ -161,6 +169,93 @@ export function createRadarRepository(
         metadata: row.payload as NormalizedRadarSignal["metadata"],
         rawExpiresAt: row.raw_expires_at,
       }));
+    },
+
+    async persistDiscoveredCandidates(candidates) {
+      if (!candidates.length) return;
+      const now = new Date().toISOString();
+      const phrases = candidates.map((candidate) => candidate.normalizedPhrase);
+      const { data: existingRows, error: existingError } = await admin
+        .from("trend_candidates")
+        .select("id,normalized_phrase,status,first_discovered_at,content_published_at,evidence_ids,source_policy_keys,score_components")
+        .in("normalized_phrase", phrases);
+      if (existingError) fail("RADAR_CANDIDATE_READ_FAILED");
+      const existingByPhrase = new Map(
+        (existingRows ?? []).map((row) => [row.normalized_phrase, row]),
+      );
+      const activeCandidates = candidates.filter((candidate) => {
+        const status = existingByPhrase.get(candidate.normalizedPhrase)?.status;
+        return status !== "approved" && status !== "rejected" && status !== "merged";
+      });
+      if (!activeCandidates.length) return;
+      const { data, error } = await admin
+        .from("trend_candidates")
+        .upsert(
+          activeCandidates.map((candidate) => {
+            const existing = existingByPhrase.get(candidate.normalizedPhrase);
+            const firstDiscoveredAt = [existing?.first_discovered_at, candidate.firstDiscoveredAt]
+              .filter((value): value is string => Boolean(value))
+              .sort()[0];
+            const contentPublishedAt = [existing?.content_published_at, candidate.earliestPublishedAt]
+              .filter((value): value is string => Boolean(value))
+              .sort()[0] ?? null;
+            const existingComponents =
+              existing?.score_components &&
+              typeof existing.score_components === "object" &&
+              !Array.isArray(existing.score_components)
+                ? existing.score_components
+                : {};
+            return {
+              normalized_phrase: candidate.normalizedPhrase,
+              display_name: candidate.displayName,
+              candidate_kind: "new_meme",
+              status: existing?.status ?? "discovered",
+              content_published_at: contentPublishedAt,
+              first_discovered_at: firstDiscoveredAt,
+              last_assessed_at: now,
+              external_state: "observing",
+              confidence: 0,
+              independent_use_count: 0,
+              comparable_growth: false,
+              score_components: {
+                ...existingComponents,
+                observed_content_count: candidate.observedContentCount,
+                observed_creator_count: candidate.observedCreatorCount,
+                note: "candidate_only_not_trend_evidence",
+              },
+              source_policy_keys: [...new Set([
+                ...(existing?.source_policy_keys ?? []),
+                ...candidate.platforms.map((platform) => `${platform}_api`),
+              ])],
+              evidence_ids: [...new Set([
+                ...(existing?.evidence_ids ?? []),
+                ...candidate.signalIds,
+              ])],
+              discovery_reason: `${candidate.observedContentCount}개의 실제 수집 게시물에서 반복된 표현입니다. 독립 사용례와 성장 근거는 아직 검수 전입니다.`,
+            };
+          }),
+          { onConflict: "normalized_phrase" },
+        )
+        .select("id,normalized_phrase");
+      if (error) fail("RADAR_CANDIDATE_WRITE_FAILED");
+
+      const candidateByPhrase = new Map((data ?? []).map((row) => [row.normalized_phrase, row.id]));
+      const links = activeCandidates.flatMap((candidate) => {
+        const candidateId = candidateByPhrase.get(candidate.normalizedPhrase);
+        if (!candidateId) return [];
+        return candidate.signalIds.map((signalId) => ({
+          candidate_id: candidateId,
+          signal_id: signalId,
+          relationship: "unknown",
+          counts_as_independent: false,
+          relationship_reviewed: false,
+        }));
+      });
+      if (!links.length) return;
+      const { error: linkError } = await admin
+        .from("trend_candidate_signals")
+        .upsert(links, { onConflict: "candidate_id,signal_id", ignoreDuplicates: true });
+      if (linkError) fail("RADAR_CANDIDATE_SIGNAL_WRITE_FAILED");
     },
 
     async persistMatch(input) {

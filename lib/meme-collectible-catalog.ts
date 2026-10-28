@@ -9,6 +9,15 @@ export interface MemeCardArtDirection {
   composition: MemeCardArtComposition;
 }
 
+export interface MemeCardEditorialPresentation {
+  art: MemeCardArtDirection;
+  caption: string;
+}
+
+function normalizeIdentity(value: string): string {
+  return value.normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+}
+
 // Review metadata stays on the server. Live database eligibility gates public titles.
 const artById = new Map<string, MemeCardArtDirection>(catalog.cards.map(card => [card.id, {
   motif: card.art.motif as MemeCardArtMotif,
@@ -17,6 +26,33 @@ const artById = new Map<string, MemeCardArtDirection>(catalog.cards.map(card => 
 }]));
 
 const captionById = new Map(catalog.cards.map(card => [card.id, card.cardCaption]));
+
+const identityById = new Map(catalog.cards.map(card => [card.id, {
+  memeId: card.memeId,
+  titleKeys: new Set([
+    normalizeIdentity(card.catalogTitle),
+    normalizeIdentity(card.conceptKey),
+    ...card.aliasKeys.map(normalizeIdentity),
+  ]),
+}]));
+
+/**
+ * Editorial copy and art are valid only while the live card still points at the
+ * reviewed meme identity. Stable card IDs and claims can survive a data repair,
+ * but stale presentation must not be attached to a different meme.
+ */
+export function getAlignedMemeCardEditorialPresentation(
+  cardId: string,
+  memeId: string,
+  title: string,
+): MemeCardEditorialPresentation | null {
+  const identity = identityById.get(cardId);
+  if (!identity || identity.memeId !== memeId || !identity.titleKeys.has(normalizeIdentity(title))) return null;
+  return {
+    art: getMemeCardArtDirection(cardId),
+    caption: getMemeCardEditorialCaption(cardId),
+  };
+}
 
 // Callers must establish the current public meme eligibility before serializing this.
 export function getMemeCardEditorialCaption(cardId: string): string {

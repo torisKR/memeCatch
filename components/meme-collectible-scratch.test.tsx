@@ -33,8 +33,9 @@ describe("scratch interaction", () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
     const reveal = vi.fn(); const start = vi.fn(); render(<MemeCollectibleScratch cardId={card.id} card={card} revealed={false} onStart={start} onReveal={reveal}/>);
     expect(screen.queryByText("PPAP")).toBeNull(); expect(screen.getByTestId("scratch-canvas").dataset.canvasState).toBe("unavailable");
-    const user = userEvent.setup(); await user.tab(); await user.keyboard("{Enter}"); expect(reveal).toHaveBeenCalledOnce();
+    const user = userEvent.setup(); await user.tab(); expect(document.activeElement).toBe(screen.getByTestId("scratch-canvas")); await user.keyboard("{Enter}"); expect(reveal).toHaveBeenCalledOnce();
     expect(start).toHaveBeenCalledOnce();
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("100");
   });
   it("counts real scaled area, preserves progress across resize, and recovers canceled pointers", async () => {
     const reveal = vi.fn(); const start = vi.fn(); const rendered = render(<MemeCollectibleScratch cardId={card.id} card={card} revealed={false} onStart={start} onReveal={reveal}/>);
@@ -67,6 +68,20 @@ describe("scratch interaction", () => {
     expect(erasedStyles.length).toBeGreaterThanOrEqual(4);
     expect(erasedStyles.every(([alpha, stroke]) => alpha === 1 && stroke === "#000")).toBe(true);
     expect(context.fillStyle).toBe("#000");
+  });
+  it("consumes coalesced pointer samples so fast swipes leave a continuous scratch trail", () => {
+    render(<MemeCollectibleScratch cardId={card.id} card={card} revealed={false} onStart={vi.fn()} onReveal={vi.fn()}/>);
+    const canvas = screen.getByTestId("scratch-canvas");
+    fireEvent.pointerDown(canvas, { pointerId: 12, clientX: 55, clientY: 80 });
+    const move = new TestPointerEvent("pointermove", { bubbles: true, pointerId: 12, clientX: 325, clientY: 80 });
+    Object.defineProperty(move, "getCoalescedEvents", { value: () => [
+      new TestPointerEvent("pointermove", { pointerId: 12, clientX: 120, clientY: 80 }),
+      new TestPointerEvent("pointermove", { pointerId: 12, clientX: 220, clientY: 80 }),
+      new TestPointerEvent("pointermove", { pointerId: 12, clientX: 325, clientY: 80 }),
+    ] });
+    fireEvent(canvas, move);
+    expect(Number(canvas.parentElement!.parentElement!.dataset.scratchProgress)).toBeGreaterThan(4);
+    expect((context.ellipse as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(7);
   });
   it("ships an opaque generic back in SSR even if a full card was supplied", () => {
     const markup = renderToStaticMarkup(<MemeCollectibleScratch cardId={card.id} card={card} revealed={false} onStart={vi.fn()} onReveal={vi.fn()}/>);

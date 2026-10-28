@@ -3,7 +3,10 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { createStaticClient } from "@/lib/supabase/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { memePathFrom } from "@/lib/labels";
-import { getMemeCardArtDirection, getMemeCardEditorialCaption } from "@/lib/meme-collectible-catalog";
+import {
+  getAlignedMemeCardEditorialPresentation,
+  type MemeCardArtDirection,
+} from "@/lib/meme-collectible-catalog";
 import type { Database } from "@/lib/database.types";
 import {
   MEME_CARD_PAGE_SIZE, MEME_CARD_TARGET_COUNT, isMemeCardId, parseMemeCardPage,
@@ -12,9 +15,9 @@ import {
 } from "@/lib/meme-collectible";
 
 type Client = SupabaseClient<Database>;
-const CARD_SELECT = "id,card_no,meme_id,edition,art_seed,active,memes!inner(id,short_id,title,slug,category,origin_year,moderation_status,safety_level,published_at)" as const;
+const CARD_SELECT = "id,card_no,meme_id,edition,art_seed,active,memes!inner(id,short_id,title,slug,summary,category,origin_year,moderation_status,safety_level,published_at)" as const;
 type CatalogRow = Pick<Database["public"]["Tables"]["meme_collectible_cards"]["Row"], "id" | "card_no" | "meme_id" | "edition" | "art_seed" | "active"> & {
-  memes: Pick<Database["public"]["Tables"]["memes"]["Row"], "id" | "short_id" | "title" | "slug" | "category" | "origin_year" | "moderation_status" | "safety_level" | "published_at">;
+  memes: Pick<Database["public"]["Tables"]["memes"]["Row"], "id" | "short_id" | "title" | "slug" | "summary" | "category" | "origin_year" | "moderation_status" | "safety_level" | "published_at">;
 };
 
 export class MemeCardServiceError extends Error {
@@ -66,17 +69,32 @@ function eligibleQuery(client: Client) {
     .eq("memes.safety_level", "green").not("memes.published_at", "is", null);
 }
 
+const FALLBACK_ART_BY_CATEGORY: Record<Database["public"]["Enums"]["meme_category"], MemeCardArtDirection> = {
+  phrase: { motif: "chat", symbols: ["speech", "quote", "question"], composition: "frame" },
+  comment: { motif: "chat", symbols: ["speech", "quote", "exchange"], composition: "exchange" },
+  song: { motif: "music", symbols: ["music-note", "wave", "microphone"], composition: "rhythm" },
+  dance: { motif: "dance", symbols: ["footsteps", "music-note", "wave"], composition: "rhythm" },
+  challenge: { motif: "dance", symbols: ["footsteps", "music-note", "hands"], composition: "rhythm" },
+  image: { motif: "reaction", symbols: ["frame", "camera", "spark"], composition: "frame" },
+};
+
+function fallbackArt(category: Database["public"]["Enums"]["meme_category"]): MemeCardArtDirection {
+  const art = FALLBACK_ART_BY_CATEGORY[category];
+  return { ...art, symbols: [...art.symbols] };
+}
+
 function normalizeCard(row: CatalogRow): MemeCollectibleCard {
   const meme = row.memes;
   if (!isMemeCardId(row.id) || row.id !== `mc-${String(row.card_no).padStart(4, "0")}`
     || !row.active || !meme || row.meme_id !== meme.id || meme.moderation_status !== "approved"
     || meme.safety_level !== "green" || !meme.published_at || row.edition !== 1
     || !Number.isInteger(row.art_seed) || row.art_seed < 0 || row.art_seed > 2147483647) unavailable();
-  const art = getMemeCardArtDirection(row.id);
+  const editorial = getAlignedMemeCardEditorialPresentation(row.id, meme.id, meme.title);
+  const art = editorial?.art ?? fallbackArt(meme.category);
   return {
     id: row.id, cardNo: row.card_no, edition: row.edition, artSeed: row.art_seed,
     memeId: meme.id, title: meme.title, slug: meme.slug, href: memePathFrom(meme.short_id, meme.slug),
-    summary: getMemeCardEditorialCaption(row.id), category: meme.category, originYear: meme.origin_year,
+    summary: editorial?.caption ?? meme.summary, category: meme.category, originYear: meme.origin_year,
     thumbnailUrl: null, artMotif: art.motif, artSymbols: art.symbols, artComposition: art.composition,
   };
 }

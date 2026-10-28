@@ -1,3 +1,5 @@
+import type { TrendPipelineTables, TrendPipelineFunctions } from "@/lib/trend/database-contract";
+
 export type Json =
   | string
   | number
@@ -33,7 +35,7 @@ export type Database = {
     }
   }
   public: {
-    Tables: {
+    Tables: TrendPipelineTables & {
       meme_collectible_cards: {
         Row: {
           id: string
@@ -68,6 +70,204 @@ export type Database = {
             columns: ["meme_id"]
             isOneToOne: true
             referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_meme_trend_summaries: {
+        Row: {
+          candidate_id: string
+          confidence: number
+          evidence_links: Json
+          evidence_scope: string
+          external_score: number | null
+          external_state: string
+          independent_use_count: number
+          last_verified_at: string
+          meme_id: string
+          reason: string
+          reviewed_by: string
+          stale_after: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          confidence: number
+          evidence_links?: Json
+          evidence_scope: string
+          external_score?: number | null
+          external_state: string
+          independent_use_count: number
+          last_verified_at: string
+          meme_id: string
+          reason: string
+          reviewed_by: string
+          stale_after: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          confidence?: number
+          evidence_links?: Json
+          evidence_scope?: string
+          external_score?: number | null
+          external_state?: string
+          independent_use_count?: number
+          last_verified_at?: string
+          meme_id?: string
+          reason?: string
+          reviewed_by?: string
+          stale_after?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_meme_trend_summaries_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: true
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_meme_trend_summaries_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: true
+            referencedRelation: "trend_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trend_candidates: {
+        Row: {
+          ai_draft: Json
+          aliases: string[]
+          candidate_kind: string
+          comparable_growth: boolean
+          confidence: number
+          content_published_at: string | null
+          created_at: string
+          discovery_reason: string
+          display_name: string
+          evidence_ids: string[]
+          external_score: number | null
+          external_state: string
+          first_discovered_at: string
+          id: string
+          independent_use_count: number
+          last_assessed_at: string | null
+          normalized_phrase: string
+          origin_status: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          score_components: Json
+          source_policy_keys: string[]
+          source_text_untrusted: boolean
+          status: string
+          target_meme_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_draft?: Json
+          aliases?: string[]
+          candidate_kind: string
+          comparable_growth?: boolean
+          confidence?: number
+          content_published_at?: string | null
+          created_at?: string
+          discovery_reason: string
+          display_name: string
+          evidence_ids?: string[]
+          external_score?: number | null
+          external_state?: string
+          first_discovered_at: string
+          id?: string
+          independent_use_count?: number
+          last_assessed_at?: string | null
+          normalized_phrase: string
+          origin_status?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score_components?: Json
+          source_policy_keys?: string[]
+          source_text_untrusted?: boolean
+          status?: string
+          target_meme_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_draft?: Json
+          aliases?: string[]
+          candidate_kind?: string
+          comparable_growth?: boolean
+          confidence?: number
+          content_published_at?: string | null
+          discovery_reason?: string
+          display_name?: string
+          evidence_ids?: string[]
+          external_score?: number | null
+          external_state?: string
+          first_discovered_at?: string
+          independent_use_count?: number
+          last_assessed_at?: string | null
+          normalized_phrase?: string
+          origin_status?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score_components?: Json
+          source_policy_keys?: string[]
+          source_text_untrusted?: boolean
+          status?: string
+          target_meme_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_candidates_target_meme_id_fkey"
+            columns: ["target_meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trend_candidate_signals: {
+        Row: {
+          candidate_id: string
+          counts_as_independent: boolean
+          linked_at: string
+          relationship: string
+          relationship_reviewed: boolean
+          signal_id: string
+        }
+        Insert: {
+          candidate_id: string
+          counts_as_independent?: boolean
+          linked_at?: string
+          relationship?: string
+          relationship_reviewed?: boolean
+          signal_id: string
+        }
+        Update: {
+          counts_as_independent?: boolean
+          relationship?: string
+          relationship_reviewed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_candidate_signals_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "trend_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trend_candidate_signals_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "external_signals"
             referencedColumns: ["id"]
           },
         ]
@@ -961,9 +1161,12 @@ export type Database = {
       }
       external_signals: {
         Row: {
+          availability_status: string
+          canonical_identity_key: string | null
           canonical_url: string | null
           collected_at: string
           connector_key: string
+          creator_key: string | null
           first_seen_at: string
           hashtags: string[]
           id: string
@@ -985,11 +1188,16 @@ export type Database = {
           rights_mode: string
           signal_kind: string
           text: string | null
+          unavailable_at: string | null
+          unavailable_reason: string | null
         }
         Insert: {
+          availability_status?: string
+          canonical_identity_key?: string | null
           canonical_url?: string | null
           collected_at?: string
           connector_key: string
+          creator_key?: string | null
           first_seen_at: string
           hashtags?: string[]
           id?: string
@@ -1011,11 +1219,16 @@ export type Database = {
           rights_mode?: string
           signal_kind: string
           text?: string | null
+          unavailable_at?: string | null
+          unavailable_reason?: string | null
         }
         Update: {
+          availability_status?: string
+          canonical_identity_key?: string | null
           canonical_url?: string | null
           collected_at?: string
           connector_key?: string
+          creator_key?: string | null
           first_seen_at?: string
           hashtags?: string[]
           id?: string
@@ -1037,6 +1250,8 @@ export type Database = {
           rights_mode?: string
           signal_kind?: string
           text?: string | null
+          unavailable_at?: string | null
+          unavailable_reason?: string | null
         }
         Relationships: []
       }
@@ -4143,7 +4358,29 @@ export type Database = {
         ]
       }
     }
-    Functions: {
+    Functions: TrendPipelineFunctions & {
+      review_trend_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_decision: string
+          p_evidence_links?: Json
+          p_evidence_scope?: string | null
+          p_note?: string | null
+          p_public_summary?: string | null
+          p_target_meme_id?: string | null
+          p_target_candidate_id?: string | null
+          p_split_signal_ids?: string[]
+        }
+        Returns: Database["public"]["Tables"]["trend_candidates"]["Row"]
+      }
+      review_trend_candidate_signal: {
+        Args: {
+          p_candidate_id: string
+          p_relationship: string
+          p_signal_id: string
+        }
+        Returns: number
+      }
       register_catalog_meme: { Args: { p_input: Json }; Returns: Json }
       search_meme_references: {
         Args: { p_query: string; p_embedding: number[]; p_limit?: number }

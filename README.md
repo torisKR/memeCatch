@@ -97,8 +97,13 @@ node scripts/refresh-youtube-sources.mjs [--limit=2000] [--dry-run]
 # 3) 출처가 없는 밈을 YouTube Data API로 검색해 검수 큐에 적재 (YOUTUBE_API_KEY 필요)
 node scripts/discover-youtube-candidates.mjs [--max=20] [--dry-run]
 
-# 4) TikTok/Instagram oEmbed 수집기의 후보 JSONL을 검수 큐에 적재
-node scripts/import-source-candidates.mjs <candidates.jsonl> [--dry-run]
+# 4) 운영자가 확보한 TikTok/Instagram 최종 공개 URL의 단일 밈 계획 확인
+# JSONL 각 행에는 동일한 meme_id(UUID)와 source_url이 필요하다.
+# 기본은 읽기 전용 계획이며 YouTube/공급자 호출·DB 쓰기를 하지 않는다.
+node scripts/import-source-candidates.mjs candidates.jsonl --limit=1 --meme-id=<uuid>
+# 계획과 대상이 검수된 뒤에만 명시 실행: 새 후보 1건을 pending/권리 미확인으로 등록
+# 기존 출처는 변경하지 않으며 용어·비영상·미검수 부모는 차단한다.
+node scripts/import-source-candidates.mjs candidates.jsonl --execute --limit=1 --meme-id=<uuid>
 
 # 5) 미검증 후보 검증 (YouTube videos.list / TikTok·Instagram oEmbed)
 node scripts/verify-youtube-pending.mjs [--limit=3000]

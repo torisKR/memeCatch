@@ -4,7 +4,6 @@ import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
 import { getWeeklyDigest } from "@/lib/weekly";
 import { WeeklyDigest } from "@/components/weekly-digest";
-import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * 주간 결산 — 완전 자동 콘텐츠 자산(수동 큐레이션 0).
@@ -44,7 +43,6 @@ export default async function WeeklyPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
-      <AdsenseScript />
       {/* CollectionPage + ItemList — 주간 결산의 구조화 데이터 */}
       {schemaItems.length > 0 && (
         <script

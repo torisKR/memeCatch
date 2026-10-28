@@ -5,7 +5,6 @@ import type { Audience } from "@/lib/meme-commerce";
 import { getBriefsForAudience, type MemeNewsBrief } from "@/lib/meme-news";
 import { getGenerationHighlights } from "@/lib/queries";
 import { PAGE_COPY } from "@/lib/i18n-pages";
-import { AdsenseScript } from "@/components/adsense-script";
 
 /**
  * ISR 로케일 함정 주의: 여기서 getRequestLocale()(=headers())를 읽으면 페이지가
@@ -44,7 +43,6 @@ export default async function NewsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
-      <AdsenseScript />
       {/* JSON-LD는 ko 정적 데이터 기준 — 클라이언트 로케일과 무관(ISR 유지) */}
       <NewsCollectionJsonLd
         briefs={AUDIENCES.flatMap((audience) =>

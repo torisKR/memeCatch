@@ -14,7 +14,6 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
-import { AdsenseScript } from "@/components/adsense-script";
 import {
   RANKING_METHODS,
   formatRollupDate,
@@ -179,7 +178,6 @@ export default async function RankingsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
-      <AdsenseScript />
       {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
       <h1 className="text-2xl font-bold">밈캐치 내 급상승</h1>
       <p className="mt-1 text-base text-muted">밈캐치 내부 조회·반응 신호를 기준으로 모았어요.</p>

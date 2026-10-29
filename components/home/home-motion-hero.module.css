@@ -1,0 +1,390 @@
+/*
+ * 홈 히어로 모션 장면 (DESIGN.md §5).
+ * transform·opacity 위주, 진입은 ease-out, 화면당 focal 모션 1개.
+ * 타임라인: 검색어 타이핑 → 카드 상승 → 사용 신호 점등 → 진행 막대가 끝나면 다음 항목.
+ */
+.root {
+  --type-dur: 0.9s;
+  --type-steps: 8;
+  --card-delay: calc(var(--type-dur) + 0.08s);
+  --lamp-delay: calc(var(--type-dur) + 0.6s);
+  --label-delay: calc(var(--type-dur) + 0.8s);
+  --cycle-dur: 6.4s;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-width: 0;
+  gap: 0.8rem;
+  overflow: hidden;
+  padding: clamp(0.9rem, 2.4vw, 1.25rem);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent-soft) 85%, transparent) 0%, transparent 60%),
+    var(--surface-2);
+}
+
+.halo {
+  position: absolute;
+  z-index: -1;
+  right: -9rem;
+  bottom: -14rem;
+  width: 26rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 52%,
+    color-mix(in srgb, var(--accent) 24%, transparent) 72%,
+    transparent 88%
+  );
+  animation: halo-spin 20s linear infinite;
+  pointer-events: none;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.statusDot {
+  position: relative;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.statusDot::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  content: "";
+  animation: status-ping 1.6s var(--ease-out) infinite;
+}
+
+.pauseButton {
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out), border-color 160ms ease;
+}
+
+.pauseButton:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.pauseButton:active { transform: scale(0.94); }
+.pauseButton svg { width: 1rem; height: 1rem; }
+
+.pauseButton:focus-visible,
+.card:focus-visible,
+.dot:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.stage {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+.query {
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding-inline: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--surface);
+  font-size: 0.95rem;
+  font-weight: 800;
+  animation: query-focus 0.7s var(--ease-out) both;
+}
+
+.query svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  color: var(--muted);
+}
+
+.queryText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: type var(--type-dur) steps(var(--type-steps), end) both;
+}
+
+.caret {
+  width: 2px;
+  height: 1.1em;
+  flex: none;
+  margin-left: -0.35rem;
+  background: var(--accent);
+  animation: caret 0.9s steps(1, end) infinite;
+}
+
+.card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: 0 22px 40px -30px color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: inherit;
+  text-decoration: none;
+  transform-origin: 50% 100%;
+  animation: card-in 0.42s var(--ease-out) var(--card-delay) both;
+  transition: border-color 160ms ease, translate 200ms var(--ease-out);
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  translate: 0 -2px;
+}
+
+.card:active { translate: 0 0; }
+
+.category {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.title {
+  font-size: clamp(1.1rem, 2.4vw, 1.3rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.signalRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--border);
+}
+
+.signals {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.signal {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 0.6rem;
+  background: var(--surface-2);
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.signal[data-active] {
+  background: var(--signal-bg);
+  color: var(--signal);
+  opacity: 1;
+  animation: lamp-on 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) var(--lamp-delay) both;
+}
+
+.signalIcon { width: 1.1rem; height: 1.1rem; }
+
+.signalLabel {
+  display: grid;
+  color: var(--active-signal);
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-align: right;
+  animation: fade-up 0.3s var(--ease-out) var(--label-delay) both;
+}
+
+.signalTitle {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.read {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  color: var(--accent-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  animation: fade-up 0.3s var(--ease-out) calc(var(--label-delay) + 0.12s) both;
+}
+
+.read svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  transition: translate 180ms var(--ease-out);
+}
+
+.card:hover .read svg { translate: 3px 0; }
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.progress {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: progress var(--cycle-dur) linear both;
+}
+
+.dots {
+  display: flex;
+  margin-left: auto;
+}
+
+.dot {
+  display: grid;
+  width: 1.6rem;
+  height: 2.75rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.dot::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--border);
+  content: "";
+  transition: transform 200ms var(--ease-out), background-color 200ms ease;
+}
+
+.dot:hover::before { background: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+
+.dot[aria-pressed="true"]::before {
+  background: var(--accent);
+  transform: scale(1.4);
+}
+
+/* 정지 조건: 버튼, 화면 밖·숨은 탭, 카드 위 포인터·키보드 포커스. 진행 막대도 멈춰 자동 전환이 미뤄진다. */
+.root[data-paused] *,
+.root[data-paused] *::before,
+.root[data-paused] *::after,
+.root:has(.card:focus-visible) *,
+.root:has(.card:focus-visible) *::after {
+  animation-play-state: paused;
+}
+
+@media (hover: hover) {
+  .root:has(.card:hover) *,
+  .root:has(.card:hover) *::after {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes halo-spin { to { transform: rotate(1turn); } }
+
+@keyframes status-ping {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.8); }
+}
+
+@keyframes query-focus {
+  0%, 100% { border-color: var(--border); }
+  35% { border-color: var(--accent); }
+}
+
+@keyframes type {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes caret { 50% { opacity: 0; } }
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes lamp-on {
+  0% { background-color: var(--surface-2); color: var(--muted); opacity: 0.5; transform: scale(0.8); }
+  60% { transform: scale(1.18); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* reduced-motion: 애니메이션을 모두 끄면 완성 상태만 남고, animationend가 없으니 자동 전환도 멈춘다. 점 버튼으로만 넘긴다. */
+@media (prefers-reduced-motion: reduce) {
+  .root *,
+  .root *::before,
+  .root *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .pauseButton,
+  .progress,
+  .caret,
+  .halo {
+    display: none;
+  }
+}

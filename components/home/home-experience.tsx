@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { HomeDiscovery } from "@/components/home/home-discovery";
+import { HomeMotionHero } from "@/components/home/home-motion-hero";
 import { HomeSearch } from "@/components/home/home-search";
 import { HomeTrendDiscovery } from "@/components/home/home-trend-discovery";
 import { TranslatedEditionHint } from "@/components/home/translated-edition-hint";
@@ -37,6 +38,8 @@ export function HomeExperience({
   const copy = HOME_COPY[locale];
   const searchPath = localizedPath("/search", locale);
   const explorePath = localizedPath("/explore", locale);
+  const motionEntries = entryState === "ready" ? entries : [];
+  const titleWords = copy.hero.title.split(" ");
 
   return (
     <div className={styles.page}>
@@ -45,22 +48,36 @@ export function HomeExperience({
         id="home-top"
         data-home-section="hero-search"
         className={styles.hero}
+        data-hero-motion={motionEntries.length > 0 ? "true" : undefined}
         aria-labelledby={`home-title-${locale}`}
       >
-        <div className={styles.heroCopy}>
-          <h1 id={`home-title-${locale}`} className={styles.heroTitle}>
-            {copy.hero.title}
-          </h1>
-          <p className={styles.heroIntro}>{copy.hero.intro}</p>
+        <div className={styles.heroMain}>
+          <div className={styles.heroCopy}>
+            <h1 id={`home-title-${locale}`} className={styles.heroTitle}>
+              {titleWords.map((word, index) => (
+                <span
+                  key={`${word}-${index}`}
+                  className={styles.heroWord}
+                  style={{ animationDelay: `${index * 70}ms` }}
+                >
+                  {word}
+                  {index < titleWords.length - 1 ? " " : null}
+                </span>
+              ))}
+            </h1>
+            <p className={styles.heroIntro}>{copy.hero.intro}</p>
+          </div>
+
+          <HomeSearch
+            locale={locale}
+            action={searchPath}
+            label={copy.hero.searchLabel}
+            placeholder={copy.hero.searchPlaceholder}
+            button={copy.hero.searchButton}
+          />
         </div>
 
-        <HomeSearch
-          locale={locale}
-          action={searchPath}
-          label={copy.hero.searchLabel}
-          placeholder={copy.hero.searchPlaceholder}
-          button={copy.hero.searchButton}
-        />
+        <HomeMotionHero locale={locale} entries={motionEntries} />
       </section>
 
       <HomeTrendDiscovery locale={locale} entries={externalTrends} />

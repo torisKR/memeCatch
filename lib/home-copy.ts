@@ -19,6 +19,12 @@ export type HomeCopy = {
     pauseScene: string;
     playScene: string;
   };
+  motion: {
+    label: string;
+    pause: string;
+    play: string;
+    show: string;
+  };
   recent: {
     eyebrow: string;
     title: string;
@@ -61,6 +67,12 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
       sceneLabel: "오렌지색 입체 말풍선 심벌과 금속 카드, 네 가지 맥락 신호를 조작하는 스튜디오",
       pauseScene: "장면 멈추기",
       playScene: "장면 재생하기",
+    },
+    motion: {
+      label: "밈 3초 해석",
+      pause: "장면 멈추기",
+      play: "장면 재생하기",
+      show: "이 밈 보기",
     },
     recent: {
       eyebrow: "편집 추천",
@@ -117,6 +129,12 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
       pauseScene: "Pause scene",
       playScene: "Play scene",
     },
+    motion: {
+      label: "A meme, read in 3 seconds",
+      pause: "Pause scene",
+      play: "Play scene",
+      show: "Show this meme",
+    },
     recent: {
       eyebrow: "Published translations",
       title: "Start with an available explanation",
@@ -168,6 +186,12 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
       sceneLabel: "オレンジ色の立体吹き出しシンボルとメタルカード、4つの文脈シグナルを操作するスタジオ",
       pauseScene: "シーンを停止",
       playScene: "シーンを再生",
+    },
+    motion: {
+      label: "3秒でミーム解説",
+      pause: "シーンを停止",
+      play: "シーンを再生",
+      show: "このミームを表示",
     },
     recent: {
       eyebrow: "公開中の翻訳",
@@ -221,6 +245,12 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
       pauseScene: "暂停场景",
       playScene: "播放场景",
     },
+    motion: {
+      label: "3秒看懂迷因",
+      pause: "暂停场景",
+      play: "播放场景",
+      show: "查看这个迷因",
+    },
     recent: {
       eyebrow: "已发布翻译",
       title: "从现有解释开始",
@@ -272,6 +302,12 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
       sceneLabel: "橙色立體氣泡標誌、金屬卡片與四種可互動語境提示組成的工作室場景",
       pauseScene: "暫停場景",
       playScene: "播放場景",
+    },
+    motion: {
+      label: "3秒看懂迷因",
+      pause: "暫停場景",
+      play: "播放場景",
+      show: "查看這個迷因",
     },
     recent: {
       eyebrow: "已發布翻譯",

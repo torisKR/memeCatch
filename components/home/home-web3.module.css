@@ -13,6 +13,12 @@
   border-bottom: 1px solid var(--border);
 }
 
+.heroMain {
+  display: grid;
+  min-width: 0;
+  gap: clamp(1rem, 3vw, 1.5rem);
+}
+
 .heroCopy { max-width: 34rem; }
 
 .heroTitle {
@@ -22,6 +28,20 @@
   letter-spacing: -0.035em;
   line-height: 1.2;
   text-wrap: balance;
+}
+
+/* 헤드라인 단어 스태거 (DESIGN.md §5 검색 히어로). 투명도는 건드리지 않아 LCP 텍스트가 바로 그려진다. */
+.heroWord {
+  display: inline-block;
+  white-space: pre;
+  animation: hero-word-in 0.5s var(--ease-out) both;
+}
+
+.heroWord:last-child:not(:first-child) { color: var(--accent-text); }
+
+@keyframes hero-word-in {
+  from { transform: translateY(0.4em) rotate(2deg); }
+  to { transform: none; }
 }
 
 .heroIntro {
@@ -89,7 +109,11 @@
   font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
+  transition: filter 160ms ease, transform 120ms var(--ease-out);
 }
+
+.searchButton:hover { filter: brightness(1.08); }
+.searchButton:active { transform: scale(0.96); }
 
 .searchButton:focus-visible,
 .textLink:focus-visible,
@@ -145,8 +169,13 @@
 .primaryLink svg { width: 1rem; height: 1rem; }
 
 @media (min-width: 48rem) {
-  .hero {
-    grid-template-columns: minmax(0, 0.95fr) minmax(22rem, 1.05fr);
+  .hero[data-hero-motion] {
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 1fr);
     align-items: center;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroWord { animation: none; }
+  .searchButton { transition: none; }
 }

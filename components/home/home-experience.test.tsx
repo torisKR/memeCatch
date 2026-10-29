@@ -39,6 +39,8 @@ const trend: PublicMemeTrendSummary = {
 };
 
 describe("HomeExperience", () => {
+  const textOf = (html: string) => html.replace(/<[^>]+>/g, "");
+
   it.each(HOME_LOCALES)("keeps a compact search and recent-content flow for %s", (locale) => {
     const html = renderToStaticMarkup(
       <HomeExperience locale={locale} entries={[entry]} />,
@@ -54,6 +56,7 @@ describe("HomeExperience", () => {
     expect(html).toContain(`href="${locale === "ko" ? "/explore" : `/${locale}/explore`}"`);
     expect(html).toContain(entry.title);
     expect(html).toContain('data-safety-icon="green"');
+    expect(html).toContain("data-home-motion");
     expect(html).not.toContain("data-home-scroll-track");
     expect(html).not.toContain("data-home-artwork");
     expect(html).not.toContain('data-home-section="pathways"');
@@ -78,7 +81,7 @@ describe("HomeExperience", () => {
   it("uses a short Korean first-screen promise", () => {
     const html = renderToStaticMarkup(<HomeExperience locale="ko" entries={[entry]} />);
 
-    expect(html).toContain("지금 궁금한 밈, 한눈에.");
+    expect(textOf(html)).toContain("지금 궁금한 밈, 한눈에.");
     expect(html).not.toContain("밈의 뜻을 찾고, 쓸 맥락까지 확인하세요.");
     expect(html).toContain("최근 정리한 밈");
     expect(html).toContain("외부 유행순이 아닙니다.");
@@ -106,5 +109,7 @@ describe("HomeExperience", () => {
     expect(empty).not.toContain("data-thumbnail-state");
     expect(unavailable).toContain('data-home-recommendations="unavailable"');
     expect(unavailable).not.toContain('data-home-recommendations="empty"');
+    expect(empty).not.toContain("data-home-motion");
+    expect(unavailable).not.toContain("data-home-motion");
   });
 });

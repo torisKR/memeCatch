@@ -6,6 +6,8 @@ import type { MemeContentRow } from "@/lib/queries";
 import { isAvailableContent } from "@/lib/content-availability";
 import { isContextSourceUrl } from "@/lib/source-links";
 import { sourcePlatformFromReference } from "@/lib/source-platform";
+import { isHouseOriginal } from "@/lib/house-original";
+import { HouseOriginalVisual } from "@/components/house-original-visual";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
@@ -33,6 +35,8 @@ export function MemeEmbed({
   isRepresentative = true,
   category,
   originYear,
+  originKind,
+  summary,
 }: {
   content: Pick<
     MemeContentRow,
@@ -46,7 +50,22 @@ export function MemeEmbed({
   category?: MemeCategory | null;
   /** 폴백 타이포 히어로의 등장연도 칩 — 미전달 시 칩 생략 */
   originYear?: number | null;
+  /** 밈캐치 자체 제작 여부 */
+  originKind?: string | null;
+  /** 자체 제작 밈 요약 설명 */
+  summary?: string | null;
 }) {
+  if (isHouseOriginal(originKind)) {
+    return (
+      <figure>
+        <HouseOriginalVisual
+          title={title}
+          summary={summary || "밈캐치 자체 제작 오리지널 밈 콘텐츠입니다."}
+          category={category || undefined}
+        />
+      </figure>
+    );
+  }
   const sourcePlatform = sourcePlatformFromReference({
     platform: content?.platform,
     url: content?.url,

@@ -317,6 +317,8 @@ export default async function MemeDetailPage({ params }: Props) {
               isRepresentative={representative?.is_representative ?? true}
               category={meme.category}
               originYear={meme.origin_year}
+              originKind={meme.origin_kind}
+              summary={meme.summary}
             />
           </section>
 

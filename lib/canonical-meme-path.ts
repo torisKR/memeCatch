@@ -15,6 +15,17 @@ function decodedRouteKey(value: string): string | null {
 }
 
 /**
+ * Known duplicate entries mapped to a single authoritative canonical representative.
+ * Prevents redundant crawl targets and "thin/duplicate content" AdSense penalties.
+ * (e.g. Hiddink 2002 World Cup quote variations)
+ */
+export const CANONICAL_MEME_ALIAS_MAP: Record<string, string> = {
+  // Hiddink "I am still hungry" duplicates -> canonical: gnact78h (히딩크 "나는 아직 배가 고프다")
+  cssqxwmb: "gnact78h",
+  "9ajbp6w6": "gnact78h",
+};
+
+/**
  * Returns a same-site canonical destination for a valid meme alias, or null
  * when the requested route key already identifies the canonical document.
  */

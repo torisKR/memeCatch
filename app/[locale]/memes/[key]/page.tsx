@@ -31,10 +31,10 @@ import {
   isIndexableLocalizedMeme,
 } from "@/lib/meme-translations";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
-import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { publicSourceUrl } from "@/lib/source-links";
 
-export const revalidate = 600;
+export const revalidate = 86400;
 
 type Props = { params: Promise<{ locale: string; key: string }> };
 
@@ -223,9 +223,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, key } = await params;
   if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
 
-  const shortId = shortIdFromParam(key);
-  const meme = await getLocalizedMemeByShortId(shortId, locale);
+  const requestedShortId = shortIdFromParam(key);
+  const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
+  const meme = await getLocalizedMemeByShortId(targetShortId, locale);
   if (!meme) notFound();
+
+  if (targetShortId !== requestedShortId) {
+    permanentRedirect(localizedMemePath(locale, meme.short_id, meme.slug));
+  }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
@@ -281,9 +286,14 @@ export default async function LocalizedMemePage({ params }: Props) {
   const { locale, key } = await params;
   if (!isSeoContentLocale(locale)) notFound();
 
-  const shortId = shortIdFromParam(key);
-  const meme = await getLocalizedMemeByShortId(shortId, locale);
+  const requestedShortId = shortIdFromParam(key);
+  const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
+  const meme = await getLocalizedMemeByShortId(targetShortId, locale);
   if (!meme) notFound();
+
+  if (targetShortId !== requestedShortId) {
+    permanentRedirect(localizedMemePath(locale, meme.short_id, meme.slug));
+  }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,

@@ -16,8 +16,10 @@ import {
 } from "@/lib/i18n-routing";
 
 
-/** 1시간마다 재생성 — 새로 공개된 밈 반영 */
-export const revalidate = 3600;
+import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
+
+/** 24시간마다 재생성 — Vercel ISR 쓰기 한도 최적화 */
+export const revalidate = 86400;
 
 /** 공개(=200으로 렌더되는) 밈 상태: approved + limited. */
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
@@ -264,6 +266,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!data || data.length === 0) break;
 
     for (const meme of data as unknown as SitemapMemeRow[]) {
+      if (CANONICAL_MEME_ALIAS_MAP[meme.short_id]) continue;
       if (!isIndexableMeme(meme)) continue;
       const translations = reviewedTranslations(meme);
       const languages = memeLanguages(meme, translations);

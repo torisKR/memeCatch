@@ -12,7 +12,7 @@ import {
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { SITE_URL } from "@/lib/site";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 type Props = { params: Promise<{ locale: string }> };
 

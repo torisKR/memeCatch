@@ -11,8 +11,8 @@ import {
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
 
-/** 홈 문서는 요청별 SSR. 명시적으로 캐시 가능한 데이터는 5분 단위로 갱신한다. */
-export const revalidate = 300;
+/** 홈 문서는 요청별 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   alternates: {

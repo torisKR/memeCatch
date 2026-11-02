@@ -12,7 +12,8 @@ import { AdsenseScript } from "@/components/adsense-script";
 
 
 /** 테마별 밈 모음 허브. slug는 미리 열거하지만 문서는 요청별 SSR로 렌더한다. */
-export const revalidate = 3600;
+/** 테마별 모음 허브. Vercel ISR 쓰기 최적화를 위해 24시간 단위로 캐시한다. */
+export const revalidate = 86400;
 
 export function generateStaticParams() {
   return COLLECTIONS.map((c) => ({ slug: c.slug }));

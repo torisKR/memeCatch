@@ -11,6 +11,7 @@ import {
 } from "@/lib/i18n-routing";
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { SITE_URL } from "@/lib/site";
+import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
 
 export const revalidate = 3600;
 
@@ -49,7 +50,7 @@ export default async function LocalizedHomePage({ params }: Props) {
     .slice(0, 6);
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);
-  const entries = featured.map((meme) => ({
+  const rawEntries = featured.map((meme) => ({
     id: meme.id,
     href: localizedMemePath(locale, meme.short_id, meme.slug),
     title: meme.title,
@@ -62,6 +63,7 @@ export default async function LocalizedHomePage({ params }: Props) {
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,
   }));
+  const entries = getGuaranteedHomeEntries(locale, rawEntries);
 
   return (
     <main

@@ -9,6 +9,8 @@ import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
 import styles from "@/components/home/home-web3.module.css";
 import { TranslatedEditionHint } from "@/components/home/translated-edition-hint";
 import { SafetySignalGuide } from "@/components/usage-guide";
+import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
+import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
 import { HOME_COPY } from "@/lib/home-copy";
 import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
 import {
@@ -70,6 +72,24 @@ export function HomeExperience({
             </Link>
           </div>
         )}
+      </section>
+
+      {/* 상황별 안전 가이드 및 실전 용례 쇼케이스 (고유 가치 전면 배치) */}
+      <section
+        id="home-safety-showcase"
+        data-home-section="safety-showcase"
+        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+      >
+        <HomeSafetyShowcase />
+      </section>
+
+      {/* 인터랙티브 밈 소통 안전도 자가진단기 */}
+      <section
+        id="home-safety-quiz"
+        data-home-section="safety-quiz"
+        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+      >
+        <SafetyDiagnosticQuiz />
       </section>
 
       <section

@@ -10,6 +10,7 @@ import {
 } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
+import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
 
 /** 홈 문서는 요청별 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
 export const revalidate = 3600;
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 export default async function Home() {
   const latest = await getRecentlyPublishedMemes(6);
   const categoryCopy = getSeoCopy("ko").categories;
-  const entries = latest.map((meme) => ({
+  const rawEntries = latest.map((meme) => ({
     id: meme.id,
     href: memePathFrom(meme.short_id, meme.slug),
     title: meme.title,
@@ -41,6 +42,7 @@ export default async function Home() {
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,
   }));
+  const entries = getGuaranteedHomeEntries("ko", rawEntries);
 
   return (
     <main className="bg-background text-foreground">

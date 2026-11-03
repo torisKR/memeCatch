@@ -45,6 +45,7 @@ import { ContextNav } from "@/components/context-nav";
 import { SourceEvidence } from "@/components/source-evidence";
 import { TrustNote } from "@/components/trust-note";
 import { DocStatusNote } from "@/components/doc-status-note";
+import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
 import { isIndexableMeme } from "@/lib/content-depth";
@@ -393,6 +394,13 @@ export default async function MemeDetailPage({ params }: Props) {
             note={meme.usage_note}
             caution={meme.caution}
             reviewedAt={meme.safety_reviewed_at}
+          />
+
+          {/* 지금도 쓰이나요? — 트렌드 수명 주기 및 현실적 사용 가이드 */}
+          <MemeLifecycleGuide
+            lifecycleStatus={meme.lifecycle_status}
+            originYear={meme.origin_year}
+            title={meme.title}
           />
 
           {(meme.description || meme.origin) && (

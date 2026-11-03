@@ -5,6 +5,7 @@ import { DocClassNote } from "@/components/doc-class-note";
 import { SaveButton } from "@/components/save-button";
 import { SafetyBadge } from "@/components/safety-badge";
 import { SignalTrace } from "@/components/signal-trace";
+import { CopyTextButton } from "@/components/copy-text-button";
 import { LIFECYCLE_STATUS, type SafetyLevel } from "@/lib/labels";
 import type { MemeRow } from "@/lib/queries";
 
@@ -61,9 +62,19 @@ export function AnswerCard({
         <SignalTrace status={meme.lifecycle_status} size="lg" />
       </div>
 
-      <h1 className="mt-4 text-2xl font-extrabold leading-tight md:text-3xl">
-        {meme.title}
-      </h1>
+      <div className="mt-4 flex items-start justify-between gap-3">
+        <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
+          {meme.title}
+        </h1>
+        <CopyTextButton
+          text={`${meme.title}: ${meme.summary}`}
+          label="복사"
+          copiedLabel="복사됨"
+          ariaLabel="밈 명칭 및 요약 복사"
+          variant="pill"
+          className="shrink-0 mt-0.5"
+        />
+      </div>
       <p
         id="meme-summary"
         className="mt-1.5 text-lg leading-relaxed text-foreground"

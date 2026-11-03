@@ -1,5 +1,6 @@
-import { Clock, TrendingUp, Archive, Flame, ShieldAlert } from "lucide-react";
+import { Clock, TrendingUp, Archive, Flame } from "lucide-react";
 import { LIFECYCLE_STATUS, type LifecycleStatus } from "@/lib/labels";
+import { CopyTextButton } from "@/components/copy-text-button";
 
 type Props = {
   lifecycleStatus: LifecycleStatus;
@@ -60,7 +61,7 @@ export function MemeLifecycleGuide({ lifecycleStatus, originYear, title }: Props
   return (
     <section
       aria-labelledby="meme-lifecycle-heading"
-      className="rounded-2xl border border-white/10 bg-surface p-5 space-y-4"
+      className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4 shadow-xs"
     >
       <div className="flex items-center justify-between">
         <h2 id="meme-lifecycle-heading" className="text-lg font-bold text-foreground">
@@ -82,9 +83,18 @@ export function MemeLifecycleGuide({ lifecycleStatus, originYear, title }: Props
         </p>
       </div>
 
-      <div className="rounded-xl border border-white/5 bg-surface-2 p-3.5 text-xs sm:text-sm text-foreground/90 space-y-1">
-        <div className="font-bold text-accent-text flex items-center gap-1.5">
-          <span>💡</span> 밈캐치 실전 사용 제안
+      <div className="rounded-xl border border-border/80 bg-surface-2 p-3.5 text-xs sm:text-sm text-foreground space-y-2">
+        <div className="font-bold text-accent-text flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span>💡</span>
+            <span>밈캐치 실전 사용 제안</span>
+          </div>
+          <CopyTextButton
+            text={detail.recommendation}
+            label="제안 복사"
+            ariaLabel="실전 사용 제안 복사"
+            variant="mini"
+          />
         </div>
         <p className="leading-relaxed text-muted">
           {detail.recommendation}

@@ -54,9 +54,9 @@ export function HouseOriginalVisual({
           <button
             type="button"
             onClick={() => setActiveTab("card")}
-            className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${
+            className={`min-h-[38px] rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${
               activeTab === "card"
-                ? "bg-accent text-white"
+                ? "bg-accent text-white shadow-xs"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -65,9 +65,9 @@ export function HouseOriginalVisual({
           <button
             type="button"
             onClick={() => setActiveTab("storyboard")}
-            className={`rounded-lg px-3 py-1 text-xs font-bold transition-colors ${
+            className={`min-h-[38px] rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${
               activeTab === "storyboard"
-                ? "bg-accent text-white"
+                ? "bg-accent text-white shadow-xs"
                 : "text-muted hover:text-foreground"
             }`}
           >

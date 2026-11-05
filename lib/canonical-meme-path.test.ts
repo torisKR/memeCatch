@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 
 describe("canonical meme detail redirects", () => {
+  it("maps known duplicate entries to their canonical authority shortId", () => {
+    expect(CANONICAL_MEME_ALIAS_MAP["cssqxwmb"]).toBe("gnact78h");
+    expect(CANONICAL_MEME_ALIAS_MAP["9ajbp6w6"]).toBe("gnact78h");
+  });
   it("does not decode an already-decoded Next route parameter a second time", () => {
     const meme = { shortId: "a1b2c3", slug: "current", locale: "ko" as const };
     // Request %252D arrives in the page parameter as literal %2D, not a delimiter.

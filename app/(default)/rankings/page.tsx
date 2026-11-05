@@ -22,8 +22,8 @@ import {
   type RankingMethodKey,
 } from "@/lib/ranking/methods";
 
-/** 요청별 문서 SSR. revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값이다. */
-export const revalidate = 600;
+/** 요청별 문서 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
+export const revalidate = 3600;
 
 const RANKINGS_DESCRIPTION =
   "밈캐치 안에서 오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.";

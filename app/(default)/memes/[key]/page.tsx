@@ -45,6 +45,7 @@ import { ContextNav } from "@/components/context-nav";
 import { SourceEvidence } from "@/components/source-evidence";
 import { TrustNote } from "@/components/trust-note";
 import { DocStatusNote } from "@/components/doc-status-note";
+import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
 import { isIndexableMeme } from "@/lib/content-depth";
@@ -63,10 +64,10 @@ import {
 } from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
-import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 
-/** 밈 상세 문서는 요청별 SSR. React cache는 같은 요청 안의 중복 상세 조회만 제거한다. */
-export const revalidate = 600;
+/** 밈 상세 문서는 요청별 SSR. 불필요한 백그라운드 재검증으로 인한 Vercel ISR 쓰기 한도 소진을 막기 위해 24시간 캐시를 적용한다. */
+export const revalidate = 86400;
 
 export async function generateStaticParams(): Promise<{ key: string }[]> {
   return [];
@@ -76,12 +77,19 @@ type Props = { params: Promise<{ key: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
-  const meme = await getMemeByShortId(shortIdFromParam(key));
+  const requestedShortId = shortIdFromParam(key);
+  const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
+  const meme = await getMemeByShortId(targetShortId);
   // 메타데이터 단계에서 404를 확정한다. 여기서 제목만 반환하면 응답이 200으로
   // 스트리밍을 시작한 뒤라 본문의 notFound()가 상태 코드를 바꾸지 못해,
   // 없는 문서가 200 + "찾을 수 없어요" 화면(soft-404)으로 나간다 — 검색엔진이
   // 저품질 신호로 읽는다. (smoke가 /memes/zzzzzzzz 200 수신으로 검출)
   if (!meme) notFound();
+
+  // 중복 밈 별칭인 경우 대표 권위 URL로 301 영구 리디렉션
+  if (targetShortId !== requestedShortId) {
+    permanentRedirect(memePathFrom(meme.short_id, meme.slug));
+  }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
@@ -148,8 +156,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MemeDetailPage({ params }: Props) {
   const { key } = await params;
-  const meme = await getMemeByShortId(shortIdFromParam(key));
+  const requestedShortId = shortIdFromParam(key);
+  const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
+  const meme = await getMemeByShortId(targetShortId);
   if (!meme) notFound();
+
+  if (targetShortId !== requestedShortId) {
+    permanentRedirect(memePathFrom(meme.short_id, meme.slug));
+  }
+
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
@@ -303,6 +318,8 @@ export default async function MemeDetailPage({ params }: Props) {
               isRepresentative={representative?.is_representative ?? true}
               category={meme.category}
               originYear={meme.origin_year}
+              originKind={meme.origin_kind}
+              summary={meme.summary}
             />
           </section>
 
@@ -377,6 +394,13 @@ export default async function MemeDetailPage({ params }: Props) {
             note={meme.usage_note}
             caution={meme.caution}
             reviewedAt={meme.safety_reviewed_at}
+          />
+
+          {/* 지금도 쓰이나요? — 트렌드 수명 주기 및 현실적 사용 가이드 */}
+          <MemeLifecycleGuide
+            lifecycleStatus={meme.lifecycle_status}
+            originYear={meme.origin_year}
+            title={meme.title}
           />
 
           {(meme.description || meme.origin) && (

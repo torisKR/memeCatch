@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 1800;
+export const revalidate = 86400;
 
 const AUDIENCES = ["20s", "30s", "40s"] as const;
 

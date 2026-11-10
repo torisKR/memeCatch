@@ -5,7 +5,10 @@
  * 쓰기는 절대 여기서 하지 않는다(쓰기는 RPC — 클라이언트 컴포넌트에서 호출).
  */
 import { cache } from "react";
+import { cacheCatalogRead } from "@/lib/catalog-read-cache";
+import { relatedMemePoolFilter } from "@/lib/related-meme-pool";
 import { createStaticClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
@@ -219,136 +222,148 @@ export async function getGenerationHighlights(
   }
 }
 
-/** 상세 조회 — generateMetadata와 본문에서 중복 호출되므로 React cache로 dedupe */
-export const getMemeByShortId = cache(
-  async (shortId: string): Promise<MemeDetail | null> => {
-    if (!shortId) return null;
-    try {
-      const supabase = createStaticClient();
-      const { data, error } = await supabase
-        .from("memes")
-        .select("*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state)")
-        .eq("short_id", shortId)
-        .in("moderation_status", [...PUBLIC_STATUSES])
-        .maybeSingle();
-      if (error) throw new MemeCatalogUnavailableError();
-      if (!data) return null;
-      return data as unknown as MemeDetail;
-    } catch (error) {
-      if (error instanceof MemeCatalogUnavailableError) throw error;
-      throw new MemeCatalogUnavailableError();
-    }
-  }
+const DETAIL_SELECT =
+  "*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state)";
+
+/** 오류는 throw라 Data Cache에 들어가지 않는다. null은 확인된 결측이다. */
+async function fetchMemeByShortId(shortId: string): Promise<MemeDetail | null> {
+  const supabase = createStaticClient();
+  const { data, error } = await supabase
+    .from("memes")
+    .select(DETAIL_SELECT)
+    .eq("short_id", shortId)
+    .in("moderation_status", [...PUBLIC_STATUSES])
+    .maybeSingle();
+  if (error) throw new MemeCatalogUnavailableError();
+  if (!data) return null;
+  return data as unknown as MemeDetail;
+}
+
+const fetchMemeByShortIdCached = cacheCatalogRead(
+  fetchMemeByShortId,
+  ["public-meme-by-short-id"],
+  { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
 );
 
-/** 관련 밈 — 같은 태그 우선, 부족하면 같은 카테고리에서 연도 근접순으로 채움 (최대 4개) */
+/** 상세 조회 — 한 요청 안에서는 React cache, 성공한 읽기는 Data Cache. */
+export const getMemeByShortId = cache(async (shortId: string): Promise<MemeDetail | null> => {
+  if (!shortId) return null;
+  try {
+    return await fetchMemeByShortIdCached(shortId);
+  } catch (error) {
+    if (error instanceof MemeCatalogUnavailableError) throw error;
+    throw new MemeCatalogUnavailableError();
+  }
+});
+
+type RelatedLexicalPool = {
+  taggedIds: string[];
+  rows: MemeListItem[];
+};
+
 /**
- * 관련 밈 — CEO 플랜 Wave 1 스코어링:
- *   태그 공유 여부×3 + 동일 카테고리×2 + 의미 후보×2 + |연도차|≤2×1,
- *   동점 시 trend_score 내림차순. 의미 검색 미설정 시 기존 점수를 유지한다.
- * 후보 풀: 태그 공유 밈(최대 30) ∪ 동일 카테고리 상위 24 ∪ 연도 인접(±2) 상위 12.
+ * 태그 공유 밈과, 같은 카테고리·±2년을 한 필터로 모은 목록.
+ * 쿼리 오류는 throw해서 빈 목록으로 캐시되지 않는다.
+ */
+const loadRelatedLexicalPool = cacheCatalogRead(
+  async (
+    id: string,
+    category: MemeCategory,
+    originYear: number | null,
+    tagKey: string,
+  ): Promise<RelatedLexicalPool> => {
+    const supabase = createStaticClient();
+    const tagIds = tagKey ? tagKey.split(",") : [];
+    const taggedIds = new Set<string>();
+    const [tagged, pool] = await Promise.all([
+      (async (): Promise<MemeListItem[]> => {
+        if (tagIds.length === 0) return [];
+        const { data: mapRows, error: mapError } = await supabase
+          .from("meme_tags_map")
+          .select("meme_id")
+          .in("tag_id", tagIds)
+          .neq("meme_id", id)
+          .limit(30);
+        if (mapError) throw new MemeCatalogUnavailableError();
+        for (const row of mapRows ?? []) taggedIds.add(row.meme_id);
+        if (taggedIds.size === 0) return [];
+        const { data, error } = await supabase
+          .from("memes")
+          .select(LIST_SELECT)
+          .in("id", [...taggedIds])
+          .in("moderation_status", [...PUBLIC_STATUSES])
+          .order("trend_score", { ascending: false })
+          .limit(30);
+        if (error) throw new MemeCatalogUnavailableError();
+        return (data ?? []) as MemeListItem[];
+      })(),
+      (async (): Promise<MemeListItem[]> => {
+        const { data, error } = await supabase
+          .from("memes")
+          .select(LIST_SELECT)
+          .or(relatedMemePoolFilter(category, originYear))
+          .neq("id", id)
+          .in("moderation_status", [...PUBLIC_STATUSES])
+          .order("trend_score", { ascending: false })
+          .limit(36);
+        if (error) throw new MemeCatalogUnavailableError();
+        return (data ?? []) as MemeListItem[];
+      })(),
+    ]);
+    return { taggedIds: [...taggedIds], rows: [...tagged, ...pool] };
+  },
+  ["public-meme-related"],
+  { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+);
+
+/**
+ * 관련 밈 점수: 태그 공유×3 + 동일 카테고리×2 + 의미 후보×2 + |연도차|≤2×1.
+ * 어휘 후보는 성공한 읽기만 캐시하고, 의미 검색 실패는 그 후보만 빼서 빈 결과로 저장하지 않는다.
  */
 export async function getRelatedMemes(
   meme: { id: string; category: MemeCategory; origin_year: number | null },
   tagIds: string[],
-  limit = 9
+  limit = 9,
 ): Promise<MemeListItem[]> {
   try {
-    const supabase = createStaticClient();
-    const taggedIds = new Set<string>();
-    const semanticIds = new Set<string>();
-    const semanticPromise = (async (): Promise<MemeListItem[] | null> => {
-      try {
-        const ids = await getSemanticRelatedMemeIds(meme.id, limit);
-        if (!ids.length) return null;
-        const { data, error } = await supabase.from("memes").select(LIST_SELECT)
-          .in("id", ids).in("moderation_status", [...PUBLIC_STATUSES]);
-        if (error) return null;
-        for (const id of ids) semanticIds.add(id);
-        return data as MemeListItem[] | null;
-      } catch { return null; }
-    })();
-
-    // 태그맵→태그밈 2단계 체인만 진짜 의존 관계 — 체인을 async IIFE로 묶어
-    // sameCat·nearYear 조회와 병렬 실행한다(직렬 4회 → 병렬, 대기 시간 단축).
-    const taggedPromise = (async (): Promise<MemeListItem[] | null> => {
-      if (tagIds.length === 0) return null;
-      const { data: mapRows } = await supabase
-        .from("meme_tags_map")
-        .select("meme_id")
-        .in("tag_id", tagIds)
-        .neq("meme_id", meme.id)
-        .limit(30);
-      for (const r of mapRows ?? []) taggedIds.add(r.meme_id);
-      if (taggedIds.size === 0) return null;
-      const { data } = await supabase
-        .from("memes")
-        .select(LIST_SELECT)
-        .in("id", [...taggedIds])
-        .in("moderation_status", [...PUBLIC_STATUSES])
-        .order("trend_score", { ascending: false })
-        .limit(30);
-      return data as MemeListItem[] | null;
-    })();
-
-    const sameCatPromise = (async (): Promise<MemeListItem[] | null> => {
-      const { data } = await supabase
-        .from("memes")
-        .select(LIST_SELECT)
-        .eq("category", meme.category)
-        .neq("id", meme.id)
-        .in("moderation_status", [...PUBLIC_STATUSES])
-        .order("trend_score", { ascending: false })
-        .limit(24);
-      return data as MemeListItem[] | null;
-    })();
-
-    const nearYearPromise = (async (): Promise<MemeListItem[] | null> => {
-      if (meme.origin_year == null) return null;
-      const { data } = await supabase
-        .from("memes")
-        .select(LIST_SELECT)
-        .gte("origin_year", meme.origin_year - 2)
-        .lte("origin_year", meme.origin_year + 2)
-        .neq("id", meme.id)
-        .in("moderation_status", [...PUBLIC_STATUSES])
-        .order("trend_score", { ascending: false })
-        .limit(12);
-      return data as MemeListItem[] | null;
-    })();
-
-    const [tagged, sameCat, nearYear, semantic] = await Promise.all([
-      taggedPromise,
-      sameCatPromise,
-      nearYearPromise,
-      semanticPromise,
+    const tagKey = [...new Set(tagIds)].sort().join(",");
+    const [lexical, semanticRows] = await Promise.all([
+      loadRelatedLexicalPool(meme.id, meme.category, meme.origin_year, tagKey),
+      (async (): Promise<MemeListItem[] | null> => {
+        try {
+          const ids = await getSemanticRelatedMemeIds(meme.id, limit);
+          if (!ids.length) return null;
+          const { data, error } = await createStaticClient()
+            .from("memes")
+            .select(LIST_SELECT)
+            .in("id", ids)
+            .in("moderation_status", [...PUBLIC_STATUSES]);
+          if (error) return null;
+          return data as MemeListItem[] | null;
+        } catch {
+          return null;
+        }
+      })(),
     ]);
-
-    // 병합 순서는 기존 직렬 버전과 동일하게 유지: 태그밈 → 동일 카테고리 → 연도 인접
+    const taggedIds = new Set(lexical.taggedIds);
+    const semanticIds = new Set((semanticRows ?? []).map((item) => item.id));
     const pool = new Map<string, MemeListItem>();
-    const collect = (rows: MemeListItem[] | null) => {
-      for (const m of rows ?? []) if (m.id !== meme.id) pool.set(m.id, m);
-    };
-    collect(tagged);
-    collect(sameCat);
-    collect(nearYear);
-    collect(semantic);
-
-    const score = (m: MemeListItem) =>
-      (taggedIds.has(m.id) ? 3 : 0) +
-      (m.category === meme.category ? 2 : 0) +
-      (semanticIds.has(m.id) ? 2 : 0) +
+    for (const item of [...lexical.rows, ...(semanticRows ?? [])]) {
+      if (item.id !== meme.id) pool.set(item.id, item);
+    }
+    const score = (item: MemeListItem) =>
+      (taggedIds.has(item.id) ? 3 : 0) +
+      (item.category === meme.category ? 2 : 0) +
+      (semanticIds.has(item.id) ? 2 : 0) +
       (meme.origin_year != null &&
-      m.origin_year != null &&
-      Math.abs(m.origin_year - meme.origin_year) <= 2
+      item.origin_year != null &&
+      Math.abs(item.origin_year - meme.origin_year) <= 2
         ? 1
         : 0);
-
     return [...pool.values()]
       .sort((a, b) => score(b) - score(a) || (b.trend_score ?? 0) - (a.trend_score ?? 0))
       .slice(0, limit);
   } catch {
-    // 관련 밈 실패는 치명적이지 않음 — 섹션 숨김으로 처리
     return [];
   }
 }

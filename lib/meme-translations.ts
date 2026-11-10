@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { cacheCatalogRead } from "@/lib/catalog-read-cache";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
 import {
   DEFAULT_LOCALE,
@@ -15,6 +16,7 @@ import {
   type MemeDetail,
 } from "@/lib/queries";
 import { createStaticClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { originCountryCode } from "@/lib/meme-country";
 
 export type TranslationStatus = "machine" | "reviewed" | "stale";
@@ -211,6 +213,39 @@ export function isIndexableLocalizedMeme(
   );
 }
 
+async function fetchReviewedTranslationRows(memeId: string): Promise<MemeTranslationRow[]> {
+  const { data, error } = await createStaticClient()
+    .from("meme_translations")
+    .select(TRANSLATION_COLUMNS)
+    .eq("meme_id", memeId)
+    .eq("status", "reviewed")
+    .overrideTypes<MemeTranslationRow[], { merge: false }>();
+  if (error || !data) throw new MemeCatalogUnavailableError();
+  return data;
+}
+
+const readReviewedTranslationRows = cache(cacheCatalogRead(
+  fetchReviewedTranslationRows,
+  ["public-meme-reviewed-translations"],
+  { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+));
+
+export const listIndexableLocalizedMemes = cache(async function listIndexableLocalizedMemes<
+  T extends LocalizableMeme,
+>(meme: T): Promise<LocalizedMeme<T>[]> {
+  try {
+    const rows = await readReviewedTranslationRows(meme.id);
+    return rows.flatMap((row) => {
+      if (!isLocale(row.locale) || row.locale === DEFAULT_LOCALE) return [];
+      const localized = overlayMemeTranslation(meme, row, row.locale);
+      return localized && isIndexableLocalizedMeme(localized) ? [localized] : [];
+    });
+  } catch (error) {
+    if (!(error instanceof MemeCatalogUnavailableError)) throw error;
+    return [];
+  }
+});
+
 export const getLocalizedMemeByShortId = cache(async function getLocalizedMemeByShortId(
   shortId: string,
   locale: Locale,
@@ -221,16 +256,7 @@ export const getLocalizedMemeByShortId = cache(async function getLocalizedMemeBy
   if (!meme) return null;
 
   try {
-    const { data, error } = await createStaticClient()
-      .from("meme_translations")
-      .select(TRANSLATION_COLUMNS)
-      .eq("meme_id", meme.id)
-      .eq("locale", locale)
-      .eq("status", "reviewed")
-      .maybeSingle()
-      .overrideTypes<MemeTranslationRow, { merge: false }>();
-    if (error) throw new MemeCatalogUnavailableError();
-    if (!data) return null;
+    const data = (await readReviewedTranslationRows(meme.id)).find((row) => row.locale === locale);
     const localized = overlayMemeTranslation(meme, data, locale);
     return isIndexableLocalizedMeme(localized) ? localized : null;
   } catch (error) {
@@ -339,25 +365,19 @@ export const getAvailableTranslationLocales = cache(async function getAvailableT
 
   try {
     const supabase = createStaticClient();
-    const [{ data: base, error: baseError }, { data: rows, error: rowsError }] =
-      await Promise.all([
-        supabase
-          .from("memes")
-          .select(
-            "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url),meme_contents(availability,moderation_status),meme_tags_map(tag_id),meme_market_profiles(market_code, role, review_state)",
-          )
-          .eq("id", memeId)
-          .in("moderation_status", ["approved", "limited"])
-          .maybeSingle()
-          .overrideTypes<AvailabilityBaseRow, { merge: false }>(),
-        supabase
-          .from("meme_translations")
-          .select(TRANSLATION_COLUMNS)
-          .eq("meme_id", memeId)
-          .eq("status", "reviewed")
-          .overrideTypes<MemeTranslationRow[], { merge: false }>(),
-      ]);
-    if (baseError || rowsError || !base || !rows) return [];
+    const [{ data: base, error: baseError }, rows] = await Promise.all([
+      supabase
+        .from("memes")
+        .select(
+          "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url),meme_contents(availability,moderation_status),meme_tags_map(tag_id),meme_market_profiles(market_code, role, review_state)",
+        )
+        .eq("id", memeId)
+        .in("moderation_status", ["approved", "limited"])
+        .maybeSingle()
+        .overrideTypes<AvailabilityBaseRow, { merge: false }>(),
+      readReviewedTranslationRows(memeId),
+    ]);
+    if (baseError || !base) return [];
 
     const byLocale = new Set<Locale>();
     for (const row of rows) {

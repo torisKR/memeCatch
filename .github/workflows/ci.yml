@@ -34,7 +34,12 @@ jobs:
       - run: pnpm build
         env:
           RELEASE_SHA: ${{ github.sha }}
-      - run: pnpm exec opennextjs-cloudflare build
+      - run: pnpm cf:build
         env:
-          MEMECATCH_RUNTIME: cloudflare
           RELEASE_SHA: ${{ github.sha }}
+      - name: Confirm the Worker bundle excludes ONNX
+        run: |
+          if grep -R -l -E '@huggingface/transformers|onnxruntime_binding' .open-next --include='*.js' --include='*.mjs'; then
+            echo "ONNX leaked into the OpenNext bundle"
+            exit 1
+          fi

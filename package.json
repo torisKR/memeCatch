@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/prepare-meme-embedding-model.mjs --if-enabled && next build --webpack",
-    "cf:build": "MEMECATCH_RUNTIME=cloudflare opennextjs-cloudflare build",
+    "cf:build": "rm -rf .next && MEMECATCH_RUNTIME=cloudflare opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare deploy",
     "cf:check-env": "node scripts/check-cloudflare-env-manifest.mjs",

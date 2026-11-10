@@ -180,6 +180,12 @@ const nextConfig: NextConfig = {
     : undefined,
   webpack: (config, { isServer, webpack }) => {
     if (!cloudflareBuild || !isServer) return config;
+    // A preceding `next build` caches the real transformers import. The cache
+    // key does not see this env branch, so the Worker server compile must not
+    // reuse it.
+    if (config.cache && typeof config.cache === "object") {
+      config.cache.version = `${config.cache.version ?? ""}:memecatch-cloudflare`;
+    }
     const pipelineStub = join(__dirname, "lib/stubs/meme-embedding-pipeline.ts");
     const stubs = {
       "@/lib/meme-embedding-pipeline.server": pipelineStub,

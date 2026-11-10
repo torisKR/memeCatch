@@ -48,7 +48,7 @@ export function HomeSafetyShowcase() {
               onClick={() => setActiveTab("work_safe")}
               className={`min-h-[44px] rounded-xl px-3.5 py-2 transition-all active:scale-[0.98] ${
                 activeTab === "work_safe"
-                  ? "bg-accent text-white shadow-sm"
+                  ? "bg-accent-strong text-white shadow-sm"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -59,7 +59,7 @@ export function HomeSafetyShowcase() {
               onClick={() => setActiveTab("caution_needed")}
               className={`min-h-[44px] rounded-xl px-3.5 py-2 transition-all active:scale-[0.98] ${
                 activeTab === "caution_needed"
-                  ? "bg-accent text-white shadow-sm"
+                  ? "bg-accent-strong text-white shadow-sm"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -70,7 +70,7 @@ export function HomeSafetyShowcase() {
               onClick={() => setActiveTab("everyday")}
               className={`min-h-[44px] rounded-xl px-3.5 py-2 transition-all active:scale-[0.98] ${
                 activeTab === "everyday"
-                  ? "bg-accent text-white shadow-sm"
+                  ? "bg-accent-strong text-white shadow-sm"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -85,7 +85,7 @@ export function HomeSafetyShowcase() {
         {filteredMemes.slice(0, 6).map((meme) => {
           const detailHref = `/memes/${meme.short_id}-${meme.slug}`;
           const dialogueSample = meme.usage_examples[0]?.dialogue;
-          const punchline = dialogueSample?.[1]?.line ?? meme.usage_examples[0]?.text ?? meme.summary;
+          const punchline = dialogueSample?.[1]?.line ?? meme.summary;
           const speakerName = dialogueSample?.[1]?.speaker ?? "실전 대사";
 
           return (

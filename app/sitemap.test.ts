@@ -122,23 +122,53 @@ describe("사이트맵 페이지네이션 안정성", () => {
     expect(source).toContain("isIndexableMeme");
   });
 
-  it("공개 밈 조회 실패를 부분 사이트맵 성공으로 숨기지 않는다", async () => {
-    useRows([], { message: "database unavailable" });
+  it("밈 조회 오류는 밈 URL 없이 정적 사이트맵만 남긴다", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    useRows([], { message: "exceed_egress_quota" });
 
-    await expect(sitemap()).rejects.toThrow(
-      "[sitemap] 밈 조회 실패 (from=0): database unavailable",
-    );
+    const entries = await sitemap();
+
+    expect(entries.some((entry) => entry.url.endsWith("/explore"))).toBe(true);
+    expect(entries.some((entry) => entry.url.includes("/memes/"))).toBe(false);
+    expect(errorLog).toHaveBeenCalledWith("[sitemap] catalog unavailable");
+    expect(errorLog.mock.calls.flat().join(" ")).not.toContain("exceed_egress_quota");
+    errorLog.mockRestore();
   });
 
-  it("최신 공개일 조회 실패도 정상 사이트맵이나 현재 시각으로 숨기지 않는다", async () => {
-    useRows([], null, {
-      data: null,
-      error: { message: "latest unavailable" },
+  it("최신 공개일 조회 오류도 현재 시각을 만들지 않고 정적 URL만 남긴다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2035-12-31T23:59:59.000Z"));
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      useRows([], null, {
+        data: null,
+        error: { message: "exceed_egress_quota" },
+      });
+
+      const entries = await sitemap();
+
+      expect(entries.every((entry) => entry.lastModified === undefined)).toBe(true);
+      expect(entries.some((entry) => entry.url.endsWith("/collections"))).toBe(true);
+      expect(entries.some((entry) => entry.url.includes("/memes/"))).toBe(false);
+      expect(errorLog.mock.calls.flat().join(" ")).not.toContain("exceed_egress_quota");
+    } finally {
+      errorLog.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("Supabase 클라이언트가 던져도 정적 사이트맵을 반환한다", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    createStaticClient.mockImplementation(() => {
+      throw new Error("Your project's URL and Key are required to create a Supabase client!");
     });
 
-    await expect(sitemap()).rejects.toThrow(
-      "[sitemap] 최신 공개일 조회 실패: latest unavailable",
-    );
+    const entries = await sitemap();
+
+    expect(entries.some((entry) => entry.url.endsWith("/explore"))).toBe(true);
+    expect(entries.some((entry) => entry.url.includes("/memes/"))).toBe(false);
+    expect(errorLog).toHaveBeenCalledWith("[sitemap] catalog unavailable");
+    errorLog.mockRestore();
   });
 });
 

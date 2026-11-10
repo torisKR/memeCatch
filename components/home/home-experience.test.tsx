@@ -68,6 +68,8 @@ describe("HomeExperience", () => {
     expect(sectionOrder).toEqual([
       "hero-search",
       "recent-content",
+      "safety-showcase",
+      "safety-quiz",
       "usage-signals",
       "pathways",
       "editorial-trust",

@@ -292,7 +292,7 @@ export function SafetyDiagnosticQuiz() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:opacity-95 active:scale-95"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-accent-strong px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:opacity-95 active:scale-95"
                 >
                   <span>{currentIndex + 1 < DIAGNOSTIC_QUESTIONS.length ? "다음 문항 풀기" : "결과 확인하기"}</span>
                   <ArrowRight className="h-4 w-4" />
@@ -347,7 +347,7 @@ export function SafetyDiagnosticQuiz() {
             </button>
             <Link
               href="/explore"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-white shadow-md hover:opacity-95 active:scale-95"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-accent-strong px-5 py-2.5 text-sm font-bold text-white shadow-md hover:opacity-95 active:scale-95"
             >
               <span>트렌드 밈 탐색하기</span>
               <ArrowRight className="h-4 w-4" />

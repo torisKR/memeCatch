@@ -112,9 +112,7 @@ export function AuthMenu() {
     return (
       <Link
         href={`/login?next=${next}`}
-        // 모바일: 고스트(외곽선)로 시각 비중 낮춤 — 첫 화면 주인공은 검색.
-        // md+: 기존 솔리드 유지.
-        className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border border-border bg-transparent px-3 text-sm font-semibold text-foreground transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:h-11 md:border-0 md:bg-accent-strong md:px-4 md:text-white md:shadow-sm"
+        className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border border-border bg-transparent px-3 text-sm font-semibold text-foreground transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:h-11 md:px-4"
       >
         {messages.login}
       </Link>

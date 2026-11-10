@@ -47,8 +47,8 @@
 .emptyAssist {
   display: flex;
   width: min(100% - 2rem, 72rem);
-  margin: clamp(-4rem, -5vw, -2rem) auto 0;
-  padding: 0 0 clamp(3.5rem, 7vw, 6rem);
+  margin: 0 auto;
+  padding: 0 0 clamp(1.5rem, 3vw, 2.5rem);
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
   align-items: center;
@@ -58,14 +58,15 @@
 .emptyAssist p {
   max-width: 48rem;
   margin: 0;
-  color: #5c5953;
+  color: #3f3d39;
+  font-size: 1rem;
   line-height: 1.7;
 }
 
 .recentSignalRail {
   width: min(100% - 2rem, 72rem);
-  margin: clamp(-3rem, -4vw, -1.5rem) auto 0;
-  padding: 0 0 clamp(3.5rem, 7vw, 6rem);
+  margin: 0 auto;
+  padding: 0 0 clamp(1.5rem, 3vw, 2.5rem);
   border-top: 1px solid var(--web3-line);
 }
 
@@ -111,17 +112,17 @@
 
 .sectionNumber {
   display: block;
-  margin-bottom: -0.35rem;
-  color: #76726b;
-  font-size: clamp(4.5rem, 11vw, 9.5rem);
-  font-weight: 900;
-  letter-spacing: -0.09em;
-  line-height: 0.75;
+  margin-bottom: 0.75rem;
+  color: #5c5953;
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
   user-select: none;
 }
 
 .signalsSection {
-  padding: 0 1rem clamp(5rem, 9vw, 8rem);
+  padding: 0 1rem clamp(2rem, 4vw, 3rem);
   background: var(--web3-paper);
 }
 
@@ -129,7 +130,7 @@
   position: relative;
   width: min(100%, 76rem);
   margin-inline: auto;
-  padding-top: 2.25rem;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--web3-line);
 }
 
@@ -142,7 +143,7 @@
 
 .pathwaysSection {
   overflow: hidden;
-  padding: clamp(5rem, 10vw, 9rem) 1rem;
+  padding: clamp(2.25rem, 4vw, 3.5rem) 1rem;
   background: #dedbd3;
 }
 
@@ -168,7 +169,7 @@
 
 .pathwayGrid {
   display: grid;
-  margin-top: clamp(2.5rem, 6vw, 5rem);
+  margin-top: clamp(1.25rem, 3vw, 2rem);
   grid-template-columns: minmax(0, 1.18fr) minmax(18rem, 0.82fr);
   gap: 1rem;
   align-items: stretch;
@@ -177,7 +178,7 @@
 .pathwayCard {
   position: relative;
   display: flex;
-  min-height: 31rem;
+  min-height: 18rem;
   overflow: hidden;
   flex-direction: column;
   justify-content: space-between;
@@ -194,8 +195,8 @@
 .communityCard { background: var(--web3-ink-soft); }
 
 .productsCard {
-  min-height: 25rem;
-  margin-top: 6rem;
+  min-height: 18rem;
+  margin-top: 0;
   background: var(--web3-orange);
   color: #21120d;
 }
@@ -369,7 +370,7 @@
   .trustGrid { grid-template-columns: minmax(0, 1fr); }
 
   .pathwayCard,
-  .productsCard { min-height: 25rem; margin-top: 0; }
+  .productsCard { min-height: 16rem; margin-top: 0; }
 
   .contributionBar { grid-template-columns: minmax(0, 1fr); }
   .trustGrid { align-items: start; }

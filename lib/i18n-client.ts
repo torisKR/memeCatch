@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
-import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, localeFromLanguageTag, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
 import { normalizePathname } from "@/lib/normalize-pathname";
 
@@ -87,32 +87,11 @@ export function LocaleDocumentSync() {
 }
 
 /**
- * 첫 방문(쿠키 없음) 시 브라우저 언어(navigator.languages) 기반으로
- * 로케일을 1회 자동 설정한다. ko로 감지되면 쿠키를 남기지 않아
- * 기존 한국어 사용자의 동작은 그대로 유지된다.
+ * 접두사 없는 페이지는 서버가 그린 한국어 UI를 유지한다.
+ * 브라우저 언어는 `/` 첫 방문 리다이렉트에서만 고르고, 그때 쿠키가 생긴다.
+ * 여기서 다시 고르면 새로고침 뒤 메뉴가 영어로 바뀌었다가 한국어로 돌아온다.
  */
 export function LocaleAutoDetect() {
-  useEffect(() => {
-    try {
-      // A locale URL is an explicit, shareable choice. Do not overwrite it with
-      // the browser preference during hydration.
-      if (localeFromCurrentUrl()) return;
-      const hasCookie = document.cookie
-        .split("; ")
-        .some((item) => item.startsWith(`${LOCALE_COOKIE}=`));
-      if (hasCookie) return;
-      const candidates = [...(navigator.languages ?? []), navigator.language];
-      for (const tag of candidates) {
-        const detected = localeFromLanguageTag(tag);
-        if (!detected) continue;
-        if (detected !== DEFAULT_LOCALE) persistLocale(detected);
-        return;
-      }
-    } catch {
-      /* noop — 감지 실패 시 기본 로케일 유지 */
-    }
-  }, []);
-
   return null;
 }
 

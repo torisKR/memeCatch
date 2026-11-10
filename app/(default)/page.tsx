@@ -11,6 +11,8 @@ import {
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
 import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
+import { CommunityMemeBattle } from "@/components/home/community-meme-battle";
+import { getCommunityMemeBattle } from "@/lib/community-battle.server";
 
 /** 홈 문서는 요청별 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
 export const revalidate = 3600;
@@ -43,13 +45,21 @@ export default async function Home() {
       ?? null,
   }));
   const entries = getGuaranteedHomeEntries("ko", rawEntries);
+  const battleBoards = (await getCommunityMemeBattle()).filter((board) => board.status === "ready");
 
   return (
     <main className="bg-background text-foreground">
       <AdsenseScript />
       <WebSiteJsonLd />
       <DefinedTermSetJsonLd />
-      <HomeExperience locale="ko" entries={entries} />
+      <div className={battleBoards.length > 0 ? "xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start" : undefined}>
+        <HomeExperience locale="ko" entries={entries} />
+        {battleBoards.length > 0 ? (
+          <aside className="px-4 pb-8 xl:sticky xl:top-20 xl:pr-4 xl:pl-0">
+            <CommunityMemeBattle boards={battleBoards} />
+          </aside>
+        ) : null}
+      </div>
     </main>
   );
 }

@@ -28,14 +28,21 @@ function publicMemeRow(overrides: Record<string, unknown> = {}) {
 }
 
 vi.mock("@supabase/ssr", () => ({
-  createServerClient: () => ({
-    auth: { getUser: supabaseMocks.getUser },
-    from: supabaseMocks.from,
-    rpc: supabaseMocks.rpc,
-  }),
+  createServerClient: (url?: string, key?: string) => {
+    if (!url?.trim() || !key?.trim()) {
+      throw new Error("Your project's URL and Key are required to create a Supabase client!");
+    }
+    return {
+      auth: { getUser: supabaseMocks.getUser },
+      from: supabaseMocks.from,
+      rpc: supabaseMocks.rpc,
+    };
+  },
 }));
 
 beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-test-key");
   supabaseMocks.getUser.mockReset().mockResolvedValue({ data: { user: null } });
   supabaseMocks.rpc.mockReset().mockResolvedValue({ data: false, error: null });
   supabaseMocks.abortSignal.mockReset().mockResolvedValue({
@@ -551,6 +558,48 @@ describe("proxy landing redirect", () => {
 
     // Assert
     expect(response.headers.get("location")).toBeNull();
+  });
+});
+
+describe("proxy auth when Supabase is unavailable", () => {
+  it("redirects /my to login instead of throwing when the public Supabase env is missing", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const response = await proxy(publicRequest("/my"));
+      expect(response.status).toBe(307);
+      const location = new URL(response.headers.get("location")!);
+      expect(location.pathname).toBe("/login");
+      expect(location.searchParams.get("next")).toBe("/my");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("redirects /my to login when the session lookup throws", async () => {
+    supabaseMocks.getUser.mockRejectedValueOnce(new Error("network down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const response = await proxy(publicRequest("/my"));
+      expect(response.status).toBe(307);
+      expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("continues a public meme request when the Supabase client cannot be created", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const response = await proxy(publicRequest("/memes/zzzzzzzz"));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

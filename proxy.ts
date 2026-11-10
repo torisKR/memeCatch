@@ -224,22 +224,47 @@ export async function proxy(request: NextRequest) {
     : null;
   if (!needsAuth && !documentDetailKey) return response;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = nextResponse();
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
+  const closedWithoutSession = path.startsWith("/my")
+    || path.startsWith("/premium")
+    || path.startsWith("/submit")
+    || path.startsWith("/admin");
+  const redirectToLogin = () => {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("next", authReturnPath);
+    return applyLocale(NextResponse.redirect(url));
+  };
+
+  const supabase = (() => {
+    try {
+      return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => request.cookies.getAll(),
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+              response = nextResponse();
+              cookiesToSet.forEach(({ name, value, options }) =>
+                response.cookies.set(name, value, options)
+              );
+            },
+          },
+        }
+      );
+    } catch {
+      return null;
     }
-  );
+  })();
+  if (!supabase) {
+    // Preview can omit the public Supabase URL and key. A protected route
+    // still closes; a public route continues so a missing client is not a 500.
+    console.warn("supabase_client_unavailable");
+    if (closedWithoutSession) return redirectToLogin();
+    return response;
+  }
 
   if (documentDetailKey) {
     try {
@@ -287,9 +312,15 @@ export async function proxy(request: NextRequest) {
 
   if (!needsAuth) return response;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: { id: string } | null = null;
+  try {
+    const auth = await supabase.auth.getUser();
+    user = auth.data?.user ?? null;
+  } catch {
+    console.warn("auth_lookup_failed");
+    if (closedWithoutSession) return redirectToLogin();
+    return response;
+  }
 
   if (!user && (path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit"))) {
     const url = request.nextUrl.clone();

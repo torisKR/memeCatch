@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { cronPathsForSchedule, dispatchScheduledCron } from "@/lib/cloudflare-cron";
 import { deployStep } from "@/lib/cloudflare-deploy";
-import { wwwToApexRedirect, withReleaseSha } from "@/lib/cloudflare-host";
+import { releaseShaForWorker, wwwToApexRedirect, withReleaseSha } from "@/lib/cloudflare-host";
 import { detailDataCacheStores, detailHttpState } from "@/lib/detail-document-state";
 
 describe("detail document states", () => {
@@ -87,6 +87,15 @@ describe("apex redirect", () => {
     expect(response?.status).toBe(308);
     expect(response?.headers.get("location")).toBe("https://catchmeme.com/memes/abc?q=1");
     expect(wwwToApexRedirect(new Request("https://catchmeme.com/"))).toBeNull();
+  });
+
+  it("uses RELEASE_SHA on the Worker, then version metadata", () => {
+    expect(releaseShaForWorker({
+      RELEASE_SHA: "build-sha",
+      CF_VERSION_METADATA: { id: "version-id" },
+    })).toBe("build-sha");
+    expect(releaseShaForWorker({ CF_VERSION_METADATA: { id: "version-id" } })).toBe("version-id");
+    expect(releaseShaForWorker({})).toBeUndefined();
   });
 
   it("adds a release header only when the response does not already have one", () => {

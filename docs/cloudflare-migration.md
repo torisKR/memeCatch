@@ -10,7 +10,7 @@ The bundled ONNX embedding model (`intfloat/multilingual-e5-small`) is not part 
 
 Bedrock on Vercel still uses OIDC when `VERCEL` and `AWS_ROLE_ARN` are set. Off Vercel, including the Worker, the client uses `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` when both are set, and otherwise the normal AWS credential chain.
 
-The release header prefers `RELEASE_SHA`, then `VERCEL_GIT_COMMIT_SHA`. On the Worker, a missing header is filled from the Workers version metadata id.
+On Vercel the release header is `VERCEL_GIT_COMMIT_SHA`. A project `RELEASE_SHA` does not override that platform SHA. Off Vercel the header is `RELEASE_SHA`, and on the Worker a missing header is filled from the Workers version metadata id.
 
 `www.catchmeme.com` returns 308 to `https://catchmeme.com` with the path and query preserved. A Cloudflare Redirect Rule for the same redirect is the preferred edge config once the zone is on Cloudflare:
 
@@ -47,6 +47,8 @@ Paid is required for three reasons. Server rendering and crons exceed 10 ms of C
 ## Environment variables
 
 The audit scanned `process.env` and `env` reads under `app`, `lib`, `components`, `scripts`, `proxy.ts`, `next.config.ts`, and `integrations/memecatch-chatgpt/src` (imported by the MCP routes). Terraform is excluded. The Vercel project has 71 names. Only names the code reads are migrated. `scripts/cloudflare-env-manifest.json` is the machine-readable list: name, `var` or `secret`, and target environments. It stores no values. `node scripts/check-cloudflare-env-manifest.mjs` fails when code reads a name that is not in the manifest, and when these tables drift from it.
+
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are production-only on the current Vercel project, so a Vercel preview cannot create a Supabase client. Protected routes then redirect to login. Public routes continue, and a catalog read that cannot start renders the outage screen. Enable those two names for Preview when that environment should read the catalog.
 
 `NEXT_PUBLIC_*` values are inlined by `next build`. Set them as GitHub Actions secrets for the deploy build, and as Worker vars for any server read that still sees `process.env` at runtime. `CSP_ENFORCE`, `CSP_REPORT_URI`, and `RELEASE_SHA` are read while the Next config loads, so the build needs them too. `MEMECATCH_RUNTIME=cloudflare` is already a var in `wrangler.jsonc`. Preview also sets `MEMECATCH_DEPLOYMENT=preview`.
 

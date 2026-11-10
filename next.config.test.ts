@@ -49,11 +49,9 @@ describe("service-worker image CSP", () => {
 });
 
 describe("release SHA response header", () => {
-  it("prefers RELEASE_SHA and falls back to the Vercel Git SHA", () => {
+  it("reads the release SHA through the Vercel-aware helper", () => {
     expect(source).toContain("releaseShaFromEnv()");
     const helper = readFileSync(join(process.cwd(), "lib/release-sha.ts"), "utf8");
-    expect(helper).toContain(
-      "env.RELEASE_SHA?.trim() || env.VERCEL_GIT_COMMIT_SHA?.trim()",
-    );
+    expect(helper).toContain("if (env.VERCEL) return trimmed(env.VERCEL_GIT_COMMIT_SHA)");
   });
 });

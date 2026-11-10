@@ -5,7 +5,7 @@
  * 쓰기는 절대 여기서 하지 않는다(쓰기는 RPC — 클라이언트 컴포넌트에서 호출).
  */
 import { cache } from "react";
-import { cacheCatalogRead } from "@/lib/catalog-read-cache";
+import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache";
 import { relatedMemePoolFilter } from "@/lib/related-meme-pool";
 import { createStaticClient } from "@/lib/supabase/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
@@ -225,8 +225,8 @@ export async function getGenerationHighlights(
 const DETAIL_SELECT =
   "*, meme_contents(*), meme_sources(*), meme_tags_map(tag_id, tags(name)), meme_market_profiles(market_code, role, review_state)";
 
-/** 오류는 throw라 Data Cache에 들어가지 않는다. null은 확인된 결측이다. */
-async function fetchMemeByShortId(shortId: string): Promise<MemeDetail | null> {
+/** 오류와 확인된 결측은 throw라 Data Cache에 들어가지 않는다. 찾아낸 행만 반환한다. */
+async function fetchMemeByShortId(shortId: string): Promise<MemeDetail> {
   const supabase = createStaticClient();
   const { data, error } = await supabase
     .from("memes")
@@ -235,7 +235,7 @@ async function fetchMemeByShortId(shortId: string): Promise<MemeDetail | null> {
     .in("moderation_status", [...PUBLIC_STATUSES])
     .maybeSingle();
   if (error) throw new MemeCatalogUnavailableError();
-  if (!data) return null;
+  if (!data) throw new ConfirmedCatalogMiss();
   return data as unknown as MemeDetail;
 }
 
@@ -251,6 +251,7 @@ export const getMemeByShortId = cache(async (shortId: string): Promise<MemeDetai
   try {
     return await fetchMemeByShortIdCached(shortId);
   } catch (error) {
+    if (error instanceof ConfirmedCatalogMiss) return null;
     if (error instanceof MemeCatalogUnavailableError) throw error;
     throw new MemeCatalogUnavailableError();
   }

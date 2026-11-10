@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { cacheCatalogRead } from "@/lib/catalog-read-cache";
+import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 
 class CatalogFailure extends Error {
@@ -29,15 +29,31 @@ describe("cacheCatalogRead", () => {
     await expect(read()).rejects.toBeInstanceOf(CatalogFailure);
   });
 
+  it("does not cache a confirmed miss", async () => {
+    const read = cacheCatalogRead(
+      async () => {
+        throw new ConfirmedCatalogMiss();
+      },
+      ["catalog-read-miss"],
+      { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+    );
+    await expect(read()).rejects.toBeInstanceOf(ConfirmedCatalogMiss);
+  });
+
   it("stores successful detail reads on the shared catalog tag and leaves failures thrown", () => {
     const source = readFileSync(join(process.cwd(), "lib/queries.ts"), "utf8");
-    const detail = source.slice(source.indexOf("async function fetchMemeByShortId"));
+    const fetchStart = source.indexOf("async function fetchMemeByShortId");
+    const fetchEnd = source.indexOf("const fetchMemeByShortIdCached");
+    const detail = source.slice(fetchStart, fetchEnd);
     expect(detail.startsWith("async function fetchMemeByShortId")).toBe(true);
     expect(detail).toContain("if (error) throw new MemeCatalogUnavailableError()");
-    expect(detail).toContain("if (!data) return null");
+    expect(detail).toContain("if (!data) throw new ConfirmedCatalogMiss()");
+    expect(detail).not.toContain("return null");
     expect(detail.indexOf("if (error) throw new MemeCatalogUnavailableError()")).toBeLessThan(
-      detail.indexOf("if (!data) return null"),
+      detail.indexOf("if (!data) throw new ConfirmedCatalogMiss()"),
     );
+    const getter = source.slice(source.indexOf("export const getMemeByShortId"));
+    expect(getter).toContain("if (error instanceof ConfirmedCatalogMiss) return null");
     expect(source).toContain("cacheCatalogRead(");
     expect(source).toContain("tags: [PUBLIC_CATALOG_CACHE_TAG]");
     const stream = readFileSync(join(process.cwd(), "components/continue-stream.tsx"), "utf8");

@@ -193,9 +193,9 @@ export async function proxy(request: NextRequest) {
   const exportLocale = isSeoContentLocale(requestedExportLocale) ? requestedExportLocale : null;
   const contentLocale = urlLocale ?? exportLocale ?? DEFAULT_LOCALE;
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
-  const locale = urlLocale ?? (isLocale(cookieLocale)
-    ? cookieLocale
-    : localeFromAcceptLanguage(request.headers.get("accept-language")) ?? DEFAULT_LOCALE);
+  // 접두사 없는 주소는 한국어 문서다. Accept-Language로 UI를 바꾸면
+  // 서버는 영어 메뉴를 그리고, 클라이언트 스냅샷이 다시 한국어로 되돌린다.
+  const locale = urlLocale ?? (isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER, locale);
   const applyLocale = (response: NextResponse) => {

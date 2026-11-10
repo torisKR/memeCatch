@@ -122,7 +122,7 @@ describe("LocaleProvider URL precedence", () => {
     });
   });
 
-  it("retains browser-locale auto-detection on shared unlocalized pages", async () => {
+  it("does not switch an unprefixed page to the browser language after load", async () => {
     Object.defineProperty(window.navigator, "languages", {
       configurable: true,
       value: ["zh-TW"],
@@ -136,7 +136,7 @@ describe("LocaleProvider URL precedence", () => {
     render(<LocaleAutoDetect />);
 
     await waitFor(() => {
-      expect(document.cookie).toContain(`${LOCALE_COOKIE}=zh-tw`);
+      expect(document.cookie).not.toContain(`${LOCALE_COOKIE}=`);
     });
   });
 });

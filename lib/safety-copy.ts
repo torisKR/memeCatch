@@ -12,6 +12,8 @@ export type SafetySignalCopy = {
   title: string;
   description: string;
   disclaimer: string;
+  expand: string;
+  collapse: string;
   badgeTitle: string;
   levels: Record<
     SafetyLevel,
@@ -30,6 +32,8 @@ const BASE_COPY = {
     description: "각 모양은 검토된 용례의 맥락과 유행 시점을 함께 요약해요.",
     disclaimer:
       "이 신호는 검토된 용례를 바탕으로 한 편집 안내이며, 모든 상황의 안전이나 허용을 보장하지 않아요.",
+    expand: "펼치기",
+    collapse: "접기",
     badgeTitle: "사용 안전 신호",
     levels: {
       green: {
@@ -65,6 +69,8 @@ const BASE_COPY = {
       "Each shape summarizes the context and timing found in reviewed examples.",
     disclaimer:
       "These signals are editorial guidance based on reviewed examples. They do not guarantee that every use is safe, permitted, or well received.",
+    expand: "Show details",
+    collapse: "Hide details",
     badgeTitle: "Usage signal",
     levels: {
       green: {
@@ -99,6 +105,8 @@ const BASE_COPY = {
     description: "各シンボルは、確認済みの用例から読み取った文脈と流行時期の目安です。",
     disclaimer:
       "このシグナルは確認済みの用例に基づく編集上の案内です。すべての場面で安全・許可・好意的な反応を保証するものではありません。",
+    expand: "詳しく見る",
+    collapse: "閉じる",
     badgeTitle: "使用シグナル",
     levels: {
       green: {
@@ -133,6 +141,8 @@ const BASE_COPY = {
     description: "每个图形概括了已审核用例中的语境和流行时机。",
     disclaimer:
       "这些提示是基于已审核用例的编辑建议，不保证在所有场合都安全、获准或被接受。",
+    expand: "展开",
+    collapse: "收起",
     badgeTitle: "使用提示",
     levels: {
       green: {
@@ -163,6 +173,8 @@ const BASE_COPY = {
     description: "每個圖形概括已審核用例中的語境與流行時機。",
     disclaimer:
       "這些提示是根據已審核用例提供的編輯建議，不保證在所有情境中都安全、獲准或被接受。",
+    expand: "展開",
+    collapse: "收合",
     badgeTitle: "使用提示",
     levels: {
       green: {

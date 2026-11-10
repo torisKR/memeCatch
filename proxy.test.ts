@@ -131,13 +131,13 @@ describe("proxy locale contract", () => {
     expect(response.cookies.get(LOCALE_COOKIE)?.value).toBe("en");
   });
 
-  it("keeps unprefixed response content Korean while forwarding Accept-Language as UI preference", async () => {
+  it("keeps an unprefixed page Korean when Accept-Language prefers another language", async () => {
     const response = await proxy(
       publicRequest("/explore", { acceptLanguage: "ja-JP,ko-KR;q=0.8" }),
     );
 
     expect(response.headers.get("content-language")).toBe("ko");
-    expect(forwardedLocale(response)).toBe("ja");
+    expect(forwardedLocale(response)).toBe("ko");
     expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
   });
 

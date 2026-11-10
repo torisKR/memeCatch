@@ -54,6 +54,20 @@ const MEME_LIST_COLUMNS =
 
 export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)`;
 
+function hasActiveExploreFilter(filters: ExploreFilters): boolean {
+  return Boolean(
+    filters.q?.trim() ||
+      filters.topicTag ||
+      filters.difficulty ||
+      filters.lifecycle ||
+      filters.media ||
+      filters.year ||
+      filters.platform ||
+      filters.categories.length > 0 ||
+      filters.sort !== "trending",
+  );
+}
+
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
@@ -333,6 +347,13 @@ export function ExploreGrid({
           <p className="mt-1.5 text-base text-foreground">
             사전 연결이 잠시 막혀 있어요. 출처 숫자는 남아 있어도, 이 목록은 연결이 돌아와야 보여요.
           </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+          >
+            다시 시도
+          </button>
         </div>
       </div>
     );
@@ -367,14 +388,18 @@ export function ExploreGrid({
                 &lsquo;<span className="text-accent">{filters.q}</span>&rsquo; 검색
                 결과가 없어요
               </>
-            ) : (
+            ) : hasActiveExploreFilter(filters) ? (
               "이 조건의 밈이 아직 없어요"
+            ) : (
+              "공개된 밈이 아직 이 목록에 없어요"
             )}
           </p>
-          <p className="mt-1.5 text-base text-muted">
+          <p className="mt-1.5 text-base text-foreground">
             {filters.q
               ? "다른 말로 검색하거나 필터를 풀어 보세요. 아직 없는 밈이면 제보해 주세요."
-              : "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."}
+              : hasActiveExploreFilter(filters)
+                ? "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."
+                : "알고 있는 밈이 있으면 제보해 주세요."}
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             <Link

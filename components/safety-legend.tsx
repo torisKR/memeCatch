@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { SafetyIcon } from "@/components/safety-icon";
 import type { Locale } from "@/lib/i18n";
 import type { SafetyLevel } from "@/lib/labels";
@@ -28,7 +29,7 @@ export function SafetySignalGuide({ locale = "ko" }: { locale?: Locale }) {
       >
         {copy.title}
       </h2>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+      <p className="mt-3 max-w-2xl text-base leading-7 text-foreground">
         {copy.description}
       </p>
 
@@ -41,7 +42,7 @@ export function SafetySignalGuide({ locale = "ko" }: { locale?: Locale }) {
               <details className="group h-full rounded-xl border border-border bg-surface-2 open:bg-surface">
                 <summary
                   tabIndex={0}
-                  className="cursor-pointer rounded-xl px-4 py-4 marker:text-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  className="cursor-pointer list-none rounded-xl px-4 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
                 >
                   <span className="flex items-start gap-3">
                     <span
@@ -50,17 +51,25 @@ export function SafetySignalGuide({ locale = "ko" }: { locale?: Locale }) {
                     >
                       <SafetyIcon level={level} className="size-6" />
                     </span>
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block font-bold text-foreground">
                         {item.label}
                       </span>
-                      <span className="mt-1 block text-sm leading-snug text-muted">
+                      <span className="mt-1 block text-base leading-6 text-foreground">
                         {item.summary}
+                      </span>
+                      <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-foreground">
+                        <ChevronDown
+                          aria-hidden
+                          className="size-4 transition-transform group-open:rotate-180"
+                        />
+                        <span className="group-open:hidden">{copy.expand}</span>
+                        <span className="hidden group-open:!inline">{copy.collapse}</span>
                       </span>
                     </span>
                   </span>
                 </summary>
-                <p className="px-4 pb-4 text-sm leading-relaxed text-muted">
+                <p className="px-4 pb-4 text-base leading-7 text-foreground">
                   {item.detail}
                 </p>
               </details>
@@ -69,7 +78,7 @@ export function SafetySignalGuide({ locale = "ko" }: { locale?: Locale }) {
         })}
       </ol>
 
-      <p className="mt-5 max-w-3xl text-xs leading-relaxed text-muted">
+      <p className="mt-5 max-w-3xl text-base leading-7 text-foreground">
         {copy.disclaimer}
       </p>
     </section>

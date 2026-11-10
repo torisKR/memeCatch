@@ -35,7 +35,7 @@ export function HomeSafetyShowcase() {
           <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             이 밈, 지금 써도 될까? 상황별 안전 가이드
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-base leading-7 text-foreground">
             밈의 뜻만 아는 것으로는 부족합니다. 직장 동료, 단톡방, SNS 등 장소와 대상에 따른 검증된 실전 가이드를 확인하세요.
           </p>
         </div>
@@ -106,13 +106,13 @@ export function HomeSafetyShowcase() {
                   <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors">
                     {meme.title}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">
+                  <p className="mt-1 line-clamp-2 text-base leading-7 text-foreground">
                     {meme.summary}
                   </p>
                 </div>
 
                 {/* 실전 대사 미니 말풍선 */}
-                <div className="rounded-xl border border-border/80 bg-surface-2 p-3 text-xs">
+                <div className="rounded-xl border border-border/80 bg-surface-2 p-3 text-base">
                   <div className="flex items-center gap-1.5 font-semibold text-accent mb-1">
                     <MessageCircle className="size-3" />
                     <span>{speakerName}</span>

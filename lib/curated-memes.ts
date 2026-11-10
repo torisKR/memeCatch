@@ -365,7 +365,10 @@ export function getGuaranteedHomeEntries(
         summary: meme.summary,
         category: meme.category,
         safety_level: meme.safety_level,
-        usage_examples: meme.usage_examples,
+        usage_examples: meme.usage_examples.map((example) => ({
+          situation: example.context,
+          dialogue: example.dialogue,
+        })),
       },
       "landscape",
       meme.safety_level === "green" ? "obsidian_coral" : "cyber_indigo",
@@ -390,4 +393,12 @@ export function getGuaranteedHomeEntries(
   }
 
   return fallbackEntries.slice(0, 8);
+}
+
+const curatedByShortId = new Map(
+  CURATED_CORE_MEMES.map((meme) => [meme.short_id, meme] as const),
+);
+
+export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
+  return curatedByShortId.get(shortId) ?? null;
 }

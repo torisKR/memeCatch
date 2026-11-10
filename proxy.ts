@@ -27,6 +27,7 @@ import {
   buildPlusOutcomeReplayPath,
   parsePlusOutcomeReplayRequest,
 } from "@/lib/plus-outcome-replay-routing";
+import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { shortIdFromParam } from "@/lib/labels";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
@@ -255,7 +256,8 @@ export async function proxy(request: NextRequest) {
       if (error) {
         console.warn("public_meme_existence_check_failed query_error");
       }
-      if (!error && data?.length === 0) {
+      const requestedShortId = shortIdFromParam(documentDetailKey);
+      if (!error && data?.length === 0 && !isCuratedCoreShortId(requestedShortId)) {
         const url = request.nextUrl.clone();
         url.pathname = "/__missing_public_meme__";
         return applyLocale(NextResponse.rewrite(url, {

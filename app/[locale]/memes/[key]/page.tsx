@@ -25,11 +25,15 @@ import {
   MemeDefinedTermJsonLd,
   MemeWebPageJsonLd,
 } from "@/components/json-ld";
+import { MemeCatalogUnavailable } from "@/components/meme-catalog-unavailable";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
   isIndexableLocalizedMeme,
+  type LocalizedMemeDetail,
 } from "@/lib/meme-translations";
+import { unavailableMemeMetadata } from "@/lib/public-meme-document";
+import { MemeCatalogUnavailableError } from "@/lib/queries";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { publicSourceUrl } from "@/lib/source-links";
@@ -211,12 +215,31 @@ async function getLanguageVersions(shortId: string, memeId: string, current: Seo
   const available = await getAvailableTranslationLocales(memeId);
   const locales = [...new Set([current, ...available.filter(isSeoContentLocale)])];
   const translated = await Promise.all(
-    locales.map(async (locale) => ({ locale, meme: await getLocalizedMemeByShortId(shortId, locale) })),
+    locales.map(async (locale) => {
+      try {
+        return { locale, meme: await getLocalizedMemeByShortId(shortId, locale) };
+      } catch (error) {
+        if (!(error instanceof MemeCatalogUnavailableError)) throw error;
+        return { locale, meme: null };
+      }
+    }),
   );
   return translated.filter(
     (item): item is { locale: SeoContentLocale; meme: NonNullable<typeof item.meme> } =>
       item.meme !== null,
   );
+}
+
+async function loadLocalizedDetail(
+  shortId: string,
+  locale: SeoContentLocale,
+): Promise<{ status: "ready"; meme: LocalizedMemeDetail | null } | { status: "unavailable"; meme: null }> {
+  try {
+    return { status: "ready", meme: await getLocalizedMemeByShortId(shortId, locale) };
+  } catch (error) {
+    if (!(error instanceof MemeCatalogUnavailableError)) throw error;
+    return { status: "unavailable", meme: null };
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -225,7 +248,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
-  const meme = await getLocalizedMemeByShortId(targetShortId, locale);
+  const loaded = await loadLocalizedDetail(targetShortId, locale);
+  if (loaded.status === "unavailable") return unavailableMemeMetadata();
+  const meme = loaded.meme;
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
@@ -238,7 +263,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const versions = await getLanguageVersions(shortId, meme.id, locale);
+  const versions = await getLanguageVersions(meme.short_id, meme.id, locale);
   const indexableVersions = versions.filter(({ meme: version }) =>
     isIndexableLocalizedMeme(version),
   );
@@ -288,7 +313,9 @@ export default async function LocalizedMemePage({ params }: Props) {
 
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
-  const meme = await getLocalizedMemeByShortId(targetShortId, locale);
+  const loaded = await loadLocalizedDetail(targetShortId, locale);
+  if (loaded.status === "unavailable") return <MemeCatalogUnavailable />;
+  const meme = loaded.meme;
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
@@ -302,7 +329,7 @@ export default async function LocalizedMemePage({ params }: Props) {
   if (redirectPath) permanentRedirect(redirectPath);
 
   const [versions, marketPassport] = await Promise.all([
-    getLanguageVersions(shortId, meme.id, locale),
+    getLanguageVersions(meme.short_id, meme.id, locale),
     getMemeMarketPassport(meme.id, locale),
   ]);
   const copy = DETAIL_COPY[locale];

@@ -317,6 +317,15 @@ describe("proxy public meme existence check", () => {
     expect(supabaseMocks.from).not.toHaveBeenCalled();
   });
 
+  it("keeps a curated home-card slug reachable when the catalog has no matching row", async () => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+
+    const response = await proxy(publicRequest("/memes/jkm2022k-jung-kkuk-ma"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
   it.each([undefined, "navigate"])("checks a document request with fetch mode %s", async (fetchMode) => {
     supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
 

@@ -8,6 +8,14 @@ const source = readFileSync(
 );
 
 describe("밈 상세 hreflang 계약", () => {
+  it("카탈로그 오류와 편집 카드는 없는 문서로 처리하지 않는다", () => {
+    expect(source).toContain('if (resolved.kind === "curated") return <CuratedMemeArticle');
+    expect(source).toContain('if (resolved.kind === "unavailable") return <MemeCatalogUnavailable');
+    expect(source.indexOf('if (resolved.kind === "unavailable")')).toBeLessThan(
+      source.indexOf("if (!meme) notFound();"),
+    );
+  });
+
   it("존재하는 short-only·오래된 slug 별칭은 저장된 canonical 경로로 영구 이동한다", () => {
     expect(source).toContain('import { notFound, permanentRedirect } from "next/navigation";');
     expect(source).toContain("canonicalMemeRedirectPath(key");

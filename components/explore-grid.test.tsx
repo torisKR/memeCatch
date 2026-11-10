@@ -49,6 +49,20 @@ describe("ExploreGrid", () => {
     expect(item?.style.opacity).not.toBe("0");
   });
 
+  it("shows a load failure instead of the empty catalog when the first query fails", () => {
+    render(
+      <ExploreGrid
+        initial={[]}
+        catalogUnavailable
+        filters={{ categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.getByRole("alert").textContent).toContain("밈 목록을 불러오지 못했어요");
+    expect(screen.queryByText("이 조건의 밈이 아직 없어요")).toBeNull();
+    expect(screen.queryByText("필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요.")).toBeNull();
+  });
+
   it("renders an empty state with a submit path when there are no results", () => {
     render(
       <ExploreGrid

@@ -71,12 +71,12 @@ import {
   unavailableMemeMetadata,
 } from "@/lib/public-meme-document";
 
-/** 밈 상세 문서는 요청별 SSR. 불필요한 백그라운드 재검증으로 인한 Vercel ISR 쓰기 한도 소진을 막기 위해 24시간 캐시를 적용한다. */
-export const revalidate = 86400;
-
-export async function generateStaticParams(): Promise<{ key: string }[]> {
-  return [];
-}
+/**
+ * 요청마다 렌더한다. 이 라우트를 ISR로 두고 요청 대기를 걸면 프로덕션이
+ * DYNAMIC_SERVER_USAGE 500을 낸다. 카탈로그 오류는 200, 확인된 결측은
+ * notFound()의 404, 성공은 본문이다. 그 결과를 하루짜리 정적 결과로 남기지 않는다.
+ */
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ key: string }> };
 

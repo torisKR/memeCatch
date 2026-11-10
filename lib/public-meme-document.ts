@@ -1,5 +1,4 @@
 import { cache } from "react";
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
@@ -48,12 +47,9 @@ export const resolveKoreanMemeDocument = cache(async function resolveKoreanMemeD
   try {
     const row = await getMemeByShortId(targetShortId);
     const lookup = classifyPublicMemeLookup({ row, curated, catalogUnavailable: false });
-    // 확인된 결측만 동적 404로 보낸다. ISR이 그 결과를 200 soft-404로 하루 보관하지 않게 한다.
-    if (lookup.kind === "missing") await connection();
     return withRoute(lookup, requestedShortId, targetShortId);
   } catch (error) {
     if (!(error instanceof MemeCatalogUnavailableError)) throw error;
-    await connection();
     return withRoute(
       classifyPublicMemeLookup<MemeDetail, CuratedMeme>({
         row: null,
@@ -66,8 +62,7 @@ export const resolveKoreanMemeDocument = cache(async function resolveKoreanMemeD
   }
 });
 
-export async function unavailableMemeMetadata(): Promise<Metadata> {
-  await connection();
+export function unavailableMemeMetadata(): Metadata {
   return {
     title: "밈을 잠시 불러오지 못했어요",
     robots: { index: false, follow: true },

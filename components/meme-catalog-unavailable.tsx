@@ -1,10 +1,7 @@
 import Link from "next/link";
-import { connection } from "next/server";
 
 /** 카탈로그를 읽지 못한 상세. 없는 밈 404와 다른 화면이다. */
-export async function MemeCatalogUnavailable() {
-  await connection();
-
+export function MemeCatalogUnavailable() {
   return (
     <main className="mx-auto flex min-h-[70dvh] w-full max-w-3xl flex-col justify-center px-4 py-16 text-foreground">
       <p className="text-sm font-bold text-accent-text">밈 사전</p>

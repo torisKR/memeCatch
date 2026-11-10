@@ -38,7 +38,8 @@ import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { publicSourceUrl } from "@/lib/source-links";
 
-export const revalidate = 86400;
+/** 한국어 상세와 같다. ISR로 두면 프로덕션 상세가 DYNAMIC_SERVER_USAGE 500이 된다. */
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ locale: string; key: string }> };
 

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CURATED_CORE_SHORT_IDS } from "@/lib/curated-meme-ids";
 import { CURATED_CORE_MEMES, findCuratedCoreMeme } from "@/lib/curated-memes";
@@ -51,6 +53,24 @@ describe("classifyPublicMemeLookup", () => {
         catalogUnavailable: false,
       }).kind,
     ).toBe("missing");
+  });
+
+  it("renders meme detail per request without connection()", () => {
+    const files = [
+      "lib/public-meme-document.ts",
+      "components/meme-catalog-unavailable.tsx",
+      "app/(default)/memes/[key]/page.tsx",
+      "app/[locale]/memes/[key]/page.tsx",
+    ];
+    for (const file of files) {
+      const source = readFileSync(join(process.cwd(), file), "utf8");
+      expect(source, file).not.toMatch(/\bconnection\s*\(/);
+      expect(source, file).not.toContain("revalidate = 86400");
+    }
+    for (const file of files.slice(2)) {
+      const source = readFileSync(join(process.cwd(), file), "utf8");
+      expect(source, file).toContain('export const dynamic = "force-dynamic"');
+    }
   });
 
   it("keeps the proxy allowlist aligned with the curated cards", () => {

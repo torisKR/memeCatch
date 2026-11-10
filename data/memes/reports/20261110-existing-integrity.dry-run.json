@@ -1,0 +1,138 @@
+{
+  "mode": "dry-run",
+  "writes": false,
+  "database_connected": false,
+  "project_ref": "onjipuldngbdptldkpoe",
+  "captured_at": "2026-11-10T13:30:00.000Z",
+  "capture": "Read-only SELECT. This file does not update production. Re-list every row with data/memes/sql/20261110-existing-integrity-listing.sql.",
+  "ignored": ["live_render_404"],
+  "schema_consistent_not_listed": [
+    {
+      "id": "limited_with_published_at",
+      "count": 10,
+      "reason": "check_moderation_transition sets published_at when moderation becomes approved or limited. A 2026-11-10 audit listed these 10 rows as unexpected; they match the trigger and are not violations."
+    }
+  ],
+  "rules": [
+    {
+      "id": "approved_missing_published_at",
+      "severity": "fail",
+      "count": 462,
+      "examples": [
+        { "id": "ca89ddce-710c-4557-b73f-cda779ec3153", "short_id": "ff4118d5", "slug": "-ussy" },
+        { "id": "daed4bc0-9625-40a7-a867-e30cd3c7c86f", "short_id": "65bdc3a3", "slug": "$Trump" },
+        { "id": "cbc0eeee-f268-434d-8ef7-eb05201d0a0f", "short_id": "685dc9eb", "slug": "100_men_versus_a_gorilla" },
+        { "id": "148f4c54-8f58-4145-9402-ff99feb588b6", "short_id": "27afdfd0", "slug": "15.ai" },
+        { "id": "ee68ab62-e0dd-425d-bdd6-2a815b990be4", "short_id": "92b8f789", "slug": "2_Hours_Doing_Nothing" }
+      ]
+    },
+    {
+      "id": "unpublished_status_has_published_at",
+      "severity": "fail",
+      "count": 604,
+      "by_status": { "rejected": 603, "fact_checking": 1, "pending": 0, "rights_checking": 0 },
+      "examples": [
+        { "id": "e62688d2-4f47-48a9-98b3-4f41e662d157", "short_id": "4q5z854e", "slug": "핫바리", "moderation_status": "fact_checking" },
+        { "id": "17a87510-94be-4e7e-87e4-6bb25bf85051", "short_id": "6dz9xbjn", "slug": "wm-2000-17b096f81dea34", "moderation_status": "rejected" },
+        { "id": "5bcee309-279f-4700-9f9e-82ccbf52ace9", "short_id": "au4jxx8g", "slug": "wm-2000-9b28ef9e4414e5", "moderation_status": "rejected" },
+        { "id": "e8f6dd70-219d-495b-a5c8-ffd31999930f", "short_id": "5m7nxkk4", "slug": "wm-2000-a6a403861a592f", "moderation_status": "rejected" }
+      ]
+    },
+    {
+      "id": "public_media_missing_contents_and_media",
+      "severity": "fail",
+      "definition": "approved, published_at set, media_type in image/video/audio/embed, zero meme_contents and zero meme_media",
+      "count": 143,
+      "by_media_type": { "image": 142, "video": 1, "audio": 0, "embed": 0 },
+      "examples": [
+        { "id": "95eaa1c6-09d1-48d8-9f9a-6a4dbf7756d6", "short_id": "7a988khc", "slug": "12시네-점심", "media_type": "image" },
+        { "id": "8297ac55-8230-4ec3-9f0c-fb20ebc0bebc", "short_id": "j8efhs7z", "slug": "AI-삿포로샷", "media_type": "image" },
+        { "id": "2d945006-c387-4de0-bab3-1289066a0622", "short_id": "u5gw45cb", "slug": "bedrock-canary-mth9nf8a", "media_type": "image" },
+        { "id": "a0f2ac56-8aef-464e-bdf5-f9aa09143009", "short_id": "cxhacks6", "slug": "dont-provoke-chaewon", "media_type": "image" },
+        { "id": "5379054d-3a9e-4458-b32a-01647fc1b9e9", "short_id": "e4vkhy7f", "slug": "everyone-get-rich-amulet", "media_type": "image" },
+        { "id": "b55cf939-2db6-4d9e-a397-989347eb244c", "short_id": "ruayk4d9", "slug": "애교", "media_type": "video" }
+      ]
+    },
+    {
+      "id": "public_text_missing_contents_and_media",
+      "severity": "warn",
+      "count": 1621,
+      "note": "Listed for the owner. New text memes are not hard-rejected for this gap."
+    },
+    {
+      "id": "null_content_url",
+      "severity": "fail",
+      "count": 5,
+      "examples": [
+        { "content_id": "51bcba0b-af72-4d3f-ba44-ed65a498838d", "meme_id": "279d001e-3f4a-4801-9816-3fb089c6834b", "short_id": "xazbup6j", "slug": "ai-slop", "thumbnail_url": "/ai-memes/ai-slop.jpg" },
+        { "content_id": "6dc93c4a-df40-4adc-a833-a5f759c2ce1c", "meme_id": "33a63717-9a70-4601-891a-54337d5740c2", "short_id": "djjz3enf", "slug": "ballerina-cappuccina", "thumbnail_url": "/ai-memes/ballerina-cappuccina.jpg" },
+        { "content_id": "a9d70ed0-d25a-4d4f-b71a-b3db2d4e8218", "meme_id": "d6fdc6c3-0ac6-4508-8b01-f4e048c0aeca", "short_id": "us5jg4gj", "slug": "italian-brainrot", "thumbnail_url": "/ai-memes/italian-brainrot.jpg" },
+        { "content_id": "6400fd1c-e69c-4575-bc14-0ed02110d077", "meme_id": "cedbbef0-0cd5-4557-990b-6531d8cb0183", "short_id": "b9gzeysg", "slug": "shrimp-jesus", "thumbnail_url": "/ai-memes/shrimp-jesus.jpg" },
+        { "content_id": "ca200bf8-4dc2-4a18-b339-64782fff37cf", "meme_id": "d2abe3a0-fc36-40e8-8e50-5ab03fb6b280", "short_id": "py3fd5gq", "slug": "tralalero-tralala", "thumbnail_url": "/ai-memes/tralalero-tralala.jpg" }
+      ]
+    },
+    {
+      "id": "normalized_slug_duplicate",
+      "severity": "fail",
+      "groups": 1,
+      "rows": 2,
+      "examples": [
+        {
+          "slug_key": "italian-brainrot",
+          "members": [
+            { "id": "d6fdc6c3-0ac6-4508-8b01-f4e048c0aeca", "short_id": "us5jg4gj", "slug": "italian-brainrot", "moderation_status": "limited" },
+            { "id": "f99aec3c-6d48-499c-bc08-4ea5e667eb8a", "short_id": "q6frbftn", "slug": "Italian-Brainrot", "moderation_status": "pending" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "normalized_title_duplicate",
+      "severity": "fail",
+      "groups": 58,
+      "rows": 116,
+      "casefold_only_groups": 40,
+      "casefold_only_rows": 80,
+      "note": "The loader key strips case, spaces, and punctuation. Casefold-only comparison, which is what the 2026-11-10 audit counted, is the 40/80 subset.",
+      "examples": [
+        {
+          "title_fold": "ameno (song)",
+          "members": [
+            { "id": "7a8215b1-31f8-49d0-9dbf-50355cd5012c", "short_id": "a6d0ff7e", "slug": "Ameno_(song)", "moderation_status": "approved" },
+            { "id": "79bbe69b-f894-4827-9eb0-bdd877fc37a3", "short_id": "zqjga4vf", "slug": "wm-2020-aec5640517ec09", "moderation_status": "rejected" }
+          ]
+        },
+        {
+          "title_fold": "italian brainrot",
+          "members": [
+            { "id": "8edfe7c8-69f1-46be-a8dc-ce4852fe8a8c", "short_id": "a9ae6bd4", "slug": "Italian_brainrot", "moderation_status": "approved" },
+            { "id": "f99aec3c-6d48-499c-bc08-4ea5e667eb8a", "short_id": "q6frbftn", "slug": "Italian-Brainrot", "moderation_status": "pending" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "localized_slug_collision",
+      "severity": "fail",
+      "groups": 1,
+      "rows": 2,
+      "examples": [
+        {
+          "locale": "zh",
+          "localized_slug": "lim-yo-hwan-terran-emperor",
+          "members": [
+            { "meme_id": "484e0b56-97b1-4910-8fa6-2ea0348d28ca", "short_id": "au7za8te", "slug": "임요환-테란의-황제" },
+            { "meme_id": "90c32145-5e91-4bb0-a9de-4cc3dfac13e3", "short_id": "cpujgv78", "slug": "임요환-\"테란의-황제\"" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "missing_translation",
+      "severity": "fail",
+      "definition": "approved and published_at set, missing one of en, ja, zh, zh-tw. The listing has one row per missing locale.",
+      "missing_approved_published": { "en": 3726, "ja": 3767, "zh": 3788, "zh-tw": 3767 },
+      "listing_rows": 15048
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "ok": true,
+  "mode": "dry-run",
+  "database_connected": false,
+  "batch_id": "loop-026-pending-2026-11-10",
+  "errors": [],
+  "warnings": [
+    "무마가가이: pending video has no contents and no media",
+    "무마가가이: pending meme is missing translations: en, ja, zh, zh-tw"
+  ],
+  "summary": {
+    "memes": {
+      "insert": 1,
+      "skip_existing": 1,
+      "reject": 5
+    },
+    "meme_sources": {
+      "insert": 1,
+      "skip_existing": 1,
+      "reject": 5
+    }
+  },
+  "actions": [
+    {
+      "table": "memes",
+      "key": "파라파라-챌린지",
+      "action": "reject",
+      "reasons": [
+        "near-duplicate of \"파라파라나-춰야겠다\": Same 리센느 미나미 unaccompanied parapara reaction. Title keys differ, so this is a curator match."
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "그린그린-레드레드",
+      "action": "reject",
+      "reasons": [
+        "normalized title/alias duplicates catalog slug \"Green-Green-(그린그린-레드레드)\" via \"그린그린\", \"레드레드\""
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "과자-사꾸",
+      "action": "skip_existing",
+      "reasons": [
+        "slug already in catalog"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "갸륵체",
+      "action": "reject",
+      "reasons": [
+        "normalized title/alias duplicates catalog slug \"챗GPT-갸륵체\" via \"챗GPT 어화둥둥체\""
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "무마가가이",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "무마가가이: pending video has no contents and no media",
+        "무마가가이: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "윤정아-챌린지",
+      "action": "reject",
+      "reasons": [
+        "near-duplicate of \"윤정아-윤정아-챌린지\": Same 정이랑 쇼팽피아노학원 서윤정 challenge already filed under 윤정아-윤정아-챌린지 and 윤정아-윤정아-밈."
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "장시간-비행-밈",
+      "action": "reject",
+      "reasons": [
+        "near-duplicate of \"장시간-비행-옆자리-골라라-밈\": Same long-haul seat-choice format.",
+        "near-duplicate of \"장시간-비행,-옆자리를-골라라\": Same long-haul seat-choice format, including alias 비행기 옆자리 챌린지."
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "파라파라-챌린지\n0",
+      "action": "reject",
+      "reasons": [
+        "sources[0]: parent meme was not inserted"
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "그린그린-레드레드\n1",
+      "action": "reject",
+      "reasons": [
+        "sources[1]: parent meme was not inserted"
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "과자-사꾸\nhttps://letter.wepick.kr/post/23942",
+      "action": "skip_existing",
+      "reasons": [
+        "source already on catalog meme"
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "갸륵체\n3",
+      "action": "reject",
+      "reasons": [
+        "sources[3]: parent meme was not inserted"
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "무마가가이\nhttps://filmora.wondershare.kr/useful-information/latest-meme-trends.html",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "윤정아-챌린지\n5",
+      "action": "reject",
+      "reasons": [
+        "sources[5]: parent meme was not inserted"
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "장시간-비행-밈\n6",
+      "action": "reject",
+      "reasons": [
+        "sources[6]: parent meme was not inserted"
+      ]
+    }
+  ]
+}

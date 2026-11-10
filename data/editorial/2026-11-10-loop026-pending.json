@@ -1,0 +1,241 @@
+{
+  "batch_id": "loop-026-pending-2026-11-10",
+  "checked_at": "2026-11-10T03:25:00.000Z",
+  "memes": [
+    {
+      "slug": "파라파라-챌린지",
+      "title": "파라파라 챌린지",
+      "aliases": ["파라파라"],
+      "summary": "난감한 상황에서 \"모르겠고, 난 파라파라나 춰야겠다\"며 현실을 회피하듯 무반주 파라파라 춤을 추는 챌린지",
+      "description": "걸그룹 리센느 멤버 미나미가 거제 여행 영상에서 무반주로 파라파라 춤을 춘 장면이 시초다. 당당하지만 힘이 빠진 태도가 핵심 정서로, 자막을 바꿔 상황을 변주하는 숏폼 챌린지로 번졌다.",
+      "origin": "리센느 미나미의 거제 여행 유튜브 영상(2026년 6월)에서 시작됐다.",
+      "category": "challenge",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    },
+    {
+      "slug": "그린그린-레드레드",
+      "title": "그린그린 레드레드",
+      "aliases": ["그린그린", "레드레드"],
+      "summary": "좋은 것은 \"그린그린\", 별로인 것은 \"레드레드\"로 색깔에 빗대 긍정·부정을 표현하는 밈",
+      "description": "보이그룹 코르티스의 곡 RED RED에서 파생됐다. 비포&애프터 형식으로 호불호를 색으로 구분해 말하는 포맷이 SNS와 마케팅 계정에서 널리 쓰인다.",
+      "origin": "코르티스 곡 RED RED(2026년 5월경 확산)에서 파생됐다.",
+      "category": "phrase",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    },
+    {
+      "slug": "과자-사꾸",
+      "title": "과자 사꾸",
+      "aliases": ["과자 사진 꾸미기"],
+      "summary": "과자 포장지의 글자를 오려 조합해 메시지를 만들고 인증하는 SNS 놀이",
+      "description": "과자 포장지에 인쇄된 글자들을 모아 원하는 문장을 완성한 뒤 사진으로 인증하는 DIY 트렌드다. 수집·전시 감성의 참여형 밈으로 인스타그램을 중심으로 퍼졌다.",
+      "origin": "SNS 사용자들 사이에서 자연 발생했다(2026년 5월경 확산).",
+      "category": "image",
+      "media_type": "image",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    },
+    {
+      "slug": "갸륵체",
+      "title": "갸륵체",
+      "aliases": ["챗GPT 어화둥둥체", "어화둥둥체"],
+      "summary": "AI 챗봇 특유의 과하게 상냥하고 극진한 말투를 흉내 내는 문체 밈",
+      "description": "X(트위터)에서 \"GPT 말투 너무 열받는다\"는 글이 1만 회 이상 리포스트되며 확산됐다. AI가 사용자를 과하게 어르고 달래는 듯한 문체를 「갸륵체」·「어화둥둥체」로 부르며 패러디하는 밈이 됐다.",
+      "origin": "X(트위터)의 챗GPT 말투 지적 게시물(2026년)에서 시작됐다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    },
+    {
+      "slug": "무마가가이",
+      "title": "무마가가이",
+      "aliases": ["Moo Ma Ga Gai", "돼지 개 까마귀 닭"],
+      "summary": "태국 동요의 동물 이름 부분을 따라 부르는 손동작 게임이 숏폼 챌린지로 번진 밈",
+      "description": "태국 동요를 바탕으로 한 「돼지(무)·개(마)·까마귀(가)·닭(가이)」 게임이 2025년 말부터 세계적으로 확산돼 한국 숏폼에서도 챌린지로 유행했다.",
+      "origin": "태국 동요 기반 게임(2025년 말 해외 확산, 2026년 국내 유행).",
+      "category": "challenge",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    },
+    {
+      "slug": "윤정아-챌린지",
+      "title": "윤정아 챌린지",
+      "aliases": ["서윤정 챌린지", "쇼팽피아노학원"],
+      "summary": "개그우먼 정이랑의 캐릭터 「서윤정」을 흉내 내는 릴스 챌린지",
+      "description": "개그우먼 정이랑의 유튜브 채널 쇼팽피아노학원의 캐릭터 「서윤정」 말투와 행동을 따라 하는 챌린지다. 초등학생 참여 릴스가 화제가 되며 확산됐다.",
+      "origin": "정이랑의 유튜브 채널 쇼팽피아노학원 캐릭터에서 시작됐다(2026년).",
+      "category": "challenge",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    },
+    {
+      "slug": "장시간-비행-밈",
+      "title": "장시간 비행 밈",
+      "aliases": ["비행기 옆자리 골라라", "장시간 비행"],
+      "summary": "비행기 좌석 배치도에 인물·캐릭터를 놓고 \"장시간 비행, 옆자리를 골라라\"라고 묻는 선택 밈",
+      "description": "비행기 좌석 배치 이미지에 여러 인물·캐릭터를 배치하고 옆자리에 앉을 대상을 고르게 하는 참여형 밈이다. 2026년 1월 말부터 인스타그램과 커뮤니티로 확산됐다.",
+      "origin": "해외 SNS의 좌석 선택 밈 형식이 2026년 1월 말 국내로 번졌다.",
+      "category": "image",
+      "media_type": "image",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": { "work": "yellow", "friends": "yellow", "family": "yellow", "sns": "yellow" }
+    }
+  ],
+  "sources": [
+    {
+      "meme_slug": "파라파라-챌린지",
+      "url": "https://letter.wepick.kr/post/23942",
+      "title": "2026 트렌디한 밈 아카이브.ZIP",
+      "publisher": "위픽레터"
+    },
+    {
+      "meme_slug": "그린그린-레드레드",
+      "url": "https://letter.wepick.kr/post/23942",
+      "title": "2026 트렌디한 밈 아카이브.ZIP",
+      "publisher": "위픽레터"
+    },
+    {
+      "meme_slug": "과자-사꾸",
+      "url": "https://letter.wepick.kr/post/23942",
+      "title": "2026 트렌디한 밈 아카이브.ZIP",
+      "publisher": "위픽레터"
+    },
+    {
+      "meme_slug": "갸륵체",
+      "url": "https://filmora.wondershare.kr/useful-information/latest-meme-trends.html",
+      "title": "틱톡·인스타그램에서 인기 폭발! 요즘 유행하는 밈 베스트",
+      "publisher": "Wondershare Filmora"
+    },
+    {
+      "meme_slug": "무마가가이",
+      "url": "https://filmora.wondershare.kr/useful-information/latest-meme-trends.html",
+      "title": "틱톡·인스타그램에서 인기 폭발! 요즘 유행하는 밈 베스트",
+      "publisher": "Wondershare Filmora"
+    },
+    {
+      "meme_slug": "윤정아-챌린지",
+      "url": "https://filmora.wondershare.kr/useful-information/latest-meme-trends.html",
+      "title": "틱톡·인스타그램에서 인기 폭발! 요즘 유행하는 밈 베스트",
+      "publisher": "Wondershare Filmora"
+    },
+    {
+      "meme_slug": "장시간-비행-밈",
+      "url": "https://letter.wepick.kr/post/23942",
+      "title": "2026 트렌디한 밈 아카이브.ZIP",
+      "publisher": "위픽레터"
+    }
+  ],
+  "catalog": {
+    "memes": [
+      {
+        "slug": "Green-Green-(그린그린-레드레드)",
+        "title": "Green Green (그린그린 레드레드)",
+        "aliases": ["그린그린", "레드레드", "That's red red"]
+      },
+      {
+        "slug": "과자-사꾸",
+        "title": "과자 사꾸",
+        "aliases": ["과자 사진 꾸미기", "과자사꾸"]
+      },
+      {
+        "slug": "챗GPT-갸륵체",
+        "title": "챗GPT 갸륵체",
+        "aliases": ["챗GPT 어화둥둥체", "지피티갸륵체"]
+      },
+      {
+        "slug": "윤정아-윤정아-밈",
+        "title": "윤정아 윤정아 밈",
+        "aliases": ["윤정아 밈", "왜요 쌤"]
+      },
+      {
+        "slug": "윤정아-윤정아-챌린지",
+        "title": "윤정아 윤정아 챌린지",
+        "aliases": ["뀨", "왜요쌤 챌린지", "윤정아 왜요쌤"]
+      },
+      {
+        "slug": "장시간-비행-옆자리-골라라-밈",
+        "title": "장시간 비행 옆자리 골라라 밈",
+        "aliases": []
+      },
+      {
+        "slug": "장시간-비행,-옆자리를-골라라",
+        "title": "장시간 비행, 옆자리를 골라라",
+        "aliases": ["비행기 옆자리 챌린지", "장시간 비행 어디 앉을래"]
+      },
+      {
+        "slug": "파라파라나-춰야겠다",
+        "title": "파라파라나 춰야겠다",
+        "aliases": ["파라파라 밈"]
+      }
+    ],
+    "sources": [
+      {
+        "meme_slug": "과자-사꾸",
+        "url": "https://letter.wepick.kr/post/23942"
+      }
+    ],
+    "near_duplicates": [
+      {
+        "meme_slug": "파라파라-챌린지",
+        "existing_slug": "파라파라나-춰야겠다",
+        "reason": "Same 리센느 미나미 unaccompanied parapara reaction. Title keys differ, so this is a curator match."
+      },
+      {
+        "meme_slug": "윤정아-챌린지",
+        "existing_slug": "윤정아-윤정아-챌린지",
+        "reason": "Same 정이랑 쇼팽피아노학원 서윤정 challenge already filed under 윤정아-윤정아-챌린지 and 윤정아-윤정아-밈."
+      },
+      {
+        "meme_slug": "장시간-비행-밈",
+        "existing_slug": "장시간-비행-옆자리-골라라-밈",
+        "reason": "Same long-haul seat-choice format."
+      },
+      {
+        "meme_slug": "장시간-비행-밈",
+        "existing_slug": "장시간-비행,-옆자리를-골라라",
+        "reason": "Same long-haul seat-choice format, including alias 비행기 옆자리 챌린지."
+      }
+    ]
+  }
+}

@@ -22,6 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "content:review-international-origins": "node scripts/review-international-meme-origins.mjs",
+    "content:ingest": "node scripts/ingest-meme-content.mjs",
+    "content:ingest:test": "node --test scripts/ingest-meme-content.test.mjs",
     "smoke": "node scripts/smoke.mts",
     "mpe:worker": "node scripts/mpe-media-worker.mjs --watch",
     "mpe:worker:once": "node scripts/mpe-media-worker.mjs",

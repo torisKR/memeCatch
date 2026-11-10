@@ -13,6 +13,7 @@ import Link from "next/link";
 // 못 미덥다 — 그래서 상태코드와 무관하게 여기서 robots noindex를 명시한다. follow는
 // 유지: 페이지의 홈/탐색 링크로 크롤이 계속 전파돼야 한다.
 export const metadata: Metadata = {
+  title: "이 밈은 아직 없어요",
   robots: { index: false, follow: true },
 };
 

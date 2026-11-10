@@ -4,7 +4,6 @@ import {
   CATEGORIES,
   MODERATION_STATUS,
   formatOriginYear,
-  shortIdFromParam,
 } from "@/lib/labels";
 import {
   aboutSectionHeading,
@@ -14,7 +13,6 @@ import {
   originSectionHeading,
 } from "@/lib/house-original";
 import {
-  getMemeByShortId,
   getReactionCounts,
   getRelatedMemes,
 } from "@/lib/queries";
@@ -64,22 +62,33 @@ import {
 } from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
-import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
+import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { CuratedMemeArticle } from "@/components/curated-meme-article";
+import { MemeCatalogUnavailable } from "@/components/meme-catalog-unavailable";
+import {
+  curatedMemeMetadata,
+  resolveKoreanMemeDocument,
+  unavailableMemeMetadata,
+} from "@/lib/public-meme-document";
 
-/** 밈 상세 문서는 요청별 SSR. 불필요한 백그라운드 재검증으로 인한 Vercel ISR 쓰기 한도 소진을 막기 위해 24시간 캐시를 적용한다. */
-export const revalidate = 86400;
-
-export async function generateStaticParams(): Promise<{ key: string }[]> {
-  return [];
-}
+/**
+ * 요청마다 렌더한다. 이 라우트를 ISR로 두고 요청 대기를 걸면 프로덕션이
+ * DYNAMIC_SERVER_USAGE 500을 낸다. 카탈로그 오류는 200, 확인된 결측은
+ * notFound()의 404, 성공은 본문이다. 그 결과를 하루짜리 정적 결과로 남기지 않는다.
+ */
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ key: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
-  const requestedShortId = shortIdFromParam(key);
-  const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
-  const meme = await getMemeByShortId(targetShortId);
+  const resolved = await resolveKoreanMemeDocument(key);
+  if (resolved.kind === "curated") return curatedMemeMetadata(resolved.meme);
+  if (resolved.kind === "unavailable") return unavailableMemeMetadata();
+  const meme = resolved.kind === "database" ? resolved.meme : null;
+  const requestedShortId = resolved.requestedShortId;
+  const targetShortId = resolved.targetShortId;
+  // 조회가 성공하고 행이 없을 때만 404다. 카탈로그 오류는 위에서 빠진다.
   // 메타데이터 단계에서 404를 확정한다. 여기서 제목만 반환하면 응답이 200으로
   // 스트리밍을 시작한 뒤라 본문의 notFound()가 상태 코드를 바꾸지 못해,
   // 없는 문서가 200 + "찾을 수 없어요" 화면(soft-404)으로 나간다 — 검색엔진이
@@ -156,9 +165,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MemeDetailPage({ params }: Props) {
   const { key } = await params;
-  const requestedShortId = shortIdFromParam(key);
-  const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
-  const meme = await getMemeByShortId(targetShortId);
+  const resolved = await resolveKoreanMemeDocument(key);
+  if (resolved.kind === "curated") return <CuratedMemeArticle meme={resolved.meme} />;
+  if (resolved.kind === "unavailable") return <MemeCatalogUnavailable />;
+  const meme = resolved.kind === "database" ? resolved.meme : null;
+  const requestedShortId = resolved.requestedShortId;
+  const targetShortId = resolved.targetShortId;
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {

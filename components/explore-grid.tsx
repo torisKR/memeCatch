@@ -199,9 +199,12 @@ export function ExploreGrid({
   excludeIds = [],
   initialOffset,
   hasMoreInitial,
+  catalogUnavailable = false,
 }: {
   initial: MemeListItem[];
   filters: ExploreFilters;
+  /** 첫 조회가 실패한 경우. 빈 결과와 구분한다. */
+  catalogUnavailable?: boolean;
   /** 스트림에서 항상 제외할 밈 id (예: 현재 보고 있는 밈) */
   excludeIds?: string[];
   /**
@@ -228,7 +231,7 @@ export function ExploreGrid({
   useEffect(() => {
     // 검색 경로는 RPC 50건 캡이라 정확한 총계 불가 — 렌더 가드가 표시를 막는다
     // (effect 안 동기 setState 금지 — 캐스케이드 렌더 방지 lint 준수).
-    if (filters.q) return;
+    if (filters.q || catalogUnavailable) return;
     let cancelled = false;
     (async () => {
       try {
@@ -246,7 +249,7 @@ export function ExploreGrid({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- filters는 URL 파생 불변 객체
-  }, [filters.q, filters.platform, filters.topicTag, filters.categories.join(","), filters.difficulty, filters.lifecycle, filters.media, filters.year, filters.sort]);
+  }, [catalogUnavailable, filters.q, filters.platform, filters.topicTag, filters.categories.join(","), filters.difficulty, filters.lifecycle, filters.media, filters.year, filters.sort]);
 
   // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
@@ -317,6 +320,23 @@ export function ExploreGrid({
     io.observe(el);
     return () => io.disconnect();
   }, [loadMore, hasMore, items.length]);
+
+  if (catalogUnavailable && items.length === 0) {
+    return (
+      <div
+        role="alert"
+        className="glass-panel relative mt-8 overflow-hidden rounded-2xl p-8 text-center"
+      >
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <div className="relative">
+          <p className="text-xl font-bold">밈 목록을 불러오지 못했어요</p>
+          <p className="mt-1.5 text-base text-foreground">
+            사전 연결이 잠시 막혀 있어요. 출처 숫자는 남아 있어도, 이 목록은 연결이 돌아와야 보여요.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음 (검색어가 있으면 반영)
   if (items.length === 0) {

@@ -17,6 +17,16 @@ export type MemeContentRow = Database["public"]["Tables"]["meme_contents"]["Row"
 export type MemeSourceRow = Database["public"]["Tables"]["meme_sources"]["Row"];
 export type ReactionType = Database["public"]["Enums"]["reaction_type"];
 
+/** 사전 조회가 실패했다. 행이 없는 것과 다르다. */
+export class MemeCatalogUnavailableError extends Error {
+  readonly code = "meme_catalog_unavailable";
+
+  constructor() {
+    super("meme_catalog_unavailable");
+    this.name = "MemeCatalogUnavailableError";
+  }
+}
+
 /**
  * 목록 카드가 실제로 읽는 컬럼만 명시 — memes 테이블의 장문 컬럼(description,
  * origin, usage_note, usage_context, caution, aliases, title_chosung 등)은
@@ -221,10 +231,12 @@ export const getMemeByShortId = cache(
         .eq("short_id", shortId)
         .in("moderation_status", [...PUBLIC_STATUSES])
         .maybeSingle();
-      if (error || !data) return null;
+      if (error) throw new MemeCatalogUnavailableError();
+      if (!data) return null;
       return data as unknown as MemeDetail;
-    } catch {
-      return null;
+    } catch (error) {
+      if (error instanceof MemeCatalogUnavailableError) throw error;
+      throw new MemeCatalogUnavailableError();
     }
   }
 );

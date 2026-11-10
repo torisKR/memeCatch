@@ -11,6 +11,7 @@ import {
 import type { Database } from "@/lib/database.types";
 import {
   getMemeByShortId,
+  MemeCatalogUnavailableError,
   type MemeDetail,
 } from "@/lib/queries";
 import { createStaticClient } from "@/lib/supabase/server";
@@ -228,11 +229,13 @@ export const getLocalizedMemeByShortId = cache(async function getLocalizedMemeBy
       .eq("status", "reviewed")
       .maybeSingle()
       .overrideTypes<MemeTranslationRow, { merge: false }>();
-    if (error || !data) return null;
+    if (error) throw new MemeCatalogUnavailableError();
+    if (!data) return null;
     const localized = overlayMemeTranslation(meme, data, locale);
     return isIndexableLocalizedMeme(localized) ? localized : null;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof MemeCatalogUnavailableError) throw error;
+    throw new MemeCatalogUnavailableError();
   }
 });
 

@@ -150,13 +150,20 @@ function memeLanguages(
   return { ...languages, "x-default": languages.en ?? absolute(koreanPath) };
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const supabase = createStaticClient();
+function reportCatalogUnavailable(): void {
+  // 오류 원문에는 쿼터 문구와 요청 URL이 섞인다. 빌드를 멈추는 대신 정적 URL만 남긴다.
+  console.error("[sitemap] catalog unavailable");
+}
 
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
   // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
+  // 카탈로그가 402처럼 막혀도 정적 페이지 사이트맵은 빌드를 통과해야 한다.
+  let supabase: ReturnType<typeof createStaticClient> | null = null;
   let homeLastMod: Date | undefined;
+  let catalogUnavailable = false;
   try {
+    supabase = createStaticClient();
     const { data: latest, error } = await supabase
       .from("memes")
       .select("published_at")
@@ -165,14 +172,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(1)
       .maybeSingle();
     if (error) {
-      throw new Error(`[sitemap] 최신 공개일 조회 실패: ${error.message}`, {
-        cause: error,
-      });
+      reportCatalogUnavailable();
+      catalogUnavailable = true;
+    } else {
+      homeLastMod = validDate(latest?.published_at);
     }
-    homeLastMod = validDate(latest?.published_at);
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith("[sitemap]")) throw error;
-    throw new Error("[sitemap] 최신 공개일 조회 실패", { cause: error });
+  } catch {
+    reportCatalogUnavailable();
+    catalogUnavailable = true;
   }
 
   const localizedHomeEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
@@ -244,24 +251,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 데이터는 삭제하지 않으며 사이트맵에서 발견 경로만 뺀다.
   // 페이지 단위로 순회 — 사이트맵 상한 5만 URL.
   const PAGE = 1000;
-  for (let from = 0; from < 49000; from += PAGE) {
-    const { data, error } = await supabase
-      .from("memes")
-      .select(DEPTH_SELECT)
-      .in("moderation_status", [...PUBLIC_STATUSES])
-      .order("published_at", { ascending: false })
+  for (let from = 0; !catalogUnavailable && supabase && from < 49000; from += PAGE) {
+    let data: unknown[] | null = null;
+    try {
+      const page = await supabase
+        .from("memes")
+        .select(DEPTH_SELECT)
+        .in("moderation_status", [...PUBLIC_STATUSES])
+        .order("published_at", { ascending: false })
       // 고유 타이브레이커 필수 — published_at은 동점이 매우 많다(일괄 등록으로
       // 공개 3,905건 중 2,835건이 같은 타임스탬프를 공유). 단일 컬럼 정렬로
       // range() 페이지를 나누면 페이지마다 정렬이 달라져 경계에서 같은 행을
       // 다시 읽고 다른 행은 건너뛴다. 실제로 사이트맵에 URL 2건이 중복 등재되고
       // 충실한 문서 1건이 누락됐다.
       .order("id", { ascending: false })
-      .range(from, from + PAGE - 1);
-
-    if (error) {
-      const message = `[sitemap] 밈 조회 실패 (from=${from}): ${error.message}`;
-      console.error(message);
-      throw new Error(message, { cause: error });
+        .range(from, from + PAGE - 1);
+      if (page.error) {
+        reportCatalogUnavailable();
+        break;
+      }
+      data = page.data;
+    } catch {
+      reportCatalogUnavailable();
+      break;
     }
     if (!data || data.length === 0) break;
 

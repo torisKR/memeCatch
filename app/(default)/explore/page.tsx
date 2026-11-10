@@ -229,17 +229,22 @@ export default async function ExplorePage({
   const sp = await searchParams;
   const filters = parseFilters(sp);
 
-  const [initial, platformCounts] = await Promise.all([
-    (async (): Promise<MemeListItem[]> => {
+  const [initialLoad, platformCounts] = await Promise.all([
+    (async (): Promise<{ items: MemeListItem[]; unavailable: boolean }> => {
       try {
         const supabase = createStaticClient();
-        const { data } = await buildQuery(supabase, filters).range(
+        const { data, error } = await buildQuery(supabase, filters).range(
           0,
           PAGE_SIZE - 1
         );
-        return (data ?? []) as unknown as MemeListItem[];
+        // 조회 실패를 빈 목록으로 두면 출처 개수만 남고 "아직 없어요"가 된다.
+        if (error) return { items: [], unavailable: true };
+        return {
+          items: (data ?? []) as unknown as MemeListItem[],
+          unavailable: false,
+        };
       } catch {
-        return [];
+        return { items: [], unavailable: true };
       }
     })(),
     getSocialPlatformCounts(),
@@ -278,7 +283,12 @@ export default async function ExplorePage({
           aria-label="밈 탐색 결과"
           className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
         >
-          <ExploreGrid key={filterKey(filters)} initial={initial} filters={filters} />
+          <ExploreGrid
+            key={filterKey(filters)}
+            initial={initialLoad.items}
+            catalogUnavailable={initialLoad.unavailable}
+            filters={filters}
+          />
         </section>
       </div>
     </main>

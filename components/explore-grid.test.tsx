@@ -59,7 +59,9 @@ describe("ExploreGrid", () => {
     );
 
     expect(screen.getByRole("alert").textContent).toContain("밈 목록을 불러오지 못했어요");
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
     expect(screen.queryByText("이 조건의 밈이 아직 없어요")).toBeNull();
+    expect(screen.queryByText("공개된 밈이 아직 이 목록에 없어요")).toBeNull();
     expect(screen.queryByText("필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요.")).toBeNull();
   });
 
@@ -71,10 +73,23 @@ describe("ExploreGrid", () => {
       />,
     );
 
-    expect(screen.getByText("이 조건의 밈이 아직 없어요")).toBeTruthy();
+    expect(screen.getByText("공개된 밈이 아직 이 목록에 없어요")).toBeTruthy();
+    expect(screen.queryByText(/필터를 풀어/)).toBeNull();
     expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
       "/submit",
     );
+  });
+
+  it("asks to loosen filters only when a filter is active", () => {
+    render(
+      <ExploreGrid
+        initial={[]}
+        filters={{ categories: ["phrase"], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.getByText("이 조건의 밈이 아직 없어요")).toBeTruthy();
+    expect(screen.getByText(/필터를 풀어/)).toBeTruthy();
   });
 
   it("names a zero-result search query in the empty state", () => {

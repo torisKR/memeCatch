@@ -65,7 +65,7 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
       description: "지금 읽을 수 있도록 공개된 설명에서 최근 항목을 모았습니다.",
       read: "뜻과 유래 읽기",
       originalLabel: "원문",
-      empty: "지금은 최근 항목을 표시할 수 없습니다. 공개 항목이 없거나 연결이 원활하지 않을 수 있어요. 잠시 후 다시 열거나 밈 검색을 이용해 주세요.",
+      empty: "최근 공개된 밈이 이 자리에 모입니다. 지금은 검색으로 찾아 보세요.",
       emptyAction: "밈 검색하기",
       all: "전체 밈 보기",
     },

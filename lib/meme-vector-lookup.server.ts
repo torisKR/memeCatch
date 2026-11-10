@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createStaticClient } from "@/lib/supabase/server";
 import { isMemeVector, MEME_VECTOR_PROFILE } from "@/lib/meme-vectors";
 import { createEmbeddingAuthHeaders } from "@/lib/meme-embedding-auth.server";
+import { hostedLoopbackForbidden } from "@/lib/meme-embedding-host";
 
 const queryCache = new Map<string, { expires: number; vector: number[] }>();
 const pendingQueries = new Map<string, Promise<number[] | null>>();
@@ -11,16 +12,19 @@ export function semanticSearchEnabled(env: Readonly<Record<string, string | unde
 }
 export function embeddingEndpoint(env: Readonly<Record<string, string | undefined>> = process.env): URL | null {
   if (!semanticSearchEnabled(env)) return null;
-  const endpoint = env.MEME_EMBEDDING_RUNTIME === "bundled" && env.VERCEL_URL
+  const onCloudflare = env.MEMECATCH_RUNTIME === "cloudflare";
+  if (onCloudflare && (env.MEME_EMBEDDING_RUNTIME === "bundled" || !env.MEME_EMBEDDING_URL)) return null;
+  const hosted = hostedLoopbackForbidden(env);
+  const endpoint = env.MEME_EMBEDDING_RUNTIME === "bundled" && env.VERCEL_URL && !onCloudflare
     ? `https://${env.VERCEL_URL}/v1/embeddings` : env.MEME_EMBEDDING_URL;
   if (!endpoint) return null;
   try {
     const url = new URL(endpoint);
-    if (env.MEME_EMBEDDING_RUNTIME === "bundled" && env.VERCEL_URL && url.host !== env.VERCEL_URL) return null;
+    if (env.MEME_EMBEDDING_RUNTIME === "bundled" && env.VERCEL_URL && !onCloudflare && url.host !== env.VERCEL_URL) return null;
     const loopback = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
     if (url.username || url.password || url.search || url.hash || url.pathname !== "/v1/embeddings") return null;
-    if (loopback && env.VERCEL) return null;
-    if (url.protocol === "https:" || (url.protocol === "http:" && loopback && !env.VERCEL)) return url;
+    if (loopback && hosted) return null;
+    if (url.protocol === "https:" || (url.protocol === "http:" && loopback && !hosted)) return url;
   } catch { /* Invalid configuration leaves lexical search available. */ }
   return null;
 }

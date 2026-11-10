@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
+import type { MemeCategory, SafetyLevel } from "@/lib/labels";
 
 type HouseOriginalVisualProps = {
   title: string;
   summary: string;
-  category?: string;
-  safetyLevel?: string;
+  category?: MemeCategory;
+  safetyLevel?: SafetyLevel;
   exampleDialogue?: string;
 };
 
@@ -24,8 +25,8 @@ export function HouseOriginalVisual({
     {
       title,
       summary,
-      category: category as any,
-      safety_level: safetyLevel as any,
+      category,
+      safety_level: safetyLevel,
       usage_examples: [
         {
           situation: "대화 예시",
@@ -99,7 +100,7 @@ export function HouseOriginalVisual({
                 <span className="text-xs font-bold text-accent">Scene 1 (00:00 - 00:03)</span>
                 <span className="text-xs text-muted">타이틀 인트로</span>
               </div>
-              <p className="mt-1 text-sm font-semibold">"{title}" 요즘 대세 밈 30초 완성</p>
+              <p className="mt-1 text-sm font-semibold">{`"${title}" 요즘 대세 밈 30초 완성`}</p>
               <p className="text-xs text-muted mt-0.5">화면 중앙 볼드 타이포그래피 + 다이내믹 사운드</p>
             </div>
 
@@ -117,7 +118,7 @@ export function HouseOriginalVisual({
                 <span className="text-xs font-bold text-accent">Scene 3 (00:08 - 00:12)</span>
                 <span className="text-xs text-muted">실전 톡 예시</span>
               </div>
-              <p className="mt-1 text-sm font-semibold">"{exampleDialogue || '대화에서 실제로 어떻게 쓰는지 보여주기'}"</p>
+              <p className="mt-1 text-sm font-semibold">{`"${exampleDialogue || "대화에서 실제로 어떻게 쓰는지 보여주기"}"`}</p>
               <p className="text-xs text-muted mt-0.5">메신저 말풍선 인터랙션 애니메이션</p>
             </div>
 

@@ -354,6 +354,29 @@ describe("internal catalog passage embeddings", () => {
     expect(mocks.pipeline).toHaveBeenCalledTimes(2);
   });
 
+  it("does not load ONNX on Cloudflare", async () => {
+    vi.stubEnv("MEMECATCH_RUNTIME", "cloudflare");
+    expect(await runtime.embedBundledMemePassage("문서")).toBeNull();
+    expect(mocks.readFile).not.toHaveBeenCalled();
+    expect(mocks.pipeline).not.toHaveBeenCalled();
+  });
+
+  it("sends a passage to an external runtime on Cloudflare", async () => {
+    vi.stubEnv("MEMECATCH_RUNTIME", "cloudflare");
+    vi.stubEnv("MEME_EMBEDDING_RUNTIME", "remote");
+    vi.stubEnv("MEME_EMBEDDING_URL", "https://embeddings.example.test/v1/embeddings");
+    vi.stubEnv("MEME_EMBEDDING_API_KEY", "embed-key");
+    mocks.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ model: "multilingual-e5-small-v1", data: [{ embedding: vector() }] }),
+    });
+    expect(await runtime.embedBundledMemePassage("문서")).toEqual(vector());
+    expect(mocks.readFile).not.toHaveBeenCalled();
+    const options = mocks.fetch.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(options.body))).toMatchObject({ input: "passage: 문서" });
+    expect(new Headers(options.headers).get("authorization")).toBe("Bearer embed-key");
+  });
+
   it.each([null, undefined, [], [1], Array(384).fill(0), Array(384).fill(Infinity)].map((embedding) => ({ embedding })))(
     "rejects invalid passage vectors and releases the in-flight slot", async ({ embedding }) => {
       mocks.extractor.mockResolvedValueOnce({ tolist: () => [embedding] }).mockResolvedValueOnce(output());

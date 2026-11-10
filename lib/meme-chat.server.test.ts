@@ -714,6 +714,13 @@ describe("public grounded meme answers", () => {
     expect(mocks.fetch.mock.calls[0][1].headers.authorization).not.toContain("test-key");
   });
 
+  it("never targets opencodex loopback from Cloudflare", async () => {
+    vi.stubEnv("MEME_CHAT_PROVIDER", "opencodex");
+    vi.stubEnv("MEMECATCH_RUNTIME", "cloudflare");
+    expect((await (await load())(input)).mode).toBe("retrieved");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it.each(["http://127.0.0.1:10100/v1", "https://localhost:10100/v1"])("never targets opencodex loopback from Vercel: %s", async (base) => {
     vi.stubEnv("MEME_CHAT_PROVIDER", "opencodex");
     vi.stubEnv("MEME_CHAT_BASE_URL", base);

@@ -1,0 +1,1707 @@
+{
+  "vercelInventory": [
+    "ADPICK_AFFILIATE_ID",
+    "ADSENSE_AUTO_ADS_ENABLED",
+    "AWS_REGION",
+    "AWS_ROLE_ARN",
+    "BEDROCK_MEME_STUDIO_ENABLED",
+    "BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN",
+    "BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN",
+    "CRON_SECRET",
+    "FAIRY_PLUS_ENABLED",
+    "FAIRY_PLUS_MIN_AMOUNT_KRW",
+    "FAIRY_PROJECT_SLUG",
+    "FAIRY_WEBHOOK_SECRET",
+    "GA4_PROPERTY_ID",
+    "GA4_SERVICE_ACCOUNT_EMAIL",
+    "GA4_SERVICE_ACCOUNT_PRIVATE_KEY",
+    "LATPEED_MEMBERSHIP_URL",
+    "LATPEED_WEBHOOK_SECRET",
+    "MCP_EVENT_RETRY_TOKEN",
+    "MCP_EVENT_STATE_KEY",
+    "MCP_GITHUB_WEBHOOK_SECRET",
+    "MEME_CHAT_GENERATION_ENABLED",
+    "MEME_EMBEDDING_REINDEX_ENABLED",
+    "MEME_EMBEDDING_RUNTIME",
+    "MEME_LAYA_ROUTING_ENABLED",
+    "MEME_SEMANTIC_SEARCH_ENABLED",
+    "NEXT_PUBLIC_ADSENSE_CLIENT",
+    "NEXT_PUBLIC_COMMUNITY_ENABLED",
+    "NEXT_PUBLIC_GA_ID",
+    "NEXT_PUBLIC_SITE_URL",
+    "NEXT_PUBLIC_SUBMISSIONS_OPEN",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_UNIFI_CLIENT_ID",
+    "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_BASE_URL",
+    "OPENROUTER_MPE_MODEL",
+    "R2_ACCESS_KEY_ID",
+    "R2_ACCOUNT_ID",
+    "R2_BUCKET",
+    "R2_SECRET_ACCESS_KEY",
+    "RADAR_AI_DRAFT_DAILY_LIMIT",
+    "RADAR_AI_DRAFT_ENABLED",
+    "RADAR_CANDIDATE_TRACKING_CALL_BUDGET_PER_RUN",
+    "RADAR_DISCOVERY_DAILY_CANDIDATE_LIMIT",
+    "RADAR_DISCOVERY_ENABLED",
+    "RADAR_NEW_DISCOVERY_CALL_BUDGET_PER_RUN",
+    "RADAR_YOUTUBE_DAILY_CALL_LIMIT",
+    "RELEASE_SHA",
+    "SOURCE_REFRESH_ENABLED",
+    "SOURCE_REVIEW_ATOMIC_ENABLED",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "TIKTOK_CLIENT_KEY",
+    "TIKTOK_CLIENT_SECRET",
+    "TIKTOK_REDIRECT_URI",
+    "TREND_CRON_SECRET",
+    "UNIFI_PAY_API_KEY",
+    "UNIFI_PAY_API_SECRET",
+    "UNIFI_PAY_BASE_URL",
+    "UNIFI_PAY_CALLBACK_BASE_URL",
+    "UNIFI_PAY_CHECKOUT_ENABLED",
+    "UNIFI_PAY_CURRENCY",
+    "UNIFI_PAY_ITEM_NAME",
+    "UNIFI_PAY_ITEM_PRICE",
+    "UNIFI_PAY_RETURN_BASE_URL",
+    "UNIFI_PAY_SERVICE_NAME",
+    "UNIFI_PAY_STORE_ID",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_SUBJECT",
+    "VERCEL_SUPPORT_LARGE_FUNCTIONS",
+    "YOUTUBE_API_KEY"
+  ],
+  "entries": [
+    {
+      "name": "ACT001_CLOSURE_EVIDENCE",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_EVIDENCE_MANIFEST",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_BASE_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs",
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_EVIDENCE",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_SUPABASE_ANON_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_SUPABASE_PREVIEW_JWT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_SUPABASE_SERVICE_ROLE_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_SUPABASE_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs",
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREFLIGHT_TIMEOUT_MS",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preflight.mjs",
+        "scripts/plus-activation-preflight.test.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_APP_ORIGIN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs",
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_CROSS_OWNER_JWT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_EXPIRED_JWT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_FREE_JWT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_OWNER_JWT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_REFUND_SERVICE_ROLE_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_SUPABASE_ANON_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_SUPABASE_ORIGIN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs",
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_SUPABASE_REF",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs",
+        "scripts/plus-activation-evidence.test.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PREVIEW_SUPABASE_SERVICE_ROLE_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PRIVACY_REVIEW_JSON",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PRODUCTION_APP_ORIGIN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs",
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PRODUCTION_SUPABASE_ORIGIN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs",
+        "scripts/plus-activation-preview.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_PRODUCTION_SUPABASE_REF",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs"
+      ]
+    },
+    {
+      "name": "ACT001_RUN_ID",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-evidence.mjs"
+      ]
+    },
+    {
+      "name": "ADPICK_AFFILIATE_ID",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/go/products/[id]/route.test.ts",
+        "lib/affiliate/product-redirect.ts",
+        "lib/affiliate/sync.server.ts"
+      ]
+    },
+    {
+      "name": "ADSENSE_AUTO_ADS_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "components/adsense-script.tsx"
+      ]
+    },
+    {
+      "name": "ALLOWED_ORIGINS",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "ANON_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "ANTHROPIC_TRANSLATION_MODEL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/translate-memes.mjs"
+      ]
+    },
+    {
+      "name": "API_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "AWS_ACCESS_KEY_ID",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "AWS_REGION",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "AWS_ROLE_ARN",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "AWS_SECRET_ACCESS_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "BEDROCK_MEME_STUDIO_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "CF_VERSION_METADATA",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "lib/cloudflare-host.ts"
+      ]
+    },
+    {
+      "name": "CLOUDFLARE_ACCOUNT_ID",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/apply-cloudflare-env.mjs"
+      ]
+    },
+    {
+      "name": "CLOUDFLARE_API_TOKEN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/apply-cloudflare-env.mjs"
+      ]
+    },
+    {
+      "name": "CRON_SECRET",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/cron/adpick-hotdeals/route.test.ts",
+        "app/api/cron/growth-baseline/route.ts",
+        "app/api/cron/mcp-events/route.js",
+        "app/api/cron/meme-embeddings/route.test.ts",
+        "app/api/cron/meme-embeddings/route.ts",
+        "app/api/cron/plus-daily-signal/route.test.ts",
+        "app/api/cron/plus-daily-signal/route.ts",
+        "app/api/cron/plus-expiry-reminders/route.test.ts",
+        "app/api/cron/plus-expiry-reminders/route.ts",
+        "app/api/cron/saved-state-emails/route.ts",
+        "app/api/cron/source-refresh/route.ts",
+        "app/api/cron/trend-pulse/route.test.ts",
+        "app/api/cron/trend-pulse/route.ts",
+        "app/api/cron/web-push/route.ts",
+        "app/v1/embeddings/route.ts",
+        "lib/affiliate/cron-handler.ts",
+        "lib/meme-embedding-auth.server.test.ts",
+        "lib/meme-embedding-auth.server.ts",
+        "lib/meme-vector-lookup.server.ts"
+      ]
+    },
+    {
+      "name": "CSP_ENFORCE",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "next.config.ts"
+      ]
+    },
+    {
+      "name": "CSP_REPORT_URI",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "next.config.ts"
+      ]
+    },
+    {
+      "name": "EVENT_CALLBACK_ORIGINS",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "EVENT_STATE_KEY_BASE64",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "EVENT_STATE_PATH",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "FAIRY_PLUS_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/fairy.server.ts"
+      ]
+    },
+    {
+      "name": "FAIRY_PLUS_MIN_AMOUNT_KRW",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/fairy.server.ts"
+      ]
+    },
+    {
+      "name": "FAIRY_PROJECT_SLUG",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/fairy.server.ts"
+      ]
+    },
+    {
+      "name": "FAIRY_WEBHOOK_SECRET",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/fairy.server.ts"
+      ]
+    },
+    {
+      "name": "GA4_PROPERTY_ID",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/ga4-admin.ts"
+      ]
+    },
+    {
+      "name": "GA4_SERVICE_ACCOUNT_EMAIL",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/ga4-admin.ts"
+      ]
+    },
+    {
+      "name": "GA4_SERVICE_ACCOUNT_PRIVATE_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/ga4-admin.ts"
+      ]
+    },
+    {
+      "name": "GITHUB_WEBHOOK_SECRET",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "HOST",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "IMPORT_APPROVED",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/jsonl-to-postgrest.mjs"
+      ]
+    },
+    {
+      "name": "LATPEED_MEMBERSHIP_PRODUCT_ID",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/billing/latpeed/webhook/route.ts"
+      ]
+    },
+    {
+      "name": "LATPEED_MEMBERSHIP_URL",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "LATPEED_WEBHOOK_SECRET",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/billing/latpeed/webhook/route.ts"
+      ]
+    },
+    {
+      "name": "LOCAL_SUPABASE_ANON_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-local.mjs"
+      ]
+    },
+    {
+      "name": "LOCAL_SUPABASE_SERVICE_ROLE_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-local.mjs"
+      ]
+    },
+    {
+      "name": "LOCAL_SUPABASE_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/plus-activation-local.mjs"
+      ]
+    },
+    {
+      "name": "MCP_EVENT_CALLBACK_ORIGINS",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/state.mjs"
+      ]
+    },
+    {
+      "name": "MCP_EVENT_RETRY_TOKEN",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/cron/mcp-events/route.js"
+      ]
+    },
+    {
+      "name": "MCP_EVENT_STATE_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/state.mjs"
+      ]
+    },
+    {
+      "name": "MCP_GITHUB_WEBHOOK_SECRET",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/mcp-operator/github/route.js"
+      ]
+    },
+    {
+      "name": "MCP_OPERATOR_TOKEN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "MEME_CHAT_API_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_CHAT_BASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_CHAT_GENERATION_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_CHAT_MODEL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_CHAT_PROVIDER",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_EMBEDDING_API_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-embedding-runtime.server.ts",
+        "lib/meme-vector-lookup.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_EMBEDDING_REINDEX_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/cron/meme-embeddings/route.test.ts",
+        "lib/meme-embedding-host.ts"
+      ]
+    },
+    {
+      "name": "MEME_EMBEDDING_RUNTIME",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/v1/embeddings/route.ts",
+        "lib/meme-embedding-host.ts",
+        "lib/meme-embedding-runtime.server.ts",
+        "lib/meme-vector-lookup.server.ts",
+        "scripts/prepare-meme-embedding-model.mjs"
+      ]
+    },
+    {
+      "name": "MEME_EMBEDDING_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-embedding-host.ts",
+        "lib/meme-embedding-runtime.server.ts",
+        "lib/meme-vector-lookup.server.ts"
+      ]
+    },
+    {
+      "name": "MEME_LAYA_ROUTING_ENABLED",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "MEME_SEMANTIC_SEARCH_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-vector-lookup.server.ts"
+      ]
+    },
+    {
+      "name": "MEMECATCH_DEPLOYMENT",
+      "kind": "var",
+      "envs": [
+        "preview"
+      ],
+      "readAt": [
+        "components/adsense-script.tsx"
+      ]
+    },
+    {
+      "name": "MEMECATCH_OPERATOR_JWT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/review-international-meme-origins.mjs"
+      ]
+    },
+    {
+      "name": "MEMECATCH_PREVIEW",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs"
+      ]
+    },
+    {
+      "name": "MEMECATCH_QA_ORIGIN",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/qa-unified-home.mjs"
+      ]
+    },
+    {
+      "name": "MEMECATCH_RUNTIME",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/cron/meme-embeddings/route.test.ts",
+        "lib/meme-chat.server.ts",
+        "lib/meme-embedding-host.ts",
+        "lib/meme-embedding-runtime.server.ts",
+        "lib/meme-vector-lookup.server.ts",
+        "next.config.ts"
+      ]
+    },
+    {
+      "name": "META_GRAPH_API_VERSION",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/oembed.ts",
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "META_INSTAGRAM_ACCESS_TOKEN",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "META_INSTAGRAM_USER_ID",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "MPE_E2E_APP_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "MPE_E2E_EMAIL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "MPE_E2E_PASSWORD",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "MPE_E2E_PROVIDER_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "MPE_FFPROBE_TIMEOUT_MS",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-media-worker.test.ts"
+      ]
+    },
+    {
+      "name": "MPE_WORKER_MAX_IDLE_POLL_MS",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-media-worker.mjs"
+      ]
+    },
+    {
+      "name": "MPE_WORKER_POLL_MS",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-media-worker.mjs"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_ADSENSE_CLIENT",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/_root/metadata.ts",
+        "components/adsense-script.test.tsx",
+        "components/adsense-script.tsx"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_COMMUNITY_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/flags.ts"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_GA_ID",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/_root/root-document.tsx"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_SITE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/(default)/memes/random/route.ts",
+        "lib/actions/admin-users.ts",
+        "lib/house-original.ts",
+        "lib/site.ts",
+        "lib/tiktok-auth.server.ts",
+        "next.config.ts"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_SUBMISSIONS_OPEN",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/flags.ts"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-collectible.server.ts",
+        "lib/supabase/client.ts",
+        "lib/supabase/server.ts",
+        "proxy.ts",
+        "scripts/quality-check.mts",
+        "scripts/review-international-meme-origins.mjs",
+        "scripts/tag-backfill-preview.mts"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/sw.ts",
+        "lib/meme-collectible.server.ts",
+        "lib/supabase/admin.ts",
+        "lib/supabase/client.ts",
+        "lib/supabase/server.ts",
+        "proxy.ts",
+        "scripts/media-backfill.mjs",
+        "scripts/mpe-media-worker.mjs",
+        "scripts/quality-check.mts",
+        "scripts/review-international-meme-origins.mjs",
+        "scripts/seed-community.mjs",
+        "scripts/source-pipeline-rest.mjs",
+        "scripts/tag-backfill-preview.mts"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_UNIFI_CLIENT_ID",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/(default)/login/login-form.tsx"
+      ]
+    },
+    {
+      "name": "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/web-push/subscription/route.ts",
+        "lib/web-push/server.ts"
+      ]
+    },
+    {
+      "name": "NODE_ENV",
+      "kind": "builtin",
+      "envs": [],
+      "readAt": [
+        "app/auth/tiktok/route.ts",
+        "components/adsense-script.test.tsx",
+        "components/adsense-script.tsx",
+        "lib/mpe/openrouter.server.ts",
+        "next.config.ts"
+      ]
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/(default)/admin/memes/[id]/page.tsx",
+        "app/(default)/admin/submissions/[id]/page.tsx",
+        "app/(default)/admin/translations/page.tsx",
+        "lib/openai-review.server.ts"
+      ]
+    },
+    {
+      "name": "OPENAI_REVIEW_BASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/openai-review.server.ts"
+      ]
+    },
+    {
+      "name": "OPENNEXT_BASE_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/opennext-detail-states.mjs"
+      ]
+    },
+    {
+      "name": "OPENROUTER_API_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts",
+        "lib/mpe/openrouter.server.ts",
+        "scripts/mpe-media-worker.mjs",
+        "scripts/mpe-media-worker.test.ts"
+      ]
+    },
+    {
+      "name": "OPENROUTER_BASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/meme-chat.server.ts",
+        "lib/mpe/openrouter.server.ts"
+      ]
+    },
+    {
+      "name": "OPENROUTER_MPE_MODEL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/mpe/openrouter.server.ts"
+      ]
+    },
+    {
+      "name": "PATH",
+      "kind": "builtin",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-media-worker.test.ts",
+        "scripts/plus-activation-evidence.test.mjs",
+        "scripts/plus-activation-preview.test.mjs",
+        "scripts/source-publication-contract.test.mjs"
+      ]
+    },
+    {
+      "name": "PLUS_DIGEST_DELIVERY_TOKEN",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/plus-daily-signal-delivery.server.ts",
+        "lib/plus-expiry-reminder-delivery.server.ts",
+        "lib/trend/outbox.server.ts"
+      ]
+    },
+    {
+      "name": "PLUS_DIGEST_DELIVERY_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/plus-daily-signal-delivery.server.ts",
+        "lib/plus-expiry-reminder-delivery.server.ts",
+        "lib/trend/outbox.server.ts"
+      ]
+    },
+    {
+      "name": "PLUS_DIGEST_FROM_EMAIL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/plus-daily-signal-delivery.server.ts",
+        "lib/plus-expiry-reminder-delivery.server.ts",
+        "lib/trend/outbox.server.ts"
+      ]
+    },
+    {
+      "name": "PORT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "integrations/memecatch-chatgpt/src/server.mjs",
+        "scripts/mpe-local-provider-stub.mjs"
+      ]
+    },
+    {
+      "name": "R2_ACCESS_KEY_ID",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/r2.server.ts"
+      ]
+    },
+    {
+      "name": "R2_ACCOUNT_ID",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/r2.server.ts"
+      ]
+    },
+    {
+      "name": "R2_BUCKET",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/r2.server.ts"
+      ]
+    },
+    {
+      "name": "R2_SECRET_ACCESS_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/r2.server.ts"
+      ]
+    },
+    {
+      "name": "RADAR_AI_DRAFT_DAILY_LIMIT",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RADAR_AI_DRAFT_ENABLED",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RADAR_CANDIDATE_TRACKING_CALL_BUDGET_PER_RUN",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RADAR_DISCOVERY_DAILY_CANDIDATE_LIMIT",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RADAR_DISCOVERY_ENABLED",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RADAR_INSTAGRAM_HASHTAGS",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "RADAR_NEW_DISCOVERY_CALL_BUDGET_PER_RUN",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RADAR_THREADS_TERMS",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "RADAR_X_TERMS",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "RADAR_YOUTUBE_DAILY_CALL_LIMIT",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "RELEASE_SHA",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/cloudflare-host.ts",
+        "lib/release-sha.ts"
+      ]
+    },
+    {
+      "name": "SERVICE_ROLE_KEY",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/mpe-local-e2e.mjs"
+      ]
+    },
+    {
+      "name": "SMOKE_BASE_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/smoke.mts"
+      ]
+    },
+    {
+      "name": "SOURCE_REFRESH_ENABLED",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "SOURCE_REVIEW_ATOMIC_ENABLED",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "STUB_CONTROL_URL",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/opennext-detail-states.mjs"
+      ]
+    },
+    {
+      "name": "STUB_PORT",
+      "kind": "local",
+      "envs": [],
+      "readAt": [
+        "scripts/opennext-supabase-stub.mjs"
+      ]
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/api/analytics/events/route.ts",
+        "app/api/cron/meme-embeddings/route.test.ts",
+        "app/api/cron/meme-embeddings/route.ts",
+        "app/api/memes/[id]/view/route.ts",
+        "app/api/memes/view/route.ts",
+        "lib/growth/events.server.ts",
+        "lib/supabase/admin.ts",
+        "scripts/media-backfill.mjs",
+        "scripts/mpe-media-worker.mjs",
+        "scripts/seed-community.mjs",
+        "scripts/source-pipeline-rest.mjs"
+      ]
+    },
+    {
+      "name": "THREADS_ACCESS_TOKEN",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "TIKTOK_CLIENT_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/tiktok-auth.server.test.ts",
+        "lib/tiktok-auth.server.ts"
+      ]
+    },
+    {
+      "name": "TIKTOK_CLIENT_SECRET",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/tiktok-auth.server.test.ts",
+        "lib/tiktok-auth.server.ts"
+      ]
+    },
+    {
+      "name": "TIKTOK_REDIRECT_URI",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/tiktok-auth.server.ts"
+      ]
+    },
+    {
+      "name": "TREND_CRON_SECRET",
+      "kind": "unused",
+      "envs": []
+    },
+    {
+      "name": "UNIFI_PAY_API_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_API_SECRET",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_BASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_CALLBACK_BASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_CHECKOUT_ENABLED",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "app/(default)/pricing/page.tsx",
+        "app/[locale]/pricing/page.tsx",
+        "app/api/billing/checkout/route.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_CURRENCY",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_ITEM_NAME",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_ITEM_PRICE",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_RETURN_BASE_URL",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_SERVICE_NAME",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "UNIFI_PAY_STORE_ID",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/billing/unifi-pay.server.ts"
+      ]
+    },
+    {
+      "name": "VAPID_PRIVATE_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/web-push/server.ts"
+      ]
+    },
+    {
+      "name": "VAPID_SUBJECT",
+      "kind": "var",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/web-push/server.ts"
+      ]
+    },
+    {
+      "name": "VERCEL",
+      "kind": "vercel-only",
+      "envs": [],
+      "readAt": [
+        "lib/meme-chat.server.ts",
+        "lib/meme-embedding-host.ts",
+        "lib/meme-embedding-runtime.server.ts",
+        "lib/meme-studio-bedrock.server.ts"
+      ]
+    },
+    {
+      "name": "VERCEL_AUTOMATION_BYPASS_SECRET",
+      "kind": "vercel-only",
+      "envs": [],
+      "readAt": [
+        "lib/meme-vector-lookup.server.ts"
+      ]
+    },
+    {
+      "name": "VERCEL_ENV",
+      "kind": "vercel-only",
+      "envs": [],
+      "readAt": [
+        "components/adsense-script.test.tsx",
+        "components/adsense-script.tsx"
+      ]
+    },
+    {
+      "name": "VERCEL_GIT_COMMIT_SHA",
+      "kind": "vercel-only",
+      "envs": [],
+      "readAt": [
+        "lib/release-sha.ts"
+      ]
+    },
+    {
+      "name": "VERCEL_SUPPORT_LARGE_FUNCTIONS",
+      "kind": "vercel-only",
+      "envs": []
+    },
+    {
+      "name": "VERCEL_URL",
+      "kind": "vercel-only",
+      "envs": [],
+      "readAt": [
+        "lib/meme-vector-lookup.server.ts"
+      ]
+    },
+    {
+      "name": "X_API_BEARER_TOKEN",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/trend/radar-platform-connectors.server.test.ts",
+        "lib/trend/radar-platform-connectors.server.ts"
+      ]
+    },
+    {
+      "name": "YOUTUBE_API_KEY",
+      "kind": "secret",
+      "envs": [
+        "production",
+        "preview"
+      ],
+      "readAt": [
+        "lib/sources/youtube.server.ts",
+        "scripts/discover-youtube-candidates.mjs",
+        "scripts/refresh-youtube-sources.mjs",
+        "scripts/verify-youtube-pending.mjs"
+      ]
+    }
+  ]
+}

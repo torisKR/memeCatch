@@ -24,6 +24,9 @@ const eslintConfig = defineConfig([
     ".codex/plugins/**",
     ".omo/**",
     ".omx/**",
+    ".open-next/**",
+    ".wrangler/**",
+    "cloudflare/**",
   ]),
 ]);
 

@@ -1,0 +1,84 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "memecatch",
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true },
+    "traces": { "enabled": true }
+  },
+  "limits": { "cpu_ms": 300000 },
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "MEMECATCH_RUNTIME": "cloudflare"
+  },
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "memecatch" }
+  ],
+  "r2_buckets": [
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "memecatch-next-cache" }
+  ],
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "memecatch-next-tag-cache",
+      "database_id": "00000000-0000-4000-8000-000000000001"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }
+  ],
+  "triggers": {
+    "crons": [
+      "0 21 * * *",
+      "0 18 * * *",
+      "0 17 * * *",
+      "0 1 * * *",
+      "15 0 * * *",
+      "30 1 * * *",
+      "45 0 * * *",
+      "30 18 * * *"
+    ]
+  },
+  "env": {
+    "preview": {
+      "name": "memecatch-preview",
+      "workers_dev": true,
+      "vars": {
+        "MEMECATCH_RUNTIME": "cloudflare",
+        "MEMECATCH_DEPLOYMENT": "preview"
+      },
+      "services": [
+        { "binding": "WORKER_SELF_REFERENCE", "service": "memecatch-preview" }
+      ],
+      "r2_buckets": [
+        { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "memecatch-next-cache-preview" }
+      ],
+      "d1_databases": [
+        {
+          "binding": "NEXT_TAG_CACHE_D1",
+          "database_name": "memecatch-next-tag-cache-preview",
+          "database_id": "00000000-0000-4000-8000-000000000002"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }
+        ]
+      },
+      "triggers": { "crons": [] }
+    }
+  }
+}

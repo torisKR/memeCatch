@@ -31,7 +31,8 @@ export function AdsenseScript() {
   // Ownership verification remains in server-rendered google-adsense-account metadata.
   if (process.env.ADSENSE_AUTO_ADS_ENABLED !== "true") return null;
   if (!isConfiguredAdsenseClient(ADSENSE_CLIENT) || process.env.NODE_ENV !== "production" ||
-      (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return null;
+      (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") ||
+      process.env.MEMECATCH_DEPLOYMENT === "preview") return null;
 
   return (
     <AdsenseHostGate>

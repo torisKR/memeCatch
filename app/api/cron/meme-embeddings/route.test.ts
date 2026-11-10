@@ -158,6 +158,24 @@ describe("meme embedding cron route", () => {
     expect(mocks.runMemeEmbeddingReindex).not.toHaveBeenCalled();
   });
 
+  it("skips ONNX reindex on Cloudflare when no external runtime is configured", async () => {
+    process.env.MEMECATCH_RUNTIME = "cloudflare";
+    try {
+      const response = await GET(new Request("https://catchmeme.com/api/cron/meme-embeddings", {
+        headers: { authorization: "Bearer existing-cron-secret" },
+      }));
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        ok: true,
+        status: "skipped",
+        reason: "onnx_unavailable_on_workers",
+      });
+      expect(mocks.runMemeEmbeddingReindex).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.MEMECATCH_RUNTIME;
+    }
+  });
+
   it("returns only bounded generic failure details", async () => {
     mocks.runMemeEmbeddingReindex.mockResolvedValueOnce({
       status: "failed", indexed: 1, stale: 0, remaining: 3, errorCode: "store_failed",

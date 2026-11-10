@@ -3,6 +3,7 @@ import {
   runMemeEmbeddingReindex,
   type MemeEmbeddingReindexResult,
 } from "@/lib/meme-embedding-reindex.server";
+import { memeEmbeddingsCronDisposition } from "@/lib/meme-embedding-host";
 import { embedBundledMemePassage } from "@/lib/meme-embedding-runtime.server";
 import { MEME_VECTOR_DIMENSIONS, MEME_VECTOR_PROFILE } from "@/lib/meme-vectors";
 import { readBoundedText } from "@/lib/request-body";
@@ -48,8 +49,15 @@ async function runManualReindex(request: Request, secret: string | undefined): P
   if (!hasNoQueryInput(request) || request.body !== null) {
     return Response.json({ ok: false, error: "INVALID_REQUEST" }, { status: 400, headers });
   }
-  if (process.env.MEME_EMBEDDING_REINDEX_ENABLED !== "true") {
+  const disposition = memeEmbeddingsCronDisposition();
+  if (disposition === "disabled") {
     return Response.json({ ok: true, status: "disabled" }, { status: 202, headers });
+  }
+  if (disposition === "skip-onnx") {
+    return Response.json(
+      { ok: true, status: "skipped", reason: "onnx_unavailable_on_workers" },
+      { status: 200, headers },
+    );
   }
   return responseFor(await runMemeEmbeddingReindex());
 }
@@ -104,5 +112,12 @@ export async function POST(request: Request): Promise<Response> {
   }
   const mode = await postMode(request);
   if (!mode) return Response.json({ ok: false, error: "INVALID_REQUEST" }, { status: 400, headers });
-  return mode === "probe" ? probeModel() : responseFor(await runMemeEmbeddingReindex());
+  if (mode === "probe") return probeModel();
+  if (memeEmbeddingsCronDisposition() === "skip-onnx") {
+    return Response.json(
+      { ok: true, status: "skipped", reason: "onnx_unavailable_on_workers" },
+      { status: 200, headers },
+    );
+  }
+  return responseFor(await runMemeEmbeddingReindex());
 }

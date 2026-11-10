@@ -13,6 +13,7 @@ import {
 } from "@/lib/billing/repository.server";
 import { growthSessionIdFromRequest } from "@/lib/growth/events.server";
 import { hasTrustedOrigin } from "@/lib/origin";
+import { releaseShaFromEnv } from "@/lib/release-sha";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,7 +102,7 @@ async function beginCheckout(request: Request, requestedLocale: FormDataEntryVal
     console.error({
       code: checkoutFailureCode(error, stage),
       requestId,
-      releaseSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || "unknown",
+      releaseSha: releaseShaFromEnv() || "unknown",
     });
     return Response.json(
       { ok: false, error: "checkout_failed" },

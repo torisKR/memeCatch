@@ -93,6 +93,21 @@ describe("Bedrock Meme Studio", () => {
     });
 
     createClient.mockClear();
+    createBedrockMemeStudioClient({
+      env: {
+        AWS_ACCESS_KEY_ID: "AKIAEXAMPLE",
+        AWS_SECRET_ACCESS_KEY: "secret-example",
+        AWS_REGION: "us-east-1",
+      },
+      createClient,
+      oidcCredentialsProvider: credentials,
+    });
+    expect(credentials).not.toHaveBeenCalled();
+    const staticConfig = createClient.mock.calls.at(-1)?.[0];
+    expect(staticConfig?.region).toBe("us-east-1");
+    expect(staticConfig?.credentials).toEqual(expect.any(Function));
+
+    createClient.mockClear();
     expect(() => createBedrockMemeStudioClient({
       env: { VERCEL: "1" },
       createClient,

@@ -2,7 +2,9 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { FeatureExtractionPipeline } from "@huggingface/transformers";
-import { isMemeVector } from "@/lib/meme-vectors";
+import { externalEmbeddingRuntimeConfigured } from "@/lib/meme-embedding-host";
+import { loadEmbeddingPipeline } from "@/lib/meme-embedding-pipeline.server";
+import { isMemeVector, MEME_VECTOR_PROFILE } from "@/lib/meme-vectors";
 
 const MODEL = "intfloat/multilingual-e5-small";
 const REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3";
@@ -26,7 +28,7 @@ async function getPipeline(): Promise<FeatureExtractionPipeline> {
         file.path === "onnx/model.onnx" && file.sha256 === MODEL_SHA256)) {
       throw new Error("embedding_model_mismatch");
     }
-    const { env, pipeline } = await import("@huggingface/transformers");
+    const { env, pipeline } = await loadEmbeddingPipeline();
     env.localModelPath = modelRoot;
     env.allowRemoteModels = false;
     env.useFSCache = false;
@@ -58,6 +60,7 @@ async function getPipeline(): Promise<FeatureExtractionPipeline> {
 
 /** One CPU inference at a time; repeated queries share work and successful vectors. */
 export async function embedBundledMemeInput(input: string): Promise<number[] | null> {
+  if (process.env.MEMECATCH_RUNTIME === "cloudflare") return null;
   if (process.env.MEME_EMBEDDING_RUNTIME !== "bundled" || !input.startsWith("query: ")) return null;
   const query = input.slice(7);
   if (query.length < 2 || query.length > 120 || query !== query.normalize("NFKC").trim()) return null;
@@ -66,9 +69,39 @@ export async function embedBundledMemeInput(input: string): Promise<number[] | n
 
 /** Internal catalog indexing only; callers supply the exact SQL document, never a prefixed input. */
 export async function embedBundledMemePassage(document: string): Promise<number[] | null> {
-  if (process.env.MEME_EMBEDDING_RUNTIME !== "bundled"
-    || !document.trim() || Array.from(document).length > 6900) return null;
+  if (!document.trim() || Array.from(document).length > 6900) return null;
+  if (process.env.MEMECATCH_RUNTIME === "cloudflare") {
+    if (!externalEmbeddingRuntimeConfigured()) return null;
+    return embedRemoteMemePassage(document);
+  }
+  if (process.env.MEME_EMBEDDING_RUNTIME !== "bundled") return null;
   return runBundledMemeInput(`passage: ${document}`, false);
+}
+
+async function embedRemoteMemePassage(document: string): Promise<number[] | null> {
+  const endpoint = process.env.MEME_EMBEDDING_URL?.trim();
+  if (!endpoint) return null;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(process.env.MEME_EMBEDDING_API_KEY
+          ? { authorization: `Bearer ${process.env.MEME_EMBEDDING_API_KEY}` }
+          : {}),
+      },
+      body: JSON.stringify({ model: MEME_VECTOR_PROFILE, input: `passage: ${document}` }),
+      redirect: "error",
+      signal: AbortSignal.timeout(30_000),
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const result = await response.json() as { model?: unknown; data?: { embedding?: unknown }[] };
+    const vector = result.data?.[0]?.embedding;
+    return result.model === MEME_VECTOR_PROFILE && isMemeVector(vector) ? vector : null;
+  } catch {
+    return null;
+  }
 }
 
 async function runBundledMemeInput(input: string, cacheQuery: boolean): Promise<number[] | null> {

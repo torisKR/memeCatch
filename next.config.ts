@@ -1,7 +1,11 @@
+import { join } from "node:path";
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import withSerwistInit from "@serwist/next";
+import { releaseShaFromEnv } from "./lib/release-sha";
 
 const isDev = process.env.NODE_ENV === "development";
+const cloudflareBuild = process.env.MEMECATCH_RUNTIME === "cloudflare";
 
 // 밈 카드의 외부 썸네일은 페이지의 <img>뿐 아니라 서비스워커 fetch()로도 요청된다.
 // 해당 호스트만 img-src와 connect-src가 공유해 CSP 권한을 필요한 범위로 제한한다.
@@ -121,8 +125,7 @@ const SITE_ORIGIN =
 const CSP_REPORT_URI =
   process.env.CSP_REPORT_URI ?? `${SITE_ORIGIN}/api/csp-report`;
 
-const RELEASE_SHA =
-  process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim();
+const RELEASE_SHA = releaseShaFromEnv();
 const RELEASE_HEADERS = RELEASE_SHA
   ? [{ key: "X-MemeCatch-Release-Sha", value: RELEASE_SHA }]
   : [];
@@ -156,10 +159,45 @@ const nextConfig: NextConfig = {
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
-    "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
-    "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
+    ...(cloudflareBuild
+      ? {}
+      : {
+          "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
+          "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
+        }),
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],
     "/api/mcp-operator": ["./integrations/memecatch-chatgpt/ui/app.html"],
+  },
+  outputFileTracingExcludes: cloudflareBuild
+    ? {
+        "*": [
+          "./.local/embedding-models/**",
+          "./node_modules/@huggingface/**",
+          "./node_modules/onnxruntime-node/**",
+          "./node_modules/onnxruntime-web/**",
+        ],
+      }
+    : undefined,
+  webpack: (config, { isServer, webpack }) => {
+    if (!cloudflareBuild || !isServer) return config;
+    const pipelineStub = join(__dirname, "lib/stubs/meme-embedding-pipeline.ts");
+    const stubs = {
+      "@/lib/meme-embedding-pipeline.server": pipelineStub,
+      "@huggingface/transformers": join(__dirname, "lib/stubs/huggingface-transformers.ts"),
+      "onnxruntime-node": join(__dirname, "lib/stubs/onnxruntime-node.ts"),
+      "onnxruntime-web": join(__dirname, "lib/stubs/onnxruntime-node.ts"),
+    };
+    config.resolve ??= {};
+    const current = config.resolve.alias;
+    config.resolve.alias = {
+      ...(current && !Array.isArray(current) ? current : {}),
+      ...stubs,
+    };
+    config.plugins.push(new webpack.NormalModuleReplacementPlugin(
+      /[\\/]meme-embedding-pipeline\.server\.ts$/,
+      pipelineStub,
+    ));
+    return config;
   },
   // x-powered-by 헤더 제거 — 프레임워크 버전 노출 방지
   poweredByHeader: false,
@@ -248,4 +286,9 @@ const nextConfig: NextConfig = {
 
 // dev는 Turbopack(기본)만 사용 — serwist는 webpack 설정을 주입해 Turbopack과 충돌한다.
 // PWA 서비스워커는 프로덕션 빌드에서만 필요하므로 dev에선 순수 nextConfig를 쓴다.
+if (isDev) {
+  // `next build` must not start Wrangler's dev proxy. Vercel builds stay on Next alone.
+  void initOpenNextCloudflareForDev();
+}
+
 export default isDev ? nextConfig : withSerwist(nextConfig);

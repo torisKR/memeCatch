@@ -15,6 +15,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/prepare-meme-embedding-model.mjs --if-enabled && next build --webpack",
+    "cf:build": "MEMECATCH_RUNTIME=cloudflare opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare deploy",
+    "cf:check-env": "node scripts/check-cloudflare-env-manifest.mjs",
     "embeddings:prepare": "node scripts/prepare-meme-embedding-model.mjs",
     "embeddings:prepare:test": "node --test scripts/prepare-meme-embedding-model.test.mjs",
     "start": "next start",
@@ -52,7 +56,8 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1121.0",
     "@huggingface/transformers": "3.8.1",
     "@linenext/dapp-portal-sdk": "^1.6.0",
-    "@next/third-parties": "^16.3.4",
+    "@next/third-parties": "^16.4.6",
+    "@opennextjs/cloudflare": "^1.20.16",
     "@serwist/next": "^9.5.12",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.1",
@@ -64,7 +69,7 @@
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^1.24.0",
     "motion": "^12.42.2",
-    "next": "16.3.4",
+    "next": "16.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
@@ -87,11 +92,12 @@
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.4.6",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.160.0"
   },
   "pnpm": {
     "overrides": {

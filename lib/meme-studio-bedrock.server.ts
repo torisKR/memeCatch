@@ -251,9 +251,16 @@ export function createBedrockMemeStudioClient({
   const region = env.AWS_REGION?.trim() || BEDROCK_MEME_STUDIO_DEFAULT_REGION;
   const roleArn = env.AWS_ROLE_ARN?.trim();
   if (env.VERCEL && !roleArn) throw error(BEDROCK_MEME_STUDIO_ERROR.oidcRoleRequired);
+  const accessKeyId = env.AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = env.AWS_SECRET_ACCESS_KEY?.trim();
+  const staticKeys = accessKeyId && secretAccessKey
+    ? async () => ({ accessKeyId, secretAccessKey })
+    : undefined;
   const credentials = env.VERCEL && roleArn
     ? oidcCredentialsProvider({ roleArn, clientConfig: { region } })
-    : undefined;
+    : env.VERCEL
+      ? undefined
+      : staticKeys;
   return createClient({ region, credentials, maxAttempts: 1 });
 }
 

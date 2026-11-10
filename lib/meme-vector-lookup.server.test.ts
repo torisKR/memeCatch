@@ -79,6 +79,25 @@ describe("embedding configuration", () => {
     expect(lookup.embeddingEndpoint({ MEME_SEMANTIC_SEARCH_ENABLED: "true", MEME_EMBEDDING_URL: endpoint })).toBeNull();
   });
 
+  it("rejects the bundled runtime and loopback on Cloudflare", () => {
+    expect(lookup.embeddingEndpoint({
+      MEME_SEMANTIC_SEARCH_ENABLED: "true",
+      MEME_EMBEDDING_RUNTIME: "bundled",
+      MEME_EMBEDDING_URL: "https://embeddings.example.test/v1/embeddings",
+      MEMECATCH_RUNTIME: "cloudflare",
+    })).toBeNull();
+    expect(lookup.embeddingEndpoint({
+      MEME_SEMANTIC_SEARCH_ENABLED: "true",
+      MEME_EMBEDDING_URL: "http://127.0.0.1/v1/embeddings",
+      MEMECATCH_RUNTIME: "cloudflare",
+    })).toBeNull();
+    expect(lookup.embeddingEndpoint({
+      MEME_SEMANTIC_SEARCH_ENABLED: "true",
+      MEME_EMBEDDING_URL: "https://embeddings.example.test/v1/embeddings",
+      MEMECATCH_RUNTIME: "cloudflare",
+    })?.href).toBe("https://embeddings.example.test/v1/embeddings");
+  });
+
   it.each(["localhost", "127.0.0.1", "[::1]"])("rejects HTTP and HTTPS loopback on Vercel (%s)", (host) => {
     for (const protocol of ["http", "https"]) {
       expect(lookup.embeddingEndpoint({

@@ -49,9 +49,11 @@ describe("service-worker image CSP", () => {
 });
 
 describe("release SHA response header", () => {
-  it("falls back to RELEASE_SHA when a CLI deployment has an empty Git SHA", () => {
-    expect(source).toContain(
-      "process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim()",
+  it("prefers RELEASE_SHA and falls back to the Vercel Git SHA", () => {
+    expect(source).toContain("releaseShaFromEnv()");
+    const helper = readFileSync(join(process.cwd(), "lib/release-sha.ts"), "utf8");
+    expect(helper).toContain(
+      "env.RELEASE_SHA?.trim() || env.VERCEL_GIT_COMMIT_SHA?.trim()",
     );
   });
 });

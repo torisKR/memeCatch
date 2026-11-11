@@ -1,13 +1,13 @@
 {
   "batch_id": "loop-028-priority-enrichment-2026-11-11",
-  "round": 6,
+  "round": 7,
   "method": "Every public sentence (summary, description, origin, usage_note, caution, usage_examples situation/text) has cited_source_url + exact quote from a visible source (titled, not hidden_from_public, HTTP 200 when fetched), or an explicit no_fact reason. Quotes were checked by substring match against page text fetched this round (whitespace and spacing before punctuation normalized). Dates, decades and rankings need 2 independent visible sources; jjalbang.today and instablank.com state they were compiled from wepick, so they do not count as independent of it.",
   "fetched_at": "2026-11-12T03:10:00+09:00",
   "totals": {
-    "sentences": 229,
-    "cited": 164,
-    "no_fact": 65,
-    "quotes": 233
+    "sentences": 213,
+    "cited": 153,
+    "no_fact": 60,
+    "quotes": 213
   },
   "errors": [],
   "memes": [
@@ -210,7 +210,7 @@
           "field": "usage_note",
           "index": 0,
           "text": "‘새삥’ 안무를 따라 춘 영상이나 챌린지를 소개할 때 쓸 수 있다.",
-          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+          "no_fact": "쓰임 서술: 이 말이 쓰이는 일반적 상황을 위 정의에 맞춰 풀어 쓴 문장이다. 권고·주의 문장이 아니며, 특정 플랫폼·시기·집단·원인·평가에 대한 사실 주장은 담지 않는다."
         },
         {
           "field": "usage_note",
@@ -513,7 +513,7 @@
           "field": "usage_note",
           "index": 0,
           "text": "반응 이미지로 감정을 표현할 때 쓸 수 있다.",
-          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+          "no_fact": "쓰임 서술: 이 말이 쓰이는 일반적 상황을 위 정의에 맞춰 풀어 쓴 문장이다. 권고·주의 문장이 아니며, 특정 플랫폼·시기·집단·원인·평가에 대한 사실 주장은 담지 않는다."
         },
         {
           "field": "usage_note",
@@ -1056,7 +1056,7 @@
         {
           "field": "origin",
           "index": 3,
-          "text": "이 징계 때문에 키움과 다시 계약한 뒤에도 한동안 경기는 물론 팀 훈련에도 참여할 수 없었다.",
+          "text": "이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 그는 자유계약 선수가 됐다.",
           "citations": [
             {
               "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
@@ -1067,12 +1067,20 @@
               "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
             },
             {
-              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
-              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
-              "quote": "이전 실격 징계 때문에 내년 3월 중순까지 경기는 물론, 팀 훈련도 소화할 수 없습니다.",
+              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+              "source_title": "Jung-ho Kang",
+              "quote": "returned to the KBO League by signing a one-year, $25,000 contract with his former team, now named the Kiwoom Heroes",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
-              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+              "source_title": "Jung-ho Kang",
+              "quote": "the KBO declined to approve the contract and Kang became a free agent",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
             }
           ],
           "date_or_ranking": false
@@ -1164,7 +1172,7 @@
       "visible_sources": [
         {
           "url": "https://www.segye.com/newsView/20070920001620",
-          "title": "진중권 \"''디워'' 해프닝 ''황우석 사태''와 비슷\""
+          "title": "진중권 \"‘디워’ 해프닝 ‘황우석 사태’와 비슷\""
         },
         {
           "url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
@@ -1399,7 +1407,7 @@
           "citations": [
             {
               "cited_source_url": "https://www.segye.com/newsView/20070920001620",
-              "source_title": "진중권 \"''디워'' 해프닝 ''황우석 사태''와 비슷\"",
+              "source_title": "진중권 \"‘디워’ 해프닝 ‘황우석 사태’와 비슷\"",
               "quote": "진씨는 최근 발간된 계간문예지",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
@@ -1407,7 +1415,7 @@
             },
             {
               "cited_source_url": "https://www.segye.com/newsView/20070920001620",
-              "source_title": "진중권 \"''디워'' 해프닝 ''황우석 사태''와 비슷\"",
+              "source_title": "진중권 \"‘디워’ 해프닝 ‘황우석 사태’와 비슷\"",
               "quote": "때와 무척 닮아있다고비판했다",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
@@ -1954,7 +1962,7 @@
           "field": "usage_note",
           "index": 0,
           "text": "황당하거나 기이한 것을 두고 놀라움을 표현할 때 쓸 수 있다.",
-          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+          "no_fact": "쓰임 서술: 이 말이 쓰이는 일반적 상황을 위 정의에 맞춰 풀어 쓴 문장이다. 권고·주의 문장이 아니며, 특정 플랫폼·시기·집단·원인·평가에 대한 사실 주장은 담지 않는다."
         },
         {
           "field": "usage_note",
@@ -2140,12 +2148,20 @@
         {
           "field": "origin",
           "index": 1,
-          "text": "이 놀이에 동참하는 네티즌이 늘면서 인조이재팬 외의 다른 커뮤니티에서도 낚시가 이뤄졌다.",
+          "text": "이 놀이에 동참하는 네티즌이 늘면서 낚시는 다른 커뮤니티로도 점점 퍼져 나갔다.",
           "citations": [
             {
               "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
               "source_title": "낚시 (인터넷)",
-              "quote": "서서히 이런 놀이에 동참하는 네티즌들이 늘어나면서, 인조이재팬 이외의 다른 커뮤니티에서도 낚시가 이뤄지는 등",
+              "quote": "서서히 이런 놀이에 동참하는 네티즌들이 늘어나면서",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "이외의 다른 커뮤니티에서도 낚시가 이뤄지는 등 이 놀이는 점점 퍼져나가며",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
               "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
@@ -2197,7 +2213,7 @@
           "field": "usage_note",
           "index": 0,
           "text": "제목과 내용이 다르거나, 관심을 끌기 위한 미끼 글을 지적할 때 쓴다.",
-          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+          "no_fact": "쓰임 서술: 이 말이 쓰이는 일반적 상황을 위 정의에 맞춰 풀어 쓴 문장이다. 권고·주의 문장이 아니며, 특정 플랫폼·시기·집단·원인·평가에 대한 사실 주장은 담지 않는다."
         },
         {
           "field": "usage_note",
@@ -2222,16 +2238,26 @@
         {
           "field": "usage_examples",
           "index": 1,
-          "text": "미리 힌트만 던질 때",
+          "text": "댓글을 노린 글을 봤을 때",
           "part": "situation",
           "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
         },
         {
           "field": "usage_examples",
           "index": 1,
-          "text": "떡밥만 던져 두고 내일 알려 줄게. 오늘은 여기까지.",
+          "text": "이건 댓글 달리라고 던진 떡밥글이네.",
           "part": "text",
-          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+          "citations": [
+            {
+              "cited_source_url": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+              "source_title": "[새말탐험] 낚시질 / 김한샘",
+              "quote": "인터넷에서 ‘떡밥글’을 올리면 누리꾼들이 너도나도 댓글을 단다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "c1584bf4ba31e6bbba1cdc096545500ee506047098b49649d612eb59d027b9e5"
+            }
+          ],
+          "date_or_ranking": false
         }
       ]
     },
@@ -2742,7 +2768,7 @@
         {
           "field": "origin",
           "index": 2,
-          "text": "한일 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다.",
+          "text": "월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다.",
           "citations": [
             {
               "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
@@ -2774,12 +2800,12 @@
         {
           "field": "usage_note",
           "index": 0,
-          "text": "친구와 저녁 약속을 잡거나 스포츠 중계를 함께 볼 때 쓴다.",
+          "text": "월드컵이나 아시안컵 같은 스포츠 경기를 함께 볼 때 먹을거리로 치맥을 권하는 말로 쓸 수 있다.",
           "citations": [
             {
               "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
               "source_title": "Chimaek",
-              "quote": "Chimaek is popular choice for people watching sports events",
+              "quote": "Chimaek is popular choice for people watching sports events such as World Cup and Asian Cup",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
               "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
@@ -3052,7 +3078,7 @@
           "field": "usage_note",
           "index": 0,
           "text": "권위적으로 훈계하는 태도를 비판할 때 쓴다.",
-          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+          "no_fact": "쓰임 서술: 이 말이 쓰이는 일반적 상황을 위 정의에 맞춰 풀어 쓴 문장이다. 권고·주의 문장이 아니며, 특정 플랫폼·시기·집단·원인·평가에 대한 사실 주장은 담지 않는다."
         },
         {
           "field": "usage_note",
@@ -3289,7 +3315,7 @@
           "field": "usage_note",
           "index": 0,
           "text": "예상 밖의 등장이나 상황을 가볍게 표현할 때 쓴다.",
-          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+          "no_fact": "쓰임 서술: 이 말이 쓰이는 일반적 상황을 위 정의에 맞춰 풀어 쓴 문장이다. 권고·주의 문장이 아니며, 특정 플랫폼·시기·집단·원인·평가에 대한 사실 주장은 담지 않는다."
         },
         {
           "field": "usage_note",
@@ -3611,335 +3637,6 @@
             }
           ],
           "date_or_ranking": false
-        }
-      ]
-    },
-    {
-      "short_id": "2au7br9f",
-      "slug": "도마도마-챌린지",
-      "title": "도마도마 챌린지",
-      "visible_sources": [
-        {
-          "url": "https://www.jjalbang.today/jjalstoryview/48",
-          "title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법"
-        },
-        {
-          "url": "https://letter.wepick.kr/post/23723",
-          "title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면"
-        },
-        {
-          "url": "https://www.instablank.com/meme/44",
-          "title": "도마도마 챌린지, 무슨 뜻일까?"
-        }
-      ],
-      "sentences": [
-        {
-          "field": "summary",
-          "index": 0,
-          "text": "브라질 펑크 ‘MENTE MÁ’에 맞춰 시크한 표정과 슬로우 모션 안무를 선보이는 글로벌 댄스 챌린지",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "브라질 펑크 'MENTE MÁ'에 맞춰 추는 챌린지!",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "쿨하고 시크한 표정·안무로 챌린지 영상 찍기",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "비주얼을 강조하는 슬로우 모션 컷과 함께 사용",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "역수입된 글로벌 밈이에요",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "description",
-          "index": 0,
-          "text": "도마도마 챌린지는 브라질 펑크 곡 ‘MENTE MÁ’에 맞춰 추는 댄스 챌린지다.",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "브라질 펑크 'MENTE MÁ'에 맞춰 추는 챌린지!",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://www.instablank.com/meme/44",
-              "source_title": "도마도마 챌린지, 무슨 뜻일까?",
-              "quote": "브라질 펑크 'MENTE MÁ'에 맞춰 춤추는 챌린지로",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "7bc86d9763c30cace2a0ecf9c2dbf7cc95bb3976035382396062b65874f0e024"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "description",
-          "index": 1,
-          "text": "이름은 후렴의 ‘바이 도마도마도마(vai toma toma toma)’에서 왔으며, 포르투갈어로 “어서, 받아 받아 받아”라는 뜻이다.",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "후렴의 '바이 도마도마도마(vai toma toma toma)'는 포르투갈어로 \"어서, 받아 받아 받아\"라는 뜻이고",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "'어서 받아, 받아, 받아'라는 뜻",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "description",
-          "index": 2,
-          "text": "원곡은 브라질 프로듀서 Nakama와 MC Staff가 만든 곡이다.",
-          "citations": [
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "는 브라질의 프로듀서 Nakama와 MC Staff가 만든 곡.",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "description",
-          "index": 3,
-          "text": "원곡 가사는 거친 내용이지만, 한국에서는 의미보다 중독적인 비트와 ‘도마도마’ 발음의 귀여움으로 소비됐다.",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "원곡 가사 자체는 거친 내용이지만, 한국에서는 의미보다",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "중독적인 비트와 '도마도마' 발음의 귀여움",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "description",
-          "index": 4,
-          "text": "챌린지 안무에 두 손으로 권총 모양을 만드는 동작이 들어간 것도 총을 언급하는 가사 때문이다.",
-          "citations": [
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "두 손으로 권총 모양을 만들며",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            },
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "총알 세례를 어서 받아라 받아!",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            },
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "챌린지 안무에 🔫권총이 있던 것은 바로 이 배경이었던 것.",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "origin",
-          "index": 0,
-          "text": "한국 아이돌 그룹 라이즈의 원빈이 선보인 챌린지가 신호탄이 됐다.",
-          "citations": [
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "한국의 아이돌 가수 라이즈 원빈이 도마도마의 신호탄을 올렸다",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "origin",
-          "index": 1,
-          "text": "이 챌린지는 중국의 내수용 숏폼 플랫폼 도우인에서 빠르게 퍼진 뒤 한국으로 역수입됐다.",
-          "citations": [
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "중국의 내수용 숏폼 매체 도우인에서 빠르게 퍼진 이후 큰 인기몰이를 했다",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            },
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "중국 도우인에서 폭발적으로 확산된 뒤 한국으로 역수입됐고",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "origin",
-          "index": 2,
-          "text": "이후 백현, 스테이씨, TXT 등 여러 아이돌이 참여하며 한국에서도 아이돌을 중심으로 퍼졌다.",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "이후 백현·스테이씨·TXT 등 수많은 아이돌이 합류하며",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "한국에서도 이 '도마도마 챌린지'가 아이돌을 중심으로 퍼지게 된 것이다",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "origin",
-          "index": 3,
-          "text": "외국어 공부 앱 홍보에도 쓰일 만큼 활용 범위가 넓었다.",
-          "citations": [
-            {
-              "cited_source_url": "https://letter.wepick.kr/post/23723",
-              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
-              "quote": "한 유명한 외국어 공부 앱 홍보에도 절찬리에 쓰일 만큼 활용도는 무궁무진하다",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "usage_note",
-          "index": 0,
-          "text": "‘MENTE MÁ’ 음원에 맞춰 시크한 표정과 안무로 챌린지 영상을 찍을 때 쓴다.",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "'MENTE MÁ' 음원에 맞춰 쿨하고 시크한 표정·안무로 챌린지 영상 찍기",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "usage_note",
-          "index": 1,
-          "text": "슬로우 모션 컷과 함께 쓰거나, 후렴 구간을 짤이나 릴스 배경음으로 쓰기도 한다.",
-          "citations": [
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "비주얼을 강조하는 슬로우 모션 컷과 함께 사용",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            },
-            {
-              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
-              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
-              "quote": "'도마도마~' 후렴 구간을 짤·릴스 배경음으로 활용",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "usage_examples",
-          "index": 0,
-          "text": "친구가 괜히 있어 보이는 포즈를 잡을 때",
-          "part": "situation",
-          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
-        },
-        {
-          "field": "usage_examples",
-          "index": 0,
-          "text": "야 그거 완전 도마도마 각인데?",
-          "part": "text",
-          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
-        },
-        {
-          "field": "usage_examples",
-          "index": 1,
-          "text": "숏폼 안무 챌린지 얘기할 때",
-          "part": "situation",
-          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
-        },
-        {
-          "field": "usage_examples",
-          "index": 1,
-          "text": "이번 주말에 도마도마 챌린지 같이 찍자, 나 안무 다 외웠어.",
-          "part": "text",
-          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
         }
       ]
     }

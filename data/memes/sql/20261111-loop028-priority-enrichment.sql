@@ -61,7 +61,7 @@
 --   are also kept if already present and are not counted.
 -- Untitled existing live sources in this batch get a verified title so they render.
 -- Rollback is not a simple inverse of UPDATE; restore from a pre-apply backup if needed.
--- dropped: 69 memes from the original 83 were not included (see editorial catalog).
+-- dropped: 70 memes from the original 83 were not included (see editorial catalog).
 
 set local lock_timeout = '15s';
 set local statement_timeout = '10min';
@@ -69,7 +69,7 @@ set local statement_timeout = '10min';
 create temporary table loop028_safety_reviewed_backup as
 select id, safety_reviewed_at
   from public.memes
- where short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', '2au7br9f', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x');
+ where short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x');
 
 -- 새우 예수 (b9gzeysg / shrimp-jesus)
 update public.memes set
@@ -101,8 +101,8 @@ where meme.short_id = 'b9gzeysg' and meme.slug = 'shrimp-jesus'
 update public.memes set
   summary = '치킨 안주에 맥주를 함께 즐기는 조합을 줄여 부르는 말',
   description = '치맥은 치킨 안주에 맥주를 곁들여 즐기는 조합을 줄여 부르는 말이다. 치맥은 월드컵이나 아시안컵 같은 스포츠 경기를 볼 때 많이 찾는 메뉴다. 월드컵 기간에는 편의점과 치킨 프랜차이즈가 대목을 맞는다. 드라마 ‘별에서 온 그대’에서 주인공 천송이는 치킨 안주에 맥주를 즐기는 치맥 마니아로 나오고, “눈 오는 날엔 치맥인데”라는 대사도 한다. 이 드라마의 인기로 중국에서도 치맥이 유행했다. 중국 상하이에서는 한국식 치킨을 사 먹으려면 치킨집 앞에서 3시간 정도 줄을 서야 한다는 전언이 나왔다.',
-  origin = '한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 한일 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다. 월드컵 이후 치킨 가게 수는 약 1만 곳에서 2만 5천 곳으로 늘었다.',
-  usage_note = '친구와 저녁 약속을 잡거나 스포츠 중계를 함께 볼 때 쓴다. 술이 들어가므로 상대가 마실 수 있는지부터 확인하는 것이 좋다.',
+  origin = '한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다. 월드컵 이후 치킨 가게 수는 약 1만 곳에서 2만 5천 곳으로 늘었다.',
+  usage_note = '월드컵이나 아시안컵 같은 스포츠 경기를 함께 볼 때 먹을거리로 치맥을 권하는 말로 쓸 수 있다. 술이 들어가므로 상대가 마실 수 있는지부터 확인하는 것이 좋다.',
   caution = '술이 들어가는 문화라 미성년자나 술을 못 마시는 사람에게 강요하지 말자.',
   usage_examples = '[{"situation":"축구 경기가 있는 날","text":"오늘 경기 보면서 치맥 어때?"},{"situation":"퇴근길","text":"이번 주 고생했으니 치맥 한잔하자."}]'::jsonb,
   content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
@@ -148,20 +148,6 @@ where meme.short_id = 'kh75j5f8' and meme.slug = '꼰대'
     select 1 from public.meme_sources as existing
     where existing.meme_id = meme.id and existing.source_url = 'https://www.koreaherald.com/article/10844914'
   );
-
--- 도마도마 챌린지 (2au7br9f / 도마도마-챌린지)
-update public.memes set
-  summary = '브라질 펑크 ‘MENTE MÁ’에 맞춰 시크한 표정과 슬로우 모션 안무를 선보이는 글로벌 댄스 챌린지',
-  description = '도마도마 챌린지는 브라질 펑크 곡 ‘MENTE MÁ’에 맞춰 추는 댄스 챌린지다. 이름은 후렴의 ‘바이 도마도마도마(vai toma toma toma)’에서 왔으며, 포르투갈어로 “어서, 받아 받아 받아”라는 뜻이다. 원곡은 브라질 프로듀서 Nakama와 MC Staff가 만든 곡이다. 원곡 가사는 거친 내용이지만, 한국에서는 의미보다 중독적인 비트와 ‘도마도마’ 발음의 귀여움으로 소비됐다. 챌린지 안무에 두 손으로 권총 모양을 만드는 동작이 들어간 것도 총을 언급하는 가사 때문이다.',
-  origin = '한국 아이돌 그룹 라이즈의 원빈이 선보인 챌린지가 신호탄이 됐다. 이 챌린지는 중국의 내수용 숏폼 플랫폼 도우인에서 빠르게 퍼진 뒤 한국으로 역수입됐다. 이후 백현, 스테이씨, TXT 등 여러 아이돌이 참여하며 한국에서도 아이돌을 중심으로 퍼졌다. 외국어 공부 앱 홍보에도 쓰일 만큼 활용 범위가 넓었다.',
-  usage_note = '‘MENTE MÁ’ 음원에 맞춰 시크한 표정과 안무로 챌린지 영상을 찍을 때 쓴다. 슬로우 모션 컷과 함께 쓰거나, 후렴 구간을 짤이나 릴스 배경음으로 쓰기도 한다.',
-  caution = caution,
-  usage_examples = '[{"situation":"친구가 괜히 있어 보이는 포즈를 잡을 때","text":"야 그거 완전 도마도마 각인데?"},{"situation":"숏폼 안무 챌린지 얘기할 때","text":"이번 주말에 도마도마 챌린지 같이 찍자, 나 안무 다 외웠어."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = '2au7br9f'
-  and slug = '도마도마-챌린지'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
 
 -- 엽기 신드롬 (xq7ycnys / 엽기-신드롬)
 update public.memes set
@@ -245,10 +231,10 @@ where meme.short_id = 'vtu3rkyg' and meme.slug = 'TV는-사랑을-싣고'
 update public.memes set
   summary = '호기심을 자극하는 제목으로 글을 열어 보게 한 뒤 엉뚱한 내용으로 속이는 인터넷 낚시와 그 미끼인 떡밥',
   description = '인터넷에서 낚시는 그럴듯하게 다른 사람을 속여 특정한 행동을 하게 하는 것을 뜻한다. 이렇게 속이거나 속는 데는 ‘낚다’, ‘낚였다’라는 표현을 쓰고, 속이기 위해 이용한 내용은 떡밥 또는 미끼라고 부른다. ‘낚시질’은 사실과 다르거나 엉뚱한 내용을 글과 상관없는 자극적인 제목으로 올리는 것을 말한다. 낚인 사람은 “낚였다!”라는 댓글로 놀림을 당했음을 털어놓는 동시에, 다른 사람들에게 낚시글을 피하라고 경고하기도 한다. 미끼와 함께 떡밥을 던지면 물고기가 몰려들듯, 인터넷에서 ‘떡밥글’을 올리면 누리꾼들이 너도나도 댓글을 단다.',
-  origin = '처음에는 그럴듯한 제목의 글을 눌러 보면 만화 사진 한 장과 ‘걸렸다’는 짧은 글이 담겨 있는 식으로 낚시가 시작됐다. 이 놀이에 동참하는 네티즌이 늘면서 인조이재팬 외의 다른 커뮤니티에서도 낚시가 이뤄졌다. 낚였다는 것을 암시하려고 실제 바다낚시를 하는 낚시꾼 사진을 쓰기 시작한 것도 이때부터다. 나중에는 증거자료라며 URL을 붙여 낚시임을 드러내는 등 수법이 점점 교묘해졌다.',
+  origin = '처음에는 그럴듯한 제목의 글을 눌러 보면 만화 사진 한 장과 ‘걸렸다’는 짧은 글이 담겨 있는 식으로 낚시가 시작됐다. 이 놀이에 동참하는 네티즌이 늘면서 낚시는 다른 커뮤니티로도 점점 퍼져 나갔다. 낚였다는 것을 암시하려고 실제 바다낚시를 하는 낚시꾼 사진을 쓰기 시작한 것도 이때부터다. 나중에는 증거자료라며 URL을 붙여 낚시임을 드러내는 등 수법이 점점 교묘해졌다.',
   usage_note = '제목과 내용이 다르거나, 관심을 끌기 위한 미끼 글을 지적할 때 쓴다. 상대의 글을 너무 쉽게 낚시로 단정하면 논쟁이 커질 수 있다.',
   caution = caution,
-  usage_examples = '[{"situation":"제목만 자극적인 글을 보고","text":"또 낚시글이네. 본문이랑 제목이 완전히 달라."},{"situation":"미리 힌트만 던질 때","text":"떡밥만 던져 두고 내일 알려 줄게. 오늘은 여기까지."}]'::jsonb,
+  usage_examples = '[{"situation":"제목만 자극적인 글을 보고","text":"또 낚시글이네. 본문이랑 제목이 완전히 달라."},{"situation":"댓글을 노린 글을 봤을 때","text":"이건 댓글 달리라고 던진 떡밥글이네."}]'::jsonb,
   content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
   updated_at = now()
 where short_id = '8kz4upjt'
@@ -297,7 +283,7 @@ where short_id = '89b37mrx'
 update public.memes set
   summary = '세 차례 음주운전 사실이 드러나고 음주 뺑소니 사고를 낸 전 메이저리거 강정호 사건',
   description = '강정호는 피츠버그 파이리츠 소속 메이저리거이던 시절, 음주 상태로 차를 몰다 서울 강남 삼성역사거리에서 가드레일을 들이받고 그대로 달아났다. 사고 직후 동승한 친구가 경찰에 자신이 운전했다고 거짓말을 했지만, 블랙박스 확인 결과 강정호가 운전한 사실이 드러났다. 그는 앞서 두 차례 음주운전으로 적발된 전력도 있었다. 누적 적발 횟수가 세 차례가 되면서 ‘음주운전 삼진아웃제’에 따라 면허가 취소될 상황이 됐다. 그는 징역 8개월에 집행유예 2년을 선고받았다.',
-  origin = '이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이 징계 때문에 키움과 다시 계약한 뒤에도 한동안 경기는 물론 팀 훈련에도 참여할 수 없었다.',
+  origin = '이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 그는 자유계약 선수가 됐다.',
   usage_note = '반복된 음주운전이라는 실제 범죄 사건이므로 농담거리로만 소비하지 않도록 주의한다.',
   caution = '음주운전 전력을 다루는 만큼 미화하거나 가볍게 다루지 않도록 주의가 필요하다.',
   usage_examples = '[{"situation":"스포츠 범죄를 설명할 때","text":"강정호 음주운전 사건은 한 번의 실수가 아니라 반복된 적발이 핵심이야."},{"situation":"복귀 논의를 보다가","text":"세 번째 적발이 뺑소니 사고였다는 걸 빼고는 이 사안을 말하기 어려워."}]'::jsonb,
@@ -513,7 +499,7 @@ where ms.meme_id = meme.id
   and meme.short_id = 'vtu3rkyg'
   and ms.source_url = 'https://www.youtube.com/watch?v=lBsbtNxtX7w';
 update public.meme_sources as ms
-set title = '진중권 "''''디워'''' 해프닝 ''''황우석 사태''''와 비슷"',
+set title = '진중권 "‘디워’ 해프닝 ‘황우석 사태’와 비슷"',
     creator_name = coalesce(ms.creator_name, '세계일보')
 from public.memes as meme
 where ms.meme_id = meme.id
@@ -526,20 +512,13 @@ from public.memes as meme
 where ms.meme_id = meme.id
   and meme.short_id = 'xq7ycnys'
   and ms.source_url = 'https://www.khan.co.kr/article/200012251708421';
-update public.meme_sources as ms
-set title = '도마도마 챌린지 toma toma 짤 뜻·유래·사용법',
-    creator_name = coalesce(ms.creator_name, '오늘의짤방')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = '2au7br9f'
-  and ms.source_url = 'https://www.jjalbang.today/jjalstoryview/48';
 
 -- Hide non-200, dead, or irrelevant source rows from public display without deleting them.
 update public.meme_sources as ms
    set hidden_from_public = true
   from public.memes as meme
  where ms.meme_id = meme.id
-   and meme.short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', '2au7br9f', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x')
+   and meme.short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x')
    and (ms.source_url ilike '%namu.wiki%' or ms.source_url ilike '%merriam-webster.com%' or ms.source_url ilike '%etnews.com%' or ms.source_url ilike '%vop.co.kr%' or ms.source_url ilike '%gamemeca.com%' or ms.source_url ilike '%VbmYQF32SNg%' or ms.source_url ilike '%mvqYV2zvksU%' or ms.source_url ilike '%uzAdeV9Yz5U%' or ms.source_url ilike '%WwYmJzjU10w%' or ms.source_url ilike '%qK7YQ6pvLp8%' or ms.source_url ilike '%XTuKk2HZCBM%' or ms.source_url ilike '%h4mfwvB7C7Q%' or ms.source_url ilike '%skrG0f0ihvM%' or ms.source_url ilike '%CmsLb87hOqQ%' or ms.source_url ilike '%ZCKxJx7tBi4%' or ms.source_url ilike '%CAxYaPGMICA%' or ms.source_url ilike '%NLAdKX2r1jI%' or ms.source_url ilike '%sxVZlnSHqy0%' or ms.source_url ilike '%B_Kt0uDmTFA%' or ms.source_url ilike '%vk9_bKXhI_c%' or ms.source_url ilike '%JfsNf8j4BUY%' or ms.source_url ilike '%BKo1bznv-RY%' or ms.source_url ilike '%MKeOC3BMG0c%' or ms.source_url ilike '%_WWM0QilnS0%' or ms.source_url ilike '%wbrFi8n7-sw%' or ms.source_url ilike '%aRv2-fGOteg%' or ms.source_url ilike '%71XbAI7SMEU%' or ms.source_url ilike '%fAqPgEW_46U%' or ms.source_url ilike '%fVX6ptcsHHY%' or ms.source_url ilike '%Trq8SGvkQTI%' or ms.source_url ilike '%hvM_JGYgfJ0%' or ms.source_url ilike '%VSHq5oxg2Sk%' or ms.source_url ilike '%n5zRdGm2vgg%' or ms.source_url ilike '%6arSLs0y-Q8%' or ms.source_url ilike '%V_yj-ChWSYs%' or ms.source_url ilike '%AhE7PT7fr60%' or ms.source_url ilike '%_BuM_uCk4JI%' or ms.source_url ilike '%KARSCdB946A%' or ms.source_url ilike '%fz_LRL8NyoI%' or ms.source_url ilike '%about.ncsoft.com%');
 
 -- Restore safety_reviewed_at after the usage_note/caution trigger has fired.

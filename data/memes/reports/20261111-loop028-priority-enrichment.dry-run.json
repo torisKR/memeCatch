@@ -13,18 +13,18 @@
   ],
   "summary": {
     "memes": {
-      "update": 14,
-      "drop": 69,
+      "update": 13,
+      "drop": 70,
       "insert": 0,
       "skip_existing": 0,
       "reject": 0
     },
     "meme_sources": {
       "insert_if_missing": 18,
-      "title_update": 7,
+      "title_update": 6,
       "delete_non200_for_batch": 0,
       "hide_from_public": "runtime, markers=40",
-      "hide_from_public_rows_expected": 36,
+      "hide_from_public_rows_expected": 35,
       "skip_existing": "runtime"
     }
   },
@@ -479,6 +479,13 @@
       "title": "나는 행복합니다 (한화 이글스 행복송)",
       "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
       "follow_up_candidate": true
+    },
+    {
+      "short_id": "2au7br9f",
+      "slug": "도마도마-챌린지",
+      "title": "도마도마 챌린지",
+      "reason": "PR #61 QA 6차(run-2026-11-12-pr61-data-recheck6.md): 보이는 출처 jjalbang.today·instablank.com이 wepick에서 정리한 글이라 사실상 출처가 한 계열(wepick)뿐이고, 독립된 다른 도메인의 보이는 출처가 없다. 이 PR에서는 빼고 독립 출처를 확보한 뒤 후속 배치에서 다룬다.",
+      "follow_up_candidate": true
     }
   ],
   "actions": [
@@ -533,15 +540,6 @@
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "도마도마-챌린지",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
       ],
       "warnings": []
     },
@@ -818,15 +816,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.khan.co.kr/article/200012251708421",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.jjalbang.today/jjalstoryview/48",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"

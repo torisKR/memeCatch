@@ -22,9 +22,9 @@ import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
  * A database-less image build must not cache a sitemap that has no meme URLs.
  * `revalidate` still prerenders that empty result into the standalone server.
  * `force-dynamic` keeps the first request live. The module cache below skips
- * the full catalog scan for the next hour, and next.config sets
- * `s-maxage` plus `stale-while-revalidate` on `/sitemap.xml`. An outage is
- * not cached, so the next request tries the catalog again.
+ * the full catalog scan for the next hour. The route sets `s-maxage` only
+ * when the catalog produced meme URLs. An empty or failed catalog is not
+ * cached, so the next request tries again.
  */
 export const dynamic = "force-dynamic";
 
@@ -380,11 +380,54 @@ async function buildSitemap(): Promise<{
   return { entries: entries.slice(0, MAX_SITEMAP_URLS), catalogUnavailable };
 }
 
+function memeUrlCount(entries: MetadataRoute.Sitemap): number {
+  return entries.filter((entry) => entry.url.includes("/memes/")).length;
+}
+
+export const SITEMAP_SUCCESS_CACHE =
+  "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400";
+
+export function renderSitemapXml(entries: MetadataRoute.Sitemap): string {
+  const escapeXml = (value: string) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  const urls = entries.map((item) => {
+    const lines = ["<url>", `<loc>${escapeXml(item.url)}</loc>`];
+    const languages = item.alternates?.languages;
+    if (languages) {
+      for (const [language, href] of Object.entries(languages)) {
+        if (!href) continue;
+        lines.push(
+          `<xhtml:link rel="alternate" hreflang="${escapeXml(language)}" href="${escapeXml(href)}" />`,
+        );
+      }
+    }
+    if (item.lastModified) {
+      const serialized = item.lastModified instanceof Date
+        ? item.lastModified.toISOString()
+        : String(item.lastModified);
+      lines.push(`<lastmod>${escapeXml(serialized)}</lastmod>`);
+    }
+    if (item.changeFrequency) lines.push(`<changefreq>${item.changeFrequency}</changefreq>`);
+    if (typeof item.priority === "number") lines.push(`<priority>${item.priority}</priority>`);
+    lines.push("</url>");
+    return lines.join("\n");
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${urls.join("\n")}
+</urlset>
+`;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = Date.now();
   if (cachedSitemap && cachedSitemap.expiresAt > now) return cachedSitemap.entries;
   const built = await buildSitemap();
-  if (!built.catalogUnavailable) {
+  if (!built.catalogUnavailable && memeUrlCount(built.entries) > 0) {
     cachedSitemap = { expiresAt: now + SITEMAP_CACHE_MS, entries: built.entries };
   }
   return built.entries;

@@ -26,6 +26,22 @@ describe("curated memes and guaranteed home entries", () => {
     expect(cards[0]?.meme_contents[0]?.thumbnail_url).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
+  it("matches the common 꺽 misspelling of 중꺾마", () => {
+    const cards = curatedSearchCards("중꺽마");
+    expect(cards.map((card) => card.short_id)).toContain("jkm2022k");
+  });
+
+  it("points localized home guides at the canonical Korean URL", () => {
+    for (const locale of ["en", "ja"] as const) {
+      const entries = getGuaranteedHomeEntries(locale, []);
+      expect(entries.length).toBeGreaterThan(0);
+      for (const entry of entries) {
+        expect(entry.href.startsWith("/memes/")).toBe(true);
+        expect(entry.href.startsWith(`/${locale}/`)).toBe(false);
+      }
+    }
+  });
+
   it("guarantees non-empty home entries when live DB entries are empty", () => {
     const emptyLiveEntries: readonly HomeEntry[] = [];
     const entries = getGuaranteedHomeEntries("ko", emptyLiveEntries);

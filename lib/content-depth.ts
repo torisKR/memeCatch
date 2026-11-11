@@ -9,7 +9,7 @@
  * 소비처는 두 갈래로 나뉘고, 갈래마다 산문 하한이 다르다(HG-001 C안, 2026-08-04):
  *
  *   [색인 판정 — isIndexableMeme, MIN_PROSE_CHARS_INDEX=150]
- *   - app/sitemap.ts                      — 얇은 밈을 사이트맵에서 제외
+ *   - lib/sitemap-document.ts             — 얇은 밈을 사이트맵에서 제외
  *   - app/(default)/memes/[key]/page.tsx  — robots noindex,follow 부착 + WebPage JSON-LD 게이트
  *   [배너·광고 판정 — contentDepth().isSubstantial, MIN_PROSE_CHARS=250, 현행 유지]
  *   - components/doc-status-note.tsx      — 「아직 정리 중인 문서예요」 배너

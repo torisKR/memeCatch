@@ -314,6 +314,20 @@ class QueryBuilder implements PromiseLike<QueryResult> {
   range(from: number, to: number): this {
     this.plan.offset = from;
     this.plan.limit = to - from + 1;
+    // search_memes applies p_limit inside the function, before this page
+    // window. Raise it to the end of the window so a later page is not cut
+    // off at the first 50 rows. The executor then applies offset and limit.
+    const args = this.plan.args;
+    const pageEnd = to + 1;
+    if (
+      this.plan.op === "rpc"
+      && args
+      && typeof args.p_limit === "number"
+      && Number.isInteger(args.p_limit)
+      && args.p_limit < pageEnd
+    ) {
+      args.p_limit = Math.min(pageEnd, 5000);
+    }
     return this;
   }
 
@@ -336,6 +350,19 @@ class QueryBuilder implements PromiseLike<QueryResult> {
 
   /** Call sites use this to name the row shape. Runtime rows already match the select list. */
   returns<T>(): PromiseLike<QueryResult<T>> {
+    return this.execute(this.plan, this.signal) as PromiseLike<QueryResult<T>>;
+  }
+
+  /**
+   * Same terminal as returns(). Supabase-js uses the second type argument
+   * only to decide whether the row type replaces or merges the inferred row.
+   * The eleven server callers pass `{ merge: false }` and await this directly.
+   */
+  overrideTypes<T, Options extends { merge?: boolean } = { merge: false }>(): PromiseLike<QueryResult<T>> {
+    // Options is type-only at every call site. Reading it keeps the second
+    // type argument in the signature so `{ merge: false }` still typechecks.
+    const typedMerge: Options["merge"] | undefined = undefined;
+    void typedMerge;
     return this.execute(this.plan, this.signal) as PromiseLike<QueryResult<T>>;
   }
 
@@ -376,7 +403,14 @@ export function createPlanClient(execute: PlanExecutor) {
       };
     },
     rpc(fn: string, args?: Record<string, unknown>) {
-      return new QueryBuilder(execute, "rpc", { fn, args: args ?? {} });
+      const next = { ...(args ?? {}) };
+      if (
+        (fn === "search_memes" || fn === "search_ai_memes")
+        && typeof next.p_query === "string"
+      ) {
+        next.p_query = next.p_query.normalize("NFC").replaceAll("\uAEBD", "\uAEBE");
+      }
+      return new QueryBuilder(execute, "rpc", { fn, args: next });
     },
   };
 }

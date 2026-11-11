@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { executePlan, resetQueryMetadata } from "@/lib/db/execute";
+import { createPlanClient } from "@/lib/db/plan";
 import { getPool } from "@/lib/db/pool";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -33,6 +34,21 @@ describe.skipIf(!databaseUrl)("enum in() filters", () => {
         FOR SELECT
         TO anon
         USING (true);
+      DROP TABLE IF EXISTS public.memecatch_probe_memes;
+      CREATE TABLE public.memecatch_probe_memes (
+        id integer PRIMARY KEY,
+        short_id text NOT NULL,
+        moderation_status text NOT NULL
+      );
+      INSERT INTO public.memecatch_probe_memes (id, short_id, moderation_status)
+      VALUES (1, 'rk3w632x', 'approved');
+      GRANT SELECT ON public.memecatch_probe_memes TO anon;
+      ALTER TABLE public.memecatch_probe_memes ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY memecatch_probe_memes_read
+        ON public.memecatch_probe_memes
+        FOR SELECT
+        TO anon
+        USING (true);
     `);
     resetQueryMetadata();
   });
@@ -40,6 +56,7 @@ describe.skipIf(!databaseUrl)("enum in() filters", () => {
   afterAll(async () => {
     const pool = getPool();
     await pool.query(`
+      DROP TABLE IF EXISTS public.memecatch_probe_memes;
       DROP TABLE IF EXISTS public.memecatch_probe_enum;
       DROP TYPE IF EXISTS public.memecatch_probe_status;
     `);
@@ -74,5 +91,18 @@ describe.skipIf(!databaseUrl)("enum in() filters", () => {
       { id: 1, moderation_status: "approved" },
       { id: 3, moderation_status: "rejected" },
     ]);
+  });
+
+  it("runs overrideTypes through the plan client against Postgres", async () => {
+    const client = createPlanClient((plan, signal) => executePlan(plan, anon, signal));
+    const result = await client
+      .from("memecatch_probe_memes")
+      .select("id, short_id")
+      .eq("moderation_status", "approved")
+      .limit(1)
+      .overrideTypes<{ id: number; short_id: string }[]>();
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([{ id: 1, short_id: "rk3w632x" }]);
   });
 });

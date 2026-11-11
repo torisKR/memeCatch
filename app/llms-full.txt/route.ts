@@ -82,6 +82,7 @@ export async function GET() {
       primaryOrder: "trend_score",
       limit: MAX_MEMES,
       countAll: true,
+      omitAliasShortIds: true,
     });
     memes = result.rows;
     eligibleCount = result.eligibleCount;

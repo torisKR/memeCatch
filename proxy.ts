@@ -29,7 +29,7 @@ import {
 } from "@/lib/plus-outcome-replay-routing";
 import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { shortIdFromParam } from "@/lib/labels";
-import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { CANONICAL_MEME_ALIAS_MAP, canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
@@ -228,10 +228,16 @@ export async function proxy(request: NextRequest) {
 
   if (documentDetailKey) {
     try {
+      const requestedShortId = shortIdFromParam(documentDetailKey);
+      // Duplicate short ids (cssqxwmb, 9ajbp6w6) have their own rows, so a
+      // lookup of the requested id matches itself and the page then renders a
+      // 200 + NEXT_REDIRECT meta refresh. Resolve the canonical row here and
+      // send the 308 before any document bytes.
+      const lookupShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
       const { data, error } = await supabase
         .from("memes")
         .select(PUBLIC_MEME_CANONICAL_SELECT)
-        .eq("short_id", shortIdFromParam(documentDetailKey))
+        .eq("short_id", lookupShortId)
         .in("moderation_status", [...PUBLIC_MEME_STATUSES])
         .limit(1)
         .abortSignal(AbortSignal.timeout(MEME_LOOKUP_TIMEOUT_MS)) as {
@@ -241,7 +247,6 @@ export async function proxy(request: NextRequest) {
       if (error) {
         console.warn("public_meme_existence_check_failed query_error");
       }
-      const requestedShortId = shortIdFromParam(documentDetailKey);
       if (!error && data?.length === 0 && !isCuratedCoreShortId(requestedShortId)) {
         const url = request.nextUrl.clone();
         url.pathname = "/__missing_public_meme__";
@@ -251,17 +256,24 @@ export async function proxy(request: NextRequest) {
         }));
       }
       const meme = !error ? data?.[0] : null;
-      const canonicalSlug = meme ? canonicalSlugForDocument(meme, urlLocale) : null;
-      if (meme && canonicalSlug) {
-        const destination = canonicalMemeRedirectPath(documentDetailKey, {
-          shortId: meme.short_id,
-          slug: canonicalSlug,
-          locale: urlLocale ?? "ko",
-        }, "encoded");
-        if (destination) {
-          const url = request.nextUrl.clone();
-          url.pathname = destination;
-          return applyLocale(NextResponse.redirect(url, 308));
+      if (meme) {
+        const localizedSlug = canonicalSlugForDocument(meme, urlLocale);
+        // An alias with no reviewed translation still leaves this document.
+        // Send it to the Korean canonical URL instead of rendering a refresh.
+        const aliasWithoutTranslation = !localizedSlug && requestedShortId !== meme.short_id;
+        const slug = localizedSlug ?? (aliasWithoutTranslation ? meme.slug : null);
+        const locale = localizedSlug ? (urlLocale ?? "ko") : "ko";
+        if (slug) {
+          const destination = canonicalMemeRedirectPath(documentDetailKey, {
+            shortId: meme.short_id,
+            slug,
+            locale,
+          }, "encoded");
+          if (destination) {
+            const url = request.nextUrl.clone();
+            url.pathname = destination;
+            return applyLocale(NextResponse.redirect(url, 308));
+          }
         }
       }
     } catch {

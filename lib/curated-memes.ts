@@ -1,5 +1,5 @@
 import type { MemeCategory, SafetyLevel, LifecycleStatus } from "@/lib/labels";
-import { getSeoCopy, localizePath, type SeoRouteLocale } from "@/lib/i18n-routing";
+import { getSeoCopy, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { HomeEntry } from "@/components/home/home-experience";
 import { memePathFrom } from "@/lib/labels";
 import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
@@ -376,7 +376,7 @@ export function getGuaranteedHomeEntries(
 
     return {
       id: meme.id,
-      href: localizePath(memePathFrom(meme.short_id, meme.slug), locale),
+      href: memePathFrom(meme.short_id, meme.slug),
       title: meme.title,
       summary: meme.summary,
       categoryLabel: categoryCopy[meme.category] ?? "밈 용어",
@@ -404,7 +404,7 @@ export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
 }
 
 export function curatedMemesMatchingQuery(query: string): readonly CuratedMeme[] {
-  const needle = query.normalize("NFC").trim().toLocaleLowerCase("ko-KR");
+  const needle = query.normalize("NFC").trim().toLocaleLowerCase("ko-KR").replaceAll("\uAEBD", "\uAEBE");
   if (!needle) return [];
   return CURATED_CORE_MEMES.filter((meme) =>
     [meme.title, meme.summary, meme.slug, ...meme.tags]

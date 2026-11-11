@@ -172,6 +172,24 @@ describe("proxy locale contract", () => {
 
 describe("proxy public meme existence check", () => {
   it.each([
+    "/memes/cssqxwmb",
+    "/memes/9ajbp6w6",
+    "/en/memes/cssqxwmb-old",
+  ])("308-redirects duplicate short id %s before the page can render a meta refresh", async (path) => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [publicMemeRow({ short_id: "gnact78h", slug: "나는-아직-배가-고프다" })],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest(path));
+
+    expect(supabaseMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toContain("/memes/gnact78h-");
+    expect(await response.text()).not.toContain("NEXT_REDIRECT");
+  });
+
+  it.each([
     ["/memes/gjq95suv", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
     ["/memes/gjq95suv-old-slug", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
   ])("308-redirects a confirmed Korean alias %s to its stored canonical path", async (path, expected) => {

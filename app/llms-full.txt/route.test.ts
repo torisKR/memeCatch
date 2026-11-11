@@ -115,6 +115,19 @@ describe("llms-full publication export", () => {
     },
   );
 
+  it("lists canonical meme URLs and omits duplicate alias short ids", async () => {
+    const canonical = row(1, true);
+    const alias = { ...row(2, true), short_id: "cssqxwmb", title: "Alias meme", slug: "alias" };
+    useRows([canonical, alias]);
+
+    const body = await (await GET()).text();
+
+    expect(body).toContain("/memes/m1-meme-1");
+    expect(body).not.toContain("cssqxwmb");
+    expect(body).not.toContain("9ajbp6w6");
+    expect(body).toContain("한국 밈·유행어·챌린지 1건");
+  });
+
   it("returns a truthful zero-count document for a valid empty result", async () => {
     useRows([]);
 

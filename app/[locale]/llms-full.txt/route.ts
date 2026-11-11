@@ -4,6 +4,7 @@ import {
   localizedMemePath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 
@@ -109,10 +110,11 @@ export async function GET(
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) return new Response("Not found\n", { status: 404 });
 
-  const [memes, copy] = await Promise.all([
+  const [featured, copy] = await Promise.all([
     getLocalizedFeaturedMemes(locale, 400),
     Promise.resolve(COPY[locale]),
   ]);
+  const memes = featured.filter((meme) => !CANONICAL_MEME_ALIAS_MAP[meme.short_id]);
   const entries = memes.map((meme) => {
     const url = `${SITE_URL}${localizedMemePath(locale, meme.short_id, meme.slug)}`;
     const sources = meme.meme_sources

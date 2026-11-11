@@ -1,4 +1,5 @@
 import type { createStaticClient } from "@/lib/supabase/server";
+import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import {
   isIndexableMeme,
   type ContentDepthInput,
@@ -11,6 +12,7 @@ type StaticClient = ReturnType<typeof createStaticClient>;
 
 type PublicationExportRow = ContentDepthInput & {
   id: string;
+  short_id?: string;
 };
 
 type PublicationExportOptions = {
@@ -19,6 +21,8 @@ type PublicationExportOptions = {
   limit: number;
   /** llms exports display the real eligible corpus count, so they must scan to exhaustion. */
   countAll: boolean;
+  /** Duplicate short ids redirect to another meme and must not be listed as their own URL. */
+  omitAliasShortIds?: boolean;
 };
 
 export class PublicationExportError extends Error {
@@ -69,6 +73,8 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
 
     const page = (data ?? []) as unknown as T[];
     for (const meme of page) {
+      const shortId = meme.short_id;
+      if (options.omitAliasShortIds && shortId && CANONICAL_MEME_ALIAS_MAP[shortId]) continue;
       if (!isIndexableMeme(meme)) continue;
       eligibleCount += 1;
       if (rows.length < options.limit) rows.push(meme);

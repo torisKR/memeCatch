@@ -9,9 +9,10 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import sitemap, { clearSitemapCache } from "@/app/sitemap";
+import { GET as sitemapRoute } from "@/app/sitemap.xml/route";
+import sitemap, { clearSitemapCache } from "@/lib/sitemap-document";
 
-const source = readFileSync(join(process.cwd(), "app/sitemap.ts"), "utf-8");
+const source = readFileSync(join(process.cwd(), "lib/sitemap-document.ts"), "utf-8");
 
 type Translation = {
   locale: string;
@@ -108,10 +109,40 @@ describe("사이트맵 페이지네이션 안정성", () => {
   it("요청 시점에 다시 만들어 빌드 당시의 빈 카탈로그를 고정하지 않는다", () => {
     expect(source).toContain('export const dynamic = "force-dynamic"');
     expect(source).not.toContain("export const revalidate");
-    const config = readFileSync(join(process.cwd(), "next.config.ts"), "utf-8");
-    expect(config).toContain(
+    const route = readFileSync(join(process.cwd(), "app/sitemap.xml/route.ts"), "utf-8");
+    expect(route).toContain("SITEMAP_SUCCESS_CACHE");
+    expect(source).toContain(
       "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
     );
+    expect(route).toContain("no-store");
+    const config = readFileSync(join(process.cwd(), "next.config.ts"), "utf-8");
+    expect(config).not.toContain('source: "/sitemap.xml"');
+  });
+
+  it("sends no-store 503 when the catalog has no meme URLs", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    createStaticClient.mockImplementation(() => {
+      throw new Error("catalog down");
+    });
+
+    const response = await sitemapRoute();
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.text()).not.toContain("/memes/");
+    errorLog.mockRestore();
+  });
+
+  it("caches a sitemap that contains meme URLs", async () => {
+    useRows([indexableMeme(1, [])]);
+
+    const response = await sitemapRoute();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+    );
+    expect(await response.text()).toContain("/memes/");
   });
 
   it("keeps a successful catalog in memory and retries an outage", async () => {

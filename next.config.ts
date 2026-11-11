@@ -238,20 +238,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // force-dynamic would otherwise emit no-store. This header is applied
-      // before the render, and Next does not replace a Cache-Control that is
-      // already set. Browsers revalidate; the CDN keeps the document for an
-      // hour and may serve it stale for a day. The in-process cache in
-      // app/sitemap.ts stops the catalog scan on that revalidation.
-      {
-        source: "/sitemap.xml",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
-          },
-        ],
-      },
     ];
   },
 };

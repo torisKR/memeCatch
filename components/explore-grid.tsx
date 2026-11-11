@@ -39,7 +39,7 @@ export type ExploreFilters = {
   q?: string; // 이 목록 안 검색어 — 있으면 search_memes RPC 경로
 };
 
-/** 검색 RPC 상한(SQL의 least(p_limit,50)) — 검색 결과 페이지네이션의 실질 상한 */
+/** 첫 페이지가 함수 안에서 잘리지 않게 두는 초기 창. 다음 페이지는 range()가 늘린다. */
 const SEARCH_LIMIT = 50;
 
 /** 한 페이지 크기 — app/explore/page.tsx의 첫 페이지 크기와 반드시 동일하게 유지 */
@@ -130,7 +130,7 @@ export function buildMemesQuery(
 ) {
   // 검색어가 있으면 search_memes RPC(trgm·초성·별칭 서버 처리) 결과 위에
   // 동일한 카테고리/정렬/페이지네이션을 얹는다. RPC는 setof memes라 필터 체이닝 가능.
-  // (RPC 내부 LIMIT 50 → 검색 결과는 최대 50건까지 무한스크롤)
+  // range()가 페이지 끝을 p_limit으로 올리고, 실행기가 offset을 적용한다.
   if (filters.q) {
     let sq = supabase
       .rpc(filters.topicTag ? "search_ai_memes" : "search_memes", {
@@ -243,7 +243,7 @@ export function ExploreGrid({
   const [total, setTotal] = useState<number | null>(null);
 
   useEffect(() => {
-    // 검색 경로는 RPC 50건 캡이라 정확한 총계 불가 — 렌더 가드가 표시를 막는다
+    // 검색 경로는 head count를 만들지 않는다 — 렌더 가드가 표시를 막는다
     // (effect 안 동기 setState 금지 — 캐스케이드 렌더 방지 lint 준수).
     if (filters.q || catalogUnavailable) return;
     let cancelled = false;

@@ -460,9 +460,9 @@ function rpcSql(plan: QueryPlan, fn: PgFunction): SqlParts {
     return `${quoteIdent(key)} => $${params.length}${castFor(udt, value)}`;
   });
   const call = `public.${quoteIdent(name)}(${pairs.join(", ")})`;
-  return fn.proretset
-    ? { sql: `SELECT * FROM ${call}`, params }
-    : { sql: `SELECT ${call} AS result`, params };
+  if (!fn.proretset) return { sql: `SELECT ${call} AS result`, params };
+  const page = `${orderSql(plan.orders, "rpc_row", params)}${limitSql(plan.limit, plan.offset, params)}`;
+  return { sql: `SELECT * FROM ${call} AS rpc_row${page}`, params };
 }
 
 function pgArray(value: unknown): string[] {

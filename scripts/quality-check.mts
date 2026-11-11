@@ -26,7 +26,7 @@ import {
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPORT_PATH = resolve(ROOT, "docs/renewal/DATA_QUALITY_REPORT.json");
 
-/** 공개(=200으로 렌더되는) 상태. app/sitemap.ts의 PUBLIC_STATUSES와 같아야 한다. */
+/** 공개(=200으로 렌더되는) 상태. lib/sitemap-document.ts의 PUBLIC_STATUSES와 같아야 한다. */
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 
 /** 표본 ID는 리포트에 이만큼만 남긴다(운영자가 바로 열어볼 최소량). */

@@ -1,6 +1,10 @@
 import http from "node:http";
 
-const port = Number(process.env.PROXY_PORT);
+const port = Number(process.argv[2]);
+if (!port) {
+  console.error("usage: hangul-proxy-check.mjs <proxy-port>");
+  process.exit(1);
+}
 const hangul = "중꺾마";
 const canonical = `/memes/rk3w632x-${encodeURIComponent(hangul)}`;
 const lowercase = `/memes/rk3w632x-${encodeURIComponent(hangul).toLowerCase()}`;

@@ -80,12 +80,12 @@ DATABASE_URL="postgresql://memecatch:${db_password}@127.0.0.1:${pg_port}/postgre
   node server.js >"$root/.next/hangul-standalone.log" 2>&1 &
 app_pid=$!
 
-PROXY_PORT="$proxy_port" APP_PORT="$app_port" \
-  node "$root/scripts/hangul-forward-proxy.mjs" >"$root/.next/hangul-proxy.log" 2>&1 &
+node "$root/scripts/hangul-forward-proxy.mjs" "$proxy_port" "$app_port" \
+  >"$root/.next/hangul-proxy.log" 2>&1 &
 proxy_pid=$!
 
 set +e
-PROXY_PORT="$proxy_port" node "$root/scripts/hangul-proxy-check.mjs"
+node "$root/scripts/hangul-proxy-check.mjs" "$proxy_port"
 status=$?
 set -e
 if [[ "$status" != "0" ]]; then

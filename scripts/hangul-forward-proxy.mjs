@@ -1,10 +1,10 @@
 import http from "node:http";
 
-const proxyPort = Number(process.env.PROXY_PORT);
-const appPort = Number(process.env.APP_PORT);
+const proxyPort = Number(process.argv[2]);
+const appPort = Number(process.argv[3]);
 
 if (!proxyPort || !appPort) {
-  console.error("PROXY_PORT and APP_PORT are required");
+  console.error("usage: hangul-forward-proxy.mjs <proxy-port> <app-port>");
   process.exit(1);
 }
 

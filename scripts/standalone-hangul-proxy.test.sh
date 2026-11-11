@@ -30,8 +30,9 @@ docker rm -f "$server" >/dev/null 2>&1 || true
 docker run -d --name "$server" \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_USER=postgres \
-  -e POSTGRES_DB=postgres \
+  -e POSTGRES_DB=memecatch \
   -e MEMECATCH_DB_PASSWORD="$db_password" \
+  -e MEMECATCH_BACKUP_DB_PASSWORD=hangul-ci-backup \
   -p "127.0.0.1:${pg_port}:5432" \
   -v "$root/deploy/postgres:/sql:ro" \
   -v "$root/supabase/migrations:/migrations:ro" \
@@ -53,11 +54,12 @@ fi
 
 docker exec \
   -e MEMECATCH_DB_PASSWORD="$db_password" \
+  -e MEMECATCH_BACKUP_DB_PASSWORD=hangul-ci-backup \
   -e POSTGRES_USER=postgres \
-  -e POSTGRES_DB=postgres \
+  -e POSTGRES_DB=memecatch \
   "$server" bash /sql/init.sh
 
-docker exec -i "$server" psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+docker exec -i "$server" psql -v ON_ERROR_STOP=1 -U postgres -d memecatch <<'SQL'
 insert into public.memes (short_id, title, slug, moderation_status, published_at)
 values ('rk3w632x', '중꺾마', '중꺾마', 'approved', now());
 SQL
@@ -72,7 +74,7 @@ fi
 
 mkdir -p "$root/.next"
 cd "$standalone"
-DATABASE_URL="postgresql://memecatch:${db_password}@127.0.0.1:${pg_port}/postgres" \
+DATABASE_URL="postgresql://memecatch:${db_password}@127.0.0.1:${pg_port}/memecatch" \
   BETTER_AUTH_SECRET="ci-hangul-proxy-secret-not-production" \
   NEXT_PUBLIC_SITE_URL="http://127.0.0.1:${app_port}" \
   HOSTNAME="127.0.0.1" \

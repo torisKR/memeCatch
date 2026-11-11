@@ -20,7 +20,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsc --noEmit
       - run: pnpm lint
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if sudo timeout --foreground 120 apt-get update \
+              && sudo timeout --foreground 180 apt-get install -y ffmpeg; then
+              command -v ffmpeg >/dev/null
+              exit 0
+            fi
+            echo "apt install ffmpeg failed on attempt ${attempt}"
+            sudo dpkg --configure -a || true
+            sleep $((attempt * 10))
+          done
+          exit 1
       - run: pnpm test
       - run: node scripts/check-env-manifest.mjs
       - run: pnpm build

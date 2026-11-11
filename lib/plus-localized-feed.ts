@@ -40,7 +40,7 @@ export type PlusLocalizedFeedSource = Pick<
       "availability" | "moderation_status" | "thumbnail_url" | "is_representative"
     >
   >;
-  meme_sources: Array<Pick<MemeSourceRow, "source_url">>;
+  meme_sources: Array<Pick<MemeSourceRow, "source_url"> & { hidden_from_public?: boolean | null }>;
   meme_tags_map: Array<{ tag_id: string }>;
   meme_market_profiles?: MemeOriginProfile[];
 };

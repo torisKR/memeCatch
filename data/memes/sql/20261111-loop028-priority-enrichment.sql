@@ -3,9 +3,12 @@
 -- Apply only after QA and toris approval. Do NOT apply to prod from this PR alone.
 --
 -- Official apply command (both files; migration first). Do not omit either flag:
---   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261111160000_meme_content_reviewed_at.sql
---   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261112003000_meme_sources_hidden_from_public.sql
---   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f <this-file>
+--   1) psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261111160000_meme_content_reviewed_at.sql
+--   2) psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261112003000_meme_sources_hidden_from_public.sql
+--   3) psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f <this-file>
+--   4) Deploy the application code after the two migrations and this data SQL.
+--      hidden_from_public only takes effect on public pages once the new code is live.
+--      Prod SEO holdout membership is unverified and must be checked before apply.
 -- This file has no BEGIN/COMMIT. The -1 flag wraps the whole file in one transaction.
 -- Combining file-level COMMIT with -1 would end that transaction early; do not add COMMIT.
 -- Without ON_ERROR_STOP, a failed run can exit 0 after ROLLBACK.
@@ -53,7 +56,7 @@
 --   are also kept if already present and are not counted.
 -- Untitled existing live sources in this batch get a verified title so they render.
 -- Rollback is not a simple inverse of UPDATE; restore from a pre-apply backup if needed.
--- dropped: 5 memes from the original 83 were not included (see editorial catalog).
+-- dropped: 15 memes from the original 83 were not included (see editorial catalog).
 
 set local lock_timeout = '15s';
 set local statement_timeout = '10min';
@@ -61,7 +64,7 @@ set local statement_timeout = '10min';
 create temporary table loop028_safety_reviewed_backup as
 select id, safety_reviewed_at
   from public.memes
- where short_id in ('b9gzeysg', 'xazbup6j', 'k32wguve', 'qqzf3wyy', 'ruayk4d9', 'stm8qern', 'x85wgk74', '87pakbhn', '42d6qeqm', '4f25qzwc', 'u6mxpr58', '63485cxm', '9r3fjkwr', '5jysgx3d', 'cdkdz2tv', 'gf66ref6', 't4n9can6', '9uyxmw4g', 'kh75j5f8', '2au7br9f', '7kqc35wv', 's2v2pzh9', 'xq7ycnys', 'j5sbgbev', 'nvmtccc6', 'n4srdru6', 'wsjz865n', 'yeyam8cm', '5pzu8tzp', 'q7cjtg8h', 'rc2d9rq9', 'ywh3wq2f', 'mx2p9d97', 'ewwjd6g7', 'fzmt7ngh', 'jcdupe54', 'rf3dt6mp', 'm9qmrhxz', 's5tx6yzk', 'f2jjy62y', 'wyu84dvf', 'rmpwzmy7', 'by5gkxee', 'au7za8te', 't6jrbnbd', 'vtu3rkyg', '8kz4upjt', 'sw48ahk5', '89b37mrx', '3rqfnny8', 'pg778k4u', 'amhqsvt2', 'pnphbt7f', 'hmhac9nw', '8eacrtkx', 'mzgvq8xt', '8e9dyfqp', 'n5s5eq5p', '9gzfuejc', 'qqu8andb', 'ajvzf7pk', 'db3bd33n', '56hnkxyk', 'utxgy8un', 'ah2zk3m5', 'xyfnse8f', 'cg9uvyv5', 'f6dvsvvv', 't2fpqhcs', 'bucts34h', 'q246gvj2', '93grdumg', 'gqdszbfz', 'fxp7dc8y', 'jkd7vu6x', 'nrjutpq7', '4ae4pkpa', 'kkk7mx6b');
+ where short_id in ('b9gzeysg', 'xazbup6j', 'k32wguve', 'ruayk4d9', 'stm8qern', 'x85wgk74', '87pakbhn', '42d6qeqm', '4f25qzwc', 'u6mxpr58', '63485cxm', '9r3fjkwr', '5jysgx3d', 'cdkdz2tv', 'gf66ref6', 't4n9can6', '9uyxmw4g', 'kh75j5f8', '2au7br9f', 'xq7ycnys', 'j5sbgbev', 'nvmtccc6', 'n4srdru6', 'wsjz865n', 'yeyam8cm', '5pzu8tzp', 'q7cjtg8h', 'rc2d9rq9', 'ywh3wq2f', 'mx2p9d97', 'ewwjd6g7', 'jcdupe54', 'm9qmrhxz', 's5tx6yzk', 'f2jjy62y', 'wyu84dvf', 'rmpwzmy7', 'by5gkxee', 'au7za8te', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '3rqfnny8', 'pg778k4u', 'amhqsvt2', 'hmhac9nw', '8eacrtkx', 'mzgvq8xt', 'n5s5eq5p', '9gzfuejc', 'qqu8andb', 'ajvzf7pk', 'db3bd33n', '56hnkxyk', 'utxgy8un', 'ah2zk3m5', 'xyfnse8f', 'cg9uvyv5', 'f6dvsvvv', 't2fpqhcs', 'bucts34h', 'q246gvj2', '93grdumg', 'gqdszbfz', 'fxp7dc8y', 'jkd7vu6x', '4ae4pkpa', 'kkk7mx6b');
 
 -- 새우 예수 (b9gzeysg / shrimp-jesus)
 update public.memes set
@@ -148,43 +151,6 @@ where meme.short_id = 'k32wguve' and meme.slug = '뇌절'
   and not exists (
     select 1 from public.meme_sources as existing
     where existing.meme_id = meme.id and existing.source_url = 'https://www.asiae.co.kr/article/2020040814253172269'
-  );
-
--- 내돈내산 (qqzf3wyy / 내돈내산)
-update public.memes set
-  description = '내돈내산은 ‘내 돈 주고 내가 산’의 줄임말로, 협찬이나 광고비를 받지 않고 직접 사서 써 본 제품이라는 점을 강조할 때 쓰는 말이다. 유튜브·블로그·숏폼 리뷰에서 해시태그로 자주 붙이며, 광고성 후기와 구별하려는 신호가 됐다. 다만 영수증만 보여주고 따로 대가를 받는 경우도 있어, 태그만으로 진정성을 단정할 수는 없다. 2020년대 초 전후 인플루언서 뒷광고 논란과 함께 이 표현이 다시 주목받았다.',
-  origin = '2010년대 중반 이후 리뷰 창작자들 사이에서 퍼진 말로, 이투데이 등 언론은 ‘내 돈 주고 내가 산 제품’을 뜻하는 SNS·유튜브 신조어로 소개한다. SBS 등 보도에 따르면 2020년대 초 유명 인플루언서가 내돈내산을 내세우고도 광고·협찬을 명확히 표시하지 않은 ‘뒷광고’ 논란이 일며 공정위 표시 지침 강화 논의와 맞물렸다. 최초 사용자를 한 사람으로 단정한 기록은 언론에서 교차 확인되지 않는다.',
-  usage_note = '직접 사서 쓴 후기를 올릴 때, 또는 광고와 실제 구매 후기를 구분해 말할 때 쓴다. 대가를 받았다면 이 말을 붙이지 않는 것이 맞다.',
-  caution = '실제로 광고를 받았다면 이 말을 쓰면 안 된다. 광고 표시를 숨기면 법에 걸릴 수 있다.',
-  usage_examples = '[{"situation":"구매 후기를 올릴 때","text":"이 이어폰은 내돈내산이야. 협찬 아니니까 단점도 같이 적을게."},{"situation":"광고처럼 보이는 리뷰를 볼 때","text":"내돈내산 태그만 믿지 말고 광고 표시부터 확인하자."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 'qqzf3wyy'
-  and slug = '내돈내산'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467', '[Pick Q&A] ''내돈내산''에 속았다…이거 ''사기'' 아닌가요?', 'SBS',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'qqzf3wyy' and meme.slug = '내돈내산'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467'
-  );
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://www.bbc.com/korean/features-53720146', '인플루언서 ‘뒷광고'' 처벌받을 수 있나?', 'BBC News 코리아',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'qqzf3wyy' and meme.slug = '내돈내산'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://www.bbc.com/korean/features-53720146'
   );
 
 -- 애교 (ruayk4d9 / 애교)
@@ -412,8 +378,8 @@ where meme.short_id = 'u6mxpr58' and meme.slug = '막내'
 
 -- 멍때리기 (63485cxm / 멍때리기)
 update public.memes set
-  description = '멍때리기는 아무 생각 없이 한곳을 바라보며 넋을 놓는 일을 말한다. 영어의 space out에 가까운 상태다. 2010년대 중반 서울에서 ‘멍때리기 대회’가 열리며 널리 알려졌고, 이후 캠핑장에서 불을 보는 ‘불멍’, 물을 보는 ‘물멍’ 같은 파생어도 퍼졌다. 한때 부정적으로만 보이던 표현이, 잠깐의 휴식으로 다시 읽히기도 한다.',
-  origin = '표준국어대사전에는 아직 올라 있지 않은 신조어로, ‘멍하다’와 ‘때리다’가 결합한 형태로 설명된다. 동아일보에 따르면 2010년대 중반 프로젝트 듀오 전기호가 서울광장에서 멍때리기 대회를 열어 화제가 됐다. 연합뉴스와 매일경제 등은 이후 불멍·물멍처럼 대상 뒤에 ‘멍’을 붙이는 용법이 이어졌다고 적는다. 정확한 첫 사용 연도는 단정하기 어렵고, 대회를 계기로 대중화된 것은 여러 보도가 일치한다.',
+  description = '멍때리기는 아무 생각 없이 한곳을 바라보며 넋을 놓는 일을 말한다. 영어의 space out에 가까운 상태다. 서울에서 ‘멍때리기 대회’가 열리며 널리 알려졌고, 이후 캠핑장에서 불을 보는 ‘불멍’, 물을 보는 ‘물멍’ 같은 파생어도 퍼졌다. 한때 부정적으로만 보이던 표현이, 잠깐의 휴식으로 다시 읽히기도 한다.',
+  origin = '표준국어대사전에는 아직 올라 있지 않은 신조어로, ‘멍하다’와 ‘때리다’가 결합한 형태로 설명된다. 연합뉴스와 매일경제 등은 이후 불멍·물멍처럼 대상 뒤에 ‘멍’을 붙이는 용법이 이어졌다고 적는다. 정확한 첫 사용 연도는 단정하기 어렵고, 대회를 계기로 대중화된 것은 여러 보도가 일치한다.',
   usage_note = '잠깐 쉬고 싶을 때, 또는 캠핑이나 바다에서 편히 쉬는 모습을 말할 때 쓴다. 수업이나 회의 중 집중하지 못한 일을 사과할 때도 쓴다.',
   caution = caution,
   usage_examples = '[{"situation":"캠핑장에서","text":"오늘 밤은 불멍하면서 쉬자."},{"situation":"회의 중에 한눈을 팔았을 때","text":"미안, 잠깐 멍때렸어. 지금 다시 설명해줄래?"}]'::jsonb,
@@ -585,8 +551,8 @@ where meme.short_id = 'gf66ref6' and meme.slug = '스불재'
 
 -- 내 마음속에 저장 (t4n9can6 / 내-마음속에-저장)
 update public.memes set
-  description = '2010년대 말 Mnet 오디션 예능 ‘프로듀스 101 시즌2’에서 박지훈이 카메라를 보며 윙크하고 한 말로 유명해졌다. 이 장면이 크게 화제가 되면서 그는 ‘윙크 남신’이라는 별명을 얻었다. 그 뒤 사람들은 마음에 드는 사진이나 순간을 보고 “내 마음속에 저장”이라고 쓰기 시작했다. 지금은 조금 옛 유행어처럼 들리기도 하지만, 귀엽게 좋아하는 마음을 표현할 때 여전히 쓰인다.',
-  origin = '2010년대 말 방송된 프로듀스 101 시즌2에서 박지훈이 윙크하며 “내 마음속에 저장”이라고 말한 장면이 출발점이다. 해당 방송과 출연진 정보는 한국어 위키백과 항목으로도 확인할 수 있고, 클립은 유튜브 등에서 반복 공유되며 유행어가 됐다. 이후 팬 커뮤니티와 SNS에서 귀여운 이미지나 순간을 저장한다는 뜻의 짧은 말로 자리 잡았다.',
+  description = 'Mnet 오디션 예능 ‘프로듀스 101 시즌2’에서 박지훈이 카메라를 보며 윙크하고 한 말로 유명해졌다. 이 장면이 크게 화제가 되면서 그는 ‘윙크 남신’이라는 별명을 얻었다. 그 뒤 사람들은 마음에 드는 사진이나 순간을 보고 “내 마음속에 저장”이라고 쓰기 시작했다. 지금은 조금 옛 유행어처럼 들리기도 하지만, 귀엽게 좋아하는 마음을 표현할 때 여전히 쓰인다.',
+  origin = '프로듀스 101 시즌2에서 박지훈이 윙크하며 “내 마음속에 저장”이라고 말한 장면이 출발점이다. 해당 방송과 출연진 정보는 한국어 위키백과 항목으로도 확인할 수 있고, 클립은 유튜브 등에서 반복 공유되며 유행어가 됐다. 이후 팬 커뮤니티와 SNS에서 귀여운 이미지나 순간을 저장한다는 뜻의 짧은 말로 자리 잡았다.',
   usage_note = '좋아하는 사진이나 순간을 보고 장난스럽게 쓴다. 윙크 이모티콘과 함께 쓰면 잘 어울린다.',
   caution = caution,
   usage_examples = '[{"situation":"귀여운 강아지 사진을 보고","text":"이건 내 마음속에 저장."},{"situation":"친구가 잘 나온 사진을 보냈을 때","text":"이 사진 내 마음속에 저장했어."}]'::jsonb,
@@ -669,32 +635,6 @@ update public.memes set
   updated_at = now()
 where short_id = '2au7br9f'
   and slug = '도마도마-챌린지'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
--- 국민학교→초등학교 개칭 (7kqc35wv / 국민학교→초등학교-개칭)
-update public.memes set
-  description = '광복 이후에도 쓰이던 ‘국민학교’라는 명칭이 1990년대 중반부터 ‘초등학교’로 바뀌었다. MBC 뉴스는 그날부터 전국 학교의 명칭이 바뀐다고 전했다. 일제 잔재를 정리한 조치로 회고되며, 이 시기 학생이었던 세대는 ‘국딩’이라는 표현으로 스스로를 구분하기도 한다. 학교 이름이 바뀐 기억은 그 세대의 학창 시절을 나누는 표지로 자주 소환된다.',
-  origin = 'MBC 뉴스 기록은 1990년대 중반부터 전국의 국민학교 명칭이 초등학교로 바뀐다고 전한다. 이 조치는 일제 잔재 청산의 맥락에서 자주 설명되고, 이 시기 학교를 다닌 세대는 스스로를 ‘국민학교 마지막 세대’로 부르곤 한다.',
-  usage_note = '일제 잔재 청산이나 세대 구분을 이야기할 때 역사적 사례로 언급한다. 지금 초등학교에 다니는 아이 앞에서 장난처럼 ‘국민학교’라고 부를 필요는 없다.',
-  caution = caution,
-  usage_examples = '[{"situation":"학창 시절을 회상할 때","text":"나는 국민학교 마지막 세대라, 졸업장에 초등학교라고 적혀 있던 기억이 어색했어."},{"situation":"지명이 바뀐 이야기를 할 때","text":"1990년대 중반에 국민학교가 초등학교로 바뀐 것도 일제 잔재를 정리한 일이었지."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = '7kqc35wv'
-  and slug = '국민학교→초등학교-개칭'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
--- 포켓몬빵 띠부씰 (s2v2pzh9 / 포켓몬빵-띠부씰)
-update public.memes set
-  description = '포켓몬빵은 애니메이션 ‘포켓몬스터’ 인기에 힘입어, 봉지 속 ‘띠부띠부씰’ 스티커를 모으는 일이 어린이들 사이에서 큰 유행이 됐다. 이후 다시 나왔을 때마다 수집 열풍이 소환됐다. 스티커를 구하지 못해 애를 태우는 풍경과, 그 수집 문화가 어떻게 시작됐는지가 함께 회고된다. 빵보다 봉지의 부가 상품이 더 중요해진 사례로도 이야기된다.',
-  origin = '일본 애니메이션 ‘포켓몬스터’ 인기에 힘입어 국내에서 포켓몬빵이 나왔고, 봉지 안 캐릭터 스티커 ‘띠부띠부씰’을 모으는 열풍이 일었다. 재출시 보도는 이 수집 문화가 다시 소환된 장면과, 스티커가 빵의 인기를 이끌었던 기억을 전한다.',
-  usage_note = '수집욕을 자극하는 마케팅 사례로도, 어린 시절 추억으로도 언급할 수 있다.',
-  caution = caution,
-  usage_examples = '[{"situation":"편의점에서 품절 안내를 보고","text":"포켓몬빵 띠부씰 때문에 또 줄이 생겼네. 스티커만 찾는 사람이 여전하구나."},{"situation":"어릴 적 추억을 이야기할 때","text":"우리는 띠부씰 모으느라 포켓몬빵을 여러 봉 사던 세대야."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 's2v2pzh9'
-  and slug = '포켓몬빵-띠부씰'
   and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
 
 -- 엽기 신드롬 (xq7ycnys / 엽기-신드롬)
@@ -926,7 +866,7 @@ where meme.short_id = 'ywh3wq2f' and meme.slug = 'TTL-임은경-스무살의-011
 -- Y2K 밀레니엄버그 (mx2p9d97 / Y2K-밀레니엄버그)
 update public.memes set
   description = '1990년대 말에서 2000년대 초로 넘어가는 시점에, 연도를 두 자리로만 처리한 컴퓨터가 날짜를 오인할 수 있다는 우려가 확산됐다. 재난 대비 물품이 팔릴 정도로 사회적 소동이 일었으나, 실제로는 큰 피해 없이 지나갔다. 이후에는 과장된 공포가 찻잔 속 태풍으로 끝났다는 평가와 함께 세기말 풍속도로 자주 회자된다.',
-  origin = 'Y2K(밀레니엄버그)는 컴퓨터가 연도를 마지막 두 자리로만 인식해 2000년대 초을 1900년대 초으로 오인, 전산 대란이 일어날 수 있다는 우려에서 비롯된 문제다. 1990년대 말 경향신문 등 언론이 "금융망 마비, 통신 두절로 사회가 공황 상태에 빠질 수 있다"고 잇달아 보도하면서 한국 사회 전체가 촉각을 곤두세웠고, 정부와 기업은 하반기 내내 전산·네트워크 점검에 매달렸다. 이 시기를 틈타 바이러스와 해킹까지 기승을 부리며 불안을 키웠으나, 정작 새해가 밝은 뒤 별다른 사고는 일어나지 않아 ''찻잔 속 태풍''으로 끝났다는 평가를 받는다.',
+  origin = 'Y2K(밀레니엄버그)는 컴퓨터가 연도를 마지막 두 자리로만 인식해 2000년을 1900년으로 오인할 수 있어, 전산 대란이 일어날 수 있다는 우려에서 비롯된 문제다. 1990년대 말 경향신문 등 언론이 "금융망 마비, 통신 두절로 사회가 공황 상태에 빠질 수 있다"고 잇달아 보도하면서 한국 사회 전체가 촉각을 곤두세웠고, 정부와 기업은 하반기 내내 전산·네트워크 점검에 매달렸다. 이 시기를 틈타 바이러스와 해킹까지 기승을 부리며 불안을 키웠으나, 정작 새해가 밝은 뒤 별다른 사고는 일어나지 않아 ''찻잔 속 태풍''으로 끝났다는 평가를 받는다.',
   usage_note = '과장된 공포가 실제로는 큰 일 없이 지나간 사례로 언급할 수 있다. 당시 전산 점검 자체를 헛수고로만 단정하지는 않는 편이 정확하다.',
   caution = caution,
   usage_examples = '[{"situation":"세기말 이야기를 할 때","text":"Y2K 밀레니엄버그 때는 진짜 컴퓨터가 멈출 줄 알고 긴장했었어."},{"situation":"과장된 예측을 농담할 때","text":"그 소문은 Y2K처럼 지나갈 수도 있어. 일단 확인하고 판단하자."}]'::jsonb,
@@ -985,31 +925,6 @@ where meme.short_id = 'ewwjd6g7' and meme.slug = 'ㅋㅋㅋ-표기'
     where existing.meme_id = meme.id and existing.source_url = 'https://www.hankookilbo.com/news/article/201507211545312014'
   );
 
--- 탑블레이드 팽이 붐 (fzmt7ngh / 탑블레이드-팽이-붐)
-update public.memes set
-  description = '애니메이션 ‘탑블레이드’를 계기로 국내에서 팽이 붐이 일었다. 완구와 함께 퍼진 놀이 문화가 어린이들 사이에서 크게 유행한 한편, 모조 팽이가 범람하는 문제도 함께 회고된다. 이후 시즌이 이어지며 한 세대의 장난감 기억으로 자주 소환되고, 팽이 대전 장면은 그 시절을 이야기할 때 빼놓기 어렵다.',
-  origin = '탑블레이드는 팽이 완구를 소재로 한 애니메이션이다. 완구와 함께 퍼진 놀이 문화가 어린이들 사이에서 크게 유행했고, 모조 팽이 문제와 함께 어린이 놀이 문화의 상징처럼 남았다는 회고가 많다. 팽이를 들고 대전하는 장면은 그 시절을 이야기할 때 자주 등장한다.',
-  usage_note = '어린이 완구 열풍의 대표 사례로 언급할 수 있다. 모조품 문제까지 함께 말하면 당시 분위기를 더 정확히 전할 수 있다.',
-  caution = caution,
-  usage_examples = '[{"situation":"어린 시절 장난감을 회상할 때","text":"우리 때는 탑블레이드 팽이 배틀이 학교 놀이터를 점령했었어."},{"situation":"완구 유행을 비교할 때","text":"요즘 베이블레이드 보면 탑블레이드 붐이 생각나."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 'fzmt7ngh'
-  and slug = '탑블레이드-팽이-붐'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://en.wikipedia.org/wiki/Beyblade', 'Beyblade', 'Wikipedia',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'fzmt7ngh' and meme.slug = '탑블레이드-팽이-붐'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://en.wikipedia.org/wiki/Beyblade'
-  );
-
 -- 바츠 해방전쟁 (jcdupe54 / 바츠-해방전쟁)
 update public.memes set
   description = '온라인 게임 리니지2의 바츠 서버에서, 서버를 장악한 DK 혈맹의 독재에 맞서 일반 유저들이 연합해 싸운 사건이다. 연인원 20만 명이 참여한 것으로 알려져 있고, 게시판에는 전황을 알리는 글이 이어졌다. 이후 게임 판타지와 커뮤니티 서사에 깊은 인상을 남긴 사례로 회자된다.',
@@ -1022,31 +937,6 @@ update public.memes set
 where short_id = 'jcdupe54'
   and slug = '바츠-해방전쟁'
   and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
--- 서태지와 아이들 컴백홈 현상 (rf3dt6mp / 서태지와-아이들-컴백홈-현상)
-update public.memes set
-  description = '1990년대 중반 발표된 서태지와 아이들의 ‘컴백홈’은 갱스터 랩 스타일의 파격으로 주목받았다. 이 노래를 듣고 가출 청소년이 집으로 돌아왔다는 사연이 뉴스에 보도되며 ‘컴백홈 현상’이라는 말이 생겼다. 공익 캠페인과 표절 논란 등 주변 이야기도 함께 남았지만, 대중에게는 귀가 서사로 가장 오래 기억된다.',
-  origin = '서태지와 아이들 4집 타이틀곡으로, 뮤직비디오가 공개된 뒤 큰 화제를 모았다. 발매 후 가출 청소년들이 이 노래를 듣고 집으로 돌아왔다는 사례가 잇따라 보도되며 ‘컴백홈 현상’이라는 말이 생겼다. 가출 청소년 귀가 캠페인과 연결된 공익 활동도 함께 이야기되지만, 대중에게는 귀가 서사로 가장 오래 기억된다.',
-  usage_note = '가출과 귀가처럼 민감한 사연을 이야기할 때 배경지식으로 쓸 수 있다. 실제 가출 청소년에 대한 훈계나 낭만화는 피해야 한다.',
-  caution = caution,
-  usage_examples = '[{"situation":"90년대 노래를 들을 때","text":"컴백홈 들으면 그때 뉴스에서 귀가 사연을 전하던 장면이 겹쳐."},{"situation":"서태지 이야기를 할 때","text":"서태지와 아이들 컴백홈 현상은 노래가 사회 뉴스가 된 드문 경우였어."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 'rf3dt6mp'
-  and slug = '서태지와-아이들-컴백홈-현상'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4', '서태지와 아이들', '한국어 위키백과',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'rf3dt6mp' and meme.slug = '서태지와-아이들-컴백홈-현상'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4'
-  );
 
 -- 대장금 홍시 (m9qmrhxz / 대장금-홍시)
 update public.memes set
@@ -1211,31 +1101,6 @@ where meme.short_id = 'au7za8te' and meme.slug = '임요환-테란의-황제'
     where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/%EC%9E%84%EC%9A%94%ED%99%98'
   );
 
--- 젝스키스 해체(2000) (t6jrbnbd / 젝스키스-해체(2000))
-update public.memes set
-  description = '젝스키스는 데뷔 이후 H.O.T.와 함께 1세대 아이돌 양강으로 불리며 큰 인기를 누리다 해체를 발표했다. 갑작스러운 해체 소식은 팬덤에 큰 충격을 주었고, 당시 청소년 문화의 사건처럼 보도됐다. 이후 재결합과 개별 활동이 이어지면서도, 그 해체는 아이돌사의 분기점으로 자주 언급된다.',
-  origin = '젝스키스는 돌연 기자회견을 열어 해체를 발표했다. 구체적 사유는 명확히 밝히지 않았으나 소속사와의 처우 갈등, 멤버들의 음악적 방향 차이, 인기 절정에서 활동을 마무리하려는 의지 등이 배경으로 꼽힌다. 해체 발표 직후 서울올림픽주경기장에서 열린 드림콘서트가 사실상 고별 무대가 됐고, 많은 팬이 몰려 마지막을 지켰다. 멤버들은 음성사서함 메시지로 팬들과 만나고 싶어 매니저에게 부탁해 드림콘서트 출연 일정이 잡혔다고 설명했다.',
-  usage_note = '1세대 아이돌의 전성기와 공백을 이야기할 때 언급할 수 있다. 해체 이유에 대해 확인되지 않은 소문을 보태지 않는 것이 좋다.',
-  caution = caution,
-  usage_examples = '[{"situation":"1세대 아이돌을 회고할 때","text":"젝스키스 해체 소식 듣고 울었다는 친구 이야기가 우리 학년에도 있었어."},{"situation":"재결합 뉴스를 볼 때","text":"해체 때 그 충격을 알면, 다시 모였을 때 왜 화제가 됐는지 이해가 돼."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 't6jrbnbd'
-  and slug = '젝스키스-해체(2000)'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4', '젝스키스', '한국어 위키백과',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 't6jrbnbd' and meme.slug = '젝스키스-해체(2000)'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4'
-  );
-
 -- TV는 사랑을 싣고 (vtu3rkyg / TV는-사랑을-싣고)
 update public.memes set
   description = 'KBS 프로그램 ‘TV는 사랑을 싣고’는 헤어졌거나 소식이 끊긴 사람을 찾아 주는 휴먼 다큐 형식의 방송으로, 1990년대 큰 시청률과 화제를 모았다. 출연자의 사연과 재회 장면이 많은 가정에서 저녁 이야깃거리가 됐다. 이후 유사 포맷의 재회 프로그램이 이어지며, 그 시대 텔레비전 감성을 대표하는 제목으로 남아 있다.',
@@ -1298,35 +1163,10 @@ where meme.short_id = '8kz4upjt' and meme.slug = '떡밥과-낚시글'
     where existing.meme_id = meme.id and existing.source_url = 'https://www.hani.co.kr/arti/opinion/column/146193.html'
   );
 
--- 찔러맨 (sw48ahk5 / 찔러맨)
-update public.memes set
-  description = '찔러맨은 2000년대 초 엽기하우스 등 플래시 사이트에서 인기를 끈 스틱맨 애니메이션 캐릭터다. 단순한 막대 인간 그림체와 과격하고 우스운 액션이 당시 초고속 인터넷 보급과 맞물려 학생들 사이에서 퍼졌다. 겟타맨·졸라맨과 함께 그 시절 ‘맨’ 캐릭터 유행의 한 축으로 기억된다.',
-  origin = '2000년대 초 플래시 애니메이션 사이트 엽기하우스를 중심으로 북서니 작가의 스틱맨 작품이 연재되며 찔러맨이 알려졌다. 플래시 아카이브에는 2000년대 중반경 찔러맨 뮤직 플래시가 남아 있어, 당시 유통 형태를 확인할 수 있다.',
-  usage_note = '2000년대 초 플래시 애니메이션과 엽기 코드를 회상할 때 언급한다. 과격한 개그 장면이 있으므로 어린이에게 무심코 보여 주지는 않는 편이 좋다.',
-  caution = caution,
-  usage_examples = '[{"situation":"플래시 만화를 회상할 때","text":"그때 학교 컴퓨터실에서 찔러맨 보느라 수업 시작 벨도 놓쳤어."},{"situation":"엽기하우스를 이야기할 때","text":"겟타맨이랑 찔러맨이 그 사이트 대표 스틱맨이었지."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 'sw48ahk5'
-  and slug = '찔러맨'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1', '찔러맨 뮤직플래시 아카이브', 'Flasharch',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'sw48ahk5' and meme.slug = '찔러맨'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1'
-  );
-
 -- 새삥 챌린지 (지코) (89b37mrx / 새삥 챌린지 (지코))
 update public.memes set
   description = '‘새삥 챌린지’는 Mnet 스트릿 맨 파이터 리더 계급 미션곡 ‘새삥 (Prod. ZICO) (Feat. 호미들)’의 안무를 따라 하는 댄스 챌린지다. The CHOOM 공식 댄스 비디오는 안무가를 위댐보이즈 바타로 표기하며, 바타가 알려주는 공식 안무 튜토리얼도 공개되어 있다. CJ 공식 뉴스룸은 이 곡의 댄스 비디오와 지코 등 아티스트의 챌린지 참여를 소개한다. 곡을 듣고 감상하는 콘텐츠와 안무를 따라 하는 챌린지는 구분해서 설명한다.',
-  origin = '2020년대 초 Mnet 프로그램 스트릿 맨 파이터의 리더 계급 미션곡으로 ‘새삥 (Prod. ZICO) (Feat. 호미들)’이 공개되며 안무 챌린지가 시작됐다. 공식 댄스 비디오는 안무가를 위댐보이즈 바타로 표기하고, 튜토리얼과 아티스트 참여 영상이 이어졌다. CJ 공식 뉴스룸도 댄스 비디오와 챌린지 확산을 소개했다. 이후 숏폼에서 포인트 안무를 따라 하는 대표적인 2020년대 초 댄스 밈이 됐다.',
+  origin = 'Mnet 프로그램 스트릿 맨 파이터의 리더 계급 미션곡으로 ‘새삥 (Prod. ZICO) (Feat. 호미들)’이 공개되며 안무 챌린지가 시작됐다. 공식 댄스 비디오는 안무가를 위댐보이즈 바타로 표기하고, 튜토리얼과 아티스트 참여 영상이 이어졌다. CJ 공식 뉴스룸도 댄스 비디오와 챌린지 확산을 소개했다. 이후 숏폼에서 포인트 안무를 따라 하는 대표적인 댄스 밈이 됐다.',
   usage_note = '공식 안무를 따라 찍은 숏폼이나 챌린지 영상을 소개할 때 쓴다. 동작의 세부 순서는 공식 튜토리얼을 기준으로 확인하고, 추측으로 단계를 단정하지 않는 편이 정확하다.',
   caution = caution,
   usage_examples = '[{"situation":"댄스 챌린지를 제안할 때","text":"이번 주에는 새삥 챌린지 안무 영상 하나 찍어 보자."},{"situation":"포인트 안무를 보고","text":"저 구간만 나와도 새삥인지 바로 알겠어."}]'::jsonb,
@@ -1398,43 +1238,6 @@ update public.memes set
 where short_id = 'amhqsvt2'
   and slug = '박카스-그날의-피로는-그날에'
   and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
--- 시티폰 (pnphbt7f / 시티폰)
-update public.memes set
-  description = '시티폰은 1990년대 후반 한국에서 쓰인 저렴한 도심형 이동전화 서비스로, 일반 휴대폰보다 제한된 방식이었지만 학생과 서민층 사이에 널리 보급됐다. 디지털데일리 등 회고 기사는 드라마 속 소품으로도 자주 등장한 이 기기가, 휴대폰 요금이 비싸던 시대의 대안이었다고 설명한다. 2000년대 초 전후 서비스가 정리되며 일상에서 사라졌고, 지금은 그 시절을 상징하는 통신 기기로 회자된다.',
-  origin = '시티폰은 한국통신(현 KT)이 제공한 도심형 이동전화로, 일반 PCS·휴대폰과 다른 제한적 통화 방식이었다. 디지털데일리와 서울경제 보도에 따르면 이용자가 휴대폰으로 옮겨 가며 2000년대 초 서비스가 중단됐다. 비싼 휴대폰을 쓰기 어렵던 학생층에게는 한때 유용한 대안이었고, 이후 복고 드라마의 소품으로도 자주 등장했다.',
-  usage_note = '1990년대 통신 문화나 복고 드라마 소품을 이야기할 때 언급할 수 있다. 이동통신 회사와 서비스 주체를 혼동하지 않도록, ‘한국통신의 시티폰’처럼 구체적으로 말하는 편이 정확하다.',
-  caution = caution,
-  usage_examples = '[{"situation":"90년대를 회상할 때","text":"첫 휴대 기기가 시티폰이었어. 집 밖으로만 나가도 연락이 되니까 신기했지."},{"situation":"복고 드라마를 보다가","text":"저 단말기, 시티폰 맞지? 그때 학생들이 많이 썼잖아."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 'pnphbt7f'
-  and slug = '시티폰'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://www.ddaily.co.kr/page/view/2022012109032973484', '[IT발자국] ‘응답하라’ 드라마 속 시티폰, 왜 사라졌을까?', '디지털데일리',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'pnphbt7f' and meme.slug = '시티폰'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://www.ddaily.co.kr/page/view/2022012109032973484'
-  );
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://www.sedaily.com/article/10122712', '시티폰 26일부터 서비스 중단', '서울경제',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'pnphbt7f' and meme.slug = '시티폰'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://www.sedaily.com/article/10122712'
-  );
 
 -- 유희왕 카드게임 유행 (hmhac9nw / 유희왕-카드게임-유행)
 update public.memes set
@@ -1509,31 +1312,6 @@ where meme.short_id = 'mzgvq8xt' and meme.slug = 'H.O.T.-캔디'
   and not exists (
     select 1 from public.meme_sources as existing
     where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/H.O.T.'
-  );
-
--- 겟타맨 (8e9dyfqp / 겟타맨)
-update public.memes set
-  description = '겟타맨은 엽기하우스 등에서 유행한 스틱맨 플래시 애니메이션으로, 막대 인간 히어로가 과격하고 우스운 액션을 펼치는 구성이 특징이다. 찔러맨·졸라맨과 함께 그 시절 인터넷 동영상 문화를 상징하는 ‘맨’ 캐릭터로 기억된다. 회고 기사는 한 시대를 풍미했던 각종 ‘맨’ 콘텐츠의 흐름 속에서 이 계열 작품을 언급한다.',
-  origin = '초고속 인터넷과 플래시 애니메이션이 겹치며 엽기하우스를 중심으로 스틱맨 작품이 크게 퍼졌다. 겟타맨은 그 흐름 속에서 히어로물을 패러디한 막대 인간 애니메이션으로 학생층에게 인기를 끌었다.',
-  usage_note = '플래시 애니메이션과 엽기 코드를 회상할 때 언급한다. 과격한 개그가 섞여 있으므로 어린 시청자에게 무심코 재생하지 않는 편이 좋다.',
-  caution = caution,
-  usage_examples = '[{"situation":"플래시 만화를 회상할 때","text":"컴퓨터 시간마다 겟타맨 돌리던 친구들이 꼭 있었어."},{"situation":"엽기 콘텐츠를 설명할 때","text":"그 시절 스틱맨 히어로라면 겟타맨이 바로 떠올라."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = '8e9dyfqp'
-  and slug = '겟타맨'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://www.sisunnews.co.kr/news/articleView.html?idxno=31370', '기억 속 저편, 한 시대를 풍미했던 각종 ‘맨’들', '시선뉴스',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = '8e9dyfqp' and meme.slug = '겟타맨'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://www.sisunnews.co.kr/news/articleView.html?idxno=31370'
   );
 
 -- 스티커사진 (n5s5eq5p / 스티커사진)
@@ -2070,47 +1848,10 @@ where meme.short_id = 'jkd7vu6x' and meme.slug = '페페 더 프로그(슬픈 �
     where existing.meme_id = meme.id and existing.source_url = 'https://en.wikipedia.org/wiki/Pepe_the_Frog'
   );
 
--- SNL 코리아 무신사 냄새 (nrjutpq7 / SNL-코리아-무신사-냄새)
-update public.memes set
-  description = 'SNL 코리아 ‘MZ오피스’에서 신입사원 역을 맡은 지코의 옷차림을 두고 ‘무신사 냄새’라는 대사가 나오며 화제와 논란이 동시에 일었다. 이 표현이 무채색 기본 아이템 위주의 획일적 패션을 비꼬는 말로 퍼졌고, 남성을 겨냥한 비하라는 반발도 있었다. 유행어가 된 뒤에도 패션을 깎아내리는 말로 쓰이면 기분이 상할 수 있다.',
-  origin = 'SNL 코리아 ‘MZ오피스’에서 지코가 신입사원으로 출연했고, 옷차림을 본 주현영의 대사로 ‘무신사 냄새’가 화제가 됐다. 같은 장면을 계기로 논란이 일었고, 프로그램과 대사의 존재는 여러 보도를 통해 확인된다.',
-  usage_note = '무난하고 획일적인 패션 스타일을 가리킬 때 쓰이나 성별 논쟁의 소지가 있음',
-  caution = '특정 성별을 겨냥한 비하로 받아들여져 젠더 갈등 논란을 일으킨 표현임',
-  usage_examples = '[{"situation":"패션 유행을 이야기할 때","text":"무신사 냄새라는 말은 기본티에 조거팬츠 조합을 놀릴 때 쓰이기 시작했어."},{"situation":"예능 논란을 설명할 때","text":"웃긴 대사였지만, 성별을 겨냥한 표현으로 받아들여져 논란이 됐지."}]'::jsonb,
-  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
-  updated_at = now()
-where short_id = 'nrjutpq7'
-  and slug = 'SNL-코리아-무신사-냄새'
-  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://economist.co.kr/article/view/ecn202302010077', '무신사 냄새 나는 데일리룩…2조 패션공룡 ‘무신사 냄새’ 뭐길래', '이코노미스트',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'nrjutpq7' and meme.slug = 'SNL-코리아-무신사-냄새'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://economist.co.kr/article/view/ecn202302010077'
-  );
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
-select meme.id, 'Web', 'https://www.mk.co.kr/news/business/10630614', '인기의 역설…냄새 밈으로 확인한 무신사 영향력', '매일경제',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.short_id = 'nrjutpq7' and meme.slug = 'SNL-코리아-무신사-냄새'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://www.mk.co.kr/news/business/10630614'
-  );
-
 -- MSG 워너비 (4ae4pkpa / MSG-워너비)
 update public.memes set
-  description = '2020년대 초 MBC 놀면 뭐하니에서 기획한 세 번째 프로젝트 그룹으로, SG워너비의 향수를 노리고 만들어졌다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 ''유야호''가 제작진으로 설정됐으며, 이름은 ''MSG를 친 듯 노래를 맛깔나게 부르는 그룹'' 또는 ''MBC+SG워너비''라는 중의적 의미를 담았다.',
-  origin = '2020년대 초 MBC 예능 ‘놀면 뭐하니’에서 기획한 세 번째 프로젝트 그룹이다. SG워너비의 향수를 겨냥해 만들어졌고, ‘MSG를 친 듯 맛깔나게 부르는 그룹’ 또는 ‘MBC+SG워너비’라는 중의적 이름이 붙었다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 ‘유야호’가 제작진으로 설정됐다. 데뷔 무대와 그룹 정보는 공식 영상과 한국어 위키백과 항목으로 확인된다.',
+  description = 'MBC 놀면 뭐하니에서 기획한 세 번째 프로젝트 그룹으로, SG워너비의 향수를 노리고 만들어졌다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 ''유야호''가 제작진으로 설정됐으며, 이름은 ''MSG를 친 듯 노래를 맛깔나게 부르는 그룹'' 또는 ''MBC+SG워너비''라는 중의적 의미를 담았다.',
+  origin = 'MBC 예능 ‘놀면 뭐하니’에서 기획한 세 번째 프로젝트 그룹이다. SG워너비의 향수를 겨냥해 만들어졌고, ‘MSG를 친 듯 맛깔나게 부르는 그룹’ 또는 ‘MBC+SG워너비’라는 중의적 이름이 붙었다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 ‘유야호’가 제작진으로 설정됐다. 데뷔 무대와 그룹 정보는 공식 영상과 한국어 위키백과 항목으로 확인된다.',
   usage_note = '놀면 뭐하니 프로젝트 그룹 계보(싹쓰리·환불원정대·유산슬)의 연장선으로 언급됨',
   caution = caution,
   usage_examples = '[{"situation":"예능 프로젝트 그룹을 이야기할 때","text":"싹쓰리 다음에 환불원정대, 그다음이 MSG 워너비 순서야."},{"situation":"데뷔 무대를 회상할 때","text":"바라만 본다 나왔을 때 MSG 워너비가 예능을 넘어 음원 차트까지 갔지."}]'::jsonb,
@@ -2172,20 +1913,6 @@ from public.memes as meme
 where ms.meme_id = meme.id
   and meme.short_id = '5pzu8tzp'
   and ms.source_url = 'https://cine21.com/news/view/?mag_id=96550';
-update public.meme_sources as ms
-set title = '3월 1일부터 전국의 국민학교 명칭 초등학교로 바뀐다[송요훈]',
-    creator_name = coalesce(ms.creator_name, 'MBC 뉴스')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = '7kqc35wv'
-  and ms.source_url = 'https://imnews.imbc.com/replay/1996/nwdesk/article/1968630_30711.html';
-update public.meme_sources as ms
-set title = '[스틱] 신세기겟타맨 1화',
-    creator_name = coalesce(ms.creator_name, 'YouTube')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = '8e9dyfqp'
-  and ms.source_url = 'https://www.youtube.com/watch?v=u4SrYHBHsPc';
 update public.meme_sources as ms
 set title = '기억의 습작 - 전람회 (1994, 가사포함)',
     creator_name = coalesce(ms.creator_name, 'YouTube')
@@ -2257,13 +1984,6 @@ where ms.meme_id = meme.id
   and meme.short_id = 'fxp7dc8y'
   and ms.source_url = 'https://www.youtube.com/watch?v=yreTzhZ2P5M';
 update public.meme_sources as ms
-set title = '[애니OST] 탑블레이드 V 오프닝 - 투 더 탑 | Topblade V Opening - To the Top',
-    creator_name = coalesce(ms.creator_name, 'YouTube')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = 'fzmt7ngh'
-  and ms.source_url = 'https://www.youtube.com/watch?v=0wnbcAwUnvg';
-update public.meme_sources as ms
 set title = '한화이글스 행복송 나는 행복 합니다~~~~',
     creator_name = coalesce(ms.creator_name, 'YouTube')
 from public.memes as meme
@@ -2313,26 +2033,12 @@ where ms.meme_id = meme.id
   and meme.short_id = 'n5s5eq5p'
   and ms.source_url = 'https://news.sbs.co.kr/news/endPage.do?news_id=N1004468097';
 update public.meme_sources as ms
-set title = '''무신사 냄새'' 논란이 2030에게 미친 영향! (feat. SNL)',
-    creator_name = coalesce(ms.creator_name, 'YouTube')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = 'nrjutpq7'
-  and ms.source_url = 'https://www.youtube.com/watch?v=Qg5ePCV6mqs';
-update public.meme_sources as ms
 set title = '''업계1위 프리챌'' 단숨에 무너뜨렸던 싸이월드, ''그때의 교훈'' - 머니투데이',
     creator_name = coalesce(ms.creator_name, '머니투데이')
 from public.memes as meme
 where ms.meme_id = meme.id
   and meme.short_id = 'nvmtccc6'
   and ms.source_url = 'https://www.mt.co.kr/opinion/2020/06/26/2020062520044444620';
-update public.meme_sources as ms
-set title = '[N년전뉴스] 아이폰만큼 대세였던 그 시절 시티폰',
-    creator_name = coalesce(ms.creator_name, 'YTN')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = 'pnphbt7f'
-  and ms.source_url = 'https://www.ytn.co.kr/_ln/0134_201910291430064648';
 update public.meme_sources as ms
 set title = '‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”',
     creator_name = coalesce(ms.creator_name, '농민신문')
@@ -2369,13 +2075,6 @@ where ms.meme_id = meme.id
   and meme.short_id = 'rc2d9rq9'
   and ms.source_url = 'https://www.sportsseoul.com/news/read/576627';
 update public.meme_sources as ms
-set title = '서태지와 아이들(Seotaiji and Boys) - 컴백홈(COME BACK HOME) M/V',
-    creator_name = coalesce(ms.creator_name, 'YouTube')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = 'rf3dt6mp'
-  and ms.source_url = 'https://www.youtube.com/watch?v=q3xy4p2JTfU';
-update public.meme_sources as ms
 set title = '학원별곡',
     creator_name = coalesce(ms.creator_name, '한국어 위키백과')
 from public.memes as meme
@@ -2390,26 +2089,12 @@ where ms.meme_id = meme.id
   and meme.short_id = 'rmpwzmy7'
   and ms.source_url = 'https://www.youtube.com/watch?v=BSLgJxFc4UA';
 update public.meme_sources as ms
-set title = '"없어서 못 판다" 난리 난 포켓몬빵 ''띠부띠부씰''... 이렇게 탄생됐다-지역ㅣ한국일보',
-    creator_name = coalesce(ms.creator_name, '한국일보')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = 's2v2pzh9'
-  and ms.source_url = 'https://m.hankookilbo.com/News/Read/A2022031817270004541';
-update public.meme_sources as ms
 set title = '[스브스타] ''종이접기 아저씨'' 김영만 근황 공개…청년들 울컥한 이유는',
     creator_name = coalesce(ms.creator_name, 'SBS 뉴스')
 from public.memes as meme
 where ms.meme_id = meme.id
   and meme.short_id = 's5tx6yzk'
   and ms.source_url = 'https://news.sbs.co.kr/news/endPage.do?news_id=N1005267860';
-update public.meme_sources as ms
-set title = '찔러맨 리부트 1화 - 루시퍼의 타락',
-    creator_name = coalesce(ms.creator_name, 'YouTube')
-from public.memes as meme
-where ms.meme_id = meme.id
-  and meme.short_id = 'sw48ahk5'
-  and ms.source_url = 'https://www.youtube.com/watch?v=lVreX4udyUY';
 update public.meme_sources as ms
 set title = '나훈아 2020 대한민국 어게인 ‘테스형!’',
     creator_name = coalesce(ms.creator_name, 'YouTube')
@@ -2493,8 +2178,8 @@ update public.meme_sources as ms
    set hidden_from_public = true
   from public.memes as meme
  where ms.meme_id = meme.id
-   and meme.short_id in ('b9gzeysg', 'xazbup6j', 'k32wguve', 'qqzf3wyy', 'ruayk4d9', 'stm8qern', 'x85wgk74', '87pakbhn', '42d6qeqm', '4f25qzwc', 'u6mxpr58', '63485cxm', '9r3fjkwr', '5jysgx3d', 'cdkdz2tv', 'gf66ref6', 't4n9can6', '9uyxmw4g', 'kh75j5f8', '2au7br9f', '7kqc35wv', 's2v2pzh9', 'xq7ycnys', 'j5sbgbev', 'nvmtccc6', 'n4srdru6', 'wsjz865n', 'yeyam8cm', '5pzu8tzp', 'q7cjtg8h', 'rc2d9rq9', 'ywh3wq2f', 'mx2p9d97', 'ewwjd6g7', 'fzmt7ngh', 'jcdupe54', 'rf3dt6mp', 'm9qmrhxz', 's5tx6yzk', 'f2jjy62y', 'wyu84dvf', 'rmpwzmy7', 'by5gkxee', 'au7za8te', 't6jrbnbd', 'vtu3rkyg', '8kz4upjt', 'sw48ahk5', '89b37mrx', '3rqfnny8', 'pg778k4u', 'amhqsvt2', 'pnphbt7f', 'hmhac9nw', '8eacrtkx', 'mzgvq8xt', '8e9dyfqp', 'n5s5eq5p', '9gzfuejc', 'qqu8andb', 'ajvzf7pk', 'db3bd33n', '56hnkxyk', 'utxgy8un', 'ah2zk3m5', 'xyfnse8f', 'cg9uvyv5', 'f6dvsvvv', 't2fpqhcs', 'bucts34h', 'q246gvj2', '93grdumg', 'gqdszbfz', 'fxp7dc8y', 'jkd7vu6x', 'nrjutpq7', '4ae4pkpa', 'kkk7mx6b')
-   and (ms.source_url ilike '%namu.wiki%' or ms.source_url ilike '%merriam-webster.com%' or ms.source_url ilike '%etnews.com%' or ms.source_url ilike '%vop.co.kr%' or ms.source_url ilike '%gamemeca.com%' or ms.source_url ilike '%VbmYQF32SNg%' or ms.source_url ilike '%mvqYV2zvksU%' or ms.source_url ilike '%uzAdeV9Yz5U%' or ms.source_url ilike '%WwYmJzjU10w%' or ms.source_url ilike '%qK7YQ6pvLp8%' or ms.source_url ilike '%XTuKk2HZCBM%' or ms.source_url ilike '%h4mfwvB7C7Q%' or ms.source_url ilike '%skrG0f0ihvM%' or ms.source_url ilike '%CmsLb87hOqQ%' or ms.source_url ilike '%ZCKxJx7tBi4%' or ms.source_url ilike '%CAxYaPGMICA%' or ms.source_url ilike '%NLAdKX2r1jI%' or ms.source_url ilike '%sxVZlnSHqy0%' or ms.source_url ilike '%B_Kt0uDmTFA%' or ms.source_url ilike '%vk9_bKXhI_c%' or ms.source_url ilike '%JfsNf8j4BUY%' or ms.source_url ilike '%BKo1bznv-RY%' or ms.source_url ilike '%MKeOC3BMG0c%' or ms.source_url ilike '%_WWM0QilnS0%' or ms.source_url ilike '%wbrFi8n7-sw%' or ms.source_url ilike '%aRv2-fGOteg%' or ms.source_url ilike '%71XbAI7SMEU%' or ms.source_url ilike '%fAqPgEW_46U%' or ms.source_url ilike '%fVX6ptcsHHY%' or ms.source_url ilike '%Trq8SGvkQTI%' or ms.source_url ilike '%hvM_JGYgfJ0%' or ms.source_url ilike '%VSHq5oxg2Sk%' or ms.source_url ilike '%n5zRdGm2vgg%' or ms.source_url ilike '%6arSLs0y-Q8%' or ms.source_url ilike '%V_yj-ChWSYs%' or ms.source_url ilike '%AhE7PT7fr60%' or ms.source_url ilike '%_BuM_uCk4JI%' or ms.source_url ilike '%KARSCdB946A%' or ms.source_url ilike '%fz_LRL8NyoI%');
+   and meme.short_id in ('b9gzeysg', 'xazbup6j', 'k32wguve', 'ruayk4d9', 'stm8qern', 'x85wgk74', '87pakbhn', '42d6qeqm', '4f25qzwc', 'u6mxpr58', '63485cxm', '9r3fjkwr', '5jysgx3d', 'cdkdz2tv', 'gf66ref6', 't4n9can6', '9uyxmw4g', 'kh75j5f8', '2au7br9f', 'xq7ycnys', 'j5sbgbev', 'nvmtccc6', 'n4srdru6', 'wsjz865n', 'yeyam8cm', '5pzu8tzp', 'q7cjtg8h', 'rc2d9rq9', 'ywh3wq2f', 'mx2p9d97', 'ewwjd6g7', 'jcdupe54', 'm9qmrhxz', 's5tx6yzk', 'f2jjy62y', 'wyu84dvf', 'rmpwzmy7', 'by5gkxee', 'au7za8te', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '3rqfnny8', 'pg778k4u', 'amhqsvt2', 'hmhac9nw', '8eacrtkx', 'mzgvq8xt', 'n5s5eq5p', '9gzfuejc', 'qqu8andb', 'ajvzf7pk', 'db3bd33n', '56hnkxyk', 'utxgy8un', 'ah2zk3m5', 'xyfnse8f', 'cg9uvyv5', 'f6dvsvvv', 't2fpqhcs', 'bucts34h', 'q246gvj2', '93grdumg', 'gqdszbfz', 'fxp7dc8y', 'jkd7vu6x', '4ae4pkpa', 'kkk7mx6b')
+   and (ms.source_url ilike '%namu.wiki%' or ms.source_url ilike '%merriam-webster.com%' or ms.source_url ilike '%etnews.com%' or ms.source_url ilike '%vop.co.kr%' or ms.source_url ilike '%gamemeca.com%' or ms.source_url ilike '%VbmYQF32SNg%' or ms.source_url ilike '%mvqYV2zvksU%' or ms.source_url ilike '%uzAdeV9Yz5U%' or ms.source_url ilike '%WwYmJzjU10w%' or ms.source_url ilike '%qK7YQ6pvLp8%' or ms.source_url ilike '%XTuKk2HZCBM%' or ms.source_url ilike '%h4mfwvB7C7Q%' or ms.source_url ilike '%skrG0f0ihvM%' or ms.source_url ilike '%CmsLb87hOqQ%' or ms.source_url ilike '%ZCKxJx7tBi4%' or ms.source_url ilike '%CAxYaPGMICA%' or ms.source_url ilike '%NLAdKX2r1jI%' or ms.source_url ilike '%sxVZlnSHqy0%' or ms.source_url ilike '%B_Kt0uDmTFA%' or ms.source_url ilike '%vk9_bKXhI_c%' or ms.source_url ilike '%JfsNf8j4BUY%' or ms.source_url ilike '%BKo1bznv-RY%' or ms.source_url ilike '%MKeOC3BMG0c%' or ms.source_url ilike '%_WWM0QilnS0%' or ms.source_url ilike '%wbrFi8n7-sw%' or ms.source_url ilike '%aRv2-fGOteg%' or ms.source_url ilike '%71XbAI7SMEU%' or ms.source_url ilike '%fAqPgEW_46U%' or ms.source_url ilike '%fVX6ptcsHHY%' or ms.source_url ilike '%Trq8SGvkQTI%' or ms.source_url ilike '%hvM_JGYgfJ0%' or ms.source_url ilike '%VSHq5oxg2Sk%' or ms.source_url ilike '%n5zRdGm2vgg%' or ms.source_url ilike '%6arSLs0y-Q8%' or ms.source_url ilike '%V_yj-ChWSYs%' or ms.source_url ilike '%AhE7PT7fr60%' or ms.source_url ilike '%_BuM_uCk4JI%' or ms.source_url ilike '%KARSCdB946A%' or ms.source_url ilike '%fz_LRL8NyoI%' or ms.source_url ilike '%about.ncsoft.com%');
 
 -- Restore safety_reviewed_at after the usage_note/caution trigger has fired.
 update public.memes as meme

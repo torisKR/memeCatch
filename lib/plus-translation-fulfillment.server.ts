@@ -56,7 +56,7 @@ export async function loadPlusTranslationFulfillment({
     const { data: requestRows, error: requestError } = await supabase
       .from("plus_translation_requests")
       .select(
-        "id, meme_id, locale, status, created_at, updated_at, completed_at, meme:memes!inner(id, short_id, slug, title, summary, description, origin, usage_note, caution, usage_examples, safety_level, lifecycle_status, trend_score, moderation_status, updated_at, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id))",
+        "id, meme_id, locale, status, created_at, updated_at, completed_at, meme:memes!inner(id, short_id, slug, title, summary, description, origin, usage_note, caution, usage_examples, safety_level, lifecycle_status, trend_score, moderation_status, updated_at, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id))",
       )
       .eq("user_id", ownerId)
       .in("memes.moderation_status", ["approved", "limited"])

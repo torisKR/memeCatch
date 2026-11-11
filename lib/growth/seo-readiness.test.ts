@@ -129,4 +129,21 @@ describe("auditTopSeoMemes", () => {
 
     expect(rows.every((row) => !row.checks.title && !row.checks.openGraph)).toBe(true);
   });
+
+  it("does not count hidden_from_public rows toward completeness", () => {
+    const visible = auditTopSeoMemes([
+      meme({ meme_sources: [{ source_url: "https://example.com/one" }, { source_url: "https://example.com/two" }] }),
+    ]);
+    const hidden = auditTopSeoMemes([
+      meme({
+        meme_sources: [
+          { source_url: "https://example.com/one", hidden_from_public: true },
+          { source_url: "https://example.com/two", hidden_from_public: true },
+        ],
+      }),
+    ]);
+
+    expect(hidden[0].completenessScore).toBeLessThan(visible[0].completenessScore);
+  });
+
 });

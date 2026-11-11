@@ -138,7 +138,7 @@ describe("loadPlusTranslationFulfillment", () => {
     expect(supabase.from).toHaveBeenNthCalledWith(1, "plus_translation_requests");
     expect(requests.select).toHaveBeenCalledWith(
       expect.stringContaining(
-        "meme:memes!inner(id, short_id, slug, title, summary, description, origin, usage_note, caution, usage_examples, safety_level, lifecycle_status, trend_score, moderation_status, updated_at, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id))",
+        "meme:memes!inner(id, short_id, slug, title, summary, description, origin, usage_note, caution, usage_examples, safety_level, lifecycle_status, trend_score, moderation_status, updated_at, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id))",
       ),
     );
     expect(requests.eq).toHaveBeenCalledWith("user_id", "owner-1");

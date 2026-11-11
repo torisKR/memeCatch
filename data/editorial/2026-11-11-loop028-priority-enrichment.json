@@ -33,6 +33,66 @@
       "slug": "슬릭백-챌린지",
       "title": "슬릭백 챌린지",
       "reason": "본문에 미성년자 실명(이효철)과 조회수 주장이 있으나, 기존 틱톡·유튜브 출처는 이 환경의 일반 curl로 본문을 확인할 수 없다. 실명을 지운 채 교차 확인 가능한 읽기 쉬운 출처 2건을 확보하지 못해 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "8e9dyfqp",
+      "slug": "겟타맨",
+      "title": "겟타맨",
+      "reason": "출처 언급 문장을 제외하면 본문·뜻·유래가 품질 기준 하한에 미치지 못한다. 억지로 늘리지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "sw48ahk5",
+      "slug": "찔러맨",
+      "title": "찔러맨",
+      "reason": "출처 언급 문장을 제외하면 본문·유래가 하한에 미치지 못하고, ‘2000년대 중반경’ 주장은 출처 1건뿐이다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "nrjutpq7",
+      "slug": "SNL-코리아-무신사-냄새",
+      "title": "SNL 코리아 무신사 냄새",
+      "reason": "출처 언급 문장을 제외하면 본문·유래가 하한에 미치지 못한다. 억지로 늘리지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "s2v2pzh9",
+      "slug": "포켓몬빵-띠부씰",
+      "title": "포켓몬빵 띠부씰",
+      "reason": "출처 언급 문장을 제외하면 유래가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "qqzf3wyy",
+      "slug": "내돈내산",
+      "title": "내돈내산",
+      "reason": "‘2010년대 중반 이후’ 주장을 받쳐 주는 독립 출처가 없고, 날짜를 빼면 유래가 더 짧아진다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "rf3dt6mp",
+      "slug": "서태지와-아이들-컴백홈-현상",
+      "title": "서태지와 아이들 컴백홈 현상",
+      "reason": "보이는 출처가 ‘표절 논란’과 공익 캠페인 주장을 받쳐 주지 않는다. 문장만 고쳐 억지로 남기지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "fzmt7ngh",
+      "slug": "탑블레이드-팽이-붐",
+      "title": "탑블레이드 팽이 붐",
+      "reason": "보이는 출처가 ‘모조 팽이’ 문제를 언급하지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "7kqc35wv",
+      "slug": "국민학교→초등학교-개칭",
+      "title": "국민학교→초등학교 개칭",
+      "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "pnphbt7f",
+      "slug": "시티폰",
+      "title": "시티폰",
+      "reason": "출처 언급 문장을 제외하면 뜻 글자 수가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t6jrbnbd",
+      "slug": "젝스키스-해체(2000)",
+      "title": "젝스키스 해체(2000)",
+      "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
     }
   ],
   "memes": [
@@ -198,67 +258,6 @@
         "meaning": 190,
         "origin": 155,
         "usage": 74,
-        "examples": 2
-      }
-    },
-    {
-      "short_id": "qqzf3wyy",
-      "slug": "내돈내산",
-      "title": "내돈내산",
-      "summary": "'내 돈 주고 내가 산' 물건이라는 뜻, 협찬 아님을 밝히는 말",
-      "description": "내돈내산은 ‘내 돈 주고 내가 산’의 줄임말로, 협찬이나 광고비를 받지 않고 직접 사서 써 본 제품이라는 점을 강조할 때 쓰는 말이다. 유튜브·블로그·숏폼 리뷰에서 해시태그로 자주 붙이며, 광고성 후기와 구별하려는 신호가 됐다. 다만 영수증만 보여주고 따로 대가를 받는 경우도 있어, 태그만으로 진정성을 단정할 수는 없다. 2020년대 초 전후 인플루언서 뒷광고 논란과 함께 이 표현이 다시 주목받았다.",
-      "origin": "2010년대 중반 이후 리뷰 창작자들 사이에서 퍼진 말로, 이투데이 등 언론은 ‘내 돈 주고 내가 산 제품’을 뜻하는 SNS·유튜브 신조어로 소개한다. SBS 등 보도에 따르면 2020년대 초 유명 인플루언서가 내돈내산을 내세우고도 광고·협찬을 명확히 표시하지 않은 ‘뒷광고’ 논란이 일며 공정위 표시 지침 강화 논의와 맞물렸다. 최초 사용자를 한 사람으로 단정한 기록은 언론에서 교차 확인되지 않는다.",
-      "usage_note": "직접 사서 쓴 후기를 올릴 때, 또는 광고와 실제 구매 후기를 구분해 말할 때 쓴다. 대가를 받았다면 이 말을 붙이지 않는 것이 맞다.",
-      "caution": "실제로 광고를 받았다면 이 말을 쓰면 안 된다. 광고 표시를 숨기면 법에 걸릴 수 있다.",
-      "usage_examples": [
-        {
-          "situation": "구매 후기를 올릴 때",
-          "text": "이 이어폰은 내돈내산이야. 협찬 아니니까 단점도 같이 적을게."
-        },
-        {
-          "situation": "광고처럼 보이는 리뷰를 볼 때",
-          "text": "내돈내산 태그만 믿지 말고 광고 표시부터 확인하자."
-        }
-      ],
-      "category": "phrase",
-      "media_type": "text",
-      "origin_year": 2015,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "대박",
-        "파이팅"
-      ],
-      "live_source_urls": [
-        "https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467",
-        "https://www.bbc.com/korean/features-53720146"
-      ],
-      "new_sources": [
-        {
-          "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467",
-          "title": "[Pick Q&A] '내돈내산'에 속았다…이거 '사기' 아닌가요?",
-          "creator_name": "SBS",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        },
-        {
-          "url": "https://www.bbc.com/korean/features-53720146",
-          "title": "인플루언서 ‘뒷광고' 처벌받을 수 있나?",
-          "creator_name": "BBC News 코리아",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 514,
-        "meaning": 225,
-        "origin": 125,
-        "usage": 75,
         "examples": 2
       }
     },
@@ -667,8 +666,8 @@
       "slug": "멍때리기",
       "title": "멍때리기",
       "summary": "아무 생각 없이 멍하니 있는 것",
-      "description": "멍때리기는 아무 생각 없이 한곳을 바라보며 넋을 놓는 일을 말한다. 영어의 space out에 가까운 상태다. 2010년대 중반 서울에서 ‘멍때리기 대회’가 열리며 널리 알려졌고, 이후 캠핑장에서 불을 보는 ‘불멍’, 물을 보는 ‘물멍’ 같은 파생어도 퍼졌다. 한때 부정적으로만 보이던 표현이, 잠깐의 휴식으로 다시 읽히기도 한다.",
-      "origin": "표준국어대사전에는 아직 올라 있지 않은 신조어로, ‘멍하다’와 ‘때리다’가 결합한 형태로 설명된다. 동아일보에 따르면 2010년대 중반 프로젝트 듀오 전기호가 서울광장에서 멍때리기 대회를 열어 화제가 됐다. 연합뉴스와 매일경제 등은 이후 불멍·물멍처럼 대상 뒤에 ‘멍’을 붙이는 용법이 이어졌다고 적는다. 정확한 첫 사용 연도는 단정하기 어렵고, 대회를 계기로 대중화된 것은 여러 보도가 일치한다.",
+      "description": "멍때리기는 아무 생각 없이 한곳을 바라보며 넋을 놓는 일을 말한다. 영어의 space out에 가까운 상태다. 서울에서 ‘멍때리기 대회’가 열리며 널리 알려졌고, 이후 캠핑장에서 불을 보는 ‘불멍’, 물을 보는 ‘물멍’ 같은 파생어도 퍼졌다. 한때 부정적으로만 보이던 표현이, 잠깐의 휴식으로 다시 읽히기도 한다.",
+      "origin": "표준국어대사전에는 아직 올라 있지 않은 신조어로, ‘멍하다’와 ‘때리다’가 결합한 형태로 설명된다. 연합뉴스와 매일경제 등은 이후 불멍·물멍처럼 대상 뒤에 ‘멍’을 붙이는 용법이 이어졌다고 적는다. 정확한 첫 사용 연도는 단정하기 어렵고, 대회를 계기로 대중화된 것은 여러 보도가 일치한다.",
       "usage_note": "잠깐 쉬고 싶을 때, 또는 캠핑이나 바다에서 편히 쉬는 모습을 말할 때 쓴다. 수업이나 회의 중 집중하지 못한 일을 사과할 때도 쓴다.",
       "caution": null,
       "usage_examples": [
@@ -716,8 +715,8 @@
         }
       ],
       "metrics": {
-        "prose": 482,
-        "meaning": 185,
+        "prose": 472,
+        "meaning": 175,
         "origin": 162,
         "usage": 75,
         "examples": 2
@@ -963,8 +962,8 @@
       "slug": "내-마음속에-저장",
       "title": "내 마음속에 저장",
       "summary": "너무 좋아서 마음에 담아 두겠다는 귀여운 표현",
-      "description": "2010년대 말 Mnet 오디션 예능 ‘프로듀스 101 시즌2’에서 박지훈이 카메라를 보며 윙크하고 한 말로 유명해졌다. 이 장면이 크게 화제가 되면서 그는 ‘윙크 남신’이라는 별명을 얻었다. 그 뒤 사람들은 마음에 드는 사진이나 순간을 보고 “내 마음속에 저장”이라고 쓰기 시작했다. 지금은 조금 옛 유행어처럼 들리기도 하지만, 귀엽게 좋아하는 마음을 표현할 때 여전히 쓰인다.",
-      "origin": "2010년대 말 방송된 프로듀스 101 시즌2에서 박지훈이 윙크하며 “내 마음속에 저장”이라고 말한 장면이 출발점이다. 해당 방송과 출연진 정보는 한국어 위키백과 항목으로도 확인할 수 있고, 클립은 유튜브 등에서 반복 공유되며 유행어가 됐다. 이후 팬 커뮤니티와 SNS에서 귀여운 이미지나 순간을 저장한다는 뜻의 짧은 말로 자리 잡았다.",
+      "description": "Mnet 오디션 예능 ‘프로듀스 101 시즌2’에서 박지훈이 카메라를 보며 윙크하고 한 말로 유명해졌다. 이 장면이 크게 화제가 되면서 그는 ‘윙크 남신’이라는 별명을 얻었다. 그 뒤 사람들은 마음에 드는 사진이나 순간을 보고 “내 마음속에 저장”이라고 쓰기 시작했다. 지금은 조금 옛 유행어처럼 들리기도 하지만, 귀엽게 좋아하는 마음을 표현할 때 여전히 쓰인다.",
+      "origin": "프로듀스 101 시즌2에서 박지훈이 윙크하며 “내 마음속에 저장”이라고 말한 장면이 출발점이다. 해당 방송과 출연진 정보는 한국어 위키백과 항목으로도 확인할 수 있고, 클립은 유튜브 등에서 반복 공유되며 유행어가 됐다. 이후 팬 커뮤니티와 SNS에서 귀여운 이미지나 순간을 저장한다는 뜻의 짧은 말로 자리 잡았다.",
       "usage_note": "좋아하는 사진이나 순간을 보고 장난스럽게 쓴다. 윙크 이모티콘과 함께 쓰면 잘 어울린다.",
       "caution": null,
       "usage_examples": [
@@ -993,9 +992,9 @@
       ],
       "new_sources": [],
       "metrics": {
-        "prose": 442,
-        "meaning": 212,
-        "origin": 119,
+        "prose": 420,
+        "meaning": 203,
+        "origin": 106,
         "usage": 49,
         "examples": 2
       }
@@ -1152,90 +1151,6 @@
         "meaning": 232,
         "origin": 151,
         "usage": 72,
-        "examples": 2
-      }
-    },
-    {
-      "short_id": "7kqc35wv",
-      "slug": "국민학교→초등학교-개칭",
-      "title": "국민학교→초등학교 개칭",
-      "summary": "1996년 3월 일제 잔재 청산을 위해 국민학교를 초등학교로 바꾼 사건",
-      "description": "광복 이후에도 쓰이던 ‘국민학교’라는 명칭이 1990년대 중반부터 ‘초등학교’로 바뀌었다. MBC 뉴스는 그날부터 전국 학교의 명칭이 바뀐다고 전했다. 일제 잔재를 정리한 조치로 회고되며, 이 시기 학생이었던 세대는 ‘국딩’이라는 표현으로 스스로를 구분하기도 한다. 학교 이름이 바뀐 기억은 그 세대의 학창 시절을 나누는 표지로 자주 소환된다.",
-      "origin": "MBC 뉴스 기록은 1990년대 중반부터 전국의 국민학교 명칭이 초등학교로 바뀐다고 전한다. 이 조치는 일제 잔재 청산의 맥락에서 자주 설명되고, 이 시기 학교를 다닌 세대는 스스로를 ‘국민학교 마지막 세대’로 부르곤 한다.",
-      "usage_note": "일제 잔재 청산이나 세대 구분을 이야기할 때 역사적 사례로 언급한다. 지금 초등학교에 다니는 아이 앞에서 장난처럼 ‘국민학교’라고 부를 필요는 없다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "학창 시절을 회상할 때",
-          "text": "나는 국민학교 마지막 세대라, 졸업장에 초등학교라고 적혀 있던 기억이 어색했어."
-        },
-        {
-          "situation": "지명이 바뀐 이야기를 할 때",
-          "text": "1990년대 중반에 국민학교가 초등학교로 바뀐 것도 일제 잔재를 정리한 일이었지."
-        }
-      ],
-      "category": "comment",
-      "media_type": "image",
-      "origin_year": 1996,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "Y2K-밀레니엄버그",
-        "ㅋㅋㅋ-표기"
-      ],
-      "live_source_urls": [
-        "https://imnews.imbc.com/replay/1996/nwdesk/article/1968630_30711.html",
-        "https://www.youtube.com/watch?v=lxd5LCzrvDo"
-      ],
-      "new_sources": [],
-      "metrics": {
-        "prose": 482,
-        "meaning": 158,
-        "origin": 125,
-        "usage": 83,
-        "examples": 2
-      }
-    },
-    {
-      "short_id": "s2v2pzh9",
-      "slug": "포켓몬빵-띠부씰",
-      "title": "포켓몬빵 띠부씰",
-      "summary": "1999년 출시돼 사회현상급 열풍을 일으킨 포켓몬빵 스티커 수집 문화",
-      "description": "포켓몬빵은 애니메이션 ‘포켓몬스터’ 인기에 힘입어, 봉지 속 ‘띠부띠부씰’ 스티커를 모으는 일이 어린이들 사이에서 큰 유행이 됐다. 이후 다시 나왔을 때마다 수집 열풍이 소환됐다. 스티커를 구하지 못해 애를 태우는 풍경과, 그 수집 문화가 어떻게 시작됐는지가 함께 회고된다. 빵보다 봉지의 부가 상품이 더 중요해진 사례로도 이야기된다.",
-      "origin": "일본 애니메이션 ‘포켓몬스터’ 인기에 힘입어 국내에서 포켓몬빵이 나왔고, 봉지 안 캐릭터 스티커 ‘띠부띠부씰’을 모으는 열풍이 일었다. 재출시 보도는 이 수집 문화가 다시 소환된 장면과, 스티커가 빵의 인기를 이끌었던 기억을 전한다.",
-      "usage_note": "수집욕을 자극하는 마케팅 사례로도, 어린 시절 추억으로도 언급할 수 있다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "편의점에서 품절 안내를 보고",
-          "text": "포켓몬빵 띠부씰 때문에 또 줄이 생겼네. 스티커만 찾는 사람이 여전하구나."
-        },
-        {
-          "situation": "어릴 적 추억을 이야기할 때",
-          "text": "우리는 띠부씰 모으느라 포켓몬빵을 여러 봉 사던 세대야."
-        }
-      ],
-      "category": "challenge",
-      "media_type": "image",
-      "origin_year": 1999,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "탑블레이드-팽이-붐",
-        "유희왕-카드게임-유행"
-      ],
-      "live_source_urls": [
-        "https://m.hankookilbo.com/News/Read/A2022031817270004541",
-        "https://www.youtube.com/watch?v=dN6GLMZu9AM"
-      ],
-      "new_sources": [],
-      "metrics": {
-        "prose": 460,
-        "meaning": 187,
-        "origin": 130,
-        "usage": 41,
         "examples": 2
       }
     },
@@ -1745,7 +1660,7 @@
       "title": "Y2K 밀레니엄버그",
       "summary": "1999년 말 새천년 전환기 컴퓨터 오류를 둘러싼 사회적 공포",
       "description": "1990년대 말에서 2000년대 초로 넘어가는 시점에, 연도를 두 자리로만 처리한 컴퓨터가 날짜를 오인할 수 있다는 우려가 확산됐다. 재난 대비 물품이 팔릴 정도로 사회적 소동이 일었으나, 실제로는 큰 피해 없이 지나갔다. 이후에는 과장된 공포가 찻잔 속 태풍으로 끝났다는 평가와 함께 세기말 풍속도로 자주 회자된다.",
-      "origin": "Y2K(밀레니엄버그)는 컴퓨터가 연도를 마지막 두 자리로만 인식해 2000년대 초을 1900년대 초으로 오인, 전산 대란이 일어날 수 있다는 우려에서 비롯된 문제다. 1990년대 말 경향신문 등 언론이 \"금융망 마비, 통신 두절로 사회가 공황 상태에 빠질 수 있다\"고 잇달아 보도하면서 한국 사회 전체가 촉각을 곤두세웠고, 정부와 기업은 하반기 내내 전산·네트워크 점검에 매달렸다. 이 시기를 틈타 바이러스와 해킹까지 기승을 부리며 불안을 키웠으나, 정작 새해가 밝은 뒤 별다른 사고는 일어나지 않아 '찻잔 속 태풍'으로 끝났다는 평가를 받는다.",
+      "origin": "Y2K(밀레니엄버그)는 컴퓨터가 연도를 마지막 두 자리로만 인식해 2000년을 1900년으로 오인할 수 있어, 전산 대란이 일어날 수 있다는 우려에서 비롯된 문제다. 1990년대 말 경향신문 등 언론이 \"금융망 마비, 통신 두절로 사회가 공황 상태에 빠질 수 있다\"고 잇달아 보도하면서 한국 사회 전체가 촉각을 곤두세웠고, 정부와 기업은 하반기 내내 전산·네트워크 점검에 매달렸다. 이 시기를 틈타 바이러스와 해킹까지 기승을 부리며 불안을 키웠으나, 정작 새해가 밝은 뒤 별다른 사고는 일어나지 않아 '찻잔 속 태풍'으로 끝났다는 평가를 받는다.",
       "usage_note": "과장된 공포가 실제로는 큰 일 없이 지나간 사례로 언급할 수 있다. 당시 전산 점검 자체를 헛수고로만 단정하지는 않는 편이 정확하다.",
       "caution": null,
       "usage_examples": [
@@ -1853,58 +1768,6 @@
       }
     },
     {
-      "short_id": "fzmt7ngh",
-      "slug": "탑블레이드-팽이-붐",
-      "title": "탑블레이드 팽이 붐",
-      "summary": "2001~2002년 국내를 휩쓴 팽이 완구 열풍",
-      "description": "애니메이션 ‘탑블레이드’를 계기로 국내에서 팽이 붐이 일었다. 완구와 함께 퍼진 놀이 문화가 어린이들 사이에서 크게 유행한 한편, 모조 팽이가 범람하는 문제도 함께 회고된다. 이후 시즌이 이어지며 한 세대의 장난감 기억으로 자주 소환되고, 팽이 대전 장면은 그 시절을 이야기할 때 빼놓기 어렵다.",
-      "origin": "탑블레이드는 팽이 완구를 소재로 한 애니메이션이다. 완구와 함께 퍼진 놀이 문화가 어린이들 사이에서 크게 유행했고, 모조 팽이 문제와 함께 어린이 놀이 문화의 상징처럼 남았다는 회고가 많다. 팽이를 들고 대전하는 장면은 그 시절을 이야기할 때 자주 등장한다.",
-      "usage_note": "어린이 완구 열풍의 대표 사례로 언급할 수 있다. 모조품 문제까지 함께 말하면 당시 분위기를 더 정확히 전할 수 있다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "어린 시절 장난감을 회상할 때",
-          "text": "우리 때는 탑블레이드 팽이 배틀이 학교 놀이터를 점령했었어."
-        },
-        {
-          "situation": "완구 유행을 비교할 때",
-          "text": "요즘 베이블레이드 보면 탑블레이드 붐이 생각나."
-        }
-      ],
-      "category": "challenge",
-      "media_type": "video",
-      "origin_year": 2001,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "포켓몬빵-띠부씰",
-        "유희왕-카드게임-유행"
-      ],
-      "live_source_urls": [
-        "https://www.youtube.com/watch?v=0wnbcAwUnvg",
-        "https://en.wikipedia.org/wiki/Beyblade"
-      ],
-      "new_sources": [
-        {
-          "url": "https://en.wikipedia.org/wiki/Beyblade",
-          "title": "Beyblade",
-          "creator_name": "Wikipedia",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 462,
-        "meaning": 165,
-        "origin": 144,
-        "usage": 66,
-        "examples": 2
-      }
-    },
-    {
       "short_id": "jcdupe54",
       "slug": "바츠-해방전쟁",
       "title": "바츠 해방전쟁",
@@ -1943,58 +1806,6 @@
         "meaning": 154,
         "origin": 219,
         "usage": 93,
-        "examples": 2
-      }
-    },
-    {
-      "short_id": "rf3dt6mp",
-      "slug": "서태지와-아이들-컴백홈-현상",
-      "title": "서태지와 아이들 컴백홈 현상",
-      "summary": "1995년 서태지와 아이들의 곡을 듣고 가출 청소년이 귀가했다는 사회 현상",
-      "description": "1990년대 중반 발표된 서태지와 아이들의 ‘컴백홈’은 갱스터 랩 스타일의 파격으로 주목받았다. 이 노래를 듣고 가출 청소년이 집으로 돌아왔다는 사연이 뉴스에 보도되며 ‘컴백홈 현상’이라는 말이 생겼다. 공익 캠페인과 표절 논란 등 주변 이야기도 함께 남았지만, 대중에게는 귀가 서사로 가장 오래 기억된다.",
-      "origin": "서태지와 아이들 4집 타이틀곡으로, 뮤직비디오가 공개된 뒤 큰 화제를 모았다. 발매 후 가출 청소년들이 이 노래를 듣고 집으로 돌아왔다는 사례가 잇따라 보도되며 ‘컴백홈 현상’이라는 말이 생겼다. 가출 청소년 귀가 캠페인과 연결된 공익 활동도 함께 이야기되지만, 대중에게는 귀가 서사로 가장 오래 기억된다.",
-      "usage_note": "가출과 귀가처럼 민감한 사연을 이야기할 때 배경지식으로 쓸 수 있다. 실제 가출 청소년에 대한 훈계나 낭만화는 피해야 한다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "90년대 노래를 들을 때",
-          "text": "컴백홈 들으면 그때 뉴스에서 귀가 사연을 전하던 장면이 겹쳐."
-        },
-        {
-          "situation": "서태지 이야기를 할 때",
-          "text": "서태지와 아이들 컴백홈 현상은 노래가 사회 뉴스가 된 드문 경우였어."
-        }
-      ],
-      "category": "song",
-      "media_type": "video",
-      "origin_year": 1995,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "H.O.T.-캔디",
-        "젝스키스-학원별곡"
-      ],
-      "live_source_urls": [
-        "https://www.youtube.com/watch?v=q3xy4p2JTfU",
-        "https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4"
-      ],
-      "new_sources": [
-        {
-          "url": "https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4",
-          "title": "서태지와 아이들",
-          "creator_name": "한국어 위키백과",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 508,
-        "meaning": 171,
-        "origin": 171,
-        "usage": 69,
         "examples": 2
       }
     },
@@ -2352,58 +2163,6 @@
       }
     },
     {
-      "short_id": "t6jrbnbd",
-      "slug": "젝스키스-해체(2000)",
-      "title": "젝스키스 해체(2000)",
-      "summary": "2000년 5월 드림콘서트에서 전격 해체를 선언한 젝스키스",
-      "description": "젝스키스는 데뷔 이후 H.O.T.와 함께 1세대 아이돌 양강으로 불리며 큰 인기를 누리다 해체를 발표했다. 갑작스러운 해체 소식은 팬덤에 큰 충격을 주었고, 당시 청소년 문화의 사건처럼 보도됐다. 이후 재결합과 개별 활동이 이어지면서도, 그 해체는 아이돌사의 분기점으로 자주 언급된다.",
-      "origin": "젝스키스는 돌연 기자회견을 열어 해체를 발표했다. 구체적 사유는 명확히 밝히지 않았으나 소속사와의 처우 갈등, 멤버들의 음악적 방향 차이, 인기 절정에서 활동을 마무리하려는 의지 등이 배경으로 꼽힌다. 해체 발표 직후 서울올림픽주경기장에서 열린 드림콘서트가 사실상 고별 무대가 됐고, 많은 팬이 몰려 마지막을 지켰다. 멤버들은 음성사서함 메시지로 팬들과 만나고 싶어 매니저에게 부탁해 드림콘서트 출연 일정이 잡혔다고 설명했다.",
-      "usage_note": "1세대 아이돌의 전성기와 공백을 이야기할 때 언급할 수 있다. 해체 이유에 대해 확인되지 않은 소문을 보태지 않는 것이 좋다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "1세대 아이돌을 회고할 때",
-          "text": "젝스키스 해체 소식 듣고 울었다는 친구 이야기가 우리 학년에도 있었어."
-        },
-        {
-          "situation": "재결합 뉴스를 볼 때",
-          "text": "해체 때 그 충격을 알면, 다시 모였을 때 왜 화제가 됐는지 이해가 돼."
-        }
-      ],
-      "category": "comment",
-      "media_type": "image",
-      "origin_year": 2000,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "젝스키스-학원별곡",
-        "H.O.T.-캔디"
-      ],
-      "live_source_urls": [
-        "https://www.youtube.com/watch?v=jR4PSaycv4A",
-        "https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4"
-      ],
-      "new_sources": [
-        {
-          "url": "https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4",
-          "title": "젝스키스",
-          "creator_name": "한국어 위키백과",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 571,
-        "meaning": 159,
-        "origin": 238,
-        "usage": 70,
-        "examples": 2
-      }
-    },
-    {
       "short_id": "vtu3rkyg",
       "slug": "TV는-사랑을-싣고",
       "title": "TV는 사랑을 싣고",
@@ -2517,64 +2276,12 @@
       }
     },
     {
-      "short_id": "sw48ahk5",
-      "slug": "찔러맨",
-      "title": "찔러맨",
-      "summary": "스타크래프트 질럿을 모티브로 한 스틱맨 플래시 애니메이션 시리즈",
-      "description": "찔러맨은 2000년대 초 엽기하우스 등 플래시 사이트에서 인기를 끈 스틱맨 애니메이션 캐릭터다. 단순한 막대 인간 그림체와 과격하고 우스운 액션이 당시 초고속 인터넷 보급과 맞물려 학생들 사이에서 퍼졌다. 겟타맨·졸라맨과 함께 그 시절 ‘맨’ 캐릭터 유행의 한 축으로 기억된다.",
-      "origin": "2000년대 초 플래시 애니메이션 사이트 엽기하우스를 중심으로 북서니 작가의 스틱맨 작품이 연재되며 찔러맨이 알려졌다. 플래시 아카이브에는 2000년대 중반경 찔러맨 뮤직 플래시가 남아 있어, 당시 유통 형태를 확인할 수 있다.",
-      "usage_note": "2000년대 초 플래시 애니메이션과 엽기 코드를 회상할 때 언급한다. 과격한 개그 장면이 있으므로 어린이에게 무심코 보여 주지는 않는 편이 좋다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "플래시 만화를 회상할 때",
-          "text": "그때 학교 컴퓨터실에서 찔러맨 보느라 수업 시작 벨도 놓쳤어."
-        },
-        {
-          "situation": "엽기하우스를 이야기할 때",
-          "text": "겟타맨이랑 찔러맨이 그 사이트 대표 스틱맨이었지."
-        }
-      ],
-      "category": "image",
-      "media_type": "video",
-      "origin_year": 2000,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "겟타맨",
-        "엽기-신드롬"
-      ],
-      "live_source_urls": [
-        "https://www.youtube.com/watch?v=lVreX4udyUY",
-        "https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1"
-      ],
-      "new_sources": [
-        {
-          "url": "https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1",
-          "title": "찔러맨 뮤직플래시 아카이브",
-          "creator_name": "Flasharch",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 450,
-        "meaning": 155,
-        "origin": 127,
-        "usage": 81,
-        "examples": 2
-      }
-    },
-    {
       "short_id": "89b37mrx",
       "slug": "새삥 챌린지 (지코)",
       "title": "새삥 챌린지 (지코)",
       "summary": "Mnet 스트릿 맨 파이터 리더 계급 미션곡 ‘새삥’ 안무를 따라 하는 댄스 챌린지",
       "description": "‘새삥 챌린지’는 Mnet 스트릿 맨 파이터 리더 계급 미션곡 ‘새삥 (Prod. ZICO) (Feat. 호미들)’의 안무를 따라 하는 댄스 챌린지다. The CHOOM 공식 댄스 비디오는 안무가를 위댐보이즈 바타로 표기하며, 바타가 알려주는 공식 안무 튜토리얼도 공개되어 있다. CJ 공식 뉴스룸은 이 곡의 댄스 비디오와 지코 등 아티스트의 챌린지 참여를 소개한다. 곡을 듣고 감상하는 콘텐츠와 안무를 따라 하는 챌린지는 구분해서 설명한다.",
-      "origin": "2020년대 초 Mnet 프로그램 스트릿 맨 파이터의 리더 계급 미션곡으로 ‘새삥 (Prod. ZICO) (Feat. 호미들)’이 공개되며 안무 챌린지가 시작됐다. 공식 댄스 비디오는 안무가를 위댐보이즈 바타로 표기하고, 튜토리얼과 아티스트 참여 영상이 이어졌다. CJ 공식 뉴스룸도 댄스 비디오와 챌린지 확산을 소개했다. 이후 숏폼에서 포인트 안무를 따라 하는 대표적인 2020년대 초 댄스 밈이 됐다.",
+      "origin": "Mnet 프로그램 스트릿 맨 파이터의 리더 계급 미션곡으로 ‘새삥 (Prod. ZICO) (Feat. 호미들)’이 공개되며 안무 챌린지가 시작됐다. 공식 댄스 비디오는 안무가를 위댐보이즈 바타로 표기하고, 튜토리얼과 아티스트 참여 영상이 이어졌다. CJ 공식 뉴스룸도 댄스 비디오와 챌린지 확산을 소개했다. 이후 숏폼에서 포인트 안무를 따라 하는 대표적인 댄스 밈이 됐다.",
       "usage_note": "공식 안무를 따라 찍은 숏폼이나 챌린지 영상을 소개할 때 쓴다. 동작의 세부 순서는 공식 튜토리얼을 기준으로 확인하고, 추측으로 단계를 단정하지 않는 편이 정확하다.",
       "caution": null,
       "usage_examples": [
@@ -2603,9 +2310,9 @@
       ],
       "new_sources": [],
       "metrics": {
-        "prose": 639,
+        "prose": 621,
         "meaning": 247,
-        "origin": 226,
+        "origin": 208,
         "usage": 92,
         "examples": 2
       }
@@ -2753,67 +2460,6 @@
         "meaning": 174,
         "origin": 113,
         "usage": 83,
-        "examples": 2
-      }
-    },
-    {
-      "short_id": "pnphbt7f",
-      "slug": "시티폰",
-      "title": "시티폰",
-      "summary": "1997년 잠시 폭발적 인기를 끌었다가 2년 만에 사라진 발신전용 휴대전화",
-      "description": "시티폰은 1990년대 후반 한국에서 쓰인 저렴한 도심형 이동전화 서비스로, 일반 휴대폰보다 제한된 방식이었지만 학생과 서민층 사이에 널리 보급됐다. 디지털데일리 등 회고 기사는 드라마 속 소품으로도 자주 등장한 이 기기가, 휴대폰 요금이 비싸던 시대의 대안이었다고 설명한다. 2000년대 초 전후 서비스가 정리되며 일상에서 사라졌고, 지금은 그 시절을 상징하는 통신 기기로 회자된다.",
-      "origin": "시티폰은 한국통신(현 KT)이 제공한 도심형 이동전화로, 일반 PCS·휴대폰과 다른 제한적 통화 방식이었다. 디지털데일리와 서울경제 보도에 따르면 이용자가 휴대폰으로 옮겨 가며 2000년대 초 서비스가 중단됐다. 비싼 휴대폰을 쓰기 어렵던 학생층에게는 한때 유용한 대안이었고, 이후 복고 드라마의 소품으로도 자주 등장했다.",
-      "usage_note": "1990년대 통신 문화나 복고 드라마 소품을 이야기할 때 언급할 수 있다. 이동통신 회사와 서비스 주체를 혼동하지 않도록, ‘한국통신의 시티폰’처럼 구체적으로 말하는 편이 정확하다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "90년대를 회상할 때",
-          "text": "첫 휴대 기기가 시티폰이었어. 집 밖으로만 나가도 연락이 되니까 신기했지."
-        },
-        {
-          "situation": "복고 드라마를 보다가",
-          "text": "저 단말기, 시티폰 맞지? 그때 학생들이 많이 썼잖아."
-        }
-      ],
-      "category": "image",
-      "media_type": "image",
-      "origin_year": 1997,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "TTL-임은경-스무살의-011",
-        "PC통신-모뎀-접속음"
-      ],
-      "live_source_urls": [
-        "https://www.ddaily.co.kr/page/view/2022012109032973484",
-        "https://www.sedaily.com/article/10122712"
-      ],
-      "new_sources": [
-        {
-          "url": "https://www.ddaily.co.kr/page/view/2022012109032973484",
-          "title": "[IT발자국] ‘응답하라’ 드라마 속 시티폰, 왜 사라졌을까?",
-          "creator_name": "디지털데일리",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        },
-        {
-          "url": "https://www.sedaily.com/article/10122712",
-          "title": "시티폰 26일부터 서비스 중단",
-          "creator_name": "서울경제",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 588,
-        "meaning": 214,
-        "origin": 180,
-        "usage": 101,
         "examples": 2
       }
     },
@@ -2970,58 +2616,6 @@
         "meaning": 161,
         "origin": 269,
         "usage": 82,
-        "examples": 2
-      }
-    },
-    {
-      "short_id": "8e9dyfqp",
-      "slug": "겟타맨",
-      "title": "겟타맨",
-      "summary": "2000년대 초 엽기하우스에 연재된 스틱맨 플래시 애니메이션",
-      "description": "겟타맨은 엽기하우스 등에서 유행한 스틱맨 플래시 애니메이션으로, 막대 인간 히어로가 과격하고 우스운 액션을 펼치는 구성이 특징이다. 찔러맨·졸라맨과 함께 그 시절 인터넷 동영상 문화를 상징하는 ‘맨’ 캐릭터로 기억된다. 회고 기사는 한 시대를 풍미했던 각종 ‘맨’ 콘텐츠의 흐름 속에서 이 계열 작품을 언급한다.",
-      "origin": "초고속 인터넷과 플래시 애니메이션이 겹치며 엽기하우스를 중심으로 스틱맨 작품이 크게 퍼졌다. 겟타맨은 그 흐름 속에서 히어로물을 패러디한 막대 인간 애니메이션으로 학생층에게 인기를 끌었다.",
-      "usage_note": "플래시 애니메이션과 엽기 코드를 회상할 때 언급한다. 과격한 개그가 섞여 있으므로 어린 시청자에게 무심코 재생하지 않는 편이 좋다.",
-      "caution": null,
-      "usage_examples": [
-        {
-          "situation": "플래시 만화를 회상할 때",
-          "text": "컴퓨터 시간마다 겟타맨 돌리던 친구들이 꼭 있었어."
-        },
-        {
-          "situation": "엽기 콘텐츠를 설명할 때",
-          "text": "그 시절 스틱맨 히어로라면 겟타맨이 바로 떠올라."
-        }
-      ],
-      "category": "image",
-      "media_type": "video",
-      "origin_year": 2001,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "찔러맨",
-        "엽기-신드롬"
-      ],
-      "live_source_urls": [
-        "https://www.youtube.com/watch?v=u4SrYHBHsPc",
-        "https://www.sisunnews.co.kr/news/articleView.html?idxno=31370"
-      ],
-      "new_sources": [
-        {
-          "url": "https://www.sisunnews.co.kr/news/articleView.html?idxno=31370",
-          "title": "기억 속 저편, 한 시대를 풍미했던 각종 ‘맨’들",
-          "creator_name": "시선뉴스",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 433,
-        "meaning": 174,
-        "origin": 105,
-        "usage": 73,
         "examples": 2
       }
     },
@@ -4026,73 +3620,12 @@
       }
     },
     {
-      "short_id": "nrjutpq7",
-      "slug": "SNL-코리아-무신사-냄새",
-      "title": "SNL 코리아 무신사 냄새",
-      "summary": "SNL 코리아 MZ오피스에서 나온 패션 취향 조롱 표현이 촉발한 젠더 논란",
-      "description": "SNL 코리아 ‘MZ오피스’에서 신입사원 역을 맡은 지코의 옷차림을 두고 ‘무신사 냄새’라는 대사가 나오며 화제와 논란이 동시에 일었다. 이 표현이 무채색 기본 아이템 위주의 획일적 패션을 비꼬는 말로 퍼졌고, 남성을 겨냥한 비하라는 반발도 있었다. 유행어가 된 뒤에도 패션을 깎아내리는 말로 쓰이면 기분이 상할 수 있다.",
-      "origin": "SNL 코리아 ‘MZ오피스’에서 지코가 신입사원으로 출연했고, 옷차림을 본 주현영의 대사로 ‘무신사 냄새’가 화제가 됐다. 같은 장면을 계기로 논란이 일었고, 프로그램과 대사의 존재는 여러 보도를 통해 확인된다.",
-      "usage_note": "무난하고 획일적인 패션 스타일을 가리킬 때 쓰이나 성별 논쟁의 소지가 있음",
-      "caution": "특정 성별을 겨냥한 비하로 받아들여져 젠더 갈등 논란을 일으킨 표현임",
-      "usage_examples": [
-        {
-          "situation": "패션 유행을 이야기할 때",
-          "text": "무신사 냄새라는 말은 기본티에 조거팬츠 조합을 놀릴 때 쓰이기 시작했어."
-        },
-        {
-          "situation": "예능 논란을 설명할 때",
-          "text": "웃긴 대사였지만, 성별을 겨냥한 표현으로 받아들여져 논란이 됐지."
-        }
-      ],
-      "category": "phrase",
-      "media_type": "video",
-      "origin_year": 2022,
-      "origin_kind": "catalog",
-      "doc_class": "meme",
-      "moderation_status": "approved",
-      "related_slugs": [
-        "내돈내산",
-        "꼰대"
-      ],
-      "live_source_urls": [
-        "https://economist.co.kr/article/view/ecn202302010077",
-        "https://www.mk.co.kr/news/business/10630614"
-      ],
-      "new_sources": [
-        {
-          "url": "https://economist.co.kr/article/view/ecn202302010077",
-          "title": "무신사 냄새 나는 데일리룩…2조 패션공룡 ‘무신사 냄새’ 뭐길래",
-          "creator_name": "이코노미스트",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        },
-        {
-          "url": "https://www.mk.co.kr/news/business/10630614",
-          "title": "인기의 역설…냄새 밈으로 확인한 무신사 영향력",
-          "creator_name": "매일경제",
-          "platform": "Web",
-          "source_role": "secondary_reference",
-          "rights_basis": "link_only",
-          "copyright_status": "unknown"
-        }
-      ],
-      "metrics": {
-        "prose": 440,
-        "meaning": 180,
-        "origin": 118,
-        "usage": 41,
-        "examples": 2
-      }
-    },
-    {
       "short_id": "4ae4pkpa",
       "slug": "MSG-워너비",
       "title": "MSG 워너비",
       "summary": "놀면 뭐하니가 기획한 8인조 남성 보컬 프로젝트 그룹",
-      "description": "2020년대 초 MBC 놀면 뭐하니에서 기획한 세 번째 프로젝트 그룹으로, SG워너비의 향수를 노리고 만들어졌다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 '유야호'가 제작진으로 설정됐으며, 이름은 'MSG를 친 듯 노래를 맛깔나게 부르는 그룹' 또는 'MBC+SG워너비'라는 중의적 의미를 담았다.",
-      "origin": "2020년대 초 MBC 예능 ‘놀면 뭐하니’에서 기획한 세 번째 프로젝트 그룹이다. SG워너비의 향수를 겨냥해 만들어졌고, ‘MSG를 친 듯 맛깔나게 부르는 그룹’ 또는 ‘MBC+SG워너비’라는 중의적 이름이 붙었다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 ‘유야호’가 제작진으로 설정됐다. 데뷔 무대와 그룹 정보는 공식 영상과 한국어 위키백과 항목으로 확인된다.",
+      "description": "MBC 놀면 뭐하니에서 기획한 세 번째 프로젝트 그룹으로, SG워너비의 향수를 노리고 만들어졌다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 '유야호'가 제작진으로 설정됐으며, 이름은 'MSG를 친 듯 노래를 맛깔나게 부르는 그룹' 또는 'MBC+SG워너비'라는 중의적 의미를 담았다.",
+      "origin": "MBC 예능 ‘놀면 뭐하니’에서 기획한 세 번째 프로젝트 그룹이다. SG워너비의 향수를 겨냥해 만들어졌고, ‘MSG를 친 듯 맛깔나게 부르는 그룹’ 또는 ‘MBC+SG워너비’라는 중의적 이름이 붙었다. 환불원정대를 프로듀싱한 지미유의 쌍둥이 동생 ‘유야호’가 제작진으로 설정됐다. 데뷔 무대와 그룹 정보는 공식 영상과 한국어 위키백과 항목으로 확인된다.",
       "usage_note": "놀면 뭐하니 프로젝트 그룹 계보(싹쓰리·환불원정대·유산슬)의 연장선으로 언급됨",
       "caution": null,
       "usage_examples": [
@@ -4131,9 +3664,9 @@
         }
       ],
       "metrics": {
-        "prose": 479,
-        "meaning": 169,
-        "origin": 165,
+        "prose": 461,
+        "meaning": 160,
+        "origin": 156,
         "usage": 43,
         "examples": 2
       }
@@ -4231,28 +3764,6 @@
       "url": "https://www.asiae.co.kr/article/2020040814253172269",
       "title": "[신조어사전] 뇌절 - 집착에 가까운 반복",
       "creator_name": "아시아경제",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "내돈내산",
-      "short_id": "qqzf3wyy",
-      "url": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467",
-      "title": "[Pick Q&A] '내돈내산'에 속았다…이거 '사기' 아닌가요?",
-      "creator_name": "SBS",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "내돈내산",
-      "short_id": "qqzf3wyy",
-      "url": "https://www.bbc.com/korean/features-53720146",
-      "title": "인플루언서 ‘뒷광고' 처벌받을 수 있나?",
-      "creator_name": "BBC News 코리아",
       "platform": "Web",
       "source_role": "secondary_reference",
       "rights_basis": "link_only",
@@ -4633,28 +4144,6 @@
       "copyright_status": "unknown"
     },
     {
-      "meme_slug": "탑블레이드-팽이-붐",
-      "short_id": "fzmt7ngh",
-      "url": "https://en.wikipedia.org/wiki/Beyblade",
-      "title": "Beyblade",
-      "creator_name": "Wikipedia",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "서태지와-아이들-컴백홈-현상",
-      "short_id": "rf3dt6mp",
-      "url": "https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4",
-      "title": "서태지와 아이들",
-      "creator_name": "한국어 위키백과",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
       "meme_slug": "대장금-홍시",
       "short_id": "m9qmrhxz",
       "url": "https://ko.wikipedia.org/wiki/%EB%8C%80%EC%9E%A5%EA%B8%88",
@@ -4721,17 +4210,6 @@
       "copyright_status": "unknown"
     },
     {
-      "meme_slug": "젝스키스-해체(2000)",
-      "short_id": "t6jrbnbd",
-      "url": "https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4",
-      "title": "젝스키스",
-      "creator_name": "한국어 위키백과",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
       "meme_slug": "TV는-사랑을-싣고",
       "short_id": "vtu3rkyg",
       "url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
@@ -4765,17 +4243,6 @@
       "copyright_status": "unknown"
     },
     {
-      "meme_slug": "찔러맨",
-      "short_id": "sw48ahk5",
-      "url": "https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1",
-      "title": "찔러맨 뮤직플래시 아카이브",
-      "creator_name": "Flasharch",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
       "meme_slug": "바람의나라",
       "short_id": "3rqfnny8",
       "url": "https://ko.wikipedia.org/wiki/바람의_나라_(온라인_게임)",
@@ -4792,28 +4259,6 @@
       "url": "https://en.wikipedia.org/wiki/Pucca",
       "title": "Pucca",
       "creator_name": "Wikipedia",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "시티폰",
-      "short_id": "pnphbt7f",
-      "url": "https://www.ddaily.co.kr/page/view/2022012109032973484",
-      "title": "[IT발자국] ‘응답하라’ 드라마 속 시티폰, 왜 사라졌을까?",
-      "creator_name": "디지털데일리",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "시티폰",
-      "short_id": "pnphbt7f",
-      "url": "https://www.sedaily.com/article/10122712",
-      "title": "시티폰 26일부터 서비스 중단",
-      "creator_name": "서울경제",
       "platform": "Web",
       "source_role": "secondary_reference",
       "rights_basis": "link_only",
@@ -4847,17 +4292,6 @@
       "url": "https://ko.wikipedia.org/wiki/H.O.T.",
       "title": "H.O.T.",
       "creator_name": "한국어 위키백과",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "겟타맨",
-      "short_id": "8e9dyfqp",
-      "url": "https://www.sisunnews.co.kr/news/articleView.html?idxno=31370",
-      "title": "기억 속 저편, 한 시대를 풍미했던 각종 ‘맨’들",
-      "creator_name": "시선뉴스",
       "platform": "Web",
       "source_role": "secondary_reference",
       "rights_basis": "link_only",
@@ -5139,28 +4573,6 @@
       "copyright_status": "unknown"
     },
     {
-      "meme_slug": "SNL-코리아-무신사-냄새",
-      "short_id": "nrjutpq7",
-      "url": "https://economist.co.kr/article/view/ecn202302010077",
-      "title": "무신사 냄새 나는 데일리룩…2조 패션공룡 ‘무신사 냄새’ 뭐길래",
-      "creator_name": "이코노미스트",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
-      "meme_slug": "SNL-코리아-무신사-냄새",
-      "short_id": "nrjutpq7",
-      "url": "https://www.mk.co.kr/news/business/10630614",
-      "title": "인기의 역설…냄새 밈으로 확인한 무신사 영향력",
-      "creator_name": "매일경제",
-      "platform": "Web",
-      "source_role": "secondary_reference",
-      "rights_basis": "link_only",
-      "copyright_status": "unknown"
-    },
-    {
       "meme_slug": "MSG-워너비",
       "short_id": "4ae4pkpa",
       "url": "https://ko.wikipedia.org/wiki/MSG_%EC%9B%8C%EB%84%88%EB%B9%84",
@@ -5185,10 +4597,10 @@
   ],
   "catalog": {
     "original_priority": 83,
-    "dropped": 5,
-    "enriched": 78,
-    "new_source_rows": 90,
-    "title_updates": 47,
+    "dropped": 15,
+    "enriched": 68,
+    "new_source_rows": 79,
+    "title_updates": 39,
     "content_reviewed_at": "2026-11-11T15:00:00+09:00",
     "standard_sha256": "f654b0bfdf3fa0a76b61b0a1423362ca59ef1c6c25a36671e58e49bc543b9fd6",
     "standard_approved_by": "pending_user_confirmation"

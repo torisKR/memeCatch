@@ -344,7 +344,7 @@ export const getAvailableTranslationLocales = cache(async function getAvailableT
         supabase
           .from("memes")
           .select(
-            "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url),meme_contents(availability,moderation_status),meme_tags_map(tag_id),meme_market_profiles(market_code, role, review_state)",
+            "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url, hidden_from_public),meme_contents(availability,moderation_status),meme_tags_map(tag_id),meme_market_profiles(market_code, role, review_state)",
           )
           .eq("id", memeId)
           .in("moderation_status", ["approved", "limited"])

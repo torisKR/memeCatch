@@ -34,10 +34,13 @@ function cleanText(value?: string | null): string {
 
 
 /** Editorial flag: keep the row, but do not render it in public citation lists. */
-export function isPublicDisplaySource(source: {
-  hidden_from_public?: boolean | null;
-}): boolean {
-  return source.hidden_from_public !== true;
+export function isPublicDisplaySource(source: object): boolean {
+  return (source as { hidden_from_public?: boolean | null }).hidden_from_public !== true;
+}
+
+/** Public citation and gating counts should ignore hidden rows. */
+export function publicDisplaySources<T extends object>(sources: T[] | null | undefined): T[] {
+  return Array.isArray(sources) ? sources.filter(isPublicDisplaySource) : [];
 }
 
 /** Public citation links only. This validates syntax; it does not fetch or certify a source. */

@@ -13,17 +13,17 @@
   ],
   "summary": {
     "memes": {
-      "update": 78,
-      "drop": 5,
+      "update": 68,
+      "drop": 15,
       "insert": 0,
       "skip_existing": 0,
       "reject": 0
     },
     "meme_sources": {
-      "insert_if_missing": 90,
-      "title_update": 47,
+      "insert_if_missing": 79,
+      "title_update": 39,
       "delete_non200_for_batch": 0,
-      "hide_from_public": "runtime, markers=39",
+      "hide_from_public": "runtime, markers=40",
       "skip_existing": "runtime"
     }
   },
@@ -57,6 +57,66 @@
       "slug": "슬릭백-챌린지",
       "title": "슬릭백 챌린지",
       "reason": "본문에 미성년자 실명(이효철)과 조회수 주장이 있으나, 기존 틱톡·유튜브 출처는 이 환경의 일반 curl로 본문을 확인할 수 없다. 실명을 지운 채 교차 확인 가능한 읽기 쉬운 출처 2건을 확보하지 못해 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "8e9dyfqp",
+      "slug": "겟타맨",
+      "title": "겟타맨",
+      "reason": "출처 언급 문장을 제외하면 본문·뜻·유래가 품질 기준 하한에 미치지 못한다. 억지로 늘리지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "sw48ahk5",
+      "slug": "찔러맨",
+      "title": "찔러맨",
+      "reason": "출처 언급 문장을 제외하면 본문·유래가 하한에 미치지 못하고, ‘2000년대 중반경’ 주장은 출처 1건뿐이다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "nrjutpq7",
+      "slug": "SNL-코리아-무신사-냄새",
+      "title": "SNL 코리아 무신사 냄새",
+      "reason": "출처 언급 문장을 제외하면 본문·유래가 하한에 미치지 못한다. 억지로 늘리지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "s2v2pzh9",
+      "slug": "포켓몬빵-띠부씰",
+      "title": "포켓몬빵 띠부씰",
+      "reason": "출처 언급 문장을 제외하면 유래가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "qqzf3wyy",
+      "slug": "내돈내산",
+      "title": "내돈내산",
+      "reason": "‘2010년대 중반 이후’ 주장을 받쳐 주는 독립 출처가 없고, 날짜를 빼면 유래가 더 짧아진다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "rf3dt6mp",
+      "slug": "서태지와-아이들-컴백홈-현상",
+      "title": "서태지와 아이들 컴백홈 현상",
+      "reason": "보이는 출처가 ‘표절 논란’과 공익 캠페인 주장을 받쳐 주지 않는다. 문장만 고쳐 억지로 남기지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "fzmt7ngh",
+      "slug": "탑블레이드-팽이-붐",
+      "title": "탑블레이드 팽이 붐",
+      "reason": "보이는 출처가 ‘모조 팽이’ 문제를 언급하지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "7kqc35wv",
+      "slug": "국민학교→초등학교-개칭",
+      "title": "국민학교→초등학교 개칭",
+      "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "pnphbt7f",
+      "slug": "시티폰",
+      "title": "시티폰",
+      "reason": "출처 언급 문장을 제외하면 뜻 글자 수가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t6jrbnbd",
+      "slug": "젝스키스-해체(2000)",
+      "title": "젝스키스 해체(2000)",
+      "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
     }
   ],
   "actions": [
@@ -117,33 +177,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.asiae.co.kr/article/2020040814253172269",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "내돈내산",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.bbc.com/korean/features-53720146",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -503,24 +536,6 @@
     },
     {
       "table": "memes",
-      "key": "국민학교→초등학교-개칭",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "포켓몬빵-띠부씰",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "엽기-신드롬",
       "action": "update",
       "reasons": [
@@ -728,46 +743,10 @@
     },
     {
       "table": "memes",
-      "key": "탑블레이드-팽이-붐",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://en.wikipedia.org/wiki/Beyblade",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "바츠-해방전쟁",
       "action": "update",
       "reasons": [
         "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "서태지와-아이들-컴백홈-현상",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
       ],
       "warnings": []
     },
@@ -890,24 +869,6 @@
     },
     {
       "table": "memes",
-      "key": "젝스키스-해체(2000)",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "TV는-사랑을-싣고",
       "action": "update",
       "reasons": [
@@ -945,24 +906,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.hani.co.kr/arti/opinion/column/146193.html",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "찔러맨",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1025,33 +968,6 @@
     },
     {
       "table": "memes",
-      "key": "시티폰",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.ddaily.co.kr/page/view/2022012109032973484",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.sedaily.com/article/10122712",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "유희왕-카드게임-유행",
       "action": "update",
       "reasons": [
@@ -1098,24 +1014,6 @@
     {
       "table": "meme_sources",
       "key": "https://ko.wikipedia.org/wiki/H.O.T.",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "겟타맨",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.sisunnews.co.kr/news/articleView.html?idxno=31370",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1511,33 +1409,6 @@
     },
     {
       "table": "memes",
-      "key": "SNL-코리아-무신사-냄새",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://economist.co.kr/article/view/ecn202302010077",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.mk.co.kr/news/business/10630614",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "MSG-워너비",
       "action": "update",
       "reasons": [
@@ -1584,24 +1455,6 @@
     {
       "table": "meme_sources",
       "key": "https://cine21.com/news/view/?mag_id=96550",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://imnews.imbc.com/replay/1996/nwdesk/article/1968630_30711.html",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=u4SrYHBHsPc",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1700,15 +1553,6 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=0wnbcAwUnvg",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://www.youtube.com/watch?v=AFeTuDHp1bg",
       "action": "update_title",
       "reasons": [
@@ -1772,25 +1616,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=Qg5ePCV6mqs",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://www.mt.co.kr/opinion/2020/06/26/2020062520044444620",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.ytn.co.kr/_ln/0134_201910291430064648",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1844,15 +1670,6 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=q3xy4p2JTfU",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://ko.wikipedia.org/wiki/%ED%95%99%EC%9B%90%EB%B3%84%EA%B3%A1",
       "action": "update_title",
       "reasons": [
@@ -1871,25 +1688,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://m.hankookilbo.com/News/Read/A2022031817270004541",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005267860",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=lVreX4udyUY",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"

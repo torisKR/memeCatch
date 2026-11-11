@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createStaticClient } = vi.hoisted(() => ({
@@ -116,4 +118,10 @@ describe("llms.txt publication export", () => {
     expect(body).toContain("콘텐츠 충실도 기준");
     expect(body).not.toContain("사실 확인 → 저작권 확인");
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    const source = readFileSync(join(process.cwd(), "app/llms.txt/route.ts"), "utf-8");
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
 });

@@ -429,4 +429,9 @@ describe("사이트맵 다국어 색인 계약", () => {
 
     expect(entries).toHaveLength(50_000);
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
 });

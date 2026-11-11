@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createStaticClient } = vi.hoisted(() => ({
@@ -149,4 +151,10 @@ describe("RSS publication export", () => {
     expect(body).not.toContain("<item>");
     expect(body).not.toContain("<lastBuildDate>");
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    const source = readFileSync(join(process.cwd(), "app/feed.xml/route.ts"), "utf-8");
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
 });

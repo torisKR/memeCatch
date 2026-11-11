@@ -55,7 +55,7 @@ export async function getMemeMarketPassport(
       ? await supabase
           .from("memes")
           .select(
-            "id, short_id, slug, title, description, origin, usage_note, caution, usage_examples, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
+            "id, short_id, slug, title, description, origin, usage_note, caution, usage_examples, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
           )
           .in("id", targetIds)
           .in("moderation_status", ["approved", "limited"])

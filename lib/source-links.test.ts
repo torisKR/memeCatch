@@ -127,4 +127,15 @@ describe("source link selection", () => {
       ])
     ).toEqual({ total: 3, primary: 3, context: 0, identifiedPrimary: 2 });
   });
+
+  it("treats content-mapped objects without hidden_from_public as visible", () => {
+    const links = sourceLinksWithContent(
+      [],
+      [{ url: "https://www.youtube.com/watch?v=abcdefghijk", platform: "youtube" }],
+    );
+    expect(links).toEqual([
+      { source_url: "https://www.youtube.com/watch?v=abcdefghijk", platform: "youtube" },
+    ]);
+  });
+
 });

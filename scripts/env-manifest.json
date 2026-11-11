@@ -164,5 +164,6 @@
   "MEMECATCH_CADDY": "Set to own to publish memeCatch's Caddy. Any other value uses the shared proxy.",
   "MEMECATCH_RESTORE_CONFIRM": "Must be restore before a dump is loaded into the target database.",
   "MEMECATCH_SIGNING_SECRET": "HMAC and operator bearer for analytics, view counts, and the embedding probe.",
+  "PGDATABASE": "Target database name exported by the backup tools from the postgres URL.",
   "PGPASSFILE": "Path to the mode-0600 pgpass file used by the backup and restore tools."
 }

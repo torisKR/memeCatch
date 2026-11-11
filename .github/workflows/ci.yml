@@ -23,22 +23,28 @@ jobs:
       - name: Install ffmpeg
         run: |
           set -euo pipefail
-          for attempt in 1 2 3; do
-            if sudo timeout 90s apt-get update \
-              -o Acquire::Retries=3 \
-              -o Acquire::http::Timeout=30 \
-              -o Acquire::https::Timeout=30 \
-              && sudo timeout 180s apt-get install -y ffmpeg \
-              -o Acquire::Retries=3 \
-              -o Acquire::http::Timeout=30 \
-              -o Acquire::https::Timeout=30; then
-              exit 0
+          if command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -version | head -n 1
+            exit 0
+          fi
+          # The default Azure Ubuntu apt mirror has hung this workflow (run 43051899980
+          # stalled on apt-get update for 30+ minutes; run 43060728980 failed after
+          # azure.archive.ubuntu.com InRelease was ignored). Fall back to archive.ubuntu.com.
+          switch_to_archive_mirror() {
+            echo "Default apt mirror failed or stalled; falling back to archive.ubuntu.com"
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'               /etc/apt/apt-mirrors.txt 2>/dev/null || true
+            if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+              sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'                 /etc/apt/sources.list.d/ubuntu.sources
             fi
-            echo "ffmpeg apt-get attempt ${attempt} failed; retrying..."
-            sleep 20
-          done
-          echo "ffmpeg install failed after 3 attempts"
-          exit 1
+          }
+          apt_update() {
+            sudo timeout 180s apt-get update               -o Acquire::Retries=3               -o Acquire::http::Timeout=20               -o Acquire::https::Timeout=20
+          }
+          if ! apt_update; then
+            switch_to_archive_mirror
+            apt_update
+          fi
+          sudo timeout 180s apt-get install -y ffmpeg             -o Acquire::Retries=3             -o Acquire::http::Timeout=20             -o Acquire::https::Timeout=20
       - run: pnpm test
       - run: node scripts/check-env-manifest.mjs
       - run: pnpm build

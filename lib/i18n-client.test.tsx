@@ -83,6 +83,19 @@ describe("LocaleProvider URL precedence", () => {
     expect(screen.getByLabelText("active locale").textContent).toBe(expected);
   });
 
+  it.each(["/memes/rk3w632x-unbroken-will", "/memes/cssqxwmb", "/memes/9ajbp6w6-old"])(
+    "keeps Korean chrome on a direct meme document %s even when the cookie is English",
+    (path) => {
+      setLocaleCookie("en");
+      setLocation(path);
+
+      renderProvider();
+
+      expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+      expect(document.documentElement.lang).toBe("ko");
+    },
+  );
+
   it.each(["/products", "/community"])(
     "preserves the preferred cookie locale on shared page %s",
     (path) => {

@@ -10,9 +10,9 @@ import { normalizePathname } from "@/lib/normalize-pathname";
 export function HeaderDiscoveryLinks() {
   const pathname = stripLocalePath(normalizePathname(usePathname()));
   const { locale, messages } = useLocale();
-  const latestHref = localizedStaticPath("/explore?sort=recent", locale);
+  const latestHref = localizedStaticPath("/explore", locale);
   const latestLabel =
-    ({ ko: "최신 밈", en: "Latest", ja: "最新", zh: "最新", "zh-tw": "最新" } as Partial<Record<typeof locale, string>>)[locale] ??
+    ({ ko: "밈 탐색", en: "Explore", ja: "探索", zh: "探索", "zh-tw": "探索" } as Partial<Record<typeof locale, string>>)[locale] ??
     messages.explore;
   const items = [
     { href: latestHref, path: "/explore", label: latestLabel },

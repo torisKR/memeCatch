@@ -47,7 +47,7 @@ export default async function LocalizedHomePage({ params }: Props) {
       (left, right) =>
         Date.parse(right.translation.updatedAt) - Date.parse(left.translation.updatedAt),
     )
-    .slice(0, 6);
+    .slice(0, 8);
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);
   const rawEntries = featured.map((meme) => ({

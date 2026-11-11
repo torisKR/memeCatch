@@ -148,10 +148,11 @@ export function ExploreFilters({
   );
 
   const submitSearch = useCallback(
-    (event: React.FormEvent) => {
+    (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const next = new URLSearchParams(searchParams);
-      const trimmed = query.trim();
+      const submitted = new FormData(event.currentTarget).get("q");
+      const trimmed = (typeof submitted === "string" ? submitted : query).trim();
       if (trimmed) next.set("q", trimmed);
       else next.delete("q");
       pushParams(next);
@@ -238,7 +239,7 @@ export function ExploreFilters({
           enterKeyHint="search"
           className="min-h-12 w-full rounded-xl border border-border bg-surface py-2 pl-11 pr-28 text-base text-foreground placeholder:text-muted focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-search-cancel-button]:appearance-none"
         />
-        <div className="absolute inset-y-0 right-2 flex items-center gap-1">
+        <div className="absolute inset-y-0 right-2 z-10 flex items-center gap-1">
           {query && (
             <button
               type="button"

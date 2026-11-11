@@ -67,7 +67,7 @@ describe("HomeExperience", () => {
 
     expect(sectionOrder).toEqual([
       "hero-search",
-      "recent-content",
+      "trending-memes",
       "safety-showcase",
       "safety-quiz",
       "usage-signals",
@@ -75,55 +75,52 @@ describe("HomeExperience", () => {
       "editorial-trust",
     ]);
     expect(html).toContain('id="home-top"');
-    expect(html.match(/data-home-scroll-track=/g)).toHaveLength(1);
-    expect(html.match(/data-home-scroll-pin=/g)).toHaveLength(1);
-    expect(html).toContain('id="home-story-discover"');
-    expect(html).toContain('id="home-story-context"');
-    expect(html).toContain('id="home-story-participate"');
+    expect(html).not.toContain("data-home-scroll-track");
+    expect(html).not.toContain("data-home-scroll-pin");
+    expect(html).not.toContain('id="home-story-context"');
+    expect(html).not.toContain('id="home-story-participate"');
     expect(html).toContain('id="home-latest"');
     expect(html).toContain('id="home-signals"');
     expect(html).toContain('id="home-pathways"');
     expect(html).toContain('id="home-editorial"');
-    for (const anchor of [
-      "#home-story-discover",
-      "#home-story-context",
-      "#home-story-participate",
-      "#home-latest",
-      "#home-signals",
-    ]) {
-      expect(html).toContain(`href="${anchor}"`);
-    }
+    expect(html).toContain('href="#home-latest"');
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain(`action="${locale === "ko" ? "/search" : `/${locale}/search`}"`);
     expect(html).toContain('href="/community"');
-    expect(html).toContain('href="/products"');
-    expect(html).toContain('href="/community/new"');
+    expect(html).toContain('data-cta="secondary"');
+    expect(html).not.toContain('href="/products"');
+    expect(html).not.toContain('href="/products/new"');
+    expect(html).not.toContain("밈 상품 둘러보기");
     expect(html).toContain('href="/submit"');
-    expect(html).toContain('href="/products/new"');
+    expect(html).toContain('data-cta="primary"');
     if (locale === "ko") {
+      expect(html).toContain("지금 뜨는 밈");
       expect(html).toContain("오리지널 보러 가기");
       expect(html).toContain("밈 올리기");
+      expect(html).toContain("커뮤니티 가기");
       expect(html).toContain('href="/originals"');
     } else {
       expect(html).not.toContain("오리지널 보러 가기");
       expect(html).not.toContain("밈 올리기");
+      expect(html).toContain(HOME_COPY[locale].recent.title);
     }
+    expect(html).toContain('data-cta="explore"');
     expect(html).toContain(
-      `href="${locale === "ko" ? "/explore?sort=recent" : `/${locale}/explore?sort=recent`}"`,
+      `href="${locale === "ko" ? "/explore" : `/${locale}/explore`}"`,
     );
     expect(html).toContain('data-safety-icon="green"');
     expect(html).toContain(getSafetySignalCopy(locale).levels.green.label);
     expect(html).toContain('data-signal-guide=');
     expect(html).toContain(HOME_IMMERSIVE_COPY[locale].chapters[0].title);
+    expect(html).not.toContain("New to Korean memes?");
   });
 
-  it.each(HOME_LOCALES)("uses one persistent story scene for %s", (locale) => {
+  it.each(HOME_LOCALES)("keeps an empty catalog honest without a pinned scene for %s", (locale) => {
     const html = renderToStaticMarkup(<HomeExperience locale={locale} entries={[]} />);
-    expect(html.match(/data-scene="true"/g)).toHaveLength(1);
-    expect(html).toContain(`data-interactive-locale="${locale}"`);
-    expect(html).toContain('data-scene-variant="story"');
-    expect(html).not.toMatch(/data-scene[^>]*class="[^"]*(?:h-56|lg:h-80|xl:h-96)/);
-    expect(html).toContain('data-home-artwork="immersive-story"');
+    expect(html).not.toContain("data-home-scene");
+    expect(html).not.toContain("data-home-scroll-pin");
+    expect(html).toContain(HOME_COPY[locale].recent.empty);
+    expect(html).toContain(`href="${locale === "ko" ? "/search" : `/${locale}/search`}"`);
   });
 
   it("renders meaningful published content and an honest empty state", () => {

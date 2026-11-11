@@ -71,8 +71,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "함께 만드는 밈 사전",
-      title: "읽은 다음, 이야기하고 발견하세요.",
-      description: "커뮤니티에서 맥락을 나누거나 밈과 연결된 상품을 둘러볼 수 있습니다.",
+      title: "읽은 다음, 이야기하고 이어가세요.",
+      description: "커뮤니티에서 맥락을 나누거나, 오리지널과 직접 올린 밈으로 이어갈 수 있습니다.",
       contributionLabel: "직접 발견한 맥락이 있나요?",
       submitAction: "밈 제보",
       community: {
@@ -123,8 +123,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "Beyond the dictionary",
-      title: "Join the conversation or browse meme goods.",
-      description: "Continue into MemeCatch’s Korean community and product directories.",
+      title: "Join the conversation.",
+      description: "Continue into MemeCatch’s Korean community, or submit a meme you found.",
       contributionLabel: "Have context to add?",
       submitAction: "Submit a meme",
       community: {
@@ -175,8 +175,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "辞典のその先へ",
-      title: "会話に参加し、ミーム関連の商品を探す。",
-      description: "MemeCatchの韓国語コミュニティと商品ページへ進めます。",
+      title: "会話に参加する。",
+      description: "MemeCatchの韓国語コミュニティへ進めます。",
       contributionLabel: "追加したい文脈がありますか？",
       submitAction: "ミームを投稿",
       community: {
@@ -227,8 +227,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "词典之外",
-      title: "加入讨论，或浏览迷因相关商品。",
-      description: "继续前往 MemeCatch 的韩语社区和商品目录。",
+      title: "加入讨论。",
+      description: "继续前往 MemeCatch 的韩语社区。",
       contributionLabel: "有想补充的语境吗？",
       submitAction: "提交迷因",
       community: {
@@ -279,8 +279,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "詞典之外",
-      title: "加入討論，或瀏覽迷因相關商品。",
-      description: "繼續前往 MemeCatch 的韓語社群和商品目錄。",
+      title: "加入討論。",
+      description: "繼續前往 MemeCatch 的韓語社群。",
       contributionLabel: "有想補充的語境嗎？",
       submitAction: "提交迷因",
       community: {

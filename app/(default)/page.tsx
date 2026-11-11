@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 /** 홈은 검색과 서비스 이해, 각 전용 페이지로의 진입만 담당한다. */
 export default async function Home() {
-  const latest = await getRecentlyPublishedMemes(6);
+  const latest = await getRecentlyPublishedMemes(8);
   const categoryCopy = getSeoCopy("ko").categories;
   const rawEntries = latest.map((meme) => ({
     id: meme.id,

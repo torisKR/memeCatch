@@ -24,10 +24,18 @@ function localeFromSearch(search: string): Locale | null {
   return isLocale(value) ? value : null;
 }
 
+/** Unprefixed meme documents are Korean pages. The header must follow the page, not a UI cookie. */
+function isKoreanMemeDocument(pathname: string): boolean {
+  const path = normalizePathname(pathname);
+  return path === "/memes" || path.startsWith("/memes/");
+}
+
 /** URL-owned locale choices must stay aligned with the server-rendered page. */
 function localeFromCurrentUrl(): Locale | null {
   const prefixedLocale = localeFromPathname(window.location.pathname);
   if (prefixedLocale) return prefixedLocale;
+
+  if (isKoreanMemeDocument(window.location.pathname)) return DEFAULT_LOCALE;
 
   const queryLocale = localeFromSearch(window.location.search);
   if (queryLocale) return queryLocale;

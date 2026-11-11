@@ -380,6 +380,26 @@ test("the loop-026 batch inserts only 무마가가이 and matches the committed 
   assert.equal(listing, existingViolationSql());
 });
 
+test("the loop-027 batch inserts 15 pending memes and matches the committed SQL", () => {
+  const file = new URL("../data/editorial/2026-11-11-loop027-pending.json", import.meta.url);
+  const input = JSON.parse(readFileSync(file, "utf8"));
+  const now = new Date("2026-11-11T12:00:00.000Z");
+  const plan = planContentBatch(input, { now });
+  assert.equal(plan.ok, true);
+  assert.deepEqual(plan.summary.memes, { insert: 15, skip_existing: 0, reject: 0 });
+  assert.deepEqual(plan.summary.meme_sources, { insert: 49, skip_existing: 0, reject: 0 });
+  for (const meme of input.memes) {
+    assert.equal(meme.moderation_status, "pending");
+    assert.equal(meme.published_at, null);
+    const urls = new Set(input.sources.filter((source) => source.meme_slug === meme.slug).map((source) => source.url));
+    assert.ok(urls.size >= 2, `${meme.slug} needs at least 2 distinct sources`);
+  }
+  const sql = buildContentSql(input, { now });
+  const committed = readFileSync(new URL("../data/memes/sql/20261111-loop027-trending-pending.sql", import.meta.url), "utf8");
+  assert.equal(committed, sql);
+  assert.doesNotMatch(sql, /moderation_status = 'approved'|'approved'::public\.moderation_status|'limited'::public\.moderation_status/);
+});
+
 test("CLI dry-run never connects and prints the plan", () => {
   const directory = mkdtempSync(join(tmpdir(), "ingest-"));
   const inputPath = join(directory, "batch.json");

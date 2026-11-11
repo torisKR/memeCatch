@@ -49,7 +49,8 @@ function wallet(chainId = "0x2019"): TestWallet {
 }
 
 function renderLogin(locale: Locale = "ko", next = "/saved") {
-  window.history.replaceState({}, "", "/login");
+  const search = locale === "ko" ? "" : `?lang=${encodeURIComponent(locale)}`;
+  window.history.replaceState({}, "", `/login${search}`);
   document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
   document.cookie = `${LOCALE_COOKIE}=${locale}; path=/`;
   return render(
@@ -60,6 +61,7 @@ function renderLogin(locale: Locale = "ko", next = "/saved") {
 }
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/login");
   vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "");
   auth.signInWithWeb3.mockReset();
   dappPortal.init.mockReset();

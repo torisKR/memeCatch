@@ -20,7 +20,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsc --noEmit
       - run: pnpm lint
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg
+        run: |
+          set -euo pipefail
+          archive="$(mktemp --suffix=.tar.xz)"
+          root="$(mktemp -d)"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+            -o "$archive" \
+            https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz
+          tar -xJf "$archive" -C "$root"
+          sudo install -m 755 "$(find "$root" -type f -path '*/bin/ffmpeg' -print -quit)" /usr/local/bin/ffmpeg
+          sudo install -m 755 "$(find "$root" -type f -path '*/bin/ffprobe' -print -quit)" /usr/local/bin/ffprobe
+          ffmpeg -hide_banner -version
+          ffprobe -hide_banner -version
       - run: pnpm test
       - run: node scripts/check-env-manifest.mjs
       - run: pnpm build

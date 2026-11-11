@@ -69,6 +69,11 @@ describe("SlangDictionary", () => {
     expect(section("1990s")?.hasAttribute("hidden")).toBe(true);
     // 비활성 패널의 표제어도 DOM(정적 HTML)에는 존재해야 한다 — SEO 요구
     expect(screen.getByText("하이루")).toBeTruthy();
+    const row = screen.getByRole("link", { name: /럭키비키/ });
+    expect(row.getAttribute("href")).toBe("/memes/aaa-럭키비키");
+    expect(row.textContent).toContain("초긍정 사고방식 유행어");
+    expect(row.textContent).toContain("›");
+    expect(row.querySelector(".truncate")).toBeNull();
   });
 
   it("?era=1990s면 1990년대 패널이 보이고 탭에 aria-current가 붙는다", () => {

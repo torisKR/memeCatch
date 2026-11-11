@@ -17,6 +17,11 @@ vi.mock("@/lib/meme-translations", () => ({
   getLocalizedFeaturedMemes: queryMocks.getLocalizedFeaturedMemes,
 }));
 
+vi.mock("@/lib/meme-art.server", () => ({
+  loadMemeArtUrls: vi.fn(async () => new Map()),
+  loadMemeArtByShortId: vi.fn(async () => null),
+}));
+
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => (
     <a {...props}>{children}</a>

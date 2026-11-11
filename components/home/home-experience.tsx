@@ -1,10 +1,8 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
 import styles from "@/components/home/home-web3.module.css";
-import { MemeThumbnail } from "@/components/meme-thumbnail";
-import { SafetyBadge } from "@/components/safety-badge";
+import { MemePosterCard } from "@/components/meme-poster-card";
 import { SafetySignalGuide } from "@/components/usage-guide";
 import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
 import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
@@ -23,11 +21,14 @@ export type HomeEntry = {
   categoryLabel: string;
   category?: MemeCategory;
   thumbnailUrl?: string | null;
+  artUrl?: string | null;
+  year?: number | null;
   originalTitle?: string;
   safetyLevel: SafetyLevel;
 };
 
-const TRENDING_LIMIT = 8;
+/** Four 4:3 posters stay above the fold at 1280×800. The rest are on /explore. */
+const TRENDING_LIMIT = 4;
 
 export function HomeExperience({
   locale,
@@ -62,27 +63,20 @@ export function HomeExperience({
         </div>
         {trending.length > 0 ? (
           <>
-            <ul
-              className={styles.trendingGrid}
-              style={{ "--trend-columns": String(Math.min(Math.max(trending.length, 4), TRENDING_LIMIT)) } as CSSProperties}
-            >
+            <ul className={styles.trendingGrid}>
               {trending.map((entry, index) => (
                 <li key={entry.id}>
                   <Link href={entry.href} className={styles.trendingCard}>
-                    <span className={styles.trendingArt}>
-                      <MemeThumbnail
-                        src={entry.thumbnailUrl ?? null}
-                        title={entry.title}
-                        category={entry.category ?? "phrase"}
-                        variant="compact"
-                        priority={index < 4}
-                      />
-                      <span className={styles.trendingSafety}>
-                        <SafetyBadge level={entry.safetyLevel} locale={locale} />
-                      </span>
-                    </span>
-                    <span className={styles.trendingName}>{entry.title}</span>
-                    <span className="sr-only">{entry.summary}</span>
+                    <MemePosterCard
+                      title={entry.title}
+                      summary={entry.summary}
+                      safetyLevel={entry.safetyLevel}
+                      year={entry.year}
+                      artUrl={entry.artUrl}
+                      size="grid"
+                      locale={locale}
+                      priority={index < 4}
+                    />
                     {entry.originalTitle ? (
                       <span className="sr-only" lang="ko">{entry.originalTitle}</span>
                     ) : null}

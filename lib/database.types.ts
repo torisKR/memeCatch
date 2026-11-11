@@ -2242,6 +2242,7 @@ export type Database = {
       memes: {
         Row: {
           aliases: string[]
+          art_url: string | null
           catalog_registration_key: string | null
           category: Database["public"]["Enums"]["meme_category"]
           caution: string | null
@@ -2281,6 +2282,7 @@ export type Database = {
         }
         Insert: {
           aliases?: string[]
+          art_url?: string | null
           catalog_registration_key?: string | null
           category?: Database["public"]["Enums"]["meme_category"]
           caution?: string | null
@@ -2320,6 +2322,7 @@ export type Database = {
         }
         Update: {
           aliases?: string[]
+          art_url?: string | null
           catalog_registration_key?: string | null
           category?: Database["public"]["Enums"]["meme_category"]
           caution?: string | null

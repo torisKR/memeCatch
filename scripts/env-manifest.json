@@ -54,6 +54,7 @@
   "GITHUB_WEBHOOK_SECRET": "GitHub webhook secret checked by the ChatGPT integration.",
   "GOOGLE_CLIENT_ID": "Google OAuth client id. Google login stays closed when empty.",
   "GOOGLE_CLIENT_SECRET": "Google OAuth client secret.",
+  "GROK_IMAGE_API_KEY": "Grok image API key for the offline meme-art backfill. Leave empty. The web app never reads it.",
   "HOST": "Bind address for the optional ChatGPT integration server.",
   "IMPORT_APPROVED": "Allows a maintenance import to write approved rows.",
   "KAKAO_CLIENT_ID": "Kakao OAuth client id. Kakao login stays closed when empty.",

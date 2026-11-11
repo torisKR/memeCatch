@@ -16,13 +16,21 @@ docker run -d --name "$server" \
   -p "127.0.0.1:${port}:5432" \
   postgres:16 >/dev/null
 
-for _ in $(seq 1 60); do
-  if docker exec "$server" pg_isready -U postgres >/dev/null; then
+# pg_isready turns true while the entrypoint is still restarting. The next
+# check then exits 2. Wait until the server accepts a query.
+ready=0
+for _ in $(seq 1 90); do
+  if docker exec "$server" psql -v ON_ERROR_STOP=1 --username postgres --dbname postgres -c "select 1" >/dev/null 2>&1; then
+    ready=1
     break
   fi
   sleep 1
 done
-docker exec "$server" pg_isready -U postgres >/dev/null
+if [[ "$ready" -ne 1 ]]; then
+  echo "postgres did not accept a query" >&2
+  docker logs "$server" >&2 || true
+  exit 1
+fi
 
 cd "$root"
 DATABASE_URL="postgresql://postgres:${password}@127.0.0.1:${port}/postgres" \

@@ -8,7 +8,7 @@
     "Related memes are computed at read time from tags/category/year/embeddings; this file records related_slugs for editors only.",
     "Q-09: schema adds memes.content_reviewed_at (flagged migration). This SQL sets it to the editorial review date. UI shows 최종 검토일 from that column.",
     "safety_reviewed_at is captured and restored in the same transaction so the existing trigger does not overwrite it.",
-    "This SQL does not DELETE meme_sources. namu.wiki and other non-200 or unverifiable URLs are kept and are not counted toward Q-07.",
+    "This SQL does not DELETE meme_sources. Non-200, dead, or irrelevant rows in this batch are hidden_from_public=true so they do not render. Source-mention sentences are excluded from character totals.",
     "This SQL was not applied to prod."
   ],
   "summary": {
@@ -20,9 +20,10 @@
       "reject": 0
     },
     "meme_sources": {
-      "insert_if_missing": 91,
-      "title_update": 48,
+      "insert_if_missing": 90,
+      "title_update": 47,
       "delete_non200_for_batch": 0,
+      "hide_from_public": "runtime, markers=39",
       "skip_existing": "runtime"
     }
   },
@@ -641,15 +642,6 @@
       "action": "update",
       "reasons": [
         "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EB%B2%84%EB%94%94%EB%B2%84%EB%94%94",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
       ],
       "warnings": []
     },
@@ -1619,15 +1611,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.youtube.com/watch?v=HzkAIHL9I3g",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=mvqYV2zvksU",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"

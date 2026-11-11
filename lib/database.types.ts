@@ -1838,6 +1838,7 @@ export type Database = {
           captured_at: string
           copyright_status: Database["public"]["Enums"]["copyright_status"]
           creator_name: string | null
+          hidden_from_public: boolean | null
           id: string
           meme_id: string
           platform: string
@@ -1850,6 +1851,7 @@ export type Database = {
           captured_at?: string
           copyright_status?: Database["public"]["Enums"]["copyright_status"]
           creator_name?: string | null
+          hidden_from_public?: boolean | null
           id?: string
           meme_id: string
           platform: string
@@ -1862,6 +1864,7 @@ export type Database = {
           captured_at?: string
           copyright_status?: Database["public"]["Enums"]["copyright_status"]
           creator_name?: string | null
+          hidden_from_public?: boolean | null
           id?: string
           meme_id?: string
           platform?: string

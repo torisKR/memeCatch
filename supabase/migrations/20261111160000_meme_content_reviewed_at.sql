@@ -15,8 +15,8 @@
 -- is edited later; otherwise the displayed "최종 검토일" goes stale. There is no
 -- trigger that maintains this column.
 
-set lock_timeout = '15s';
-set statement_timeout = '10min';
+set local lock_timeout = '15s';
+set local statement_timeout = '10min';
 
 alter table public.memes
   add column if not exists content_reviewed_at timestamptz;

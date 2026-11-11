@@ -36,7 +36,7 @@ import { unavailableMemeMetadata } from "@/lib/public-meme-document";
 import { MemeCatalogUnavailableError } from "@/lib/queries";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { publicSourceUrl } from "@/lib/source-links";
+import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
 
 /** 한국어 상세와 같다. ISR로 두면 프로덕션 상세가 DYNAMIC_SERVER_USAGE 500이 된다. */
 export const dynamic = "force-dynamic";
@@ -338,6 +338,7 @@ export default async function LocalizedMemePage({ params }: Props) {
   const seo = getSeoCopy(locale);
   const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
   const sourceLinks = meme.meme_sources.flatMap((source) => {
+    if (!isPublicDisplaySource(source)) return [];
     const url = publicSourceUrl(source.source_url);
     return url ? [{ ...source, source_url: url }] : [];
   });

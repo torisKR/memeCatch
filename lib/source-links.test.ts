@@ -9,6 +9,14 @@ import {
 } from "@/lib/source-links";
 
 describe("citable sources", () => {
+  it("hidden_from_public 행은 제목이 있어도 근거 목록에서 제외한다", () => {
+    const cited = citableSources([
+      { source_url: "https://namu.wiki/w/x", title: "나무위키 문서", hidden_from_public: true },
+      { source_url: "https://news.example.com/1", title: "보도" },
+    ]);
+    expect(cited.map((s) => s.url)).toEqual(["https://news.example.com/1"]);
+  });
+
   it("제목 없는 출처는 근거 목록에서 제외한다(제목을 지어내지 않는다)", () => {
     const cited = citableSources([
       { source_url: "https://example.com/a", title: null, platform: "News" },
@@ -71,6 +79,17 @@ describe("source link selection", () => {
       { source_url: "https://namu.wiki/w/example", platform: "Community" },
     ]);
     expect(preferredSourceUrl(links)).toBe("https://www.youtube.com/watch?v=abcdefghijk");
+  });
+
+  it("omits hidden_from_public rows from the inline source list", () => {
+    const links = sourceLinksWithContent(
+      [
+        { source_url: "https://namu.wiki/w/example", platform: "Community", hidden_from_public: true },
+        { source_url: "https://news.example.com/1", platform: "News" },
+      ],
+      [],
+    );
+    expect(links.map((s) => s.source_url)).toEqual(["https://news.example.com/1"]);
   });
 
   it("counts evidence sources, separating primary from context wikis", () => {

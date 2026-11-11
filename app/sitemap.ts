@@ -18,8 +18,11 @@ import {
 
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 
-/** 24시간마다 재생성 — Vercel ISR 쓰기 한도 최적화 */
-export const revalidate = 86400;
+/**
+ * A database-less image build must not cache a sitemap that has no meme URLs.
+ * `revalidate` still prerenders that empty result into the standalone server.
+ */
+export const dynamic = "force-dynamic";
 
 /** 공개(=200으로 렌더되는) 밈 상태: approved + limited. */
 const PUBLIC_STATUSES = ["approved", "limited"] as const;

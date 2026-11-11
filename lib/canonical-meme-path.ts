@@ -14,6 +14,27 @@ function decodedRouteKey(value: string): string | null {
   }
 }
 
+function normalizedKey(value: string): string {
+  return value.normalize("NFC");
+}
+
+/**
+ * Page params are decoded on Vercel and still percent-encoded under the
+ * standalone server. Compare both forms in NFC. An ASCII-only escape such as
+ * `%2D` stays literal in decoded mode so a double-encoded hyphen still redirects.
+ */
+function comparableRequestedKey(
+  requestedKey: string,
+  inputEncoding: "decoded" | "encoded",
+): string | null {
+  const decoded = decodedRouteKey(requestedKey);
+  if (inputEncoding === "encoded") return decoded === null ? null : normalizedKey(decoded);
+  if (decoded && decoded !== requestedKey && /[^\u0000-\u007f]/.test(decoded)) {
+    return normalizedKey(decoded);
+  }
+  return normalizedKey(requestedKey);
+}
+
 /**
  * Known duplicate entries mapped to a single authoritative canonical representative.
  * Prevents redundant crawl targets and "thin/duplicate content" AdSense penalties.
@@ -36,10 +57,9 @@ export function canonicalMemeRedirectPath(
 ): string | null {
   const canonicalPath = localizedMemePath(meme.locale, meme.shortId, meme.slug);
   const canonicalKey = canonicalPath.slice(canonicalPath.lastIndexOf("/") + 1);
-  const canonicalDecodedKey = decodedRouteKey(canonicalKey);
-  // Page params are already decoded by Next; only the proxy sees encoded URL segments.
-  // Decoding page params again incorrectly accepts double-encoded aliases as canonical.
-  const comparableKey = inputEncoding === "encoded" ? decodedRouteKey(requestedKey) : requestedKey;
+  const canonicalDecoded = decodedRouteKey(canonicalKey);
+  const canonicalDecodedKey = canonicalDecoded === null ? null : normalizedKey(canonicalDecoded);
+  const comparableKey = comparableRequestedKey(requestedKey, inputEncoding);
   const isCanonical = comparableKey !== null && comparableKey === canonicalDecodedKey;
 
   return isCanonical ? null : canonicalPath;

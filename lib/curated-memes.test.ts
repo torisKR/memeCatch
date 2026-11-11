@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURATED_CORE_MEMES, getGuaranteedHomeEntries } from "@/lib/curated-memes";
+import { CURATED_CORE_MEMES, curatedSearchCards, getGuaranteedHomeEntries } from "@/lib/curated-memes";
 import type { HomeEntry } from "@/components/home/home-experience";
 
 describe("curated memes and guaranteed home entries", () => {
@@ -18,6 +18,12 @@ describe("curated memes and guaranteed home entries", () => {
       expect(meme.usage_examples.length).toBeGreaterThanOrEqual(1);
       expect(meme.trend_now.status_label).toBeTruthy();
     }
+  });
+
+  it("finds the jung-kkuk-ma guide for a Hangul query the catalog slug does not use", () => {
+    const cards = curatedSearchCards("중꺾마");
+    expect(cards.map((card) => card.short_id)).toContain("jkm2022k");
+    expect(cards[0]?.meme_contents[0]?.thumbnail_url).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
   it("guarantees non-empty home entries when live DB entries are empty", () => {

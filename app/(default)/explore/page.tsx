@@ -22,6 +22,7 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
+import { curatedSearchCards } from "@/lib/curated-memes";
 import { AdsenseScript } from "@/components/adsense-script";
 
 /**
@@ -231,6 +232,7 @@ export default async function ExplorePage({
 
   const [initialLoad, platformCounts] = await Promise.all([
     (async (): Promise<{ items: MemeListItem[]; unavailable: boolean }> => {
+      const curated = filters.q ? curatedSearchCards(filters.q) : [];
       try {
         const supabase = createStaticClient();
         const { data, error } = await buildQuery(supabase, filters).range(
@@ -238,13 +240,21 @@ export default async function ExplorePage({
           PAGE_SIZE - 1
         );
         // 조회 실패를 빈 목록으로 두면 출처 개수만 남고 "아직 없어요"가 된다.
-        if (error) return { items: [], unavailable: true };
+        if (error) {
+          return curated.length > 0
+            ? { items: curated, unavailable: false }
+            : { items: [], unavailable: true };
+        }
+        const rows = (data ?? []) as unknown as MemeListItem[];
+        const seen = new Set(rows.map((item) => item.short_id));
         return {
-          items: (data ?? []) as unknown as MemeListItem[],
+          items: [...curated.filter((item) => !seen.has(item.short_id)), ...rows],
           unavailable: false,
         };
       } catch {
-        return { items: [], unavailable: true };
+        return curated.length > 0
+          ? { items: curated, unavailable: false }
+          : { items: [], unavailable: true };
       }
     })(),
     getSocialPlatformCounts(),

@@ -63,6 +63,7 @@ import {
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import { findCuratedCoreMeme } from "@/lib/curated-memes";
 import { CuratedMemeArticle } from "@/components/curated-meme-article";
 import { MemeCatalogUnavailable } from "@/components/meme-catalog-unavailable";
 import {
@@ -186,9 +187,12 @@ export default async function MemeDetailPage({ params }: Props) {
   const path = memePathFrom(meme.short_id, meme.slug);
 
   const tagIds = meme.meme_tags_map.map((t) => t.tag_id);
-  const tagNames = meme.meme_tags_map
+  const storedTagNames = meme.meme_tags_map
     .map((t) => t.tags?.name)
     .filter((n): n is string => !!n);
+  const tagNames = storedTagNames.length > 0
+    ? storedTagNames
+    : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
   const [related, reactionCounts, marketPassport, availableTranslationLocales] = await Promise.all([
     // 첫 화면 링크 수를 줄이려 6개만 — 나머지 탐색은 하단 무한 스크롤이 담당한다.
     getRelatedMemes(

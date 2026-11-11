@@ -19,6 +19,27 @@ describe("social platform aggregate", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it("accepts bigint counts that the pg driver returns as text", async () => {
+    mocks.createStaticClient.mockReturnValue({
+      from: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({
+        data: [
+          { platform: "youtube", meme_count: "15" },
+          { platform: "youtube_shorts", meme_count: "8" },
+          { platform: "tiktok", meme_count: "4" },
+          { platform: "instagram", meme_count: "3" },
+        ],
+        error: null,
+      }),
+    });
+    expect(await getSocialPlatformCounts()).toEqual({
+      youtube: 15,
+      youtube_shorts: 8,
+      tiktok: 4,
+      instagram: 3,
+    });
+  });
+
   it("does not amplify a provider outage with a full scan", async () => {
     const from = vi.fn();
     mocks.createStaticClient.mockReturnValue({ from, rpc: vi.fn().mockResolvedValue({ data: null, error: { code: "503" } }) });

@@ -23,16 +23,23 @@ function row(index: number, indexable: boolean) {
     short_id: `m${index}`,
     slug: `meme-${index}`,
     summary: `Summary ${index}`,
-    description: indexable ? "d".repeat(400) : "thin",
-    origin: indexable ? "o".repeat(60) : "",
+    description: indexable ? "가".repeat(180) : "thin",
+    origin: indexable ? "나".repeat(90) : "",
     origin_year: 2026,
-    usage_note: null,
+    usage_note: indexable ? "다".repeat(50) : null,
     caution: null,
     aliases: [],
     category: "phrase",
     safety_level: "green",
-    usage_examples: [],
-    meme_sources: [],
+    usage_examples: indexable
+      ? [
+          { situation: "상황".repeat(20), text: "예문".repeat(20) },
+          { situation: "다른".repeat(20), text: "대사".repeat(20) },
+        ]
+      : [],
+    meme_sources: indexable
+      ? [{ source_url: "https://example.com/a" }, { source_url: "https://example.com/b" }]
+      : [],
     meme_contents: [],
     meme_tags_map: [],
   };

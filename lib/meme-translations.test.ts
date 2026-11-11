@@ -17,6 +17,12 @@ import {
 const createStaticClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/index-gate.server", () => ({
+  loadDiscoveryIndex: vi.fn(async () => ({
+    ok: true,
+    ids: new Set(["00000000-0000-4000-8000-000000000001"]),
+  })),
+}));
 
 const SOURCE_UPDATED_AT = "2026-07-28T04:00:00.000Z";
 

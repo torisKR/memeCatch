@@ -27,15 +27,24 @@ type Translation = {
 
 function indexableMeme(index: number, translations: Translation[]) {
   return {
+    id: `id-${index}`,
+    category: "phrase",
+    origin_year: 2020,
     short_id: `m${index}`,
     slug: `meme-${index}`,
     updated_at: "2026-01-02T00:00:00.000Z",
-    description: "d".repeat(400),
-    origin: "o".repeat(60),
-    usage_note: null,
+    description: "가".repeat(180),
+    origin: "나".repeat(90),
+    usage_note: "다".repeat(50),
     caution: null,
-    usage_examples: [],
-    meme_sources: [],
+    usage_examples: [
+      { situation: "상황".repeat(20), text: "예문".repeat(20) },
+      { situation: "다른".repeat(20), text: "대사".repeat(20) },
+    ],
+    meme_sources: [
+      { source_url: "https://example.com/a" },
+      { source_url: "https://example.com/b" },
+    ],
     meme_contents: [],
     meme_tags_map: [],
     meme_translations: translations,
@@ -148,7 +157,7 @@ describe("사이트맵 페이지네이션 안정성", () => {
 
   it("얇은 문서를 거르는 단일 판정 함수를 쓴다", () => {
     // 상세의 robots 판정과 같은 함수여야 "사이트맵엔 있는데 noindex" 모순이 없다.
-    expect(source).toContain("isIndexableMeme");
+    expect(source).toContain("passesContentIndexGate");
   });
 
   it("밈 조회 오류는 밈 URL 없이 정적 사이트맵만 남긴다", async () => {
@@ -321,6 +330,7 @@ describe("사이트맵 다국어 색인 계약", () => {
     useRows([
       indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]),
       indexableMeme(2, [reviewedTranslation("ja", "2026-03-01T00:00:00.000Z")]),
+      indexableMeme(3, []),
     ]);
 
     const entries = await sitemap();
@@ -353,7 +363,8 @@ describe("사이트맵 다국어 색인 계약", () => {
 
   it("indexable 원문에 대해 현재 reviewed 완역 locale만 alternates에 허용한다", () => {
     // 원문 충실도 판정은 번역 유무보다 먼저 통과해야 한다.
-    expect(source).toContain("if (!isIndexableMeme(meme)) continue");
+    expect(source).toContain("if (!passesContentIndexGate(meme)) continue");
+    expect(source).toContain("if (!discoveryIds.has(meme.id)) continue");
 
     // machine/stale/부분 번역을 hreflang에 내보내지 않는 계약. 구현은 인라인 또는
     // 명명된 helper 어느 쪽이어도 되지만 세 조건이 소스에 명시돼야 한다.
@@ -371,6 +382,7 @@ describe("사이트맵 다국어 색인 계약", () => {
     useRows([
       indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]),
       indexableMeme(2, [reviewedTranslation("ja", "2026-03-01T00:00:00.000Z")]),
+      indexableMeme(3, []),
     ]);
 
     const entries = await sitemap();

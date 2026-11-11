@@ -10,8 +10,8 @@ import {
 } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
-import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
 import { loadMemeArtUrls } from "@/lib/meme-art.server";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { CommunityMemeBattle } from "@/components/home/community-meme-battle";
 import { getCommunityMemeBattle } from "@/lib/community-battle.server";
 
@@ -31,10 +31,16 @@ export const metadata: Metadata = {
 
 /** 홈은 검색과 서비스 이해, 각 전용 페이지로의 진입만 담당한다. */
 export default async function Home() {
-  const latest = await getRecentlyPublishedMemes(8);
-  const artUrls = await loadMemeArtUrls(latest.map((meme) => meme.id));
+  const [latest, discovery] = await Promise.all([
+    getRecentlyPublishedMemes(8),
+    loadDiscoveryIndex(),
+  ]);
+  const listed = discovery.ok
+    ? latest.filter((meme) => discovery.ids.has(meme.id))
+    : [];
+  const artUrls = await loadMemeArtUrls(listed.map((meme) => meme.id));
   const categoryCopy = getSeoCopy("ko").categories;
-  const rawEntries = latest.map((meme) => ({
+  const entries = listed.map((meme) => ({
     id: meme.id,
     href: memePathFrom(meme.short_id, meme.slug),
     title: meme.title,
@@ -48,7 +54,6 @@ export default async function Home() {
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,
   }));
-  const entries = getGuaranteedHomeEntries("ko", rawEntries);
   const battleBoards = (await getCommunityMemeBattle()).filter((board) => board.status === "ready");
 
   return (

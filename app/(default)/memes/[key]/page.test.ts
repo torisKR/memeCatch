@@ -45,7 +45,7 @@ describe("밈 상세 hreflang 계약", () => {
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {
-    const answerCard = source.indexOf("<AnswerCard meme={meme} saveMemeId={meme.id} />");
+    const answerCard = source.indexOf("<AnswerCard meme={meme} saveMemeId={meme.id}");
     const shareButton = source.indexOf('<ShareButton path={path} title={meme.title} label="공유" />');
     const representativeContent = source.indexOf("<MemeEmbed", answerCard);
 

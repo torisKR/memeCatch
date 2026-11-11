@@ -11,8 +11,8 @@ import {
 } from "@/lib/i18n-routing";
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { SITE_URL } from "@/lib/site";
-import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
 import { loadMemeArtUrls } from "@/lib/meme-art.server";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 export const revalidate = 3600;
 
@@ -42,8 +42,14 @@ export default async function LocalizedHomePage({ params }: Props) {
   const { locale } = await params;
   if (!isSeoContentLocale(locale)) notFound();
 
-  const available = await getLocalizedFeaturedMemes(locale, 24);
-  const featured = [...available]
+  const [available, discovery] = await Promise.all([
+    getLocalizedFeaturedMemes(locale, 24),
+    loadDiscoveryIndex(),
+  ]);
+  const listed = discovery.ok
+    ? available.filter((meme) => discovery.ids.has(meme.id))
+    : [];
+  const featured = [...listed]
     .sort(
       (left, right) =>
         Date.parse(right.translation.updatedAt) - Date.parse(left.translation.updatedAt),
@@ -67,7 +73,7 @@ export default async function LocalizedHomePage({ params }: Props) {
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,
   }));
-  const entries = getGuaranteedHomeEntries(locale, rawEntries);
+  const entries = rawEntries;
 
   return (
     <main

@@ -17,6 +17,13 @@ vi.mock("@/lib/meme-translations", () => ({
   getLocalizedFeaturedMemes: queryMocks.getLocalizedFeaturedMemes,
 }));
 
+vi.mock("@/lib/index-gate.server", () => ({
+  loadDiscoveryIndex: vi.fn(async () => ({
+    ok: true,
+    ids: new Set(["ABC123", "OLD001", "NEW001"]),
+  })),
+}));
+
 vi.mock("@/lib/meme-art.server", () => ({
   loadMemeArtUrls: vi.fn(async () => new Map()),
   loadMemeArtByShortId: vi.fn(async () => null),

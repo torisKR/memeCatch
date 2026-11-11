@@ -1,3 +1,4 @@
+import { passesContentIndexGate, type ContentDepthInput } from "@/lib/content-depth";
 import type { MemeCategory, SafetyLevel, LifecycleStatus } from "@/lib/labels";
 import { getSeoCopy, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { HomeEntry } from "@/components/home/home-experience";
@@ -400,6 +401,27 @@ export function getGuaranteedHomeEntries(
 const curatedByShortId = new Map(
   CURATED_CORE_MEMES.map((meme) => [meme.short_id, meme] as const),
 );
+
+/** Curated cards have no source rows, so they fail the index gate until one is recorded. */
+export function curatedContentInput(meme: CuratedMeme): ContentDepthInput {
+  return {
+    description: meme.description,
+    origin: meme.origin,
+    usage_note: [
+      meme.trend_now.analysis,
+      ...meme.usage_examples.map((example) => example.description ?? ""),
+    ].join("\n"),
+    caution: meme.caution,
+    usage_examples: meme.usage_examples.flatMap((example) =>
+      example.dialogue.map((line) => ({ situation: example.context, text: line.line })),
+    ),
+    meme_sources: [],
+  };
+}
+
+export function curatedPassesIndexGate(meme: CuratedMeme): boolean {
+  return passesContentIndexGate(curatedContentInput(meme));
+}
 
 export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
   return curatedByShortId.get(shortId) ?? null;

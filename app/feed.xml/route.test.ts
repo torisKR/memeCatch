@@ -24,12 +24,19 @@ function row(
     category: "phrase",
     published_at: publishedAt,
     updated_at: updatedAt,
-    description: indexable ? "d".repeat(400) : "thin",
-    origin: indexable ? "o".repeat(60) : "",
-    usage_note: null,
+    description: indexable ? "가".repeat(180) : "thin",
+    origin: indexable ? "나".repeat(90) : "",
+    usage_note: indexable ? "다".repeat(50) : null,
     caution: null,
-    usage_examples: [],
-    meme_sources: [],
+    usage_examples: indexable
+      ? [
+          { situation: "상황".repeat(20), text: "예문".repeat(20) },
+          { situation: "다른".repeat(20), text: "대사".repeat(20) },
+        ]
+      : [],
+    meme_sources: indexable
+      ? [{ source_url: "https://example.com/a" }, { source_url: "https://example.com/b" }]
+      : [],
     meme_contents: [],
     meme_tags_map: [],
   };
@@ -92,6 +99,7 @@ describe("RSS publication export", () => {
     useRows([
       row(1, true, null),
       row(2, true, "2026-02-03T04:05:06.000Z"),
+      row(3, true, null),
     ]);
 
     const response = await GET();

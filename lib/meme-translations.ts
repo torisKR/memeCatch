@@ -14,6 +14,7 @@ import {
   MemeCatalogUnavailableError,
   type MemeDetail,
 } from "@/lib/queries";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { createStaticClient } from "@/lib/supabase/server";
 import { originCountryCode } from "@/lib/meme-country";
 
@@ -268,10 +269,16 @@ export async function getLocalizedSearchMemesResult(
       .in("memes.moderation_status", ["approved", "limited"])
       .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
     if (error || !data) return { items, status: "unavailable" };
+    const discovery = await loadDiscoveryIndex();
+    if (!discovery.ok) return { items, status: "unavailable" };
 
     for (const row of data) {
       const localized = overlayMemeTranslation(row.memes, row, locale);
-      if (localized && isIndexableLocalizedMeme(localized)) {
+      if (
+        localized &&
+        discovery.ids.has(localized.id) &&
+        isIndexableLocalizedMeme(localized)
+      ) {
         items.set(localized.short_id, localized);
       }
     }
@@ -313,9 +320,12 @@ export async function getLocalizedFeaturedMemes(
       .limit(candidateLimit)
       .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
     if (error || !data) return [];
+    const discovery = await loadDiscoveryIndex();
+    if (!discovery.ok) return [];
 
     const localized: LocalizedMemeListItem[] = [];
     for (const row of data) {
+      if (!discovery.ids.has(row.memes.id)) continue;
       if (originCountryCode(row.memes.meme_market_profiles) !== "KR") continue;
       const meme = overlayMemeTranslation(row.memes, row, locale);
       if (!meme || !isIndexableLocalizedMeme(meme)) continue;
@@ -358,6 +368,8 @@ export const getAvailableTranslationLocales = cache(async function getAvailableT
           .overrideTypes<MemeTranslationRow[], { merge: false }>(),
       ]);
     if (baseError || rowsError || !base || !rows) return [];
+    const discovery = await loadDiscoveryIndex();
+    if (!discovery.ok || !discovery.ids.has(memeId)) return [];
 
     const byLocale = new Set<Locale>();
     for (const row of rows) {

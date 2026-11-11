@@ -6,22 +6,16 @@
  * 똑같이 붙는 요소는 점수에 넣지 않는다(대량생산 얇은 문서를 걸러내는 게 목적이라
  * 공통 껍데기를 세면 전부 통과해버린다).
  *
- * 소비처는 두 갈래로 나뉘고, 갈래마다 산문 하한이 다르다(HG-001 C안, 2026-08-04):
+ * 소비처는 두 갈래다.
  *
- *   [색인 판정 — isIndexableMeme, MIN_PROSE_CHARS_INDEX=150]
- *   - app/sitemap.ts                      — 얇은 밈을 사이트맵에서 제외
- *   - app/(default)/memes/[key]/page.tsx  — robots noindex,follow 부착 + WebPage JSON-LD 게이트
- *   [배너·광고 판정 — contentDepth().isSubstantial, MIN_PROSE_CHARS=250, 현행 유지]
+ *   [본문 색인 자격 — passesContentIndexGate + discoveryIndexIds]
+ *   뜻·유래·쓰임·예문을 합쳐 400자 이상이고, 항목별 하한과 출처 2개,
+ *   「아직 정리 중」 배너가 없을 것. 사이트맵·robots·llms·탐색 목록은
+ *   그다음 관련 밈 2개까지 통과한 문서만 색인하고 링크한다.
+ *   isIndexableMeme(150자)은 Plus·작업 목록용으로 남아 있다.
+ *   [배너·광고 — contentDepth().isSubstantial, MIN_PROSE_CHARS=250]
  *   - components/doc-status-note.tsx      — 「아직 정리 중인 문서예요」 배너
  *   - app/(default)/memes/[key]/page.tsx  — AdsenseScript 로더 게이트
- *
- * 같은 갈래 안에서는 **반드시 같은 신호·같은 함수**를 넘겨야 판정이 갈리지 않는다.
- * MIN_SCORE(5)는 두 갈래 모두 동일 — 낮아지는 건 산문 하한뿐이다.
- *
- * 주의: lib/meme-translations.ts의 isIndexableLocalizedMeme는 isIndexableMeme을
- * 그대로 감싸므로, 색인 하한 변경이 번역 페이지의 존재 여부·검수 배너·추천 노출에도
- * 함께 전파된다 — 이번 변경은 사이트맵·robots(색인)만 요청받았고 그 파급은 범위
- * 밖이라 손대지 않았다. 실제로 조정하려면 별도 확인이 필요하다.
  *
  * 데이터는 삭제하지 않는다. 페이지는 그대로 200으로 살아 있고 색인 노출만 줄인다.
  */
@@ -35,10 +29,7 @@ export const CONTENT_DEPTH_THRESHOLDS = {
    */
   MIN_PROSE_CHARS: 250,
   /**
-   * 색인(사이트맵·robots) 판정 전용 산문 하한 — HG-001 C안(2026-08-04).
-   * 배너·광고 판정(MIN_PROSE_CHARS=250)보다 낮춰 isIndexableMeme()만 이 값을 쓴다.
-   * 「대량생산 얇은 문서」 방지 취지는 유지하되, 노출 범위만 사이트맵·robots에서
-   * 149자 이하 문서까지로 좁혀 색인 볼륨 손실을 줄인다.
+   * 예전 색인 산문 하한. 배너 점수 설명에만 남아 있고, 색인 자격은 INDEX_GATE를 쓴다.
    */
   MIN_PROSE_CHARS_INDEX: 150,
   /** 종합 점수 하한. 산문 하한을 넘겨도 이 점수 미만이면 얇음. 색인·배너·광고 모두 공통. */
@@ -241,15 +232,109 @@ export function contentDepth(meme: ContentDepthInput | null | undefined): Conten
 }
 
 /**
- * 사이트맵 포함·robots index 허용 여부. 색인 노출 판단은 전부 이 함수를 거친다.
- *
- * HG-001 C안(2026-08-04): contentDepth().isSubstantial(MIN_PROSE_CHARS=250, 배너·광고용)을
- * 그대로 쓰지 않고 MIN_PROSE_CHARS_INDEX(150)를 독자적으로 적용한다 — 색인 임계값만
- * 낮추고 배너·광고 판정은 현행(250) 유지가 이번 결정이라 두 갈래를 여기서 갈라 둔다.
- * MIN_SCORE(5)는 배너·광고와 동일하게 유지.
+ * 상세 페이지를 색인할 본문 조건. 관련 밈 수는 행 하나만으로는 알 수 없어서
+ * discoveryIndexIds가 더한다. 크롤이나 화면 텍스트가 아니라 DB 필드만 센다.
+ */
+export const INDEX_GATE = {
+  BODY_CHARS: 400,
+  MEANING_CHARS: 150,
+  ORIGIN_CHARS: 80,
+  USAGE_CHARS: 40,
+  MIN_EXAMPLES: 2,
+  MIN_RELATED: 2,
+  MIN_SOURCES: 2,
+} as const;
+
+/** 연속 공백은 한 칸으로 접은 뒤의 글자 수. 한글은 JS 문자열 길이(코드 유닛)와 같다. */
+function countedLength(value: unknown): number {
+  if (typeof value !== "string") return 0;
+  return value.replace(/\s+/g, " ").trim().length;
+}
+
+export type IndexCandidate = ContentDepthInput & {
+  id: string;
+  category?: string | null;
+  origin_year?: number | null;
+};
+
+/**
+ * 본문 색인 자격. 배너·광고는 contentDepth().isSubstantial(250자)을 그대로 쓴다.
+ * 이 함수를 통과해도 관련 밈이 2개 미만이면 색인하지 않는다.
+ * Plus·번역 작업 목록의 isIndexableMeme(150자)과는 따로 둔다.
+ */
+export function passesContentIndexGate(meme: ContentDepthInput | null | undefined): boolean {
+  if (!meme || contentDepth(meme).isThin) return false;
+  const meaning = countedLength(meme.description);
+  const origin = isBoilerplateOrigin(meme.origin) ? 0 : countedLength(meme.origin);
+  const usage = countedLength(meme.usage_note);
+  const examples = validUsageExamples(meme.usage_examples);
+  const exampleChars = examples.reduce(
+    (sum, example) => sum + countedLength(example.situation) + countedLength(example.text),
+    0,
+  );
+  const body = meaning + origin + usage + exampleChars;
+  return (
+    body >= INDEX_GATE.BODY_CHARS &&
+    meaning >= INDEX_GATE.MEANING_CHARS &&
+    origin >= INDEX_GATE.ORIGIN_CHARS &&
+    usage >= INDEX_GATE.USAGE_CHARS &&
+    examples.length >= INDEX_GATE.MIN_EXAMPLES &&
+    distinctSourceCount(meme.meme_sources) >= INDEX_GATE.MIN_SOURCES
+  );
+}
+
+/**
+ * 작업 목록·Plus가 쓰는 기존 산문 하한. 공개 색인(사이트맵·robots·탐색)은
+ * passesContentIndexGate와 discoveryIndexIds를 쓴다.
  */
 export function isIndexableMeme(meme: ContentDepthInput | null | undefined): boolean {
   const t = CONTENT_DEPTH_THRESHOLDS;
   const depth = contentDepth(meme);
   return depth.proseChars >= t.MIN_PROSE_CHARS_INDEX && depth.score >= t.MIN_SCORE;
+}
+
+function tagIds(meme: ContentDepthInput): string[] {
+  if (!Array.isArray(meme.meme_tags_map)) return [];
+  return meme.meme_tags_map.flatMap((tag) =>
+    typeof tag?.tag_id === "string" && tag.tag_id ? [tag.tag_id] : [],
+  );
+}
+
+/** 상세의 관련 밈 후보와 같다. 같은 카테고리, 공유 태그, 또는 유래 연도 ±2. */
+function sharesDiscoveryRelation(left: IndexCandidate, right: IndexCandidate): boolean {
+  if (left.category && left.category === right.category) return true;
+  const leftTags = new Set(tagIds(left));
+  if (tagIds(right).some((id) => leftTags.has(id))) return true;
+  return (
+    typeof left.origin_year === "number" &&
+    typeof right.origin_year === "number" &&
+    Math.abs(left.origin_year - right.origin_year) <= 2
+  );
+}
+
+function relatedCount(meme: IndexCandidate, pool: readonly IndexCandidate[]): number {
+  let count = 0;
+  for (const other of pool) {
+    if (other.id === meme.id) continue;
+    if (!sharesDiscoveryRelation(meme, other)) continue;
+    count += 1;
+    if (count >= INDEX_GATE.MIN_RELATED) return count;
+  }
+  return count;
+}
+
+/**
+ * 본문 자격을 통과하고, 마찬가지로 통과한 관련 밈이 2개 이상인 id.
+ * 관련 밈이 탈락하면 그 밈에만 기대던 문서도 다시 세서 고정점에 도달한다.
+ */
+export function discoveryIndexIds(candidates: readonly IndexCandidate[]): Set<string> {
+  let passing = candidates.filter((candidate) => candidate.id && passesContentIndexGate(candidate));
+  for (let round = 0; round <= passing.length; round += 1) {
+    const next = passing.filter(
+      (meme) => relatedCount(meme, passing) >= INDEX_GATE.MIN_RELATED,
+    );
+    if (next.length === passing.length) return new Set(next.map((meme) => meme.id));
+    passing = next;
+  }
+  return new Set(passing.map((meme) => meme.id));
 }

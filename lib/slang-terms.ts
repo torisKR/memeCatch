@@ -1,4 +1,4 @@
-import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import { passesContentIndexGate, type ContentDepthInput } from "@/lib/content-depth";
 import type { SafetyLevel } from "@/lib/labels";
 
 /** /slang dictionary row shown in the list. */
@@ -23,7 +23,7 @@ export const SLANG_DEPTH_SELECT =
 
 /** Keep only rows whose detail page is indexable, then cap the panel. */
 export function indexableSlangTerms(rows: readonly SlangDepthRow[], limit: number): SlangTermRow[] {
-  return rows.filter((row) => isIndexableMeme(row)).slice(0, limit).map((row) => ({
+  return rows.filter((row) => passesContentIndexGate(row)).slice(0, limit).map((row) => ({
     id: row.id,
     short_id: row.short_id,
     slug: row.slug,

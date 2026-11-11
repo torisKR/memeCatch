@@ -379,21 +379,23 @@ export async function getReactionCounts(
 export async function searchMemes(query: string, limit = 20): Promise<MemeListItem[]> {
   const q = query.trim();
   if (!q) return [];
-  try {
-    const supabase = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await supabase
-      .rpc("search_memes", {
-        p_query: q,
-        p_limit: limit,
-      }, { get: true })
-      .select(LIST_SELECT)
-      .in("moderation_status", [...PUBLIC_STATUSES]);
-    const rows = error || !data ? [] : data as MemeListItem[];
-    const seen = new Set(rows.map((item) => item.short_id));
-    return [...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)), ...rows];
-  } catch {
-    return curatedSearchCards(q);
+  const supabase = createStaticClient({ cachePublicCatalog: true });
+  const { data, error } = await supabase
+    .rpc("search_memes", {
+      p_query: q,
+      p_limit: limit,
+    }, { get: true })
+    .select(LIST_SELECT)
+    .in("moderation_status", [...PUBLIC_STATUSES]);
+  // A catalog failure must surface. Returning curated cards here hid the
+  // explore/search error state and looked like a successful empty-or-guide result.
+  if (error) {
+    console.error("search_memes failed");
+    throw new Error("search_memes failed");
   }
+  const rows = (data ?? []) as MemeListItem[];
+  const seen = new Set(rows.map((item) => item.short_id));
+  return [...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)), ...rows];
 }
 
 /** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */

@@ -174,6 +174,16 @@ export function HomeExperience({
               <Link href="/products/new" className={styles.contributionLinkStrong}>
                 {copy.pathways.products.createAction}
               </Link>
+              {locale === "ko" ? (
+                <>
+                  <Link href="/originals" className={styles.contributionLink}>
+                    오리지널 보러 가기
+                  </Link>
+                  <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
+                    밈 올리기
+                  </Link>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

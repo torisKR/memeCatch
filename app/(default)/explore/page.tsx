@@ -231,30 +231,38 @@ export default async function ExplorePage({
   const filters = parseFilters(sp);
 
   const [initialLoad, platformCounts] = await Promise.all([
-    (async (): Promise<{ items: MemeListItem[]; unavailable: boolean }> => {
+    (async (): Promise<{
+      items: MemeListItem[];
+      unavailable: boolean;
+      dbCount: number;
+      hasMore: boolean;
+    }> => {
       const curated = filters.q ? curatedSearchCards(filters.q) : [];
+      const failed = {
+        items: [] as MemeListItem[],
+        unavailable: true,
+        dbCount: 0,
+        hasMore: false,
+      };
       try {
         const supabase = createStaticClient();
         const { data, error } = await buildQuery(supabase, filters).range(
           0,
           PAGE_SIZE - 1
         );
-        // 조회 실패를 빈 목록으로 두면 출처 개수만 남고 "아직 없어요"가 된다.
-        if (error) {
-          return curated.length > 0
-            ? { items: curated, unavailable: false }
-            : { items: [], unavailable: true };
-        }
+        // Curated cards are not a successful catalog read. Showing them with
+        // unavailable:false hid the retry state when the database failed.
+        if (error) return failed;
         const rows = (data ?? []) as unknown as MemeListItem[];
         const seen = new Set(rows.map((item) => item.short_id));
         return {
           items: [...curated.filter((item) => !seen.has(item.short_id)), ...rows],
           unavailable: false,
+          dbCount: rows.length,
+          hasMore: rows.length >= PAGE_SIZE,
         };
       } catch {
-        return curated.length > 0
-          ? { items: curated, unavailable: false }
-          : { items: [], unavailable: true };
+        return failed;
       }
     })(),
     getSocialPlatformCounts(),
@@ -296,6 +304,8 @@ export default async function ExplorePage({
           <ExploreGrid
             key={filterKey(filters)}
             initial={initialLoad.items}
+            initialOffset={initialLoad.dbCount}
+            hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}
             filters={filters}
           />

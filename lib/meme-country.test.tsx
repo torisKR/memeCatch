@@ -103,4 +103,18 @@ describe("meme country display", () => {
     expect(publicFilter).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
     expect(results[0]?.meme_market_profiles?.[0]?.market_code).toBe("US");
   });
+
+  it("does not hide a search catalog failure behind curated cards", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const publicFilter = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "catalog down" },
+    });
+    const select = vi.fn(() => ({ in: publicFilter }));
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select })) });
+
+    await expect(searchMemes("중꺾마")).rejects.toThrow("search_memes failed");
+    expect(errorLog.mock.calls.flat().join(" ")).not.toContain("catalog down");
+    errorLog.mockRestore();
+  });
 });

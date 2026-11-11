@@ -1,0 +1,1512 @@
+{
+  "ok": true,
+  "mode": "update_existing_dry_run",
+  "database_connected": false,
+  "batch_id": "loop-028-priority-enrichment-2026-11-11",
+  "errors": [],
+  "warnings": [
+    "Related memes are computed at read time from tags/category/year/embeddings; this file records related_slugs for editors only.",
+    "safety_reviewed_at / Q-09 last-reviewed UI is unchanged in this content PR.",
+    "namu.wiki returned 403 from this environment's curl, so it was not counted as a live 200 source. Replacement sources on other domains were added where needed.",
+    "This SQL was not applied to prod."
+  ],
+  "summary": {
+    "memes": {
+      "update": 79,
+      "drop": 4,
+      "insert": 0,
+      "skip_existing": 0,
+      "reject": 0
+    },
+    "meme_sources": {
+      "insert_if_missing": 83,
+      "skip_existing": "runtime"
+    }
+  },
+  "dropped": [
+    {
+      "short_id": "jz3dnexj",
+      "slug": "막차-10분-전-line-단체방의-기적",
+      "title": "막차 10분 전 LINE 단체방의 기적",
+      "reason": "origin_kind가 house_original이고 유일한 출처가 catchmeme.com 자체 링크다. 외부 SNS·언론에서 유통된 기록을 확인하지 못해 품질 기준의 독립 출처 2건을 충족할 수 없다."
+    },
+    {
+      "short_id": "3jetw9gv",
+      "slug": "가족-단톡-pix-송금-요청의-진짜-의미",
+      "title": "가족 단톡 Pix 송금 요청의 진짜 의미",
+      "reason": "밈캐치 자체 기획 문구로, 외부에서 확인 가능한 원본이나 제3자 보도가 없다."
+    },
+    {
+      "short_id": "ueucy5wp",
+      "slug": "슬랙-마지막-5분의-동시-폭탄",
+      "title": "슬랙 마지막 5분의 동시 폭탄",
+      "reason": "밈캐치 자체 기획 문구로, 독립된 유통 출처를 확인하지 못했다."
+    },
+    {
+      "short_id": "admu9pnm",
+      "slug": "응-니-애미-(김윤태)",
+      "title": "응 니 애미 (김윤태)",
+      "reason": "기존 나무위키 링크는 이 환경의 curl에서 403이고, 커뮤니티·블로그 외에 교차 확인 가능한 언론·사전 출처를 찾지 못했다. 확인되지 않은 채 본문을 늘리지 않기 위해 이번 배치에서 제외한다."
+    }
+  ],
+  "actions": [
+    {
+      "table": "memes",
+      "key": "shrimp-jesus",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "ai-slop",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://dictionary.cambridge.org/us/dictionary/english/ai-slop",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://simonwillison.net/2024/May/8/slop/",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "뇌절",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.asiae.co.kr/article/2020040814253172269",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "내돈내산",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005920467",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.bbc.com/korean/features-53720146",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "애교",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.koreaherald.com/article/3299428",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "눈치",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.koreaherald.com/article/3844092",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "파이팅",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hani.co.kr/arti/sports/sports_general/858587.html",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wiktionary.org/wiki/%ED%99%94%EC%9D%B4%ED%8C%85",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "직관",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.bizhankook.com/bk/article/13120",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://julimmal.com/en/word/jikgwan",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "치맥",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "대박",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.seoul.co.kr/news/editOpinion/column/find_wordlight/2020/01/02/20200102029009",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.koreaherald.com/article/3457306",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "막내",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hani.co.kr/arti/opinion/column/1222084.html",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://rights.or.kr/1447",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "멍때리기",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.donga.com/news/Culture/article/all/20141025/67428036/1",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20230522114900022",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "엄근진",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.insight.co.kr/news/168411",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.mediatoday.co.kr/news/articleView.html?idxno=145463",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "댕댕이",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hani.co.kr/arti/society/society_general/813654.html",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.ytn.co.kr/_ln/0106_201710091317539361",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "럭키비키",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.mk.co.kr/news/culture/11144024",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.ytn.co.kr/_ln/0106_202412220209210241",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "스불재",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/N.EX.T",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "내-마음속에-저장",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "중요한-건-꺾이지-않는-마음",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20221206081700004",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1006997373",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "꼰대",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.koreaherald.com/article/10844914",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "도마도마-챌린지",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "국민학교→초등학교-개칭",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "포켓몬빵-띠부씰",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "엽기-신드롬",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "폐인-문화",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%8B%A4%EB%AA%A8_(%EB%93%9C%EB%9D%BC%EB%A7%88)",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "프리챌-유료화-논란",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%ED%94%84%EB%A6%AC%EC%B1%8C",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "아이러브스쿨-동창찾기-열풍",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%95%84%EC%9D%B4%EB%9F%AC%EB%B8%8C%EC%8A%A4%EC%BF%A8",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "디워-사태",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/D-War",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "PC통신-모뎀-접속음",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "검정고무신-애니메이션",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EA%B2%80%EC%A0%95%EA%B3%A0%EB%AC%B4%EC%8B%A0",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "버디버디-메신저",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%B2%84%EB%94%94%EB%B2%84%EB%94%94",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "신승훈-발라드-황제",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%8B%A0%EC%8A%B9%ED%9B%88",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "TTL-임은경-스무살의-011",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ent.sbs.co.kr/news/article.do?article_id=E10007025505",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "Y2K-밀레니엄버그",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Year_2000_problem",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "ㅋㅋㅋ-표기",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/ㅋㅋ",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hankookilbo.com/news/article/201507211545312014",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "탑블레이드-팽이-붐",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Beyblade",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "바츠-해방전쟁",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "서태지와-아이들-컴백홈-현상",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%84%9C%ED%83%9C%EC%A7%80%EC%99%80_%EC%95%84%EC%9D%B4%EB%93%A4",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "대장금-홍시",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%8C%80%EC%9E%A5%EA%B8%88",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "종이접기-아저씨-김영만",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EA%B9%80%EC%98%81%EB%A7%8C",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "노스트라다무스-지구멸망설",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "온게임넷-스타리그-출범",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/OnGameNet",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "젝스키스-학원별곡",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "갈갈이-삼형제",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EA%B0%9C%EA%B7%B8_%EC%BD%98%EC%84%9C%ED%8A%B8",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "임요환-테란의-황제",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%9E%84%EC%9A%94%ED%99%98",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "젝스키스-해체(2000)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%A0%9D%EC%8A%A4%ED%82%A4%EC%8A%A4",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "TV는-사랑을-싣고",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "떡밥과-낚시글",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "찔러맨",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://flasharch.com/ko/archive/play/363fd7c21b9a566c88be582e9195ffc1",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "새삥 챌린지 (지코)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "바람의나라",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%B0%94%EB%9E%8C%EC%9D%98_%EB%82%98%EB%9D%BC",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "뿌까-캐릭터",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Pucca",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "박카스-그날의-피로는-그날에",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "시티폰",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.ddaily.co.kr/page/view/2022012109032973484",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.sedaily.com/article/10122712",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "유희왕-카드게임-유행",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Yu-Gi-Oh!",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "펌프-잇업",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Pump_It_Up",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "H.O.T.-캔디",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/H.O.T.",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "겟타맨",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.sisunnews.co.kr/news/articleView.html?idxno=31370",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "스티커사진",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "기억의-습작",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EA%B9%80%EB%8F%99%EB%A5%A0",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "이정현-바꿔·와",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%9D%B4%EC%A0%95%ED%98%84",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "과자-사꾸",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "슬릭백-챌린지",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "평창올림픽-팀추월-왕따-논란",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.bbc.com/korean/news-43140165",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20180523041400007",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "강정호-3회-음주운전-사건",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20161206115151004",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "2026년-롯데-자이언츠-원정-도박-사건",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20260213190700007",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.sportschosun.com/baseball/2026-05-05/202605050100020530001335",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "나만 아니면 돼",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/1%EB%B0%95_2%EC%9D%BC",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "니가-가라-하와이",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Friend_(2001_film)",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "파이어-누들-챌린지-(불닭볶음면-챌린지)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%B6%88%EB%8B%AD%EB%B3%B6%EC%9D%8C%EB%A9%B4",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "설거지론",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hankookilbo.com/news/article/A2021102611400003375",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.newspim.com/news/view/20211230000767",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "테스형",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%82%98%ED%9B%88%EC%95%84",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "고마워요-사토-(G.G.사토)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.nocutnews.co.kr/news/4498012",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.asiae.co.kr/article/2012070420232962598",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "피식대학-영양군-지역비하-사태",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "갑툭튀",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%8B%A0%ED%98%9C%EC%84%B1",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "나는-행복합니다-(한화-이글스-행복송)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%ED%95%9C%ED%99%94_%EC%9D%B4%EA%B8%80%EC%8A%A4",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "KIA타이거즈-남행열차-응원가",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/KIA_%ED%83%80%EC%9D%B4%EA%B1%B0%EC%A6%88",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "페페 더 프로그(슬픈 개구리 페페)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "SNL-코리아-무신사-냄새",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/SNL_%EC%BD%94%EB%A6%AC%EC%95%84",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "MSG-워너비",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/MSG_%EC%9B%8C%EB%84%88%EB%B9%84",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "이종범-바람의-아들",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EC%9D%B4%EC%A2%85%EB%B2%94",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    }
+  ]
+}

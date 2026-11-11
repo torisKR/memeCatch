@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   MessagesSquare,
-  ShoppingBag,
 } from "lucide-react";
 import { HomeDiscovery } from "@/components/home/home-discovery";
 import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
@@ -139,27 +138,6 @@ export function HomeExperience({
                 </span>
               </span>
             </Link>
-
-            <Link
-              href="/products"
-              className={`${styles.pathwayCard} ${styles.productsCard}`}
-            >
-              <span aria-hidden className={styles.productsMotif} />
-              <span className={styles.cardTop}>
-                <ShoppingBag aria-hidden className={styles.cardIcon} />
-                <span className={styles.cardMark}>{web3.pathways.productsMark}</span>
-              </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardTitle}>{copy.pathways.products.title}</span>
-                <span className={styles.cardDescription}>
-                  {copy.pathways.products.description}
-                </span>
-                <span className={styles.cardAction}>
-                  {copy.pathways.products.action}
-                  <ArrowRight aria-hidden className={styles.buttonIcon} />
-                </span>
-              </span>
-            </Link>
           </div>
 
           <div className={styles.contributionBar}>
@@ -170,9 +148,6 @@ export function HomeExperience({
               </Link>
               <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
                 {copy.pathways.submitAction}
-              </Link>
-              <Link href="/products/new" className={styles.contributionLinkStrong}>
-                {copy.pathways.products.createAction}
               </Link>
               {locale === "ko" ? (
                 <>

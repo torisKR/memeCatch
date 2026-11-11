@@ -24,7 +24,6 @@
   "ACT001_PRODUCTION_SUPABASE_ORIGIN": "preview와의 불일치 검증에 필수입니다. 실제 production credential은 입력하지 않습니다.",
   "ACT001_PRODUCTION_SUPABASE_REF": "Production Supabase ref used only to prove a preview mismatch.",
   "ACT001_RUN_ID": "Run id stamped on Plus activation evidence.",
-  "ADPICK_AFFILIATE_ID": "Adpick ShoppingMate hotdeal sync (server only)",
   "ADSENSE_AUTO_ADS_ENABLED": "기본 false: 검증용 메타태그만 유지하고 Auto Ads 런타임을 시작하지 않음. 승인·동의 설정·페이지 제외를 운영자가 확인한 뒤에만 true로 변경. SPA에서는 스크립트 제거만으로 이전에 실행된 자동 광고가 종료되지 않음.",
   "ALLOWED_ORIGINS": "Browser origins allowed to call the ChatGPT integration.",
   "ANTHROPIC_API_KEY": "Key for the offline meme translation batch.",

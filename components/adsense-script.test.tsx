@@ -70,7 +70,7 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
       "app/(default)/support/page.tsx",
       "app/(default)/search/page.tsx",
       "app/(default)/offline/page.tsx",
-      "app/(default)/products/page.tsx",
+      "app/(default)/products/[[...slug]]/page.tsx",
       "app/(default)/quiz/page.tsx",
       "app/(default)/community/page.tsx",
       "app/(default)/community/[id]/page.tsx",

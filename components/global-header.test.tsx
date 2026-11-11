@@ -104,12 +104,12 @@ describe("GlobalHeader", () => {
     },
   );
 
-  it("shows direct desktop entry points for latest memes, community, and products", () => {
+  it("shows direct desktop entry points for latest memes and community", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
 
     expect(html).toContain('href="/explore?sort=recent"');
     expect(html).toContain('href="/community"');
-    expect(html).toContain('href="/products"');
+    expect(html).not.toContain('href="/products"');
   });
 
   it("keeps the tablet header on one row without shrinking its controls below their touch targets", () => {
@@ -119,7 +119,7 @@ describe("GlobalHeader", () => {
     const discoveryNav = html.match(/<nav[^>]*aria-label="주요 발견"[^>]*>/)?.[0];
     const discoveryLinks = [
       ...html.matchAll(
-        /<a[^>]*href="(?:\/explore\?sort=recent|\/community|\/products)"[^>]*>/g,
+        /<a[^>]*href="(?:\/explore\?sort=recent|\/community)"[^>]*>/g,
       ),
     ].map(([link]) => link);
 
@@ -135,7 +135,7 @@ describe("GlobalHeader", () => {
     expect(discoveryNav).toContain("shrink-0");
     expect(discoveryNav).toContain("gap-0.5");
     expect(discoveryNav).toContain("lg:gap-1");
-    expect(discoveryLinks).toHaveLength(3);
+    expect(discoveryLinks).toHaveLength(2);
     for (const link of discoveryLinks) {
       expect(link).toContain("min-h-11");
       expect(link).toContain("shrink-0");

@@ -30,7 +30,7 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
       { href: "#home-top", label: "처음" },
       { href: "#home-latest", label: "최신 밈" },
       { href: "#home-signals", label: "사용 신호" },
-      { href: "#home-pathways", label: "커뮤니티와 상품" },
+      { href: "#home-pathways", label: "커뮤니티" },
       { href: "#home-editorial", label: "편집 원칙" },
     ],
     hero: {
@@ -48,7 +48,7 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
       { href: "#home-top", label: "Top" },
       { href: "#home-latest", label: "Latest" },
       { href: "#home-signals", label: "Usage signals" },
-      { href: "#home-pathways", label: "Community and shop" },
+      { href: "#home-pathways", label: "Community" },
       { href: "#home-editorial", label: "Editorial" },
     ],
     hero: {
@@ -66,7 +66,7 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
       { href: "#home-top", label: "トップ" },
       { href: "#home-latest", label: "新着" },
       { href: "#home-signals", label: "使用シグナル" },
-      { href: "#home-pathways", label: "コミュニティと商品" },
+      { href: "#home-pathways", label: "コミュニティ" },
       { href: "#home-editorial", label: "編集方針" },
     ],
     hero: {
@@ -84,7 +84,7 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
       { href: "#home-top", label: "顶部" },
       { href: "#home-latest", label: "最新内容" },
       { href: "#home-signals", label: "使用提示" },
-      { href: "#home-pathways", label: "社区与商品" },
+      { href: "#home-pathways", label: "社区" },
       { href: "#home-editorial", label: "编辑原则" },
     ],
     hero: {
@@ -102,7 +102,7 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
       { href: "#home-top", label: "頂部" },
       { href: "#home-latest", label: "最新內容" },
       { href: "#home-signals", label: "使用提示" },
-      { href: "#home-pathways", label: "社群與商品" },
+      { href: "#home-pathways", label: "社群" },
       { href: "#home-editorial", label: "編輯原則" },
     ],
     hero: {

@@ -71,7 +71,6 @@ Database dumps use `R2_BACKUP_BUCKET`. That can be the same account and a differ
 
 | UTC | Path |
 | --- | --- |
-| 21:00 | `/api/cron/adpick-hotdeals` |
 | 18:00 | `/api/cron/trend-pulse` |
 | 17:00 | `/api/cron/source-refresh` |
 | 01:00 | `/api/cron/plus-daily-signal` |

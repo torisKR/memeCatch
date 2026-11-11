@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { NewsCollectionJsonLd } from "@/components/json-ld";
 import { NewsPageContent } from "@/components/news-page-content";
-import type { Audience } from "@/lib/meme-commerce";
+import type { Audience } from "@/lib/meme-news";
 import { getBriefsForAudience, type MemeNewsBrief } from "@/lib/meme-news";
 import { getGenerationHighlights } from "@/lib/queries";
 import { PAGE_COPY } from "@/lib/i18n-pages";

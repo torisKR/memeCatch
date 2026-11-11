@@ -5,7 +5,7 @@ export const maxDuration = 60;
 
 /**
  * 일일 트렌드 펄스 cron (vercel.json crons에 등록).
- * Bearer CRON_SECRET 인증 — lib/affiliate/cron-handler.ts와 동일 규약.
+ * Bearer CRON_SECRET 인증.
  */
 export async function GET(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET;

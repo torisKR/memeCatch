@@ -10,7 +10,7 @@ import { usePremium } from "@/lib/hooks/use-premium";
 
 const TABS: {
   href: string;
-  label: "brand" | "latest" | "community" | "submit" | "products" | "premium" | "my";
+  label: "brand" | "latest" | "community" | "submit" | "premium" | "my";
   icon: (props: { className?: string }) => React.ReactElement;
   emphasized?: boolean;
 }[] = [
@@ -18,7 +18,6 @@ const TABS: {
   { href: "/explore?sort=recent", label: "latest", icon: CompassIcon },
   { href: "/community", label: "community", icon: CommunityIcon },
   { href: "/submit", label: "submit", icon: PlusIcon, emphasized: true },
-  { href: "/products", label: "products", icon: ProductIcon },
   { href: "/pricing", label: "premium", icon: PremiumIcon },
   { href: "/my", label: "my", icon: UserIcon },
 ];
@@ -194,14 +193,6 @@ function CommunityIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M4 5.5h16v11H9l-5 3v-14Z" strokeLinejoin="round" />
       <path d="M8 10h8M8 13h5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function ProductIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M4 9h16l-1 12H5L4 9Z" strokeLinejoin="round" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" />
     </svg>
   );
 }

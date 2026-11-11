@@ -31,7 +31,6 @@ export type HomeImmersiveCopy = {
   };
   contextAction: string;
   communityAction: string;
-  productsAction: string;
 };
 
 export const HOME_IMMERSIVE_LOCALES = SEO_ROUTE_LOCALES;
@@ -66,7 +65,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "참여",
         eyebrow: "03 · PARTICIPATE",
         title: "읽었다면, 다음 맥락을 함께 만드세요.",
-        description: "커뮤니티에서 발견한 장면을 나누고, 판매 주체와 관계가 표시된 밈 상품도 둘러보세요.",
+        description: "커뮤니티에서 발견한 장면을 나누고, 다음 맥락을 함께 남겨 보세요.",
       },
     ],
     search: {
@@ -76,7 +75,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "네 가지 사용 신호 보기",
     communityAction: "커뮤니티 가기",
-    productsAction: "밈 상품 둘러보기",
   },
   en: {
     navigationLabel: "Home story chapters",
@@ -107,7 +105,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "Participate",
         eyebrow: "03 · PARTICIPATE",
         title: "Once you understand it, add to the story.",
-        description: "Share the context you found with the community, or browse meme goods with seller relationships shown clearly.",
+        description: "Share the context you found and leave the next piece of the story with the community.",
       },
     ],
     search: {
@@ -117,7 +115,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "See the four usage signals",
     communityAction: "Visit the community",
-    productsAction: "Browse meme products",
   },
   ja: {
     navigationLabel: "ホームストーリーのチャプター",
@@ -148,7 +145,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "参加",
         eyebrow: "03 · PARTICIPATE",
         title: "理解したら、次の文脈に参加する。",
-        description: "見つけた場面をコミュニティで共有し、販売者との関係が明示されたミーム商品も探せます。",
+        description: "見つけた場面をコミュニティで共有し、次の文脈を一緒に残しましょう。",
       },
     ],
     search: {
@@ -158,7 +155,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "4つの使用シグナルを見る",
     communityAction: "コミュニティを見る",
-    productsAction: "ミーム商品を見る",
   },
   zh: {
     navigationLabel: "首页故事章节",
@@ -189,7 +185,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "参与",
         eyebrow: "03 · PARTICIPATE",
         title: "理解之后，一起补充下一段故事。",
-        description: "在社区分享你发现的使用场景，或浏览清楚标明卖家关联关系的迷因商品。",
+        description: "在社区分享你发现的使用场景，并一起留下下一段语境。",
       },
     ],
     search: {
@@ -199,7 +195,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "查看四种使用提示",
     communityAction: "前往社区",
-    productsAction: "浏览迷因商品",
   },
   "zh-tw": {
     navigationLabel: "首頁故事章節",
@@ -230,7 +225,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "參與",
         eyebrow: "03 · PARTICIPATE",
         title: "理解之後，一起補充下一段故事。",
-        description: "在社群分享你發現的使用場景，或瀏覽清楚標示賣家關聯關係的迷因商品。",
+        description: "在社群分享你發現的使用場景，並一起留下下一段語境。",
       },
     ],
     search: {
@@ -240,6 +235,5 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "查看四種使用提示",
     communityAction: "前往社群",
-    productsAction: "瀏覽迷因商品",
   },
 };

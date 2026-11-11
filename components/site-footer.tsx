@@ -33,6 +33,16 @@ export function SiteFooter() {
           {locale === "ko" ? <TranslatedEditionHint /> : null}
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              {locale === "ko" ? (
+                <li>
+                  <Link
+                    href="/contact"
+                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] hover:text-foreground hover:decoration-flame-500 focus-visible:decoration-flame-500"
+                  >
+                    문의
+                  </Link>
+                </li>
+              ) : null}
               {FOOTER_LINKS.map((l) => (
                 <li key={l.href}>
                   <Link

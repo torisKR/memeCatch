@@ -258,7 +258,7 @@ async function buildSitemap(): Promise<{
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/editorial", "/privacy", "/terms"] as const).map(
+    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/products", "/about", "/contact", "/editorial", "/privacy", "/terms"] as const).map(
       (path) => ({
         url: `${SITE_URL}${path}`,
         changeFrequency: "daily" as const,

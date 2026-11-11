@@ -4,13 +4,10 @@
  * PWA 설치 유도 배너 (레인 E)
  *
  * 노출 조건(전부 만족해야 함):
- * - 첫 세션 아님 (localStorage 방문 카운트 2회 이상) 또는 저장 행동 2회 이상
+ * - 방문 2회 이상. 첫 페이지 뷰에서는 보이지 않는다.
  * - 이미 설치(standalone)돼 있지 않음
- * - 최근 14일 내에 닫은 적 없음
+ * - 한 번이라도 닫은 적 없음 (닫기는 영구)
  * - Android/데스크톱: beforeinstallprompt 캡처됨 / iOS Safari: 수동 안내
- *
- * 저장 행동 집계: 다른 컴포넌트에서 `window.dispatchEvent(new Event("memecatch:save"))`
- * 를 호출하면 카운트가 올라가요.
  *
  * 사용: app/_root/root-document.tsx의 <body> 안에 <PwaInstall /> 한 줄 추가.
  */
@@ -18,11 +15,20 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 const KEY_VISITS = "mc:visits";
-const KEY_SAVES = "mc:saves";
 const KEY_DISMISSED_AT = "mc:install-dismissed-at";
 const KEY_INSTALLED = "mc:installed";
 const SESSION_COUNTED = "mc:visit-counted";
-const DISMISS_DAYS = 14;
+
+/** Second visit onward, and never again after the visitor closes it. */
+export function installOfferAllowed(state: {
+  visits: number;
+  dismissed: boolean;
+  installed: boolean;
+  standalone: boolean;
+}): boolean {
+  if (state.standalone || state.installed || state.dismissed) return false;
+  return state.visits >= 2;
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -54,11 +60,9 @@ function isIos(): boolean {
   return /iPhone|iPad|iPod/i.test(ua) || iPadOs;
 }
 
-function dismissedRecently(): boolean {
+function dismissedForever(): boolean {
   try {
-    const at = Number.parseInt(localStorage.getItem(KEY_DISMISSED_AT) ?? "0", 10);
-    if (!at) return false;
-    return Date.now() - at < DISMISS_DAYS * 24 * 60 * 60 * 1000;
+    return Boolean(localStorage.getItem(KEY_DISMISSED_AT));
   } catch {
     return false;
   }
@@ -74,7 +78,7 @@ export function PwaInstall() {
   const iosSheetRef = useRef<HTMLDivElement>(null);
   const iosSheetReturnFocusRef = useRef<HTMLElement | null>(null);
 
-  // 방문 카운트 (세션당 1회) + 저장 행동 카운트 리스너
+  // 방문 카운트 (세션당 1회). 안내 배너는 2회째부터.
   useEffect(() => {
     try {
       if (!sessionStorage.getItem(SESSION_COUNTED)) {
@@ -85,29 +89,21 @@ export function PwaInstall() {
       // 프라이빗 모드 등 스토리지 불가 시 조용히 통과
     }
 
-    const onSave = () => {
-      try {
-        localStorage.setItem(KEY_SAVES, String(readCount(KEY_SAVES) + 1));
-      } catch {
-        // noop
-      }
-    };
-    window.addEventListener("memecatch:save", onSave);
-    return () => window.removeEventListener("memecatch:save", onSave);
   }, []);
 
   const eligible = useCallback((): boolean => {
-    if (isStandalone()) return false;
-    if (dismissedRecently()) return false;
+    let installed = false;
     try {
-      if (localStorage.getItem(KEY_INSTALLED) === "1") return false;
+      installed = localStorage.getItem(KEY_INSTALLED) === "1";
     } catch {
       return false;
     }
-    const visits = readCount(KEY_VISITS);
-    const saves = readCount(KEY_SAVES);
-    // 첫 세션 금지: 방문 2회+ 또는 저장 2회+
-    return visits >= 2 || saves >= 2;
+    return installOfferAllowed({
+      visits: readCount(KEY_VISITS),
+      dismissed: dismissedForever(),
+      installed,
+      standalone: isStandalone(),
+    });
   }, []);
 
   // beforeinstallprompt 캡처 (Android/데스크톱 Chrome 계열)

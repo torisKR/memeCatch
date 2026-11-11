@@ -96,15 +96,16 @@ describe("LocaleProvider URL precedence", () => {
     },
   );
 
-  it.each(["/products", "/community"])(
-    "preserves the preferred cookie locale on shared page %s",
+  it.each(["/products", "/community", "/slang", "/explore"])(
+    "keeps Korean chrome on unprefixed page %s even when the cookie is English",
     (path) => {
-      setLocaleCookie("zh-tw");
+      setLocaleCookie("en");
       setLocation(path);
 
       renderProvider();
 
-      expect(screen.getByLabelText("active locale").textContent).toBe("zh-tw");
+      expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+      expect(document.documentElement.lang).toBe("ko");
     },
   );
 

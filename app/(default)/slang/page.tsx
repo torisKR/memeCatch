@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import { Suspense, cache } from "react";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
-import { getSlangTermsByYearRange, type SlangTermRow } from "@/lib/queries";
+import {
+  getSlangTermsByYearRange,
+  indexableSlangTerms,
+  SLANG_CANDIDATE_LIMIT,
+  SLANG_DEPTH_SELECT,
+  type SlangDepthRow,
+  type SlangTermRow,
+} from "@/lib/queries";
 import { createStaticClient } from "@/lib/supabase/server";
 import {
   SlangDictionary,
@@ -96,23 +103,19 @@ const loadRiskyTerms = cache(async (): Promise<SlangEra["terms"]> => {
     const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("memes")
-      .select(
-        "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
-      )
+      .select(SLANG_DEPTH_SELECT)
       .eq("category", "phrase")
       .in("moderation_status", ["approved", "limited"])
       .in("safety_level", ["red", "yellow"])
       .order("trend_score", { ascending: false })
       .order("id", { ascending: false })
-      .limit(TERMS_PER_ERA);
+      .limit(SLANG_CANDIDATE_LIMIT);
     if (error || !data) return [];
     // red(쓰면 위험)를 먼저 — 같은 등급 안에서는 trend 순 유지(stable sort)
-    return [...(data as SlangTermRow[])]
-      .sort(
-        (a, b) =>
-          Number(b.safety_level === "red") - Number(a.safety_level === "red")
-      )
-      .map(rowToTerm);
+    const ranked = [...(data as SlangDepthRow[])].sort(
+      (a, b) => Number(b.safety_level === "red") - Number(a.safety_level === "red"),
+    );
+    return indexableSlangTerms(ranked, TERMS_PER_ERA).map(rowToTerm);
   } catch {
     return [];
   }

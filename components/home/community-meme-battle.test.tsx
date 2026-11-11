@@ -50,6 +50,31 @@ describe("CommunityMemeBattle", () => {
     expect(screen.getByText("이번 달 올라온 밈이 아직 없어요. 첫 밈을 올려 보세요.")).toBeTruthy();
   });
 
+  it("opens this week when today has no entries", () => {
+    render(
+      <CommunityMemeBattle
+        boards={[
+          { period: "day", status: "ready", totalPosts: 0, promotionCount: 0, entries: [] },
+          {
+            period: "week",
+            status: "ready",
+            totalPosts: 2,
+            promotionCount: 1,
+            entries: [
+              { postId: "w", title: "이번 주 1등", likeCount: 3, commentCount: 0, rank: 1, isPromotionCandidate: true },
+            ],
+          },
+          { period: "month", status: "ready", totalPosts: 0, promotionCount: 0, entries: [] },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("tab", { name: "이번 주" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "오늘" }).getAttribute("aria-selected")).toBe("false");
+    expect(screen.queryByText("오늘 올라온 밈이 아직 없어요. 첫 밈을 올려 보세요.")).toBeNull();
+    expect(screen.getByText("이번 주 1등")).toBeTruthy();
+  });
+
   it("links to posting and voting", () => {
     render(<CommunityMemeBattle boards={boards} />);
     expect(screen.getByRole("link", { name: "밈 올리기" }).getAttribute("href")).toBe("/community/new");

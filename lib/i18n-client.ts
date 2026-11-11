@@ -3,7 +3,6 @@
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
 import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
-import { normalizePathname } from "@/lib/normalize-pathname";
 
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
@@ -24,25 +23,19 @@ function localeFromSearch(search: string): Locale | null {
   return isLocale(value) ? value : null;
 }
 
-/** Unprefixed meme documents are Korean pages. The header must follow the page, not a UI cookie. */
-function isKoreanMemeDocument(pathname: string): boolean {
-  const path = normalizePathname(pathname);
-  return path === "/memes" || path.startsWith("/memes/");
-}
-
-/** URL-owned locale choices must stay aligned with the server-rendered page. */
+/**
+ * URL-owned locale choices must stay aligned with the server-rendered page.
+ * Unprefixed paths are Korean documents. A UI cookie must not turn their
+ * header and footer into MemeCatch / Latest / Submit.
+ */
 function localeFromCurrentUrl(): Locale | null {
   const prefixedLocale = localeFromPathname(window.location.pathname);
   if (prefixedLocale) return prefixedLocale;
 
-  if (isKoreanMemeDocument(window.location.pathname)) return DEFAULT_LOCALE;
-
   const queryLocale = localeFromSearch(window.location.search);
   if (queryLocale) return queryLocale;
 
-  return normalizePathname(window.location.pathname) === "/"
-    ? DEFAULT_LOCALE
-    : null;
+  return DEFAULT_LOCALE;
 }
 
 function readLocale(): Locale {

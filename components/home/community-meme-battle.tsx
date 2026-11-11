@@ -14,9 +14,17 @@ import {
  * 오늘·이번 주·이번 달 좋아요 순위를 탭으로 바꿔 보고, 상위 1% 후보는 표시를 단다.
  * 상위 1%는 기간이 끝나면 운영자 검수 대기(meme_submissions)로 넘어간다.
  */
+/** Today stays first only when it has entries. An empty today opens on this week. */
+export function initialBattlePeriod(boards: readonly BattleBoard[]): BattlePeriod {
+  const today = boards.find((board) => board.period === "day");
+  if (today && today.status === "ready" && today.entries.length > 0) return "day";
+  if (boards.some((board) => board.period === "week")) return "week";
+  return boards[0]?.period ?? "day";
+}
+
 export function CommunityMemeBattle({ boards }: { boards: readonly BattleBoard[] }) {
   const baseId = useId();
-  const [active, setActive] = useState<BattlePeriod>(boards[0]?.period ?? "day");
+  const [active, setActive] = useState<BattlePeriod>(initialBattlePeriod(boards));
   const board = boards.find((item) => item.period === active) ?? boards[0];
   if (!board || boards.every((item) => item.status === "unavailable")) return null;
 

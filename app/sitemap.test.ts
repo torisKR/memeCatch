@@ -211,6 +211,7 @@ describe("사이트맵 날짜 진실성", () => {
       "/collections",
       "/collections/2020s",
       "/about",
+      "/contact",
       "/privacy",
       "/terms",
     ];

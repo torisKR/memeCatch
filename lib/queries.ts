@@ -7,6 +7,13 @@
 import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
 import { curatedSearchCards } from "@/lib/curated-memes";
+import {
+  indexableSlangTerms,
+  SLANG_CANDIDATE_LIMIT,
+  SLANG_DEPTH_SELECT,
+  type SlangDepthRow,
+  type SlangTermRow,
+} from "@/lib/slang-terms";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
@@ -398,18 +405,8 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
   return [...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)), ...rows];
 }
 
-/** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */
-export type SlangTermRow = Pick<
-  MemeRow,
-  | "id"
-  | "short_id"
-  | "slug"
-  | "title"
-  | "summary"
-  | "safety_level"
-  | "origin_year"
-  | "trend_score"
->;
+export { indexableSlangTerms, SLANG_CANDIDATE_LIMIT, SLANG_DEPTH_SELECT };
+export type { SlangDepthRow, SlangTermRow };
 
 /**
  * /slang — 연대(origin_year 범위)별 유행어(category=phrase) 상위 조회.
@@ -424,18 +421,16 @@ export async function getSlangTermsByYearRange(
     const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
-      .select(
-        "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
-      )
+      .select(SLANG_DEPTH_SELECT)
       .eq("category", "phrase")
       .in("moderation_status", [...PUBLIC_STATUSES])
       .gte("origin_year", fromYear)
       .lte("origin_year", toYear)
       .order("trend_score", { ascending: false })
       .order("id", { ascending: false })
-      .limit(limit);
+      .limit(Math.max(limit, SLANG_CANDIDATE_LIMIT));
     if (error || !data) return [];
-    return data as SlangTermRow[];
+    return indexableSlangTerms(data as SlangDepthRow[], limit);
   } catch {
     return [];
   }

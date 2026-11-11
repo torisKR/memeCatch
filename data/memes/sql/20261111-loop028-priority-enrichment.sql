@@ -101,7 +101,7 @@ where meme.short_id = 'b9gzeysg' and meme.slug = 'shrimp-jesus'
 update public.memes set
   summary = '치킨 안주에 맥주를 함께 즐기는 조합을 줄여 부르는 말',
   description = '치맥은 치킨 안주에 맥주를 곁들여 즐기는 조합을 줄여 부르는 말이다. 치맥은 월드컵이나 아시안컵 같은 스포츠 경기를 볼 때 많이 찾는 메뉴다. 월드컵 기간에는 편의점과 치킨 프랜차이즈가 대목을 맞는다. 드라마 ‘별에서 온 그대’에서 주인공 천송이는 치킨 안주에 맥주를 즐기는 치맥 마니아로 나오고, “눈 오는 날엔 치맥인데”라는 대사도 한다. 이 드라마의 인기로 중국에서도 치맥이 유행했다. 중국 상하이에서는 한국식 치킨을 사 먹으려면 치킨집 앞에서 3시간 정도 줄을 서야 한다는 전언이 나왔다.',
-  origin = '한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다. 월드컵 이후 치킨 가게 수는 약 1만 곳에서 2만 5천 곳으로 늘었다.',
+  origin = '한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다.',
   usage_note = '월드컵이나 아시안컵 같은 스포츠 경기를 함께 볼 때 먹을거리로 치맥을 권하는 말로 쓸 수 있다. 술이 들어가므로 상대가 마실 수 있는지부터 확인하는 것이 좋다.',
   caution = '술이 들어가는 문화라 미성년자나 술을 못 마시는 사람에게 강요하지 말자.',
   usage_examples = '[{"situation":"축구 경기가 있는 날","text":"오늘 경기 보면서 치맥 어때?"},{"situation":"퇴근길","text":"이번 주 고생했으니 치맥 한잔하자."}]'::jsonb,
@@ -283,7 +283,7 @@ where short_id = '89b37mrx'
 update public.memes set
   summary = '세 차례 음주운전 사실이 드러나고 음주 뺑소니 사고를 낸 전 메이저리거 강정호 사건',
   description = '강정호는 피츠버그 파이리츠 소속 메이저리거이던 시절, 음주 상태로 차를 몰다 서울 강남 삼성역사거리에서 가드레일을 들이받고 그대로 달아났다. 사고 직후 동승한 친구가 경찰에 자신이 운전했다고 거짓말을 했지만, 블랙박스 확인 결과 강정호가 운전한 사실이 드러났다. 그는 앞서 두 차례 음주운전으로 적발된 전력도 있었다. 누적 적발 횟수가 세 차례가 되면서 ‘음주운전 삼진아웃제’에 따라 면허가 취소될 상황이 됐다. 그는 징역 8개월에 집행유예 2년을 선고받았다.',
-  origin = '이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 그는 자유계약 선수가 됐다.',
+  origin = '이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 복귀는 무산됐다.',
   usage_note = '반복된 음주운전이라는 실제 범죄 사건이므로 농담거리로만 소비하지 않도록 주의한다.',
   caution = '음주운전 전력을 다루는 만큼 미화하거나 가볍게 다루지 않도록 주의가 필요하다.',
   usage_examples = '[{"situation":"스포츠 범죄를 설명할 때","text":"강정호 음주운전 사건은 한 번의 실수가 아니라 반복된 적발이 핵심이야."},{"situation":"복귀 논의를 보다가","text":"세 번째 적발이 뺑소니 사고였다는 걸 빼고는 이 사안을 말하기 어려워."}]'::jsonb,
@@ -315,6 +315,18 @@ where meme.short_id = '56hnkxyk' and meme.slug = '강정호-3회-음주운전-�
   and not exists (
     select 1 from public.meme_sources as existing
     where existing.meme_id = meme.id and existing.source_url = 'https://en.wikipedia.org/wiki/Jung-ho_Kang'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'News', 'https://www.yna.co.kr/view/AKR20220429073300007', '강정호 복귀 무산…KBO, 선수계약 미승인', '연합뉴스',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '56hnkxyk' and meme.slug = '강정호-3회-음주운전-사건'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.yna.co.kr/view/AKR20220429073300007'
   );
 
 -- 2026년 롯데 자이언츠 원정 도박 사건 (utxgy8un / 2026년-롯데-자이언츠-원정-도박-사건)
@@ -519,7 +531,7 @@ update public.meme_sources as ms
   from public.memes as meme
  where ms.meme_id = meme.id
    and meme.short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x')
-   and (ms.source_url ilike '%namu.wiki%' or ms.source_url ilike '%merriam-webster.com%' or ms.source_url ilike '%etnews.com%' or ms.source_url ilike '%vop.co.kr%' or ms.source_url ilike '%gamemeca.com%' or ms.source_url ilike '%VbmYQF32SNg%' or ms.source_url ilike '%mvqYV2zvksU%' or ms.source_url ilike '%uzAdeV9Yz5U%' or ms.source_url ilike '%WwYmJzjU10w%' or ms.source_url ilike '%qK7YQ6pvLp8%' or ms.source_url ilike '%XTuKk2HZCBM%' or ms.source_url ilike '%h4mfwvB7C7Q%' or ms.source_url ilike '%skrG0f0ihvM%' or ms.source_url ilike '%CmsLb87hOqQ%' or ms.source_url ilike '%ZCKxJx7tBi4%' or ms.source_url ilike '%CAxYaPGMICA%' or ms.source_url ilike '%NLAdKX2r1jI%' or ms.source_url ilike '%sxVZlnSHqy0%' or ms.source_url ilike '%B_Kt0uDmTFA%' or ms.source_url ilike '%vk9_bKXhI_c%' or ms.source_url ilike '%JfsNf8j4BUY%' or ms.source_url ilike '%BKo1bznv-RY%' or ms.source_url ilike '%MKeOC3BMG0c%' or ms.source_url ilike '%_WWM0QilnS0%' or ms.source_url ilike '%wbrFi8n7-sw%' or ms.source_url ilike '%aRv2-fGOteg%' or ms.source_url ilike '%71XbAI7SMEU%' or ms.source_url ilike '%fAqPgEW_46U%' or ms.source_url ilike '%fVX6ptcsHHY%' or ms.source_url ilike '%Trq8SGvkQTI%' or ms.source_url ilike '%hvM_JGYgfJ0%' or ms.source_url ilike '%VSHq5oxg2Sk%' or ms.source_url ilike '%n5zRdGm2vgg%' or ms.source_url ilike '%6arSLs0y-Q8%' or ms.source_url ilike '%V_yj-ChWSYs%' or ms.source_url ilike '%AhE7PT7fr60%' or ms.source_url ilike '%_BuM_uCk4JI%' or ms.source_url ilike '%KARSCdB946A%' or ms.source_url ilike '%fz_LRL8NyoI%' or ms.source_url ilike '%about.ncsoft.com%');
+   and (ms.source_url ilike '%namu.wiki%' or ms.source_url ilike '%merriam-webster.com%' or ms.source_url ilike '%etnews.com%' or ms.source_url ilike '%vop.co.kr%' or ms.source_url ilike '%gamemeca.com%' or ms.source_url ilike '%VbmYQF32SNg%' or ms.source_url ilike '%mvqYV2zvksU%' or ms.source_url ilike '%uzAdeV9Yz5U%' or ms.source_url ilike '%WwYmJzjU10w%' or ms.source_url ilike '%qK7YQ6pvLp8%' or ms.source_url ilike '%XTuKk2HZCBM%' or ms.source_url ilike '%h4mfwvB7C7Q%' or ms.source_url ilike '%skrG0f0ihvM%' or ms.source_url ilike '%CmsLb87hOqQ%' or ms.source_url ilike '%ZCKxJx7tBi4%' or ms.source_url ilike '%NLAdKX2r1jI%' or ms.source_url ilike '%sxVZlnSHqy0%' or ms.source_url ilike '%B_Kt0uDmTFA%' or ms.source_url ilike '%vk9_bKXhI_c%' or ms.source_url ilike '%JfsNf8j4BUY%' or ms.source_url ilike '%BKo1bznv-RY%' or ms.source_url ilike '%MKeOC3BMG0c%' or ms.source_url ilike '%_WWM0QilnS0%' or ms.source_url ilike '%wbrFi8n7-sw%' or ms.source_url ilike '%aRv2-fGOteg%' or ms.source_url ilike '%71XbAI7SMEU%' or ms.source_url ilike '%fAqPgEW_46U%' or ms.source_url ilike '%fVX6ptcsHHY%' or ms.source_url ilike '%Trq8SGvkQTI%' or ms.source_url ilike '%hvM_JGYgfJ0%' or ms.source_url ilike '%VSHq5oxg2Sk%' or ms.source_url ilike '%n5zRdGm2vgg%' or ms.source_url ilike '%6arSLs0y-Q8%' or ms.source_url ilike '%V_yj-ChWSYs%' or ms.source_url ilike '%AhE7PT7fr60%' or ms.source_url ilike '%_BuM_uCk4JI%' or ms.source_url ilike '%KARSCdB946A%' or ms.source_url ilike '%fz_LRL8NyoI%' or ms.source_url ilike '%about.ncsoft.com%');
 
 -- Restore safety_reviewed_at after the usage_note/caution trigger has fired.
 update public.memes as meme

@@ -20,10 +20,10 @@
       "reject": 0
     },
     "meme_sources": {
-      "insert_if_missing": 18,
+      "insert_if_missing": 19,
       "title_update": 6,
       "delete_non200_for_batch": 0,
-      "hide_from_public": "runtime, markers=40",
+      "hide_from_public": "runtime, markers=39",
       "hide_from_public_rows_expected": 35,
       "skip_existing": "runtime"
     }
@@ -654,6 +654,15 @@
     {
       "table": "meme_sources",
       "key": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20220429073300007",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"

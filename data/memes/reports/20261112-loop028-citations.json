@@ -4,10 +4,10 @@
   "method": "Every public sentence (summary, description, origin, usage_note, caution, usage_examples situation/text) has cited_source_url + exact quote from a visible source (titled, not hidden_from_public, HTTP 200 when fetched), or an explicit no_fact reason. Quotes were checked by substring match against page text fetched this round (whitespace and spacing before punctuation normalized). Dates, decades and rankings need 2 independent visible sources; jjalbang.today and instablank.com state they were compiled from wepick, so they do not count as independent of it.",
   "fetched_at": "2026-11-12T03:10:00+09:00",
   "totals": {
-    "sentences": 213,
-    "cited": 153,
+    "sentences": 212,
+    "cited": 152,
     "no_fact": 60,
-    "quotes": 213
+    "quotes": 212
   },
   "errors": [],
   "memes": [
@@ -866,6 +866,10 @@
         {
           "url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
           "title": "Jung-ho Kang"
+        },
+        {
+          "url": "https://www.yna.co.kr/view/AKR20220429073300007",
+          "title": "강정호 복귀 무산…KBO, 선수계약 미승인"
         }
       ],
       "sentences": [
@@ -1056,7 +1060,7 @@
         {
           "field": "origin",
           "index": 3,
-          "text": "이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 그는 자유계약 선수가 됐다.",
+          "text": "이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 복귀는 무산됐다.",
           "citations": [
             {
               "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
@@ -1067,20 +1071,20 @@
               "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
             },
             {
-              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
-              "source_title": "Jung-ho Kang",
-              "quote": "returned to the KBO League by signing a one-year, $25,000 contract with his former team, now named the Kiwoom Heroes",
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20220429073300007",
+              "source_title": "강정호 복귀 무산…KBO, 선수계약 미승인",
+              "quote": "강정호와 키움의 선수 계약은 KBO리그 발전을 저해한다고 판단해 승인하지 않는다",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
-              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
+              "fetched_text_sha256": "8b40de0f58c08778e34928fdf964cc813c93033d34435536784d17109bbf3fd6"
             },
             {
-              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
-              "source_title": "Jung-ho Kang",
-              "quote": "the KBO declined to approve the contract and Kang became a free agent",
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20220429073300007",
+              "source_title": "강정호 복귀 무산…KBO, 선수계약 미승인",
+              "quote": "두 번째 프로야구 KBO리그 복귀 시도도 무산됐다",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
-              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
+              "fetched_text_sha256": "8b40de0f58c08778e34928fdf964cc813c93033d34435536784d17109bbf3fd6"
             }
           ],
           "date_or_ranking": false
@@ -2774,22 +2778,6 @@
               "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
               "source_title": "Chimaek",
               "quote": "Public parks would often have large screens to watch the games, and people would dress in red (the colour and nickname of the home team ) and gather together to cheer for the World Cup, while eating chicken and drinking beer.",
-              "quote_found_in_fetched_page": true,
-              "http_status": 200,
-              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
-            }
-          ],
-          "date_or_ranking": false
-        },
-        {
-          "field": "origin",
-          "index": 3,
-          "text": "월드컵 이후 치킨 가게 수는 약 1만 곳에서 2만 5천 곳으로 늘었다.",
-          "citations": [
-            {
-              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
-              "source_title": "Chimaek",
-              "quote": "The number of chicken restaurants increased from around 10,000 to 25,000 after the World Cup.",
               "quote_found_in_fetched_page": true,
               "http_status": 200,
               "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"

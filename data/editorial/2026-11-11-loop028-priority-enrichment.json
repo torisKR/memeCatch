@@ -522,7 +522,7 @@
       "title": "치맥",
       "summary": "치킨 안주에 맥주를 함께 즐기는 조합을 줄여 부르는 말",
       "description": "치맥은 치킨 안주에 맥주를 곁들여 즐기는 조합을 줄여 부르는 말이다. 치맥은 월드컵이나 아시안컵 같은 스포츠 경기를 볼 때 많이 찾는 메뉴다. 월드컵 기간에는 편의점과 치킨 프랜차이즈가 대목을 맞는다. 드라마 ‘별에서 온 그대’에서 주인공 천송이는 치킨 안주에 맥주를 즐기는 치맥 마니아로 나오고, “눈 오는 날엔 치맥인데”라는 대사도 한다. 이 드라마의 인기로 중국에서도 치맥이 유행했다. 중국 상하이에서는 한국식 치킨을 사 먹으려면 치킨집 앞에서 3시간 정도 줄을 서야 한다는 전언이 나왔다.",
-      "origin": "한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다. 월드컵 이후 치킨 가게 수는 약 1만 곳에서 2만 5천 곳으로 늘었다.",
+      "origin": "한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다.",
       "usage_note": "월드컵이나 아시안컵 같은 스포츠 경기를 함께 볼 때 먹을거리로 치맥을 권하는 말로 쓸 수 있다. 술이 들어가므로 상대가 마실 수 있는지부터 확인하는 것이 좋다.",
       "caution": "술이 들어가는 문화라 미성년자나 술을 못 마시는 사람에게 강요하지 말자.",
       "usage_examples": [
@@ -561,9 +561,9 @@
         }
       ],
       "metrics": {
-        "prose": 608,
+        "prose": 568,
         "meaning": 277,
-        "origin": 193,
+        "origin": 153,
         "usage": 89,
         "examples": 2
       }
@@ -885,7 +885,7 @@
       "title": "강정호 3회 음주운전 사건",
       "summary": "세 차례 음주운전 사실이 드러나고 음주 뺑소니 사고를 낸 전 메이저리거 강정호 사건",
       "description": "강정호는 피츠버그 파이리츠 소속 메이저리거이던 시절, 음주 상태로 차를 몰다 서울 강남 삼성역사거리에서 가드레일을 들이받고 그대로 달아났다. 사고 직후 동승한 친구가 경찰에 자신이 운전했다고 거짓말을 했지만, 블랙박스 확인 결과 강정호가 운전한 사실이 드러났다. 그는 앞서 두 차례 음주운전으로 적발된 전력도 있었다. 누적 적발 횟수가 세 차례가 되면서 ‘음주운전 삼진아웃제’에 따라 면허가 취소될 상황이 됐다. 그는 징역 8개월에 집행유예 2년을 선고받았다.",
-      "origin": "이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 그는 자유계약 선수가 됐다.",
+      "origin": "이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 복귀는 무산됐다.",
       "usage_note": "반복된 음주운전이라는 실제 범죄 사건이므로 농담거리로만 소비하지 않도록 주의한다.",
       "caution": "음주운전 전력을 다루는 만큼 미화하거나 가볍게 다루지 않도록 주의가 필요하다.",
       "usage_examples": [
@@ -910,7 +910,8 @@
       ],
       "live_source_urls": [
         "https://www.yna.co.kr/view/AKR20161206115151004",
-        "https://en.wikipedia.org/wiki/Jung-ho_Kang"
+        "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+        "https://www.yna.co.kr/view/AKR20220429073300007"
       ],
       "new_sources": [
         {
@@ -930,12 +931,21 @@
           "source_role": "secondary_reference",
           "rights_basis": "link_only",
           "copyright_status": "unknown"
+        },
+        {
+          "url": "https://www.yna.co.kr/view/AKR20220429073300007",
+          "title": "강정호 복귀 무산…KBO, 선수계약 미승인",
+          "platform": "News",
+          "creator_name": "연합뉴스",
+          "source_role": "secondary_reference",
+          "rights_basis": "link_only",
+          "copyright_status": "unknown"
         }
       ],
       "metrics": {
-        "prose": 631,
+        "prose": 625,
         "meaning": 257,
-        "origin": 228,
+        "origin": 222,
         "usage": 45,
         "examples": 2
       }
@@ -1299,6 +1309,17 @@
       "copyright_status": "unknown"
     },
     {
+      "meme_slug": "강정호-3회-음주운전-사건",
+      "short_id": "56hnkxyk",
+      "url": "https://www.yna.co.kr/view/AKR20220429073300007",
+      "title": "강정호 복귀 무산…KBO, 선수계약 미승인",
+      "platform": "News",
+      "creator_name": "연합뉴스",
+      "source_role": "secondary_reference",
+      "rights_basis": "link_only",
+      "copyright_status": "unknown"
+    },
+    {
       "meme_slug": "2026년-롯데-자이언츠-원정-도박-사건",
       "short_id": "utxgy8un",
       "url": "https://www.yna.co.kr/view/AKR20260213190700007",
@@ -1391,7 +1412,7 @@
     "original_priority": 83,
     "dropped": 70,
     "enriched": 13,
-    "new_source_rows": 18,
+    "new_source_rows": 19,
     "title_updates": 6,
     "content_reviewed_at": "2026-11-11T15:00:00+09:00",
     "standard_sha256": "f654b0bfdf3fa0a76b61b0a1423362ca59ef1c6c25a36671e58e49bc543b9fd6",

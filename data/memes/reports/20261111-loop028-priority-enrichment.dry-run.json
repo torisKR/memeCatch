@@ -8,7 +8,7 @@
     "Related memes are computed at read time from tags/category/year/embeddings; this file records related_slugs for editors only.",
     "Q-09: schema adds memes.content_reviewed_at (flagged migration). This SQL sets it to the editorial review date. UI shows 최종 검토일 from that column.",
     "safety_reviewed_at is captured and restored in the same transaction so the existing trigger does not overwrite it.",
-    "namu.wiki (403), merriam-webster (403), vop/etnews connection failures, and deleted YouTube VbmYQF32SNg are deleted for this batch only and do not count as live 200 sources.",
+    "This SQL does not DELETE meme_sources. namu.wiki and other non-200 or unverifiable URLs are kept and are not counted toward Q-07.",
     "This SQL was not applied to prod."
   ],
   "summary": {
@@ -20,9 +20,9 @@
       "reject": 0
     },
     "meme_sources": {
-      "insert_if_missing": 92,
-      "title_update": 8,
-      "delete_non200_for_batch": "runtime, patterns=namu.wiki,merriam-webster.com,vop.co.kr,etnews.com,VbmYQF32SNg",
+      "insert_if_missing": 91,
+      "title_update": 48,
+      "delete_non200_for_batch": 0,
       "skip_existing": "runtime"
     }
   },
@@ -997,7 +997,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EB%B0%94%EB%9E%8C%EC%9D%98_%EB%82%98%EB%9D%BC",
+      "key": "https://ko.wikipedia.org/wiki/바람의_나라_(온라인_게임)",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1087,16 +1087,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://en.wikipedia.org/wiki/Pump_It_Up",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.gamemeca.com/view.php?gid=1587825",
+      "key": "https://en.wikipedia.org/wiki/Pump_It_Up_(video_game_series)",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1177,7 +1168,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EC%9D%B4%EC%A0%95%ED%98%84",
+      "key": "https://en.wikipedia.org/wiki/Lee_Jung-hyun",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1285,7 +1276,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.sportschosun.com/baseball/2026-05-05/202605050100020530001335",
+      "key": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1591,25 +1582,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://imnews.imbc.com/replay/1996/nwdesk/article/1968630_30711.html",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1004468097",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.jjalbang.today/jjalstoryview/48",
+      "key": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1627,7 +1600,52 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.insight.co.kr/news/184150",
+      "key": "https://imnews.imbc.com/replay/1996/nwdesk/article/1968630_30711.html",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=u4SrYHBHsPc",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=HzkAIHL9I3g",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=mvqYV2zvksU",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.asiae.co.kr/article/2012030509281753829",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=exvGgp_458Y",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1645,7 +1663,340 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.gamemeca.com/view.php?gid=1587825",
+      "key": "https://www.youtube.com/watch?v=nECFcvPdAXc",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=2gzrjRm5emg",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=0Pu--Gf98xY",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=FkweUESmoh8",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/1999%EB%85%84_%EC%A2%85%EB%A7%90%EB%A1%A0",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=yreTzhZ2P5M",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=0wnbcAwUnvg",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=AFeTuDHp1bg",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hankookilbo.com/News/Read/200308210033196594",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/바츠해방전쟁",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=3svR5j1i-Vo",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=ME0V2_vm6I0",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=3NUaXU1d-NY",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1004468097",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=Qg5ePCV6mqs",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.mt.co.kr/opinion/2020/06/26/2020062520044444620",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.ytn.co.kr/_ln/0134_201910291430064648",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.nongmin.com/article/20240519500070",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=mM3su9pxkJQ",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.insight.co.kr/news/184150",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=78ULUYsN1hc",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.sportsseoul.com/news/read/576627",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=q3xy4p2JTfU",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%ED%95%99%EC%9B%90%EB%B3%84%EA%B3%A1",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=BSLgJxFc4UA",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://m.hankookilbo.com/News/Read/A2022031817270004541",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005267860",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=lVreX4udyUY",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=8cNz9awcVqg",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.segye.com/newsView/20070920001620",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=lbUo0ShXvNc",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.khan.co.kr/article/200012251708421",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=4xIrSRXscCY",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://m.segye.com/view/20220306509477",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=xXKA3IMA3pA",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.brandbrief.co.kr/news/articleView.html?idxno=4391",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.jjalbang.today/jjalstoryview/48",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"

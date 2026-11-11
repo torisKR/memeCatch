@@ -59,9 +59,23 @@ describe("canonical meme detail redirects", () => {
     expect(canonicalMemeRedirectPath(decodeURIComponent(key), meme)).toBeNull();
   });
 
-  it("treats NFC and NFD Hangul slugs as the same canonical key", () => {
+  it("redirects NFD, lowercase percent-encoding, and %2D to the NFC canonical URL", () => {
     const meme = { shortId: "a1b2c3", slug: "중꺾마".normalize("NFC"), locale: "ko" as const };
-    expect(canonicalMemeRedirectPath(`a1b2c3-${"중꺾마".normalize("NFD")}`, meme)).toBeNull();
+    const canonical = "/memes/a1b2c3-%EC%A4%91%EA%BA%BE%EB%A7%88";
+    const encoded = "a1b2c3-%EC%A4%91%EA%BA%BE%EB%A7%88";
+
+    expect(canonicalMemeRedirectPath(`a1b2c3-${"중꺾마".normalize("NFD")}`, meme)).toBe(canonical);
+    expect(canonicalMemeRedirectPath(`a1b2c3-${"중꺾마".normalize("NFD")}`, meme, "encoded")).toBe(canonical);
+    expect(canonicalMemeRedirectPath(encoded.toLowerCase(), meme, "encoded")).toBe(canonical);
+    expect(canonicalMemeRedirectPath(encoded.toLowerCase(), meme)).toBe(canonical);
+    expect(canonicalMemeRedirectPath(encoded, meme, "encoded")).toBeNull();
+    expect(canonicalMemeRedirectPath(decodeURIComponent(encoded), meme)).toBeNull();
+
+    const hyphen = { shortId: "a1b2c3", slug: "current", locale: "ko" as const };
+    expect(canonicalMemeRedirectPath("a1b2c3%2Dcurrent", hyphen, "encoded")).toBe(
+      "/memes/a1b2c3-current",
+    );
+    expect(canonicalMemeRedirectPath("a1b2c3-current", hyphen, "encoded")).toBeNull();
   });
 
   it("does not loop when a decoded canonical slug contains a literal percent sign", () => {

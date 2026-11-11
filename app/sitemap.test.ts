@@ -9,7 +9,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import sitemap from "@/app/sitemap";
+import sitemap, { clearSitemapCache } from "@/app/sitemap";
 
 const source = readFileSync(join(process.cwd(), "app/sitemap.ts"), "utf-8");
 
@@ -96,6 +96,7 @@ function useRows(
 }
 
 beforeEach(() => {
+  clearSitemapCache();
   createStaticClient.mockReset();
 });
 
@@ -106,6 +107,30 @@ beforeEach(() => {
 describe("사이트맵 페이지네이션 안정성", () => {
   it("요청 시점에 다시 만들어 빌드 당시의 빈 카탈로그를 고정하지 않는다", () => {
     expect(source).toContain('export const dynamic = "force-dynamic"');
+    expect(source).not.toContain("export const revalidate");
+    const config = readFileSync(join(process.cwd(), "next.config.ts"), "utf-8");
+    expect(config).toContain(
+      "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+    );
+  });
+
+  it("keeps a successful catalog in memory and retries an outage", async () => {
+    useRows([indexableMeme(1, [])]);
+    await sitemap();
+    const callsAfterFirst = createStaticClient.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+    await sitemap();
+    expect(createStaticClient.mock.calls.length).toBe(callsAfterFirst);
+
+    clearSitemapCache();
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    createStaticClient.mockImplementation(() => {
+      throw new Error("catalog down");
+    });
+    await sitemap();
+    await sitemap();
+    expect(createStaticClient.mock.calls.length).toBe(callsAfterFirst + 2);
+    errorLog.mockRestore();
   });
 
   it("range() 페이지네이션에 고유 타이브레이커(id)가 있다", () => {

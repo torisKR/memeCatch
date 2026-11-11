@@ -100,6 +100,14 @@ describe("HomeExperience", () => {
     expect(html).toContain('href="/community/new"');
     expect(html).toContain('href="/submit"');
     expect(html).toContain('href="/products/new"');
+    if (locale === "ko") {
+      expect(html).toContain("오리지널 보러 가기");
+      expect(html).toContain("밈 올리기");
+      expect(html).toContain('href="/originals"');
+    } else {
+      expect(html).not.toContain("오리지널 보러 가기");
+      expect(html).not.toContain("밈 올리기");
+    }
     expect(html).toContain(
       `href="${locale === "ko" ? "/explore?sort=recent" : `/${locale}/explore?sort=recent`}"`,
     );

@@ -21,8 +21,25 @@ import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 /**
  * A database-less image build must not cache a sitemap that has no meme URLs.
  * `revalidate` still prerenders that empty result into the standalone server.
+ * `force-dynamic` keeps the first request live. The module cache below skips
+ * the full catalog scan for the next hour, and next.config sets
+ * `s-maxage` plus `stale-while-revalidate` on `/sitemap.xml`. An outage is
+ * not cached, so the next request tries the catalog again.
  */
 export const dynamic = "force-dynamic";
+
+const SITEMAP_CACHE_MS = 60 * 60 * 1000;
+
+type CachedSitemap = {
+  expiresAt: number;
+  entries: MetadataRoute.Sitemap;
+};
+
+let cachedSitemap: CachedSitemap | null = null;
+
+export function clearSitemapCache(): void {
+  cachedSitemap = null;
+}
 
 /** 공개(=200으로 렌더되는) 밈 상태: approved + limited. */
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
@@ -158,7 +175,10 @@ function reportCatalogUnavailable(): void {
   console.error("[sitemap] catalog unavailable");
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+async function buildSitemap(): Promise<{
+  entries: MetadataRoute.Sitemap;
+  catalogUnavailable: boolean;
+}> {
   // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
   // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
   // 카탈로그가 402처럼 막혀도 정적 페이지 사이트맵은 빌드를 통과해야 한다.
@@ -271,11 +291,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .range(from, from + PAGE - 1);
       if (page.error) {
         reportCatalogUnavailable();
+        catalogUnavailable = true;
         break;
       }
       data = page.data;
     } catch {
       reportCatalogUnavailable();
+      catalogUnavailable = true;
       break;
     }
     if (!data || data.length === 0) break;
@@ -355,5 +377,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
-  return entries.slice(0, MAX_SITEMAP_URLS);
+  return { entries: entries.slice(0, MAX_SITEMAP_URLS), catalogUnavailable };
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = Date.now();
+  if (cachedSitemap && cachedSitemap.expiresAt > now) return cachedSitemap.entries;
+  const built = await buildSitemap();
+  if (!built.catalogUnavailable) {
+    cachedSitemap = { expiresAt: now + SITEMAP_CACHE_MS, entries: built.entries };
+  }
+  return built.entries;
 }

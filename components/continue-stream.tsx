@@ -1,10 +1,28 @@
+import { cacheCatalogRead } from "@/lib/catalog-read-cache";
 import { createStaticClient } from "@/lib/supabase/server";
-import type { MemeListItem } from "@/lib/queries";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { LIST_SELECT, MemeCatalogUnavailableError, type MemeListItem } from "@/lib/queries";
 import type { MemeCategory } from "@/lib/labels";
 import { ExploreGrid } from "@/components/explore-grid";
 import { TrackedBlock } from "@/components/tracked-block";
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)";
+const loadCategoryStream = cacheCatalogRead(
+  async (category: MemeCategory, currentId: string, scanSize: number): Promise<MemeListItem[]> => {
+    const { data, error } = await createStaticClient()
+      .from("memes")
+      .select(LIST_SELECT)
+      .eq("category", category)
+      .neq("id", currentId)
+      .in("moderation_status", ["approved", "limited"])
+      .order("trend_score", { ascending: false })
+      .order("id", { ascending: false })
+      .range(0, scanSize - 1);
+    if (error) throw new MemeCatalogUnavailableError();
+    return (data ?? []) as MemeListItem[];
+  },
+  ["public-meme-category-stream"],
+  { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+);
 
 /**
  * 첫 화면에 렌더할 카드 수 상한. 상세는 '문서'라서 본문 대비 링크 비율이 중요하다 —
@@ -44,20 +62,10 @@ export async function ContinueStream({
   let consumed = 0;
   let exhausted = false;
   try {
-    const supabase = createStaticClient();
     // 관련 밈과 겹쳐 걸러질 수 있으니 필요한 수보다 넉넉히 읽고, 실제로 훑은
     // 행 수만 consumed로 센다(그 뒤부터 무한 스크롤이 이어받는다).
     const scanSize = need + RELATED_SLOTS;
-    const { data } = await supabase
-      .from("memes")
-      .select(SELECT)
-      .eq("category", category)
-      .neq("id", currentId)
-      .in("moderation_status", ["approved", "limited"])
-      .order("trend_score", { ascending: false })
-      .order("id", { ascending: false })
-      .range(0, scanSize - 1);
-    const rows = (data ?? []) as MemeListItem[];
+    const rows = await loadCategoryStream(category, currentId, scanSize);
     exhausted = rows.length < scanSize;
 
     const seen = new Set<string>([currentId, ...relatedIds]);

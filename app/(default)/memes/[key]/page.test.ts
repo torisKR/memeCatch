@@ -41,7 +41,7 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).toContain("const missingTranslationLocales = SEO_CONTENT_LOCALES.filter");
     expect(source).toContain('translationStatus="missing"');
     expect(source).toContain("global-translation-title");
-    expect(source).toContain("getAvailableTranslationLocales(meme.id)");
+    expect(source).toContain("listIndexableLocalizedMemes(meme)");
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {

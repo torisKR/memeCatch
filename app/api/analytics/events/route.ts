@@ -1,4 +1,4 @@
-import { isAuthSessionMissingError } from "@supabase/supabase-js";
+import { isAuthSessionMissingError } from "@/lib/auth/session-error";
 import {
   growthNetworkHash,
   isGrowthRateLimitError,

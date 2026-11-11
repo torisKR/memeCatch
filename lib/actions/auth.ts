@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
 import { SITE_URL } from "@/lib/site";
@@ -15,7 +16,7 @@ export type AuthState = {
 } | null;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const INTERNAL_AUTH_DOMAIN = "@auth.memecatch.internal";
+const INTERNAL_AUTH_DOMAINS = ["@auth.memecatch.internal", "@wallet.memecatch.internal"];
 const SIGNUP_NOTICE =
   "가입 요청을 접수했어요. 가입 가능한 이메일이면 안내 메일을 확인하거나 로그인해 주세요.";
 const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
@@ -61,7 +62,7 @@ export async function signUp(
   }
   if (!email) fieldErrors.email = "이메일을 입력해 주세요";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
-  else if (email.toLowerCase().endsWith(INTERNAL_AUTH_DOMAIN)) {
+  else if (INTERNAL_AUTH_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain))) {
     fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
   }
   if (!STRONG_PASSWORD_RE.test(password)) {
@@ -175,9 +176,18 @@ export async function requestPasswordReset(
   };
 }
 
+async function resetWithToken(token: string, password: string): Promise<{ message: string } | null> {
+  try {
+    await ensureAuthSchema();
+    await getAuth().api.resetPassword({ body: { newPassword: password, token } });
+    return null;
+  } catch {
+    return { message: "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요." };
+  }
+}
+
 /**
- * 새 비밀번호 저장 — 재설정 메일 링크로 만들어진 세션이 있을 때만 동작한다.
- * 세션이 없으면(링크 만료·직접 접근) 변경하지 않고 재요청을 안내한다.
+ * 새 비밀번호 저장. 재설정 메일의 token 또는 이미 로그인된 세션이 있어야 한다.
  */
 export async function updatePassword(
   _prev: AuthState,
@@ -185,6 +195,7 @@ export async function updatePassword(
 ): Promise<AuthState> {
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
+  const token = String(formData.get("token") ?? "");
 
   if (!STRONG_PASSWORD_RE.test(password)) {
     return { fieldErrors: { password: "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요" } };
@@ -197,14 +208,16 @@ export async function updatePassword(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
+  if (!token && !user) {
     return {
       formError:
         "재설정 링크가 만료됐거나 유효하지 않아요. 메일을 다시 요청해 주세요.",
     };
   }
 
-  const { error } = await supabase.auth.updateUser({ password });
+  const error = token
+    ? await resetWithToken(token, password)
+    : (await supabase.auth.updateUser({ password })).error;
   if (error) {
     return {
       formError: "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.",

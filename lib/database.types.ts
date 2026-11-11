@@ -2263,6 +2263,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
@@ -2302,6 +2303,7 @@ export type Database = {
           published_at?: string | null
           revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at?: string | null
           safety_reviewed_at?: string | null
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
@@ -2341,6 +2343,7 @@ export type Database = {
           published_at?: string | null
           revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at?: string | null
           safety_reviewed_at?: string | null
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
@@ -4453,6 +4456,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
@@ -4882,6 +4886,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
@@ -4929,6 +4934,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string

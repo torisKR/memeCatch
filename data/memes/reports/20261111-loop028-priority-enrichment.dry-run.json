@@ -6,20 +6,23 @@
   "errors": [],
   "warnings": [
     "Related memes are computed at read time from tags/category/year/embeddings; this file records related_slugs for editors only.",
-    "safety_reviewed_at / Q-09 last-reviewed UI is unchanged in this content PR.",
-    "namu.wiki returned 403 from this environment's curl, so it was not counted as a live 200 source. Replacement sources on other domains were added where needed.",
+    "Q-09: schema adds memes.content_reviewed_at (flagged migration). This SQL sets it to the editorial review date. UI shows 최종 검토일 from that column.",
+    "safety_reviewed_at is captured and restored in the same transaction so the existing trigger does not overwrite it.",
+    "namu.wiki (403), merriam-webster (403), vop/etnews connection failures, and deleted YouTube VbmYQF32SNg are deleted for this batch only and do not count as live 200 sources.",
     "This SQL was not applied to prod."
   ],
   "summary": {
     "memes": {
-      "update": 79,
-      "drop": 4,
+      "update": 78,
+      "drop": 5,
       "insert": 0,
       "skip_existing": 0,
       "reject": 0
     },
     "meme_sources": {
-      "insert_if_missing": 83,
+      "insert_if_missing": 92,
+      "title_update": 8,
+      "delete_non200_for_batch": "runtime, patterns=namu.wiki,merriam-webster.com,vop.co.kr,etnews.com,VbmYQF32SNg",
       "skip_existing": "runtime"
     }
   },
@@ -47,6 +50,12 @@
       "slug": "응-니-애미-(김윤태)",
       "title": "응 니 애미 (김윤태)",
       "reason": "기존 나무위키 링크는 이 환경의 curl에서 403이고, 커뮤니티·블로그 외에 교차 확인 가능한 언론·사전 출처를 찾지 못했다. 확인되지 않은 채 본문을 늘리지 않기 위해 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "7nh5djcf",
+      "slug": "슬릭백-챌린지",
+      "title": "슬릭백 챌린지",
+      "reason": "본문에 미성년자 실명(이효철)과 조회수 주장이 있으나, 기존 틱톡·유튜브 출처는 이 환경의 일반 curl로 본문을 확인할 수 없다. 실명을 지운 채 교차 확인 가능한 읽기 쉬운 출처 2건을 확보하지 못해 이번 배치에서 제외한다."
     }
   ],
   "actions": [
@@ -583,7 +592,16 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://en.wikipedia.org/wiki/D-War",
+      "key": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.khan.co.kr/article/200708101214011",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -790,7 +808,16 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EA%B9%80%EC%98%81%EB%A7%8C",
+      "key": "https://www.hani.co.kr/arti/society/society_general/699962.html",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20250602138800371",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1068,6 +1095,15 @@
       "warnings": []
     },
     {
+      "table": "meme_sources",
+      "key": "https://www.gamemeca.com/view.php?gid=1587825",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
       "table": "memes",
       "key": "H.O.T.-캔디",
       "action": "update",
@@ -1159,15 +1195,6 @@
     },
     {
       "table": "memes",
-      "key": "슬릭백-챌린지",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "평창올림픽-팀추월-왕따-논란",
       "action": "update",
       "reasons": [
@@ -1187,6 +1214,24 @@
     {
       "table": "meme_sources",
       "key": "https://www.yna.co.kr/view/AKR20180523041400007",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20230421103700004",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.joongang.co.kr/article/25394152",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1383,6 +1428,24 @@
       "warnings": []
     },
     {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20240821061000005",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.metroseoul.co.kr/article/20240829500089",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
       "table": "memes",
       "key": "갑툭튀",
       "action": "update",
@@ -1393,7 +1456,16 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EC%8B%A0%ED%98%9C%EC%84%B1",
+      "key": "https://biz.heraldcorp.com/article/3755062",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.nate.com/view/20210713n02819",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1465,7 +1537,16 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/SNL_%EC%BD%94%EB%A6%AC%EC%95%84",
+      "key": "https://economist.co.kr/article/view/ecn202302010077",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.mk.co.kr/news/business/10630614",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1505,6 +1586,78 @@
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://imnews.imbc.com/replay/1996/nwdesk/article/1968630_30711.html",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1004468097",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.jjalbang.today/jjalstoryview/48",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://cine21.com/news/view/?mag_id=96550",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.insight.co.kr/news/184150",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://v.daum.net/v/M0OIVlynxD",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.gamemeca.com/view.php?gid=1587825",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=fHowwndHvuU",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
       ],
       "warnings": []
     }

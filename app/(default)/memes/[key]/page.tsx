@@ -431,6 +431,19 @@ export default async function MemeDetailPage({ params }: Props) {
                 <h2 id="meme-about" className="sr-only">
                   {aboutSectionHeading(meme.origin_kind)}
                 </h2>
+                {meme.content_reviewed_at && (
+                  <p className="text-sm text-muted">
+                    최종 검토일:{" "}
+                    <time dateTime={meme.content_reviewed_at}>
+                      {new Intl.DateTimeFormat("ko-KR", {
+                        timeZone: "Asia/Seoul",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }).format(new Date(meme.content_reviewed_at))}
+                    </time>
+                  </p>
+                )}
                 {meme.description && (
                   <div>
                     <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>

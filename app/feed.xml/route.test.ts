@@ -30,8 +30,8 @@ function row(
     origin: indexable ? "o".repeat(60) : "",
     usage_note: null,
     caution: null,
-    usage_examples: [],
-    meme_sources: [],
+    usage_examples: [] as { situation: string; text: string }[],
+    meme_sources: [] as { source_url?: string; hidden_from_public?: boolean }[],
     meme_contents: [],
     meme_tags_map: [],
   };

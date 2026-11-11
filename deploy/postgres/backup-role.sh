@@ -58,6 +58,47 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+
+-- TEMP is granted to PUBLIC by the template database. Take it away, then give
+-- it back to the app roles. memecatch_backup must not create temp tables.
+REVOKE TEMP ON DATABASE memecatch FROM PUBLIC;
+REVOKE TEMP ON DATABASE memecatch FROM memecatch_backup;
+GRANT TEMP ON DATABASE memecatch TO memecatch, anon, authenticated, service_role;
+
+-- SECURITY DEFINER writers are executable by PUBLIC unless revoked. The backup
+-- login could set app.user_id and call them. Keep execute for the request roles.
+DO $$
+DECLARE
+  fn regprocedure;
+  owner_name text;
+BEGIN
+  FOR fn IN
+    SELECT p.oid::regprocedure
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public'
+       AND p.prosecdef
+  LOOP
+    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, memecatch_backup', fn);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO anon, authenticated, service_role', fn);
+  END LOOP;
+  FOREACH owner_name IN ARRAY ARRAY['postgres', 'memecatch']
+  LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = owner_name) THEN
+      -- A per-schema default privilege is added on top of the hard-wired
+      -- EXECUTE grant to PUBLIC, so it cannot remove that grant. A global
+      -- entry replaces the hard-wired default.
+      EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES FOR ROLE %I REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC',
+        owner_name
+      );
+      EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES FOR ROLE %I GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role',
+        owner_name
+      );
+    END IF;
+  END LOOP;
+END $$;
 SQL
 }
 

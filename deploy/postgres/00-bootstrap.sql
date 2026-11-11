@@ -81,14 +81,17 @@ RETURNS jsonb
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT COALESCE(
-    NULLIF(current_setting('request.jwt.claims', true), '')::jsonb,
-    jsonb_build_object(
-      'role', COALESCE(NULLIF(current_setting('app.db_role', true), ''), 'anon'),
-      'sub', NULLIF(current_setting('app.user_id', true), ''),
-      'is_anonymous', COALESCE(NULLIF(current_setting('app.is_anonymous', true), ''), 'false')
+  SELECT CASE
+    WHEN session_user::text = 'memecatch' THEN COALESCE(
+      NULLIF(current_setting('request.jwt.claims', true), '')::jsonb,
+      jsonb_build_object(
+        'role', COALESCE(NULLIF(current_setting('app.db_role', true), ''), 'anon'),
+        'sub', NULLIF(current_setting('app.user_id', true), ''),
+        'is_anonymous', COALESCE(NULLIF(current_setting('app.is_anonymous', true), ''), 'false')
+      )
     )
-  );
+    ELSE NULL
+  END;
 $$;
 
 CREATE OR REPLACE FUNCTION auth.role()
@@ -104,13 +107,16 @@ RETURNS uuid
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT NULLIF(
-    COALESCE(
-      NULLIF(current_setting('app.user_id', true), ''),
-      auth.jwt() ->> 'sub'
-    ),
-    ''
-  )::uuid;
+  SELECT CASE
+    WHEN session_user::text = 'memecatch' THEN NULLIF(
+      COALESCE(
+        NULLIF(current_setting('app.user_id', true), ''),
+        auth.jwt() ->> 'sub'
+      ),
+      ''
+    )::uuid
+    ELSE NULL
+  END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.app_current_user_id()

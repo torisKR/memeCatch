@@ -163,6 +163,7 @@ psql -v ON_ERROR_STOP=1 -f "$here/../../supabase/migrations/20261110130000_auth_
   pg_restore --data-only --no-owner -f - "$auth_dump" | awk -f "$here/filter-pg17-dump.awk"
   printf '%s\n' 'COMMIT;'
 } | psql -v ON_ERROR_STOP=1 -d "$PGDATABASE"
+psql -v ON_ERROR_STOP=1 -d "$PGDATABASE" -f "$here/check-fk.sql"
 
 : > "$target_counts"
 while IFS='|' read -r schema table; do

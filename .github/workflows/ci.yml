@@ -26,6 +26,7 @@ jobs:
       - run: pnpm build
       - name: Build the app image with the public release values
         env:
+          RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
           NEXT_PUBLIC_ADSENSE_CLIENT: ${{ vars.NEXT_PUBLIC_ADSENSE_CLIENT }}
           NEXT_PUBLIC_COMMUNITY_ENABLED: ${{ vars.NEXT_PUBLIC_COMMUNITY_ENABLED }}
@@ -37,7 +38,7 @@ jobs:
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
         run: |
           docker build -t memecatch:ci \
-            --build-arg RELEASE_SHA="${GITHUB_SHA}" \
+            --build-arg RELEASE_SHA="${RELEASE_SHA}" \
             --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}" \
             --build-arg NEXT_PUBLIC_ADSENSE_CLIENT="${NEXT_PUBLIC_ADSENSE_CLIENT}" \
             --build-arg NEXT_PUBLIC_COMMUNITY_ENABLED="${NEXT_PUBLIC_COMMUNITY_ENABLED}" \
@@ -53,4 +54,5 @@ jobs:
       - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
       - run: bash scripts/postgres/migrate-from-supabase.test.sh
       - run: bash scripts/postgres/enum-in-filter.test.sh
+      - run: bash scripts/postgres/backup-role-readonly.test.sh
       - run: bash deploy/backup/ci-test-restore.sh

@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm lint
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pnpm test
+      - run: node scripts/check-env-manifest.mjs
+      - run: pnpm build
+      - run: docker build -t memecatch:ci .
+      - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
+      - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
+      - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
+      - run: bash scripts/postgres/migrate-from-supabase.test.sh
+      - run: bash deploy/backup/ci-test-restore.sh

@@ -21,7 +21,7 @@ import type { ContentDepthInput } from "@/lib/content-depth";
  * 답변엔진(ChatGPT/Perplexity 등)이 링크를 크롤링하지 않고도 정확히 인용할 수 있게 한다.
  * 크기 제어를 위해 트렌드 상위 순으로 상한을 둔다(전체 URL은 sitemap.xml로 안내).
  */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const MAX_MEMES = 400;
 

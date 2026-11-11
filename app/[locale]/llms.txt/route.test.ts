@@ -6,7 +6,7 @@ vi.mock("@/lib/meme-translations", () => ({
   getLocalizedFeaturedMemes: (...args: unknown[]) => getLocalizedFeaturedMemes(...args),
 }));
 
-import { GET } from "./route";
+import { GET, dynamic as routeDynamic } from "./route";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -14,6 +14,10 @@ beforeEach(() => {
 });
 
 describe("localized llms index policy", () => {
+  it("renders on request so a database-less build cannot cache a failure", () => {
+    expect(routeDynamic).toBe("force-dynamic");
+  });
+
   it.each(["en", "ja", "zh", "zh-tw"])('keeps %s drafts private and feeds reviewed entries only', async (locale) => {
     const response = await GET(new Request(`https://catchmeme.com/${locale}/llms.txt`), {
       params: Promise.resolve({ locale }),

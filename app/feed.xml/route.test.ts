@@ -7,7 +7,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import { GET } from "@/app/feed.xml/route";
+import { GET, dynamic as routeDynamic } from "@/app/feed.xml/route";
 
 function row(
   index: number,
@@ -61,6 +61,10 @@ function useRows(
 beforeEach(() => createStaticClient.mockReset());
 
 describe("RSS publication export", () => {
+  it("renders on request so a database-less build cannot cache a failure", () => {
+    expect(routeDynamic).toBe("force-dynamic");
+  });
+
   it("filters with isIndexableMeme before applying the 30 item limit and pages stably", async () => {
     const rows = [
       ...Array.from({ length: 1_000 }, (_, index) => row(index, false)),

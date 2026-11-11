@@ -10,8 +10,8 @@ import {
 import type { ContentDepthInput } from "@/lib/content-depth";
 
 
-/** llms.txt — AI 시스템용 사이트 안내 (https://llmstxt.org 규격). 1시간 재검증 */
-export const revalidate = 3600;
+/** llms.txt — AI 시스템용 사이트 안내 (https://llmstxt.org 규격). 빌드 시 DB 없이 실패 본문을 굽지 않는다. */
+export const dynamic = "force-dynamic";
 
 type LlmsIndexRow = ContentDepthInput & {
   id: string;

@@ -1,4 +1,5 @@
-import { isAuthSessionMissingError } from "@supabase/supabase-js";
+import { isAuthSessionMissingError } from "@/lib/auth/session-error";
+import { signingSecret } from "@/lib/auth/signing-secret";
 import {
   growthNetworkHash,
   isGrowthRateLimitError,
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
   if (authError && !isAuthSessionMissingError(authError)) {
     return Response.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }
-  const principalSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const principalSecret = signingSecret();
   if (!principalSecret) {
     return Response.json({ ok: false, error: "analytics_unavailable" }, { status: 503 });
   }

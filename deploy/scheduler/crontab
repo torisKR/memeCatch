@@ -1,0 +1,10 @@
+# Times are UTC, matching the previous Vercel cron definitions.
+0 21 * * * /usr/local/bin/run-cron /api/cron/adpick-hotdeals
+0 18 * * * /usr/local/bin/run-cron /api/cron/trend-pulse
+0 17 * * * /usr/local/bin/run-cron /api/cron/source-refresh
+0 1 * * * /usr/local/bin/run-cron /api/cron/plus-daily-signal
+15 0 * * * /usr/local/bin/run-cron /api/cron/growth-baseline
+15 0 * * * /usr/local/bin/run-cron /api/cron/plus-expiry-reminders
+30 1 * * * /usr/local/bin/run-cron /api/cron/web-push
+45 0 * * * /usr/local/bin/run-cron /api/cron/saved-state-emails
+30 18 * * * /usr/local/bin/run-cron /api/cron/meme-embeddings

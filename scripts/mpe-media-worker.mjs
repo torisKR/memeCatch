@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -683,10 +682,11 @@ function loadEnvironment() {
 
 async function main() {
   loadEnvironment();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 설정 필요");
-  const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  if (!process.env.DATABASE_URL?.trim()) throw new Error("DATABASE_URL 설정 필요");
+  // The worker tests import this module and pass a fake client. Loading the
+  // admin client at module scope would open Postgres during those tests.
+  const { createAdminClient } = await import("../lib/supabase/admin-client.ts");
+  const supabase = createAdminClient();
   if (process.argv.includes("--watch")) {
     let stopping = false;
     process.once("SIGTERM", () => { stopping = true; });

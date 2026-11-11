@@ -1,67 +1,134 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { headers } from "next/headers";
 import type { Database } from "@/lib/database.types";
-import { createPublicCountFetch } from "@/lib/supabase/public-count-cache";
-import { createPublicCatalogFetch } from "@/lib/supabase/public-catalog-cache";
+import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
+import { verifyMagicLink } from "@/lib/auth/magic-link";
+import { hashNewPassword } from "@/lib/auth/passwords";
+import { executePlan } from "@/lib/db/execute";
+import { createPlanClient } from "@/lib/db/plan";
+import { getPool, type DbIdentity } from "@/lib/db/pool";
 
-type RetryConfigurableClient = {
-  rest: { retry?: boolean };
-};
+type SessionUser = { id: string; email: string; name?: string | null; is_anonymous?: boolean };
 
-function isLoopbackUrl(value: string): boolean {
-  try {
-    const { hostname } = new URL(value);
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-  } catch {
-    return false;
-  }
+function identityFor(user: SessionUser | null): DbIdentity {
+  if (!user) return { userId: null, role: "anon", anonymous: false };
+  return { userId: user.id, role: "authenticated", anonymous: user.is_anonymous === true };
 }
 
-export async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server Component에서 호출된 경우 — 미들웨어가 세션을 갱신함
-          }
-        },
-      },
-    }
-  );
+async function currentSession(): Promise<SessionUser | null> {
+  await ensureAuthSchema();
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session?.user) return null;
+  return { id: session.user.id, email: session.user.email, name: session.user.name, is_anonymous: false };
 }
 
-/** 인증 쿠키 없이 공개 집계/목록만 선택적으로 Data Cache에 넣는다. */
-export function createStaticClient(options: { cachePublicCounts?: boolean; cachePublicCatalog?: boolean } = {}) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const client = createServerClient<Database>(
-    supabaseUrl,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: { getAll: () => [], setAll: () => {} },
-      ...(options.cachePublicCounts ? {
-        global: { fetch: createPublicCountFetch(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!) },
-      } : options.cachePublicCatalog ? {
-        global: { fetch: createPublicCatalogFetch(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!) },
-      } : {}),
-    }
-  );
+function authApi(loadUser: () => Promise<SessionUser | null>) {
+  return {
+    async getUser() {
+      try {
+        const user = await loadUser();
+        return { data: { user }, error: null };
+      } catch {
+        return { data: { user: null }, error: null };
+      }
+    },
+    async getSession() {
+      const user = await loadUser().catch(() => null);
+      return { data: { session: user ? { user } : null }, error: null };
+    },
+    async signInWithPassword({ email, password }: { email: string; password: string }) {
+      try {
+        await ensureAuthSchema();
+        await getAuth().api.signInEmail({ body: { email, password }, headers: await headers() });
+        return { data: { session: { access_token: "cookie" }, user: null }, error: null };
+      } catch {
+        return { data: { session: null, user: null }, error: { message: "invalid credentials" } };
+      }
+    },
+    async signUp({ email, password, options }: { email: string; password: string; options?: { data?: { nickname?: string } } }) {
+      try {
+        await ensureAuthSchema();
+        await getAuth().api.signUpEmail({
+          body: { email, password, name: options?.data?.nickname ?? "밈러" },
+          headers: await headers(),
+        });
+        return { data: { session: null, user: null }, error: null };
+      } catch {
+        return { data: { session: null, user: null }, error: { message: "signup failed" } };
+      }
+    },
+    async signOut() {
+      try {
+        await getAuth().api.signOut({ headers: await headers() });
+        return { error: null };
+      } catch {
+        return { error: null };
+      }
+    },
+    async resetPasswordForEmail(email: string) {
+      try {
+        await ensureAuthSchema();
+        await getAuth().api.requestPasswordReset({ body: { email, redirectTo: "/reset-password" }, headers: await headers() });
+      } catch {
+        // The caller always shows the same notice.
+      }
+      return { data: {}, error: null };
+    },
+    async updateUser({ password }: { password: string }) {
+      try {
+        const user = await loadUser();
+        if (!user) return { data: { user: null }, error: { message: "no session" } };
+        const hash = await hashNewPassword(password);
+        await getPool().query(
+          `UPDATE account SET password = $1, "updatedAt" = now()
+            WHERE "userId" = $2 AND "providerId" = 'credential'`,
+          [hash, user.id],
+        );
+        return { data: { user }, error: null };
+      } catch (error) {
+        return { data: { user: null }, error: { message: error instanceof Error ? error.message : "password update failed" } };
+      }
+    },
+    async exchangeCodeForSession() {
+      return { data: { session: null }, error: { message: "oauth code exchange is handled by /api/auth" } };
+    },
+    async verifyOtp({ token_hash }: { token_hash: string; type: string }) {
+      try {
+        const user = await verifyMagicLink(token_hash, await headers());
+        if (!user) return { data: { user: null, session: null }, error: { message: "invalid token" } };
+        return { data: { user, session: { access_token: "cookie" } }, error: null };
+      } catch (error) {
+        return { data: { user: null, session: null }, error: { message: error instanceof Error ? error.message : "invalid token" } };
+      }
+    },
+    onAuthStateChange(callback: (event: string, session: { user: SessionUser } | null) => void) {
+      void loadUser()
+        .then((user) => callback(user ? "SIGNED_IN" : "SIGNED_OUT", user ? { user } : null))
+        .catch(() => callback("SIGNED_OUT", null));
+      return { data: { subscription: { unsubscribe() {} } } };
+    },
+  };
+}
 
-  // 로컬 스택이 꺼졌을 때 PostgREST의 1s+2s+4s 재시도가 모든 공개 화면을
-  // 붙잡지 않게 한다. 원격/프로덕션의 일시적 장애 재시도는 그대로 보존한다.
-  if (isLoopbackUrl(supabaseUrl)) {
-    (client as unknown as RetryConfigurableClient).rest.retry = false;
-  }
+export async function createClient(): Promise<SupabaseClient<Database>> {
+  const user = await currentSession().catch(() => null);
+  const identity = identityFor(user);
+  const database = createPlanClient((plan, signal) => executePlan(plan, identity, signal));
+  return {
+    from: database.from.bind(database),
+    rpc: database.rpc.bind(database),
+    auth: authApi(async () => user ?? currentSession().catch(() => null)),
+  } as unknown as SupabaseClient<Database>;
+}
 
-  return client;
+/** Public reads. The old PostgREST response cache is not used on this path. */
+export function createStaticClient(options: { cachePublicCounts?: boolean; cachePublicCatalog?: boolean } = {}): SupabaseClient<Database> {
+  void options;
+  const identity: DbIdentity = { userId: null, role: "anon", anonymous: false };
+  const database = createPlanClient((plan, signal) => executePlan(plan, identity, signal));
+  return {
+    from: database.from.bind(database),
+    rpc: database.rpc.bind(database),
+    auth: authApi(async () => null),
+  } as unknown as SupabaseClient<Database>;
 }

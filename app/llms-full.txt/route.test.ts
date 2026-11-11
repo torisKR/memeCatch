@@ -9,7 +9,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import { GET } from "@/app/llms-full.txt/route";
+import { GET, dynamic as routeDynamic } from "@/app/llms-full.txt/route";
 
 const source = readFileSync(
   join(process.cwd(), "app/llms-full.txt/route.ts"),
@@ -74,6 +74,10 @@ describe("llms-full category grouping", () => {
 });
 
 describe("llms-full publication export", () => {
+  it("renders on request so a database-less build cannot cache a failure", () => {
+    expect(routeDynamic).toBe("force-dynamic");
+  });
+
   it("counts all eligible rows and applies the 400 item limit only after filtering", async () => {
     const rows = [
       ...Array.from({ length: 1_000 }, (_, index) => row(index, false)),

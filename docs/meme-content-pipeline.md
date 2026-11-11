@@ -186,7 +186,7 @@ Vercel Hobby는 CPU 추론이 포함된 **전체 앱 합산**으로 Active CPU 4
 
 `/api/cron/meme-embeddings`는 매일 UTC18:30(한국03:30) 실행하며 최대25문서·90초 작업 예산으로 변경분만 순차 처리한다. Hobby cron은 하루 한 번이고 시간 단위 정밀도(±59분)로 실행된다. 따라서 즉시 재색인이나 대량 변경의 당일 완료를 보장하지 않는다. 하루 변경량이25건을 넘으면 잔량을 확인하고 기존 Python 인덱서로 제한된 추가 실행을 한다. [Vercel 공식 cron 한도](https://vercel.com/docs/cron-jobs/usage-and-pricing)
 
-기존 `CRON_SECRET`의 Bearer 인증을 검증하고 `MEME_EMBEDDING_REINDEX_ENABLED=true`인 GET만 정기 작업을 시작한다. 이 flag는 기본 비활성화이며 배포 모델 검증 뒤에 별도로 켠다. 수동 POST는 기존 서버 전용 `SUPABASE_SERVICE_ROLE_KEY`를 검증하며 새로운 토큰을 발급하지 않는다. 공개 사용자·일반 로그인·WebMCP 도구에 색인 실행 권한을 제공하지 않는다. POST의 빈 요청은 수동 변경분 처리이며, 정확히 `{"validate_model":true}`인 작은 요청만 고정된 긴 문서로 배포 모델을 검사한다. 이 검사는 문서나 벡터를 응답하지 않고 DB를 변경하지 않는다. 공개 `/v1/embeddings`에는 문서 입력을 허용하지 않는다.
+기존 `CRON_SECRET`의 Bearer 인증을 검증하고 `MEME_EMBEDDING_REINDEX_ENABLED=true`인 GET만 정기 작업을 시작한다. 이 flag는 기본 비활성화이며 배포 모델 검증 뒤에 별도로 켠다. 수동 POST는 서버 전용 `MEMECATCH_SIGNING_SECRET`을 검증하며 새로운 토큰을 발급하지 않는다. 공개 사용자·일반 로그인·WebMCP 도구에 색인 실행 권한을 제공하지 않는다. POST의 빈 요청은 수동 변경분 처리이며, 정확히 `{"validate_model":true}`인 작은 요청만 고정된 긴 문서로 배포 모델을 검사한다. 이 검사는 문서나 벡터를 응답하지 않고 DB를 변경하지 않는다. 공개 `/v1/embeddings`에는 문서 입력을 허용하지 않는다.
 
 서비스 전용 `acquire_meme_embedding_run`은180초 lease를 원자적으로 획득한다. 중복 요청은 추론·저장 없이 종료한다. 실행 중 원문 또는 공개 상태가 바뀌면 기존 hash 재검증으로 stale 결과를 거부하며 다음 실행에 남긴다. 실패 시 lease를 해제하고15→30→60분 backoff를 기록한다. 함수 강제 종료 시 lease 만료 뒤 다시 시작할 수 있다. 매일 cron은 별도 자동 재시도 없이 다음 예약 실행을 사용한다.
 

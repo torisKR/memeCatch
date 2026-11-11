@@ -7,7 +7,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import { GET } from "@/app/llms.txt/route";
+import { GET, dynamic as routeDynamic } from "@/app/llms.txt/route";
 
 function row(index: number, indexable: boolean) {
   return {
@@ -55,6 +55,10 @@ function useRows(
 beforeEach(() => createStaticClient.mockReset());
 
 describe("llms.txt publication export", () => {
+  it("renders on request so a database-less build cannot cache a failure", () => {
+    expect(routeDynamic).toBe("force-dynamic");
+  });
+
   it("counts only indexable approved rows and applies the 15 item limit after filtering", async () => {
     const rows = [
       ...Array.from({ length: 1_000 }, (_, index) => row(index, false)),

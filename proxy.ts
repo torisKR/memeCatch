@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createRequestDb } from "@/lib/db/request-db";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   DEFAULT_LOCALE,
@@ -211,7 +211,7 @@ export async function proxy(request: NextRequest) {
   };
   const nextResponse = () =>
     applyLocale(NextResponse.next({ request: { headers: requestHeaders } }));
-  let response = nextResponse();
+  const response = nextResponse();
 
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
@@ -224,22 +224,7 @@ export async function proxy(request: NextRequest) {
     : null;
   if (!needsAuth && !documentDetailKey) return response;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = nextResponse();
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const supabase = await createRequestDb(request);
 
   if (documentDetailKey) {
     try {
@@ -287,11 +272,18 @@ export async function proxy(request: NextRequest) {
 
   if (!needsAuth) return response;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: { id: string } | null = null;
+  let authFailed = false;
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+    authFailed = Boolean(result.error);
+  } catch {
+    authFailed = true;
+  }
+  const gated = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit");
 
-  if (!user && (path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit"))) {
+  if ((authFailed || !user) && gated) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
@@ -300,7 +292,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (path.startsWith("/admin")) {
-    if (!user) {
+    if (authFailed || !user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.search = "";

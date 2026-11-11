@@ -27,8 +27,8 @@ function publicMemeRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-vi.mock("@supabase/ssr", () => ({
-  createServerClient: () => ({
+vi.mock("@/lib/db/request-db", () => ({
+  createRequestDb: async () => ({
     auth: { getUser: supabaseMocks.getUser },
     from: supabaseMocks.from,
     rpc: supabaseMocks.rpc,

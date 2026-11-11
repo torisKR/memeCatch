@@ -3,8 +3,8 @@
 import { useActionState, useId } from "react";
 import { updatePassword, type AuthState } from "@/lib/actions/auth";
 
-/** 새 비밀번호 설정 — 재설정 링크 세션이 있을 때만 서버에서 반영된다. */
-export function ResetPasswordForm() {
+/** 새 비밀번호 설정. token은 재설정 메일 링크에서 온다. */
+export function ResetPasswordForm({ token = "" }: { token?: string }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(
     updatePassword,
     null
@@ -17,6 +17,7 @@ export function ResetPasswordForm() {
 
   return (
     <form action={action} className="mt-6 flex flex-col gap-4" noValidate>
+      {token ? <input type="hidden" name="token" value={token} /> : null}
       {state?.formError && (
         <p
           role="alert"

@@ -1,0 +1,19 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    mem_limit: 128m
+    cpus: 0.10
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-catchmeme.com}
+      ACME_EMAIL: ${ACME_EMAIL:-ops@catchmeme.com}
+      CLOUDFLARE_TRUSTED_PROXIES: ${CLOUDFLARE_TRUSTED_PROXIES}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/cloudflare-proxies.txt:/etc/caddy/cloudflare-proxies.txt:ro
+      - memecatch-caddy:/data
+    networks: [memecatch]
+    depends_on: [app]
+    restart: unless-stopped

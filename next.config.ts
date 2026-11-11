@@ -85,12 +85,6 @@ const CSP_DIRECTIVES = [
     "connect-src 'self'",
     // /sw.js의 NetworkOnly 이미지 요청은 CSP에서 connect-src 적용 대상이다.
     ...REMOTE_MEME_THUMBNAIL_SOURCES,
-    "https://*.supabase.co",
-    "wss://*.supabase.co",
-    // 개발은 로컬 Supabase(supabase start)를 쓴다. 여기에 없으면 브라우저가
-    // 인증·조회 요청을 막아 "TypeError: Failed to fetch"로 나타난다.
-    // 프로덕션 CSP에는 포함되지 않는다(.env.production은 원격을 본다).
-    ...(IS_DEV ? ["http://127.0.0.1:54321", "ws://127.0.0.1:54321"] : []),
     "https://*.google-analytics.com",
     "https://*.analytics.google.com",
     "https://analytics.google.com", // GA4 수집 — 베어 도메인은 와일드카드(*.analytics.google.com)와 미매치
@@ -143,6 +137,8 @@ const CSP_HEADER_KEY = CSP_ENFORCE
   : "Content-Security-Policy-Report-Only";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  serverExternalPackages: ["pg", "onnxruntime-node"],
   /* 개발 서버를 Cloudflare 터널로 열어 모바일·외부 기기에서 확인할 때,
      Next는 기본적으로 다른 origin의 dev 리소스(/_next/webpack-hmr) 접근을
      차단한다. 터널 호스트명은 세션마다 바뀌므로 와일드카드로 허용한다.

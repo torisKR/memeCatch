@@ -8,7 +8,7 @@ import {
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 type Copy = {
   summary: string;

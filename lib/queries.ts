@@ -6,6 +6,7 @@
  */
 import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
+import { curatedSearchCards } from "@/lib/curated-memes";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
@@ -387,10 +388,11 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
       }, { get: true })
       .select(LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES]);
-    if (error || !data) return [];
-    return data as MemeListItem[];
+    const rows = error || !data ? [] : data as MemeListItem[];
+    const seen = new Set(rows.map((item) => item.short_id));
+    return [...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)), ...rows];
   } catch {
-    return [];
+    return curatedSearchCards(q);
   }
 }
 

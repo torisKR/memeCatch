@@ -402,3 +402,50 @@ const curatedByShortId = new Map(
 export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
   return curatedByShortId.get(shortId) ?? null;
 }
+
+export function curatedMemesMatchingQuery(query: string): readonly CuratedMeme[] {
+  const needle = query.normalize("NFC").trim().toLocaleLowerCase("ko-KR");
+  if (!needle) return [];
+  return CURATED_CORE_MEMES.filter((meme) =>
+    [meme.title, meme.summary, meme.slug, ...meme.tags]
+      .join("\n")
+      .normalize("NFC")
+      .toLocaleLowerCase("ko-KR")
+      .includes(needle),
+  );
+}
+
+export function curatedSearchCards(query: string) {
+  return curatedMemesMatchingQuery(query).map((meme) => ({
+    id: meme.id,
+    short_id: meme.short_id,
+    slug: meme.slug,
+    title: meme.title,
+    summary: meme.summary,
+    category: meme.category,
+    safety_level: meme.safety_level,
+    lifecycle_status: meme.lifecycle_status,
+    media_type: "image" as const,
+    origin_year: meme.origin_year,
+    trend_score: 100,
+    meme_contents: [
+      {
+        thumbnail_url: generateHouseMemeCardDataUrl(
+          {
+            title: meme.title,
+            summary: meme.summary,
+            category: meme.category,
+            safety_level: meme.safety_level,
+            usage_examples: meme.usage_examples.map((example) => ({
+              situation: example.context,
+              dialogue: example.dialogue,
+            })),
+          },
+          "square",
+          "obsidian_coral",
+        ),
+        is_representative: true as const,
+      },
+    ],
+  }));
+}

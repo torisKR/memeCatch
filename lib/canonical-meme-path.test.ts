@@ -39,6 +39,29 @@ describe("canonical meme detail redirects", () => {
         "encoded",
       ),
     ).toBeNull();
+    // The standalone server leaves the route param percent-encoded.
+    expect(
+      canonicalMemeRedirectPath(
+        "a1b2c3-%ED%95%9C%EA%B5%AD%20%EB%B0%88",
+        meme,
+        "decoded",
+      ),
+    ).toBeNull();
+  });
+
+  it("redirects a short id to the canonical URL exactly once", () => {
+    const meme = { shortId: "rk3w632x", slug: "중꺾마", locale: "ko" as const };
+    const destination = canonicalMemeRedirectPath("rk3w632x", meme);
+    expect(destination).toBe("/memes/rk3w632x-%EC%A4%91%EA%BA%BE%EB%A7%88");
+    const key = destination?.slice(destination.lastIndexOf("/") + 1) ?? "";
+    expect(canonicalMemeRedirectPath(key, meme, "encoded")).toBeNull();
+    expect(canonicalMemeRedirectPath(key, meme, "decoded")).toBeNull();
+    expect(canonicalMemeRedirectPath(decodeURIComponent(key), meme)).toBeNull();
+  });
+
+  it("treats NFC and NFD Hangul slugs as the same canonical key", () => {
+    const meme = { shortId: "a1b2c3", slug: "중꺾마".normalize("NFC"), locale: "ko" as const };
+    expect(canonicalMemeRedirectPath(`a1b2c3-${"중꺾마".normalize("NFD")}`, meme)).toBeNull();
   });
 
   it("does not loop when a decoded canonical slug contains a literal percent sign", () => {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CuratedMeme } from "@/lib/curated-memes";
+import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
 import { SAFETY_LEVELS } from "@/lib/labels";
 
 const PLACE: Record<"friends" | "work" | "sns", string> = {
@@ -10,6 +11,21 @@ const PLACE: Record<"friends" | "work" | "sns", string> = {
 
 /** 홈 검증 가이드 카드가 가리키는 편집 밈. 카탈로그 행이 없어도 본문이 있다. */
 export function CuratedMemeArticle({ meme }: { meme: CuratedMeme }) {
+  const cardSrc = generateHouseMemeCardDataUrl(
+    {
+      title: meme.title,
+      summary: meme.summary,
+      category: meme.category,
+      safety_level: meme.safety_level,
+      usage_examples: meme.usage_examples.map((example) => ({
+        situation: example.context,
+        dialogue: example.dialogue,
+      })),
+    },
+    "square",
+    "obsidian_coral",
+  );
+
   return (
     <article className="mx-auto w-full max-w-3xl px-4 py-10 text-foreground">
       <nav className="text-sm">
@@ -25,6 +41,24 @@ export function CuratedMemeArticle({ meme }: { meme: CuratedMeme }) {
           {meme.title}
         </h1>
         <p className="mt-4 text-base leading-7">{meme.summary}</p>
+        {/* eslint-disable-next-line @next/next/no-img-element -- SVG data URL from the in-process card renderer */}
+        <img
+          src={cardSrc}
+          alt={`${meme.title} 카드`}
+          className="mt-6 aspect-square w-full max-w-md rounded-2xl border border-border"
+        />
+        {meme.tags.length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {meme.tags.map((tag) => (
+              <li
+                key={tag}
+                className="rounded-full bg-surface-2 px-2.5 py-1 text-sm font-medium text-muted"
+              >
+                #{tag}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </header>
 
       <section className="mt-8">

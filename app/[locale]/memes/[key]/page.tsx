@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { shortIdFromParam, type SafetyLevel } from "@/lib/labels";
+import { memePathFrom, shortIdFromParam, type SafetyLevel } from "@/lib/labels";
 import {
   SEO_LOCALE_CONFIG,
   buildLocalizedMetadata,
@@ -18,7 +18,15 @@ import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
 import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
-import { MemePosterCard } from "@/components/meme-poster-card";
+import {
+  ARTICLE_BODY,
+  ARTICLE_COLUMN,
+  articleDate,
+  MemeArticleArt,
+  MemeArticleFooter,
+  MemeByline,
+} from "@/components/meme-article-meta";
+import { RelatedMemeLinks } from "@/components/related-meme-links";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
 import {
@@ -34,11 +42,19 @@ import {
   type LocalizedMemeDetail,
 } from "@/lib/meme-translations";
 import { unavailableMemeMetadata } from "@/lib/public-meme-document";
-import { MemeCatalogUnavailableError } from "@/lib/queries";
+import { getRelatedMemes, MemeCatalogUnavailableError } from "@/lib/queries";
+import { posterBadgeTone } from "@/lib/meme-poster";
 import { loadMemeArtByShortId } from "@/lib/meme-art.server";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { publicSourceUrl } from "@/lib/source-links";
+
+const RELATED_HEADING: Record<SeoContentLocale, string> = {
+  en: "Related memes",
+  ja: "関連ミーム",
+  zh: "相关迷因",
+  "zh-tw": "相關迷因",
+};
 
 /** 한국어 상세와 같다. ISR로 두면 프로덕션 상세가 DYNAMIC_SERVER_USAGE 500이 된다. */
 export const dynamic = "force-dynamic";
@@ -331,10 +347,15 @@ export default async function LocalizedMemePage({ params }: Props) {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, marketPassport, artUrl] = await Promise.all([
+  const [versions, marketPassport, artUrl, related] = await Promise.all([
     getLanguageVersions(meme.short_id, meme.id, locale),
     getMemeMarketPassport(meme.id, locale),
     loadMemeArtByShortId(meme.short_id),
+    getRelatedMemes(
+      { id: meme.id, category: meme.category, origin_year: meme.origin_year },
+      meme.meme_tags_map.map((tag) => tag.tag_id),
+      6,
+    ),
   ]);
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
@@ -355,7 +376,7 @@ export default async function LocalizedMemePage({ params }: Props) {
     <article
       lang={config.documentLanguage}
       dir={config.direction}
-      className="mx-auto max-w-5xl px-4 py-8 pb-16 text-foreground"
+      className={`${ARTICLE_COLUMN} px-4 py-8 pb-16 text-foreground`}
     >
       {!needsReview && (
         <>
@@ -426,29 +447,22 @@ export default async function LocalizedMemePage({ params }: Props) {
           {!needsReview && <span className="rounded-full bg-safety-green-bg px-3 py-1.5 text-safety-green">{copy.reviewed}</span>}
         </div>
         <div className="mt-5">
-          <MemePosterCard
-            title={meme.title}
-            summary={meme.summary}
-            safetyLevel={meme.safety_level}
-            year={meme.origin_year}
-            artUrl={artUrl}
-            size="detail"
-            locale={locale}
-            heading="h1"
-            summaryId="meme-summary"
-            priority
-          />
+          <MemeArticleArt title={meme.original.title} artUrl={artUrl} />
+          <h1 className="text-[1.75rem] font-black leading-tight tracking-tight">{meme.title}</h1>
+          <MemeByline updatedAt={meme.translation.updatedAt} />
+          {meme.summary.trim() ? (
+            <p id="meme-summary" className={`mt-4 ${ARTICLE_BODY}`}>
+              {meme.summary}
+            </p>
+          ) : null}
         </div>
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{copy.originalTitle}</p>
           <p lang="ko" dir="ltr" className="mt-1 text-lg font-bold">{meme.original.title}</p>
         </div>
-        <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-          {meme.origin_year && <span>{copy.born(meme.origin_year)}</span>}
-          <span>
-            {copy.updated}: {new Intl.DateTimeFormat(config.dateLocale, { dateStyle: "long" }).format(new Date(meme.translation.updatedAt))}
-          </span>
-        </p>
+        {meme.origin_year ? (
+          <p className="mt-4 text-sm text-muted">{copy.born(meme.origin_year)}</p>
+        ) : null}
       </header>
 
       <nav aria-label={copy.language} className="border-b border-border py-5">
@@ -505,7 +519,7 @@ export default async function LocalizedMemePage({ params }: Props) {
         </div>
       )}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+      <div className="mt-8">
         <div className="space-y-6">
           {meme.description && (
             <section aria-labelledby="meme-description" className="glass-panel relative overflow-hidden rounded-2xl p-5 sm:p-7">
@@ -514,7 +528,7 @@ export default async function LocalizedMemePage({ params }: Props) {
               <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
               <div className="relative">
                 <h2 id="meme-description" className="text-2xl font-black tracking-tight">{copy.description}</h2>
-                <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.description}</p>
+                <p className={`mt-3 whitespace-pre-line ${ARTICLE_BODY}`}>{meme.description}</p>
               </div>
             </section>
           )}
@@ -523,16 +537,44 @@ export default async function LocalizedMemePage({ params }: Props) {
               <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
               <div className="relative">
                 <h2 id="meme-origin" className="text-2xl font-black tracking-tight">{copy.origin}</h2>
-                <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.origin}</p>
+                <p className={`mt-3 whitespace-pre-line ${ARTICLE_BODY}`}>{meme.origin}</p>
               </div>
             </section>
           )}
+          {sourceLinks.length > 0 ? (
+            <section aria-labelledby="meme-sources">
+              <h2 id="meme-sources" className="text-2xl font-black tracking-tight">{copy.sources}</h2>
+              <ol className="mt-3 space-y-3">
+                {sourceLinks.map((source, index) => {
+                  const captured = articleDate(source.captured_at);
+                  return (
+                    <li key={source.id} className={ARTICLE_BODY}>
+                      <a
+                        href={source.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold underline decoration-border underline-offset-4 hover:text-accent"
+                      >
+                        {source.title || source.platform || `${copy.sourceFallback} ${index + 1}`}
+                        <span aria-hidden> ↗</span>
+                      </a>
+                      {captured ? (
+                        <p className="mt-1 text-sm text-muted">
+                          <time dateTime={captured}>{captured}</time>
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ) : null}
           {meme.usage_note && (
             <section aria-labelledby="meme-usage" className="glass-panel relative overflow-hidden rounded-2xl p-5 sm:p-7">
               <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
               <div className="relative">
                 <h2 id="meme-usage" className="text-2xl font-black tracking-tight">{copy.usage}</h2>
-                <p className="mt-3 whitespace-pre-line leading-relaxed">{meme.usage_note}</p>
+                <p className={`mt-3 whitespace-pre-line ${ARTICLE_BODY}`}>{meme.usage_note}</p>
                 {contextsUnverified ? (
                   <div className="mt-5 border-t border-border pt-4">
                     <p className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm text-muted">
@@ -544,13 +586,21 @@ export default async function LocalizedMemePage({ params }: Props) {
                   contexts.length > 0 && (
                     <div className="mt-5 border-t border-border pt-4">
                       <h3 className="text-sm font-bold">{copy.context}</h3>
-                      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {contexts.map(([context, level]) => (
-                          <div key={context} className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-                            <dt>{copy.contexts[context] ?? context}</dt>
-                            <dd className="font-semibold">{copy.safety[level]}</dd>
-                          </div>
-                        ))}
+                      <dl className="mt-3 grid gap-2">
+                        {contexts.map(([context, level]) => {
+                          const tone = posterBadgeTone(level);
+                          return (
+                            <div key={context} className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm">
+                              <dt>{copy.contexts[context] ?? context}</dt>
+                              <dd
+                                className="rounded-full px-2.5 py-0.5 text-sm font-semibold"
+                                style={{ background: tone.background, color: tone.foreground }}
+                              >
+                                {copy.safety[level]}
+                              </dd>
+                            </div>
+                          );
+                        })}
                       </dl>
                     </div>
                   )
@@ -561,7 +611,7 @@ export default async function LocalizedMemePage({ params }: Props) {
           {meme.caution && (
             <section aria-labelledby="meme-caution" className="rounded-2xl border border-safety-yellow bg-safety-yellow-bg p-5 text-safety-yellow sm:p-7">
               <h2 id="meme-caution" className="text-xl font-black">{copy.caution}</h2>
-              <p className="mt-2 whitespace-pre-line leading-relaxed">{meme.caution}</p>
+              <p className={`mt-2 whitespace-pre-line ${ARTICLE_BODY}`}>{meme.caution}</p>
             </section>
           )}
           <MemeUseKit
@@ -575,31 +625,16 @@ export default async function LocalizedMemePage({ params }: Props) {
 
           <MemeMarketPassport passport={marketPassport} locale={locale} />
           <MemeTrendPanel memeId={meme.id} />
+          <RelatedMemeLinks
+            heading={RELATED_HEADING[locale]}
+            items={related.map((item) => ({
+              href: memePathFrom(item.short_id, item.slug),
+              title: item.title,
+              summary: item.summary,
+            }))}
+          />
+          <MemeArticleFooter />
         </div>
-
-        {sourceLinks.length > 0 && (
-          <aside className="rounded-2xl border border-border bg-surface-2 p-5 lg:sticky lg:top-20">
-            <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-              {copy.sources}
-            </h2>
-            <ol className="mt-4 space-y-3">
-              {sourceLinks.map((source, index) => (
-                <li key={source.id} className="text-sm">
-                  <a
-                    href={source.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold underline decoration-border underline-offset-4 hover:text-accent"
-                  >
-                    {source.title || source.platform || `${copy.sourceFallback} ${index + 1}`}
-                    <span aria-hidden> ↗</span>
-                  </a>
-                  {source.creator_name && <p className="mt-1 text-xs text-muted">{source.creator_name}</p>}
-                </li>
-              ))}
-            </ol>
-          </aside>
-        )}
       </div>
     </article>
   );

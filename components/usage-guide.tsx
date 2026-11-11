@@ -101,21 +101,18 @@ export function UsageContextRows({ rows }: { rows: CommercialUsageContextRow[] }
     <ul className="mt-3 divide-y divide-border">
       {rows.map(({ key, label, level, reason }) => {
         return (
-          <li
-            key={key}
-            className="hover-glow-flame flex min-h-11 items-center justify-between gap-3 rounded-lg py-2"
-          >
-            <span>
+          <li key={key} className="hover-glow-flame min-h-11 rounded-lg py-2">
+            <span className="flex flex-wrap items-center gap-2">
               <span className="text-base font-medium">{label}</span>
-              <span className="mt-0.5 block text-sm text-muted">{reason}</span>
-            </span>
-            <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${TONE[level]}`}>
-              <span aria-hidden className="stat-mono text-[10px] font-bold tracking-wider">{STATUS_CODE[level]}</span>
-              <span aria-hidden className="leading-none">
-                <SafetyIcon level={level} className="size-4" />
+              <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${TONE[level]}`}>
+                <span aria-hidden className="stat-mono text-[10px] font-bold tracking-wider">{STATUS_CODE[level]}</span>
+                <span aria-hidden className="leading-none">
+                  <SafetyIcon level={level} className="size-4" />
+                </span>
+                {SAFETY_LEVELS[level].user}
               </span>
-              {SAFETY_LEVELS[level].user}
             </span>
+            <span className="mt-0.5 block text-sm text-muted">{reason}</span>
           </li>
         );
       })}

@@ -23,13 +23,21 @@ EOF
 
 docker run -d --name "$server" --network host \
   -e POSTGRES_PASSWORD="$password" "$image" postgres -c port="$port" >/dev/null
-for _ in $(seq 1 60); do
-  if docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null; then
+# pg_isready turns true while the entrypoint is still restarting. The next
+# check then exits 2. Wait until the server accepts a query.
+ready=0
+for _ in $(seq 1 90); do
+  if docker exec "$server" psql -v ON_ERROR_STOP=1 --username postgres --dbname postgres -p "$port" -c "select 1" >/dev/null 2>&1; then
+    ready=1
     break
   fi
   sleep 1
 done
-docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null
+if [[ "$ready" -ne 1 ]]; then
+  echo "postgres did not accept a query" >&2
+  docker logs "$server" >&2 || true
+  exit 1
+fi
 
 filtered="$(awk -f "$root/scripts/postgres/filter-pg17-dump.awk" <<'EOF'
 SET transaction_timeout = 0;

@@ -11,6 +11,7 @@ import {
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
 import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
+import { loadMemeArtUrls } from "@/lib/meme-art.server";
 import { CommunityMemeBattle } from "@/components/home/community-meme-battle";
 import { getCommunityMemeBattle } from "@/lib/community-battle.server";
 
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
 /** 홈은 검색과 서비스 이해, 각 전용 페이지로의 진입만 담당한다. */
 export default async function Home() {
   const latest = await getRecentlyPublishedMemes(8);
+  const artUrls = await loadMemeArtUrls(latest.map((meme) => meme.id));
   const categoryCopy = getSeoCopy("ko").categories;
   const rawEntries = latest.map((meme) => ({
     id: meme.id,
@@ -40,6 +42,8 @@ export default async function Home() {
     categoryLabel: categoryCopy[meme.category],
     safetyLevel: meme.safety_level,
     category: meme.category,
+    year: meme.origin_year,
+    artUrl: artUrls.get(meme.id) ?? null,
     thumbnailUrl: meme.meme_contents?.find((content) => content.is_representative && content.thumbnail_url)?.thumbnail_url
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,

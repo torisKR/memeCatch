@@ -89,20 +89,15 @@
   padding: 0;
   list-style: none;
   gap: 0.65rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .trendingCard {
-  display: flex;
+  display: block;
   min-width: 0;
-  height: 100%;
-  overflow: hidden;
-  flex-direction: column;
-  border: 1px solid var(--web3-line);
-  border-radius: 0.85rem;
-  background: #fffaf3;
   color: inherit;
   text-decoration: none;
+  border-radius: 16px;
 }
 
 .trendingCard:focus-visible {
@@ -110,30 +105,10 @@
   outline-offset: 2px;
 }
 
-.trendingArt {
-  display: block;
-  position: relative;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: #e8e6df;
-}
-
-.trendingSafety {
-  position: absolute;
-  top: 0.3rem;
-  left: 0.3rem;
-}
-
-.trendingName {
-  display: -webkit-box;
-  margin: 0;
-  padding: 0.4rem 0.5rem 0.5rem;
-  overflow: hidden;
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+@media (min-width: 40rem) {
+  .trendingGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .exploreButton,
@@ -173,9 +148,9 @@
   margin-top: 1rem;
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 64rem) {
   .trendingGrid {
-    grid-template-columns: repeat(var(--trend-columns, 8), minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

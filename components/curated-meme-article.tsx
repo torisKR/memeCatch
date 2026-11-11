@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { MemePosterCard } from "@/components/meme-poster-card";
 import type { CuratedMeme } from "@/lib/curated-memes";
-import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
 import { SAFETY_LEVELS } from "@/lib/labels";
 
 const PLACE: Record<"friends" | "work" | "sns", string> = {
@@ -11,21 +11,6 @@ const PLACE: Record<"friends" | "work" | "sns", string> = {
 
 /** 홈 검증 가이드 카드가 가리키는 편집 밈. 카탈로그 행이 없어도 본문이 있다. */
 export function CuratedMemeArticle({ meme }: { meme: CuratedMeme }) {
-  const cardSrc = generateHouseMemeCardDataUrl(
-    {
-      title: meme.title,
-      summary: meme.summary,
-      category: meme.category,
-      safety_level: meme.safety_level,
-      usage_examples: meme.usage_examples.map((example) => ({
-        situation: example.context,
-        dialogue: example.dialogue,
-      })),
-    },
-    "square",
-    "obsidian_coral",
-  );
-
   return (
     <article className="mx-auto w-full max-w-3xl px-4 py-10 text-foreground">
       <nav className="text-sm">
@@ -34,18 +19,17 @@ export function CuratedMemeArticle({ meme }: { meme: CuratedMeme }) {
         </Link>
       </nav>
       <header className="mt-6 border-b border-border pb-8">
-        <p className="text-sm font-bold text-accent-text">
-          {SAFETY_LEVELS[meme.safety_level].user} · {meme.origin_year}
-        </p>
-        <h1 className="mt-3 text-4xl font-black leading-tight tracking-tight text-balance [word-break:keep-all] sm:text-5xl">
-          {meme.title}
-        </h1>
-        <p className="mt-4 text-base leading-7">{meme.summary}</p>
-        {/* eslint-disable-next-line @next/next/no-img-element -- SVG data URL from the in-process card renderer */}
-        <img
-          src={cardSrc}
-          alt={`${meme.title} 카드`}
-          className="mt-6 aspect-square w-full max-w-md rounded-2xl border border-border"
+        <MemePosterCard
+          title={meme.title}
+          summary={meme.summary}
+          safetyLevel={meme.safety_level}
+          year={meme.origin_year}
+          artUrl={null}
+          size="detail"
+          locale="ko"
+          heading="h1"
+          summaryId="meme-summary"
+          priority
         />
         {meme.tags.length > 0 ? (
           <ul className="mt-4 flex flex-wrap gap-2">

@@ -18,6 +18,7 @@ import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
 import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
+import { MemePosterCard } from "@/components/meme-poster-card";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
 import {
@@ -34,6 +35,7 @@ import {
 } from "@/lib/meme-translations";
 import { unavailableMemeMetadata } from "@/lib/public-meme-document";
 import { MemeCatalogUnavailableError } from "@/lib/queries";
+import { loadMemeArtByShortId } from "@/lib/meme-art.server";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { publicSourceUrl } from "@/lib/source-links";
@@ -329,9 +331,10 @@ export default async function LocalizedMemePage({ params }: Props) {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, marketPassport] = await Promise.all([
+  const [versions, marketPassport, artUrl] = await Promise.all([
     getLanguageVersions(meme.short_id, meme.id, locale),
     getMemeMarketPassport(meme.id, locale),
+    loadMemeArtByShortId(meme.short_id),
   ]);
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
@@ -422,16 +425,24 @@ export default async function LocalizedMemePage({ params }: Props) {
           <span className="rounded-full bg-surface-2 px-3 py-1.5 text-muted">{copy.safety[meme.safety_level]}</span>
           {!needsReview && <span className="rounded-full bg-safety-green-bg px-3 py-1.5 text-safety-green">{copy.reviewed}</span>}
         </div>
-        <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
-          {meme.title}
-        </h1>
+        <div className="mt-5">
+          <MemePosterCard
+            title={meme.title}
+            summary={meme.summary}
+            safetyLevel={meme.safety_level}
+            year={meme.origin_year}
+            artUrl={artUrl}
+            size="detail"
+            locale={locale}
+            heading="h1"
+            summaryId="meme-summary"
+            priority
+          />
+        </div>
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{copy.originalTitle}</p>
           <p lang="ko" dir="ltr" className="mt-1 text-lg font-bold">{meme.original.title}</p>
         </div>
-        <p id="meme-summary" className="mt-6 max-w-3xl text-xl font-medium leading-relaxed">
-          {meme.summary}
-        </p>
         <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
           {meme.origin_year && <span>{copy.born(meme.origin_year)}</span>}
           <span>

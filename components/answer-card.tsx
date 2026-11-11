@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { DocClassNote } from "@/components/doc-class-note";
 import { SaveButton } from "@/components/save-button";
+import { MemePosterCard } from "@/components/meme-poster-card";
 import { SafetyBadge } from "@/components/safety-badge";
 import { SignalTrace } from "@/components/signal-trace";
 import { CopyTextButton } from "@/components/copy-text-button";
@@ -33,6 +34,8 @@ export function AnswerCard({
     /** 상세 조회(select("*"))에서만 실려 온다 — 목록·위젯 select에는 없어 optional. */
     doc_class?: MemeRow["doc_class"];
     usage_note?: MemeRow["usage_note"];
+    art_url?: MemeRow["art_url"] | null;
+    origin_year?: MemeRow["origin_year"] | null;
   };
   saveMemeId?: string;
 }) {
@@ -62,25 +65,30 @@ export function AnswerCard({
         <SignalTrace status={meme.lifecycle_status} size="lg" />
       </div>
 
-      <div className="mt-4 flex items-start justify-between gap-3">
-        <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
-          {meme.title}
-        </h1>
+      <div className="mt-4 flex items-start justify-end">
         <CopyTextButton
           text={`${meme.title}: ${meme.summary}`}
           label="복사"
           copiedLabel="복사됨"
           ariaLabel="밈 명칭 및 요약 복사"
           variant="pill"
-          className="shrink-0 mt-0.5"
+          className="shrink-0"
         />
       </div>
-      <p
-        id="meme-summary"
-        className="mt-1.5 text-lg leading-relaxed text-foreground"
-      >
-        {meme.summary}
-      </p>
+      <div className="mt-3">
+        <MemePosterCard
+          title={meme.title}
+          summary={meme.summary}
+          safetyLevel={meme.safety_level}
+          year={meme.origin_year}
+          artUrl={meme.art_url}
+          size="detail"
+          locale="ko"
+          heading="h1"
+          summaryId="meme-summary"
+          priority
+        />
+      </div>
       <DocClassNote docClass={meme.doc_class} />
       <div className="relative mt-4">
         {!reduce && (

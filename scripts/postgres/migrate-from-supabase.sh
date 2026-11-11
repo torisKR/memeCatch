@@ -154,8 +154,15 @@ while IFS='|' read -r schema table; do
   fi
 done < "$table_list"
 
-pg_restore --data-only --no-owner --exit-on-error --single-transaction -d "$PGDATABASE" "$public_dump"
-pg_restore --data-only --no-owner --exit-on-error --single-transaction -d "$PGDATABASE" "$auth_dump"
+psql -v ON_ERROR_STOP=1 -f "$here/../../supabase/migrations/20261110130000_auth_users_supabase_columns.sql"
+# One transaction, with FK and user triggers disabled, so a Postgres 17 data
+# dump can land on Postgres 16 without a half-loaded scratch database.
+{
+  printf '%s\n' 'BEGIN;' 'SET LOCAL session_replication_role = replica;'
+  pg_restore --data-only --no-owner -f - "$public_dump" | awk -f "$here/filter-pg17-dump.awk"
+  pg_restore --data-only --no-owner -f - "$auth_dump" | awk -f "$here/filter-pg17-dump.awk"
+  printf '%s\n' 'COMMIT;'
+} | psql -v ON_ERROR_STOP=1 -d "$PGDATABASE"
 
 : > "$target_counts"
 while IFS='|' read -r schema table; do

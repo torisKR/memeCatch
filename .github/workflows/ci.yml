@@ -24,9 +24,33 @@ jobs:
       - run: pnpm test
       - run: node scripts/check-env-manifest.mjs
       - run: pnpm build
-      - run: docker build -t memecatch:ci .
+      - name: Build the app image with the public release values
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_ADSENSE_CLIENT: ${{ vars.NEXT_PUBLIC_ADSENSE_CLIENT }}
+          NEXT_PUBLIC_COMMUNITY_ENABLED: ${{ vars.NEXT_PUBLIC_COMMUNITY_ENABLED }}
+          NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          NEXT_PUBLIC_SUBMISSIONS_OPEN: ${{ vars.NEXT_PUBLIC_SUBMISSIONS_OPEN }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_UNIFI_CLIENT_ID: ${{ vars.NEXT_PUBLIC_UNIFI_CLIENT_ID }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+        run: |
+          docker build -t memecatch:ci \
+            --build-arg RELEASE_SHA="${GITHUB_SHA}" \
+            --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}" \
+            --build-arg NEXT_PUBLIC_ADSENSE_CLIENT="${NEXT_PUBLIC_ADSENSE_CLIENT}" \
+            --build-arg NEXT_PUBLIC_COMMUNITY_ENABLED="${NEXT_PUBLIC_COMMUNITY_ENABLED}" \
+            --build-arg NEXT_PUBLIC_GA_ID="${NEXT_PUBLIC_GA_ID}" \
+            --build-arg NEXT_PUBLIC_SUBMISSIONS_OPEN="${NEXT_PUBLIC_SUBMISSIONS_OPEN}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
+            --build-arg NEXT_PUBLIC_UNIFI_CLIENT_ID="${NEXT_PUBLIC_UNIFI_CLIENT_ID}" \
+            --build-arg NEXT_PUBLIC_VAPID_PUBLIC_KEY="${NEXT_PUBLIC_VAPID_PUBLIC_KEY}" \
+            .
       - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
       - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
       - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
       - run: bash scripts/postgres/migrate-from-supabase.test.sh
+      - run: bash scripts/postgres/enum-in-filter.test.sh
       - run: bash deploy/backup/ci-test-restore.sh

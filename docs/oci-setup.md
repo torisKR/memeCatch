@@ -52,6 +52,7 @@ Create `/opt/memecatch/.env` from `.env.example`. Required for boot:
 
 - `POSTGRES_PASSWORD` (postgres service only)
 - `MEMECATCH_DB_PASSWORD`
+- `MEMECATCH_BACKUP_DB_PASSWORD` (login `memecatch_backup`, used only by the backup service)
 - `BETTER_AUTH_SECRET` (long random)
 - `MEMECATCH_SIGNING_SECRET` (analytics, view counts, embedding probe)
 - `NEXT_PUBLIC_SITE_URL=https://catchmeme.com`
@@ -111,9 +112,17 @@ unset GHCR_READ_TOKEN
 
 `docker login` stores the credential in that user's `~/.docker/config.json`. Do not commit the token or pass it as a Compose variable. A public package does not need this login. Confirm with `docker pull` of one pushed tag before the first deploy that uses GHCR.
 
+The app image build args are `RELEASE_SHA` and the public `NEXT_PUBLIC_*` values. CI sets `RELEASE_SHA` to the commit SHA and reads the public values from repository variables. Responses carry `X-MemeCatch-Release-Sha` when that SHA is set at build time.
+
 ## Backups
 
-The backup container runs `pg_dump -Fc` daily at 02:30 UTC, gzips it, encrypts it with age to the public key in `BACKUP_AGE_RECIPIENT`, and uploads `memecatch/<stamp>.dump.gz.age` to R2. Retention defaults to 14 days. If the R2 backup variables are empty, the job logs a skip and exits 0. If R2 is set and the recipient is empty, the job fails and uploads nothing.
+The backup container runs `pg_dump -Fc` as `memecatch_backup` daily at 02:30 UTC, gzips it, encrypts it with age to the public key in `BACKUP_AGE_RECIPIENT`, and uploads `memecatch/<stamp>.dump.gz.age` to R2. That role has `BYPASSRLS` and `SELECT` on every non-system schema, plus default privileges so later tables are included. Retention defaults to 14 days. If the R2 backup variables are empty, the job logs a skip and exits 0. If R2 is set and the recipient is empty, the job fails and uploads nothing.
+
+A new data directory creates the role from `deploy/postgres/init.sh`. An existing volume does not re-run init. After `MEMECATCH_BACKUP_DB_PASSWORD` is in `.env` and the postgres container has been recreated so it sees that variable, apply the role once:
+
+```bash
+docker compose exec -T -u postgres postgres bash -c 'source /sql/backup-role.sh && ensure_backup_role'
+```
 
 Restore only into an empty database, in one transaction, with the matching identity:
 

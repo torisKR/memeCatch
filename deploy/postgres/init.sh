@@ -51,4 +51,9 @@ done
 
 echo "memecatch: app identity"
 "${PSQL[@]}" -f /sql/99-app-identity.sql
+memecatch_psql() { "${PSQL[@]}" "$@"; }
+# shellcheck disable=SC1091
+source /sql/backup-role.sh
+echo "memecatch: backup role"
+ensure_backup_role
 echo "memecatch: schema ready"

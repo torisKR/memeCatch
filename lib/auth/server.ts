@@ -66,6 +66,7 @@ export const authOptions = {
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
+    requireEmailVerification: true,
     minPasswordLength: 12,
     password: {
       verify: ({ hash, password }: { hash: string; password: string }) => verifyStoredPassword(hash, password),
@@ -86,6 +87,29 @@ export const authOptions = {
           url: resetUrl,
         }),
       });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: false,
+    sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
+      const webhook = process.env.AUTH_EMAIL_WEBHOOK?.trim();
+      if (!webhook) {
+        console.info(JSON.stringify({ event: "verification_email_not_delivered", email: user.email }));
+        return;
+      }
+      await fetch(webhook, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          to: user.email,
+          subject: "Verify your MemeCatch email",
+          url,
+        }),
+      });
+    },
+    afterEmailVerification: async (user: { id: string; email: string; name: string }) => {
+      await syncAuthUser({ id: user.id, email: user.email, name: user.name, emailVerified: true });
     },
   },
   socialProviders: googleProvider(),

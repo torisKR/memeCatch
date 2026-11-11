@@ -2,7 +2,7 @@
 -- Bcrypt hashes stay in account.password. The app verifies $2 hashes with bcrypt
 -- and writes new passwords as Better Auth scrypt.
 INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
-SELECT id::text,
+SELECT id,
        COALESCE(raw_user_meta_data->>'nickname', '밈러'),
        email,
        email_confirmed_at IS NOT NULL,
@@ -13,10 +13,10 @@ SELECT id::text,
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
-SELECT id::text,
+SELECT id,
        id::text,
        'credential',
-       id::text,
+       id,
        encrypted_password,
        COALESCE(created_at, now()),
        COALESCE(updated_at, now())

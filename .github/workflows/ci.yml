@@ -27,3 +27,6 @@ jobs:
       - run: docker build -t memecatch:ci .
       - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
       - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
+      - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
+      - run: bash scripts/postgres/migrate-from-supabase.test.sh
+      - run: bash deploy/backup/ci-test-restore.sh

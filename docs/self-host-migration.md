@@ -86,7 +86,9 @@ There is no `supabase.channel()` usage. `onAuthStateChange` reads the session on
 
 ## Data move
 
-`scripts/postgres/migrate-from-supabase.sh` dumps `public` plus `auth.users`, restores the data, copies bcrypt passwords into Better Auth, and runs `scripts/postgres/verify.sql` (row counts and an id checksum). It exits immediately unless `MEMECATCH_ALLOW_SUPABASE_DUMP=owner-approved`. Do not run it from CI or from an agent. The old Supabase project stays read-only until the owner decides the dump is good.
+`scripts/postgres/migrate-from-supabase.sh` dumps `public` and `auth.users` separately. It clones the target into a scratch database, truncates the dumped tables there, restores into that scratch database, creates the Better Auth tables, and copies bcrypt passwords. Row counts are compared only for tables present in the source dumps. The live database is renamed into place only after that diff passes. A failure drops the scratch database and leaves the target unchanged. The previous database is kept as `<name>_premigrate`. `DATABASE_URL` has to be a role that can `CREATE DATABASE` (the Postgres superuser, not the `memecatch` login).
+
+The script exits immediately unless `MEMECATCH_ALLOW_SUPABASE_DUMP=owner-approved`. Do not point it at the production Supabase project from CI or from an agent. CI runs `scripts/postgres/migrate-from-supabase.test.sh` against local fixture databases only. The old Supabase project stays read-only until the owner decides the dump is good.
 
 ## Env manifest
 

@@ -9,8 +9,8 @@ import type { ContentDepthInput } from "@/lib/content-depth";
 import { evidenceTimestamp } from "@/lib/source-links";
 
 
-/** 1시간마다 재생성 */
-export const revalidate = 3600;
+/** Request-time feed. A database-less build must not cache a failed export. */
+export const dynamic = "force-dynamic";
 
 function escapeXml(value: string): string {
   return value
@@ -101,6 +101,7 @@ ${items}
   return new Response(xml, {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
     },
   });
 }

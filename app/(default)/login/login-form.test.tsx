@@ -72,7 +72,7 @@ beforeEach(() => {
 
 describe("LoginForm signup notice", () => {
   it("announces the generic signup result accessibly", async () => {
-    const notice = "가입 요청을 접수했어요. 가입 가능한 이메일이면 안내 메일을 확인하거나 로그인해 주세요.";
+    const notice = "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.";
     serverActions.signUp.mockResolvedValue({ notice });
     render(
       <LocaleProvider initialLocale="ko">

@@ -97,6 +97,20 @@ The script starts only the `memecatch` project and curls `/api/health`. In share
 
 GitHub Actions (`.github/workflows/deploy.yml`) builds `linux/amd64` and `linux/arm64` app and worker images, pushes them to GHCR, and SSHes `cd /opt/memecatch && git pull && MEMECATCH_IMAGE=<tag> MEMECATCH_WORKER_IMAGE=<tag> bash scripts/deploy-oci.sh`. The deploy job is skipped when `OCI_SSH_HOST`, `OCI_SSH_USER`, or `OCI_SSH_KEY` is empty. When those are set, `OCI_SSH_KNOWN_HOSTS` is required and SSH uses `StrictHostKeyChecking=yes`. It never logs into the VM when the host secrets are absent.
 
+## GHCR login on the VM
+
+The images are `ghcr.io/<owner>/memecatch` and `ghcr.io/<owner>/memecatch-worker`, with the owner lowercased. `scripts/deploy-oci.sh` pulls those tags when `MEMECATCH_IMAGE` or `MEMECATCH_WORKER_IMAGE` starts with `ghcr.io/`. The Actions `GITHUB_TOKEN` that pushes them never reaches the VM.
+
+GHCR packages are private until their visibility is changed. On the VM, log in once as the user that runs Docker, with a GitHub user and a token that can `read:packages` for this repository:
+
+```bash
+umask 077
+printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u '<github-user>' --password-stdin
+unset GHCR_READ_TOKEN
+```
+
+`docker login` stores the credential in that user's `~/.docker/config.json`. Do not commit the token or pass it as a Compose variable. A public package does not need this login. Confirm with `docker pull` of one pushed tag before the first deploy that uses GHCR.
+
 ## Backups
 
 The backup container runs `pg_dump -Fc` daily at 02:30 UTC, gzips it, encrypts it with age to the public key in `BACKUP_AGE_RECIPIENT`, and uploads `memecatch/<stamp>.dump.gz.age` to R2. Retention defaults to 14 days. If the R2 backup variables are empty, the job logs a skip and exits 0. If R2 is set and the recipient is empty, the job fails and uploads nothing.

@@ -18,7 +18,7 @@ export type AuthState = {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INTERNAL_AUTH_DOMAINS = ["@auth.memecatch.internal", "@wallet.memecatch.internal"];
 const SIGNUP_NOTICE =
-  "가입 요청을 접수했어요. 가입 가능한 이메일이면 안내 메일을 확인하거나 로그인해 주세요.";
+  "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.";
 const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
 
 export async function signIn(

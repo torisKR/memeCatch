@@ -13,7 +13,7 @@ describe("home route integration", () => {
   });
 
   it("uses publication recency for Korean cards and passes real safety levels on both routes", () => {
-    expect(koreanPage).toContain("getRecentlyPublishedMemes(6)");
+    expect(koreanPage).toContain("getRecentlyPublishedMemes(8)");
     expect(koreanPage).not.toContain("getLatestMemes");
     expect(koreanPage).toContain("safetyLevel: meme.safety_level");
     expect(localizedPage).toContain("safetyLevel: meme.safety_level");

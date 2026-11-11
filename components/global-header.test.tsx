@@ -107,7 +107,8 @@ describe("GlobalHeader", () => {
   it("shows direct desktop entry points for latest memes, community, and products", () => {
     const html = renderToStaticMarkup(<GlobalHeader />);
 
-    expect(html).toContain('href="/explore?sort=recent"');
+    expect(html).toContain('href="/explore"');
+    expect(html).toContain("밈 탐색");
     expect(html).toContain('href="/community"');
     expect(html).toContain('href="/products"');
   });
@@ -119,7 +120,7 @@ describe("GlobalHeader", () => {
     const discoveryNav = html.match(/<nav[^>]*aria-label="주요 발견"[^>]*>/)?.[0];
     const discoveryLinks = [
       ...html.matchAll(
-        /<a[^>]*href="(?:\/explore\?sort=recent|\/community|\/products)"[^>]*>/g,
+        /<a[^>]*href="(?:\/explore|\/community|\/products)"[^>]*>/g,
       ),
     ].map(([link]) => link);
 

@@ -39,7 +39,7 @@ export const HOME_IMMERSIVE_LOCALES = SEO_ROUTE_LOCALES;
 export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
   ko: {
     navigationLabel: "홈 스토리 챕터",
-    skipLabel: "최신 밈으로 건너뛰기",
+    skipLabel: "지금 뜨는 밈으로 건너뛰기",
     sceneLabel: "밈의 발견, 맥락, 참여를 하나의 흐름으로 보여 주는 오렌지색 입체 장면",
     pauseScene: "장면 멈추기",
     playScene: "장면 재생하기",

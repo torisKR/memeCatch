@@ -8,18 +8,20 @@ import { ExploreFilters } from "@/components/explore-filters";
 const navigation = vi.hoisted(() => ({
   push: vi.fn(),
   query: "",
+  params: new URLSearchParams(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: navigation.push }),
   usePathname: () => "/explore",
-  useSearchParams: () => new URLSearchParams(navigation.query),
+  useSearchParams: () => navigation.params,
 }));
 
 afterEach(() => {
   cleanup();
   navigation.push.mockReset();
   navigation.query = "";
+  navigation.params = new URLSearchParams();
 });
 
 describe("ExploreFilters", () => {
@@ -51,6 +53,7 @@ describe("ExploreFilters", () => {
 
   it("shows AI memes and keeps the tag-backed category exclusive", async () => {
     navigation.query = "category=meme_term";
+    navigation.params = new URLSearchParams(navigation.query);
     const user = userEvent.setup();
     render(
       <ExploreFilters
@@ -68,6 +71,7 @@ describe("ExploreFilters", () => {
 
   it("removes AI memes when selecting a format category", async () => {
     navigation.query = "category=ai-meme";
+    navigation.params = new URLSearchParams(navigation.query);
     const user = userEvent.setup();
     render(
       <ExploreFilters
@@ -81,5 +85,22 @@ describe("ExploreFilters", () => {
     expect(navigation.push).toHaveBeenCalledWith("/explore?category=meme_term", {
       scroll: false,
     });
+  });
+
+  it("submits the typed query when the search button is clicked", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExploreFilters
+        platformCounts={{ youtube: 12, youtube_shorts: 8, tiktok: 4, instagram: 2 }}
+      />,
+    );
+
+    await user.type(screen.getByRole("searchbox", { name: "밈 이름이나 뜻으로 검색" }), "중꺾마");
+    await user.click(screen.getByRole("button", { name: "검색" }));
+
+    expect(navigation.push).toHaveBeenCalledWith(
+      `/explore?q=${encodeURIComponent("중꺾마")}`,
+      { scroll: false },
+    );
   });
 });

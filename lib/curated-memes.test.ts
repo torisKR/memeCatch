@@ -33,6 +33,9 @@ describe("curated memes and guaranteed home entries", () => {
     expect(entries.length).toBeGreaterThanOrEqual(6);
     expect(entries[0].title).toBeTruthy();
     expect(entries[0].href).toMatch(/^\/memes\//);
+    const english = getGuaranteedHomeEntries("en", emptyLiveEntries);
+    expect(english.every((entry) => entry.href.startsWith("/memes/"))).toBe(true);
+    expect(english.some((entry) => entry.href.startsWith("/en/"))).toBe(false);
     expect(entries[0].thumbnailUrl).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 

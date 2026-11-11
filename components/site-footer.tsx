@@ -5,6 +5,7 @@ import { HideOnAdmin } from "@/components/auth-menu";
 import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
 import { CONTACT_EMAIL } from "@/lib/site";
+import { TranslatedEditionHint } from "@/components/home/translated-edition-hint";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
@@ -29,6 +30,7 @@ export function SiteFooter() {
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
         <div className="mx-auto max-w-5xl px-4 py-8">
+          {locale === "ko" ? <TranslatedEditionHint /> : null}
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
               {FOOTER_LINKS.map((l) => (

@@ -95,8 +95,9 @@ describe("home route rendering", () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('action="/search"');
     expect(html).toContain("공개된 최신 밈");
-    expect(queryMocks.getRecentlyPublishedMemes).toHaveBeenCalledWith(6);
-    expect(html).toContain('href="/explore?sort=recent"');
+    expect(queryMocks.getRecentlyPublishedMemes).toHaveBeenCalledWith(8);
+    expect(html).toContain('href="/explore"');
+    expect(html).toContain("지금 뜨는 밈");
     expect(html).toContain('data-safety-icon="green"');
     expect(html).toContain('data-signal-guide="ko"');
     expect(html).toContain('data-adsense-loader="korean-home"');
@@ -121,7 +122,7 @@ describe("home route rendering", () => {
       expect(html).toContain(`${locale} newer`);
       expect(html.indexOf(`${locale} newer`)).toBeLessThan(html.indexOf(`${locale} older`));
       expect(html).toContain("원문 NEW001");
-      expect(html).toContain(`href="/${locale}/explore?sort=recent"`);
+      expect(html).toContain(`href="/${locale}/explore"`);
       expect(html).toContain('data-safety-icon="green"');
       expect(html).toContain('type="application/ld+json"');
     },

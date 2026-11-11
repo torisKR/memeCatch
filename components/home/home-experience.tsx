@@ -1,18 +1,14 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  MessagesSquare,
-  ShoppingBag,
-} from "lucide-react";
-import { HomeDiscovery } from "@/components/home/home-discovery";
+import { ArrowRight } from "lucide-react";
 import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
 import styles from "@/components/home/home-web3.module.css";
-import { TranslatedEditionHint } from "@/components/home/translated-edition-hint";
+import { MemeThumbnail } from "@/components/meme-thumbnail";
+import { SafetyBadge } from "@/components/safety-badge";
 import { SafetySignalGuide } from "@/components/usage-guide";
 import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
 import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
 import { HOME_COPY } from "@/lib/home-copy";
-import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
 import {
   localizedPath,
   type SeoRouteLocale,
@@ -31,6 +27,8 @@ export type HomeEntry = {
   safetyLevel: SafetyLevel;
 };
 
+const TRENDING_LIMIT = 8;
+
 export function HomeExperience({
   locale,
   entries,
@@ -39,42 +37,74 @@ export function HomeExperience({
   entries: readonly HomeEntry[];
 }) {
   const copy = HOME_COPY[locale];
-  const web3 = HOME_WEB3_COPY[locale];
   const searchPath = localizedPath("/search", locale);
-  const explorePath = localizedPath("/explore?sort=recent", locale);
+  const explorePath = localizedPath("/explore", locale);
   const pathwaysTitleId = `home-pathways-title-${locale}`;
   const trustTitleId = `home-trust-title-${locale}`;
+  const trendingTitleId = `home-trending-title-${locale}`;
+  const trending = entries.slice(0, TRENDING_LIMIT);
+  const trendingTitle = locale === "ko" ? "지금 뜨는 밈" : copy.recent.title;
 
   return (
     <div className={styles.page}>
-      {locale === "ko" && <TranslatedEditionHint />}
       <HomeImmersiveStory locale={locale} />
 
       <section
         id="home-latest"
-        data-home-section="recent-content"
-        aria-label={copy.recent.title}
-        className={`${styles.editorialSection} ${styles.anchorTarget}`}
+        data-home-section="trending-memes"
+        aria-labelledby={trendingTitleId}
+        className={styles.trendingSection}
       >
-        <span aria-hidden className={`${styles.sectionNumber} ${styles.discoveryNumber}`}>01</span>
-        <HomeDiscovery locale={locale} entries={entries} />
-        {entries.length > 0 ? (
-          <div className={styles.recentSignalRail}>
-            <Link href={explorePath} className={styles.contributionLinkStrong}>
-              {copy.recent.all} <ArrowRight aria-hidden className={styles.buttonIcon} />
+        <div className={styles.trendingHeader}>
+          <h2 id={trendingTitleId} className={styles.trendingHeading}>
+            {trendingTitle}
+          </h2>
+        </div>
+        {trending.length > 0 ? (
+          <>
+            <ul
+              className={styles.trendingGrid}
+              style={{ "--trend-columns": String(Math.min(Math.max(trending.length, 4), TRENDING_LIMIT)) } as CSSProperties}
+            >
+              {trending.map((entry, index) => (
+                <li key={entry.id}>
+                  <Link href={entry.href} className={styles.trendingCard}>
+                    <span className={styles.trendingArt}>
+                      <MemeThumbnail
+                        src={entry.thumbnailUrl ?? null}
+                        title={entry.title}
+                        category={entry.category ?? "phrase"}
+                        variant="compact"
+                        priority={index < 4}
+                      />
+                      <span className={styles.trendingSafety}>
+                        <SafetyBadge level={entry.safetyLevel} locale={locale} />
+                      </span>
+                    </span>
+                    <span className={styles.trendingName}>{entry.title}</span>
+                    <span className="sr-only">{entry.summary}</span>
+                    {entry.originalTitle ? (
+                      <span className="sr-only" lang="ko">{entry.originalTitle}</span>
+                    ) : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link href={explorePath} className={styles.exploreButton} data-cta="explore">
+              {copy.recent.all}
+              <ArrowRight aria-hidden className={styles.buttonIcon} />
             </Link>
-          </div>
+          </>
         ) : (
           <div className={styles.emptyAssist}>
             <p>{copy.recent.empty}</p>
-            <Link href={searchPath} className={styles.contributionLinkStrong}>
+            <Link href={searchPath} className={styles.exploreButton}>
               {copy.recent.emptyAction}
             </Link>
           </div>
         )}
       </section>
 
-      {/* 상황별 안전 가이드 및 실전 용례 쇼케이스 (고유 가치 전면 배치) */}
       <section
         id="home-safety-showcase"
         data-home-section="safety-showcase"
@@ -83,7 +113,6 @@ export function HomeExperience({
         <HomeSafetyShowcase />
       </section>
 
-      {/* 인터랙티브 밈 소통 안전도 자가진단기 */}
       <section
         id="home-safety-quiz"
         data-home-section="safety-quiz"
@@ -118,73 +147,24 @@ export function HomeExperience({
             <p className={styles.sectionDescription}>{copy.pathways.description}</p>
           </header>
 
-          <div className={styles.pathwayGrid}>
-            <Link
-              href="/community"
-              className={`${styles.pathwayCard} ${styles.communityCard}`}
-            >
-              <span aria-hidden className={styles.communityMotif} />
-              <span className={styles.cardTop}>
-                <MessagesSquare aria-hidden className={styles.cardIcon} />
-                <span className={styles.cardMark}>{web3.pathways.communityMark}</span>
-              </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardTitle}>{copy.pathways.community.title}</span>
-                <span className={styles.cardDescription}>
-                  {copy.pathways.community.description}
-                </span>
-                <span className={styles.cardAction}>
-                  {copy.pathways.community.action}
-                  <ArrowRight aria-hidden className={styles.buttonIcon} />
-                </span>
-              </span>
-            </Link>
-
-            <Link
-              href="/products"
-              className={`${styles.pathwayCard} ${styles.productsCard}`}
-            >
-              <span aria-hidden className={styles.productsMotif} />
-              <span className={styles.cardTop}>
-                <ShoppingBag aria-hidden className={styles.cardIcon} />
-                <span className={styles.cardMark}>{web3.pathways.productsMark}</span>
-              </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardTitle}>{copy.pathways.products.title}</span>
-                <span className={styles.cardDescription}>
-                  {copy.pathways.products.description}
-                </span>
-                <span className={styles.cardAction}>
-                  {copy.pathways.products.action}
-                  <ArrowRight aria-hidden className={styles.buttonIcon} />
-                </span>
-              </span>
-            </Link>
-          </div>
-
-          <div className={styles.contributionBar}>
-            <p>{copy.pathways.contributionLabel}</p>
-            <div className={styles.contributionLinks}>
-              <Link href="/community/new" className={styles.contributionLink}>
-                {copy.pathways.community.createAction}
-              </Link>
-              <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
+          <div className={styles.ctaRow}>
+            {locale === "ko" ? (
+              <>
+                <Link href="/originals" className={styles.primaryCta} data-cta="primary">
+                  오리지널 보러 가기
+                </Link>
+                <Link href="/submit" rel="nofollow" className={styles.primaryCta} data-cta="primary">
+                  밈 올리기
+                </Link>
+              </>
+            ) : (
+              <Link href="/submit" rel="nofollow" className={styles.primaryCta} data-cta="primary">
                 {copy.pathways.submitAction}
               </Link>
-              <Link href="/products/new" className={styles.contributionLinkStrong}>
-                {copy.pathways.products.createAction}
-              </Link>
-              {locale === "ko" ? (
-                <>
-                  <Link href="/originals" className={styles.contributionLink}>
-                    오리지널 보러 가기
-                  </Link>
-                  <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
-                    밈 올리기
-                  </Link>
-                </>
-              ) : null}
-            </div>
+            )}
+            <Link href="/community" className={styles.secondaryCta} data-cta="secondary">
+              {copy.pathways.community.action}
+            </Link>
           </div>
         </div>
       </section>

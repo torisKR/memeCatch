@@ -1,5 +1,5 @@
 import type { MemeCategory, SafetyLevel, LifecycleStatus } from "@/lib/labels";
-import { getSeoCopy, localizePath, type SeoRouteLocale } from "@/lib/i18n-routing";
+import { getSeoCopy, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { HomeEntry } from "@/components/home/home-experience";
 import { memePathFrom } from "@/lib/labels";
 import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
@@ -376,7 +376,7 @@ export function getGuaranteedHomeEntries(
 
     return {
       id: meme.id,
-      href: localizePath(memePathFrom(meme.short_id, meme.slug), locale),
+      href: memePathFrom(meme.short_id, meme.slug),
       title: meme.title,
       summary: meme.summary,
       categoryLabel: categoryCopy[meme.category] ?? "밈 용어",

@@ -1,0 +1,3947 @@
+{
+  "batch_id": "loop-028-priority-enrichment-2026-11-11",
+  "round": 6,
+  "method": "Every public sentence (summary, description, origin, usage_note, caution, usage_examples situation/text) has cited_source_url + exact quote from a visible source (titled, not hidden_from_public, HTTP 200 when fetched), or an explicit no_fact reason. Quotes were checked by substring match against page text fetched this round (whitespace and spacing before punctuation normalized). Dates, decades and rankings need 2 independent visible sources; jjalbang.today and instablank.com state they were compiled from wepick, so they do not count as independent of it.",
+  "fetched_at": "2026-11-12T03:10:00+09:00",
+  "totals": {
+    "sentences": 229,
+    "cited": 164,
+    "no_fact": 65,
+    "quotes": 233
+  },
+  "errors": [],
+  "memes": [
+    {
+      "short_id": "89b37mrx",
+      "slug": "새삥 챌린지 (지코)",
+      "title": "새삥 챌린지 (지코)",
+      "visible_sources": [
+        {
+          "url": "https://www.youtube.com/watch?v=JnQu_5O4lh4",
+          "title": "Mnet 새삥 리더 계급 댄스 비디오 — 안무: 위댐보이즈 바타"
+        },
+        {
+          "url": "https://cjnews.cj.net/?p=32515",
+          "title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=WG2YQEzgH8c",
+          "title": "Mnet 바타의 새삥 안무 튜토리얼"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "Mnet ‘스트릿 맨 파이터’ 리더 계급 미션곡 ‘새삥’에 맞춘 댄스 챌린지",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "리더 계급 미션에서 선보인 곡 ‘새삥’이",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            },
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "셀럽들도 연이어 댄스 챌린지에 참여하며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "‘새삥 챌린지’는 Mnet ‘스트릿 맨 파이터’의 리더 계급 미션에서 선보인 곡 ‘새삥’에 맞춰 춤을 추는 댄스 챌린지다.",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "Mnet ‘스트릿 맨 파이터(이하 ‘스맨파’)’의 리더 계급 미션에서 선보인 곡 ‘새삥’이",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            },
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "셀럽들도 연이어 댄스 챌린지에 참여하며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "곡의 프로듀서는 지코이고, 피처링에는 호미들이 참여했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "프로듀서인 지코",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=WG2YQEzgH8c",
+              "source_title": "Mnet 바타의 새삥 안무 튜토리얼",
+              "quote": "지코(ZICO) - 새삥(Feat.호미들)",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "14838583a64967c58a078f97eadde737955a09d64e7f2e960070c7d5bfb428ac"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "리더 계급 댄스 비디오의 안무는 위댐보이즈 바타가 맡았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=JnQu_5O4lh4",
+              "source_title": "Mnet 새삥 리더 계급 댄스 비디오 — 안무: 위댐보이즈 바타",
+              "quote": "리더 계급 댄스 비디오 (Choreo by 위댐보이즈 바타)",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "84493dcedbfc2c70a4c767b74b106dae094eb827cb8bc05e9832e26e33641834"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "Mnet의 공식 유튜브 채널 ‘더 춤’에 공개된 이 댄스 비디오는 약 500만 뷰를 돌파했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "Mnet의 공식 유튜브 채널 ‘더 춤’에 공개된 리더 계급 미션 댄스 비디오는 지금까지 약 500만 뷰를 돌파했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "프로듀서 지코뿐 아니라 강다니엘, 세븐틴 호시, NCT 등도 연이어 댄스 챌린지에 참여했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "프로듀서인 지코 뿐 아니라 강다니엘, 세븐틴 호시, NCT 등 셀럽들도 연이어 댄스 챌린지에 참여하며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "‘스맨파’ 제작진과 CJ ENM A&R팀은 프로그램 기획 초기부터 지코를 프로듀서로 섭외할 생각이었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "프로그램 기획 초기부터 ‘스맨파’ 제작진과 A&R팀 차인준 담당자는 지코 프로듀서님 섭외를 생각하고 있었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "‘스맨파’의 음원은 가창자보다 댄서들과 무대를 먼저 생각하고 만들어졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "‘스맨파’의 음원은 가창자가 아니라 댄서들과 무대를 먼저 생각하고 제작하고 있으며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "‘더 춤’ 채널에는 바타가 직접 알려 주는 ‘새삥’ 안무 튜토리얼 영상도 올라왔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=WG2YQEzgH8c",
+              "source_title": "Mnet 바타의 새삥 안무 튜토리얼",
+              "quote": "위댐보이즈 바타쌤이 알려주는 지코(ZICO) - 새삥(Feat.호미들) 안무 튜토리얼",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "14838583a64967c58a078f97eadde737955a09d64e7f2e960070c7d5bfb428ac"
+            },
+            {
+              "cited_source_url": "https://cjnews.cj.net/?p=32515",
+              "source_title": "CJ 뉴스룸: 스트릿 맨 파이터 새삥 챌린지",
+              "quote": "Mnet의 공식 유튜브 채널 ‘더 춤’",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d00c6b94d67e8865055b0bb505de3c17e9f2fd4f188c51265f003e087144055b"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "‘새삥’ 안무를 따라 춘 영상이나 챌린지를 소개할 때 쓸 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "동작 순서가 헷갈리면 공식 안무 튜토리얼 영상을 기준으로 확인하는 편이 정확하다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=WG2YQEzgH8c",
+              "source_title": "Mnet 바타의 새삥 안무 튜토리얼",
+              "quote": "새삥(Feat.호미들) 안무 튜토리얼",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "14838583a64967c58a078f97eadde737955a09d64e7f2e960070c7d5bfb428ac"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "댄스 챌린지를 제안할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "이번 주에는 새삥 챌린지 안무 영상 하나 찍어 보자.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "포인트 안무를 보고",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "저 구간만 나와도 새삥인지 바로 알겠어.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "jkd7vu6x",
+      "slug": "페페 더 프로그(슬픈 개구리 페페)",
+      "title": "페페 더 프로그(슬픈 개구리 페페)",
+      "visible_sources": [
+        {
+          "url": "https://www.youtube.com/watch?v=Osx-DvbTOUQ",
+          "title": "칠가이 VS 페페"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=KjM91lt4EKU",
+          "title": "슬픈 개구리 페페의 장례식 #shorts"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=kUourkjOKv0",
+          "title": "이렇게 🐸귀여운 애가 왜요 : 페페 연대기 上편"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=ScImBKpLRNU",
+          "title": "이 개구리 도대체 뭐하는 친구일까?"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+          "title": "Pepe the Frog"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "만화 캐릭터 개구리 페페의 얼굴로 여러 감정을 표현하는 인터넷 밈",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "adapted Pepe's face and catchphrase to fit different scenarios and emotions",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "페페 더 프로그는 미국 만화가 맷 퓨리의 웹코믹 ‘보이즈 클럽(Boy's Club)’에서 나온 개구리 캐릭터다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Pepe the Frog was created by American artist and cartoonist Matt Furie",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Pepe originated in Furie's 2005 webcomic Boy's Club",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "4chan 이용자들은 페페의 얼굴과 대사를 우울함, 분노, 놀라움 같은 여러 감정과 상황에 맞게 바꿔 썼다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "The meme took off among 4chan users, who adapted Pepe's face and catchphrase to fit different scenarios and emotions, such as melancholy, anger, and surprise.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "변형으로는 ‘Sad Frog(슬픈 개구리)’, ‘Smug Frog’, ‘Angry Pepe’, ‘Feels Frog’ 등이 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Different types of Pepe memes include \"Sad Frog\", \"Smug Frog\", \"Angry Pepe\", \"Feels Frog\"",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "한국을 포함해 세계 어디서나 찾아볼 수 있는 캐릭터로 소개된다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=kUourkjOKv0",
+              "source_title": "이렇게 🐸귀여운 애가 왜요 : 페페 연대기 上편",
+              "quote": "우리나라는 물론 전 세계 어디서나 찾아볼 수 있는 개구리 페페",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0d06eb2db2d8c369e059cc1942fa7ecfff9da52bc4b092af22f0b565c5cf56ac"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "원래는 정치와 무관한 캐릭터였지만, 이후 미국 대안우파(alt-right)의 상징으로 전용되기도 했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Although originally an apolitical character in Furie's works and its original internet popularity, Pepe was appropriated from 2015 onward as a symbol of the alt-right",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 5,
+          "text": "미국 반명예훼손연맹(ADL)은 페페를 혐오 상징 데이터베이스에 올렸지만, 대부분의 페페 사용은 혐오와 관련된 맥락이 아니라고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "included Pepe in its hate symbol database but wrote that most instances of Pepe were not used in a hate-related context",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 6,
+          "text": "홍콩에서는 페페가 대안우파 이념과 연결된 상징으로 받아들여지지 않았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Pepe the Frog's symbolism in Hong Kong is not perceived as being connected with alt-right ideology",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "원작 만화에서 페페는 화장실 문을 열어 둔 채 소변을 보다가, 친구가 왜 바지를 내렸느냐고 묻자 “feels good man”이라고 답한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "In the comic, Pepe is seen urinating in a toilet, having left the door open; when one of his friends asks him why he lowered his pants to urinate, Pepe simply answers: \"feels good man\" as his rationale.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "이 장면이 담긴 페이지가 스캔돼 4chan에 올라가면서 밈으로 퍼졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "the page containing Pepe and the catchphrase was scanned and uploaded to 4chan's",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "The meme took off among 4chan users",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "‘feels good man’의 슬픈 변형인 ‘feels bad, man’도 페페와 함께 쓰였다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "\"Feels bad, man\", a sad variant of the frog's \"feels good, man\" catchphrase, also became associated with Pepe.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "퓨리는 페페가 혐오 상징으로 쓰이는 데 유감을 나타냈고, 결국 만화 속에서 페페를 죽게 하고 장례식을 치러 주었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Furie has expressed his dismay at Pepe being used as a hate symbol",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Furie had killed Pepe off in response to the character's continued use as a hate symbol",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=kUourkjOKv0",
+              "source_title": "이렇게 🐸귀여운 애가 왜요 : 페페 연대기 上편",
+              "quote": "원작자가 직접 자신의 손으로 장례식을 치뤄줬다는 사실",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0d06eb2db2d8c369e059cc1942fa7ecfff9da52bc4b092af22f0b565c5cf56ac"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "반응 이미지로 감정을 표현할 때 쓸 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "혐오 상징으로 전용된 이력이 있으니, 해외 이용자와 대화하거나 공적인 자리에서는 맥락을 함께 설명하는 편이 좋다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "was appropriated from 2015 onward as a symbol of the alt-right",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "반응짤을 고를 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "이 표정은 슬픈 개구리 페페가 제일 잘 살려.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "해외 커뮤니티를 설명할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "페페는 원래 만화 캐릭터인데, 해외에서는 혐오 상징으로 쓰인 적이 있어서 조심해야 해.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+              "source_title": "Pepe the Frog",
+              "quote": "Furie has expressed his dismay at Pepe being used as a hate symbol",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0ef8c572a9f826e98680bf63b5d5d18c4c618d8bef881c85da99d5dcfc04d6b9"
+            }
+          ],
+          "date_or_ranking": false
+        }
+      ]
+    },
+    {
+      "short_id": "q246gvj2",
+      "slug": "피식대학-영양군-지역비하-사태",
+      "title": "피식대학 영양군 지역비하 사태",
+      "visible_sources": [
+        {
+          "url": "https://www.nongmin.com/article/20240519500070",
+          "title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=mM3su9pxkJQ",
+          "title": "\"똥물\" \"중국이야?\" 피식대학 '영양군 비하 논란'에 주민들 '폭발'…피해 업주·공무원도 입 열었다 (현장영상) / SBS"
+        },
+        {
+          "url": "https://www.yna.co.kr/view/AKR20240821061000005",
+          "title": "영양 비하 사과한 '피식대학', 영양군과 협업 콘텐츠 제작"
+        },
+        {
+          "url": "https://www.metroseoul.co.kr/article/20240829500089",
+          "title": "영양군, 피식대학 홍보대사 위촉"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "코미디 유튜브 채널 ‘피식대학’의 경북 영양군 비하 논란과 이후 영양군 홍보대사 위촉",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "경북 영양지역을 비하하는 언행으로 대중의 뭇매를 맞은 유튜브 채널 ‘피식대학’",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            },
+            {
+              "cited_source_url": "https://www.metroseoul.co.kr/article/20240829500089",
+              "source_title": "영양군, 피식대학 홍보대사 위촉",
+              "quote": "피식대학 3인(이용주 외 2)을 영양군 홍보대사로 위촉한다고 밝혔다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "14fdc65fd3e079ec3b925e3c76dca63022fc4466704f537a847373074c46b1ec"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "‘피식대학’은 코미디언 정재형, 김민수, 이용주가 운영하는 코미디 유튜브 채널이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20240821061000005",
+              "source_title": "영양 비하 사과한 '피식대학', 영양군과 협업 콘텐츠 제작",
+              "quote": "'피식대학'은 코미디언 정재형, 김민수, 이용주가 운영하는 채널이다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3eea98bb0f367b55d3ed48b8c6216eda01047be7a8fc2808f40cd6c7cfd20837"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "이 채널은 경북 영양을 찾은 영상 ‘경상도에서 가장 작은 도시 영양에 왔스유예’에서 지역을 비하하는 언행으로 거센 비판을 받았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "논란이 된 영상은 이달 11일 유튜브 채널을 통해 공개된 ‘경상도에서 가장 작은 도시 영양에 왔스유예’다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            },
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "경북 영양지역을 비하하는 언행으로 대중의 뭇매를 맞은",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "출연진은 버스터미널의 지명 표지판을 보고 “여기 중국 아니냐”고 했고, 지역 특산물인 블루베리 젤리를 먹고는 “할머니 살을 뜯는 것 같다”고 말했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "버스터미널에 적힌 청기, 상청, 진보, 입암 등 지명을 보고선 “여기 중국 아니냐”는 말을 했다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            },
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "가장 문제가 된 발언은 지역 특산물인 블루베리 젤리를 사 먹은 후의 시식평이다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=mM3su9pxkJQ",
+              "source_title": "\"똥물\" \"중국이야?\" 피식대학 '영양군 비하 논란'에 주민들 '폭발'…피해 업주·공무원도 입 열었다 (현장영상) / SBS",
+              "quote": "\"할머니 살을 뜯는 것 같다\"",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "f077813d13f1d63e6e7f28f7bd7f00b6f86d55f6700c20911bab699d38d7c342"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "누리꾼들은 “무례하다”, “지역을 무시하는 게 보인다” 같은 비판을 쏟아냈다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "영상을 본 누리꾼들은 “무례하다” “지역을 무시하는 게 보인다”",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "피식대학 측은 영상 공개 1주일 만에 사과문을 올리고, 영상에서 언급한 제과점과 백반식당을 찾아가 사과했다고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "영상 공개 1주일 만에 사과문 게재",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            },
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "콘텐츠에서 직접 언급해 문제가 된 제과점과 백반식당에 방문해 사과를 드렸다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "이후 피식대학은 영양군을 소개하고 축제를 홍보하는 협업 콘텐츠를 순차적으로 공개하겠다고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20240821061000005",
+              "source_title": "영양 비하 사과한 '피식대학', 영양군과 협업 콘텐츠 제작",
+              "quote": "영양군을 소개하고 영양군의 축제를 홍보하기 위한 콘텐츠를 순차적으로 공개할 예정",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3eea98bb0f367b55d3ed48b8c6216eda01047be7a8fc2808f40cd6c7cfd20837"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "첫 협업 영상 도입부에는 오도창 영양군수가 출연해, 수해 때 피식대학이 5천만원어치 물품을 기부한 데 고마움을 전했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20240821061000005",
+              "source_title": "영양 비하 사과한 '피식대학', 영양군과 협업 콘텐츠 제작",
+              "quote": "오도창 영양군수가 영상 도입부에 출연해 최근 수해가 발생했을 때 '피식대학'에서 5천만원어치 물품을 기부해준 데 고마움을 전했다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3eea98bb0f367b55d3ed48b8c6216eda01047be7a8fc2808f40cd6c7cfd20837"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "영양군은 서울광장에서 열린 영양고추 H.O.T Festival 행사에서 피식대학 3인을 영양군 홍보대사로 위촉한다고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.metroseoul.co.kr/article/20240829500089",
+              "source_title": "영양군, 피식대학 홍보대사 위촉",
+              "quote": "영양고추 H.O.T Festival 행사가 열리는 서울광장에서 온라인콘텐츠 창작자 피식대학 3인(이용주 외 2)을 영양군 홍보대사로 위촉한다고 밝혔다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "14fdc65fd3e079ec3b925e3c76dca63022fc4466704f537a847373074c46b1ec"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "실제 지역 비하 논란이 배경이므로, 이 사건을 빌려 특정 지역을 조롱하는 데 쓰지 않아야 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "경북 영양지역을 비하하는 언행으로 대중의 뭇매를 맞은",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "언급할 때는 사과와 이후 경위까지 함께 설명하는 편이 좋다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "지역 비하 논란을 설명할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "피식대학 영양 편은 결국 사과문까지 올라왔잖아.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nongmin.com/article/20240519500070",
+              "source_title": "‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”",
+              "quote": "영상 공개 1주일 만에 사과문 게재",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "1efaa9e71a8a6c85b43be04ba08c83fdf54096f64489a51bdeab9dadb128693e"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "후속 소식을 이야기할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "처음엔 비하 논란이었는데, 나중엔 영양군 홍보대사로 위촉됐더라.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://www.metroseoul.co.kr/article/20240829500089",
+              "source_title": "영양군, 피식대학 홍보대사 위촉",
+              "quote": "피식대학 3인(이용주 외 2)을 영양군 홍보대사로 위촉한다고 밝혔다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "14fdc65fd3e079ec3b925e3c76dca63022fc4466704f537a847373074c46b1ec"
+            }
+          ],
+          "date_or_ranking": false
+        }
+      ]
+    },
+    {
+      "short_id": "56hnkxyk",
+      "slug": "강정호-3회-음주운전-사건",
+      "title": "강정호 3회 음주운전 사건",
+      "visible_sources": [
+        {
+          "url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+          "title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN"
+        },
+        {
+          "url": "https://www.yna.co.kr/view/AKR20161206115151004",
+          "title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+          "title": "Jung-ho Kang"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "세 차례 음주운전 사실이 드러나고 음주 뺑소니 사고를 낸 전 메이저리거 강정호 사건",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "모두 세 차례 음주운전 사실이 드러나",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "서울에서 뺑소니 사고를 냈고",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "강정호는 피츠버그 파이리츠 소속 메이저리거이던 시절, 음주 상태로 차를 몰다 서울 강남 삼성역사거리에서 가드레일을 들이받고 그대로 달아났다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "메이저리거 강정호(29·피츠버그 파이리츠)",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            },
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "최근 강남에서 음주뺑소니 사고를 낸",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            },
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "음주 상태로 BMW 승용차를 몰고 삼성역사거리에서 가드레일을 들이받고 그대로 달아나",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "사고 직후 동승한 친구가 경찰에 자신이 운전했다고 거짓말을 했지만, 블랙박스 확인 결과 강정호가 운전한 사실이 드러났다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "동승한 중학교 동창 유모(29)씨는 경찰에 \"내가 운전했다\"며 거짓말을 했다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            },
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "블랙박스 확인 결과 강씨가 운전한 사실이 들통나면서",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "그는 앞서 두 차례 음주운전으로 적발된 전력도 있었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "두 차례나 음주운전으로 적발된 전력이 있었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+              "source_title": "Jung-ho Kang",
+              "quote": "his other 2 arrests which occurred when he was an active KBO player",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "누적 적발 횟수가 세 차례가 되면서 ‘음주운전 삼진아웃제’에 따라 면허가 취소될 상황이 됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "누적 적발 횟수가 3차례가 돼 '음주운전 삼진아웃제' 적용으로 면허를 취소당하게 됐다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "그는 징역 8개월에 집행유예 2년을 선고받았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "징역 8개월 집행유예 2년을 선고받았던 강정호",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+              "source_title": "Jung-ho Kang",
+              "quote": "his request for a work visa to enter the United States for the 2017 season was denied",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "키움 복귀를 타진했지만 여론과 팬들의 따가운 질책 속에 의사를 접고 사실상 은퇴했던 강정호",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+              "source_title": "Jung-ho Kang",
+              "quote": "opting instead to give him the maximum punishment for his other 2 arrests which occurred when he was an active KBO player",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3452889da7ab9dde4c0dcbfac34d225657caffddc590839205dc89302791e2de"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "이 징계 때문에 키움과 다시 계약한 뒤에도 한동안 경기는 물론 팀 훈련에도 참여할 수 없었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "원소속팀 키움은 최저 연봉을 지급하는 조건으로 올 시즌 선수 계약을 체결했다고 밝혔습니다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "이전 실격 징계 때문에 내년 3월 중순까지 경기는 물론, 팀 훈련도 소화할 수 없습니다.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "반복된 음주운전이라는 실제 범죄 사건이므로 농담거리로만 소비하지 않도록 주의한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "모두 세 차례 음주운전 사실이 드러나",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "음주운전 전력을 다루는 만큼 미화하거나 가볍게 다루지 않도록 주의가 필요하다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "스포츠 범죄를 설명할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "강정호 음주운전 사건은 한 번의 실수가 아니라 반복된 적발이 핵심이야.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "두 차례나 음주운전으로 적발된 전력이 있었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "복귀 논의를 보다가",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "세 번째 적발이 뺑소니 사고였다는 걸 빼고는 이 사안을 말하기 어려워.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20161206115151004",
+              "source_title": "강정호 \"팬들에 너무 죄송…야구로 보답할 일밖에 없어\"(종합)",
+              "quote": "누적 적발 횟수가 3차례가 돼",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "58cfa65d41595ad8047d5923254af0c9a6e977a234b4cc84180388f47d278a52"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+              "source_title": "'음주운전' 강정호, 의문 가득한 복귀...키움은 왜? / YTN",
+              "quote": "서울에서 뺑소니 사고를 냈고",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b85edd531490d232a6fa93852847385a7844b5a438dbbfa71356d3f235c28163"
+            }
+          ],
+          "date_or_ranking": false
+        }
+      ]
+    },
+    {
+      "short_id": "wsjz865n",
+      "slug": "디워-사태",
+      "title": "디워 사태",
+      "visible_sources": [
+        {
+          "url": "https://www.segye.com/newsView/20070920001620",
+          "title": "진중권 \"''디워'' 해프닝 ''황우석 사태''와 비슷\""
+        },
+        {
+          "url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+          "title": "디워"
+        },
+        {
+          "url": "https://www.khan.co.kr/article/200708101214011",
+          "title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "2007년 영화 <디워>의 작품성을 둘러싸고 평론가와 네티즌이 맞붙은 논쟁",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "2007년에 개봉한 심형래 감독의 판타지 액션 영화이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "입력 2007.08.10",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "혹평한 문화평론가 진중권 교수에 대해 네티즌들이 집중포화를 퍼붓고 있다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            }
+          ],
+          "date_or_ranking": true,
+          "independent_sources": [
+            "khan.co.kr",
+            "wikipedia.org"
+          ]
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "디워 사태는 2007년 개봉한 심형래 감독의 영화 <디워>를 두고 작품성 비판과 이에 대한 네티즌의 반발이 맞붙은 논쟁이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "2007년에 개봉한 심형래 감독의 판타지 액션 영화이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "입력 2007.08.10",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "작품성에 대한 논란을 불러일으키기도 하였다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "네티즌들이 집중포화를 퍼붓고 있다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            }
+          ],
+          "date_or_ranking": true,
+          "independent_sources": [
+            "khan.co.kr",
+            "wikipedia.org"
+          ]
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "논란은 한국 영화계의 관행과 ‘애국주의 마케팅’ 문제를 부각시켰다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "논란은 한국 영화계의 관행과 ‘애국주의 마케팅’의 문제를 부각시켰다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "독립영화 감독 이송희일은 블로그에 비판적인 글을 올렸다가, 수만 네티즌의 악플과 동시 접속으로 블로그가 폐쇄됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "독립 영화감독인 이송희일 이 디워를 둘러싼 사회현상에 대한 비판적인 글을 자신의 블로그에 올려 논란이 되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "수만의 네티즌의 악플과 동시접속으로 인해 블로그가 폐쇄되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "MBC ‘100분 토론’에서 문화평론가 진중권이 영화를 혹평하자, 네티즌들은 그에게 집중포화를 퍼부었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "심형래 감독작의 영화 ‘디 워’를 방송 토론프로에서 혹평한 문화평론가 진중권 교수에 대해 네티즌들이 집중포화를 퍼붓고 있다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "MBC ‘100분 토론’",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "‘100분 토론’ 시청자 게시판에는 방송이 끝날 무렵 이미 1만 개를 훨씬 넘는 댓글이 붙었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "‘100분 토론’ 시청자 게시판엔 방송이 끝날 무렵 이미 1만개를 훨씬 상회하는 댓글이 붙었고",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "진중권은 토론에서 내용이 너무 허술하고 영화의 기초인 플롯이 없다고 지적했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "내용이 너무 허술하다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200708101214011",
+              "source_title": "진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’",
+              "quote": "영화의 기초인 플롯이 없으니",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ec858124486335c9beef857f8b6f66b4e940aa280f3f7c3637f347c3df2d54e9"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "토론 뒤 진중권의 블로그는 항의성 글로 마비되기도 했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "그 뒤 진중권의 블로그는 항의성 글로 마비되기도 했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "토론에서 반대편 패널이었던 평론가 하재근은 자신의 블로그에서 누리꾼들에게 인신공격을 자제해 달라고 요청했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "100분 토론에서 진중권의 반대측 패널에 섰던 평론가 하재근 은 자신의 블로그에서 그의 말이 맞다며 누리군들에게 인신공격을 자제해 달라고 요청했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "진중권은 이후 계간문예지 기고에서 <디워>에 대한 대중의 열광이 ‘황우석 사건’ 때와 닮았다고 비판했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.segye.com/newsView/20070920001620",
+              "source_title": "진중권 \"''디워'' 해프닝 ''황우석 사태''와 비슷\"",
+              "quote": "진씨는 최근 발간된 계간문예지",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9ba4fdb9372ca210273746db94a082c333bd242093d0aebe376da1231b9bdb00"
+            },
+            {
+              "cited_source_url": "https://www.segye.com/newsView/20070920001620",
+              "source_title": "진중권 \"''디워'' 해프닝 ''황우석 사태''와 비슷\"",
+              "quote": "때와 무척 닮아있다고비판했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9ba4fdb9372ca210273746db94a082c333bd242093d0aebe376da1231b9bdb00"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "온라인 여론전을 돌아볼 때 신중하게 언급한다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "특정 평론가나 블로거를 다시 공격하는 방식으로 쓰면 안 된다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "특정 개인(평론가·블로거)에 대한 온라인 공격으로 번진 사례이므로 조심스럽게 다뤄야 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "수만의 네티즌의 악플과 동시접속으로 인해 블로그가 폐쇄되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "온라인 여론을 이야기할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "디워 사태 때는 평론가 블로그가 항의 글로 마비될 정도였대.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "그 뒤 진중권의 블로그는 항의성 글로 마비되기도 했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "영화 논쟁을 돌아볼 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "영화 평가 이야기였는데 애국주의 마케팅 논쟁까지 붙었지.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+              "source_title": "디워",
+              "quote": "‘애국주의 마케팅’의 문제를 부각시켰다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "4df206504145a274abe650d46a6ffb59c46497e4c27cc29778348140dd03ae26"
+            }
+          ],
+          "date_or_ranking": false
+        }
+      ]
+    },
+    {
+      "short_id": "utxgy8un",
+      "slug": "2026년-롯데-자이언츠-원정-도박-사건",
+      "title": "2026년 롯데 자이언츠 원정 도박 사건",
+      "visible_sources": [
+        {
+          "url": "https://www.youtube.com/watch?v=B4l0UqvJuyI",
+          "title": "결국 사실로... 롯데 자이언츠 주전급 4명 대만 원정 도박 인정 '즉시 귀국 조치' / KNN"
+        },
+        {
+          "url": "https://www.yna.co.kr/view/AKR20260213190700007",
+          "title": "프로야구 롯데, 대만서 4명 불법도박장 출입인정…즉각 귀국조처"
+        },
+        {
+          "url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+          "title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "롯데 자이언츠 선수 4명이 대만 타이난 전지훈련 중 불법으로 분류된 도박장에 출입한 사건",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20260213190700007",
+              "source_title": "프로야구 롯데, 대만서 4명 불법도박장 출입인정…즉각 귀국조처",
+              "quote": "대만 타이난에서",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b3697957fb76eda32eb5151264d0563f6c230bbcbb6b6cb6cbdea25e6f2dcf0e"
+            },
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "대만 타이난 전지훈련 도중 도박장에 출입해 물의를 빚은 프로야구 롯데 자이언츠 선수 4명이",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "롯데 자이언츠 소속 선수 4명이 대만 타이난 전지훈련 도중 현지에서 불법으로 분류된 장소에 방문한 사실이 드러났다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "대만 타이난 전지훈련 도중 도박장에 출입해 물의를 빚은 프로야구 롯데 자이언츠 선수 4명이",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            },
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20260213190700007",
+              "source_title": "프로야구 롯데, 대만서 4명 불법도박장 출입인정…즉각 귀국조처",
+              "quote": "대만에서 불법으로 분류된 장소에 방문한 것을 확인했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b3697957fb76eda32eb5151264d0563f6c230bbcbb6b6cb6cbdea25e6f2dcf0e"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "선수들은 훈련 휴식일에 숙소 인근 사행성 오락실을 찾아 전자 베팅 게임을 이용했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20260213190700007",
+              "source_title": "프로야구 롯데, 대만서 4명 불법도박장 출입인정…즉각 귀국조처",
+              "quote": "전지훈련 도중 훈련 휴식일에 온라인 도박장에 출입한 것으로 알려졌다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b3697957fb76eda32eb5151264d0563f6c230bbcbb6b6cb6cbdea25e6f2dcf0e"
+            },
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "대만 타이난 숙소 인근 사행성 오락실에 방문해 전자 베팅 게임을 이용했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "사건은 도박장 내부 CCTV 화면으로 추정되는 영상이 SNS에 퍼지며 알려졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "도박장 내부에 설치된 폐쇄회로(CC)TV 화면으로 추정되는 영상이 소셜미디어(SNS)에 확산하며 수면 위로 드러났다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "구단은 이유를 불문하고 KBO 규약과 구단 내규에 어긋나는 행위라며 선수 4명을 즉각 귀국 조치하겠다고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.yna.co.kr/view/AKR20260213190700007",
+              "source_title": "프로야구 롯데, 대만서 4명 불법도박장 출입인정…즉각 귀국조처",
+              "quote": "이유를 불문하고 KBO와 구단 내규에 어긋나는 행위를 저지른 선수 4명을 즉각 귀국 조치할 예정",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "b3697957fb76eda32eb5151264d0563f6c230bbcbb6b6cb6cbdea25e6f2dcf0e"
+            },
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "이유를 불문하고 KBO 규약과 구단 내규에 어긋나는 행위",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "롯데는 KBO 클린베이스볼센터에 선수들의 도박장 출입 사실을 신고했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "롯데는 14일 KBO 클린베이스볼센터에 선수들의 도박장 출입 사실을 신고했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "KBO 상벌위원회는 선수 1명에게 50경기, 나머지 3명에게 30경기 출전 정지 징계를 내렸다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "50경기, 나머지 3명은 30경기 출전 정지 징계를 받았다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "KBO는 경찰 수사가 진행 중이지만 사안의 심각성을 고려해 선제적인 제재를 결정했다고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "경찰 수사가 진행 중이지만 선수들이 일으킨 사회적 물의와 그로 인해 실추된 리그 이미지 등 사안의 심각성을 고려해 선제적인 제재를 결정했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "구단은 이 결과를 즉각 이행하겠다고 밝혔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "이 결과를 즉각 이행할 것이며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "실제 징계가 내려진 사건이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "30~50경기 출전 징계를 받았다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "선수 개인을 조롱하거나 가십처럼 소비하지 말고, 공개된 징계와 보도를 기준으로 말하는 편이 맞다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "징계 발표 당시 경찰 수사가 진행 중이던 사건이므로, 사실관계 확인 없이 추측성 서술을 덧붙이지 않도록 주의한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "경찰 수사가 진행 중이지만",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "프로야구 징계 뉴스를 볼 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "롯데 선수들은 전지훈련 중에 도박장에 갔다가 바로 귀국 조치됐어.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+              "source_title": "전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계",
+              "quote": "대만 전지훈련 도중 도박장에 출입해 강제 귀국조치 된 롯데 자이언츠 소속 4인방",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "60e0a5f09109216942a85324243a375e686b778c79a92d87b6c3ca96c1181ee5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "스포츠 윤리 이야기를 할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "이 사안은 농담으로 소비하기보다, 발표된 징계와 보도를 기준으로 말해야 해.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "xq7ycnys",
+      "slug": "엽기-신드롬",
+      "title": "엽기 신드롬",
+      "visible_sources": [
+        {
+          "url": "https://www.khan.co.kr/article/200012251708421",
+          "title": "‘엽기’올 최고의 히트언어"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=2bDURW_z_1s",
+          "title": "(2000년) 엽기야~ 미안해🥺 나도 어쩔 수 없는... 도파민 중독인가봐🙄ㅣ빽투더뉴스ㅣ엽기사이트ㅣ엽기유행ㅣ엽기ㅣ도파민"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "2000년 신세대 문화를 상징하는 코드가 된 유행어 ‘엽기’",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "－유행어 통해 돌아본 2000년－",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=2bDURW_z_1s",
+              "source_title": "(2000년) 엽기야~ 미안해🥺 나도 어쩔 수 없는... 도파민 중독인가봐🙄ㅣ빽투더뉴스ㅣ엽기사이트ㅣ엽기유행ㅣ엽기ㅣ도파민",
+              "quote": "2000년... 바야흐로 세기말...",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "e9d620dc56771c1abf0225dd989369871436d4791d0df4f1efc0e6aa4a439d2f"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "신세대 문화를 상징하는 코드가 된 엽기는",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": true,
+          "independent_sources": [
+            "khan.co.kr",
+            "youtube.com"
+          ]
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "‘엽기’는 2000년 한국 대중문화의 흐름을 짚어 낼 수 있는 함축된 단어로 꼽힌 유행어다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "이 말은 올 대중문화의 흐름을 짚어낼 수 있는 함축된 단어로",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            },
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "－유행어 통해 돌아본 2000년－",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=2bDURW_z_1s",
+              "source_title": "(2000년) 엽기야~ 미안해🥺 나도 어쩔 수 없는... 도파민 중독인가봐🙄ㅣ빽투더뉴스ㅣ엽기사이트ㅣ엽기유행ㅣ엽기ㅣ도파민",
+              "quote": "한국에 그야말로 엽기 신드롬이 일어났다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "e9d620dc56771c1abf0225dd989369871436d4791d0df4f1efc0e6aa4a439d2f"
+            }
+          ],
+          "date_or_ranking": true,
+          "independent_sources": [
+            "khan.co.kr",
+            "youtube.com"
+          ]
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "‘문화적 퇴행’, ‘기성문화에 대한 반기’ 같은 다양한 해석 속에서 엽기는 신세대 문화를 상징하는 코드가 됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "‘문화적 퇴행’ ‘기성문화에 대한 반기’ 등 다양한 해석 속에 신세대 문화를 상징하는 코드가 된 엽기는",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "엽기는 TV뿐 아니라 영화, 소설, 애니메이션, 뮤직비디오, CF, 인터넷 등 문화 전반에서 인기를 누렸다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "TV뿐 아니라 영화·소설·애니메이션·뮤직비디오·CF·인터넷 등의 문화 전반을 통해 인기를 누렸다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "과거라면 기이한 모습과 행동으로 비난받았을 인물들도 엽기로 해석돼 오히려 환영받았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "과거 기이한 모습과 행동으로 비난받았을 인물들도 엽기로 해석, 오히려 환영받았다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "이 말은 각종 문화상품 속에 배어 있던 ‘엽기현상’에서 비롯됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "각종 문화상품속에 배어있는 ‘엽기현상’에서 비롯됐다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "TV 오락 프로그램은 ‘엽기이벤트’라는 코너명을 달고 참외밭 통째로 먹어치우기, 라면가게 동내기 같은 행사를 벌이기도 했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "TV오락 프로그램에서도 ‘엽기이벤트’라는 코너명을 달고 참외밭 통째로 먹어치우기, 라면가게 동내기 등의 행사를 벌이기도 했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "엽기 신드롬과 함께 인터넷에는 수백 개의 엽기 사이트가 쏟아졌다고 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=2bDURW_z_1s",
+              "source_title": "(2000년) 엽기야~ 미안해🥺 나도 어쩔 수 없는... 도파민 중독인가봐🙄ㅣ빽투더뉴스ㅣ엽기사이트ㅣ엽기유행ㅣ엽기ㅣ도파민",
+              "quote": "인터넷에서는 수백 개의 엽기 사이트가 와르르르륵 쏟아졌다는데",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "e9d620dc56771c1abf0225dd989369871436d4791d0df4f1efc0e6aa4a439d2f"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "황당하거나 기이한 것을 두고 놀라움을 표현할 때 쓸 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "사람을 직접 가리켜 쓰면 비하로 들릴 수 있으니, 상대를 부르는 말로는 조심해서 쓴다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "황당한 장면을 봤을 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "이건 좀 엽기적인데?",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "유행어 이야기를 할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "엽기라는 말이 방송이랑 CF에도 나오던 유행어였대.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://www.khan.co.kr/article/200012251708421",
+              "source_title": "‘엽기’올 최고의 히트언어",
+              "quote": "TV뿐 아니라 영화·소설·애니메이션·뮤직비디오·CF·인터넷 등의 문화 전반을 통해 인기를 누렸다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "275bb00d418faf4e66958beedc457623afd0a9ff830c07f3844e0c1d0e61ca2c"
+            }
+          ],
+          "date_or_ranking": false
+        }
+      ]
+    },
+    {
+      "short_id": "8kz4upjt",
+      "slug": "떡밥과-낚시글",
+      "title": "떡밥과 낚시글",
+      "visible_sources": [
+        {
+          "url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+          "title": "낚시 (인터넷)"
+        },
+        {
+          "url": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+          "title": "[새말탐험] 낚시질 / 김한샘"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "호기심을 자극하는 제목으로 글을 열어 보게 한 뒤 엉뚱한 내용으로 속이는 인터넷 낚시와 그 미끼인 떡밥",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "읽는 사람의 호기심을 자극하는 제목을 만들어서 내용을 열어보게 하지만, 내용은 그것과 전혀 상관없는 글 혹은 그림이 들어 있는 방식이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "떡밥 또는 '미끼'라고 부른다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "인터넷에서 낚시는 그럴듯하게 다른 사람을 속여 특정한 행동을 하게 하는 것을 뜻한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "낚시 란 그럴듯하게 다른 사람을 속여 특정한 행동을 하게 하는 것을 뜻한다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "이렇게 속이거나 속는 데는 ‘낚다’, ‘낚였다’라는 표현을 쓰고, 속이기 위해 이용한 내용은 떡밥 또는 미끼라고 부른다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "이렇게 다른 사람을 속이거나 속임을 당하는 데는 '낚다', '낚였다'라는 표현을 쓰고, 다른 사람을 속이기 위해 이용한 내용은 떡밥 또는 '미끼'라고 부른다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "‘낚시질’은 사실과 다르거나 엉뚱한 내용을 글과 상관없는 자극적인 제목으로 올리는 것을 말한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+              "source_title": "[새말탐험] 낚시질 / 김한샘",
+              "quote": "인터넷에서의 ‘낚시질’은 사실과 다르거나 엉뚱한 내용을 글 자체와는 상관이 없는 자극적인 제목으로 올리는 것을 말한다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "c1584bf4ba31e6bbba1cdc096545500ee506047098b49649d612eb59d027b9e5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "낚인 사람은 “낚였다!”라는 댓글로 놀림을 당했음을 털어놓는 동시에, 다른 사람들에게 낚시글을 피하라고 경고하기도 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+              "source_title": "[새말탐험] 낚시질 / 김한샘",
+              "quote": "“낚였다!”란 한 마디 댓글로 제대로 된 정보를 얻지 못하고 글 올린 사람에게 놀림을 당했음을 토로하는 동시에, 다른 사람들이 ‘낚시글’을 피할 수 있도록 경고를 주기도 한다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "c1584bf4ba31e6bbba1cdc096545500ee506047098b49649d612eb59d027b9e5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "미끼와 함께 떡밥을 던지면 물고기가 몰려들듯, 인터넷에서 ‘떡밥글’을 올리면 누리꾼들이 너도나도 댓글을 단다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+              "source_title": "[새말탐험] 낚시질 / 김한샘",
+              "quote": "미끼와 함께 떡밥을 던져넣으면 물고기들이 몰려들듯이 인터넷에서 ‘떡밥글’을 올리면 누리꾼들이 너도나도 댓글을 단다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "c1584bf4ba31e6bbba1cdc096545500ee506047098b49649d612eb59d027b9e5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "처음에는 그럴듯한 제목의 글을 눌러 보면 만화 사진 한 장과 ‘걸렸다’는 짧은 글이 담겨 있는 식으로 낚시가 시작됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "처음에는 그럴듯한 제목의 글을 눌러보면 만화 사진 한 장과 '걸렸다'는 걸 나타내는 짧은 글이 담겨 있는 식으로 낚시 행위가 시작되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "이 놀이에 동참하는 네티즌이 늘면서 인조이재팬 외의 다른 커뮤니티에서도 낚시가 이뤄졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "서서히 이런 놀이에 동참하는 네티즌들이 늘어나면서, 인조이재팬 이외의 다른 커뮤니티에서도 낚시가 이뤄지는 등",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "낚였다는 것을 암시하려고 실제 바다낚시를 하는 낚시꾼 사진을 쓰기 시작한 것도 이때부터다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "글을 읽는 사람이 낚였다는 것을 암시하기 위해 실제 바다낚시를 하는 낚시꾼의 사진을 사용한 것 역시 이 때부터다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "나중에는 증거자료라며 URL을 붙여 낚시임을 드러내는 등 수법이 점점 교묘해졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "나중에는 해당 게시물에 증거자료라면서 URL을 첨부하고",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+              "source_title": "낚시 (인터넷)",
+              "quote": "수법이 점차 교묘해져 갔다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "43266567f2a2a83651b047cfe007966c7fea2a617f23ef2fd3dee9cd199b0e89"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "제목과 내용이 다르거나, 관심을 끌기 위한 미끼 글을 지적할 때 쓴다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "상대의 글을 너무 쉽게 낚시로 단정하면 논쟁이 커질 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "제목만 자극적인 글을 보고",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "또 낚시글이네. 본문이랑 제목이 완전히 달라.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "미리 힌트만 던질 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "떡밥만 던져 두고 내일 알려 줄게. 오늘은 여기까지.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "b9gzeysg",
+      "slug": "shrimp-jesus",
+      "title": "새우 예수",
+      "visible_sources": [
+        {
+          "url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+          "title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth"
+        },
+        {
+          "url": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+          "title": "Facebook users say 'amen' to bizarre AI-generated images of Jesus"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "예수를 새우 같은 바다 생물 형태로 표현한 AI 생성 이미지로, 페이스북 AI 스팸·스캠 연구에 소개된 사례",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+              "source_title": "Facebook users say 'amen' to bizarre AI-generated images of Jesus",
+              "quote": "More recently, Jesus has taken on sea creature forms, mainly shrimp",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d764a82962c1046eb25633523f56cb7e1c57a5022dd93c06d6eb179630822bcf"
+            },
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Behold, Shrimp Jesus.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "새우 예수(Shrimp Jesus)는 페이스북에 올라온 AI 생성 이미지 가운데 예수를 새우 같은 바다 생물 형태로 표현한 그림을 가리킨다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+              "source_title": "Facebook users say 'amen' to bizarre AI-generated images of Jesus",
+              "quote": "Outlandish images that appear to be generated by artificial intelligence are racking up reactions on Facebook",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d764a82962c1046eb25633523f56cb7e1c57a5022dd93c06d6eb179630822bcf"
+            },
+            {
+              "cited_source_url": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+              "source_title": "Facebook users say 'amen' to bizarre AI-generated images of Jesus",
+              "quote": "More recently, Jesus has taken on sea creature forms, mainly shrimp , crabs and sea horses .",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d764a82962c1046eb25633523f56cb7e1c57a5022dd93c06d6eb179630822bcf"
+            },
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Behold, Shrimp Jesus.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "비슷한 이미지로 게 예수, 수박 예수, 환타 예수, 스파게티 예수도 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Crab Jesus, Watermelon Jesus, Fanta Jesus, and Spaghetti Jesus",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "이런 기이한 예수 이미지에는 이용자들이 “Amen(아멘)”이라는 댓글을 줄줄이 달았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+              "source_title": "Facebook users say 'amen' to bizarre AI-generated images of Jesus",
+              "quote": "Many of the AI photos draw in streams of users commenting “Amen” on bizarre Jesus images",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d764a82962c1046eb25633523f56cb7e1c57a5022dd93c06d6eb179630822bcf"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "댓글을 보면 많은 이용자가 이미지가 AI로 만들어졌다는 사실을 모르는 것으로 보이지만, 일부는 다른 이용자에게 알리는 댓글을 남겼다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Comments on the AI-generated images suggest many users are unaware of the synthetic origin of the images, though a subset of users post comments or infographics alerting others.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "이런 이미지는 해당 페이지를 팔로하지 않는 이용자의 페이스북 피드에도 노출됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "AI-generated images are shown on the Facebook Feed to users who do not follow the Pages.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "스탠퍼드 인터넷 관측소(Stanford Internet Observatory) 연구진은 AI 생성 이미지를 각각 50장 이상 올린 페이스북 페이지 120개를 분석했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "We studied 120 Facebook Pages that posted at least 50 AI-generated images each",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            },
+            {
+              "cited_source_url": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+              "source_title": "Facebook users say 'amen' to bizarre AI-generated images of Jesus",
+              "quote": "according to a new Stanford Internet Observatory analysis that studied 120 such pages",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d764a82962c1046eb25633523f56cb7e1c57a5022dd93c06d6eb179630822bcf"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "연구진은 이 페이지들을 스팸, 스캠, 기타 창작자로 나눴고, 이미지들은 모두 합쳐 수억 건의 반응을 얻었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "classifying the Pages into spam, scam, and ‘other creator’ categories",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            },
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "These images collectively received hundreds of millions of engagements.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "스팸 페이지는 낚시성 수법으로 이용자를 외부 콘텐츠 팜과 저품질 사이트로 유도하려 했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Spam Pages used clickbait tactics and attempted to direct users to off-platform content farms and low-quality domains.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "스캠 페이지는 존재하지 않는 상품을 팔거나 개인정보를 빼내려 했고, 일부는 도용한 페이지에 AI 이미지를 올렸다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Scam Pages attempted to sell products that do not exist or to get users to divulge personal details; some were posting the AI-generated images on stolen Pages.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 4,
+          "text": "새우 예수 이미지는 이전에 콘텐츠 팜으로 가는 낚시성 링크를 공유하던 페이지가 만든 것이었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "created by a page that previously shared clickbait links to a content farm",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "AI 생성 이미지가 스팸·스캠 페이지에서 어떻게 쓰이는지 설명하는 사례로 쓸 수 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "To understand how the technology is being used for page growth and incorporated into spam and scams",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "이미지를 다시 퍼뜨리기보다 AI 생성물이라는 점과 연구 맥락을 함께 알리는 편이 적절하다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "예수의 형상을 유희적으로 변형했다고 느끼는 신자에게 모욕적이거나 불편할 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 1,
+          "text": "종교 공동체나 가족 대화에서는 신성한 표상을 존중하고, 실제 사진으로 오인하지 않도록 AI 생성물임을 밝힌다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 2,
+          "text": "반응을 유도하거나 외부 링크를 누르게 하는 계정은 스팸·스캠 가능성을 의심해야 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Spam Pages used clickbait tactics and attempted to direct users to off-platform content farms and low-quality domains.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "AI 스팸 연구를 설명할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "새우 예수도 스탠퍼드 연구에 나온 AI 스팸 이미지야.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "Behold, Shrimp Jesus.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            },
+            {
+              "cited_source_url": "https://fsi.stanford.edu/news/ai-spam-accounts-build-followers",
+              "source_title": "How Spammers, Scammers and Creators Leverage AI-Generated Images on Facebook for Audience Growth",
+              "quote": "spam and scams",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6d65f02d533a4e078894508c6ebcb43e58c6060027b85a9d684fce0985bd786a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "의심스러운 종교 이미지를 볼 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "AI 생성 여부와 게시 계정의 링크부터 확인해 보자.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "42d6qeqm",
+      "slug": "치맥",
+      "title": "치맥",
+      "visible_sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Chimaek",
+          "title": "Chimaek"
+        },
+        {
+          "url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+          "title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "치킨 안주에 맥주를 함께 즐기는 조합을 줄여 부르는 말",
+          "citations": [
+            {
+              "cited_source_url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+              "source_title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’",
+              "quote": "치킨 안주에 맥주를 즐기는 이른바 치맥 마니아",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "177e06afaa32bb1cdd4b960f0c31b59f2f6992d5f140769957bfeacab291ffe3"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "치맥은 치킨 안주에 맥주를 곁들여 즐기는 조합을 줄여 부르는 말이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+              "source_title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’",
+              "quote": "치킨 안주에 맥주를 즐기는 이른바 치맥 마니아",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "177e06afaa32bb1cdd4b960f0c31b59f2f6992d5f140769957bfeacab291ffe3"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "치맥은 월드컵이나 아시안컵 같은 스포츠 경기를 볼 때 많이 찾는 메뉴다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "Chimaek is popular choice for people watching sports events such as World Cup and Asian Cup",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "월드컵 기간에는 편의점과 치킨 프랜차이즈가 대목을 맞는다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "Convenience stores and fried chicken franchises enjoying a busy season during the World Cup",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "드라마 ‘별에서 온 그대’에서 주인공 천송이는 치킨 안주에 맥주를 즐기는 치맥 마니아로 나오고, “눈 오는 날엔 치맥인데”라는 대사도 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+              "source_title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’",
+              "quote": "드라마 속 주인공 천송이(전지현 분)가 치킨 안주에 맥주를 즐기는 이른바 치맥 마니아기 때문이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "177e06afaa32bb1cdd4b960f0c31b59f2f6992d5f140769957bfeacab291ffe3"
+            },
+            {
+              "cited_source_url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+              "source_title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’",
+              "quote": "“눈 오는 날엔 치맥인데”라는 천송이의 대사도 있다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "177e06afaa32bb1cdd4b960f0c31b59f2f6992d5f140769957bfeacab291ffe3"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "이 드라마의 인기로 중국에서도 치맥이 유행했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "Chimaek is also popular in China because of the popular drama My Love From the Star",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            },
+            {
+              "cited_source_url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+              "source_title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’",
+              "quote": "중국 치맥 열풍",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "177e06afaa32bb1cdd4b960f0c31b59f2f6992d5f140769957bfeacab291ffe3"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 5,
+          "text": "중국 상하이에서는 한국식 치킨을 사 먹으려면 치킨집 앞에서 3시간 정도 줄을 서야 한다는 전언이 나왔다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+              "source_title": "중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’",
+              "quote": "중국 상하이에선 한국식 닭튀김을 사먹으려면 치킨집 앞에서 3시간 정도 줄을 서고 있어야 한다는 전언이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "177e06afaa32bb1cdd4b960f0c31b59f2f6992d5f140769957bfeacab291ffe3"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "While chicken was gaining popularity, a new draft beer which appeared in the 1970s was also becoming very popular, and it became common for the two to be combined as a single menu item.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "At this time, chicken and beer were sold together, which eventually led to the creation of chimaek .",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "한일 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "Public parks would often have large screens to watch the games, and people would dress in red (the colour and nickname of the home team ) and gather together to cheer for the World Cup, while eating chicken and drinking beer.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "월드컵 이후 치킨 가게 수는 약 1만 곳에서 2만 5천 곳으로 늘었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "The number of chicken restaurants increased from around 10,000 to 25,000 after the World Cup.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "친구와 저녁 약속을 잡거나 스포츠 중계를 함께 볼 때 쓴다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Chimaek",
+              "source_title": "Chimaek",
+              "quote": "Chimaek is popular choice for people watching sports events",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "d8acec5377d8e6b5a8f97430f79df66de35293fc83067b33fc398068fbcd8dad"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "술이 들어가므로 상대가 마실 수 있는지부터 확인하는 것이 좋다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "술이 들어가는 문화라 미성년자나 술을 못 마시는 사람에게 강요하지 말자.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "축구 경기가 있는 날",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "오늘 경기 보면서 치맥 어때?",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "퇴근길",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "이번 주 고생했으니 치맥 한잔하자.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "kh75j5f8",
+      "slug": "꼰대",
+      "title": "꼰대",
+      "visible_sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Kkondae",
+          "title": "Kkondae"
+        },
+        {
+          "url": "https://www.bbc.com/worklife/article/20190726-the-condescending-old-people-of-south-koreas-workforce",
+          "title": "The 'condescending old people' of South Korea's workforce"
+        },
+        {
+          "url": "https://www.koreaherald.com/article/10844914",
+          "title": "꼰대"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "구시대적인 생각이나 방식을 남에게 강요하는 사람을 낮춰 부르는 말",
+          "citations": [
+            {
+              "cited_source_url": "https://www.koreaherald.com/article/10844914",
+              "source_title": "꼰대",
+              "quote": "구시대적인 생각이나 방식을 다른 사람에게 강요하면 “꼰대”라고 부를 수 있습니다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0195ed093c8a34cec872c168b2243de96a6b29b2e97ef4caadb1de0fa8940cd5"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Kkondae",
+              "source_title": "Kkondae",
+              "quote": "forces the former's outdated way of thinking onto another person",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3296fd35ab2cd0cd1bcbd9b9db5a6e44ea59607c52e1735be37b777f8ce47c39"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "꼰대는 원래 늙은이를 낮춰 이르는 은어이자, 학생들이 선생님을 가리켜 쓰던 은어다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.koreaherald.com/article/10844914",
+              "source_title": "꼰대",
+              "quote": "“꼰대”는 원래 늙은이를 낮춰 이르는 은어이자, 학생들이 선생님을 가리켜 쓰던 은어로 사전에 올라 있는 표현입니다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0195ed093c8a34cec872c168b2243de96a6b29b2e97ef4caadb1de0fa8940cd5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "요즘은 이른바 ‘꼰대질’을 하며 자신의 낡은 생각을 남에게 강요하는 상사나 나이 많은 사람을 가리킬 때 쓴다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Kkondae",
+              "source_title": "Kkondae",
+              "quote": "the word has been used to refer to a boss or an older person who does so-called kkondae-jil",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3296fd35ab2cd0cd1bcbd9b9db5a6e44ea59607c52e1735be37b777f8ce47c39"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "“나 때는 말이야” 같은 말로 요즘 젊은이들이 고생을 덜 한다거나 예의가 없다고 훈계할 때 “저 사람은 꼰대다”라고 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.koreaherald.com/article/10844914",
+              "source_title": "꼰대",
+              "quote": "특히 “나 때는 말이야” 같은 말을 하며 요즘 젊은이들은 예전보다 고생을 덜 한다거나 예의가 없다는 식으로 훈계할 때 “저 사람은 꼰대다”라고 표현합니다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0195ed093c8a34cec872c168b2243de96a6b29b2e97ef4caadb1de0fa8940cd5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "또래라도 구시대적인 생각이나 방식을 남에게 강요하면 꼰대라고 부를 수 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.koreaherald.com/article/10844914",
+              "source_title": "꼰대",
+              "quote": "또래라도 구시대적인 생각이나 방식을 다른 사람에게 강요하면 “꼰대”라고 부를 수 있습니다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0195ed093c8a34cec872c168b2243de96a6b29b2e97ef4caadb1de0fa8940cd5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "영어로는 대략 “condescending older person(거들먹거리는 나이 든 사람)”으로 옮긴다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.bbc.com/worklife/article/20190726-the-condescending-old-people-of-south-koreas-workforce",
+              "source_title": "The 'condescending old people' of South Korea's workforce",
+              "quote": "In Korean, kkondae loosely translates as “condescending older person”",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6b5fec61c9fc69c46372e22e722d9d56b0d1003181feaa1664d507d4ac5367ef"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "정확한 기원은 분명하지 않다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.bbc.com/worklife/article/20190726-the-condescending-old-people-of-south-koreas-workforce",
+              "source_title": "The 'condescending old people' of South Korea's workforce",
+              "quote": "the exact origin of kkondae is unclear",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6b5fec61c9fc69c46372e22e722d9d56b0d1003181feaa1664d507d4ac5367ef"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "어원으로는 경상남도 방언에서 번데기를 뜻하는 ‘kondaegi’에서 왔다는 설과, 프랑스어 귀족 작위 ‘comte(백작)’에서 왔다는 설이 맞선다.",
+          "citations": [
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Kkondae",
+              "source_title": "Kkondae",
+              "quote": "There are two competing arguments on the origin of kkondae",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3296fd35ab2cd0cd1bcbd9b9db5a6e44ea59607c52e1735be37b777f8ce47c39"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Kkondae",
+              "source_title": "Kkondae",
+              "quote": "kondaegi , which means a pupa in the South Gyeongsang Province dialect",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3296fd35ab2cd0cd1bcbd9b9db5a6e44ea59607c52e1735be37b777f8ce47c39"
+            },
+            {
+              "cited_source_url": "https://en.wikipedia.org/wiki/Kkondae",
+              "source_title": "Kkondae",
+              "quote": "the French nobility title comte ( count ) is the basis of the word kkondae",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "3296fd35ab2cd0cd1bcbd9b9db5a6e44ea59607c52e1735be37b777f8ce47c39"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "초창기에는 융통성 없고 고집 세고 엄격한 선생님을 가리키는 학생 은어였다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.bbc.com/worklife/article/20190726-the-condescending-old-people-of-south-koreas-workforce",
+              "source_title": "The 'condescending old people' of South Korea's workforce",
+              "quote": "In its early days, kkondae was student slang to label unforgiving, stubborn and strict teachers.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6b5fec61c9fc69c46372e22e722d9d56b0d1003181feaa1664d507d4ac5367ef"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "지금은 교실 밖, 특히 직장에서 누구도 되고 싶어 하지 않는 유형의 사람을 가리키는 말로 널리 쓰인다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.bbc.com/worklife/article/20190726-the-condescending-old-people-of-south-koreas-workforce",
+              "source_title": "The 'condescending old people' of South Korea's workforce",
+              "quote": "Now kkondae is widely used outside the classroom to describe the type of person whom nobody wants to become, particularly within offices.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6b5fec61c9fc69c46372e22e722d9d56b0d1003181feaa1664d507d4ac5367ef"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 4,
+          "text": "이 말은 주로 남성, 특히 중간 관리자 이상의 직급에 있는 사람에게 붙는다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.bbc.com/worklife/article/20190726-the-condescending-old-people-of-south-koreas-workforce",
+              "source_title": "The 'condescending old people' of South Korea's workforce",
+              "quote": "The label is mostly applied to men, often in middle- or upper-management positions",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "6b5fec61c9fc69c46372e22e722d9d56b0d1003181feaa1664d507d4ac5367ef"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "권위적으로 훈계하는 태도를 비판할 때 쓴다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "나이나 세대 전체를 싸잡아 부르는 말로 쓰면 오해가 커질 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "caution",
+          "index": 0,
+          "text": "사람을 낮춰 부르는 말이라, 당사자 앞이나 직장에서 쓰면 다툼이 생길 수 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.koreaherald.com/article/10844914",
+              "source_title": "꼰대",
+              "quote": "늙은이를 낮춰 이르는 은어",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "0195ed093c8a34cec872c168b2243de96a6b29b2e97ef4caadb1de0fa8940cd5"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "회의에서 의견이 막혔을 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "나이를 이유로 말을 끊으면 꼰대처럼 들려.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "친구의 잔소리를 농담으로 받을 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "너 오늘따라 꼰대 같다. 한 번만 내 얘기도 들어 줘.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "93grdumg",
+      "slug": "갑툭튀",
+      "title": "갑툭튀",
+      "visible_sources": [
+        {
+          "url": "https://biz.heraldcorp.com/article/3755062",
+          "title": "신혜성 깜놀 창시자? “포털사이트에 검색하면…”"
+        },
+        {
+          "url": "https://news.nate.com/view/20210713n02819",
+          "title": "이지훈 \"깜놀·갑툭튀 줄임말, 신혜성 강타와 함께 만들어\""
+        },
+        {
+          "url": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+          "title": "갑툭튀 - 우리말샘"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "예상하지 못한 것이 갑자기 나타났을 때 쓰는 ‘갑자기 툭 튀어나오다’의 줄임말",
+          "citations": [
+            {
+              "cited_source_url": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+              "source_title": "갑툭튀 - 우리말샘",
+              "quote": "‘갑자기 툭 튀어나오다’를 줄여 이르는 말로, 예상하지 못한 사물이나 현상 따위가 갑자기 나타나거나 생겨났다는 뜻으로 쓰는 말",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "86244137c288fe29e5294e7388184b53d6d30ba0a806dbab15db4c631322d771"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "갑툭튀는 ‘갑자기 툭 튀어나오다’를 줄여 이르는 말이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+              "source_title": "갑툭튀 - 우리말샘",
+              "quote": "‘갑자기 툭 튀어나오다’를 줄여 이르는 말로",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "86244137c288fe29e5294e7388184b53d6d30ba0a806dbab15db4c631322d771"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "예상하지 못한 사물이나 현상 따위가 갑자기 나타나거나 생겨났다는 뜻으로 쓴다.",
+          "citations": [
+            {
+              "cited_source_url": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+              "source_title": "갑툭튀 - 우리말샘",
+              "quote": "예상하지 못한 사물이나 현상 따위가 갑자기 나타나거나 생겨났다는 뜻으로 쓰는 말",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "86244137c288fe29e5294e7388184b53d6d30ba0a806dbab15db4c631322d771"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "신문 기사에서도 갑툭튀로 여겨진 그룹이나 올 시즌 갑툭튀 활약을 보인 선수처럼 이 말을 쓴 용례가 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+              "source_title": "갑툭튀 - 우리말샘",
+              "quote": "‘갑툭튀’로 여겨진 그룹이",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "86244137c288fe29e5294e7388184b53d6d30ba0a806dbab15db4c631322d771"
+            },
+            {
+              "cited_source_url": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+              "source_title": "갑툭튀 - 우리말샘",
+              "quote": "올 시즌 ‘갑툭튀’의 활약을 보이고 있는",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "86244137c288fe29e5294e7388184b53d6d30ba0a806dbab15db4c631322d771"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "‘깜놀’과 함께 인터넷 신조어로 소개된 줄임말이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://biz.heraldcorp.com/article/3755062",
+              "source_title": "신혜성 깜놀 창시자? “포털사이트에 검색하면…”",
+              "quote": "인터넷 신조어 ‘깜놀’, ‘갑툭튀’ 등을",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ba9f0310c4ca168b3b3e76259cc6f593c79f36d9d231dddfdbd3ee6397ba16d7"
+            },
+            {
+              "cited_source_url": "https://biz.heraldcorp.com/article/3755062",
+              "source_title": "신혜성 깜놀 창시자? “포털사이트에 검색하면…”",
+              "quote": "‘깜놀’, ‘갑툭튀’라는 줄임말의",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ba9f0310c4ca168b3b3e76259cc6f593c79f36d9d231dddfdbd3ee6397ba16d7"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "이지훈은 방송에서 스케줄을 가는 길에 매니저가 운전하는 차 앞으로 다른 차가 과감하게 끼어들면 “갑툭튀 깜놀”이라고 했다고 말했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://news.nate.com/view/20210713n02819",
+              "source_title": "이지훈 \"깜놀·갑툭튀 줄임말, 신혜성 강타와 함께 만들어\"",
+              "quote": "우리가 스케줄 하러 갈 때 매니저들이 운전하는데 다른 차가 과감하게 끼어들면 갑툭튀 깜놀 이랬다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "a996947b2e8631655a91211869bf0a3a39dcdfa76fe8eca6cf95d19400208f9f"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "그룹 신화의 신혜성은 MBC ‘황금어장-라디오스타’에 출연해 자신이 ‘깜놀’, ‘갑툭튀’라는 줄임말의 창시자라고 말했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://biz.heraldcorp.com/article/3755062",
+              "source_title": "신혜성 깜놀 창시자? “포털사이트에 검색하면…”",
+              "quote": "신혜성은 지난 8일 방송된 MBC ‘황금어장-라디오스타’에 출연, 자신이 ‘깜놀’, ‘갑툭튀’라는 줄임말의 창시자라며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ba9f0310c4ca168b3b3e76259cc6f593c79f36d9d231dddfdbd3ee6397ba16d7"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "그는 한때 포털 사이트에 이 말을 신혜성이 만들었다는 설명이 있었다고 덧붙였다.",
+          "citations": [
+            {
+              "cited_source_url": "https://biz.heraldcorp.com/article/3755062",
+              "source_title": "신혜성 깜놀 창시자? “포털사이트에 검색하면…”",
+              "quote": "한 때 포털 사이트에 이 말을 신혜성이 만들었다는 설명이 있었다고 말했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "ba9f0310c4ca168b3b3e76259cc6f593c79f36d9d231dddfdbd3ee6397ba16d7"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "이지훈은 SBS ‘동상이몽 시즌2-너는 내 운명’에서 신혜성, 강타와 함께 이 줄임말을 만들었다고 말했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://news.nate.com/view/20210713n02819",
+              "source_title": "이지훈 \"깜놀·갑툭튀 줄임말, 신혜성 강타와 함께 만들어\"",
+              "quote": "SBS ‘동상이몽 시즌2-너는 내 운명’에서 이지훈은 신혜성, 강타와 함께 줄임말을 만들었다고 말했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "a996947b2e8631655a91211869bf0a3a39dcdfa76fe8eca6cf95d19400208f9f"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "예상 밖의 등장이나 상황을 가볍게 표현할 때 쓴다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "실제로 사람을 놀라게 하는 장난에는 위험과 불쾌감이 따를 수 있다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "차가 갑자기 끼어들었을 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "아, 갑툭튀 깜놀이야.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "친구가 갑자기 나타났을 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "어디서 갑툭튀했어?",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    },
+    {
+      "short_id": "vtu3rkyg",
+      "slug": "TV는-사랑을-싣고",
+      "title": "TV는 사랑을 싣고",
+      "visible_sources": [
+        {
+          "url": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+          "title": "[TV는 사랑을 싣고] 석광렬&전원주 | 1회 KBS 1994.05.03. 방송"
+        },
+        {
+          "url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+          "title": "TV는 사랑을 싣고"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "1994년 첫 방송된, 추억 속 주인공을 찾아 만나게 하는 KBS 예능 프로그램",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "1994년 에 첫 방송을 시작했으며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+              "source_title": "[TV는 사랑을 싣고] 석광렬&전원주 | 1회 KBS 1994.05.03. 방송",
+              "quote": "1회 KBS 1994.05.03. 방송",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "a543fe90a1f00244fab5c1d195ca51f377453a6150901bf32877fef246c68425"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "추억 속의 주인공과 평소에 고마움을 전하고 싶었던 주인공을 찾아 만나게 하는 예능 프로그램 이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": true,
+          "independent_sources": [
+            "wikipedia.org",
+            "youtube.com"
+          ]
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "‘TV는 사랑을 싣고’는 추억 속의 주인공이나 평소 고마움을 전하고 싶었던 사람을 찾아 만나게 해 주는 KBS 예능 프로그램이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "추억 속의 주인공과 평소에 고마움을 전하고 싶었던 주인공을 찾아 만나게 하는 예능 프로그램 이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+              "source_title": "[TV는 사랑을 싣고] 석광렬&전원주 | 1회 KBS 1994.05.03. 방송",
+              "quote": "1회 KBS 1994.05.03. 방송",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "a543fe90a1f00244fab5c1d195ca51f377453a6150901bf32877fef246c68425"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "1994년 5월 3일 1회가 방송됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "1994년 5월 3일 ~ 2005년 5월 1일",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            },
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+              "source_title": "[TV는 사랑을 싣고] 석광렬&전원주 | 1회 KBS 1994.05.03. 방송",
+              "quote": "1회 KBS 1994.05.03. 방송",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "a543fe90a1f00244fab5c1d195ca51f377453a6150901bf32877fef246c68425"
+            }
+          ],
+          "date_or_ranking": true,
+          "independent_sources": [
+            "wikipedia.org",
+            "youtube.com"
+          ]
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "실종자나 행방불명자를 찾는 과정 자체가 시청자에게 강한 감동과 몰입을 줬고, 방송의 사회적 역할도 분명하게 인식됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "당시에는 프로그램을 통해 실종자나 행방불명자를 찾는 과정 자체가 대중에게 강한 감동과 몰입을 제공했고, 방송의 사회적 역할 또한 분명하게 인식되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "한때 높은 화제성과 시청률을 기록하며 전성기를 맞았다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "높은 화제성과 시청률 을 기록하며 전성기를 맞았다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "연예인 출연자가 초등학교 시절 첫사랑이나 잊지 못할 은사를 찾는 회차들이 방송됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "초등학교 1학년 때 첫사랑이었던 이용호를 찾는다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "초등학교 2학년 때의 잊지 못할 은사님인 김종구 선생님을 찾는다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "인터넷과 휴대전화, 온라인 커뮤니티가 빠르게 퍼지면서 방송을 통해 사람을 찾아야 할 필요성은 이전보다 크게 줄었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "인터넷 과 휴대전화 , 온라인 커뮤니티 등 개인 간 정보 공유가 가능한 매체가 급속히 확산되면서, 굳이 방송 프로그램을 통해 사람을 찾아야 할 필요성도 이전보다 크게 감소하였다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "제작진은 침체를 극복하려고 포맷을 바꾸는 등 여러 차례 변화를 시도했지만, 기대만큼의 성과를 거두지 못했다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "포맷을 변경하는 등 여러 차례 변화를 시도했으나, 기대에 부응하는 성과를 거두지는 못했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "한 차례 방송을 마친 뒤 다시 편성됐을 때는 스튜디오 중심 진행에서 VCR 녹화를 바탕으로 한 추적 MC 체제로 바뀌었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "마지막으로 방송을 종료하며 역사 속으로 사라지게 되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            },
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "기존의 스튜디오 중심 진행 방식에서 벗어나, VCR 녹화를 기반으로 한 추적 MC 체제로 전환되었다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "옛 KBS 프로그램을 회상할 때 언급할 수 있다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+              "source_title": "[TV는 사랑을 싣고] 석광렬&전원주 | 1회 KBS 1994.05.03. 방송",
+              "quote": "1회 KBS 1994.05.03. 방송",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "a543fe90a1f00244fab5c1d195ca51f377453a6150901bf32877fef246c68425"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "실제 이산과 재회 사연을 웃음의 소재로만 소비하지 않는 편이 좋다.",
+          "no_fact": "사용 안내: 권고·주의 문장이며 플랫폼·시기·집단·원인·평가에 대한 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "옛 프로그램을 이야기할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "TV는 사랑을 싣고에서 첫사랑 찾는 회차가 제일 기억나.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "초등학교 1학년 때 첫사랑이었던 이용호를 찾는다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "사람을 찾는 이야기를 할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "지금은 인터넷으로 찾지만, 예전에는 방송 프로그램이 그 역할을 했지.",
+          "part": "text",
+          "citations": [
+            {
+              "cited_source_url": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+              "source_title": "TV는 사랑을 싣고",
+              "quote": "굳이 방송 프로그램을 통해 사람을 찾아야 할 필요성도 이전보다 크게 감소하였다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "9c67745855573c6c6ab4d324a56e4c1421a7fbb6167f5a47898499950c416593"
+            }
+          ],
+          "date_or_ranking": false
+        }
+      ]
+    },
+    {
+      "short_id": "2au7br9f",
+      "slug": "도마도마-챌린지",
+      "title": "도마도마 챌린지",
+      "visible_sources": [
+        {
+          "url": "https://www.jjalbang.today/jjalstoryview/48",
+          "title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법"
+        },
+        {
+          "url": "https://letter.wepick.kr/post/23723",
+          "title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면"
+        },
+        {
+          "url": "https://www.instablank.com/meme/44",
+          "title": "도마도마 챌린지, 무슨 뜻일까?"
+        }
+      ],
+      "sentences": [
+        {
+          "field": "summary",
+          "index": 0,
+          "text": "브라질 펑크 ‘MENTE MÁ’에 맞춰 시크한 표정과 슬로우 모션 안무를 선보이는 글로벌 댄스 챌린지",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "브라질 펑크 'MENTE MÁ'에 맞춰 추는 챌린지!",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "쿨하고 시크한 표정·안무로 챌린지 영상 찍기",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "비주얼을 강조하는 슬로우 모션 컷과 함께 사용",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "역수입된 글로벌 밈이에요",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 0,
+          "text": "도마도마 챌린지는 브라질 펑크 곡 ‘MENTE MÁ’에 맞춰 추는 댄스 챌린지다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "브라질 펑크 'MENTE MÁ'에 맞춰 추는 챌린지!",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://www.instablank.com/meme/44",
+              "source_title": "도마도마 챌린지, 무슨 뜻일까?",
+              "quote": "브라질 펑크 'MENTE MÁ'에 맞춰 춤추는 챌린지로",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "7bc86d9763c30cace2a0ecf9c2dbf7cc95bb3976035382396062b65874f0e024"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 1,
+          "text": "이름은 후렴의 ‘바이 도마도마도마(vai toma toma toma)’에서 왔으며, 포르투갈어로 “어서, 받아 받아 받아”라는 뜻이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "후렴의 '바이 도마도마도마(vai toma toma toma)'는 포르투갈어로 \"어서, 받아 받아 받아\"라는 뜻이고",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "'어서 받아, 받아, 받아'라는 뜻",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 2,
+          "text": "원곡은 브라질 프로듀서 Nakama와 MC Staff가 만든 곡이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "는 브라질의 프로듀서 Nakama와 MC Staff가 만든 곡.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 3,
+          "text": "원곡 가사는 거친 내용이지만, 한국에서는 의미보다 중독적인 비트와 ‘도마도마’ 발음의 귀여움으로 소비됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "원곡 가사 자체는 거친 내용이지만, 한국에서는 의미보다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "중독적인 비트와 '도마도마' 발음의 귀여움",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "description",
+          "index": 4,
+          "text": "챌린지 안무에 두 손으로 권총 모양을 만드는 동작이 들어간 것도 총을 언급하는 가사 때문이다.",
+          "citations": [
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "두 손으로 권총 모양을 만들며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            },
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "총알 세례를 어서 받아라 받아!",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            },
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "챌린지 안무에 🔫권총이 있던 것은 바로 이 배경이었던 것.",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 0,
+          "text": "한국 아이돌 그룹 라이즈의 원빈이 선보인 챌린지가 신호탄이 됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "한국의 아이돌 가수 라이즈 원빈이 도마도마의 신호탄을 올렸다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 1,
+          "text": "이 챌린지는 중국의 내수용 숏폼 플랫폼 도우인에서 빠르게 퍼진 뒤 한국으로 역수입됐다.",
+          "citations": [
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "중국의 내수용 숏폼 매체 도우인에서 빠르게 퍼진 이후 큰 인기몰이를 했다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            },
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "중국 도우인에서 폭발적으로 확산된 뒤 한국으로 역수입됐고",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 2,
+          "text": "이후 백현, 스테이씨, TXT 등 여러 아이돌이 참여하며 한국에서도 아이돌을 중심으로 퍼졌다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "이후 백현·스테이씨·TXT 등 수많은 아이돌이 합류하며",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "한국에서도 이 '도마도마 챌린지'가 아이돌을 중심으로 퍼지게 된 것이다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "origin",
+          "index": 3,
+          "text": "외국어 공부 앱 홍보에도 쓰일 만큼 활용 범위가 넓었다.",
+          "citations": [
+            {
+              "cited_source_url": "https://letter.wepick.kr/post/23723",
+              "source_title": "도마도마 챌린지, 숏폼 점령한 브라질 펑크 그 노래 궁금하면",
+              "quote": "한 유명한 외국어 공부 앱 홍보에도 절찬리에 쓰일 만큼 활용도는 무궁무진하다",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "dfc62212a80ba69a1a5be8d6e327b0e8a3ea7ce3b93b63b2e8297a23767c1f3a"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 0,
+          "text": "‘MENTE MÁ’ 음원에 맞춰 시크한 표정과 안무로 챌린지 영상을 찍을 때 쓴다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "'MENTE MÁ' 음원에 맞춰 쿨하고 시크한 표정·안무로 챌린지 영상 찍기",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_note",
+          "index": 1,
+          "text": "슬로우 모션 컷과 함께 쓰거나, 후렴 구간을 짤이나 릴스 배경음으로 쓰기도 한다.",
+          "citations": [
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "비주얼을 강조하는 슬로우 모션 컷과 함께 사용",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            },
+            {
+              "cited_source_url": "https://www.jjalbang.today/jjalstoryview/48",
+              "source_title": "도마도마 챌린지 toma toma 짤 뜻·유래·사용법",
+              "quote": "'도마도마~' 후렴 구간을 짤·릴스 배경음으로 활용",
+              "quote_found_in_fetched_page": true,
+              "http_status": 200,
+              "fetched_text_sha256": "63186d135769bdebba7626d4ad310e3859960802e37532babe9bd35c9fb9dba0"
+            }
+          ],
+          "date_or_ranking": false
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "친구가 괜히 있어 보이는 포즈를 잡을 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 0,
+          "text": "야 그거 완전 도마도마 각인데?",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "숏폼 안무 챌린지 얘기할 때",
+          "part": "situation",
+          "no_fact": "예문 상황 라벨: 예문을 쓰는 장면만 가리키며 사실 주장을 담지 않는다."
+        },
+        {
+          "field": "usage_examples",
+          "index": 1,
+          "text": "이번 주말에 도마도마 챌린지 같이 찍자, 나 안무 다 외웠어.",
+          "part": "text",
+          "no_fact": "예문 발화: 가상의 대화 문장이며 사실 주장(플랫폼·시기·집단·원인·평가)을 담지 않는다."
+        }
+      ]
+    }
+  ]
+}

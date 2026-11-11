@@ -124,4 +124,40 @@ describe("llms.txt publication export", () => {
     expect(source).toContain("meme_sources(source_url, hidden_from_public)");
   });
 
+
+  it("excludes a root llms entry whose only sources are hidden_from_public, and keeps a twin with visible sources", async () => {
+    const gated = (index: number, meme_sources: { source_url: string; hidden_from_public?: boolean }[]) => ({
+      id: `id-g${index}`,
+      title: `Gated ${index}`,
+      summary: `Summary ${index}`,
+      short_id: `g${index}`,
+      slug: `gated-${index}`,
+      description: "d".repeat(250),
+      origin: "o".repeat(59),
+      usage_note: null,
+      caution: null,
+      usage_examples: [{ situation: "s", text: "t" }],
+      meme_sources,
+      meme_contents: [],
+      meme_tags_map: [],
+    });
+
+    useRows([
+      gated(1, [
+        { source_url: "https://namu.wiki/w/hidden", hidden_from_public: true },
+        { source_url: "https://example.org/also-hidden", hidden_from_public: true },
+      ]),
+      gated(2, [
+        { source_url: "https://example.org/one" },
+        { source_url: "https://example.org/two", hidden_from_public: false },
+      ]),
+    ]);
+
+    const body = await (await GET()).text();
+
+    expect(body).not.toContain("[Gated 1]");
+    expect(body).toContain("[Gated 2]");
+    expect(body).toContain("한국 밈·유행어·챌린지 1건");
+  });
+
 });

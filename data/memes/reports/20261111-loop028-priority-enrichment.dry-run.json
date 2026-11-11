@@ -13,15 +13,15 @@
   ],
   "summary": {
     "memes": {
-      "update": 68,
-      "drop": 15,
+      "update": 51,
+      "drop": 32,
       "insert": 0,
       "skip_existing": 0,
       "reject": 0
     },
     "meme_sources": {
-      "insert_if_missing": 79,
-      "title_update": 39,
+      "insert_if_missing": 64,
+      "title_update": 27,
       "delete_non200_for_batch": 0,
       "hide_from_public": "runtime, markers=40",
       "skip_existing": "runtime"
@@ -117,6 +117,108 @@
       "slug": "젝스키스-해체(2000)",
       "title": "젝스키스 해체(2000)",
       "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "mx2p9d97",
+      "slug": "Y2K-밀레니엄버그",
+      "title": "Y2K 밀레니엄버그",
+      "reason": "보이는 출처(영어 위키·유튜브)가 경향신문 인용, 하반기 점검, 바이러스·해킹, ‘찻잔 속 태풍’ 주장을 받쳐 주지 않는다. 해당 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "rmpwzmy7",
+      "slug": "젝스키스-학원별곡",
+      "title": "젝스키스 '학원별곡'",
+      "reason": "보이는 출처가 가요톱텐 10위권, 국악 타령조, 아크로바틱 군무, 성적지상주의 주장을 받쳐 주지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "m9qmrhxz",
+      "slug": "대장금-홍시",
+      "title": "대장금 홍시",
+      "reason": "보이는 출처가 ‘대장금 5회’를 명시하지 않는다. 회차를 빼면 장면 서술이 출처로 확인되지 않은 채 남아, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t2fpqhcs",
+      "slug": "테스형",
+      "title": "테스형",
+      "reason": "‘정규 9집’은 위키의 정규 앨범 19장·아홉 이야기와 맞지 않는다. 그 표현만 빼도 쓰임이 하한(40자)에 그대로여서, 여유 있게 하한을 넘긴다고 보기 어려워 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "63485cxm",
+      "slug": "멍때리기",
+      "title": "멍때리기",
+      "reason": "매일경제는 출처 목록에 없고, 출처 언급·유보 문장을 제외하면 본문과 유래가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "wyu84dvf",
+      "slug": "온게임넷-스타리그-출범",
+      "title": "온게임넷 스타리그 출범",
+      "reason": "보이는 출처가 ‘99 PKO’, 황형준, 창고방, 80여 명, 21세기프로게임협회, 문화관광부 장관의 ‘e스포츠’ 언급을 받쳐 주지 않는다. 해당 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "n4srdru6",
+      "slug": "아이러브스쿨-동창찾기-열풍",
+      "title": "아이러브스쿨 동창찾기 열풍",
+      "reason": "보이는 출처가 동창 재회 후 결혼·기혼자 불륜 주장을 받쳐 주지 않는다. 해당 문장을 빼면 뜻 글자 수가 하한(150)에서 10자 이내가 되어, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "kkk7mx6b",
+      "slug": "이종범-바람의-아들",
+      "title": "이종범 바람의 아들",
+      "reason": "보이는 출처가 하청일의 작명 일화와 ‘바람의 손자’ 별명을 받쳐 주지 않는다. 해당 문장을 빼면 본문·뜻·쓰임이 하한 또는 하한 +10자 이내가 되어, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t4n9can6",
+      "slug": "내-마음속에-저장",
+      "title": "내 마음속에 저장",
+      "reason": "보이는 출처가 ‘윙크 남신’과 윙크 연기를 받쳐 주지 않는다. 해당 문장을 빼면 본문이 하한(400)에 미치지 못해, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "qqu8andb",
+      "slug": "이정현-바꿔·와",
+      "title": "이정현 '바꿔'·'와'",
+      "reason": "보이는 출처가 ‘테크노 여전사’, 기계 날개 의상, 부채·마이크 소품, ‘하반기’ 주장을 받쳐 주지 않는다. 해당 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "by5gkxee",
+      "slug": "갈갈이-삼형제",
+      "title": "갈갈이 삼형제",
+      "reason": "보이는 출처가 박명수 중심 서술, ‘긴급구조 911’ 패러디 시작, 이승환 출연을 받쳐 주지 않는다. 숨은 나무위키 서술에 의존하지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "5pzu8tzp",
+      "slug": "검정고무신-애니메이션",
+      "title": "검정고무신 애니메이션",
+      "reason": "1990년대 초 소년챔프 연재·최장수 기록은 씨네21 1건, 1999년 설날 특집은 위키 1건뿐이다. 날짜 규칙에 따라 그 주장을 빼면 뜻 글자 수가 하한(150)에 미치지 못해, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "stm8qern",
+      "slug": "눈치",
+      "title": "눈치",
+      "reason": "17세기 용법은 영어 위키 1건뿐이다. 그 문장을 빼면 출처 언급을 제외한 유래가 하한(80)에 미치지 못해, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "mzgvq8xt",
+      "slug": "H.O.T.-캔디",
+      "title": "H.O.T. 캔디",
+      "reason": "1990년대 시점은 위키 1건뿐이고, 보이는 출처가 장용진 작곡, 파워레이서춤·망치춤, 털모자 패션 주장을 받쳐 주지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "fxp7dc8y",
+      "slug": "KIA타이거즈-남행열차-응원가",
+      "title": "KIA타이거즈 남행열차 응원가",
+      "reason": "보이는 출처(가요무대 영상·구단 위키)가 패티김 원곡, 응원가 관례, ‘고래사냥’·‘목포의 눈물’ 주장을 받쳐 주지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "4ae4pkpa",
+      "slug": "MSG-워너비",
+      "title": "MSG 워너비",
+      "reason": "보이는 출처가 ‘유야호’, 중의적 이름 풀이, 환불원정대·지미유 설정을 받쳐 주지 않는다. 해당 문장을 빼면 뜻 글자 수가 하한(150)에서 10자 이내가 되어, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "f2jjy62y",
+      "slug": "노스트라다무스-지구멸망설",
+      "title": "노스트라다무스 지구멸망설",
+      "reason": "보이는 출처가 고토 벤, 다미선교회 휴거설, Y2K와의 묶음을 받쳐 주지 않고, 1999년 시점은 위키 1건뿐이다. 날짜 규칙과 미확인 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
     }
   ],
   "actions": [
@@ -195,24 +297,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.koreaherald.com/article/3299428",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "눈치",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.koreaherald.com/article/3844092",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -347,33 +431,6 @@
     },
     {
       "table": "memes",
-      "key": "멍때리기",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.donga.com/news/Culture/article/all/20141025/67428036/1",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.yna.co.kr/view/AKR20230522114900022",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "엄근진",
       "action": "update",
       "reasons": [
@@ -468,15 +525,6 @@
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "내-마음속에-저장",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
       ],
       "warnings": []
     },
@@ -581,24 +629,6 @@
     },
     {
       "table": "memes",
-      "key": "아이러브스쿨-동창찾기-열풍",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EC%95%84%EC%9D%B4%EB%9F%AC%EB%B8%8C%EC%8A%A4%EC%BF%A8",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "디워-사태",
       "action": "update",
       "reasons": [
@@ -630,24 +660,6 @@
       "action": "update",
       "reasons": [
         "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "검정고무신-애니메이션",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EA%B2%80%EC%A0%95%EA%B3%A0%EB%AC%B4%EC%8B%A0",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
       ],
       "warnings": []
     },
@@ -698,24 +710,6 @@
     },
     {
       "table": "memes",
-      "key": "Y2K-밀레니엄버그",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://en.wikipedia.org/wiki/Year_2000_problem",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "ㅋㅋㅋ-표기",
       "action": "update",
       "reasons": [
@@ -752,24 +746,6 @@
     },
     {
       "table": "memes",
-      "key": "대장금-홍시",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EB%8C%80%EC%9E%A5%EA%B8%88",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "종이접기-아저씨-김영만",
       "action": "update",
       "reasons": [
@@ -789,60 +765,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.yna.co.kr/view/AKR20250602138800371",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "노스트라다무스-지구멸망설",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "온게임넷-스타리그-출범",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://en.wikipedia.org/wiki/OnGameNet",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "젝스키스-학원별곡",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "갈갈이-삼형제",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EA%B0%9C%EA%B7%B8_%EC%BD%98%EC%84%9C%ED%8A%B8",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1004,24 +926,6 @@
     },
     {
       "table": "memes",
-      "key": "H.O.T.-캔디",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/H.O.T.",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "스티커사진",
       "action": "update",
       "reasons": [
@@ -1041,24 +945,6 @@
     {
       "table": "meme_sources",
       "key": "https://ko.wikipedia.org/wiki/%EA%B9%80%EB%8F%99%EB%A5%A0",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "이정현-바꿔·와",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://en.wikipedia.org/wiki/Lee_Jung-hyun",
       "action": "insert_if_missing",
       "reasons": [
         "where-not-exists"
@@ -1256,24 +1142,6 @@
     },
     {
       "table": "memes",
-      "key": "테스형",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EB%82%98%ED%9B%88%EC%95%84",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "고마워요-사토-(G.G.사토)",
       "action": "update",
       "reasons": [
@@ -1373,24 +1241,6 @@
     },
     {
       "table": "memes",
-      "key": "KIA타이거즈-남행열차-응원가",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/KIA_%ED%83%80%EC%9D%B4%EA%B1%B0%EC%A6%88",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
       "key": "페페 더 프로그(슬픈 개구리 페페)",
       "action": "update",
       "reasons": [
@@ -1408,53 +1258,8 @@
       "warnings": []
     },
     {
-      "table": "memes",
-      "key": "MSG-워너비",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/MSG_%EC%9B%8C%EB%84%88%EB%B9%84",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "memes",
-      "key": "이종범-바람의-아들",
-      "action": "update",
-      "reasons": [
-        "priority-enrichment"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%EC%9D%B4%EC%A2%85%EB%B2%94",
-      "action": "insert_if_missing",
-      "reasons": [
-        "where-not-exists"
-      ],
-      "warnings": []
-    },
-    {
       "table": "meme_sources",
       "key": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://cine21.com/news/view/?mag_id=96550",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1508,15 +1313,6 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=2gzrjRm5emg",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://www.youtube.com/watch?v=0Pu--Gf98xY",
       "action": "update_title",
       "reasons": [
@@ -1527,24 +1323,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.youtube.com/watch?v=FkweUESmoh8",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/1999%EB%85%84_%EC%A2%85%EB%A7%90%EB%A1%A0",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=yreTzhZ2P5M",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1581,24 +1359,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.youtube.com/watch?v=3svR5j1i-Vo",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=ME0V2_vm6I0",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=3NUaXU1d-NY",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1652,15 +1412,6 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=78ULUYsN1hc",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://www.sportsseoul.com/news/read/576627",
       "action": "update_title",
       "reasons": [
@@ -1670,34 +1421,7 @@
     },
     {
       "table": "meme_sources",
-      "key": "https://ko.wikipedia.org/wiki/%ED%95%99%EC%9B%90%EB%B3%84%EA%B3%A1",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=BSLgJxFc4UA",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
       "key": "https://news.sbs.co.kr/news/endPage.do?news_id=N1005267860",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=8cNz9awcVqg",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1716,15 +1440,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.segye.com/newsView/20070920001620",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=lbUo0ShXvNc",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"
@@ -1779,15 +1494,6 @@
     {
       "table": "meme_sources",
       "key": "https://www.jjalbang.today/jjalstoryview/48",
-      "action": "update_title",
-      "reasons": [
-        "untitled-prod-source-not-rendered"
-      ],
-      "warnings": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "https://www.youtube.com/watch?v=fHowwndHvuU",
       "action": "update_title",
       "reasons": [
         "untitled-prod-source-not-rendered"

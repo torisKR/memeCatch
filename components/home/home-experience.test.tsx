@@ -68,7 +68,6 @@ describe("HomeExperience", () => {
     expect(sectionOrder).toEqual([
       "hero-search",
       "trending-memes",
-      "safety-showcase",
       "safety-quiz",
       "usage-signals",
       "pathways",
@@ -108,6 +107,7 @@ describe("HomeExperience", () => {
     expect(html).toContain(
       `href="${locale === "ko" ? "/explore" : `/${locale}/explore`}"`,
     );
+    expect(html).not.toContain("/memes/jkm2022k");
     expect(html).toContain('data-safety-icon="green"');
     expect(html).toContain(getSafetySignalCopy(locale).levels.green.label);
     expect(html).toContain('data-signal-guide=');

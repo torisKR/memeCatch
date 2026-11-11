@@ -4,14 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck, Sparkles, MessageCircle } from "lucide-react";
 import { SafetyBadge } from "@/components/safety-badge";
-import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
+import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
 
 type FilterTab = "work_safe" | "caution_needed" | "everyday";
 
 export function HomeSafetyShowcase() {
   const [activeTab, setActiveTab] = useState<FilterTab>("work_safe");
 
-  const filteredMemes = CURATED_CORE_MEMES.filter((m) => {
+  const indexableMemes = CURATED_CORE_MEMES.filter((meme) => curatedPassesIndexGate(meme));
+  if (indexableMemes.length === 0) return null;
+
+  const filteredMemes = indexableMemes.filter((m) => {
     if (activeTab === "work_safe") {
       return m.usage_context.work === "green";
     }

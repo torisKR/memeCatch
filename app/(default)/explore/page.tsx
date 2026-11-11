@@ -22,7 +22,9 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
-import { curatedSearchCards } from "@/lib/curated-memes";
+import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from "@/lib/curated-memes";
+import { limitQueryToIds } from "@/lib/index-gate";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
 
 /**
@@ -150,7 +152,11 @@ function withPlatform<T extends {
   return query;
 }
 
-function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
+function buildQuery(
+  supabase: SupabaseClient<Database>,
+  filters: Filters,
+  indexableIds: readonly string[] | undefined,
+) {
   // 검색어가 있으면 search_memes RPC 위에 동일 필터/정렬을 얹는다
   // (components/explore-grid.tsx의 buildMemesQuery와 반드시 동기화).
   if (filters.q) {
@@ -177,7 +183,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
       sq = sq.order("trend_score", { ascending: false });
     }
     sq = sq.order("id", { ascending: false });
-    return sq;
+    return limitQueryToIds(sq, indexableIds);
   }
 
   let q = supabase
@@ -204,7 +210,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
     q = q.order("trend_score", { ascending: false });
   }
   q = q.order("id", { ascending: false });
-  return q;
+  return limitQueryToIds(q, indexableIds);
 }
 
 /** 필터 상태로부터 안정적인 remount 키 — 필터 변경 시 그리드 상태 초기화 */
@@ -236,17 +242,27 @@ export default async function ExplorePage({
       unavailable: boolean;
       dbCount: number;
       hasMore: boolean;
+      indexableIds: string[];
     }> => {
-      const curated = filters.q ? curatedSearchCards(filters.q) : [];
+      const discovery = await loadDiscoveryIndex();
+      const indexableIds = discovery.ok ? [...discovery.ids] : [];
+      const curated = filters.q
+        ? curatedSearchCards(filters.q).filter((card) => {
+            const meme = findCuratedCoreMeme(card.short_id);
+            return meme ? curatedPassesIndexGate(meme) : false;
+          })
+        : [];
       const failed = {
         items: [] as MemeListItem[],
         unavailable: true,
         dbCount: 0,
         hasMore: false,
+        indexableIds,
       };
+      if (!discovery.ok) return failed;
       try {
         const supabase = createStaticClient();
-        const { data, error } = await buildQuery(supabase, filters).range(
+        const { data, error } = await buildQuery(supabase, filters, indexableIds).range(
           0,
           PAGE_SIZE - 1
         );
@@ -260,6 +276,7 @@ export default async function ExplorePage({
           unavailable: false,
           dbCount: rows.length,
           hasMore: rows.length >= PAGE_SIZE,
+          indexableIds,
         };
       } catch {
         return failed;
@@ -308,6 +325,7 @@ export default async function ExplorePage({
             hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}
             filters={filters}
+            indexableIds={initialLoad.indexableIds}
           />
         </section>
       </div>

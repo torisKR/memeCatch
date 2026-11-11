@@ -18,9 +18,48 @@ export function articleDate(value: string | null | undefined): string | null {
   }).format(date);
 }
 
+const REVIEWED_LABEL = {
+  ko: "최종 검토일",
+  en: "Last reviewed",
+  ja: "最終確認日",
+  zh: "最后审阅",
+  "zh-tw": "最後審閱",
+} as const;
+
+type ReviewedLocale = keyof typeof REVIEWED_LABEL;
+
+/** Seoul calendar day in the page language. Invalid timestamps stay unset. */
+export function reviewedDateLabel(
+  value: string | null | undefined,
+  locale: ReviewedLocale = "ko",
+): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const formatLocale =
+    locale === "ko" ? "ko-KR" : locale === "ja" ? "ja-JP" : locale === "zh" ? "zh-CN" : locale === "zh-tw" ? "zh-TW" : "en-US";
+  return new Intl.DateTimeFormat(formatLocale, {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
 /** Byline under the article title. The name links to the editorial policy. */
-export function MemeByline({ updatedAt }: { updatedAt?: string | null }) {
+export function MemeByline({
+  updatedAt,
+  reviewedAt,
+  reviewedLocale = "ko",
+}: {
+  updatedAt?: string | null;
+  /** Set only on pages that pass the index gate. */
+  reviewedAt?: string | null;
+  reviewedLocale?: ReviewedLocale;
+}) {
   const updated = articleDate(updatedAt);
+  const reviewed = reviewedDateLabel(reviewedAt, reviewedLocale);
+  const reviewedIso = articleDate(reviewedAt);
   return (
     <p className="mt-2 text-sm text-muted">
       <Link href="/editorial" className="font-medium underline decoration-border underline-offset-4 hover:text-foreground">
@@ -36,6 +75,13 @@ export function MemeByline({ updatedAt }: { updatedAt?: string | null }) {
           "최종 수정일"
         )}
       </span>
+      {reviewed ? (
+        <span className="mt-1 block">
+          {REVIEWED_LABEL[reviewedLocale]}
+          {": "}
+          <time dateTime={reviewedIso ?? undefined}>{reviewed}</time>
+        </span>
+      ) : null}
     </p>
   );
 }

@@ -6,7 +6,7 @@ export type RelatedMemeLink = {
   summary?: string | null;
 };
 
-/** Four to six internal links. Fewer than four hides the heading as well. */
+/** Two to six internal links. Fewer than two hides the heading as well. */
 export function RelatedMemeLinks({
   items,
   heading = "관련 밈",
@@ -15,7 +15,7 @@ export function RelatedMemeLinks({
   heading?: string;
 }) {
   const links = items.filter((item) => item.href && item.title.trim()).slice(0, 6);
-  if (links.length < 4) return null;
+  if (links.length < 2) return null;
 
   return (
     <section aria-labelledby="related-memes" className="mt-10">

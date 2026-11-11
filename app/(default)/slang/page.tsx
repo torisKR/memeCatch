@@ -17,6 +17,7 @@ import {
   type SlangEra,
 } from "@/components/slang-dictionary";
 import { AdsenseScript } from "@/components/adsense-script";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 /**
  * /slang — 줄임말·유행어 사전 (연대별 브라우징).
@@ -81,6 +82,7 @@ function rowToTerm(row: SlangTermRow): SlangEra["terms"][number] {
 
 /** 네 연대 상위 표제어 — generateMetadata·본문 중복 호출을 React cache로 dedupe */
 const loadSlangEras = cache(async (): Promise<SlangEra[]> => {
+  const discovery = await loadDiscoveryIndex();
   const results = await Promise.all(
     ERA_DEFS.map((def) => getSlangTermsByYearRange(def.from, def.to, TERMS_PER_ERA))
   );
@@ -89,7 +91,7 @@ const loadSlangEras = cache(async (): Promise<SlangEra[]> => {
     label: def.label,
     range: def.range,
     exploreHref: def.exploreHref,
-    terms: results[i].map(rowToTerm),
+    terms: (discovery.ok ? results[i].filter((row) => discovery.ids.has(row.id)) : []).map(rowToTerm),
   }));
 });
 
@@ -115,7 +117,9 @@ const loadRiskyTerms = cache(async (): Promise<SlangEra["terms"]> => {
     const ranked = [...(data as SlangDepthRow[])].sort(
       (a, b) => Number(b.safety_level === "red") - Number(a.safety_level === "red"),
     );
-    return indexableSlangTerms(ranked, TERMS_PER_ERA).map(rowToTerm);
+    const discovery = await loadDiscoveryIndex();
+    const listed = discovery.ok ? ranked.filter((row) => discovery.ids.has(row.id)) : [];
+    return indexableSlangTerms(listed, TERMS_PER_ERA).map(rowToTerm);
   } catch {
     return [];
   }

@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
+import { curatedPassesIndexGate, findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
 import { memePathFrom, shortIdFromParam } from "@/lib/labels";
 import { classifyPublicMemeLookup, type PublicMemeLookup } from "@/lib/public-meme-lookup";
 import {
@@ -76,6 +76,7 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
     title,
     description: meme.summary,
     alternates: { canonical: path },
+    ...(curatedPassesIndexGate(meme) ? {} : { robots: { index: false, follow: false } }),
     openGraph: {
       type: "website",
       siteName: "밈캐치",

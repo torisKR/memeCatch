@@ -47,6 +47,7 @@ import { posterBadgeTone } from "@/lib/meme-poster";
 import { loadMemeArtByShortId } from "@/lib/meme-art.server";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
+import { loadDiscoveryIndex, type DiscoveryIndexResult } from "@/lib/index-gate.server";
 import { publicSourceUrl } from "@/lib/source-links";
 
 const RELATED_HEADING: Record<SeoContentLocale, string> = {
@@ -230,6 +231,10 @@ function isUnverifiedContexts(entries: [string, SafetyLevel][]): boolean {
   return entries.length >= 2 && entries.every(([, level]) => level === "green");
 }
 
+function sourceIsListed(discovery: DiscoveryIndexResult, memeId: string): boolean {
+  return discovery.ok && discovery.ids.has(memeId);
+}
+
 async function getLanguageVersions(shortId: string, memeId: string, current: SeoContentLocale) {
   const available = await getAvailableTranslationLocales(memeId);
   const locales = [...new Set([current, ...available.filter(isSeoContentLocale)])];
@@ -283,8 +288,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (redirectPath) permanentRedirect(redirectPath);
 
   const versions = await getLanguageVersions(meme.short_id, meme.id, locale);
+  const discovery = await loadDiscoveryIndex();
+  const sourceListed = sourceIsListed(discovery, meme.id);
   const indexableVersions = versions.filter(({ meme: version }) =>
-    isIndexableLocalizedMeme(version),
+    sourceListed && isIndexableLocalizedMeme(version),
   );
   const copy = DETAIL_COPY[locale];
   const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
@@ -314,7 +321,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     ...metadata,
     alternates: { canonical, languages },
-    ...(isIndexableLocalizedMeme(meme) ? {} : { robots: { index: false, follow: true } }),
+    ...(sourceListed && isIndexableLocalizedMeme(meme)
+      ? {}
+      : { robots: { index: false, follow: false } }),
     openGraph: {
       ...metadata.openGraph,
       url: canonical,
@@ -347,7 +356,7 @@ export default async function LocalizedMemePage({ params }: Props) {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, marketPassport, artUrl, related] = await Promise.all([
+  const [versions, marketPassport, artUrl, related, discovery] = await Promise.all([
     getLanguageVersions(meme.short_id, meme.id, locale),
     getMemeMarketPassport(meme.id, locale),
     loadMemeArtByShortId(meme.short_id),
@@ -356,7 +365,11 @@ export default async function LocalizedMemePage({ params }: Props) {
       meme.meme_tags_map.map((tag) => tag.tag_id),
       6,
     ),
+    loadDiscoveryIndex(),
   ]);
+  const sourceListed = sourceIsListed(discovery, meme.id);
+  const indexable = sourceListed && isIndexableLocalizedMeme(meme);
+  const visibleRelated = related.filter((item) => sourceListed && discovery.ok && discovery.ids.has(item.id));
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);
@@ -378,7 +391,7 @@ export default async function LocalizedMemePage({ params }: Props) {
       dir={config.direction}
       className={`${ARTICLE_COLUMN} px-4 py-8 pb-16 text-foreground`}
     >
-      {!needsReview && (
+      {indexable && (
         <>
           <MemeWebPageJsonLd
             locale={locale}
@@ -449,7 +462,11 @@ export default async function LocalizedMemePage({ params }: Props) {
         <div className="mt-5">
           <MemeArticleArt title={meme.original.title} artUrl={artUrl} />
           <h1 className="text-[1.75rem] font-black leading-tight tracking-tight">{meme.title}</h1>
-          <MemeByline updatedAt={meme.translation.updatedAt} />
+          <MemeByline
+            updatedAt={meme.translation.updatedAt}
+            reviewedAt={indexable ? meme.translation.reviewedAt || meme.translation.updatedAt : null}
+            reviewedLocale={locale}
+          />
           {meme.summary.trim() ? (
             <p id="meme-summary" className={`mt-4 ${ARTICLE_BODY}`}>
               {meme.summary}
@@ -627,7 +644,7 @@ export default async function LocalizedMemePage({ params }: Props) {
           <MemeTrendPanel memeId={meme.id} />
           <RelatedMemeLinks
             heading={RELATED_HEADING[locale]}
-            items={related.map((item) => ({
+            items={visibleRelated.map((item) => ({
               href: memePathFrom(item.short_id, item.slug),
               title: item.title,
               summary: item.summary,

@@ -6,7 +6,7 @@ import {
   MemeByline,
 } from "@/components/meme-article-meta";
 import { RelatedMemeLinks } from "@/components/related-meme-links";
-import { CURATED_CORE_MEMES, type CuratedMeme } from "@/lib/curated-memes";
+import { CURATED_CORE_MEMES, curatedPassesIndexGate, type CuratedMeme } from "@/lib/curated-memes";
 import { memePathFrom, SAFETY_LEVELS } from "@/lib/labels";
 import { posterBadgeTone } from "@/lib/meme-poster";
 
@@ -21,7 +21,9 @@ export function CuratedMemeArticle({ meme }: { meme: CuratedMeme }) {
   const places = (Object.keys(PLACE) as Array<keyof typeof PLACE>).filter(
     (place) => meme.usage_context[place],
   );
-  const related = CURATED_CORE_MEMES.filter((item) => item.short_id !== meme.short_id)
+  const related = CURATED_CORE_MEMES.filter(
+    (item) => item.short_id !== meme.short_id && curatedPassesIndexGate(item),
+  )
     .slice(0, 6)
     .map((item) => ({
       href: memePathFrom(item.short_id, item.slug),

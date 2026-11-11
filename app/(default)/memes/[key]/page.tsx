@@ -47,7 +47,7 @@ import { DocStatusNote } from "@/components/doc-status-note";
 import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
-import { isIndexableMeme } from "@/lib/content-depth";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { isRenderableContent } from "@/lib/content-availability";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import {
@@ -140,6 +140,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meme.summary,
     meme.origin_kind,
   );
+  const discovery = await loadDiscoveryIndex();
+  const indexable = discovery.ok && discovery.ids.has(meme.id);
   return {
     metadataBase: new URL(SITE_URL),
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
@@ -147,9 +149,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: path, languages },
-    // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/content-depth.ts).
-    // follow는 유지 — 페이지는 200으로 살아 있고, 관련 밈·출처 링크로 크롤이 전파돼야 한다.
-    ...(isIndexableMeme(meme) ? {} : { robots: { index: false, follow: true } }),
+    // 본문·관련 밈 기준에 못 미치면 noindex,nofollow. URL은 200으로 남긴다.
+    ...(indexable ? {} : { robots: { index: false, follow: false } }),
     // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 밈별 og 명시
     openGraph: {
       type: "website",
@@ -194,8 +195,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport, availableTranslationLocales] = await Promise.all([
-    // 첫 화면 링크 수를 줄이려 6개만 — 나머지 탐색은 하단 무한 스크롤이 담당한다.
+  const [related, reactionCounts, marketPassport, availableTranslationLocales, discovery] = await Promise.all([
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
       tagIds,
@@ -204,7 +204,11 @@ export default async function MemeDetailPage({ params }: Props) {
     getReactionCounts(meme.id),
     getMemeMarketPassport(meme.id, "ko"),
     getAvailableTranslationLocales(meme.id),
+    loadDiscoveryIndex(),
   ]);
+  const indexable = discovery.ok && discovery.ids.has(meme.id);
+  const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
+  const reviewedAt = meme.safety_reviewed_at || meme.updated_at;
   const missingTranslationLocales = SEO_CONTENT_LOCALES.filter(
     (locale) => !availableTranslationLocales.includes(locale),
   );
@@ -246,10 +250,8 @@ export default async function MemeDetailPage({ params }: Props) {
         광고는 충실도 판정을 통과한 문서에서만 게재한다. 얇은 문서는 noindex로
         색인에서 빠지지만 사람은 여전히 도달하므로, 로더를 렌더하지 않아야
         "저품질 화면에 광고 게재"(게시자 정책 인벤토리 가치)를 피할 수 있다.
-        HG-001 C안(2026-08-04): 색인(sitemap·robots) 임계값만 MIN_PROSE_CHARS_INDEX(150자)로
-        낮췄다. 광고는 여기 반영하지 않고 contentDepth().isSubstantial(250자, 배너와 동일
-        기준)을 그대로 쓴다 — isIndexableMeme()과 더는 같은 함수가 아니므로 기준이
-        갈릴 수 있다(150~249자 문서는 색인엔 남지만 광고는 여전히 게재하지 않는다).
+        광고는 색인 게이트와 따로 contentDepth().isSubstantial(250자, 배너와 동일
+        기준)을 쓴다. 색인은 400자 본문과 관련 밈 2개를 요구한다.
       */}
       {isAdsenseContentEligible(meme) && <AdsenseScript />}
       {/* GEO: WebPage(날짜·speakable) + mainEntity DefinedTerm(중첩) + 독립 최상위
@@ -258,7 +260,7 @@ export default async function MemeDetailPage({ params }: Props) {
           WebPage JSON-LD는 색인 판정과 같은 조건으로 게이트한다 — 얇은 문서(96.3%)는
           noindex인데 구조화 데이터만 완성 문서처럼 나가면 LOOP.md §10「보강 중 문서의
           metadata 과장 금지」위반이다. 브레드크럼은 탐색 관계만 서술하므로 유지. */}
-      {isIndexableMeme(meme) && (
+      {indexable && (
         <>
           <MemeWebPageJsonLd
             name={meme.title}
@@ -308,7 +310,7 @@ export default async function MemeDetailPage({ params }: Props) {
           카드를 그리드 밖으로 빼면 모바일은 "뜻 먼저, 영상 나중"(LOOP.md 정보 계층)이
           되고 데스크톱은 제목이 전체 폭을 쓰는 헤더가 된다. 2단 구조 자체는 그대로다. */}
       <div className={`${ARTICLE_COLUMN} space-y-3`}>
-        <AnswerCard meme={meme} saveMemeId={meme.id} />
+        <AnswerCard meme={meme} saveMemeId={meme.id} reviewedAt={indexable ? reviewedAt : null} />
         <div className="flex justify-end">
           <ShareButton path={path} title={meme.title} label="공유" />
         </div>
@@ -552,6 +554,7 @@ export default async function MemeDetailPage({ params }: Props) {
           currentId={meme.id}
           category={meme.category}
           related={related}
+          indexableIds={indexableIds}
         />
         <MemeArticleFooter />
       </div>

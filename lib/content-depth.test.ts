@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   CONTENT_DEPTH_THRESHOLDS as T,
   contentDepth,
+  discoveryIndexIds,
   isBoilerplateOrigin,
   isIndexableMeme,
+  passesContentIndexGate,
   type ContentDepthInput,
+  type IndexCandidate,
 } from "@/lib/content-depth";
 
 /** 한글 n글자 — 길이 경계를 정확히 맞추기 위한 헬퍼(공백 없음, trim 영향 없음). */
@@ -77,13 +80,11 @@ describe("contentDepth 판정", () => {
 });
 
 /**
- * HG-001 C안(2026-08-04) — 색인(사이트맵·robots) 임계값만 낮추고 배너·광고 판정은
- * 현행 유지하기로 한 결정의 회귀 테스트. isIndexableMeme()은 MIN_PROSE_CHARS_INDEX(150),
- * contentDepth().isSubstantial(배너·광고가 쓰는 값)은 MIN_PROSE_CHARS(250)를 쓴다 —
- * 두 산문 하한 사이(150~249자)에서 반드시 갈라져야 한다. MIN_SCORE(5)는 공통.
+ * 배너·광고는 250자 isSubstantial을 유지한다. 색인은 그보다 긴 400자 본문 게이트라
+ * 150~249자 문서는 배너에도, 색인에도 남지 않는다.
  */
-describe("색인 판정과 배너·광고 판정의 산문 하한 분리 (HG-001 C안)", () => {
-  it("산문 150~249자·점수 충족 문서는 색인엔 남지만 배너·광고 기준은 통과하지 못한다", () => {
+describe("짧은 산문은 배너와 색인 모두에서 빠진다", () => {
+  it("산문 150~249자 문서는 색인되지 않고 배너·광고 기준도 통과하지 못한다", () => {
     // 정의 100(0점, BASIC 150 미만) + 유래 60(2점) + 출처 2개(2점) + 미디어 1개(1점) = 5점,
     // 산문 160자 — MIN_PROSE_CHARS_INDEX(150) 이상, MIN_PROSE_CHARS(250) 미만.
     const between: ContentDepthInput = {
@@ -102,8 +103,8 @@ describe("색인 판정과 배너·광고 판정의 산문 하한 분리 (HG-001
     expect(depth.proseChars).toBeGreaterThanOrEqual(T.MIN_PROSE_CHARS_INDEX);
     expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS);
 
-    // 색인(사이트맵·robots)은 150자 기준이라 통과.
     expect(isIndexableMeme(between)).toBe(true);
+    expect(passesContentIndexGate(between)).toBe(false);
     // 배너(DocStatusNote)·광고(AdsenseScript)는 250자 기준을 그대로 쓰므로 미통과.
     expect(depth.isSubstantial).toBe(false);
     expect(depth.isThin).toBe(true);
@@ -371,5 +372,60 @@ describe("자동 생성 상투구 유래", () => {
     expect(asOwnProse.proseChars).toBeGreaterThanOrEqual(T.MIN_PROSE_CHARS);
     expect(asOwnProse.score).toBe(T.MIN_SCORE);
     expect(asOwnProse.isSubstantial).toBe(true);
+  });
+});
+
+function passingCandidate(id: string, overrides: Partial<IndexCandidate> = {}): IndexCandidate {
+  return {
+    id,
+    category: null,
+    origin_year: null,
+    description: chars(180),
+    origin: chars(90),
+    usage_note: chars(50),
+    usage_examples: [
+      { situation: chars(20), text: chars(20) },
+      { situation: chars(20), text: chars(20) },
+    ],
+    meme_sources: [
+      { source_url: `https://example.com/${id}/a` },
+      { source_url: `https://example.com/${id}/b` },
+    ],
+    meme_tags_map: [],
+    ...overrides,
+  };
+}
+
+describe("index gate", () => {
+  it("indexes a meme only when every body section and the source count clear the gate", () => {
+    expect(passesContentIndexGate(substantialMeme())).toBe(true);
+    const shortMeaning = passingCandidate("short", { description: chars(149) });
+    expect(passesContentIndexGate(shortMeaning)).toBe(false);
+    const oneSource = passingCandidate("one", {
+      meme_sources: [{ source_url: "https://example.com/only" }],
+    });
+    expect(passesContentIndexGate(oneSource)).toBe(false);
+  });
+
+  it("keeps a meme indexed only while two other indexable relatives remain", () => {
+    const shared = passingCandidate("shared", { category: "phrase" });
+    const left = passingCandidate("left", { category: "phrase" });
+    const right = passingCandidate("right", { category: "phrase" });
+    const alone = passingCandidate("alone", { category: "challenge" });
+
+    expect(discoveryIndexIds([shared, left, right, alone])).toEqual(
+      new Set(["shared", "left", "right"]),
+    );
+
+    const linked = passingCandidate("linked", { meme_tags_map: [{ tag_id: "hub" }] });
+    const other = passingCandidate("other", { meme_tags_map: [{ tag_id: "hub" }] });
+    expect(discoveryIndexIds([linked, other])).toEqual(new Set());
+  });
+
+  it("drops a meme whose only relatives fail the body gate", () => {
+    const keeper = passingCandidate("keeper", { category: "phrase" });
+    const thinA = { ...passingCandidate("thin-a", { category: "phrase" }), description: "짧다" };
+    const thinB = { ...passingCandidate("thin-b", { category: "phrase" }), description: "짧다" };
+    expect(discoveryIndexIds([keeper, thinA, thinB])).toEqual(new Set());
   });
 });

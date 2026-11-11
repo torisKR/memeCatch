@@ -6,6 +6,7 @@ import { MemePosterCard } from "@/components/meme-poster-card";
 import { SafetySignalGuide } from "@/components/usage-guide";
 import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
 import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
+import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
 import { HOME_COPY } from "@/lib/home-copy";
 import {
   localizedPath,
@@ -44,6 +45,7 @@ export function HomeExperience({
   const trustTitleId = `home-trust-title-${locale}`;
   const trendingTitleId = `home-trending-title-${locale}`;
   const trending = entries.slice(0, TRENDING_LIMIT);
+  const showSafetyGuide = CURATED_CORE_MEMES.some((meme) => curatedPassesIndexGate(meme));
   const trendingTitle = locale === "ko" ? "지금 뜨는 밈" : copy.recent.title;
 
   return (
@@ -99,13 +101,15 @@ export function HomeExperience({
         )}
       </section>
 
-      <section
-        id="home-safety-showcase"
-        data-home-section="safety-showcase"
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
-      >
-        <HomeSafetyShowcase />
-      </section>
+      {showSafetyGuide ? (
+        <section
+          id="home-safety-showcase"
+          data-home-section="safety-showcase"
+          className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+        >
+          <HomeSafetyShowcase />
+        </section>
+      ) : null}
 
       <section
         id="home-safety-quiz"

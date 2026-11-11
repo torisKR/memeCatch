@@ -24,37 +24,38 @@ export async function ContinueStream({
   currentId,
   category,
   related,
+  indexableIds,
 }: {
   currentId: string;
   category: MemeCategory;
   related: MemeListItem[];
+  indexableIds: ReadonlySet<string>;
 }) {
-  const head = related.slice(0, RELATED_LINKS);
-  const relatedIds = head.map((meme) => meme.id);
+  const head = related.filter((meme) => indexableIds.has(meme.id)).slice(0, RELATED_LINKS);
   const need = Math.max(0, RELATED_LINKS - head.length);
   let stream: MemeListItem[] = [];
 
   if (need > 0) {
-    try {
-      const supabase = createStaticClient();
-      const { data } = await supabase
-        .from("memes")
-        .select(SELECT)
-        .eq("category", category)
-        .neq("id", currentId)
-        .in("moderation_status", ["approved", "limited"])
-        .order("trend_score", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(need + RELATED_LINKS);
-      const seen = new Set<string>([currentId, ...relatedIds]);
-      for (const meme of (data ?? []) as MemeListItem[]) {
-        if (seen.has(meme.id)) continue;
-        seen.add(meme.id);
-        stream.push(meme);
-        if (stream.length >= need) break;
+    const ids = [...indexableIds].filter(
+      (id) => id !== currentId && !head.some((meme) => meme.id === id),
+    );
+    if (ids.length > 0) {
+      try {
+        const supabase = createStaticClient();
+        const { data } = await supabase
+          .from("memes")
+          .select(SELECT)
+          .in("id", ids)
+          .in("moderation_status", ["approved", "limited"])
+          .order("trend_score", { ascending: false })
+          .order("id", { ascending: false });
+        const rows = (data ?? []) as MemeListItem[];
+        const sameCategory = rows.filter((meme) => meme.category === category);
+        const other = rows.filter((meme) => meme.category !== category);
+        stream = [...sameCategory, ...other].slice(0, need);
+      } catch {
+        stream = [];
       }
-    } catch {
-      stream = [];
     }
   }
 

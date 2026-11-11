@@ -26,6 +26,7 @@ const SAFETY_GLOW: Record<SafetyLevel, string> = {
 export function AnswerCard({
   meme,
   saveMemeId,
+  reviewedAt,
 }: {
   meme: Pick<
     MemeRow,
@@ -39,6 +40,8 @@ export function AnswerCard({
     origin_year?: MemeRow["origin_year"] | null;
   };
   saveMemeId?: string;
+  /** Present only when this article is indexable. */
+  reviewedAt?: string | null;
 }) {
   const reduce = useReducedMotion();
 
@@ -79,7 +82,7 @@ export function AnswerCard({
       <div className="mt-3">
         <MemeArticleArt title={meme.title} artUrl={meme.art_url} />
         <h1 className="text-[1.75rem] font-black leading-tight tracking-tight">{meme.title}</h1>
-        <MemeByline updatedAt={meme.updated_at} />
+        <MemeByline updatedAt={meme.updated_at} reviewedAt={reviewedAt} />
         {meme.summary.trim() ? (
           <p id="meme-summary" className={`mt-3 ${ARTICLE_BODY}`}>
             {meme.summary}

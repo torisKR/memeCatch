@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { SafetyBadge } from "@/components/safety-badge";
 import { CopyTextButton } from "@/components/copy-text-button";
-import type { SafetyLevel } from "@/lib/labels";
+import { memePathFrom, type SafetyLevel } from "@/lib/labels";
+import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
 
 type QuizQuestion = {
   id: number;
@@ -31,6 +32,14 @@ type QuizQuestion = {
   explanation: string;
   safeAlternative: string;
 };
+
+function indexableQuizHref(href: string): string | null {
+  const curated = CURATED_CORE_MEMES.find(
+    (meme) => memePathFrom(meme.short_id, meme.slug) === href,
+  );
+  if (!curated || !curatedPassesIndexGate(curated)) return null;
+  return href;
+}
 
 const DIAGNOSTIC_QUESTIONS: readonly QuizQuestion[] = [
   {
@@ -281,13 +290,17 @@ export function SafetyDiagnosticQuiz() {
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border/60">
-                <Link
-                  href={currentQ.memeHref}
-                  className="text-xs font-semibold text-muted hover:text-accent flex items-center gap-1"
-                >
-                  ‘{currentQ.targetMeme.split(" ")[0]}’ 상세 사전 보기
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
+                {indexableQuizHref(currentQ.memeHref) ? (
+                  <Link
+                    href={currentQ.memeHref}
+                    className="text-xs font-semibold text-muted hover:text-accent flex items-center gap-1"
+                  >
+                    ‘{currentQ.targetMeme.split(" ")[0]}’ 상세 사전 보기
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <span />
+                )}
 
                 <button
                   type="button"

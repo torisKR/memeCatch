@@ -1,0 +1,930 @@
+{
+  "batch_id": "loop-027-pending-2026-11-11",
+  "checked_at": "2026-11-11T09:30:00.000Z",
+  "memes": [
+    {
+      "slug": "체포하겠어-챌린지",
+      "title": "체포하겠어 챌린지",
+      "aliases": [
+        "체포하겠어",
+        "아일릿 체포하겠어 챌린지",
+        "You're Under Arrest 챌린지"
+      ],
+      "summary": "아일릿 신곡 '체포하겠어'의 호루라기 사운드에 맞춰 호루라기를 부는 시늉을 하고 손가락 총을 쏘는 숏폼 댄스 챌린지",
+      "description": "걸그룹 아일릿(ILLIT)의 미니 5집 'BREAK EVEN' 타이틀곡 '체포하겠어'의 포인트 안무를 따라 하는 챌린지다. 반복되는 호루라기 소리에 맞춰 호루라기를 부는 시늉을 하고 손가락으로 총 모양을 만들어 쏘는 동작이 핵심이다. 아이유, 아이브 레이 등 다른 가수와 프로파일러 출신 권일용 교수까지 참여한 영상이 화제가 되며 숏폼에서 널리 퍼졌다. 애매한 친절로 마음을 흔든 상대를 '체포'하겠다는 가사 덕분에 '너 체포야'처럼 장난스럽게 호감을 표현하는 말로도 쓰인다.",
+      "origin": "아일릿이 2026년 10월 5일 챌린지 티저를, 10월 18일 공식 챌린지 영상을 공개했고 곡은 10월 26일 발매됐다.",
+      "category": "challenge",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "exact",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "춤 챌린지 영상이나 '너 체포야' 같은 장난스러운 호감 표현에 쓴다.",
+      "caution": "경찰 제복 콘셉트 의상을 두고 성별 고정관념 논란도 있었으니, 실제 경찰·단속 상황을 희화화하는 용도로는 쓰지 않는 편이 좋다.",
+      "usage_examples": [
+        {
+          "situation": "SNS 댓글",
+          "text": "이 귀여움은 유죄다, 체포하겠어 🚨"
+        },
+        {
+          "situation": "단톡방",
+          "text": "오늘 체포하겠어 챌린지 찍을 사람 손"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "영원할-건가-보다",
+      "title": "영원할 건가 보다",
+      "aliases": [
+        "나 왜 이 순간이 영원할 것 같지",
+        "난 왜 이 순간이 영원할 것 같지"
+      ],
+      "summary": "드라마 대사 '나 왜 이 순간이 영원할 것 같지?'에 밴드 리도어의 '영원은 그렇듯'을 붙여, 행복한 순간이나 끝나지 않는 고된 순간을 아련하게 보여주는 릴스 밈",
+      "description": "tvN 드라마 '스물다섯 스물하나'에서 나희도가 '나 왜 이 순간이 영원할 것 같지?'라고 묻자 백이진이 '영원할 건가 보다'라고 답하는 대사 뒤에 밴드 리도어의 노래 '영원은 그렇듯'을 이어 붙인 숏폼 형식이다. 처음에는 결혼식, 불꽃놀이, 여행처럼 오래 간직하고 싶은 장면에 쓰였다. 이후 시험 기간, 야근, 출근, 취업 준비처럼 빨리 끝났으면 하는데 끝이 보이지 않는 상황에 반어적으로 붙이는 영상이 많아졌다. '나 왜 이 야근이 영원할 것만 같지?'처럼 '순간' 자리에 힘든 일을 넣는 변형이 대표적이다.",
+      "origin": "2022년 tvN 드라마 '스물다섯 스물하나'의 대사와 리도어 '영원은 그렇듯'(2021)을 조합한 릴스가 2026년 10월 인스타그램에서 유행했다. 처음 조합을 만든 사람은 확인되지 않는다.",
+      "category": "phrase",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "행복한 순간을 기록할 때도, 끝나지 않는 고된 일상을 자조할 때도 쓴다.",
+      "usage_examples": [
+        {
+          "situation": "SNS 캡션",
+          "text": "나 왜 이 시험 기간이 영원할 것만 같지? 영원할 건가 보다…"
+        },
+        {
+          "situation": "단톡방",
+          "text": "회의가 3시간째야. 나 왜 이 순간이 영원할 것 같지"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "l을-가져가",
+      "title": "L을 가져가",
+      "aliases": [
+        "Take the L",
+        "L 챌린지",
+        "L을 가져가 춤"
+      ],
+      "summary": "'Take the L(패배를 인정해)'을 그대로 옮긴 말로, 엄지와 검지로 만든 L자를 이마에 대고 다리를 차는 춤과 함께 외치는 놀림 섞인 유행어",
+      "description": "영어 속어 'Take the L'에서 L은 패배(Loss)를 뜻해, '졌으면 인정해'라는 의미다. 2018년 게임 '포트나이트'의 감정 표현(이모트) 'Take the L'로 알려졌고, 엄지와 검지로 만든 L자를 이마에 대고 다리를 번갈아 옆으로 차는 동작이 함께 퍼졌다. 국내에서는 로블록스 게임 속 같은 동작을 유튜버 권루트가 따라 하며 'L을 가져가'라고 외친 영상이 계기가 되어 초등학생 사이에서 크게 유행했고, 운동회·체육대회 영상과 연예인·기관 계정의 패러디로 번졌다.",
+      "origin": "2018년 포트나이트 이모트 'Take the L'에서 유래했고, 국내에서는 2026년 8월께부터 유튜버 권루트의 로블록스 영상으로 퍼졌다.",
+      "category": "dance",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "yellow",
+        "family": "yellow",
+        "sns": "yellow"
+      },
+      "usage_note": "게임이나 내기에서 이긴 뒤 친구를 장난스럽게 놀릴 때 쓴다.",
+      "caution": "상대의 패배를 조롱하는 뜻이라 실제로 실패해 속상한 사람에게 쓰면 기분을 상하게 할 수 있다.",
+      "usage_examples": [
+        {
+          "situation": "친구와 게임 후",
+          "text": "내가 이겼지? L을 가져가~"
+        },
+        {
+          "situation": "SNS 댓글",
+          "text": "운동회 계주 끝나고 다 같이 L을 가져가 춤 춘 거 너무 웃김"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "빼난지원금",
+      "title": "빼난지원금",
+      "aliases": [
+        "빼빼로 재난지원금"
+      ],
+      "summary": "빼빼로데이에 빼빼로를 받지 못한 친구에게 빼빼로를 나눠주는 일을 '재난지원금'에 빗댄 초등학생발 신조어",
+      "description": "'빼빼로'와 '재난지원금'을 합친 말로, 빼빼로데이(11월 11일)에 빼빼로를 하나도 받지 못한 친구에게 과자를 나눠 주며 챙겨 주는 일을 장난스럽게 부르는 말이다. 방송인 유병재의 유튜브 영상에서 한 초등학생이 또래 사이의 신조어로 소개했고, 출연한 아일릿 멤버들도 공감했다. 영상이 공개된 뒤 빼빼로데이를 앞두고 여러 언론과 SNS에서 소개되며 퍼졌다.",
+      "origin": "2026년 11월 6일 공개된 유병재 유튜브 영상 '웃으면 안되는 아일릿 팬미팅'에서 현장의 초등학생이 소개했다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "exact",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "빼빼로데이에 친구에게 과자를 나눠 주며 가볍게 쓴다.",
+      "caution": "실제 정부 지원금이 아니다. '빼난지원금 신청' 같은 문자·링크는 사칭일 수 있으니 누르지 않는다.",
+      "usage_examples": [
+        {
+          "situation": "학교에서",
+          "text": "너 빼빼로 하나도 못 받았어? 빼난지원금 지급한다"
+        },
+        {
+          "situation": "단톡방",
+          "text": "빼난지원금 신청합니다… 저 아직 0개예요"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "가로등-신사",
+      "title": "가로등 신사",
+      "aliases": [
+        "베스퍼",
+        "Vesper",
+        "롯데월드 가로등 신사"
+      ],
+      "summary": "롯데월드 가을 퍼레이드에 나온 가스등 머리의 신사 캐릭터 '베스퍼'가 아이돌급 인기를 얻으며 직캠·팬아트로 번진 팬덤 밈",
+      "description": "롯데월드 어드벤처의 가을 퍼레이드 '다크 판타지 페스티벌'에 등장한 캐릭터 베스퍼를 부르는 별명이다. 가스등 모양의 머리에 연미복을 입은 신사가 표정 없이 우아한 손짓으로 관객에게 인사하는 모습이 화제가 됐다. 관객들이 아이돌 공연처럼 앞자리를 맡아 직캠을 찍고 팬아트와 인증샷을 올리면서 인터넷 밈이 됐고, 사람이 아닌 캐릭터에 끌리는 취향과 함께 언급되기도 했다. 양초 모양의 캐릭터 '캔드라' 등 함께 나오는 캐릭터도 관심을 받았다.",
+      "origin": "2026년 9월 12일 시작한 롯데월드 어드벤처 퍼레이드 '다크 판타지 페스티벌'의 캐릭터 베스퍼에서 시작됐다.",
+      "category": "image",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "exact",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "표정은 없지만 묘하게 멋있는 대상을 두고 말하거나, 퍼레이드 직캠을 공유할 때 쓴다.",
+      "usage_examples": [
+        {
+          "situation": "SNS 댓글",
+          "text": "표정 하나 없는데 손짓이 왜 이렇게 설레지… 가로등 신사 직캠 또 봄"
+        },
+        {
+          "situation": "단톡방",
+          "text": "이번 주말 롯데월드 가로등 신사 보러 갈 사람"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "느리구나-oo하는-것조차",
+      "title": "느리구나, OO하는 것조차",
+      "aliases": [
+        "느리구나",
+        "느리구나 대피하는 것조차",
+        "느리구나 쓰러지는 것조차"
+      ],
+      "summary": "애니메이션 「블리치」 쿠치키 뱌쿠야의 대사 '느리구나, 쓰러지는 것조차'에서 동사만 바꿔, 느린 상대를 비장하게 놀리는 말투",
+      "description": "「블리치」의 쿠치키 뱌쿠야가 상대를 제압한 뒤 '느리구나, 쓰러지는 것조차'라고 말하는 장면을 패러디한 문형이다. '느리구나, 답장하는 것조차', '느리구나, 출근 준비하는 것조차'처럼 뒤의 동사만 바꿔 행동이 느린 사람이나 상황을 지나치게 진지한 톤으로 놀린다. 2026년 8월 말 유튜버 우정잉이 영상 문구로 변형해 쓰면서 퍼지기 시작했고, 9월 8일 유튜브 채널 '소방관 삼촌'이 화재 대피 훈련 영상에 '느리구나, 대피하는 것조차'라는 자막을 붙여 크게 확산됐다. 이후 기관·브랜드 계정이 '서두르라'는 안내를 재치 있게 전할 때도 쓰였다.",
+      "origin": "「블리치」 쿠치키 뱌쿠야의 대사가 2026년 8월 말 유튜브에서 변형되기 시작했고, 9월 8일 '소방관 삼촌' 채널의 화재 대피 영상으로 크게 퍼졌다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "yellow",
+        "family": "yellow",
+        "sns": "yellow"
+      },
+      "usage_note": "답장이 늦거나 준비가 느린 친구에게 장난스럽게 쓴다.",
+      "caution": "윗사람이나 친하지 않은 사람에게 쓰면 무례하게 들릴 수 있다.",
+      "usage_examples": [
+        {
+          "situation": "단톡방",
+          "text": "3시간 만에 답장? 느리구나, 답장하는 것조차"
+        },
+        {
+          "situation": "친구에게",
+          "text": "아직도 메뉴 못 골랐어? 느리구나, 고르는 것조차"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "책없쾌",
+      "title": "책없쾌",
+      "aliases": [
+        "책임 없는 쾌락"
+      ],
+      "summary": "'책임 없는 쾌락'의 줄임말로, 책임이나 부담 없이 즐거움만 누리는 상황을 뜻하며 2026년 야구팬 사이에서 중립 관람의 의미로 크게 퍼진 말",
+      "description": "'책임 없는 쾌락'을 줄인 말이다. 원래는 씻기기·재우기 같은 육아의 수고 없이 조카를 잠깐 귀여워만 해 주는 즐거움처럼, 책임은 지지 않고 즐거움만 누리는 상황을 가리켰다. 2026년 프로야구 시즌에는 응원팀이 아닌 경기를 보며 승패 스트레스 없이 응원과 먹거리만 즐기는 관람을 뜻하는 말로 야구팬 사이에서 다시 크게 퍼졌다. 경기장이나 야구장 음식 사진에 '책없쾌'라는 한마디를 붙이는 식으로 쓴다.",
+      "origin": "조카를 귀여워하는 즐거움을 가리키던 말이 2026년 여름 야구팬 커뮤니티를 중심으로 다시 유행했다. 처음 쓰인 시점은 확인되지 않는다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "approximate",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "부담 없이 즐기기만 하는 상황을 가볍게 표현할 때 쓴다.",
+      "usage_examples": [
+        {
+          "situation": "SNS 캡션",
+          "text": "오늘 우리 팀 경기 없어서 책없쾌 직관 ⚾"
+        },
+        {
+          "situation": "친구에게",
+          "text": "조카랑 반나절 놀아 주고 왔어. 이게 책없쾌지"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "줴줴이야",
+      "title": "줴줴이야",
+      "aliases": [
+        "줴줴",
+        "ㅈㅈㅇㅇ"
+      ],
+      "summary": "게임 종료 인사 GG(Good Game)를 찰지게 늘여 발음한 말로, '이미 끝났다, 망했다'는 체념을 장난스럽게 표현하는 유행어",
+      "description": "게임이 끝날 때 하는 인사 'GG'를 특유의 억양으로 길게 외친 말이다. 리그 오브 레전드 스트리머 저라뎃이 경기를 관전하다 승부가 기울자 '줴줴이야~'라고 외친 장면이 클립으로 퍼지며 유행어가 됐다. 지금은 게임 밖에서도 시험을 망치거나 일이 꼬였을 때 '오늘 하루 줴줴이야'처럼 '끝났다, 망했다'는 뜻으로 쓰고, 초성으로 'ㅈㅈㅇㅇ'라고 적기도 한다. 중국어처럼 들리지만 GG를 다르게 소리 낸 것일 뿐이다.",
+      "origin": "SOOP 스트리머 저라뎃의 리그 오브 레전드 관전 방송 클립에서 시작돼 2026년 숏폼과 SNS로 퍼졌다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "approximate",
+      "lifecycle_status": "rising",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "yellow",
+        "family": "yellow",
+        "sns": "yellow"
+      },
+      "usage_note": "친구끼리 일이 틀어졌을 때 장난스럽게 쓴다.",
+      "caution": "경기 뒤 상대에게 하는 인사로 쓰면 비꼬는 느낌이 날 수 있으니, 인사는 원래대로 'GG'라고 하는 편이 좋다.",
+      "usage_examples": [
+        {
+          "situation": "단톡방",
+          "text": "과제 마감 10분 남았는데 파일 날아감… 줴줴이야"
+        },
+        {
+          "situation": "게임 중",
+          "text": "한타 졌다, 이 판 줴줴이야"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "회크닉",
+      "title": "회크닉",
+      "aliases": [
+        "회 피크닉"
+      ],
+      "summary": "'회'와 '피크닉'을 합친 말로, 수산시장에서 회를 포장해 한강공원 같은 야외에서 즐기는 나들이",
+      "description": "수산시장이나 횟집에서 회를 포장해 한강공원, 노들섬 같은 야외에서 돗자리를 펴고 먹는 나들이를 가리킨다. '치맥', '한강 라면'처럼 장소와 음식을 묶어 부르는 말의 새 변형으로, 2026년 가을 20~30대 사이에서 SNS 인증샷과 함께 퍼졌다. 언론 보도에 따르면 '회크닉' 검색량은 7월보다 9월 말에 크게 늘었다.",
+      "origin": "2026년 9월 SNS에서 퍼져 9월 말~10월 언론에 '한강 회크닉' 열풍으로 소개됐다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "green",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "나들이 계획이나 인증샷에 편하게 쓴다.",
+      "usage_examples": [
+        {
+          "situation": "단톡방",
+          "text": "이번 주말 노량진 들렀다가 한강에서 회크닉 어때?"
+        },
+        {
+          "situation": "SNS 캡션",
+          "text": "가을엔 치맥 말고 회크닉 🐟"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "엉가남",
+      "title": "엉가남",
+      "aliases": [
+        "엉덩이가 가벼운 남자"
+      ],
+      "summary": "'엉덩이가 가벼운 남자'의 줄임말로, 시키기 전에 먼저 일어나 필요한 일을 챙기는 부지런하고 배려심 있는 남자를 칭찬하는 말",
+      "description": "'엉덩이가 가볍다'는 표현을 살려, 궂은일이 생기면 먼저 일어나 정리하고 챙기는 사람을 칭찬하는 말이다. 연애 예능 '나는 SOLO' 34기에서 출연자 영호가 궂은일을 먼저 도맡는 모습으로 '엉가남'이라는 별명을 얻고 첫인상 선택에서 3표를 받으며 화제가 됐다. 이후 연애·직장·모임에서 먼저 움직이는 사람을 가리키는 말로 퍼졌다.",
+      "origin": "2026년 10월 방송된 ENA·SBS Plus '나는 SOLO' 34기 출연자 영호의 별명에서 퍼졌다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "먼저 나서서 일을 챙기는 사람을 칭찬할 때 쓴다.",
+      "caution": "'엉덩이가 가볍다'는 원래 진득하지 못하다는 뜻으로도 쓰이니, 맥락 없이 쓰면 오해할 수 있다.",
+      "usage_examples": [
+        {
+          "situation": "모임 후",
+          "text": "설거지 벌써 다 했어? 완전 엉가남이네"
+        },
+        {
+          "situation": "SNS 댓글",
+          "text": "요즘 연애시장 최고 스펙은 엉가남이래"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "감다살",
+      "title": "감다살",
+      "aliases": [
+        "감 다 살았네",
+        "감이 다 살았네"
+      ],
+      "summary": "'감이 다 살았네'의 줄임말로, 센스나 감각이 기대 이상으로 살아 있을 때 쓰는 칭찬",
+      "description": "'감이 다 살았네'를 줄인 말로, 누군가의 선택이나 결과물이 센스 있고 기대 이상일 때 칭찬하는 말이다. '오늘 코디 감다살', '이 브랜드 광고 감다살'처럼 사람, 콘텐츠, 기업 SNS 등에 두루 쓴다. 반대로 감각이 떨어졌다는 뜻의 '감다죽(감이 다 죽었다)'도 함께 쓰인다.",
+      "origin": "2025년 무렵 온라인을 중심으로 퍼진 줄임말로, 2026년에도 Z세대 대표 신조어로 꼽혔다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2025,
+      "year_precision": "approximate",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "센스 있는 선택이나 결과물을 가볍게 칭찬할 때 쓴다.",
+      "caution": "반대말 중 '감다뒤'는 거친 표현이 섞여 있어 윗사람이나 공적인 자리에서는 피하는 편이 좋다.",
+      "usage_examples": [
+        {
+          "situation": "단톡방",
+          "text": "이번 생일 선물 고른 거 진짜 감다살이다"
+        },
+        {
+          "situation": "SNS 댓글",
+          "text": "담당자 감다살 ㅋㅋ 이 타이밍에 이 밈을"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "퇴사할게여-챌린지",
+      "title": "퇴사할게여 챌린지",
+      "aliases": [
+        "퇴사할게여"
+      ],
+      "summary": "아이들 소연의 솔로곡 '퇴사할게여'에 맞춰 회사를 그만두는 상상을 연기와 춤으로 표현하는 직장인 공감 숏폼 챌린지",
+      "description": "그룹 아이들 멤버 소연(전소연)의 첫 솔로 정규 앨범 '끝내주는 인생' 타이틀곡 '퇴사할게여'를 활용한 챌린지다. 기안84가 내레이션으로 참여한 곡으로, 직장인의 퇴사 욕구를 유쾌하게 담은 제목과 가사가 공감을 얻었다. 연기와 춤을 결합한 챌린지에 기안84, 리센느 미나미, 라이즈 소희, 선우용여 등이 참여했고, 일반 이용자들도 실제 퇴사 영상이나 출근길 영상에 곡을 붙이며 밈처럼 번졌다.",
+      "origin": "2026년 9월 7일 발매된 소연의 정규 1집 '끝내주는 인생' 타이틀곡 '퇴사할게여(Narr. 기안84)'에서 시작됐다.",
+      "category": "challenge",
+      "media_type": "video",
+      "origin_year": 2026,
+      "year_precision": "exact",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "출근하기 싫은 날이나 퇴사 소식을 유쾌하게 알릴 때 쓴다.",
+      "caution": "회사 공식 채널이나 상사에게 보내면 실제 퇴사 의사로 오해받을 수 있다.",
+      "usage_examples": [
+        {
+          "situation": "SNS 캡션",
+          "text": "월요일 아침 9시, 마음속으로 퇴사할게여 🎵"
+        },
+        {
+          "situation": "단톡방",
+          "text": "오늘 회의 끝나고 퇴사할게여 챌린지 찍고 싶었음"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "오살힘",
+      "title": "오살힘",
+      "aliases": [
+        "오늘을 살아갈 힘",
+        "오늘을 살아가는 힘"
+      ],
+      "summary": "'오늘을 살아갈 힘'의 줄임말로, 좋아하는 사람·사진·음식처럼 하루를 버티게 해 주는 작은 즐거움을 가리키는 말",
+      "description": "'오늘을 살아갈(살아가는) 힘'을 줄인 말이다. 좋아하는 아이돌의 사진이나 영상, 귀여운 동물, 퇴근길 간식처럼 하루를 버티게 해 주는 대상을 '내 오살힘'이라고 부른다. 팬덤 게시물에서 최애를 향한 애정 표현으로 쓰이다 일상 표현으로 넓어졌고, 2026년 Z세대 줄임말로 여러 매체에 소개됐다. 예전의 '소확행'과 비슷한 결의 말이다.",
+      "origin": "팬덤 게시물에서 2025년 하반기부터 쓰인 것이 확인되며, 2026년 여름 Z세대 줄임말로 널리 소개됐다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2025,
+      "year_precision": "approximate",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "green",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "하루를 버티게 해 주는 대상을 소개할 때 쓴다.",
+      "usage_examples": [
+        {
+          "situation": "SNS 캡션",
+          "text": "퇴근길 붕어빵이 오늘의 오살힘"
+        },
+        {
+          "situation": "팬 계정",
+          "text": "이 무대 영상이 내 오살힘이야"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "엔믹스하다",
+      "title": "엔믹스하다",
+      "aliases": [
+        "엔믹스했다",
+        "엔믹스해버렸다"
+      ],
+      "summary": "곡 안에서 장르를 확 바꾸는 걸그룹 엔믹스의 음악처럼, 대화·분위기·태도가 갑자기 정반대로 바뀌는 상황을 뜻하는 동사형 밈",
+      "description": "걸그룹 엔믹스(NMIXX)가 한 곡 안에서 서로 다른 장르를 갑자기 전환하는 'MIXX POP' 스타일과 'Change Up' 구호에서 나온 말이다. 기분이 갑자기 좋아지거나 나빠질 때, 날씨가 급변할 때, 대화 주제나 태도가 확 바뀔 때 '엔믹스했다'라고 표현한다. 2026년 여름 X(옛 트위터)를 중심으로 동사처럼 쓰이며 퍼졌다.",
+      "origin": "2026년 6월 말 X에서 쓰이기 시작해 7월 초 트렌드 뉴스레터 등에 소개됐다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "lifecycle_status": "rising",
+      "safety_level": "green",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "green",
+        "family": "green",
+        "sns": "green"
+      },
+      "usage_note": "분위기나 태도가 갑자기 바뀐 상황을 재치 있게 표현할 때 쓴다.",
+      "usage_examples": [
+        {
+          "situation": "단톡방",
+          "text": "아까까지 울더니 치킨 오니까 바로 엔믹스함"
+        },
+        {
+          "situation": "SNS 캡션",
+          "text": "오전엔 비, 오후엔 쨍쨍. 날씨 엔믹스했다"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    },
+    {
+      "slug": "톤망진창",
+      "title": "톤망진창",
+      "aliases": [],
+      "summary": "'톤'과 '엉망진창'을 합친 뷰티 신조어로, 피부 톤과 맞지 않는 화장·옷 색 때문에 전체가 어색해진 상태",
+      "description": "'톤'과 '엉망진창'을 합친 말로, 피부 톤에 맞지 않는 파운데이션 같은 베이스 메이크업이나 색조를 골라 전체적인 인상이 어색해진 상태를 뜻한다. 퍼스널 컬러 열풍과 함께 '톤알못', '톤팡질팡' 같은 뷰티 신조어와 나란히 쓰였고, 이후 옷이나 사진 색감이 어울리지 않을 때도 쓴다.",
+      "origin": "2018년 무렵 뷰티 매체의 '뷰티 신조어' 소개 기사에 실리며 알려졌다.",
+      "category": "phrase",
+      "media_type": "text",
+      "origin_year": 2018,
+      "year_precision": "approximate",
+      "lifecycle_status": "active",
+      "safety_level": "yellow",
+      "moderation_status": "pending",
+      "published_at": null,
+      "usage_context": {
+        "work": "yellow",
+        "friends": "yellow",
+        "family": "yellow",
+        "sns": "yellow"
+      },
+      "usage_note": "자기 화장이나 착장이 실패했을 때 자조적으로 쓴다.",
+      "caution": "다른 사람의 외모나 화장을 지적하는 데 쓰면 비하로 들릴 수 있다.",
+      "usage_examples": [
+        {
+          "situation": "친구에게",
+          "text": "파운데이션 호수 잘못 사서 오늘 톤망진창이야"
+        },
+        {
+          "situation": "SNS 캡션",
+          "text": "조명 탓인지 사진이 톤망진창… 다시 찍자"
+        }
+      ],
+      "origin_kind": "catalog",
+      "doc_class": "meme"
+    }
+  ],
+  "sources": [
+    {
+      "meme_slug": "체포하겠어-챌린지",
+      "url": "https://www.mk.co.kr/news/musics/12170044",
+      "title": "아일릿, ‘체포하겠어’ 챌린지 열풍 예고…강렬 ‘호루라기 사운드’",
+      "publisher": "스타투데이(매일경제)"
+    },
+    {
+      "meme_slug": "체포하겠어-챌린지",
+      "url": "https://www.topstarnews.net/news/articleView.html?idxno=16259969",
+      "title": "아이유-아일릿 원희, ‘체포하겠어’ 챌린지 성사…‘좋은 날’ 커버 인연 재조명",
+      "publisher": "톱스타뉴스"
+    },
+    {
+      "meme_slug": "체포하겠어-챌린지",
+      "url": "https://www.starnewskorea.com/star/2026/11/04/2026110418333529525",
+      "title": "아이브 레이, 아일릿 원희에 '체포'당했다..깜찍한 투샷 챌린지",
+      "publisher": "스타뉴스"
+    },
+    {
+      "meme_slug": "체포하겠어-챌린지",
+      "url": "https://sports.donga.com/ent/article/all/20261106/134971093/1",
+      "title": "‘교수님이 왜 거기서 나와?’…아이돌 챌린지의 ‘선넘는 콜라보’",
+      "publisher": "스포츠동아"
+    },
+    {
+      "meme_slug": "체포하겠어-챌린지",
+      "url": "https://www.huffingtonpost.kr/article/261315",
+      "title": "아일릿 신곡 '체포하겠어' 무대, '짧은 치마' 여성 경찰 콘셉트 논란",
+      "publisher": "허프포스트코리아"
+    },
+    {
+      "meme_slug": "영원할-건가-보다",
+      "url": "https://maily.so/trendaword/posts/w6ovxlgmzk5",
+      "title": "[Trend A Word #638] 나 왜 이 출근이 영원할 것만 같지? 영원할 건가 보다…",
+      "publisher": "Trend A Word"
+    },
+    {
+      "meme_slug": "영원할-건가-보다",
+      "url": "https://blog.hsad.co.kr/3798",
+      "title": "[월간 2026밈] 11월 편 - 나 왜 이 순간이 영원할 것 같지?",
+      "publisher": "HSAD 공식 블로그"
+    },
+    {
+      "meme_slug": "영원할-건가-보다",
+      "url": "https://meme100.me/meme/475",
+      "title": "영원할 건가 보다 뜻·유래",
+      "publisher": "밈 백과사전"
+    },
+    {
+      "meme_slug": "l을-가져가",
+      "url": "https://www.yna.co.kr/view/AKR20261104078900505",
+      "title": "[소셜＋] \"애를 가져가?\" 부모들 갸웃…초등생 휩쓴 'L 챌린지'",
+      "publisher": "연합뉴스"
+    },
+    {
+      "meme_slug": "l을-가져가",
+      "url": "https://blog.hsad.co.kr/3798",
+      "title": "[월간 2026밈] 11월 편 - L을 가져가",
+      "publisher": "HSAD 공식 블로그"
+    },
+    {
+      "meme_slug": "l을-가져가",
+      "url": "https://www.ohmynews.com/NWS_Web/Event/FrogPress/Suwon/bbs_view.aspx?pBBS_CD=000001628128&pBOARD_CD=J0278",
+      "title": "요즘 초등학생들 사이에서 유행중인 춤, L을 가져가의 정체는?",
+      "publisher": "오마이뉴스 청개구리 기자단"
+    },
+    {
+      "meme_slug": "빼난지원금",
+      "url": "https://www.mt.co.kr/society/2026/11/10/2026111007574324321",
+      "title": "빼빼로 못 받으면 '빼난지원금' 수령?…아일릿 \"우리도 받았었다\"",
+      "publisher": "머니투데이"
+    },
+    {
+      "meme_slug": "빼난지원금",
+      "url": "https://www.mk.co.kr/news/society/12205361",
+      "title": "“빼빼로 못 받으면 ‘빼난지원금’이라도”…초등학생이 만든 신조어, 뭐길래",
+      "publisher": "매일경제"
+    },
+    {
+      "meme_slug": "빼난지원금",
+      "url": "https://www.fnnews.com/news/202611111620523928",
+      "title": "\"오늘 빼빼로 못 받았다면?\"… 초등생이 만든 웃픈 신조어 '빼난지원금' 화제",
+      "publisher": "파이낸셜뉴스"
+    },
+    {
+      "meme_slug": "빼난지원금",
+      "url": "https://www.diarypoint.com/news/articleView.html?idxno=7047",
+      "title": "빼난지원금 뜻은? 빼빼로 못 받은 친구에게 나눠주는 밈",
+      "publisher": "다이어리포인트"
+    },
+    {
+      "meme_slug": "가로등-신사",
+      "url": "https://www.joongang.co.kr/article/25468058",
+      "title": "“꺅!” 아이돌인 줄…롯데월드 입장객 30% 늘린 ‘가로등 신사’ 정체",
+      "publisher": "중앙일보"
+    },
+    {
+      "meme_slug": "가로등-신사",
+      "url": "https://www.hankyung.com/article/2026101546431",
+      "title": "가로등 신사·촛대 숙녀의 손짓…잊혀진 꿈에 불 밝히다",
+      "publisher": "한국경제"
+    },
+    {
+      "meme_slug": "가로등-신사",
+      "url": "https://imnews.imbc.com/original/14f/6856097_29052.html",
+      "title": "[14F] 가로등이 잘생겼다고?... 인외 캐릭터 ‘가로등 신사’ 화제",
+      "publisher": "MBC 14F"
+    },
+    {
+      "meme_slug": "가로등-신사",
+      "url": "https://www.insight.co.kr/news/578886",
+      "title": "“표정 없는 가로등 신사에 빠졌다”... 롯데월드 ‘인외’ 캐릭터 열풍",
+      "publisher": "인사이트"
+    },
+    {
+      "meme_slug": "느리구나-oo하는-것조차",
+      "url": "https://www.youtube.com/watch?v=Oxp9eFV4AxU",
+      "title": "느리구나, 대피하는 것 조차",
+      "publisher": "소방관 삼촌 (YouTube)",
+      "platform": "YouTube",
+      "source_role": "usage_example"
+    },
+    {
+      "meme_slug": "느리구나-oo하는-것조차",
+      "url": "https://jjalnews.com/archives/61774",
+      "title": "느리구나, OO하는 것조차 (블리치 뱌쿠야 대사 패러디)",
+      "publisher": "짤뉴스"
+    },
+    {
+      "meme_slug": "느리구나-oo하는-것조차",
+      "url": "https://meme100.me/meme/456",
+      "title": "느리구나, OO하는 것조차 뜻·유래",
+      "publisher": "밈 백과사전"
+    },
+    {
+      "meme_slug": "느리구나-oo하는-것조차",
+      "url": "https://www.instablank.com/meme/237",
+      "title": "느리구나, OO하는 것조차 밈 총정리",
+      "publisher": "인스타공백닷컴"
+    },
+    {
+      "meme_slug": "책없쾌",
+      "url": "https://www.yna.co.kr/view/AKR20260721114800011",
+      "title": "[샷!] \"누가 이기든 내 알 바 아니라 너무 좋아\"",
+      "publisher": "연합뉴스"
+    },
+    {
+      "meme_slug": "책없쾌",
+      "url": "https://weekly.khan.co.kr/article/202608010600021",
+      "title": "[꼬다리] ‘책없쾌’의 시대",
+      "publisher": "주간경향"
+    },
+    {
+      "meme_slug": "책없쾌",
+      "url": "https://www.careet.net/1945",
+      "title": "책없쾌, 오살힘, 사보필 뜻은? 요즘 Z세대 줄임말 모음",
+      "publisher": "캐릿"
+    },
+    {
+      "meme_slug": "줴줴이야",
+      "url": "https://vod.sooplive.com/player/185893997",
+      "title": "[클립]저라뎃 유행어 \"줴줴이야\"의 유래 / 구슬요 반응",
+      "publisher": "SOOP VOD",
+      "platform": "SOOP"
+    },
+    {
+      "meme_slug": "줴줴이야",
+      "url": "https://www.tpick.co.kr/post/10967",
+      "title": "'줴줴이야' 무슨 뜻이야? 요즘 게임·SNS에서 자꾸 보이는 유행어 정체",
+      "publisher": "티픽"
+    },
+    {
+      "meme_slug": "줴줴이야",
+      "url": "https://hangeul-tool.com/blog/newword-2026-autumn",
+      "title": "요즘 신조어 2026 가을편: 책없쾌·젬민이·난리자베스·줴줴이야 뜻",
+      "publisher": "한글도구함"
+    },
+    {
+      "meme_slug": "회크닉",
+      "url": "https://www.joongang.co.kr/article/25468384",
+      "title": "“뻔한 라면 그만”…검색량 110배 폭증, 한강 돗자리 휩쓴 이 음식 [비크닉]",
+      "publisher": "중앙일보"
+    },
+    {
+      "meme_slug": "회크닉",
+      "url": "https://magazine.hankyung.com/business/article/202609304040b",
+      "title": "요즘 한강에선 다 이거 먹는다… MZ 빠진 회크닉",
+      "publisher": "한경비즈니스"
+    },
+    {
+      "meme_slug": "회크닉",
+      "url": "https://www.sedaily.com/article/20099994",
+      "title": "“한강에서 치맥 대신 회 한접시”…2030 가을 ‘회크닉’ 열풍",
+      "publisher": "서울경제"
+    },
+    {
+      "meme_slug": "엉가남",
+      "url": "https://www.joynews24.com/view/2015155",
+      "title": "'나는솔로' 34기 영호, 첫인상 싹쓸이⋯7누나 영수·상철 \"집 하나 더\"",
+      "publisher": "조이뉴스24"
+    },
+    {
+      "meme_slug": "엉가남",
+      "url": "https://programs.sbs.co.kr/plus/iamsolo/clip/69611/22000637914",
+      "title": "나는 SOLO : 요즘 연애시장에서 제일 귀한 타입.. 엉가남 영호",
+      "publisher": "SBS Plus",
+      "platform": "SBS",
+      "source_role": "official_reupload"
+    },
+    {
+      "meme_slug": "감다살",
+      "url": "https://www.sedaily.com/article/14070510",
+      "title": "[신조어 사전] 감다살",
+      "publisher": "서울경제"
+    },
+    {
+      "meme_slug": "감다살",
+      "url": "https://www.newspim.com/news/view/20250905000852",
+      "title": "Z세대 신조어, '느좋'서 '테토녀'까지 세대 간 언어 격차",
+      "publisher": "뉴스핌"
+    },
+    {
+      "meme_slug": "퇴사할게여-챌린지",
+      "url": "https://www.news1.kr/videos/24893",
+      "title": "\"관둬!\" 리센느부터 선우용여까지…재미·감동 다 잡은 '퇴사할게여' 챌린지 화제",
+      "publisher": "뉴스1"
+    },
+    {
+      "meme_slug": "퇴사할게여-챌린지",
+      "url": "https://www3.edaily.co.kr/News/Read?mediaCodeNo=257&newsId=04857686645579136",
+      "title": "소연, ‘퇴사할게여’로 통했다… 직장인 마음까지 저격",
+      "publisher": "이데일리"
+    },
+    {
+      "meme_slug": "퇴사할게여-챌린지",
+      "url": "https://tvdaily.co.kr/read.php3?aid=17889382191801595010",
+      "title": "\"저도 퇴사할게요\"…아이들 소연 신곡에 연예계·기업 '유쾌한 대동단결'",
+      "publisher": "티브이데일리"
+    },
+    {
+      "meme_slug": "오살힘",
+      "url": "https://www.arenakorea.com/news/articleView.html?idxno=71964",
+      "title": "신조어에 대하여",
+      "publisher": "아레나옴므플러스"
+    },
+    {
+      "meme_slug": "오살힘",
+      "url": "https://www.careet.net/1945",
+      "title": "책없쾌, 오살힘, 사보필 뜻은? 요즘 Z세대 줄임말 모음",
+      "publisher": "캐릿"
+    },
+    {
+      "meme_slug": "오살힘",
+      "url": "https://onmeme.com/osalhim",
+      "title": "오살힘(=오늘을 살아갈 힘) 뜻 · 유래",
+      "publisher": "온밈"
+    },
+    {
+      "meme_slug": "엔믹스하다",
+      "url": "https://maily.so/trendaword/posts/knrj18g7rld",
+      "title": "[Trend A Word #575] 엔믹스해버렸다",
+      "publisher": "Trend A Word"
+    },
+    {
+      "meme_slug": "엔믹스하다",
+      "url": "https://onmeme.com/nmixx-hada",
+      "title": "엔믹스하다(=엔믹스했다) 뜻 · 유래",
+      "publisher": "온밈"
+    },
+    {
+      "meme_slug": "엔믹스하다",
+      "url": "https://www.haradaeigo.com/buzzword2026/w/nmixx-hada/",
+      "title": "「엔믹스하다」の意味は？",
+      "publisher": "原田英語"
+    },
+    {
+      "meme_slug": "톤망진창",
+      "url": "https://www.mhns.co.kr/news/articleView.html?idxno=148943",
+      "title": "[문화뉴스 울트라문화] 알.쓸.신.뷰 ‘Beauty Word’",
+      "publisher": "문화뉴스"
+    },
+    {
+      "meme_slug": "톤망진창",
+      "url": "https://www.elle.co.kr/article/22341",
+      "title": "뷰티 '인싸' 되고 싶니?",
+      "publisher": "엘르 코리아"
+    }
+  ],
+  "catalog": {
+    "memes": [
+      {
+        "slug": "딸깍",
+        "title": "딸깍",
+        "aliases": []
+      },
+      {
+        "slug": "밤티",
+        "title": "밤티",
+        "aliases": []
+      },
+      {
+        "slug": "야르",
+        "title": "야르",
+        "aliases": []
+      },
+      {
+        "slug": "야르(야르송)",
+        "title": "야르(야르송)",
+        "aliases": []
+      },
+      {
+        "slug": "거제-야호",
+        "title": "거제 야호",
+        "aliases": []
+      },
+      {
+        "slug": "영크크",
+        "title": "영크크",
+        "aliases": []
+      },
+      {
+        "slug": "영크크·늙크크",
+        "title": "영크크·늙크크",
+        "aliases": []
+      },
+      {
+        "slug": "파라파라나-춰야겠다",
+        "title": "파라파라나 춰야겠다",
+        "aliases": []
+      },
+      {
+        "slug": "아자스",
+        "title": "아자스",
+        "aliases": []
+      },
+      {
+        "slug": "동결건조-밈",
+        "title": "동결건조 밈",
+        "aliases": []
+      },
+      {
+        "slug": "엄마-동결건조",
+        "title": "엄마 동결건조",
+        "aliases": []
+      }
+    ],
+    "near_duplicates": []
+  }
+}

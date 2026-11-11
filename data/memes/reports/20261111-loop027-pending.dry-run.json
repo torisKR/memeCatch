@@ -1,0 +1,465 @@
+{
+  "ok": true,
+  "mode": "dry-run",
+  "database_connected": false,
+  "batch_id": "loop-027-pending-2026-11-11",
+  "errors": [],
+  "warnings": [
+    "체포하겠어-챌린지: pending video has no contents and no media",
+    "체포하겠어-챌린지: pending meme is missing translations: en, ja, zh, zh-tw",
+    "영원할-건가-보다: pending video has no contents and no media",
+    "영원할-건가-보다: pending meme is missing translations: en, ja, zh, zh-tw",
+    "l을-가져가: pending video has no contents and no media",
+    "l을-가져가: pending meme is missing translations: en, ja, zh, zh-tw",
+    "빼난지원금: pending meme is missing translations: en, ja, zh, zh-tw",
+    "가로등-신사: pending video has no contents and no media",
+    "가로등-신사: pending meme is missing translations: en, ja, zh, zh-tw",
+    "느리구나-oo하는-것조차: pending meme is missing translations: en, ja, zh, zh-tw",
+    "책없쾌: pending meme is missing translations: en, ja, zh, zh-tw",
+    "줴줴이야: pending meme is missing translations: en, ja, zh, zh-tw",
+    "회크닉: pending meme is missing translations: en, ja, zh, zh-tw",
+    "엉가남: pending meme is missing translations: en, ja, zh, zh-tw",
+    "감다살: pending meme is missing translations: en, ja, zh, zh-tw",
+    "퇴사할게여-챌린지: pending video has no contents and no media",
+    "퇴사할게여-챌린지: pending meme is missing translations: en, ja, zh, zh-tw",
+    "오살힘: pending meme is missing translations: en, ja, zh, zh-tw",
+    "엔믹스하다: pending meme is missing translations: en, ja, zh, zh-tw",
+    "톤망진창: pending meme is missing translations: en, ja, zh, zh-tw"
+  ],
+  "summary": {
+    "memes": {
+      "insert": 15,
+      "skip_existing": 0,
+      "reject": 0
+    },
+    "meme_sources": {
+      "insert": 47,
+      "skip_existing": 0,
+      "reject": 0
+    }
+  },
+  "actions": [
+    {
+      "table": "memes",
+      "key": "체포하겠어-챌린지",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "체포하겠어-챌린지: pending video has no contents and no media",
+        "체포하겠어-챌린지: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "영원할-건가-보다",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "영원할-건가-보다: pending video has no contents and no media",
+        "영원할-건가-보다: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "l을-가져가",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "l을-가져가: pending video has no contents and no media",
+        "l을-가져가: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "빼난지원금",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "빼난지원금: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "가로등-신사",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "가로등-신사: pending video has no contents and no media",
+        "가로등-신사: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "느리구나-oo하는-것조차",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "느리구나-oo하는-것조차: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "책없쾌",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "책없쾌: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "줴줴이야",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "줴줴이야: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "회크닉",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "회크닉: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "엉가남",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "엉가남: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "감다살",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "감다살: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "퇴사할게여-챌린지",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "퇴사할게여-챌린지: pending video has no contents and no media",
+        "퇴사할게여-챌린지: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "오살힘",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "오살힘: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "엔믹스하다",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "엔믹스하다: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "memes",
+      "key": "톤망진창",
+      "action": "insert",
+      "reasons": [],
+      "warnings": [
+        "톤망진창: pending meme is missing translations: en, ja, zh, zh-tw"
+      ]
+    },
+    {
+      "table": "meme_sources",
+      "key": "체포하겠어-챌린지\nhttps://www.mk.co.kr/news/musics/12170044",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "체포하겠어-챌린지\nhttps://www.topstarnews.net/news/articleView.html?idxno=16259969",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "체포하겠어-챌린지\nhttps://www.starnewskorea.com/star/2026/11/04/2026110418333529525",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "체포하겠어-챌린지\nhttps://sports.donga.com/ent/article/all/20261106/134971093/1",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "체포하겠어-챌린지\nhttps://www.huffingtonpost.kr/article/261315",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "영원할-건가-보다\nhttps://maily.so/trendaword/posts/w6ovxlgmzk5",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "영원할-건가-보다\nhttps://blog.hsad.co.kr/3798",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "영원할-건가-보다\nhttps://meme100.me/meme/475",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "l을-가져가\nhttps://www.yna.co.kr/view/AKR20261104078900505",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "l을-가져가\nhttps://blog.hsad.co.kr/3798",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "l을-가져가\nhttps://www.ohmynews.com/NWS_Web/Event/FrogPress/Suwon/bbs_view.aspx?pBBS_CD=000001628128&pBOARD_CD=J0278",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "빼난지원금\nhttps://www.mt.co.kr/society/2026/11/10/2026111007574324321",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "빼난지원금\nhttps://www.mk.co.kr/news/society/12205361",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "빼난지원금\nhttps://www.fnnews.com/news/202611111620523928",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "빼난지원금\nhttps://www.diarypoint.com/news/articleView.html?idxno=7047",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "가로등-신사\nhttps://www.joongang.co.kr/article/25468058",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "가로등-신사\nhttps://www.hankyung.com/article/2026101546431",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "가로등-신사\nhttps://imnews.imbc.com/original/14f/6856097_29052.html",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "가로등-신사\nhttps://www.insight.co.kr/news/578886",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "느리구나-oo하는-것조차\nhttps://www.youtube.com/watch?v=Oxp9eFV4AxU",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "느리구나-oo하는-것조차\nhttps://jjalnews.com/archives/61774",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "느리구나-oo하는-것조차\nhttps://meme100.me/meme/456",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "느리구나-oo하는-것조차\nhttps://www.instablank.com/meme/237",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "책없쾌\nhttps://www.yna.co.kr/view/AKR20260721114800011",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "책없쾌\nhttps://weekly.khan.co.kr/article/202608010600021",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "책없쾌\nhttps://www.careet.net/1945",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "줴줴이야\nhttps://vod.sooplive.com/player/185893997",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "줴줴이야\nhttps://www.tpick.co.kr/post/10967",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "줴줴이야\nhttps://hangeul-tool.com/blog/newword-2026-autumn",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "회크닉\nhttps://www.joongang.co.kr/article/25468384",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "회크닉\nhttps://magazine.hankyung.com/business/article/202609304040b",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "회크닉\nhttps://www.sedaily.com/article/20099994",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엉가남\nhttps://www.joynews24.com/view/2015155",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엉가남\nhttps://programs.sbs.co.kr/plus/iamsolo/clip/69611/22000637914",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "감다살\nhttps://www.sedaily.com/article/14070510",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "감다살\nhttps://www.newspim.com/news/view/20250905000852",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "퇴사할게여-챌린지\nhttps://www.news1.kr/videos/24893",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "퇴사할게여-챌린지\nhttps://www3.edaily.co.kr/News/Read?mediaCodeNo=257&newsId=04857686645579136",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "퇴사할게여-챌린지\nhttps://tvdaily.co.kr/read.php3?aid=17889382191801595010",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "오살힘\nhttps://www.arenakorea.com/news/articleView.html?idxno=71964",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "오살힘\nhttps://www.careet.net/1945",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "오살힘\nhttps://onmeme.com/osalhim",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엔믹스하다\nhttps://maily.so/trendaword/posts/knrj18g7rld",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엔믹스하다\nhttps://onmeme.com/nmixx-hada",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엔믹스하다\nhttps://www.haradaeigo.com/buzzword2026/w/nmixx-hada",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "톤망진창\nhttps://www.mhns.co.kr/news/articleView.html?idxno=148943",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "톤망진창\nhttps://www.elle.co.kr/article/22341",
+      "action": "insert",
+      "reasons": []
+    }
+  ]
+}

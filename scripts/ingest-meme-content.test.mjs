@@ -387,7 +387,7 @@ test("the loop-027 batch inserts 15 pending memes and matches the committed SQL"
   const plan = planContentBatch(input, { now });
   assert.equal(plan.ok, true);
   assert.deepEqual(plan.summary.memes, { insert: 15, skip_existing: 0, reject: 0 });
-  assert.deepEqual(plan.summary.meme_sources, { insert: 47, skip_existing: 0, reject: 0 });
+  assert.deepEqual(plan.summary.meme_sources, { insert: 49, skip_existing: 0, reject: 0 });
   for (const meme of input.memes) {
     assert.equal(meme.moderation_status, "pending");
     assert.equal(meme.published_at, null);

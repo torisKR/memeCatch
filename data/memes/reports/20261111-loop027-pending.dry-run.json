@@ -33,7 +33,7 @@
       "reject": 0
     },
     "meme_sources": {
-      "insert": 47,
+      "insert": 49,
       "skip_existing": 0,
       "reject": 0
     }
@@ -295,6 +295,18 @@
     },
     {
       "table": "meme_sources",
+      "key": "느리구나-oo하는-것조차\nhttps://www.youtube.com/watch?v=ut-_ihLdJ8Y",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "느리구나-oo하는-것조차\nhttps://gogumafarm.kr/%EB%82%B4%EA%B0%80-%EA%B3%A0%EA%B5%AC%EB%A7%88%ED%8C%9C%EC%9D%B4%EC%97%88%EC%9C%BC%EB%A9%B4-%EC%9D%B4-%EB%B0%88%EC%9D%80-%EA%BC%AD-%EC%86%8C%EA%B0%9C%ED%95%98%EA%B3%A0-%EC%8B%B6%EC%9D%8C-2026",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
       "key": "느리구나-oo하는-것조차\nhttps://www.youtube.com/watch?v=Oxp9eFV4AxU",
       "action": "insert",
       "reasons": []
@@ -302,18 +314,6 @@
     {
       "table": "meme_sources",
       "key": "느리구나-oo하는-것조차\nhttps://jjalnews.com/archives/61774",
-      "action": "insert",
-      "reasons": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "느리구나-oo하는-것조차\nhttps://meme100.me/meme/456",
-      "action": "insert",
-      "reasons": []
-    },
-    {
-      "table": "meme_sources",
-      "key": "느리구나-oo하는-것조차\nhttps://www.instablank.com/meme/237",
       "action": "insert",
       "reasons": []
     },
@@ -368,6 +368,18 @@
     {
       "table": "meme_sources",
       "key": "회크닉\nhttps://www.sedaily.com/article/20099994",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엉가남\nhttps://www.sportschosun.com/entertainment/2025-10-24/202510240100149240019923",
+      "action": "insert",
+      "reasons": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "엉가남\nhttps://sports.donga.com/ent/article/all/20251024/132626552/1",
       "action": "insert",
       "reasons": []
     },

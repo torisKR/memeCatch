@@ -11,6 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: memecatch
       MEMECATCH_DB_PASSWORD: ${MEMECATCH_DB_PASSWORD:?MEMECATCH_DB_PASSWORD is required}
+      MEMECATCH_BACKUP_DB_PASSWORD: ${MEMECATCH_BACKUP_DB_PASSWORD:?MEMECATCH_BACKUP_DB_PASSWORD is required}
     command:
       - postgres
       - -c
@@ -30,6 +31,7 @@ services:
       - ./deploy/postgres/init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
       - ./deploy/postgres/00-bootstrap.sql:/sql/00-bootstrap.sql:ro
       - ./deploy/postgres/99-app-identity.sql:/sql/99-app-identity.sql:ro
+      - ./deploy/postgres/backup-role.sh:/sql/backup-role.sh:ro
       - ./supabase/migrations:/migrations:ro
     networks: [memecatch]
     healthcheck:
@@ -205,7 +207,7 @@ services:
     mem_limit: 256m
     cpus: 0.10
     environment:
-      DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
+      DATABASE_URL: postgresql://memecatch_backup:${MEMECATCH_BACKUP_DB_PASSWORD}@postgres:5432/memecatch
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}

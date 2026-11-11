@@ -31,6 +31,26 @@ for _ in $(seq 1 60); do
 done
 docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null
 
+filtered="$(awk -f "$root/scripts/postgres/filter-pg17-dump.awk" <<'EOF'
+SET transaction_timeout = 0;
+SELECT pg_catalog.set_config('transaction_timeout', '0', false);
+SET session_replication_role = origin;
+COPY public.memes (title) FROM stdin;
+SET transaction_timeout = 0;
+\.
+SELECT 1;
+EOF
+)"
+timeout_lines="$(printf '%s\n' "$filtered" | grep -c '^SET transaction_timeout = 0;$' || true)"
+if [[ "$timeout_lines" != "1" || "$filtered" == *"set_config"* || "$filtered" == *"session_replication_role"* ]]; then
+  echo "memecatch migrate test: PG17 settings were not filtered" >&2
+  printf '%s\n' "$filtered" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$filtered" | awk 'BEGIN { copy = 0 } /^COPY / { copy = 1 } /^\\\.$/ { copy = 0 } /^SET transaction_timeout = 0;$/ { if (copy != 1) bad = 1 } END { exit bad }'; then
+  echo "memecatch migrate test: transaction_timeout survived outside COPY data" >&2
+  exit 1
+fi
 psql_exec() {
   docker exec -i "$server" psql -U postgres -p "$port" -v ON_ERROR_STOP=1 "$@"
 }
@@ -102,6 +122,15 @@ count_of() {
   docker exec "$server" psql -U postgres -p "$port" -d "$database" -At -c "$query"
 }
 
+psql_exec -d postgres <<'SQL'
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'memecatch') THEN
+    CREATE ROLE memecatch NOLOGIN;
+  END IF;
+END $$;
+SQL
+
 echo "memecatch migrate test: success path"
 psql_exec -c "DROP DATABASE IF EXISTS fixture_source;"
 psql_exec -c "DROP DATABASE IF EXISTS memecatch;"
@@ -126,6 +155,24 @@ VALUES (
   '{"nickname":"밈러"}'::jsonb
 );
 SQL
+for database in fixture_source memecatch; do
+  psql_exec -d "$database" <<'SQL'
+ALTER TABLE public.memes ADD COLUMN tag_id integer;
+ALTER TABLE public.tags ADD COLUMN meme_id uuid;
+ALTER TABLE public.memes
+  ADD CONSTRAINT memes_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags (id);
+ALTER TABLE public.tags
+  ADD CONSTRAINT tags_meme_id_fkey FOREIGN KEY (meme_id) REFERENCES public.memes (id);
+SQL
+done
+psql_exec -d fixture_source <<'SQL'
+UPDATE public.tags
+   SET meme_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'
+ WHERE name = 'one';
+UPDATE public.memes
+   SET tag_id = (SELECT id FROM public.tags WHERE name = 'one')
+ WHERE id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';
+SQL
 run_migration fixture_source memecatch
 [[ "$(count_of memecatch 'SELECT count(*) FROM public.memes')" == "2" ]]
 [[ "$(count_of memecatch 'SELECT count(*) FROM public.tags')" == "3" ]]
@@ -133,6 +180,7 @@ run_migration fixture_source memecatch
 [[ "$(count_of memecatch 'SELECT count(*) FROM public."user"')" == "1" ]]
 [[ "$(count_of memecatch 'SELECT count(*) FROM public.account')" == "1" ]]
 [[ "$(count_of memecatch "SELECT \"emailVerified\" FROM public.\"user\"")" == "t" ]]
+[[ "$(count_of memecatch "SELECT pg_get_userbyid(c.relowner) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'user'")" == "memecatch" ]]
 [[ "$(count_of memecatch_premigrate 'SELECT count(*) FROM public.memes')" == "5" ]]
 [[ "$(count_of memecatch_premigrate 'SELECT count(*) FROM public.tags')" == "17" ]]
 echo "memecatch migrate test: success path kept the seeded database aside"
@@ -148,14 +196,14 @@ base_schema fixture_mismatch
 base_schema memecatch_fail
 seed_target memecatch_fail
 psql_exec -d memecatch_fail <<'SQL'
-CREATE FUNCTION public.add_extra_tag() RETURNS trigger
+CREATE FUNCTION public.add_extra_tag() RETURNS boolean
 LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO public.tags (id, name) VALUES (1000, 'from-trigger');
-  RETURN NEW;
+  INSERT INTO public.tags (id, name) VALUES (1000, 'from-check')
+  ON CONFLICT (id) DO NOTHING;
+  RETURN true;
 END $$;
-CREATE TRIGGER memes_extra AFTER INSERT ON public.memes
-FOR EACH ROW EXECUTE FUNCTION public.add_extra_tag();
+ALTER TABLE public.memes ADD CONSTRAINT memes_extra CHECK (public.add_extra_tag()) NOT VALID;
 SQL
 psql_exec -d fixture_mismatch <<'SQL'
 INSERT INTO public.memes (id, title) VALUES ('cccccccc-cccc-4ccc-8ccc-ccccccccccc1', 'only');

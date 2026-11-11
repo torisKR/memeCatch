@@ -46,7 +46,30 @@ CREATE TABLE IF NOT EXISTS auth.users (
   updated_at timestamptz NOT NULL DEFAULT now(),
   is_anonymous boolean NOT NULL DEFAULT false,
   banned_until timestamptz,
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  instance_id uuid,
+  aud character varying(255),
+  role character varying(255),
+  invited_at timestamptz,
+  confirmation_token character varying(255),
+  confirmation_sent_at timestamptz,
+  recovery_token character varying(255),
+  recovery_sent_at timestamptz,
+  email_change_token_new character varying(255),
+  email_change character varying(255),
+  email_change_sent_at timestamptz,
+  last_sign_in_at timestamptz,
+  is_super_admin boolean,
+  phone text,
+  phone_confirmed_at timestamptz,
+  phone_change text,
+  phone_change_token character varying(255),
+  phone_change_sent_at timestamptz,
+  email_change_token_current character varying(255),
+  email_change_confirm_status smallint,
+  reauthentication_token character varying(255),
+  reauthentication_sent_at timestamptz,
+  is_sso_user boolean
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS auth_users_email_lower_idx
@@ -58,14 +81,17 @@ RETURNS jsonb
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT COALESCE(
-    NULLIF(current_setting('request.jwt.claims', true), '')::jsonb,
-    jsonb_build_object(
-      'role', COALESCE(NULLIF(current_setting('app.db_role', true), ''), 'anon'),
-      'sub', NULLIF(current_setting('app.user_id', true), ''),
-      'is_anonymous', COALESCE(NULLIF(current_setting('app.is_anonymous', true), ''), 'false')
+  SELECT CASE
+    WHEN session_user::text = 'memecatch' THEN COALESCE(
+      NULLIF(current_setting('request.jwt.claims', true), '')::jsonb,
+      jsonb_build_object(
+        'role', COALESCE(NULLIF(current_setting('app.db_role', true), ''), 'anon'),
+        'sub', NULLIF(current_setting('app.user_id', true), ''),
+        'is_anonymous', COALESCE(NULLIF(current_setting('app.is_anonymous', true), ''), 'false')
+      )
     )
-  );
+    ELSE NULL
+  END;
 $$;
 
 CREATE OR REPLACE FUNCTION auth.role()
@@ -81,13 +107,16 @@ RETURNS uuid
 LANGUAGE sql
 STABLE
 AS $$
-  SELECT NULLIF(
-    COALESCE(
-      NULLIF(current_setting('app.user_id', true), ''),
-      auth.jwt() ->> 'sub'
-    ),
-    ''
-  )::uuid;
+  SELECT CASE
+    WHEN session_user::text = 'memecatch' THEN NULLIF(
+      COALESCE(
+        NULLIF(current_setting('app.user_id', true), ''),
+        auth.jwt() ->> 'sub'
+      ),
+      ''
+    )::uuid
+    ELSE NULL
+  END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.app_current_user_id()

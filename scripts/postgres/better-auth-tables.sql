@@ -53,6 +53,12 @@ CREATE INDEX IF NOT EXISTS "verification_identifier_idx" ON "verification" (iden
 
 DO $$
 BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'memecatch') THEN
+    EXECUTE 'ALTER TABLE public."user" OWNER TO memecatch';
+    EXECUTE 'ALTER TABLE public.session OWNER TO memecatch';
+    EXECUTE 'ALTER TABLE public.account OWNER TO memecatch';
+    EXECUTE 'ALTER TABLE public.verification OWNER TO memecatch';
+  END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
     EXECUTE 'GRANT SELECT ON TABLE public."user" TO service_role';
     EXECUTE 'GRANT SELECT ON TABLE public.session TO service_role';

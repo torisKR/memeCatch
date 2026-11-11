@@ -40,6 +40,28 @@ function bindValue(value: unknown, udt: string | undefined): unknown {
   return value;
 }
 
+const BUILTIN_UDT = new Set([
+  "bool",
+  "bpchar",
+  "bytea",
+  "date",
+  "float4",
+  "float8",
+  "int2",
+  "int4",
+  "int8",
+  "json",
+  "jsonb",
+  "name",
+  "numeric",
+  "oid",
+  "text",
+  "timestamp",
+  "timestamptz",
+  "uuid",
+  "varchar",
+]);
+
 function castFor(udt: string | undefined, value: unknown): string {
   if (Array.isArray(value)) {
     if (udt === "jsonb" || udt === "json") return "::jsonb";
@@ -81,6 +103,13 @@ function castFor(udt: string | undefined, value: unknown): string {
   }
 }
 
+function inArrayExpr(ref: string, index: number, udt: string | undefined, values: unknown[]): string {
+  if (udt && !udt.startsWith("_") && !BUILTIN_UDT.has(udt)) {
+    return `${ref}::text = ANY($${index}::text[])`;
+  }
+  return `${ref} = ANY($${index}${castFor(udt, values)})`;
+}
+
 function compileFilter(
   filter: PlanFilter,
   alias: string,
@@ -101,7 +130,7 @@ function compileFilter(
       const values = Array.isArray(filter.value) ? filter.value : [filter.value];
       if (values.length === 0) return filter.negate ? "TRUE" : "FALSE";
       params.push(values.map((item) => bindValue(item, udt)));
-      const expr = `${ref} = ANY($${params.length}${castFor(udt, values)})`;
+      const expr = inArrayExpr(ref, params.length, udt, values);
       return filter.negate ? `NOT (${expr})` : expr;
     }
     case "contains": {

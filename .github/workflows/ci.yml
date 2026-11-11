@@ -23,3 +23,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pnpm test
       - run: node scripts/check-env-manifest.mjs
+      - run: pnpm build
+      - run: docker build -t memecatch:ci .
+      - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
+      - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs

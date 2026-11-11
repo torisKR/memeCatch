@@ -38,7 +38,7 @@ function request(body: unknown, origin = "https://catchmeme.com") {
 describe("meme view ingestion", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-secret");
+    vi.stubEnv("MEMECATCH_SIGNING_SECRET", "test-service-secret");
     mocks.rpc.mockResolvedValue({ error: null });
     mocks.rateLimit.mockReturnValue({ ok: true });
     mocks.growthSessionId.mockReturnValue(null);
@@ -102,7 +102,7 @@ describe("meme view ingestion", () => {
   });
 
   it("fails closed when the server signing secret is unavailable", async () => {
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    vi.stubEnv("MEMECATCH_SIGNING_SECRET", "");
 
     const response = await POST(request({ memeId: MEME_ID }));
 

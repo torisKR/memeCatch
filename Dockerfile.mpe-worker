@@ -8,4 +8,4 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 COPY . .
 USER node
-CMD ["node", "--experimental-strip-types", "scripts/mpe-media-worker.mjs", "--watch"]
+CMD ["node", "--experimental-strip-types", "--import", "./scripts/register-ts-paths.mjs", "scripts/mpe-media-worker.mjs", "--watch"]

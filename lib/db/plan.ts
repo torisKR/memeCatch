@@ -206,12 +206,14 @@ export type PlanExecutor = (plan: QueryPlan, signal?: AbortSignal) => Promise<Qu
 class QueryBuilder implements PromiseLike<QueryResult> {
   private plan: QueryPlan;
   private signal?: AbortSignal;
+  private readonly execute: PlanExecutor;
 
   constructor(
-    private readonly execute: PlanExecutor,
+    execute: PlanExecutor,
     op: PlanOp,
     target: { table?: string; fn?: string; values?: unknown; args?: Record<string, unknown> },
   ) {
+    this.execute = execute;
     this.plan = {
       op,
       table: target.table,

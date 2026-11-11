@@ -1,5 +1,14 @@
 #!/bin/sh
 # supercronic does not expand variables, so the crontab calls this script.
+# The bearer token is written to a mode-0600 header file so it is not a curl argument.
 set -eu
 path="${1:?cron path is required}"
-curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" "http://app:3000${path}"
+if [ -z "${CRON_SECRET:-}" ]; then
+  echo "CRON_SECRET is required" >&2
+  exit 1
+fi
+umask 077
+header="$(mktemp)"
+trap 'rm -f "$header"' EXIT
+printf 'Authorization: Bearer %s\n' "$CRON_SECRET" > "$header"
+curl -fsS -H "@${header}" "http://app:3000${path}"

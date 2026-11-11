@@ -89,4 +89,28 @@ describe.skipIf(!databaseUrl)("postgres query executor", () => {
     expect(operator.error).toBeNull();
     expect(operator.data).toBe(false);
   });
+
+  it("drops the cancel listener when the transaction ends", async () => {
+    const controller = new AbortController();
+    const plan = {
+      op: "select" as const,
+      table: "memes",
+      fields: [{ kind: "column" as const, name: "id" }],
+      filters: [],
+      orGroups: [],
+      orders: [],
+      limit: 1,
+      offset: null,
+      single: false,
+      maybeSingle: false,
+      count: null,
+      head: false,
+      returning: true,
+    };
+    const first = await executePlan(plan, anon, controller.signal);
+    expect(first.error).toBeNull();
+    controller.abort();
+    const second = await executePlan(plan, anon);
+    expect(second.error).toBeNull();
+  });
 });

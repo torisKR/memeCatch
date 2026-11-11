@@ -15,14 +15,14 @@ vi.mock("@/lib/meme-embedding-runtime.server", () => ({
 import { dynamic, GET, maxDuration, POST, runtime } from "./route";
 
 const originalCronSecret = process.env.CRON_SECRET;
-const originalServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const originalSigningSecret = process.env.MEMECATCH_SIGNING_SECRET;
 const originalReindexFlag = process.env.MEME_EMBEDDING_REINDEX_ENABLED;
 
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.CRON_SECRET = "existing-cron-secret";
   process.env.MEME_EMBEDDING_REINDEX_ENABLED = "true";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "existing-service-role-key";
+  process.env.MEMECATCH_SIGNING_SECRET = "existing-service-role-key";
   mocks.runMemeEmbeddingReindex.mockResolvedValue({
     status: "succeeded", indexed: 2, stale: 0, remaining: 0, errorCode: null,
   });
@@ -32,8 +32,8 @@ beforeEach(() => {
 afterEach(() => {
   if (originalCronSecret === undefined) delete process.env.CRON_SECRET;
   else process.env.CRON_SECRET = originalCronSecret;
-  if (originalServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceKey;
+  if (originalSigningSecret === undefined) delete process.env.MEMECATCH_SIGNING_SECRET;
+  else process.env.MEMECATCH_SIGNING_SECRET = originalSigningSecret;
   if (originalReindexFlag === undefined) delete process.env.MEME_EMBEDDING_REINDEX_ENABLED;
   else process.env.MEME_EMBEDDING_REINDEX_ENABLED = originalReindexFlag;
 });

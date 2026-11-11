@@ -103,8 +103,8 @@ export const authOptions = {
           }
           return { data: user };
         },
-        async after(user: { id: string; email: string; name: string }) {
-          await syncAuthUser(user);
+        async after(user: { id: string; email: string; name: string; emailVerified?: boolean }) {
+          await syncAuthUser({ ...user, emailVerified: user.emailVerified === true });
         },
       },
     },
@@ -128,10 +128,31 @@ export function getAuth() {
 
 let migrating: Promise<void> | null = null;
 
+async function grantServiceRole(): Promise<void> {
+  await getPool().query(`
+    DO $$
+    BEGIN
+      IF to_regclass('public."user"') IS NOT NULL THEN
+        EXECUTE 'GRANT SELECT ON TABLE public."user" TO service_role';
+      END IF;
+      IF to_regclass('public.session') IS NOT NULL THEN
+        EXECUTE 'GRANT SELECT ON TABLE public.session TO service_role';
+      END IF;
+      IF to_regclass('public.account') IS NOT NULL THEN
+        EXECUTE 'GRANT SELECT, UPDATE ON TABLE public.account TO service_role';
+      END IF;
+      IF to_regclass('public.verification') IS NOT NULL THEN
+        EXECUTE 'GRANT SELECT ON TABLE public.verification TO service_role';
+      END IF;
+    END $$;
+  `);
+}
+
 export function ensureAuthSchema(): Promise<void> {
   if (migrating) return migrating;
   const run = getMigrations(authConfig())
     .then((plan) => plan.runMigrations())
+    .then(() => grantServiceRole())
     .catch((error: unknown) => {
       migrating = null;
       throw error;

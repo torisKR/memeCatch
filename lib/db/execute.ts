@@ -569,9 +569,16 @@ async function runQuery(
 ): Promise<Record<string, unknown>[]> {
   return withIdentity(identity, async (trx: Transaction<Record<string, Record<string, unknown>>>, cancel) => {
     if (signal?.aborted) throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
-    signal?.addEventListener("abort", cancel, { once: true });
-    const result = await trx.executeQuery<Record<string, unknown>>(CompiledQuery.raw(sqlText, params));
-    return result.rows;
+    const abort = () => {
+      cancel();
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    try {
+      const result = await trx.executeQuery<Record<string, unknown>>(CompiledQuery.raw(sqlText, params));
+      return result.rows;
+    } finally {
+      signal?.removeEventListener("abort", abort);
+    }
   });
 }
 

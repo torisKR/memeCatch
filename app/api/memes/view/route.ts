@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { signingSecret } from "@/lib/auth/signing-secret";
 import { growthSessionIdFromRequest } from "@/lib/growth/events.server";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
@@ -50,15 +51,15 @@ export async function POST(request: Request) {
   }
 
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
-  const signingSecret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!signingSecret) {
+  const secret = signingSecret();
+  if (!secret) {
     return Response.json({ ok: false, error: "view_unavailable" }, { status: 503 });
   }
   const growthSessionId = growthSessionIdFromRequest(request);
   const viewerIdentity = growthSessionId
     ? `session:${growthSessionId}`
     : `network:${viewerAddress}`;
-  const viewerKey = createHmac("sha256", signingSecret)
+  const viewerKey = createHmac("sha256", secret)
     .update(`${day}\0${viewerIdentity}`)
     .digest("hex");
 

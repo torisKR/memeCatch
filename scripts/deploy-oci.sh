@@ -17,19 +17,26 @@ port_busy() {
 }
 
 files=(-f docker-compose.yml)
-health_url="http://127.0.0.1/api/health"
-if port_busy 80 || port_busy 443; then
-  echo "memecatch: 80 or 443 is already taken. Using the shared-proxy port 127.0.0.1:12730."
-  echo "memecatch: add deploy/Caddyfile.site to the existing reverse proxy. This script will not edit it."
-  files+=(-f docker-compose.shared-proxy.yml)
-  health_url="http://127.0.0.1:12730/api/health"
-else
-  echo "memecatch: 80 and 443 are free. Starting memeCatch's own Caddy."
+health_url="http://127.0.0.1:12730/api/health"
+if [[ "${MEMECATCH_CADDY:-}" == "own" ]]; then
+  if port_busy 80 || port_busy 443; then
+    echo "memecatch: MEMECATCH_CADDY=own but 80 or 443 is already in use. Not starting a second proxy." >&2
+    exit 1
+  fi
+  echo "memecatch: MEMECATCH_CADDY=own and 80/443 are free. Starting memeCatch's own Caddy."
   files+=(-f docker-compose.own-caddy.yml)
+  health_url="http://127.0.0.1/api/health"
+else
+  echo "memecatch: shared proxy on 127.0.0.1:12730. Paste deploy/Caddyfile.site into the existing reverse proxy."
+  echo "memecatch: this script will not edit that proxy. Set MEMECATCH_CADDY=own only when 80 and 443 are free."
+  files+=(-f docker-compose.shared-proxy.yml)
 fi
 
 if [[ "${MEMECATCH_IMAGE:-}" == ghcr.io/* ]]; then
   docker compose -p memecatch "${files[@]}" pull app
+fi
+if [[ "${MEMECATCH_WORKER_IMAGE:-}" == ghcr.io/* ]]; then
+  docker compose -p memecatch "${files[@]}" pull mpe-worker
 fi
 docker compose -p memecatch "${files[@]}" up -d
 

@@ -50,9 +50,10 @@ cd /opt/memecatch
 
 Create `/opt/memecatch/.env` from `.env.example`. Required for boot:
 
-- `POSTGRES_PASSWORD`
+- `POSTGRES_PASSWORD` (postgres service only)
 - `MEMECATCH_DB_PASSWORD`
 - `BETTER_AUTH_SECRET` (long random)
+- `MEMECATCH_SIGNING_SECRET` (analytics, view counts, embedding probe)
 - `NEXT_PUBLIC_SITE_URL=https://catchmeme.com`
 - `CRON_SECRET`
 
@@ -60,13 +61,13 @@ Put the checkout's deploy key on the VM so `git pull` in GitHub Actions can upda
 
 ## Ports and Caddy
 
-`scripts/deploy-oci.sh` checks listeners with `ss -ltn` (or `netstat` if `ss` is missing).
+`scripts/deploy-oci.sh` checks listeners with `ss -ltn` (or `netstat` if `ss` is missing). Own Caddy starts only when `MEMECATCH_CADDY=own`. Any other value, including an empty one, uses the shared proxy.
 
-**Own Caddy.** Used only when both 80 and 443 are free. Compose file `docker-compose.own-caddy.yml` publishes `80` and `443`. `deploy/Caddyfile` terminates TLS, trusts the Cloudflare ranges in `deploy/cloudflare-proxies.txt`, and reads the client address from `CF-Connecting-IP`. Refresh those ranges from `https://www.cloudflare.com/ips-v4` and `https://www.cloudflare.com/ips-v6` when Cloudflare publishes new ones.
+**Own Caddy.** Set `MEMECATCH_CADDY=own` and only when both 80 and 443 are free. If either port is busy the script exits and does not start a second proxy. Compose file `docker-compose.own-caddy.yml` publishes `80` and `443`. `deploy/Caddyfile` terminates TLS, trusts the Cloudflare ranges in `deploy/cloudflare-proxies.txt`, and reads the client address from `CF-Connecting-IP`. Refresh those ranges from `https://www.cloudflare.com/ips-v4` and `https://www.cloudflare.com/ips-v6` when Cloudflare publishes new ones.
 
 The OCI security list and the host firewall should allow 80 and 443 from the internet only in this mode.
 
-**Shared proxy.** Used when 80 or 443 is already taken. Compose file `docker-compose.shared-proxy.yml` publishes `127.0.0.1:12730` to the app and nothing else. Paste `deploy/Caddyfile.site` into the Caddy that already owns 80/443. The deploy script prints that reminder and does not edit the other Caddy.
+**Shared proxy.** This is the default on the shared VM. Compose file `docker-compose.shared-proxy.yml` publishes `127.0.0.1:12730` to the app and nothing else. Paste `deploy/Caddyfile.site` into the Caddy that already owns 80/443. The deploy script prints that reminder and does not edit the other Caddy.
 
 ```
 catchmeme.com {
@@ -90,22 +91,26 @@ cd /opt/memecatch
 bash scripts/deploy-oci.sh
 ```
 
-The script picks the Caddy mode, starts only the `memecatch` project, and curls `/api/health`. In shared-proxy mode the check is `http://127.0.0.1:12730/api/health`. In own-caddy mode it is `http://127.0.0.1/api/health`.
+The script starts only the `memecatch` project and curls `/api/health`. In shared-proxy mode the check is `http://127.0.0.1:12730/api/health`. With `MEMECATCH_CADDY=own` it is `http://127.0.0.1/api/health`.
 
-GitHub Actions (`.github/workflows/deploy.yml`) builds `linux/amd64` and `linux/arm64`, pushes to GHCR, and SSHes `cd /opt/memecatch && git pull && MEMECATCH_IMAGE=<tag> bash scripts/deploy-oci.sh`. The deploy job is skipped when `OCI_SSH_HOST`, `OCI_SSH_USER`, or `OCI_SSH_KEY` is empty. It never logs into the VM in that case.
+`MEMECATCH_SIGNING_SECRET` is the HMAC and operator bearer for analytics, view counts, and the embedding probe. `MEME_EMBEDDING_REINDEX_ENABLED` defaults to false.
+
+GitHub Actions (`.github/workflows/deploy.yml`) builds `linux/amd64` and `linux/arm64` app and worker images, pushes them to GHCR, and SSHes `cd /opt/memecatch && git pull && MEMECATCH_IMAGE=<tag> MEMECATCH_WORKER_IMAGE=<tag> bash scripts/deploy-oci.sh`. The deploy job is skipped when `OCI_SSH_HOST`, `OCI_SSH_USER`, or `OCI_SSH_KEY` is empty. When those are set, `OCI_SSH_KNOWN_HOSTS` is required and SSH uses `StrictHostKeyChecking=yes`. It never logs into the VM when the host secrets are absent.
 
 ## Backups
 
-The backup container runs `pg_dump -Fc` daily at 02:30 UTC, gzips it, and uploads to `s3://$R2_BACKUP_BUCKET/memecatch/` using the R2 S3 endpoint. Retention defaults to 14 days. If the R2 backup variables are empty, the job logs a skip and exits 0.
+The backup container runs `pg_dump -Fc` daily at 02:30 UTC, gzips it, encrypts it with age to the public key in `BACKUP_AGE_RECIPIENT`, and uploads `memecatch/<stamp>.dump.gz.age` to R2. Retention defaults to 14 days. If the R2 backup variables are empty, the job logs a skip and exits 0. If R2 is set and the recipient is empty, the job fails and uploads nothing.
 
-Restore onto a scratch database first:
+Restore only into an empty database, in one transaction, with the matching identity:
 
 ```bash
-DATABASE_URL=postgresql://postgres:...@127.0.0.1:5432/memecatch \
-  bash deploy/backup/restore.sh memecatch-20260101T023000Z.dump.gz
+MEMECATCH_RESTORE_CONFIRM=restore \
+BACKUP_AGE_IDENTITY="$(cat backup-identity.txt)" \
+DATABASE_URL=postgresql://postgres:...@127.0.0.1:5432/scratch \
+  bash deploy/backup/restore.sh memecatch-20260101T023000Z.dump.gz.age
 ```
 
-`deploy/backup/test-restore.sh` dumps the current database and restores it into `memecatch_restore_proof`. It does not contact Supabase or R2.
+`deploy/backup/test-restore.sh` encrypts a dump, restores it into `memecatch_restore_proof`, and compares per-table counts and a meme id checksum. It does not contact Supabase or R2.
 
 ## Cutover and rollback
 

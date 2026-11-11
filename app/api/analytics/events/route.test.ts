@@ -38,7 +38,7 @@ describe("growth analytics ingestion", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+    vi.stubEnv("MEMECATCH_SIGNING_SECRET", "test-service-role-key");
     mocks.getUser.mockResolvedValue({ data: { user: { id: "10000000-0000-4000-8000-000000000001" } }, error: null });
     mocks.record.mockResolvedValue(undefined);
     mocks.rateLimit.mockReturnValue({ ok: true });

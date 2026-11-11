@@ -30,8 +30,17 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,scope=app,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.mpe-worker
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.name }}-worker:${{ github.sha }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,scope=worker,mode=max
 
   deploy:
     needs: image
@@ -57,9 +66,19 @@ jobs:
           OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST }}
           OCI_SSH_USER: ${{ secrets.OCI_SSH_USER }}
           OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
+          OCI_SSH_KNOWN_HOSTS: ${{ secrets.OCI_SSH_KNOWN_HOSTS }}
           IMAGE: ghcr.io/${{ github.repository }}
         run: |
+          if [ -z "$OCI_SSH_KNOWN_HOSTS" ]; then
+            echo "OCI_SSH_KNOWN_HOSTS is required. Refusing to accept a new host key." >&2
+            exit 1
+          fi
           image="$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]'):${GITHUB_SHA}"
+          worker="${image%%:*}-worker:${GITHUB_SHA}"
           install -m 600 /dev/stdin "$RUNNER_TEMP/oci_key" <<<"$OCI_SSH_KEY"
-          ssh -i "$RUNNER_TEMP/oci_key" -o StrictHostKeyChecking=accept-new "$OCI_SSH_USER@$OCI_SSH_HOST" \
-            "cd /opt/memecatch && git pull && MEMECATCH_IMAGE='$image' bash scripts/deploy-oci.sh"
+          install -m 644 /dev/stdin "$RUNNER_TEMP/known_hosts" <<<"$OCI_SSH_KNOWN_HOSTS"
+          ssh -i "$RUNNER_TEMP/oci_key" \
+            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o StrictHostKeyChecking=yes \
+            "$OCI_SSH_USER@$OCI_SSH_HOST" \
+            "cd /opt/memecatch && git pull && MEMECATCH_IMAGE='$image' MEMECATCH_WORKER_IMAGE='$worker' bash scripts/deploy-oci.sh"

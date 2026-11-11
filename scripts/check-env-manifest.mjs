@@ -19,7 +19,7 @@ function files(dir, out = []) {
 const used = new Set();
 function collect(text) {
   const aliases = ["process\\.env"];
-  for (const match of text.matchAll(/([A-Za-z_$][\w$]*)(?:\s*:[^=\n]+)?\s*=\s*process\.env\b/g)) {
+  for (const match of text.matchAll(/([A-Za-z_$][\w$]*)(?:\s*:[^=\n]+)?\s*=\s*process\.env(?!\s*[.\[])/g)) {
     aliases.push(match[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   }
   const patterns = aliases.flatMap((alias) => [
@@ -27,7 +27,7 @@ function collect(text) {
     new RegExp(`${alias}\\[['"]([A-Z][A-Z0-9_]*)['"]\\]`, "g"),
   ]);
   patterns.push(
-    /(?:requiredEnv|required|seeds|configuredTimeout)\(\s*(?:[A-Za-z_$][\w$]*\s*,\s*)?['"]([A-Z][A-Z0-9_]*)['"]/g,
+    /(?:requiredEnv|required|seeds|configuredTimeout|rate)\(\s*(?:[A-Za-z_$][\w$]*\s*,\s*)?['"]([A-Z][A-Z0-9_]*)['"]/g,
   );
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern)) used.add(match[1]);

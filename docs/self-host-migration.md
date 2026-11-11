@@ -80,7 +80,7 @@ Database dumps use `R2_BACKUP_BUCKET`. That can be the same account and a differ
 | 00:45 | `/api/cron/saved-state-emails` |
 | 18:30 | `/api/cron/meme-embeddings` |
 
-Embeddings run inside the app container when `MEME_EMBEDDING_RUNTIME=bundled`. The model is mounted at `/app/.local/embedding-models` and is not downloaded during the image build. The MPE worker keeps ffmpeg and runs as its own container.
+Embeddings run inside the app container when `MEME_EMBEDDING_RUNTIME=bundled`. Reindex stays off unless `MEME_EMBEDDING_REINDEX_ENABLED=true`. The model is mounted at `/app/.local/embedding-models` and is not downloaded during the image build. The MPE worker image is built from `Dockerfile.mpe-worker` and runs as its own container.
 
 There is no `supabase.channel()` usage. `onAuthStateChange` reads the session once. Nothing keeps a realtime socket open.
 

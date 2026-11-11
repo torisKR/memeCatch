@@ -156,5 +156,13 @@
   "VERCEL_GIT_COMMIT_SHA": "Vercel commit SHA fallback for the release identifier.",
   "VERCEL_URL": "Vercel host. Bundled embeddings used it as their endpoint.",
   "X_API_BEARER_TOKEN": "─── Radar 외부 신호 (선택, 전부 서버 전용) ────────────────────── X·Threads는 텍스트 게시물만 요청하고 미디어는 무시합니다. X API는 pay-per-use이므로 RADAR_X_TERMS를 작게 유지하고 콘솔 spending limit을 설정하세요.",
-  "YOUTUBE_API_KEY": "─── YouTube Data API (선택) ───────────────────────────────────── 출처 후보 발견·메타데이터 재확인용. 서버 전용 (클라이언트 노출 금지). 영상 파일은 저장하지 않고 메타데이터만 조회합니다."
+  "YOUTUBE_API_KEY": "─── YouTube Data API (선택) ───────────────────────────────────── 출처 후보 발견·메타데이터 재확인용. 서버 전용 (클라이언트 노출 금지). 영상 파일은 저장하지 않고 메타데이터만 조회합니다.",
+  "BACKUP_AGE_IDENTITY": "age identity used to decrypt a backup during restore. Keep it off the backup container.",
+  "BACKUP_AGE_RECIPIENT": "age public key that backups are encrypted to before the R2 upload.",
+  "BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN": "nano-USD per input token reserved for an admin meme-studio draft.",
+  "BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN": "nano-USD per output token reserved for an admin meme-studio draft.",
+  "MEMECATCH_CADDY": "Set to own to publish memeCatch's Caddy. Any other value uses the shared proxy.",
+  "MEMECATCH_RESTORE_CONFIRM": "Must be restore before a dump is loaded into the target database.",
+  "MEMECATCH_SIGNING_SECRET": "HMAC and operator bearer for analytics, view counts, and the embedding probe.",
+  "PGPASSFILE": "Path to the mode-0600 pgpass file used by the backup and restore tools."
 }

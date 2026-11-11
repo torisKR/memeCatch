@@ -17,6 +17,7 @@ import {
   getRelatedMemes,
 } from "@/lib/queries";
 import { AnswerCard } from "@/components/answer-card";
+import { ARTICLE_BODY, ARTICLE_COLUMN, MemeArticleFooter } from "@/components/meme-article-meta";
 import { SafetyRationale } from "@/components/safety-rationale";
 import { UsageExamples } from "@/components/usage-examples";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
@@ -306,7 +307,7 @@ export default async function MemeDetailPage({ params }: Props) {
           첫 뷰포트(844px)에 이 밈의 뜻과 신호가 하나도 없었다는 뜻이다.
           카드를 그리드 밖으로 빼면 모바일은 "뜻 먼저, 영상 나중"(LOOP.md 정보 계층)이
           되고 데스크톱은 제목이 전체 폭을 쓰는 헤더가 된다. 2단 구조 자체는 그대로다. */}
-      <div className="space-y-3">
+      <div className={`${ARTICLE_COLUMN} space-y-3`}>
         <AnswerCard meme={meme} saveMemeId={meme.id} />
         <div className="flex justify-end">
           <ShareButton path={path} title={meme.title} label="공유" />
@@ -396,7 +397,7 @@ export default async function MemeDetailPage({ params }: Props) {
         </div>
 
         {/* 오른쪽 — 정보. 오른쪽만 스크롤된다. */}
-        <div className="mt-6 min-w-0 space-y-5 lg:mt-0">
+        <div className={`${ARTICLE_COLUMN} mt-6 min-w-0 space-y-5 lg:mt-0`}>
           {/* 정리 중 안내 — content-depth가 '얇음'으로 본 문서에만. 방치된 스텁이 아니라
               확인된 만큼만 공개하는 관리 문서임을 밝히고 제보 경로를 연다.
               충실도 판정은 generateMetadata의 robots와 같은 입력(meme)을 쓴다. */}
@@ -434,7 +435,7 @@ export default async function MemeDetailPage({ params }: Props) {
                 {meme.description && (
                   <div>
                     <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>
-                    <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
+                    <p className={`mt-1.5 whitespace-pre-line ${ARTICLE_BODY}`}>
                       {meme.description}
                     </p>
                   </div>
@@ -448,7 +449,7 @@ export default async function MemeDetailPage({ params }: Props) {
                       </p>
                     )}
                     {meme.origin ? (
-                      <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
+                      <p className={`mt-1.5 whitespace-pre-line ${ARTICLE_BODY}`}>
                         {meme.origin}
                       </p>
                     ) : null}
@@ -516,6 +517,8 @@ export default async function MemeDetailPage({ params }: Props) {
             </section>
           )}
 
+          <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
+
           <AuthInvite />
 
           {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
@@ -532,10 +535,6 @@ export default async function MemeDetailPage({ params }: Props) {
 
           <MemeMarketPassport passport={marketPassport} locale="ko" />
 
-          {/* 참고 자료 근거 목록 — 제목 있는 출처가 하나도 없으면 렌더하지 않는다.
-              유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
-          <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
-
           {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
               권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}
           <MemeTrendPanel memeId={meme.id} />
@@ -547,15 +546,14 @@ export default async function MemeDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 더 둘러보기 — 관련 밈(비슷한 밈)을 앞에 두고 같은 카테고리로 끝없이 이어보기.
-          큐레이션 캐러셀 + 무한 스트림을 하나의 피드로 통합했다. */}
-      <div className="border-t border-border pt-10">
-        {/* Wave 1 — 세션 깊이: 관련 밈 프리펜드 + 같은 카테고리 무한 이어보기 */}
+      {/* 관련 밈 4–6개. 4개 미만이면 제목까지 숨긴다. */}
+      <div className={`${ARTICLE_COLUMN} border-t border-border pt-10`}>
         <ContinueStream
           currentId={meme.id}
           category={meme.category}
           related={related}
         />
+        <MemeArticleFooter />
       </div>
     </main>
   );

@@ -2,8 +2,8 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { DocClassNote } from "@/components/doc-class-note";
+import { ARTICLE_BODY, MemeArticleArt, MemeByline } from "@/components/meme-article-meta";
 import { SaveButton } from "@/components/save-button";
-import { MemePosterCard } from "@/components/meme-poster-card";
 import { SafetyBadge } from "@/components/safety-badge";
 import { SignalTrace } from "@/components/signal-trace";
 import { CopyTextButton } from "@/components/copy-text-button";
@@ -31,6 +31,7 @@ export function AnswerCard({
     MemeRow,
     "title" | "summary" | "lifecycle_status" | "safety_level"
   > & {
+    updated_at?: MemeRow["updated_at"] | null;
     /** 상세 조회(select("*"))에서만 실려 온다 — 목록·위젯 select에는 없어 optional. */
     doc_class?: MemeRow["doc_class"];
     usage_note?: MemeRow["usage_note"];
@@ -53,7 +54,7 @@ export function AnswerCard({
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           <span aria-hidden className="size-1.5 rounded-full bg-(--signal-cyan)" />
-          Life signal
+          생애 신호
         </span>
         <span className="stat-mono text-[11px] font-bold text-muted">
           {LIFECYCLE_STATUS[meme.lifecycle_status].user}
@@ -76,18 +77,14 @@ export function AnswerCard({
         />
       </div>
       <div className="mt-3">
-        <MemePosterCard
-          title={meme.title}
-          summary={meme.summary}
-          safetyLevel={meme.safety_level}
-          year={meme.origin_year}
-          artUrl={meme.art_url}
-          size="detail"
-          locale="ko"
-          heading="h1"
-          summaryId="meme-summary"
-          priority
-        />
+        <MemeArticleArt title={meme.title} artUrl={meme.art_url} />
+        <h1 className="text-[1.75rem] font-black leading-tight tracking-tight">{meme.title}</h1>
+        <MemeByline updatedAt={meme.updated_at} />
+        {meme.summary.trim() ? (
+          <p id="meme-summary" className={`mt-3 ${ARTICLE_BODY}`}>
+            {meme.summary}
+          </p>
+        ) : null}
       </div>
       <DocClassNote docClass={meme.doc_class} />
       <div className="relative mt-4">

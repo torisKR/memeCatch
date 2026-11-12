@@ -13,6 +13,10 @@ vi.mock("next/navigation", () => ({
   notFound: vi.fn(),
 }));
 
+vi.mock("@/lib/korean-rankings.server", () => ({
+  koreanRankingsVisible: async () => true,
+}));
+
 import KoreanRootLayout from "@/app/(default)/layout";
 import LocalizedRootLayout from "@/app/[locale]/layout";
 

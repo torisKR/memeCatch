@@ -3,8 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   DEFAULT_LOCALE,
   getDocumentLanguage,
-  isLocale,
-  localeFromAcceptLanguage,
   LOCALE_COOKIE,
   LOCALE_HEADER,
   type Locale,
@@ -127,44 +125,32 @@ function buildAuthReturnPath(path: string, searchParams: URLSearchParams): strin
     : path;
 }
 
-// ponytail: substring UA sniff, not a maintained bot-UA list — swap for a
-// vetted crawler-detection package if false positives/negatives show up.
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp/i;
-
 export type LandingNegotiationInput = {
   pathname: string;
   cookieValue: string | undefined;
-  acceptLanguage: string | null;
-  userAgent: string | null;
+  acceptLanguage?: string | null;
+  userAgent?: string | null;
 };
 
 /**
- * 글로벌 피벗: 첫 방문(로케일 쿠키 없음) 루트 경로("/") 전용 언어 협상.
- * ko 계열 선호·기존 쿠키·봇 UA는 그대로 두고, 그 외 방문자는 지원 SEO
- * 로케일(en/ja/zh/zh-tw) 우선순위면 해당 로케일로, 그 외 비-ko 선호는 en으로
- * 보낸다. 순수 함수로 분리해 proxy 밖에서 단위 테스트한다.
+ * `/` follows an explicit SEO locale cookie only. Accept-Language, crawler
+ * UAs, and a missing cookie stay on the Korean home. The cookie itself is
+ * written only by the language selector (`persistLocale`).
  */
 export function resolveLandingRedirectLocale({
   pathname,
   cookieValue,
-  acceptLanguage,
-  userAgent,
 }: LandingNegotiationInput): SeoContentLocale | null {
   if (pathname !== "/") return null;
-  if (cookieValue) return null;
-  if (userAgent && BOT_UA_PATTERN.test(userAgent)) return null;
-
-  const preferred = localeFromAcceptLanguage(acceptLanguage);
-  if (preferred === "ko") return null;
-  return isSeoContentLocale(preferred) ? preferred : "en";
+  return isSeoContentLocale(cookieValue) ? cookieValue : null;
 }
 
 /**
  * 로케일 헤더 전달과 인증 경로의 세션 갱신을 함께 처리한다.
  * 일반 페이지는 로케일 헤더만 설정하고 Supabase 호출은 인증 경로로 한정한다.
  *
- * 로케일 우선순위: ① 명시적 URL prefix ② 언어 선택 쿠키 ③ Accept-Language ④ ko.
- * URL prefix는 공유·색인 가능한 선택이므로 쿠키에도 동기화한다.
+ * 로케일 우선순위: ① URL prefix ② ko. 쿠키·Accept-Language·prefetch는
+ * 문서를 바꾸지 않는다. memecatch_locale은 언어 선택기만 기록한다.
  */
 export async function proxy(request: NextRequest) {
   const landingLocale = resolveLandingRedirectLocale({
@@ -176,39 +162,25 @@ export async function proxy(request: NextRequest) {
   if (landingLocale) {
     const url = request.nextUrl.clone();
     url.pathname = localizePath("/", landingLocale);
-    const response = NextResponse.redirect(url, 302);
-    response.headers.set("Vary", "Accept-Language");
-    response.cookies.set(LOCALE_COOKIE, landingLocale, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: "lax",
-    });
-    return response;
+    // A preference redirect must not refresh the cookie. Prefetch and RSC
+    // requests used to persist the last localized /pricing hop.
+    return NextResponse.redirect(url, 302);
   }
 
   const urlLocale = localeFromPathname(request.nextUrl.pathname);
-  // `locale` is the UI preference passed to the app. The response body itself
-  // is Korean unless the URL addresses an indexed translated document.
+  // The response body is Korean unless the URL addresses a translated document.
+  // The locale cookie is not a document locale: prefetching /zh/pricing must
+  // not restyle the next unprefixed page.
   const requestedExportLocale = request.nextUrl.pathname.endsWith("/export")
     ? request.nextUrl.searchParams.get("locale")
     : null;
   const exportLocale = isSeoContentLocale(requestedExportLocale) ? requestedExportLocale : null;
   const contentLocale = urlLocale ?? exportLocale ?? DEFAULT_LOCALE;
-  const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
-  // 접두사 없는 주소는 한국어 문서다. Accept-Language로 UI를 바꾸면
-  // 서버는 영어 메뉴를 그리고, 클라이언트 스냅샷이 다시 한국어로 되돌린다.
-  const locale = urlLocale ?? (isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE);
+  const locale = urlLocale ?? DEFAULT_LOCALE;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER, locale);
   const applyLocale = (response: NextResponse) => {
     response.headers.set("Content-Language", getDocumentLanguage(contentLocale));
-    if (urlLocale && cookieLocale !== urlLocale) {
-      response.cookies.set(LOCALE_COOKIE, urlLocale, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: "lax",
-      });
-    }
     return response;
   };
   const retired = retiredProductDecision(request.nextUrl.pathname);

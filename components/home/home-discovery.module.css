@@ -476,12 +476,12 @@
   letter-spacing: -0.05em;
   line-height: 1;
   word-break: keep-all;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 :lang(ja) .preview h3,
 :lang(zh) .preview h3 {
-  word-break: normal;
+  word-break: auto-phrase;
   overflow-wrap: anywhere;
   line-break: strict;
 }
@@ -578,7 +578,7 @@
 
 :lang(ja) .emptyState h3,
 :lang(zh) .emptyState h3 {
-  word-break: normal;
+  word-break: auto-phrase;
   overflow-wrap: anywhere;
   line-break: strict;
 }

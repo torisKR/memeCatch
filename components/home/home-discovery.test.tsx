@@ -264,26 +264,29 @@ describe("HomeDiscovery", () => {
       <aside class="preview"><h3>preview</h3></aside>
       <div class="emptyState"><h3>empty</h3></div>
     `;
-    const nodes = [
-      document.querySelector(".title"),
-      document.querySelector(".preview h3"),
-      document.querySelector(".emptyState h3"),
-    ];
 
     try {
       document.documentElement.lang = "ko";
-      for (const node of nodes) {
-        const computed = getComputedStyle(node!);
-        expect(computed.wordBreak).toBe("keep-all");
-        expect(computed.overflowWrap).toBe("anywhere");
-      }
+      const title = getComputedStyle(document.querySelector(".title")!);
+      const preview = getComputedStyle(document.querySelector(".preview h3")!);
+      const empty = getComputedStyle(document.querySelector(".emptyState h3")!);
+      expect(title.wordBreak).toBe("keep-all");
+      expect(preview.wordBreak).toBe("keep-all");
+      expect(preview.overflowWrap).toBe("normal");
+      expect(empty.wordBreak).toBe("keep-all");
 
       for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
         document.documentElement.lang = lang;
-        for (const node of nodes) {
+        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("normal");
+        expect(getComputedStyle(document.querySelector(".title")!).overflowWrap).toBe("anywhere");
+        for (const node of [
+          document.querySelector(".preview h3"),
+          document.querySelector(".emptyState h3"),
+        ]) {
           const computed = getComputedStyle(node!);
-          expect(computed.wordBreak).toBe("normal");
+          expect(computed.wordBreak).toBe("auto-phrase");
           expect(computed.overflowWrap).toBe("anywhere");
+          expect(computed.lineBreak).toBe("strict");
         }
       }
     } finally {
@@ -329,7 +332,7 @@ describe("HomeDiscovery", () => {
         document.documentElement.lang = lang;
         const preview = getComputedStyle(document.querySelector(".preview h3")!);
         expect(preview.wordBreak).toBe("keep-all");
-        expect(preview.overflowWrap).toBe("anywhere");
+        expect(preview.overflowWrap).toBe("normal");
       }
     } finally {
       style.remove();

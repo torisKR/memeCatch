@@ -143,7 +143,7 @@ export default function AboutPage() {
             에 공개되어 있습니다.
           </p>
           <p className="mt-4 text-base leading-relaxed">
-            운영비는 광고와 제휴 링크, 후원, 그리고 선택형 멤버십으로
+            운영비는 광고와 후원, 그리고 선택형 멤버십으로
             충당합니다. 광고주는 밈의 수록 여부나 안전 등급에 관여하지
             않습니다. 서비스가 도움이 됐다면{" "}
             <Link

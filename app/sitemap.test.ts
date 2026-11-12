@@ -9,7 +9,8 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import sitemap, { clearSitemapCache } from "@/app/sitemap";
+import sitemap, { clearSitemapCache, getIndexableKoreanMemeCount } from "@/app/sitemap";
+import { clearKoreanRankingsCache } from "@/lib/korean-rankings.server";
 
 const source = readFileSync(join(process.cwd(), "app/sitemap.ts"), "utf-8");
 
@@ -83,7 +84,12 @@ function useRows(
 
         const memeQuery = {
           in: vi.fn(() => memeQuery),
+          eq: vi.fn(() => memeQuery),
+          not: vi.fn(() => memeQuery),
+          gt: vi.fn(() => memeQuery),
+          lt: vi.fn(() => memeQuery),
           order: vi.fn(() => memeQuery),
+          limit: vi.fn(async () => ({ data: [], error: null })),
           range: vi.fn(async (from: number, to: number) => ({
             data: rows.slice(from, to + 1),
             error: queryError,
@@ -97,6 +103,7 @@ function useRows(
 
 beforeEach(() => {
   clearSitemapCache();
+  clearKoreanRankingsCache();
   createStaticClient.mockReset();
 });
 
@@ -197,7 +204,16 @@ describe("사이트맵 페이지네이션 안정성", () => {
     expect(entries.some((entry) => entry.url.endsWith("/explore"))).toBe(true);
     expect(entries.some((entry) => entry.url.includes("/memes/"))).toBe(false);
     expect(errorLog).toHaveBeenCalledWith("[sitemap] catalog unavailable");
+    expect(await getIndexableKoreanMemeCount()).toBeNull();
     errorLog.mockRestore();
+  });
+
+  it("counts the indexable Korean meme URLs the sitemap publishes", async () => {
+    useRows([indexableMeme(1, []), indexableMeme(2, [])]);
+    expect(await getIndexableKoreanMemeCount()).toBe(2);
+    const entries = await sitemap();
+    const koreanMemes = entries.filter((entry) => new URL(entry.url).pathname.startsWith("/memes/"));
+    expect(koreanMemes).toHaveLength(2);
   });
 });
 

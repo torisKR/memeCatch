@@ -32,5 +32,8 @@ describe("HOME_SCENE_COPY", () => {
     expect(allCopy).not.toContain("adsense");
     expect(allCopy).not.toContain("legally permitted");
     expect(allCopy).not.toContain("automatically verified");
+    expect(HOME_SCENE_COPY.ko.layoutLoading).toBe("");
+    expect(JSON.stringify(HOME_SCENE_COPY.ko)).not.toContain("3D 준비 중");
+    expect(JSON.stringify(HOME_SCENE_COPY.ko)).not.toContain("준비 중");
   });
 });

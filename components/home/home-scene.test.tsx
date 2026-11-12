@@ -506,4 +506,29 @@ describe("HomeScene", () => {
     act(() => motionPreference.emit(false));
     expect(rendererController.setPaused).toHaveBeenLastCalledWith(true);
   });
+
+  it("keeps the unfinished Korean 3D status and its layout controls out of the initial story HTML", () => {
+    const html = renderToStaticMarkup(<HomeScene locale="ko" variant="story" />);
+    expect(html).not.toContain("3D 준비 중");
+    expect(html).not.toContain("준비 중");
+    expect(html).not.toContain("data-scene-layout=");
+    expect(html).not.toContain("data-scene-reset=");
+    expect(html).toContain('data-scene-signal="green"');
+  });
+
+  it("shows Korean layout controls after the renderer is ready, without a preparing label", async () => {
+    const { container } = render(
+      <section data-home-scroll-track>
+        <div data-home-scroll-pin>
+          <HomeScene locale="ko" variant="story" />
+        </div>
+      </section>,
+    );
+    expect(container.innerHTML).not.toContain("3D 준비 중");
+    act(() => MockIntersectionObserver.instances[0]?.trigger(true));
+    await waitFor(() => expect(mountHomeScene).toHaveBeenCalled());
+    expect(container.querySelectorAll("[data-scene-layout]")).toHaveLength(3);
+    expect(container.innerHTML).not.toContain("3D 준비 중");
+    expect(container.innerHTML).not.toContain("준비 중");
+  });
 });

@@ -9,6 +9,7 @@ import {
   SEO_ROUTE_LOCALES,
   toOpenGraphLocale,
 } from "@/lib/i18n-routing";
+import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -40,8 +41,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = ROOT_VIEWPORT;
 
-export default function KoreanRootLayout({
+export default async function KoreanRootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <RootDocument locale={DEFAULT_LOCALE}>{children}</RootDocument>;
+  const showRankings = await koreanRankingsVisible();
+  return (
+    <RootDocument locale={DEFAULT_LOCALE} showRankings={showRankings}>
+      {children}
+    </RootDocument>
+  );
 }

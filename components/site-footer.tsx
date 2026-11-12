@@ -22,15 +22,26 @@ const FOOTER_LINKS = [
   { href: "/support", label: "support" },
 ] as const;
 
-export function SiteFooter() {
+export function SiteFooter({ showRankings = true }: { showRankings?: boolean }) {
   const { messages, locale } = useLocale();
+  const links = FOOTER_LINKS.filter((link) => showRankings || link.href !== "/rankings");
   return (
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
         <div className="mx-auto max-w-5xl px-4 py-8">
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              {FOOTER_LINKS.map((l) => (
+              {locale === "ko" && (
+                <li>
+                  <Link
+                    href="/contact"
+                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] hover:text-foreground hover:decoration-flame-500 focus-visible:decoration-flame-500"
+                  >
+                    문의
+                  </Link>
+                </li>
+              )}
+              {links.map((l) => (
                 <li key={l.href}>
                   <Link
                     href={l.href}

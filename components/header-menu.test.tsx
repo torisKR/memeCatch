@@ -53,6 +53,16 @@ describe("HeaderMenu", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "메뉴" }));
   });
 
+  it("hides rankings when the published list cannot be built", async () => {
+    const user = userEvent.setup();
+    render(<HeaderMenu showRankings={false} />);
+
+    await user.click(screen.getByRole("button", { name: "메뉴" }));
+
+    expect(screen.queryByRole("link", { name: "밈캐치 내 급상승" })).toBeNull();
+    expect(screen.getByRole("link", { name: "연표" })).toBeTruthy();
+  });
+
   it("uses Traditional Chinese for the zh-tw menu label", () => {
     localeState.value = "zh-tw";
     render(<HeaderMenu />);

@@ -44,6 +44,7 @@ export function HomeStorySceneView({
   const selected = signals.levels[selectedSignal];
   const ready = rendererState === "ready";
   const unavailable = rendererState === "failed" || rendererState === "static";
+  const showLayoutControls = locale !== "ko" || ready;
 
   return (
     <figure
@@ -80,26 +81,28 @@ export function HomeStorySceneView({
             <span>{copy.controlsLabel}</span>
           </summary>
           <div className={styles.panel} data-scene-control-dock="true">
-            <fieldset aria-label={copy.layoutLabel} data-scene-layout-controls="true">
-              <legend>{copy.layoutLabel}</legend>
-              <div className={styles.choices}>
-                {(["scroll", "stacked", "spread"] as const).map((mode) => (
-                  <label key={mode} className={styles.choice}>
-                    <input
-                      type="radio"
-                      name={`story-layout-${explanationId}`}
-                      value={mode}
-                      data-scene-layout={mode}
-                      checked={layoutMode === mode}
-                      disabled={!ready}
-                      onChange={() => onLayoutChange(mode)}
-                    />
-                    <span>{mode === "scroll" ? copy.scrollLayout : mode === "stacked" ? copy.stackLabel : copy.spreadLabel}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            {!ready && <p role="status">{unavailable ? copy.layoutUnavailable : copy.layoutLoading}</p>}
+            {showLayoutControls && (
+              <fieldset aria-label={copy.layoutLabel} data-scene-layout-controls="true">
+                <legend>{copy.layoutLabel}</legend>
+                <div className={styles.choices}>
+                  {(["scroll", "stacked", "spread"] as const).map((mode) => (
+                    <label key={mode} className={styles.choice}>
+                      <input
+                        type="radio"
+                        name={`story-layout-${explanationId}`}
+                        value={mode}
+                        data-scene-layout={mode}
+                        checked={layoutMode === mode}
+                        disabled={!ready}
+                        onChange={() => onLayoutChange(mode)}
+                      />
+                      <span>{mode === "scroll" ? copy.scrollLayout : mode === "stacked" ? copy.stackLabel : copy.spreadLabel}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {showLayoutControls && !ready && <p role="status">{unavailable ? copy.layoutUnavailable : copy.layoutLoading}</p>}
             <fieldset aria-label={copy.signalGroupLabel}>
               <legend>{copy.signalGroupLabel}</legend>
               <div className={styles.signals}>
@@ -121,7 +124,9 @@ export function HomeStorySceneView({
             </fieldset>
             <p id={explanationId} role="status" aria-live="polite"><strong>{selected.label}</strong> · {selected.summary}</p>
             <p className={styles.notice}>{copy.educationNotice}</p>
-            <button type="button" className={styles.control} data-scene-reset="true" disabled={!ready} onClick={onReset}>{copy.resetView}</button>
+            {showLayoutControls && (
+              <button type="button" className={styles.control} data-scene-reset="true" disabled={!ready} onClick={onReset}>{copy.resetView}</button>
+            )}
           </div>
         </details>
 

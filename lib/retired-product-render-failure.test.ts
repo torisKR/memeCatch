@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-vi.mock("@/components/meme-card", () => ({
+vi.mock("@/components/meme-card-poster", () => ({
   MemeCard() {
     throw new Error("MemeCard failed");
   },

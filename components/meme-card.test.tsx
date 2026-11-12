@@ -144,4 +144,44 @@ describe("MemeCard", () => {
     expect(korean).not.toContain("밈 용어");
     expect(korean).not.toContain("밈 영상");
   });
+
+  it("server-renders a verified public image for the 410 page", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard
+        meme={{
+          ...meme,
+          title: "새우 예수",
+          meme_contents: [{ thumbnail_url: "/ai-memes/ai-slop.jpg", is_representative: true }],
+        }}
+        href="/memes/m1-test-meme"
+        locale="ko"
+        imageAspect="4/3"
+        staticMarkup
+        thumbnailAlt="새우 예수 상징 일러스트"
+      />,
+    );
+
+    expect(html).toContain('href="/memes/m1-test-meme"');
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain('alt="새우 예수 상징 일러스트"');
+    expect(html).toContain('src="/ai-memes/ai-slop.jpg"');
+    expect(html).toContain("<img");
+    expect(html).toContain('data-thumbnail-state="image"');
+    expect(html).not.toContain("ytimg");
+    expect(html).not.toContain("data-country-flag");
+  });
+
+  it("uses the retired fallback when the 410 image is not a verified public file", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard meme={meme} staticMarkup thumbnailAlt="should not appear" />,
+    );
+
+    expect(html).toContain('data-meme-card-art="fallback"');
+    expect(html).toContain('fill="#ff5c38"');
+    expect(html).toContain("bg-[#141414]");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("should not appear");
+    expect(html).not.toContain("ytimg.com");
+  });
 });

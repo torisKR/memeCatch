@@ -184,7 +184,8 @@ describe("retired product responses", () => {
       expect(html).not.toContain("aspect-[4/5]");
       if (locale === "en") {
         expect(html).toContain("Safe to use");
-        expect(html).toContain("Meme terms");
+        expect(html).not.toContain("Meme terms");
+        expect(html).not.toContain("Origin unconfirmed");
         expect(html).not.toContain("써도 됨");
         expect(html).not.toContain("맥락 주의");
       }

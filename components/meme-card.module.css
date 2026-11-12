@@ -3,7 +3,7 @@
   height: auto;
 }
 
-.frame {
+.frame.frame {
   aspect-ratio: 4 / 3;
 }
 
@@ -118,7 +118,7 @@
 }
 
 @container (max-width: 199px) {
-  .frame {
+  .frame.frame {
     aspect-ratio: auto;
     min-height: 12rem;
   }

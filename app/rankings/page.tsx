@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { RankingsJsonLd } from "@/components/json-ld";
-import { StatusPanel } from "@/components/status-panel";
 import Link from "next/link";
-import { createStaticClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getPremiumEntitlement } from "@/lib/billing/repository.server";
 import { flags } from "@/lib/flags";
 import {
   LIFECYCLE_STATUS,
@@ -13,7 +10,8 @@ import {
   type LifecycleStatus,
   type SafetyLevel,
 } from "@/lib/labels";
-import type { Database } from "@/lib/database.types";
+import { loadKoreanRankings } from "@/lib/korean-rankings.server";
+import type { PublicRankingMeme } from "@/lib/korean-rankings";
 import { AdsenseScript } from "@/components/adsense-script";
 import {
   RANKING_METHODS,
@@ -22,160 +20,56 @@ import {
   type RankingMethodKey,
 } from "@/lib/ranking/methods";
 
-/** 요청별 문서 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
-export const revalidate = 3600;
+/**
+ * Request-time render. The previous hourly ISR page called headers() inside
+ * the loader's try/catch, so a dynamic bailout was stored as the error panel.
+ * Staying dynamic keeps a database-less build from caching that failure, and
+ * the loader's own short cache limits repeat catalog reads.
+ */
+export const dynamic = "force-dynamic";
 
 const RANKINGS_DESCRIPTION =
   "밈캐치 안에서 오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.";
 
-export const metadata: Metadata = {
-  title: "밈캐치 내 급상승",
-  description: RANKINGS_DESCRIPTION,
-  alternates: { canonical: "/rankings" },
-  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
-    title: "밈캐치 내 급상승",
-    description: RANKINGS_DESCRIPTION,
-    url: "/rankings",
-  },
-};
-
-type MemeRow = Pick<
-  Database["public"]["Tables"]["memes"]["Row"],
-  | "id"
-  | "short_id"
-  | "slug"
-  | "title"
-  | "summary"
-  | "safety_level"
-  | "lifecycle_status"
-  | "trend_score"
-  | "published_at"
->;
-
-const MEME_FIELDS =
-  "id,short_id,slug,title,summary,safety_level,lifecycle_status,trend_score,published_at";
-
-async function loadRankings(includeWeeklyMetrics: boolean) {
-  const supabase = createStaticClient();
-
-  // 오늘의 급상승: trend_score 상위 + rising 우선 (limited는 추천 표면에서 제외)
-  const { data: top, count, error: topErr } = await supabase
-    .from("memes")
-    .select(MEME_FIELDS, { count: "exact" })
-    .eq("moderation_status", "approved")
-    .order("trend_score", { ascending: false })
-    .limit(30);
-  if (topErr) throw topErr;
-
-  const memes = (top ?? []) as MemeRow[];
-  const needsFallback =
-    (count ?? 0) < 10 || memes.every((m) => (m.trend_score ?? 0) <= 0);
-
-  if (needsFallback) {
-    const { data: fresh, error: freshErr } = await supabase
-      .from("memes")
-      .select(MEME_FIELDS)
-      .eq("moderation_status", "approved")
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .limit(12);
-    if (freshErr) throw freshErr;
-    return { fallback: (fresh ?? []) as MemeRow[] } as const;
+export async function generateMetadata(): Promise<Metadata> {
+  const rankings = await loadKoreanRankings();
+  if (rankings.kind === "unavailable" || rankings.kind === "outage") {
+    return {
+      title: "페이지를 찾을 수 없어요",
+      robots: { index: false, follow: true },
+    };
   }
-
-  const today = [...memes]
-    .sort(
-      (a, b) =>
-        (a.lifecycle_status === "rising" ? 0 : 1) -
-          (b.lifecycle_status === "rising" ? 0 : 1) ||
-        (b.trend_score ?? 0) - (a.trend_score ?? 0)
-    )
-    .slice(0, 20);
-
-  // 이번 주 많이 본: meme_trend_metrics 최근 7일 views 합산
-  let metricRows: { meme_id: string; views: number | null; date: string }[] = [];
-  if (includeWeeklyMetrics) {
-    const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-    const { data, error } = await createAdminClient()
-      .from("meme_trend_metrics")
-      .select("meme_id,views,date")
-      .gte("date", since);
-    if (error) throw error;
-    metricRows = data ?? [];
-  }
-
-  // 마지막 집계일 — job_runs는 운영자 전용 RLS라 공개 화면에서 못 읽는다.
-  // 원시 추이 데이터도 Plus 전용이므로 서버에서 최신 롤업 날짜만 계산한다.
-  const lastRollupDate =
-    metricRows.reduce<string | null>(
-      (max, row) => (!max || row.date > max ? row.date : max),
-      null,
-    ) ?? null;
-
-  const viewsById = new Map<string, number>();
-  for (const row of metricRows) {
-    viewsById.set(row.meme_id, (viewsById.get(row.meme_id) ?? 0) + (row.views ?? 0));
-  }
-  const weeklyIds = [...viewsById.entries()]
-    .filter(([, v]) => v > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20)
-    .map(([id]) => id);
-
-  let weekly: (MemeRow & { weeklyViews: number })[] = [];
-  if (weeklyIds.length > 0) {
-    const { data: weeklyMemes, error: weeklyErr } = await supabase
-      .from("memes")
-      .select(MEME_FIELDS)
-      .eq("moderation_status", "approved")
-      .in("id", weeklyIds);
-    if (weeklyErr) throw weeklyErr;
-    weekly = ((weeklyMemes ?? []) as MemeRow[])
-      .map((m) => ({ ...m, weeklyViews: viewsById.get(m.id) ?? 0 }))
-      .sort((a, b) => b.weeklyViews - a.weeklyViews);
-  }
-
-  // 다시 뜨는: 게시된 지 오래됐는데(90일+) trend_score가 살아있는 밈 (archived→rising 재부상)
-  const oldCutoff = new Date(Date.now() - 90 * 86400000).toISOString();
-  const { data: comebackRows, error: comebackErr } = await supabase
-    .from("memes")
-    .select(MEME_FIELDS)
-    .eq("moderation_status", "approved")
-    .lt("published_at", oldCutoff)
-    .gt("trend_score", 0)
-    .order("trend_score", { ascending: false })
-    .limit(20);
-  if (comebackErr) throw comebackErr;
-
+  const title = rankings.kind === "published" ? "이번 주 많이 본 밈" : "밈캐치 내 급상승";
+  const description = rankings.kind === "published"
+    ? "공개된 밈 기록에서 최근 글을 모았어요."
+    : RANKINGS_DESCRIPTION;
   return {
-    fallback: null,
-    today,
-    weekly,
-    weeklyLocked: !includeWeeklyMetrics,
-    comeback: (comebackRows ?? []) as MemeRow[],
-    lastRollupDate,
-    // 표본 판정 기준 — 1위 문서의 기간 내 조회 수. 세 탭 모두 같은 조회 데이터에서
-    // 파생되므로 한 값으로 판정한다.
-    topWeeklyViews: weekly[0]?.weeklyViews ?? 0,
-  } as const;
+    title,
+    description,
+    alternates: { canonical: "/rankings" },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title,
+      description,
+      url: "/rankings",
+    },
+  };
 }
 
-export default async function RankingsPage() {
-  let data: Awaited<ReturnType<typeof loadRankings>> | null = null;
-  let failed = false;
-  try {
-    const entitlement = await getPremiumEntitlement();
-    data = await loadRankings(entitlement.isPremium);
-  } catch {
-    failed = true;
-  }
+type MemeRow = PublicRankingMeme;
 
-  const rankedForSchema = data
-    ? (data.fallback ?? data.today ?? []).slice(0, 10)
-    : [];
+export default async function RankingsPage() {
+  const rankings = await loadKoreanRankings();
+  if (rankings.kind === "unavailable" || rankings.kind === "outage") notFound();
+  if (rankings.kind === "published") {
+    return <PublishedWeeklyList memes={rankings.memes} />;
+  }
+  const data = rankings;
+
+  const rankedForSchema = (data.fallback ?? data.today).slice(0, 10);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
@@ -196,26 +90,7 @@ export default async function RankingsPage() {
         </div>
       )}
 
-      {failed && (
-        <StatusPanel
-          className="mt-8"
-          role="alert"
-          tone="error"
-          label="랭킹 신호 확인 중"
-          title="랭킹을 불러오지 못했어요"
-          description="집계 연결이 잠시 끊겼어요. 바로 다시 시도할 수 있어요."
-          actions={
-            <Link
-              href="/rankings"
-              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent"
-            >
-              다시 불러오기
-            </Link>
-          }
-        />
-      )}
-
-      {data?.fallback && (
+      {data.fallback && (
         <section aria-label="에디토리얼 픽" className="mt-6">
           <div className="rounded-2xl border border-border bg-surface-2 p-5 text-center">
             <p className="text-base font-semibold">아직 집계 전이에요 — 큐레이션으로 만나보세요</p>
@@ -237,7 +112,7 @@ export default async function RankingsPage() {
         </section>
       )}
 
-      {data && !data.fallback && (
+      {!data.fallback && (
         <div className="instrument-grid mt-6 rounded-3xl border border-border/60 p-4 sm:p-6">
           {/* CSS 라디오 탭 — 클라이언트 상태나 JS 없이 서버 렌더 마크업으로 전환 */}
           <input type="radio" name="rank-tab" id="rank-tab-today" className="peer/today sr-only" defaultChecked />
@@ -343,6 +218,22 @@ export default async function RankingsPage() {
  * 격차가 조회 1~2회다. 그 상태의 "1위"를 단정적으로 보여 주면 없는 정밀도를
  * 주장하게 된다. 트래픽이 임계치를 넘으면 이 경고는 자동으로 사라진다.
  */
+function PublishedWeeklyList({ memes }: { memes: MemeRow[] }) {
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-6">
+      <AdsenseScript />
+      <RankingsJsonLd items={memes.slice(0, 10)} />
+      <h1 className="text-2xl font-bold">이번 주 많이 본 밈</h1>
+      <p className="mt-1 text-base text-muted">공개된 밈 기록에서 최근 글을 모았어요.</p>
+      <ol className="mt-6 grid gap-2 lg:grid-cols-2 lg:gap-x-8">
+        {memes.map((meme, index) => (
+          <RankItem key={meme.id} meme={meme} rank={index + 1} />
+        ))}
+      </ol>
+    </main>
+  );
+}
+
 function MethodNote({
   method,
   lastRollupDate,

@@ -1,27 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getIndexableKoreanMemeCount } from "@/app/sitemap";
+import { aboutDescription, aboutRecordedSentence } from "@/lib/about-copy";
 import { CONTACT_EMAIL } from "@/lib/site";
 
-const ABOUT_DESCRIPTION =
-  "밈캐치는 한국 밈·유행어 3,000여 건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전입니다. 콘텐츠 검수 원칙과 운영 방침을 소개합니다.";
+/** Same live catalog read as the sitemap, so a database-less build cannot freeze a count. */
+export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "소개",
-  description: ABOUT_DESCRIPTION,
-  alternates: { canonical: "/about" },
-  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
+export async function generateMetadata(): Promise<Metadata> {
+  const count = await getIndexableKoreanMemeCount().catch(() => null);
+  const description = aboutDescription(count);
+  return {
     title: "소개",
-    description: ABOUT_DESCRIPTION,
-    url: "/about",
-  },
-};
+    description,
+    alternates: { canonical: "/about" },
+    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
+    openGraph: {
+      type: "website",
+      siteName: "밈캐치",
+      locale: "ko_KR",
+      title: "소개",
+      description,
+      url: "/about",
+    },
+  };
+}
 
 /** 소개 — 운영 주체·검수 프로세스·콘텐츠 원칙 (E-E-A-T 신뢰 문서) */
-export default function AboutPage() {
+export default async function AboutPage() {
+  const count = await getIndexableKoreanMemeCount().catch(() => null);
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
       <div className="max-w-3xl">
@@ -29,7 +36,7 @@ export default function AboutPage() {
         <p className="mt-3 text-lg leading-relaxed text-muted">
           밈캐치는 한국 밈·유행어·챌린지의 <strong className="text-foreground">뜻·유래·지금 써도
           되는지</strong>를 한 번에 알려주는 실시간 밈 사전입니다. 1990년대부터
-          오늘까지 3,000여 건의 밈을 기록하고 있습니다.
+          {aboutRecordedSentence(count)}
         </p>
 
         <section className="mt-10">

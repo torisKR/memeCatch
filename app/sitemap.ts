@@ -33,6 +33,7 @@ const SITEMAP_CACHE_MS = 60 * 60 * 1000;
 type CachedSitemap = {
   expiresAt: number;
   entries: MetadataRoute.Sitemap;
+  koreanMemeCount: number;
 };
 
 let cachedSitemap: CachedSitemap | null = null;
@@ -178,6 +179,7 @@ function reportCatalogUnavailable(): void {
 async function buildSitemap(): Promise<{
   entries: MetadataRoute.Sitemap;
   catalogUnavailable: boolean;
+  koreanMemeCount: number;
 }> {
   // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
   // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
@@ -258,7 +260,7 @@ async function buildSitemap(): Promise<{
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms"] as const).map(
+    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const).map(
       (path) => ({
         url: `${SITE_URL}${path}`,
         changeFrequency: "daily" as const,
@@ -274,6 +276,7 @@ async function buildSitemap(): Promise<{
   // 데이터는 삭제하지 않으며 사이트맵에서 발견 경로만 뺀다.
   // 페이지 단위로 순회 — 사이트맵 상한 5만 URL.
   const PAGE = 1000;
+  let koreanMemeCount = 0;
   for (let from = 0; !catalogUnavailable && supabase && from < 49000; from += PAGE) {
     let data: unknown[] | null = null;
     try {
@@ -331,6 +334,7 @@ async function buildSitemap(): Promise<{
           priority: 0.8,
           alternates: { languages },
         });
+        koreanMemeCount += 1;
       }
 
       for (const locale of SEO_CONTENT_LOCALES) {
@@ -377,15 +381,36 @@ async function buildSitemap(): Promise<{
     );
   }
 
-  return { entries: entries.slice(0, MAX_SITEMAP_URLS), catalogUnavailable };
+  return {
+    entries: entries.slice(0, MAX_SITEMAP_URLS),
+    catalogUnavailable,
+    koreanMemeCount,
+  };
+}
+
+async function loadSitemap(): Promise<{
+  entries: MetadataRoute.Sitemap;
+  koreanMemeCount: number | null;
+}> {
+  const now = Date.now();
+  if (cachedSitemap && cachedSitemap.expiresAt > now) return cachedSitemap;
+  const built = await buildSitemap();
+  if (!built.catalogUnavailable) {
+    cachedSitemap = {
+      expiresAt: now + SITEMAP_CACHE_MS,
+      entries: built.entries,
+      koreanMemeCount: built.koreanMemeCount,
+    };
+    return cachedSitemap;
+  }
+  return { entries: built.entries, koreanMemeCount: null };
+}
+
+/** Indexable unprefixed meme URLs. Null when the catalog read failed. */
+export async function getIndexableKoreanMemeCount(): Promise<number | null> {
+  return (await loadSitemap()).koreanMemeCount;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = Date.now();
-  if (cachedSitemap && cachedSitemap.expiresAt > now) return cachedSitemap.entries;
-  const built = await buildSitemap();
-  if (!built.catalogUnavailable) {
-    cachedSitemap = { expiresAt: now + SITEMAP_CACHE_MS, entries: built.entries };
-  }
-  return built.entries;
+  return (await loadSitemap()).entries;
 }

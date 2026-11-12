@@ -1,7 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import EditorialPage from "@/app/(default)/editorial/page";
-import AboutPage from "@/app/(default)/about/page";
+import AboutPage, { generateMetadata } from "@/app/(default)/about/page";
+
+const koreanCount = vi.hoisted(() => ({ value: 531 as number | null }));
+
+vi.mock("@/app/sitemap", () => ({
+  getIndexableKoreanMemeCount: async () => koreanCount.value,
+}));
 
 describe("smoke", () => {
   it("editorial renders with real pipeline constants", () => {
@@ -24,12 +30,26 @@ describe("smoke", () => {
     expect(html.length).toBeGreaterThan(8000);
   });
 
-  it("about links to editorial and lists contact channels", () => {
-    const html = renderToStaticMarkup(<AboutPage />);
+  it("about links to editorial and lists contact channels", async () => {
+    koreanCount.value = 531;
+    const html = renderToStaticMarkup(await AboutPage());
     expect(html).toContain("/editorial");
     expect(html).toContain("toris@toris.kr");
     expect(html).toContain("/support");
     expect(html).toContain("toris-dev");
+    expect(html).toContain("531건");
+    expect(html).not.toContain("3,000");
     expect(html).not.toMatch(/제휴 링크|\/products|adpick/i);
+    const metadata = await generateMetadata();
+    expect(metadata.description).toContain("531건");
+    expect(metadata.description).not.toContain("3,000");
+  });
+
+  it("about drops the number when the published catalog cannot be counted", async () => {
+    koreanCount.value = null;
+    const html = renderToStaticMarkup(await AboutPage());
+    expect(html).toContain("공개된 한국 밈을 기록하고 있습니다.");
+    expect(html).not.toContain("3,000");
+    expect(html).not.toMatch(/\d[\d,]*건/);
   });
 });

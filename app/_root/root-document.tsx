@@ -33,9 +33,11 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 export function RootDocument({
   children,
   locale,
+  showRankings = true,
 }: {
   children: React.ReactNode;
   locale: Locale;
+  showRankings?: boolean;
 }) {
   return (
     <html
@@ -54,9 +56,9 @@ export function RootDocument({
           {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
           <AttributionTracker />
           <OrganizationJsonLd />
-          <GlobalHeader />
+          <GlobalHeader showRankings={showRankings} />
           <div className="flex-1">{children}</div>
-          <SiteFooter />
+          <SiteFooter showRankings={showRankings} />
           <PremiumAdControl />
           <BottomNav />
           <Suspense fallback={null}>

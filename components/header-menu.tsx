@@ -26,7 +26,7 @@ import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
  * 권장. ESC(버튼 포커스 복귀)·바깥 클릭·라우트 변경 시 닫힘. 포커스 트랩 불필요
  * (모달 아님, Tab 순서가 자연스럽게 패널을 통과).
  */
-export function HeaderMenu() {
+export function HeaderMenu({ showRankings = true }: { showRankings?: boolean }) {
   const { locale = "ko", messages } = useLocale();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -58,7 +58,7 @@ export function HeaderMenu() {
     href: string;
     label: string;
     icon: LucideIcon;
-    prefetch?: false;
+    prefetch?: boolean;
   }[] = [
     { href: "/meme-cards", label: MEME_CARDS_COPY[locale].nav, prefetch: false, icon: Layers3 },
     {
@@ -76,7 +76,7 @@ export function HeaderMenu() {
     { href: "/timeline", label: messages.timeline, prefetch: false, icon: Milestone },
     { href: "/rankings", label: messages.rankings, prefetch: false, icon: Trophy },
     { href: "/news", label: messages.news, prefetch: false, icon: Newspaper },
-  ];
+  ].filter((item) => showRankings || item.href !== "/rankings");
 
   return (
     <div ref={rootRef} className="relative">

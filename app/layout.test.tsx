@@ -13,6 +13,9 @@ vi.mock("@/components/auth-menu", () => ({
   AuthMenu: () => null,
   HideOnAdmin: ({ children }: { children: React.ReactNode }) => children,
 }));
+vi.mock("@/lib/korean-rankings.server", () => ({
+  koreanRankingsVisible: async () => true,
+}));
 
 import KoreanRootLayout from "@/app/(default)/layout";
 import LocalizedRootLayout, {
@@ -22,19 +25,19 @@ import LocalizedRootLayout, {
 } from "@/app/[locale]/layout";
 
 describe("multiple root layouts", () => {
-  it("does not render the Coupang banner or its reserved space", () => {
+  it("does not render the Coupang banner or its reserved space", async () => {
     const html = renderToStaticMarkup(
-      KoreanRootLayout({ children: <main>content</main> }),
+      await KoreanRootLayout({ children: <main>content</main> }),
     );
     expect(html).not.toContain("coupang.com");
     expect(html).not.toContain("h-[131px]");
     expect(html).not.toContain("md:h-[151px]");
   });
-  it("정적 기본 로케일(ko) 문서를 서버 렌더한다 — ISR 유지", () => {
+  it("정적 기본 로케일(ko) 문서를 서버 렌더한다 — ISR 유지", async () => {
     const messages = getMessages("ko");
 
     const html = renderToStaticMarkup(
-      KoreanRootLayout({ children: <main>content</main> }),
+      await KoreanRootLayout({ children: <main>content</main> }),
     );
 
     expect(html).toMatch(/^<html lang="ko" dir="ltr">/);
@@ -47,17 +50,20 @@ describe("multiple root layouts", () => {
     expect(html).toContain(`>${messages.about}</a>`);
     // 편집 원칙(E-E-A-T 신뢰 문서)은 전 페이지 푸터에서 도달 가능해야 한다.
     expect(html).toContain(`>${messages.editorial}</a>`);
+    expect(html).toContain('href="/contact"');
+    expect(html).toContain(">문의</a>");
+    expect(html).toContain('href="/rankings"');
   });
 
   // 예전 푸터는 모바일용 <details>와 데스크톱용 <div>에 같은 고지 문단을
   // 각각 렌더하고 CSS로 한쪽만 보여줬다. 화면에는 하나만 보여도 HTML에는
   // 두 벌이 담겨, 크롤러·심사 도구에는 같은 문단이 연속 2회 반복되는
   // 중복 텍스트로 읽혔다. 고지는 문서에 정확히 한 번만 나와야 한다.
-  it("운영·저작권 고지를 문서에 한 번만 출력한다", () => {
+  it("운영·저작권 고지를 문서에 한 번만 출력한다", async () => {
     const messages = getMessages("ko");
 
     const html = renderToStaticMarkup(
-      KoreanRootLayout({ children: <main>content</main> }),
+      await KoreanRootLayout({ children: <main>content</main> }),
     );
 
     expect(html.split(messages.legal1).length - 1).toBe(1);

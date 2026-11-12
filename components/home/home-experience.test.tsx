@@ -96,10 +96,10 @@ describe("HomeExperience", () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain(`action="${locale === "ko" ? "/search" : `/${locale}/search`}"`);
     expect(html).toContain('href="/community"');
-    expect(html).toContain('href="/products"');
+    expect(html).not.toContain('href="/products"');
     expect(html).toContain('href="/community/new"');
     expect(html).toContain('href="/submit"');
-    expect(html).toContain('href="/products/new"');
+    expect(html).not.toContain('href="/products/new"');
     if (locale === "ko") {
       expect(html).toContain("오리지널 보러 가기");
       expect(html).toContain("밈 올리기");

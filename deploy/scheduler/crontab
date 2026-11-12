@@ -1,5 +1,4 @@
 # Times are UTC, matching the previous Vercel cron definitions.
-0 21 * * * /usr/local/bin/run-cron /api/cron/adpick-hotdeals
 0 18 * * * /usr/local/bin/run-cron /api/cron/trend-pulse
 0 17 * * * /usr/local/bin/run-cron /api/cron/source-refresh
 0 1 * * * /usr/local/bin/run-cron /api/cron/plus-daily-signal

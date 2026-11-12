@@ -80,7 +80,7 @@ describe("HomeImmersiveStory", () => {
       expect(html).toContain('href="#home-latest"');
       expect(html).toContain('href="#home-signals"');
       expect(html).toContain('href="/community"');
-      expect(html).toContain('href="/products"');
+      expect(html).not.toContain('href="/products"');
       expect(html).toContain('name="q"');
       expect(html).toContain(
         `action="${locale === "ko" ? "/search" : `/${locale}/search`}"`,

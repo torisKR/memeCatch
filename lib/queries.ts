@@ -10,7 +10,7 @@ import { curatedSearchCards } from "@/lib/curated-memes";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
-import type { Audience } from "@/lib/meme-commerce";
+import type { Audience } from "@/lib/meme-news";
 import type { MemeOriginProfile } from "@/lib/meme-country";
 
 export type MemeRow = Database["public"]["Tables"]["memes"]["Row"];

@@ -56,7 +56,6 @@ export function HomeImmersiveStory({ locale }: { locale: SeoRouteLocale }) {
                   {chapter.id === "participate" && (
                     <div className={styles.actionRow}>
                       <Link className={styles.primaryAction} href="/community">{copy.communityAction}<ArrowRight aria-hidden="true" /></Link>
-                      <Link className={styles.secondaryAction} href="/products">{copy.productsAction}</Link>
                     </div>
                   )}
                 </div>

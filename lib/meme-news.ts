@@ -1,4 +1,4 @@
-import type { Audience } from "@/lib/meme-commerce";
+export type Audience = "20s" | "30s" | "40s";
 
 export const AUDIENCE_LABELS: Record<Audience, string> = {
   "20s": "20대",

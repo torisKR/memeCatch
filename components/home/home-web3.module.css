@@ -170,7 +170,7 @@
 .pathwayGrid {
   display: grid;
   margin-top: clamp(1.25rem, 3vw, 2rem);
-  grid-template-columns: minmax(0, 1.18fr) minmax(18rem, 0.82fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
 }
@@ -193,13 +193,6 @@
 .pathwayCard:hover { transform: translateY(-0.3rem); }
 .pathwayCard:active { transform: translateY(-0.05rem); }
 .communityCard { background: var(--web3-ink-soft); }
-
-.productsCard {
-  min-height: 18rem;
-  margin-top: 0;
-  background: var(--web3-orange);
-  color: #21120d;
-}
 
 .cardTop,
 .cardBody { position: relative; z-index: 2; }
@@ -224,7 +217,6 @@
 }
 
 .communityCard .cardMark { color: #a9a59e; }
-.productsCard .cardMark { color: #30190f; }
 
 .cardTitle {
   display: block;
@@ -243,8 +235,6 @@
   line-height: 1.65;
 }
 
-.productsCard .cardDescription { color: #30190f; }
-
 .cardAction {
   display: inline-flex;
   min-height: 2.75rem;
@@ -254,8 +244,7 @@
   font-weight: 850;
 }
 
-.communityMotif,
-.productsMotif { position: absolute; z-index: 1; pointer-events: none; }
+.communityMotif { position: absolute; z-index: 1; pointer-events: none; }
 
 .communityMotif {
   top: 12%;
@@ -271,29 +260,34 @@
     -11rem -2rem 0 0 rgb(255 255 255 / 0.13);
 }
 
-.productsMotif {
-  top: 20%;
-  right: -4rem;
-  width: 18rem;
-  aspect-ratio: 1;
-  border: 1.35rem solid rgb(33 18 13 / 0.2);
-  border-right-color: transparent;
-  border-radius: 50%;
-  transform: rotate(-28deg);
-}
-
 .contributionBar {
-  display: grid;
-  margin-top: 1rem;
-  padding: 1.25rem 0;
-  border-top: 1px solid #aaa69e;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem 2rem;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  min-width: 0;
+  margin-top: 1rem;
+  /* The chat launcher is 4rem wide and sits 1.5rem from the viewport edge. */
+  padding: 1.25rem 6rem 1.25rem 0;
+  border-top: 1px solid #aaa69e;
 }
 
-.contributionBar p { margin: 0; font-weight: 800; }
-.contributionLinks { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.contributionBar p {
+  margin: 0;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.contributionLinks {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0.5rem 1rem;
+}
 
 .contributionLink,
 .contributionLinkStrong {
@@ -366,13 +360,11 @@
 @media (max-width: 47.99rem) {
   .anchorTarget { scroll-margin-top: 11rem; }
   .sectionNumber { margin-bottom: 0.5rem; }
-  .pathwayGrid,
   .trustGrid { grid-template-columns: minmax(0, 1fr); }
 
-  .pathwayCard,
-  .productsCard { min-height: 16rem; margin-top: 0; }
+  .pathwayCard { min-height: 16rem; margin-top: 0; }
 
-  .contributionBar { grid-template-columns: minmax(0, 1fr); }
+  .contributionLinks { justify-content: flex-start; }
   .trustGrid { align-items: start; }
 }
 

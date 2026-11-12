@@ -215,6 +215,10 @@ describe("사이트맵 날짜 진실성", () => {
       "/terms",
     ];
 
+    const pathnames = entries.map((entry) => new URL(entry.url).pathname);
+    expect(pathnames).not.toContain("/products");
+    expect(pathnames.some((pathname) => pathname.startsWith("/products/") || pathname.includes("/go/products"))).toBe(false);
+
     for (const pathname of staticPaths) {
       const entry = entries.find((candidate) =>
         new URL(candidate.url).pathname === pathname,

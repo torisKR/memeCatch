@@ -21,7 +21,7 @@ describe("HOME_WEB3_COPY", () => {
       expect(copy.hero.exploreAction.trim()).not.toBe("");
       expect(copy.hero.communityAction.trim()).not.toBe("");
       expect(copy.pathways.communityMark.trim()).not.toBe("");
-      expect(copy.pathways.productsMark.trim()).not.toBe("");
+      expect(JSON.stringify(copy)).not.toMatch(/productsMark|판매 주체|Seller relationships/);
     }
   });
 

@@ -17,13 +17,20 @@ docker run -d --name "$server" \
   -p "127.0.0.1:${port}:5432" \
   postgres:16 >/dev/null
 
-for _ in $(seq 1 60); do
-  if docker exec "$server" pg_isready -U postgres >/dev/null; then
+ready=0
+for _ in $(seq 1 90); do
+  if docker logs "$server" 2>&1 | grep -q "init process complete" \
+    && docker exec "$server" psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select 1" >/dev/null 2>&1; then
+    ready=1
     break
   fi
   sleep 1
 done
-docker exec "$server" pg_isready -U postgres >/dev/null
+if [[ "$ready" != "1" ]]; then
+  echo "backup-role postgres did not become ready" >&2
+  docker logs "$server" >&2 || true
+  exit 1
+fi
 
 docker cp "$root/deploy/postgres/99-app-identity.sql" "$server:/tmp/99-app-identity.sql"
 docker cp "$root/deploy/postgres/backup-role.sh" "$server:/tmp/backup-role.sh"

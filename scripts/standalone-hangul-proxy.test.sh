@@ -38,9 +38,11 @@ docker run -d --name "$server" \
   -v "$root/supabase/migrations:/migrations:ro" \
   pgvector/pgvector:pg16 >/dev/null
 
+# pg_isready turns true while the image entrypoint is still creating
+# POSTGRES_DB. Wait until that database accepts a query.
 ready=0
 for _ in $(seq 1 90); do
-  if docker exec "$server" pg_isready -U postgres >/dev/null 2>&1; then
+  if docker exec "$server" psql -v ON_ERROR_STOP=1 --username postgres --dbname memecatch -c "select 1" >/dev/null 2>&1; then
     ready=1
     break
   fi

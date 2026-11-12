@@ -280,14 +280,12 @@ export default function EditorialPage() {
         </section>
 
         <section className="mt-12">
-          <h2 className="text-xl font-bold">6. 광고·제휴와 편집의 분리</h2>
+          <h2 className="text-xl font-bold">6. 광고와 편집의 분리</h2>
           <p className="mt-3 text-base leading-relaxed">
-            밈캐치는 광고와 제휴 링크, 후원으로 운영됩니다. 다만 광고주는 밈의
-            수록 여부나 사용 안전 등급에 관여하지 않으며, 대가를 받고 특정 밈을
-            올리거나 등급을 조정하지 않습니다. 제휴 링크가 있는 자리에는 광고
-            표기를 함께 노출하고, 링크를 통한 구매로 수수료를 받을 수 있다는
-            사실을 밝힙니다. 상품 가격과 재고는 판매처 기준이며 저희가 보장하지
-            않습니다.
+            밈캐치는 광고와 후원으로 운영됩니다. 광고주는 밈의 수록 여부나
+            사용 안전 등급에 관여하지 않으며, 대가를 받고 특정 밈을 올리거나
+            등급을 조정하지 않습니다. 광고가 있는 자리에는 광고 표기를 함께
+            노출합니다.
           </p>
         </section>
 

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { RETIRED_PRODUCT_REDIRECTS } from "./lib/retired-product-paths";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -253,6 +254,9 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
+  },
+  async redirects() {
+    return [...RETIRED_PRODUCT_REDIRECTS];
   },
 };
 

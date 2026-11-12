@@ -273,18 +273,63 @@ describe("HomeDiscovery", () => {
     try {
       document.documentElement.lang = "ko";
       for (const node of nodes) {
-        const style = getComputedStyle(node!);
-        expect(style.wordBreak).toBe("keep-all");
-        expect(style.overflowWrap).toBe("anywhere");
+        const computed = getComputedStyle(node!);
+        expect(computed.wordBreak).toBe("keep-all");
+        expect(computed.overflowWrap).toBe("anywhere");
       }
 
       for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
         document.documentElement.lang = lang;
         for (const node of nodes) {
-          const style = getComputedStyle(node!);
-          expect(style.wordBreak).not.toBe("keep-all");
-          expect(style.overflowWrap).toBe("anywhere");
+          const computed = getComputedStyle(node!);
+          expect(computed.wordBreak).toBe("normal");
+          expect(computed.overflowWrap).toBe("anywhere");
         }
+      }
+    } finally {
+      style.remove();
+      document.body.innerHTML = "";
+      document.documentElement.lang = "en";
+    }
+  });
+
+  it("uses auto-phrase for the ja/zh preview heading from 64rem and leaves ko and en on keep-all", () => {
+    const css = readFileSync("components/home/home-discovery.module.css", "utf8");
+    const desktop = css.match(
+      /@media \(min-width: 64rem\) \{\s*:lang\(ja\) \.preview h3,\s*:lang\(zh\) \.preview h3 \{([^}]+)\}/,
+    );
+    expect(desktop).not.toBeNull();
+    const declarations = desktop?.[1] ?? "";
+    expect(declarations).toContain("font-size: clamp(1.75rem, 2.75vw, 2.2rem);");
+    expect(declarations).toContain("word-break: auto-phrase;");
+    expect(declarations).toContain("overflow-wrap: anywhere;");
+    expect(declarations).toContain("line-break: strict;");
+
+    // jsdom does not evaluate min-width media features, so the 64rem block never
+    // becomes computed style on its own. The declarations are copied from that block.
+    const style = document.createElement("style");
+    style.textContent = `${css}\n:lang(ja) .preview h3, :lang(zh) .preview h3 {${declarations}}`;
+    document.head.appendChild(style);
+    document.body.innerHTML = `
+      <h2 class="title">title</h2>
+      <aside class="preview"><h3>preview</h3></aside>
+    `;
+
+    try {
+      for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
+        document.documentElement.lang = lang;
+        const preview = getComputedStyle(document.querySelector(".preview h3")!);
+        expect(preview.wordBreak).toBe("auto-phrase");
+        expect(preview.overflowWrap).toBe("anywhere");
+        expect(preview.lineBreak).toBe("strict");
+        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("normal");
+      }
+
+      for (const lang of ["ko", "en"]) {
+        document.documentElement.lang = lang;
+        const preview = getComputedStyle(document.querySelector(".preview h3")!);
+        expect(preview.wordBreak).toBe("keep-all");
+        expect(preview.overflowWrap).toBe("anywhere");
       }
     } finally {
       style.remove();

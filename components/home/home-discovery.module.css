@@ -622,6 +622,16 @@
   }
 }
 
+@media (min-width: 64rem) {
+  :lang(ja) .preview h3,
+  :lang(zh) .preview h3 {
+    font-size: clamp(1.75rem, 2.75vw, 2.2rem);
+    word-break: auto-phrase;
+    overflow-wrap: anywhere;
+    line-break: strict;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chip,
   .clearButton,

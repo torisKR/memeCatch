@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import type { MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
+import { MOBILE_CARD_CLEARANCE } from "@/components/mobile-card-clearance";
 import { MemeCardSkeleton } from "@/components/skeletons";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import type { MemeCategory } from "@/lib/labels";
@@ -430,7 +431,7 @@ export function ExploreGrid({
           결과 <strong className="font-semibold text-foreground">{total.toLocaleString("ko-KR")}</strong>개
         </p>
       )}
-      <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
             <MemeCard meme={meme} sourcePlatform={filters.platform} />

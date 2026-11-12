@@ -77,7 +77,8 @@ export function AnswerCard({
       </div>
       <p
         id="meme-summary"
-        className="mt-1.5 text-lg leading-relaxed text-foreground"
+        data-korean-lead=""
+        className="mt-1.5 text-lg leading-relaxed text-foreground [word-break:keep-all]"
       >
         {meme.summary}
       </p>

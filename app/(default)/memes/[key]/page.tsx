@@ -404,71 +404,88 @@ export default async function MemeDetailPage({ params }: Props) {
               충실도 판정은 generateMetadata의 robots와 같은 입력(meme)을 쓴다. */}
           <DocStatusNote meme={meme} title={meme.title} shortId={meme.short_id} />
 
-          {/* 판정 근거 한 블록 — 신호등 의미·usage_note·상황별 가이드·sentiment·caution 통합 */}
-          <SafetyRationale
-            level={meme.safety_level}
-            sentiment={meme.sentiment}
-            context={meme.usage_context}
-            note={meme.usage_note}
-            caution={meme.caution}
-            reviewedAt={meme.safety_reviewed_at}
-          />
+          {meme.description && (
+            <section aria-labelledby="meme-meaning" data-detail-order="meaning">
+              <h2 id="meme-meaning" className="text-lg font-bold [word-break:keep-all]">뜻</h2>
+              <p data-korean-body="" className="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]">
+                {meme.description}
+              </p>
+            </section>
+          )}
 
-          {/* 지금도 쓰이나요? — 트렌드 수명 주기 및 현실적 사용 가이드 */}
-          <MemeLifecycleGuide
-            lifecycleStatus={meme.lifecycle_status}
-            originYear={meme.origin_year}
-            title={meme.title}
-          />
-
-          {(meme.description || meme.origin) && (
-            <section
-              aria-labelledby="meme-about"
-              className="glass-panel relative overflow-hidden rounded-2xl p-5"
-            >
-              {/* 계측 격자 — glass-panel과 같은 노드에 두면 배경 shorthand가 grid-line을
-                  지우므로 별도 레이어로 둔다(status-panel.tsx 문법 재사용). 정적이라 성능 비용 없음. */}
-              <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
-              <div className="relative space-y-4">
-                <h2 id="meme-about" className="sr-only">
-                  {aboutSectionHeading(meme.origin_kind)}
-                </h2>
-                {meme.content_reviewed_at && (
-                  <p className="text-sm text-muted">
-                    최종 검토일:{" "}
-                    <time dateTime={meme.content_reviewed_at}>
-                      {new Intl.DateTimeFormat("ko-KR", {
-                        timeZone: "Asia/Seoul",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }).format(new Date(meme.content_reviewed_at))}
-                    </time>
+          {(meme.usage_note || (Array.isArray(usageExamples) && usageExamples.length > 0)) && (
+            <section aria-labelledby="meme-usage" data-detail-order="usage" className="space-y-4">
+              {meme.usage_note ? (
+                <div>
+                  <h2 id="meme-usage" className="text-lg font-bold [word-break:keep-all]">이렇게 써요</h2>
+                  <p data-korean-body="" className="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]">
+                    {meme.usage_note}
                   </p>
-                )}
-                {meme.description && (
-                  <div>
-                    <h3 className="text-lg font-bold">무슨 뜻이에요?</h3>
-                    <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-                      {meme.description}
-                    </p>
-                  </div>
-                )}
-                {(meme.origin || isHouseOriginal(meme.origin_kind)) && (
-                  <div>
-                    <h3 className="text-lg font-bold">{originSectionHeading(meme.origin_kind)}</h3>
-                    {isHouseOriginal(meme.origin_kind) && (
-                      <p className="mt-1.5 text-sm font-semibold text-foreground">
-                        {houseOriginalPublicLabel()}
-                      </p>
-                    )}
-                    {meme.origin ? (
-                      <p className="mt-1.5 whitespace-pre-line text-base leading-relaxed">
-                        {meme.origin}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
+                </div>
+              ) : null}
+              <UsageExamples examples={usageExamples} heading={!meme.usage_note} />
+            </section>
+          )}
+
+          {meme.caution ? (
+            <section aria-labelledby="meme-caution" data-detail-order="caution">
+              <h2 id="meme-caution" className="text-lg font-bold [word-break:keep-all]">쓰면 안 되는 상황</h2>
+              <p data-korean-body="" className="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]">
+                {meme.caution}
+              </p>
+            </section>
+          ) : null}
+
+          {(meme.origin || isHouseOriginal(meme.origin_kind)) && (
+            <section aria-labelledby="meme-origin" data-detail-order="origin">
+              <h2 id="meme-origin" className="text-lg font-bold [word-break:keep-all]">
+                {isHouseOriginal(meme.origin_kind) ? originSectionHeading(meme.origin_kind) : "유래"}
+              </h2>
+              {isHouseOriginal(meme.origin_kind) && (
+                <p className="mt-1.5 text-sm font-semibold text-foreground">
+                  {houseOriginalPublicLabel()}
+                </p>
+              )}
+              {meme.origin ? (
+                <p data-korean-body="" className="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]">
+                  {meme.origin}
+                </p>
+              ) : null}
+            </section>
+          )}
+
+          <div data-detail-order="related">
+            <ContinueStream
+              currentId={meme.id}
+              category={meme.category}
+              related={related}
+            />
+          </div>
+
+          <section
+            aria-labelledby="meme-about"
+            data-detail-order="sources"
+            className="glass-panel relative overflow-hidden rounded-2xl p-5"
+          >
+            <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+            <div className="relative space-y-4">
+              <h2 id="meme-about" className="sr-only">
+                {aboutSectionHeading(meme.origin_kind)}
+              </h2>
+              <h2 className="text-lg font-bold [word-break:keep-all]">출처</h2>
+              {meme.content_reviewed_at && (
+                <p className="text-sm text-muted">
+                  최종 검토일:{" "}
+                  <time dateTime={meme.content_reviewed_at}>
+                    {new Intl.DateTimeFormat("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }).format(new Date(meme.content_reviewed_at))}
+                  </time>
+                </p>
+              )}
 
                 {/* 분류·시기·태그 — 유래 유무와 무관하게 이 밈이 가진 실제 메타데이터라
                     origin이 비어도 노출한다(있는 정보를 숨기지 않는다). */}
@@ -529,12 +546,8 @@ export default async function MemeDetailPage({ params }: Props) {
                 />
               </div>
             </section>
-          )}
 
           <AuthInvite />
-
-          {/* 대화 예문 — 데이터는 에이전트 D 의존(usage_examples 없으면 null 렌더) */}
-          <UsageExamples examples={usageExamples} />
 
           <MemeUseKit
             title={meme.title}
@@ -555,6 +568,22 @@ export default async function MemeDetailPage({ params }: Props) {
             <KoreanPlusPricingCard titleId="plus-pricing-title-mobile" />
           </div>
 
+          <div data-detail-order="appendix" className="space-y-5">
+            <SafetyRationale
+              level={meme.safety_level}
+              sentiment={meme.sentiment}
+              context={meme.usage_context}
+              note={meme.usage_note}
+              caution={meme.caution}
+              reviewedAt={meme.safety_reviewed_at}
+            />
+            <MemeLifecycleGuide
+              lifecycleStatus={meme.lifecycle_status}
+              originYear={meme.origin_year}
+              title={meme.title}
+            />
+          </div>
+
           {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
               권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}
           <MemeTrendPanel memeId={meme.id} />
@@ -566,13 +595,6 @@ export default async function MemeDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="border-t border-border pt-10">
-        <ContinueStream
-          currentId={meme.id}
-          category={meme.category}
-          related={related}
-        />
-      </div>
     </main>
   );
 }

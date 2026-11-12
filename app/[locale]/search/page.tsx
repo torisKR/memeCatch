@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MemeCard } from "@/components/meme-card";
+import { MOBILE_CARD_CLEARANCE } from "@/components/mobile-card-clearance";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { StatusPanel } from "@/components/status-panel";
 import { TrackedBlock } from "@/components/tracked-block";
@@ -115,7 +116,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
         >
           <p className="text-base text-muted">{copy.resultSummary(query, results.length)}</p>
           <TrackedBlock event="search_result_click" params={{ query }}>
-            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
               {results.map((meme) => {
                 const localized = localizedByShortId.get(meme.short_id);
                 return (
@@ -193,7 +194,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
       {needsFallback && trending.length > 0 && (
         <section aria-labelledby="search-trending" className="mt-8">
           <h2 id="search-trending" className="text-xl font-bold">{copy.trendingTitle}</h2>
-          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
             {trending.slice(0, 6).map((meme) => {
               const localized = localizedByShortId.get(meme.short_id);
               return (

@@ -44,6 +44,12 @@ function catalog(payload: { data: MemeListItem[] | null; error: { message: strin
       filters.push({ column, values });
       return builder;
     },
+    order() {
+      return builder;
+    },
+    limit() {
+      return builder;
+    },
     then(
       onFulfilled?: (value: typeof payload) => unknown,
       onRejected?: (reason: unknown) => unknown,
@@ -67,41 +73,59 @@ describe("loadRetiredProductMemes", () => {
     createStaticClient.mockReset();
   });
 
-  it("keeps trending memes and does not query the curated slugs", async () => {
-    getTrendingMemes.mockResolvedValue([1, 2].map((index) => meme(`trend-${index}`, `급상승 ${index}`)));
-
-    const memes = await loadRetiredProductMemes();
-
-    expect(memes.map((item) => item.title)).toEqual(["급상승 1", "급상승 2"]);
-    expect(createStaticClient).not.toHaveBeenCalled();
-  });
-
-  it("falls back to the four verified published slugs, in constant order", async () => {
-    getTrendingMemes.mockResolvedValue([]);
-    const shuffled = [
-      ...[...RETIRED_PRODUCT_FALLBACK_SLUGS].reverse().map((slug) => meme(slug, `제목 ${slug}`)),
-      meme("꼰대", "꼰대"),
-      meme("치맥", "치맥"),
-    ];
-    const source = catalog({ data: shuffled, error: null });
+  it("puts verified public art ahead of other trending memes and skips YouTube stills", async () => {
+    const verified = meme("ai-slop", "AI 슬롭");
+    verified.meme_contents = [{ thumbnail_url: "/ai-memes/ai-slop.jpg", is_representative: true }];
+    const bubble = meme("trend-bubble", "말풍선");
+    bubble.meme_contents = [];
+    const youtube = meme("trend-yt", "유튜브");
+    youtube.meme_contents = [{
+      thumbnail_url: "https://i.ytimg.com/vi/abc/hqdefault.jpg",
+      is_representative: true,
+    }];
+    const source = catalog({ data: [youtube, bubble, verified], error: null });
     createStaticClient.mockReturnValue(source.client);
+    getTrendingMemes.mockResolvedValue([
+      youtube,
+      bubble,
+      meme("trend-2", "급상승 2"),
+    ]);
 
     const memes = await loadRetiredProductMemes();
 
-    expect(memes.map((item) => item.slug)).toEqual([...RETIRED_PRODUCT_FALLBACK_SLUGS]);
-    expect(memes.map((item) => item.title)).toEqual(
-      RETIRED_PRODUCT_FALLBACK_SLUGS.map((slug) => `제목 ${slug}`),
-    );
-    expect(memes.map((item) => item.slug)).not.toContain("꼰대");
-    expect(memes.map((item) => item.slug)).not.toContain("치맥");
-    expect(source.filters).toContainEqual({
-      column: "slug",
-      values: [...RETIRED_PRODUCT_FALLBACK_SLUGS],
-    });
+    expect(memes).toHaveLength(4);
+    expect(memes.map((item) => item.slug).slice(0, 3)).toEqual([
+      "ai-slop",
+      "trend-bubble",
+      "trend-2",
+    ]);
+    expect(memes.map((item) => item.slug)).not.toContain("trend-yt");
+    expect(getTrendingMemes).toHaveBeenCalledWith(24);
     expect(source.filters).toContainEqual({
       column: "moderation_status",
       values: ["approved", "limited"],
     });
+  });
+
+  it("fills a short catalog with the shipped illustrations and skips unverified slugs", async () => {
+    getTrendingMemes.mockResolvedValue([]);
+    const onlyOne = meme("ai-slop", "제목 ai-slop");
+    onlyOne.meme_contents = [{ thumbnail_url: "/ai-memes/ai-slop.jpg", is_representative: true }];
+    const source = catalog({
+      data: [onlyOne, meme("꼰대", "꼰대"), meme("치맥", "치맥")],
+      error: null,
+    });
+    createStaticClient.mockReturnValue(source.client);
+
+    const memes = await loadRetiredProductMemes();
+
+    expect(memes).toHaveLength(4);
+    expect(memes[0]?.slug).toBe("ai-slop");
+    expect(memes.map((item) => item.slug)).not.toContain("꼰대");
+    expect(memes.map((item) => item.slug)).not.toContain("치맥");
+    expect(memes.slice(1).map((item) => item.slug)).toEqual(
+      RETIRED_PRODUCT_FALLBACK_SLUGS.filter((slug) => slug !== "ai-slop"),
+    );
   });
 
   it("uses the shipped illustrations when the catalog cannot load the picks", async () => {

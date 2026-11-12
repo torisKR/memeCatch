@@ -4,6 +4,7 @@ import { SECTION_TITLES } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { getTrendingMemes, searchMemes } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
+import { MOBILE_CARD_CLEARANCE } from "@/components/mobile-card-clearance";
 import { StatusPanel } from "@/components/status-panel";
 import { TrackedBlock } from "@/components/tracked-block";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
@@ -67,7 +68,7 @@ export default async function SearchPage({ searchParams }: Props) {
             &lsquo;{query}&rsquo; 검색 결과 <span className="stat-mono">{results.length}</span>개예요.
           </p>
           <TrackedBlock event="search_result_click" params={{ query }}>
-            <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
               {results.map((meme) => (
                 <li key={meme.id} className="min-w-0">
                   <MemeCard meme={meme} />
@@ -123,7 +124,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <h2 id="search-trending" className="text-xl font-bold">
             {SECTION_TITLES.trending}
           </h2>
-          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
             {trending.slice(0, 6).map((meme) => (
               <li key={meme.id} className="min-w-0">
                 <MemeCard meme={meme} />

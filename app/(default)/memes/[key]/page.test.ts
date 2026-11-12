@@ -59,7 +59,10 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source.slice(afterSources - 24, afterSources)).toContain("lg:hidden");
     expect(rail).toBeGreaterThan(-1);
     expect(afterSources).toBeGreaterThan(sources);
-    expect(related).toBeGreaterThan(afterSources);
+    // #65 moves ContinueStream into the reading order (after origin, before sources).
+    // #67 still places the mobile Plus card immediately after SourceEvidence.
+    expect(related).toBeGreaterThan(-1);
+    expect(related).toBeLessThan(sources);
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {

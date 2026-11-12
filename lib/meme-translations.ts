@@ -188,6 +188,26 @@ export function overlayMemeTranslation<T extends LocalizableMeme>(
   };
 }
 
+/** Related cards may keep a reviewed row whose summary is blank. */
+export function isRelatedLocalizedMeme(
+  meme: LocalizedMeme<LocalizableMeme> | null | undefined,
+): boolean {
+  if (!meme) return false;
+  const originalDepth: ContentDepthInput = {
+    ...meme.original,
+    meme_sources: meme.meme_sources,
+    meme_contents: meme.meme_contents,
+    meme_tags_map: meme.meme_tags_map,
+  };
+  return (
+    meme.translation.status === "reviewed" &&
+    meme.translation.isCurrent &&
+    meme.title.trim().length > 0 &&
+    [meme.description, meme.origin].every((value) => value.trim().length > 0) &&
+    isIndexableMeme(originalDepth)
+  );
+}
+
 /**
  * Public localized pages require a human-reviewed snapshot of an already
  * substantial Korean source. Drafts remain available only to the operator
@@ -249,6 +269,7 @@ export type LocalizedSearchMemesResult = {
 export async function getLocalizedSearchMemesResult(
   shortIds: readonly string[],
   locale: Locale,
+  options?: { includeEmptySummary?: boolean },
 ): Promise<LocalizedSearchMemesResult> {
   const items = new Map<string, LocalizedMemeDetail>();
   if (locale === DEFAULT_LOCALE || shortIds.length === 0) {
@@ -271,7 +292,10 @@ export async function getLocalizedSearchMemesResult(
 
     for (const row of data) {
       const localized = overlayMemeTranslation(row.memes, row, locale);
-      if (localized && isIndexableLocalizedMeme(localized)) {
+      const include = options?.includeEmptySummary
+        ? isRelatedLocalizedMeme(localized)
+        : isIndexableLocalizedMeme(localized);
+      if (localized && include) {
         items.set(localized.short_id, localized);
       }
     }

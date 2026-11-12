@@ -67,7 +67,7 @@ export function SiteFooter() {
                 {messages.legalSummary}
                 <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" />
               </summary>
-              <div className="space-y-1.5 pb-2 sm:pb-0">
+              <div className="space-y-1.5 pb-2 leading-normal sm:pb-0">
                 <LegalCopy legal1={messages.legal1} legal2={messages.legal2} />
               </div>
             </details>
@@ -82,14 +82,12 @@ export function SiteFooter() {
 function LegalCopy({ legal1, legal2 }: { legal1: string; legal2: string }) {
   return (
     <>
-      <p>
-        {legal1}
-      </p>
-      <p>
+      <p className="break-keep leading-normal">{legal1}</p>
+      <p className="break-keep leading-normal">
         {legal2}{" "}
         <a
           href={`mailto:${CONTACT_EMAIL}`}
-          className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-foreground"
+          className="underline underline-offset-2 hover:text-foreground"
         >
           {CONTACT_EMAIL}
         </a>

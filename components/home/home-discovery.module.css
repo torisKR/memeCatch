@@ -475,6 +475,15 @@
   font-size: clamp(1.7rem, 3.4vw, 2.7rem);
   letter-spacing: -0.05em;
   line-height: 1;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:lang(ja) .preview h3,
+:lang(zh) .preview h3 {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-break: strict;
 }
 
 .previewDescription {
@@ -563,6 +572,15 @@
   margin: 0;
   font-size: clamp(1.3rem, 3vw, 2rem);
   letter-spacing: -0.035em;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:lang(ja) .emptyState h3,
+:lang(zh) .emptyState h3 {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-break: strict;
 }
 
 .emptyState p {

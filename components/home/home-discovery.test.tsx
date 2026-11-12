@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
 import type { ComponentPropsWithoutRef } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -251,5 +252,44 @@ describe("HomeDiscovery", () => {
     );
     expect(within(screen.getByLabelText(HOME_DISCOVERY_COPY.ja.previewLabel)).getByText("Dance loop"))
       .toBeTruthy();
+  });
+
+  it("keeps Korean heading breaks and lets ja/zh/zh-tw wrap the title and discovery headings", () => {
+    const css = readFileSync("components/home/home-discovery.module.css", "utf8");
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.appendChild(style);
+    document.body.innerHTML = `
+      <h2 class="title">title</h2>
+      <aside class="preview"><h3>preview</h3></aside>
+      <div class="emptyState"><h3>empty</h3></div>
+    `;
+    const nodes = [
+      document.querySelector(".title"),
+      document.querySelector(".preview h3"),
+      document.querySelector(".emptyState h3"),
+    ];
+
+    try {
+      document.documentElement.lang = "ko";
+      for (const node of nodes) {
+        const style = getComputedStyle(node!);
+        expect(style.wordBreak).toBe("keep-all");
+        expect(style.overflowWrap).toBe("anywhere");
+      }
+
+      for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
+        document.documentElement.lang = lang;
+        for (const node of nodes) {
+          const style = getComputedStyle(node!);
+          expect(style.wordBreak).not.toBe("keep-all");
+          expect(style.overflowWrap).toBe("anywhere");
+        }
+      }
+    } finally {
+      style.remove();
+      document.body.innerHTML = "";
+      document.documentElement.lang = "en";
+    }
   });
 });

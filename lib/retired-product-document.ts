@@ -17,7 +17,6 @@ const COPY = {
     message: "밈상품 페이지는 더 이상 운영하지 않아요.",
     explore: "밈 탐색",
     exploreHref: "/explore",
-    empty: "지금은 보여드릴 인기 밈이 없어요.",
   },
   en: {
     lang: "en",
@@ -25,7 +24,6 @@ const COPY = {
     message: "Meme product pages are no longer available.",
     explore: "Explore memes",
     exploreHref: "/en/explore",
-    empty: "No popular memes to show right now.",
   },
 } as const satisfies Record<
   RetiredProductLocale,
@@ -35,7 +33,6 @@ const COPY = {
     message: string;
     explore: string;
     exploreHref: string;
-    empty: string;
   }
 >;
 
@@ -53,7 +50,6 @@ function fallbackDocument(locale: RetiredProductLocale): string {
 <main>
 <h1>${copy.message}</h1>
 <a href="${copy.exploreHref}">${copy.explore}</a>
-<p>${copy.empty}</p>
 </main>
 </body>
 </html>`;

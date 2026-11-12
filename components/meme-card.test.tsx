@@ -30,8 +30,21 @@ describe("MemeCard", () => {
     const html = renderToStaticMarkup(<MemeCard meme={meme} />);
 
     expect(html).toContain("테스트 밈");
+    expect(html).toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
     expect(html).not.toContain("YouTube");
     expect(html).not.toContain("영상");
+  });
+
+  it("can frame the image at 4:3 without moving the title off the bottom", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard meme={meme} imageAspect="4/3" />,
+    );
+
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
+    expect(html.indexOf("aspect-[4/3]")).toBeLessThan(html.indexOf("테스트 밈"));
   });
 
   it("shows one source only when a platform filter provides that context", () => {

@@ -44,6 +44,7 @@ describe("retired product responses", () => {
     expect(html).toContain("밈 탐색");
     expect(html).toContain('href="/explore"');
     expect(html).toContain("noindex");
+    expect(html).not.toContain("지금은 보여드릴 인기 밈이 없어요.");
   });
 
   it.each(["/en/go/products", "/en/go/products/hotdeal"])(
@@ -57,6 +58,7 @@ describe("retired product responses", () => {
       expect(html).toContain("Explore memes");
       expect(html).toContain('href="/en/explore"');
       expect(html).toContain("noindex");
+      expect(html).not.toContain("No popular memes to show right now.");
     },
   );
 

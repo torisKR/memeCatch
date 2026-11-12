@@ -46,7 +46,9 @@ describe("retired products page", () => {
     expect(html).toContain('href="/explore"');
     expect(html).toContain('name="robots"');
     expect(html).toContain("noindex");
-    expect(html).toContain("지금은 보여드릴 인기 밈이 없어요.");
+    expect(html).not.toContain("지금은 보여드릴 인기 밈이 없어요.");
+    expect(html).not.toContain("지금 많이 보는 밈");
+    expect(html).not.toContain("<ul");
     expect(koreanMetadata.robots).toEqual(RETIRED_PRODUCTS_ROBOTS);
     expect(koreanMetadata.robots).toMatchObject({ index: false });
   });
@@ -60,6 +62,11 @@ describe("retired products page", () => {
     expect(html).toContain("인기 밈 4");
     expect(html).not.toContain("인기 밈 5");
     expect(html).not.toContain("지금은 보여드릴 인기 밈이 없어요.");
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
+    expect(html).toContain("grid-cols-2");
+    expect(html).toContain("xl:grid-cols-4");
   });
 
   it("uses the English copy on the English gone page", async () => {
@@ -70,6 +77,8 @@ describe("retired products page", () => {
     expect(html).toContain("Explore memes");
     expect(html).toContain('href="/en/explore"');
     expect(html).toContain("noindex");
+    expect(html).not.toContain("No popular memes to show right now.");
+    expect(html).not.toContain("<ul");
     await expect(englishMetadata({ params: Promise.resolve({ locale: "en" }) })).resolves.toMatchObject({
       robots: RETIRED_PRODUCTS_ROBOTS,
     });

@@ -17,6 +17,21 @@ import {
  * 카드의 주인공은 이미지·이름·한 줄 설명이다. 플랫폼과 미디어 타입을 모두
  * 겹쳐 보이던 이전 UI 대신, 플랫폼 필터 문맥에서만 출처 하나를 표시한다.
  */
+type MemeCardImageAspect = "4/5" | "4/3";
+
+function imageAspectClass(aspect: MemeCardImageAspect): string {
+  switch (aspect) {
+    case "4/5":
+      return "aspect-[4/5]";
+    case "4/3":
+      return "aspect-[4/3]";
+    default: {
+      const unreachable: never = aspect;
+      return unreachable;
+    }
+  }
+}
+
 export function MemeCard({
   meme,
   href,
@@ -24,6 +39,7 @@ export function MemeCard({
   rank,
   sourcePlatform,
   locale = "ko",
+  imageAspect = "4/5",
 }: {
   meme: MemeRow | MemeListItem;
   href?: string;
@@ -31,6 +47,8 @@ export function MemeCard({
   rank?: number;
   sourcePlatform?: SocialPlatform;
   locale?: MemeCountryLocale;
+  /** Default explore cards are 4:5. The retired-product tombstone uses 4:3. */
+  imageAspect?: MemeCardImageAspect;
 }) {
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
   const thumb =
@@ -47,7 +65,7 @@ export function MemeCard({
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
       className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/60 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
     >
-      <div className="relative aspect-[4/5] shrink-0 overflow-hidden bg-surface-2">
+      <div className={`relative shrink-0 overflow-hidden bg-surface-2 ${imageAspectClass(imageAspect)}`}>
         <MemeThumbnail
           src={thumb}
           title={meme.title}

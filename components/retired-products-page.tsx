@@ -10,14 +10,12 @@ const COPY = {
     message: "밈상품 페이지는 더 이상 운영하지 않아요.",
     explore: "밈 탐색",
     exploreHref: "/explore",
-    empty: "지금은 보여드릴 인기 밈이 없어요.",
     popular: "지금 많이 보는 밈",
   },
   en: {
     message: "Meme product pages are no longer available.",
     explore: "Explore memes",
     exploreHref: "/en/explore",
-    empty: "No popular memes to show right now.",
     popular: "Popular memes",
   },
 } as const satisfies Record<
@@ -26,7 +24,6 @@ const COPY = {
     message: string;
     explore: string;
     exploreHref: string;
-    empty: string;
     popular: string;
   }
 >;
@@ -60,17 +57,20 @@ export function RetiredProductsPage({
       </div>
       {cards.length > 0 ? (
         <section className="mt-12" aria-label={copy.popular}>
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {cards.map((meme, index) => (
               <li key={meme.id} className="min-w-0">
-                <MemeCard meme={meme} locale={locale} priority={index === 0} />
+                <MemeCard
+                  meme={meme}
+                  locale={locale}
+                  priority={index === 0}
+                  imageAspect="4/3"
+                />
               </li>
             ))}
           </ul>
         </section>
-      ) : (
-        <p className="mt-10 text-center text-base text-muted">{copy.empty}</p>
-      )}
+      ) : null}
     </main>
   );
 }

@@ -10,7 +10,11 @@ const { createStaticClient, responses } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import { clearKoreanRankingsCache, loadKoreanRankings } from "@/lib/korean-rankings.server";
+import {
+  clearKoreanRankingsCache,
+  koreanRankingsVisible,
+  loadKoreanRankings,
+} from "@/lib/korean-rankings.server";
 
 function meme(id: string, trendScore: number) {
   return {
@@ -78,8 +82,16 @@ describe("loadKoreanRankings", () => {
     responses.push(
       { data: [], error: null },
       { data: [], error: null },
-      { data: [], error: null },
     );
     await expect(loadKoreanRankings()).resolves.toEqual({ kind: "unavailable" });
+    await expect(koreanRankingsVisible()).resolves.toBe(false);
+  });
+
+  it("hides rankings when the database client throws", async () => {
+    createStaticClient.mockImplementation(() => {
+      throw new Error("DATABASE_URL is required");
+    });
+    await expect(loadKoreanRankings()).resolves.toEqual({ kind: "outage" });
+    await expect(koreanRankingsVisible()).resolves.toBe(false);
   });
 });

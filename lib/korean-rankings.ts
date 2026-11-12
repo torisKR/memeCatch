@@ -35,6 +35,27 @@ export function liveRankingHasRows(
 }
 
 /**
+ * The page renders a list only for live rows or the published fallback.
+ * Unavailable and outage are the 404 path, so navigation must stay hidden.
+ */
+export function koreanRankingsRenderList(
+  rankings: KoreanRankings,
+): rankings is LiveKoreanRankings | { kind: "published"; memes: PublicRankingMeme[] } {
+  switch (rankings.kind) {
+    case "live":
+    case "published":
+      return true;
+    case "unavailable":
+    case "outage":
+      return false;
+    default: {
+      const exhaustive: never = rankings;
+      return exhaustive;
+    }
+  }
+}
+
+/**
  * Live trend rows win. A failed or empty live read falls back to published
  * memes. Neither source yields a 200 error page.
  */

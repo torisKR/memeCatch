@@ -11,7 +11,7 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import { loadKoreanRankings } from "@/lib/korean-rankings.server";
-import type { PublicRankingMeme } from "@/lib/korean-rankings";
+import { koreanRankingsRenderList, type PublicRankingMeme } from "@/lib/korean-rankings";
 import { AdsenseScript } from "@/components/adsense-script";
 import {
   RANKING_METHODS,
@@ -33,7 +33,7 @@ const RANKINGS_DESCRIPTION =
 
 export async function generateMetadata(): Promise<Metadata> {
   const rankings = await loadKoreanRankings();
-  if (rankings.kind === "unavailable" || rankings.kind === "outage") {
+  if (!koreanRankingsRenderList(rankings)) {
     return {
       title: "페이지를 찾을 수 없어요",
       robots: { index: false, follow: true },
@@ -63,7 +63,7 @@ type MemeRow = PublicRankingMeme;
 
 export default async function RankingsPage() {
   const rankings = await loadKoreanRankings();
-  if (rankings.kind === "unavailable" || rankings.kind === "outage") notFound();
+  if (!koreanRankingsRenderList(rankings)) notFound();
   if (rankings.kind === "published") {
     return <PublishedWeeklyList memes={rankings.memes} />;
   }

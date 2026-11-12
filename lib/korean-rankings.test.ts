@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  koreanRankingsRenderList,
   resolveKoreanRankings,
   type PublicRankingMeme,
 } from "@/lib/korean-rankings";
@@ -57,12 +58,12 @@ describe("resolveKoreanRankings", () => {
   });
 
   it("reports an outage when neither read can run", () => {
-    expect(
-      resolveKoreanRankings({
-        liveError: true,
-        live: null,
-        published: null,
-      }).kind,
-    ).toBe("outage");
+    const result = resolveKoreanRankings({
+      liveError: true,
+      live: null,
+      published: null,
+    });
+    expect(result.kind).toBe("outage");
+    expect(koreanRankingsRenderList(result)).toBe(false);
   });
 });

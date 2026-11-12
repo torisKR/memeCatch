@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { ComponentPropsWithoutRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -139,5 +140,13 @@ describe("HomeExperience", () => {
     expect(populated).toContain('href="/memes/ABC123/published-entry"');
     expect(empty).toContain(HOME_COPY.en.recent.empty);
     expect(empty).toContain('href="/en/search"');
+  });
+
+  it("keeps the pathway link row clear of the mobile chat launcher", () => {
+    const css = readFileSync(new URL("./home-web3.module.css", import.meta.url), "utf8");
+    const mobile = css.slice(css.indexOf("@media (max-width: 47.99rem)"));
+    expect(mobile).toContain("padding-right: calc(4rem + 1rem + 2rem)");
+    expect(mobile).toContain("margin-bottom: calc(4rem + 1rem)");
+    expect(mobile).toContain("padding-right: calc(4rem + 1rem)");
   });
 });

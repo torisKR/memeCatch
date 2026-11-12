@@ -146,6 +146,7 @@ describe("retired product responses", () => {
     expect(html).toContain('href="/explore"');
     expect(cardHrefs).toHaveLength(4);
     expect(cardHrefs.every((href) => href.startsWith("/memes/"))).toBe(true);
+    expect(html).not.toMatch(/href="\/(?:en|ja|zh-tw|zh)\/memes\//);
     expect(html).toContain("aspect-[4/3]");
     expect(html).not.toContain("aspect-[4/5]");
     expect(html).toContain('alt="새우 예수 상징 일러스트"');
@@ -167,18 +168,18 @@ describe("retired product responses", () => {
   });
 
   it.each(["en", "ja", "zh", "zh-tw"] as const)(
-    "prefixes %s card links and keeps the 4:3 image",
+    "keeps %s card links on the unprefixed meme path",
     async (locale) => {
       loadRetiredProductMemes.mockResolvedValue(FOUR_CARDS);
-      const pathname = locale === "en" ? "/en/go/products" : `/${locale}/products`;
+      const pathname = locale === "en" ? "/en/go/products/1" : `/${locale}/products`;
       const response = await proxy(request(pathname));
       const html = await response.text();
       const cardHrefs = [...html.matchAll(/href="([^"]*\/memes\/[^"]+)"/g)].map((match) => match[1]);
 
       expect(response.status).toBe(410);
       expect(cardHrefs).toHaveLength(4);
-      expect(cardHrefs.every((href) => href.startsWith(`/${locale}/memes/`))).toBe(true);
-      expect(html).not.toMatch(/href="\/memes\//);
+      expect(cardHrefs.every((href) => href.startsWith("/memes/"))).toBe(true);
+      expect(html).not.toMatch(new RegExp(`href="/${locale}/memes/`));
       expect(html).toContain("aspect-[4/3]");
       expect(html).not.toContain("aspect-[4/5]");
       if (locale === "en") {

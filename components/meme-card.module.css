@@ -1,0 +1,146 @@
+.shell {
+  container-type: inline-size;
+  height: auto;
+}
+
+.frame {
+  aspect-ratio: 4 / 3;
+}
+
+.face {
+  container-type: size;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.fallback {
+  grid-template-rows: 30% minmax(0, 1fr) auto;
+}
+
+.bubbleSlot {
+  min-height: 0;
+  overflow: hidden;
+  padding: 24px 0 8px 24px;
+}
+
+.bubble {
+  display: block;
+  width: auto;
+  height: 100%;
+  max-height: 100%;
+  aspect-ratio: 3 / 2;
+}
+
+.copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  grid-row: -1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 24px 24px;
+}
+
+.title {
+  margin: 0;
+  flex: none;
+  overflow: hidden;
+  color: #f7f4ee;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.title[data-title-size="detail"] {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.summary {
+  margin: 0;
+  flex: none;
+  overflow: hidden;
+  color: #f7f4ee;
+  font-size: 14px;
+  line-height: 1.25rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.badges {
+  display: flex;
+  flex: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.safety {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.safety > span {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.safety > span > span:first-child {
+  flex: none;
+}
+
+.safety > span > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.year {
+  flex: none;
+  white-space: nowrap;
+}
+
+@container (max-width: 199px) {
+  .frame {
+    aspect-ratio: auto;
+    min-height: 12rem;
+  }
+
+  .copy {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .title,
+  .title[data-title-size="detail"] {
+    min-height: 2.5em;
+    font-size: 16px;
+    line-height: 1.25;
+    -webkit-line-clamp: 2;
+  }
+
+  .summary {
+    display: none;
+  }
+
+  .badges {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .safety {
+    max-width: 100%;
+  }
+}

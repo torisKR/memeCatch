@@ -78,7 +78,7 @@
 .chapterHeading { text-align: center; }
 .chapterHeading p, .chapterTitle, .chapterDescription, .searchForm, .textAction, .actionRow { pointer-events: auto; }
 .eyebrow { margin: 0 0 0.75rem; color: #ff9b7c; font-size: clamp(0.68rem, 1vw, 0.78rem); font-weight: 900; letter-spacing: 0.16em; }
-.chapterTitle { max-width: 14ch; margin: 0 auto; color: var(--story-ivory); font-size: clamp(2.65rem, 7vw, 7.2rem); font-weight: 950; letter-spacing: -0.072em; line-height: 0.92; text-wrap: balance; }
+.chapterTitle { max-width: 14ch; margin: 0 auto; color: var(--story-ivory); font-size: clamp(2.65rem, 7vw, 7.2rem); font-weight: 950; letter-spacing: -0.072em; line-height: 0.92; text-wrap: balance; word-break: keep-all; overflow-wrap: normal; }
 .chapterCenter { min-height: 0; pointer-events: none; }
 .chapterPanel { width: min(100%, 44rem); padding: clamp(1rem, 2vw, 1.35rem); border: 1px solid #ffffff24; border-radius: 1.25rem; background: #0f0f12ed; box-shadow: 0 1.5rem 4rem #0003, inset 0 1px #ffffff0f; }
 .chapterDescription { max-width: 40rem; margin: 0 auto; color: #d1cbc2; font-size: clamp(0.9rem, 1.2vw, 1.02rem); line-height: 1.65; text-align: center; text-wrap: pretty; }

@@ -63,7 +63,7 @@ export function SafetyBadge({
       <span aria-hidden className="leading-none">
         <SafetyIcon level={level} className="size-4" />
       </span>
-      {signal.label}
+      <span className="min-w-0">{signal.label}</span>
     </span>
   );
 }

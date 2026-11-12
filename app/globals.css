@@ -120,6 +120,14 @@ html:lang(ko) body {
   word-break: keep-all;
 }
 
+/* Korean copy stays on word boundaries. Body uses overflow-wrap: anywhere,
+   which would still split "밈을" inside a heading. */
+:is(h1, h2, h3, h4, h5, h6),
+[data-meme-card-title] {
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 html:lang(ja) body,
 html:lang(zh-Hans) body {
   line-break: strict;

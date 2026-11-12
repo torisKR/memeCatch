@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
 import { fireEvent, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MemeCard, MemeCardFace } from "@/components/meme-card";
 import type { MemeCardModel } from "@/components/meme-card";
+
+const cardCss = readFileSync("components/meme-card.module.css", "utf8");
 
 const ART = "/api/media/meme-card-art/jung.webp";
 
@@ -28,12 +31,11 @@ describe("MemeCard", () => {
   it("uses the poster chrome and refuses YouTube stills", () => {
     const html = renderToStaticMarkup(<MemeCard meme={meme} />);
 
-    expect(html).toContain("aspect-[4/3]");
     expect(html).toContain("rounded-[16px]");
-    expect(html).toContain("p-6");
-    expect(html).toContain("text-[20px]");
-    expect(html).toContain("text-[14px]");
-    expect(html).toContain("line-clamp-1");
+    expect(cardCss).toContain("aspect-ratio: 4 / 3");
+    expect(html).toContain('data-meme-card-title=""');
+    expect(html).toContain('data-title-size="grid"');
+    expect(html).toContain('data-meme-card-summary=""');
     expect(html).toContain("써도 됨");
     expect(html).toContain("2024");
     expect(html).toContain('data-meme-card-art="fallback"');
@@ -67,7 +69,7 @@ describe("MemeCard", () => {
     expect(korean).toContain('height="900"');
     expect(english).toContain('alt="Test meme symbol illustration"');
     expect(english).toContain("Safe to use");
-    expect(english).toContain("text-[28px]");
+    expect(english).toContain('data-title-size="detail"');
     expect(english).not.toContain("써도 됨");
     expect(english).not.toContain("밈 용어(유행어)");
   });
@@ -86,7 +88,7 @@ describe("MemeCard", () => {
     expect(image).toBeTruthy();
     fireEvent.error(image!);
     expect(view.container.querySelector("img")).toBeNull();
-    expect(view.container.querySelector("[data-meme-card-art='fallback'] svg")?.textContent).toBe("");
+    expect(view.container.querySelector("[data-meme-card-bubble]")?.textContent).toBe("");
     expect(view.container.querySelector("[data-meme-card-art='fallback']")?.textContent).not.toContain("테스트 밈");
     expect(view.getByText("테스트 밈")).toBeTruthy();
   });
@@ -105,5 +107,22 @@ describe("MemeCard", () => {
     expect(html).toContain("PPAP");
     expect(html).toContain("2016");
     expect(html).toContain('data-meme-card-art="fallback"');
+  });
+
+  it("keeps grid titles on one line and gives narrow cards a two-line title without a summary", () => {
+    const narrow = cardCss.slice(cardCss.indexOf("@container (max-width: 199px)"));
+    expect(cardCss).toContain("-webkit-line-clamp: 1");
+    expect(cardCss).toContain("font-size: 20px");
+    expect(cardCss).toContain("font-size: 14px");
+    expect(cardCss).toContain("font-size: 28px");
+    expect(cardCss).toContain("padding: 24px 0 8px 24px");
+    expect(cardCss).toContain("min-height: 2.5em");
+    expect(cardCss).toContain("min-height: 12rem");
+    expect(cardCss).toContain("grid-template-rows: 30%");
+    expect(cardCss).toContain("word-break: keep-all");
+    expect(narrow).toContain("font-size: 16px");
+    expect(narrow).toContain("-webkit-line-clamp: 2");
+    expect(narrow).toContain("min-height: 2.5em");
+    expect(narrow).toContain("display: none");
   });
 });

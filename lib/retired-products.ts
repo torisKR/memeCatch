@@ -14,16 +14,6 @@ export const RETIRED_PRODUCTS_ROBOTS = { index: false, follow: true } as const;
 
 export const RETIRED_PRODUCTS_PATH = "/retired-products";
 
-/** Set on the loopback render so proxy does not fetch the tombstone again. */
-export const RETIRED_PRODUCT_SHELL_HEADER = "x-memecatch-retired-shell";
-
-/** The internal render of the tombstone page. Other paths keep the public 410. */
-export function isRetiredProductShellRequest(pathname: string, headers: Headers): boolean {
-  if (headers.get(RETIRED_PRODUCT_SHELL_HEADER) !== "1") return false;
-  const path = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  return path === RETIRED_PRODUCTS_PATH || path === `/en${RETIRED_PRODUCTS_PATH}`;
-}
-
 function normalizePath(pathname: string): string {
   const path = pathname.split("?")[0] ?? pathname;
   if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
@@ -61,10 +51,6 @@ export function retiredProductDecision(pathname: string): RetiredProductDecision
   if (locale === "en" && product) return { type: "redirect", location: "/en" };
   if (locale === "en") return { type: "gone", locale: "en" };
   return { type: "gone", locale: "ko" };
-}
-
-export function retiredProductRewritePath(locale: RetiredProductLocale): string {
-  return locale === "en" ? `/en${RETIRED_PRODUCTS_PATH}` : RETIRED_PRODUCTS_PATH;
 }
 
 /** 410 JSON for retired product APIs. */

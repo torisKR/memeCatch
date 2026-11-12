@@ -1,19 +1,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
 import { GET as creatorGet, POST as creatorPost } from "@/app/api/creator-products/[[...slug]]/route";
 import { GET as cronGet } from "@/app/api/cron/adpick-hotdeals/route";
 import { proxy } from "@/proxy";
-import {
-  retiredProductDocument,
-  retiredProductLoopbackUrl,
-} from "@/lib/retired-product-document";
+import { retiredProductDocument } from "@/lib/retired-product-document";
 import {
   DEFAULT_TRAILING_SLASH_REDIRECT,
   EN_PRODUCT_GONE_REDIRECTS,
 } from "@/lib/retired-product-redirects";
-import { RETIRED_PRODUCT_SHELL_HEADER } from "@/lib/retired-products";
+import type { MemeListItem } from "@/lib/queries";
 
 const GONE_PAGES = [
   "/products",
@@ -87,67 +86,55 @@ describe("retired product responses", () => {
     },
   );
 
-  it("renders the tombstone page for the loopback shell request", async () => {
-    const response = await proxy(
-      new NextRequest("http://127.0.0.1:3000/retired-products", {
-        headers: { [RETIRED_PRODUCT_SHELL_HEADER]: "1" },
-      }),
-    );
-    expect(response.status).toBe(200);
-    expect(response.headers.get("x-middleware-next")).toBe("1");
-  });
-
-  it("still returns 410 for a product URL that copies the shell header", async () => {
-    const response = await proxy(
-      new NextRequest("http://0.0.0.0:3000/products", {
-        headers: {
-          "x-forwarded-proto": "https",
-          host: "0.0.0.0:3000",
-          [RETIRED_PRODUCT_SHELL_HEADER]: "1",
-        },
-      }),
-    );
-    expect(response.status).toBe(410);
-    const html = await response.text();
-    expect(html).toContain("밈상품 페이지는 더 이상 운영하지 않아요.");
-    expect(html).not.toContain("0.0.0.0");
-  });
-
   it("returns 404 for a non-English tombstone URL", async () => {
     const response = await proxy(request("/ja/retired-products"));
     expect(response.status).toBe(404);
   });
 
   it("returns the full page for X-Forwarded-Proto https without calling the bind host", async () => {
-    const fullPage = `<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css" /></head><body><header>밈캐치</header><main><h1>밈상품 페이지는 더 이상 운영하지 않아요.</h1><a href="/explore">밈 탐색</a><ul><li>새우 예수</li><li>치맥</li><li>꼰대</li><li>갑툭튀</li></ul></main></body></html>`;
-    const seen: string[] = [];
-    const response = await retiredProductDocument(
-      forwardedProducts(),
-      "ko",
-      async (url) => {
-        seen.push(url.toString());
-        return { status: 200, html: fullPage };
-      },
-    );
+    const response = await proxy(forwardedProducts());
     const html = await response.text();
-
-    expect(retiredProductLoopbackUrl(forwardedProducts(), "ko")).toBe(
-      "http://127.0.0.1:3000/retired-products",
-    );
-    expect(seen).toEqual(["http://127.0.0.1:3000/retired-products"]);
     expect(response.status).toBe(410);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
     expect(response.headers.get("content-type")).toContain("text/html");
-    expect(html).toContain('rel="stylesheet"');
     expect(html).toContain("밈캐치");
-    expect(html).toContain("새우 예수");
-    expect(html).toContain("갑툭튀");
+    expect(html).toContain("밈상품 페이지는 더 이상 운영하지 않아요.");
+    expect(html).toContain('href="/explore"');
     expect(html).not.toContain("0.0.0.0");
-    expect(html.length).toBeGreaterThan(200);
+    expect(html.length).toBeGreaterThan(1000);
+
+    const cards = await retiredProductDocument("ko", async () =>
+      ["새우 예수", "치맥", "꼰대", "갑툭튀"].map(
+        (title, index) =>
+          ({
+            id: `meme-${index}`,
+            short_id: `m${index}`,
+            slug: `meme-${index}`,
+            title,
+            summary: "한 줄 설명",
+            category: "phrase",
+            safety_level: "green",
+            lifecycle_status: "rising",
+            media_type: "image",
+            origin_year: 2026,
+            trend_score: 10 - index,
+          }) as MemeListItem,
+      ),
+    );
+    const cardHtml = await cards.text();
+    expect(cards.status).toBe(410);
+    expect(cardHtml).toContain("새우 예수");
+    expect(cardHtml).toContain("갑툭튀");
+    expect(cardHtml).toContain("aspect-[4/3]");
+    expect(cardHtml).not.toContain("0.0.0.0");
+
     const documentSource = readFileSync(
       join(process.cwd(), "lib/retired-product-document.ts"),
       "utf8",
     );
+    expect(documentSource).not.toContain("node:http");
     expect(documentSource).not.toContain("node:https");
+    expect(documentSource).not.toContain("127.0.0.1");
     expect(documentSource).not.toContain("nextUrl.origin");
   });
 

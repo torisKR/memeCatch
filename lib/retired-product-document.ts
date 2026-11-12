@@ -1,13 +1,11 @@
-import { request as httpRequest } from "node:http";
-import type { IncomingMessage } from "node:http";
-import { NextResponse, type NextRequest } from "next/server";
-import {
-  RETIRED_PRODUCT_SHELL_HEADER,
-  retiredProductRewritePath,
-  type RetiredProductLocale,
-} from "@/lib/retired-products";
-
-const RENDER_TIMEOUT_MS = 4_000;
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+import { createElement, type ReactNode } from "react";
+import { NextResponse } from "next/server";
+import { BrandTile } from "@/components/brand-mark";
+import { RetiredProductsPage } from "@/components/retired-products-page";
+import type { MemeListItem } from "@/lib/queries";
+import type { RetiredProductLocale } from "@/lib/retired-products";
 
 const COPY = {
   ko: {
@@ -35,19 +33,123 @@ const COPY = {
   }
 >;
 
-export type RetiredShellResult = { status: number; html: string };
+const BRAND = {
+  ko: { name: "밈캐치", home: "밈캐치 홈", homeHref: "/" },
+  en: { name: "MemeCatch", home: "MemeCatch home", homeHref: "/en" },
+} as const;
 
-/**
- * Listen port of this process. Behind a TLS proxy the public origin is
- * `https://<bind-host>:<port>`, and a request there fails the handshake.
- * The tombstone page is rendered once, over loopback HTTP.
- */
-export function retiredProductLoopbackUrl(
-  request: NextRequest,
-  locale: RetiredProductLocale,
-): string {
-  const port = request.nextUrl.port || process.env.PORT || "3000";
-  return `http://127.0.0.1:${port}${retiredProductRewritePath(locale)}`;
+const NAV = {
+  ko: [
+    ["/", "홈"],
+    ["/explore?sort=recent", "최신"],
+    ["/community", "커뮤니티"],
+    ["/submit", "제보"],
+    ["/pricing", "Plus"],
+    ["/my", "내 정보"],
+  ],
+  en: [
+    ["/en", "Home"],
+    ["/en/explore?sort=recent", "Latest"],
+    ["/community", "Community"],
+    ["/submit", "Submit"],
+    ["/pricing", "Plus"],
+    ["/my", "My"],
+  ],
+} as const satisfies Record<RetiredProductLocale, readonly (readonly [string, string])[]>;
+
+function TombstoneDocument({
+  locale,
+  memes,
+}: {
+  locale: RetiredProductLocale;
+  memes: MemeListItem[];
+}) {
+  const brand = BRAND[locale];
+  const nav = NAV[locale];
+  return createElement(
+    "html",
+    { lang: COPY[locale].lang },
+    createElement(
+      "body",
+      { className: "flex min-h-dvh flex-col pb-16 md:pb-0" },
+      createElement(
+        "header",
+        {
+          className:
+            "sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur",
+        },
+        createElement(
+          "div",
+          { className: "mx-auto flex min-h-16 max-w-6xl items-center px-4 sm:px-6" },
+          createElement(
+            "a",
+            {
+              href: brand.homeHref,
+              "aria-label": brand.home,
+              className: "flex items-center gap-2",
+            },
+            createElement(BrandTile, { className: "size-8" }),
+            createElement(
+              "span",
+              { className: "text-lg font-extrabold tracking-[-0.045em]" },
+              brand.name,
+            ),
+          ),
+        ),
+      ),
+      createElement(
+        "div",
+        { className: "flex-1" },
+        createElement(RetiredProductsPage, { locale, memes }),
+      ),
+      createElement(
+        "nav",
+        {
+          "aria-label": locale === "en" ? "Main navigation" : "주 내비게이션",
+          className:
+            "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur md:hidden",
+        },
+        createElement(
+          "ul",
+          { className: "mx-auto flex max-w-2xl items-stretch justify-around" },
+          nav.map(([href, label]) =>
+            createElement(
+              "li",
+              { key: href, className: "flex min-w-11 flex-1" },
+              createElement(
+                "a",
+                {
+                  href,
+                  className:
+                    "flex min-h-14 w-full flex-col items-center justify-center whitespace-nowrap text-[11px] leading-none text-muted",
+                },
+                label,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+function stylesheetLinks(): string {
+  const directories = [
+    join(process.cwd(), ".next/static/css"),
+    join(process.cwd(), ".next/standalone/.next/static/css"),
+  ];
+  const links: string[] = [];
+  for (const directory of directories) {
+    try {
+      for (const name of readdirSync(directory)) {
+        if (!name.endsWith(".css")) continue;
+        links.push(`<link rel="stylesheet" href="/_next/static/css/${name}" />`);
+      }
+    } catch {
+      // Unit tests run before the production CSS build exists.
+    }
+  }
+  return links.join("");
 }
 
 function fallbackDocument(locale: RetiredProductLocale): string {
@@ -69,79 +171,32 @@ function fallbackDocument(locale: RetiredProductLocale): string {
 </html>`;
 }
 
-function stripScripts(html: string): string {
-  // Keep the inline $RC swap that replaces the loading shell. Drop the app
-  // bundle so the tombstone does not hydrate against the retired URL.
-  return html
-    .replace(/<link\b[^>]*\bas=["']script["'][^>]*>/gi, "")
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (script) => {
-      if (/\bsrc\s*=/.test(script) || script.includes("__next_f")) return "";
-      return script;
-    });
-}
-
-function readResponse(response: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    response.on("data", (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    response.on("end", () => {
-      resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-    response.on("error", reject);
-  });
-}
-
-function requestDocument(url: URL): Promise<RetiredShellResult> {
-  return new Promise((resolve, reject) => {
-    const req = httpRequest(
-      url,
-      {
-        headers: {
-          accept: "text/html",
-          [RETIRED_PRODUCT_SHELL_HEADER]: "1",
-        },
-        timeout: RENDER_TIMEOUT_MS,
-      },
-      (response) => {
-        void readResponse(response).then(
-          (html) => resolve({ status: response.statusCode ?? 0, html }),
-          reject,
-        );
-      },
-    );
-    req.on("timeout", () => {
-      req.destroy(new Error("retired product shell timed out"));
-    });
-    req.on("error", reject);
-    req.end();
-  });
-}
-
-async function renderedShell(
-  request: NextRequest,
-  locale: RetiredProductLocale,
-  load: (url: URL) => Promise<RetiredShellResult>,
-): Promise<string | null> {
-  if (request.headers.get(RETIRED_PRODUCT_SHELL_HEADER) === "1") return null;
-  const url = new URL(retiredProductLoopbackUrl(request, locale));
-  try {
-    const rendered = await load(url);
-    if (rendered.status !== 200 || !rendered.html.includes("<h1")) return null;
-    return stripScripts(rendered.html);
-  } catch {
-    return null;
-  }
-}
-
-/** 410 document. One loopback render of the App Router page; tests can inject it. */
+/**
+ * 410 document rendered in this process.
+ * The public request is not fetched again: a forwarded https origin would
+ * point at the bind address and the TLS handshake would fail.
+ */
 export async function retiredProductDocument(
-  request: NextRequest,
   locale: RetiredProductLocale,
-  load: (url: URL) => Promise<RetiredShellResult> = requestDocument,
+  load?: () => Promise<MemeListItem[]>,
 ): Promise<NextResponse> {
-  const html = (await renderedShell(request, locale, load)) ?? fallbackDocument(locale);
+  let html = fallbackDocument(locale);
+  try {
+    // Dynamic so the App Router compiler does not treat this module as a
+    // component that imports the server renderer.
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const memes = load
+      ? await load()
+      : await (await import("@/lib/retired-product-memes")).loadRetiredProductMemes();
+    const markup = renderToStaticMarkup(
+      createElement(TombstoneDocument, { locale, memes }) as ReactNode,
+    );
+    const copy = COPY[locale];
+    const head = `<head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex, follow"/><title>${copy.title}</title>${stylesheetLinks()}</head>`;
+    html = `<!DOCTYPE html>${markup.replace(/<html([^>]*)>/, `<html$1>${head}`)}`;
+  } catch (error) {
+    console.error("retired product document failed", error);
+  }
   return new NextResponse(html, {
     status: 410,
     headers: {

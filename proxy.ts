@@ -32,10 +32,7 @@ import { shortIdFromParam } from "@/lib/labels";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
 import { retiredProductDocument } from "@/lib/retired-product-document";
-import {
-  isRetiredProductShellRequest,
-  retiredProductDecision,
-} from "@/lib/retired-products";
+import { retiredProductDecision } from "@/lib/retired-products";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
 const MEME_LOOKUP_TIMEOUT_MS = 1_500;
@@ -214,13 +211,7 @@ export async function proxy(request: NextRequest) {
     }
     return response;
   };
-  // The loopback render of the tombstone page. Rendering it again would loop.
-  const retired = isRetiredProductShellRequest(
-    request.nextUrl.pathname,
-    request.headers,
-  )
-    ? null
-    : retiredProductDecision(request.nextUrl.pathname);
+  const retired = retiredProductDecision(request.nextUrl.pathname);
   if (retired) {
     switch (retired.type) {
       case "redirect": {
@@ -231,7 +222,7 @@ export async function proxy(request: NextRequest) {
         return applyLocale(NextResponse.redirect(url, 308));
       }
       case "gone": {
-        return applyLocale(await retiredProductDocument(request, retired.locale));
+        return applyLocale(await retiredProductDocument(retired.locale));
       }
       case "missing": {
         return applyLocale(new NextResponse(null, { status: 404 }));

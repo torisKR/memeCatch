@@ -58,15 +58,45 @@ for (const width of [390, 1280]) {
   test(`꼰대 has a single unprefixed Plus link at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await page.goto(KKONDAE, { waitUntil: "networkidle" });
-    const cta = page.locator("[data-plus-pricing-cta]");
+    const cta = page.locator("[data-plus-pricing-cta]:visible");
     await expect(cta).toHaveAttribute("href", "/pricing");
     await expect(cta).toHaveCount(1);
+    await expect(cta).toContainText("Plus 요금제 보기");
+    await expect(page.getByRole("heading", { name: "광고 없는 경험" }).locator("visible=true")).toHaveCount(1);
+    await expect(page.getByText("사이트 전체에서 광고가 사라져").locator("visible=true")).toHaveCount(1);
     await expect(page.locator("#global-translation-title")).toHaveCount(0);
     await expect(page.getByText("이 밈을 다른 언어로 먼저 받아보세요")).toHaveCount(0);
     await expect(page.locator('a[href="/en/pricing"], a[href="/ja/pricing"], a[href="/zh/pricing"], a[href="/zh-tw/pricing"]')).toHaveCount(0);
+
+    const plusBox = await page.locator(`[data-plus-pricing-slot="${width === 390 ? "after-sources" : "rail"}"]`).boundingBox();
+    const safetyBox = await page.locator("#safety-rationale-title").boundingBox();
+    expect(plusBox).not.toBeNull();
+    expect(safetyBox).not.toBeNull();
+    if (width === 390) {
+      await expect(page.locator('[data-plus-pricing-slot="rail"]')).toBeHidden();
+      expect(plusBox!.y).toBeGreaterThan(safetyBox!.y);
+      const sources = page.locator("#source-evidence-title");
+      if (await sources.count()) {
+        const sourcesBox = await sources.boundingBox();
+        expect(plusBox!.y).toBeGreaterThan(sourcesBox!.y);
+      }
+      const related = page.locator("#related-memes");
+      if (await related.count()) {
+        const relatedBox = await related.boundingBox();
+        expect(plusBox!.y).toBeLessThan(relatedBox!.y);
+      }
+    } else {
+      await expect(page.locator('[data-plus-pricing-slot="after-sources"]')).toBeHidden();
+      expect(plusBox!.x + plusBox!.width).toBeLessThanOrEqual(safetyBox!.x + 8);
+    }
+
     await cta.scrollIntoViewIfNeeded();
     await page.screenshot({
       path: `e2e/screenshots/kkondae-${width}.png`,
+      fullPage: true,
+    });
+    await page.screenshot({
+      path: `/opt/cursor/artifacts/kkondae-plus-${width}.png`,
       fullPage: true,
     });
   });

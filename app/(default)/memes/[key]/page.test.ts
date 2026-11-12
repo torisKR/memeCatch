@@ -40,6 +40,9 @@ describe("밈 상세 hreflang 계약", () => {
   it("한국어 상세는 언어별 번역 데스크 대신 접두사 없는 Plus 요금 링크만 둔다", () => {
     expect(source).toContain('href="/pricing"');
     expect(source).toContain("plus-pricing-title");
+    expect(source).toContain('item.label === "광고 없는 경험"');
+    expect(source).toContain("{feature.label}");
+    expect(source).toContain("{feature.detail}");
     expect(source).toContain("PREMIUM_COPY.ko.dashboard.viewPlans");
     expect(source).not.toContain("TranslationPriorityButton");
     expect(source).not.toContain("global-translation-title");
@@ -47,6 +50,16 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).not.toContain('href="/ja/pricing"');
     expect(source).not.toContain('href="/zh/pricing"');
     expect(source).not.toContain('href="/zh-tw/pricing"');
+
+    const rail = source.indexOf('data-plus-pricing-slot="rail"');
+    const sources = source.indexOf("<SourceEvidence");
+    const afterSources = source.indexOf('data-plus-pricing-slot="after-sources"');
+    const related = source.indexOf("<ContinueStream");
+    expect(source.slice(rail - 40, rail)).toContain("hidden lg:block");
+    expect(source.slice(afterSources - 24, afterSources)).toContain("lg:hidden");
+    expect(rail).toBeGreaterThan(-1);
+    expect(afterSources).toBeGreaterThan(sources);
+    expect(related).toBeGreaterThan(afterSources);
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {

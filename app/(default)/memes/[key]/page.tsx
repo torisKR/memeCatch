@@ -164,6 +164,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function koreanAdFreePlus() {
+  const feature = PREMIUM_COPY.ko.pricing.features.find(
+    (item) => item.label === "광고 없는 경험",
+  );
+  if (!feature) {
+    throw new Error("Korean Plus pricing is missing the ad-free benefit");
+  }
+  return feature;
+}
+
+function KoreanPlusPricingCard({ titleId }: { titleId: string }) {
+  const feature = koreanAdFreePlus();
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="rounded-2xl border border-accent/25 bg-accent-soft/20 p-4"
+    >
+      <h2 id={titleId} className="text-lg font-black">
+        {feature.label}
+      </h2>
+      <p className="mt-1 text-sm leading-relaxed">{feature.detail}</p>
+      <Link
+        href="/pricing"
+        data-plus-pricing-cta
+        className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white"
+      >
+        {PREMIUM_COPY.ko.dashboard.viewPlans}
+      </Link>
+    </section>
+  );
+}
+
 export default async function MemeDetailPage({ params }: Props) {
   const { key } = await params;
   const resolved = await resolveKoreanMemeDocument(key);
@@ -338,21 +370,9 @@ export default async function MemeDetailPage({ params }: Props) {
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
           <ExportButton shortId={meme.short_id} />
 
-          <section
-            aria-labelledby="plus-pricing-title"
-            className="rounded-2xl border border-accent/25 bg-accent-soft/20 p-4"
-          >
-            <h2 id="plus-pricing-title" className="text-lg font-black">
-              Plus
-            </h2>
-            <Link
-              href="/pricing"
-              data-plus-pricing-cta
-              className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white"
-            >
-              {PREMIUM_COPY.ko.dashboard.viewPlans}
-            </Link>
-          </section>
+          <div className="hidden lg:block" data-plus-pricing-slot="rail">
+            <KoreanPlusPricingCard titleId="plus-pricing-title" />
+          </div>
 
           {/* 관련 TikTok·Instagram — 대표 아래 공개 사용 예시(비대표 임베드) */}
           {relatedSocialContents.length > 0 && (
@@ -530,6 +550,10 @@ export default async function MemeDetailPage({ params }: Props) {
           {/* 참고 자료 근거 목록 — 제목 있는 출처가 하나도 없으면 렌더하지 않는다.
               유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
           <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
+
+          <div className="lg:hidden" data-plus-pricing-slot="after-sources">
+            <KoreanPlusPricingCard titleId="plus-pricing-title-mobile" />
+          </div>
 
           {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
               권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}

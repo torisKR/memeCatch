@@ -194,13 +194,6 @@
 .pathwayCard:active { transform: translateY(-0.05rem); }
 .communityCard { background: var(--web3-ink-soft); }
 
-.productsCard {
-  min-height: 18rem;
-  margin-top: 0;
-  background: var(--web3-orange);
-  color: #21120d;
-}
-
 .cardTop,
 .cardBody { position: relative; z-index: 2; }
 
@@ -224,7 +217,6 @@
 }
 
 .communityCard .cardMark { color: #a9a59e; }
-.productsCard .cardMark { color: #30190f; }
 
 .cardTitle {
   display: block;
@@ -243,8 +235,6 @@
   line-height: 1.65;
 }
 
-.productsCard .cardDescription { color: #30190f; }
-
 .cardAction {
   display: inline-flex;
   min-height: 2.75rem;
@@ -254,8 +244,7 @@
   font-weight: 850;
 }
 
-.communityMotif,
-.productsMotif { position: absolute; z-index: 1; pointer-events: none; }
+.communityMotif { position: absolute; z-index: 1; pointer-events: none; }
 
 .communityMotif {
   top: 12%;
@@ -269,17 +258,6 @@
     -6rem 4rem 0 0 rgb(255 92 56 / 0.76),
     -11rem -2rem 0 -1px var(--web3-ink-soft),
     -11rem -2rem 0 0 rgb(255 255 255 / 0.13);
-}
-
-.productsMotif {
-  top: 20%;
-  right: -4rem;
-  width: 18rem;
-  aspect-ratio: 1;
-  border: 1.35rem solid rgb(33 18 13 / 0.2);
-  border-right-color: transparent;
-  border-radius: 50%;
-  transform: rotate(-28deg);
 }
 
 .contributionBar {
@@ -369,8 +347,7 @@
   .pathwayGrid,
   .trustGrid { grid-template-columns: minmax(0, 1fr); }
 
-  .pathwayCard,
-  .productsCard { min-height: 16rem; margin-top: 0; }
+  .pathwayCard { min-height: 16rem; margin-top: 0; }
 
   .contributionBar { grid-template-columns: minmax(0, 1fr); }
   .trustGrid { align-items: start; }

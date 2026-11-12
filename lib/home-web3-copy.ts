@@ -19,7 +19,6 @@ export type HomeWeb3Copy = {
   };
   pathways: {
     communityMark: string;
-    productsMark: string;
   };
 };
 
@@ -39,7 +38,6 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
     },
     pathways: {
       communityMark: "대화가 설명을 완성합니다",
-      productsMark: "판매 주체와 관계를 확인하세요",
     },
   },
   en: {
@@ -57,7 +55,6 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
     },
     pathways: {
       communityMark: "Conversation completes the context",
-      productsMark: "Seller relationships stay visible",
     },
   },
   ja: {
@@ -75,7 +72,6 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
     },
     pathways: {
       communityMark: "会話から文脈が見えてきます",
-      productsMark: "販売者との関係を確認できます",
     },
   },
   zh: {
@@ -93,7 +89,6 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
     },
     pathways: {
       communityMark: "通过讨论补充语境",
-      productsMark: "清楚标明卖家与关联关系",
     },
   },
   "zh-tw": {
@@ -111,7 +106,6 @@ export const HOME_WEB3_COPY: Record<SeoRouteLocale, HomeWeb3Copy> = {
     },
     pathways: {
       communityMark: "透過討論補充語境",
-      productsMark: "清楚標示賣家與關聯關係",
     },
   },
 };

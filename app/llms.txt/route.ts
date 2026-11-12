@@ -38,7 +38,7 @@ export async function GET() {
       {
         select:
           "id, title, summary, short_id, slug, description, origin, usage_note," +
-          " caution, usage_examples, meme_sources(source_url)," +
+          " caution, usage_examples, meme_sources(source_url, hidden_from_public)," +
           " meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
         primaryOrder: "trend_score",
         limit: 15,

@@ -135,4 +135,9 @@ describe("llms-full publication export", () => {
     expect(body).toContain("콘텐츠 충실도 기준");
     expect(body).not.toContain("사실 확인 → 저작권 확인");
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
 });

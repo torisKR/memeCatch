@@ -69,13 +69,13 @@ type PlusOutcomeHistoryMemeRow = {
   safety_level: string;
   lifecycle_status: string;
   meme_contents: { availability?: string | null; moderation_status?: string | null }[];
-  meme_sources: { source_url?: string | null }[];
+  meme_sources: { source_url?: string | null; hidden_from_public?: boolean | null }[];
   meme_tags_map: { tag_id?: string | null; tags?: { name: string } | null }[];
   meme_translations: MemeTranslationRow[] | null;
 };
 
 const PLUS_OUTCOME_HISTORY_SELECT =
-  "id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, mode, performance_note, performance_rating, result_url, memes(id, short_id, slug, title, summary, description, origin, usage_note, caution, aliases, updated_at, moderation_status, safety_level, lifecycle_status, usage_examples, meme_contents(availability, moderation_status), meme_sources(source_url), meme_tags_map(tag_id, tags(name)), meme_translations(meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at))";
+  "id, meme_id, completion_date, title_snapshot, channel, locale, artifact_kind, mode, performance_note, performance_rating, result_url, memes(id, short_id, slug, title, summary, description, origin, usage_note, caution, aliases, updated_at, moderation_status, safety_level, lifecycle_status, usage_examples, meme_contents(availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id, tags(name)), meme_translations(meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at))";
 
 type PlusOutcomeHistoryLink = {
   href: string | null;

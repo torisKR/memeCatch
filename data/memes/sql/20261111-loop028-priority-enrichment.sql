@@ -1,0 +1,542 @@
+-- Idempotent UPDATE batch for already-public memes. The generator does not connect or write.
+-- batch_id: loop-028-priority-enrichment-2026-11-11
+-- Apply only after QA and toris approval. Do NOT apply to prod from this PR alone.
+--
+-- Official apply order. Do not omit either psql flag, and do not skip the live check:
+--   1) the two migrations:
+--        psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261111160000_meme_content_reviewed_at.sql
+--        psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261112003000_meme_sources_hidden_from_public.sql
+--      The new code selects hidden_from_public by name. Without this column, prod would
+--      fail with 42703 ("catalog unavailable"), so the migrations must land first.
+--   2) Deploy the application code, then a live check that public pages load.
+--   3) psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f <this-file>
+--      Running this data SQL before the new code is live would expose the rows meant to
+--      be hidden: old code does not honor hidden_from_public, so hidden_from_public=true
+--      would still be shown on public pages until the new code is serving traffic.
+--      Prod SEO holdout membership is unverified and must be checked before apply.
+-- This file has no BEGIN/COMMIT. The -1 flag wraps the whole file in one transaction.
+-- Combining file-level COMMIT with -1 would end that transaction early; do not add COMMIT.
+-- Without ON_ERROR_STOP, a failed run can exit 0 after ROLLBACK.
+--
+-- Prerequisites: apply the flagged migration first so public.memes.content_reviewed_at exists.
+-- Updates existing rows by short_id + slug + public moderation_status.
+-- Does not INSERT new memes, and does not change moderation_status or published_at.
+--
+-- content_reviewed_at is the editorial review date only (2026-11-11T15:00:00+09:00), explicitly
+--   set by this editorial SQL. It is not the apply time and is not maintained by a trigger.
+--   The editorial process must update this column whenever the explanation body is edited
+--   later; otherwise the displayed "최종 검토일" goes stale.
+--
+-- safety_reviewed_at is captured before the updates and restored in the same transaction,
+--   because memes_touch_safety_reviewed_at would otherwise stamp now() when usage_note or
+--   caution changes. This SQL does not alter that trigger.
+--
+-- Known trigger side effects we do not suppress (declared here):
+--   * meme_public_change_events editorial_update rows
+--   * meme_translations.status -> stale
+--   * private.meme_semantic_embeddings invalidated (invalidate_meme_embedding)
+-- Embeddings must be reindexed after apply. The daily cron GET /api/cron/meme-embeddings
+--   processes at most 25 documents and is not enough for this batch. After apply, run:
+--     python3 scripts/meme_embeddings.py index --allow-remote --limit 100 --batches 50
+--   Check remaining work with: select * from public.meme_embedding_backlog();
+--   (A signed POST /api/cron/meme-embeddings is also available; do not paste secrets here.)
+--
+-- SEO holdout: migration 20260716040000_seo_campaigns.sql creates
+--   protect_active_seo_holdout() as a BEFORE UPDATE trigger on public.memes. If a row in
+--   this batch is in an active SEO holdout (seo_campaign_items.bucket='holdout' and the
+--   campaign state is ready/in_progress/measurement_due), changing description/origin/
+--   usage_note/caution (and other listed columns) raises active_seo_holdout_is_read_only
+--   and aborts the whole transaction (fails closed), unless app.seo_campaign_write='on'.
+--   Prod seo_campaign_items is not readable from the public API, so this cannot be
+--   pre-checked here. Confirm holdout membership before apply.
+--
+-- meme_sources rows are added only when the (meme_id, source_url) pair does not already exist.
+-- This SQL does not DELETE any meme_sources rows.
+-- Non-200, dead, or irrelevant rows in this batch are hidden with hidden_from_public=true
+--   (nullable flag; null/false stays visible). This is reversible and is not a delete.
+--   Apply supabase/migrations/20261112003000_meme_sources_hidden_from_public.sql first. namu.wiki (bot 403, not dead),
+--   merriam-webster (403), vop.co.kr / etnews.com (unreliable), gamemeca.com (intermittent
+--   403), about.ncsoft.com (JS shell), and deleted YouTube VbmYQF32SNg are kept in place
+--   and are not counted toward the Q-07 live-source gate. Wikipedia disambiguation pages
+--   are also kept if already present and are not counted.
+-- Untitled existing live sources in this batch get a verified title so they render.
+-- Rollback is not a simple inverse of UPDATE; restore from a pre-apply backup if needed.
+-- dropped: 70 memes from the original 83 were not included (see editorial catalog).
+
+set local lock_timeout = '15s';
+set local statement_timeout = '10min';
+
+create temporary table loop028_safety_reviewed_backup as
+select id, safety_reviewed_at
+  from public.memes
+ where short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x');
+
+-- 새우 예수 (b9gzeysg / shrimp-jesus)
+update public.memes set
+  summary = '예수를 새우 같은 바다 생물 형태로 표현한 AI 생성 이미지로, 페이스북 AI 스팸·스캠 연구에 소개된 사례',
+  description = '새우 예수(Shrimp Jesus)는 페이스북에 올라온 AI 생성 이미지 가운데 예수를 새우 같은 바다 생물 형태로 표현한 그림을 가리킨다. 비슷한 이미지로 게 예수, 수박 예수, 환타 예수, 스파게티 예수도 있다. 이런 기이한 예수 이미지에는 이용자들이 “Amen(아멘)”이라는 댓글을 줄줄이 달았다. 댓글을 보면 많은 이용자가 이미지가 AI로 만들어졌다는 사실을 모르는 것으로 보이지만, 일부는 다른 이용자에게 알리는 댓글을 남겼다. 이런 이미지는 해당 페이지를 팔로하지 않는 이용자의 페이스북 피드에도 노출됐다.',
+  origin = '스탠퍼드 인터넷 관측소(Stanford Internet Observatory) 연구진은 AI 생성 이미지를 각각 50장 이상 올린 페이스북 페이지 120개를 분석했다. 연구진은 이 페이지들을 스팸, 스캠, 기타 창작자로 나눴고, 이미지들은 모두 합쳐 수억 건의 반응을 얻었다. 스팸 페이지는 낚시성 수법으로 이용자를 외부 콘텐츠 팜과 저품질 사이트로 유도하려 했다. 스캠 페이지는 존재하지 않는 상품을 팔거나 개인정보를 빼내려 했고, 일부는 도용한 페이지에 AI 이미지를 올렸다. 새우 예수 이미지는 이전에 콘텐츠 팜으로 가는 낚시성 링크를 공유하던 페이지가 만든 것이었다.',
+  usage_note = 'AI 생성 이미지가 스팸·스캠 페이지에서 어떻게 쓰이는지 설명하는 사례로 쓸 수 있다. 이미지를 다시 퍼뜨리기보다 AI 생성물이라는 점과 연구 맥락을 함께 알리는 편이 적절하다.',
+  caution = '예수의 형상을 유희적으로 변형했다고 느끼는 신자에게 모욕적이거나 불편할 수 있다. 종교 공동체나 가족 대화에서는 신성한 표상을 존중하고, 실제 사진으로 오인하지 않도록 AI 생성물임을 밝힌다. 반응을 유도하거나 외부 링크를 누르게 하는 계정은 스팸·스캠 가능성을 의심해야 한다.',
+  usage_examples = '[{"situation":"AI 스팸 연구를 설명할 때","text":"새우 예수도 스탠퍼드 연구에 나온 AI 스팸 이미지야."},{"situation":"의심스러운 종교 이미지를 볼 때","text":"AI 생성 여부와 게시 계정의 링크부터 확인해 보자."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'b9gzeysg'
+  and slug = 'shrimp-jesus'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965', 'Facebook users say ''amen'' to bizarre AI-generated images of Jesus', 'NBC News',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'b9gzeysg' and meme.slug = 'shrimp-jesus'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965'
+  );
+
+-- 치맥 (42d6qeqm / 치맥)
+update public.memes set
+  summary = '치킨 안주에 맥주를 함께 즐기는 조합을 줄여 부르는 말',
+  description = '치맥은 치킨 안주에 맥주를 곁들여 즐기는 조합을 줄여 부르는 말이다. 치맥은 월드컵이나 아시안컵 같은 스포츠 경기를 볼 때 많이 찾는 메뉴다. 월드컵 기간에는 편의점과 치킨 프랜차이즈가 대목을 맞는다. 드라마 ‘별에서 온 그대’에서 주인공 천송이는 치킨 안주에 맥주를 즐기는 치맥 마니아로 나오고, “눈 오는 날엔 치맥인데”라는 대사도 한다. 이 드라마의 인기로 중국에서도 치맥이 유행했다. 중국 상하이에서는 한국식 치킨을 사 먹으려면 치킨집 앞에서 3시간 정도 줄을 서야 한다는 전언이 나왔다.',
+  origin = '한국에서 치킨이 인기를 얻는 동안 새로 나온 생맥주도 큰 인기를 끌면서, 둘을 한 메뉴로 묶어 파는 일이 흔해졌다. 치킨과 맥주를 함께 팔던 것이 결국 치맥의 탄생으로 이어졌다. 월드컵 때는 공원 대형 화면 앞에 모인 사람들이 붉은 옷을 입고 치킨과 맥주를 먹으며 응원했다.',
+  usage_note = '월드컵이나 아시안컵 같은 스포츠 경기를 함께 볼 때 먹을거리로 치맥을 권하는 말로 쓸 수 있다. 술이 들어가므로 상대가 마실 수 있는지부터 확인하는 것이 좋다.',
+  caution = '술이 들어가는 문화라 미성년자나 술을 못 마시는 사람에게 강요하지 말자.',
+  usage_examples = '[{"situation":"축구 경기가 있는 날","text":"오늘 경기 보면서 치맥 어때?"},{"situation":"퇴근길","text":"이번 주 고생했으니 치맥 한잔하자."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = '42d6qeqm'
+  and slug = '치맥'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1', '중국 치맥 열풍, 치킨 먹으려면 3시간 줄...‘별그대 영향’', '동아일보',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '42d6qeqm' and meme.slug = '치맥'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1'
+  );
+
+-- 꼰대 (kh75j5f8 / 꼰대)
+update public.memes set
+  summary = '구시대적인 생각이나 방식을 남에게 강요하는 사람을 낮춰 부르는 말',
+  description = '꼰대는 원래 늙은이를 낮춰 이르는 은어이자, 학생들이 선생님을 가리켜 쓰던 은어다. 요즘은 이른바 ‘꼰대질’을 하며 자신의 낡은 생각을 남에게 강요하는 상사나 나이 많은 사람을 가리킬 때 쓴다. “나 때는 말이야” 같은 말로 요즘 젊은이들이 고생을 덜 한다거나 예의가 없다고 훈계할 때 “저 사람은 꼰대다”라고 한다. 또래라도 구시대적인 생각이나 방식을 남에게 강요하면 꼰대라고 부를 수 있다. 영어로는 대략 “condescending older person(거들먹거리는 나이 든 사람)”으로 옮긴다.',
+  origin = '정확한 기원은 분명하지 않다. 어원으로는 경상남도 방언에서 번데기를 뜻하는 ‘kondaegi’에서 왔다는 설과, 프랑스어 귀족 작위 ‘comte(백작)’에서 왔다는 설이 맞선다. 초창기에는 융통성 없고 고집 세고 엄격한 선생님을 가리키는 학생 은어였다. 지금은 교실 밖, 특히 직장에서 누구도 되고 싶어 하지 않는 유형의 사람을 가리키는 말로 널리 쓰인다. 이 말은 주로 남성, 특히 중간 관리자 이상의 직급에 있는 사람에게 붙는다.',
+  usage_note = '권위적으로 훈계하는 태도를 비판할 때 쓴다. 나이나 세대 전체를 싸잡아 부르는 말로 쓰면 오해가 커질 수 있다.',
+  caution = '사람을 낮춰 부르는 말이라, 당사자 앞이나 직장에서 쓰면 다툼이 생길 수 있다.',
+  usage_examples = '[{"situation":"회의에서 의견이 막혔을 때","text":"나이를 이유로 말을 끊으면 꼰대처럼 들려."},{"situation":"친구의 잔소리를 농담으로 받을 때","text":"너 오늘따라 꼰대 같다. 한 번만 내 얘기도 들어 줘."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'kh75j5f8'
+  and slug = '꼰대'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.koreaherald.com/article/10844914', '꼰대', 'The Korea Herald',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'kh75j5f8' and meme.slug = '꼰대'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.koreaherald.com/article/10844914'
+  );
+
+-- 엽기 신드롬 (xq7ycnys / 엽기-신드롬)
+update public.memes set
+  summary = '2000년 신세대 문화를 상징하는 코드가 된 유행어 ‘엽기’',
+  description = '‘엽기’는 2000년 한국 대중문화의 흐름을 짚어 낼 수 있는 함축된 단어로 꼽힌 유행어다. ‘문화적 퇴행’, ‘기성문화에 대한 반기’ 같은 다양한 해석 속에서 엽기는 신세대 문화를 상징하는 코드가 됐다. 엽기는 TV뿐 아니라 영화, 소설, 애니메이션, 뮤직비디오, CF, 인터넷 등 문화 전반에서 인기를 누렸다. 과거라면 기이한 모습과 행동으로 비난받았을 인물들도 엽기로 해석돼 오히려 환영받았다.',
+  origin = '이 말은 각종 문화상품 속에 배어 있던 ‘엽기현상’에서 비롯됐다. TV 오락 프로그램은 ‘엽기이벤트’라는 코너명을 달고 참외밭 통째로 먹어치우기, 라면가게 동내기 같은 행사를 벌이기도 했다. 엽기 신드롬과 함께 인터넷에는 수백 개의 엽기 사이트가 쏟아졌다고 한다.',
+  usage_note = '황당하거나 기이한 것을 두고 놀라움을 표현할 때 쓸 수 있다. 사람을 직접 가리켜 쓰면 비하로 들릴 수 있으니, 상대를 부르는 말로는 조심해서 쓴다.',
+  caution = caution,
+  usage_examples = '[{"situation":"황당한 장면을 봤을 때","text":"이건 좀 엽기적인데?"},{"situation":"유행어 이야기를 할 때","text":"엽기라는 말이 방송이랑 CF에도 나오던 유행어였대."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'xq7ycnys'
+  and slug = '엽기-신드롬'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+-- 디워 사태 (wsjz865n / 디워-사태)
+update public.memes set
+  summary = '2007년 영화 <디워>의 작품성을 둘러싸고 평론가와 네티즌이 맞붙은 논쟁',
+  description = '디워 사태는 2007년 개봉한 심형래 감독의 영화 <디워>를 두고 작품성 비판과 이에 대한 네티즌의 반발이 맞붙은 논쟁이다. 논란은 한국 영화계의 관행과 ‘애국주의 마케팅’ 문제를 부각시켰다. 독립영화 감독 이송희일은 블로그에 비판적인 글을 올렸다가, 수만 네티즌의 악플과 동시 접속으로 블로그가 폐쇄됐다. MBC ‘100분 토론’에서 문화평론가 진중권이 영화를 혹평하자, 네티즌들은 그에게 집중포화를 퍼부었다. ‘100분 토론’ 시청자 게시판에는 방송이 끝날 무렵 이미 1만 개를 훨씬 넘는 댓글이 붙었다.',
+  origin = '진중권은 토론에서 내용이 너무 허술하고 영화의 기초인 플롯이 없다고 지적했다. 토론 뒤 진중권의 블로그는 항의성 글로 마비되기도 했다. 토론에서 반대편 패널이었던 평론가 하재근은 자신의 블로그에서 누리꾼들에게 인신공격을 자제해 달라고 요청했다. 진중권은 이후 계간문예지 기고에서 <디워>에 대한 대중의 열광이 ‘황우석 사건’ 때와 닮았다고 비판했다.',
+  usage_note = '온라인 여론전을 돌아볼 때 신중하게 언급한다. 특정 평론가나 블로거를 다시 공격하는 방식으로 쓰면 안 된다.',
+  caution = '특정 개인(평론가·블로거)에 대한 온라인 공격으로 번진 사례이므로 조심스럽게 다뤄야 한다.',
+  usage_examples = '[{"situation":"온라인 여론을 이야기할 때","text":"디워 사태 때는 평론가 블로그가 항의 글로 마비될 정도였대."},{"situation":"영화 논쟁을 돌아볼 때","text":"영화 평가 이야기였는데 애국주의 마케팅 논쟁까지 붙었지."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'wsjz865n'
+  and slug = '디워-사태'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C', '디워', '한국어 위키백과',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'wsjz865n' and meme.slug = '디워-사태'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.khan.co.kr/article/200708101214011', '진중권 “‘디 워’는 엉망진창” 혹평…인터넷 ‘들썩’', '경향신문',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'wsjz865n' and meme.slug = '디워-사태'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.khan.co.kr/article/200708101214011'
+  );
+
+-- TV는 사랑을 싣고 (vtu3rkyg / TV는-사랑을-싣고)
+update public.memes set
+  summary = '1994년 첫 방송된, 추억 속 주인공을 찾아 만나게 하는 KBS 예능 프로그램',
+  description = '‘TV는 사랑을 싣고’는 추억 속의 주인공이나 평소 고마움을 전하고 싶었던 사람을 찾아 만나게 해 주는 KBS 예능 프로그램이다. 1994년 5월 3일 1회가 방송됐다. 실종자나 행방불명자를 찾는 과정 자체가 시청자에게 강한 감동과 몰입을 줬고, 방송의 사회적 역할도 분명하게 인식됐다. 한때 높은 화제성과 시청률을 기록하며 전성기를 맞았다. 연예인 출연자가 초등학교 시절 첫사랑이나 잊지 못할 은사를 찾는 회차들이 방송됐다.',
+  origin = '인터넷과 휴대전화, 온라인 커뮤니티가 빠르게 퍼지면서 방송을 통해 사람을 찾아야 할 필요성은 이전보다 크게 줄었다. 제작진은 침체를 극복하려고 포맷을 바꾸는 등 여러 차례 변화를 시도했지만, 기대만큼의 성과를 거두지 못했다. 한 차례 방송을 마친 뒤 다시 편성됐을 때는 스튜디오 중심 진행에서 VCR 녹화를 바탕으로 한 추적 MC 체제로 바뀌었다.',
+  usage_note = '옛 KBS 프로그램을 회상할 때 언급할 수 있다. 실제 이산과 재회 사연을 웃음의 소재로만 소비하지 않는 편이 좋다.',
+  caution = caution,
+  usage_examples = '[{"situation":"옛 프로그램을 이야기할 때","text":"TV는 사랑을 싣고에서 첫사랑 찾는 회차가 제일 기억나."},{"situation":"사람을 찾는 이야기를 할 때","text":"지금은 인터넷으로 찾지만, 예전에는 방송 프로그램이 그 역할을 했지."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'vtu3rkyg'
+  and slug = 'TV는-사랑을-싣고'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0', 'TV는 사랑을 싣고', '한국어 위키백과',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'vtu3rkyg' and meme.slug = 'TV는-사랑을-싣고'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0'
+  );
+
+-- 떡밥과 낚시글 (8kz4upjt / 떡밥과-낚시글)
+update public.memes set
+  summary = '호기심을 자극하는 제목으로 글을 열어 보게 한 뒤 엉뚱한 내용으로 속이는 인터넷 낚시와 그 미끼인 떡밥',
+  description = '인터넷에서 낚시는 그럴듯하게 다른 사람을 속여 특정한 행동을 하게 하는 것을 뜻한다. 이렇게 속이거나 속는 데는 ‘낚다’, ‘낚였다’라는 표현을 쓰고, 속이기 위해 이용한 내용은 떡밥 또는 미끼라고 부른다. ‘낚시질’은 사실과 다르거나 엉뚱한 내용을 글과 상관없는 자극적인 제목으로 올리는 것을 말한다. 낚인 사람은 “낚였다!”라는 댓글로 놀림을 당했음을 털어놓는 동시에, 다른 사람들에게 낚시글을 피하라고 경고하기도 한다. 미끼와 함께 떡밥을 던지면 물고기가 몰려들듯, 인터넷에서 ‘떡밥글’을 올리면 누리꾼들이 너도나도 댓글을 단다.',
+  origin = '처음에는 그럴듯한 제목의 글을 눌러 보면 만화 사진 한 장과 ‘걸렸다’는 짧은 글이 담겨 있는 식으로 낚시가 시작됐다. 이 놀이에 동참하는 네티즌이 늘면서 낚시는 다른 커뮤니티로도 점점 퍼져 나갔다. 낚였다는 것을 암시하려고 실제 바다낚시를 하는 낚시꾼 사진을 쓰기 시작한 것도 이때부터다. 나중에는 증거자료라며 URL을 붙여 낚시임을 드러내는 등 수법이 점점 교묘해졌다.',
+  usage_note = '제목과 내용이 다르거나, 관심을 끌기 위한 미끼 글을 지적할 때 쓴다. 상대의 글을 너무 쉽게 낚시로 단정하면 논쟁이 커질 수 있다.',
+  caution = caution,
+  usage_examples = '[{"situation":"제목만 자극적인 글을 보고","text":"또 낚시글이네. 본문이랑 제목이 완전히 달라."},{"situation":"댓글을 노린 글을 봤을 때","text":"이건 댓글 달리라고 던진 떡밥글이네."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = '8kz4upjt'
+  and slug = '떡밥과-낚시글'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)', '낚시 (인터넷)', '한국어 위키백과',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '8kz4upjt' and meme.slug = '떡밥과-낚시글'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.hani.co.kr/arti/opinion/column/146193.html', '[새말탐험] 낚시질 / 김한샘', '한겨레',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '8kz4upjt' and meme.slug = '떡밥과-낚시글'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.hani.co.kr/arti/opinion/column/146193.html'
+  );
+
+-- 새삥 챌린지 (지코) (89b37mrx / 새삥 챌린지 (지코))
+update public.memes set
+  summary = 'Mnet ‘스트릿 맨 파이터’ 리더 계급 미션곡 ‘새삥’에 맞춘 댄스 챌린지',
+  description = '‘새삥 챌린지’는 Mnet ‘스트릿 맨 파이터’의 리더 계급 미션에서 선보인 곡 ‘새삥’에 맞춰 춤을 추는 댄스 챌린지다. 곡의 프로듀서는 지코이고, 피처링에는 호미들이 참여했다. 리더 계급 댄스 비디오의 안무는 위댐보이즈 바타가 맡았다. Mnet의 공식 유튜브 채널 ‘더 춤’에 공개된 이 댄스 비디오는 약 500만 뷰를 돌파했다. 프로듀서 지코뿐 아니라 강다니엘, 세븐틴 호시, NCT 등도 연이어 댄스 챌린지에 참여했다.',
+  origin = '‘스맨파’ 제작진과 CJ ENM A&R팀은 프로그램 기획 초기부터 지코를 프로듀서로 섭외할 생각이었다. ‘스맨파’의 음원은 가창자보다 댄서들과 무대를 먼저 생각하고 만들어졌다. ‘더 춤’ 채널에는 바타가 직접 알려 주는 ‘새삥’ 안무 튜토리얼 영상도 올라왔다.',
+  usage_note = '‘새삥’ 안무를 따라 춘 영상이나 챌린지를 소개할 때 쓸 수 있다. 동작 순서가 헷갈리면 공식 안무 튜토리얼 영상을 기준으로 확인하는 편이 정확하다.',
+  caution = caution,
+  usage_examples = '[{"situation":"댄스 챌린지를 제안할 때","text":"이번 주에는 새삥 챌린지 안무 영상 하나 찍어 보자."},{"situation":"포인트 안무를 보고","text":"저 구간만 나와도 새삥인지 바로 알겠어."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = '89b37mrx'
+  and slug = '새삥 챌린지 (지코)'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+-- 강정호 3회 음주운전 사건 (56hnkxyk / 강정호-3회-음주운전-사건)
+update public.memes set
+  summary = '세 차례 음주운전 사실이 드러나고 음주 뺑소니 사고를 낸 전 메이저리거 강정호 사건',
+  description = '강정호는 피츠버그 파이리츠 소속 메이저리거이던 시절, 음주 상태로 차를 몰다 서울 강남 삼성역사거리에서 가드레일을 들이받고 그대로 달아났다. 사고 직후 동승한 친구가 경찰에 자신이 운전했다고 거짓말을 했지만, 블랙박스 확인 결과 강정호가 운전한 사실이 드러났다. 그는 앞서 두 차례 음주운전으로 적발된 전력도 있었다. 누적 적발 횟수가 세 차례가 되면서 ‘음주운전 삼진아웃제’에 따라 면허가 취소될 상황이 됐다. 그는 징역 8개월에 집행유예 2년을 선고받았다.',
+  origin = '이 사건 뒤 그는 미국 취업 비자를 받지 못해 다음 시즌 미국에서 뛸 수 없었다. 이후 원소속팀 키움 복귀를 타진했지만, 여론과 팬들의 질책 속에 뜻을 접고 사실상 은퇴했다. KBO 상벌위원회는 그가 KBO 현역 선수이던 때 적발된 두 차례 음주운전에 최고 수위의 징계를 내렸다. 이후 키움은 최저 연봉 조건으로 그와 다시 선수 계약을 맺었지만, KBO가 이 계약을 승인하지 않아 복귀는 무산됐다.',
+  usage_note = '반복된 음주운전이라는 실제 범죄 사건이므로 농담거리로만 소비하지 않도록 주의한다.',
+  caution = '음주운전 전력을 다루는 만큼 미화하거나 가볍게 다루지 않도록 주의가 필요하다.',
+  usage_examples = '[{"situation":"스포츠 범죄를 설명할 때","text":"강정호 음주운전 사건은 한 번의 실수가 아니라 반복된 적발이 핵심이야."},{"situation":"복귀 논의를 보다가","text":"세 번째 적발이 뺑소니 사고였다는 걸 빼고는 이 사안을 말하기 어려워."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = '56hnkxyk'
+  and slug = '강정호-3회-음주운전-사건'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.yna.co.kr/view/AKR20161206115151004', '강정호 "팬들에 너무 죄송…야구로 보답할 일밖에 없어"(종합)', '연합뉴스',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '56hnkxyk' and meme.slug = '강정호-3회-음주운전-사건'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.yna.co.kr/view/AKR20161206115151004'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://en.wikipedia.org/wiki/Jung-ho_Kang', 'Jung-ho Kang', 'Wikipedia',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '56hnkxyk' and meme.slug = '강정호-3회-음주운전-사건'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://en.wikipedia.org/wiki/Jung-ho_Kang'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'News', 'https://www.yna.co.kr/view/AKR20220429073300007', '강정호 복귀 무산…KBO, 선수계약 미승인', '연합뉴스',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '56hnkxyk' and meme.slug = '강정호-3회-음주운전-사건'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.yna.co.kr/view/AKR20220429073300007'
+  );
+
+-- 2026년 롯데 자이언츠 원정 도박 사건 (utxgy8un / 2026년-롯데-자이언츠-원정-도박-사건)
+update public.memes set
+  summary = '롯데 자이언츠 선수 4명이 대만 타이난 전지훈련 중 불법으로 분류된 도박장에 출입한 사건',
+  description = '롯데 자이언츠 소속 선수 4명이 대만 타이난 전지훈련 도중 현지에서 불법으로 분류된 장소에 방문한 사실이 드러났다. 선수들은 훈련 휴식일에 숙소 인근 사행성 오락실을 찾아 전자 베팅 게임을 이용했다. 사건은 도박장 내부 CCTV 화면으로 추정되는 영상이 SNS에 퍼지며 알려졌다. 구단은 이유를 불문하고 KBO 규약과 구단 내규에 어긋나는 행위라며 선수 4명을 즉각 귀국 조치하겠다고 밝혔다.',
+  origin = '롯데는 KBO 클린베이스볼센터에 선수들의 도박장 출입 사실을 신고했다. KBO 상벌위원회는 선수 1명에게 50경기, 나머지 3명에게 30경기 출전 정지 징계를 내렸다. KBO는 경찰 수사가 진행 중이지만 사안의 심각성을 고려해 선제적인 제재를 결정했다고 밝혔다. 구단은 이 결과를 즉각 이행하겠다고 밝혔다.',
+  usage_note = '실제 징계가 내려진 사건이다. 선수 개인을 조롱하거나 가십처럼 소비하지 말고, 공개된 징계와 보도를 기준으로 말하는 편이 맞다.',
+  caution = '징계 발표 당시 경찰 수사가 진행 중이던 사건이므로, 사실관계 확인 없이 추측성 서술을 덧붙이지 않도록 주의한다.',
+  usage_examples = '[{"situation":"프로야구 징계 뉴스를 볼 때","text":"롯데 선수들은 전지훈련 중에 도박장에 갔다가 바로 귀국 조치됐어."},{"situation":"스포츠 윤리 이야기를 할 때","text":"이 사안은 농담으로 소비하기보다, 발표된 징계와 보도를 기준으로 말해야 해."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'utxgy8un'
+  and slug = '2026년-롯데-자이언츠-원정-도박-사건'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.yna.co.kr/view/AKR20260213190700007', '프로야구 롯데, 대만서 4명 불법도박장 출입인정…즉각 귀국조처', '연합뉴스',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'utxgy8un' and meme.slug = '2026년-롯데-자이언츠-원정-도박-사건'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.yna.co.kr/view/AKR20260213190700007'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318', '전지훈련 보냈더니 도박장에…롯데 4인방, 50경기·30경기 출장정지 징계', '서울신문',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'utxgy8un' and meme.slug = '2026년-롯데-자이언츠-원정-도박-사건'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318'
+  );
+
+-- 피식대학 영양군 지역비하 사태 (q246gvj2 / 피식대학-영양군-지역비하-사태)
+update public.memes set
+  summary = '코미디 유튜브 채널 ‘피식대학’의 경북 영양군 비하 논란과 이후 영양군 홍보대사 위촉',
+  description = '‘피식대학’은 코미디언 정재형, 김민수, 이용주가 운영하는 코미디 유튜브 채널이다. 이 채널은 경북 영양을 찾은 영상 ‘경상도에서 가장 작은 도시 영양에 왔스유예’에서 지역을 비하하는 언행으로 거센 비판을 받았다. 출연진은 버스터미널의 지명 표지판을 보고 “여기 중국 아니냐”고 했고, 지역 특산물인 블루베리 젤리를 먹고는 “할머니 살을 뜯는 것 같다”고 말했다. 누리꾼들은 “무례하다”, “지역을 무시하는 게 보인다” 같은 비판을 쏟아냈다. 피식대학 측은 영상 공개 1주일 만에 사과문을 올리고, 영상에서 언급한 제과점과 백반식당을 찾아가 사과했다고 밝혔다.',
+  origin = '이후 피식대학은 영양군을 소개하고 축제를 홍보하는 협업 콘텐츠를 순차적으로 공개하겠다고 밝혔다. 첫 협업 영상 도입부에는 오도창 영양군수가 출연해, 수해 때 피식대학이 5천만원어치 물품을 기부한 데 고마움을 전했다. 영양군은 서울광장에서 열린 영양고추 H.O.T Festival 행사에서 피식대학 3인을 영양군 홍보대사로 위촉한다고 밝혔다.',
+  usage_note = '실제 지역 비하 논란이 배경이므로, 이 사건을 빌려 특정 지역을 조롱하는 데 쓰지 않아야 한다.',
+  caution = '언급할 때는 사과와 이후 경위까지 함께 설명하는 편이 좋다.',
+  usage_examples = '[{"situation":"지역 비하 논란을 설명할 때","text":"피식대학 영양 편은 결국 사과문까지 올라왔잖아."},{"situation":"후속 소식을 이야기할 때","text":"처음엔 비하 논란이었는데, 나중엔 영양군 홍보대사로 위촉됐더라."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'q246gvj2'
+  and slug = '피식대학-영양군-지역비하-사태'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.yna.co.kr/view/AKR20240821061000005', '영양 비하 사과한 ''피식대학'', 영양군과 협업 콘텐츠 제작', '연합뉴스',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'q246gvj2' and meme.slug = '피식대학-영양군-지역비하-사태'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.yna.co.kr/view/AKR20240821061000005'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://www.metroseoul.co.kr/article/20240829500089', '영양군, 피식대학 홍보대사 위촉', '메트로신문',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'q246gvj2' and meme.slug = '피식대학-영양군-지역비하-사태'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://www.metroseoul.co.kr/article/20240829500089'
+  );
+
+-- 갑툭튀 (93grdumg / 갑툭튀)
+update public.memes set
+  summary = '예상하지 못한 것이 갑자기 나타났을 때 쓰는 ‘갑자기 툭 튀어나오다’의 줄임말',
+  description = '갑툭튀는 ‘갑자기 툭 튀어나오다’를 줄여 이르는 말이다. 예상하지 못한 사물이나 현상 따위가 갑자기 나타나거나 생겨났다는 뜻으로 쓴다. 신문 기사에서도 갑툭튀로 여겨진 그룹이나 올 시즌 갑툭튀 활약을 보인 선수처럼 이 말을 쓴 용례가 있다. ‘깜놀’과 함께 인터넷 신조어로 소개된 줄임말이다. 이지훈은 방송에서 스케줄을 가는 길에 매니저가 운전하는 차 앞으로 다른 차가 과감하게 끼어들면 “갑툭튀 깜놀”이라고 했다고 말했다.',
+  origin = '그룹 신화의 신혜성은 MBC ‘황금어장-라디오스타’에 출연해 자신이 ‘깜놀’, ‘갑툭튀’라는 줄임말의 창시자라고 말했다. 그는 한때 포털 사이트에 이 말을 신혜성이 만들었다는 설명이 있었다고 덧붙였다. 이지훈은 SBS ‘동상이몽 시즌2-너는 내 운명’에서 신혜성, 강타와 함께 이 줄임말을 만들었다고 말했다.',
+  usage_note = '예상 밖의 등장이나 상황을 가볍게 표현할 때 쓴다. 실제로 사람을 놀라게 하는 장난에는 위험과 불쾌감이 따를 수 있다.',
+  caution = caution,
+  usage_examples = '[{"situation":"차가 갑자기 끼어들었을 때","text":"아, 갑툭튀 깜놀이야."},{"situation":"친구가 갑자기 나타났을 때","text":"어디서 갑툭튀했어?"}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = '93grdumg'
+  and slug = '갑툭튀'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://biz.heraldcorp.com/article/3755062', '신혜성 깜놀 창시자? “포털사이트에 검색하면…”', '헤럴드경제',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '93grdumg' and meme.slug = '갑툭튀'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://biz.heraldcorp.com/article/3755062'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://news.nate.com/view/20210713n02819', '이지훈 "깜놀·갑툭튀 줄임말, 신혜성 강타와 함께 만들어"', '네이트/뉴스엔',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '93grdumg' and meme.slug = '갑툭튀'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://news.nate.com/view/20210713n02819'
+  );
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://opendict.korean.go.kr/dictionary/view?sense_no=1369891', '갑툭튀 - 우리말샘', '국립국어원 우리말샘',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = '93grdumg' and meme.slug = '갑툭튀'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://opendict.korean.go.kr/dictionary/view?sense_no=1369891'
+  );
+
+-- 페페 더 프로그(슬픈 개구리 페페) (jkd7vu6x / 페페 더 프로그(슬픈 개구리 페페))
+update public.memes set
+  summary = '만화 캐릭터 개구리 페페의 얼굴로 여러 감정을 표현하는 인터넷 밈',
+  description = '페페 더 프로그는 미국 만화가 맷 퓨리의 웹코믹 ‘보이즈 클럽(Boy''s Club)’에서 나온 개구리 캐릭터다. 4chan 이용자들은 페페의 얼굴과 대사를 우울함, 분노, 놀라움 같은 여러 감정과 상황에 맞게 바꿔 썼다. 변형으로는 ‘Sad Frog(슬픈 개구리)’, ‘Smug Frog’, ‘Angry Pepe’, ‘Feels Frog’ 등이 있다. 한국을 포함해 세계 어디서나 찾아볼 수 있는 캐릭터로 소개된다. 원래는 정치와 무관한 캐릭터였지만, 이후 미국 대안우파(alt-right)의 상징으로 전용되기도 했다. 미국 반명예훼손연맹(ADL)은 페페를 혐오 상징 데이터베이스에 올렸지만, 대부분의 페페 사용은 혐오와 관련된 맥락이 아니라고 밝혔다. 홍콩에서는 페페가 대안우파 이념과 연결된 상징으로 받아들여지지 않았다.',
+  origin = '원작 만화에서 페페는 화장실 문을 열어 둔 채 소변을 보다가, 친구가 왜 바지를 내렸느냐고 묻자 “feels good man”이라고 답한다. 이 장면이 담긴 페이지가 스캔돼 4chan에 올라가면서 밈으로 퍼졌다. ‘feels good man’의 슬픈 변형인 ‘feels bad, man’도 페페와 함께 쓰였다. 퓨리는 페페가 혐오 상징으로 쓰이는 데 유감을 나타냈고, 결국 만화 속에서 페페를 죽게 하고 장례식을 치러 주었다.',
+  usage_note = '반응 이미지로 감정을 표현할 때 쓸 수 있다. 혐오 상징으로 전용된 이력이 있으니, 해외 이용자와 대화하거나 공적인 자리에서는 맥락을 함께 설명하는 편이 좋다.',
+  caution = caution,
+  usage_examples = '[{"situation":"반응짤을 고를 때","text":"이 표정은 슬픈 개구리 페페가 제일 잘 살려."},{"situation":"해외 커뮤니티를 설명할 때","text":"페페는 원래 만화 캐릭터인데, 해외에서는 혐오 상징으로 쓰인 적이 있어서 조심해야 해."}]'::jsonb,
+  content_reviewed_at = '2026-11-11T15:00:00+09:00'::timestamptz,
+  updated_at = now()
+where short_id = 'jkd7vu6x'
+  and slug = '페페 더 프로그(슬픈 개구리 페페)'
+  and moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status);
+
+insert into public.meme_sources (
+  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
+)
+select meme.id, 'Web', 'https://en.wikipedia.org/wiki/Pepe_the_Frog', 'Pepe the Frog', 'Wikipedia',
+  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
+from public.memes as meme
+where meme.short_id = 'jkd7vu6x' and meme.slug = '페페 더 프로그(슬픈 개구리 페페)'
+  and not exists (
+    select 1 from public.meme_sources as existing
+    where existing.meme_id = meme.id and existing.source_url = 'https://en.wikipedia.org/wiki/Pepe_the_Frog'
+  );
+
+-- Give previously untitled live sources a verified title so they render.
+update public.meme_sources as ms
+set title = '''음주운전'' 강정호, 의문 가득한 복귀...키움은 왜? / YTN',
+    creator_name = coalesce(ms.creator_name, 'YouTube')
+from public.memes as meme
+where ms.meme_id = meme.id
+  and meme.short_id = '56hnkxyk'
+  and ms.source_url = 'https://www.youtube.com/watch?v=v3YbaqL9rV8';
+update public.meme_sources as ms
+set title = '‘영양 비하 논란’ 피식대학 “질책 댓글 반성하며 읽어…미숙했다”',
+    creator_name = coalesce(ms.creator_name, '농민신문')
+from public.memes as meme
+where ms.meme_id = meme.id
+  and meme.short_id = 'q246gvj2'
+  and ms.source_url = 'https://www.nongmin.com/article/20240519500070';
+update public.meme_sources as ms
+set title = '"똥물" "중국이야?" 피식대학 ''영양군 비하 논란''에 주민들 ''폭발''…피해 업주·공무원도 입 열었다 (현장영상) / SBS',
+    creator_name = coalesce(ms.creator_name, 'YouTube')
+from public.memes as meme
+where ms.meme_id = meme.id
+  and meme.short_id = 'q246gvj2'
+  and ms.source_url = 'https://www.youtube.com/watch?v=mM3su9pxkJQ';
+update public.meme_sources as ms
+set title = '[TV는 사랑을 싣고] 석광렬&전원주 | 1회 KBS 1994.05.03. 방송',
+    creator_name = coalesce(ms.creator_name, 'YouTube')
+from public.memes as meme
+where ms.meme_id = meme.id
+  and meme.short_id = 'vtu3rkyg'
+  and ms.source_url = 'https://www.youtube.com/watch?v=lBsbtNxtX7w';
+update public.meme_sources as ms
+set title = '진중권 "‘디워’ 해프닝 ‘황우석 사태’와 비슷"',
+    creator_name = coalesce(ms.creator_name, '세계일보')
+from public.memes as meme
+where ms.meme_id = meme.id
+  and meme.short_id = 'wsjz865n'
+  and ms.source_url = 'https://www.segye.com/newsView/20070920001620';
+update public.meme_sources as ms
+set title = '‘엽기’올 최고의 히트언어',
+    creator_name = coalesce(ms.creator_name, '경향신문')
+from public.memes as meme
+where ms.meme_id = meme.id
+  and meme.short_id = 'xq7ycnys'
+  and ms.source_url = 'https://www.khan.co.kr/article/200012251708421';
+
+-- Hide non-200, dead, or irrelevant source rows from public display without deleting them.
+update public.meme_sources as ms
+   set hidden_from_public = true
+  from public.memes as meme
+ where ms.meme_id = meme.id
+   and meme.short_id in ('b9gzeysg', '42d6qeqm', 'kh75j5f8', 'xq7ycnys', 'wsjz865n', 'vtu3rkyg', '8kz4upjt', '89b37mrx', '56hnkxyk', 'utxgy8un', 'q246gvj2', '93grdumg', 'jkd7vu6x')
+   and (ms.source_url ilike '%namu.wiki%' or ms.source_url ilike '%merriam-webster.com%' or ms.source_url ilike '%etnews.com%' or ms.source_url ilike '%vop.co.kr%' or ms.source_url ilike '%gamemeca.com%' or ms.source_url ilike '%VbmYQF32SNg%' or ms.source_url ilike '%mvqYV2zvksU%' or ms.source_url ilike '%uzAdeV9Yz5U%' or ms.source_url ilike '%WwYmJzjU10w%' or ms.source_url ilike '%qK7YQ6pvLp8%' or ms.source_url ilike '%XTuKk2HZCBM%' or ms.source_url ilike '%h4mfwvB7C7Q%' or ms.source_url ilike '%skrG0f0ihvM%' or ms.source_url ilike '%CmsLb87hOqQ%' or ms.source_url ilike '%ZCKxJx7tBi4%' or ms.source_url ilike '%NLAdKX2r1jI%' or ms.source_url ilike '%sxVZlnSHqy0%' or ms.source_url ilike '%B_Kt0uDmTFA%' or ms.source_url ilike '%vk9_bKXhI_c%' or ms.source_url ilike '%JfsNf8j4BUY%' or ms.source_url ilike '%BKo1bznv-RY%' or ms.source_url ilike '%MKeOC3BMG0c%' or ms.source_url ilike '%_WWM0QilnS0%' or ms.source_url ilike '%wbrFi8n7-sw%' or ms.source_url ilike '%aRv2-fGOteg%' or ms.source_url ilike '%71XbAI7SMEU%' or ms.source_url ilike '%fAqPgEW_46U%' or ms.source_url ilike '%fVX6ptcsHHY%' or ms.source_url ilike '%Trq8SGvkQTI%' or ms.source_url ilike '%hvM_JGYgfJ0%' or ms.source_url ilike '%VSHq5oxg2Sk%' or ms.source_url ilike '%n5zRdGm2vgg%' or ms.source_url ilike '%6arSLs0y-Q8%' or ms.source_url ilike '%V_yj-ChWSYs%' or ms.source_url ilike '%AhE7PT7fr60%' or ms.source_url ilike '%_BuM_uCk4JI%' or ms.source_url ilike '%KARSCdB946A%' or ms.source_url ilike '%fz_LRL8NyoI%' or ms.source_url ilike '%about.ncsoft.com%');
+
+-- Restore safety_reviewed_at after the usage_note/caution trigger has fired.
+update public.memes as meme
+   set safety_reviewed_at = backup.safety_reviewed_at
+  from loop028_safety_reviewed_backup as backup
+ where meme.id = backup.id;
+
+drop table loop028_safety_reviewed_backup;

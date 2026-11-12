@@ -166,5 +166,9 @@
   "MEMECATCH_RESTORE_CONFIRM": "Must be restore before a dump is loaded into the target database.",
   "MEMECATCH_SIGNING_SECRET": "HMAC and operator bearer for analytics, view counts, and the embedding probe.",
   "PGDATABASE": "Target database name exported by the backup tools from the postgres URL.",
-  "PGPASSFILE": "Path to the mode-0600 pgpass file used by the backup and restore tools."
+  "PGDATA": "Local Postgres data directory used by the loop-028 safety_reviewed_at proof script.",
+  "PGHOST": "Local Postgres socket or host used by the loop-028 safety_reviewed_at proof script.",
+  "PGPORT": "Local Postgres port used by the loop-028 safety_reviewed_at proof script.",
+  "PGPASSFILE": "Path to the mode-0600 pgpass file used by the backup and restore tools.",
+  "LD_LIBRARY_PATH": "Shared-library path for the bundled libpq used by the loop-028 safety_reviewed_at proof script."
 }

@@ -56,7 +56,7 @@ const MIN_LOCALIZED_EXPLORE_ITEMS = 24;
  */
 const DEPTH_SELECT =
   "short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples," +
-  " meme_sources(source_url), meme_contents(availability, moderation_status)," +
+  " meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status)," +
   " meme_tags_map(tag_id)," +
   " meme_translations(locale, status, localized_slug, source_updated_at, updated_at, title, summary, description, origin)";
 

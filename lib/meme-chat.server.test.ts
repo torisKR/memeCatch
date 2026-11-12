@@ -741,4 +741,29 @@ describe("public grounded meme answers", () => {
     expect(prompt.messages[1].content.length).toBeLessThanOrEqual(6000);
     expect(JSON.parse(prompt.messages[1].content).facts).toHaveLength(4);
   });
+
+  it("does not cite hidden_from_public sources and selects the flag", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const source = readFileSync(join(process.cwd(), "lib/meme-chat.server.ts"), "utf-8");
+    expect(source).toContain("meme_sources(source_url,title,platform,hidden_from_public)");
+
+    mocks.read.mockResolvedValue({
+      data: [row({
+        meme_sources: [
+          { source_url: "https://namu.wiki/w/hidden", title: "HIDDEN_NAMU", platform: "wiki", hidden_from_public: true },
+          { source_url: "https://www.wikipedia.org/wiki/Meme", title: "출처 문서", platform: "web" },
+        ],
+      })],
+      error: null,
+    });
+    const result = await (await load())(input);
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("HIDDEN_NAMU");
+    expect(serialized).not.toContain("namu.wiki");
+    expect(result.items[0].sources).toEqual([
+      { url: "https://www.wikipedia.org/wiki/Meme", label: "출처 문서" },
+    ]);
+  });
+
 });

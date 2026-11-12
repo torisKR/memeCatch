@@ -182,6 +182,9 @@ describe("overlayMemeTranslation", () => {
 });
 
 describe("translation freshness and SEO eligibility", () => {
+  const micros = "2026-07-15T15:30:00.191373+00:00";
+  const millisecond = new Date("2026-07-15T15:30:00.191Z");
+
   it("compares source revisions as instants rather than raw timestamp strings", () => {
     expect(
       isTranslationCurrent(
@@ -189,7 +192,90 @@ describe("translation freshness and SEO eligibility", () => {
         "2026-07-28T04:00:00.000Z",
       ),
     ).toBe(true);
+    expect(
+      isTranslationCurrent(
+        "2026-11-12T14:47:37.123+00:00",
+        "2026-11-12T14:47:37.123Z",
+      ),
+    ).toBe(true);
+    expect(
+      isTranslationCurrent(
+        "2026-11-12T14:47:37.123000Z",
+        "2026-11-12T14:47:37.123Z",
+      ),
+    ).toBe(true);
     expect(isTranslationCurrent("not-a-date", SOURCE_UPDATED_AT)).toBe(false);
+  });
+
+  it("treats a millisecond Date and a microsecond string as the same instant in either direction", () => {
+    expect(isTranslationCurrent(millisecond, micros)).toBe(true);
+    expect(isTranslationCurrent(micros, millisecond)).toBe(true);
+  });
+
+  it("treats two Dates and two equivalent strings of one millisecond as current", () => {
+    expect(isTranslationCurrent(millisecond, new Date(millisecond.getTime()))).toBe(true);
+    expect(isTranslationCurrent(micros, "2026-07-15T15:30:00.191Z")).toBe(true);
+    expect(isTranslationCurrent("2026-07-15T15:30:00.191Z", micros)).toBe(true);
+  });
+
+  it("rejects a translation that differs by exactly 1ms", () => {
+    const stale = new Date(millisecond.getTime() + 1);
+    expect(stale.toISOString()).toBe("2026-07-15T15:30:00.192Z");
+    expect(isTranslationCurrent(stale, millisecond)).toBe(false);
+    expect(isTranslationCurrent(millisecond, stale)).toBe(false);
+    expect(isTranslationCurrent(stale.toISOString(), millisecond)).toBe(false);
+    expect(isTranslationCurrent(micros, stale)).toBe(false);
+    expect(
+      isIndexableLocalizedMeme(
+        overlayMemeTranslation(
+          baseMeme({ updated_at: millisecond as unknown as string }),
+          translation({ source_updated_at: stale as unknown as string }),
+          "en",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the 411 same-instant Date/Date detail pages indexable", () => {
+    // Detail reads both timestamptz columns as top-level node-pg Dates.
+    // The previous Date.parse(String(date)) check dropped milliseconds, so a
+    // 1ms skew inside the same second looked current. Prod has 0 stale
+    // reviewed rows: every indexable detail page is an exact millisecond pair.
+    // This count is that population. A 1ms skew is asserted separately and is
+    // not part of it.
+    const legacyDetailCurrent = (left: Date, right: Date) => {
+      const leftMs = Date.parse(String(left));
+      const rightMs = Date.parse(String(right));
+      return Number.isFinite(leftMs) && Number.isFinite(rightMs) && leftMs === rightMs;
+    };
+    let before = 0;
+    let after = 0;
+    for (let index = 0; index < 411; index += 1) {
+      const instant = new Date(Date.UTC(2026, 6, 15, 15, 30, 0, 191) + index * 1000);
+      const sourceUpdatedAt = new Date(instant.getTime());
+      const meme = baseMeme({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        short_id: `d${index}`,
+        updated_at: instant as unknown as string,
+      });
+      const row = translation({
+        meme_id: meme.id,
+        localized_slug: `detail-${index}`,
+        source_updated_at: sourceUpdatedAt as unknown as string,
+      });
+      const localized = overlayMemeTranslation(meme, row, "en");
+      const legacyLocalized = localized && {
+        ...localized,
+        translation: {
+          ...localized.translation,
+          isCurrent: legacyDetailCurrent(sourceUpdatedAt, instant),
+        },
+      };
+      if (isIndexableLocalizedMeme(legacyLocalized)) before += 1;
+      if (isIndexableLocalizedMeme(localized)) after += 1;
+    }
+    expect(before).toBe(411);
+    expect(after).toBe(411);
   });
 
   it("marks a source-updated translation as stale even if its status was not changed", () => {

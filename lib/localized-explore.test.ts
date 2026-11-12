@@ -160,6 +160,40 @@ describe("getLocalizedExploreMemes", () => {
     expect(unavailable).toEqual({ items: [], status: "unavailable" });
   });
 
+  it("includes a Date translation timestamp against an embedded microsecond meme timestamp", async () => {
+    const current = meme(7);
+    const embeddedUpdatedAt = "2026-07-15T15:30:00.191373+00:00";
+    const sourceUpdatedAt = new Date("2026-07-15T15:30:00.191Z");
+    const stale = meme(8);
+    useRows([
+      {
+        ...translation(
+          { ...current, updated_at: embeddedUpdatedAt },
+          {
+            locale: "ja",
+            source_updated_at: sourceUpdatedAt as unknown as string,
+          },
+        ),
+        memes: { ...current, updated_at: embeddedUpdatedAt },
+      },
+      {
+        ...translation(
+          { ...stale, updated_at: embeddedUpdatedAt },
+          {
+            locale: "ja",
+            source_updated_at: new Date(sourceUpdatedAt.getTime() + 1) as unknown as string,
+          },
+        ),
+        memes: { ...stale, updated_at: embeddedUpdatedAt },
+      },
+    ]);
+
+    const result = await getLocalizedExploreMemes("ja");
+
+    expect(result.status).toBe("active");
+    expect(result.items.map((item) => item.id)).toEqual([current.id]);
+  });
+
   it("excludes stale and incomplete rows without weakening the source gate", async () => {
     const stale = meme(30);
     const incomplete = meme(31);

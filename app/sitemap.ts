@@ -4,6 +4,12 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import {
+  isIndexableLocalizedMeme,
+  isTranslationCurrent,
+  type LocalizedMeme,
+  type TranslationStatus,
+} from "@/lib/meme-translations";
 import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import { evidenceTimestamp } from "@/lib/source-links";
 import {
@@ -62,12 +68,14 @@ const DEPTH_SELECT =
   " meme_tags_map(tag_id)," +
   " meme_translations(locale, status, localized_slug, source_updated_at, updated_at, title, summary, description, origin)";
 
+type SitemapTimestamp = string | Date;
+
 type SitemapTranslationRow = {
   locale: string;
   status: string;
   localized_slug: string;
-  source_updated_at: string;
-  updated_at: string;
+  source_updated_at: SitemapTimestamp;
+  updated_at: SitemapTimestamp;
   title: string;
   summary: string;
   description: string;
@@ -77,11 +85,15 @@ type SitemapTranslationRow = {
 type SitemapMemeRow = ContentDepthInput & {
   short_id: string;
   slug: string;
-  updated_at: string;
+  updated_at: SitemapTimestamp;
   meme_translations: SitemapTranslationRow[];
 };
 
-function validDate(value: string | null | undefined): Date | undefined {
+function validDate(value: SitemapTimestamp | null | undefined): Date | undefined {
+  if (value instanceof Date) {
+    if (!Number.isFinite(value.getTime())) return undefined;
+    return evidenceTimestamp(value.toISOString()) ? new Date(value.getTime()) : undefined;
+  }
   const timestamp = evidenceTimestamp(value);
   return timestamp ? new Date(timestamp) : undefined;
 }
@@ -130,19 +142,90 @@ function exploreLanguages(locales: readonly SeoContentLocale[]): Record<string, 
   return { ...languages, "x-default": languages.en ?? languages.ko };
 }
 
-/** Only reviewed, exact-source, complete translations may become crawl targets. */
+function translationStatus(status: string): TranslationStatus | null {
+  if (status === "machine" || status === "reviewed" || status === "stale") return status;
+  return null;
+}
+
+/** Same slug the detail page publishes: trim, then fall back to the Korean slug. */
+function publishedLocalizedSlug(
+  localizedSlug: string | null | undefined,
+  sourceSlug: string,
+): string {
+  const trimmed = localizedSlug?.trim() ?? "";
+  return trimmed || sourceSlug;
+}
+
+function timestampText(value: SitemapTimestamp): string {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+/**
+ * Crawl targets use the detail page's publication predicate.
+ * `isIndexableLocalizedMeme` checks reviewed status, required prose,
+ * `isIndexableMeme` on the Korean source, and `isTranslationCurrent`.
+ * Freshness goes through `sameInstant`, which treats a node-pg Date and a
+ * microsecond `row_to_json` string of the same millisecond as one revision.
+ */
+function localizedIndexCandidate(
+  meme: SitemapMemeRow,
+  translation: SitemapTranslationRow,
+  locale: SeoContentLocale,
+  status: TranslationStatus,
+): LocalizedMeme {
+  return {
+    id: meme.short_id,
+    short_id: meme.short_id,
+    updated_at: timestampText(meme.updated_at),
+    slug: publishedLocalizedSlug(translation.localized_slug, meme.slug),
+    title: translation.title,
+    summary: translation.summary,
+    description: translation.description,
+    origin: translation.origin,
+    usage_note: null,
+    caution: null,
+    aliases: [],
+    usage_examples: meme.usage_examples,
+    meme_sources: meme.meme_sources,
+    meme_contents: meme.meme_contents,
+    meme_tags_map: meme.meme_tags_map,
+    original: {
+      slug: meme.slug,
+      title: "",
+      summary: "",
+      description: meme.description ?? "",
+      origin: meme.origin ?? "",
+      usage_note: meme.usage_note ?? null,
+      caution: meme.caution ?? null,
+      aliases: [],
+      usage_examples: meme.usage_examples,
+    },
+    translation: {
+      locale,
+      status,
+      localizedSlug: translation.localized_slug?.trim() || null,
+      sourceUpdatedAt: timestampText(translation.source_updated_at),
+      updatedAt: timestampText(translation.updated_at),
+      isCurrent: isTranslationCurrent(translation.source_updated_at, meme.updated_at),
+      provider: "",
+      model: "",
+      promptVersion: 0,
+      translatedAt: timestampText(translation.updated_at),
+      reviewedAt: null,
+    },
+  };
+}
+
+/** Only reviewed, current, complete translations may become crawl targets. */
 function reviewedTranslations(meme: SitemapMemeRow): Map<SeoContentLocale, SitemapTranslationRow> {
   const translations = new Map<SeoContentLocale, SitemapTranslationRow>();
   for (const translation of meme.meme_translations ?? []) {
     if (!isSeoContentLocale(translation.locale)) continue;
-    const isReviewedAndCurrent =
-      translation.status === "reviewed" &&
-      translation.source_updated_at === meme.updated_at &&
-      Boolean(translation.title?.trim()) &&
-      Boolean(translation.summary?.trim()) &&
-      Boolean(translation.description?.trim()) &&
-      Boolean(translation.origin?.trim());
-    if (!isReviewedAndCurrent) continue;
+    const status = translationStatus(translation.status);
+    if (!status) continue;
+    if (!isIndexableLocalizedMeme(localizedIndexCandidate(meme, translation, translation.locale, status))) {
+      continue;
+    }
     translations.set(translation.locale, translation);
   }
   return translations;
@@ -163,7 +246,7 @@ function memeLanguages(
       localizedMemePath(
         locale,
         meme.short_id,
-        translation.localized_slug || meme.slug,
+        publishedLocalizedSlug(translation.localized_slug, meme.slug),
       ),
     );
   }
@@ -349,7 +432,7 @@ async function buildSitemap(): Promise<{
             localizedMemePath(
               locale,
               meme.short_id,
-              translation.localized_slug || meme.slug,
+              publishedLocalizedSlug(translation.localized_slug, meme.slug),
             ),
           ),
           ...lastModified(validDate(translation.updated_at)),

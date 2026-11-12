@@ -50,8 +50,10 @@ describe("rankings fallback copy", () => {
     expect(arabic).toContain("text-right");
     expect(arabic).toContain("justify-start");
     expect(arabic).not.toContain("justify-end");
-    expect(arabic).toContain('href="/ar/explore"');
+    expect(arabic).toContain('href="/explore"');
+    expect(arabic).not.toContain("/ar/explore");
     expect(getDocumentDirection("ar")).toBe("rtl");
+    expect(rankingsExploreHref("ar")).toBe("/explore");
     expect(rankingsExploreHref("en")).toBe("/en/explore");
     expect(rankingsExploreHref("ko")).toBe("/explore");
     expect(documentLocaleFromPathname("/ar/rankings")).toBe("ar");

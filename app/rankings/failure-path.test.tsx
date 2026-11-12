@@ -149,7 +149,8 @@ describe("rankings failure path", () => {
     expect(arabicHtml).toContain("justify-start");
     expect(arabicHtml).toContain("تعذر تحميل التصنيفات الآن. يُرجى المحاولة مرة أخرى بعد قليل.");
     expect(arabicHtml).toContain("التصنيفات");
-    expect(arabicHtml).toContain('href="/ar/explore"');
+    expect(arabicHtml).toContain('href="/explore"');
+    expect(arabicHtml).not.toContain('href="/ar/explore"');
     expect(arabicHtml).toContain('href="/rankings"');
     expect(arabicHtml).not.toContain("순위를 잠시 불러오지 못했어요");
     expect(arabicHtml).not.toContain("밈 사전 보기");

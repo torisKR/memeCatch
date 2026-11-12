@@ -57,10 +57,19 @@ const entry: HomeEntry = {
   safetyLevel: "green",
 };
 
+function railEntries(count: number): HomeEntry[] {
+  return Array.from({ length: count }, (_, index) => ({
+    ...entry,
+    id: `published-${index}`,
+    title: index === 0 ? entry.title : `Published ${index}`,
+    href: `/memes/ABC123/published-${index}`,
+  }));
+}
+
 describe("HomeExperience", () => {
   it.each(HOME_LOCALES)("keeps the shared story and downstream section order for %s", (locale) => {
     const html = renderToStaticMarkup(
-      <HomeExperience locale={locale} entries={[entry]} />,
+      <HomeExperience locale={locale} entries={railEntries(3)} />,
     );
     const sectionOrder = [...html.matchAll(/data-home-section="([^"]+)"/g)].map(
       (match) => match[1],
@@ -127,19 +136,23 @@ describe("HomeExperience", () => {
     expect(html).toContain('data-home-artwork="immersive-story"');
   });
 
-  it("renders meaningful published content and an honest empty state", () => {
+  it("renders a recent rail of at least 3 cards and hides a shorter one", () => {
     const populated = renderToStaticMarkup(
-      <HomeExperience locale="en" entries={[entry]} />,
+      <HomeExperience locale="en" entries={railEntries(3)} />,
     );
-    const empty = renderToStaticMarkup(
-      <HomeExperience locale="en" entries={[]} />,
-    );
-
     expect(populated).toContain(entry.title);
     expect(populated).toContain(entry.summary);
-    expect(populated).toContain('href="/memes/ABC123/published-entry"');
-    expect(empty).toContain(HOME_COPY.en.recent.empty);
-    expect(empty).toContain('href="/en/search"');
+    expect(populated).toContain('data-home-section="recent-content"');
+
+    for (const count of [0, 1, 2]) {
+      const hidden = renderToStaticMarkup(
+        <HomeExperience locale="en" entries={railEntries(count)} />,
+      );
+      expect(hidden).not.toContain('data-home-section="recent-content"');
+      expect(hidden).not.toContain('id="home-latest"');
+      expect(hidden).not.toContain(HOME_COPY.en.recent.title);
+      expect(hidden).not.toContain(HOME_COPY.en.recent.empty);
+    }
   });
 
   it("keeps the pathway link row clear of the mobile chat launcher", () => {

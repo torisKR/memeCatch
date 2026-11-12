@@ -9,6 +9,7 @@ import { TrackedBlock } from "@/components/tracked-block";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { SearchInput } from "./search-input";
 import { MemeReferenceSearch } from "@/components/meme-reference-search";
+import { hasPublicListing } from "@/lib/thin-meme";
 
 const SEARCH_DESCRIPTION =
   "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
@@ -58,7 +59,7 @@ export default async function SearchPage({ searchParams }: Props) {
       {/* 검색 성공률 계측 — 결과가 실제로 렌더된 시점 기준(입력 중간 상태 제외) */}
       <SearchOutcomeTracker query={query} resultCount={results.length} />
 
-      {query && results.length > 0 && (
+      {query && hasPublicListing(results.length) && (
         <section
           aria-label="검색 결과"
           className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
@@ -118,7 +119,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </section>
       )}
 
-      {needsFallback && trending.length > 0 && (
+      {needsFallback && hasPublicListing(trending.length) && (
         <section aria-labelledby="search-trending" className="mt-8">
           <h2 id="search-trending" className="text-xl font-bold">
             {SECTION_TITLES.trending}

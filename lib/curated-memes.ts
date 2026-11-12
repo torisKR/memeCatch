@@ -3,6 +3,22 @@ import { getSeoCopy, localizePath, type SeoRouteLocale } from "@/lib/i18n-routin
 import type { HomeEntry } from "@/components/home/home-experience";
 import { memePathFrom } from "@/lib/labels";
 import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
+import type { ContentDepthInput } from "@/lib/content-depth";
+import { isThinMeme } from "@/lib/thin-meme";
+
+/** Body fields the thin-page predicate reads. Curated examples store context, not situation. */
+export function curatedDepthInput(meme: CuratedMeme): ContentDepthInput {
+  return {
+    description: meme.description,
+    origin: meme.origin,
+    caution: meme.caution,
+    usage_examples: meme.usage_examples.map((example) => ({
+      situation: example.context,
+      dialogue: example.dialogue,
+      text: example.description ?? example.dialogue.map((line) => line.line).join("\n"),
+    })),
+  };
+}
 
 export type CuratedMeme = {
   id: string;
@@ -358,7 +374,9 @@ export function getGuaranteedHomeEntries(
 
   const categoryCopy = getSeoCopy(locale).categories;
 
-  const fallbackEntries: HomeEntry[] = CURATED_CORE_MEMES.map((meme) => {
+  const fallbackEntries: HomeEntry[] = CURATED_CORE_MEMES.filter(
+    (meme) => !isThinMeme(curatedDepthInput(meme)),
+  ).map((meme) => {
     const cardDataUrl = generateHouseMemeCardDataUrl(
       {
         title: meme.title,
@@ -417,7 +435,9 @@ export function curatedMemesMatchingQuery(query: string): readonly CuratedMeme[]
 }
 
 export function curatedSearchCards(query: string) {
-  return curatedMemesMatchingQuery(query).map((meme) => ({
+  return curatedMemesMatchingQuery(query)
+    .filter((meme) => !isThinMeme(curatedDepthInput(meme)))
+    .map((meme) => ({
     id: meme.id,
     short_id: meme.short_id,
     slug: meme.slug,
@@ -429,6 +449,7 @@ export function curatedSearchCards(query: string) {
     media_type: "image" as const,
     origin_year: meme.origin_year,
     trend_score: 100,
+    ...curatedDepthInput(meme),
     meme_contents: [
       {
         thumbnail_url: generateHouseMemeCardDataUrl(

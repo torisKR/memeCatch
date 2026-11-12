@@ -2,8 +2,9 @@ import { createStaticClient } from "@/lib/supabase/server";
 import type { MemeListItem } from "@/lib/queries";
 import type { MemeCategory } from "@/lib/labels";
 import { RelatedMemes } from "@/components/related-memes";
+import { indexableScanLimit, omitThinMemes } from "@/lib/thin-meme";
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)";
+const SELECT = "*, meme_contents(thumbnail_url, is_representative, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)";
 
 /** 상세의 관련 밈은 최대 6장. 관련 결과가 적으면 같은 카테고리로 채운다. */
 const RELATED_LIMIT = 6;
@@ -21,7 +22,7 @@ export async function ContinueStream({
   category: MemeCategory;
   related: MemeListItem[];
 }) {
-  const head = related.slice(0, RELATED_LIMIT);
+  const head = omitThinMemes(related).slice(0, RELATED_LIMIT);
   const relatedIds = head.map((m) => m.id);
   const need = Math.max(0, RELATED_LIMIT - head.length);
 
@@ -29,7 +30,7 @@ export async function ContinueStream({
   if (need > 0) {
     try {
       const supabase = createStaticClient();
-      const scanSize = need + RELATED_LIMIT;
+      const scanSize = indexableScanLimit(RELATED_LIMIT);
       const { data } = await supabase
         .from("memes")
         .select(SELECT)
@@ -39,7 +40,7 @@ export async function ContinueStream({
         .order("trend_score", { ascending: false })
         .order("id", { ascending: false })
         .range(0, scanSize - 1);
-      const rows = (data ?? []) as MemeListItem[];
+      const rows = omitThinMemes((data ?? []) as unknown as MemeListItem[]);
       const seen = new Set<string>([currentId, ...relatedIds]);
       for (const meme of rows) {
         if (seen.has(meme.id)) continue;

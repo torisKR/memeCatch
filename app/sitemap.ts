@@ -4,6 +4,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import { isThinMeme } from "@/lib/thin-meme";
 import { evidenceTimestamp } from "@/lib/source-links";
 import {
   SEO_CONTENT_LOCALES,
@@ -322,7 +323,9 @@ async function buildSitemap(): Promise<{
         }
       }
 
-      if (entries.length < MAX_SITEMAP_URLS) {
+      // Localized URLs stay on isIndexableMeme so an English page without a
+      // translation still 404s. The Korean URL uses the tighter C1 thin gate.
+      if (entries.length < MAX_SITEMAP_URLS && !isThinMeme(meme)) {
         const updatedAt = validDate(meme.updated_at);
         entries.push({
           url: `${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}`,

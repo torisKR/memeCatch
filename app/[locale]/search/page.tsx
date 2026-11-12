@@ -14,6 +14,7 @@ import {
   localizedStaticPath,
 } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
+import { hasPublicListing } from "@/lib/thin-meme";
 import {
   getLocalizedSearchMemesResult,
   type LocalizedMemeDetail,
@@ -108,7 +109,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
 
       <SearchOutcomeTracker query={query} resultCount={results.length} />
 
-      {query && results.length > 0 && (
+      {query && hasPublicListing(results.length) && (
         <section
           aria-label={copy.resultSection}
           className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
@@ -190,7 +191,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
         />
       )}
 
-      {needsFallback && trending.length > 0 && (
+      {needsFallback && hasPublicListing(trending.length) && (
         <section aria-labelledby="search-trending" className="mt-8">
           <h2 id="search-trending" className="text-xl font-bold">{copy.trendingTitle}</h2>
           <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

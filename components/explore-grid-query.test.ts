@@ -81,8 +81,11 @@ describe("explore platform query", () => {
         (call) => call.method === "rpc" && call.args[0] === "search_ai_memes",
       ),
     ).toBe(true);
-    expect(search.calls.find((call) => call.method === "select")?.args[0]).not.toContain(
-      "meme_tags_map",
+    const searchSelect = search.calls.find((call) => call.method === "select")?.args[0];
+    expect(searchSelect).toContain("meme_tags_map(tag_id)");
+    expect(searchSelect).not.toContain("tags!inner");
+    expect(search.calls.some((call) => call.method === "eq" && call.args[0] === "meme_tags_map.tags.name")).toBe(
+      false,
     );
 
     const count = recorder();
@@ -102,8 +105,11 @@ describe("explore platform query", () => {
     const { calls, client } = recorder();
     buildMemesQuery(client, { categories: ["phrase"], sort: "trending" });
 
+    expect(calls.find((call) => call.method === "select")?.args[0]).toContain(
+      "meme_tags_map(tag_id)",
+    );
     expect(calls.find((call) => call.method === "select")?.args[0]).not.toContain(
-      "meme_tags_map",
+      "tags!inner",
     );
     expect(
       calls.some(

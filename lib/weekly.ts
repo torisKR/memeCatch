@@ -7,7 +7,8 @@
  */
 import { createStaticClient } from "@/lib/supabase/server";
 import type { MemeCategory } from "@/lib/labels";
-import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
+import { INDEXABLE_LIST_SELECT, type MemeListItem } from "@/lib/queries";
+import { indexableScanLimit, takeIndexableMemes } from "@/lib/thin-meme";
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 
@@ -77,12 +78,12 @@ async function loadTrending(): Promise<MemeListItem[]> {
     const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .eq("moderation_status", "approved")
       .order("trend_score", { ascending: false })
-      .limit(10);
+      .limit(indexableScanLimit(10));
     if (error) throw error;
-    return (data ?? []) as MemeListItem[];
+    return takeIndexableMemes((data ?? []) as unknown as MemeListItem[], 10);
   } catch {
     return [];
   }
@@ -93,14 +94,14 @@ async function loadFresh(range: WeekRange): Promise<MemeListItem[]> {
     const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .gte("published_at", range.startISO)
       .lte("published_at", range.endISO)
       .order("published_at", { ascending: false })
-      .limit(24);
+      .limit(indexableScanLimit(24));
     if (error) throw error;
-    return (data ?? []) as MemeListItem[];
+    return takeIndexableMemes((data ?? []) as unknown as MemeListItem[], 24);
   } catch {
     return [];
   }

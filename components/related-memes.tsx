@@ -1,5 +1,6 @@
 import { MemeCard, type MemeCardModel } from "@/components/meme-card";
 import { withLocaleFallback, type Locale } from "@/lib/i18n";
+import { hasPublicListing } from "@/lib/thin-meme";
 
 const RELATED_COPY = withLocaleFallback({
   ko: {
@@ -42,7 +43,7 @@ export function RelatedMemes({
   locale: Locale;
 }) {
   const cards = memes.slice(0, 6);
-  if (cards.length === 0) return null;
+  if (!hasPublicListing(cards.length)) return null;
   const copy = RELATED_COPY[locale];
 
   return (

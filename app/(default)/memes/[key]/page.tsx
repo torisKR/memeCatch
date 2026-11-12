@@ -46,7 +46,7 @@ import { DocStatusNote } from "@/components/doc-status-note";
 import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
-import { isIndexableMeme } from "@/lib/content-depth";
+import { isThinMeme, koreanDetailRobots } from "@/lib/thin-meme";
 import { isRenderableContent } from "@/lib/content-availability";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import {
@@ -146,9 +146,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: path, languages },
-    // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/content-depth.ts).
+    // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/thin-meme.ts).
     // follow는 유지 — 페이지는 200으로 살아 있고, 관련 밈·출처 링크로 크롤이 전파돼야 한다.
-    ...(isIndexableMeme(meme) ? {} : { robots: { index: false, follow: true } }),
+    ...(koreanDetailRobots(meme)
+      ? { robots: koreanDetailRobots(meme) }
+      : {}),
     // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 밈별 og 명시
     openGraph: {
       type: "website",
@@ -257,7 +259,7 @@ export default async function MemeDetailPage({ params }: Props) {
           WebPage JSON-LD는 색인 판정과 같은 조건으로 게이트한다 — 얇은 문서(96.3%)는
           noindex인데 구조화 데이터만 완성 문서처럼 나가면 LOOP.md §10「보강 중 문서의
           metadata 과장 금지」위반이다. 브레드크럼은 탐색 관계만 서술하므로 유지. */}
-      {isIndexableMeme(meme) && (
+      {!isThinMeme(meme) && (
         <>
           <MemeWebPageJsonLd
             name={meme.title}

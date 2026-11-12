@@ -361,6 +361,7 @@ describe("사이트맵 다국어 색인 계약", () => {
   it("indexable 원문에 대해 현재 reviewed 완역 locale만 alternates에 허용한다", () => {
     // 원문 충실도 판정은 번역 유무보다 먼저 통과해야 한다.
     expect(source).toContain("if (!isIndexableMeme(meme)) continue");
+    expect(source).toContain("!isThinMeme(meme)");
 
     // machine/stale/부분 번역을 hreflang에 내보내지 않는 계약. 구현은 인라인 또는
     // 명명된 helper 어느 쪽이어도 되지만 세 조건이 소스에 명시돼야 한다.
@@ -369,6 +370,25 @@ describe("사이트맵 다국어 색인 계약", () => {
     for (const field of ["title", "summary", "description"] as const) {
       expect(source).toMatch(new RegExp(`${field}\\??\\.trim\\(\\)`));
     }
+  });
+
+  it("drops a Korean page under 400 body characters and keeps the localized URL", async () => {
+    const thin = indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]);
+    thin.description = "밈".repeat(339);
+    thin.origin = "유".repeat(60);
+    thin.meme_sources = [{ source_url: "https://example.com/source" }];
+    const ready = indexableMeme(2, []);
+    ready.description = "밈".repeat(340);
+    ready.origin = "유".repeat(60);
+    ready.meme_sources = [{ source_url: "https://example.com/source" }];
+    useRows([thin, ready]);
+
+    const entries = await sitemap();
+    const paths = entries.map((entry) => new URL(entry.url).pathname);
+
+    expect(paths.some((path) => path.startsWith("/memes/m1"))).toBe(false);
+    expect(paths.some((path) => path.startsWith("/en/memes/"))).toBe(true);
+    expect(paths.some((path) => path.startsWith("/memes/m2"))).toBe(true);
   });
 
   it("x-default는 영어 문서를 가리키고, en 번역이 없으면 ko 원문을 유지한다", async () => {
@@ -450,11 +470,13 @@ describe("사이트맵 다국어 색인 계약", () => {
       updated_at: "2026-01-02T00:00:00.000Z",
       // Score without sources: description 250 (+2) + origin 59 (+1) + 1 example (+1) = 4, below MIN_SCORE 5.
       // Two visible sources add +2 and make it indexable; hidden sources must not.
+      // The example sentence also clears the 400-character Korean body gate so this
+      // test still isolates the hidden-source rule.
       description: "d".repeat(250),
       origin: "o".repeat(59),
       usage_note: null,
       caution: null,
-      usage_examples: [{ situation: "s", text: "t" }],
+      usage_examples: [{ situation: "s", text: "t".repeat(90) }],
       meme_sources,
       meme_contents: [],
       meme_tags_map: [],

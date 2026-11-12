@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
-import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
 
 const EVENT_NAME = "memecatch:locale-change";
@@ -30,19 +30,86 @@ function localeFromCurrentUrl(): Locale {
 /**
  * Selector choice for the path it was made on, plus the path the selector
  * navigates to. A stale cookie still does not win on load: this is memory
- * from `persistLocale` in the current document. Any later URL drops it, so
- * chrome follows the URL again.
+ * from `persistLocale` in the current document. Crossing a locale prefix
+ * remounts this module, so that destination is also stored until the new
+ * page arrives. Any later URL drops it, so chrome follows the URL again.
  */
 let inPlaceLocale: { locale: Locale; paths: readonly string[] } | null = null;
 let historyNotifyInstalled = false;
 
+/**
+ * Destination of a selector choice. Module memory dies when a prefixed route
+ * remounts onto an unprefixed one, so the destination is also stored here
+ * until that exact path is shown. It never overrides a different URL.
+ */
+export const LOCALE_DESTINATION_STORAGE_KEY = "memecatch:locale-destination";
+export const LOCALE_DESTINATION_TTL_MS = 15_000;
+
+type StoredLocaleDestination = {
+  locale: Locale;
+  path: string;
+  at: number;
+};
+
+function clearStoredDestination(): void {
+  try {
+    sessionStorage.removeItem(LOCALE_DESTINATION_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function rememberLocaleDestination(locale: Locale, path: string): void {
+  try {
+    const payload: StoredLocaleDestination = { locale, path, at: Date.now() };
+    sessionStorage.setItem(LOCALE_DESTINATION_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    /* in-memory flag still covers this document */
+  }
+}
+
+function readStoredDestination(): StoredLocaleDestination | "invalid" | null {
+  let raw: string | null;
+  try {
+    raw = sessionStorage.getItem(LOCALE_DESTINATION_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return "invalid";
+    const record = parsed as { locale?: unknown; path?: unknown; at?: unknown };
+    if (typeof record.locale !== "string" || !isLocale(record.locale)) return "invalid";
+    if (typeof record.path !== "string" || !record.path.startsWith("/")) return "invalid";
+    if (typeof record.at !== "number" || !Number.isFinite(record.at)) return "invalid";
+    return { locale: record.locale, path: record.path, at: record.at };
+  } catch {
+    return "invalid";
+  }
+}
+
 export function clearInPlaceLocale(): void {
   inPlaceLocale = null;
+  clearStoredDestination();
 }
 
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
   const path = window.location.pathname;
+  const stored = readStoredDestination();
+  if (stored === "invalid") {
+    clearStoredDestination();
+  } else if (stored) {
+    const fresh = Date.now() - stored.at <= LOCALE_DESTINATION_TTL_MS;
+    if (!fresh) {
+      clearStoredDestination();
+    } else if (stored.path === path) {
+      inPlaceLocale = { locale: stored.locale, paths: [path] };
+      clearStoredDestination();
+      return stored.locale;
+    }
+  }
   if (inPlaceLocale?.paths.includes(path)) return inPlaceLocale.locale;
   return localeFromCurrentUrl();
 }
@@ -143,5 +210,6 @@ export function persistLocale(locale: Locale, nextPath?: string) {
   } catch {
     /* locale cookie is sufficient */
   }
+  if (destination !== current) rememberLocaleDestination(locale, destination);
   window.dispatchEvent(new Event(EVENT_NAME));
 }

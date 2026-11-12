@@ -283,7 +283,7 @@ const EXTRA_MESSAGES: Record<Exclude<Locale, TranslatedLocale>, Partial<Messages
   ar: {
     home: "الصفحة الرئيسية MemeCatch", search: "البحث عن الميمات", searchPlaceholder: "ابحث عن ميم",
     explore: "استكشاف", timeline: "الخط الزمني", community: "المجتمع", submit: "إرسال", login: "تسجيل الدخول",
-    savedMemes: "الميمات المحفوظة", logout: "تسجيل الخروج", greeting: "مرحبًا بعودتك", accountMenu: "حسابي",
+    savedMemes: "الميمات المحفوظة", logout: "تسجيل الخروج", greeting: "مرحبًا بعودتك", accountMenu: "حسابي", my: "حسابي",
     random: "عرض ميم عشوائي", findingMeme: "جارٍ البحث عن ميم", language: "اللغة", languageMenu: "اختر اللغة",
     footerNav: "معلومات الموقع", about: "عن MemeCatch", privacy: "الخصوصية", terms: "الشروط",
     rankings: "التصنيفات", news: "أخبار الميمات حسب الجيل", donate: "ادعمنا",

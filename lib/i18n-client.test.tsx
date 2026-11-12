@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   LocaleAutoDetect,
+  LOCALE_DESTINATION_STORAGE_KEY,
+  LOCALE_DESTINATION_TTL_MS,
   LocaleDocumentSync,
   LocaleProvider,
   clearInPlaceLocale,
@@ -248,5 +250,167 @@ describe("LocaleProvider URL precedence", () => {
     await waitFor(() => {
       expect(document.cookie).not.toContain(`${LOCALE_COOKIE}=`);
     });
+  });
+});
+
+describe("locale destination survives a client remount", () => {
+  beforeEach(() => {
+    clearInPlaceLocale();
+    clearLocaleCookie();
+    sessionStorage.clear();
+    document.documentElement.lang = "ko";
+    document.documentElement.dir = "ltr";
+  });
+
+  afterEach(() => {
+    cleanup();
+    clearInPlaceLocale();
+    clearLocaleCookie();
+    sessionStorage.clear();
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it.each([
+    ["zh", "/zh/explore"],
+    ["ja", "/ja/explore"],
+    ["en", "/en/explore"],
+  ] as const)(
+    "keeps Arabic after %s /explore remounts onto unprefixed /explore",
+    async (_prefix, source) => {
+      setLocation(source);
+      persistLocale("ar", "/explore");
+      document.cookie = `${LOCALE_COOKIE}=en; Path=/`;
+      expect(sessionStorage.getItem(LOCALE_DESTINATION_STORAGE_KEY)).toContain('"/explore"');
+
+      vi.resetModules();
+      setLocation("/explore");
+      // Fresh module evaluation drops in-memory locale state. sessionStorage survives.
+      const fresh = await import("@/lib/i18n-client");
+
+      function FreshProbe() {
+        const { locale, messages } = fresh.useLocale();
+        return (
+          <>
+            <header data-site-header="">{messages.home}</header>
+            <nav data-site-bottom-nav="">{messages.mainNav}</nav>
+            <output aria-label="active locale">{locale}</output>
+          </>
+        );
+      }
+
+      render(
+        <fresh.LocaleProvider initialLocale="ko">
+          <fresh.LocaleDocumentSync />
+          <FreshProbe />
+        </fresh.LocaleProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("active locale").textContent).toBe("ar");
+      });
+      expect(document.documentElement.lang).toBe("ar");
+      expect(document.documentElement.dir).toBe("rtl");
+      expect(document.querySelector("[data-site-header]")?.textContent).toBe("الصفحة الرئيسية MemeCatch");
+      expect(document.querySelector("[data-site-bottom-nav]")?.textContent).toBe("التنقل الرئيسي");
+      expect(sessionStorage.getItem(fresh.LOCALE_DESTINATION_STORAGE_KEY)).toBeNull();
+
+      window.history.pushState({}, "", "/search");
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+      });
+      expect(document.documentElement.lang).toBe("ko");
+      expect(document.documentElement.dir).toBe("ltr");
+      expect(document.querySelector("[data-site-header]")?.textContent).toBe("밈캐치 홈");
+      expect(document.cookie).toContain(`${LOCALE_COOKIE}=en`);
+    },
+  );
+
+  it("clears an expired destination and follows the URL", () => {
+    setLocaleCookie("ar");
+    setLocation("/explore");
+    sessionStorage.setItem(
+      LOCALE_DESTINATION_STORAGE_KEY,
+      JSON.stringify({
+        locale: "ar",
+        path: "/explore",
+        at: Date.now() - LOCALE_DESTINATION_TTL_MS - 1,
+      }),
+    );
+
+    renderProvider();
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(sessionStorage.getItem(LOCALE_DESTINATION_STORAGE_KEY)).toBeNull();
+    expect(document.documentElement.lang).toBe("ko");
+    expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("ignores a destination for a different path and still applies it on arrival", async () => {
+    setLocation("/search");
+    sessionStorage.setItem(
+      LOCALE_DESTINATION_STORAGE_KEY,
+      JSON.stringify({ locale: "ar", path: "/explore", at: Date.now() }),
+    );
+
+    renderProvider();
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(sessionStorage.getItem(LOCALE_DESTINATION_STORAGE_KEY)).toContain('"/explore"');
+    cleanup();
+
+    vi.resetModules();
+    setLocation("/explore");
+    // Fresh module evaluation drops in-memory locale state. sessionStorage survives.
+    const fresh = await import("@/lib/i18n-client");
+
+    function ArrivalProbe() {
+      const { locale } = fresh.useLocale();
+      return <output aria-label="active locale">{locale}</output>;
+    }
+
+    render(
+      <fresh.LocaleProvider initialLocale="ko">
+        <fresh.LocaleDocumentSync />
+        <ArrivalProbe />
+      </fresh.LocaleProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("active locale").textContent).toBe("ar");
+    });
+    expect(sessionStorage.getItem(fresh.LOCALE_DESTINATION_STORAGE_KEY)).toBeNull();
+    expect(document.documentElement.dir).toBe("rtl");
+  });
+
+  it("drops an invalid destination flag", () => {
+    setLocation("/explore");
+    sessionStorage.setItem(LOCALE_DESTINATION_STORAGE_KEY, "{not-json");
+
+    renderProvider();
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(sessionStorage.getItem(LOCALE_DESTINATION_STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps the URL locale when sessionStorage throws", () => {
+    setLocation("/zh/explore");
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(() => persistLocale("ar", "/explore")).not.toThrow();
+
+    vi.restoreAllMocks();
+    clearInPlaceLocale();
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    setLocation("/explore");
+
+    renderProvider();
+
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(document.documentElement.lang).toBe("ko");
   });
 });

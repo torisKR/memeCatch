@@ -57,9 +57,11 @@ describe("mobile horizontal rail", () => {
     expect(readFileSync("components/home/home-chapter-nav.module.css", "utf8")).toContain(
       "top: var(--site-header-offset, 6.75rem)",
     );
-    expect(readFileSync("components/home/home-immersive-story.module.css", "utf8")).toContain(
-      "--story-header: var(--site-header-offset, 6.75rem)",
-    );
+    const story = readFileSync("components/home/home-immersive-story.module.css", "utf8");
+    expect(story).toContain("top: var(--site-header-offset, var(--story-header))");
+    expect(story).toContain("--story-header: 6.75rem");
+    expect(story).not.toContain("--story-header: var(--site-header-offset");
+    expect(story).toContain("calc(100svh - var(--story-header)");
   });
 
   it("still clears the launcher under page-bottom grids", () => {

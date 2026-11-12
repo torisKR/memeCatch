@@ -10,6 +10,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import sitemap, { clearSitemapCache, getIndexableKoreanMemeCount } from "@/app/sitemap";
+import { clearKoreanRankingsCache } from "@/lib/korean-rankings.server";
 
 const source = readFileSync(join(process.cwd(), "app/sitemap.ts"), "utf-8");
 
@@ -83,7 +84,12 @@ function useRows(
 
         const memeQuery = {
           in: vi.fn(() => memeQuery),
+          eq: vi.fn(() => memeQuery),
+          not: vi.fn(() => memeQuery),
+          gt: vi.fn(() => memeQuery),
+          lt: vi.fn(() => memeQuery),
           order: vi.fn(() => memeQuery),
+          limit: vi.fn(async () => ({ data: [], error: null })),
           range: vi.fn(async (from: number, to: number) => ({
             data: rows.slice(from, to + 1),
             error: queryError,
@@ -97,6 +103,7 @@ function useRows(
 
 beforeEach(() => {
   clearSitemapCache();
+  clearKoreanRankingsCache();
   createStaticClient.mockReset();
 });
 

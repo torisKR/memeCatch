@@ -4,6 +4,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import { evidenceTimestamp } from "@/lib/source-links";
 import {
   SEO_CONTENT_LOCALES,
@@ -207,6 +208,8 @@ async function buildSitemap(): Promise<{
     catalogUnavailable = true;
   }
 
+  const showRankings = await koreanRankingsVisible();
+
   const localizedHomeEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
     (locale) => ({
       url: absolute(localizedPath("/", locale)),
@@ -260,13 +263,13 @@ async function buildSitemap(): Promise<{
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const).map(
-      (path) => ({
+    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const)
+      .filter((path) => showRankings || path !== "/rankings")
+      .map((path) => ({
         url: `${SITE_URL}${path}`,
         changeFrequency: "daily" as const,
         priority: 0.6,
-      })
-    ),
+      })),
   ];
 
   // 공개 밈 중 **콘텐츠가 충실한 것만** 색인 노출한다.

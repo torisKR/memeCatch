@@ -10,6 +10,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import { GET, dynamic as routeDynamic } from "@/app/llms.txt/route";
+import { clearKoreanRankingsCache } from "@/lib/korean-rankings.server";
 
 function row(index: number, indexable: boolean) {
   return {
@@ -45,6 +46,7 @@ function useRows(
   const query = {
     select: vi.fn(() => query),
     eq: vi.fn(() => query),
+    not: vi.fn(() => query),
     order,
     range: vi.fn(async (from: number, to: number) => result(rows.slice(from, to + 1))),
     limit: vi.fn(async (limit: number) => result(rows.slice(0, limit))),
@@ -54,7 +56,10 @@ function useRows(
   return query;
 }
 
-beforeEach(() => createStaticClient.mockReset());
+beforeEach(() => {
+  clearKoreanRankingsCache();
+  createStaticClient.mockReset();
+});
 
 describe("llms.txt publication export", () => {
   it("renders on request so a database-less build cannot cache a failure", () => {
@@ -76,6 +81,7 @@ describe("llms.txt publication export", () => {
     expect(body).not.toContain("3,000+");
     expect(body.match(/^- \[Meme /gm)).toHaveLength(15);
     expect(body).not.toContain("[Meme 0]");
+    expect(body).toContain("/rankings");
     expect(query.range).toHaveBeenNthCalledWith(1, 0, 999);
     expect(query.range).toHaveBeenNthCalledWith(2, 1000, 1999);
     expect(query.order).toHaveBeenCalledWith("trend_score", { ascending: false });
@@ -107,6 +113,7 @@ describe("llms.txt publication export", () => {
     expect(response.status).toBe(200);
     expect(body).toContain("한국 밈·유행어·챌린지 0건");
     expect(body).not.toContain("3,000+");
+    expect(body).not.toContain("/rankings");
   });
 
   it("describes inclusion as approval plus indexability, not independent fact review", async () => {

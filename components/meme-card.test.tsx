@@ -120,7 +120,10 @@ describe("MemeCard", () => {
 
   it("lets grid titles wrap to two lines and gives narrow cards a two-line title without a summary", () => {
     const narrow = cardCss.slice(cardCss.indexOf("@container (max-width: 199px)"));
+    expect(cardCss).toContain("line-clamp: 2");
     expect(cardCss).toContain("-webkit-line-clamp: 2");
+    expect(cardCss).toContain("text-overflow: ellipsis");
+    expect(cardCss).toContain("max-height: 2.5em");
     expect(cardCss).toContain("-webkit-line-clamp: 1");
     expect(cardCss).toContain('data-meme-card-aspect="fixed"');
     expect(cardCss).toContain("font-size: 20px");
@@ -138,7 +141,6 @@ describe("MemeCard", () => {
     expect(narrow).not.toContain("flex-wrap: wrap");
     expect(cardCss).toContain("flex-wrap: nowrap");
     expect(cardCss).toContain("white-space: nowrap");
-    expect(cardCss).not.toContain("text-overflow: ellipsis");
     expect(cardCss).toContain("height: 420px");
     expect(cardCss).toContain("max-height: 420px");
     const yearRule = cardCss.slice(cardCss.indexOf("@container (max-width: 419px)"));

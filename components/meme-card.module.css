@@ -56,14 +56,22 @@
   overflow-wrap: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+  /* Two lines at every grid width, so a short title and a long one share a slot. */
+  min-height: 2.5em;
+  max-height: 2.5em;
 }
 
 .title[data-title-size="detail"] {
   display: block;
   overflow: visible;
+  min-height: 0;
+  max-height: none;
   font-size: 28px;
   line-height: 1.25;
+  line-clamp: unset;
   -webkit-line-clamp: unset;
 }
 
@@ -141,9 +149,11 @@
   .title[data-title-size="detail"] {
     display: block;
     min-height: 0;
+    max-height: none;
     overflow: visible;
     font-size: 22px;
     line-height: 1.25;
+    line-clamp: unset;
     -webkit-line-clamp: unset;
   }
 

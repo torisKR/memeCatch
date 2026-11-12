@@ -26,7 +26,7 @@ export function GlobalHeader({ showRankings = true }: { showRankings?: boolean }
   const { locale, messages } = useLocale();
   return (
     <HideOnAdmin>
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
+      <header data-site-header="" className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
           <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto">
             {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}

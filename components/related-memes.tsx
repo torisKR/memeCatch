@@ -1,5 +1,4 @@
 import { MemeCard, type MemeCardModel } from "@/components/meme-card";
-import { MOBILE_CARD_CLEARANCE } from "@/components/mobile-card-clearance";
 import { withLocaleFallback, type Locale } from "@/lib/i18n";
 
 const RELATED_COPY = withLocaleFallback({
@@ -47,10 +46,7 @@ export function RelatedMemes({
   const copy = RELATED_COPY[locale];
 
   return (
-    <section
-      aria-labelledby="related-memes"
-      className={`mt-2 ${MOBILE_CARD_CLEARANCE}`}
-    >
+    <section aria-labelledby="related-memes" className="mt-2">
       <h2 id="related-memes" className="text-xl font-bold">
         {copy.title}
       </h2>

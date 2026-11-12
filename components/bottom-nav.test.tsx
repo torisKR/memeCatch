@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
 const premium = vi.hoisted(() => ({ value: false }));
-const currentLocale = vi.hoisted(() => ({ value: "ko" as "ko" | "en" }));
+const currentLocale = vi.hoisted(() => ({ value: "ko" as "ko" | "en" | "ar" }));
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => <a {...props}>{children}</a>,
@@ -103,6 +103,20 @@ describe("BottomNav", () => {
   it("stays hidden on admin routes", () => {
     navigation.pathname = "/admin/growth";
     expect(renderToStaticMarkup(<BottomNav />)).toBe("");
+  });
+
+  it("translates Home, Latest, Plus, and MY into the existing Arabic wording", () => {
+    currentLocale.value = "ar";
+    const html = renderToStaticMarkup(<BottomNav />);
+
+    expect(html).toContain("الرئيسية");
+    expect(html).toContain("استكشاف");
+    expect(html).toContain("بلس");
+    expect(html).toContain("حسابي");
+    expect(html).not.toMatch(/>\s*Home\s*</);
+    expect(html).not.toMatch(/>\s*Latest\s*</);
+    expect(html).not.toMatch(/>\s*Plus\s*</);
+    expect(html).not.toMatch(/>\s*MY\s*</);
   });
 
   it("marks Home current for the Vercel /index alias", () => {

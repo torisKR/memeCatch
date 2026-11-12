@@ -7,6 +7,7 @@ import { MemeChatbot } from "@/components/meme-chatbot";
 import { NavProgress } from "@/components/nav-progress";
 import { PremiumAdControl } from "@/components/premium-ad-control";
 import { PwaInstall } from "@/components/pwa-install";
+import { ScrollChrome } from "@/components/scroll-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { PublicWebMcpTools } from "@/components/webmcp/public-tools";
@@ -45,22 +46,24 @@ export function RootDocument({
       dir={getDocumentDirection(locale)}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col max-md:h-dvh max-md:overflow-hidden max-md:pb-[calc(4.5rem+4rem+1rem)] md:pb-0">
+      <body className="flex min-h-dvh flex-col max-md:pb-[calc(4.5rem+4rem+1rem)] md:pb-0">
         <LocaleProvider initialLocale={locale}>
           <PublicWebMcpTools />
           <LocaleDocumentSync />
           <LocaleAutoDetect />
+          <ScrollChrome />
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>
           {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
           <AttributionTracker />
           <OrganizationJsonLd />
-          {/* Mobile scrollport ends above the chat launcher, so a card title
-              cannot slide underneath it. Desktop keeps the window as the scroller. */}
-          <div className="flex min-h-0 flex-1 flex-col max-md:overflow-y-auto md:contents">
+          {/* The window is the scroller so route changes, hashes, and
+              back/forward move the page. Bottom padding keeps the end of the
+              page above the chat launcher and the bottom nav. */}
+          <div className="flex min-w-0 flex-1 flex-col">
             <GlobalHeader showRankings={showRankings} />
-            <div className="flex-1">{children}</div>
+            <div className="min-w-0 flex-1">{children}</div>
             <SiteFooter showRankings={showRankings} />
           </div>
           <PremiumAdControl />

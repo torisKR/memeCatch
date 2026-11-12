@@ -102,7 +102,7 @@
 
 @media (max-width: 47.99rem) {
   .story { --story-header: 6.75rem; --story-bottom-nav: 4.75rem; }
-  .chapterNav { min-height: 3.4rem; padding-inline: 0.75rem; overflow-x: auto; scrollbar-width: none; }
+  .chapterNav { min-height: 3.4rem; padding-inline: 0.75rem; }
   .chapterNav::-webkit-scrollbar { display: none; }
   .chapterNavList { flex: 0 0 auto; }
   .chapterNavLink { gap: 0.35rem; font-size: 0.68rem; }
@@ -117,7 +117,7 @@
   .story[data-home-scroll-ready="true"] .composition,
   .story[data-home-scroll-retained="true"] .composition { grid-template-rows: repeat(3, minmax(var(--story-viewport), auto)); }
   .story[data-home-scroll-ready="true"] .visualPin,
-  .story[data-home-scroll-retained="true"] .visualPin { position: sticky; top: var(--story-header); }
+  .story[data-home-scroll-retained="true"] .visualPin { position: sticky; top: var(--site-header-offset, var(--story-header)); }
   .story[data-home-scroll-ready="true"] .chapter,
   .story[data-home-scroll-retained="true"] .chapter { min-height: var(--story-viewport); padding-block: clamp(1rem, 2.4vh, 2rem) calc(var(--story-controls-reserve) + 1rem); border-top: 0; }
 }

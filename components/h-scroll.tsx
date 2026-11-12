@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
+import { H_RAIL_CLASS } from "@/lib/mobile-rail";
 
 /**
  * 가로 스크롤 스트립 공용 셸 (이어보기 / TOP 10 / 추후 스트립 공통).
@@ -87,7 +88,7 @@ export function HScrollSection({
       </div>
       <div
         ref={scrollRef}
-        className="-mx-4 mt-3 snap-x scroll-px-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`-mx-4 mt-3 snap-x scroll-px-4 px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${H_RAIL_CLASS}`}
         style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
       >
         {children}

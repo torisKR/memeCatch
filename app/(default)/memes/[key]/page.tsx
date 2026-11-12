@@ -19,6 +19,7 @@ import {
 } from "@/lib/queries";
 import { AnswerCard } from "@/components/answer-card";
 import { SafetyRationale } from "@/components/safety-rationale";
+import { PlusPricingHashScroll } from "@/components/plus-pricing-hash-scroll";
 import { UsageExamples } from "@/components/usage-examples";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { MemeUseKit } from "@/components/premium/meme-use-kit";
@@ -35,6 +36,7 @@ import {
   MemeDefinedTermJsonLd,
   MemeWebPageJsonLd,
 } from "@/components/json-ld";
+import { usageRegionLabelledBy } from "@/lib/detail-usage";
 import { memePathFrom } from "@/lib/labels";
 import { DonateCard } from "@/components/donate-card";
 import { ViewTracker } from "./view-tracker";
@@ -259,6 +261,10 @@ export default async function MemeDetailPage({ params }: Props) {
   // 옵셔널 캐스팅 1곳으로 안전 처리(컴포넌트가 런타임 검증, 없으면 null 렌더)
   const usageExamples = (meme as typeof meme & { usage_examples?: unknown })
     .usage_examples;
+  const usageLabel = usageRegionLabelledBy(
+    Boolean(meme.usage_note),
+    Array.isArray(usageExamples) && usageExamples.length > 0,
+  );
 
   // year_precision은 3,904건 전부 'unknown'이라 지금은 대부분 「(추정)」이 붙는다.
   // 운영자가 근거를 확인해 정밀도를 올리면 자동으로 단정 표기로 돌아간다.
@@ -269,6 +275,7 @@ export default async function MemeDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">
+      <PlusPricingHashScroll />
       {/*
         광고는 충실도 판정을 통과한 문서에서만 게재한다. 얇은 문서는 noindex로
         색인에서 빠지지만 사람은 여전히 도달하므로, 로더를 렌더하지 않아야
@@ -370,7 +377,7 @@ export default async function MemeDetailPage({ params }: Props) {
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
           <ExportButton shortId={meme.short_id} />
 
-          <div className="hidden lg:block" data-plus-pricing-slot="rail">
+          <div className="scroll-mt-28 hidden lg:block" data-plus-pricing-slot="rail">
             <KoreanPlusPricingCard titleId="plus-pricing-title" />
           </div>
 
@@ -413,8 +420,8 @@ export default async function MemeDetailPage({ params }: Props) {
             </section>
           )}
 
-          {(meme.usage_note || (Array.isArray(usageExamples) && usageExamples.length > 0)) && (
-            <section aria-labelledby="meme-usage" data-detail-order="usage" className="space-y-4">
+          {usageLabel && (
+            <section aria-labelledby={usageLabel} data-detail-order="usage" className="space-y-4">
               {meme.usage_note ? (
                 <div>
                   <h2 id="meme-usage" className="text-lg font-bold [word-break:keep-all]">이렇게 써요</h2>
@@ -564,7 +571,7 @@ export default async function MemeDetailPage({ params }: Props) {
               유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
           <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
 
-          <div className="lg:hidden" data-plus-pricing-slot="after-sources">
+          <div className="lg:hidden scroll-mt-28" data-plus-pricing-slot="after-sources">
             <KoreanPlusPricingCard titleId="plus-pricing-title-mobile" />
           </div>
 

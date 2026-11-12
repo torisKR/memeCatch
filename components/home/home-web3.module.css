@@ -85,7 +85,12 @@
   margin: 0;
   padding: 0 0 0.25rem;
   gap: 0.65rem;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: clip;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   list-style: none;
 }
 

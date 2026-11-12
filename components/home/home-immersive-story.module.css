@@ -102,7 +102,7 @@
 
 @media (max-width: 47.99rem) {
   .story { --story-header: 6.75rem; --story-bottom-nav: 4.75rem; }
-  .chapterNav { min-height: 3.4rem; padding-inline: 0.75rem; overflow-x: auto; scrollbar-width: none; }
+  .chapterNav { min-height: 3.4rem; padding-inline: 0.75rem; }
   .chapterNav::-webkit-scrollbar { display: none; }
   .chapterNavList { flex: 0 0 auto; }
   .chapterNavLink { gap: 0.35rem; font-size: 0.68rem; }

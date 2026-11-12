@@ -27,9 +27,27 @@ function localeFromCurrentUrl(): Locale {
   return localeFromPathname(window.location.pathname) ?? DEFAULT_LOCALE;
 }
 
+/**
+ * Selector choice for the path it was made on. A stale cookie still does not
+ * win on load: this is memory from `persistLocale` in the current document,
+ * and a different URL drops it so chrome follows the URL again.
+ */
+let inPlaceLocale: { locale: Locale; path: string } | null = null;
+
+export function clearInPlaceLocale(): void {
+  inPlaceLocale = null;
+}
+
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
+  const path = window.location.pathname;
+  if (inPlaceLocale && inPlaceLocale.path === path) return inPlaceLocale.locale;
   return localeFromCurrentUrl();
+}
+
+function applyDocumentLocale(locale: Locale): void {
+  document.documentElement.lang = getDocumentLanguage(locale);
+  document.documentElement.dir = getDocumentDirection(locale);
 }
 
 function subscribe(listener: () => void) {
@@ -66,8 +84,7 @@ export function LocaleDocumentSync() {
   const { locale } = useLocale();
 
   useEffect(() => {
-    document.documentElement.lang = getDocumentLanguage(locale);
-    document.documentElement.dir = getDocumentDirection(locale);
+    applyDocumentLocale(locale);
   }, [locale]);
 
   return null;
@@ -82,9 +99,9 @@ export function LocaleAutoDetect() {
 }
 
 export function persistLocale(locale: Locale) {
+  inPlaceLocale = { locale, path: window.location.pathname };
   document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  document.documentElement.lang = getDocumentLanguage(locale);
-  document.documentElement.dir = getDocumentDirection(locale);
+  applyDocumentLocale(locale);
   // Private browsing and storage-restricted embeds can throw here. Cookie,
   // in-memory subscribers, and navigation must still complete.
   try {

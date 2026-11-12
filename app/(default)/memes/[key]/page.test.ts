@@ -40,6 +40,9 @@ describe("밈 상세 hreflang 계약", () => {
   it("한국어 상세는 언어별 번역 데스크 대신 접두사 없는 Plus 요금 링크만 둔다", () => {
     expect(source).toContain('href="/pricing"');
     expect(source).toContain("plus-pricing-title");
+    expect(source).toContain("<PlusPricingHashScroll />");
+    expect(source).toContain("usageRegionLabelledBy");
+    expect(source).not.toContain('aria-labelledby="meme-usage"');
     expect(source).toContain('item.label === "광고 없는 경험"');
     expect(source).toContain("{feature.label}");
     expect(source).toContain("{feature.detail}");

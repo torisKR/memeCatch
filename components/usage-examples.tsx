@@ -14,9 +14,11 @@ export function UsageExamples({
   const rows = parseUsageExamples(examples);
   if (rows.length === 0) return null;
 
+  const Wrapper = heading ? "section" : "div";
+
   return (
-    <section
-      aria-labelledby="usage-examples-title"
+    <Wrapper
+      {...(heading ? { "aria-labelledby": "usage-examples-title" } : {})}
       className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4 shadow-xs"
     >
       {heading ? (
@@ -114,6 +116,6 @@ export function UsageExamples({
           );
         })}
       </div>
-    </section>
+    </Wrapper>
   );
 }

@@ -66,6 +66,10 @@ describe("밈 상세 hreflang 계약", () => {
     // #67 still places the mobile Plus card immediately after SourceEvidence.
     expect(related).toBeGreaterThan(-1);
     expect(related).toBeLessThan(sources);
+
+    const column = source.slice(source.lastIndexOf("왼쪽 레일", rail), rail);
+    expect(column).toContain('className="space-y-4"');
+    expect(column).not.toContain("sticky");
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {

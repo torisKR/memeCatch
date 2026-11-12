@@ -348,11 +348,13 @@ export default async function MemeDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 감상(좌)·정보(우) 2단 — 데스크톱은 영상을 고정하고 오른쪽 정보만 스크롤,
+      {/* 감상(좌)·정보(우) 2단.
+          왼쪽 레일은 페이지와 함께 스크롤한다. 레일 전체를 고정하면 1280×800에서
+          Plus 카드가 뷰포트 아래(top ≈ 1028px)에 머물러 스크롤해도 다 보이지 않는다.
           모바일은 정답 카드 다음에 영상, 그다음 나머지 정보가 이어진다. */}
       <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8">
-        {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장). 데스크톱에서 고정. */}
-        <div className="space-y-4 lg:sticky lg:top-[4.5rem]">
+        {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장) + 데스크톱 Plus 카드. */}
+        <div className="space-y-4">
           {/* 렌더 가능한 콘텐츠가 하나도 없으면(폴백 히어로) 이 자리는 여전히 이 밈의
               대표 미디어 슬롯이다. 아래 MemeEmbed의 isRepresentative와 같은 식을 써서
               라벨과 컴포넌트 판정이 갈리지 않게 한다. */}
@@ -404,7 +406,7 @@ export default async function MemeDetailPage({ params }: Props) {
           )}
         </div>
 
-        {/* 오른쪽 — 정보. 오른쪽만 스크롤된다. */}
+        {/* 오른쪽 — 정보. */}
         <div className="mt-6 min-w-0 space-y-5 lg:mt-0">
           {/* 정리 중 안내 — content-depth가 '얇음'으로 본 문서에만. 방치된 스텁이 아니라
               확인된 만큼만 공개하는 관리 문서임을 밝히고 제보 경로를 연다.

@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -26,9 +28,31 @@ const meme = {
 } as MemeListItem;
 
 describe("retired product render failures", () => {
-  it("does not replace a MemeCard failure with a cardless page", async () => {
-    await expect(
-      retiredProductDocument("ko", { load: async () => [meme, meme, meme, meme] }),
-    ).rejects.toThrow(/MemeCard failed/);
+  beforeAll(() => {
+    const directory = join(process.cwd(), ".next/static/css");
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, "retired-product-failure.css"), "/* test stylesheet */");
+  });
+
+  it("serves the styled cardless 410 when MemeCard throws", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = await retiredProductDocument("ko", {
+      load: async () => [meme, meme, meme, meme],
+    });
+    const html = await response.text();
+
+    expect(response.status).toBe(410);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(response.headers.get("x-robots-tag")).toContain("noindex");
+    expect(html).toContain('rel="stylesheet"');
+    expect(html).toContain("noindex");
+    expect(html).toContain('href="/explore"');
+    expect(html).toContain("밈 탐색");
+    expect(html).not.toMatch(/href="[^"]*\/memes\//);
+    expect(error).toHaveBeenCalledWith(
+      "retired product document failed",
+      expect.objectContaining({ locale: "ko", message: "MemeCard failed" }),
+    );
+    error.mockRestore();
   });
 });

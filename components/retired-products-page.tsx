@@ -1,4 +1,5 @@
 import { MemeCard } from "@/components/meme-card";
+import { memeThumbnailAlt } from "@/components/meme-thumbnail-view";
 import { buttonVariants } from "@/components/ui/button";
 import { localizedMemePath } from "@/lib/i18n-routing";
 import type { MemeListItem } from "@/lib/queries";
@@ -68,6 +69,7 @@ export function RetiredProductsPage({
                   locale={routeLocale}
                   imageAspect="4/3"
                   staticMarkup
+                  thumbnailAlt={memeThumbnailAlt(meme.title, routeLocale)}
                 />
               </li>
             ))}

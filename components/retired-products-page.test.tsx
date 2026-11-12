@@ -28,6 +28,7 @@ function meme(index: number): MemeListItem {
     media_type: "image",
     origin_year: 2026,
     trend_score: 100 - index,
+    meme_contents: [{ thumbnail_url: "/ai-memes/ai-slop.jpg", is_representative: true }],
   } as MemeListItem;
 }
 

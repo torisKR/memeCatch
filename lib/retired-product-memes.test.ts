@@ -11,7 +11,9 @@ vi.mock("@/lib/queries", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
+import { isYouTubeThumbnailUrl } from "@/lib/retired-card-image";
 import {
+  RETIRED_PRODUCT_FALLBACK_PICKS,
   RETIRED_PRODUCT_FALLBACK_SLUGS,
   loadRetiredProductMemes,
 } from "@/lib/retired-product-memes";
@@ -74,14 +76,12 @@ describe("loadRetiredProductMemes", () => {
     expect(createStaticClient).not.toHaveBeenCalled();
   });
 
-  it("falls back to the four curated published slugs, in constant order", async () => {
+  it("falls back to the four verified published slugs, in constant order", async () => {
     getTrendingMemes.mockResolvedValue([]);
     const shuffled = [
-      meme("갑툭튀", "갑툭튀"),
-      meme("shrimp-jesus", "새우 예수"),
+      ...[...RETIRED_PRODUCT_FALLBACK_SLUGS].reverse().map((slug) => meme(slug, `제목 ${slug}`)),
       meme("꼰대", "꼰대"),
       meme("치맥", "치맥"),
-      meme("not-curated", "제외"),
     ];
     const source = catalog({ data: shuffled, error: null });
     createStaticClient.mockReturnValue(source.client);
@@ -89,7 +89,11 @@ describe("loadRetiredProductMemes", () => {
     const memes = await loadRetiredProductMemes();
 
     expect(memes.map((item) => item.slug)).toEqual([...RETIRED_PRODUCT_FALLBACK_SLUGS]);
-    expect(memes.map((item) => item.title)).toEqual(["새우 예수", "치맥", "꼰대", "갑툭튀"]);
+    expect(memes.map((item) => item.title)).toEqual(
+      RETIRED_PRODUCT_FALLBACK_SLUGS.map((slug) => `제목 ${slug}`),
+    );
+    expect(memes.map((item) => item.slug)).not.toContain("꼰대");
+    expect(memes.map((item) => item.slug)).not.toContain("치맥");
     expect(source.filters).toContainEqual({
       column: "slug",
       values: [...RETIRED_PRODUCT_FALLBACK_SLUGS],
@@ -100,16 +104,36 @@ describe("loadRetiredProductMemes", () => {
     });
   });
 
-  it("returns no cards when the curated slugs cannot be loaded", async () => {
+  it("uses the shipped illustrations when the catalog cannot load the picks", async () => {
     getTrendingMemes.mockResolvedValue([]);
     const missing = catalog({ data: null, error: { message: "unavailable" } });
     createStaticClient.mockReturnValue(missing.client);
 
-    await expect(loadRetiredProductMemes()).resolves.toEqual([]);
+    const memes = await loadRetiredProductMemes();
+
+    expect(memes.map((item) => item.slug)).toEqual([...RETIRED_PRODUCT_FALLBACK_SLUGS]);
+    expect(memes.map((item) => item.meme_contents?.[0]?.thumbnail_url)).toEqual(
+      RETIRED_PRODUCT_FALLBACK_PICKS.map((pick) => pick.thumbnail),
+    );
 
     createStaticClient.mockImplementation(() => {
       throw new Error("catalog down");
     });
-    await expect(loadRetiredProductMemes()).resolves.toEqual([]);
+    await expect(loadRetiredProductMemes()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ slug: "ai-slop" })]),
+    );
+  });
+
+  it("does not pick 꼰대, 치맥, or a YouTube thumbnail", () => {
+    const slugs = RETIRED_PRODUCT_FALLBACK_PICKS.map((pick) => pick.slug);
+    expect(slugs).not.toContain("꼰대");
+    expect(slugs).not.toContain("치맥");
+    expect(slugs).not.toContain("shrimp-jesus");
+    expect(slugs).not.toContain("갑툭튀");
+    for (const pick of RETIRED_PRODUCT_FALLBACK_PICKS) {
+      expect(isYouTubeThumbnailUrl(pick.thumbnail)).toBe(false);
+      expect(pick.thumbnail).not.toMatch(/ytimg|youtube/i);
+      expect(pick.thumbnail).toMatch(/^\/ai-memes\/[a-z0-9-]+\.jpg$/);
+    }
   });
 });

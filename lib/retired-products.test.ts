@@ -61,7 +61,7 @@ function cardMeme(title: string, index: number): MemeListItem {
     trend_score: 10 - index,
     meme_contents: [
       {
-        thumbnail_url: `https://cdn.example.com/${index}.jpg`,
+        thumbnail_url: `/ai-memes/ai-slop.jpg`,
         is_representative: true,
       },
     ],
@@ -181,6 +181,12 @@ describe("retired product responses", () => {
       expect(html).not.toMatch(/href="\/memes\//);
       expect(html).toContain("aspect-[4/3]");
       expect(html).not.toContain("aspect-[4/5]");
+      if (locale === "en") {
+        expect(html).toContain("Safe to use");
+        expect(html).toContain("Meme terms");
+        expect(html).not.toContain("써도 됨");
+        expect(html).not.toContain("맥락 주의");
+      }
     },
   );
 

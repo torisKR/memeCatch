@@ -44,26 +44,6 @@ export function memeThumbnailSrc(src: string | null): string | null {
   }
 }
 
-/** Illustration used when a 410 card has no catalog photo. It is an image, not a CSS background. */
-export function symbolicCardArt(title: string): string {
-  const label = [...title].map((char) => {
-    switch (char) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      default:
-        return char;
-    }
-  }).join("");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#16324f"/><text x="28" y="248" fill="#ffffff" font-size="28" font-family="sans-serif">${label}</text></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 /**
  * Static thumbnail frame. The client wrapper adds the broken-image fallback;
  * the 410 document renders this directly because it cannot call client hooks.

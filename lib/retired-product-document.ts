@@ -158,7 +158,7 @@ function stylesheetLinks(): string {
  * 410 document rendered in this process.
  * The public request is not fetched again: a forwarded https origin would
  * point at the bind address and the TLS handshake would fail.
- * A card render error is not replaced with a cardless page.
+ * A card render error is logged and replaced with this same page without cards.
  */
 export async function retiredProductDocument(
   locale: RetiredProductLocale,
@@ -170,16 +170,45 @@ export async function retiredProductDocument(
   // Dynamic so the App Router compiler does not treat this module as a
   // component that imports the server renderer.
   const { renderToStaticMarkup } = await import("react-dom/server");
-  const memes = options?.load
-    ? await options.load()
-    : await (await import("@/lib/retired-product-memes")).loadRetiredProductMemes();
-  const markup = renderToStaticMarkup(
-    createElement(TombstoneDocument, {
+  const routeLocale = options?.routeLocale ?? locale;
+  let memes: MemeListItem[] = [];
+  try {
+    memes = options?.load
+      ? await options.load()
+      : await (await import("@/lib/retired-product-memes")).loadRetiredProductMemes();
+  } catch (error) {
+    console.error("retired product memes failed", {
       locale,
-      routeLocale: options?.routeLocale ?? locale,
-      memes,
-    }) as ReactNode,
-  );
+      routeLocale,
+      message: error instanceof Error ? error.message : "load failed",
+    });
+    memes = [];
+  }
+  let markup: string;
+  try {
+    markup = renderToStaticMarkup(
+      createElement(TombstoneDocument, { locale, routeLocale, memes }) as ReactNode,
+    );
+  } catch (error) {
+    console.error("retired product document failed", {
+      locale,
+      routeLocale,
+      message: error instanceof Error ? error.message : "render failed",
+    });
+    try {
+      markup = renderToStaticMarkup(
+        createElement(TombstoneDocument, { locale, routeLocale, memes: [] }) as ReactNode,
+      );
+    } catch (cardlessError) {
+      console.error("retired product document failed", {
+        locale,
+        routeLocale,
+        message: cardlessError instanceof Error ? cardlessError.message : "cardless render failed",
+      });
+      const copy = COPY[locale];
+      markup = `<html lang="${copy.lang}"><body><main><h1>${copy.message}</h1><a href="${copy.exploreHref}">${copy.explore}</a></main></body></html>`;
+    }
+  }
   const copy = COPY[locale];
   const head = `<head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex, follow"/><title>${copy.title}</title>${stylesheetLinks()}</head>`;
   const html = `<!DOCTYPE html>${markup.replace(/<html([^>]*)>/, `<html$1>${head}`)}`;

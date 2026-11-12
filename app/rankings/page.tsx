@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { RankingsJsonLd } from "@/components/json-ld";
+import { RankingsUnavailable } from "@/components/rankings-unavailable";
 import Link from "next/link";
 import { flags } from "@/lib/flags";
+import type { Locale } from "@/lib/i18n";
+import { rankingsFallbackCopy } from "@/lib/rankings-fallback-copy";
 import {
   LIFECYCLE_STATUS,
   SAFETY_LEVELS,
@@ -21,22 +23,41 @@ import {
 } from "@/lib/ranking/methods";
 
 /**
- * Request-time render. The previous hourly ISR page called headers() inside
- * the loader's try/catch, so a dynamic bailout was stored as the error panel.
- * Staying dynamic keeps a database-less build from caching that failure, and
- * the loader's own short cache limits repeat catalog reads.
+ * Request-time render. A shared `revalidate` would store whichever HTML the
+ * build produced, so a database-less image would keep the fallback until that
+ * window elapsed. `force-dynamic` does not prerender it. The loader also
+ * skips its short memory cache for an outage, so the next request after the
+ * database returns renders the live list.
  */
 export const dynamic = "force-dynamic";
 
 const RANKINGS_DESCRIPTION =
   "밈캐치 안에서 오늘 급상승한 밈, 이번 주 많이 본 밈, 다시 뜨는 추억 밈을 모았어요.";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateRankingsMetadata(locale: Locale): Promise<Metadata> {
   const rankings = await loadKoreanRankings();
   if (!koreanRankingsRenderList(rankings)) {
+    const copy = rankingsFallbackCopy(locale);
     return {
-      title: "페이지를 찾을 수 없어요",
+      title: copy.title,
+      description: copy.guidance,
       robots: { index: false, follow: true },
+    };
+  }
+  if (locale !== "ko") {
+    const copy = rankingsFallbackCopy(locale);
+    return {
+      title: copy.title,
+      alternates: { canonical: "/rankings" },
+      // The live board stays the Korean canonical page. Prefixed URLs follow it
+      // and stay out of the index so a translated shell is not a second listing.
+      robots: { index: false, follow: true },
+      openGraph: {
+        type: "website",
+        siteName: "MemeCatch",
+        title: copy.title,
+        url: `/${locale}/rankings`,
+      },
     };
   }
   const title = rankings.kind === "published" ? "이번 주 많이 본 밈" : "밈캐치 내 급상승";
@@ -59,11 +80,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+export async function generateMetadata(): Promise<Metadata> {
+  return generateRankingsMetadata("ko");
+}
+
 type MemeRow = PublicRankingMeme;
 
-export default async function RankingsPage() {
+export async function RankingsScreen({ locale }: { locale: Locale }) {
   const rankings = await loadKoreanRankings();
-  if (!koreanRankingsRenderList(rankings)) notFound();
+  if (!koreanRankingsRenderList(rankings)) return <RankingsUnavailable locale={locale} />;
   if (rankings.kind === "published") {
     return <PublishedWeeklyList memes={rankings.memes} />;
   }
@@ -208,6 +233,10 @@ export default async function RankingsPage() {
       )}
     </main>
   );
+}
+
+export default async function RankingsPage() {
+  return RankingsScreen({ locale: "ko" });
 }
 
 /**

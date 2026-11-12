@@ -162,7 +162,10 @@ export async function loadKoreanRankings(): Promise<KoreanRankings> {
   return result;
 }
 
-/** Same predicate as the page: a link is shown only when a list will render. */
+/**
+ * True when the rankings page will render a list. Sitemap and llms.txt use
+ * this so a noindex fallback is not advertised. Navigation links do not.
+ */
 export async function koreanRankingsVisible(): Promise<boolean> {
   try {
     return koreanRankingsRenderList(await loadKoreanRankings());

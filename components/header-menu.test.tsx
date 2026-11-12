@@ -53,13 +53,13 @@ describe("HeaderMenu", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "메뉴" }));
   });
 
-  it("hides rankings when the published list cannot be built", async () => {
+  it("keeps the rankings link when the catalog cannot be built", async () => {
     const user = userEvent.setup();
-    render(<HeaderMenu showRankings={false} />);
+    render(<HeaderMenu />);
 
     await user.click(screen.getByRole("button", { name: "메뉴" }));
 
-    expect(screen.queryByRole("link", { name: "밈캐치 내 급상승" })).toBeNull();
+    expect(screen.getByRole("link", { name: "밈캐치 내 급상승" }).getAttribute("href")).toBe("/rankings");
     expect(screen.getByRole("link", { name: "연표" })).toBeTruthy();
   });
 

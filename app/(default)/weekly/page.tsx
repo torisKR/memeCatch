@@ -3,7 +3,6 @@ import Link from "next/link";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
 import { getWeeklyDigest } from "@/lib/weekly";
-import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import { WeeklyDigest } from "@/components/weekly-digest";
 import { AdsenseScript } from "@/components/adsense-script";
 
@@ -35,10 +34,7 @@ export const metadata: Metadata = {
 };
 
 export default async function WeeklyPage() {
-  const [digest, showRankings] = await Promise.all([
-    getWeeklyDigest(),
-    koreanRankingsVisible(),
-  ]);
+  const digest = await getWeeklyDigest();
   const { range } = digest;
   const url = `${SITE_URL}/weekly`;
 
@@ -112,14 +108,12 @@ export default async function WeeklyPage() {
       <WeeklyDigest digest={digest} />
 
       <div className="mt-10 flex flex-wrap gap-3">
-        {showRankings ? (
-          <Link
-            href="/rankings"
-            className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
-          >
-            전체 랭킹 보기 <span aria-hidden className="ml-1">→</span>
-          </Link>
-        ) : null}
+        <Link
+          href="/rankings"
+          className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
+        >
+          전체 랭킹 보기 <span aria-hidden className="ml-1">→</span>
+        </Link>
         <Link
           href="/explore"
           className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-6 text-base font-semibold text-muted transition-colors hover:border-accent hover:text-accent"

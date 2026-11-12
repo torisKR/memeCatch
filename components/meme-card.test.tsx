@@ -70,6 +70,7 @@ describe("MemeCard", () => {
     expect(english).toContain('alt="Test meme symbol illustration"');
     expect(english).toContain("Safe to use");
     expect(english).toContain('data-title-size="detail"');
+    expect(cardCss).toContain('-webkit-line-clamp: unset');
     expect(english).not.toContain("써도 됨");
     expect(english).not.toContain("밈 용어(유행어)");
   });
@@ -127,7 +128,12 @@ describe("MemeCard", () => {
     expect(narrow).not.toContain("flex-wrap: wrap");
     expect(cardCss).toContain("flex-wrap: nowrap");
     expect(cardCss).toContain("white-space: nowrap");
-    expect(cardCss).toContain("text-overflow: ellipsis");
+    expect(cardCss).not.toContain("text-overflow: ellipsis");
+    expect(cardCss).toContain("height: 420px");
+    expect(cardCss).toContain("max-height: 420px");
+    const yearRule = cardCss.slice(cardCss.indexOf("@container (max-width: 419px)"));
+    expect(yearRule).toContain("display: none");
+    expect(narrow).toContain("clip: rect(0, 0, 0, 0)");
   });
 
   it("leaves the country pill and category badge off the poster in English and Korean", () => {

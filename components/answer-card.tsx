@@ -63,7 +63,7 @@ export function AnswerCard({
       </div>
 
       <div className="mt-4 flex items-start justify-between gap-3">
-        <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
+        <h1 className="min-w-0 flex-1 whitespace-normal text-2xl font-extrabold leading-tight md:text-3xl">
           {meme.title}
         </h1>
         <CopyTextButton

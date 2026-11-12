@@ -451,7 +451,7 @@ export default async function LocalizedMemePage({ params }: Props) {
           <span className="rounded-full bg-surface-2 px-3 py-1.5 text-muted">{copy.safety[meme.safety_level]}</span>
           {!needsReview && <span className="rounded-full bg-safety-green-bg px-3 py-1.5 text-safety-green">{copy.reviewed}</span>}
         </div>
-        <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
+        <h1 className="mt-5 max-w-4xl whitespace-normal text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
           {meme.title}
         </h1>
         <div className="mt-4">

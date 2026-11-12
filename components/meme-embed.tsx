@@ -12,6 +12,10 @@ import { memeCardArtAlt, memeCardArtFromMeme } from "@/lib/meme-card-art";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
+/** Desktop detail art stays at most 420px tall so the title remains in the first viewport. */
+const DETAIL_HERO_IMAGE =
+  "aspect-[4/3] w-full rounded-[16px] object-cover lg:aspect-auto lg:h-[420px] lg:max-h-[420px]";
+
 type OEmbedResponse = {
   provider: SocialProvider;
   sourceUrl: string;
@@ -103,7 +107,7 @@ export function MemeEmbed({
         <img
           src={projectImage}
           alt={`${title} 대표 이미지`}
-          className="aspect-[4/3] w-full rounded-[16px] border border-border bg-surface-2 object-cover"
+          className={`${DETAIL_HERO_IMAGE} border border-border bg-surface-2`}
         />
         {content?.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -125,7 +129,7 @@ export function MemeEmbed({
           width={ownedArt.width}
           height={ownedArt.height}
           alt={memeCardArtAlt(title, "ko")}
-          className="aspect-[4/3] w-full rounded-[16px] object-cover"
+          className={DETAIL_HERO_IMAGE}
         />
         {content?.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -254,7 +258,7 @@ function PlaybackNote({
           width={art.width}
           height={art.height}
           alt={memeCardArtAlt(title, "ko")}
-          className="aspect-[4/3] w-full rounded-[16px] object-cover"
+          className={DETAIL_HERO_IMAGE}
         />
       ) : null}
       {(catMeta || originYear != null) && (
@@ -601,7 +605,7 @@ function LiteYouTube({
   return (
     <div
       className={`relative max-h-[70vh] overflow-hidden rounded-xl border border-border bg-surface-2 ${
-        isShort ? "mx-auto aspect-[9/16] w-full max-w-[394px]" : "aspect-video w-full"
+        isShort ? "mx-auto aspect-[9/16] w-full max-w-[394px]" : "aspect-video w-full lg:max-h-[420px]"
       }`}
     >
       {showIframe ? (

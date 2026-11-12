@@ -46,7 +46,10 @@ export function RelatedMemes({
   const copy = RELATED_COPY[locale];
 
   return (
-    <section aria-labelledby="related-memes" className="mt-2">
+    <section
+      aria-labelledby="related-memes"
+      className="mt-2 max-md:mb-[calc(4rem+1rem)] max-md:pr-[calc(4rem+1rem)]"
+    >
       <h2 id="related-memes" className="text-xl font-bold">
         {copy.title}
       </h2>

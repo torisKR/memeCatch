@@ -62,12 +62,18 @@ describe("Korean rankings page", () => {
     expect(html).not.toContain("다시 불러오기");
   });
 
-  it("does not render a 200 error page when nothing can be listed", async () => {
+  it("renders a noindex fallback instead of a 404 when nothing can be listed", async () => {
     loadKoreanRankings.mockResolvedValueOnce({ kind: "unavailable" });
     const metadata = await generateMetadata();
     expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(metadata.title).toBe("밈캐치 내 급상승");
     loadKoreanRankings.mockResolvedValueOnce({ kind: "outage" });
-    await expect(RankingsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    const html = renderToStaticMarkup(await RankingsPage());
+    expect(html).toContain("순위를 잠시 불러오지 못했어요. 잠시 후 다시 확인해 주세요.");
+    expect(html).toContain('href="/explore"');
+    expect(html).not.toContain("error");
+    expect(html).not.toContain("500");
+    expect(html).not.toContain("<table");
   });
 
   it("no longer reads the session inside the rankings loader", () => {

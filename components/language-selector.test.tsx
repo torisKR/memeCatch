@@ -123,4 +123,16 @@ describe("localeDestination", () => {
       "/memes/abc-translated-slug",
     );
   });
+
+  it("stays on rankings for every supported locale", () => {
+    expect(SUPPORTED_LOCALES).toHaveLength(19);
+    for (const locale of SUPPORTED_LOCALES) {
+      const expected = locale === "ko" ? "/rankings" : `/${locale}/rankings`;
+      expect(localeDestination("/rankings", locale)).toBe(expected);
+      expect(localeDestination("/en/rankings", locale)).toBe(expected);
+      expect(localeDestination("/zh-tw/rankings", locale)).toBe(expected);
+      expect(localeDestination("/ar/rankings", locale)).toBe(expected);
+      expect(localeDestination("/th/rankings?from=menu", locale)).toBe(`${expected}?from=menu`);
+    }
+  });
 });

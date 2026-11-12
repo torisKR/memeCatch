@@ -2,6 +2,7 @@ import { createRequestDb } from "@/lib/db/request-db";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   DEFAULT_LOCALE,
+  documentLocaleFromPathname,
   getDocumentLanguage,
   LOCALE_COOKIE,
   LOCALE_HEADER,
@@ -175,7 +176,7 @@ export async function proxy(request: NextRequest) {
     ? request.nextUrl.searchParams.get("locale")
     : null;
   const exportLocale = isSeoContentLocale(requestedExportLocale) ? requestedExportLocale : null;
-  const contentLocale = urlLocale ?? exportLocale ?? DEFAULT_LOCALE;
+  const contentLocale = documentLocaleFromPathname(request.nextUrl.pathname) ?? exportLocale ?? DEFAULT_LOCALE;
   const locale = urlLocale ?? DEFAULT_LOCALE;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER, locale);

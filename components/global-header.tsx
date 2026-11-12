@@ -22,7 +22,7 @@ import { localizedStaticPath } from "@/lib/i18n-routing";
  * 인증 세션은 AuthMenu가 클라이언트에서 별도로 조회해 전역 SSR을 막지 않는다.
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
-export function GlobalHeader({ showRankings = true }: { showRankings?: boolean }) {
+export function GlobalHeader() {
   const { locale, messages } = useLocale();
   return (
     <HideOnAdmin>
@@ -99,7 +99,7 @@ export function GlobalHeader({ showRankings = true }: { showRankings?: boolean }
             <AuthMenu />
 
             {/* 통합 메뉴 드롭다운 — 연표·랭킹·소식·랜덤 */}
-            <HeaderMenu showRankings={showRankings} />
+            <HeaderMenu />
           </div>
         </div>
       </header>

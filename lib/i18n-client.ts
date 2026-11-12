@@ -1,8 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
-import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
-import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
+import { DEFAULT_LOCALE, documentLocaleFromPathname, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
@@ -14,8 +13,7 @@ function createLocaleContextValue(locale: Locale) {
 
 /** Locale prefixes are shareable/crawlable, so they always beat local preference. */
 function localeFromPathname(pathname: string): Locale | null {
-  const parsed = parseLocalePath(pathname);
-  return parsed.hadLocalePrefix && isSeoContentLocale(parsed.locale) ? parsed.locale : null;
+  return documentLocaleFromPathname(pathname);
 }
 
 /**

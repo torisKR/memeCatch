@@ -40,6 +40,7 @@ export default async function Home() {
     categoryLabel: categoryCopy[meme.category],
     safetyLevel: meme.safety_level,
     category: meme.category,
+    originYear: meme.origin_year,
     thumbnailUrl: meme.meme_contents?.find((content) => content.is_representative && content.thumbnail_url)?.thumbnail_url
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,

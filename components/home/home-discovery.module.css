@@ -180,10 +180,9 @@
 .deck {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1px;
+  gap: 16px;
   margin: 0;
-  padding: 1px;
-  background: var(--discovery-ink);
+  padding: 0;
   list-style: none;
 }
 

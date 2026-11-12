@@ -50,6 +50,15 @@ describe("media proxy", () => {
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=300");
   });
 
+  it("serves owned 4:3 card art with the public thumbnail cache", async () => {
+    const response = await request(["meme-card-art", "cat.webp"]);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/webp");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=300");
+    expect(mocks.r2Get).toHaveBeenCalledWith("meme-card-art/cat.webp");
+  });
+
   it("allows CDN caching of public thumbnails in the Storage fallback", async () => {
     mocks.r2Configured.mockReturnValue(false);
     const download = vi.fn().mockResolvedValue({ data: new Blob(["image"]), error: null });

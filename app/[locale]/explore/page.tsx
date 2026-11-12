@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { LocalizedExploreCard } from "@/components/localized-explore-card";
+import { MemeCard } from "@/components/meme-card";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
 import {
   SEO_LOCALE_CONFIG,
   buildLocalizedMetadata,
   isSeoContentLocale,
+  localizedMemePath,
   localizedStaticPath,
 } from "@/lib/i18n-routing";
 import {
@@ -161,15 +162,16 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
         )}
 
         {showCards && (
-          <ul aria-label={copy.title} className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul aria-label={copy.title} className="mt-7 grid grid-cols-2 gap-4 lg:grid-cols-3">
             {result.items.map((meme, index) => (
-              <LocalizedExploreCard
-                key={meme.id}
-                locale={locale}
-                meme={meme}
-                copy={copy}
-                priority={index < 6}
-              />
+              <li key={meme.id} className="min-w-0">
+                <MemeCard
+                  meme={meme}
+                  href={localizedMemePath(locale, meme.short_id, meme.slug)}
+                  locale={locale}
+                  priority={index < 6}
+                />
+              </li>
             ))}
           </ul>
         )}

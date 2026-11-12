@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { shortIdFromParam, type SafetyLevel } from "@/lib/labels";
+import { memePathFrom, shortIdFromParam, type SafetyLevel } from "@/lib/labels";
 import {
   SEO_LOCALE_CONFIG,
   buildLocalizedMetadata,
@@ -18,6 +18,7 @@ import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
 import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
+import { RelatedMemes } from "@/components/related-memes";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
 import {
@@ -29,11 +30,12 @@ import { MemeCatalogUnavailable } from "@/components/meme-catalog-unavailable";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
+  getLocalizedSearchMemesResult,
   isIndexableLocalizedMeme,
   type LocalizedMemeDetail,
 } from "@/lib/meme-translations";
 import { unavailableMemeMetadata } from "@/lib/public-meme-document";
-import { MemeCatalogUnavailableError } from "@/lib/queries";
+import { getRelatedMemes, MemeCatalogUnavailableError } from "@/lib/queries";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
@@ -329,10 +331,36 @@ export default async function LocalizedMemePage({ params }: Props) {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, marketPassport] = await Promise.all([
+  const tagIds = meme.meme_tags_map.map((tag) => tag.tag_id);
+  const [versions, marketPassport, related] = await Promise.all([
     getLanguageVersions(meme.short_id, meme.id, locale),
     getMemeMarketPassport(meme.id, locale),
+    getRelatedMemes(
+      { id: meme.id, category: meme.category, origin_year: meme.origin_year },
+      tagIds,
+      6,
+    ),
   ]);
+  const localizedRelated = await getLocalizedSearchMemesResult(
+    related.map((item) => item.short_id),
+    locale,
+  );
+  const relatedCards = related.slice(0, 6).map((item) => {
+    const overlay = localizedRelated.items.get(item.short_id);
+    return {
+      meme: overlay
+        ? {
+            ...item,
+            title: overlay.title,
+            summary: overlay.summary,
+            slug: overlay.slug,
+          }
+        : item,
+      href: overlay
+        ? localizedMemePath(locale, overlay.short_id, overlay.slug)
+        : memePathFrom(item.short_id, item.slug),
+    };
+  });
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);
@@ -423,7 +451,7 @@ export default async function LocalizedMemePage({ params }: Props) {
           <span className="rounded-full bg-surface-2 px-3 py-1.5 text-muted">{copy.safety[meme.safety_level]}</span>
           {!needsReview && <span className="rounded-full bg-safety-green-bg px-3 py-1.5 text-safety-green">{copy.reviewed}</span>}
         </div>
-        <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
+        <h1 className="mt-5 max-w-4xl whitespace-normal text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
           {meme.title}
         </h1>
         <div className="mt-4">
@@ -565,6 +593,7 @@ export default async function LocalizedMemePage({ params }: Props) {
 
           <MemeMarketPassport passport={marketPassport} locale={locale} />
           <MemeTrendPanel memeId={meme.id} />
+          <RelatedMemes memes={relatedCards} locale={locale} />
         </div>
 
         {sourceLinks.length > 0 && (

@@ -329,6 +329,11 @@ class QueryBuilder implements PromiseLike<QueryResult> {
     return this;
   }
 
+  /** Supabase type cast. The select list already defines the runtime row. */
+  overrideTypes(): this {
+    return this;
+  }
+
   abortSignal(signal: AbortSignal): this {
     this.signal = signal;
     return this;

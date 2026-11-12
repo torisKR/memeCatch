@@ -382,6 +382,7 @@ export function getGuaranteedHomeEntries(
       categoryLabel: categoryCopy[meme.category] ?? "밈 용어",
       category: meme.category,
       safetyLevel: meme.safety_level,
+      originYear: meme.origin_year,
       thumbnailUrl: cardDataUrl,
     };
   });

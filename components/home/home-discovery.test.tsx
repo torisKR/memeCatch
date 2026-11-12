@@ -53,52 +53,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function mockInteractionMedia({
-  finePointer = true,
-  reducedMotion = false,
-}: {
-  finePointer?: boolean;
-  reducedMotion?: boolean;
-} = {}) {
-  const records = new Map<string, {
-    listeners: Set<(event: MediaQueryListEvent) => void>;
-    mediaQuery: MediaQueryList;
-  }>();
-
-  vi.stubGlobal("matchMedia", vi.fn((query: string) => {
-    const listeners = new Set<(event: MediaQueryListEvent) => void>();
-    const initialMatches = query === "(pointer: fine)" ? finePointer : reducedMotion;
-    const mediaQuery = {
-      matches: initialMatches,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn((_name: string, listener: (event: MediaQueryListEvent) => void) => {
-        listeners.add(listener);
-      }),
-      removeEventListener: vi.fn((_name: string, listener: (event: MediaQueryListEvent) => void) => {
-        listeners.delete(listener);
-      }),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    } as unknown as MediaQueryList;
-    records.set(query, { listeners, mediaQuery });
-    return mediaQuery;
-  }));
-
-  return {
-    emit(query: "(pointer: fine)" | "(prefers-reduced-motion: reduce)", matches: boolean) {
-      const record = records.get(query);
-      if (!record) throw new Error(`No media query registered for ${query}`);
-      Object.defineProperty(record.mediaQuery, "matches", {
-        configurable: true,
-        value: matches,
-      });
-      record.listeners.forEach((listener) => listener({ matches } as MediaQueryListEvent));
-    },
-  };
-}
-
 function getDeck() {
   return screen.getByRole("list", { name: HOME_DISCOVERY_COPY.en.resultsLabel });
 }
@@ -134,112 +88,24 @@ describe("HomeDiscovery", () => {
     }
   });
 
-  it("server-renders an original abstract print inside every native card link", () => {
+  it("renders every home entry as the shared poster card without a 3D tilt", () => {
     const { container } = render(<HomeDiscovery locale="en" entries={entries} />);
-    const cards = [...container.querySelectorAll<HTMLAnchorElement>("a[data-interactive-card]")];
+    const cards = [...container.querySelectorAll<HTMLAnchorElement>("[data-meme-card]")];
 
     expect(cards).toHaveLength(entries.length);
     expect(cards.map((card) => card.getAttribute("href"))).toEqual(entries.map((entry) => entry.href));
-    expect(cards.map((card) => card.getAttribute("data-tilt"))).toEqual(["0,0", "0,0", "0,0"]);
-    expect(cards.map((card) => card.querySelector("[data-card-artwork]")?.getAttribute("data-card-artwork")))
-      .toEqual(["orbit", "cutout", "signal"]);
-    expect(cards.every((card) => card.querySelector("svg[aria-hidden='true']"))).toBe(true);
+    expect(cards.every((card) => card.getAttribute("data-tilt") === null)).toBe(true);
+    expect(cards.every((card) => card.querySelector("[data-meme-card-art='fallback']"))).toBe(true);
+    expect(cards.every((card) => card.className.includes("hover:-translate-y-0.5"))).toBe(true);
     expect(cards.every((card, index) => card.textContent?.includes(entries[index]!.title))).toBe(true);
     expect(cards.every((card, index) => card.textContent?.includes(entries[index]!.summary))).toBe(true);
-  });
+    expect(container.querySelector("[data-safety-icon='green']")).toBeTruthy();
+    expect(container.textContent).toContain("Safe to use");
+    expect(container.textContent).not.toContain("써도 됨");
 
-  it("applies capped fine-pointer tilt and spotlight without scheduling animation frames", () => {
-    mockInteractionMedia();
-    const requestAnimationFrame = vi.fn();
-    vi.stubGlobal("requestAnimationFrame", requestAnimationFrame);
-    const { container } = render(<HomeDiscovery locale="en" entries={entries} />);
-    const card = container.querySelector<HTMLElement>("[data-interactive-card]")!;
-    vi.spyOn(card, "getBoundingClientRect").mockReturnValue({
-      bottom: 120,
-      height: 100,
-      left: 20,
-      right: 220,
-      top: 20,
-      width: 200,
-      x: 20,
-      y: 20,
-      toJSON: () => ({}),
-    });
-
-    fireEvent.pointerMove(card, { clientX: 220, clientY: 20, pointerType: "mouse" });
-
-    expect(card.style.getPropertyValue("--card-tilt-x")).toBe("4.00deg");
-    expect(card.style.getPropertyValue("--card-tilt-y")).toBe("4.00deg");
-    expect(card.style.getPropertyValue("--card-light-x")).toBe("100.00%");
-    expect(card.style.getPropertyValue("--card-light-y")).toBe("0.00%");
-    expect(card.getAttribute("data-tilt")).toBe("4.00,4.00");
-    expect(requestAnimationFrame).not.toHaveBeenCalled();
-
-    fireEvent.pointerLeave(card);
-
-    expect(card.style.getPropertyValue("--card-tilt-x")).toBe("");
-    expect(card.style.getPropertyValue("--card-tilt-y")).toBe("");
-    expect(card.style.getPropertyValue("--card-light-x")).toBe("");
-    expect(card.style.getPropertyValue("--card-light-y")).toBe("");
-    expect(card.getAttribute("data-tilt")).toBe("0,0");
-  });
-
-  it("resets active cards on media changes and unmount", () => {
-    const media = mockInteractionMedia();
-    const { container, unmount } = render(<HomeDiscovery locale="en" entries={entries} />);
-    const card = container.querySelector<HTMLElement>("[data-interactive-card]")!;
-    vi.spyOn(card, "getBoundingClientRect").mockReturnValue({
-      bottom: 100,
-      height: 100,
-      left: 0,
-      right: 100,
-      top: 0,
-      width: 100,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    });
-
-    fireEvent.pointerMove(card, { clientX: 75, clientY: 25, pointerType: "mouse" });
-    expect(card.getAttribute("data-tilt")).not.toBe("0,0");
-
-    media.emit("(pointer: fine)", false);
-    expect(card.getAttribute("data-tilt")).toBe("0,0");
-    expect(card.getAttribute("data-pointer-active")).toBeNull();
-
-    media.emit("(pointer: fine)", true);
-    fireEvent.pointerMove(card, { clientX: 75, clientY: 25, pointerType: "mouse" });
-    expect(card.getAttribute("data-tilt")).not.toBe("0,0");
-
-    media.emit("(prefers-reduced-motion: reduce)", true);
-    expect(card.getAttribute("data-tilt")).toBe("0,0");
-    expect(card.getAttribute("data-pointer-active")).toBeNull();
-
-    media.emit("(prefers-reduced-motion: reduce)", false);
-    fireEvent.pointerMove(card, { clientX: 75, clientY: 25, pointerType: "mouse" });
-    expect(card.getAttribute("data-tilt")).not.toBe("0,0");
-
-    unmount();
-    expect(card.style.getPropertyValue("--card-tilt-x")).toBe("");
-    expect(card.style.getPropertyValue("--card-light-x")).toBe("");
-    expect(card.getAttribute("data-tilt")).toBe("0,0");
-    expect(card.getAttribute("data-pointer-active")).toBeNull();
-  });
-
-  it.each([
-    { finePointer: false, reducedMotion: false, label: "coarse pointer" },
-    { finePointer: true, reducedMotion: true, label: "reduced motion" },
-  ])("keeps $label input inert", ({ finePointer, reducedMotion }) => {
-    mockInteractionMedia({ finePointer, reducedMotion });
-    const { container } = render(<HomeDiscovery locale="en" entries={entries} />);
-    const card = container.querySelector<HTMLElement>("[data-interactive-card]")!;
-    vi.spyOn(card, "getBoundingClientRect");
-
-    fireEvent.pointerMove(card, { clientX: 80, clientY: 20, pointerType: "mouse" });
-
-    expect(card.getBoundingClientRect).not.toHaveBeenCalled();
-    expect(card.getAttribute("data-tilt")).toBe("0,0");
-    expect(card.getAttribute("style")).toBeNull();
+    fireEvent.pointerMove(cards[0]!, { clientX: 220, clientY: 20, pointerType: "mouse" });
+    expect(cards[0]!.getAttribute("data-tilt")).toBeNull();
+    expect(cards[0]!.style.getPropertyValue("--card-tilt-x")).toBe("");
   });
 
   it("normalizes Unicode and reports the exact filtered count", async () => {
@@ -305,21 +171,23 @@ describe("HomeDiscovery", () => {
     expect(screen.getByRole("searchbox", { name: copy.searchLabel }).getAttribute("name")).toBe("q");
   });
 
-  it("renders a real representative thumbnail and keeps the original art when it fails", () => {
+  it("shows owned 4:3 art and falls back instead of using an external still", () => {
+    const owned = "/api/media/meme-card-art/cat.webp";
     const { container } = render(<HomeDiscovery locale="en" entries={[
-      { ...entries[0]!, thumbnailUrl: "https://images.example.com/cat.jpg", category: "image" },
-      entries[1]!,
+      { ...entries[0]!, thumbnailUrl: owned, category: "image" },
+      { ...entries[1]!, thumbnailUrl: "https://i.ytimg.com/vi/example/hqdefault.jpg" },
     ]} />);
-    const cards = container.querySelectorAll<HTMLAnchorElement>("a[data-interactive-card]");
+    const cards = container.querySelectorAll<HTMLAnchorElement>("[data-meme-card]");
     const image = cards[0]!.querySelector("img")!;
-    expect(image.getAttribute("src")).toBe("https://images.example.com/cat.jpg");
-    expect(image.getAttribute("loading")).toBe("lazy");
-    expect(image.getAttribute("alt")).toBe("");
-    expect(cards[0]!.querySelector("[data-card-artwork]")).toBeNull();
-    expect(cards[1]!.querySelector("[data-card-artwork]")?.getAttribute("data-card-artwork")).toBe("cutout");
+    expect(image.getAttribute("src")).toBe(`${owned}?w=1200`);
+    expect(image.getAttribute("srcset")).toContain(`${owned}?w=600 600w`);
+    expect(image.getAttribute("alt")).toBe(`${entries[0]!.title} symbol illustration`);
+    expect(cards[1]!.querySelector("img")).toBeNull();
+    expect(cards[1]!.querySelector("[data-meme-card-art='fallback']")).toBeTruthy();
+    expect(cards[1]!.innerHTML).not.toContain("hqdefault");
     fireEvent.error(image);
     expect(cards[0]!.querySelector("img")).toBeNull();
-    expect(cards[0]!.querySelector("[data-card-artwork]")?.getAttribute("data-card-artwork")).toBe("orbit");
+    expect(cards[0]!.querySelector("[data-meme-card-art='fallback']")).toBeTruthy();
     expect(cards[0]!.textContent).toContain(entries[0]!.title);
   });
 

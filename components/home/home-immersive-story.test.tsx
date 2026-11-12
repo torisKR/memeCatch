@@ -105,6 +105,7 @@ describe("HomeImmersiveStory", () => {
     expect(css).toContain('grid-area: 1 / 1');
     expect(css).toContain('position: sticky');
     expect(css).toContain('min-height: var(--story-viewport)');
+    expect(css).toContain("word-break: keep-all");
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
     expect(css).toMatch(/\.chapter\s*\{[\s\S]*?pointer-events:\s*none/);
     expect(css).toMatch(/\.searchForm,[\s\S]*?\.actionRow\s*\{[\s\S]*?pointer-events:\s*auto/);

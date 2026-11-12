@@ -194,7 +194,7 @@ export default async function MemeDetailPage({ params }: Props) {
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
   const [related, reactionCounts, marketPassport, availableTranslationLocales] = await Promise.all([
-    // 첫 화면 링크 수를 줄이려 6개만 — 나머지 탐색은 하단 무한 스크롤이 담당한다.
+    // 상세 하단은 관련 밈 카드를 최대 6장까지 둔다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
       tagIds,
@@ -560,10 +560,7 @@ export default async function MemeDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 더 둘러보기 — 관련 밈(비슷한 밈)을 앞에 두고 같은 카테고리로 끝없이 이어보기.
-          큐레이션 캐러셀 + 무한 스트림을 하나의 피드로 통합했다. */}
       <div className="border-t border-border pt-10">
-        {/* Wave 1 — 세션 깊이: 관련 밈 프리펜드 + 같은 카테고리 무한 이어보기 */}
         <ContinueStream
           currentId={meme.id}
           category={meme.category}

@@ -27,6 +27,7 @@ export type HomeEntry = {
   category?: MemeCategory;
   thumbnailUrl?: string | null;
   originalTitle?: string;
+  originYear?: number | null;
   safetyLevel: SafetyLevel;
 };
 

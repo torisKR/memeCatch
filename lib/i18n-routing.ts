@@ -142,7 +142,7 @@ const SEO_ROUTE_LOCALE_SET = new Set<string>(SEO_ROUTE_LOCALES);
 // Only these non-detail routes have dedicated localized page implementations.
 // Keeping this list explicit prevents the language selector from generating
 // locale URLs that resolve to a 404 page.
-const LOCALIZED_STATIC_PATHS = new Set(["/", "/pricing", "/daily", "/search", "/explore"]);
+const LOCALIZED_STATIC_PATHS = new Set(["/", "/pricing", "/daily", "/search", "/explore", "/meme-cards"]);
 
 export function isSeoContentLocale(value: string | null | undefined): value is SeoContentLocale {
   return !!value && SEO_CONTENT_LOCALE_SET.has(value);

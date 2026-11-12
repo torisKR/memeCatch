@@ -65,8 +65,9 @@ describe("retired products page", () => {
     expect(html).not.toContain("지금은 보여드릴 인기 밈이 없어요.");
     expect(html).toContain("aspect-[4/3]");
     expect(html).not.toContain("aspect-[4/5]");
-    expect(html).toContain("rounded-2xl");
-    expect(html).toContain('data-country-flag-position="top-right"');
+    expect(html).toContain("rounded-[16px]");
+    expect(html).not.toContain("data-country-flag");
+    expect(html).not.toContain("밈 용어");
     expect(html).toContain('alt="인기 밈 1 상징 일러스트"');
     expect(html).toContain("<img");
     expect(html).not.toContain("background-image");

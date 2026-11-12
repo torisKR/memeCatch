@@ -9,12 +9,7 @@ function Bone({ className = "" }: { className?: string }) {
 export function MemeCardSkeleton() {
   return (
     <div className="min-w-0">
-      <Bone className="aspect-[4/5] w-full rounded-xl" />
-      <div className="mt-2 space-y-2">
-        <Bone className="h-4 w-3/4" />
-        <Bone className="h-3.5 w-full" />
-        <Bone className="h-6 w-20 rounded-full" />
-      </div>
+      <Bone className="aspect-[4/3] w-full rounded-[16px]" />
     </div>
   );
 }

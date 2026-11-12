@@ -109,6 +109,11 @@ describe("localeDestination", () => {
     expect(localeDestination("/explore", "ko")).toBe("/explore");
   });
 
+  it("stays on the meme card catalog when the language changes", () => {
+    expect(localeDestination("/meme-cards", "en")).toBe("/en/meme-cards");
+    expect(localeDestination("/en/meme-cards", "ko")).toBe("/meme-cards");
+  });
+
   it("keeps UI-only locales on an unprefixed route", () => {
     expect(localeDestination("/products", "th")).toBeNull();
   });

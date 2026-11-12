@@ -1,0 +1,179 @@
+.shell {
+  container-type: inline-size;
+  height: auto;
+}
+
+.frame.frame {
+  aspect-ratio: 4 / 3;
+}
+
+.face {
+  container-type: size;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.fallback {
+  grid-template-rows: 30% minmax(0, 1fr) auto;
+}
+
+.bubbleSlot {
+  min-height: 0;
+  overflow: hidden;
+  padding: 24px 0 8px 24px;
+}
+
+.bubble {
+  display: block;
+  width: auto;
+  height: 100%;
+  max-height: 100%;
+  aspect-ratio: 3 / 2;
+}
+
+.copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  grid-row: -1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 24px 24px;
+}
+
+.title {
+  margin: 0;
+  flex: none;
+  overflow: hidden;
+  color: #f7f4ee;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.title[data-title-size="detail"] {
+  display: block;
+  overflow: visible;
+  font-size: 28px;
+  line-height: 1.25;
+  -webkit-line-clamp: unset;
+}
+
+.summary {
+  margin: 0;
+  flex: none;
+  overflow: hidden;
+  color: #f7f4ee;
+  font-size: 14px;
+  line-height: 1.25rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.badges {
+  display: flex;
+  flex: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.safety {
+  min-width: 0;
+  flex: none;
+}
+
+.safety > span {
+  display: inline-flex;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.safety > span > span:first-child {
+  flex: none;
+}
+
+.safety > span > span:last-child {
+  white-space: nowrap;
+}
+
+.year {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* Drop the year before the usage label is cut. The full label stays one line. */
+@container (max-width: 419px) {
+  .year {
+    display: none;
+  }
+}
+
+@container (max-width: 199px) {
+  .frame.frame {
+    aspect-ratio: auto;
+    min-height: 12rem;
+  }
+
+  .copy {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .title {
+    min-height: 2.5em;
+    font-size: 16px;
+    line-height: 1.25;
+    -webkit-line-clamp: 2;
+  }
+
+  .title[data-title-size="detail"] {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+    font-size: 22px;
+    line-height: 1.25;
+    -webkit-line-clamp: unset;
+  }
+
+  .summary {
+    display: none;
+  }
+
+  .year {
+    display: none;
+  }
+
+  /* Icon only. The badge keeps aria-label with the full usage words. */
+  .safety > span > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* A wide detail poster stays in the first 1280×800 viewport. */
+@container (min-width: 640px) {
+  .shell[data-meme-card-title-size="detail"] .frame.frame {
+    aspect-ratio: auto;
+    height: 420px;
+    max-height: 420px;
+  }
+}

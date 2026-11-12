@@ -1,4 +1,4 @@
-import { MemeCard } from "@/components/meme-card";
+import { MemeCard } from "@/components/meme-card-poster";
 import { memeThumbnailAlt } from "@/components/meme-thumbnail-view";
 import { buttonVariants } from "@/components/ui/button";
 import { memePathFrom } from "@/lib/labels";

@@ -2,7 +2,7 @@
 
 import type { MemeListItem } from "@/lib/queries";
 import { HScrollSection } from "@/components/h-scroll";
-import { MemeCompactCard } from "@/components/meme-compact-card";
+import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 
 /**
@@ -11,7 +11,7 @@ import { MotionList } from "@/components/motion-list";
  * 부족분은 trend_score desc로 채움).
  *
  * 스트립 셸(스크롤바 숨김/양끝 페이드/데스크톱 화살표)은 HScrollSection,
- * 카드는 MemeCompactCard(rank 뱃지) 공용 컴포넌트를 쓴다.
+ * 카드는 탐색과 같은 MemeCard를 쓴다.
  * 진입 스태거는 MotionList(DESIGN §5) 유지.
  */
 export function DailyTop10({ memes }: { memes: MemeListItem[] }) {
@@ -34,11 +34,11 @@ export function DailyTop10({ memes }: { memes: MemeListItem[] }) {
       <MotionList
         as="ul"
         itemAs="li"
-        className="instrument-grid flex w-max gap-3"
-        itemClassName="w-36 min-w-0 shrink-0 snap-start sm:w-40"
+        className="instrument-grid flex w-max gap-4"
+        itemClassName="w-64 min-w-0 shrink-0 snap-start"
       >
         {memes.slice(0, 10).map((meme, i) => (
-          <MemeCompactCard key={meme.id} meme={meme} rank={i + 1} />
+          <MemeCard key={meme.id} meme={meme} priority={i < 2} />
         ))}
       </MotionList>
     </HScrollSection>

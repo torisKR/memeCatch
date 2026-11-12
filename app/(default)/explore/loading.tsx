@@ -18,7 +18,7 @@ export default function ExploreLoading() {
       </div>
 
       {/* 카드 그리드 */}
-      <div className="mt-6 grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 12 }).map((_, i) => (
           <MemeCardSkeleton key={i} />
         ))}

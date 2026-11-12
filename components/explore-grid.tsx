@@ -430,7 +430,7 @@ export function ExploreGrid({
           결과 <strong className="font-semibold text-foreground">{total.toLocaleString("ko-KR")}</strong>개
         </p>
       )}
-      <ul className="grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4">
+      <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
             <MemeCard meme={meme} sourcePlatform={filters.platform} />
@@ -441,7 +441,7 @@ export function ExploreGrid({
       {/* 로딩 스켈레톤 — 다음 페이지 조회 중 */}
       {loading && (
         <ul
-          className="mt-4 grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4"
+          className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4"
           aria-hidden
         >
           {Array.from({ length: 6 }).map((_, i) => (

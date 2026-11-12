@@ -157,6 +157,8 @@
   letter-spacing: -0.065em;
   line-height: 0.98;
   text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .sectionDescription {
@@ -328,6 +330,8 @@
   letter-spacing: -0.06em;
   line-height: 1;
   text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .trustDescription {
@@ -364,7 +368,18 @@
 
   .pathwayCard { min-height: 16rem; margin-top: 0; }
 
+  .contributionBar {
+    /* The launcher is 4rem wide and `right-4`, flush with this section's 1rem
+       inset, so it covers 4rem of the content box. Keep another 1rem clear
+       (launcher size + 16px) and the same amount below the row. */
+    padding-right: calc(4rem + 1rem + 2rem);
+    margin-bottom: calc(4rem + 1rem);
+  }
+
   .contributionLinks { justify-content: flex-start; }
+
+  .trustLinks { padding-right: calc(4rem + 1rem); }
+
   .trustGrid { align-items: start; }
 }
 

@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AttributionTracker } from "@/components/attribution-tracker";
 import { BottomNav } from "@/components/bottom-nav";
-import { ChangelogModal } from "@/components/changelog-modal";
 import { GlobalHeader } from "@/components/global-header";
 import { MemeChatbot } from "@/components/meme-chatbot";
 import { NavProgress } from "@/components/nav-progress";
@@ -64,7 +63,6 @@ export function RootDocument({
             <MemeChatbot />
           </Suspense>
           <PwaInstall />
-          <ChangelogModal />
         </LocaleProvider>
       </body>
     </html>

@@ -17,6 +17,12 @@ function localToday(): string {
   return new Date().toLocaleDateString("en-CA");
 }
 
+/** `/memes/{key}` and the same path with a locale prefix, after that prefix is removed. */
+function isMemeDetailPath(pathname: string): boolean {
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  return /^\/memes\/[^/]+$/.test(path);
+}
+
 /**
  * 배포 "새 소식" 모달 — lib/changelog.ts의 최신 항목 id와
  * localStorage에 기록된 마지막 확인 id가 다르면 1회 노출.
@@ -25,6 +31,8 @@ function localToday(): string {
  *    첫 공지를 숨겨버리는 버그였다)
  * - 홈(모든 언어)에서는 3D/검색을 가리지 않는다. 읽음 처리는 하지 않아
  *   다른 페이지에서는 기존대로 공지를 확인할 수 있다.
+ * - /memes/{key} 상세(로케일 prefix 포함)에서는 모달·딤·스크롤 잠금을 쓰지 않는다.
+ *   읽음 처리도 하지 않는다.
  * - /admin, /login, /auth, /onboarding 경로에서는 띄우지 않음
  * - "오늘 하루 보지 않기": 확인 기록 없이 로컬 날짜만 기록 — 당일 재노출 안 함,
  *   다음 날부터는 아직 확인 전 소식이면 다시 노출
@@ -39,11 +47,12 @@ export function ChangelogModal() {
 function RouteChangelogModal({ pathname }: { pathname: string }) {
   const contentPath = stripLocalePath(normalizePathname(pathname));
   const isHome = contentPath === "/" || contentPath === "/index";
+  const hideNoticeModal = isHome || isMemeDetailPath(contentPath);
   const [entries, setEntries] = useState<ChangelogEntry[] | null>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!LATEST_CHANGELOG_ID || isHome) return;
+    if (!LATEST_CHANGELOG_ID || hideNoticeModal) return;
     if (
       pathname.startsWith("/admin") ||
       pathname.startsWith("/login") ||
@@ -75,7 +84,7 @@ function RouteChangelogModal({ pathname }: { pathname: string }) {
     if (unseen.length === 0) return;
     const t = window.setTimeout(() => setEntries(unseen), OPEN_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [pathname, isHome]);
+  }, [pathname, hideNoticeModal]);
 
   const dismiss = useCallback(() => {
     if (LATEST_CHANGELOG_ID) {
@@ -100,7 +109,7 @@ function RouteChangelogModal({ pathname }: { pathname: string }) {
 
   // 열림 상태 — 포커스 이동, ESC 닫기, 배경 스크롤 잠금
   useEffect(() => {
-    if (!entries || isHome) return;
+    if (!entries || hideNoticeModal) return;
     confirmRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss();
@@ -112,9 +121,9 @@ function RouteChangelogModal({ pathname }: { pathname: string }) {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [entries, dismiss, isHome]);
+  }, [entries, dismiss, hideNoticeModal]);
 
-  if (!entries || isHome) return null;
+  if (!entries || hideNoticeModal) return null;
 
   return (
     <div

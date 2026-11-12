@@ -58,27 +58,62 @@ it("starts a fresh delay after leaving home instead of reusing a stale dialog", 
   expect(window.localStorage.getItem("mc:changelog:last-seen")).toBeNull();
 });
 
-it("이전 소식을 읽은 사용자가 새 안내로 이동하면 읽음 처리해 다시 띄우지 않는다", () => {
+it("does not show the retired 2026-09-05 notice, and confirming the latest notice marks it read", () => {
   vi.useFakeTimers();
-  window.localStorage.setItem("mc:changelog:last-seen", CHANGELOG[1].id);
-
-  const { unmount } = render(<ChangelogModal />);
+  render(<ChangelogModal />);
   act(() => vi.advanceTimersByTime(800));
 
   expect(screen.getByRole("dialog")).toBeTruthy();
-  const link = screen.getByRole("link", { name: "무료 확인표와 참여 안내 보기" });
-  expect(link.getAttribute("href")).toBe(
-    "/community/745c8c04-0ec1-4abd-bee4-3a5d41df6a77",
-  );
-  link.addEventListener("click", (event) => event.preventDefault());
-  fireEvent.click(link);
+  expect(CHANGELOG.some((entry) => entry.id === "2026-09-05")).toBe(false);
+  expect(LATEST_CHANGELOG_ID).not.toBe("2026-09-05");
+  expect(screen.queryByText("2026-09-05")).toBeNull();
+  expect(screen.queryByText("밈을 쓰기 전, 5가지만 확인해 보세요")).toBeNull();
+  expect(screen.queryByRole("link", { name: "무료 확인표와 참여 안내 보기" })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "확인했어요" }));
 
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(window.localStorage.getItem("mc:changelog:last-seen")).toBe(LATEST_CHANGELOG_ID);
   expect(document.body.style.overflow).not.toBe("hidden");
+});
 
-  unmount();
+it.each([
+  "/memes/kh75j5f8",
+  "/memes/kh75j5f8-%EA%BC%B0%EB%8C%80",
+  "/memes/bjk2021k-bun-jo-ka",
+  "/memes/t4n9can6-내-마음속에-저장",
+  "/memes/t4n9can6/",
+  "/en/memes/kh75j5f8",
+  "/ja/memes/bjk2021k",
+  "/zh/memes/t4n9can6",
+  "/zh-tw/memes/kh75j5f8",
+  "/ko/memes/bjk2021k",
+])("renders no notice modal and no dialog on detail %s for a fresh visitor", (pathname) => {
+  vi.useFakeTimers();
+  navigation.pathname = pathname;
   render(<ChangelogModal />);
-  act(() => vi.advanceTimersByTime(800));
+  act(() => vi.advanceTimersByTime(1000));
   expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByText("새 소식")).toBeNull();
+  expect(screen.queryByText("밈캐치가 업데이트됐어요")).toBeNull();
+  expect(screen.queryByText("2026-09-05")).toBeNull();
+  expect(document.body.style.overflow).not.toBe("hidden");
+  expect(window.localStorage.getItem("mc:changelog:last-seen")).toBeNull();
+});
+
+it("does not open a stored unread notice as a modal on a detail page", () => {
+  vi.useFakeTimers();
+  window.localStorage.setItem("mc:changelog:last-seen", "2026-01-01");
+  navigation.pathname = "/en/memes/t4n9can6-내-마음속에-저장";
+  const { rerender } = render(<ChangelogModal />);
+  act(() => vi.advanceTimersByTime(1000));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.body.style.overflow).not.toBe("hidden");
+  expect(window.localStorage.getItem("mc:changelog:last-seen")).toBe("2026-01-01");
+
+  navigation.pathname = "/explore";
+  rerender(<ChangelogModal />);
+  act(() => vi.advanceTimersByTime(800));
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(screen.queryByText("2026-09-05")).toBeNull();
 });

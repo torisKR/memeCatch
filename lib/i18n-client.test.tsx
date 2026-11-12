@@ -176,8 +176,7 @@ describe("LocaleProvider URL precedence", () => {
       expect(document.documentElement.dir).toBe("rtl");
     });
 
-    setLocation("/en");
-    window.dispatchEvent(new Event("memecatch:locale-change"));
+    window.history.pushState({}, "", "/en");
 
     await waitFor(() => {
       expect(screen.getByLabelText("active locale").textContent).toBe("en");
@@ -185,6 +184,52 @@ describe("LocaleProvider URL precedence", () => {
     expect(document.querySelector("[data-site-header]")?.textContent).toBe("MemeCatch home");
     expect(document.documentElement.lang).toBe("en");
     expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("drops an in-place choice when another unprefixed route opens", async () => {
+    setLocation("/explore");
+    renderProvider();
+    persistLocale("ar");
+    await waitFor(() => {
+      expect(screen.getByLabelText("active locale").textContent).toBe("ar");
+    });
+
+    window.history.pushState({}, "", "/search");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    });
+    expect(document.querySelector("[data-site-header]")?.textContent).toBe("밈캐치 홈");
+    expect(document.querySelector("[data-site-bottom-nav]")?.textContent).toBe("주 내비게이션");
+    expect(document.documentElement.lang).toBe("ko");
+    expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("keeps a selector choice that leaves a prefixed route, then follows the next URL", async () => {
+    setLocation("/en");
+    renderProvider();
+    persistLocale("ar", "/");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("active locale").textContent).toBe("ar");
+    });
+    expect(document.documentElement.dir).toBe("rtl");
+
+    window.history.pushState({}, "", "/");
+
+    await waitFor(() => {
+      expect(document.documentElement.lang).toBe("ar");
+    });
+    expect(screen.getByLabelText("active locale").textContent).toBe("ar");
+    expect(document.querySelector("[data-site-header]")?.textContent).toBe("الصفحة الرئيسية MemeCatch");
+
+    window.history.pushState({}, "", "/explore");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    });
+    expect(document.documentElement.dir).toBe("ltr");
+    expect(document.querySelector("[data-site-header]")?.textContent).toBe("밈캐치 홈");
   });
 
   it("does not switch an unprefixed page to the browser language after load", async () => {

@@ -28,11 +28,13 @@ function localeFromCurrentUrl(): Locale {
 }
 
 /**
- * Selector choice for the path it was made on. A stale cookie still does not
- * win on load: this is memory from `persistLocale` in the current document,
- * and a different URL drops it so chrome follows the URL again.
+ * Selector choice for the path it was made on, plus the path the selector
+ * navigates to. A stale cookie still does not win on load: this is memory
+ * from `persistLocale` in the current document. Any later URL drops it, so
+ * chrome follows the URL again.
  */
-let inPlaceLocale: { locale: Locale; path: string } | null = null;
+let inPlaceLocale: { locale: Locale; paths: readonly string[] } | null = null;
+let historyNotifyInstalled = false;
 
 export function clearInPlaceLocale(): void {
   inPlaceLocale = null;
@@ -41,8 +43,34 @@ export function clearInPlaceLocale(): void {
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
   const path = window.location.pathname;
-  if (inPlaceLocale && inPlaceLocale.path === path) return inPlaceLocale.locale;
+  if (inPlaceLocale?.paths.includes(path)) return inPlaceLocale.locale;
   return localeFromCurrentUrl();
+}
+
+/** Once the selector's destination is current, forget the source path so Back follows the URL. */
+function retainInPlaceDestination(): void {
+  if (!inPlaceLocale || inPlaceLocale.paths.length < 2) return;
+  const path = window.location.pathname;
+  const destination = inPlaceLocale.paths[inPlaceLocale.paths.length - 1];
+  if (path === destination) inPlaceLocale = { locale: inPlaceLocale.locale, paths: [path] };
+}
+
+function installHistoryNotify(): void {
+  if (historyNotifyInstalled || typeof window === "undefined") return;
+  historyNotifyInstalled = true;
+  const notify = () => {
+    retainInPlaceDestination();
+    window.dispatchEvent(new Event(EVENT_NAME));
+  };
+  for (const method of ["pushState", "replaceState"] as const) {
+    const original = history[method].bind(history);
+    history[method] = function (this: History, ...args: Parameters<History["pushState"]>) {
+      const result = original.apply(this, args);
+      notify();
+      return result;
+    };
+  }
+  window.addEventListener("popstate", notify);
 }
 
 function applyDocumentLocale(locale: Locale): void {
@@ -51,6 +79,7 @@ function applyDocumentLocale(locale: Locale): void {
 }
 
 function subscribe(listener: () => void) {
+  installHistoryNotify();
   window.addEventListener(EVENT_NAME, listener);
   window.addEventListener("storage", listener);
   return () => {
@@ -98,8 +127,13 @@ export function LocaleAutoDetect() {
   return null;
 }
 
-export function persistLocale(locale: Locale) {
-  inPlaceLocale = { locale, path: window.location.pathname };
+export function persistLocale(locale: Locale, nextPath?: string) {
+  const current = window.location.pathname;
+  const destination = nextPath && nextPath.length > 0 ? nextPath : current;
+  inPlaceLocale = {
+    locale,
+    paths: destination === current ? [current] : [current, destination],
+  };
   document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
   applyDocumentLocale(locale);
   // Private browsing and storage-restricted embeds can throw here. Cookie,

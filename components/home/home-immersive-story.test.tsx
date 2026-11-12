@@ -97,8 +97,8 @@ describe("HomeImmersiveStory", () => {
       "utf8",
     );
 
-    expect(css).toContain('--story-header: 4rem');
-    expect(css).toContain('--story-header: 6.75rem');
+    expect(css).toContain('--story-header: var(--site-header-offset, 4rem)');
+    expect(css).toContain('--story-header: var(--site-header-offset, 6.75rem)');
     expect(css).toContain('--story-bottom-nav: 4.75rem');
     expect(css).toContain('--story-controls-reserve: 64px');
     expect(css).toContain('.story[data-home-scroll-ready="true"] .composition');

@@ -51,6 +51,17 @@ describe("mobile horizontal rail", () => {
     expect(readFileSync("app/(default)/memes/[key]/page.tsx", "utf8")).toContain("data-plus-pricing-slot");
   });
 
+  it("drops sticky header offsets while phone chrome is hidden", () => {
+    const hidden = block(css, 'html[data-chrome="hidden"] {');
+    expect(hidden).toContain("--site-header-offset: 0px");
+    expect(readFileSync("components/home/home-chapter-nav.module.css", "utf8")).toContain(
+      "top: var(--site-header-offset, 6.75rem)",
+    );
+    expect(readFileSync("components/home/home-immersive-story.module.css", "utf8")).toContain(
+      "--story-header: var(--site-header-offset, 6.75rem)",
+    );
+  });
+
   it("still clears the launcher under page-bottom grids", () => {
     expect(readFileSync("components/explore-grid.tsx", "utf8")).toContain("MOBILE_CARD_CLEARANCE");
     expect(readFileSync("components/related-memes.tsx", "utf8")).not.toContain("MOBILE_CARD_CLEARANCE");

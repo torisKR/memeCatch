@@ -30,6 +30,10 @@ function isHomePath(pathname: string): boolean {
   return normalizePathname(parseLocalePath(pathname).pathname) === "/";
 }
 
+function destinationPath(destination: string): string {
+  return new URL(destination, "https://memecatch.local").pathname;
+}
+
 /**
  * Return the route needed to apply a locale, or `null` when the cookie-driven
  * UI can update in place. The global selector does not know which individual
@@ -75,11 +79,11 @@ export function LanguageSelector() {
   const availableLocales = isHomePath(pathname) ? SEO_ROUTE_LOCALES : SUPPORTED_LOCALES;
 
   function changeLocale(nextLocale: Locale) {
-    persistLocale(nextLocale);
     const destination = localeDestination(
       `${pathname}${typeof window === "undefined" ? "" : window.location.search}`,
       nextLocale,
     );
+    persistLocale(nextLocale, destination ? destinationPath(destination) : undefined);
     if (destination) router.push(destination);
     else router.refresh();
   }

@@ -11,6 +11,7 @@ import { SafetySignalGuide } from "@/components/usage-guide";
 import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
 import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
 import { HOME_COPY } from "@/lib/home-copy";
+import { hasPublicListing } from "@/lib/thin-meme";
 import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
 import {
   localizedPath,
@@ -40,7 +41,6 @@ export function HomeExperience({
 }) {
   const copy = HOME_COPY[locale];
   const web3 = HOME_WEB3_COPY[locale];
-  const searchPath = localizedPath("/search", locale);
   const explorePath = localizedPath("/explore?sort=recent", locale);
   const pathwaysTitleId = `home-pathways-title-${locale}`;
   const trustTitleId = `home-trust-title-${locale}`;
@@ -50,29 +50,22 @@ export function HomeExperience({
       {locale === "ko" && <TranslatedEditionHint />}
       <HomeImmersiveStory locale={locale} />
 
-      <section
-        id="home-latest"
-        data-home-section="recent-content"
-        aria-label={copy.recent.title}
-        className={`${styles.editorialSection} ${styles.anchorTarget}`}
-      >
-        <span aria-hidden className={`${styles.sectionNumber} ${styles.discoveryNumber}`}>01</span>
-        <HomeDiscovery locale={locale} entries={entries} />
-        {entries.length > 0 ? (
+      {hasPublicListing(entries.length) ? (
+        <section
+          id="home-latest"
+          data-home-section="recent-content"
+          aria-label={copy.recent.title}
+          className={`${styles.editorialSection} ${styles.anchorTarget}`}
+        >
+          <span aria-hidden className={`${styles.sectionNumber} ${styles.discoveryNumber}`}>01</span>
+          <HomeDiscovery locale={locale} entries={entries} />
           <div className={styles.recentSignalRail}>
             <Link href={explorePath} className={styles.contributionLinkStrong}>
               {copy.recent.all} <ArrowRight aria-hidden className={styles.buttonIcon} />
             </Link>
           </div>
-        ) : (
-          <div className={styles.emptyAssist}>
-            <p>{copy.recent.empty}</p>
-            <Link href={searchPath} className={styles.contributionLinkStrong}>
-              {copy.recent.emptyAction}
-            </Link>
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
 
       {/* 상황별 안전 가이드 및 실전 용례 쇼케이스 (고유 가치 전면 배치) */}
       <section

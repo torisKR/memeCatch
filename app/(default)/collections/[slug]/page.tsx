@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { createStaticClient } from "@/lib/supabase/server";
 import { COLLECTIONS, getCollection, type CollectionDef } from "@/lib/collections";
 import type { MemeListItem } from "@/lib/queries";
+import { hasPublicListing, indexableScanLimit, takeIndexableMemes } from "@/lib/thin-meme";
 import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { memePathFrom } from "@/lib/labels";
@@ -43,7 +44,7 @@ export async function generateMetadata({
   };
 }
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)";
+const SELECT = "*, meme_contents(thumbnail_url, is_representative, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)";
 const LIMIT = 24;
 
 async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {
@@ -83,8 +84,8 @@ async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {
         break;
       }
     }
-    const { data } = await q.order("id", { ascending: false }).limit(LIMIT);
-    return (data ?? []) as MemeListItem[];
+    const { data } = await q.order("id", { ascending: false }).limit(indexableScanLimit(LIMIT));
+    return takeIndexableMemes((data ?? []) as unknown as MemeListItem[], LIMIT);
   } catch {
     return [];
   }
@@ -99,7 +100,8 @@ export default async function CollectionPage({
   const col = getCollection(slug);
   if (!col) notFound();
 
-  const memes = await loadMemes(col);
+  const loaded = await loadMemes(col);
+  const memes = hasPublicListing(loaded.length) ? loaded : [];
   const url = `${SITE_URL}/collections/${col.slug}`;
 
   return (
@@ -183,11 +185,7 @@ export default async function CollectionPage({
             </Link>
           </div>
         </>
-      ) : (
-        <p className="glass-panel instrument-grid mt-8 rounded-2xl p-6 text-base text-muted">
-          이 모음은 준비 중이에요. 곧 채워질 거예요.
-        </p>
-      )}
+      ) : null}
 
       {/* 다른 모음으로의 내부 링크 — 허브 간 연결 */}
       <section aria-labelledby="other-collections" className="mt-12">

@@ -4,6 +4,7 @@ import { MotionList } from "@/components/motion-list";
 import { Reveal } from "@/components/reveal";
 import { TrackedBlock } from "@/components/tracked-block";
 import { SECTION_TITLES } from "@/lib/labels";
+import { hasPublicListing } from "@/lib/thin-meme";
 import type { WeeklyDigest as WeeklyDigestData } from "@/lib/weekly";
 
 /**
@@ -13,19 +14,14 @@ import type { WeeklyDigest as WeeklyDigestData } from "@/lib/weekly";
  */
 export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
   const { trending, fresh, categoryBreakdown } = digest;
-  const hasAny = trending.length > 0 || fresh.length > 0;
+  const showTrending = hasPublicListing(trending.length);
+  const showFresh = hasPublicListing(fresh.length);
 
-  if (!hasAny) {
-    return (
-      <p className="mt-8 rounded-2xl border border-border bg-surface p-6 text-base text-muted">
-        이번 주 결산은 아직 준비 중이에요. 데이터가 쌓이는 대로 채워질 거예요.
-      </p>
-    );
-  }
+  if (!showTrending && !showFresh) return null;
 
   return (
     <div className="mt-8 flex flex-col gap-10">
-      {trending.length > 0 && (
+      {showTrending && (
         <Reveal as="section">
           <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
             <span aria-hidden className="signal-live size-1.5 rounded-full bg-(--signal-cyan)" />
@@ -52,7 +48,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
         </Reveal>
       )}
 
-      {fresh.length > 0 && (
+      {showFresh && (
         <Reveal as="section" delay={0.05}>
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
             New entries

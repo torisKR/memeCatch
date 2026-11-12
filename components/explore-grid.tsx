@@ -11,6 +11,7 @@ import { MemeCardSkeleton } from "@/components/skeletons";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
+import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -52,28 +53,16 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)`;
-
-function hasActiveExploreFilter(filters: ExploreFilters): boolean {
-  return Boolean(
-    filters.q?.trim() ||
-      filters.topicTag ||
-      filters.difficulty ||
-      filters.lifecycle ||
-      filters.media ||
-      filters.year ||
-      filters.platform ||
-      filters.categories.length > 0 ||
-      filters.sort !== "trending",
-  );
-}
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url)";
-  const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
+    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
+  const topic = topicTag
+    ? ", meme_tags_map!inner(tags!inner(name))"
+    : ", meme_tags_map(tag_id)";
+  return `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
@@ -193,18 +182,22 @@ export function buildMemesQuery(
   return q;
 }
 
-/** 지정한 오프셋부터 PAGE_SIZE만큼 — 서버가 소비한 행 수에서 이어받기 위해 오프셋 기준. */
+/** 지정한 오프셋부터 얇은 문서를 건너뛰고 PAGE_SIZE만큼. scanned는 소비한 원본 행 수. */
 async function fetchFrom(
   supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
   from: number
-): Promise<MemeListItem[]> {
-  const { data, error } = await buildMemesQuery(supabase, filters).range(
+) {
+  return collectIndexableWindow(
+    async (start, end) => {
+      const { data, error } = await buildMemesQuery(supabase, filters).range(start, end);
+      if (error || !data) throw error ?? new Error("no data");
+      return data as unknown as MemeListItem[];
+    },
     from,
-    from + PAGE_SIZE - 1
+    PAGE_SIZE,
+    { pageSize: PAGE_SIZE },
   );
-  if (error || !data) throw error ?? new Error("no data");
-  return data as unknown as MemeListItem[];
 }
 
 export function ExploreGrid({
@@ -287,14 +280,12 @@ export function ExploreGrid({
     try {
       const supabase = createClient();
       const batch = await fetchFrom(supabase, filters, from);
-      const fresh = batch.filter((m) => !seenRef.current.has(m.id));
+      const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
       for (const m of fresh) seenRef.current.add(m.id);
       setItems((prev) => [...prev, ...fresh]);
-      // 중복 제거 전 조회한 행 수만큼 전진 — 걸러진 행을 다시 읽지 않는다.
-      offsetRef.current = from + batch.length;
-      const nextHasMore = batch.length >= PAGE_SIZE;
-      hasMoreRef.current = nextHasMore;
-      setHasMore(nextHasMore);
+      offsetRef.current = from + batch.scanned;
+      hasMoreRef.current = batch.hasMore;
+      setHasMore(batch.hasMore);
     } catch {
       setFailed(true);
     } finally {
@@ -382,32 +373,19 @@ export function ExploreGrid({
             decoding="async"
             className="mx-auto mb-2 w-48 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-56"
           />
-          <p className="text-xl font-bold">
-            {filters.q ? (
-              <>
-                &lsquo;<span className="text-accent">{filters.q}</span>&rsquo; 검색
-                결과가 없어요
-              </>
-            ) : hasActiveExploreFilter(filters) ? (
-              "이 조건의 밈이 아직 없어요"
-            ) : (
-              "공개된 밈이 아직 이 목록에 없어요"
-            )}
-          </p>
+          <p className="text-xl font-bold">조건에 맞는 밈이 아직 없어요</p>
           <p className="mt-1.5 text-base text-foreground">
-            {filters.q
-              ? "다른 말로 검색하거나 필터를 풀어 보세요. 아직 없는 밈이면 제보해 주세요."
-              : hasActiveExploreFilter(filters)
-                ? "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."
-                : "알고 있는 밈이 있으면 제보해 주세요."}
+            필터를 초기화하거나, 알고 있는 밈을 제보해 주세요.
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            <Link
-              href="/explore"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
-            >
-              필터 초기화
-            </Link>
+            <form action="/explore" method="get">
+              <button
+                type="submit"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+              >
+                필터 초기화
+              </button>
+            </form>
             <Link
               href={submissionHref}
               rel="nofollow"

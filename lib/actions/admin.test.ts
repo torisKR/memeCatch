@@ -30,6 +30,9 @@ describe("canonical meme cache revalidation", () => {
       "/* ── 제보 큐",
     );
 
+    expect(helper).toContain('"/explore"');
+    expect(helper).toContain('"/search"');
+    expect(helper).toContain('"/rankings"');
     expect(helper).toContain('"/sitemap.xml"');
     expect(helper).toContain('"/llms.txt"');
     expect(helper).toContain('"/llms-full.txt"');

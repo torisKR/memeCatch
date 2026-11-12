@@ -60,27 +60,10 @@ describe("ExploreGrid", () => {
 
     expect(screen.getByRole("alert").textContent).toContain("밈 목록을 불러오지 못했어요");
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
-    expect(screen.queryByText("이 조건의 밈이 아직 없어요")).toBeNull();
-    expect(screen.queryByText("공개된 밈이 아직 이 목록에 없어요")).toBeNull();
-    expect(screen.queryByText("필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요.")).toBeNull();
+    expect(screen.queryByText("조건에 맞는 밈이 아직 없어요")).toBeNull();
   });
 
-  it("renders an empty state with a submit path when there are no results", () => {
-    render(
-      <ExploreGrid
-        initial={[]}
-        filters={{ categories: [], sort: "trending" }}
-      />,
-    );
-
-    expect(screen.getByText("공개된 밈이 아직 이 목록에 없어요")).toBeTruthy();
-    expect(screen.queryByText(/필터를 풀어/)).toBeNull();
-    expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
-      "/submit",
-    );
-  });
-
-  it("asks to loosen filters only when a filter is active", () => {
+  it("shows the filter-reset empty state when a result set has no cards", () => {
     render(
       <ExploreGrid
         initial={[]}
@@ -88,11 +71,28 @@ describe("ExploreGrid", () => {
       />,
     );
 
-    expect(screen.getByText("이 조건의 밈이 아직 없어요")).toBeTruthy();
-    expect(screen.getByText(/필터를 풀어/)).toBeTruthy();
+    expect(screen.getByText("조건에 맞는 밈이 아직 없어요")).toBeTruthy();
+    const reset = screen.getByRole("button", { name: "필터 초기화" });
+    expect(reset.closest("form")?.getAttribute("action")).toBe("/explore");
+    expect(reset.closest("form")?.getAttribute("method")).toBe("get");
+    expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
+      "/submit",
+    );
   });
 
-  it("names a zero-result search query in the empty state", () => {
+  it("keeps one or two explore cards instead of hiding the dictionary grid", () => {
+    render(
+      <ExploreGrid
+        initial={[meme, { ...meme, id: "explore-card-2", title: "두 번째 밈" }]}
+        filters={{ categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.getAllByTestId("explore-card")).toHaveLength(2);
+    expect(screen.queryByText("조건에 맞는 밈이 아직 없어요")).toBeNull();
+  });
+
+  it("keeps a zero-result search query on the submit path", () => {
     render(
       <ExploreGrid
         initial={[]}
@@ -100,8 +100,8 @@ describe("ExploreGrid", () => {
       />,
     );
 
-    expect(screen.getByText(/검색 결과가 없어요/)).toBeTruthy();
-    expect(screen.getByText("없는밈")).toBeTruthy();
+    expect(screen.getByText("조건에 맞는 밈이 아직 없어요")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "필터 초기화" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "밈 제보하기" }).getAttribute("href")).toBe(
       "/submit?name=%EC%97%86%EB%8A%94%EB%B0%88",
     );

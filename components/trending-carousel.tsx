@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { MemeCard } from "@/components/meme-card";
 import type { MemeListItem } from "@/lib/queries";
+import { hasPublicListing } from "@/lib/thin-meme";
 
 /**
  * 홈 "오늘의 급상승" — 실시간 차트 캐러셀 (DESIGN §12 시세판 모티프 연장).
@@ -116,6 +117,8 @@ export function TrendingCarousel({ memes }: { memes: MemeListItem[] }) {
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [reduce]);
+
+  if (!hasPublicListing(memes.length)) return null;
 
   return (
     <div className="instrument-grid group/carousel relative -mx-4 mt-3">

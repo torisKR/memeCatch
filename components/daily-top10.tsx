@@ -4,6 +4,7 @@ import type { MemeListItem } from "@/lib/queries";
 import { HScrollSection } from "@/components/h-scroll";
 import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
+import { hasPublicListing } from "@/lib/thin-meme";
 
 /**
  * 오늘 많이 본 밈 TOP 10 — 탐색 기본 진입 상태에서 그리드 위 가로 스크롤 스트립.
@@ -15,7 +16,7 @@ import { MotionList } from "@/components/motion-list";
  * 진입 스태거는 MotionList(DESIGN §5) 유지.
  */
 export function DailyTop10({ memes }: { memes: MemeListItem[] }) {
-  if (memes.length === 0) return null;
+  if (!hasPublicListing(memes.length)) return null;
   return (
     <HScrollSection
       headingId="daily-top10-heading"

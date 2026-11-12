@@ -3,7 +3,8 @@ import { cache } from "react";
 import { createStaticClient } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
-import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
+import { INDEXABLE_LIST_SELECT, type MemeListItem } from "@/lib/queries";
+import { hasPublicListing, omitThinMemes } from "@/lib/thin-meme";
 import { TimelineView, type TimelineDecade } from "@/components/timeline-view";
 import { AdsenseScript } from "@/components/adsense-script";
 
@@ -38,7 +39,7 @@ const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
     // 데이터 증가 시 최신 연대가 조용히 잘리므로, 대표성(trend) 기준으로 선별한다.
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .not("origin_year", "is", null)
       .order("trend_score", { ascending: false })
@@ -47,7 +48,7 @@ const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
     if (error) throw error;
     if (!data) return [];
 
-    const rows = data as MemeListItem[];
+    const rows = omitThinMemes(data as unknown as MemeListItem[]);
     const byYear = new Map<number, MemeListItem[]>();
     for (const meme of rows) {
       const year = meme.origin_year;
@@ -64,7 +65,8 @@ const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
       const years = [...byYear.entries()]
         .filter(([year]) => year >= def.from && year <= def.to)
         .sort((a, b) => a[0] - b[0])
-        .map(([year, memes]) => ({ year, memes }));
+        .map(([year, memes]) => ({ year, memes }))
+        .filter((year) => hasPublicListing(year.memes.length));
       if (years.length > 0) {
         decades.push({ key: def.key, label: def.label, years });
       }

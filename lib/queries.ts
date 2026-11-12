@@ -12,6 +12,11 @@ import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
 import type { Audience } from "@/lib/meme-news";
 import type { MemeOriginProfile } from "@/lib/meme-country";
+import {
+  indexableScanLimit,
+  takeIndexableMemes,
+  THIN_MEME_BODY_COLUMNS,
+} from "@/lib/thin-meme";
 
 export type MemeRow = Database["public"]["Tables"]["memes"]["Row"];
 export type MemeContentRow = Database["public"]["Tables"]["meme_contents"]["Row"];
@@ -74,21 +79,28 @@ const PUBLIC_STATUSES = ["approved", "limited"] as const;
 export const LIST_SELECT =
   `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)` as const;
 
+/**
+ * Listing queries that apply `isThinMeme` must load the same body and depth
+ * signals the detail page uses. Card columns stay in LIST_COLUMNS.
+ */
+export const INDEXABLE_LIST_SELECT =
+  `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)` as const;
+
 /** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
   try {
     const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .or("origin_year.eq.2026,korea_viral_year.eq.2026")
       .order("trend_score", { ascending: false })
       .order("published_at", { ascending: false })
       .order("id", { ascending: true })
-      .limit(limit);
+      .limit(indexableScanLimit(limit));
     if (error || !data) return [];
-    return data as MemeListItem[];
+    return takeIndexableMemes(data as unknown as MemeListItem[], limit);
   } catch {
     return [];
   }
@@ -105,15 +117,15 @@ export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
     const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .not("origin_year", "is", null)
       .order("origin_year", { ascending: false })
       .order("trend_score", { ascending: false })
       .order("published_at", { ascending: false })
-      .limit(limit);
+      .limit(indexableScanLimit(limit));
     if (error || !data) return [];
-    return data as MemeListItem[];
+    return takeIndexableMemes(data as unknown as MemeListItem[], limit);
   } catch {
     return [];
   }
@@ -125,13 +137,13 @@ export async function getRecentlyPublishedMemes(limit = 6): Promise<MemeListItem
     const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .not("published_at", "is", null)
       .order("published_at", { ascending: false, nullsFirst: false })
       .order("id", { ascending: true })
-      .limit(limit);
-    return error || !data ? [] : data as MemeListItem[];
+      .limit(indexableScanLimit(limit));
+    return error || !data ? [] : takeIndexableMemes(data as unknown as MemeListItem[], limit);
   } catch {
     return [];
   }
@@ -143,13 +155,13 @@ export async function getBeginnerMemes(limit = 8): Promise<MemeListItem[]> {
     const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
       .eq("difficulty", "beginner")
       .order("trend_score", { ascending: false })
-      .limit(limit);
+      .limit(indexableScanLimit(limit));
     if (error || !data) return [];
-    return data as MemeListItem[];
+    return takeIndexableMemes(data as unknown as MemeListItem[], limit);
   } catch {
     return [];
   }
@@ -190,12 +202,14 @@ export async function getGenerationHighlights(
 
     const { data: memes, error: memesError } = await supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT)
       .in("id", memeIds)
       .in("moderation_status", [...PUBLIC_STATUSES]);
 
     if (memesError || !memes?.length) return empty;
-    const memeById = new Map((memes as MemeListItem[]).map((meme) => [meme.id, meme]));
+    const memeById = new Map(
+      takeIndexableMemes(memes as unknown as MemeListItem[], memes.length).map((meme) => [meme.id, meme]),
+    );
 
     for (const ageGroup of ["20s", "30s", "40s"] as const) {
       empty[ageGroup] = [...scores.entries()]
@@ -262,11 +276,11 @@ export async function getRelatedMemes(
       try {
         const ids = await getSemanticRelatedMemeIds(meme.id, limit);
         if (!ids.length) return null;
-        const { data, error } = await supabase.from("memes").select(LIST_SELECT)
+        const { data, error } = await supabase.from("memes").select(INDEXABLE_LIST_SELECT)
           .in("id", ids).in("moderation_status", [...PUBLIC_STATUSES]);
         if (error) return null;
         for (const id of ids) semanticIds.add(id);
-        return data as MemeListItem[] | null;
+        return data as unknown as MemeListItem[] | null;
       } catch { return null; }
     })();
 
@@ -284,38 +298,38 @@ export async function getRelatedMemes(
       if (taggedIds.size === 0) return null;
       const { data } = await supabase
         .from("memes")
-        .select(LIST_SELECT)
+        .select(INDEXABLE_LIST_SELECT)
         .in("id", [...taggedIds])
         .in("moderation_status", [...PUBLIC_STATUSES])
         .order("trend_score", { ascending: false })
-        .limit(30);
-      return data as MemeListItem[] | null;
+        .limit(60);
+      return data as unknown as MemeListItem[] | null;
     })();
 
     const sameCatPromise = (async (): Promise<MemeListItem[] | null> => {
       const { data } = await supabase
         .from("memes")
-        .select(LIST_SELECT)
+        .select(INDEXABLE_LIST_SELECT)
         .eq("category", meme.category)
         .neq("id", meme.id)
         .in("moderation_status", [...PUBLIC_STATUSES])
         .order("trend_score", { ascending: false })
-        .limit(24);
-      return data as MemeListItem[] | null;
+        .limit(48);
+      return data as unknown as MemeListItem[] | null;
     })();
 
     const nearYearPromise = (async (): Promise<MemeListItem[] | null> => {
       if (meme.origin_year == null) return null;
       const { data } = await supabase
         .from("memes")
-        .select(LIST_SELECT)
+        .select(INDEXABLE_LIST_SELECT)
         .gte("origin_year", meme.origin_year - 2)
         .lte("origin_year", meme.origin_year + 2)
         .neq("id", meme.id)
         .in("moderation_status", [...PUBLIC_STATUSES])
         .order("trend_score", { ascending: false })
-        .limit(12);
-      return data as MemeListItem[] | null;
+        .limit(24);
+      return data as unknown as MemeListItem[] | null;
     })();
 
     const [tagged, sameCat, nearYear, semantic] = await Promise.all([
@@ -345,9 +359,12 @@ export async function getRelatedMemes(
         ? 1
         : 0);
 
-    return [...pool.values()]
-      .sort((a, b) => score(b) - score(a) || (b.trend_score ?? 0) - (a.trend_score ?? 0))
-      .slice(0, limit);
+    return takeIndexableMemes(
+      [...pool.values()].sort(
+        (a, b) => score(b) - score(a) || (b.trend_score ?? 0) - (a.trend_score ?? 0),
+      ),
+      limit,
+    );
   } catch {
     // 관련 밈 실패는 치명적이지 않음 — 섹션 숨김으로 처리
     return [];
@@ -383,9 +400,10 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
   const { data, error } = await supabase
     .rpc("search_memes", {
       p_query: q,
-      p_limit: limit,
+      // The SQL function caps this at 50. Read the cap, then drop thin rows.
+      p_limit: Math.max(limit, 50),
     }, { get: true })
-    .select(LIST_SELECT)
+    .select(INDEXABLE_LIST_SELECT)
     .in("moderation_status", [...PUBLIC_STATUSES]);
   // A catalog failure must surface. Returning curated cards here hid the
   // explore/search error state and looked like a successful empty-or-guide result.
@@ -393,9 +411,12 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
     console.error("search_memes failed");
     throw new Error("search_memes failed");
   }
-  const rows = (data ?? []) as MemeListItem[];
+  const rows = takeIndexableMemes((data ?? []) as unknown as MemeListItem[], limit);
   const seen = new Set(rows.map((item) => item.short_id));
-  return [...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)), ...rows];
+  return [
+    ...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)),
+    ...rows,
+  ] as MemeListItem[];
 }
 
 /** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */

@@ -31,6 +31,8 @@ import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { shortIdFromParam } from "@/lib/labels";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
+import { retiredProductDocument } from "@/lib/retired-product-document";
+import { retiredProductDecision } from "@/lib/retired-products";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
 const MEME_LOOKUP_TIMEOUT_MS = 1_500;
@@ -209,6 +211,27 @@ export async function proxy(request: NextRequest) {
     }
     return response;
   };
+  const retired = retiredProductDecision(request.nextUrl.pathname);
+  if (retired) {
+    switch (retired.type) {
+      case "redirect": {
+        // Same-origin absolute URL. Next relativizes Location before it is sent,
+        // so the client sees `/en` or `/` and never the bind host. A cloned
+        // nextUrl would keep a trailing slash from `/en/products/`.
+        const url = new URL(retired.location, request.nextUrl.origin);
+        return applyLocale(NextResponse.redirect(url, 308));
+      }
+      case "gone":
+        // A rewrite keeps the rendered page but drops the status back to 200.
+        // Returning the document body is what makes the HTTP status stay 410.
+        return applyLocale(await retiredProductDocument(request, retired.locale));
+      default: {
+        const unreachable: never = retired;
+        return unreachable;
+      }
+    }
+  }
+
   const nextResponse = () =>
     applyLocale(NextResponse.next({ request: { headers: requestHeaders } }));
   const response = nextResponse();

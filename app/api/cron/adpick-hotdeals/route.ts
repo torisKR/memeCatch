@@ -1,5 +1,9 @@
-import { redirectRetiredProduct } from "@/lib/retired-product-redirects";
+import { retiredProductJson } from "@/lib/retired-products";
 
 export function GET(): Response {
-  return redirectRetiredProduct();
+  return retiredProductJson();
+}
+
+export function POST(): Response {
+  return retiredProductJson();
 }

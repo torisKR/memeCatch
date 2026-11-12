@@ -83,25 +83,40 @@ describe("LocaleProvider URL precedence", () => {
     expect(screen.getByLabelText("active locale").textContent).toBe(expected);
   });
 
-  it.each(["/products", "/community"])(
-    "preserves the preferred cookie locale on shared page %s",
-    (path) => {
-      setLocaleCookie("zh-tw");
-      setLocation(path);
+  it.each([
+    "/products",
+    "/community",
+    "/memes/kh75j5f8-꼰대",
+    "/explore",
+    "/search",
+  ])("ignores a stale zh-tw cookie on unprefixed %s", (path) => {
+    setLocaleCookie("zh-tw");
+    setLocation(path);
 
-      renderProvider();
+    render(
+      <LocaleProvider initialLocale="ko">
+        <LocaleDocumentSync />
+        <LocaleProbe />
+      </LocaleProvider>,
+    );
 
-      expect(screen.getByLabelText("active locale").textContent).toBe("zh-tw");
-    },
-  );
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(document.documentElement.lang).toBe("ko");
+  });
 
-  it("honors an explicit valid lang query on an unprefixed shared page", () => {
+  it("ignores a lang query on an unprefixed page", () => {
     setLocaleCookie("zh-tw");
     setLocation("/products?lang=ja");
 
-    renderProvider();
+    render(
+      <LocaleProvider initialLocale="ko">
+        <LocaleDocumentSync />
+        <LocaleProbe />
+      </LocaleProvider>,
+    );
 
-    expect(screen.getByLabelText("active locale").textContent).toBe("ja");
+    expect(screen.getByLabelText("active locale").textContent).toBe("ko");
+    expect(document.documentElement.lang).toBe("ko");
   });
 
   it("does not let auto-detection overwrite an explicit Korean URL choice", async () => {

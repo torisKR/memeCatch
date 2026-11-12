@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   CATEGORIES,
@@ -21,7 +22,6 @@ import { SafetyRationale } from "@/components/safety-rationale";
 import { UsageExamples } from "@/components/usage-examples";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { MemeUseKit } from "@/components/premium/meme-use-kit";
-import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { MeteredGate } from "@/components/metered-gate";
 import { AuthInvite } from "@/components/auth-invite";
@@ -58,8 +58,8 @@ import {
   getOpenGraphLocale,
   isSeoContentLocale,
   localizedMemePath,
-  SEO_CONTENT_LOCALES,
 } from "@/lib/i18n-routing";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -193,7 +193,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport, availableTranslationLocales] = await Promise.all([
+  const [related, reactionCounts, marketPassport] = await Promise.all([
     // 상세 하단은 관련 밈 카드를 최대 6장까지 둔다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
@@ -202,11 +202,7 @@ export default async function MemeDetailPage({ params }: Props) {
     ),
     getReactionCounts(meme.id),
     getMemeMarketPassport(meme.id, "ko"),
-    getAvailableTranslationLocales(meme.id),
   ]);
-  const missingTranslationLocales = SEO_CONTENT_LOCALES.filter(
-    (locale) => !availableTranslationLocales.includes(locale),
-  );
 
   // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트
   // (is_meme_rank_eligible)와 같은 기준이라 "랭킹엔 못 오르는데 상세엔 뜨는"
@@ -342,35 +338,21 @@ export default async function MemeDetailPage({ params }: Props) {
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
           <ExportButton shortId={meme.short_id} />
 
-          {missingTranslationLocales.length > 0 && (
-            <section
-              aria-labelledby="global-translation-title"
-              className="space-y-3 rounded-2xl border border-accent/25 bg-accent-soft/20 p-4"
+          <section
+            aria-labelledby="plus-pricing-title"
+            className="rounded-2xl border border-accent/25 bg-accent-soft/20 p-4"
+          >
+            <h2 id="plus-pricing-title" className="text-lg font-black">
+              Plus
+            </h2>
+            <Link
+              href="/pricing"
+              data-plus-pricing-cta
+              className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white"
             >
-              <div>
-                <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-text">
-                  글로벌 번역
-                </p>
-                <h2 id="global-translation-title" className="mt-1 text-lg font-black">
-                  이 밈을 다른 언어로 먼저 받아보세요
-                </h2>
-                <p className="mt-1 text-sm leading-relaxed text-muted">
-                  검수된 번역이 없는 언어만 표시합니다. Plus 사용자는 저장한 밈의 번역을 우선 검수 요청할 수 있어요.
-                </p>
-              </div>
-              <div className="grid gap-3 xl:grid-cols-2">
-                {missingTranslationLocales.map((locale) => (
-                  <TranslationPriorityButton
-                    key={locale}
-                    memeId={meme.id}
-                    locale={locale}
-                    translationStatus="missing"
-                    translationIsCurrent={false}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+              {PREMIUM_COPY.ko.dashboard.viewPlans}
+            </Link>
+          </section>
 
           {/* 관련 TikTok·Instagram — 대표 아래 공개 사용 예시(비대표 임베드) */}
           {relatedSocialContents.length > 0 && (

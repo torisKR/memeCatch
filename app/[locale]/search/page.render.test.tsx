@@ -72,7 +72,7 @@ describe("localized search recovery action", () => {
       expect(html).toContain(LOCALIZED_EXPLORE_COPY[locale].originalExplore);
       expect(html).toContain('data-localized-search-translation-options-action="true"');
       expect(html).toContain(
-        `href="${memePathFrom(sourceMeme.short_id, sourceMeme.slug)}#global-translation-title"`,
+        `href="${memePathFrom(sourceMeme.short_id, sourceMeme.slug)}#plus-pricing-title"`,
       );
       expect(html).toContain(GLOBAL_SEARCH_COPY[locale].translationOptions);
     }

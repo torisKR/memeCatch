@@ -37,11 +37,16 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).toContain("metadataBase: new URL(SITE_URL)");
   });
 
-  it("검수 완료 번역이 없는 글로벌 언어에는 Plus 번역 요청 진입을 제공한다", () => {
-    expect(source).toContain("const missingTranslationLocales = SEO_CONTENT_LOCALES.filter");
-    expect(source).toContain('translationStatus="missing"');
-    expect(source).toContain("global-translation-title");
-    expect(source).toContain("getAvailableTranslationLocales(meme.id)");
+  it("한국어 상세는 언어별 번역 데스크 대신 접두사 없는 Plus 요금 링크만 둔다", () => {
+    expect(source).toContain('href="/pricing"');
+    expect(source).toContain("plus-pricing-title");
+    expect(source).toContain("PREMIUM_COPY.ko.dashboard.viewPlans");
+    expect(source).not.toContain("TranslationPriorityButton");
+    expect(source).not.toContain("global-translation-title");
+    expect(source).not.toContain('href="/en/pricing"');
+    expect(source).not.toContain('href="/ja/pricing"');
+    expect(source).not.toContain('href="/zh/pricing"');
+    expect(source).not.toContain('href="/zh-tw/pricing"');
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {

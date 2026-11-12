@@ -1,9 +1,8 @@
 "use client";
 
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
-import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
-import { normalizePathname } from "@/lib/normalize-pathname";
 
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
@@ -19,30 +18,18 @@ function localeFromPathname(pathname: string): Locale | null {
   return parsed.hadLocalePrefix && isSeoContentLocale(parsed.locale) ? parsed.locale : null;
 }
 
-function localeFromSearch(search: string): Locale | null {
-  const value = new URLSearchParams(search).get("lang");
-  return isLocale(value) ? value : null;
-}
-
-/** URL-owned locale choices must stay aligned with the server-rendered page. */
-function localeFromCurrentUrl(): Locale | null {
-  const prefixedLocale = localeFromPathname(window.location.pathname);
-  if (prefixedLocale) return prefixedLocale;
-
-  const queryLocale = localeFromSearch(window.location.search);
-  if (queryLocale) return queryLocale;
-
-  return normalizePathname(window.location.pathname) === "/"
-    ? DEFAULT_LOCALE
-    : null;
+/**
+ * Chrome and `html lang` follow the URL. An unprefixed path is Korean even
+ * when a stale `memecatch_locale` cookie or `?lang=` is present. The cookie
+ * is only a preference for `/` navigation, written by the language selector.
+ */
+function localeFromCurrentUrl(): Locale {
+  return localeFromPathname(window.location.pathname) ?? DEFAULT_LOCALE;
 }
 
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
-  const urlLocale = localeFromCurrentUrl();
-  if (urlLocale) return urlLocale;
-  const value = document.cookie.split("; ").find((item) => item.startsWith(`${LOCALE_COOKIE}=`))?.split("=")[1];
-  return isLocale(value) ? value : DEFAULT_LOCALE;
+  return localeFromCurrentUrl();
 }
 
 function subscribe(listener: () => void) {
@@ -87,9 +74,8 @@ export function LocaleDocumentSync() {
 }
 
 /**
- * 접두사 없는 페이지는 서버가 그린 한국어 UI를 유지한다.
- * 브라우저 언어는 `/` 첫 방문 리다이렉트에서만 고르고, 그때 쿠키가 생긴다.
- * 여기서 다시 고르면 새로고침 뒤 메뉴가 영어로 바뀌었다가 한국어로 돌아온다.
+ * 접두사 없는 페이지는 URL 로케일(ko)을 유지한다.
+ * 브라우저 언어나 남은 쿠키로 크롬을 바꾸지 않는다.
  */
 export function LocaleAutoDetect() {
   return null;

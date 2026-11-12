@@ -65,7 +65,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
   const needsFallback = !query || results.length === 0;
   const firstOriginalResult = results[0] ?? null;
   const translationOptionsHref = firstOriginalResult
-    ? `${memePathFrom(firstOriginalResult.short_id, firstOriginalResult.slug)}#global-translation-title`
+    ? `${memePathFrom(firstOriginalResult.short_id, firstOriginalResult.slug)}#plus-pricing-title`
     : null;
   const localizedResultCount = results.reduce(
     (count, meme) => count + (localizedByShortId.has(meme.short_id) ? 1 : 0),

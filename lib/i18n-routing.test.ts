@@ -64,6 +64,8 @@ describe("SEO locale routing", () => {
     expect(isLocalizedStaticPath("/en/daily")).toBe(true);
     expect(isLocalizedStaticPath("/en/search?q=돌아온")).toBe(true);
     expect(isLocalizedStaticPath("/explore")).toBe(true);
+    expect(isLocalizedStaticPath("/meme-cards")).toBe(true);
+    expect(localizedStaticPath("/meme-cards", "en")).toBe("/en/meme-cards");
     expect(localizedStaticPath("/pricing", "en")).toBe("/en/pricing");
     expect(localizedStaticPath("/daily", "ja")).toBe("/ja/daily");
     expect(localizedStaticPath("/search", "en")).toBe("/en/search");

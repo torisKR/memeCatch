@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { mountCardPointerSurface } from "@/components/home/card-pointer-surface";
 import styles from "@/components/home/home-discovery.module.css";
 import type { HomeEntry } from "@/components/home/home-experience";
-import { SafetyBadge } from "@/components/safety-badge";
-import { MemeThumbnail } from "@/components/meme-thumbnail";
+import { MemeCard } from "@/components/meme-card";
 import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
 import { localizedPath, type SeoRouteLocale } from "@/lib/i18n-routing";
 
@@ -20,57 +18,6 @@ type IndexedEntry = {
   entry: HomeEntry;
   position: number;
 };
-
-const CARD_ARTWORK_VARIANTS = ["orbit", "cutout", "signal", "frame"] as const;
-
-type CardArtworkVariant = (typeof CARD_ARTWORK_VARIANTS)[number];
-
-function CardArtwork({ variant, entry }: { variant: CardArtworkVariant; entry: HomeEntry }) {
-  return (
-    <span className={styles.cardArtwork}>
-      <MemeThumbnail src={entry.thumbnailUrl ?? null} title={entry.title} category={entry.category ?? "phrase"} fallback={(
-      <svg viewBox="0 0 320 180" aria-hidden="true" focusable="false" data-card-artwork={variant}>
-        {variant === "orbit" ? (
-          <>
-            <rect className={styles.artIvory} width="320" height="180" />
-            <circle className={styles.artOrange} cx="229" cy="70" r="58" />
-            <circle className={styles.artOrbit} cx="107" cy="91" r="66" />
-            <path className={styles.artInk} d="M0 139 121 59l35 21-85 100H0Z" />
-            <rect className={styles.artInk} x="246" y="130" width="74" height="16" />
-          </>
-        ) : null}
-        {variant === "cutout" ? (
-          <>
-            <rect className={styles.artOrange} width="320" height="180" />
-            <path className={styles.artInk} d="M-8 24h184l-52 132H-8Z" />
-            <circle className={styles.artIvory} cx="215" cy="91" r="65" />
-            <path className={styles.artCut} d="m172 180 63-118 88 83v35Z" />
-            <rect className={styles.artIvory} x="26" y="132" width="78" height="13" />
-          </>
-        ) : null}
-        {variant === "signal" ? (
-          <>
-            <rect className={styles.artInk} width="320" height="180" />
-            <rect className={styles.artIvory} x="28" y="25" width="94" height="130" />
-            <circle className={styles.artOrange} cx="75" cy="90" r="25" />
-            <path className={styles.artSignal} d="M151 45c55 0 55 90 110 90M151 71c34 0 34 38 68 38M151 97c17 0 17-13 34-13" />
-            <rect className={styles.artOrange} x="270" y="25" width="22" height="130" />
-          </>
-        ) : null}
-        {variant === "frame" ? (
-          <>
-            <rect className={styles.artIvory} width="320" height="180" />
-            <path className={styles.artOrange} d="M0 0h138L93 180H0Z" />
-            <rect className={styles.artFrame} x="122" y="26" width="159" height="128" />
-            <circle className={styles.artInk} cx="203" cy="90" r="34" />
-            <path className={styles.artIvory} d="m180 91 18-19 28 37h-53Z" />
-          </>
-        ) : null}
-      </svg>
-      )} />
-    </span>
-  );
-}
 
 function normalizeSearchText(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase().trim();
@@ -107,7 +54,6 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const deckRef = useRef<HTMLOListElement>(null);
   const categories = useMemo(
     () => [...new Set(entries.map((entry) => entry.categoryLabel))],
     [entries],
@@ -128,12 +74,6 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
     : undefined;
   const titleId = `home-discovery-title-${locale}`;
   const scopeId = `home-discovery-scope-${locale}`;
-
-  useEffect(() => {
-    const deck = deckRef.current;
-    if (!deck) return;
-    return mountCardPointerSurface(deck);
-  }, [filteredEntries]);
 
   function selectCategory(nextCategory: string | null) {
     setCategory(nextCategory);
@@ -226,36 +166,26 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
 
           {filteredEntries.length > 0 ? (
             <div className={styles.contentGrid}>
-              <ol ref={deckRef} className={styles.deck} aria-label={copy.resultsLabel}>
-                {filteredEntries.map(({ entry, position }) => (
-                  <li className={styles.card} key={entry.id}>
-                    <Link
-                      className={styles.cardLink}
+              <ol className={styles.deck} aria-label={copy.resultsLabel}>
+                {filteredEntries.map(({ entry }, index) => (
+                  <li className="min-w-0" key={entry.id}>
+                    <MemeCard
+                      meme={{
+                        short_id: entry.id,
+                        slug: "home",
+                        title: entry.title,
+                        summary: entry.summary,
+                        category: entry.category ?? "phrase",
+                        safety_level: entry.safetyLevel,
+                        origin_year: entry.originYear ?? null,
+                        meme_contents: entry.thumbnailUrl
+                          ? [{ thumbnail_url: entry.thumbnailUrl, is_representative: true }]
+                          : [],
+                      }}
                       href={entry.href}
-                      data-interactive-card
-                      data-tilt="0,0"
-                    >
-                      <span className={styles.cardTopline}>
-                        <span className={styles.cardNumber} aria-hidden>
-                          {String(position + 1).padStart(2, "0")}
-                        </span>
-                        <span className={styles.categoryBadge}>{entry.categoryLabel}</span>
-                        <SafetyBadge level={entry.safetyLevel} locale={locale} />
-                      </span>
-                      <CardArtwork variant={CARD_ARTWORK_VARIANTS[position % CARD_ARTWORK_VARIANTS.length]!} entry={entry} />
-                      <span className={styles.cardBody}>
-                        <span className={styles.cardTitle}>{entry.title}</span>
-                        <span className={styles.cardSummary}>{entry.summary}</span>
-                        {entry.originalTitle ? (
-                          <span className={styles.originalTitle}>
-                            <strong>{copy.originalLabel}</strong> <span lang="ko">{entry.originalTitle}</span>
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className={styles.readAction}>
-                        {copy.readEntry} <span aria-hidden>↗</span>
-                      </span>
-                    </Link>
+                      locale={locale}
+                      priority={index < 2}
+                    />
                   </li>
                 ))}
               </ol>
@@ -271,6 +201,11 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
                   <div className={styles.previewRecord}>
                     <span>{preview.entry.categoryLabel}</span>
                     <strong>{preview.entry.title}</strong>
+                    {preview.entry.originalTitle ? (
+                      <span>
+                        {copy.originalLabel} <span lang="ko">{preview.entry.originalTitle}</span>
+                      </span>
+                    ) : null}
                   </div>
                   <Link
                     className={styles.previewLink}

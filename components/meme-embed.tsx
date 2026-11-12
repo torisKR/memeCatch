@@ -8,6 +8,7 @@ import { isContextSourceUrl } from "@/lib/source-links";
 import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { isHouseOriginal } from "@/lib/house-original";
 import { HouseOriginalVisual } from "@/components/house-original-visual";
+import { memeCardArtAlt, memeCardArtFromMeme } from "@/lib/meme-card-art";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
@@ -88,16 +89,45 @@ export function MemeEmbed({
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
 
-  if (isPlayable && content?.thumbnail_url && !content.url) {
+  const ownedArt = memeCardArtFromMeme({
+    meme_contents: content?.thumbnail_url
+      ? [{ thumbnail_url: content.thumbnail_url, is_representative: true }]
+      : [],
+  });
+  const projectImage = projectOwnedImage(content?.thumbnail_url);
+
+  if (isPlayable && projectImage && !ownedArt && !content?.url) {
     return (
       <figure>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={content.thumbnail_url}
+          src={projectImage}
           alt={`${title} 대표 이미지`}
-          className="aspect-[4/3] w-full rounded-xl border border-border bg-surface-2 object-cover"
+          className="aspect-[4/3] w-full rounded-[16px] border border-border bg-surface-2 object-cover"
         />
-        {content.caption && (
+        {content?.caption && (
+          <figcaption className="mt-2 text-sm text-muted">
+            {content.caption}
+          </figcaption>
+        )}
+      </figure>
+    );
+  }
+
+  if (isPlayable && ownedArt && !content?.url) {
+    return (
+      <figure>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={ownedArt.src}
+          srcSet={ownedArt.srcSet}
+          sizes="(min-width: 1024px) 640px, 100vw"
+          width={ownedArt.width}
+          height={ownedArt.height}
+          alt={memeCardArtAlt(title, "ko")}
+          className="aspect-[4/3] w-full rounded-[16px] object-cover"
+        />
+        {content?.caption && (
           <figcaption className="mt-2 text-sm text-muted">
             {content.caption}
           </figcaption>
@@ -147,7 +177,7 @@ export function MemeEmbed({
   if (sourceUrl) {
     const isContextSource = isContextSourceUrl(sourceUrl);
     return (
-      <TypoFallbackHero title={title} category={category} originYear={originYear}>
+      <PlaybackNote art={ownedArt} title={title} category={category} originYear={originYear}>
         <p className="text-base font-semibold">
           {isContextSource
             ? "원본 맥락은 출처에서 확인할 수 있어요."
@@ -175,12 +205,12 @@ export function MemeEmbed({
                 : "출처에서 원본 보기"}
           <span aria-hidden>↗</span>
         </a>
-      </TypoFallbackHero>
+      </PlaybackNote>
     );
   }
 
   return (
-    <TypoFallbackHero title={title} category={category} originYear={originYear}>
+    <PlaybackNote art={ownedArt} title={title} category={category} originYear={originYear}>
       <p className="text-base font-semibold">
         {effectiveFallbackReason === "confirmed_unavailable"
           ? "원본 콘텐츠는 현재 확인할 수 없지만, 뜻과 맥락은 여기 남아 있어요."
@@ -191,22 +221,22 @@ export function MemeEmbed({
           ? "플랫폼에서 내려갔거나 접근할 수 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."
           : "아직 재생 가능한 원본 링크가 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요."}
       </p>
-    </TypoFallbackHero>
+    </PlaybackNote>
   );
 }
 
 /**
- * 타이포 폴백 히어로 — 임베드 불가·원본 소실 밈의 대표 콘텐츠 영역.
- * 밈 제목을 대형 타이포 주인공으로 세우고 카테고리 틴트(--cat-*-bg/-text, 다크값
- * 존재·AA 대비)로 채운다. 장식은 히어로 §12 문법의 미세 그리드 + 큰따옴표
- * 워터마크(정적, 저불투명). category 미전달 시 중립 surface-2 톤으로 동일 구조.
+ * 재생할 영상이 없을 때의 안내. 페이지 H1과 같은 제목을 다시 그리지 않는다.
+ * 자체 4:3 아트가 있으면 그 이미지만 두고, 없으면 이미지를 뺀다.
  */
-function TypoFallbackHero({
+function PlaybackNote({
+  art,
   title,
   category,
   originYear,
   children,
 }: {
+  art: ReturnType<typeof memeCardArtFromMeme>;
   title: string;
   category?: MemeCategory | null;
   originYear?: number | null;
@@ -214,47 +244,26 @@ function TypoFallbackHero({
 }) {
   const catMeta = category ? CATEGORIES[category] : null;
   return (
-    <div
-      className={`relative overflow-hidden rounded-2xl border border-border p-6 sm:p-10 ${
-        catMeta ? "" : "bg-surface-2"
-      }`}
-      style={
-        category
-          ? {
-              background: `var(--cat-${category}-bg)`,
-              color: `var(--cat-${category}-text)`,
-            }
-          : undefined
-      }
-    >
-      {/* 미세 그리드 — currentColor 기반, radial 마스크로 좌상단만 은은히 */}
-      <div
-        aria-hidden
-        className="typo-hero-grid pointer-events-none absolute inset-0"
-      />
-      {/* 큰따옴표 워터마크 — "인용될 만한 말"이라는 사전 정체성 장식 */}
-      <QuoteGlyph className="pointer-events-none absolute -right-3 -top-5 h-28 w-28 opacity-[0.09] sm:h-36 sm:w-36" />
-      <div className="relative flex min-h-44 flex-col justify-center">
-        {(catMeta || originYear != null) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {catMeta && <HeroChip>{catMeta.user}</HeroChip>}
-            {/* 「년 등장」은 단정이다. year_precision이 3,904건 전부 unknown이라
-                근거가 없고, 같은 정보를 4개 로케일은 이미 "around/ごろ/约在"로
-                헤지하고 있다(app/[locale]/memes/[key]/page.tsx). 한국어만 단정할
-                이유가 없어 「무렵」으로 맞춘다. 정밀도를 prop으로 넘기지 않는 이유는
-                이 칩이 압축 라벨이고, 「무렵」은 정밀도가 올라가도 여전히 참이기 때문. */}
-            {originYear != null && <HeroChip>{originYear}년 무렵</HeroChip>}
-          </div>
-        )}
-        <p
-          className={`break-keep text-3xl font-black leading-tight tracking-tight sm:text-4xl ${
-            catMeta || originYear != null ? "mt-3" : ""
-          }`}
-        >
-          {title}
-        </p>
-        <div className="mt-4 max-w-prose">{children}</div>
-      </div>
+    <div className="space-y-3">
+      {art ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={art.src}
+          srcSet={art.srcSet}
+          sizes="(min-width: 1024px) 640px, 100vw"
+          width={art.width}
+          height={art.height}
+          alt={memeCardArtAlt(title, "ko")}
+          className="aspect-[4/3] w-full rounded-[16px] object-cover"
+        />
+      ) : null}
+      {(catMeta || originYear != null) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {catMeta && <HeroChip>{catMeta.user}</HeroChip>}
+          {originYear != null && <HeroChip>{originYear}년 무렵</HeroChip>}
+        </div>
+      )}
+      <div className="max-w-prose text-foreground">{children}</div>
     </div>
   );
 }
@@ -268,13 +277,22 @@ function HeroChip({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 큰따옴표 SVG(이모지 금지 규칙) — fill: currentColor */
-function QuoteGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
-      <path d="M10.6 4.9C6.8 7.1 4.6 10.3 4.6 14.2c0 2.8 1.7 4.6 4 4.6 2 0 3.6-1.5 3.6-3.6 0-2-1.4-3.3-3.2-3.3-.3 0-.7 0-.9.1.4-2 2.1-4 4-5.2L10.6 4.9Zm8.9 0c-3.9 2.2-6 5.4-6 9.3 0 2.8 1.7 4.6 4 4.6 2 0 3.5-1.5 3.5-3.6 0-2-1.3-3.3-3.1-3.3-.3 0-.7 0-.9.1.4-2 2-4 4-5.2L19.5 4.9Z" />
-    </svg>
-  );
+/** Same-origin editorial art. YouTube stills and rehosted social thumbs stay out. */
+function projectOwnedImage(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("..")) return null;
+  const path = trimmed.split(/[?#]/)[0] ?? "";
+  if (
+    path.includes("hqdefault") ||
+    path.includes("mqdefault") ||
+    path.includes("sddefault") ||
+    path.includes("ytimg") ||
+    path.startsWith("/api/media/meme-thumbs/")
+  ) {
+    return null;
+  }
+  return path;
 }
 
 function getSocialProvider(

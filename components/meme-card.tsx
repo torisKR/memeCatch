@@ -1,190 +1,210 @@
+"use client";
+
 import Link from "next/link";
-import { CategoryTag } from "@/components/category-tag";
-import { CountryFlagBadge } from "@/components/country-flag-badge";
-import { MemeThumbnail } from "@/components/meme-thumbnail";
-import { memeThumbnailSrc, MemeThumbnailView } from "@/components/meme-thumbnail-view";
-import { RetiredCardFallback } from "@/components/retired-card-fallback";
+import { useState } from "react";
 import { SafetyBadge } from "@/components/safety-badge";
-import { getSeoCopy, type SeoRouteLocale } from "@/lib/i18n-routing";
-import { memePathFrom } from "@/lib/labels";
-import type { MemeListItem, MemeRow } from "@/lib/queries";
-import { originCountryCode, type MemeCountryLocale } from "@/lib/meme-country";
-import { verifiedRetiredCardImage } from "@/lib/retired-card-image";
+import type { Locale } from "@/lib/i18n";
+import { memePathFrom, type MemeCategory, type SafetyLevel } from "@/lib/labels";
 import {
-  SOURCE_PLATFORM_META,
-  type SocialPlatform,
-} from "@/lib/source-platform";
+  memeCardArtAlt,
+  memeCardArtFromMeme,
+  type MemeCardArtSource,
+} from "@/lib/meme-card-art";
+import type { SocialPlatform } from "@/lib/source-platform";
 
 /**
- * 기본 탐색 카드.
+ * Shared poster card (Direction B).
  *
- * 카드의 주인공은 이미지·이름·한 줄 설명이다. 플랫폼과 미디어 타입을 모두
- * 겹쳐 보이던 이전 UI 대신, 플랫폼 필터 문맥에서만 출처 하나를 표시한다.
+ * Art fills the 4:3 frame. Charcoal (#141414) fades to 85% at the bottom-left,
+ * and the title, one-line summary, usage signal, and year sit in a 24px inset.
+ * Missing 4:3 art uses the charcoal speech-bubble fallback. YouTube stills are
+ * never a card image. A later art file only changes `card_art_url` or an owned
+ * `/api/media/meme-card-art/` thumbnail — the chrome stays the same.
+ *
+ * `imageAspect`, `rank`, and `sourcePlatform` stay on the props so existing
+ * callers (including the retired-product page) keep typechecking. The poster
+ * is always 4:3 and only shows the usage signal and year.
  */
-type MemeCardImageAspect = "4/5" | "4/3";
+export type MemeCardTitleSize = "grid" | "detail";
 
-function imageAspectClass(aspect: MemeCardImageAspect): string {
-  switch (aspect) {
-    case "4/5":
-      return "aspect-[4/5]";
-    case "4/3":
-      return "aspect-[4/3]";
-    default: {
-      const unreachable: never = aspect;
-      return unreachable;
-    }
-  }
-}
+export type MemeCardModel = {
+  short_id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  category: MemeCategory;
+  safety_level: SafetyLevel;
+  origin_year?: number | null;
+  card_art_url?: string | null;
+  meme_contents?: ReadonlyArray<{
+    thumbnail_url?: string | null;
+    is_representative?: boolean | null;
+  }> | null;
+};
+
+export type MemeCardProps = {
+  meme: MemeCardModel;
+  href?: string;
+  priority?: boolean;
+  rank?: number;
+  sourcePlatform?: SocialPlatform;
+  locale?: Locale;
+  titleSize?: MemeCardTitleSize;
+  /** Accepted for callers that still pass it. The poster is always 4:3. */
+  imageAspect?: "4/3" | "4/5";
+};
+
+const CARD_LINK =
+  "meme-card-link block h-full min-w-0 rounded-[16px] text-inherit no-underline outline-none transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(20,20,20,0.28)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff5c38] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0";
 
 export function MemeCard({
   meme,
   href,
   priority = false,
-  rank,
-  sourcePlatform,
   locale = "ko",
-  imageAspect = "4/5",
-  staticMarkup = false,
-  thumbnailAlt = "",
-}: {
-  meme: MemeRow | MemeListItem;
-  href?: string;
-  priority?: boolean;
-  rank?: number;
-  sourcePlatform?: SocialPlatform;
-  locale?: MemeCountryLocale;
-  /** Default explore cards are 4:5. The retired-product tombstone uses 4:3. */
-  imageAspect?: MemeCardImageAspect;
-  /**
-   * Render an anchor and the server thumbnail. The 410 document is
-   * `renderToStaticMarkup` inside proxy, which cannot invoke client components.
-   */
-  staticMarkup?: boolean;
-  /** 410 cards only. Other cards keep an empty alt. */
-  thumbnailAlt?: string;
-}) {
-  const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
-  const thumb =
-    contents.find((content) => content.is_representative && content.thumbnail_url)
-      ?.thumbnail_url ??
-    contents.find((content) => content.thumbnail_url)?.thumbnail_url ??
-    null;
-  const countryCode = originCountryCode(
-    (meme as MemeListItem).meme_market_profiles,
-  );
-  const cardHref = href ?? memePathFrom(meme.short_id, meme.slug);
-  const verifiedImage = staticMarkup ? verifiedRetiredCardImage(memeThumbnailSrc(thumb)) : null;
-  const cardClass =
-    "group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/60 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4";
-  const thumbnail = staticMarkup ? (
-    verifiedImage ? (
-      <MemeThumbnailView
-        src={verifiedImage}
-        title={meme.title}
-        fallbackCaption={meme.summary}
-        category={meme.category}
-        originYear={meme.origin_year}
-        priority={priority}
-        alt={thumbnailAlt}
-      />
-    ) : (
-      <RetiredCardFallback />
-    )
-  ) : (
-    <MemeThumbnail
-      src={thumb}
-      title={meme.title}
-      fallbackCaption={meme.summary}
-      category={meme.category}
-      originYear={meme.origin_year}
-      priority={priority}
-    />
-  );
-  const categoryLabel = getSeoCopy(locale as SeoRouteLocale).categories[meme.category];
-
-  const body = (
-    <>
-      <div className={`relative shrink-0 overflow-hidden bg-surface-2 ${imageAspectClass(imageAspect)}`}>
-        {thumbnail}
-
-        <div
-          data-country-flag-position="top-right"
-          className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5"
-        >
-          <div className="min-w-0">
-            <CategoryTag
-              category={meme.category}
-              className="shadow-sm"
-              label={staticMarkup ? categoryLabel : undefined}
-            />
-          </div>
-          <div className="flex min-w-0 flex-col items-end gap-1.5">
-            <CountryFlagBadge code={countryCode} locale={locale} />
-            {sourcePlatform && <SourcePlatformBadge platform={sourcePlatform} />}
-          </div>
-        </div>
-
-        {rank != null && (
-          <span
-            aria-hidden
-            className={`stat-mono pointer-events-none absolute bottom-2 left-2.5 text-[2.35rem] font-black italic leading-none tracking-tighter ${
-              rank <= 3 ? "text-accent" : "text-white"
-            }`}
-            style={{ filter: "drop-shadow(0 1px 3px rgb(0 0 0 / 0.62))" }}
-          >
-            {rank}
-          </span>
-        )}
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3.5">
-        {rank != null && <span className="sr-only">{rank}위</span>}
-        {/* line-clamp로 잘린 긴 제목의 전체 텍스트 접근 경로(title 툴팁) — LOOP.md §6 */}
-        <p
-          title={meme.title}
-          className="line-clamp-2 min-h-[2.75em] break-keep text-lg font-extrabold leading-snug"
-        >
-          {meme.title}
-        </p>
-        <p className="line-clamp-2 min-h-[3.25em] break-keep text-sm leading-relaxed text-muted">
-          {meme.summary}
-        </p>
-        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border pt-2.5">
-          <SafetyBadge level={meme.safety_level} locale={staticMarkup ? locale : "ko"} />
-        </div>
-      </div>
-    </>
-  );
-
-  if (staticMarkup) {
-    return (
-      <a href={cardHref} className={cardClass}>
-        {body}
-      </a>
-    );
-  }
-
+  titleSize = "grid",
+}: MemeCardProps) {
+  const art = memeCardArtFromMeme(meme);
   return (
-    <Link href={cardHref} className={cardClass}>
-      {body}
+    <Link
+      href={href ?? memePathFrom(meme.short_id, meme.slug)}
+      className={CARD_LINK}
+      data-meme-card=""
+      data-meme-card-title-size={titleSize}
+    >
+      <MemeCardFace
+        title={meme.title}
+        summary={meme.summary}
+        safetyLevel={meme.safety_level}
+        year={meme.origin_year}
+        locale={locale}
+        art={art}
+        priority={priority}
+        titleSize={titleSize}
+      />
     </Link>
   );
 }
 
-function SourcePlatformBadge({ platform }: { platform: SocialPlatform }) {
-  const tone: Record<SocialPlatform, string> = {
-    youtube: "border-red-200 bg-red-50/95 text-red-700",
-    youtube_shorts: "border-rose-200 bg-rose-50/95 text-rose-700",
-    tiktok: "border-cyan-200 bg-cyan-50/95 text-cyan-800",
-    instagram: "border-fuchsia-200 bg-fuchsia-50/95 text-fuchsia-800",
-  };
+export function MemeCardFace({
+  title,
+  summary,
+  safetyLevel,
+  year,
+  locale = "ko",
+  art,
+  priority = false,
+  titleSize = "grid",
+}: {
+  title: string;
+  summary: string;
+  safetyLevel?: SafetyLevel | null;
+  year?: number | null;
+  locale?: Locale;
+  art: MemeCardArtSource | null;
+  priority?: boolean;
+  titleSize?: MemeCardTitleSize;
+}) {
+  const titleClass =
+    titleSize === "detail"
+      ? "text-[28px] leading-[1.15]"
+      : "text-[20px] leading-[1.25]";
+  const sizes =
+    titleSize === "detail"
+      ? "(min-width: 1024px) 360px, 100vw"
+      : "(min-width: 1280px) 280px, (min-width: 768px) 33vw, 50vw";
 
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold shadow-sm backdrop-blur-sm ${tone[platform]}`}
-    >
-      <span aria-hidden className="size-1.5 rounded-full bg-current" />
-      {SOURCE_PLATFORM_META[platform].label}
-    </span>
+    <div className="relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]">
+      <MemeCardMedia
+        art={art}
+        alt={art ? memeCardArtAlt(title, locale) : ""}
+        priority={priority}
+        sizes={sizes}
+      />
+      <div className="absolute inset-0 z-10 flex flex-col justify-end gap-2 p-6">
+        <p title={title} className={`line-clamp-2 font-extrabold tracking-tight ${titleClass}`}>
+          {title}
+        </p>
+        <p title={summary} className="line-clamp-1 text-[14px] leading-5 text-[#f7f4ee]">
+          {summary}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {safetyLevel ? <SafetyBadge level={safetyLevel} locale={locale} /> : null}
+          {year != null ? (
+            <span className="inline-flex items-center rounded-full bg-[#141414] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-white ring-1 ring-white/70">
+              {year}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MemeCardMedia({
+  art,
+  alt,
+  priority,
+  sizes,
+}: {
+  art: MemeCardArtSource | null;
+  alt: string;
+  priority: boolean;
+  sizes: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showArt = Boolean(art && !failed);
+
+  return (
+    <>
+      {showArt && art ? (
+        // Owned storage is same-origin. Widths are explicit, so next/image is unnecessary.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={art.src}
+          srcSet={art.srcSet}
+          sizes={sizes}
+          width={art.width}
+          height={art.height}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
+          decoding="async"
+          draggable={false}
+          onError={() => setFailed(true)}
+          data-meme-card-art="image"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <MemeCardFallback />
+      )}
+      <div
+        aria-hidden
+        data-meme-card-scrim=""
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(to bottom left, rgb(20 20 20 / 0), rgb(20 20 20 / 0.85))",
+        }}
+      />
+    </>
+  );
+}
+
+function MemeCardFallback() {
+  return (
+    <div aria-hidden data-meme-card-art="fallback" className="absolute inset-0 bg-[#141414]">
+      <svg
+        viewBox="0 0 120 80"
+        className="absolute left-6 top-6 h-[38%] w-[58%]"
+        focusable="false"
+      >
+        <path
+          fill="#ff5c38"
+          d="M8 6h78a8 8 0 0 1 8 8v36a8 8 0 0 1-8 8H42L26 74V58H8a8 8 0 0 1-8-8V14a8 8 0 0 1 8-8z"
+        />
+      </svg>
+    </div>
   );
 }

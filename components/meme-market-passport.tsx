@@ -26,6 +26,7 @@ export function MemeMarketPassport({
   locale: Locale;
 }) {
   const copy = getCopy(locale);
+  if (passport.dataStatus === "unavailable" || passport.dataStatus === "empty") return null;
   return (
     <section
       aria-labelledby="meme-market-passport-title"
@@ -40,19 +41,9 @@ export function MemeMarketPassport({
       <h2 id="meme-market-passport-title" className="mt-1 text-xl font-black tracking-tight">
         {copy.title}
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-muted">
-        {passport.dataStatus === "unavailable" ? copy.unavailableBody : copy.description}
-      </p>
+      <p className="mt-2 text-sm leading-relaxed text-muted">{copy.description}</p>
 
-      {passport.dataStatus === "unavailable" ? (
-        <div className="mt-5 rounded-xl border border-safety-yellow/30 bg-safety-yellow-bg/40 p-4" role="status">
-          <h3 className="font-bold">{copy.unavailableTitle}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted">{copy.unavailableBody}</p>
-        </div>
-      ) : (
-        <>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {passport.profiles.map((profile) => (
               <article
                 key={`${profile.marketCode}-${profile.role}`}
@@ -114,8 +105,6 @@ export function MemeMarketPassport({
               </ul>
             )}
           </div>
-        </>
-      )}
     </section>
   );
 }

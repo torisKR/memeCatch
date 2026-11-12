@@ -95,6 +95,17 @@ describe("retired product responses", () => {
     expect(source).not.toContain("RETIRED_PRODUCT_REDIRECTS");
     expect(source).not.toContain('"/products"');
   });
+
+  it("does not schedule the adpick hotdeal cron", () => {
+    const config = JSON.parse(readFileSync(join(process.cwd(), "vercel.json"), "utf8")) as {
+      crons: Array<{ path: string; schedule: string }>;
+    };
+    expect(config.crons.map((cron) => cron.path)).not.toContain("/api/cron/adpick-hotdeals");
+    expect(config.crons).toContainEqual({
+      path: "/api/cron/trend-pulse",
+      schedule: "0 18 * * *",
+    });
+  });
 });
 
 describe("retired product APIs", () => {

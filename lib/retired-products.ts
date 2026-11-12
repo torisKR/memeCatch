@@ -6,12 +6,23 @@ export type RetiredProductLocale = "ko" | "en";
 
 export type RetiredProductDecision =
   | { type: "gone"; locale: RetiredProductLocale }
-  | { type: "redirect"; location: "/en" | "/" };
+  | { type: "redirect"; location: "/en" | "/" }
+  | { type: "missing" };
 
 /** Robots metadata for the retired product document. Next emits this as a noindex meta tag. */
 export const RETIRED_PRODUCTS_ROBOTS = { index: false, follow: true } as const;
 
 export const RETIRED_PRODUCTS_PATH = "/retired-products";
+
+/** Set on the loopback render so proxy does not fetch the tombstone again. */
+export const RETIRED_PRODUCT_SHELL_HEADER = "x-memecatch-retired-shell";
+
+/** The internal render of the tombstone page. Other paths keep the public 410. */
+export function isRetiredProductShellRequest(pathname: string, headers: Headers): boolean {
+  if (headers.get(RETIRED_PRODUCT_SHELL_HEADER) !== "1") return false;
+  const path = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  return path === RETIRED_PRODUCTS_PATH || path === `/en${RETIRED_PRODUCTS_PATH}`;
+}
 
 function normalizePath(pathname: string): string {
   const path = pathname.split("?")[0] ?? pathname;
@@ -39,6 +50,11 @@ export function retiredProductDecision(pathname: string): RetiredProductDecision
   const localeMatch = LOCALE_PREFIX.exec(path);
   const locale = localeMatch?.[1] ?? "ko";
   const rest = localeMatch ? path.slice(localeMatch[0].length) || "/" : path;
+  if (rest === RETIRED_PRODUCTS_PATH) {
+    if (locale === "en") return { type: "gone", locale: "en" };
+    if (!localeMatch) return { type: "gone", locale: "ko" };
+    return { type: "missing" };
+  }
   const product = isProductPath(rest);
   const go = isGoProductPath(rest);
   if (!product && !go) return null;

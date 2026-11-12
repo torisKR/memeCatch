@@ -1,13 +1,12 @@
 import { request as httpRequest } from "node:http";
-import { request as httpsRequest } from "node:https";
 import type { IncomingMessage } from "node:http";
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  RETIRED_PRODUCT_SHELL_HEADER,
   retiredProductRewritePath,
   type RetiredProductLocale,
 } from "@/lib/retired-products";
 
-const SHELL_HEADER = "x-memecatch-retired-shell";
 const RENDER_TIMEOUT_MS = 4_000;
 
 const COPY = {
@@ -35,6 +34,21 @@ const COPY = {
     exploreHref: string;
   }
 >;
+
+export type RetiredShellResult = { status: number; html: string };
+
+/**
+ * Listen port of this process. Behind a TLS proxy the public origin is
+ * `https://<bind-host>:<port>`, and a request there fails the handshake.
+ * The tombstone page is rendered once, over loopback HTTP.
+ */
+export function retiredProductLoopbackUrl(
+  request: NextRequest,
+  locale: RetiredProductLocale,
+): string {
+  const port = request.nextUrl.port || process.env.PORT || "3000";
+  return `http://127.0.0.1:${port}${retiredProductRewritePath(locale)}`;
+}
 
 function fallbackDocument(locale: RetiredProductLocale): string {
   const copy = COPY[locale];
@@ -79,15 +93,14 @@ function readResponse(response: IncomingMessage): Promise<string> {
   });
 }
 
-function requestDocument(url: URL): Promise<{ status: number; html: string }> {
-  const send = url.protocol === "https:" ? httpsRequest : httpRequest;
+function requestDocument(url: URL): Promise<RetiredShellResult> {
   return new Promise((resolve, reject) => {
-    const req = send(
+    const req = httpRequest(
       url,
       {
         headers: {
           accept: "text/html",
-          [SHELL_HEADER]: "1",
+          [RETIRED_PRODUCT_SHELL_HEADER]: "1",
         },
         timeout: RENDER_TIMEOUT_MS,
       },
@@ -109,13 +122,12 @@ function requestDocument(url: URL): Promise<{ status: number; html: string }> {
 async function renderedShell(
   request: NextRequest,
   locale: RetiredProductLocale,
+  load: (url: URL) => Promise<RetiredShellResult>,
 ): Promise<string | null> {
-  if (request.headers.get(SHELL_HEADER) === "1") return null;
-  const url = new URL(retiredProductRewritePath(locale), request.nextUrl.origin);
+  if (request.headers.get(RETIRED_PRODUCT_SHELL_HEADER) === "1") return null;
+  const url = new URL(retiredProductLoopbackUrl(request, locale));
   try {
-    // Node's HTTP client, not the patched fetch: Next's fetch returns the
-    // empty streaming shell instead of the finished document.
-    const rendered = await requestDocument(url);
+    const rendered = await load(url);
     if (rendered.status !== 200 || !rendered.html.includes("<h1")) return null;
     return stripScripts(rendered.html);
   } catch {
@@ -123,12 +135,13 @@ async function renderedShell(
   }
 }
 
-/** 410 document. The shell is the real App Router page; tests use the fallback. */
+/** 410 document. One loopback render of the App Router page; tests can inject it. */
 export async function retiredProductDocument(
   request: NextRequest,
   locale: RetiredProductLocale,
+  load: (url: URL) => Promise<RetiredShellResult> = requestDocument,
 ): Promise<NextResponse> {
-  const html = (await renderedShell(request, locale)) ?? fallbackDocument(locale);
+  const html = (await renderedShell(request, locale, load)) ?? fallbackDocument(locale);
   return new NextResponse(html, {
     status: 410,
     headers: {

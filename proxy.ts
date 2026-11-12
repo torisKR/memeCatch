@@ -32,7 +32,10 @@ import { shortIdFromParam } from "@/lib/labels";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
 import { retiredProductDocument } from "@/lib/retired-product-document";
-import { retiredProductDecision } from "@/lib/retired-products";
+import {
+  isRetiredProductShellRequest,
+  retiredProductDecision,
+} from "@/lib/retired-products";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
 const MEME_LOOKUP_TIMEOUT_MS = 1_500;
@@ -211,7 +214,13 @@ export async function proxy(request: NextRequest) {
     }
     return response;
   };
-  const retired = retiredProductDecision(request.nextUrl.pathname);
+  // The loopback render of the tombstone page. Rendering it again would loop.
+  const retired = isRetiredProductShellRequest(
+    request.nextUrl.pathname,
+    request.headers,
+  )
+    ? null
+    : retiredProductDecision(request.nextUrl.pathname);
   if (retired) {
     switch (retired.type) {
       case "redirect": {
@@ -221,10 +230,12 @@ export async function proxy(request: NextRequest) {
         const url = new URL(retired.location, request.nextUrl.origin);
         return applyLocale(NextResponse.redirect(url, 308));
       }
-      case "gone":
-        // A rewrite keeps the rendered page but drops the status back to 200.
-        // Returning the document body is what makes the HTTP status stay 410.
+      case "gone": {
         return applyLocale(await retiredProductDocument(request, retired.locale));
+      }
+      case "missing": {
+        return applyLocale(new NextResponse(null, { status: 404 }));
+      }
       default: {
         const unreachable: never = retired;
         return unreachable;

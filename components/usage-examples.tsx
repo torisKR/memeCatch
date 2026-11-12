@@ -4,7 +4,13 @@ import { CopyTextButton } from "@/components/copy-text-button";
 
 export type { UsageExample } from "@/lib/usage-examples";
 
-export function UsageExamples({ examples }: { examples?: unknown }) {
+export function UsageExamples({
+  examples,
+  heading = true,
+}: {
+  examples?: unknown;
+  heading?: boolean;
+}) {
   const rows = parseUsageExamples(examples);
   if (rows.length === 0) return null;
 
@@ -13,21 +19,23 @@ export function UsageExamples({ examples }: { examples?: unknown }) {
       aria-labelledby="usage-examples-title"
       className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4 shadow-xs"
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <MessagesSquare className="size-4" />
-            </span>
-            <h2 id="usage-examples-title" className="text-lg font-bold text-foreground sm:text-xl">
-              실전 대화 예시 · 이렇게 써보세요
-            </h2>
+      {heading ? (
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <MessagesSquare className="size-4" />
+              </span>
+              <h2 id="usage-examples-title" className="text-lg font-bold text-foreground sm:text-xl [word-break:keep-all]">
+                이렇게 써요
+              </h2>
+            </div>
+            <p className="mt-1 text-xs text-muted sm:text-sm">
+              메신저와 일상 대화에서 어색하지 않게 사용하는 모범 용례입니다.
+            </p>
           </div>
-          <p className="mt-1 text-xs text-muted sm:text-sm">
-            메신저와 일상 대화에서 어색하지 않게 사용하는 모범 용례입니다.
-          </p>
         </div>
-      </div>
+      ) : null}
 
       <div className="space-y-4">
         {rows.map((ex, exIdx) => {

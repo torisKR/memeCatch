@@ -118,6 +118,12 @@ body {
 
 html:lang(ko) body {
   word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+html:lang(ko) :is(#meme-summary, [data-korean-lead], [data-korean-body]) {
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 /* Korean copy stays on word boundaries. Body uses overflow-wrap: anywhere,

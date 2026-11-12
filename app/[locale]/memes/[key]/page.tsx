@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { memePathFrom, shortIdFromParam, type SafetyLevel } from "@/lib/labels";
+import { shortIdFromParam, type SafetyLevel } from "@/lib/labels";
 import {
   SEO_LOCALE_CONFIG,
   buildLocalizedMetadata,
@@ -19,6 +19,7 @@ import { ExportButton } from "@/components/export-button";
 import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { RelatedMemes } from "@/components/related-memes";
+import { selectLocalizedRelatedCards } from "@/lib/localized-related";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
 import {
@@ -344,23 +345,9 @@ export default async function LocalizedMemePage({ params }: Props) {
   const localizedRelated = await getLocalizedSearchMemesResult(
     related.map((item) => item.short_id),
     locale,
+    { includeEmptySummary: true },
   );
-  const relatedCards = related.slice(0, 6).map((item) => {
-    const overlay = localizedRelated.items.get(item.short_id);
-    return {
-      meme: overlay
-        ? {
-            ...item,
-            title: overlay.title,
-            summary: overlay.summary,
-            slug: overlay.slug,
-          }
-        : item,
-      href: overlay
-        ? localizedMemePath(locale, overlay.short_id, overlay.slug)
-        : memePathFrom(item.short_id, item.slug),
-    };
-  });
+  const relatedCards = selectLocalizedRelatedCards(related, localizedRelated.items, locale);
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(locale);

@@ -56,7 +56,7 @@
   overflow-wrap: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
 }
 
 .title[data-title-size="detail"] {
@@ -166,6 +166,22 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+}
+
+/* 410 cards stay 4:3. The summary is already hidden at this width. */
+@container (max-width: 199px) {
+  .shell[data-meme-card-aspect="fixed"] .frame.frame {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+  }
+
+  .shell[data-meme-card-aspect="fixed"] .title {
+    min-height: 0;
+  }
+
+  .shell[data-meme-card-aspect="fixed"] .summary {
+    display: none;
   }
 }
 

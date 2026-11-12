@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 
-export function redirectRetiredProduct(request: Request): NextResponse {
-  return NextResponse.redirect(new URL("/", request.url), 308);
+/**
+ * 308 to the home page.
+ * Location is a relative path. Building it with `new URL("/", request.url)`
+ * copies the bind host through the proxy (`https://0.0.0.0:3000/...`).
+ */
+export function redirectRetiredProduct(): NextResponse {
+  return new NextResponse(null, {
+    status: 308,
+    headers: { Location: "/" },
+  });
 }

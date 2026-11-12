@@ -26,11 +26,10 @@ describe("retired product redirects", () => {
     }
   });
 
-  it("answers a direct request with 308 to the home page", () => {
-    const response = redirectRetiredProduct(
-      new Request("https://catchmeme.com/go/products/abc?ref=ad"),
-    );
+  it("answers with a relative 308 so the bind host cannot leak", () => {
+    const response = redirectRetiredProduct();
     expect(response.status).toBe(308);
-    expect(response.headers.get("location")).toBe("https://catchmeme.com/");
+    expect(response.headers.get("location")).toBe("/");
+    expect(response.headers.get("location")).not.toContain("0.0.0.0");
   });
 });

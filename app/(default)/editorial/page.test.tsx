@@ -19,6 +19,8 @@ describe("smoke", () => {
     expect(html).toContain("게임 고유명사");
     expect(html).toContain("toris@toris.kr");
     expect(html).toContain("/support");
+    expect(html).toContain("광고와 편집의 분리");
+    expect(html).not.toMatch(/제휴 링크|상품 가격|애드픽|adpick|\/products/i);
     expect(html.length).toBeGreaterThan(8000);
   });
 
@@ -28,5 +30,6 @@ describe("smoke", () => {
     expect(html).toContain("toris@toris.kr");
     expect(html).toContain("/support");
     expect(html).toContain("toris-dev");
+    expect(html).not.toMatch(/제휴 링크|\/products|adpick/i);
   });
 });

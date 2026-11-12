@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
-import { RETIRED_PRODUCT_REDIRECTS } from "./lib/retired-product-paths";
+import {
+  DEFAULT_TRAILING_SLASH_REDIRECT,
+  EN_PRODUCT_GONE_REDIRECTS,
+} from "./lib/retired-product-redirects";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -160,6 +163,12 @@ const nextConfig: NextConfig = {
   },
   // x-powered-by 헤더 제거 — 프레임워크 버전 노출 방지
   poweredByHeader: false,
+  // The built-in `/:path+/` → `/:path+` redirect runs before proxy and makes
+  // `/en/products/` a second hop. Specific `/en` redirects are listed first.
+  skipTrailingSlashRedirect: true,
+  async redirects() {
+    return [...EN_PRODUCT_GONE_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
+  },
   // 기본 보안 헤더 — CSP는 임베드·인라인 스크립트 회귀 위험이 있어 Report-Only로만 관찰(enforce 전환 금지)
   async headers() {
     return [
@@ -254,9 +263,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
-  },
-  async redirects() {
-    return [...RETIRED_PRODUCT_REDIRECTS];
   },
 };
 

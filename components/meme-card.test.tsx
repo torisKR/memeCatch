@@ -30,8 +30,65 @@ describe("MemeCard", () => {
     const html = renderToStaticMarkup(<MemeCard meme={meme} />);
 
     expect(html).toContain("테스트 밈");
+    expect(html).toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
     expect(html).not.toContain("YouTube");
     expect(html).not.toContain("영상");
+  });
+
+  it("keeps the previous empty alt on a normal card", () => {
+    const html = renderToStaticMarkup(<MemeCard meme={meme} />);
+
+    expect(html).toContain('alt=""');
+    expect(html).not.toContain("상징 일러스트");
+    expect(html).not.toContain("symbol illustration");
+  });
+
+  it("can frame the image at 4:3 without moving the title off the bottom", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard meme={meme} imageAspect="4/3" />,
+    );
+
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
+    expect(html.indexOf("aspect-[4/3]")).toBeLessThan(html.indexOf("테스트 밈"));
+  });
+
+  it("renders the shared card as server markup for the 410 document", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard
+        meme={{
+          ...meme,
+          meme_contents: [{ thumbnail_url: "/ai-memes/ai-slop.jpg", is_representative: true }],
+        }}
+        imageAspect="4/3"
+        staticMarkup
+        thumbnailAlt="테스트 밈 상징 일러스트"
+      />,
+    );
+
+    expect(html).toContain('href="/memes/m1-test-meme"');
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
+    expect(html).toContain('alt="테스트 밈 상징 일러스트"');
+    expect(html).toContain('data-thumbnail-state="image"');
+    expect(html).toContain('data-country-flag-position="top-right"');
+    expect(html.indexOf("aspect-[4/3]")).toBeLessThan(html.indexOf("테스트 밈"));
+  });
+
+  it("uses the charcoal speech bubble instead of an unverified or YouTube image", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard meme={meme} imageAspect="4/3" staticMarkup thumbnailAlt="테스트 밈 상징 일러스트" />,
+    );
+
+    expect(html).toContain('data-meme-card-art="fallback"');
+    expect(html).toContain("bg-[#141414]");
+    expect(html).toContain('fill="#ff5c38"');
+    expect(html).not.toContain("i.ytimg.com");
+    expect(html).not.toContain("상징 일러스트");
+    expect(html).not.toContain("<img");
   });
 
   it("shows one source only when a platform filter provides that context", () => {

@@ -217,7 +217,11 @@ describe("사이트맵 날짜 진실성", () => {
 
     const pathnames = entries.map((entry) => new URL(entry.url).pathname);
     expect(pathnames).not.toContain("/products");
-    expect(pathnames.some((pathname) => pathname.startsWith("/products/") || pathname.includes("/go/products"))).toBe(false);
+    expect(pathnames).not.toContain("/en/products");
+    expect(pathnames).not.toContain("/ja/products");
+    expect(pathnames).not.toContain("/retired-products");
+    expect(pathnames).not.toContain("/en/retired-products");
+    expect(pathnames.some((pathname) => pathname.startsWith("/products/") || pathname.includes("/go/products") || pathname.includes("/retired-products"))).toBe(false);
 
     for (const pathname of staticPaths) {
       const entry = entries.find((candidate) =>

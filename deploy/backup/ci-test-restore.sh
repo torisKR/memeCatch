@@ -12,13 +12,20 @@ trap 'docker rm -f "$server" >/dev/null 2>&1 || true' EXIT
 
 docker run -d --name "$server" --network host \
   -e POSTGRES_PASSWORD=postgres postgres:16 postgres -c port="$port" >/dev/null
-for _ in $(seq 1 60); do
-  if docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null; then
+ready=0
+for _ in $(seq 1 90); do
+  if docker logs "$server" 2>&1 | grep -q "init process complete" \
+    && docker exec "$server" psql -v ON_ERROR_STOP=1 -U postgres -p "$port" -d postgres -c "select 1" >/dev/null 2>&1; then
+    ready=1
     break
   fi
   sleep 1
 done
-docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null
+if [[ "$ready" != "1" ]]; then
+  echo "restore postgres did not become ready" >&2
+  docker logs "$server" >&2 || true
+  exit 1
+fi
 docker exec -i "$server" psql -U postgres -p "$port" -v ON_ERROR_STOP=1 <<'SQL'
 CREATE TABLE public.memes (id uuid PRIMARY KEY);
 INSERT INTO public.memes VALUES ('11111111-1111-4111-8111-111111111111');

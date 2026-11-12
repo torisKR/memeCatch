@@ -23,13 +23,20 @@ EOF
 
 docker run -d --name "$server" --network host \
   -e POSTGRES_PASSWORD="$password" "$image" postgres -c port="$port" >/dev/null
-for _ in $(seq 1 60); do
-  if docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null; then
+ready=0
+for _ in $(seq 1 90); do
+  if docker logs "$server" 2>&1 | grep -q "init process complete" \
+    && docker exec "$server" psql -v ON_ERROR_STOP=1 -U postgres -p "$port" -d postgres -c "select 1" >/dev/null 2>&1; then
+    ready=1
     break
   fi
   sleep 1
 done
-docker exec "$server" pg_isready -U postgres -p "$port" >/dev/null
+if [[ "$ready" != "1" ]]; then
+  echo "migrate postgres did not become ready" >&2
+  docker logs "$server" >&2 || true
+  exit 1
+fi
 
 filtered="$(awk -f "$root/scripts/postgres/filter-pg17-dump.awk" <<'EOF'
 SET transaction_timeout = 0;

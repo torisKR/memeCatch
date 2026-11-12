@@ -1,7 +1,7 @@
 import { MemeCard } from "@/components/meme-card";
 import { memeThumbnailAlt } from "@/components/meme-thumbnail-view";
 import { buttonVariants } from "@/components/ui/button";
-import { localizedMemePath } from "@/lib/i18n-routing";
+import { memePathFrom } from "@/lib/labels";
 import type { MemeListItem } from "@/lib/queries";
 import type { RetiredProductLocale, RetiredRouteLocale } from "@/lib/retired-products";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,7 @@ export function RetiredProductsPage({
               <li key={meme.id} className="min-w-0">
                 <MemeCard
                   meme={meme}
-                  href={localizedMemePath(routeLocale, meme.short_id, meme.slug)}
+                  href={memePathFrom(meme.short_id, meme.slug)}
                   locale={routeLocale}
                   imageAspect="4/3"
                   staticMarkup

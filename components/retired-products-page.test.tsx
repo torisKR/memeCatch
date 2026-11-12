@@ -75,13 +75,16 @@ describe("retired products page", () => {
     expect(html).toContain("xl:grid-cols-4");
   });
 
-  it("prefixes card links for the page locale", () => {
+  it("keeps card links unprefixed while the alt follows the page locale", () => {
     const html = renderToStaticMarkup(
       <RetiredProductsPage locale="ko" routeLocale="zh-tw" memes={[meme(1)]} />,
     );
-    expect(html).toContain('href="/zh-tw/memes/m1-meme-1"');
+    expect(html).toContain('href="/memes/m1-meme-1"');
     expect(html).toContain('alt="인기 밈 1象徵插畫"');
-    expect(html).not.toContain('href="/memes/');
+    expect(html).not.toContain('href="/zh-tw/memes/');
+    expect(html).not.toContain('href="/en/memes/');
+    expect(html).not.toContain('href="/ja/memes/');
+    expect(html).not.toContain('href="/zh/memes/');
   });
 
   it("uses the English copy on the English gone page", async () => {

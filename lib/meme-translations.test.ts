@@ -236,13 +236,16 @@ describe("translation freshness and SEO eligibility", () => {
     ).toBe(false);
   });
 
-  it("keeps the 411 same-instant Date/Date detail pages indexable", () => {
+  it("keeps synthetic same-instant Date/Date pages indexable", () => {
+    // Synthetic copies only. This loop does not count production rows.
+    // Reconciled prod indexable localized detail URLs are 595
+    // (en 184, ja 144, zh 123, zh-tw 144). QA's live CJK H1 count of 411
+    // is a different measurement (ja+zh+zh-tw candidates with a real H1).
     // Detail reads both timestamptz columns as top-level node-pg Dates.
     // The previous Date.parse(String(date)) check dropped milliseconds, so a
-    // 1ms skew inside the same second looked current. Prod has 0 stale
-    // reviewed rows: every indexable detail page is an exact millisecond pair.
-    // This count is that population. A 1ms skew is asserted separately and is
-    // not part of it.
+    // 1ms skew inside the same second looked current. Exact getTime() pairs
+    // stay indexable under both comparisons. A 1ms skew is asserted separately.
+    const syntheticPages = 4;
     const legacyDetailCurrent = (left: Date, right: Date) => {
       const leftMs = Date.parse(String(left));
       const rightMs = Date.parse(String(right));
@@ -250,7 +253,7 @@ describe("translation freshness and SEO eligibility", () => {
     };
     let before = 0;
     let after = 0;
-    for (let index = 0; index < 411; index += 1) {
+    for (let index = 0; index < syntheticPages; index += 1) {
       const instant = new Date(Date.UTC(2026, 6, 15, 15, 30, 0, 191) + index * 1000);
       const sourceUpdatedAt = new Date(instant.getTime());
       const meme = baseMeme({
@@ -274,8 +277,8 @@ describe("translation freshness and SEO eligibility", () => {
       if (isIndexableLocalizedMeme(legacyLocalized)) before += 1;
       if (isIndexableLocalizedMeme(localized)) after += 1;
     }
-    expect(before).toBe(411);
-    expect(after).toBe(411);
+    expect(before).toBe(syntheticPages);
+    expect(after).toBe(syntheticPages);
   });
 
   it("marks a source-updated translation as stale even if its status was not changed", () => {

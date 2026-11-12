@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import sitemap, { clearSitemapCache, getIndexableKoreanMemeCount } from "@/app/sitemap";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { isIndexableMeme } from "@/lib/content-depth";
+import { contentDepth, isIndexableMeme } from "@/lib/content-depth";
 import {
   getHreflang,
   isSeoContentLocale,
@@ -443,6 +443,100 @@ describe("사이트맵 다국어 색인 계약", () => {
     expect(paths.some((pathname) => pathname.startsWith("/ja/memes/m2"))).toBe(true);
     expect(paths.some((pathname) => pathname.startsWith("/zh/memes/m3"))).toBe(true);
     expect(paths.some((pathname) => pathname.startsWith("/zh-tw/memes/m3"))).toBe(false);
+  });
+
+  it("점수 4인 원문과 1ms 지난 번역은 색인 판정과 사이트맵에서 빠진다", async () => {
+    const updatedAt = "2026-07-15T15:30:00.191Z";
+    const thinProse = {
+      description: "d".repeat(250),
+      origin: "o".repeat(60),
+      usage_note: null,
+      caution: null,
+      aliases: [] as string[],
+      usage_examples: [] as { situation: string; text: string }[],
+      meme_sources: [] as { source_url?: string }[],
+      meme_contents: [] as { availability?: string | null; moderation_status?: string | null }[],
+      meme_tags_map: [] as { tag_id?: string | null }[],
+    };
+    const thinTranslation = {
+      ...reviewedTranslation("en", "2026-03-01T00:00:00.000Z"),
+      source_updated_at: updatedAt,
+    };
+    const thinRow = {
+      short_id: "thin1",
+      slug: "thin-source",
+      updated_at: updatedAt,
+      ...thinProse,
+      meme_translations: [thinTranslation],
+    };
+    const staleTranslation = {
+      ...reviewedTranslation("ja", "2026-03-01T00:00:00.000Z"),
+      source_updated_at: "2026-07-15T15:30:00.190Z",
+    };
+    const staleRow = {
+      ...indexableMeme(9, [staleTranslation]),
+      updated_at: updatedAt,
+    };
+
+    expect(contentDepth(thinRow).score).toBe(4);
+    expect(contentDepth(thinRow).proseChars).toBeGreaterThanOrEqual(150);
+    expect(isIndexableMeme(thinRow)).toBe(false);
+
+    function localized(shortId: string, slug: string, translation: Translation, prose: typeof thinProse) {
+      const meme = {
+        id: shortId === "thin1"
+          ? "00000000-0000-4000-8000-000000000011"
+          : "00000000-0000-4000-8000-000000000019",
+        short_id: shortId,
+        slug,
+        title: "원본",
+        summary: "요약",
+        updated_at: updatedAt,
+        ...prose,
+      };
+      const locale = translation.locale;
+      if (!isSeoContentLocale(locale)) {
+        throw new Error(`unexpected locale ${locale}`);
+      }
+      const row: MemeTranslationRow = {
+        meme_id: meme.id,
+        locale,
+        status: "reviewed",
+        localized_slug: translation.localized_slug,
+        title: translation.title,
+        summary: translation.summary,
+        description: translation.description,
+        origin: translation.origin,
+        usage_note: null,
+        caution: null,
+        aliases: [],
+        usage_examples: [],
+        source_updated_at: String(translation.source_updated_at),
+        provider: "test",
+        model: "test",
+        prompt_version: 1,
+        translated_at: updatedAt,
+        reviewed_at: updatedAt,
+        reviewed_by: null,
+        created_at: updatedAt,
+        updated_at: updatedAt,
+      };
+      return overlayMemeTranslation(meme, row, locale);
+    }
+
+    const substantial = {
+      ...thinProse,
+      description: "d".repeat(400),
+    };
+    expect(isIndexableLocalizedMeme(localized("thin1", "thin-source", thinTranslation, thinProse))).toBe(false);
+    expect(isIndexableLocalizedMeme(localized("m9", "meme-9", staleTranslation, substantial))).toBe(false);
+
+    useRows([thinRow, staleRow] as ReturnType<typeof indexableMeme>[]);
+    const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
+
+    expect(paths.some((pathname) => pathname.includes("thin1"))).toBe(false);
+    expect(paths.some((pathname) => pathname.startsWith("/ja/memes/m9"))).toBe(false);
+    expect(paths.some((pathname) => pathname.startsWith("/memes/m9"))).toBe(true);
   });
 
   it("사이트맵 locale URL 집합이 색인 가능한 상세 페이지와 같고 hreflang도 같다", async () => {

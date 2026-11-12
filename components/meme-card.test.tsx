@@ -124,5 +124,24 @@ describe("MemeCard", () => {
     expect(narrow).toContain("-webkit-line-clamp: 2");
     expect(narrow).toContain("min-height: 2.5em");
     expect(narrow).toContain("display: none");
+    expect(narrow).not.toContain("flex-wrap: wrap");
+    expect(cardCss).toContain("flex-wrap: nowrap");
+    expect(cardCss).toContain("white-space: nowrap");
+    expect(cardCss).toContain("text-overflow: ellipsis");
+  });
+
+  it("leaves the country pill and category badge off the poster in English and Korean", () => {
+    const english = renderToStaticMarkup(<MemeCard meme={meme} locale="en" />);
+    const korean = renderToStaticMarkup(<MemeCard meme={meme} />);
+
+    expect(english).toContain("Safe to use");
+    expect(english).not.toContain("Origin unconfirmed");
+    expect(english).not.toContain("Meme terms");
+    expect(english).not.toContain("Meme videos");
+    expect(english).not.toContain("data-country-flag");
+    expect(korean).toContain("써도 됨");
+    expect(korean).not.toContain("출처 국가");
+    expect(korean).not.toContain("밈 용어");
+    expect(korean).not.toContain("밈 영상");
   });
 });

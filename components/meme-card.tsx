@@ -19,7 +19,8 @@ import type { SocialPlatform } from "@/lib/source-platform";
  * Art fills the 4:3 frame. Charcoal (#141414) fades to 85% at the bottom-left.
  * The title, one-line summary, usage signal, and year sit on that scrim.
  * Grid titles stay on one line. Cards under 200px drop the summary, show a
- * 16px title on two lines, and keep the badges under the title. The fallback
+ * 16px title on two lines, and keep the usage badge and year on one line
+ * under the title. A long usage label truncates. The fallback
  * bubble is pinned 24px from the top-left and never taller than 30% of the card.
  * Missing 4:3 art uses the charcoal speech-bubble fallback. YouTube stills are
  * never a card image. A later art file only changes `card_art_url` or an owned

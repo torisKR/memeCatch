@@ -82,18 +82,23 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
+  width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .safety {
   min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
 }
 
 .safety > span {
+  display: inline-flex;
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
 }
 
 .safety > span > span:first-child {
@@ -133,14 +138,5 @@
 
   .summary {
     display: none;
-  }
-
-  .badges {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .safety {
-    max-width: 100%;
   }
 }

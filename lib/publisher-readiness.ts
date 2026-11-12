@@ -5,7 +5,7 @@ import {
   type ContentDepthInput,
 } from "@/lib/content-depth";
 import { memePathFrom } from "@/lib/labels";
-import { evidenceTimestamp, publicSourceUrl } from "@/lib/source-links";
+import { evidenceTimestamp, isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
 
 export const PUBLISHER_READINESS_PAGE_SIZE = 100;
 export const PUBLISHER_READINESS_MAX_PAGE = 10_000;
@@ -82,6 +82,7 @@ function safeSourceUrls(sources: PublisherReadinessRow["meme_sources"]): string[
   const safe: string[] = [];
 
   for (const source of sources) {
+    if (!source || !isPublicDisplaySource(source)) continue;
     const normalized = publicSourceUrl(source?.source_url);
     if (!normalized) continue;
     const documentUrl = new URL(normalized);

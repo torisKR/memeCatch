@@ -20,7 +20,7 @@ import {
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 
 const FEED_SELECT =
-  "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score, description, origin, usage_note, caution, aliases, usage_examples, updated_at, meme_contents(thumbnail_url, is_representative, availability, moderation_status), meme_sources(source_url), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)" as const;
+  "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score, description, origin, usage_note, caution, aliases, usage_examples, updated_at, meme_contents(thumbnail_url, is_representative, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)" as const;
 
 const TRANSLATION_SELECT =
   "meme_id, locale, status, localized_slug, title, summary, description, origin, usage_note, caution, aliases, usage_examples, source_updated_at, provider, model, prompt_version, translated_at, reviewed_at, reviewed_by, created_at, updated_at" as const;

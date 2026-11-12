@@ -53,7 +53,7 @@ type MemeListColumn = SplitColumns<typeof LIST_COLUMNS>;
 export type MemeListItem = Pick<MemeRow, MemeListColumn> & {
   meme_contents?: (Pick<MemeContentRow, "thumbnail_url" | "is_representative"> &
     Partial<Pick<MemeContentRow, "platform" | "url">>)[];
-  meme_sources?: Pick<MemeSourceRow, "platform" | "source_url">[];
+  meme_sources?: Array<Pick<MemeSourceRow, "platform" | "source_url"> & { hidden_from_public?: boolean | null }>;
   meme_market_profiles?: MemeOriginProfile[];
 };
 

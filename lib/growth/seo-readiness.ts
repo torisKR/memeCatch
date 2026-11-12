@@ -23,7 +23,7 @@ export type SeoAuditMeme = SeoRelatedMeme & {
   caution: string | null;
   usage_examples: unknown;
   trend_score: number;
-  meme_sources: Array<{ source_url?: string | null }>;
+  meme_sources: Array<{ source_url?: string | null; hidden_from_public?: boolean | null }>;
   meme_contents: Array<{
     availability?: string | null;
     moderation_status?: string | null;

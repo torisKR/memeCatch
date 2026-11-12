@@ -134,7 +134,7 @@ export const dynamic = "force-dynamic";
 
 const SAVED_CONTEXT_PAGE_SIZE = 200;
 const WEEKLY_SOURCE_SELECT =
-  "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score, description, origin, usage_note, caution, aliases, usage_examples, updated_at, moderation_status, meme_contents(availability, moderation_status, thumbnail_url, is_representative), meme_sources(source_url), meme_tags_map(tag_id)" as const;
+  "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score, description, origin, usage_note, caution, aliases, usage_examples, updated_at, moderation_status, meme_contents(availability, moderation_status, thumbnail_url, is_representative), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id)" as const;
 const WEEKLY_TRANSLATION_SELECT =
   "meme_id, locale, status, localized_slug, title, summary, description, origin, source_updated_at" as const;
 

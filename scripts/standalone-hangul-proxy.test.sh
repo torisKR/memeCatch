@@ -54,6 +54,21 @@ if [[ "$ready" != "1" ]]; then
   exit 1
 fi
 
+# pg_isready can succeed before the image entrypoint has created POSTGRES_DB.
+db_ready=0
+for _ in $(seq 1 90); do
+  if docker exec "$server" psql -U postgres -d memecatch -c "select 1" >/dev/null 2>&1; then
+    db_ready=1
+    break
+  fi
+  sleep 1
+done
+if [[ "$db_ready" != "1" ]]; then
+  echo "database memecatch did not become ready" >&2
+  docker logs "$server" >&2 || true
+  exit 1
+fi
+
 docker exec \
   -e MEMECATCH_DB_PASSWORD="$db_password" \
   -e MEMECATCH_BACKUP_DB_PASSWORD=hangul-ci-backup \

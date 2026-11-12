@@ -77,7 +77,7 @@ export async function GET() {
       select:
         "id, title, short_id, slug, summary, description, origin, origin_year," +
         " usage_note, caution, aliases, category, safety_level, usage_examples," +
-        " meme_sources(source_url), meme_contents(availability, moderation_status)," +
+        " meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status)," +
         " meme_tags_map(tag_id)",
       primaryOrder: "trend_score",
       limit: MAX_MEMES,

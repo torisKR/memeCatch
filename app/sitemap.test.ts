@@ -34,8 +34,8 @@ function indexableMeme(index: number, translations: Translation[]) {
     origin: "o".repeat(60),
     usage_note: null,
     caution: null,
-    usage_examples: [],
-    meme_sources: [],
+    usage_examples: [] as { situation: string; text: string }[],
+    meme_sources: [] as { source_url?: string; hidden_from_public?: boolean }[],
     meme_contents: [],
     meme_tags_map: [],
     meme_translations: translations,
@@ -433,4 +433,46 @@ describe("사이트맵 다국어 색인 계약", () => {
 
     expect(entries).toHaveLength(50_000);
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
+
+  it("excludes a meme whose only sources are hidden_from_public, and keeps a twin with visible sources", async () => {
+    const gated = (index: number, meme_sources: { source_url: string; hidden_from_public?: boolean }[]) => ({
+      short_id: `g${index}`,
+      slug: `gated-${index}`,
+      updated_at: "2026-01-02T00:00:00.000Z",
+      // Score without sources: description 250 (+2) + origin 59 (+1) + 1 example (+1) = 4, below MIN_SCORE 5.
+      // Two visible sources add +2 and make it indexable; hidden sources must not.
+      description: "d".repeat(250),
+      origin: "o".repeat(59),
+      usage_note: null,
+      caution: null,
+      usage_examples: [{ situation: "s", text: "t" }],
+      meme_sources,
+      meme_contents: [],
+      meme_tags_map: [],
+      meme_translations: [],
+    });
+
+    useRows([
+      gated(1, [
+        { source_url: "https://namu.wiki/w/hidden", hidden_from_public: true },
+        { source_url: "https://example.org/also-hidden", hidden_from_public: true },
+      ]),
+      gated(2, [
+        { source_url: "https://example.org/one" },
+        { source_url: "https://example.org/two", hidden_from_public: false },
+      ]),
+    ]);
+
+    const entries = await sitemap();
+    const urls = entries.map((entry) => entry.url);
+
+    expect(urls.some((url) => url.includes("/memes/g1-gated-1"))).toBe(false);
+    expect(urls.some((url) => url.includes("/memes/g2-gated-2"))).toBe(true);
+  });
+
 });

@@ -1838,6 +1838,7 @@ export type Database = {
           captured_at: string
           copyright_status: Database["public"]["Enums"]["copyright_status"]
           creator_name: string | null
+          hidden_from_public: boolean | null
           id: string
           meme_id: string
           platform: string
@@ -1850,6 +1851,7 @@ export type Database = {
           captured_at?: string
           copyright_status?: Database["public"]["Enums"]["copyright_status"]
           creator_name?: string | null
+          hidden_from_public?: boolean | null
           id?: string
           meme_id: string
           platform: string
@@ -1862,6 +1864,7 @@ export type Database = {
           captured_at?: string
           copyright_status?: Database["public"]["Enums"]["copyright_status"]
           creator_name?: string | null
+          hidden_from_public?: boolean | null
           id?: string
           meme_id?: string
           platform?: string
@@ -2263,6 +2266,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
@@ -2302,6 +2306,7 @@ export type Database = {
           published_at?: string | null
           revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at?: string | null
           safety_reviewed_at?: string | null
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
@@ -2341,6 +2346,7 @@ export type Database = {
           published_at?: string | null
           revival_years?: number[]
           safety_level?: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at?: string | null
           safety_reviewed_at?: string | null
           sentiment?: Database["public"]["Enums"]["meme_sentiment"]
           short_id?: string
@@ -4453,6 +4459,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
@@ -4882,6 +4889,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string
@@ -4929,6 +4937,7 @@ export type Database = {
           published_at: string | null
           revival_years: number[]
           safety_level: Database["public"]["Enums"]["safety_level"]
+          content_reviewed_at: string | null
           safety_reviewed_at: string | null
           sentiment: Database["public"]["Enums"]["meme_sentiment"]
           short_id: string

@@ -372,4 +372,27 @@ describe("자동 생성 상투구 유래", () => {
     expect(asOwnProse.score).toBe(T.MIN_SCORE);
     expect(asOwnProse.isSubstantial).toBe(true);
   });
+
+  it("hidden_from_public 행은 출처 수에 넣지 않는다", () => {
+    const depth = contentDepth({
+      meme_sources: [
+        { source_url: "https://namu.wiki/w/example", hidden_from_public: true },
+        { source_url: "https://example.org/one" },
+        { source_url: "https://example.org/two", hidden_from_public: false },
+      ],
+    });
+
+    expect(depth.signals.sourceCount).toBe(2);
+  });
+
+  it("hidden 출처만 있으면 출처 점수를 주지 않는다", () => {
+    const depth = contentDepth(
+      thinMeme({
+        meme_sources: [{ source_url: "https://namu.wiki/w/example", hidden_from_public: true }],
+      }),
+    );
+
+    expect(depth.signals.sourceCount).toBe(0);
+  });
+
 });

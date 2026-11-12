@@ -110,7 +110,7 @@ function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
   // LIST_COLUMNS: 목록 카드가 읽는 컬럼만 — 장문 컬럼 과다 전송 방지(lib/queries.ts 참조)
   const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)${topic}`;
+  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {

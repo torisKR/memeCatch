@@ -59,8 +59,8 @@ jobs:
     steps:
       - id: gate
         env:
-          OCI_SSH_HOST: ${{ vars.OCI_SSH_HOST || secrets.OCI_SSH_HOST }}
-          OCI_SSH_USER: ${{ vars.OCI_SSH_USER || secrets.OCI_SSH_USER }}
+          OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST }}
+          OCI_SSH_USER: ${{ secrets.OCI_SSH_USER }}
           OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
         run: |
           if [ -z "$OCI_SSH_HOST" ] || [ -z "$OCI_SSH_USER" ] || [ -z "$OCI_SSH_KEY" ]; then
@@ -74,8 +74,8 @@ jobs:
       - name: Deploy on the OCI VM
         if: steps.gate.outputs.skip != 'true'
         env:
-          OCI_SSH_HOST: ${{ vars.OCI_SSH_HOST || secrets.OCI_SSH_HOST }}
-          OCI_SSH_USER: ${{ vars.OCI_SSH_USER || secrets.OCI_SSH_USER }}
+          OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST }}
+          OCI_SSH_USER: ${{ secrets.OCI_SSH_USER }}
           OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
           OCI_SSH_KNOWN_HOSTS: ${{ secrets.OCI_SSH_KNOWN_HOSTS }}
           MEMECATCH_CADDY: ${{ vars.MEMECATCH_CADDY }}

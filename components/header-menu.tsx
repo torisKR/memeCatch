@@ -98,7 +98,7 @@ export function HeaderMenu() {
         <nav
           id="header-menu-panel"
           aria-label={messages.menu}
-          className="menu-pop instrument-grid absolute right-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
+          className="menu-pop instrument-grid absolute end-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
         >
           <p
             aria-hidden

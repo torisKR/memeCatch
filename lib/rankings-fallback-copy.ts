@@ -100,12 +100,11 @@ export function rankingsFallbackCopy(locale: Locale): RankingsFallbackCopy {
 }
 
 /**
- * Explore target for the fallback button. SEO prefixes keep their explore
- * route. Arabic has no `/ar/explore` page (`dynamicParams` is false), so the
- * button uses the Korean dictionary at `/explore`.
+ * Explore target for the fallback button. Only locales with a real localized
+ * explore page (`SEO_CONTENT_LOCALES`) keep that prefix. Every other locale,
+ * including Arabic, uses `/explore` because `dynamicParams` is false.
  */
 export function rankingsExploreHref(locale: Locale): string {
-  if (locale === "ko" || locale === "ar") return "/explore";
   if (isSeoContentLocale(locale)) return localizedStaticPath("/explore", locale);
-  return `/${locale}/explore`;
+  return "/explore";
 }

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RankingsUnavailable } from "@/components/rankings-unavailable";
 import { SUPPORTED_LOCALES, documentLocaleFromPathname, getDocumentDirection, getMessages } from "@/lib/i18n";
+import { SEO_CONTENT_LOCALES } from "@/lib/i18n-routing";
 import {
   rankingsExploreHref,
   rankingsFallbackCopy,
@@ -33,6 +34,20 @@ describe("rankings fallback copy", () => {
         expect(copy.explore).not.toMatch(HANGUL);
         expect(copy.title).not.toMatch(HANGUL);
         expect(html).not.toMatch(HANGUL);
+      }
+    }
+  });
+
+  it("points every fallback button at an explore route that exists", () => {
+    const localizedExplore = new Set<string>(SEO_CONTENT_LOCALES);
+    expect(SUPPORTED_LOCALES).toHaveLength(19);
+    for (const locale of SUPPORTED_LOCALES) {
+      const expected = localizedExplore.has(locale) ? `/${locale}/explore` : "/explore";
+      const html = renderToStaticMarkup(<RankingsUnavailable locale={locale} />);
+      expect(rankingsExploreHref(locale)).toBe(expected);
+      expect(html).toContain(`href="${expected}"`);
+      if (!localizedExplore.has(locale)) {
+        expect(html).not.toContain(`href="/${locale}/explore"`);
       }
     }
   });

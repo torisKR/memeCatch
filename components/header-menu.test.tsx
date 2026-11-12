@@ -41,7 +41,9 @@ describe("HeaderMenu", () => {
 
     await user.click(screen.getByRole("button", { name: "메뉴" }));
 
-    expect(screen.getByRole("navigation", { name: "메뉴" })).toBeTruthy();
+    const panel = screen.getByRole("navigation", { name: "메뉴" });
+    expect(panel.className).toContain("end-0");
+    expect(panel.className).not.toContain("right-0");
     expect(screen.queryByRole("link", { name: "커뮤니티" })).toBeNull();
     expect(screen.queryByRole("link", { name: "밈 상품" })).toBeNull();
     expect(screen.getByRole("link", { name: "연표" })).toBeTruthy();

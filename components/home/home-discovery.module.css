@@ -34,13 +34,21 @@
 }
 
 .title {
-  max-width: 12ch;
+  max-width: min(12ch, 100%);
   margin: 0.65rem 0 0;
   font-size: clamp(2.25rem, 6vw, 5.5rem);
   font-weight: 900;
   letter-spacing: -0.065em;
   line-height: 0.94;
   text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+:lang(ja) .title,
+:lang(zh) .title {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-break: strict;
 }
 
 .description {

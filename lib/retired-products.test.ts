@@ -1,13 +1,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+
+const loadRetiredProductMemes = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/retired-product-memes", () => ({
+  loadRetiredProductMemes,
+}));
 import { GET as creatorGet, POST as creatorPost } from "@/app/api/creator-products/[[...slug]]/route";
 import { GET as cronGet } from "@/app/api/cron/adpick-hotdeals/route";
 import { proxy } from "@/proxy";
-import { retiredProductDocument } from "@/lib/retired-product-document";
 import {
   DEFAULT_TRAILING_SLASH_REDIRECT,
   EN_PRODUCT_GONE_REDIRECTS,
@@ -41,13 +46,45 @@ function locationOnTheWire(header: string, origin: string): string {
   return `${target.pathname}${target.search}${target.hash}`;
 }
 
+function cardMeme(title: string, index: number): MemeListItem {
+  return {
+    id: `meme-${index}`,
+    short_id: `m${index}`,
+    slug: `meme-${index}`,
+    title,
+    summary: "한 줄 설명",
+    category: "phrase",
+    safety_level: "green",
+    lifecycle_status: "rising",
+    media_type: "image",
+    origin_year: 2026,
+    trend_score: 10 - index,
+    meme_contents: [
+      {
+        thumbnail_url: `https://cdn.example.com/${index}.jpg`,
+        is_representative: true,
+      },
+    ],
+  } as MemeListItem;
+}
+
+const FOUR_CARDS = ["새우 예수", "치맥", "꼰대", "갑툭튀"].map(cardMeme);
+
 function forwardedProducts(): NextRequest {
   return new NextRequest("http://0.0.0.0:3000/products", {
-    headers: { "x-forwarded-proto": "https", host: "0.0.0.0:3000" },
+    headers: {
+      host: "catchmeme.com",
+      "x-forwarded-proto": "https",
+    },
   });
 }
 
 describe("retired product responses", () => {
+  beforeEach(() => {
+    loadRetiredProductMemes.mockReset();
+    loadRetiredProductMemes.mockResolvedValue([]);
+  });
+
   it.each(GONE_PAGES)("returns 410 for %s", async (pathname) => {
     const response = await proxy(request(pathname));
     expect(response.status).toBe(410);
@@ -91,42 +128,32 @@ describe("retired product responses", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns the full page for X-Forwarded-Proto https without calling the bind host", async () => {
-    const response = await proxy(forwardedProducts());
+  it("returns four cards for X-Forwarded-Proto https without calling the bind host", async () => {
+    const request = forwardedProducts();
+    expect(request.headers.get("host")).toBe("catchmeme.com");
+    expect(request.headers.get("x-forwarded-proto")).toBe("https");
+    loadRetiredProductMemes.mockResolvedValue(FOUR_CARDS);
+
+    const response = await proxy(request);
     const html = await response.text();
+    const cardHrefs = [...html.matchAll(/href="(\/memes\/[^"]+)"/g)].map((match) => match[1]);
+
     expect(response.status).toBe(410);
     expect(response.headers.get("x-middleware-rewrite")).toBeNull();
     expect(response.headers.get("content-type")).toContain("text/html");
     expect(html).toContain("밈캐치");
     expect(html).toContain("밈상품 페이지는 더 이상 운영하지 않아요.");
     expect(html).toContain('href="/explore"');
+    expect(cardHrefs).toHaveLength(4);
+    expect(cardHrefs.every((href) => href.startsWith("/memes/"))).toBe(true);
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain('alt="새우 예수 상징 일러스트"');
+    expect(html).toContain('alt="갑툭튀 상징 일러스트"');
+    expect(html).toContain("<img");
+    expect(html).not.toContain("background-image");
     expect(html).not.toContain("0.0.0.0");
     expect(html.length).toBeGreaterThan(1000);
-
-    const cards = await retiredProductDocument("ko", async () =>
-      ["새우 예수", "치맥", "꼰대", "갑툭튀"].map(
-        (title, index) =>
-          ({
-            id: `meme-${index}`,
-            short_id: `m${index}`,
-            slug: `meme-${index}`,
-            title,
-            summary: "한 줄 설명",
-            category: "phrase",
-            safety_level: "green",
-            lifecycle_status: "rising",
-            media_type: "image",
-            origin_year: 2026,
-            trend_score: 10 - index,
-          }) as MemeListItem,
-      ),
-    );
-    const cardHtml = await cards.text();
-    expect(cards.status).toBe(410);
-    expect(cardHtml).toContain("새우 예수");
-    expect(cardHtml).toContain("갑툭튀");
-    expect(cardHtml).toContain("aspect-[4/3]");
-    expect(cardHtml).not.toContain("0.0.0.0");
 
     const documentSource = readFileSync(
       join(process.cwd(), "lib/retired-product-document.ts"),
@@ -136,7 +163,26 @@ describe("retired product responses", () => {
     expect(documentSource).not.toContain("node:https");
     expect(documentSource).not.toContain("127.0.0.1");
     expect(documentSource).not.toContain("nextUrl.origin");
+    expect(documentSource).not.toContain("fallbackDocument");
   });
+
+  it.each(["en", "ja", "zh", "zh-tw"] as const)(
+    "prefixes %s card links and keeps the 4:3 image",
+    async (locale) => {
+      loadRetiredProductMemes.mockResolvedValue(FOUR_CARDS);
+      const pathname = locale === "en" ? "/en/go/products" : `/${locale}/products`;
+      const response = await proxy(request(pathname));
+      const html = await response.text();
+      const cardHrefs = [...html.matchAll(/href="([^"]*\/memes\/[^"]+)"/g)].map((match) => match[1]);
+
+      expect(response.status).toBe(410);
+      expect(cardHrefs).toHaveLength(4);
+      expect(cardHrefs.every((href) => href.startsWith(`/${locale}/memes/`))).toBe(true);
+      expect(html).not.toMatch(/href="\/memes\//);
+      expect(html).toContain("aspect-[4/3]");
+      expect(html).not.toContain("aspect-[4/5]");
+    },
+  );
 
   it.each(["/en/products", "/en/products/", "/en/products/hotdeal", "/en/products/a/b"])(
     "308s %s to a relative /en",

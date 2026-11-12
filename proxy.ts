@@ -222,7 +222,11 @@ export async function proxy(request: NextRequest) {
         return applyLocale(NextResponse.redirect(url, 308));
       }
       case "gone": {
-        return applyLocale(await retiredProductDocument(retired.locale));
+        return applyLocale(
+          await retiredProductDocument(retired.locale, {
+            routeLocale: retired.routeLocale,
+          }),
+        );
       }
       case "missing": {
         return applyLocale(new NextResponse(null, { status: 404 }));

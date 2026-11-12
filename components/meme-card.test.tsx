@@ -47,6 +47,21 @@ describe("MemeCard", () => {
     expect(html.indexOf("aspect-[4/3]")).toBeLessThan(html.indexOf("테스트 밈"));
   });
 
+  it("renders the shared card as server markup for the 410 document", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard meme={meme} imageAspect="4/3" staticMarkup />,
+    );
+
+    expect(html).toContain('href="/memes/m1-test-meme"');
+    expect(html).toContain("aspect-[4/3]");
+    expect(html).not.toContain("aspect-[4/5]");
+    expect(html).toContain("rounded-2xl");
+    expect(html).toContain('alt="테스트 밈 상징 일러스트"');
+    expect(html).toContain('data-thumbnail-state="image"');
+    expect(html).toContain('data-country-flag-position="top-right"');
+    expect(html.indexOf("aspect-[4/3]")).toBeLessThan(html.indexOf("테스트 밈"));
+  });
+
   it("shows one source only when a platform filter provides that context", () => {
     const html = renderToStaticMarkup(
       <MemeCard meme={meme} sourcePlatform="youtube" />,

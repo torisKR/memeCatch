@@ -1,28 +1,8 @@
 "use client";
 
 import { useCallback, useState, type ReactNode } from "react";
+import { memeThumbnailSrc, MemeThumbnailView } from "@/components/meme-thumbnail-view";
 import type { MemeCategory } from "@/lib/labels";
-
-const OWNED_MEDIA_HOSTS = new Set(["catchmeme.com", "www.catchmeme.com"]);
-
-function thumbnailSrcForBrowser(src: string | null): string | null {
-  if (!src) return null;
-
-  try {
-    const url = new URL(src);
-    const isOwnedMedia =
-      url.protocol === "https:" &&
-      url.username === "" &&
-      url.password === "" &&
-      url.port === "" &&
-      OWNED_MEDIA_HOSTS.has(url.hostname) &&
-      url.pathname.startsWith("/api/media/");
-
-    return isOwnedMedia ? `${url.pathname}${url.search}${url.hash}` : src;
-  } catch {
-    return src;
-  }
-}
 
 /**
  * 카드 썸네일의 실패 경계를 한곳에서 처리한다.
@@ -40,6 +20,7 @@ export function MemeThumbnail({
   priority = false,
   variant = "card",
   fallback,
+  alt = "",
 }: {
   src: string | null;
   title: string;
@@ -49,8 +30,9 @@ export function MemeThumbnail({
   priority?: boolean;
   variant?: "card" | "compact";
   fallback?: ReactNode;
+  alt?: string;
 }) {
-  const imageSrc = thumbnailSrcForBrowser(src);
+  const imageSrc = memeThumbnailSrc(src);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const canRenderImage = Boolean(imageSrc && failedSrc !== imageSrc);
   const handleImageRef = useCallback(
@@ -64,66 +46,31 @@ export function MemeThumbnail({
 
   if (canRenderImage && imageSrc) {
     return (
-      // 원격 도메인이 다양해 next/image remotePatterns 대신 img를 사용한다.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        ref={handleImageRef}
+      <MemeThumbnailView
         src={imageSrc}
-        alt=""
-        loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : undefined}
-        decoding="async"
-        referrerPolicy="no-referrer"
-        draggable={false}
+        title={title}
+        fallbackCaption={fallbackCaption}
+        category={category}
+        originYear={originYear}
+        priority={priority}
+        variant={variant}
+        alt={alt}
+        imageRef={handleImageRef}
         onError={() => setFailedSrc(imageSrc)}
-        data-thumbnail-state="image"
-        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
       />
     );
   }
 
-  if (fallback !== undefined) return <>{fallback}</>;
-
   return (
-    <div
-      aria-hidden
-      data-thumbnail-state="fallback"
-      className={`instrument-grid relative flex h-full w-full flex-col justify-end ${
-        variant === "compact" ? "gap-1.5 p-3" : "gap-2 p-3.5"
-      }`}
-      style={{
-        background: `var(--cat-${category}-bg)`,
-        color: `var(--cat-${category}-text)`,
-      }}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className={`pointer-events-none absolute left-2 top-3 opacity-[0.12] ${
-          variant === "compact" ? "size-12" : "size-16"
-        }`}
-      >
-        <path d="M10.6 4.9C6.8 7.1 4.6 10.3 4.6 14.2c0 2.8 1.7 4.6 4 4.6 2 0 3.6-1.5 3.6-3.6 0-2-1.4-3.3-3.2-3.3-.3 0-.7 0-.9.1.4-2 2.1-4 4-5.2L10.6 4.9Zm8.9 0c-3.9 2.2-6 5.4-6 9.3 0 2.8 1.7 4.6 4 4.6 2 0 3.5-1.5 3.5-3.6 0-2-1.3-3.3-3.1-3.3-.3 0-.7 0-.9.1.4-2 2-4 4-5.2L19.5 4.9Z" />
-      </svg>
-      <span
-        className={`relative line-clamp-3 font-extrabold leading-snug ${
-          variant === "compact" ? "text-base" : "text-xl"
-        }`}
-      >
-        {title}
-      </span>
-      {fallbackCaption && (
-        <span className={`relative line-clamp-3 leading-snug ${
-          variant === "compact" ? "text-xs" : "text-sm"
-        }`}>
-          {fallbackCaption}
-        </span>
-      )}
-      {variant === "card" && originYear != null && (
-        <span className="relative inline-flex items-center self-end rounded-full border border-current/30 px-2 py-0.5 text-[11px] font-bold tabular-nums tracking-tight">
-          {originYear}
-        </span>
-      )}
-    </div>
+    <MemeThumbnailView
+      src={null}
+      title={title}
+      fallbackCaption={fallbackCaption}
+      category={category}
+      originYear={originYear}
+      variant={variant}
+      alt={alt}
+      fallback={fallback}
+    />
   );
 }

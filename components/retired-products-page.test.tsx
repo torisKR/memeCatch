@@ -65,8 +65,22 @@ describe("retired products page", () => {
     expect(html).toContain("aspect-[4/3]");
     expect(html).not.toContain("aspect-[4/5]");
     expect(html).toContain("rounded-2xl");
+    expect(html).toContain('data-country-flag-position="top-right"');
+    expect(html).toContain('alt="인기 밈 1 상징 일러스트"');
+    expect(html).toContain("<img");
+    expect(html).not.toContain("background-image");
+    expect(html).toContain('href="/memes/m1-meme-1"');
     expect(html).toContain("grid-cols-2");
     expect(html).toContain("xl:grid-cols-4");
+  });
+
+  it("prefixes card links for the page locale", () => {
+    const html = renderToStaticMarkup(
+      <RetiredProductsPage locale="ko" routeLocale="zh-tw" memes={[meme(1)]} />,
+    );
+    expect(html).toContain('href="/zh-tw/memes/m1-meme-1"');
+    expect(html).toContain('alt="인기 밈 1象徵插畫"');
+    expect(html).not.toContain('href="/memes/');
   });
 
   it("uses the English copy on the English gone page", async () => {

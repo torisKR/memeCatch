@@ -2,6 +2,12 @@ import Link from "next/link";
 import { CategoryTag } from "@/components/category-tag";
 import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { MemeThumbnail } from "@/components/meme-thumbnail";
+import {
+  memeThumbnailAlt,
+  memeThumbnailSrc,
+  MemeThumbnailView,
+  symbolicCardArt,
+} from "@/components/meme-thumbnail-view";
 import { SafetyBadge } from "@/components/safety-badge";
 import { memePathFrom } from "@/lib/labels";
 import type { MemeListItem, MemeRow } from "@/lib/queries";
@@ -40,6 +46,7 @@ export function MemeCard({
   sourcePlatform,
   locale = "ko",
   imageAspect = "4/5",
+  staticMarkup = false,
 }: {
   meme: MemeRow | MemeListItem;
   href?: string;
@@ -49,6 +56,11 @@ export function MemeCard({
   locale?: MemeCountryLocale;
   /** Default explore cards are 4:5. The retired-product tombstone uses 4:3. */
   imageAspect?: MemeCardImageAspect;
+  /**
+   * Render an anchor and the server thumbnail. The 410 document is
+   * `renderToStaticMarkup` inside proxy, which cannot invoke client components.
+   */
+  staticMarkup?: boolean;
 }) {
   const contents = "meme_contents" in meme ? (meme.meme_contents ?? []) : [];
   const thumb =
@@ -59,21 +71,36 @@ export function MemeCard({
   const countryCode = originCountryCode(
     (meme as MemeListItem).meme_market_profiles,
   );
+  const cardHref = href ?? memePathFrom(meme.short_id, meme.slug);
+  const thumbnailAlt = memeThumbnailAlt(meme.title, locale);
+  const cardClass =
+    "group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/60 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4";
+  const thumbnail = staticMarkup ? (
+    <MemeThumbnailView
+      src={memeThumbnailSrc(thumb) ?? symbolicCardArt(meme.title)}
+      title={meme.title}
+      fallbackCaption={meme.summary}
+      category={meme.category}
+      originYear={meme.origin_year}
+      priority={priority}
+      alt={thumbnailAlt}
+    />
+  ) : (
+    <MemeThumbnail
+      src={thumb}
+      title={meme.title}
+      fallbackCaption={meme.summary}
+      category={meme.category}
+      originYear={meme.origin_year}
+      priority={priority}
+      alt={thumbnailAlt}
+    />
+  );
 
-  return (
-    <Link
-      href={href ?? memePathFrom(meme.short_id, meme.slug)}
-      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-accent/60 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-offset-4"
-    >
+  const body = (
+    <>
       <div className={`relative shrink-0 overflow-hidden bg-surface-2 ${imageAspectClass(imageAspect)}`}>
-        <MemeThumbnail
-          src={thumb}
-          title={meme.title}
-          fallbackCaption={meme.summary}
-          category={meme.category}
-          originYear={meme.origin_year}
-          priority={priority}
-        />
+        {thumbnail}
 
         <div
           data-country-flag-position="top-right"
@@ -117,6 +144,20 @@ export function MemeCard({
           <SafetyBadge level={meme.safety_level} />
         </div>
       </div>
+    </>
+  );
+
+  if (staticMarkup) {
+    return (
+      <a href={cardHref} className={cardClass}>
+        {body}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={cardHref} className={cardClass}>
+      {body}
     </Link>
   );
 }

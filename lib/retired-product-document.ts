@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { BrandTile } from "@/components/brand-mark";
 import { RetiredProductsPage } from "@/components/retired-products-page";
 import type { MemeListItem } from "@/lib/queries";
-import type { RetiredProductLocale } from "@/lib/retired-products";
+import type { RetiredProductLocale, RetiredRouteLocale } from "@/lib/retired-products";
 
 const COPY = {
   ko: {
@@ -59,9 +59,11 @@ const NAV = {
 
 function TombstoneDocument({
   locale,
+  routeLocale,
   memes,
 }: {
   locale: RetiredProductLocale;
+  routeLocale: RetiredRouteLocale;
   memes: MemeListItem[];
 }) {
   const brand = BRAND[locale];
@@ -100,7 +102,7 @@ function TombstoneDocument({
       createElement(
         "div",
         { className: "flex-1" },
-        createElement(RetiredProductsPage, { locale, memes }),
+        createElement(RetiredProductsPage, { locale, routeLocale, memes }),
       ),
       createElement(
         "nav",
@@ -152,51 +154,35 @@ function stylesheetLinks(): string {
   return links.join("");
 }
 
-function fallbackDocument(locale: RetiredProductLocale): string {
-  const copy = COPY[locale];
-  return `<!DOCTYPE html>
-<html lang="${copy.lang}">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="robots" content="noindex, follow"/>
-<title>${copy.title}</title>
-</head>
-<body>
-<main>
-<h1>${copy.message}</h1>
-<a href="${copy.exploreHref}">${copy.explore}</a>
-</main>
-</body>
-</html>`;
-}
-
 /**
  * 410 document rendered in this process.
  * The public request is not fetched again: a forwarded https origin would
  * point at the bind address and the TLS handshake would fail.
+ * A card render error is not replaced with a cardless page.
  */
 export async function retiredProductDocument(
   locale: RetiredProductLocale,
-  load?: () => Promise<MemeListItem[]>,
+  options?: {
+    load?: () => Promise<MemeListItem[]>;
+    routeLocale?: RetiredRouteLocale;
+  },
 ): Promise<NextResponse> {
-  let html = fallbackDocument(locale);
-  try {
-    // Dynamic so the App Router compiler does not treat this module as a
-    // component that imports the server renderer.
-    const { renderToStaticMarkup } = await import("react-dom/server");
-    const memes = load
-      ? await load()
-      : await (await import("@/lib/retired-product-memes")).loadRetiredProductMemes();
-    const markup = renderToStaticMarkup(
-      createElement(TombstoneDocument, { locale, memes }) as ReactNode,
-    );
-    const copy = COPY[locale];
-    const head = `<head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex, follow"/><title>${copy.title}</title>${stylesheetLinks()}</head>`;
-    html = `<!DOCTYPE html>${markup.replace(/<html([^>]*)>/, `<html$1>${head}`)}`;
-  } catch (error) {
-    console.error("retired product document failed", error);
-  }
+  // Dynamic so the App Router compiler does not treat this module as a
+  // component that imports the server renderer.
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const memes = options?.load
+    ? await options.load()
+    : await (await import("@/lib/retired-product-memes")).loadRetiredProductMemes();
+  const markup = renderToStaticMarkup(
+    createElement(TombstoneDocument, {
+      locale,
+      routeLocale: options?.routeLocale ?? locale,
+      memes,
+    }) as ReactNode,
+  );
+  const copy = COPY[locale];
+  const head = `<head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex, follow"/><title>${copy.title}</title>${stylesheetLinks()}</head>`;
+  const html = `<!DOCTYPE html>${markup.replace(/<html([^>]*)>/, `<html$1>${head}`)}`;
   return new NextResponse(html, {
     status: 410,
     headers: {

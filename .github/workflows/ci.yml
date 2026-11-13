@@ -48,6 +48,7 @@ jobs:
       - run: pnpm test
       - run: node scripts/check-env-manifest.mjs
       - run: pnpm build
+      - run: bash scripts/deploy-oci.test.sh
       - run: bash scripts/standalone-hangul-proxy.test.sh
       - name: Build the app image with the public release values
         env:

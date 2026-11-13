@@ -32,6 +32,23 @@ function entrySearchText(entry: HomeEntry): string {
   ].join(" "));
 }
 
+function keptPhrases(text: string, phrases: readonly string[] | undefined) {
+  if (!phrases || phrases.join("") !== text) return text;
+  return phrases.map((phrase, index) => (
+    <span className={styles.keepPhrase} key={`${index}:${phrase}`}>{phrase}</span>
+  ));
+}
+
+function keptEnding(text: string, ending: string | undefined) {
+  if (!ending || ending.length >= text.length || !text.endsWith(ending)) return text;
+  return (
+    <>
+      {text.slice(0, -ending.length)}
+      <span className={styles.keepPhrase}>{ending}</span>
+    </>
+  );
+}
+
 function discoveryRevision(locale: SeoRouteLocale, entries: readonly HomeEntry[]): string {
   return JSON.stringify([
     locale,
@@ -100,7 +117,7 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
         <div className={styles.emptyState}>
           <span className={styles.emptyMark} aria-hidden>00</span>
           <div>
-            <h3>{copy.emptyTitle}</h3>
+            <h3>{keptEnding(copy.emptyTitle, copy.unbrokenEnding)}</h3>
             <p>{copy.emptyDescription}</p>
           </div>
         </div>
@@ -196,7 +213,7 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
                     <p className={styles.previewEyebrow}>{copy.previewEyebrow}</p>
                     <span aria-hidden>{String((previewIndex % filteredEntries.length) + 1).padStart(2, "0")}</span>
                   </div>
-                  <h3>{copy.previewTitle}</h3>
+                  <h3>{keptPhrases(copy.previewTitle, copy.previewPhrases)}</h3>
                   <p className={styles.previewDescription}>{copy.previewDescription}</p>
                   <div className={styles.previewRecord}>
                     <span>{preview.entry.categoryLabel}</span>
@@ -231,7 +248,7 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
             <div className={styles.emptyState}>
               <span className={styles.emptyMark} aria-hidden>00</span>
               <div>
-                <h3>{copy.noResultsTitle}</h3>
+                <h3>{keptEnding(copy.noResultsTitle, copy.unbrokenEnding)}</h3>
                 <p>{copy.noResultsDescription}</p>
                 <button type="button" className={styles.clearButton} onClick={clearFilters}>
                   {copy.clearFilters}

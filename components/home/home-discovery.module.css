@@ -481,9 +481,15 @@
 
 :lang(ja) .preview h3,
 :lang(zh) .preview h3 {
+  /* `normal` remains when a browser drops the unsupported `auto-phrase` value. */
+  word-break: normal;
   word-break: auto-phrase;
   overflow-wrap: anywhere;
   line-break: strict;
+}
+
+.keepPhrase {
+  white-space: nowrap;
 }
 
 .previewDescription {
@@ -578,6 +584,7 @@
 
 :lang(ja) .emptyState h3,
 :lang(zh) .emptyState h3 {
+  word-break: normal;
   word-break: auto-phrase;
   overflow-wrap: anywhere;
   line-break: strict;
@@ -626,6 +633,7 @@
   :lang(ja) .preview h3,
   :lang(zh) .preview h3 {
     font-size: clamp(1.75rem, 2.75vw, 2.2rem);
+    word-break: normal;
     word-break: auto-phrase;
     overflow-wrap: anywhere;
     line-break: strict;

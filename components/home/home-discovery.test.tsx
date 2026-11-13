@@ -74,7 +74,7 @@ describe("HomeDiscovery", () => {
       }
       expect(html).toContain(copy.searchScope);
       expect(html).toContain(copy.resultStatus(3, 3));
-      expect(html).toContain(copy.previewTitle);
+      expect(html.replace(/<[^>]+>/g, "")).toContain(copy.previewTitle);
       expect(html).not.toMatch(/likes|users online|minted/iu);
     },
   );
@@ -167,7 +167,7 @@ describe("HomeDiscovery", () => {
     await user.type(screen.getByRole("searchbox", { name: copy.searchLabel }), "  ＴＭＩ & 냥  ");
     const link = screen.getByRole("link", { name: copy.searchArchive("TMI & 냥") });
     expect(link.getAttribute("href")).toBe(`${locale === "ko" ? "" : `/${locale}`}/search?q=TMI+%26+%EB%83%A5`);
-    expect(screen.getByText(copy.noResultsTitle)).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 3, name: copy.noResultsTitle })).toBeTruthy();
     expect(link.closest("form")?.getAttribute("method")).toBe("get");
     expect(screen.getByRole("searchbox", { name: copy.searchLabel }).getAttribute("name")).toBe("q");
   });
@@ -348,5 +348,33 @@ describe("HomeDiscovery", () => {
       document.body.innerHTML = "";
       document.documentElement.lang = "en";
     }
+  });
+
+  it("keeps Japanese heading phrases whole when auto-phrase is dropped", async () => {
+    const user = userEvent.setup();
+    const css = readFileSync("components/home/home-discovery.module.css", "utf8");
+    expect(css.match(/word-break: normal;\n\s*word-break: auto-phrase;/g)).toHaveLength(3);
+    expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
+
+    const copy = HOME_DISCOVERY_COPY.ja;
+    const { container } = render(<HomeDiscovery locale="ja" entries={entries} />);
+    const preview = within(screen.getByLabelText(copy.previewLabel)).getByRole("heading", { level: 3 });
+    expect([...preview.querySelectorAll("span")].map((span) => span.textContent)).toEqual([
+      "まず一つ",
+      "読んで",
+      "みませんか",
+    ]);
+    expect(preview.textContent).toBe(copy.previewTitle);
+
+    await user.type(screen.getByRole("searchbox", { name: copy.searchLabel }), "zzzz-no-match-qa");
+    const empty = container.querySelector("h3");
+    expect(empty?.textContent).toBe(copy.noResultsTitle);
+    expect(empty?.querySelector("span")?.textContent).toBe("ありません");
+
+    cleanup();
+    render(<HomeDiscovery locale="ja" entries={[]} />);
+    const unavailable = screen.getByRole("heading", { level: 3 });
+    expect(unavailable.textContent).toBe(copy.emptyTitle);
+    expect(unavailable.querySelector("span")?.textContent).toBe("ありません");
   });
 });

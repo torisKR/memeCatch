@@ -40,6 +40,7 @@ import { getRelatedMemes, MemeCatalogUnavailableError } from "@/lib/queries";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
+import titleStyles from "@/components/meme-detail-title.module.css";
 
 /** 한국어 상세와 같다. ISR로 두면 프로덕션 상세가 DYNAMIC_SERVER_USAGE 500이 된다. */
 export const dynamic = "force-dynamic";
@@ -438,9 +439,11 @@ export default async function LocalizedMemePage({ params }: Props) {
           <span className="rounded-full bg-surface-2 px-3 py-1.5 text-muted">{copy.safety[meme.safety_level]}</span>
           {!needsReview && <span className="rounded-full bg-safety-green-bg px-3 py-1.5 text-safety-green">{copy.reviewed}</span>}
         </div>
-        <h1 className="mt-5 max-w-4xl whitespace-normal text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
-          {meme.title}
-        </h1>
+        <div className={titleStyles.frame}>
+          <h1 className={`${titleStyles.title} mt-5 whitespace-normal font-black leading-tight tracking-[-0.03em]`}>
+            {meme.title}
+          </h1>
+        </div>
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{copy.originalTitle}</p>
           <p lang="ko" dir="ltr" className="mt-1 text-lg font-bold">{meme.original.title}</p>

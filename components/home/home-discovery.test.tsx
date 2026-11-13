@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
 import type { ComponentPropsWithoutRef } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -73,7 +74,7 @@ describe("HomeDiscovery", () => {
       }
       expect(html).toContain(copy.searchScope);
       expect(html).toContain(copy.resultStatus(3, 3));
-      expect(html).toContain(copy.previewTitle);
+      expect(html.replace(/<[^>]+>/g, "")).toContain(copy.previewTitle);
       expect(html).not.toMatch(/likes|users online|minted/iu);
     },
   );
@@ -166,7 +167,7 @@ describe("HomeDiscovery", () => {
     await user.type(screen.getByRole("searchbox", { name: copy.searchLabel }), "  ＴＭＩ & 냥  ");
     const link = screen.getByRole("link", { name: copy.searchArchive("TMI & 냥") });
     expect(link.getAttribute("href")).toBe(`${locale === "ko" ? "" : `/${locale}`}/search?q=TMI+%26+%EB%83%A5`);
-    expect(screen.getByText(copy.noResultsTitle)).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 3, name: copy.noResultsTitle })).toBeTruthy();
     expect(link.closest("form")?.getAttribute("method")).toBe("get");
     expect(screen.getByRole("searchbox", { name: copy.searchLabel }).getAttribute("name")).toBe("q");
   });
@@ -251,5 +252,129 @@ describe("HomeDiscovery", () => {
     );
     expect(within(screen.getByLabelText(HOME_DISCOVERY_COPY.ja.previewLabel)).getByText("Dance loop"))
       .toBeTruthy();
+  });
+
+  it("keeps Korean heading breaks and lets ja/zh/zh-tw wrap the title and discovery headings", () => {
+    const css = readFileSync("components/home/home-discovery.module.css", "utf8");
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.appendChild(style);
+    document.body.innerHTML = `
+      <h2 class="title">title</h2>
+      <aside class="preview"><h3>preview</h3></aside>
+      <div class="emptyState"><h3>empty</h3></div>
+    `;
+
+    try {
+      document.documentElement.lang = "ko";
+      const title = getComputedStyle(document.querySelector(".title")!);
+      const preview = getComputedStyle(document.querySelector(".preview h3")!);
+      const empty = getComputedStyle(document.querySelector(".emptyState h3")!);
+      expect(title.wordBreak).toBe("keep-all");
+      expect(preview.wordBreak).toBe("keep-all");
+      expect(preview.overflowWrap).toBe("normal");
+      expect(empty.wordBreak).toBe("keep-all");
+
+      for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
+        document.documentElement.lang = lang;
+        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("normal");
+        expect(getComputedStyle(document.querySelector(".title")!).overflowWrap).toBe("anywhere");
+        for (const node of [
+          document.querySelector(".preview h3"),
+          document.querySelector(".emptyState h3"),
+        ]) {
+          const computed = getComputedStyle(node!);
+          expect(computed.wordBreak).toBe("auto-phrase");
+          expect(computed.overflowWrap).toBe("anywhere");
+          expect(computed.lineBreak).toBe("strict");
+        }
+      }
+    } finally {
+      style.remove();
+      document.body.innerHTML = "";
+      document.documentElement.lang = "en";
+    }
+  });
+
+  it("uses auto-phrase for the ja/zh preview heading from 64rem and leaves ko and en on keep-all", () => {
+    const css = readFileSync("components/home/home-discovery.module.css", "utf8");
+    const desktop = css.match(
+      /@media \(min-width: 64rem\) \{\s*:lang\(ja\) \.preview h3,\s*:lang\(zh\) \.preview h3 \{([^}]+)\}/,
+    );
+    expect(desktop).not.toBeNull();
+    const declarations = desktop?.[1] ?? "";
+    expect(declarations).toContain("font-size: clamp(1.75rem, 2.75vw, 2.2rem);");
+    expect(declarations).toContain("word-break: auto-phrase;");
+    expect(declarations).toContain("overflow-wrap: anywhere;");
+    expect(declarations).toContain("line-break: strict;");
+
+    const korean = css.match(
+      /@media \(min-width: 64rem\) \{\s*:lang\(ja\) \.preview h3,\s*:lang\(zh\) \.preview h3 \{[^}]+\}\s*:lang\(ko\) \.preview h3 \{([^}]+)\}/,
+    );
+    expect(korean).not.toBeNull();
+    const koreanDeclarations = korean?.[1] ?? "";
+    expect(koreanDeclarations).toContain("font-size: clamp(1.75rem, 2.75vw, 2.2rem);");
+    expect(koreanDeclarations).not.toContain("word-break");
+    expect(koreanDeclarations).not.toContain("overflow-wrap");
+
+    // jsdom does not evaluate min-width media features, so the 64rem block never
+    // becomes computed style on its own. The declarations are copied from that block.
+    const style = document.createElement("style");
+    style.textContent = `${css}\n:lang(ja) .preview h3, :lang(zh) .preview h3 {${declarations}}`;
+    document.head.appendChild(style);
+    document.body.innerHTML = `
+      <h2 class="title">title</h2>
+      <aside class="preview"><h3>preview</h3></aside>
+    `;
+
+    try {
+      for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
+        document.documentElement.lang = lang;
+        const preview = getComputedStyle(document.querySelector(".preview h3")!);
+        expect(preview.wordBreak).toBe("auto-phrase");
+        expect(preview.overflowWrap).toBe("anywhere");
+        expect(preview.lineBreak).toBe("strict");
+        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("normal");
+      }
+
+      for (const lang of ["ko", "en"]) {
+        document.documentElement.lang = lang;
+        const preview = getComputedStyle(document.querySelector(".preview h3")!);
+        expect(preview.wordBreak).toBe("keep-all");
+        expect(preview.overflowWrap).toBe("normal");
+      }
+    } finally {
+      style.remove();
+      document.body.innerHTML = "";
+      document.documentElement.lang = "en";
+    }
+  });
+
+  it("keeps Japanese heading phrases whole when auto-phrase is dropped", async () => {
+    const user = userEvent.setup();
+    const css = readFileSync("components/home/home-discovery.module.css", "utf8");
+    expect(css.match(/word-break: normal;\n\s*word-break: auto-phrase;/g)).toHaveLength(3);
+    expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
+
+    const copy = HOME_DISCOVERY_COPY.ja;
+    const { container } = render(<HomeDiscovery locale="ja" entries={entries} />);
+    const preview = within(screen.getByLabelText(copy.previewLabel)).getByRole("heading", { level: 3 });
+    expect([...preview.querySelectorAll("span")].map((span) => span.textContent)).toEqual([
+      "まず一つ",
+      "読んで",
+      "みませんか",
+    ]);
+    expect(preview.textContent).toBe(copy.previewTitle);
+
+    await user.type(screen.getByRole("searchbox", { name: copy.searchLabel }), "zzzz-no-match-qa");
+    const empty = container.querySelector("h3");
+    expect(empty?.textContent).toBe(copy.noResultsTitle);
+    expect(empty?.querySelector("span")?.textContent).toBe("ありません");
+
+    cleanup();
+    render(<HomeDiscovery locale="ja" entries={[]} />);
+    const unavailable = screen.getByRole("heading", { level: 3 });
+    expect(unavailable.textContent).toBe(copy.emptyTitle);
+    expect(unavailable.querySelector("span")?.textContent).toBe("ありません");
   });
 });

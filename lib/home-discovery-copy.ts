@@ -22,6 +22,10 @@ export type HomeDiscoveryCopy = {
   previewLabel: string;
   previewEyebrow: string;
   previewTitle: string;
+  /** Unbreakable pieces of `previewTitle`. Their concatenation must equal that title. */
+  previewPhrases?: readonly string[];
+  /** Ending of the empty-state titles that must not break. */
+  unbrokenEnding?: string;
   previewDescription: string;
   previewAction: string;
   nextPreview: string;
@@ -102,6 +106,8 @@ export const HOME_DISCOVERY_COPY: Record<SeoRouteLocale, HomeDiscoveryCopy> = {
     previewLabel: "次の候補プレビュー",
     previewEyebrow: "次の候補",
     previewTitle: "まず一つ読んでみませんか",
+    previewPhrases: ["まず一つ", "読んで", "みませんか"],
+    unbrokenEnding: "ありません",
     previewDescription: "現在表示中の最近の記事を、順番に一つずつ提案します。",
     previewAction: "この解説を開く",
     nextPreview: "次の候補を見る",

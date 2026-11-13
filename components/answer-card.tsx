@@ -8,6 +8,7 @@ import { SignalTrace } from "@/components/signal-trace";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { LIFECYCLE_STATUS, type SafetyLevel } from "@/lib/labels";
 import type { MemeRow } from "@/lib/queries";
+import titleStyles from "@/components/meme-detail-title.module.css";
 
 /** 신호등 글로우 색 — labels/globals의 안전 토큰 기준(색약 대응은 배지 아이콘·텍스트가 담당) */
 const SAFETY_GLOW: Record<SafetyLevel, string> = {
@@ -63,7 +64,7 @@ export function AnswerCard({
       </div>
 
       <div className="mt-4 flex items-start justify-between gap-3">
-        <h1 className="min-w-0 flex-1 whitespace-normal text-2xl font-extrabold leading-tight md:text-3xl">
+        <h1 className={`${titleStyles.title} min-w-0 flex-1 whitespace-normal text-2xl font-extrabold leading-tight md:text-3xl`}>
           {meme.title}
         </h1>
         <CopyTextButton

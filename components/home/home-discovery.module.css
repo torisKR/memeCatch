@@ -34,13 +34,21 @@
 }
 
 .title {
-  max-width: 12ch;
+  max-width: min(12ch, 100%);
   margin: 0.65rem 0 0;
   font-size: clamp(2.25rem, 6vw, 5.5rem);
   font-weight: 900;
   letter-spacing: -0.065em;
   line-height: 0.94;
   text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+:lang(ja) .title,
+:lang(zh) .title {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-break: strict;
 }
 
 .description {
@@ -467,6 +475,21 @@
   font-size: clamp(1.7rem, 3.4vw, 2.7rem);
   letter-spacing: -0.05em;
   line-height: 1;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+:lang(ja) .preview h3,
+:lang(zh) .preview h3 {
+  /* `normal` remains when a browser drops the unsupported `auto-phrase` value. */
+  word-break: normal;
+  word-break: auto-phrase;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
+.keepPhrase {
+  white-space: nowrap;
 }
 
 .previewDescription {
@@ -555,6 +578,16 @@
   margin: 0;
   font-size: clamp(1.3rem, 3vw, 2rem);
   letter-spacing: -0.035em;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:lang(ja) .emptyState h3,
+:lang(zh) .emptyState h3 {
+  word-break: normal;
+  word-break: auto-phrase;
+  overflow-wrap: anywhere;
+  line-break: strict;
 }
 
 .emptyState p {
@@ -593,6 +626,21 @@
   .preview { position: sticky; top: 8.25rem; }
   .contentGrid {
     grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.34fr);
+  }
+}
+
+@media (min-width: 64rem) {
+  :lang(ja) .preview h3,
+  :lang(zh) .preview h3 {
+    font-size: clamp(1.75rem, 2.75vw, 2.2rem);
+    word-break: normal;
+    word-break: auto-phrase;
+    overflow-wrap: anywhere;
+    line-break: strict;
+  }
+
+  :lang(ko) .preview h3 {
+    font-size: clamp(1.75rem, 2.75vw, 2.2rem);
   }
 }
 

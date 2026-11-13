@@ -73,6 +73,15 @@ describe("classifyPublicMemeLookup", () => {
     }
   });
 
+  it("gives a curated Korean detail its own X title and the locale image", () => {
+    const source = readFileSync(join(process.cwd(), "lib/public-meme-document.ts"), "utf8");
+    const card = source.slice(source.indexOf("export function curatedMemeMetadata"));
+    expect(card).toContain("twitter:");
+    expect(card).toContain("card: \"summary_large_image\"");
+    expect(card).toContain("title,");
+    expect(card).toContain("ogDefaultImageDescriptor(\"ko\")");
+  });
+
   it("keeps the proxy allowlist aligned with the curated cards", () => {
     expect([...CURATED_CORE_MEMES.map((meme) => meme.short_id)].sort()).toEqual(
       [...CURATED_CORE_SHORT_IDS].sort(),

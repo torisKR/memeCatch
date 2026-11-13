@@ -86,5 +86,11 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
       url: path,
       images: [ogDefaultImageDescriptor("ko")],
     },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: meme.summary,
+      images: [ogDefaultImageDescriptor("ko")],
+    },
   };
 }

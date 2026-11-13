@@ -165,6 +165,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: path,
       images: [ogDefaultImageDescriptor("ko")],
     },
+    twitter: {
+      card: "summary_large_image",
+      title: `${meme.title} 뜻`,
+      description,
+      images: [ogDefaultImageDescriptor("ko")],
+    },
   };
 }
 

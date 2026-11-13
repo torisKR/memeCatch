@@ -17,7 +17,7 @@ vi.mock("@/lib/korean-rankings.server", () => ({
   koreanRankingsVisible: async () => true,
 }));
 
-import KoreanRootLayout from "@/app/(default)/layout";
+import KoreanRootLayout, { metadata as koreanMetadata } from "@/app/(default)/layout";
 import LocalizedRootLayout, {
   dynamicParams,
   generateMetadata as generateLocalizedMetadata,
@@ -53,6 +53,11 @@ describe("multiple root layouts", () => {
     expect(html).toContain('href="/contact"');
     expect(html).toContain(">문의</a>");
     expect(html).toContain('href="/rankings"');
+    expect(koreanMetadata.twitter).toEqual({
+      card: "summary_large_image",
+      images: [{ url: "/og/ko", width: 1200, height: 630, alt: "밈캐치 — 그 밈, 3초 안에 알려드려요", type: "image/png" }],
+    });
+    expect(koreanMetadata.openGraph).toMatchObject({ url: "/", locale: "ko_KR" });
   });
 
   // 예전 푸터는 모바일용 <details>와 데스크톱용 <div>에 같은 고지 문단을

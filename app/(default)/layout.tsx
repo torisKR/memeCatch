@@ -41,9 +41,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
-    description:
-      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
     images: [ogDefaultImageDescriptor("ko")],
   },
 };

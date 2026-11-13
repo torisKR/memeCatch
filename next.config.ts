@@ -157,6 +157,9 @@ const nextConfig: NextConfig = {
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
+    "/og/[locale]": ["./assets/og-fonts/**/*"],
+    "/opengraph-image": ["./assets/og-fonts/**/*"],
+    "/[locale]/opengraph-image": ["./assets/og-fonts/**/*"],
     "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],

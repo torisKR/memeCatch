@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Locale } from "@/lib/i18n";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 
 const localeState = vi.hoisted(() => ({ value: "en" as Locale }));
 
@@ -20,6 +21,12 @@ vi.mock("@/lib/i18n-client", async () => {
 });
 
 import { PricingContent } from "@/components/premium/pricing-content";
+
+function ruleBody(css: string, selector: string) {
+  const match = css.match(new RegExp(`(?:^|\\n)${selector}\\s*\\{([^}]*)\\}`));
+  expect(match, selector).not.toBeNull();
+  return match?.[1] ?? "";
+}
 
 describe("PricingContent", () => {
   beforeEach(() => {
@@ -61,24 +68,38 @@ describe("PricingContent", () => {
     expect(html).toContain("whitespace-nowrap");
   });
 
-  it("wraps the Japanese hero title on phrase boundaries and keeps the English title plain", () => {
+  it("wraps ja/zh/zh-tw hero titles on phrase boundaries and keeps the English title plain", () => {
     const css = readFileSync(new URL("./pricing-content.module.css", import.meta.url), "utf8");
     expect(css).toMatch(/word-break: normal;\n\s*word-break: auto-phrase;/);
     expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
-    expect(css).toContain("min-width: 0;");
+    expect(ruleBody(css, ".root")).toMatch(/min-width:\s*0\s*;/);
+    expect(ruleBody(css, ".hero")).toMatch(/min-width:\s*0\s*;/);
+    expect(ruleBody(css, ".heroCopy,\\s*\\.intro")).toMatch(/min-width:\s*0\s*;/);
+    expect(ruleBody(css, ".title")).toMatch(/min-width:\s*0\s*;/);
+    expect(ruleBody(css, ".eyebrow")).toMatch(/overflow-wrap:\s*anywhere\s*;/);
 
-    localeState.value = "ja";
-    const html = renderToStaticMarkup(<PricingContent />);
-    for (const phrase of ["今日", "投稿する", "ミーム", "3つと", "媒体別", "コピーを", "受け取る"]) {
-      expect(html).toContain(`>${phrase}<`);
+    const phrases = {
+      ja: ["今日", "投稿する", "ミーム", "3つと", "媒体別", "コピーを", "受け取る"],
+      zh: ["获取", "今天", "可发布的", "3个", "迷因", "及", "各平台", "文案"],
+      "zh-tw": ["今天", "就能", "使用的", "已審核", "迷因"],
+    } as const;
+    for (const locale of ["ja", "zh", "zh-tw"] as const) {
+      expect(phrases[locale].join("")).toBe(PREMIUM_COPY[locale].pricing.title);
+      localeState.value = locale;
+      const html = renderToStaticMarkup(<PricingContent />);
+      for (const phrase of phrases[locale]) {
+        expect(html).toContain(`>${phrase}<`);
+      }
+      expect(html).not.toContain("minmax(20rem");
+      if (locale === "ja") expect(html).toContain("審査済みミーム活用ツール");
     }
-    expect(html).toContain("審査済みミーム活用ツール");
-    expect(html).not.toContain("minmax(20rem");
 
     localeState.value = "en";
     const english = renderToStaticMarkup(<PricingContent />);
     expect(english).toContain(">Get three memes to post today, with platform-ready copy<");
     expect(english).not.toContain(">投稿する<");
+    expect(english).not.toContain(">获取<");
+    expect(english).not.toContain(">已審核<");
   });
 
   it("does not render a checkout form while new purchases are disabled", () => {

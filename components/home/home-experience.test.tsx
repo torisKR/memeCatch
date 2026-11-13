@@ -150,9 +150,10 @@ describe("HomeExperience", () => {
 
     for (const locale of ["ja", "zh", "zh-tw"] as const) {
       const html = renderToStaticMarkup(<HomeExperience locale={locale} entries={[]} />);
-      const phrases = HOME_COPY[locale].trust.titlePhrases ?? [];
-      expect(phrases.join("")).toBe(HOME_COPY[locale].trust.title);
-      for (const phrase of phrases) expect(html).toContain(`>${phrase}<`);
+      const phrases = HOME_COPY[locale].trust.titlePhrases;
+      expect(phrases, locale).toBeDefined();
+      expect(phrases?.join("")).toBe(HOME_COPY[locale].trust.title);
+      for (const phrase of phrases ?? []) expect(html).toContain(`>${phrase}<`);
     }
 
     const korean = renderToStaticMarkup(<HomeExperience locale="ko" entries={[]} />);

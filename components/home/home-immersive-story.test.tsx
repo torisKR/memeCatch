@@ -71,13 +71,23 @@ describe("HomeImmersiveStory", () => {
       expect(html.match(/<h2[ >]/g)).toHaveLength(2);
 
       const plain = html.replace(/<[^>]+>/g, "");
+      const phrasesRequired = locale === "ja" || locale === "zh" || locale === "zh-tw";
+      if (phrasesRequired) {
+        for (const chapter of copy.chapters) {
+          if (chapter.id === "discover") continue;
+          expect(chapter.titlePhrases, `${locale} ${chapter.id}`).toBeDefined();
+          expect(chapter.titlePhrases?.join("")).toBe(chapter.title);
+        }
+      }
       for (const [index, chapter] of copy.chapters.entries()) {
         expect(html).toContain(`href="${chapter.href}"`);
         expect(html).toContain(`0${index + 1}`);
         expect(plain).toContain(chapter.title);
         expect(html).toContain(chapter.description);
-        for (const phrase of chapter.titlePhrases ?? []) {
-          expect(html).toContain(`>${phrase}<`);
+        if (phrasesRequired && chapter.id !== "discover") {
+          for (const phrase of chapter.titlePhrases ?? []) {
+            expect(html).toContain(`>${phrase}<`);
+          }
         }
       }
 

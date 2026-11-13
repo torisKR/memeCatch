@@ -358,6 +358,7 @@ describe("HomeDiscovery", () => {
     expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
 
     const copy = HOME_DISCOVERY_COPY.ja;
+    expect(copy.titlePhrases?.join("")).toBe(copy.title);
     const { container } = render(<HomeDiscovery locale="ja" entries={entries} />);
     const title = screen.getByRole("heading", { level: 2, name: copy.title });
     expect([...title.querySelectorAll("span")].map((span) => span.textContent)).toEqual([

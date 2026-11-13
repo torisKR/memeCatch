@@ -24,8 +24,11 @@ describe("localized meme detail metadata", () => {
   });
 
   it("turns a missing localized meme into a not-found result", () => {
-    expect(source).toContain("if (!meme) {");
-    expect(source).toContain("notFound();");
+    expect(source).toContain("if (!meme) notFound();");
+    expect(source).not.toContain("CuratedMemeArticle");
+    expect(source).not.toContain("curatedShareMetadata");
+    expect(source).toContain('if (loaded.status === "unavailable") return unavailableMemeMetadata();');
+    expect(source).toContain('if (loaded.status === "unavailable") return <MemeCatalogUnavailable />;');
   });
 
   it("keeps the Plus export action on the active localized detail page", () => {

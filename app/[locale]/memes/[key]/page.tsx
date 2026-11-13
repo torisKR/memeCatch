@@ -14,8 +14,6 @@ import {
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
 import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
-import { findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
-import { CuratedMemeArticle } from "@/components/curated-meme-article";
 import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
@@ -250,19 +248,6 @@ async function loadLocalizedDetail(
   }
 }
 
-function curatedShareMetadata(locale: "en" | "ja" | "zh" | "zh-tw" | "ar", meme: CuratedMeme): Metadata {
-  const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
-  return {
-    ...buildLocalizedMetadata({
-      locale,
-      pathname: canonical,
-      title: meme.title,
-      description: meme.summary,
-    }),
-    robots: { index: false, follow: locale !== "ar" },
-  };
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale: shareLocale, key } = await params;
   if (!isOgPageLocale(shareLocale)) return { robots: { index: false, follow: false } };
@@ -271,15 +256,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
   const loaded = await loadLocalizedDetail(targetShortId, locale);
-  const curated = findCuratedCoreMeme(targetShortId);
-  if (loaded.status === "unavailable") {
-    return curated ? curatedShareMetadata(shareLocale, curated) : unavailableMemeMetadata();
-  }
+  // Same as main: a catalog outage is the unavailable state, and a missing
+  // translation is notFound. Do not substitute the Korean curated card.
+  if (loaded.status === "unavailable") return unavailableMemeMetadata();
   const meme = loaded.meme;
-  if (!meme) {
-    if (curated) return curatedShareMetadata(shareLocale, curated);
-    notFound();
-  }
+  if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
     permanentRedirect(localizedMemePath(shareLocale, meme.short_id, meme.slug));
@@ -345,15 +326,9 @@ export default async function LocalizedMemePage({ params }: Props) {
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
   const loaded = await loadLocalizedDetail(targetShortId, locale);
-  const curated = findCuratedCoreMeme(targetShortId);
-  if (loaded.status === "unavailable") {
-    return curated ? <CuratedMemeArticle meme={curated} /> : <MemeCatalogUnavailable />;
-  }
+  if (loaded.status === "unavailable") return <MemeCatalogUnavailable />;
   const meme = loaded.meme;
-  if (!meme) {
-    if (curated) return <CuratedMemeArticle meme={curated} />;
-    notFound();
-  }
+  if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
     permanentRedirect(localizedMemePath(shareLocale, meme.short_id, meme.slug));

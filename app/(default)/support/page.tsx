@@ -9,11 +9,18 @@ import {
   type InquiryCategory,
   type InquiryStatus,
 } from "@/lib/support";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 export const metadata: Metadata = {
   title: "고객센터",
   description: "밈캐치에 버그 신고, 콘텐츠 정정·삭제 요청, 건의사항을 보내 주세요.",
   robots: { index: false },
+  alternates: { canonical: "/support" },
+  ...koreanPageShare({
+    title: "고객센터",
+    description: "밈캐치에 버그 신고, 콘텐츠 정정·삭제 요청, 건의사항을 보내 주세요.",
+    pathname: "/support",
+  }),
 };
 
 const dateFmt = new Intl.DateTimeFormat("ko-KR", {

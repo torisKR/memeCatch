@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 const DESCRIPTION =
@@ -8,14 +9,7 @@ export const metadata: Metadata = {
   title: "문의",
   description: DESCRIPTION,
   alternates: { canonical: "/contact" },
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
-    title: "문의",
-    description: DESCRIPTION,
-    url: "/contact",
-  },
+  ...koreanPageShare({ title: "문의", description: DESCRIPTION, pathname: "/contact" }),
 };
 
 /** Public contact page. The address and reply window are already published on the site. */

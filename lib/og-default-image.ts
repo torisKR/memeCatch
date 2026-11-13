@@ -107,8 +107,8 @@ export function ogDefaultCopy(value: string | null | undefined): OgDefaultCopy {
 }
 
 /**
- * Arabic share pages are not a content locale. `/ar/memes/*` returns 404
- * and must not call this. The `en` branch keeps the union exhaustive.
+ * Arabic share pages are not a content locale. `/ar/memes/*` is not a
+ * published route and must not call this. The `en` branch keeps the union exhaustive.
  */
 export function ogPageContentLocale(locale: OgPageLocale): SeoContentLocale {
   switch (locale) {

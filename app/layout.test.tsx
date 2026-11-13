@@ -105,8 +105,8 @@ describe("multiple root layouts", () => {
       { locale: "ja" },
       { locale: "zh" },
       { locale: "zh-tw" },
-      { locale: "ar" },
     ]);
+    expect(generateStaticParams().map((entry) => entry.locale)).not.toContain("ar");
 
     const metadata = await generateLocalizedMetadata({
       children: null,
@@ -121,12 +121,12 @@ describe("multiple root layouts", () => {
       children: null,
       params: Promise.resolve({ locale: "ar" }),
     });
-    expect(arabic.robots).toEqual({ index: false, follow: false });
-    expect(arabic.alternates?.canonical).toBe("/ar");
-    expect(arabic.openGraph).toMatchObject({
-      locale: "ar_AR",
-      url: "/ar",
-      images: [{ url: "/og/ar", width: 1200, height: 630 }],
-    });
+    expect(arabic).toEqual({ robots: { index: false, follow: false } });
+    await expect(
+      LocalizedRootLayout({
+        children: <main>arabic</main>,
+        params: Promise.resolve({ locale: "ar" }),
+      }),
+    ).rejects.toThrow("not found");
   });
 });

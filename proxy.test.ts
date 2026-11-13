@@ -313,14 +313,16 @@ describe("proxy public meme existence check", () => {
   });
 
   it.each([
+    "/ar",
+    "/ar/pricing",
+    "/ar/memes",
     "/ar/memes/unknown-slug",
     "/ar/memes/bjk2021k-bun-jo-ka",
     "/ar/memes/yeyam8cm-pc-modem-dial-up-sound",
-    "/ar/memes",
-  ])("returns 404 for %s without an Arabic meme catalog", async (path) => {
+  ])("lets the app router render main's not-found document for %s", async (path) => {
     const response = await proxy(publicRequest(path));
 
-    expect(response.status).toBe(404);
+    expect(response.status).not.toBe(404);
     expect(response.headers.get("x-middleware-rewrite")).toBeNull();
     expect(response.headers.get("location")).toBeNull();
     expect(supabaseMocks.from).not.toHaveBeenCalled();

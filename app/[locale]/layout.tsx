@@ -5,8 +5,11 @@ import {
   ROOT_VIEWPORT,
   SHARED_ROOT_METADATA,
 } from "@/app/_root/metadata";
-import { buildLocalizedMetadata } from "@/lib/i18n-routing";
-import { OG_PAGE_LOCALES, isOgPageLocale } from "@/lib/og-default-image";
+import {
+  SEO_CONTENT_LOCALES,
+  buildLocalizedMetadata,
+  isSeoContentLocale,
+} from "@/lib/i18n-routing";
 import "../globals.css";
 
 type Props = {
@@ -15,15 +18,16 @@ type Props = {
 };
 
 export function generateStaticParams() {
-  return OG_PAGE_LOCALES.map((locale) => ({ locale }));
+  return SEO_CONTENT_LOCALES.map((locale) => ({ locale }));
 }
 
-// Only the prebuilt share locales are valid localized document roots.
+// Arabic share metadata stays callable for a future page, but this PR does
+// not publish `/ar` or `/ar/pricing`. Unknown locales 404 like main.
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  if (!isOgPageLocale(locale)) return { robots: { index: false, follow: false } };
+  if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
 
   return {
     ...SHARED_ROOT_METADATA,
@@ -31,7 +35,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale,
       pathname: "/",
     }),
-    ...(locale === "ar" ? { robots: { index: false, follow: false } } : {}),
   };
 }
 
@@ -39,7 +42,7 @@ export const viewport: Viewport = ROOT_VIEWPORT;
 
 export default async function LocalizedLayout({ children, params }: Props) {
   const { locale } = await params;
-  if (!isOgPageLocale(locale)) notFound();
+  if (!isSeoContentLocale(locale)) notFound();
 
   return <RootDocument locale={locale}>{children}</RootDocument>;
 }

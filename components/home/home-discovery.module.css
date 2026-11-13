@@ -630,6 +630,10 @@
     overflow-wrap: anywhere;
     line-break: strict;
   }
+
+  :lang(ko) .preview h3 {
+    font-size: clamp(1.75rem, 2.75vw, 2.2rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

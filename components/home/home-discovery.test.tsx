@@ -308,6 +308,15 @@ describe("HomeDiscovery", () => {
     expect(declarations).toContain("overflow-wrap: anywhere;");
     expect(declarations).toContain("line-break: strict;");
 
+    const korean = css.match(
+      /@media \(min-width: 64rem\) \{\s*:lang\(ja\) \.preview h3,\s*:lang\(zh\) \.preview h3 \{[^}]+\}\s*:lang\(ko\) \.preview h3 \{([^}]+)\}/,
+    );
+    expect(korean).not.toBeNull();
+    const koreanDeclarations = korean?.[1] ?? "";
+    expect(koreanDeclarations).toContain("font-size: clamp(1.75rem, 2.75vw, 2.2rem);");
+    expect(koreanDeclarations).not.toContain("word-break");
+    expect(koreanDeclarations).not.toContain("overflow-wrap");
+
     // jsdom does not evaluate min-width media features, so the 64rem block never
     // becomes computed style on its own. The declarations are copied from that block.
     const style = document.createElement("style");

@@ -12,7 +12,7 @@ describe("localized meme detail metadata", () => {
     expect(source).toContain('import { notFound, permanentRedirect } from "next/navigation";');
     expect(source).toContain("canonicalMemeRedirectPath(key");
     expect(source).toContain("if (redirectPath) permanentRedirect(redirectPath);");
-    expect(source.indexOf("if (!meme) notFound();")).toBeLessThan(
+    expect(source.indexOf("notFound();")).toBeLessThan(
       source.indexOf("canonicalMemeRedirectPath(key"),
     );
   });
@@ -24,7 +24,8 @@ describe("localized meme detail metadata", () => {
   });
 
   it("turns a missing localized meme into a not-found result", () => {
-    expect(source).toContain("if (!meme) notFound();");
+    expect(source).toContain("if (!meme) {");
+    expect(source).toContain("notFound();");
   });
 
   it("keeps the Plus export action on the active localized detail page", () => {

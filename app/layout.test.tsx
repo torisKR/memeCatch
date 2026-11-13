@@ -96,6 +96,7 @@ describe("multiple root layouts", () => {
       { locale: "ja" },
       { locale: "zh" },
       { locale: "zh-tw" },
+      { locale: "ar" },
     ]);
 
     const metadata = await generateLocalizedMetadata({
@@ -106,5 +107,17 @@ describe("multiple root layouts", () => {
     expect(metadata.manifest).toBe("/manifest.webmanifest");
     expect(metadata.verification).toBeDefined();
     expect(metadata.alternates?.canonical).toBe("/en");
+
+    const arabic = await generateLocalizedMetadata({
+      children: null,
+      params: Promise.resolve({ locale: "ar" }),
+    });
+    expect(arabic.robots).toEqual({ index: false, follow: false });
+    expect(arabic.alternates?.canonical).toBe("/ar");
+    expect(arabic.openGraph).toMatchObject({
+      locale: "ar_AR",
+      url: "/ar",
+      images: [{ url: "/og/ar", width: 1200, height: 630 }],
+    });
   });
 });

@@ -429,6 +429,19 @@ describe("proxy landing redirect", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
+  it.each([
+    ["browser", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "en-US,en;q=0.9"],
+    ["kakao", "facebookexternalhit/1.1; kakaotalk-scrap/1.0; +https://devtalk.kakao.com/t/scrap/33984", undefined],
+    ["kakao-en", "facebookexternalhit/1.1; kakaotalk-scrap/1.0; +https://devtalk.kakao.com/t/scrap/33984", "en-US,en;q=0.9"],
+    ["x", "Twitterbot/1.0", "en-US,en;q=0.9"],
+  ] as const)("keeps / Korean for %s even when the request previously negotiated /en", async (_name, userAgent, acceptLanguage) => {
+    const response = await proxy(publicRequest("/", { userAgent, acceptLanguage }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+  });
+
   it("redirects / when the visitor explicitly chose an SEO locale cookie, without rewriting it", async () => {
     const response = await proxy(publicRequest("/", { cookie: "en", acceptLanguage: "ko-KR" }));
 

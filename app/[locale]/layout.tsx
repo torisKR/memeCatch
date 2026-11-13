@@ -5,11 +5,8 @@ import {
   ROOT_VIEWPORT,
   SHARED_ROOT_METADATA,
 } from "@/app/_root/metadata";
-import {
-  SEO_CONTENT_LOCALES,
-  buildLocalizedMetadata,
-  isSeoContentLocale,
-} from "@/lib/i18n-routing";
+import { buildLocalizedMetadata } from "@/lib/i18n-routing";
+import { OG_PAGE_LOCALES, isOgPageLocale } from "@/lib/og-default-image";
 import "../globals.css";
 
 type Props = {
@@ -18,15 +15,15 @@ type Props = {
 };
 
 export function generateStaticParams() {
-  return SEO_CONTENT_LOCALES.map((locale) => ({ locale }));
+  return OG_PAGE_LOCALES.map((locale) => ({ locale }));
 }
 
-// Only the prebuilt SEO locales are valid localized document roots.
+// Only the prebuilt share locales are valid localized document roots.
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
+  if (!isOgPageLocale(locale)) return { robots: { index: false, follow: false } };
 
   return {
     ...SHARED_ROOT_METADATA,
@@ -34,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale,
       pathname: "/",
     }),
+    ...(locale === "ar" ? { robots: { index: false, follow: false } } : {}),
   };
 }
 
@@ -41,7 +39,7 @@ export const viewport: Viewport = ROOT_VIEWPORT;
 
 export default async function LocalizedLayout({ children, params }: Props) {
   const { locale } = await params;
-  if (!isSeoContentLocale(locale)) notFound();
+  if (!isOgPageLocale(locale)) notFound();
 
   return <RootDocument locale={locale}>{children}</RootDocument>;
 }

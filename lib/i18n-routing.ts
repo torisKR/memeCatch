@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n";
 import { memePathFrom, type MemeCategory } from "@/lib/labels";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { SITE_URL } from "@/lib/site";
 
 /**
@@ -186,15 +187,24 @@ export function stripLocalePath(value: string): string {
   return parseLocalePath(value).pathname;
 }
 
+/** `ar` is a share locale, not an SEO route, so parseLocalePath leaves it in place. */
+function stripSharePrefix(value: string): string {
+  const { pathname, suffix } = splitPath(value);
+  const [first = "", ...rest] = pathname.split("/").filter(Boolean);
+  if (first !== "ar") return value;
+  const stripped = rest.length > 0 ? `/${rest.join("/")}` : "/";
+  return `${stripped}${suffix}`;
+}
+
 /** 한국어는 prefix 없이, SEO 번역 로케일은 첫 경로 segment로 붙인다. */
-export function localizePath(value: string, locale: SeoRouteLocale): string {
-  const unprefixed = stripLocalePath(value);
+export function localizePath(value: string, locale: OgShareLocale): string {
+  const unprefixed = stripSharePrefix(stripLocalePath(value));
   const { pathname, suffix } = splitPath(unprefixed);
   if (locale === "ko") return `${pathname}${suffix}`;
   return `${pathname === "/" ? `/${locale}` : `/${locale}${pathname}`}${suffix}`;
 }
 
-export function localizedPath(value: string, locale: SeoRouteLocale): string {
+export function localizedPath(value: string, locale: OgShareLocale): string {
   return localizePath(value, locale);
 }
 
@@ -216,7 +226,7 @@ export function localizedStaticPath(value: string, locale: Locale): string {
   return unprefixed;
 }
 
-export function localizedMemePath(locale: SeoRouteLocale, shortId: string, slug: string): string {
+export function localizedMemePath(locale: OgShareLocale, shortId: string, slug: string): string {
   return localizePath(memePathFrom(shortId, slug), locale);
 }
 
@@ -232,15 +242,38 @@ export function toSeoBcp47(locale: SeoRouteLocale): string {
   return SEO_LOCALE_CONFIG[locale].bcp47;
 }
 
-export function toOpenGraphLocale(locale: SeoRouteLocale): string {
+export type OgShareLocale = SeoRouteLocale | "ar";
+
+const AR_SEO_COPY: SeoCopy = {
+  siteName: "MemeCatch",
+  defaultTitle: "MemeCatch — شرح الميمات الكورية",
+  titleTemplate: "%s | MemeCatch",
+  description:
+    "افهم معنى الميمات الكورية وأصلها، وهل ما زال استخدامها مناسبًا.",
+  homeName: "MemeCatch",
+  glossaryName: "معجم الميمات الكورية",
+  glossaryDescription: "معجم للميمات والعبارات والتحديات الكورية.",
+  categories: {
+    phrase: "عبارات الميم",
+    dance: "تحديات الرقص",
+    song: "أغانٍ",
+    image: "مقاطع الميم",
+    comment: "مشاهد درامية",
+    challenge: "تحديات الرقص",
+  },
+};
+
+export function toOpenGraphLocale(locale: OgShareLocale): string {
+  if (locale === "ar") return "ar_AR";
   return SEO_LOCALE_CONFIG[locale].openGraphLocale;
 }
 
-export function getOpenGraphLocale(locale: SeoRouteLocale): string {
+export function getOpenGraphLocale(locale: OgShareLocale): string {
   return toOpenGraphLocale(locale);
 }
 
-export function getSeoCopy(locale: SeoRouteLocale): SeoCopy {
+export function getSeoCopy(locale: OgShareLocale): SeoCopy {
+  if (locale === "ar") return AR_SEO_COPY;
   return SEO_COPY[locale];
 }
 
@@ -258,7 +291,7 @@ export function buildHreflangLanguages(
 }
 
 type BuildLocalizedMetadataOptions = {
-  locale: SeoRouteLocale;
+  locale: OgShareLocale;
   /** prefix 유무와 관계없이 받아 canonical에서는 해당 locale 규칙으로 정규화한다. */
   pathname?: string;
   title?: string;
@@ -282,6 +315,7 @@ export function buildLocalizedMetadata({
   const canonical = localizePath(pathname, locale);
   const resolvedTitle = title ?? copy.defaultTitle;
   const resolvedDescription = description ?? copy.description;
+  const image = ogDefaultImageDescriptor(locale);
   const alternateLocales = availableLocales?.filter((item) => item !== locale) ?? [];
   const languages = availableLocales
     ? {
@@ -314,11 +348,13 @@ export function buildLocalizedMetadata({
       ...(alternateLocales.length > 0
         ? { alternateLocale: alternateLocales.map(toOpenGraphLocale) }
         : {}),
+      images: [image],
     },
     twitter: {
       card: "summary_large_image",
       title: resolvedTitle,
       description: resolvedDescription,
+      images: [image],
     },
   };
 }

@@ -62,6 +62,7 @@ import {
   localizedMemePath,
 } from "@/lib/i18n-routing";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -162,6 +163,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${meme.title} 뜻`,
       description,
       url: path,
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

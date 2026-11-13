@@ -9,6 +9,7 @@ import {
   SEO_ROUTE_LOCALES,
   toOpenGraphLocale,
 } from "@/lib/i18n-routing";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
+    url: "/",
     title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
     description:
       "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
@@ -35,6 +37,14 @@ export const metadata: Metadata = {
     alternateLocale: SEO_ROUTE_LOCALES.filter((locale) => locale !== "ko").map(
       toOpenGraphLocale,
     ),
+    images: [ogDefaultImageDescriptor("ko")],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    description:
+      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 

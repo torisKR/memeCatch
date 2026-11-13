@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
 import type { ComponentPropsWithoutRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Locale } from "@/lib/i18n";
+
+const localeState = vi.hoisted(() => ({ value: "en" as Locale }));
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => (
@@ -10,12 +14,18 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/lib/i18n-client", async () => {
   const { getMessages } = await import("@/lib/i18n");
-  return { useLocale: () => ({ locale: "en", messages: getMessages("en") }) };
+  return {
+    useLocale: () => ({ locale: localeState.value, messages: getMessages(localeState.value) }),
+  };
 });
 
 import { PricingContent } from "@/components/premium/pricing-content";
 
 describe("PricingContent", () => {
+  beforeEach(() => {
+    localeState.value = "en";
+  });
+
   it("shows the separate Fairy donation option only with server-approved configuration", () => {
     expect(renderToStaticMarkup(<PricingContent />)).not.toContain("/api/billing/fairy/checkout");
     const html = renderToStaticMarkup(<PricingContent fairyMinimumAmount={15_000} />);
@@ -49,6 +59,26 @@ describe("PricingContent", () => {
     expect(html).toContain("original payment wallet");
     expect(html).toContain("shrink-0 text-right");
     expect(html).toContain("whitespace-nowrap");
+  });
+
+  it("wraps the Japanese hero title on phrase boundaries and keeps the English title plain", () => {
+    const css = readFileSync(new URL("./pricing-content.module.css", import.meta.url), "utf8");
+    expect(css).toMatch(/word-break: normal;\n\s*word-break: auto-phrase;/);
+    expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
+    expect(css).toContain("min-width: 0;");
+
+    localeState.value = "ja";
+    const html = renderToStaticMarkup(<PricingContent />);
+    for (const phrase of ["今日", "投稿する", "ミーム", "3つと", "媒体別", "コピーを", "受け取る"]) {
+      expect(html).toContain(`>${phrase}<`);
+    }
+    expect(html).toContain("審査済みミーム活用ツール");
+    expect(html).not.toContain("minmax(20rem");
+
+    localeState.value = "en";
+    const english = renderToStaticMarkup(<PricingContent />);
+    expect(english).toContain(">Get three memes to post today, with platform-ready copy<");
+    expect(english).not.toContain(">投稿する<");
   });
 
   it("does not render a checkout form while new purchases are disabled", () => {

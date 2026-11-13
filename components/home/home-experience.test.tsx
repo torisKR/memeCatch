@@ -142,6 +142,24 @@ describe("HomeExperience", () => {
     expect(empty).toContain('href="/en/search"');
   });
 
+  it("keeps ja/zh trust phrases whole without changing the Korean keep-all heading", () => {
+    const css = readFileSync(new URL("./home-web3.module.css", import.meta.url), "utf8");
+    expect(css.match(/word-break: normal;\n\s*word-break: auto-phrase;/g)).toHaveLength(2);
+    expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
+    expect(css).toContain("word-break: keep-all;");
+
+    for (const locale of ["ja", "zh", "zh-tw"] as const) {
+      const html = renderToStaticMarkup(<HomeExperience locale={locale} entries={[]} />);
+      const phrases = HOME_COPY[locale].trust.titlePhrases ?? [];
+      expect(phrases.join("")).toBe(HOME_COPY[locale].trust.title);
+      for (const phrase of phrases) expect(html).toContain(`>${phrase}<`);
+    }
+
+    const korean = renderToStaticMarkup(<HomeExperience locale="ko" entries={[]} />);
+    expect(korean).toContain(`>${HOME_COPY.ko.trust.title}<`);
+    expect(korean).not.toContain(">方針<");
+  });
+
   it("keeps the pathway link row clear of the mobile chat launcher", () => {
     const css = readFileSync(new URL("./home-web3.module.css", import.meta.url), "utf8");
     const mobile = css.slice(css.indexOf("@media (max-width: 47.99rem)"));

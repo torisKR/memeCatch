@@ -81,12 +81,14 @@
 .chapterTitle { max-width: min(14ch, 100%); margin: 0 auto; color: var(--story-ivory); font-size: clamp(2.65rem, 7vw, 7.2rem); font-weight: 950; letter-spacing: -0.072em; line-height: 0.92; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere; }
 :lang(ja) .chapterTitle,
 :lang(zh) .chapterTitle {
-  word-break: normal;
   overflow-wrap: anywhere;
   line-break: strict;
+  /* `normal` remains when a browser drops the unsupported `auto-phrase` value. */
+  word-break: normal;
   word-break: auto-phrase;
   overflow-wrap: break-word;
 }
+.keepPhrase { white-space: nowrap; }
 .chapterCenter { min-height: 0; pointer-events: none; }
 .chapterPanel { width: min(100%, 44rem); padding: clamp(1rem, 2vw, 1.35rem); border: 1px solid #ffffff24; border-radius: 1.25rem; background: #0f0f12ed; box-shadow: 0 1.5rem 4rem #0003, inset 0 1px #ffffff0f; }
 .chapterDescription { max-width: 40rem; margin: 0 auto; color: #d1cbc2; font-size: clamp(0.9rem, 1.2vw, 1.02rem); line-height: 1.65; text-align: center; text-wrap: pretty; }

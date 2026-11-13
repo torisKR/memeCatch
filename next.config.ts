@@ -159,7 +159,6 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/og/[locale]": ["./assets/og-fonts/**/*"],
     "/opengraph-image": ["./assets/og-fonts/**/*"],
-    "/[locale]/opengraph-image": ["./assets/og-fonts/**/*"],
     "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],
@@ -178,10 +177,9 @@ const nextConfig: NextConfig = {
   // the SEO locales.
   async rewrites() {
     return [
-      // This dynamic image route would paint `/ar/opengraph-image/ar`.
-      // Checked before dynamic routes, so the request becomes `/ar` and
-      // returns the same global not-found document as main. `/og/ar` is
-      // the only published Arabic card.
+      // `/[locale]/opengraph-image` is not a route. This rule still runs
+      // before dynamic routes and turns `/ar/opengraph-image/*` into `/ar`,
+      // the same global not-found as main. `/og/ar` is the Arabic card.
       {
         source: "/ar/opengraph-image/:path*",
         destination: "/ar",

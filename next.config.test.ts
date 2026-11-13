@@ -1,8 +1,33 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import nextConfig from "./next.config";
 
 const source = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
+
+type RewriteRule = {
+  source: string;
+  destination: string;
+  has?: unknown;
+  missing?: unknown;
+};
+
+function rewriteRules(value: unknown): RewriteRule[] {
+  if (Array.isArray(value)) return value as RewriteRule[];
+  if (value && typeof value === "object") {
+    const grouped = value as {
+      beforeFiles?: RewriteRule[];
+      afterFiles?: RewriteRule[];
+      fallback?: RewriteRule[];
+    };
+    return [
+      ...(grouped.beforeFiles ?? []),
+      ...(grouped.afterFiles ?? []),
+      ...(grouped.fallback ?? []),
+    ];
+  }
+  return [];
+}
 
 describe("script-src eval policy", () => {
   it("allows eval only in development", () => {
@@ -53,5 +78,21 @@ describe("release SHA response header", () => {
     expect(source).toContain(
       "process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim()",
     );
+  });
+});
+
+describe("arabic opengraph rewrite", () => {
+  it("sends every /ar/opengraph-image request to /ar with no conditions", async () => {
+    if (typeof nextConfig.rewrites !== "function") {
+      throw new Error("next config has no rewrites()");
+    }
+    const result = await nextConfig.rewrites();
+    const match = rewriteRules(result).filter(
+      (rule) => rule.source === "/ar/opengraph-image/:path*",
+    );
+
+    expect(match).toEqual([
+      { source: "/ar/opengraph-image/:path*", destination: "/ar" },
+    ]);
   });
 });

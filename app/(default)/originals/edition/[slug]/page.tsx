@@ -8,6 +8,7 @@ import {
   nextEditorialOriginal,
 } from "@/lib/editorial-originals";
 import { SITE_URL } from "@/lib/site";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "밈캐치",
       locale: "ko_KR",
       url: path,
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

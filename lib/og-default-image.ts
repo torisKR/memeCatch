@@ -106,7 +106,10 @@ export function ogDefaultCopy(value: string | null | undefined): OgDefaultCopy {
   return OG_DEFAULT_COPY[resolveOgDefaultLocale(value)];
 }
 
-/** Arabic pages reuse reviewed English meme copy until an Arabic catalog exists. */
+/**
+ * Arabic share pages are not a content locale. `/ar/memes/*` returns 404
+ * and must not call this. The `en` branch keeps the union exhaustive.
+ */
 export function ogPageContentLocale(locale: OgPageLocale): SeoContentLocale {
   switch (locale) {
     case "ar":

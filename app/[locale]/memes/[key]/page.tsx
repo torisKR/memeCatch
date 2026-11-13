@@ -251,6 +251,7 @@ async function loadLocalizedDetail(
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale: shareLocale, key } = await params;
   if (!isOgPageLocale(shareLocale)) return { robots: { index: false, follow: false } };
+  if (shareLocale === "ar") notFound();
   const locale = ogPageContentLocale(shareLocale);
 
   const requestedShortId = shortIdFromParam(key);
@@ -303,9 +304,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     ...metadata,
-    alternates: shareLocale === "ar" ? { canonical } : { canonical, languages },
-    ...(shareLocale === "ar" || !isIndexableLocalizedMeme(meme)
-      ? { robots: { index: false, follow: shareLocale !== "ar" } }
+    alternates: { canonical, languages },
+    ...(!isIndexableLocalizedMeme(meme)
+      ? { robots: { index: false, follow: true } }
       : {}),
     openGraph: {
       ...metadata.openGraph,
@@ -321,6 +322,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function LocalizedMemePage({ params }: Props) {
   const { locale: shareLocale, key } = await params;
   if (!isOgPageLocale(shareLocale)) notFound();
+  if (shareLocale === "ar") notFound();
   const locale = ogPageContentLocale(shareLocale);
 
   const requestedShortId = shortIdFromParam(key);
@@ -357,9 +359,7 @@ export default async function LocalizedMemePage({ params }: Props) {
   );
   const relatedCards = selectLocalizedRelatedCards(related, localizedRelated.items, locale);
   const copy = DETAIL_COPY[locale];
-  const config = shareLocale === "ar"
-    ? { documentLanguage: "ar", direction: "rtl" as const, dateLocale: "ar" }
-    : SEO_LOCALE_CONFIG[locale];
+  const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(shareLocale);
   const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
   const sourceLinks = meme.meme_sources.flatMap((source) => {

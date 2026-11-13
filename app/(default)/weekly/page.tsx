@@ -5,6 +5,7 @@ import { memePathFrom } from "@/lib/labels";
 import { getWeeklyDigest } from "@/lib/weekly";
 import { WeeklyDigest } from "@/components/weekly-digest";
 import { AdsenseScript } from "@/components/adsense-script";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * 주간 결산 — 완전 자동 콘텐츠 자산(수동 큐레이션 0).
@@ -30,6 +31,7 @@ export const metadata: Metadata = {
     title: WEEKLY_TITLE,
     description: WEEKLY_DESCRIPTION,
     url: "/weekly",
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 

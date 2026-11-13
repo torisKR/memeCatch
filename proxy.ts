@@ -215,6 +215,12 @@ export async function proxy(request: NextRequest) {
     applyLocale(NextResponse.next({ request: { headers: requestHeaders } }));
   const response = nextResponse();
 
+  // Arabic has a share image and landing pages, not a meme catalog.
+  // `/ar/memes/*` stays 404 for every slug, including unknown ones.
+  if (/^\/ar\/memes(?:\/|$)/.test(request.nextUrl.pathname)) {
+    return applyLocale(new NextResponse(null, { status: 404 }));
+  }
+
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
   const needsAuth = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";

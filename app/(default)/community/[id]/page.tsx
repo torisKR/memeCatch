@@ -9,6 +9,7 @@ import { CommunityCommentForm } from "@/components/community-comment-form";
 import { CommunityMemeChip } from "@/components/community-post-card";
 import { MarkdownBody } from "@/components/markdown-body";
 import { stripMarkdownToText } from "@/lib/markdown";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import {
   POST_SELECT,
   timeAgo,
@@ -64,6 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.title,
       description,
       url: `/community/${post.id}`,
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

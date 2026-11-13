@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 
 import { MemeStudioApp } from "@/components/studio/meme-studio-app";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
+
+const STUDIO_TITLE = "밈 스튜디오";
+const STUDIO_DESCRIPTION =
+  "게시물 아이디어를 만들고, 내가 권리를 가진 이미지로 PNG 밈과 사전 카드를 출력합니다.";
 
 export const metadata: Metadata = {
-  title: "밈 스튜디오",
-  description:
-    "게시물 아이디어를 만들고, 내가 권리를 가진 이미지로 PNG 밈과 사전 카드를 출력합니다.",
+  title: STUDIO_TITLE,
+  description: STUDIO_DESCRIPTION,
   alternates: { canonical: "/studio" },
+  ...koreanPageShare({
+    title: STUDIO_TITLE,
+    description: STUDIO_DESCRIPTION,
+    pathname: "/studio",
+  }),
 };
 
 export default function StudioPage() {

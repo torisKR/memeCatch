@@ -50,7 +50,11 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
       card: "summary_large_image",
       images: [{ url: "/og/ko", width: 1200, height: 630, alt: HOME_TITLE, type: "image/png" }],
     });
-    expect(koreanLayoutMetadata.openGraph).toMatchObject({ url: "/", locale: "ko_KR" });
+    expect(koreanLayoutMetadata.openGraph).toMatchObject({
+      locale: "ko_KR",
+      images: [{ url: "/og/ko", width: 1200, height: 630, alt: HOME_TITLE, type: "image/png" }],
+    });
+    expect(koreanLayoutMetadata.openGraph).not.toHaveProperty("url");
   });
 
   it("gives each static page its own title, description, and url", () => {
@@ -144,7 +148,7 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
   });
 
   it("keeps an untranslated locale detail off the Korean curated card", async () => {
-    for (const locale of ["en", "ja", "zh", "zh-tw", "ar"] as const) {
+    for (const locale of ["en", "ja", "zh", "zh-tw"] as const) {
       const metadata = await generateLocalizedMemeMetadata({
         params: Promise.resolve({ locale, key: "bjk2021k-bun-jo-ka" }),
       });
@@ -152,5 +156,14 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
       expect(JSON.stringify(metadata)).not.toContain("분좋카");
       expect(JSON.stringify(metadata)).not.toContain("분위기 좋은 카페");
     }
+  });
+
+  it("returns not-found for an Arabic meme detail", async () => {
+    await expect(generateLocalizedMemeMetadata({
+      params: Promise.resolve({ locale: "ar", key: "bjk2021k-bun-jo-ka" }),
+    })).rejects.toMatchObject({ digest: expect.stringMatching(/404$/) });
+    await expect(generateLocalizedMemeMetadata({
+      params: Promise.resolve({ locale: "ar", key: "not-a-real-slug" }),
+    })).rejects.toMatchObject({ digest: expect.stringMatching(/404$/) });
   });
 });

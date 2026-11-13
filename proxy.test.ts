@@ -312,6 +312,20 @@ describe("proxy public meme existence check", () => {
     expect(supabaseMocks.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
   });
 
+  it.each([
+    "/ar/memes/unknown-slug",
+    "/ar/memes/bjk2021k-bun-jo-ka",
+    "/ar/memes/yeyam8cm-pc-modem-dial-up-sound",
+    "/ar/memes",
+  ])("returns 404 for %s without an Arabic meme catalog", async (path) => {
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
+  });
+
   it("skips the lookup for a cors RSC or prefetch request", async () => {
     const response = await proxy(publicRequest("/en/memes/missing-meme", { fetchMode: "cors" }));
 

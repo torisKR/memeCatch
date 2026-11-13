@@ -7,6 +7,7 @@ import {
   OG_DEFAULT_DESIGN,
   OG_DEFAULT_LOCALES,
   ogDefaultCopy,
+  ogDefaultImageDescriptor,
   ogDefaultLocaleHasHangul,
   ogPageContentLocale,
   ogTitlePreviewPx,
@@ -96,6 +97,61 @@ function pixel(rows: Buffer[], x: number, y: number) {
   if (!row) throw new Error("missing row");
   const index = x * 4;
   return [row[index] ?? 0, row[index + 1] ?? 0, row[index + 2] ?? 0, row[index + 3] ?? 0] as const;
+}
+
+/** Ink widths of the joined Arabic title, one cluster list per line. */
+function arabicTitleClusters(
+  image: { width: number; height: number; rows: Buffer[] },
+  isBackground: (sample: readonly number[]) => boolean,
+  chipMaxY: number,
+) {
+  const hits = Array.from({ length: image.height }, (_, y) => {
+    if (y <= chipMaxY + 8) return false;
+    let ink = 0;
+    for (let x = 0; x < image.width; x += 1) {
+      if (!isBackground(pixel(image.rows, x, y))) ink += 1;
+    }
+    return ink >= 30;
+  });
+  const bands: Array<[number, number]> = [];
+  let start: number | null = null;
+  let gap = 0;
+  for (let y = 0; y < hits.length; y += 1) {
+    if (hits[y]) {
+      if (start === null) start = y;
+      gap = 0;
+    } else if (start !== null) {
+      gap += 1;
+      if (gap > 8) {
+        bands.push([start, y - gap]);
+        start = null;
+      }
+    }
+  }
+  return bands.map(([top, bottom]) => {
+    const xs: number[] = [];
+    for (let x = 0; x < image.width; x += 1) {
+      for (let y = top; y <= bottom; y += 1) {
+        if (!isBackground(pixel(image.rows, x, y))) {
+          xs.push(x);
+          break;
+        }
+      }
+    }
+    const clusters: number[] = [];
+    if (xs.length === 0) return clusters;
+    let clusterStart = xs[0] ?? 0;
+    let previous = clusterStart;
+    for (const x of xs.slice(1)) {
+      if (x > previous + 14) {
+        clusters.push(previous - clusterStart + 1);
+        clusterStart = x;
+      }
+      previous = x;
+    }
+    clusters.push(previous - clusterStart + 1);
+    return clusters;
+  });
 }
 
 function crc32(data: Buffer) {
@@ -210,6 +266,7 @@ describe("default preview copy", () => {
     expect(ogDefaultCopy("th")).toEqual(OG_DEFAULT_COPY.en);
     expect(ogPageContentLocale("ar")).toBe("en");
     expect(ogPageContentLocale("ja")).toBe("ja");
+    expect(ogDefaultImageDescriptor("ja").url).toBe("/og/ja");
   });
 
   it("keeps a readable title inside 540px, with phrase-safe breaks", () => {
@@ -316,6 +373,14 @@ describe("default preview image response", () => {
       const center = (minX + maxX) / 2;
       expect(Math.abs(center - (image.width - 1) / 2)).toBeLessThanOrEqual(8);
 
+      let wordmarkInk = 0;
+      for (let y = chipMinY; y <= chipMaxY; y += 1) {
+        for (let x = chipMaxX + 24; x <= chipMaxX + 180; x += 1) {
+          if (!isBackground(pixel(image.rows, x, y))) wordmarkInk += 1;
+        }
+      }
+      expect(wordmarkInk).toBeGreaterThan(400);
+
       let titleMinX = image.width;
       let titleMaxX = -1;
       const titleRows: boolean[] = [];
@@ -346,9 +411,8 @@ describe("default preview image response", () => {
       let gap = 0;
       for (const hit of titleRows) {
         if (hit) {
-          if (run === 0 && gap > 0 && bands.length > 0 && gap <= 2) {
-            const previous = bands[bands.length - 1] ?? 0;
-            bands[bands.length - 1] = previous + gap;
+          if (run === 0 && gap > 0 && bands.length > 0 && gap <= 8) {
+            run = (bands.pop() ?? 0) + gap;
           }
           gap = 0;
           run += 1;
@@ -362,6 +426,14 @@ describe("default preview image response", () => {
       }
       if (run > 0) bands.push(run);
       expect(bands, bands.join(",")).toHaveLength(OG_DEFAULT_COPY[locale].lines.length);
+      if (locale === "ar") {
+        const clusters = arabicTitleClusters(image, isBackground, chipMaxY);
+        const [memes, explanation] = clusters[0] ?? [];
+        const [korean] = clusters[1] ?? [];
+        expect(Math.abs((memes ?? 0) - 224) / 224).toBeLessThanOrEqual(0.05);
+        expect(Math.abs((explanation ?? 0) - 132) / 132).toBeLessThanOrEqual(0.05);
+        expect(Math.abs((korean ?? 0) - 180) / 180).toBeLessThanOrEqual(0.05);
+      }
       for (const band of bands) {
         expect(band, bands.join(",")).toBeGreaterThanOrEqual(locale === "en" || locale === "ar" ? 30 : 40);
         expect((band * 300) / image.width).toBeGreaterThanOrEqual(10);

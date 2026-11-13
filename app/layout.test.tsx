@@ -57,7 +57,11 @@ describe("multiple root layouts", () => {
       card: "summary_large_image",
       images: [{ url: "/og/ko", width: 1200, height: 630, alt: "밈캐치 — 그 밈, 3초 안에 알려드려요", type: "image/png" }],
     });
-    expect(koreanMetadata.openGraph).toMatchObject({ url: "/", locale: "ko_KR" });
+    expect(koreanMetadata.openGraph).toMatchObject({
+      locale: "ko_KR",
+      images: [{ url: "/og/ko", width: 1200, height: 630, alt: "밈캐치 — 그 밈, 3초 안에 알려드려요", type: "image/png" }],
+    });
+    expect(koreanMetadata.openGraph).not.toHaveProperty("url");
   });
 
   // 예전 푸터는 모바일용 <details>와 데스크톱용 <div>에 같은 고지 문단을

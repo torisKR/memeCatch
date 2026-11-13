@@ -25,6 +25,10 @@ describe("localized meme detail metadata", () => {
 
   it("turns a missing localized meme into a not-found result", () => {
     expect(source).toContain("if (!meme) notFound();");
+    expect(source.match(/if \(shareLocale === "ar"\) notFound\(\);/g)).toHaveLength(2);
+    expect(source.indexOf('if (shareLocale === "ar") notFound();')).toBeLessThan(
+      source.indexOf("ogPageContentLocale(shareLocale)"),
+    );
     expect(source).not.toContain("CuratedMemeArticle");
     expect(source).not.toContain("curatedShareMetadata");
     expect(source).toContain('if (loaded.status === "unavailable") return unavailableMemeMetadata();');

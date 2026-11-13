@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
- * Korean page share tags. A child that omits these inherits the home card:
- * `og:url` stays `/`, and X uses the home title because the layout twitter
- * block has no title of its own for post-processing to replace.
+ * Korean page share tags. The layout openGraph has no url, so each page
+ * sets `og:url` to its own canonical. A page that sets openGraph also has
+ * to repeat the image: a child openGraph object replaces the layout one.
  */
 export function koreanPageShare(input: {
   title: string;

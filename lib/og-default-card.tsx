@@ -8,16 +8,6 @@ import {
   type OgDefaultLocale,
 } from "@/lib/og-default-image";
 
-/**
- * Satori shapes Arabic letters but keeps word order left to right.
- * Reverse each Arabic line so it reads from the right. The metadata alt
- * stays the logical string.
- */
-function visualTitleLine(locale: OgDefaultLocale, line: string): string {
-  if (locale !== "ar") return line;
-  return line.split(/\s+/).filter(Boolean).reverse().join(" ");
-}
-
 const fontCache = new Map<OgDefaultLocale, Promise<Buffer>>();
 
 function readFontFile(locale: OgDefaultLocale): Promise<Buffer> {
@@ -52,6 +42,15 @@ function loadFont(locale: OgDefaultLocale): Promise<Buffer> {
 
 export async function renderOgDefaultImage(locale: string | null | undefined) {
   const resolved = resolveOgDefaultLocale(locale);
+  // Satori does not join this Arabic subset. Chrome/HarfBuzz does.
+  // scripts/render-og-ar.mjs writes the committed card.
+  if (resolved === "ar") {
+    const bytes = await readFile(join(process.cwd(), "assets/og/ar.png"));
+    return new Response(bytes, {
+      status: 200,
+      headers: { "content-type": "image/png" },
+    });
+  }
   const copy = ogDefaultCopy(resolved);
   const font = await loadFont(resolved);
   const { logoSize, wordmarkSize, titleFontSize, titleLineHeight } = OG_DEFAULT_DESIGN;
@@ -121,7 +120,7 @@ export async function renderOgDefaultImage(locale: string | null | undefined) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {visualTitleLine(resolved, line)}
+                {line}
               </div>
             ))}
           </div>

@@ -72,6 +72,7 @@ export async function generateRankingsMetadata(locale: Locale): Promise<Metadata
         siteName: "MemeCatch",
         title: copy.title,
         url: `/${locale}/rankings`,
+        images: [ogDefaultImageDescriptor(locale)],
       },
     };
   }

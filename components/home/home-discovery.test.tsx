@@ -277,8 +277,9 @@ describe("HomeDiscovery", () => {
 
       for (const lang of ["ja", "zh", "zh-Hans", "zh-Hant"]) {
         document.documentElement.lang = lang;
-        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("normal");
+        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("auto-phrase");
         expect(getComputedStyle(document.querySelector(".title")!).overflowWrap).toBe("anywhere");
+        expect(getComputedStyle(document.querySelector(".title")!).lineBreak).toBe("strict");
         for (const node of [
           document.querySelector(".preview h3"),
           document.querySelector(".emptyState h3"),
@@ -334,7 +335,7 @@ describe("HomeDiscovery", () => {
         expect(preview.wordBreak).toBe("auto-phrase");
         expect(preview.overflowWrap).toBe("anywhere");
         expect(preview.lineBreak).toBe("strict");
-        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("normal");
+        expect(getComputedStyle(document.querySelector(".title")!).wordBreak).toBe("auto-phrase");
       }
 
       for (const lang of ["ko", "en"]) {
@@ -353,11 +354,18 @@ describe("HomeDiscovery", () => {
   it("keeps Japanese heading phrases whole when auto-phrase is dropped", async () => {
     const user = userEvent.setup();
     const css = readFileSync("components/home/home-discovery.module.css", "utf8");
-    expect(css.match(/word-break: normal;\n\s*word-break: auto-phrase;/g)).toHaveLength(3);
+    expect(css.match(/word-break: normal;\n\s*word-break: auto-phrase;/g)).toHaveLength(4);
     expect(css).toContain(".keepPhrase {\n  white-space: nowrap;\n}");
 
     const copy = HOME_DISCOVERY_COPY.ja;
+    expect(copy.titlePhrases?.join("")).toBe(copy.title);
     const { container } = render(<HomeDiscovery locale="ja" entries={entries} />);
+    const title = screen.getByRole("heading", { level: 2, name: copy.title });
+    expect([...title.querySelectorAll("span")].map((span) => span.textContent)).toEqual([
+      ...copy.titlePhrases ?? [],
+    ]);
+    expect(title.querySelector("span")?.className).toMatch(/keepPhrase/);
+    expect(title.textContent).toBe(copy.title);
     const preview = within(screen.getByLabelText(copy.previewLabel)).getByRole("heading", { level: 3 });
     expect([...preview.querySelectorAll("span")].map((span) => span.textContent)).toEqual([
       "まず一つ",

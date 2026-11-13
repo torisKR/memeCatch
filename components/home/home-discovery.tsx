@@ -108,7 +108,7 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
       <div className={styles.headingGrid}>
         <div>
           <p className={styles.eyebrow}>{copy.eyebrow}</p>
-          <h2 id={titleId} className={styles.title}>{copy.title}</h2>
+          <h2 id={titleId} className={styles.title}>{keptPhrases(copy.title, copy.titlePhrases)}</h2>
         </div>
         <p className={styles.description}>{copy.description}</p>
       </div>

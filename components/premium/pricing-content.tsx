@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { withLocaleFallback } from "@/lib/i18n";
+import { withLocaleFallback, type Locale } from "@/lib/i18n";
 import { useLocale } from "@/lib/i18n-client";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { localizedStaticPath } from "@/lib/i18n-routing";
+import { cjkKeepPhrases } from "@/lib/cjk-keep-phrase";
 import { PlusFeatures } from "@/components/premium/plus-features";
 import { track } from "@/lib/analytics";
 import { FairySupportOption } from "@/components/premium/fairy-support-option";
+import styles from "@/components/premium/pricing-content.module.css";
+
+const PRICING_TITLE_PHRASES: Partial<Record<Locale, readonly string[]>> = {
+  ja: ["今日", "投稿する", "ミーム", "3つと", "媒体別", "コピーを", "受け取る"],
+  zh: ["获取", "今天", "可发布的", "3个", "迷因", "及", "各平台", "文案"],
+  "zh-tw": ["今天", "就能", "使用的", "已審核", "迷因"],
+};
 
 const CHECKOUT_UNAVAILABLE = withLocaleFallback({
   ko: "신규 결제는 현재 잠시 중단되어 있습니다.",
@@ -34,17 +42,17 @@ export function PricingContent({
   }, [locale]);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:py-16 lg:py-20">
-      <header className="grid gap-5 border-b border-border pb-8 sm:pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-end lg:gap-16">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-text">
+    <main className={`${styles.root} mx-auto w-full max-w-6xl px-4 py-10 sm:py-16 lg:py-20`}>
+      <header className={`${styles.hero} grid gap-5 border-b border-border pb-8 sm:pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end lg:gap-16`}>
+        <div className={styles.heroCopy}>
+          <p className={`${styles.eyebrow} text-xs font-bold uppercase tracking-[0.16em] text-accent-text`}>
             {copy.pricing.eyebrow}
           </p>
-          <h1 className="mt-4 max-w-3xl text-balance text-4xl font-black leading-[1.06] tracking-[-0.045em] sm:text-6xl">
-            {copy.pricing.title}
+          <h1 className={`${styles.title} mt-4 text-balance text-4xl font-black leading-[1.06] tracking-[-0.045em] sm:text-6xl`}>
+            {cjkKeepPhrases(copy.pricing.title, PRICING_TITLE_PHRASES[locale], styles.keepPhrase)}
           </h1>
         </div>
-        <p className="max-w-2xl text-pretty text-base leading-relaxed text-muted sm:text-lg">
+        <p className={`${styles.intro} max-w-2xl text-pretty text-base leading-relaxed text-muted sm:text-lg`}>
           {copy.pricing.intro}
         </p>
       </header>

@@ -167,9 +167,11 @@
 }
 :lang(ja) .sectionTitle,
 :lang(zh) .sectionTitle {
-  word-break: normal;
   overflow-wrap: anywhere;
   line-break: strict;
+  /* `normal` remains when a browser drops the unsupported `auto-phrase` value. */
+  word-break: normal;
+  word-break: auto-phrase;
 }
 
 .sectionDescription {
@@ -346,9 +348,15 @@
 }
 :lang(ja) .trustTitle,
 :lang(zh) .trustTitle {
-  word-break: normal;
   overflow-wrap: anywhere;
   line-break: strict;
+  /* `normal` remains when a browser drops the unsupported `auto-phrase` value. */
+  word-break: normal;
+  word-break: auto-phrase;
+}
+
+.keepPhrase {
+  white-space: nowrap;
 }
 
 .trustDescription {

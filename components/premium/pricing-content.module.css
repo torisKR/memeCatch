@@ -1,0 +1,37 @@
+.root {
+  min-width: 0;
+}
+
+.hero {
+  min-width: 0;
+}
+
+.heroCopy,
+.intro {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.eyebrow {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
+.title {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:lang(ja) .title,
+:lang(zh) .title {
+  overflow-wrap: anywhere;
+  line-break: strict;
+  /* `normal` remains when a browser drops the unsupported `auto-phrase` value. */
+  word-break: normal;
+  word-break: auto-phrase;
+}
+
+.keepPhrase {
+  white-space: nowrap;
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getIndexableKoreanMemeCount } from "@/app/sitemap";
 import { aboutDescription, aboutRecordedSentence } from "@/lib/about-copy";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 /** Same live catalog read as the sitemap, so a database-less build cannot freeze a count. */
@@ -14,15 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "소개",
     description,
     alternates: { canonical: "/about" },
-    // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-    openGraph: {
-      type: "website",
-      siteName: "밈캐치",
-      locale: "ko_KR",
-      title: "소개",
-      description,
-      url: "/about",
-    },
+    ...koreanPageShare({ title: "소개", description, pathname: "/about" }),
   };
 }
 

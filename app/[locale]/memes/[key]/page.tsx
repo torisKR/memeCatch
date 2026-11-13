@@ -13,6 +13,7 @@ import {
   localizedPath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
 import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
@@ -248,23 +249,27 @@ async function loadLocalizedDetail(
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, key } = await params;
-  if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
+  const { locale: shareLocale, key } = await params;
+  if (!isOgPageLocale(shareLocale)) return { robots: { index: false, follow: false } };
+  if (shareLocale === "ar") notFound();
+  const locale = ogPageContentLocale(shareLocale);
 
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
   const loaded = await loadLocalizedDetail(targetShortId, locale);
+  // Same as main: a catalog outage is the unavailable state, and a missing
+  // translation is notFound. Do not substitute the Korean curated card.
   if (loaded.status === "unavailable") return unavailableMemeMetadata();
   const meme = loaded.meme;
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
-    permanentRedirect(localizedMemePath(locale, meme.short_id, meme.slug));
+    permanentRedirect(localizedMemePath(shareLocale, meme.short_id, meme.slug));
   }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
-    locale,
+    locale: shareLocale,
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
@@ -273,7 +278,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     isIndexableLocalizedMeme(version),
   );
   const copy = DETAIL_COPY[locale];
-  const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
+  const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
   const koreanPath = localizedMemePath("ko", meme.short_id, meme.original.slug);
   const englishVersion = indexableVersions.find(({ locale: versionLocale }) =>
     versionLocale === "en",
@@ -291,7 +296,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   const description = `${meme.title}: ${meme.summary}`;
   const metadata = buildLocalizedMetadata({
-    locale,
+    locale: shareLocale,
     pathname: canonical,
     title: `${meme.title} · ${copy.meaningTitle}`,
     description,
@@ -300,21 +305,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     ...metadata,
     alternates: { canonical, languages },
-    ...(isIndexableLocalizedMeme(meme) ? {} : { robots: { index: false, follow: true } }),
+    ...(!isIndexableLocalizedMeme(meme)
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       ...metadata.openGraph,
       url: canonical,
-      locale: getOpenGraphLocale(locale),
+      locale: getOpenGraphLocale(shareLocale),
       alternateLocale: indexableVersions
-        .filter((item) => item.locale !== locale)
+        .filter((item) => item.locale !== shareLocale)
         .map((item) => getOpenGraphLocale(item.locale)),
     },
   };
 }
 
 export default async function LocalizedMemePage({ params }: Props) {
-  const { locale, key } = await params;
-  if (!isSeoContentLocale(locale)) notFound();
+  const { locale: shareLocale, key } = await params;
+  if (!isOgPageLocale(shareLocale)) notFound();
+  if (shareLocale === "ar") notFound();
+  const locale = ogPageContentLocale(shareLocale);
 
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
@@ -324,12 +333,12 @@ export default async function LocalizedMemePage({ params }: Props) {
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
-    permanentRedirect(localizedMemePath(locale, meme.short_id, meme.slug));
+    permanentRedirect(localizedMemePath(shareLocale, meme.short_id, meme.slug));
   }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
-    locale,
+    locale: shareLocale,
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
@@ -351,8 +360,8 @@ export default async function LocalizedMemePage({ params }: Props) {
   const relatedCards = selectLocalizedRelatedCards(related, localizedRelated.items, locale);
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
-  const seo = getSeoCopy(locale);
-  const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
+  const seo = getSeoCopy(shareLocale);
+  const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
   const sourceLinks = meme.meme_sources.flatMap((source) => {
     if (!isPublicDisplaySource(source)) return [];
     const url = publicSourceUrl(source.source_url);
@@ -407,7 +416,7 @@ export default async function LocalizedMemePage({ params }: Props) {
       />
 
       <nav aria-label="Breadcrumb" className="mb-8 text-sm text-muted">
-        <Link href={localizedPath("/", locale)} className="underline-offset-4 hover:text-foreground hover:underline">
+        <Link href={localizedPath("/", shareLocale)} className="underline-offset-4 hover:text-foreground hover:underline">
           {copy.home}
         </Link>
         <span aria-hidden className="mx-2">/</span>

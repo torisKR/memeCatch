@@ -4,10 +4,12 @@ import { HomeExperience } from "@/components/home/home-experience";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
 import {
   SEO_ROUTE_LOCALES,
+  KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
   buildHreflangLanguages,
   getSeoCopy,
   localizePath,
 } from "@/lib/i18n-routing";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
 import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
@@ -25,6 +27,17 @@ export const metadata: Metadata = {
       // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다.
       "x-default": localizePath("/", "en"),
     },
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    description:
+      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
+    siteName: "밈캐치",
+    locale: "ko_KR",
+    alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 

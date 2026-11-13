@@ -13,6 +13,9 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import { loadKoreanRankings } from "@/lib/korean-rankings.server";
+import { KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES } from "@/lib/i18n-routing";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { koreanRankingsRenderList, type PublicRankingMeme } from "@/lib/korean-rankings";
 import { AdsenseScript } from "@/components/adsense-script";
 import {
@@ -38,10 +41,24 @@ export async function generateRankingsMetadata(locale: Locale): Promise<Metadata
   const rankings = await loadKoreanRankings();
   if (!koreanRankingsRenderList(rankings)) {
     const copy = rankingsFallbackCopy(locale);
+    if (locale !== "ko") {
+      return {
+        title: copy.title,
+        description: copy.guidance,
+        robots: { index: false, follow: true },
+      };
+    }
     return {
       title: copy.title,
       description: copy.guidance,
       robots: { index: false, follow: true },
+      alternates: { canonical: "/rankings" },
+      ...koreanPageShare({
+        title: copy.title,
+        description: copy.guidance,
+        pathname: "/rankings",
+        alternateLocales: true,
+      }),
     };
   }
   if (locale !== "ko") {
@@ -57,6 +74,7 @@ export async function generateRankingsMetadata(locale: Locale): Promise<Metadata
         siteName: "MemeCatch",
         title: copy.title,
         url: `/${locale}/rankings`,
+        images: [ogDefaultImageDescriptor(locale)],
       },
     };
   }
@@ -73,9 +91,17 @@ export async function generateRankingsMetadata(locale: Locale): Promise<Metadata
       type: "website",
       siteName: "밈캐치",
       locale: "ko_KR",
+      alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
       title,
       description,
       url: "/rankings",
+      images: [ogDefaultImageDescriptor("ko")],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

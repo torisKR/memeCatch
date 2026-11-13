@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
 import { memePathFrom, shortIdFromParam } from "@/lib/labels";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { classifyPublicMemeLookup, type PublicMemeLookup } from "@/lib/public-meme-lookup";
 import {
   getMemeByShortId,
@@ -83,6 +84,13 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
       title,
       description: meme.summary,
       url: path,
+      images: [ogDefaultImageDescriptor("ko")],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: meme.summary,
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

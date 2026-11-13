@@ -1,3 +1,5 @@
+// Main's Korean per-meme card, kept as a route handler so the published
+// `/memes/[key]/opengraph-image-k2cx9c` URL stays a PNG without a metadata file.
 import { ImageResponse } from "next/og";
 import { createStaticClient } from "@/lib/supabase/server";
 import {
@@ -70,7 +72,7 @@ function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-export default async function Image({
+export async function renderLegacyKoreanMemeOpenGraph({
   params,
 }: {
   params: Promise<{ key: string }>;

@@ -9,6 +9,7 @@ import {
   isSeoContentLocale,
   localizedMemePath,
 } from "@/lib/i18n-routing";
+import { isOgPageLocale } from "@/lib/og-default-image";
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { SITE_URL } from "@/lib/site";
 import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
@@ -19,13 +20,18 @@ type Props = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
+  if (!isOgPageLocale(locale)) return { robots: { index: false, follow: false } };
 
-  return buildLocalizedMetadata({
-    locale,
-    pathname: "/",
-    availableLocales: ["ko", ...SEO_CONTENT_LOCALES],
-  });
+  return {
+    ...buildLocalizedMetadata({
+      locale,
+      pathname: "/",
+      ...(isSeoContentLocale(locale)
+        ? { availableLocales: ["ko", ...SEO_CONTENT_LOCALES] as const }
+        : {}),
+    }),
+    ...(locale === "ar" ? { robots: { index: false, follow: false } } : {}),
+  };
 }
 
 function JsonLd({ data }: { data: object }) {
@@ -39,7 +45,16 @@ function JsonLd({ data }: { data: object }) {
 
 export default async function LocalizedHomePage({ params }: Props) {
   const { locale } = await params;
-  if (!isSeoContentLocale(locale)) notFound();
+  if (!isOgPageLocale(locale)) notFound();
+  if (locale === "ar") {
+    const copy = getSeoCopy("ar");
+    return (
+      <main lang="ar" dir="rtl" className="bg-background text-foreground px-6 py-16">
+        <h1 className="text-3xl font-black">{copy.defaultTitle}</h1>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed">{copy.description}</p>
+      </main>
+    );
+  }
 
   const available = await getLocalizedFeaturedMemes(locale, 24);
   const featured = [...available]

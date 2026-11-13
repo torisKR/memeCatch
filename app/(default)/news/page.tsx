@@ -6,6 +6,7 @@ import { getBriefsForAudience, type MemeNewsBrief } from "@/lib/meme-news";
 import { getGenerationHighlights } from "@/lib/queries";
 import { PAGE_COPY } from "@/lib/i18n-pages";
 import { AdsenseScript } from "@/components/adsense-script";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 /**
  * ISR 로케일 함정 주의: 여기서 getRequestLocale()(=headers())를 읽으면 페이지가
@@ -19,15 +20,11 @@ export const metadata: Metadata = {
   title: copy.newsTitle,
   description: copy.newsDescription,
   alternates: { canonical: "/news" },
-  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
+  ...koreanPageShare({
     title: copy.newsTitle,
     description: copy.newsDescription,
-    url: "/news",
-  },
+    pathname: "/news",
+  }),
 };
 
 export const revalidate = 86400;

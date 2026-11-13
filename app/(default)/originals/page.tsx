@@ -4,11 +4,18 @@ import {
   EDITORIAL_ORIGINALS,
   editorialOriginalPath,
 } from "@/lib/editorial-originals";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 export const metadata: Metadata = {
   title: "오리지널 밈",
   description: "밈캐치가 직접 만든 일러스트와 이야기.",
   alternates: { canonical: "/originals" },
+  ...koreanPageShare({
+    title: "오리지널 밈",
+    description: "밈캐치가 직접 만든 일러스트와 이야기.",
+    pathname: "/originals",
+    alternateLocales: true,
+  }),
 };
 
 export default function OriginalsPage() {

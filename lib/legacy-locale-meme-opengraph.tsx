@@ -1,3 +1,5 @@
+// Main's locale per-meme card. A route handler keeps the URL and the
+// same response, including the English fallback for non-SEO locales.
 import { ImageResponse } from "next/og";
 import { isSeoContentLocale, type SeoContentLocale } from "@/lib/i18n-routing";
 import { shortIdFromParam } from "@/lib/labels";
@@ -97,7 +99,7 @@ function truncate(value: string, maxLength: number) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
-export default async function Image({
+export async function renderLegacyLocaleMemeOpenGraph({
   params,
 }: {
   params: Promise<{ locale: string; key: string }>;

@@ -10,6 +10,7 @@ import {
   type SlangEra,
 } from "@/components/slang-dictionary";
 import { AdsenseScript } from "@/components/adsense-script";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * /slang — 줄임말·유행어 사전 (연대별 브라우징).
@@ -153,6 +154,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "줄임말·유행어 사전",
       description,
       url: "/slang",
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

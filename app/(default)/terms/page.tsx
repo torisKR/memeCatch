@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "이용약관",
   description: "밈캐치 서비스 이용약관 — 서비스 내용, 회원의 의무, 콘텐츠 권리, 책임 제한.",
   alternates: { canonical: "/terms" },
+  ...koreanPageShare({
+    title: "이용약관",
+    description: "밈캐치 서비스 이용약관 — 서비스 내용, 회원의 의무, 콘텐츠 권리, 책임 제한.",
+    pathname: "/terms",
+    alternateLocales: true,
+  }),
 };
 
 const EFFECTIVE = "2026년 8월 18일";

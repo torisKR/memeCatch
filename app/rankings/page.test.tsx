@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/korean-rankings.server", () => ({ loadKoreanRankings }));
 
-import RankingsPage, { generateMetadata } from "@/app/rankings/page";
+import RankingsPage, { generateMetadata, generateRankingsMetadata } from "@/app/rankings/page";
 
 function meme(id: string): PublicRankingMeme {
   return {
@@ -74,6 +74,42 @@ describe("Korean rankings page", () => {
     expect(html).not.toContain("error");
     expect(html).not.toContain("500");
     expect(html).not.toContain("<table");
+  });
+
+  it("keeps the four layout alternate locales on every Korean rankings card", async () => {
+    const expected = ["en_US", "ja_JP", "zh_CN", "zh_TW"];
+    loadKoreanRankings.mockResolvedValueOnce({ kind: "unavailable" });
+    const fallback = await generateMetadata();
+    const fallbackGraph = fallback.openGraph && !Array.isArray(fallback.openGraph)
+      ? fallback.openGraph
+      : undefined;
+    expect(fallbackGraph?.alternateLocale).toEqual(expected);
+
+    loadKoreanRankings.mockResolvedValueOnce({
+      kind: "published",
+      memes: [meme("week")],
+    });
+    const published = await generateMetadata();
+    const publishedGraph = published.openGraph && !Array.isArray(published.openGraph)
+      ? published.openGraph
+      : undefined;
+    expect(publishedGraph?.alternateLocale).toEqual(expected);
+  });
+
+  it("keeps a locale board noindex and on its own share image", async () => {
+    for (const locale of ["en", "ja", "ar"] as const) {
+      loadKoreanRankings.mockResolvedValue({
+        kind: "published",
+        memes: [meme("week")],
+      });
+      const metadata = await generateRankingsMetadata(locale);
+      expect(metadata.robots).toEqual({ index: false, follow: true });
+      expect(metadata.alternates).toEqual({ canonical: "/rankings" });
+      expect(metadata.openGraph).toMatchObject({
+        url: `/${locale}/rankings`,
+        images: [{ url: `/og/${locale}`, width: 1200, height: 630 }],
+      });
+    }
   });
 
   it("no longer reads the session inside the rankings loader", () => {

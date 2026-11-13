@@ -5,13 +5,23 @@ import {
   resolveGlobalFeedPlatform,
   type FeedPlatformKey,
 } from "@/lib/global-feed.types";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import type { SocialPlatform } from "@/lib/source-platform";
 
+const GLOBAL_TITLE = "Global Meme Feed";
+const GLOBAL_DESCRIPTION =
+  "Browse reviewed YouTube, TikTok, and Instagram meme sources. Each item opens a Korean MemeCatch detail page with context and safety guidance.";
+
 export const metadata: Metadata = {
-  title: "Global Meme Feed",
-  description:
-    "Browse reviewed YouTube, TikTok, and Instagram meme sources. Each item opens a Korean MemeCatch detail page with context and safety guidance.",
+  title: GLOBAL_TITLE,
+  description: GLOBAL_DESCRIPTION,
   alternates: { canonical: "/global" },
+  ...koreanPageShare({
+    title: GLOBAL_TITLE,
+    description: GLOBAL_DESCRIPTION,
+    pathname: "/global",
+    alternateLocales: true,
+  }),
 };
 
 const QUERY_PLATFORMS: Record<

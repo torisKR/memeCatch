@@ -268,6 +268,11 @@ export function toOpenGraphLocale(locale: OgShareLocale): string {
   return SEO_LOCALE_CONFIG[locale].openGraphLocale;
 }
 
+/** Layout alternate locales for Korean pages. A child `openGraph` replaces the layout object, so pages that set one must copy this list. */
+export const KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES = SEO_ROUTE_LOCALES.filter(
+  (locale) => locale !== "ko",
+).map(toOpenGraphLocale);
+
 export function getOpenGraphLocale(locale: OgShareLocale): string {
   return toOpenGraphLocale(locale);
 }

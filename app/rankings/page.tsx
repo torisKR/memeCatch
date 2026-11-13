@@ -13,6 +13,7 @@ import {
   type SafetyLevel,
 } from "@/lib/labels";
 import { loadKoreanRankings } from "@/lib/korean-rankings.server";
+import { KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES } from "@/lib/i18n-routing";
 import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { koreanRankingsRenderList, type PublicRankingMeme } from "@/lib/korean-rankings";
@@ -56,6 +57,7 @@ export async function generateRankingsMetadata(locale: Locale): Promise<Metadata
         title: copy.title,
         description: copy.guidance,
         pathname: "/rankings",
+        alternateLocales: true,
       }),
     };
   }
@@ -89,6 +91,7 @@ export async function generateRankingsMetadata(locale: Locale): Promise<Metadata
       type: "website",
       siteName: "밈캐치",
       locale: "ko_KR",
+      alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
       title,
       description,
       url: "/rankings",

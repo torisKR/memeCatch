@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     title: MEME_CARDS_TITLE,
     description: MEME_CARDS_DESCRIPTION,
     pathname: "/meme-cards",
+    alternateLocales: true,
   }),
 };
 

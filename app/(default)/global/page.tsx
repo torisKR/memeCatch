@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     title: GLOBAL_TITLE,
     description: GLOBAL_DESCRIPTION,
     pathname: "/global",
+    alternateLocales: true,
   }),
 };
 

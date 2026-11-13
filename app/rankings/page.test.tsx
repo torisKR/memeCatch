@@ -76,6 +76,26 @@ describe("Korean rankings page", () => {
     expect(html).not.toContain("<table");
   });
 
+  it("keeps the four layout alternate locales on every Korean rankings card", async () => {
+    const expected = ["en_US", "ja_JP", "zh_CN", "zh_TW"];
+    loadKoreanRankings.mockResolvedValueOnce({ kind: "unavailable" });
+    const fallback = await generateMetadata();
+    const fallbackGraph = fallback.openGraph && !Array.isArray(fallback.openGraph)
+      ? fallback.openGraph
+      : undefined;
+    expect(fallbackGraph?.alternateLocale).toEqual(expected);
+
+    loadKoreanRankings.mockResolvedValueOnce({
+      kind: "published",
+      memes: [meme("week")],
+    });
+    const published = await generateMetadata();
+    const publishedGraph = published.openGraph && !Array.isArray(published.openGraph)
+      ? published.openGraph
+      : undefined;
+    expect(publishedGraph?.alternateLocale).toEqual(expected);
+  });
+
   it("keeps a locale board noindex and on its own share image", async () => {
     for (const locale of ["en", "ja", "ar"] as const) {
       loadKoreanRankings.mockResolvedValue({

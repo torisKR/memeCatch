@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES } from "@/lib/i18n-routing";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
@@ -10,6 +11,12 @@ export function koreanPageShare(input: {
   title: string;
   description: string;
   pathname: string;
+  /**
+   * Pages that did not set `openGraph` on main inherit the layout's four
+   * alternate locales. Passing true copies that list, because this object
+   * replaces the layout card.
+   */
+  alternateLocales?: boolean;
 }): Pick<Metadata, "openGraph" | "twitter"> {
   const image = ogDefaultImageDescriptor("ko");
   return {
@@ -20,6 +27,9 @@ export function koreanPageShare(input: {
       title: input.title,
       description: input.description,
       url: input.pathname,
+      ...(input.alternateLocales
+        ? { alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES }
+        : {}),
       images: [image],
     },
     twitter: {

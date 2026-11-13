@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     title: "오리지널 밈",
     description: "밈캐치가 직접 만든 일러스트와 이야기.",
     pathname: "/originals",
+    alternateLocales: true,
   }),
 };
 

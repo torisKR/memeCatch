@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     title: "고객센터",
     description: "밈캐치에 버그 신고, 콘텐츠 정정·삭제 요청, 건의사항을 보내 주세요.",
     pathname: "/support",
+    alternateLocales: true,
   }),
 };
 

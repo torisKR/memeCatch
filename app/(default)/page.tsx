@@ -4,10 +4,10 @@ import { HomeExperience } from "@/components/home/home-experience";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
 import {
   SEO_ROUTE_LOCALES,
+  KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
   buildHreflangLanguages,
   getSeoCopy,
   localizePath,
-  toOpenGraphLocale,
 } from "@/lib/i18n-routing";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { memePathFrom } from "@/lib/labels";
@@ -36,9 +36,7 @@ export const metadata: Metadata = {
       "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
     siteName: "밈캐치",
     locale: "ko_KR",
-    alternateLocale: SEO_ROUTE_LOCALES.filter((locale) => locale !== "ko").map(
-      toOpenGraphLocale,
-    ),
+    alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
     images: [ogDefaultImageDescriptor("ko")],
   },
 };

@@ -19,6 +19,7 @@ vi.mock("@/lib/meme-translations", async (importOriginal) => {
 import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale]/memes/[key]/page";
 import { generateMetadata as generateLocalizedNotFoundMetadata } from "@/app/[locale]/not-found";
 import { metadata as koreanNotFoundMetadata } from "@/app/(default)/not-found";
+import { getSeoCopy, toOpenGraphLocale } from "@/lib/i18n-routing";
 
 const LOCALES = ["en", "ja", "zh", "zh-tw"] as const;
 
@@ -53,12 +54,27 @@ describe("untranslated locale detail share images", () => {
       const ogUrls = imageUrls(openGraph?.images);
       const twitterUrls = imageUrls(twitter?.images);
 
+      const copy = getSeoCopy(locale);
       expect(metadata.title).toBe(koreanNotFoundMetadata.title);
       expect(metadata.robots).toEqual({ index: false, follow: true });
+      expect(openGraph).toMatchObject({
+        type: "website",
+        title: copy.defaultTitle,
+        siteName: "MemeCatch",
+        url: `/${locale}`,
+        locale: toOpenGraphLocale(locale),
+      });
+      expect(openGraph).not.toHaveProperty("alternateLocale");
+      expect(twitter).toMatchObject({
+        card: "summary_large_image",
+        title: copy.defaultTitle,
+      });
       expect(ogUrls).toEqual([`/og/${locale}`]);
       expect(twitterUrls).toEqual([`/og/${locale}`]);
       expect(ogUrls).toEqual(twitterUrls);
       expect(ogUrls.join(" ")).not.toContain("opengraph-image");
+      expect(String(openGraph?.title)).not.toContain("이 밈은 아직 없어요");
+      expect(String(twitter?.title)).not.toContain("이 밈은 아직 없어요");
     }
   });
 });

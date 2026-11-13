@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { metadata as koreanNotFoundMetadata } from "@/app/(default)/not-found";
-import { isSeoContentLocale } from "@/lib/i18n-routing";
+import { buildLocalizedMetadata, isSeoContentLocale } from "@/lib/i18n-routing";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
-// The Korean title, body, and noindex decision stay. This file only stops the
-// root `opengraph-image` file from replacing og:image while twitter stays on
-// the locale layout's `/og/{locale}` card.
+// The Korean title and body stay. Share tags keep the locale layout card and
+// only replace the image, so og:url, locale, site name, type, and title stay
+// the localized home values while both images are `/og/{locale}`.
 export { default } from "@/app/(default)/not-found";
 
 type NotFoundProps = {
@@ -20,10 +20,17 @@ export async function generateMetadata({ params }: NotFoundProps): Promise<Metad
   };
   if (!isSeoContentLocale(locale)) return metadata;
 
+  const localized = buildLocalizedMetadata({ locale, pathname: "/" });
   const image = ogDefaultImageDescriptor(locale);
   return {
     ...metadata,
-    openGraph: { images: [image] },
-    twitter: { images: [image] },
+    openGraph: {
+      ...localized.openGraph,
+      images: [image],
+    },
+    twitter: {
+      ...localized.twitter,
+      images: [image],
+    },
   };
 }

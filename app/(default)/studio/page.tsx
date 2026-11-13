@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     title: STUDIO_TITLE,
     description: STUDIO_DESCRIPTION,
     pathname: "/studio",
+    alternateLocales: true,
   }),
 };
 

@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     title: "커뮤니티 글쓰기",
     description: "밈 추천·추억·토론 — 커뮤니티에 새 글을 올려요.",
     pathname: "/community/new",
+    alternateLocales: true,
   }),
 };
 

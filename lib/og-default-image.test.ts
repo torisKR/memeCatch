@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { deflateSync, inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
@@ -471,6 +472,25 @@ describe("default preview image response", () => {
       expect(preview.width).toBe(300);
       expect(ogTitlePreviewPx(preview.width)).toBeGreaterThanOrEqual(12);
       writeFileSync(`/tmp/og-preview/${locale}-300.png`, previewBytes);
+    },
+    20_000,
+  );
+});
+
+describe("locale card fonts", () => {
+  const cardSha256 = {
+    ko: "3e7de32edb6ec8a88eb1018a94d24aee30d312e2bcd579c03b8b5349a119198c",
+    en: "256ea7f550a966f7d801cae8f4807b8d332d3847a1290c9cbae3460ab15bf266",
+    ja: "ab15748bd8544ecbc9c96d2a21f772ea906750c0211669041f14cf9d6ff96feb",
+    zh: "fe8a6c00b123b5036da7770d4ddcd6da3a2d41e86e37376e22b71605aafdcedb",
+    "zh-tw": "a335457c1f6b304e13c48aec0268d062c622a2f480a987ab2f2764d33ba139db",
+  } as const;
+
+  it.each(["ko", "en", "ja", "zh", "zh-tw"] as const)(
+    "paints %s with that locale font",
+    async (locale) => {
+      const bytes = Buffer.from(await (await renderOgDefaultImage(locale)).arrayBuffer());
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(cardSha256[locale]);
     },
     20_000,
   );

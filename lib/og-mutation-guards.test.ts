@@ -98,9 +98,15 @@ describe("meme detail share tags survive the known mutants", () => {
     expect(metadata.title).toBe("데이터베이스밈 뜻");
     expect(metadata.title).not.toBe(HOME_TITLE);
     expect(metadata.openGraph).toMatchObject({
+      title: "데이터베이스밈 뜻",
       url: "/memes/zzdb0001-database-only",
       images: [{ url: "/og/ko" }],
     });
+    expect(metadata.twitter).toMatchObject({
+      card: "summary_large_image",
+      title: "데이터베이스밈 뜻",
+    });
+    expect(metadata.twitter).not.toMatchObject({ title: HOME_TITLE });
   });
 
   it("keeps localized images when a translation exists", async () => {

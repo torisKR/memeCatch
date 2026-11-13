@@ -178,6 +178,14 @@ const nextConfig: NextConfig = {
   // the SEO locales.
   async rewrites() {
     return [
+      // This dynamic image route would paint `/ar/opengraph-image/ar`.
+      // Checked before dynamic routes, so the request becomes `/ar` and
+      // returns the same global not-found document as main. `/og/ar` is
+      // the only published Arabic card.
+      {
+        source: "/ar/opengraph-image/:path*",
+        destination: "/ar",
+      },
       {
         source: rankingsLocaleRewriteSource(),
         destination: "/locale-rankings/:locale",

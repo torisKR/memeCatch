@@ -7,8 +7,8 @@ import {
   type MemeShareCardContent,
 } from "@/lib/meme-share-image";
 import {
+  fontKindFor,
   layoutMemeShareCard,
-  textRuns,
   type ShareFontKind,
   type ShareFontSet,
 } from "@/lib/meme-share-layout";
@@ -71,21 +71,45 @@ function loadShareFonts(): Promise<LoadedShareFonts> {
   return fontsPromise;
 }
 
+export function emojiFaceName(fonts: EmojiFont[], codePoint: number): string | null {
+  const index = fonts.findIndex((font) => font.advances.advances.has(codePoint));
+  return index >= 0 ? `ShareEmoji${index}` : null;
+}
+
+function fontRuns(
+  text: string,
+  locale: MemeShareCardContent["locale"],
+  emoji: EmojiFont[],
+): { family: string; text: string }[] {
+  const runs: { family: string; text: string }[] = [];
+  for (const char of text) {
+    const codePoint = char.codePointAt(0) ?? 0;
+    const kind = fontKindFor(codePoint, locale);
+    const family = kind === "emoji" ? emojiFaceName(emoji, codePoint) ?? FAMILY.ko : FAMILY[kind];
+    const last = runs[runs.length - 1];
+    if (last && last.family === family) last.text += char;
+    else runs.push({ family, text: char });
+  }
+  return runs;
+}
+
 function ShareLine({
   text,
   locale,
   fontSize,
   color,
+  emoji,
 }: {
   text: string;
   locale: MemeShareCardContent["locale"];
   fontSize: number;
   color: string;
+  emoji: EmojiFont[];
 }) {
   return (
     <div style={{ display: "flex", justifyContent: "center", fontSize, color, lineHeight: 1.15 }}>
-      {textRuns(text, locale).map((run, index) => (
-        <div key={`${run.kind}-${index}`} style={{ display: "flex", fontFamily: FAMILY[run.kind] }}>
+      {fontRuns(text, locale, emoji).map((run, index) => (
+        <div key={`${run.family}-${index}`} style={{ display: "flex", fontFamily: run.family }}>
           {run.text}
         </div>
       ))}
@@ -111,22 +135,24 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
     const codePoint = char.codePointAt(0) ?? 0;
     if (loaded.metrics.emoji.advances.has(codePoint)) emojiPoints.add(codePoint);
   }
-  const emojiData: Buffer[] = [];
-  for (const codePoint of emojiPoints) {
-    const font = loaded.emoji.find((item) => item.advances.advances.has(codePoint));
-    if (font && !emojiData.includes(font.data)) emojiData.push(font.data);
-  }
+  const emojiFaces = loaded.emoji.flatMap((font, index) => {
+    const ownsPaintedGlyph = [...emojiPoints].some(
+      (codePoint) => emojiFaceName(loaded.emoji, codePoint) === `ShareEmoji${index}`,
+    );
+    if (!ownsPaintedGlyph) return [];
+    return [{
+      name: `ShareEmoji${index}`,
+      data: font.data,
+      weight: 700 as const,
+      style: "normal" as const,
+    }];
+  });
   const fonts = [
     { name: FAMILY.ko, data: loaded.files.ko, weight: 700 as const, style: "normal" as const },
     { name: FAMILY.ja, data: loaded.files.ja, weight: 700 as const, style: "normal" as const },
     { name: FAMILY.zh, data: loaded.files.zh, weight: 700 as const, style: "normal" as const },
     { name: FAMILY["zh-tw"], data: loaded.files["zh-tw"], weight: 700 as const, style: "normal" as const },
-    ...emojiData.map((data) => ({
-      name: FAMILY.emoji,
-      data,
-      weight: 700 as const,
-      style: "normal" as const,
-    })),
+    ...emojiFaces,
   ];
   return new ImageResponse(
     (
@@ -163,6 +189,7 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
                 locale={card.locale}
                 fontSize={layout.wordmarkFontSize}
                 color={MEME_SHARE_DESIGN.foreground}
+                emoji={loaded.emoji}
               />
             </div>
           </div>
@@ -174,6 +201,7 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
                 locale={card.locale}
                 fontSize={layout.titleFontSize}
                 color={MEME_SHARE_DESIGN.foreground}
+                emoji={loaded.emoji}
               />
             ))}
           </div>
@@ -184,6 +212,7 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
                 locale={card.locale}
                 fontSize={layout.summaryFontSize}
                 color={MEME_SHARE_DESIGN.summary}
+                emoji={loaded.emoji}
               />
             </div>
           ) : null}
@@ -202,6 +231,7 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
                 locale={card.locale}
                 fontSize={layout.chipFontSize}
                 color={MEME_SHARE_DESIGN.foreground}
+                emoji={loaded.emoji}
               />
             </div>
           ) : null}

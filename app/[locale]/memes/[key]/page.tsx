@@ -13,7 +13,7 @@ import {
   localizedPath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
-import { localeMemeShareImage } from "@/lib/meme-share-image";
+import { localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image";
 import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
 import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
@@ -301,7 +301,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     shortId: meme.short_id,
     slug: meme.slug,
     alt: meme.title,
-    version: meme.updated_at,
+    version: localeShareVersion({
+      updated_at: meme.updated_at,
+      translationUpdatedAt: meme.translation.updatedAt,
+    }),
   });
   const metadata = buildLocalizedMetadata({
     locale: shareLocale,

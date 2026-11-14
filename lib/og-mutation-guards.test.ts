@@ -26,7 +26,7 @@ vi.mock("@/lib/meme-translations", async (importOriginal) => {
 
 import { generateMetadata as generateKoreanMemeMetadata } from "@/app/(default)/memes/[key]/page";
 import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale]/memes/[key]/page";
-import { isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage } from "@/lib/meme-share-image";
+import { isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image";
 
 const HOME_TITLE = "밈캐치 — 그 밈, 3초 안에 알려드려요";
 
@@ -176,7 +176,10 @@ describe("meme detail share tags survive the known mutants", () => {
         shortId: "zzdb0001",
         slug: "database-only",
         alt: "Database meme",
-        version: "2026-01-01T00:00:00.000Z",
+        version: localeShareVersion({
+          updated_at: "2026-01-01T00:00:00.000Z",
+          translationUpdatedAt: "2026-01-01T00:00:00.000Z",
+        }),
       }).url,
       "Database meme",
     );
@@ -215,6 +218,28 @@ describe("meme detail share tags survive the known mutants", () => {
     expect(afterUrl).toContain(encodeURIComponent("2026-06-01T00:00:00.000Z"));
     expect(beforeUrl).not.toBe(afterUrl);
     expect(imageTags(before).twitter[0]?.url).toBe(beforeUrl);
+    expect(imageTags(after).twitter[0]?.url).toBe(afterUrl);
+  });
+
+  it("changes the locale image URL when only the translation is edited", async () => {
+    const first = localizedMeme();
+    translations.getLocalizedMemeByShortId.mockResolvedValue(first);
+    translations.getAvailableTranslationLocales.mockResolvedValue([]);
+    const before = await generateLocalizedMemeMetadata({
+      params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
+    });
+    translations.getLocalizedMemeByShortId.mockResolvedValue({
+      ...first,
+      translation: { ...first.translation, updatedAt: "2026-07-01T00:00:00.000Z" },
+    });
+    const after = await generateLocalizedMemeMetadata({
+      params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
+    });
+    const beforeUrl = imageTags(before).og[0]?.url ?? "";
+    const afterUrl = imageTags(after).og[0]?.url ?? "";
+    expect(beforeUrl).toContain(encodeURIComponent("2026-01-01T00:00:00.000Z|2026-01-01T00:00:00.000Z"));
+    expect(afterUrl).toContain(encodeURIComponent("2026-07-01T00:00:00.000Z|2026-01-01T00:00:00.000Z"));
+    expect(afterUrl).not.toBe(beforeUrl);
     expect(imageTags(after).twitter[0]?.url).toBe(afterUrl);
   });
 

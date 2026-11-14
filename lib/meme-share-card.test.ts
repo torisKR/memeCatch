@@ -1,13 +1,14 @@
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { deflateSync, inflateSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 import { contrastRatio } from "@/lib/a11y-contrast";
-import { renderMemeShareCard, respondWithShareCard, shareFontMetrics } from "@/lib/meme-share-card";
+import { emojiFaceName, renderMemeShareCard, respondWithShareCard, shareFontMetrics } from "@/lib/meme-share-card";
 import { cardFromLocalized } from "@/lib/meme-share-content";
 import {
   MEME_SHARE_DESIGN,
@@ -15,8 +16,19 @@ import {
 } from "@/lib/meme-share-image";
 import { fitShareLines, layoutMemeShareCard, measureText, type ShareFontSet } from "@/lib/meme-share-layout";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
+import { readFontAdvances } from "@/lib/ttf-metrics";
 
-const MAIN = "e5841d8ce7fc8aed6e3f1cfd3188dee9c79606dd";
+/** Page bodies that must stay byte-identical to main e5841d8c. Git history is
+ * absent in the shallow CI checkout, so the lock is the content hash. */
+const MAIN_FILE_SHA: Record<string, string> = {
+  "app/(default)/community/[id]/page.tsx": "9e1fe0c35c3284794baaba6f9fdb81ab056adbedb898584940e42f9842df1418",
+  "app/[locale]/not-found.tsx": "ef253029a73492bd5b44e1b70e10d2e7a1e7271d56e500a615e41d2c92b86f06",
+  "app/(default)/not-found.tsx": "0445ade89cdc8dcbd2eb884622e3cc7af31936a1a0623077b9daf9e82c5ab511",
+  "app/(default)/quiz/page.tsx": "5999e8189f2e0cab4f3a525ab957a9345f8db3f6d5e704870406e0eed943997b",
+  "app/(default)/weekly/page.tsx": "21b87a774bec43bcae0c62c410b51301ccbfaf939d9a49f403c01741b45858e3",
+  "app/(default)/collections/page.tsx": "b4186d5d3e92201f20ab1cedf0bd7b911f586c3299346b623f7d779ee72e405e",
+};
+const LOCALIZED_PAGE_BODY_SHA = "dfa8610fb8f162bc646d284d5e2e7ab5929d01038732994690ba35577674364d";
 
 function sha256(body: Buffer) {
   return createHash("sha256").update(body).digest("hex");
@@ -166,35 +178,28 @@ const ARTIFACTS = "/opt/cursor/artifacts";
 
 function savePair(name: string, png: Buffer) {
   if (!existsSync(ARTIFACTS)) return;
-  mkdirSync(ARTIFACTS, { recursive: true });
-  writeFileSync(`${ARTIFACTS}/${name}.png`, png);
-  writeFileSync(`${ARTIFACTS}/${name}-center.png`, cropCenter(png));
+  try {
+    mkdirSync(ARTIFACTS, { recursive: true });
+    writeFileSync(`${ARTIFACTS}/${name}.png`, png);
+    writeFileSync(`${ARTIFACTS}/${name}-center.png`, cropCenter(png));
+  } catch {
+    // Sample files are optional. A busy artifact directory must not fail CI.
+  }
 }
 
 describe("per-meme share card", () => {
   it("keeps untranslated, Arabic, and non-detail pages identical to main", () => {
     expect(existsSync("app/ar")).toBe(false);
     const source = readFileSync("app/[locale]/memes/[key]/page.tsx", "utf8");
-    const main = execFileSync("git", ["show", `${MAIN}:app/[locale]/memes/[key]/page.tsx`], {
-      encoding: "utf8",
-    });
     const marker = "export default async function LocalizedMemePage";
-    expect(source.slice(source.indexOf(marker))).toBe(main.slice(main.indexOf(marker)));
+    const body = source.slice(source.indexOf(marker));
+    expect(createHash("sha256").update(body).digest("hex")).toBe(LOCALIZED_PAGE_BODY_SHA);
     expect(source).toContain("if (!meme) notFound();");
     expect(source.match(/if \(shareLocale === "ar"\) notFound\(\);/g)).toHaveLength(2);
     expect(source).not.toContain("koreanMemeShareImage");
-    execFileSync("git", [
-      "diff",
-      "--exit-code",
-      MAIN,
-      "--",
-      "app/(default)/community/[id]/page.tsx",
-      "app/[locale]/not-found.tsx",
-      "app/(default)/not-found.tsx",
-      "app/(default)/quiz/page.tsx",
-      "app/(default)/weekly/page.tsx",
-      "app/(default)/collections/page.tsx",
-    ]);
+    for (const [path, hash] of Object.entries(MAIN_FILE_SHA)) {
+      expect(createHash("sha256").update(readFileSync(path)).digest("hex")).toBe(hash);
+    }
   });
 
   it("omits a missing summary and never copies one from another language", () => {
@@ -265,6 +270,47 @@ describe("per-meme share card", () => {
     expect(empty.summaryLine).toBeNull();
     expect(empty.chip).toBeNull();
   });
+
+  it("gives emojis from different subsets their own font face", async () => {
+    const directory = join(process.cwd(), "assets/og-fonts/share/emoji");
+    const names = (await readdir(directory)).filter((name) => name.endsWith(".ttf")).sort();
+    const fonts = await Promise.all(names.map(async (name) => {
+      const data = await readFile(join(directory, name));
+      return { data, advances: readFontAdvances(data) };
+    }));
+    const rainbow = emojiFaceName(fonts, 0x1f308);
+    const fire = emojiFaceName(fonts, 0x1f525);
+    expect(rainbow).toBeTruthy();
+    expect(fire).toBeTruthy();
+    expect(rainbow).not.toBe(fire);
+    const card = {
+      locale: "ko" as const,
+      summary: null,
+      year: null,
+      category: null,
+    };
+    const lightInk = (png: Buffer) => {
+      const { width, height, rgba } = decodePng(png);
+      let count = 0;
+      for (let index = 0; index < width * height; index += 1) {
+        const offset = index * 4;
+        const red = rgba[offset] ?? 0;
+        const green = rgba[offset + 1] ?? 0;
+        const blueChannel = rgba[offset + 2] ?? 0;
+        if (red > 180 && green > 180 && blueChannel > 180) count += 1;
+      }
+      return count;
+    };
+    const [rainbowPng, firePng, bothPng] = await Promise.all([
+      paint({ ...card, title: "🌈" }),
+      paint({ ...card, title: "🔥" }),
+      paint({ ...card, title: "🌈🔥" }),
+    ]);
+    savePair("ko-two-emoji", bothPng);
+    const bothInk = lightInk(bothPng);
+    expect(bothInk).toBeGreaterThan(lightInk(rainbowPng) + 40);
+    expect(bothInk).toBeGreaterThan(lightInk(firePng) + 40);
+  }, 15_000);
 
   it("falls back to the locale card when rendering throws", async () => {
     const failed = await respondWithShareCard("ja", {
@@ -400,15 +446,21 @@ describe("per-meme share card", () => {
     expect(titleContrast).toBeGreaterThanOrEqual(4.5);
     expect(summaryContrast).toBeGreaterThanOrEqual(4.5);
     expect(chipContrast).toBeGreaterThanOrEqual(4.5);
-    if (existsSync(ARTIFACTS)) writeFileSync(`${ARTIFACTS}/design-compliance.json`, JSON.stringify({
-      titleFontSize: MEME_SHARE_DESIGN.titleFontSize,
-      summaryFontSize: MEME_SHARE_DESIGN.summaryFontSize,
-      titleContrast: Number(titleContrast.toFixed(2)),
-      summaryContrast: Number(summaryContrast.toFixed(2)),
-      chipContrast: Number(chipContrast.toFixed(2)),
-      contentLeft: MEME_SHARE_DESIGN.contentLeft,
-      contentRight: MEME_SHARE_DESIGN.contentRight,
-      samples: measured,
-    }, null, 2));
+    try {
+      if (existsSync(ARTIFACTS)) {
+        writeFileSync(`${ARTIFACTS}/design-compliance.json`, JSON.stringify({
+          titleFontSize: MEME_SHARE_DESIGN.titleFontSize,
+          summaryFontSize: MEME_SHARE_DESIGN.summaryFontSize,
+          titleContrast: Number(titleContrast.toFixed(2)),
+          summaryContrast: Number(summaryContrast.toFixed(2)),
+          chipContrast: Number(chipContrast.toFixed(2)),
+          contentLeft: MEME_SHARE_DESIGN.contentLeft,
+          contentRight: MEME_SHARE_DESIGN.contentRight,
+          samples: measured,
+        }, null, 2));
+      }
+    } catch {
+      // Sample files are optional.
+    }
   }, 30_000);
 });

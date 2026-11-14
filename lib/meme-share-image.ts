@@ -86,6 +86,17 @@ function absoluteVersionedUrl(pathname: string, version: string): string {
   return url.toString();
 }
 
+/**
+ * Locale cards paint the translation, plus the row's year and category.
+ * Either timestamp moves the URL, so a translation-only edit is not cached.
+ */
+export function localeShareVersion(meme: {
+  updated_at: string;
+  translationUpdatedAt: string;
+}): string {
+  return `${meme.translationUpdatedAt}|${meme.updated_at}`;
+}
+
 /** One absolute HTTPS image. `version` is the meme `updated_at` when the row has one. */
 export function koreanMemeShareImage(input: {
   shortId: string;

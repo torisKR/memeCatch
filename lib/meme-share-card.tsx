@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { fitShareCardBytes } from "@/lib/jpeg-encode";
-import { loadSharePhoto, prepareSharePhoto, type PreparedSharePhoto } from "@/lib/meme-share-photo";
+import { loadSharePhoto, prepareSharePhoto, sharePhotoObjectPosition, type PreparedSharePhoto } from "@/lib/meme-share-photo";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
 import {
   MEME_SHARE_DESIGN,
@@ -212,7 +212,7 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
               width: MEME_SHARE_DESIGN.width,
               height: MEME_SHARE_DESIGN.height,
               objectFit: "cover",
-              objectPosition: "center 30%",
+              objectPosition: sharePhotoObjectPosition(photo.width, photo.height),
             }}
           />
         ) : null}

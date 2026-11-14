@@ -8,6 +8,7 @@ import {
   prepareSharePhoto,
   readPublicFile,
   representativeImageUrl,
+  sharePhotoObjectPosition,
 } from "@/lib/meme-share-photo";
 
 function solid(width: number, height: number, rgb: [number, number, number]) {
@@ -99,6 +100,13 @@ describe("representative share photos", () => {
       expect(read).toBeNull();
       expect(Buffer.from(read ?? []).equals(outside)).toBe(false);
     }
+  });
+
+  it("keeps tall photos high and centers square or landscape photos", () => {
+    expect(sharePhotoObjectPosition(1000, 1500)).toBe("center 30%");
+    expect(sharePhotoObjectPosition(1000, 1501)).toBe("center 30%");
+    expect(sharePhotoObjectPosition(1000, 1499)).toBe("center center");
+    expect(sharePhotoObjectPosition(1254, 1254)).toBe("center center");
   });
 
   it("rejects an absolute path outside public", async () => {

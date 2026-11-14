@@ -8,6 +8,15 @@ import { SITE_URL } from "@/lib/site";
 
 /** Shorter side below this is too small to fill a 1200×630 card. */
 export const MIN_SHARE_PHOTO_SIDE = 400;
+/** At this height/width and above, keep the subject near the top of a cover crop. */
+export const SHARE_PHOTO_TALL_RATIO = 1.5;
+
+/** Tall portraits use `center 30%`. Square and landscape images stay centered. */
+export function sharePhotoObjectPosition(width: number, height: number): "center 30%" | "center center" {
+  if (!(width > 0) || !(height > 0)) return "center center";
+  return height / width >= SHARE_PHOTO_TALL_RATIO ? "center 30%" : "center center";
+}
+
 export const SHARE_PHOTO_TIMEOUT_MS = 1500;
 const MAX_SHARE_PHOTO_BYTES = 8_000_000;
 

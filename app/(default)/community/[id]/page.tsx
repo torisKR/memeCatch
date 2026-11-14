@@ -9,6 +9,7 @@ import { CommunityCommentForm } from "@/components/community-comment-form";
 import { CommunityMemeChip } from "@/components/community-post-card";
 import { MarkdownBody } from "@/components/markdown-body";
 import { stripMarkdownToText } from "@/lib/markdown";
+import { koreanMemeShareImage } from "@/lib/meme-share-image";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import {
   POST_SELECT,
@@ -52,6 +53,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: "글을 찾을 수 없어요" };
   // 메타 설명은 마크다운 구문(이미지/링크)을 벗긴 플레인 텍스트로
   const description = stripMarkdownToText(post.body).slice(0, 120);
+  const meme = post.memes;
+  const image = meme
+    ? koreanMemeShareImage(meme.short_id, meme.slug, meme.title)
+    : ogDefaultImageDescriptor("ko");
+  const shareTitle = meme?.title ?? post.title;
   return {
     title: post.title,
     description,
@@ -62,11 +68,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       siteName: "밈캐치",
       locale: "ko_KR",
-      title: post.title,
+      title: shareTitle,
       description,
       url: `/community/${post.id}`,
-      images: [ogDefaultImageDescriptor("ko")],
+      images: [image],
     },
+    ...(meme
+      ? {
+          twitter: {
+            card: "summary_large_image" as const,
+            title: shareTitle,
+            description,
+            images: [image],
+          },
+        }
+      : {}),
   };
 }
 

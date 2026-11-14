@@ -17,6 +17,7 @@ import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale
 import { metadata as koreanLayoutMetadata } from "@/app/(default)/layout";
 import { generateRankingsMetadata } from "@/app/rankings/page";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
+import { isGenericShareImageUrl, koreanMemeShareImage } from "@/lib/meme-share-image";
 import type { Metadata } from "next";
 
 const HOME_TITLE = "밈캐치 — 그 밈, 3초 안에 알려드려요";
@@ -132,18 +133,31 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
     expect(metadata.openGraph).not.toMatchObject({ url: "/" });
   });
 
-  it("gives every curated Korean detail its own X title", async () => {
+  it("gives every curated Korean detail its own X title and meme card", async () => {
     expect(CURATED_CORE_MEMES.length).toBeGreaterThanOrEqual(8);
     for (const meme of CURATED_CORE_MEMES) {
       const metadata = await generateKoreanMemeMetadata({
         params: Promise.resolve({ key: `${meme.short_id}-${meme.slug}` }),
       });
       const title = `${meme.title} 뜻`;
-      expectOwnCard(metadata, {
+      const image = koreanMemeShareImage(meme.short_id, meme.slug, meme.title);
+      expect(metadata.title).toBe(title);
+      expect(metadata.description).toBe(meme.summary);
+      expect(metadata.openGraph).toMatchObject({
         title,
         description: meme.summary,
-        pathname: `/memes/${meme.short_id}-${meme.slug}`,
+        url: `/memes/${meme.short_id}-${meme.slug}`,
+        images: [image],
       });
+      expect(metadata.twitter).toMatchObject({
+        card: "summary_large_image",
+        title,
+        description: meme.summary,
+        images: [image],
+      });
+      const urls = JSON.stringify(metadata);
+      expect(urls).not.toContain("/og/ko");
+      expect(isGenericShareImageUrl(image.url)).toBe(false);
     }
   });
 

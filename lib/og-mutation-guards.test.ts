@@ -26,6 +26,7 @@ vi.mock("@/lib/meme-translations", async (importOriginal) => {
 
 import { generateMetadata as generateKoreanMemeMetadata } from "@/app/(default)/memes/[key]/page";
 import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale]/memes/[key]/page";
+import { isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage } from "@/lib/meme-share-image";
 
 const HOME_TITLE = "밈캐치 — 그 밈, 3초 안에 알려드려요";
 
@@ -48,6 +49,34 @@ function databaseMeme() {
     meme_tags_map: [],
     updated_at: "2026-01-01T00:00:00.000Z",
   };
+}
+
+function imageUrls(metadata: { openGraph?: unknown; twitter?: unknown }): { og: string[]; twitter: string[] } {
+  const openGraph = metadata.openGraph && !Array.isArray(metadata.openGraph)
+    ? metadata.openGraph
+    : undefined;
+  const twitter = metadata.twitter && !Array.isArray(metadata.twitter)
+    ? metadata.twitter
+    : undefined;
+  const read = (images: unknown): string[] => {
+    if (!Array.isArray(images)) return [];
+    return images.map((image) => {
+      if (typeof image === "string") return image;
+      if (image && typeof image === "object" && "url" in image) return String(image.url);
+      return "";
+    });
+  };
+  const graph = openGraph as { images?: unknown } | undefined;
+  const tw = twitter as { images?: unknown } | undefined;
+  return { og: read(graph?.images), twitter: read(tw?.images) };
+}
+
+function expectMemeCard(metadata: { openGraph?: unknown; twitter?: unknown }, url: string) {
+  const images = imageUrls(metadata);
+  expect(images.og).toEqual([url]);
+  expect(images.twitter).toEqual([url]);
+  expect(images.og.filter((item) => isGenericShareImageUrl(item))).toEqual([]);
+  expect(images.twitter.filter((item) => isGenericShareImageUrl(item))).toEqual([]);
 }
 
 function localizedMeme() {
@@ -100,8 +129,11 @@ describe("meme detail share tags survive the known mutants", () => {
     expect(metadata.openGraph).toMatchObject({
       title: "데이터베이스밈 뜻",
       url: "/memes/zzdb0001-database-only",
-      images: [{ url: "/og/ko" }],
     });
+    expectMemeCard(
+      metadata,
+      koreanMemeShareImage("zzdb0001", "database-only", "데이터베이스밈").url,
+    );
     expect(metadata.twitter).toMatchObject({
       card: "summary_large_image",
       title: "데이터베이스밈 뜻",
@@ -109,7 +141,7 @@ describe("meme detail share tags survive the known mutants", () => {
     expect(metadata.twitter).not.toMatchObject({ title: HOME_TITLE });
   });
 
-  it("keeps localized images when a translation exists", async () => {
+  it("keeps one translated meme card when a translation exists", async () => {
     translations.getLocalizedMemeByShortId.mockResolvedValue(localizedMeme());
     translations.getAvailableTranslationLocales.mockResolvedValue([]);
 
@@ -117,15 +149,39 @@ describe("meme detail share tags survive the known mutants", () => {
       params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
     });
 
-    const images = metadata.openGraph && !Array.isArray(metadata.openGraph)
-      ? metadata.openGraph.images
-      : undefined;
-    expect(Array.isArray(images) ? images : []).toEqual([
-      expect.objectContaining({ url: "/og/en" }),
-    ]);
+    expect(metadata.openGraph).toMatchObject({ title: "Database meme · Meaning" });
+    expectMemeCard(
+      metadata,
+      localeMemeShareImage("en", "zzdb0001", "database-only", "Database meme").url,
+    );
+    expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
+  });
+
+  it("uses the Korean meme card for an untranslated locale page when the meme exists", async () => {
+    queries.getMemeByShortId.mockResolvedValue(databaseMeme());
+    translations.getLocalizedMemeByShortId.mockResolvedValue(null);
+    translations.getAvailableTranslationLocales.mockResolvedValue([]);
+    const card = koreanMemeShareImage("zzdb0001", "database-only", "데이터베이스밈").url;
+
+    for (const locale of ["en", "ja", "zh", "zh-tw", "ar"] as const) {
+      const metadata = await generateLocalizedMemeMetadata({
+        params: Promise.resolve({ locale, key: "zzdb0001-database-only" }),
+      });
+      expect(metadata.title).toBe("데이터베이스밈");
+      expect(metadata.robots).toEqual({ index: false, follow: true });
+      expect(metadata.openGraph).toMatchObject({
+        title: "데이터베이스밈",
+        url: locale === "ar"
+          ? "/ar/memes/zzdb0001-database-only"
+          : `/${locale}/memes/zzdb0001-database-only`,
+      });
+      expectMemeCard(metadata, card);
+      expect(metadata.twitter).toMatchObject({ card: "summary_large_image", title: "데이터베이스밈" });
+    }
   });
 
   it("does not publish a Korean curated title when the translation is missing", async () => {
+    queries.getMemeByShortId.mockResolvedValue(null);
     translations.getLocalizedMemeByShortId.mockResolvedValue(null);
     for (const locale of ["en", "ja"] as const) {
       await expect(generateLocalizedMemeMetadata({

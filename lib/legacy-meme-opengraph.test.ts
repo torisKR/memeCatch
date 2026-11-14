@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -23,6 +24,19 @@ describe("legacy per-meme image routes", () => {
       params: Promise.resolve({ key: "not-a-real-meme" }),
     });
     expect(await pngSha256(response)).toBe(KOREAN_FALLBACK_SHA256);
+  });
+
+  it("paints the curated meme instead of the generic fallback when the catalog row is missing", async () => {
+    const response = await koreanImage(new Request("http://localhost/memes/bjk2021k-bun-jo-ka/opengraph-image-k2cx9c"), {
+      params: Promise.resolve({ key: "bjk2021k-bun-jo-ka" }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/png");
+    const body = Buffer.from(await response.arrayBuffer());
+    const hash = createHash("sha256").update(body).digest("hex");
+    expect(hash).not.toBe(KOREAN_FALLBACK_SHA256);
+    mkdirSync("/opt/cursor/artifacts", { recursive: true });
+    writeFileSync("/opt/cursor/artifacts/ko-curated-bun-jo-ka.png", body);
   });
 
   it("returns main's English fallback PNG for Arabic and other non-SEO prefixes", async () => {

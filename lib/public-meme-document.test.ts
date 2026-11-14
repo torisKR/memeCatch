@@ -79,7 +79,8 @@ describe("classifyPublicMemeLookup", () => {
     expect(card).toContain("twitter:");
     expect(card).toContain("card: \"summary_large_image\"");
     expect(card).toContain("title,");
-    expect(card).toContain("ogDefaultImageDescriptor(\"ko\")");
+    expect(card).toContain("koreanMemeShareImage(meme.short_id, meme.slug, meme.title)");
+    expect(card).not.toContain("ogDefaultImageDescriptor");
   });
 
   it("keeps the proxy allowlist aligned with the curated cards", () => {

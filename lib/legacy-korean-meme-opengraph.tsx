@@ -1,6 +1,7 @@
 // Main's Korean per-meme card, kept as a route handler so the published
 // `/memes/[key]/opengraph-image-k2cx9c` URL stays a PNG without a metadata file.
 import { ImageResponse } from "next/og";
+import { findCuratedCoreMeme } from "@/lib/curated-memes";
 import { createStaticClient } from "@/lib/supabase/server";
 import {
   SAFETY_LEVELS,
@@ -87,17 +88,20 @@ export async function renderLegacyKoreanMemeOpenGraph({
     .eq("short_id", shortId)
     .maybeSingle();
 
-  const title = truncate(meme?.title ?? "밈캐치", 20);
+  // A curated home card has no catalog row. Unknown keys keep the same fallback
+  // strings, so the published "not a meme" PNG stays byte-identical.
+  const curated = meme ? null : findCuratedCoreMeme(shortId);
+  const title = truncate(meme?.title ?? curated?.title ?? "밈캐치", 20);
   const summary = truncate(
-    meme?.summary ?? "그 밈, 3초 안에 알려드려요",
-    52
+    meme?.summary ?? curated?.summary ?? "그 밈, 3초 안에 알려드려요",
+    52,
   );
-  const safety = SAFETY_LEVELS[(meme?.safety_level ?? "yellow") as SafetyLevel];
-  const safetyColor =
-    C.safety[(meme?.safety_level ?? "yellow") as SafetyLevel];
-  const lifecycle =
-    LIFECYCLE_STATUS[(meme?.lifecycle_status ?? "active") as LifecycleStatus];
-  const lifeColor = C.life[(meme?.lifecycle_status ?? "active") as LifecycleStatus];
+  const safetyLevel = (meme?.safety_level ?? curated?.safety_level ?? "yellow") as SafetyLevel;
+  const lifecycleLevel = (meme?.lifecycle_status ?? curated?.lifecycle_status ?? "active") as LifecycleStatus;
+  const safety = SAFETY_LEVELS[safetyLevel];
+  const safetyColor = C.safety[safetyLevel];
+  const lifecycle = LIFECYCLE_STATUS[lifecycleLevel];
+  const lifeColor = C.life[lifecycleLevel];
 
   const fonts = await loadFonts();
 

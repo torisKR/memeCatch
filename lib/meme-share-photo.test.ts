@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { encodePng } from "@/lib/png-raster";
 import {
@@ -5,6 +6,7 @@ import {
   loadSharePhoto,
   MIN_SHARE_PHOTO_SIDE,
   prepareSharePhoto,
+  readPublicFile,
   representativeImageUrl,
 } from "@/lib/meme-share-photo";
 
@@ -70,5 +72,42 @@ describe("representative share photos", () => {
       init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
     }));
     expect(await loadSharePhoto("/ai-memes/missing.png", slow, 20)).toBeNull();
+  });
+
+  it("reads a public file from disk and does not fetch", async () => {
+    const disk = readFileSync("public/icons/icon-512.png");
+    const fetchImpl = vi.fn();
+    const photo = await loadSharePhoto("/icons/icon-512.png", fetchImpl);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const encoded = photo?.dataUrl.split(",")[1] ?? "";
+    expect(Buffer.from(encoded, "base64").equals(disk)).toBe(true);
+  });
+
+  it("rejects a ../ traversal path", async () => {
+    const outside = readFileSync("package.json");
+    for (const pathname of ["/../package.json", "/ai-memes/../../package.json"]) {
+      const read = await readPublicFile(pathname);
+      expect(read).toBeNull();
+      expect(Buffer.from(read ?? []).equals(outside)).toBe(false);
+    }
+  });
+
+  it("rejects an encoded traversal", async () => {
+    const outside = readFileSync("package.json");
+    for (const pathname of ["/%2e%2e/package.json", "%2e%2e%2fpackage.json"]) {
+      const read = await readPublicFile(pathname);
+      expect(read).toBeNull();
+      expect(Buffer.from(read ?? []).equals(outside)).toBe(false);
+    }
+  });
+
+  it("rejects an absolute path outside public", async () => {
+    const passwd = readFileSync("/etc/passwd");
+    const read = await readPublicFile("/etc/passwd");
+    expect(read).toBeNull();
+    expect(Buffer.from(read ?? []).equals(passwd)).toBe(false);
+    const escaped = await readPublicFile("/icons/../../package.json");
+    expect(escaped).toBeNull();
+    expect(Buffer.from(escaped ?? []).equals(readFileSync("package.json"))).toBe(false);
   });
 });

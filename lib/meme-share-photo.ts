@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join, normalize, sep } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import { isRenderableContent } from "@/lib/content-availability";
 import { ownedMemeCardArtPath } from "@/lib/meme-card-art";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
@@ -169,12 +169,21 @@ export function prepareSharePhoto(bytes: Uint8Array): PreparedSharePhoto | null 
   };
 }
 
-async function readPublicFile(pathname: string): Promise<Uint8Array | null> {
-  const relative = pathname.split("?")[0] ?? "";
-  if (!relative.startsWith("/") || relative.includes("..")) return null;
-  const root = join(process.cwd(), "public");
-  const file = normalize(join(root, relative));
-  if (file !== root && !file.startsWith(`${root}${sep}`)) return null;
+/** Read a site path from `public/`. A path that leaves that directory is not a file. */
+export async function readPublicFile(pathname: string): Promise<Uint8Array | null> {
+  const withoutQuery = pathname.split(/[?#]/)[0] ?? "";
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(withoutQuery);
+  } catch {
+    return null;
+  }
+  const stripped = decoded.replace(/^\/+/, "");
+  if (!stripped || stripped.includes("\0")) return null;
+  const publicRoot = resolve(process.cwd(), "public");
+  const file = resolve(publicRoot, stripped);
+  const fromRoot = relative(publicRoot, file);
+  if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) return null;
   try {
     return await readFile(file);
   } catch {

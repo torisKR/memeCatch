@@ -1,9 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { fitShareCardBytes } from "@/lib/jpeg-encode";
+import { loadSharePhoto, prepareSharePhoto, type PreparedSharePhoto } from "@/lib/meme-share-photo";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
 import {
   MEME_SHARE_DESIGN,
+  SHARE_PHOTO_PILL,
+  SHARE_PHOTO_SCRIM,
   type MemeShareCardContent,
 } from "@/lib/meme-share-image";
 import {
@@ -90,7 +94,19 @@ function fontRuns(
     if (last && last.family === family) last.text += char;
     else runs.push({ family, text: char });
   }
-  return runs;
+  const folded: { family: string; text: string }[] = [];
+  for (const run of runs) {
+    const previous = folded[folded.length - 1];
+    if (previous && run.text.trim().length === 0) {
+      previous.text += run.text;
+      continue;
+    }
+    folded.push({ family: run.family, text: run.text });
+  }
+  return folded.map((run) => ({
+    family: run.family,
+    text: run.text.replaceAll(" ", "\u00A0"),
+  }));
 }
 
 function ShareLine({
@@ -107,9 +123,12 @@ function ShareLine({
   emoji: EmojiFont[];
 }) {
   return (
-    <div style={{ display: "flex", justifyContent: "center", fontSize, color, lineHeight: 1.15 }}>
+    <div style={{ display: "flex", justifyContent: "center", fontSize, color, lineHeight: 1.15, whiteSpace: "pre" }}>
       {fontRuns(text, locale, emoji).map((run, index) => (
-        <div key={`${run.family}-${index}`} style={{ display: "flex", fontFamily: run.family }}>
+        <div
+          key={`${run.family}-${index}`}
+          style={{ display: "flex", fontFamily: run.family, whiteSpace: "pre" }}
+        >
           {run.text}
         </div>
       ))}
@@ -121,8 +140,19 @@ export async function shareFontMetrics(): Promise<ShareFontSet> {
   return (await loadShareFonts()).metrics;
 }
 
+async function cardPhoto(card: MemeShareCardContent): Promise<PreparedSharePhoto | null> {
+  try {
+    if (card.photoBytes) return prepareSharePhoto(card.photoBytes);
+    if (card.photoUrl) return await loadSharePhoto(card.photoUrl);
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export async function renderMemeShareCard(card: MemeShareCardContent): Promise<Response> {
   const loaded = await loadShareFonts();
+  const photo = await cardPhoto(card);
   const layout = layoutMemeShareCard(card, loaded.metrics);
   const painted = [
     layout.wordmark,
@@ -154,6 +184,8 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
     { name: FAMILY["zh-tw"], data: loaded.files["zh-tw"], weight: 700 as const, style: "normal" as const },
     ...emojiFaces,
   ];
+  const scrimLeft = (MEME_SHARE_DESIGN.width - MEME_SHARE_DESIGN.centerSquare) / 2;
+  const pill = photo ? SHARE_PHOTO_PILL : "transparent";
   return new ImageResponse(
     (
       <div
@@ -163,9 +195,40 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: MEME_SHARE_DESIGN.background,
+          backgroundColor: photo ? "#000000" : MEME_SHARE_DESIGN.background,
+          position: "relative",
         }}
       >
+        {photo ? (
+          // Satori only paints a raw img. next/image is not available inside ImageResponse.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt=""
+            src={photo.dataUrl}
+            width={MEME_SHARE_DESIGN.width}
+            height={MEME_SHARE_DESIGN.height}
+            style={{
+              position: "absolute",
+              width: MEME_SHARE_DESIGN.width,
+              height: MEME_SHARE_DESIGN.height,
+              objectFit: "cover",
+              objectPosition: "center 30%",
+            }}
+          />
+        ) : null}
+        {photo ? (
+          <div
+            style={{
+              position: "absolute",
+              left: scrimLeft,
+              top: 0,
+              width: MEME_SHARE_DESIGN.centerSquare,
+              height: MEME_SHARE_DESIGN.centerSquare,
+              display: "flex",
+              backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,${SHARE_PHOTO_SCRIM.top}), rgba(0,0,0,${SHARE_PHOTO_SCRIM.bottom}))`,
+            }}
+          />
+        ) : null}
         <div
           style={{
             width: MEME_SHARE_DESIGN.maxTextWidth,
@@ -174,7 +237,15 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
             alignItems: "center",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: pill,
+              borderRadius: 999,
+              padding: photo ? "6px 12px" : "0px",
+            }}
+          >
             <div
               style={{
                 width: layout.logoSize,
@@ -206,7 +277,15 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
             ))}
           </div>
           {layout.summaryLine ? (
-            <div style={{ display: "flex", marginTop: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                marginTop: 16,
+                backgroundColor: pill,
+                borderRadius: 999,
+                padding: photo ? "4px 12px" : "0px",
+              }}
+            >
               <ShareLine
                 text={layout.summaryLine}
                 locale={card.locale}
@@ -221,7 +300,7 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
               style={{
                 display: "flex",
                 marginTop: 22,
-                backgroundColor: MEME_SHARE_DESIGN.chipBackground,
+                backgroundColor: photo ? SHARE_PHOTO_PILL : MEME_SHARE_DESIGN.chipBackground,
                 borderRadius: 999,
                 padding: "6px 14px",
               }}
@@ -246,16 +325,48 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
   );
 }
 
-/** A missing meme or a failed render serves the locale default card, never a 404. */
+/** Same header next/og ImageResponse sets. Main's Arabic meme image route returned that response. */
+export function ogImageCacheControl(): string {
+  return process.env.NODE_ENV === "development"
+    ? "no-cache, no-store"
+    : "public, max-age=0, must-revalidate";
+}
+
+function cachedImage(body: Uint8Array, contentType: string): Response {
+  return new Response(Buffer.from(body), {
+    status: 200,
+    headers: {
+      "content-type": contentType,
+      "cache-control": ogImageCacheControl(),
+    },
+  });
+}
+
+async function defaultCard(locale: string): Promise<Response> {
+  const rendered = await renderOgDefaultImage(locale);
+  const bytes = new Uint8Array(await rendered.arrayBuffer());
+  const contentType = rendered.headers.get("content-type") ?? "image/png";
+  return cachedImage(bytes, contentType);
+}
+
+/**
+ * A missing meme or a failed render, including a font error thrown while the
+ * image stream is read, serves the locale default card. Cards over 1MB become
+ * JPEG so a client such as KakaoTalk can fetch them.
+ */
 export async function respondWithShareCard(
   locale: string,
   card: MemeShareCardContent | null,
   render: (card: MemeShareCardContent) => Promise<Response> = renderMemeShareCard,
 ): Promise<Response> {
-  if (!card?.title.trim()) return renderOgDefaultImage(locale);
+  if (!card?.title.trim()) return defaultCard(locale);
   try {
-    return await render(card);
+    const rendered = await render(card);
+    const bytes = Buffer.from(await rendered.arrayBuffer());
+    if (bytes.byteLength === 0) return defaultCard(locale);
+    const fitted = fitShareCardBytes(bytes);
+    return cachedImage(fitted.body, fitted.contentType);
   } catch {
-    return renderOgDefaultImage(locale);
+    return defaultCard(locale);
   }
 }

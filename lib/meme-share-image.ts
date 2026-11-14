@@ -1,7 +1,13 @@
-import { createHash } from "node:crypto";
 import { localizedMemePath, type SeoContentLocale } from "@/lib/i18n-routing";
 import { memePathFrom, type MemeCategory } from "@/lib/labels";
+import {
+  curatedShareVersion,
+  shareCacheVersion,
+  type ShareTimestamp,
+} from "@/lib/share-version";
 import { SITE_URL } from "@/lib/site";
+
+export { curatedShareVersion, shareCacheVersion, type ShareTimestamp };
 
 /** Published Korean per-meme card. The suffix is Next's old file-convention id. */
 export const KOREAN_MEME_CARD_SUFFIX = "opengraph-image-k2cx9c";
@@ -29,6 +35,11 @@ export const MEME_SHARE_DESIGN = {
   measureSlack: 4,
 } as const;
 
+/** Black scrim over the center square. Both stops sit inside the 55–70% band. */
+export const SHARE_PHOTO_SCRIM = { top: 0.62, bottom: 0.7 } as const;
+/** Extra pill so the wordmark, summary, and chip stay ≥4.5:1 on a white photo. */
+export const SHARE_PHOTO_PILL = "rgba(0,0,0,0.72)";
+
 export type ShareCardLocale = "ko" | SeoContentLocale;
 
 export type MemeShareCardContent = {
@@ -37,6 +48,10 @@ export type MemeShareCardContent = {
   summary: string | null;
   year: number | null;
   category: MemeCategory | null;
+  /** Site-hosted still. Absent means the title-only card. */
+  photoUrl?: string | null;
+  /** Already-fetched bytes. Tests use this instead of the network. */
+  photoBytes?: Uint8Array | null;
 };
 
 export type MemeShareImage = {
@@ -67,42 +82,39 @@ export function blankToNull(value: string | null | undefined): string | null {
   return text.length > 0 ? text : null;
 }
 
-/** Stable for a curated card, and different when its visible copy changes. */
-export function curatedShareVersion(meme: {
-  title: string;
-  summary: string;
-  origin_year: number | null;
-  category: string;
-}): string {
-  return createHash("sha256")
-    .update([meme.title, meme.summary, String(meme.origin_year ?? ""), meme.category].join("\n"))
-    .digest("hex")
-    .slice(0, 16);
+function versionQuery(version: ShareTimestamp): string {
+  if (typeof version === "string" && /^\d{1,16}$/.test(version)) return version;
+  return shareCacheVersion({ timestamps: [version] });
 }
 
-function absoluteVersionedUrl(pathname: string, version: string): string {
+function absoluteVersionedUrl(pathname: string, version: ShareTimestamp): string {
   const url = new URL(pathname, SITE_URL);
-  url.searchParams.set("v", version);
+  url.searchParams.set("v", versionQuery(version));
   return url.toString();
 }
 
 /**
- * Locale cards paint the translation, plus the row's year and category.
- * Either timestamp moves the URL, so a translation-only edit is not cached.
+ * Newest UTC epoch-ms among the row, the translation, and the image, mixed
+ * with the image URL when the card shows one.
  */
 export function localeShareVersion(meme: {
-  updated_at: string;
-  translationUpdatedAt: string;
+  updated_at: ShareTimestamp;
+  translationUpdatedAt: ShareTimestamp;
+  imageUpdatedAt?: ShareTimestamp | null;
+  imageUrl?: string | null;
 }): string {
-  return `${meme.translationUpdatedAt}|${meme.updated_at}`;
+  return shareCacheVersion({
+    timestamps: [meme.updated_at, meme.translationUpdatedAt, meme.imageUpdatedAt],
+    imageUrl: meme.imageUrl,
+  });
 }
 
-/** One absolute HTTPS image. `version` is the meme `updated_at` when the row has one. */
+/** One absolute HTTPS image. `version` is the decimal `?v` for this meme. */
 export function koreanMemeShareImage(input: {
   shortId: string;
   slug: string;
   alt: string;
-  version: string;
+  version: ShareTimestamp;
 }): MemeShareImage {
   return {
     url: absoluteVersionedUrl(
@@ -121,7 +133,7 @@ export function localeMemeShareImage(input: {
   shortId: string;
   slug: string;
   alt: string;
-  version: string;
+  version: ShareTimestamp;
 }): MemeShareImage {
   return {
     url: absoluteVersionedUrl(

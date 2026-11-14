@@ -26,7 +26,11 @@ vi.mock("@/lib/meme-translations", async (importOriginal) => {
 
 import { generateMetadata as generateKoreanMemeMetadata } from "@/app/(default)/memes/[key]/page";
 import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale]/memes/[key]/page";
-import { isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image";
+import { GET as localeImage } from "@/app/[locale]/memes/[key]/opengraph-image/route";
+import { loadKoreanShareCard } from "@/lib/meme-share-content";
+import { isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage, localeShareVersion, shareCacheVersion } from "@/lib/meme-share-image";
+import { renderOgDefaultImage } from "@/lib/og-default-card";
+import { curatedShareVersion } from "@/lib/share-version";
 
 const HOME_TITLE = "밈캐치 — 그 밈, 3초 안에 알려드려요";
 
@@ -47,7 +51,7 @@ function databaseMeme() {
     meme_sources: [],
     meme_contents: [],
     meme_tags_map: [],
-    updated_at: "2026-01-01T00:00:00.000Z",
+    updated_at: new Date("2026-01-01T00:00:00.000Z"),
   };
 }
 
@@ -149,7 +153,7 @@ describe("meme detail share tags survive the known mutants", () => {
         shortId: "zzdb0001",
         slug: "database-only",
         alt: "데이터베이스밈",
-        version: "2026-01-01T00:00:00.000Z",
+        version: shareCacheVersion({ timestamps: [databaseMeme().updated_at] }),
       }).url,
       "데이터베이스밈",
     );
@@ -177,8 +181,8 @@ describe("meme detail share tags survive the known mutants", () => {
         slug: "database-only",
         alt: "Database meme",
         version: localeShareVersion({
-          updated_at: "2026-01-01T00:00:00.000Z",
-          translationUpdatedAt: "2026-01-01T00:00:00.000Z",
+          updated_at: databaseMeme().updated_at,
+          translationUpdatedAt: databaseMeme().updated_at,
         }),
       }).url,
       "Database meme",
@@ -197,25 +201,26 @@ describe("meme detail share tags survive the known mutants", () => {
     }
   });
 
-  it("changes the image URL when the meme updated_at changes", async () => {
+  it("changes the image URL when updated_at moves inside the same second", async () => {
     const first = databaseMeme();
-    queries.getMemeByShortId.mockResolvedValue(first);
+    const early = new Date("2026-11-14T02:45:04.100Z");
+    const later = new Date("2026-11-14T02:45:04.900Z");
+    expect(early.getUTCSeconds()).toBe(later.getUTCSeconds());
+    queries.getMemeByShortId.mockResolvedValue({ ...first, updated_at: early });
     translations.getAvailableTranslationLocales.mockResolvedValue([]);
     translations.getLocalizedMemeByShortId.mockResolvedValue(null);
     const before = await generateKoreanMemeMetadata({
       params: Promise.resolve({ key: "zzdb0001-database-only" }),
     });
-    queries.getMemeByShortId.mockResolvedValue({
-      ...first,
-      updated_at: "2026-06-01T00:00:00.000Z",
-    });
+    queries.getMemeByShortId.mockResolvedValue({ ...first, updated_at: later });
     const after = await generateKoreanMemeMetadata({
       params: Promise.resolve({ key: "zzdb0001-database-only" }),
     });
-    const beforeUrl = imageTags(before).og[0]?.url;
-    const afterUrl = imageTags(after).og[0]?.url;
-    expect(beforeUrl).toContain(encodeURIComponent("2026-01-01T00:00:00.000Z"));
-    expect(afterUrl).toContain(encodeURIComponent("2026-06-01T00:00:00.000Z"));
+    const beforeUrl = imageTags(before).og[0]?.url ?? "";
+    const afterUrl = imageTags(after).og[0]?.url ?? "";
+    expect(new URL(beforeUrl).searchParams.get("v")).toBe(String(early.getTime()));
+    expect(new URL(afterUrl).searchParams.get("v")).toBe(String(later.getTime()));
+    expect(new URL(beforeUrl).searchParams.get("v")).not.toMatch(/GMT|Sat/);
     expect(beforeUrl).not.toBe(afterUrl);
     expect(imageTags(before).twitter[0]?.url).toBe(beforeUrl);
     expect(imageTags(after).twitter[0]?.url).toBe(afterUrl);
@@ -228,19 +233,96 @@ describe("meme detail share tags survive the known mutants", () => {
     const before = await generateLocalizedMemeMetadata({
       params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
     });
+    const later = new Date("2026-01-01T00:00:00.800Z");
+    expect(later.getUTCSeconds()).toBe(new Date(first.updated_at).getUTCSeconds());
     translations.getLocalizedMemeByShortId.mockResolvedValue({
       ...first,
-      translation: { ...first.translation, updatedAt: "2026-07-01T00:00:00.000Z" },
+      translation: { ...first.translation, updatedAt: later },
     });
     const after = await generateLocalizedMemeMetadata({
       params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
     });
     const beforeUrl = imageTags(before).og[0]?.url ?? "";
     const afterUrl = imageTags(after).og[0]?.url ?? "";
-    expect(beforeUrl).toContain(encodeURIComponent("2026-01-01T00:00:00.000Z|2026-01-01T00:00:00.000Z"));
-    expect(afterUrl).toContain(encodeURIComponent("2026-07-01T00:00:00.000Z|2026-01-01T00:00:00.000Z"));
+    expect(beforeUrl).toContain(String(new Date(first.updated_at).getTime()));
+    expect(afterUrl).toContain(String(later.getTime()));
     expect(afterUrl).not.toBe(beforeUrl);
     expect(imageTags(after).twitter[0]?.url).toBe(afterUrl);
+  });
+
+  it("changes ?v when only the representative image URL changes", async () => {
+    const first = localizedMeme();
+    const earlyPhoto = {
+      ...first,
+      meme_contents: [{
+        thumbnail_url: "/ai-memes/early.png",
+        url: null,
+        is_representative: true,
+        moderation_status: "approved",
+        availability: "live",
+        created_at: first.updated_at,
+      }],
+    };
+    translations.getLocalizedMemeByShortId.mockResolvedValue(earlyPhoto);
+    translations.getAvailableTranslationLocales.mockResolvedValue([]);
+    const before = await generateLocalizedMemeMetadata({
+      params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
+    });
+    translations.getLocalizedMemeByShortId.mockResolvedValue({
+      ...earlyPhoto,
+      meme_contents: [{ ...earlyPhoto.meme_contents[0], thumbnail_url: "/ai-memes/later.png" }],
+    });
+    const after = await generateLocalizedMemeMetadata({
+      params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
+    });
+    const beforeUrl = imageTags(before).og[0]?.url ?? "";
+    const afterUrl = imageTags(after).og[0]?.url ?? "";
+    const beforeVersion = new URL(beforeUrl).searchParams.get("v");
+    const afterVersion = new URL(afterUrl).searchParams.get("v");
+    expect(beforeVersion).toMatch(/^\d+$/);
+    expect(afterVersion).toMatch(/^\d+$/);
+    expect(beforeVersion).not.toBe(String(new Date(first.updated_at).getTime()));
+    expect(beforeVersion).not.toBe(afterVersion);
+  });
+
+  it("prefers a database row over a curated seed with the same short id", async () => {
+    queries.getMemeByShortId.mockResolvedValue({
+      ...databaseMeme(),
+      short_id: "bjk2021k",
+      slug: "bun-jo-ka",
+      title: "디비분좋카",
+    });
+    const card = await loadKoreanShareCard("bjk2021k-bun-jo-ka");
+    expect(card?.title).toBe("디비분좋카");
+  });
+
+  it("serves /og/en when a curated meme has no translation", async () => {
+    translations.getLocalizedMemeByShortId.mockResolvedValue(null);
+    const response = await localeImage(
+      new Request("http://localhost/en/memes/bjk2021k-bun-jo-ka/opengraph-image"),
+      { params: Promise.resolve({ locale: "en", key: "bjk2021k-bun-jo-ka" }) },
+    );
+    const expected = await renderOgDefaultImage("en");
+    const body = Buffer.from(await response.arrayBuffer());
+    expect(response.status).toBe(200);
+    expect(body.equals(Buffer.from(await expected.arrayBuffer()))).toBe(true);
+  });
+
+  it("keeps curated ?v a decimal that changes with the copy and the image", () => {
+    const meme = {
+      title: "분좋카 (분위기 좋은 카페)",
+      summary: "감각적인 인테리어",
+      origin_year: 2021,
+      category: "phrase",
+    };
+    const version = curatedShareVersion(meme);
+    expect(version).toMatch(/^\d+$/);
+    expect(version).not.toMatch(/[a-f]/i);
+    expect(curatedShareVersion({ ...meme, summary: "다른 뜻" })).not.toBe(version);
+    expect(curatedShareVersion(meme, "/ai-memes/bun.png")).not.toBe(version);
+    expect(curatedShareVersion(meme, "/ai-memes/bun.png")).not.toBe(
+      curatedShareVersion(meme, "/ai-memes/other.png"),
+    );
   });
 
   it("does not publish a Korean curated title when the translation is missing", async () => {

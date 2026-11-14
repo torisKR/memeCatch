@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { deflateSync, inflateSync } from "node:zlib";
+import { createElement } from "react";
+import { ImageResponse } from "next/og";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -15,7 +17,9 @@ import {
   type MemeShareCardContent,
 } from "@/lib/meme-share-image";
 import { fitShareLines, layoutMemeShareCard, measureText, type ShareFontSet } from "@/lib/meme-share-layout";
+import { encodePng as encodeRaster } from "@/lib/png-raster";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
+import { SHARE_CARD_BYTE_LIMIT } from "@/lib/jpeg-encode";
 import { readFontAdvances } from "@/lib/ttf-metrics";
 
 /** Page bodies that must stay byte-identical to main e5841d8c. Git history is
@@ -248,6 +252,12 @@ describe("per-meme share card", () => {
     }
     const words = fitShareLines("Distractingly wonderful title", 56, 2, "en", fonts);
     expect(words.join(" ")).not.toMatch(/Distract…/);
+    const phrase = "아주 짧은 단어들 여럿이 한 줄을 넘기도록 계속 이어 쓰는 설명입니다 더 길게";
+    const ellipsized = fitShareLines(phrase, 32, 1, "ko", fonts)[0] ?? "";
+    expect(ellipsized.endsWith("…")).toBe(true);
+    const stem = ellipsized.slice(0, -1);
+    expect(phrase.startsWith(stem)).toBe(true);
+    expect(phrase[stem.length]).toBe(" ");
     expect(words.every((line) => !line.endsWith("…") || line === words.at(-1))).toBe(true);
 
     const bun = layoutMemeShareCard({
@@ -323,6 +333,29 @@ describe("per-meme share card", () => {
       throw new Error("render failed");
     });
     const expected = await renderOgDefaultImage("ja");
+    expect(sha256(Buffer.from(await failed.arrayBuffer()))).toBe(
+      sha256(Buffer.from(await expected.arrayBuffer())),
+    );
+  });
+
+  it("returns the locale card when a corrupt font fails while streaming", async () => {
+    const failed = await respondWithShareCard("ko", {
+      locale: "ko",
+      title: "분좋카",
+      summary: "뜻",
+      year: 2021,
+      category: "phrase",
+    }, async () => new ImageResponse(
+      createElement("div", { style: { display: "flex", fontFamily: "Broken" } }, "분좋카"),
+      {
+        width: 64,
+        height: 64,
+        fonts: [{ name: "Broken", data: Buffer.from("not-a-font"), weight: 700, style: "normal" }],
+      },
+    ));
+    const expected = await renderOgDefaultImage("ko");
+    expect(failed.status).toBe(200);
+    expect(failed.headers.get("content-type")).toContain("image/png");
     expect(sha256(Buffer.from(await failed.arrayBuffer()))).toBe(
       sha256(Buffer.from(await expected.arrayBuffer())),
     );
@@ -463,4 +496,117 @@ describe("per-meme share card", () => {
       // Sample files are optional.
     }
   }, 30_000);
+
+  it("paints a representative image inside the center square and keeps spaces", async () => {
+    const photo = (width: number, height: number, paintAt: (rgba: Buffer, width: number) => void) => {
+      const rgba = Buffer.alloc(width * height * 4, 255);
+      paintAt(rgba, width);
+      return encodeRaster(width, height, rgba);
+    };
+    const white = photo(800, 450, () => undefined);
+    const yellow = photo(800, 450, (rgba) => {
+      for (let index = 0; index < rgba.length; index += 4) {
+        rgba[index] = 255;
+        rgba[index + 1] = 220;
+        rgba[index + 2] = 0;
+      }
+    });
+    const portrait = photo(400, 1600, (rgba, width) => {
+      for (let y = 0; y < 1600; y += 1) {
+        const red = y < 650;
+        for (let x = 0; x < width; x += 1) {
+          const index = (y * width + x) * 4;
+          rgba[index] = red ? 220 : 20;
+          rgba[index + 1] = red ? 20 : 40;
+          rgba[index + 2] = red ? 20 : 220;
+        }
+      }
+    });
+    const base = {
+      locale: "ko" as const,
+      summary: "한 줄 뜻",
+      year: 2020,
+      category: "phrase" as const,
+    };
+    const [withImage, withoutImage, failed, tooSmall, portraitCard, yellowCard] = await Promise.all([
+      paint({ ...base, title: "이미지 밈", photoBytes: white }),
+      paint({ ...base, title: "이미지 밈" }),
+      paint({ ...base, title: "이미지 밈", photoUrl: "https://evil.example/secret.png" }),
+      paint({ ...base, title: "이미지 밈", photoBytes: encodeRaster(120, 800, Buffer.alloc(120 * 800 * 4, 255)) }),
+      paint({ ...base, title: "세로 이미지", photoBytes: portrait }),
+      paint({ ...base, title: "노란 자막", photoBytes: yellow }),
+    ]);
+    expect(sha256(withImage)).not.toBe(sha256(withoutImage));
+    expect(sha256(failed)).toBe(sha256(withoutImage));
+    expect(sha256(tooSmall)).toBe(sha256(withoutImage));
+    savePair("ko-with-image", withImage);
+    savePair("ko-without-image", withoutImage);
+    savePair("ko-portrait", portraitCard);
+    savePair("ko-yellow-subtitles", yellowCard);
+    savePair("ko-image-failed", failed);
+    savePair("ko-image-too-small", tooSmall);
+
+    const at = (png: Buffer, x: number, y: number) => {
+      const { width, rgba } = decodePng(png);
+      const index = (y * width + x) * 4;
+      return [rgba[index] ?? 0, rgba[index + 1] ?? 0, rgba[index + 2] ?? 0] as const;
+    };
+    const hex = (rgb: readonly [number, number, number]) =>
+      `#${rgb.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+    const scrim = at(withImage, 600, 12);
+    const yellowScrim = at(yellowCard, 600, 12);
+    expect(contrastRatio(MEME_SHARE_DESIGN.foreground, hex(scrim))).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(MEME_SHARE_DESIGN.foreground, hex(yellowScrim))).toBeGreaterThanOrEqual(4.5);
+    const edge = at(portraitCard, 16, 315);
+    expect(edge[0]).toBeGreaterThan(edge[2]);
+
+    const lightWidth = (png: Buffer) => {
+      const { width, height, rgba } = decodePng(png);
+      let minX = width;
+      let maxX = -1;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 330; x <= 870; x += 1) {
+          const index = (y * width + x) * 4;
+          if ((rgba[index] ?? 0) > 230 && (rgba[index + 1] ?? 0) > 230 && (rgba[index + 2] ?? 0) > 210) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+          }
+        }
+      }
+      return maxX - minX;
+    };
+    const spaced = async (title: string, locale: MemeShareCardContent["locale"]) => lightWidth(await paint({
+      locale,
+      title,
+      summary: null,
+      year: null,
+      category: null,
+      photoBytes: white,
+    }));
+    expect(await spaced("2020 · 流行語", "ja")).toBeGreaterThan(await spaced("2020 ·流行語", "ja"));
+    expect(await spaced("ファイト 応援 テスト", "ja")).toBeGreaterThan(await spaced("ファイト応援テスト", "ja"));
+    expect(await spaced("파이팅 💪", "ko")).toBeGreaterThan(await spaced("파이팅💪", "ko"));
+
+    const served = await respondWithShareCard("ko", { ...base, title: "이미지 밈", photoBytes: white });
+    expect(served.headers.get("content-type")).toContain("image/");
+    expect((await served.arrayBuffer()).byteLength).toBeLessThanOrEqual(SHARE_CARD_BYTE_LIMIT);
+    const sizes = [withImage, portraitCard, yellowCard, withoutImage].map((png) => png.length);
+    try {
+      if (existsSync(ARTIFACTS)) {
+        writeFileSync(`${ARTIFACTS}/share-card-sizes.json`, JSON.stringify({
+          limit: SHARE_CARD_BYTE_LIMIT,
+          withImage: sizes[0],
+          portrait: sizes[1],
+          yellowSubtitles: sizes[2],
+          withoutImage: sizes[3],
+          scrimOnWhite: hex(scrim),
+          scrimOnYellow: hex(yellowScrim),
+          titleContrastOnWhite: Number(contrastRatio(MEME_SHARE_DESIGN.foreground, hex(scrim)).toFixed(2)),
+          titleContrastOnYellow: Number(contrastRatio(MEME_SHARE_DESIGN.foreground, hex(yellowScrim)).toFixed(2)),
+        }, null, 2));
+      }
+    } catch {
+      // Sample files are optional.
+    }
+  }, 60_000);
 });

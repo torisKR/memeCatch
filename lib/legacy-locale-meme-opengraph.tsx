@@ -2,6 +2,7 @@ import { isSeoContentLocale } from "@/lib/i18n-routing";
 import { shortIdFromParam } from "@/lib/labels";
 import { cardFromLocalized } from "@/lib/meme-share-content";
 import { respondWithShareCard } from "@/lib/meme-share-card";
+import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { getLocalizedMemeByShortId } from "@/lib/meme-translations";
 import { isOgDefaultLocale } from "@/lib/og-default-image";
 
@@ -24,12 +25,14 @@ export async function renderLegacyLocaleMemeOpenGraph({
     if (!isSeoContentLocale(locale)) return respondWithShareCard(fallback, null);
     const meme = await getLocalizedMemeByShortId(shortIdFromParam(key), locale);
     if (!meme) return respondWithShareCard(locale, null);
-    return respondWithShareCard(locale, cardFromLocalized(locale, {
+    const card = cardFromLocalized(locale, {
       title: meme.title,
       summary: meme.summary,
       origin_year: meme.origin_year,
       category: meme.category,
-    }));
+    });
+    const photo = representativeImageUrl({ contents: meme.meme_contents ?? [] });
+    return respondWithShareCard(locale, card && photo ? { ...card, photoUrl: photo.url } : card);
   } catch {
     return respondWithShareCard(fallback, null);
   }

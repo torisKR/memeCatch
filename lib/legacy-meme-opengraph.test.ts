@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
+import { createElement } from "react";
+import { ImageResponse } from "next/og";
 import { describe, expect, it, vi } from "vitest";
+import { renderMemeShareCard } from "@/lib/meme-share-card";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
 
 vi.mock("server-only", () => ({}));
@@ -71,5 +74,43 @@ describe("legacy per-meme image routes", () => {
       const expected = await renderOgDefaultImage(locale === "fr" ? "en" : locale);
       expect(sha256(await pngBytes(response))).toBe(sha256(await pngBytes(expected)));
     }
+  });
+
+  it("finds a curated meme by the slug tail, including later hyphens", async () => {
+    expect(shareKeyParts("zzzzzzzz-bun-jo-ka").slug).toBe("bun-jo-ka");
+    expect(shareKeyParts("zzzzzzzz-bun-jo-ka").slug).not.toBe("bun");
+    const response = await koreanImage(
+      new Request("http://localhost/memes/zzzzzzzz-bun-jo-ka/opengraph-image-k2cx9c"),
+      { params: Promise.resolve({ key: "zzzzzzzz-bun-jo-ka" }) },
+    );
+    const fallback = await renderOgDefaultImage("ko");
+    expect(sha256(await pngBytes(response))).not.toBe(sha256(await pngBytes(fallback)));
+    expect((await loadKoreanShareCard("zzzzzzzz-bun-jo-ka"))?.title).toContain("분좋카");
+    const keyCard = await renderMemeShareCard({
+      locale: "ko",
+      title: "bjk2021k-bun-jo-ka",
+      summary: null,
+      year: null,
+      category: null,
+    });
+    const titled = await koreanImage(
+      new Request("http://localhost/memes/bjk2021k-bun-jo-ka/opengraph-image-k2cx9c"),
+      { params: Promise.resolve({ key: "bjk2021k-bun-jo-ka" }) },
+    );
+    expect(sha256(await pngBytes(titled))).not.toBe(sha256(await pngBytes(keyCard)));
+    expect((await loadKoreanShareCard("bjk2021k-bun-jo-ka"))?.title).not.toBe("bjk2021k-bun-jo-ka");
+  });
+
+  it("restores the ImageResponse cache-control header for /ar/memes/*/opengraph-image", async () => {
+    const sample = new ImageResponse(
+      createElement("div", { style: { display: "flex" } }, "x"),
+      { width: 8, height: 8 },
+    );
+    const response = await localeImage(
+      new Request("http://localhost/ar/memes/bjk2021k-bun-jo-ka/opengraph-image"),
+      { params: Promise.resolve({ locale: "ar", key: "bjk2021k-bun-jo-ka" }) },
+    );
+    expect(response.headers.get("cache-control")).toBe(sample.headers.get("cache-control"));
+    expect(response.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
   });
 });

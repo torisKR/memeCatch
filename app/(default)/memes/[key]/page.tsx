@@ -62,7 +62,8 @@ import {
   localizedMemePath,
 } from "@/lib/i18n-routing";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
-import { koreanMemeShareImage } from "@/lib/meme-share-image";
+import { koreanMemeShareImage, shareCacheVersion } from "@/lib/meme-share-image";
+import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -142,11 +143,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meme.summary,
     meme.origin_kind,
   );
+  const photo = representativeImageUrl({ contents: meme.meme_contents });
   const image = koreanMemeShareImage({
     shortId: meme.short_id,
     slug: meme.slug,
     alt: meme.title,
-    version: meme.updated_at,
+    version: shareCacheVersion({
+      timestamps: [meme.updated_at, photo?.updatedAt],
+      imageUrl: photo?.url,
+    }),
   });
   return {
     metadataBase: new URL(SITE_URL),

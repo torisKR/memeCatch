@@ -24,6 +24,18 @@ export const SHARE_PHOTO_EDGE_CAP = 0.35;
  * that a downscale can turn into a 98% black edge. Sides with no bar stay put.
  */
 export const SHARE_PHOTO_EDGE_MARGIN = 2;
+/**
+ * A line under 98% black can interrupt a bar when at least this share of its
+ * pixels are still luma <= 16. A line below this share ends the scan.
+ */
+const SHARE_PHOTO_NOISE_SHARE = 0.8;
+/** Sub-98% lines allowed in one bar, including a noise line on the outer edge. */
+const SHARE_PHOTO_NOISE_LIMIT = 3;
+/**
+ * Mean of the per-line luma standard deviations, from the outer edge through
+ * the last 98% line. Above this the band is a dark scene and the strict run wins.
+ */
+const SHARE_PHOTO_BAND_STD = 1.5;
 /** At this height/width and above, keep the subject near the top of a cover crop. */
 export const SHARE_PHOTO_TALL_RATIO = 1.5;
 
@@ -290,6 +302,61 @@ function trimAmount(run: number, dimension: number): number {
   return amount;
 }
 
+type LineStat = { dark: number; lumaStd: number };
+
+function lineStat(rgba: Uint8Array, length: number, indexAt: (offset: number) => number): LineStat {
+  let dark = 0;
+  let sum = 0;
+  let sumSq = 0;
+  for (let offset = 0; offset < length; offset += 1) {
+    const index = indexAt(offset);
+    const luma = pixelLuma(rgba[index] ?? 0, rgba[index + 1] ?? 0, rgba[index + 2] ?? 0);
+    sum += luma;
+    sumSq += luma * luma;
+    if (luma <= SHARE_PHOTO_NEAR_BLACK_LUMA) dark += 1;
+  }
+  const mean = length > 0 ? sum / length : 0;
+  const variance = length > 0 ? sumSq / length - mean * mean : 0;
+  return { dark, lumaStd: Math.sqrt(Math.max(0, variance)) };
+}
+
+/**
+ * Strict bars stay a contiguous 98% run. A longer band may include up to three
+ * lines that are under 98% but at least 80% black, then ends on the last 98%
+ * line. That band is used only when it trims more, stays within the 35% cap,
+ * and its mean per-line luma deviation is at most 1.5. Otherwise the strict
+ * amount wins, which is zero when that run is missing or over the cap.
+ */
+function sideTrim(dimension: number, lineLength: number, statAt: (line: number) => LineStat): number {
+  const stats: LineStat[] = [];
+  let noise = 0;
+  let lastStrict = -1;
+  for (let line = 0; line < dimension; line += 1) {
+    const stat = statAt(line);
+    if (lineIsBlack(stat.dark, lineLength)) {
+      stats.push(stat);
+      lastStrict = stats.length - 1;
+      continue;
+    }
+    if (stat.dark >= lineLength * SHARE_PHOTO_NOISE_SHARE && noise < SHARE_PHOTO_NOISE_LIMIT) {
+      stats.push(stat);
+      noise += 1;
+      continue;
+    }
+    break;
+  }
+  let strictRun = 0;
+  while (strictRun < stats.length && lineIsBlack(stats[strictRun]?.dark ?? 0, lineLength)) strictRun += 1;
+  const strict = trimAmount(strictRun, dimension);
+  if (lastStrict < 0) return strict;
+  const band = lastStrict + 1;
+  let sumStd = 0;
+  for (let line = 0; line < band; line += 1) sumStd += stats[line]?.lumaStd ?? 0;
+  if (sumStd / band > SHARE_PHOTO_BAND_STD) return strict;
+  const extended = trimAmount(band, dimension);
+  return extended > strict ? extended : strict;
+}
+
 function rasterOf(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { width: number; height: number; rgba: Buffer } | null {
   try {
     if (mime === "image/png") return decodePng(Buffer.from(bytes));
@@ -300,24 +367,35 @@ function rasterOf(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { width:
 }
 
 /**
- * Drop contiguous black bars from all four edges before the cover crop.
- * A bar is a run of rows or columns where at least 98% of pixels have
- * luminance <= 16. A side that has a bar also drops 2 source pixels past it.
- * The run plus those 2px is removed only when the total is at most 35% of
- * that side. Width and height here are the trimmed size: the 400px rule and
- * the tall-photo object-position both use them. No bars leaves the original
- * bytes unchanged.
+ * Drop black bars from all four edges before the cover crop.
+ * The strict run is contiguous rows or columns where at least 98% of pixels
+ * have luminance <= 16. A longer band may absorb up to three noisier lines
+ * that are still at least 80% black, including on the outer edge, and must
+ * end on a 98% line whose pixels stay uniform. Either way a trimmed side
+ * also drops 2 source pixels, and the total is kept only when it is at most
+ * 35% of that side. The longer band never replaces a strict trim with a
+ * shorter one. Width and height here are the trimmed size: the 400px rule
+ * and the tall-photo object-position both use them. No bars leaves the
+ * original bytes unchanged.
  */
 function trimLetterbox(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { bytes: Uint8Array; width: number; height: number } | null {
   const size = imageSize(bytes);
   if (!size) return null;
   const raster = rasterOf(bytes, mime);
   if (!raster || raster.width !== size.width || raster.height !== size.height) return null;
-  const edges = blackEdgeRuns(raster.rgba, raster.width, raster.height);
-  const top = trimAmount(edges.top, raster.height);
-  const bottom = trimAmount(edges.bottom, raster.height);
-  const left = trimAmount(edges.left, raster.width);
-  const right = trimAmount(edges.right, raster.width);
+  const { rgba, width: rasterWidth, height: rasterHeight } = raster;
+  const top = sideTrim(rasterHeight, rasterWidth, (line) => lineStat(rgba, rasterWidth, (x) => ((line * rasterWidth) + x) * 4));
+  const bottom = sideTrim(rasterHeight, rasterWidth, (line) => lineStat(
+    rgba,
+    rasterWidth,
+    (x) => (((rasterHeight - 1 - line) * rasterWidth) + x) * 4,
+  ));
+  const left = sideTrim(rasterWidth, rasterHeight, (line) => lineStat(rgba, rasterHeight, (y) => ((y * rasterWidth) + line) * 4));
+  const right = sideTrim(rasterWidth, rasterHeight, (line) => lineStat(
+    rgba,
+    rasterHeight,
+    (y) => ((y * rasterWidth) + (rasterWidth - 1 - line)) * 4,
+  ));
   if (top === 0 && bottom === 0 && left === 0 && right === 0) {
     return { bytes, width: raster.width, height: raster.height };
   }

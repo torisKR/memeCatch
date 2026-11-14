@@ -564,4 +564,74 @@ describe("edge trim", () => {
     const photo = prepareSharePhoto(png);
     expect(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64").equals(png)).toBe(true);
   });
+
+  const bandWidth = 1000;
+  const bandHeight = 500;
+  const bandContent: [number, number, number] = [200, 80, 40];
+
+  function bandPhoto(specs: Array<{ dark: number; bright?: [number, number, number] }>) {
+    const rgba = Buffer.alloc(bandWidth * bandHeight * 4);
+    for (let y = 0; y < bandHeight; y += 1) {
+      const spec = specs[y];
+      const bright = spec?.bright ?? [20, 20, 20];
+      for (let x = 0; x < bandWidth; x += 1) {
+        const color = spec == null ? bandContent : x < spec.dark ? [0, 0, 0] : bright;
+        const index = (y * bandWidth + x) * 4;
+        rgba[index] = color[0];
+        rgba[index + 1] = color[1];
+        rgba[index + 2] = color[2];
+        rgba[index + 3] = 255;
+      }
+    }
+    return encodePng(bandWidth, bandHeight, rgba);
+  }
+
+  function repeat(count: number, spec: { dark: number; bright?: [number, number, number] }) {
+    return Array.from({ length: count }, () => spec);
+  }
+
+  it("trims through one 85% noise line inside a uniform black band", () => {
+    const black = { dark: bandWidth };
+    const noise = { dark: Math.round(bandWidth * 0.85) };
+    const band = [...repeat(10, black), noise, ...repeat(10, black)];
+    const photo = prepareSharePhoto(bandPhoto(band));
+    expect(photo?.width).toBe(bandWidth);
+    expect(photo?.height).toBe(bandHeight - band.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("trims a uniform band whose first line is the 85% noise line", () => {
+    const black = { dark: bandWidth };
+    const noise = { dark: Math.round(bandWidth * 0.85) };
+    const band = [noise, ...repeat(20, black)];
+    const photo = prepareSharePhoto(bandPhoto(band));
+    expect(photo?.width).toBe(bandWidth);
+    expect(photo?.height).toBe(bandHeight - band.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("keeps the strict run when a fourth noise line interrupts the band", () => {
+    const black = { dark: bandWidth };
+    const noise = { dark: Math.round(bandWidth * 0.85) };
+    const strict = repeat(10, black);
+    const photo = prepareSharePhoto(bandPhoto([...strict, ...repeat(4, noise), ...repeat(10, black)]));
+    expect(photo?.height).toBe(bandHeight - strict.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("stops the band at a 79% line", () => {
+    const black = { dark: bandWidth };
+    const strict = repeat(10, black);
+    const photo = prepareSharePhoto(bandPhoto([
+      ...strict,
+      { dark: Math.round(bandWidth * 0.79) },
+      ...repeat(10, black),
+    ]));
+    expect(photo?.height).toBe(bandHeight - strict.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("does not extend a dark scene whose rows vary", () => {
+    const varied = { dark: Math.round(bandWidth * 0.98), bright: [29, 29, 29] as [number, number, number] };
+    const almost = { dark: Math.round(bandWidth * 0.979), bright: [29, 29, 29] as [number, number, number] };
+    const strict = repeat(10, varied);
+    const photo = prepareSharePhoto(bandPhoto([...strict, ...repeat(2, almost), ...repeat(10, varied)]));
+    expect(photo?.height).toBe(bandHeight - strict.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
 });

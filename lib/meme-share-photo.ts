@@ -15,10 +15,15 @@ export const SHARE_PHOTO_NEAR_BLACK_LUMA = 16;
 /** A row or column is a black bar when at least this share of its pixels are black. */
 export const SHARE_PHOTO_BLACK_SHARE = 0.98;
 /**
- * A contiguous black run longer than this fraction of that side's dimension
- * is left in place. A shorter run is removed entirely.
+ * A black run plus the 2px margin is removed only when that total is at most
+ * this fraction of the side. A longer total is left in place.
  */
 export const SHARE_PHOTO_EDGE_CAP = 0.35;
+/**
+ * Source pixels removed past a black bar. Drops the bar/content transition
+ * that a downscale can turn into a 98% black edge. Sides with no bar stay put.
+ */
+export const SHARE_PHOTO_EDGE_MARGIN = 2;
 /** At this height/width and above, keep the subject near the top of a cover crop. */
 export const SHARE_PHOTO_TALL_RATIO = 1.5;
 
@@ -277,10 +282,12 @@ export function nearBlackEdgeRows(rgba: Uint8Array, width: number, height: numbe
   return { top: edges.top, bottom: edges.bottom };
 }
 
-/** Drop the run when it is within 35% of that side. A longer run stays. */
+/** Drop the run plus 2px when that total is within 35% of the side. A longer total stays. */
 function trimAmount(run: number, dimension: number): number {
-  if (run > dimension * SHARE_PHOTO_EDGE_CAP) return 0;
-  return run;
+  if (run < 1) return 0;
+  const amount = run + SHARE_PHOTO_EDGE_MARGIN;
+  if (amount > dimension * SHARE_PHOTO_EDGE_CAP) return 0;
+  return amount;
 }
 
 function rasterOf(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { width: number; height: number; rgba: Buffer } | null {
@@ -295,9 +302,11 @@ function rasterOf(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { width:
 /**
  * Drop contiguous black bars from all four edges before the cover crop.
  * A bar is a run of rows or columns where at least 98% of pixels have
- * luminance <= 16. A run longer than 35% of that side is not trimmed.
- * Width and height here are the trimmed size: the 400px rule and the tall-photo
- * object-position both use them. No bars leaves the original bytes unchanged.
+ * luminance <= 16. A side that has a bar also drops 2 source pixels past it.
+ * The run plus those 2px is removed only when the total is at most 35% of
+ * that side. Width and height here are the trimmed size: the 400px rule and
+ * the tall-photo object-position both use them. No bars leaves the original
+ * bytes unchanged.
  */
 function trimLetterbox(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { bytes: Uint8Array; width: number; height: number } | null {
   const size = imageSize(bytes);

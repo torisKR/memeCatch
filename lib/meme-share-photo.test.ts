@@ -15,6 +15,7 @@ import {
   representativeImageUrl,
   rowIsNearBlack,
   SHARE_PHOTO_EDGE_CAP,
+  SHARE_PHOTO_EDGE_MARGIN,
   sharePhotoObjectPosition,
   youtubeThumbnailCandidates,
 } from "@/lib/meme-share-photo";
@@ -388,13 +389,13 @@ describe("edge trim", () => {
     const width = 800;
     const height = 700;
     const bar = 80;
-    expect(bar).toBeLessThanOrEqual(height * SHARE_PHOTO_EDGE_CAP);
+    expect(bar + SHARE_PHOTO_EDGE_MARGIN).toBeLessThanOrEqual(height * SHARE_PHOTO_EDGE_CAP);
     const letterbox = encodePng(width, height, rows(width, height, (y) => (
       y < bar || y >= height - bar ? [0, 0, 0] : [240, 180, 20]
     )));
     const photo = prepareSharePhoto(letterbox);
     expect(photo?.width).toBe(width);
-    expect(photo?.height).toBe(height - bar * 2);
+    expect(photo?.height).toBe(height - (bar + SHARE_PHOTO_EDGE_MARGIN) * 2);
     const trimmed = decodePng(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64"));
     expect(nearBlackEdgeRows(trimmed.rgba, trimmed.width, trimmed.height)).toEqual({ top: 0, bottom: 0 });
   });
@@ -403,7 +404,7 @@ describe("edge trim", () => {
     const width = 800;
     const height = 500;
     const bar = 80;
-    expect(bar).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
+    expect(bar + SHARE_PHOTO_EDGE_MARGIN).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
     const rgba = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
@@ -416,7 +417,7 @@ describe("edge trim", () => {
       }
     }
     const photo = prepareSharePhoto(encodePng(width, height, rgba));
-    expect(photo?.width).toBe(width - bar * 2);
+    expect(photo?.width).toBe(width - (bar + SHARE_PHOTO_EDGE_MARGIN) * 2);
     expect(photo?.height).toBe(height);
     const trimmed = decodePng(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64"));
     expect(columnIsNearBlack(trimmed.rgba, trimmed.width, trimmed.height, 0)).toBe(false);
@@ -447,7 +448,7 @@ describe("edge trim", () => {
     const width = 640;
     const height = 480;
     const bar = 183;
-    expect(bar).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
+    expect(bar + SHARE_PHOTO_EDGE_MARGIN).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
     const rgba = Buffer.alloc(width * height * 4);
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
@@ -460,8 +461,9 @@ describe("edge trim", () => {
       }
     }
     expect(prepareSharePhoto(encodePng(width, height, rgba))).toBeNull();
-    expect(width - bar * 2).toBe(274);
-    expect(Math.min(274, height)).toBeLessThan(MIN_SHARE_PHOTO_SIDE);
+    const trimmedWidth = width - (bar + SHARE_PHOTO_EDGE_MARGIN) * 2;
+    expect(trimmedWidth).toBe(270);
+    expect(Math.min(trimmedWidth, height)).toBeLessThan(MIN_SHARE_PHOTO_SIDE);
   });
 
   it("uses the trimmed size for the tall-photo position", () => {
@@ -469,7 +471,7 @@ describe("edge trim", () => {
       y < 80 || y >= 920 ? [0, 0, 0] : [240, 180, 20]
     ))));
     expect(tall?.width).toBe(600);
-    expect(tall?.height).toBe(840);
+    expect(tall?.height).toBe(1000 - (80 + SHARE_PHOTO_EDGE_MARGIN) * 2);
     expect(sharePhotoObjectPosition(600, 1000)).toBe("center 30%");
     expect(sharePhotoObjectPosition(tall?.width ?? 0, tall?.height ?? 0)).toBe("center center");
   });
@@ -485,7 +487,81 @@ describe("edge trim", () => {
     }, 90);
     const photo = prepareSharePhoto(jpeg);
     expect(photo?.width).toBe(width);
-    expect(photo?.height).toBe(height - bar * 2);
+    expect(photo?.height).toBe(height - (bar + SHARE_PHOTO_EDGE_MARGIN) * 2);
     expect(photo?.dataUrl.startsWith("data:image/png;base64,")).toBe(true);
+  });
+
+  it("trims rows at luminance 15 and 16 and leaves 17", () => {
+    const width = 420;
+    const height = 420;
+    const content: [number, number, number] = [200, 80, 40];
+    const trimmedHeight = height - 1 - SHARE_PHOTO_EDGE_MARGIN;
+    // Gray 16 is 15.999... under the luma weights, so it does not separate <= from <.
+    // [31, 7, 23] is luminance 16 exactly.
+    const bars: Array<[number, number, number]> = [[15, 15, 15], [31, 7, 23]];
+    for (const bar of bars) {
+      const photo = prepareSharePhoto(encodePng(width, height, rows(width, height, (y) => (
+        y === 0 ? bar : content
+      ))));
+      expect(photo?.width).toBe(width);
+      expect(photo?.height).toBe(trimmedHeight);
+      const trimmed = decodePng(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64"));
+      expect(rowIsNearBlack(trimmed.rgba, trimmed.width, 0)).toBe(false);
+    }
+    const kept = encodePng(width, height, rows(width, height, (y) => (
+      y === 0 ? [17, 17, 17] : content
+    )));
+    const untouched = prepareSharePhoto(kept);
+    expect(Buffer.from(untouched?.dataUrl.split(",")[1] ?? "", "base64").equals(kept)).toBe(true);
+  });
+
+  it("trims a 34% bar including the 2px margin and leaves a 36% bar", () => {
+    const width = 1000;
+    const height = 500;
+    const content: [number, number, number] = [200, 80, 40];
+    const pillar = (bar: number) => {
+      const rgba = Buffer.alloc(width * height * 4);
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const index = (y * width + x) * 4;
+          const [red, green, blue] = x < bar ? [0, 0, 0] : content;
+          rgba[index] = red;
+          rgba[index + 1] = green;
+          rgba[index + 2] = blue;
+          rgba[index + 3] = 255;
+        }
+      }
+      return encodePng(width, height, rgba);
+    };
+    const under = Math.round(width * 0.34);
+    expect(under + SHARE_PHOTO_EDGE_MARGIN).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
+    const trimmed = prepareSharePhoto(pillar(under));
+    expect(trimmed?.height).toBe(height);
+    expect(trimmed?.width).toBe(width - under - SHARE_PHOTO_EDGE_MARGIN);
+    const over = Math.round(width * 0.36);
+    expect(over + SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThan(width * SHARE_PHOTO_EDGE_CAP);
+    const kept = pillar(over);
+    const untouched = prepareSharePhoto(kept);
+    expect(untouched?.width).toBe(width);
+    expect(untouched?.height).toBe(height);
+    expect(width - over).toBeGreaterThan(1);
+    expect(Buffer.from(untouched?.dataUrl.split(",")[1] ?? "", "base64").equals(kept)).toBe(true);
+  });
+
+  it("leaves a 95% dark first row in place when it is not a bar", () => {
+    const width = 400;
+    const height = 400;
+    const rgba = rows(width, height, () => [200, 80, 40]);
+    const dark = Math.round(width * 0.95);
+    expect(dark).toBeLessThan(width * 0.98);
+    for (let x = 0; x < dark; x += 1) {
+      const index = x * 4;
+      rgba[index] = 0;
+      rgba[index + 1] = 0;
+      rgba[index + 2] = 0;
+    }
+    const png = encodePng(width, height, rgba);
+    const photo = prepareSharePhoto(png);
+    expect(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64").equals(png)).toBe(true);
   });
 });

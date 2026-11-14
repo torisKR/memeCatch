@@ -17,7 +17,7 @@ import {
   type MemeShareCardContent,
 } from "@/lib/meme-share-image";
 import { fitShareLines, layoutMemeShareCard, measureText, type ShareFontSet } from "@/lib/meme-share-layout";
-import { nearBlackEdgeRows } from "@/lib/meme-share-photo";
+import { blackEdgeRuns, nearBlackEdgeRows } from "@/lib/meme-share-photo";
 import { encodePng as encodeRaster } from "@/lib/png-raster";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
 import { SHARE_CARD_BYTE_LIMIT } from "@/lib/jpeg-encode";
@@ -643,6 +643,40 @@ describe("share card cache and letterbox", () => {
     const raster = decodePng(png);
     expect(nearBlackEdgeRows(raster.rgba, raster.width, raster.height)).toEqual({ top: 0, bottom: 0 });
   }, 20_000);
+
+  it("drops a 95% dark transition row so the card has no black edge", async () => {
+    const width = 1600;
+    const height = 900;
+    const bar = 40;
+    const rgba = Buffer.alloc(width * height * 4);
+    const darkCount = Math.round(width * 0.95);
+    for (let y = 0; y < height; y += 1) {
+      const barRow = y < bar || y >= height - bar;
+      const transition = (y >= bar && y < bar + 2) || (y < height - bar && y >= height - bar - 2);
+      for (let x = 0; x < width; x += 1) {
+        const index = (y * width + x) * 4;
+        const brightSpot = transition && x % 20 === 0;
+        const [red, green, blue] = barRow
+          ? [0, 0, 0]
+          : transition
+            ? (brightSpot ? [17, 17, 17] : [0, 0, 0])
+            : [240, 180, 20];
+        rgba[index] = red;
+        rgba[index + 1] = green;
+        rgba[index + 2] = blue;
+        rgba[index + 3] = 255;
+      }
+    }
+    expect(darkCount).toBe(1520);
+    const response = await respondWithShareCard("ko", { ...card, photoBytes: encodeRaster(width, height, rgba) });
+    const body = Buffer.from(await response.arrayBuffer());
+    const raster = decodePng(body);
+    expect(raster.width).toBe(1200);
+    expect(raster.height).toBe(630);
+    expect(blackEdgeRuns(raster.rgba, raster.width, raster.height)).toEqual({
+      top: 0, bottom: 0, left: 0, right: 0,
+    });
+  }, 30_000);
 
   it("keeps the next/og header when a photo is painted", async () => {
     const served = await respondWithShareCard("ko", { ...card, photoBytes: letterboxPng(800, 500, 0) });

@@ -51,19 +51,25 @@ function databaseMeme() {
   };
 }
 
-function imageUrls(metadata: { openGraph?: unknown; twitter?: unknown }): { og: string[]; twitter: string[] } {
+function imageTags(metadata: { openGraph?: unknown; twitter?: unknown }): {
+  og: { url: string; alt: string }[];
+  twitter: { url: string; alt: string }[];
+} {
   const openGraph = metadata.openGraph && !Array.isArray(metadata.openGraph)
     ? metadata.openGraph
     : undefined;
   const twitter = metadata.twitter && !Array.isArray(metadata.twitter)
     ? metadata.twitter
     : undefined;
-  const read = (images: unknown): string[] => {
+  const read = (images: unknown): { url: string; alt: string }[] => {
     if (!Array.isArray(images)) return [];
     return images.map((image) => {
-      if (typeof image === "string") return image;
-      if (image && typeof image === "object" && "url" in image) return String(image.url);
-      return "";
+      if (typeof image === "string") return { url: image, alt: "" };
+      if (image && typeof image === "object" && "url" in image) {
+        const alt = "alt" in image ? String(image.alt ?? "") : "";
+        return { url: String(image.url), alt };
+      }
+      return { url: "", alt: "" };
     });
   };
   const graph = openGraph as { images?: unknown } | undefined;
@@ -71,12 +77,19 @@ function imageUrls(metadata: { openGraph?: unknown; twitter?: unknown }): { og: 
   return { og: read(graph?.images), twitter: read(tw?.images) };
 }
 
-function expectMemeCard(metadata: { openGraph?: unknown; twitter?: unknown }, url: string) {
-  const images = imageUrls(metadata);
-  expect(images.og).toEqual([url]);
-  expect(images.twitter).toEqual([url]);
-  expect(images.og.filter((item) => isGenericShareImageUrl(item))).toEqual([]);
-  expect(images.twitter.filter((item) => isGenericShareImageUrl(item))).toEqual([]);
+function expectMemeCard(
+  metadata: { openGraph?: unknown; twitter?: unknown },
+  url: string,
+  alt: string,
+) {
+  const images = imageTags(metadata);
+  expect(images.og.map((item) => item.url)).toEqual([url]);
+  expect(images.twitter.map((item) => item.url)).toEqual([url]);
+  expect(images.og.map((item) => item.alt)).toEqual([alt]);
+  expect(images.twitter.map((item) => item.alt)).toEqual([alt]);
+  expect(images.og.filter((item) => isGenericShareImageUrl(item.url))).toEqual([]);
+  expect(images.twitter.filter((item) => isGenericShareImageUrl(item.url))).toEqual([]);
+  expect(url.startsWith("https://")).toBe(true);
 }
 
 function localizedMeme() {
@@ -132,7 +145,13 @@ describe("meme detail share tags survive the known mutants", () => {
     });
     expectMemeCard(
       metadata,
-      koreanMemeShareImage("zzdb0001", "database-only", "데이터베이스밈").url,
+      koreanMemeShareImage({
+        shortId: "zzdb0001",
+        slug: "database-only",
+        alt: "데이터베이스밈",
+        version: "2026-01-01T00:00:00.000Z",
+      }).url,
+      "데이터베이스밈",
     );
     expect(metadata.twitter).toMatchObject({
       card: "summary_large_image",
@@ -152,32 +171,51 @@ describe("meme detail share tags survive the known mutants", () => {
     expect(metadata.openGraph).toMatchObject({ title: "Database meme · Meaning" });
     expectMemeCard(
       metadata,
-      localeMemeShareImage("en", "zzdb0001", "database-only", "Database meme").url,
+      localeMemeShareImage({
+        locale: "en",
+        shortId: "zzdb0001",
+        slug: "database-only",
+        alt: "Database meme",
+        version: "2026-01-01T00:00:00.000Z",
+      }).url,
+      "Database meme",
     );
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });
 
-  it("uses the Korean meme card for an untranslated locale page when the meme exists", async () => {
+  it("keeps an untranslated locale page on main's not-found", async () => {
     queries.getMemeByShortId.mockResolvedValue(databaseMeme());
     translations.getLocalizedMemeByShortId.mockResolvedValue(null);
     translations.getAvailableTranslationLocales.mockResolvedValue([]);
-    const card = koreanMemeShareImage("zzdb0001", "database-only", "데이터베이스밈").url;
-
     for (const locale of ["en", "ja", "zh", "zh-tw", "ar"] as const) {
-      const metadata = await generateLocalizedMemeMetadata({
+      await expect(generateLocalizedMemeMetadata({
         params: Promise.resolve({ locale, key: "zzdb0001-database-only" }),
-      });
-      expect(metadata.title).toBe("데이터베이스밈");
-      expect(metadata.robots).toEqual({ index: false, follow: true });
-      expect(metadata.openGraph).toMatchObject({
-        title: "데이터베이스밈",
-        url: locale === "ar"
-          ? "/ar/memes/zzdb0001-database-only"
-          : `/${locale}/memes/zzdb0001-database-only`,
-      });
-      expectMemeCard(metadata, card);
-      expect(metadata.twitter).toMatchObject({ card: "summary_large_image", title: "데이터베이스밈" });
+      })).rejects.toMatchObject({ digest: expect.stringMatching(/404$/) });
     }
+  });
+
+  it("changes the image URL when the meme updated_at changes", async () => {
+    const first = databaseMeme();
+    queries.getMemeByShortId.mockResolvedValue(first);
+    translations.getAvailableTranslationLocales.mockResolvedValue([]);
+    translations.getLocalizedMemeByShortId.mockResolvedValue(null);
+    const before = await generateKoreanMemeMetadata({
+      params: Promise.resolve({ key: "zzdb0001-database-only" }),
+    });
+    queries.getMemeByShortId.mockResolvedValue({
+      ...first,
+      updated_at: "2026-06-01T00:00:00.000Z",
+    });
+    const after = await generateKoreanMemeMetadata({
+      params: Promise.resolve({ key: "zzdb0001-database-only" }),
+    });
+    const beforeUrl = imageTags(before).og[0]?.url;
+    const afterUrl = imageTags(after).og[0]?.url;
+    expect(beforeUrl).toContain(encodeURIComponent("2026-01-01T00:00:00.000Z"));
+    expect(afterUrl).toContain(encodeURIComponent("2026-06-01T00:00:00.000Z"));
+    expect(beforeUrl).not.toBe(afterUrl);
+    expect(imageTags(before).twitter[0]?.url).toBe(beforeUrl);
+    expect(imageTags(after).twitter[0]?.url).toBe(afterUrl);
   });
 
   it("does not publish a Korean curated title when the translation is missing", async () => {

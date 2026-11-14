@@ -1,58 +1,75 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
+import { renderOgDefaultImage } from "@/lib/og-default-card";
 
 vi.mock("server-only", () => ({}));
+
 import { GET as koreanImage } from "@/app/(default)/memes/[key]/opengraph-image-k2cx9c/route";
 import { GET as localeImage } from "@/app/[locale]/memes/[key]/opengraph-image/route";
+import { loadKoreanShareCard } from "@/lib/meme-share-content";
+import { findCuratedByShareKey, shareKeyParts } from "@/lib/curated-memes";
 
-const KOREAN_FALLBACK_SHA256 =
-  "968643504db6cc0ea42091c812cba44f89bced3569ad88c6ade2260774b694f2";
-const NON_SEO_LOCALE_FALLBACK_SHA256 =
-  "dff39b55a17d9ce4eb74837e6aeebfea9b6bf2a3ec01b00a93958fe20d2284df";
-
-async function pngSha256(response: Response) {
+async function pngBytes(response: Response) {
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toContain("image/png");
-  const body = Buffer.from(await response.arrayBuffer());
+  return Buffer.from(await response.arrayBuffer());
+}
+
+function sha256(body: Buffer) {
   return createHash("sha256").update(body).digest("hex");
 }
 
 describe("legacy per-meme image routes", () => {
-  it("returns main's Korean fallback PNG when the catalog is unset", async () => {
-    const response = await koreanImage(new Request("http://localhost/memes/not-a-real-meme/opengraph-image-k2cx9c"), {
-      params: Promise.resolve({ key: "not-a-real-meme" }),
+  it("parses year-style curated keys by short id and hyphenated slug", () => {
+    expect(shareKeyParts("bjk2021k-bun-jo-ka")).toEqual({
+      shortId: "bjk2021k",
+      slug: "bun-jo-ka",
     });
-    expect(await pngSha256(response)).toBe(KOREAN_FALLBACK_SHA256);
-  });
-
-  it("paints the curated meme instead of the generic fallback when the catalog row is missing", async () => {
-    const response = await koreanImage(new Request("http://localhost/memes/bjk2021k-bun-jo-ka/opengraph-image-k2cx9c"), {
-      params: Promise.resolve({ key: "bjk2021k-bun-jo-ka" }),
+    expect(shareKeyParts("okk2020k-eok-kka")).toEqual({
+      shortId: "okk2020k",
+      slug: "eok-kka",
     });
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toContain("image/png");
-    const body = Buffer.from(await response.arrayBuffer());
-    const hash = createHash("sha256").update(body).digest("hex");
-    expect(hash).not.toBe(KOREAN_FALLBACK_SHA256);
-    mkdirSync("/opt/cursor/artifacts", { recursive: true });
-    writeFileSync("/opt/cursor/artifacts/ko-curated-bun-jo-ka.png", body);
+    expect(shareKeyParts("%62jk2021k-bun-jo-ka").shortId).toBe("bjk2021k");
+    expect(findCuratedByShareKey("bjk2021k-bun-jo-ka")?.title).toContain("분좋카");
+    expect(findCuratedByShareKey("okk2020k-eok-kka")?.title).toContain("억까");
+    expect(findCuratedByShareKey("wrongid-bun-jo-ka")?.slug).toBe("bun-jo-ka");
+    expect(findCuratedByShareKey("not-a-real-meme")).toBeNull();
   });
 
-  it("returns main's English fallback PNG for Arabic and other non-SEO prefixes", async () => {
-    for (const locale of ["ar", "ko", "fr"]) {
-      const response = await localeImage(new Request(`http://localhost/${locale}/memes/not-a-real-meme/opengraph-image`), {
-        params: Promise.resolve({ locale, key: "not-a-real-meme" }),
-      });
-      expect(await pngSha256(response)).toBe(NON_SEO_LOCALE_FALLBACK_SHA256);
-    }
-  });
-
-  it("raises the same catalog error as main for an SEO locale when the database is unset", async () => {
-    await expect(
-      localeImage(new Request("http://localhost/en/memes/not-a-real-meme/opengraph-image"), {
-        params: Promise.resolve({ locale: "en", key: "not-a-real-meme" }),
+  it("renders curated titles for bjk2021k and okk2020k, and /og/ko for an unknown key", async () => {
+    const [missing, bun, eok, fallback] = await Promise.all([
+      koreanImage(new Request("http://localhost/memes/not-a-real-meme/opengraph-image-k2cx9c"), {
+        params: Promise.resolve({ key: "not-a-real-meme" }),
       }),
-    ).rejects.toMatchObject({ code: "meme_catalog_unavailable" });
+      koreanImage(new Request("http://localhost/memes/bjk2021k-bun-jo-ka/opengraph-image-k2cx9c"), {
+        params: Promise.resolve({ key: "bjk2021k-bun-jo-ka" }),
+      }),
+      koreanImage(new Request("http://localhost/memes/okk2020k-eok-kka/opengraph-image-k2cx9c"), {
+        params: Promise.resolve({ key: "okk2020k-eok-kka" }),
+      }),
+      renderOgDefaultImage("ko"),
+    ]);
+    const missingSha = sha256(await pngBytes(missing));
+    const bunSha = sha256(await pngBytes(bun));
+    const eokSha = sha256(await pngBytes(eok));
+    expect(missingSha).toBe(sha256(await pngBytes(fallback)));
+    expect(bunSha).not.toBe(missingSha);
+    expect(eokSha).not.toBe(missingSha);
+    expect(bunSha).not.toBe(eokSha);
+    expect((await loadKoreanShareCard("bjk2021k-bun-jo-ka"))?.title).toContain("분좋카");
+    expect((await loadKoreanShareCard("okk2020k-eok-kka"))?.title).toContain("억까");
+    expect(await loadKoreanShareCard("not-a-real-meme")).toBeNull();
+    expect((await loadKoreanShareCard("bjk2021k-bun-jo-ka"))?.title).not.toBe("밈캐치");
+  });
+
+  it("serves the locale default card when there is no translation", async () => {
+    for (const locale of ["en", "ja", "ar", "ko", "fr"]) {
+      const response = await localeImage(
+        new Request(`http://localhost/${locale}/memes/not-a-real-meme/opengraph-image`),
+        { params: Promise.resolve({ locale, key: "not-a-real-meme" }) },
+      );
+      const expected = await renderOgDefaultImage(locale === "fr" ? "en" : locale);
+      expect(sha256(await pngBytes(response))).toBe(sha256(await pngBytes(expected)));
+    }
   });
 });

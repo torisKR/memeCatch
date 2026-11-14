@@ -160,6 +160,7 @@ const nextConfig: NextConfig = {
     "/og/[locale]": ["./assets/og-fonts/**/*"],
     "/opengraph-image": ["./assets/og-fonts/**/*"],
     "/[locale]/memes/[key]/opengraph-image": ["./assets/og-fonts/**/*"],
+    "/memes/[key]/opengraph-image-k2cx9c": ["./assets/og-fonts/**/*"],
     "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],

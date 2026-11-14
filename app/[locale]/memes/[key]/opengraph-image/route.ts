@@ -2,8 +2,9 @@ import { renderLegacyLocaleMemeOpenGraph } from "@/lib/legacy-locale-meme-opengr
 
 type RouteContext = { params: Promise<{ locale: string; key: string }> };
 
-// Locale detail HTML stays on its own page. This handler only preserves
-// the image URL main already served, including `/ar/memes/[key]/opengraph-image`.
+// Translated locale detail HTML stays on its own page. This handler serves
+// `/[locale]/memes/[key]/opengraph-image` for en, ja, zh, and zh-tw.
+// `/ar/memes/*` is not a locale segment and stays unpublished.
 export function GET(_request: Request, context: RouteContext) {
   return renderLegacyLocaleMemeOpenGraph(context);
 }

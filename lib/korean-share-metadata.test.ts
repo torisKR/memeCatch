@@ -17,7 +17,7 @@ import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale
 import { metadata as koreanLayoutMetadata } from "@/app/(default)/layout";
 import { generateRankingsMetadata } from "@/app/rankings/page";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
-import { isGenericShareImageUrl, koreanMemeShareImage } from "@/lib/meme-share-image";
+import { curatedShareVersion, isGenericShareImageUrl, koreanMemeShareImage } from "@/lib/meme-share-image";
 import type { Metadata } from "next";
 
 const HOME_TITLE = "밈캐치 — 그 밈, 3초 안에 알려드려요";
@@ -140,7 +140,12 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
         params: Promise.resolve({ key: `${meme.short_id}-${meme.slug}` }),
       });
       const title = `${meme.title} 뜻`;
-      const image = koreanMemeShareImage(meme.short_id, meme.slug, meme.title);
+      const image = koreanMemeShareImage({
+        shortId: meme.short_id,
+        slug: meme.slug,
+        alt: meme.title,
+        version: curatedShareVersion(meme),
+      });
       expect(metadata.title).toBe(title);
       expect(metadata.description).toBe(meme.summary);
       expect(metadata.openGraph).toMatchObject({

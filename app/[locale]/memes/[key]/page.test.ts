@@ -9,13 +9,12 @@ const source = readFileSync(
 
 describe("localized meme detail metadata", () => {
   it("redirects short-only and stale aliases to the current localized canonical slug", () => {
-    const metadata = source.slice(source.indexOf("export async function generateMetadata"));
-    const page = source.slice(source.indexOf("export default async function LocalizedMemePage"));
     expect(source).toContain('import { notFound, permanentRedirect } from "next/navigation";');
     expect(source).toContain("canonicalMemeRedirectPath(key");
     expect(source).toContain("if (redirectPath) permanentRedirect(redirectPath);");
-    expect(metadata.indexOf('case "missing"')).toBeLessThan(metadata.indexOf("redirectLocaleMeme"));
-    expect(page.indexOf('case "missing"')).toBeLessThan(page.indexOf("redirectLocaleMeme"));
+    expect(source.indexOf("notFound();")).toBeLessThan(
+      source.indexOf("canonicalMemeRedirectPath(key"),
+    );
   });
 
   it("uses the reviewed English page as x-default when available", () => {
@@ -25,18 +24,15 @@ describe("localized meme detail metadata", () => {
   });
 
   it("turns a missing localized meme into a not-found result", () => {
-    const metadata = source.slice(source.indexOf("export async function generateMetadata"));
-    const page = source.slice(source.indexOf("export default async function LocalizedMemePage"));
-    expect(metadata.indexOf('case "missing":')).toBeLessThan(metadata.indexOf("redirectLocaleMeme"));
-    expect(page.indexOf('case "missing":')).toBeLessThan(page.indexOf("redirectLocaleMeme"));
-    expect(source.indexOf('if (shareLocale === "ar")')).toBeLessThan(
+    expect(source).toContain("if (!meme) notFound();");
+    expect(source.match(/if \(shareLocale === "ar"\) notFound\(\);/g)).toHaveLength(2);
+    expect(source.indexOf('if (shareLocale === "ar") notFound();')).toBeLessThan(
       source.indexOf("ogPageContentLocale(shareLocale)"),
     );
     expect(source).not.toContain("CuratedMemeArticle");
     expect(source).not.toContain("curatedShareMetadata");
-    expect(source).toContain('case "unavailable":\n      return unavailableMemeMetadata();');
-    expect(source).toContain("case \"unavailable\":\n      return <MemeCatalogUnavailable />;");
-    expect(source).toContain("findPublishedKoreanMeme");
+    expect(source).toContain('if (loaded.status === "unavailable") return unavailableMemeMetadata();');
+    expect(source).toContain('if (loaded.status === "unavailable") return <MemeCatalogUnavailable />;');
   });
 
   it("keeps the Plus export action on the active localized detail page", () => {

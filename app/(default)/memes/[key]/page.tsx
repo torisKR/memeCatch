@@ -142,7 +142,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meme.summary,
     meme.origin_kind,
   );
-  const image = koreanMemeShareImage(meme.short_id, meme.slug, meme.title);
+  const image = koreanMemeShareImage({
+    shortId: meme.short_id,
+    slug: meme.slug,
+    alt: meme.title,
+    version: meme.updated_at,
+  });
   return {
     metadataBase: new URL(SITE_URL),
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)

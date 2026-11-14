@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createElement } from "react";
 import { ImageResponse } from "next/og";
 import { describe, expect, it, vi } from "vitest";
-import { renderMemeShareCard } from "@/lib/meme-share-card";
+import { ogImageCacheControl, renderMemeShareCard, SHARE_CARD_FALLBACK_CACHE_CONTROL } from "@/lib/meme-share-card";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
 
 vi.mock("server-only", () => ({}));
@@ -10,6 +10,8 @@ vi.mock("server-only", () => ({}));
 import { GET as koreanImage } from "@/app/(default)/memes/[key]/opengraph-image-k2cx9c/route";
 import { GET as localeImage } from "@/app/[locale]/memes/[key]/opengraph-image/route";
 import { loadKoreanShareCard } from "@/lib/meme-share-content";
+import * as shareContent from "@/lib/meme-share-content";
+import * as memeTranslations from "@/lib/meme-translations";
 import { findCuratedByShareKey, shareKeyParts } from "@/lib/curated-memes";
 
 async function pngBytes(response: Response) {
@@ -52,6 +54,8 @@ describe("legacy per-meme image routes", () => {
       }),
       renderOgDefaultImage("ko"),
     ]);
+    expect(missing.headers.get("cache-control")).toBe(ogImageCacheControl());
+    expect(bun.headers.get("cache-control")).toBe(SHARE_CARD_FALLBACK_CACHE_CONTROL);
     const missingSha = sha256(await pngBytes(missing));
     const bunSha = sha256(await pngBytes(bun));
     const eokSha = sha256(await pngBytes(eok));
@@ -72,6 +76,9 @@ describe("legacy per-meme image routes", () => {
         { params: Promise.resolve({ locale, key: "not-a-real-meme" }) },
       );
       const expected = await renderOgDefaultImage(locale === "fr" ? "en" : locale);
+      if (locale === "ko" || locale === "ar") {
+        expect(response.headers.get("cache-control")).toBe(ogImageCacheControl());
+      }
       expect(sha256(await pngBytes(response))).toBe(sha256(await pngBytes(expected)));
     }
   });
@@ -112,5 +119,41 @@ describe("legacy per-meme image routes", () => {
     );
     expect(response.headers.get("cache-control")).toBe(sample.headers.get("cache-control"));
     expect(response.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+    expect(response.headers.get("cache-control")).toBe(ogImageCacheControl());
+  });
+
+  it("keeps the current header when the locale lookup finds no translation", async () => {
+    const lookup = vi.spyOn(memeTranslations, "getLocalizedMemeByShortId").mockResolvedValue(null);
+    try {
+      const response = await localeImage(
+        new Request("http://localhost/en/memes/not-a-real-meme/opengraph-image"),
+        { params: Promise.resolve({ locale: "en", key: "not-a-real-meme" }) },
+      );
+      expect(response.headers.get("cache-control")).toBe(ogImageCacheControl());
+      const expected = await renderOgDefaultImage("en");
+      expect(sha256(await pngBytes(response))).toBe(sha256(await pngBytes(expected)));
+    } finally {
+      lookup.mockRestore();
+    }
+  });
+
+  it("uses the short header when the catalog lookup throws", async () => {
+    const korean = vi.spyOn(shareContent, "loadKoreanShareCard").mockRejectedValue(new Error("catalog"));
+    const locale = vi.spyOn(memeTranslations, "getLocalizedMemeByShortId").mockRejectedValue(new Error("catalog"));
+    try {
+      const koreanResponse = await koreanImage(
+        new Request("http://localhost/memes/bjk2021k-bun-jo-ka/opengraph-image-k2cx9c"),
+        { params: Promise.resolve({ key: "bjk2021k-bun-jo-ka" }) },
+      );
+      const localeResponse = await localeImage(
+        new Request("http://localhost/en/memes/bjk2021k-bun-jo-ka/opengraph-image"),
+        { params: Promise.resolve({ locale: "en", key: "bjk2021k-bun-jo-ka" }) },
+      );
+      expect(koreanResponse.headers.get("cache-control")).toBe(SHARE_CARD_FALLBACK_CACHE_CONTROL);
+      expect(localeResponse.headers.get("cache-control")).toBe(SHARE_CARD_FALLBACK_CACHE_CONTROL);
+    } finally {
+      korean.mockRestore();
+      locale.mockRestore();
+    }
   });
 });

@@ -1,13 +1,24 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { isRenderableContent } from "@/lib/content-availability";
+import { decodeBaselineJpeg } from "@/lib/jpeg-decode";
 import { ownedMemeCardArtPath } from "@/lib/meme-card-art";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
+import { decodePng, encodePng } from "@/lib/png-raster";
 import type { ShareTimestamp } from "@/lib/share-version";
 import { SITE_URL } from "@/lib/site";
 
-/** Shorter side below this is too small to fill a 1200×630 card. */
+/** Shorter side below this is too small to fill a 1200×630 card. Measured after edge trim. */
 export const MIN_SHARE_PHOTO_SIDE = 400;
+/** A pixel at or below this luminance (0–255) counts as black. */
+export const SHARE_PHOTO_NEAR_BLACK_LUMA = 16;
+/** A row or column is a black bar when at least this share of its pixels are black. */
+export const SHARE_PHOTO_BLACK_SHARE = 0.98;
+/**
+ * A contiguous black run longer than this fraction of that side's dimension
+ * is left in place. A shorter run is removed entirely.
+ */
+export const SHARE_PHOTO_EDGE_CAP = 0.35;
 /** At this height/width and above, keep the subject near the top of a cover crop. */
 export const SHARE_PHOTO_TALL_RATIO = 1.5;
 
@@ -208,17 +219,123 @@ function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
   return null;
 }
 
+function pixelLuma(red: number, green: number, blue: number): number {
+  return 0.299 * red + 0.587 * green + 0.114 * blue;
+}
+
+function pixelIsBlack(rgba: Uint8Array, index: number): boolean {
+  return pixelLuma(rgba[index] ?? 0, rgba[index + 1] ?? 0, rgba[index + 2] ?? 0) <= SHARE_PHOTO_NEAR_BLACK_LUMA;
+}
+
+/** At least 98% of the pixels on this line are at or below the luma cutoff. */
+function lineIsBlack(dark: number, length: number): boolean {
+  return dark >= length * SHARE_PHOTO_BLACK_SHARE;
+}
+
+/** A row is a black bar when at least 98% of its pixels have luminance <= 16. */
+export function rowIsNearBlack(rgba: Uint8Array, width: number, y: number): boolean {
+  let dark = 0;
+  const start = y * width * 4;
+  for (let x = 0; x < width; x += 1) {
+    if (pixelIsBlack(rgba, start + x * 4)) dark += 1;
+  }
+  return lineIsBlack(dark, width);
+}
+
+/** A column is a black bar when at least 98% of its pixels have luminance <= 16. */
+export function columnIsNearBlack(rgba: Uint8Array, width: number, height: number, x: number): boolean {
+  let dark = 0;
+  for (let y = 0; y < height; y += 1) {
+    if (pixelIsBlack(rgba, (y * width + x) * 4)) dark += 1;
+  }
+  return lineIsBlack(dark, height);
+}
+
+function contiguousRun(length: number, isBlack: (offset: number) => boolean): number {
+  let run = 0;
+  while (run < length && isBlack(run)) run += 1;
+  return run;
+}
+
+/** How many black rows or columns sit on each edge, before the 35% skip. */
+export function blackEdgeRuns(
+  rgba: Uint8Array,
+  width: number,
+  height: number,
+): { top: number; bottom: number; left: number; right: number } {
+  return {
+    top: contiguousRun(height, (offset) => rowIsNearBlack(rgba, width, offset)),
+    bottom: contiguousRun(height, (offset) => rowIsNearBlack(rgba, width, height - 1 - offset)),
+    left: contiguousRun(width, (offset) => columnIsNearBlack(rgba, width, height, offset)),
+    right: contiguousRun(width, (offset) => columnIsNearBlack(rgba, width, height, width - 1 - offset)),
+  };
+}
+
+/** How many near-black rows sit on each edge, ignoring the trim cap. */
+export function nearBlackEdgeRows(rgba: Uint8Array, width: number, height: number): { top: number; bottom: number } {
+  const edges = blackEdgeRuns(rgba, width, height);
+  return { top: edges.top, bottom: edges.bottom };
+}
+
+/** Drop the run when it is within 35% of that side. A longer run stays. */
+function trimAmount(run: number, dimension: number): number {
+  if (run > dimension * SHARE_PHOTO_EDGE_CAP) return 0;
+  return run;
+}
+
+function rasterOf(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { width: number; height: number; rgba: Buffer } | null {
+  try {
+    if (mime === "image/png") return decodePng(Buffer.from(bytes));
+    return decodeBaselineJpeg(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Drop contiguous black bars from all four edges before the cover crop.
+ * A bar is a run of rows or columns where at least 98% of pixels have
+ * luminance <= 16. A run longer than 35% of that side is not trimmed.
+ * Width and height here are the trimmed size: the 400px rule and the tall-photo
+ * object-position both use them. No bars leaves the original bytes unchanged.
+ */
+function trimLetterbox(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { bytes: Uint8Array; width: number; height: number } | null {
+  const size = imageSize(bytes);
+  if (!size) return null;
+  const raster = rasterOf(bytes, mime);
+  if (!raster || raster.width !== size.width || raster.height !== size.height) return null;
+  const edges = blackEdgeRuns(raster.rgba, raster.width, raster.height);
+  const top = trimAmount(edges.top, raster.height);
+  const bottom = trimAmount(edges.bottom, raster.height);
+  const left = trimAmount(edges.left, raster.width);
+  const right = trimAmount(edges.right, raster.width);
+  if (top === 0 && bottom === 0 && left === 0 && right === 0) {
+    return { bytes, width: raster.width, height: raster.height };
+  }
+  const width = raster.width - left - right;
+  const height = raster.height - top - bottom;
+  if (width < 1 || height < 1) return { bytes, width: raster.width, height: raster.height };
+  const cropped = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const source = ((y + top) * raster.width + left) * 4;
+    raster.rgba.copy(cropped, y * width * 4, source, source + width * 4);
+  }
+  return { bytes: encodePng(width, height, cropped), width, height };
+}
+
 /** PNG or JPEG large enough for the card. WebP and other formats are skipped. */
 export function prepareSharePhoto(bytes: Uint8Array): PreparedSharePhoto | null {
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_SHARE_PHOTO_BYTES) return null;
   const size = imageSize(bytes);
   if (!size) return null;
-  if (Math.min(size.width, size.height) < MIN_SHARE_PHOTO_SIDE) return null;
-  const encoded = Buffer.from(bytes).toString("base64");
+  const trimmed = trimLetterbox(bytes, size.mime) ?? { bytes, width: size.width, height: size.height };
+  if (Math.min(trimmed.width, trimmed.height) < MIN_SHARE_PHOTO_SIDE) return null;
+  const mime = trimmed.bytes === bytes ? size.mime : "image/png";
+  const encoded = Buffer.from(trimmed.bytes).toString("base64");
   return {
-    dataUrl: `data:${size.mime};base64,${encoded}`,
-    width: size.width,
-    height: size.height,
+    dataUrl: `data:${mime};base64,${encoded}`,
+    width: trimmed.width,
+    height: trimmed.height,
   };
 }
 

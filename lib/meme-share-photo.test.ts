@@ -1,14 +1,20 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { encodePng } from "@/lib/png-raster";
+import { encodeJpeg } from "@/lib/jpeg-encode";
+import { decodePng, encodePng } from "@/lib/png-raster";
 import {
   canonicalShareImageUrl,
   loadSharePhoto,
   MAX_SHARE_PHOTO_BYTES,
   MIN_SHARE_PHOTO_SIDE,
+  blackEdgeRuns,
+  columnIsNearBlack,
+  nearBlackEdgeRows,
   prepareSharePhoto,
   readPublicFile,
   representativeImageUrl,
+  rowIsNearBlack,
+  SHARE_PHOTO_EDGE_CAP,
   sharePhotoObjectPosition,
   youtubeThumbnailCandidates,
 } from "@/lib/meme-share-photo";
@@ -171,7 +177,7 @@ describe("YouTube thumbnail ladder", () => {
       const href = hrefOf(input);
       calls.push(href);
       if (href.endsWith("/maxresdefault.jpg")) return Promise.resolve(pngResponse(120, 90));
-      if (href.endsWith("/sddefault.jpg")) return Promise.resolve(pngResponse(640, 480, [1, 2, 3]));
+      if (href.endsWith("/sddefault.jpg")) return Promise.resolve(pngResponse(640, 480, [40, 80, 120]));
       return Promise.resolve(pngResponse(480, 360));
     });
     const photo = await loadSharePhoto(YOUTUBE_RECORDED, fetchImpl);
@@ -187,7 +193,7 @@ describe("YouTube thumbnail ladder", () => {
       smallCalls.push(href);
       if (href.endsWith("/maxresdefault.jpg")) return Promise.resolve(pngResponse(120, 90));
       if (href.endsWith("/sddefault.jpg")) return Promise.resolve(pngResponse(320, 240));
-      return Promise.resolve(pngResponse(900, 600, [4, 5, 6]));
+      return Promise.resolve(pngResponse(900, 600, [40, 80, 120]));
     });
     const hq = await loadSharePhoto(YOUTUBE_RECORDED, small);
     expect(hq?.width).toBe(900);
@@ -252,7 +258,7 @@ describe("YouTube thumbnail ladder", () => {
       const href = hrefOf(input);
       calls.push(href);
       if (href.endsWith("/maxresdefault.jpg")) return hang(input, init);
-      return Promise.resolve(pngResponse(640, 480, [7, 8, 9]));
+      return Promise.resolve(pngResponse(640, 480, [40, 80, 120]));
     });
     const photo = await loadSharePhoto(YOUTUBE_RECORDED, fetchImpl, 30);
     expect(photo?.width).toBe(640);
@@ -310,5 +316,176 @@ describe("YouTube thumbnail ladder", () => {
     });
     const next = await loadSharePhoto(YOUTUBE_RECORDED, streaming);
     expect(next?.width).toBe(800);
+  });
+
+  it("stops reading once the streamed body passes the size cap", async () => {
+    let reads = 0;
+    const streaming = vi.fn((input: RequestInfo | URL) => {
+      const href = hrefOf(input);
+      if (!href.endsWith("/maxresdefault.jpg")) return Promise.resolve(pngResponse(800, 450));
+      return Promise.resolve(new Response(new ReadableStream({
+        pull(controller) {
+          reads += 1;
+          if (reads === 1) {
+            controller.enqueue(new Uint8Array(1024));
+            return;
+          }
+          if (reads === 2) {
+            controller.enqueue(new Uint8Array(MAX_SHARE_PHOTO_BYTES));
+            return;
+          }
+          controller.enqueue(new Uint8Array([9]));
+          controller.close();
+        },
+      }, new CountQueuingStrategy({ highWaterMark: 0 })), { status: 200 }));
+    });
+    const photo = await loadSharePhoto(YOUTUBE_RECORDED, streaming);
+    expect(photo?.width).toBe(800);
+    expect(reads).toBe(2);
+  });
+
+  it("does not follow redirects", async () => {
+    const modes: Array<RequestRedirect | undefined> = [];
+    const fetchImpl = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      modes.push(init?.redirect);
+      return Promise.resolve(new Response(null, {
+        status: 302,
+        headers: { location: "https://evil.example/stolen.jpg" },
+      }));
+    });
+    expect(await loadSharePhoto(YOUTUBE_RECORDED, fetchImpl)).toBeNull();
+    expect(modes).toEqual(["manual", "manual", "manual"]);
+    expect(fetchImpl.mock.calls.map(([input]) => hrefOf(input)).some((url) => url.includes("evil.example"))).toBe(false);
+  });
+});
+
+function rows(width: number, height: number, colorAt: (y: number) => [number, number, number]) {
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const [red, green, blue] = colorAt(y);
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      rgba[index] = red;
+      rgba[index + 1] = green;
+      rgba[index + 2] = blue;
+      rgba[index + 3] = 255;
+    }
+  }
+  return rgba;
+}
+
+describe("edge trim", () => {
+  it("counts a line as a bar at 98% black and not just under", () => {
+    const width = 100;
+    const rgba = Buffer.alloc(width * 4);
+    for (let x = 0; x < 2; x += 1) rgba[x * 4] = 255;
+    expect(rowIsNearBlack(rgba, width, 0)).toBe(true);
+    rgba[2 * 4] = 255;
+    expect(rowIsNearBlack(rgba, width, 0)).toBe(false);
+  });
+
+  it("drops top and bottom letterbox bars", () => {
+    const width = 800;
+    const height = 700;
+    const bar = 80;
+    expect(bar).toBeLessThanOrEqual(height * SHARE_PHOTO_EDGE_CAP);
+    const letterbox = encodePng(width, height, rows(width, height, (y) => (
+      y < bar || y >= height - bar ? [0, 0, 0] : [240, 180, 20]
+    )));
+    const photo = prepareSharePhoto(letterbox);
+    expect(photo?.width).toBe(width);
+    expect(photo?.height).toBe(height - bar * 2);
+    const trimmed = decodePng(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64"));
+    expect(nearBlackEdgeRows(trimmed.rgba, trimmed.width, trimmed.height)).toEqual({ top: 0, bottom: 0 });
+  });
+
+  it("drops left and right pillarbox bars", () => {
+    const width = 800;
+    const height = 500;
+    const bar = 80;
+    expect(bar).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
+    const rgba = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = (y * width + x) * 4;
+        const black = x < bar || x >= width - bar;
+        rgba[index] = black ? 0 : 240;
+        rgba[index + 1] = black ? 0 : 180;
+        rgba[index + 2] = black ? 0 : 20;
+        rgba[index + 3] = 255;
+      }
+    }
+    const photo = prepareSharePhoto(encodePng(width, height, rgba));
+    expect(photo?.width).toBe(width - bar * 2);
+    expect(photo?.height).toBe(height);
+    const trimmed = decodePng(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64"));
+    expect(columnIsNearBlack(trimmed.rgba, trimmed.width, trimmed.height, 0)).toBe(false);
+    expect(columnIsNearBlack(trimmed.rgba, trimmed.width, trimmed.height, trimmed.width - 1)).toBe(false);
+    expect(blackEdgeRuns(trimmed.rgba, trimmed.width, trimmed.height)).toEqual({
+      top: 0, bottom: 0, left: 0, right: 0,
+    });
+  });
+
+  it("leaves an image without bars byte-identical", () => {
+    const plain = solid(800, 500, [240, 180, 20]);
+    const untouched = prepareSharePhoto(plain);
+    expect(untouched?.width).toBe(800);
+    expect(untouched?.height).toBe(500);
+    expect(Buffer.from(untouched?.dataUrl.split(",")[1] ?? "", "base64").equals(plain)).toBe(true);
+  });
+
+  it("leaves an all-dark image untouched when every edge exceeds 35%", () => {
+    const dark = solid(800, 800, [0, 0, 0]);
+    const photo = prepareSharePhoto(dark);
+    expect(800).toBeGreaterThan(800 * SHARE_PHOTO_EDGE_CAP);
+    expect(photo?.width).toBe(800);
+    expect(photo?.height).toBe(800);
+    expect(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64").equals(dark)).toBe(true);
+  });
+
+  it("drops a photo whose trimmed short side is under 400px", () => {
+    const width = 640;
+    const height = 480;
+    const bar = 183;
+    expect(bar).toBeLessThanOrEqual(width * SHARE_PHOTO_EDGE_CAP);
+    const rgba = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = (y * width + x) * 4;
+        const black = x < bar || x >= width - bar;
+        rgba[index] = black ? 0 : 40;
+        rgba[index + 1] = black ? 0 : 180;
+        rgba[index + 2] = black ? 0 : 90;
+        rgba[index + 3] = 255;
+      }
+    }
+    expect(prepareSharePhoto(encodePng(width, height, rgba))).toBeNull();
+    expect(width - bar * 2).toBe(274);
+    expect(Math.min(274, height)).toBeLessThan(MIN_SHARE_PHOTO_SIDE);
+  });
+
+  it("uses the trimmed size for the tall-photo position", () => {
+    const tall = prepareSharePhoto(encodePng(600, 1000, rows(600, 1000, (y) => (
+      y < 80 || y >= 920 ? [0, 0, 0] : [240, 180, 20]
+    ))));
+    expect(tall?.width).toBe(600);
+    expect(tall?.height).toBe(840);
+    expect(sharePhotoObjectPosition(600, 1000)).toBe("center 30%");
+    expect(sharePhotoObjectPosition(tall?.width ?? 0, tall?.height ?? 0)).toBe("center center");
+  });
+
+  it("trims a baseline jpeg the same way", () => {
+    const width = 800;
+    const height = 560;
+    const bar = 40;
+    const jpeg = encodeJpeg({
+      width,
+      height,
+      rgba: rows(width, height, (y) => (y < bar || y >= height - bar ? [0, 0, 0] : [220, 40, 40])),
+    }, 90);
+    const photo = prepareSharePhoto(jpeg);
+    expect(photo?.width).toBe(width);
+    expect(photo?.height).toBe(height - bar * 2);
+    expect(photo?.dataUrl.startsWith("data:image/png;base64,")).toBe(true);
   });
 });

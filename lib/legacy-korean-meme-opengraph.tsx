@@ -1,5 +1,5 @@
 import { loadKoreanShareCard } from "@/lib/meme-share-content";
-import { respondWithShareCard } from "@/lib/meme-share-card";
+import { renderMemeShareCard, respondWithShareCard } from "@/lib/meme-share-card";
 
 export const alt = "밈캐치 밈 카드";
 export const size = { width: 1200, height: 630 };
@@ -23,6 +23,6 @@ export async function renderLegacyKoreanMemeOpenGraph({
   try {
     return await respondWithShareCard("ko", await loadKoreanShareCard(key));
   } catch {
-    return respondWithShareCard("ko", null);
+    return respondWithShareCard("ko", null, renderMemeShareCard, "short");
   }
 }

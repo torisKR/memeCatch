@@ -17,7 +17,8 @@ import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale
 import { metadata as koreanLayoutMetadata } from "@/app/(default)/layout";
 import { generateRankingsMetadata } from "@/app/rankings/page";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
-import { curatedShareVersion, isGenericShareImageUrl, koreanMemeShareImage } from "@/lib/meme-share-image";
+import { curatedShareVersion, isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage } from "@/lib/meme-share-image";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import type { Metadata } from "next";
 
 const HOME_TITLE = "밈캐치 — 그 밈, 3초 안에 알려드려요";
@@ -163,7 +164,50 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
       const urls = JSON.stringify(metadata);
       expect(urls).not.toContain("/og/ko");
       expect(isGenericShareImageUrl(image.url)).toBe(false);
+      expect(image).not.toHaveProperty("type");
     }
+  });
+
+  it("omits og:image:type on a per-meme card and keeps it on /og/{l}", () => {
+    const meme = koreanMemeShareImage({
+      shortId: "bjk2021k",
+      slug: "bun-jo-ka",
+      alt: "분좋카",
+      version: "1",
+    });
+    const translated = localeMemeShareImage({
+      locale: "en",
+      shortId: "bjk2021k",
+      slug: "bun-jo-ka",
+      alt: "Good cafe",
+      version: "1",
+    });
+    const fallback = ogDefaultImageDescriptor("ko");
+    const tags = (image: { url: string; alt?: string; width?: number; height?: number; type?: string }) => {
+      const og = ["og:image"];
+      if (image.type) og.push("og:image:type");
+      if (image.width) og.push("og:image:width");
+      if (image.height) og.push("og:image:height");
+      if (image.alt) og.push("og:image:alt");
+      const twitter = ["twitter:image"];
+      if (image.alt) twitter.push("twitter:image:alt");
+      if (image.type) twitter.push("twitter:image:type");
+      if (image.width) twitter.push("twitter:image:width");
+      if (image.height) twitter.push("twitter:image:height");
+      return [...og, ...twitter];
+    };
+    expect(tags(meme)).toEqual([
+      "og:image", "og:image:width", "og:image:height", "og:image:alt",
+      "twitter:image", "twitter:image:alt", "twitter:image:width", "twitter:image:height",
+    ]);
+    expect(tags(meme)).toHaveLength(8);
+    expect(tags(translated)).toEqual(tags(meme));
+    expect(tags(fallback)).toEqual([
+      "og:image", "og:image:type", "og:image:width", "og:image:height", "og:image:alt",
+      "twitter:image", "twitter:image:alt", "twitter:image:type", "twitter:image:width", "twitter:image:height",
+    ]);
+    expect(tags(fallback)).toHaveLength(10);
+    expect(fallback.type).toBe("image/png");
   });
 
   it("keeps an untranslated locale detail off the Korean curated card", async () => {

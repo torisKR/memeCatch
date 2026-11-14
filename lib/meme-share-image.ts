@@ -59,7 +59,6 @@ export type MemeShareImage = {
   width: 1200;
   height: 630;
   alt: string;
-  type: "image/png";
 };
 
 const CHIP_CATEGORY = {
@@ -124,7 +123,6 @@ export function koreanMemeShareImage(input: {
     alt: input.alt,
     width: MEME_SHARE_DESIGN.width,
     height: MEME_SHARE_DESIGN.height,
-    type: "image/png",
   };
 }
 
@@ -143,7 +141,6 @@ export function localeMemeShareImage(input: {
     alt: input.alt,
     width: MEME_SHARE_DESIGN.width,
     height: MEME_SHARE_DESIGN.height,
-    type: "image/png",
   };
 }
 

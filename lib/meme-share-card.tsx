@@ -153,6 +153,17 @@ async function cardPhoto(card: MemeShareCardContent): Promise<PreparedSharePhoto
 export async function renderMemeShareCard(card: MemeShareCardContent): Promise<Response> {
   const loaded = await loadShareFonts();
   const photo = await cardPhoto(card);
+  const painted = await paintMemeShareCard(card, photo, loaded);
+  const headers = new Headers(painted.headers);
+  headers.set("x-share-photo", photo ? "1" : "0");
+  return new Response(painted.body, { status: painted.status, headers });
+}
+
+async function paintMemeShareCard(
+  card: MemeShareCardContent,
+  photo: PreparedSharePhoto | null,
+  loaded: Awaited<ReturnType<typeof loadShareFonts>>,
+): Promise<Response> {
   const layout = layoutMemeShareCard(card, loaded.metrics);
   const painted = [
     layout.wordmark,
@@ -325,48 +336,78 @@ export async function renderMemeShareCard(card: MemeShareCardContent): Promise<R
   );
 }
 
-/** Same header next/og ImageResponse sets. Main's Arabic meme image route returned that response. */
+/** Same header next/og ImageResponse sets. Painted photos and `/ar` keep it. */
 export function ogImageCacheControl(): string {
   return process.env.NODE_ENV === "development"
     ? "no-cache, no-store"
     : "public, max-age=0, must-revalidate";
 }
 
-function cachedImage(body: Uint8Array, contentType: string): Response {
+/**
+ * Title-only cards and a failed render can be replaced later without a new `?v`
+ * (the recorded thumbnail URL does not name the fetched variant). `no-store`
+ * keeps a cache from pinning the fallback.
+ */
+export const SHARE_CARD_FALLBACK_CACHE_CONTROL = "no-store";
+
+export type ShareCardCacheKind = "standard" | "short";
+
+export function shareCardCacheControl(kind: ShareCardCacheKind): string {
+  switch (kind) {
+    case "standard":
+      return ogImageCacheControl();
+    case "short":
+      return SHARE_CARD_FALLBACK_CACHE_CONTROL;
+    default: {
+      const exhausted: never = kind;
+      return exhausted;
+    }
+  }
+}
+
+function cachedImage(body: Uint8Array, contentType: string, kind: ShareCardCacheKind): Response {
   return new Response(Buffer.from(body), {
     status: 200,
     headers: {
       "content-type": contentType,
-      "cache-control": ogImageCacheControl(),
+      "cache-control": shareCardCacheControl(kind),
     },
   });
 }
 
-async function defaultCard(locale: string): Promise<Response> {
+async function defaultCard(locale: string, kind: ShareCardCacheKind): Promise<Response> {
   const rendered = await renderOgDefaultImage(locale);
   const bytes = new Uint8Array(await rendered.arrayBuffer());
   const contentType = rendered.headers.get("content-type") ?? "image/png";
-  return cachedImage(bytes, contentType);
+  return cachedImage(bytes, contentType, kind);
 }
 
 /**
  * A missing meme or a failed render, including a font error thrown while the
  * image stream is read, serves the locale default card. Cards over 1MB become
  * JPEG so a client such as KakaoTalk can fetch them.
+ *
+ * A painted photo keeps the next/og header. A title-only card and a failed
+ * render send `no-store`, because `?v` does not change when a later fetch
+ * finds a large thumbnail of the same recorded URL. Pass `missing: "short"`
+ * only for that failure path. A missing meme, an untranslated page, and `/ar`
+ * stay on the standard header.
  */
 export async function respondWithShareCard(
   locale: string,
   card: MemeShareCardContent | null,
   render: (card: MemeShareCardContent) => Promise<Response> = renderMemeShareCard,
+  missing: ShareCardCacheKind = "standard",
 ): Promise<Response> {
-  if (!card?.title.trim()) return defaultCard(locale);
+  if (!card?.title.trim()) return defaultCard(locale, missing);
   try {
     const rendered = await render(card);
     const bytes = Buffer.from(await rendered.arrayBuffer());
-    if (bytes.byteLength === 0) return defaultCard(locale);
+    if (bytes.byteLength === 0) return defaultCard(locale, "short");
     const fitted = fitShareCardBytes(bytes);
-    return cachedImage(fitted.body, fitted.contentType);
+    const kind: ShareCardCacheKind = rendered.headers.get("x-share-photo") === "0" ? "short" : "standard";
+    return cachedImage(fitted.body, fitted.contentType, kind);
   } catch {
-    return defaultCard(locale);
+    return defaultCard(locale, "short");
   }
 }

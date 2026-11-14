@@ -10,13 +10,14 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { contrastRatio } from "@/lib/a11y-contrast";
-import { emojiFaceName, renderMemeShareCard, respondWithShareCard, shareFontMetrics } from "@/lib/meme-share-card";
+import { emojiFaceName, ogImageCacheControl, renderMemeShareCard, respondWithShareCard, SHARE_CARD_FALLBACK_CACHE_CONTROL, shareFontMetrics } from "@/lib/meme-share-card";
 import { cardFromLocalized } from "@/lib/meme-share-content";
 import {
   MEME_SHARE_DESIGN,
   type MemeShareCardContent,
 } from "@/lib/meme-share-image";
 import { fitShareLines, layoutMemeShareCard, measureText, type ShareFontSet } from "@/lib/meme-share-layout";
+import { nearBlackEdgeRows } from "@/lib/meme-share-photo";
 import { encodePng as encodeRaster } from "@/lib/png-raster";
 import { renderOgDefaultImage } from "@/lib/og-default-card";
 import { SHARE_CARD_BYTE_LIMIT } from "@/lib/jpeg-encode";
@@ -336,6 +337,7 @@ describe("per-meme share card", () => {
     expect(sha256(Buffer.from(await failed.arrayBuffer()))).toBe(
       sha256(Buffer.from(await expected.arrayBuffer())),
     );
+    expect(failed.headers.get("cache-control")).toBe(SHARE_CARD_FALLBACK_CACHE_CONTROL);
   });
 
   it("returns the locale card when a corrupt font fails while streaming", async () => {
@@ -359,6 +361,7 @@ describe("per-meme share card", () => {
     expect(sha256(Buffer.from(await failed.arrayBuffer()))).toBe(
       sha256(Buffer.from(await expected.arrayBuffer())),
     );
+    expect(failed.headers.get("cache-control")).toBe(SHARE_CARD_FALLBACK_CACHE_CONTROL);
   });
 
   it("centers every sample inside x 330–870 and writes a 630 crop", async () => {
@@ -609,4 +612,77 @@ describe("per-meme share card", () => {
       // Sample files are optional.
     }
   }, 60_000);
+});
+
+function letterboxPng(width: number, height: number, bar: number) {
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const black = y < bar || y >= height - bar;
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      rgba[index] = black ? 0 : 240;
+      rgba[index + 1] = black ? 0 : 180;
+      rgba[index + 2] = black ? 0 : 20;
+      rgba[index + 3] = 255;
+    }
+  }
+  return encodeRaster(width, height, rgba);
+}
+
+describe("share card cache and letterbox", () => {
+  const card = {
+    locale: "ko" as const,
+    title: "작업 중이야",
+    summary: "광고 자막",
+    year: 2024,
+    category: "image" as const,
+  };
+
+  it("removes letterbox bars from the rendered card", async () => {
+    const png = await paint({ ...card, photoBytes: letterboxPng(1200, 630, 40) });
+    const raster = decodePng(png);
+    expect(nearBlackEdgeRows(raster.rgba, raster.width, raster.height)).toEqual({ top: 0, bottom: 0 });
+  }, 20_000);
+
+  it("keeps the next/og header when a photo is painted", async () => {
+    const served = await respondWithShareCard("ko", { ...card, photoBytes: letterboxPng(800, 500, 0) });
+    expect(served.headers.get("cache-control")).toBe(ogImageCacheControl());
+    expect(served.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+    expect(served.headers.get("cache-control")).not.toBe(SHARE_CARD_FALLBACK_CACHE_CONTROL);
+  }, 20_000);
+
+  it("uses the short header for every title-only cause", async () => {
+    const noImage = await respondWithShareCard("ko", card);
+    const tooSmall = await respondWithShareCard("ko", { ...card, photoBytes: letterboxPng(200, 200, 0) });
+    const missingFile = await respondWithShareCard("ko", { ...card, photoUrl: "/no-such-share-photo.png" });
+    const fetchImpl = vi.fn(async () => new Response(new Uint8Array(letterboxPng(120, 90, 0)), { status: 200 }));
+    vi.stubGlobal("fetch", fetchImpl);
+    let ladderMiss: Response;
+    try {
+      ladderMiss = await respondWithShareCard("ko", {
+        ...card,
+        photoUrl: "https://i.ytimg.com/vi/vR1iO5mHtyg/hqdefault.jpg",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    const empty = await respondWithShareCard("ko", card, async () => new Response(new Uint8Array()));
+    const pillars = Buffer.alloc(640 * 480 * 4);
+    for (let y = 0; y < 480; y += 1) {
+      for (let x = 0; x < 640; x += 1) {
+        const index = (y * 640 + x) * 4;
+        const black = x < 183 || x >= 640 - 183;
+        pillars[index] = black ? 0 : 40;
+        pillars[index + 1] = black ? 0 : 180;
+        pillars[index + 2] = black ? 0 : 90;
+        pillars[index + 3] = 255;
+      }
+    }
+    const under400 = await respondWithShareCard("ko", { ...card, photoBytes: encodeRaster(640, 480, pillars) });
+    for (const response of [noImage, tooSmall, missingFile, ladderMiss, empty, under400]) {
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(response.headers.get("cache-control")).not.toBe(ogImageCacheControl());
+    }
+    expect(fetchImpl).toHaveBeenCalled();
+  }, 30_000);
 });

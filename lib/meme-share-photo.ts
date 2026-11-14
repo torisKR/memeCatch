@@ -18,7 +18,12 @@ export function sharePhotoObjectPosition(width: number, height: number): "center
 }
 
 export const SHARE_PHOTO_TIMEOUT_MS = 1500;
-const MAX_SHARE_PHOTO_BYTES = 8_000_000;
+/** Reject a still larger than this before the body is buffered. */
+export const MAX_SHARE_PHOTO_BYTES = 8_000_000;
+const YOUTUBE_THUMB_HOST = "i.ytimg.com";
+const YOUTUBE_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+const YOUTUBE_THUMB_FILE = /^[A-Za-z0-9_-]+\.jpg$/;
+const YOUTUBE_THUMB_LADDER = ["maxresdefault.jpg", "sddefault.jpg", "hqdefault.jpg"] as const;
 
 export type SharePhotoSource = {
   thumbnail_url?: string | null;
@@ -39,8 +44,10 @@ export type SharePhotoRef = {
 
 /**
  * The still the detail page already uses for the representative slot:
- * a same-origin editorial image, owned card art, or the video poster stored
- * on the site. External posters (i.ytimg.com and other CDNs) are not fetched.
+ * a same-origin editorial image, owned card art, a site-hosted video poster,
+ * or the YouTube thumbnail the page already serves (`i.ytimg.com`).
+ * The returned URL is the one mixed into `?v`. A larger YouTube variant fetched
+ * later is not part of that string.
  */
 export function representativeImageUrl(input: {
   contents: readonly SharePhotoSource[];
@@ -57,7 +64,9 @@ export function representativeImageUrl(input: {
   const owned = !hasPlaybackUrl ? projectOwnedPath(thumb) : null;
   const art = !hasPlaybackUrl ? ownedMemeCardArtPath(thumb) : null;
   // A playback URL means the page shows the player and this thumbnail is its poster.
-  const poster = hasPlaybackUrl && thumb ? canonicalShareImageUrl(thumb) : null;
+  const poster = hasPlaybackUrl && thumb
+    ? canonicalShareImageUrl(thumb) ?? canonicalYoutubeThumbnailUrl(thumb)
+    : null;
   const candidate = owned ?? (art ? `${art}?w=1200` : null) ?? poster;
   if (!candidate) return null;
   return { url: candidate, updatedAt: content.created_at ?? null };
@@ -122,6 +131,41 @@ export function canonicalShareImageUrl(value: string | null | undefined): string
   if (!siteHosts().has(hostname)) return null;
   if (hostname.endsWith(".supabase.co") && !url.pathname.includes("/storage/")) return null;
   return `${url.origin}${url.pathname}${url.search}`;
+}
+
+/**
+ * Larger stills of the same YouTube video, then the page's own hqdefault.
+ * Null unless the URL is https on `i.ytimg.com` and the video id is 11 characters.
+ */
+export function youtubeThumbnailCandidates(value: string | null | undefined): readonly string[] | null {
+  const videoId = youtubeThumbnailVideoId(value);
+  if (!videoId) return null;
+  return YOUTUBE_THUMB_LADDER.map((name) => `https://${YOUTUBE_THUMB_HOST}/vi/${videoId}/${name}`);
+}
+
+/** The thumbnail URL as recorded. This is the string mixed into `?v`, not a fetched variant. */
+export function canonicalYoutubeThumbnailUrl(value: string | null | undefined): string | null {
+  if (!youtubeThumbnailVideoId(value) || !value) return null;
+  const url = new URL(value.trim());
+  return `https://${YOUTUBE_THUMB_HOST}${url.pathname}${url.search}`;
+}
+
+function youtubeThumbnailVideoId(value: string | null | undefined): string | null {
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+  if (url.hostname.toLowerCase() !== YOUTUBE_THUMB_HOST) return null;
+  const parts = url.pathname.split("/");
+  if (parts.length !== 4 || parts[1] !== "vi") return null;
+  const videoId = parts[2] ?? "";
+  const file = parts[3] ?? "";
+  if (!YOUTUBE_VIDEO_ID.test(videoId) || !YOUTUBE_THUMB_FILE.test(file)) return null;
+  return videoId;
 }
 
 export type PreparedSharePhoto = {
@@ -201,14 +245,23 @@ export async function readPublicFile(pathname: string): Promise<Uint8Array | nul
 }
 
 /**
- * Fetch a site-hosted still. Failures, timeouts, redirects, tiny images, and
- * formats Satori cannot decode return null so the card stays title-only.
+ * Fetch a site-hosted still, or a larger YouTube thumbnail of the same video.
+ * Failures, timeouts, redirects, tiny images, and formats Satori cannot decode
+ * return null so the card stays title-only.
  */
 export async function loadSharePhoto(
   url: string,
   fetchImpl: typeof fetch = fetch,
   timeoutMs = SHARE_PHOTO_TIMEOUT_MS,
 ): Promise<PreparedSharePhoto | null> {
+  const youtube = youtubeThumbnailCandidates(url);
+  if (youtube) {
+    for (const candidate of youtube) {
+      const photo = await fetchPreparedPhoto(candidate, fetchImpl, timeoutMs);
+      if (photo) return photo;
+    }
+    return null;
+  }
   const canonical = canonicalShareImageUrl(url);
   if (!canonical) return null;
   try {
@@ -217,16 +270,74 @@ export async function loadSharePhoto(
       if (local) return prepareSharePhoto(local);
     }
     const target = canonical.startsWith("/") ? new URL(canonical, SITE_URL) : new URL(canonical);
+    return await fetchPreparedPhoto(target, fetchImpl, timeoutMs);
+  } catch {
+    return null;
+  }
+}
+
+async function fetchPreparedPhoto(
+  target: URL | string,
+  fetchImpl: typeof fetch,
+  timeoutMs: number,
+): Promise<PreparedSharePhoto | null> {
+  try {
     const response = await fetchImpl(target, {
       redirect: "manual",
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (response.status !== 200) return null;
-    const length = Number(response.headers.get("content-length") ?? "0");
-    if (Number.isFinite(length) && length > MAX_SHARE_PHOTO_BYTES) return null;
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const bytes = await readBoundedBody(response, MAX_SHARE_PHOTO_BYTES);
+    if (!bytes) return null;
     return prepareSharePhoto(bytes);
   } catch {
     return null;
   }
+}
+
+/** Stop before or during the read when the body exceeds `maxBytes`. */
+async function readBoundedBody(response: Response, maxBytes: number): Promise<Uint8Array | null> {
+  const declared = Number(response.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    try {
+      await response.body?.cancel();
+    } catch {
+      // The caller only needs the rejection. A cancel failure is not a photo.
+    }
+    return null;
+  }
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return bytes.byteLength > maxBytes ? null : bytes;
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const step = await reader.read();
+      if (step.done) break;
+      const value = step.value;
+      if (!value || value.byteLength === 0) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          // The oversized body is already discarded.
+        }
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }

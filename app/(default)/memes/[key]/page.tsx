@@ -62,7 +62,8 @@ import {
   localizedMemePath,
 } from "@/lib/i18n-routing";
 import { PREMIUM_COPY } from "@/lib/i18n-premium";
-import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
+import { koreanMemeShareImage, shareCacheVersion } from "@/lib/meme-share-image";
+import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -142,6 +143,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meme.summary,
     meme.origin_kind,
   );
+  const photo = representativeImageUrl({ contents: meme.meme_contents });
+  const image = koreanMemeShareImage({
+    shortId: meme.short_id,
+    slug: meme.slug,
+    alt: meme.title,
+    version: shareCacheVersion({
+      timestamps: [meme.updated_at, photo?.updatedAt],
+      imageUrl: photo?.url,
+    }),
+  });
   return {
     metadataBase: new URL(SITE_URL),
     // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
@@ -163,13 +174,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${meme.title} 뜻`,
       description,
       url: path,
-      images: [ogDefaultImageDescriptor("ko")],
+      images: [image],
     },
     twitter: {
       card: "summary_large_image",
       title: `${meme.title} 뜻`,
       description,
-      images: [ogDefaultImageDescriptor("ko")],
+      images: [image],
     },
   };
 }

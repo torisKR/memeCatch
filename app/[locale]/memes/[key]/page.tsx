@@ -13,6 +13,8 @@ import {
   localizedPath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image";
+import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
 import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
@@ -295,6 +297,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ["x-default", xDefault],
   ]);
   const description = `${meme.title}: ${meme.summary}`;
+  const photo = representativeImageUrl({ contents: meme.meme_contents ?? [] });
+  const image = localeMemeShareImage({
+    locale,
+    shortId: meme.short_id,
+    slug: meme.slug,
+    alt: meme.title,
+    version: localeShareVersion({
+      updated_at: meme.updated_at,
+      translationUpdatedAt: meme.translation.updatedAt,
+      imageUpdatedAt: photo?.updatedAt,
+      imageUrl: photo?.url,
+    }),
+  });
   const metadata = buildLocalizedMetadata({
     locale: shareLocale,
     pathname: canonical,
@@ -315,6 +330,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       alternateLocale: indexableVersions
         .filter((item) => item.locale !== shareLocale)
         .map((item) => getOpenGraphLocale(item.locale)),
+      images: [image],
+    },
+    twitter: {
+      ...metadata.twitter,
+      images: [image],
     },
   };
 }

@@ -15,8 +15,9 @@ export const SHARE_PHOTO_NEAR_BLACK_LUMA = 16;
 /** A row or column is a black bar when at least this share of its pixels are black. */
 export const SHARE_PHOTO_BLACK_SHARE = 0.98;
 /**
- * A black run plus the 2px margin is removed only when that total is at most
- * this fraction of the side. A longer total is left in place.
+ * A strict black run plus the 2px margin rejects the still when that total
+ * is more than this fraction of the side. A longer noise-tolerant band over
+ * this fraction is not used, and the strict trim stays.
  */
 export const SHARE_PHOTO_EDGE_CAP = 0.35;
 /**
@@ -294,11 +295,15 @@ export function nearBlackEdgeRows(rgba: Uint8Array, width: number, height: numbe
   return { top: edges.top, bottom: edges.bottom };
 }
 
-/** Drop the run plus 2px when that total is within 35% of the side. A longer total stays. */
-function trimAmount(run: number, dimension: number): number {
+/**
+ * Run plus 2px when that total is within 35% of the side.
+ * A longer total is over the cap: a strict run then rejects the still, and a
+ * noise-tolerant band falls back to the strict trim.
+ */
+function trimAmount(run: number, dimension: number): number | "over-cap" {
   if (run < 1) return 0;
   const amount = run + SHARE_PHOTO_EDGE_MARGIN;
-  if (amount > dimension * SHARE_PHOTO_EDGE_CAP) return 0;
+  if (amount > dimension * SHARE_PHOTO_EDGE_CAP) return "over-cap";
   return amount;
 }
 
@@ -324,10 +329,10 @@ function lineStat(rgba: Uint8Array, length: number, indexAt: (offset: number) =>
  * Strict bars stay a contiguous 98% run. A longer band may include up to three
  * lines that are under 98% but at least 80% black, then ends on the last 98%
  * line. That band is used only when it trims more, stays within the 35% cap,
- * and its mean per-line luma deviation is at most 1.5. Otherwise the strict
- * amount wins, which is zero when that run is missing or over the cap.
+ * and its mean per-line luma deviation is at most 1.5. A strict run over the
+ * cap rejects the still. A missing strict run trims nothing.
  */
-function sideTrim(dimension: number, lineLength: number, statAt: (line: number) => LineStat): number {
+function sideTrim(dimension: number, lineLength: number, statAt: (line: number) => LineStat): number | "reject" {
   const stats: LineStat[] = [];
   let noise = 0;
   let lastStrict = -1;
@@ -348,12 +353,14 @@ function sideTrim(dimension: number, lineLength: number, statAt: (line: number) 
   let strictRun = 0;
   while (strictRun < stats.length && lineIsBlack(stats[strictRun]?.dark ?? 0, lineLength)) strictRun += 1;
   const strict = trimAmount(strictRun, dimension);
+  if (strict === "over-cap") return "reject";
   if (lastStrict < 0) return strict;
   const band = lastStrict + 1;
   let sumStd = 0;
   for (let line = 0; line < band; line += 1) sumStd += stats[line]?.lumaStd ?? 0;
   if (sumStd / band > SHARE_PHOTO_BAND_STD) return strict;
   const extended = trimAmount(band, dimension);
+  if (extended === "over-cap") return strict;
   return extended > strict ? extended : strict;
 }
 
@@ -372,13 +379,16 @@ function rasterOf(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { width:
  * have luminance <= 16. A longer band may absorb up to three noisier lines
  * that are still at least 80% black, including on the outer edge, and must
  * end on a 98% line whose pixels stay uniform. Either way a trimmed side
- * also drops 2 source pixels, and the total is kept only when it is at most
- * 35% of that side. The longer band never replaces a strict trim with a
- * shorter one. Width and height here are the trimmed size: the 400px rule
- * and the tall-photo object-position both use them. No bars leaves the
- * original bytes unchanged.
+ * also drops 2 source pixels. A strict run whose total exceeds 35% of that
+ * side rejects the still. A longer band over that cap is not used, and it
+ * never replaces a strict trim with a shorter one. Width and height here are
+ * the trimmed size: the 400px rule and the tall-photo object-position both
+ * use them. No bars leaves the original bytes unchanged.
  */
-function trimLetterbox(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { bytes: Uint8Array; width: number; height: number } | null {
+function trimLetterbox(
+  bytes: Uint8Array,
+  mime: "image/png" | "image/jpeg",
+): { bytes: Uint8Array; width: number; height: number } | "reject" | null {
   const size = imageSize(bytes);
   if (!size) return null;
   const raster = rasterOf(bytes, mime);
@@ -396,6 +406,7 @@ function trimLetterbox(bytes: Uint8Array, mime: "image/png" | "image/jpeg"): { b
     rasterHeight,
     (y) => ((y * rasterWidth) + (rasterWidth - 1 - line)) * 4,
   ));
+  if (top === "reject" || bottom === "reject" || left === "reject" || right === "reject") return "reject";
   if (top === 0 && bottom === 0 && left === 0 && right === 0) {
     return { bytes, width: raster.width, height: raster.height };
   }
@@ -415,14 +426,16 @@ export function prepareSharePhoto(bytes: Uint8Array): PreparedSharePhoto | null 
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_SHARE_PHOTO_BYTES) return null;
   const size = imageSize(bytes);
   if (!size) return null;
-  const trimmed = trimLetterbox(bytes, size.mime) ?? { bytes, width: size.width, height: size.height };
-  if (Math.min(trimmed.width, trimmed.height) < MIN_SHARE_PHOTO_SIDE) return null;
-  const mime = trimmed.bytes === bytes ? size.mime : "image/png";
-  const encoded = Buffer.from(trimmed.bytes).toString("base64");
+  const trimmed = trimLetterbox(bytes, size.mime);
+  if (trimmed === "reject") return null;
+  const photo = trimmed ?? { bytes, width: size.width, height: size.height };
+  if (Math.min(photo.width, photo.height) < MIN_SHARE_PHOTO_SIDE) return null;
+  const mime = photo.bytes === bytes ? size.mime : "image/png";
+  const encoded = Buffer.from(photo.bytes).toString("base64");
   return {
     dataUrl: `data:${mime};base64,${encoded}`,
-    width: trimmed.width,
-    height: trimmed.height,
+    width: photo.width,
+    height: photo.height,
   };
 }
 
@@ -450,8 +463,9 @@ export async function readPublicFile(pathname: string): Promise<Uint8Array | nul
 
 /**
  * Fetch a site-hosted still, or a larger YouTube thumbnail of the same video.
- * Failures, timeouts, redirects, tiny images, and formats Satori cannot decode
- * return null so the card stays title-only.
+ * Failures, timeouts, redirects, a strict bar over the 35% cap, tiny images,
+ * and formats Satori cannot decode return null so the card stays title-only.
+ * The YouTube ladder treats that null like any other miss and tries the next size.
  */
 export async function loadSharePhoto(
   url: string,

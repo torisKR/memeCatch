@@ -142,6 +142,21 @@ function pngResponse(width: number, height: number, rgb: [number, number, number
   return new Response(new Uint8Array(solid(width, height, rgb)), { status: 200 });
 }
 
+function leftBarPng(width: number, height: number, bar: number) {
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const black = x < bar;
+      rgba[index] = black ? 0 : 40;
+      rgba[index + 1] = black ? 0 : 80;
+      rgba[index + 2] = black ? 0 : 120;
+      rgba[index + 3] = 255;
+    }
+  }
+  return new Uint8Array(encodePng(width, height, rgba));
+}
+
 describe("YouTube thumbnail ladder", () => {
   it("keeps the recorded thumbnail in the share URL and tries larger variants of that video", () => {
     expect(representativeImageUrl({
@@ -211,6 +226,51 @@ describe("YouTube thumbnail ladder", () => {
     expect(await loadSharePhoto(YOUTUBE_RECORDED, none)).toBeNull();
     expect(noneCalls).toHaveLength(3);
     expect(Math.min(480, 360)).toBeLessThan(MIN_SHARE_PHOTO_SIDE);
+  });
+
+  it("skips an over-cap variant and uses the next ladder size within the cap", async () => {
+    const maxresBar = 460;
+    const sdBar = 40;
+    expect(maxresBar + SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThan(1280 * SHARE_PHOTO_EDGE_CAP);
+    expect(1280 - maxresBar - SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThanOrEqual(MIN_SHARE_PHOTO_SIDE);
+    expect(sdBar + SHARE_PHOTO_EDGE_MARGIN).toBeLessThanOrEqual(1000 * SHARE_PHOTO_EDGE_CAP);
+    const calls: string[] = [];
+    const fetchImpl = vi.fn((input: RequestInfo | URL) => {
+      const href = hrefOf(input);
+      calls.push(href);
+      if (href.endsWith("/maxresdefault.jpg")) return Promise.resolve(new Response(leftBarPng(1280, 720, maxresBar), { status: 200 }));
+      if (href.endsWith("/sddefault.jpg")) return Promise.resolve(new Response(leftBarPng(1000, 600, sdBar), { status: 200 }));
+      return Promise.resolve(new Response(leftBarPng(900, 600, 0), { status: 200 }));
+    });
+    const photo = await loadSharePhoto(YOUTUBE_RECORDED, fetchImpl);
+    expect(photo?.width).toBe(1000 - sdBar - SHARE_PHOTO_EDGE_MARGIN);
+    expect(photo?.height).toBe(600);
+    expect(calls).toEqual([
+      `https://i.ytimg.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`,
+      `https://i.ytimg.com/vi/${YOUTUBE_ID}/sddefault.jpg`,
+    ]);
+  });
+
+  it("rejects every ladder variant when each strict bar exceeds the cap", async () => {
+    const variants = [
+      { file: "maxresdefault.jpg", width: 1280, height: 720, bar: 460 },
+      { file: "sddefault.jpg", width: 1000, height: 600, bar: 400 },
+      { file: "hqdefault.jpg", width: 800, height: 500, bar: 300 },
+    ] as const;
+    for (const variant of variants) {
+      expect(variant.bar + SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThan(variant.width * SHARE_PHOTO_EDGE_CAP);
+      expect(variant.width - variant.bar - SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThanOrEqual(MIN_SHARE_PHOTO_SIDE);
+    }
+    const calls: string[] = [];
+    const fetchImpl = vi.fn((input: RequestInfo | URL) => {
+      const href = hrefOf(input);
+      calls.push(href);
+      const variant = variants.find((item) => href.endsWith(`/${item.file}`));
+      if (!variant) return Promise.resolve(new Response(null, { status: 404 }));
+      return Promise.resolve(new Response(leftBarPng(variant.width, variant.height, variant.bar), { status: 200 }));
+    });
+    expect(await loadSharePhoto(YOUTUBE_RECORDED, fetchImpl)).toBeNull();
+    expect(calls).toHaveLength(3);
   });
 
   it("does not fetch a host outside i.ytimg.com", async () => {
@@ -435,13 +495,9 @@ describe("edge trim", () => {
     expect(Buffer.from(untouched?.dataUrl.split(",")[1] ?? "", "base64").equals(plain)).toBe(true);
   });
 
-  it("leaves an all-dark image untouched when every edge exceeds 35%", () => {
-    const dark = solid(800, 800, [0, 0, 0]);
-    const photo = prepareSharePhoto(dark);
-    expect(800).toBeGreaterThan(800 * SHARE_PHOTO_EDGE_CAP);
-    expect(photo?.width).toBe(800);
-    expect(photo?.height).toBe(800);
-    expect(Buffer.from(photo?.dataUrl.split(",")[1] ?? "", "base64").equals(dark)).toBe(true);
+  it("rejects an all-dark image because every strict edge exceeds 35%", () => {
+    expect(800 + SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThan(800 * SHARE_PHOTO_EDGE_CAP);
+    expect(prepareSharePhoto(solid(800, 800, [0, 0, 0]))).toBeNull();
   });
 
   it("drops a photo whose trimmed short side is under 400px", () => {
@@ -515,7 +571,7 @@ describe("edge trim", () => {
     expect(Buffer.from(untouched?.dataUrl.split(",")[1] ?? "", "base64").equals(kept)).toBe(true);
   });
 
-  it("trims a 34% bar including the 2px margin and leaves a 36% bar", () => {
+  it("trims a 34% bar including the 2px margin and rejects a 36% bar", () => {
     const width = 1000;
     const height = 500;
     const content: [number, number, number] = [200, 80, 40];
@@ -540,12 +596,8 @@ describe("edge trim", () => {
     expect(trimmed?.width).toBe(width - under - SHARE_PHOTO_EDGE_MARGIN);
     const over = Math.round(width * 0.36);
     expect(over + SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThan(width * SHARE_PHOTO_EDGE_CAP);
-    const kept = pillar(over);
-    const untouched = prepareSharePhoto(kept);
-    expect(untouched?.width).toBe(width);
-    expect(untouched?.height).toBe(height);
-    expect(width - over).toBeGreaterThan(1);
-    expect(Buffer.from(untouched?.dataUrl.split(",")[1] ?? "", "base64").equals(kept)).toBe(true);
+    expect(width - over - SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThanOrEqual(MIN_SHARE_PHOTO_SIDE);
+    expect(prepareSharePhoto(pillar(over))).toBeNull();
   });
 
   it("leaves a 95% dark first row in place when it is not a bar", () => {
@@ -569,13 +621,14 @@ describe("edge trim", () => {
   const bandHeight = 500;
   const bandContent: [number, number, number] = [200, 80, 40];
 
-  function bandPhoto(specs: Array<{ dark: number; bright?: [number, number, number] }>) {
+  function bandPhoto(specs: Array<{ dark: number; bright?: [number, number, number]; darkColor?: [number, number, number] }>) {
     const rgba = Buffer.alloc(bandWidth * bandHeight * 4);
     for (let y = 0; y < bandHeight; y += 1) {
       const spec = specs[y];
       const bright = spec?.bright ?? [20, 20, 20];
+      const darkColor = spec?.darkColor ?? [0, 0, 0];
       for (let x = 0; x < bandWidth; x += 1) {
-        const color = spec == null ? bandContent : x < spec.dark ? [0, 0, 0] : bright;
+        const color = spec == null ? bandContent : x < spec.dark ? darkColor : bright;
         const index = (y * bandWidth + x) * 4;
         rgba[index] = color[0];
         rgba[index + 1] = color[1];
@@ -633,5 +686,72 @@ describe("edge trim", () => {
     const strict = repeat(10, varied);
     const photo = prepareSharePhoto(bandPhoto([...strict, ...repeat(2, almost), ...repeat(10, varied)]));
     expect(photo?.height).toBe(bandHeight - strict.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("extends a uniform band whose rows vary by about 1.4", () => {
+    const strict = {
+      dark: 980,
+      darkColor: [16, 16, 16] as [number, number, number],
+      bright: [26, 26, 26] as [number, number, number],
+    };
+    const noise = {
+      dark: 970,
+      darkColor: [16, 16, 16] as [number, number, number],
+      bright: [24, 24, 24] as [number, number, number],
+    };
+    const band = [...repeat(10, strict), noise, ...repeat(10, strict)];
+    const photo = prepareSharePhoto(bandPhoto(band));
+    expect(photo?.height).toBe(bandHeight - band.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("does not extend a band whose rows vary by about 1.6", () => {
+    const strict = {
+      dark: 990,
+      bright: [16, 16, 16] as [number, number, number],
+    };
+    const noise = {
+      dark: 970,
+      darkColor: [16, 16, 16] as [number, number, number],
+      bright: [26, 26, 26] as [number, number, number],
+    };
+    const leading = repeat(10, strict);
+    const photo = prepareSharePhoto(bandPhoto([...leading, noise, ...repeat(10, strict)]));
+    expect(photo?.height).toBe(bandHeight - leading.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("trims through three noise lines inside a uniform black band", () => {
+    const black = { dark: bandWidth };
+    const noise = { dark: Math.round(bandWidth * 0.85) };
+    const band = [...repeat(10, black), ...repeat(3, noise), ...repeat(10, black)];
+    const photo = prepareSharePhoto(bandPhoto(band));
+    expect(photo?.height).toBe(bandHeight - band.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("trims a uniform band whose first line is 82% dark", () => {
+    const band = [{ dark: Math.round(bandWidth * 0.82) }, ...repeat(20, { dark: bandWidth })];
+    const photo = prepareSharePhoto(bandPhoto(band));
+    expect(photo?.height).toBe(bandHeight - band.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("does not extend a non-uniform edge that has only seven 98% lines", () => {
+    const varied = { dark: Math.round(bandWidth * 0.98), bright: [29, 29, 29] as [number, number, number] };
+    const gap = { dark: Math.round(bandWidth * 0.85), bright: [29, 29, 29] as [number, number, number] };
+    const leading = repeat(4, varied);
+    const photo = prepareSharePhoto(bandPhoto([
+      ...leading,
+      ...repeat(2, gap),
+      ...repeat(3, varied),
+    ]));
+    expect(photo?.height).toBe(bandHeight - leading.length - SHARE_PHOTO_EDGE_MARGIN);
+  });
+
+  it("keeps the strict trim when the longer band exceeds 35%", () => {
+    const black = { dark: bandWidth };
+    const leading = repeat(20, black);
+    const band = [...leading, { dark: Math.round(bandWidth * 0.85) }, ...repeat(160, black)];
+    expect(band.length + SHARE_PHOTO_EDGE_MARGIN).toBeGreaterThan(bandHeight * SHARE_PHOTO_EDGE_CAP);
+    expect(leading.length + SHARE_PHOTO_EDGE_MARGIN).toBeLessThanOrEqual(bandHeight * SHARE_PHOTO_EDGE_CAP);
+    const photo = prepareSharePhoto(bandPhoto(band));
+    expect(photo?.height).toBe(bandHeight - leading.length - SHARE_PHOTO_EDGE_MARGIN);
   });
 });

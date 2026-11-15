@@ -62,4 +62,32 @@ describe("publication export eligibility", () => {
     expect(result.rows.map((row) => row.id)).toEqual(["approved-a"]);
     expect(result.eligibleCount).toBe(1);
   });
+
+  it("stops after the first page when a non-counting export already has its limit", async () => {
+    const firstPage = Array.from({ length: 1_000 }, (_, index) =>
+      candidate(`approved-${index}`, "approved"),
+    );
+    const query = {
+      select: vi.fn(),
+      in: vi.fn(),
+      order: vi.fn(),
+      range: vi.fn()
+        .mockResolvedValueOnce({ data: firstPage, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: "unnecessary second page failed" } }),
+    };
+    for (const key of ["select", "in", "order"] as const) query[key].mockReturnValue(query);
+    const supabase = { from: vi.fn().mockReturnValue(query) };
+
+    const result = await loadApprovedIndexableMemes(supabase as never, {
+      select: "id, category, origin_year, description, origin, usage_note, caution, usage_examples, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
+      primaryOrder: "published_at",
+      limit: 30,
+      countAll: false,
+    });
+
+    expect(result.rows).toHaveLength(30);
+    expect(result.eligibleCount).toBe(1_000);
+    expect(query.range).toHaveBeenCalledTimes(1);
+    expect(query.range).toHaveBeenCalledWith(0, 999);
+  });
 });

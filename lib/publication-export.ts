@@ -1,8 +1,7 @@
 import type { createStaticClient } from "@/lib/supabase/server";
 import {
-  discoveryIndexIds,
+  isIndexableMeme,
   type ContentDepthInput,
-  type IndexCandidate,
 } from "@/lib/content-depth";
 
 export const PUBLICATION_EXPORT_PAGE_SIZE = 1_000;
@@ -46,7 +45,8 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
   supabase: StaticClient,
   options: PublicationExportOptions,
 ): Promise<{ rows: T[]; eligibleCount: number }> {
-  const candidates: PublicationExportCandidate<T>[] = [];
+  const rows: T[] = [];
+  let eligibleCount = 0;
   let exhausted = false;
 
   for (
@@ -76,7 +76,15 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
     }
 
     const page = (data ?? []) as unknown as PublicationExportCandidate<T>[];
-    candidates.push(...page);
+    for (const meme of page) {
+      if (meme.moderation_status !== "approved" || !isIndexableMeme(meme)) continue;
+      eligibleCount += 1;
+      if (rows.length < options.limit) rows.push(meme);
+    }
+
+    if (!options.countAll && rows.length >= options.limit) {
+      return { rows, eligibleCount };
+    }
 
     if (page.length < PUBLICATION_EXPORT_PAGE_SIZE) {
       exhausted = true;
@@ -90,14 +98,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
     );
   }
 
-  const indexableIds = discoveryIndexIds(candidates as IndexCandidate[]);
-  const eligible = candidates.filter(
-    (meme) => meme.moderation_status === "approved" && indexableIds.has(meme.id),
-  );
-  return {
-    rows: eligible.slice(0, options.limit),
-    eligibleCount: eligible.length,
-  };
+  return { rows, eligibleCount };
 }
 
 export function publicationExportUnavailableResponse(): Response {

@@ -120,7 +120,7 @@ rollback_env() {
     case "$service" in
       app) printf 'MEMECATCH_IMAGE=%s\n' "$ref" ;;
       mpe-worker) printf 'MEMECATCH_WORKER_IMAGE=%s\n' "$ref" ;;
-      scheduler | backup) docker tag "$ref" "memecatch-$service" ;;
+      scheduler | backup) docker tag "$ref" "memecatch-$service:local" ;;
     esac
   done <"$record"
 }

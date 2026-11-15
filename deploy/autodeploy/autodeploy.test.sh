@@ -90,7 +90,7 @@ grep -q "^tag sha256:worker memecatch-worker:rollback-s1$" "$calls" || fail "wor
 mapfile -t env < <(PATH="$stub:$PATH" stub_calls="$calls" stub_app_image=memecatch:release-new stub_worker_image=memecatch-worker:local rollback_env s1)
 [[ " ${env[*]} " == *" MEMECATCH_IMAGE=memecatch:rollback-s1 "* ]] || fail "app rollback ref: ${env[*]}"
 [[ " ${env[*]} " == *" MEMECATCH_WORKER_IMAGE=memecatch-worker:rollback-s1 "* ]] || fail "worker rollback ref: ${env[*]}"
-grep -q "^tag memecatch-scheduler:rollback-s1 memecatch-scheduler$" "$calls" || fail "scheduler not restored"
+grep -q "^tag memecatch-scheduler:rollback-s1 memecatch-scheduler:local$" "$calls" || fail "scheduler not restored"
 # Snapshots never carry a registry prefix that deploy-oci.sh would try to pull.
 [[ "$(grep -c ghcr.io "$STATE_DIR/rollback-s1.refs")" == 0 ]] || fail "snapshot kept a ghcr.io name"
 [[ "$(rollback_ref backup s1)" == memecatch-backup:rollback-s1 ]] || fail "backup snapshot name"
@@ -111,6 +111,12 @@ STUB
 PATH="$stub:$PATH" stub_calls="$calls" tag_rollback s2 >/dev/null || fail "missing image aborted the snapshot"
 grep -q "^app memecatch:rollback-s2$" "$STATE_DIR/rollback-s2.refs" || fail "app snapshot missing"
 grep -q "^mpe-worker" "$STATE_DIR/rollback-s2.refs" && fail "unsnapshotted worker was recorded"
+
+# Every compose-built service names its image, so `compose up` recreates it after a rebuild.
+for svc in mpe-worker scheduler backup; do
+  awk -v s="  $svc:" '$0 == s {f=1; next} f && /^  [a-z]/ {exit} f && /^    image:/ {found=1} END {exit !found}' "$root/docker-compose.yml" \
+    || fail "$svc has no image: in docker-compose.yml"
+done
 
 # Snapshots are taken before the build, which can drop the replaced image.
 snap_line="$(grep -n 'tag_rollback "\$current"' "$here/autodeploy.sh" | cut -d: -f1)"

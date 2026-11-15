@@ -71,7 +71,7 @@ describe("MPE OpenRouter adapter", () => {
   });
 
   it.each(["message", "code", "details"] as const)(
-    "recognizes the exact daily budget code from Supabase %s",
+    "recognizes the exact daily budget code from the database %s",
     (field) => {
       expect(classifyOpenRouterReservationError({ [field]: "openrouter_daily_budget_exhausted" }))
         .toBe("openrouter_daily_budget_exhausted");

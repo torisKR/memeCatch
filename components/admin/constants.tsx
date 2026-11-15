@@ -13,7 +13,7 @@ export type ModerationStatus =
   | "limited"
   | "rejected";
 
-/** supabase/migrations의 check_moderation_transition()과 동일 (20260727000000_unpublish_to_fact_checking.sql 반영) */
+/** db/migrations의 check_moderation_transition()과 동일 (20260727000000_unpublish_to_fact_checking.sql 반영) */
 export const VALID_TRANSITIONS: Record<ModerationStatus, ModerationStatus[]> = {
   pending: ["fact_checking", "rejected"],
   fact_checking: ["rights_checking", "rejected", "pending"],

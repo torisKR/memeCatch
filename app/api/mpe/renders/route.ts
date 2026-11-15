@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { rateLimit } from "@/lib/rate-limit";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { readBoundedJson } from "@/lib/request-body";
 import { hasTrustedOrigin } from "@/lib/origin";
 
@@ -40,8 +40,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasTrustedOrigin(request)) {
     return Response.json({ ok: false, error: "invalid_origin" }, { status: 403 });
   }
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
   if (!user) return Response.json({ ok: false, error: "signed_out" }, { status: 401 });
 
   const limit = rateLimit(`mpe-render:${user.id}`, { limit: 5, windowMs: 60_000 });
@@ -56,7 +56,7 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = requestSchema.safeParse(payload);
   if (!parsed.success) return Response.json({ ok: false, error: "invalid_render_request" }, { status: 400 });
 
-  const { data, error } = await (supabase as unknown as RenderRpcClient).rpc("queue_metered_mpe_render_job", {
+  const { data, error } = await (db as unknown as RenderRpcClient).rpc("queue_metered_mpe_render_job", {
     p_ingestion_id: parsed.data.ingestionId,
     p_segments: parsed.data.segments,
     p_preset: parsed.data.preset,

@@ -24,7 +24,7 @@ Identifiers must match `/^[a-z_][a-z0-9_]*$/i`. Filter values are parameters. `l
 
 1. `deploy/postgres/00-bootstrap.sql`, which creates the roles and the Supabase-shaped schemas the migrations expect: `auth`, `storage`, `vault`, `net`, `cron`, and `extensions`.
 2. The login role `memecatch`.
-3. `supabase/migrations/*.sql`, in filename order, except the two seeds named below.
+3. `db/migrations/*.sql`, in filename order, except the two seeds named below.
 4. `deploy/postgres/99-app-identity.sql`.
 
 Two lines are removed while applying: `create extension if not exists pg_net` and `create extension if not exists pg_cron`. `net.http_get` returns `0`. `cron.schedule` only inserts a row. Nothing in the database calls the public internet.
@@ -89,7 +89,7 @@ There is no `supabase.channel()` usage. `onAuthStateChange` reads the session on
 
 The script exits immediately unless `MEMECATCH_ALLOW_SUPABASE_DUMP=owner-approved`. Do not point it at the production Supabase project from CI or from an agent. CI runs `scripts/postgres/migrate-from-supabase.test.sh` against local fixture databases only. The old Supabase project stays read-only until the owner decides the dump is good.
 
-Production had migrations that were not in this repository. They are now `supabase/migrations/20260927190806_reviewed_latest_meme_content_20260928.sql` through `20261029183405_ai_review_automation_20261030.sql`, plus `20261110120000_prod_schema_drift.sql` (the affiliate `seasonal` check and community meme promotions) and `20261110130000_auth_users_supabase_columns.sql`. The trend scheduler calls `vault` and `pg_cron` only when those functions exist. On this database the compose scheduler owns the HTTP crons, and the bootstrap stubs satisfy a fresh init.
+Production had migrations that were not in this repository. They are now `db/migrations/20260927190806_reviewed_latest_meme_content_20260928.sql` through `20261029183405_ai_review_automation_20261030.sql`, plus `20261110120000_prod_schema_drift.sql` (the affiliate `seasonal` check and community meme promotions) and `20261110130000_auth_users_supabase_columns.sql`. The trend scheduler calls `vault` and `pg_cron` only when those functions exist. On this database the compose scheduler owns the HTTP crons, and the bootstrap stubs satisfy a fresh init.
 
 ## Env manifest
 

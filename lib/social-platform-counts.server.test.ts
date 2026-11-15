@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient: mocks.createStaticClient }));
 import { getSocialPlatformCounts } from "./social-platform-counts.server";
 
 beforeEach(() => vi.clearAllMocks());

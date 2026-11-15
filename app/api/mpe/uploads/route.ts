@@ -6,7 +6,7 @@ import {
 } from "@/lib/mpe/storage.server";
 import { MediaValidationError, validateMedia, VIDEO_UPLOAD_LIMIT } from "@/lib/mpe/media";
 import { rateLimit } from "@/lib/rate-limit";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { readBoundedFormData, RequestBodyTooLargeError } from "@/lib/request-body";
 import { hasTrustedOrigin } from "@/lib/origin";
 
@@ -51,8 +51,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasTrustedOrigin(request)) {
     return Response.json({ ok: false, error: "invalid_origin" }, { status: 403 });
   }
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
   if (!user) return Response.json({ ok: false, error: "signed_out" }, { status: 401 });
 
   const limit = rateLimit(`mpe-upload:${user.id}`, { limit: 5, windowMs: 60_000 });
@@ -63,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const { error: quotaError } = await (supabase as unknown as QuotaRpcClient).rpc(
+  const { error: quotaError } = await (db as unknown as QuotaRpcClient).rpc(
     "reserve_api_request",
     { p_action: "mpe_upload_storage" },
   );
@@ -116,7 +116,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, error: "upload_failed" }, { status: 502 });
   }
 
-  const { data, error } = await (supabase as unknown as RpcClient).rpc("create_metered_media_ingestion", {
+  const { data, error } = await (db as unknown as RpcClient).rpc("create_metered_media_ingestion", {
     p_source_id: null,
     p_ingest_mode: "USER_UPLOADED",
     p_mime_type: media.mimeType,

@@ -1,5 +1,6 @@
--- Vanilla Postgres 16 stand-ins for the Supabase catalog this schema was written against.
--- Identity is NOT a Supabase JWT. auth.uid() reads the app.user_id GUC that the
+-- Vanilla Postgres 16 stand-ins for the hosted-Postgres catalog (auth schema,
+-- anon/authenticated/service_role) the migrations were originally written against.
+-- Identity is NOT a JWT. auth.uid() reads the app.user_id GUC that the
 -- app sets inside the transaction after it has checked the session cookie.
 -- RLS policies stay as row filters over that app-set identity. They do not trust
 -- a client-supplied role. anon / authenticated / service_role are NOLOGIN.

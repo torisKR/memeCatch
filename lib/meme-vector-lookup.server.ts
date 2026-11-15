@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import { isMemeVector, MEME_VECTOR_PROFILE } from "@/lib/meme-vectors";
 import { createEmbeddingAuthHeaders } from "@/lib/meme-embedding-auth.server";
 
@@ -11,16 +11,13 @@ export function semanticSearchEnabled(env: Readonly<Record<string, string | unde
 }
 export function embeddingEndpoint(env: Readonly<Record<string, string | undefined>> = process.env): URL | null {
   if (!semanticSearchEnabled(env)) return null;
-  const endpoint = env.MEME_EMBEDDING_RUNTIME === "bundled" && env.VERCEL_URL
-    ? `https://${env.VERCEL_URL}/v1/embeddings` : env.MEME_EMBEDDING_URL;
+  const endpoint = env.MEME_EMBEDDING_URL;
   if (!endpoint) return null;
   try {
     const url = new URL(endpoint);
-    if (env.MEME_EMBEDDING_RUNTIME === "bundled" && env.VERCEL_URL && url.host !== env.VERCEL_URL) return null;
     const loopback = ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
     if (url.username || url.password || url.search || url.hash || url.pathname !== "/v1/embeddings") return null;
-    if (loopback && env.VERCEL) return null;
-    if (url.protocol === "https:" || (url.protocol === "http:" && loopback && !env.VERCEL)) return url;
+    if (url.protocol === "https:" || (url.protocol === "http:" && loopback)) return url;
   } catch { /* Invalid configuration leaves lexical search available. */ }
   return null;
 }
@@ -59,9 +56,6 @@ async function loadQueryEmbedding(endpoint: URL, input: string): Promise<number[
       headers: {
         "content-type": "application/json",
         ...authHeaders,
-        ...(bundled && process.env.VERCEL_URL && endpoint.host === process.env.VERCEL_URL
-          && process.env.VERCEL_AUTOMATION_BYPASS_SECRET
-          ? { "x-vercel-protection-bypass": process.env.VERCEL_AUTOMATION_BYPASS_SECRET } : {}),
         ...(!bundled && process.env.MEME_EMBEDDING_API_KEY ? { authorization: `Bearer ${process.env.MEME_EMBEDDING_API_KEY}` } : {}),
       },
       body: JSON.stringify({ model: MEME_VECTOR_PROFILE, input }),

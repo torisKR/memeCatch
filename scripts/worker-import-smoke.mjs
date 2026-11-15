@@ -1,2 +1,2 @@
-await import("../lib/supabase/admin-client.ts");
+await import("../lib/db/admin.ts");
 console.log("memecatch worker import smoke: ok");

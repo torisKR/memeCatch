@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Precompute localized meme copy with Anthropic and persist it to Supabase.
+ * Precompute localized meme copy with Anthropic and persist it to the self-hosted Postgres.
  *
  * This script is intentionally an offline/service-role batch. Public page
  * requests must only read meme_translations and must never call the provider.
@@ -13,7 +13,6 @@
 import { pathToFileURL } from "node:url";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createClient } from "@supabase/supabase-js";
 
 export const SUPPORTED_TRANSLATION_LOCALES = ["en", "ja", "zh", "zh-tw"];
 export const SUPPORTED_SELECTION_STATUSES = [
@@ -339,12 +338,12 @@ function requiredEnv(name) {
   return value;
 }
 
-async function findCandidates(supabase, options) {
+async function findCandidates(db, options) {
   const candidates = [];
   let from = 0;
 
   while (candidates.length < options.limit) {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("memes")
       .select(
         "id,slug,title,aliases,summary,description,origin,usage_note,caution,usage_examples,updated_at,moderation_status,meme_translations(locale,status,source_updated_at,updated_at)",
@@ -417,8 +416,8 @@ async function requestTranslation({ apiKey, model, locale, meme }) {
   return normalizeTranslation(parsed);
 }
 
-async function candidateIsCurrent(supabase, candidate, locale) {
-  const { data, error } = await supabase
+async function candidateIsCurrent(db, candidate, locale) {
+  const { data, error } = await db
     .from("memes")
     .select("updated_at,meme_translations(locale,status,source_updated_at,updated_at)")
     .eq("id", candidate.meme.id)
@@ -429,7 +428,7 @@ async function candidateIsCurrent(supabase, candidate, locale) {
 }
 
 export async function persistTranslationIfCurrent({
-  supabase,
+  db,
   candidate,
   locale,
   translation,
@@ -453,14 +452,14 @@ export async function persistTranslationIfCurrent({
   };
 
   if (snapshot.translation == null) {
-    const { error } = await supabase.from("meme_translations").insert(payload);
+    const { error } = await db.from("meme_translations").insert(payload);
     // A target created after the version check is newer work, not a batch failure.
     if (error?.code === "23505") return false;
     if (error) throw new Error(`translation insert failed: ${error.message}`);
     return true;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("meme_translations")
     .update(payload)
     .eq("meme_id", meme.id)
@@ -482,16 +481,15 @@ export async function run(argv = process.argv.slice(2)) {
   }
 
   loadProjectEnv();
-  const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+  requiredEnv("DATABASE_URL");
   // A dry run only inspects the database selection and never contacts Anthropic.
   const apiKey = options.dryRun ? null : requiredEnv("ANTHROPIC_API_KEY");
   const model = process.env.ANTHROPIC_TRANSLATION_MODEL?.trim() || DEFAULT_MODEL;
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  // Loaded lazily so tests that import this module never open Postgres.
+  const { createAdminClient } = await import("../lib/db/admin.ts");
+  const db = createAdminClient();
 
-  const candidates = await findCandidates(supabase, options);
+  const candidates = await findCandidates(db, options);
   console.log(
     `selected=${candidates.length} locale=${options.locale} status=${options.status} dryRun=${options.dryRun}`,
   );
@@ -516,7 +514,7 @@ export async function run(argv = process.argv.slice(2)) {
         locale: options.locale,
         meme,
       });
-      if (!(await candidateIsCurrent(supabase, candidate, options.locale))) {
+      if (!(await candidateIsCurrent(db, candidate, options.locale))) {
         console.warn(`${label} skipped because the source or translation changed during translation`);
         skipped += 1;
         continue;
@@ -524,7 +522,7 @@ export async function run(argv = process.argv.slice(2)) {
 
       const now = new Date().toISOString();
       const persisted = await persistTranslationIfCurrent({
-        supabase,
+        db,
         candidate,
         locale: options.locale,
         translation,

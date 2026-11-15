@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 import {
   sourceIngestionFailure,
   type SourceIngestionErrorCode,

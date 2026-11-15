@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { BrandTile } from "@/components/brand-mark";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { safeNext as normalizeNext } from "@/lib/safe-redirect";
 
 /**
@@ -93,8 +93,8 @@ export function LoginGate({
     setOauthNotice(null);
     const label = PROVIDER_LABEL[provider];
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const db = createClient();
+      const { error } = await db.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,

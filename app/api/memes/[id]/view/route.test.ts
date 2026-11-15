@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc }) }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: () => ({ rpc }) }));
 vi.mock("@/lib/rate-limit", () => ({
   getClientIp: () => "203.0.113.1",
   rateLimit: () => ({ ok: true }),

@@ -6,7 +6,6 @@ import { HeaderDiscoveryLinks } from "@/components/header-discovery-links";
 import { BrandTile } from "@/components/brand-mark";
 import { HeaderMenu } from "@/components/header-menu";
 import { LanguageSelector } from "@/components/language-selector";
-import { TrendAlertsBell } from "@/components/premium/trend-alerts-bell";
 import { useLocale } from "@/lib/i18n-client";
 import { localizedStaticPath } from "@/lib/i18n-routing";
 
@@ -93,8 +92,6 @@ export function GlobalHeader() {
               <SearchIcon className="h-5 w-5" />
             </Link>
 
-            {/* Plus 구독자에게만 렌더된다(내부에서 usePremium 가드) */}
-            <TrendAlertsBell />
 
             <AuthMenu />
 

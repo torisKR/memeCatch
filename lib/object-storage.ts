@@ -99,7 +99,8 @@ export async function readSignedObject(key: string): Promise<{ bytes: Uint8Array
 
 function bucketApi(bucket: string) {
   return {
-    async upload(name: string, body: unknown, options?: { contentType?: string; upsert?: boolean }) {
+    // ponytail: cacheControl is accepted but not stored; objects are served through /api/media, which sets its own cache headers.
+    async upload(name: string, body: unknown, options?: { contentType?: string; upsert?: boolean; cacheControl?: string }) {
       try {
         const key = objectKey(bucket, name);
         const bytes = await bodyBytes(body);
@@ -153,7 +154,9 @@ function bucketApi(bucket: string) {
         return { data: null, error: { message: error instanceof Error ? error.message : "list failed" } };
       }
     },
-    async createSignedUrl(name: string, expiresIn = 60) {
+    // ponytail: `download` naming is not applied to signed URLs; add Content-Disposition if a caller needs it.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- accepted for caller compatibility
+    async createSignedUrl(name: string, expiresIn = 60, _options?: { download?: string | boolean }) {
       try {
         return { data: { signedUrl: signedObjectUrl(bucket, name, expiresIn) }, error: null };
       } catch (error) {

@@ -23,16 +23,12 @@ import { metadata as exploreMetadata } from "@/app/(default)/explore/page";
 import { metadata as quizMetadata } from "@/app/(default)/quiz/page";
 import { metadata as weeklyMetadata } from "@/app/(default)/weekly/page";
 import { metadata as collectionsMetadata } from "@/app/(default)/collections/page";
-import { metadata as pricingMetadata } from "@/app/(default)/pricing/page";
-import { metadata as dailyMetadata } from "@/app/(default)/daily/page";
 import { metadata as layoutMetadata } from "@/app/(default)/layout";
 import { generateMetadata as generateAboutMetadata } from "@/app/(default)/about/page";
 import { generateMetadata as generateCollectionMetadata } from "@/app/(default)/collections/[slug]/page";
 import { generateMetadata as generateEditionMetadata } from "@/app/(default)/originals/edition/[slug]/page";
 import { generateMetadata as generateLocaleHomeMetadata } from "@/app/[locale]/page";
-import { generateMetadata as generateLocalePricingMetadata } from "@/app/[locale]/pricing/page";
 import { generateMetadata as generateLocaleSearchMetadata } from "@/app/[locale]/search/page";
-import { generateMetadata as generateLocaleDailyMetadata } from "@/app/[locale]/daily/page";
 import { generateMetadata as generateLocaleMemeCardsMetadata } from "@/app/[locale]/meme-cards/page";
 import { generateMetadata as generateKoreanMemeMetadata } from "@/app/(default)/memes/[key]/page";
 import { COLLECTIONS } from "@/lib/collections";
@@ -92,8 +88,6 @@ describe("og:url matches each page canonical", () => {
     expectOwnUrl(quizMetadata, "/quiz");
     expectOwnUrl(weeklyMetadata, "/weekly");
     expectOwnUrl(collectionsMetadata, "/collections");
-    expectOwnUrl(pricingMetadata, "/pricing");
-    expectOwnUrl(dailyMetadata, "/daily");
   });
 
   it("keeps generated Korean and locale cards on their own canonical", async () => {
@@ -123,10 +117,6 @@ describe("og:url matches each page canonical", () => {
         await generateLocaleHomeMetadata({ params: Promise.resolve({ locale }) }),
         localizePath("/", locale),
       );
-      expectOwnUrl(
-        await generateLocalePricingMetadata({ params: Promise.resolve({ locale }) }),
-        localizePath("/pricing", locale),
-      );
     }
     for (const locale of SEO_CONTENT_LOCALES) {
       expectOwnUrl(
@@ -135,10 +125,6 @@ describe("og:url matches each page canonical", () => {
           searchParams: Promise.resolve({}),
         }),
         localizePath("/search", locale),
-      );
-      expectOwnUrl(
-        await generateLocaleDailyMetadata({ params: Promise.resolve({ locale }) }),
-        localizePath("/daily", locale),
       );
       expectOwnUrl(
         await generateLocaleMemeCardsMetadata({

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { parseMemeCardIds, parseMemeCardPageOptions } from "@/lib/meme-collectible";
 import { getMemeCardAuthenticatedUser, getMemeCardCollectionPage, getOwnedMemeCardIds } from "@/lib/meme-collectible.server";
 import { cardApiError, PRIVATE_CARD_HEADERS } from "../_response";

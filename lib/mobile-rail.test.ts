@@ -48,7 +48,6 @@ describe("mobile horizontal rail", () => {
     expect(readFileSync("components/h-scroll.tsx", "utf8")).toContain("H_RAIL_CLASS");
     expect(H_RAIL_CLASS).toBe("h-rail");
     expect(readFileSync("app/(default)/explore/page.tsx", "utf8")).toContain("ExploreGrid");
-    expect(readFileSync("app/(default)/memes/[key]/page.tsx", "utf8")).toContain("data-plus-pricing-slot");
   });
 
   it("drops sticky header offsets while phone chrome is hidden", () => {

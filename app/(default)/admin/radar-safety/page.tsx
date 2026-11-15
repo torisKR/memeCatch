@@ -42,8 +42,8 @@ function formatEvidence(evidence: unknown): string {
 }
 
 export default async function AdminRadarSafetyPage() {
-  const { supabase } = await requireOperatorPage("/admin/radar-safety");
-  const { data, error } = await supabase
+  const { db } = await requireOperatorPage("/admin/radar-safety");
+  const { data, error } = await db
     .from("safety_review_queue")
     .select("id, proposed_level, reason, evidence, requested_at, memes(title, safety_level)")
     .eq("status", "pending")

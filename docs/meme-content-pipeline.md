@@ -1,5 +1,7 @@
 # 밈 콘텐츠 제작을 위한 검색 기반과 다음 단계
 
+> **2026-11-15 이후:** 운영은 OCI VM(docker-compose, 자체 Postgres)과 Cloudflare로 옮겼다. 아래의 Vercel·Supabase 절차와 수치는 당시 기록이며, 현재 배포·임베딩 설정은 `docs/oci-setup.md`와 `docker-compose.yml`(`MEME_EMBEDDING_RUNTIME=bundled`)을 따른다.
+
 2026-10-04(Asia/Seoul) 기준 **운영 활성화를 완료했다.** 기존 Supabase에 신규 마이그레이션 `20261003123428`을 적용하고 공개 `approved`/`limited` 밈 4,378건을 색인했다. 누락·stale·비공개 벡터는 각각 0건, 전체 밈은 5,018건으로 유지됐다. 동일 FP32 모델을 제공하는 Vercel HTTPS 경로를 검증한 뒤 `catchmeme.com`으로 전환했다. 기능 버전은 `d9b0c1b`, 최초 활성화 배포는 `dpl_J2tmRn8Zo2FiSiVDRCbFPVwnHxso`이며 아래 수치는 해당 배포의 검증 시점 스냅샷이다.
 
 | 운영 검증 | 실제 결과 |
@@ -93,8 +95,8 @@ HNSW는 이번 마이그레이션에 추가하지 않았다. 먼저 실제 공�
    psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
      -v ON_ERROR_STOP=1 \
      -c BEGIN \
-     -f supabase/migrations/20261003123428_meme_catalog_vectors.sql \
-     -f supabase/tests/meme_catalog_vectors.sql \
+     -f db/migrations/20261003123428_meme_catalog_vectors.sql \
+     -f db/tests/meme_catalog_vectors.sql \
      -c ROLLBACK
    ```
 

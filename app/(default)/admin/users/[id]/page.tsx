@@ -22,10 +22,6 @@ function fmt(iso: string | null): string {
       });
 }
 
-function won(n: number | null): string {
-  return n == null ? "—" : `₩${n.toLocaleString("ko-KR")}`;
-}
-
 export default async function AdminUserDetailPage({
   params,
 }: {
@@ -59,15 +55,6 @@ export default async function AdminUserDetailPage({
               운영자
             </span>
           )}
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-bold ${
-              u.isPremium
-                ? "bg-safety-green-bg text-safety-green"
-                : "bg-safety-gray-bg text-safety-gray"
-            }`}
-          >
-            {u.isPremium ? "Plus 활성" : "무료"}
-          </span>
         </div>
       </div>
 
@@ -93,10 +80,6 @@ export default async function AdminUserDetailPage({
           <dd className="text-right font-semibold tabular-nums">
             {u.trustScore ?? "—"}
           </dd>
-          <dt className="text-muted">결제 이메일 연결</dt>
-          <dd className="text-right font-semibold">
-            {u.hasBillingIdentity ? "연결됨" : "미연결"}
-          </dd>
           <dt className="text-muted">관심 카테고리</dt>
           <dd className="text-right font-semibold">
             {u.interests?.length ? u.interests.join(", ") : "—"}
@@ -110,103 +93,8 @@ export default async function AdminUserDetailPage({
           userId={u.id}
           email={u.email}
           role={u.role}
-          isPremium={u.isPremium}
         />
       </div>
-
-      {/* 구독 내역 */}
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-base font-bold">구독 내역</h2>
-        {u.subscriptions.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">구독 기록이 없어요.</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted">
-                  <th className="py-2 pr-3 font-semibold">주문</th>
-                  <th className="py-2 pr-3 font-semibold">상태</th>
-                  <th className="py-2 pr-3 font-semibold">금액</th>
-                  <th className="py-2 pr-3 font-semibold">유효기간</th>
-                  <th className="py-2 font-semibold">구분</th>
-                </tr>
-              </thead>
-              <tbody>
-                {u.subscriptions.map((s) => (
-                  <tr key={s.orderId} className="border-b border-border">
-                    <td className="py-2.5 pr-3 font-mono text-xs">
-                      {s.orderId}
-                    </td>
-                    <td className="py-2.5 pr-3 font-semibold">{s.status}</td>
-                    <td className="py-2.5 pr-3 tabular-nums">
-                      {won(s.amount)}
-                    </td>
-                    <td className="py-2.5 pr-3 tabular-nums text-muted">
-                      {fmt(s.currentPeriodEnd)}
-                    </td>
-                    <td className="py-2.5">
-                      {s.isManual ? "수동 부여" : "결제"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* 결제 이력 */}
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-base font-bold">결제 이력</h2>
-        <p className="mt-1 text-sm text-muted">
-          Latpeed 웹훅으로 수신한 결제 이벤트예요. 처리 오류가 있으면 사유가
-          함께 보여요.
-        </p>
-        {u.payments.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">결제 이벤트가 없어요.</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted">
-                  <th className="py-2 pr-3 font-semibold">발생</th>
-                  <th className="py-2 pr-3 font-semibold">주문</th>
-                  <th className="py-2 pr-3 font-semibold">상태</th>
-                  <th className="py-2 pr-3 font-semibold">금액</th>
-                  <th className="py-2 font-semibold">처리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {u.payments.map((p) => (
-                  <tr key={p.id} className="border-b border-border">
-                    <td className="py-2.5 pr-3 tabular-nums text-muted">
-                      {fmt(p.occurredAt ?? p.receivedAt)}
-                    </td>
-                    <td className="py-2.5 pr-3 font-mono text-xs">
-                      {p.orderId}
-                    </td>
-                    <td className="py-2.5 pr-3 font-semibold">{p.status}</td>
-                    <td className="py-2.5 pr-3 tabular-nums">
-                      {won(p.amount)}
-                    </td>
-                    <td className="py-2.5">
-                      {p.processingError ? (
-                        <span className="font-semibold text-safety-red">
-                          {p.processingError}
-                        </span>
-                      ) : p.processedAt ? (
-                        <span className="text-safety-green">완료</span>
-                      ) : (
-                        <span className="text-muted">대기</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
     </div>
   );
 }

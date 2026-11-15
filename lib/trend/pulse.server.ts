@@ -1,6 +1,6 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 import { revalidateTag } from "next/cache";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createConfiguredRadarConnectors } from "@/lib/trend/radar-platform-connectors.server";
 import { runRadarPulse, type RadarPulseResult } from "@/lib/trend/radar-pulse.server";
 import { createRadarRepository } from "@/lib/trend/radar-repository.server";

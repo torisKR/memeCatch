@@ -36,8 +36,8 @@ export default async function AdminMemeEditPage({
 }) {
   const { id } = await params;
   // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
-  const { supabase } = await requireOperatorPage(`/admin/memes/${id}`);
-  const { data: meme } = await supabase.from("memes").select("*").eq("id", id).single();
+  const { db } = await requireOperatorPage(`/admin/memes/${id}`);
+  const { data: meme } = await db.from("memes").select("*").eq("id", id).single();
   if (!meme) notFound();
 
   const [
@@ -48,7 +48,7 @@ export default async function AdminMemeEditPage({
     { data: tagRows, error: tagsError },
     { data: originProfiles, error: originProfilesError },
   ] = await Promise.all([
-    supabase
+    db
       .from("meme_contents")
       .select(
         "id, platform, content_id, url, thumbnail_url, availability, caption, is_representative, moderation_status",
@@ -56,28 +56,28 @@ export default async function AdminMemeEditPage({
       .eq("meme_id", id)
       .order("is_representative", { ascending: false })
       .order("created_at", { ascending: true }),
-    supabase
+    db
       .from("meme_translations")
       .select(
         "locale, status, source_updated_at, translated_at, updated_at, reviewed_at, reviewed_by, title, summary, description, origin, usage_note, caution, aliases",
       )
       .eq("meme_id", id)
       .order("locale", { ascending: true }),
-    supabase
+    db
       .from("meme_sources")
       .select("source_url, source_role, rights_basis")
       .eq("meme_id", id),
-    supabase
+    db
       .from("meme_media")
       .select("source_id, source_role, rights_basis, review_state, reviewer_note, media_sources(canonical_url, title, platform)")
       .eq("meme_id", id)
       .order("created_at", { ascending: true })
       .returns<CatalogProvenanceSource[]>(),
-    supabase
+    db
       .from("meme_tags_map")
       .select("tags(name)")
       .eq("meme_id", id),
-    supabase
+    db
       .from("meme_market_profiles")
       .select("market_code, language_tag, local_title, review_state")
       .eq("meme_id", id)

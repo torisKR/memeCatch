@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Rank review-only social source candidates. A score is triage assistance, not
- * publication approval: this script never writes to Supabase and every result
+ * publication approval: this script never writes to the database and every result
  * remains `needs_human_source_match`.
  *
  * Usage:

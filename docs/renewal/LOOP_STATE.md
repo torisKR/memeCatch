@@ -31,7 +31,7 @@
 | Lint           | `eslint` (eslint-config-next)                                                                   |
 | 타입           | `tsc --noEmit` (별도 package script 없음 — 직접 호출)                                           |
 | DB             | Supabase Postgres 17 (`onjipuldngbdptldkpoe`, ap-northeast-1)                                   |
-| 마이그레이션   | `supabase/migrations/*.sql` 41개 — RLS 기본 deny + RPC 쓰기 경계                                |
+| 마이그레이션   | `db/migrations/*.sql` 41개 — RLS 기본 deny + RPC 쓰기 경계                                |
 | 배포           | Vercel (`vercel.json`)                                                                          |
 | 크론           | `pg_cron` → `compute_trend_scores()` 일 1회 (최근 67회 전부 성공)                               |
 | 분석           | GA(`NEXT_PUBLIC_GA_ID`) + `lib/analytics.ts`                                                    |
@@ -547,7 +547,7 @@ DECISIONS.md 「결정 확정 (2026-08-04, 루프 047)」 표 참조.
   /privacy 1줄 반영.
 - HG-007 B/D: not-found 경계에 robots noindex 명시(상태코드 무관 색인 차단).
 - HG-009(a) B: 카드에서 LifeGauge·SignalTrace 제거(안전+카테고리만).
-- dev 환경: supabase/seed.sql 12건(카테고리 6×2, lifecycle·safety 각 3×4) + db reset
+- dev 환경: db/seed.sql 12건(카테고리 6×2, lifecycle·safety 각 3×4) + db reset
   검증 + NEXT_PUBLIC_SITE_URL 추가. 로컬 dev가 실콘텐츠로 렌더됨.
 
 **실행 보류(결정은 확정)**: HG-002 B(168건 재판정 — HG-003 재판정과 묶은 배치),

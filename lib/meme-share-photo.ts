@@ -118,7 +118,7 @@ function projectOwnedPath(value: string | null): string | null {
 
 function siteHosts(): Set<string> {
   const hosts = new Set(["catchmeme.com", "www.catchmeme.com"]);
-  for (const raw of [SITE_URL, process.env.NEXT_PUBLIC_SUPABASE_URL]) {
+  for (const raw of [SITE_URL]) {
     if (!raw) continue;
     try {
       hosts.add(new URL(raw).hostname.toLowerCase());
@@ -133,7 +133,7 @@ function isIpHost(hostname: string): boolean {
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) || hostname.includes(":");
 }
 
-/** Site origin or the project's own storage host. Rejects arbitrary URLs. */
+/** Site origin only. Rejects arbitrary URLs. */
 export function isAllowedShareImageUrl(value: string | null | undefined): boolean {
   return canonicalShareImageUrl(value) != null;
 }
@@ -158,7 +158,6 @@ export function canonicalShareImageUrl(value: string | null | undefined): string
   const hostname = url.hostname.toLowerCase();
   if (isIpHost(hostname) || hostname === "localhost" || hostname.endsWith(".local")) return null;
   if (!siteHosts().has(hostname)) return null;
-  if (hostname.endsWith(".supabase.co") && !url.pathname.includes("/storage/")) return null;
   return `${url.origin}${url.pathname}${url.search}`;
 }
 

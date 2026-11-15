@@ -9,7 +9,7 @@ import type { MemeCardDiscoveryPage, MemeCollectibleCard } from "@/lib/meme-coll
 const auth = vi.hoisted(() => ({ getUser: vi.fn(), listener: null as null | ((event: string) => void), unsubscribe: vi.fn() }));
 vi.mock("next/link", () => ({ default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => <a {...props}>{children}</a> }));
 vi.mock("@/lib/i18n-client", () => ({ useLocale: () => ({ locale: "ko" }) }));
-vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { getUser: auth.getUser, onAuthStateChange: (listener: (event: string) => void) => { auth.listener = listener; return { data: { subscription: { unsubscribe: auth.unsubscribe } } }; } } }) }));
+vi.mock("@/lib/db/client", () => ({ createClient: () => ({ auth: { getUser: auth.getUser, onAuthStateChange: (listener: (event: string) => void) => { auth.listener = listener; return { data: { subscription: { unsubscribe: auth.unsubscribe } } }; } } }) }));
 vi.mock("./meme-collectible-scratch", () => ({ MemeCollectibleScratch: ({ cardId, card, revealed, onStart, onReveal }: { cardId: string; card: MemeCollectibleCard | null; revealed: boolean; onStart: () => void; onReveal: () => void }) => <div data-scratch-card={cardId} data-loaded-card={card?.id} data-revealed={revealed}>{card && <span data-testid="scratch-loaded-title">{card.title}</span>}{!revealed && <><button onClick={onStart}>긁기 시작</button><button onClick={onReveal}>바로 공개</button></>}</div> }));
 import { MemeCollectibleGallery } from "./meme-collectible-gallery";
 
@@ -93,7 +93,7 @@ describe("meme card collection actions", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "보유하기" })).toBeTruthy());
     expect(screen.queryByText("소장 중 ✓")).toBeNull(); expect(posts()[0][1].signal.aborted).toBe(true);
   });
-  it("asks anonymous Supabase users to log in and lets transport failures retry verification", async () => {
+  it("asks anonymous users to log in and lets transport failures retry verification", async () => {
     auth.getUser.mockResolvedValueOnce({ data: { user: { id: "anon", is_anonymous: true } }, error: null });
     const first = renderRevealed(); expect(await screen.findByRole("link", { name: "로그인하고 보유하기" })).toBeTruthy(); first.unmount();
     auth.getUser.mockRejectedValueOnce(new Error("network")); renderRevealed();

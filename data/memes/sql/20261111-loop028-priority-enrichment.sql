@@ -4,8 +4,8 @@
 --
 -- Official apply order. Do not omit either psql flag, and do not skip the live check:
 --   1) the two migrations:
---        psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261111160000_meme_content_reviewed_at.sql
---        psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261112003000_meme_sources_hidden_from_public.sql
+--        psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f db/migrations/20261111160000_meme_content_reviewed_at.sql
+--        psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f db/migrations/20261112003000_meme_sources_hidden_from_public.sql
 --      The new code selects hidden_from_public by name. Without this column, prod would
 --      fail with 42703 ("catalog unavailable"), so the migrations must land first.
 --   2) Deploy the application code, then a live check that public pages load.
@@ -54,7 +54,7 @@
 -- This SQL does not DELETE any meme_sources rows.
 -- Non-200, dead, or irrelevant rows in this batch are hidden with hidden_from_public=true
 --   (nullable flag; null/false stays visible). This is reversible and is not a delete.
---   Apply supabase/migrations/20261112003000_meme_sources_hidden_from_public.sql first. namu.wiki (bot 403, not dead),
+--   Apply db/migrations/20261112003000_meme_sources_hidden_from_public.sql first. namu.wiki (bot 403, not dead),
 --   merriam-webster (403), vop.co.kr / etnews.com (unreliable), gamemeca.com (intermittent
 --   403), about.ncsoft.com (JS shell), and deleted YouTube VbmYQF32SNg are kept in place
 --   and are not counted toward the Q-07 live-source gate. Wikipedia disambiguation pages

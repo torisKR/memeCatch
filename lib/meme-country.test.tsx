@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const createStaticClient = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient }));
 import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { MemeCard } from "@/components/meme-card";
 import { localizedMemeCountryLabel, originCountryCode } from "@/lib/meme-country";

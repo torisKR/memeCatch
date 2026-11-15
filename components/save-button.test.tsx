@@ -7,7 +7,7 @@ const getUser = vi.hoisted(() => vi.fn());
 const maybeSingle = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/db/client", () => ({
   createClient: () => ({
     auth: { getUser },
     rpc,
@@ -18,7 +18,9 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/memes/test" }));
 vi.mock("@/lib/i18n-client", () => ({ useLocale: () => ({ locale: "ko" }) }));
-vi.mock("@/components/login-gate", () => ({ LoginGate: () => null }));
+vi.mock("@/components/login-gate", () => ({
+  LoginGate: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="login gate" /> : null),
+}));
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
 import {
   SaveButton,
@@ -37,9 +39,9 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("getSaveFailure", () => {
-  it("recognizes login and free save limit errors without exposing database details", () => {
+  it("recognizes login errors and treats every other failure as retryable", () => {
     expect(getSaveFailure("login_required")).toBe("login");
-    expect(getSaveFailure("premium_save_limit: 30")).toBe("premium-limit");
+    expect(getSaveFailure("premium_save_limit: 30")).toBe("retry");
     expect(getSaveFailure("database unavailable")).toBe("retry");
   });
 });
@@ -86,7 +88,7 @@ describe("guest save intent queue", () => {
     expect(screen.getByRole("button").getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("routes an eleventh guest save to attributed pricing without dropping the first ten", async () => {
+  it("opens the login gate on an eleventh guest save without dropping the first ten", async () => {
     const createdAt = Date.now();
     const intents = Array.from({ length: 10 }, (_, index) => ({
       memeId: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
@@ -99,9 +101,8 @@ describe("guest save intent queue", () => {
     await waitFor(() => expect(getUser).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: "이 밈 저장하기" }));
 
-    expect(screen.getByRole("link", { name: "Plus로 무제한 저장하기" }).getAttribute("href")).toBe(
-      "/pricing?source=save_limit_11",
-    );
+    expect(screen.getByRole("dialog", { name: "login gate" })).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
     expect(parseSaveIntents(localStorage.getItem("memecatch:save-intents:v1"))).toHaveLength(10);
   });
 });

@@ -35,8 +35,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function AdminMpePage() {
-  const { supabase } = await requireOperatorPage("/admin/mpe");
-  const { data, error } = await supabase
+  const { db } = await requireOperatorPage("/admin/mpe");
+  const { data, error } = await db
     .from("meme_candidates")
     .select("id, ingestion_id, title, meme_type, review_status, overall_confidence, created_at, media_ingestions(ingest_mode, mime_type, media_sources(platform, title))")
     .order("created_at", { ascending: true })
@@ -48,7 +48,7 @@ export default async function AdminMpePage() {
   const ingestionIds = [...new Set(candidates.map((candidate) => candidate.ingestion_id))];
   const jobsByIngestion = new Map<string, Record<string, number>>();
   if (ingestionIds.length) {
-    const { data: jobs, error: jobsError } = await supabase
+    const { data: jobs, error: jobsError } = await db
       .from("processing_jobs")
       .select("ingestion_id, status")
       .in("ingestion_id", ingestionIds)

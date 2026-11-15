@@ -37,37 +37,27 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).toContain("metadataBase: new URL(SITE_URL)");
   });
 
-  it("한국어 상세는 언어별 번역 데스크 대신 접두사 없는 Plus 요금 링크만 둔다", () => {
-    expect(source).toContain('href="/pricing"');
-    expect(source).toContain("plus-pricing-title");
-    expect(source).toContain("<PlusPricingHashScroll />");
+  it("한국어 상세에는 Plus 요금·사용 키트·미터링 게이트·후원 카드가 없다", () => {
+    expect(source).not.toContain("/pricing");
+    expect(source).not.toContain("data-plus-pricing-slot");
+    expect(source).not.toContain("PlusPricingHashScroll");
+    expect(source).not.toContain("PREMIUM_COPY");
+    expect(source).not.toContain("<MemeUseKit");
+    expect(source).not.toContain("<MemeTrendPanel");
+    expect(source).not.toContain("<MeteredGate");
+    expect(source).not.toContain("<DonateCard");
+    expect(source).not.toContain("TranslationPriorityButton");
     expect(source).toContain("usageRegionLabelledBy");
     expect(source).not.toContain('aria-labelledby="meme-usage"');
-    expect(source).toContain('item.label === "광고 없는 경험"');
-    expect(source).toContain("{feature.label}");
-    expect(source).toContain("{feature.detail}");
-    expect(source).toContain("PREMIUM_COPY.ko.dashboard.viewPlans");
-    expect(source).not.toContain("TranslationPriorityButton");
-    expect(source).not.toContain("global-translation-title");
-    expect(source).not.toContain('href="/en/pricing"');
-    expect(source).not.toContain('href="/ja/pricing"');
-    expect(source).not.toContain('href="/zh/pricing"');
-    expect(source).not.toContain('href="/zh-tw/pricing"');
 
-    const rail = source.indexOf('data-plus-pricing-slot="rail"');
     const sources = source.indexOf("<SourceEvidence");
-    const afterSources = source.indexOf('data-plus-pricing-slot="after-sources"');
     const related = source.indexOf("<ContinueStream");
-    expect(source.slice(rail - 40, rail)).toContain("hidden lg:block");
-    expect(source.slice(afterSources - 24, afterSources)).toContain("lg:hidden");
-    expect(rail).toBeGreaterThan(-1);
-    expect(afterSources).toBeGreaterThan(sources);
     // #65 moves ContinueStream into the reading order (after origin, before sources).
-    // #67 still places the mobile Plus card immediately after SourceEvidence.
     expect(related).toBeGreaterThan(-1);
     expect(related).toBeLessThan(sources);
 
-    const column = source.slice(source.lastIndexOf("왼쪽 레일", rail), rail);
+    const railStart = source.indexOf("왼쪽 레일");
+    const column = source.slice(railStart, source.indexOf("<MemeEmbed", railStart));
     expect(column).toContain('className="space-y-4"');
     expect(column).not.toContain("sticky");
   });
@@ -85,16 +75,14 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source.match(/<ShareButton path=\{path\}/g)).toHaveLength(1);
   });
 
-  it("무료 뜻·유래·기본 안전성은 Plus 잠금 밖에 둔다", () => {
+  it("뜻·유래·기본 안전성을 정답 카드 다음 순서로 둔다", () => {
     const answerCard = source.indexOf("<AnswerCard meme={meme}");
     const description = source.indexOf("{meme.description && (");
     const origin = source.indexOf("{(meme.origin || isHouseOriginal(meme.origin_kind)) && (");
-    const useKit = source.indexOf("<MemeUseKit");
 
     expect(answerCard).toBeGreaterThan(-1);
     expect(description).toBeGreaterThan(answerCard);
     expect(origin).toBeGreaterThan(description);
-    expect(useKit).toBeGreaterThan(origin);
   });
 
   it("WebPage에는 실제 게시일과 화면에 표시되는 저장 출처만 전달하고 DB 생성일은 대체값으로 쓰지 않는다", () => {

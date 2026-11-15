@@ -21,7 +21,7 @@ vi.mock("motion/react", () => ({
 }));
 
 vi.mock("@/lib/actions/auth", () => ({ signOut: vi.fn() }));
-vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/db/client", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/i18n-client", async (importOriginal) => {
   const { getMessages } = await import("@/lib/i18n");
   const original = await importOriginal<typeof import("@/lib/i18n-client")>();
@@ -48,7 +48,7 @@ describe("AuthMenu", () => {
     expect(html).toContain(">Log in</a>");
   });
 
-  it("uses the canonical home path for the Vercel /index alias", () => {
+  it("uses the canonical home path for the /index alias", () => {
     navigation.pathname = "/index";
 
     expect(renderToStaticMarkup(<AuthMenu />)).toContain(

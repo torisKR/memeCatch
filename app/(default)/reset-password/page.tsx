@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata: Metadata = {
@@ -19,10 +19,10 @@ export default async function ResetPasswordPage({
 }) {
   const params = await searchParams;
   const token = typeof params.token === "string" ? params.token : "";
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   const canReset = Boolean(user || token);
 
   return (

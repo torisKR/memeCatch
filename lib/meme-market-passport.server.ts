@@ -6,8 +6,8 @@ import { memePathFrom } from "@/lib/labels";
 import { localizedMemePath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import { getLocalizedSearchMemesResult } from "@/lib/meme-translations";
 import { MemeCatalogUnavailableError } from "@/lib/queries";
-import { createStaticClient } from "@/lib/supabase/server";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { createStaticClient } from "@/lib/db/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import {
   buildMemeMarketPassport,
   type MarketPassportProfileRow,
@@ -33,9 +33,9 @@ async function loadMemeMarketPassport(
   if (!memeId) return fallback("empty");
 
   try {
-    const supabase = createStaticClient();
+    const db = createStaticClient();
     const [profilesResult, variantsResult] = await Promise.all([
-      supabase
+      db
         .from("meme_market_profiles")
         .select(
           "meme_id, market_code, language_tag, role, local_title, local_aliases, usage_note, caution, review_state",
@@ -43,7 +43,7 @@ async function loadMemeMarketPassport(
         .eq("meme_id", memeId)
         .eq("review_state", "reviewed")
         .overrideTypes<MarketPassportProfileRow[], { merge: false }>(),
-      supabase
+      db
         .from("meme_variant_links")
         .select("id, target_meme_id, relation_kind, review_state")
         .eq("source_meme_id", memeId)
@@ -55,7 +55,7 @@ async function loadMemeMarketPassport(
     const variants = variantsResult.data ?? [];
     const targetIds = [...new Set(variants.map((variant) => variant.target_meme_id))];
     const targetsResult = targetIds.length
-      ? await supabase
+      ? await db
           .from("memes")
           .select(
             "id, short_id, slug, title, description, origin, usage_note, caution, usage_examples, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",

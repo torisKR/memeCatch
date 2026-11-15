@@ -39,7 +39,7 @@ describe("광고 로더 게재 통제 (정책 불변조건)", () => {
     const loader = read("components/adsense-script.tsx");
     expect(loader).toContain("isConfiguredAdsenseClient(ADSENSE_CLIENT)");
     expect(loader).toContain('process.env.NODE_ENV !== "production"');
-    expect(loader).toContain('process.env.VERCEL_ENV !== "production"');
+    expect(loader).not.toContain("VERCEL");
     expect(loader).toContain("<AdsenseHostGate>");
   });
 

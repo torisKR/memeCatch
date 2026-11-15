@@ -49,12 +49,7 @@ describe("trend pulse cron route", () => {
   });
 
   it("is the one scheduled owner of the sequential trend pipeline", () => {
-    const config = JSON.parse(readFileSync("vercel.json", "utf8")) as {
-      crons: Array<{ path: string; schedule: string }>;
-    };
-    expect(config.crons).toContainEqual({
-      path: "/api/cron/trend-pulse",
-      schedule: "0 18 * * *",
-    });
+    const crontab = readFileSync("deploy/scheduler/crontab", "utf8");
+    expect(crontab).toMatch(/^0 18 \* \* \* \/usr\/local\/bin\/run-cron \/api\/cron\/trend-pulse$/m);
   });
 });

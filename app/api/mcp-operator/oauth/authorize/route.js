@@ -1,14 +1,14 @@
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { databaseStore, stateKey } from '@/integrations/memecatch-chatgpt/src/state.mjs';
 import { authorization, validateClient, consentTicket, readConsent, grant, ORIGIN } from '@/integrations/memecatch-chatgpt/src/oauth.mjs';
 import { html, form, escape, headers } from '@/integrations/memecatch-chatgpt/src/http.mjs';
 export const runtime='nodejs';
 export const maxDuration=30;
 async function operator() {
-  const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser();
+  const db=await createClient(); const {data:{user}}=await db.auth.getUser();
   if(!user) return null;
-  const {data,error}=await supabase.rpc('is_operator');
+  const {data,error}=await db.rpc('is_operator');
   return !error && data?user.id:null;
 }
 export async function GET(request) {

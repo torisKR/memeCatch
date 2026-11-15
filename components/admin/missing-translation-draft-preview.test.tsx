@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const previewMissingMemeTranslationWithGpt = vi.fn();
 const saveMissingMemeTranslationDraft = vi.fn();
-const claimTranslationPriority = vi.fn();
 const { refresh, push } = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
@@ -16,14 +15,12 @@ vi.mock("@/lib/actions/admin-translations", () => ({
   previewMissingMemeTranslationWithGpt: (...args: unknown[]) =>
     previewMissingMemeTranslationWithGpt(...args),
   saveMissingMemeTranslationDraft: (...args: unknown[]) => saveMissingMemeTranslationDraft(...args),
-  claimTranslationPriority: (...args: unknown[]) => claimTranslationPriority(...args),
 }));
 
 import {
   MissingTranslationDraftPreview,
   type MissingTranslationSourceRow,
 } from "./missing-translation-draft-preview";
-import { TranslationPriorityQueue } from "./translation-priority-queue";
 import type { TranslationPriorityQueueRow } from "@/lib/actions/admin-translations";
 
 const ROWS: MissingTranslationSourceRow[] = [
@@ -68,7 +65,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   previewMissingMemeTranslationWithGpt.mockResolvedValue(SUCCESS);
   saveMissingMemeTranslationDraft.mockResolvedValue({ ok: true });
-  claimTranslationPriority.mockResolvedValue({ ok: true });
 });
 
 describe("MissingTranslationDraftPreview", () => {
@@ -181,7 +177,7 @@ describe("MissingTranslationDraftPreview", () => {
     render(<MissingTranslationDraftPreview locale="zh" rows={ROWS} priorityRows={[priorityRow]} />);
 
     expect(screen.getByText("ZH ROUTE-UNLOCK OPERATOR LANE")).toBeTruthy();
-    expect(screen.getByText("Plus 4건 요청")).toBeTruthy();
+    expect(screen.getByText("4건 요청")).toBeTruthy();
     expect(screen.getByRole("list", { name: "中文(简体) Route-Unlock 운영 큐" })).toBeTruthy();
 
     fireEvent.click(
@@ -211,61 +207,5 @@ describe("MissingTranslationDraftPreview", () => {
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain("GPT 호출 오류");
-  });
-
-  it("claims a missing translation before opening the focused GPT draft route", async () => {
-    const row: TranslationPriorityQueueRow = {
-      memeId: "meme-1",
-      locale: "en",
-      requestCount: 3,
-      latestRequestedAt: "2026-08-09T01:00:00.000Z",
-      status: "requested",
-      memeTitle: "원영적 사고",
-      memeShortId: "MC-0001",
-      memeSlug: "wonyoung-thinking",
-      translationStatus: null,
-      translationUpdatedAt: null,
-      sourceUpdatedAt: "2026-08-09T01:00:00.000Z",
-      routeUnlockCandidate: false,
-    };
-    render(<TranslationPriorityQueue rows={[row]} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "초안 만들기" }));
-
-    await waitFor(() => {
-      expect(claimTranslationPriority).toHaveBeenCalledWith({ memeId: "meme-1", locale: "en" });
-      expect(push).toHaveBeenCalledWith("/admin/translations?locale=en&focus=meme-1");
-    });
-  });
-
-  it("keeps the operator on the queue when the missing translation claim fails", async () => {
-    claimTranslationPriority.mockResolvedValue({ ok: false, error: "이미 다른 운영자가 검수 중이에요." });
-    const row: TranslationPriorityQueueRow = {
-      memeId: "meme-1",
-      locale: "en",
-      requestCount: 3,
-      latestRequestedAt: "2026-08-09T01:00:00.000Z",
-      status: "requested",
-      memeTitle: "원영적 사고",
-      memeShortId: "MC-0001",
-      memeSlug: "wonyoung-thinking",
-      translationStatus: null,
-      translationUpdatedAt: null,
-      sourceUpdatedAt: "2026-08-09T01:00:00.000Z",
-      routeUnlockCandidate: false,
-    };
-    render(<TranslationPriorityQueue rows={[row]} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "초안 만들기" }));
-
-    expect((await screen.findByRole("alert")).textContent).toContain("이미 다른 운영자가 검수 중이에요.");
-    expect(push).not.toHaveBeenCalled();
-  });
-
-  it("keeps an unavailable Plus queue distinct from an empty queue", () => {
-    render(<TranslationPriorityQueue rows={[]} error="rpc unavailable" />);
-
-    expect(screen.getByRole("alert").textContent).toContain("0건으로 간주하지 않았습니다");
-    expect(screen.queryByText("현재 대기 중인 Plus 번역 요청이 없어요.")).toBeNull();
   });
 });

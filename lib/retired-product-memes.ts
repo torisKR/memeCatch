@@ -1,6 +1,6 @@
 import { getTrendingMemes, LIST_SELECT, type MemeListItem } from "@/lib/queries";
 import { isYouTubeThumbnailUrl, verifiedRetiredCardImage } from "@/lib/retired-card-image";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import type { MemeCategory, SafetyLevel } from "@/lib/labels";
 
 const RETIRED_PRODUCT_CARD_COUNT = 4;
@@ -157,8 +157,8 @@ export async function loadRetiredProductMemes(): Promise<MemeListItem[]> {
 
 async function loadPublicMemes(limit: number): Promise<MemeListItem[]> {
   try {
-    const supabase = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await supabase
+    const db = createStaticClient({ cachePublicCatalog: true });
+    const { data, error } = await db
       .from("memes")
       .select(LIST_SELECT)
       .in("moderation_status", [...PUBLISHED_STATUSES])

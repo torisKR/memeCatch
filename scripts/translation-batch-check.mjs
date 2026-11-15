@@ -2,7 +2,7 @@
 /**
  * Validate offline meme_translations SQL batches before an operator applies them.
  *
- * The checker is intentionally read-only. It never connects to Supabase and it
+ * The checker is intentionally read-only. It never connects to the database and it
  * never executes SQL. A loop may ship a partial batch as a resumable artifact;
  * --require-complete is reserved for the release gate when every worklist entry
  * has one row for every supported locale.

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { DbClient } from "@/lib/db/types";
 import { buildMemesQuery, type ExploreFilters } from "@/components/explore-grid";
 
 type Call = { method: string; args: unknown[] };
@@ -26,7 +25,7 @@ function recorder() {
       calls.push({ method: "rpc", args });
       return chain;
     },
-  } as unknown as SupabaseClient<Database>;
+  } as unknown as DbClient;
   return { calls, client };
 }
 

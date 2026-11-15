@@ -4,7 +4,7 @@ import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { MpeReviewConsole, type MpeReviewConsoleProps, type MpeReviewStatus } from "@/components/admin/mpe-review-console";
 import type { Json } from "@/lib/database.types";
 import { MPE_STORAGE_BUCKET } from "@/lib/mpe/storage.server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 
 export const metadata = { title: "MPE 후보 검수" };
 export const dynamic = "force-dynamic";
@@ -147,8 +147,8 @@ async function signFrameArtifacts(
 
 export default async function AdminMpeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await requireOperatorPage(`/admin/mpe/${id}`);
-  const { data: candidate, error } = await supabase
+  const { db } = await requireOperatorPage(`/admin/mpe/${id}`);
+  const { data: candidate, error } = await db
     .from("meme_candidates")
     .select("id, ingestion_id, title, meme_type, review_status, overall_confidence, draft_json, model_version, prompt_version, media_ingestions(id, user_id, source_id, ingest_mode, mime_type, width, height, duration_ms, rights_attested_at, source_role, rights_basis, media_sources(canonical_url, title, channel_name, platform_published_at, public_status))")
     .eq("id", id)
@@ -157,12 +157,12 @@ export default async function AdminMpeDetailPage({ params }: { params: Promise<{
 
   const ingestion = candidate.media_ingestions;
   const [jobsResult, segmentsResult, fingerprintsResult, matchesResult, claimsResult, revisionsResult] = await Promise.all([
-    supabase.from("processing_jobs").select("id, job_type, status, attempts, processor_name, processor_version, output_json, error_code").eq("ingestion_id", ingestion.id).order("created_at").returns<JobRow[]>(),
-    supabase.from("text_segments").select("id, origin, start_ms, end_ms, raw_text, normalized_text, confidence").eq("ingestion_id", ingestion.id).order("start_ms", { ascending: true, nullsFirst: true }).order("id").returns<SegmentRow[]>(),
-    supabase.from("media_fingerprints").select("id, fingerprint_type, hash_value, frame_ms").eq("ingestion_id", ingestion.id).order("frame_ms", { ascending: true, nullsFirst: false }).returns<FingerprintRow[]>(),
-    supabase.from("candidate_matches").select("id, rank, overall_score, classification, memes(title)").eq("candidate_id", candidate.id).neq("classification", "SEPARATE").order("rank").limit(5).returns<MatchRow[]>(),
-    supabase.from("claim_evidence").select("id, claim_field, claim_text, confidence, review_status, media_sources(canonical_url), text_segments(origin, start_ms, raw_text)").eq("candidate_id", candidate.id).order("created_at").returns<ClaimRow[]>(),
-    supabase.from("candidate_revisions").select("id, revision_number, draft_json, model_version, prompt_version, created_at").eq("candidate_id", candidate.id).order("revision_number", { ascending: false }).limit(5).returns<RevisionRow[]>(),
+    db.from("processing_jobs").select("id, job_type, status, attempts, processor_name, processor_version, output_json, error_code").eq("ingestion_id", ingestion.id).order("created_at").returns<JobRow[]>(),
+    db.from("text_segments").select("id, origin, start_ms, end_ms, raw_text, normalized_text, confidence").eq("ingestion_id", ingestion.id).order("start_ms", { ascending: true, nullsFirst: true }).order("id").returns<SegmentRow[]>(),
+    db.from("media_fingerprints").select("id, fingerprint_type, hash_value, frame_ms").eq("ingestion_id", ingestion.id).order("frame_ms", { ascending: true, nullsFirst: false }).returns<FingerprintRow[]>(),
+    db.from("candidate_matches").select("id, rank, overall_score, classification, memes(title)").eq("candidate_id", candidate.id).neq("classification", "SEPARATE").order("rank").limit(5).returns<MatchRow[]>(),
+    db.from("claim_evidence").select("id, claim_field, claim_text, confidence, review_status, media_sources(canonical_url), text_segments(origin, start_ms, raw_text)").eq("candidate_id", candidate.id).order("created_at").returns<ClaimRow[]>(),
+    db.from("candidate_revisions").select("id, revision_number, draft_json, model_version, prompt_version, created_at").eq("candidate_id", candidate.id).order("revision_number", { ascending: false }).limit(5).returns<RevisionRow[]>(),
   ]);
   const firstError = [jobsResult.error, segmentsResult.error, fingerprintsResult.error, matchesResult.error, claimsResult.error, revisionsResult.error].find(Boolean);
   if (firstError) throw new Error(`MPE 검수 자료를 불러오지 못했어요: ${firstError.message}`);

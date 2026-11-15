@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/mpe/candidates.server", () => ({
   createCandidateFromIngestion: mocks.createCandidateFromIngestion,
   discardCreatedCandidate: mocks.discardCreatedCandidate,

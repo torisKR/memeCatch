@@ -42,7 +42,8 @@ describe.skipIf(!databaseUrl)("postgres query executor", () => {
 
   it("rejects a table outside the public catalog", async () => {
     const client = createPlanClient((plan, signal) => executePlan(plan, anon, signal));
-    const result = await client.from("pg_authid").select("rolname");
+    // Deliberately outside the typed catalog.
+    const result = await client.from("pg_authid" as "memes").select("rolname");
     expect(result.error?.code).toBe("42602");
   });
 

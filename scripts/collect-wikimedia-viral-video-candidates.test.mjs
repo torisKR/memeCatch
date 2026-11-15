@@ -9,5 +9,5 @@ const source = readFileSync(
 assert.match(source, /Wikimedia Category: Viral videos/);
 assert.match(source, /review_status: "needs_human_source_match"/);
 assert.match(source, /year < 2000 \|\| year > 2020/);
-assert.doesNotMatch(source, /meme_contents|meme_sources|supabase/i);
+assert.doesNotMatch(source, /meme_contents|meme_sources|DATABASE_URL|createAdminClient/i);
 console.log("collect-wikimedia-viral-video-candidates safeguards OK");

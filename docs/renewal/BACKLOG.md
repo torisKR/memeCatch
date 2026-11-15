@@ -701,7 +701,7 @@
       사용자 영향: 5 / 데이터·법적 위험: 3 / 트래픽 가중치: 3 / 해결 확신: 4 / 예상 노력: 3
       의존성: `saved_memes` owner scope · `memes` 공개 상태 · `meme_translations` stale/reviewed 상태 · Plus entitlement
       완료 조건: 공개 콘텐츠 변화만 immutable event로 기록하고 활성 Plus의 자기 저장 밈에만 전달하며, Premium에서 locale-safe 상세 링크·읽음 처리·마이그레이션 전 폴백을 제공한다. 트렌드 점수 배치를 콘텐츠 변경으로 오인하지 않는다.
-      검증 명령: `pnpm exec vitest run lib/saved-context-watch.test.ts supabase/plus_saved_context_watch.test.ts components/premium/plus-saved-context-watch.test.tsx app/api/saved-context-alerts/route.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
+      검증 명령: `pnpm exec vitest run lib/saved-context-watch.test.ts db/plus_saved_context_watch.test.ts components/premium/plus-saved-context-watch.test.tsx app/api/saved-context-alerts/route.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
       상태: done (루프 066; build는 원격 Supabase DNS 게이트로 실패, production migration/deploy 미수행)
       결과: `meme_public_change_events`·`plus_saved_context_alerts`·self-scoped read RPC/cron과 `PlusSavedContextWatch`를 추가했다. 전체 test 111 files / 769 tests.
 
@@ -711,7 +711,7 @@
       우선순위 점수: 20.0
       의존성: Loop 065 관리자 GPT 보조 검수 · Loop 066 `meme_public_change_events`/`plus_saved_context_alerts` · active Plus · owner-scoped `saved_memes`
       완료 조건: Plus 사용자가 자기 저장 밈의 en/ja/zh/zh-tw 번역 검수를 idempotent하게 요청하고, 운영자가 수요순 큐에서 claim하며, 최신 reviewed 번역 승인 시 요청 완료와 owner-scoped 알림이 중복 없이 연결된다. 자동 번역 승인·자동 게시를 추가하지 않는다.
-      검증 명령: `pnpm exec vitest run app/api/translation-priority/route.test.ts components/premium/translation-priority-button.test.tsx lib/actions/admin-translations.test.ts supabase/plus_translation_priority_requests.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint`
+      검증 명령: `pnpm exec vitest run app/api/translation-priority/route.test.ts components/premium/translation-priority-button.test.tsx lib/actions/admin-translations.test.ts db/plus_translation_priority_requests.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint`
       상태: done (루프 067 로컬 코드·SQL source contract; production migration/deploy 미승인·미수행)
       결과: `plus_translation_requests`와 요청/수요 큐/claim/완료 trigger 계약, locale 상세 CTA, 관리자 수요 큐를 연결했다. targeted 4 files / 20 tests, 전체 114 files / 784 tests 통과. 실제 Supabase RLS/RPC/trigger와 완료 알림 fan-out은 migration 적용 전이라 미검증이다.
 
@@ -725,7 +725,7 @@
       우선순위 점수: 15.0
       의존성: active Plus entitlement · `trend_alerts` saved/category fan-out · current reviewed translations · 외부 email relay
       완료 조건: 명시적 수신 동의 사용자만 KST 날짜당 최대 1회 원장에 들어가고, 저장 밈 급상승을 먼저 최대 3개 제공한다. approved/limited·rising·green/yellow와 현재 reviewed locale 번역만 사용하며, 수신 언어·상세 링크·안전 신호를 포함한다. provider 미설정 시 claim/send를 하지 않는다.
-      검증 명령: `pnpm exec vitest run lib/plus-daily-signal.server.test.ts lib/plus-daily-signal-delivery.server.test.ts components/premium/plus-daily-signal-settings.test.tsx app/api/plus/daily-signal/preferences/route.test.ts app/api/cron/plus-daily-signal/route.test.ts supabase/plus_daily_signal.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
+      검증 명령: `pnpm exec vitest run lib/plus-daily-signal.server.test.ts lib/plus-daily-signal-delivery.server.test.ts components/premium/plus-daily-signal-settings.test.tsx app/api/plus/daily-signal/preferences/route.test.ts app/api/cron/plus-daily-signal/route.test.ts db/plus_daily_signal.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
       상태: code_complete (루프 068 로컬 코드·SQL·mock relay contract; production migration/relay/deploy 미승인·미수행)
       결과: `plus_digest_preferences`·`plus_digest_deliveries`와 service-role queue/claim/finish RPC, `/premium` 수신 설정, localized email builder, mock relay cron을 연결했다. targeted 7 files / 102 tests, 전체 120 files / 809 tests 통과. 실제 Supabase RLS/RPC 실행·relay credential·발송/수신·production 적용은 별도 게이트다.
 
@@ -767,7 +767,7 @@
       우선순위 점수: 21.7
       의존성: Asia/Seoul KST 날짜·approved/limited public memes·5개 locale reviewed/current translations·active Plus entitlement·기존 `buildQuestions()`·Supabase RPC 경계
       완료 조건: `/daily`와 4개 localized route가 signed-out/free/active Plus/unavailable 상태를 정직하게 분리하고, KST 날짜당 reviewed/current 5 locale 후보 12개에서 locale별 3문제를 deterministic하게 제공한다. 완료 요청은 locale만 허용하고 서버가 사용자·날짜·밈 ID를 결정하며, user/date당 한 번의 completion과 streak를 기록한다. machine/stale/missing 번역을 public quiz로 fallback하지 않는다.
-      검증 명령: `pnpm exec vitest run lib/global-daily-challenge.test.ts lib/global-daily-challenge.server.test.ts supabase/plus_global_daily_challenge.test.ts app/api/plus/global-daily/complete/route.test.ts components/premium/global-daily-challenge.test.tsx components/premium/premium-dashboard-content.test.tsx lib/i18n-routing.test.ts lib/i18n-premium.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
+      검증 명령: `pnpm exec vitest run lib/global-daily-challenge.test.ts lib/global-daily-challenge.server.test.ts db/plus_global_daily_challenge.test.ts app/api/plus/global-daily/complete/route.test.ts components/premium/global-daily-challenge.test.tsx components/premium/premium-dashboard-content.test.tsx lib/i18n-routing.test.ts lib/i18n-premium.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
       상태: code_complete (루프 072 로컬 5 locale Daily contract; Supabase migration/RLS/RPC·authenticated Plus QA·production deploy 미승인·미수행)
       결과: KST 고정 12후보/3문제 생성기, 5개 locale route·copy·Plus dashboard entry, completion API와 idempotent streak RPC를 연결했다. targeted 8 files / 125 tests, 전체 129 files / 852 tests 통과. local HTTP에서 3 route·security/noindex·invalid completion input을 확인했으며 실제 DB-backed 성공 흐름은 Docker daemon 부재로 미검증이다.
 
@@ -837,7 +837,7 @@
       우선순위 점수: 33.3
       의존성: existing `plus_translation_requests` · active Plus entitlement · owner-scoped `saved_memes` request RPC · operator queue/claim · human CAS reviewed/current publication trigger · SEO content locales
       완료 조건: active Plus의 `/premium`에 자기 요청만 최대 20건 표시하고 `requested`·`in_review`·`completed`·`dismissed` 상태와 시각·exact locale 상세 링크를 제공한다. 완료는 exact locale reviewed/current일 때만 ready이며 원문 revision 변경은 stale로 표시한다. free/expired/blank owner는 fulfillment query·DTO를 만들지 않는다. 성공 empty와 query unavailable을 구분하고 operator claim·human publish 경계를 유지한다.
-      검증 명령: `pnpm exec vitest run lib/plus-translation-fulfillment.test.ts lib/plus-translation-fulfillment.server.test.ts components/premium/plus-translation-fulfillment-center.test.tsx components/premium/premium-dashboard-content.test.tsx lib/i18n-premium.test.ts supabase/plus_translation_priority_requests.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP signed-out `/premium`/translation API
+      검증 명령: `pnpm exec vitest run lib/plus-translation-fulfillment.test.ts lib/plus-translation-fulfillment.server.test.ts components/premium/plus-translation-fulfillment-center.test.tsx components/premium/premium-dashboard-content.test.tsx lib/i18n-premium.test.ts db/plus_translation_priority_requests.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP signed-out `/premium`/translation API
       상태: code_complete (루프 078 로컬 Plus fulfillment/RLS contract; production migration·authenticated Plus/operator E2E·deploy 미수행)
       결과: 순수 fulfillment builder·server-only owner loader·4 locale copy/zh-tw fallback UI·Premium wiring을 추가하고 translation request self-read RLS를 owner + active Plus로 강화했다. targeted 6 files / 110 tests, 전체 142 files / 937 tests, tsc/lint/build/diff check·signed-out premium 307·translation POST 401을 확인했다. 실제 요청→운영자 claim→human reviewed completion→알림과 Supabase RLS 실행은 운영 게이트로 남겼다.
 
@@ -865,7 +865,7 @@
       우선순위 점수: 75.0
       의존성: `has_active_plus(auth.uid())` · 기존 owner-scoped policies · service/operator flow
       완료 조건: 두 private alert self-read 정책 모두 owner + active Plus를 요구하고, browser write grant·RPC·service fan-out을 변경하지 않는다. forward migration과 active/expired/cross-owner source contract를 남긴다.
-      검증 명령: `pnpm exec vitest run supabase/plus_alert_entitlement_rls.test.ts supabase/plus_saved_context_watch.test.ts supabase/plus_saved_meme_rising_alerts.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
+      검증 명령: `pnpm exec vitest run db/plus_alert_entitlement_rls.test.ts db/plus_saved_context_watch.test.ts db/plus_saved_meme_rising_alerts.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check`
       상태: code_complete (루프 079 local forward RLS contract; production migration·JWT PostgREST E2E 미수행)
       결과: `20260809190000_plus_alert_entitlement_rls.sql`과 source contract를 추가했다. targeted 3 files / 14 tests, 전체 143 files / 942 tests 통과. 실제 DB 적용과 active/expired/cross-owner 관찰은 운영 게이트다.
 
@@ -893,7 +893,7 @@
       우선순위 점수: 25.0
       의존성: 기존 Plus Action Inbox read models · active Plus entitlement · KST 날짜 · reviewed/approved public content · 새 owner-scoped completion RPC
       완료 조건: 활성 Plus만 활용 완료 API/RPC에 접근하고, 사용자·밈·KST 날짜별 완료를 멱등 기록한다. 오늘 완료한 밈은 인박스에서 제외하고, 카드에서 검수된 텍스트를 복사·공유하며 오늘 완료 수·연속 활용 일수를 표시한다. migration은 파일로만 남기고 적용·자동 게시·외부 SNS POST는 하지 않는다.
-      검증 명령: `pnpm exec vitest run lib/plus-global-action-inbox.test.ts lib/plus-global-action-inbox.server.test.ts components/premium/plus-global-action-inbox.test.tsx app/api/plus/action-inbox/complete/route.test.ts supabase/plus_meme_use_completions.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP
+      검증 명령: `pnpm exec vitest run lib/plus-global-action-inbox.test.ts lib/plus-global-action-inbox.server.test.ts components/premium/plus-global-action-inbox.test.tsx app/api/plus/action-inbox/complete/route.test.ts db/plus_meme_use_completions.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP
       상태: code_complete (루프 081 local Plus use loop; migration/RLS/RPC authenticated E2E·production deploy 미수행)
       결과: Action Inbox에 server-derived completion summary, copy/share/mark-used controls, owner + active Plus gated API, KST idempotent completion migration 초안을 연결했다. targeted 5 files / 18 tests, 전체 148 files / 961 tests, tsc/lint/build/diff check·signed-out premium/invalid API HTTP를 확인했다. 실제 Supabase 적용·Plus 인증 사용자 완료 기록은 운영 게이트다.
 
@@ -1047,7 +1047,7 @@
       우선순위 점수: 50.0
       의존성: `plus_meme_use_receipts` · active Plus entitlement · owner-scoped RLS/RPC · 기존 7일 Outcome Ledger
       완료 조건: 최근 7일 receipt 최대 5건을 성과 미입력 우선으로 표시하고, 제목·날짜·채널·언어·산출물만 노출한다. active Plus 본인의 미입력 receipt만 성과 메모(필수, 최대 1,000자)를 한 번 갱신하고 기존 값은 덮어쓰지 않는다. 저장 성공 시 대기 수와 목록을 새로고침 없이 갱신하며 실패 시 입력값을 보존한다. ko/en/ja/zh/zh-tw 카피와 signed-out/free/RPC negative 경계를 포함한다.
-      검증 명령: `pnpm exec vitest run lib/plus-outcome-follow-up.test.ts lib/plus-outcome-follow-up.server.test.ts app/api/plus/outcome-ledger/performance/route.test.ts components/premium/plus-outcome-follow-up.test.tsx supabase/plus_meme_use_performance_followup.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP
+      검증 명령: `pnpm exec vitest run lib/plus-outcome-follow-up.test.ts lib/plus-outcome-follow-up.server.test.ts app/api/plus/outcome-ledger/performance/route.test.ts components/premium/plus-outcome-follow-up.test.tsx db/plus_meme_use_performance_followup.test.ts` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP
       상태: code_complete (루프 093 local Outcome Follow-up; production migration·JWT/RLS authenticated E2E·실제 Plus 저장·production deploy 미수행)
       결과: 기존 Outcome Ledger 안에 최근 활용 목록과 `성과 추가` 인라인 form을 연결했다. `record_plus_meme_use_performance` RPC/API는 owner + active Plus와 one-time update를 강제하며 URL/private note를 client로 보내지 않는다. focused 7 files / 25 tests, 전체 160 files / 1,045 tests, tsc/lint/build·signed-out `/premium` 307·성과 API 401을 확인했다.
 
@@ -1089,7 +1089,7 @@
       우선순위 점수: 33.3
       의존성: `plus_meme_use_receipts` · active Plus entitlement · owner-scoped rating RPC · 기존 Action Inbox/Outcome Follow-up
       완료 조건: 최근 28일·최대 50건의 `hit|neutral|miss` 평가를 owner + active Plus만 1회 저장한다. 평가 3건 미만은 학습 중으로 표시하고, hit는 가산·miss는 감점·동점은 기존 Action Inbox 순서를 유지한다. 오늘 완료한 밈은 다음 추천에서 제외하며, 평가를 저장하면 같은 화면의 Next Move가 즉시 재정렬된다. URL·private note·자유 텍스트는 추천 DTO나 UI에 노출하지 않는다.
-      검증 명령: `pnpm exec vitest run lib/plus-next-move.test.ts components/premium/plus-next-move.test.tsx app/api/plus/outcome-ledger/rating/route.test.ts supabase/plus_meme_use_outcome_ratings.test.ts components/premium/plus-outcome-follow-up.test.tsx` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP
+      검증 명령: `pnpm exec vitest run lib/plus-next-move.test.ts components/premium/plus-next-move.test.tsx app/api/plus/outcome-ledger/rating/route.test.ts db/plus_meme_use_outcome_ratings.test.ts components/premium/plus-outcome-follow-up.test.tsx` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `git diff --check` · local production HTTP
       상태: code_complete (루프 096 local Plus Next Move; production migration·authenticated JWT/RLS·실제 rating 저장·production deploy 미수행)
       결과: `performance_rating` additive migration/RPC/API와 28일 rating loader, deterministic Next Move ranking, 5-locale copy, one-time rating UI를 연결했다. focused 7 files / 28 tests, 전체 164 files / 1,060 tests, tsc/lint/build 73/73·signed-out premium/admin/rating 경계를 확인했다. 기존 note follow-up은 migration rolling fallback으로 유지된다.
 
@@ -1784,7 +1784,7 @@
       우선순위 점수: 62.5
       의존성: 기존 `record_plus_meme_use_receipt`·`/api/plus/action-inbox/complete`·One-Cut Creator Pack·owner-scoped RLS·local ACT-001 runner
       완료 조건: 여섯 의미 필드가 동일한 retry만 멱등 성공하고, 차이가 있으면 `receipt_conflict`/HTTP 409로 fail-closed한다. canonical trim 값과 race-safe insert branch를 동일하게 적용하고 receipt UPDATE/direct write를 열지 않는다. UI가 충돌 이유를 표시하며 free/canceled/cross-owner와 cleanup 경계를 유지한다. 결제·번역 publication·production activation은 이 항목의 완료로 주장하지 않는다.
-      검증 명령: `pnpm exec vitest run 'app/api/plus/action-inbox/complete/route.test.ts' 'components/premium/plus-outcome-receipt-form.test.tsx' 'supabase/plus_meme_use_receipts.test.ts' 'supabase/plus_meme_use_receipt_integrity.test.ts'` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `node --check scripts/plus-activation-local.mjs` · `git diff --check` · local production route smoke · independent `gpt-5.6-sol` high review
+      검증 명령: `pnpm exec vitest run 'app/api/plus/action-inbox/complete/route.test.ts' 'components/premium/plus-outcome-receipt-form.test.tsx' 'db/plus_meme_use_receipts.test.ts' 'db/plus_meme_use_receipt_integrity.test.ts'` · `pnpm test` · `pnpm exec tsc --noEmit` · `pnpm lint` · `pnpm build` · `node --check scripts/plus-activation-local.mjs` · `git diff --check` · local production route smoke · independent `gpt-5.6-sol` high review
       상태: code_complete (루프 145 — receipt semantic retry integrity; local Supabase RPC runtime은 CLI crash/환경변수 부재로 미실행)
       결과: 후속 migration에서 canonical trim 값으로 여섯 필드를 비교하고 conflict를 반환한다. API 409와 5개 locale UI copy, `creator_pack` local runner의 실제 p_channel conflict·owner read-back·cleanup contract를 추가했다. focused 4파일/20건, 전체 183파일/1,308건, tsc/lint/build/diff check·HTTP smoke·최종 independent `gpt-5.6-sol` high PASS/APPROVE를 통과했다.
 

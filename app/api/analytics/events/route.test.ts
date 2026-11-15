@@ -11,7 +11,7 @@ vi.mock("@/lib/growth/events.server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/growth/events.server")>();
   return { ...actual, recordClientGrowthEvent: mocks.record };
 });
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/db/server", () => ({
   createClient: async () => ({ auth: { getUser: mocks.getUser } }),
 }));
 vi.mock("@/lib/rate-limit", () => ({

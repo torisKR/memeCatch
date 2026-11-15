@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { createRadarRepository } from "@/lib/trend/radar-repository.server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 
 describe("createRadarRepository", () => {
   it("upserts external posts by platform content id without creating repeat observations", async () => {

@@ -59,55 +59,17 @@ describe("Bedrock Meme Studio", () => {
     expect(h.client.send).not.toHaveBeenCalled();
   });
 
-  it("uses Vercel OIDC credentials only when a role ARN exists", () => {
+  it("leaves credentials to the AWS SDK default chain", () => {
     const createClient = vi.fn((config) => ({ send: vi.fn(), config }));
-    const credentials = vi.fn(() => vi.fn());
-    const oidc = createBedrockMemeStudioClient({
-      env: { VERCEL: "1", AWS_ROLE_ARN: "arn:aws:iam::123:role/memecatch" },
-      createClient,
-      oidcCredentialsProvider: credentials,
-    });
-    expect(credentials).toHaveBeenCalledWith({
-      roleArn: "arn:aws:iam::123:role/memecatch",
-      clientConfig: { region: BEDROCK_MEME_STUDIO_DEFAULT_REGION },
-    });
-    expect(createClient).toHaveBeenCalledWith(expect.objectContaining({
-      credentials: expect.any(Function),
-      maxAttempts: 1,
-      region: BEDROCK_MEME_STUDIO_DEFAULT_REGION,
-    }));
-    expect(oidc).toBeTruthy();
+    createBedrockMemeStudioClient({ env: { AWS_REGION: "us-west-2" }, createClient });
+    expect(createClient).toHaveBeenCalledWith({ maxAttempts: 1, region: "us-west-2" });
 
     createClient.mockClear();
-    credentials.mockClear();
-    createBedrockMemeStudioClient({
-      env: { AWS_ROLE_ARN: "arn:aws:iam::123:role/local" },
-      createClient,
-      oidcCredentialsProvider: credentials,
-    });
-    expect(credentials).not.toHaveBeenCalled();
+    createBedrockMemeStudioClient({ env: {}, createClient });
     expect(createClient).toHaveBeenCalledWith({
-      credentials: undefined,
       maxAttempts: 1,
       region: BEDROCK_MEME_STUDIO_DEFAULT_REGION,
     });
-
-    createClient.mockClear();
-    expect(() => createBedrockMemeStudioClient({
-      env: { VERCEL: "1" },
-      createClient,
-      oidcCredentialsProvider: credentials,
-    })).toThrow(expect.objectContaining({ code: BEDROCK_MEME_STUDIO_ERROR.oidcRoleRequired }));
-    expect(createClient).not.toHaveBeenCalled();
-  });
-
-  it("does not reserve budget when Vercel OIDC role configuration is missing", async () => {
-    const reserveCost = vi.fn();
-    await expect(generateBedrockMemeConcepts(input, {
-      reserveCost,
-      env: { BEDROCK_MEME_STUDIO_ENABLED: "true", VERCEL: "1" },
-    })).rejects.toMatchObject({ code: BEDROCK_MEME_STUDIO_ERROR.oidcRoleRequired });
-    expect(reserveCost).not.toHaveBeenCalled();
   });
 
   it("reserves the bounded worst case, then calls Converse once on the exact model", async () => {

@@ -62,7 +62,7 @@ const BUILTIN_UDT = new Set([
   "varchar",
 ]);
 
-function castFor(udt: string | undefined, value: unknown): string {
+export function castFor(udt: string | undefined, value: unknown): string {
   if (Array.isArray(value)) {
     if (udt === "jsonb" || udt === "json") return "::jsonb";
     if (udt === "_uuid" || udt === "uuid") return "::uuid[]";
@@ -70,6 +70,8 @@ function castFor(udt: string | undefined, value: unknown): string {
       return "::bigint[]";
     }
     if (udt === "_bool" || udt === "bool") return "::boolean[]";
+    if (udt === "_float4" || udt === "_float8" || udt === "float4" || udt === "float8") return "::double precision[]";
+    if (udt === "_numeric" || udt === "numeric") return "::numeric[]";
     return "::text[]";
   }
   switch (udt) {
@@ -616,11 +618,24 @@ function shapeRows(plan: QueryPlan, rows: Record<string, unknown>[], count: numb
   return { data, error: null, count, status: 200, statusText: "OK" };
 }
 
+/**
+ * Serialize each row as JSON inside Postgres, the way PostgREST did. Top-level
+ * columns then match embedded (json) columns exactly: timestamps keep
+ * microseconds and their `+00:00` offset, numeric/bigint come back as numbers.
+ * pg's own Date parsing would drop microseconds and change the offset format,
+ * so equal instants would compare unequal as strings. Plan queries only;
+ * Better Auth shares the pool and keeps pg's default parsing.
+ */
+export function asJsonRows(sqlText: string): string {
+  return `WITH __q AS (${sqlText}) SELECT row_to_json(__q) AS __row FROM __q`;
+}
+
 async function runQuery(
   identity: DbIdentity,
   sqlText: string,
   params: unknown[],
   signal?: AbortSignal,
+  json = true,
 ): Promise<Record<string, unknown>[]> {
   return withIdentity(identity, async (trx: Transaction<Record<string, Record<string, unknown>>>, cancel) => {
     if (signal?.aborted) throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
@@ -629,8 +644,14 @@ async function runQuery(
     };
     signal?.addEventListener("abort", abort, { once: true });
     try {
-      const result = await trx.executeQuery<Record<string, unknown>>(CompiledQuery.raw(sqlText, params));
-      return result.rows;
+      if (!json) {
+        const result = await trx.executeQuery<Record<string, unknown>>(CompiledQuery.raw(sqlText, params));
+        return result.rows;
+      }
+      const result = await trx.executeQuery<{ __row: Record<string, unknown> }>(
+        CompiledQuery.raw(asJsonRows(sqlText), params),
+      );
+      return result.rows.map((row) => row.__row);
     } finally {
       signal?.removeEventListener("abort", abort);
     }
@@ -658,14 +679,15 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
       const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal);
       let count: number | null = null;
       if (countSql) {
-        const counted = await runQuery(identity, countSql.sql, countSql.params, signal);
+        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false);
         count = Number(counted[0]?.count ?? 0);
       }
       return shapeRows(plan, rows, count, false);
     }
     attachDottedFilters(plan);
     const built = mutationSql(plan, meta);
-    const rows = await runQuery(identity, built.sql, built.params, signal);
+    // Without RETURNING there are no rows, and a WITH wrapper would be rejected.
+    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning);
     return shapeRows(plan, rows, null, false);
   } catch (error) {
     return { data: null, error: queryError(error), count: null };

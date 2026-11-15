@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { getPremiumEntitlement } from "@/lib/billing/repository.server";
+import { createClient } from "@/lib/db/server";
 import {
   SAFETY_LEVELS,
   LIFECYCLE_STATUS,
@@ -10,7 +9,6 @@ import {
   type LifecycleStatus,
 } from "@/lib/labels";
 import {
-  CARD_TEMPLATES,
   CARD_FORMATS,
   isCardTemplate,
   isCardFormat,
@@ -26,8 +24,6 @@ import { isSeoContentLocale } from "@/lib/i18n-routing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const MAX_PREMIUM_SCALE = 3;
 
 type ExportQuotaClient = {
   rpc(name: "reserve_meme_export"): PromiseLike<{ error: { code?: string } | null }>;
@@ -53,10 +49,8 @@ function errorResponse(error: string, status: number): Response {
 
 /**
  * B2 — 밈 카드 이미지 내보내기.
- * 무료: classic 템플릿 + card 포맷 + 1x + "catchmeme.com" 워터마크.
- * Plus: 모든 템플릿·포맷 + 최대 3x 고해상도 + 워터마크 제거.
- *
- * 서버가 엔타이틀먼트를 최종 판정한다(클라이언트 UI 게이팅과 별개로 위조 방지).
+ * 로그인 사용자 누구나 모든 템플릿·포맷을 1x + "catchmeme.com" 워터마크로 받는다.
+ * 남용은 reserve_meme_export 쿼터가 막는다.
  */
 export async function GET(
   req: NextRequest,
@@ -71,11 +65,13 @@ export async function GET(
   }
   const localizedLocale = isSeoContentLocale(requestedLocale) ? requestedLocale : null;
 
-  const { signedIn, isPremium } = await getPremiumEntitlement();
-  if (!signedIn) return errorResponse("signed_out", 401);
+  const db = await createClient();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) return errorResponse("signed_out", 401);
 
-  const supabase = await createClient();
-  const { error: quotaError } = await (supabase as unknown as ExportQuotaClient).rpc(
+  const { error: quotaError } = await (db as unknown as ExportQuotaClient).rpc(
     "reserve_meme_export",
   );
   if (quotaError) {
@@ -83,32 +79,14 @@ export async function GET(
     return errorResponse(limited ? "rate_limited" : "quota_unavailable", limited ? 429 : 503);
   }
 
-  // --- 옵션 파싱 + 엔타이틀먼트 게이팅 ---
+  // --- 옵션 파싱 ---
   const templateParam = sp.get("template");
   const formatParam = sp.get("format");
   const template = isCardTemplate(templateParam) ? templateParam : "classic";
   const format = isCardFormat(formatParam) ? formatParam : "card";
 
-  // 프리미엄 전용 옵션을 무료 사용자가 요청하면 402(업그레이드 유도).
-  const wantsPremiumTemplate = CARD_TEMPLATES[template].premium;
-  const wantsPremiumFormat = CARD_FORMATS[format].premium;
-  const requestedScale = Number(sp.get("scale") ?? "1");
-  const wantsHighRes = Number.isFinite(requestedScale) && requestedScale > 1;
-
-  if (!isPremium && (wantsPremiumTemplate || wantsPremiumFormat || wantsHighRes)) {
-    return NextResponse.json(
-      { error: "premium_required" },
-      { status: 402, headers: { "cache-control": "no-store" } },
-    );
-  }
-
-  const scale = isPremium
-    ? Math.min(Math.max(Math.round(requestedScale) || 1, 1), MAX_PREMIUM_SCALE)
-    : 1;
-  const watermark = !isPremium;
-
   // --- 데이터 로드 ---
-  const { data: meme, error: memeError } = await supabase
+  const { data: meme, error: memeError } = await db
     .from("memes")
     .select("id, title, summary, updated_at, safety_level, lifecycle_status")
     .eq("short_id", shortId)
@@ -120,7 +98,7 @@ export async function GET(
   let title = meme.title;
   let summary = meme.summary;
   if (localizedLocale) {
-    const { data: translation, error: translationError } = await supabase
+    const { data: translation, error: translationError } = await db
       .from("meme_translations")
       .select("meme_id, locale, status, title, summary, description, origin, source_updated_at")
       .eq("meme_id", meme.id)
@@ -159,17 +137,17 @@ export async function GET(
     {
       template,
       format,
-      watermark,
+      watermark: true,
       hasFont: fonts !== null,
       locale: localizedLocale ?? "ko",
     },
   );
 
-  const filename = `memecatch-${shortId}-${template}-${format}${scale > 1 ? `@${scale}x` : ""}.png`;
+  const filename = `memecatch-${shortId}-${template}-${format}.png`;
 
   return new ImageResponse(element, {
-    width: width * scale,
-    height: height * scale,
+    width,
+    height,
     fonts: fonts
       ? [
           { name: "Pretendard", data: fonts.bold, style: "normal" as const, weight: 700 as const },

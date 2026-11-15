@@ -6,7 +6,6 @@ export const WEBMCP_NAV_SECTIONS = {
   home: "/",
   explore: "/explore",
   search: "/search",
-  daily: "/daily",
   rankings: "/rankings",
   timeline: "/timeline",
   news: "/news",

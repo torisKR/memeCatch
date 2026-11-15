@@ -249,14 +249,9 @@ describe("retired product responses", () => {
   });
 
   it("does not schedule the adpick hotdeal cron", () => {
-    const config = JSON.parse(readFileSync(join(process.cwd(), "vercel.json"), "utf8")) as {
-      crons: Array<{ path: string; schedule: string }>;
-    };
-    expect(config.crons.map((cron) => cron.path)).not.toContain("/api/cron/adpick-hotdeals");
-    expect(config.crons).toContainEqual({
-      path: "/api/cron/trend-pulse",
-      schedule: "0 18 * * *",
-    });
+    const crontab = readFileSync(join(process.cwd(), "deploy/scheduler/crontab"), "utf8");
+    expect(crontab).not.toContain("/api/cron/adpick-hotdeals");
+    expect(crontab).toMatch(/^0 18 \* \* \* \/usr\/local\/bin\/run-cron \/api\/cron\/trend-pulse$/m);
   });
 });
 

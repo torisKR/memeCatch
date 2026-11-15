@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/memes/demo1234",
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/db/client", () => ({
   createClient: () => ({
     auth: { getSession },
   }),

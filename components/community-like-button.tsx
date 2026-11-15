@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { LoginGate } from "@/components/login-gate";
 
 const GATE_MESSAGE = "로그인하면 좋아요를 남길 수 있어요.";
@@ -32,10 +32,10 @@ export function CommunityLikeButton({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
+      const db = createClient();
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await db.auth.getUser();
       if (cancelled) return;
       setLoggedIn(!!user);
       if (!user) return;

@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { DbSessionClient } from "@/lib/db/types";
 
-const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn(), createPublicClient: vi.fn(), motif: vi.fn(), caption: vi.fn() }));
+const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn(), motif: vi.fn(), caption: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
-vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.createPublicClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient: mocks.createStaticClient }));
 vi.mock("@/lib/meme-collectible-catalog", () => ({ getMemeCardArtDirection: mocks.motif, getMemeCardEditorialCaption: mocks.caption }));
 
 import {
@@ -33,7 +31,7 @@ function clientFixture(results: Result[]) {
       return builder;
     }),
   };
-  return { client: client as unknown as SupabaseClient<Database>, records, getUser };
+  return { client: client as unknown as DbSessionClient, records, getUser };
 }
 
 const card = {

@@ -39,14 +39,12 @@ async function getPipeline(): Promise<FeatureExtractionPipeline> {
       },
     });
     extractor.tokenizer.model_max_length = 512;
-    if (process.env.VERCEL) {
-      const used = process.cpuUsage(cpu);
-      console.info("meme_embedding_ready", JSON.stringify({
-        revision: REVISION, dtype: "fp32", dimensions: 384,
-        elapsedMs: Math.round(performance.now() - start), cpuMs: Math.round((used.user + used.system) / 1000),
-        rssBytes: process.memoryUsage().rss, maxRssKiB: process.resourceUsage().maxRSS,
-      }));
-    }
+    const used = process.cpuUsage(cpu);
+    console.info("meme_embedding_ready", JSON.stringify({
+      revision: REVISION, dtype: "fp32", dimensions: 384,
+      elapsedMs: Math.round(performance.now() - start), cpuMs: Math.round((used.user + used.system) / 1000),
+      rssBytes: process.memoryUsage().rss, maxRssKiB: process.resourceUsage().maxRSS,
+    }));
     return extractor;
   })().catch((error: unknown) => {
     pipelinePromise = null;

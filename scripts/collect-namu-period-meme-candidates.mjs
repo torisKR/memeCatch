@@ -4,7 +4,7 @@
  * "밈(인터넷 용어)/시기별" article, then drop anything already present in the
  * local catalog (verified + raw) by memeTitleKey(title|aliases).
  *
- * Output is review-only discovery JSONL. It never writes to Supabase.
+ * Output is review-only discovery JSONL. It never writes to the database.
  *
  * Usage:
  *   node scripts/collect-namu-period-meme-candidates.mjs \

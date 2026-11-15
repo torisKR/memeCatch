@@ -1,11 +1,10 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
-import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
+import { PUBLIC_CATALOG_CACHE_TAG, PUBLIC_COUNT_CACHE_TAG } from "@/lib/db/cache-tags";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/db/admin";
+import { createClient } from "@/lib/db/server";
 import type { Json } from "@/lib/database.types";
 import { RIGHTS_BASIS, SOURCE_ROLES, type RightsBasis, type SourceRole } from "@/lib/sources/review";
 
@@ -26,12 +25,12 @@ const sourceRightsSchema = z.object({
 });
 
 async function requireOperator() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: isOperator } = await supabase.rpc("is_operator");
+  const { data: isOperator } = await db.rpc("is_operator");
   if (!isOperator) throw new Error("운영자 권한이 없어요.");
-  return { supabase, uid: user.id };
+  return { db, uid: user.id };
 }
 
 async function audit(actorId: string, action: string, entityId: string, detail?: Json) {
@@ -76,8 +75,8 @@ export async function reviewMpeCandidate(input: {
       return { ok: false, error: "앞 단계를 건너뛰어 공개할 수 없어요." };
     }
 
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase.rpc("review_mpe_candidate", {
+    const { db, uid } = await requireOperator();
+    const { error } = await db.rpc("review_mpe_candidate", {
       p_candidate_id: parsed.data.candidateId,
       p_stage: parsed.data.stage,
       p_decision: parsed.data.decision,
@@ -111,8 +110,8 @@ export async function saveMpeCandidateRevision(input: {
     const serialized = JSON.stringify(parsed.data.draft);
     if (serialized.length > 100_000) return { ok: false, error: "초안이 너무 커요." };
 
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase.rpc("save_mpe_candidate_revision", {
+    const { db, uid } = await requireOperator();
+    const { error } = await db.rpc("save_mpe_candidate_revision", {
       p_candidate_id: parsed.data.candidateId,
       p_draft_json: parsed.data.draft as Json,
     });
@@ -133,8 +132,8 @@ export async function setMpeIngestionSourceRights(input: {
   try {
     const parsed = sourceRightsSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: "출처 역할과 권리 근거를 확인해 주세요." };
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase.rpc("set_mpe_ingestion_source_rights", {
+    const { db, uid } = await requireOperator();
+    const { error } = await db.rpc("set_mpe_ingestion_source_rights", {
       p_ingestion_id: parsed.data.ingestionId,
       p_source_role: parsed.data.sourceRole,
       p_rights_basis: parsed.data.rightsBasis,
@@ -159,8 +158,8 @@ export async function reviewMpeClaim(input: {
   try {
     const parsed = z.object({ candidateId: idSchema, claimId: idSchema, decision: z.enum(["APPROVED", "REJECTED"]) }).safeParse(input);
     if (!parsed.success) return { ok: false, error: "근거 검수 요청 형식이 올바르지 않아요." };
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase.rpc("review_mpe_claim", {
+    const { db, uid } = await requireOperator();
+    const { error } = await db.rpc("review_mpe_claim", {
       p_candidate_id: parsed.data.candidateId,
       p_claim_id: parsed.data.claimId,
       p_decision: parsed.data.decision,
@@ -180,8 +179,8 @@ export async function reviewMpeClaim(input: {
 export async function reprocessMpeJob(input: { jobId: string }): Promise<MpeActionResult> {
   try {
     if (!idSchema.safeParse(input.jobId).success) return { ok: false, error: "작업 ID가 올바르지 않아요." };
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase.rpc("reprocess_mpe_job", { p_job_id: input.jobId });
+    const { db, uid } = await requireOperator();
+    const { error } = await db.rpc("reprocess_mpe_job", { p_job_id: input.jobId });
     if (error) throw new Error(error.message);
     await audit(uid, "mpe.job.reprocess", input.jobId);
     revalidatePath("/admin/mpe");

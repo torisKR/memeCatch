@@ -9,12 +9,6 @@ type LoginCopy = {
   callbackError: string;
   providerNames: { kakao: string; google: string };
   oauthUnavailable: (provider: string) => string;
-  kaiaButton: string;
-  kaiaAccountNotice: string;
-  kaiaUnavailable: string;
-  kaiaWrongChain: string;
-  kaiaRejected: string;
-  kaiaGenericError: string;
   kakaoButton: string;
   googleButton: string;
   tiktokButton: string;
@@ -49,12 +43,6 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     callbackError: "로그인 링크가 만료됐거나 잘못됐어요. 다시 로그인해 주세요.",
     providerNames: { kakao: "카카오", google: "구글" },
     oauthUnavailable: (provider) => `${provider} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.`,
-    kaiaButton: "Unifi Wallet로 로그인",
-    kaiaAccountNotice: "지갑 로그인은 기존 이메일 계정과 자동으로 연결되지 않아요.",
-    kaiaUnavailable: "Kaia Wallet을 찾지 못했어요. Kaia Wallet을 설치하거나 지갑 브라우저에서 다시 시도해 주세요.",
-    kaiaWrongChain: "Kaia Mainnet으로 네트워크를 변경한 뒤 다시 시도해 주세요.",
-    kaiaRejected: "Kaia Wallet 서명이 취소됐어요. 로그인하려면 다시 시도해 주세요.",
-    kaiaGenericError: "Kaia Wallet 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.",
     kakaoButton: "카카오로 시작하기",
     googleButton: "구글로 시작하기",
     tiktokButton: "TikTok으로 시작하기",
@@ -87,12 +75,6 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     callbackError: "This login link is invalid or has expired. Please log in again.",
     providerNames: { kakao: "Kakao", google: "Google" },
     oauthUnavailable: (provider) => `${provider} login is not available yet. Please use email for now.`,
-    kaiaButton: "Continue with Unifi Wallet",
-    kaiaAccountNotice: "Wallet login does not automatically link to an existing email account.",
-    kaiaUnavailable: "Kaia Wallet was not found. Install it or try again in the wallet browser.",
-    kaiaWrongChain: "Switch to Kaia Mainnet and try again.",
-    kaiaRejected: "The Kaia Wallet signature was cancelled. Try again to log in.",
-    kaiaGenericError: "Kaia Wallet login failed. Please try again shortly.",
     kakaoButton: "Continue with Kakao",
     googleButton: "Continue with Google",
     tiktokButton: "Continue with TikTok",
@@ -125,12 +107,6 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     callbackError: "ログインリンクが無効か、有効期限が切れています。もう一度ログインしてください。",
     providerNames: { kakao: "Kakao", google: "Google" },
     oauthUnavailable: (provider) => `${provider}ログインはまだ利用できません。現在はメールをご利用ください。`,
-    kaiaButton: "Unifi Walletでログイン",
-    kaiaAccountNotice: "ウォレットログインは既存のメールアカウントに自動連携されません。",
-    kaiaUnavailable: "Kaia Walletが見つかりません。インストールするか、ウォレットブラウザで再試行してください。",
-    kaiaWrongChain: "Kaia Mainnetに切り替えてから、もう一度お試しください。",
-    kaiaRejected: "Kaia Walletの署名がキャンセルされました。ログインするにはもう一度お試しください。",
-    kaiaGenericError: "Kaia Walletでのログインに失敗しました。しばらくしてからもう一度お試しください。",
     kakaoButton: "Kakaoで続ける",
     googleButton: "Googleで続ける",
     tiktokButton: "TikTokで続ける",
@@ -163,12 +139,6 @@ const BASE: { ko: LoginCopy; en: LoginCopy; ja: LoginCopy; zh: LoginCopy } = {
     callbackError: "登录链接无效或已过期，请重新登录。",
     providerNames: { kakao: "Kakao", google: "Google" },
     oauthUnavailable: (provider) => `${provider} 登录暂未开放，请先使用邮箱。`,
-    kaiaButton: "使用 Unifi Wallet 登录",
-    kaiaAccountNotice: "钱包登录不会自动关联已有的邮箱账户。",
-    kaiaUnavailable: "未找到 Kaia Wallet。请安装钱包，或在钱包浏览器中重试。",
-    kaiaWrongChain: "请切换到 Kaia Mainnet 后重试。",
-    kaiaRejected: "Kaia Wallet 签名已取消。如需登录，请重试。",
-    kaiaGenericError: "Kaia Wallet 登录失败，请稍后重试。",
     kakaoButton: "使用 Kakao 继续",
     googleButton: "使用 Google 继续",
     tiktokButton: "使用 TikTok 继续",

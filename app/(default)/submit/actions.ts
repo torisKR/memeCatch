@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { flags } from "@/lib/flags";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -105,10 +105,10 @@ export async function submitMemeWithAttachment(
     return { status: "error", fieldErrors };
   }
 
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) {
     return {
       status: "error",
@@ -137,7 +137,7 @@ export async function submitMemeWithAttachment(
     };
   }
 
-  const { error: quotaError } = await (supabase.rpc as unknown as SubmissionQuotaRpc)(
+  const { error: quotaError } = await (db.rpc as unknown as SubmissionQuotaRpc)(
     "reserve_submission_attempt",
   );
   if (quotaError) {
@@ -170,8 +170,8 @@ export async function submitMemeWithAttachment(
     p_guess: guessReason === "" ? null : guessReason,
     p_tags: parseTags(tags),
     p_attachment_path: attachmentPath === "" ? null : attachmentPath,
-  } as unknown as Parameters<typeof supabase.rpc<"submit_meme_v2">>[1];
-  const { data, error } = await supabase.rpc("submit_meme_v2", rpcArgs);
+  } as unknown as Parameters<typeof db.rpc<"submit_meme_v2">>[1];
+  const { data, error } = await db.rpc("submit_meme_v2", rpcArgs);
 
   if (error) {
     if (error.code === "P0429") {

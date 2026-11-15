@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LOCALE_COOKIE, LOCALE_HEADER } from "@/lib/i18n";
 import { proxy, resolveLandingRedirectLocale } from "@/proxy";
 
-const supabaseMocks = vi.hoisted(() => ({
+const dbMocks = vi.hoisted(() => ({
   abortSignal: vi.fn(),
   eq: vi.fn(),
   from: vi.fn(),
@@ -29,36 +29,36 @@ function publicMemeRow(overrides: Record<string, unknown> = {}) {
 
 vi.mock("@/lib/db/request-db", () => ({
   createRequestDb: async () => ({
-    auth: { getUser: supabaseMocks.getUser },
-    from: supabaseMocks.from,
-    rpc: supabaseMocks.rpc,
+    auth: { getUser: dbMocks.getUser },
+    from: dbMocks.from,
+    rpc: dbMocks.rpc,
   }),
 }));
 
 beforeEach(() => {
-  supabaseMocks.getUser.mockReset().mockResolvedValue({ data: { user: null } });
-  supabaseMocks.rpc.mockReset().mockResolvedValue({ data: false, error: null });
-  supabaseMocks.abortSignal.mockReset().mockResolvedValue({
+  dbMocks.getUser.mockReset().mockResolvedValue({ data: { user: null } });
+  dbMocks.rpc.mockReset().mockResolvedValue({ data: false, error: null });
+  dbMocks.abortSignal.mockReset().mockResolvedValue({
     data: [publicMemeRow()],
     error: null,
   });
   const query = {
-    select: supabaseMocks.select,
-    eq: supabaseMocks.eq,
-    in: supabaseMocks.in,
-    limit: supabaseMocks.limit,
-    abortSignal: supabaseMocks.abortSignal,
+    select: dbMocks.select,
+    eq: dbMocks.eq,
+    in: dbMocks.in,
+    limit: dbMocks.limit,
+    abortSignal: dbMocks.abortSignal,
   };
-  supabaseMocks.select.mockReset().mockReturnValue(query);
-  supabaseMocks.eq.mockReset().mockReturnValue(query);
-  supabaseMocks.in.mockReset().mockReturnValue(query);
-  supabaseMocks.limit.mockReset().mockReturnValue(query);
-  supabaseMocks.from.mockReset().mockReturnValue(query);
+  dbMocks.select.mockReset().mockReturnValue(query);
+  dbMocks.eq.mockReset().mockReturnValue(query);
+  dbMocks.in.mockReset().mockReturnValue(query);
+  dbMocks.limit.mockReset().mockReturnValue(query);
+  dbMocks.from.mockReset().mockReturnValue(query);
 });
 
 describe("proxy operator authorization", () => {
   it("removes private dashboard filters when a non-operator is redirected to the public site", async () => {
-    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
+    dbMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
     const response = await proxy(publicRequest("/admin/activity?userId=81000000-0000-4000-8000-000000000003&subscribersOnly=1"));
     const destination = new URL(response.headers.get("location")!);
     expect(destination.pathname).toBe("/");
@@ -66,29 +66,29 @@ describe("proxy operator authorization", () => {
   });
 
   it("redirects an authenticated non-operator without reading profiles.role", async () => {
-    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
+    dbMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "member-1" } } });
 
     const response = await proxy(publicRequest("/admin"));
 
     expect(new URL(response.headers.get("location")!).pathname).toBe("/");
-    expect(supabaseMocks.rpc).toHaveBeenCalledWith("is_operator");
-    expect(supabaseMocks.from).not.toHaveBeenCalledWith("profiles");
+    expect(dbMocks.rpc).toHaveBeenCalledWith("is_operator");
+    expect(dbMocks.from).not.toHaveBeenCalledWith("profiles");
   });
 
   it("allows an authenticated operator through the RPC authorization boundary", async () => {
-    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "operator-1" } } });
-    supabaseMocks.rpc.mockResolvedValueOnce({ data: true, error: null });
+    dbMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "operator-1" } } });
+    dbMocks.rpc.mockResolvedValueOnce({ data: true, error: null });
 
     const response = await proxy(publicRequest("/admin"));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
-    expect(supabaseMocks.rpc).toHaveBeenCalledWith("is_operator");
+    expect(dbMocks.rpc).toHaveBeenCalledWith("is_operator");
   });
 
   it("rejects an operator lookup error even if data is truthy", async () => {
-    supabaseMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "operator-1" } } });
-    supabaseMocks.rpc.mockResolvedValueOnce({ data: true, error: { message: "unavailable" } });
+    dbMocks.getUser.mockResolvedValueOnce({ data: { user: { id: "operator-1" } } });
+    dbMocks.rpc.mockResolvedValueOnce({ data: true, error: { message: "unavailable" } });
     const response = await proxy(publicRequest("/admin/activity"));
     expect(new URL(response.headers.get("location")!).pathname).toBe("/");
   });
@@ -177,7 +177,7 @@ describe("proxy public meme existence check", () => {
     ["/memes/gjq95suv", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
     ["/memes/gjq95suv-old-slug", "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88"],
   ])("308-redirects a confirmed Korean alias %s to its stored canonical path", async (path, expected) => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({
+    dbMocks.abortSignal.mockResolvedValueOnce({
       data: [publicMemeRow({ short_id: "gjq95suv", slug: "한국-밈" })],
       error: null,
     });
@@ -193,7 +193,7 @@ describe("proxy public meme existence check", () => {
     "/memes/gjq95suv-%ED%95%9C%EA%B5%AD-%EB%B0%88",
   ])("does not redirect an exact canonical key %s", async (path) => {
     const slug = path.includes("gjq95suv-current") ? "current" : "한국-밈";
-    supabaseMocks.abortSignal.mockResolvedValueOnce({
+    dbMocks.abortSignal.mockResolvedValueOnce({
       data: [publicMemeRow({ short_id: "gjq95suv", slug })],
       error: null,
     });
@@ -205,7 +205,7 @@ describe("proxy public meme existence check", () => {
   });
 
   it("308-redirects a localized alias to the current stored localized slug", async () => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({
+    dbMocks.abortSignal.mockResolvedValueOnce({
       data: [
         publicMemeRow({
           short_id: "gjq95suv",
@@ -252,7 +252,7 @@ describe("proxy public meme existence check", () => {
       }],
     },
   ])("does not redirect an unavailable localized document ($name)", async ({ memeTranslations }) => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({
+    dbMocks.abortSignal.mockResolvedValueOnce({
       data: [
         publicMemeRow({
           short_id: "gjq95suv",
@@ -272,7 +272,7 @@ describe("proxy public meme existence check", () => {
 
   it("fails open without canonicalizing an alias when lookup fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    supabaseMocks.abortSignal.mockResolvedValueOnce({
+    dbMocks.abortSignal.mockResolvedValueOnce({
       data: null,
       error: { message: "provider unavailable" },
     });
@@ -292,24 +292,24 @@ describe("proxy public meme existence check", () => {
     ["/en/memes/missing-meme", "en"],
     ["/en/memes/random", "en"],
   ])("rewrites a confirmed missing exact detail %s to a branded 404", async (path, language) => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+    dbMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
 
     const response = await proxy(publicRequest(path));
 
     expect(response.status).toBe(404);
     expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
     expect(response.headers.get("content-language")).toBe(language);
-    expect(supabaseMocks.from).toHaveBeenCalledWith("memes");
-    expect(supabaseMocks.select).toHaveBeenCalledWith(
+    expect(dbMocks.from).toHaveBeenCalledWith("memes");
+    expect(dbMocks.select).toHaveBeenCalledWith(
       "id, short_id, slug, updated_at, meme_translations(locale, status, localized_slug, source_updated_at)",
     );
-    expect(supabaseMocks.eq).toHaveBeenCalledWith(
+    expect(dbMocks.eq).toHaveBeenCalledWith(
       "short_id",
       path.endsWith("/random") ? "random" : "missing",
     );
-    expect(supabaseMocks.in).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
-    expect(supabaseMocks.limit).toHaveBeenCalledWith(1);
-    expect(supabaseMocks.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(dbMocks.in).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
+    expect(dbMocks.limit).toHaveBeenCalledWith(1);
+    expect(dbMocks.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
   });
 
   it.each([
@@ -325,18 +325,18 @@ describe("proxy public meme existence check", () => {
     expect(response.status).not.toBe(404);
     expect(response.headers.get("x-middleware-rewrite")).toBeNull();
     expect(response.headers.get("location")).toBeNull();
-    expect(supabaseMocks.from).not.toHaveBeenCalled();
+    expect(dbMocks.from).not.toHaveBeenCalled();
   });
 
   it("skips the lookup for a cors RSC or prefetch request", async () => {
     const response = await proxy(publicRequest("/en/memes/missing-meme", { fetchMode: "cors" }));
 
     expect(response.status).toBe(200);
-    expect(supabaseMocks.from).not.toHaveBeenCalled();
+    expect(dbMocks.from).not.toHaveBeenCalled();
   });
 
   it("keeps a curated home-card slug reachable when the catalog has no matching row", async () => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+    dbMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
 
     const response = await proxy(publicRequest("/memes/jkm2022k-jung-kkuk-ma"));
 
@@ -345,12 +345,12 @@ describe("proxy public meme existence check", () => {
   });
 
   it.each([undefined, "navigate"])("checks a document request with fetch mode %s", async (fetchMode) => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+    dbMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
 
     const response = await proxy(publicRequest("/en/memes/missing-meme", { fetchMode }));
 
     expect(response.status).toBe(404);
-    expect(supabaseMocks.from).toHaveBeenCalledWith("memes");
+    expect(dbMocks.from).toHaveBeenCalledWith("memes");
   });
 
   it.each([
@@ -361,7 +361,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest(path));
 
     expect(response.status).toBe(200);
-    expect(supabaseMocks.from).not.toHaveBeenCalled();
+    expect(dbMocks.from).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -369,7 +369,7 @@ describe("proxy public meme existence check", () => {
     { data: [], error: { message: "timeout" } },
   ])("fails open when the public lookup returns an error", async (result) => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    supabaseMocks.abortSignal.mockResolvedValueOnce(result);
+    dbMocks.abortSignal.mockResolvedValueOnce(result);
 
     const response = await proxy(publicRequest("/memes/meme-1"));
 
@@ -385,7 +385,7 @@ describe("proxy public meme existence check", () => {
   it("fails open when the public lookup throws", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const providerMessage = "network down";
-    supabaseMocks.abortSignal.mockRejectedValueOnce(new Error(providerMessage));
+    dbMocks.abortSignal.mockRejectedValueOnce(new Error(providerMessage));
 
     const response = await proxy(publicRequest("/memes/meme-1"));
 
@@ -499,7 +499,7 @@ describe("proxy locale cookie", () => {
   });
 
   it("does not set memecatch_locale on a localized canonical redirect", async () => {
-    supabaseMocks.abortSignal.mockResolvedValueOnce({
+    dbMocks.abortSignal.mockResolvedValueOnce({
       data: [
         publicMemeRow({
           short_id: "gjq95suv",
@@ -543,88 +543,9 @@ describe("proxy auth return path", () => {
     expect(location.searchParams.get("next")).toBe("/submit");
   });
 
-  it("preserves Daily Signal query params inside the login destination", async () => {
-    const response = await proxy(
-      publicRequest("/premium?focus=meme-1&locale=en&from=daily_signal"),
-    );
-
-    expect(response.status).toBe(307);
-    const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/login");
-    expect(location.searchParams.get("next")).toBe(
-      "/premium?focus=meme-1&locale=en&from=daily_signal",
-    );
-  });
-
-  it("preserves a Global Daily One-Cut query inside the login destination", async () => {
-    const response = await proxy(
-      publicRequest("/premium?focus=meme-1&locale=ja&from=global_daily"),
-    );
-
-    expect(response.status).toBe(307);
-    const location = new URL(response.headers.get("location")!);
-    expect(location.searchParams.get("next")).toBe(
-      "/premium?focus=meme-1&locale=ja&from=global_daily",
-    );
-  });
-
-  it("preserves a validated Outcome Replay query inside the login destination", async () => {
-    const response = await proxy(
-      publicRequest("/premium?replay=meme-1&replay_locale=en&from=outcome_history"),
-    );
-
-    const location = new URL(response.headers.get("location")!);
-    expect(location.searchParams.get("next")).toBe(
-      "/premium?replay=meme-1&replay_locale=en&from=outcome_history",
-    );
-  });
-
-  it("drops unknown Premium query params before building the login destination", async () => {
-    const response = await proxy(
-      publicRequest(
-        "/premium?focus=meme-1&locale=en&from=daily_signal&email=private@example.com",
-      ),
-    );
-
-    const location = new URL(response.headers.get("location")!);
-    expect(location.searchParams.get("next")).toBe(
-      "/premium?focus=meme-1&locale=en&from=daily_signal",
-    );
-    expect(location.search).not.toContain("private@example.com");
-  });
-
-  it.each([
-    "/premium?focus=meme-1&locale=en",
-    "/premium?focus=meme-1&locale=en&from=other",
-    "/premium?focus=meme-1&locale=en&from=daily_signal&from=other",
-    "/premium?focus=meme-1&focus=meme-2&locale=en&from=daily_signal",
-    "/premium?focus=meme-1&locale=en&locale=ja&from=daily_signal",
-    "/premium?focus=meme-1&locale=en&from=global_daily&from=daily_signal",
-    "/premium?focus=meme-1&focus=meme-2&locale=en&from=global_daily",
-    "/premium?focus=meme-1&locale=en&locale=ja&from=global_daily",
-  ])("does not trust an invalid or duplicated Daily Signal marker: %s", async (path) => {
-    const response = await proxy(publicRequest(path));
-    const location = new URL(response.headers.get("location")!);
-    expect(location.searchParams.get("next")).toBe("/premium");
-  });
-
-  it.each([
-    "/premium?replay=meme-1&replay_locale=en",
-    "/premium?replay=meme-1&replay_locale=en&from=other",
-    "/premium?replay=meme-1&replay=meme-2&replay_locale=en&from=outcome_history",
-    "/premium?replay=meme-1&replay_locale=fr&from=outcome_history",
-  ])("does not trust an invalid or duplicated Outcome Replay marker: %s", async (path) => {
-    const response = await proxy(publicRequest(path));
-    const location = new URL(response.headers.get("location")!);
-    expect(location.searchParams.get("next")).toBe("/premium");
-  });
-
-  it("preserves only the checkout return marker for a checkout resume", async () => {
-    const response = await proxy(
-      publicRequest("/premium?checkout=return&email=private@example.com"),
-    );
-    const location = new URL(response.headers.get("location")!);
-    expect(location.searchParams.get("next")).toBe("/premium?checkout=return");
+  it("no longer gates the retired /premium path behind login", async () => {
+    const response = await proxy(publicRequest("/premium?checkout=return"));
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("preserves the unsourced admin queue query inside the login destination", async () => {

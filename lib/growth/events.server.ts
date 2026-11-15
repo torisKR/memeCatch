@@ -3,7 +3,7 @@ import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { signingSecret } from "@/lib/auth/signing-secret";
 import type { Json } from "@/lib/database.types";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 
 export type ClientGrowthEvent = {
   eventName:

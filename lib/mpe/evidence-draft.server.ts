@@ -8,7 +8,7 @@ import {
   OPENROUTER_DAILY_BUDGET_EXHAUSTED,
   requestOpenRouterStructured,
 } from "@/lib/mpe/openrouter.server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { DRAFT_SCHEMA, getAbstentionNotes, parseEvidenceDraftClaims, type DraftEvidence, type MemeDraftClaim } from "./evidence-draft-contract";
 
 export type { DraftEvidence, MemeDraftClaim } from "./evidence-draft-contract";

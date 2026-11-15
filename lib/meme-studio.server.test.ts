@@ -19,7 +19,7 @@ vi.mock("@/lib/meme-studio-bedrock.server", () => ({
   },
   generateBedrockMemeConcepts: mocks.generateBedrock,
 }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
 import {
   generateAdminMemeConcepts,

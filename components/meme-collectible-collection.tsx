@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type { MemeCardCollectionPage } from "@/lib/meme-collectible";
 import { memeCardReturnHref } from "@/lib/meme-collectible-ui";
 import { useLocale } from "@/lib/i18n-client";

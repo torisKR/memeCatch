@@ -8,7 +8,7 @@ import {
   type MemeTranslationRow,
 } from "@/lib/meme-translations";
 import type { MemeDetail } from "@/lib/queries";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import type { SeoContentLocale } from "@/lib/i18n-routing";
 
 export type LocalizedExploreStatus = "active" | "coverage-empty" | "unavailable";

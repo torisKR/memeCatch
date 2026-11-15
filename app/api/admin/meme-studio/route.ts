@@ -5,7 +5,7 @@ import {
   MEME_FORMATS,
   MEME_TONES,
 } from "@/lib/meme-studio.server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { isMemeCountryCode } from "@/lib/meme-country";
 import { hasTrustedOrigin } from "@/lib/origin";
 
@@ -20,13 +20,13 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasTrustedOrigin(request)) {
     return Response.json({ error: "invalid_origin" }, { status: 403 });
   }
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
   if (!user) {
     return Response.json({ error: "signed_out" }, { status: 401 });
   }
 
-  const { data: isOperator } = await supabase.rpc("is_operator");
+  const { data: isOperator } = await db.rpc("is_operator");
   if (!isOperator) {
     return Response.json({ error: "operator_required" }, { status: 403 });
   }

@@ -1,4 +1,4 @@
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom, CATEGORIES, type MemeCategory } from "@/lib/labels";
 import {

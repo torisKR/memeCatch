@@ -39,10 +39,6 @@ jobs:
             NEXT_PUBLIC_COMMUNITY_ENABLED=${{ vars.NEXT_PUBLIC_COMMUNITY_ENABLED }}
             NEXT_PUBLIC_GA_ID=${{ vars.NEXT_PUBLIC_GA_ID }}
             NEXT_PUBLIC_SUBMISSIONS_OPEN=${{ vars.NEXT_PUBLIC_SUBMISSIONS_OPEN }}
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-            NEXT_PUBLIC_UNIFI_CLIENT_ID=${{ vars.NEXT_PUBLIC_UNIFI_CLIENT_ID }}
-            NEXT_PUBLIC_VAPID_PUBLIC_KEY=${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
       - uses: docker/build-push-action@v6
         with:
           context: .

@@ -3,7 +3,7 @@ import { signingSecret } from "@/lib/auth/signing-secret";
 import { growthSessionIdFromRequest } from "@/lib/growth/events.server";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

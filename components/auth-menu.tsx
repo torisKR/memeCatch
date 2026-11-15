@@ -5,10 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { signOut } from "@/lib/actions/auth";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { useLocale } from "@/lib/i18n-client";
-import { PREMIUM_COPY } from "@/lib/i18n-premium";
-import { selectPremiumSubscription } from "@/lib/billing/entitlements";
 import { normalizePathname } from "@/lib/normalize-pathname";
 
 /**
@@ -33,16 +31,12 @@ export function HideOnAdmin({ children }: { children: React.ReactNode }) {
  */
 /** 로그인 상태 힌트 — 직전 로그인의 닉네임을 보관해 재방문 시 즉시 아바타를 그린다. */
 const AUTH_HINT_KEY = "mc_auth_nick";
-/** Plus 멤버십 힌트 — 구독자는 재방문 시 헤더 PLUS 배지를 즉시 그린다. */
-const PLUS_HINT_KEY = "mc_auth_plus";
 
 export function AuthMenu() {
   const pathname = normalizePathname(usePathname());
   const reduce = useReducedMotion();
   // null = 아직 조회 전, string = 로그인, "" = 비로그인 확정
   const [nickname, setNickname] = useState<string | null>(null);
-  // 헤더 PLUS 배지 노출 여부 — billing_subscriptions self-read로 확정.
-  const [isPremium, setIsPremium] = useState(false);
   const { messages } = useLocale();
 
   useEffect(() => {
@@ -56,48 +50,37 @@ export function AuthMenu() {
       const hint = window.localStorage.getItem(AUTH_HINT_KEY);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (hint) setNickname(hint);
-      if (window.localStorage.getItem(PLUS_HINT_KEY) === "1") setIsPremium(true);
     } catch {
       // 저장소 접근 실패(시크릿 모드 등)는 무시 — 아래 네트워크 조회로 확정된다
     }
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    const db = createClient();
+    db.auth.getUser().then(async ({ data: { user } }) => {
       if (!alive) return;
       if (!user) {
         setNickname("");
-        setIsPremium(false);
         try {
           window.localStorage.removeItem(AUTH_HINT_KEY);
-          window.localStorage.removeItem(PLUS_HINT_KEY);
         } catch {}
         return;
       }
-      // 닉네임과 구독 상태를 병렬 조회 — billing_subscriptions는 self-read RLS로
-      // 본인 행만 반환된다. 활성 구독이 하나라도 있으면 헤더에 PLUS를 그린다.
-      const [{ data }, { data: subs }] = await Promise.all([
-        supabase.from("profiles").select("nickname").eq("id", user.id).single(),
-        supabase
-          .from("billing_subscriptions")
-          .select("status, current_period_end, last_event_at"),
-      ]);
+      const { data } = await db
+        .from("profiles")
+        .select("nickname")
+        .eq("id", user.id)
+        .single();
       if (!alive) return;
       const nick = data?.nickname ?? "밈러";
       setNickname(nick);
-      const premium = selectPremiumSubscription(subs ?? []) !== null;
-      setIsPremium(premium);
       try {
         window.localStorage.setItem(AUTH_HINT_KEY, nick);
-        window.localStorage.setItem(PLUS_HINT_KEY, premium ? "1" : "0");
       } catch {}
     });
     // 로그인/로그아웃 변화 반영
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = db.auth.onAuthStateChange((_e, session) => {
       if (!session?.user) {
         setNickname("");
-        setIsPremium(false);
         try {
           window.localStorage.removeItem(AUTH_HINT_KEY);
-          window.localStorage.removeItem(PLUS_HINT_KEY);
         } catch {}
       }
     });
@@ -120,21 +103,18 @@ export function AuthMenu() {
   }
 
   return (
-    <LoggedInMenu nickname={nickname} reduce={reduce} isPremium={isPremium} />
+    <LoggedInMenu nickname={nickname} reduce={reduce} />
   );
 }
 
 function LoggedInMenu({
   nickname,
   reduce,
-  isPremium,
 }: {
   nickname: string;
   reduce: boolean | null;
-  isPremium: boolean;
 }) {
-  const { locale, messages } = useLocale();
-  const premiumCopy = PREMIUM_COPY[locale];
+  const { messages } = useLocale();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -173,24 +153,13 @@ function LoggedInMenu({
 
   return (
     <div ref={rootRef} className="relative flex items-center gap-1.5">
-      {/* 헤더 PLUS 배지 — 구독자는 드롭다운을 열지 않아도 멤버십이 보이고,
-          탭하면 MY PLUS 대시보드로 바로 이동한다(§10 AuthMenu). */}
-      {isPremium && (
-        <Link
-          href="/premium"
-          aria-label={premiumCopy.dashboard.eyebrow}
-          className="inline-block select-none whitespace-nowrap rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-black leading-none tracking-wider text-accent-text transition-transform active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-2"
-        >
-          {premiumCopy.badge}
-        </Link>
-      )}
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`${nickname}${isPremium ? ` · ${premiumCopy.badge}` : ""} · ${messages.accountMenu}`}
+        aria-label={`${nickname} · ${messages.accountMenu}`}
         className="hover-glow-flame flex h-11 w-11 items-center justify-center rounded-full bg-accent-strong text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.95] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <span aria-hidden>{initial}</span>
@@ -231,17 +200,6 @@ function LoggedInMenu({
               onClick={() => setOpen(false)}
             >
               {messages.savedMemes}
-            </Link>
-            <Link
-              href="/premium"
-              role="menuitem"
-              className={`${itemClass} justify-between font-semibold text-accent-text`}
-              onClick={() => setOpen(false)}
-            >
-              {premiumCopy.menuLabel}
-              <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-black tracking-wider">
-                {premiumCopy.badge}
-              </span>
             </Link>
             <div className="my-1 h-px bg-border" />
             <form action={signOut}>

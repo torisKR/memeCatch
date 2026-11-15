@@ -3,7 +3,7 @@
  * Enrich review-only TikTok and Instagram candidates from metadata exposed by
  * their public post pages. This uses no app API, login, cookie, private
  * endpoint, challenge bypass, or media download. It stores only a small set of
- * public text metadata fields and never publishes candidates to Supabase.
+ * public text metadata fields and never publishes candidates to the database.
  *
  * Usage:
  *   node scripts/collect-public-social-page-metadata.mjs <input.jsonl> <output.jsonl> [--max=100]

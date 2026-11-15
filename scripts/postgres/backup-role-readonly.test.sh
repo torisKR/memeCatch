@@ -34,6 +34,7 @@ fi
 
 docker cp "$root/deploy/postgres/99-app-identity.sql" "$server:/tmp/99-app-identity.sql"
 docker cp "$root/deploy/postgres/backup-role.sh" "$server:/tmp/backup-role.sh"
+docker exec "$server" chmod 644 /tmp/backup-role.sh
 
 docker exec -i "$server" psql -U postgres -v ON_ERROR_STOP=1 -d postgres -c "CREATE DATABASE memecatch;"
 docker exec -i "$server" psql -U postgres -v ON_ERROR_STOP=1 -d memecatch <<'SQL'
@@ -62,9 +63,24 @@ AS $$
 BEGIN
   INSERT INTO public.reactions (user_id, meme_id) VALUES (auth.uid(), p_meme);
 END $$;
+REVOKE ALL ON FUNCTION public.toggle_reaction(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.toggle_reaction(integer) TO authenticated;
+CREATE FUNCTION public.service_writer() RETURNS void LANGUAGE sql SECURITY DEFINER
+AS $$ INSERT INTO public.reactions (meme_id) VALUES (2) $$;
+REVOKE ALL ON FUNCTION public.service_writer() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.service_writer() TO service_role;
 SQL
 docker exec -u postgres -e MEMECATCH_BACKUP_DB_PASSWORD=backup "$server" \
   bash -c 'source /tmp/backup-role.sh && ensure_backup_role'
+# Running maintenance again must not widen a service-only function's grants.
+docker exec -u postgres -e MEMECATCH_BACKUP_DB_PASSWORD=backup "$server" \
+  bash -c 'source /tmp/backup-role.sh && ensure_backup_role'
+
+privileges="$(docker exec "$server" psql -U postgres -d memecatch -At -c "SELECT has_function_privilege('anon', 'public.service_writer()', 'EXECUTE'), has_function_privilege('authenticated', 'public.service_writer()', 'EXECUTE'), has_function_privilege('service_role', 'public.service_writer()', 'EXECUTE');")"
+if [[ "$privileges" != "f|f|t" ]]; then
+  echo "memecatch backup readonly: service-only function grants changed: ${privileges}" >&2
+  exit 1
+fi
 
 fail_as_backup() {
   local label="$1"
@@ -124,8 +140,27 @@ END $$;
 SQL
 backup_exec="$(docker exec "$server" psql -U postgres -d memecatch -At -c "SELECT has_function_privilege('memecatch_backup', 'public.future_writer(integer)', 'EXECUTE');")"
 app_exec="$(docker exec "$server" psql -U postgres -d memecatch -At -c "SELECT has_function_privilege('authenticated', 'public.future_writer(integer)', 'EXECUTE');")"
-if [[ "$backup_exec" != "f" || "$app_exec" != "t" ]]; then
+if [[ "$backup_exec" != "f" || "$app_exec" != "f" ]]; then
   echo "memecatch backup readonly: future function privileges backup=${backup_exec} authenticated=${app_exec}" >&2
+  exit 1
+fi
+
+docker exec "$server" psql -U postgres -v ON_ERROR_STOP=1 -d postgres -c 'CREATE DATABASE acl_target TEMPLATE memecatch;' >/dev/null
+docker exec "$server" psql -U postgres -v ON_ERROR_STOP=1 -d acl_target -c 'GRANT EXECUTE ON FUNCTION public.service_writer() TO anon, authenticated;' >/dev/null
+restore_sql="$(ACL_BASELINE_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:${port}/memecatch" ACL_TARGET_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:${port}/acl_target" node "$root/scripts/postgres/prepare-function-acl-restore.mjs")"
+if [[ "$restore_sql" != *'REVOKE EXECUTE ON FUNCTION public.service_writer() FROM "anon";'* || "$restore_sql" != *'REVOKE EXECUTE ON FUNCTION public.service_writer() FROM "authenticated";'* ]]; then
+  echo "memecatch backup readonly: ACL comparison missed broad service grants" >&2
+  exit 1
+fi
+printf '%s\n' "$restore_sql" | docker exec -i "$server" psql -U postgres -d acl_target -v ON_ERROR_STOP=1 >/dev/null
+restored="$(docker exec "$server" psql -U postgres -d acl_target -At -c "SELECT has_function_privilege('anon', 'public.service_writer()', 'EXECUTE'), has_function_privilege('authenticated', 'public.service_writer()', 'EXECUTE'), has_function_privilege('service_role', 'public.service_writer()', 'EXECUTE');")"
+if [[ "$restored" != "f|f|t" ]]; then
+  echo "memecatch backup readonly: restore produced incorrect privileges: ${restored}" >&2
+  exit 1
+fi
+docker exec "$server" psql -U postgres -d acl_target -c 'CREATE FUNCTION public.unexpected() RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ SELECT $$;' >/dev/null
+if ACL_BASELINE_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:${port}/memecatch" ACL_TARGET_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:${port}/acl_target" node "$root/scripts/postgres/prepare-function-acl-restore.mjs" >/dev/null 2>&1; then
+  echo "memecatch backup readonly: ACL comparison accepted differing function sets" >&2
   exit 1
 fi
 

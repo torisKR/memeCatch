@@ -6,6 +6,7 @@ import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
 import { createClient } from "@/lib/db/server";
 import { safeNext } from "@/lib/safe-redirect";
 import { SITE_URL } from "@/lib/site";
+import { blockedPublicEmail } from "@/lib/auth/reserved-email";
 
 export type AuthState = {
   fieldErrors?: { email?: string; password?: string; nickname?: string };
@@ -16,7 +17,6 @@ export type AuthState = {
 } | null;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const INTERNAL_AUTH_DOMAINS = ["@auth.memecatch.internal", "@wallet.memecatch.internal"];
 const SIGNUP_NOTICE =
   "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.";
 const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
@@ -62,7 +62,7 @@ export async function signUp(
   }
   if (!email) fieldErrors.email = "이메일을 입력해 주세요";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
-  else if (INTERNAL_AUTH_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain))) {
+  else if (blockedPublicEmail(email)) {
     fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
   }
   if (!STRONG_PASSWORD_RE.test(password)) {

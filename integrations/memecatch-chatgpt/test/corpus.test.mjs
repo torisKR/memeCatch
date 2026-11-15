@@ -41,3 +41,17 @@ test('cache coalesces concurrent loads and refresh failures do not masquerade as
   await Promise.all([corpus.search(),corpus.search()]);assert.equal(calls,1);
   now+=200;fail=true;await assert.rejects(corpus.search(),/offline/);assert.equal(calls,2);
 });
+test('indexed search preserves score order, stable ties and total matches across refreshes',async()=>{
+  let now=0;
+  const record=(title,id,summary='',aliases='')=>`### ${title}\n- URL: https://catchmeme.com/memes/${id}-test\n- 사용 안전도: ● 써도 됨\n- 한 줄 뜻: ${summary}\n- 별칭: ${aliases}\n`;
+  let text=record('other','id000001','target')+record('target extra','id000002')+record('target','id000003')+record('target more','id000004')+record('alias','id000005','','target');
+  const corpus=new Corpus({now:()=>now,ttlMs:100,fetcher:async()=>new Response(text)});
+  let result=await corpus.search({query:'target',limit:3});
+  assert.deepEqual(result.memes.map(m=>m.id),['id000003','id000002','id000004']);
+  assert.equal(result.matched,5);
+  assert.deepEqual((await corpus.search({limit:2})).memes.map(m=>m.id),['id000001','id000002']);
+  text=record('replacement','id000006','target');now+=101;
+  result=await corpus.search({query:'target'});
+  assert.deepEqual(result.memes.map(m=>m.id),['id000006']);
+  assert.equal(result.matched,1);
+});

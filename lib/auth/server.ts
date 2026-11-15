@@ -6,6 +6,7 @@ import { APIError } from "better-auth/api";
 import { SITE_URL } from "@/lib/site";
 import { getPool } from "@/lib/db/pool";
 import { blockedPublicEmail, internalSignupOpen } from "@/lib/auth/internal";
+import { isKakaoInternalEmail } from "@/lib/auth/reserved-email";
 import { verifyStoredPassword } from "@/lib/auth/passwords";
 import { syncAuthUser } from "@/lib/auth/sync-user";
 
@@ -121,8 +122,13 @@ export const authOptions = {
   databaseHooks: {
     user: {
       create: {
-        async before(user: { email: string }) {
-          if (!internalSignupOpen() && blockedPublicEmail(user.email)) {
+        async before(user: { email: string }, context?: { path?: string; params?: Record<string, unknown> } | null) {
+          // The OAuth callback creates the synthetic address only after Better Auth
+          // has validated the Kakao callback and obtained the provider profile.
+          const kakaoCallback = isKakaoInternalEmail(user.email) &&
+            (context?.path === "/callback/kakao" ||
+             (context?.path === "/callback/:id" && context.params?.id === "kakao"));
+          if (!internalSignupOpen() && !kakaoCallback && blockedPublicEmail(user.email)) {
             throw new APIError("BAD_REQUEST", { message: "blocked email domain" });
           }
           return { data: user };

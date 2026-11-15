@@ -43,6 +43,21 @@ describe("public MemeCatch MCP endpoint", () => {
     const large = new Request("https://catchmeme.com/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: "x".repeat(256 * 1024 + 1) });
     expect((await POST(large)).status).toBe(413);
   });
+  it("limits repeated tool calls before performing a search", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("### 테스트\n- URL: https://catchmeme.com/memes/test1234-title\n- 사용 안전도: ● 써도 됨"));
+    vi.stubGlobal("fetch", fetcher);
+    const { POST } = await import("./route.js");
+    for (let i = 0; i < 120; i++) {
+      expect((await POST(request("tools/call", { name: "search_memes", arguments: {} }))).status).toBe(200);
+    }
+    const response = await POST(request("tools/call", { name: "search_memes", arguments: {} }));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBeTruthy();
+    expect((await response.json()).error.code).toBe(-32000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    // Discovery remains available even if the tool-call quota is exhausted.
+    expect((await POST(request("tools/list"))).status).toBe(200);
+  });
 });
 
 

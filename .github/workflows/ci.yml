@@ -73,4 +73,5 @@ jobs:
       - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
       - run: bash scripts/postgres/enum-in-filter.test.sh
       - run: bash scripts/postgres/backup-role-readonly.test.sh
+      - run: bash scripts/postgres/community-upload-quota.test.sh
       - run: bash deploy/backup/ci-test-restore.sh

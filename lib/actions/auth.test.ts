@@ -69,12 +69,10 @@ describe("signUp", () => {
   }
 
   it("blocks the internal OAuth email domain before calling the auth backend", async () => {
-    const result = await submitSignUp(
-      null,
-      signupForm("claimed@auth.memecatch.internal"),
-    );
-
-    expect(result?.fieldErrors?.email).toBe("가입할 수 없는 이메일 도메인이에요");
+    for (const email of ["claimed@auth.memecatch.internal", "123@KaKaO.MemeCatch.Internal", "claimed@wallet.memecatch.internal"]) {
+      const result = await submitSignUp(null, signupForm(email));
+      expect(result?.fieldErrors?.email).toBe("가입할 수 없는 이메일 도메인이에요");
+    }
     expect(signUp).not.toHaveBeenCalled();
   });
 

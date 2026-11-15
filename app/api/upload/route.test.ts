@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   r2Put: vi.fn(),
   rateLimit: vi.fn(() => ({ ok: true })),
   rpc: vi.fn(),
+  adminRpc: vi.fn(),
   storageUpload: vi.fn(),
 }));
 
@@ -37,11 +38,13 @@ beforeEach(() => {
   mocks.rateLimit.mockReturnValue({ ok: true });
   mocks.storageUpload.mockResolvedValue({ data: { path: "user-1/file.png" }, error: null });
   mocks.rpc.mockResolvedValue({ error: null });
+  mocks.adminRpc.mockResolvedValue({ error: null });
   mocks.createClient.mockResolvedValue({
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
     rpc: mocks.rpc,
   });
   mocks.createAdminClient.mockReturnValue({
+    rpc: mocks.adminRpc,
     storage: { from: () => ({ upload: mocks.storageUpload }) },
   });
 });
@@ -80,6 +83,32 @@ describe("community upload API", () => {
     expect(mocks.r2Put).not.toHaveBeenCalled();
   });
 
+  it("reserves storage before writing and fails closed when the quota is exhausted", async () => {
+    mocks.adminRpc.mockResolvedValueOnce({ error: { message: "upload_storage_quota_exceeded" } });
+    const response = await POST(request());
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ error: "storage_quota_exceeded" });
+    expect(mocks.adminRpc).toHaveBeenCalledWith("reserve_community_upload_storage", {
+      p_user_id: "user-1", p_bytes: 8,
+    });
+    expect(mocks.storageUpload).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when storage quota cannot be checked", async () => {
+    mocks.adminRpc.mockResolvedValueOnce({ error: { message: "database unavailable" } });
+    expect((await POST(request())).status).toBe(503);
+    expect(mocks.storageUpload).not.toHaveBeenCalled();
+  });
+
+  it("retains the reservation when object storage reports a failed write", async () => {
+    mocks.storageUpload.mockResolvedValueOnce({ data: null, error: { message: "write failed" } });
+    expect((await POST(request())).status).toBe(502);
+    expect(mocks.adminRpc).toHaveBeenCalledTimes(1);
+    expect(mocks.adminRpc).toHaveBeenCalledWith("reserve_community_upload_storage", {
+      p_user_id: "user-1", p_bytes: 8,
+    });
+  });
+
   it("stores a valid image with the existing path contract", async () => {
     const response = await POST(request());
 
@@ -93,5 +122,6 @@ describe("community upload API", () => {
       expect.any(File),
       expect.objectContaining({ contentType: "image/png" }),
     );
+    expect(mocks.adminRpc.mock.invocationCallOrder[0]).toBeLessThan(mocks.storageUpload.mock.invocationCallOrder[0]);
   });
 });

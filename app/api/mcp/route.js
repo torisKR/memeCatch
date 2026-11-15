@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Corpus } from "../../../integrations/memecatch-chatgpt/src/corpus.mjs";
 import { dispatch, validateRequest, isLegacyRequest, VERSION } from "../../../integrations/memecatch-chatgpt/src/protocol.mjs";
+import { getClientIp, rateLimit } from "../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -41,6 +42,13 @@ export async function POST(request) {
     validateRequest(message, headers);
     if (message.method.startsWith("events/")) return Response.json({ jsonrpc: "2.0", ...(message.id != null ? { id: message.id } : {}), error: { code: -32601, message: "Events require the separately authenticated persistent server." } }, { status: 404, headers: responseHeaders });
     if (message.id === undefined) return new Response(null, { status: 202, headers: responseHeaders });
+    if (message.method === "tools/call") {
+      // The global cap remains effective when caller-controlled IP headers rotate.
+      // These limits are per process; enforce distributed limits at the edge too.
+      const global = rateLimit("mcp:tools:all", { limit: 1200, windowMs: 60_000 });
+      const client = global.ok ? rateLimit(`mcp:tools:ip:${getClientIp(request)}`, { limit: 120, windowMs: 60_000 }) : global;
+      if (!client.ok) return Response.json({ jsonrpc: "2.0", id: message.id, error: { code: -32000, message: "Too many requests." } }, { status: 429, headers: { ...responseHeaders, "Retry-After": String(client.retryAfterSec) } });
+    }
     const result = await dispatch(message, { corpus, broker: null, owner: null, uiHtml });
     if (isLegacyRequest(message, headers)) delete result.resultType;
     return Response.json({ jsonrpc: "2.0", id: message.id, result }, { headers: responseHeaders });

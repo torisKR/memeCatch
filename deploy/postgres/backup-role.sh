@@ -65,8 +65,9 @@ REVOKE TEMP ON DATABASE memecatch FROM PUBLIC;
 REVOKE TEMP ON DATABASE memecatch FROM memecatch_backup;
 GRANT TEMP ON DATABASE memecatch TO memecatch, anon, authenticated, service_role;
 
--- SECURITY DEFINER writers are executable by PUBLIC unless revoked. The backup
--- login could set app.user_id and call them. Keep execute for the request roles.
+-- A backup login must not execute SECURITY DEFINER functions through PUBLIC.
+-- Preserve the individual grants made by migrations: blanket grants here
+-- would also expose service-only functions to anonymous callers.
 DO $$
 DECLARE
   fn regprocedure;
@@ -80,7 +81,6 @@ BEGIN
        AND p.prosecdef
   LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, memecatch_backup', fn);
-    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO anon, authenticated, service_role', fn);
   END LOOP;
   FOREACH owner_name IN ARRAY ARRAY['postgres', 'memecatch']
   LOOP
@@ -93,7 +93,7 @@ BEGIN
         owner_name
       );
       EXECUTE format(
-        'ALTER DEFAULT PRIVILEGES FOR ROLE %I GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role',
+        'ALTER DEFAULT PRIVILEGES FOR ROLE %I REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated, service_role',
         owner_name
       );
     END IF;

@@ -64,11 +64,24 @@ service_image() {
   docker inspect "memecatch-$1-1" --format '{{.Config.Image}}' 2>/dev/null
 }
 
+# Snapshot name for a service. The app always snapshots to memecatch:rollback-<sha>,
+# whatever registry its running image came from, because restore_rollback deploys
+# exactly that name. Other services keep their own repository, which compose reuses.
+rollback_ref() {
+  local service="$1" image="$2" sha="$3"
+  if [[ "$service" == app ]]; then
+    printf 'memecatch:rollback-%s\n' "$sha"
+  else
+    printf '%s:rollback-%s\n' "${image%:*}" "$sha"
+  fi
+}
+
 tag_rollback() {
   local sha="$1" service image
   for service in app mpe-worker scheduler backup; do
     image="$(service_image "$service")" || continue
-    docker tag "$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" "${image%%:*}:rollback-${sha}"
+    docker tag "$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" \
+      "$(rollback_ref "$service" "$image" "$sha")"
   done
 }
 
@@ -76,8 +89,8 @@ restore_rollback() {
   local sha="$1" service image
   for service in mpe-worker scheduler backup; do
     image="$(service_image "$service")" || continue
-    if docker image inspect "${image%%:*}:rollback-${sha}" >/dev/null 2>&1; then
-      docker tag "${image%%:*}:rollback-${sha}" "$image"
+    if docker image inspect "$(rollback_ref "$service" "$image" "$sha")" >/dev/null 2>&1; then
+      docker tag "$(rollback_ref "$service" "$image" "$sha")" "$image"
     fi
   done
   git -C "$ROOT" reset -q --keep "$sha"
@@ -93,13 +106,15 @@ build_args() {
   done <"$file"
 }
 
+# Callers run this under `if !`, where bash turns errexit off; chain with && so a
+# failed app build can never fall through to a "successful" auxiliary build.
 build_images() {
   local sha="$1" args=()
-  mapfile -t args < <(build_args "$ROOT/deploy/build.env")
-  ( cd "$ROOT"
-    nice -n 10 docker build -q -f Dockerfile --build-arg "RELEASE_SHA=${sha}" "${args[@]}" \
-      -t "memecatch:release-${sha}" . >/dev/null
-    nice -n 10 docker compose -p memecatch -f docker-compose.yml build -q mpe-worker scheduler backup )
+  mapfile -t args < <(build_args "$ROOT/deploy/build.env") || return 1
+  ( cd "$ROOT" \
+    && nice -n 10 docker build -q -f Dockerfile --build-arg "RELEASE_SHA=${sha}" "${args[@]}" \
+      -t "memecatch:release-${sha}" . >/dev/null \
+    && nice -n 10 docker compose -p memecatch -f docker-compose.yml build -q mpe-worker scheduler backup )
 }
 
 public_release_is() {
@@ -184,6 +199,5 @@ main() {
   exit 1
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  main "$@"
-fi
+# Run when executed; only define functions when sourced (the test sources it).
+(return 0 2>/dev/null) || main "$@"

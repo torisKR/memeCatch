@@ -44,4 +44,22 @@ shared_plan="$(plan "$tmp" yes yes)"
 override_plan="$(plan "$tmp" yes yes MEMECATCH_CADDY=own)"
 [[ "$override_plan" == *"mode=own"* ]]
 
+stub="$(mktemp -d)"
+trap 'rm -f "$tmp" "$err"; rm -rf "$stub"' EXIT
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$test_calls"
+STUB
+cat >"$stub/curl" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+chmod +x "$stub/docker" "$stub/curl"
+calls="$stub/calls"
+PATH="$stub:$PATH" test_calls="$calls" MEMECATCH_ENV_FILE="$tmp" DEPLOY_OCI_FORCE_RECREATE=1 bash "$script" >/dev/null
+grep -q 'up -d --no-deps --force-recreate app' "$calls" || { echo 'manual deploy did not recreate app' >&2; exit 1; }
+: >"$calls"
+PATH="$stub:$PATH" test_calls="$calls" MEMECATCH_ENV_FILE="$tmp" bash "$script" >/dev/null
+if grep -q -- '--force-recreate' "$calls"; then echo 'automatic deploy recreated app unconditionally' >&2; exit 1; fi
+
 echo "deploy-oci plan ok"

@@ -83,6 +83,9 @@ if [[ "${MEMECATCH_WORKER_IMAGE:-}" == ghcr.io/* ]]; then
   docker compose -p memecatch "${files[@]}" pull mpe-worker
 fi
 docker compose -p memecatch "${files[@]}" up -d
+if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" ]]; then
+  docker compose -p memecatch "${files[@]}" up -d --no-deps --force-recreate app
+fi
 
 for _ in $(seq 1 60); do
   if curl -fsS "$health_url" >/dev/null; then

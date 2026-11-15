@@ -1,9 +1,9 @@
+import type { ContentDepthInput } from "@/lib/content-depth";
 import type { MemeCategory, SafetyLevel, LifecycleStatus } from "@/lib/labels";
 import { getSeoCopy, localizePath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { HomeEntry } from "@/components/home/home-experience";
 import { memePathFrom } from "@/lib/labels";
 import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
-import type { ContentDepthInput } from "@/lib/content-depth";
 import { isThinMeme } from "@/lib/thin-meme";
 
 /** Body fields the thin-page predicate reads. Curated examples store context, not situation. */
@@ -417,6 +417,10 @@ export function getGuaranteedHomeEntries(
 const curatedByShortId = new Map(
   CURATED_CORE_MEMES.map((meme) => [meme.short_id, meme] as const),
 );
+
+export function curatedPassesIndexGate(meme: CuratedMeme): boolean {
+  return !isThinMeme(curatedDepthInput(meme));
+}
 
 export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
   return curatedByShortId.get(shortId) ?? null;

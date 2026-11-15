@@ -7,10 +7,16 @@ import { RelatedMemes } from "@/components/related-memes";
 import { indexableScanLimit, omitThinMemes } from "@/lib/thin-meme";
 
 const loadCategoryStream = cacheCatalogRead(
-  async (category: MemeCategory, currentId: string, scanSize: number): Promise<MemeListItem[]> => {
+  async (
+    category: MemeCategory,
+    currentId: string,
+    indexableIds: string[],
+    scanSize: number,
+  ): Promise<MemeListItem[]> => {
     const { data, error } = await createStaticClient()
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
+      .in("id", indexableIds)
       .eq("category", category)
       .neq("id", currentId)
       .in("moderation_status", ["approved", "limited"])
@@ -35,20 +41,29 @@ export async function ContinueStream({
   currentId,
   category,
   related,
+  indexableIds,
 }: {
   currentId: string;
   category: MemeCategory;
   related: MemeListItem[];
+  indexableIds: ReadonlySet<string>;
 }) {
-  const head = omitThinMemes(related).slice(0, RELATED_LIMIT);
+  const head = omitThinMemes(
+    related.filter((meme) => indexableIds.has(meme.id)),
+  ).slice(0, RELATED_LIMIT);
   const relatedIds = head.map((m) => m.id);
   const need = Math.max(0, RELATED_LIMIT - head.length);
 
   let stream: MemeListItem[] = [];
-  if (need > 0) {
+  const fallbackIds = [...indexableIds].filter(
+    (id) => id !== currentId && !relatedIds.includes(id),
+  );
+  if (need > 0 && fallbackIds.length > 0) {
     try {
       const scanSize = indexableScanLimit(RELATED_LIMIT);
-      const rows = omitThinMemes(await loadCategoryStream(category, currentId, scanSize));
+      const rows = omitThinMemes(
+        await loadCategoryStream(category, currentId, fallbackIds, scanSize),
+      );
       const seen = new Set<string>([currentId, ...relatedIds]);
       for (const meme of rows) {
         if (seen.has(meme.id)) continue;

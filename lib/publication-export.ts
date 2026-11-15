@@ -11,6 +11,12 @@ type StaticClient = ReturnType<typeof createStaticClient>;
 
 type PublicationExportRow = ContentDepthInput & {
   id: string;
+  category?: string | null;
+  origin_year?: number | null;
+};
+
+type PublicationExportCandidate<T extends PublicationExportRow> = T & {
+  moderation_status: "approved" | "limited";
 };
 
 type PublicationExportOptions = {
@@ -30,7 +36,8 @@ export class PublicationExportError extends Error {
 
 /**
  * Read the Korean discovery corpus under one explicit contract:
- * approved records only, then the same isIndexableMeme gate as sitemap/detail robots.
+ * approved and limited records form the bounded candidate pool, then only approved
+ * records are exported after the current main indexability check.
  * The output limit is applied after filtering. Range pages have an id tie-breaker and
  * a hard scan bound so an unexpectedly large corpus cannot create an unbounded request.
  */
@@ -40,6 +47,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
 ): Promise<{ rows: T[]; eligibleCount: number }> {
   const rows: T[] = [];
   let eligibleCount = 0;
+  let exhausted = false;
 
   for (
     let from = 0;
@@ -48,8 +56,8 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
   ) {
     let query = supabase
       .from("memes")
-      .select(options.select)
-      .eq("moderation_status", "approved");
+      .select(`${options.select}, moderation_status`)
+      .in("moderation_status", ["approved", "limited"]);
 
     query = options.primaryOrder === "published_at"
       ? query.order("published_at", { ascending: false, nullsFirst: false })
@@ -67,9 +75,9 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
       );
     }
 
-    const page = (data ?? []) as unknown as T[];
+    const page = (data ?? []) as unknown as PublicationExportCandidate<T>[];
     for (const meme of page) {
-      if (!isIndexableMeme(meme)) continue;
+      if (meme.moderation_status !== "approved" || !isIndexableMeme(meme)) continue;
       eligibleCount += 1;
       if (rows.length < options.limit) rows.push(meme);
     }
@@ -77,14 +85,20 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
     if (!options.countAll && rows.length >= options.limit) {
       return { rows, eligibleCount };
     }
+
     if (page.length < PUBLICATION_EXPORT_PAGE_SIZE) {
-      return { rows, eligibleCount };
+      exhausted = true;
+      break;
     }
   }
 
-  throw new PublicationExportError(
-    `Publication export exceeded the ${MAX_PUBLICATION_EXPORT_CANDIDATES.toLocaleString("en-US")}-row scan bound`,
-  );
+  if (!exhausted) {
+    throw new PublicationExportError(
+      `Publication export exceeded the ${MAX_PUBLICATION_EXPORT_CANDIDATES.toLocaleString("en-US")}-row scan bound`,
+    );
+  }
+
+  return { rows, eligibleCount };
 }
 
 export function publicationExportUnavailableResponse(): Response {

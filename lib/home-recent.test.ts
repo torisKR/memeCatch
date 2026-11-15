@@ -33,4 +33,15 @@ describe("home recent publication feed", () => {
     mocks.createStaticClient.mockImplementation(() => { throw new Error("offline"); });
     expect(await getRecentlyPublishedMemes()).toEqual([]);
   });
+  it("queries the discovery ids directly instead of scanning unrelated publication pages", async () => {
+    const query = { select: vi.fn(), in: vi.fn(), not: vi.fn(), order: vi.fn(), limit: vi.fn() };
+    for (const key of ["select", "in", "not", "order"] as const) query[key].mockReturnValue(query);
+    const eligible = { ...ready, id: "eligible" };
+    query.limit.mockResolvedValue({ data: [eligible], error: null });
+    mocks.createStaticClient.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
+    expect(await getRecentlyPublishedMemes(8, new Set(["eligible"]))).toEqual([eligible]);
+    expect(query.in).toHaveBeenNthCalledWith(1, "id", ["eligible"]);
+    expect(query.in).toHaveBeenNthCalledWith(2, "moderation_status", ["approved", "limited"]);
+    expect(query.limit).toHaveBeenCalledWith(indexableScanLimit(8));
+  });
 });

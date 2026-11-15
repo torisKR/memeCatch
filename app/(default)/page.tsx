@@ -15,6 +15,7 @@ import { getRecentlyPublishedMemes } from "@/lib/queries";
 import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
 import { CommunityMemeBattle } from "@/components/home/community-meme-battle";
 import { getCommunityMemeBattle } from "@/lib/community-battle.server";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 /** 홈 문서는 요청별 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
 export const revalidate = 3600;
@@ -43,7 +44,10 @@ export const metadata: Metadata = {
 
 /** 홈은 검색과 서비스 이해, 각 전용 페이지로의 진입만 담당한다. */
 export default async function Home() {
-  const latest = await getRecentlyPublishedMemes(6);
+  const discovery = await loadDiscoveryIndex();
+  const latest = discovery.ok
+    ? await getRecentlyPublishedMemes(6, discovery.ids)
+    : [];
   const categoryCopy = getSeoCopy("ko").categories;
   const rawEntries = latest.map((meme) => ({
     id: meme.id,

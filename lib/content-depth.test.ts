@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   CONTENT_DEPTH_THRESHOLDS as T,
   contentDepth,
+  discoveryIndexIds,
   isBoilerplateOrigin,
   isIndexableMeme,
   type ContentDepthInput,
+  type IndexCandidate,
 } from "@/lib/content-depth";
 
 /** 한글 n글자 — 길이 경계를 정확히 맞추기 위한 헬퍼(공백 없음, trim 영향 없음). */
@@ -77,13 +79,11 @@ describe("contentDepth 판정", () => {
 });
 
 /**
- * HG-001 C안(2026-08-04) — 색인(사이트맵·robots) 임계값만 낮추고 배너·광고 판정은
- * 현행 유지하기로 한 결정의 회귀 테스트. isIndexableMeme()은 MIN_PROSE_CHARS_INDEX(150),
- * contentDepth().isSubstantial(배너·광고가 쓰는 값)은 MIN_PROSE_CHARS(250)를 쓴다 —
- * 두 산문 하한 사이(150~249자)에서 반드시 갈라져야 한다. MIN_SCORE(5)는 공통.
+ * 배너·광고는 250자 isSubstantial을 유지한다. 색인은 현재 main의 150자 하한을
+ * 유지하므로 150~249자 문서는 색인될 수 있지만 광고·배너에는 남지 않는다.
  */
-describe("색인 판정과 배너·광고 판정의 산문 하한 분리 (HG-001 C안)", () => {
-  it("산문 150~249자·점수 충족 문서는 색인엔 남지만 배너·광고 기준은 통과하지 못한다", () => {
+describe("색인과 광고의 기존 하한은 분리된다", () => {
+  it("산문 150~249자 문서는 색인되지만 배너·광고 기준은 통과하지 못한다", () => {
     // 정의 100(0점, BASIC 150 미만) + 유래 60(2점) + 출처 2개(2점) + 미디어 1개(1점) = 5점,
     // 산문 160자 — MIN_PROSE_CHARS_INDEX(150) 이상, MIN_PROSE_CHARS(250) 미만.
     const between: ContentDepthInput = {
@@ -102,7 +102,6 @@ describe("색인 판정과 배너·광고 판정의 산문 하한 분리 (HG-001
     expect(depth.proseChars).toBeGreaterThanOrEqual(T.MIN_PROSE_CHARS_INDEX);
     expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS);
 
-    // 색인(사이트맵·robots)은 150자 기준이라 통과.
     expect(isIndexableMeme(between)).toBe(true);
     // 배너(DocStatusNote)·광고(AdsenseScript)는 250자 기준을 그대로 쓰므로 미통과.
     expect(depth.isSubstantial).toBe(false);
@@ -395,4 +394,63 @@ describe("자동 생성 상투구 유래", () => {
     expect(depth.signals.sourceCount).toBe(0);
   });
 
+});
+
+function indexableCandidate(id: string, overrides: Partial<IndexCandidate> = {}): IndexCandidate {
+  return {
+    id,
+    category: null,
+    origin_year: null,
+    description: chars(180),
+    origin: chars(90),
+    usage_note: chars(50),
+    usage_examples: [
+      { situation: chars(20), text: chars(20) },
+      { situation: chars(20), text: chars(20) },
+    ],
+    meme_sources: [
+      { source_url: `https://example.com/${id}/a` },
+      { source_url: `https://example.com/${id}/b` },
+    ],
+    meme_tags_map: [],
+    ...overrides,
+  };
+}
+
+describe("discovery index policy", () => {
+  it("matches isIndexableMeme without adding section-by-section requirements", () => {
+    const sparseSections = indexableCandidate("sparse", {
+      description: chars(100),
+      origin: chars(60),
+      usage_note: null,
+      usage_examples: null,
+      meme_sources: [
+        { source_url: "https://a.example/1" },
+        { source_url: "https://b.example/2" },
+      ],
+      meme_contents: [{ availability: "live", moderation_status: "approved" }],
+    });
+
+    expect(isIndexableMeme(sparseSections)).toBe(true);
+    expect(discoveryIndexIds([sparseSections])).toEqual(new Set(["sparse"]));
+  });
+
+  it("does not require two related discovery documents", () => {
+    const alone = indexableCandidate("alone", { category: "challenge" });
+    expect(discoveryIndexIds([alone])).toEqual(new Set(["alone"]));
+  });
+
+  it("still excludes documents that fail current main's indexability floor", () => {
+    const eligible = indexableCandidate("eligible");
+    const thin = indexableCandidate("thin", {
+      description: "짧다",
+      origin: null,
+      usage_note: null,
+      usage_examples: null,
+      meme_sources: [],
+    });
+
+    expect(isIndexableMeme(thin)).toBe(false);
+    expect(discoveryIndexIds([eligible, thin])).toEqual(new Set(["eligible"]));
+  });
 });

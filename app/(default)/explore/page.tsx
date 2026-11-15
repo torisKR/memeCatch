@@ -21,8 +21,9 @@ import {
 } from "@/components/explore-grid";
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
-import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
-import { curatedSearchCards } from "@/lib/curated-memes";
+import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from "@/lib/curated-memes";
+import { limitQueryToIds } from "@/lib/index-gate";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
@@ -154,7 +155,11 @@ function withPlatform<T extends {
   return query;
 }
 
-function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
+function buildQuery(
+  supabase: SupabaseClient<Database>,
+  filters: Filters,
+  indexableIds: readonly string[] | undefined,
+) {
   // 검색어가 있으면 search_memes RPC 위에 동일 필터/정렬을 얹는다
   // (components/explore-grid.tsx의 buildMemesQuery와 반드시 동기화).
   if (filters.q) {
@@ -181,7 +186,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
       sq = sq.order("trend_score", { ascending: false });
     }
     sq = sq.order("id", { ascending: false });
-    return sq;
+    return limitQueryToIds(sq, indexableIds);
   }
 
   let q = supabase
@@ -208,7 +213,7 @@ function buildQuery(supabase: SupabaseClient<Database>, filters: Filters) {
     q = q.order("trend_score", { ascending: false });
   }
   q = q.order("id", { ascending: false });
-  return q;
+  return limitQueryToIds(q, indexableIds);
 }
 
 /** 필터 상태로부터 안정적인 remount 키 — 필터 변경 시 그리드 상태 초기화 */
@@ -234,26 +239,39 @@ export default async function ExplorePage({
   const sp = await searchParams;
   const filters = parseFilters(sp);
 
-  const [initialLoad, platformCounts] = await Promise.all([
-    (async (): Promise<{
+  const initialLoad = await (async (): Promise<{
       items: MemeListItem[];
       unavailable: boolean;
       dbCount: number;
       hasMore: boolean;
+      indexableIds: string[];
     }> => {
-      const curated = filters.q ? curatedSearchCards(filters.q) : [];
+      const discovery = await loadDiscoveryIndex();
+      const indexableIds = discovery.ok ? [...discovery.ids] : [];
+      const curated = filters.q
+        ? curatedSearchCards(filters.q).filter((card) => {
+            const meme = findCuratedCoreMeme(card.short_id);
+            return meme ? curatedPassesIndexGate(meme) : false;
+          })
+        : [];
       const failed = {
         items: [] as MemeListItem[],
         unavailable: true,
         dbCount: 0,
         hasMore: false,
+        indexableIds,
       };
+      if (!discovery.ok) return failed;
       try {
         const supabase = createStaticClient();
         let queryFailed = false;
         const page = await collectIndexableWindow(
           async (from, to) => {
-            const { data, error } = await buildQuery(supabase, filters).range(from, to);
+            const { data, error } = await buildQuery(
+              supabase,
+              filters,
+              indexableIds,
+            ).range(from, to);
             // Curated cards are not a successful catalog read. Showing them with
             // unavailable:false hid the retry state when the database failed.
             if (error) {
@@ -277,13 +295,12 @@ export default async function ExplorePage({
           unavailable: false,
           dbCount: page.scanned,
           hasMore: page.hasMore,
+          indexableIds,
         };
       } catch {
         return failed;
       }
-    })(),
-    getSocialPlatformCounts(),
-  ]);
+    })();
 
   return (
     <main className="bg-background pb-14 text-foreground">
@@ -312,7 +329,7 @@ export default async function ExplorePage({
           </div>
         </div>
 
-        <ExploreFilters platformCounts={platformCounts} />
+        <ExploreFilters />
 
         <section
           aria-label="밈 탐색 결과"
@@ -325,6 +342,7 @@ export default async function ExplorePage({
             hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}
             filters={filters}
+            indexableIds={initialLoad.indexableIds}
           />
         </section>
       </div>

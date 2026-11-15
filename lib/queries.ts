@@ -134,12 +134,15 @@ export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
 }
 
 /** Newly published records, distinct from origin-year/trend-based recommendations. */
-export async function getRecentlyPublishedMemes(limit = 6): Promise<MemeListItem[]> {
+export async function getRecentlyPublishedMemes(limit = 6, eligibleIds?: ReadonlySet<string>): Promise<MemeListItem[]> {
   try {
+    if (eligibleIds && eligibleIds.size === 0) return [];
     const supabase = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await supabase
+    let query = supabase
       .from("memes")
-      .select(INDEXABLE_LIST_SELECT)
+      .select(INDEXABLE_LIST_SELECT);
+    if (eligibleIds) query = query.in("id", [...eligibleIds]);
+    const { data, error } = await query
       .in("moderation_status", [...PUBLIC_STATUSES])
       .not("published_at", "is", null)
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -471,11 +474,13 @@ export type SlangTermRow = Pick<
 export async function getSlangTermsByYearRange(
   fromYear: number,
   toYear: number,
-  limit = 60
+  limit = 60,
+  eligibleIds?: ReadonlySet<string>,
 ): Promise<SlangTermRow[]> {
+  if (eligibleIds && eligibleIds.size === 0) return [];
   try {
     const supabase = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await supabase
+    let query = supabase
       .from("memes")
       .select(
         "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
@@ -483,7 +488,9 @@ export async function getSlangTermsByYearRange(
       .eq("category", "phrase")
       .in("moderation_status", [...PUBLIC_STATUSES])
       .gte("origin_year", fromYear)
-      .lte("origin_year", toYear)
+      .lte("origin_year", toYear);
+    if (eligibleIds) query = query.in("id", [...eligibleIds]);
+    const { data, error } = await query
       .order("trend_score", { ascending: false })
       .order("id", { ascending: false })
       .limit(limit);

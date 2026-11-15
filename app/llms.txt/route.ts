@@ -38,7 +38,7 @@ export async function GET() {
       createStaticClient(),
       {
         select:
-          "id, title, summary, short_id, slug, description, origin, usage_note," +
+          "id, category, origin_year, title, summary, short_id, slug, description, origin, usage_note," +
           " caution, usage_examples, meme_sources(source_url, hidden_from_public)," +
           " meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
         primaryOrder: "trend_score",

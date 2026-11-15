@@ -12,6 +12,7 @@ import { MemeCardSkeleton } from "@/components/skeletons";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
+import { limitQueryToIds } from "@/lib/index-gate";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
 
 /**
@@ -116,6 +117,7 @@ export const YEAR_RANGES: Record<string, [number, number]> = {
 export function buildMemesQuery(
   supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
+  options?: { countOnly?: boolean; indexableIds?: readonly string[] }
 ) {
   // 검색어가 있으면 search_memes RPC(trgm·초성·별칭 서버 처리) 결과 위에
   // 동일한 카테고리/정렬/페이지네이션을 얹는다. RPC는 setof memes라 필터 체이닝 가능.
@@ -144,7 +146,7 @@ export function buildMemesQuery(
       sq = sq.order("trend_score", { ascending: false });
     }
     sq = sq.order("id", { ascending: false });
-    return sq;
+    return limitQueryToIds(sq, options?.indexableIds);
   }
 
   let q = supabase
@@ -174,18 +176,21 @@ export function buildMemesQuery(
   // 페이지네이션 안정용 2차 정렬(동점 시 순서 고정)
   q = q.order("id", { ascending: false });
 
-  return q;
+  return limitQueryToIds(q, options?.indexableIds);
 }
 
 /** 지정한 오프셋부터 얇은 문서를 건너뛰고 PAGE_SIZE만큼. scanned는 소비한 원본 행 수. */
 async function fetchFrom(
   supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
-  from: number
+  from: number,
+  indexableIds?: readonly string[],
 ) {
   return collectIndexableWindow(
     async (start, end) => {
-      const { data, error } = await buildMemesQuery(supabase, filters).range(start, end);
+      const { data, error } = await buildMemesQuery(supabase, filters, {
+        indexableIds,
+      }).range(start, end);
       if (error || !data) throw error ?? new Error("no data");
       return data as unknown as MemeListItem[];
     },
@@ -202,9 +207,12 @@ export function ExploreGrid({
   initialOffset,
   hasMoreInitial,
   catalogUnavailable = false,
+  indexableIds,
 }: {
   initial: MemeListItem[];
   filters: ExploreFilters;
+  /** Discovery ids. Omit to leave the query unfiltered (tests). */
+  indexableIds?: readonly string[];
   /** 첫 조회가 실패한 경우. 빈 결과와 구분한다. */
   catalogUnavailable?: boolean;
   /** 스트림에서 항상 제외할 밈 id (예: 현재 보고 있는 밈) */
@@ -249,7 +257,7 @@ export function ExploreGrid({
     const from = offsetRef.current;
     try {
       const supabase = createClient();
-      const batch = await fetchFrom(supabase, filters, from);
+      const batch = await fetchFrom(supabase, filters, from, indexableIds);
       const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
       for (const m of fresh) seenRef.current.add(m.id);
       setItems((prev) => [...prev, ...fresh]);
@@ -262,7 +270,7 @@ export function ExploreGrid({
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, indexableIds]);
 
   useEffect(() => {
     const el = sentinelRef.current;

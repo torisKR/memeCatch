@@ -2,16 +2,20 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createStaticClient } = vi.hoisted(() => ({
+const { createStaticClient, discoveryIds } = vi.hoisted(() => ({
   createStaticClient: vi.fn(),
+  discoveryIds: new Set<string>(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/index-gate.server", () => ({
+  loadDiscoveryIndex: vi.fn(async () => ({ ok: true, ids: new Set(discoveryIds) })),
+}));
 
 import sitemap, { clearSitemapCache, getIndexableKoreanMemeCount } from "@/app/sitemap";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { contentDepth, isIndexableMeme } from "@/lib/content-depth";
+import { contentDepth, discoveryIndexIds, isIndexableMeme } from "@/lib/content-depth";
 import {
   getHreflang,
   isSeoContentLocale,
@@ -44,15 +48,18 @@ type Translation = {
 
 function indexableMeme(index: number, translations: Translation[]) {
   return {
+    id: `id-${index}`,
+    category: "phrase",
+    origin_year: 2026,
     short_id: `m${index}`,
     slug: `meme-${index}`,
     updated_at: "2026-01-02T00:00:00.000Z" as string | Date,
     description: "d".repeat(400),
-    origin: "o".repeat(60),
-    usage_note: null,
+    origin: "o".repeat(80),
+    usage_note: "u".repeat(40),
     caution: null,
-    usage_examples: [] as { situation: string; text: string }[],
-    meme_sources: [] as { source_url?: string; hidden_from_public?: boolean }[],
+    usage_examples: [{ situation: "one", text: "a" }, { situation: "two", text: "b" }],
+    meme_sources: [{ source_url: `https://example.com/${index}/a` }, { source_url: `https://example.com/${index}/b` }],
     meme_contents: [],
     meme_tags_map: [],
     meme_translations: translations,
@@ -84,6 +91,8 @@ function useRows(
     error: null,
   },
 ) {
+  discoveryIds.clear();
+  for (const id of discoveryIndexIds(rows)) discoveryIds.add(id);
   createStaticClient.mockReturnValue({
     from: vi.fn(() => ({
       select: vi.fn((columns: string) => {
@@ -121,6 +130,7 @@ beforeEach(() => {
   clearSitemapCache();
   clearKoreanRankingsCache();
   createStaticClient.mockReset();
+  discoveryIds.clear();
 });
 
 /**
@@ -392,7 +402,8 @@ describe("사이트맵 다국어 색인 계약", () => {
 
   it("indexable 원문에 대해 상세와 같은 번역 색인 판정만 alternates에 허용한다", () => {
     // 원문 충실도 판정은 번역 유무보다 먼저 통과해야 한다.
-    expect(source).toContain("if (!isIndexableMeme(meme)) continue");
+    expect(source).toContain("if (!discoveryIds.has(meme.id)) continue");
+    expect(source).not.toContain("passesContentIndexGate");
     expect(source).toContain("!isThinMeme(meme)");
     // 검수·필수 필드·원문 150자·시각 비교는 isIndexableLocalizedMeme 한 곳이다.
     // 타임스탬프 문자열 동등 비교로 다시 갈라지면 Date와 마이크로초 문자열이 빠진다.
@@ -470,7 +481,7 @@ describe("사이트맵 다국어 색인 계약", () => {
     const thinProse = {
       description: "d".repeat(250),
       origin: "o".repeat(60),
-      usage_note: null,
+      usage_note: "u".repeat(39),
       caution: null,
       aliases: [] as string[],
       usage_examples: [] as { situation: string; text: string }[],
@@ -566,12 +577,12 @@ describe("사이트맵 다국어 색인 계약", () => {
       title: "원본",
       summary: "요약",
       description: "d".repeat(400),
-      origin: "o".repeat(60),
-      usage_note: null as string | null,
+      origin: "o".repeat(80),
+      usage_note: "u".repeat(40) as string | null,
       caution: null as string | null,
       aliases: [] as string[],
-      usage_examples: [] as { situation: string; text: string }[],
-      meme_sources: [] as { source_url?: string }[],
+      usage_examples: [{ situation: "one", text: "a" }, { situation: "two", text: "b" }],
+      meme_sources: [{ source_url: "https://example.com/a" }, { source_url: "https://example.com/b" }],
       meme_contents: [] as { availability?: string | null; moderation_status?: string | null }[],
       meme_tags_map: [] as { tag_id?: string | null }[],
     };
@@ -751,6 +762,9 @@ describe("사이트맵 다국어 색인 계약", () => {
     }
 
     useRows(fixtures.map(({ meme, translations }) => ({
+      id: meme.id,
+      category: "phrase",
+      origin_year: 2026,
       short_id: meme.short_id,
       slug: meme.slug,
       updated_at: meme.updated_at,
@@ -889,6 +903,9 @@ describe("사이트맵 다국어 색인 계약", () => {
 
   it("excludes a meme whose only sources are hidden_from_public, and keeps a twin with visible sources", async () => {
     const gated = (index: number, meme_sources: { source_url: string; hidden_from_public?: boolean }[]) => ({
+      id: `id-g${index}`,
+      category: "phrase",
+      origin_year: 2026,
       short_id: `g${index}`,
       slug: `gated-${index}`,
       updated_at: "2026-01-02T00:00:00.000Z",
@@ -897,7 +914,7 @@ describe("사이트맵 다국어 색인 계약", () => {
       // sources add +2 and make it indexable; hidden sources must not.
       description: "d".repeat(339),
       origin: "o".repeat(59),
-      usage_note: null,
+      usage_note: "u".repeat(39),
       caution: null,
       usage_examples: [{ situation: "s", text: "t" }],
       meme_sources,

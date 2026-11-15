@@ -6,24 +6,17 @@
  * 똑같이 붙는 요소는 점수에 넣지 않는다(대량생산 얇은 문서를 걸러내는 게 목적이라
  * 공통 껍데기를 세면 전부 통과해버린다).
  *
- * 소비처는 두 갈래로 나뉘고, 갈래마다 산문 하한이 다르다(HG-001 C안, 2026-08-04):
+ * 소비처는 두 갈래다.
  *
  *   [번역·기존 색인 판정 — isIndexableMeme, MIN_PROSE_CHARS_INDEX=150]
  *   - app/sitemap.ts                      — 번역 URL과 localized explore 집계
  *   - lib/meme-translations.ts            — 번역이 없으면 기존처럼 404
  *   한국어 상세의 noindex, 한국어 사이트맵 URL, 공개 카드 레일도
- *   lib/thin-meme.ts를 통해 이 기존 색인 판정을 그대로 공유한다.
+ *   lib/thin-meme.ts와 discoveryIndexIds를 통해 이 기존 판정을 그대로 공유하며,
+ *   섹션별 길이나 관련 밈 수를 별도 조건으로 추가하지 않는다.
  *   [배너·광고 판정 — contentDepth().isSubstantial, MIN_PROSE_CHARS=250, 현행 유지]
  *   - components/doc-status-note.tsx      — 「아직 정리 중인 문서예요」 배너
  *   - app/(default)/memes/[key]/page.tsx  — AdsenseScript 로더 게이트
- *
- * 같은 갈래 안에서는 **반드시 같은 신호·같은 함수**를 넘겨야 판정이 갈리지 않는다.
- * MIN_SCORE(5)는 두 갈래 모두 동일 — 낮아지는 건 산문 하한뿐이다.
- *
- * 주의: lib/meme-translations.ts의 isIndexableLocalizedMeme는 isIndexableMeme을
- * 그대로 감싸므로, 색인 하한 변경이 번역 페이지의 존재 여부·검수 배너·추천 노출에도
- * 함께 전파된다 — 이번 변경은 사이트맵·robots(색인)만 요청받았고 그 파급은 범위
- * 밖이라 손대지 않았다. 실제로 조정하려면 별도 확인이 필요하다.
  *
  * 데이터는 삭제하지 않는다. 페이지는 그대로 200으로 살아 있고 색인 노출만 줄인다.
  */
@@ -37,10 +30,7 @@ export const CONTENT_DEPTH_THRESHOLDS = {
    */
   MIN_PROSE_CHARS: 250,
   /**
-   * 색인(사이트맵·robots) 판정 전용 산문 하한 — HG-001 C안(2026-08-04).
-   * 배너·광고 판정(MIN_PROSE_CHARS=250)보다 낮춰 isIndexableMeme()만 이 값을 쓴다.
-   * 「대량생산 얇은 문서」 방지 취지는 유지하되, 노출 범위만 사이트맵·robots에서
-   * 149자 이하 문서까지로 좁혀 색인 볼륨 손실을 줄인다.
+   * 현재 main의 색인 산문 하한. discovery·사이트맵·robots가 함께 쓴다.
    */
   MIN_PROSE_CHARS_INDEX: 150,
   /** 종합 점수 하한. 산문 하한을 넘겨도 이 점수 미만이면 얇음. 색인·배너·광고 모두 공통. */
@@ -244,16 +234,29 @@ export function contentDepth(meme: ContentDepthInput | null | undefined): Conten
   return { score, proseChars, isSubstantial, isThin: !isSubstantial, signals };
 }
 
+export type IndexCandidate = ContentDepthInput & {
+  id: string;
+  category?: string | null;
+  origin_year?: number | null;
+};
+
 /**
- * 사이트맵 포함·robots index 허용 여부. 색인 노출 판단은 전부 이 함수를 거친다.
- *
- * HG-001 C안(2026-08-04): contentDepth().isSubstantial(MIN_PROSE_CHARS=250, 배너·광고용)을
- * 그대로 쓰지 않고 MIN_PROSE_CHARS_INDEX(150)를 독자적으로 적용한다 — 색인 임계값만
- * 낮추고 배너·광고 판정은 현행(250) 유지가 이번 결정이라 두 갈래를 여기서 갈라 둔다.
- * MIN_SCORE(5)는 배너·광고와 동일하게 유지.
+ * 작업 목록·Plus와 공개 discovery가 함께 쓰는 현재 main의 색인 하한.
  */
 export function isIndexableMeme(meme: ContentDepthInput | null | undefined): boolean {
   const t = CONTENT_DEPTH_THRESHOLDS;
   const depth = contentDepth(meme);
   return depth.proseChars >= t.MIN_PROSE_CHARS_INDEX && depth.score >= t.MIN_SCORE;
+}
+
+/**
+ * 현재 main의 단일 문서 색인 기준을 그대로 discovery 목록에 적용한다.
+ * 섹션별 최소 길이나 관련 문서 수를 별도 조건으로 추가하지 않는다.
+ */
+export function discoveryIndexIds(candidates: readonly IndexCandidate[]): Set<string> {
+  return new Set(
+    candidates
+      .filter((candidate) => candidate.id && isIndexableMeme(candidate))
+      .map((candidate) => candidate.id),
+  );
 }

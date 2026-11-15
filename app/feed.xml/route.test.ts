@@ -24,14 +24,15 @@ function row(
     title: `Meme ${index}`,
     summary: `Summary ${index}`,
     category: "phrase",
+    moderation_status: "approved" as const,
     published_at: publishedAt,
     updated_at: updatedAt,
     description: indexable ? "d".repeat(400) : "thin",
-    origin: indexable ? "o".repeat(60) : "",
-    usage_note: null,
+    origin: indexable ? "o".repeat(80) : "",
+    usage_note: indexable ? "u".repeat(40) : null,
     caution: null,
-    usage_examples: [] as { situation: string; text: string }[],
-    meme_sources: [] as { source_url?: string; hidden_from_public?: boolean }[],
+    usage_examples: indexable ? [{ situation: "one", text: "a" }, { situation: "two", text: "b" }] : [],
+    meme_sources: indexable ? [{ source_url: `https://example.com/${index}/a` }, { source_url: `https://example.com/${index}/b` }] : [],
     meme_contents: [],
     meme_tags_map: [],
   };
@@ -51,7 +52,7 @@ function useRows(
   };
   const query = {
     select: vi.fn(() => query),
-    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
     order,
     range: vi.fn(async (from: number, to: number) => result(rows.slice(from, to + 1))),
     limit: vi.fn(async (limit: number) => result(rows.slice(0, limit))),
@@ -94,6 +95,7 @@ describe("RSS publication export", () => {
     useRows([
       row(1, true, null),
       row(2, true, "2026-02-03T04:05:06.000Z"),
+      row(3, true, null),
     ]);
 
     const response = await GET();
@@ -166,6 +168,7 @@ describe("RSS publication export", () => {
       title: `Gated ${index}`,
       summary: `Summary ${index}`,
       category: "phrase",
+      moderation_status: "approved" as const,
       published_at: "2026-02-01T00:00:00.000Z",
       updated_at: "2026-02-02T00:00:00.000Z",
       description: "d".repeat(250),

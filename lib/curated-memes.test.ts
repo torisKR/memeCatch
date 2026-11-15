@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURATED_CORE_MEMES, curatedDepthInput, curatedSearchCards, getGuaranteedHomeEntries } from "@/lib/curated-memes";
+import { CURATED_CORE_MEMES, curatedDepthInput, curatedPassesIndexGate, curatedSearchCards, getGuaranteedHomeEntries } from "@/lib/curated-memes";
 import type { HomeEntry } from "@/components/home/home-experience";
 import { isThinMeme } from "@/lib/thin-meme";
 
@@ -8,6 +8,12 @@ const passingCurated = CURATED_CORE_MEMES.filter(
 );
 
 describe("curated memes and guaranteed home entries", () => {
+  it("uses the same eligibility predicate for curated fallback and thin filtering", () => {
+    for (const meme of CURATED_CORE_MEMES) {
+      expect(curatedPassesIndexGate(meme)).toBe(!isThinMeme(curatedDepthInput(meme)));
+    }
+  });
+
   it("contains well-formed core curated memes with required metadata", () => {
     expect(CURATED_CORE_MEMES.length).toBeGreaterThanOrEqual(8);
 
@@ -42,7 +48,7 @@ describe("curated memes and guaranteed home entries", () => {
     expect(entries[0].thumbnailUrl).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
-  it("preserves live entries and pads with curated ones if live entries are sparse", () => {
+  it("preserves live entries and pads with eligible curated ones if live entries are sparse", () => {
     const sparseLiveEntries: readonly HomeEntry[] = [
       {
         id: "live-1",

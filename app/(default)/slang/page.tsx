@@ -11,6 +11,7 @@ import {
 } from "@/components/slang-dictionary";
 import { AdsenseScript } from "@/components/adsense-script";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 /**
  * /slang — 줄임말·유행어 사전 (연대별 브라우징).
@@ -75,8 +76,16 @@ function rowToTerm(row: SlangTermRow): SlangEra["terms"][number] {
 
 /** 네 연대 상위 표제어 — generateMetadata·본문 중복 호출을 React cache로 dedupe */
 const loadSlangEras = cache(async (): Promise<SlangEra[]> => {
+  const discovery = await loadDiscoveryIndex();
   const results = await Promise.all(
-    ERA_DEFS.map((def) => getSlangTermsByYearRange(def.from, def.to, TERMS_PER_ERA))
+    ERA_DEFS.map((def) =>
+      getSlangTermsByYearRange(
+        def.from,
+        def.to,
+        TERMS_PER_ERA,
+        discovery.ok ? discovery.ids : new Set<string>(),
+      ),
+    ),
   );
   return ERA_DEFS.map((def, i) => ({
     key: def.key,
@@ -94,6 +103,8 @@ const loadSlangEras = cache(async (): Promise<SlangEra[]> => {
  */
 const loadRiskyTerms = cache(async (): Promise<SlangEra["terms"]> => {
   try {
+    const discovery = await loadDiscoveryIndex();
+    if (!discovery.ok || discovery.ids.size === 0) return [];
     const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("memes")
@@ -101,6 +112,7 @@ const loadRiskyTerms = cache(async (): Promise<SlangEra["terms"]> => {
         "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
       )
       .eq("category", "phrase")
+      .in("id", [...discovery.ids])
       .in("moderation_status", ["approved", "limited"])
       .in("safety_level", ["red", "yellow"])
       .order("trend_score", { ascending: false })

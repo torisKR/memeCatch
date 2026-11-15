@@ -23,13 +23,16 @@ afterEach(() => {
 });
 
 describe("ExploreFilters", () => {
+  it("does not show catalog-wide platform counts beside discovery-filtered options", () => {
+    render(<ExploreFilters />);
+
+    expect(screen.getByRole("option", { name: "YouTube" })).toBeTruthy();
+    expect(screen.queryByText(/YouTube · \d+/)).toBeNull();
+  });
+
   it("uses disclosure and pressed-button semantics instead of orphaned tabs", async () => {
     const user = userEvent.setup();
-    render(
-      <ExploreFilters
-        platformCounts={{ youtube: 12, youtube_shorts: 8, tiktok: 4, instagram: 2 }}
-      />,
-    );
+    render(<ExploreFilters />);
 
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.queryByRole("tablist")).toBeNull();
@@ -52,11 +55,7 @@ describe("ExploreFilters", () => {
   it("shows AI memes and keeps the tag-backed category exclusive", async () => {
     navigation.query = "category=meme_term";
     const user = userEvent.setup();
-    render(
-      <ExploreFilters
-        platformCounts={{ youtube: 12, youtube_shorts: 8, tiktok: 4, instagram: 2 }}
-      />,
-    );
+    render(<ExploreFilters />);
 
     await user.click(screen.getByRole("button", { name: "필터 1" }));
     await user.click(screen.getByRole("button", { name: "AI 밈" }));
@@ -69,11 +68,7 @@ describe("ExploreFilters", () => {
   it("removes AI memes when selecting a format category", async () => {
     navigation.query = "category=ai-meme";
     const user = userEvent.setup();
-    render(
-      <ExploreFilters
-        platformCounts={{ youtube: 12, youtube_shorts: 8, tiktok: 4, instagram: 2 }}
-      />,
-    );
+    render(<ExploreFilters />);
 
     await user.click(screen.getByRole("button", { name: "필터 1" }));
     await user.click(screen.getByRole("button", { name: "밈 용어(유행어)" }));

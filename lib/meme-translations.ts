@@ -18,6 +18,7 @@ import {
 import { createStaticClient } from "@/lib/supabase/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { originCountryCode } from "@/lib/meme-country";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 export type TranslationStatus = "machine" | "reviewed" | "stale";
 
@@ -104,6 +105,11 @@ type FeaturedTranslationRow = MemeTranslationRow & {
 };
 
 type AvailabilityBaseRow = Omit<LocalizableMeme, "short_id">;
+
+export type TranslationLocaleAvailability = {
+  availableLocales: Locale[];
+  reviewedLocales: Locale[];
+};
 
 /**
  * Millisecond instant of a timestamptz value.
@@ -329,17 +335,21 @@ export async function getLocalizedSearchMemesResult(
   if (uniqueShortIds.length === 0) return { items, status: "coverage-empty" };
 
   try {
-    const { data, error } = await createStaticClient()
+    const [{ data, error }, discovery] = await Promise.all([
+      createStaticClient()
       .from("meme_translations")
       .select(FEATURED_SELECT)
       .eq("locale", locale)
       .eq("status", "reviewed")
       .in("memes.short_id", uniqueShortIds)
       .in("memes.moderation_status", ["approved", "limited"])
-      .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
-    if (error || !data) return { items, status: "unavailable" };
+      .overrideTypes<FeaturedTranslationRow[], { merge: false }>(),
+      loadDiscoveryIndex(),
+    ]);
+    if (error || !data || !discovery.ok) return { items, status: "unavailable" };
 
     for (const row of data) {
+      if (!discovery.ids.has(row.memes.id)) continue;
       const localized = overlayMemeTranslation(row.memes, row, locale);
       const include = options?.includeEmptySummary
         ? isRelatedLocalizedMeme(localized)
@@ -376,7 +386,8 @@ export async function getLocalizedFeaturedMemes(
   const candidateLimit = Math.min(Math.max(safeLimit * 8, 96), 1_200);
 
   try {
-    const { data, error } = await createStaticClient()
+    const [{ data, error }, discovery] = await Promise.all([
+      createStaticClient()
       .from("meme_translations")
       .select(FEATURED_SELECT)
       .eq("locale", locale)
@@ -384,11 +395,14 @@ export async function getLocalizedFeaturedMemes(
       .in("memes.moderation_status", ["approved", "limited"])
       .order("trend_score", { referencedTable: "memes", ascending: false })
       .limit(candidateLimit)
-      .overrideTypes<FeaturedTranslationRow[], { merge: false }>();
-    if (error || !data) return [];
+      .overrideTypes<FeaturedTranslationRow[], { merge: false }>(),
+      loadDiscoveryIndex(),
+    ]);
+    if (error || !data || !discovery.ok) return [];
 
     const localized: LocalizedMemeListItem[] = [];
     for (const row of data) {
+      if (!discovery.ids.has(row.memes.id)) continue;
       if (originCountryCode(row.memes.meme_market_profiles) !== "KR") continue;
       const meme = overlayMemeTranslation(row.memes, row, locale);
       if (!meme || !isIndexableLocalizedMeme(meme)) continue;
@@ -405,10 +419,11 @@ export async function getLocalizedFeaturedMemes(
  * Hreflang-ready locales only. Existing machine/stale rows are not advertised
  * as alternates because they are intentionally non-indexable.
  */
-export const getAvailableTranslationLocales = cache(async function getAvailableTranslationLocales(
+export const getTranslationLocaleAvailability = cache(async function getTranslationLocaleAvailability(
   memeId: string,
-): Promise<Locale[]> {
-  if (!memeId) return [];
+): Promise<TranslationLocaleAvailability> {
+  const empty = { availableLocales: [], reviewedLocales: [] };
+  if (!memeId) return empty;
 
   try {
     const supabase = createStaticClient();
@@ -424,21 +439,34 @@ export const getAvailableTranslationLocales = cache(async function getAvailableT
         .overrideTypes<AvailabilityBaseRow, { merge: false }>(),
       readReviewedTranslationRows(memeId),
     ]);
-    if (baseError || !base) return [];
+    if (baseError || !base) return empty;
 
-    const byLocale = new Set<Locale>();
+    const reviewed = new Set<Locale>();
+    const available = new Set<Locale>();
     for (const row of rows) {
       if (!isLocale(row.locale) || row.locale === DEFAULT_LOCALE) continue;
-      const minimalBase: LocalizableMeme = {
-        ...base,
-        short_id: "",
-      };
-      const meme = overlayMemeTranslation(minimalBase, row, row.locale);
-      if (meme && isIndexableLocalizedMeme(meme)) byLocale.add(row.locale);
+      reviewed.add(row.locale);
     }
 
-    return SUPPORTED_LOCALES.filter((locale) => byLocale.has(locale));
+    const discovery = await loadDiscoveryIndex();
+    if (discovery.ok && discovery.ids.has(memeId)) {
+      for (const row of rows) {
+        if (!isLocale(row.locale) || row.locale === DEFAULT_LOCALE) continue;
+        const minimalBase: LocalizableMeme = { ...base, short_id: "" };
+        const meme = overlayMemeTranslation(minimalBase, row, row.locale);
+        if (meme && isIndexableLocalizedMeme(meme)) available.add(row.locale);
+      }
+    }
+
+    return {
+      availableLocales: SUPPORTED_LOCALES.filter((locale) => available.has(locale)),
+      reviewedLocales: SUPPORTED_LOCALES.filter((locale) => reviewed.has(locale)),
+    };
   } catch {
-    return [];
+    return empty;
   }
 });
+
+export async function getAvailableTranslationLocales(memeId: string): Promise<Locale[]> {
+  return (await getTranslationLocaleAvailability(memeId)).availableLocales;
+}

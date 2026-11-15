@@ -11,6 +11,7 @@ import {
   overlayMemeTranslation,
   getLocalizedFeaturedMemes,
   getLocalizedSearchMemesResult,
+  getTranslationLocaleAvailability,
   listIndexableLocalizedMemes,
   type MemeTranslationRow,
 } from "@/lib/meme-translations";
@@ -18,6 +19,12 @@ import {
 const createStaticClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/index-gate.server", () => ({
+  loadDiscoveryIndex: vi.fn(async () => ({
+    ok: true,
+    ids: new Set(["00000000-0000-4000-8000-000000000001"]),
+  })),
+}));
 
 const SOURCE_UPDATED_AT = "2026-07-28T04:00:00.000Z";
 
@@ -469,5 +476,42 @@ describe("localized featured Korean origin", () => {
     expect(featured).toHaveLength(1);
     expect(featured[0]?.short_id).toBe("abc12345");
     expect(featured[0]?.title).toBe("Original meme");
+  });
+});
+
+describe("translation locale availability", () => {
+  it("keeps an existing reviewed locale out of the missing CTA when the source is noindex", async () => {
+    const baseQuery = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      in: vi.fn(),
+      maybeSingle: vi.fn(),
+      overrideTypes: vi.fn(),
+    };
+    const translationQuery = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      overrideTypes: vi.fn(),
+    };
+    for (const key of ["select", "eq", "in", "maybeSingle"] as const) {
+      baseQuery[key].mockReturnValue(baseQuery);
+    }
+    for (const key of ["select", "eq"] as const) {
+      translationQuery[key].mockReturnValue(translationQuery);
+    }
+    baseQuery.overrideTypes.mockResolvedValue({ data: baseMeme(), error: null });
+    translationQuery.overrideTypes.mockResolvedValue({ data: [translation()], error: null });
+    createStaticClient.mockReturnValue({
+      from: vi.fn((table: string) =>
+        table === "memes" ? baseQuery : translationQuery,
+      ),
+    });
+    const { loadDiscoveryIndex } = await import("@/lib/index-gate.server");
+    vi.mocked(loadDiscoveryIndex).mockResolvedValueOnce({ ok: true, ids: new Set() });
+
+    await expect(getTranslationLocaleAvailability(baseMeme().id)).resolves.toEqual({
+      availableLocales: [],
+      reviewedLocales: ["en"],
+    });
   });
 });

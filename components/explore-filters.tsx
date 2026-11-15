@@ -11,8 +11,6 @@ import {
   type DisplayCategoryKey,
   expandDisplayCategoryTokens,
 } from "@/lib/labels";
-import type { SocialPlatform, SocialPlatformCounts } from "@/lib/source-platform";
-
 const SORTS = [
   { key: "trending", label: "급상승" },
   { key: "recent", label: "최신" },
@@ -60,11 +58,7 @@ const chipOn =
   "border-(--flame-500) bg-accent-soft font-semibold text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_25%,transparent),0_0_14px_-3px_color-mix(in_srgb,var(--flame-500)_55%,transparent)]";
 
 /** 검색과 결과 사이를 한 줄 도구막대로 정돈한 URL 동기화 필터. */
-export function ExploreFilters({
-  platformCounts,
-}: {
-  platformCounts: SocialPlatformCounts;
-}) {
+export function ExploreFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -282,12 +276,9 @@ export function ExploreFilters({
             className="rounded-sm bg-transparent font-semibold text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {PLATFORMS.map((item) => {
-              const count = item.key
-                ? platformCounts[item.key as SocialPlatform]
-                : null;
               return (
                 <option key={item.key || "all"} value={item.key}>
-                  {item.label}{count === null ? "" : ` · ${count}`}
+                  {item.label}
                 </option>
               );
             })}

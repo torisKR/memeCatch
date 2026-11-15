@@ -44,6 +44,8 @@ import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
 import titleStyles from "@/components/meme-detail-title.module.css";
+import { detailIndexableFromDiscovery } from "@/lib/index-gate";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 /** 한국어 상세와 같다. 문서는 캐시하지 않고, 성공한 카탈로그 읽기만 Data Cache에 둔다. */
 export const dynamic = "force-dynamic";
@@ -267,7 +269,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const versions = await getLanguageVersions(meme, locale);
+  const [versions, discovery] = await Promise.all([
+    getLanguageVersions(meme, locale),
+    loadDiscoveryIndex(),
+  ]);
+  const indexable = detailIndexableFromDiscovery(
+    discovery,
+    meme.id,
+    isIndexableLocalizedMeme(meme),
+  );
   const indexableVersions = versions.filter(({ meme: version }) =>
     isIndexableLocalizedMeme(version),
   );
@@ -312,8 +322,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     ...metadata,
     alternates: { canonical, languages },
-    ...(!isIndexableLocalizedMeme(meme)
-      ? { robots: { index: false, follow: true } }
+    ...(!indexable
+      ? { robots: { index: false, follow: false } }
       : {}),
     openGraph: {
       ...metadata.openGraph,
@@ -355,7 +365,7 @@ export default async function LocalizedMemePage({ params }: Props) {
   if (redirectPath) permanentRedirect(redirectPath);
 
   const tagIds = meme.meme_tags_map.map((tag) => tag.tag_id);
-  const [versions, marketPassport, related] = await Promise.all([
+  const [versions, marketPassport, related, discovery] = await Promise.all([
     getLanguageVersions(meme, locale),
     getMemeMarketPassport(meme.id, locale),
     getRelatedMemes(
@@ -363,6 +373,7 @@ export default async function LocalizedMemePage({ params }: Props) {
       tagIds,
       6,
     ),
+    loadDiscoveryIndex(),
   ]);
   const localizedRelated = await getLocalizedSearchMemesResult(
     related.map((item) => item.short_id),
@@ -385,6 +396,11 @@ export default async function LocalizedMemePage({ params }: Props) {
   const isMachine = meme.translation.status === "machine";
   const isStale = meme.translation.status === "stale" || !meme.translation.isCurrent;
   const needsReview = !isIndexableLocalizedMeme(meme);
+  const indexable = detailIndexableFromDiscovery(
+    discovery,
+    meme.id,
+    !needsReview,
+  );
 
   return (
     <article
@@ -392,7 +408,7 @@ export default async function LocalizedMemePage({ params }: Props) {
       dir={config.direction}
       className="mx-auto max-w-5xl px-4 py-8 pb-16 text-foreground"
     >
-      {!needsReview && (
+      {indexable && (
         <>
           <MemeWebPageJsonLd
             locale={locale}

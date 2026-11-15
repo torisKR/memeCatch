@@ -15,15 +15,11 @@ describe("castFor", () => {
   });
 });
 
-describe("normalizeRow", () => {
-  it("turns top-level Date values into ISO strings and leaves other values alone", async () => {
-    const { normalizeRow } = await import("@/lib/db/execute");
-    const row = { id: "a", updated_at: new Date("2026-11-15T09:00:00Z"), n: 1, embed: { created_at: "2026-01-01T00:00:00+00:00" } };
-    const out = normalizeRow(row);
-    expect(out.updated_at).toBe("2026-11-15T09:00:00.000Z");
-    expect(out.embed).toBe(row.embed);
-    expect(row.updated_at).toBeInstanceOf(Date);
-    const plain = { id: "b" };
-    expect(normalizeRow(plain)).toBe(plain);
+describe("asJsonRows", () => {
+  it("serializes rows in Postgres so timestamps keep their JSON text form", async () => {
+    const { asJsonRows } = await import("@/lib/db/execute");
+    expect(asJsonRows('SELECT "id" FROM public."memes" LIMIT 1')).toBe(
+      'WITH __q AS (SELECT "id" FROM public."memes" LIMIT 1) SELECT row_to_json(__q) AS __row FROM __q',
+    );
   });
 });

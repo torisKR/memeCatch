@@ -95,6 +95,28 @@ grep -q "^tag memecatch-scheduler:rollback-s1 memecatch-scheduler$" "$calls" || 
 [[ "$(grep -c ghcr.io "$STATE_DIR/rollback-s1.refs")" == 0 ]] || fail "snapshot kept a ghcr.io name"
 [[ "$(rollback_ref backup s1)" == memecatch-backup:rollback-s1 ]] || fail "backup snapshot name"
 
+# A service whose image is already gone is skipped, not fatal, and is not recorded.
+: >"$calls"
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$stub_calls"
+case "$1 $2" in
+  "inspect memecatch-app-1") [[ "$*" == *Config.Image* ]] && echo memecatch:release-old || echo sha256:app ;;
+  "inspect memecatch-mpe-worker-1") [[ "$*" == *Config.Image* ]] && echo memecatch-worker:local || echo sha256:gone ;;
+  "inspect "*) [[ "$*" == *Config.Image* ]] && echo "${2#memecatch-}" | sed 's/-1$//;s/^/memecatch-/' || echo sha256:other ;;
+  "tag sha256:gone") exit 1 ;;
+esac
+exit 0
+STUB
+PATH="$stub:$PATH" stub_calls="$calls" tag_rollback s2 >/dev/null || fail "missing image aborted the snapshot"
+grep -q "^app memecatch:rollback-s2$" "$STATE_DIR/rollback-s2.refs" || fail "app snapshot missing"
+grep -q "^mpe-worker" "$STATE_DIR/rollback-s2.refs" && fail "unsnapshotted worker was recorded"
+
+# Snapshots are taken before the build, which can drop the replaced image.
+snap_line="$(grep -n 'tag_rollback "\$current"' "$here/autodeploy.sh" | cut -d: -f1)"
+build_line="$(grep -n 'if ! build_images "\$target"' "$here/autodeploy.sh" | cut -d: -f1)"
+(( snap_line > 0 && snap_line < build_line )) || fail "tag_rollback must run before build_images"
+
 # The running agent lives outside the checkout and only changes when the checkout's
 # copy differs; a checkout without the agent (an older release) leaves it alone.
 STATE_DIR="$stub/state"

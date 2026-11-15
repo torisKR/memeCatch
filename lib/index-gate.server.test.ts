@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 
 vi.mock("server-only", () => ({}));
 
@@ -24,9 +24,25 @@ vi.mock("@/lib/supabase/server", () => ({
   createStaticClient: mocks.createStaticClient,
 }));
 
-import { loadDiscoveryIndex } from "@/lib/index-gate.server";
-
 describe("discovery index server cache", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("shares the public catalog invalidation tag with admin and source mutations", async () => {
+    await import("@/lib/index-gate.server");
+
+    expect(mocks.unstableCache).toHaveBeenCalledWith(
+      expect.any(Function),
+      ["public-discovery-index-v1"],
+      {
+        revalidate: 60 * 60,
+        tags: [PUBLIC_CATALOG_CACHE_TAG, "public-discovery-index"],
+      },
+    );
+  });
+
   it("reuses one full catalog scan across separate loader calls", async () => {
     const row = {
       id: "eligible",
@@ -52,6 +68,7 @@ describe("discovery index server cache", () => {
     };
     for (const key of ["select", "in", "order"] as const) query[key].mockReturnValue(query);
     mocks.createStaticClient.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
+    const { loadDiscoveryIndex } = await import("@/lib/index-gate.server");
 
     const first = await loadDiscoveryIndex();
     const second = await loadDiscoveryIndex();
@@ -59,9 +76,5 @@ describe("discovery index server cache", () => {
     expect(first).toEqual({ ok: true, ids: new Set(["eligible"]) });
     expect(second).toEqual(first);
     expect(query.range).toHaveBeenCalledTimes(1);
-    const source = readFileSync("lib/index-gate.server.ts", "utf8");
-    expect(source).toContain("unstable_cache(");
-    expect(source).toContain("revalidate: DISCOVERY_REVALIDATE_SECONDS");
-    expect(source).toContain('tags: ["public-discovery-index"]');
   });
 });

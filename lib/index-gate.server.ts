@@ -3,6 +3,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { discoveryIndexIds, type IndexCandidate } from "@/lib/content-depth";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { createStaticClient } from "@/lib/supabase/server";
 
 const SELECT =
@@ -42,7 +43,7 @@ const loadCachedDiscoveryIds = unstable_cache(
   ["public-discovery-index-v1"],
   {
     revalidate: DISCOVERY_REVALIDATE_SECONDS,
-    tags: ["public-discovery-index"],
+    tags: [PUBLIC_CATALOG_CACHE_TAG, "public-discovery-index"],
   },
 );
 

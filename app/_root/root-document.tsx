@@ -34,11 +34,9 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 export function RootDocument({
   children,
   locale,
-  showRankings = true,
 }: {
   children: React.ReactNode;
   locale: Locale;
-  showRankings?: boolean;
 }) {
   return (
     <html
@@ -62,9 +60,9 @@ export function RootDocument({
               back/forward move the page. Bottom padding keeps the end of the
               page above the chat launcher and the bottom nav. */}
           <div className="flex min-w-0 flex-1 flex-col">
-            <GlobalHeader showRankings={showRankings} />
+            <GlobalHeader />
             <div className="min-w-0 flex-1">{children}</div>
-            <SiteFooter showRankings={showRankings} />
+            <SiteFooter />
           </div>
           <PremiumAdControl />
           <BottomNav />

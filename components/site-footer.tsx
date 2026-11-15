@@ -22,9 +22,9 @@ const FOOTER_LINKS = [
   { href: "/support", label: "support" },
 ] as const;
 
-export function SiteFooter({ showRankings = true }: { showRankings?: boolean }) {
+export function SiteFooter() {
   const { messages, locale } = useLocale();
-  const links = FOOTER_LINKS.filter((link) => showRankings || link.href !== "/rankings");
+  const links = FOOTER_LINKS;
   return (
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">

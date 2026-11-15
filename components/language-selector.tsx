@@ -7,6 +7,7 @@ import {
   LANGUAGE_NAMES,
   LANGUAGE_SHORT_NAMES,
   SUPPORTED_LOCALES,
+  isLocale,
   type Locale,
 } from "@/lib/i18n";
 import { persistLocale, useLocale } from "@/lib/i18n-client";
@@ -35,6 +36,23 @@ function destinationPath(destination: string): string {
 }
 
 /**
+ * Rankings exists for every supported locale: `/rankings` in Korean and
+ * `/{locale}/rankings` otherwise. The prefix may be any supported locale,
+ * not only an SEO prefix, because those URLs are rewritten.
+ */
+function rankingsLocaleDestination(pathname: string, nextLocale: Locale): string | undefined {
+  const marker = pathname.search(/[?#]/);
+  const rawPath = marker === -1 ? pathname : pathname.slice(0, marker);
+  const suffix = marker === -1 ? "" : pathname.slice(marker);
+  const parts = rawPath.split("/").filter(Boolean);
+  const onRankings =
+    (parts.length === 1 && parts[0] === "rankings") ||
+    (parts.length === 2 && parts[1] === "rankings" && isLocale(parts[0]) && parts[0] !== "ko");
+  if (!onRankings) return undefined;
+  return nextLocale === "ko" ? `/rankings${suffix}` : `/${nextLocale}/rankings${suffix}`;
+}
+
+/**
  * Return the route needed to apply a locale, or `null` when the cookie-driven
  * UI can update in place. The global selector does not know which individual
  * meme translations exist, so only the detail page's availability-aware nav
@@ -42,6 +60,8 @@ function destinationPath(destination: string): string {
  */
 export function localeDestination(pathname: string, nextLocale: Locale): string | null {
   const pathnameWithoutLang = withoutLangQuery(pathname);
+  const rankingsDestination = rankingsLocaleDestination(pathnameWithoutLang, nextLocale);
+  if (rankingsDestination !== undefined) return rankingsDestination;
   const parsed = parseLocalePath(pathnameWithoutLang);
 
   // UI-only locales have no URL prefix. Drop an existing SEO prefix only when

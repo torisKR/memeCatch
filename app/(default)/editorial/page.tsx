@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SafetyBadge } from "@/components/safety-badge";
 import { SAFETY_LEVELS, type SafetyLevel } from "@/lib/labels";
 import { RIGHTS_BASIS_LABELS, SOURCE_ROLE_LABELS } from "@/lib/sources/review";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 const EDITORIAL_DESCRIPTION =
@@ -12,14 +13,11 @@ export const metadata: Metadata = {
   title: "편집 원칙",
   description: EDITORIAL_DESCRIPTION,
   alternates: { canonical: "/editorial" },
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
+  ...koreanPageShare({
     title: "편집 원칙",
     description: EDITORIAL_DESCRIPTION,
-    url: "/editorial",
-  },
+    pathname: "/editorial",
+  }),
 };
 
 const EFFECTIVE = "2026년 7월 26일";

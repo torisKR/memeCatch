@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
 
 import { HomeScene } from "@/components/home/home-scene";
+import { cjkKeepPhrases } from "@/lib/cjk-keep-phrase";
 import { HOME_IMMERSIVE_COPY } from "@/lib/home-immersive-copy";
 import { localizedPath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import { H_RAIL_CLASS } from "@/lib/mobile-rail";
@@ -36,7 +37,9 @@ export function HomeImmersiveStory({ locale }: { locale: SeoRouteLocale }) {
               <section id={`home-story-${chapter.id}`} className={styles.chapter} data-story-chapter={chapter.id} aria-labelledby={headingId}>
                 <header className={styles.chapterHeading}>
                   <p className={styles.eyebrow}>{chapter.eyebrow}</p>
-                  <Heading id={headingId} className={styles.chapterTitle}>{chapter.title}</Heading>
+                  <Heading id={headingId} className={styles.chapterTitle}>
+                    {cjkKeepPhrases(chapter.title, chapter.titlePhrases, styles.keepPhrase)}
+                  </Heading>
                 </header>
                 <div className={styles.chapterCenter} aria-hidden="true" />
                 <div className={styles.chapterPanel}>

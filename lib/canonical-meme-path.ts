@@ -1,9 +1,9 @@
-import { localizedMemePath, type SeoRouteLocale } from "@/lib/i18n-routing";
+import { localizedMemePath, type OgShareLocale } from "@/lib/i18n-routing";
 
 type CanonicalMemeIdentity = {
   shortId: string;
   slug: string;
-  locale: SeoRouteLocale;
+  locale: OgShareLocale;
 };
 
 function decodedRouteKey(value: string): string | null {

@@ -77,6 +77,18 @@ export function isLocale(value: string | null | undefined): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
 }
 
+/**
+ * First path segment when it is a non-Korean locale prefix.
+ * Korean stays unprefixed. SEO prefixes and UI locales such as `ar` both match,
+ * so `/ar/rankings` is Arabic even though `ar` is not an indexable content locale.
+ */
+export function documentLocaleFromPathname(pathname: string): Locale | null {
+  const path = pathname.split(/[?#]/)[0] ?? pathname;
+  const first = path.split("/").filter(Boolean)[0];
+  if (!first || first === "ko" || !isLocale(first)) return null;
+  return first;
+}
+
 export function getDocumentLanguage(locale: Locale): string {
   if (locale === "zh") return "zh-Hans";
   if (locale === "zh-tw") return "zh-Hant";

@@ -1,12 +1,22 @@
 import type { Metadata } from "next";
 import { MemeCollectibleGallery } from "@/components/meme-collectible-gallery";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { getMemeCardCatalogPage, getMemeCollectibleCard } from "@/lib/meme-collectible.server";
 import { isMemeCardId, parseMemeCardPage, type MemeCardDiscoveryPage } from "@/lib/meme-collectible";
 
+const MEME_CARDS_TITLE = "밈카드";
+const MEME_CARDS_DESCRIPTION = "원하는 밈카드를 긁어 공개하고 내 무료 컬렉션에 모으세요.";
+
 export const metadata: Metadata = {
-  title: "밈카드",
-  description: "원하는 밈카드를 긁어 공개하고 내 무료 컬렉션에 모으세요.",
+  title: MEME_CARDS_TITLE,
+  description: MEME_CARDS_DESCRIPTION,
   alternates: { canonical: "/meme-cards" },
+  ...koreanPageShare({
+    title: MEME_CARDS_TITLE,
+    description: MEME_CARDS_DESCRIPTION,
+    pathname: "/meme-cards",
+    alternateLocales: true,
+  }),
 };
 
 export default async function MemeCardsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

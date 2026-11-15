@@ -23,8 +23,8 @@ import { renderOgDefaultImage } from "@/lib/og-default-card";
 import { SHARE_CARD_BYTE_LIMIT } from "@/lib/jpeg-encode";
 import { readFontAdvances } from "@/lib/ttf-metrics";
 
-/** Page bodies that must stay byte-identical to main e5841d8c. Git history is
- * absent in the shallow CI checkout, so the lock is the content hash. */
+/** Non-detail pages that must stay byte-identical to main e5841d8c. Git history
+ * is absent in the shallow CI checkout, so the lock is the content hash. */
 const MAIN_FILE_SHA: Record<string, string> = {
   "app/(default)/community/[id]/page.tsx": "9e1fe0c35c3284794baaba6f9fdb81ab056adbedb898584940e42f9842df1418",
   "app/[locale]/not-found.tsx": "ef253029a73492bd5b44e1b70e10d2e7a1e7271d56e500a615e41d2c92b86f06",
@@ -33,7 +33,6 @@ const MAIN_FILE_SHA: Record<string, string> = {
   "app/(default)/weekly/page.tsx": "21b87a774bec43bcae0c62c410b51301ccbfaf939d9a49f403c01741b45858e3",
   "app/(default)/collections/page.tsx": "b4186d5d3e92201f20ab1cedf0bd7b911f586c3299346b623f7d779ee72e405e",
 };
-const LOCALIZED_PAGE_BODY_SHA = "dfa8610fb8f162bc646d284d5e2e7ab5929d01038732994690ba35577674364d";
 
 function sha256(body: Buffer) {
   return createHash("sha256").update(body).digest("hex");
@@ -193,15 +192,34 @@ function savePair(name: string, png: Buffer) {
 }
 
 describe("per-meme share card", () => {
-  it("keeps untranslated, Arabic, and non-detail pages identical to main", () => {
+  it("keeps localized share cards scoped to reviewed detail metadata", () => {
     expect(existsSync("app/ar")).toBe(false);
     const source = readFileSync("app/[locale]/memes/[key]/page.tsx", "utf8");
-    const marker = "export default async function LocalizedMemePage";
-    const body = source.slice(source.indexOf(marker));
-    expect(createHash("sha256").update(body).digest("hex")).toBe(LOCALIZED_PAGE_BODY_SHA);
-    expect(source).toContain("if (!meme) notFound();");
-    expect(source.match(/if \(shareLocale === "ar"\) notFound\(\);/g)).toHaveLength(2);
+    const metadataMarker = "export async function generateMetadata";
+    const pageMarker = "export default async function LocalizedMemePage";
+    const metadataStart = source.indexOf(metadataMarker);
+    const pageStart = source.indexOf(pageMarker);
+    expect(metadataStart).toBeGreaterThan(-1);
+    expect(pageStart).toBeGreaterThan(metadataStart);
+    const metadata = source.slice(metadataStart, pageStart);
+    const body = source.slice(pageStart);
+
+    expect(metadata).toMatch(
+      /const image = localeMemeShareImage\(\{\s+locale,\s+shortId: meme\.short_id,\s+slug: meme\.slug,\s+alt: meme\.title,/,
+    );
+    expect(metadata).toContain("translationUpdatedAt: meme.translation.updatedAt");
+    expect(metadata).toContain("imageUpdatedAt: photo?.updatedAt");
+    expect(metadata.match(/images: \[image\]/g)).toHaveLength(2);
+    expect(body).not.toContain("localeMemeShareImage");
+    expect(body).not.toContain("localeShareVersion");
+    expect(source.match(/if \(!meme\) notFound\(\);/g)).toHaveLength(2);
+    expect(metadata.match(/if \(shareLocale === "ar"\) notFound\(\);/g)).toHaveLength(1);
+    expect(body.match(/if \(shareLocale === "ar"\) notFound\(\);/g)).toHaveLength(1);
+    expect(source).not.toContain("CuratedMemeArticle");
     expect(source).not.toContain("koreanMemeShareImage");
+  });
+
+  it("keeps non-detail pages byte-identical to main", () => {
     for (const [path, hash] of Object.entries(MAIN_FILE_SHA)) {
       expect(createHash("sha256").update(readFileSync(path)).digest("hex")).toBe(hash);
     }

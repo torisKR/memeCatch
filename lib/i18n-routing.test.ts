@@ -60,20 +60,16 @@ describe("SEO locale routing", () => {
   });
 
   it("localizes only static routes that actually exist in every SEO locale", () => {
-    expect(isLocalizedStaticPath("/en/pricing?source=header")).toBe(true);
-    expect(isLocalizedStaticPath("/en/daily")).toBe(true);
+    expect(isLocalizedStaticPath("/en/pricing")).toBe(false);
+    expect(isLocalizedStaticPath("/en/daily")).toBe(false);
     expect(isLocalizedStaticPath("/en/search?q=돌아온")).toBe(true);
     expect(isLocalizedStaticPath("/explore")).toBe(true);
     expect(isLocalizedStaticPath("/meme-cards")).toBe(true);
     expect(localizedStaticPath("/meme-cards", "en")).toBe("/en/meme-cards");
-    expect(localizedStaticPath("/pricing", "en")).toBe("/en/pricing");
-    expect(localizedStaticPath("/daily", "ja")).toBe("/ja/daily");
     expect(localizedStaticPath("/search", "en")).toBe("/en/search");
     expect(localizedStaticPath("/explore", "zh-tw")).toBe("/zh-tw/explore");
-    expect(localizedStaticPath("/en/pricing?source=header", "ja")).toBe(
-      "/ja/pricing?source=header",
-    );
-    expect(localizedStaticPath("/pricing", "th")).toBe("/pricing");
+    expect(localizedStaticPath("/en/search?q=x", "ja")).toBe("/ja/search?q=x");
+    expect(localizedStaticPath("/search", "th")).toBe("/search");
   });
 });
 

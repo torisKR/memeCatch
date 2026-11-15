@@ -15,7 +15,6 @@ export type LiveKoreanRankings = {
   fallback: PublicRankingMeme[] | null;
   today: PublicRankingMeme[];
   weekly: (PublicRankingMeme & { weeklyViews: number })[];
-  weeklyLocked: true;
   comeback: PublicRankingMeme[];
   lastRollupDate: null;
   topWeeklyViews: 0;
@@ -63,7 +62,7 @@ export function koreanRankingsRenderList(
  */
 export function resolveKoreanRankings(input: {
   liveError: boolean;
-  live: Omit<LiveKoreanRankings, "kind" | "weekly" | "weeklyLocked" | "lastRollupDate" | "topWeeklyViews"> | null;
+  live: Omit<LiveKoreanRankings, "kind" | "weekly" | "lastRollupDate" | "topWeeklyViews"> | null;
   published: PublicRankingMeme[] | null;
 }): KoreanRankings {
   if (!input.liveError && liveRankingHasRows(input.live) && input.live) {
@@ -72,7 +71,6 @@ export function resolveKoreanRankings(input: {
       fallback: input.live.fallback,
       today: input.live.today,
       weekly: [],
-      weeklyLocked: true,
       comeback: input.live.comeback,
       lastRollupDate: null,
       topWeeklyViews: 0,

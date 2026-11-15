@@ -14,7 +14,7 @@ export default async function AdminActivityPage({ searchParams }: { searchParams
     try {
       const result = await supabase.rpc("get_admin_activity_dashboard", {
         p_from: filters.from, p_to: filters.to, p_hour_date: filters.hourDate,
-        p_user_id: filters.userId || undefined, p_subscribers_only: filters.subscribersOnly,
+        p_user_id: filters.userId || undefined,
         p_users_page: filters.usersPage, p_views_page: filters.viewsPage,
       });
       const parsed = adminActivitySchema.safeParse(result.data);

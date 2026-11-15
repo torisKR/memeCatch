@@ -20,9 +20,7 @@ vi.mock("@/lib/openai-review.server", () => ({
 
 import {
   deleteMemeTranslation,
-  claimTranslationPriority,
   listMissingMemeTranslations,
-  listTranslationPriorityQueue,
   listTranslationsForReview,
   markMemeTranslationStale,
   previewMissingMemeTranslationWithGpt,
@@ -31,7 +29,6 @@ import {
   saveMissingMemeTranslationDraft,
   saveMemeTranslation,
   getTranslationCoverage,
-  listTranslationSupplyPriorityQueue,
   type TranslationReviewInput,
 } from "@/lib/actions/admin-translations";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
@@ -888,144 +885,6 @@ describe("admin translation review queue", () => {
 
     expect(requestOpenAiStructured).not.toHaveBeenCalled();
     expect(supabase.from).not.toHaveBeenCalledWith("admin_audit_log");
-  });
-
-  it("maps the Plus demand queue and claims a requested locale through RPCs", async () => {
-    const profile = query({ data: { role: "operator" }, error: null });
-    const rpc = vi
-      .fn()
-      .mockResolvedValueOnce({
-        data: [
-          {
-            meme_id: "meme-1",
-            locale: "en",
-            request_count: 4,
-            latest_requested_at: EXPECTED_UPDATED_AT,
-            status: "requested",
-            meme_title: "원문 제목",
-            meme_short_id: "abc123",
-            meme_slug: "source-slug",
-            meme_summary: "요약",
-            meme_updated_at: SOURCE_UPDATED_AT,
-            translation_status: null,
-            translation_updated_at: null,
-            source_updated_at: SOURCE_UPDATED_AT,
-            translation_title: "Localized",
-            translation_summary: "Localized summary",
-          },
-        ],
-        error: null,
-      })
-      .mockResolvedValueOnce({ data: { status: "in_review" }, error: null });
-    const source = query({
-      data: [
-        {
-          id: "meme-1",
-          short_id: "abc123",
-          title: "원문 제목",
-          summary: "요약",
-          description: "d".repeat(160),
-          origin: "o".repeat(40),
-          usage_note: "u".repeat(40),
-          caution: "c".repeat(40),
-          aliases: [],
-          updated_at: SOURCE_UPDATED_AT,
-          usage_examples: [{ situation: "s", text: "t" }],
-          meme_sources: [{ source_url: "https://example.com/source" }],
-          meme_contents: [{ availability: "available", moderation_status: "approved" }],
-          meme_tags_map: [{ tag_id: "tag-1" }, { tag_id: "tag-2" }, { tag_id: "tag-3" }],
-        },
-      ],
-      error: null,
-    });
-    const supabase = operatorClient({ profiles: [profile, profile], memes: [source] }, rpc);
-    createClient.mockResolvedValue(supabase);
-
-    await expect(listTranslationPriorityQueue()).resolves.toEqual({
-      ok: true,
-      data: [
-        expect.objectContaining({
-          memeId: "meme-1",
-          locale: "en",
-          requestCount: 4,
-          status: "requested",
-          routeUnlockCandidate: true,
-        }),
-      ],
-    });
-    await expect(claimTranslationPriority({ memeId: "meme-1", locale: "en" })).resolves.toEqual({ ok: true });
-    expect(rpc).toHaveBeenNthCalledWith(1, "list_translation_priority_queue", { p_limit: 50 });
-    expect(rpc).toHaveBeenNthCalledWith(2, "claim_translation_priority_request", {
-      p_meme_id: "meme-1",
-      p_locale: "en",
-    });
-  });
-
-  it("passes the selected locale into the priority RPC before its database limit", async () => {
-    const profile = query({ data: { role: "operator" }, error: null });
-    const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
-    createClient.mockResolvedValue(operatorClient({ profiles: [profile] }, rpc));
-
-    await expect(listTranslationPriorityQueue(50, "ja")).resolves.toEqual({ ok: true, data: [] });
-    expect(rpc).toHaveBeenCalledWith("list_translation_priority_queue", {
-      p_limit: 50,
-      p_locale: "ja",
-    });
-  });
-
-  it("sorts the full global supply set before applying the UI limit", async () => {
-    const profile = query({ data: { role: "operator" }, error: null });
-    const source = (id: string, routeUnlockCandidate: boolean) => ({
-      id,
-      short_id: id,
-      slug: id,
-      title: id,
-      summary: "summary",
-      description: routeUnlockCandidate ? "d".repeat(160) : "thin",
-      origin: routeUnlockCandidate ? "o".repeat(40) : "",
-      usage_note: routeUnlockCandidate ? "u".repeat(40) : null,
-      caution: routeUnlockCandidate ? "c".repeat(40) : null,
-      aliases: [],
-      updated_at: SOURCE_UPDATED_AT,
-      usage_examples: routeUnlockCandidate ? [{ situation: "s", text: "t" }] : [],
-      meme_sources: routeUnlockCandidate ? [{ source_url: "https://example.com/source" }] : [],
-      meme_contents: routeUnlockCandidate
-        ? [{ availability: "available", moderation_status: "approved" }]
-        : [],
-      meme_tags_map: routeUnlockCandidate
-        ? [{ tag_id: "tag-1" }, { tag_id: "tag-2" }, { tag_id: "tag-3" }]
-        : [],
-      moderation_status: "approved",
-    });
-    const demandRows = Array.from({ length: 1001 }, (_, index) => {
-      const id = index === 1000 ? "route-meme" : `thin-meme-${index}`;
-      return {
-        meme_id: id,
-        locale: index % 2 === 0 ? "en" : "ja",
-        status: "requested",
-        created_at: "2026-08-10T01:00:00.000Z",
-        memes: source(id, index === 1000),
-      };
-    });
-    const demandPages = [
-      query({ data: demandRows.slice(0, 1000), error: null }),
-      query({ data: demandRows.slice(1000), error: null }),
-    ];
-    const translationPages = Array.from({ length: 6 }, () => query({ data: [], error: null }));
-    createClient.mockResolvedValue(
-      operatorClient(
-        { profiles: [profile], plus_translation_requests: demandPages, meme_translations: translationPages },
-      ),
-    );
-
-    const result = await listTranslationSupplyPriorityQueue(50);
-    expect(result).toMatchObject({
-      ok: true,
-      data: expect.arrayContaining([
-        expect.objectContaining({ memeId: "route-meme", routeUnlockCandidate: true }),
-      ]),
-    });
-    if (result.ok) expect(result.data).toHaveLength(50);
   });
 
   it("returns a GPT review draft without mutating or publishing the translation", async () => {

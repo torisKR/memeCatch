@@ -16,7 +16,7 @@ it("uses GA4 for traffic and preserves operational DB metrics without DB traffic
   query.maybeSingle = vi.fn(async () => ({ data: null }));
   vi.mocked(requireOperatorPage).mockResolvedValue({ supabase: query } as never);
   vi.mocked(createAdminClient).mockReturnValue(query as never);
-  vi.mocked(getAdminStats).mockResolvedValue({ today: { views: 999999, sessions: 888888 }, yesterday: { views: 0, sessions: 0 }, last14: [{ date: "2026-09-21", views: 999999, sessions: 888888 }], totals: { users: 42, newUsers7d: 2, plusActive: 3, savedMemes: 4, communityPosts: 5 }, topMemes: [] });
+  vi.mocked(getAdminStats).mockResolvedValue({ today: { views: 999999, sessions: 888888 }, yesterday: { views: 0, sessions: 0 }, last14: [{ date: "2026-09-21", views: 999999, sessions: 888888 }], totals: { users: 42, newUsers7d: 2, savedMemes: 4, communityPosts: 5 }, topMemes: [] });
   vi.mocked(getAdminGA4Report).mockResolvedValue({ status: "error", reason: "quota" });
   const html = renderToStaticMarkup(await Page());
   expect(getAdminGA4Report).toHaveBeenCalledWith("dashboard");

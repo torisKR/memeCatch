@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getPremiumEntitlement, from, renderMemeCard, imageResponse } = vi.hoisted(() => ({
-  getPremiumEntitlement: vi.fn(),
+const { getUser, from, renderMemeCard, imageResponse } = vi.hoisted(() => ({
+  getUser: vi.fn(),
   from: vi.fn(),
   renderMemeCard: vi.fn(() => "rendered-card"),
   imageResponse: vi.fn(),
@@ -15,22 +15,14 @@ vi.mock("next/og", () => ({
     }
   },
 }));
-vi.mock("@/lib/billing/repository.server", () => ({
-  getPremiumEntitlement: () => getPremiumEntitlement(),
-}));
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ from, rpc: async () => ({ error: null }) }),
+  createClient: async () => ({ from, auth: { getUser }, rpc: async () => ({ error: null }) }),
   createStaticClient: () => ({ from }),
 }));
 vi.mock("@/lib/meme-card", () => ({
-  CARD_TEMPLATES: {
-    classic: { premium: false },
-    minimal: { premium: true },
-    bold: { premium: true },
-  },
   CARD_FORMATS: {
-    card: { premium: false, width: 1200, height: 630 },
-    story: { premium: true, width: 1080, height: 1920 },
+    card: { width: 1200, height: 630 },
+    story: { width: 1080, height: 1920 },
   },
   isCardTemplate: (value: string | null): value is "classic" | "minimal" | "bold" =>
     value === "classic" || value === "minimal" || value === "bold",
@@ -95,7 +87,37 @@ function request(url: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getPremiumEntitlement.mockResolvedValue({ signedIn: true, isPremium: true });
+  getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+});
+
+describe("meme card export access", () => {
+  it("requires a signed-in account", async () => {
+    getUser.mockResolvedValueOnce({ data: { user: null } });
+
+    const response = await GET(
+      request("https://catchmeme.com/memes/abc123-title/export"),
+      { params: Promise.resolve({ key: "abc123-title" }) },
+    );
+
+    expect(response.status).toBe(401);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("exports every template and format for free with the site watermark", async () => {
+    from.mockReturnValueOnce(query({ data: baseMeme, error: null }));
+
+    const response = await GET(
+      request("https://catchmeme.com/memes/abc123-title/export?template=bold&format=story&scale=3"),
+      { params: Promise.resolve({ key: "abc123-title" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(renderMemeCard).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ template: "bold", format: "story", watermark: true }),
+    );
+    expect(response.headers.get("content-disposition")).toContain("abc123-bold-story.png");
+  });
 });
 
 describe("meme card export localization", () => {

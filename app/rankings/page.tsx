@@ -216,14 +216,7 @@ export async function RankingsScreen({ locale }: { locale: Locale }) {
               lastRollupDate={data.lastRollupDate}
               topViews={data.topWeeklyViews}
             />
-            {data.weeklyLocked ? (
-              <div className="rounded-xl border border-border bg-surface-2 p-5 text-center">
-                <p className="font-semibold">이번 주 조회 순위는 Plus에서 볼 수 있어요.</p>
-                <Link className="mt-3 inline-flex min-h-11 items-center text-accent underline" href="/pricing">
-                  Plus 보기
-                </Link>
-              </div>
-            ) : data.weekly.length === 0 ? (
+            {data.weekly.length === 0 ? (
               <EmptyList message="이번 주 조회 집계가 아직 없어요. 내일 다시 확인해 보세요." />
             ) : (
               <ol className="grid gap-2 lg:grid-cols-2 lg:gap-x-8">

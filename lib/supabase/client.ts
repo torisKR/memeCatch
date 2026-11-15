@@ -54,28 +54,6 @@ export function createClient(): SupabaseClient<Database> {
         window.location.assign(body.url);
         return { data: { url: body.url }, error: null };
       },
-      async signInWithWeb3({ wallet, statement }: { chain: "ethereum"; statement: string; wallet: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }) {
-        const accounts = (await wallet.request({ method: "eth_requestAccounts" })) as string[];
-        const address = accounts[0];
-        if (!address) return { data: { session: null }, error: { message: "wallet account missing" } };
-        const nonce = await fetch("/api/auth/kaia", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ address, statement }),
-        });
-        const issued = (await nonce.json().catch(() => null)) as { message?: string } | null;
-        if (!nonce.ok || !issued?.message) return { data: { session: null }, error: { message: "kaia challenge failed" } };
-        const signature = await wallet.request({ method: "personal_sign", params: [issued.message, address] });
-        const login = await fetch("/api/auth/kaia", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ address, message: issued.message, signature }),
-        });
-        if (!login.ok) return { data: { session: null }, error: { message: "kaia sign-in failed" } };
-        return { data: { session: { access_token: "cookie" } }, error: null };
-      },
       onAuthStateChange(callback: (event: string, session: { user: SessionUser } | null) => void) {
         let active = true;
         void readSession()

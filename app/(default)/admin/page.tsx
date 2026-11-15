@@ -79,7 +79,7 @@ export default async function AdminDashboardPage() {
     {
       href: "/admin/activity",
       label: "사용자 활동",
-      value: "조회·구독 분석",
+      value: "조회 분석",
       sub: "사용자별 조회 콘텐츠와 일별·시간별 활동을 확인해요",
     },
     {
@@ -157,15 +157,6 @@ export default async function AdminDashboardPage() {
             label="전체 회원"
             value={stats.totals.users.toLocaleString("ko-KR")}
             sub={`최근 7일 신규 ${stats.totals.newUsers7d}명`}
-          />
-          <StatCard
-            label="Plus 구독자"
-            value={stats.totals.plusActive.toLocaleString("ko-KR")}
-            sub={
-              stats.totals.users > 0
-                ? `전환율 ${((stats.totals.plusActive / stats.totals.users) * 100).toFixed(1)}%`
-                : "—"
-            }
           />
         </div>
       </section>

@@ -1,18 +1,50 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LoginGate } from "@/components/login-gate";
 import { useLocale } from "@/lib/i18n-client";
-import { PREMIUM_COPY } from "@/lib/i18n-premium";
-import { localizedStaticPath } from "@/lib/i18n-routing";
+import { withLocaleFallback } from "@/lib/i18n";
 import { track } from "@/lib/analytics";
 
 const SAVE_INTENT_KEY = "memecatch:save-intents:v1";
 const SAVE_INTENT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SAVE_INTENT_LIMIT = 10;
+const SAVE_COPY = withLocaleFallback({
+  ko: {
+    loginGate: "로그인하면 밈을 저장할 수 있어요.",
+    savedButton: "저장한 밈",
+    saveButton: "이 밈 저장하기",
+    saved: "MY에 저장했어요.",
+    removed: "저장을 해제했어요.",
+    retry: "잠시 후 다시 시도해 주세요.",
+  },
+  en: {
+    loginGate: "Log in to save memes.",
+    savedButton: "Saved",
+    saveButton: "Save this meme",
+    saved: "Saved to MY.",
+    removed: "Removed from saved memes.",
+    retry: "Please try again in a moment.",
+  },
+  ja: {
+    loginGate: "ログインするとミームを保存できます。",
+    savedButton: "保存済み",
+    saveButton: "このミームを保存",
+    saved: "MYに保存しました。",
+    removed: "保存を解除しました。",
+    retry: "しばらくしてからもう一度お試しください。",
+  },
+  zh: {
+    loginGate: "登录后即可收藏迷因。",
+    savedButton: "已收藏",
+    saveButton: "收藏这个迷因",
+    saved: "已收藏到我的页面。",
+    removed: "已取消收藏。",
+    retry: "请稍后再试。",
+  },
+});
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type SaveIntent = { memeId: string; createdAt: number };
@@ -78,10 +110,8 @@ function writeSaveIntents(intents: SaveIntent[]) {
   } catch {}
 }
 
-export function getSaveFailure(message: string): "login" | "premium-limit" | "retry" {
-  if (message.includes("login_required")) return "login";
-  if (message.includes("premium_save_limit")) return "premium-limit";
-  return "retry";
+export function getSaveFailure(message: string): "login" | "retry" {
+  return message.includes("login_required") ? "login" : "retry";
 }
 
 /**
@@ -97,18 +127,16 @@ export function SaveButton({ memeId }: { memeId: string }) {
   // null = 아직 모름(마운트 인증 확인 전)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
-  const [upgradeRequired, setUpgradeRequired] = useState(false);
   const noticeTimerRef = useRef<number | null>(null);
   const pathname = usePathname();
   const { locale } = useLocale();
-  const copy = PREMIUM_COPY[locale].save;
+  const copy = SAVE_COPY[locale];
 
   function rememberGuestSave() {
     const intents = readSaveIntents();
     if (!intents.some((intent) => intent.memeId === memeId) && intents.length >= SAVE_INTENT_LIMIT) {
-      setNotice(copy.limitReached);
-      setUpgradeRequired(true);
-      setGateOpen(false);
+      // 대기열이 가득 차면 더 쌓지 않고 로그인부터 유도한다.
+      setGateOpen(true);
       return;
     }
     writeSaveIntents(enqueueSaveIntent(intents, memeId));
@@ -171,7 +199,6 @@ export function SaveButton({ memeId }: { memeId: string }) {
       return;
     }
     setBusy(true);
-    setUpgradeRequired(false);
     const wasSaved = saved;
     setSaved(!wasSaved); // 낙관적 반영
     const { data, error } = await createClient().rpc("toggle_save", {
@@ -185,13 +212,6 @@ export function SaveButton({ memeId }: { memeId: string }) {
       if (failure === "login") {
         setLoggedIn(false);
         rememberGuestSave();
-        return;
-      }
-      if (failure === "premium-limit") {
-        if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
-        noticeTimerRef.current = null;
-        setNotice(copy.limitReached);
-        setUpgradeRequired(true);
         return;
       }
       showNotice(copy.retry);
@@ -227,14 +247,6 @@ export function SaveButton({ memeId }: { memeId: string }) {
       <p role="status" aria-live="polite" className="mt-1 min-h-5 text-center text-sm text-muted">
         {notice}
       </p>
-      {upgradeRequired && (
-        <Link
-          href={localizedStaticPath("/pricing?source=save_limit_11", locale)}
-          className="mt-1 flex min-h-11 items-center justify-center rounded-xl text-sm font-bold text-accent-text underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          {copy.upgrade}
-        </Link>
-      )}
       <LoginGate
         open={gateOpen}
         onClose={() => setGateOpen(false)}

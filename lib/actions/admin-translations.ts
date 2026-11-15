@@ -26,7 +26,6 @@ import {
   classifyTranslationWorklistSource,
   prioritizeTranslationWorklistRows,
 } from "@/lib/translation-worklist";
-import { sortTranslationSupplyPriorityRows } from "@/lib/translation-supply-control-tower";
 
 export type TranslationActionResult =
   | { ok: true }
@@ -797,10 +796,6 @@ export type TranslationPriorityQueueRow = {
   routeUnlockCandidate: boolean;
 };
 
-export type TranslationPriorityQueueResult =
-  | { ok: true; data: TranslationPriorityQueueRow[] }
-  | { ok: false; error: string };
-
 export type TranslationCoverageViewRow = {
   locale: SeoContentLocale;
   totalPublic: number;
@@ -819,7 +814,6 @@ const TRANSLATION_QUEUE_PAGE_SIZE = 10;
 const TRANSLATION_COVERAGE_PAGE_SIZE = 1000;
 const MISSING_TRANSLATION_DEFAULT_LIMIT = 20;
 const MISSING_TRANSLATION_MAX_LIMIT = 100;
-const TRANSLATION_SUPPLY_ID_BATCH_SIZE = 200;
 
 type MissingMemeSourceQueryRow = {
   id: string;
@@ -840,25 +834,8 @@ type MissingMemeSourceQueryRow = {
   meme_tags_map: { tag_id: string | null }[] | null;
 };
 
-type TranslationSupplyDemandQueryRow = {
-  meme_id: string;
-  locale: string;
-  status: string;
-  created_at: string;
-  memes: MissingMemeSourceQueryRow | null;
-};
-
-type TranslationSupplyStatusQueryRow = {
-  meme_id: string;
-  locale: string;
-  status: string | null;
-  source_updated_at: string | null;
-  updated_at: string | null;
-};
-
 const MISSING_MEME_SELECT =
   "id, short_id, slug, title, summary, description, origin, usage_note, caution, aliases, usage_examples, updated_at, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)";
-const TRANSLATION_SUPPLY_SOURCE_SELECT = `${MISSING_MEME_SELECT}, moderation_status`;
 
 async function loadTranslatedMemeIds(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -1112,213 +1089,6 @@ export async function listTranslationsForReview(
       ok: true,
       data: { rows, page, pageSize: TRANSLATION_QUEUE_PAGE_SIZE, total: count ?? rows.length },
     };
-  } catch (error) {
-    return { ok: false, error: errorMessage(error) };
-  }
-}
-
-export async function listTranslationPriorityQueue(
-  limit = 50,
-  locale?: SeoContentLocale,
-): Promise<TranslationPriorityQueueResult> {
-  try {
-    const { supabase } = await requireOperator();
-    const safeLimit = Math.min(100, Math.max(1, Math.trunc(limit)));
-    const { data, error } = await supabase.rpc(
-      "list_translation_priority_queue",
-      locale
-        ? { p_limit: safeLimit, p_locale: locale }
-        : { p_limit: safeLimit },
-    );
-    if (error) return { ok: false, error: error.message };
-
-    const rows: Omit<TranslationPriorityQueueRow, "routeUnlockCandidate">[] = (data ?? [])
-      .filter((row) => isSeoContentLocale(row.locale))
-      .map((row) => ({
-        memeId: row.meme_id,
-        locale: row.locale as SeoContentLocale,
-        requestCount: row.request_count,
-        latestRequestedAt: row.latest_requested_at,
-        status: row.status === "in_review" ? "in_review" : "requested",
-        memeTitle: row.meme_title,
-        memeShortId: row.meme_short_id,
-        memeSlug: row.meme_slug,
-        translationStatus: row.translation_status,
-        translationUpdatedAt: row.translation_updated_at,
-        sourceUpdatedAt: row.source_updated_at,
-      }));
-    if (rows.length === 0) return { ok: true, data: [] };
-
-    const { data: sourceRows, error: sourceError } = await supabase
-      .from("memes")
-      .select(MISSING_MEME_SELECT)
-      .in("id", rows.map((row) => row.memeId))
-      .in("moderation_status", ["approved", "limited"])
-      .overrideTypes<MissingMemeSourceQueryRow[], { merge: false }>();
-    if (sourceError) return { ok: false, error: sourceError.message };
-
-    const routeUnlockByMemeId = new Map(
-      (sourceRows ?? []).map((source) => [
-        source.id,
-        classifyTranslationWorklistSource({
-          memeId: source.id,
-          shortId: source.short_id,
-          title: source.title,
-          updatedAt: source.updated_at,
-          description: source.description,
-          origin: source.origin,
-          usage_note: source.usage_note,
-          caution: source.caution,
-          usage_examples: source.usage_examples,
-          meme_sources: source.meme_sources,
-          meme_contents: source.meme_contents,
-          meme_tags_map: source.meme_tags_map,
-        }).routeUnlockCandidate,
-      ]),
-    );
-
-    return {
-      ok: true,
-      data: rows.map((row) => ({
-        ...row,
-        routeUnlockCandidate:
-          row.translationStatus === null && routeUnlockByMemeId.get(row.memeId) === true,
-      })),
-    };
-  } catch (error) {
-    return { ok: false, error: errorMessage(error) };
-  }
-}
-
-export async function listTranslationSupplyPriorityQueue(
-  limit = 50,
-): Promise<TranslationPriorityQueueResult> {
-  try {
-    const { supabase } = await requireOperator();
-    const safeLimit = Math.min(100, Math.max(1, Math.trunc(limit)));
-    const demandRows: TranslationSupplyDemandQueryRow[] = [];
-    for (let from = 0; ; from += TRANSLATION_COVERAGE_PAGE_SIZE) {
-      const { data, error } = await supabase
-        .from("plus_translation_requests")
-        .select(`meme_id, locale, status, created_at, memes!inner(${TRANSLATION_SUPPLY_SOURCE_SELECT})`)
-        .in("status", ["requested", "in_review"])
-        .in("memes.moderation_status", ["approved", "limited"])
-        .order("meme_id", { ascending: true })
-        .order("locale", { ascending: true })
-        .order("created_at", { ascending: true })
-        .range(from, from + TRANSLATION_COVERAGE_PAGE_SIZE - 1)
-        .overrideTypes<TranslationSupplyDemandQueryRow[], { merge: false }>();
-      if (error) return { ok: false, error: error.message };
-      demandRows.push(...(data ?? []));
-      if ((data ?? []).length < TRANSLATION_COVERAGE_PAGE_SIZE) break;
-    }
-
-    const groups = new Map<
-      string,
-      {
-        meme: MissingMemeSourceQueryRow;
-        locale: SeoContentLocale;
-        requestCount: number;
-        latestRequestedAt: string;
-        status: "requested" | "in_review";
-      }
-    >();
-    for (const row of demandRows ?? []) {
-      if (!isSeoContentLocale(row.locale) || !row.memes) continue;
-      const key = `${row.meme_id}\u0000${row.locale}`;
-      const existing = groups.get(key);
-      if (!existing) {
-        groups.set(key, {
-          meme: row.memes,
-          locale: row.locale,
-          requestCount: 1,
-          latestRequestedAt: row.created_at,
-          status: row.status === "in_review" ? "in_review" : "requested",
-        });
-        continue;
-      }
-      existing.requestCount += 1;
-      if (Date.parse(row.created_at) > Date.parse(existing.latestRequestedAt)) {
-        existing.latestRequestedAt = row.created_at;
-      }
-      if (row.status === "in_review") existing.status = "in_review";
-    }
-    if (groups.size === 0) return { ok: true, data: [] };
-
-    const memeIds = [...new Set([...groups.values()].map((group) => group.meme.id))];
-    const translationRows: TranslationSupplyStatusQueryRow[] = [];
-    for (let from = 0; from < memeIds.length; from += TRANSLATION_SUPPLY_ID_BATCH_SIZE) {
-      const ids = memeIds.slice(from, from + TRANSLATION_SUPPLY_ID_BATCH_SIZE);
-      const { data, error } = await supabase
-        .from("meme_translations")
-        .select("meme_id, locale, status, source_updated_at, updated_at")
-        .in("meme_id", ids)
-        .in("locale", [...SEO_CONTENT_LOCALES])
-        .overrideTypes<TranslationSupplyStatusQueryRow[], { merge: false }>();
-      if (error) return { ok: false, error: error.message };
-      translationRows.push(...(data ?? []));
-    }
-
-    const translationsByKey = new Map(
-      (translationRows ?? []).map((row) => [`${row.meme_id}\u0000${row.locale}`, row]),
-    );
-    const rows = [...groups.entries()].map(([key, group]) => {
-      const translation = translationsByKey.get(key);
-      const routeUnlockCandidate =
-        translation?.status == null &&
-        classifyTranslationWorklistSource({
-          memeId: group.meme.id,
-          shortId: group.meme.short_id,
-          title: group.meme.title,
-          updatedAt: group.meme.updated_at,
-          description: group.meme.description,
-          origin: group.meme.origin,
-          usage_note: group.meme.usage_note,
-          caution: group.meme.caution,
-          usage_examples: group.meme.usage_examples,
-          meme_sources: group.meme.meme_sources,
-          meme_contents: group.meme.meme_contents,
-          meme_tags_map: group.meme.meme_tags_map,
-        }).routeUnlockCandidate;
-      return {
-        memeId: group.meme.id,
-        locale: group.locale,
-        requestCount: group.requestCount,
-        latestRequestedAt: group.latestRequestedAt,
-        status: group.status,
-        memeTitle: group.meme.title,
-        memeShortId: group.meme.short_id,
-        memeSlug: group.meme.slug,
-        translationStatus: translation?.status ?? null,
-        translationUpdatedAt: translation?.updated_at ?? null,
-        sourceUpdatedAt: translation?.source_updated_at ?? null,
-        routeUnlockCandidate,
-      } satisfies TranslationPriorityQueueRow;
-    });
-
-    return { ok: true, data: sortTranslationSupplyPriorityRows(rows).slice(0, safeLimit) };
-  } catch (error) {
-    return { ok: false, error: errorMessage(error) };
-  }
-}
-
-export async function claimTranslationPriority(input: {
-  memeId: string;
-  locale: SeoContentLocale;
-}): Promise<TranslationActionResult> {
-  try {
-    if (!input.memeId || !isSeoContentLocale(input.locale)) {
-      return { ok: false, error: "유효한 밈과 번역 언어가 필요해요." };
-    }
-    const { supabase } = await requireOperator();
-    const { error } = await supabase.rpc("claim_translation_priority_request", {
-      p_meme_id: input.memeId,
-      p_locale: input.locale,
-    });
-    if (error) return { ok: false, error: error.message };
-    revalidatePath("/admin/translations");
-    revalidatePath(`/admin/memes/${input.memeId}`);
-    return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error) };
   }

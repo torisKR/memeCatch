@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   CATEGORIES,
@@ -19,12 +18,8 @@ import {
 } from "@/lib/queries";
 import { AnswerCard } from "@/components/answer-card";
 import { SafetyRationale } from "@/components/safety-rationale";
-import { PlusPricingHashScroll } from "@/components/plus-pricing-hash-scroll";
 import { UsageExamples } from "@/components/usage-examples";
-import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
-import { MemeUseKit } from "@/components/premium/meme-use-kit";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
-import { MeteredGate } from "@/components/metered-gate";
 import { AuthInvite } from "@/components/auth-invite";
 import { MemeEmbed } from "@/components/meme-embed";
 import { ReactionBar } from "@/components/reaction-bar";
@@ -38,7 +33,6 @@ import {
 } from "@/components/json-ld";
 import { usageRegionLabelledBy } from "@/lib/detail-usage";
 import { memePathFrom } from "@/lib/labels";
-import { DonateCard } from "@/components/donate-card";
 import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
 import { ContextNav } from "@/components/context-nav";
@@ -60,7 +54,6 @@ import {
   isSeoContentLocale,
   localizedMemePath,
 } from "@/lib/i18n-routing";
-import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { koreanMemeShareImage, shareCacheVersion } from "@/lib/meme-share-image";
 import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { SITE_URL } from "@/lib/site";
@@ -191,38 +184,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function koreanAdFreePlus() {
-  const feature = PREMIUM_COPY.ko.pricing.features.find(
-    (item) => item.label === "광고 없는 경험",
-  );
-  if (!feature) {
-    throw new Error("Korean Plus pricing is missing the ad-free benefit");
-  }
-  return feature;
-}
-
-function KoreanPlusPricingCard({ titleId }: { titleId: string }) {
-  const feature = koreanAdFreePlus();
-  return (
-    <section
-      aria-labelledby={titleId}
-      className="rounded-2xl border border-accent/25 bg-accent-soft/20 p-4"
-    >
-      <h2 id={titleId} className="text-lg font-black">
-        {feature.label}
-      </h2>
-      <p className="mt-1 text-sm leading-relaxed">{feature.detail}</p>
-      <Link
-        href="/pricing"
-        data-plus-pricing-cta
-        className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white"
-      >
-        {PREMIUM_COPY.ko.dashboard.viewPlans}
-      </Link>
-    </section>
-  );
-}
-
 export default async function MemeDetailPage({ params }: Props) {
   const { key } = await params;
   const resolved = await resolveKoreanMemeDocument(key);
@@ -307,7 +268,6 @@ export default async function MemeDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">
-      <PlusPricingHashScroll />
       {/*
         광고는 충실도 판정을 통과한 문서에서만 게재한다. 얇은 문서는 noindex로
         색인에서 빠지지만 사람은 여전히 도달하므로, 로더를 렌더하지 않아야
@@ -351,8 +311,6 @@ export default async function MemeDetailPage({ params }: Props) {
         slug={meme.slug}
       />
       <ViewTracker memeId={meme.id} />
-      {/* 미터링 게이트 — 서버는 동일 HTML을 주고 방문자 본인 기록으로만 판단(클로킹 아님) */}
-      <MeteredGate memeId={meme.id} />
 
       {/* 컬렉션 진입 맥락 네비 — 최신 searchParams를 읽기 위해 클라이언트에서 처리 */}
       <ContextNav />
@@ -381,11 +339,10 @@ export default async function MemeDetailPage({ params }: Props) {
       </div>
 
       {/* 감상(좌)·정보(우) 2단.
-          왼쪽 레일은 페이지와 함께 스크롤한다. 레일 전체를 고정하면 1280×800에서
-          Plus 카드가 뷰포트 아래(top ≈ 1028px)에 머물러 스크롤해도 다 보이지 않는다.
+          왼쪽 레일은 페이지와 함께 스크롤한다.
           모바일은 정답 카드 다음에 영상, 그다음 나머지 정보가 이어진다. */}
       <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8">
-        {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장) + 데스크톱 Plus 카드. */}
+        {/* 왼쪽 레일 — 영상/SNS + 감상 액션(반응·저장). */}
         <div className="space-y-4">
           {/* 렌더 가능한 콘텐츠가 하나도 없으면(폴백 히어로) 이 자리는 여전히 이 밈의
               대표 미디어 슬롯이다. 아래 MemeEmbed의 isRepresentative와 같은 식을 써서
@@ -411,9 +368,6 @@ export default async function MemeDetailPage({ params }: Props) {
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
           <ExportButton shortId={meme.short_id} />
 
-          <div className="scroll-mt-28 hidden lg:block" data-plus-pricing-slot="rail">
-            <KoreanPlusPricingCard titleId="plus-pricing-title" />
-          </div>
 
           {/* 관련 TikTok·Instagram — 대표 아래 공개 사용 예시(비대표 임베드) */}
           {relatedSocialContents.length > 0 && (
@@ -591,14 +545,6 @@ export default async function MemeDetailPage({ params }: Props) {
 
           <AuthInvite />
 
-          <MemeUseKit
-            title={meme.title}
-            summary={meme.summary}
-            usageNote={meme.usage_note}
-            caution={meme.caution}
-            safetyLevel={meme.safety_level}
-            lifecycleStatus={meme.lifecycle_status}
-          />
 
           <MemeMarketPassport passport={marketPassport} locale="ko" />
 
@@ -606,9 +552,6 @@ export default async function MemeDetailPage({ params }: Props) {
               유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
           <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
 
-          <div className="lg:hidden scroll-mt-28" data-plus-pricing-slot="after-sources">
-            <KoreanPlusPricingCard titleId="plus-pricing-title-mobile" />
-          </div>
 
           <div data-detail-order="appendix" className="space-y-5">
             <SafetyRationale
@@ -626,14 +569,9 @@ export default async function MemeDetailPage({ params }: Props) {
             />
           </div>
 
-          {/* Plus 트렌드 추이 — 이 페이지의 SSG를 지키려고 서버에서 구독을 읽지 않는다.
-              권한 검사·데이터 제공은 클라이언트가 호출하는 /api/memes/[id]/trend가 담당. */}
-          <MemeTrendPanel memeId={meme.id} />
 
           <Comments memeId={meme.id} />
 
-          {/* 후원 — 본문·반응을 거친 고관여 지점에 절제된 1개 CTA(1인 운영 비영리) */}
-          <DonateCard />
         </div>
       </div>
 

@@ -76,7 +76,7 @@ describe("setMemeOriginCountry", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith(`/admin/memes/${memeId}`);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/global");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/explore");
-    for (const path of ["/", "/daily", "/rankings", "/weekly", "/timeline", "/news"]) {
+    for (const path of ["/", "/rankings", "/weekly", "/timeline", "/news"]) {
       expect(mocks.revalidatePath).toHaveBeenCalledWith(path);
     }
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/collections/[slug]", "page");

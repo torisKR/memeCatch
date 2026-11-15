@@ -6,11 +6,10 @@ import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/i18n-client";
 import { localizedStaticPath, stripLocalePath } from "@/lib/i18n-routing";
 import { normalizePathname } from "@/lib/normalize-pathname";
-import { usePremium } from "@/lib/hooks/use-premium";
 
 const TABS: {
   href: string;
-  label: "brand" | "latest" | "community" | "submit" | "premium" | "my";
+  label: "brand" | "latest" | "community" | "submit" | "my";
   icon: (props: { className?: string }) => React.ReactElement;
   emphasized?: boolean;
 }[] = [
@@ -18,17 +17,14 @@ const TABS: {
   { href: "/explore?sort=recent", label: "latest", icon: CompassIcon },
   { href: "/community", label: "community", icon: CommunityIcon },
   { href: "/submit", label: "submit", icon: PlusIcon, emphasized: true },
-  { href: "/pricing", label: "premium", icon: PremiumIcon },
   { href: "/my", label: "my", icon: UserIcon },
 ];
 
 export function BottomNav() {
   const pathname = normalizePathname(usePathname());
   const { locale, messages } = useLocale();
-  const isPremium = usePremium();
   if (pathname.startsWith("/admin")) return null;
   const currentPath = stripLocalePath(pathname);
-  const plusHref = isPremium ? "/premium" : localizedStaticPath("/pricing", locale);
 
   return (
     <nav
@@ -42,23 +38,18 @@ export function BottomNav() {
           const href =
             tab.label === "brand" || tab.label === "latest"
               ? localizedStaticPath(tab.href, locale)
-              : tab.label === "premium"
-                ? plusHref
-                : tab.href;
+              : tab.href;
           const targetPath = stripLocalePath(href).split("?")[0];
           const active =
             tab.label === "brand"
               ? currentPath === "/" || currentPath === "/index"
-              : tab.label === "premium"
-                ? currentPath.startsWith("/premium") ||
-                  currentPath.startsWith("/pricing")
-                : currentPath === targetPath ||
-                  currentPath.startsWith(`${targetPath}/`);
+              : currentPath === targetPath ||
+                currentPath.startsWith(`${targetPath}/`);
           return (
             <li key={tab.href} className="flex min-w-11 flex-1">
               <Link
                 href={href}
-                rel={tab.label === "submit" || tab.label === "my" || href === "/premium" ? "nofollow" : undefined}
+                rel={tab.label === "submit" || tab.label === "my" ? "nofollow" : undefined}
                 aria-current={active ? "page" : undefined}
                 className={`no-press flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 text-xs ${
                   tab.emphasized
@@ -77,9 +68,7 @@ export function BottomNav() {
                       ? latestLabel(locale)
                       : tab.label === "brand"
                         ? homeLabel(locale)
-                        : tab.label === "premium"
-                          ? plusLabel(locale)
-                          : messages[tab.label]
+                        : messages[tab.label]
                   }
                 />
               </Link>
@@ -100,12 +89,6 @@ function homeLabel(locale: ReturnType<typeof useLocale>["locale"]) {
 function latestLabel(locale: ReturnType<typeof useLocale>["locale"]) {
   return (
     ({ ko: "최신", en: "Latest", ja: "最新", zh: "最新", "zh-tw": "最新", ar: "استكشاف" } as Partial<Record<typeof locale, string>>)[locale] ?? "Latest"
-  );
-}
-
-function plusLabel(locale: ReturnType<typeof useLocale>["locale"]) {
-  return (
-    ({ ar: "بلس" } as Partial<Record<typeof locale, string>>)[locale] ?? "Plus"
   );
 }
 
@@ -200,13 +183,6 @@ function CommunityIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M4 5.5h16v11H9l-5 3v-14Z" strokeLinejoin="round" />
       <path d="M8 10h8M8 13h5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function PremiumIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="m12 3 2.4 5.1L20 9l-4 4.1.9 5.9-4.9-2.7L7.1 19l.9-5.9L4 9l5.6-.9L12 3Z" strokeLinejoin="round" />
     </svg>
   );
 }

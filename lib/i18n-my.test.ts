@@ -34,7 +34,7 @@ describe("MY_COPY", () => {
     expect(copy.saved.emptyBody).toBeTruthy();
     expect(copy.saved.library.title).toBeTruthy();
     expect(copy.saved.library.results(1, 2)).toBeTruthy();
-    expect(copy.saved.library.upgradeAction).toBeTruthy();
+    expect(copy.saved.library.pagination.status(1, 2)).toBeTruthy();
     expect(copy.recent.title).toBeTruthy();
     expect(copy.recent.clearAll).toBeTruthy();
     expect(copy.submissions.submittedAt("2026-07-18")).toContain("2026-07-18");

@@ -96,3 +96,19 @@ describe("arabic opengraph rewrite", () => {
     ]);
   });
 });
+
+describe("retired membership redirects", () => {
+  it("permanently sends old Plus pricing, premium, and daily URLs home before the trailing-slash rule", async () => {
+    if (typeof nextConfig.redirects !== "function") {
+      throw new Error("next config has no redirects()");
+    }
+    const redirects = await nextConfig.redirects();
+    const find = (source: string) => redirects.find((rule) => rule.source === source);
+
+    expect(find("/pricing")).toMatchObject({ destination: "/", permanent: true });
+    expect(find("/premium/:path+")).toMatchObject({ destination: "/", permanent: true });
+    expect(find("/daily")).toMatchObject({ destination: "/", permanent: true });
+    expect(find("/:locale(en|ja|zh|zh-tw)/pricing")).toMatchObject({ destination: "/:locale" });
+    expect(redirects.at(-1)?.source).toBe("/:path+/");
+  });
+});

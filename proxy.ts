@@ -15,17 +15,6 @@ import {
   stripLocalePath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
-import {
-  buildPlusActionPremiumPath,
-  buildPlusDailySignalPremiumPath,
-  isSafePlusDailySignalFocusId,
-  parsePlusActionPremiumSource,
-  parsePlusDailySignalLocale,
-} from "@/lib/plus-daily-signal-routing";
-import {
-  buildPlusOutcomeReplayPath,
-  parsePlusOutcomeReplayRequest,
-} from "@/lib/plus-outcome-replay-routing";
 import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { shortIdFromParam } from "@/lib/labels";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -83,46 +72,8 @@ function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): strin
 }
 
 function buildAuthReturnPath(path: string, searchParams: URLSearchParams): string {
-  if (path !== "/premium") {
-    return path.startsWith("/admin") || path === "/submit"
-      ? withAllowlistedSearch(path, searchParams)
-      : path;
-  }
-
-  const focus = searchParams.getAll("focus");
-  const source = searchParams.getAll("from");
-  const actionSource = source.length === 1 ? parsePlusActionPremiumSource(source[0]) : undefined;
-  if (
-    focus.length === 1 &&
-    isSafePlusDailySignalFocusId(focus[0]) &&
-    actionSource
-  ) {
-    const localeValues = searchParams.getAll("locale");
-    if (localeValues.length > 1) return path;
-    const locale =
-      localeValues.length === 1 ? parsePlusDailySignalLocale(localeValues[0]) : undefined;
-    return actionSource === "daily_signal"
-      ? buildPlusDailySignalPremiumPath(focus[0], locale)
-      : buildPlusActionPremiumPath(focus[0], locale, actionSource);
-  }
-
-  const replay = searchParams.getAll("replay");
-  const replayLocale = searchParams.getAll("replay_locale");
-  const replaySource = searchParams.getAll("from");
-  const replayRequest = parsePlusOutcomeReplayRequest({
-    shortId: replay,
-    locale: replayLocale,
-    source: replaySource.length === 1 ? replaySource[0] : replaySource,
-    focus: searchParams.has("focus") ? searchParams.getAll("focus") : undefined,
-    dailySignalLocale: searchParams.has("locale") ? searchParams.getAll("locale") : undefined,
-  });
-  if (replayRequest) {
-    return buildPlusOutcomeReplayPath(replayRequest.shortId, replayRequest.locale) ?? path;
-  }
-
-  const checkout = searchParams.getAll("checkout");
-  return checkout.length === 1 && checkout[0] === "return"
-    ? `${path}?checkout=return`
+  return path.startsWith("/admin") || path === "/submit"
+    ? withAllowlistedSearch(path, searchParams)
     : path;
 }
 
@@ -164,13 +115,13 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = localizePath("/", landingLocale);
     // A preference redirect must not refresh the cookie. Prefetch and RSC
-    // requests used to persist the last localized /pricing hop.
+    // requests used to persist the last localized hop.
     return NextResponse.redirect(url, 302);
   }
 
   const urlLocale = localeFromPathname(request.nextUrl.pathname);
   // The response body is Korean unless the URL addresses a translated document.
-  // The locale cookie is not a document locale: prefetching /zh/pricing must
+  // The locale cookie is not a document locale: prefetching /zh/explore must
   // not restyle the next unprefixed page.
   const requestedExportLocale = request.nextUrl.pathname.endsWith("/export")
     ? request.nextUrl.searchParams.get("locale")
@@ -217,7 +168,7 @@ export async function proxy(request: NextRequest) {
 
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
-  const needsAuth = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
+  const needsAuth = path.startsWith("/my") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
   const detailMatch = path.match(/^\/memes\/([^/]+)$/);
   const detailKey = detailMatch?.[1] === "random" && !urlLocale ? null : detailMatch?.[1];
   const fetchMode = request.headers.get("sec-fetch-mode");
@@ -283,7 +234,7 @@ export async function proxy(request: NextRequest) {
   } catch {
     authFailed = true;
   }
-  const gated = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit");
+  const gated = path.startsWith("/my") || path.startsWith("/submit");
 
   if ((authFailed || !user) && gated) {
     const url = request.nextUrl.clone();

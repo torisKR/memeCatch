@@ -17,11 +17,11 @@ const now = new Date("2026-09-05T15:30:00Z");
 const filters = parseActivityFilters({}, now).filters;
 const fixture: AdminActivity = {
   generatedAt: now.toISOString(), range: { from: filters.from, to: filters.to, hourDate: filters.hourDate },
-  summary: { views: 2, activeUsers: 1, anonymousSessions: 1, currentSubscribers: 1 },
+  summary: { views: 2, activeUsers: 1, anonymousSessions: 1 },
   daily: [{ date: filters.to, views: 2, activeUsers: 1, anonymousSessions: 1 }],
   hourly: Array.from({ length: 24 }, (_, hour) => ({ hour, views: 0, activeUsers: 0, anonymousSessions: 0 })),
   users: { total: 26, page: 1, pageSize: 25, items: [
-    { id: userId, nickname: "테스트 회원", isPlus: true, plusUntil: "2026-10-01T00:00:00+00:00", views: 2, lastSeenAt: now.toISOString() },
+    { id: userId, nickname: "테스트 회원", views: 2, lastSeenAt: now.toISOString() },
   ] },
   views: { total: 51, page: 1, pageSize: 50, items: [
     { id: "53a4f876-4e70-4d44-b1f8-9655f7abaeee", eventAt: now.toISOString(), userId, nickname: "테스트 회원", memeId: "d9fa46cd-939f-4f41-8b6d-e7f52a1cefc8", title: "테스트 밈", shortId: "test01", slug: "테스트 밈" },
@@ -54,16 +54,15 @@ describe("admin activity boundaries", () => {
     for (const query of [
       { from: "2026-08-06" }, { from: "2026-09-07" }, { to: "2026-09-07" },
       { to: "2026-02-30" }, { hourDate: "2026-08-30" }, { userId: "invalid" },
-      { usersPage: "10001" }, { viewsPage: "0" }, { from: ["2026-09-01"] }, { subscribersOnly: "true" },
+      { usersPage: "10001" }, { viewsPage: "0" }, { from: ["2026-09-01"] },
     ]) expect(parseActivityFilters(query, now).error).not.toBeNull();
     expect(parseActivityFilters({ from: "2024-02-29", to: "2024-02-29" }, now).error).toBeNull();
     expect(parseActivityFilters({ userId: "00000000-0000-0000-0000-000000000001" }, now).error).toBeNull();
   });
 
-  it("preserves the time and subscriber filters while independently paging and selecting a user", () => {
-    const href = activityHref({ ...filters, subscribersOnly: true, usersPage: 2, viewsPage: 3 }, { userId, viewsPage: 1 }, "activity-views");
+  it("preserves the time filters while independently paging and selecting a user", () => {
+    const href = activityHref({ ...filters, usersPage: 2, viewsPage: 3 }, { userId, viewsPage: 1 }, "activity-views");
     const url = new URL(href, "https://example.test");
-    expect(url.searchParams.get("subscribersOnly")).toBe("1");
     expect(url.searchParams.get("usersPage")).toBe("2");
     expect(url.searchParams.has("viewsPage")).toBe(false);
     expect(url.searchParams.get("userId")).toBe(userId);
@@ -78,14 +77,14 @@ describe("admin activity boundaries", () => {
   });
 
   it("authorizes before calling the read-only RPC with validated parameters", async () => {
-    render(await AdminActivityPage({ searchParams: Promise.resolve({ userId, subscribersOnly: "1" }) }));
+    render(await AdminActivityPage({ searchParams: Promise.resolve({ userId }) }));
     expect(guard).toHaveBeenCalledWith("/admin/activity");
     expect(rpc).toHaveBeenCalledExactlyOnceWith("get_admin_activity_dashboard", {
       p_from: filters.from, p_to: filters.to, p_hour_date: filters.hourDate,
-      p_user_id: userId, p_subscribers_only: true, p_users_page: 1, p_views_page: 1,
+      p_user_id: userId, p_users_page: 1, p_views_page: 1,
     });
     expect(guard.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[0]);
-    expect(screen.getByRole("heading", { name: /현재 구독 중인 사용자/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /사용자별 활동/ })).toBeTruthy();
   });
 
   it("does not query activity when the operator guard denies access", async () => {

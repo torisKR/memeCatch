@@ -44,7 +44,6 @@ const NAV = {
     ["/explore?sort=recent", "최신"],
     ["/community", "커뮤니티"],
     ["/submit", "제보"],
-    ["/pricing", "Plus"],
     ["/my", "내 정보"],
   ],
   en: [
@@ -52,7 +51,6 @@ const NAV = {
     ["/en/explore?sort=recent", "Latest"],
     ["/community", "Community"],
     ["/submit", "Submit"],
-    ["/pricing", "Plus"],
     ["/my", "My"],
   ],
 } as const satisfies Record<RetiredProductLocale, readonly (readonly [string, string])[]>;

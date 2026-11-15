@@ -49,10 +49,6 @@ const STATUS_LABELS: Record<EnglishPilotStatus, string> = {
 const KPI_LABELS: Record<GrowthKpiId, string> = {
   activation: "활성화",
   account: "계정 전환",
-  conversion: "Paywall → Checkout",
-  payment: "Checkout → 결제",
-  renewal: "30일 재구매",
-  usage: "유료 사용자 월 복사",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -146,7 +142,7 @@ export default async function AdminGrowthPage({
       <header>
         <h1 className="text-2xl font-bold">성장 운영</h1>
         <p className="mt-1 text-sm text-muted">
-          Top-100 검색 랜딩 준비도와 영어 Plus 파일럿의 실제 진행 상태를 한곳에서 확인합니다.
+          Top-100 검색 랜딩 준비도와 영어 파일럿의 실제 진행 상태를 한곳에서 확인합니다.
         </p>
       </header>
 
@@ -187,7 +183,7 @@ export default async function AdminGrowthPage({
                 </div>
                 <div className="mt-2 text-2xl font-bold tabular-nums">
                   {metric.available && metric.value !== null
-                    ? `${metric.value}${id === "usage" ? "회" : "%"}`
+                    ? `${metric.value}%`
                     : "insufficient data"}
                 </div>
                 {metric.available && (
@@ -285,7 +281,7 @@ export default async function AdminGrowthPage({
 
       <section className="space-y-4" aria-labelledby="english-pilot-heading">
         <div>
-          <h2 id="english-pilot-heading" className="text-xl font-bold">영어 Plus 파일럿</h2>
+          <h2 id="english-pilot-heading" className="text-xl font-bold">영어 파일럿</h2>
           <p className="mt-1 text-sm text-muted">
             최신 원문 기준으로 검수 완료된 영어 번역만 배정할 수 있습니다. 슬롯 생성은 운영
             준비 상태이며 실제 인터뷰나 사용자 반응을 뜻하지 않습니다.

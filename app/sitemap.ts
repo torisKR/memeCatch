@@ -124,19 +124,6 @@ function homeLanguages(): Record<string, string> {
   };
 }
 
-/** Plus pricing is the other fully localized static conversion page. */
-function pricingLanguages(): Record<string, string> {
-  return {
-    ...Object.fromEntries(
-      SEO_ROUTE_LOCALES.map((locale) => [
-        toHrefLang(locale),
-        absolute(localizedPath("/pricing", locale)),
-      ]),
-    ),
-    "x-default": absolute(localizedPath("/pricing", "en")),
-  };
-}
-
 function exploreLanguages(locales: readonly SeoContentLocale[]): Record<string, string> {
   const languages: Record<string, string> = {
     ko: absolute("/explore"),
@@ -306,14 +293,6 @@ async function buildSitemap(): Promise<{
       alternates: { languages: homeLanguages() },
     }),
   );
-  const localizedPricingEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
-    (locale) => ({
-      url: absolute(localizedPath("/pricing", locale)),
-      changeFrequency: "weekly" as const,
-      priority: 0.55,
-      alternates: { languages: pricingLanguages() },
-    }),
-  );
   const localizedHomeLastModified = new Map<SeoContentLocale, Date>();
   const localizedExploreCounts = new Map<SeoContentLocale, number>();
 
@@ -326,13 +305,6 @@ async function buildSitemap(): Promise<{
       alternates: { languages: homeLanguages() },
     },
     ...localizedHomeEntries,
-    {
-      url: `${SITE_URL}/pricing`,
-      changeFrequency: "weekly" as const,
-      priority: 0.55,
-      alternates: { languages: pricingLanguages() },
-    },
-    ...localizedPricingEntries,
     {
       url: `${SITE_URL}/collections`,
       changeFrequency: "daily" as const,

@@ -52,9 +52,7 @@ describe("SafetyRationale", () => {
     expect(screen.getByText("2026년 8월 17일")).toBeTruthy();
     expect(screen.getByText("2026년 8월 17일").closest("time")?.getAttribute("datetime"))
       .toBe("2026-08-17T02:00:00.000Z");
-    expect(
-      screen.getByRole("link", { name: "회사·브랜드 운영용 고급 안전 검수 보기" }).getAttribute("href"),
-    ).toBe("/pricing?source=brand_company_safety");
+    expect(screen.queryByRole("link", { name: "회사·브랜드 운영용 고급 안전 검수 보기" })).toBeNull();
   });
 
   it("caution이 없으면 등급 일반 문구로 채우지 않는다(근거 발명 금지)", () => {

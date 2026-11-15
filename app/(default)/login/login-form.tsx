@@ -3,7 +3,6 @@
 import { useActionState, useId, useState } from "react";
 import { BrandTile } from "@/components/brand-mark";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   AnimatePresence,
   motion,
@@ -14,7 +13,6 @@ import { createClient } from "@/lib/supabase/client";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
 import { LOGIN_COPY } from "@/lib/i18n-login";
 import { useLocale } from "@/lib/i18n-client";
-import { safeNext } from "@/lib/safe-redirect";
 
 /**
  * 레인 C — 로그인/가입 폼(클라이언트). DESIGN.md §10 인증.
@@ -27,30 +25,6 @@ import { safeNext } from "@/lib/safe-redirect";
 
 type Mode = "login" | "signup";
 type Provider = "kakao" | "google";
-type KaiaEventMap = {
-  accountsChanged(accounts: `0x${string}`[]): void;
-  chainChanged(chainId: string): void;
-  connect(connectInfo: { chainId: string }): void;
-  disconnect(error: { code: number; message: string }): void;
-  message(message: { type: string; data: unknown }): void;
-};
-type KaiaProvider = {
-  address: string;
-  request(args: { method: string; params?: unknown }): Promise<unknown>;
-  on<Event extends keyof KaiaEventMap>(
-    event: Event,
-    listener: KaiaEventMap[Event],
-  ): void;
-  removeListener<Event extends keyof KaiaEventMap>(
-    event: Event,
-    listener: KaiaEventMap[Event],
-  ): void;
-};
-
-const KAIA_MAINNET_CHAIN_ID = "0x2019";
-const UNIFI_MAINNET_CHAIN_ID = "8217";
-const KAIA_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/i;
-
 export function LoginForm({
   next,
   callbackError = false,
@@ -60,17 +34,15 @@ export function LoginForm({
   callbackError?: boolean;
   initialMode?: Mode;
 }) {
-  const router = useRouter();
   const { locale } = useLocale();
   const copy = LOGIN_COPY[locale];
   const reduce = useReducedMotion();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [oauthBusy, setOauthBusy] = useState<Provider | null>(null);
-  const [walletBusy, setWalletBusy] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
   async function startOAuth(provider: Provider) {
-    if (oauthBusy || walletBusy) return;
+    if (oauthBusy) return;
     setOauthBusy(provider);
     setOauthNotice(null);
     const label = copy.providerNames[provider];
@@ -90,92 +62,6 @@ export function LoginForm({
     } catch {
       setOauthBusy(null);
       setOauthNotice(copy.oauthUnavailable(label));
-    }
-  }
-
-  async function startKaiaWalletLogin() {
-    if (walletBusy || oauthBusy) return;
-
-    setWalletBusy(true);
-    setOauthNotice(null);
-    try {
-      const unifiClientId = process.env.NEXT_PUBLIC_UNIFI_CLIENT_ID?.trim();
-      let wallet: KaiaProvider;
-
-      if (unifiClientId) {
-        const { default: DappPortalSDK } = await import(
-          "@linenext/dapp-portal-sdk"
-        );
-        const sdk = await DappPortalSDK.init({
-          clientId: unifiClientId,
-          chainId: UNIFI_MAINNET_CHAIN_ID,
-        });
-        const sdkWallet = sdk.getWalletProvider();
-        const accounts = await sdkWallet.request({
-          method: "kaia_requestAccounts",
-        });
-        if (
-          !Array.isArray(accounts) ||
-          typeof accounts[0] !== "string" ||
-          !KAIA_ADDRESS_PATTERN.test(accounts[0])
-        ) {
-          throw new Error("Unifi Wallet returned an invalid account address");
-        }
-        const account = accounts[0];
-        wallet = {
-          address: account,
-          request: ({ method, params }) => {
-            if (method === "eth_requestAccounts") return Promise.resolve([account]);
-            if (method === "eth_chainId") return Promise.resolve(KAIA_MAINNET_CHAIN_ID);
-            if (params !== undefined && !Array.isArray(params)) {
-              throw new Error("Unifi Wallet received invalid request parameters");
-            }
-            return sdkWallet.request({ method, params });
-          },
-          on: () => undefined,
-          removeListener: () => undefined,
-        };
-      } else {
-        const fallback = (window as Window & { klaytn?: KaiaProvider }).klaytn;
-        if (!fallback) {
-          setOauthNotice(copy.kaiaUnavailable);
-          return;
-        }
-
-        const chainId = await fallback.request({ method: "eth_chainId" });
-        if (
-          typeof chainId !== "string" ||
-          chainId.toLowerCase() !== KAIA_MAINNET_CHAIN_ID
-        ) {
-          setOauthNotice(copy.kaiaWrongChain);
-          return;
-        }
-        wallet = fallback;
-      }
-
-      const { data, error } = await createClient().auth.signInWithWeb3({
-        chain: "ethereum",
-        wallet,
-        statement: "Sign in to MemeCatch with Kaia Wallet.",
-      });
-      if (error) throw error;
-      if (!data.session) throw new Error("Kaia Wallet session was not created");
-
-      router.replace(safeNext(next));
-      router.refresh();
-    } catch (error) {
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? error.code
-          : undefined;
-      const message = error instanceof Error ? error.message : "";
-      setOauthNotice(
-        code === 4001 || /reject|denied|cancel/i.test(message)
-          ? copy.kaiaRejected
-          : copy.kaiaGenericError,
-      );
-    } finally {
-      setWalletBusy(false);
     }
   }
 
@@ -219,29 +105,8 @@ export function LoginForm({
       <div className="mt-6 flex flex-col gap-2.5">
         <button
           type="button"
-          onClick={startKaiaWalletLogin}
-          disabled={walletBusy || !!oauthBusy}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
-        >
-          {walletBusy ? (
-            <Spinner className="border-white/40 border-t-white" />
-          ) : (
-            <span
-              aria-hidden
-              className="grid size-5 place-items-center rounded-full bg-white text-xs font-black text-black"
-            >
-              K
-            </span>
-          )}
-          {copy.kaiaButton}
-        </button>
-        <p className="px-1 text-xs text-muted">
-          {copy.kaiaAccountNotice}
-        </p>
-        <button
-          type="button"
           onClick={() => startOAuth("kakao")}
-          disabled={!!oauthBusy || walletBusy}
+          disabled={!!oauthBusy}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 text-base font-semibold text-[#191600] transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {oauthBusy === "kakao" ? (
@@ -254,7 +119,7 @@ export function LoginForm({
         <button
           type="button"
           onClick={() => startOAuth("google")}
-          disabled={!!oauthBusy || walletBusy}
+          disabled={!!oauthBusy}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-base font-semibold text-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {oauthBusy === "google" ? (

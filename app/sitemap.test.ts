@@ -319,25 +319,10 @@ describe("사이트맵 다국어 색인 계약", () => {
     ).toHaveLength(1);
   });
 
-  it("Plus 가격 전환 페이지를 모든 정적 SEO locale에 reciprocal alternates로 노출한다", async () => {
+  it("종료된 Plus 요금·daily 페이지는 sitemap에 없다", async () => {
     useRows([]);
     const entries = await sitemap();
-    const pricingEntries = entries.filter((entry) =>
-      /\/pricing$/.test(entry.url),
-    );
-    const englishPricing = pricingEntries.find((entry) =>
-      entry.url.endsWith("/en/pricing"),
-    );
-
-    expect(pricingEntries).toHaveLength(5);
-    expect(englishPricing?.alternates?.languages).toMatchObject({
-      ko: expect.stringMatching(/\/pricing$/),
-      en: expect.stringMatching(/\/en\/pricing$/),
-      ja: expect.stringMatching(/\/ja\/pricing$/),
-      "zh-Hans": expect.stringMatching(/\/zh\/pricing$/),
-      "zh-Hant": expect.stringMatching(/\/zh-tw\/pricing$/),
-      "x-default": expect.stringMatching(/\/en\/pricing$/),
-    });
+    expect(entries.filter((entry) => /\/(pricing|premium|daily)$/.test(entry.url))).toHaveLength(0);
   });
 
   it("24개 이상 적격 문서가 있는 locale만 localized explore sitemap에 올린다", async () => {

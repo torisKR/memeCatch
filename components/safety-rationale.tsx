@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SENTIMENT, USAGE_CONTEXTS, type SafetyLevel } from "@/lib/labels";
 import type { Database, Json } from "@/lib/database.types";
 import { SafetyBadge } from "@/components/safety-badge";
@@ -185,12 +184,6 @@ export function SafetyRationale({
                 "확인된 기록 없음"
               )}
             </p>
-            <Link
-              href="/pricing?source=brand_company_safety"
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-bold text-accent-text underline underline-offset-4"
-            >
-              회사·브랜드 운영용 고급 안전 검수 보기
-            </Link>
           </div>
         )
       )}

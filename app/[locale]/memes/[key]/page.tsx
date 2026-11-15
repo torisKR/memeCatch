@@ -16,10 +16,7 @@ import {
 import { localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image";
 import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
-import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
-import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
-import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { RelatedMemes } from "@/components/related-memes";
 import { selectLocalizedRelatedCards } from "@/lib/localized-related";
@@ -526,16 +523,7 @@ export default async function LocalizedMemePage({ params }: Props) {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,15rem)] lg:items-start">
         <SaveButton memeId={meme.id} />
-        <TranslationPriorityButton
-          memeId={meme.id}
-          locale={locale}
-          translationStatus={meme.translation.status}
-          translationIsCurrent={meme.translation.isCurrent}
-        />
         <ExportButton shortId={meme.short_id} />
-      </div>
-      <div className="mt-3">
-        <MemeUseKitEntry locale={locale} />
       </div>
       {!needsReview && (
         <div className="mt-3 flex justify-end">
@@ -609,17 +597,7 @@ export default async function LocalizedMemePage({ params }: Props) {
               <p className="mt-2 whitespace-pre-line leading-relaxed">{meme.caution}</p>
             </section>
           )}
-          <MemeUseKit
-            title={meme.title}
-            summary={meme.summary}
-            usageNote={meme.usage_note}
-            caution={meme.caution}
-            safetyLevel={meme.safety_level}
-            lifecycleStatus={meme.lifecycle_status}
-          />
-
           <MemeMarketPassport passport={marketPassport} locale={locale} />
-          <MemeTrendPanel memeId={meme.id} />
           <RelatedMemes memes={relatedCards} locale={locale} />
         </div>
 

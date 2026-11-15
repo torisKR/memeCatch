@@ -4,6 +4,7 @@ import { rankingsLocaleRewriteSource } from "./lib/rankings-locale-rewrite";
 import {
   DEFAULT_TRAILING_SLASH_REDIRECT,
   EN_PRODUCT_GONE_REDIRECTS,
+  RETIRED_MEMBERSHIP_REDIRECTS,
 } from "./lib/retired-product-redirects";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -172,7 +173,7 @@ const nextConfig: NextConfig = {
   // `/en/products/` a second hop. Specific `/en` redirects are listed first.
   skipTrailingSlashRedirect: true,
   async redirects() {
-    return [...EN_PRODUCT_GONE_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
+    return [...EN_PRODUCT_GONE_REDIRECTS, ...RETIRED_MEMBERSHIP_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
   },
   // Prefixed rankings URLs share one dynamic route. A static `app/ar` segment
   // would shadow every future `/ar/*` page, and `[locale]` only prerenders

@@ -3,6 +3,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { discoveryIndexIds, type IndexCandidate } from "@/lib/content-depth";
+import type { DiscoveryIndexResult } from "@/lib/index-gate";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { createStaticClient } from "@/lib/supabase/server";
 
@@ -12,10 +13,6 @@ const SELECT =
 
 const PAGE = 1_000;
 const DISCOVERY_REVALIDATE_SECONDS = 60 * 60;
-
-export type DiscoveryIndexResult =
-  | { ok: true; ids: ReadonlySet<string> }
-  | { ok: false };
 
 /**
  * Public memes that pass current main's existing isIndexableMeme policy.

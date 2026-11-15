@@ -44,6 +44,7 @@ import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
 import titleStyles from "@/components/meme-detail-title.module.css";
+import { detailIndexableFromDiscovery } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
 /** 한국어 상세와 같다. 문서는 캐시하지 않고, 성공한 카탈로그 읽기만 Data Cache에 둔다. */
@@ -272,7 +273,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getLanguageVersions(meme, locale),
     loadDiscoveryIndex(),
   ]);
-  const sourceListed = discovery.ok && discovery.ids.has(meme.id);
+  const indexable = detailIndexableFromDiscovery(
+    discovery,
+    meme.id,
+    isIndexableLocalizedMeme(meme),
+  );
   const indexableVersions = versions.filter(({ meme: version }) =>
     isIndexableLocalizedMeme(version),
   );
@@ -317,7 +322,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     ...metadata,
     alternates: { canonical, languages },
-    ...(!sourceListed || !isIndexableLocalizedMeme(meme)
+    ...(!indexable
       ? { robots: { index: false, follow: false } }
       : {}),
     openGraph: {
@@ -391,7 +396,11 @@ export default async function LocalizedMemePage({ params }: Props) {
   const isMachine = meme.translation.status === "machine";
   const isStale = meme.translation.status === "stale" || !meme.translation.isCurrent;
   const needsReview = !isIndexableLocalizedMeme(meme);
-  const indexable = discovery.ok && discovery.ids.has(meme.id) && !needsReview;
+  const indexable = detailIndexableFromDiscovery(
+    discovery,
+    meme.id,
+    !needsReview,
+  );
 
   return (
     <article

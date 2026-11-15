@@ -48,6 +48,7 @@ import { DocStatusNote } from "@/components/doc-status-note";
 import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
+import { detailIndexableFromDiscovery } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { isThinMeme, koreanDetailRobots } from "@/lib/thin-meme";
 import { isRenderableContent } from "@/lib/content-availability";
@@ -113,11 +114,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     loadDiscoveryIndex(),
     listIndexableLocalizedMemes(meme),
   ]);
-  const indexable = discovery.ok && discovery.ids.has(meme.id);
-  const robots = !discovery.ok
-    ? { index: false as const, follow: false as const }
+  const indexable = detailIndexableFromDiscovery(
+    discovery,
+    meme.id,
+    !isThinMeme(meme),
+  );
+  const robots = indexable
+    ? undefined
     : koreanDetailRobots(meme)
-      ?? (!indexable ? { index: false as const, follow: true as const } : undefined);
+      ?? { index: false as const, follow: true as const };
   const localizedVersions = indexable
     ? localizedCandidates.flatMap((version) =>
         isSeoContentLocale(version.translation.locale)
@@ -162,7 +167,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: path, languages },
     // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/thin-meme.ts).
-    // 확인된 thin 문서는 follow를 유지하고, discovery 장애는 fail-safe로 follow도 끈다.
+    // 이미 읽은 row가 충실하면 discovery 장애만으로 noindex하지 않는다.
     ...(robots ? { robots } : {}),
     // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 밈별 og 명시
     openGraph: {
@@ -259,7 +264,11 @@ export default async function MemeDetailPage({ params }: Props) {
     loadDiscoveryIndex(),
   ]);
   const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
-  const indexable = indexableIds.has(meme.id);
+  const indexable = detailIndexableFromDiscovery(
+    discovery,
+    meme.id,
+    !isThinMeme(meme),
+  );
 
   // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트
   // (is_meme_rank_eligible)와 같은 기준이라 "랭킹엔 못 오르는데 상세엔 뜨는"

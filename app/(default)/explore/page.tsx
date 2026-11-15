@@ -21,7 +21,6 @@ import {
 } from "@/components/explore-grid";
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
-import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
 import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from "@/lib/curated-memes";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
@@ -240,8 +239,7 @@ export default async function ExplorePage({
   const sp = await searchParams;
   const filters = parseFilters(sp);
 
-  const [initialLoad, platformCounts] = await Promise.all([
-    (async (): Promise<{
+  const initialLoad = await (async (): Promise<{
       items: MemeListItem[];
       unavailable: boolean;
       dbCount: number;
@@ -302,9 +300,7 @@ export default async function ExplorePage({
       } catch {
         return failed;
       }
-    })(),
-    getSocialPlatformCounts(),
-  ]);
+    })();
 
   return (
     <main className="bg-background pb-14 text-foreground">
@@ -333,7 +329,7 @@ export default async function ExplorePage({
           </div>
         </div>
 
-        <ExploreFilters platformCounts={platformCounts} />
+        <ExploreFilters />
 
         <section
           aria-label="밈 탐색 결과"

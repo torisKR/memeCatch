@@ -1,5 +1,23 @@
 const EMPTY_INDEX_ID = "00000000-0000-0000-0000-000000000000";
 
+export type DiscoveryIndexResult =
+  | { ok: true; ids: ReadonlySet<string> }
+  | { ok: false };
+
+/**
+ * Detail routes already have the row needed to apply the public eligibility
+ * predicate. A discovery outage must not turn that healthy document into a
+ * temporary noindex; a successful discovery read still constrains the row.
+ */
+export function detailIndexableFromDiscovery(
+  discovery: DiscoveryIndexResult,
+  id: string,
+  rowIndexable: boolean,
+): boolean {
+  if (!rowIndexable) return false;
+  return discovery.ok ? discovery.ids.has(id) : true;
+}
+
 /**
  * Keep a PostgREST list on the discovery id set. Undefined leaves the query
  * unchanged. An empty set matches nothing, so a failed or empty gate cannot

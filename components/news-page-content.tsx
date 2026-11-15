@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/i18n";
 import type { Audience } from "@/lib/meme-news";
 import type { MemeNewsBrief } from "@/lib/meme-news";
 import type { GenerationHighlight } from "@/lib/queries";
+import { hasPublicListing } from "@/lib/thin-meme";
 
 const AUDIENCES = ["20s", "30s", "40s"] as const;
 
@@ -93,7 +94,7 @@ function AudienceSection({
         </Link>
       </div>
 
-      {highlights.length > 0 ? (
+      {hasPublicListing(highlights.length) ? (
         <div className="mt-5">
           <h3 className="text-lg font-bold">{audienceLabel}{copy.known}</h3>
           <p className="mt-1 text-sm text-muted">{copy.voteInfo}</p>
@@ -111,11 +112,7 @@ function AudienceSection({
             </ul>
           </TrackedBlock>
         </div>
-      ) : (
-        <p className="mt-5 rounded-xl bg-surface-2 p-4 text-sm text-muted">
-          {copy.noVotes}
-        </p>
-      )}
+      ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         {briefs.map((brief) => (

@@ -10,6 +10,7 @@ import { TrackedBlock } from "@/components/tracked-block";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { SearchInput } from "./search-input";
 import { MemeReferenceSearch } from "@/components/meme-reference-search";
+import { hasPublicListing } from "@/lib/thin-meme";
 import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 const SEARCH_DESCRIPTION =
@@ -115,7 +116,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </section>
       )}
 
-      {needsFallback && trending.length > 0 && (
+      {needsFallback && hasPublicListing(trending.length) && (
         <section aria-labelledby="search-trending" className="mt-8">
           <h2 id="search-trending" className="text-xl font-bold">
             {SECTION_TITLES.trending}

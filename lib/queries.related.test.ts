@@ -14,9 +14,14 @@ vi.mock("@/lib/meme-vector-lookup.server", () => ({
 }));
 
 import type { MemeListItem } from "@/lib/queries";
+import type { ContentDepthInput } from "@/lib/content-depth";
 import { getRelatedMemes } from "@/lib/queries";
 
-function meme(id: string, originYear: number, trendScore: number): MemeListItem {
+function meme(
+  id: string,
+  originYear: number,
+  trendScore: number,
+): MemeListItem & ContentDepthInput {
   return {
     id,
     short_id: id,
@@ -29,7 +34,18 @@ function meme(id: string, originYear: number, trendScore: number): MemeListItem 
     media_type: "text",
     origin_year: originYear,
     trend_score: trendScore,
-  };
+    description: "설명".repeat(250),
+    origin: null,
+    usage_note: null,
+    caution: null,
+    usage_examples: [],
+    meme_sources: [
+      { source_url: `https://example.com/${id}/one` },
+      { source_url: `https://example.com/${id}/two` },
+    ],
+    meme_contents: [],
+    meme_tags_map: [],
+  } as unknown as MemeListItem & ContentDepthInput;
 }
 
 function listQuery(data: MemeListItem[]) {
@@ -85,6 +101,8 @@ describe("getRelatedMemes lexical pool", () => {
     );
 
     expect(sameCategory.eq).toHaveBeenCalledWith("category", "phrase");
+    expect(sameCategory.select).toHaveBeenCalledWith(expect.stringContaining("description"));
+    expect(sameCategory.select).toHaveBeenCalledWith(expect.stringContaining("meme_sources"));
     expect(sameCategory.limit).toHaveBeenCalledWith(24);
     expect(nearbyYear.gte).toHaveBeenCalledWith("origin_year", 2018);
     expect(nearbyYear.lte).toHaveBeenCalledWith("origin_year", 2022);

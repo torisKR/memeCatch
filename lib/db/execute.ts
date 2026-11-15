@@ -14,7 +14,7 @@ import { getDb, withIdentity, type DbIdentity } from "@/lib/db/pool";
 
 type ColumnMap = Map<string, Map<string, string>>;
 
-type ForeignKey = {
+export type ForeignKey = {
   name: string;
   srcTable: string;
   srcCols: string[];
@@ -22,7 +22,7 @@ type ForeignKey = {
   dstCols: string[];
 };
 
-type Meta = {
+export type Meta = {
   columns: ColumnMap;
   foreignKeys: ForeignKey[];
   primaryKeys: Map<string, string[]>;
@@ -293,7 +293,12 @@ function renderEmbed(parent: string, parentAlias: string, embed: PlanEmbed, meta
   const fk = pickForeignKey(parent, embed, meta.foreignKeys);
   const joined = joinSql(parent, parentAlias, childAlias, fk);
   const columns = tableColumns(meta, embed.table);
-  const where = `${joined.sql} AND ${whereSql(embed.filters, embed.orGroups, childAlias, columns, params)}`;
+  const nested = innerExists(embed.fields, embed.table, childAlias, meta, params);
+  const where = [
+    joined.sql,
+    whereSql(embed.filters, embed.orGroups, childAlias, columns, params),
+    ...nested,
+  ].join(" AND ");
   const projected = renderFieldList(embed.fields, embed.table, childAlias, meta, params);
   const limited = `${orderSql(embed.orders, childAlias, params)}${limitSql(embed.limit, null, params)}`;
   const select = joined.manyToOne
@@ -331,8 +336,19 @@ function innerExists(fields: PlanField[], table: string, alias: string, meta: Me
     const fk = pickForeignKey(table, field.embed, meta.foreignKeys);
     const joined = joinSql(table, alias, childAlias, fk);
     const columns = tableColumns(meta, field.embed.table);
+    const nested = innerExists(
+      field.embed.fields,
+      field.embed.table,
+      childAlias,
+      meta,
+      params,
+    );
     checks.push(
-      `EXISTS (SELECT 1 FROM public.${quoteIdent(field.embed.table)} ${childAlias} WHERE ${joined.sql} AND ${whereSql(field.embed.filters, field.embed.orGroups, childAlias, columns, params)})`,
+      `EXISTS (SELECT 1 FROM public.${quoteIdent(field.embed.table)} ${childAlias} WHERE ${[
+        joined.sql,
+        whereSql(field.embed.filters, field.embed.orGroups, childAlias, columns, params),
+        ...nested,
+      ].join(" AND ")})`,
     );
   }
   return checks;
@@ -353,6 +369,16 @@ function selectSql(plan: QueryPlan, meta: Meta, counting: boolean): SqlParts {
     sql: `SELECT ${projected} FROM public.${quoteIdent(table)} ${alias} WHERE ${where}${page}`,
     params,
   };
+}
+
+/** Compile a select plan after moving PostgREST-style dotted filters onto embeds. */
+export function compileSelectPlan(
+  plan: QueryPlan,
+  meta: Meta,
+  counting = false,
+): SqlParts {
+  attachDottedFilters(plan);
+  return selectSql(plan, meta, counting);
 }
 
 function columnList(rows: Record<string, unknown>[]): string[] {
@@ -613,9 +639,9 @@ async function runQuery(
 
 export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
   try {
-    attachDottedFilters(plan);
     const meta = await loadMeta();
     if (plan.op === "rpc") {
+      attachDottedFilters(plan);
       const matches = await loadFunctions(plan.fn ?? "");
       const fn = matches.find((item) => {
         const names = new Set(item.names ?? []);
@@ -627,8 +653,8 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
       return shapeRows(plan, rows, null, !fn.proretset);
     }
     if (plan.op === "select") {
-      const dataSql = selectSql(plan, meta, false);
-      const countSql = plan.count === "exact" ? selectSql(plan, meta, true) : null;
+      const dataSql = compileSelectPlan(plan, meta, false);
+      const countSql = plan.count === "exact" ? compileSelectPlan(plan, meta, true) : null;
       const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal);
       let count: number | null = null;
       if (countSql) {
@@ -637,6 +663,7 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
       }
       return shapeRows(plan, rows, count, false);
     }
+    attachDottedFilters(plan);
     const built = mutationSql(plan, meta);
     const rows = await runQuery(identity, built.sql, built.params, signal);
     return shapeRows(plan, rows, null, false);

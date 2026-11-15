@@ -393,11 +393,31 @@ describe("사이트맵 다국어 색인 계약", () => {
   it("indexable 원문에 대해 상세와 같은 번역 색인 판정만 alternates에 허용한다", () => {
     // 원문 충실도 판정은 번역 유무보다 먼저 통과해야 한다.
     expect(source).toContain("if (!isIndexableMeme(meme)) continue");
+    expect(source).toContain("!isThinMeme(meme)");
     // 검수·필수 필드·원문 150자·시각 비교는 isIndexableLocalizedMeme 한 곳이다.
     // 타임스탬프 문자열 동등 비교로 다시 갈라지면 Date와 마이크로초 문자열이 빠진다.
     expect(source).toContain("isIndexableLocalizedMeme");
     expect(source).toContain("isTranslationCurrent");
     expect(source).not.toMatch(/source_updated_at\s*={2,3}\s*meme\.updated_at/);
+  });
+
+  it("keeps an existing-indexable Korean page below 400 body characters", async () => {
+    const existing = indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]);
+    existing.description = "밈".repeat(339);
+    existing.origin = "유".repeat(60);
+    existing.meme_sources = [{ source_url: "https://example.com/source" }];
+    const ready = indexableMeme(2, []);
+    ready.description = "밈".repeat(340);
+    ready.origin = "유".repeat(60);
+    ready.meme_sources = [{ source_url: "https://example.com/source" }];
+    useRows([existing, ready]);
+
+    const entries = await sitemap();
+    const paths = entries.map((entry) => new URL(entry.url).pathname);
+
+    expect(paths.some((path) => path.startsWith("/memes/m1"))).toBe(true);
+    expect(paths.some((path) => path.startsWith("/en/memes/"))).toBe(true);
+    expect(paths.some((path) => path.startsWith("/memes/m2"))).toBe(true);
   });
 
   it("같은 밀리초의 Date·마이크로초 문자열·다른 ISO 표기를 포함하고 1ms 차이는 뺀다", async () => {
@@ -872,9 +892,10 @@ describe("사이트맵 다국어 색인 계약", () => {
       short_id: `g${index}`,
       slug: `gated-${index}`,
       updated_at: "2026-01-02T00:00:00.000Z",
-      // Score without sources: description 250 (+2) + origin 59 (+1) + 1 example (+1) = 4, below MIN_SCORE 5.
-      // Two visible sources add +2 and make it indexable; hidden sources must not.
-      description: "d".repeat(250),
+      // Body is exactly 400 chars. Score without sources: description 339 (+2) +
+      // origin 59 (+1) + 1 example (+1) = 4, below MIN_SCORE 5. Two visible
+      // sources add +2 and make it indexable; hidden sources must not.
+      description: "d".repeat(339),
       origin: "o".repeat(59),
       usage_note: null,
       caution: null,

@@ -4,6 +4,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import { isThinMeme } from "@/lib/thin-meme";
 import {
   isIndexableLocalizedMeme,
   isTranslationCurrent,
@@ -411,7 +412,9 @@ async function buildSitemap(): Promise<{
         }
       }
 
-      if (entries.length < MAX_SITEMAP_URLS) {
+      // Localized URLs retain their existing 150-character indexability rule;
+      // the unprefixed Korean document uses the stricter C1 thin-page policy.
+      if (entries.length < MAX_SITEMAP_URLS && !isThinMeme(meme)) {
         const updatedAt = validDate(meme.updated_at);
         entries.push({
           url: `${SITE_URL}${memePathFrom(meme.short_id, meme.slug)}`,

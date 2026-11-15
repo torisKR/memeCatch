@@ -141,7 +141,15 @@ async function loadMemeRevalidationIdentity(
 function revalidateCanonicalMemePaths(meme: MemeRevalidationIdentity | null) {
   revalidateTag(PUBLIC_COUNT_CACHE_TAG, { expire: 0 });
   revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
-  const paths = new Set(["/", "/sitemap.xml", "/llms.txt", "/llms-full.txt"]);
+  const paths = new Set([
+    "/",
+    "/explore",
+    "/search",
+    "/rankings",
+    "/sitemap.xml",
+    "/llms.txt",
+    "/llms-full.txt",
+  ]);
 
   for (const locale of SEO_CONTENT_LOCALES) {
     paths.add(`/${locale}`);

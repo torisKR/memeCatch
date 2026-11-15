@@ -52,6 +52,30 @@ beforeEach(() => {
 });
 
 describe("localized search recovery action", () => {
+  it.each([1, 2])("renders %i Korean search result(s) instead of hiding them", async (count) => {
+    const results = Array.from({ length: count }, (_, index) => ({
+      ...sourceMeme,
+      id: `meme-${index + 1}`,
+      short_id: `abc1234${index}`,
+      title: `한국어 원문 밈 ${index + 1}`,
+    }));
+    searchMemes.mockResolvedValue(results);
+    getLocalizedSearchMemesResult.mockResolvedValue({
+      items: new Map(),
+      status: "coverage-empty",
+    });
+
+    const html = renderToStaticMarkup(
+      await LocalizedSearchPage({
+        params: Promise.resolve({ locale: "en" }),
+        searchParams: Promise.resolve({ q: "meme" }),
+      }),
+    );
+
+    expect(html).toContain(`aria-label="${GLOBAL_SEARCH_COPY.en.resultSection}"`);
+    expect(html).toContain("한국어 원문 밈 1");
+  });
+
   it("offers each locale's Korean original Explore action only for coverage-empty results", async () => {
     for (const locale of LOCALES) {
       searchMemes.mockResolvedValueOnce([sourceMeme]);

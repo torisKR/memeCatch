@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CURATED_CORE_MEMES, curatedSearchCards, getGuaranteedHomeEntries } from "@/lib/curated-memes";
+import { CURATED_CORE_MEMES, curatedDepthInput, curatedSearchCards, getGuaranteedHomeEntries } from "@/lib/curated-memes";
 import type { HomeEntry } from "@/components/home/home-experience";
+import { isThinMeme } from "@/lib/thin-meme";
+
+const passingCurated = CURATED_CORE_MEMES.filter(
+  (meme) => !isThinMeme(curatedDepthInput(meme)),
+);
 
 describe("curated memes and guaranteed home entries", () => {
   it("contains well-formed core curated memes with required metadata", () => {
@@ -30,7 +35,8 @@ describe("curated memes and guaranteed home entries", () => {
     const emptyLiveEntries: readonly HomeEntry[] = [];
     const entries = getGuaranteedHomeEntries("ko", emptyLiveEntries);
 
-    expect(entries.length).toBeGreaterThanOrEqual(6);
+    expect(passingCurated.length).toBeGreaterThan(0);
+    expect(entries).toHaveLength(Math.min(8, passingCurated.length));
     expect(entries[0].title).toBeTruthy();
     expect(entries[0].href).toMatch(/^\/memes\//);
     expect(entries[0].thumbnailUrl).toMatch(/^data:image\/svg\+xml;base64,/);
@@ -49,7 +55,7 @@ describe("curated memes and guaranteed home entries", () => {
     ];
 
     const entries = getGuaranteedHomeEntries("ko", sparseLiveEntries);
-    expect(entries.length).toBeGreaterThanOrEqual(4);
+    expect(entries).toHaveLength(Math.min(8, 1 + passingCurated.length));
     expect(entries[0].id).toBe("live-1");
   });
 

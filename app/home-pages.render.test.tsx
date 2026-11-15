@@ -107,7 +107,7 @@ describe("home route rendering", () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('action="/search"');
     expect(html).toContain("공개된 최신 밈");
-    expect(queryMocks.getRecentlyPublishedMemes).toHaveBeenCalledWith(8);
+    expect(queryMocks.getRecentlyPublishedMemes).toHaveBeenCalledWith(8, new Set(["ABC123", "OLD001", "NEW001"]));
     expect(html).toContain('href="/explore"');
     expect(html).toContain("지금 뜨는 밈");
     expect(html).toContain('data-safety-icon="green"');

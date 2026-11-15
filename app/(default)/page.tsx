@@ -31,12 +31,9 @@ export const metadata: Metadata = {
 
 /** 홈은 검색과 서비스 이해, 각 전용 페이지로의 진입만 담당한다. */
 export default async function Home() {
-  const [latest, discovery] = await Promise.all([
-    getRecentlyPublishedMemes(8),
-    loadDiscoveryIndex(),
-  ]);
+  const discovery = await loadDiscoveryIndex();
   const listed = discovery.ok
-    ? latest.filter((meme) => discovery.ids.has(meme.id))
+    ? await getRecentlyPublishedMemes(8, discovery.ids)
     : [];
   const artUrls = await loadMemeArtUrls(listed.map((meme) => meme.id));
   const categoryCopy = getSeoCopy("ko").categories;

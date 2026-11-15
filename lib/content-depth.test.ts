@@ -428,4 +428,16 @@ describe("index gate", () => {
     const thinB = { ...passingCandidate("thin-b", { category: "phrase" }), description: "짧다" };
     expect(discoveryIndexIds([keeper, thinA, thinB])).toEqual(new Set());
   });
+
+  it("prunes a relation chain until no survivors remain", () => {
+    const chain = Array.from({ length: 12 }, (_, i) =>
+      passingCandidate(`chain-${i}`, {
+        meme_tags_map: [
+          ...(i > 0 ? [{ tag_id: `edge-${i - 1}` }] : []),
+          ...(i < 11 ? [{ tag_id: `edge-${i}` }] : []),
+        ],
+      }),
+    );
+    expect(discoveryIndexIds(chain)).toEqual(new Set());
+  });
 });

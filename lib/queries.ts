@@ -6,7 +6,6 @@
  */
 import { cache } from "react";
 import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache";
-import { relatedMemePoolFilter } from "@/lib/related-meme-pool";
 import { createStaticClient } from "@/lib/supabase/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { curatedSearchCards } from "@/lib/curated-memes";
@@ -264,7 +263,7 @@ type RelatedLexicalPool = {
 };
 
 /**
- * 태그 공유 밈과, 같은 카테고리·±2년을 한 필터로 모은 목록.
+ * 태그 공유, 같은 카테고리, ±2년 인접 밈을 독립 quota로 모은 목록.
  * 쿼리 오류는 throw해서 빈 목록으로 캐시되지 않는다.
  */
 const loadRelatedLexicalPool = cacheCatalogRead(
@@ -277,7 +276,7 @@ const loadRelatedLexicalPool = cacheCatalogRead(
     const supabase = createStaticClient();
     const tagIds = tagKey ? tagKey.split(",") : [];
     const taggedIds = new Set<string>();
-    const [tagged, pool] = await Promise.all([
+    const [tagged, sameCategory, nearbyYear] = await Promise.all([
       (async (): Promise<MemeListItem[]> => {
         if (tagIds.length === 0) return [];
         const { data: mapRows, error: mapError } = await supabase
@@ -303,16 +302,33 @@ const loadRelatedLexicalPool = cacheCatalogRead(
         const { data, error } = await supabase
           .from("memes")
           .select(LIST_SELECT)
-          .or(relatedMemePoolFilter(category, originYear))
+          .eq("category", category)
           .neq("id", id)
           .in("moderation_status", [...PUBLIC_STATUSES])
           .order("trend_score", { ascending: false })
-          .limit(36);
+          .limit(24);
+        if (error) throw new MemeCatalogUnavailableError();
+        return (data ?? []) as MemeListItem[];
+      })(),
+      (async (): Promise<MemeListItem[]> => {
+        if (originYear == null) return [];
+        const { data, error } = await supabase
+          .from("memes")
+          .select(LIST_SELECT)
+          .gte("origin_year", originYear - 2)
+          .lte("origin_year", originYear + 2)
+          .neq("id", id)
+          .in("moderation_status", [...PUBLIC_STATUSES])
+          .order("trend_score", { ascending: false })
+          .limit(12);
         if (error) throw new MemeCatalogUnavailableError();
         return (data ?? []) as MemeListItem[];
       })(),
     ]);
-    return { taggedIds: [...taggedIds], rows: [...tagged, ...pool] };
+    return {
+      taggedIds: [...taggedIds],
+      rows: [...tagged, ...sameCategory, ...nearbyYear],
+    };
   },
   ["public-meme-related"],
   { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },

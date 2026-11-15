@@ -2,14 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { createClient, getOpenAiReviewModel, revalidatePath, requestOpenAiStructured } = vi.hoisted(() => ({
+const { createClient, getOpenAiReviewModel, revalidatePath, revalidateTag, requestOpenAiStructured } = vi.hoisted(() => ({
   createClient: vi.fn(),
   getOpenAiReviewModel: vi.fn(() => "gpt-5.6-sol"),
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
   requestOpenAiStructured: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath }));
+vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }));
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
 vi.mock("@/lib/openai-review.server", () => ({
   getOpenAiReviewModel,
@@ -33,6 +34,7 @@ import {
   listTranslationSupplyPriorityQueue,
   type TranslationReviewInput,
 } from "@/lib/actions/admin-translations";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 
 const SOURCE_UPDATED_AT = "2026-07-28T01:00:00.000Z";
 const EXPECTED_UPDATED_AT = "2026-07-28T01:05:00.000Z";
@@ -133,6 +135,27 @@ beforeEach(() => {
 });
 
 describe("admin translation concurrency and audit", () => {
+  it("expires reviewed translation reads after publishing a review", async () => {
+    const context = contextQueries();
+    const reviewMutation = query({
+      data: { meme_id: "meme-1", updated_at: "2026-07-28T01:06:00.000Z" },
+      error: null,
+    });
+    const latestMeme = query({ data: { updated_at: SOURCE_UPDATED_AT }, error: null });
+    const audit = query({ data: null, error: null });
+    const supabase = operatorClient({
+      profiles: [context.profile],
+      memes: [context.meme, latestMeme],
+      meme_translations: [context.translation, reviewMutation],
+      admin_audit_log: [audit],
+    });
+    createClient.mockResolvedValue(supabase);
+
+    await expect(reviewMemeTranslation(actionInput())).resolves.toEqual({ ok: true });
+
+    expect(revalidateTag).toHaveBeenCalledWith(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+  });
+
   it("saves only the translation revision rendered by the operator and audits with their client", async () => {
     const context = contextQueries();
     const mutation = query({ data: { meme_id: "meme-1" }, error: null });

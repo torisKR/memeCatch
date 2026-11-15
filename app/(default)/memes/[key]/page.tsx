@@ -51,10 +51,7 @@ import { isAdsenseContentEligible } from "@/lib/adsense-policy";
 import { isThinMeme, koreanDetailRobots } from "@/lib/thin-meme";
 import { isRenderableContent } from "@/lib/content-availability";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
-import {
-  getAvailableTranslationLocales,
-  getLocalizedMemeByShortId,
-} from "@/lib/meme-translations";
+import { listIndexableLocalizedMemes } from "@/lib/meme-translations";
 import {
   getHreflang,
   getOpenGraphLocale,
@@ -77,9 +74,9 @@ import {
 } from "@/lib/public-meme-document";
 
 /**
- * 요청마다 렌더한다. 이 라우트를 ISR로 두고 요청 대기를 걸면 프로덕션이
- * DYNAMIC_SERVER_USAGE 500을 낸다. 카탈로그 오류는 200, 확인된 결측은
- * notFound()의 404, 성공은 본문이다. 그 결과를 하루짜리 정적 결과로 남기지 않는다.
+ * 문서는 요청마다 렌더한다. 성공·결측·장애가 같은 라우트라, 페이지를 ISR로
+ * 두면 장애 화면이나 404가 하루짜리 결과로 남거나 DYNAMIC_SERVER_USAGE 500이 된다.
+ * 성공한 카탈로그 읽기만 Data Cache에 둔다.
  */
 export const dynamic = "force-dynamic";
 
@@ -111,18 +108,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
   const path = memePathFrom(meme.short_id, meme.slug);
-  const availableLocales = (await getAvailableTranslationLocales(meme.id)).filter(
-    isSeoContentLocale,
-  );
-  const localizedVersions = (
-    await Promise.all(
-      availableLocales.map(async (locale) => ({
-        locale,
-        version: await getLocalizedMemeByShortId(meme.short_id, locale),
-      })),
-    )
-  ).flatMap(({ locale, version }) =>
-    version ? [{ locale, version }] : [],
+  const localizedVersions = (await listIndexableLocalizedMemes(meme)).flatMap((version) =>
+    isSeoContentLocale(version.translation.locale)
+      ? [{ locale: version.translation.locale, version }]
+      : [],
   );
   const hreflangs: Record<string, string> = Object.fromEntries([
     ["ko", path],

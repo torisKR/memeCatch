@@ -1,10 +1,13 @@
 import "server-only";
 
+import { cacheCatalogRead } from "@/lib/catalog-read-cache";
 import { isIndexableMeme } from "@/lib/content-depth";
 import { memePathFrom } from "@/lib/labels";
 import { localizedMemePath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import { getLocalizedSearchMemesResult } from "@/lib/meme-translations";
+import { MemeCatalogUnavailableError } from "@/lib/queries";
 import { createStaticClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import {
   buildMemeMarketPassport,
   type MarketPassportProfileRow,
@@ -13,9 +16,9 @@ import {
   type MemeMarketPassport,
 } from "@/lib/meme-market-passport";
 
-export async function getMemeMarketPassport(
+async function loadMemeMarketPassport(
   memeId: string,
-  locale: SeoRouteLocale = "ko",
+  locale: SeoRouteLocale,
 ): Promise<MemeMarketPassport> {
   const fallback = (dataStatus: "empty" | "unavailable") => ({
     ...buildMemeMarketPassport({
@@ -47,7 +50,7 @@ export async function getMemeMarketPassport(
         .eq("review_state", "reviewed")
         .overrideTypes<MarketPassportVariantRow[], { merge: false }>(),
     ]);
-    if (profilesResult.error || variantsResult.error) return fallback("unavailable");
+    if (profilesResult.error || variantsResult.error) throw new MemeCatalogUnavailableError();
 
     const variants = variantsResult.data ?? [];
     const targetIds = [...new Set(variants.map((variant) => variant.target_meme_id))];
@@ -61,7 +64,7 @@ export async function getMemeMarketPassport(
           .in("moderation_status", ["approved", "limited"])
           .overrideTypes<MarketPassportTargetRow[], { merge: false }>()
       : { data: [] as MarketPassportTargetRow[], error: null };
-    if (targetsResult.error) return fallback("unavailable");
+    if (targetsResult.error) throw new MemeCatalogUnavailableError();
 
     const indexableTargets = (targetsResult.data ?? []).filter(isIndexableMeme);
     const routeReadyTargets =
@@ -82,8 +85,35 @@ export async function getMemeMarketPassport(
       ...passport,
       dataStatus: passport.hasReviewedData ? "reviewed" : "empty",
     };
+  } catch (error) {
+    if (error instanceof MemeCatalogUnavailableError) throw error;
+    throw new MemeCatalogUnavailableError();
+  }
+}
+
+const loadMemeMarketPassportCached = cacheCatalogRead(
+  loadMemeMarketPassport,
+  ["public-meme-market-passport"],
+  { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+);
+
+export async function getMemeMarketPassport(
+  memeId: string,
+  locale: SeoRouteLocale = "ko",
+): Promise<MemeMarketPassport> {
+  if (!memeId) {
+    return {
+      ...buildMemeMarketPassport({ memeId, profiles: [], variants: [], targets: [] }),
+      dataStatus: "empty",
+    };
+  }
+  try {
+    return await loadMemeMarketPassportCached(memeId, locale);
   } catch {
-    return fallback("unavailable");
+    return {
+      ...buildMemeMarketPassport({ memeId, profiles: [], variants: [], targets: [] }),
+      dataStatus: "unavailable",
+    };
   }
 }
 

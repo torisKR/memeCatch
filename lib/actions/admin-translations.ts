@@ -1,8 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import type { Json } from "@/lib/database.types";
 import {
   isSeoContentLocale,
@@ -563,6 +564,7 @@ function revalidateTranslationPaths(
   locale: SeoContentLocale,
   localizedSlug: string,
 ) {
+  revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
   revalidatePath(`/admin/memes/${meme.id}`);
   revalidatePath(memePathFrom(meme.short_id, meme.slug));
   revalidatePath(localizedMemePath(locale, meme.short_id, localizedSlug));

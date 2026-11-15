@@ -82,14 +82,23 @@ rollback_ref() {
 # Snapshot every running service before a deploy and record exactly what was
 # saved. Restore reads this record; it never re-derives names from containers
 # that the failed deploy has already replaced.
+#
+# Call this before building: compose rebuilds reuse names like
+# memecatch-worker:local, and the image they replace can disappear once it loses
+# its last tag. A service whose image is already gone is skipped with a warning
+# (a rollback then leaves that service on the new image).
 tag_rollback() {
-  local sha="$1" service image ref record="$STATE_DIR/rollback-$1.refs"
+  local sha="$1" service image id ref record="$STATE_DIR/rollback-$1.refs"
   : >"$record"
   for service in app mpe-worker scheduler backup; do
     image="$(service_image "$service")" || continue
+    id="$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" || continue
     ref="$(rollback_ref "$service" "$sha")"
-    docker tag "$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" "$ref"
-    printf '%s %s\n' "$service" "$ref" >>"$record"
+    if docker tag "$id" "$ref" 2>/dev/null; then
+      printf '%s %s\n' "$service" "$ref" >>"$record"
+    else
+      log "warning: cannot snapshot $service ($id is gone); its rollback keeps the new image"
+    fi
   done
 }
 
@@ -203,6 +212,8 @@ main() {
   fi
 
   log "deploying ${target:0:7} (running ${current:0:7})"
+  # Snapshot before building; see tag_rollback.
+  tag_rollback "$current"
   git -C "$ROOT" merge -q --ff-only "$target"
   if ! build_images "$target"; then
     log "build failed for ${target:0:7}; keeping ${current:0:7}"
@@ -210,7 +221,6 @@ main() {
     touch "$STATE_DIR/failed-$target"
     exit 1
   fi
-  tag_rollback "$current"
 
   # RELEASE_SHA from the shell overrides any stale value in .env.
   if RELEASE_SHA="$target" MEMECATCH_IMAGE="memecatch:release-${target}" bash "$ROOT/scripts/deploy-oci.sh" \

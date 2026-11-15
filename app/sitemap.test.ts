@@ -401,21 +401,21 @@ describe("사이트맵 다국어 색인 계약", () => {
     expect(source).not.toMatch(/source_updated_at\s*={2,3}\s*meme\.updated_at/);
   });
 
-  it("drops a Korean page under 400 body characters and keeps the localized URL", async () => {
-    const thin = indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]);
-    thin.description = "밈".repeat(339);
-    thin.origin = "유".repeat(60);
-    thin.meme_sources = [{ source_url: "https://example.com/source" }];
+  it("keeps an existing-indexable Korean page below 400 body characters", async () => {
+    const existing = indexableMeme(1, [reviewedTranslation("en", "2026-03-01T00:00:00.000Z")]);
+    existing.description = "밈".repeat(339);
+    existing.origin = "유".repeat(60);
+    existing.meme_sources = [{ source_url: "https://example.com/source" }];
     const ready = indexableMeme(2, []);
     ready.description = "밈".repeat(340);
     ready.origin = "유".repeat(60);
     ready.meme_sources = [{ source_url: "https://example.com/source" }];
-    useRows([thin, ready]);
+    useRows([existing, ready]);
 
     const entries = await sitemap();
     const paths = entries.map((entry) => new URL(entry.url).pathname);
 
-    expect(paths.some((path) => path.startsWith("/memes/m1"))).toBe(false);
+    expect(paths.some((path) => path.startsWith("/memes/m1"))).toBe(true);
     expect(paths.some((path) => path.startsWith("/en/memes/"))).toBe(true);
     expect(paths.some((path) => path.startsWith("/memes/m2"))).toBe(true);
   });

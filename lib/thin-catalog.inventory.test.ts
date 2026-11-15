@@ -89,16 +89,18 @@ describe("thin catalog inventory", () => {
 
     expect(seed).toHaveLength(12);
     expect(curated.length).toBe(CURATED_CORE_MEMES.length);
-    const thin = [...seed, ...curated].filter((row) => row.thin);
-    const indexable = [...seed, ...curated].filter((row) => !row.thin);
+    const rows = [...seed, ...curated];
+    const thin = rows.filter((row) => row.thin);
+    const indexable = rows.filter((row) => !row.thin);
     console.log(JSON.stringify({
       seed: seed.length,
       curated: curated.length,
       thin: thin.length,
       indexable: indexable.length,
       thinSlugs: thin.map((row) => row.slug),
-      rows: [...seed, ...curated],
+      rows,
     }));
     expect(thin.length + indexable.length).toBe(seed.length + curated.length);
+    expect(rows.every((row) => row.thin === !row.indexable)).toBe(true);
   });
 });

@@ -39,7 +39,12 @@ function meme(id: string, trendScore: number) {
 }
 
 function thinMeme(id: string, trendScore: number) {
-  return { ...meme(id, trendScore), description: "밈".repeat(339) };
+  return {
+    ...meme(id, trendScore),
+    description: "밈".repeat(500),
+    origin: null,
+    meme_sources: [],
+  };
 }
 
 function client() {

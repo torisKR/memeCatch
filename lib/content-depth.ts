@@ -11,8 +11,8 @@
  *   [번역·기존 색인 판정 — isIndexableMeme, MIN_PROSE_CHARS_INDEX=150]
  *   - app/sitemap.ts                      — 번역 URL과 localized explore 집계
  *   - lib/meme-translations.ts            — 번역이 없으면 기존처럼 404
- *   한국어 상세의 noindex, 한국어 사이트맵 URL, 공개 카드 레일은
- *   lib/thin-meme.ts의 isThinMeme(본문 400자 또는 보강 중 배너)를 쓴다.
+ *   한국어 상세의 noindex, 한국어 사이트맵 URL, 공개 카드 레일도
+ *   lib/thin-meme.ts를 통해 이 기존 색인 판정을 그대로 공유한다.
  *   [배너·광고 판정 — contentDepth().isSubstantial, MIN_PROSE_CHARS=250, 현행 유지]
  *   - components/doc-status-note.tsx      — 「아직 정리 중인 문서예요」 배너
  *   - app/(default)/memes/[key]/page.tsx  — AdsenseScript 로더 게이트

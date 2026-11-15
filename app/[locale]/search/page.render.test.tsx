@@ -32,8 +32,6 @@ vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 
 import LocalizedSearchPage from "@/app/[locale]/search/page";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
-import { GLOBAL_SEARCH_COPY } from "@/lib/i18n-global-search";
-import { memePathFrom } from "@/lib/labels";
 
 const LOCALES = ["en", "ja", "zh", "zh-tw"] as const;
 
@@ -94,11 +92,8 @@ describe("localized search recovery action", () => {
       expect(html).toContain('data-localized-search-original-action="true"');
       expect(html).toContain('href="/explore"');
       expect(html).toContain(LOCALIZED_EXPLORE_COPY[locale].originalExplore);
-      expect(html).toContain('data-localized-search-translation-options-action="true"');
-      expect(html).toContain(
-        `href="${memePathFrom(sourceMeme.short_id, sourceMeme.slug)}#plus-pricing-title"`,
-      );
-      expect(html).toContain(GLOBAL_SEARCH_COPY[locale].translationOptions);
+      expect(html).not.toContain("data-localized-search-translation-options-action");
+      expect(html).not.toContain("#plus-pricing-title");
     }
   });
 

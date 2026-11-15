@@ -204,6 +204,12 @@ requested_sha() {
 }
 
 main() {
+  # Over SSH a full commit SHA is mandatory: a missing or malformed request
+  # must never fall back to deploying whatever origin/main points at. Checked
+  # first, so a bare key probe does no git, CI, or docker work.
+  if [[ -n "${SSH_CONNECTION:-}" && -z "$(requested_sha)" ]]; then
+    not_deployed "an SSH deploy must name a full commit SHA; got '${SSH_ORIGINAL_COMMAND:-}'"
+  fi
   mkdir -p "$STATE_DIR"
   exec 9>"$STATE_DIR/lock"
   if [[ -n "$STRICT" ]]; then

@@ -146,6 +146,16 @@ checkout_target "$mig" && [[ "$(git -C "$repo" rev-parse HEAD)" == "$mig" ]] || 
 [[ "$(SSH_ORIGINAL_COMMAND=0123456789abcdef0123456789abcdef01234567 requested_sha)" == 0123456789abcdef0123456789abcdef01234567 ]] || fail "full SHA rejected"
 [[ -z "$(SSH_ORIGINAL_COMMAND='abc123; rm -rf /' requested_sha)" ]] || fail "injected command accepted"
 [[ -z "$(SSH_ORIGINAL_COMMAND='bash -i' requested_sha)" ]] || fail "shell request accepted"
+# Over SSH, a missing or malformed SHA stops before any git, CI, or docker work.
+bad="$(mktemp -d)"
+rc=0
+( ROOT="$bad/none" STATE_DIR="$bad/state" SSH_CONNECTION="1.2.3.4 1 5.6.7.8 22" STRICT=1 SSH_ORIGINAL_COMMAND="" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "SSH run without a SHA must exit 3 (got $rc)"
+rc=0
+( ROOT="$bad/none" STATE_DIR="$bad/state" SSH_CONNECTION="1.2.3.4 1 5.6.7.8 22" STRICT=1 SSH_ORIGINAL_COMMAND="id" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "SSH run with a non-SHA command must exit 3 (got $rc)"
+rm -rf "$bad"
+
 # Strict (GitHub) callers see "not deployed" as a failure; the timer retries quietly.
 rc=0; ( STRICT=1; not_deployed "x" ) >/dev/null || rc=$?
 [[ "$rc" == 3 ]] || fail "strict not_deployed must exit 3 (got $rc)"

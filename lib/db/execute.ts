@@ -618,6 +618,24 @@ function shapeRows(plan: QueryPlan, rows: Record<string, unknown>[], count: numb
   return { data, error: null, count, status: 200, statusText: "OK" };
 }
 
+/**
+ * pg returns timestamp columns as Date objects; embedded (json) columns and the
+ * generated row types use ISO strings. Rows leave the executor with strings so
+ * equality checks and `typeof value === "string"` guards keep working.
+ * Scoped to plan queries: Better Auth shares the pool and expects Dates.
+ */
+export function normalizeRow(row: Record<string, unknown>): Record<string, unknown> {
+  let out: Record<string, unknown> | null = null;
+  for (const key in row) {
+    const value = row[key];
+    if (value instanceof Date) {
+      out ??= { ...row };
+      out[key] = Number.isNaN(value.getTime()) ? null : value.toISOString();
+    }
+  }
+  return out ?? row;
+}
+
 async function runQuery(
   identity: DbIdentity,
   sqlText: string,
@@ -632,7 +650,7 @@ async function runQuery(
     signal?.addEventListener("abort", abort, { once: true });
     try {
       const result = await trx.executeQuery<Record<string, unknown>>(CompiledQuery.raw(sqlText, params));
-      return result.rows;
+      return result.rows.map(normalizeRow);
     } finally {
       signal?.removeEventListener("abort", abort);
     }

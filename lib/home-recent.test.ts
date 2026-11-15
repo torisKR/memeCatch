@@ -25,4 +25,13 @@ describe("home recent publication feed", () => {
     mocks.createStaticClient.mockImplementation(() => { throw new Error("offline"); });
     expect(await getRecentlyPublishedMemes()).toEqual([]);
   });
+  it("searches later pages when newer records do not pass the discovery gate", async () => {
+    const query = { select: vi.fn(), in: vi.fn(), not: vi.fn(), order: vi.fn(), range: vi.fn() };
+    for (const key of ["select", "in", "not", "order"] as const) query[key].mockReturnValue(query);
+    query.range.mockResolvedValueOnce({ data: Array.from({ length: 100 }, (_, i) => ({ id: `thin-${i}` })), error: null })
+      .mockResolvedValueOnce({ data: [{ id: "eligible" }], error: null });
+    mocks.createStaticClient.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
+    expect(await getRecentlyPublishedMemes(8, new Set(["eligible"]))).toEqual([{ id: "eligible" }]);
+    expect(query.range).toHaveBeenCalledTimes(2);
+  });
 });

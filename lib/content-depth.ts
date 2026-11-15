@@ -331,12 +331,11 @@ function relatedCount(meme: IndexCandidate, pool: readonly IndexCandidate[]): nu
  */
 export function discoveryIndexIds(candidates: readonly IndexCandidate[]): Set<string> {
   let passing = candidates.filter((candidate) => candidate.id && passesContentIndexGate(candidate));
-  for (let round = 0; round <= passing.length; round += 1) {
+  while (true) {
     const next = passing.filter(
       (meme) => relatedCount(meme, passing) >= INDEX_GATE.MIN_RELATED,
     );
     if (next.length === passing.length) return new Set(next.map((meme) => meme.id));
     passing = next;
   }
-  return new Set(passing.map((meme) => meme.id));
 }

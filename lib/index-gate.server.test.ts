@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 
 vi.mock("server-only", () => ({}));
 
@@ -20,7 +20,7 @@ vi.mock("next/cache", () => ({
     },
   ),
 }));
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/db/server", () => ({
   createStaticClient: mocks.createStaticClient,
 }));
 

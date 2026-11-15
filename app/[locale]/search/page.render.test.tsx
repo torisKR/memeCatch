@@ -32,6 +32,7 @@ vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 
 import LocalizedSearchPage from "@/app/[locale]/search/page";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
+import { GLOBAL_SEARCH_COPY } from "@/lib/i18n-global-search";
 
 const LOCALES = ["en", "ja", "zh", "zh-tw"] as const;
 

@@ -42,20 +42,29 @@ export function Comments({ memeId }: { memeId: string }) {
 
   const fetchComments = useCallback(async () => {
     const db = createClient();
-    const { data, error: err } = await db
+    const rows: CommentRow[] = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error: err } = await db
       .from("discussions")
       // profiles 임베드는 FK 명시 필수 (discussion_reactions 경유 M2M과 모호성 발생)
       .select(
         "id,parent_id,body,status,created_at,user_id,profiles!discussions_user_id_fkey(nickname)"
       )
       .eq("meme_id", memeId)
-      .order("created_at", { ascending: true });
-    if (err) {
-      setError(true);
-      return;
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (err) {
+        setError(true);
+        return;
+      }
+      const page = (data ?? []) as unknown as CommentRow[];
+      rows.push(...page);
+      if (page.length < pageSize) break;
     }
     setError(false);
-    setComments((data ?? []) as unknown as CommentRow[]);
+    setComments(rows);
   }, [memeId]);
 
   useEffect(() => {

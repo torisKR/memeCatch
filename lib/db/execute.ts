@@ -62,7 +62,7 @@ const BUILTIN_UDT = new Set([
   "varchar",
 ]);
 
-function castFor(udt: string | undefined, value: unknown): string {
+export function castFor(udt: string | undefined, value: unknown): string {
   if (Array.isArray(value)) {
     if (udt === "jsonb" || udt === "json") return "::jsonb";
     if (udt === "_uuid" || udt === "uuid") return "::uuid[]";
@@ -70,6 +70,8 @@ function castFor(udt: string | undefined, value: unknown): string {
       return "::bigint[]";
     }
     if (udt === "_bool" || udt === "bool") return "::boolean[]";
+    if (udt === "_float4" || udt === "_float8" || udt === "float4" || udt === "float8") return "::double precision[]";
+    if (udt === "_numeric" || udt === "numeric") return "::numeric[]";
     return "::text[]";
   }
   switch (udt) {

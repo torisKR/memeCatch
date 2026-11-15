@@ -78,6 +78,39 @@ describe("loadKoreanRankings", () => {
     expect(logged).toContain("database unavailable");
   });
 
+  it("returns live today and comeback rows when both reads succeed", async () => {
+    const trend = Array.from({ length: 10 }, (_, index) => meme(`trend-${index}`, index + 1));
+    responses.push(
+      { data: trend, error: null },
+      { data: [meme("comeback", 4)], error: null },
+    );
+
+    const result = await loadKoreanRankings();
+
+    expect(result.kind).toBe("live");
+    if (result.kind !== "live") return;
+    expect(result.today).toHaveLength(10);
+    expect(result.comeback.map((item) => item.id)).toEqual(["comeback"]);
+  });
+
+  it("keeps the live trend list when the comeback query fails", async () => {
+    const trend = Array.from({ length: 10 }, (_, index) => meme(`trend-${index}`, index + 1));
+    responses.push(
+      { data: trend, error: null },
+      { data: null, error: { message: "comeback timeout" } },
+      { data: [meme("published-should-not-win", 0)], error: null },
+    );
+
+    const result = await loadKoreanRankings();
+
+    expect(result.kind).toBe("live");
+    if (result.kind !== "live") return;
+    expect(result.today.map((item) => item.id)).toEqual(trend.map((item) => item.id).reverse());
+    expect(result.comeback).toEqual([]);
+    expect(result.today.some((item) => item.id === "published-should-not-win")).toBe(false);
+    expect(responses).toHaveLength(1);
+  });
+
   it("hides the page when the catalog read succeeds with no rows", async () => {
     responses.push(
       { data: [], error: null },

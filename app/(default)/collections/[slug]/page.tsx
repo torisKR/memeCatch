@@ -9,6 +9,7 @@ import { MemeCard } from "@/components/meme-card";
 import { MotionList } from "@/components/motion-list";
 import { memePathFrom } from "@/lib/labels";
 import { AdsenseScript } from "@/components/adsense-script";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 
 /** 테마별 밈 모음 허브. slug는 미리 열거하지만 문서는 요청별 SSR로 렌더한다. */
@@ -39,6 +40,7 @@ export async function generateMetadata({
       title: col.title,
       description: col.description,
       url: `/collections/${col.slug}`,
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

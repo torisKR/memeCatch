@@ -36,7 +36,8 @@ export function liveRankingHasRows(
 
 /**
  * The page renders a list only for live rows or the published fallback.
- * Unavailable and outage are the 404 path, so navigation must stay hidden.
+ * Unavailable and outage render the localized fallback instead of a 404.
+ * Navigation stays linked either way; the sitemap uses this predicate.
  */
 export function koreanRankingsRenderList(
   rankings: KoreanRankings,
@@ -57,7 +58,8 @@ export function koreanRankingsRenderList(
 
 /**
  * Live trend rows win. A failed or empty live read falls back to published
- * memes. Neither source yields a 200 error page.
+ * memes. When neither source has rows, the page renders the localized
+ * fallback rather than a 404.
  */
 export function resolveKoreanRankings(input: {
   liveError: boolean;

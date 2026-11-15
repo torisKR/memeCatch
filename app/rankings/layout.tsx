@@ -1,20 +1,18 @@
 import type { ReactNode } from "react";
 import { RootDocument } from "@/app/_root/root-document";
 import { DEFAULT_LOCALE } from "@/lib/i18n";
-import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import "../globals.css";
 
 export { metadata, viewport } from "@/app/(default)/layout";
 
 /**
  * Own root so /rankings is outside the Korean segment's loading boundary.
- * That boundary streams a 200 before notFound() can set a 404.
- * The link uses the same predicate as the page, including on the 404.
+ * The rankings link is always rendered; a database outage must not remove it
+ * from this shell or from pages prerendered at build time.
  */
-export default async function RankingsLayout({ children }: { children: ReactNode }) {
-  const showRankings = await koreanRankingsVisible();
+export default function RankingsLayout({ children }: { children: ReactNode }) {
   return (
-    <RootDocument locale={DEFAULT_LOCALE} showRankings={showRankings}>
+    <RootDocument locale={DEFAULT_LOCALE}>
       {children}
     </RootDocument>
   );

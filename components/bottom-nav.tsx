@@ -33,6 +33,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={messages.mainNav}
+      data-site-bottom-nav=""
       className="fixed inset-x-0 bottom-0 z-40 border-t border-(--foreground)/10 bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-(--surface)/72 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
@@ -77,7 +78,7 @@ export function BottomNav() {
                       : tab.label === "brand"
                         ? homeLabel(locale)
                         : tab.label === "premium"
-                          ? "Plus"
+                          ? plusLabel(locale)
                           : messages[tab.label]
                   }
                 />
@@ -92,13 +93,19 @@ export function BottomNav() {
 
 function homeLabel(locale: ReturnType<typeof useLocale>["locale"]) {
   return (
-    ({ ko: "홈", en: "Home", ja: "ホーム", zh: "首页", "zh-tw": "首頁" } as Partial<Record<typeof locale, string>>)[locale] ?? "Home"
+    ({ ko: "홈", en: "Home", ja: "ホーム", zh: "首页", "zh-tw": "首頁", ar: "الرئيسية" } as Partial<Record<typeof locale, string>>)[locale] ?? "Home"
   );
 }
 
 function latestLabel(locale: ReturnType<typeof useLocale>["locale"]) {
   return (
-    ({ ko: "최신", en: "Latest", ja: "最新", zh: "最新", "zh-tw": "最新" } as Partial<Record<typeof locale, string>>)[locale] ?? "Latest"
+    ({ ko: "최신", en: "Latest", ja: "最新", zh: "最新", "zh-tw": "最新", ar: "استكشاف" } as Partial<Record<typeof locale, string>>)[locale] ?? "Latest"
+  );
+}
+
+function plusLabel(locale: ReturnType<typeof useLocale>["locale"]) {
+  return (
+    ({ ar: "بلس" } as Partial<Record<typeof locale, string>>)[locale] ?? "Plus"
   );
 }
 

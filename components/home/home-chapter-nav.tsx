@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
 import type { SeoRouteLocale } from "@/lib/i18n-routing";
+import { H_RAIL_CLASS } from "@/lib/mobile-rail";
 import styles from "./home-chapter-nav.module.css";
 
 /** Native anchors remain usable without JavaScript; the client only tracks location. */
@@ -40,7 +41,7 @@ export function HomeChapterNav({ locale }: { locale: SeoRouteLocale }) {
 
   return (
     <nav className={styles.rail} ref={rail} aria-label={copy.chapterLabel} data-home-chapters="true">
-      <ol className={styles.list}>
+      <ol className={`${styles.list} ${H_RAIL_CLASS}`}>
         {copy.chapters.map((chapter, index) => (
           <li key={chapter.href}>
             <a className={styles.link} href={chapter.href} aria-current={active === chapter.href ? "location" : undefined}>

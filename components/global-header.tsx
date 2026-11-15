@@ -22,11 +22,11 @@ import { localizedStaticPath } from "@/lib/i18n-routing";
  * 인증 세션은 AuthMenu가 클라이언트에서 별도로 조회해 전역 SSR을 막지 않는다.
  * /admin 경로에선 HideOnAdmin으로 숨긴다.
  */
-export function GlobalHeader({ showRankings = true }: { showRankings?: boolean }) {
+export function GlobalHeader() {
   const { locale, messages } = useLocale();
   return (
     <HideOnAdmin>
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
+      <header data-site-header="" className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
           <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto">
             {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
@@ -99,7 +99,7 @@ export function GlobalHeader({ showRankings = true }: { showRankings?: boolean }
             <AuthMenu />
 
             {/* 통합 메뉴 드롭다운 — 연표·랭킹·소식·랜덤 */}
-            <HeaderMenu showRankings={showRankings} />
+            <HeaderMenu />
           </div>
         </div>
       </header>

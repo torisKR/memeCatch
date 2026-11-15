@@ -26,7 +26,7 @@ import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
  * 권장. ESC(버튼 포커스 복귀)·바깥 클릭·라우트 변경 시 닫힘. 포커스 트랩 불필요
  * (모달 아님, Tab 순서가 자연스럽게 패널을 통과).
  */
-export function HeaderMenu({ showRankings = true }: { showRankings?: boolean }) {
+export function HeaderMenu() {
   const { locale = "ko", messages } = useLocale();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -76,7 +76,7 @@ export function HeaderMenu({ showRankings = true }: { showRankings?: boolean }) 
     { href: "/timeline", label: messages.timeline, prefetch: false, icon: Milestone },
     { href: "/rankings", label: messages.rankings, prefetch: false, icon: Trophy },
     { href: "/news", label: messages.news, prefetch: false, icon: Newspaper },
-  ].filter((item) => showRankings || item.href !== "/rankings");
+  ];
 
   return (
     <div ref={rootRef} className="relative">
@@ -98,7 +98,7 @@ export function HeaderMenu({ showRankings = true }: { showRankings?: boolean }) 
         <nav
           id="header-menu-panel"
           aria-label={messages.menu}
-          className="menu-pop instrument-grid absolute right-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
+          className="menu-pop instrument-grid absolute end-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
         >
           <p
             aria-hidden

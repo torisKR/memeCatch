@@ -404,6 +404,33 @@ export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
   return curatedByShortId.get(shortId) ?? null;
 }
 
+/** Slug after the first hyphen, including later hyphens (`bun-jo-ka`). */
+export function shareKeyParts(param: string): { shortId: string; slug: string } {
+  let decoded = param;
+  try {
+    decoded = decodeURIComponent(param);
+  } catch {
+    decoded = param;
+  }
+  const dash = decoded.indexOf("-");
+  if (dash < 0) return { shortId: decoded, slug: "" };
+  return { shortId: decoded.slice(0, dash), slug: decoded.slice(dash + 1) };
+}
+
+export function findCuratedCoreMemeBySlug(slug: string): CuratedMeme | null {
+  if (!slug) return null;
+  return CURATED_CORE_MEMES.find((meme) => meme.slug === slug) ?? null;
+}
+
+/**
+ * Curated seed ids such as `bjk2021k` are not hex and are often absent from
+ * `memes`. Match the short id and, if that misses, the slug suffix.
+ */
+export function findCuratedByShareKey(param: string): CuratedMeme | null {
+  const { shortId, slug } = shareKeyParts(param);
+  return findCuratedCoreMeme(shortId) ?? findCuratedCoreMemeBySlug(slug);
+}
+
 export function curatedMemesMatchingQuery(query: string): readonly CuratedMeme[] {
   const needle = query.normalize("NFC").trim().toLocaleLowerCase("ko-KR");
   if (!needle) return [];

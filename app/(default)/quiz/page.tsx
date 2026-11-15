@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { QuizApp } from "@/components/quiz-app";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * /quiz — 밈력고사. 문서는 완전 정적 셸(○)이고 문항은 시작 시
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     url: "/quiz",
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CommunityPostForm } from "@/components/community-post-form";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 /**
  * 레인 3 — 커뮤니티 글쓰기.
@@ -12,6 +13,13 @@ import { CommunityPostForm } from "@/components/community-post-form";
 export const metadata: Metadata = {
   title: "커뮤니티 글쓰기",
   description: "밈 추천·추억·토론 — 커뮤니티에 새 글을 올려요.",
+  alternates: { canonical: "/community/new" },
+  ...koreanPageShare({
+    title: "커뮤니티 글쓰기",
+    description: "밈 추천·추억·토론 — 커뮤니티에 새 글을 올려요.",
+    pathname: "/community/new",
+    alternateLocales: true,
+  }),
 };
 
 export default async function CommunityNewPage() {

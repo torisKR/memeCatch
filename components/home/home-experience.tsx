@@ -10,6 +10,7 @@ import { TranslatedEditionHint } from "@/components/home/translated-edition-hint
 import { SafetySignalGuide } from "@/components/usage-guide";
 import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
 import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
+import { cjkKeepPhrases } from "@/lib/cjk-keep-phrase";
 import { HOME_COPY } from "@/lib/home-copy";
 import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
 import {
@@ -175,7 +176,7 @@ export function HomeExperience({
           <span aria-hidden className={styles.sectionNumber}>04</span>
           <div className={styles.trustCopy}>
             <h2 id={trustTitleId} className={styles.trustTitle}>
-              {copy.trust.title}
+              {cjkKeepPhrases(copy.trust.title, copy.trust.titlePhrases, styles.keepPhrase)}
             </h2>
             <p className={styles.trustDescription}>{copy.trust.description}</p>
             <nav aria-label={copy.trust.eyebrow}>

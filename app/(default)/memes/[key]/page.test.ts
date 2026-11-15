@@ -40,6 +40,9 @@ describe("밈 상세 hreflang 계약", () => {
   it("한국어 상세는 언어별 번역 데스크 대신 접두사 없는 Plus 요금 링크만 둔다", () => {
     expect(source).toContain('href="/pricing"');
     expect(source).toContain("plus-pricing-title");
+    expect(source).toContain("<PlusPricingHashScroll />");
+    expect(source).toContain("usageRegionLabelledBy");
+    expect(source).not.toContain('aria-labelledby="meme-usage"');
     expect(source).toContain('item.label === "광고 없는 경험"');
     expect(source).toContain("{feature.label}");
     expect(source).toContain("{feature.detail}");
@@ -63,6 +66,10 @@ describe("밈 상세 hreflang 계약", () => {
     // #67 still places the mobile Plus card immediately after SourceEvidence.
     expect(related).toBeGreaterThan(-1);
     expect(related).toBeLessThan(sources);
+
+    const column = source.slice(source.lastIndexOf("왼쪽 레일", rail), rail);
+    expect(column).toContain('className="space-y-4"');
+    expect(column).not.toContain("sticky");
   });
 
   it("모바일 첫 화면 CTA는 대표 콘텐츠보다 앞의 정답 카드에 한 번만 둔다", () => {

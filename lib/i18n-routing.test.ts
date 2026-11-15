@@ -84,6 +84,9 @@ describe("SEO locale signals", () => {
     expect(toSeoBcp47("zh-tw")).toBe("zh-TW");
     expect(getOpenGraphLocale("zh")).toBe("zh_CN");
     expect(getOpenGraphLocale("zh-tw")).toBe("zh_TW");
+    expect(getOpenGraphLocale("ar")).toBe("ar_AR");
+    expect(localizedPath("/", "ar")).toBe("/ar");
+    expect(localizedPath("/ar/memes/bjk2021k-bun-jo-ka", "ar")).toBe("/ar/memes/bjk2021k-bun-jo-ka");
     expect(SEO_LOCALE_CONFIG.ja.documentLanguage).toBe("ja");
     expect(SEO_LOCALE_CONFIG.en.dateLocale).toBe("en-US");
   });
@@ -129,8 +132,22 @@ describe("SEO locale signals", () => {
       locale: "en_US",
       alternateLocale: ["ko_KR", "ja_JP"],
       url: "/en/memes/a1-name",
+      images: [{ url: "/og/en", width: 1200, height: 630, alt: "MemeCatch — Korean Memes Explained" }],
     });
-    expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
+    expect(metadata.twitter).toMatchObject({
+      card: "summary_large_image",
+      images: [{ url: "/og/en", alt: "MemeCatch — Korean Memes Explained" }],
+    });
+    expect(buildLocalizedMetadata({ locale: "ko" }).openGraph).toMatchObject({
+      locale: "ko_KR",
+      url: "/",
+      images: [{ url: "/og/ko", alt: "밈캐치 — 그 밈, 3초 안에 알려드려요" }],
+    });
+    expect(buildLocalizedMetadata({ locale: "ar", pathname: "/pricing" }).openGraph).toMatchObject({
+      locale: "ar_AR",
+      url: "/ar/pricing",
+      images: [{ url: "/og/ar" }],
+    });
   });
 
   it("resets an inherited title template while preserving the localized child template", () => {

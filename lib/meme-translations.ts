@@ -96,6 +96,11 @@ type FeaturedTranslationRow = MemeTranslationRow & {
 
 type AvailabilityBaseRow = Omit<LocalizableMeme, "short_id">;
 
+export type TranslationLocaleAvailability = {
+  availableLocales: Locale[];
+  reviewedLocales: Locale[];
+};
+
 function sameInstant(left: string, right: string): boolean {
   const leftTime = Date.parse(left);
   const rightTime = Date.parse(right);
@@ -339,13 +344,15 @@ export async function getLocalizedFeaturedMemes(
 }
 
 /**
- * Hreflang-ready locales only. Existing machine/stale rows are not advertised
- * as alternates because they are intentionally non-indexable.
+ * Keep reviewed rows distinct from hreflang-ready rows. A reviewed translation
+ * still exists when its Korean source is noindex, so it must not be offered as
+ * a missing Plus translation even though it cannot be advertised as an alternate.
  */
-export const getAvailableTranslationLocales = cache(async function getAvailableTranslationLocales(
+export const getTranslationLocaleAvailability = cache(async function getTranslationLocaleAvailability(
   memeId: string,
-): Promise<Locale[]> {
-  if (!memeId) return [];
+): Promise<TranslationLocaleAvailability> {
+  const empty = { availableLocales: [], reviewedLocales: [] };
+  if (!memeId) return empty;
 
   try {
     const supabase = createStaticClient();
@@ -367,23 +374,38 @@ export const getAvailableTranslationLocales = cache(async function getAvailableT
           .eq("status", "reviewed")
           .overrideTypes<MemeTranslationRow[], { merge: false }>(),
       ]);
-    if (baseError || rowsError || !base || !rows) return [];
-    const discovery = await loadDiscoveryIndex();
-    if (!discovery.ok || !discovery.ids.has(memeId)) return [];
+    if (baseError || rowsError || !base || !rows) return empty;
 
-    const byLocale = new Set<Locale>();
+    const reviewed = new Set<Locale>();
+    const available = new Set<Locale>();
     for (const row of rows) {
       if (!isLocale(row.locale) || row.locale === DEFAULT_LOCALE) continue;
-      const minimalBase: LocalizableMeme = {
-        ...base,
-        short_id: "",
-      };
-      const meme = overlayMemeTranslation(minimalBase, row, row.locale);
-      if (meme && isIndexableLocalizedMeme(meme)) byLocale.add(row.locale);
+      reviewed.add(row.locale);
     }
 
-    return SUPPORTED_LOCALES.filter((locale) => byLocale.has(locale));
+    const discovery = await loadDiscoveryIndex();
+    if (discovery.ok && discovery.ids.has(memeId)) {
+      for (const row of rows) {
+        if (!isLocale(row.locale) || row.locale === DEFAULT_LOCALE) continue;
+        const minimalBase: LocalizableMeme = {
+          ...base,
+          short_id: "",
+        };
+        const meme = overlayMemeTranslation(minimalBase, row, row.locale);
+        if (meme && isIndexableLocalizedMeme(meme)) available.add(row.locale);
+      }
+    }
+
+    return {
+      availableLocales: SUPPORTED_LOCALES.filter((locale) => available.has(locale)),
+      reviewedLocales: SUPPORTED_LOCALES.filter((locale) => reviewed.has(locale)),
+    };
   } catch {
-    return [];
+    return empty;
   }
 });
+
+/** Hreflang-ready locales only; machine, stale, and noindex rows stay excluded. */
+export async function getAvailableTranslationLocales(memeId: string): Promise<Locale[]> {
+  return (await getTranslationLocaleAvailability(memeId)).availableLocales;
+}

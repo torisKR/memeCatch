@@ -131,24 +131,11 @@ export async function getRecentlyPublishedMemes(limit = 6, eligibleIds?: Readonl
   try {
     if (eligibleIds && eligibleIds.size === 0) return [];
     const supabase = createStaticClient({ cachePublicCatalog: true });
-    if (eligibleIds) {
-      const found: MemeListItem[] = [];
-      const pageSize = 100;
-      for (let offset = 0; ; offset += pageSize) {
-        const { data, error } = await supabase.from("memes").select(LIST_SELECT)
-          .in("moderation_status", [...PUBLIC_STATUSES])
-          .not("published_at", "is", null)
-          .order("published_at", { ascending: false, nullsFirst: false })
-          .order("id", { ascending: true })
-          .range(offset, offset + pageSize - 1);
-        if (error || !data) return [];
-        found.push(...(data as MemeListItem[]).filter((row) => eligibleIds.has(row.id)));
-        if (found.length >= limit || data.length < pageSize) return found.slice(0, limit);
-      }
-    }
-    const { data, error } = await supabase
+    let query = supabase
       .from("memes")
-      .select(LIST_SELECT)
+      .select(LIST_SELECT);
+    if (eligibleIds) query = query.in("id", [...eligibleIds]);
+    const { data, error } = await query
       .in("moderation_status", [...PUBLIC_STATUSES])
       .not("published_at", "is", null)
       .order("published_at", { ascending: false, nullsFirst: false })

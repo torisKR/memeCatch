@@ -22,6 +22,7 @@ function row(
     title: `Meme ${index}`,
     summary: `Summary ${index}`,
     category: "phrase",
+    moderation_status: "approved" as const,
     published_at: publishedAt,
     updated_at: updatedAt,
     description: indexable ? "가".repeat(180) : "thin",
@@ -56,7 +57,7 @@ function useRows(
   };
   const query = {
     select: vi.fn(() => query),
-    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
     order,
     range: vi.fn(async (from: number, to: number) => result(rows.slice(from, to + 1))),
     limit: vi.fn(async (limit: number) => result(rows.slice(0, limit))),

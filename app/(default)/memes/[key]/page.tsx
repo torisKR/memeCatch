@@ -53,6 +53,7 @@ import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import {
   getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
+  getTranslationLocaleAvailability,
 } from "@/lib/meme-translations";
 import {
   getHreflang,
@@ -195,7 +196,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport, availableTranslationLocales, discovery] = await Promise.all([
+  const [related, reactionCounts, marketPassport, translationLocales, discovery] = await Promise.all([
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
       tagIds,
@@ -203,14 +204,15 @@ export default async function MemeDetailPage({ params }: Props) {
     ),
     getReactionCounts(meme.id),
     getMemeMarketPassport(meme.id, "ko"),
-    getAvailableTranslationLocales(meme.id),
+    getTranslationLocaleAvailability(meme.id),
     loadDiscoveryIndex(),
   ]);
   const indexable = discovery.ok && discovery.ids.has(meme.id);
   const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
   const reviewedAt = meme.safety_reviewed_at || meme.updated_at;
+  const reviewedTranslationLocales = translationLocales.reviewedLocales;
   const missingTranslationLocales = SEO_CONTENT_LOCALES.filter(
-    (locale) => !availableTranslationLocales.includes(locale),
+    (locale) => !reviewedTranslationLocales.includes(locale),
   );
 
   // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트

@@ -17,6 +17,10 @@ type PublicationExportRow = ContentDepthInput & {
   origin_year?: number | null;
 };
 
+type PublicationExportCandidate<T extends PublicationExportRow> = T & {
+  moderation_status: "approved" | "limited";
+};
+
 type PublicationExportOptions = {
   select: string;
   primaryOrder: "published_at" | "trend_score";
@@ -34,7 +38,8 @@ export class PublicationExportError extends Error {
 
 /**
  * Read the Korean discovery corpus under one explicit contract:
- * approved records only, then the body gate plus two indexable relatives.
+ * approved and limited records form the relation graph, then only approved
+ * records are exported after the body gate plus two indexable relatives.
  * The output limit is applied after filtering. Range pages have an id tie-breaker and
  * a hard scan bound so an unexpectedly large corpus cannot create an unbounded request.
  */
@@ -42,7 +47,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
   supabase: StaticClient,
   options: PublicationExportOptions,
 ): Promise<{ rows: T[]; eligibleCount: number }> {
-  const fieldPassers: T[] = [];
+  const fieldPassers: PublicationExportCandidate<T>[] = [];
   let exhausted = false;
 
   for (
@@ -52,8 +57,8 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
   ) {
     let query = supabase
       .from("memes")
-      .select(options.select)
-      .eq("moderation_status", "approved");
+      .select(`${options.select}, moderation_status`)
+      .in("moderation_status", ["approved", "limited"]);
 
     query = options.primaryOrder === "published_at"
       ? query.order("published_at", { ascending: false, nullsFirst: false })
@@ -71,7 +76,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
       );
     }
 
-    const page = (data ?? []) as unknown as T[];
+    const page = (data ?? []) as unknown as PublicationExportCandidate<T>[];
     for (const meme of page) {
       if (!passesContentIndexGate(meme)) continue;
       fieldPassers.push(meme);
@@ -90,7 +95,9 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
   }
 
   const indexableIds = discoveryIndexIds(fieldPassers as IndexCandidate[]);
-  const eligible = fieldPassers.filter((meme) => indexableIds.has(meme.id));
+  const eligible = fieldPassers.filter(
+    (meme) => meme.moderation_status === "approved" && indexableIds.has(meme.id),
+  );
   return {
     rows: eligible.slice(0, options.limit),
     eligibleCount: eligible.length,

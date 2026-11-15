@@ -23,6 +23,7 @@ function row(index: number, indexable: boolean) {
     short_id: `m${index}`,
     slug: `meme-${index}`,
     summary: `Summary ${index}`,
+    moderation_status: "approved" as const,
     description: indexable ? "가".repeat(180) : "thin",
     origin: indexable ? "나".repeat(90) : "",
     origin_year: 2026,
@@ -60,7 +61,7 @@ function useRows(
   };
   const query = {
     select: vi.fn(() => query),
-    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
     order,
     range: vi.fn(async (from: number, to: number) => result(rows.slice(from, to + 1))),
     limit: vi.fn(async (limit: number) => result(rows.slice(0, limit))),

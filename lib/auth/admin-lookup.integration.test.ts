@@ -4,7 +4,7 @@ import { CompiledQuery } from "kysely";
 import { ensureAuthSchema } from "@/lib/auth/server";
 import { syncAuthUser } from "@/lib/auth/sync-user";
 import { getPool, withIdentity } from "@/lib/db/pool";
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 
 const databaseUrl = process.env.DATABASE_URL;
 

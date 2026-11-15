@@ -24,7 +24,7 @@ create role anon;
 create role service_role bypassrls;
 SQL
 
-psql -X -v ON_ERROR_STOP=1 -v recovery_migration="$ROOT/db/migrations/20260912010000_source_acquisition_recovery.sql" -h "$SOCKET" -p "$PORT" -d "$DB" <<'SQL'
+psql -X -v ON_ERROR_STOP=1 -v recovery_migration="$ROOT/supabase/migrations/20260912010000_source_acquisition_recovery.sql" -h "$SOCKET" -p "$PORT" -d "$DB" <<'SQL'
 create schema extensions;
 create extension if not exists pgcrypto with schema extensions;
 create table public.media_sources (id uuid primary key);

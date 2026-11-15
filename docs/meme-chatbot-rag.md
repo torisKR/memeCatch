@@ -1,7 +1,5 @@
 # 공개 밈 자료를 답변 근거로 쓰는 캐릭터 챗봇
 
-> **2026-11-15 이후:** 운영은 OCI VM(docker-compose, 자체 Postgres)과 Cloudflare로 옮겼다. 아래의 Vercel·Supabase 절차와 수치는 당시 기록이며, 현재 배포·임베딩 설정은 `docs/oci-setup.md`와 `docker-compose.yml`(`MEME_EMBEDDING_RUNTIME=bundled`)을 따른다.
-
 우측 하단 캐릭터를 누르면 질문을 입력하고 관련 밈 설명·상세 링크·근거 출처를 확인한다. 관리자·인증 화면에서는 숨기며, 열기만으로 서버 요청을 보내지 않는다. 답변은 HTML을 실행하지 않는 일반 텍스트다.
 
 ## PostgreSQL RAG 구성

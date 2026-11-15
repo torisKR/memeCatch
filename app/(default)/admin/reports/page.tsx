@@ -21,8 +21,8 @@ const TARGET_LABEL: Record<string, string> = {
 
 export default async function AdminReportsPage() {
   // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
-  const { db } = await requireOperatorPage("/admin/reports");
-  const { data: reports, error } = await db
+  const { supabase } = await requireOperatorPage("/admin/reports");
+  const { data: reports, error } = await supabase
     .from("reports")
     .select("id, target_type, target_id, reason, created_at, reporter:profiles!reports_reporter_id_fkey(nickname)")
     .eq("status", "open")
@@ -35,13 +35,13 @@ export default async function AdminReportsPage() {
 
   const [memesRes, discussionsRes, submissionsRes] = await Promise.all([
     byType("meme").length
-      ? db.from("memes").select("id, title, short_id, slug").in("id", byType("meme"))
+      ? supabase.from("memes").select("id, title, short_id, slug").in("id", byType("meme"))
       : Promise.resolve({ data: [] as { id: string; title: string; short_id: string; slug: string }[] }),
     byType("discussion").length
-      ? db.from("discussions").select("id, body, status").in("id", byType("discussion"))
+      ? supabase.from("discussions").select("id, body, status").in("id", byType("discussion"))
       : Promise.resolve({ data: [] as { id: string; body: string; status: string }[] }),
     byType("submission").length
-      ? db.from("meme_submissions").select("id, name").in("id", byType("submission"))
+      ? supabase.from("meme_submissions").select("id, name").in("id", byType("submission"))
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
 

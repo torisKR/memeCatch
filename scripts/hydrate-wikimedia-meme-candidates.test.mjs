@@ -11,5 +11,5 @@ assert.match(source, /Pending editorial review/);
 assert.match(source, /startsWith\("wikimedia-"\)/);
 assert.match(source, /const BATCH_SIZE = 20/);
 assert.match(source, /setTimeout\(done, 1_000\)/);
-assert.doesNotMatch(source, /createAdminClient|DATABASE_URL|meme_contents|meme_sources/);
+assert.doesNotMatch(source, /createClient|SUPABASE_SERVICE_ROLE_KEY|meme_contents|meme_sources/);
 console.log("hydrate-wikimedia-meme-candidates safeguards OK");

@@ -6,8 +6,8 @@ const { createAdminClient, createStaticClient } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/admin", () => ({ createAdminClient }));
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import { getGlobalFeed } from "@/lib/global-feed.server";
 

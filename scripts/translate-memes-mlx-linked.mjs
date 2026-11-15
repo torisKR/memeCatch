@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 /**
  * Generate local MLX translations for the Korean meme pages that are already
- * present in the production sitemap, then insert machine drafts into the
- * self-hosted Postgres at DATABASE_URL.
+ * present in the production sitemap, then insert machine drafts through the
+ * linked Supabase CLI.
  *
  * Safety properties:
  * - dry-run is the default; --apply is required for model calls and writes
- * - DATABASE_URL is read from the environment and never logged or written
+ * - no Supabase key is read, copied, or written by this script
  * - model output is strictly validated and never interpolated into SQL
  * - each successful insert is its own durable resume checkpoint
  * - existing translations are never updated or overwritten
  */
+import { execFile as execFileCallback } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 import { parseTranslationArtifacts } from "./translation-batch-check.mjs";
 
+const execFile = promisify(execFileCallback);
 
 export const SUPPORTED_LOCALES = ["en", "ja", "zh", "zh-tw"];
 export const DEFAULT_SITEMAP_URL = "https://catchmeme.com/sitemap.xml";
@@ -28,6 +31,7 @@ export const MAX_RETRIES = 2;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 1_000;
 const MAX_USAGE_EXAMPLES = 10;
+const CLI_MAX_BUFFER = 64 * 1024 * 1024;
 const MODEL_TIMEOUT_MS = 10 * 60 * 1_000;
 const TRANSLATION_KEYS = [
   "title",
@@ -182,12 +186,12 @@ export function parseArgs(argv) {
 
 function usage() {
   return [
-    "Generate local MLX meme translation drafts and insert them into DATABASE_URL Postgres.",
+    "Generate local MLX meme translation drafts through the linked Supabase CLI.",
     "",
     "Dry-run (default; no model call and no write):",
     "  pnpm translate:memes:mlx-linked -- --locale=en --limit=20",
     "",
-    "Apply (writes DATABASE_URL Postgres; production authority required):",
+    "Apply (writes linked Supabase; production authority required):",
     "  pnpm translate:memes:mlx-linked -- --locale=en --limit=20 --apply",
     "",
     "Offline artifact (local MLX + read-only linked query; never executes SQL):",
@@ -233,27 +237,62 @@ export function decodeJsonBase64(value) {
   return JSON.parse(Buffer.from(value, "base64").toString("utf8"));
 }
 
-const RAW_TEXT_TYPES = new Set([1082, 1083, 1114, 1184]); // date/time/timestamp(tz) stay strings
-
-export async function queryLinked(sql, { connectionString = process.env.DATABASE_URL } = {}) {
-  if (!connectionString?.trim()) throw new Error("DATABASE_URL is required");
-  const { default: pg } = await import("pg");
-  const client = new pg.Client({
-    connectionString,
-    types: {
-      getTypeParser: (oid, format) =>
-        RAW_TEXT_TYPES.has(oid) ? (value) => value : pg.types.getTypeParser(oid, format),
-    },
-  });
-  await client.connect();
+export function parseSupabaseCliJson(stdout) {
+  const source = String(stdout).trim();
+  let parsed;
   try {
-    return (await client.query(sql)).rows;
+    parsed = JSON.parse(source);
+  } catch {
+    parsed = null;
+    const candidates = [
+      [source.indexOf("{"), source.lastIndexOf("}")],
+      [source.indexOf("["), source.lastIndexOf("]")],
+    ].sort((left, right) => {
+      if (left[0] === -1) return 1;
+      if (right[0] === -1) return -1;
+      return left[0] - right[0];
+    });
+    for (const [start, end] of candidates) {
+      if (start === -1 || end <= start) continue;
+      try {
+        parsed = JSON.parse(source.slice(start, end + 1));
+        break;
+      } catch {
+        // Try the other supported top-level shape.
+      }
+    }
+  }
+  if (Array.isArray(parsed)) return parsed;
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.rows)) {
+    throw new Error("Supabase CLI JSON did not contain a rows array");
+  }
+  return parsed.rows;
+}
+
+export async function queryLinked(sql, { execFileImpl = execFile } = {}) {
+  try {
+    const { stdout } = await execFileImpl(
+      "supabase",
+      [
+        "db",
+        "query",
+        "--linked",
+        "--output-format",
+        "json",
+        "--log-level",
+        "error",
+        sql,
+      ],
+      { encoding: "utf8", maxBuffer: CLI_MAX_BUFFER },
+    );
+    return parseSupabaseCliJson(stdout);
   } catch (error) {
-    const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "unknown";
-    // Never include the SQL or server detail: either could contain model output.
-    throw new Error(`database query failed (sqlstate ${code})`);
-  } finally {
-    await client.end();
+    if (error instanceof Error && error.message.startsWith("Supabase CLI")) throw error;
+    const exitCode = typeof error === "object" && error !== null && "code" in error
+      ? String(error.code)
+      : "unknown";
+    // Never include stderr or the SQL: either could contain model output.
+    throw new Error(`Supabase CLI query failed (exit code ${exitCode})`);
   }
 }
 

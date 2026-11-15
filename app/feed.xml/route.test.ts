@@ -7,7 +7,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import { GET, dynamic as routeDynamic } from "@/app/feed.xml/route";
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 
 /**
@@ -21,9 +21,9 @@ function randomShortId(): string {
 export async function GET() {
   const fallback = "/explore";
   try {
-    const db = createStaticClient();
+    const supabase = createStaticClient();
     const pivot = randomShortId();
-    let { data } = await db
+    let { data } = await supabase
       .from("memes")
       .select("short_id, slug")
       .eq("moderation_status", "approved")
@@ -32,7 +32,7 @@ export async function GET() {
       .limit(1)
       .maybeSingle();
     if (!data) {
-      const wrapped = await db
+      const wrapped = await supabase
         .from("memes")
         .select("short_id, slug")
         .eq("moderation_status", "approved")

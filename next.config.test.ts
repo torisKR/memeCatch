@@ -74,9 +74,10 @@ describe("service-worker image CSP", () => {
 });
 
 describe("release SHA response header", () => {
-  it("reads the release identifier from the image build arg only", () => {
-    expect(source).toContain("process.env.RELEASE_SHA?.trim()");
-    expect(source).not.toContain("VERCEL");
+  it("falls back to RELEASE_SHA when a CLI deployment has an empty Git SHA", () => {
+    expect(source).toContain(
+      "process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim()",
+    );
   });
 });
 
@@ -93,21 +94,5 @@ describe("arabic opengraph rewrite", () => {
     expect(match).toEqual([
       { source: "/ar/opengraph-image/:path*", destination: "/ar" },
     ]);
-  });
-});
-
-describe("retired membership redirects", () => {
-  it("permanently sends old Plus pricing, premium, and daily URLs home before the trailing-slash rule", async () => {
-    if (typeof nextConfig.redirects !== "function") {
-      throw new Error("next config has no redirects()");
-    }
-    const redirects = await nextConfig.redirects();
-    const find = (source: string) => redirects.find((rule) => rule.source === source);
-
-    expect(find("/pricing")).toMatchObject({ destination: "/", permanent: true });
-    expect(find("/premium/:path+")).toMatchObject({ destination: "/", permanent: true });
-    expect(find("/daily")).toMatchObject({ destination: "/", permanent: true });
-    expect(find("/:locale(en|ja|zh|zh-tw)/pricing")).toMatchObject({ destination: "/:locale" });
-    expect(redirects.at(-1)?.source).toBe("/:path+/");
   });
 });

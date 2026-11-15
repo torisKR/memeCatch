@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 import { safeNext } from "@/lib/safe-redirect";
 import { getRequestLocale } from "@/lib/i18n-server";
@@ -21,15 +21,15 @@ export default async function OnboardingPage({
   const sp = await searchParams;
   const next = safeNext(sp.next);
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(`/onboarding?next=${next}`)}`);
   }
 
-  const { data: profile } = await db
+  const { data: profile } = await supabase
     .rpc("get_my_profile")
     .maybeSingle();
 

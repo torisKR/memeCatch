@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       );
       const disposition = safeField(body.disposition, "enforce");
       const document = safeField(body["document-uri"], "-");
-      // 콘솔(컨테이너 로그)로만 남긴다 — 외부 저장/전송 없음
+      // 콘솔(Vercel 로그)로만 남긴다 — 외부 저장/전송 없음
       console.warn(
         `[CSP-VIOLATION] disposition=${disposition} directive="${directive}" blocked="${blocked}" doc="${document}"`,
       );

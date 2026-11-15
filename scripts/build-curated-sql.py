@@ -357,7 +357,7 @@ def escape_sql(val):
 lines = []
 lines.append("-- ============================================================================")
 lines.append("-- 밈캐치 (catchmeme.com) 핵심 대표 밈 고품질 시드 마이그레이션 SQL")
-lines.append('-- 적용: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f scripts/seed-curated-memes.sql')
+lines.append("-- Supabase SQL Editor에서 이 파일 전체를 복사하여 'Run' 버튼을 클릭하면 즉시 적용됩니다.")
 lines.append("-- 중복 실행 시에도 안전하게 업데이트(ON CONFLICT DO UPDATE)됩니다.")
 lines.append("-- ============================================================================\n")
 lines.append("BEGIN;\n")
@@ -451,7 +451,7 @@ sql_content = "\n".join(lines)
 with open("scripts/seed-curated-memes.sql", "w", encoding="utf-8") as f:
     f.write(sql_content)
 
-with open("db/migrations/20261103_seed_curated_memes.sql", "w", encoding="utf-8") as f:
+with open("supabase/migrations/20261103_seed_curated_memes.sql", "w", encoding="utf-8") as f:
     f.write(sql_content)
 
 print(f"SQL seed files generated successfully! Total memes: {len(MEMES)}")

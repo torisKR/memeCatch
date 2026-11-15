@@ -4,7 +4,6 @@ import { rankingsLocaleRewriteSource } from "./lib/rankings-locale-rewrite";
 import {
   DEFAULT_TRAILING_SLASH_REDIRECT,
   EN_PRODUCT_GONE_REDIRECTS,
-  RETIRED_MEMBERSHIP_REDIRECTS,
 } from "./lib/retired-product-redirects";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -40,6 +39,7 @@ const withSerwist = withSerwistInit({
  * - GA4: googletagmanager(@next/third-parties) + google-analytics 수집
  * - AdSense: googlesyndication·googleadservices·doubleclick·adtrafficquality 계열
  *   (adsbygoogle가 요구하는 도메인 폭이 넓어 script/frame/img/connect에 분산 반영)
+ * - Supabase: *.supabase.co (REST/Storage/Realtime — wss 포함)
  * - inline script: JSON-LD(dangerouslySetInnerHTML)·Next 런타임 인라인 → 'unsafe-inline'
  */
 /* 개발 모드의 React·Turbopack은 콜스택 재구성 등 디버깅 기능에 eval()을 쓴다.
@@ -105,7 +105,10 @@ const CSP_DIRECTIVES = [
   "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  // 결제는 폼 POST → 303으로 호스팅 결제창으로 보내는 흐름이다. 브라우저는
+  // form-action을 리다이렉트 체인에도 적용하므로, 결제 호스트가 없으면 제출이
+  // 그대로 취소된다(구독 버튼이 아무 반응 없어 보이는 원인).
+  "form-action 'self' https://app.unifi.me https://latpeed.com https://www.latpeed.com https://fairy.hada.io",
   "frame-ancestors 'self'",
 ];
 
@@ -118,7 +121,7 @@ const CSP_REPORT_URI =
   process.env.CSP_REPORT_URI ?? `${SITE_ORIGIN}/api/csp-report`;
 
 const RELEASE_SHA =
-  process.env.RELEASE_SHA?.trim();
+  process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.RELEASE_SHA?.trim();
 const RELEASE_HEADERS = RELEASE_SHA
   ? [{ key: "X-MemeCatch-Release-Sha", value: RELEASE_SHA }]
   : [];
@@ -132,7 +135,7 @@ const CSP_VALUE = [
 ].join("; ");
 
 // 적용 모드 — 기본 enforce(실제 차단). 광고/임베드 회귀가 관측되면 코드 배포 없이
-// 서버 환경변수 CSP_ENFORCE=false 로 즉시 Report-Only 롤백 가능.
+// Vercel 환경변수 CSP_ENFORCE=false 로 즉시 Report-Only 롤백 가능.
 const CSP_ENFORCE = process.env.CSP_ENFORCE !== "false";
 const CSP_HEADER_KEY = CSP_ENFORCE
   ? "Content-Security-Policy"
@@ -169,7 +172,7 @@ const nextConfig: NextConfig = {
   // `/en/products/` a second hop. Specific `/en` redirects are listed first.
   skipTrailingSlashRedirect: true,
   async redirects() {
-    return [...EN_PRODUCT_GONE_REDIRECTS, ...RETIRED_MEMBERSHIP_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
+    return [...EN_PRODUCT_GONE_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
   },
   // Prefixed rankings URLs share one dynamic route. A static `app/ar` segment
   // would shadow every future `/ar/*` page, and `[locale]` only prerenders
@@ -196,7 +199,8 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           ...RELEASE_HEADERS,
-          // HSTS — includeSubDomains·preload까지 명시한다.
+          // HSTS 보강 — Vercel 기본값(max-age=63072000)을 명시 헤더로 덮어써
+          // includeSubDomains·preload까지 적용한다.
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",

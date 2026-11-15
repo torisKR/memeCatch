@@ -18,7 +18,7 @@ import {
 
 const createStaticClient = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 vi.mock("@/lib/index-gate.server", () => ({
   loadDiscoveryIndex: vi.fn(async () => ({
     ok: true,

@@ -7,13 +7,14 @@ const metrics = { views: count, activeUsers: count, anonymousSessions: count };
 export const adminActivitySchema = z.object({
   generatedAt: timestamp,
   range: z.object({ from: z.iso.date(), to: z.iso.date(), hourDate: z.iso.date() }),
-  summary: z.object(metrics),
+  summary: z.object({ ...metrics, currentSubscribers: count }),
   daily: z.array(z.object({ date: z.iso.date(), ...metrics })).max(31),
   hourly: z.array(z.object({ hour: count.max(23), ...metrics })).length(24),
   users: z.object({
     total: count, page: count.min(1), pageSize: z.literal(25),
     items: z.array(z.object({
-      id: z.guid(), nickname: z.string().nullable(), views: count, lastSeenAt: timestamp.nullable(),
+      id: z.guid(), nickname: z.string().nullable(), isPlus: z.boolean(),
+      plusUntil: timestamp.nullable(), views: count, lastSeenAt: timestamp.nullable(),
     })).max(25),
   }),
   views: z.object({
@@ -33,6 +34,7 @@ export type ActivityFilters = {
   to: string;
   hourDate: string;
   userId: string;
+  subscribersOnly: boolean;
   usersPage: number;
   viewsPage: number;
 };
@@ -46,12 +48,13 @@ export function parseActivityFilters(search: ActivitySearch, now = new Date()):
   const today = kstToday(now);
   const to = typeof search.to === "string" && z.iso.date().safeParse(search.to).success ? search.to : today;
   const from = new Date(Date.parse(`${to}T00:00:00Z`) - 6 * 86400000).toISOString().slice(0, 10);
-  const defaults: ActivityFilters = { from, to, hourDate: to, userId: "", usersPage: 1, viewsPage: 1 };
+  const defaults: ActivityFilters = { from, to, hourDate: to, userId: "", subscribersOnly: false, usersPage: 1, viewsPage: 1 };
   const parsed = z.object({
     from: z.iso.date().default(from),
     to: z.iso.date().default(today),
     hourDate: z.iso.date().default(to),
     userId: z.union([z.literal(""), z.guid()]).default(""),
+    subscribersOnly: z.enum(["", "1"]).default(""),
     usersPage: z.string().regex(/^[1-9]\d{0,4}$/).default("1"),
     viewsPage: z.string().regex(/^[1-9]\d{0,4}$/).default("1"),
   }).safeParse(search);
@@ -59,6 +62,7 @@ export function parseActivityFilters(search: ActivitySearch, now = new Date()):
   if (!parsed.success) return invalid;
   const filters: ActivityFilters = {
     ...parsed.data,
+    subscribersOnly: parsed.data.subscribersOnly === "1",
     usersPage: Number(parsed.data.usersPage), viewsPage: Number(parsed.data.viewsPage),
   };
   const days = (Date.parse(filters.to) - Date.parse(filters.from)) / 86400000;
@@ -71,6 +75,7 @@ export function activityHref(filters: ActivityFilters, changes: Partial<Activity
   const next = { ...filters, ...changes };
   const params = new URLSearchParams({ from: next.from, to: next.to, hourDate: next.hourDate });
   if (next.userId) params.set("userId", next.userId);
+  if (next.subscribersOnly) params.set("subscribersOnly", "1");
   if (next.usersPage > 1) params.set("usersPage", String(next.usersPage));
   if (next.viewsPage > 1) params.set("viewsPage", String(next.viewsPage));
   return `/admin/activity?${params}${anchor ? `#${anchor}` : ""}`;

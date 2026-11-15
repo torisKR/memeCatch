@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { embedBundledMemePassage } from "@/lib/meme-embedding-runtime.server";
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_DOCUMENTS = 25;
 const WORK_BUDGET_MS = 90_000;

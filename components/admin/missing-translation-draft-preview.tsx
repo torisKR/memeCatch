@@ -257,7 +257,7 @@ export function MissingTranslationDraftPreview({
                 ZH ROUTE-UNLOCK OPERATOR LANE
               </p>
               <p className="mt-1 text-sm leading-relaxed text-muted">
-                번역 요청을 먼저 처리하고, 그다음 번역으로 글로벌 route를 열 수 있는 원문을
+                Plus 번역 요청을 먼저 처리하고, 그다음 번역으로 글로벌 route를 열 수 있는 원문을
                 처리합니다. 저장은 machine 초안으로만 남고, GPT 미리보기와 사람 검수는 계속
                 명시적으로 실행합니다.
               </p>
@@ -313,7 +313,7 @@ export function MissingTranslationDraftPreview({
                       </span>
                       {focused && (
                         <span className="mt-2 inline-flex rounded-full bg-accent-soft px-2 py-1 text-xs font-semibold text-accent-text">
-                          요청 우선
+                          Plus 요청 우선
                         </span>
                       )}
                       {priority && (
@@ -321,7 +321,7 @@ export function MissingTranslationDraftPreview({
                           className="mt-2 inline-flex rounded-full bg-accent-soft px-2 py-1 text-xs font-semibold text-accent-text"
                           data-translation-plus-priority="true"
                         >
-                          {priority.requestCount}건 요청
+                          Plus {priority.requestCount}건 요청
                         </span>
                       )}
                       {active && (

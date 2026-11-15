@@ -5,7 +5,7 @@
  * tiktok.com/@.../video/... URLs; TikTok oEmbed then confirms that each URL is
  * publicly embeddable.
  *
- * This never imports a row into the database or stores returned embed HTML. A human
+ * This never imports a row into Supabase or stores returned embed HTML. A human
  * must still confirm that each candidate is the actual meme source before it is
  * published as meme_contents or meme_sources.
  *

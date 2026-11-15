@@ -1,6 +1,6 @@
 #!/bin/bash
 # Dump the local database, encrypt it, restore it into a scratch database, and
-# compare per-table counts plus a meme id checksum. Does not contact R2.
+# compare per-table counts plus a meme id checksum. Does not contact Supabase or R2.
 set -euo pipefail
 
 if [[ -z "${DATABASE_URL:-}" ]]; then

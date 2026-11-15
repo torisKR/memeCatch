@@ -58,6 +58,14 @@ export function parseSavedLibraryFilters(
   };
 }
 
+/** Filter parameters do not unlock an entitlement for a free account. */
+export function applySavedLibraryEntitlement(
+  filters: SavedLibraryFilters,
+  isPremium: boolean,
+): SavedLibraryFilters {
+  return isPremium ? filters : { ...filters, query: "", safety: null };
+}
+
 /** A sanitized PostgREST predicate limited to the embedded public meme row. */
 export function savedLibraryTitleFilter(query: string): string | null {
   const term = normalizeSavedLibraryQuery(query);

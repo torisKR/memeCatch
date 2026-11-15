@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn() }));
-vi.mock("@/lib/db/server", () => mocks);
+vi.mock("@/lib/supabase/server", () => mocks);
 import { getRecentlyPublishedMemes } from "./queries";
 import { indexableScanLimit } from "./thin-meme";
 

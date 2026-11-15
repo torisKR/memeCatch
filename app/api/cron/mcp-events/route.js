@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/db/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { databaseStore } from '@/integrations/memecatch-chatgpt/src/state.mjs';
 import { same, json } from '@/integrations/memecatch-chatgpt/src/http.mjs';
 export const runtime='nodejs';

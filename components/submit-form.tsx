@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { memePathFrom } from "@/lib/labels";
 import { useLocale } from "@/lib/i18n-client";
 import { SUBMIT_COPY } from "@/lib/i18n-submit";
@@ -154,8 +154,8 @@ export function SubmitForm({ defaultName = "" }: { defaultName?: string }) {
     /* eslint-enable react-hooks/set-state-in-effect */
     const seq = ++searchSeq.current;
     const timer = setTimeout(async () => {
-      const db = createClient();
-      const { data, error } = await db.rpc("search_memes", {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("search_memes", {
         p_query: query,
         p_limit: 3,
       });

@@ -1,5 +1,3 @@
-// Row, Insert, Update, Relationships, Functions, and Enums for the self-hosted Postgres `public` schema.
-// lib/db/types.ts reads these to type queries. Keep in step with db/migrations.
 export type Json =
   | string
   | number
@@ -9,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       meme_collectible_cards: {
@@ -5219,7 +5242,7 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Database
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
@@ -5337,6 +5360,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       availability_status: ["live", "dead", "region_blocked", "unchecked"],

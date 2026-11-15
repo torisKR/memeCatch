@@ -1,6 +1,6 @@
 import { MPE_STORAGE_BUCKET } from "@/lib/mpe/storage.server";
-import { createAdminClient } from "@/lib/db/admin";
-import { createClient } from "@/lib/db/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const SIGNED_URL_SECONDS = 60;
 const ARTIFACT_KEY = new RegExp("^[0-9a-f-]{36}/[0-9a-f-]{36}/renders/[0-9a-f]{64}\\.mp4$");
@@ -16,12 +16,12 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const db = await createClient();
-  const { data: { user } } = await db.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ ok: false, error: "signed_out" }, { status: 401 });
 
   const { id } = await params;
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from("processing_jobs")
     .select("id, ingestion_id, job_type, status, attempts, output_json, error_code, started_at, completed_at, created_at")
     .eq("id", id)

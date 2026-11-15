@@ -65,6 +65,10 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
   const copy = GLOBAL_SEARCH_COPY[contentLocale];
   const popularTerms = trending.map((meme) => meme.title);
   const needsFallback = !query || results.length === 0;
+  const firstOriginalResult = results[0] ?? null;
+  const translationOptionsHref = firstOriginalResult
+    ? `${memePathFrom(firstOriginalResult.short_id, firstOriginalResult.slug)}#plus-pricing-title`
+    : null;
   const localizedResultCount = results.reduce(
     (count, meme) => count + (localizedByShortId.has(meme.short_id) ? 1 : 0),
     0,
@@ -154,6 +158,15 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
               >
                 {LOCALIZED_EXPLORE_COPY[contentLocale].originalExplore}
               </Link>
+              {translationOptionsHref && (
+                <Link
+                  href={translationOptionsHref}
+                  data-localized-search-translation-options-action
+                  className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-5 text-sm font-bold text-white transition-colors hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+                >
+                  {copy.translationOptions}
+                </Link>
+              )}
             </div>
           }
         />

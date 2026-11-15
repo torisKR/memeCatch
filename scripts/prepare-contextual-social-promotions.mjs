@@ -10,7 +10,7 @@
  * 4. creator_name is present (oEmbed author)
  *
  * Output rows satisfy contextual-social-promotions-to-sql.mjs validation.
- * This never writes to the database; generate SQL and run it explicitly.
+ * This never writes to Supabase; generate SQL and run it explicitly.
  *
  * Usage:
  *   node scripts/prepare-contextual-social-promotions.mjs \

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SITE_URL } from "@/lib/site";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { COLLECTIONS, getCollection, type CollectionDef } from "@/lib/collections";
 import type { MemeListItem } from "@/lib/queries";
 import { hasPublicListing, indexableScanLimit, takeIndexableMemes } from "@/lib/thin-meme";
@@ -14,7 +14,7 @@ import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 
 /** 테마별 밈 모음 허브. slug는 미리 열거하지만 문서는 요청별 SSR로 렌더한다. */
-/** 테마별 모음 허브. ISR 재생성 비용을 줄이려고 24시간 단위로 캐시한다. */
+/** 테마별 모음 허브. Vercel ISR 쓰기 최적화를 위해 24시간 단위로 캐시한다. */
 export const revalidate = 86400;
 
 export function generateStaticParams() {
@@ -51,8 +51,8 @@ const LIMIT = 24;
 
 async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {
   try {
-    const db = createStaticClient();
-    let q = db
+    const supabase = createStaticClient();
+    let q = supabase
       .from("memes")
       .select(SELECT)
       .in("moderation_status", ["approved", "limited"]);
@@ -78,7 +78,7 @@ async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {
         break;
       case "keywords": {
         // 제목·요약·유래 중 하나라도 키워드를 포함하면 매치.
-        // .or() 필터 문자열에서는 %가 아닌 *를 와일드카드로 써야 인코딩이 안전하다.
+        // supabase-js .or()에서는 %가 아닌 *를 와일드카드로 써야 인코딩이 안전하다.
         const ors = col.filter.terms
           .flatMap((t) => ["title", "summary", "origin"].map((c) => `${c}.ilike.*${t}*`))
           .join(",");

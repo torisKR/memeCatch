@@ -56,6 +56,17 @@ type MyCopy = {
     set: string;
     empty: string;
   };
+  customization: {
+    title: string;
+    flairLabel: string;
+    flairPlaceholder: string;
+    flairHint: string;
+    accentLabel: string;
+    save: string;
+    saved: string;
+    plusOnly: string;
+    saveFailed: string;
+  };
   categories: Record<MemeCategory, string>;
   saved: {
     title: string;
@@ -73,11 +84,31 @@ type MyCopy = {
       results: (matches: number, total: number) => string;
       emptyFilteredTitle: string;
       emptyFilteredBody: string;
-      pagination: {
-        label: string;
-        previous: string;
-        next: string;
-        status: (page: number, total: number) => string;
+      upgradeTitle: string;
+      upgradeBody: string;
+      upgradeAction: string;
+      brief: {
+        title: string;
+        body: string;
+        selectLabel: string;
+        selectPlaceholder: string;
+        download: string;
+        empty: string;
+        limitNote: string;
+      };
+      editor: {
+        freeHint: string;
+        edit: string;
+        add: string;
+        collectionLabel: string;
+        collectionPlaceholder: string;
+        noteLabel: string;
+        notePlaceholder: string;
+        saving: string;
+        save: string;
+        cancel: string;
+        plusRequired: string;
+        saveFailed: string;
       };
     };
   };
@@ -160,6 +191,17 @@ const MY_COPY_BASE = {
       set: "설정하기",
       empty: "관심 카테고리를 설정하면 취향에 맞는 밈을 먼저 보여드려요.",
     },
+    customization: {
+      title: "프로필 꾸미기",
+      flairLabel: "플레어",
+      flairPlaceholder: "예: 밈 수집가",
+      flairHint: "닉네임 옆에 붙는 짧은 문구예요 (최대 24자).",
+      accentLabel: "강조 색상",
+      save: "저장",
+      saved: "프로필 꾸미기를 저장했어요.",
+      plusOnly: "Plus 전용 기능이에요.",
+      saveFailed: "저장에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    },
     categories: {
       phrase: "밈 용어(유행어)",
       dance: "챌린지 댄스",
@@ -185,11 +227,32 @@ const MY_COPY_BASE = {
           `${matches}개 결과 · 전체 ${total}개 저장됨`,
         emptyFilteredTitle: "조건에 맞는 저장 밈이 없어요.",
         emptyFilteredBody: "검색어를 바꾸거나 사용 신호 필터를 지워 보세요.",
-        pagination: {
-          label: "저장한 밈 페이지",
-          previous: "이전",
-          next: "다음",
-          status: (page, total) => `${page} / ${total} 페이지`,
+        upgradeTitle: "Plus로 내 밈 보관함을 검색하세요",
+        upgradeBody:
+          "저장한 밈을 제목·뜻·사용 신호로 빠르게 다시 찾아볼 수 있어요.",
+        upgradeAction: "Plus로 보관함 열기",
+        brief: {
+          title: "컬렉션 브리프 만들기",
+          body: "폴더의 밈을 뜻·사용 신호·주의·내 메모가 담긴 비공개 Markdown으로 내려받아요.",
+          selectLabel: "컬렉션",
+          selectPlaceholder: "내 컬렉션 선택",
+          download: "브리프 다운로드",
+          empty: "먼저 저장 밈에 폴더를 지정해 주세요.",
+          limitNote: "현재 검수된 공개 밈만 최대 100개 포함해요.",
+        },
+        editor: {
+          freeHint: "에서 폴더로 분류하고 메모를 남길 수 있어요.",
+          edit: "폴더·메모 수정",
+          add: "폴더·메모 추가",
+          collectionLabel: "폴더 (최대 40자)",
+          collectionPlaceholder: "예: 이번 주 콘텐츠 후보",
+          noteLabel: "메모 (최대 500자)",
+          notePlaceholder: "어디에 어떻게 쓸지 적어두세요",
+          saving: "저장 중…",
+          save: "저장",
+          cancel: "취소",
+          plusRequired: "Plus 구독이 필요해요.",
+          saveFailed: "저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
         },
       },
     },
@@ -284,6 +347,17 @@ const MY_COPY_BASE = {
       set: "Set interests",
       empty: "Set your interests to see relevant memes first.",
     },
+    customization: {
+      title: "Profile flair",
+      flairLabel: "Flair",
+      flairPlaceholder: "e.g. Meme curator",
+      flairHint: "A short tag shown next to your nickname (max 24 chars).",
+      accentLabel: "Accent color",
+      save: "Save",
+      saved: "Your profile flair has been saved.",
+      plusOnly: "This is a Plus-only feature.",
+      saveFailed: "Couldn't save. Please try again in a moment.",
+    },
     categories: {
       phrase: "Meme terms",
       dance: "Challenge dances",
@@ -309,11 +383,32 @@ const MY_COPY_BASE = {
           `${matches} results · ${total} saved in total`,
         emptyFilteredTitle: "No saved memes match these filters.",
         emptyFilteredBody: "Try another search or clear the use-signal filter.",
-        pagination: {
-          label: "Saved memes pages",
-          previous: "Previous",
-          next: "Next",
-          status: (page, total) => `Page ${page} of ${total}`,
+        upgradeTitle: "Search your meme vault with Plus",
+        upgradeBody: "Find saved memes again by title, meaning, or use signal.",
+        upgradeAction: "Open the Plus vault",
+        brief: {
+          title: "Build a collection brief",
+          body: "Download a private Markdown brief with meanings, use signals, cautions, and your notes.",
+          selectLabel: "Collection",
+          selectPlaceholder: "Choose a collection",
+          download: "Download brief",
+          empty: "Add a folder to a saved meme first.",
+          limitNote: "Includes up to 100 currently reviewed public memes.",
+        },
+        editor: {
+          freeHint:
+            " lets you organize saved memes into folders and add notes.",
+          edit: "Edit folder & note",
+          add: "Add folder & note",
+          collectionLabel: "Folder (up to 40 characters)",
+          collectionPlaceholder: "e.g. This week’s content ideas",
+          noteLabel: "Note (up to 500 characters)",
+          notePlaceholder: "Write where or how you want to use it",
+          saving: "Saving…",
+          save: "Save",
+          cancel: "Cancel",
+          plusRequired: "Plus is required.",
+          saveFailed: "We couldn’t save this. Please try again shortly.",
         },
       },
     },
@@ -410,6 +505,18 @@ const MY_COPY_BASE = {
       empty:
         "興味のあるカテゴリーを設定すると、好みに合うミームを先に表示します。",
     },
+    customization: {
+      title: "プロフィール装飾",
+      flairLabel: "フレア",
+      flairPlaceholder: "例：ミームコレクター",
+      flairHint: "ニックネームの横に表示される短いタグです（最大24文字）。",
+      accentLabel: "アクセントカラー",
+      save: "保存",
+      saved: "プロフィール装飾を保存しました。",
+      plusOnly: "これは Plus 専用機能です。",
+      saveFailed:
+        "保存に失敗しました。しばらくしてからもう一度お試しください。",
+    },
     categories: {
       phrase: "ミーム用語",
       dance: "チャレンジダンス",
@@ -435,11 +542,33 @@ const MY_COPY_BASE = {
         emptyFilteredTitle: "条件に合う保存済みミームはありません。",
         emptyFilteredBody:
           "別の検索語にするか、使用シグナルのフィルターを解除してください。",
-        pagination: {
-          label: "保存したミームのページ",
-          previous: "前へ",
-          next: "次へ",
-          status: (page, total) => `${page} / ${total}ページ`,
+        upgradeTitle: "Plusで自分のミーム保管庫を検索",
+        upgradeBody:
+          "保存したミームをタイトル・意味・使用シグナルからすばやく探し直せます。",
+        upgradeAction: "Plusの保管庫を開く",
+        brief: {
+          title: "コレクションブリーフを作成",
+          body: "意味・使用シグナル・注意点・自分のメモを含む非公開Markdownをダウンロードできます。",
+          selectLabel: "コレクション",
+          selectPlaceholder: "コレクションを選択",
+          download: "ブリーフをダウンロード",
+          empty: "まず保存したミームにフォルダを設定してください。",
+          limitNote: "現在確認済みの公開ミームを最大100件収録します。",
+        },
+        editor: {
+          freeHint: "なら、保存したミームをフォルダに整理してメモを残せます。",
+          edit: "フォルダ・メモを編集",
+          add: "フォルダ・メモを追加",
+          collectionLabel: "フォルダ（最大40文字）",
+          collectionPlaceholder: "例：今週のコンテンツ候補",
+          noteLabel: "メモ（最大500文字）",
+          notePlaceholder: "どこでどう使うかを書き留めましょう",
+          saving: "保存中…",
+          save: "保存",
+          cancel: "キャンセル",
+          plusRequired: "Plusへの登録が必要です。",
+          saveFailed:
+            "保存できませんでした。しばらくしてからもう一度お試しください。",
         },
       },
     },
@@ -530,6 +659,17 @@ const MY_COPY_BASE = {
       set: "设置兴趣",
       empty: "设置兴趣分类后，我们会优先显示符合你喜好的迷因。",
     },
+    customization: {
+      title: "个人资料装饰",
+      flairLabel: "标签",
+      flairPlaceholder: "例：迷因收藏家",
+      flairHint: "显示在昵称旁边的简短标签（最多24个字符）。",
+      accentLabel: "强调色",
+      save: "保存",
+      saved: "已保存个人资料装饰。",
+      plusOnly: "这是 Plus 专属功能。",
+      saveFailed: "保存失败，请稍后再试。",
+    },
     categories: {
       phrase: "梗语",
       dance: "舞蹈挑战",
@@ -554,11 +694,31 @@ const MY_COPY_BASE = {
         results: (matches, total) => `${matches} 条结果 · 共收藏 ${total} 条`,
         emptyFilteredTitle: "没有符合这些筛选条件的收藏迷因。",
         emptyFilteredBody: "请尝试其他搜索词，或清除使用信号筛选。",
-        pagination: {
-          label: "已收藏迷因分页",
-          previous: "上一页",
-          next: "下一页",
-          status: (page, total) => `第 ${page} / ${total} 页`,
+        upgradeTitle: "使用 Plus 搜索你的迷因收藏库",
+        upgradeBody: "可按标题、含义或使用信号快速重新找到收藏的迷因。",
+        upgradeAction: "打开 Plus 收藏库",
+        brief: {
+          title: "制作收藏集简报",
+          body: "将收藏集中的含义、使用信号、注意事项和个人备注下载为私密 Markdown。",
+          selectLabel: "收藏集",
+          selectPlaceholder: "选择收藏集",
+          download: "下载简报",
+          empty: "请先为收藏的迷因设置文件夹。",
+          limitNote: "最多包含100条当前已审核的公开迷因。",
+        },
+        editor: {
+          freeHint: "可将收藏的迷因整理到文件夹并添加备注。",
+          edit: "编辑文件夹和备注",
+          add: "添加文件夹和备注",
+          collectionLabel: "文件夹（最多40个字符）",
+          collectionPlaceholder: "例如：本周内容候选",
+          noteLabel: "备注（最多500个字符）",
+          notePlaceholder: "记下在哪里、如何使用",
+          saving: "正在保存…",
+          save: "保存",
+          cancel: "取消",
+          plusRequired: "需要订阅 Plus。",
+          saveFailed: "无法保存，请稍后重试。",
         },
       },
     },

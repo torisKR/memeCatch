@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { DbClient } from "@/lib/db/types";
-import { createStaticClient } from "@/lib/db/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createStaticClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import { LIST_COLUMNS, type MemeListItem } from "@/lib/queries";
@@ -156,14 +156,14 @@ function withPlatform<T extends {
 }
 
 function buildQuery(
-  db: DbClient,
+  supabase: SupabaseClient<Database>,
   filters: Filters,
   indexableIds: readonly string[] | undefined,
 ) {
   // 검색어가 있으면 search_memes RPC 위에 동일 필터/정렬을 얹는다
   // (components/explore-grid.tsx의 buildMemesQuery와 반드시 동기화).
   if (filters.q) {
-    let sq = db
+    let sq = supabase
       .rpc(filters.topicTag ? "search_ai_memes" : "search_memes", {
         p_query: filters.q,
         p_limit: SEARCH_LIMIT,
@@ -189,7 +189,7 @@ function buildQuery(
     return limitQueryToIds(sq, indexableIds);
   }
 
-  let q = db
+  let q = supabase
     .from("memes")
     .select(selectForPlatform(filters.platform, filters.topicTag))
     .in("moderation_status", ["approved", "limited"]);
@@ -263,12 +263,12 @@ export default async function ExplorePage({
       };
       if (!discovery.ok) return failed;
       try {
-        const db = createStaticClient();
+        const supabase = createStaticClient();
         let queryFailed = false;
         const page = await collectIndexableWindow(
           async (from, to) => {
             const { data, error } = await buildQuery(
-              db,
+              supabase,
               filters,
               indexableIds,
             ).range(from, to);

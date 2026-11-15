@@ -31,7 +31,7 @@ export default async function AdminUsersPage({
     <div>
       <h1 className="text-2xl font-bold tracking-tight">사용자 관리</h1>
       <p className="mt-1.5 text-sm text-muted">
-        계정 정보·비밀번호·권한을 사용자별로 관리해요.
+        계정 정보·비밀번호·Plus 구독·결제 이력을 사용자별로 관리해요.
       </p>
 
       <form method="get" className="mt-5 flex gap-2">
@@ -73,6 +73,7 @@ export default async function AdminUsersPage({
                   <th className="py-2 pr-3 font-semibold">이메일</th>
                   <th className="py-2 pr-3 font-semibold">닉네임</th>
                   <th className="py-2 pr-3 font-semibold">권한</th>
+                  <th className="py-2 pr-3 font-semibold">Plus</th>
                   <th className="py-2 pr-3 font-semibold">가입</th>
                   <th className="py-2 font-semibold">최근 로그인</th>
                 </tr>
@@ -96,6 +97,15 @@ export default async function AdminUsersPage({
                         </span>
                       ) : (
                         <span className="text-muted">일반</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      {u.isPremium ? (
+                        <span className="rounded-full bg-safety-green-bg px-2 py-0.5 text-xs font-bold text-safety-green">
+                          Plus
+                        </span>
+                      ) : (
+                        <span className="text-muted">무료</span>
                       )}
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums text-muted">

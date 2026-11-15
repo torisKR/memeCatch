@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/meme-studio.server", () => ({
   MEME_TONES: ["wholesome", "sarcastic", "absurd", "hype"],
   MEME_FORMATS: ["image-macro", "reaction", "caption"],

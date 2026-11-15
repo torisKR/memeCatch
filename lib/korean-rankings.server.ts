@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import {
   koreanRankingsRenderList,
   resolveKoreanRankings,
@@ -63,8 +63,8 @@ function trendIsUsable(memes: PublicRankingMeme[]): boolean {
 
 /** Trend-score read. This is the query whose failure must not be reused as the list. */
 async function loadTrendMemes(): Promise<PublicRankingMeme[]> {
-  const db = createStaticClient();
-  const { data, error } = await db
+  const supabase = createStaticClient();
+  const { data, error } = await supabase
     .from("memes")
     .select(RANKING_SELECT)
     .eq("moderation_status", "approved")
@@ -75,9 +75,9 @@ async function loadTrendMemes(): Promise<PublicRankingMeme[]> {
 }
 
 async function loadComeback(): Promise<PublicRankingMeme[]> {
-  const db = createStaticClient();
+  const supabase = createStaticClient();
   const oldCutoff = new Date(Date.now() - 90 * 86400000).toISOString();
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from("memes")
     .select(RANKING_SELECT)
     .eq("moderation_status", "approved")
@@ -91,8 +91,8 @@ async function loadComeback(): Promise<PublicRankingMeme[]> {
 }
 
 async function loadPublishedMemes(): Promise<PublicRankingMeme[]> {
-  const db = createStaticClient();
-  const { data, error } = await db
+  const supabase = createStaticClient();
+  const { data, error } = await supabase
     .from("memes")
     .select(RANKING_SELECT)
     .eq("moderation_status", "approved")

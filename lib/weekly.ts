@@ -5,7 +5,7 @@
  * 전부 인증 쿠키 없는 createStaticClient + 개별 try/catch로 실패 시 빈 배열 폴백.
  * createStaticClient 자체는 Data Cache나 문서 ISR을 추가하지 않는다.
  */
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import type { MemeCategory } from "@/lib/labels";
 import { INDEXABLE_LIST_SELECT, type MemeListItem } from "@/lib/queries";
 import { indexableScanLimit, takeIndexableMemes } from "@/lib/thin-meme";
@@ -75,8 +75,8 @@ export type WeeklyDigest = {
 
 async function loadTrending(): Promise<MemeListItem[]> {
   try {
-    const db = createStaticClient();
-    const { data, error } = await db
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .eq("moderation_status", "approved")
@@ -91,8 +91,8 @@ async function loadTrending(): Promise<MemeListItem[]> {
 
 async function loadFresh(range: WeekRange): Promise<MemeListItem[]> {
   try {
-    const db = createStaticClient();
-    const { data, error } = await db
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])

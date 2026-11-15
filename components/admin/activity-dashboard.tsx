@@ -19,7 +19,7 @@ export function ActivityDashboard({ data, filters, today, error }: {
       <header>
         <p className="text-sm font-medium text-accent">관리자 전용 · 한국 시간 (KST)</p>
         <h1 className="mt-1 text-2xl font-bold">사용자 활동</h1>
-        <p className="mt-2 text-sm text-muted">어떤 콘텐츠를 보고, 언제 방문하는지 확인하세요.</p>
+        <p className="mt-2 text-sm text-muted">어떤 콘텐츠를 보고, 언제 방문하고, 누가 구독 중인지 확인하세요.</p>
       </header>
 
       <form key={JSON.stringify(filters)} action="/admin/activity" method="get" aria-label="활동 조회 조건" className="rounded-xl border border-border bg-surface p-4">
@@ -36,6 +36,10 @@ export function ActivityDashboard({ data, filters, today, error }: {
           <button className="min-h-11 rounded-lg bg-accent-strong px-4 font-semibold text-white" type="submit">조회하기</button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+          <label className="flex min-h-11 items-center gap-2">
+            <input type="checkbox" name="subscribersOnly" value="1" defaultChecked={filters.subscribersOnly} className="h-4 w-4 accent-accent" />
+            현재 Plus 구독자만
+          </label>
           <Link href="/admin/activity" className={link}>조건 초기화</Link>
           <p className="text-muted">최대 31일 · 일별 날짜를 누르면 해당 날짜의 시간별 활동을 확인합니다.</p>
         </div>
@@ -44,16 +48,17 @@ export function ActivityDashboard({ data, filters, today, error }: {
       {error && <p role="alert" className="rounded-xl border border-safety-red/40 bg-surface p-4 text-safety-red">{error}</p>}
       {data && !error && <>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-          <p>{data.range.from} ~ {data.range.to} · 전체 활동
+          <p>{data.range.from} ~ {data.range.to} · {filters.subscribersOnly ? "현재 구독자 활동" : "전체 활동"}
             {filters.userId && <span className="ml-2 break-all">· 선택 계정 {filters.userId}</span>}
           </p>
           <p>집계 시각 {dateTime(data.generatedAt)}</p>
         </div>
-        <section aria-label="활동 요약" className="grid gap-3 sm:grid-cols-3">
+        <section aria-label="활동 요약" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { label: "기록된 밈 조회", value: data.summary.views, unit: "회", note: "선택 기간 · 중복 제거된 조회 이벤트" },
             { label: "활성 로그인 사용자", value: data.summary.activeUsers, unit: "명", note: "선택 기간 · 활동 계정 중복 제거" },
             { label: "익명 방문 세션", value: data.summary.anonymousSessions, unit: "개", note: "선택 기간 · 사람 수와 다릅니다" },
+            { label: "현재 Plus 구독자", value: data.summary.currentSubscribers, unit: "명", note: "전체 계정 · 기간·사용자 필터와 무관" },
           ].map((metric) => <div key={metric.label} className="rounded-xl border border-border bg-surface p-4">
             <h2 className="text-sm font-medium text-muted">{metric.label}</h2>
             <p className="mt-2 text-3xl font-bold tabular-nums">{number(metric.value)}<span className="ml-1 text-base font-normal text-muted">{metric.unit}</span></p>
@@ -73,18 +78,19 @@ export function ActivityDashboard({ data, filters, today, error }: {
 
         <section id="activity-users" aria-labelledby="users-heading" className="scroll-mt-6 rounded-xl border border-border bg-surface">
           <div className="p-4">
-            <h2 id="users-heading" className="text-lg font-bold">사용자별 활동 <span className="text-sm font-normal text-muted">{number(data.users.total)}명</span></h2>
-            <p className="mt-1 text-sm text-muted">기간 내 활동한 로그인 계정입니다. 익명 세션은 특정 계정과 연결하지 않습니다.</p>
+            <h2 id="users-heading" className="text-lg font-bold">{filters.subscribersOnly ? "현재 구독 중인 사용자" : "사용자별 활동"} <span className="text-sm font-normal text-muted">{number(data.users.total)}명</span></h2>
+            <p className="mt-1 text-sm text-muted">{filters.subscribersOnly ? "기간 내 활동이 없는 구독자도 표시됩니다." : "기간 내 활동한 로그인 계정입니다. 익명 세션은 특정 계정과 연결하지 않습니다."} 구독 상태는 현재 기준입니다.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
-              <caption className="sr-only">사용자별 선택 기간 활동</caption>
+              <caption className="sr-only">사용자별 현재 구독 상태와 선택 기간 활동</caption>
               <thead className="border-y border-border bg-surface-2 text-muted"><tr>
-                {["사용자", "밈 조회", "최근 활동 (KST)", "상세"].map((label) => <th scope="col" key={label} className={cell}>{label}</th>)}
+                {["사용자", "현재 구독", "밈 조회", "최근 활동 (KST)", "상세"].map((label) => <th scope="col" key={label} className={cell}>{label}</th>)}
               </tr></thead>
               <tbody className="divide-y divide-border">
                 {data.users.items.map((user) => <tr key={user.id}>
                   <td className={cell}><span className="font-medium">{user.nickname || "닉네임 없음"}</span><span className="mt-1 block font-mono text-xs text-muted">{user.id.slice(0, 8)}</span></td>
+                  <td className={cell}><span className={user.isPlus ? "font-semibold text-accent" : "text-muted"}>{user.isPlus ? "Plus 이용 중" : "무료"}</span>{user.isPlus && <span className="mt-1 block text-xs text-muted">만료 {dateTime(user.plusUntil)}</span>}</td>
                   <td className={`${cell} tabular-nums`}>{number(user.views)}회</td>
                   <td className={cell}>{dateTime(user.lastSeenAt)}</td>
                   <td className={cell}><div className="flex gap-4 whitespace-nowrap">
@@ -92,7 +98,7 @@ export function ActivityDashboard({ data, filters, today, error }: {
                     <Link className={link} href={`/admin/users/${user.id}`}>계정 관리</Link>
                   </div></td>
                 </tr>)}
-                {data.users.items.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">이 조건에 해당하는 사용자 기록이 없습니다.</td></tr>}
+                {data.users.items.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">이 조건에 해당하는 사용자 기록이 없습니다.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -127,6 +133,7 @@ export function ActivityDashboard({ data, filters, today, error }: {
         기존 클라이언트 활동 이벤트 기준입니다. 밈 조회는 같은 세션·콘텐츠의 분 단위 중복이 제거되며, 차단된 추적이나 전송 실패는 포함되지 않습니다.
         활성 사용자는 조회 외 활동도 포함합니다. 익명 세션은 실제 사람 수가 아니며 로그인 계정 수와 합산하지 않습니다.
         삭제된 계정의 기록은 익명으로 남을 수 있습니다. 이메일·IP·검색어·세션 식별자는 표시하지 않습니다.
+        Plus는 활성 상태이면서 이용 기간이 남은 계정만 포함하고, 같은 계정의 중복 구독은 한 명으로 집계합니다.
       </aside>
     </div>
   );

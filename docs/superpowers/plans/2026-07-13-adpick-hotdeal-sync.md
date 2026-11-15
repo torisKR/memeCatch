@@ -43,8 +43,8 @@
 - `components/affiliate-product-card.tsx` — 핫딜 상품 카드
 - `components/affiliate-product-card.test.tsx` — 서버 마크업 회귀 테스트
 - `components/affiliate-product-grid.tsx` — 인기·핫딜 섹션과 빈 상태
-- `db/migrations/20260713090000_affiliate_hotdeals.sql` — 테이블·RPC·권한
-- `db/tests/affiliate_hotdeals.test.sql` — pgTAP 스키마·RPC 동작 테스트
+- `supabase/migrations/20260713090000_affiliate_hotdeals.sql` — 테이블·RPC·권한
+- `supabase/tests/affiliate_hotdeals.test.sql` — pgTAP 스키마·RPC 동작 테스트
 - `vercel.json` — 하루 1회 Cron 등록
 
 ### Modify
@@ -288,8 +288,8 @@ git commit -m "test: define Adpick hotdeal normalization"
 ### Task 2: Supabase 상품 스냅샷과 원자 동기화 RPC
 
 **Files:**
-- Create: `db/migrations/20260713090000_affiliate_hotdeals.sql`
-- Create: `db/tests/affiliate_hotdeals.test.sql`
+- Create: `supabase/migrations/20260713090000_affiliate_hotdeals.sql`
+- Create: `supabase/tests/affiliate_hotdeals.test.sql`
 - Modify: `lib/database.types.ts`
 
 **Interfaces:**
@@ -300,7 +300,7 @@ git commit -m "test: define Adpick hotdeal normalization"
 
 - [ ] **Step 1: 실패하는 pgTAP 계약 테스트를 작성한다**
 
-Create `db/tests/affiliate_hotdeals.test.sql`:
+Create `supabase/tests/affiliate_hotdeals.test.sql`:
 
 ```sql
 begin;
@@ -333,14 +333,14 @@ Run:
 
 ```bash
 pnpm exec supabase db reset
-pnpm exec supabase test db db/tests/affiliate_hotdeals.test.sql
+pnpm exec supabase test db supabase/tests/affiliate_hotdeals.test.sql
 ```
 
 Expected: FAIL because the affiliate tables and functions do not exist.
 
 - [ ] **Step 3: migration을 구현한다**
 
-Create `db/migrations/20260713090000_affiliate_hotdeals.sql` with:
+Create `supabase/migrations/20260713090000_affiliate_hotdeals.sql` with:
 
 ```sql
 create table public.affiliate_products (
@@ -425,7 +425,7 @@ Run:
 
 ```bash
 pnpm exec supabase db reset
-pnpm exec supabase test db db/tests/affiliate_hotdeals.test.sql
+pnpm exec supabase test db supabase/tests/affiliate_hotdeals.test.sql
 ```
 
 Expected: `12 tests, 0 failures`.
@@ -444,7 +444,7 @@ Expected: TypeScript exits 0 and the four RPC signatures exist under `Database["
 - [ ] **Step 6: 커밋한다**
 
 ```bash
-git add db/migrations/20260713090000_affiliate_hotdeals.sql db/tests/affiliate_hotdeals.test.sql lib/database.types.ts
+git add supabase/migrations/20260713090000_affiliate_hotdeals.sql supabase/tests/affiliate_hotdeals.test.sql lib/database.types.ts
 git commit -m "feat: add affiliate hotdeal persistence"
 ```
 

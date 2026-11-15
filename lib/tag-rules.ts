@@ -2,13 +2,13 @@
  * 태그 backfill 후보 산정 규칙 — 순수 함수. DB·네트워크 접근 없음.
  *
  * 근거: artifacts/renewal/loop-023/proposals/HG-004.md §2 (규칙 테이블) · §6.4 (회귀 테스트).
- * 소비처: scripts/tag-backfill-preview.test.ts(회귀 가드). 프리뷰 스크립트는 제거됨.
+ * 소비처: scripts/tag-backfill-preview.mts(프리뷰), scripts/tag-backfill-preview.test.ts(회귀 가드).
  *
  * R1(category) · R3(origin_year 연도대)도 여기 정의하지만 **기본 실행은 R2만**이다
  * (제안서 §5.1 — 정렬 없는 `.limit(30)` 관련 조회 앞에서는 대형 태그가 추천을 악화시킨다).
  */
 
-/** DB 제약과 동일해야 한다 — db/migrations/20260708004500_schema_v2.sql:161-171 */
+/** DB 제약과 동일해야 한다 — supabase/migrations/20260708004500_schema_v2.sql:161-171 */
 export type TagType = "topic" | "generation" | "platform" | "emotion" | "risk";
 
 export type RuleId = "r1" | "r2" | "r3";

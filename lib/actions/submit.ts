@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
 import type { Database } from "@/lib/database.types";
 
@@ -77,10 +77,10 @@ export async function submitMeme(
     return { status: "error", fieldErrors };
   }
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) {
     return {
       status: "error",
@@ -91,7 +91,7 @@ export async function submitMeme(
 
   const { name, seenAt, sourceUrl, description, guessReason, tags } = parsed.data;
 
-  const { data, error } = await db.rpc("submit_meme", {
+  const { data, error } = await supabase.rpc("submit_meme", {
     p_name: name,
     p_seen_at: seenAt === "" ? null : seenAt,
     p_url: sourceUrl === "" ? null : sourceUrl,

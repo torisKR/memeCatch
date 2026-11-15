@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   rateLimit: vi.fn(() => ({ ok: true, retryAfterSec: 0 })),
 }));
 
-vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mocks.rateLimit }));
 
 import { POST } from "./route";

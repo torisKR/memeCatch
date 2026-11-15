@@ -1,5 +1,5 @@
--- Re-assert app-owned identity after the migrated function bodies. JWT helpers
--- are gone; these functions only see what the application set.
+-- Re-assert app-owned identity after the migrated function bodies. Supabase JWT
+-- helpers are gone; these functions only see what the application set.
 
 CREATE OR REPLACE FUNCTION auth.jwt()
 RETURNS jsonb

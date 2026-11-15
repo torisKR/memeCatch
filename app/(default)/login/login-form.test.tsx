@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const auth = vi.hoisted(() => ({ signInWithWeb3: vi.fn() }));
+const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
+const dappPortal = vi.hoisted(() => ({ init: vi.fn() }));
 const serverActions = vi.hoisted(() => ({ signIn: vi.fn(), signUp: vi.fn() }));
 
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@linenext/dapp-portal-sdk", () => ({
+  default: { init: dappPortal.init },
+}));
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   motion: { div: "div", span: "span" },
@@ -12,14 +19,35 @@ vi.mock("motion/react", () => ({
 }));
 vi.mock("@/components/brand-mark", () => ({ BrandTile: () => <span /> }));
 vi.mock("@/lib/actions/auth", () => serverActions);
-vi.mock("@/lib/db/client", () => ({
-  createClient: () => ({ auth: { signInWithOAuth: vi.fn() } }),
-}));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth }) }));
 
 import { LoginForm } from "./login-form";
 import { LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/i18n-client";
 import { LOGIN_COPY } from "@/lib/i18n-login";
+
+type TestWallet = {
+  address: `0x${string}`;
+  request: ReturnType<typeof vi.fn>;
+  on: ReturnType<typeof vi.fn>;
+  removeListener: ReturnType<typeof vi.fn>;
+};
+
+function setWallet(wallet?: TestWallet) {
+  Object.defineProperty(window, "klaytn", {
+    configurable: true,
+    value: wallet,
+  });
+}
+
+function wallet(chainId = "0x2019"): TestWallet {
+  return {
+    address: "0x0000000000000000000000000000000000000001",
+    request: vi.fn().mockResolvedValue(chainId),
+    on: vi.fn(),
+    removeListener: vi.fn(),
+  };
+}
 
 function renderLogin(locale: Locale = "ko", next = "/saved", pathname = "/login") {
   window.history.replaceState({}, "", pathname);
@@ -33,8 +61,14 @@ function renderLogin(locale: Locale = "ko", next = "/saved", pathname = "/login"
 }
 
 beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "");
+  auth.signInWithWeb3.mockReset();
+  dappPortal.init.mockReset();
+  router.replace.mockReset();
+  router.refresh.mockReset();
   serverActions.signIn.mockReset();
   serverActions.signUp.mockReset();
+  setWallet(undefined);
 });
 
 describe("LoginForm signup notice", () => {
@@ -87,40 +121,192 @@ describe("LoginForm signup notice", () => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllEnvs();
   document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
   window.history.replaceState({}, "", "/");
+  delete (window as Window & { klaytn?: TestWallet }).klaytn;
 });
 
-describe("LoginForm providers and locale chrome", () => {
-  it("offers Kakao and Google but no wallet login", () => {
-    renderLogin("ko");
+describe("LoginForm Kaia Wallet", () => {
+  it("initializes Unifi Wallet, validates its account, and signs in with its provider", async () => {
+    vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "public-client-id");
+    const provider = wallet();
+    provider.request.mockResolvedValue([
+      "0x0000000000000000000000000000000000000001",
+    ]);
+    const getWalletProvider = vi.fn(() => provider);
+    dappPortal.init.mockResolvedValue({ getWalletProvider });
+    auth.signInWithWeb3.mockResolvedValue({
+      data: { session: { access_token: "test" } },
+      error: null,
+    });
+    renderLogin();
 
-    expect(screen.getByRole("button", { name: LOGIN_COPY.ko.kakaoButton })).toBeTruthy();
-    expect(screen.getByRole("button", { name: LOGIN_COPY.ko.googleButton })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Wallet/i })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/saved"));
+    expect(dappPortal.init).toHaveBeenCalledWith({
+      clientId: "public-client-id",
+      chainId: "8217",
+    });
+    expect(getWalletProvider).toHaveBeenCalledOnce();
+    expect(provider.request).toHaveBeenCalledWith({
+      method: "kaia_requestAccounts",
+    });
+    expect(auth.signInWithWeb3).toHaveBeenCalledWith(expect.objectContaining({
+      chain: "ethereum",
+      statement: "Sign in to MemeCatch with Kaia Wallet.",
+    }));
+    const loginWallet = auth.signInWithWeb3.mock.calls[0][0].wallet;
+    await expect(loginWallet.request({ method: "eth_requestAccounts" })).resolves.toEqual([
+      "0x0000000000000000000000000000000000000001",
+    ]);
+    await expect(loginWallet.request({ method: "eth_chainId" })).resolves.toBe("0x2019");
+    await loginWallet.request({ method: "personal_sign", params: ["message", "address"] });
+    expect(provider.request).toHaveBeenLastCalledWith({
+      method: "personal_sign",
+      params: ["message", "address"],
+    });
   });
 
-  it.each(["en", "ja", "zh-tw"] as const)(
-    "keeps Korean login chrome on unprefixed /login when the cookie is %s",
-    (cookieLocale) => {
-      renderLogin(cookieLocale, "/saved", "/login");
+  it("rejects an invalid Unifi Wallet account before authentication", async () => {
+    vi.stubEnv("NEXT_PUBLIC_UNIFI_CLIENT_ID", "public-client-id");
+    const provider = wallet();
+    provider.request.mockResolvedValue(["not-an-address"]);
+    dappPortal.init.mockResolvedValue({
+      getWalletProvider: () => provider,
+    });
+    renderLogin();
 
-      expect(screen.getByRole("heading", { name: LOGIN_COPY.ko.loginTitle })).toBeTruthy();
-      expect(screen.getByLabelText(LOGIN_COPY.ko.email)).toBeTruthy();
-      expect(screen.queryByRole("heading", { name: LOGIN_COPY.en.loginTitle })).toBeNull();
-    },
-  );
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    expect(await screen.findByText(/Kaia Wallet 로그인에 실패했어요/)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
+  it("explains when the Kaia provider is unavailable", async () => {
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    expect(await screen.findByText(/Kaia Wallet을 찾지 못했어요/)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
+  it("blocks authentication outside Kaia Mainnet", async () => {
+    const provider = wallet("0x1");
+    setWallet(provider);
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    expect(await screen.findByText(/Kaia Mainnet으로 네트워크를 변경/)).toBeTruthy();
+    expect(provider.request).toHaveBeenCalledWith({ method: "eth_chainId" });
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
+  it("signs in with the Kaia provider and preserves a safe next route", async () => {
+    const provider = wallet();
+    setWallet(provider);
+    auth.signInWithWeb3.mockResolvedValue({
+      data: { session: { access_token: "test" } },
+      error: null,
+    });
+    renderLogin("ko", "//evil.example");
+
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    expect(auth.signInWithWeb3).toHaveBeenCalledWith({
+      chain: "ethereum",
+      wallet: provider,
+      statement: "Sign in to MemeCatch with Kaia Wallet.",
+    });
+    expect(provider.request.mock.invocationCallOrder[0]).toBeLessThan(
+      auth.signInWithWeb3.mock.invocationCallOrder[0],
+    );
+    expect(router.refresh).toHaveBeenCalledOnce();
+  });
+
+  it("distinguishes a rejected wallet signature", async () => {
+    setWallet(wallet());
+    auth.signInWithWeb3.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unifi Wallet로 로그인" }));
+
+    expect(await screen.findByText(/Kaia Wallet 서명이 취소됐어요/)).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("keeps Korean login chrome on unprefixed /login when the cookie is English", async () => {
+    renderLogin("en", "/saved", "/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ko.kaiaButton }));
+
+    expect(screen.getByRole("heading", { name: LOGIN_COPY.ko.loginTitle })).toBeTruthy();
+    expect(screen.getByLabelText(LOGIN_COPY.ko.email)).toBeTruthy();
+    expect(await screen.findByText(LOGIN_COPY.ko.kaiaUnavailable)).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: LOGIN_COPY.en.loginTitle })).toBeNull();
+  });
+
+  it("keeps Korean login chrome on unprefixed /login when the cookie is Japanese", async () => {
+    setWallet(wallet("0x1"));
+    renderLogin("ja", "/saved", "/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ko.kaiaButton }));
+
+    expect(await screen.findByText(LOGIN_COPY.ko.kaiaWrongChain)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: LOGIN_COPY.ja.kaiaButton })).toBeNull();
+  });
+
+  it("keeps Korean login chrome on unprefixed /login when the cookie is zh-tw", async () => {
+    setWallet(wallet());
+    auth.signInWithWeb3.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+    renderLogin("zh-tw", "/saved", "/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ko.kaiaButton }));
+
+    expect(await screen.findByText(LOGIN_COPY.ko.kaiaRejected)).toBeTruthy();
+    expect(screen.queryByText(LOGIN_COPY["zh-tw"].kaiaRejected)).toBeNull();
+  });
 
   // There is no app/[locale]/login route. The form still follows a prefixed
   // pathname, which is what /en|ja|zh-tw/login would render if that route existed.
-  it.each([
-    ["/en/login", "en"],
-    ["/ja/login", "ja"],
-    ["/zh-tw/login", "zh-tw"],
-  ] as const)("uses localized chrome when the login pathname is %s", (pathname, locale) => {
-    renderLogin("ko", "/saved", pathname);
+  it("uses English chrome when the login pathname is /en/login", async () => {
+    renderLogin("ko", "/saved", "/en/login");
 
-    expect(screen.getByRole("heading", { name: LOGIN_COPY[locale].loginTitle })).toBeTruthy();
-    expect(screen.getByRole("button", { name: LOGIN_COPY[locale].kakaoButton })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.en.kaiaButton }));
+
+    expect(screen.getByRole("heading", { name: LOGIN_COPY.en.loginTitle })).toBeTruthy();
+    expect(screen.getByLabelText(LOGIN_COPY.en.email)).toBeTruthy();
+    expect(await screen.findByText(LOGIN_COPY.en.kaiaUnavailable)).toBeTruthy();
+  });
+
+  it("uses Japanese chrome when the login pathname is /ja/login", async () => {
+    setWallet(wallet("0x1"));
+    renderLogin("ko", "/saved", "/ja/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ja.kaiaButton }));
+
+    expect(await screen.findByText(LOGIN_COPY.ja.kaiaWrongChain)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
+  it("uses the Chinese fallback when the login pathname is /zh-tw/login", async () => {
+    setWallet(wallet());
+    auth.signInWithWeb3.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+    renderLogin("ko", "/saved", "/zh-tw/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.zh.kaiaButton }));
+
+    expect(await screen.findByText(LOGIN_COPY["zh-tw"].kaiaRejected)).toBeTruthy();
   });
 });

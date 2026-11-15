@@ -37,9 +37,10 @@ const LIFE_COLOR = {
   archived: "#6f6a60",
 } as const;
 
-/** 템플릿 — 모두 무료 */
+/** 템플릿 — free 1종 + premium 2종 */
 export const CARD_TEMPLATES = {
   classic: {
+    premium: false,
     label: "클래식",
     bg: DARK.background,
     fg: DARK.foreground,
@@ -48,6 +49,7 @@ export const CARD_TEMPLATES = {
     cell: DARK.surface2,
   },
   minimal: {
+    premium: true,
     label: "미니멀",
     bg: "#faf9f7",
     fg: "#1a1a1e",
@@ -56,6 +58,7 @@ export const CARD_TEMPLATES = {
     cell: "#e7e5e0",
   },
   bold: {
+    premium: true,
     label: "볼드",
     bg: "#ff6b47",
     fg: "#ffffff",
@@ -67,10 +70,10 @@ export const CARD_TEMPLATES = {
 
 export type CardTemplate = keyof typeof CARD_TEMPLATES;
 
-/** 포맷 — card(가로) + story(세로) */
+/** 포맷 — card(가로, free) + story(세로, premium) */
 export const CARD_FORMATS = {
-  card: { width: 1200, height: 630, label: "카드 (1200×630)" },
-  story: { width: 1080, height: 1920, label: "스토리 (1080×1920)" },
+  card: { premium: false, width: 1200, height: 630, label: "카드 (1200×630)" },
+  story: { premium: true, width: 1080, height: 1920, label: "스토리 (1080×1920)" },
 } as const;
 
 export type CardFormat = keyof typeof CARD_FORMATS;

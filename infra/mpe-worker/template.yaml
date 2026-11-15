@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Credential-free foundation for the MemeCatch production MPE worker. This stack
+  intentionally creates no SSM parameters, task definition, service, or compute.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC that will contain the future MPE worker tasks.
+
+Rules:
+  RequireSeoulRegion:
+    Assertions:
+      - Assert: !Equals
+          - !Ref AWS::Region
+          - ap-northeast-2
+        AssertDescription: This production foundation must be deployed in ap-northeast-2.
+
+Resources:
+  MpeWorkerRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: memecatch/mpe-worker
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Keep the 10 most recent images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}
+
+  MpeWorkerCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: memecatch-prod
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled
+
+  MpeWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/memecatch/mpe-worker
+      RetentionInDays: 14
+
+  MpeWorkerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: No-ingress security group for the MemeCatch MPE worker
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []
+      SecurityGroupEgress:
+        - Description: HTTPS egress for ECR, CloudWatch, SSM, Supabase, and OpenRouter
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: memecatch-prod-mpe-worker
+
+  MpeWorkerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: memecatch-prod-mpe-worker-execution
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: ReadMpeWorkerParameters
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadExactMpeWorkerParameters
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/memecatch/prod/mpe-worker/supabase-service-role-key
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/memecatch/prod/mpe-worker/openrouter-api-key
+              - Sid: DecryptMpeWorkerSecureStringsThroughSsmOnly
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource: !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub ssm.${AWS::Region}.${AWS::URLSuffix}
+                    kms:EncryptionContext:PARAMETER_ARN:
+                      - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/memecatch/prod/mpe-worker/supabase-service-role-key
+                      - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/memecatch/prod/mpe-worker/openrouter-api-key
+
+Outputs:
+  RepositoryName:
+    Description: ECR repository name for immutable MPE worker images.
+    Value: !Ref MpeWorkerRepository
+  RepositoryUri:
+    Description: ECR repository URI used when publishing the worker image.
+    Value: !GetAtt MpeWorkerRepository.RepositoryUri
+  ClusterName:
+    Description: ECS cluster name reserved for production workloads.
+    Value: !Ref MpeWorkerCluster
+  ClusterArn:
+    Description: ECS cluster ARN.
+    Value: !GetAtt MpeWorkerCluster.Arn
+  LogGroupName:
+    Description: CloudWatch Logs group for the future task definition.
+    Value: !Ref MpeWorkerLogGroup
+  SecurityGroupId:
+    Description: No-ingress, HTTPS-egress-only security group for future tasks.
+    Value: !GetAtt MpeWorkerSecurityGroup.GroupId
+  ExecutionRoleArn:
+    Description: ECS task execution role authorized to read only the two MPE parameters.
+    Value: !GetAtt MpeWorkerExecutionRole.Arn
+  SupabaseServiceRoleKeyParameterArn:
+    Description: Expected ARN for the externally provisioned Supabase service-role SecureString.
+    Value: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/memecatch/prod/mpe-worker/supabase-service-role-key
+  OpenRouterApiKeyParameterArn:
+    Description: Expected ARN for the externally provisioned OpenRouter API-key SecureString.
+    Value: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/memecatch/prod/mpe-worker/openrouter-api-key

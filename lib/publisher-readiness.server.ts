@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { createClient } from "@/lib/db/server";
+import type { createClient } from "@/lib/supabase/server";
 import {
   PUBLISHER_READINESS_PAGE_SIZE,
   buildPublisherReadinessPage,
@@ -23,14 +23,14 @@ export type PublisherReadinessPageOptions = {
 };
 
 export async function listPublisherReadinessPage(
-  db: PublisherReadinessClient,
+  supabase: PublisherReadinessClient,
   options: PublisherReadinessPageOptions,
 ): Promise<PublisherReadinessReport> {
   const page = parsePublisherReadinessPage(options.page);
   const focus = parsePublisherReadinessFocus(options.focus);
   const from = (page - 1) * PUBLISHER_READINESS_PAGE_SIZE;
   const to = from + PUBLISHER_READINESS_PAGE_SIZE - 1;
-  const { data, count, error } = await db
+  const { data, count, error } = await supabase
     .from("memes")
     .select(PUBLISHER_READINESS_SELECT, { count: "exact" })
     .in("moderation_status", ["approved", "limited"])

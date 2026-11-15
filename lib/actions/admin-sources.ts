@@ -9,9 +9,10 @@
  */
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { PUBLIC_CATALOG_CACHE_TAG, PUBLIC_COUNT_CACHE_TAG } from "@/lib/db/cache-tags";
-import { createClient } from "@/lib/db/server";
-import { createAdminClient } from "@/lib/db/admin";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/database.types";
 import {
   DISPLAY_PLATFORM_LABELS,
@@ -26,14 +27,14 @@ type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 async function requireOperator() {
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: isOperator } = await db.rpc("is_operator");
+  const { data: isOperator } = await supabase.rpc("is_operator");
   if (!isOperator) throw new Error("운영자 권한이 없어요.");
-  return { db, uid: user.id };
+  return { supabase, uid: user.id };
 }
 
 async function logAudit(
@@ -82,10 +83,10 @@ export async function reviewMemeSource(input: {
   note?: string;
 }): Promise<ActionResult> {
   try {
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const note = input.note?.trim() || null;
 
-    const { data: row, error: rowError } = await db
+    const { data: row, error: rowError } = await supabase
       .from("meme_media")
       .select(
         "meme_id, source_id, review_state, media_sources(id, platform, external_id, canonical_url, title, channel_name, embeddable, thumbnail_url, removed_at)",
@@ -104,7 +105,7 @@ export async function reviewMemeSource(input: {
 
     if (input.decision === "reject") {
       if (!note) return { ok: false, error: "반려 사유를 입력해 주세요." };
-      const { error } = await db
+      const { error } = await supabase
         .from("meme_media")
         .update({ review_state: "rejected", reviewer_note: note, reviewed_at: now })
         .eq("meme_id", input.memeId)
@@ -149,7 +150,7 @@ export async function reviewMemeSource(input: {
     }
 
     // 1) 원장 갱신
-    const { error: ledgerError } = await db
+    const { error: ledgerError } = await supabase
       .from("meme_media")
       .update({
         review_state: "approved",
@@ -165,14 +166,14 @@ export async function reviewMemeSource(input: {
     const displayPlatform = DISPLAY_PLATFORM_LABELS[source.platform] ?? "web";
 
     // 2) 출처 링크 게시 (중복 방지)
-    const { data: existingSource } = await db
+    const { data: existingSource } = await supabase
       .from("meme_sources")
       .select("id")
       .eq("meme_id", input.memeId)
       .eq("source_url", source.canonical_url)
       .maybeSingle();
     if (!existingSource) {
-      const { error } = await db.from("meme_sources").insert({
+      const { error } = await supabase.from("meme_sources").insert({
         meme_id: input.memeId,
         platform: displayPlatform,
         source_url: source.canonical_url,
@@ -187,7 +188,7 @@ export async function reviewMemeSource(input: {
 
     // 3) 공식 임베드 게시 — 링크만 허용이면 건너뛴다
     if (!linkOnly && source.external_id) {
-      const { data: existingContent } = await db
+      const { data: existingContent } = await supabase
         .from("meme_contents")
         .select("id")
         .eq("meme_id", input.memeId)
@@ -196,12 +197,12 @@ export async function reviewMemeSource(input: {
         .eq("content_id", source.external_id)
         .maybeSingle();
       if (existingContent) {
-        await db
+        await supabase
           .from("meme_contents")
           .update({ availability: "live", moderation_status: "approved" })
           .eq("id", existingContent.id);
       } else {
-        const { error } = await db.from("meme_contents").insert({
+        const { error } = await supabase.from("meme_contents").insert({
           meme_id: input.memeId,
           type: "embed",
           platform: displayPlatform,

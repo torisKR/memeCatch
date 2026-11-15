@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { flags } from "@/lib/flags";
 import { CommentForm } from "@/components/comment-form";
 import { CommunityGate } from "@/components/community-gate";
@@ -41,8 +41,8 @@ export function Comments({ memeId }: { memeId: string }) {
   const [replyTo, setReplyTo] = useState<string | null>(null);
 
   const fetchComments = useCallback(async () => {
-    const db = createClient();
-    const { data, error: err } = await db
+    const supabase = createClient();
+    const { data, error: err } = await supabase
       .from("discussions")
       // profiles 임베드는 FK 명시 필수 (discussion_reactions 경유 M2M과 모호성 발생)
       .select(

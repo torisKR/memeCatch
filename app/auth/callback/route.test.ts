@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
 }));
 
-vi.mock("@/lib/db/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { exchangeCodeForSession: mocks.exchangeCodeForSession },
   }),

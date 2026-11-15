@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { CategoryTag } from "@/components/category-tag";
 import { MarkdownBody } from "@/components/markdown-body";
 import { createCommunityPost } from "@/app/(default)/community/actions";

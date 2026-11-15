@@ -44,7 +44,7 @@
 
 ```sh
 pnpm exec vitest run components/admin/activity-dashboard.test.tsx
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/tests/admin_activity_dashboard.test.sql  # pgTAP 확장이 있는 테스트 DB에서만
+supabase test db /absolute/repo/supabase/tests/admin_activity_dashboard.test.sql --workdir /absolute/repo
 pnpm exec tsc --noEmit
 pnpm exec eslint
 pnpm exec vitest run

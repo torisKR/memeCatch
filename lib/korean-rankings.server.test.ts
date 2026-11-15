@@ -8,7 +8,7 @@ const { createStaticClient, responses } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import {
   clearKoreanRankingsCache,

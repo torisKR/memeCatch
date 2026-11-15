@@ -5,7 +5,7 @@ import {
   BedrockMemeStudioError,
   generateBedrockMemeConcepts,
 } from "@/lib/meme-studio-bedrock.server";
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 import { withKoreanParticle } from "@/lib/korean-particles";
 

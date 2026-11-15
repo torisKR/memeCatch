@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { DbClient } from "@/lib/db/types";
-import { createClient } from "@/lib/db/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import type { MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
@@ -112,10 +112,10 @@ export const YEAR_RANGES: Record<string, [number, number]> = {
 
 /**
  * 필터·정렬을 PostgREST 쿼리에 적용 (range는 호출부에서 붙인다).
- * 서버(createStaticClient)와 브라우저(createClient) 양쪽 DbClient에서 동일 동작.
+ * 서버(createStaticClient)와 브라우저(createClient) 양쪽 SupabaseClient<Database>에서 동일 동작.
  */
 export function buildMemesQuery(
-  db: DbClient,
+  supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
   options?: { countOnly?: boolean; indexableIds?: readonly string[] }
 ) {
@@ -123,7 +123,7 @@ export function buildMemesQuery(
   // 동일한 카테고리/정렬/페이지네이션을 얹는다. RPC는 setof memes라 필터 체이닝 가능.
   // (RPC 내부 LIMIT 50 → 검색 결과는 최대 50건까지 무한스크롤)
   if (filters.q) {
-    let sq = db
+    let sq = supabase
       .rpc(filters.topicTag ? "search_ai_memes" : "search_memes", {
         p_query: filters.q,
         p_limit: SEARCH_LIMIT,
@@ -149,7 +149,7 @@ export function buildMemesQuery(
     return limitQueryToIds(sq, options?.indexableIds);
   }
 
-  let q = db
+  let q = supabase
     .from("memes")
     .select(exploreSelect(filters.platform, filters.topicTag))
     .in("moderation_status", ["approved", "limited"]);
@@ -181,14 +181,14 @@ export function buildMemesQuery(
 
 /** 지정한 오프셋부터 얇은 문서를 건너뛰고 PAGE_SIZE만큼. scanned는 소비한 원본 행 수. */
 async function fetchFrom(
-  db: DbClient,
+  supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
   from: number,
   indexableIds?: readonly string[],
 ) {
   return collectIndexableWindow(
     async (start, end) => {
-      const { data, error } = await buildMemesQuery(db, filters, {
+      const { data, error } = await buildMemesQuery(supabase, filters, {
         indexableIds,
       }).range(start, end);
       if (error || !data) throw error ?? new Error("no data");
@@ -256,8 +256,8 @@ export function ExploreGrid({
     setFailed(false);
     const from = offsetRef.current;
     try {
-      const db = createClient();
-      const batch = await fetchFrom(db, filters, from, indexableIds);
+      const supabase = createClient();
+      const batch = await fetchFrom(supabase, filters, from, indexableIds);
       const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
       for (const m of fresh) seenRef.current.add(m.id);
       setItems((prev) => [...prev, ...fresh]);

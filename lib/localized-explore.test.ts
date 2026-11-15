@@ -5,7 +5,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import type { MemeDetail } from "@/lib/queries";
 import {

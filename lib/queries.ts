@@ -6,8 +6,8 @@
  */
 import { cache } from "react";
 import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache";
-import { createStaticClient } from "@/lib/db/server";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
+import { createStaticClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { curatedSearchCards } from "@/lib/curated-memes";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
@@ -91,8 +91,8 @@ export const INDEXABLE_LIST_SELECT =
 /** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
   try {
-    const db = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await db
+    const supabase = createStaticClient({ cachePublicCatalog: true });
+    const { data, error } = await supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
@@ -116,8 +116,8 @@ export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {
  */
 export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
   try {
-    const db = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await db
+    const supabase = createStaticClient({ cachePublicCatalog: true });
+    const { data, error } = await supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
@@ -137,8 +137,8 @@ export async function getLatestMemes(limit = 6): Promise<MemeListItem[]> {
 export async function getRecentlyPublishedMemes(limit = 6, eligibleIds?: ReadonlySet<string>): Promise<MemeListItem[]> {
   try {
     if (eligibleIds && eligibleIds.size === 0) return [];
-    const db = createStaticClient({ cachePublicCatalog: true });
-    let query = db
+    const supabase = createStaticClient({ cachePublicCatalog: true });
+    let query = supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT);
     if (eligibleIds) query = query.in("id", [...eligibleIds]);
@@ -157,8 +157,8 @@ export async function getRecentlyPublishedMemes(limit = 6, eligibleIds?: Readonl
 /** 지금 알아도 충분한 밈 — difficulty=beginner */
 export async function getBeginnerMemes(limit = 8): Promise<MemeListItem[]> {
   try {
-    const db = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await db
+    const supabase = createStaticClient({ cachePublicCatalog: true });
+    const { data, error } = await supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])
@@ -186,8 +186,8 @@ export async function getGenerationHighlights(
   };
 
   try {
-    const db = createStaticClient();
-    const { data: stats, error: statsError } = await db
+    const supabase = createStaticClient();
+    const { data: stats, error: statsError } = await supabase
       .from("generation_vote_stats")
       .select("age_group,vote,cnt,meme_id")
       .in("age_group", ["20s", "30s", "40s"])
@@ -205,7 +205,7 @@ export async function getGenerationHighlights(
     const memeIds = [...new Set(stats.flatMap((row) => (row.meme_id ? [row.meme_id] : [])))];
     if (!memeIds.length) return empty;
 
-    const { data: memes, error: memesError } = await db
+    const { data: memes, error: memesError } = await supabase
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .in("id", memeIds)
@@ -244,8 +244,8 @@ const DETAIL_SELECT =
 
 /** 오류와 확인된 결측은 throw라 Data Cache에 들어가지 않는다. 찾아낸 행만 반환한다. */
 async function fetchMemeByShortId(shortId: string): Promise<MemeDetail> {
-  const db = createStaticClient();
-  const { data, error } = await db
+  const supabase = createStaticClient();
+  const { data, error } = await supabase
     .from("memes")
     .select(DETAIL_SELECT)
     .eq("short_id", shortId)
@@ -290,13 +290,13 @@ const loadRelatedLexicalPool = cacheCatalogRead(
     originYear: number | null,
     tagKey: string,
   ): Promise<RelatedLexicalPool> => {
-    const db = createStaticClient();
+    const supabase = createStaticClient();
     const tagIds = tagKey ? tagKey.split(",") : [];
     const taggedIds = new Set<string>();
     const [tagged, sameCategory, nearbyYear] = await Promise.all([
       (async (): Promise<MemeListItem[]> => {
         if (tagIds.length === 0) return [];
-        const { data: mapRows, error: mapError } = await db
+        const { data: mapRows, error: mapError } = await supabase
           .from("meme_tags_map")
           .select("meme_id")
           .in("tag_id", tagIds)
@@ -305,7 +305,7 @@ const loadRelatedLexicalPool = cacheCatalogRead(
         if (mapError) throw new MemeCatalogUnavailableError();
         for (const row of mapRows ?? []) taggedIds.add(row.meme_id);
         if (taggedIds.size === 0) return [];
-        const { data, error } = await db
+        const { data, error } = await supabase
           .from("memes")
           .select(INDEXABLE_LIST_SELECT)
           .in("id", [...taggedIds])
@@ -316,7 +316,7 @@ const loadRelatedLexicalPool = cacheCatalogRead(
         return (data ?? []) as unknown as MemeListItem[];
       })(),
       (async (): Promise<MemeListItem[]> => {
-        const { data, error } = await db
+        const { data, error } = await supabase
           .from("memes")
           .select(INDEXABLE_LIST_SELECT)
           .eq("category", category)
@@ -329,7 +329,7 @@ const loadRelatedLexicalPool = cacheCatalogRead(
       })(),
       (async (): Promise<MemeListItem[]> => {
         if (originYear == null) return [];
-        const { data, error } = await db
+        const { data, error } = await supabase
           .from("memes")
           .select(INDEXABLE_LIST_SELECT)
           .gte("origin_year", originYear - 2)
@@ -411,8 +411,8 @@ export async function getReactionCounts(
   memeId: string
 ): Promise<Partial<Record<ReactionType, number>>> {
   try {
-    const db = createStaticClient();
-    const { data, error } = await db
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
       .from("meme_reaction_counts")
       .select("reaction, cnt")
       .eq("meme_id", memeId);
@@ -431,8 +431,8 @@ export async function getReactionCounts(
 export async function searchMemes(query: string, limit = 20): Promise<MemeListItem[]> {
   const q = query.trim();
   if (!q) return [];
-  const db = createStaticClient({ cachePublicCatalog: true });
-  const { data, error } = await db
+  const supabase = createStaticClient({ cachePublicCatalog: true });
+  const { data, error } = await supabase
     .rpc("search_memes", {
       p_query: q,
       // The SQL function caps this at 50. Read the cap, then drop thin rows.
@@ -479,8 +479,8 @@ export async function getSlangTermsByYearRange(
 ): Promise<SlangTermRow[]> {
   if (eligibleIds && eligibleIds.size === 0) return [];
   try {
-    const db = createStaticClient({ cachePublicCatalog: true });
-    let query = db
+    const supabase = createStaticClient({ cachePublicCatalog: true });
+    let query = supabase
       .from("memes")
       .select(
         "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"
@@ -504,8 +504,8 @@ export async function getSlangTermsByYearRange(
 /** 공개 밈 총 수 — 히어로 카운트업용(head 카운트, 행 미전송) */
 export async function getTotalMemeCount(): Promise<number> {
   try {
-    const db = createStaticClient();
-    const { count, error } = await db
+    const supabase = createStaticClient();
+    const { count, error } = await supabase
       .from("memes")
       .select("id", { count: "exact", head: true })
       .in("moderation_status", ["approved", "limited"]);

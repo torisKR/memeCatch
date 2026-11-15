@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
 import { SITE_URL } from "@/lib/site";
 
@@ -10,16 +10,16 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get("next");
   const next = rawNext === "/reset-password" ? rawNext : safeNext(rawNext);
 
-  const db = await createClient();
+  const supabase = await createClient();
   if (code) {
-    const { error } = await db.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${SITE_URL}${next}`);
     return NextResponse.redirect(`${SITE_URL}/login?error=auth`);
   }
 
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (user) return NextResponse.redirect(`${SITE_URL}${next}`);
 
   return NextResponse.redirect(`${SITE_URL}/login?error=auth`);

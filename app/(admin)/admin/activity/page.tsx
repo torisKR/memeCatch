@@ -6,15 +6,15 @@ export const metadata = { title: "사용자 활동" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminActivityPage({ searchParams }: { searchParams: Promise<ActivitySearch> }) {
-  const { db } = await requireOperatorPage("/admin/activity");
+  const { supabase } = await requireOperatorPage("/admin/activity");
   const { filters, today, error: inputError } = parseActivityFilters(await searchParams);
   let data = null;
   let error = inputError;
   if (!error) {
     try {
-      const result = await db.rpc("get_admin_activity_dashboard", {
+      const result = await supabase.rpc("get_admin_activity_dashboard", {
         p_from: filters.from, p_to: filters.to, p_hour_date: filters.hourDate,
-        p_user_id: filters.userId || undefined,
+        p_user_id: filters.userId || undefined, p_subscribers_only: filters.subscribersOnly,
         p_users_page: filters.usersPage, p_views_page: filters.viewsPage,
       });
       const parsed = adminActivitySchema.safeParse(result.data);

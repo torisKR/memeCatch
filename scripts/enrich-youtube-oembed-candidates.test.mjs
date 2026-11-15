@@ -8,7 +8,7 @@ assert.match(source, /source\.isShort/);
 assert.match(source, /row\.review_priority !== priority/);
 assert.match(source, /oembed_author_name/);
 assert.match(source, /review_status: "needs_human_source_match"/);
-assert.match(source, /uses no API key, account login, video download, or database write/);
-assert.doesNotMatch(source, /DATABASE_URL|process\.env|data\.html/);
+assert.match(source, /uses no API key, account login, video download, or Supabase write/);
+assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|process\.env|data\.html/);
 
 console.log("YouTube oEmbed candidate enrichment safeguards OK");

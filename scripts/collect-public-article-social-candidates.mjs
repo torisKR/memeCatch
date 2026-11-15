@@ -6,7 +6,7 @@
  * post pages themselves (use seed oEmbed collectors for those).
  *
  * No app key, login, cookie, challenge bypass, or video download. Output is
- * never published to the database automatically.
+ * never published to Supabase automatically.
  *
  * Usage:
  *   node scripts/collect-public-article-social-candidates.mjs \

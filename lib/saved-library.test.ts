@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  applySavedLibraryEntitlement,
   normalizeSavedLibraryQuery,
   parseSavedLibraryFilters,
   savedLibraryHref,
   savedLibraryTitleFilter,
 } from "@/lib/saved-library";
 
-describe("saved library filters", () => {
+describe("Plus Meme Vault filters", () => {
   it("parses only supported safety values and a safe positive page", () => {
     expect(
       parseSavedLibraryFilters({
@@ -18,6 +19,21 @@ describe("saved library filters", () => {
     expect(
       parseSavedLibraryFilters({ saved_safety: "unknown", saved_page: "-1" }),
     ).toEqual({ query: "", safety: null, page: 1 });
+  });
+
+  it("does not let a hand-crafted URL unlock filters for a free account", () => {
+    const filters = parseSavedLibraryFilters({
+      saved_q: "BTS",
+      saved_safety: "green",
+      saved_page: "2",
+    });
+
+    expect(applySavedLibraryEntitlement(filters, false)).toEqual({
+      query: "",
+      safety: null,
+      page: 2,
+    });
+    expect(applySavedLibraryEntitlement(filters, true)).toEqual(filters);
   });
 
   it("removes raw PostgREST grammar before creating an embedded title search", () => {

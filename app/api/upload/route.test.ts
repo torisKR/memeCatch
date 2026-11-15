@@ -10,8 +10,8 @@ const mocks = vi.hoisted(() => ({
   storageUpload: vi.fn(),
 }));
 
-vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("@/lib/r2.server", () => ({
   r2Configured: mocks.r2Configured,
   r2Put: mocks.r2Put,

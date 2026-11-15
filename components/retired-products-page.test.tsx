@@ -9,7 +9,7 @@ vi.mock("@/lib/queries", () => ({
   getTrendingMemes,
 }));
 
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import { metadata as koreanMetadata } from "@/app/(default)/retired-products/page";
 import KoreanRetiredProductsPage from "@/app/(default)/retired-products/page";

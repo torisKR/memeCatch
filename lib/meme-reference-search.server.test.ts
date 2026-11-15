@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({ keyword: vi.fn(), embed: vi.fn(), enabled: vi.
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/queries", () => ({ searchMemes: mocks.keyword }));
 vi.mock("@/lib/meme-vector-lookup.server", () => ({ embedMemeQuery: mocks.embed, semanticSearchEnabled: mocks.enabled }));
-vi.mock("@/lib/db/server", () => ({ createStaticClient: () => ({ rpc: mocks.rpc }) }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient: () => ({ rpc: mocks.rpc }) }));
 import { searchMemeReferences } from "./meme-reference-search.server";
 
 const row = (id: string) => ({ id, short_id: id, slug: id, title: id, summary: "요약" });

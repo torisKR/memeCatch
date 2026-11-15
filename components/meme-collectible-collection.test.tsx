@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemeCardCollectionPage, MemeCollectibleCard } from "@/lib/meme-collectible";
 const auth = vi.hoisted(() => ({ getUser: vi.fn(), listener: null as null | ((event: string) => void), refresh: vi.fn(), unsubscribe: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: auth.refresh }) }));
-vi.mock("@/lib/db/client", () => ({ createClient: () => ({ auth: { getUser: auth.getUser, onAuthStateChange: (listener: (event: string) => void) => { auth.listener = listener; return { data: { subscription: { unsubscribe: auth.unsubscribe } } }; } } }) }));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { getUser: auth.getUser, onAuthStateChange: (listener: (event: string) => void) => { auth.listener = listener; return { data: { subscription: { unsubscribe: auth.unsubscribe } } }; } } }) }));
 vi.mock("next/link", () => ({ default: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => <a {...props}>{children}</a> }));
 vi.mock("@/lib/i18n-client", () => ({ useLocale: () => ({ locale: "ko" }) }));
 import { MemeCollectibleCollection } from "./meme-collectible-collection";

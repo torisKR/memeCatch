@@ -7,7 +7,7 @@ import type { MemeCollectibleCard } from "@/lib/meme-collectible";
 type GalleryProps = ComponentProps<typeof MemeCollectibleGallery>;
 const loaders = vi.hoisted(() => ({ catalog: vi.fn(), card: vi.fn(), auth: vi.fn(), gallery: vi.fn() }));
 vi.mock("@/lib/meme-collectible.server", () => ({ getMemeCardCatalogPage: loaders.catalog, getMemeCollectibleCard: loaders.card }));
-vi.mock("@/lib/db/server", () => ({ createClient: loaders.auth }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: loaders.auth }));
 vi.mock("@/components/meme-collectible-gallery", () => ({
   MemeCollectibleGallery: (props: GalleryProps) => {
     loaders.gallery(props);

@@ -16,5 +16,5 @@ assert.match(source, /catalog_match_status === "unmapped"/);
 assert.match(source, /candidate is not mapped to a CatchMeme record/);
 assert.match(source, /derivative-content hint/);
 assert.match(source, /short generic title needs manual context review/);
-assert.doesNotMatch(source, /meme_contents|meme_sources|DATABASE_URL/);
+assert.doesNotMatch(source, /meme_contents|meme_sources|SUPABASE_SERVICE_ROLE_KEY/);
 console.log("rank-social-source-candidates safeguards OK");

@@ -26,18 +26,19 @@ describe("growth KPI dashboard", () => {
       },
     });
 
-    expect(Object.keys(parsed.metrics)).toEqual(["activation", "account"]);
-    expect(growthKpiAdvisory("account", parsed.metrics.account)).toEqual({
+    expect(growthKpiAdvisory("payment", parsed.metrics.payment)).toEqual({
       state: "insufficient",
-      target: "35% 이상",
+      target: "50% 이상",
       message: "insufficient data",
     });
   });
 
   it("surfaces the document decision thresholds as advisory states", () => {
-    expect(growthKpiAdvisory("activation", metric(7.9))).toMatchObject({ state: "below" });
-    expect(growthKpiAdvisory("activation", metric(8))).toMatchObject({ state: "target" });
-    expect(growthKpiAdvisory("account", metric(34))).toMatchObject({ state: "below" });
-    expect(growthKpiAdvisory("account", metric(35))).toMatchObject({ state: "target" });
+    expect(growthKpiAdvisory("payment", metric(49))).toMatchObject({ state: "action" });
+    expect(growthKpiAdvisory("renewal", metric(24.9))).toMatchObject({ state: "action" });
+    expect(growthKpiAdvisory("renewal", metric(30))).toMatchObject({ state: "below" });
+    expect(growthKpiAdvisory("usage", metric(1.9))).toMatchObject({ state: "action" });
+    expect(growthKpiAdvisory("conversion", metric(10))).toMatchObject({ state: "target" });
+    expect(growthKpiAdvisory("conversion", metric(13))).toMatchObject({ state: "above" });
   });
 });

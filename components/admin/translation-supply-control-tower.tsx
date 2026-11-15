@@ -9,8 +9,8 @@ import {
 } from "@/lib/translation-supply-control-tower";
 
 const NEXT_ACTION_LABELS: Record<TranslationSupplyNextAction, string> = {
-  plus_missing: "번역 요청 누락부터",
-  plus_review: "번역 요청 검수부터",
+  plus_missing: "Plus 요청 누락부터",
+  plus_review: "Plus 요청 검수부터",
   review: "기계 번역 검수부터",
   stale: "원문 변경 재검수부터",
   missing: "누락 번역 보충부터",
@@ -86,7 +86,7 @@ export function TranslationSupplyControlTower({
           글로벌 번역 공급 다음 행동
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          공개 원문 품질과 번역 요청을 함께 보고, 로케일별로 지금 열어야 할 검수 큐를 결정합니다.
+          공개 원문 품질과 Plus 수요를 함께 보고, 로케일별로 지금 열어야 할 검수 큐를 결정합니다.
           이 표면은 읽기 전용이며 초안 생성·저장·공개 발행을 자동으로 실행하지 않습니다.
         </p>
       </div>
@@ -104,7 +104,7 @@ export function TranslationSupplyControlTower({
           className="mt-3 rounded-xl border border-safety-red/30 bg-safety-red-bg p-4 text-sm text-safety-red"
           role="alert"
         >
-          번역 요청과 라우트 후보를 불러오지 못했어요. 0건으로 간주하지 않았습니다: {priorityError}
+          Plus 수요와 라우트 후보를 불러오지 못했어요. 0건으로 간주하지 않았습니다: {priorityError}
         </p>
       )}
 
@@ -136,7 +136,7 @@ export function TranslationSupplyControlTower({
                   <span>검토 {row.reviewNeeded}</span>
                   <span>변경 {row.stale}</span>
                   <span>누락 {row.missing}</span>
-                  <span>{priorityError ? "요청 확인 불가" : `요청 ${row.requestCount}`}</span>
+                  <span>{priorityError ? "Plus 확인 불가" : `Plus ${row.requestCount}`}</span>
                 </div>
                 <Link
                   href={href}
@@ -157,11 +157,11 @@ export function TranslationSupplyControlTower({
               <p className="text-xs font-bold uppercase tracking-[0.1em] text-accent-text">
                 {topCandidate.routeUnlockCandidate
                   ? "NEXT ROUTE-UNLOCK CANDIDATE"
-                  : "NEXT REQUEST CANDIDATE"}
+                  : "NEXT PLUS DEMAND CANDIDATE"}
               </p>
               <p className="mt-1 text-base font-bold">{topCandidate.memeTitle}</p>
               <p className="mt-1 text-xs text-muted">
-                {LANGUAGE_NAMES[topCandidate.locale]} · 요청 {topCandidate.requestCount}건 · {topCandidate.memeShortId}
+                {LANGUAGE_NAMES[topCandidate.locale]} · Plus {topCandidate.requestCount}건 요청 · {topCandidate.memeShortId}
               </p>
             </div>
             <Link
@@ -174,7 +174,7 @@ export function TranslationSupplyControlTower({
           <p className="mt-3 text-sm leading-relaxed text-muted">
             {topCandidate.routeUnlockCandidate
               ? "원문이 현재 색인 가능 기준을 충족하므로, 이 로케일의 reviewed 번역이 라우트 공급을 직접 늘릴 수 있습니다."
-              : "요청이 많은 항목입니다. 원문 revision과 번역 상태를 확인한 뒤 검수하세요."}
+              : "Plus 수요가 높은 항목입니다. 원문 revision과 번역 상태를 확인한 뒤 검수하세요."}
           </p>
         </div>
       )}

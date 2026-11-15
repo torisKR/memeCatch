@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * 상세 진입 유도 카드 — 밈 상세로 들어온 방문자에게 로그인/회원가입을 권한다.

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { ENGLISH_PILOT_STATUSES } from "@/lib/growth/pilot";
 
 type GrowthRpc = (
@@ -32,14 +32,14 @@ const interviewSchema = z.object({
 });
 
 async function requireOperator() {
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: isOperator } = await db.rpc("is_operator");
+  const { data: isOperator } = await supabase.rpc("is_operator");
   if (!isOperator) throw new Error("운영자 권한이 없어요.");
-  return db;
+  return supabase;
 }
 
 function growthRpc(client: Awaited<ReturnType<typeof createClient>>): GrowthRpc {
@@ -57,8 +57,8 @@ export async function saveEnglishPilotSlot(formData: FormData): Promise<void> {
   }
 
   try {
-    const db = await requireOperator();
-    const { error } = await growthRpc(db)("set_growth_english_pilot_slot", {
+    const supabase = await requireOperator();
+    const { error } = await growthRpc(supabase)("set_growth_english_pilot_slot", {
       p_slot: parsed.data.slot,
       p_meme_id: parsed.data.memeId || null,
       p_status: parsed.data.status,
@@ -89,8 +89,8 @@ export async function recordGrowthPilotInterview(formData: FormData): Promise<vo
   }
 
   try {
-    const db = await requireOperator();
-    const { error } = await growthRpc(db)("record_growth_pilot_interview", {
+    const supabase = await requireOperator();
+    const { error } = await growthRpc(supabase)("record_growth_pilot_interview", {
       p_participant_reference: parsed.data.participantReference,
       p_interviewed_at: interviewedAt.toISOString(),
       p_market: parsed.data.market,

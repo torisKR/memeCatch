@@ -14,10 +14,17 @@ import {
   type MemeCategory,
   type SafetyLevel,
 } from "@/lib/labels";
-import { signOut, updateNickname } from "@/lib/actions/auth";
+import {
+  signOut,
+  updateNickname,
+  updateProfileCustomization,
+} from "@/lib/actions/auth";
 import { MyRecent } from "@/components/my-recent";
 import { useLocale } from "@/lib/i18n-client";
+import { PREMIUM_COPY } from "@/lib/i18n-premium";
 import { MY_COPY } from "@/lib/i18n-my";
+import { SavedMetaEditor } from "@/components/premium/saved-meta-editor";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 import { savedLibraryHref } from "@/lib/saved-library";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
@@ -29,6 +36,9 @@ export type SavedMeme = {
   title: string;
   summary: string | null;
   safetyLevel: SafetyLevel;
+  /** Plus 전용 — 폴더 분류·메모 */
+  collection: string | null;
+  note: string | null;
 };
 
 export type MySubmission = {
@@ -67,39 +77,57 @@ export function MyContent({
   ageGroup,
   interests,
   saved,
+  collectionNames,
   submissions,
   loadError,
   nicknameError,
   nicknameSaved,
+  flair,
+  accentColor,
+  customError,
+  customSaved,
+  isPremium,
+  saveLimit,
   savedTotal,
   savedResultTotal,
   savedQuery,
   savedSafety,
   savedPage,
   savedPageCount,
+  myFeed,
   memeCards,
 }: {
   nickname: string;
   ageGroup: string | null;
   interests: string[];
   saved: SavedMeme[];
+  collectionNames: string[];
   submissions: MySubmission[];
   loadError: boolean;
   nicknameError?: string;
   nicknameSaved: boolean;
-  /** All saved memes; never reduced by the active library filters. */
+  flair: string | null;
+  accentColor: string | null;
+  customError?: string;
+  customSaved: boolean;
+  isPremium: boolean;
+  saveLimit: number;
+  /** All saved memes; never reduced by the active Plus vault filters. */
   savedTotal: number;
-  /** Matching saved memes after the server-side library filters. */
+  /** Matching saved memes after the server-side Plus vault filters. */
   savedResultTotal: number;
   savedQuery: string;
   savedSafety: SafetyLevel | null;
   savedPage: number;
   savedPageCount: number;
-  /** Private meme card collection; independent of the saved library. */
+  /** 관심 카테고리 맞춤 피드 — 서버 컴포넌트(components/my-feed.tsx)를 페이지에서 슬롯으로 전달 */
+  myFeed: ReactNode;
+  /** Free private meme card collection; independent of the Plus saved library. */
   memeCards?: ReactNode;
 }) {
   const reduce = useReducedMotion();
   const { locale } = useLocale();
+  const premiumCopy = PREMIUM_COPY[locale];
   const copy = MY_COPY[locale];
   const avatarChar = (nickname.trim()[0] ?? copy.avatarFallback).toUpperCase();
   const knownInterests = interests.filter(
@@ -119,6 +147,10 @@ export function MyContent({
       : nicknameError === NICKNAME_ERROR_SOURCE.taken
         ? copy.nickname.errors.taken
         : copy.nickname.errors.saveFailed;
+  // 커스터마이징 저장 실패는 종류 무관하게 안내 문구 하나로 통일 (입력단에서 이미 제약)
+  const customErrorMessage = customError
+    ? copy.customization.saveFailed
+    : undefined;
   const dateFormatter = new Intl.DateTimeFormat(copy.dateLocale, {
     dateStyle: "medium",
     timeZone: "Asia/Seoul",
@@ -173,13 +205,32 @@ export function MyContent({
           <span
             aria-hidden
             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-soft text-2xl font-bold text-accent"
+            style={
+              isPremium && accentColor
+                ? { boxShadow: `0 0 0 2px ${accentColor}` }
+                : undefined
+            }
           >
             {avatarChar}
           </span>
           <div className="min-w-0">
+            {/* PLUS 배지는 프로필이 아니라 전역 헤더(AuthMenu)에서 노출한다. */}
             <h1 className="truncate text-2xl font-bold">
               {nickname || copy.defaultNickname}
             </h1>
+            {/* Plus 플레어 — 저장된 강조 색상으로 렌더(색상은 DB check로 hex 강제) */}
+            {isPremium && flair && (
+              <span
+                className="mt-1 inline-flex max-w-full items-center truncate rounded-full border px-2 py-0.5 text-xs font-semibold"
+                style={
+                  accentColor
+                    ? { borderColor: accentColor, color: accentColor }
+                    : undefined
+                }
+              >
+                {flair}
+              </span>
+            )}
             <p className="mt-0.5 text-sm text-muted">
               {copy.greeting(ageLabel)}
             </p>
@@ -290,6 +341,83 @@ export function MyContent({
             )}
           </motion.section>
 
+          {/* 프로필 꾸미기 (Plus 전용) — 플레어 + 강조 색상 */}
+          <motion.section
+            {...section}
+            className="rounded-2xl border border-border bg-surface p-5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold">{copy.customization.title}</h2>
+              <span className="rounded-full bg-accent-strong px-2 py-0.5 text-xs font-bold text-white">
+                PLUS
+              </span>
+            </div>
+            {isPremium ? (
+              <form
+                action={updateProfileCustomization}
+                className="mt-3 flex flex-col gap-3"
+              >
+                <div>
+                  <label
+                    htmlFor="flair"
+                    className="block text-sm font-semibold"
+                  >
+                    {copy.customization.flairLabel}
+                  </label>
+                  <input
+                    id="flair"
+                    name="flair"
+                    type="text"
+                    defaultValue={flair ?? ""}
+                    maxLength={24}
+                    placeholder={copy.customization.flairPlaceholder}
+                    aria-invalid={!!customErrorMessage}
+                    aria-describedby="flair-hint"
+                    className="mt-1 h-12 w-full rounded-xl border border-border bg-surface px-4 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  />
+                  <p id="flair-hint" className="mt-1 text-xs text-muted">
+                    {copy.customization.flairHint}
+                  </p>
+                </div>
+                <div>
+                  <label
+                    htmlFor="accent"
+                    className="block text-sm font-semibold"
+                  >
+                    {copy.customization.accentLabel}
+                  </label>
+                  <input
+                    id="accent"
+                    name="accent"
+                    type="color"
+                    defaultValue={accentColor ?? "#6366f1"}
+                    className="mt-1 h-12 w-16 cursor-pointer rounded-xl border border-border bg-surface p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="h-12 shrink-0 rounded-xl bg-accent-strong px-5 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
+                  {copy.customization.save}
+                </button>
+                {customErrorMessage && (
+                  <p role="alert" className="text-sm text-safety-red">
+                    {customErrorMessage}
+                  </p>
+                )}
+                {customSaved && !customErrorMessage && (
+                  <p role="status" className="text-sm text-safety-green">
+                    {copy.customization.saved}
+                  </p>
+                )}
+              </form>
+            ) : (
+              <p className="mt-2 text-sm text-muted">
+                {copy.customization.plusOnly}
+              </p>
+            )}
+          </motion.section>
+
           <motion.section
             {...section}
             className="rounded-2xl border border-border bg-surface p-5"
@@ -317,6 +445,9 @@ export function MyContent({
 
         {/* 우측 콘텐츠 컬럼 — 첫 섹션의 자체 mt-8은 컬럼 정렬을 위해 상쇄 */}
         <div className="min-w-0 flex-1 [&>*:first-child]:mt-0">
+          {/* 관심 카테고리 맞춤 피드 — 서버 컴포넌트 슬롯 */}
+          {myFeed}
+
           {memeCards && <>
             <nav aria-label={copy.saved.title} className="mt-6 flex flex-wrap gap-3 border-b border-border pb-3">
               <Link href="#meme-cards" className="inline-flex min-h-11 items-center rounded-xl bg-accent-soft px-4 text-sm font-bold text-accent-text">{MEME_CARDS_COPY[locale].nav}</Link>
@@ -325,18 +456,25 @@ export function MyContent({
             {memeCards}
           </>}
 
-          {/* 저장한 밈 — 저장 라이브러리를 검색·안전 신호로 다시 찾는다. */}
+          {/* 저장한 밈 — Plus Meme Vault는 기존 RLS 저장 라이브러리를 검색·안전 신호로 다시 찾게 한다. */}
           <section id="saved" className="mt-8 scroll-mt-24">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <div className="flex items-baseline gap-2">
                 <h2 className="text-lg font-bold">{copy.saved.title}</h2>
+                {isPremium && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-accent-text">
+                    {copy.saved.library.title}
+                  </span>
+                )}
               </div>
               <span className="text-sm text-muted">
-                {savedTotal}
+                {isPremium
+                  ? `${savedTotal} · ${premiumCopy.my.unlimited}`
+                  : premiumCopy.my.freeLimit(savedTotal, saveLimit)}
               </span>
             </div>
 
-            {savedTotal > 0 && (
+            {isPremium ? (
               <form
                 action="/my#saved"
                 method="get"
@@ -408,6 +546,88 @@ export function MyContent({
                   {copy.saved.library.results(savedResultTotal, savedTotal)}
                 </p>
               </form>
+            ) : savedTotal > 0 ? (
+              <aside className="mt-3 rounded-2xl border border-accent/30 bg-accent-soft/45 p-4">
+                <h3 className="text-sm font-bold">
+                  {copy.saved.library.upgradeTitle}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  {copy.saved.library.upgradeBody}
+                </p>
+                <Link
+                  href={localizedStaticPath("/pricing", locale)}
+                  className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.97]"
+                >
+                  {copy.saved.library.upgradeAction}
+                </Link>
+              </aside>
+            ) : null}
+
+            {isPremium && (
+              <section
+                aria-labelledby="saved-collection-brief-title"
+                className="mt-4 rounded-2xl border border-accent/30 bg-accent-soft/35 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 id="saved-collection-brief-title" className="text-sm font-bold">
+                      {copy.saved.library.brief.title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted">
+                      {copy.saved.library.brief.body}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-accent-strong px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-white">
+                    PLUS
+                  </span>
+                </div>
+                {collectionNames.length > 0 ? (
+                  <form
+                    action="/api/plus/collection-brief"
+                    method="post"
+                    className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end"
+                  >
+                    <input type="hidden" name="locale" value={locale} />
+                    <div className="min-w-0 flex-1">
+                      <label
+                        htmlFor="saved-collection-brief-select"
+                        className="block text-xs font-bold text-muted"
+                      >
+                        {copy.saved.library.brief.selectLabel}
+                      </label>
+                      <select
+                        id="saved-collection-brief-select"
+                        name="collection"
+                        required
+                        defaultValue=""
+                        className="mt-1 h-11 w-full rounded-xl border border-border bg-surface-2 px-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="" disabled>
+                          {copy.saved.library.brief.selectPlaceholder}
+                        </option>
+                        {collectionNames.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    >
+                      {copy.saved.library.brief.download}
+                    </button>
+                  </form>
+                ) : (
+                  <p className="mt-3 text-sm text-muted">
+                    {copy.saved.library.brief.empty}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-muted">
+                  {copy.saved.library.brief.limitNote}
+                </p>
+              </section>
             )}
 
             {saved.length === 0 ? (
@@ -416,16 +636,16 @@ export function MyContent({
                 className="mt-3 rounded-2xl border border-border bg-surface p-6 text-center"
               >
                 <p className="text-muted">
-                  {hasSavedVaultFilter
+                  {isPremium && hasSavedVaultFilter
                     ? copy.saved.library.emptyFilteredTitle
                     : copy.saved.emptyTitle}
                 </p>
                 <p className="mt-1 text-muted">
-                  {hasSavedVaultFilter
+                  {isPremium && hasSavedVaultFilter
                     ? copy.saved.library.emptyFilteredBody
                     : copy.saved.emptyBody}
                 </p>
-                {hasSavedVaultFilter ? (
+                {isPremium && hasSavedVaultFilter ? (
                   <Link
                     href={savedLibraryPageHref()}
                     className="mt-4 inline-flex h-12 items-center justify-center rounded-xl bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -475,6 +695,15 @@ export function MyContent({
                           </p>
                         )}
                       </Link>
+                      {/* 폴더·메모는 카드 링크 밖에 둔다 — 편집 클릭이 상세로 이동하지 않게 */}
+                      <div className="px-4 pb-3">
+                        <SavedMetaEditor
+                          memeId={meme.id}
+                          isPremium={isPremium}
+                          collection={meme.collection}
+                          note={meme.note}
+                        />
+                      </div>
                     </motion.li>
                   );
                 })}
@@ -482,7 +711,7 @@ export function MyContent({
             )}
             {savedPageCount > 1 && (
               <nav
-                aria-label={copy.saved.library.pagination.label}
+                aria-label={premiumCopy.my.paginationLabel}
                 className="mt-5 flex items-center justify-between gap-3"
               >
                 {savedPage > 1 ? (
@@ -490,35 +719,35 @@ export function MyContent({
                     href={savedLibraryPageHref(savedPage - 1)}
                     className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    {copy.saved.library.pagination.previous}
+                    {premiumCopy.my.previousPage}
                   </Link>
                 ) : (
                   <span
                     aria-disabled="true"
                     className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold text-muted opacity-50"
                   >
-                    {copy.saved.library.pagination.previous}
+                    {premiumCopy.my.previousPage}
                   </span>
                 )}
                 <span
                   aria-current="page"
                   className="text-sm font-medium text-muted"
                 >
-                  {copy.saved.library.pagination.status(savedPage, savedPageCount)}
+                  {premiumCopy.my.pageStatus(savedPage, savedPageCount)}
                 </span>
                 {savedPage < savedPageCount ? (
                   <Link
                     href={savedLibraryPageHref(savedPage + 1)}
                     className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    {copy.saved.library.pagination.next}
+                    {premiumCopy.my.nextPage}
                   </Link>
                 ) : (
                   <span
                     aria-disabled="true"
                     className="inline-flex min-h-11 items-center rounded-xl border border-border px-4 text-sm font-semibold text-muted opacity-50"
                   >
-                    {copy.saved.library.pagination.next}
+                    {premiumCopy.my.nextPage}
                   </span>
                 )}
               </nav>

@@ -10,6 +10,7 @@ afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 
 async function productionLoader() {
   vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("VERCEL_ENV", "production");
   vi.stubEnv("NEXT_PUBLIC_ADSENSE_CLIENT", "ca-pub-3004906966180197");
   vi.resetModules();
   return (await import("./adsense-script")).AdsenseScript;
@@ -26,10 +27,10 @@ describe("review-safe automatic advertising", () => {
     const Loader = await productionLoader();
     expect(Loader()).not.toBeNull();
   });
-  it("never enables it outside a production build even with an opt-in", async () => {
+  it("never enables it on preview even with an opt-in", async () => {
     vi.stubEnv("ADSENSE_AUTO_ADS_ENABLED", "true");
     const Loader = await productionLoader();
-    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("VERCEL_ENV", "preview");
     expect(Loader()).toBeNull();
   });
 });

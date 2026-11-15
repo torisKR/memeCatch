@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/admin", () => ({
+vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     storage: { from: mocks.from },
     from: () => ({ insert: mocks.insert }),

@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { GlobalHeader } from "@/components/global-header";
 import { MemeChatbot } from "@/components/meme-chatbot";
 import { NavProgress } from "@/components/nav-progress";
+import { PremiumAdControl } from "@/components/premium-ad-control";
 import { PwaInstall } from "@/components/pwa-install";
 import { ScrollChrome } from "@/components/scroll-chrome";
 import { SiteFooter } from "@/components/site-footer";
@@ -63,6 +64,7 @@ export function RootDocument({
             <div className="min-w-0 flex-1">{children}</div>
             <SiteFooter />
           </div>
+          <PremiumAdControl />
           <BottomNav />
           <Suspense fallback={null}>
             <MemeChatbot />

@@ -82,7 +82,7 @@ async function postUpload(file: File, failMessage: string): Promise<UploadResult
 
 /**
  * 이미지 업로드 — 서버 라우트(/api/upload) 경유(밈 제보 폼용).
- * 서버가 R2(설정 시) 또는 로컬 디스크 저장소(폴백)에 저장한다.
+ * 서버가 R2(설정 시) 또는 Supabase Storage(폴백)에 저장한다.
  * 스토리지 자격증명은 서버에만 있고 클라이언트는 경로만 돌려받는다.
  */
 export async function uploadMemeImage(file: File): Promise<UploadResult> {

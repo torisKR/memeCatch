@@ -71,7 +71,7 @@ describe("TranslationSupplyControlTower", () => {
     render(<TranslationSupplyControlTower coverageRows={coverageRows} priorityRows={priorityRows} />);
 
     expect(screen.getByRole("heading", { name: "글로벌 번역 공급 다음 행동" })).toBeTruthy();
-    expect(screen.getByText("번역 요청 누락부터")).toBeTruthy();
+    expect(screen.getByText("Plus 요청 누락부터")).toBeTruthy();
     expect(screen.getByText(/원문이 현재 색인 가능 기준을 충족하므로/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "누락 검수 열기" }).getAttribute("href")).toBe(
       "/admin/translations?locale=en&focus=meme-route",
@@ -114,7 +114,7 @@ describe("TranslationSupplyControlTower", () => {
       />,
     );
 
-    expect(screen.getAllByText("요청 확인 불가")).toHaveLength(4);
-    expect(screen.queryByText("요청 0")).toBeNull();
+    expect(screen.getAllByText("Plus 확인 불가")).toHaveLength(4);
+    expect(screen.queryByText("Plus 0")).toBeNull();
   });
 });

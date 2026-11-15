@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
 import { SITE_URL } from "@/lib/site";
 
@@ -36,8 +36,8 @@ export async function signIn(
     return { fieldErrors, values: { email } };
   }
 
-  const db = await createClient();
-  const { error } = await db.auth.signInWithPassword({ email, password });
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     return {
       formError: "이메일 또는 비밀번호가 맞지 않아요",
@@ -72,10 +72,10 @@ export async function signUp(
     return { fieldErrors, values: { email, nickname } };
   }
 
-  const db = await createClient();
+  const supabase = await createClient();
   let providerFailed = false;
   try {
-    const { error } = await db.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { nickname } },
@@ -85,7 +85,7 @@ export async function signUp(
     providerFailed = true;
   }
   if (providerFailed) console.error({ event: "auth_signup_provider_failed" });
-  const { error: signOutError } = await db.auth.signOut();
+  const { error: signOutError } = await supabase.auth.signOut();
   if (signOutError) throw new Error("가입 세션 정리에 실패했어요.");
   return { notice: SIGNUP_NOTICE, values: { email, nickname } };
 }
@@ -126,13 +126,13 @@ export async function completeOnboarding(formData: FormData): Promise<void> {
   const preferences = parseOnboardingPreferences(formData);
   const nickname = String(formData.get("nickname") ?? "").trim();
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { error } = await db
+  const { error } = await supabase
     .from("profiles")
     .update({
       ...preferences,
@@ -164,8 +164,8 @@ export async function requestPasswordReset(
     };
   }
 
-  const db = await createClient();
-  await db.auth.resetPasswordForEmail(email, {
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
   });
 
@@ -204,10 +204,10 @@ export async function updatePassword(
     return { fieldErrors: { password: "두 비밀번호가 서로 달라요" } };
   }
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!token && !user) {
     return {
       formError:
@@ -217,7 +217,7 @@ export async function updatePassword(
 
   const error = token
     ? await resetWithToken(token, password)
-    : (await db.auth.updateUser({ password })).error;
+    : (await supabase.auth.updateUser({ password })).error;
   if (error) {
     return {
       formError: "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.",
@@ -228,18 +228,18 @@ export async function updatePassword(
 }
 
 export async function signOut(): Promise<void> {
-  const db = await createClient();
-  await db.auth.signOut();
+  const supabase = await createClient();
+  await supabase.auth.signOut();
   redirect("/");
 }
 
 export async function updateNickname(formData: FormData): Promise<void> {
   const nickname = String(formData.get("nickname") ?? "").trim();
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/my");
 
   if (nickname.length < 2 || nickname.length > 20) {
@@ -248,7 +248,7 @@ export async function updateNickname(formData: FormData): Promise<void> {
     );
   }
 
-  const { error } = await db
+  const { error } = await supabase
     .from("profiles")
     .update({ nickname })
     .eq("id", user.id);
@@ -273,10 +273,10 @@ export async function updateProfileCustomization(
   const flair = flairRaw.length > 0 ? flairRaw : null;
   const accent = accentRaw.length > 0 ? accentRaw : null;
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/my");
 
   // 클라이언트 사전 검증 (RPC가 최종 강제하지만 즉각 피드백용)
@@ -287,7 +287,7 @@ export async function updateProfileCustomization(
     redirect(`/my?custom_error=invalid_color`);
   }
 
-  const { error } = await db.rpc("update_profile_customization", {
+  const { error } = await supabase.rpc("update_profile_customization", {
     p_flair: flair,
     p_accent: accent,
   });

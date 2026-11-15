@@ -6,23 +6,27 @@ import {
   setUserPassword,
   setUserRole,
 } from "@/lib/actions/admin-users";
+import { setUserPlus } from "@/lib/actions/admin";
 
 /**
- * 사용자 상세의 변경 컨트롤 — 비밀번호(직접 설정/재설정 메일), 권한.
+ * 사용자 상세의 변경 컨트롤 — 비밀번호(직접 설정/재설정 메일), 권한, Plus 구독.
  * 모든 액션은 서버에서 operator를 재확인하고 감사 로그를 남긴다.
  */
 export function UserControls({
   userId,
   email,
   role,
+  isPremium,
 }: {
   userId: string;
   email: string | null;
   role: string | null;
+  isPremium: boolean;
 }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pw, setPw] = useState("");
+  const [months, setMonths] = useState(1);
 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>, okText: string) {
     setMsg(null);
@@ -102,6 +106,65 @@ export function UserControls({
         >
           재설정 메일 보내기
         </button>
+      </section>
+
+      {/* Plus 구독 */}
+      <section className="rounded-2xl border border-border bg-surface p-5">
+        <h2 className="text-base font-bold">Plus 구독</h2>
+        <p className="mt-1 text-sm text-muted">
+          수동 부여는 결제와 분리된 무료 권한이에요(감사 로그 기록).
+        </p>
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label
+              htmlFor="plus-months-detail"
+              className="block text-xs font-semibold text-muted"
+            >
+              기간(개월)
+            </label>
+            <input
+              id="plus-months-detail"
+              type="number"
+              min={1}
+              max={36}
+              value={months}
+              onChange={(e) =>
+                setMonths(Math.max(1, Math.min(36, Number(e.target.value) || 1)))
+              }
+              className="mt-1 h-11 w-20 rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-accent focus:ring-4 focus:ring-accent/20"
+            />
+          </div>
+          <button
+            type="button"
+            disabled={pending || !email}
+            onClick={() =>
+              run(
+                () =>
+                  setUserPlus({ email: email as string, active: true, months }),
+                `Plus를 ${months}개월 부여했어요.`
+              )
+            }
+            className={primary}
+          >
+            {isPremium ? "기간 연장·재부여" : "Plus 부여"}
+          </button>
+          {isPremium && (
+            <button
+              type="button"
+              disabled={pending || !email}
+              onClick={() =>
+                run(
+                  () =>
+                    setUserPlus({ email: email as string, active: false }),
+                  "Plus를 해제했어요."
+                )
+              }
+              className={`${ghost} text-safety-red`}
+            >
+              Plus 해제
+            </button>
+          )}
+        </div>
       </section>
 
       {/* 권한 */}

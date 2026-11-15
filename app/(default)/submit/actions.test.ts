@@ -4,7 +4,7 @@ vi.mock("@/lib/flags", () => ({ flags: { submissionsOpen: true } }));
 vi.mock("@/lib/i18n-server", () => ({
   getRequestLocale: vi.fn().mockResolvedValue("en"),
 }));
-vi.mock("@/lib/db/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
 import { submitMemeWithAttachment, type SubmitState } from "./actions";
 

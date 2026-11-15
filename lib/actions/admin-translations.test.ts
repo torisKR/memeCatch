@@ -11,7 +11,7 @@ const { createClient, getOpenAiReviewModel, revalidatePath, revalidateTag, reque
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }));
-vi.mock("@/lib/db/server", () => ({ createClient }));
+vi.mock("@/lib/supabase/server", () => ({ createClient }));
 vi.mock("@/lib/openai-review.server", () => ({
   getOpenAiReviewModel,
   OPENAI_REVIEW_REASONING_EFFORT: "high",
@@ -20,7 +20,9 @@ vi.mock("@/lib/openai-review.server", () => ({
 
 import {
   deleteMemeTranslation,
+  claimTranslationPriority,
   listMissingMemeTranslations,
+  listTranslationPriorityQueue,
   listTranslationsForReview,
   markMemeTranslationStale,
   previewMissingMemeTranslationWithGpt,
@@ -29,9 +31,10 @@ import {
   saveMissingMemeTranslationDraft,
   saveMemeTranslation,
   getTranslationCoverage,
+  listTranslationSupplyPriorityQueue,
   type TranslationReviewInput,
 } from "@/lib/actions/admin-translations";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 
 const SOURCE_UPDATED_AT = "2026-07-28T01:00:00.000Z";
 const EXPECTED_UPDATED_AT = "2026-07-28T01:05:00.000Z";
@@ -51,7 +54,7 @@ function query(result: { data: unknown; error: { message: string } | null; count
     single: vi.fn().mockResolvedValue(result),
     maybeSingle: vi.fn().mockResolvedValue(result),
     // 목록 조회는 terminal 메서드 없이 체이닝 끝에서 바로 await되므로 thenable로 만든다
-    // (lib/db/plan.ts 쿼리 빌더와 동일한 계약).
+    // (실제 supabase-js PostgrestFilterBuilder와 동일한 계약).
     then: (resolve: (value: typeof result) => void) => resolve(result),
   };
   builder.select.mockReturnValue(builder);
@@ -140,13 +143,13 @@ describe("admin translation concurrency and audit", () => {
     });
     const latestMeme = query({ data: { updated_at: SOURCE_UPDATED_AT }, error: null });
     const audit = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [context.profile],
       memes: [context.meme, latestMeme],
       meme_translations: [context.translation, reviewMutation],
       admin_audit_log: [audit],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(reviewMemeTranslation(actionInput())).resolves.toEqual({ ok: true });
 
@@ -157,13 +160,13 @@ describe("admin translation concurrency and audit", () => {
     const context = contextQueries();
     const mutation = query({ data: { meme_id: "meme-1" }, error: null });
     const audit = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [context.profile],
       memes: [context.meme],
       meme_translations: [context.translation, mutation],
       admin_audit_log: [audit],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(saveMemeTranslation(actionInput())).resolves.toEqual({ ok: true });
 
@@ -189,13 +192,13 @@ describe("admin translation concurrency and audit", () => {
     });
     const recovery = query({ data: { meme_id: "meme-1" }, error: null });
     const audit = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [context.profile],
       memes: [context.meme, latestMeme],
       meme_translations: [context.translation, reviewMutation, recovery],
       admin_audit_log: [audit],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await reviewMemeTranslation(actionInput());
 
@@ -220,13 +223,13 @@ describe("admin translation concurrency and audit", () => {
     const context = contextQueries();
     const mutation = query({ data: { meme_id: "meme-1" }, error: null });
     const audit = query({ data: null, error: { message: "RLS rejected insert" } });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [context.profile],
       memes: [context.meme],
       meme_translations: [context.translation, mutation],
       admin_audit_log: [audit],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await markMemeTranslationStale({
       memeId: "meme-1",
@@ -262,8 +265,8 @@ describe("translation coverage desk", () => {
       ],
       error: null,
     });
-    const db = operatorClient({ profiles: [profile], memes: [memes], meme_translations: [translations] });
-    createClient.mockResolvedValue(db);
+    const supabase = operatorClient({ profiles: [profile], memes: [memes], meme_translations: [translations] });
+    createClient.mockResolvedValue(supabase);
 
     await expect(getTranslationCoverage()).resolves.toEqual({
       ok: true,
@@ -284,8 +287,8 @@ describe("translation coverage desk", () => {
 
   it("does not turn a query failure or non-operator session into zero coverage", async () => {
     const profile = query({ data: { role: "member" }, error: null });
-    const db = operatorClient({ profiles: [profile] }, vi.fn(), false);
-    createClient.mockResolvedValue(db);
+    const supabase = operatorClient({ profiles: [profile] }, vi.fn(), false);
+    createClient.mockResolvedValue(supabase);
 
     await expect(getTranslationCoverage()).resolves.toEqual({ ok: false, error: "운영자 권한이 없어요." });
   });
@@ -294,14 +297,14 @@ describe("translation coverage desk", () => {
 describe("missing translation draft preview", () => {
   it("rejects a non-operator before listing missing translations", async () => {
     const profile = query({ data: { role: "member" }, error: null });
-    const db = operatorClient({ profiles: [profile] }, vi.fn(), false);
-    createClient.mockResolvedValue(db);
+    const supabase = operatorClient({ profiles: [profile] }, vi.fn(), false);
+    createClient.mockResolvedValue(supabase);
 
     await expect(listMissingMemeTranslations({ locale: "en" })).resolves.toEqual({
       ok: false,
       error: "운영자 권한이 없어요.",
     });
-    expect(db.from).not.toHaveBeenCalled();
+    expect(supabase.from).not.toHaveBeenCalled();
     expect(requestOpenAiStructured).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
@@ -344,7 +347,7 @@ describe("missing translation draft preview", () => {
       error: null,
     });
     const rpc = vi.fn();
-    const db = operatorClient(
+    const supabase = operatorClient(
       {
         profiles: [profile],
         meme_translations: [translatedPage, translatedEnd],
@@ -352,7 +355,7 @@ describe("missing translation draft preview", () => {
       },
       rpc,
     );
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await listMissingMemeTranslations({ locale: "en", limit: 500 });
 
@@ -381,7 +384,7 @@ describe("missing translation draft preview", () => {
       expect(read.delete).not.toHaveBeenCalled();
     }
     expect(rpc).not.toHaveBeenCalled();
-    expect(db.from).not.toHaveBeenCalledWith("admin_audit_log");
+    expect(supabase.from).not.toHaveBeenCalledWith("admin_audit_log");
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
@@ -439,8 +442,8 @@ describe("missing translation draft preview", () => {
       ],
       error: null,
     });
-    const db = operatorClient({ profiles: [profile], meme_translations: [translated], memes: [sources] });
-    createClient.mockResolvedValue(db);
+    const supabase = operatorClient({ profiles: [profile], meme_translations: [translated], memes: [sources] });
+    createClient.mockResolvedValue(supabase);
 
     const result = await listMissingMemeTranslations({ locale: "en", limit: 3 });
 
@@ -500,12 +503,12 @@ describe("missing translation draft preview", () => {
       ],
       error: null,
     });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       meme_translations: [translated],
       memes: [sources],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await listMissingMemeTranslations({
       locale: "zh",
@@ -571,12 +574,12 @@ describe("missing translation draft preview", () => {
       })),
       error: null,
     });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       meme_translations: [translated],
       memes: [focused, higherRankedRows],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await listMissingMemeTranslations({
       locale: "en",
@@ -614,12 +617,12 @@ describe("missing translation draft preview", () => {
       error: null,
     });
     const existing = query({ data: { meme_id: PREVIEW_MEME_ID }, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       memes: [source],
       meme_translations: [existing],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(
       previewMissingMemeTranslationWithGpt({
@@ -654,7 +657,7 @@ describe("missing translation draft preview", () => {
     const latestSource = query({ data: { updated_at: SOURCE_UPDATED_AT }, error: null });
     const latestTranslation = query({ data: null, error: null });
     const rpc = vi.fn();
-    const db = operatorClient(
+    const supabase = operatorClient(
       {
         profiles: [profile],
         memes: [source, latestSource],
@@ -675,7 +678,7 @@ describe("missing translation draft preview", () => {
       review_notes: ["Preserved source uncertainty."],
     };
     requestOpenAiStructured.mockResolvedValue(draft);
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(
       previewMissingMemeTranslationWithGpt({
@@ -717,7 +720,7 @@ describe("missing translation draft preview", () => {
       expect(read.delete).not.toHaveBeenCalled();
     }
     expect(rpc).not.toHaveBeenCalled();
-    expect(db.from).not.toHaveBeenCalledWith("admin_audit_log");
+    expect(supabase.from).not.toHaveBeenCalledWith("admin_audit_log");
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
@@ -736,13 +739,13 @@ describe("missing translation draft preview", () => {
     const existing = query({ data: null, error: null });
     const mutation = query({ data: null, error: null });
     const audit = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       memes: [source],
       meme_translations: [existing, mutation],
       admin_audit_log: [audit],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(
       saveMissingMemeTranslationDraft({
@@ -816,13 +819,13 @@ describe("missing translation draft preview", () => {
       error: null,
     });
     const latestTranslation = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       memes: [source, latestSource],
       meme_translations: [existing, latestTranslation],
     });
     requestOpenAiStructured.mockResolvedValue({ recommendation: "edit", confidence: "low" });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(
       previewMissingMemeTranslationWithGpt({
@@ -835,7 +838,7 @@ describe("missing translation draft preview", () => {
       error: "원문 또는 번역 상태가 변경되어 초안을 폐기했어요. 새로고침해 주세요.",
     });
     expect(revalidatePath).not.toHaveBeenCalled();
-    expect(db.from).not.toHaveBeenCalledWith("admin_audit_log");
+    expect(supabase.from).not.toHaveBeenCalledWith("admin_audit_log");
   });
 });
 
@@ -867,13 +870,13 @@ describe("admin translation review queue", () => {
       },
       error: null,
     });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       memes: [context.meme, source],
       meme_translations: [context.translation, localized],
     });
     getOpenAiReviewModel.mockImplementationOnce(() => "legacy-review-model");
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(
       reviewMemeTranslationWithGpt({
@@ -884,7 +887,145 @@ describe("admin translation review queue", () => {
     ).resolves.toEqual({ ok: false, error: "GPT 검수 AI 계약이 올바르지 않아요." });
 
     expect(requestOpenAiStructured).not.toHaveBeenCalled();
-    expect(db.from).not.toHaveBeenCalledWith("admin_audit_log");
+    expect(supabase.from).not.toHaveBeenCalledWith("admin_audit_log");
+  });
+
+  it("maps the Plus demand queue and claims a requested locale through RPCs", async () => {
+    const profile = query({ data: { role: "operator" }, error: null });
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [
+          {
+            meme_id: "meme-1",
+            locale: "en",
+            request_count: 4,
+            latest_requested_at: EXPECTED_UPDATED_AT,
+            status: "requested",
+            meme_title: "원문 제목",
+            meme_short_id: "abc123",
+            meme_slug: "source-slug",
+            meme_summary: "요약",
+            meme_updated_at: SOURCE_UPDATED_AT,
+            translation_status: null,
+            translation_updated_at: null,
+            source_updated_at: SOURCE_UPDATED_AT,
+            translation_title: "Localized",
+            translation_summary: "Localized summary",
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { status: "in_review" }, error: null });
+    const source = query({
+      data: [
+        {
+          id: "meme-1",
+          short_id: "abc123",
+          title: "원문 제목",
+          summary: "요약",
+          description: "d".repeat(160),
+          origin: "o".repeat(40),
+          usage_note: "u".repeat(40),
+          caution: "c".repeat(40),
+          aliases: [],
+          updated_at: SOURCE_UPDATED_AT,
+          usage_examples: [{ situation: "s", text: "t" }],
+          meme_sources: [{ source_url: "https://example.com/source" }],
+          meme_contents: [{ availability: "available", moderation_status: "approved" }],
+          meme_tags_map: [{ tag_id: "tag-1" }, { tag_id: "tag-2" }, { tag_id: "tag-3" }],
+        },
+      ],
+      error: null,
+    });
+    const supabase = operatorClient({ profiles: [profile, profile], memes: [source] }, rpc);
+    createClient.mockResolvedValue(supabase);
+
+    await expect(listTranslationPriorityQueue()).resolves.toEqual({
+      ok: true,
+      data: [
+        expect.objectContaining({
+          memeId: "meme-1",
+          locale: "en",
+          requestCount: 4,
+          status: "requested",
+          routeUnlockCandidate: true,
+        }),
+      ],
+    });
+    await expect(claimTranslationPriority({ memeId: "meme-1", locale: "en" })).resolves.toEqual({ ok: true });
+    expect(rpc).toHaveBeenNthCalledWith(1, "list_translation_priority_queue", { p_limit: 50 });
+    expect(rpc).toHaveBeenNthCalledWith(2, "claim_translation_priority_request", {
+      p_meme_id: "meme-1",
+      p_locale: "en",
+    });
+  });
+
+  it("passes the selected locale into the priority RPC before its database limit", async () => {
+    const profile = query({ data: { role: "operator" }, error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
+    createClient.mockResolvedValue(operatorClient({ profiles: [profile] }, rpc));
+
+    await expect(listTranslationPriorityQueue(50, "ja")).resolves.toEqual({ ok: true, data: [] });
+    expect(rpc).toHaveBeenCalledWith("list_translation_priority_queue", {
+      p_limit: 50,
+      p_locale: "ja",
+    });
+  });
+
+  it("sorts the full global supply set before applying the UI limit", async () => {
+    const profile = query({ data: { role: "operator" }, error: null });
+    const source = (id: string, routeUnlockCandidate: boolean) => ({
+      id,
+      short_id: id,
+      slug: id,
+      title: id,
+      summary: "summary",
+      description: routeUnlockCandidate ? "d".repeat(160) : "thin",
+      origin: routeUnlockCandidate ? "o".repeat(40) : "",
+      usage_note: routeUnlockCandidate ? "u".repeat(40) : null,
+      caution: routeUnlockCandidate ? "c".repeat(40) : null,
+      aliases: [],
+      updated_at: SOURCE_UPDATED_AT,
+      usage_examples: routeUnlockCandidate ? [{ situation: "s", text: "t" }] : [],
+      meme_sources: routeUnlockCandidate ? [{ source_url: "https://example.com/source" }] : [],
+      meme_contents: routeUnlockCandidate
+        ? [{ availability: "available", moderation_status: "approved" }]
+        : [],
+      meme_tags_map: routeUnlockCandidate
+        ? [{ tag_id: "tag-1" }, { tag_id: "tag-2" }, { tag_id: "tag-3" }]
+        : [],
+      moderation_status: "approved",
+    });
+    const demandRows = Array.from({ length: 1001 }, (_, index) => {
+      const id = index === 1000 ? "route-meme" : `thin-meme-${index}`;
+      return {
+        meme_id: id,
+        locale: index % 2 === 0 ? "en" : "ja",
+        status: "requested",
+        created_at: "2026-08-10T01:00:00.000Z",
+        memes: source(id, index === 1000),
+      };
+    });
+    const demandPages = [
+      query({ data: demandRows.slice(0, 1000), error: null }),
+      query({ data: demandRows.slice(1000), error: null }),
+    ];
+    const translationPages = Array.from({ length: 6 }, () => query({ data: [], error: null }));
+    createClient.mockResolvedValue(
+      operatorClient(
+        { profiles: [profile], plus_translation_requests: demandPages, meme_translations: translationPages },
+      ),
+    );
+
+    const result = await listTranslationSupplyPriorityQueue(50);
+    expect(result).toMatchObject({
+      ok: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({ memeId: "route-meme", routeUnlockCandidate: true }),
+      ]),
+    });
+    if (result.ok) expect(result.data).toHaveLength(50);
   });
 
   it("returns a GPT review draft without mutating or publishing the translation", async () => {
@@ -914,7 +1055,7 @@ describe("admin translation review queue", () => {
       error: null,
     });
     const audit = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [context.profile],
       memes: [context.meme, source],
       meme_translations: [context.translation, localized],
@@ -932,7 +1073,7 @@ describe("admin translation review queue", () => {
       confidence: "high",
       review_notes: ["Check the proper noun."],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     await expect(
       reviewMemeTranslationWithGpt({
@@ -997,11 +1138,11 @@ describe("admin translation review queue", () => {
       error: null,
       count: 1,
     });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [profile],
       meme_translations: [listing],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await listTranslationsForReview({ locale: "en", status: "machine", page: 1 });
 
@@ -1031,13 +1172,13 @@ describe("admin translation review queue", () => {
     const context = contextQueries();
     const mutation = query({ data: { meme_id: "meme-1" }, error: null });
     const audit = query({ data: null, error: null });
-    const db = operatorClient({
+    const supabase = operatorClient({
       profiles: [context.profile],
       memes: [context.meme],
       meme_translations: [context.translation, mutation],
       admin_audit_log: [audit],
     });
-    createClient.mockResolvedValue(db);
+    createClient.mockResolvedValue(supabase);
 
     const result = await deleteMemeTranslation({
       memeId: "meme-1",

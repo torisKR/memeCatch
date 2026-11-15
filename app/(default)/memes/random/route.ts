@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const db = createStaticClient();
-    const { count } = await db
+    const supabase = createStaticClient();
+    const { count } = await supabase
       .from("memes")
       .select("id", { count: "exact", head: true })
       .eq("moderation_status", "approved");
     if (!count) return NextResponse.redirect(`${SITE_URL}/explore`, 302);
 
     const offset = Math.floor(Math.random() * count);
-    const { data } = await db
+    const { data } = await supabase
       .from("memes")
       .select("short_id, slug")
       .eq("moderation_status", "approved")

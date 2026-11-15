@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { memePathFrom } from "@/lib/labels";
 import { track } from "@/lib/analytics";
 import { SearchSuggest, type SearchSuggestion } from "@/components/search-suggest";
@@ -60,7 +60,7 @@ export function SearchInput({
   const [recent, setRecent] = useState<string[]>([]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const db = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const suggestionCache = useMemo(() => createSearchSuggestionCache(), []);
   const uid = useId();
   const listboxId = `search-suggest-listbox-${uid}`;
@@ -135,7 +135,7 @@ export function SearchInput({
         setLoading(false);
         return;
       }
-      db
+      supabase
         .rpc("search_memes", { p_query: trimmed, p_limit: 6 })
         .select(SEARCH_SUGGESTION_COLUMNS)
         .abortSignal(controller.signal)
@@ -162,7 +162,7 @@ export function SearchInput({
       if (suggestionRequest.current === controller) suggestionRequest.current = null;
       window.clearTimeout(timer);
     };
-  }, [trimmed, hasQuery, open, isComposing, db, suggestionCache]);
+  }, [trimmed, hasQuery, open, isComposing, supabase, suggestionCache]);
 
   // 바깥 클릭 시 드롭다운 닫힘
   useEffect(() => {

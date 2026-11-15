@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const createStaticClient = vi.hoisted(() => vi.fn());
 const getLocalizedSearchMemesResult = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 vi.mock("@/lib/meme-translations", () => ({ getLocalizedSearchMemesResult }));
 
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
@@ -30,15 +30,15 @@ function query(result: QueryResult) {
 }
 
 function installClient(queries: ReturnType<typeof query>[]) {
-  const db = {
+  const supabase = {
     from: vi.fn((table: string) => {
       const next = queries.shift();
       if (!next) throw new Error(`Unexpected query for ${table}`);
       return next;
     }),
   };
-  createStaticClient.mockReturnValue(db);
-  return db;
+  createStaticClient.mockReturnValue(supabase);
+  return supabase;
 }
 
 const reviewedProfile = {

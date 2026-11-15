@@ -58,8 +58,8 @@ export default async function PublisherReadinessPage({
     page: typeof raw.page === "string" ? raw.page : undefined,
     focus: typeof raw.focus === "string" ? raw.focus : undefined,
   };
-  const { db } = await requireOperatorPage("/admin/publisher-readiness", authSearch);
-  const report = await listPublisherReadinessPage(db, { page, focus });
+  const { supabase } = await requireOperatorPage("/admin/publisher-readiness", authSearch);
+  const report = await listPublisherReadinessPage(supabase, { page, focus });
 
   return (
     <div className="space-y-8">

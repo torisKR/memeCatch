@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import {
   countSocialPlatformReferences,
@@ -24,8 +24,8 @@ function countValue(value: unknown): number | null {
  */
 export async function getSocialPlatformCounts(): Promise<SocialPlatformCounts> {
   try {
-    const db = createStaticClient({ cachePublicCounts: true });
-    const aggregate = await db.rpc("get_social_platform_counts", undefined, { get: true });
+    const supabase = createStaticClient({ cachePublicCounts: true });
+    const aggregate = await supabase.rpc("get_social_platform_counts", undefined, { get: true });
     if (!aggregate.error) {
       const counts = emptySocialPlatformCounts();
       for (const row of aggregate.data ?? []) {
@@ -42,7 +42,7 @@ export async function getSocialPlatformCounts(): Promise<SocialPlatformCounts> {
     const rows: Array<{ meme_id: string; platform: string | null; url: string | null }> = [];
 
     for (let from = 0; ; from += PAGE_SIZE) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("meme_contents")
         .select("meme_id, platform, url")
         .eq("moderation_status", "approved")

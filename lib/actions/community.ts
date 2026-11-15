@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { flags } from "@/lib/flags";
 
 export type ActionResult<T = null> =
@@ -74,8 +74,8 @@ export async function postComment(
       message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
     };
   }
-  const db = await createClient();
-  const { data, error } = await db.rpc("post_comment", {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("post_comment", {
     p_meme_id: parsed.data.memeId,
     // SQL 시그니처상 3인자 필수 — 최상위 댓글은 null 전달 (생성 타입이 string이라 캐스팅)
     p_parent_id: (parsed.data.parentId ?? null) as unknown as string,
@@ -104,8 +104,8 @@ export async function reportContent(
       message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
     };
   }
-  const db = await createClient();
-  const { error } = await db.rpc("file_report", {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("file_report", {
     p_target: parsed.data.targetType,
     p_target_id: parsed.data.targetId,
     p_reason: parsed.data.reason,
@@ -133,8 +133,8 @@ export async function castGenerationVote(
       message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
     };
   }
-  const db = await createClient();
-  const { error } = await db.rpc("cast_generation_vote", {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cast_generation_vote", {
     p_meme_id: parsed.data.memeId,
     p_age_group: parsed.data.ageGroup,
     p_vote: parsed.data.vote,
@@ -144,11 +144,11 @@ export async function castGenerationVote(
   // 연령대 미설정 프로필이면 이번 응답을 기억 (실패해도 투표는 성공 처리)
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (user) {
-    const { data: profile } = await db.rpc("get_my_profile").single();
+    const { data: profile } = await supabase.rpc("get_my_profile").single();
     if (profile && profile.age_group == null) {
-      await db
+      await supabase
         .from("profiles")
         .update({ age_group: parsed.data.ageGroup })
         .eq("id", user.id);

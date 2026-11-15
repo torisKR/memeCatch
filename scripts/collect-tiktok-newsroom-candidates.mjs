@@ -3,7 +3,7 @@
  * Collect review-only TikTok candidates from an official TikTok Newsroom
  * article and verify each canonical post URL through public oEmbed metadata.
  * No app key, login, private endpoint, challenge bypass, or video download is
- * used, and the output is never published to the database automatically.
+ * used, and the output is never published to Supabase automatically.
  *
  * Usage:
  *   node scripts/collect-tiktok-newsroom-candidates.mjs <newsroom-url> <output.jsonl> [--max=100]

@@ -1,4 +1,4 @@
-import type { createStaticClient } from "@/lib/db/server";
+import type { createStaticClient } from "@/lib/supabase/server";
 import {
   isIndexableMeme,
   type ContentDepthInput,
@@ -42,7 +42,7 @@ export class PublicationExportError extends Error {
  * a hard scan bound so an unexpectedly large corpus cannot create an unbounded request.
  */
 export async function loadApprovedIndexableMemes<T extends PublicationExportRow>(
-  db: StaticClient,
+  supabase: StaticClient,
   options: PublicationExportOptions,
 ): Promise<{ rows: T[]; eligibleCount: number }> {
   const rows: T[] = [];
@@ -54,7 +54,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
     from < MAX_PUBLICATION_EXPORT_CANDIDATES;
     from += PUBLICATION_EXPORT_PAGE_SIZE
   ) {
-    let query = db
+    let query = supabase
       .from("memes")
       .select(`${options.select}, moderation_status`)
       .in("moderation_status", ["approved", "limited"]);

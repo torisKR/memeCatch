@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * 일일 트렌드 펄스 cron (deploy/scheduler/crontab에 등록).
+ * 일일 트렌드 펄스 cron (vercel.json crons에 등록).
  * Bearer CRON_SECRET 인증.
  */
 export async function GET(request: Request): Promise<Response> {

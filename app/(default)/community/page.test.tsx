@@ -12,7 +12,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("@/lib/db/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createStaticClient: () => ({
     from: () => {
       const query = {

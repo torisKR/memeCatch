@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   verifyOtp: vi.fn(),
 }));
 
-vi.mock("@/lib/db/admin", () => ({
+vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     auth: { admin: { generateLink: mocks.generateLink } },
     from: () => ({
@@ -25,7 +25,7 @@ vi.mock("@/lib/db/admin", () => ({
     }),
   }),
 }));
-vi.mock("@/lib/db/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { signOut: mocks.signOut, verifyOtp: mocks.verifyOtp },
   }),
@@ -76,7 +76,7 @@ describe("TikTok OAuth security", () => {
     expect(isValidTikTokOAuthState(state, null)).toBe(false);
   });
 
-  it("requires the basic profile scope before creating a session", async () => {
+  it("requires the basic profile scope before creating a Supabase session", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({
         access_token: "access-token",
@@ -172,7 +172,7 @@ describe("TikTok OAuth security", () => {
 
     await expect(
       signInWithTikTokCode("code", "https://preview.example/auth/tiktok/callback"),
-    ).rejects.toThrow("TikTok identity binding failed");
+    ).rejects.toThrow("Supabase TikTok identity binding failed");
     expect(mocks.signOut).toHaveBeenCalledOnce();
   });
 

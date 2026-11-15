@@ -6,15 +6,15 @@
  *   node scripts/quality-check.mts --fail-on=high   — high 이상 위반 시 exit 1
  *
  * 설계 원칙 (LOOP.md「자동 검수 도구」):
- *   - 읽기만 한다. 쓰기 경로가 코드에 없다.
+ *   - GET만 보낸다. 쓰기 경로가 코드에 없다.
  *   - 충실도는 lib/content-depth.ts의 정리 중 배너·광고 기준(250자·점수 5)을 쓴다.
  *     SEO 색인은 별도의 150자 기준이므로 충실도 미달을 색인 제외로 해석하지 않는다.
- *   - DB 헬퍼는 scripts/source-pipeline-rest.mjs를 재사용한다(anon 역할, RLS 통과).
+ *   - PostgREST 헬퍼는 scripts/source-pipeline-rest.mjs를 재사용한다.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRestClient, restAll } from "./source-pipeline-rest.mjs";
+import { restAll } from "./source-pipeline-rest.mjs";
 import { contentDepth } from "../lib/content-depth.ts";
 import { publicSourceUrl } from "../lib/source-links.ts";
 import { memeTitleKey } from "./meme-title-key.mjs";
@@ -81,7 +81,7 @@ const SELECT = [
 function loadEnvFromFiles(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const name of [".env.local", ".env.production", ".env.development"]) {
-    if (env.DATABASE_URL) break;
+    if (env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY) break;
     let raw: string;
     try {
       raw = readFileSync(resolve(ROOT, name), "utf8");
@@ -97,12 +97,29 @@ function loadEnvFromFiles(): NodeJS.ProcessEnv {
 }
 
 /**
- * anon 역할로만 읽는다.
- *   1) 최소 권한 — 이 도구는 어떤 쓰기도 하지 않는다.
+ * anon 키로만 읽는다. 두 가지 이유가 있다.
+ *   1) 최소 권한 — 이 도구는 어떤 쓰기도 하지 않으므로 service_role이 필요 없다.
  *   2) 검사 대상이 "공개된 화면"이라 RLS를 통과한 뒤의 데이터를 보는 게 정확하다.
+ *      approved/limited 밈과 그 출처·콘텐츠·태그는 공개 읽기 정책이 열려 있다.
  */
 function createReadOnlyClient(env: NodeJS.ProcessEnv) {
-  return createRestClient(env, { role: "anon" });
+  const base = env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!base || !key) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY 누락 (.env.local·.env.production)",
+    );
+  }
+  return async function rest(path: string) {
+    const res = await fetch(`${base}/rest/v1/${path}`, {
+      method: "GET",
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) {
+      throw new Error(`GET ${path} → ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    }
+    return res.json();
+  };
 }
 
 /** 등록·수입 검사와 같은 NFKC 키로 "사실상 같은 제목"을 모은다. */

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ claim: vi.fn(), catalog: vi.fn(), collection: vi.fn(), owned: vi.fn(), user: vi.fn(), client: vi.fn() }));
-vi.mock("@/lib/db/server", () => ({ createClient: mocks.client }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.client }));
 vi.mock("@/lib/meme-collectible.server", () => ({
   claimMemeCollectibleCard: mocks.claim, getMemeCardCatalogPage: mocks.catalog,
   getMemeCardCollectionPage: mocks.collection, getOwnedMemeCardIds: mocks.owned,

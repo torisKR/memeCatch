@@ -1,14 +1,14 @@
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
-  const db = await createClient();
-  const { data: { user } } = await db.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return Response.json({ error: "로그인이 필요해요.", code: "SIGNED_OUT" }, { status: 401 });
   }
-  const { error: quotaError } = await db.rpc("reserve_oembed_request");
+  const { error: quotaError } = await supabase.rpc("reserve_oembed_request");
   if (quotaError) {
     return Response.json({ error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.", code: "RATE_LIMITED" }, { status: 429 });
   }

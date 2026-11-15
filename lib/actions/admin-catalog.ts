@@ -9,7 +9,7 @@ import {
   type CatalogRegistrationInput,
 } from "@/lib/catalog-registration";
 import type { Json } from "@/lib/database.types";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 
 type ActionError = {
   ok: false;
@@ -39,16 +39,16 @@ export type CatalogRegistrationResult =
   | ActionError;
 
 async function requireOperator() {
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) return { ok: false, result: failure("signed_out", "로그인이 필요해요.") } as const;
-  const { data: isOperator, error } = await db.rpc("is_operator");
+  const { data: isOperator, error } = await supabase.rpc("is_operator");
   if (error || !isOperator) {
     return { ok: false, result: failure("operator_required", "운영자 권한이 필요해요.") } as const;
   }
-  return { ok: true, db, user } as const;
+  return { ok: true, supabase, user } as const;
 }
 
 function failure(code: string, message: string, retryable = false): ActionError {
@@ -101,7 +101,7 @@ export async function checkCatalogMemeDuplicates(input: {
   const auth = await requireOperator();
   if (!auth.ok) return auth.result;
   const sourceUrls = parsed.data.sourceUrls.map((url) => normalizeCatalogSourceUrl(url)!);
-  const { data, error } = await auth.db.rpc("find_catalog_meme_duplicates", {
+  const { data, error } = await auth.supabase.rpc("find_catalog_meme_duplicates", {
     p_title: parsed.data.title,
     p_source_urls: sourceUrls,
   });
@@ -126,7 +126,7 @@ export async function registerCatalogMeme(
   if (!auth.ok) return auth.result;
 
   const normalized = normalizeCatalogRegistration(parsed.data);
-  const { data, error } = await auth.db.rpc("register_catalog_meme", {
+  const { data, error } = await auth.supabase.rpc("register_catalog_meme", {
     p_input: normalized as unknown as Json,
   });
   if (error) {

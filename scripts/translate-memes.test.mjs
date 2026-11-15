@@ -72,11 +72,11 @@ const envTarget = { ANTHROPIC_API_KEY: "from-shell" };
 const envFiles = new Map([
   [
     "/project/.env.local",
-    "DATABASE_URL=postgres://local\nMEME_TRANSLATION_LOCALE=local",
+    "SUPABASE_SERVICE_ROLE_KEY=from-local\nNEXT_PUBLIC_SUPABASE_URL=https://local.example",
   ],
   [
     "/project/.env",
-    "ANTHROPIC_API_KEY=from-env\nDATABASE_URL=postgres://env",
+    "ANTHROPIC_API_KEY=from-env\nNEXT_PUBLIC_SUPABASE_URL=https://env.example",
   ],
 ]);
 assert.deepEqual(
@@ -94,8 +94,8 @@ assert.deepEqual(
 );
 assert.deepEqual(envTarget, {
   ANTHROPIC_API_KEY: "from-shell",
-  DATABASE_URL: "postgres://local",
-  MEME_TRANSLATION_LOCALE: "local",
+  SUPABASE_SERVICE_ROLE_KEY: "from-local",
+  NEXT_PUBLIC_SUPABASE_URL: "https://local.example",
 });
 
 assert.equal(localizedSlug("  킹받네! Meaning & Origin  ", "fallback"), "킹받네-meaning-origin");
@@ -271,7 +271,7 @@ function updateClient(result) {
 const conditionalUpdate = updateClient({ data: { meme_id: selectedMeme.id }, error: null });
 assert.equal(
   await persistTranslationIfCurrent({
-    db: conditionalUpdate.client,
+    supabase: conditionalUpdate.client,
     candidate: { meme: selectedMeme, snapshot: selectedSnapshot },
     locale: "en",
     translation: generatedTranslation,
@@ -293,7 +293,7 @@ assert.equal(conditionalUpdate.state.payload.reviewed_at, null);
 const lostConditionalUpdate = updateClient({ data: null, error: null });
 assert.equal(
   await persistTranslationIfCurrent({
-    db: lostConditionalUpdate.client,
+    supabase: lostConditionalUpdate.client,
     candidate: { meme: selectedMeme, snapshot: selectedSnapshot },
     locale: "en",
     translation: generatedTranslation,
@@ -316,7 +316,7 @@ const duplicateInsertClient = {
 };
 assert.equal(
   await persistTranslationIfCurrent({
-    db: duplicateInsertClient,
+    supabase: duplicateInsertClient,
     candidate: { meme: selectedMeme, snapshot: missingSnapshot },
     locale: "en",
     translation: generatedTranslation,

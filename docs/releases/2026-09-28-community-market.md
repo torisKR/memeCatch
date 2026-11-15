@@ -33,7 +33,7 @@
 Supabase project: `onjipuldngbdptldkpoe`.
 
 Applied through the connected migration tool:
-1. `creator_products_reviewed_market_20260928` — creator products table, private storage bucket, isolated quotas, authorization policies and RPCs. Reviewed local schema source: `db/migrations/20260927184114_creator_products.sql`.
+1. `creator_products_reviewed_market_20260928` — creator products table, private storage bucket, isolated quotas, authorization policies and RPCs. Reviewed local schema source: `supabase/migrations/20260927184114_creator_products.sql`.
 2. `reviewed_latest_meme_content_20260928` — reviewed original text-only editorial batch, inserted idempotently with references and sequential moderation transitions.
 
 The hosted migration tool assigns its own migration version/name. Do not blindly push all historical local migrations; reconcile hosted migration history before future CLI database pushes.

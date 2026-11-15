@@ -4,8 +4,8 @@ import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { discoveryIndexIds, type IndexCandidate } from "@/lib/content-depth";
 import type { DiscoveryIndexResult } from "@/lib/index-gate";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
-import { createStaticClient } from "@/lib/db/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { createStaticClient } from "@/lib/supabase/server";
 
 const SELECT =
   "id, category, origin_year, description, origin, usage_note, caution, usage_examples," +
@@ -21,10 +21,10 @@ const DISCOVERY_REVALIDATE_SECONDS = 60 * 60;
  */
 const loadCachedDiscoveryIds = unstable_cache(
   async (): Promise<string[]> => {
-    const db = createStaticClient();
+    const supabase = createStaticClient();
     const candidates: IndexCandidate[] = [];
     for (let from = 0; from < 50_000; from += PAGE) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("memes")
         .select(SELECT)
         .in("moderation_status", ["approved", "limited"])

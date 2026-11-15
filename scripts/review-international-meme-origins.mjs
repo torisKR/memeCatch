@@ -20,8 +20,8 @@ function usage() {
   return [
     "Usage: node scripts/review-international-meme-origins.mjs [--apply] [--confirm-remote] [--json]",
     "",
-    "Defaults to a read-only dry run against DATABASE_URL. --apply requires MEMECATCH_OPERATOR_USER_ID.",
-    "Remote writes also require --confirm-remote. The RPC records the operator as auth.uid().",
+    "Defaults to a read-only dry run. --apply requires MEMECATCH_OPERATOR_JWT.",
+    "Remote writes also require --confirm-remote. The RPC records the authenticated operator.",
   ].join("\n");
 }
 
@@ -44,32 +44,31 @@ function requiredEnv(env, name) {
   return value;
 }
 
-function isLocalDatabase(url) {
+function isLocalSupabase(url) {
   const host = new URL(url).hostname;
   return host === "127.0.0.1" || host === "localhost";
 }
 
-/** Plan client running as the given identity. Imported lazily so tests never open Postgres. */
-async function defaultDbFor(identity) {
-  await import("./register-ts-paths.mjs");
-  const [{ createPlanClient }, { executePlan }] = await Promise.all([
-    import("../lib/db/plan.ts"),
-    import("../lib/db/execute.ts"),
-  ]);
-  return createPlanClient((plan, signal) => executePlan(plan, identity, signal));
+async function jsonResponse(response) {
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = payload && typeof payload === "object" && "message" in payload
+      ? String(payload.message)
+      : `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+  return payload;
 }
 
-function unwrap({ data, error }) {
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-async function loadCandidate({ db, candidate }) {
-  const rows = unwrap(await db
-    .from("memes")
-    .select("id,slug,title,meme_sources(id,source_url)")
-    .eq("slug", candidate.slug)
-    .limit(2));
+async function loadCandidate({ baseUrl, anonKey, candidate, fetchImpl }) {
+  const search = new URLSearchParams({
+    select: "id,slug,title,meme_sources(id,source_url)",
+    slug: `eq.${candidate.slug}`,
+    limit: "2",
+  });
+  const rows = await jsonResponse(await fetchImpl(`${baseUrl}/rest/v1/memes?${search}`, {
+    headers: { apikey: anonKey, authorization: `Bearer ${anonKey}` },
+  }));
   if (!Array.isArray(rows) || rows.length !== 1) {
     throw new Error(`${candidate.slug}: expected exactly one public meme`);
   }
@@ -82,41 +81,57 @@ async function loadCandidate({ db, candidate }) {
   return { row, evidenceSourceId: evidenceSource.id };
 }
 
-async function applyCountry({ db, candidate, memeId, evidenceSourceId }) {
-  unwrap(await db.rpc("set_meme_origin_country_with_evidence", {
-    p_meme_id: memeId,
-    p_market_code: candidate.country,
-    p_local_title: candidate.localTitle,
-    p_evidence_source_id: evidenceSourceId,
+async function applyCountry({ baseUrl, anonKey, operatorJwt, candidate, memeId, evidenceSourceId, fetchImpl }) {
+  await jsonResponse(await fetchImpl(`${baseUrl}/rest/v1/rpc/set_meme_origin_country_with_evidence`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      authorization: `Bearer ${operatorJwt}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      p_meme_id: memeId,
+      p_market_code: candidate.country,
+      p_local_title: candidate.localTitle,
+      p_evidence_source_id: evidenceSourceId,
+    }),
   }));
 }
 
 export async function reviewInternationalMemeOrigins({
   env = process.env,
   argv = process.argv.slice(2),
-  dbFor = defaultDbFor,
+  fetchImpl = fetch,
 } = {}) {
   const options = parseArgs(argv);
   if (options.help) return { help: usage() };
 
-  const databaseUrl = requiredEnv(env, "DATABASE_URL");
-  const remote = !isLocalDatabase(databaseUrl);
+  const baseUrl = requiredEnv(env, "NEXT_PUBLIC_SUPABASE_URL").replace(/\/$/, "");
+  const anonKey = requiredEnv(env, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const remote = !isLocalSupabase(baseUrl);
   if (options.apply && remote && !options.confirmRemote) {
     throw new Error("remote apply requires --confirm-remote");
   }
-  const operatorId = options.apply ? requiredEnv(env, "MEMECATCH_OPERATOR_USER_ID") : null;
-  process.env.DATABASE_URL ??= databaseUrl;
-
-  const reader = await dbFor({ userId: null, role: "anon", anonymous: false });
-  const writer = operatorId
-    ? await dbFor({ userId: operatorId, role: "authenticated", anonymous: false })
-    : null;
+  const operatorJwt = options.apply ? requiredEnv(env, "MEMECATCH_OPERATOR_JWT") : null;
 
   const reviewed = [];
   for (const candidate of ORIGIN_REVIEW_PACK) {
-    const { row, evidenceSourceId } = await loadCandidate({ db: reader, candidate });
-    if (writer) {
-      await applyCountry({ db: writer, candidate, memeId: row.id, evidenceSourceId });
+    const { row, evidenceSourceId } = await loadCandidate({
+      baseUrl,
+      anonKey,
+      candidate,
+      fetchImpl,
+    });
+    if (options.apply && operatorJwt) {
+      await applyCountry({
+        baseUrl,
+        anonKey,
+        operatorJwt,
+        candidate,
+        memeId: row.id,
+        evidenceSourceId,
+        fetchImpl,
+      });
     }
     reviewed.push({ slug: candidate.slug, country: candidate.country });
   }

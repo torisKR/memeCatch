@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { searchMemeReferences } from "@/lib/meme-reference-search.server";
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { citableSources } from "@/lib/source-links";
 import { localizedMemePath } from "@/lib/i18n-routing";
 import { memePathFrom } from "@/lib/labels";
@@ -156,8 +156,8 @@ function generationConfig(): GenerationConfig | null {
   if (process.env.MEME_CHAT_GENERATION_ENABLED === "false") return null;
   try {
     if (process.env.MEME_CHAT_PROVIDER === "opencodex") {
-      // The local proxy is a development-only option, never a production target.
-      if (process.env.NODE_ENV === "production") return null;
+      // The local proxy is an explicit development option, never a Vercel loopback target.
+      if (process.env.VERCEL) return null;
       const base = new URL(process.env.MEME_CHAT_BASE_URL?.trim() || "http://127.0.0.1:10100/v1");
       if (!["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)
         || !["http:", "https:"].includes(base.protocol) || base.username || base.password

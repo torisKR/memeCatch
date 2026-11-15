@@ -9,9 +9,10 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
-import { PUBLIC_CATALOG_CACHE_TAG, PUBLIC_COUNT_CACHE_TAG } from "@/lib/db/cache-tags";
-import { createClient } from "@/lib/db/server";
-import { createAdminClient } from "@/lib/db/admin";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { PUBLIC_COUNT_CACHE_TAG } from "@/lib/supabase/public-count-cache";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
@@ -51,14 +52,14 @@ type SubmissionApprovalResult =
 
 /** 운영자 인증 확인 — 통과 시 operator 세션 클라이언트와 uid 반환 */
 async function requireOperator() {
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: isOperator } = await db.rpc("is_operator");
+  const { data: isOperator } = await supabase.rpc("is_operator");
   if (!isOperator) throw new Error("운영자 권한이 없어요.");
-  return { db, uid: user.id };
+  return { supabase, uid: user.id };
 }
 
 /** 감사 로그 기록 — service-role 전용 (RLS상 operator 직접 INSERT 불가) */
@@ -125,10 +126,10 @@ type MemeRevalidationIdentity = {
 };
 
 async function loadMemeRevalidationIdentity(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   memeId: string,
 ): Promise<MemeRevalidationIdentity | null> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from("memes")
     .select("short_id, slug, origin_kind, moderation_status, meme_translations(locale, localized_slug)")
     .eq("id", memeId)
@@ -178,6 +179,7 @@ function revalidateCountryCardPaths(meme: MemeRevalidationIdentity) {
     "/",
     "/global",
     "/explore",
+    "/daily",
     "/rankings",
     "/weekly",
     "/timeline",
@@ -196,8 +198,8 @@ function revalidateCountryCardPaths(meme: MemeRevalidationIdentity) {
 
 export async function claimSubmission(submissionId: string): Promise<ActionResult> {
   try {
-    const { db, uid } = await requireOperator();
-    const { error } = await db
+    const { supabase, uid } = await requireOperator();
+    const { error } = await supabase
       .from("meme_submissions")
       .update({ claimed_by: uid, status: "reviewing", updated_at: new Date().toISOString() })
       .eq("id", submissionId)
@@ -221,14 +223,14 @@ export async function rejectSubmission(input: {
   reason: string;
 }): Promise<ActionResult> {
   try {
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     if (!REJECT_CATEGORIES.includes(input.category)) {
       return { ok: false, error: "반려 사유 카테고리를 선택해 주세요." };
     }
     if (!input.reason.trim()) {
       return { ok: false, error: "반려 사유를 입력해 주세요." };
     }
-    const { error } = await db
+    const { error } = await supabase
       .from("meme_submissions")
       .update({
         status: "rejected",
@@ -271,11 +273,11 @@ export async function approveSubmission(input: {
   usageContext: UsageContext;
 }): Promise<SubmissionApprovalResult> {
   try {
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     if (!input.summary.trim()) return { ok: false, error: "한 줄 요약을 입력해 주세요." };
 
-    const { data: submission, error: subErr } = await db
+    const { data: submission, error: subErr } = await supabase
       .from("meme_submissions")
       .select("*")
       .eq("id", input.submissionId)
@@ -306,7 +308,7 @@ export async function approveSubmission(input: {
     let revalidationIdentity: MemeRevalidationIdentity | null = null;
     let insertError: string | null = null;
     for (const slug of [slugify(input.title), `${slugify(input.title)}-${Date.now().toString(36)}`]) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("memes")
         .insert({ ...baseRow, slug })
         .select("id, short_id, slug")
@@ -332,7 +334,7 @@ export async function approveSubmission(input: {
       }
       let sourceStored = false;
       try {
-        const { error } = await db.from("meme_sources").insert({
+        const { error } = await supabase.from("meme_sources").insert({
           meme_id: memeId,
           platform,
           source_url: submission.source_url,
@@ -354,7 +356,7 @@ export async function approveSubmission(input: {
     for (const status of ["fact_checking", "rights_checking", "approved"] as const) {
       let transitioned = false;
       try {
-        const { error } = await db
+        const { error } = await supabase
           .from("memes")
           .update({ moderation_status: status, updated_at: new Date().toISOString() })
           .eq("id", memeId);
@@ -377,7 +379,7 @@ export async function approveSubmission(input: {
       if (isSupportedOEmbedUrl(submission.source_url)) {
         try {
           const embed = await getOEmbed(submission.source_url);
-          await db.from("meme_contents").insert({
+          await supabase.from("meme_contents").insert({
             meme_id: memeId,
             platform: embed.provider,
             content_id: embed.contentId,
@@ -398,14 +400,14 @@ export async function approveSubmission(input: {
     for (const raw of input.tags) {
       const name = raw.trim();
       if (!name) continue;
-      const { data: existing } = await db
+      const { data: existing } = await supabase
         .from("tags")
         .select("id")
         .eq("name", name)
         .maybeSingle();
       let tagId = existing?.id ?? null;
       if (!tagId) {
-        const { data: created } = await db
+        const { data: created } = await supabase
           .from("tags")
           .insert({ name })
           .select("id")
@@ -413,7 +415,7 @@ export async function approveSubmission(input: {
         tagId = created?.id ?? null;
       }
       if (tagId) {
-        await db
+        await supabase
           .from("meme_tags_map")
           .upsert({ meme_id: memeId, tag_id: tagId }, { onConflict: "meme_id,tag_id" });
       }
@@ -424,7 +426,7 @@ export async function approveSubmission(input: {
     const reconciliation: string[] = [];
     let submissionUpdatePending = false;
     try {
-      const { data: updatedSubmission, error } = await db
+      const { data: updatedSubmission, error } = await supabase
         .from("meme_submissions")
         .update({ status: "approved", updated_at: new Date().toISOString() })
         .eq("id", input.submissionId)
@@ -512,7 +514,7 @@ export async function createHouseOriginal(input: {
   localTitle?: string;
 }): Promise<ActionResult<{ memeId: string }>> {
   try {
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     if (!input.summary.trim()) return { ok: false, error: "한 줄 요약을 입력해 주세요." };
     if (!isMemeCountryCode(input.country)) return { ok: false, error: "밈 국가를 확인해 주세요." };
@@ -541,7 +543,7 @@ export async function createHouseOriginal(input: {
     let created: { id: string; short_id: string; slug: string } | null = null;
     let insertError: string | null = null;
     for (const slug of [slugify(input.title), `${slugify(input.title)}-${Date.now().toString(36)}`]) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("memes")
         .insert({ ...baseRow, slug })
         .select("id, short_id, slug")
@@ -561,7 +563,7 @@ export async function createHouseOriginal(input: {
       };
     }
 
-    const { error: sourceError } = await db.from("meme_sources").insert({
+    const { error: sourceError } = await supabase.from("meme_sources").insert({
       meme_id: created.id,
       platform: "catchmeme",
       source_url: houseOriginalCanonicalUrl(created.short_id, created.slug),
@@ -578,7 +580,7 @@ export async function createHouseOriginal(input: {
       };
     }
 
-    const { error: marketProfileError } = await db.from("meme_market_profiles").insert({
+    const { error: marketProfileError } = await supabase.from("meme_market_profiles").insert({
       meme_id: created.id,
       market_code: country.code,
       language_tag: country.languageTag,
@@ -615,7 +617,7 @@ export async function setMemeOriginCountry(input: {
   localTitle: string;
 }): Promise<ActionResult> {
   try {
-    const { db } = await requireOperator();
+    const { supabase } = await requireOperator();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.memeId)) {
       return { ok: false, error: "밈 식별자를 확인해 주세요." };
     }
@@ -626,10 +628,10 @@ export async function setMemeOriginCountry(input: {
     if (!localTitle || localTitle.length > 300) {
       return { ok: false, error: "현지 제목은 1~300자로 입력해 주세요." };
     }
-    const meme = await loadMemeRevalidationIdentity(db, input.memeId);
+    const meme = await loadMemeRevalidationIdentity(supabase, input.memeId);
     if (!meme) return { ok: false, error: "밈을 찾을 수 없어요." };
 
-    const { error } = await db.rpc("set_meme_origin_country", {
+    const { error } = await supabase.rpc("set_meme_origin_country", {
       p_meme_id: input.memeId,
       p_market_code: input.country,
       p_local_title: localTitle,
@@ -682,10 +684,10 @@ export async function updateMeme(input: {
   usageContext: UsageContext;
 }): Promise<ActionResult<{ safetyReviewQueued: boolean; revertedToRightsChecking: boolean }>> {
   try {
-    const { db } = await requireOperator();
+    const { supabase } = await requireOperator();
     if (!input.title.trim()) return { ok: false, error: "제목을 입력해 주세요." };
     const revalidationIdentity = await loadMemeRevalidationIdentity(
-      db,
+      supabase,
       input.memeId,
     );
     if (
@@ -695,7 +697,7 @@ export async function updateMeme(input: {
     ) {
       return { ok: false, error: houseOriginalOriginScratchError() };
     }
-    const { data: safetyReviewQueued, error } = await db.rpc(
+    const { data: safetyReviewQueued, error } = await supabase.rpc(
       "update_meme_with_safety_review",
       {
         p_meme_id: input.memeId,
@@ -725,7 +727,7 @@ export async function updateMeme(input: {
       (revalidationIdentity.moderation_status === "approved" ||
         revalidationIdentity.moderation_status === "limited")
     ) {
-      const { data: after } = await db
+      const { data: after } = await supabase
         .from("memes")
         .select("moderation_status")
         .eq("id", input.memeId)
@@ -780,9 +782,9 @@ export async function generateKoreanReviewDraft(
   memeId: string
 ): Promise<ActionResult<KoreanReviewDraft>> {
   try {
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
 
-    const { data: meme, error } = await db
+    const { data: meme, error } = await supabase
       .from("memes")
       .select("title, summary, description, origin, usage_note, caution")
       .eq("id", memeId)
@@ -820,8 +822,8 @@ export async function transitionMemeStatus(input: {
   attested?: boolean;
 }): Promise<ActionResult> {
   try {
-    const { db, uid } = await requireOperator();
-    const { data: meme, error: loadError } = await db
+    const { supabase, uid } = await requireOperator();
+    const { data: meme, error: loadError } = await supabase
       .from("memes")
       .select("short_id, slug, origin_kind, meme_translations(locale, localized_slug)")
       .eq("id", input.memeId)
@@ -837,7 +839,7 @@ export async function transitionMemeStatus(input: {
       if (input.attested !== true) {
         return { ok: false, error: houseOriginalPublishErrorMessage("house_rights_attestation_required") };
       }
-      const { error } = await db.rpc("publish_house_original", {
+      const { error } = await supabase.rpc("publish_house_original", {
         p_meme_id: input.memeId,
         p_to: input.to,
         p_attested: true,
@@ -846,7 +848,7 @@ export async function transitionMemeStatus(input: {
         return { ok: false, error: houseOriginalPublishErrorMessage(error.message) };
       }
     } else {
-      const { error } = await db
+      const { error } = await supabase
         .from("memes")
         .update({ moderation_status: input.to, updated_at: new Date().toISOString() })
         .eq("id", input.memeId);
@@ -879,8 +881,8 @@ export async function handleReport(input: {
   action: "resolved" | "dismissed";
 }): Promise<ActionResult> {
   try {
-    const { db, uid } = await requireOperator();
-    const { error } = await db
+    const { supabase, uid } = await requireOperator();
+    const { error } = await supabase
       .from("reports")
       .update({ status: input.action, handled_by: uid })
       .eq("id", input.reportId)
@@ -989,9 +991,9 @@ const DRAFT_SCHEMA = {
 
 export async function generateDraft(submissionId: string): Promise<ActionResult<DraftResult>> {
   try {
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
 
-    const { data: submission } = await db
+    const { data: submission } = await supabase
       .from("meme_submissions")
       .select("name, source_url, description, seen_at, guess_reason, tags")
       .eq("id", submissionId)
@@ -1029,6 +1031,136 @@ export async function generateDraft(submissionId: string): Promise<ActionResult<
       reasoning_effort: OPENAI_REVIEW_REASONING_EFFORT,
     });
     return { ok: true, data: draft };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
+// ── MemeCatch Plus 수동 권한 관리 (운영자 전용) ─────────────────────
+// 조회/부여 모두 service-role RPC를 쓰되(다른 사용자 구독 열람은 RLS로 막혀 있음),
+// 호출 전 requireOperator로 운영자를 재확인하고 부여/해제는 감사 로그에 남긴다.
+
+export type PlusStatusView = {
+  userFound: boolean;
+  userId?: string;
+  email: string;
+  hasBillingIdentity?: boolean;
+  isPremium?: boolean;
+  status?: string | null;
+  currentPeriodEnd?: string | null;
+  lastEventAt?: string | null;
+  amount?: number | null;
+  isManual?: boolean | null;
+  provider?: string | null;
+  subscriptions?: {
+    provider: string;
+    status: string;
+    amount: number | null;
+    currentPeriodEnd: string | null;
+    lastEventAt: string | null;
+    isManual: boolean;
+  }[];
+};
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/** 이메일로 Plus 상태 조회 — 부작용 없음 */
+export async function lookupPlusStatus(
+  email: string
+): Promise<ActionResult<PlusStatusView>> {
+  try {
+    await requireOperator();
+    const normalized = normalizeEmail(email);
+    if (!normalized || normalized.indexOf("@") < 1) {
+      return { ok: false, error: "이메일을 입력해 주세요." };
+    }
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("admin_get_plus_status", {
+      p_email: normalized,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: data as unknown as PlusStatusView };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
+/** 이메일 사용자에게 Plus 수동 부여(active=true, months 시한부) 또는 해제(active=false) */
+export async function setUserPlus(input: {
+  email: string;
+  active: boolean;
+  months?: number;
+}): Promise<ActionResult<PlusStatusView>> {
+  try {
+    const { uid } = await requireOperator();
+    const normalized = normalizeEmail(input.email);
+    if (!normalized || normalized.indexOf("@") < 1) {
+      return { ok: false, error: "이메일을 입력해 주세요." };
+    }
+    const months = input.active
+      ? Math.max(1, Math.min(Math.trunc(input.months ?? 1), 36))
+      : 1;
+    const admin = createAdminClient();
+    const action = input.active ? "plus.grant" : "plus.revoke";
+    const detail = { email: normalized, active: input.active, months };
+    await logAuditOutcome(
+      uid,
+      action,
+      "billing_subscription",
+      null,
+      "intent",
+      detail,
+    );
+    const { data, error } = await (async () => {
+      try {
+        return await admin.rpc("admin_set_plus_entitlement", {
+          p_email: normalized,
+          p_active: input.active,
+          p_months: months,
+        });
+      } catch (cause) {
+        await logAuditOutcome(
+          uid,
+          action,
+          "billing_subscription",
+          null,
+          "failed",
+          detail,
+        );
+        throw cause;
+      }
+    })();
+    if (error) {
+      await logAuditOutcome(
+        uid,
+        action,
+        "billing_subscription",
+        null,
+        "failed",
+        detail,
+      );
+      const msg = error.message.includes("user_not_found")
+        ? "해당 이메일의 가입 계정을 찾을 수 없어요. (사용자가 먼저 로그인·가입해야 해요.)"
+        : error.message.includes("invalid_email")
+          ? "이메일 형식이 올바르지 않아요."
+          : error.message;
+      return { ok: false, error: msg };
+    }
+    const result = data as { userId?: string } | null;
+    await finalizeAudit(
+      uid,
+      action,
+      "billing_subscription",
+      result?.userId ?? null,
+      detail,
+    );
+    revalidatePath("/admin/subscriptions");
+    const { data: latest } = await admin.rpc("admin_get_plus_status", {
+      p_email: normalized,
+    });
+    return { ok: true, data: latest as unknown as PlusStatusView };
   } catch (e) {
     return { ok: false, error: errMessage(e) };
   }

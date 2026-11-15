@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createAdminClient } from '@/lib/db/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { databaseStore } from '@/integrations/memecatch-chatgpt/src/state.mjs';
 import { principal, ORIGIN, SCOPE } from '@/integrations/memecatch-chatgpt/src/oauth.mjs';
 import { body, json } from '@/integrations/memecatch-chatgpt/src/http.mjs';

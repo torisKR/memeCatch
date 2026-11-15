@@ -40,11 +40,15 @@ describe("localized meme detail metadata", () => {
     expect(source).toContain("<ExportButton shortId={meme.short_id} />");
   });
 
-  it("has no Plus-only trend panel, use kit, or translation priority request", () => {
-    expect(source).not.toContain("@/components/premium/");
-    expect(source).not.toContain("<MemeTrendPanel");
-    expect(source).not.toContain("<MemeUseKit");
-    expect(source).not.toContain("TranslationPriorityButton");
+  it("keeps the Plus trend anchor available for localized weekly brief links", () => {
+    expect(source).toContain('import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";');
+    expect(source).toContain("<MemeTrendPanel memeId={meme.id} />");
+  });
+
+  it("connects the localized detail action row to the existing Plus Use Kit", () => {
+    expect(source).toContain('import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";');
+    expect(source).toContain("<MemeUseKitEntry locale={locale} />");
+    expect(source).toContain("<MemeUseKit");
   });
 
   it("offers the localized canonical share action only after editorial review", () => {

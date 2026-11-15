@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Free local Korean embeddings; bounded indexing writes through DATABASE_URL (service role).
+"""Free local Korean embeddings; bounded indexing uses existing Supabase credentials.
 
 Uses an installed transformers/torch environment. Does not install packages,
 start other services, create tokens, or publish any content.
@@ -13,6 +13,7 @@ from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 PROFILE = "multilingual-e5-small-v1"
 MODEL = "intfloat/multilingual-e5-small"
@@ -64,20 +65,23 @@ class Encoder:
         return vectors
 
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args):
+        return None
 
 
-def rpc(dsn, name, body):
-    result = subprocess.run(["node", os.path.join(ROOT, "scripts", "db-rpc.mjs"), name],
-                            input=json.dumps(body), capture_output=True, text=True, timeout=60,
-                            env={**os.environ, "DATABASE_URL": dsn}, check=False)
-    if result.returncode != 0:
-        raise RuntimeError("rpc_failed:" + name)
-    return json.loads(result.stdout)
+def rpc(url, key, name, body):
+    request = Request(url.rstrip("/") + "/rest/v1/rpc/" + name,
+                      data=json.dumps(body).encode(), method="POST",
+                      headers={"content-type": "application/json", "apikey": key, "authorization": "Bearer " + key})
+    with build_opener(NoRedirect()).open(request, timeout=30) as response:
+        return json.load(response)
 
 
 def local_connection():
-    return os.environ.get("DATABASE_URL", "postgres://postgres:postgres@127.0.0.1:5432/memecatch")
+    result = subprocess.run(["supabase", "status", "--output", "json"], check=True, capture_output=True, text=True)
+    status = json.loads(result.stdout)
+    return status["API_URL"], status["SERVICE_ROLE_KEY"]
 
 
 def index_catalog(args):
@@ -88,12 +92,15 @@ def index_catalog(args):
         raise ValueError("batches_must_be_1_to_100")
     if args.limit * batches > 10000:
         raise ValueError("indexing_row_budget_exceeded")
-    dsn = local_connection() if args.local else os.environ.get("DATABASE_URL", "")
-    target = urlparse(dsn)
+    if args.local:
+        url, key = local_connection()
+    else:
+        url, key = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""), os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    target = urlparse(url)
     loopback = target.hostname in ["localhost", "127.0.0.1", "::1"]
-    if target.scheme not in ["postgres", "postgresql"] or not target.hostname:
+    if not key or target.username or target.password or target.query or target.fragment:
         raise ValueError("invalid_database_configuration")
-    if not loopback and not args.allow_remote:
+    if not loopback and (not args.allow_remote or target.scheme != "https"):
         raise ValueError("remote_indexing_requires_allow_remote")
     # Public missing/changed documents only; a keyset skips stale rows until a fresh run.
     # Successful stores are individually atomic, so failures can be resumed by rerunning.
@@ -104,7 +111,7 @@ def index_catalog(args):
         body = {"p_limit": args.limit}
         if after is not None:
             body["p_after"] = after
-        jobs = rpc(dsn, "list_meme_embedding_jobs", body)
+        jobs = rpc(url, key, "list_meme_embedding_jobs", body)
         if not isinstance(jobs, list) or len(jobs) > args.limit:
             raise ValueError("invalid_embedding_jobs_response")
         batch_indexed = batch_stale = 0
@@ -117,7 +124,7 @@ def index_catalog(args):
                 if not isinstance(vectors, list) or len(vectors) != len(batch):
                     raise ValueError("invalid_model_output")
                 for job, vector in zip(batch, vectors):
-                    stored = rpc(dsn, "store_meme_embedding", {
+                    stored = rpc(url, key, "store_meme_embedding", {
                         "p_meme_id": job["meme_id"], "p_source_hash": job["source_hash"], "p_embedding": vector,
                     })
                     if not isinstance(stored, bool):

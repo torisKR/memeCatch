@@ -8,7 +8,7 @@ const { createStaticClient, koreanRankingsVisible } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 vi.mock("@/lib/korean-rankings.server", () => ({ koreanRankingsVisible }));
 
 import { GET, dynamic as routeDynamic } from "@/app/llms.txt/route";

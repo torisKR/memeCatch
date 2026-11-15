@@ -8,7 +8,7 @@ import type { MemeListItem } from "@/lib/queries";
 
 const createClient = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/db/client", () => ({ createClient }));
+vi.mock("@/lib/supabase/client", () => ({ createClient }));
 
 vi.mock("@/components/meme-card", () => ({
   MemeCard: ({ meme }: { meme: MemeListItem }) => (

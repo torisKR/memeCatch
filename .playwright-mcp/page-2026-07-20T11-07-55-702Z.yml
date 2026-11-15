@@ -1,0 +1,595 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "밈캐치 홈" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]:
+          - generic [ref=e10]: 밈캐치
+          - generic [ref=e11]: catchmeme.com
+      - link "탐색" [ref=e12] [cursor=pointer]:
+        - /url: /explore
+      - link "연표" [ref=e16] [cursor=pointer]:
+        - /url: /timeline
+      - link "커뮤니티" [ref=e21] [cursor=pointer]:
+        - /url: /community
+      - generic [ref=e24]:
+        - search [ref=e25]:
+          - generic [ref=e26] [cursor=pointer]: 밈 검색
+          - searchbox "밈 검색" [ref=e28]
+        - button "아무 밈이나 보기" [ref=e30] [cursor=pointer]
+        - link "로그인" [ref=e37] [cursor=pointer]:
+          - /url: /login?next=%2Fmemes%2Fcduhxdw2
+  - main [ref=e39]:
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - region "관련 콘텐츠" [ref=e42]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: 유행어
+              - generic [ref=e47]: 2025년 등장
+            - paragraph [ref=e48]: 밤티
+            - generic [ref=e49]:
+              - paragraph [ref=e50]: 원본은 사라졌지만, 뜻과 맥락은 여기 남아 있어요.
+              - paragraph [ref=e51]: 플랫폼에서 내려갔거나 임베드가 어려운 콘텐츠예요. 아래 설명이 이 밈의 기록이에요.
+        - region [ref=e52]:
+          - heading "이 밈, 어땠어요?" [level=2] [ref=e53]
+          - paragraph [ref=e54]: 반응 남기기는 준비 중이에요.
+          - generic [ref=e55]:
+            - button "이해됨" [disabled] [ref=e56] [cursor=pointer]:
+              - generic [ref=e57]: 💡
+              - text: 이해됨
+            - button "웃김" [disabled] [ref=e58] [cursor=pointer]:
+              - generic [ref=e59]: 😂
+              - text: 웃김
+            - button "이제 알았다" [disabled] [ref=e60] [cursor=pointer]:
+              - generic [ref=e61]: 👀
+              - text: 이제 알았다
+            - button "이미 늦었다" [disabled] [ref=e62] [cursor=pointer]:
+              - generic [ref=e63]: 🕰️
+              - text: 이미 늦었다
+            - button "아직 살아있다" [disabled] [ref=e64] [cursor=pointer]:
+              - generic [ref=e65]: 🔥
+              - text: 아직 살아있다
+            - button "쓰면 위험하다" [disabled] [ref=e66] [cursor=pointer]:
+              - generic [ref=e67]: 🚨
+              - text: 쓰면 위험하다
+          - status [ref=e68]
+        - generic [ref=e69]:
+          - button "이 밈 저장하기" [ref=e70] [cursor=pointer]
+          - status [ref=e73]
+      - generic [ref=e74]:
+        - region "정답 카드" [ref=e75]:
+          - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e76]':
+            - generic [ref=e86]: 급상승
+          - heading "밤티" [level=1] [ref=e87]
+          - paragraph [ref=e88]: 촌스럽다·못생겼다·미감이 떨어진다는 뜻으로 쓰이는 유행어 (라인플레이 유래)
+          - paragraph [ref=e90]:
+            - generic [ref=e91]: ◌
+            - generic [ref=e92]:
+              - generic [ref=e93]: 사용 안전 신호등
+              - generic [ref=e94]: 이미 늦음
+        - region [ref=e95]:
+          - heading "이 판정의 근거" [level=2] [ref=e96]
+          - generic [ref=e97]:
+            - paragraph [ref=e98]:
+              - generic [ref=e99]:
+                - generic [ref=e100]: ◌
+                - text: 이미 늦음
+              - generic [ref=e101]: 유행이 지나 지금 쓰면 어색하게 들릴 수 있는 등급이에요.
+            - paragraph [ref=e102]: 외모 비하로 오해될 수 있어 친한 사이 농담이 아니면 피하는 게 안전 — 대상이 밈을 모르면 사이버불링 논란 가능
+          - generic [ref=e103]:
+            - heading "어디서 써도 될까요?" [level=3] [ref=e104]
+            - list [ref=e105]:
+              - listitem [ref=e106]:
+                - generic [ref=e107]: 직장에서
+                - generic [ref=e108]:
+                  - generic [ref=e109]: ✕
+                  - text: 쓰면 위험
+              - listitem [ref=e110]:
+                - generic [ref=e111]: 친구끼리
+                - generic [ref=e112]:
+                  - generic [ref=e113]: ▲
+                  - text: 맥락 주의
+              - listitem [ref=e114]:
+                - generic [ref=e115]: 자녀·가족과
+                - generic [ref=e116]:
+                  - generic [ref=e117]: ▲
+                  - text: 맥락 주의
+              - listitem [ref=e118]:
+                - generic [ref=e119]: 공개 SNS에서
+                - generic [ref=e120]:
+                  - generic [ref=e121]: ▲
+                  - text: 맥락 주의
+        - region [ref=e122]:
+          - heading "뜻과 유래" [level=2] [ref=e123]
+          - generic [ref=e124]:
+            - heading "무슨 뜻이에요?" [level=3] [ref=e125]
+            - paragraph [ref=e126]: 아바타 꾸미기 게임 라인플레이의 유저 닉네임에서 시작된 밈. 천사 복장에 수염 난 독특한 코스튬의 유저 밤티에게 누군가 "밤티님 죄송한데 진짜…"라고 하자 무덤덤하게 "네"라고 답한 장면이 짤로 퍼졌다. 라인플레이 서비스 종료(2024) 이후 2025년 X에서 급부상해, 지금은 촌스럽다·못생겼다·조잡하다·마음에 안 든다는 부정적 평가의 형용사처럼 쓰인다. 길티 밤티(촌스럽지만 묘하게 끌림), 밤티난다, 밤티력 등 파생어도 있다.
+          - generic [ref=e127]:
+            - heading "어디서 시작됐어요?" [level=3] [ref=e128]
+            - paragraph [ref=e129]: 아바타 게임 라인플레이 유저 닉네임/짤 → 2025년 X 확산
+            - paragraph [ref=e130]:
+              - generic [ref=e131]: 유행어
+              - generic [ref=e132]: 2025년생 밈
+          - paragraph [ref=e133]:
+            - text: 밈캐치 검수팀 확인 · 마지막 업데이트
+            - time [ref=e134]: 2026년 7월 20일
+        - region [ref=e135]:
+          - generic [ref=e136]:
+            - heading "트렌드 추이" [level=2] [ref=e137]
+            - generic [ref=e138]: Plus
+        - region "댓글은 곧 열려요" [ref=e140]:
+          - heading "댓글은 곧 열려요" [level=3] [ref=e144]
+          - paragraph [ref=e145]: 커뮤니티 기능을 차근차근 준비하고 있어요. 열리면 이 자리에서 바로 만나요.
+          - generic [ref=e146]:
+            - paragraph [ref=e147]: 지금은 반응 버튼으로 마음을 남길 수 있어요.
+            - list "반응 종류" [ref=e148]:
+              - listitem [ref=e149]:
+                - generic [ref=e150]: 💡
+                - text: 이해됨
+              - listitem [ref=e151]:
+                - generic [ref=e152]: 😂
+                - text: 웃김
+              - listitem [ref=e153]:
+                - generic [ref=e154]: 👀
+                - text: 이제 알았다
+              - listitem [ref=e155]:
+                - generic [ref=e156]: 🕰️
+                - text: 이미 늦었다
+              - listitem [ref=e157]:
+                - generic [ref=e158]: 🔥
+                - text: 아직 살아있다
+              - listitem [ref=e159]:
+                - generic [ref=e160]: 🚨
+                - text: 쓰면 위험하다
+        - complementary "후원하기" [ref=e161]:
+          - generic [ref=e166]:
+            - paragraph [ref=e167]: 이 사전, 도움이 되셨나요?
+            - paragraph [ref=e168]: 밈캐치는 1인이 광고·후원으로 운영하는 비영리 밈 사전이에요. 커피 한 잔이면 다음 밈도 계속 기록할 수 있어요.
+            - link "후원하기" [ref=e170] [cursor=pointer]:
+              - /url: https://fairy.hada.io/@toris-dev
+    - generic [ref=e173]:
+      - region [ref=e174]:
+        - generic [ref=e175]:
+          - heading "이 밈도 알아두면 좋아요" [level=2] [ref=e176]
+          - generic [ref=e177]: 비슷한 밈
+        - list [ref=e179]:
+          - listitem [ref=e180]:
+            - link [ref=e181] [cursor=pointer]:
+              - /url: /memes/d8kf6t9w-%EC%83%A4%EA%B0%88
+              - generic [ref=e182]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e183]:
+                - paragraph [ref=e184]: 샤갈
+                - paragraph [ref=e185]: 어이없고 당황스러운 상황에 쓰는 유튜브발 신조어
+                - generic [ref=e186]:
+                  - generic [ref=e187]:
+                    - generic [ref=e188]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e189]'
+          - listitem [ref=e199]:
+            - link [ref=e200] [cursor=pointer]:
+              - /url: /memes/sejp2dtf-%EC%95%BC%EB%A5%B4
+              - generic [ref=e201]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e202]:
+                - paragraph [ref=e203]: 야르
+                - paragraph [ref=e204]: 기분 좋을 때 쓰는 감탄사로 '샤갈'과 짝을 이루는 신조어
+                - generic [ref=e205]:
+                  - generic [ref=e206]:
+                    - generic [ref=e207]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e208]'
+          - listitem [ref=e218]:
+            - link [ref=e219] [cursor=pointer]:
+              - /url: /memes/4gpkwy4w-%ED%85%8C%EB%9D%BC-%EB%B0%9C%ED%9A%A8%EB%A7%8C-%EC%8B%9C%EC%BC%B0%EC%8A%B5%EB%8B%88%EB%8B%A4
+              - generic [ref=e220]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e221]:
+                - paragraph [ref=e222]: 테라 발효만 시켰습니다
+                - paragraph [ref=e223]: 청정라거를 표방하며 공유를 모델로 내세운 하이트진로 테라 맥주 광고
+                - generic [ref=e224]:
+                  - generic [ref=e225]:
+                    - generic [ref=e226]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e227]'
+          - listitem [ref=e237]:
+            - link [ref=e238] [cursor=pointer]:
+              - /url: /memes/fqs3t9wg-%EB%A5%98%EC%8A%B9%EB%A3%A1-%EA%B8%B0%EB%AA%A8%EC%B0%8C!(%EC%98%A4%EB%B2%84%EC%9B%8C%EC%B9%98)
+              - generic [ref=e239]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e240]:
+                - paragraph [ref=e241]: 류승룡 기모찌!(오버워치)
+                - paragraph [ref=e242]: 겐지 궁극기 대사가 잘못 들려 생긴 오버워치 밈
+                - generic [ref=e243]:
+                  - generic [ref=e244]:
+                    - generic [ref=e245]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e246]'
+          - listitem [ref=e256]:
+            - link [ref=e257] [cursor=pointer]:
+              - /url: /memes/9ctd73f3-%EC%BD%94%EB%A6%AC%EC%95%88%ED%8A%B9%EA%B8%89
+              - generic [ref=e258]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e259]:
+                - paragraph [ref=e260]: 코리안특급
+                - paragraph [ref=e261]: 1994년 박찬호 메이저리그 데뷔 후 얻은 별명
+                - generic [ref=e262]:
+                  - generic [ref=e263]:
+                    - generic [ref=e264]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e265]'
+          - listitem [ref=e275]:
+            - link [ref=e276] [cursor=pointer]:
+              - /url: /memes/6bgyw6gb-%EB%AA%AC%EC%A3%BC%EC%9D%B5%EC%9D%98-%EC%98%81%EC%9B%85
+              - generic [ref=e277]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e278]:
+                - paragraph [ref=e279]: 몬주익의 영웅
+                - paragraph [ref=e280]: 1992년 바르셀로나 올림픽 마라톤에서 황영조가 얻은 별명
+                - generic [ref=e281]:
+                  - generic [ref=e282]:
+                    - generic [ref=e283]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e284]'
+          - listitem [ref=e294]:
+            - link [ref=e295] [cursor=pointer]:
+              - /url: /memes/9fvbcgv5-X%EB%A7%A8-%EC%A3%BD%EC%A7%80-%EC%95%8A%EC%95%84
+              - generic [ref=e296]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e297]:
+                - paragraph [ref=e298]: X맨 죽지 않아
+                - paragraph [ref=e299]: 예능 <X맨을 찾아라>에서 하하가 유행시킨 2006년 유행어
+                - generic [ref=e300]:
+                  - generic [ref=e301]:
+                    - generic [ref=e302]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e303]'
+          - listitem [ref=e313]:
+            - link [ref=e314] [cursor=pointer]:
+              - /url: /memes/wguaekkj-%EB%B0%94%EA%BF%94%EC%A4%98(%EC%A0%95%EC%97%AC%EC%82%AC)
+              - generic [ref=e315]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e316]:
+                - paragraph [ref=e317]: 바꿔줘(정여사)
+                - paragraph [ref=e318]: 막무가내로 물건을 바꿔달라던 개그콘서트 코너 유행어
+                - generic [ref=e319]:
+                  - generic [ref=e320]:
+                    - generic [ref=e321]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e322]'
+          - listitem [ref=e332]:
+            - link [ref=e333] [cursor=pointer]:
+              - /url: /memes/v9jzbs7q-%EA%B7%B8%EB%9F%BC-%EC%82%B4%EB%A0%A4%EC%9A%94
+              - generic [ref=e334]:
+                - generic:
+                  - generic: 유행어
+                  - generic: 영상
+              - generic [ref=e335]:
+                - paragraph [ref=e336]: 그럼 살려요
+                - paragraph [ref=e337]: 태양의 후예 유시진의 로맨틱한 명대사
+                - generic [ref=e338]:
+                  - generic [ref=e339]:
+                    - generic [ref=e340]: ●
+                    - text: 써도 됨
+                  - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e341]'
+      - region [ref=e351]:
+        - heading "이어서 보기" [level=2] [ref=e352]
+        - paragraph [ref=e353]: 스크롤을 멈추기 아까운 밈들 — 끝없이 이어져요.
+        - generic [ref=e355]:
+          - list [ref=e356]:
+            - listitem [ref=e357]:
+              - link [ref=e358] [cursor=pointer]:
+                - /url: /memes/javpvzxr-%EC%8B%9C%EC%B6%94%EC%97%90%EC%9D%B4%EC%85%98%EC%8B%AD(Situationship)
+                - generic [ref=e359]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e360]:
+                  - paragraph [ref=e361]: 시추에이션십(Situationship)
+                  - paragraph [ref=e362]: 연인은 아니지만 연인 같은 애매한 관계를 가리키는 신조어
+                  - generic [ref=e363]:
+                    - generic [ref=e364]:
+                      - generic [ref=e365]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e366]'
+            - listitem [ref=e376]:
+              - link [ref=e377] [cursor=pointer]:
+                - /url: /memes/6ccccejt-%EB%B0%95%EB%B1%85-(%EB%B0%95%EB%B3%91%ED%98%B8)
+                - generic [ref=e378]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e379]:
+                  - paragraph [ref=e380]: 박뱅 (박병호)
+                  - paragraph [ref=e381]: 미국 진출 후 붙은 박병호의 MLB식 별명
+                  - generic [ref=e382]:
+                    - generic [ref=e383]:
+                      - generic [ref=e384]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e385]'
+            - listitem [ref=e395]:
+              - link [ref=e396] [cursor=pointer]:
+                - /url: /memes/mbznr5ga-%EB%AF%BC%EC%B4%88%EB%8B%A8-vs-%EB%B0%98%EB%AF%BC%EC%B4%88%EB%8B%A8
+                - generic [ref=e397]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e398]:
+                  - paragraph [ref=e399]: 민초단 vs 반민초단
+                  - paragraph [ref=e400]: 민트초코 호불호를 두고 갈라진 두 진영을 가리키는 밈
+                  - generic [ref=e401]:
+                    - generic [ref=e402]:
+                      - generic [ref=e403]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e404]'
+            - listitem [ref=e414]:
+              - link [ref=e415] [cursor=pointer]:
+                - /url: /memes/zm9cegzj-%EA%B1%B8-%EB%A7%A4%EC%8A%A4(Girl-Math)
+                - generic [ref=e416]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e417]:
+                  - paragraph [ref=e418]: 걸 매스(Girl Math)
+                  - paragraph [ref=e419]: 현금 아니면 공짜라는 식의 유쾌한 소비 합리화 논리
+                  - generic [ref=e420]:
+                    - generic [ref=e421]:
+                      - generic [ref=e422]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e423]'
+            - listitem [ref=e433]:
+              - link [ref=e434] [cursor=pointer]:
+                - /url: /memes/wbkaqb69-%EB%82%B4%EA%B0%80-%EC%A0%9C%EC%9D%BC-%EC%9E%98%EB%82%98%EA%B0%80
+                - generic [ref=e435]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e436]:
+                  - paragraph [ref=e437]: 내가 제일 잘나가
+                  - paragraph [ref=e438]: 2NE1 노래 후렴구가 자기과시 유행어로 굳어짐
+                  - generic [ref=e439]:
+                    - generic [ref=e440]:
+                      - generic [ref=e441]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e442]'
+            - listitem [ref=e452]:
+              - link [ref=e453] [cursor=pointer]:
+                - /url: /memes/6m2h46n8-%EC%A7%9C%EC%9E%A5%EB%A9%B4-%EC%A7%AC%EB%BD%95-%EA%B2%B0%EC%A0%95%EC%9E%A5%EC%95%A0
+                - generic [ref=e454]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e455]:
+                  - paragraph [ref=e456]: 짜장면 짬뽕 결정장애
+                  - paragraph [ref=e457]: 중국집에서 짜장면과 짬뽕 중 하나를 못 고르는 흔한 고민을 가리키는 밈
+                  - generic [ref=e458]:
+                    - generic [ref=e459]:
+                      - generic [ref=e460]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e461]'
+            - listitem [ref=e471]:
+              - link [ref=e472] [cursor=pointer]:
+                - /url: /memes/bw9remn6-%ED%96%87%EB%8B%98%2F%EB%8B%AC%EB%8B%98
+                - generic [ref=e473]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e474]:
+                  - paragraph [ref=e475]: 햇님/달님
+                  - paragraph [ref=e476]: 무한도전 정형돈의 사투리 발음에서 나온 자막 유행어
+                  - generic [ref=e477]:
+                    - generic [ref=e478]:
+                      - generic [ref=e479]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e480]'
+            - listitem [ref=e490]:
+              - link [ref=e491] [cursor=pointer]:
+                - /url: /memes/n8x6kv6e-%EB%8C%80%EC%9E%A5%EA%B8%88-%ED%99%8D%EC%8B%9C%EB%A7%9B-%EB%AA%85%EB%8C%80%EC%82%AC
+                - generic [ref=e492]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e493]:
+                  - paragraph [ref=e494]: 대장금 홍시맛 명대사
+                  - paragraph [ref=e495]: 어린 장금이 남긴 2003년 드라마 명대사
+                  - generic [ref=e496]:
+                    - generic [ref=e497]:
+                      - generic [ref=e498]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e499]'
+            - listitem [ref=e509]:
+              - link [ref=e510] [cursor=pointer]:
+                - /url: /memes/6f5tsjyj-%EB%82%98%ED%95%9C%ED%85%8C%EB%AA%85%EB%A0%B9%ED%95%98%EC%A7%80%EB%A7%88%ED%95%A0%EA%B1%B0%EB%A9%B4%EB%A7%88%EC%9D%B8%ED%81%AC%EB%9E%98%ED%94%84%ED%8A%B8%EB%AA%85%EB%A0%B9%EC%96%B4%EB%A1%9C%ED%95%B4
+                - generic [ref=e511]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e512]:
+                  - paragraph [ref=e513]: 나한테명령하지마할거면마인크래프트명령어로해
+                  - paragraph [ref=e514]: 듣기 싫은 말에 마인크래프트 명령어 드립으로 받아치는 밈
+                  - generic [ref=e515]:
+                    - generic [ref=e516]:
+                      - generic [ref=e517]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e518]'
+            - listitem [ref=e528]:
+              - link [ref=e529] [cursor=pointer]:
+                - /url: /memes/a4nkemva-%EB%B0%B0%ED%8B%80%EA%B7%B8%EB%9D%BC%EC%9A%B4%EB%93%9C-%EC%B9%98%ED%82%A8-%EB%A8%B9%EC%97%88%EB%8B%A4
+                - generic [ref=e530]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e531]:
+                  - paragraph [ref=e532]: 배틀그라운드 치킨 먹었다
+                  - paragraph [ref=e533]: 배틀그라운드 1등 승리 메시지에서 나온 '치킨 먹었다'라는 표현이 유행어가 된 것
+                  - generic [ref=e534]:
+                    - generic [ref=e535]:
+                      - generic [ref=e536]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e537]'
+            - listitem [ref=e547]:
+              - link [ref=e548] [cursor=pointer]:
+                - /url: /memes/exd9cn5q-%EA%B9%80%EC%97%B0%EC%95%84-%ED%82%A4%EC%A6%88
+                - generic [ref=e549]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e550]:
+                  - paragraph [ref=e551]: 김연아 키즈
+                  - paragraph [ref=e552]: 김연아의 영향을 받아 피겨스케이팅을 시작한 세대
+                  - generic [ref=e553]:
+                    - generic [ref=e554]:
+                      - generic [ref=e555]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e556]'
+            - listitem [ref=e566]:
+              - link [ref=e567] [cursor=pointer]:
+                - /url: /memes/dzxy69n7-%EC%98%A4%EB%A7%88%EC%B9%B4%EC%84%B8-%EC%97%B4%ED%92%8D
+                - generic [ref=e568]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e569]:
+                  - paragraph [ref=e570]: 오마카세 열풍
+                  - paragraph [ref=e571]: 고가의 셰프 코스요리 '오마카세'가 플렉스 문화의 상징이 된 외식 트렌드
+                  - generic [ref=e572]:
+                    - generic [ref=e573]:
+                      - generic [ref=e574]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e575]'
+            - listitem [ref=e585]:
+              - link [ref=e586] [cursor=pointer]:
+                - /url: /memes/pypgascr-%EB%B9%A0%EB%8D%98
+                - generic [ref=e587]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e588]:
+                  - paragraph [ref=e589]: 빠던
+                  - paragraph [ref=e590]: 타자가 안타·홈런 후 배트를 휙 던지는 KBO식 세리머니
+                  - generic [ref=e591]:
+                    - generic [ref=e592]:
+                      - generic [ref=e593]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e594]'
+            - listitem [ref=e604]:
+              - link [ref=e605] [cursor=pointer]:
+                - /url: /memes/dbyg5vmr-%EA%B9%80%EB%B3%91%EB%A7%8C%EC%9D%98-%EB%8B%AC%EC%9D%B8
+                - generic [ref=e606]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e607]:
+                  - paragraph [ref=e608]: 김병만의 달인
+                  - paragraph [ref=e609]: 16년간 수련했다는 허풍으로 시작해 결국 들통나는 개그콘서트 최장수 코너
+                  - generic [ref=e610]:
+                    - generic [ref=e611]:
+                      - generic [ref=e612]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e613]'
+            - listitem [ref=e623]:
+              - link [ref=e624] [cursor=pointer]:
+                - /url: /memes/qyhwwa4d-%EB%B0%B0%EA%B5%AC%EC%97%AC%EC%A0%9C-(%EA%B9%80%EC%97%B0%EA%B2%BD)
+                - generic [ref=e625]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e626]:
+                  - paragraph [ref=e627]: 배구여제 (김연경)
+                  - paragraph [ref=e628]: 세계 최고의 아웃사이드 히터 김연경을 부르는 별명
+                  - generic [ref=e629]:
+                    - generic [ref=e630]:
+                      - generic [ref=e631]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e632]'
+            - listitem [ref=e642]:
+              - link [ref=e643] [cursor=pointer]:
+                - /url: /memes/6d2gv3zv-%EB%82%B4%EB%8A%94-%EB%AD%94%EB%8D%B0%3F-%EB%82%B4%EB%8A%94-%EB%8B%88-%EC%8B%9C%EB%8B%A4%EB%B0%94%EB%A6%AC%EA%B0%80%3F
+                - generic [ref=e644]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e645]:
+                  - paragraph [ref=e646]: 내는 뭔데? 내는 니 시다바리가?
+                  - paragraph [ref=e647]: 영화 '친구'(2001)에서 나온 서열·자존심 관련 명대사
+                  - generic [ref=e648]:
+                    - generic [ref=e649]:
+                      - generic [ref=e650]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 추억 밈 (4칸 중 1칸)" [ref=e651]'
+            - listitem [ref=e661]:
+              - link [ref=e662] [cursor=pointer]:
+                - /url: /memes/uhnwd7st-%ED%90%88%EB%84%98-%ED%83%9D%EC%8A%A4(Fanum-Tax)
+                - generic [ref=e663]:
+                  - generic:
+                    - generic: 유행어
+                    - generic: 영상
+                - generic [ref=e664]:
+                  - paragraph [ref=e665]: 퐈넘 택스(Fanum Tax)
+                  - paragraph [ref=e666]: 친구 음식을 몰래 뺏어먹는 행동을 뜻하는 스트리머發 유행어
+                  - generic [ref=e667]:
+                    - generic [ref=e668]:
+                      - generic [ref=e669]: ●
+                      - text: 써도 됨
+                    - 'img "밈 생명 게이지: 급상승 (4칸 중 4칸)" [ref=e670]'
+          - paragraph [ref=e680]: 끝까지 봤어요
+  - contentinfo [ref=e681]:
+    - generic [ref=e682]:
+      - navigation "사이트 정보" [ref=e683]:
+        - list [ref=e684]:
+          - listitem [ref=e685]:
+            - link "밈캐치 소개" [ref=e686] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=e687]:
+            - link "개인정보처리방침" [ref=e688] [cursor=pointer]:
+              - /url: /privacy
+          - listitem [ref=e689]:
+            - link "이용약관" [ref=e690] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=e691]:
+            - link "랭킹" [ref=e692] [cursor=pointer]:
+              - /url: /rankings
+          - listitem [ref=e693]:
+            - link "세대별 밈 소식" [ref=e694] [cursor=pointer]:
+              - /url: /news
+          - listitem [ref=e695]:
+            - link "밈 상품" [ref=e696] [cursor=pointer]:
+              - /url: /products
+          - listitem [ref=e697]:
+            - link "제보" [ref=e698] [cursor=pointer]:
+              - /url: /submit
+          - listitem [ref=e699]:
+            - link "후원하기" [ref=e701] [cursor=pointer]:
+              - /url: https://fairy.hada.io/@toris-dev
+      - generic [ref=e704]:
+        - generic [ref=e705]:
+          - paragraph [ref=e706]: 밈캐치는 한국 밈·유행어의 뜻과 유래를 기록하는 사전 서비스입니다. 모든 제보는 운영자 검수(사실 확인 → 저작권 확인)를 거쳐 공개됩니다.
+          - paragraph [ref=e707]:
+            - text: "원본 영상·이미지는 저장하지 않고 출처 링크·임베드로만 제공하며, 각 콘텐츠의 저작권은 원저작자에게 있습니다. 문의·삭제 요청:"
+            - link "ironjustlikethat@gmail.com" [ref=e708] [cursor=pointer]:
+              - /url: mailto:ironjustlikethat@gmail.com
+        - paragraph [ref=e709]: © 2026 밈캐치
+  - complementary "쿠팡 파트너스 광고" [ref=e711]:
+    - generic [ref=e712]:
+      - paragraph [ref=e713]: 광고 · 쿠팡 파트너스 활동으로 일정 수수료를 제공받습니다
+      - button "광고 닫기" [ref=e714] [cursor=pointer]
+    - iframe [ref=e718]:
+      
+  - alert [ref=e719]

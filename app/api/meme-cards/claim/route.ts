@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { hasTrustedOrigin } from "@/lib/origin";
 import { readBoundedJson, RequestBodyTooLargeError } from "@/lib/request-body";
 import { isMemeCardId } from "@/lib/meme-collectible";

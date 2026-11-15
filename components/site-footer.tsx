@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { HideOnAdmin } from "@/components/auth-menu";
+import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
 import { CONTACT_EMAIL } from "@/lib/site";
+import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 전역 푸터 — E-E-A-T 신뢰 신호(운영 주체·문의·정책 링크·저작권 안내).
@@ -49,6 +51,17 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <TrackedBlock event="donate_click" className="inline-flex">
+                  <Link
+                    href={`${localizedStaticPath("/pricing", locale)}#fairy-support-title`}
+                    className="hover-glow-flame inline-flex min-h-11 items-center gap-1 rounded-md font-semibold text-accent transition-colors hover:brightness-90"
+                  >
+                    <HeartGlyph />
+                    {messages.donate}
+                  </Link>
+                </TrackedBlock>
+              </li>
             </ul>
           </nav>
           <div className="mt-3 text-[13px] leading-relaxed text-muted">
@@ -107,6 +120,19 @@ function ChevronDown({ className }: { className?: string }) {
       aria-hidden
     >
       <path d="m7 10 5 5 5-5" />
+    </svg>
+  );
+}
+
+function HeartGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M12 21s-7.5-4.7-10-9.3C.5 8.6 2.6 5 6.2 5c2 0 3.7 1.1 4.6 2.7l1.2 2 1.2-2C14.1 6.1 15.8 5 17.8 5c3.6 0 5.7 3.6 4.2 6.7C19.5 16.3 12 21 12 21Z" />
     </svg>
   );
 }

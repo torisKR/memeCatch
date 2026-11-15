@@ -280,7 +280,7 @@ export default function EditorialPage() {
         <section className="mt-12">
           <h2 className="text-xl font-bold">6. 광고와 편집의 분리</h2>
           <p className="mt-3 text-base leading-relaxed">
-            밈캐치는 광고로만 운영됩니다. 광고주는 밈의 수록 여부나
+            밈캐치는 광고와 후원으로 운영됩니다. 광고주는 밈의 수록 여부나
             사용 안전 등급에 관여하지 않으며, 대가를 받고 특정 밈을 올리거나
             등급을 조정하지 않습니다. 광고가 있는 자리에는 광고 표기를 함께
             노출합니다.

@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -16,8 +16,12 @@ vi.mock("motion/react", () => ({
 vi.mock("@/lib/actions/auth", () => ({
   signOut: vi.fn(),
   updateNickname: vi.fn(),
+  updateProfileCustomization: vi.fn(),
 }));
 vi.mock("@/components/my-recent", () => ({ MyRecent: () => null }));
+vi.mock("@/components/premium/saved-meta-editor", () => ({
+  SavedMetaEditor: () => <div data-saved-editor />,
+}));
 vi.mock("@/lib/i18n-client", async () => {
   const { getMessages } = await import("@/lib/i18n");
   return {
@@ -46,27 +50,37 @@ function renderMyContent(
           title: "BTS reaction",
           summary: "A saved meaning",
           safetyLevel: "yellow",
+          collection: null,
+          note: null,
         },
       ]}
+      collectionNames={["Launch ideas", "Archive"]}
       submissions={[]}
       loadError={false}
       nicknameSaved={false}
+      flair={null}
+      accentColor={null}
+      customSaved={false}
+      isPremium
+      saveLimit={30}
       savedTotal={3}
       savedResultTotal={1}
       savedQuery="BTS"
       savedSafety="yellow"
       savedPage={1}
       savedPageCount={2}
+      myFeed={(<div>personal feed</div>) as ReactNode}
       {...overrides}
     />,
   );
 }
 
-describe("MY saved library", () => {
+describe("Plus Meme Vault", () => {
   it("renders a localized server-filtered search, safety filter, count, and preserved page link", () => {
     locale.value = "en";
     const html = renderMyContent();
 
+    expect(html).toContain("Your meme vault");
     expect(html).toContain('name="saved_q"');
     expect(html).toContain('value="BTS"');
     expect(html).toContain('name="saved_safety"');
@@ -74,29 +88,25 @@ describe("MY saved library", () => {
     expect(html).toContain(
       'href="/my?saved_q=BTS&amp;saved_safety=yellow&amp;saved_page=2#saved"',
     );
-    expect(html).toContain('aria-label="Saved memes pages"');
-    expect(html).toContain("Page 1 of 2");
-    expect(html).not.toContain("/api/plus/");
-    expect(html).not.toContain("PLUS");
+    expect(html).toContain("Build a collection brief");
+    expect(html).toContain('action="/api/plus/collection-brief"');
+    expect(html).toContain('name="collection"');
+    expect(html).toContain("Download brief");
   });
 
-  it("offers saved-library search to every account without a pricing upsell", () => {
+  it("keeps the vault locked for free accounts and sends Japanese users to localized pricing", () => {
     locale.value = "ja";
     const html = renderMyContent({
+      isPremium: false,
+      collectionNames: [],
       savedQuery: "",
       savedSafety: null,
       savedPageCount: 1,
+      myFeed: <div>upgrade gate</div>,
     });
 
-    expect(html).toContain('name="saved_q"');
-    expect(html).not.toContain("pricing");
-    expect(html).not.toContain("Plus");
-  });
-
-  it("hides saved-library search when nothing is saved yet", () => {
-    locale.value = "en";
-    const html = renderMyContent({ saved: [], savedTotal: 0, savedResultTotal: 0, savedQuery: "", savedSafety: null, savedPageCount: 1 });
-
+    expect(html).toContain("Plusで自分のミーム保管庫を検索");
+    expect(html).toContain('href="/ja/pricing"');
     expect(html).not.toContain('name="saved_q"');
   });
 
@@ -111,12 +121,14 @@ describe("MY saved library", () => {
     expect(html).toContain("mailto:toris@toris.kr");
   });
 
-  it("keeps the meme card slot beside the saved library", () => {
+  it("keeps the free meme card slot beside the existing feed and saved library", () => {
     locale.value = "en";
-    const html = renderMyContent({ memeCards: <section id="meme-cards">28 free cards</section> });
+    const html = renderMyContent({ isPremium: false, memeCards: <section id="meme-cards">28 free cards</section>, myFeed: <div>existing premium gate</div> });
     expect(html).toContain("28 free cards");
+    expect(html).toContain("existing premium gate");
     expect(html).toContain('href="#meme-cards"');
     expect(html).toContain('id="saved"');
     expect(html).toContain("Request account deletion");
+    expect(html).not.toContain('name="saved_q"');
   });
 });

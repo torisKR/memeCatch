@@ -15,6 +15,17 @@ import {
   stripLocalePath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import {
+  buildPlusActionPremiumPath,
+  buildPlusDailySignalPremiumPath,
+  isSafePlusDailySignalFocusId,
+  parsePlusActionPremiumSource,
+  parsePlusDailySignalLocale,
+} from "@/lib/plus-daily-signal-routing";
+import {
+  buildPlusOutcomeReplayPath,
+  parsePlusOutcomeReplayRequest,
+} from "@/lib/plus-outcome-replay-routing";
 import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { shortIdFromParam } from "@/lib/labels";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -72,8 +83,46 @@ function pathWithoutLocalePrefix(pathname: string, locale: Locale | null): strin
 }
 
 function buildAuthReturnPath(path: string, searchParams: URLSearchParams): string {
-  return path.startsWith("/admin") || path === "/submit"
-    ? withAllowlistedSearch(path, searchParams)
+  if (path !== "/premium") {
+    return path.startsWith("/admin") || path === "/submit"
+      ? withAllowlistedSearch(path, searchParams)
+      : path;
+  }
+
+  const focus = searchParams.getAll("focus");
+  const source = searchParams.getAll("from");
+  const actionSource = source.length === 1 ? parsePlusActionPremiumSource(source[0]) : undefined;
+  if (
+    focus.length === 1 &&
+    isSafePlusDailySignalFocusId(focus[0]) &&
+    actionSource
+  ) {
+    const localeValues = searchParams.getAll("locale");
+    if (localeValues.length > 1) return path;
+    const locale =
+      localeValues.length === 1 ? parsePlusDailySignalLocale(localeValues[0]) : undefined;
+    return actionSource === "daily_signal"
+      ? buildPlusDailySignalPremiumPath(focus[0], locale)
+      : buildPlusActionPremiumPath(focus[0], locale, actionSource);
+  }
+
+  const replay = searchParams.getAll("replay");
+  const replayLocale = searchParams.getAll("replay_locale");
+  const replaySource = searchParams.getAll("from");
+  const replayRequest = parsePlusOutcomeReplayRequest({
+    shortId: replay,
+    locale: replayLocale,
+    source: replaySource.length === 1 ? replaySource[0] : replaySource,
+    focus: searchParams.has("focus") ? searchParams.getAll("focus") : undefined,
+    dailySignalLocale: searchParams.has("locale") ? searchParams.getAll("locale") : undefined,
+  });
+  if (replayRequest) {
+    return buildPlusOutcomeReplayPath(replayRequest.shortId, replayRequest.locale) ?? path;
+  }
+
+  const checkout = searchParams.getAll("checkout");
+  return checkout.length === 1 && checkout[0] === "return"
+    ? `${path}?checkout=return`
     : path;
 }
 
@@ -99,7 +148,7 @@ export function resolveLandingRedirectLocale({
 
 /**
  * 로케일 헤더 전달과 인증 경로의 세션 갱신을 함께 처리한다.
- * 일반 페이지는 로케일 헤더만 설정하고 DB·세션 조회는 인증 경로로 한정한다.
+ * 일반 페이지는 로케일 헤더만 설정하고 Supabase 호출은 인증 경로로 한정한다.
  *
  * 로케일 우선순위: ① URL prefix ② ko. 쿠키·Accept-Language·prefetch는
  * 문서를 바꾸지 않는다. memecatch_locale은 언어 선택기만 기록한다.
@@ -115,13 +164,13 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = localizePath("/", landingLocale);
     // A preference redirect must not refresh the cookie. Prefetch and RSC
-    // requests used to persist the last localized hop.
+    // requests used to persist the last localized /pricing hop.
     return NextResponse.redirect(url, 302);
   }
 
   const urlLocale = localeFromPathname(request.nextUrl.pathname);
   // The response body is Korean unless the URL addresses a translated document.
-  // The locale cookie is not a document locale: prefetching /zh/explore must
+  // The locale cookie is not a document locale: prefetching /zh/pricing must
   // not restyle the next unprefixed page.
   const requestedExportLocale = request.nextUrl.pathname.endsWith("/export")
     ? request.nextUrl.searchParams.get("locale")
@@ -168,7 +217,7 @@ export async function proxy(request: NextRequest) {
 
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
-  const needsAuth = path.startsWith("/my") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
+  const needsAuth = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
   const detailMatch = path.match(/^\/memes\/([^/]+)$/);
   const detailKey = detailMatch?.[1] === "random" && !urlLocale ? null : detailMatch?.[1];
   const fetchMode = request.headers.get("sec-fetch-mode");
@@ -177,11 +226,11 @@ export async function proxy(request: NextRequest) {
     : null;
   if (!needsAuth && !documentDetailKey) return response;
 
-  const db = await createRequestDb(request);
+  const supabase = await createRequestDb(request);
 
   if (documentDetailKey) {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("memes")
         .select(PUBLIC_MEME_CANONICAL_SELECT)
         .eq("short_id", shortIdFromParam(documentDetailKey))
@@ -228,13 +277,13 @@ export async function proxy(request: NextRequest) {
   let user: { id: string } | null = null;
   let authFailed = false;
   try {
-    const result = await db.auth.getUser();
+    const result = await supabase.auth.getUser();
     user = result.data.user;
     authFailed = Boolean(result.error);
   } catch {
     authFailed = true;
   }
-  const gated = path.startsWith("/my") || path.startsWith("/submit");
+  const gated = path.startsWith("/my") || path.startsWith("/premium") || path.startsWith("/submit");
 
   if ((authFailed || !user) && gated) {
     const url = request.nextUrl.clone();
@@ -253,7 +302,7 @@ export async function proxy(request: NextRequest) {
       return applyLocale(NextResponse.redirect(url));
     }
     // 서버측 운영자 검증 (D-1: 클라이언트 라우팅 숨김은 보안이 아님)
-    const { data: isOperator, error: operatorError } = await db.rpc("is_operator");
+    const { data: isOperator, error: operatorError } = await supabase.rpc("is_operator");
     if (operatorError || isOperator !== true) {
       const url = request.nextUrl.clone();
       url.pathname = "/";

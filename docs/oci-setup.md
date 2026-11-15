@@ -94,8 +94,6 @@ bash scripts/deploy-oci.sh
 
 The script starts only the `memecatch` project and curls `/api/health`. In shared-proxy mode the check is `http://127.0.0.1:12730/api/health`. With `MEMECATCH_CADDY=own` it is `http://127.0.0.1/api/health`.
 
-Admin Bedrock drafts read `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` from `/opt/memecatch/.env` (keys of the `memecatch-bedrock` IAM user from `terraform/`).
-
 `MEMECATCH_SIGNING_SECRET` is the HMAC and operator bearer for analytics, view counts, and the embedding probe. `MEME_EMBEDDING_REINDEX_ENABLED` defaults to false.
 
 GitHub Actions (`.github/workflows/deploy.yml`) builds `linux/amd64` and `linux/arm64` app and worker images, pushes them to GHCR, and SSHes `cd /opt/memecatch && git pull && MEMECATCH_IMAGE=<tag> MEMECATCH_WORKER_IMAGE=<tag> bash scripts/deploy-oci.sh`. The deploy job is skipped when `OCI_SSH_HOST`, `OCI_SSH_USER`, or `OCI_SSH_KEY` is empty. When those are set, `OCI_SSH_KNOWN_HOSTS` is required and SSH uses `StrictHostKeyChecking=yes`. It never logs into the VM when the host secrets are absent.
@@ -138,8 +136,15 @@ DATABASE_URL=postgresql://postgres:...@127.0.0.1:5432/scratch \
   bash deploy/backup/restore.sh memecatch-20260101T023000Z.dump.gz.age
 ```
 
-`deploy/backup/test-restore.sh` encrypts a dump, restores it into `memecatch_restore_proof`, and compares per-table counts and a meme id checksum. It does not contact R2.
+`deploy/backup/test-restore.sh` encrypts a dump, restores it into `memecatch_restore_proof`, and compares per-table counts and a meme id checksum. It does not contact Supabase or R2.
 
-## Rollback
+## Cutover and rollback
 
-The VM is the only production origin. Roll back by redeploying the previous image tag with `scripts/deploy-oci.sh`; restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.
+Keep the Vercel deployment serving `catchmeme.com` until the VM health check passes and a restored row-count check looks right.
+
+1. Lower the Cloudflare proxy TTL if it is high.
+2. Point the proxied `A` record at `oci-hermes-dev`.
+3. Confirm `https://catchmeme.com/api/health` and a logged-in `/my` page.
+4. Rollback is the same DNS record pointed back at Vercel. Do not delete the Vercel project on cutover day.
+
+The Supabase project stays available until the owner has run the dump, the checksum queries, and a login with a migrated bcrypt password.

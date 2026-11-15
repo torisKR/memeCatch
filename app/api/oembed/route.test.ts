@@ -12,7 +12,7 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: () => "127.0.0.1",
   rateLimit: () => ({ ok: true }),
 }));
-vi.mock("@/lib/db/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }),
 }));
 

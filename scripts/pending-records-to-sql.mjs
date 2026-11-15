@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Create SQL batches for the moderation queue. This generator never connects
- * to the database; execute the output explicitly with
- * `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f <file>` after reviewing it.
+ * Create SQL batches for a remote Supabase moderation queue. This generator
+ * never connects to Supabase; execute the output explicitly with
+ * `supabase db query --linked --file <file>` after reviewing it.
  *
  * All records are inserted as pending and only get a Wikimedia context source.
  * No statement can publish a meme or create an embeddable content row.

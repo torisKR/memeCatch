@@ -39,6 +39,7 @@ describe("Korean rankings page", () => {
       fallback: null,
       today: [meme("live")],
       weekly: [],
+      weeklyLocked: true,
       comeback: [],
       lastRollupDate: null,
       topWeeklyViews: 0,

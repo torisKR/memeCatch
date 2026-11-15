@@ -6,7 +6,7 @@ const source = readFileSync(new URL("./collect-namu-period-meme-candidates.mjs",
 assert.match(source, /memeTitleKey/);
 assert.match(source, /catalog_match_status: "new"/);
 assert.match(source, /needs_human_source_match/);
-assert.match(source, /never writes to the database/);
+assert.match(source, /never writes to Supabase/);
 
 const sample = `
 무대뽀](https://namu.wiki/w/a)

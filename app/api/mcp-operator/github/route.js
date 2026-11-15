@@ -1,5 +1,5 @@
 import { after } from 'next/server';
-import { createAdminClient } from '@/lib/db/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { databaseStore } from '@/integrations/memecatch-chatgpt/src/state.mjs';
 import { verifyGithub, normalizeGithub, EventError } from '@/integrations/memecatch-chatgpt/src/events.mjs';
 import { body, json } from '@/integrations/memecatch-chatgpt/src/http.mjs';

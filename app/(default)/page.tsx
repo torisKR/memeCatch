@@ -17,7 +17,7 @@ import { CommunityMemeBattle } from "@/components/home/community-meme-battle";
 import { getCommunityMemeBattle } from "@/lib/community-battle.server";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
-/** 홈 문서는 요청별 SSR. ISR 재생성 비용을 줄이려고 1시간 단위로 캐시한다. */
+/** 홈 문서는 요청별 SSR. Vercel ISR 쓰기 최적화를 위해 1시간 단위로 캐시한다. */
 export const revalidate = 3600;
 
 export const metadata: Metadata = {

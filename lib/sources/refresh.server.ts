@@ -11,7 +11,7 @@ import "server-only";
  */
 
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
 import {

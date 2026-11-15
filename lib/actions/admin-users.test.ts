@@ -9,13 +9,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@/lib/db/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: mocks.getUser },
     rpc: mocks.isOperator,
   }),
 }));
-vi.mock("@/lib/db/admin", () => ({
+vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     auth: { admin: { updateUserById: mocks.updateUserById } },
     from: () => ({ insert: mocks.auditInsert }),

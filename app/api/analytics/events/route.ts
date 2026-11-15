@@ -8,7 +8,7 @@ import {
   type ClientGrowthEvent,
 } from "@/lib/growth/events.server";
 import { SITE_URL } from "@/lib/site";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { readBoundedJson, RequestBodyTooLargeError } from "@/lib/request-body";
 
@@ -93,8 +93,8 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "invalid_meme" }, { status: 400 });
   }
 
-  const db = await createClient();
-  const { data: { user }, error: authError } = await db.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError && !isAuthSessionMissingError(authError)) {
     return Response.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }

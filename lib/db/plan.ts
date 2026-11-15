@@ -4,8 +4,6 @@
  * No SQL strings and no role travel in the plan.
  */
 
-import type { DbClient } from "@/lib/db/types";
-
 export type FilterOp =
   | "eq"
   | "neq"
@@ -81,7 +79,7 @@ export type QueryError = {
   name?: string;
 };
 
-// Untyped at run time; lib/db/types.ts gives call sites their row types.
+// Call sites infer row fields from this default the same way supabase-js did.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type QueryResult<T = any> = {
   data: T;
@@ -343,7 +341,7 @@ class QueryBuilder implements PromiseLike<QueryResult> {
     return this;
   }
 
-  /** Type-only cast. The select list already defines the runtime row. */
+  /** Supabase type cast. The select list already defines the runtime row. */
   overrideTypes(): this {
     return this;
   }
@@ -375,9 +373,8 @@ class QueryBuilder implements PromiseLike<QueryResult> {
   }
 }
 
-/** The runtime builder is untyped; lib/db/types.ts describes it for callers. */
-export function createPlanClient(execute: PlanExecutor): DbClient {
-  const client = {
+export function createPlanClient(execute: PlanExecutor) {
+  return {
     from(table: string) {
       const builder = new QueryBuilder(execute, "select", { table });
       return {
@@ -399,7 +396,6 @@ export function createPlanClient(execute: PlanExecutor): DbClient {
       return new QueryBuilder(execute, "rpc", { fn, args: args ?? {} });
     },
   };
-  return client as unknown as DbClient;
 }
 
 export function attachDottedFilters(plan: QueryPlan): void {

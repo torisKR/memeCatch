@@ -3,7 +3,7 @@ import { Suspense, cache } from "react";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
 import { getSlangTermsByYearRange, type SlangTermRow } from "@/lib/queries";
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import {
   SlangDictionary,
   SlangDictionaryFromQuery,
@@ -105,8 +105,8 @@ const loadRiskyTerms = cache(async (): Promise<SlangEra["terms"]> => {
   try {
     const discovery = await loadDiscoveryIndex();
     if (!discovery.ok || discovery.ids.size === 0) return [];
-    const db = createStaticClient();
-    const { data, error } = await db
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
       .from("memes")
       .select(
         "id, short_id, slug, title, summary, safety_level, origin_year, trend_score"

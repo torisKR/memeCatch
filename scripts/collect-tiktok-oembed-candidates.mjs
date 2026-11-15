@@ -2,7 +2,7 @@
 /**
  * Verify manually discovered, publicly indexed TikTok video URLs as review-only
  * candidates. It does not use the TikTok Display API, sign in, scrape TikTok
- * pages, download video media, or publish rows to the database.
+ * pages, download video media, or publish rows to Supabase.
  *
  * The input must contain final tiktok.com/@username/video/{id} URLs gathered
  * from public webpages. oEmbed only verifies public embeddability; a reviewer

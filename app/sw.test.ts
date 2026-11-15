@@ -157,8 +157,8 @@ describe("service-worker runtime caching", () => {
     expect(unrelatedImage.handler).toMatchObject({ cacheName: "static-image-assets" });
   });
 
-  it("does not register push handlers after Plus Web Push retirement", () => {
-    expect(state.listeners.has("push")).toBe(false);
-    expect(state.listeners.has("notificationclick")).toBe(false);
+  it("registers push display and notification click handlers", () => {
+    expect(state.listeners.has("push")).toBe(true);
+    expect(state.listeners.has("notificationclick")).toBe(true);
   });
 });

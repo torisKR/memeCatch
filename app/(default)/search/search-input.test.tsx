@@ -6,7 +6,7 @@ import { SearchInput } from "./search-input";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), replace: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks }));
-vi.mock("@/lib/db/client", () => ({ createClient: () => ({ rpc: mocks.rpc }) }));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ rpc: mocks.rpc }) }));
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
 
 type Result = { data: Array<{ id: string; short_id: string; slug: string; title: string; summary: string; category: "phrase" }> | null; error: unknown };

@@ -93,7 +93,7 @@ async function postMode(request: Request): Promise<"reindex" | "probe" | null> {
   }
 }
 
-/** The OCI scheduler (deploy/scheduler) sends the CRON_SECRET bearer credential. */
+/** Vercel Cron uses the existing CRON_SECRET bearer credential. */
 export async function GET(request: Request): Promise<Response> {
   return runManualReindex(request, process.env.CRON_SECRET);
 }

@@ -35,7 +35,7 @@ docker run -d --name "$server" \
   -e MEMECATCH_BACKUP_DB_PASSWORD=hangul-ci-backup \
   -p "127.0.0.1:${pg_port}:5432" \
   -v "$root/deploy/postgres:/sql:ro" \
-  -v "$root/db/migrations:/migrations:ro" \
+  -v "$root/supabase/migrations:/migrations:ro" \
   pgvector/pgvector:pg16 >/dev/null
 
 # pg_isready turns true while the image entrypoint is still creating

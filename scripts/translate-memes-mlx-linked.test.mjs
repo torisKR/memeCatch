@@ -11,6 +11,7 @@ import {
   offlineArtifactHeader,
   parseArgs,
   parseStrictTranslation,
+  parseSupabaseCliJson,
   requestMlxTranslation,
   run,
   sourceSnapshot,
@@ -655,6 +656,13 @@ assert.throws(
   /exact schema/,
 );
 
+assert.deepEqual(parseSupabaseCliJson('{"rows":[{"n":1}]}'), [{ n: 1 }]);
+assert.deepEqual(parseSupabaseCliJson('[{"n":3}]'), [{ n: 3 }]);
+assert.deepEqual(
+  parseSupabaseCliJson('Initialising login role...\n{"boundary":"x","rows":[{"n":2}]}'),
+  [{ n: 2 }],
+);
+assert.throws(() => parseSupabaseCliJson('{"data":[]}'), /rows array/);
 
 const encoded = encodeJsonBase64({ korean: "킹받네", quote: "'" });
 assert.deepEqual(decodeJsonBase64(encoded), { korean: "킹받네", quote: "'" });
@@ -801,7 +809,7 @@ const dryRunResult = await run(["--locale=en", "--limit=1"], {
 });
 assert.deepEqual(dryRunResult, { selected: 1, translated: 0, failed: 0 });
 assert.equal(modelCalled, false, "dry-run must not call MLX");
-assert.equal(writeCalled, false, "dry-run must not write to the database");
+assert.equal(writeCalled, false, "dry-run must not write to Supabase");
 assert.doesNotMatch(logs.join("\n"), /원문 제목|원문 요약|충분한 설명/);
 
 const artifactStatements = [];
@@ -834,7 +842,7 @@ const artifactResult = await run([
   logger: { log() {}, error() {} },
 });
 assert.deepEqual(artifactResult, { selected: 1, translated: 1, failed: 0 });
-assert.equal(writeCalled, false, "offline artifact mode must not write to the database");
+assert.equal(writeCalled, false, "offline artifact mode must not write to Supabase");
 assert.equal(artifactStatements.length, 1);
 assert.equal(artifactStatements[0].path, "/tmp/memecatch-translation-test/en-slice20.sql");
 assert.match(artifactStatements[0].sql, /insert into public\.meme_translations/i);

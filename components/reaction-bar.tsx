@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { REACTIONS, type ReactionType } from "@/lib/labels";
 import { flags } from "@/lib/flags";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { LoginGate } from "@/components/login-gate";
 
 const REACTION_KEYS = Object.keys(REACTIONS) as ReactionType[];

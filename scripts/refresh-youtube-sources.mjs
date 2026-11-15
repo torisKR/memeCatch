@@ -8,7 +8,7 @@
  * - 성공 메타데이터는 30일 갱신 시한을 찍는다(YouTube API 저장 정책).
  *
  * 사용: node scripts/refresh-youtube-sources.mjs [--limit=500] [--dry-run]
- * 필요 환경변수: YOUTUBE_API_KEY (+ DATABASE_URL)
+ * 필요 환경변수: YOUTUBE_API_KEY (+ Supabase service role)
  */
 import { createRestClient, restAll, loadEnv } from "./source-pipeline-rest.mjs";
 

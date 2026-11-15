@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { hoursAgoIso } from "@/components/admin/constants";
 import { getAdminStats } from "@/lib/actions/admin-stats";
 import { getAdminGA4Report } from "@/lib/ga4-admin";
@@ -11,7 +11,7 @@ export const metadata = { title: "대시보드" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const { db } = await requireOperatorPage("/admin");
+  const { supabase } = await requireOperatorPage("/admin");
 
   const admin = createAdminClient();
   const dayAgo = hoursAgoIso(24);
@@ -19,27 +19,27 @@ export default async function AdminDashboardPage() {
   const [stats, ga4] = await Promise.all([getAdminStats(), getAdminGA4Report("dashboard")]);
 
   const [pendingRes, reportsRes, sourcesRes, safetyRes, translationsRes, jobRes, viewsRes] = await Promise.all([
-    db
+    supabase
       .from("meme_submissions")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
-    db
+    supabase
       .from("reports")
       .select("id", { count: "exact", head: true })
       .eq("status", "open"),
-    db
+    supabase
       .from("meme_media")
       .select("meme_id", { count: "exact", head: true })
       .eq("review_state", "pending"),
-    db
+    supabase
       .from("safety_review_queue")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
-    db
+    supabase
       .from("meme_translations")
       .select("meme_id", { count: "exact", head: true })
       .eq("status", "machine"),
-    db
+    supabase
       .from("job_runs")
       .select("ok, started_at, finished_at")
       .eq("job_name", "compute_trend_scores")
@@ -79,7 +79,7 @@ export default async function AdminDashboardPage() {
     {
       href: "/admin/activity",
       label: "사용자 활동",
-      value: "조회 분석",
+      value: "조회·구독 분석",
       sub: "사용자별 조회 콘텐츠와 일별·시간별 활동을 확인해요",
     },
     {
@@ -157,6 +157,15 @@ export default async function AdminDashboardPage() {
             label="전체 회원"
             value={stats.totals.users.toLocaleString("ko-KR")}
             sub={`최근 7일 신규 ${stats.totals.newUsers7d}명`}
+          />
+          <StatCard
+            label="Plus 구독자"
+            value={stats.totals.plusActive.toLocaleString("ko-KR")}
+            sub={
+              stats.totals.users > 0
+                ? `전환율 ${((stats.totals.plusActive / stats.totals.users) * 100).toFixed(1)}%`
+                : "—"
+            }
           />
         </div>
       </section>

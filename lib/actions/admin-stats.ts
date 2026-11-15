@@ -2,14 +2,14 @@ import "server-only";
 
 /**
  * 관리자 대시보드 집계.
- * view_events·profiles는 RLS로 본인 것만 보이거나 공개 정책이 없어
+ * view_events·profiles·billing_* 는 RLS로 본인 것만 보이거나 공개 정책이 없어
  * service-role로 읽는다. 호출부(관리자 페이지)가 requireOperatorPage로 이미 보호된다.
  *
  * GA4가 아니라 우리 DB를 쓴다 — increment_view가 session_hash로 일 단위 중복을
  * 제거하므로 "순 세션"을 그대로 셀 수 있고, 외부 API 의존이 없다.
  */
 
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type DailyPoint = { date: string; views: number; sessions: number };
 
@@ -20,6 +20,7 @@ export type AdminStats = {
   totals: {
     users: number;
     newUsers7d: number;
+    plusActive: number;
     savedMemes: number;
     communityPosts: number;
   };
@@ -40,13 +41,16 @@ export async function getAdminStats(): Promise<AdminStats> {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 14);
 
-  const [viewsRes, usersRes, savedRes, postsRes] = await Promise.all([
+  const [viewsRes, usersRes, plusRes, savedRes, postsRes] = await Promise.all([
     admin
       .from("view_events")
       .select("meme_id, session_hash, created_at")
       .gte("created_at", since.toISOString())
       .limit(50000),
     admin.from("profiles").select("id, created_at"),
+    admin
+      .from("billing_subscriptions")
+      .select("user_id, status, current_period_end"),
     admin.from("saved_memes").select("meme_id", { count: "exact", head: true }),
     admin.from("community_posts").select("id", { count: "exact", head: true }),
   ]);
@@ -99,7 +103,8 @@ export async function getAdminStats(): Promise<AdminStats> {
     });
   }
 
-  const weekAgo = Date.now() - 7 * 86_400_000;
+  const now = Date.now();
+  const weekAgo = now - 7 * 86_400_000;
   const profiles = usersRes.data ?? [];
 
   return {
@@ -109,6 +114,9 @@ export async function getAdminStats(): Promise<AdminStats> {
     totals: {
       users: profiles.length,
       newUsers7d: profiles.filter((p) => Date.parse(p.created_at) > weekAgo).length,
+      plusActive: (plusRes.data ?? []).filter(
+        (s) => s.status === "active" && Date.parse(s.current_period_end) > now
+      ).length,
       savedMemes: savedRes.count ?? 0,
       communityPosts: postsRes.count ?? 0,
     },

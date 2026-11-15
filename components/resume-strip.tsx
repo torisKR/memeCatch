@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import type { MemeListItem } from "@/lib/queries";
 import { HScrollSection } from "@/components/h-scroll";
 import { MemeCard } from "@/components/meme-card";

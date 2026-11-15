@@ -35,6 +35,7 @@ describe("resolveKoreanRankings", () => {
     expect(result.kind).toBe("live");
     if (result.kind !== "live") return;
     expect(result.today[0]?.title).toBe("밈 today");
+    expect(result.weeklyLocked).toBe(true);
   });
 
   it("falls back to published memes when the live read fails", () => {

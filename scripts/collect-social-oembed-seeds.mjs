@@ -4,7 +4,7 @@
  * review-only candidates via public oEmbed. Accepts both platforms in one
  * seed file (TikTok-only seeds still work with collect-tiktok-oembed-candidates).
  *
- * Does not log in, scrape platform pages, download media, or publish to the database.
+ * Does not log in, scrape platform pages, download media, or publish to Supabase.
  *
  * Seed JSONL fields:
  *   source_url (required) — final tiktok.com/@.../video/... or instagram.com/(reel|p|tv)/...

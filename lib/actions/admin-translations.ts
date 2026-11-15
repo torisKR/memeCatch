@@ -2,8 +2,8 @@
 
 import { z } from "zod";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { createClient } from "@/lib/db/server";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
+import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import type { Json } from "@/lib/database.types";
 import {
   isSeoContentLocale,
@@ -26,6 +26,7 @@ import {
   classifyTranslationWorklistSource,
   prioritizeTranslationWorklistRows,
 } from "@/lib/translation-worklist";
+import { sortTranslationSupplyPriorityRows } from "@/lib/translation-supply-control-tower";
 
 export type TranslationActionResult =
   | { ok: true }
@@ -148,15 +149,15 @@ type MemeIdentity = {
 };
 
 async function requireOperator() {
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
 
-  const { data: isOperator } = await db.rpc("is_operator");
+  const { data: isOperator } = await supabase.rpc("is_operator");
   if (!isOperator) throw new Error("운영자 권한이 없어요.");
-  return { db, uid: user.id };
+  return { supabase, uid: user.id };
 }
 
 function errorMessage(error: unknown) {
@@ -258,9 +259,9 @@ export async function reviewMemeTranslationWithGpt(input: {
       return { ok: false, error: "유효한 밈과 번역 revision이 필요해요." };
     }
 
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const { meme, translation } = await loadTranslationContext(
-      db,
+      supabase,
       input.memeId,
       input.locale,
     );
@@ -270,12 +271,12 @@ export async function reviewMemeTranslationWithGpt(input: {
 
     const [{ data: source, error: sourceError }, { data: localized, error: localizedError }] =
       await Promise.all([
-        db
+        supabase
           .from("memes")
           .select("title, summary, description, origin, usage_note, caution, aliases")
           .eq("id", input.memeId)
           .single(),
-        db
+        supabase
           .from("meme_translations")
           .select("title, summary, description, origin, usage_note, caution, aliases")
           .eq("meme_id", input.memeId)
@@ -312,7 +313,7 @@ export async function reviewMemeTranslationWithGpt(input: {
       ),
     });
 
-    await logAudit(db, uid, "ai.meme_translation_review", meme.id, input.locale, {
+    await logAudit(supabase, uid, "ai.meme_translation_review", meme.id, input.locale, {
       model: getOpenAiReviewModel(),
       reasoning_effort: OPENAI_REVIEW_REASONING_EFFORT,
       recommendation: draft.recommendation,
@@ -340,10 +341,10 @@ export async function previewMissingMemeTranslationWithGpt(input: {
       return { ok: false, error: "유효한 밈과 원문 revision이 필요해요." };
     }
 
-    const { db } = await requireOperator();
+    const { supabase } = await requireOperator();
     const [{ data: source, error: sourceError }, { data: existing, error: existingError }] =
       await Promise.all([
-        db
+        supabase
           .from("memes")
           .select(
             "id, short_id, title, summary, description, origin, usage_note, caution, aliases, updated_at",
@@ -351,7 +352,7 @@ export async function previewMissingMemeTranslationWithGpt(input: {
           .eq("id", input.memeId)
           .in("moderation_status", ["approved", "limited"])
           .maybeSingle(),
-        db
+        supabase
           .from("meme_translations")
           .select("meme_id")
           .eq("meme_id", input.memeId)
@@ -398,13 +399,13 @@ export async function previewMissingMemeTranslationWithGpt(input: {
       { data: latestSource, error: latestSourceError },
       { data: latestTranslation, error: latestTranslationError },
     ] = await Promise.all([
-      db
+      supabase
         .from("memes")
         .select("updated_at")
         .eq("id", input.memeId)
         .in("moderation_status", ["approved", "limited"])
         .maybeSingle(),
-      db
+      supabase
         .from("meme_translations")
         .select("meme_id")
         .eq("meme_id", input.memeId)
@@ -435,8 +436,8 @@ export async function saveMissingMemeTranslationDraft(
     const validationError = missingDraftValidationError(input);
     if (validationError) return { ok: false, error: validationError };
 
-    const { db, uid } = await requireOperator();
-    const { data: source, error: sourceError } = await db
+    const { supabase, uid } = await requireOperator();
+    const { data: source, error: sourceError } = await supabase
       .from("memes")
       .select("id, short_id, slug, updated_at, moderation_status")
       .eq("id", input.memeId)
@@ -449,7 +450,7 @@ export async function saveMissingMemeTranslationDraft(
       return { ok: false, error: "원문이 변경되어 저장하지 못했어요. 새로고침해 주세요." };
     }
 
-    const { data: existing, error: existingError } = await db
+    const { data: existing, error: existingError } = await supabase
       .from("meme_translations")
       .select("meme_id")
       .eq("meme_id", input.memeId)
@@ -459,7 +460,7 @@ export async function saveMissingMemeTranslationDraft(
     if (existing) return { ok: false, error: "이미 해당 언어의 번역 행이 있어요. 검수 큐를 새로고침해 주세요." };
 
     const content = missingDraftContent(input);
-    const { error: insertError } = await db.from("meme_translations").insert({
+    const { error: insertError } = await supabase.from("meme_translations").insert({
       meme_id: input.memeId,
       locale: input.locale,
       localized_slug: localizedSlug(content.title, source.slug),
@@ -480,7 +481,7 @@ export async function saveMissingMemeTranslationDraft(
     }
 
     try {
-      await logAudit(db, uid, "meme_translation.draft_create", input.memeId, input.locale, {
+      await logAudit(supabase, uid, "meme_translation.draft_create", input.memeId, input.locale, {
         status: "machine",
         source_updated_at: source.updated_at,
         model: getOpenAiReviewModel(),
@@ -499,18 +500,18 @@ export async function saveMissingMemeTranslationDraft(
 }
 
 async function loadTranslationContext(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   memeId: string,
   locale: SeoContentLocale,
 ): Promise<{ meme: MemeIdentity; translation: TranslationIdentity }> {
   const [{ data: meme, error: memeError }, { data: translation, error: translationError }] =
     await Promise.all([
-      db
+      supabase
         .from("memes")
         .select("id, short_id, slug, updated_at")
         .eq("id", memeId)
         .maybeSingle(),
-      db
+      supabase
         .from("meme_translations")
         .select("meme_id, locale, localized_slug, source_updated_at, updated_at, status")
         .eq("meme_id", memeId)
@@ -524,14 +525,14 @@ async function loadTranslationContext(
 }
 
 async function logAudit(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   actorId: string,
   action: string,
   memeId: string,
   locale: SeoContentLocale,
   detail?: Record<string, unknown>,
 ) {
-  const { error } = await db.from("admin_audit_log").insert({
+  const { error } = await supabase.from("admin_audit_log").insert({
     actor_id: actorId,
     action,
     entity_type: "meme_translation",
@@ -542,7 +543,7 @@ async function logAudit(
 }
 
 async function auditAndRevalidate(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   actorId: string,
   action: string,
   meme: MemeIdentity,
@@ -551,7 +552,7 @@ async function auditAndRevalidate(
   detail?: Record<string, unknown>,
 ) {
   try {
-    await logAudit(db, actorId, action, meme.id, locale, detail);
+    await logAudit(supabase, actorId, action, meme.id, locale, detail);
   } finally {
     // A successful mutation must refresh the UI even if audit persistence fails.
     revalidateTranslationPaths(meme, locale, localizedSlug);
@@ -583,14 +584,14 @@ export async function saveMemeTranslation(
     const validationError = validateInput(input, false);
     if (validationError) return { ok: false, error: validationError };
 
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const { meme, translation } = await loadTranslationContext(
-      db,
+      supabase,
       input.memeId,
       input.locale,
     );
     const current = sameInstant(meme.updated_at, translation.source_updated_at);
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("meme_translations")
       .update({
         ...normalizedContent(input),
@@ -608,7 +609,7 @@ export async function saveMemeTranslation(
     if (!data) return { ok: false, error: "번역이 변경되어 저장하지 못했어요. 새로고침해 주세요." };
 
     await auditAndRevalidate(
-      db,
+      supabase,
       uid,
       "meme_translation.save",
       meme,
@@ -637,9 +638,9 @@ export async function reviewMemeTranslation(
     const validationError = validateInput(input, true);
     if (validationError) return { ok: false, error: validationError };
 
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const { meme, translation } = await loadTranslationContext(
-      db,
+      supabase,
       input.memeId,
       input.locale,
     );
@@ -651,7 +652,7 @@ export async function reviewMemeTranslation(
     }
 
     const reviewedAt = new Date().toISOString();
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("meme_translations")
       .update({
         ...normalizedContent(input),
@@ -670,7 +671,7 @@ export async function reviewMemeTranslation(
       return { ok: false, error: "원문 또는 번역이 변경되어 검수하지 못했어요. 새로고침해 주세요." };
     }
 
-    const { data: latestMeme, error: latestMemeError } = await db
+    const { data: latestMeme, error: latestMemeError } = await supabase
       .from("memes")
       .select("updated_at")
       .eq("id", input.memeId)
@@ -680,7 +681,7 @@ export async function reviewMemeTranslation(
       !latestMeme ||
       !sameInstant(latestMeme.updated_at, translation.source_updated_at)
     ) {
-      const { data: staleTranslation, error: staleError } = await db
+      const { data: staleTranslation, error: staleError } = await supabase
         .from("meme_translations")
         .update({ status: "stale", reviewed_at: null, reviewed_by: null })
         .eq("meme_id", input.memeId)
@@ -695,7 +696,7 @@ export async function reviewMemeTranslation(
           ? "번역이 동시에 변경되어 stale 복구를 적용하지 못했어요. 새로고침해 주세요."
           : null;
       await auditAndRevalidate(
-        db,
+        supabase,
         uid,
         "meme_translation.review_source_changed",
         meme,
@@ -717,7 +718,7 @@ export async function reviewMemeTranslation(
     }
 
     await auditAndRevalidate(
-      db,
+      supabase,
       uid,
       "meme_translation.review",
       meme,
@@ -796,6 +797,10 @@ export type TranslationPriorityQueueRow = {
   routeUnlockCandidate: boolean;
 };
 
+export type TranslationPriorityQueueResult =
+  | { ok: true; data: TranslationPriorityQueueRow[] }
+  | { ok: false; error: string };
+
 export type TranslationCoverageViewRow = {
   locale: SeoContentLocale;
   totalPublic: number;
@@ -814,6 +819,7 @@ const TRANSLATION_QUEUE_PAGE_SIZE = 10;
 const TRANSLATION_COVERAGE_PAGE_SIZE = 1000;
 const MISSING_TRANSLATION_DEFAULT_LIMIT = 20;
 const MISSING_TRANSLATION_MAX_LIMIT = 100;
+const TRANSLATION_SUPPLY_ID_BATCH_SIZE = 200;
 
 type MissingMemeSourceQueryRow = {
   id: string;
@@ -834,16 +840,33 @@ type MissingMemeSourceQueryRow = {
   meme_tags_map: { tag_id: string | null }[] | null;
 };
 
+type TranslationSupplyDemandQueryRow = {
+  meme_id: string;
+  locale: string;
+  status: string;
+  created_at: string;
+  memes: MissingMemeSourceQueryRow | null;
+};
+
+type TranslationSupplyStatusQueryRow = {
+  meme_id: string;
+  locale: string;
+  status: string | null;
+  source_updated_at: string | null;
+  updated_at: string | null;
+};
+
 const MISSING_MEME_SELECT =
   "id, short_id, slug, title, summary, description, origin, usage_note, caution, aliases, usage_examples, updated_at, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)";
+const TRANSLATION_SUPPLY_SOURCE_SELECT = `${MISSING_MEME_SELECT}, moderation_status`;
 
 async function loadTranslatedMemeIds(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   locale: SeoContentLocale,
 ): Promise<{ ids: Set<string>; error: string | null }> {
   const ids = new Set<string>();
   for (let from = 0; ; from += TRANSLATION_COVERAGE_PAGE_SIZE) {
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("meme_translations")
       .select("meme_id")
       .eq("locale", locale)
@@ -885,8 +908,8 @@ export async function listMissingMemeTranslations(input: {
         return { ok: false, error: "번역 우선순위 밈 ID가 올바르지 않아요." };
       }
     }
-    const { db } = await requireOperator();
-    const translated = await loadTranslatedMemeIds(db, input.locale);
+    const { supabase } = await requireOperator();
+    const translated = await loadTranslatedMemeIds(supabase, input.locale);
     if (translated.error) return { ok: false, error: translated.error };
 
     const rows: MissingMemeTranslationRow[] = [];
@@ -921,7 +944,7 @@ export async function listMissingMemeTranslations(input: {
     };
 
     if (input.focusMemeId && !translated.ids.has(input.focusMemeId)) {
-      const { data: focused, error: focusedError } = await db
+      const { data: focused, error: focusedError } = await supabase
         .from("memes")
         .select(MISSING_MEME_SELECT)
         .eq("id", input.focusMemeId)
@@ -933,7 +956,7 @@ export async function listMissingMemeTranslations(input: {
     }
 
     for (let from = 0; ; from += TRANSLATION_COVERAGE_PAGE_SIZE) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("memes")
         .select(MISSING_MEME_SELECT)
         .in("moderation_status", ["approved", "limited"])
@@ -963,11 +986,11 @@ export async function listMissingMemeTranslations(input: {
 }
 
 async function loadPublicMemeRevisions(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<{ rows: PublicMemeRevision[]; error: string | null }> {
   const rows: PublicMemeRevision[] = [];
   for (let from = 0; ; from += TRANSLATION_COVERAGE_PAGE_SIZE) {
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("memes")
       .select("id, updated_at")
       .in("moderation_status", ["approved", "limited"])
@@ -981,11 +1004,11 @@ async function loadPublicMemeRevisions(
 }
 
 async function loadPublicTranslationCoverageRows(
-  db: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<{ rows: TranslationCoverageInputRow[]; error: string | null }> {
   const rows: TranslationCoverageInputRow[] = [];
   for (let from = 0; ; from += TRANSLATION_COVERAGE_PAGE_SIZE) {
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("meme_translations")
       .select("meme_id, locale, status, source_updated_at, memes!inner(updated_at, moderation_status)")
       .in("locale", [...SEO_CONTENT_LOCALES])
@@ -1001,10 +1024,10 @@ async function loadPublicTranslationCoverageRows(
 
 export async function getTranslationCoverage(): Promise<TranslationCoverageResult> {
   try {
-    const { db } = await requireOperator();
-    const publicMemes = await loadPublicMemeRevisions(db);
+    const { supabase } = await requireOperator();
+    const publicMemes = await loadPublicMemeRevisions(supabase);
     if (publicMemes.error) return { ok: false, error: publicMemes.error };
-    const translations = await loadPublicTranslationCoverageRows(db);
+    const translations = await loadPublicTranslationCoverageRows(supabase);
     if (translations.error) return { ok: false, error: translations.error };
 
     const coverage = computeTranslationCoverage(publicMemes.rows, translations.rows);
@@ -1034,12 +1057,12 @@ export async function listTranslationsForReview(
   } = {},
 ): Promise<TranslationQueueResult> {
   try {
-    const { db } = await requireOperator();
+    const { supabase } = await requireOperator();
     const page = Math.max(1, Math.trunc(input.page ?? 1));
     const from = (page - 1) * TRANSLATION_QUEUE_PAGE_SIZE;
     const to = from + TRANSLATION_QUEUE_PAGE_SIZE - 1;
 
-    let query = db
+    let query = supabase
       .from("meme_translations")
       .select(
         "meme_id, locale, status, title, summary, description, origin, usage_note, caution, aliases, source_updated_at, translated_at, updated_at, reviewed_at, reviewed_by, memes(title, summary, description, origin, usage_note, caution, short_id, updated_at)",
@@ -1094,6 +1117,213 @@ export async function listTranslationsForReview(
   }
 }
 
+export async function listTranslationPriorityQueue(
+  limit = 50,
+  locale?: SeoContentLocale,
+): Promise<TranslationPriorityQueueResult> {
+  try {
+    const { supabase } = await requireOperator();
+    const safeLimit = Math.min(100, Math.max(1, Math.trunc(limit)));
+    const { data, error } = await supabase.rpc(
+      "list_translation_priority_queue",
+      locale
+        ? { p_limit: safeLimit, p_locale: locale }
+        : { p_limit: safeLimit },
+    );
+    if (error) return { ok: false, error: error.message };
+
+    const rows: Omit<TranslationPriorityQueueRow, "routeUnlockCandidate">[] = (data ?? [])
+      .filter((row) => isSeoContentLocale(row.locale))
+      .map((row) => ({
+        memeId: row.meme_id,
+        locale: row.locale as SeoContentLocale,
+        requestCount: row.request_count,
+        latestRequestedAt: row.latest_requested_at,
+        status: row.status === "in_review" ? "in_review" : "requested",
+        memeTitle: row.meme_title,
+        memeShortId: row.meme_short_id,
+        memeSlug: row.meme_slug,
+        translationStatus: row.translation_status,
+        translationUpdatedAt: row.translation_updated_at,
+        sourceUpdatedAt: row.source_updated_at,
+      }));
+    if (rows.length === 0) return { ok: true, data: [] };
+
+    const { data: sourceRows, error: sourceError } = await supabase
+      .from("memes")
+      .select(MISSING_MEME_SELECT)
+      .in("id", rows.map((row) => row.memeId))
+      .in("moderation_status", ["approved", "limited"])
+      .overrideTypes<MissingMemeSourceQueryRow[], { merge: false }>();
+    if (sourceError) return { ok: false, error: sourceError.message };
+
+    const routeUnlockByMemeId = new Map(
+      (sourceRows ?? []).map((source) => [
+        source.id,
+        classifyTranslationWorklistSource({
+          memeId: source.id,
+          shortId: source.short_id,
+          title: source.title,
+          updatedAt: source.updated_at,
+          description: source.description,
+          origin: source.origin,
+          usage_note: source.usage_note,
+          caution: source.caution,
+          usage_examples: source.usage_examples,
+          meme_sources: source.meme_sources,
+          meme_contents: source.meme_contents,
+          meme_tags_map: source.meme_tags_map,
+        }).routeUnlockCandidate,
+      ]),
+    );
+
+    return {
+      ok: true,
+      data: rows.map((row) => ({
+        ...row,
+        routeUnlockCandidate:
+          row.translationStatus === null && routeUnlockByMemeId.get(row.memeId) === true,
+      })),
+    };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+export async function listTranslationSupplyPriorityQueue(
+  limit = 50,
+): Promise<TranslationPriorityQueueResult> {
+  try {
+    const { supabase } = await requireOperator();
+    const safeLimit = Math.min(100, Math.max(1, Math.trunc(limit)));
+    const demandRows: TranslationSupplyDemandQueryRow[] = [];
+    for (let from = 0; ; from += TRANSLATION_COVERAGE_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("plus_translation_requests")
+        .select(`meme_id, locale, status, created_at, memes!inner(${TRANSLATION_SUPPLY_SOURCE_SELECT})`)
+        .in("status", ["requested", "in_review"])
+        .in("memes.moderation_status", ["approved", "limited"])
+        .order("meme_id", { ascending: true })
+        .order("locale", { ascending: true })
+        .order("created_at", { ascending: true })
+        .range(from, from + TRANSLATION_COVERAGE_PAGE_SIZE - 1)
+        .overrideTypes<TranslationSupplyDemandQueryRow[], { merge: false }>();
+      if (error) return { ok: false, error: error.message };
+      demandRows.push(...(data ?? []));
+      if ((data ?? []).length < TRANSLATION_COVERAGE_PAGE_SIZE) break;
+    }
+
+    const groups = new Map<
+      string,
+      {
+        meme: MissingMemeSourceQueryRow;
+        locale: SeoContentLocale;
+        requestCount: number;
+        latestRequestedAt: string;
+        status: "requested" | "in_review";
+      }
+    >();
+    for (const row of demandRows ?? []) {
+      if (!isSeoContentLocale(row.locale) || !row.memes) continue;
+      const key = `${row.meme_id}\u0000${row.locale}`;
+      const existing = groups.get(key);
+      if (!existing) {
+        groups.set(key, {
+          meme: row.memes,
+          locale: row.locale,
+          requestCount: 1,
+          latestRequestedAt: row.created_at,
+          status: row.status === "in_review" ? "in_review" : "requested",
+        });
+        continue;
+      }
+      existing.requestCount += 1;
+      if (Date.parse(row.created_at) > Date.parse(existing.latestRequestedAt)) {
+        existing.latestRequestedAt = row.created_at;
+      }
+      if (row.status === "in_review") existing.status = "in_review";
+    }
+    if (groups.size === 0) return { ok: true, data: [] };
+
+    const memeIds = [...new Set([...groups.values()].map((group) => group.meme.id))];
+    const translationRows: TranslationSupplyStatusQueryRow[] = [];
+    for (let from = 0; from < memeIds.length; from += TRANSLATION_SUPPLY_ID_BATCH_SIZE) {
+      const ids = memeIds.slice(from, from + TRANSLATION_SUPPLY_ID_BATCH_SIZE);
+      const { data, error } = await supabase
+        .from("meme_translations")
+        .select("meme_id, locale, status, source_updated_at, updated_at")
+        .in("meme_id", ids)
+        .in("locale", [...SEO_CONTENT_LOCALES])
+        .overrideTypes<TranslationSupplyStatusQueryRow[], { merge: false }>();
+      if (error) return { ok: false, error: error.message };
+      translationRows.push(...(data ?? []));
+    }
+
+    const translationsByKey = new Map(
+      (translationRows ?? []).map((row) => [`${row.meme_id}\u0000${row.locale}`, row]),
+    );
+    const rows = [...groups.entries()].map(([key, group]) => {
+      const translation = translationsByKey.get(key);
+      const routeUnlockCandidate =
+        translation?.status == null &&
+        classifyTranslationWorklistSource({
+          memeId: group.meme.id,
+          shortId: group.meme.short_id,
+          title: group.meme.title,
+          updatedAt: group.meme.updated_at,
+          description: group.meme.description,
+          origin: group.meme.origin,
+          usage_note: group.meme.usage_note,
+          caution: group.meme.caution,
+          usage_examples: group.meme.usage_examples,
+          meme_sources: group.meme.meme_sources,
+          meme_contents: group.meme.meme_contents,
+          meme_tags_map: group.meme.meme_tags_map,
+        }).routeUnlockCandidate;
+      return {
+        memeId: group.meme.id,
+        locale: group.locale,
+        requestCount: group.requestCount,
+        latestRequestedAt: group.latestRequestedAt,
+        status: group.status,
+        memeTitle: group.meme.title,
+        memeShortId: group.meme.short_id,
+        memeSlug: group.meme.slug,
+        translationStatus: translation?.status ?? null,
+        translationUpdatedAt: translation?.updated_at ?? null,
+        sourceUpdatedAt: translation?.source_updated_at ?? null,
+        routeUnlockCandidate,
+      } satisfies TranslationPriorityQueueRow;
+    });
+
+    return { ok: true, data: sortTranslationSupplyPriorityRows(rows).slice(0, safeLimit) };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+export async function claimTranslationPriority(input: {
+  memeId: string;
+  locale: SeoContentLocale;
+}): Promise<TranslationActionResult> {
+  try {
+    if (!input.memeId || !isSeoContentLocale(input.locale)) {
+      return { ok: false, error: "유효한 밈과 번역 언어가 필요해요." };
+    }
+    const { supabase } = await requireOperator();
+    const { error } = await supabase.rpc("claim_translation_priority_request", {
+      p_meme_id: input.memeId,
+      p_locale: input.locale,
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/translations");
+    revalidatePath(`/admin/memes/${input.memeId}`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
 /** 큐 화면 전용 반려 — DB 상태는 바꾸지 않고(그대로 재검수 대상) 사유만 감사 로그에 남긴다. */
 export async function rejectMemeTranslationDraft(input: {
   memeId: string;
@@ -1107,9 +1337,9 @@ export async function rejectMemeTranslationDraft(input: {
     }
     if (!input.reason.trim()) return { ok: false, error: "반려 사유를 입력해 주세요." };
 
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const { meme, translation } = await loadTranslationContext(
-      db,
+      supabase,
       input.memeId,
       input.locale,
     );
@@ -1117,7 +1347,7 @@ export async function rejectMemeTranslationDraft(input: {
       return { ok: false, error: "번역이 변경되어 반려하지 못했어요. 새로고침해 주세요." };
     }
 
-    await logAudit(db, uid, "meme_translation.reject", meme.id, input.locale, {
+    await logAudit(supabase, uid, "meme_translation.reject", meme.id, input.locale, {
       reason: input.reason.trim(),
       status: translation.status,
     });
@@ -1138,14 +1368,14 @@ export async function deleteMemeTranslation(input: {
     if (!input.memeId || !isSeoContentLocale(input.locale)) {
       return { ok: false, error: "유효한 밈과 번역 언어가 필요해요." };
     }
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const { meme, translation } = await loadTranslationContext(
-      db,
+      supabase,
       input.memeId,
       input.locale,
     );
 
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("meme_translations")
       .delete()
       .eq("meme_id", input.memeId)
@@ -1157,7 +1387,7 @@ export async function deleteMemeTranslation(input: {
     if (!data) return { ok: false, error: "번역이 변경되어 삭제하지 못했어요. 새로고침해 주세요." };
 
     await auditAndRevalidate(
-      db,
+      supabase,
       uid,
       "meme_translation.delete",
       meme,
@@ -1186,13 +1416,13 @@ export async function markMemeTranslationStale(input: {
     ) {
       return { ok: false, error: "유효한 밈과 번역 언어가 필요해요." };
     }
-    const { db, uid } = await requireOperator();
+    const { supabase, uid } = await requireOperator();
     const { meme, translation } = await loadTranslationContext(
-      db,
+      supabase,
       input.memeId,
       input.locale,
     );
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from("meme_translations")
       .update({ status: "stale" })
       .eq("meme_id", input.memeId)
@@ -1206,7 +1436,7 @@ export async function markMemeTranslationStale(input: {
     }
 
     await auditAndRevalidate(
-      db,
+      supabase,
       uid,
       "meme_translation.mark_stale",
       meme,

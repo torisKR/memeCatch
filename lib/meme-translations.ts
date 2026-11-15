@@ -15,8 +15,8 @@ import {
   MemeCatalogUnavailableError,
   type MemeDetail,
 } from "@/lib/queries";
-import { createStaticClient } from "@/lib/db/server";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
+import { createStaticClient } from "@/lib/supabase/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { originCountryCode } from "@/lib/meme-country";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
@@ -426,9 +426,9 @@ export const getTranslationLocaleAvailability = cache(async function getTranslat
   if (!memeId) return empty;
 
   try {
-    const db = createStaticClient();
+    const supabase = createStaticClient();
     const [{ data: base, error: baseError }, rows] = await Promise.all([
-      db
+      supabase
         .from("memes")
         .select(
           "id,slug,title,summary,description,origin,usage_note,caution,aliases,updated_at,usage_examples,meme_sources(source_url, hidden_from_public),meme_contents(availability,moderation_status),meme_tags_map(tag_id),meme_market_profiles(market_code, role, review_state)",

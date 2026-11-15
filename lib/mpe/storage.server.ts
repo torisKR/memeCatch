@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const MPE_STORAGE_BUCKET = "mpe-temporary";
 

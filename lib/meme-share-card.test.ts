@@ -26,7 +26,7 @@ import { readFontAdvances } from "@/lib/ttf-metrics";
 /** Non-detail pages that must stay byte-identical to main e5841d8c. Git history
  * is absent in the shallow CI checkout, so the lock is the content hash. */
 const MAIN_FILE_SHA: Record<string, string> = {
-  "app/(default)/community/[id]/page.tsx": "d2970639234251beb0c2dcfd3a6943f052adb4f3f8fcbeb84e7efcea12f728eb",
+  "app/(default)/community/[id]/page.tsx": "9e1fe0c35c3284794baaba6f9fdb81ab056adbedb898584940e42f9842df1418",
   "app/[locale]/not-found.tsx": "ef253029a73492bd5b44e1b70e10d2e7a1e7271d56e500a615e41d2c92b86f06",
   "app/(default)/not-found.tsx": "0445ade89cdc8dcbd2eb884622e3cc7af31936a1a0623077b9daf9e82c5ab511",
   "app/(default)/quiz/page.tsx": "5999e8189f2e0cab4f3a525ab957a9345f8db3f6d5e704870406e0eed943997b",

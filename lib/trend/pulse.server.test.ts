@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => {
 });
 vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 
-vi.mock("@/lib/db/admin", () => ({
+vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({ rpc: mocks.rpc, from: mocks.from }),
 }));
 vi.mock("@/lib/trend/radar-platform-connectors.server", () => ({

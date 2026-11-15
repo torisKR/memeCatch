@@ -59,7 +59,7 @@ function parseSeed(sql: string): SeedMeme[] {
 
 describe("thin catalog inventory", () => {
   it("classifies every seed and curated meme with the shared predicate", () => {
-    const sql = readFileSync(join(process.cwd(), "db/seed.sql"), "utf8");
+    const sql = readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8");
     const seed = parseSeed(sql).map((row) => {
       const meme = {
         description: row.description,

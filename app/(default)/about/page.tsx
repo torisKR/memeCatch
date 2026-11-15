@@ -143,9 +143,16 @@ export default async function AboutPage() {
             에 공개되어 있습니다.
           </p>
           <p className="mt-4 text-base leading-relaxed">
-            밈캐치는 누구나 무료로 쓰는 커뮤니티이며, 운영비는 광고로만
-            충당합니다. 유료 멤버십이나 결제 기능은 없고, 광고주는 밈의 수록
-            여부나 안전 등급에 관여하지 않습니다.
+            운영비는 광고와 후원, 그리고 선택형 멤버십으로
+            충당합니다. 광고주는 밈의 수록 여부나 안전 등급에 관여하지
+            않습니다. 서비스가 도움이 됐다면{" "}
+            <Link
+              href="/pricing#fairy-support-title"
+              className="text-accent-text underline underline-offset-2"
+            >
+              후원(Fairy)
+            </Link>
+            으로 응원할 수 있습니다.
           </p>
         </section>
 

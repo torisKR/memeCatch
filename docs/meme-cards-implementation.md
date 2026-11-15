@@ -45,8 +45,8 @@
 
 운영 migration ledger에 맞춘 적용 파일은 다음 두 개다. 검증된 내용을 유지하며 이름만 실제 적용 시각과 맞췄다.
 
-- `db/migrations/20261007083631_meme_collectible_cards.sql`
-- `db/migrations/20261007083649_meme_collectible_catalog_seed.sql`
+- `supabase/migrations/20261007083631_meme_collectible_cards.sql`
+- `supabase/migrations/20261007083649_meme_collectible_catalog_seed.sql`
 
 담당자가 MCP로 추가 적용한 뒤 정확히 1,000개 배정 일치, 소장 행 0개, RLS·열 권한을 확인했다. 소장 0개는 해당 검증 시점의 값이다. 운영 사용자에게 수령 요청을 보내 QA용 소장 데이터를 만들지 않았다.
 
@@ -70,7 +70,7 @@ node scripts/build-meme-card-catalog.mjs --check
 CIRCLE_NODE_TOTAL=1 npm run build
 ```
 
-SQL 검증 파일은 `db/tests/meme_collectible_cards.sql`이다. 실제 적용 이력이 있는 DB에 생성 migration을 다시 실행하지 않고 분리된 검증 환경을 사용한다.
+SQL 검증 파일은 `supabase/tests/meme_collectible_cards.sql`이다. 실제 적용 이력이 있는 DB에 생성 migration을 다시 실행하지 않고 분리된 검증 환경을 사용한다.
 
 브라우저 검사 도구의 라벨 선택자와 Next 안내용 `role=alert`를 오류로 센 실패 기록은 보존했다. 선택자를 실제 combobox로 지정하고 카드 영역의 오류만 검사한 후 남은 모의 수령 검사를 통과했다. 제품 코드 변경은 필요하지 않았다. 브라우저 실행 중 실제 수령·모델 요청은 0건이다.
 

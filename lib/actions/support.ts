@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { INQUIRY_CATEGORIES } from "@/lib/support";
 
 export type SupportActionResult =
@@ -45,10 +45,10 @@ export async function createInquiry(
     };
   }
 
-  const db = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await db.auth.getUser();
+  } = await supabase.auth.getUser();
   if (!user) {
     return {
       ok: false,
@@ -57,7 +57,7 @@ export async function createInquiry(
     };
   }
 
-  const { error } = await db.from("support_inquiries").insert({
+  const { error } = await supabase.from("support_inquiries").insert({
     user_id: user.id,
     category: parsed.data.category,
     subject: parsed.data.subject,

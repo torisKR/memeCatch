@@ -136,6 +136,15 @@ describe("admin audit durability", () => {
     expect(actionBody).toContain('"failed"');
   });
 
+  it("audits Plus entitlement intent before its mutation and outcome afterward", () => {
+    const actionBody = source.slice(source.indexOf("export async function setUserPlus"));
+    const mutation = actionBody.indexOf('admin.rpc("admin_set_plus_entitlement"');
+
+    expect(actionBody.indexOf('"intent"')).toBeLessThan(mutation);
+    expect(actionBody.indexOf("finalizeAudit(")).toBeGreaterThan(mutation);
+    expect(actionBody).toContain('"failed"');
+  });
+
   it("audits discussion visibility around the service-role mutation", () => {
     const actionBody = section(
       "export async function setDiscussionVisibility",

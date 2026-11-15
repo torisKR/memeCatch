@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
+const premium = vi.hoisted(() => ({ value: false }));
 const currentLocale = vi.hoisted(() => ({ value: "ko" as "ko" | "en" | "ar" }));
 
 vi.mock("next/link", () => ({
@@ -10,6 +11,9 @@ vi.mock("next/link", () => ({
   useLinkStatus: () => ({ pending: false }),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
+vi.mock("@/lib/hooks/use-premium", () => ({
+  usePremium: () => premium.value,
+}));
 vi.mock("@/lib/i18n-client", async () => {
   const { getMessages } = await import("@/lib/i18n");
   return {
@@ -25,11 +29,12 @@ import { BottomNav } from "./bottom-nav";
 describe("BottomNav", () => {
   beforeEach(() => {
     navigation.pathname = "/";
+    premium.value = false;
     currentLocale.value = "ko";
   });
 
   it("keeps meme destinations in the persistent tab bar", () => {
-    navigation.pathname = "/";
+    navigation.pathname = "/pricing";
     const html = renderToStaticMarkup(<BottomNav />);
 
     expect(html).toContain('aria-label="주 내비게이션"');
@@ -39,12 +44,11 @@ describe("BottomNav", () => {
     expect(html).not.toContain('href="/products"');
     expect(html).toContain('href="/submit"');
     expect(html).toContain('href="/my"');
-    expect(html).not.toContain('href="/pricing"');
-    expect(html).not.toContain('href="/premium"');
+    expect(html).toContain('href="/pricing"');
     expect(html).toContain("min-h-14");
     expect(html).toContain("whitespace-nowrap");
-    expect(html.match(/<li class="flex min-w-11 flex-1">/g)).toHaveLength(5);
-    expect(html.match(/<a [^>]*class="[^"]*min-h-14 min-w-11/g)).toHaveLength(5);
+    expect(html.match(/<li class="flex min-w-11 flex-1">/g)).toHaveLength(6);
+    expect(html.match(/<a [^>]*class="[^"]*min-h-14 min-w-11/g)).toHaveLength(6);
     expect(html).toContain("min-w-[19.25rem]");
     expect(html.match(/<a href="\/community"[^>]*aria-current="page"/)).toBeFalsy();
   });
@@ -86,18 +90,28 @@ describe("BottomNav", () => {
     expect(html.match(/<a href="\/my" rel="nofollow"/)).toBeTruthy();
   });
 
+  it("sends Plus subscribers to the premium dashboard", () => {
+    premium.value = true;
+    navigation.pathname = "/premium";
+    const html = renderToStaticMarkup(<BottomNav />);
+
+    expect(html).toContain('href="/premium"');
+    expect(html.match(/<a href="\/premium"[^>]*aria-current="page"/)).toBeTruthy();
+    expect(html).not.toContain('href="/pricing"');
+  });
+
   it("stays hidden on admin routes", () => {
     navigation.pathname = "/admin/growth";
     expect(renderToStaticMarkup(<BottomNav />)).toBe("");
   });
 
-  it("translates Home, Latest, and MY into the existing Arabic wording", () => {
+  it("translates Home, Latest, Plus, and MY into the existing Arabic wording", () => {
     currentLocale.value = "ar";
     const html = renderToStaticMarkup(<BottomNav />);
 
     expect(html).toContain("الرئيسية");
     expect(html).toContain("استكشاف");
-    expect(html).not.toContain("بلس");
+    expect(html).toContain("بلس");
     expect(html).toContain("حسابي");
     expect(html).not.toMatch(/>\s*Home\s*</);
     expect(html).not.toMatch(/>\s*Latest\s*</);
@@ -105,7 +119,7 @@ describe("BottomNav", () => {
     expect(html).not.toMatch(/>\s*MY\s*</);
   });
 
-  it("marks Home current for the /index alias", () => {
+  it("marks Home current for the Vercel /index alias", () => {
     navigation.pathname = "/index";
     const html = renderToStaticMarkup(<BottomNav />);
 

@@ -9,7 +9,7 @@ vi.mock("@/lib/queries", () => ({
   LIST_SELECT: "id, slug, title",
 }));
 
-vi.mock("@/lib/db/server", () => ({ createStaticClient }));
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import { isYouTubeThumbnailUrl } from "@/lib/retired-card-image";
 import {

@@ -25,6 +25,7 @@ export type GlobalSearchCopy = {
   noResultDescription: string;
   submit: (query: string) => string;
   trendingTitle: string;
+  translationOptions: string;
   input: SearchInputCopy;
 };
 
@@ -41,6 +42,7 @@ const SEARCH_COPY_BASE = {
     noResultDescription: "제보해 주시면 뜻과 유래를 정리해서 알려드려요.",
     submit: (query: string) => `‘${query}’ 제보하기`,
     trendingTitle: "지금 많이 찾는 밈",
+    translationOptions: "번역 옵션 보기",
     input: {
       label: "밈 검색",
       placeholder: "무슨 밈인지 검색해보세요",
@@ -66,6 +68,7 @@ const SEARCH_COPY_BASE = {
     noResultDescription: "Send it in and we will explain its meaning and origin.",
     submit: (query: string) => `Submit “${query}”`,
     trendingTitle: "Trending now",
+    translationOptions: "See translation options",
     input: {
       label: "Search memes",
       placeholder: "What meme are you looking for?",
@@ -91,6 +94,7 @@ const SEARCH_COPY_BASE = {
     noResultDescription: "投稿していただければ、意味と由来を整理します。",
     submit: (query: string) => `「${query}」を投稿`,
     trendingTitle: "今よく検索されているミーム",
+    translationOptions: "翻訳オプションを見る",
     input: {
       label: "ミームを検索",
       placeholder: "探したいミームは？",
@@ -116,6 +120,7 @@ const SEARCH_COPY_BASE = {
     noResultDescription: "欢迎投稿，我们会整理它的含义和来源。",
     submit: (query: string) => `投稿“${query}”`,
     trendingTitle: "正在热门搜索",
+    translationOptions: "查看翻译选项",
     input: {
       label: "搜索迷因",
       placeholder: "想找什么迷因？",
@@ -141,6 +146,7 @@ const SEARCH_COPY_BASE = {
     noResultDescription: "歡迎投稿，我們會整理它的含義和來源。",
     submit: (query: string) => `投稿「${query}」`,
     trendingTitle: "目前熱門搜尋",
+    translationOptions: "查看翻譯選項",
     input: {
       label: "搜尋迷因",
       placeholder: "想找什麼迷因？",

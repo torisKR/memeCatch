@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Add public YouTube oEmbed title/author metadata to review-only candidates.
- * This uses no API key, account login, video download, or database write and
+ * This uses no API key, account login, video download, or Supabase write and
  * never treats embeddability as publication approval.
  *
  * Usage:

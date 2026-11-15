@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Json } from "@/lib/database.types";
-import { createAdminClient } from "@/lib/db/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SITE_URL } from "@/lib/site";
 
 export type NotificationChannel = "in_app" | "email" | "web_push" | "webhook";

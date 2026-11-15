@@ -1,8 +1,8 @@
 import "server-only";
 
 import { isRenderableContent } from "@/lib/content-availability";
-import { createAdminClient } from "@/lib/db/admin";
-import { createStaticClient } from "@/lib/db/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createStaticClient } from "@/lib/supabase/server";
 import {
   isSocialPlatform,
   SOURCE_PLATFORM_META,
@@ -126,7 +126,7 @@ export async function getGlobalFeed(
   limit = 24
 ): Promise<GlobalFeedResult> {
   try {
-    const db = createStaticClient();
+    const supabase = createStaticClient();
     const storedPlatforms = [
       ...new Set(
         platforms.flatMap((platform) => [platform, SOURCE_PLATFORM_META[platform].label]),
@@ -136,7 +136,7 @@ export async function getGlobalFeed(
     const items: GlobalFeedItem[] = [];
     let admin: ReturnType<typeof createAdminClient> | undefined;
     for (let from = 0; items.length < limit; from += FEED_BATCH_SIZE) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("memes")
         .select(
           `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative), meme_market_profiles!inner(market_code, role, review_state)`

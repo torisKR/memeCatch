@@ -208,7 +208,7 @@
 
 ### 인증 방식
 - 이메일 + 비밀번호 (기본, 로컬 개발에서 즉시 로그인).
-- 소셜: 카카오 · 구글 (better-auth OAuth, `/auth/callback` 콜백). provider 미설정 시 "준비 중" 안내로 우아하게 폴백.
+- 소셜: 카카오 · 구글 (Supabase OAuth, `/auth/callback` 콜백). provider 미설정 시 "준비 중" 안내로 우아하게 폴백.
 - 온보딩은 선택(Skip 가능), 강제 선형 투어 금지.
 
 ### 컴포넌트 (신규)

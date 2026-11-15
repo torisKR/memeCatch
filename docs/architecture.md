@@ -2,41 +2,41 @@
 
 > 어떤 서비스가 무엇을 맡고, **왜 그렇게 정했는지**를 남긴다.
 > 특히 "AWS로 옮길까?"는 여러 번 다시 떠오르는 질문이라 실측 근거를 함께 기록한다.
-> 최종 갱신: 2026-11-15
+> 최종 갱신: 2026-08-31
 
 ## 한 줄 요약
 
-앱·DB·인증·크론은 **OCI VM 한 대의 Docker Compose**(자체 Caddy), 앞단 CDN·보안 프록시와 이미지·백업 저장소는 **Cloudflare(R2)**,
-메일 발송과 관리자 초안 생성만 **AWS(SES·Bedrock)**. 수익은 광고 전용이며 결제 기능은 없다.
+앱은 **Vercel**, 데이터·인증은 **Supabase**, 이미지는 **Cloudflare R2**, 결제는 **Unifi Pay Direct**,
+메일 발송만 **AWS SES**. AWS는 기존 스택을 대체하지 않고 비어 있던 자리 하나를 채운다.
 
 ## 서비스 분담
 
 | 담당 | 서비스 | 비고 |
 | --- | --- | --- |
-| 앱 호스팅·배포 | OCI VM + Docker Compose | GitHub Actions가 GHCR 이미지를 만들어 `scripts/deploy-oci.sh`로 배포 |
-| DB·RLS·RPC | PostgreSQL 16 + pgvector (Compose `postgres`) | `db/migrations`를 첫 부팅 시 적용, 이후 `psql`로 수동 적용 |
-| 인증 | better-auth (앱 내장) | 이메일·카카오·구글·TikTok, 세션은 같은 Postgres |
-| 크론 | Compose `scheduler` | `deploy/scheduler/crontab` → `CRON_SECRET`으로 `/api/cron/*` 호출 |
-| CDN·프록시·TLS 앞단 | Cloudflare | Full (strict), HTML·`/api/*`는 캐시하지 않음 |
-| 밈 이미지·업로드·백업 | Cloudflare R2 | `/api/media` 프록시 경유. aws4fetch로 SigV4 서명. 암호화 DB 백업도 R2 |
+| 앱 호스팅·배포·크론 | Vercel | GitHub `main` 푸시 시 자동 배포. ISR/SSG 비중 높음(SEO) |
+| DB·인증·RLS·RPC | Supabase | 프로젝트 `onjipuldngbdptldkpoe` (ap-northeast-1) |
+| 밈 이미지·업로드 | Cloudflare R2 | `/api/media` 프록시 경유. aws4fetch로 SigV4 서명 |
+| 유료 멤버십 결제 | Unifi Pay Direct | `billing_orders` → HMAC 상태 재조회 → `billing_subscriptions` |
 | **메일 발송** | **AWS SES** | 계정 `264144511402`, ap-northeast-2 |
-| 관리자 초안 생성 | AWS Bedrock | IAM 사용자 `memecatch-bedrock` 액세스 키를 VM 환경변수에만 둔다 |
 
-광고는 Google AdSense.
+광고는 Google AdSense + 쿠팡 파트너스(하단 고정 도크).
+
+현재 결제 원장은 `billing_orders`이며, 확인된 거래만 `billing_subscriptions` 권한으로 반영한다. `billing_webhook_events`는 재전송과 감사 이력을 보존한다. 저장소에 남은 Latpeed 라우트·RPC·마이그레이션은 기존 주문 호환과 감사용 **legacy** 경로이며 신규 checkout의 기준이 아니다.
+
+신규 checkout은 서버 전용 `UNIFI_PAY_CHECKOUT_ENABLED`가 공백 제거 후 정확히 `true`일 때만 열린다. 플래그가 없거나 `false`이면 주문 생성을 fail-closed로 막되, 이미 생성된 주문의 웹훅 검증과 환불 정산은 계속 처리한다. 따라서 롤백은 이 플래그만 끄며 webhook/refund 경로를 함께 내리지 않는다.
 
 ## AWS는 무엇을 하고, 무엇을 하지 않는가
 
-Terraform으로 만든 리소스는 **소수이고 전부 AWS 계정 안에서만** 존재한다
+Terraform으로 만든 리소스는 **9개뿐이고 전부 AWS 계정 안에서만** 존재한다
 (`terraform/`, `terraform state list`로 확인 가능).
 
 - **SES** — 도메인 인증 + DKIM + 설정세트(TLS 필수·반송/불만 CloudWatch 기록)
 - **발송 전용 IAM 사용자** `memecatch-mailer` — `noreply@catchmeme.com`에서만 보낼 수 있게 조건 제한
 - **보안 기준선** — 계정 레벨 S3 퍼블릭 차단, IAM 비밀번호 정책
 - **예산 경보** — 월 $50 기준, 실사용 80%·예측 100%에서 알림
-- **Bedrock 호출 전용 IAM 사용자** `memecatch-bedrock` — 고정 inference profile만 호출 가능
 
-Terraform은 AWS 자격증명만 갖고 있어 **OCI VM·Cloudflare를 건드릴 수단이 없다.**
-AWS를 통째로 지워도 사이트는 그대로 동작한다(메일·관리자 초안 생성만 사라짐).
+Terraform은 AWS 자격증명만 갖고 있어 **Vercel·Supabase·R2를 건드릴 수단이 없다.**
+AWS를 통째로 지워도 사이트는 그대로 동작한다(메일 기능만 사라짐).
 
 ## 결정 기록
 
@@ -62,15 +62,15 @@ AWS를 통째로 지워도 사이트는 그대로 동작한다(메일·관리자
 
 ### 크론을 Lambda+EventBridge로 옮기지 않는다
 
-Compose `scheduler` 컨테이너가 이미 있고 추가 비용이 없다.
-**다시 볼 트리거**: VM 한 대로 배치 시간이 부족해질 때(예: 장시간 밈 수집 배치).
+Vercel Cron이 이미 있고 무료다.
+**다시 볼 트리거**: Vercel 함수 실행시간 제한에 실제로 막힐 때(예: 장시간 밈 수집 배치).
 
 ### 출처 수집 파이프라인 (2026-07-23 추가)
 
 외부 미디어는 `yt-dlp` 대량 다운로드가 아니라 **공식 API·oEmbed 후보 발견 → 운영자 검수(`/admin/sources`) → 링크·공식 임베드만 게시** 구조다.
 CatchMeme house originals (`origin_kind=house_original`) do not enter through oEmbed ranking; the operator creates a pending dictionary row and publishes only after in-transaction rights evidence.
 `media_sources`/`meme_media`/`meme_claims` 원장은 RLS로 운영자만 열고, 승인된 행만 기존 `meme_contents`/`meme_sources`로 복사해 공개한다.
-YouTube 메타데이터는 30일 갱신·삭제 대응이 필요해 스케줄러(`/api/cron/source-refresh`, 17:00 UTC)이 7일 주기로 공개·임베드 상태를 재확인한다.
+YouTube 메타데이터는 30일 갱신·삭제 대응이 필요해 Vercel Cron(`/api/cron/source-refresh`, 17:00 UTC)이 7일 주기로 공개·임베드 상태를 재확인한다.
 YouTube 조회수 등 API 지표는 파생 점수에 쓰지 않는다(트렌드 점수는 자체 view_events만).
 
 ### MPE AI 경계 (2026-08-31 갱신)
@@ -84,8 +84,8 @@ MPE OCR·근거 초안은 `stealth/ox-alpha` 단일 모델, 호출 비용 `$0`�
 
 ### 전체 스택을 AWS로 이전하지 않는다
 
-인프라를 만지는 사람이 1명이라 구성 요소를 최소로 유지한다.
-OCI VM 한 대 + Cloudflare는 현재 비용이 거의 없고 운영 부담도 낮다.
+인프라를 만지는 사람이 1명이라 완전관리형만 감당 가능하다.
+Vercel+Supabase는 현재 비용이 거의 없고 운영 부담도 낮다.
 특별한 이유(대량 크레딧 소진 압박, 규제, 락인 회피)가 생기기 전에는 옮기지 않는다.
 
 > 참고: 이 스택에서 AWS 크레딧을 의미 있게 소진할 수 있는 건 사실상 **Bedrock 추론**
@@ -141,5 +141,5 @@ terraform apply -var enable_media_cdn=true
 
 - [ ] Cafe24에 SES DNS 레코드 6개 입력 → 인증 완료 확인
 - [ ] SES 프로덕션 액세스 신청(샌드박스 해제)
-- [ ] 발송 IAM 액세스 키 발급 → OCI VM `/opt/memecatch/.env` 등록
+- [ ] 발송 IAM 액세스 키 발급 → Vercel env 등록
 - [ ] 메일 발송 코드 + 주간 브리핑 크론 + 원클릭 수신거부 구현

@@ -56,7 +56,7 @@ Chicken-and-egg: a dictionary entry is not a folk meme until people use it. Hous
 | Caption / idea generation | `/studio`, `lib/meme-studio.server.ts`, `POST /api/meme-studio` (rate-limited, no DB write, template fallback) | Yes for optional **draft copy**. Never INSERT into `memes`. |
 | Client PNG of CatchMeme graphics | `components/studio/artifact-studio.tsx` dictionary mode: “외부 SNS 이미지는 복사하지 않고 밈캐치 자체 그래픽과 입력한 텍스트만 사용합니다.” Files stay in the browser. | Yes as the **visual recipe**. Dictionary publication still needs a server row + rights attestation. |
 | Plus share cards from reviewed facts | `lib/plus-creator-pack.ts`, Action Inbox, no-auto-posting (loop 147 PLUS-060) | **Do not reuse as a factory.** Packs catalog facts for subscribers. |
-| Human publication gate | `check_moderation_transition()` in `db/migrations/20260727000000_unpublish_to_fact_checking.sql`: pending → fact_checking → rights_checking → approved/limited | **Required.** Same trigger. No parallel state machine. |
+| Human publication gate | `check_moderation_transition()` in `supabase/migrations/20260727000000_unpublish_to_fact_checking.sql`: pending → fact_checking → rights_checking → approved/limited | **Required.** Same trigger. No parallel state machine. |
 | Operator status buttons | `transitionMemeStatus` in `lib/actions/admin.ts`, `MemeStatusControls` | Extend for house-original rights attestation. Do not add a second transition API. |
 | Operator AI draft | `generateDraft` in `lib/actions/admin.ts` — structured JSON, audit log, “자동 게시나 자동 저장을 하지 않으며” | Clone the **contract** (draft only). Do not point it at house originals without a new prompt that forbids inventing folk origin. |
 | Third-party media ingest | MPE: `media_ingestions` 20MB, 24h delete, `rights_basis` / `source_role`, publish projection | **Wrong tool** for assets CatchMeme wants to keep. Do not fork. |
@@ -82,7 +82,7 @@ A “complete generation platform” (new draft table, worker, OpenRouter budget
 
 | # | Module |
 | --- | --- |
-| 1 | `db/migrations/*_house_original_provenance.sql` |
+| 1 | `supabase/migrations/*_house_original_provenance.sql` |
 | 2 | `lib/house-original.ts` + `lib/house-original.test.ts` |
 | 3 | `lib/actions/admin.ts` (create + gated transition) + tests |
 | 4 | `components/admin/house-original-form.tsx` (or extend meme create) + test |
@@ -181,7 +181,7 @@ House-original rights evidence (pick one, recommended A):
 - **A (recommended):** reuse `meme_media` / `meme_sources` with `source_role='original'` and `rights_basis='creator_permission'`. Add `memes.house_rights_attested_at timestamptz`. Trigger: if `origin_kind=house_original` and new status in (approved, limited), require attestation timestamp + at least one original/creator_permission link.
 - **B:** new `meme_house_rights` table. Cleaner isolation, extra JOIN, 1-person maintenance cost. Defer unless A cannot express “CatchMeme is the creator.”
 
-Existing `rights_basis` values already include `creator_permission` (`db/migrations/20260824220000_mpe_pipeline.sql`). Do not invent a parallel enum.
+Existing `rights_basis` values already include `creator_permission` (`supabase/migrations/20260824220000_mpe_pipeline.sql`). Do not invent a parallel enum.
 
 `source_role='original'` already exists. Catalog rows today mostly have `usage_example` (DQ-007). House originals must not ship with that default.
 
@@ -218,7 +218,7 @@ DB trigger remains source of truth so a compromised or scripted client cannot sk
 
 Quoted moderation machine (keep):
 
-```11:16:db/migrations/20260727000000_unpublish_to_fact_checking.sql
+```11:16:supabase/migrations/20260727000000_unpublish_to_fact_checking.sql
     (old.moderation_status = 'pending' and new.moderation_status in ('fact_checking','rejected')) or
     (old.moderation_status = 'fact_checking' and new.moderation_status in ('rights_checking','rejected','pending')) or
     (old.moderation_status = 'rights_checking' and new.moderation_status in ('approved','limited','rejected','fact_checking')) or
@@ -339,7 +339,7 @@ GAPS: 16 (2 CRITICAL regressions to lock, 1 eval)
 | `lib/house-original.test.ts` | publish predicate true/false matrix; trust copy kind |
 | `lib/actions/admin-house-original.test.ts` (or extend existing admin tests) | create leaves pending; transition to approved without attestation fails; catalog transition still works |
 | `components/trust-note.test.tsx` | house original copy; catalog 0-source CTA unchanged |
-| `db/house_original_contract.test.ts` | migration SQL contains origin_kind check + publish guard |
+| `supabase/house_original_contract.test.ts` | migration SQL contains origin_kind check + publish guard |
 | `app/api/meme-studio/route.test.ts` | **CRITICAL regression:** mock supabase insert not called (already JSON; lock it) |
 
 Eval: one fixture prompt + forbidden-output list (invented origin year, named third-party rights holder, `moderation_status: approved` in model JSON). Run only if a house draft helper ships.
@@ -450,8 +450,8 @@ Synthesized from this review’s findings. Each task derives from a specific fin
 
 - [ ] **T1 (P1, human: ~2h / CC: ~20min)** — schema — Add `origin_kind` + house publish guard
   - Surfaced by: Architecture — UI-only originality is not a gate
-  - Files: `db/migrations/*_house_original_provenance.sql`, `db/house_original_contract.test.ts`
-  - Verify: `pnpm exec vitest run db/house_original_contract.test.ts` (and local supabase test if used)
+  - Files: `supabase/migrations/*_house_original_provenance.sql`, `supabase/house_original_contract.test.ts`
+  - Verify: `pnpm exec vitest run supabase/house_original_contract.test.ts` (and local supabase test if used)
 - [ ] **T2 (P1, human: ~2h / CC: ~25min)** — admin actions — `createHouseOriginal` pending-only; gate `transitionMemeStatus`
   - Surfaced by: Architecture — `approveSubmission` three-step walk must not be copied (`lib/actions/admin.ts` ~240)
   - Files: `lib/house-original.ts`, `lib/actions/admin.ts`, action tests
@@ -516,7 +516,7 @@ Codex `gpt-5.6-sol` high, read-only, 2026-08-29. Full output captured in session
 
 1. P0 — v1 stores a labeled document, not a durable house asset (Studio PNG never hits the server).
 2. P0 — UPDATE-only moderation trigger can be bypassed via direct approved INSERT, flipping `origin_kind` on a live row, or deleting rights after approve.
-3. P0 — `meme_media` requires `media_sources.source_id` (`db/migrations/20260723120000_source_pipeline.sql:77-79`) and defaults `review_state='pending'` (`:102`). Plan option A does not match that schema.
+3. P0 — `meme_media` requires `media_sources.source_id` (`supabase/migrations/20260723120000_source_pipeline.sql:77-79`) and defaults `review_state='pending'` (`:102`). Plan option A does not match that schema.
 4. P0 — `logAudit` is a separate service-role insert after status update (`lib/actions/admin.ts:50-64`, `:465-476`). DB cannot require “uid in audit log” in that order.
 5. P1 — edit RPC can change copy after attestation without reverting to `rights_checking`.
 6. P1 — regex/contract tests do not prove trigger/RLS/INSERT/revoke behavior.

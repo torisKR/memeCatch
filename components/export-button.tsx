@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { selectPremiumSubscription } from "@/lib/billing/entitlements";
 import { useLocale } from "@/lib/i18n-client";
 import { withLocaleFallback, type Locale } from "@/lib/i18n";
-import { isSeoContentLocale } from "@/lib/i18n-routing";
+import { isSeoContentLocale, localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * B2 — 밈 카드 내보내기 UI.
- * 모든 템플릿·포맷을 누구나 쓸 수 있다(1x · catchmeme.com 워터마크 포함).
+ * 무료: 클래식 템플릿 · 카드 포맷 · 1x · 워터마크 포함.
+ * Plus: 미니멀/볼드 템플릿 · 스토리 포맷 · 최대 3x · 워터마크 제거.
+ *
+ * 프리미엄 옵션은 무료 사용자에게 잠금(자물쇠 + PLUS)으로 노출하고,
+ * 선택 시 업그레이드로 유도한다. 서버 라우트가 최종 게이팅(402)을 담당.
  */
 
 const COPY_BASE = {
@@ -17,6 +24,7 @@ const COPY_BASE = {
     title: "밈 카드로 저장",
     template: "템플릿",
     format: "크기",
+    quality: "화질",
     classic: "클래식",
     minimal: "미니멀",
     bold: "볼드",
@@ -24,7 +32,10 @@ const COPY_BASE = {
     story: "스토리",
     download: "다운로드",
     downloading: "만드는 중…",
-    watermarkNote: "저장한 카드에는 catchmeme.com 표시가 들어가요.",
+    plusOnly: "PLUS 전용",
+    upgradeHint: "Plus로 업그레이드하면 워터마크 없이 고화질로 저장할 수 있어요.",
+    upgrade: "Plus 보러가기",
+    watermarkNote: "무료 저장에는 catchmeme.com 표시가 들어가요.",
     failed: "저장에 실패했어요. 다시 시도해 주세요.",
   },
   en: {
@@ -33,6 +44,7 @@ const COPY_BASE = {
     title: "Save as meme card",
     template: "Template",
     format: "Size",
+    quality: "Quality",
     classic: "Classic",
     minimal: "Minimal",
     bold: "Bold",
@@ -40,7 +52,10 @@ const COPY_BASE = {
     story: "Story",
     download: "Download",
     downloading: "Rendering…",
-    watermarkNote: "Exports include a catchmeme.com mark.",
+    plusOnly: "PLUS only",
+    upgradeHint: "Upgrade to Plus for watermark-free, high-resolution exports.",
+    upgrade: "See Plus",
+    watermarkNote: "Free exports include a catchmeme.com mark.",
     failed: "Export failed. Please try again.",
   },
   ja: {
@@ -49,6 +64,7 @@ const COPY_BASE = {
     title: "ミームカードとして保存",
     template: "テンプレート",
     format: "サイズ",
+    quality: "画質",
     classic: "クラシック",
     minimal: "ミニマル",
     bold: "ボールド",
@@ -56,7 +72,10 @@ const COPY_BASE = {
     story: "ストーリー",
     download: "ダウンロード",
     downloading: "作成中…",
-    watermarkNote: "保存したカードにはcatchmeme.comの表示が入ります。",
+    plusOnly: "PLUS限定",
+    upgradeHint: "Plusにアップグレードすると透かしなし・高画質で保存できます。",
+    upgrade: "Plusを見る",
+    watermarkNote: "無料保存にはcatchmeme.comの表示が入ります。",
     failed: "書き出しに失敗しました。もう一度お試しください。",
   },
   zh: {
@@ -65,6 +84,7 @@ const COPY_BASE = {
     title: "保存为梗卡片",
     template: "模板",
     format: "尺寸",
+    quality: "画质",
     classic: "经典",
     minimal: "极简",
     bold: "醒目",
@@ -72,7 +92,10 @@ const COPY_BASE = {
     story: "故事",
     download: "下载",
     downloading: "生成中…",
-    watermarkNote: "导出的卡片会带有 catchmeme.com 标记。",
+    plusOnly: "PLUS 专属",
+    upgradeHint: "升级 Plus 可无水印、高清导出。",
+    upgrade: "查看 Plus",
+    watermarkNote: "免费导出会带有 catchmeme.com 标记。",
     failed: "导出失败，请重试。",
   },
 } satisfies Record<"ko" | "en" | "ja" | "zh", Record<string, string>>;
@@ -82,16 +105,46 @@ const COPY: Record<Locale, Record<string, string>> = withLocaleFallback<Record<s
 type Template = "classic" | "minimal" | "bold";
 type Format = "card" | "story";
 
+/** Premium export upsells keep users on the locale-specific public price page. */
+export function exportUpgradeHref(locale: Locale): string {
+  return localizedStaticPath("/pricing", locale);
+}
+
 export function ExportButton({ shortId }: { shortId: string }) {
   const { locale } = useLocale();
   const copy = COPY[locale];
 
   const [open, setOpen] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [template, setTemplate] = useState<Template>("classic");
   const [format, setFormat] = useState<Format>("card");
+  const [hiRes, setHiRes] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const objectUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (!user) {
+        setIsPremium(false);
+        return;
+      }
+      const { data: subs } = await supabase
+        .from("billing_subscriptions")
+        .select("status, current_period_end, last_event_at");
+      if (cancelled) return;
+      setIsPremium(selectPremiumSubscription(subs ?? []) !== null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 언마운트 시 blob URL 정리(메모리 누수 방지).
   useEffect(
@@ -100,6 +153,11 @@ export function ExportButton({ shortId }: { shortId: string }) {
     },
     [],
   );
+
+  const premium = isPremium === true;
+  const usingPremiumOption =
+    template !== "classic" || format !== "card" || hiRes;
+  const locked = !premium && usingPremiumOption;
 
   function pickTemplate(next: Template) {
     setError(false);
@@ -111,11 +169,13 @@ export function ExportButton({ shortId }: { shortId: string }) {
   }
 
   async function handleDownload() {
+    if (locked) return; // 잠금 상태에서는 업그레이드 CTA만 노출
     setBusy(true);
     setError(false);
     try {
       const qs = new URLSearchParams({ template, format });
       if (isSeoContentLocale(locale)) qs.set("locale", locale);
+      if (premium && hiRes) qs.set("scale", "3");
       const res = await fetch(`/memes/${shortId}/export?${qs.toString()}`, {
         cache: "no-store",
       });
@@ -126,7 +186,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
       objectUrlRef.current = url;
       const a = document.createElement("a");
       a.href = url;
-      a.download = `memecatch-${shortId}-${template}-${format}.png`;
+      a.download = `memecatch-${shortId}-${template}-${format}${premium && hiRes ? "@3x" : ""}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -172,6 +232,8 @@ export function ExportButton({ shortId }: { shortId: string }) {
         <p className="mb-1.5 text-xs font-semibold text-text-muted">{copy.template}</p>
         <div className="mb-3 flex gap-2">
           {(["classic", "minimal", "bold"] as const).map((tpl) => {
+            const isPlus = tpl !== "classic";
+            const isLocked = isPlus && !premium;
             return (
               <button
                 key={tpl}
@@ -185,6 +247,11 @@ export function ExportButton({ shortId }: { shortId: string }) {
                 }`}
               >
                 {copy[tpl]}
+                {isLocked && (
+                  <span aria-hidden className="ml-1 text-[10px] opacity-70">
+                    🔒
+                  </span>
+                )}
               </button>
             );
           })}
@@ -194,6 +261,8 @@ export function ExportButton({ shortId }: { shortId: string }) {
         <p className="mb-1.5 text-xs font-semibold text-text-muted">{copy.format}</p>
         <div className="mb-3 flex gap-2">
           {(["card", "story"] as const).map((fmt) => {
+            const isPlus = fmt !== "card";
+            const isLocked = isPlus && !premium;
             return (
               <button
                 key={fmt}
@@ -207,14 +276,58 @@ export function ExportButton({ shortId }: { shortId: string }) {
                 }`}
               >
                 {copy[fmt]}
+                {isLocked && (
+                  <span aria-hidden className="ml-1 text-[10px] opacity-70">
+                    🔒
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
-        <p className="mb-2 text-xs text-text-muted">{copy.watermarkNote}</p>
+        {/* 화질(Plus) */}
+        <label
+          className={`mb-3 flex items-center justify-between rounded-xl border border-border px-3 py-2.5 ${
+            premium ? "" : "opacity-60"
+          }`}
+        >
+          <span className="text-sm font-semibold text-foreground">
+            {copy.quality} · 3x
+            {!premium && (
+              <span className="ml-1.5 text-[10px] text-accent">{copy.plusOnly}</span>
+            )}
+          </span>
+          <input
+            type="checkbox"
+            checked={premium && hiRes}
+            disabled={!premium}
+            onChange={(e) => {
+              setError(false);
+              setHiRes(e.target.checked);
+            }}
+            className="h-4 w-4 accent-accent"
+          />
+        </label>
+
+        {!premium && (
+          <p className="mb-2 text-xs text-text-muted">{copy.watermarkNote}</p>
+        )}
         {error && <p className="mb-2 text-xs text-safety-red">{copy.failed}</p>}
 
+        {locked ? (
+          <div className="rounded-xl border border-accent/40 bg-accent/5 p-3">
+            <p className="mb-2 text-xs leading-relaxed text-foreground">
+              {copy.upgradeHint}
+            </p>
+            <Link
+              href={exportUpgradeHref(locale)}
+              className="inline-flex h-10 w-full items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98]"
+            >
+              {copy.upgrade}
+            </Link>
+          </div>
+        ) : (
           <button
             type="button"
             onClick={handleDownload}
@@ -223,6 +336,7 @@ export function ExportButton({ shortId }: { shortId: string }) {
           >
             {busy ? copy.downloading : copy.download}
           </button>
+        )}
       </section>
     </>
   );

@@ -66,8 +66,10 @@ describe("localeDestination", () => {
     );
   });
 
-  it("does not keep a localized route for the retired Plus pricing page", () => {
-    expect(localeDestination("/pricing", "en")).toBe("/en");
+  it("keeps a visitor on the localized Plus conversion route", () => {
+    expect(localeDestination("/pricing", "en")).toBe("/en/pricing");
+    expect(localeDestination("/en/pricing", "ja")).toBe("/ja/pricing");
+    expect(localeDestination("/ja/pricing", "ko")).toBe("/pricing");
   });
 
   it("preserves a search query when switching localized search routes", () => {

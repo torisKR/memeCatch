@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { r2Configured, r2Get } from "@/lib/r2.server";
-import { createAdminClient } from "@/lib/db/admin";
-import { createClient } from "@/lib/db/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const SAFE_MEDIA_TYPES: Record<string, string> = {
   gif: "image/gif",
@@ -25,7 +25,7 @@ function safeMediaType(key: string) {
  * - /api/media/meme-card-art/{file}.{ext} — 카드 전용 4:3 원본
  *   (원본 CDN 만료 서명 URL이라 수집 시점에 R2로 영구화)
  * R2가 설정돼 있으면 서버가 서명해 스트리밍(버킷 비공개 유지 가능),
- * 아니면 로컬 디스크 저장소(LOCAL_OBJECT_STORAGE_DIR)에서 같은 권한·MIME·캐시 정책으로 스트리밍.
+ * 아니면 Supabase Storage에서 같은 권한·MIME·캐시 정책으로 스트리밍.
  * 허용 프리픽스 외 경로는 차단.
  */
 export async function GET(

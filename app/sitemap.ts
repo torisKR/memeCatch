@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import type { ContentDepthInput } from "@/lib/content-depth";
@@ -121,6 +121,19 @@ function homeLanguages(): Record<string, string> {
     ),
     // 해외 주 타깃 전환: 언어 미상 방문자는 영어 홈으로 보낸다.
     "x-default": absolute(localizedPath("/", "en")),
+  };
+}
+
+/** Plus pricing is the other fully localized static conversion page. */
+function pricingLanguages(): Record<string, string> {
+  return {
+    ...Object.fromEntries(
+      SEO_ROUTE_LOCALES.map((locale) => [
+        toHrefLang(locale),
+        absolute(localizedPath("/pricing", locale)),
+      ]),
+    ),
+    "x-default": absolute(localizedPath("/pricing", "en")),
   };
 }
 
@@ -260,12 +273,12 @@ async function buildSitemap(): Promise<{
   // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
   // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
   // 카탈로그가 402처럼 막혀도 정적 페이지 사이트맵은 빌드를 통과해야 한다.
-  let db: ReturnType<typeof createStaticClient> | null = null;
+  let supabase: ReturnType<typeof createStaticClient> | null = null;
   let homeLastMod: Date | undefined;
   let catalogUnavailable = false;
   try {
-    db = createStaticClient();
-    const { data: latest, error } = await db
+    supabase = createStaticClient();
+    const { data: latest, error } = await supabase
       .from("memes")
       .select("published_at")
       .in("moderation_status", [...PUBLIC_STATUSES])
@@ -293,6 +306,14 @@ async function buildSitemap(): Promise<{
       alternates: { languages: homeLanguages() },
     }),
   );
+  const localizedPricingEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
+    (locale) => ({
+      url: absolute(localizedPath("/pricing", locale)),
+      changeFrequency: "weekly" as const,
+      priority: 0.55,
+      alternates: { languages: pricingLanguages() },
+    }),
+  );
   const localizedHomeLastModified = new Map<SeoContentLocale, Date>();
   const localizedExploreCounts = new Map<SeoContentLocale, number>();
 
@@ -305,6 +326,13 @@ async function buildSitemap(): Promise<{
       alternates: { languages: homeLanguages() },
     },
     ...localizedHomeEntries,
+    {
+      url: `${SITE_URL}/pricing`,
+      changeFrequency: "weekly" as const,
+      priority: 0.55,
+      alternates: { languages: pricingLanguages() },
+    },
+    ...localizedPricingEntries,
     {
       url: `${SITE_URL}/collections`,
       changeFrequency: "daily" as const,
@@ -350,10 +378,10 @@ async function buildSitemap(): Promise<{
   }
   const PAGE = 1000;
   let koreanMemeCount = 0;
-  for (let from = 0; !catalogUnavailable && db && from < 49000; from += PAGE) {
+  for (let from = 0; !catalogUnavailable && supabase && from < 49000; from += PAGE) {
     let data: unknown[] | null = null;
     try {
-      const page = await db
+      const page = await supabase
         .from("memes")
         .select(DEPTH_SELECT)
         .in("moderation_status", [...PUBLIC_STATUSES])

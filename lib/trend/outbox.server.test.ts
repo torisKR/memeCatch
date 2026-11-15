@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const rpc = vi.fn();
 const getUserById = vi.fn();
-vi.mock("@/lib/db/admin", () => ({
+vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({ rpc, auth: { admin: { getUserById } } }),
 }));
 

@@ -1,4 +1,4 @@
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { SITE_URL, CONTACT_EMAIL } from "@/lib/site";
 import { DISPLAY_CATEGORY_LIST, memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";

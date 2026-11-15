@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 
 class CatalogFailure extends Error {
   readonly code = "meme_catalog_unavailable";

@@ -19,9 +19,9 @@ const dateFmt = new Intl.DateTimeFormat("ko-KR", {
 
 /** 관리자 — 고객센터 문의 목록(최신순)과 답변/상태 관리 */
 export default async function AdminInquiriesPage() {
-  const { db } = await requireOperatorPage("/admin/inquiries");
+  const { supabase } = await requireOperatorPage("/admin/inquiries");
 
-  const { data: inquiries } = await db
+  const { data: inquiries } = await supabase
     .from("support_inquiries")
     .select("id, user_id, category, subject, body, status, admin_reply, created_at")
     .order("created_at", { ascending: false })
@@ -29,7 +29,7 @@ export default async function AdminInquiriesPage() {
 
   const userIds = [...new Set((inquiries ?? []).map((i) => i.user_id))];
   const { data: profiles } = userIds.length
-    ? await db.from("profiles").select("id, nickname").in("id", userIds)
+    ? await supabase.from("profiles").select("id, nickname").in("id", userIds)
     : { data: [] as { id: string; nickname: string }[] };
   const nicknameById = new Map((profiles ?? []).map((p) => [p.id, p.nickname]));
 

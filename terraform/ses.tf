@@ -32,7 +32,7 @@ resource "aws_ses_event_destination" "cloudwatch" {
   }
 }
 
-# 앱(OCI VM)에서 SES로 발송할 때 쓸 최소 권한 사용자.
+# 앱(Vercel)에서 SES로 발송할 때 쓸 최소 권한 사용자.
 # 발송 외 권한은 주지 않으며, 지정한 도메인에서만 보낼 수 있게 제한한다.
 resource "aws_iam_user" "mailer" {
   name = "memecatch-mailer"

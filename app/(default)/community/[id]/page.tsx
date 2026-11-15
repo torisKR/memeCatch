@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ForumPostingJsonLd } from "@/components/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createStaticClient } from "@/lib/db/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createStaticClient } from "@/lib/supabase/server";
 import { CommunityLikeButton } from "@/components/community-like-button";
 import { CommunityCommentForm } from "@/components/community-comment-form";
 import { CommunityMemeChip } from "@/components/community-post-card";
@@ -32,8 +33,8 @@ type Props = { params: Promise<{ id: string }> };
 async function getPost(id: string): Promise<CommunityPostRow | null> {
   if (!UUID_RE.test(id)) return null;
   try {
-    const db = createStaticClient();
-    const { data } = await db
+    const supabase = createStaticClient() as unknown as SupabaseClient;
+    const { data } = await supabase
       .from("community_posts")
       .select(POST_SELECT)
       .eq("id", id)
@@ -76,8 +77,8 @@ export default async function CommunityPostPage({ params }: Props) {
 
   let comments: CommunityCommentRow[] = [];
   try {
-    const db = createStaticClient();
-    const { data } = await db
+    const supabase = createStaticClient() as unknown as SupabaseClient;
+    const { data } = await supabase
       .from("community_comments")
       .select(
         "id,post_id,user_id,body,created_at,profiles!community_comments_user_id_fkey(nickname)"

@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("./youtube.server", () => ({ fetchYouTubeVideoStatuses: mocks.fetchYouTubeVideoStatuses }));
 vi.mock("@/lib/oembed", () => ({ getOEmbed: mocks.getOEmbed }));
 vi.mock("./recovery.server", () => ({

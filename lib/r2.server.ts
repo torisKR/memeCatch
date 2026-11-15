@@ -6,7 +6,7 @@ import { AwsClient } from "aws4fetch";
  * Cloudflare R2 서버 전용 클라이언트 (S3 호환 API, sigv4).
  * 자격증명은 서버 환경변수로만 읽는다 — NEXT_PUBLIC_ 금지, 클라이언트 번들에 절대 노출되지 않음.
  *
- * 필요 환경변수 (없으면 로컬 디스크 저장소 LOCAL_OBJECT_STORAGE_DIR 폴백):
+ * 필요 환경변수 (없으면 Supabase Storage 폴백):
  *   R2_ACCOUNT_ID        — Cloudflare 계정 ID
  *   R2_ACCESS_KEY_ID     — R2 API 토큰의 Access Key ID
  *   R2_SECRET_ACCESS_KEY — R2 API 토큰의 Secret Access Key

@@ -1,4 +1,4 @@
-import { createStaticClient } from "@/lib/db/server";
+import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { AnswerCard } from "@/components/answer-card";
 import { ShareButton } from "@/components/share-button";
@@ -26,15 +26,15 @@ function hashCode(s: string): number {
 
 async function loadTodayMeme() {
   try {
-    const db = createStaticClient();
-    const { count } = await db
+    const supabase = createStaticClient();
+    const { count } = await supabase
       .from("memes")
       .select("id", { count: "exact", head: true })
       .eq("moderation_status", "approved");
     if (!count) return null;
 
     const offset = hashCode(kstDayKey()) % count;
-    const { data: meme } = await db
+    const { data: meme } = await supabase
       .from("memes")
       .select("short_id, slug, title, summary, lifecycle_status, safety_level")
       .eq("moderation_status", "approved")

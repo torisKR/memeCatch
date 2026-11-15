@@ -231,8 +231,8 @@ export function limitSceneOcrTimes(times) {
   return times.slice(0, MAX_SCENE_OCR_FRAMES);
 }
 
-async function reserveOpenRouterRequest(db) {
-  const { error } = await db.rpc("reserve_openrouter_daily_request", {
+async function reserveOpenRouterRequest(supabase) {
+  const { error } = await supabase.rpc("reserve_openrouter_daily_request", {
     p_provider: "openrouter",
     p_model: "stealth/ox-alpha",
   });
@@ -288,15 +288,15 @@ export async function normalizedAudioFingerprint(path) {
   return createHash("sha256").update(stdout).digest("hex");
 }
 
-async function downloadOriginal(db, key, path) {
-  const { data, error } = await db.storage.from(BUCKET).download(key);
+async function downloadOriginal(supabase, key, path) {
+  const { data, error } = await supabase.storage.from(BUCKET).download(key);
   if (error || !data) throw new Error("source_download_failed");
   await writeFile(path, new Uint8Array(await data.arrayBuffer()));
 }
 
-async function insertSegments(db, ingestionId, segments) {
+async function insertSegments(supabase, ingestionId, segments) {
   if (segments.length === 0) return;
-  const { error } = await db.from("text_segments").insert(segments.map((segment) => ({
+  const { error } = await supabase.from("text_segments").insert(segments.map((segment) => ({
     ingestion_id: ingestionId,
     origin: segment.origin === "ocr" ? "OCR" : "STT",
     start_ms: segment.startMs,
@@ -310,19 +310,19 @@ async function insertSegments(db, ingestionId, segments) {
   if (error) throw new Error("segment_insert_failed");
 }
 
-async function insertFingerprint(db, row) {
-  const { error } = await db.from("media_fingerprints").upsert(row, {
+async function insertFingerprint(supabase, row) {
+  const { error } = await supabase.from("media_fingerprints").upsert(row, {
     onConflict: "ingestion_id,fingerprint_type,hash_value,processor_version,frame_ms",
     ignoreDuplicates: true,
   });
   if (error) throw new Error("fingerprint_insert_failed");
 }
 
-async function runJob(db, job, ingestion, path, directory) {
+async function runJob(supabase, job, ingestion, path, directory) {
   if (job.job_type === "cleanup") {
-    const { error: storageError } = await db.storage.from(BUCKET).remove([ingestion.temporary_storage_key]);
+    const { error: storageError } = await supabase.storage.from(BUCKET).remove([ingestion.temporary_storage_key]);
     if (storageError) throw new Error("storage_delete_failed");
-    const { error: updateError } = await db.from("media_ingestions")
+    const { error: updateError } = await supabase.from("media_ingestions")
       .update({ deleted_at: new Date().toISOString() }).eq("id", ingestion.id);
     if (updateError) throw new Error("cleanup_record_failed");
     return { status: "completed", output: { deleted: true } };
@@ -331,7 +331,7 @@ async function runJob(db, job, ingestion, path, directory) {
     const metadata = await inspectMedia(path);
     const { validateProbedMedia } = await import("../lib/mpe/media.ts");
     validateProbedMedia(ingestion.mime_type, metadata);
-    const { error } = await db.from("media_ingestions").update({
+    const { error } = await supabase.from("media_ingestions").update({
       width: metadata.width, height: metadata.height, duration_ms: metadata.durationMs,
     }).eq("id", ingestion.id);
     if (error) throw new Error("ingestion_update_failed");
@@ -340,18 +340,18 @@ async function runJob(db, job, ingestion, path, directory) {
   if (job.job_type === "fingerprint") {
     const metadata = await inspectMedia(path);
     const phash = await framePerceptualHash(path);
-    await insertFingerprint(db, {
+    await insertFingerprint(supabase, {
       ingestion_id: ingestion.id, fingerprint_type: "SHA256", hash_value: ingestion.sha256,
       frame_ms: null, processor_version: PROCESSOR_VERSION,
     });
-    await insertFingerprint(db, {
+    await insertFingerprint(supabase, {
       ingestion_id: ingestion.id, fingerprint_type: "PHASH", hash_value: phash,
       frame_ms: 0, processor_version: PROCESSOR_VERSION,
     });
     let audioFingerprint = null;
     if (metadata.hasAudio) {
       audioFingerprint = await normalizedAudioFingerprint(path);
-      await insertFingerprint(db, {
+      await insertFingerprint(supabase, {
         ingestion_id: ingestion.id, fingerprint_type: "AUDIO", hash_value: audioFingerprint,
         frame_ms: null, processor_version: PROCESSOR_VERSION,
       });
@@ -368,12 +368,12 @@ async function runJob(db, job, ingestion, path, directory) {
     for (const [index, frameMs] of times.entries()) {
       const bytes = await frameBytes(path, frameMs);
       const key = `${ingestion.user_id}/${ingestion.id}/frames/${String(index).padStart(3, "0")}.jpg`;
-      const { error } = await db.storage.from(BUCKET).upload(key, bytes, {
+      const { error } = await supabase.storage.from(BUCKET).upload(key, bytes, {
         contentType: "image/jpeg", upsert: true,
       });
       if (error) throw new Error("artifact_upload_failed");
       const phash = await framePerceptualHash(path, frameMs);
-      await insertFingerprint(db, {
+      await insertFingerprint(supabase, {
         ingestion_id: ingestion.id, fingerprint_type: "FRAME_PHASH", hash_value: phash,
         frame_ms: frameMs, processor_version: PROCESSOR_VERSION,
       });
@@ -381,9 +381,9 @@ async function runJob(db, job, ingestion, path, directory) {
         bytes,
         mimeType: "image/jpeg",
         frameMs,
-        reserveRequest: () => reserveOpenRouterRequest(db),
+        reserveRequest: () => reserveOpenRouterRequest(supabase),
       });
-      await insertSegments(db, ingestion.id, segments);
+      await insertSegments(supabase, ingestion.id, segments);
       segmentsWritten += segments.length;
       frames.push({ kind: index === 0 ? "representative_frame" : "scene_frame", frameMs, storageKey: key, mimeType: "image/jpeg", phash });
     }
@@ -398,9 +398,9 @@ async function runJob(db, job, ingestion, path, directory) {
     const image = ingestion.mime_type === "image/gif" ? await frameBytes(path, 0) : new Uint8Array(await readFile(path));
     const segments = await recognizeImageText({
       bytes: image, mimeType: ingestion.mime_type === "image/gif" ? "image/jpeg" : ingestion.mime_type, frameMs: 0,
-      reserveRequest: () => reserveOpenRouterRequest(db),
+      reserveRequest: () => reserveOpenRouterRequest(supabase),
     });
-    await insertSegments(db, ingestion.id, segments);
+    await insertSegments(supabase, ingestion.id, segments);
     return { status: "completed", output: {
       provider: "openrouter", model: getMpeVisionModel(), providerBacked: true, segmentsWritten: segments.length,
     } };
@@ -425,7 +425,7 @@ async function runJob(db, job, ingestion, path, directory) {
     const outputPath = join(directory, "render.mp4");
     const dimensions = await renderVideoArtifact(path, outputPath, request);
     const bytes = await readFile(outputPath);
-    const { error } = await db.storage.from(BUCKET).upload(artifactKey, bytes, {
+    const { error } = await supabase.storage.from(BUCKET).upload(artifactKey, bytes, {
       contentType: "video/mp4", upsert: true,
     });
     if (error) throw new Error("artifact_upload_failed");
@@ -460,8 +460,8 @@ function isStaleCompletionError(error) {
   return code === "lease_token_mismatch" || code === "job_not_running";
 }
 
-async function auditCompletionError(db, jobId, error) {
-  await db.from("admin_audit_log").insert({
+async function auditCompletionError(supabase, jobId, error) {
+  await supabase.from("admin_audit_log").insert({
     actor_id: null,
     action: "mpe_worker_completion_failed",
     entity_type: "processing_job",
@@ -470,12 +470,12 @@ async function auditCompletionError(db, jobId, error) {
   });
 }
 
-export function startProcessingJobHeartbeat(db, job, intervalMs = JOB_LEASE_HEARTBEAT_MS) {
+export function startProcessingJobHeartbeat(supabase, job, intervalMs = JOB_LEASE_HEARTBEAT_MS) {
   let stopped = false;
   let leaseLost = false;
   let inFlight = null;
   const renew = async () => {
-    const { error } = await db.rpc("renew_processing_job_lease", {
+    const { error } = await supabase.rpc("renew_processing_job_lease", {
       p_job_id: job.id,
       p_lease_token: job.lease_token,
     });
@@ -500,8 +500,8 @@ export function startProcessingJobHeartbeat(db, job, intervalMs = JOB_LEASE_HEAR
   };
 }
 
-export async function processOneJob(db, options = {}) {
-  const { data: jobs, error: claimError } = await db.rpc("claim_processing_job", {
+export async function processOneJob(supabase, options = {}) {
+  const { data: jobs, error: claimError } = await supabase.rpc("claim_processing_job", {
     p_processor_name: PROCESSOR_NAME,
     p_processor_version: PROCESSOR_VERSION,
     p_job_types: ["inspect", "fingerprint", "scene_frames", "ocr", "stt", "render", "cleanup"],
@@ -511,40 +511,40 @@ export async function processOneJob(db, options = {}) {
   if (!job) return false;
   if (!job.lease_token) throw new Error("job_claim_missing_lease");
   const directory = await mkdtemp(join(tmpdir(), "mpe-worker-"));
-  const heartbeat = startProcessingJobHeartbeat(db, job, options.heartbeatIntervalMs);
+  const heartbeat = startProcessingJobHeartbeat(supabase, job, options.heartbeatIntervalMs);
   try {
-    const { data: ingestion, error } = await db.from("media_ingestions").select("*").eq("id", job.ingestion_id).single();
+    const { data: ingestion, error } = await supabase.from("media_ingestions").select("*").eq("id", job.ingestion_id).single();
     if (error || !ingestion) throw new Error("ingestion_not_found");
     const path = join(directory, "original");
-    if (job.job_type !== "cleanup") await downloadOriginal(db, ingestion.temporary_storage_key, path);
-    const result = await runJob(db, job, ingestion, path, directory);
+    if (job.job_type !== "cleanup") await downloadOriginal(supabase, ingestion.temporary_storage_key, path);
+    const result = await runJob(supabase, job, ingestion, path, directory);
     const lease = await heartbeat.stop();
     if (lease.leaseLost) return true;
-    const { error: completionError } = await db.rpc("complete_processing_job", {
+    const { error: completionError } = await supabase.rpc("complete_processing_job", {
       p_job_id: job.id, p_lease_token: job.lease_token,
       p_status: result.status, p_output_json: result.output,
       p_error_code: null, p_cost_units: 0,
     });
     if (completionError) {
       if (isStaleCompletionError(completionError)) return true;
-      await auditCompletionError(db, job.id, completionError);
-      const { error: failureError } = await db.rpc("complete_processing_job", {
+      await auditCompletionError(supabase, job.id, completionError);
+      const { error: failureError } = await supabase.rpc("complete_processing_job", {
         p_job_id: job.id, p_lease_token: job.lease_token,
         p_status: "failed", p_output_json: {}, p_error_code: "job_completion_failed", p_cost_units: 0,
       });
       if (failureError && !isStaleCompletionError(failureError)) {
-        await auditCompletionError(db, job.id, failureError);
+        await auditCompletionError(supabase, job.id, failureError);
       }
     }
   } catch (error) {
     const lease = await heartbeat.stop();
     if (lease.leaseLost) return true;
-    const { error: failureError } = await db.rpc("complete_processing_job", {
+    const { error: failureError } = await supabase.rpc("complete_processing_job", {
       p_job_id: job.id, p_lease_token: job.lease_token,
       p_status: "failed", p_output_json: {}, p_error_code: errorCode(error), p_cost_units: 0,
     });
     if (failureError && !isStaleCompletionError(failureError)) {
-      await auditCompletionError(db, job.id, failureError);
+      await auditCompletionError(supabase, job.id, failureError);
     }
   } finally {
     await heartbeat.stop();
@@ -553,28 +553,28 @@ export async function processOneJob(db, options = {}) {
   return true;
 }
 
-export async function queueExpiredCleanupJobs(db) {
-  const { data, error } = await db.from("media_ingestions")
+export async function queueExpiredCleanupJobs(supabase) {
+  const { data, error } = await supabase.from("media_ingestions")
     .select("id,sha256").is("deleted_at", null).lt("expires_at", new Date().toISOString()).limit(100);
   if (error) throw new Error("expiry_query_failed");
   let queued = 0;
   for (const ingestion of data ?? []) {
-    const { data: activeJobs, error: activeError } = await db.from("processing_jobs")
+    const { data: activeJobs, error: activeError } = await supabase.from("processing_jobs")
       .select("id").eq("ingestion_id", ingestion.id).neq("job_type", "cleanup")
       .in("status", ["queued", "running"]).limit(1);
     if (activeError || activeJobs?.length) continue;
-    const { data: existing, error: lookupError } = await db.from("processing_jobs")
+    const { data: existing, error: lookupError } = await supabase.from("processing_jobs")
       .select("id,status").eq("ingestion_id", ingestion.id).eq("job_type", "cleanup").maybeSingle();
     if (lookupError) continue;
     if (existing?.status === "queued" || existing?.status === "running" || existing?.status === "completed") continue;
     if (existing) {
-      const { error: retryError } = await db.from("processing_jobs").update({
+      const { error: retryError } = await supabase.from("processing_jobs").update({
         status: "queued", started_at: null, completed_at: null, error_code: null, output_json: {},
       }).eq("id", existing.id);
       if (!retryError) queued += 1;
       continue;
     }
-    const { error: insertError } = await db.from("processing_jobs").insert({
+    const { error: insertError } = await supabase.from("processing_jobs").insert({
       ingestion_id: ingestion.id,
       job_type: "cleanup",
       status: "queued",
@@ -603,11 +603,11 @@ async function listAllStorageEntries(bucket, prefix) {
   throw new Error("orphan_scan_limit_exceeded");
 }
 
-export async function cleanupOrphanOriginals(db, olderThanMs = 60 * 60 * 1_000) {
+export async function cleanupOrphanOriginals(supabase, olderThanMs = 60 * 60 * 1_000) {
   const cutoff = new Date(Date.now() - olderThanMs).toISOString();
   const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
   const uuidPattern = new RegExp(`^${uuid}$`, "i");
-  const bucket = db.storage.from(BUCKET);
+  const bucket = supabase.storage.from(BUCKET);
   const roots = await listAllStorageEntries(bucket, "");
   const candidates = [];
   for (const root of roots) {
@@ -623,7 +623,7 @@ export async function cleanupOrphanOriginals(db, olderThanMs = 60 * 60 * 1_000) 
   const referenced = new Set();
   for (let offset = 0; offset < candidates.length; offset += 250) {
     const keys = candidates.slice(offset, offset + 250);
-    const { data: ingestions, error: ingestionError } = await db.from("media_ingestions")
+    const { data: ingestions, error: ingestionError } = await supabase.from("media_ingestions")
       .select("temporary_storage_key").in("temporary_storage_key", keys);
     if (ingestionError) throw new Error("orphan_ingestion_query_failed");
     for (const ingestion of ingestions ?? []) referenced.add(ingestion.temporary_storage_key);
@@ -639,13 +639,13 @@ export async function cleanupOrphanOriginals(db, olderThanMs = 60 * 60 * 1_000) 
   return { deleted, failed };
 }
 
-export async function runMaintenance(db) {
-  const queued = await queueExpiredCleanupJobs(db);
-  const orphans = await cleanupOrphanOriginals(db);
+export async function runMaintenance(supabase) {
+  const queued = await queueExpiredCleanupJobs(supabase);
+  const orphans = await cleanupOrphanOriginals(supabase);
   return { queued, orphans };
 }
 
-export async function watchForJobs(db, options = {}) {
+export async function watchForJobs(supabase, options = {}) {
   const pollMs = Number.isFinite(options.pollMs)
     ? Math.min(60_000, Math.max(1_000, options.pollMs)) : 2_000;
   const maxIdlePollMs = Math.max(pollMs, Number.isFinite(options.maxIdlePollMs)
@@ -656,13 +656,13 @@ export async function watchForJobs(db, options = {}) {
   const maintain = options.maintain ?? runMaintenance;
   const wait = options.wait ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const now = options.now ?? Date.now;
-  await maintain(db);
+  await maintain(supabase);
   let lastMaintenance = now();
   let idlePollMs = pollMs;
   while (!shouldStop()) {
-    const processed = await processJob(db);
+    const processed = await processJob(supabase);
     if (now() - lastMaintenance >= maintenanceMs) {
-      await maintain(db);
+      await maintain(supabase);
       lastMaintenance = now();
     }
     if (processed) {
@@ -685,21 +685,21 @@ async function main() {
   if (!process.env.DATABASE_URL?.trim()) throw new Error("DATABASE_URL 설정 필요");
   // The worker tests import this module and pass a fake client. Loading the
   // admin client at module scope would open Postgres during those tests.
-  const { createAdminClient } = await import("../lib/db/admin.ts");
-  const db = createAdminClient();
+  const { createAdminClient } = await import("../lib/supabase/admin-client.ts");
+  const supabase = createAdminClient();
   if (process.argv.includes("--watch")) {
     let stopping = false;
     process.once("SIGTERM", () => { stopping = true; });
     process.once("SIGINT", () => { stopping = true; });
     const pollMs = Math.max(1_000, Number(process.env.MPE_WORKER_POLL_MS) || 2_000);
     const maxIdlePollMs = Math.max(pollMs, Number(process.env.MPE_WORKER_MAX_IDLE_POLL_MS) || 30_000);
-    await watchForJobs(db, { pollMs, maxIdlePollMs, shouldStop: () => stopping });
+    await watchForJobs(supabase, { pollMs, maxIdlePollMs, shouldStop: () => stopping });
   } else if (process.argv.includes("--drain")) {
-    await runMaintenance(db);
-    while (await processOneJob(db)) continue;
+    await runMaintenance(supabase);
+    while (await processOneJob(supabase)) continue;
   } else {
-    await runMaintenance(db);
-    await processOneJob(db);
+    await runMaintenance(supabase);
+    await processOneJob(supabase);
   }
 }
 

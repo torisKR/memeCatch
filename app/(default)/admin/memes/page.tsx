@@ -26,7 +26,7 @@ export default async function AdminMemesPage({
   searchParams: Promise<{ q?: string; status?: string; focus?: string; origin?: string }>;
 }) {
   const { q = "", status = "", focus: focusRaw, origin: originRaw } = await searchParams;
-  const { db } = await requireOperatorPage("/admin/memes", {
+  const { supabase } = await requireOperatorPage("/admin/memes", {
     q,
     status,
     focus: focusRaw,
@@ -51,7 +51,7 @@ export default async function AdminMemesPage({
   let error: { message: string } | null = null;
 
   if (qualityQueue) {
-    let query = db
+    let query = supabase
       .from("memes")
       .select(`${MEME_LIST_COLUMNS}, meme_sources(source_url)`)
       .in("moderation_status", ["approved", "limited"])
@@ -66,7 +66,7 @@ export default async function AdminMemesPage({
     error = result.error;
     memes = rankUnsourcedQualityQueue(result.data ?? []);
   } else {
-    let query = db
+    let query = supabase
       .from("memes")
       .select(MEME_LIST_COLUMNS)
       .order("updated_at", { ascending: false })

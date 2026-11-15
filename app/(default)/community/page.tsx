@@ -11,6 +11,7 @@ import {
   POST_SELECT,
   type CommunityPostRow,
 } from "./shared";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 /**
  * 레인 3 — 커뮤니티 글 목록 (최신순, 서버 컴포넌트 + 페이지네이션).
@@ -27,15 +28,11 @@ export const metadata: Metadata = {
   description: COMMUNITY_DESCRIPTION,
   // 루트 canonical("/") 상속 방지 — ?page= 쿼리 변형은 기본 경로로 수렴
   alternates: { canonical: "/community" },
-  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
+  ...koreanPageShare({
     title: "커뮤니티",
     description: COMMUNITY_DESCRIPTION,
-    url: "/community",
-  },
+    pathname: "/community",
+  }),
 };
 
 export default async function CommunityPage({

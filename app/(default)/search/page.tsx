@@ -10,6 +10,7 @@ import { TrackedBlock } from "@/components/tracked-block";
 import { SearchOutcomeTracker } from "@/components/search-outcome-tracker";
 import { SearchInput } from "./search-input";
 import { MemeReferenceSearch } from "@/components/meme-reference-search";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 const SEARCH_DESCRIPTION =
   "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
@@ -19,16 +20,11 @@ export const metadata: Metadata = {
   description: SEARCH_DESCRIPTION,
   // 루트 canonical("/") 상속 방지 — ?q= 쿼리 변형은 기본 경로로 수렴
   alternates: { canonical: "/search" },
-  // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 페이지별 og 명시
-  // (페이지 openGraph는 루트 값을 통째로 대체하므로 siteName 등 공통 필드 포함)
-  openGraph: {
-    type: "website",
-    siteName: "밈캐치",
-    locale: "ko_KR",
+  ...koreanPageShare({
     title: "검색",
     description: SEARCH_DESCRIPTION,
-    url: "/search",
-  },
+    pathname: "/search",
+  }),
 };
 
 type Props = {

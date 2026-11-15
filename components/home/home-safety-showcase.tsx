@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ShieldCheck, Sparkles, MessageCircle } from "lucide-react";
 import { SafetyBadge } from "@/components/safety-badge";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
+import { H_RAIL_CLASS } from "@/lib/mobile-rail";
 
 type FilterTab = "work_safe" | "caution_needed" | "everyday";
 
@@ -41,7 +42,7 @@ export function HomeSafetyShowcase() {
         </div>
 
         {/* 필터 탭 (모바일 터치 타깃 44px 이상, 수평 스크롤 지원) */}
-        <div className="flex max-w-full overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <div className={`flex pb-1 sm:pb-0 scrollbar-none ${H_RAIL_CLASS}`}>
           <div className="inline-flex shrink-0 rounded-2xl border border-border bg-surface-2 p-1 text-xs font-semibold shadow-xs">
             <button
               type="button"

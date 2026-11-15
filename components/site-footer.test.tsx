@@ -30,9 +30,9 @@ describe("SiteFooter", () => {
     expect(html).toContain('href="/rankings"');
   });
 
-  it("hides rankings when the published list cannot be built", () => {
-    const html = renderToStaticMarkup(<SiteFooter showRankings={false} />);
-    expect(html).not.toContain('href="/rankings"');
+  it("keeps the rankings link when the catalog cannot be built", () => {
+    const html = renderToStaticMarkup(<SiteFooter />);
+    expect(html).toContain('href="/rankings"');
     expect(html).toContain('href="/about"');
     expect(html).toContain('href="/contact"');
   });

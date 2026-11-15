@@ -120,17 +120,22 @@ export async function loadKoreanRankings(): Promise<KoreanRankings> {
   }
 
   if (!trendError && trend && trendIsUsable(trend)) {
+    // Comeback is a side list. Its failure must not drop the trend rows
+    // already in hand, or the page falls through to the recency fallback
+    // and can 404 when that read fails too.
+    let comeback: PublicRankingMeme[] = [];
     try {
-      const result = resolveKoreanRankings({
-        liveError: false,
-        live: { fallback: null, today: rankToday(trend), comeback: await loadComeback() },
-        published: null,
-      });
-      cached = { at: now, result };
-      return result;
+      comeback = await loadComeback();
     } catch (error) {
       logRankingsFailure("comeback query failed", error);
     }
+    const result = resolveKoreanRankings({
+      liveError: false,
+      live: { fallback: null, today: rankToday(trend), comeback },
+      published: null,
+    });
+    cached = { at: now, result };
+    return result;
   }
 
   let published: PublicRankingMeme[] | null = null;
@@ -157,7 +162,10 @@ export async function loadKoreanRankings(): Promise<KoreanRankings> {
   return result;
 }
 
-/** Same predicate as the page: a link is shown only when a list will render. */
+/**
+ * True when the rankings page will render a list. Sitemap and llms.txt use
+ * this so a noindex fallback is not advertised. Navigation links do not.
+ */
 export async function koreanRankingsVisible(): Promise<boolean> {
   try {
     return koreanRankingsRenderList(await loadKoreanRankings());

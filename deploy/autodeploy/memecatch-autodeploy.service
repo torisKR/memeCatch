@@ -9,6 +9,7 @@ User=ubuntu
 Group=docker
 StateDirectory=memecatch-autodeploy
 Environment=AUTODEPLOY_ROOT=/opt/memecatch
-ExecStart=/bin/bash /opt/memecatch/deploy/autodeploy/autodeploy.sh
+# Runs the copy outside the checkout so a rollback cannot delete the agent.
+ExecStart=/bin/bash /var/lib/memecatch-autodeploy/bin/autodeploy.sh
 Nice=10
 TimeoutStartSec=45min

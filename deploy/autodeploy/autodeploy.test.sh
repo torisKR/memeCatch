@@ -75,4 +75,16 @@ grep -q "^compose" "$calls" || fail "auxiliary images were not built"
 [[ "$(rollback_ref mpe-worker memecatch-worker:local s1)" == memecatch-worker:rollback-s1 ]] || fail "worker snapshot"
 [[ "$(rollback_ref scheduler memecatch-scheduler s1)" == memecatch-scheduler:rollback-s1 ]] || fail "untagged image snapshot"
 
+# The running agent lives outside the checkout and only changes when the checkout's
+# copy differs; a checkout without the agent (an older release) leaves it alone.
+STATE_DIR="$stub/state"
+mkdir -p "$repo/deploy/autodeploy"
+echo "v2" >"$repo/deploy/autodeploy/autodeploy.sh"
+self_update >/dev/null
+[[ "$(cat "$STATE_DIR/bin/autodeploy.sh")" == v2 ]] || fail "agent not installed from checkout"
+rm "$repo/deploy/autodeploy/autodeploy.sh"
+self_update >/dev/null
+[[ "$(cat "$STATE_DIR/bin/autodeploy.sh")" == v2 ]] || fail "agent removed when checkout lacks it"
+grep -q '/var/lib/memecatch-autodeploy/bin/autodeploy.sh' "$here/memecatch-autodeploy.service" || fail "service must run the out-of-checkout copy"
+
 echo "autodeploy OK"

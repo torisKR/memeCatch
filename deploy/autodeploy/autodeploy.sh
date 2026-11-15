@@ -13,6 +13,10 @@
 #   4. build images on the VM, tag the running ones for rollback, deploy
 #   5. confirm the public site (through Cloudflare) reports the new release
 #   6. on any failure after step 4, restore the previous images and checkout
+#
+# The agent runs from $STATE_DIR/bin, outside the checkout. A rollback can reset
+# the checkout to a commit that predates this file; the running copy must survive
+# that. It replaces itself with the checkout's version only after a good deploy.
 set -euo pipefail
 
 REPO="${AUTODEPLOY_REPO:-torisKR/memeCatch}"
@@ -128,6 +132,16 @@ public_release_is() {
   return 1
 }
 
+# Install the checkout's agent as the running copy (atomic rename).
+self_update() {
+  local src="$ROOT/deploy/autodeploy/autodeploy.sh" dest="$STATE_DIR/bin/autodeploy.sh"
+  [[ -f "$src" ]] || return 0
+  mkdir -p "$STATE_DIR/bin"
+  cmp -s "$src" "$dest" 2>/dev/null && return 0
+  cp "$src" "$dest.new" && chmod 755 "$dest.new" && mv -f "$dest.new" "$dest"
+  log "agent updated from ${src}"
+}
+
 # Keep the newest $KEEP_IMAGES release and rollback tags per repository.
 prune_images() {
   local repo kind
@@ -189,6 +203,7 @@ main() {
     && public_release_is "$target"; then
     printf '%s\n' "$target" >"$STATE_DIR/deployed"
     log "deployed ${target:0:7}"
+    self_update
     prune_images
     exit 0
   fi

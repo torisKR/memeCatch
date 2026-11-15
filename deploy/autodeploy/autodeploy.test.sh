@@ -90,10 +90,38 @@ grep -q "^tag sha256:worker memecatch-worker:rollback-s1$" "$calls" || fail "wor
 mapfile -t env < <(PATH="$stub:$PATH" stub_calls="$calls" stub_app_image=memecatch:release-new stub_worker_image=memecatch-worker:local rollback_env s1)
 [[ " ${env[*]} " == *" MEMECATCH_IMAGE=memecatch:rollback-s1 "* ]] || fail "app rollback ref: ${env[*]}"
 [[ " ${env[*]} " == *" MEMECATCH_WORKER_IMAGE=memecatch-worker:rollback-s1 "* ]] || fail "worker rollback ref: ${env[*]}"
-grep -q "^tag memecatch-scheduler:rollback-s1 memecatch-scheduler$" "$calls" || fail "scheduler not restored"
+grep -q "^tag memecatch-scheduler:rollback-s1 memecatch-scheduler:local$" "$calls" || fail "scheduler not restored"
 # Snapshots never carry a registry prefix that deploy-oci.sh would try to pull.
 [[ "$(grep -c ghcr.io "$STATE_DIR/rollback-s1.refs")" == 0 ]] || fail "snapshot kept a ghcr.io name"
 [[ "$(rollback_ref backup s1)" == memecatch-backup:rollback-s1 ]] || fail "backup snapshot name"
+
+# A service whose image is already gone is skipped, not fatal, and is not recorded.
+: >"$calls"
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$stub_calls"
+case "$1 $2" in
+  "inspect memecatch-app-1") [[ "$*" == *Config.Image* ]] && echo memecatch:release-old || echo sha256:app ;;
+  "inspect memecatch-mpe-worker-1") [[ "$*" == *Config.Image* ]] && echo memecatch-worker:local || echo sha256:gone ;;
+  "inspect "*) [[ "$*" == *Config.Image* ]] && echo "${2#memecatch-}" | sed 's/-1$//;s/^/memecatch-/' || echo sha256:other ;;
+  "tag sha256:gone") exit 1 ;;
+esac
+exit 0
+STUB
+PATH="$stub:$PATH" stub_calls="$calls" tag_rollback s2 >/dev/null || fail "missing image aborted the snapshot"
+grep -q "^app memecatch:rollback-s2$" "$STATE_DIR/rollback-s2.refs" || fail "app snapshot missing"
+grep -q "^mpe-worker" "$STATE_DIR/rollback-s2.refs" && fail "unsnapshotted worker was recorded"
+
+# Every compose-built service names its image, so `compose up` recreates it after a rebuild.
+for svc in mpe-worker scheduler backup; do
+  awk -v s="  $svc:" '$0 == s {f=1; next} f && /^  [a-z]/ {exit} f && /^    image:/ {found=1} END {exit !found}' "$root/docker-compose.yml" \
+    || fail "$svc has no image: in docker-compose.yml"
+done
+
+# Snapshots are taken before the build, which can drop the replaced image.
+snap_line="$(grep -n 'tag_rollback "\$current"' "$here/autodeploy.sh" | cut -d: -f1)"
+build_line="$(grep -n 'if ! build_images "\$target"' "$here/autodeploy.sh" | cut -d: -f1)"
+(( snap_line > 0 && snap_line < build_line )) || fail "tag_rollback must run before build_images"
 
 # The running agent lives outside the checkout and only changes when the checkout's
 # copy differs; a checkout without the agent (an older release) leaves it alone.
@@ -106,5 +134,33 @@ rm "$repo/deploy/autodeploy/autodeploy.sh"
 self_update >/dev/null
 [[ "$(cat "$STATE_DIR/bin/autodeploy.sh")" == v2 ]] || fail "agent removed when checkout lacks it"
 grep -q '/var/lib/memecatch-autodeploy/bin/autodeploy.sh' "$here/memecatch-autodeploy.service" || fail "service must run the out-of-checkout copy"
+
+# The checkout always lands on exactly the commit being built, even when HEAD
+# is already ahead of it (an interrupted deploy left a newer tree checked out).
+git -C "$repo" reset -q --hard "$mig"
+checkout_target "$code" || fail "checkout_target failed"
+[[ "$(git -C "$repo" rev-parse HEAD)" == "$code" ]] || fail "HEAD is not the requested commit"
+checkout_target "$mig" && [[ "$(git -C "$repo" rev-parse HEAD)" == "$mig" ]] || fail "forward checkout failed"
+
+# GitHub runs pass only a full commit SHA; anything else is ignored.
+[[ "$(SSH_ORIGINAL_COMMAND=0123456789abcdef0123456789abcdef01234567 requested_sha)" == 0123456789abcdef0123456789abcdef01234567 ]] || fail "full SHA rejected"
+[[ -z "$(SSH_ORIGINAL_COMMAND='abc123; rm -rf /' requested_sha)" ]] || fail "injected command accepted"
+[[ -z "$(SSH_ORIGINAL_COMMAND='bash -i' requested_sha)" ]] || fail "shell request accepted"
+# Over SSH, a missing or malformed SHA stops before any git, CI, or docker work.
+bad="$(mktemp -d)"
+rc=0
+( ROOT="$bad/none" STATE_DIR="$bad/state" SSH_CONNECTION="1.2.3.4 1 5.6.7.8 22" STRICT=1 SSH_ORIGINAL_COMMAND="" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "SSH run without a SHA must exit 3 (got $rc)"
+rc=0
+( ROOT="$bad/none" STATE_DIR="$bad/state" SSH_CONNECTION="1.2.3.4 1 5.6.7.8 22" STRICT=1 SSH_ORIGINAL_COMMAND="id" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "SSH run with a non-SHA command must exit 3 (got $rc)"
+rm -rf "$bad"
+
+# Strict (GitHub) callers see "not deployed" as a failure; the timer retries quietly.
+rc=0; ( STRICT=1; not_deployed "x" ) >/dev/null || rc=$?
+[[ "$rc" == 3 ]] || fail "strict not_deployed must exit 3 (got $rc)"
+( STRICT=""; not_deployed "x" ) >/dev/null || fail "timer not_deployed must exit 0"
+# The GitHub key is installed with a forced command and `restrict`.
+grep -q 'restrict,command=\\"/var/lib/memecatch-autodeploy/bin/autodeploy.sh\\"' "$here/authorize-github-key.sh" || fail "deploy key must force the agent"
 
 echo "autodeploy OK"

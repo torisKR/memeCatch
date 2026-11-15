@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# Public repository: the token stays read-only and CI holds no deploy secrets.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -50,23 +54,20 @@ jobs:
       - run: pnpm build
       - run: bash scripts/deploy-oci.test.sh
       - run: bash scripts/standalone-hangul-proxy.test.sh
+      - run: bash deploy/autodeploy/autodeploy.test.sh
       - name: Build the app image with the public release values
         env:
           RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
-          NEXT_PUBLIC_ADSENSE_CLIENT: ${{ vars.NEXT_PUBLIC_ADSENSE_CLIENT }}
-          NEXT_PUBLIC_COMMUNITY_ENABLED: ${{ vars.NEXT_PUBLIC_COMMUNITY_ENABLED }}
-          NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          NEXT_PUBLIC_SUBMISSIONS_OPEN: ${{ vars.NEXT_PUBLIC_SUBMISSIONS_OPEN }}
         run: |
-          docker build -t memecatch:ci \
-            --build-arg RELEASE_SHA="${RELEASE_SHA}" \
-            --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}" \
-            --build-arg NEXT_PUBLIC_ADSENSE_CLIENT="${NEXT_PUBLIC_ADSENSE_CLIENT}" \
-            --build-arg NEXT_PUBLIC_COMMUNITY_ENABLED="${NEXT_PUBLIC_COMMUNITY_ENABLED}" \
-            --build-arg NEXT_PUBLIC_GA_ID="${NEXT_PUBLIC_GA_ID}" \
-            --build-arg NEXT_PUBLIC_SUBMISSIONS_OPEN="${NEXT_PUBLIC_SUBMISSIONS_OPEN}" \
-            .
+          # Same public values the VM's autodeploy bakes in (deploy/build.env).
+          args=()
+          while IFS='=' read -r key value; do
+            [[ -z "$key" || "$key" == \#* ]] && continue
+            args+=(--build-arg "${key}=${value}")
+          done < deploy/build.env
+          docker build -t memecatch:ci --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
+      - name: The runtime user can write the Next.js cache
+        run: docker run --rm --entrypoint sh memecatch:ci -c 'mkdir -p /app/.next/cache/fetch-cache && touch /app/.next/cache/probe'
       - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
       - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
       - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .

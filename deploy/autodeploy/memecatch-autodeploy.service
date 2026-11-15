@@ -1,0 +1,15 @@
+[Unit]
+Description=memecatch pull-based deploy (one check of origin/main)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=docker
+StateDirectory=memecatch-autodeploy
+Environment=AUTODEPLOY_ROOT=/opt/memecatch
+# Runs the copy outside the checkout so a rollback cannot delete the agent.
+ExecStart=/bin/bash /var/lib/memecatch-autodeploy/bin/autodeploy.sh
+Nice=10
+TimeoutStartSec=45min

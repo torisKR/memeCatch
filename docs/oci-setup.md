@@ -98,23 +98,38 @@ Admin Bedrock drafts read `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACC
 
 `MEMECATCH_SIGNING_SECRET` is the HMAC and operator bearer for analytics, view counts, and the embedding probe. `MEME_EMBEDDING_REINDEX_ENABLED` defaults to false.
 
-GitHub Actions (`.github/workflows/deploy.yml`) builds `linux/amd64` and `linux/arm64` app and worker images, pushes them to GHCR, and SSHes `cd /opt/memecatch && git pull && MEMECATCH_IMAGE=<tag> MEMECATCH_WORKER_IMAGE=<tag> bash scripts/deploy-oci.sh`. The deploy job is skipped when `OCI_SSH_HOST`, `OCI_SSH_USER`, or `OCI_SSH_KEY` is empty. When those are set, `OCI_SSH_KNOWN_HOSTS` is required and SSH uses `StrictHostKeyChecking=yes`. It never logs into the VM when the host secrets are absent.
+## Continuous deploy (pull-based)
 
-## GHCR login on the VM
+The repository is public, so nothing in GitHub can reach this VM. There is no deploy workflow, no SSH key, host, or token in Actions secrets, and port 22 stays limited to operator IPs in the OCI security list. The VM pulls instead:
 
-The images are `ghcr.io/<owner>/memecatch` and `ghcr.io/<owner>/memecatch-worker`, with the owner lowercased. `scripts/deploy-oci.sh` pulls those tags when `MEMECATCH_IMAGE` or `MEMECATCH_WORKER_IMAGE` starts with `ghcr.io/`. The Actions `GITHUB_TOKEN` that pushes them never reaches the VM.
-
-GHCR packages are private until their visibility is changed. On the VM, log in once as the user that runs Docker, with a GitHub user and a token that can `read:packages` for this repository:
-
-```bash
-umask 077
-printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u '<github-user>' --password-stdin
-unset GHCR_READ_TOKEN
+```text
+push to main ─► GitHub Actions CI (`check`) ─► success
+                                                  │
+VM timer (every 3 min) ─ git fetch (https, anonymous) ─ check-runs API (anonymous)
+   └─ new commit with a green `check` ─► build on the VM ─► scripts/deploy-oci.sh
+        └─ https://catchmeme.com (through Cloudflare) reports X-MemeCatch-Release-Sha = new commit
+             ├─ yes: done, old images pruned (3 kept)
+             └─ no: previous images and checkout restored, commit marked failed
 ```
 
-`docker login` stores the credential in that user's `~/.docker/config.json`. Do not commit the token or pass it as a Compose variable. A public package does not need this login. Confirm with `docker pull` of one pushed tag before the first deploy that uses GHCR.
+`deploy/autodeploy/autodeploy.sh` does one check per run. It skips a commit whose CI is pending (retries next tick) or failed, and it never auto-deploys a commit that adds files under `db/migrations/`. Apply those by hand, then allow the release:
 
-The app image build args are `RELEASE_SHA` and the public `NEXT_PUBLIC_*` values. On a pull request, CI sets `RELEASE_SHA` to the PR head SHA. The GHCR workflow sets it to the commit SHA on `main`. Public values come from repository variables. Responses carry `X-MemeCatch-Release-Sha` when that SHA is set at build time.
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f db/migrations/<file>.sql   # or docker exec into memecatch-postgres-1
+touch /var/lib/memecatch-autodeploy/allow-<full-sha>
+```
+
+Install or update the timer from the checkout:
+
+```bash
+cd /opt/memecatch && bash deploy/autodeploy/install.sh
+journalctl -u memecatch-autodeploy --since today     # what it did
+systemctl start memecatch-autodeploy                 # check now instead of waiting
+```
+
+State lives in `/var/lib/memecatch-autodeploy/`: `deployed` (last good SHA), `failed-<sha>` (delete it to retry that commit), `allow-<sha>`. Before each deploy the running images are tagged `<repo>:rollback-<previous-sha>`. Roll back by hand with `MEMECATCH_IMAGE=memecatch:rollback-<sha> bash scripts/deploy-oci.sh` after `git reset --keep <sha>`.
+
+Build-time values live in `deploy/build.env`. Every one ships in the HTML, so the file holds only `NEXT_PUBLIC_*` values; CI fails if anything else appears there. CI builds the same image from the same file. Runtime secrets stay in `/opt/memecatch/.env`, which is not in git. Responses carry `X-MemeCatch-Release-Sha`.
 
 ## Backups
 

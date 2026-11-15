@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { signingSecret } from "@/lib/auth/signing-secret";
 import {
   runMemeEmbeddingReindex,
   type MemeEmbeddingReindexResult,
@@ -97,9 +98,9 @@ export async function GET(request: Request): Promise<Response> {
   return runManualReindex(request, process.env.CRON_SECRET);
 }
 
-/** Explicit operator QA/reindex runs reuse the existing server service key. */
+/** Explicit operator QA/reindex runs use MEMECATCH_SIGNING_SECRET. */
 export async function POST(request: Request): Promise<Response> {
-  if (!hasExactBearer(request, process.env.SUPABASE_SERVICE_ROLE_KEY)) {
+  if (!hasExactBearer(request, signingSecret() ?? undefined)) {
     return Response.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401, headers });
   }
   const mode = await postMode(request);

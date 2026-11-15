@@ -8,7 +8,6 @@ const LINKS = [
   { href: "/admin/activity", label: "사용자 활동", icon: UsersIcon },
   { href: "/admin/analytics", label: "GA4 리포트", icon: GaugeIcon },
   { href: "/admin/submissions", label: "제보 큐", icon: InboxIcon },
-  { href: "/admin/creator-products", label: "크리에이터 상품 검토", icon: ShoppingIcon },
   { href: "/admin/publisher-readiness", label: "퍼블리셔 준비도", icon: BookIcon },
   { href: "/admin/sources", label: "출처 검수", icon: LinkIcon },
   { href: "/admin/mpe", label: "MPE 검수", icon: InboxIcon },
@@ -70,14 +69,6 @@ function InboxIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M4 5h16v14H4z M4 14h5l1.5 2h3L15 14h5" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function ShoppingIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M5 8h14l1 12H4L5 8Z" strokeLinejoin="round" />
-      <path d="M9 9V6a3 3 0 0 1 6 0v3" strokeLinecap="round" />
     </svg>
   );
 }

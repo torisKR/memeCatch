@@ -9,7 +9,7 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import { GET } from "@/app/llms-full.txt/route";
+import { GET, dynamic as routeDynamic } from "@/app/llms-full.txt/route";
 
 const source = readFileSync(
   join(process.cwd(), "app/llms-full.txt/route.ts"),
@@ -74,6 +74,10 @@ describe("llms-full category grouping", () => {
 });
 
 describe("llms-full publication export", () => {
+  it("renders on request so a database-less build cannot cache a failure", () => {
+    expect(routeDynamic).toBe("force-dynamic");
+  });
+
   it("counts all eligible rows and applies the 400 item limit only after filtering", async () => {
     const rows = [
       ...Array.from({ length: 1_000 }, (_, index) => row(index, false)),
@@ -131,4 +135,9 @@ describe("llms-full publication export", () => {
     expect(body).toContain("콘텐츠 충실도 기준");
     expect(body).not.toContain("사실 확인 → 저작권 확인");
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
 });

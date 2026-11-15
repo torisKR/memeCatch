@@ -14,6 +14,8 @@ type HomeStoryChapter = {
   navigationLabel: string;
   eyebrow: string;
   title: string;
+  /** Unbreakable pieces of `title`. Their concatenation must equal that title. */
+  titlePhrases?: readonly string[];
   description: string;
 };
 
@@ -31,7 +33,6 @@ export type HomeImmersiveCopy = {
   };
   contextAction: string;
   communityAction: string;
-  productsAction: string;
 };
 
 export const HOME_IMMERSIVE_LOCALES = SEO_ROUTE_LOCALES;
@@ -66,7 +67,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "참여",
         eyebrow: "03 · PARTICIPATE",
         title: "읽었다면, 다음 맥락을 함께 만드세요.",
-        description: "커뮤니티에서 발견한 장면을 나누고, 판매 주체와 관계가 표시된 밈 상품도 둘러보세요.",
+        description: "커뮤니티에서 발견한 장면을 나누고, 다음 맥락을 함께 남겨 보세요.",
       },
     ],
     search: {
@@ -76,7 +77,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "네 가지 사용 신호 보기",
     communityAction: "커뮤니티 가기",
-    productsAction: "밈 상품 둘러보기",
   },
   en: {
     navigationLabel: "Home story chapters",
@@ -107,7 +107,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "Participate",
         eyebrow: "03 · PARTICIPATE",
         title: "Once you understand it, add to the story.",
-        description: "Share the context you found with the community, or browse meme goods with seller relationships shown clearly.",
+        description: "Share the context you found and leave the next piece of the story with the community.",
       },
     ],
     search: {
@@ -117,7 +117,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "See the four usage signals",
     communityAction: "Visit the community",
-    productsAction: "Browse meme products",
   },
   ja: {
     navigationLabel: "ホームストーリーのチャプター",
@@ -140,6 +139,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "文脈",
         eyebrow: "02 · CONTEXT",
         title: "使う前に、そのミームを取り巻く文脈から。",
+        titlePhrases: ["使う前に、", "その", "ミームを", "取り巻く", "文脈から。"],
         description: "意味と由来、現在の使用シグナルを一緒に読むと、場面による違いが見えてきます。",
       },
       {
@@ -148,7 +148,8 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "参加",
         eyebrow: "03 · PARTICIPATE",
         title: "理解したら、次の文脈に参加する。",
-        description: "見つけた場面をコミュニティで共有し、販売者との関係が明示されたミーム商品も探せます。",
+        titlePhrases: ["理解したら、", "次の", "文脈に", "参加する。"],
+        description: "見つけた場面をコミュニティで共有し、次の文脈を一緒に残しましょう。",
       },
     ],
     search: {
@@ -158,7 +159,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "4つの使用シグナルを見る",
     communityAction: "コミュニティを見る",
-    productsAction: "ミーム商品を見る",
   },
   zh: {
     navigationLabel: "首页故事章节",
@@ -181,6 +181,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "语境",
         eyebrow: "02 · CONTEXT",
         title: "转发之前，先读懂它周围的语境。",
+        titlePhrases: ["转发", "之前，", "先", "读懂", "它", "周围", "的", "语境。"],
         description: "结合含义、来源与当前使用提示，了解同一个表达在不同场景中会如何变化。",
       },
       {
@@ -189,7 +190,8 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "参与",
         eyebrow: "03 · PARTICIPATE",
         title: "理解之后，一起补充下一段故事。",
-        description: "在社区分享你发现的使用场景，或浏览清楚标明卖家关联关系的迷因商品。",
+        titlePhrases: ["理解", "之后，", "一起", "补充", "下一段", "故事。"],
+        description: "在社区分享你发现的使用场景，并一起留下下一段语境。",
       },
     ],
     search: {
@@ -199,7 +201,6 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "查看四种使用提示",
     communityAction: "前往社区",
-    productsAction: "浏览迷因商品",
   },
   "zh-tw": {
     navigationLabel: "首頁故事章節",
@@ -222,6 +223,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "語境",
         eyebrow: "02 · CONTEXT",
         title: "轉發之前，先讀懂它周圍的語境。",
+        titlePhrases: ["轉發", "之前，", "先", "讀懂", "它", "周圍", "的", "語境。"],
         description: "結合含義、來源與目前的使用提示，了解同一個表達在不同場景中會如何變化。",
       },
       {
@@ -230,7 +232,8 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "參與",
         eyebrow: "03 · PARTICIPATE",
         title: "理解之後，一起補充下一段故事。",
-        description: "在社群分享你發現的使用場景，或瀏覽清楚標示賣家關聯關係的迷因商品。",
+        titlePhrases: ["理解", "之後，", "一起", "補充", "下一段", "故事。"],
+        description: "在社群分享你發現的使用場景，並一起留下下一段語境。",
       },
     ],
     search: {
@@ -240,6 +243,5 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
     },
     contextAction: "查看四種使用提示",
     communityAction: "前往社群",
-    productsAction: "瀏覽迷因商品",
   },
 };

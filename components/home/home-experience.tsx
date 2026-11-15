@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   MessagesSquare,
-  ShoppingBag,
 } from "lucide-react";
 import { HomeDiscovery } from "@/components/home/home-discovery";
 import { HomeImmersiveStory } from "@/components/home/home-immersive-story";
@@ -11,6 +10,7 @@ import { TranslatedEditionHint } from "@/components/home/translated-edition-hint
 import { SafetySignalGuide } from "@/components/usage-guide";
 import { HomeSafetyShowcase } from "@/components/home/home-safety-showcase";
 import { SafetyDiagnosticQuiz } from "@/components/safety-diagnostic-quiz";
+import { cjkKeepPhrases } from "@/lib/cjk-keep-phrase";
 import { HOME_COPY } from "@/lib/home-copy";
 import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
 import {
@@ -28,6 +28,7 @@ export type HomeEntry = {
   category?: MemeCategory;
   thumbnailUrl?: string | null;
   originalTitle?: string;
+  originYear?: number | null;
   safetyLevel: SafetyLevel;
 };
 
@@ -139,27 +140,6 @@ export function HomeExperience({
                 </span>
               </span>
             </Link>
-
-            <Link
-              href="/products"
-              className={`${styles.pathwayCard} ${styles.productsCard}`}
-            >
-              <span aria-hidden className={styles.productsMotif} />
-              <span className={styles.cardTop}>
-                <ShoppingBag aria-hidden className={styles.cardIcon} />
-                <span className={styles.cardMark}>{web3.pathways.productsMark}</span>
-              </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardTitle}>{copy.pathways.products.title}</span>
-                <span className={styles.cardDescription}>
-                  {copy.pathways.products.description}
-                </span>
-                <span className={styles.cardAction}>
-                  {copy.pathways.products.action}
-                  <ArrowRight aria-hidden className={styles.buttonIcon} />
-                </span>
-              </span>
-            </Link>
           </div>
 
           <div className={styles.contributionBar}>
@@ -171,9 +151,16 @@ export function HomeExperience({
               <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
                 {copy.pathways.submitAction}
               </Link>
-              <Link href="/products/new" className={styles.contributionLinkStrong}>
-                {copy.pathways.products.createAction}
-              </Link>
+              {locale === "ko" ? (
+                <>
+                  <Link href="/originals" className={styles.contributionLink}>
+                    오리지널 보러 가기
+                  </Link>
+                  <Link href="/submit" rel="nofollow" className={styles.contributionLink}>
+                    밈 올리기
+                  </Link>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -189,7 +176,7 @@ export function HomeExperience({
           <span aria-hidden className={styles.sectionNumber}>04</span>
           <div className={styles.trustCopy}>
             <h2 id={trustTitleId} className={styles.trustTitle}>
-              {copy.trust.title}
+              {cjkKeepPhrases(copy.trust.title, copy.trust.titlePhrases, styles.keepPhrase)}
             </h2>
             <p className={styles.trustDescription}>{copy.trust.description}</p>
             <nav aria-label={copy.trust.eyebrow}>

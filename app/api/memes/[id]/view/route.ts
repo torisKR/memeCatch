@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { signingSecret } from "@/lib/auth/signing-secret";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -32,7 +33,7 @@ export async function POST(
       headers: { "retry-after": String(limit.retryAfterSec) },
     });
   }
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = signingSecret();
   if (!secret) return Response.json({ ok: false, error: "unavailable" }, { status: 503 });
   const day = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const principal = createHmac("sha256", secret)

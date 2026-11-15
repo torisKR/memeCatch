@@ -17,7 +17,6 @@ export function HeaderDiscoveryLinks() {
   const items = [
     { href: latestHref, path: "/explore", label: latestLabel },
     { href: "/community", path: "/community", label: messages.community },
-    { href: "/products", path: "/products", label: messages.products },
   ];
 
   return (

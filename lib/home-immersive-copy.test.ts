@@ -41,7 +41,6 @@ describe("HOME_IMMERSIVE_COPY", () => {
       expect(copy.search.button.length).toBeGreaterThan(0);
       expect(copy.contextAction.length).toBeGreaterThan(0);
       expect(copy.communityAction.length).toBeGreaterThan(0);
-      expect(copy.productsAction.length).toBeGreaterThan(0);
     }
   });
 });

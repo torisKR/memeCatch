@@ -100,8 +100,6 @@ describe("MemeMarketPassport", () => {
       />,
     );
 
-    expect(html).toContain('data-market-passport="unavailable"');
-    expect(html).toContain("Global market data is unavailable");
-    expect(html).not.toContain("No reviewed local variant is connected yet.");
+    expect(html).toBe("");
   });
 });

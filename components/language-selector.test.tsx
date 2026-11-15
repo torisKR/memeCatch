@@ -109,6 +109,11 @@ describe("localeDestination", () => {
     expect(localeDestination("/explore", "ko")).toBe("/explore");
   });
 
+  it("stays on the meme card catalog when the language changes", () => {
+    expect(localeDestination("/meme-cards", "en")).toBe("/en/meme-cards");
+    expect(localeDestination("/en/meme-cards", "ko")).toBe("/meme-cards");
+  });
+
   it("keeps UI-only locales on an unprefixed route", () => {
     expect(localeDestination("/products", "th")).toBeNull();
   });
@@ -117,5 +122,17 @@ describe("localeDestination", () => {
     expect(localeDestination("/en/memes/abc-translated-slug", "vi")).toBe(
       "/memes/abc-translated-slug",
     );
+  });
+
+  it("stays on rankings for every supported locale", () => {
+    expect(SUPPORTED_LOCALES).toHaveLength(19);
+    for (const locale of SUPPORTED_LOCALES) {
+      const expected = locale === "ko" ? "/rankings" : `/${locale}/rankings`;
+      expect(localeDestination("/rankings", locale)).toBe(expected);
+      expect(localeDestination("/en/rankings", locale)).toBe(expected);
+      expect(localeDestination("/zh-tw/rankings", locale)).toBe(expected);
+      expect(localeDestination("/ar/rankings", locale)).toBe(expected);
+      expect(localeDestination("/th/rankings?from=menu", locale)).toBe(`${expected}?from=menu`);
+    }
   });
 });

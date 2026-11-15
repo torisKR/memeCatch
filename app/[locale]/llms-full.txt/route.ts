@@ -6,8 +6,9 @@ import {
 } from "@/lib/i18n-routing";
 import { getLocalizedFeaturedMemes } from "@/lib/meme-translations";
 import { CONTACT_EMAIL, SITE_URL } from "@/lib/site";
+import { isPublicDisplaySource } from "@/lib/source-links";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 type Copy = {
   intro: string;
@@ -116,7 +117,7 @@ export async function GET(
   const entries = memes.map((meme) => {
     const url = `${SITE_URL}${localizedMemePath(locale, meme.short_id, meme.slug)}`;
     const sources = meme.meme_sources
-      .filter((source) => source.source_url)
+      .filter((source) => isPublicDisplaySource(source) && source.source_url)
       .map(
         (source) =>
           `- [${prose(source.title || source.platform, copy.sources)}](${source.source_url})`,

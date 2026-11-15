@@ -1,7 +1,6 @@
 import "server-only";
-import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createStaticClient } from "@/lib/supabase/server";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
 import { memePathFrom } from "@/lib/labels";
 import { getMemeCardArtDirection, getMemeCardEditorialCaption } from "@/lib/meme-collectible-catalog";
 import type { Database } from "@/lib/database.types";
@@ -81,17 +80,9 @@ function normalizeCard(row: CatalogRow): MemeCollectibleCard {
   };
 }
 
-/** This client only executes finite, fixed 24-row anonymous catalog pages. */
+/** Anonymous catalog pages go through Postgres. The old 60s PostgREST cache is not replayed. */
 function cachedPublicClient(): Client {
-  return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-      global: { fetch: (input, init) => fetch(input, {
-        ...init, cache: "force-cache", next: { revalidate: 60, tags: ["meme-collectible-catalog", PUBLIC_CATALOG_CACHE_TAG] },
-      }) },
-    },
-  );
+  return createStaticClient();
 }
 
 export async function getMemeCardCatalogPage(options: MemeCardPageOptions): Promise<MemeCardCatalogPage> {

@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm lint
+      - name: Install ffmpeg
+        run: |
+          set -euo pipefail
+          if command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -version | head -n 1
+            exit 0
+          fi
+          # The default Azure Ubuntu apt mirror has hung this workflow (run 43051899980
+          # stalled on apt-get update for 30+ minutes; run 43060728980 failed after
+          # azure.archive.ubuntu.com InRelease was ignored). Fall back to archive.ubuntu.com.
+          switch_to_archive_mirror() {
+            echo "Default apt mirror failed or stalled; falling back to archive.ubuntu.com"
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'               /etc/apt/apt-mirrors.txt 2>/dev/null || true
+            if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+              sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'                 /etc/apt/sources.list.d/ubuntu.sources
+            fi
+          }
+          apt_update() {
+            sudo timeout 180s apt-get update               -o Acquire::Retries=3               -o Acquire::http::Timeout=20               -o Acquire::https::Timeout=20
+          }
+          if ! apt_update; then
+            switch_to_archive_mirror
+            apt_update
+          fi
+          sudo timeout 180s apt-get install -y ffmpeg             -o Acquire::Retries=3             -o Acquire::http::Timeout=20             -o Acquire::https::Timeout=20
+      - run: pnpm test
+      - run: node scripts/check-env-manifest.mjs
+      - run: pnpm build
+      - run: bash scripts/deploy-oci.test.sh
+      - run: bash scripts/standalone-hangul-proxy.test.sh
+      - name: Build the app image with the public release values
+        env:
+          RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_ADSENSE_CLIENT: ${{ vars.NEXT_PUBLIC_ADSENSE_CLIENT }}
+          NEXT_PUBLIC_COMMUNITY_ENABLED: ${{ vars.NEXT_PUBLIC_COMMUNITY_ENABLED }}
+          NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          NEXT_PUBLIC_SUBMISSIONS_OPEN: ${{ vars.NEXT_PUBLIC_SUBMISSIONS_OPEN }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_UNIFI_CLIENT_ID: ${{ vars.NEXT_PUBLIC_UNIFI_CLIENT_ID }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+        run: |
+          docker build -t memecatch:ci \
+            --build-arg RELEASE_SHA="${RELEASE_SHA}" \
+            --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}" \
+            --build-arg NEXT_PUBLIC_ADSENSE_CLIENT="${NEXT_PUBLIC_ADSENSE_CLIENT}" \
+            --build-arg NEXT_PUBLIC_COMMUNITY_ENABLED="${NEXT_PUBLIC_COMMUNITY_ENABLED}" \
+            --build-arg NEXT_PUBLIC_GA_ID="${NEXT_PUBLIC_GA_ID}" \
+            --build-arg NEXT_PUBLIC_SUBMISSIONS_OPEN="${NEXT_PUBLIC_SUBMISSIONS_OPEN}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
+            --build-arg NEXT_PUBLIC_UNIFI_CLIENT_ID="${NEXT_PUBLIC_UNIFI_CLIENT_ID}" \
+            --build-arg NEXT_PUBLIC_VAPID_PUBLIC_KEY="${NEXT_PUBLIC_VAPID_PUBLIC_KEY}" \
+            .
+      - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
+      - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
+      - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
+      - run: bash scripts/postgres/migrate-from-supabase.test.sh
+      - run: bash scripts/postgres/enum-in-filter.test.sh
+      - run: bash scripts/postgres/backup-role-readonly.test.sh
+      - run: bash deploy/backup/ci-test-restore.sh

@@ -155,12 +155,21 @@ export function generateHouseMemeCardSvg(
 /**
  * 인라인 이미지(Data URL)로 바로 사용할 수 있는 포맷을 반환합니다.
  */
+function utf8ToBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
 export function generateHouseMemeCardDataUrl(
   meme: Pick<GeneratedHouseMeme, "title" | "summary" | "category" | "safety_level" | "usage_examples">,
   preset: CardPreset = "square",
   theme: CardTheme = "obsidian_coral",
 ): string {
   const svg = generateHouseMemeCardSvg(meme, preset, theme);
-  const base64 = Buffer.from(svg).toString("base64");
-  return `data:image/svg+xml;base64,${base64}`;
+  return `data:image/svg+xml;base64,${utf8ToBase64(svg)}`;
 }

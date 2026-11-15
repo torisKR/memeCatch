@@ -23,7 +23,7 @@ async function principalAt(instant: string): Promise<string> {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-secret");
+  vi.stubEnv("MEMECATCH_SIGNING_SECRET", "test-service-secret");
   rpc.mockResolvedValue({ error: null });
 });
 

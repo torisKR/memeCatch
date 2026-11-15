@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import type { MemeListItem } from "@/lib/queries";
 import { MemeCard } from "@/components/meme-card";
+import { MOBILE_CARD_CLEARANCE } from "@/components/mobile-card-clearance";
 import { MemeCardSkeleton } from "@/components/skeletons";
 import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import type { MemeCategory } from "@/lib/labels";
@@ -52,7 +53,7 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)`;
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)`;
 
 function hasActiveExploreFilter(filters: ExploreFilters): boolean {
   return Boolean(
@@ -73,7 +74,7 @@ function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
   const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)${topic}`;
+  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
@@ -430,7 +431,7 @@ export function ExploreGrid({
           결과 <strong className="font-semibold text-foreground">{total.toLocaleString("ko-KR")}</strong>개
         </p>
       )}
-      <ul className="grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4">
+      <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
             <MemeCard meme={meme} sourcePlatform={filters.platform} />
@@ -441,7 +442,7 @@ export function ExploreGrid({
       {/* 로딩 스켈레톤 — 다음 페이지 조회 중 */}
       {loading && (
         <ul
-          className="mt-4 grid grid-cols-2 gap-3.5 lg:grid-cols-4 lg:gap-4"
+          className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4"
           aria-hidden
         >
           {Array.from({ length: 6 }).map((_, i) => (

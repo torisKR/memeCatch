@@ -53,8 +53,8 @@ beforeEach(() => {
 describe("collectible card repository", () => {
   it("reads 24 current eligible public cards with canonical links, explicit filters, and a finite cache", async () => {
     const fixture = clientFixture([{ data: [card], count: 1000 }]);
-    mocks.createPublicClient.mockReturnValue(fixture.client);
-    mocks.createStaticClient.mockReturnValue(clientFixture([{ data: [{ id: card.id, meme_id: card.meme_id, memes: { id: card.meme_id } }], count: 1000 }]).client);
+    const fresh = clientFixture([{ data: [{ id: card.id, meme_id: card.meme_id, memes: { id: card.meme_id } }], count: 1000 }]);
+    mocks.createStaticClient.mockReturnValueOnce(fixture.client).mockReturnValue(fresh.client);
     const page = await getMemeCardCatalogPage({ page: 2 });
     expect(page).toMatchObject({ total: 1000, pageSize: 24, hasMore: true, page: 2 });
     expect(page.cards[0]).toMatchObject({ id: "mc-0001", artMotif: "pen-pineapple", thumbnailUrl: null, href: "/memes/abc123-ppap", summary: "Editorially reviewed card caption" });
@@ -65,18 +65,14 @@ describe("collectible card repository", () => {
       { method: "eq", args: ["memes.safety_level", "green"] }, { method: "not", args: ["memes.published_at", "is", null] },
       { method: "range", args: [24, 47] },
     ]));
-    const fetchMock = vi.fn().mockResolvedValue(new Response("[]"));
-    vi.stubGlobal("fetch", fetchMock);
-    const config = mocks.createPublicClient.mock.calls[0][2];
-    await config.global.fetch("https://database.example/rest/v1/meme_collectible_cards", { method: "GET" });
-    expect(fetchMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cache: "force-cache", next: { revalidate: 60, tags: ["meme-collectible-catalog", "public-meme-catalog"] } }));
-    vi.unstubAllGlobals();
+    expect(mocks.createStaticClient).toHaveBeenCalledTimes(2);
   });
 
   it("never exposes primed cached content after a live withdrawal and reconciles the current availability count", async () => {
-    mocks.createPublicClient.mockReturnValue(clientFixture([{ data: [card], count: 1 }]).client);
     const fresh = clientFixture([{ data: [], count: 0 }]);
-    mocks.createStaticClient.mockReturnValue(fresh.client);
+    mocks.createStaticClient
+      .mockReturnValueOnce(clientFixture([{ data: [card], count: 1 }]).client)
+      .mockReturnValue(fresh.client);
     const page = await getMemeCardCatalogPage({ page: 1 });
     expect(page).toEqual({ cards: [], total: 0, page: 1, pageSize: 24, hasMore: false });
     expect(JSON.stringify(page)).not.toContain(card.memes.title);
@@ -86,7 +82,7 @@ describe("collectible card repository", () => {
 
   it("fills shifted live page IDs after withdrawal instead of showing stale cards or stale pagination", async () => {
     const next = { ...card, id: "mc-0002", card_no: 2, meme_id: "meme-b", memes: { ...card.memes, id: "meme-b", title: "Current replacement" } };
-    mocks.createPublicClient.mockReturnValue(clientFixture([{ data: [card], count: 25 }]).client);
+    mocks.createStaticClient.mockReturnValueOnce(clientFixture([{ data: [card], count: 25 }]).client);
     const fresh = clientFixture([
       { data: [{ id: next.id, meme_id: next.meme_id, memes: { id: next.meme_id } }], count: 24 },
       { data: [next] },
@@ -100,8 +96,9 @@ describe("collectible card repository", () => {
   });
 
   it("does not fall back to cached publication status when the fresh eligibility query fails", async () => {
-    mocks.createPublicClient.mockReturnValue(clientFixture([{ data: [card], count: 1 }]).client);
-    mocks.createStaticClient.mockReturnValue(clientFixture([{ data: null, error: { message: "eligibility unavailable" } }]).client);
+    mocks.createStaticClient
+      .mockReturnValueOnce(clientFixture([{ data: [card], count: 1 }]).client)
+      .mockReturnValue(clientFixture([{ data: null, error: { message: "eligibility unavailable" } }]).client);
     await expect(getMemeCardCatalogPage({ page: 1 })).rejects.toMatchObject({ status: 503, code: "cards_unavailable" });
   });
 
@@ -109,13 +106,13 @@ describe("collectible card repository", () => {
     const fixture = clientFixture([{ data: [], count: 0 }]);
     mocks.createStaticClient.mockReturnValue(fixture.client);
     await getMemeCardCatalogPage({ page: 1, query: "100%_", category: "song" });
-    expect(mocks.createPublicClient).not.toHaveBeenCalled();
+    expect(mocks.createStaticClient).toHaveBeenCalled();
     expect(fixture.records[0].calls).toContainEqual({ method: "ilike", args: ["memes.title", "%100\\%\\_%"] });
   });
 
   it("treats failed queries and missing counts as failures, never an empty collection", async () => {
     const fixture = clientFixture([{ data: null, error: { message: "secret database failure" } }, { data: [], count: null }]);
-    mocks.createPublicClient.mockReturnValue(fixture.client);
+    mocks.createStaticClient.mockReturnValue(fixture.client);
     await expect(getMemeCardCatalogPage({ page: 1 })).rejects.toMatchObject({ status: 503, code: "cards_unavailable" });
     await expect(getMemeCardCatalogPage({ page: 1 })).rejects.toMatchObject({ status: 503 });
   });

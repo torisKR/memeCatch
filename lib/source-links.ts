@@ -1,4 +1,8 @@
-export type SourceLink = { source_url?: string | null; platform?: string | null };
+export type SourceLink = {
+  source_url?: string | null;
+  platform?: string | null;
+  hidden_from_public?: boolean | null;
+};
 
 /**
  * 근거 목록에 실을 수 있는 출처 — URL만 있는 링크와 달리 "무엇을 근거로 삼았는지"를
@@ -10,6 +14,7 @@ export type CitableSourceInput = {
   title?: string | null;
   creator_name?: string | null;
   captured_at?: string | null;
+  hidden_from_public?: boolean | null;
 };
 
 export type CitableSource = {
@@ -25,6 +30,17 @@ export type CitableSource = {
 
 function cleanText(value?: string | null): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+
+/** Editorial flag: keep the row, but do not render it in public citation lists. */
+export function isPublicDisplaySource(source: object): boolean {
+  return (source as { hidden_from_public?: boolean | null }).hidden_from_public !== true;
+}
+
+/** Public citation and gating counts should ignore hidden rows. */
+export function publicDisplaySources<T extends object>(sources: T[] | null | undefined): T[] {
+  return Array.isArray(sources) ? sources.filter(isPublicDisplaySource) : [];
 }
 
 /** Public citation links only. This validates syntax; it does not fetch or certify a source. */
@@ -73,6 +89,7 @@ export function citableSources(sources: CitableSourceInput[]): CitableSource[] {
   const seen = new Set<string>();
   const out: CitableSource[] = [];
   for (const source of sources) {
+    if (!isPublicDisplaySource(source)) continue;
     const url = publicSourceUrl(source.source_url);
     const title = cleanText(source.title);
     if (!url || !title) continue;
@@ -141,6 +158,7 @@ export function summarizeEvidence(sources: EvidenceSourceInput[]): EvidenceSumma
   let context = 0;
   let identifiedPrimary = 0;
   for (const source of sources) {
+    if (!isPublicDisplaySource(source)) continue;
     const url = publicSourceUrl(source.source_url);
     if (!url) continue;
     const key = sourceDocumentKey(url);
@@ -161,6 +179,7 @@ export function summarizeEvidence(sources: EvidenceSourceInput[]): EvidenceSumma
 /** 원본·공식·보도 링크를 먼저 보여 주고, 없을 때만 맥락 출처를 폴백한다. */
 export function preferredSourceUrl(sources: SourceLink[]) {
   const urls = sources
+    .filter(isPublicDisplaySource)
     .map((source) => publicSourceUrl(source.source_url))
     .filter((url): url is string => Boolean(url));
   return urls.find((url) => !isContextSourceUrl(url)) ?? urls[0] ?? null;
@@ -178,6 +197,7 @@ export function sourceLinksWithContent(
   const seen = new Set<string>();
   return [...contents.map((content) => ({ source_url: content.url, platform: content.platform })), ...sources]
     .flatMap((source) => {
+      if (!isPublicDisplaySource(source)) return [];
       const url = publicSourceUrl(source.source_url);
       if (!url) return [];
       const key = sourceDocumentKey(url);

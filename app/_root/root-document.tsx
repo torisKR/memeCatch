@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AttributionTracker } from "@/components/attribution-tracker";
 import { BottomNav } from "@/components/bottom-nav";
-import { ChangelogModal } from "@/components/changelog-modal";
 import { GlobalHeader } from "@/components/global-header";
 import { MemeChatbot } from "@/components/meme-chatbot";
 import { NavProgress } from "@/components/nav-progress";
 import { PremiumAdControl } from "@/components/premium-ad-control";
 import { PwaInstall } from "@/components/pwa-install";
+import { ScrollChrome } from "@/components/scroll-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { PublicWebMcpTools } from "@/components/webmcp/public-tools";
@@ -44,27 +44,32 @@ export function RootDocument({
       dir={getDocumentDirection(locale)}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col pb-16 md:pb-0">
+      <body className="flex min-h-dvh flex-col max-md:pb-[calc(4.5rem+4rem+1rem)] md:pb-0">
         <LocaleProvider initialLocale={locale}>
           <PublicWebMcpTools />
           <LocaleDocumentSync />
           <LocaleAutoDetect />
+          <ScrollChrome />
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>
           {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
           <AttributionTracker />
           <OrganizationJsonLd />
-          <GlobalHeader />
-          <div className="flex-1">{children}</div>
-          <SiteFooter />
+          {/* The window is the scroller so route changes, hashes, and
+              back/forward move the page. Bottom padding keeps the end of the
+              page above the chat launcher and the bottom nav. */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <GlobalHeader />
+            <div className="min-w-0 flex-1">{children}</div>
+            <SiteFooter />
+          </div>
           <PremiumAdControl />
           <BottomNav />
           <Suspense fallback={null}>
             <MemeChatbot />
           </Suspense>
           <PwaInstall />
-          <ChangelogModal />
         </LocaleProvider>
       </body>
     </html>

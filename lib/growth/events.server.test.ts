@@ -16,7 +16,7 @@ import {
 
 beforeEach(() => {
   vi.unstubAllEnvs();
-  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+  vi.stubEnv("MEMECATCH_SIGNING_SECRET", "test-service-role-key");
   mocks.rpc.mockReset();
   mocks.rpc.mockResolvedValue({ data: "event-1", error: null });
 });

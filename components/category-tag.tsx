@@ -18,9 +18,12 @@ const TONE: Record<MemeCategory, string> = {
 export function CategoryTag({
   category,
   className = "",
+  label,
 }: {
   category: MemeCategory;
   className?: string;
+  /** Overrides the Korean catalog label. The 410 page passes the locale copy. */
+  label?: string;
 }) {
   const meta = CATEGORIES[category];
   return (
@@ -28,7 +31,7 @@ export function CategoryTag({
       className={`hover-glow-flame inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-transparent px-2.5 py-1 text-[13px] font-semibold leading-none ${TONE[category]} ${className}`}
     >
       <CategoryGlyph icon={meta.icon} className="size-3.5 shrink-0" />
-      {meta.user}
+      {label ?? meta.user}
     </span>
   );
 }

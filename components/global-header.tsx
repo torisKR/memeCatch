@@ -12,7 +12,7 @@ import { localizedStaticPath } from "@/lib/i18n-routing";
 
 /**
  * 전역 헤더 — DESIGN.md §10 + 2026-07 IA 개편(검색·탐색 중심 제품형 내비).
- * 좌: 워드마크 + 언어 선택 + 최신 밈·커뮤니티·상품 바로가기.
+ * 좌: 워드마크 + 언어 선택 + 최신 밈·커뮤니티 바로가기.
  * 우: 검색(모바일=아이콘, 데스크톱=미니 검색바) → 제보 강조 CTA →
  *     로그인/프로필(<AuthMenu/>) → 통합 메뉴 드롭다운(<HeaderMenu/> — 연표·
  *     랭킹·소식·랜덤).
@@ -26,7 +26,7 @@ export function GlobalHeader() {
   const { locale, messages } = useLocale();
   return (
     <HideOnAdmin>
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
+      <header data-site-header="" className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
           <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto">
             {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}

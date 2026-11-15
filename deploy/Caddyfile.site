@@ -1,0 +1,8 @@
+# Paste this into the Caddy that already owns ports 80 and 443 on oci-hermes-dev.
+# memeCatch does not edit that Caddy. The app listens only on 127.0.0.1:12730.
+# Refresh Cloudflare ranges from https://www.cloudflare.com/ips-v4 and /ips-v6
+# if this Caddy is not already configured with them.
+catchmeme.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:12730
+}

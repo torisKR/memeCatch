@@ -22,7 +22,9 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
+import { curatedSearchCards } from "@/lib/curated-memes";
 import { AdsenseScript } from "@/components/adsense-script";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -49,6 +51,7 @@ export const metadata: Metadata = {
     title: "밈 탐색",
     description: EXPLORE_DESCRIPTION,
     url: "/explore",
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 
@@ -109,7 +112,7 @@ function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
     : "meme_contents(thumbnail_url, is_representative, platform, url)";
   // LIST_COLUMNS: 목록 카드가 읽는 컬럼만 — 장문 컬럼 과다 전송 방지(lib/queries.ts 참조)
   const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url), meme_market_profiles(market_code, role, review_state)${topic}`;
+  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
@@ -230,21 +233,38 @@ export default async function ExplorePage({
   const filters = parseFilters(sp);
 
   const [initialLoad, platformCounts] = await Promise.all([
-    (async (): Promise<{ items: MemeListItem[]; unavailable: boolean }> => {
+    (async (): Promise<{
+      items: MemeListItem[];
+      unavailable: boolean;
+      dbCount: number;
+      hasMore: boolean;
+    }> => {
+      const curated = filters.q ? curatedSearchCards(filters.q) : [];
+      const failed = {
+        items: [] as MemeListItem[],
+        unavailable: true,
+        dbCount: 0,
+        hasMore: false,
+      };
       try {
         const supabase = createStaticClient();
         const { data, error } = await buildQuery(supabase, filters).range(
           0,
           PAGE_SIZE - 1
         );
-        // 조회 실패를 빈 목록으로 두면 출처 개수만 남고 "아직 없어요"가 된다.
-        if (error) return { items: [], unavailable: true };
+        // Curated cards are not a successful catalog read. Showing them with
+        // unavailable:false hid the retry state when the database failed.
+        if (error) return failed;
+        const rows = (data ?? []) as unknown as MemeListItem[];
+        const seen = new Set(rows.map((item) => item.short_id));
         return {
-          items: (data ?? []) as unknown as MemeListItem[],
+          items: [...curated.filter((item) => !seen.has(item.short_id)), ...rows],
           unavailable: false,
+          dbCount: rows.length,
+          hasMore: rows.length >= PAGE_SIZE,
         };
       } catch {
-        return { items: [], unavailable: true };
+        return failed;
       }
     })(),
     getSocialPlatformCounts(),
@@ -286,6 +306,8 @@ export default async function ExplorePage({
           <ExploreGrid
             key={filterKey(filters)}
             initial={initialLoad.items}
+            initialOffset={initialLoad.dbCount}
+            hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}
             filters={filters}
           />

@@ -3,8 +3,10 @@ import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
 
 import { HomeScene } from "@/components/home/home-scene";
+import { cjkKeepPhrases } from "@/lib/cjk-keep-phrase";
 import { HOME_IMMERSIVE_COPY } from "@/lib/home-immersive-copy";
 import { localizedPath, type SeoRouteLocale } from "@/lib/i18n-routing";
+import { H_RAIL_CLASS } from "@/lib/mobile-rail";
 import styles from "./home-immersive-story.module.css";
 
 export function HomeImmersiveStory({ locale }: { locale: SeoRouteLocale }) {
@@ -13,7 +15,7 @@ export function HomeImmersiveStory({ locale }: { locale: SeoRouteLocale }) {
 
   return (
     <section id="home-top" className={styles.story} data-home-scroll-track="true" data-home-section="hero-search" aria-label={copy.navigationLabel}>
-      <nav className={styles.chapterNav} aria-label={copy.navigationLabel}>
+      <nav className={`${styles.chapterNav} ${H_RAIL_CLASS}`} aria-label={copy.navigationLabel}>
         <ol className={styles.chapterNavList}>
           {copy.chapters.map((chapter, index) => (
             <li key={chapter.id}>
@@ -35,7 +37,9 @@ export function HomeImmersiveStory({ locale }: { locale: SeoRouteLocale }) {
               <section id={`home-story-${chapter.id}`} className={styles.chapter} data-story-chapter={chapter.id} aria-labelledby={headingId}>
                 <header className={styles.chapterHeading}>
                   <p className={styles.eyebrow}>{chapter.eyebrow}</p>
-                  <Heading id={headingId} className={styles.chapterTitle}>{chapter.title}</Heading>
+                  <Heading id={headingId} className={styles.chapterTitle}>
+                    {cjkKeepPhrases(chapter.title, chapter.titlePhrases, styles.keepPhrase)}
+                  </Heading>
                 </header>
                 <div className={styles.chapterCenter} aria-hidden="true" />
                 <div className={styles.chapterPanel}>
@@ -56,7 +60,6 @@ export function HomeImmersiveStory({ locale }: { locale: SeoRouteLocale }) {
                   {chapter.id === "participate" && (
                     <div className={styles.actionRow}>
                       <Link className={styles.primaryAction} href="/community">{copy.communityAction}<ArrowRight aria-hidden="true" /></Link>
-                      <Link className={styles.secondaryAction} href="/products">{copy.productsAction}</Link>
                     </div>
                   )}
                 </div>

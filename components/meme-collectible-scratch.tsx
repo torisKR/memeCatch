@@ -5,7 +5,8 @@ import type { MemeCollectibleCard } from "@/lib/meme-collectible";
 import { createScratchCoverage, scratchPoint, SCRATCH_REVEAL_RATIO, type ScratchPoint } from "@/lib/meme-collectible-ui";
 import { useLocale } from "@/lib/i18n-client";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
-import { MemeCollectibleArt } from "./meme-collectible-art";
+import { MemeCardFace } from "./meme-card";
+import { memeCardArtFromMeme } from "@/lib/meme-card-art";
 import { MemeCollectibleSeal } from "./meme-collectible-seal";
 import styles from "./meme-collectible.module.css";
 
@@ -140,7 +141,7 @@ export function MemeCollectibleScratch({ cardId, card, revealed, loading = false
   const normalizedProgress = Math.min(100, Math.round(progress / SCRATCH_REVEAL_RATIO));
   return <div className={styles.scratchArea} data-card-id={cardId} data-scratch-progress={progress} data-revealed={revealed} data-scratch-state={revealed ? "revealed" : unavailable ? "error" : loading ? "loading" : started ? "scratching" : "sealed"}>
     <div ref={stageRef} className={styles.scratchCard} data-complete={revealed} data-pointer="false" data-dragging="false">
-      {(revealed || started) && card ? <div aria-hidden={!revealed}><MemeCollectibleArt card={card}/></div> : <MemeCollectibleSeal label={copy.foilTitle} hint={copy.foilHint}/>}
+      {(revealed || started) && card ? <div aria-hidden={!revealed}><MemeCardFace title={card.title} summary={card.summary} year={card.originYear} locale={locale} art={memeCardArtFromMeme({ meme_contents: card.thumbnailUrl ? [{ thumbnail_url: card.thumbnailUrl, is_representative: true }] : [] })} /></div> : <MemeCollectibleSeal label={copy.foilTitle} hint={copy.foilHint}/>}
       {coverVisible && <canvas ref={canvasRef} className={styles.scratchCanvas} aria-label={copy.scratch} aria-hidden={revealed} data-complete={revealed} data-canvas-state="pending" data-testid="scratch-canvas"/>}
       {!revealed && <><div className={styles.scratchShimmer} data-scratch-shimmer aria-hidden="true"/><div className={styles.scratchBrush} data-scratch-brush aria-hidden="true"/><div ref={dustRef} className={styles.scratchDust} data-scratch-dust aria-hidden="true"/></>}
     </div>

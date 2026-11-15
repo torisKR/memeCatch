@@ -9,10 +9,11 @@ import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache
 import { relatedMemePoolFilter } from "@/lib/related-meme-pool";
 import { createStaticClient } from "@/lib/supabase/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { curatedSearchCards } from "@/lib/curated-memes";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
-import type { Audience } from "@/lib/meme-commerce";
+import type { Audience } from "@/lib/meme-news";
 import type { MemeOriginProfile } from "@/lib/meme-country";
 
 export type MemeRow = Database["public"]["Tables"]["memes"]["Row"];
@@ -55,7 +56,7 @@ type MemeListColumn = SplitColumns<typeof LIST_COLUMNS>;
 export type MemeListItem = Pick<MemeRow, MemeListColumn> & {
   meme_contents?: (Pick<MemeContentRow, "thumbnail_url" | "is_representative"> &
     Partial<Pick<MemeContentRow, "platform" | "url">>)[];
-  meme_sources?: Pick<MemeSourceRow, "platform" | "source_url">[];
+  meme_sources?: Array<Pick<MemeSourceRow, "platform" | "source_url"> & { hidden_from_public?: boolean | null }>;
   meme_market_profiles?: MemeOriginProfile[];
 };
 
@@ -394,20 +395,23 @@ export async function getReactionCounts(
 export async function searchMemes(query: string, limit = 20): Promise<MemeListItem[]> {
   const q = query.trim();
   if (!q) return [];
-  try {
-    const supabase = createStaticClient({ cachePublicCatalog: true });
-    const { data, error } = await supabase
-      .rpc("search_memes", {
-        p_query: q,
-        p_limit: limit,
-      }, { get: true })
-      .select(LIST_SELECT)
-      .in("moderation_status", [...PUBLIC_STATUSES]);
-    if (error || !data) return [];
-    return data as MemeListItem[];
-  } catch {
-    return [];
+  const supabase = createStaticClient({ cachePublicCatalog: true });
+  const { data, error } = await supabase
+    .rpc("search_memes", {
+      p_query: q,
+      p_limit: limit,
+    }, { get: true })
+    .select(LIST_SELECT)
+    .in("moderation_status", [...PUBLIC_STATUSES]);
+  // A catalog failure must surface. Returning curated cards here hid the
+  // explore/search error state and looked like a successful empty-or-guide result.
+  if (error) {
+    console.error("search_memes failed");
+    throw new Error("search_memes failed");
   }
+  const rows = (data ?? []) as MemeListItem[];
+  const seen = new Set(rows.map((item) => item.short_id));
+  return [...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)), ...rows];
 }
 
 /** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */

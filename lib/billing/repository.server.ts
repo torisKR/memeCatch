@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isAuthSessionMissingError } from "@supabase/supabase-js";
+import { isAuthSessionMissingError } from "@/lib/auth/session-error";
 import type { Json } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";

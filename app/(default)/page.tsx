@@ -4,10 +4,12 @@ import { HomeExperience } from "@/components/home/home-experience";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
 import {
   SEO_ROUTE_LOCALES,
+  KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
   buildHreflangLanguages,
   getSeoCopy,
   localizePath,
 } from "@/lib/i18n-routing";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { memePathFrom } from "@/lib/labels";
 import { getRecentlyPublishedMemes } from "@/lib/queries";
 import { getGuaranteedHomeEntries } from "@/lib/curated-memes";
@@ -26,6 +28,17 @@ export const metadata: Metadata = {
       "x-default": localizePath("/", "en"),
     },
   },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    description:
+      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
+    siteName: "밈캐치",
+    locale: "ko_KR",
+    alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,
+    images: [ogDefaultImageDescriptor("ko")],
+  },
 };
 
 /** 홈은 검색과 서비스 이해, 각 전용 페이지로의 진입만 담당한다. */
@@ -40,6 +53,7 @@ export default async function Home() {
     categoryLabel: categoryCopy[meme.category],
     safetyLevel: meme.safety_level,
     category: meme.category,
+    originYear: meme.origin_year,
     thumbnailUrl: meme.meme_contents?.find((content) => content.is_representative && content.thumbnail_url)?.thumbnail_url
       ?? meme.meme_contents?.find((content) => content.thumbnail_url)?.thumbnail_url
       ?? null,

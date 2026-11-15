@@ -64,7 +64,7 @@ export async function exerciseHomeCinematic({ cdp, evaluate, navigate, record, d
         return form?.getAttribute('action')===${JSON.stringify(locale==='ko'?'/search':`/${locale}/search`)}
           && !!document.querySelector('[data-story-chapter="context"] a[href="#home-signals"]')
           && !!document.querySelector('[data-story-chapter="participate"] a[href="/community"]')
-          && !!document.querySelector('[data-story-chapter="participate"] a[href="/products"]')
+          && !document.querySelector('[data-story-chapter="participate"] a[href="/products"]')
           && document.querySelectorAll('[data-home-section]').length===5;
       })()`));
     }

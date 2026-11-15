@@ -209,7 +209,7 @@ function YearRow({
       </div>
 
       {/* 모든 뷰포트에서 컨테이너 안에 머무는 반응형 그리드 — 우측 잘림·페이지 가로 스크롤 방지 */}
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {yearGroup.memes.map((meme) => (
           <div
             key={meme.id}

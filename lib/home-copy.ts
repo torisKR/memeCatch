@@ -36,11 +36,12 @@ export type HomeCopy = {
     contributionLabel: string;
     submitAction: string;
     community: { title: string; description: string; action: string; createAction: string };
-    products: { title: string; description: string; action: string; createAction: string };
   };
   trust: {
     eyebrow: string;
     title: string;
+    /** Unbreakable pieces of `title`. Their concatenation must equal that title. */
+    titlePhrases?: readonly string[];
     description: string;
     links: [HomeLinkCopy, HomeLinkCopy, HomeLinkCopy];
   };
@@ -72,7 +73,7 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     pathways: {
       eyebrow: "함께 만드는 밈 사전",
       title: "읽은 다음, 이야기하고 발견하세요.",
-      description: "커뮤니티에서 맥락을 나누거나 밈과 연결된 상품을 둘러볼 수 있습니다.",
+      description: "커뮤니티에서 밈의 맥락을 나눌 수 있습니다.",
       contributionLabel: "직접 발견한 맥락이 있나요?",
       submitAction: "밈 제보",
       community: {
@@ -80,12 +81,6 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
         description: "밈을 어디서 봤는지, 어떤 맥락이 더 필요한지 이야기해 보세요.",
         action: "커뮤니티 가기",
         createAction: "이야기 나누기",
-      },
-      products: {
-        title: "밈 상품",
-        description: "판매 주체와 연결 관계를 표시한 밈 관련 상품을 둘러보세요.",
-        action: "상품 둘러보기",
-        createAction: "내 밈 상품 등록",
       },
     },
     trust: {
@@ -123,8 +118,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "Beyond the dictionary",
-      title: "Join the conversation or browse meme goods.",
-      description: "Continue into MemeCatch’s Korean community and product directories.",
+      title: "Join the conversation.",
+      description: "Continue into MemeCatch’s Korean community.",
       contributionLabel: "Have context to add?",
       submitAction: "Submit a meme",
       community: {
@@ -132,12 +127,6 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
         description: "Share where a meme appeared and which context still needs explaining.",
         action: "Visit the community",
         createAction: "Start a discussion",
-      },
-      products: {
-        title: "Meme products",
-        description: "Browse meme-related goods with seller and relationship disclosures.",
-        action: "Browse products",
-        createAction: "List your meme product",
       },
     },
     trust: {
@@ -175,8 +164,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "辞典のその先へ",
-      title: "会話に参加し、ミーム関連の商品を探す。",
-      description: "MemeCatchの韓国語コミュニティと商品ページへ進めます。",
+      title: "会話に参加する。",
+      description: "MemeCatchの韓国語コミュニティへ進めます。",
       contributionLabel: "追加したい文脈がありますか？",
       submitAction: "ミームを投稿",
       community: {
@@ -185,16 +174,11 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
         action: "コミュニティを見る",
         createAction: "話題を投稿",
       },
-      products: {
-        title: "ミーム商品",
-        description: "販売者と関係性の表示があるミーム関連商品を見られます。",
-        action: "商品を見る",
-        createAction: "商品を登録",
-      },
     },
     trust: {
       eyebrow: "編集情報",
       title: "解説と一緒に編集方針も確認できます。",
+      titlePhrases: ["解説", "と", "一緒に", "編集", "方針", "も", "確認できます。"],
       description: "使用シグナルは文脈を理解するための編集情報であり、法的な許可やリアルタイムの安全を保証するものではありません。",
       links: [
         { label: "編集方針", href: "/editorial" },
@@ -227,8 +211,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "词典之外",
-      title: "加入讨论，或浏览迷因相关商品。",
-      description: "继续前往 MemeCatch 的韩语社区和商品目录。",
+      title: "加入讨论。",
+      description: "继续前往 MemeCatch 的韩语社区。",
       contributionLabel: "有想补充的语境吗？",
       submitAction: "提交迷因",
       community: {
@@ -237,16 +221,11 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
         action: "前往社区",
         createAction: "发起讨论",
       },
-      products: {
-        title: "迷因商品",
-        description: "浏览标明卖家与关联关系的迷因相关商品。",
-        action: "浏览商品",
-        createAction: "登记迷因商品",
-      },
     },
     trust: {
       eyebrow: "编辑信息",
       title: "阅读解释时，也能查看整理标准。",
+      titlePhrases: ["阅读", "解释", "时，", "也能", "查看", "整理", "标准。"],
       description: "使用提示是帮助理解语境的编辑信息，不代表法律许可，也不保证实时安全。",
       links: [
         { label: "编辑原则", href: "/editorial" },
@@ -279,8 +258,8 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     },
     pathways: {
       eyebrow: "詞典之外",
-      title: "加入討論，或瀏覽迷因相關商品。",
-      description: "繼續前往 MemeCatch 的韓語社群和商品目錄。",
+      title: "加入討論。",
+      description: "繼續前往 MemeCatch 的韓語社群。",
       contributionLabel: "有想補充的語境嗎？",
       submitAction: "提交迷因",
       community: {
@@ -289,16 +268,11 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
         action: "前往社群",
         createAction: "發起討論",
       },
-      products: {
-        title: "迷因商品",
-        description: "瀏覽標明賣家與關聯關係的迷因相關商品。",
-        action: "瀏覽商品",
-        createAction: "登記迷因商品",
-      },
     },
     trust: {
       eyebrow: "編輯資訊",
       title: "閱讀解釋時，也能查看整理標準。",
+      titlePhrases: ["閱讀", "解釋", "時，", "也能", "查看", "整理", "標準。"],
       description: "使用提示是協助理解語境的編輯資訊，不代表法律許可，也不保證即時安全。",
       links: [
         { label: "編輯原則", href: "/editorial" },

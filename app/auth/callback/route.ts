@@ -10,13 +10,17 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get("next");
   const next = rawNext === "/reset-password" ? rawNext : safeNext(rawNext);
 
+  const supabase = await createClient();
   if (code) {
-    const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${SITE_URL}${next}`);
-    }
+    if (!error) return NextResponse.redirect(`${SITE_URL}${next}`);
+    return NextResponse.redirect(`${SITE_URL}/login?error=auth`);
   }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) return NextResponse.redirect(`${SITE_URL}${next}`);
 
   return NextResponse.redirect(`${SITE_URL}/login?error=auth`);
 }

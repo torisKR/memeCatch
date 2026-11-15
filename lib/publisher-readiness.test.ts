@@ -197,4 +197,20 @@ describe("buildPublisherReadinessPage", () => {
     expect(report.items[0].id).toBe("meme-2");
     expect(report.totalPublic).toBe(200);
   });
+
+  it("does not count hidden_from_public rows as public sources", () => {
+    const result = classifyPublisherReadiness(
+      row({
+        meme_sources: [
+          { source_url: "https://namu.wiki/w/example", hidden_from_public: true },
+          { source_url: "https://example.org/one" },
+        ],
+      }),
+      NOW,
+    );
+
+    expect(result.safeSourceUrls).toEqual(["https://example.org/one"]);
+    expect(result.depth.signals.sourceCount).toBe(1);
+  });
+
 });

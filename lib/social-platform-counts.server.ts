@@ -11,6 +11,12 @@ import {
 
 const PAGE_SIZE = 1000;
 
+/** node-pg returns bigint as text. PostgREST returned a number. */
+function countValue(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
 /**
  * 탐색 필터의 수량은 `meme_contents`의 공개 URL을 기준으로 계산한다.
  * DB가 같은 밈의 같은 플랫폼을 한 번만 세어 네 행만 반환한다.
@@ -23,8 +29,9 @@ export async function getSocialPlatformCounts(): Promise<SocialPlatformCounts> {
     if (!aggregate.error) {
       const counts = emptySocialPlatformCounts();
       for (const row of aggregate.data ?? []) {
-        if (isSocialPlatform(row.platform) && Number.isSafeInteger(row.meme_count) && row.meme_count >= 0) {
-          counts[row.platform] = row.meme_count;
+        const memeCount = countValue(row.meme_count);
+        if (isSocialPlatform(row.platform) && memeCount !== null) {
+          counts[row.platform] = memeCount;
         }
       }
       return counts;

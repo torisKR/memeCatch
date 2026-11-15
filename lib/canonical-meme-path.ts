@@ -1,9 +1,9 @@
-import { localizedMemePath, type SeoRouteLocale } from "@/lib/i18n-routing";
+import { localizedMemePath, type OgShareLocale } from "@/lib/i18n-routing";
 
 type CanonicalMemeIdentity = {
   shortId: string;
   slug: string;
-  locale: SeoRouteLocale;
+  locale: OgShareLocale;
 };
 
 function decodedRouteKey(value: string): string | null {
@@ -26,21 +26,32 @@ export const CANONICAL_MEME_ALIAS_MAP: Record<string, string> = {
 };
 
 /**
- * Returns a same-site canonical destination for a valid meme alias, or null
- * when the requested route key already identifies the canonical document.
+ * One NFC canonical path. The stored slug is normalized before encoding so an
+ * NFD row and an NFD request share the uppercase percent-encoded NFC URL.
+ * `inputEncoding` stays in the signature because the proxy still passes
+ * "encoded" and pages pass "decoded"; both compare the raw key. Only the
+ * exact encoded key and the exact decoded NFC key are already canonical.
+ * NFD, lowercase percent-encoding, and `%2D` therefore 308 once.
  */
 export function canonicalMemeRedirectPath(
   requestedKey: string,
   meme: CanonicalMemeIdentity,
   inputEncoding: "decoded" | "encoded" = "decoded",
 ): string | null {
-  const canonicalPath = localizedMemePath(meme.locale, meme.shortId, meme.slug);
-  const canonicalKey = canonicalPath.slice(canonicalPath.lastIndexOf("/") + 1);
-  const canonicalDecodedKey = decodedRouteKey(canonicalKey);
-  // Page params are already decoded by Next; only the proxy sees encoded URL segments.
-  // Decoding page params again incorrectly accepts double-encoded aliases as canonical.
-  const comparableKey = inputEncoding === "encoded" ? decodedRouteKey(requestedKey) : requestedKey;
-  const isCanonical = comparableKey !== null && comparableKey === canonicalDecodedKey;
-
-  return isCanonical ? null : canonicalPath;
+  switch (inputEncoding) {
+    case "encoded":
+    case "decoded":
+      break;
+    default: {
+      const unreachable: never = inputEncoding;
+      return unreachable;
+    }
+  }
+  const slug = meme.slug.normalize("NFC");
+  const canonicalPath = localizedMemePath(meme.locale, meme.shortId, slug);
+  const encodedKey = canonicalPath.slice(canonicalPath.lastIndexOf("/") + 1);
+  const decodedKey = decodedRouteKey(encodedKey);
+  if (requestedKey === encodedKey) return null;
+  if (decodedKey !== null && requestedKey === decodedKey) return null;
+  return canonicalPath;
 }

@@ -37,12 +37,6 @@ export function CommunityPageIntro() {
             >
               최신 밈 보기
             </Link>
-            <Link
-              href="/products"
-              className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-3 text-sm font-semibold transition-colors hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              밈 상품
-            </Link>
           </div>
         </div>
 

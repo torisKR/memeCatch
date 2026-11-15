@@ -35,7 +35,7 @@
 - **프론트엔드**: Next.js 16 (App Router, 요청별 SSR) · React 19 · TypeScript · Tailwind CSS v4 · [motion](https://motion.dev) (framer-motion)
 - **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
 - **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
-- **배포**: Vercel (GitHub 연동 자동 배포)
+- **배포**: OCI 도쿄 VM의 Docker Compose와 자체 Caddy. Cloudflare가 `catchmeme.com`을 그 원본으로 프록시하고, GitHub Actions가 이미지를 만들어 VM에 배포한다.
 - **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Unifi Pay Direct · Fairy · **메일**: AWS SES
 
 > 어떤 서비스가 무엇을 맡고 **왜 그렇게 정했는지**(특히 "AWS로 옮길까?"에 대한 실측 근거와
@@ -116,20 +116,6 @@ node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve 
 - `memes.source_work_year` / `meme_first_seen_year` / `korea_viral_year` / `era_type` — YouTube 업로드 날짜와 밈 발생 연도를 분리
 - Vercel Cron `0 17 * * *` → `/api/cron/source-refresh`가 삭제·비공개·임베드 불가를 7일 주기로 확인하고 공개 임베드를 자동으로 내립니다(`meme_contents.availability='dead'`). YouTube 메타데이터는 30일 안에 갱신됩니다.
 
-### 애드픽 핫딜 동기화 운영
-
-프로덕션에서는 Vercel Cron이 `0 21 * * *`에 `/api/cron/adpick-hotdeals`를 호출합니다. Vercel Cron 스케줄은 UTC 기준이며, 매일 21:00 UTC에 예약된 작업은 한국 시간으로 다음 날 06:00 KST에 해당합니다. Hobby 플랜에서는 예약된 일일 작업이 06:00:00–06:59:59 KST (21:00:00–21:59:59 UTC) 사이에 실행될 수 있습니다. 실패한 작업을 Vercel이 자동으로 재시도하지 않습니다.
-
-Vercel 프로젝트 환경변수에 `ADPICK_AFFILIATE_ID`와 `CRON_SECRET`을 설정하세요. 두 값은 서버 전용 비밀값이므로 실제 값을 저장소에 커밋하거나 `NEXT_PUBLIC_` 접두사로 클라이언트에 노출하지 않습니다.
-
-로컬 서버를 실행한 뒤 같은 `CRON_SECRET`을 셸 환경변수로 설정하고 다음 명령으로 수동 실행할 수 있습니다.
-
-```bash
-curl --fail-with-body \
-  -H "Authorization: Bearer $CRON_SECRET" \
-  http://localhost:3000/api/cron/adpick-hotdeals
-```
-
 ## 환경변수
 
 | 변수 | 설명 |
@@ -159,7 +145,6 @@ curl --fail-with-body \
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | (선택) AdSense 게시자 ID(`ca-pub-…`). 설정 시 스크립트·`/ads.txt`·계정 메타 자동 활성화 |
 | `NEXT_PUBLIC_GA_ID` | (선택) GA4 측정 ID(`G-…`). 설정 시 gtag 자동 로드 |
 | `YOUTUBE_API_KEY` | (선택) YouTube Data API v3 키 — 출처 후보 발견·메타데이터 재확인. 서버 전용 |
-| `ADPICK_AFFILIATE_ID` | 애드픽 ShoppingMate 제휴 ID. 서버 전용 |
 | `CRON_SECRET` | Vercel Cron 및 수동 동기화 요청 인증 비밀값. 서버 전용 |
 
 > R2 4종이 비어 있으면 제보 이미지는 Supabase Storage(`meme-uploads`)에 저장됩니다. R2 키는 서버에서만 읽으며(`lib/r2.server.ts`, `server-only`) 클라이언트 번들에 포함되지 않습니다.

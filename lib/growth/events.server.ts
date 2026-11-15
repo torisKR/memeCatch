@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { signingSecret } from "@/lib/auth/signing-secret";
 import type { Json } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,7 +35,7 @@ const NETWORK_HASH_CONTEXT = "memecatch:growth-network-hash:v1";
 const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 function signingKey(): Buffer | null {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const secret = signingSecret();
   return secret ? createHmac("sha256", secret).update(SIGNING_CONTEXT).digest() : null;
 }
 
@@ -71,7 +72,7 @@ export function growthSessionIdFromRequest(request: Request): string | null {
 }
 
 export function growthNetworkHash(networkIdentity: string): string | null {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const secret = signingSecret();
   return secret
     ? createHmac("sha256", secret).update(`${NETWORK_HASH_CONTEXT}:${networkIdentity}`).digest("hex")
     : null;

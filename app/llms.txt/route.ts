@@ -7,11 +7,12 @@ import {
   loadApprovedIndexableMemes,
   publicationExportUnavailableResponse,
 } from "@/lib/publication-export";
+import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import type { ContentDepthInput } from "@/lib/content-depth";
 
 
-/** llms.txt — AI 시스템용 사이트 안내 (https://llmstxt.org 규격). 1시간 재검증 */
-export const revalidate = 3600;
+/** llms.txt — AI 시스템용 사이트 안내 (https://llmstxt.org 규격). 빌드 시 DB 없이 실패 본문을 굽지 않는다. */
+export const dynamic = "force-dynamic";
 
 type LlmsIndexRow = ContentDepthInput & {
   id: string;
@@ -38,7 +39,7 @@ export async function GET() {
       {
         select:
           "id, title, summary, short_id, slug, description, origin, usage_note," +
-          " caution, usage_examples, meme_sources(source_url)," +
+          " caution, usage_examples, meme_sources(source_url, hidden_from_public)," +
           " meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
         primaryOrder: "trend_score",
         limit: 15,
@@ -52,6 +53,7 @@ export async function GET() {
     return publicationExportUnavailableResponse();
   }
 
+  const showRankings = await koreanRankingsVisible();
   const countLine = eligibleCount.toLocaleString("en-US");
   const trendingBlock = trending.length
     ? trending
@@ -83,8 +85,7 @@ ${SEO_CONTENT_LOCALES.map((locale) => `- [${locale} index](${SITE_URL}/${locale}
 - [줄임말·유행어 사전](${SITE_URL}/slang): 요즘 신조어부터 1990년대 유행어까지 연대별 표제어·뜻·사용 안전도
 - [밈력고사](${SITE_URL}/quiz): 사전 데이터로 매번 새로 출제되는 10문항 밈 지식 퀴즈
 - [이번 주 밈 결산](${SITE_URL}/weekly): 매주 자동 갱신되는 급상승·신규 정리
-- [오늘의 랭킹](${SITE_URL}/rankings)
-- [전체 사이트맵](${SITE_URL}/sitemap.xml): 밈 상세 페이지 전체 URL
+${showRankings ? `- [오늘의 랭킹](${SITE_URL}/rankings)\n` : ""}- [전체 사이트맵](${SITE_URL}/sitemap.xml): 밈 상세 페이지 전체 URL
 - [RSS 피드](${SITE_URL}/feed.xml): 최신 등록 밈
 
 ## 카테고리

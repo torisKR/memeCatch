@@ -8,6 +8,7 @@ import {
   buildLocalizedMetadata,
   isSeoContentLocale,
 } from "@/lib/i18n-routing";
+import { isOgPageLocale } from "@/lib/og-default-image";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -18,21 +19,24 @@ type Props = { params: Promise<{ locale: string }> };
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
+  if (!isOgPageLocale(locale)) return { robots: { index: false, follow: false } };
 
   const copy = PREMIUM_COPY[locale].pricing;
-  return buildLocalizedMetadata({
-    locale,
-    pathname: "/pricing",
-    title: `MemeCatch Plus — ${copy.title}`,
-    description: copy.intro,
-    availableLocales: SEO_ROUTE_LOCALES,
-  });
+  return {
+    ...buildLocalizedMetadata({
+      locale,
+      pathname: "/pricing",
+      title: `MemeCatch Plus — ${copy.title}`,
+      description: copy.intro,
+      ...(isSeoContentLocale(locale) ? { availableLocales: SEO_ROUTE_LOCALES } : {}),
+    }),
+    ...(locale === "ar" ? { robots: { index: false, follow: false } } : {}),
+  };
 }
 
 export default async function LocalizedPricingPage({ params }: Props) {
   const { locale } = await params;
-  if (!isSeoContentLocale(locale)) notFound();
+  if (!isOgPageLocale(locale)) notFound();
 
   const checkoutEnabled = process.env.UNIFI_PAY_CHECKOUT_ENABLED?.trim() === "true";
   return (

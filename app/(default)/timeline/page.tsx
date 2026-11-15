@@ -6,6 +6,7 @@ import { memePathFrom } from "@/lib/labels";
 import { LIST_SELECT, type MemeListItem } from "@/lib/queries";
 import { TimelineView, type TimelineDecade } from "@/components/timeline-view";
 import { AdsenseScript } from "@/components/adsense-script";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * 레인 A — /timeline: 한국 밈 연표 (1990년대 ~ 2020년대).
@@ -109,6 +110,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "한국 밈 연표 — 1990년대부터 지금까지",
       description,
       url: "/timeline",
+      images: [ogDefaultImageDescriptor("ko")],
     },
   };
 }

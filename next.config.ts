@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { rankingsLocaleRewriteSource } from "./lib/rankings-locale-rewrite";
+import {
+  DEFAULT_TRAILING_SLASH_REDIRECT,
+  EN_PRODUCT_GONE_REDIRECTS,
+} from "./lib/retired-product-redirects";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -85,12 +90,6 @@ const CSP_DIRECTIVES = [
     "connect-src 'self'",
     // /sw.js의 NetworkOnly 이미지 요청은 CSP에서 connect-src 적용 대상이다.
     ...REMOTE_MEME_THUMBNAIL_SOURCES,
-    "https://*.supabase.co",
-    "wss://*.supabase.co",
-    // 개발은 로컬 Supabase(supabase start)를 쓴다. 여기에 없으면 브라우저가
-    // 인증·조회 요청을 막아 "TypeError: Failed to fetch"로 나타난다.
-    // 프로덕션 CSP에는 포함되지 않는다(.env.production은 원격을 본다).
-    ...(IS_DEV ? ["http://127.0.0.1:54321", "ws://127.0.0.1:54321"] : []),
     "https://*.google-analytics.com",
     "https://*.analytics.google.com",
     "https://analytics.google.com", // GA4 수집 — 베어 도메인은 와일드카드(*.analytics.google.com)와 미매치
@@ -143,6 +142,8 @@ const CSP_HEADER_KEY = CSP_ENFORCE
   : "Content-Security-Policy-Report-Only";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  serverExternalPackages: ["pg", "onnxruntime-node"],
   /* 개발 서버를 Cloudflare 터널로 열어 모바일·외부 기기에서 확인할 때,
      Next는 기본적으로 다른 origin의 dev 리소스(/_next/webpack-hmr) 접근을
      차단한다. 터널 호스트명은 세션마다 바뀌므로 와일드카드로 허용한다.
@@ -156,6 +157,10 @@ const nextConfig: NextConfig = {
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
+    "/og/[locale]": ["./assets/og-fonts/**/*"],
+    "/opengraph-image": ["./assets/og-fonts/**/*"],
+    "/[locale]/memes/[key]/opengraph-image": ["./assets/og-fonts/**/*"],
+    "/memes/[key]/opengraph-image-k2cx9c": ["./assets/og-fonts/**/*"],
     "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],
@@ -163,6 +168,30 @@ const nextConfig: NextConfig = {
   },
   // x-powered-by 헤더 제거 — 프레임워크 버전 노출 방지
   poweredByHeader: false,
+  // The built-in `/:path+/` → `/:path+` redirect runs before proxy and makes
+  // `/en/products/` a second hop. Specific `/en` redirects are listed first.
+  skipTrailingSlashRedirect: true,
+  async redirects() {
+    return [...EN_PRODUCT_GONE_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
+  },
+  // Prefixed rankings URLs share one dynamic route. A static `app/ar` segment
+  // would shadow every future `/ar/*` page, and `[locale]` only prerenders
+  // the SEO locales.
+  async rewrites() {
+    return [
+      // `/[locale]/opengraph-image` is not a route. This rule still runs
+      // before dynamic routes and turns `/ar/opengraph-image/*` into `/ar`,
+      // the same global not-found as main. `/og/ar` is the Arabic card.
+      {
+        source: "/ar/opengraph-image/:path*",
+        destination: "/ar",
+      },
+      {
+        source: rankingsLocaleRewriteSource(),
+        destination: "/locale-rankings/:locale",
+      },
+    ];
+  },
   // 기본 보안 헤더 — CSP는 임베드·인라인 스크립트 회귀 위험이 있어 Report-Only로만 관찰(enforce 전환 금지)
   async headers() {
     return [
@@ -239,6 +268,20 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=31536000, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      // force-dynamic would otherwise emit no-store. This header is applied
+      // before the render, and Next does not replace a Cache-Control that is
+      // already set. Browsers revalidate; the CDN keeps the document for an
+      // hour and may serve it stale for a day. The in-process cache in
+      // app/sitemap.ts stops the catalog scan on that revalidation.
+      {
+        source: "/sitemap.xml",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
           },
         ],
       },

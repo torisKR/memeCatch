@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
 import { memePathFrom, shortIdFromParam } from "@/lib/labels";
+import { curatedShareVersion, koreanMemeShareImage } from "@/lib/meme-share-image";
 import { classifyPublicMemeLookup, type PublicMemeLookup } from "@/lib/public-meme-lookup";
 import {
   getMemeByShortId,
@@ -72,6 +73,12 @@ export function unavailableMemeMetadata(): Metadata {
 export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
   const path = memePathFrom(meme.short_id, meme.slug);
   const title = `${meme.title} 뜻`;
+  const image = koreanMemeShareImage({
+    shortId: meme.short_id,
+    slug: meme.slug,
+    alt: meme.title,
+    version: curatedShareVersion(meme),
+  });
   return {
     title,
     description: meme.summary,
@@ -83,6 +90,13 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
       title,
       description: meme.summary,
       url: path,
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: meme.summary,
+      images: [image],
     },
   };
 }

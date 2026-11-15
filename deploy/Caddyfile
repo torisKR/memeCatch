@@ -1,0 +1,12 @@
+{
+	email {$ACME_EMAIL:ops@catchmeme.com}
+	servers {
+		trusted_proxies static {$CLOUDFLARE_TRUSTED_PROXIES}
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+	}
+}
+
+{$SITE_ADDRESS:catchmeme.com} {
+	encode gzip
+	reverse_proxy app:3000
+}

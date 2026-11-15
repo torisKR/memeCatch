@@ -95,7 +95,7 @@ export default async function AdminGrowthPage({
   let memeQuery = supabase
     .from("memes")
     .select(
-      "id, short_id, slug, title, summary, description, origin, origin_year, usage_note, caution, usage_examples, category, trend_score, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
+      "id, short_id, slug, title, summary, description, origin, origin_year, usage_note, caution, usage_examples, category, trend_score, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
     )
     .in("moderation_status", ["approved", "limited"]);
   memeQuery = campaign

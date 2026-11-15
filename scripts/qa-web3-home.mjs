@@ -78,7 +78,7 @@ export async function exerciseWeb3Home({ cdp, evaluate, navigate, record, delay 
   }
 
   await click('a[href="#home-pathways"]');
-  check('participation paths preserve community and seller entry points', await evaluate(`['/community','/products','/community/new','/products/new','/submit'].every(path=>[...document.querySelectorAll('[data-home-section="pathways"] a')].some(a=>a.getAttribute('href')===path))`));
+  check('participation paths preserve community and meme submission entry points', await evaluate(`['/community','/community/new','/submit'].every(path=>[...document.querySelectorAll('[data-home-section="pathways"] a')].some(a=>a.getAttribute('href')===path)) && ![...document.querySelectorAll('a')].some(a=>a.getAttribute('href')==='/products' || a.getAttribute('href')==='/products/new')`));
   await record('web3-community-products');
 
   await cdp('Emulation.setDeviceMetricsOverride', {width:375,height:812,deviceScaleFactor:1,mobile:true});

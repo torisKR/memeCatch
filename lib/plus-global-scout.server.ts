@@ -67,7 +67,7 @@ export async function loadPlusGlobalScout({
   let sourceQuery = supabase
     .from("memes")
     .select(
-      "id, short_id, slug, title, summary, description, origin, usage_note, caution, usage_examples, category, safety_level, lifecycle_status, moderation_status, trend_score, updated_at, meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
+      "id, short_id, slug, title, summary, description, origin, usage_note, caution, usage_examples, category, safety_level, lifecycle_status, moderation_status, trend_score, updated_at, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
     )
     .in("moderation_status", ["approved", "limited"])
     .in("safety_level", ["green", "yellow"])

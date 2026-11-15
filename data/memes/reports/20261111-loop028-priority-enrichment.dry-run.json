@@ -1,0 +1,835 @@
+{
+  "ok": true,
+  "mode": "update_existing_dry_run",
+  "database_connected": false,
+  "batch_id": "loop-028-priority-enrichment-2026-11-11",
+  "errors": [],
+  "warnings": [
+    "Related memes are computed at read time from tags/category/year/embeddings; this file records related_slugs for editors only.",
+    "Q-09: schema adds memes.content_reviewed_at (flagged migration). This SQL sets it to the editorial review date. UI shows 최종 검토일 from that column.",
+    "safety_reviewed_at is captured and restored in the same transaction so the existing trigger does not overwrite it.",
+    "This SQL does not DELETE meme_sources. Non-200, dead, or irrelevant rows in this batch are hidden_from_public=true so they do not render. Source-mention sentences are excluded from character totals.",
+    "This SQL was not applied to prod."
+  ],
+  "summary": {
+    "memes": {
+      "update": 13,
+      "drop": 70,
+      "insert": 0,
+      "skip_existing": 0,
+      "reject": 0
+    },
+    "meme_sources": {
+      "insert_if_missing": 19,
+      "title_update": 6,
+      "delete_non200_for_batch": 0,
+      "hide_from_public": "runtime, markers=39",
+      "hide_from_public_rows_expected": 35,
+      "skip_existing": "runtime"
+    }
+  },
+  "dropped": [
+    {
+      "short_id": "jz3dnexj",
+      "slug": "막차-10분-전-line-단체방의-기적",
+      "title": "막차 10분 전 LINE 단체방의 기적",
+      "reason": "origin_kind가 house_original이고 유일한 출처가 catchmeme.com 자체 링크다. 외부 SNS·언론에서 유통된 기록을 확인하지 못해 품질 기준의 독립 출처 2건을 충족할 수 없다."
+    },
+    {
+      "short_id": "3jetw9gv",
+      "slug": "가족-단톡-pix-송금-요청의-진짜-의미",
+      "title": "가족 단톡 Pix 송금 요청의 진짜 의미",
+      "reason": "밈캐치 자체 기획 문구로, 외부에서 확인 가능한 원본이나 제3자 보도가 없다."
+    },
+    {
+      "short_id": "ueucy5wp",
+      "slug": "슬랙-마지막-5분의-동시-폭탄",
+      "title": "슬랙 마지막 5분의 동시 폭탄",
+      "reason": "밈캐치 자체 기획 문구로, 독립된 유통 출처를 확인하지 못했다."
+    },
+    {
+      "short_id": "admu9pnm",
+      "slug": "응-니-애미-(김윤태)",
+      "title": "응 니 애미 (김윤태)",
+      "reason": "기존 나무위키 링크는 이 환경의 curl에서 403이고, 커뮤니티·블로그 외에 교차 확인 가능한 언론·사전 출처를 찾지 못했다. 확인되지 않은 채 본문을 늘리지 않기 위해 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "7nh5djcf",
+      "slug": "슬릭백-챌린지",
+      "title": "슬릭백 챌린지",
+      "reason": "본문에 미성년자 실명(이효철)과 조회수 주장이 있으나, 기존 틱톡·유튜브 출처는 이 환경의 일반 curl로 본문을 확인할 수 없다. 실명을 지운 채 교차 확인 가능한 읽기 쉬운 출처 2건을 확보하지 못해 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "8e9dyfqp",
+      "slug": "겟타맨",
+      "title": "겟타맨",
+      "reason": "출처 언급 문장을 제외하면 본문·뜻·유래가 품질 기준 하한에 미치지 못한다. 억지로 늘리지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "sw48ahk5",
+      "slug": "찔러맨",
+      "title": "찔러맨",
+      "reason": "출처 언급 문장을 제외하면 본문·유래가 하한에 미치지 못하고, ‘2000년대 중반경’ 주장은 출처 1건뿐이다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "nrjutpq7",
+      "slug": "SNL-코리아-무신사-냄새",
+      "title": "SNL 코리아 무신사 냄새",
+      "reason": "출처 언급 문장을 제외하면 본문·유래가 하한에 미치지 못한다. 억지로 늘리지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "s2v2pzh9",
+      "slug": "포켓몬빵-띠부씰",
+      "title": "포켓몬빵 띠부씰",
+      "reason": "출처 언급 문장을 제외하면 유래가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "qqzf3wyy",
+      "slug": "내돈내산",
+      "title": "내돈내산",
+      "reason": "‘2010년대 중반 이후’ 주장을 받쳐 주는 독립 출처가 없고, 날짜를 빼면 유래가 더 짧아진다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "rf3dt6mp",
+      "slug": "서태지와-아이들-컴백홈-현상",
+      "title": "서태지와 아이들 컴백홈 현상",
+      "reason": "보이는 출처가 ‘표절 논란’과 공익 캠페인 주장을 받쳐 주지 않는다. 문장만 고쳐 억지로 남기지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "fzmt7ngh",
+      "slug": "탑블레이드-팽이-붐",
+      "title": "탑블레이드 팽이 붐",
+      "reason": "보이는 출처가 ‘모조 팽이’ 문제를 언급하지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "7kqc35wv",
+      "slug": "국민학교→초등학교-개칭",
+      "title": "국민학교→초등학교 개칭",
+      "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "pnphbt7f",
+      "slug": "시티폰",
+      "title": "시티폰",
+      "reason": "출처 언급 문장을 제외하면 뜻 글자 수가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t6jrbnbd",
+      "slug": "젝스키스-해체(2000)",
+      "title": "젝스키스 해체(2000)",
+      "reason": "출처 언급 문장을 제외한 뜻 글자 수가 하한(150)에서 10자 이내라, 보수적으로 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "mx2p9d97",
+      "slug": "Y2K-밀레니엄버그",
+      "title": "Y2K 밀레니엄버그",
+      "reason": "보이는 출처(영어 위키·유튜브)가 경향신문 인용, 하반기 점검, 바이러스·해킹, ‘찻잔 속 태풍’ 주장을 받쳐 주지 않는다. 해당 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "rmpwzmy7",
+      "slug": "젝스키스-학원별곡",
+      "title": "젝스키스 '학원별곡'",
+      "reason": "보이는 출처가 가요톱텐 10위권, 국악 타령조, 아크로바틱 군무, 성적지상주의 주장을 받쳐 주지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "m9qmrhxz",
+      "slug": "대장금-홍시",
+      "title": "대장금 홍시",
+      "reason": "보이는 출처가 ‘대장금 5회’를 명시하지 않는다. 회차를 빼면 장면 서술이 출처로 확인되지 않은 채 남아, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t2fpqhcs",
+      "slug": "테스형",
+      "title": "테스형",
+      "reason": "‘정규 9집’은 위키의 정규 앨범 19장·아홉 이야기와 맞지 않는다. 그 표현만 빼도 쓰임이 하한(40자)에 그대로여서, 여유 있게 하한을 넘긴다고 보기 어려워 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "63485cxm",
+      "slug": "멍때리기",
+      "title": "멍때리기",
+      "reason": "매일경제는 출처 목록에 없고, 출처 언급·유보 문장을 제외하면 본문과 유래가 하한에 미치지 못한다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "wyu84dvf",
+      "slug": "온게임넷-스타리그-출범",
+      "title": "온게임넷 스타리그 출범",
+      "reason": "보이는 출처가 ‘99 PKO’, 황형준, 창고방, 80여 명, 21세기프로게임협회, 문화관광부 장관의 ‘e스포츠’ 언급을 받쳐 주지 않는다. 해당 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "n4srdru6",
+      "slug": "아이러브스쿨-동창찾기-열풍",
+      "title": "아이러브스쿨 동창찾기 열풍",
+      "reason": "보이는 출처가 동창 재회 후 결혼·기혼자 불륜 주장을 받쳐 주지 않는다. 해당 문장을 빼면 뜻 글자 수가 하한(150)에서 10자 이내가 되어, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "kkk7mx6b",
+      "slug": "이종범-바람의-아들",
+      "title": "이종범 바람의 아들",
+      "reason": "보이는 출처가 하청일의 작명 일화와 ‘바람의 손자’ 별명을 받쳐 주지 않는다. 해당 문장을 빼면 본문·뜻·쓰임이 하한 또는 하한 +10자 이내가 되어, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "t4n9can6",
+      "slug": "내-마음속에-저장",
+      "title": "내 마음속에 저장",
+      "reason": "보이는 출처가 ‘윙크 남신’과 윙크 연기를 받쳐 주지 않는다. 해당 문장을 빼면 본문이 하한(400)에 미치지 못해, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "qqu8andb",
+      "slug": "이정현-바꿔·와",
+      "title": "이정현 '바꿔'·'와'",
+      "reason": "보이는 출처가 ‘테크노 여전사’, 기계 날개 의상, 부채·마이크 소품, ‘하반기’ 주장을 받쳐 주지 않는다. 해당 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "by5gkxee",
+      "slug": "갈갈이-삼형제",
+      "title": "갈갈이 삼형제",
+      "reason": "보이는 출처가 박명수 중심 서술, ‘긴급구조 911’ 패러디 시작, 이승환 출연을 받쳐 주지 않는다. 숨은 나무위키 서술에 의존하지 않고 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "5pzu8tzp",
+      "slug": "검정고무신-애니메이션",
+      "title": "검정고무신 애니메이션",
+      "reason": "1990년대 초 소년챔프 연재·최장수 기록은 씨네21 1건, 1999년 설날 특집은 위키 1건뿐이다. 날짜 규칙에 따라 그 주장을 빼면 뜻 글자 수가 하한(150)에 미치지 못해, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "stm8qern",
+      "slug": "눈치",
+      "title": "눈치",
+      "reason": "17세기 용법은 영어 위키 1건뿐이다. 그 문장을 빼면 출처 언급을 제외한 유래가 하한(80)에 미치지 못해, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "mzgvq8xt",
+      "slug": "H.O.T.-캔디",
+      "title": "H.O.T. 캔디",
+      "reason": "1990년대 시점은 위키 1건뿐이고, 보이는 출처가 장용진 작곡, 파워레이서춤·망치춤, 털모자 패션 주장을 받쳐 주지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "fxp7dc8y",
+      "slug": "KIA타이거즈-남행열차-응원가",
+      "title": "KIA타이거즈 남행열차 응원가",
+      "reason": "보이는 출처(가요무대 영상·구단 위키)가 패티김 원곡, 응원가 관례, ‘고래사냥’·‘목포의 눈물’ 주장을 받쳐 주지 않는다. 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "4ae4pkpa",
+      "slug": "MSG-워너비",
+      "title": "MSG 워너비",
+      "reason": "보이는 출처가 ‘유야호’, 중의적 이름 풀이, 환불원정대·지미유 설정을 받쳐 주지 않는다. 해당 문장을 빼면 뜻 글자 수가 하한(150)에서 10자 이내가 되어, 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "f2jjy62y",
+      "slug": "노스트라다무스-지구멸망설",
+      "title": "노스트라다무스 지구멸망설",
+      "reason": "보이는 출처가 고토 벤, 다미선교회 휴거설, Y2K와의 묶음을 받쳐 주지 않고, 1999년 시점은 위키 1건뿐이다. 날짜 규칙과 미확인 문장을 빼면 본문이 빈약해져 이번 배치에서 제외한다."
+    },
+    {
+      "short_id": "xazbup6j",
+      "slug": "ai-slop",
+      "title": "AI 슬롭",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "k32wguve",
+      "slug": "뇌절",
+      "title": "뇌절",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "ruayk4d9",
+      "slug": "애교",
+      "title": "애교",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "x85wgk74",
+      "slug": "파이팅",
+      "title": "파이팅",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "87pakbhn",
+      "slug": "직관",
+      "title": "직관",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "4f25qzwc",
+      "slug": "대박",
+      "title": "대박",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "u6mxpr58",
+      "slug": "막내",
+      "title": "막내",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "9r3fjkwr",
+      "slug": "엄근진",
+      "title": "엄근진",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "5jysgx3d",
+      "slug": "댕댕이",
+      "title": "댕댕이",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "cdkdz2tv",
+      "slug": "럭키비키",
+      "title": "럭키비키",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "gf66ref6",
+      "slug": "스불재",
+      "title": "스불재",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "9uyxmw4g",
+      "slug": "중요한-건-꺾이지-않는-마음",
+      "title": "중요한 건 꺾이지 않는 마음",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "j5sbgbev",
+      "slug": "폐인-문화",
+      "title": "폐인 문화",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "nvmtccc6",
+      "slug": "프리챌-유료화-논란",
+      "title": "프리챌 유료화 논란",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "yeyam8cm",
+      "slug": "PC통신-모뎀-접속음",
+      "title": "PC통신 모뎀 접속음",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "q7cjtg8h",
+      "slug": "버디버디-메신저",
+      "title": "버디버디 메신저",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "rc2d9rq9",
+      "slug": "신승훈-발라드-황제",
+      "title": "신승훈 발라드 황제",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "ywh3wq2f",
+      "slug": "TTL-임은경-스무살의-011",
+      "title": "TTL 임은경 '스무살의 011'",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "ewwjd6g7",
+      "slug": "ㅋㅋㅋ-표기",
+      "title": "ㅋㅋㅋ 표기",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "jcdupe54",
+      "slug": "바츠-해방전쟁",
+      "title": "바츠 해방전쟁",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "s5tx6yzk",
+      "slug": "종이접기-아저씨-김영만",
+      "title": "종이접기 아저씨 김영만",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "au7za8te",
+      "slug": "임요환-테란의-황제",
+      "title": "임요환 '테란의 황제'",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "3rqfnny8",
+      "slug": "바람의나라",
+      "title": "바람의나라",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "pg778k4u",
+      "slug": "뿌까-캐릭터",
+      "title": "뿌까 캐릭터",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "amhqsvt2",
+      "slug": "박카스-그날의-피로는-그날에",
+      "title": "박카스 '그날의 피로는 그날에'",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "hmhac9nw",
+      "slug": "유희왕-카드게임-유행",
+      "title": "유희왕 카드게임 유행",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "8eacrtkx",
+      "slug": "펌프-잇업",
+      "title": "펌프 잇업",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "n5s5eq5p",
+      "slug": "스티커사진",
+      "title": "스티커사진",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "9gzfuejc",
+      "slug": "기억의-습작",
+      "title": "기억의 습작",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "ajvzf7pk",
+      "slug": "과자-사꾸",
+      "title": "과자 사꾸",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "db3bd33n",
+      "slug": "평창올림픽-팀추월-왕따-논란",
+      "title": "평창올림픽 팀추월 왕따 논란",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "ah2zk3m5",
+      "slug": "나만 아니면 돼",
+      "title": "나만 아니면 돼",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "xyfnse8f",
+      "slug": "니가-가라-하와이",
+      "title": "니가 가라 하와이",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "cg9uvyv5",
+      "slug": "파이어-누들-챌린지-(불닭볶음면-챌린지)",
+      "title": "파이어 누들 챌린지 (불닭볶음면 챌린지)",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "f6dvsvvv",
+      "slug": "설거지론",
+      "title": "설거지론",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "bucts34h",
+      "slug": "고마워요-사토-(G.G.사토)",
+      "title": "고마워요 사토 (G.G.사토)",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "gqdszbfz",
+      "slug": "나는-행복합니다-(한화-이글스-행복송)",
+      "title": "나는 행복합니다 (한화 이글스 행복송)",
+      "reason": "PR #61 QA 5차(run-2026-11-12-pr61-data-recheck5.md)에서 보이는 출처로 뒷받침되지 않는 문장 또는 출처 1곳뿐인 날짜가 확인됐다. 이 PR에서는 고치지 않고 빼며, 문장 단위 출처 인용 방식으로 다시 써서 별도 배치의 후속 후보로 다룬다.",
+      "follow_up_candidate": true
+    },
+    {
+      "short_id": "2au7br9f",
+      "slug": "도마도마-챌린지",
+      "title": "도마도마 챌린지",
+      "reason": "PR #61 QA 6차(run-2026-11-12-pr61-data-recheck6.md): 보이는 출처 jjalbang.today·instablank.com이 wepick에서 정리한 글이라 사실상 출처가 한 계열(wepick)뿐이고, 독립된 다른 도메인의 보이는 출처가 없다. 이 PR에서는 빼고 독립 출처를 확보한 뒤 후속 배치에서 다룬다.",
+      "follow_up_candidate": true
+    }
+  ],
+  "actions": [
+    {
+      "table": "memes",
+      "key": "shrimp-jesus",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.nbcnews.com/tech/tech-news/facebook-users-say-amen-bizarre-ai-generated-images-jesus-rcna143965",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "치맥",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.donga.com/news/Entertainment/article/all/20140304/61423642/1",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "꼰대",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.koreaherald.com/article/10844914",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "엽기-신드롬",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "디워-사태",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%94%94%EC%9B%8C",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.khan.co.kr/article/200708101214011",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "TV는-사랑을-싣고",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/TV%EB%8A%94_%EC%82%AC%EB%9E%91%EC%9D%84_%EC%8B%A3%EA%B3%A0",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "떡밥과-낚시글",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://ko.wikipedia.org/wiki/%EB%82%9A%EC%8B%9C_(%EC%9D%B8%ED%84%B0%EB%84%B7)",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.hani.co.kr/arti/opinion/column/146193.html",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "새삥 챌린지 (지코)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "강정호-3회-음주운전-사건",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20161206115151004",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Jung-ho_Kang",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20220429073300007",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "2026년-롯데-자이언츠-원정-도박-사건",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20260213190700007",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.seoul.co.kr/news/sport/baseball/2026/02/23/20260223500318",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "피식대학-영양군-지역비하-사태",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.yna.co.kr/view/AKR20240821061000005",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.metroseoul.co.kr/article/20240829500089",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "갑툭튀",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://biz.heraldcorp.com/article/3755062",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://news.nate.com/view/20210713n02819",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://opendict.korean.go.kr/dictionary/view?sense_no=1369891",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "memes",
+      "key": "페페 더 프로그(슬픈 개구리 페페)",
+      "action": "update",
+      "reasons": [
+        "priority-enrichment"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://en.wikipedia.org/wiki/Pepe_the_Frog",
+      "action": "insert_if_missing",
+      "reasons": [
+        "where-not-exists"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=v3YbaqL9rV8",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.nongmin.com/article/20240519500070",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=mM3su9pxkJQ",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.youtube.com/watch?v=lBsbtNxtX7w",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.segye.com/newsView/20070920001620",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    },
+    {
+      "table": "meme_sources",
+      "key": "https://www.khan.co.kr/article/200012251708421",
+      "action": "update_title",
+      "reasons": [
+        "untitled-prod-source-not-rendered"
+      ],
+      "warnings": []
+    }
+  ]
+}

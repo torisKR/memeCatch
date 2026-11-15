@@ -6,7 +6,7 @@ import { TrackedBlock } from "@/components/tracked-block";
 import { useLocale } from "@/lib/i18n-client";
 import { AUDIENCE_LABELS_I18N, localizeBrief, PAGE_COPY } from "@/lib/i18n-pages";
 import type { Locale } from "@/lib/i18n";
-import type { Audience } from "@/lib/meme-commerce";
+import type { Audience } from "@/lib/meme-news";
 import type { MemeNewsBrief } from "@/lib/meme-news";
 import type { GenerationHighlight } from "@/lib/queries";
 

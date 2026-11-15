@@ -47,8 +47,6 @@ type GtagEvent =
   | "my_recent_click"
   | "timeline_click"
   | "search_suggest_click"
-  | "affiliate_click"
-  | "affiliate_product_click"
   | "generation_news_click"
   | "quiz_start"
   | "quiz_complete"

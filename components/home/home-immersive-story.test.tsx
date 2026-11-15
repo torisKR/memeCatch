@@ -70,17 +70,31 @@ describe("HomeImmersiveStory", () => {
       expect(html.match(/<h1[ >]/g)).toHaveLength(1);
       expect(html.match(/<h2[ >]/g)).toHaveLength(2);
 
+      const plain = html.replace(/<[^>]+>/g, "");
+      const phrasesRequired = locale === "ja" || locale === "zh" || locale === "zh-tw";
+      if (phrasesRequired) {
+        for (const chapter of copy.chapters) {
+          if (chapter.id === "discover") continue;
+          expect(chapter.titlePhrases, `${locale} ${chapter.id}`).toBeDefined();
+          expect(chapter.titlePhrases?.join("")).toBe(chapter.title);
+        }
+      }
       for (const [index, chapter] of copy.chapters.entries()) {
         expect(html).toContain(`href="${chapter.href}"`);
         expect(html).toContain(`0${index + 1}`);
-        expect(html).toContain(chapter.title);
+        expect(plain).toContain(chapter.title);
         expect(html).toContain(chapter.description);
+        if (phrasesRequired && chapter.id !== "discover") {
+          for (const phrase of chapter.titlePhrases ?? []) {
+            expect(html).toContain(`>${phrase}<`);
+          }
+        }
       }
 
       expect(html).toContain('href="#home-latest"');
       expect(html).toContain('href="#home-signals"');
       expect(html).toContain('href="/community"');
-      expect(html).toContain('href="/products"');
+      expect(html).not.toContain('href="/products"');
       expect(html).toContain('name="q"');
       expect(html).toContain(
         `action="${locale === "ko" ? "/search" : `/${locale}/search`}"`,
@@ -99,12 +113,17 @@ describe("HomeImmersiveStory", () => {
 
     expect(css).toContain('--story-header: 4rem');
     expect(css).toContain('--story-header: 6.75rem');
+    expect(css).toContain('top: var(--site-header-offset, var(--story-header))');
+    expect(css).not.toContain('--story-header: var(--site-header-offset');
     expect(css).toContain('--story-bottom-nav: 4.75rem');
     expect(css).toContain('--story-controls-reserve: 64px');
     expect(css).toContain('.story[data-home-scroll-ready="true"] .composition');
     expect(css).toContain('grid-area: 1 / 1');
     expect(css).toContain('position: sticky');
     expect(css).toContain('min-height: var(--story-viewport)');
+    expect(css).toContain("word-break: keep-all");
+    expect(css).toMatch(/word-break: normal;\n\s*word-break: auto-phrase;/);
+    expect(css).toContain(".keepPhrase { white-space: nowrap; }");
     expect(css).toContain('@media (prefers-reduced-motion: reduce)');
     expect(css).toMatch(/\.chapter\s*\{[\s\S]*?pointer-events:\s*none/);
     expect(css).toMatch(/\.searchForm,[\s\S]*?\.actionRow\s*\{[\s\S]*?pointer-events:\s*auto/);

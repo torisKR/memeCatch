@@ -16,16 +16,10 @@ describe("AdminNav", () => {
     navigation.pathname = "/admin";
   });
 
-  it("links to creator product moderation", () => {
+  it("does not link to retired creator product moderation", () => {
     const html = renderToStaticMarkup(<AdminNav />);
-    expect(html).toContain('href="/admin/creator-products"');
-    expect(html).toContain("크리에이터 상품 검토");
-  });
-
-  it("marks the creator product moderation link active", () => {
-    navigation.pathname = "/admin/creator-products";
-    const html = renderToStaticMarkup(<AdminNav />);
-    expect(html).toMatch(/<a href="\/admin\/creator-products" aria-current="page"/);
+    expect(html).not.toContain('href="/admin/creator-products"');
+    expect(html).not.toContain("크리에이터 상품 검토");
   });
 
   it("links to publisher readiness and marks nested routes active", () => {

@@ -13,11 +13,16 @@ import {
   localizedPath,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image";
+import { representativeImageUrl } from "@/lib/meme-share-photo";
+import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
 import { MemeUseKit, MemeUseKitEntry } from "@/components/premium/meme-use-kit";
 import { MemeTrendPanel } from "@/components/premium/meme-trend-panel";
 import { ExportButton } from "@/components/export-button";
 import { TranslationPriorityButton } from "@/components/premium/translation-priority-button";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
+import { RelatedMemes } from "@/components/related-memes";
+import { selectLocalizedRelatedCards } from "@/lib/localized-related";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
 import {
@@ -28,15 +33,17 @@ import {
 import { MemeCatalogUnavailable } from "@/components/meme-catalog-unavailable";
 import {
   getLocalizedMemeByShortId,
+  getLocalizedSearchMemesResult,
   isIndexableLocalizedMeme,
   listIndexableLocalizedMemes,
   type LocalizedMemeDetail,
 } from "@/lib/meme-translations";
 import { unavailableMemeMetadata } from "@/lib/public-meme-document";
-import { MemeCatalogUnavailableError } from "@/lib/queries";
+import { getRelatedMemes, MemeCatalogUnavailableError } from "@/lib/queries";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { publicSourceUrl } from "@/lib/source-links";
+import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
+import titleStyles from "@/components/meme-detail-title.module.css";
 
 /** 한국어 상세와 같다. 문서는 캐시하지 않고, 성공한 카탈로그 읽기만 Data Cache에 둔다. */
 export const dynamic = "force-dynamic";
@@ -236,23 +243,27 @@ async function loadLocalizedDetail(
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, key } = await params;
-  if (!isSeoContentLocale(locale)) return { robots: { index: false, follow: false } };
+  const { locale: shareLocale, key } = await params;
+  if (!isOgPageLocale(shareLocale)) return { robots: { index: false, follow: false } };
+  if (shareLocale === "ar") notFound();
+  const locale = ogPageContentLocale(shareLocale);
 
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
   const loaded = await loadLocalizedDetail(targetShortId, locale);
+  // Same as main: a catalog outage is the unavailable state, and a missing
+  // translation is notFound. Do not substitute the Korean curated card.
   if (loaded.status === "unavailable") return unavailableMemeMetadata();
   const meme = loaded.meme;
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
-    permanentRedirect(localizedMemePath(locale, meme.short_id, meme.slug));
+    permanentRedirect(localizedMemePath(shareLocale, meme.short_id, meme.slug));
   }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
-    locale,
+    locale: shareLocale,
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
@@ -261,7 +272,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     isIndexableLocalizedMeme(version),
   );
   const copy = DETAIL_COPY[locale];
-  const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
+  const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
   const koreanPath = localizedMemePath("ko", meme.short_id, meme.original.slug);
   const englishVersion = indexableVersions.find(({ locale: versionLocale }) =>
     versionLocale === "en",
@@ -278,8 +289,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ["x-default", xDefault],
   ]);
   const description = `${meme.title}: ${meme.summary}`;
-  const metadata = buildLocalizedMetadata({
+  const photo = representativeImageUrl({ contents: meme.meme_contents ?? [] });
+  const image = localeMemeShareImage({
     locale,
+    shortId: meme.short_id,
+    slug: meme.slug,
+    alt: meme.title,
+    version: localeShareVersion({
+      updated_at: meme.updated_at,
+      translationUpdatedAt: meme.translation.updatedAt,
+      imageUpdatedAt: photo?.updatedAt,
+      imageUrl: photo?.url,
+    }),
+  });
+  const metadata = buildLocalizedMetadata({
+    locale: shareLocale,
     pathname: canonical,
     title: `${meme.title} · ${copy.meaningTitle}`,
     description,
@@ -288,21 +312,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     ...metadata,
     alternates: { canonical, languages },
-    ...(isIndexableLocalizedMeme(meme) ? {} : { robots: { index: false, follow: true } }),
+    ...(!isIndexableLocalizedMeme(meme)
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       ...metadata.openGraph,
       url: canonical,
-      locale: getOpenGraphLocale(locale),
+      locale: getOpenGraphLocale(shareLocale),
       alternateLocale: indexableVersions
-        .filter((item) => item.locale !== locale)
+        .filter((item) => item.locale !== shareLocale)
         .map((item) => getOpenGraphLocale(item.locale)),
+      images: [image],
+    },
+    twitter: {
+      ...metadata.twitter,
+      images: [image],
     },
   };
 }
 
 export default async function LocalizedMemePage({ params }: Props) {
-  const { locale, key } = await params;
-  if (!isSeoContentLocale(locale)) notFound();
+  const { locale: shareLocale, key } = await params;
+  if (!isOgPageLocale(shareLocale)) notFound();
+  if (shareLocale === "ar") notFound();
+  const locale = ogPageContentLocale(shareLocale);
 
   const requestedShortId = shortIdFromParam(key);
   const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
@@ -312,24 +345,37 @@ export default async function LocalizedMemePage({ params }: Props) {
   if (!meme) notFound();
 
   if (targetShortId !== requestedShortId) {
-    permanentRedirect(localizedMemePath(locale, meme.short_id, meme.slug));
+    permanentRedirect(localizedMemePath(shareLocale, meme.short_id, meme.slug));
   }
   const redirectPath = canonicalMemeRedirectPath(key, {
     shortId: meme.short_id,
     slug: meme.slug,
-    locale,
+    locale: shareLocale,
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, marketPassport] = await Promise.all([
+  const tagIds = meme.meme_tags_map.map((tag) => tag.tag_id);
+  const [versions, marketPassport, related] = await Promise.all([
     getLanguageVersions(meme, locale),
     getMemeMarketPassport(meme.id, locale),
+    getRelatedMemes(
+      { id: meme.id, category: meme.category, origin_year: meme.origin_year },
+      tagIds,
+      6,
+    ),
   ]);
+  const localizedRelated = await getLocalizedSearchMemesResult(
+    related.map((item) => item.short_id),
+    locale,
+    { includeEmptySummary: true },
+  );
+  const relatedCards = selectLocalizedRelatedCards(related, localizedRelated.items, locale);
   const copy = DETAIL_COPY[locale];
   const config = SEO_LOCALE_CONFIG[locale];
-  const seo = getSeoCopy(locale);
-  const canonical = localizedMemePath(locale, meme.short_id, meme.slug);
+  const seo = getSeoCopy(shareLocale);
+  const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
   const sourceLinks = meme.meme_sources.flatMap((source) => {
+    if (!isPublicDisplaySource(source)) return [];
     const url = publicSourceUrl(source.source_url);
     return url ? [{ ...source, source_url: url }] : [];
   });
@@ -382,7 +428,7 @@ export default async function LocalizedMemePage({ params }: Props) {
       />
 
       <nav aria-label="Breadcrumb" className="mb-8 text-sm text-muted">
-        <Link href={localizedPath("/", locale)} className="underline-offset-4 hover:text-foreground hover:underline">
+        <Link href={localizedPath("/", shareLocale)} className="underline-offset-4 hover:text-foreground hover:underline">
           {copy.home}
         </Link>
         <span aria-hidden className="mx-2">/</span>
@@ -414,9 +460,11 @@ export default async function LocalizedMemePage({ params }: Props) {
           <span className="rounded-full bg-surface-2 px-3 py-1.5 text-muted">{copy.safety[meme.safety_level]}</span>
           {!needsReview && <span className="rounded-full bg-safety-green-bg px-3 py-1.5 text-safety-green">{copy.reviewed}</span>}
         </div>
-        <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-[-0.03em] sm:text-6xl">
-          {meme.title}
-        </h1>
+        <div className={titleStyles.frame}>
+          <h1 className={`${titleStyles.title} mt-5 whitespace-normal font-black leading-tight tracking-[-0.03em]`}>
+            {meme.title}
+          </h1>
+        </div>
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{copy.originalTitle}</p>
           <p lang="ko" dir="ltr" className="mt-1 text-lg font-bold">{meme.original.title}</p>
@@ -556,6 +604,7 @@ export default async function LocalizedMemePage({ params }: Props) {
 
           <MemeMarketPassport passport={marketPassport} locale={locale} />
           <MemeTrendPanel memeId={meme.id} />
+          <RelatedMemes memes={relatedCards} locale={locale} />
         </div>
 
         {sourceLinks.length > 0 && (

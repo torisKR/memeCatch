@@ -87,8 +87,9 @@ export function isBoilerplateOrigin(origin: unknown): boolean {
 // 확장자를 명시한다 — scripts/quality-check.mts가 이 파일을 Node로 직접 실행하고,
 // Node의 ESM 해석기는 번들러와 달리 확장자를 보완해 주지 않는다.
 import { isRenderableContent } from "./content-availability.ts";
+import { isPublicDisplaySource } from "./source-links";
 
-export type DepthSourceRef = { source_url?: string | null };
+export type DepthSourceRef = { source_url?: string | null; hidden_from_public?: boolean | null };
 export type DepthContentRef = {
   availability?: string | null;
   moderation_status?: string | null;
@@ -165,7 +166,8 @@ function distinctSourceCount(sources?: DepthSourceRef[] | null): number {
   if (!Array.isArray(sources)) return 0;
   const seen = new Set<string>();
   for (const s of sources) {
-    const url = typeof s?.source_url === "string" ? s.source_url.trim().toLowerCase() : "";
+    if (!s || !isPublicDisplaySource(s)) continue;
+    const url = typeof s.source_url === "string" ? s.source_url.trim().toLowerCase() : "";
     if (url) seen.add(url);
   }
   return seen.size;

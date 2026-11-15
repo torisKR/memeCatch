@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createStaticClient } = vi.hoisted(() => ({
@@ -7,7 +9,8 @@ const { createStaticClient } = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
-import { GET } from "@/app/llms.txt/route";
+import { GET, dynamic as routeDynamic } from "@/app/llms.txt/route";
+import { clearKoreanRankingsCache } from "@/lib/korean-rankings.server";
 
 function row(index: number, indexable: boolean) {
   return {
@@ -20,8 +23,8 @@ function row(index: number, indexable: boolean) {
     origin: indexable ? "o".repeat(60) : "",
     usage_note: null,
     caution: null,
-    usage_examples: [],
-    meme_sources: [],
+    usage_examples: [] as { situation: string; text: string }[],
+    meme_sources: [] as { source_url?: string; hidden_from_public?: boolean }[],
     meme_contents: [],
     meme_tags_map: [],
   };
@@ -43,6 +46,7 @@ function useRows(
   const query = {
     select: vi.fn(() => query),
     eq: vi.fn(() => query),
+    not: vi.fn(() => query),
     order,
     range: vi.fn(async (from: number, to: number) => result(rows.slice(from, to + 1))),
     limit: vi.fn(async (limit: number) => result(rows.slice(0, limit))),
@@ -52,9 +56,16 @@ function useRows(
   return query;
 }
 
-beforeEach(() => createStaticClient.mockReset());
+beforeEach(() => {
+  clearKoreanRankingsCache();
+  createStaticClient.mockReset();
+});
 
 describe("llms.txt publication export", () => {
+  it("renders on request so a database-less build cannot cache a failure", () => {
+    expect(routeDynamic).toBe("force-dynamic");
+  });
+
   it("counts only indexable approved rows and applies the 15 item limit after filtering", async () => {
     const rows = [
       ...Array.from({ length: 1_000 }, (_, index) => row(index, false)),
@@ -70,6 +81,7 @@ describe("llms.txt publication export", () => {
     expect(body).not.toContain("3,000+");
     expect(body.match(/^- \[Meme /gm)).toHaveLength(15);
     expect(body).not.toContain("[Meme 0]");
+    expect(body).toContain("/rankings");
     expect(query.range).toHaveBeenNthCalledWith(1, 0, 999);
     expect(query.range).toHaveBeenNthCalledWith(2, 1000, 1999);
     expect(query.order).toHaveBeenCalledWith("trend_score", { ascending: false });
@@ -101,6 +113,7 @@ describe("llms.txt publication export", () => {
     expect(response.status).toBe(200);
     expect(body).toContain("한국 밈·유행어·챌린지 0건");
     expect(body).not.toContain("3,000+");
+    expect(body).not.toContain("/rankings");
   });
 
   it("describes inclusion as approval plus indexability, not independent fact review", async () => {
@@ -112,4 +125,46 @@ describe("llms.txt publication export", () => {
     expect(body).toContain("콘텐츠 충실도 기준");
     expect(body).not.toContain("사실 확인 → 저작권 확인");
   });
+
+  it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
+    const source = readFileSync(join(process.cwd(), "app/llms.txt/route.ts"), "utf-8");
+    expect(source).toContain("meme_sources(source_url, hidden_from_public)");
+  });
+
+
+  it("excludes a root llms entry whose only sources are hidden_from_public, and keeps a twin with visible sources", async () => {
+    const gated = (index: number, meme_sources: { source_url: string; hidden_from_public?: boolean }[]) => ({
+      id: `id-g${index}`,
+      title: `Gated ${index}`,
+      summary: `Summary ${index}`,
+      short_id: `g${index}`,
+      slug: `gated-${index}`,
+      description: "d".repeat(250),
+      origin: "o".repeat(59),
+      usage_note: null,
+      caution: null,
+      usage_examples: [{ situation: "s", text: "t" }],
+      meme_sources,
+      meme_contents: [],
+      meme_tags_map: [],
+    });
+
+    useRows([
+      gated(1, [
+        { source_url: "https://namu.wiki/w/hidden", hidden_from_public: true },
+        { source_url: "https://example.org/also-hidden", hidden_from_public: true },
+      ]),
+      gated(2, [
+        { source_url: "https://example.org/one" },
+        { source_url: "https://example.org/two", hidden_from_public: false },
+      ]),
+    ]);
+
+    const body = await (await GET()).text();
+
+    expect(body).not.toContain("[Gated 1]");
+    expect(body).toContain("[Gated 2]");
+    expect(body).toContain("한국 밈·유행어·챌린지 1건");
+  });
+
 });

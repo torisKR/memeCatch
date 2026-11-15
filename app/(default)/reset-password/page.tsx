@@ -12,11 +12,18 @@ export const metadata: Metadata = {
  * 재설정 메일 링크 → /auth/callback(코드→세션 교환) → 이 페이지.
  * 세션이 없으면 링크가 만료됐거나 직접 접근한 경우이므로 재요청을 안내한다.
  */
-export default async function ResetPasswordPage() {
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const token = typeof params.token === "string" ? params.token : "";
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const canReset = Boolean(user || token);
 
   return (
     <main className="mx-auto w-full max-w-sm px-4 py-12">
@@ -26,13 +33,19 @@ export default async function ResetPasswordPage() {
       <h1 className="mt-1 text-2xl font-bold tracking-tight">새 비밀번호 설정</h1>
 
       <div className="glass-panel mt-5 rounded-2xl p-5">
-        {user ? (
+        {canReset ? (
           <>
             <p className="text-sm leading-relaxed text-muted">
-              <span className="font-semibold text-foreground">{user.email}</span>{" "}
-              계정의 새 비밀번호를 정해 주세요.
+              {user?.email ? (
+                <>
+                  <span className="font-semibold text-foreground">{user.email}</span>{" "}
+                  계정의 새 비밀번호를 정해 주세요.
+                </>
+              ) : (
+                "메일의 재설정 링크로 새 비밀번호를 정해 주세요."
+              )}
             </p>
-            <ResetPasswordForm />
+            <ResetPasswordForm token={token} />
           </>
         ) : (
           <>

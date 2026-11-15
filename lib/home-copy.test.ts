@@ -13,9 +13,7 @@ describe("HOME_COPY", () => {
       expect(copy.recent.title).toBeTruthy();
       expect(copy.recent.empty).toBeTruthy();
       expect(copy.pathways.community.title).toBeTruthy();
-      expect(copy.pathways.products.title).toBeTruthy();
       expect(copy.pathways.community.createAction).toBeTruthy();
-      expect(copy.pathways.products.createAction).toBeTruthy();
       expect(copy.pathways.submitAction).toBeTruthy();
       expect(copy.trust.links).toHaveLength(3);
     }

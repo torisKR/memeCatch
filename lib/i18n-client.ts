@@ -1,9 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, useEffect, useSyncExternalStore } from "react";
-import { DEFAULT_LOCALE, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
-import { isSeoContentLocale, parseLocalePath } from "@/lib/i18n-routing";
-import { normalizePathname } from "@/lib/normalize-pathname";
+import { DEFAULT_LOCALE, documentLocaleFromPathname, getDocumentDirection, getDocumentLanguage, getMessages, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 
 const EVENT_NAME = "memecatch:locale-change";
 type LocaleContextValue = ReturnType<typeof createLocaleContextValue>;
@@ -15,37 +13,138 @@ function createLocaleContextValue(locale: Locale) {
 
 /** Locale prefixes are shareable/crawlable, so they always beat local preference. */
 function localeFromPathname(pathname: string): Locale | null {
-  const parsed = parseLocalePath(pathname);
-  return parsed.hadLocalePrefix && isSeoContentLocale(parsed.locale) ? parsed.locale : null;
+  return documentLocaleFromPathname(pathname);
 }
 
-function localeFromSearch(search: string): Locale | null {
-  const value = new URLSearchParams(search).get("lang");
-  return isLocale(value) ? value : null;
+/**
+ * Chrome and `html lang` follow the URL. An unprefixed path is Korean even
+ * when a stale `memecatch_locale` cookie or `?lang=` is present. The cookie
+ * is only a preference for `/` navigation, written by the language selector.
+ */
+function localeFromCurrentUrl(): Locale {
+  return localeFromPathname(window.location.pathname) ?? DEFAULT_LOCALE;
 }
 
-/** URL-owned locale choices must stay aligned with the server-rendered page. */
-function localeFromCurrentUrl(): Locale | null {
-  const prefixedLocale = localeFromPathname(window.location.pathname);
-  if (prefixedLocale) return prefixedLocale;
+/**
+ * Selector choice for the path it was made on, plus the path the selector
+ * navigates to. A stale cookie still does not win on load: this is memory
+ * from `persistLocale` in the current document. Crossing a locale prefix
+ * remounts this module, so that destination is also stored until the new
+ * page arrives. Any later URL drops it, so chrome follows the URL again.
+ */
+let inPlaceLocale: { locale: Locale; paths: readonly string[] } | null = null;
+let historyNotifyInstalled = false;
 
-  const queryLocale = localeFromSearch(window.location.search);
-  if (queryLocale) return queryLocale;
+/**
+ * Destination of a selector choice. Module memory dies when a prefixed route
+ * remounts onto an unprefixed one, so the destination is also stored here
+ * until that exact path is shown. It never overrides a different URL.
+ */
+export const LOCALE_DESTINATION_STORAGE_KEY = "memecatch:locale-destination";
+export const LOCALE_DESTINATION_TTL_MS = 15_000;
 
-  return normalizePathname(window.location.pathname) === "/"
-    ? DEFAULT_LOCALE
-    : null;
+type StoredLocaleDestination = {
+  locale: Locale;
+  path: string;
+  at: number;
+};
+
+function clearStoredDestination(): void {
+  try {
+    sessionStorage.removeItem(LOCALE_DESTINATION_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function rememberLocaleDestination(locale: Locale, path: string): void {
+  try {
+    const payload: StoredLocaleDestination = { locale, path, at: Date.now() };
+    sessionStorage.setItem(LOCALE_DESTINATION_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    /* in-memory flag still covers this document */
+  }
+}
+
+function readStoredDestination(): StoredLocaleDestination | "invalid" | null {
+  let raw: string | null;
+  try {
+    raw = sessionStorage.getItem(LOCALE_DESTINATION_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return "invalid";
+    const record = parsed as { locale?: unknown; path?: unknown; at?: unknown };
+    if (typeof record.locale !== "string" || !isLocale(record.locale)) return "invalid";
+    if (typeof record.path !== "string" || !record.path.startsWith("/")) return "invalid";
+    if (typeof record.at !== "number" || !Number.isFinite(record.at)) return "invalid";
+    return { locale: record.locale, path: record.path, at: record.at };
+  } catch {
+    return "invalid";
+  }
+}
+
+export function clearInPlaceLocale(): void {
+  inPlaceLocale = null;
+  clearStoredDestination();
 }
 
 function readLocale(): Locale {
   if (typeof document === "undefined") return DEFAULT_LOCALE;
-  const urlLocale = localeFromCurrentUrl();
-  if (urlLocale) return urlLocale;
-  const value = document.cookie.split("; ").find((item) => item.startsWith(`${LOCALE_COOKIE}=`))?.split("=")[1];
-  return isLocale(value) ? value : DEFAULT_LOCALE;
+  const path = window.location.pathname;
+  const stored = readStoredDestination();
+  if (stored === "invalid") {
+    clearStoredDestination();
+  } else if (stored) {
+    const fresh = Date.now() - stored.at <= LOCALE_DESTINATION_TTL_MS;
+    if (!fresh) {
+      clearStoredDestination();
+    } else if (stored.path === path) {
+      inPlaceLocale = { locale: stored.locale, paths: [path] };
+      clearStoredDestination();
+      return stored.locale;
+    }
+  }
+  if (inPlaceLocale?.paths.includes(path)) return inPlaceLocale.locale;
+  return localeFromCurrentUrl();
+}
+
+/** Once the selector's destination is current, forget the source path so Back follows the URL. */
+function retainInPlaceDestination(): void {
+  if (!inPlaceLocale || inPlaceLocale.paths.length < 2) return;
+  const path = window.location.pathname;
+  const destination = inPlaceLocale.paths[inPlaceLocale.paths.length - 1];
+  if (path === destination) inPlaceLocale = { locale: inPlaceLocale.locale, paths: [path] };
+}
+
+function installHistoryNotify(): void {
+  if (historyNotifyInstalled || typeof window === "undefined") return;
+  historyNotifyInstalled = true;
+  const notify = () => {
+    retainInPlaceDestination();
+    window.dispatchEvent(new Event(EVENT_NAME));
+  };
+  for (const method of ["pushState", "replaceState"] as const) {
+    const original = history[method].bind(history);
+    history[method] = function (this: History, ...args: Parameters<History["pushState"]>) {
+      const result = original.apply(this, args);
+      notify();
+      return result;
+    };
+  }
+  window.addEventListener("popstate", notify);
+}
+
+function applyDocumentLocale(locale: Locale): void {
+  document.documentElement.lang = getDocumentLanguage(locale);
+  document.documentElement.dir = getDocumentDirection(locale);
 }
 
 function subscribe(listener: () => void) {
+  installHistoryNotify();
   window.addEventListener(EVENT_NAME, listener);
   window.addEventListener("storage", listener);
   return () => {
@@ -79,26 +178,29 @@ export function LocaleDocumentSync() {
   const { locale } = useLocale();
 
   useEffect(() => {
-    document.documentElement.lang = getDocumentLanguage(locale);
-    document.documentElement.dir = getDocumentDirection(locale);
+    applyDocumentLocale(locale);
   }, [locale]);
 
   return null;
 }
 
 /**
- * 접두사 없는 페이지는 서버가 그린 한국어 UI를 유지한다.
- * 브라우저 언어는 `/` 첫 방문 리다이렉트에서만 고르고, 그때 쿠키가 생긴다.
- * 여기서 다시 고르면 새로고침 뒤 메뉴가 영어로 바뀌었다가 한국어로 돌아온다.
+ * 접두사 없는 페이지는 URL 로케일(ko)을 유지한다.
+ * 브라우저 언어나 남은 쿠키로 크롬을 바꾸지 않는다.
  */
 export function LocaleAutoDetect() {
   return null;
 }
 
-export function persistLocale(locale: Locale) {
+export function persistLocale(locale: Locale, nextPath?: string) {
+  const current = window.location.pathname;
+  const destination = nextPath && nextPath.length > 0 ? nextPath : current;
+  inPlaceLocale = {
+    locale,
+    paths: destination === current ? [current] : [current, destination],
+  };
   document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  document.documentElement.lang = getDocumentLanguage(locale);
-  document.documentElement.dir = getDocumentDirection(locale);
+  applyDocumentLocale(locale);
   // Private browsing and storage-restricted embeds can throw here. Cookie,
   // in-memory subscribers, and navigation must still complete.
   try {
@@ -106,5 +208,6 @@ export function persistLocale(locale: Locale) {
   } catch {
     /* locale cookie is sufficient */
   }
+  if (destination !== current) rememberLocaleDestination(locale, destination);
   window.dispatchEvent(new Event(EVENT_NAME));
 }

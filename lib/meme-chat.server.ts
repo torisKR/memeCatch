@@ -20,7 +20,7 @@ type GenerationConfig = {
   endpoint: string;
   headers: Record<string, string>;
 };
-const SELECT = "id,short_id,slug,title,summary,description,origin,usage_note,caution,origin_year,year_precision,moderation_status,updated_at,meme_sources(source_url,title,platform),meme_translations(locale,status,localized_slug,title,summary,description,origin,usage_note,caution,source_updated_at,updated_at)";
+const SELECT = "id,short_id,slug,title,summary,description,origin,usage_note,caution,origin_year,year_precision,moderation_status,updated_at,meme_sources(source_url,title,platform,hidden_from_public),meme_translations(locale,status,localized_slug,title,summary,description,origin,usage_note,caution,source_updated_at,updated_at)";
 const optionalText = z.string().nullable().optional();
 const translationSchema = z.object({
   locale: z.string(), status: z.string(), localized_slug: z.string(),
@@ -34,7 +34,7 @@ const rowSchema = z.object({
   description: z.string(), origin: z.string(), usage_note: optionalText, caution: optionalText,
   origin_year: z.number().int().nullable(), year_precision: z.string(),
   moderation_status: z.enum(["approved", "limited"]), updated_at: z.string(),
-  meme_sources: z.array(z.object({ source_url: optionalText, title: optionalText, platform: optionalText })),
+  meme_sources: z.array(z.object({ source_url: optionalText, title: optionalText, platform: optionalText, hidden_from_public: z.boolean().nullable().optional() })),
   meme_translations: z.array(translationSchema),
 });
 type Fact = {

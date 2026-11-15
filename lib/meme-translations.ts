@@ -86,6 +86,14 @@ export type LocalizedMemeDetail = LocalizedMeme<
  * used by cards, metadata, sitemap and llms-full without a second fetch. */
 export type LocalizedMemeListItem = LocalizedMemeDetail;
 
+function restoreOriginalMemeFields<T extends LocalizableMeme>(meme: T): T {
+  if (!("original" in meme)) return meme;
+  return {
+    ...meme,
+    ...(meme as T & { original: OriginalMemeFields }).original,
+  };
+}
+
 const TRANSLATION_COLUMNS =
   "meme_id,locale,status,localized_slug,title,summary,description,origin,usage_note,caution,aliases,usage_examples,source_updated_at,provider,model,prompt_version,translated_at,reviewed_at,reviewed_by,created_at,updated_at" as const;
 
@@ -234,10 +242,11 @@ export const listIndexableLocalizedMemes = cache(async function listIndexableLoc
   T extends LocalizableMeme,
 >(meme: T): Promise<LocalizedMeme<T>[]> {
   try {
+    const sourceMeme = restoreOriginalMemeFields(meme);
     const rows = await readReviewedTranslationRows(meme.id);
     return rows.flatMap((row) => {
       if (!isLocale(row.locale) || row.locale === DEFAULT_LOCALE) return [];
-      const localized = overlayMemeTranslation(meme, row, row.locale);
+      const localized = overlayMemeTranslation(sourceMeme, row, row.locale);
       return localized && isIndexableLocalizedMeme(localized) ? [localized] : [];
     });
   } catch (error) {

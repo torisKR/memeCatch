@@ -6,7 +6,7 @@ import { createStaticClient } from "@/lib/supabase/server";
 
 const SELECT =
   "id, category, origin_year, description, origin, usage_note, caution, usage_examples," +
-  " meme_sources(source_url), meme_contents(availability, moderation_status), meme_tags_map(tag_id)";
+  " meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)";
 
 const PAGE = 1_000;
 

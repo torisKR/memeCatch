@@ -359,7 +359,7 @@ export function getGuaranteedHomeEntries(
 
   const categoryCopy = getSeoCopy(locale).categories;
 
-  const fallbackEntries: HomeEntry[] = CURATED_CORE_MEMES.map((meme) => {
+  const fallbackEntries: HomeEntry[] = CURATED_CORE_MEMES.filter(curatedPassesIndexGate).map((meme) => {
     const cardDataUrl = generateHouseMemeCardDataUrl(
       {
         title: meme.title,

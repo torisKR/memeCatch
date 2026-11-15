@@ -3,7 +3,8 @@ import { SITE_URL } from "@/lib/site";
 import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
-import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import { passesContentIndexGate, type ContentDepthInput } from "@/lib/content-depth";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import {
   isIndexableLocalizedMeme,
   isTranslationCurrent,
@@ -63,7 +64,7 @@ const MIN_LOCALIZED_EXPLORE_ITEMS = 24;
  * 그 밈은 점수가 낮게 나와 조용히 색인에서 빠지므로 컬럼 변경 시 양쪽을 함께 본다.
  */
 const DEPTH_SELECT =
-  "short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples," +
+  "id, category, origin_year, short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples," +
   " meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status)," +
   " meme_tags_map(tag_id)," +
   " meme_translations(locale, status, localized_slug, source_updated_at, updated_at, title, summary, description, origin)";
@@ -83,6 +84,9 @@ type SitemapTranslationRow = {
 };
 
 type SitemapMemeRow = ContentDepthInput & {
+  id: string;
+  category: string;
+  origin_year: number | null;
   short_id: string;
   slug: string;
   updated_at: SitemapTimestamp;
@@ -358,9 +362,19 @@ async function buildSitemap(): Promise<{
   // 공개 밈 중 **콘텐츠가 충실한 것만** 색인 노출한다.
   // 공개(approved + limited) 전량을 제출하면 정의 130~150자짜리 얇은 문서가
   // 사이트맵의 대부분을 차지해 대량생산 얇은 콘텐츠로 평가된다(애드센스 거부 사유).
-  // 얇은 밈의 상세 페이지는 그대로 200으로 살아 있고 noindex,follow만 붙는다 —
+  // 얇은 밈의 상세 페이지는 그대로 200으로 살아 있고 noindex,nofollow가 붙는다 —
   // 데이터는 삭제하지 않으며 사이트맵에서 발견 경로만 뺀다.
   // 페이지 단위로 순회 — 사이트맵 상한 5만 URL.
+  let discoveryIds = new Set<string>();
+  if (!catalogUnavailable) {
+    const discovery = await loadDiscoveryIndex();
+    if (!discovery.ok) {
+      reportCatalogUnavailable();
+      catalogUnavailable = true;
+    } else {
+      discoveryIds = new Set(discovery.ids);
+    }
+  }
   const PAGE = 1000;
   let koreanMemeCount = 0;
   for (let from = 0; !catalogUnavailable && supabase && from < 49000; from += PAGE) {
@@ -393,7 +407,7 @@ async function buildSitemap(): Promise<{
 
     for (const meme of data as unknown as SitemapMemeRow[]) {
       if (CANONICAL_MEME_ALIAS_MAP[meme.short_id]) continue;
-      if (!isIndexableMeme(meme)) continue;
+      if (!passesContentIndexGate(meme) || !discoveryIds.has(meme.id)) continue;
       const translations = reviewedTranslations(meme);
       const languages = memeLanguages(meme, translations);
       for (const [locale, translation] of translations) {

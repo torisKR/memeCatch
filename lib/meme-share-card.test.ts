@@ -33,7 +33,7 @@ const MAIN_FILE_SHA: Record<string, string> = {
   "app/(default)/weekly/page.tsx": "21b87a774bec43bcae0c62c410b51301ccbfaf939d9a49f403c01741b45858e3",
   "app/(default)/collections/page.tsx": "b4186d5d3e92201f20ab1cedf0bd7b911f586c3299346b623f7d779ee72e405e",
 };
-const LOCALIZED_PAGE_BODY_SHA = "dfa8610fb8f162bc646d284d5e2e7ab5929d01038732994690ba35577674364d";
+const LOCALIZED_PAGE_BODY_SHA = "d4f5a51819a9795dc6c897d5e8e359326d934cab773b4eafed02cfe0d1948d36";
 
 function sha256(body: Buffer) {
   return createHash("sha256").update(body).digest("hex");
@@ -193,7 +193,7 @@ function savePair(name: string, png: Buffer) {
 }
 
 describe("per-meme share card", () => {
-  it("keeps untranslated, Arabic, and non-detail pages identical to main", () => {
+  it("keeps the reviewed localized detail body pinned after the strict discovery gate change", () => {
     expect(existsSync("app/ar")).toBe(false);
     const source = readFileSync("app/[locale]/memes/[key]/page.tsx", "utf8");
     const marker = "export default async function LocalizedMemePage";

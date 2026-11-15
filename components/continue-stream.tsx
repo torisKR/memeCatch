@@ -16,23 +16,29 @@ export async function ContinueStream({
   currentId,
   category,
   related,
+  indexableIds,
 }: {
   currentId: string;
   category: MemeCategory;
   related: MemeListItem[];
+  indexableIds: ReadonlySet<string>;
 }) {
-  const head = related.slice(0, RELATED_LIMIT);
+  const head = related.filter((meme) => indexableIds.has(meme.id)).slice(0, RELATED_LIMIT);
   const relatedIds = head.map((m) => m.id);
   const need = Math.max(0, RELATED_LIMIT - head.length);
 
   let stream: MemeListItem[] = [];
-  if (need > 0) {
+  const fallbackIds = [...indexableIds].filter(
+    (id) => id !== currentId && !relatedIds.includes(id),
+  );
+  if (need > 0 && fallbackIds.length > 0) {
     try {
       const supabase = createStaticClient();
       const scanSize = need + RELATED_LIMIT;
       const { data } = await supabase
         .from("memes")
         .select(SELECT)
+        .in("id", fallbackIds)
         .eq("category", category)
         .neq("id", currentId)
         .in("moderation_status", ["approved", "limited"])

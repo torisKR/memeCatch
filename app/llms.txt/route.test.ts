@@ -19,12 +19,15 @@ function row(index: number, indexable: boolean) {
     summary: `Summary ${index}`,
     short_id: `m${index}`,
     slug: `meme-${index}`,
+    category: "phrase",
+    origin_year: 2026,
+    moderation_status: "approved" as const,
     description: indexable ? "d".repeat(400) : "thin",
-    origin: indexable ? "o".repeat(60) : "",
-    usage_note: null,
+    origin: indexable ? "o".repeat(80) : "",
+    usage_note: indexable ? "u".repeat(40) : null,
     caution: null,
-    usage_examples: [] as { situation: string; text: string }[],
-    meme_sources: [] as { source_url?: string; hidden_from_public?: boolean }[],
+    usage_examples: indexable ? [{ situation: "one", text: "a" }, { situation: "two", text: "b" }] : [],
+    meme_sources: indexable ? [{ source_url: `https://example.com/${index}/a` }, { source_url: `https://example.com/${index}/b` }] : [],
     meme_contents: [],
     meme_tags_map: [],
   };
@@ -45,6 +48,7 @@ function useRows(
   };
   const query = {
     select: vi.fn(() => query),
+    in: vi.fn(() => query),
     eq: vi.fn(() => query),
     not: vi.fn(() => query),
     order,
@@ -139,11 +143,14 @@ describe("llms.txt publication export", () => {
       summary: `Summary ${index}`,
       short_id: `g${index}`,
       slug: `gated-${index}`,
-      description: "d".repeat(250),
-      origin: "o".repeat(59),
-      usage_note: null,
+      category: "phrase",
+      origin_year: 2026,
+      moderation_status: "approved" as const,
+      description: "d".repeat(400),
+      origin: "o".repeat(80),
+      usage_note: "u".repeat(40),
       caution: null,
-      usage_examples: [{ situation: "s", text: "t" }],
+      usage_examples: [{ situation: "s1", text: "t1" }, { situation: "s2", text: "t2" }],
       meme_sources,
       meme_contents: [],
       meme_tags_map: [],
@@ -158,13 +165,15 @@ describe("llms.txt publication export", () => {
         { source_url: "https://example.org/one" },
         { source_url: "https://example.org/two", hidden_from_public: false },
       ]),
+      gated(3, [{ source_url: "https://example.org/three" }, { source_url: "https://example.org/four" }]),
+      gated(4, [{ source_url: "https://example.org/five" }, { source_url: "https://example.org/six" }]),
     ]);
 
     const body = await (await GET()).text();
 
     expect(body).not.toContain("[Gated 1]");
     expect(body).toContain("[Gated 2]");
-    expect(body).toContain("한국 밈·유행어·챌린지 1건");
+    expect(body).toContain("한국 밈·유행어·챌린지 3건");
   });
 
 });

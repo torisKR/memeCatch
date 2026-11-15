@@ -10,9 +10,7 @@ import {
   RotateCcw,
   Sparkles,
   ShieldCheck,
-  Share2,
 } from "lucide-react";
-import { SafetyBadge } from "@/components/safety-badge";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";

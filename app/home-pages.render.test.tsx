@@ -7,6 +7,11 @@ vi.mock("server-only", () => ({}));
 const queryMocks = vi.hoisted(() => ({
   getRecentlyPublishedMemes: vi.fn(),
   getLocalizedFeaturedMemes: vi.fn(),
+  loadDiscoveryIndex: vi.fn(),
+}));
+
+vi.mock("@/lib/index-gate.server", () => ({
+  loadDiscoveryIndex: queryMocks.loadDiscoveryIndex,
 }));
 
 vi.mock("@/lib/queries", () => ({
@@ -83,6 +88,7 @@ describe("home route rendering", () => {
   beforeEach(() => {
     queryMocks.getRecentlyPublishedMemes.mockReset();
     queryMocks.getLocalizedFeaturedMemes.mockReset();
+    queryMocks.loadDiscoveryIndex.mockResolvedValue({ ok: true, ids: new Set(["ABC123"]) });
   });
 
   it("server-renders Korean search, legitimate content, signals, and the existing ad loader", async () => {
@@ -95,7 +101,7 @@ describe("home route rendering", () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('action="/search"');
     expect(html).toContain("공개된 최신 밈");
-    expect(queryMocks.getRecentlyPublishedMemes).toHaveBeenCalledWith(6);
+    expect(queryMocks.getRecentlyPublishedMemes).toHaveBeenCalledWith(6, new Set(["ABC123"]));
     expect(html).toContain('href="/explore?sort=recent"');
     expect(html).toContain('data-safety-icon="green"');
     expect(html).toContain('data-signal-guide="ko"');

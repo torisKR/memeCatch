@@ -48,7 +48,7 @@ import { DocStatusNote } from "@/components/doc-status-note";
 import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
-import { isIndexableMeme } from "@/lib/content-depth";
+import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { isRenderableContent } from "@/lib/content-availability";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import {
@@ -111,6 +111,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
   const path = memePathFrom(meme.short_id, meme.slug);
+  const discovery = await loadDiscoveryIndex();
+  const indexable = discovery.ok && discovery.ids.has(meme.id);
   const availableLocales = (await getAvailableTranslationLocales(meme.id)).filter(
     isSeoContentLocale,
   );
@@ -161,8 +163,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: path, languages },
     // 콘텐츠가 얇은 문서는 색인에서 뺀다(사이트맵에서도 빠짐 — lib/content-depth.ts).
-    // follow는 유지 — 페이지는 200으로 살아 있고, 관련 밈·출처 링크로 크롤이 전파돼야 한다.
-    ...(isIndexableMeme(meme) ? {} : { robots: { index: false, follow: true } }),
+    // 관계형 discovery gate에서 빠진 문서는 추천 경로에서도 제외되므로 follow도 끈다.
+    ...(indexable ? {} : { robots: { index: false, follow: false } }),
     // Next metadata는 title을 openGraph로 자동 전파하지 않음 — 밈별 og 명시
     openGraph: {
       type: "website",
@@ -246,7 +248,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport] = await Promise.all([
+  const [related, reactionCounts, marketPassport, discovery] = await Promise.all([
     // 상세 하단은 관련 밈 카드를 최대 6장까지 둔다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
@@ -255,7 +257,10 @@ export default async function MemeDetailPage({ params }: Props) {
     ),
     getReactionCounts(meme.id),
     getMemeMarketPassport(meme.id, "ko"),
+    loadDiscoveryIndex(),
   ]);
+  const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
+  const indexable = indexableIds.has(meme.id);
 
   // 렌더 가능성 판정은 lib/content-availability.ts 하나로 모은다 — 랭킹 게이트
   // (is_meme_rank_eligible)와 같은 기준이라 "랭킹엔 못 오르는데 상세엔 뜨는"
@@ -311,7 +316,7 @@ export default async function MemeDetailPage({ params }: Props) {
           WebPage JSON-LD는 색인 판정과 같은 조건으로 게이트한다 — 얇은 문서(96.3%)는
           noindex인데 구조화 데이터만 완성 문서처럼 나가면 LOOP.md §10「보강 중 문서의
           metadata 과장 금지」위반이다. 브레드크럼은 탐색 관계만 서술하므로 유지. */}
-      {isIndexableMeme(meme) && (
+      {indexable && (
         <>
           <MemeWebPageJsonLd
             name={meme.title}
@@ -487,6 +492,7 @@ export default async function MemeDetailPage({ params }: Props) {
               currentId={meme.id}
               category={meme.category}
               related={related}
+              indexableIds={indexableIds}
             />
           </div>
 

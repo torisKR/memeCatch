@@ -7,9 +7,20 @@ import {
   type KoreanRankings,
   type PublicRankingMeme,
 } from "@/lib/korean-rankings";
+import type { ContentDepthInput } from "@/lib/content-depth";
+import {
+  hasPublicListing,
+  indexableScanLimit,
+  omitThinMemes,
+  THIN_MEME_BODY_COLUMNS,
+} from "@/lib/thin-meme";
 
 const MEME_FIELDS =
   "id,short_id,slug,title,summary,safety_level,lifecycle_status,trend_score,published_at";
+const RANKING_SELECT =
+  `${MEME_FIELDS}, ${THIN_MEME_BODY_COLUMNS}, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)`;
+
+type RankedMeme = PublicRankingMeme & ContentDepthInput;
 
 const NAV_TTL_MS = 60_000;
 
@@ -55,12 +66,12 @@ async function loadTrendMemes(): Promise<PublicRankingMeme[]> {
   const supabase = createStaticClient();
   const { data, error } = await supabase
     .from("memes")
-    .select(MEME_FIELDS)
+    .select(RANKING_SELECT)
     .eq("moderation_status", "approved")
     .order("trend_score", { ascending: false })
-    .limit(30);
+    .limit(indexableScanLimit(30));
   if (error) throw error;
-  return (data ?? []) as PublicRankingMeme[];
+  return omitThinMemes((data ?? []) as unknown as RankedMeme[]);
 }
 
 async function loadComeback(): Promise<PublicRankingMeme[]> {
@@ -68,27 +79,28 @@ async function loadComeback(): Promise<PublicRankingMeme[]> {
   const oldCutoff = new Date(Date.now() - 90 * 86400000).toISOString();
   const { data, error } = await supabase
     .from("memes")
-    .select(MEME_FIELDS)
+    .select(RANKING_SELECT)
     .eq("moderation_status", "approved")
     .lt("published_at", oldCutoff)
     .gt("trend_score", 0)
     .order("trend_score", { ascending: false })
-    .limit(20);
+    .limit(indexableScanLimit(20));
   if (error) throw error;
-  return (data ?? []) as PublicRankingMeme[];
+  const memes = omitThinMemes((data ?? []) as unknown as RankedMeme[]).slice(0, 20);
+  return hasPublicListing(memes.length) ? memes : [];
 }
 
 async function loadPublishedMemes(): Promise<PublicRankingMeme[]> {
   const supabase = createStaticClient();
   const { data, error } = await supabase
     .from("memes")
-    .select(MEME_FIELDS)
+    .select(RANKING_SELECT)
     .eq("moderation_status", "approved")
     .not("published_at", "is", null)
     .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(20);
+    .limit(indexableScanLimit(20));
   if (error) throw error;
-  return (data ?? []) as PublicRankingMeme[];
+  return omitThinMemes((data ?? []) as unknown as RankedMeme[]).slice(0, 20);
 }
 
 /**
@@ -147,7 +159,7 @@ export async function loadKoreanRankings(): Promise<KoreanRankings> {
   }
 
   const lowSample = !trendError && trend !== null && !trendIsUsable(trend);
-  const result = lowSample && published && published.length > 0
+  const result = lowSample && published && hasPublicListing(published.length)
     ? resolveKoreanRankings({
         liveError: false,
         live: { fallback: published.slice(0, 12), today: [], comeback: [] },
@@ -156,7 +168,12 @@ export async function loadKoreanRankings(): Promise<KoreanRankings> {
     : resolveKoreanRankings({
         liveError: trendError || published === null,
         live: null,
-        published,
+        published:
+          published === null
+            ? null
+            : hasPublicListing(published.length)
+              ? published
+              : [],
       });
   if (result.kind !== "outage") cached = { at: now, result };
   return result;

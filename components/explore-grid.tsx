@@ -13,6 +13,7 @@ import { UNAVAILABLE_FILTER } from "@/lib/content-availability";
 import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
 import { limitQueryToIds } from "@/lib/index-gate";
+import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -54,35 +55,23 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url), meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)`;
-
-function hasActiveExploreFilter(filters: ExploreFilters): boolean {
-  return Boolean(
-    filters.q?.trim() ||
-      filters.topicTag ||
-      filters.difficulty ||
-      filters.lifecycle ||
-      filters.media ||
-      filters.year ||
-      filters.platform ||
-      filters.categories.length > 0 ||
-      filters.sort !== "trending",
-  );
-}
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url)";
-  const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${MEME_LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
+    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
+  const topic = topicTag
+    ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
+    : "";
+  return `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
   eq: (column: string, value: string) => T;
 }>(query: T, topicTag?: string): T {
   return topicTag
-    ? query.eq("meme_tags_map.tags.name", topicTag)
+    ? query.eq("topic_tags.tags.name", topicTag)
     : query;
 }
 
@@ -162,12 +151,7 @@ export function buildMemesQuery(
 
   let q = supabase
     .from("memes")
-    // countOnly면 행 없이 총계만 받는다(head) — §6 「결과 수 제공」용.
-    // select 문자열은 동일하게 유지해야 platform의 !inner 임베드 필터가 살아 있다.
-    .select(
-      exploreSelect(filters.platform, filters.topicTag),
-      options?.countOnly ? { count: "exact", head: true } : undefined,
-    )
+    .select(exploreSelect(filters.platform, filters.topicTag))
     .in("moderation_status", ["approved", "limited"]);
   if (filters.platform) q = withPublicContent(q);
   q = withTopicTag(q, filters.topicTag);
@@ -195,19 +179,25 @@ export function buildMemesQuery(
   return limitQueryToIds(q, options?.indexableIds);
 }
 
-/** 지정한 오프셋부터 PAGE_SIZE만큼 — 서버가 소비한 행 수에서 이어받기 위해 오프셋 기준. */
+/** 지정한 오프셋부터 얇은 문서를 건너뛰고 PAGE_SIZE만큼. scanned는 소비한 원본 행 수. */
 async function fetchFrom(
   supabase: SupabaseClient<Database>,
   filters: ExploreFilters,
   from: number,
   indexableIds?: readonly string[],
-): Promise<MemeListItem[]> {
-  const { data, error } = await buildMemesQuery(supabase, filters, { indexableIds }).range(
+) {
+  return collectIndexableWindow(
+    async (start, end) => {
+      const { data, error } = await buildMemesQuery(supabase, filters, {
+        indexableIds,
+      }).range(start, end);
+      if (error || !data) throw error ?? new Error("no data");
+      return data as unknown as MemeListItem[];
+    },
     from,
-    from + PAGE_SIZE - 1
+    PAGE_SIZE,
+    { pageSize: PAGE_SIZE },
   );
-  if (error || !data) throw error ?? new Error("no data");
-  return data as unknown as MemeListItem[];
 }
 
 export function ExploreGrid({
@@ -245,32 +235,6 @@ export function ExploreGrid({
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  // 결과 총계 (§6) — head 전용 카운트 쿼리로 채운다. 실패해도 목록엔 영향 없음.
-  const [total, setTotal] = useState<number | null>(null);
-
-  useEffect(() => {
-    // 검색 경로는 RPC 50건 캡이라 정확한 총계 불가 — 렌더 가드가 표시를 막는다
-    // (effect 안 동기 setState 금지 — 캐스케이드 렌더 방지 lint 준수).
-    if (filters.q || catalogUnavailable) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { count } = await buildMemesQuery(createClient(), filters, {
-          countOnly: true,
-          indexableIds,
-        });
-        if (!cancelled && typeof count === "number") setTotal(count);
-      } catch (err) {
-        // 총계는 부가 정보 — 실패해도 목록은 정상. 단 조용히 삼키면 회귀를 못 보므로
-        // 로그는 남긴다(silent-failure 금지).
-        console.error("explore 결과 수 조회 실패:", err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filters는 URL 파생 불변 객체
-  }, [catalogUnavailable, filters.q, filters.platform, filters.topicTag, filters.categories.join(","), filters.difficulty, filters.lifecycle, filters.media, filters.year, filters.sort, indexableIds?.join(",")]);
 
   // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
@@ -294,14 +258,12 @@ export function ExploreGrid({
     try {
       const supabase = createClient();
       const batch = await fetchFrom(supabase, filters, from, indexableIds);
-      const fresh = batch.filter((m) => !seenRef.current.has(m.id));
+      const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
       for (const m of fresh) seenRef.current.add(m.id);
       setItems((prev) => [...prev, ...fresh]);
-      // 중복 제거 전 조회한 행 수만큼 전진 — 걸러진 행을 다시 읽지 않는다.
-      offsetRef.current = from + batch.length;
-      const nextHasMore = batch.length >= PAGE_SIZE;
-      hasMoreRef.current = nextHasMore;
-      setHasMore(nextHasMore);
+      offsetRef.current = from + batch.scanned;
+      hasMoreRef.current = batch.hasMore;
+      setHasMore(batch.hasMore);
     } catch {
       setFailed(true);
     } finally {
@@ -366,6 +328,30 @@ export function ExploreGrid({
     );
   }
 
+  if (items.length === 0 && hasMore) {
+    return (
+      <div className="glass-panel relative mt-8 overflow-hidden rounded-2xl p-8 text-center">
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <div className="relative">
+          <p className="text-xl font-bold">
+            {failed ? "다음 밈을 불러오지 못했어요" : "다음 공개 밈을 계속 찾고 있어요"}
+          </p>
+          <p className="mt-1.5 text-base text-foreground">
+            앞선 문서는 공개 목록 기준을 충족하지 않아 건너뛰었어요.
+          </p>
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loading}
+            className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? "찾는 중…" : failed ? "다시 시도" : "계속 찾기"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // 빈 상태 — 이 조건에 맞는 밈이 하나도 없음 (검색어가 있으면 반영)
   if (items.length === 0) {
     const submissionQuery = filters.q?.trim();
@@ -389,32 +375,19 @@ export function ExploreGrid({
             decoding="async"
             className="mx-auto mb-2 w-48 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-56"
           />
-          <p className="text-xl font-bold">
-            {filters.q ? (
-              <>
-                &lsquo;<span className="text-accent">{filters.q}</span>&rsquo; 검색
-                결과가 없어요
-              </>
-            ) : hasActiveExploreFilter(filters) ? (
-              "이 조건의 밈이 아직 없어요"
-            ) : (
-              "공개된 밈이 아직 이 목록에 없어요"
-            )}
-          </p>
+          <p className="text-xl font-bold">조건에 맞는 밈이 아직 없어요</p>
           <p className="mt-1.5 text-base text-foreground">
-            {filters.q
-              ? "다른 말로 검색하거나 필터를 풀어 보세요. 아직 없는 밈이면 제보해 주세요."
-              : hasActiveExploreFilter(filters)
-                ? "필터를 풀어 보거나, 알고 있는 밈을 제보해 주세요."
-                : "알고 있는 밈이 있으면 제보해 주세요."}
+            필터를 초기화하거나, 알고 있는 밈을 제보해 주세요.
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            <Link
-              href="/explore"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
-            >
-              필터 초기화
-            </Link>
+            <form action="/explore" method="get">
+              <button
+                type="submit"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
+              >
+                필터 초기화
+              </button>
+            </form>
             <Link
               href={submissionHref}
               rel="nofollow"
@@ -430,13 +403,6 @@ export function ExploreGrid({
 
   return (
     <div>
-      {/* 결과 수 (§6) — head 카운트가 도착한 뒤에만 렌더. 검색(q) 경로는 RPC가
-          50건 캡이라 정확한 총계를 줄 수 없어 표시하지 않는다(부정확한 수 금지). */}
-      {total != null && !filters.q && (
-        <p aria-live="polite" className="mb-3 text-sm text-muted">
-          결과 <strong className="font-semibold text-foreground">{total.toLocaleString("ko-KR")}</strong>개
-        </p>
-      )}
       <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">

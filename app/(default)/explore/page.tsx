@@ -26,6 +26,7 @@ import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from 
 import { limitQueryToIds } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
+import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
@@ -110,18 +111,19 @@ function parseFilters(sp: RawParams): Filters {
 
 function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url)";
-  // LIST_COLUMNS: 목록 카드가 읽는 컬럼만 — 장문 컬럼 과다 전송 방지(lib/queries.ts 참조)
-  const topic = topicTag ? ", meme_tags_map!inner(tags!inner(name))" : "";
-  return `${LIST_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
+    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
+  const topic = topicTag
+    ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
+    : "";
+  return `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
   eq: (column: string, value: string) => T;
 }>(query: T, topicTag?: string): T {
   return topicTag
-    ? query.eq("meme_tags_map.tags.name", topicTag)
+    ? query.eq("topic_tags.tags.name", topicTag)
     : query;
 }
 
@@ -264,20 +266,37 @@ export default async function ExplorePage({
       if (!discovery.ok) return failed;
       try {
         const supabase = createStaticClient();
-        const { data, error } = await buildQuery(supabase, filters, indexableIds).range(
+        let queryFailed = false;
+        const page = await collectIndexableWindow(
+          async (from, to) => {
+            const { data, error } = await buildQuery(
+              supabase,
+              filters,
+              indexableIds,
+            ).range(from, to);
+            // Curated cards are not a successful catalog read. Showing them with
+            // unavailable:false hid the retry state when the database failed.
+            if (error) {
+              queryFailed = true;
+              return [];
+            }
+            return (data ?? []) as unknown as MemeListItem[];
+          },
           0,
-          PAGE_SIZE - 1
+          PAGE_SIZE,
+          { pageSize: PAGE_SIZE },
         );
-        // Curated cards are not a successful catalog read. Showing them with
-        // unavailable:false hid the retry state when the database failed.
-        if (error) return failed;
-        const rows = (data ?? []) as unknown as MemeListItem[];
+        if (queryFailed) return failed;
+        const rows = page.items;
         const seen = new Set(rows.map((item) => item.short_id));
         return {
-          items: [...curated.filter((item) => !seen.has(item.short_id)), ...rows],
+          items: [
+            ...curated.filter((item) => !seen.has(item.short_id)),
+            ...rows,
+          ] as MemeListItem[],
           unavailable: false,
-          dbCount: rows.length,
-          hasMore: rows.length >= PAGE_SIZE,
+          dbCount: page.scanned,
+          hasMore: page.hasMore,
           indexableIds,
         };
       } catch {

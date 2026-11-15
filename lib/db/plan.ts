@@ -201,6 +201,18 @@ function findEmbed(fields: PlanField[], relation: string): PlanEmbed | null {
   return null;
 }
 
+function findDirectEmbed(fields: PlanField[], relation: string): PlanEmbed | null {
+  for (const field of fields) {
+    if (
+      field.kind === "embed" &&
+      (field.embed.alias === relation || field.embed.table === relation)
+    ) {
+      return field.embed;
+    }
+  }
+  return null;
+}
+
 export type PlanExecutor = (plan: QueryPlan, signal?: AbortSignal) => Promise<QueryResult>;
 
 class QueryBuilder implements PromiseLike<QueryResult> {
@@ -389,17 +401,23 @@ export function createPlanClient(execute: PlanExecutor) {
 export function attachDottedFilters(plan: QueryPlan): void {
   const keep: PlanFilter[] = [];
   for (const filter of plan.filters) {
-    const dot = filter.column.indexOf(".");
-    if (dot === -1) {
+    const path = filter.column.split(".");
+    if (path.length === 1) {
       keep.push(filter);
       continue;
     }
-    const relation = filter.column.slice(0, dot);
-    const column = filter.column.slice(dot + 1);
-    const embed = findEmbed(plan.fields, relation);
+    if (path.some((part) => !isIdent(part))) throw new Error("invalid identifier");
+    const column = path.pop();
+    if (!column) throw new Error("invalid identifier");
+    let fields = plan.fields;
+    let embed: PlanEmbed | null = null;
+    for (const relation of path) {
+      embed = findDirectEmbed(fields, relation);
+      if (!embed) throw new Error("invalid identifier");
+      fields = embed.fields;
+    }
     if (!embed) throw new Error("invalid identifier");
     embed.filters.push({ ...filter, column });
-    if (embed.inner) embed.inner = true;
   }
   plan.filters = keep;
 }

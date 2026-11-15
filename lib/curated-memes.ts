@@ -1,9 +1,24 @@
-import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
+import type { ContentDepthInput } from "@/lib/content-depth";
 import type { MemeCategory, SafetyLevel, LifecycleStatus } from "@/lib/labels";
 import { getSeoCopy, localizePath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { HomeEntry } from "@/components/home/home-experience";
 import { memePathFrom } from "@/lib/labels";
 import { generateHouseMemeCardDataUrl } from "@/lib/meme-generator/image-generator";
+import { isThinMeme } from "@/lib/thin-meme";
+
+/** Body fields the thin-page predicate reads. Curated examples store context, not situation. */
+export function curatedDepthInput(meme: CuratedMeme): ContentDepthInput {
+  return {
+    description: meme.description,
+    origin: meme.origin,
+    caution: meme.caution,
+    usage_examples: meme.usage_examples.map((example) => ({
+      situation: example.context,
+      dialogue: example.dialogue,
+      text: example.description ?? example.dialogue.map((line) => line.line).join("\n"),
+    })),
+  };
+}
 
 export type CuratedMeme = {
   id: string;
@@ -359,7 +374,9 @@ export function getGuaranteedHomeEntries(
 
   const categoryCopy = getSeoCopy(locale).categories;
 
-  const fallbackEntries: HomeEntry[] = CURATED_CORE_MEMES.filter(curatedPassesIndexGate).map((meme) => {
+  const fallbackEntries: HomeEntry[] = CURATED_CORE_MEMES.filter(
+    (meme) => !isThinMeme(curatedDepthInput(meme)),
+  ).map((meme) => {
     const cardDataUrl = generateHouseMemeCardDataUrl(
       {
         title: meme.title,
@@ -401,25 +418,8 @@ const curatedByShortId = new Map(
   CURATED_CORE_MEMES.map((meme) => [meme.short_id, meme] as const),
 );
 
-/** Curated cards have no source rows, so they fail the index gate until one is recorded. */
-export function curatedContentInput(meme: CuratedMeme): ContentDepthInput {
-  return {
-    description: meme.description,
-    origin: meme.origin,
-    usage_note: [
-      meme.trend_now.analysis,
-      ...meme.usage_examples.map((example) => example.description ?? ""),
-    ].join("\n"),
-    caution: meme.caution,
-    usage_examples: meme.usage_examples.flatMap((example) =>
-      example.dialogue.map((line) => ({ situation: example.context, text: line.line })),
-    ),
-    meme_sources: [],
-  };
-}
-
 export function curatedPassesIndexGate(meme: CuratedMeme): boolean {
-  return isIndexableMeme(curatedContentInput(meme));
+  return !isThinMeme(curatedDepthInput(meme));
 }
 
 export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {
@@ -466,7 +466,9 @@ export function curatedMemesMatchingQuery(query: string): readonly CuratedMeme[]
 }
 
 export function curatedSearchCards(query: string) {
-  return curatedMemesMatchingQuery(query).map((meme) => ({
+  return curatedMemesMatchingQuery(query)
+    .filter((meme) => !isThinMeme(curatedDepthInput(meme)))
+    .map((meme) => ({
     id: meme.id,
     short_id: meme.short_id,
     slug: meme.slug,
@@ -478,6 +480,7 @@ export function curatedSearchCards(query: string) {
     media_type: "image" as const,
     origin_year: meme.origin_year,
     trend_score: 100,
+    ...curatedDepthInput(meme),
     meme_contents: [
       {
         thumbnail_url: generateHouseMemeCardDataUrl(

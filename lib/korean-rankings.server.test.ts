@@ -27,6 +27,23 @@ function meme(id: string, trendScore: number) {
     lifecycle_status: "active",
     trend_score: trendScore,
     published_at: "2026-11-01T00:00:00.000Z",
+    description: "밈".repeat(340),
+    origin: "유".repeat(60),
+    usage_note: null,
+    caution: null,
+    usage_examples: [],
+    meme_sources: [{ source_url: `https://example.com/${id}` }],
+    meme_contents: [],
+    meme_tags_map: [],
+  };
+}
+
+function thinMeme(id: string, trendScore: number) {
+  return {
+    ...meme(id, trendScore),
+    description: "밈".repeat(500),
+    origin: null,
+    meme_sources: [],
   };
 }
 
@@ -56,14 +73,15 @@ describe("loadKoreanRankings", () => {
   });
 
   it("uses published memes when the live query fails", async () => {
+    const published = Array.from({ length: 3 }, (_, index) => meme(`published-${index}`, 0));
     responses.push(
       { data: null, error: { message: "statement timeout" } },
-      { data: [meme("published", 0)], error: null },
+      { data: [thinMeme("thin", 0), ...published], error: null },
     );
     const result = await loadKoreanRankings();
     expect(result.kind).toBe("published");
     if (result.kind !== "published") return;
-    expect(result.memes[0]?.title).toBe("밈 published");
+    expect(result.memes.map((item) => item.id)).toEqual(published.map((item) => item.id));
     expect(console.error).toHaveBeenCalled();
   });
 
@@ -80,9 +98,10 @@ describe("loadKoreanRankings", () => {
 
   it("returns live today and comeback rows when both reads succeed", async () => {
     const trend = Array.from({ length: 10 }, (_, index) => meme(`trend-${index}`, index + 1));
+    const comeback = Array.from({ length: 3 }, (_, index) => meme(`comeback-${index}`, index + 1));
     responses.push(
-      { data: trend, error: null },
-      { data: [meme("comeback", 4)], error: null },
+      { data: [thinMeme("thin-trend", 100), ...trend], error: null },
+      { data: [thinMeme("thin-comeback", 100), ...comeback], error: null },
     );
 
     const result = await loadKoreanRankings();
@@ -90,7 +109,8 @@ describe("loadKoreanRankings", () => {
     expect(result.kind).toBe("live");
     if (result.kind !== "live") return;
     expect(result.today).toHaveLength(10);
-    expect(result.comeback.map((item) => item.id)).toEqual(["comeback"]);
+    expect(result.today.some((item) => item.id === "thin-trend")).toBe(false);
+    expect(result.comeback.map((item) => item.id)).toEqual(comeback.map((item) => item.id));
   });
 
   it("keeps the live trend list when the comeback query fails", async () => {

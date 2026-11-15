@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 import { CountryFlagBadge } from "@/components/country-flag-badge";
 import { MemeCard } from "@/components/meme-card";
 import { localizedMemeCountryLabel, originCountryCode } from "@/lib/meme-country";
-import { LIST_SELECT, searchMemes, type MemeListItem } from "@/lib/queries";
+import { INDEXABLE_LIST_SELECT, LIST_SELECT, searchMemes, type MemeListItem } from "@/lib/queries";
 
 const meme = {
   id: "us-meme",
@@ -22,10 +22,13 @@ const meme = {
   origin_year: 2026,
   trend_score: 1,
   meme_contents: [],
+  description: "밈".repeat(340),
+  origin: "유".repeat(60),
+  meme_sources: [{ source_url: "https://example.com/source" }],
   meme_market_profiles: [
     { market_code: "US", role: "origin", review_state: "reviewed" },
   ],
-} as MemeListItem;
+} as unknown as MemeListItem;
 
 describe("meme country display", () => {
   it("keeps the origin country off the shared poster card", () => {
@@ -98,9 +101,9 @@ describe("meme country display", () => {
 
     expect(rpc).toHaveBeenCalledWith("search_memes", {
       p_query: "미국 밈",
-      p_limit: 20,
+      p_limit: 50,
     }, { get: true });
-    expect(select).toHaveBeenCalledWith(LIST_SELECT);
+    expect(select).toHaveBeenCalledWith(INDEXABLE_LIST_SELECT);
     expect(publicFilter).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
     expect(results[0]?.meme_market_profiles?.[0]?.market_code).toBe("US");
   });

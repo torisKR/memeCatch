@@ -1,7 +1,8 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { curatedPassesIndexGate, findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
+import { curatedDepthInput, findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
+import { koreanDetailRobots } from "@/lib/thin-meme";
 import { memePathFrom, shortIdFromParam } from "@/lib/labels";
 import { curatedShareVersion, koreanMemeShareImage } from "@/lib/meme-share-image";
 import { classifyPublicMemeLookup, type PublicMemeLookup } from "@/lib/public-meme-lookup";
@@ -73,6 +74,7 @@ export function unavailableMemeMetadata(): Metadata {
 export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
   const path = memePathFrom(meme.short_id, meme.slug);
   const title = `${meme.title} 뜻`;
+  const robots = koreanDetailRobots(curatedDepthInput(meme));
   const image = koreanMemeShareImage({
     shortId: meme.short_id,
     slug: meme.slug,
@@ -83,7 +85,7 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
     title,
     description: meme.summary,
     alternates: { canonical: path },
-    ...(curatedPassesIndexGate(meme) ? {} : { robots: { index: false, follow: false } }),
+    ...(robots ? { robots } : {}),
     openGraph: {
       type: "website",
       siteName: "밈캐치",

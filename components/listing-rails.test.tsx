@@ -29,7 +29,13 @@ function related(id: string) {
 }
 
 function card(id: string): MemeListItem {
-  return { id, short_id: id, slug: id, title: `카드 ${id}` } as MemeListItem;
+  return {
+    id,
+    short_id: id,
+    slug: id,
+    title: `카드 ${id}`,
+    summary: "요약",
+  } as MemeListItem;
 }
 
 describe("listing rails under 3 cards", () => {
@@ -42,7 +48,7 @@ describe("listing rails under 3 cards", () => {
     );
 
     expect(hidden).toBe("");
-    expect(shown).toContain("관련 밈");
+    expect(shown).toContain("비슷한 밈");
     expect(shown).toContain("관련 1");
   });
 
@@ -60,7 +66,7 @@ describe("listing rails under 3 cards", () => {
     const files = [
       "app/(default)/search/page.tsx",
       "app/[locale]/search/page.tsx",
-      "app/(default)/rankings/page.tsx",
+      "lib/korean-rankings.server.ts",
       "app/(default)/timeline/page.tsx",
       "app/(default)/collections/[slug]/page.tsx",
       "components/weekly-digest.tsx",

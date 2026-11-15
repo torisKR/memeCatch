@@ -7,22 +7,22 @@ describe("RelatedMemes", () => {
     const html = renderToStaticMarkup(
       <RelatedMemes
         locale="ko"
-        memes={[{
+        memes={["1", "2", "3"].map((id) => ({
           meme: {
-            id: "1",
-            short_id: "abc12345",
-            slug: "test",
-            title: "테스트 밈",
+            id,
+            short_id: `abc1234${id}`,
+            slug: `test-${id}`,
+            title: `테스트 밈 ${id}`,
             summary: "한 줄 뜻",
             category: "phrase",
             safety_level: "green",
           },
-        }]}
+        }))}
       />,
     );
 
     expect(html).toContain("비슷한 밈");
-    expect(html).toContain("테스트 밈");
+    expect(html).toContain("테스트 밈 1");
     expect(html).not.toContain("max-md:pb-");
     expect(html).not.toContain("4.5rem+4rem+1rem");
   });

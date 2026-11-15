@@ -2,15 +2,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createStaticClient } = vi.hoisted(() => ({
+const { createStaticClient, koreanRankingsVisible } = vi.hoisted(() => ({
   createStaticClient: vi.fn(),
+  koreanRankingsVisible: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/korean-rankings.server", () => ({ koreanRankingsVisible }));
 
 import { GET, dynamic as routeDynamic } from "@/app/llms.txt/route";
-import { clearKoreanRankingsCache } from "@/lib/korean-rankings.server";
 
 function row(index: number, indexable: boolean) {
   return {
@@ -57,8 +58,8 @@ function useRows(
 }
 
 beforeEach(() => {
-  clearKoreanRankingsCache();
   createStaticClient.mockReset();
+  koreanRankingsVisible.mockReset().mockResolvedValue(false);
 });
 
 describe("llms.txt publication export", () => {
@@ -72,6 +73,7 @@ describe("llms.txt publication export", () => {
       ...Array.from({ length: 20 }, (_, index) => row(index + 1_000, true)),
     ];
     const query = useRows(rows);
+    koreanRankingsVisible.mockResolvedValue(true);
 
     const response = await GET();
     const body = await response.text();

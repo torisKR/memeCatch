@@ -21,8 +21,9 @@ dotenv_value() {
 }
 
 env_file="${MEMECATCH_ENV_FILE:-$ROOT/.env}"
-if [[ -z "${MEMECATCH_CADDY:-}" ]]; then
-  MEMECATCH_CADDY="$(dotenv_value MEMECATCH_CADDY "$env_file")"
+caddy_mode="${MEMECATCH_CADDY:-}"
+if [[ -z "$caddy_mode" ]]; then
+  caddy_mode="$(dotenv_value MEMECATCH_CADDY "$env_file")"
 fi
 
 port_busy() {
@@ -53,7 +54,7 @@ own_caddy_running() {
 files=(-f docker-compose.yml)
 health_url="http://127.0.0.1:12730/api/health"
 mode="shared"
-if [[ "${MEMECATCH_CADDY:-}" == "own" ]]; then
+if [[ "$caddy_mode" == "own" ]]; then
   if ! own_caddy_running && { port_busy 80 || port_busy 443; }; then
     echo "memecatch: MEMECATCH_CADDY=own but 80 or 443 is already in use by another process. Not starting a second proxy." >&2
     exit 1

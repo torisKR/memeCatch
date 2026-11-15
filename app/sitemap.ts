@@ -3,7 +3,7 @@ import { SITE_URL } from "@/lib/site";
 import { createStaticClient } from "@/lib/supabase/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
-import { passesContentIndexGate, type ContentDepthInput } from "@/lib/content-depth";
+import type { ContentDepthInput } from "@/lib/content-depth";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import {
   isIndexableLocalizedMeme,
@@ -407,7 +407,7 @@ async function buildSitemap(): Promise<{
 
     for (const meme of data as unknown as SitemapMemeRow[]) {
       if (CANONICAL_MEME_ALIAS_MAP[meme.short_id]) continue;
-      if (!passesContentIndexGate(meme) || !discoveryIds.has(meme.id)) continue;
+      if (!discoveryIds.has(meme.id)) continue;
       const translations = reviewedTranslations(meme);
       const languages = memeLanguages(meme, translations);
       for (const [locale, translation] of translations) {

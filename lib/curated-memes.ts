@@ -1,4 +1,4 @@
-import { passesContentIndexGate, type ContentDepthInput } from "@/lib/content-depth";
+import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
 import type { MemeCategory, SafetyLevel, LifecycleStatus } from "@/lib/labels";
 import { getSeoCopy, localizePath, type SeoRouteLocale } from "@/lib/i18n-routing";
 import type { HomeEntry } from "@/components/home/home-experience";
@@ -419,7 +419,7 @@ export function curatedContentInput(meme: CuratedMeme): ContentDepthInput {
 }
 
 export function curatedPassesIndexGate(meme: CuratedMeme): boolean {
-  return passesContentIndexGate(curatedContentInput(meme));
+  return isIndexableMeme(curatedContentInput(meme));
 }
 
 export function findCuratedCoreMeme(shortId: string): CuratedMeme | null {

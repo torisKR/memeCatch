@@ -15,7 +15,7 @@ vi.mock("@/lib/index-gate.server", () => ({
 
 import sitemap, { clearSitemapCache, getIndexableKoreanMemeCount } from "@/app/sitemap";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { contentDepth, isIndexableMeme } from "@/lib/content-depth";
+import { contentDepth, discoveryIndexIds, isIndexableMeme } from "@/lib/content-depth";
 import {
   getHreflang,
   isSeoContentLocale,
@@ -92,7 +92,7 @@ function useRows(
   },
 ) {
   discoveryIds.clear();
-  for (const row of rows) discoveryIds.add(row.id);
+  for (const id of discoveryIndexIds(rows)) discoveryIds.add(id);
   createStaticClient.mockReturnValue({
     from: vi.fn(() => ({
       select: vi.fn((columns: string) => {
@@ -402,7 +402,8 @@ describe("사이트맵 다국어 색인 계약", () => {
 
   it("indexable 원문에 대해 상세와 같은 번역 색인 판정만 alternates에 허용한다", () => {
     // 원문 충실도 판정은 번역 유무보다 먼저 통과해야 한다.
-    expect(source).toContain("!passesContentIndexGate(meme) || !discoveryIds.has(meme.id)");
+    expect(source).toContain("if (!discoveryIds.has(meme.id)) continue");
+    expect(source).not.toContain("passesContentIndexGate");
     // 검수·필수 필드·원문 150자·시각 비교는 isIndexableLocalizedMeme 한 곳이다.
     // 타임스탬프 문자열 동등 비교로 다시 갈라지면 Date와 마이크로초 문자열이 빠진다.
     expect(source).toContain("isIndexableLocalizedMeme");
@@ -460,7 +461,7 @@ describe("사이트맵 다국어 색인 계약", () => {
     const thinProse = {
       description: "d".repeat(250),
       origin: "o".repeat(60),
-      usage_note: null,
+      usage_note: "u".repeat(39),
       caution: null,
       aliases: [] as string[],
       usage_examples: [] as { situation: string; text: string }[],
@@ -890,11 +891,11 @@ describe("사이트맵 다국어 색인 계약", () => {
       updated_at: "2026-01-02T00:00:00.000Z",
       // Score without sources: description 250 (+2) + origin 59 (+1) + 1 example (+1) = 4, below MIN_SCORE 5.
       // Two visible sources add +2 and make it indexable; hidden sources must not.
-      description: "d".repeat(400),
-      origin: "o".repeat(80),
-      usage_note: "u".repeat(40),
+      description: "d".repeat(250),
+      origin: "o".repeat(59),
+      usage_note: "u".repeat(39),
       caution: null,
-      usage_examples: [{ situation: "s1", text: "t1" }, { situation: "s2", text: "t2" }],
+      usage_examples: [{ situation: "s", text: "t" }],
       meme_sources,
       meme_contents: [],
       meme_tags_map: [],

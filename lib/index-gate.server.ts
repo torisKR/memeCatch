@@ -15,7 +15,7 @@ export type DiscoveryIndexResult =
   | { ok: false };
 
 /**
- * Public memes that pass the body gate and still have two indexable relatives.
+ * Public memes that pass current main's existing isIndexableMeme policy.
  * One failed read is not an empty catalog: callers must noindex and skip lists
  * instead of publishing the unfiltered corpus.
  */

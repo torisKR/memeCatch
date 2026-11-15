@@ -25,12 +25,22 @@ function candidate(id: string, moderationStatus: "approved" | "limited") {
   };
 }
 
-describe("publication export discovery graph", () => {
-  it("uses limited relatives to qualify approved rows without exporting the limited row", async () => {
+describe("publication export eligibility", () => {
+  it("keeps limited rows in the bounded read pool but exports only eligible approved rows", async () => {
     const rows = [
       candidate("approved-a", "approved"),
-      candidate("approved-b", "approved"),
-      candidate("limited-relative", "limited"),
+      candidate("limited-entry", "limited"),
+      {
+        ...candidate("thin-approved", "approved"),
+        description: "짧다",
+        origin: null,
+        usage_note: null,
+        caution: null,
+        usage_examples: [],
+        meme_sources: [],
+        meme_contents: [],
+        meme_tags_map: [],
+      },
     ];
     const query = {
       select: vi.fn(),
@@ -49,7 +59,7 @@ describe("publication export discovery graph", () => {
     });
 
     expect(query.in).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
-    expect(result.rows.map((row) => row.id)).toEqual(["approved-a", "approved-b"]);
-    expect(result.eligibleCount).toBe(2);
+    expect(result.rows.map((row) => row.id)).toEqual(["approved-a"]);
+    expect(result.eligibleCount).toBe(1);
   });
 });

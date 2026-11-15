@@ -26,14 +26,17 @@ describe("curated memes and guaranteed home entries", () => {
     expect(cards[0]?.meme_contents[0]?.thumbnail_url).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
-  it("does not bypass the strict gate with source-less curated entries", () => {
+  it("guarantees non-empty home entries when live DB entries are empty", () => {
     const emptyLiveEntries: readonly HomeEntry[] = [];
     const entries = getGuaranteedHomeEntries("ko", emptyLiveEntries);
 
-    expect(entries).toEqual([]);
+    expect(entries.length).toBeGreaterThanOrEqual(6);
+    expect(entries[0].title).toBeTruthy();
+    expect(entries[0].href).toMatch(/^\/memes\//);
+    expect(entries[0].thumbnailUrl).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
-  it("preserves sparse live entries without padding with noindex curated ones", () => {
+  it("preserves live entries and pads with eligible curated ones if live entries are sparse", () => {
     const sparseLiveEntries: readonly HomeEntry[] = [
       {
         id: "live-1",
@@ -46,7 +49,7 @@ describe("curated memes and guaranteed home entries", () => {
     ];
 
     const entries = getGuaranteedHomeEntries("ko", sparseLiveEntries);
-    expect(entries).toHaveLength(1);
+    expect(entries.length).toBeGreaterThanOrEqual(4);
     expect(entries[0].id).toBe("live-1");
   });
 

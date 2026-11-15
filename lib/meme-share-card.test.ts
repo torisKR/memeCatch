@@ -193,7 +193,7 @@ function savePair(name: string, png: Buffer) {
 }
 
 describe("per-meme share card", () => {
-  it("keeps the reviewed localized detail body pinned after the strict discovery gate change", () => {
+  it("keeps the reviewed localized detail body pinned after the discovery gate change", () => {
     expect(existsSync("app/ar")).toBe(false);
     const source = readFileSync("app/[locale]/memes/[key]/page.tsx", "utf8");
     const marker = "export default async function LocalizedMemePage";

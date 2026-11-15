@@ -171,11 +171,11 @@ describe("RSS publication export", () => {
       moderation_status: "approved" as const,
       published_at: "2026-02-01T00:00:00.000Z",
       updated_at: "2026-02-02T00:00:00.000Z",
-      description: "d".repeat(400),
-      origin: "o".repeat(80),
-      usage_note: "u".repeat(40),
+      description: "d".repeat(250),
+      origin: "o".repeat(59),
+      usage_note: null,
       caution: null,
-      usage_examples: [{ situation: "s1", text: "t1" }, { situation: "s2", text: "t2" }],
+      usage_examples: [{ situation: "s", text: "t" }],
       meme_sources,
       meme_contents: [],
       meme_tags_map: [],
@@ -190,8 +190,6 @@ describe("RSS publication export", () => {
         { source_url: "https://example.org/one" },
         { source_url: "https://example.org/two", hidden_from_public: false },
       ]),
-      gated(3, [{ source_url: "https://example.org/three" }, { source_url: "https://example.org/four" }]),
-      gated(4, [{ source_url: "https://example.org/five" }, { source_url: "https://example.org/six" }]),
     ]);
 
     const body = await (await GET()).text();

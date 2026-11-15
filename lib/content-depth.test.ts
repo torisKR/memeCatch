@@ -6,7 +6,6 @@ import {
   discoveryIndexIds,
   isBoilerplateOrigin,
   isIndexableMeme,
-  passesContentIndexGate,
   type ContentDepthInput,
   type IndexCandidate,
 } from "@/lib/content-depth";
@@ -80,11 +79,11 @@ describe("contentDepth 판정", () => {
 });
 
 /**
- * 배너·광고는 250자 isSubstantial을 유지한다. 색인은 그보다 긴 400자 본문 게이트라
- * 150~249자 문서는 배너에도, 색인에도 남지 않는다.
+ * 배너·광고는 250자 isSubstantial을 유지한다. 색인은 현재 main의 150자 하한을
+ * 유지하므로 150~249자 문서는 색인될 수 있지만 광고·배너에는 남지 않는다.
  */
-describe("짧은 산문은 배너와 색인 모두에서 빠진다", () => {
-  it("산문 150~249자 문서는 색인되지 않고 배너·광고 기준도 통과하지 못한다", () => {
+describe("색인과 광고의 기존 하한은 분리된다", () => {
+  it("산문 150~249자 문서는 색인되지만 배너·광고 기준은 통과하지 못한다", () => {
     // 정의 100(0점, BASIC 150 미만) + 유래 60(2점) + 출처 2개(2점) + 미디어 1개(1점) = 5점,
     // 산문 160자 — MIN_PROSE_CHARS_INDEX(150) 이상, MIN_PROSE_CHARS(250) 미만.
     const between: ContentDepthInput = {
@@ -104,7 +103,6 @@ describe("짧은 산문은 배너와 색인 모두에서 빠진다", () => {
     expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS);
 
     expect(isIndexableMeme(between)).toBe(true);
-    expect(passesContentIndexGate(between)).toBe(false);
     // 배너(DocStatusNote)·광고(AdsenseScript)는 250자 기준을 그대로 쓰므로 미통과.
     expect(depth.isSubstantial).toBe(false);
     expect(depth.isThin).toBe(true);
@@ -398,7 +396,7 @@ describe("자동 생성 상투구 유래", () => {
 
 });
 
-function passingCandidate(id: string, overrides: Partial<IndexCandidate> = {}): IndexCandidate {
+function indexableCandidate(id: string, overrides: Partial<IndexCandidate> = {}): IndexCandidate {
   return {
     id,
     category: null,
@@ -419,48 +417,40 @@ function passingCandidate(id: string, overrides: Partial<IndexCandidate> = {}): 
   };
 }
 
-describe("index gate", () => {
-  it("indexes a meme only when every body section and the source count clear the gate", () => {
-    expect(passesContentIndexGate(substantialMeme())).toBe(true);
-    const shortMeaning = passingCandidate("short", { description: chars(149) });
-    expect(passesContentIndexGate(shortMeaning)).toBe(false);
-    const oneSource = passingCandidate("one", {
-      meme_sources: [{ source_url: "https://example.com/only" }],
+describe("discovery index policy", () => {
+  it("matches isIndexableMeme without adding section-by-section requirements", () => {
+    const sparseSections = indexableCandidate("sparse", {
+      description: chars(100),
+      origin: chars(60),
+      usage_note: null,
+      usage_examples: null,
+      meme_sources: [
+        { source_url: "https://a.example/1" },
+        { source_url: "https://b.example/2" },
+      ],
+      meme_contents: [{ availability: "live", moderation_status: "approved" }],
     });
-    expect(passesContentIndexGate(oneSource)).toBe(false);
+
+    expect(isIndexableMeme(sparseSections)).toBe(true);
+    expect(discoveryIndexIds([sparseSections])).toEqual(new Set(["sparse"]));
   });
 
-  it("keeps a meme indexed only while two other indexable relatives remain", () => {
-    const shared = passingCandidate("shared", { category: "phrase" });
-    const left = passingCandidate("left", { category: "phrase" });
-    const right = passingCandidate("right", { category: "phrase" });
-    const alone = passingCandidate("alone", { category: "challenge" });
-
-    expect(discoveryIndexIds([shared, left, right, alone])).toEqual(
-      new Set(["shared", "left", "right"]),
-    );
-
-    const linked = passingCandidate("linked", { meme_tags_map: [{ tag_id: "hub" }] });
-    const other = passingCandidate("other", { meme_tags_map: [{ tag_id: "hub" }] });
-    expect(discoveryIndexIds([linked, other])).toEqual(new Set());
+  it("does not require two related discovery documents", () => {
+    const alone = indexableCandidate("alone", { category: "challenge" });
+    expect(discoveryIndexIds([alone])).toEqual(new Set(["alone"]));
   });
 
-  it("drops a meme whose only relatives fail the body gate", () => {
-    const keeper = passingCandidate("keeper", { category: "phrase" });
-    const thinA = { ...passingCandidate("thin-a", { category: "phrase" }), description: "짧다" };
-    const thinB = { ...passingCandidate("thin-b", { category: "phrase" }), description: "짧다" };
-    expect(discoveryIndexIds([keeper, thinA, thinB])).toEqual(new Set());
-  });
+  it("still excludes documents that fail current main's indexability floor", () => {
+    const eligible = indexableCandidate("eligible");
+    const thin = indexableCandidate("thin", {
+      description: "짧다",
+      origin: null,
+      usage_note: null,
+      usage_examples: null,
+      meme_sources: [],
+    });
 
-  it("prunes a relation chain until no survivors remain", () => {
-    const chain = Array.from({ length: 12 }, (_, i) =>
-      passingCandidate(`chain-${i}`, {
-        meme_tags_map: [
-          ...(i > 0 ? [{ tag_id: `edge-${i - 1}` }] : []),
-          ...(i < 11 ? [{ tag_id: `edge-${i}` }] : []),
-        ],
-      }),
-    );
-    expect(discoveryIndexIds(chain)).toEqual(new Set());
+    expect(isIndexableMeme(thin)).toBe(false);
+    expect(discoveryIndexIds([eligible, thin])).toEqual(new Set(["eligible"]));
   });
 });

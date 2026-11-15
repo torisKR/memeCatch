@@ -1,7 +1,6 @@
 import type { createStaticClient } from "@/lib/supabase/server";
 import {
   discoveryIndexIds,
-  passesContentIndexGate,
   type ContentDepthInput,
   type IndexCandidate,
 } from "@/lib/content-depth";
@@ -38,8 +37,8 @@ export class PublicationExportError extends Error {
 
 /**
  * Read the Korean discovery corpus under one explicit contract:
- * approved and limited records form the relation graph, then only approved
- * records are exported after the body gate plus two indexable relatives.
+ * approved and limited records form the bounded candidate pool, then only approved
+ * records are exported after the current main indexability check.
  * The output limit is applied after filtering. Range pages have an id tie-breaker and
  * a hard scan bound so an unexpectedly large corpus cannot create an unbounded request.
  */
@@ -47,7 +46,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
   supabase: StaticClient,
   options: PublicationExportOptions,
 ): Promise<{ rows: T[]; eligibleCount: number }> {
-  const fieldPassers: PublicationExportCandidate<T>[] = [];
+  const candidates: PublicationExportCandidate<T>[] = [];
   let exhausted = false;
 
   for (
@@ -77,10 +76,7 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
     }
 
     const page = (data ?? []) as unknown as PublicationExportCandidate<T>[];
-    for (const meme of page) {
-      if (!passesContentIndexGate(meme)) continue;
-      fieldPassers.push(meme);
-    }
+    candidates.push(...page);
 
     if (page.length < PUBLICATION_EXPORT_PAGE_SIZE) {
       exhausted = true;
@@ -94,8 +90,8 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
     );
   }
 
-  const indexableIds = discoveryIndexIds(fieldPassers as IndexCandidate[]);
-  const eligible = fieldPassers.filter(
+  const indexableIds = discoveryIndexIds(candidates as IndexCandidate[]);
+  const eligible = candidates.filter(
     (meme) => meme.moderation_status === "approved" && indexableIds.has(meme.id),
   );
   return {

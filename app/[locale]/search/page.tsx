@@ -110,7 +110,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
 
       <SearchOutcomeTracker query={query} resultCount={results.length} />
 
-      {query && hasPublicListing(results.length) && (
+      {query && results.length > 0 && (
         <section
           aria-label={copy.resultSection}
           className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"

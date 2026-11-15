@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExploreGrid } from "@/components/explore-grid";
 import type { MemeListItem } from "@/lib/queries";
 
+const createClient = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/supabase/client", () => ({ createClient }));
+
 vi.mock("@/components/meme-card", () => ({
   MemeCard: ({ meme }: { meme: MemeListItem }) => (
     <a href={`/memes/${meme.id}`} data-testid="explore-card">
@@ -20,6 +24,7 @@ const meme = {
 } as MemeListItem;
 
 beforeEach(() => {
+  createClient.mockReset();
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -105,6 +110,18 @@ describe("ExploreGrid", () => {
 
     expect(screen.getAllByTestId("explore-card")).toHaveLength(2);
     expect(screen.queryByText("조건에 맞는 밈이 아직 없어요")).toBeNull();
+  });
+
+  it("does not claim a raw database total for the thin-filtered grid", () => {
+    render(
+      <ExploreGrid
+        initial={[meme]}
+        filters={{ categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(createClient).not.toHaveBeenCalled();
+    expect(screen.queryByText(/^결과 .*개$/)).toBeNull();
   });
 
   it("keeps a zero-result search query on the submit path", () => {

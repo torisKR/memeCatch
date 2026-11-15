@@ -6,6 +6,7 @@ import { getWeeklyDigest } from "@/lib/weekly";
 import { WeeklyDigest } from "@/components/weekly-digest";
 import { AdsenseScript } from "@/components/adsense-script";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
+import { hasPublicListing } from "@/lib/thin-meme";
 
 /**
  * 주간 결산 — 완전 자동 콘텐츠 자산(수동 큐레이션 0).
@@ -41,8 +42,11 @@ export default async function WeeklyPage() {
   const url = `${SITE_URL}/weekly`;
 
   // JSON-LD 스키마용 아이템 — 급상승을 우선하고 부족하면 신규로 채운다
-  const schemaItems =
-    digest.trending.length > 0 ? digest.trending : digest.fresh;
+  const schemaItems = hasPublicListing(digest.trending.length)
+    ? digest.trending
+    : hasPublicListing(digest.fresh.length)
+      ? digest.fresh
+      : [];
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">

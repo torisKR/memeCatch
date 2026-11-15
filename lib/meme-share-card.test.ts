@@ -30,7 +30,7 @@ const MAIN_FILE_SHA: Record<string, string> = {
   "app/[locale]/not-found.tsx": "ef253029a73492bd5b44e1b70e10d2e7a1e7271d56e500a615e41d2c92b86f06",
   "app/(default)/not-found.tsx": "0445ade89cdc8dcbd2eb884622e3cc7af31936a1a0623077b9daf9e82c5ab511",
   "app/(default)/quiz/page.tsx": "5999e8189f2e0cab4f3a525ab957a9345f8db3f6d5e704870406e0eed943997b",
-  "app/(default)/weekly/page.tsx": "21b87a774bec43bcae0c62c410b51301ccbfaf939d9a49f403c01741b45858e3",
+  "app/(default)/weekly/page.tsx": "4a3658c682d3b2fa0509144fd8a8cb3a43eb83932cb525434617c7fb6906a2ca",
   "app/(default)/collections/page.tsx": "b4186d5d3e92201f20ab1cedf0bd7b911f586c3299346b623f7d779ee72e405e",
 };
 const LOCALIZED_PAGE_BODY_SHA = "dfa8610fb8f162bc646d284d5e2e7ab5929d01038732994690ba35577674364d";

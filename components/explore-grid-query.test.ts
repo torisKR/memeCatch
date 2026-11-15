@@ -71,7 +71,7 @@ describe("explore platform query", () => {
     expect(calls.some((call) => call.method === "in" && call.args[0] === "category")).toBe(false);
   });
 
-  it("applies the AI topic restriction to search and count paths", () => {
+  it("uses the dedicated AI search path without an invalid embedded filter", () => {
     const search = recorder();
     buildMemesQuery(search.client, {
       categories: [],
@@ -91,17 +91,6 @@ describe("explore platform query", () => {
       false,
     );
 
-    const count = recorder();
-    buildMemesQuery(
-      count.client,
-      { categories: [], topicTag: "AI 밈", sort: "trending" },
-      { countOnly: true },
-    );
-    expect(hasCall(count.calls, "eq", "topic_tags.tags.name", "AI 밈")).toBe(true);
-    expect(count.calls.find((call) => call.method === "select")?.args[1]).toEqual({
-      count: "exact",
-      head: true,
-    });
   });
 
   it("preserves the existing category query without a tag join", () => {

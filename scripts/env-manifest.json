@@ -32,6 +32,7 @@
   "CSP_REPORT_URI": "Optional URI that receives CSP violation reports.",
   "DATABASE_URL": "Postgres URL for the memecatch login role. The app never uses the superuser.",
   "DEPLOY_OCI_OWN_CADDY_RUNNING": "Test override for whether the site's own Caddy is running.",
+  "DEPLOY_OCI_FORCE_RECREATE": "Recreate the app container after a manual redeploy, including when the image is cached.",
   "DEPLOY_OCI_PORTS_BUSY": "Test override for whether proxy ports are occupied.",
   "DEPLOY_OCI_PRINT_PLAN": "Print the OCI deployment plan without executing it.",
   "E2E_BASE_URL": "Base URL Playwright uses for end-to-end tests.",

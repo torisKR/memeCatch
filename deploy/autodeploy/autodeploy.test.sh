@@ -146,6 +146,9 @@ checkout_target "$mig" && [[ "$(git -C "$repo" rev-parse HEAD)" == "$mig" ]] || 
 [[ "$(SSH_ORIGINAL_COMMAND=0123456789abcdef0123456789abcdef01234567 requested_sha)" == 0123456789abcdef0123456789abcdef01234567 ]] || fail "full SHA rejected"
 [[ -z "$(SSH_ORIGINAL_COMMAND='abc123; rm -rf /' requested_sha)" ]] || fail "injected command accepted"
 [[ -z "$(SSH_ORIGINAL_COMMAND='bash -i' requested_sha)" ]] || fail "shell request accepted"
+[[ "$(SSH_ORIGINAL_COMMAND='redeploy 0123456789abcdef0123456789abcdef01234567' requested_sha)" == 0123456789abcdef0123456789abcdef01234567 ]] || fail "redeploy SHA rejected"
+SSH_ORIGINAL_COMMAND='redeploy 0123456789abcdef0123456789abcdef01234567' requested_redeploy || fail "redeploy request rejected"
+[[ -z "$(SSH_ORIGINAL_COMMAND='redeploy 0123456789abcdef0123456789abcdef01234567; id' requested_sha)" ]] || fail "injected redeploy accepted"
 # Over SSH, a missing or malformed SHA stops before any git, CI, or docker work.
 bad="$(mktemp -d)"
 rc=0
@@ -162,5 +165,49 @@ rc=0; ( STRICT=1; not_deployed "x" ) >/dev/null || rc=$?
 ( STRICT=""; not_deployed "x" ) >/dev/null || fail "timer not_deployed must exit 0"
 # The GitHub key is installed with a forced command and `restrict`.
 grep -q 'restrict,command=\\"/var/lib/memecatch-autodeploy/bin/autodeploy.sh\\"' "$here/authorize-github-key.sh" || fail "deploy key must force the agent"
+
+# Exercise the manual path through main: it must build an already-running main
+# commit, pass force-recreate, and still refuse stale commits and failed CI.
+manual_root="$stub/manual"; mkdir -p "$manual_root/scripts" "$stub/manual-state"
+cat >"$manual_root/scripts/deploy-oci.sh" <<'STUB'
+#!/usr/bin/env bash
+printf 'deploy force=%s\n' "$DEPLOY_OCI_FORCE_RECREATE" >>"$test_calls"
+STUB
+cat >"$stub/git" <<'STUB'
+#!/usr/bin/env bash
+shift 2
+case "$1" in
+  fetch|merge-base) exit 0 ;;
+  rev-parse) echo "$test_head" ;;
+  status|diff) exit 0 ;;
+  *) exit 1 ;;
+esac
+STUB
+chmod +x "$stub/git"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$stub/flock"
+chmod +x "$stub/flock"
+running_sha() { echo "$test_running"; }
+ci_state() { echo "$test_ci"; }
+new_migrations() { :; }
+tag_rollback() { echo snapshot >>"$test_calls"; }
+checkout_target() { return 0; }
+build_images() { echo build >>"$test_calls"; }
+public_release_is() { return 0; }
+self_update() { :; }
+prune_images() { :; }
+test_head=0123456789abcdef0123456789abcdef01234567
+test_running="$test_head"; test_ci=success; test_calls="$stub/manual-calls"
+export test_head test_running test_ci test_calls
+: >"$test_calls"
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="redeploy $test_head" main ) >/dev/null || fail "manual redeploy failed"
+grep -q '^build$' "$test_calls" || fail "manual redeploy did not build"
+grep -q '^deploy force=1$' "$test_calls" || fail "manual redeploy did not request recreation"
+: >"$test_calls"
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null || fail "automatic no-op failed"
+[[ ! -s "$test_calls" ]] || fail "normal request rebuilt current commit"
+rc=0; ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND='redeploy 1111111111111111111111111111111111111111' main ) >/dev/null || rc=$?
+[[ "$rc" == 3 ]] || fail "redeploy allowed a non-running commit"
+rc=0; ( test_ci=failure; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="redeploy $test_head" main ) >/dev/null || rc=$?
+[[ "$rc" == 3 ]] || fail "redeploy bypassed CI failure"
 
 echo "autodeploy OK"

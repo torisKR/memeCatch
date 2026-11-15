@@ -131,6 +131,12 @@ touch /var/lib/memecatch-autodeploy/allow-<full-sha>   # then re-run the deploy 
 
 A re-run in GitHub retries a commit that failed before. Install or update the agent with `bash deploy/autodeploy/install.sh` (add `--with-timer` to also poll main every 3 minutes as a fallback). Logs: the GitHub job, or `journalctl -u memecatch-autodeploy` for timer runs. Each deploy tags the running images `memecatch*:rollback-<previous-sha>` first.
 
+### Rebuild and redeploy the current release
+
+In GitHub Actions, select **Manual production redeploy**, choose `main`, and select **Run workflow**. This is distinct from re-running the automatic deploy job, which intentionally does nothing when its commit is already running. The manual job requests `redeploy <full-sha>` through the same restricted key and Access tunnel. The VM accepts this request only when the SHA is both the running release and the current `origin/main` tip; an out-of-date request fails without deploying. The agent checks the commit's existing CI result, uses the same deployment lock and rollback snapshots, rebuilds the images, and explicitly recreates the app even if Docker's build cache produces the same image. The normal health and public release checks still apply.
+
+The first release containing this workflow updates the VM agent after its automatic deployment. Wait for that deployment to succeed before running the manual workflow. If a newer `main` commit is awaiting deployment, wait for it to finish before requesting a manual redeploy.
+
 Build-time values live in `deploy/build.env`. Every one ships in the HTML, so the file holds only `NEXT_PUBLIC_*` values; CI fails if anything else appears there. Runtime secrets stay in `/opt/memecatch/.env`, which is not in git. Responses carry `X-MemeCatch-Release-Sha`.
 
 ## Backups

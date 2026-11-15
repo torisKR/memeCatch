@@ -199,8 +199,13 @@ not_deployed() {
 # The commit a GitHub run asked for, or empty. Only a full SHA is accepted.
 requested_sha() {
   local req="${SSH_ORIGINAL_COMMAND:-}"
+  [[ "$req" =~ ^redeploy\ [0-9a-f]{40}$ ]] && { printf '%s\n' "${req#redeploy }"; return; }
   [[ "$req" =~ ^[0-9a-f]{40}$ ]] && printf '%s\n' "$req"
   return 0
+}
+
+requested_redeploy() {
+  [[ "${SSH_ORIGINAL_COMMAND:-}" =~ ^redeploy\ [0-9a-f]{40}$ ]]
 }
 
 main() {
@@ -219,23 +224,29 @@ main() {
   fi
 
   git -C "$ROOT" fetch -q origin main
-  local target current state migrations req
+  local target current state migrations req force="" running
   target="$(git -C "$ROOT" rev-parse origin/main)"
-  current="$(running_sha)"
+  running="$(running_sha)"
+  current="$running"
   [[ -n "$current" ]] || current="$(git -C "$ROOT" rev-parse HEAD)"
 
   req="$(requested_sha)"
+  if requested_redeploy; then
+    [[ -n "${SSH_CONNECTION:-}" ]] || not_deployed "redeploy requires SSH"
+    [[ -n "$running" && "$req" == "$target" && "$req" == "$running" ]] || not_deployed "redeploy requires the running origin/main commit"
+    force=1
+  fi
   if [[ -n "$req" ]]; then
     git -C "$ROOT" merge-base --is-ancestor "$req" "$target" 2>/dev/null \
       || not_deployed "${req:0:7} is not on origin/main; refusing"
-    if git -C "$ROOT" merge-base --is-ancestor "$req" "$current" 2>/dev/null; then
+    if [[ -z "$force" ]] && git -C "$ROOT" merge-base --is-ancestor "$req" "$current" 2>/dev/null; then
       log "running ${current:0:7} already includes ${req:0:7}"
       exit 0
     fi
     target="$req"
   fi
 
-  if [[ "$target" == "$current" ]]; then
+  if [[ "$target" == "$current" && -z "$force" ]]; then
     [[ -n "$STRICT" ]] && log "${target:0:7} is already running"
     exit 0
   fi
@@ -275,7 +286,7 @@ main() {
   fi
 
   # RELEASE_SHA from the shell overrides any stale value in .env.
-  if RELEASE_SHA="$target" MEMECATCH_IMAGE="memecatch:release-${target}" bash "$ROOT/scripts/deploy-oci.sh" \
+  if RELEASE_SHA="$target" MEMECATCH_IMAGE="memecatch:release-${target}" DEPLOY_OCI_FORCE_RECREATE="$force" bash "$ROOT/scripts/deploy-oci.sh" \
     && public_release_is "$target"; then
     printf '%s\n' "$target" >"$STATE_DIR/deployed"
     log "deployed ${target:0:7}"

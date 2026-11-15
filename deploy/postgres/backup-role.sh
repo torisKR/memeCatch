@@ -82,6 +82,11 @@ BEGIN
   LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, memecatch_backup', fn);
   END LOOP;
+  -- This public ranking RPC was historically available via PUBLIC. Its
+  -- production-schema migration records its ACL but does not grant it.
+  IF to_regprocedure('public.community_meme_battle(text,integer)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.community_meme_battle(text, integer) TO anon, authenticated, service_role;
+  END IF;
   FOREACH owner_name IN ARRAY ARRAY['postgres', 'memecatch']
   LOOP
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = owner_name) THEN

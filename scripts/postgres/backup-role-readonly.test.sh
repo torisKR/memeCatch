@@ -69,6 +69,7 @@ CREATE FUNCTION public.service_writer() RETURNS void LANGUAGE sql SECURITY DEFIN
 AS $$ INSERT INTO public.reactions (meme_id) VALUES (2) $$;
 REVOKE ALL ON FUNCTION public.service_writer() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.service_writer() TO service_role;
+CREATE FUNCTION public.community_meme_battle(text, integer) RETURNS integer LANGUAGE sql SECURITY DEFINER AS $$ SELECT 1 $$;
 SQL
 docker exec -u postgres -e MEMECATCH_BACKUP_DB_PASSWORD=backup "$server" \
   bash -c 'source /tmp/backup-role.sh && ensure_backup_role'
@@ -79,6 +80,11 @@ docker exec -u postgres -e MEMECATCH_BACKUP_DB_PASSWORD=backup "$server" \
 privileges="$(docker exec "$server" psql -U postgres -d memecatch -At -c "SELECT has_function_privilege('anon', 'public.service_writer()', 'EXECUTE'), has_function_privilege('authenticated', 'public.service_writer()', 'EXECUTE'), has_function_privilege('service_role', 'public.service_writer()', 'EXECUTE');")"
 if [[ "$privileges" != "f|f|t" ]]; then
   echo "memecatch backup readonly: service-only function grants changed: ${privileges}" >&2
+  exit 1
+fi
+ranking_privileges="$(docker exec "$server" psql -U postgres -d memecatch -At -c "SELECT has_function_privilege('anon', 'public.community_meme_battle(text,integer)', 'EXECUTE'), has_function_privilege('authenticated', 'public.community_meme_battle(text,integer)', 'EXECUTE'), has_function_privilege('service_role', 'public.community_meme_battle(text,integer)', 'EXECUTE'), has_function_privilege('memecatch_backup', 'public.community_meme_battle(text,integer)', 'EXECUTE');")"
+if [[ "$ranking_privileges" != "t|t|t|f" ]]; then
+  echo "memecatch backup readonly: ranking function grants incorrect: ${ranking_privileges}" >&2
   exit 1
 fi
 

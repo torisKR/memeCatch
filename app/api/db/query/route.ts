@@ -11,7 +11,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const OPS = new Set(["select", "insert", "update", "delete", "upsert", "rpc"]);
-const MAX_BODY_BYTES = 64 * 1024;
+// Explore pagination sends the discovery index as UUIDs in an IN filter.
+const MAX_BODY_BYTES = 1024 * 1024;
 const MAX_ROWS = 1000;
 const DEFAULT_ROWS = 500;
 const MAX_EMBED_ROWS = 100;

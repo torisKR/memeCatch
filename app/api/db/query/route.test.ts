@@ -39,11 +39,18 @@ describe("browser database query boundary", () => {
   });
 
   it("rejects oversized bodies and excessive limits without contacting the database", async () => {
-    expect((await POST(request({ plan: plan(), padding: "x".repeat(65_537) }))).status).toBe(413);
+    expect((await POST(request({ plan: plan(), padding: "x".repeat(1024 * 1024) }))).status).toBe(413);
     expect((await POST(request({ plan: { ...plan(), limit: 1001 } }))).status).toBe(400);
     const nested = { table: "items", fields: [{ kind: "embed", embed: { table: "children", fields: [{ kind: "star" }], filters: [], orGroups: [], orders: [], limit: null } }], filters: [], orGroups: [], orders: [], limit: null };
     expect((await POST(request({ plan: { ...plan(), fields: [{ kind: "embed", embed: nested }] } }))).status).toBe(400);
     expect(mocks.execute).not.toHaveBeenCalled();
+  });
+
+  it("accepts an Explore discovery filter with thousands of UUIDs", async () => {
+    const ids = Array.from({ length: 2000 }, (_, i) => `00000000-0000-4000-8000-${i.toString().padStart(12, "0")}`);
+    const selection = { ...plan(), filters: [{ column: "id", op: "in", value: ids }] };
+    expect((await POST(request({ plan: selection }))).status).toBe(200);
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
   });
 
   it("rejects requests when rate limited", async () => {

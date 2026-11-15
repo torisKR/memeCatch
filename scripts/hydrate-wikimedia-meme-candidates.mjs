@@ -2,7 +2,7 @@
 /**
  * Turn Wikimedia discovery candidates into complete, still-pending review
  * records. It reads only public Wikimedia introductions and never publishes or
- * writes to Supabase. The result is intended for the pending moderation queue.
+ * writes to the database. The result is intended for the pending moderation queue.
  *
  * Usage:
  *   node scripts/hydrate-wikimedia-meme-candidates.mjs <input-dir> <output.jsonl>

@@ -4,7 +4,7 @@ import { MEME_VECTOR_DIMENSIONS, MEME_VECTOR_PROFILE } from "./meme-vectors";
 
 const mocks = vi.hoisted(() => ({ createStaticClient: vi.fn(), rpc: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("./supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
+vi.mock("./db/server", () => ({ createStaticClient: mocks.createStaticClient }));
 
 function vector() {
   const values = Array<number>(MEME_VECTOR_DIMENSIONS).fill(0);
@@ -36,9 +36,6 @@ beforeEach(async () => {
   vi.stubEnv("MEME_EMBEDDING_API_KEY", "existing-test-key");
   vi.stubEnv("MEME_EMBEDDING_RUNTIME", "");
   vi.stubEnv("CRON_SECRET", "");
-  vi.stubEnv("VERCEL", "");
-  vi.stubEnv("VERCEL_URL", "");
-  vi.stubEnv("VERCEL_AUTOMATION_BYPASS_SECRET", "");
   mocks.createStaticClient.mockReturnValue({ rpc: mocks.rpc });
   lookup = await import("./meme-vector-lookup.server");
 });
@@ -77,14 +74,6 @@ describe("embedding configuration", () => {
     "ftp://localhost/v1/embeddings",
   ])("rejects an unsupported configured endpoint (%#)", (endpoint) => {
     expect(lookup.embeddingEndpoint({ MEME_SEMANTIC_SEARCH_ENABLED: "true", MEME_EMBEDDING_URL: endpoint })).toBeNull();
-  });
-
-  it.each(["localhost", "127.0.0.1", "[::1]"])("rejects HTTP and HTTPS loopback on Vercel (%s)", (host) => {
-    for (const protocol of ["http", "https"]) {
-      expect(lookup.embeddingEndpoint({
-        MEME_SEMANTIC_SEARCH_ENABLED: "true", MEME_EMBEDDING_URL: `${protocol}://${host}/v1/embeddings`, VERCEL: "1",
-      })).toBeNull();
-    }
   });
 
   it("makes no provider request when endpoint configuration is absent or rejected", async () => {
@@ -290,95 +279,28 @@ describe("bundled HTTPS embedding requests", () => {
   });
 });
 
-describe("bundled self-deployment HTTPS endpoint", () => {
-  const selfHost = "memecatch-preview.vercel.app";
-  const selfEndpoint = `https://${selfHost}/v1/embeddings`;
-  const bypass = "existing-vercel-bypass-test-secret";
+describe("bundled runtime on the app host", () => {
+  const local = "http://127.0.0.1:3000/v1/embeddings";
 
   beforeEach(() => {
     vi.stubEnv("MEME_EMBEDDING_RUNTIME", "bundled");
     vi.stubEnv("CRON_SECRET", "existing-cron-test-secret");
-    vi.stubEnv("VERCEL", "1");
-    vi.stubEnv("VERCEL_URL", selfHost);
-    vi.stubEnv("VERCEL_AUTOMATION_BYPASS_SECRET", bypass);
+    vi.stubEnv("MEME_EMBEDDING_URL", local);
     fetchMock.mockImplementation(async () => response());
   });
 
-  it("prefers the exact HTTPS deployment over an arbitrary configured external provider", async () => {
-    expect(lookup.embeddingEndpoint()?.href).toBe(selfEndpoint);
+  it("calls the configured loopback endpoint with a signature and no bearer key", async () => {
+    expect(lookup.embeddingEndpoint()?.href).toBe(local);
     expect(await lookup.embedMemeQuery("퇴근 상황")).toEqual(vector());
     const [endpoint, options] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe(selfEndpoint);
+    expect(String(endpoint)).toBe(local);
     const headers = new Headers(options?.headers);
-    expect(headers.get("x-vercel-protection-bypass")).toBe(bypass);
     expect(headers.has("authorization")).toBe(false);
     expect(headers.get("x-memecatch-embedding-signature")).toMatch(/^[a-f0-9]{64}$/);
     expect(options?.body).toBe(JSON.stringify({ model: MEME_VECTOR_PROFILE, input: "query: 퇴근 상황" }));
-    expect(options?.body).not.toContain(bypass);
   });
 
-  it.each(["http://localhost:8766/v1/embeddings", "http://127.0.0.1:8766/v1/embeddings", "https://localhost/v1/embeddings"])(
-    "overrides a configured localhost URL with deployed HTTPS (%s)", async (configured) => {
-      vi.stubEnv("MEME_EMBEDDING_URL", configured);
-      expect(lookup.embeddingEndpoint()?.href).toBe(selfEndpoint);
-      expect(await lookup.embedMemeQuery("퇴근 상황")).toEqual(vector());
-      expect(String(fetchMock.mock.calls[0][0])).toBe(selfEndpoint);
-    },
-  );
-
-  it("uses self HTTPS when no explicit embedding URL is configured", async () => {
-    vi.stubEnv("MEME_EMBEDDING_URL", "");
-    expect(await lookup.embedMemeQuery("퇴근 상황")).toEqual(vector());
-    expect(String(fetchMock.mock.calls[0][0])).toBe(selfEndpoint);
-  });
-
-  it("does not invent a protection bypass header when the existing secret is absent", async () => {
-    vi.stubEnv("VERCEL_AUTOMATION_BYPASS_SECRET", "");
-    await lookup.embedMemeQuery("퇴근 상황");
-    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).has("x-vercel-protection-bypass")).toBe(false);
-  });
-
-  it("rejects a normalized self host that does not match the configured host exactly", async () => {
-    vi.stubEnv("VERCEL_URL", selfHost.toUpperCase());
-    expect(lookup.embeddingEndpoint()).toBeNull();
-    expect(await lookup.embedMemeQuery("퇴근 상황")).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it.each(["https://external.example.test/v1/embeddings", selfEndpoint])(
-    "never forwards a self bypass in remote mode even when the target is %s", async (configured) => {
-      vi.stubEnv("MEME_EMBEDDING_RUNTIME", "");
-      vi.stubEnv("MEME_EMBEDDING_URL", configured);
-      expect(await lookup.embedMemeQuery("퇴근 상황")).toEqual(vector());
-      const [endpoint, options] = fetchMock.mock.calls[0];
-      expect(String(endpoint)).toBe(configured);
-      const headers = new Headers(options?.headers);
-      expect(headers.has("x-vercel-protection-bypass")).toBe(false);
-      expect(headers.has("x-memecatch-embedding-signature")).toBe(false);
-      expect(headers.get("authorization")).toBe("Bearer existing-test-key");
-    },
-  );
-
-  it("never forwards a bypass to a bundled fallback provider without a self host", async () => {
-    vi.stubEnv("VERCEL_URL", "");
-    await lookup.embedMemeQuery("퇴근 상황");
-    const [endpoint, options] = fetchMock.mock.calls[0];
-    expect(String(endpoint)).toBe("https://embeddings.example.test/v1/embeddings");
-    expect(new Headers(options?.headers).has("x-vercel-protection-bypass")).toBe(false);
-  });
-
-  it.each([
-    `user:password@${selfHost}`, `${selfHost}?token=value`, `${selfHost}#fragment`,
-    `${selfHost}/other-path`, `${selfHost}/`, `${selfHost}/..`, `${selfHost}/./..`,
-    `https://${selfHost}`,
-  ])("rejects a corrupt VERCEL_URL without falling back to another provider (%s)", async (host) => {
-    vi.stubEnv("VERCEL_URL", host);
-    expect(lookup.embeddingEndpoint()).toBeNull();
-    expect(await lookup.embedMemeQuery("퇴근 상황")).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("keeps the explicit feature gate even with a self deployment and existing bypass", async () => {
+  it("keeps the explicit feature gate", async () => {
     vi.stubEnv("MEME_SEMANTIC_SEARCH_ENABLED", "false");
     expect(lookup.embeddingEndpoint()).toBeNull();
     expect(await lookup.embedMemeQuery("퇴근 상황")).toBeNull();
@@ -387,7 +309,7 @@ describe("bundled self-deployment HTTPS endpoint", () => {
 });
 
 describe("related meme vector lookup", () => {
-  it("does not read Supabase when the feature is disabled", async () => {
+  it("does not read the database when the feature is disabled", async () => {
     vi.stubEnv("MEME_SEMANTIC_SEARCH_ENABLED", "false");
     expect(await lookup.getSemanticRelatedMemeIds("meme-id")).toEqual([]);
     expect(mocks.createStaticClient).not.toHaveBeenCalled();

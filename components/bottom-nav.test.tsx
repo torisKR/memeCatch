@@ -105,7 +105,7 @@ describe("BottomNav", () => {
     expect(html).not.toMatch(/>\s*MY\s*</);
   });
 
-  it("marks Home current for the Vercel /index alias", () => {
+  it("marks Home current for the /index alias", () => {
     navigation.pathname = "/index";
     const html = renderToStaticMarkup(<BottomNav />);
 

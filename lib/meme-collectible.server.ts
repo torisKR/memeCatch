@@ -1,6 +1,6 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createStaticClient } from "@/lib/supabase/server";
+import type { DbSessionClient } from "@/lib/db/types";
+import { createStaticClient } from "@/lib/db/server";
 import { memePathFrom } from "@/lib/labels";
 import { getMemeCardArtDirection, getMemeCardEditorialCaption } from "@/lib/meme-collectible-catalog";
 import type { Database } from "@/lib/database.types";
@@ -10,7 +10,7 @@ import {
   type MemeCardClaimResult, type MemeCardPageOptions,
 } from "@/lib/meme-collectible";
 
-type Client = SupabaseClient<Database>;
+type Client = DbSessionClient;
 const CARD_SELECT = "id,card_no,meme_id,edition,art_seed,active,memes!inner(id,short_id,title,slug,category,origin_year,moderation_status,safety_level,published_at)" as const;
 type CatalogRow = Pick<Database["public"]["Tables"]["meme_collectible_cards"]["Row"], "id" | "card_no" | "meme_id" | "edition" | "art_seed" | "active"> & {
   memes: Pick<Database["public"]["Tables"]["memes"]["Row"], "id" | "short_id" | "title" | "slug" | "category" | "origin_year" | "moderation_status" | "safety_level" | "published_at">;
@@ -37,7 +37,7 @@ export async function getMemeCardAuthenticatedUser(client: Client): Promise<{ id
 
 function unavailable(): never { throw new MemeCardServiceError(503, "cards_unavailable"); }
 
-function checkPrivateQueryAuth(error: { code: string } | null, status?: number): void {
+function checkPrivateQueryAuth(error: { code?: string } | null, status?: number): void {
   if (status === 401 || error?.code === "PGRST301" || error?.code === "PGRST303") {
     throw new MemeCardServiceError(401, "signed_out");
   }

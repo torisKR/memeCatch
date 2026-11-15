@@ -1,4 +1,4 @@
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import {
   buildQuestions,
   QUIZ_SIZE,
@@ -38,10 +38,10 @@ export async function GET(request: Request) {
   const yearFilter = MODE_YEAR_FILTER[mode];
 
   try {
-    const supabase = createStaticClient();
+    const db = createStaticClient();
 
     const pivot = randomShortId();
-    let poolQuery = supabase
+    let poolQuery = db
       .from("memes")
       .select("short_id, slug, title, summary, category, origin_year, safety_level")
       .eq("moderation_status", "approved")
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
 
     let data = first;
     if (data.length < POOL_SIZE) {
-      let wrapQuery = supabase
+      let wrapQuery = db
         .from("memes")
         .select("short_id, slug, title, summary, category, origin_year, safety_level")
         .eq("moderation_status", "approved")

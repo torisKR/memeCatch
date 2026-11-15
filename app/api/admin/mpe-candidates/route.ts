@@ -10,7 +10,7 @@ import {
   EvidenceDraftError,
   generateEvidenceDraft,
 } from "@/lib/mpe/evidence-draft.server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { hasTrustedOrigin } from "@/lib/origin";
 
 const candidateIdSchema = z.uuid();

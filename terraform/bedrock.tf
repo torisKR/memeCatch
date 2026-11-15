@@ -2,44 +2,12 @@ locals {
   bedrock_inference_profile_id  = "global.anthropic.claude-sonnet-5"
   bedrock_inference_profile_arn = "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${local.bedrock_inference_profile_id}"
   bedrock_foundation_model_arn  = "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-5"
-  vercel_oidc_host              = "oidc.vercel.com/${var.vercel_team_slug}"
-  vercel_audience               = "https://vercel.com/${var.vercel_team_slug}"
 }
 
-resource "aws_iam_openid_connect_provider" "vercel" {
-  url            = "https://${local.vercel_oidc_host}"
-  client_id_list = [local.vercel_audience]
-}
-
-data "aws_iam_policy_document" "vercel_bedrock_trust" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-
-    principals {
-      type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.vercel.arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.vercel_oidc_host}:aud"
-      values   = [local.vercel_audience]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "${local.vercel_oidc_host}:sub"
-      values = [
-        "owner:${var.vercel_team_slug}:project:${var.vercel_project_name}:environment:preview",
-        "owner:${var.vercel_team_slug}:project:${var.vercel_project_name}:environment:production",
-      ]
-    }
-  }
-}
-
-resource "aws_iam_role" "vercel_bedrock" {
-  name               = "memecatch-vercel-bedrock"
-  assume_role_policy = data.aws_iam_policy_document.vercel_bedrock_trust.json
+# OCI VM의 앱 컨테이너가 Bedrock을 호출할 때 쓸 최소 권한 사용자.
+# 액세스 키는 콘솔/CLI로 별도 발급해 VM의 AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY에만 둔다.
+resource "aws_iam_user" "bedrock" {
+  name = "memecatch-bedrock"
 }
 
 data "aws_iam_policy_document" "bedrock_inference" {
@@ -62,9 +30,9 @@ data "aws_iam_policy_document" "bedrock_inference" {
   }
 }
 
-resource "aws_iam_role_policy" "bedrock_inference" {
+resource "aws_iam_user_policy" "bedrock_inference" {
   name   = "claude-haiku-4-5-global-inference-only"
-  role   = aws_iam_role.vercel_bedrock.id
+  user   = aws_iam_user.bedrock.name
   policy = data.aws_iam_policy_document.bedrock_inference.json
 }
 

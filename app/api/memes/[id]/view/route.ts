@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { signingSecret } from "@/lib/auth/signing-secret";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { MEME_CARD_TARGET_COUNT, type MemeCardDiscoveryPage, type MemeCardSeal, type MemeCollectibleCard } from "@/lib/meme-collectible";
 import { memeCardCatalogHref, memeCardReturnHref, readRevealedMemeCard } from "@/lib/meme-collectible-ui";
 import { useLocale } from "@/lib/i18n-client";
@@ -45,12 +45,12 @@ export function MemeCollectibleGallery({ catalog, initialSelected = null, initia
   useEffect(() => {
     let alive = true;
     let authEpoch = 0;
-    const supabase = createClient();
+    const db = createClient();
     async function checkUser() {
       const epoch = ++authEpoch;
       if (alive) setAuthFailed(false);
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await db.auth.getUser();
         if (!alive || authEpoch !== epoch) return;
         if (error && ![400, 401, 403].includes(error.status ?? 0) && error.name !== "AuthSessionMissingError") throw error;
         const id = !error && user && !user.is_anonymous ? user.id : null;
@@ -71,7 +71,7 @@ export function MemeCollectibleGallery({ catalog, initialSelected = null, initia
       void checkUser();
     }
     function onVisibility() { if (document.visibilityState === "visible") revalidate(); }
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = db.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         authEpoch++; verifiedUser.current = null;
         ownershipEpoch.current++; ownershipRequest.current?.abort();

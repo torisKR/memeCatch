@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { signOut } from "@/lib/actions/auth";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { useLocale } from "@/lib/i18n-client";
 import { normalizePathname } from "@/lib/normalize-pathname";
 
@@ -53,8 +53,8 @@ export function AuthMenu() {
     } catch {
       // 저장소 접근 실패(시크릿 모드 등)는 무시 — 아래 네트워크 조회로 확정된다
     }
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    const db = createClient();
+    db.auth.getUser().then(async ({ data: { user } }) => {
       if (!alive) return;
       if (!user) {
         setNickname("");
@@ -63,7 +63,7 @@ export function AuthMenu() {
         } catch {}
         return;
       }
-      const { data } = await supabase
+      const { data } = await db
         .from("profiles")
         .select("nickname")
         .eq("id", user.id)
@@ -76,7 +76,7 @@ export function AuthMenu() {
       } catch {}
     });
     // 로그인/로그아웃 변화 반영
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = db.auth.onAuthStateChange((_e, session) => {
       if (!session?.user) {
         setNickname("");
         try {

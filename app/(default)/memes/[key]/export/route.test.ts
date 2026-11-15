@@ -15,7 +15,7 @@ vi.mock("next/og", () => ({
     }
   },
 }));
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/db/server", () => ({
   createClient: async () => ({ from, auth: { getUser }, rpc: async () => ({ error: null }) }),
   createStaticClient: () => ({ from }),
 }));

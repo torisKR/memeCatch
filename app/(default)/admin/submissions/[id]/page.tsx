@@ -24,9 +24,9 @@ export default async function SubmissionDetailPage({
 }) {
   const { id } = await params;
   // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
-  const { supabase, user } = await requireOperatorPage(`/admin/submissions/${id}`);
+  const { db, user } = await requireOperatorPage(`/admin/submissions/${id}`);
 
-  const { data: submission } = await supabase
+  const { data: submission } = await db
     .from("meme_submissions")
     .select(
       "*, dup:memes!meme_submissions_dup_of_fkey(id, title, short_id, slug), submitter:profiles!meme_submissions_submitter_id_fkey(nickname), claimer:profiles!meme_submissions_claimed_by_fkey(nickname)"

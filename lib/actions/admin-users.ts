@@ -7,8 +7,8 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/db/server";
+import { createAdminClient } from "@/lib/db/admin";
 import type { Json } from "@/lib/database.types";
 
 type ActionResult<T = undefined> =
@@ -16,12 +16,12 @@ type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 async function requireOperator() {
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) throw new Error("로그인이 필요해요.");
-  const { data: isOperator } = await supabase.rpc("is_operator");
+  const { data: isOperator } = await db.rpc("is_operator");
   if (!isOperator) throw new Error("운영자 권한이 없어요.");
   return { uid: user.id };
 }
@@ -221,10 +221,10 @@ export async function sendPasswordReset(
   try {
     const { uid } = await requireOperator();
     await logAuditOutcome(uid, "user.password_reset_sent", null, "intent", { email });
-    const supabase = await createClient();
+    const db = await createClient();
     const { error } = await (async () => {
       try {
-        return await supabase.auth.resetPasswordForEmail(email, {
+        return await db.auth.resetPasswordForEmail(email, {
           redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://catchmeme.com"}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
         });
       } catch (cause) {

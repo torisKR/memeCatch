@@ -43,11 +43,11 @@ node scripts/build-meme-card-catalog.mjs --check
 
 The checks enforce exactly 1,000 sequential stable IDs, distinct meme UUIDs, distinct normalized titles and concept keys, reviewed alias keys, distinct art seeds, valid motifs and compositions, nonempty symbol tokens and captions, canonical HTTPS references and absence of filler or unsubstantiated fields. Separate UI rendering tests exercise every catalog card and reject symbols the renderer does not implement. Structural uniqueness checks do not replace editorial review of whether two titles describe the same meme.
 
-The catalog table migration must exist before applying the seed. Create the seed filename with the installed Supabase CLI, then render it into that existing empty file:
+The catalog table migration must exist before applying the seed. Create an empty, timestamped seed file in `db/migrations/`, then render into it:
 
 ```sh
-supabase migration new meme_collectible_catalog_seed
-node scripts/build-meme-card-catalog.mjs --seed supabase/migrations/CLI_CREATED_TIMESTAMP_meme_collectible_catalog_seed.sql
+f="db/migrations/$(date -u +%Y%m%d%H%M%S)_meme_collectible_catalog_seed.sql"; : > "$f"
+node scripts/build-meme-card-catalog.mjs --seed "$f"
 ```
 
 The generated seed contains only collectible references. It does not insert or update memes, moderation, safety, rights, origins, existing source rows, user profiles or collection claims. It runs in one transaction and aborts unless all 1,000 referenced memes still exist and satisfy the eligibility rules. It rejects conflicting frozen card assignments, uses `ON CONFLICT (id) DO NOTHING` for safe retries, and verifies exactly 1,000 matching eligible cards before committing. The embedded SHA-256 identifies the manifest it was generated from.

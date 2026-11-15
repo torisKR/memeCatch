@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { type SafetyLevel } from "@/lib/labels";
 import { MyContent, type SavedMeme, type MySubmission } from "./my-content";
 import { getMemeCardCollectionPage } from "@/lib/meme-collectible.server";
@@ -28,24 +28,24 @@ export default async function MyPage({
   const nicknameSaved = sp.nickname_saved === "1";
   const savedFilters = parseSavedLibraryFilters(sp);
 
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) redirect("/login?next=/my");
 
   const memeCardsPromise = user.is_anonymous
     ? Promise.resolve({ page: null, error: true, loginRequired: true })
-    : getMemeCardCollectionPage(supabase, user.id, { page: 1 })
+    : getMemeCardCollectionPage(db, user.id, { page: 1 })
       .then((page) => ({ page, error: false, loginRequired: false }))
       .catch(() => ({ page: null, error: true, loginRequired: false }));
 
   const [profileRes, subsRes] =
     await Promise.all([
-      supabase
+      db
         .rpc("get_my_profile")
         .single(),
-      supabase
+      db
         .from("meme_submissions")
         .select(
           "id, name, status, reject_reason, created_at, dup:memes!dup_of(title, short_id, slug)",
@@ -57,7 +57,7 @@ export default async function MyPage({
   const savedFrom = (savedFilters.page - 1) * SAVED_LIBRARY_PAGE_SIZE;
   const hasVaultFilters = Boolean(savedFilters.query || savedFilters.safety);
 
-  let savedQuery = supabase
+  let savedQuery = db
     .from("saved_memes")
     // `!inner` is required: referenced-table filters must filter parent saved
     // rows rather than merely returning an empty embedded `memes` object.
@@ -78,7 +78,7 @@ export default async function MyPage({
   // complete saved total. The second request is head-only and remains scoped by
   // the existing saved_memes RLS policy.
   const totalSavedPromise = hasVaultFilters
-    ? supabase
+    ? db
         .from("saved_memes")
         .select("meme_id", { count: "exact", head: true })
     : Promise.resolve(null);

@@ -44,12 +44,12 @@ export default async function AdminSourcesPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const { supabase } = await requireOperatorPage("/admin/sources");
+  const { db } = await requireOperatorPage("/admin/sources");
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? "1") || 1);
 
   const [{ data, count }, { data: memes, error: memesError }] = await Promise.all([
-    supabase
+    db
       .from("meme_media")
       .select(
         "meme_id, source_id, created_at, memes(title, slug, short_id, origin_year, source_work_year, korea_viral_year), media_sources(id, platform, external_id, canonical_url, title, channel_name, platform_published_at, duration_seconds, public_status, embeddable, license_code, thumbnail_url, removed_at)",
@@ -59,7 +59,7 @@ export default async function AdminSourcesPage({
       .order("created_at", { ascending: true })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
       .returns<QueueRow[]>(),
-    supabase
+    db
       .from("memes")
       .select("id, title, short_id")
       .order("updated_at", { ascending: false })

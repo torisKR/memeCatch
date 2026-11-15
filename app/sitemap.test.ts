@@ -8,7 +8,7 @@ const { createStaticClient, discoveryIds } = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient }));
 vi.mock("@/lib/index-gate.server", () => ({
   loadDiscoveryIndex: vi.fn(async () => ({ ok: true, ids: new Set(discoveryIds) })),
 }));
@@ -219,10 +219,10 @@ describe("사이트맵 페이지네이션 안정성", () => {
     }
   });
 
-  it("Supabase 클라이언트가 던져도 정적 사이트맵을 반환한다", async () => {
+  it("DB 클라이언트가 던져도 정적 사이트맵을 반환한다", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     createStaticClient.mockImplementation(() => {
-      throw new Error("Your project's URL and Key are required to create a Supabase client!");
+      throw new Error("database unavailable");
     });
 
     const entries = await sitemap();

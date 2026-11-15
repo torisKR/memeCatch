@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import {
   withAllowlistedSearch,
   type AuthReturnSearch,
@@ -11,7 +11,7 @@ import {
  * 각 페이지 상단에서 operator를 재확인한다(미들웨어 단독 의존 금지).
  * 비로그인 → /login?next=…, 비운영자 → /.
  * `next`는 경로 + allowlist된 search만 담는다(예: focus=unsourced).
- * 통과 시 세션 supabase 클라이언트와 user를 반환해 페이지가 재사용한다.
+ * 통과 시 세션 db 클라이언트와 user를 반환해 페이지가 재사용한다.
  * (Server Action 쪽은 lib/actions/admin.ts의 requireOperator가 동일 검증을 수행)
  */
 // Request-scoped memoization: page and authorized DAL share the same check.
@@ -19,13 +19,13 @@ export const requireOperatorPage = cache(async function requireOperatorPage(
   nextPath: string = "/admin",
   search?: AuthReturnSearch,
 ) {
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   const next = withAllowlistedSearch(nextPath, search);
   if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
-  const { data: isOperator, error: operatorError } = await supabase.rpc("is_operator");
+  const { data: isOperator, error: operatorError } = await db.rpc("is_operator");
   if (operatorError || isOperator !== true) redirect("/");
-  return { supabase, user };
+  return { db, user };
 });

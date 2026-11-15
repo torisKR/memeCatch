@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import {
   SAFETY_LEVELS,
   LIFECYCLE_STATUS,
@@ -65,13 +65,13 @@ export async function GET(
   }
   const localizedLocale = isSeoContentLocale(requestedLocale) ? requestedLocale : null;
 
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) return errorResponse("signed_out", 401);
 
-  const { error: quotaError } = await (supabase as unknown as ExportQuotaClient).rpc(
+  const { error: quotaError } = await (db as unknown as ExportQuotaClient).rpc(
     "reserve_meme_export",
   );
   if (quotaError) {
@@ -86,7 +86,7 @@ export async function GET(
   const format = isCardFormat(formatParam) ? formatParam : "card";
 
   // --- 데이터 로드 ---
-  const { data: meme, error: memeError } = await supabase
+  const { data: meme, error: memeError } = await db
     .from("memes")
     .select("id, title, summary, updated_at, safety_level, lifecycle_status")
     .eq("short_id", shortId)
@@ -98,7 +98,7 @@ export async function GET(
   let title = meme.title;
   let summary = meme.summary;
   if (localizedLocale) {
-    const { data: translation, error: translationError } = await supabase
+    const { data: translation, error: translationError } = await db
       .from("meme_translations")
       .select("meme_id, locale, status, title, summary, description, origin, source_updated_at")
       .eq("meme_id", meme.id)

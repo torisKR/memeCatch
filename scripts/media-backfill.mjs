@@ -12,54 +12,16 @@
  *      (이미 임베드가 있는 meme_id는 스킵)
  *
  * 사용: node scripts/media-backfill.mjs [--dry-run] [--research file.json]
- * 키는 .env.local 의 NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 에서 읽음.
+ * DB는 .env.local 또는 환경변수의 DATABASE_URL(service role)로 접근한다.
  */
-import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRestClient } from "./source-pipeline-rest.mjs";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
-
-function loadEnv() {
-  const raw = readFileSync(resolve(ROOT, ".env.local"), "utf8");
-  const env = {};
-  for (const line of raw.split("\n")) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-
-const env = loadEnv();
-const BASE = env.NEXT_PUBLIC_SUPABASE_URL;
-const KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-if (!BASE || !KEY) {
-  console.error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 누락 (.env.local)");
-  process.exit(1);
-}
+const rest = createRestClient();
 
 const DRY = process.argv.includes("--dry-run");
 const researchIdx = process.argv.indexOf("--research");
 const researchFile = researchIdx > -1 ? process.argv[researchIdx + 1] : null;
-
-async function rest(path, init = {}) {
-  const res = await fetch(`${BASE}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: KEY,
-      Authorization: `Bearer ${KEY}`,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`${init.method ?? "GET"} ${path} → ${res.status}: ${body}`);
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
-}
 
 function extractYouTubeId(rawUrl) {
   let u;

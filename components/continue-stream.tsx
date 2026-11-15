@@ -1,6 +1,6 @@
 import { cacheCatalogRead } from "@/lib/catalog-read-cache";
-import { createStaticClient } from "@/lib/supabase/server";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { createStaticClient } from "@/lib/db/server";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { INDEXABLE_LIST_SELECT, MemeCatalogUnavailableError, type MemeListItem } from "@/lib/queries";
 import type { MemeCategory } from "@/lib/labels";
 import { RelatedMemes } from "@/components/related-memes";

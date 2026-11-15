@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Json, TablesInsert } from "@/lib/database.types";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 import type {
   NormalizedRadarSignal,
   RadarState,

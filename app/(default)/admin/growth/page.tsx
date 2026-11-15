@@ -62,8 +62,8 @@ export default async function AdminGrowthPage({
 }: {
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
-  const { supabase } = await requireOperatorPage("/admin/growth");
-  const { data: campaign, error: campaignError } = await supabase
+  const { db } = await requireOperatorPage("/admin/growth");
+  const { data: campaign, error: campaignError } = await db
     .from("seo_campaigns")
     .select("id")
     .in("state", ["ready", "in_progress", "measurement_due"])
@@ -73,7 +73,7 @@ export default async function AdminGrowthPage({
   if (campaignError) throw new Error(`SEO 캠페인을 확인하지 못했어요: ${campaignError.message}`);
 
   const { data: campaignItems, error: campaignItemsError } = campaign
-    ? await supabase
+    ? await db
         .from("seo_campaign_items")
         .select("meme_id, batch, created_at, id")
         .eq("campaign_id", campaign.id)
@@ -88,7 +88,7 @@ export default async function AdminGrowthPage({
   }
   const targetIds = campaignItems?.map((item) => item.meme_id) ?? [];
 
-  let memeQuery = supabase
+  let memeQuery = db
     .from("memes")
     .select(
       "id, short_id, slug, title, summary, description, origin, origin_year, usage_note, caution, usage_examples, category, trend_score, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id)",
@@ -105,8 +105,8 @@ export default async function AdminGrowthPage({
 
   const [{ data: memeRows, error: memeError }, dashboardResult, kpiResult, notice] = await Promise.all([
     memeQuery,
-    (supabase.rpc as unknown as GrowthRpc)("get_growth_pilot_dashboard"),
-    (supabase.rpc as unknown as GrowthRpc)("get_growth_kpi_dashboard"),
+    (db.rpc as unknown as GrowthRpc)("get_growth_pilot_dashboard"),
+    (db.rpc as unknown as GrowthRpc)("get_growth_kpi_dashboard"),
     searchParams,
   ]);
 
@@ -118,7 +118,7 @@ export default async function AdminGrowthPage({
     throw new Error(`성장 KPI를 불러오지 못했어요: ${kpiResult.error.message}`);
   }
 
-  const relatedResult = await (supabase.rpc as unknown as GrowthRpc)(
+  const relatedResult = await (db.rpc as unknown as GrowthRpc)(
     "get_growth_seo_related_counts",
     { p_meme_ids: (memeRows ?? []).map((row) => row.id) },
   );

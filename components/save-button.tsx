@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { LoginGate } from "@/components/login-gate";
 import { useLocale } from "@/lib/i18n-client";
 import { withLocaleFallback } from "@/lib/i18n";
@@ -152,10 +152,10 @@ export function SaveButton({ memeId }: { memeId: string }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
+      const db = createClient();
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await db.auth.getUser();
       if (cancelled) return;
       setLoggedIn(!!user);
       if (!user) return;
@@ -163,13 +163,13 @@ export function SaveButton({ memeId }: { memeId: string }) {
       const queued = readSaveIntents();
       const remaining: SaveIntent[] = [];
       for (const intent of queued) {
-        const { error } = await supabase.rpc("save_meme", { p_meme_id: intent.memeId });
+        const { error } = await db.rpc("save_meme", { p_meme_id: intent.memeId });
         if (error && !isTerminalSaveError(error)) remaining.push(intent);
         if (!error && intent.memeId === memeId) setSaved(true);
       }
       writeSaveIntents(remaining);
 
-      const { data } = await supabase
+      const { data } = await db
         .from("saved_memes")
         .select("meme_id")
         .eq("meme_id", memeId)

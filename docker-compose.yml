@@ -32,7 +32,7 @@ services:
       - ./deploy/postgres/00-bootstrap.sql:/sql/00-bootstrap.sql:ro
       - ./deploy/postgres/99-app-identity.sql:/sql/99-app-identity.sql:ro
       - ./deploy/postgres/backup-role.sh:/sql/backup-role.sh:ro
-      - ./supabase/migrations:/migrations:ro
+      - ./db/migrations:/migrations:ro
     networks: [memecatch]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d memecatch"]
@@ -55,8 +55,9 @@ services:
       NODE_ENV: production
       ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
       AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_REGION: ${AWS_REGION:-}
-      AWS_ROLE_ARN: ${AWS_ROLE_ARN:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       BEDROCK_MEME_STUDIO_ENABLED: ${BEDROCK_MEME_STUDIO_ENABLED:-}
       BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN:-}
       BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN:-}
@@ -89,7 +90,6 @@ services:
       NEXT_PUBLIC_COMMUNITY_ENABLED: ${NEXT_PUBLIC_COMMUNITY_ENABLED:-}
       NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
       NEXT_PUBLIC_SUBMISSIONS_OPEN: ${NEXT_PUBLIC_SUBMISSIONS_OPEN:-}
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
       OBJECT_SIGNING_SECRET: ${OBJECT_SIGNING_SECRET:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_REVIEW_BASE_URL: ${OPENAI_REVIEW_BASE_URL:-}
@@ -111,11 +111,6 @@ services:
       TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
       TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
       TIKTOK_REDIRECT_URI: ${TIKTOK_REDIRECT_URI:-}
-      VERCEL: ${VERCEL:-}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${VERCEL_AUTOMATION_BYPASS_SECRET:-}
-      VERCEL_ENV: ${VERCEL_ENV:-}
-      VERCEL_GIT_COMMIT_SHA: ${VERCEL_GIT_COMMIT_SHA:-}
-      VERCEL_URL: ${VERCEL_URL:-}
       X_API_BEARER_TOKEN: ${X_API_BEARER_TOKEN:-}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
     depends_on:

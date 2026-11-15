@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/db/server";
+import { createAdminClient } from "@/lib/db/admin";
 import { r2Configured, r2Put } from "@/lib/r2.server";
 import {
   ALLOWED_IMAGE_TYPES,
@@ -21,7 +21,7 @@ type QuotaRpcClient = {
 /**
  * 제보 이미지 업로드 — 서버 전용 경로.
  * R2 자격증명이 설정돼 있으면 Cloudflare R2(memecatch-uploads)로,
- * 아니면 기존 Supabase Storage(meme-uploads 버킷)로 폴백.
+ * 아니면 로컬 디스크 저장소(LOCAL_OBJECT_STORAGE_DIR, meme-uploads 버킷)로 폴백.
  * 어느 쪽이든 반환 경로는 "meme-uploads/{userId}/{uuid}.{ext}" —
  * submit_meme_v2 RPC의 자기 폴더 프리픽스 검증과 호환된다.
  * 클라이언트는 R2 키를 전혀 알지 못한다(서버 env로만 서명).
@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
   if (!hasTrustedOrigin(req)) {
     return NextResponse.json({ ok: false, error: "invalid_origin" }, { status: 403 });
   }
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) {
     return NextResponse.json({ ok: false, error: "login_required" }, { status: 401 });
   }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { error: quotaError } = await (supabase as unknown as QuotaRpcClient).rpc(
+  const { error: quotaError } = await (db as unknown as QuotaRpcClient).rpc(
     "reserve_api_request",
     { p_action: "upload" },
   );
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, path: fullPath });
   }
 
-  // 폴백: Supabase Storage (RLS 정책 — 자기 폴더만 insert 가능)
+  // 폴백: 로컬 디스크 저장소 (경로는 자기 폴더로 제한)
   const { data, error } = await createAdminClient().storage
     .from("meme-uploads")
     .upload(objectPath, file, {

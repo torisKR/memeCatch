@@ -3,9 +3,9 @@
 > **그 밈, 3초 안에 알려드려요.**
 > 요즘 유행하는 밈·유행어·챌린지의 뜻·유래, 그리고 **지금 써도 되는지**까지 알려주는 한국 밈 트렌드 사전.
 
-현재 Next.js/Supabase 기반 공개 웹앱을 개발·운영 중이며, 콘텐츠 검수·출처 권리 확인은 공개 출시와 별도의 운영 절차입니다.
+현재 Next.js + 자체 호스팅 PostgreSQL 기반 공개 웹앱을 개발·운영 중이며, 콘텐츠 검수·출처 권리 확인은 공개 출시와 별도의 운영 절차입니다.
 
-**🔗 프로덕션: https://memecatch.vercel.app**
+**🔗 프로덕션: https://catchmeme.com**
 
 ---
 
@@ -33,7 +33,7 @@
 ## 기술 스택
 
 - **프론트엔드**: Next.js 16 (App Router, 요청별 SSR) · React 19 · TypeScript · Tailwind CSS v4 · [motion](https://motion.dev) (framer-motion)
-- **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
+- **백엔드**: PostgreSQL 16 + pgvector (RLS · RPC, Compose 컨테이너) · better-auth(이메일·카카오·구글·TikTok 로그인) · 크론은 `deploy/scheduler`
 - **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
 - **배포**: OCI 도쿄 VM의 Docker Compose와 자체 Caddy. Cloudflare가 `catchmeme.com`을 그 원본으로 프록시하고, GitHub Actions가 이미지를 만들어 VM에 배포한다.
 - **미디어**: Cloudflare R2 (`/api/media` 프록시) · **메일**: AWS SES
@@ -45,7 +45,7 @@
 
 - **RLS 기본 deny** — 모든 쓰기는 `security definer` RPC 경유(반응·저장·제보·신고·댓글). 서버 관리 컬럼은 클라이언트 쓰기 차단.
 - **한국어 검색** — Postgres 기본 파서가 한국어를 못 다뤄, `pg_trgm` + 초성 generated column + 별칭(aliases)으로 구현.
-- **트렌드 점수** — `ln(1+x)` 정규화 + 72h 윈도 + 신규 부스트, `pg_cron` 일배치(KST 00:30).
+- **트렌드 점수** — `ln(1+x)` 정규화 + 72h 윈도 + 신규 부스트, 스케줄러 일배치(KST 00:30).
 - **경로 없는 요청별 다국어 SSR** — Proxy가 쿠키·국가·`Accept-Language`를 검증해 요청 헤더로 전달하고, root layout이 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 SSR합니다. 이 선택은 locale-prefixed URL 대신 문서 페이지의 Full Route Cache/ISR을 의도적으로 포기합니다. 서비스 워커도 문서 내비게이션과 클라이언트 전환·refresh·prefetch의 RSC payload를 `NetworkOnly`로 처리해 URL이 같은 다른 로케일·세션의 응답을 재사용하지 않으며, 정적 자산·API·미디어 캐시는 유지합니다. 공개 데이터 쿼리는 계속 쿠키 없는 `createStaticClient`를 사용하고, 별도 정적/재검증 Route Handler와 명시된 데이터 캐시는 유지합니다. 탐색 플랫폼 수량은 RLS를 유지하는 `get_social_platform_counts` 집계 RPC의 익명 GET 응답만 300초 캐시하며, 관리자 공개 상태 변경·출처 승인 때 즉시 만료합니다. 로그인·일반 행 조회·다른 RPC는 이 캐시에 들어가지 않습니다.
 
 MPE worker는 빈 큐를 만나면 기본 2초에서 최대 30초까지 지수적으로 대기합니다. 작업을 처리하면 다시 2초로 돌아오며, 큐에 작업이 계속 있으면 대기하지 않습니다. `MPE_WORKER_POLL_MS`와 `MPE_WORKER_MAX_IDLE_POLL_MS`로 조정하고 동일한 값으로 고정 간격을 선택할 수 있습니다. 새 작업의 idle 상태 발견 지연은 기본 최대 약 30초이며, 이미 실행 중인 worker에는 재시작 후 적용됩니다.
@@ -54,19 +54,21 @@ MPE worker는 빈 큐를 만나면 기본 2초에서 최대 30초까지 지수�
 ## 로컬 개발
 
 ### 사전 요구
-- Node.js 20+ · [pnpm](https://pnpm.io) · Docker (로컬 Supabase용)
+- Node.js 22+ · [pnpm](https://pnpm.io) · Docker (로컬 Postgres용)
 
 ### 시작하기
 
 ```bash
 pnpm install
 
-# 로컬 Supabase 스택 기동 (Docker 필요)
-supabase start
-supabase db reset          # 스키마 마이그레이션 적용
+# 로컬 Postgres(pgvector) 기동 후 운영과 같은 순서로 스키마 적용
+docker run -d --name memecatch-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 pgvector/pgvector:pg16
+psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1 -f deploy/postgres/00-bootstrap.sql
+for f in db/migrations/*.sql; do psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1 -f "$f"; done
+psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1 -f db/seed.sql   # 선택: 개발 픽스처
 
 # 환경변수 — .env.local은 사용하지 않고 dev/prod를 물리적으로 분리
-cp .env.example .env.development  # supabase start의 로컬 값만 채우기
+cp .env.example .env.development  # DATABASE_URL·BETTER_AUTH_SECRET만 로컬 값으로 채우기
 
 pnpm dev                    # http://localhost:3000
 ```
@@ -114,15 +116,14 @@ node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve 
 - `meme_media` — 밈 ↔ 출처 다대다 + 권리 근거(`rights_basis`)·출처 역할(`source_role`)·검수 상태
 - `meme_claims` — 유래·의미 주장과 근거 출처 연결(검증 전 `verified=false`)
 - `memes.source_work_year` / `meme_first_seen_year` / `korea_viral_year` / `era_type` — YouTube 업로드 날짜와 밈 발생 연도를 분리
-- Vercel Cron `0 17 * * *` → `/api/cron/source-refresh`가 삭제·비공개·임베드 불가를 7일 주기로 확인하고 공개 임베드를 자동으로 내립니다(`meme_contents.availability='dead'`). YouTube 메타데이터는 30일 안에 갱신됩니다.
+- 스케줄러(`deploy/scheduler/crontab`) `0 17 * * *` → `/api/cron/source-refresh`가 삭제·비공개·임베드 불가를 7일 주기로 확인하고 공개 임베드를 자동으로 내립니다(`meme_contents.availability='dead'`). YouTube 메타데이터는 30일 안에 갱신됩니다.
 
 ## 환경변수
 
 | 변수 | 설명 |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon(publishable) 키 |
-| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service_role 키 (배치·관리·시드) |
+| `DATABASE_URL` | PostgreSQL 접속 URL (서버 전용) |
+| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` | 로그인 세션 서명 비밀값과 공개 기준 URL |
 | `NEXT_PUBLIC_COMMUNITY_ENABLED` | 커뮤니티(댓글·반응 공개·랭킹) 플래그. `false`로 시작 |
 | `NEXT_PUBLIC_SUBMISSIONS_OPEN` | 제보 기능 on/off |
 | `NEXT_PUBLIC_SITE_URL` | 절대 URL 기준(OG·sitemap) |
@@ -136,13 +137,13 @@ node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve 
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | (선택) AdSense 게시자 ID(`ca-pub-…`). 설정 시 스크립트·`/ads.txt`·계정 메타 자동 활성화 |
 | `NEXT_PUBLIC_GA_ID` | (선택) GA4 측정 ID(`G-…`). 설정 시 gtag 자동 로드 |
 | `YOUTUBE_API_KEY` | (선택) YouTube Data API v3 키 — 출처 후보 발견·메타데이터 재확인. 서버 전용 |
-| `CRON_SECRET` | Vercel Cron 및 수동 동기화 요청 인증 비밀값. 서버 전용 |
+| `CRON_SECRET` | 스케줄러 크론·수동 동기화 요청 인증 비밀값. 서버 전용 |
 
-> R2 4종이 비어 있으면 제보 이미지는 Supabase Storage(`meme-uploads`)에 저장됩니다. R2 키는 서버에서만 읽으며(`lib/r2.server.ts`, `server-only`) 클라이언트 번들에 포함되지 않습니다.
+> R2 4종이 비어 있으면 제보 이미지는 `LOCAL_OBJECT_STORAGE_DIR` 로컬 저장소에 저장됩니다. R2 키는 서버에서만 읽으며(`lib/r2.server.ts`, `server-only`) 클라이언트 번들에 포함되지 않습니다.
 
 ## 데이터베이스
 
-Supabase 마이그레이션은 `supabase/migrations/`에 있습니다. 주요 테이블:
+SQL 마이그레이션은 `db/migrations/`에 있습니다. 새 DB는 `deploy/postgres/init.sh`가 첫 부팅 때 파일명 순서로 적용하고, 운영 DB에는 새 파일을 `psql -v ON_ERROR_STOP=1 -1 -f`로 직접 적용합니다. 주요 테이블:
 
 - `memes` — 밈 본문(뜻·유래·신호등·생애주기·검수 상태·연도 분리 필드)
 - `meme_contents` / `meme_sources` — YouTube·TikTok·Instagram·Facebook·Threads 임베드와 출처 링크
@@ -167,7 +168,7 @@ RPC: `search_memes` · `toggle_reaction` · `toggle_save` · `submit_meme` · `p
 
 ## 소셜 로그인 (선택)
 
-카카오·구글 로그인은 코드에 준비돼 있으며, Supabase 대시보드 → Authentication → Providers에서 OAuth를 활성화하면 동작합니다(미설정 시 "곧 열려요"로 우아하게 폴백).
+카카오·구글 로그인은 better-auth로 동작하며, `KAKAO_CLIENT_ID`/`KAKAO_CLIENT_SECRET`·`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`을 설정하면 활성화됩니다(미설정 시 "곧 열려요"로 우아하게 폴백).
 
 ## 라이선스
 

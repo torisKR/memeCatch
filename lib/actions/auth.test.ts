@@ -9,7 +9,7 @@ const { createClient, eq, redirect, signOut, signUp, update } = vi.hoisted(() =>
   update: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/server", () => ({ createClient }));
+vi.mock("@/lib/db/server", () => ({ createClient }));
 vi.mock("next/navigation", () => ({ redirect }));
 
 import { completeOnboarding, signUp as submitSignUp } from "./auth";
@@ -68,7 +68,7 @@ describe("signUp", () => {
     return form;
   }
 
-  it("blocks the internal OAuth email domain before calling Supabase", async () => {
+  it("blocks the internal OAuth email domain before calling the auth backend", async () => {
     const result = await submitSignUp(
       null,
       signupForm("claimed@auth.memecatch.internal"),

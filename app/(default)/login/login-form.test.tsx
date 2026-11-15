@@ -12,7 +12,7 @@ vi.mock("motion/react", () => ({
 }));
 vi.mock("@/components/brand-mark", () => ({ BrandTile: () => <span /> }));
 vi.mock("@/lib/actions/auth", () => serverActions);
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/db/client", () => ({
   createClient: () => ({ auth: { signInWithOAuth: vi.fn() } }),
 }));
 

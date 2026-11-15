@@ -6,10 +6,10 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   put: vi.fn(),
 }));
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/db/server", () => ({
   createClient: async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }),
 }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: () => ({}) }));
 vi.mock("@/integrations/memecatch-chatgpt/src/state.mjs", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/integrations/memecatch-chatgpt/src/state.mjs")>(),
   databaseStore: () => ({ put: mocks.put }),

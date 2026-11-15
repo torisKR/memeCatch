@@ -1,5 +1,5 @@
 import "server-only";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import { searchMemes } from "@/lib/queries";
 import { embedMemeQuery, semanticSearchEnabled } from "@/lib/meme-vector-lookup.server";
 import { type MemeReference, type MemeReferenceResult } from "@/lib/meme-vectors";

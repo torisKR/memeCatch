@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import { CommunityPostCard } from "@/components/community-post-card";
 import { CommunityPageIntro } from "@/components/community-page-intro";
 import { StatusPanel } from "@/components/status-panel";
@@ -48,8 +47,8 @@ export default async function CommunityPage({
   let posts: CommunityPostRow[] = [];
   let failed = false;
   try {
-    const supabase = createStaticClient() as unknown as SupabaseClient;
-    const { data, error } = await supabase
+    const db = createStaticClient();
+    const { data, error } = await db
       .from("community_posts")
       .select(POST_SELECT)
       .eq("status", "visible")

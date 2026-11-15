@@ -50,9 +50,9 @@ output "aws_account_id" {
   value = data.aws_caller_identity.current.account_id
 }
 
-output "bedrock_vercel_role_arn" {
-  description = "Vercel의 서버 전용 AWS_ROLE_ARN 환경변수에 등록할 Bedrock OIDC 역할"
-  value       = aws_iam_role.vercel_bedrock.arn
+output "bedrock_iam_user" {
+  description = "Bedrock 호출용 IAM 사용자 — 액세스 키는 콘솔/CLI로 별도 발급해 OCI VM 환경변수에만 둔다"
+  value       = aws_iam_user.bedrock.name
 }
 
 output "bedrock_model_id" {

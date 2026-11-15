@@ -9,7 +9,7 @@ import "server-only";
  * 제거하므로 "순 세션"을 그대로 셀 수 있고, 외부 API 의존이 없다.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 
 export type DailyPoint = { date: string; views: number; sessions: number };
 

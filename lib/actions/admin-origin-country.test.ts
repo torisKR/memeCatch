@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, revalidateTag: mocks.revalidateTag }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
 import { setMemeOriginCountry } from "./admin";
 
@@ -37,7 +37,7 @@ function client(rpcError: { message: string } | null = null) {
 
   const rpc = vi.fn().mockResolvedValue({ data: { marketCode: "JP" }, error: rpcError });
 
-  const supabase = {
+  const db = {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: operatorId } } }),
     },
@@ -49,7 +49,7 @@ function client(rpcError: { message: string } | null = null) {
       ? Promise.resolve({ data: true, error: null })
       : rpc(name, args)),
   };
-  return { supabase, rpc };
+  return { db, rpc };
 }
 
 beforeEach(() => {
@@ -61,8 +61,8 @@ beforeEach(() => {
 
 describe("setMemeOriginCountry", () => {
   it("upserts one reviewed origin country and removes every other origin profile", async () => {
-    const { supabase, rpc } = client();
-    mocks.createClient.mockResolvedValue(supabase);
+    const { db, rpc } = client();
+    mocks.createClient.mockResolvedValue(db);
 
     await expect(
       setMemeOriginCountry({ memeId, country: "JP", localTitle: "  猫ミーム  " }),
@@ -86,8 +86,8 @@ describe("setMemeOriginCountry", () => {
   });
 
   it("rejects invalid input before reading or changing a meme", async () => {
-    const { supabase, rpc } = client();
-    mocks.createClient.mockResolvedValue(supabase);
+    const { db, rpc } = client();
+    mocks.createClient.mockResolvedValue(db);
 
     await expect(
       setMemeOriginCountry({ memeId: "bad", country: "JP", localTitle: "제목" }),
@@ -103,10 +103,10 @@ describe("setMemeOriginCountry", () => {
   });
 
   it("redacts unexpected RPC details behind a stable Korean error", async () => {
-    const { supabase } = client({
+    const { db } = client({
       message: "connection failed for postgres://secret-user:secret-password@example.com",
     });
-    mocks.createClient.mockResolvedValue(supabase);
+    mocks.createClient.mockResolvedValue(db);
 
     const result = await setMemeOriginCountry({ memeId, country: "JP", localTitle: "猫ミーム" });
 

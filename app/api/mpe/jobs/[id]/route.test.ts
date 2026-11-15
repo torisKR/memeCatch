@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ createClient: vi.fn(), createAdminClient: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("server-only", () => ({}));
 
 import { GET } from "./route";

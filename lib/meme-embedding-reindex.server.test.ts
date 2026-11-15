@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   embedBundledMemePassage: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("@/lib/meme-embedding-runtime.server", () => ({
   embedBundledMemePassage: mocks.embedBundledMemePassage,
 }));

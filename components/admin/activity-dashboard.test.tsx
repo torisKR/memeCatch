@@ -32,7 +32,7 @@ const fixture: AdminActivity = {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now);
-  guard.mockResolvedValue({ supabase: { rpc }, user: { id: userId } });
+  guard.mockResolvedValue({ db: { rpc }, user: { id: userId } });
   rpc.mockResolvedValue({ data: fixture, error: null });
 });
 afterEach(() => { cleanup(); vi.resetAllMocks(); vi.useRealTimers(); });

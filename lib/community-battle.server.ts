@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import {
   BATTLE_LIST_LIMIT,
   BATTLE_PERIODS,
@@ -19,8 +19,8 @@ type BattleRpc = (
 
 async function loadBoard(period: BattlePeriod): Promise<BattleBoard> {
   try {
-    const supabase = createStaticClient();
-    const rpc = supabase.rpc.bind(supabase) as unknown as BattleRpc;
+    const db = createStaticClient();
+    const rpc = db.rpc.bind(db) as unknown as BattleRpc;
     const { data, error } = await rpc("community_meme_battle", {
       p_period: period,
       p_limit: BATTLE_LIST_LIMIT,

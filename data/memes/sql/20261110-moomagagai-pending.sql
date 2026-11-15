@@ -2,7 +2,7 @@
 -- batch_id: loop-026-pending-2026-11-10
 -- Apply only after review:
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f <this-file>
--- or paste the transaction into the Supabase SQL editor.
+-- with psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f <file>.
 -- Inserts are skipped when the slug, normalized title/alias, source URL,
 -- content URL, canonical media URL, tag, or translation locale already exists.
 -- This file does not change moderation_status of rows that already exist

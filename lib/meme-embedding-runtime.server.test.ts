@@ -50,7 +50,6 @@ beforeEach(async () => {
   mocks.fetch.mockRejectedValue(new Error("Network access is forbidden in this unit test"));
   vi.stubGlobal("fetch", mocks.fetch);
   vi.stubEnv("MEME_EMBEDDING_RUNTIME", "bundled");
-  vi.stubEnv("VERCEL", "");
   now = 1_791_061_200_000;
   vi.spyOn(Date, "now").mockImplementation(() => now);
   runtime = await import("./meme-embedding-runtime.server");

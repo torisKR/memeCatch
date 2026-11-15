@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/db/admin";
 import { hoursAgoIso } from "@/components/admin/constants";
 import { getAdminStats } from "@/lib/actions/admin-stats";
 import { getAdminGA4Report } from "@/lib/ga4-admin";
@@ -11,7 +11,7 @@ export const metadata = { title: "대시보드" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const { supabase } = await requireOperatorPage("/admin");
+  const { db } = await requireOperatorPage("/admin");
 
   const admin = createAdminClient();
   const dayAgo = hoursAgoIso(24);
@@ -19,27 +19,27 @@ export default async function AdminDashboardPage() {
   const [stats, ga4] = await Promise.all([getAdminStats(), getAdminGA4Report("dashboard")]);
 
   const [pendingRes, reportsRes, sourcesRes, safetyRes, translationsRes, jobRes, viewsRes] = await Promise.all([
-    supabase
+    db
       .from("meme_submissions")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
-    supabase
+    db
       .from("reports")
       .select("id", { count: "exact", head: true })
       .eq("status", "open"),
-    supabase
+    db
       .from("meme_media")
       .select("meme_id", { count: "exact", head: true })
       .eq("review_state", "pending"),
-    supabase
+    db
       .from("safety_review_queue")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
-    supabase
+    db
       .from("meme_translations")
       .select("meme_id", { count: "exact", head: true })
       .eq("status", "machine"),
-    supabase
+    db
       .from("job_runs")
       .select("ok, started_at, finished_at")
       .eq("job_name", "compute_trend_scores")

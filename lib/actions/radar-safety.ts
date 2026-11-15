@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 
 export type RadarSafetyActionResult =
   | { ok: true }
@@ -24,18 +24,18 @@ const reviewSchema = z.object({
 class ActionError extends Error {}
 
 async function requireOperator() {
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) throw new ActionError("로그인이 필요해요.");
 
-  const { data: isOperator } = await supabase.rpc("is_operator");
+  const { data: isOperator } = await db.rpc("is_operator");
   if (!isOperator) {
     throw new ActionError("운영자 권한이 없어요.");
   }
 
-  return { supabase, uid: user.id };
+  return { db, uid: user.id };
 }
 
 function errorMessage(error: unknown): string {
@@ -58,8 +58,8 @@ export async function applyRadarSafetyReview(input: {
   }
 
   try {
-    const { supabase } = await requireOperator();
-    const { data: applied, error } = await supabase.rpc("apply_safety_review", {
+    const { db } = await requireOperator();
+    const { data: applied, error } = await db.rpc("apply_safety_review", {
       p_review_id: parsed.data.reviewId,
       p_decision: parsed.data.decision,
       p_review_note: parsed.data.reviewNote,

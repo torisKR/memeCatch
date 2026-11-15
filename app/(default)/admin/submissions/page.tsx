@@ -16,8 +16,8 @@ const fmt = new Intl.DateTimeFormat("ko-KR", {
 
 export default async function SubmissionsQueuePage() {
   // 방어심화 — 미들웨어와 별개로 페이지에서 operator 재검증
-  const { supabase } = await requireOperatorPage("/admin/submissions");
-  const { data: submissions, error } = await supabase
+  const { db } = await requireOperatorPage("/admin/submissions");
+  const { data: submissions, error } = await db
     .from("meme_submissions")
     .select(
       "id, name, seen_at, source_url, status, dup_of, claimed_by, created_at, dup:memes!meme_submissions_dup_of_fkey(title, short_id)"

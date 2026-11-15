@@ -12,7 +12,7 @@ assert.match(source, /requested login or a challenge; stopping without bypass/);
 assert.match(source, /review_status: "needs_human_source_match"/);
 assert.match(source, /public_page_thumbnail_available/);
 assert.doesNotMatch(source, /public_page_thumbnail_url/);
-assert.match(source, /never publishes candidates to Supabase/);
+assert.match(source, /never publishes candidates to the database/);
 assert.doesNotMatch(source, /process\.env/);
 
 console.log("public social page collector safeguards OK");

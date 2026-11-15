@@ -8,7 +8,7 @@ assert.ok(existsSync(scriptUrl));
 const source = readFileSync(scriptUrl, "utf8");
 assert.match(source, /catalog_match_status: "exact"/);
 assert.match(source, /contextual_derivative/);
-assert.match(source, /never writes to Supabase|never writes to Supabase/i);
+assert.match(source, /never writes to the database/i);
 assert.match(source, /matchCatalogMeme/);
 
 const memes = [

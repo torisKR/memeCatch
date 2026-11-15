@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ staticClient: vi.fn(), authClient: vi.fn(), cachedClient: vi.fn(), art: vi.fn(), caption: vi.fn() }));
+const mocks = vi.hoisted(() => ({ staticClient: vi.fn(), authClient: vi.fn(), art: vi.fn(), caption: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.staticClient, createClient: mocks.authClient }));
-vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.cachedClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient: mocks.staticClient, createClient: mocks.authClient }));
 vi.mock("@/lib/meme-collectible-catalog", () => ({ getMemeCardArtDirection: mocks.art, getMemeCardEditorialCaption: mocks.caption }));
 
 import { GET } from "./route";
@@ -57,7 +56,6 @@ describe("anonymous meme card reveal endpoint", () => {
     expect(mocks.staticClient).toHaveBeenCalledOnce();
     expect(mocks.authClient).not.toHaveBeenCalled();
     expect(client.auth.getUser).not.toHaveBeenCalled();
-    expect(mocks.cachedClient).not.toHaveBeenCalled();
   });
 
   it.each(["mc-0000", "mc-1001", "mc-1", "not-a-card", "mc-0001/claim"])("rejects invalid IDs before querying: %s", async (id) => {
@@ -87,7 +85,6 @@ describe("anonymous meme card reveal endpoint", () => {
     expect(await response.json()).toEqual({ error: "card_unavailable" });
     expect(mocks.staticClient).toHaveBeenCalledTimes(2);
     expect(query.maybeSingle).toHaveBeenCalledTimes(2);
-    expect(mocks.cachedClient).not.toHaveBeenCalled();
   });
 
   it.each([

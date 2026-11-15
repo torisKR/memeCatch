@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { CommunityPostForm } from "@/components/community-post-form";
 import { koreanPageShare } from "@/lib/korean-share-metadata";
 
@@ -23,10 +23,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CommunityNewPage() {
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) redirect("/login?next=/community/new");
 
   return (

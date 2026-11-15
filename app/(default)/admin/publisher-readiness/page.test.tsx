@@ -66,7 +66,7 @@ const report: PublisherReadinessReport = {
 describe("publisher readiness page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(requireOperatorPage).mockResolvedValue({ supabase: { from: vi.fn() } } as never);
+    vi.mocked(requireOperatorPage).mockResolvedValue({ db: { from: vi.fn() } } as never);
     vi.mocked(listPublisherReadinessPage).mockResolvedValue(report);
   });
 

@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({
   unstable_cache: (read: (...args: unknown[]) => unknown) => read,
 }));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient: mocks.createStaticClient }));
 vi.mock("@/lib/meme-vector-lookup.server", () => ({
   getSemanticRelatedMemeIds: mocks.getSemanticRelatedMemeIds,
 }));

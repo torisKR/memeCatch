@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 
 export type CommunityActionResult<T = null> =
   | { ok: true; data: T }
@@ -95,8 +95,8 @@ export async function createCommunityPost(
       message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
     };
   }
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("create_community_post", {
+  const db = await createClient();
+  const { data, error } = await db.rpc("create_community_post", {
     p_title: parsed.data.title,
     p_body: parsed.data.body,
     p_meme_id: parsed.data.memeId ?? undefined,
@@ -127,8 +127,8 @@ export async function createCommunityComment(
       message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
     };
   }
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("create_community_comment", {
+  const db = await createClient();
+  const { data, error } = await db.rpc("create_community_comment", {
     p_post_id: parsed.data.postId,
     p_body: parsed.data.body,
   });

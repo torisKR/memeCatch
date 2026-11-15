@@ -6,7 +6,6 @@ import {
   type BedrockRuntimeClientConfig,
   type ConverseCommandInput,
 } from "@aws-sdk/client-bedrock-runtime";
-import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { z } from "zod";
 import { getMemeCountry, isMemeCountryCode, type MemeCountryCode } from "@/lib/meme-country";
 
@@ -18,7 +17,6 @@ export const BEDROCK_MEME_STUDIO_TEMPERATURE = 0.4;
 
 export const BEDROCK_MEME_STUDIO_ERROR = {
   disabled: "bedrock_meme_studio_disabled",
-  oidcRoleRequired: "bedrock_meme_studio_oidc_role_required",
   invalidInput: "bedrock_meme_studio_invalid_input",
   invalidRate: "bedrock_meme_studio_invalid_rate",
   budgetRejected: "bedrock_meme_studio_budget_rejected",
@@ -67,7 +65,6 @@ type Dependencies = {
 type ClientDependencies = {
   env?: Environment;
   createClient?: (config: BedrockRuntimeClientConfig) => BedrockClient;
-  oidcCredentialsProvider?: typeof awsCredentialsProvider;
 };
 
 const koreanText = (max: number) => z.string().trim().min(1).max(max)
@@ -246,15 +243,10 @@ function safeTokenCount(value: unknown) {
 export function createBedrockMemeStudioClient({
   env = process.env,
   createClient = (config) => new BedrockRuntimeClient(config),
-  oidcCredentialsProvider = awsCredentialsProvider,
 }: ClientDependencies = {}): BedrockClient {
   const region = env.AWS_REGION?.trim() || BEDROCK_MEME_STUDIO_DEFAULT_REGION;
-  const roleArn = env.AWS_ROLE_ARN?.trim();
-  if (env.VERCEL && !roleArn) throw error(BEDROCK_MEME_STUDIO_ERROR.oidcRoleRequired);
-  const credentials = env.VERCEL && roleArn
-    ? oidcCredentialsProvider({ roleArn, clientConfig: { region } })
-    : undefined;
-  return createClient({ region, credentials, maxAttempts: 1 });
+  // Credentials come from the AWS SDK default chain (AWS_ACCESS_KEY_ID/… on the OCI VM).
+  return createClient({ region, maxAttempts: 1 });
 }
 
 export async function generateBedrockMemeConcepts(

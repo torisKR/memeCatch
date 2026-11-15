@@ -7,7 +7,7 @@ const getUser = vi.hoisted(() => vi.fn());
 const maybeSingle = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/supabase/client", () => ({
+vi.mock("@/lib/db/client", () => ({
   createClient: () => ({
     auth: { getUser },
     rpc,

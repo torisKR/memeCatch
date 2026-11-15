@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import type { ContentDepthInput } from "@/lib/content-depth";
@@ -260,12 +260,12 @@ async function buildSitemap(): Promise<{
   // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
   // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
   // 카탈로그가 402처럼 막혀도 정적 페이지 사이트맵은 빌드를 통과해야 한다.
-  let supabase: ReturnType<typeof createStaticClient> | null = null;
+  let db: ReturnType<typeof createStaticClient> | null = null;
   let homeLastMod: Date | undefined;
   let catalogUnavailable = false;
   try {
-    supabase = createStaticClient();
-    const { data: latest, error } = await supabase
+    db = createStaticClient();
+    const { data: latest, error } = await db
       .from("memes")
       .select("published_at")
       .in("moderation_status", [...PUBLIC_STATUSES])
@@ -350,10 +350,10 @@ async function buildSitemap(): Promise<{
   }
   const PAGE = 1000;
   let koreanMemeCount = 0;
-  for (let from = 0; !catalogUnavailable && supabase && from < 49000; from += PAGE) {
+  for (let from = 0; !catalogUnavailable && db && from < 49000; from += PAGE) {
     let data: unknown[] | null = null;
     try {
-      const page = await supabase
+      const page = await db
         .from("memes")
         .select(DEPTH_SELECT)
         .in("moderation_status", [...PUBLIC_STATUSES])

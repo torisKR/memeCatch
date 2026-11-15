@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Validate a reviewed text-only editorial batch and optionally print a SQL-only
- * transaction. This CLI never connects to Supabase or executes generated SQL.
+ * transaction. This CLI never connects to the database or executes generated SQL.
  *
  * Usage:
  *   node scripts/reviewed-meme-batch.mjs [batch.json]       # validate / dry run

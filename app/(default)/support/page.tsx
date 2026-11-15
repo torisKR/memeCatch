@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { InquiryForm } from "@/components/support/inquiry-form";
 import {
   INQUIRY_CATEGORY_LABEL,
@@ -35,13 +35,13 @@ const dateFmt = new Intl.DateTimeFormat("ko-KR", {
  * 보낸 문의와 답변을 모아보는 페이지. 비로그인은 로그인 유도.
  */
 export default async function SupportPage() {
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
 
   const { data: inquiries } = user
-    ? await supabase
+    ? await db
         .from("support_inquiries")
         .select("id, category, subject, body, status, admin_reply, replied_at, created_at")
         .order("created_at", { ascending: false })

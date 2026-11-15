@@ -99,7 +99,7 @@ export function resolveLandingRedirectLocale({
 
 /**
  * 로케일 헤더 전달과 인증 경로의 세션 갱신을 함께 처리한다.
- * 일반 페이지는 로케일 헤더만 설정하고 Supabase 호출은 인증 경로로 한정한다.
+ * 일반 페이지는 로케일 헤더만 설정하고 DB·세션 조회는 인증 경로로 한정한다.
  *
  * 로케일 우선순위: ① URL prefix ② ko. 쿠키·Accept-Language·prefetch는
  * 문서를 바꾸지 않는다. memecatch_locale은 언어 선택기만 기록한다.
@@ -177,11 +177,11 @@ export async function proxy(request: NextRequest) {
     : null;
   if (!needsAuth && !documentDetailKey) return response;
 
-  const supabase = await createRequestDb(request);
+  const db = await createRequestDb(request);
 
   if (documentDetailKey) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("memes")
         .select(PUBLIC_MEME_CANONICAL_SELECT)
         .eq("short_id", shortIdFromParam(documentDetailKey))
@@ -228,7 +228,7 @@ export async function proxy(request: NextRequest) {
   let user: { id: string } | null = null;
   let authFailed = false;
   try {
-    const result = await supabase.auth.getUser();
+    const result = await db.auth.getUser();
     user = result.data.user;
     authFailed = Boolean(result.error);
   } catch {
@@ -253,7 +253,7 @@ export async function proxy(request: NextRequest) {
       return applyLocale(NextResponse.redirect(url));
     }
     // 서버측 운영자 검증 (D-1: 클라이언트 라우팅 숨김은 보안이 아님)
-    const { data: isOperator, error: operatorError } = await supabase.rpc("is_operator");
+    const { data: isOperator, error: operatorError } = await db.rpc("is_operator");
     if (operatorError || isOperator !== true) {
       const url = request.nextUrl.clone();
       url.pathname = "/";

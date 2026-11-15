@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/meme-reference-search.server", () => ({ searchMemeReferences: mocks.search }));
-vi.mock("@/lib/supabase/server", () => ({ createStaticClient: mocks.createStaticClient }));
+vi.mock("@/lib/db/server", () => ({ createStaticClient: mocks.createStaticClient }));
 
 const ID = "10000000-0000-0000-0000-000000000001";
 const OTHER = "20000000-0000-0000-0000-000000000002";
@@ -48,7 +48,6 @@ beforeEach(() => {
   vi.stubEnv("MEME_CHAT_BASE_URL", "");
   vi.stubEnv("MEME_CHAT_MODEL", "");
   vi.stubEnv("MEME_CHAT_API_KEY", "");
-  vi.stubEnv("VERCEL", "");
   vi.stubGlobal("fetch", mocks.fetch);
   vi.spyOn(console, "warn").mockImplementation(mocks.warn);
   mocks.search.mockResolvedValue({ mode: "hybrid", items: [row()] });
@@ -714,10 +713,10 @@ describe("public grounded meme answers", () => {
     expect(mocks.fetch.mock.calls[0][1].headers.authorization).not.toContain("test-key");
   });
 
-  it.each(["http://127.0.0.1:10100/v1", "https://localhost:10100/v1"])("never targets opencodex loopback from Vercel: %s", async (base) => {
+  it.each(["http://127.0.0.1:10100/v1", "https://localhost:10100/v1"])("never targets the opencodex dev proxy in production: %s", async (base) => {
     vi.stubEnv("MEME_CHAT_PROVIDER", "opencodex");
     vi.stubEnv("MEME_CHAT_BASE_URL", base);
-    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("NODE_ENV", "production");
     expect((await (await load())(input)).mode).toBe("retrieved");
     expect(mocks.fetch).not.toHaveBeenCalled();
   });

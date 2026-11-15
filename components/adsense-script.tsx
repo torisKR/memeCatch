@@ -30,8 +30,7 @@ export function AdsenseScript() {
   // it after checking approval, consent and account-side page exclusions.
   // Ownership verification remains in server-rendered google-adsense-account metadata.
   if (process.env.ADSENSE_AUTO_ADS_ENABLED !== "true") return null;
-  if (!isConfiguredAdsenseClient(ADSENSE_CLIENT) || process.env.NODE_ENV !== "production" ||
-      (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return null;
+  if (!isConfiguredAdsenseClient(ADSENSE_CLIENT) || process.env.NODE_ENV !== "production") return null;
 
   return (
     <AdsenseHostGate>

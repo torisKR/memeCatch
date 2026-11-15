@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { flags } from "@/lib/flags";
 import { CommunityGate } from "@/components/community-gate";
 import { castGenerationVote } from "@/lib/actions/community";
@@ -47,10 +47,10 @@ export function GenerationVotes({ memeId }: { memeId: string }) {
   const [isPending, startTransition] = useTransition();
 
   const load = useCallback(async () => {
-    const supabase = createClient();
+    const db = createClient();
     const [{ data: statRows, error: statErr }, { data: auth }] = await Promise.all([
-      supabase.from("generation_vote_stats").select("*").eq("meme_id", memeId),
-      supabase.auth.getUser(),
+      db.from("generation_vote_stats").select("*").eq("meme_id", memeId),
+      db.auth.getUser(),
     ]);
     if (statErr) {
       setError(true);
@@ -63,8 +63,8 @@ export function GenerationVotes({ memeId }: { memeId: string }) {
     setUserId(user?.id ?? null);
     if (user) {
       const [{ data: profile }, { data: mine }] = await Promise.all([
-        supabase.rpc("get_my_profile").single(),
-        supabase
+        db.rpc("get_my_profile").single(),
+        db
           .from("generation_votes")
           .select("vote, age_group")
           .eq("meme_id", memeId)

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cache } from "react";
-import { createStaticClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/db/server";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
 import { INDEXABLE_LIST_SELECT, type MemeListItem } from "@/lib/queries";
@@ -35,10 +35,10 @@ const DECADE_DEFS = [
  */
 const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
   try {
-    const supabase = createStaticClient();
+    const db = createStaticClient();
     // trend_score 상위 pool을 먼저 뽑고 연도별로 버킷팅 — 연도 오름차순 limit이면
     // 데이터 증가 시 최신 연대가 조용히 잘리므로, 대표성(trend) 기준으로 선별한다.
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("memes")
       .select(INDEXABLE_LIST_SELECT)
       .in("moderation_status", [...PUBLIC_STATUSES])

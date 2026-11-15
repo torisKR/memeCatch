@@ -57,7 +57,7 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>자동 수집</strong>: 접속 로그, 쿠키(로그인 세션 유지
-              목적) — 서비스 인프라(Vercel)와 인증(Supabase Auth)이 처리
+              목적) — 서비스 서버(Oracle Cloud)에서 자체 처리
             </li>
           </ul>
         </section>
@@ -95,9 +95,8 @@ export default function PrivacyPage() {
             있습니다.
           </p>
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
-            <li><strong>Supabase</strong> — 데이터베이스·인증·저장소</li>
-            <li><strong>Vercel</strong> — 웹 호스팅·접속 로그</li>
-            <li><strong>Cloudflare</strong> — 이미지 저장소(R2)</li>
+            <li><strong>Oracle Cloud Infrastructure</strong> — 웹 서버·데이터베이스·로그인 세션·접속 로그 호스팅</li>
+            <li><strong>Cloudflare</strong> — CDN·보안 프록시, 이미지 저장소와 암호화 백업(R2)</li>
             <li>
               <strong>TikTok</strong> — 소셜 로그인 인증과 이용자가 선택한 공개
               영상 목록 제공. 사용자가 허용한 TikTok 계정·영상 정보만 암호화된

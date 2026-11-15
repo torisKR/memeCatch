@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, revalidateTag: mocks.revalidateTag }));
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("@/lib/db/server", () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mocks.getUser },
     rpc: vi.fn((name: string, args?: unknown) => name === "is_operator"
@@ -29,7 +29,7 @@ describe("applyRadarSafetyReview", () => {
     mocks.rpc.mockResolvedValue({ data: true, error: null });
   });
 
-  it("validates input before accessing Supabase", async () => {
+  it("validates input before accessing the database", async () => {
     const result = await applyRadarSafetyReview({
       reviewId: "not-a-uuid",
       decision: "approved",

@@ -9,7 +9,7 @@ import {
   useReducedMotion,
   type Variants,
 } from "motion/react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
 import { LOGIN_COPY } from "@/lib/i18n-login";
 import { useLocale } from "@/lib/i18n-client";
@@ -47,14 +47,14 @@ export function LoginForm({
     setOauthNotice(null);
     const label = copy.providerNames[provider];
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const db = createClient();
+      const { error } = await db.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
-      // 성공 시 Supabase가 브라우저를 자동으로 리다이렉트한다.
+      // 성공 시 클라이언트가 OAuth 제공자 페이지로 이동시킨다.
       if (error) {
         setOauthBusy(null);
         setOauthNotice(copy.oauthUnavailable(label));

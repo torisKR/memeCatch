@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
 vi.mock("@/lib/sources/ingest.server", () => ({
   ingestSource: mocks.ingestSource,
   SourceIngestionError: class extends Error {

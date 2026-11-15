@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, revalidateTag: mocks.revalidateTag }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
+vi.mock("@/lib/db/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
 import { reprocessMpeJob, reviewMpeCandidate, reviewMpeClaim, saveMpeCandidateRevision, setMpeIngestionSourceRights } from "./admin-mpe";
 

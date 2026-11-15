@@ -316,7 +316,7 @@ export function usage() {
     "Report only:",
     "  node scripts/translation-demand-report.mjs --intake-report intake.json --demand demand.json --json",
     "",
-    "The command never connects to Supabase, calls OpenAI, writes SQL, or publishes translations.",
+    "The command never connects to the database, calls OpenAI, writes SQL, or publishes translations.",
   ].join("\n");
 }
 

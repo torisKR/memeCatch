@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Validate a meme content batch and print either a dry-run plan or idempotent
- * SQL. This CLI never connects to Supabase and never executes the SQL.
+ * SQL. This CLI never connects to the database and never executes the SQL.
  *
  *   node scripts/ingest-meme-content.mjs <batch.json>
  *   node scripts/ingest-meme-content.mjs <batch.json> --sql
@@ -969,7 +969,7 @@ export function buildContentSql(batch, options = {}) {
     `-- batch_id: ${commentLine(batch.batch_id)}`,
     "-- Apply only after review:",
     `--   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f <this-file>`,
-    "-- or paste the transaction into the Supabase SQL editor.",
+    "-- with psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -1 -f <file>.",
     "-- Inserts are skipped when the slug, normalized title/alias, source URL,",
     "-- content URL, canonical media URL, tag, or translation locale already exists.",
     "-- This file does not change moderation_status of rows that already exist",

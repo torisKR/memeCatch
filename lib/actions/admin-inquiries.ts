@@ -9,8 +9,8 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/db/server";
+import { createAdminClient } from "@/lib/db/admin";
 import type { Json } from "@/lib/database.types";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -24,14 +24,14 @@ class ActionError extends Error {}
 
 /** 운영자 인증 확인 — 통과 시 operator 세션 클라이언트와 uid 반환 */
 async function requireOperator() {
-  const supabase = await createClient();
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
   if (!user) throw new ActionError("로그인이 필요해요.");
-  const { data: isOperator } = await supabase.rpc("is_operator");
+  const { data: isOperator } = await db.rpc("is_operator");
   if (!isOperator) throw new ActionError("운영자 권한이 없어요.");
-  return { supabase, uid: user.id };
+  return { db, uid: user.id };
 }
 
 async function logAudit(
@@ -78,8 +78,8 @@ export async function answerInquiry(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
   }
   try {
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase
+    const { db, uid } = await requireOperator();
+    const { error } = await db
       .from("support_inquiries")
       .update({
         admin_reply: parsed.data.reply,
@@ -113,8 +113,8 @@ export async function setInquiryStatus(
     return { ok: false, error: "입력값을 확인해 주세요." };
   }
   try {
-    const { supabase, uid } = await requireOperator();
-    const { error } = await supabase
+    const { db, uid } = await requireOperator();
+    const { error } = await db
       .from("support_inquiries")
       .update({ status: parsed.data.status, updated_at: new Date().toISOString() })
       .eq("id", parsed.data.inquiryId);

@@ -486,7 +486,7 @@ export async function run(argv = process.argv.slice(2)) {
   const apiKey = options.dryRun ? null : requiredEnv("ANTHROPIC_API_KEY");
   const model = process.env.ANTHROPIC_TRANSLATION_MODEL?.trim() || DEFAULT_MODEL;
   // Loaded lazily so tests that import this module never open Postgres.
-  const { createAdminClient } = await import("../lib/db/admin-client.ts");
+  const { createAdminClient } = await import("../lib/db/admin.ts");
   const db = createAdminClient();
 
   const candidates = await findCandidates(db, options);

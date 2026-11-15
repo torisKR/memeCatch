@@ -52,4 +52,8 @@ r = recorder();
 buildRestQuery(r.db, "meme_sources?select=id&or=(source_url.ilike.*youtube.com*,source_url.ilike.*youtu.be*)");
 assert.deepEqual(r.calls[2], ["or", "source_url.ilike.*youtube.com*,source_url.ilike.*youtu.be*"]);
 
+r = recorder();
+buildRestQuery(r.db, "media_sources?select=id&order=last_checked_at.asc.nullsfirst");
+assert.deepEqual(r.calls[2], ["order", "last_checked_at", { ascending: true, nullsFirst: true }]);
+
 console.log("source-pipeline-rest OK");

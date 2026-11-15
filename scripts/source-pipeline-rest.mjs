@@ -78,8 +78,12 @@ export function buildRestQuery(db, path, init = {}) {
     query = negate ? query.not(key, op, value) : query.filter(key, op, value);
   }
   for (const part of (params.get("order") ?? "").split(",").filter(Boolean)) {
-    const [column, direction] = part.split(".");
-    query = query.order(column, { ascending: direction !== "desc" });
+    const [column, ...modifiers] = part.split(".");
+    const nulls = modifiers.find((m) => m === "nullsfirst" || m === "nullslast");
+    query = query.order(column, {
+      ascending: !modifiers.includes("desc"),
+      ...(nulls ? { nullsFirst: nulls === "nullsfirst" } : {}),
+    });
   }
   if (params.has("limit")) {
     const offset = Number(params.get("offset") ?? 0);

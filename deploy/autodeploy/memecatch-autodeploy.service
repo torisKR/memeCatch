@@ -1,0 +1,14 @@
+[Unit]
+Description=memecatch pull-based deploy (one check of origin/main)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=docker
+StateDirectory=memecatch-autodeploy
+Environment=AUTODEPLOY_ROOT=/opt/memecatch
+ExecStart=/bin/bash /opt/memecatch/deploy/autodeploy/autodeploy.sh
+Nice=10
+TimeoutStartSec=45min

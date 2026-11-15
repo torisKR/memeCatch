@@ -74,3 +74,47 @@ jobs:
       - run: bash scripts/postgres/enum-in-filter.test.sh
       - run: bash scripts/postgres/backup-role-readonly.test.sh
       - run: bash deploy/backup/ci-test-restore.sh
+
+  # CD: after `check` passes on a push to main, ask the VM's deploy agent to
+  # deploy this commit. The VM has no open SSH port. The runner reaches it
+  # through a Cloudflare Tunnel guarded by Cloudflare Access (service token),
+  # and the SSH key can only run the agent (forced command on the VM). The
+  # secrets live in the `production` environment, which only main can use;
+  # pull requests, including forks, never reach this job.
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    timeout-minutes: 45
+    steps:
+      - name: Install cloudflared (pinned)
+        env:
+          CLOUDFLARED_VERSION: "2026.11.0"
+          CLOUDFLARED_SHA256: "5305dbaf62984e92e7daa29cdd6a35a4797edc23385d4c5b8422ff97eb96a19b"
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cloudflared.deb" \
+            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          echo "${CLOUDFLARED_SHA256}  $RUNNER_TEMP/cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i "$RUNNER_TEMP/cloudflared.deb" >/dev/null
+      - name: Deploy this commit on the OCI VM
+        env:
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          for name in TUNNEL_SERVICE_TOKEN_ID TUNNEL_SERVICE_TOKEN_SECRET DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_HOST; do
+            [ -n "${!name}" ] || { echo "::error::${name} is not set in the production environment"; exit 1; }
+          done
+          install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<<"$DEPLOY_SSH_KEY"
+          install -m 644 /dev/stdin "$RUNNER_TEMP/known_hosts" <<<"$DEPLOY_KNOWN_HOSTS"
+          # The agent prints its own log; exit 3 means "not deployed" (CI, migration gate).
+          ssh -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ProxyCommand="cloudflared access ssh --hostname %h" \
+            "ubuntu@${DEPLOY_HOST}" "$GITHUB_SHA"

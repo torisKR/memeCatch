@@ -14,6 +14,14 @@
 #   5. confirm the public site (through Cloudflare) reports the new release
 #   6. on any failure after step 4, restore the previous images and checkout
 #
+# Two callers:
+#   - GitHub Actions, over SSH through a Cloudflare Tunnel, with a key whose
+#     authorized_keys entry forces this script (SSH_ORIGINAL_COMMAND carries the
+#     commit to deploy). "Strict": anything that is not a deploy or a no-op
+#     exits 3 so the GitHub run fails visibly, and a re-run retries a failed SHA.
+#   - an optional systemd timer (deploy/autodeploy/install.sh --with-timer),
+#     which quietly retries on the next tick.
+#
 # The agent runs from $STATE_DIR/bin, outside the checkout. A rollback can reset
 # the checkout to a commit that predates this file; the running copy must survive
 # that. It replaces itself with the checkout's version only after a good deploy.
@@ -112,7 +120,7 @@ rollback_env() {
     case "$service" in
       app) printf 'MEMECATCH_IMAGE=%s\n' "$ref" ;;
       mpe-worker) printf 'MEMECATCH_WORKER_IMAGE=%s\n' "$ref" ;;
-      scheduler | backup) docker tag "$ref" "memecatch-$service" ;;
+      scheduler | backup) docker tag "$ref" "memecatch-$service:local" ;;
     esac
   done <"$record"
 }
@@ -178,32 +186,76 @@ prune_images() {
   docker image prune -f >/dev/null 2>&1 || true
 }
 
+STRICT=""
+[[ -n "${SSH_CONNECTION:-}" || -n "${AUTODEPLOY_STRICT:-}" ]] && STRICT=1
+
+# Stop without deploying: a failure for a GitHub run, a quiet retry for the timer.
+not_deployed() {
+  log "$1"
+  if [[ -n "$STRICT" ]]; then exit 3; fi
+  exit 0
+}
+
+# The commit a GitHub run asked for, or empty. Only a full SHA is accepted.
+requested_sha() {
+  local req="${SSH_ORIGINAL_COMMAND:-}"
+  [[ "$req" =~ ^[0-9a-f]{40}$ ]] && printf '%s\n' "$req"
+  return 0
+}
+
 main() {
+  # Over SSH a full commit SHA is mandatory: a missing or malformed request
+  # must never fall back to deploying whatever origin/main points at. Checked
+  # first, so a bare key probe does no git, CI, or docker work.
+  if [[ -n "${SSH_CONNECTION:-}" && -z "$(requested_sha)" ]]; then
+    not_deployed "an SSH deploy must name a full commit SHA; got '${SSH_ORIGINAL_COMMAND:-}'"
+  fi
   mkdir -p "$STATE_DIR"
   exec 9>"$STATE_DIR/lock"
-  flock -n 9 || { log "another run is in progress"; exit 0; }
+  if [[ -n "$STRICT" ]]; then
+    flock -w 1800 9 || not_deployed "another deploy held the lock for 30 minutes"
+  else
+    flock -n 9 || { log "another run is in progress"; exit 0; }
+  fi
 
   git -C "$ROOT" fetch -q origin main
-  local target current state migrations
+  local target current state migrations req
   target="$(git -C "$ROOT" rev-parse origin/main)"
   current="$(running_sha)"
   [[ -n "$current" ]] || current="$(git -C "$ROOT" rev-parse HEAD)"
 
-  [[ "$target" == "$current" ]] && exit 0
-  [[ -e "$STATE_DIR/failed-$target" ]] && exit 0
+  req="$(requested_sha)"
+  if [[ -n "$req" ]]; then
+    git -C "$ROOT" merge-base --is-ancestor "$req" "$target" 2>/dev/null \
+      || not_deployed "${req:0:7} is not on origin/main; refusing"
+    if git -C "$ROOT" merge-base --is-ancestor "$req" "$current" 2>/dev/null; then
+      log "running ${current:0:7} already includes ${req:0:7}"
+      exit 0
+    fi
+    target="$req"
+  fi
+
+  if [[ "$target" == "$current" ]]; then
+    [[ -n "$STRICT" ]] && log "${target:0:7} is already running"
+    exit 0
+  fi
+  if [[ -e "$STATE_DIR/failed-$target" ]]; then
+    [[ -n "$STRICT" ]] || exit 0
+    log "retrying ${target:0:7}, which failed before"
+    rm -f "$STATE_DIR/failed-$target"
+  fi
 
   state="$(ci_state "$target" || echo pending)"
   case "$state" in
     success) ;;
-    failure) log "CI failed on ${target:0:7}; not deploying"; touch "$STATE_DIR/failed-$target"; exit 0 ;;
-    *) log "waiting for CI on ${target:0:7}"; exit 0 ;;
+    failure) touch "$STATE_DIR/failed-$target"; not_deployed "CI failed on ${target:0:7}; not deploying" ;;
+    *) not_deployed "CI has not passed on ${target:0:7} yet" ;;
   esac
 
   migrations="$(new_migrations "$current" "$target")"
   if [[ -n "$migrations" && ! -e "$STATE_DIR/allow-$target" ]]; then
-    log "${target:0:7} adds migrations; apply them, then touch $STATE_DIR/allow-$target"
     printf '  %s\n' $migrations
-    exit 0
+    not_deployed "${target:0:7} adds the migrations above; apply them, then touch $STATE_DIR/allow-$target and re-run"
   fi
 
   if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then
@@ -214,7 +266,7 @@ main() {
   log "deploying ${target:0:7} (running ${current:0:7})"
   # Snapshot before building; see tag_rollback.
   tag_rollback "$current"
-  git -C "$ROOT" merge -q --ff-only "$target"
+  checkout_target "$target" || not_deployed "could not check out ${target:0:7} in $ROOT"
   if ! build_images "$target"; then
     log "build failed for ${target:0:7}; keeping ${current:0:7}"
     git -C "$ROOT" reset -q --keep "$current"
@@ -236,6 +288,16 @@ main() {
   touch "$STATE_DIR/failed-$target"
   restore_rollback "$current"
   exit 1
+}
+
+# Point the checkout at exactly <sha>. `merge --ff-only` is a no-op when <sha>
+# is already behind HEAD (e.g. after an interrupted deploy), which would build
+# a newer tree under an older label; reset --keep moves HEAD either way and
+# refuses if it would clobber local edits.
+checkout_target() {
+  local sha="$1"
+  git -C "$ROOT" reset -q --keep "$sha" || return 1
+  [[ "$(git -C "$ROOT" rev-parse HEAD)" == "$sha" ]]
 }
 
 # Run when executed; only define functions when sourced (the test sources it).

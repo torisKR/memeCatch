@@ -165,6 +165,9 @@ services:
   scheduler:
     build:
       context: ./deploy/scheduler
+    # A fixed image name lets `compose up` see a rebuilt image and recreate the
+    # container (build-only services kept running the old image).
+    image: memecatch-scheduler:local
     mem_limit: 64m
     cpus: 0.05
     environment:
@@ -177,6 +180,7 @@ services:
     build:
       context: .
       dockerfile: deploy/backup/Dockerfile
+    image: memecatch-backup:local
     mem_limit: 256m
     cpus: 0.10
     environment:

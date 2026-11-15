@@ -32,10 +32,10 @@ import {
 } from "@/components/json-ld";
 import { MemeCatalogUnavailable } from "@/components/meme-catalog-unavailable";
 import {
-  getAvailableTranslationLocales,
   getLocalizedMemeByShortId,
   getLocalizedSearchMemesResult,
   isIndexableLocalizedMeme,
+  listIndexableLocalizedMemes,
   type LocalizedMemeDetail,
 } from "@/lib/meme-translations";
 import { unavailableMemeMetadata } from "@/lib/public-meme-document";
@@ -46,7 +46,7 @@ import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
 import titleStyles from "@/components/meme-detail-title.module.css";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 
-/** 한국어 상세와 같다. ISR로 두면 프로덕션 상세가 DYNAMIC_SERVER_USAGE 500이 된다. */
+/** 한국어 상세와 같다. 문서는 캐시하지 않고, 성공한 카탈로그 읽기만 Data Cache에 둔다. */
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ locale: string; key: string }> };
@@ -220,23 +220,15 @@ function isUnverifiedContexts(entries: [string, SafetyLevel][]): boolean {
   return entries.length >= 2 && entries.every(([, level]) => level === "green");
 }
 
-async function getLanguageVersions(shortId: string, memeId: string, current: SeoContentLocale) {
-  const available = await getAvailableTranslationLocales(memeId);
-  const locales = [...new Set([current, ...available.filter(isSeoContentLocale)])];
-  const translated = await Promise.all(
-    locales.map(async (locale) => {
-      try {
-        return { locale, meme: await getLocalizedMemeByShortId(shortId, locale) };
-      } catch (error) {
-        if (!(error instanceof MemeCatalogUnavailableError)) throw error;
-        return { locale, meme: null };
-      }
-    }),
+async function getLanguageVersions(meme: LocalizedMemeDetail, current: SeoContentLocale) {
+  const versions = (await listIndexableLocalizedMemes(meme)).flatMap((version) =>
+    isSeoContentLocale(version.translation.locale)
+      ? [{ locale: version.translation.locale, meme: version }]
+      : [],
   );
-  return translated.filter(
-    (item): item is { locale: SeoContentLocale; meme: NonNullable<typeof item.meme> } =>
-      item.meme !== null,
-  );
+  return versions.some((version) => version.locale === current)
+    ? versions
+    : [{ locale: current, meme }, ...versions];
 }
 
 async function loadLocalizedDetail(
@@ -277,7 +269,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (redirectPath) permanentRedirect(redirectPath);
 
   const [versions, discovery] = await Promise.all([
-    getLanguageVersions(meme.short_id, meme.id, locale),
+    getLanguageVersions(meme, locale),
     loadDiscoveryIndex(),
   ]);
   const sourceListed = discovery.ok && discovery.ids.has(meme.id);
@@ -369,7 +361,7 @@ export default async function LocalizedMemePage({ params }: Props) {
 
   const tagIds = meme.meme_tags_map.map((tag) => tag.tag_id);
   const [versions, marketPassport, related, discovery] = await Promise.all([
-    getLanguageVersions(meme.short_id, meme.id, locale),
+    getLanguageVersions(meme, locale),
     getMemeMarketPassport(meme.id, locale),
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },

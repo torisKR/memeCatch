@@ -12,6 +12,7 @@ import {
   getLocalizedFeaturedMemes,
   getLocalizedSearchMemesResult,
   getTranslationLocaleAvailability,
+  listIndexableLocalizedMemes,
   type MemeTranslationRow,
 } from "@/lib/meme-translations";
 
@@ -344,6 +345,54 @@ describe("translation freshness and SEO eligibility", () => {
       "en",
     );
     expect(isIndexableLocalizedMeme(localized)).toBe(false);
+  });
+});
+
+describe("alternate localized versions", () => {
+  it("evaluates sibling translations against the Korean source", async () => {
+    const source = baseMeme();
+    const english = overlayMemeTranslation(
+      source,
+      translation({
+        description: "Short reviewed English description.",
+        origin: "Short reviewed English origin.",
+        usage_note: null,
+        caution: null,
+        usage_examples: null,
+      }),
+      "en",
+    );
+    mockTranslationQuery({
+      data: [
+        translation({
+          description: "Short reviewed English description.",
+          origin: "Short reviewed English origin.",
+          usage_note: null,
+          caution: null,
+          usage_examples: null,
+        }),
+        translation({
+          locale: "ja",
+          localized_slug: "original-meme-ja",
+          title: "元のミーム",
+          summary: "韓国ミームの簡潔な日本語説明です。",
+          description: "短い査読済みの日本語説明です。",
+          origin: "短い査読済みの日本語の由来です。",
+          usage_note: null,
+          caution: null,
+          usage_examples: null,
+        }),
+      ],
+      error: null,
+    });
+
+    const versions = await listIndexableLocalizedMemes(english!);
+
+    expect(versions.map((meme) => meme.translation.locale)).toEqual(["en", "ja"]);
+    expect(versions.map((meme) => meme.original.description)).toEqual([
+      source.description,
+      source.description,
+    ]);
   });
 });
 

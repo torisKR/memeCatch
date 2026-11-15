@@ -1,9 +1,33 @@
+import { cacheCatalogRead } from "@/lib/catalog-read-cache";
 import { createStaticClient } from "@/lib/supabase/server";
-import type { MemeListItem } from "@/lib/queries";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/supabase/public-catalog-cache";
+import { LIST_SELECT, MemeCatalogUnavailableError, type MemeListItem } from "@/lib/queries";
 import type { MemeCategory } from "@/lib/labels";
 import { RelatedMemes } from "@/components/related-memes";
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)";
+const loadCategoryStream = cacheCatalogRead(
+  async (
+    category: MemeCategory,
+    currentId: string,
+    indexableIds: string[],
+    scanSize: number,
+  ): Promise<MemeListItem[]> => {
+    const { data, error } = await createStaticClient()
+      .from("memes")
+      .select(LIST_SELECT)
+      .in("id", indexableIds)
+      .eq("category", category)
+      .neq("id", currentId)
+      .in("moderation_status", ["approved", "limited"])
+      .order("trend_score", { ascending: false })
+      .order("id", { ascending: false })
+      .range(0, scanSize - 1);
+    if (error) throw new MemeCatalogUnavailableError();
+    return (data ?? []) as MemeListItem[];
+  },
+  ["public-meme-category-stream"],
+  { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+);
 
 /** 상세의 관련 밈은 최대 6장. 관련 결과가 적으면 같은 카테고리로 채운다. */
 const RELATED_LIMIT = 6;
@@ -33,19 +57,8 @@ export async function ContinueStream({
   );
   if (need > 0 && fallbackIds.length > 0) {
     try {
-      const supabase = createStaticClient();
       const scanSize = need + RELATED_LIMIT;
-      const { data } = await supabase
-        .from("memes")
-        .select(SELECT)
-        .in("id", fallbackIds)
-        .eq("category", category)
-        .neq("id", currentId)
-        .in("moderation_status", ["approved", "limited"])
-        .order("trend_score", { ascending: false })
-        .order("id", { ascending: false })
-        .range(0, scanSize - 1);
-      const rows = (data ?? []) as MemeListItem[];
+      const rows = await loadCategoryStream(category, currentId, fallbackIds, scanSize);
       const seen = new Set<string>([currentId, ...relatedIds]);
       for (const meme of rows) {
         if (seen.has(meme.id)) continue;

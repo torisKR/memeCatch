@@ -60,16 +60,16 @@ function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
     : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
   const topic = topicTag
-    ? ", meme_tags_map!inner(tags!inner(name))"
-    : ", meme_tags_map(tag_id)";
-  return `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
+    ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
+    : "";
+  return `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
   eq: (column: string, value: string) => T;
 }>(query: T, topicTag?: string): T {
   return topicTag
-    ? query.eq("meme_tags_map.tags.name", topicTag)
+    ? query.eq("topic_tags.tags.name", topicTag)
     : query;
 }
 
@@ -344,6 +344,30 @@ export function ExploreGrid({
             className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]"
           >
             다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0 && hasMore) {
+    return (
+      <div className="glass-panel relative mt-8 overflow-hidden rounded-2xl p-8 text-center">
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <div className="relative">
+          <p className="text-xl font-bold">
+            {failed ? "다음 밈을 불러오지 못했어요" : "다음 공개 밈을 계속 찾고 있어요"}
+          </p>
+          <p className="mt-1.5 text-base text-foreground">
+            앞선 문서는 공개 목록 기준을 충족하지 않아 건너뛰었어요.
+          </p>
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loading}
+            className="mt-5 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? "찾는 중…" : failed ? "다시 시도" : "계속 찾기"}
           </button>
         </div>
       </div>

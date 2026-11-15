@@ -80,6 +80,21 @@ describe("ExploreGrid", () => {
     );
   });
 
+  it("keeps pagination reachable when a capped scan has no indexable cards", () => {
+    render(
+      <ExploreGrid
+        initial={[]}
+        initialOffset={408}
+        hasMoreInitial
+        filters={{ categories: [], sort: "trending" }}
+      />,
+    );
+
+    expect(screen.queryByText("조건에 맞는 밈이 아직 없어요")).toBeNull();
+    expect(screen.getByText("다음 공개 밈을 계속 찾고 있어요")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "계속 찾기" })).toBeTruthy();
+  });
+
   it("keeps one or two explore cards instead of hiding the dictionary grid", () => {
     render(
       <ExploreGrid

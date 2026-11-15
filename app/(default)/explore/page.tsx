@@ -110,16 +110,16 @@ function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
     : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
   const topic = topicTag
-    ? ", meme_tags_map!inner(tags!inner(name))"
-    : ", meme_tags_map(tag_id)";
-  return `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_market_profiles(market_code, role, review_state)${topic}`;
+    ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
+    : "";
+  return `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, ${contents}, meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)${topic}`;
 }
 
 function withTopicTag<T extends {
   eq: (column: string, value: string) => T;
 }>(query: T, topicTag?: string): T {
   return topicTag
-    ? query.eq("meme_tags_map.tags.name", topicTag)
+    ? query.eq("topic_tags.tags.name", topicTag)
     : query;
 }
 

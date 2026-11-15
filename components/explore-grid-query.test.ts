@@ -61,10 +61,13 @@ describe("explore platform query", () => {
       sort: "trending",
     });
 
-    expect(calls.find((call) => call.method === "select")?.args[0]).toContain(
-      "meme_tags_map!inner(tags!inner(name))",
+    const select = calls.find((call) => call.method === "select")?.args[0];
+    expect(select).toContain("meme_tags_map(tag_id)");
+    expect(select).toContain(
+      "topic_tags:meme_tags_map!inner(tags!inner(name))",
     );
-    expect(hasCall(calls, "eq", "meme_tags_map.tags.name", "AI 밈")).toBe(true);
+    expect(hasCall(calls, "eq", "topic_tags.tags.name", "AI 밈")).toBe(true);
+    expect(hasCall(calls, "eq", "meme_tags_map.tags.name", "AI 밈")).toBe(false);
     expect(calls.some((call) => call.method === "in" && call.args[0] === "category")).toBe(false);
   });
 
@@ -94,7 +97,7 @@ describe("explore platform query", () => {
       { categories: [], topicTag: "AI 밈", sort: "trending" },
       { countOnly: true },
     );
-    expect(hasCall(count.calls, "eq", "meme_tags_map.tags.name", "AI 밈")).toBe(true);
+    expect(hasCall(count.calls, "eq", "topic_tags.tags.name", "AI 밈")).toBe(true);
     expect(count.calls.find((call) => call.method === "select")?.args[1]).toEqual({
       count: "exact",
       head: true,

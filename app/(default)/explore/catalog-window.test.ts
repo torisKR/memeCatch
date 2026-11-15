@@ -16,4 +16,12 @@ describe("explore catalog window", () => {
     expect(source).toContain("initialOffset={initialLoad.dbCount}");
     expect(source).toContain("hasMoreInitial={initialLoad.hasMore}");
   });
+
+  it("loads all tags for depth scoring while filtering through a separate topic relation", () => {
+    expect(source).toContain("meme_tags_map(tag_id)");
+    expect(source).toContain(
+      "topic_tags:meme_tags_map!inner(tags!inner(name))",
+    );
+    expect(source).toContain('query.eq("topic_tags.tags.name", topicTag)');
+  });
 });

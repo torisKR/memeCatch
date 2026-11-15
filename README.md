@@ -35,7 +35,7 @@
 - **프론트엔드**: Next.js 16 (App Router, 요청별 SSR) · React 19 · TypeScript · Tailwind CSS v4 · [motion](https://motion.dev) (framer-motion)
 - **백엔드**: Supabase (PostgreSQL · RLS · Auth · Storage · pg_cron)
 - **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
-- **배포**: Vercel (GitHub 연동 자동 배포)
+- **배포**: OCI 도쿄 VM의 Docker Compose와 자체 Caddy. Cloudflare가 `catchmeme.com`을 그 원본으로 프록시하고, GitHub Actions가 이미지를 만들어 VM에 배포한다.
 - **미디어**: Cloudflare R2 (`/api/media` 프록시) · **결제**: Unifi Pay Direct · Fairy · **메일**: AWS SES
 
 > 어떤 서비스가 무엇을 맡고 **왜 그렇게 정했는지**(특히 "AWS로 옮길까?"에 대한 실측 근거와

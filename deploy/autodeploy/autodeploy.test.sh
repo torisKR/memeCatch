@@ -135,6 +135,13 @@ self_update >/dev/null
 [[ "$(cat "$STATE_DIR/bin/autodeploy.sh")" == v2 ]] || fail "agent removed when checkout lacks it"
 grep -q '/var/lib/memecatch-autodeploy/bin/autodeploy.sh' "$here/memecatch-autodeploy.service" || fail "service must run the out-of-checkout copy"
 
+# The checkout always lands on exactly the commit being built, even when HEAD
+# is already ahead of it (an interrupted deploy left a newer tree checked out).
+git -C "$repo" reset -q --hard "$mig"
+checkout_target "$code" || fail "checkout_target failed"
+[[ "$(git -C "$repo" rev-parse HEAD)" == "$code" ]] || fail "HEAD is not the requested commit"
+checkout_target "$mig" && [[ "$(git -C "$repo" rev-parse HEAD)" == "$mig" ]] || fail "forward checkout failed"
+
 # GitHub runs pass only a full commit SHA; anything else is ignored.
 [[ "$(SSH_ORIGINAL_COMMAND=0123456789abcdef0123456789abcdef01234567 requested_sha)" == 0123456789abcdef0123456789abcdef01234567 ]] || fail "full SHA rejected"
 [[ -z "$(SSH_ORIGINAL_COMMAND='abc123; rm -rf /' requested_sha)" ]] || fail "injected command accepted"

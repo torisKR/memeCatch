@@ -260,7 +260,7 @@ main() {
   log "deploying ${target:0:7} (running ${current:0:7})"
   # Snapshot before building; see tag_rollback.
   tag_rollback "$current"
-  git -C "$ROOT" merge -q --ff-only "$target"
+  checkout_target "$target" || not_deployed "could not check out ${target:0:7} in $ROOT"
   if ! build_images "$target"; then
     log "build failed for ${target:0:7}; keeping ${current:0:7}"
     git -C "$ROOT" reset -q --keep "$current"
@@ -282,6 +282,16 @@ main() {
   touch "$STATE_DIR/failed-$target"
   restore_rollback "$current"
   exit 1
+}
+
+# Point the checkout at exactly <sha>. `merge --ff-only` is a no-op when <sha>
+# is already behind HEAD (e.g. after an interrupted deploy), which would build
+# a newer tree under an older label; reset --keep moves HEAD either way and
+# refuses if it would clobber local edits.
+checkout_target() {
+  local sha="$1"
+  git -C "$ROOT" reset -q --keep "$sha" || return 1
+  [[ "$(git -C "$ROOT" rev-parse HEAD)" == "$sha" ]]
 }
 
 # Run when executed; only define functions when sourced (the test sources it).

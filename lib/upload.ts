@@ -72,6 +72,9 @@ async function postUpload(file: File, failMessage: string): Promise<UploadResult
           error: "업로드가 너무 잦아요. 잠시 후 다시 시도해 주세요",
         };
       }
+      if (json.error === "storage_quota_exceeded") {
+        return { ok: false, error: "업로드 저장 용량 한도에 도달했어요. 관리자에게 문의해 주세요" };
+      }
       return { ok: false, error: failMessage };
     }
     return { ok: true, path: json.path };

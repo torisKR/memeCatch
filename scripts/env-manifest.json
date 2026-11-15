@@ -1,4 +1,6 @@
 {
+  "ACL_BASELINE_DATABASE_URL": "Postgres URL for the clean baseline used to compare function permissions during ACL recovery.",
+  "ACL_TARGET_DATABASE_URL": "Postgres URL for the target whose function permissions are compared during ACL recovery.",
   "ACME_EMAIL": "Email Caddy sends to the ACME account.",
   "ADSENSE_AUTO_ADS_ENABLED": "기본 false: 검증용 메타태그만 유지하고 Auto Ads 런타임을 시작하지 않음. 승인·동의 설정·페이지 제외를 운영자가 확인한 뒤에만 true로 변경. SPA에서는 스크립트 제거만으로 이전에 실행된 자동 광고가 종료되지 않음.",
   "ALLOWED_ORIGINS": "Browser origins allowed to call the ChatGPT integration.",

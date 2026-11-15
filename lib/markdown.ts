@@ -13,6 +13,14 @@ export function isVideoUrl(url: string): boolean {
   return /\.(mp4|webm)(?=$|[?#])/i.test(url);
 }
 
+/** Embed only media served by our fixed local storage route; external URLs
+ * remain clickable links so rendering a post does not contact their hosts. */
+export function isLocalMarkdownMedia(url: string): boolean {
+  const path = url.split(/[?#]/, 1)[0];
+  return /^\/api\/media\/(?:meme-uploads|meme-thumbs|meme-card-art)\/[a-zA-Z0-9_./-]+$/.test(path)
+    && !path.split("/").some((segment) => segment === "." || segment === "..");
+}
+
 /**
  * 마크다운 안 URL 허용 정책 — http(s) 절대 URL과 사이트 상대 경로(/api/media/ 등)만
  * 통과시키고 그 외 스킴(javascript:, data:, vbscript: …)은 빈 문자열로 무력화한다.

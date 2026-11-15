@@ -67,22 +67,40 @@ export class Corpus {
       const response = await this.fetcher(SOURCE, { redirect: 'error', signal: AbortSignal.timeout(12_000), headers: { Accept: 'text/plain' } });
       if (!response.ok) throw new Error('밈캐치 공개 본문을 불러오지 못했습니다.');
       const memes = parseCorpus(await readLimited(response));
-      this.cached = { memes, at: this.now() };
+      // Build the normalized search fields only when the public corpus refreshes.
+      // Keep the original records untouched because they are returned to clients.
+      const index = memes.map(meme => ({
+        meme,
+        title: normalize(meme.title),
+        aliases: normalize(meme.aliases),
+        rest: normalize([meme.summary, meme.description, meme.origin, meme.usage].join(' ')),
+      }));
+      this.cached = { memes, index, at: this.now() };
       return this.cached;
     })();
     try { return await this.pending; } finally { this.pending = null; }
   }
   async search({ query = '', limit = 6, includeRisky = false } = {}) {
     if (typeof query !== 'string' || query.length > 160 || !Number.isInteger(limit) || limit < 1 || limit > 12 || typeof includeRisky !== 'boolean') throw new TypeError('검색어는 160자 이내, 결과 수는 1~12여야 합니다.');
-    const { memes, at } = await this.load();
+    const { memes, index, at } = await this.load();
     const term = normalize(query.trim());
     if (query.trim() && !term) throw new TypeError('검색할 단어나 밈 이름을 입력하세요.');
-    const scored = memes.filter(m => includeRisky || !['risky', 'unknown'].includes(m.safetyCode)).map(m => {
-      const title = normalize(m.title); const aliases = normalize(m.aliases);
-      const rest = normalize([m.summary, m.description, m.origin, m.usage].join(' '));
-      return { meme: m, score: !term ? 1 : title === term ? 100 : title.includes(term) ? 60 : aliases.includes(term) ? 40 : rest.includes(term) ? 10 : 0 };
-    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
-    return { query, memes: scored.slice(0, limit).map(x => x.meme), matched: scored.length, corpusSize: memes.length, scope: SCOPE, source: SOURCE, fetchedAt: new Date(at).toISOString(), siteSearchUrl: `https://catchmeme.com/search?q=${encodeURIComponent(query)}` };
+    const top = []; let matched = 0;
+    for (const entry of index) {
+      if (!includeRisky && ['risky', 'unknown'].includes(entry.meme.safetyCode)) continue;
+      const score = !term ? 1 : entry.title === term ? 100 : entry.title.includes(term) ? 60 : entry.aliases.includes(term) ? 40 : entry.rest.includes(term) ? 10 : 0;
+      if (!score) continue;
+      matched++;
+      // At most 12 results are kept, and equal scores retain corpus order.
+      const position = top.findIndex(item => item.score < score);
+      if (position < 0) {
+        if (top.length < limit) top.push({ meme: entry.meme, score });
+      } else {
+        top.splice(position, 0, { meme: entry.meme, score });
+        if (top.length > limit) top.pop();
+      }
+    }
+    return { query, memes: top.map(x => x.meme), matched, corpusSize: memes.length, scope: SCOPE, source: SOURCE, fetchedAt: new Date(at).toISOString(), siteSearchUrl: `https://catchmeme.com/search?q=${encodeURIComponent(query)}` };
   }
   async get(id) {
     if (typeof id !== 'string' || !/^[a-z0-9]{3,36}$/i.test(id)) throw new TypeError('유효한 밈 ID가 필요합니다.');

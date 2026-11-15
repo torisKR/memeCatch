@@ -25,10 +25,18 @@ describe("MarkdownBody", () => {
     expect(html).not.toContain("<a");
   });
 
-  it(".webm 이미지 구문도 video로 렌더한다", () => {
+  it("외부 동영상과 이미지는 자동으로 요청하지 않고 링크로 표시한다", () => {
     const html = render("![클립](https://example.com/clip.webm)");
-    expect(html).toContain("<video");
+    expect(html).not.toContain("<video");
     expect(html).not.toContain("<img");
+    expect(html).toContain('href="https://example.com/clip.webm"');
+    const image = render("![이미지](https://example.com/pixel.png)");
+    expect(image).not.toContain("<img");
+    expect(image).toContain('href="https://example.com/pixel.png"');
+    const videoLink = render("[동영상](https://example.com/clip.mp4)");
+    expect(videoLink).not.toContain("<video");
+    expect(videoLink).toContain('href="https://example.com/clip.mp4"');
+    expect(render("![x](/api/media/meme-uploads/../redirect.mp4)")).not.toContain("<video");
   });
 
   it("raw HTML(script 태그)을 렌더하지 않는다", () => {

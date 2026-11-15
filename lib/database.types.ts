@@ -4127,6 +4127,10 @@ export type Database = {
       }
     }
     Functions: {
+      reserve_community_upload_storage: {
+        Args: { p_user_id: string; p_bytes: number }
+        Returns: undefined
+      }
       register_catalog_meme: { Args: { p_input: Json }; Returns: Json }
       search_meme_references: {
         Args: { p_query: string; p_embedding: number[]; p_limit?: number }

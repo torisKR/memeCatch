@@ -94,6 +94,21 @@ export async function POST(req: NextRequest) {
     throw error;
   }
 
+  // Reserve persistent storage before issuing any PUT. A failed or ambiguous
+  // PUT keeps its reservation because the object may already exist remotely.
+  const admin = createAdminClient();
+  const { error: storageQuotaError } = await admin.rpc("reserve_community_upload_storage", {
+    p_user_id: user.id,
+    p_bytes: file.size,
+  });
+  if (storageQuotaError) {
+    const limited = storageQuotaError.message.includes("upload_storage_quota_exceeded");
+    return NextResponse.json(
+      { ok: false, error: limited ? "storage_quota_exceeded" : "storage_quota_unavailable" },
+      { status: limited ? 429 : 503 },
+    );
+  }
+
   const objectPath = `${user.id}/${crypto.randomUUID()}.${ext}`;
   const fullPath = `meme-uploads/${objectPath}`;
 
@@ -106,7 +121,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 폴백: 로컬 디스크 저장소 (경로는 자기 폴더로 제한)
-  const { data, error } = await createAdminClient().storage
+  const { data, error } = await admin.storage
     .from("meme-uploads")
     .upload(objectPath, file, {
       contentType: file.type,

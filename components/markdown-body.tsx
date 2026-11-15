@@ -1,7 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { isVideoUrl, sanitizeMarkdownUrl } from "@/lib/markdown";
+import { isLocalMarkdownMedia, isVideoUrl, sanitizeMarkdownUrl } from "@/lib/markdown";
 
 /**
  * 커뮤니티 본문 마크다운 렌더러 — 상세 페이지(서버)와 글쓰기 미리보기(클라이언트) 공용.
@@ -13,7 +13,7 @@ import { isVideoUrl, sanitizeMarkdownUrl } from "@/lib/markdown";
  * - remark-breaks: 단일 줄바꿈을 <br>로 — 기존 플레인 텍스트 글(whitespace-pre-wrap 시절)과 하위호환.
  *
  * 미디어 규약(lib/markdown.ts 참고): `![alt](url)` 이미지, URL이 .mp4/.webm이면
- * 이미지 구문이든 단독 링크 `[동영상](url)`이든 <video controls>로 렌더(자동재생 없음).
+ * 내부 미디어만 임베드하고 외부 미디어는 클릭 가능한 링크로 표시한다.
  */
 
 function MediaVideo({ src }: { src: string }) {
@@ -32,7 +32,7 @@ const mdComponents: Components = {
   a({ href, children }) {
     const url = typeof href === "string" ? href : "";
     if (!url) return <span>{children}</span>;
-    if (isVideoUrl(url)) return <MediaVideo src={url} />;
+    if (isVideoUrl(url) && isLocalMarkdownMedia(url)) return <MediaVideo src={url} />;
     return (
       <a
         href={url}
@@ -47,6 +47,13 @@ const mdComponents: Components = {
   img({ src, alt }) {
     const url = typeof src === "string" ? src : "";
     if (!url) return null;
+    if (!isLocalMarkdownMedia(url)) {
+      return (
+        <a href={url} target="_blank" rel="noopener noreferrer nofollow" className="break-words font-semibold text-accent underline underline-offset-2 hover:opacity-80">
+          {alt || "외부 미디어 열기"}
+        </a>
+      );
+    }
     if (isVideoUrl(url)) return <MediaVideo src={url} />;
     return (
       // eslint-disable-next-line @next/next/no-img-element -- 사용자 업로드 원본(프록시 경유) — next/image 최적화 대상 아님

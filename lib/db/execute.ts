@@ -489,7 +489,7 @@ function rpcSql(plan: QueryPlan, fn: PgFunction): SqlParts {
   });
   const call = `public.${quoteIdent(name)}(${pairs.join(", ")})`;
   return fn.proretset
-    ? { sql: `SELECT * FROM ${call}`, params }
+    ? { sql: `SELECT * FROM ${call}${limitSql(plan.limit, null, params)}`, params }
     : { sql: `SELECT ${call} AS result`, params };
 }
 

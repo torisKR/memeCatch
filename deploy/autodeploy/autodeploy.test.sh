@@ -69,11 +69,31 @@ grep -q "^compose" "$calls" && fail "compose build ran after the app build faile
 PATH="$stub:$PATH" stub_calls="$calls" build_images abc || fail "clean build reported failure"
 grep -q "^compose" "$calls" || fail "auxiliary images were not built"
 
-# The app snapshot name matches what restore_rollback deploys, whatever registry ran it.
-[[ "$(rollback_ref app ghcr.io/toriskr/memecatch:abc s1)" == memecatch:rollback-s1 ]] || fail "app snapshot from GHCR"
-[[ "$(rollback_ref app memecatch:release-abc s1)" == memecatch:rollback-s1 ]] || fail "app snapshot from local"
-[[ "$(rollback_ref mpe-worker memecatch-worker:local s1)" == memecatch-worker:rollback-s1 ]] || fail "worker snapshot"
-[[ "$(rollback_ref scheduler memecatch-scheduler s1)" == memecatch-scheduler:rollback-s1 ]] || fail "untagged image snapshot"
+# Rollback redeploys exactly the snapshots recorded before the deploy, even when
+# the replaced containers now run differently named images (GHCR -> local build).
+STATE_DIR="$stub/state"; mkdir -p "$STATE_DIR"
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$stub_calls"
+case "$1 $2" in
+  "inspect memecatch-app-1") [[ "$*" == *Config.Image* ]] && echo "${stub_app_image}" || echo sha256:app ;;
+  "inspect memecatch-mpe-worker-1") [[ "$*" == *Config.Image* ]] && echo "${stub_worker_image}" || echo sha256:worker ;;
+  "inspect memecatch-scheduler-1") [[ "$*" == *Config.Image* ]] && echo memecatch-scheduler || echo sha256:sched ;;
+  "inspect memecatch-backup-1") [[ "$*" == *Config.Image* ]] && echo memecatch-backup || echo sha256:backup ;;
+esac
+exit 0
+STUB
+: >"$calls"
+PATH="$stub:$PATH" stub_calls="$calls" stub_app_image=ghcr.io/toriskr/memecatch:old stub_worker_image=ghcr.io/toriskr/memecatch-worker:old tag_rollback s1
+grep -q "^tag sha256:worker memecatch-worker:rollback-s1$" "$calls" || fail "worker snapshot not taken"
+# The deploy then replaced both containers with local images; restore must ignore that.
+mapfile -t env < <(PATH="$stub:$PATH" stub_calls="$calls" stub_app_image=memecatch:release-new stub_worker_image=memecatch-worker:local rollback_env s1)
+[[ " ${env[*]} " == *" MEMECATCH_IMAGE=memecatch:rollback-s1 "* ]] || fail "app rollback ref: ${env[*]}"
+[[ " ${env[*]} " == *" MEMECATCH_WORKER_IMAGE=memecatch-worker:rollback-s1 "* ]] || fail "worker rollback ref: ${env[*]}"
+grep -q "^tag memecatch-scheduler:rollback-s1 memecatch-scheduler$" "$calls" || fail "scheduler not restored"
+# Snapshots never carry a registry prefix that deploy-oci.sh would try to pull.
+[[ "$(grep -c ghcr.io "$STATE_DIR/rollback-s1.refs")" == 0 ]] || fail "snapshot kept a ghcr.io name"
+[[ "$(rollback_ref backup s1)" == memecatch-backup:rollback-s1 ]] || fail "backup snapshot name"
 
 # The running agent lives outside the checkout and only changes when the checkout's
 # copy differs; a checkout without the agent (an older release) leaves it alone.

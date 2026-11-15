@@ -68,37 +68,51 @@ service_image() {
   docker inspect "memecatch-$1-1" --format '{{.Config.Image}}' 2>/dev/null
 }
 
-# Snapshot name for a service. The app always snapshots to memecatch:rollback-<sha>,
-# whatever registry its running image came from, because restore_rollback deploys
-# exactly that name. Other services keep their own repository, which compose reuses.
+# Snapshot name for a service. Always a local repository, whatever registry the
+# running image came from: deploy-oci.sh pulls any ghcr.io/ reference, and a
+# snapshot exists only on this VM.
 rollback_ref() {
-  local service="$1" image="$2" sha="$3"
-  if [[ "$service" == app ]]; then
-    printf 'memecatch:rollback-%s\n' "$sha"
-  else
-    printf '%s:rollback-%s\n' "${image%:*}" "$sha"
-  fi
+  local service="$1" sha="$2"
+  case "$service" in
+    app) printf 'memecatch:rollback-%s\n' "$sha" ;;
+    *) printf 'memecatch-%s:rollback-%s\n' "${service#mpe-}" "$sha" ;;
+  esac
 }
 
+# Snapshot every running service before a deploy and record exactly what was
+# saved. Restore reads this record; it never re-derives names from containers
+# that the failed deploy has already replaced.
 tag_rollback() {
-  local sha="$1" service image
+  local sha="$1" service image ref record="$STATE_DIR/rollback-$1.refs"
+  : >"$record"
   for service in app mpe-worker scheduler backup; do
     image="$(service_image "$service")" || continue
-    docker tag "$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" \
-      "$(rollback_ref "$service" "$image" "$sha")"
+    ref="$(rollback_ref "$service" "$sha")"
+    docker tag "$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" "$ref"
+    printf '%s %s\n' "$service" "$ref" >>"$record"
   done
+}
+
+# Image references to redeploy for the snapshot of <sha>, as KEY=VALUE lines.
+# app and mpe-worker take their image from compose variables; scheduler and
+# backup are compose-built under fixed names, so their snapshots are retagged.
+rollback_env() {
+  local record="$STATE_DIR/rollback-$1.refs" service ref
+  [[ -f "$record" ]] || return 1
+  while read -r service ref; do
+    case "$service" in
+      app) printf 'MEMECATCH_IMAGE=%s\n' "$ref" ;;
+      mpe-worker) printf 'MEMECATCH_WORKER_IMAGE=%s\n' "$ref" ;;
+      scheduler | backup) docker tag "$ref" "memecatch-$service" ;;
+    esac
+  done <"$record"
 }
 
 restore_rollback() {
-  local sha="$1" service image
-  for service in mpe-worker scheduler backup; do
-    image="$(service_image "$service")" || continue
-    if docker image inspect "$(rollback_ref "$service" "$image" "$sha")" >/dev/null 2>&1; then
-      docker tag "$(rollback_ref "$service" "$image" "$sha")" "$image"
-    fi
-  done
+  local sha="$1" env=()
+  mapfile -t env < <(rollback_env "$sha") || true
   git -C "$ROOT" reset -q --keep "$sha"
-  RELEASE_SHA="$sha" MEMECATCH_IMAGE="memecatch:rollback-${sha}" bash "$ROOT/scripts/deploy-oci.sh"
+  env RELEASE_SHA="$sha" "${env[@]}" bash "$ROOT/scripts/deploy-oci.sh"
 }
 
 # --build-arg list from deploy/build.env (public values only).

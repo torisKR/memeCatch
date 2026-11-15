@@ -129,4 +129,15 @@ self_update >/dev/null
 [[ "$(cat "$STATE_DIR/bin/autodeploy.sh")" == v2 ]] || fail "agent removed when checkout lacks it"
 grep -q '/var/lib/memecatch-autodeploy/bin/autodeploy.sh' "$here/memecatch-autodeploy.service" || fail "service must run the out-of-checkout copy"
 
+# GitHub runs pass only a full commit SHA; anything else is ignored.
+[[ "$(SSH_ORIGINAL_COMMAND=0123456789abcdef0123456789abcdef01234567 requested_sha)" == 0123456789abcdef0123456789abcdef01234567 ]] || fail "full SHA rejected"
+[[ -z "$(SSH_ORIGINAL_COMMAND='abc123; rm -rf /' requested_sha)" ]] || fail "injected command accepted"
+[[ -z "$(SSH_ORIGINAL_COMMAND='bash -i' requested_sha)" ]] || fail "shell request accepted"
+# Strict (GitHub) callers see "not deployed" as a failure; the timer retries quietly.
+rc=0; ( STRICT=1; not_deployed "x" ) >/dev/null || rc=$?
+[[ "$rc" == 3 ]] || fail "strict not_deployed must exit 3 (got $rc)"
+( STRICT=""; not_deployed "x" ) >/dev/null || fail "timer not_deployed must exit 0"
+# The GitHub key is installed with a forced command and `restrict`.
+grep -q 'restrict,command=\\"/var/lib/memecatch-autodeploy/bin/autodeploy.sh\\"' "$here/authorize-github-key.sh" || fail "deploy key must force the agent"
+
 echo "autodeploy OK"

@@ -98,38 +98,40 @@ Admin Bedrock drafts read `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACC
 
 `MEMECATCH_SIGNING_SECRET` is the HMAC and operator bearer for analytics, view counts, and the embedding probe. `MEME_EMBEDDING_REINDEX_ENABLED` defaults to false.
 
-## Continuous deploy (pull-based)
+## Continuous deploy (GitHub Actions through Cloudflare Tunnel)
 
-The repository is public, so nothing in GitHub can reach this VM. There is no deploy workflow, no SSH key, host, or token in Actions secrets, and port 22 stays limited to operator IPs in the OCI security list. The VM pulls instead:
+The repository is public. The VM keeps port 22 closed to the internet; GitHub reaches it only through a Cloudflare Tunnel that Cloudflare Access guards with a service token.
 
 ```text
-push to main ─► GitHub Actions CI (`check`) ─► success
-                                                  │
-VM timer (every 3 min) ─ git fetch (https, anonymous) ─ check-runs API (anonymous)
-   └─ new commit with a green `check` ─► build on the VM ─► scripts/deploy-oci.sh
-        └─ https://catchmeme.com (through Cloudflare) reports X-MemeCatch-Release-Sha = new commit
-             ├─ yes: done, old images pruned (3 kept)
-             └─ no: previous images and checkout restored, commit marked failed
+push to main ─► ci.yml `check` ─► success ─► `deploy` job (environment: production, main only)
+  └─ ssh ubuntu@$DEPLOY_HOST "<commit sha>"   via  cloudflared access ssh (service token)
+       └─ Cloudflare Access ─► tunnel memecatch-deploy ─► VM sshd
+            └─ forced command: /var/lib/memecatch-autodeploy/bin/autodeploy.sh
+                 build on the VM ─► scripts/deploy-oci.sh ─► https://catchmeme.com reports the new release
+                 failure ─► previous images and checkout restored; the GitHub job fails
 ```
 
-`deploy/autodeploy/autodeploy.sh` does one check per run. It skips a commit whose CI is pending (retries next tick) or failed, and it never auto-deploys a commit that adds files under `db/migrations/`. Apply those by hand, then allow the release:
+Pieces and where they live:
+
+| Piece | Where | Notes |
+| --- | --- | --- |
+| Tunnel `memecatch-deploy` | VM `/etc/cloudflared/memecatch-deploy.yml`, unit `cloudflared-memecatch-deploy` | ingress `ssh://localhost:22` for `$DEPLOY_HOST` only |
+| Access application | Cloudflare Zero Trust | self-hosted app on `$DEPLOY_HOST`, Service Auth policy for one service token |
+| Deploy key | GitHub `production` secret `DEPLOY_SSH_KEY`; VM `authorized_keys` | `restrict,command="…/autodeploy.sh"`: no shell, PTY, or forwarding; installed by `deploy/autodeploy/authorize-github-key.sh` |
+| Host key pin | secret `DEPLOY_KNOWN_HOSTS` | `StrictHostKeyChecking=yes` |
+| Access token | secrets `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | passed to cloudflared through env, never on the command line |
+
+Pull requests (including forks) never run the deploy job, and the `production` environment only serves `main`. A leaked deploy key plus Access token can do one thing: ask the VM to deploy a commit that is on `origin/main` and passed CI.
+
+The agent (`deploy/autodeploy/autodeploy.sh`) accepts only a full commit SHA on `origin/main`, refuses to downgrade, checks the CI `check` run itself, and never auto-deploys a commit that adds files under `db/migrations/`. In that case the job fails with the file list; apply them, then:
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f db/migrations/<file>.sql   # or docker exec into memecatch-postgres-1
-touch /var/lib/memecatch-autodeploy/allow-<full-sha>
+touch /var/lib/memecatch-autodeploy/allow-<full-sha>   # then re-run the deploy job in GitHub
 ```
 
-Install or update the timer from the checkout:
+A re-run in GitHub retries a commit that failed before. Install or update the agent with `bash deploy/autodeploy/install.sh` (add `--with-timer` to also poll main every 3 minutes as a fallback). Logs: the GitHub job, or `journalctl -u memecatch-autodeploy` for timer runs. Each deploy tags the running images `memecatch*:rollback-<previous-sha>` first.
 
-```bash
-cd /opt/memecatch && bash deploy/autodeploy/install.sh
-journalctl -u memecatch-autodeploy --since today     # what it did
-systemctl start memecatch-autodeploy                 # check now instead of waiting
-```
-
-State lives in `/var/lib/memecatch-autodeploy/`: `deployed` (last good SHA), `failed-<sha>` (delete it to retry that commit), `allow-<sha>`. Before each deploy the running images are tagged `<repo>:rollback-<previous-sha>`. Roll back by hand with `MEMECATCH_IMAGE=memecatch:rollback-<sha> bash scripts/deploy-oci.sh` after `git reset --keep <sha>`.
-
-Build-time values live in `deploy/build.env`. Every one ships in the HTML, so the file holds only `NEXT_PUBLIC_*` values; CI fails if anything else appears there. CI builds the same image from the same file. Runtime secrets stay in `/opt/memecatch/.env`, which is not in git. Responses carry `X-MemeCatch-Release-Sha`.
+Build-time values live in `deploy/build.env`. Every one ships in the HTML, so the file holds only `NEXT_PUBLIC_*` values; CI fails if anything else appears there. Runtime secrets stay in `/opt/memecatch/.env`, which is not in git. Responses carry `X-MemeCatch-Release-Sha`.
 
 ## Backups
 

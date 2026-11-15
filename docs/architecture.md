@@ -13,7 +13,7 @@
 
 | 담당 | 서비스 | 비고 |
 | --- | --- | --- |
-| 앱 호스팅·배포 | OCI VM + Docker Compose | VM의 systemd 타이머가 CI 통과 커밋을 받아 VM에서 빌드·배포(`deploy/autodeploy`). GitHub에는 배포 키 없음 |
+| 앱 호스팅·배포 | OCI VM + Docker Compose | CI 통과 후 GitHub Actions가 Cloudflare Tunnel+Access로 VM 배포 에이전트를 호출(22번 포트 비공개, 실행 전용 키) |
 | DB·RLS·RPC | PostgreSQL 16 + pgvector (Compose `postgres`) | `db/migrations`를 첫 부팅 시 적용, 이후 `psql`로 수동 적용 |
 | 인증 | better-auth (앱 내장) | 이메일·카카오·구글·TikTok, 세션은 같은 Postgres |
 | 크론 | Compose `scheduler` | `deploy/scheduler/crontab` → `CRON_SECRET`으로 `/api/cron/*` 호출 |

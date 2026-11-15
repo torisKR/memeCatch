@@ -14,6 +14,14 @@
 #   5. confirm the public site (through Cloudflare) reports the new release
 #   6. on any failure after step 4, restore the previous images and checkout
 #
+# Two callers:
+#   - GitHub Actions, over SSH through a Cloudflare Tunnel, with a key whose
+#     authorized_keys entry forces this script (SSH_ORIGINAL_COMMAND carries the
+#     commit to deploy). "Strict": anything that is not a deploy or a no-op
+#     exits 3 so the GitHub run fails visibly, and a re-run retries a failed SHA.
+#   - an optional systemd timer (deploy/autodeploy/install.sh --with-timer),
+#     which quietly retries on the next tick.
+#
 # The agent runs from $STATE_DIR/bin, outside the checkout. A rollback can reset
 # the checkout to a commit that predates this file; the running copy must survive
 # that. It replaces itself with the checkout's version only after a good deploy.
@@ -178,32 +186,70 @@ prune_images() {
   docker image prune -f >/dev/null 2>&1 || true
 }
 
+STRICT=""
+[[ -n "${SSH_CONNECTION:-}" || -n "${AUTODEPLOY_STRICT:-}" ]] && STRICT=1
+
+# Stop without deploying: a failure for a GitHub run, a quiet retry for the timer.
+not_deployed() {
+  log "$1"
+  if [[ -n "$STRICT" ]]; then exit 3; fi
+  exit 0
+}
+
+# The commit a GitHub run asked for, or empty. Only a full SHA is accepted.
+requested_sha() {
+  local req="${SSH_ORIGINAL_COMMAND:-}"
+  [[ "$req" =~ ^[0-9a-f]{40}$ ]] && printf '%s\n' "$req"
+  return 0
+}
+
 main() {
   mkdir -p "$STATE_DIR"
   exec 9>"$STATE_DIR/lock"
-  flock -n 9 || { log "another run is in progress"; exit 0; }
+  if [[ -n "$STRICT" ]]; then
+    flock -w 1800 9 || not_deployed "another deploy held the lock for 30 minutes"
+  else
+    flock -n 9 || { log "another run is in progress"; exit 0; }
+  fi
 
   git -C "$ROOT" fetch -q origin main
-  local target current state migrations
+  local target current state migrations req
   target="$(git -C "$ROOT" rev-parse origin/main)"
   current="$(running_sha)"
   [[ -n "$current" ]] || current="$(git -C "$ROOT" rev-parse HEAD)"
 
-  [[ "$target" == "$current" ]] && exit 0
-  [[ -e "$STATE_DIR/failed-$target" ]] && exit 0
+  req="$(requested_sha)"
+  if [[ -n "$req" ]]; then
+    git -C "$ROOT" merge-base --is-ancestor "$req" "$target" 2>/dev/null \
+      || not_deployed "${req:0:7} is not on origin/main; refusing"
+    if git -C "$ROOT" merge-base --is-ancestor "$req" "$current" 2>/dev/null; then
+      log "running ${current:0:7} already includes ${req:0:7}"
+      exit 0
+    fi
+    target="$req"
+  fi
+
+  if [[ "$target" == "$current" ]]; then
+    [[ -n "$STRICT" ]] && log "${target:0:7} is already running"
+    exit 0
+  fi
+  if [[ -e "$STATE_DIR/failed-$target" ]]; then
+    [[ -n "$STRICT" ]] || exit 0
+    log "retrying ${target:0:7}, which failed before"
+    rm -f "$STATE_DIR/failed-$target"
+  fi
 
   state="$(ci_state "$target" || echo pending)"
   case "$state" in
     success) ;;
-    failure) log "CI failed on ${target:0:7}; not deploying"; touch "$STATE_DIR/failed-$target"; exit 0 ;;
-    *) log "waiting for CI on ${target:0:7}"; exit 0 ;;
+    failure) touch "$STATE_DIR/failed-$target"; not_deployed "CI failed on ${target:0:7}; not deploying" ;;
+    *) not_deployed "CI has not passed on ${target:0:7} yet" ;;
   esac
 
   migrations="$(new_migrations "$current" "$target")"
   if [[ -n "$migrations" && ! -e "$STATE_DIR/allow-$target" ]]; then
-    log "${target:0:7} adds migrations; apply them, then touch $STATE_DIR/allow-$target"
     printf '  %s\n' $migrations
-    exit 0
+    not_deployed "${target:0:7} adds the migrations above; apply them, then touch $STATE_DIR/allow-$target and re-run"
   fi
 
   if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then

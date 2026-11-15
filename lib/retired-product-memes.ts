@@ -1,7 +1,9 @@
 import { getTrendingMemes, LIST_SELECT, type MemeListItem } from "@/lib/queries";
-import { verifiedRetiredCardImage } from "@/lib/retired-card-image";
+import { isYouTubeThumbnailUrl, verifiedRetiredCardImage } from "@/lib/retired-card-image";
 import { createStaticClient } from "@/lib/supabase/server";
 import type { MemeCategory, SafetyLevel } from "@/lib/labels";
+
+const RETIRED_PRODUCT_CARD_COUNT = 4;
 
 /**
  * Published memes whose illustrations are files in `public/`.
@@ -95,58 +97,76 @@ export function retiredProductFallbackMemes(): MemeListItem[] {
   return RETIRED_PRODUCT_FALLBACK_PICKS.map(staticFallbackMeme);
 }
 
-function withVerifiedThumbnail(meme: MemeListItem): MemeListItem {
+function representativeThumbnail(meme: MemeListItem): string | null {
   const contents = meme.meme_contents ?? [];
-  const current =
+  return (
     contents.find((content) => content.is_representative && content.thumbnail_url)
       ?.thumbnail_url ??
     contents.find((content) => content.thumbnail_url)?.thumbnail_url ??
-    null;
-  if (verifiedRetiredCardImage(current)) return meme;
-  const pick = RETIRED_PRODUCT_FALLBACK_PICKS.find((item) => item.slug === meme.slug);
-  if (!pick) return meme;
-  return {
-    ...meme,
-    meme_contents: [{ thumbnail_url: pick.thumbnail, is_representative: true }],
-  } as MemeListItem;
+    null
+  );
 }
 
-/** Trending memes, or four verified published memes when trending is empty. */
-export async function loadRetiredProductMemes(): Promise<MemeListItem[]> {
-  const trending = (await getTrendingMemes(4)).slice(0, 4);
-  if (trending.length > 0) return trending;
-  try {
-    const loaded = await loadPublishedMemesBySlug(RETIRED_PRODUCT_FALLBACK_SLUGS);
-    const bySlug = new Map(loaded.map((meme) => [meme.slug, meme]));
-    return RETIRED_PRODUCT_FALLBACK_PICKS.map((pick) =>
-      withVerifiedThumbnail(bySlug.get(pick.slug) ?? staticFallbackMeme(pick)),
-    );
-  } catch {
-    return retiredProductFallbackMemes();
+function remember(seen: Set<string>, meme: MemeListItem) {
+  seen.add(meme.id);
+  seen.add(meme.slug);
+  seen.add(meme.short_id);
+}
+
+function alreadyChosen(seen: Set<string>, meme: MemeListItem): boolean {
+  return seen.has(meme.id) || seen.has(meme.slug) || seen.has(meme.short_id);
+}
+
+/**
+ * Four public cards. Verified same-origin art comes first. The rest are
+ * trending memes whose thumbnail is not a YouTube still. Shipped illustrations
+ * fill any remaining slots when the catalog is short.
+ */
+export function chooseRetiredProductCards(
+  catalog: readonly MemeListItem[],
+  trending: readonly MemeListItem[],
+): MemeListItem[] {
+  const chosen: MemeListItem[] = [];
+  const seen = new Set<string>();
+  const push = (meme: MemeListItem) => {
+    if (chosen.length >= RETIRED_PRODUCT_CARD_COUNT || alreadyChosen(seen, meme)) return;
+    const thumbnail = representativeThumbnail(meme);
+    if (thumbnail && isYouTubeThumbnailUrl(thumbnail)) return;
+    remember(seen, meme);
+    chosen.push(meme);
+  };
+
+  for (const meme of catalog) {
+    if (verifiedRetiredCardImage(representativeThumbnail(meme))) push(meme);
   }
+  for (const meme of trending) push(meme);
+  if (chosen.length < RETIRED_PRODUCT_CARD_COUNT) {
+    for (const meme of retiredProductFallbackMemes()) push(meme);
+  }
+  return chosen.slice(0, RETIRED_PRODUCT_CARD_COUNT);
 }
 
-async function loadPublishedMemesBySlug(
-  slugs: readonly string[],
-): Promise<MemeListItem[]> {
+/** Verified art first, then non-YouTube trending memes. Always four when possible. */
+export async function loadRetiredProductMemes(): Promise<MemeListItem[]> {
+  const [catalog, trending] = await Promise.all([
+    loadPublicMemes(48),
+    getTrendingMemes(24),
+  ]);
+  return chooseRetiredProductCards(catalog, trending);
+}
+
+async function loadPublicMemes(limit: number): Promise<MemeListItem[]> {
   try {
     const supabase = createStaticClient({ cachePublicCatalog: true });
     const { data, error } = await supabase
       .from("memes")
       .select(LIST_SELECT)
-      .in("slug", [...slugs])
-      .in("moderation_status", [...PUBLISHED_STATUSES]);
+      .in("moderation_status", [...PUBLISHED_STATUSES])
+      .order("trend_score", { ascending: false })
+      .order("published_at", { ascending: false })
+      .limit(limit);
     if (error || !data) return [];
-    const bySlug = new Map(
-      (data as MemeListItem[]).map((meme) => [meme.slug, meme]),
-    );
-    const ordered: MemeListItem[] = [];
-    for (const slug of slugs) {
-      const meme = bySlug.get(slug);
-      if (!meme) continue;
-      ordered.push(meme);
-    }
-    return ordered.slice(0, 4);
+    return data as MemeListItem[];
   } catch {
     return [];
   }

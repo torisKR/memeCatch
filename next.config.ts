@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { rankingsLocaleRewriteSource } from "./lib/rankings-locale-rewrite";
 import {
   DEFAULT_TRAILING_SLASH_REDIRECT,
   EN_PRODUCT_GONE_REDIRECTS,
@@ -156,6 +157,10 @@ const nextConfig: NextConfig = {
   // 워크트리·모노 환경에서 다중 lockfile로 인한 workspace root 추론 경고 제거
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
+    "/og/[locale]": ["./assets/og-fonts/**/*"],
+    "/opengraph-image": ["./assets/og-fonts/**/*"],
+    "/[locale]/memes/[key]/opengraph-image": ["./assets/og-fonts/**/*"],
+    "/memes/[key]/opengraph-image-k2cx9c": ["./assets/og-fonts/**/*"],
     "/v1/embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/cron/meme-embeddings": ["./.local/embedding-models/intfloat/multilingual-e5-small/**/*"],
     "/api/mcp": ["./integrations/memecatch-chatgpt/ui/app.html"],
@@ -168,6 +173,24 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   async redirects() {
     return [...EN_PRODUCT_GONE_REDIRECTS, DEFAULT_TRAILING_SLASH_REDIRECT];
+  },
+  // Prefixed rankings URLs share one dynamic route. A static `app/ar` segment
+  // would shadow every future `/ar/*` page, and `[locale]` only prerenders
+  // the SEO locales.
+  async rewrites() {
+    return [
+      // `/[locale]/opengraph-image` is not a route. This rule still runs
+      // before dynamic routes and turns `/ar/opengraph-image/*` into `/ar`,
+      // the same global not-found as main. `/og/ar` is the Arabic card.
+      {
+        source: "/ar/opengraph-image/:path*",
+        destination: "/ar",
+      },
+      {
+        source: rankingsLocaleRewriteSource(),
+        destination: "/locale-rankings/:locale",
+      },
+    ];
   },
   // 기본 보안 헤더 — CSP는 임베드·인라인 스크립트 회귀 위험이 있어 Report-Only로만 관찰(enforce 전환 금지)
   async headers() {

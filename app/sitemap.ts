@@ -5,6 +5,13 @@ import { memePathFrom } from "@/lib/labels";
 import { COLLECTIONS } from "@/lib/collections";
 import { isIndexableMeme, type ContentDepthInput } from "@/lib/content-depth";
 import { isThinMeme } from "@/lib/thin-meme";
+import {
+  isIndexableLocalizedMeme,
+  isTranslationCurrent,
+  type LocalizedMeme,
+  type TranslationStatus,
+} from "@/lib/meme-translations";
+import { koreanRankingsVisible } from "@/lib/korean-rankings.server";
 import { evidenceTimestamp } from "@/lib/source-links";
 import {
   SEO_CONTENT_LOCALES,
@@ -34,6 +41,7 @@ const SITEMAP_CACHE_MS = 60 * 60 * 1000;
 type CachedSitemap = {
   expiresAt: number;
   entries: MetadataRoute.Sitemap;
+  koreanMemeCount: number;
 };
 
 let cachedSitemap: CachedSitemap | null = null;
@@ -61,12 +69,14 @@ const DEPTH_SELECT =
   " meme_tags_map(tag_id)," +
   " meme_translations(locale, status, localized_slug, source_updated_at, updated_at, title, summary, description, origin)";
 
+type SitemapTimestamp = string | Date;
+
 type SitemapTranslationRow = {
   locale: string;
   status: string;
   localized_slug: string;
-  source_updated_at: string;
-  updated_at: string;
+  source_updated_at: SitemapTimestamp;
+  updated_at: SitemapTimestamp;
   title: string;
   summary: string;
   description: string;
@@ -76,11 +86,15 @@ type SitemapTranslationRow = {
 type SitemapMemeRow = ContentDepthInput & {
   short_id: string;
   slug: string;
-  updated_at: string;
+  updated_at: SitemapTimestamp;
   meme_translations: SitemapTranslationRow[];
 };
 
-function validDate(value: string | null | undefined): Date | undefined {
+function validDate(value: SitemapTimestamp | null | undefined): Date | undefined {
+  if (value instanceof Date) {
+    if (!Number.isFinite(value.getTime())) return undefined;
+    return evidenceTimestamp(value.toISOString()) ? new Date(value.getTime()) : undefined;
+  }
   const timestamp = evidenceTimestamp(value);
   return timestamp ? new Date(timestamp) : undefined;
 }
@@ -129,19 +143,90 @@ function exploreLanguages(locales: readonly SeoContentLocale[]): Record<string, 
   return { ...languages, "x-default": languages.en ?? languages.ko };
 }
 
-/** Only reviewed, exact-source, complete translations may become crawl targets. */
+function translationStatus(status: string): TranslationStatus | null {
+  if (status === "machine" || status === "reviewed" || status === "stale") return status;
+  return null;
+}
+
+/** Same slug the detail page publishes: trim, then fall back to the Korean slug. */
+function publishedLocalizedSlug(
+  localizedSlug: string | null | undefined,
+  sourceSlug: string,
+): string {
+  const trimmed = localizedSlug?.trim() ?? "";
+  return trimmed || sourceSlug;
+}
+
+function timestampText(value: SitemapTimestamp): string {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+/**
+ * Crawl targets use the detail page's publication predicate.
+ * `isIndexableLocalizedMeme` checks reviewed status, required prose,
+ * `isIndexableMeme` on the Korean source, and `isTranslationCurrent`.
+ * Freshness goes through `sameInstant`, which treats a node-pg Date and a
+ * microsecond `row_to_json` string of the same millisecond as one revision.
+ */
+function localizedIndexCandidate(
+  meme: SitemapMemeRow,
+  translation: SitemapTranslationRow,
+  locale: SeoContentLocale,
+  status: TranslationStatus,
+): LocalizedMeme {
+  return {
+    id: meme.short_id,
+    short_id: meme.short_id,
+    updated_at: timestampText(meme.updated_at),
+    slug: publishedLocalizedSlug(translation.localized_slug, meme.slug),
+    title: translation.title,
+    summary: translation.summary,
+    description: translation.description,
+    origin: translation.origin,
+    usage_note: null,
+    caution: null,
+    aliases: [],
+    usage_examples: meme.usage_examples,
+    meme_sources: meme.meme_sources,
+    meme_contents: meme.meme_contents,
+    meme_tags_map: meme.meme_tags_map,
+    original: {
+      slug: meme.slug,
+      title: "",
+      summary: "",
+      description: meme.description ?? "",
+      origin: meme.origin ?? "",
+      usage_note: meme.usage_note ?? null,
+      caution: meme.caution ?? null,
+      aliases: [],
+      usage_examples: meme.usage_examples,
+    },
+    translation: {
+      locale,
+      status,
+      localizedSlug: translation.localized_slug?.trim() || null,
+      sourceUpdatedAt: timestampText(translation.source_updated_at),
+      updatedAt: timestampText(translation.updated_at),
+      isCurrent: isTranslationCurrent(translation.source_updated_at, meme.updated_at),
+      provider: "",
+      model: "",
+      promptVersion: 0,
+      translatedAt: timestampText(translation.updated_at),
+      reviewedAt: null,
+    },
+  };
+}
+
+/** Only reviewed, current, complete translations may become crawl targets. */
 function reviewedTranslations(meme: SitemapMemeRow): Map<SeoContentLocale, SitemapTranslationRow> {
   const translations = new Map<SeoContentLocale, SitemapTranslationRow>();
   for (const translation of meme.meme_translations ?? []) {
     if (!isSeoContentLocale(translation.locale)) continue;
-    const isReviewedAndCurrent =
-      translation.status === "reviewed" &&
-      translation.source_updated_at === meme.updated_at &&
-      Boolean(translation.title?.trim()) &&
-      Boolean(translation.summary?.trim()) &&
-      Boolean(translation.description?.trim()) &&
-      Boolean(translation.origin?.trim());
-    if (!isReviewedAndCurrent) continue;
+    const status = translationStatus(translation.status);
+    if (!status) continue;
+    if (!isIndexableLocalizedMeme(localizedIndexCandidate(meme, translation, translation.locale, status))) {
+      continue;
+    }
     translations.set(translation.locale, translation);
   }
   return translations;
@@ -162,7 +247,7 @@ function memeLanguages(
       localizedMemePath(
         locale,
         meme.short_id,
-        translation.localized_slug || meme.slug,
+        publishedLocalizedSlug(translation.localized_slug, meme.slug),
       ),
     );
   }
@@ -179,6 +264,7 @@ function reportCatalogUnavailable(): void {
 async function buildSitemap(): Promise<{
   entries: MetadataRoute.Sitemap;
   catalogUnavailable: boolean;
+  koreanMemeCount: number;
 }> {
   // 홈·탐색은 새 공개 문서가 실제로 노출면을 바꾸므로 최신 공개일을 쓸 수 있다.
   // 데이터가 없으면 요청/빌드 시각을 발명하지 않고 lastModified를 생략한다.
@@ -205,6 +291,8 @@ async function buildSitemap(): Promise<{
     reportCatalogUnavailable();
     catalogUnavailable = true;
   }
+
+  const showRankings = await koreanRankingsVisible();
 
   const localizedHomeEntries: MetadataRoute.Sitemap = SEO_CONTENT_LOCALES.map(
     (locale) => ({
@@ -259,13 +347,13 @@ async function buildSitemap(): Promise<{
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms"] as const).map(
-      (path) => ({
+    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const)
+      .filter((path) => showRankings || path !== "/rankings")
+      .map((path) => ({
         url: `${SITE_URL}${path}`,
         changeFrequency: "daily" as const,
         priority: 0.6,
-      })
-    ),
+      })),
   ];
 
   // 공개 밈 중 **콘텐츠가 충실한 것만** 색인 노출한다.
@@ -275,6 +363,7 @@ async function buildSitemap(): Promise<{
   // 데이터는 삭제하지 않으며 사이트맵에서 발견 경로만 뺀다.
   // 페이지 단위로 순회 — 사이트맵 상한 5만 URL.
   const PAGE = 1000;
+  let koreanMemeCount = 0;
   for (let from = 0; !catalogUnavailable && supabase && from < 49000; from += PAGE) {
     let data: unknown[] | null = null;
     try {
@@ -323,8 +412,8 @@ async function buildSitemap(): Promise<{
         }
       }
 
-      // Localized URLs stay on isIndexableMeme so an English page without a
-      // translation still 404s. The Korean URL uses the tighter C1 thin gate.
+      // Localized URLs retain their existing 150-character indexability rule;
+      // the unprefixed Korean document uses the stricter C1 thin-page policy.
       if (entries.length < MAX_SITEMAP_URLS && !isThinMeme(meme)) {
         const updatedAt = validDate(meme.updated_at);
         entries.push({
@@ -334,6 +423,7 @@ async function buildSitemap(): Promise<{
           priority: 0.8,
           alternates: { languages },
         });
+        koreanMemeCount += 1;
       }
 
       for (const locale of SEO_CONTENT_LOCALES) {
@@ -345,7 +435,7 @@ async function buildSitemap(): Promise<{
             localizedMemePath(
               locale,
               meme.short_id,
-              translation.localized_slug || meme.slug,
+              publishedLocalizedSlug(translation.localized_slug, meme.slug),
             ),
           ),
           ...lastModified(validDate(translation.updated_at)),
@@ -380,15 +470,36 @@ async function buildSitemap(): Promise<{
     );
   }
 
-  return { entries: entries.slice(0, MAX_SITEMAP_URLS), catalogUnavailable };
+  return {
+    entries: entries.slice(0, MAX_SITEMAP_URLS),
+    catalogUnavailable,
+    koreanMemeCount,
+  };
+}
+
+async function loadSitemap(): Promise<{
+  entries: MetadataRoute.Sitemap;
+  koreanMemeCount: number | null;
+}> {
+  const now = Date.now();
+  if (cachedSitemap && cachedSitemap.expiresAt > now) return cachedSitemap;
+  const built = await buildSitemap();
+  if (!built.catalogUnavailable) {
+    cachedSitemap = {
+      expiresAt: now + SITEMAP_CACHE_MS,
+      entries: built.entries,
+      koreanMemeCount: built.koreanMemeCount,
+    };
+    return cachedSitemap;
+  }
+  return { entries: built.entries, koreanMemeCount: null };
+}
+
+/** Indexable unprefixed meme URLs. Null when the catalog read failed. */
+export async function getIndexableKoreanMemeCount(): Promise<number | null> {
+  return (await loadSitemap()).koreanMemeCount;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = Date.now();
-  if (cachedSitemap && cachedSitemap.expiresAt > now) return cachedSitemap.entries;
-  const built = await buildSitemap();
-  if (!built.catalogUnavailable) {
-    cachedSitemap = { expiresAt: now + SITEMAP_CACHE_MS, entries: built.entries };
-  }
-  return built.entries;
+  return (await loadSitemap()).entries;
 }

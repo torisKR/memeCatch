@@ -272,6 +272,7 @@ export function HomeScene({
   };
 
   const rendererReady = rendererState === "ready";
+  const showLayoutControls = locale !== "ko" || rendererReady;
   const playbackPaused = userPaused || systemReducedMotion;
   const copy = HOME_SCENE_COPY[locale];
   const safetyCopy = getSafetySignalCopy(locale);
@@ -316,32 +317,34 @@ export function HomeScene({
         className="relative h-64 overflow-hidden bg-[#17191a] sm:h-[340px] lg:h-[390px]"
         data-home-scene-stage="true"
       >
-        <fieldset className={controlStyles.layout} aria-label={copy.layoutLabel} aria-describedby={!rendererReady ? `${explanationId}-layout-status` : undefined} data-scene-layout-controls="true">
-          <legend className="sr-only">{copy.layoutLabel}</legend>
-          {(variant === "hero" ? ["scroll", "stacked", "spread"] as const : ["stacked", "spread"] as const).map((mode) => (
-            <label key={mode} className={controlStyles.choice}>
-              <input
-                className={controlStyles.input}
-                type="radio"
-                name={`scene-layout-${explanationId}`}
-                value={mode}
-                checked={layoutMode === mode}
-                disabled={!rendererReady}
-                onChange={() => changeLayout(mode)}
-                data-scene-layout={mode}
-              />
-              <span className={controlStyles.label}>
-                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
-                  {mode === "scroll" ? <path d="M10 2v16M6 6l4-4 4 4M6 14l4 4 4-4" /> : mode === "stacked"
-                    ? <path d="m10 3 7 4-7 4-7-4 7-4Zm-7 8 7 4 7-4M3 15l7 4 7-4" />
-                    : <path d="m6 2 4 3-4 3-4-3 4-3Zm8 6 4 3-4 3-4-3 4-3ZM6 14l4 3-4 3-4-3 4-3Z" />}
-                </svg>
-                {mode === "scroll" ? copy.scrollLayout : mode === "stacked" ? copy.stackLabel : copy.spreadLabel}
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        {!rendererReady && (
+        {showLayoutControls && (
+          <fieldset className={controlStyles.layout} aria-label={copy.layoutLabel} aria-describedby={!rendererReady ? `${explanationId}-layout-status` : undefined} data-scene-layout-controls="true">
+            <legend className="sr-only">{copy.layoutLabel}</legend>
+            {(variant === "hero" ? ["scroll", "stacked", "spread"] as const : ["stacked", "spread"] as const).map((mode) => (
+              <label key={mode} className={controlStyles.choice}>
+                <input
+                  className={controlStyles.input}
+                  type="radio"
+                  name={`scene-layout-${explanationId}`}
+                  value={mode}
+                  checked={layoutMode === mode}
+                  disabled={!rendererReady}
+                  onChange={() => changeLayout(mode)}
+                  data-scene-layout={mode}
+                />
+                <span className={controlStyles.label}>
+                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
+                    {mode === "scroll" ? <path d="M10 2v16M6 6l4-4 4 4M6 14l4 4 4-4" /> : mode === "stacked"
+                      ? <path d="m10 3 7 4-7 4-7-4 7-4Zm-7 8 7 4 7-4M3 15l7 4 7-4" />
+                      : <path d="m6 2 4 3-4 3-4-3 4-3Zm8 6 4 3-4 3-4-3 4-3ZM6 14l4 3-4 3-4-3 4-3Z" />}
+                  </svg>
+                  {mode === "scroll" ? copy.scrollLayout : mode === "stacked" ? copy.stackLabel : copy.spreadLabel}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {showLayoutControls && !rendererReady && (
           <p id={`${explanationId}-layout-status`} className={controlStyles.availability}>
             {rendererState === "static" || rendererState === "failed" ? copy.layoutUnavailable : copy.layoutLoading}
           </p>
@@ -383,16 +386,18 @@ export function HomeScene({
         />
 
         <div className="absolute right-3 bottom-3 z-20 flex items-center gap-2 sm:right-5 sm:bottom-5">
-          <button
-            aria-label={copy.resetView}
-            className="min-h-11 rounded-full bg-[#202325]/92 px-4 text-xs font-black text-[#f3f0eb] shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-white/15 transition-colors hover:bg-[#2a2d2f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff7645] disabled:cursor-not-allowed disabled:opacity-45"
-            data-scene-reset="true"
-            disabled={!rendererReady}
-            onClick={resetView}
-            type="button"
-          >
-            {copy.resetView}
-          </button>
+          {showLayoutControls && (
+            <button
+              aria-label={copy.resetView}
+              className="min-h-11 rounded-full bg-[#202325]/92 px-4 text-xs font-black text-[#f3f0eb] shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-white/15 transition-colors hover:bg-[#2a2d2f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff7645] disabled:cursor-not-allowed disabled:opacity-45"
+              data-scene-reset="true"
+              disabled={!rendererReady}
+              onClick={resetView}
+              type="button"
+            >
+              {copy.resetView}
+            </button>
+          )}
 
           {rendererReady && (
             <button
@@ -417,7 +422,9 @@ export function HomeScene({
 
       {variant === "hero" && (
         <div ref={scrollCueRef} className={scrollStyles.cue} data-scene-scroll-cue="true" hidden={layoutMode !== "scroll"}>
-          <p>{rendererState === "static" || rendererState === "failed" ? copy.layoutUnavailable : systemReducedMotion ? copy.scrollReduced : userPaused ? copy.scrollPaused : !rendererReady ? copy.layoutLoading : copy.scrollHint}</p>
+          {showLayoutControls && (
+            <p>{rendererState === "static" || rendererState === "failed" ? copy.layoutUnavailable : systemReducedMotion ? copy.scrollReduced : userPaused ? copy.scrollPaused : !rendererReady ? copy.layoutLoading : copy.scrollHint}</p>
+          )}
           <div className={scrollStyles.line} aria-hidden="true"><span /></div>
           <ol className={scrollStyles.steps}>
             {copy.scrollSteps.map((step, index) => <li key={step}><span aria-hidden="true">0{index + 1}</span>{step}</li>)}

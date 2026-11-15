@@ -806,18 +806,6 @@ where meme.slug = '느리구나-oo하는-것조차'
 insert into public.meme_sources (
   meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
 )
-select meme.id, 'Web', 'https://jjalnews.com/archives/61774', '느리구나, OO하는 것조차 (블리치 뱌쿠야 대사 패러디)', '짤뉴스',
-  'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
-from public.memes as meme
-where meme.slug = '느리구나-oo하는-것조차'
-  and not exists (
-    select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://jjalnews.com/archives/61774'
-  );
-
-insert into public.meme_sources (
-  meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
-)
 select meme.id, 'Web', 'https://www.yna.co.kr/view/AKR20260721114800011', '[샷!] "누가 이기든 내 알 바 아니라 너무 좋아"', '연합뉴스',
   'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
 from public.memes as meme

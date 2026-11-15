@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MemeCard } from "@/components/meme-card";
+import { MOBILE_CARD_CLEARANCE } from "@/components/mobile-card-clearance";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
 import {
   SEO_LOCALE_CONFIG,
@@ -162,7 +163,7 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
         )}
 
         {showCards && (
-          <ul aria-label={copy.title} className="mt-7 grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <ul aria-label={copy.title} className={`mt-7 grid grid-cols-2 gap-4 lg:grid-cols-3 ${MOBILE_CARD_CLEARANCE}`}>
             {result.items.map((meme, index) => (
               <li key={meme.id} className="min-w-0">
                 <MemeCard

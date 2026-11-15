@@ -14,6 +14,8 @@ type HomeStoryChapter = {
   navigationLabel: string;
   eyebrow: string;
   title: string;
+  /** Unbreakable pieces of `title`. Their concatenation must equal that title. */
+  titlePhrases?: readonly string[];
   description: string;
 };
 
@@ -137,6 +139,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "文脈",
         eyebrow: "02 · CONTEXT",
         title: "使う前に、そのミームを取り巻く文脈から。",
+        titlePhrases: ["使う前に、", "その", "ミームを", "取り巻く", "文脈から。"],
         description: "意味と由来、現在の使用シグナルを一緒に読むと、場面による違いが見えてきます。",
       },
       {
@@ -145,6 +148,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "参加",
         eyebrow: "03 · PARTICIPATE",
         title: "理解したら、次の文脈に参加する。",
+        titlePhrases: ["理解したら、", "次の", "文脈に", "参加する。"],
         description: "見つけた場面をコミュニティで共有し、次の文脈を一緒に残しましょう。",
       },
     ],
@@ -177,6 +181,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "语境",
         eyebrow: "02 · CONTEXT",
         title: "转发之前，先读懂它周围的语境。",
+        titlePhrases: ["转发", "之前，", "先", "读懂", "它", "周围", "的", "语境。"],
         description: "结合含义、来源与当前使用提示，了解同一个表达在不同场景中会如何变化。",
       },
       {
@@ -185,6 +190,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "参与",
         eyebrow: "03 · PARTICIPATE",
         title: "理解之后，一起补充下一段故事。",
+        titlePhrases: ["理解", "之后，", "一起", "补充", "下一段", "故事。"],
         description: "在社区分享你发现的使用场景，并一起留下下一段语境。",
       },
     ],
@@ -217,6 +223,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "語境",
         eyebrow: "02 · CONTEXT",
         title: "轉發之前，先讀懂它周圍的語境。",
+        titlePhrases: ["轉發", "之前，", "先", "讀懂", "它", "周圍", "的", "語境。"],
         description: "結合含義、來源與目前的使用提示，了解同一個表達在不同場景中會如何變化。",
       },
       {
@@ -225,6 +232,7 @@ export const HOME_IMMERSIVE_COPY: Record<SeoRouteLocale, HomeImmersiveCopy> = {
         navigationLabel: "參與",
         eyebrow: "03 · PARTICIPATE",
         title: "理解之後，一起補充下一段故事。",
+        titlePhrases: ["理解", "之後，", "一起", "補充", "下一段", "故事。"],
         description: "在社群分享你發現的使用場景，並一起留下下一段語境。",
       },
     ],

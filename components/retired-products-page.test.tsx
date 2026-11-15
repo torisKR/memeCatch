@@ -3,10 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemeListItem } from "@/lib/queries";
 
 const getTrendingMemes = vi.hoisted(() => vi.fn());
+const createStaticClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/queries", () => ({
   getTrendingMemes,
 }));
+
+vi.mock("@/lib/supabase/server", () => ({ createStaticClient }));
 
 import { metadata as koreanMetadata } from "@/app/(default)/retired-products/page";
 import KoreanRetiredProductsPage from "@/app/(default)/retired-products/page";
@@ -35,6 +38,21 @@ function meme(index: number): MemeListItem {
 describe("retired products page", () => {
   beforeEach(() => {
     getTrendingMemes.mockReset();
+    createStaticClient.mockReset();
+    createStaticClient.mockReturnValue({
+      from() {
+        const builder = {
+          select() { return builder; },
+          in() { return builder; },
+          order() { return builder; },
+          limit() { return builder; },
+          then(onFulfilled?: (value: { data: never[]; error: null }) => unknown) {
+            return Promise.resolve({ data: [], error: null }).then(onFulfilled);
+          },
+        };
+        return builder;
+      },
+    });
   });
 
   it("contains the explore button and a noindex meta tag", () => {
@@ -111,7 +129,7 @@ describe("retired products page", () => {
       await EnglishRetiredProductsPage({ params: Promise.resolve({ locale: "en" }) }),
     );
 
-    expect(getTrendingMemes).toHaveBeenCalledWith(4);
+    expect(getTrendingMemes).toHaveBeenCalledWith(24);
     expect(korean).toContain("인기 밈 4");
     expect(korean).toContain('href="/explore"');
     expect(english).toContain("Explore memes");

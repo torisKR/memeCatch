@@ -24,13 +24,24 @@ const FOOTER_LINKS = [
 
 export function SiteFooter() {
   const { messages, locale } = useLocale();
+  const links = FOOTER_LINKS;
   return (
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
         <div className="mx-auto max-w-5xl px-4 py-8">
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              {FOOTER_LINKS.map((l) => (
+              {locale === "ko" && (
+                <li>
+                  <Link
+                    href="/contact"
+                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] hover:text-foreground hover:decoration-flame-500 focus-visible:decoration-flame-500"
+                  >
+                    문의
+                  </Link>
+                </li>
+              )}
+              {links.map((l) => (
                 <li key={l.href}>
                   <Link
                     href={l.href}

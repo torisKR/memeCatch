@@ -77,6 +77,18 @@ export function isLocale(value: string | null | undefined): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
 }
 
+/**
+ * First path segment when it is a non-Korean locale prefix.
+ * Korean stays unprefixed. SEO prefixes and UI locales such as `ar` both match,
+ * so `/ar/rankings` is Arabic even though `ar` is not an indexable content locale.
+ */
+export function documentLocaleFromPathname(pathname: string): Locale | null {
+  const path = pathname.split(/[?#]/)[0] ?? pathname;
+  const first = path.split("/").filter(Boolean)[0];
+  if (!first || first === "ko" || !isLocale(first)) return null;
+  return first;
+}
+
 export function getDocumentLanguage(locale: Locale): string {
   if (locale === "zh") return "zh-Hans";
   if (locale === "zh-tw") return "zh-Hant";
@@ -283,7 +295,7 @@ const EXTRA_MESSAGES: Record<Exclude<Locale, TranslatedLocale>, Partial<Messages
   ar: {
     home: "الصفحة الرئيسية MemeCatch", search: "البحث عن الميمات", searchPlaceholder: "ابحث عن ميم",
     explore: "استكشاف", timeline: "الخط الزمني", community: "المجتمع", submit: "إرسال", login: "تسجيل الدخول",
-    savedMemes: "الميمات المحفوظة", logout: "تسجيل الخروج", greeting: "مرحبًا بعودتك", accountMenu: "حسابي",
+    savedMemes: "الميمات المحفوظة", logout: "تسجيل الخروج", greeting: "مرحبًا بعودتك", accountMenu: "حسابي", my: "حسابي",
     random: "عرض ميم عشوائي", findingMeme: "جارٍ البحث عن ميم", language: "اللغة", languageMenu: "اختر اللغة",
     footerNav: "معلومات الموقع", about: "عن MemeCatch", privacy: "الخصوصية", terms: "الشروط",
     rankings: "التصنيفات", news: "أخبار الميمات حسب الجيل", donate: "ادعمنا",

@@ -60,6 +60,9 @@ public/swe-worker-*.js
 # 로컬 도구 산출물 (재생성 가능 — 스크린샷·스크랩 캐시·배치 로그·디버깅 스냅샷)
 .playwright-mcp/
 .playwright-cli/
+/test-results/
+/playwright-report/
+/e2e/screenshots/
 .firecrawl/
 .gjc/
 .local/

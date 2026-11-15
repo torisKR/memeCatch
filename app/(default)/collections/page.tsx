@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdsenseScript } from "@/components/adsense-script";
 import { COLLECTIONS, type CollectionDef } from "@/lib/collections";
 import { SITE_URL } from "@/lib/site";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 const DESCRIPTION =
   "최신 밈부터 시대별·주제별 한국 밈까지, 목적에 맞게 편집한 밈캐치 모음을 살펴보세요.";
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
     title: "테마별 밈 모음",
     description: DESCRIPTION,
     url: "/collections",
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 

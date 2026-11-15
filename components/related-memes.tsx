@@ -4,7 +4,7 @@ import { hasPublicListing } from "@/lib/thin-meme";
 
 const RELATED_COPY = withLocaleFallback({
   ko: {
-    title: "관련 밈",
+    title: "비슷한 밈",
     description: "이 밈과 가까운 항목이에요.",
   },
   en: {
@@ -47,10 +47,7 @@ export function RelatedMemes({
   const copy = RELATED_COPY[locale];
 
   return (
-    <section
-      aria-labelledby="related-memes"
-      className="mt-2 max-md:mb-[calc(4rem+1rem)] max-md:pr-[calc(4rem+1rem)]"
-    >
+    <section aria-labelledby="related-memes" className="mt-2">
       <h2 id="related-memes" className="text-xl font-bold">
         {copy.title}
       </h2>

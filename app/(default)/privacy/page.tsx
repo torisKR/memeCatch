@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { koreanPageShare } from "@/lib/korean-share-metadata";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -6,6 +7,12 @@ export const metadata: Metadata = {
   description: "밈캐치 개인정보처리방침 — 수집 항목, 이용 목적, 보관 기간, 이용자 권리.",
   alternates: { canonical: "/privacy" },
   robots: { index: true, follow: true },
+  ...koreanPageShare({
+    title: "개인정보처리방침",
+    description: "밈캐치 개인정보처리방침 — 수집 항목, 이용 목적, 보관 기간, 이용자 권리.",
+    pathname: "/privacy",
+    alternateLocales: true,
+  }),
 };
 
 const EFFECTIVE = "2026년 8월 18일";

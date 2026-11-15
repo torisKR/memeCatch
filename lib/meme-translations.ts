@@ -95,16 +95,30 @@ type FeaturedTranslationRow = MemeTranslationRow & {
 
 type AvailabilityBaseRow = Omit<LocalizableMeme, "short_id">;
 
-function sameInstant(left: string, right: string): boolean {
-  const leftTime = Date.parse(left);
-  const rightTime = Date.parse(right);
-  return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime === rightTime;
+/**
+ * Millisecond instant of a timestamptz value.
+ *
+ * node-pg returns a top-level timestamptz as a Date already truncated to
+ * milliseconds. Embedded `row_to_json` values arrive as ISO strings that still
+ * carry microseconds. `Date.parse(String(date))` drops those milliseconds
+ * ("Thu Jul 16 2026 00:30:00 GMT+0900"), so a Date and the same instant's
+ * microsecond string never match. Read Dates with getTime() and parse strings
+ * with the Date constructor, which floors fractional seconds to milliseconds.
+ */
+function timestampMs(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+}
+
+function sameInstant(left: Date | string, right: Date | string): boolean {
+  const leftMs = timestampMs(left);
+  const rightMs = timestampMs(right);
+  return Number.isFinite(leftMs) && Number.isFinite(rightMs) && leftMs === rightMs;
 }
 
 /** A translation is current only when it was produced from this exact source revision. */
 export function isTranslationCurrent(
-  sourceUpdatedAt: string,
-  baseUpdatedAt: string,
+  sourceUpdatedAt: Date | string,
+  baseUpdatedAt: Date | string,
 ): boolean {
   return sameInstant(sourceUpdatedAt, baseUpdatedAt);
 }
@@ -188,6 +202,26 @@ export function overlayMemeTranslation<T extends LocalizableMeme>(
   };
 }
 
+/** Related cards may keep a reviewed row whose summary is blank. */
+export function isRelatedLocalizedMeme(
+  meme: LocalizedMeme<LocalizableMeme> | null | undefined,
+): boolean {
+  if (!meme) return false;
+  const originalDepth: ContentDepthInput = {
+    ...meme.original,
+    meme_sources: meme.meme_sources,
+    meme_contents: meme.meme_contents,
+    meme_tags_map: meme.meme_tags_map,
+  };
+  return (
+    meme.translation.status === "reviewed" &&
+    meme.translation.isCurrent &&
+    meme.title.trim().length > 0 &&
+    [meme.description, meme.origin].every((value) => value.trim().length > 0) &&
+    isIndexableMeme(originalDepth)
+  );
+}
+
 /**
  * Public localized pages require a human-reviewed snapshot of an already
  * substantial Korean source. Drafts remain available only to the operator
@@ -249,6 +283,7 @@ export type LocalizedSearchMemesResult = {
 export async function getLocalizedSearchMemesResult(
   shortIds: readonly string[],
   locale: Locale,
+  options?: { includeEmptySummary?: boolean },
 ): Promise<LocalizedSearchMemesResult> {
   const items = new Map<string, LocalizedMemeDetail>();
   if (locale === DEFAULT_LOCALE || shortIds.length === 0) {
@@ -271,7 +306,10 @@ export async function getLocalizedSearchMemesResult(
 
     for (const row of data) {
       const localized = overlayMemeTranslation(row.memes, row, locale);
-      if (localized && isIndexableLocalizedMeme(localized)) {
+      const include = options?.includeEmptySummary
+        ? isRelatedLocalizedMeme(localized)
+        : isIndexableLocalizedMeme(localized);
+      if (localized && include) {
         items.set(localized.short_id, localized);
       }
     }

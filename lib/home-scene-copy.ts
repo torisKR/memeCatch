@@ -32,7 +32,7 @@ export const HOME_SCENE_COPY = {
     scrollSteps: ["모으기", "펼치기", "살펴보기"],
     brandLabel: "MemeCatch Studio",
     layoutLabel: "3D 레이어 보기",
-    layoutLoading: "3D 준비 중",
+    layoutLoading: "",
     layoutUnavailable: "정적 보기 · 3D 조작은 지원되지 않아요",
     stackLabel: "모아보기",
     spreadLabel: "펼쳐보기",

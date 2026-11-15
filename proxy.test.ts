@@ -128,7 +128,8 @@ describe("proxy locale contract", () => {
 
     expect(response.headers.get("content-language")).toBe("en");
     expect(forwardedLocale(response)).toBe("en");
-    expect(response.cookies.get(LOCALE_COOKIE)?.value).toBe("en");
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("keeps an unprefixed page Korean when Accept-Language prefers another language", async () => {
@@ -141,7 +142,7 @@ describe("proxy locale contract", () => {
     expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
   });
 
-  it("keeps a valid cookie ahead of Accept-Language without mislabelling Korean content", async () => {
+  it("keeps an unprefixed page Korean when a stale locale cookie is present", async () => {
     const response = await proxy(
       publicRequest("/explore", {
         cookie: "zh-tw",
@@ -150,7 +151,7 @@ describe("proxy locale contract", () => {
     );
 
     expect(response.headers.get("content-language")).toBe("ko");
-    expect(forwardedLocale(response)).toBe("zh-tw");
+    expect(forwardedLocale(response)).toBe("ko");
     expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
   });
 
@@ -159,7 +160,8 @@ describe("proxy locale contract", () => {
 
     expect(response.headers.get("content-language")).toBe("zh-Hant");
     expect(forwardedLocale(response)).toBe("zh-tw");
-    expect(response.cookies.get(LOCALE_COOKIE)?.value).toBe("zh-tw");
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("uses the export query locale for a localized card response", async () => {
@@ -310,6 +312,22 @@ describe("proxy public meme existence check", () => {
     expect(supabaseMocks.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
   });
 
+  it.each([
+    "/ar",
+    "/ar/pricing",
+    "/ar/memes",
+    "/ar/memes/unknown-slug",
+    "/ar/memes/bjk2021k-bun-jo-ka",
+    "/ar/memes/yeyam8cm-pc-modem-dial-up-sound",
+  ])("lets the app router render main's not-found document for %s", async (path) => {
+    const response = await proxy(publicRequest(path));
+
+    expect(response.status).not.toBe(404);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
+    expect(supabaseMocks.from).not.toHaveBeenCalled();
+  });
+
   it("skips the lookup for a cors RSC or prefetch request", async () => {
     const response = await proxy(publicRequest("/en/memes/missing-meme", { fetchMode: "cors" }));
 
@@ -381,176 +399,129 @@ describe("proxy public meme existence check", () => {
   });
 });
 
-// 순수 협상 함수 단위 테스트 — 글로벌 피벗: 첫 방문 비한국어 브라우저는 "/en"(또는
-// 지원 로케일)으로 보내고, ko 선호·기존 쿠키·봇 UA·비루트 경로는 리다이렉트하지 않는다.
 describe("resolveLandingRedirectLocale", () => {
-  it("does not redirect a Korean-preferring browser away from the root", () => {
-    // Arrange
-    const input = {
-      pathname: "/",
-      cookieValue: undefined,
-      acceptLanguage: "ko-KR,ko;q=0.9,en;q=0.5",
-      userAgent: "Mozilla/5.0",
-    };
-
-    // Act
-    const result = resolveLandingRedirectLocale(input);
-
-    // Assert
-    expect(result).toBeNull();
-  });
-
-  it("redirects a first-time English-preferring browser to en", () => {
-    // Arrange
-    const input = {
+  it("keeps the Korean home when Accept-Language prefers English and no cookie is set", () => {
+    expect(resolveLandingRedirectLocale({
       pathname: "/",
       cookieValue: undefined,
       acceptLanguage: "en-US,en;q=0.9",
       userAgent: "Mozilla/5.0",
-    };
-
-    // Act
-    const result = resolveLandingRedirectLocale(input);
-
-    // Assert
-    expect(result).toBe("en");
+    })).toBeNull();
   });
 
-  it.each([
-    ["ja-JP,ja;q=0.9", "ja"],
-    ["zh-CN,zh;q=0.9", "zh"],
-    ["zh-TW,zh-Hant;q=0.9", "zh-tw"],
-  ] as const)("routes a %s preference straight to its supported SEO locale (%s)", (acceptLanguage, expected) => {
-    // Arrange
-    const input = { pathname: "/", cookieValue: undefined, acceptLanguage, userAgent: "Mozilla/5.0" };
-
-    // Act
-    const result = resolveLandingRedirectLocale(input);
-
-    // Assert
-    expect(result).toBe(expected);
-  });
-
-  it("falls back to en for a preferred language without a dedicated SEO route", () => {
-    // Arrange
-    const input = {
-      pathname: "/",
-      cookieValue: undefined,
-      acceptLanguage: "fr-FR,fr;q=0.9",
-      userAgent: "Mozilla/5.0",
-    };
-
-    // Act
-    const result = resolveLandingRedirectLocale(input);
-
-    // Assert
-    expect(result).toBe("en");
-  });
-
-  it("does not redirect once a locale cookie already exists, even if it is ko (cookie priority)", () => {
-    // Arrange — mirrors a returning visitor who picked ko from the language selector
-    const input = {
-      pathname: "/",
-      cookieValue: "ko",
-      acceptLanguage: "en-US,en;q=0.9",
-      userAgent: "Mozilla/5.0",
-    };
-
-    // Act
-    const result = resolveLandingRedirectLocale(input);
-
-    // Assert
-    expect(result).toBeNull();
-  });
-
-  it("does not redirect recognized crawler user agents", () => {
-    // Arrange
-    const bots = [
-      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-      "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
-      "Mozilla/5.0 (compatible; SomeOtherCrawler/1.0)",
-    ];
-
-    // Act
-    const results = bots.map((userAgent) =>
-      resolveLandingRedirectLocale({
+  it.each(["en", "ja", "zh", "zh-tw"] as const)(
+    "redirects / only for an explicit %s cookie",
+    (cookieValue) => {
+      expect(resolveLandingRedirectLocale({
         pathname: "/",
-        cookieValue: undefined,
-        acceptLanguage: "en-US,en;q=0.9",
-        userAgent,
-      }),
-    );
+        cookieValue,
+        acceptLanguage: "ko-KR",
+      })).toBe(cookieValue);
+    },
+  );
 
-    // Assert
-    expect(results).toEqual(bots.map(() => null));
+  it("does not redirect a ko cookie or a non-SEO cookie", () => {
+    expect(resolveLandingRedirectLocale({ pathname: "/", cookieValue: "ko" })).toBeNull();
+    expect(resolveLandingRedirectLocale({ pathname: "/", cookieValue: "th" })).toBeNull();
   });
 
   it("does not redirect paths other than the exact root", () => {
-    // Arrange
-    const input = {
+    expect(resolveLandingRedirectLocale({
       pathname: "/explore",
-      cookieValue: undefined,
+      cookieValue: "en",
       acceptLanguage: "en-US,en;q=0.9",
-      userAgent: "Mozilla/5.0",
-    };
-
-    // Act
-    const result = resolveLandingRedirectLocale(input);
-
-    // Assert
-    expect(result).toBeNull();
+    })).toBeNull();
   });
 });
 
 describe("proxy landing redirect", () => {
-  it("302-redirects a first-time non-Korean browser from / to /en with cookie and Vary set", async () => {
-    // Arrange
-    const request = publicRequest("/", { acceptLanguage: "en-US,en;q=0.9" });
+  it("serves Korean / with Accept-Language en and does not set a locale cookie", async () => {
+    const response = await proxy(publicRequest("/", { acceptLanguage: "en-US,en;q=0.9" }));
 
-    // Act
-    const response = await proxy(request);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("vary")).toBeNull();
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
 
-    // Assert
+  it.each([
+    ["browser", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "en-US,en;q=0.9"],
+    ["kakao", "facebookexternalhit/1.1; kakaotalk-scrap/1.0; +https://devtalk.kakao.com/t/scrap/33984", undefined],
+    ["kakao-en", "facebookexternalhit/1.1; kakaotalk-scrap/1.0; +https://devtalk.kakao.com/t/scrap/33984", "en-US,en;q=0.9"],
+    ["x", "Twitterbot/1.0", "en-US,en;q=0.9"],
+  ] as const)("keeps / Korean for %s even when the request previously negotiated /en", async (_name, userAgent, acceptLanguage) => {
+    const response = await proxy(publicRequest("/", { userAgent, acceptLanguage }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+  });
+
+  it("redirects / when the visitor explicitly chose an SEO locale cookie, without rewriting it", async () => {
+    const response = await proxy(publicRequest("/", { cookie: "en", acceptLanguage: "ko-KR" }));
+
     expect(response.status).toBe(302);
     expect(new URL(response.headers.get("location")!).pathname).toBe("/en");
-    expect(response.headers.get("vary")).toBe("Accept-Language");
-    expect(response.cookies.get(LOCALE_COOKIE)?.value).toBe("en");
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("does not redirect a Korean-preferring browser landing on /", async () => {
-    // Arrange
-    const request = publicRequest("/", { acceptLanguage: "ko-KR,ko;q=0.9" });
+  it("does not redirect a ko cookie on /", async () => {
+    const response = await proxy(publicRequest("/", { cookie: "ko", acceptLanguage: "en-US,en;q=0.9" }));
 
-    // Act
-    const response = await proxy(request);
-
-    // Assert
     expect(response.headers.get("location")).toBeNull();
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+  });
+});
+
+describe("proxy locale cookie", () => {
+  const speculativeHeaders: Array<Record<string, string>> = [
+    { "next-router-prefetch": "1", rsc: "1" },
+    { RSC: "1" },
+    { purpose: "prefetch" },
+    { "sec-purpose": "prefetch" },
+    { "next-router-segment-prefetch": "/zh/pricing" },
+  ];
+
+  it.each(speculativeHeaders)("does not set memecatch_locale on a speculative /zh/pricing request %j", async (headers) => {
+    const response = await proxy(new NextRequest("https://catchmeme.test/zh/pricing", { headers }));
+
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("does not redirect a returning visitor who already carries a locale cookie", async () => {
-    // Arrange
-    const request = publicRequest("/", { cookie: "ko", acceptLanguage: "en-US,en;q=0.9" });
+  it("does not set memecatch_locale on a full navigation to a prefixed route", async () => {
+    const response = await proxy(publicRequest("/zh/pricing"));
 
-    // Act
-    const response = await proxy(request);
-
-    // Assert
-    expect(response.headers.get("location")).toBeNull();
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("does not redirect Googlebot even without a locale cookie", async () => {
-    // Arrange
-    const request = publicRequest("/", {
-      acceptLanguage: "en-US,en;q=0.9",
-      userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  it("does not set memecatch_locale on a localized canonical redirect", async () => {
+    supabaseMocks.abortSignal.mockResolvedValueOnce({
+      data: [
+        publicMemeRow({
+          short_id: "gjq95suv",
+          slug: "한국-밈",
+          meme_translations: [
+            {
+              locale: "zh",
+              status: "reviewed",
+              localized_slug: "当前名称",
+              source_updated_at: BASE_UPDATED_AT,
+            },
+          ],
+        }),
+      ],
+      error: null,
     });
 
-    // Act
-    const response = await proxy(request);
+    const response = await proxy(publicRequest("/zh/memes/gjq95suv-old"));
 
-    // Assert
-    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(308);
+    expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 });
 

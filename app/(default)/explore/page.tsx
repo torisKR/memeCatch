@@ -25,6 +25,7 @@ import { getSocialPlatformCounts } from "@/lib/social-platform-counts.server";
 import { curatedSearchCards } from "@/lib/curated-memes";
 import { AdsenseScript } from "@/components/adsense-script";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * 레인 B 여정2 — 전체 탐색 페이지.
@@ -51,6 +52,7 @@ export const metadata: Metadata = {
     title: "밈 탐색",
     description: EXPLORE_DESCRIPTION,
     url: "/explore",
+    images: [ogDefaultImageDescriptor("ko")],
   },
 };
 

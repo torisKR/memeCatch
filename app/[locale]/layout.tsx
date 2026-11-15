@@ -21,7 +21,8 @@ export function generateStaticParams() {
   return SEO_CONTENT_LOCALES.map((locale) => ({ locale }));
 }
 
-// Only the prebuilt SEO locales are valid localized document roots.
+// Arabic share metadata stays callable for a future page, but this PR does
+// not publish `/ar` or `/ar/pricing`. Unknown locales 404 like main.
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

@@ -24,6 +24,7 @@ vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth }) }));
 import { LoginForm } from "./login-form";
 import { LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/i18n-client";
+import { LOGIN_COPY } from "@/lib/i18n-login";
 
 type TestWallet = {
   address: `0x${string}`;
@@ -48,8 +49,8 @@ function wallet(chainId = "0x2019"): TestWallet {
   };
 }
 
-function renderLogin(locale: Locale = "ko", next = "/saved") {
-  window.history.replaceState({}, "", "/login");
+function renderLogin(locale: Locale = "ko", next = "/saved", pathname = "/login") {
+  window.history.replaceState({}, "", pathname);
   document.cookie = `${LOCALE_COOKIE}=; Max-Age=0; path=/`;
   document.cookie = `${LOCALE_COOKIE}=${locale}; path=/`;
   return render(
@@ -240,35 +241,72 @@ describe("LoginForm Kaia Wallet", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("renders the English login UI and unavailable-wallet error", async () => {
-    renderLogin("en");
+  it("keeps Korean login chrome on unprefixed /login when the cookie is English", async () => {
+    renderLogin("en", "/saved", "/login");
 
-    fireEvent.click(screen.getByRole("button", { name: "Continue with Unifi Wallet" }));
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ko.kaiaButton }));
 
-    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeTruthy();
-    expect(screen.getByLabelText("Email")).toBeTruthy();
-    expect(await screen.findByText(/Kaia Wallet was not found/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: LOGIN_COPY.ko.loginTitle })).toBeTruthy();
+    expect(screen.getByLabelText(LOGIN_COPY.ko.email)).toBeTruthy();
+    expect(await screen.findByText(LOGIN_COPY.ko.kaiaUnavailable)).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: LOGIN_COPY.en.loginTitle })).toBeNull();
   });
 
-  it("renders the Japanese Kaia button and wrong-chain error", async () => {
+  it("keeps Korean login chrome on unprefixed /login when the cookie is Japanese", async () => {
     setWallet(wallet("0x1"));
-    renderLogin("ja");
+    renderLogin("ja", "/saved", "/login");
 
-    fireEvent.click(screen.getByRole("button", { name: "Unifi Walletでログイン" }));
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ko.kaiaButton }));
 
-    expect(await screen.findByText(/Kaia Mainnetに切り替えて/)).toBeTruthy();
+    expect(await screen.findByText(LOGIN_COPY.ko.kaiaWrongChain)).toBeTruthy();
     expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: LOGIN_COPY.ja.kaiaButton })).toBeNull();
   });
 
-  it("uses the Chinese fallback for zh-tw Kaia rejection copy", async () => {
+  it("keeps Korean login chrome on unprefixed /login when the cookie is zh-tw", async () => {
     setWallet(wallet());
     auth.signInWithWeb3.mockRejectedValue(
       Object.assign(new Error("User rejected the request"), { code: 4001 }),
     );
-    renderLogin("zh-tw");
+    renderLogin("zh-tw", "/saved", "/login");
 
-    fireEvent.click(screen.getByRole("button", { name: "使用 Unifi Wallet 登录" }));
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ko.kaiaButton }));
 
-    expect(await screen.findByText(/Kaia Wallet 签名已取消/)).toBeTruthy();
+    expect(await screen.findByText(LOGIN_COPY.ko.kaiaRejected)).toBeTruthy();
+    expect(screen.queryByText(LOGIN_COPY["zh-tw"].kaiaRejected)).toBeNull();
+  });
+
+  // There is no app/[locale]/login route. The form still follows a prefixed
+  // pathname, which is what /en|ja|zh-tw/login would render if that route existed.
+  it("uses English chrome when the login pathname is /en/login", async () => {
+    renderLogin("ko", "/saved", "/en/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.en.kaiaButton }));
+
+    expect(screen.getByRole("heading", { name: LOGIN_COPY.en.loginTitle })).toBeTruthy();
+    expect(screen.getByLabelText(LOGIN_COPY.en.email)).toBeTruthy();
+    expect(await screen.findByText(LOGIN_COPY.en.kaiaUnavailable)).toBeTruthy();
+  });
+
+  it("uses Japanese chrome when the login pathname is /ja/login", async () => {
+    setWallet(wallet("0x1"));
+    renderLogin("ko", "/saved", "/ja/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.ja.kaiaButton }));
+
+    expect(await screen.findByText(LOGIN_COPY.ja.kaiaWrongChain)).toBeTruthy();
+    expect(auth.signInWithWeb3).not.toHaveBeenCalled();
+  });
+
+  it("uses the Chinese fallback when the login pathname is /zh-tw/login", async () => {
+    setWallet(wallet());
+    auth.signInWithWeb3.mockRejectedValue(
+      Object.assign(new Error("User rejected the request"), { code: 4001 }),
+    );
+    renderLogin("ko", "/saved", "/zh-tw/login");
+
+    fireEvent.click(screen.getByRole("button", { name: LOGIN_COPY.zh.kaiaButton }));
+
+    expect(await screen.findByText(LOGIN_COPY["zh-tw"].kaiaRejected)).toBeTruthy();
   });
 });

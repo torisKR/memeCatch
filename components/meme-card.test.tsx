@@ -28,6 +28,14 @@ const meme: MemeCardModel = {
 };
 
 describe("MemeCard", () => {
+  it("omits the summary element when the reviewed summary is empty", () => {
+    const html = renderToStaticMarkup(
+      <MemeCard meme={{ ...meme, summary: "   " }} />,
+    );
+    expect(html).toContain('data-meme-card-title=""');
+    expect(html).not.toContain("data-meme-card-summary");
+  });
+
   it("uses the poster chrome and refuses YouTube stills", () => {
     const html = renderToStaticMarkup(<MemeCard meme={meme} />);
 
@@ -110,9 +118,14 @@ describe("MemeCard", () => {
     expect(html).toContain('data-meme-card-art="fallback"');
   });
 
-  it("keeps grid titles on one line and gives narrow cards a two-line title without a summary", () => {
+  it("lets grid titles wrap to two lines and gives narrow cards a two-line title without a summary", () => {
     const narrow = cardCss.slice(cardCss.indexOf("@container (max-width: 199px)"));
+    expect(cardCss).toContain("line-clamp: 2");
+    expect(cardCss).toContain("-webkit-line-clamp: 2");
+    expect(cardCss).toContain("text-overflow: ellipsis");
+    expect(cardCss).toContain("max-height: 2.5em");
     expect(cardCss).toContain("-webkit-line-clamp: 1");
+    expect(cardCss).toContain('data-meme-card-aspect="fixed"');
     expect(cardCss).toContain("font-size: 20px");
     expect(cardCss).toContain("font-size: 14px");
     expect(cardCss).toContain("font-size: 28px");
@@ -128,7 +141,6 @@ describe("MemeCard", () => {
     expect(narrow).not.toContain("flex-wrap: wrap");
     expect(cardCss).toContain("flex-wrap: nowrap");
     expect(cardCss).toContain("white-space: nowrap");
-    expect(cardCss).not.toContain("text-overflow: ellipsis");
     expect(cardCss).toContain("height: 420px");
     expect(cardCss).toContain("max-height: 420px");
     const yearRule = cardCss.slice(cardCss.indexOf("@container (max-width: 419px)"));
@@ -168,6 +180,7 @@ describe("MemeCard", () => {
     );
 
     expect(html).toContain('href="/memes/m1-test-meme"');
+    expect(html).toContain('data-meme-card-aspect="fixed"');
     expect(html).toContain("aspect-[4/3]");
     expect(html).not.toContain("aspect-[4/5]");
     expect(html).toContain('alt="새우 예수 상징 일러스트"');

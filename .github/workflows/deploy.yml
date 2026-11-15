@@ -68,28 +68,40 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Skip when the VM secrets are absent
+      - name: Skip when the VM credentials are absent
         if: steps.gate.outputs.skip == 'true'
-        run: echo "OCI_SSH_HOST, OCI_SSH_USER, or OCI_SSH_KEY is absent. Leaving the VM unchanged."
-      - name: Deploy on the shared VM
+        run: echo "OCI SSH host, user, or key is absent. Leaving the VM unchanged."
+      - name: Deploy on the OCI VM
         if: steps.gate.outputs.skip != 'true'
         env:
           OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST }}
           OCI_SSH_USER: ${{ secrets.OCI_SSH_USER }}
           OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
           OCI_SSH_KNOWN_HOSTS: ${{ secrets.OCI_SSH_KNOWN_HOSTS }}
+          MEMECATCH_CADDY: ${{ vars.MEMECATCH_CADDY }}
           IMAGE: ghcr.io/${{ github.repository }}
         run: |
           if [ -z "$OCI_SSH_KNOWN_HOSTS" ]; then
             echo "OCI_SSH_KNOWN_HOSTS is required. Refusing to accept a new host key." >&2
             exit 1
           fi
+          case "${MEMECATCH_CADDY}" in
+            ""|own) ;;
+            *)
+              echo "MEMECATCH_CADDY must be empty or own." >&2
+              exit 1
+              ;;
+          esac
           image="$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]'):${GITHUB_SHA}"
           worker="${image%%:*}-worker:${GITHUB_SHA}"
+          caddy_prefix=""
+          if [ -n "$MEMECATCH_CADDY" ]; then
+            caddy_prefix="MEMECATCH_CADDY=own "
+          fi
           install -m 600 /dev/stdin "$RUNNER_TEMP/oci_key" <<<"$OCI_SSH_KEY"
           install -m 644 /dev/stdin "$RUNNER_TEMP/known_hosts" <<<"$OCI_SSH_KNOWN_HOSTS"
           ssh -i "$RUNNER_TEMP/oci_key" \
             -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
             -o StrictHostKeyChecking=yes \
             "$OCI_SSH_USER@$OCI_SSH_HOST" \
-            "cd /opt/memecatch && git pull && MEMECATCH_IMAGE='$image' MEMECATCH_WORKER_IMAGE='$worker' bash scripts/deploy-oci.sh"
+            "cd /opt/memecatch && git pull && ${caddy_prefix}MEMECATCH_IMAGE='$image' MEMECATCH_WORKER_IMAGE='$worker' bash scripts/deploy-oci.sh"

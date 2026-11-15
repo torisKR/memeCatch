@@ -40,6 +40,8 @@ export type HomeCopy = {
   trust: {
     eyebrow: string;
     title: string;
+    /** Unbreakable pieces of `title`. Their concatenation must equal that title. */
+    titlePhrases?: readonly string[];
     description: string;
     links: [HomeLinkCopy, HomeLinkCopy, HomeLinkCopy];
   };
@@ -176,6 +178,7 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     trust: {
       eyebrow: "編集情報",
       title: "解説と一緒に編集方針も確認できます。",
+      titlePhrases: ["解説", "と", "一緒に", "編集", "方針", "も", "確認できます。"],
       description: "使用シグナルは文脈を理解するための編集情報であり、法的な許可やリアルタイムの安全を保証するものではありません。",
       links: [
         { label: "編集方針", href: "/editorial" },
@@ -222,6 +225,7 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     trust: {
       eyebrow: "编辑信息",
       title: "阅读解释时，也能查看整理标准。",
+      titlePhrases: ["阅读", "解释", "时，", "也能", "查看", "整理", "标准。"],
       description: "使用提示是帮助理解语境的编辑信息，不代表法律许可，也不保证实时安全。",
       links: [
         { label: "编辑原则", href: "/editorial" },
@@ -268,6 +272,7 @@ export const HOME_COPY: Record<SeoRouteLocale, HomeCopy> = {
     trust: {
       eyebrow: "編輯資訊",
       title: "閱讀解釋時，也能查看整理標準。",
+      titlePhrases: ["閱讀", "解釋", "時，", "也能", "查看", "整理", "標準。"],
       description: "使用提示是協助理解語境的編輯資訊，不代表法律許可，也不保證即時安全。",
       links: [
         { label: "編輯原則", href: "/editorial" },

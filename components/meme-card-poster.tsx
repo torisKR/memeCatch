@@ -101,6 +101,7 @@ export function MemeCard({
       className={memeCardClassName()}
       data-meme-card=""
       data-meme-card-title-size={titleSize}
+      {...(staticMarkup ? { "data-meme-card-aspect": "fixed" } : {})}
     >
       <MemeCardFrame
         title={meme.title}
@@ -173,9 +174,11 @@ export function MemeCardFrame({
           >
             {title}
           </p>
-          <p title={summary} data-meme-card-summary="" className={styles.summary}>
-            {summary}
-          </p>
+          {summary.trim() ? (
+            <p title={summary} data-meme-card-summary="" className={styles.summary}>
+              {summary}
+            </p>
+          ) : null}
           <div className={styles.badges}>
             {safetyLevel ? (
               <span className={styles.safety}>

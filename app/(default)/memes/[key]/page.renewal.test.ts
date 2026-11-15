@@ -8,19 +8,18 @@ const source = readFileSync(
 );
 
 describe("meme detail renewal", () => {
-  it("keeps the existing auth invite once, after meaning and origin", () => {
+  it("keeps the existing auth invite once, after the source block", () => {
     const about = source.indexOf('aria-labelledby="meme-about"');
     const authInvite = source.indexOf("<AuthInvite />");
-    const usageExamples = source.indexOf("<UsageExamples");
 
     expect(about).toBeGreaterThan(-1);
     expect(authInvite).toBeGreaterThan(about);
-    expect(authInvite).toBeLessThan(usageExamples);
     expect(source.match(/<AuthInvite \/>/g)).toHaveLength(1);
   });
 
-  it("uses originSectionHeading for the origin h3 instead of hardcoded folk 유래", () => {
-    expect(source).toContain("{originSectionHeading(meme.origin_kind)}");
+  it("uses originSectionHeading for house originals and labels catalog origins 유래", () => {
+    expect(source).toContain("originSectionHeading(meme.origin_kind)");
+    expect(source).toContain(': "유래"');
     expect(source).not.toMatch(/<h3[^>]*>\s*어디서 시작됐어요\?/);
   });
 

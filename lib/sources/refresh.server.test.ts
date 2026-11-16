@@ -109,6 +109,23 @@ describe("source refresh recovery", () => {
     expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ code: "provider_transient" }), expect.anything());
   });
 
+  it("does not mark a TikTok source live from a generic oEmbed player", async () => {
+    const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: false, removed_at: "2026-01-01T00:00:00Z" };
+    const builder = sourceQuery([source]);
+    const { client, jobInsert } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : builder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockResolvedValueOnce({ title: null, authorName: null });
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.oembed.failed).toBe(1);
+    expect(builder.update).not.toHaveBeenCalled();
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ code: "provider_transient" }), expect.anything());
+  });
+
   it("marks an oEmbed 404 unavailable, including an exactly matching mislabeled entry", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
     const builder = sourceQuery([source]);

@@ -221,6 +221,11 @@ async function refreshOEmbedSources(
     const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
     try {
       const oembed = await getOEmbed(row.canonical_url);
+      // TikTok can return a generic player for any ID, including nonexistent
+      // videos. A bare player is not evidence that the source is public.
+      if (row.platform === "tiktok" && (!oembed.title || !oembed.authorName)) {
+        throw new OEmbedError("TikTok source status is inconclusive", "UPSTREAM_ERROR", 502);
+      }
       const { error } = await admin
         .from("media_sources")
         .update({

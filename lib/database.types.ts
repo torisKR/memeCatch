@@ -1470,6 +1470,8 @@ export type Database = {
           created_at: string
           id: string
           is_representative: boolean
+          manual_video_verification_generation: number
+          manual_video_verified: boolean
           meme_id: string
           moderation_status: Database["public"]["Enums"]["submission_status"]
           platform: string | null
@@ -1484,6 +1486,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_representative?: boolean
+          manual_video_verification_generation?: number
+          manual_video_verified?: boolean
           meme_id: string
           moderation_status?: Database["public"]["Enums"]["submission_status"]
           platform?: string | null
@@ -1498,6 +1502,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_representative?: boolean
+          manual_video_verification_generation?: number
+          manual_video_verified?: boolean
           meme_id?: string
           moderation_status?: Database["public"]["Enums"]["submission_status"]
           platform?: string | null

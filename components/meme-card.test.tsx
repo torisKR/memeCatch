@@ -112,6 +112,27 @@ describe("MemeCard", () => {
     view.unmount();
   });
 
+  it("shows a /p/ video button only while human verification is active", () => {
+    const verified = {
+      thumbnail_url: null,
+      is_representative: true,
+      url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      content_id: "DJiODQnTOfj",
+      availability: "live",
+      moderation_status: "approved",
+      manual_video_verified: true,
+    };
+    const view = render(<MemeCard meme={{ ...meme, meme_contents: [verified] }} />);
+
+    expect(screen.getByRole("button", { name: /Instagram 영상 미리보기/ })).toBeTruthy();
+    view.rerender(<MemeCard meme={{
+      ...meme,
+      meme_contents: [{ ...verified, manual_video_verified: false }],
+    }} />);
+    expect(screen.queryByRole("button", { name: /Instagram 영상 미리보기/ })).toBeNull();
+    view.unmount();
+  });
+
   it("renders owned 4:3 art with srcset and localized alt text", () => {
     const korean = renderToStaticMarkup(
       <MemeCard meme={{ ...meme, card_art_url: `https://catchmeme.com${ART}` }} />,

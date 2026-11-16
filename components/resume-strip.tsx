@@ -28,7 +28,7 @@ export function ResumeStrip() {
         if (!Array.isArray(ids) || ids.length === 0) return;
         const { data } = await createClient()
           .from("memes")
-          .select("*, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), meme_market_profiles(market_code, role, review_state)")
+          .select("*, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_market_profiles(market_code, role, review_state)")
           .in("id", ids.slice(0, 6))
           .in("moderation_status", ["approved", "limited"]);
         if (cancelled || !data) return;

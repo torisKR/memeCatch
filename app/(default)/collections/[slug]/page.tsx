@@ -46,7 +46,7 @@ export async function generateMetadata({
   };
 }
 
-const SELECT = "*, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)";
+const SELECT = "*, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)";
 const LIMIT = 24;
 
 async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {

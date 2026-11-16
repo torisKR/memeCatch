@@ -34,6 +34,7 @@ export type MemeCardModel = {
     content_id?: string | null;
     availability?: string | null;
     moderation_status?: string | null;
+    manual_video_verified?: boolean | null;
   }> | null;
 };
 

@@ -57,6 +57,29 @@ describe("verified social video previews", () => {
       ...post,
       thumbnail_url: "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
     }])).toBeNull();
+    expect(socialVideoPreview([{ ...post, manual_video_verified: false }])).toBeNull();
+  });
+
+  it("allows only an explicitly human-verified /p/ and follows revocation", () => {
+    const post = {
+      ...instagram,
+      url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      content_id: "DJiODQnTOfj",
+      thumbnail_url: "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+      manual_video_verified: true,
+    };
+
+    expect(socialVideoPreview([post])).toEqual({
+      platform: "instagram",
+      sourceUrl: "https://www.instagram.com/p/DJiODQnTOfj/",
+      embedUrl: "https://www.instagram.com/p/DJiODQnTOfj/embed/captioned/",
+      contentId: "DJiODQnTOfj",
+    });
+    expect(videoPreview([post])).toBe(
+      "/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+    );
+    expect(socialVideoPreview([{ ...post, manual_video_verified: false }])).toBeNull();
+    expect(videoPreview([{ ...post, manual_video_verified: false }])).toBeNull();
   });
 
   it("keeps Instagram URL forms that unambiguously identify video content", () => {

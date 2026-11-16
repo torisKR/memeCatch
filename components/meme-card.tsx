@@ -29,7 +29,7 @@ export function MemeCard(props: MemeCardProps) {
   const socialPreview = socialVideoPreview(meme.meme_contents);
 
   return (
-    <div className="relative min-w-0">
+    <div className="isolate relative min-w-0">
       <Link
         href={href ?? memePathFrom(meme.short_id, meme.slug)}
         className={memeCardClassName()}

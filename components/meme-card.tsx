@@ -12,7 +12,7 @@ import {
   type MemeCardTitleSize,
 } from "@/components/meme-card-poster";
 import { memeCardArtFromMeme, type MemeCardArtSource } from "@/lib/meme-card-art";
-import { youtubeVideoPreview } from "@/lib/meme-video-preview";
+import { videoPreview } from "@/lib/meme-video-preview";
 import type { Locale } from "@/lib/i18n";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 
@@ -40,7 +40,7 @@ export function MemeCard(props: MemeCardProps) {
         year={meme.origin_year}
         locale={locale}
         art={memeCardArtFromMeme(meme)}
-        videoPreview={youtubeVideoPreview(meme.meme_contents)}
+        videoPreview={videoPreview(meme.meme_contents)}
         priority={priority}
         titleSize={titleSize}
       />

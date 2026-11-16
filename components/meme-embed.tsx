@@ -386,6 +386,8 @@ function LiteSocialEmbed({
     immediateSocialEmbed(provider, sourceUrl)
   );
   const [error, setError] = useState<string | null>(null);
+  const [unavailableSource, setUnavailableSource] = useState<string | null>(null);
+  const playerRef = useRef<HTMLIFrameElement>(null);
   // 마운트 시점에 이미 렌더 가능한 임베드가 있었는지 — 있으면 IO 대기 없이 즉시 검증 fetch
   const hasImmediateEmbedRef = useRef(embed != null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -396,6 +398,25 @@ function LiteSocialEmbed({
     facebook: "Facebook",
     threads: "Threads",
   }[provider];
+
+  useEffect(() => {
+    if (provider !== "tiktok") return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== "https://www.tiktok.com" || event.source !== playerRef.current?.contentWindow) return;
+      const data: unknown = event.data;
+      if (!data || typeof data !== "object") return;
+      const message = data as { "x-tiktok-player"?: unknown; type?: unknown; value?: unknown };
+      if (message["x-tiktok-player"] !== true || message.type !== "onPlayerError" || !message.value || typeof message.value !== "object") return;
+      const value = message.value as { errorCode?: unknown; errorType?: unknown };
+      if (value.errorCode === 1001 && value.errorType === "INVALID_VIDEO") setUnavailableSource(sourceUrl);
+    };
+    window.addEventListener("message", onMessage);
+    // The server-rendered iframe can emit an error before hydration attaches
+    // this listener. Reload it once after subscribing so that signal is seen.
+    const frame = playerRef.current;
+    if (frame?.src) frame.src = frame.src;
+    return () => window.removeEventListener("message", onMessage);
+  }, [provider, sourceUrl]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -504,7 +525,8 @@ function LiteSocialEmbed({
     </div>
   );
 
-  if (embed) {
+  const playerUnavailable = provider === "tiktok" && unavailableSource === sourceUrl;
+  if (embed && !playerUnavailable) {
     const threadsDocument = embed.embedHtml
       ? `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${embed.embedHtml}</body></html>`
       : undefined;
@@ -512,6 +534,7 @@ function LiteSocialEmbed({
       <div ref={containerRef} className="space-y-2">
         {sourceTape}
         <iframe
+          ref={playerRef}
           src={embed.embedUrl ?? undefined}
           srcDoc={threadsDocument}
           title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
@@ -531,13 +554,13 @@ function LiteSocialEmbed({
     );
   }
 
-  if (error) {
+  if (error || playerUnavailable) {
     return (
       <div ref={containerRef} className="space-y-2">
         {sourceTape}
         <div className="mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center">
           <p role="alert" className="text-sm text-muted">
-            {error}
+            {playerUnavailable ? "이 TikTok 콘텐츠를 현재 재생할 수 없습니다." : error}
           </p>
           <a
             href={sourceUrl}

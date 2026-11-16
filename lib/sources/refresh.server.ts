@@ -16,6 +16,7 @@ import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createAdminClient } from "@/lib/db/admin";
 import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
+import { isYouTubeRegionBlocked } from "./youtube-region.mjs";
 import {
   listDueSourceAcquisitionRecovery,
   listActiveSourceAcquisitionRecovery,
@@ -148,7 +149,7 @@ async function refreshYouTubeSources(
     }
 
     const embeddable = status.privacyStatus === "public" && status.embeddable === true;
-    const regionBlocked = status.regionBlocked?.includes("KR") === true;
+    const regionBlocked = isYouTubeRegionBlocked({ allowed: status.regionAllowed, blocked: status.regionBlocked });
 
     const { error } = await admin
       .from("media_sources")

@@ -27,6 +27,7 @@ export type YouTubeVideoStatus = {
   embeddable: boolean | null;
   madeForKids: boolean | null;
   regionBlocked: string[] | null;
+  regionAllowed: string[] | null;
 };
 
 type YouTubeVideosApiResponse = {
@@ -41,7 +42,7 @@ type YouTubeVideosApiResponse = {
     };
     contentDetails?: {
       duration?: string;
-      regionRestriction?: { blocked?: string[] };
+      regionRestriction?: { blocked?: string[]; allowed?: string[] };
     };
     status?: {
       privacyStatus?: "public" | "private" | "unlisted";
@@ -101,6 +102,7 @@ function mapVideo(item: NonNullable<YouTubeVideosApiResponse["items"]>[number]) 
     embeddable: item.status?.embeddable ?? null,
     madeForKids: item.status?.madeForKids ?? null,
     regionBlocked: item.contentDetails?.regionRestriction?.blocked ?? null,
+    regionAllowed: item.contentDetails?.regionRestriction?.allowed ?? null,
   } satisfies YouTubeVideoStatus;
 }
 

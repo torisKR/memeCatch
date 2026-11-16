@@ -73,6 +73,21 @@ describe("fetchYouTubeVideoStatuses", () => {
     });
   });
 
+  it("preserves YouTube's allow and block region lists", async () => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [
+      { id: "allow", contentDetails: { regionRestriction: { allowed: ["KR"] } } },
+      { id: "empty", contentDetails: { regionRestriction: { allowed: [] } } },
+      { id: "block", contentDetails: { regionRestriction: { blocked: ["KR"] } } },
+    ] }), { status: 200 })));
+
+    const statuses = await fetchYouTubeVideoStatuses(["allow", "empty", "block"]);
+    expect(statuses.get("allow")).toMatchObject({ regionAllowed: ["KR"], regionBlocked: null });
+    expect(statuses.get("empty")).toMatchObject({ regionAllowed: [], regionBlocked: null });
+    expect(statuses.get("block")).toMatchObject({ regionAllowed: null, regionBlocked: ["KR"] });
+  });
+
   it("API 오류를 그대로 드러낸다", async () => {
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
     const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
@@ -98,6 +113,7 @@ describe("isPublishableCandidate", () => {
     license: null,
     madeForKids: null,
     regionBlocked: null,
+    regionAllowed: null,
   };
 
   it("공개+임베드 가능만 승격한다", () => {

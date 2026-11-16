@@ -96,6 +96,22 @@ describe("MemeCard", () => {
     view.unmount();
   });
 
+  it("does not show a video button for /p/ without verified media-kind metadata", () => {
+    const view = render(<MemeCard meme={{ ...meme, meme_contents: [{
+      thumbnail_url: null,
+      is_representative: true,
+      url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      content_id: "DJiODQnTOfj",
+      availability: "live",
+      moderation_status: "approved",
+    }] }} />);
+
+    expect(screen.queryByRole("button", { name: /Instagram 영상 미리보기/ })).toBeNull();
+    expect(view.container.querySelector("iframe")).toBeNull();
+    expect(view.container.querySelector("[data-meme-card]")).toBeTruthy();
+    view.unmount();
+  });
+
   it("renders owned 4:3 art with srcset and localized alt text", () => {
     const korean = renderToStaticMarkup(
       <MemeCard meme={{ ...meme, card_art_url: `https://catchmeme.com${ART}` }} />,

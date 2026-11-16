@@ -6,8 +6,10 @@ vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag, revalidatePat
 vi.mock("@/lib/auth/server", () => ({ ensureAuthSchema: vi.fn(), getAuth: () => ({ api: { getSession: mocks.session } }) }));
 vi.mock("@/lib/db/execute", () => ({ executePlan: mocks.execute }));
 vi.mock("@/lib/rate-limit", () => ({ getClientIp: () => "test", rateLimit: mocks.quota }));
+vi.mock("@/lib/db/server", () => ({ createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: "operator" } } }) }, rpc: async () => ({ data: true, error: null }) }) }));
 
 import { POST } from "./route";
+import { POST as retryCache } from "@/app/api/admin/instagram-video-verification/revalidate/route";
 
 function request(body: unknown) {
   return new NextRequest("https://example.com/api/db/query", {
@@ -48,16 +50,36 @@ describe("browser database query boundary", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 
-  it("reports a saved decision with pending invalidation and retries on a repeated request", async () => {
+  it("reports a saved decision and the invalidation-only retry endpoint", async () => {
     const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "verify" } };
     mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
     const first = await POST(request({ plan: rpc }));
     expect(first.status).toBe(503);
-    expect((await first.json()).error.message).toBe("verification_saved_cache_invalidation_pending");
+    expect((await first.json()).error).toMatchObject({ message: "verification_saved_cache_invalidation_pending", cacheRetryPath: "/api/admin/instagram-video-verification/revalidate" });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
-    expect((await POST(request({ plan: rpc }))).status).toBe(200);
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not replay a verified decision when cache retry follows a newer revocation", async () => {
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "verify" } };
+    mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
+    expect((await POST(request({ plan: rpc }))).status).toBe(503);
+    expect((await POST(request({ plan: { ...rpc, args: { p_decision: "revoke" } } }))).status).toBe(200);
+    const cacheRequest = new NextRequest("https://example.com/api/admin/instagram-video-verification/revalidate", { method: "POST", headers: { origin: "https://example.com" } });
+    expect((await retryCache(cacheRequest)).status).toBe(200);
     expect(mocks.execute).toHaveBeenCalledTimes(2);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+    expect(mocks.execute.mock.calls.map(([p]) => p.args.p_decision)).toEqual(["verify", "revoke"]);
+  });
+
+  it("retries rolled-back verification conflicts and returns a retryable error if contention persists", async () => {
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: {} };
+    mocks.execute.mockResolvedValue({ data: null, count: null, error: { message: "conflict", code: "40001", status: 400 } });
+    const response = await POST(request({ plan: rpc }));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("1");
+    expect((await response.json()).error.message).toBe("verification_conflict_retry");
+    expect(mocks.execute).toHaveBeenCalledTimes(3);
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
   });
 
   it("does not invalidate caches when verification is rejected", async () => {

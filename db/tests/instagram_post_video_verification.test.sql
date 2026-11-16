@@ -4,7 +4,7 @@ create extension if not exists pgtap with schema extensions;
 -- The production role contract does not expose pgTAP. Grant only schema usage
 -- inside this rolled-back transaction so assertions can run after SET ROLE.
 grant usage on schema extensions to authenticated;
-select plan(28);
+select plan(31);
 
 -- Match the self-hosted production contract: the application connects as the
 -- memecatch login, then explicitly assumes service_role or authenticated.
@@ -186,6 +186,27 @@ select is(
     order by id desc limit 1),
   'verify:96000000-0000-4000-8000-000000000001',
   'private evidence records the decision and authenticated recorder'
+);
+select throws_ok(
+  $$update public.meme_contents
+       set id = '98000000-0000-4000-8000-000000000003'
+     where id = '98000000-0000-4000-8000-000000000001'$$,
+  '55000',
+  'meme_content_id_is_immutable',
+  'a verified content row cannot move away from its ledger identity'
+);
+select is(
+  (select manual_video_verified from public.meme_contents
+    where id = '98000000-0000-4000-8000-000000000001'),
+  true,
+  'a rejected primary key update leaves the original row verified'
+);
+select is(
+  (select content_id from private.instagram_post_video_verification_events
+    where content_id = '98000000-0000-4000-8000-000000000001'
+    order by id desc limit 1),
+  '98000000-0000-4000-8000-000000000001'::uuid,
+  'the verification ledger remains tied to the immutable content id'
 );
 select is(
   (select manual_video_verified from public.meme_contents

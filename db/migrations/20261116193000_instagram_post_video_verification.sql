@@ -88,6 +88,12 @@ begin
     return new;
   end if;
 
+  if new.id is distinct from old.id then
+    raise exception using
+      errcode = '55000',
+      message = 'meme_content_id_is_immutable';
+  end if;
+
   if new.created_at is distinct from old.created_at
      or new.platform is distinct from old.platform
      or new.url is distinct from old.url
@@ -130,7 +136,7 @@ revoke all on function private.guard_meme_content_manual_video_projection()
 
 drop trigger if exists meme_contents_manual_video_projection_guard on public.meme_contents;
 create trigger meme_contents_manual_video_projection_guard
-before insert or update of created_at, platform, url, content_id, manual_video_verified,
+before insert or update of id, created_at, platform, url, content_id, manual_video_verified,
   manual_video_verification_generation
 on public.meme_contents
 for each row execute function private.guard_meme_content_manual_video_projection();

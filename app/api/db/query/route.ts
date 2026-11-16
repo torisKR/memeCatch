@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { hasTrustedOrigin } from "@/lib/origin";
 import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
 import { executePlan } from "@/lib/db/execute";
@@ -7,7 +6,7 @@ import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { readBoundedJson, RequestBodyTooLargeError } from "@/lib/request-body";
 import type { QueryPlan } from "@/lib/db/plan";
 import type { DbIdentity } from "@/lib/db/pool";
-import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
+import { expireInstagramVideoVerificationCache } from "@/lib/instagram-video-verification-cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,8 +85,17 @@ export async function POST(request: NextRequest) {
     } catch {
       return failure("database unavailable", 503);
     }
-    const result = await executePlan(plan, identity, request.signal);
+    const isVideoVerification = plan.op === "rpc" && plan.fn === "record_instagram_post_video_verification";
+    let result = await executePlan(plan, identity, request.signal);
+    // SQLSTATE 40001 means the transaction was rolled back, so this retry
+    // cannot replay a committed decision.
+    for (let attempt = 1; isVideoVerification && result.error?.code === "40001" && attempt < 3; attempt++) {
+      result = await executePlan(plan, identity, request.signal);
+    }
     if (result.error) {
+      if (isVideoVerification && result.error.code === "40001") {
+        return failure("verification_conflict_retry", 503, { "retry-after": "1" });
+      }
       // Preserve documented application errors used by the UI, but never return raw
       // database details, hints, or arbitrary database error messages to clients.
       const safeMessages = new Set(["login_required", "premium_save_limit"]);
@@ -95,15 +103,17 @@ export async function POST(request: NextRequest) {
       const status = result.error.status && result.error.status >= 400 ? result.error.status : 400;
       return NextResponse.json({ data: null, error: { message, code: result.error.code, status }, count: null }, { status });
     }
-    if (plan.op === "rpc" && plan.fn === "record_instagram_post_video_verification") {
+    if (isVideoVerification) {
       try {
-        // Verification and revocation affect every catalog view, including
-        // localized detail pages and cached layout output. Retrying the same
-        // RPC is idempotent and retries invalidation if this step fails.
-        revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
-        revalidatePath("/", "layout");
+        expireInstagramVideoVerificationCache();
       } catch {
-        return failure("verification_saved_cache_invalidation_pending", 503, { "retry-after": "1" });
+        console.error({ event: "instagram_video_verification_cache_invalidation_pending" });
+        // The decision is committed. Retry only the separate cache endpoint,
+        // never the mutation, which could overwrite a more recent decision.
+        return NextResponse.json({ data: result.data, count: null, error: {
+          message: "verification_saved_cache_invalidation_pending", status: 503,
+          cacheRetryPath: "/api/admin/instagram-video-verification/revalidate",
+        } }, { status: 503 });
       }
     }
     return NextResponse.json(result);

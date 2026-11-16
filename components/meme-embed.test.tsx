@@ -64,6 +64,15 @@ describe("MemeEmbed", () => {
     expect(html).not.toContain("원본 콘텐츠는 출처에서 볼 수 있어요");
   });
 
+  it("uses the played video's own thumbnail even if the stored image points elsewhere", () => {
+    const html = renderToStaticMarkup(<MemeEmbed content={{
+      platform: "YouTube", content_id: "abcdefghijk", url: "https://www.youtube.com/watch?v=abcdefghijk",
+      thumbnail_url: "https://i.ytimg.com/vi/WRONGVIDEO1/hqdefault.jpg", availability: "live", caption: null,
+    }} title="영상 밈" isRepresentative={false} />);
+    expect(html).toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
+    expect(html).not.toContain("WRONGVIDEO1");
+  });
+
   it("includes the TikTok iframe in the initial server markup", () => {
     const html = renderToStaticMarkup(
       <MemeEmbed
@@ -77,6 +86,12 @@ describe("MemeEmbed", () => {
     expect(html).toContain("www.tiktok.com/player/v1/6833754937747361025");
     expect(html).toContain("h-[min(72svh,680px)]");
     expect(html).not.toContain("재생하면");
+  });
+
+  it("plays a TikTok URL even when legacy data labels it YouTube", () => {
+    const html = renderToStaticMarkup(<MemeEmbed content={{ ...tiktokContent, platform: "YouTube" }} title="밈" />);
+    expect(html).toContain("www.tiktok.com/player/v1/6833754937747361025");
+    expect(html).not.toContain("youtube-nocookie.com/embed");
   });
 
   it("loads a non-representative TikTok embed immediately in a viewport-sized frame", async () => {

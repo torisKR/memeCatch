@@ -60,6 +60,7 @@ function discoveryRevision(locale: SeoRouteLocale, entries: readonly HomeEntry[]
       entry.categoryLabel,
       entry.category,
       entry.thumbnailUrl,
+      entry.contents,
       entry.originalTitle,
       entry.safetyLevel,
     ]),
@@ -195,9 +196,9 @@ function HomeDiscoveryDeck({ locale, entries }: HomeDiscoveryProps) {
                         category: entry.category ?? "phrase",
                         safety_level: entry.safetyLevel,
                         origin_year: entry.originYear ?? null,
-                        meme_contents: entry.thumbnailUrl
+                        meme_contents: entry.contents ?? (entry.thumbnailUrl
                           ? [{ thumbnail_url: entry.thumbnailUrl, is_representative: true }]
-                          : [],
+                          : []),
                       }}
                       href={entry.href}
                       locale={locale}

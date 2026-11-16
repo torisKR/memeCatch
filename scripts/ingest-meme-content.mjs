@@ -55,7 +55,7 @@ const MEME_OPTIONAL = [
 const SOURCE_REQUIRED = ["meme_slug", "url", "title", "publisher"];
 const SOURCE_OPTIONAL = ["platform", "copyright_status", "source_role", "rights_basis"];
 const CONTENT_REQUIRED = ["meme_slug", "url", "type", "moderation_status"];
-const CONTENT_OPTIONAL = ["title", "thumbnail_url", "is_representative", "availability", "platform", "caption"];
+const CONTENT_OPTIONAL = ["title", "thumbnail_url", "is_representative", "availability", "platform", "caption", "content_id"];
 const MEDIA_REQUIRED = ["meme_slug", "canonical_url", "platform"];
 const MEDIA_OPTIONAL = ["title", "external_id", "source_role", "rights_basis", "review_state"];
 const TAG_KEYS = ["name", "type"];
@@ -459,6 +459,19 @@ function thumbnailOk(value) {
   return value === undefined || value === null || LOCAL_THUMBNAIL.test(value) || Boolean(canonicalSourceUrl(value));
 }
 
+function contentIdFromUrl(value) {
+  if (!value) return null;
+  const url = new URL(value);
+  const host = url.hostname.toLowerCase();
+  if (host === "youtu.be" || host === "www.youtu.be") return url.pathname.split("/")[1] || null;
+  if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+    return url.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)?.[1] ?? url.searchParams.get("v");
+  }
+  if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return url.pathname.match(/\/video\/(\d+)/)?.[1] ?? null;
+  if (host === "instagram.com" || host.endsWith(".instagram.com")) return url.pathname.match(/^\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/)?.[1] ?? null;
+  return null;
+}
+
 function validateContent(content, indexPath, errors) {
   if (!isObject(content)) {
     errors.push(`${indexPath}: must be an object`);
@@ -478,6 +491,9 @@ function validateContent(content, indexPath, errors) {
   if (content.is_representative !== undefined && typeof content.is_representative !== "boolean") {
     errors.push(`${indexPath}.is_representative: must be a boolean`);
   }
+  if (content.content_id !== undefined && (typeof content.content_id !== "string" || !url || contentIdFromUrl(url) !== content.content_id)) {
+    errors.push(`${indexPath}.content_id: must match the supported video URL`);
+  }
   if (errors.some((error) => error.startsWith(indexPath))) return null;
   return {
     meme_slug: content.meme_slug,
@@ -490,6 +506,7 @@ function validateContent(content, indexPath, errors) {
     availability: content.availability ?? "unchecked",
     platform: typeof content.platform === "string" ? content.platform.trim() : null,
     caption: typeof content.caption === "string" ? content.caption.trim() : null,
+    content_id: content.content_id ?? null,
   };
 }
 
@@ -885,14 +902,15 @@ where meme.slug = ${sqlString(row.meme_slug)}
 
 function contentInsertSql(row) {
   return `insert into public.meme_contents (
-  meme_id, type, url, thumbnail_url, moderation_status, is_representative, availability, platform, caption
+  meme_id, type, url, thumbnail_url, moderation_status, is_representative, availability, platform, caption, content_id
 )
 select meme.id, ${sqlString(row.type)}::public.media_type, ${sqlString(row.url)},
   ${row.thumbnail_url === null ? "null" : sqlString(row.thumbnail_url)},
   ${sqlString(row.moderation_status)}::public.submission_status, ${row.is_representative ? "true" : "false"},
   ${sqlString(row.availability)}::public.availability_status,
   ${row.platform === null ? "null" : sqlString(row.platform)},
-  ${row.caption === null ? "null" : sqlString(row.caption)}
+  ${row.caption === null ? "null" : sqlString(row.caption)},
+  ${row.content_id === null ? "null" : sqlString(row.content_id)}
 from public.memes as meme
 where meme.slug = ${sqlString(row.meme_slug)}
   and not exists (

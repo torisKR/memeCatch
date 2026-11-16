@@ -1,6 +1,6 @@
 # Times are UTC.
 0 18 * * * /usr/local/bin/run-cron /api/cron/trend-pulse
-0 17 * * * /usr/local/bin/run-cron /api/cron/source-refresh
+*/15 * * * * /usr/local/bin/run-cron /api/cron/source-refresh
 15 0 * * * /usr/local/bin/run-cron /api/cron/growth-baseline
 45 0 * * * /usr/local/bin/run-cron /api/cron/saved-state-emails
 30 18 * * * /usr/local/bin/run-cron /api/cron/meme-embeddings

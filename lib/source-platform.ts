@@ -1,3 +1,5 @@
+import { normalizeSourceUrl } from "@/lib/sources/url";
+
 export const SOCIAL_PLATFORM_KEYS = [
   "youtube",
   "youtube_shorts",
@@ -30,6 +32,8 @@ export function sourcePlatformFromReference(
   reference?: PlatformReference | null
 ): SourcePlatform | null {
   if (!reference) return null;
+  const normalized = reference.url ? normalizeSourceUrl(reference.url) : null;
+  if (normalized) return normalized.platform;
   const value = `${reference.platform ?? ""} ${reference.url ?? ""}`.toLowerCase();
   if (
     value.includes("youtube shorts") ||

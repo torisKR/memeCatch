@@ -8,6 +8,10 @@ import {
 } from "@/lib/source-platform";
 
 describe("source platform normalization", () => {
+  it("prefers a valid URL when the stored platform is wrong", () => {
+    expect(sourcePlatformFromReference({ platform: "YouTube", url: "https://www.tiktok.com/@creator/video/7009055985738222853" })).toBe("tiktok");
+    expect(sourcePlatformFromReference({ platform: "YouTube", url: "https://www.youtube.com/shorts/abcdefghijk" })).toBe("youtube_shorts");
+  });
   it("distinguishes YouTube Shorts from regular YouTube", () => {
     expect(
       sourcePlatformFromReference({

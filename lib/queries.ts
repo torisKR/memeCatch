@@ -59,7 +59,7 @@ type MemeListColumn = SplitColumns<typeof LIST_COLUMNS>;
  */
 export type MemeListItem = Pick<MemeRow, MemeListColumn> & {
   meme_contents?: (Pick<MemeContentRow, "thumbnail_url" | "is_representative"> &
-    Partial<Pick<MemeContentRow, "platform" | "url">>)[];
+    Partial<Pick<MemeContentRow, "platform" | "url" | "content_id" | "availability" | "moderation_status">>)[];
   meme_sources?: Array<Pick<MemeSourceRow, "platform" | "source_url"> & { hidden_from_public?: boolean | null }>;
   meme_market_profiles?: MemeOriginProfile[];
 };
@@ -79,14 +79,14 @@ export type GenerationHighlight = {
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 export const LIST_SELECT =
-  `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative), meme_market_profiles(market_code, role, review_state)` as const;
+  `${LIST_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), meme_market_profiles(market_code, role, review_state)` as const;
 
 /**
  * Listing queries that apply `isThinMeme` must load the same body and depth
  * signals the detail page uses. Card columns stay in LIST_COLUMNS.
  */
 export const INDEXABLE_LIST_SELECT =
-  `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)` as const;
+  `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)` as const;
 
 /** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {

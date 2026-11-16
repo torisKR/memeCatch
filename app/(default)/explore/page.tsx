@@ -111,7 +111,7 @@ function parseFilters(sp: RawParams): Filters {
 function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
     ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
+    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";

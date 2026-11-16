@@ -146,7 +146,6 @@ export function MemeEmbed({
         <LiteYouTube
           videoId={content.content_id as string}
           title={title}
-          thumbnailUrl={content.thumbnail_url}
           isShort={content.url?.includes("/shorts/") ?? false}
           isRepresentative={isRepresentative}
         />
@@ -579,19 +578,16 @@ function LiteSocialEmbed({
 function LiteYouTube({
   videoId,
   title,
-  thumbnailUrl,
   isShort,
   isRepresentative,
 }: {
   videoId: string;
   title: string;
-  thumbnailUrl?: string | null;
   isShort: boolean;
   isRepresentative: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
-  const thumb =
-    thumbnailUrl ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  const thumb = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
 
   /**
    * 대표 영상은 처음부터 실제 iframe을 DOM에 둔다.

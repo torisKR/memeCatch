@@ -4133,6 +4133,10 @@ export type Database = {
       }
     }
     Functions: {
+      record_instagram_post_video_verification: {
+        Args: { p_content_id: string; p_decision: string; p_evidence_note: string }
+        Returns: Json
+      }
       reserve_community_upload_storage: {
         Args: { p_user_id: string; p_bytes: number }
         Returns: undefined

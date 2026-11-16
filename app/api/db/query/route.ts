@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { hasTrustedOrigin } from "@/lib/origin";
 import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
 import { executePlan } from "@/lib/db/execute";
@@ -6,6 +7,7 @@ import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { readBoundedJson, RequestBodyTooLargeError } from "@/lib/request-body";
 import type { QueryPlan } from "@/lib/db/plan";
 import type { DbIdentity } from "@/lib/db/pool";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,6 +94,17 @@ export async function POST(request: NextRequest) {
       const message = safeMessages.has(result.error.message) ? result.error.message : "query failed";
       const status = result.error.status && result.error.status >= 400 ? result.error.status : 400;
       return NextResponse.json({ data: null, error: { message, code: result.error.code, status }, count: null }, { status });
+    }
+    if (plan.op === "rpc" && plan.fn === "record_instagram_post_video_verification") {
+      try {
+        // Verification and revocation affect every catalog view, including
+        // localized detail pages and cached layout output. Retrying the same
+        // RPC is idempotent and retries invalidation if this step fails.
+        revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+        revalidatePath("/", "layout");
+      } catch {
+        return failure("verification_saved_cache_invalidation_pending", 503, { "retry-after": "1" });
+      }
     }
     return NextResponse.json(result);
   } finally {

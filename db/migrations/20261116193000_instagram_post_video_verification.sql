@@ -30,15 +30,21 @@ create table private.instagram_post_video_verification_events (
   evidence_note text not null check (
     char_length(btrim(evidence_note)) between 10 and 2000
   ),
-  reviewed_by uuid not null,
-  reviewed_at timestamptz not null default now()
+  recorded_by uuid not null,
+  recorded_at timestamptz not null default now()
 );
 
 comment on table private.instagram_post_video_verification_events is
-  'Append-only operator evidence for reviewer-observed video in an Instagram /p/ post. The latest event for the exact content incarnation and generation is authoritative and revocable. A missing lazy-loaded video element alone is not negative evidence.';
+  'Append-only operator-recorded decisions about video evidence in an Instagram /p/ post. recorded_by is the authenticated operator submitting the decision; the evidence note identifies how the content was observed. The latest event for the exact content incarnation and generation is authoritative and revocable. A missing lazy-loaded video element alone is not negative evidence.';
+
+comment on column private.instagram_post_video_verification_events.recorded_by is
+  'Authenticated operator account that submitted the decision; does not imply that the operator personally observed the evidence.';
+comment on column private.instagram_post_video_verification_events.recorded_at is
+  'Time at which the authenticated operator account submitted the decision.';
 
 create index instagram_post_video_verification_events_content_latest_idx
-  on private.instagram_post_video_verification_events (content_id, id desc);
+  on private.instagram_post_video_verification_events
+    (content_id, content_generation desc, id desc);
 
 revoke all on table private.instagram_post_video_verification_events
   from public, anon, authenticated, service_role;
@@ -53,9 +59,31 @@ set search_path = pg_catalog
 as $function$
 declare
   v_expected boolean := false;
+  v_prior_generation bigint;
 begin
   if tg_op = 'INSERT' then
-    new.manual_video_verification_generation := 0;
+    -- The primary key permits only one live row for an id. Serialize generation
+    -- allocation without waiting: a blocking lock here could deadlock with a
+    -- transaction that already deleted the live row and is reinserting it.
+    -- SQLSTATE 40001 tells a concurrent contender to retry from a fresh snapshot.
+    if not pg_catalog.pg_try_advisory_xact_lock(
+      pg_catalog.hashtextextended(new.id::text, 0)
+    ) then
+      raise exception using
+        errcode = '40001',
+        message = 'concurrent_meme_content_incarnation_change';
+    end if;
+
+    select max(event.content_generation)
+      into v_prior_generation
+      from private.instagram_post_video_verification_events as event
+     where event.content_id = new.id;
+
+    new.manual_video_verification_generation :=
+      case
+        when v_prior_generation is null then 0
+        else v_prior_generation + 1
+      end;
     new.manual_video_verified := false;
     return new;
   end if;
@@ -193,6 +221,18 @@ begin
     raise exception using errcode = 'P0002', message = 'meme_content_not_found';
   end if;
 
+  -- Coordinate ledger writes with incarnation allocation. This deliberately
+  -- does not wait after taking the row lock: if an insert allocator already
+  -- owns the per-id lock, abort and retry instead of creating opposite-order
+  -- row/advisory lock waits.
+  if not pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended(v_content.id::text, 0)
+  ) then
+    raise exception using
+      errcode = '40001',
+      message = 'concurrent_meme_content_incarnation_change';
+  end if;
+
   v_url_match := regexp_match(
     coalesce(v_content.url, ''),
     '^https://(www\.)?instagram\.com/p/([A-Za-z0-9_-]+)/?([?#].*)?$'
@@ -237,7 +277,7 @@ begin
     content_url,
     external_content_id,
     evidence_note,
-    reviewed_by
+    recorded_by
   ) values (
     v_content.id,
     v_content.manual_video_verification_generation,

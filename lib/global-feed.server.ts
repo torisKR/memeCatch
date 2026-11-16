@@ -11,6 +11,7 @@ import {
 } from "@/lib/source-platform";
 import type { GlobalFeedItem } from "@/lib/global-feed.types";
 import { originCountryCode, type MemeOriginProfile } from "@/lib/meme-country";
+import { youtubeVideoPreview } from "@/lib/meme-video-preview";
 
 /**
  * 글로벌 피드 — 플랫폼별 공개 밈 콘텐츠 조회.
@@ -107,7 +108,9 @@ function pickContent(row: FeedRow, approvedSources: ApprovedSourceRow["media_sou
   return {
     platform,
     url: best.url,
-    thumbnail_url: best.thumbnail_url,
+    thumbnail_url: platform === "youtube" || platform === "youtube_shorts"
+      ? youtubeVideoPreview([best])
+      : best.thumbnail_url,
   };
 }
 

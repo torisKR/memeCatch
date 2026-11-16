@@ -49,11 +49,11 @@ function sourceQuery(rows: unknown[], updateError?: { message: string }) {
   return builder;
 }
 
-function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean; pending?: unknown[] } = {}) {
+function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean; pending?: unknown[]; pendingError?: boolean } = {}) {
   const stale = sourceQuery(options.stale ?? [], options.updateError ? { message: "update failed" } : undefined);
   const dueRows = sourceQuery(options.due ?? []);
   const jobInsert = vi.fn().mockResolvedValue({ error: options.jobError ? { message: "audit failed" } : null });
-  const jobTable = Object.assign(query({ data: options.pending ?? [], error: null }), { insert: jobInsert });
+  const jobTable = Object.assign(query({ data: options.pending ?? [], error: options.pendingError ? { message: "lookup failed" } : null }), { insert: jobInsert });
   const client = {
     from: vi.fn((table: string) => table === "job_runs" ? jobTable : table === "media_sources" && (options.due ?? []).length ? dueRows : stale),
     rpc: vi.fn(),
@@ -138,6 +138,21 @@ describe("source refresh recovery", () => {
     expect(mocks.revalidateTag).toHaveBeenCalledTimes(2);
     expect(second.jobTable.update).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
     expect(second.jobTable.in).toHaveBeenCalledWith("id", [42]);
+  });
+
+  it("continues source checks when the cache retry lookup fails", async () => {
+    const source = { id: "yt-lookup", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const setup = admin({ pendingError: true });
+    const content = query({ data: [], error: null });
+    setup.client.from = vi.fn((table: string) => table === "job_runs" ? setup.jobTable : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(setup.client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.youtube.removed).toBe(1);
+    expect(result.status).toBe("partial");
+    expect(result.error).toContain("source_catalog_retry_lookup_failed");
+    expect(mocks.revalidateTag).toHaveBeenCalledOnce();
   });
 
   it("reserves Instagram capacity when TikTok has a large backlog", async () => {

@@ -322,14 +322,6 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     .eq("ok", false)
     .order("id", { ascending: true })
     .limit(100);
-  if (pendingCacheError) {
-    return {
-      status: "failed",
-      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0 },
-      error: pendingCacheError.message,
-    };
-  }
   const pendingCacheIds = (pendingCacheRuns ?? []).map((row) => row.id);
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
@@ -397,14 +389,16 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
   let oembed = { checked: 0, removed: 0, failed: 0 };
-  let firstError: string | undefined;
+  let firstError: string | undefined = pendingCacheError
+    ? `source_catalog_retry_lookup_failed: ${pendingCacheError.message}`
+    : undefined;
   let catalogChanged = false;
   const markCatalogChanged = () => { catalogChanged = true; };
 
   try {
     youtube = await refreshYouTubeSources(admin, youtubeRows, markCatalogChanged);
   } catch (error) {
-    firstError = error instanceof Error ? error.message : String(error);
+    firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
   try {
     oembed = await refreshOEmbedSources(admin, oembedRows, markCatalogChanged);
@@ -412,7 +406,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
 
-  if (catalogChanged || pendingCacheIds.length) {
+  if (catalogChanged || pendingCacheIds.length || pendingCacheError) {
     try {
       revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
       if (pendingCacheIds.length) {

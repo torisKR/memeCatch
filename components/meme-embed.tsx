@@ -411,10 +411,14 @@ function LiteSocialEmbed({
       if (value.errorCode === 1001 && value.errorType === "INVALID_VIDEO") setUnavailableSource(sourceUrl);
     };
     window.addEventListener("message", onMessage);
-    // The server-rendered iframe can emit an error before hydration attaches
-    // this listener. Reload it once after subscribing so that signal is seen.
+    // Force a distinct navigation after subscribing: the server-rendered
+    // player may have emitted its error before hydration attached the listener.
     const frame = playerRef.current;
-    if (frame?.src) frame.src = frame.src;
+    if (frame?.src) {
+      const playerUrl = frame.src;
+      frame.src = "about:blank";
+      frame.src = playerUrl;
+    }
     return () => window.removeEventListener("message", onMessage);
   }, [provider, sourceUrl]);
 

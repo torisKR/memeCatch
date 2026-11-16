@@ -20,6 +20,20 @@ const tiktokContent = {
 };
 
 describe("MemeEmbed", () => {
+  it("navigates away and back after hydration so early player errors can recur", () => {
+    const setter = vi.spyOn(HTMLIFrameElement.prototype, "src", "set");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ provider: "tiktok", embedUrl: "https://www.tiktok.com/player/v1/6833754937747361025" }) }));
+    try {
+      render(<MemeEmbed content={tiktokContent} title="심쿵" />);
+      const values = setter.mock.calls.map(([value]) => value);
+      const blank = values.indexOf("about:blank");
+      expect(blank).toBeGreaterThanOrEqual(0);
+      expect(values[blank + 1]).toContain("https://www.tiktok.com/player/v1/6833754937747361025");
+    } finally {
+      setter.mockRestore();
+    }
+  });
+
   it("shows unavailable only for this TikTok player's confirmed invalid-video message", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ provider: "tiktok", embedUrl: "https://www.tiktok.com/player/v1/6833754937747361025" }) }));
     render(<MemeEmbed content={tiktokContent} title="심쿵" />);

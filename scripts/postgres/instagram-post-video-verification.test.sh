@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-server="memecatch-instagram-video-pgtap-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-$$-${RANDOM}"
+server="memecatch-instagram-video-pgtap-$(date +%s)-$$"
 db_password="instagram-video-pgtap-ci"
 migration_count="$({
   find "$root/db/migrations" -maxdepth 1 -type f -name '*.sql' \

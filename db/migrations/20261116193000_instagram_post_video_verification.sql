@@ -18,6 +18,7 @@ comment on column public.meme_contents.manual_video_verification_generation is
 
 create table private.instagram_post_video_verification_events (
   id bigint generated always as identity primary key,
+  operation_id uuid not null unique,
   -- Deliberately no FK: deleting a public projection must not erase or block
   -- the durable review history. The operator RPC validates the target row.
   content_id uuid not null,
@@ -41,6 +42,8 @@ comment on column private.instagram_post_video_verification_events.recorded_by i
   'Authenticated operator account that submitted the decision; does not imply that the operator personally observed the evidence.';
 comment on column private.instagram_post_video_verification_events.recorded_at is
   'Time at which the authenticated operator account submitted the decision.';
+comment on column private.instagram_post_video_verification_events.operation_id is
+  'Caller-generated idempotency key. Each operation has exactly one immutable receipt; retries must match the original actor, content, decision, and evidence note.';
 
 create index instagram_post_video_verification_events_content_latest_idx
   on private.instagram_post_video_verification_events
@@ -61,19 +64,19 @@ declare
   v_expected boolean := false;
   v_prior_generation bigint;
 begin
+  if not pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended(new.id::text, 0)
+  ) then
+    raise exception using
+      errcode = '40001',
+      message = 'concurrent_meme_content_incarnation_change';
+  end if;
+
   if tg_op = 'INSERT' then
     -- The primary key permits only one live row for an id. Serialize generation
     -- allocation without waiting: a blocking lock here could deadlock with a
     -- transaction that already deleted the live row and is reinserting it.
     -- SQLSTATE 40001 tells a concurrent contender to retry from a fresh snapshot.
-    if not pg_catalog.pg_try_advisory_xact_lock(
-      pg_catalog.hashtextextended(new.id::text, 0)
-    ) then
-      raise exception using
-        errcode = '40001',
-        message = 'concurrent_meme_content_incarnation_change';
-    end if;
-
     select max(event.content_generation)
       into v_prior_generation
       from private.instagram_post_video_verification_events as event
@@ -187,6 +190,7 @@ before update or delete on private.instagram_post_video_verification_events
 for each row execute function private.reject_instagram_post_video_verification_event_mutation();
 
 create or replace function public.record_instagram_post_video_verification(
+  p_operation_id uuid,
   p_content_id uuid,
   p_decision text,
   p_evidence_note text
@@ -202,7 +206,7 @@ declare
   v_note text := btrim(coalesce(p_evidence_note, ''));
   v_content public.meme_contents%rowtype;
   v_url_match text[];
-  v_latest private.instagram_post_video_verification_events%rowtype;
+  v_existing private.instagram_post_video_verification_events%rowtype;
   v_event_id bigint;
 begin
   if v_actor is null or public.is_operator() is distinct from true then
@@ -211,11 +215,62 @@ begin
   if p_content_id is null then
     raise exception using errcode = '22023', message = 'content_id_required';
   end if;
+  if p_operation_id is null then
+    raise exception using errcode = '22023', message = 'operation_id_required';
+  end if;
   if v_decision not in ('verify', 'revoke') then
     raise exception using errcode = '22023', message = 'invalid_video_verification_decision';
   end if;
   if char_length(v_note) not between 10 and 2000 then
     raise exception using errcode = '22023', message = 'video_verification_evidence_note_required';
+  end if;
+
+  -- Serialize the caller-supplied operation before inspecting its receipt. A
+  -- retry racing the original call fails fast and can retry from a fresh
+  -- transaction after the original commits.
+  if not pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_operation_id::text, 1)
+  ) then
+    raise exception using
+      errcode = '40001',
+      message = 'concurrent_instagram_post_video_verification_operation';
+  end if;
+
+  select *
+    into v_existing
+    from private.instagram_post_video_verification_events as event
+   where event.operation_id = p_operation_id;
+
+  if found then
+    -- Keep this error deliberately generic: an operation id supplied by a
+    -- different actor must not reveal the original receipt or its fields.
+    if v_existing.recorded_by is distinct from v_actor
+       or v_existing.content_id is distinct from p_content_id
+       or v_existing.decision is distinct from v_decision
+       or v_existing.evidence_note is distinct from v_note then
+      raise exception using
+        errcode = '22023',
+        message = 'video_verification_operation_mismatch';
+    end if;
+
+    return jsonb_build_object(
+      'operationId', v_existing.operation_id,
+      'contentId', v_existing.content_id,
+      'decision', v_existing.decision,
+      'eventId', v_existing.id,
+      'idempotent', true,
+      'manualVideoVerifiedAtDecision', v_existing.decision = 'verify'
+    );
+  end if;
+
+  -- A separate UUID-scoped lock protects the content projection and makes
+  -- different operations for the same content fail fast instead of waiting.
+  if not pg_catalog.pg_try_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_content_id::text, 0)
+  ) then
+    raise exception using
+      errcode = '40001',
+      message = 'concurrent_meme_content_incarnation_change';
   end if;
 
   select *
@@ -225,18 +280,6 @@ begin
    for update;
   if not found then
     raise exception using errcode = 'P0002', message = 'meme_content_not_found';
-  end if;
-
-  -- Coordinate ledger writes with incarnation allocation. This deliberately
-  -- does not wait after taking the row lock: if an insert allocator already
-  -- owns the per-id lock, abort and retry instead of creating opposite-order
-  -- row/advisory lock waits.
-  if not pg_catalog.pg_try_advisory_xact_lock(
-    pg_catalog.hashtextextended(v_content.id::text, 0)
-  ) then
-    raise exception using
-      errcode = '40001',
-      message = 'concurrent_meme_content_incarnation_change';
   end if;
 
   v_url_match := regexp_match(
@@ -250,31 +293,8 @@ begin
     raise exception using errcode = '22023', message = 'instagram_post_content_required';
   end if;
 
-  select *
-    into v_latest
-    from private.instagram_post_video_verification_events as event
-   where event.content_id = v_content.id
-     and event.content_generation = v_content.manual_video_verification_generation
-     and event.content_created_at = v_content.created_at
-     and event.content_platform = v_content.platform
-     and event.content_url = v_content.url
-     and event.external_content_id = v_content.content_id
-   order by event.id desc
-   limit 1;
-
-  if found
-     and v_latest.decision = v_decision
-     and v_latest.evidence_note = v_note then
-    return jsonb_build_object(
-      'contentId', v_content.id,
-      'decision', v_decision,
-      'eventId', v_latest.id,
-      'idempotent', true,
-      'manualVideoVerified', v_content.manual_video_verified
-    );
-  end if;
-
   insert into private.instagram_post_video_verification_events (
+    operation_id,
     content_id,
     content_generation,
     decision,
@@ -285,6 +305,7 @@ begin
     evidence_note,
     recorded_by
   ) values (
+    p_operation_id,
     v_content.id,
     v_content.manual_video_verification_generation,
     v_decision,
@@ -310,18 +331,19 @@ begin
   );
 
   return jsonb_build_object(
+    'operationId', p_operation_id,
     'contentId', v_content.id,
     'decision', v_decision,
     'eventId', v_event_id,
     'idempotent', false,
-    'manualVideoVerified', v_decision = 'verify'
+    'manualVideoVerifiedAtDecision', v_decision = 'verify'
   );
 end;
 $function$;
 
-revoke all on function public.record_instagram_post_video_verification(uuid, text, text)
+revoke all on function public.record_instagram_post_video_verification(uuid, uuid, text, text)
   from public, anon, authenticated, service_role;
-grant execute on function public.record_instagram_post_video_verification(uuid, text, text)
+grant execute on function public.record_instagram_post_video_verification(uuid, uuid, text, text)
   to authenticated;
 
 commit;

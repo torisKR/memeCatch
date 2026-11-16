@@ -54,8 +54,8 @@ describe("browser database query boundary", () => {
     const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "verify" } };
     mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
     const first = await POST(request({ plan: rpc }));
-    expect(first.status).toBe(503);
-    expect((await first.json()).error).toMatchObject({ message: "verification_saved_cache_invalidation_pending", cacheRetryPath: "/api/admin/instagram-video-verification/revalidate" });
+    expect(first.status).toBe(202);
+    expect(await first.json()).toMatchObject({ error: null, cacheInvalidationPending: true, cacheRetryPath: "/api/admin/instagram-video-verification/revalidate" });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
     expect(mocks.execute).toHaveBeenCalledTimes(1);
   });
@@ -63,7 +63,7 @@ describe("browser database query boundary", () => {
   it("does not replay a verified decision when cache retry follows a newer revocation", async () => {
     const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "verify" } };
     mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
-    expect((await POST(request({ plan: rpc }))).status).toBe(503);
+    expect((await POST(request({ plan: rpc }))).status).toBe(202);
     expect((await POST(request({ plan: { ...rpc, args: { p_decision: "revoke" } } }))).status).toBe(200);
     const cacheRequest = new NextRequest("https://example.com/api/admin/instagram-video-verification/revalidate", { method: "POST", headers: { origin: "https://example.com" } });
     expect((await retryCache(cacheRequest)).status).toBe(200);

@@ -110,10 +110,10 @@ export async function POST(request: NextRequest) {
         console.error({ event: "instagram_video_verification_cache_invalidation_pending" });
         // The decision is committed. Retry only the separate cache endpoint,
         // never the mutation, which could overwrite a more recent decision.
-        return NextResponse.json({ data: result.data, count: null, error: {
-          message: "verification_saved_cache_invalidation_pending", status: 503,
+        return NextResponse.json({ data: result.data, count: null, error: null,
+          cacheInvalidationPending: true,
           cacheRetryPath: "/api/admin/instagram-video-verification/revalidate",
-        } }, { status: 503 });
+        }, { status: 202 });
       }
     }
     return NextResponse.json(result);

@@ -184,11 +184,11 @@ export function parseOEmbedTarget(rawUrl: string): ProviderTarget {
   );
 }
 
-async function readJson(response: Response): Promise<UpstreamOEmbed> {
+async function readJson(response: Response, provider?: OEmbedProvider): Promise<UpstreamOEmbed> {
   const raw = await readBoundedText(response, 256 * 1024).catch(() => "");
   const data = (raw ? JSON.parse(raw) : null) as
     | UpstreamOEmbed
-    | { error?: { message?: string } }
+    | { error?: { message?: string; code?: number; error_subcode?: number } }
     | null;
 
   if (!response.ok || !data) {
@@ -196,10 +196,16 @@ async function readJson(response: Response): Promise<UpstreamOEmbed> {
       data && "error" in data && typeof data.error?.message === "string"
         ? data.error.message
         : null;
+    // Meta's Instagram oEmbed endpoint reports a nonexistent resource using
+    // HTTP 400 rather than 404. Do not treat other 400s (e.g. bad parameters,
+    // rate limits, or authentication failures) as deleted posts.
+    const missingInstagram = provider === "instagram" && response.status === 400
+      && data && "error" in data && data.error?.code === 24
+      && data.error.error_subcode === 2207045;
     throw new OEmbedError(
       detail ?? "플랫폼에서 콘텐츠 정보를 가져오지 못했습니다.",
       "UPSTREAM_ERROR",
-      response.status === 404 ? 404 : 502
+      response.status === 404 || missingInstagram ? 404 : 502
     );
   }
 
@@ -297,7 +303,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
     next: { revalidate: 3_600 },
     signal: AbortSignal.timeout(8_000),
   });
-  const data = await readJson(response);
+  const data = await readJson(response, target.provider);
 
   if (target.provider === "threads") {
     if (typeof data.html !== "string" || !data.html.trim() || data.html.length > 50_000) {

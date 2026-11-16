@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { readFileSync } from "node:fs";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MemeCard, MemeCardFace } from "@/components/meme-card";
@@ -68,6 +68,32 @@ describe("MemeCard", () => {
     expect(html).toContain('data-meme-card-art="video"');
     expect(html).toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
     expect(html).not.toContain("WRONGVIDEO1");
+  });
+
+  it("loads the exact Instagram representative only after explicit activation", () => {
+    const view = render(<MemeCard meme={{ ...meme, meme_contents: [{
+      thumbnail_url: null,
+      is_representative: true,
+      url: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+      content_id: "DX0AR6UzAWW",
+      availability: "live",
+      moderation_status: "approved",
+    }] }} />);
+
+    expect(view.container.querySelector("iframe")).toBeNull();
+    const link = view.container.querySelector("[data-meme-card]");
+    const button = screen.getByRole("button", { name: /Instagram 영상 미리보기/ });
+    expect(link?.contains(button)).toBe(false);
+
+    fireEvent.click(button);
+    const frame = view.container.querySelector("iframe");
+    expect(frame?.getAttribute("src")).toBe(
+      "https://www.instagram.com/reel/DX0AR6UzAWW/embed/captioned/",
+    );
+    expect(frame?.getAttribute("title")).toContain("테스트 밈");
+    expect(screen.getByRole("link", { name: /Instagram에서 원본 열기/ }).getAttribute("href"))
+      .toBe("https://www.instagram.com/reel/DX0AR6UzAWW/");
+    view.unmount();
   });
 
   it("renders owned 4:3 art with srcset and localized alt text", () => {

@@ -83,6 +83,29 @@ describe("source acquisition recovery", () => {
     });
   });
 
+  it("accepts a no-op resolution while preserving newer failures", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: [{ resolved: false }], error: null });
+    await expect(resolveSourceAcquisitionFailure({
+      sourceKey: "youtube:abcdefghijk",
+      attemptIdempotencyKey: "attempt-2",
+      attemptStartedAt: new Date("2026-09-12T00:00:00.000Z"),
+      resolvedAt: new Date("2026-09-12T01:00:00.000Z"),
+    }, { rpc })).resolves.toBeUndefined();
+  });
+
+  it("rejects an invalid or failed resolution response", async () => {
+    const input = {
+      sourceKey: "youtube:abcdefghijk",
+      attemptIdempotencyKey: "attempt-2",
+      attemptStartedAt: new Date("2026-09-12T00:00:00.000Z"),
+      resolvedAt: new Date("2026-09-12T01:00:00.000Z"),
+    };
+    for (const response of [{ data: [], error: null }, { data: [{ resolved: false }], error: { message: "db error" } }]) {
+      await expect(resolveSourceAcquisitionFailure(input, { rpc: vi.fn().mockResolvedValue(response) }))
+        .rejects.toThrow("source_recovery_resolution_failed");
+    }
+  });
+
   it("returns an idempotent duplicate without advancing the attempt count", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: [{ attempt_count: 2, next_retry_at: "2026-09-12T00:10:00.000Z", recorded: false }],

@@ -30,6 +30,10 @@ export type MemeCardModel = {
   meme_contents?: ReadonlyArray<{
     thumbnail_url?: string | null;
     is_representative?: boolean | null;
+    url?: string | null;
+    content_id?: string | null;
+    availability?: string | null;
+    moderation_status?: string | null;
   }> | null;
 };
 
@@ -125,6 +129,7 @@ export type MemeCardFrameArt =
       onError?: () => void;
     }
   | { kind: "verified"; src: string; alt: string }
+  | { kind: "video"; src: string; priority: boolean; onError?: () => void }
   | { kind: "poster" }
   | { kind: "retired" };
 
@@ -207,6 +212,14 @@ function MemeCardArtLayer({
   art: MemeCardFrameArt;
 }) {
   switch (art.kind) {
+    case "video":
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={art.src} alt="" loading={art.priority ? "eager" : "lazy"}
+          fetchPriority={art.priority ? "high" : undefined} decoding="async"
+          referrerPolicy="no-referrer" onError={art.onError} data-meme-card-art="video"
+          className="absolute inset-0 h-full w-full object-cover" />
+      );
     case "owned":
       return (
         // Owned storage is same-origin. Widths are explicit, so next/image is unnecessary.

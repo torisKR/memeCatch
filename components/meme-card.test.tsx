@@ -56,6 +56,20 @@ describe("MemeCard", () => {
     expect(html.match(/테스트 밈/g)).toHaveLength(2);
   });
 
+  it("shows the matching approved representative video preview", () => {
+    const html = renderToStaticMarkup(<MemeCard meme={{ ...meme, meme_contents: [{
+      thumbnail_url: "https://i.ytimg.com/vi/WRONGVIDEO1/hqdefault.jpg",
+      is_representative: true,
+      url: "https://www.youtube.com/watch?v=abcdefghijk",
+      content_id: "abcdefghijk",
+      availability: "live",
+      moderation_status: "approved",
+    }] }} />);
+    expect(html).toContain('data-meme-card-art="video"');
+    expect(html).toContain("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg");
+    expect(html).not.toContain("WRONGVIDEO1");
+  });
+
   it("renders owned 4:3 art with srcset and localized alt text", () => {
     const korean = renderToStaticMarkup(
       <MemeCard meme={{ ...meme, card_art_url: `https://catchmeme.com${ART}` }} />,

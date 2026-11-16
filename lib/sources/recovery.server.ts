@@ -188,7 +188,7 @@ export async function resolveSourceAcquisitionFailure(
     p_resolved_at: input.resolvedAt.toISOString(),
   });
   const record = recoveryRecord(data);
-  if (error || record?.resolved !== true) {
+  if (error || typeof record?.resolved !== "boolean") {
     throw new Error("source_recovery_resolution_failed");
   }
 }

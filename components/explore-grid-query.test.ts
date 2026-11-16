@@ -49,7 +49,15 @@ describe("explore platform query", () => {
     const select = calls.find((call) => call.method === "select")?.args[0];
     expect(select).toContain("meme_contents(");
     expect(select).not.toContain("meme_contents!inner");
-    expect(hasCall(calls, "eq", "meme_contents.moderation_status", "approved")).toBe(false);
+    expect(hasCall(calls, "eq", "matched_contents.moderation_status", "approved")).toBe(false);
+  });
+
+  it("loads the video ID when filtering by YouTube", () => {
+    const { calls, client } = recorder();
+    buildMemesQuery(client, filters("youtube"));
+    expect(calls.find((call) => call.method === "select")?.args[0]).toContain(
+      "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), matched_contents:meme_contents!inner",
+    );
   });
 
   it("limits the AI meme display category to its exact topic tag", () => {
@@ -119,26 +127,26 @@ describe("explore platform query", () => {
     expect(calls.find((call) => call.method === "select")?.args[0]).toContain(
       "meme_contents!inner"
     );
-    expect(hasCall(calls, "eq", "meme_contents.moderation_status", "approved")).toBe(true);
+    expect(hasCall(calls, "eq", "matched_contents.moderation_status", "approved")).toBe(true);
     // dead만이 아니라 region_blocked도 함께 제외한다(렌더 경로와 같은 기준).
     expect(
-      hasCall(calls, "not", "meme_contents.availability", "in", "(dead,region_blocked)")
+      hasCall(calls, "not", "matched_contents.availability", "in", "(dead,region_blocked)")
     ).toBe(true);
-    expect(hasCall(calls, "ilike", "meme_contents.platform", "youtube")).toBe(true);
-    expect(hasCall(calls, "not", "meme_contents.url", "ilike", "%/shorts/%")).toBe(true);
+    expect(hasCall(calls, "ilike", "matched_contents.platform", "youtube")).toBe(true);
+    expect(hasCall(calls, "not", "matched_contents.url", "ilike", "%/shorts/%")).toBe(true);
   });
 
   it("requires a Shorts URL for the Shorts filter", () => {
     const { calls, client } = recorder();
     buildMemesQuery(client, filters("youtube_shorts"));
 
-    expect(hasCall(calls, "ilike", "meme_contents.platform", "youtube")).toBe(true);
-    expect(hasCall(calls, "ilike", "meme_contents.url", "%/shorts/%")).toBe(true);
+    expect(hasCall(calls, "ilike", "matched_contents.platform", "youtube")).toBe(true);
+    expect(hasCall(calls, "ilike", "matched_contents.url", "%/shorts/%")).toBe(true);
     // Shorts는 URL을 긍정 매칭으로 요구한다 — 제외(not) 조건으로 거르지 않는다.
     // availability의 not.in은 공개 콘텐츠 필터라 여기서 세면 안 된다.
     expect(
       calls.some(
-        (call) => call.method === "not" && call.args[0] === "meme_contents.url"
+        (call) => call.method === "not" && call.args[0] === "matched_contents.url"
       )
     ).toBe(false);
   });

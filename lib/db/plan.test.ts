@@ -78,4 +78,18 @@ describe("query plan", () => {
       { column: "platform", op: "eq", value: "youtube" },
     ]);
   });
+
+  it("filters the aliased content relation without filtering representative content", async () => {
+    const plan = await capturePlan((client) => client.from("memes")
+      .select("meme_contents(content_id,is_representative),matched_contents:meme_contents!inner(platform)")
+      .eq("matched_contents.platform", "YouTube"));
+    attachDottedFilters(plan);
+    const [contents, matching] = plan.fields;
+    expect(contents?.kind).toBe("embed");
+    expect(matching?.kind).toBe("embed");
+    if (contents?.kind !== "embed" || matching?.kind !== "embed") return;
+    expect(contents.embed.filters).toEqual([]);
+    expect(matching.embed.filters).toEqual([{ column: "platform", op: "eq", value: "YouTube" }]);
+    expect(matching.embed.inner).toBe(true);
+  });
 });

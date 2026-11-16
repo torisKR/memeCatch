@@ -9,7 +9,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("./youtube.server", () => ({ fetchYouTubeVideoStatuses: mocks.fetchYouTubeVideoStatuses }));
-vi.mock("@/lib/oembed", () => ({ getOEmbed: mocks.getOEmbed }));
+vi.mock("@/lib/oembed", () => ({
+  getOEmbed: mocks.getOEmbed,
+  OEmbedError: class OEmbedError extends Error { constructor(message: string, public code: string, public status: number) { super(message); } },
+}));
 vi.mock("./recovery.server", () => ({
   listDueSourceAcquisitionRecovery: vi.fn().mockResolvedValue([]),
   listActiveSourceAcquisitionRecovery: vi.fn().mockResolvedValue([]),
@@ -19,15 +22,16 @@ vi.mock("./recovery.server", () => ({
 }));
 
 import { runSourceRefresh } from "./refresh.server";
+import { OEmbedError } from "@/lib/oembed";
 import { listActiveSourceAcquisitionRecovery, listDueSourceAcquisitionRecovery, recordSourceAcquisitionFailure, resolveSourceAcquisitionFailure } from "./recovery.server";
 
 function query(result: { data?: unknown; error?: { message: string } | null }) {
   const builder = {
-    select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), in: vi.fn(),
+    select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), in: vi.fn(), not: vi.fn(),
     update: vi.fn(), eq: vi.fn(),
     then: undefined,
   } as unknown as Record<string, ReturnType<typeof vi.fn>> & { then: ReturnType<typeof vi.fn> | undefined };
-  for (const method of ["select", "is", "or", "order", "limit", "in", "update", "eq"]) builder[method].mockReturnValue(builder);
+  for (const method of ["select", "is", "or", "order", "limit", "in", "not", "update", "eq"]) builder[method].mockReturnValue(builder);
   builder.then = vi.fn((resolve) => Promise.resolve(result).then(resolve));
   return builder;
 }
@@ -72,13 +76,72 @@ describe("source refresh recovery", () => {
     expect(resolveSourceAcquisitionFailure).toHaveBeenCalled();
   });
 
+  it("uses a resolution time no earlier than the oEmbed attempt", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-11-16T00:00:00Z"));
+      const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+      const second = { ...source, id: "s2", external_id: "0987654321", canonical_url: "https://www.tiktok.com/@a/video/0987654321" };
+      mocks.createAdminClient.mockReturnValue(admin({ stale: [source, second] }).client);
+      const delayedResponse = async () => {
+        vi.advanceTimersByTime(5_000);
+        return { title: "ok", authorName: "creator" };
+      };
+      mocks.getOEmbed.mockImplementationOnce(delayedResponse).mockImplementationOnce(delayedResponse);
+
+      await runSourceRefresh();
+
+      const resolution = vi.mocked(resolveSourceAcquisitionFailure).mock.calls[1][0];
+      expect(resolution.resolvedAt.getTime()).toBeGreaterThanOrEqual(resolution.attemptStartedAt.getTime());
+      expect(resolution.resolvedAt.getTime()).toBe(Date.parse("2026-11-16T00:00:10Z"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("records transient failures without changing availability", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
     mocks.getOEmbed.mockRejectedValue(new Error("network"));
     mocks.createAdminClient.mockReturnValue(admin({ stale: [source] }).client);
     const result = await runSourceRefresh();
     expect(result.status).toBe("partial");
-    expect(result.error).toBeTruthy();
+    expect(result.oembed.failed).toBe(1);
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ code: "provider_transient" }), expect.anything());
+  });
+
+  it("does not mark a TikTok source live from a generic oEmbed player", async () => {
+    const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: false, removed_at: "2026-01-01T00:00:00Z" };
+    const builder = sourceQuery([source]);
+    const { client, jobInsert } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : builder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockResolvedValueOnce({ title: null, authorName: null });
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.oembed.failed).toBe(1);
+    expect(builder.update).not.toHaveBeenCalled();
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ code: "provider_transient" }), expect.anything());
+  });
+
+  it("marks an oEmbed 404 unavailable, including an exactly matching mislabeled entry", async () => {
+    const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+    const builder = sourceQuery([source]);
+    const { client, jobInsert } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : builder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(result.oembed.removed).toBe(1);
+    expect(builder.update).toHaveBeenCalledWith({ availability: "dead" });
+    expect(builder.eq).toHaveBeenCalledWith("platform", "YouTube");
+    expect(builder.eq).toHaveBeenCalledWith("url", source.canonical_url);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalled();
   });
 
   it("reports database update and job audit failures", async () => {
@@ -130,5 +193,22 @@ describe("source refresh recovery", () => {
     expect(result.status).toBe("ok");
     expect(result.youtube.failed).toBe(0);
     expect(jobInsert).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+  });
+
+  it("restores a previously removed YouTube source when it is public again", async () => {
+    const source = { id: "yt-restored", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: false, removed_at: "2026-11-01T00:00:00Z" };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [] }]]));
+    const sourceBuilder = sourceQuery([source]);
+    const { client, jobInsert } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(sourceBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ removed_at: null, embeddable: true }));
+    expect(sourceBuilder.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(sourceBuilder.in).toHaveBeenCalledWith("platform", ["youtube", "youtube_shorts"]);
+    expect(sourceBuilder.in).toHaveBeenCalledWith("platform", ["tiktok", "instagram"]);
   });
 });

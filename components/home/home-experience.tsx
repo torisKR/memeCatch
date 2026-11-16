@@ -19,6 +19,7 @@ import {
   type SeoRouteLocale,
 } from "@/lib/i18n-routing";
 import type { MemeCategory, SafetyLevel } from "@/lib/labels";
+import type { MemeCardModel } from "@/components/meme-card";
 
 export type HomeEntry = {
   id: string;
@@ -28,6 +29,7 @@ export type HomeEntry = {
   categoryLabel: string;
   category?: MemeCategory;
   thumbnailUrl?: string | null;
+  contents?: MemeCardModel["meme_contents"];
   originalTitle?: string;
   originYear?: number | null;
   safetyLevel: SafetyLevel;

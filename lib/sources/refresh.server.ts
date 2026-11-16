@@ -22,7 +22,7 @@ import {
   sourceAcquisitionKey,
 } from "./recovery.server";
 
-const LIVENESS_INTERVAL_DAYS = 7;
+const LIVENESS_INTERVAL_DAYS = 1;
 const METADATA_TTL_DAYS = 30;
 const YOUTUBE_BATCH_LIMIT = 300;
 const OEMBED_BATCH_LIMIT = 60;
@@ -60,6 +60,18 @@ async function syncMemeContentsAvailability(
     .eq("content_id", source.external_id ?? "")
     .eq("type", "embed");
   if (error) throw new Error("source_content_availability_update_failed");
+  // Some legacy entries label Shorts or TikTok URLs as YouTube. Only update
+  // those mislabeled rows when both the canonical URL and external ID match.
+  if (source.platform !== "youtube" && source.external_id) {
+    const { error: legacyError } = await admin
+      .from("meme_contents")
+      .update({ availability })
+      .eq("platform", "YouTube")
+      .eq("content_id", source.external_id)
+      .eq("url", source.canonical_url)
+      .eq("type", "embed");
+    if (legacyError) throw new Error("source_content_availability_update_failed");
+  }
 }
 
 async function refreshYouTubeSources(
@@ -141,6 +153,7 @@ async function refreshYouTubeSources(
         platform_published_at: status.publishedAt,
         duration_seconds: status.durationSeconds,
         public_status: status.privacyStatus ?? "unknown",
+        removed_at: null,
         embeddable,
         license_code: status.license,
         made_for_kids: status.madeForKids,
@@ -201,18 +214,25 @@ async function refreshOEmbedSources(
   const now = new Date().toISOString();
   let checked = 0;
   let removed = 0;
+  let failed = 0;
 
   for (const row of rows) {
     const attemptStartedAt = new Date();
     const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
     try {
       const oembed = await getOEmbed(row.canonical_url);
+      // TikTok can return a generic player for any ID, including nonexistent
+      // videos. A bare player is not evidence that the source is public.
+      if (row.platform === "tiktok" && (!oembed.title || !oembed.authorName)) {
+        throw new OEmbedError("TikTok source status is inconclusive", "UPSTREAM_ERROR", 502);
+      }
       const { error } = await admin
         .from("media_sources")
         .update({
           title: oembed.title,
           channel_name: oembed.authorName,
           embeddable: true,
+          removed_at: null,
           last_checked_at: now,
           metadata_refreshed_at: now,
           metadata_expires_at: daysFromNow(METADATA_TTL_DAYS),
@@ -225,7 +245,7 @@ async function refreshOEmbedSources(
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
           attemptIdempotencyKey,
           attemptStartedAt,
-          resolvedAt: new Date(now),
+          resolvedAt: new Date(),
         }, admin);
       }
     } catch (error) {
@@ -242,8 +262,17 @@ async function refreshOEmbedSources(
           .eq("id", row.id);
         if (sourceError) throw new Error("source_refresh_update_failed");
         await syncMemeContentsAvailability(admin, row, "dead");
+        if (row.external_id) {
+          await resolveSourceAcquisitionFailure({
+            sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+            attemptIdempotencyKey,
+            attemptStartedAt,
+            resolvedAt: new Date(),
+          }, admin);
+        }
         removed += 1;
       } else if (row.external_id) {
+        failed += 1;
         await recordSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
           idempotencyKey: attemptIdempotencyKey,
@@ -257,19 +286,19 @@ async function refreshOEmbedSources(
           occurredAt: attemptStartedAt,
           sourceId: row.id,
         }, admin);
-      }
+      } else { failed += 1; }
       // 일시 오류(502·네트워크)는 다음 실행으로 미룬다 — last_checked_at을 건드리지 않는다.
     }
     checked += 1;
   }
 
-  return { checked, removed };
+  return { checked, removed, failed };
 }
 
 export type SourceRefreshResult = {
   status: "ok" | "partial" | "failed";
   youtube: { checked: number; removed: number; hidden: number; failed: number; errors: string[] };
-  oembed: { checked: number; removed: number };
+  oembed: { checked: number; removed: number; failed: number };
   error?: string;
 };
 
@@ -278,23 +307,33 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
   const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
+  const nowMs = Date.now();
+  const deferredSourceIds = activeRecovery.flatMap((row) =>
+    row.sourceId && (row.nextRetryAt === null || Date.parse(row.nextRetryAt) > nowMs) ? [row.sourceId] : []);
   const staleBefore = new Date(
     Date.now() - LIVENESS_INTERVAL_DAYS * 86_400_000,
   ).toISOString();
 
-  const { data: stale, error: selectError } = await admin
-    .from("media_sources")
-    .select("id, platform, external_id, canonical_url, embeddable, removed_at")
-    .is("removed_at", null)
-    .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`)
-    .order("last_checked_at", { ascending: true, nullsFirst: true })
-    .limit(YOUTUBE_BATCH_LIMIT + OEMBED_BATCH_LIMIT);
+  const staleQueries = await Promise.all([
+    { platforms: ["youtube", "youtube_shorts"], limit: YOUTUBE_BATCH_LIMIT },
+    { platforms: ["tiktok", "instagram"], limit: OEMBED_BATCH_LIMIT },
+  ].map(({ platforms, limit }) => {
+    const query = admin.from("media_sources")
+      .select("id, platform, external_id, canonical_url, embeddable, removed_at")
+      .in("platform", platforms)
+      .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`)
+      .order("last_checked_at", { ascending: true, nullsFirst: true })
+      .limit(limit);
+    return deferredSourceIds.length ? query.not("id", "in", deferredSourceIds) : query;
+  }));
+  const selectError = staleQueries.find((result) => result.error)?.error;
+  const stale = staleQueries.flatMap((result) => result.data ?? []);
 
   if (selectError) {
     return {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0 },
+      oembed: { checked: 0, removed: 0, failed: 0 },
       error: selectError.message,
     };
   }
@@ -309,13 +348,12 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     return {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0 },
+      oembed: { checked: 0, removed: 0, failed: 0 },
       error: dueError.message,
     };
   }
   const recoveryBySourceId = new Map(activeRecovery.flatMap((row) => row.sourceId ? [[row.sourceId, row] as const] : []));
-  const candidateRows = [...new Map([...(stale ?? []), ...(dueRows ?? [])].map((row) => [row.id, row])).values()];
-  const nowMs = Date.now();
+  const candidateRows = [...new Map([...(dueRows ?? []), ...stale].map((row) => [row.id, row])).values()];
   const rows = candidateRows.filter((row) => {
     const recovery = recoveryBySourceId.get(row.id);
     return !recovery || (recovery.nextRetryAt !== null && Date.parse(recovery.nextRetryAt) <= nowMs);
@@ -330,7 +368,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     .slice(0, OEMBED_BATCH_LIMIT);
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-  let oembed = { checked: 0, removed: 0 };
+  let oembed = { checked: 0, removed: 0, failed: 0 };
   let firstError: string | undefined;
 
   try {
@@ -345,7 +383,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   }
 
   const result: SourceRefreshResult = {
-    status: firstError || youtube.failed > 0 || oembed.checked < oembedRows.length ? "partial" : "ok",
+    status: firstError || youtube.failed > 0 || oembed.failed > 0 || oembed.checked < oembedRows.length ? "partial" : "ok",
     youtube,
     oembed,
     ...(firstError ? { error: firstError } : {}),

@@ -110,8 +110,8 @@ function parseFilters(sp: RawParams): Filters {
 
 function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents!inner(thumbnail_url, is_representative, platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, availability, moderation_status)";
+    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";
@@ -131,9 +131,9 @@ function withPublicContent<T extends {
   not: (column: string, operator: string, value: string) => T;
 }>(query: T): T {
   return query
-    .eq("meme_contents.moderation_status", "approved")
+    .eq("matched_contents.moderation_status", "approved")
     // 렌더 경로와 같은 제외 목록을 쓴다 — dead와 region_blocked를 함께 뺀다.
-    .not("meme_contents.availability", "in", UNAVAILABLE_FILTER);
+    .not("matched_contents.availability", "in", UNAVAILABLE_FILTER);
 }
 
 function withPlatform<T extends {
@@ -142,16 +142,16 @@ function withPlatform<T extends {
 }>(query: T, platform?: SocialPlatform): T {
   if (platform === "youtube") {
     return query
-      .ilike("meme_contents.platform", "youtube")
-      .not("meme_contents.url", "ilike", "%/shorts/%");
+      .ilike("matched_contents.platform", "youtube")
+      .not("matched_contents.url", "ilike", "%/shorts/%");
   }
   if (platform === "youtube_shorts") {
     return query
-      .ilike("meme_contents.platform", "youtube")
-      .ilike("meme_contents.url", "%/shorts/%");
+      .ilike("matched_contents.platform", "youtube")
+      .ilike("matched_contents.url", "%/shorts/%");
   }
-  if (platform === "tiktok") return query.ilike("meme_contents.platform", "tiktok");
-  if (platform === "instagram") return query.ilike("meme_contents.platform", "instagram");
+  if (platform === "tiktok") return query.ilike("matched_contents.platform", "tiktok");
+  if (platform === "instagram") return query.ilike("matched_contents.platform", "instagram");
   return query;
 }
 

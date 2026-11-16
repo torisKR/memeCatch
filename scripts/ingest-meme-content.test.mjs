@@ -280,6 +280,17 @@ test("accepts a public video when either contents or media is present", () => {
   assert.equal(withMedia.summary.meme_media.insert, 1);
 });
 
+test("preserves a video ID only when it matches its playback URL", () => {
+  const content = { meme_slug: "pending-example", url: "https://www.youtube.com/watch?v=abcdefghijk", type: "embed", moderation_status: "pending", content_id: "abcdefghijk" };
+  const input = batch({ contents: [content] });
+  const plan = planContentBatch(input, { now: NOW });
+  assert.equal(plan.summary.meme_contents.insert, 1);
+  assert.match(buildContentSql(input, { now: NOW }), /caption, content_id/);
+  assert.match(buildContentSql(input, { now: NOW }), /'abcdefghijk'/);
+  const bad = planContentBatch(batch({ contents: [{ ...content, content_id: "lmnopqrstuv" }] }), { now: NOW });
+  assert.match(reasons(bad, "meme_contents", "pending-example\n0").join("\n"), /must match the supported video URL/);
+});
+
 test("warns when a pending video has no asset and no translations", () => {
   const plan = planContentBatch(batch({
     memes: [meme({ media_type: "video", category: "challenge" })],

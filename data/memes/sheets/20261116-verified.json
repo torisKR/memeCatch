@@ -1,0 +1,234 @@
+{
+  "batch_id": "sheets-verified-20261116",
+  "checked_at": "2026-11-16T03:50:00.000Z",
+  "memes": [
+    {
+      "slug": "john-politics",
+      "title": "John Politics: 글렌 파월 대통령짤",
+      "aliases": [],
+      "summary": "글렌 파월의 화보를 가상 정치인처럼 해석하는 인터넷 밈.",
+      "description": "배우 글렌 파월이 성조기를 배경으로 등장한 화보 사진을 가상의 정치인 John Politics로 부르며 선거 광고나 게임 속 인물처럼 보이는 이미지를 풍자하는 밈이다. 화보 자체와 해설 영상은 서로 다른 자료이며, 영상은 이 밈이 퍼진 맥락을 설명하는 사례다.",
+      "origin": "2025년 GQ 화보 사진이 2026년 온라인에서 다시 공유되며 John Politics라는 이름으로 확산됐다.",
+      "category": "image",
+      "media_type": "embed",
+      "safety_level": "yellow",
+      "lifecycle_status": "active",
+      "moderation_status": "approved",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "published_at": "2026-11-16T03:50:00.000Z",
+      "usage_note": "반듯한 구도와 과장된 홍보 사진을 보고 가상의 선거 후보나 게임 속 정치인을 떠올릴 때 쓰는 표현이다. 사진의 인물이 실제로 출마했다는 뜻은 아니다.",
+      "caution": "특정 인물에 관한 정치적 사실이나 지지 의사를 단정하기보다 사진의 연출과 인터넷 반응을 설명하는 맥락에서 사용하는 편이 안전하다.",
+      "usage_examples": [
+        {
+          "situation": "사진의 선거 광고 같은 연출을 설명할 때",
+          "text": "화보가 가상 후보 포스터처럼 보여서 John Politics라는 별명이 붙었어."
+        }
+      ]
+    },
+    {
+      "slug": "kang-hodong-bomdong-bibimbap",
+      "title": "강호동 봄동비빔밥",
+      "aliases": [],
+      "summary": "1박 2일의 봄동비빔밥 먹방 장면이 다시 유행한 밈.",
+      "description": "강호동이 예능 프로그램 1박 2일에서 봄동과 밥을 맛있게 먹는 장면이 다시 주목받고, 시청자들이 봄동비빔밥을 따라 만들어 먹으며 확산된 밈이다. 연결된 영상은 당시 방송 장면을 담아 KBS가 다시 게시한 공식 클립이다.",
+      "origin": "2008년 2월 3일 방송 장면이 2026년 봄 다시 온라인에서 주목받았다.",
+      "category": "comment",
+      "media_type": "embed",
+      "safety_level": "yellow",
+      "lifecycle_status": "active",
+      "moderation_status": "approved",
+      "origin_year": 2026,
+      "year_precision": "year",
+      "published_at": "2026-11-16T03:50:00.000Z",
+      "usage_note": "방송 장면을 보고 봄동과 밥을 비벼 먹는 모습을 따라 하거나, 한동안 다시 화제가 된 예능 속 먹방 장면을 이야기할 때 쓰인다.",
+      "caution": "재유행한 시기와 원래 방송 날짜는 다르다. 공식 영상의 게시일은 2026년이고 영상 제목에 적힌 080203은 2008년 방송을 가리킨다.",
+      "usage_examples": [
+        {
+          "situation": "봄동비빔밥을 만들어 먹으며 방송을 떠올릴 때",
+          "text": "강호동 봄동비빔밥 장면을 보고 나도 한번 비벼 먹어 봤어."
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "meme_slug": "john-politics",
+      "url": "https://instablank.com/meme/185",
+      "title": "John Politics: 글렌 파월 대통령짤",
+      "publisher": "Instablank"
+    },
+    {
+      "meme_slug": "john-politics",
+      "url": "https://www.youtube.com/watch?v=87DjNh7Kq8s",
+      "title": "John Politics Explained: The Glossy Glen Powell Meme Taking Over the Internet",
+      "publisher": "Meme Academy",
+      "platform": "YouTube",
+      "copyright_status": "embeddable",
+      "source_role": "usage_example",
+      "rights_basis": "official_embed"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "url": "https://instablank.com/meme/55",
+      "title": "강호동 봄동비빔밥",
+      "publisher": "Instablank"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "url": "https://www.youtube.com/watch?v=1F4Ai7SkWoY",
+      "title": "공식이 말아주는 강호동의 봄동비빔밥 먹방 | 1박2일",
+      "publisher": "KBS 한국방송",
+      "platform": "YouTube",
+      "copyright_status": "embeddable",
+      "source_role": "usage_example",
+      "rights_basis": "official_embed"
+    }
+  ],
+  "contents": [
+    {
+      "meme_slug": "john-politics",
+      "url": "https://www.youtube.com/watch?v=87DjNh7Kq8s",
+      "type": "embed",
+      "moderation_status": "approved",
+      "platform": "YouTube",
+      "content_id": "87DjNh7Kq8s",
+      "thumbnail_url": "https://i.ytimg.com/vi/87DjNh7Kq8s/hqdefault.jpg",
+      "is_representative": true,
+      "availability": "live",
+      "caption": "John Politics Explained: The Glossy Glen Powell Meme Taking Over the Internet"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "url": "https://www.youtube.com/watch?v=1F4Ai7SkWoY",
+      "type": "embed",
+      "moderation_status": "approved",
+      "platform": "YouTube",
+      "content_id": "1F4Ai7SkWoY",
+      "thumbnail_url": "https://i.ytimg.com/vi/1F4Ai7SkWoY/hqdefault.jpg",
+      "is_representative": true,
+      "availability": "live",
+      "caption": "공식이 말아주는 강호동의 봄동비빔밥 먹방 | 1박2일"
+    }
+  ],
+  "media": [
+    {
+      "meme_slug": "john-politics",
+      "canonical_url": "https://www.youtube.com/watch?v=87DjNh7Kq8s",
+      "platform": "youtube",
+      "external_id": "87DjNh7Kq8s",
+      "title": "John Politics Explained: The Glossy Glen Powell Meme Taking Over the Internet",
+      "source_role": "usage_example",
+      "rights_basis": "official_embed",
+      "review_state": "approved"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "canonical_url": "https://www.youtube.com/watch?v=1F4Ai7SkWoY",
+      "platform": "youtube",
+      "external_id": "1F4Ai7SkWoY",
+      "title": "공식이 말아주는 강호동의 봄동비빔밥 먹방 | 1박2일",
+      "source_role": "usage_example",
+      "rights_basis": "official_embed",
+      "review_state": "approved"
+    }
+  ],
+  "translations": [
+    {
+      "meme_slug": "john-politics",
+      "locale": "en",
+      "localized_slug": "john-politics",
+      "title": "John Politics",
+      "summary": "A meme recasting a Glen Powell photo as a fictional politician named John Politics.",
+      "description": "A meme recasting a Glen Powell photo as a fictional politician named John Politics.",
+      "origin": "A meme recasting a Glen Powell photo as a fictional politician named John Politics.",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "john-politics",
+      "locale": "ja",
+      "localized_slug": "john-politics",
+      "title": "John Politics: 글렌 파월 대통령짤",
+      "summary": "グレン・パウエルの写真を架空の政治家ジョン・ポリティクスに見立てるミーム。",
+      "description": "グレン・パウエルの写真を架空の政治家ジョン・ポリティクスに見立てるミーム。",
+      "origin": "グレン・パウエルの写真を架空の政治家ジョン・ポリティクスに見立てるミーム。",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "john-politics",
+      "locale": "zh",
+      "localized_slug": "john-politics",
+      "title": "John Politics: 글렌 파월 대통령짤",
+      "summary": "将格伦·鲍威尔的照片戏称为虚构政客 John Politics 的迷因。",
+      "description": "将格伦·鲍威尔的照片戏称为虚构政客 John Politics 的迷因。",
+      "origin": "将格伦·鲍威尔的照片戏称为虚构政客 John Politics 的迷因。",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "john-politics",
+      "locale": "zh-tw",
+      "localized_slug": "john-politics",
+      "title": "John Politics: 글렌 파월 대통령짤",
+      "summary": "將葛倫·鮑威爾的照片戲稱為虛構政客 John Politics 的迷因。",
+      "description": "將葛倫·鮑威爾的照片戲稱為虛構政客 John Politics 的迷因。",
+      "origin": "將葛倫·鮑威爾的照片戲稱為虛構政客 John Politics 的迷因。",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "locale": "en",
+      "localized_slug": "kang-hodong-bomdong-bibimbap",
+      "title": "Kang Ho-dong Spring Cabbage Bibimbap",
+      "summary": "A 1 Night 2 Days clip of Kang Ho-dong eating spring cabbage bibimbap became popular again.",
+      "description": "A 1 Night 2 Days clip of Kang Ho-dong eating spring cabbage bibimbap became popular again.",
+      "origin": "A 1 Night 2 Days clip of Kang Ho-dong eating spring cabbage bibimbap became popular again.",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "locale": "ja",
+      "localized_slug": "kang-hodong-bomdong-bibimbap",
+      "title": "강호동 봄동비빔밥",
+      "summary": "カン・ホドンが春キャベツのビビンバを食べる「1泊2日」の場面が再び話題になったミーム。",
+      "description": "カン・ホドンが春キャベツのビビンバを食べる「1泊2日」の場面が再び話題になったミーム。",
+      "origin": "カン・ホドンが春キャベツのビビンバを食べる「1泊2日」の場面が再び話題になったミーム。",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "locale": "zh",
+      "localized_slug": "kang-hodong-bomdong-bibimbap",
+      "title": "강호동 봄동비빔밥",
+      "summary": "姜虎东在《两天一夜》中吃春白菜拌饭的片段再次走红。",
+      "description": "姜虎东在《两天一夜》中吃春白菜拌饭的片段再次走红。",
+      "origin": "姜虎东在《两天一夜》中吃春白菜拌饭的片段再次走红。",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    },
+    {
+      "meme_slug": "kang-hodong-bomdong-bibimbap",
+      "locale": "zh-tw",
+      "localized_slug": "kang-hodong-bomdong-bibimbap",
+      "title": "강호동 봄동비빔밥",
+      "summary": "姜虎東在《兩天一夜》中吃春白菜拌飯的片段再次走紅。",
+      "description": "姜虎東在《兩天一夜》中吃春白菜拌飯的片段再次走紅。",
+      "origin": "姜虎東在《兩天一夜》中吃春白菜拌飯的片段再次走紅。",
+      "status": "machine",
+      "provider": "editorial",
+      "model": "human"
+    }
+  ]
+}

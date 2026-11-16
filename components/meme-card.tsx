@@ -12,6 +12,7 @@ import {
   type MemeCardTitleSize,
 } from "@/components/meme-card-poster";
 import { memeCardArtFromMeme, type MemeCardArtSource } from "@/lib/meme-card-art";
+import { youtubeVideoPreview } from "@/lib/meme-video-preview";
 import type { Locale } from "@/lib/i18n";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 
@@ -39,6 +40,7 @@ export function MemeCard(props: MemeCardProps) {
         year={meme.origin_year}
         locale={locale}
         art={memeCardArtFromMeme(meme)}
+        videoPreview={youtubeVideoPreview(meme.meme_contents)}
         priority={priority}
         titleSize={titleSize}
       />
@@ -53,6 +55,7 @@ export function MemeCardFace({
   year,
   locale = "ko",
   art,
+  videoPreview = null,
   priority = false,
   titleSize = "grid",
 }: {
@@ -62,6 +65,7 @@ export function MemeCardFace({
   year?: number | null;
   locale?: Locale;
   art: MemeCardArtSource | null;
+  videoPreview?: string | null;
   priority?: boolean;
   titleSize?: MemeCardTitleSize;
 }) {
@@ -71,7 +75,9 @@ export function MemeCardFace({
       ? "(min-width: 1024px) 360px, 100vw"
       : "(min-width: 1280px) 280px, (min-width: 768px) 33vw, 50vw";
   const frameArt: MemeCardFrameArt =
-    art && !failed
+    videoPreview && !failed
+      ? { kind: "video", src: videoPreview, priority, onError: () => setFailed(true) }
+      : art && !failed
       ? { kind: "owned", art, sizes, priority, onError: () => setFailed(true) }
       : { kind: "poster" };
 

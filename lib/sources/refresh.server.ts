@@ -25,7 +25,7 @@ import {
 const LIVENESS_INTERVAL_DAYS = 1;
 const METADATA_TTL_DAYS = 30;
 const YOUTUBE_BATCH_LIMIT = 300;
-const OEMBED_BATCH_LIMIT = 60;
+const SOCIAL_PLATFORM_BATCH_LIMIT = 30;
 
 type MediaSourceRow = {
   id: string;
@@ -316,7 +316,8 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
 
   const staleQueries = await Promise.all([
     { platforms: ["youtube", "youtube_shorts"], limit: YOUTUBE_BATCH_LIMIT },
-    { platforms: ["tiktok", "instagram"], limit: OEMBED_BATCH_LIMIT },
+    { platforms: ["tiktok"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
+    { platforms: ["instagram"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
   ].map(({ platforms, limit }) => {
     const query = admin.from("media_sources")
       .select("id, platform, external_id, canonical_url, embeddable, removed_at")
@@ -361,11 +362,11 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const youtubeRows = rows
     .filter((row) => isYouTubePlatform(row.platform))
     .slice(0, YOUTUBE_BATCH_LIMIT);
-  const oembedRows = rows
-    .filter(
-      (row) => row.platform === "tiktok" || row.platform === "instagram",
-    )
-    .slice(0, OEMBED_BATCH_LIMIT);
+  // An inconclusive provider must not consume another platform's entire
+  // daily liveness budget. Each platform gets its own stale and retry slots.
+  const oembedRows = (["tiktok", "instagram"] as const).flatMap((platform) =>
+    rows.filter((row) => row.platform === platform).slice(0, SOCIAL_PLATFORM_BATCH_LIMIT),
+  );
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
   let oembed = { checked: 0, removed: 0, failed: 0 };

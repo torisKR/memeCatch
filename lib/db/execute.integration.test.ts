@@ -47,6 +47,27 @@ describe.skipIf(!databaseUrl)("postgres query executor", () => {
     expect(result.error?.code).toBe("42602");
   });
 
+  it("paginates and filters search RPC rows while embedding their contents", async () => {
+    const client = createPlanClient((plan, signal) => executePlan(plan, anon, signal));
+    const page = (start: number) => client.rpc("search_memes", { p_query: " ", p_limit: 50 })
+      .select("id,title,meme_contents(url)")
+      .order("id", { ascending: true }).range(start, start + 2);
+    const first = await page(0);
+    const second = await page(3);
+    expect(first.error).toBeNull();
+    expect(second.error).toBeNull();
+    if (!first.data || !second.data) throw new Error("search returned no data");
+    expect(first.data).toHaveLength(3);
+    expect(second.data).toHaveLength(3);
+    expect(first.data.every((row: { meme_contents: unknown }) => Array.isArray(row.meme_contents))).toBe(true);
+    expect(second.data.every((row: { id: string }) => !first.data.some((item: { id: string }) => item.id === row.id))).toBe(true);
+    const target = first.data[0];
+    const filtered = await client.rpc("search_memes", { p_query: " ", p_limit: 50 })
+      .select("id").eq("id", target.id);
+    expect(filtered.error).toBeNull();
+    expect(filtered.data).toEqual([{ id: target.id }]);
+  });
+
   it("does not let anon pretend to be service_role", async () => {
     const inserted = await executePlan(
       {

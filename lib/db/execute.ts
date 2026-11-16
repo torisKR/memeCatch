@@ -474,7 +474,7 @@ async function loadFunctions(name: string): Promise<PgFunction[]> {
   return result.rows;
 }
 
-function rpcSql(plan: QueryPlan, fn: PgFunction): SqlParts {
+export function rpcSql(plan: QueryPlan, fn: PgFunction, meta?: Meta): SqlParts {
   const name = plan.fn ?? "";
   const args = plan.args ?? {};
   const params: unknown[] = [];
@@ -488,6 +488,22 @@ function rpcSql(plan: QueryPlan, fn: PgFunction): SqlParts {
     return `${quoteIdent(key)} => $${params.length}${castFor(udt, value)}`;
   });
   const call = `public.${quoteIdent(name)}(${pairs.join(", ")})`;
+  // Both search functions return SETOF memes. Apply the same projection,
+  // embedded relations, filters and range as table selects; otherwise every
+  // page repeats the unfiltered RPC result and cards lose their thumbnails.
+  if (fn.proretset && meta && (name === "search_memes" || name === "search_ai_memes")) {
+    attachDottedFilters(plan);
+    const table = "memes";
+    const columns = tableColumns(meta, table);
+    aliasSeq = 0;
+    const alias = nextAlias();
+    const projected = renderFieldList(plan.fields, table, alias, meta, params);
+    const filters = whereSql(plan.filters, plan.orGroups, alias, columns, params);
+    const exists = innerExists(plan.fields, table, alias, meta, params).join(" AND ");
+    const where = exists ? `${filters} AND ${exists}` : filters;
+    const page = `${orderSql(plan.orders, alias, params)}${limitSql(plan.limit, plan.offset, params)}`;
+    return { sql: `SELECT ${projected} FROM ${call} ${alias} WHERE ${where}${page}`, params };
+  }
   return fn.proretset
     ? { sql: `SELECT * FROM ${call}${limitSql(plan.limit, null, params)}`, params }
     : { sql: `SELECT ${call} AS result`, params };
@@ -669,7 +685,7 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
         return Object.keys(plan.args ?? {}).every((key) => names.has(key) || names.size === 0);
       }) ?? matches[0];
       if (!fn) return { data: null, error: { message: "function not found", code: "42883", status: 404 }, count: null };
-      const built = rpcSql(plan, fn);
+      const built = rpcSql(plan, fn, meta);
       const rows = await runQuery(identity, built.sql, built.params, signal);
       return shapeRows(plan, rows, null, !fn.proretset);
     }

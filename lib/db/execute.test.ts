@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { compileSelectPlan } from "@/lib/db/execute";
+import { compileSelectPlan, rpcSql } from "@/lib/db/execute";
 import { createPlanClient, type QueryPlan } from "@/lib/db/plan";
 
 async function nestedTopicPlan(): Promise<QueryPlan> {
@@ -53,5 +53,32 @@ describe("nested embedded SQL", () => {
       /EXISTS \(SELECT 1 FROM public\."meme_tags_map" r\d+ WHERE .*EXISTS \(SELECT 1 FROM public\."tags" r\d+ WHERE .*\."name" = \$\d+\)\)/,
     );
     expect(built.params).toContain("AI 밈");
+  });
+});
+
+describe("search RPC SQL", () => {
+  it("applies embedded content, filters, order and page to search results", async () => {
+    let captured: QueryPlan | undefined;
+    const client = createPlanClient(async (plan) => {
+      captured = plan;
+      return { data: [], error: null, count: null };
+    });
+    await client.rpc("search_memes", { p_query: "챌린지", p_limit: 50 })
+      .select("id,title,meme_contents(url),matched_contents:meme_contents!inner(platform)")
+      .eq("matched_contents.platform", "instagram")
+      .order("id", { ascending: false }).range(5, 9);
+    if (!captured) throw new Error("plan was not executed");
+    const built = rpcSql(captured, { proretset: true, names: ["p_query", "p_limit"], types: ["text", "int4"] }, {
+      columns: new Map([["memes", new Map([["id", "uuid"], ["title", "text"]])], ["meme_contents", new Map([["meme_id", "uuid"], ["url", "text"], ["platform", "text"]])]]),
+      foreignKeys: [{ name: "meme_contents_meme_id_fkey", srcTable: "meme_contents", srcCols: ["meme_id"], dstTable: "memes", dstCols: ["id"] }],
+      primaryKeys: new Map(),
+    });
+    expect(built.sql).toContain('FROM public."search_memes"(');
+    expect(built.sql).toContain('AS "meme_contents"');
+    expect(built.sql).toContain('EXISTS (SELECT 1 FROM public."meme_contents"');
+    expect(built.sql).toMatch(/ORDER BY r1\."id" DESC LIMIT \$\d+::int OFFSET \$\d+::int/);
+    expect(built.params.slice(0, 2)).toEqual(["챌린지", 50]);
+    expect(built.params).toContain("instagram");
+    expect(built.params.slice(-2)).toEqual([5, 5]);
   });
 });

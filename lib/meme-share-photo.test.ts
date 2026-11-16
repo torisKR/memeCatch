@@ -51,7 +51,7 @@ describe("representative share photos", () => {
         platform: "youtube",
         content_id: "abc",
       }],
-    })?.url).toBe("/api/media/meme-thumbs/youtube/abc.jpg");
+    })).toBeNull();
     expect(representativeImageUrl({
       contents: [{
         ...approved,
@@ -173,6 +173,15 @@ describe("YouTube thumbnail ladder", () => {
       `https://i.ytimg.com/vi/${YOUTUBE_ID}/sddefault.jpg`,
       `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg`,
     ]);
+  });
+
+  it("uses the actual video for sharing even when the stored poster belongs to another video", () => {
+    expect(representativeImageUrl({
+      contents: [{ ...approved, thumbnail_url: "https://i.ytimg.com/vi/WRONGVIDEO1/hqdefault.jpg", url: `https://www.youtube.com/watch?v=${YOUTUBE_ID}`, platform: "youtube", content_id: YOUTUBE_ID }],
+    })?.url).toBe(YOUTUBE_RECORDED);
+    expect(representativeImageUrl({
+      contents: [{ ...approved, thumbnail_url: YOUTUBE_RECORDED, url: "https://www.youtube.com/watch?v=WRONGVIDEO1", platform: "youtube", content_id: YOUTUBE_ID }],
+    })).toBeNull();
   });
 
   it("uses maxresdefault when that image is large enough", async () => {

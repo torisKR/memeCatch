@@ -92,6 +92,39 @@ beforeEach(() => {
 });
 
 describe("getGlobalFeed", () => {
+  it("uses the selected YouTube video's ID rather than a mismatched stored image", async () => {
+    const content = {
+      platform: "YouTube", content_id: "1F4Ai7SkWoY",
+      url: "https://www.youtube.com/watch?v=1F4Ai7SkWoY",
+      thumbnail_url: "https://i.ytimg.com/vi/WRONGVIDEO1/hqdefault.jpg",
+      availability: "live", moderation_status: "approved", is_representative: true,
+    };
+    const feedQuery = query({ data: [row("1", "YouTube", { meme_contents: [content] })], error: null });
+    const ledgerQuery = query({ data: [{ meme_id: "1", media_sources: { platform: "youtube", external_id: content.content_id, canonical_url: content.url } }], error: null });
+    createStaticClient.mockReturnValue({ from: vi.fn(() => feedQuery) });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => ledgerQuery) });
+
+    const result = await getGlobalFeed(["youtube"]);
+
+    expect(result.items[0]?.thumbnail_url).toBe("https://i.ytimg.com/vi/1F4Ai7SkWoY/hqdefault.jpg");
+  });
+
+  it("does not show a YouTube thumbnail when the URL and content ID disagree", async () => {
+    const content = {
+      platform: "YouTube", content_id: "87DjNh7Kq8s",
+      url: "https://www.youtube.com/watch?v=1F4Ai7SkWoY",
+      thumbnail_url: "https://i.ytimg.com/vi/WRONGVIDEO1/hqdefault.jpg",
+      availability: "live", moderation_status: "approved", is_representative: true,
+    };
+    const feedQuery = query({ data: [row("1", "YouTube", { meme_contents: [content] })], error: null });
+    const ledgerQuery = query({ data: [{ meme_id: "1", media_sources: { platform: "youtube", external_id: content.content_id, canonical_url: content.url } }], error: null });
+    createStaticClient.mockReturnValue({ from: vi.fn(() => feedQuery) });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => ledgerQuery) });
+
+    const result = await getGlobalFeed(["youtube"]);
+
+    expect(result.items[0]?.thumbnail_url).toBeNull();
+  });
   it("accepts stored labels and lowercase keys, then returns canonical platform keys", async () => {
     const feedQuery = query({
       data: [

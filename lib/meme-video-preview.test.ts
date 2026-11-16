@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { videoPreview, youtubeVideoPreview } from "./meme-video-preview";
+import { socialVideoPreview, videoPreview, youtubeVideoPreview } from "./meme-video-preview";
 
 const video = { url: "https://www.youtube.com/shorts/abcdefghijk", content_id: "abcdefghijk", moderation_status: "approved", availability: "live", is_representative: true };
 
@@ -25,5 +25,39 @@ describe("verified social video previews", () => {
     expect(videoPreview([{ ...instagram, thumbnail_url: instagram.thumbnail_url.replace("catchmeme.com", "evil.example") }])).toBeNull();
     expect(videoPreview([{ ...instagram, availability: "dead" }])).toBeNull();
     expect(videoPreview([{ ...instagram, moderation_status: "pending" }])).toBeNull();
+  });
+
+  it("builds an official embed only for the exact representative post", () => {
+    expect(socialVideoPreview([instagram])).toEqual({
+      platform: "instagram",
+      sourceUrl: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+      embedUrl: "https://www.instagram.com/reel/DX0AR6UzAWW/embed/captioned/",
+      contentId: "DX0AR6UzAWW",
+    });
+    expect(socialVideoPreview([{ ...instagram, content_id: "different" }])).toBeNull();
+    expect(socialVideoPreview([{ ...instagram, availability: "dead" }])).toBeNull();
+    expect(socialVideoPreview([{ ...instagram, moderation_status: "pending" }])).toBeNull();
+  });
+
+  it("uses the same TikTok post ID for the card preview and official player", () => {
+    const tiktok = {
+      ...instagram,
+      url: "https://www.tiktok.com/@creator/video/6833754937747361025",
+      content_id: "6833754937747361025",
+    };
+    expect(socialVideoPreview([tiktok])).toEqual({
+      platform: "tiktok",
+      sourceUrl: "https://www.tiktok.com/@creator/video/6833754937747361025",
+      embedUrl: "https://www.tiktok.com/player/v1/6833754937747361025?description=1&music_info=1",
+      contentId: "6833754937747361025",
+    });
+  });
+
+  it("does not pick an arbitrary post when the representative is ambiguous", () => {
+    const other = { ...instagram, url: "https://www.instagram.com/reel/AbCdEf12345/", content_id: "AbCdEf12345" };
+    expect(socialVideoPreview([instagram, other])).toBeNull();
+    expect(socialVideoPreview([{ ...instagram, is_representative: false }, { ...other, is_representative: false }])).toBeNull();
+    expect(socialVideoPreview([instagram, { ...other, is_representative: false }])?.contentId).toBe(instagram.content_id);
+    expect(socialVideoPreview([{ ...instagram, is_representative: false }])?.contentId).toBe(instagram.content_id);
   });
 });

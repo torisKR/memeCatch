@@ -1,5 +1,5 @@
 import { isRenderableContent } from "@/lib/content-availability";
-import { normalizeSourceUrl } from "@/lib/sources/url";
+import { embedUrlFor, normalizeSourceUrl } from "@/lib/sources/url";
 
 type PreviewContent = {
   url?: string | null;
@@ -10,10 +10,52 @@ type PreviewContent = {
   is_representative?: boolean | null;
 };
 
+export type SocialVideoPreview = {
+  platform: "tiktok" | "instagram";
+  sourceUrl: string;
+  embedUrl: string;
+  contentId: string;
+};
+
+function representativeContent(contents: readonly PreviewContent[] | null | undefined) {
+  const renderable = (contents ?? []).filter(isRenderableContent);
+  return renderable.find((item) => item.is_representative) ?? renderable[0] ?? null;
+}
+
+/** The official embed must resolve to the exact post selected by the detail page. */
+export function socialVideoPreview(
+  contents: readonly PreviewContent[] | null | undefined,
+): SocialVideoPreview | null {
+  const renderable = (contents ?? []).filter(isRenderableContent);
+  const representatives = renderable.filter((item) => item.is_representative);
+  // The card and detail queries do not guarantee the same order for tied
+  // representatives, or when there is no representative. Avoid previewing a
+  // different post from the one selected on the detail page.
+  const content = representatives.length === 1
+    ? representatives[0]
+    : representatives.length === 0 && renderable.length === 1
+      ? renderable[0]
+      : null;
+  if (!content?.url || !content.content_id) return null;
+  const source = normalizeSourceUrl(content.url);
+  if (
+    !source ||
+    (source.platform !== "tiktok" && source.platform !== "instagram") ||
+    source.externalId !== content.content_id
+  ) {
+    return null;
+  }
+  return {
+    platform: source.platform,
+    sourceUrl: source.canonicalUrl,
+    embedUrl: embedUrlFor(source),
+    contentId: source.externalId,
+  };
+}
+
 /** Only show a poster whose video is the same one the detail page will play. */
 export function youtubeVideoPreview(contents: readonly PreviewContent[] | null | undefined): string | null {
-  const renderable = (contents ?? []).filter(isRenderableContent);
-  const content = renderable.find((item) => item.is_representative) ?? renderable[0];
+  const content = representativeContent(contents);
   if (!content?.url || !content.content_id) return null;
   const source = normalizeSourceUrl(content.url);
   if (!source || (source.platform !== "youtube" && source.platform !== "youtube_shorts") || source.externalId !== content.content_id) return null;
@@ -24,8 +66,7 @@ export function youtubeVideoPreview(contents: readonly PreviewContent[] | null |
 export function videoPreview(contents: readonly PreviewContent[] | null | undefined): string | null {
   const youtube = youtubeVideoPreview(contents);
   if (youtube) return youtube;
-  const renderable = (contents ?? []).filter(isRenderableContent);
-  const content = renderable.find((item) => item.is_representative) ?? renderable[0];
+  const content = representativeContent(contents);
   if (!content?.url || !content.content_id || !content.thumbnail_url) return null;
   const source = normalizeSourceUrl(content.url);
   if (!source || (source.platform !== "instagram" && source.platform !== "tiktok") || source.externalId !== content.content_id) return null;

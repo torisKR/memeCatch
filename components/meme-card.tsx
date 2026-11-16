@@ -12,7 +12,8 @@ import {
   type MemeCardTitleSize,
 } from "@/components/meme-card-poster";
 import { memeCardArtFromMeme, type MemeCardArtSource } from "@/lib/meme-card-art";
-import { videoPreview } from "@/lib/meme-video-preview";
+import { SocialVideoPreviewDialog } from "@/components/social-video-preview-dialog";
+import { socialVideoPreview, videoPreview } from "@/lib/meme-video-preview";
 import type { Locale } from "@/lib/i18n";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 
@@ -25,26 +26,36 @@ export type { MemeCardModel, MemeCardProps, MemeCardTitleSize };
 export function MemeCard(props: MemeCardProps) {
   if (props.staticMarkup) return <PosterMemeCard {...props} />;
   const { meme, href, priority = false, locale = "ko", titleSize = "grid" } = props;
+  const socialPreview = socialVideoPreview(meme.meme_contents);
 
   return (
-    <Link
-      href={href ?? memePathFrom(meme.short_id, meme.slug)}
-      className={memeCardClassName()}
-      data-meme-card=""
-      data-meme-card-title-size={titleSize}
-    >
-      <MemeCardFace
-        title={meme.title}
-        summary={meme.summary}
-        safetyLevel={meme.safety_level}
-        year={meme.origin_year}
-        locale={locale}
-        art={memeCardArtFromMeme(meme)}
-        videoPreview={videoPreview(meme.meme_contents)}
-        priority={priority}
-        titleSize={titleSize}
-      />
-    </Link>
+    <div className="isolate relative min-w-0">
+      <Link
+        href={href ?? memePathFrom(meme.short_id, meme.slug)}
+        className={memeCardClassName()}
+        data-meme-card=""
+        data-meme-card-title-size={titleSize}
+      >
+        <MemeCardFace
+          title={meme.title}
+          summary={meme.summary}
+          safetyLevel={meme.safety_level}
+          year={meme.origin_year}
+          locale={locale}
+          art={memeCardArtFromMeme(meme)}
+          videoPreview={videoPreview(meme.meme_contents)}
+          priority={priority}
+          titleSize={titleSize}
+        />
+      </Link>
+      {socialPreview ? (
+        <SocialVideoPreviewDialog
+          preview={socialPreview}
+          title={meme.title}
+          locale={locale}
+        />
+      ) : null}
+    </div>
   );
 }
 

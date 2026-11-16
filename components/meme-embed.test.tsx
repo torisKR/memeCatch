@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemeEmbed } from "./meme-embed";
@@ -20,6 +20,21 @@ const tiktokContent = {
 };
 
 describe("MemeEmbed", () => {
+  it("shows unavailable only for this TikTok player's confirmed invalid-video message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ provider: "tiktok", embedUrl: "https://www.tiktok.com/player/v1/6833754937747361025" }) }));
+    render(<MemeEmbed content={tiktokContent} title="심쿵" />);
+    const frame = screen.getByTitle(/심쿵 — TikTok/) as HTMLIFrameElement;
+    const message = { "x-tiktok-player": true, type: "onPlayerError", value: { errorCode: 1001, errorType: "INVALID_VIDEO" } };
+    act(() => window.dispatchEvent(new MessageEvent("message", { origin: "https://evil.example", source: frame.contentWindow, data: message })));
+    act(() => window.dispatchEvent(new MessageEvent("message", { origin: "https://www.tiktok.com", source: window, data: message })));
+    act(() => window.dispatchEvent(new MessageEvent("message", { origin: "https://www.tiktok.com", source: frame.contentWindow, data: { ...message, value: { errorCode: 2001, errorType: "SERVER_ERROR" } } })));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => window.dispatchEvent(new MessageEvent("message", { origin: "https://www.tiktok.com", source: frame.contentWindow, data: message })));
+    expect(screen.getByRole("alert").textContent).toContain("현재 재생할 수 없습니다");
+    expect(screen.getAllByRole("link", { name: /게시물 열기|TikTok에서 보기/ }).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.queryByTitle(/심쿵 — TikTok/)).toBeNull());
+  });
+
   it("renders a live project-owned representative image", () => {
     const html = renderToStaticMarkup(
       <MemeEmbed

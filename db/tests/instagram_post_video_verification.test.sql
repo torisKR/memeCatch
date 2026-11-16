@@ -166,9 +166,9 @@ select lives_ok(
   $$select public.record_instagram_post_video_verification(
     '98000000-0000-4000-8000-000000000001',
     'verify',
-    'Ego human review saw video in slide six.'
+    'Ego manual review saw video in slide six.'
   )$$,
-  'an operator can record explicit human verification'
+  'an operator can record explicit manual verification'
 );
 reset role;
 set session authorization default;
@@ -185,7 +185,7 @@ select is(
     where content_id = '98000000-0000-4000-8000-000000000001'
     order by id desc limit 1),
   'verify:96000000-0000-4000-8000-000000000001',
-  'private evidence records the human decision and reviewer'
+  'private evidence records the review decision and reviewer'
 );
 select is(
   (select manual_video_verified from public.meme_contents
@@ -213,7 +213,7 @@ select lives_ok(
   $$select public.record_instagram_post_video_verification(
     '98000000-0000-4000-8000-000000000001',
     'revoke',
-    'Human review was withdrawn after reinspection.'
+    'Manual review was withdrawn after reinspection.'
   )$$,
   'an operator can revoke prior verification'
 );
@@ -244,7 +244,7 @@ select lives_ok(
   $$select public.record_instagram_post_video_verification(
     '98000000-0000-4000-8000-000000000001',
     'verify',
-    'Second human review confirmed a video slide.'
+    'Second manual review confirmed a video slide.'
   )$$,
   'a revoked post can be explicitly re-verified with new evidence'
 );
@@ -279,7 +279,7 @@ select is(
         'meme_content.instagram_post_video_revoke'
       )),
   3::bigint,
-  'each non-idempotent human decision is audited'
+  'each non-idempotent review decision is audited'
 );
 
 select * from finish();

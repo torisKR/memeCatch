@@ -60,7 +60,7 @@ describe("verified social video previews", () => {
     expect(socialVideoPreview([{ ...post, manual_video_verified: false }])).toBeNull();
   });
 
-  it("allows only an explicitly human-verified /p/ and follows revocation", () => {
+  it("allows only an explicitly manually verified /p/ and follows revocation", () => {
     const post = {
       ...instagram,
       url: "https://www.instagram.com/p/DJiODQnTOfj/",

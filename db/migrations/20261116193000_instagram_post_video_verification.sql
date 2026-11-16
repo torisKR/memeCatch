@@ -1,4 +1,4 @@
--- Human-reviewed media-kind evidence for ambiguous Instagram /p/ posts.
+-- Manually reviewed media-kind evidence for ambiguous Instagram /p/ posts.
 --
 -- The private event ledger is authoritative. The public boolean on
 -- meme_contents is only a small list/cache projection; URL shape, oEmbed,
@@ -12,7 +12,7 @@ alter table public.meme_contents
     check (manual_video_verification_generation >= 0);
 
 comment on column public.meme_contents.manual_video_verified is
-  'Public projection of the latest explicit human video-kind decision for this exact content identity. Managed by private.instagram_post_video_verification_events; never infer from URL, oEmbed, type, or legacy data.';
+  'Public projection of the latest explicit manual video-kind decision for this exact content identity. Managed by private.instagram_post_video_verification_events; never infer from URL, oEmbed, type, or legacy data.';
 comment on column public.meme_contents.manual_video_verification_generation is
   'Managed identity generation for manual video verification. Increments when platform, URL, or external content ID changes so old evidence cannot reactivate.';
 
@@ -35,7 +35,7 @@ create table private.instagram_post_video_verification_events (
 );
 
 comment on table private.instagram_post_video_verification_events is
-  'Append-only operator evidence for human-observed video in an Instagram /p/ post. The latest event for the exact content incarnation and generation is authoritative and revocable. A missing lazy-loaded video element alone is not negative evidence.';
+  'Append-only operator evidence for reviewer-observed video in an Instagram /p/ post. The latest event for the exact content incarnation and generation is authoritative and revocable. A missing lazy-loaded video element alone is not negative evidence.';
 
 create index instagram_post_video_verification_events_content_latest_idx
   on private.instagram_post_video_verification_events (content_id, id desc);

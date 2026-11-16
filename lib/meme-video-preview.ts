@@ -58,7 +58,7 @@ export function socialVideoPreview(
   }
   // Instagram /p/ identifies a generic post. Its URL, oEmbed payload, and
   // legacy media type are not video evidence; only the revocable DB projection
-  // of an explicit human decision can allow the preview.
+  // of an explicit review decision can allow the preview.
   if (!isVerifiedVideoSource(source, content)) {
     return null;
   }

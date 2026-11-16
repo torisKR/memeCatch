@@ -112,7 +112,7 @@ describe("MemeCard", () => {
     view.unmount();
   });
 
-  it("shows a /p/ video button only while human verification is active", () => {
+  it("shows a /p/ video button only while manual verification is active", () => {
     const verified = {
       thumbnail_url: null,
       is_representative: true,

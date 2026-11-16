@@ -11,6 +11,8 @@ import "server-only";
  */
 
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
+import { revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createAdminClient } from "@/lib/db/admin";
 import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
@@ -58,7 +60,9 @@ async function syncMemeContentsAvailability(
     .update({ availability })
     .eq("platform", DISPLAY_PLATFORM[source.platform])
     .eq("content_id", source.external_id ?? "")
-    .eq("type", "embed");
+    .eq("type", "embed")
+    .neq("availability", availability)
+    .select("id");
   if (error) throw new Error("source_content_availability_update_failed");
   // Some legacy entries label Shorts or TikTok URLs as YouTube. Only update
   // those mislabeled rows when both the canonical URL and external ID match.
@@ -69,7 +73,9 @@ async function syncMemeContentsAvailability(
       .eq("platform", "YouTube")
       .eq("content_id", source.external_id)
       .eq("url", source.canonical_url)
-      .eq("type", "embed");
+      .eq("type", "embed")
+      .neq("availability", availability)
+      .select("id");
     if (legacyError) throw new Error("source_content_availability_update_failed");
   }
 }
@@ -375,12 +381,20 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   try {
     youtube = await refreshYouTubeSources(admin, youtubeRows);
   } catch (error) {
-    firstError = error instanceof Error ? error.message : String(error);
+    firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
   try {
     oembed = await refreshOEmbedSources(admin, oembedRows);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
+  }
+
+  // Next.js queues invalidation for the response lifecycle. Retry on every
+  // scheduled run because backend failures can occur after this function returns.
+  try {
+    revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+  } catch {
+    firstError = [firstError, "source_catalog_revalidation_failed"].filter(Boolean).join("; ");
   }
 
   const result: SourceRefreshResult = {

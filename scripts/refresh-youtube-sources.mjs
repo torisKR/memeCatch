@@ -11,6 +11,7 @@
  * 필요 환경변수: YOUTUBE_API_KEY (+ DATABASE_URL)
  */
 import { createRestClient, restAll, loadEnv } from "./source-pipeline-rest.mjs";
+import { isYouTubeRegionBlocked } from "../lib/sources/youtube-region.mjs";
 
 const args = process.argv.slice(2);
 const limitArg = args.find((a) => a.startsWith("--limit="));
@@ -90,7 +91,7 @@ for (let i = 0; i < targets.length; i += 50) {
 
     const embeddable =
       video.status?.privacyStatus === "public" && video.status?.embeddable === true;
-    const blockedKr = video.contentDetails?.regionRestriction?.blocked?.includes("KR") === true;
+    const blockedKr = isYouTubeRegionBlocked(video.contentDetails?.regionRestriction);
     const thumbnails = video.snippet?.thumbnails ?? {};
 
     if (!DRY) {

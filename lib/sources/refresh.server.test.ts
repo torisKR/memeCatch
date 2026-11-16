@@ -265,6 +265,19 @@ describe("source refresh recovery", () => {
     expect(jobInsert).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
   });
 
+  it("marks a video unavailable in Korea when its allow list excludes Korea", async () => {
+    const source = { id: "yt-region", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: ["US"] }]]));
+    const content = query({ data: [{ id: "content" }], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+    expect(result.status).toBe("ok");
+    expect(content.update).toHaveBeenCalledWith({ availability: "region_blocked" });
+  });
+
   it("reports an all-success YouTube run as ok", async () => {
     const source = { id: "yt-3", platform: "youtube", external_id: "mnopqrstuvw", canonical_url: "https://www.youtube.com/watch?v=mnopqrstuvw", embeddable: true, removed_at: null };
     mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [] }]]));

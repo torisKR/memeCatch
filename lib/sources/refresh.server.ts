@@ -11,6 +11,8 @@ import "server-only";
  */
 
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
+import { revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createAdminClient } from "@/lib/db/admin";
 import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
@@ -51,32 +53,40 @@ async function syncMemeContentsAvailability(
   admin: ReturnType<typeof createAdminClient>,
   source: MediaSourceRow,
   availability: "live" | "dead" | "region_blocked",
+  onChanged: () => void,
 ) {
   // 백필이 정규 URL과 content_id를 맞춰두었다는 전제로 둘 다 매칭한다.
-  const { error } = await admin
+  const { data, error } = await admin
     .from("meme_contents")
     .update({ availability })
     .eq("platform", DISPLAY_PLATFORM[source.platform])
     .eq("content_id", source.external_id ?? "")
-    .eq("type", "embed");
+    .eq("type", "embed")
+    .neq("availability", availability)
+    .select("id");
   if (error) throw new Error("source_content_availability_update_failed");
+  if (data?.length) onChanged();
   // Some legacy entries label Shorts or TikTok URLs as YouTube. Only update
   // those mislabeled rows when both the canonical URL and external ID match.
   if (source.platform !== "youtube" && source.external_id) {
-    const { error: legacyError } = await admin
+    const { data: legacyData, error: legacyError } = await admin
       .from("meme_contents")
       .update({ availability })
       .eq("platform", "YouTube")
       .eq("content_id", source.external_id)
       .eq("url", source.canonical_url)
-      .eq("type", "embed");
+      .eq("type", "embed")
+      .neq("availability", availability)
+      .select("id");
     if (legacyError) throw new Error("source_content_availability_update_failed");
+    if (legacyData?.length) onChanged();
   }
 }
 
 async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
+  onChanged: () => void,
 ) {
   const ids = rows
     .map((row) => row.external_id)
@@ -128,7 +138,7 @@ async function refreshYouTubeSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "dead");
+      await syncMemeContentsAvailability(admin, row, "dead", onChanged);
       if (row.external_id) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -166,12 +176,12 @@ async function refreshYouTubeSources(
     if (error) throw new Error("source_refresh_update_failed");
 
     if (!embeddable) {
-      await syncMemeContentsAvailability(admin, row, "dead");
+      await syncMemeContentsAvailability(admin, row, "dead", onChanged);
       hidden += 1;
     } else if (regionBlocked) {
-      await syncMemeContentsAvailability(admin, row, "region_blocked");
+      await syncMemeContentsAvailability(admin, row, "region_blocked", onChanged);
     } else {
-      await syncMemeContentsAvailability(admin, row, "live");
+      await syncMemeContentsAvailability(admin, row, "live", onChanged);
     }
     if (row.external_id) {
       await resolveSourceAcquisitionFailure({
@@ -210,6 +220,7 @@ async function refreshYouTubeSources(
 async function refreshOEmbedSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
+  onChanged: () => void,
 ) {
   const now = new Date().toISOString();
   let checked = 0;
@@ -239,7 +250,7 @@ async function refreshOEmbedSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "live");
+      await syncMemeContentsAvailability(admin, row, "live", onChanged);
       if (row.external_id) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -261,7 +272,7 @@ async function refreshOEmbedSources(
           })
           .eq("id", row.id);
         if (sourceError) throw new Error("source_refresh_update_failed");
-        await syncMemeContentsAvailability(admin, row, "dead");
+        await syncMemeContentsAvailability(admin, row, "dead", onChanged);
         if (row.external_id) {
           await resolveSourceAcquisitionFailure({
             sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -371,16 +382,26 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
   let oembed = { checked: 0, removed: 0, failed: 0 };
   let firstError: string | undefined;
+  let catalogChanged = false;
+  const markCatalogChanged = () => { catalogChanged = true; };
 
   try {
-    youtube = await refreshYouTubeSources(admin, youtubeRows);
+    youtube = await refreshYouTubeSources(admin, youtubeRows, markCatalogChanged);
   } catch (error) {
     firstError = error instanceof Error ? error.message : String(error);
   }
   try {
-    oembed = await refreshOEmbedSources(admin, oembedRows);
+    oembed = await refreshOEmbedSources(admin, oembedRows, markCatalogChanged);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
+  }
+
+  if (catalogChanged) {
+    try {
+      revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+    } catch {
+      firstError = firstError ?? "source_catalog_revalidation_failed";
+    }
   }
 
   const result: SourceRefreshResult = {

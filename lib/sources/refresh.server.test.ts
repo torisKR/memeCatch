@@ -4,9 +4,11 @@ const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   fetchYouTubeVideoStatuses: vi.fn(),
   getOEmbed: vi.fn(),
+  revalidateTag: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 vi.mock("@/lib/db/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock("./youtube.server", () => ({ fetchYouTubeVideoStatuses: mocks.fetchYouTubeVideoStatuses }));
 vi.mock("@/lib/oembed", () => ({
@@ -28,10 +30,10 @@ import { listActiveSourceAcquisitionRecovery, listDueSourceAcquisitionRecovery, 
 function query(result: { data?: unknown; error?: { message: string } | null }) {
   const builder = {
     select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), in: vi.fn(), not: vi.fn(),
-    update: vi.fn(), eq: vi.fn(),
+    update: vi.fn(), eq: vi.fn(), neq: vi.fn(),
     then: undefined,
   } as unknown as Record<string, ReturnType<typeof vi.fn>> & { then: ReturnType<typeof vi.fn> | undefined };
-  for (const method of ["select", "is", "or", "order", "limit", "in", "not", "update", "eq"]) builder[method].mockReturnValue(builder);
+  for (const method of ["select", "is", "or", "order", "limit", "in", "not", "update", "eq", "neq"]) builder[method].mockReturnValue(builder);
   builder.then = vi.fn((resolve) => Promise.resolve(result).then(resolve));
   return builder;
 }
@@ -67,6 +69,50 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it("expires catalog data when a source availability changes", async () => {
+    const source = { id: "yt-cache", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const { client, jobInsert } = admin();
+    const content = query({ data: [{ id: "content-1" }], error: null });
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.youtube.removed).toBe(1);
+    expect(content.neq).toHaveBeenCalledWith("availability", "dead");
+    expect(mocks.revalidateTag).toHaveBeenCalledOnce();
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
+  });
+
+  it("does not expire catalog data when availability is unchanged", async () => {
+    const source = { id: "yt-unchanged", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const { client, jobInsert } = admin();
+    const content = query({ data: [], error: null });
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+
+    await runSourceRefresh();
+
+    expect(content.neq).toHaveBeenCalledWith("availability", "dead");
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it("expires catalog data even if a later availability update fails", async () => {
+    const source = { id: "ig-cache", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null };
+    const { client, jobInsert } = admin();
+    const changed = query({ data: [{ id: "content-1" }], error: null });
+    const failed = query({ data: null, error: { message: "legacy update failed" } });
+    let updates = 0;
+    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? (++updates === 1 ? changed : failed) : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(mocks.revalidateTag).toHaveBeenCalledOnce();
+  });
+
   it("reserves Instagram capacity when TikTok has a large backlog", async () => {
     const tiktok = Array.from({ length: 40 }, (_, index) => ({
       id: `t${index}`, platform: "tiktok", external_id: String(1000000000 + index),

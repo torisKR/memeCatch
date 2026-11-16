@@ -49,19 +49,21 @@ function sourceQuery(rows: unknown[], updateError?: { message: string }) {
   return builder;
 }
 
-function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean } = {}) {
+function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean; pending?: unknown[] } = {}) {
   const stale = sourceQuery(options.stale ?? [], options.updateError ? { message: "update failed" } : undefined);
   const dueRows = sourceQuery(options.due ?? []);
   const jobInsert = vi.fn().mockResolvedValue({ error: options.jobError ? { message: "audit failed" } : null });
+  const jobTable = Object.assign(query({ data: options.pending ?? [], error: null }), { insert: jobInsert });
   const client = {
-    from: vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "media_sources" && (options.due ?? []).length ? dueRows : stale),
+    from: vi.fn((table: string) => table === "job_runs" ? jobTable : table === "media_sources" && (options.due ?? []).length ? dueRows : stale),
     rpc: vi.fn(),
   };
-  return { client, jobInsert };
+  return { client, jobInsert, jobTable };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.revalidateTag.mockReset();
   mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map());
   mocks.getOEmbed.mockResolvedValue({ title: "ok", authorName: "creator" });
   vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([]);
@@ -71,9 +73,9 @@ beforeEach(() => {
 describe("source refresh recovery", () => {
   it("expires catalog data when a source availability changes", async () => {
     const source = { id: "yt-cache", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
-    const { client, jobInsert } = admin();
+    const { client, jobTable } = admin();
     const content = query({ data: [{ id: "content-1" }], error: null });
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : sourceQuery([source]));
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceQuery([source]));
     mocks.createAdminClient.mockReturnValue(client);
 
     const result = await runSourceRefresh();
@@ -86,9 +88,9 @@ describe("source refresh recovery", () => {
 
   it("does not expire catalog data when availability is unchanged", async () => {
     const source = { id: "yt-unchanged", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
-    const { client, jobInsert } = admin();
+    const { client, jobTable } = admin();
     const content = query({ data: [], error: null });
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : sourceQuery([source]));
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceQuery([source]));
     mocks.createAdminClient.mockReturnValue(client);
 
     await runSourceRefresh();
@@ -99,11 +101,11 @@ describe("source refresh recovery", () => {
 
   it("expires catalog data even if a later availability update fails", async () => {
     const source = { id: "ig-cache", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null };
-    const { client, jobInsert } = admin();
+    const { client, jobTable } = admin();
     const changed = query({ data: [{ id: "content-1" }], error: null });
     const failed = query({ data: null, error: { message: "legacy update failed" } });
     let updates = 0;
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? (++updates === 1 ? changed : failed) : sourceQuery([source]));
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? (++updates === 1 ? changed : failed) : sourceQuery([source]));
     mocks.createAdminClient.mockReturnValue(client);
     mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
 
@@ -111,6 +113,31 @@ describe("source refresh recovery", () => {
 
     expect(result.status).toBe("partial");
     expect(mocks.revalidateTag).toHaveBeenCalledOnce();
+  });
+
+  it("retries a failed cache expiry on the next run even without further changes", async () => {
+    const source = { id: "yt-retry", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const first = admin();
+    const changed = query({ data: [{ id: "content-1" }], error: null });
+    first.client.from = vi.fn((table: string) => table === "job_runs" ? first.jobTable : table === "meme_contents" ? changed : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(first.client);
+    mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache offline"); });
+
+    const failed = await runSourceRefresh();
+    expect(failed.status).toBe("partial");
+    expect(failed.error).toContain("source_catalog_revalidation_failed");
+    expect(first.jobInsert).toHaveBeenCalledWith(expect.objectContaining({ job_name: "refresh_catalog_cache_revalidation", ok: false }));
+
+    const second = admin({ pending: [{ id: 42 }] });
+    const unchanged = query({ data: [], error: null });
+    second.client.from = vi.fn((table: string) => table === "job_runs" ? second.jobTable : table === "meme_contents" ? unchanged : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(second.client);
+
+    const retried = await runSourceRefresh();
+    expect(retried.status).toBe("ok");
+    expect(mocks.revalidateTag).toHaveBeenCalledTimes(2);
+    expect(second.jobTable.update).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    expect(second.jobTable.in).toHaveBeenCalledWith("id", [42]);
   });
 
   it("reserves Instagram capacity when TikTok has a large backlog", async () => {
@@ -179,8 +206,8 @@ describe("source refresh recovery", () => {
   it("does not mark a TikTok source live from a generic oEmbed player", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: false, removed_at: "2026-01-01T00:00:00Z" };
     const builder = sourceQuery([source]);
-    const { client, jobInsert } = admin();
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : builder);
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : builder);
     mocks.createAdminClient.mockReturnValue(client);
     mocks.getOEmbed.mockResolvedValueOnce({ title: null, authorName: null });
 
@@ -196,8 +223,8 @@ describe("source refresh recovery", () => {
   it("marks an oEmbed 404 unavailable, including an exactly matching mislabeled entry", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
     const builder = sourceQuery([source]);
-    const { client, jobInsert } = admin();
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : builder);
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : builder);
     mocks.createAdminClient.mockReturnValue(client);
     mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
 
@@ -236,9 +263,9 @@ describe("source refresh recovery", () => {
   it("marks the job partial when YouTube availability synchronization fails", async () => {
     const source = { id: "yt-2", platform: "youtube", external_id: "lmnopqrstuv", canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv", embeddable: true, removed_at: null };
     mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [] }]]));
-    const { client, jobInsert } = admin({ stale: [source] });
+    const { client, jobInsert, jobTable } = admin({ stale: [source] });
     const contentQuery = query({ data: null, error: { message: "availability failed" } });
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? contentQuery : sourceQuery([source]));
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? contentQuery : sourceQuery([source]));
     mocks.createAdminClient.mockReturnValue(client);
 
     const result = await runSourceRefresh();
@@ -266,8 +293,8 @@ describe("source refresh recovery", () => {
     const source = { id: "yt-restored", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: false, removed_at: "2026-11-01T00:00:00Z" };
     mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [] }]]));
     const sourceBuilder = sourceQuery([source]);
-    const { client, jobInsert } = admin();
-    client.from = vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : sourceBuilder);
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : sourceBuilder);
     mocks.createAdminClient.mockReturnValue(client);
 
     const result = await runSourceRefresh();

@@ -3,7 +3,9 @@
 The scheduler calls `GET /api/cron/source-refresh` every 15 minutes. The job
 expires the public catalog cache when it changes a content availability state,
 including when a later update in the same run fails. Provider errors remain
-inconclusive and do not mark a video unavailable.
+inconclusive and do not mark a video unavailable. If expiration fails, the job
+records a retry marker in `job_runs` and retries on a subsequent run. A failure
+to store that marker is reported in the job result and requires operator attention.
 
 Corrections applied directly to the database bypass the admin actions that
 normally expire the cache. After such a correction, an operator can expire the

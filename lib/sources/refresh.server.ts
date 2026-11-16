@@ -315,6 +315,22 @@ export type SourceRefreshResult = {
 
 export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const admin = createAdminClient();
+  // A failed invalidation must survive the request so a later run can retry it.
+  const { data: pendingCacheRuns, error: pendingCacheError } = await admin.from("job_runs")
+    .select("id")
+    .eq("job_name", "refresh_catalog_cache_revalidation")
+    .eq("ok", false)
+    .order("id", { ascending: true })
+    .limit(100);
+  if (pendingCacheError) {
+    return {
+      status: "failed",
+      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
+      oembed: { checked: 0, removed: 0, failed: 0 },
+      error: pendingCacheError.message,
+    };
+  }
+  const pendingCacheIds = (pendingCacheRuns ?? []).map((row) => row.id);
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
   const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
@@ -396,11 +412,29 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
 
-  if (catalogChanged) {
+  if (catalogChanged || pendingCacheIds.length) {
     try {
       revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+      if (pendingCacheIds.length) {
+        // Only clear the markers observed before this run; a concurrent run
+        // may have recorded a new failure after our cache was invalidated.
+        const { error } = await admin.from("job_runs")
+          .update({ ok: true, finished_at: new Date().toISOString() })
+          .eq("job_name", "refresh_catalog_cache_revalidation")
+          .in("id", pendingCacheIds);
+        if (error) firstError = [firstError, "source_catalog_retry_clear_failed", error.message].filter(Boolean).join("; ");
+      }
     } catch {
-      firstError = firstError ?? "source_catalog_revalidation_failed";
+      firstError = [firstError, "source_catalog_revalidation_failed"].filter(Boolean).join("; ");
+      if (catalogChanged) {
+        const { error } = await admin.from("job_runs").insert({
+          job_name: "refresh_catalog_cache_revalidation",
+          finished_at: new Date().toISOString(),
+          ok: false,
+          detail: { reason: "source_catalog_revalidation_failed" },
+        });
+        if (error) firstError = [firstError, "source_catalog_retry_record_failed", error.message].filter(Boolean).join("; ");
+      }
     }
   }
 

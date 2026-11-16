@@ -39,6 +39,41 @@ describe("verified social video previews", () => {
     expect(socialVideoPreview([{ ...instagram, moderation_status: "pending" }])).toBeNull();
   });
 
+  it("withholds ambiguous Instagram /p/ posts, including mixed carousels with a later video", () => {
+    const post = {
+      ...instagram,
+      // DJiODQnTOfj has image slides first and a video on its sixth slide, but
+      // the stored card content has no trusted per-slide media-kind metadata.
+      url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      content_id: "DJiODQnTOfj",
+    };
+
+    expect(socialVideoPreview([post])).toBeNull();
+    expect(socialVideoPreview([{
+      ...post,
+      thumbnail_url: "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+    }])).toBeNull();
+    expect(videoPreview([{
+      ...post,
+      thumbnail_url: "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+    }])).toBeNull();
+  });
+
+  it("keeps Instagram URL forms that unambiguously identify video content", () => {
+    const tv = {
+      ...instagram,
+      url: "https://www.instagram.com/tv/IGTV12345/",
+      content_id: "IGTV12345",
+    };
+
+    expect(socialVideoPreview([tv])).toEqual({
+      platform: "instagram",
+      sourceUrl: "https://www.instagram.com/tv/IGTV12345/",
+      embedUrl: "https://www.instagram.com/tv/IGTV12345/embed/captioned/",
+      contentId: "IGTV12345",
+    });
+  });
+
   it("uses the same TikTok post ID for the card preview and official player", () => {
     const tiktok = {
       ...instagram,

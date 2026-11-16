@@ -17,6 +17,10 @@ export type SocialVideoPreview = {
   contentId: string;
 };
 
+function isUnambiguousVideoSource(source: { platform: string; canonicalUrl: string }): boolean {
+  return source.platform !== "instagram" || /^https:\/\/www\.instagram\.com\/(?:reel|tv)\//.test(source.canonicalUrl);
+}
+
 function representativeContent(contents: readonly PreviewContent[] | null | undefined) {
   const renderable = (contents ?? []).filter(isRenderableContent);
   return renderable.find((item) => item.is_representative) ?? renderable[0] ?? null;
@@ -45,6 +49,12 @@ export function socialVideoPreview(
   ) {
     return null;
   }
+  // Instagram /p/ identifies a generic post: it may be a photo, carousel, or
+  // video. Only URL forms that themselves prove video content may get a video
+  // preview control.
+  if (!isUnambiguousVideoSource(source)) {
+    return null;
+  }
   return {
     platform: source.platform,
     sourceUrl: source.canonicalUrl,
@@ -69,7 +79,7 @@ export function videoPreview(contents: readonly PreviewContent[] | null | undefi
   const content = representativeContent(contents);
   if (!content?.url || !content.content_id || !content.thumbnail_url) return null;
   const source = normalizeSourceUrl(content.url);
-  if (!source || (source.platform !== "instagram" && source.platform !== "tiktok") || source.externalId !== content.content_id) return null;
+  if (!source || (source.platform !== "instagram" && source.platform !== "tiktok") || source.externalId !== content.content_id || !isUnambiguousVideoSource(source)) return null;
   const path = `/api/media/meme-thumbs/verified/${source.platform}/${source.externalId}.jpg`;
   if (content.thumbnail_url === path) return path;
   try {

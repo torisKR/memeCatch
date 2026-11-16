@@ -4,6 +4,8 @@ import { isRenderableContent } from "@/lib/content-availability";
 import { decodeBaselineJpeg } from "@/lib/jpeg-decode";
 import { ownedMemeCardArtPath } from "@/lib/meme-card-art";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
+import { youtubeVideoPreview } from "@/lib/meme-video-preview";
+import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { decodePng, encodePng } from "@/lib/png-raster";
 import type { ShareTimestamp } from "@/lib/share-version";
 import { SITE_URL } from "@/lib/site";
@@ -90,6 +92,11 @@ export function representativeImageUrl(input: {
   if (!content || !isRenderableContent(content)) return null;
   const thumb = content.thumbnail_url?.trim() || null;
   const hasPlaybackUrl = Boolean(content.url?.trim());
+  const platform = sourcePlatformFromReference(content);
+  if (hasPlaybackUrl && (platform === "youtube" || platform === "youtube_shorts")) {
+    const preview = youtubeVideoPreview([content]);
+    return preview ? { url: preview, updatedAt: content.created_at ?? null } : null;
+  }
   const owned = !hasPlaybackUrl ? projectOwnedPath(thumb) : null;
   const art = !hasPlaybackUrl ? ownedMemeCardArtPath(thumb) : null;
   // A playback URL means the page shows the player and this thumbnail is its poster.

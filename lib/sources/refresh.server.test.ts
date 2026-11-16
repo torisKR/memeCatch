@@ -67,6 +67,27 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it("reserves Instagram capacity when TikTok has a large backlog", async () => {
+    const tiktok = Array.from({ length: 40 }, (_, index) => ({
+      id: `t${index}`, platform: "tiktok", external_id: String(1000000000 + index),
+      canonical_url: `https://www.tiktok.com/@a/video/${1000000000 + index}`, embeddable: true, removed_at: null,
+    }));
+    const instagram = { id: "ig1", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null };
+    mocks.createAdminClient.mockReturnValue(admin({ stale: [...tiktok, instagram] }).client);
+    mocks.getOEmbed.mockImplementation(async (url: string) => {
+      if (url.includes("tiktok")) throw new Error("provider unavailable");
+      return { title: "ok", authorName: "creator" };
+    });
+
+    const result = await runSourceRefresh();
+
+    expect(mocks.getOEmbed).toHaveBeenCalledTimes(31);
+    expect(mocks.getOEmbed).toHaveBeenCalledWith(instagram.canonical_url);
+    expect(result.oembed.checked).toBe(31);
+    expect(result.oembed.failed).toBe(30);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ sourceKey: "instagram:ABCdef12345" }), expect.anything());
+  });
+
   it("includes due recovery sources and resolves successful oEmbed attempts", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
     vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([{ sourceKey: "tiktok:1234567890", sourceId: "s1", platform: "tiktok", externalId: "1234567890", canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "provider_transient", lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null }]);
@@ -209,6 +230,7 @@ describe("source refresh recovery", () => {
     expect(sourceBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ removed_at: null, embeddable: true }));
     expect(sourceBuilder.update).toHaveBeenCalledWith({ availability: "live" });
     expect(sourceBuilder.in).toHaveBeenCalledWith("platform", ["youtube", "youtube_shorts"]);
-    expect(sourceBuilder.in).toHaveBeenCalledWith("platform", ["tiktok", "instagram"]);
+    expect(sourceBuilder.in).toHaveBeenCalledWith("platform", ["tiktok"]);
+    expect(sourceBuilder.in).toHaveBeenCalledWith("platform", ["instagram"]);
   });
 });

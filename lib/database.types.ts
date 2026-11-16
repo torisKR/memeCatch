@@ -1470,6 +1470,8 @@ export type Database = {
           created_at: string
           id: string
           is_representative: boolean
+          manual_video_verification_generation: number
+          manual_video_verified: boolean
           meme_id: string
           moderation_status: Database["public"]["Enums"]["submission_status"]
           platform: string | null
@@ -1484,6 +1486,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_representative?: boolean
+          manual_video_verification_generation?: number
+          manual_video_verified?: boolean
           meme_id: string
           moderation_status?: Database["public"]["Enums"]["submission_status"]
           platform?: string | null
@@ -1498,6 +1502,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_representative?: boolean
+          manual_video_verification_generation?: number
+          manual_video_verified?: boolean
           meme_id?: string
           moderation_status?: Database["public"]["Enums"]["submission_status"]
           platform?: string | null
@@ -4127,6 +4133,10 @@ export type Database = {
       }
     }
     Functions: {
+      record_instagram_post_video_verification: {
+        Args: { p_content_id: string; p_decision: string; p_evidence_note: string; p_operation_id: string }
+        Returns: Json
+      }
       reserve_community_upload_storage: {
         Args: { p_user_id: string; p_bytes: number }
         Returns: undefined

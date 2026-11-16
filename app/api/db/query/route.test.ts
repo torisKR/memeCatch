@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const mocks = vi.hoisted(() => ({ execute: vi.fn(), session: vi.fn(), quota: vi.fn() }));
+const mocks = vi.hoisted(() => ({ execute: vi.fn(), session: vi.fn(), quota: vi.fn(), revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag, revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/auth/server", () => ({ ensureAuthSchema: vi.fn(), getAuth: () => ({ api: { getSession: mocks.session } }) }));
 vi.mock("@/lib/db/execute", () => ({ executePlan: mocks.execute }));
 vi.mock("@/lib/rate-limit", () => ({ getClientIp: () => "test", rateLimit: mocks.quota }));
+vi.mock("@/lib/db/server", () => ({ createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: "operator" } } }) }, rpc: async () => ({ data: true, error: null }) }) }));
 
 import { POST } from "./route";
+import { POST as retryCache } from "@/app/api/admin/instagram-video-verification/revalidate/route";
 
 function request(body: unknown) {
   return new NextRequest("https://example.com/api/db/query", {
@@ -17,6 +20,7 @@ function request(body: unknown) {
 const plan = () => ({ op: "select", table: "memes", fields: [{ kind: "star" }], filters: [], orGroups: [], orders: [], limit: null, offset: null });
 
 beforeEach(() => {
+  vi.resetAllMocks();
   mocks.session.mockResolvedValue(null);
   mocks.quota.mockReturnValue({ ok: true });
   mocks.execute.mockResolvedValue({ data: [], error: null, count: null });
@@ -36,6 +40,54 @@ describe("browser database query boundary", () => {
     expect(mocks.execute.mock.calls[0][0]).toMatchObject({ op: "rpc", limit: 500 });
     expect((await POST(request({ plan: { ...rpc, limit: 1001 } }))).status).toBe(400);
     expect(mocks.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("expires catalog and page caches after a video verification or revocation", async () => {
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "revoke" } };
+    const response = await POST(request({ plan: rpc }));
+    expect(response.status).toBe(200);
+    expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("reports a saved decision and the invalidation-only retry endpoint", async () => {
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "verify" } };
+    mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
+    const first = await POST(request({ plan: rpc }));
+    expect(first.status).toBe(202);
+    expect(await first.json()).toMatchObject({ error: null, cacheInvalidationPending: true, cacheRetryPath: "/api/admin/instagram-video-verification/revalidate" });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not replay a verified decision when cache retry follows a newer revocation", async () => {
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: { p_decision: "verify" } };
+    mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
+    expect((await POST(request({ plan: rpc }))).status).toBe(202);
+    expect((await POST(request({ plan: { ...rpc, args: { p_decision: "revoke" } } }))).status).toBe(200);
+    const cacheRequest = new NextRequest("https://example.com/api/admin/instagram-video-verification/revalidate", { method: "POST", headers: { origin: "https://example.com" } });
+    expect((await retryCache(cacheRequest)).status).toBe(200);
+    expect(mocks.execute).toHaveBeenCalledTimes(2);
+    expect(mocks.execute.mock.calls.map(([p]) => p.args.p_decision)).toEqual(["verify", "revoke"]);
+  });
+
+  it("retries rolled-back verification conflicts and returns a retryable error if contention persists", async () => {
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: {} };
+    mocks.execute.mockResolvedValue({ data: null, count: null, error: { message: "conflict", code: "40001", status: 400 } });
+    const response = await POST(request({ plan: rpc }));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("1");
+    expect((await response.json()).error.message).toBe("verification_conflict_retry");
+    expect(mocks.execute).toHaveBeenCalledTimes(3);
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it("does not invalidate caches when verification is rejected", async () => {
+    mocks.execute.mockResolvedValue({ data: null, count: null, error: { message: "operator_required", code: "42501", status: 403 } });
+    const rpc = { ...plan(), op: "rpc", fn: "record_instagram_post_video_verification", args: {} };
+    expect((await POST(request({ plan: rpc }))).status).toBe(403);
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("rejects oversized bodies and excessive limits without contacting the database", async () => {

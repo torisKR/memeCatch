@@ -8,6 +8,7 @@ type PreviewContent = {
   availability?: string | null;
   moderation_status?: string | null;
   is_representative?: boolean | null;
+  manual_video_verified?: boolean | null;
 };
 
 export type SocialVideoPreview = {
@@ -17,8 +18,14 @@ export type SocialVideoPreview = {
   contentId: string;
 };
 
-function isUnambiguousVideoSource(source: { platform: string; canonicalUrl: string }): boolean {
-  return source.platform !== "instagram" || /^https:\/\/www\.instagram\.com\/(?:reel|tv)\//.test(source.canonicalUrl);
+function isVerifiedVideoSource(
+  source: { platform: string; canonicalUrl: string },
+  content: PreviewContent,
+): boolean {
+  if (source.platform !== "instagram") return true;
+  if (/^https:\/\/www\.instagram\.com\/(?:reel|tv)\//.test(source.canonicalUrl)) return true;
+  return /^https:\/\/www\.instagram\.com\/p\//.test(source.canonicalUrl)
+    && content.manual_video_verified === true;
 }
 
 function representativeContent(contents: readonly PreviewContent[] | null | undefined) {
@@ -49,10 +56,10 @@ export function socialVideoPreview(
   ) {
     return null;
   }
-  // Instagram /p/ identifies a generic post: it may be a photo, carousel, or
-  // video. Only URL forms that themselves prove video content may get a video
-  // preview control.
-  if (!isUnambiguousVideoSource(source)) {
+  // Instagram /p/ identifies a generic post. Its URL, oEmbed payload, and
+  // legacy media type are not video evidence; only the revocable DB projection
+  // of an explicit review decision can allow the preview.
+  if (!isVerifiedVideoSource(source, content)) {
     return null;
   }
   return {
@@ -79,7 +86,7 @@ export function videoPreview(contents: readonly PreviewContent[] | null | undefi
   const content = representativeContent(contents);
   if (!content?.url || !content.content_id || !content.thumbnail_url) return null;
   const source = normalizeSourceUrl(content.url);
-  if (!source || (source.platform !== "instagram" && source.platform !== "tiktok") || source.externalId !== content.content_id || !isUnambiguousVideoSource(source)) return null;
+  if (!source || (source.platform !== "instagram" && source.platform !== "tiktok") || source.externalId !== content.content_id || !isVerifiedVideoSource(source, content)) return null;
   const path = `/api/media/meme-thumbs/verified/${source.platform}/${source.externalId}.jpg`;
   if (content.thumbnail_url === path) return path;
   try {

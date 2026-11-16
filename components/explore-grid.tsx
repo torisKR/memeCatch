@@ -55,12 +55,12 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status)";
+    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";

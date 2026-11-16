@@ -53,10 +53,9 @@ async function syncMemeContentsAvailability(
   admin: ReturnType<typeof createAdminClient>,
   source: MediaSourceRow,
   availability: "live" | "dead" | "region_blocked",
-  onChanged: () => void,
 ) {
   // 백필이 정규 URL과 content_id를 맞춰두었다는 전제로 둘 다 매칭한다.
-  const { data, error } = await admin
+  const { error } = await admin
     .from("meme_contents")
     .update({ availability })
     .eq("platform", DISPLAY_PLATFORM[source.platform])
@@ -65,11 +64,10 @@ async function syncMemeContentsAvailability(
     .neq("availability", availability)
     .select("id");
   if (error) throw new Error("source_content_availability_update_failed");
-  if (data?.length) onChanged();
   // Some legacy entries label Shorts or TikTok URLs as YouTube. Only update
   // those mislabeled rows when both the canonical URL and external ID match.
   if (source.platform !== "youtube" && source.external_id) {
-    const { data: legacyData, error: legacyError } = await admin
+    const { error: legacyError } = await admin
       .from("meme_contents")
       .update({ availability })
       .eq("platform", "YouTube")
@@ -79,14 +77,12 @@ async function syncMemeContentsAvailability(
       .neq("availability", availability)
       .select("id");
     if (legacyError) throw new Error("source_content_availability_update_failed");
-    if (legacyData?.length) onChanged();
   }
 }
 
 async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
-  onChanged: () => void,
 ) {
   const ids = rows
     .map((row) => row.external_id)
@@ -138,7 +134,7 @@ async function refreshYouTubeSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "dead", onChanged);
+      await syncMemeContentsAvailability(admin, row, "dead");
       if (row.external_id) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -176,12 +172,12 @@ async function refreshYouTubeSources(
     if (error) throw new Error("source_refresh_update_failed");
 
     if (!embeddable) {
-      await syncMemeContentsAvailability(admin, row, "dead", onChanged);
+      await syncMemeContentsAvailability(admin, row, "dead");
       hidden += 1;
     } else if (regionBlocked) {
-      await syncMemeContentsAvailability(admin, row, "region_blocked", onChanged);
+      await syncMemeContentsAvailability(admin, row, "region_blocked");
     } else {
-      await syncMemeContentsAvailability(admin, row, "live", onChanged);
+      await syncMemeContentsAvailability(admin, row, "live");
     }
     if (row.external_id) {
       await resolveSourceAcquisitionFailure({
@@ -220,7 +216,6 @@ async function refreshYouTubeSources(
 async function refreshOEmbedSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
-  onChanged: () => void,
 ) {
   const now = new Date().toISOString();
   let checked = 0;
@@ -250,7 +245,7 @@ async function refreshOEmbedSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "live", onChanged);
+      await syncMemeContentsAvailability(admin, row, "live");
       if (row.external_id) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -272,7 +267,7 @@ async function refreshOEmbedSources(
           })
           .eq("id", row.id);
         if (sourceError) throw new Error("source_refresh_update_failed");
-        await syncMemeContentsAvailability(admin, row, "dead", onChanged);
+        await syncMemeContentsAvailability(admin, row, "dead");
         if (row.external_id) {
           await resolveSourceAcquisitionFailure({
             sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -315,14 +310,6 @@ export type SourceRefreshResult = {
 
 export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const admin = createAdminClient();
-  // A failed invalidation must survive the request so a later run can retry it.
-  const { data: pendingCacheRuns, error: pendingCacheError } = await admin.from("job_runs")
-    .select("id")
-    .eq("job_name", "refresh_catalog_cache_revalidation")
-    .eq("ok", false)
-    .order("id", { ascending: true })
-    .limit(100);
-  const pendingCacheIds = (pendingCacheRuns ?? []).map((row) => row.id);
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
   const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
@@ -389,47 +376,25 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
   let oembed = { checked: 0, removed: 0, failed: 0 };
-  let firstError: string | undefined = pendingCacheError
-    ? `source_catalog_retry_lookup_failed: ${pendingCacheError.message}`
-    : undefined;
-  let catalogChanged = false;
-  const markCatalogChanged = () => { catalogChanged = true; };
+  let firstError: string | undefined;
 
   try {
-    youtube = await refreshYouTubeSources(admin, youtubeRows, markCatalogChanged);
+    youtube = await refreshYouTubeSources(admin, youtubeRows);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
   try {
-    oembed = await refreshOEmbedSources(admin, oembedRows, markCatalogChanged);
+    oembed = await refreshOEmbedSources(admin, oembedRows);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
 
-  if (catalogChanged || pendingCacheIds.length || pendingCacheError) {
-    try {
-      revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
-      if (pendingCacheIds.length) {
-        // Only clear the markers observed before this run; a concurrent run
-        // may have recorded a new failure after our cache was invalidated.
-        const { error } = await admin.from("job_runs")
-          .update({ ok: true, finished_at: new Date().toISOString() })
-          .eq("job_name", "refresh_catalog_cache_revalidation")
-          .in("id", pendingCacheIds);
-        if (error) firstError = [firstError, "source_catalog_retry_clear_failed", error.message].filter(Boolean).join("; ");
-      }
-    } catch {
-      firstError = [firstError, "source_catalog_revalidation_failed"].filter(Boolean).join("; ");
-      if (catalogChanged) {
-        const { error } = await admin.from("job_runs").insert({
-          job_name: "refresh_catalog_cache_revalidation",
-          finished_at: new Date().toISOString(),
-          ok: false,
-          detail: { reason: "source_catalog_revalidation_failed" },
-        });
-        if (error) firstError = [firstError, "source_catalog_retry_record_failed", error.message].filter(Boolean).join("; ");
-      }
-    }
+  // Next.js queues invalidation for the response lifecycle. Retry on every
+  // scheduled run because backend failures can occur after this function returns.
+  try {
+    revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 });
+  } catch {
+    firstError = [firstError, "source_catalog_revalidation_failed"].filter(Boolean).join("; ");
   }
 
   const result: SourceRefreshResult = {

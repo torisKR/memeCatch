@@ -1,11 +1,12 @@
 # Source refresh and catalog cache
 
-The scheduler calls `GET /api/cron/source-refresh` every 15 minutes. The job
-expires the public catalog cache when it changes a content availability state,
-including when a later update in the same run fails. Provider errors remain
-inconclusive and do not mark a video unavailable. If expiration fails, the job
-records a retry marker in `job_runs` and retries on a subsequent run. A failure
-to store that marker is reported in the job result and requires operator attention.
+The scheduler calls `GET /api/cron/source-refresh` every 15 minutes. Each run
+queues expiration of the public catalog cache, including when source availability
+is unchanged or a later update fails. Next.js applies the expiration after the
+handler runs, so the next scheduled run retries even if a cache backend failure
+occurs after the handler returns. This reduces the effective catalog cache lifetime
+to at most 15 minutes during normal operation. Provider errors remain
+inconclusive and do not mark a video unavailable.
 
 Corrections applied directly to the database bypass the admin actions that
 normally expire the cache. After such a correction, an operator can expire the

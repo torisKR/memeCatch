@@ -49,11 +49,11 @@ function sourceQuery(rows: unknown[], updateError?: { message: string }) {
   return builder;
 }
 
-function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean; pending?: unknown[]; pendingError?: boolean } = {}) {
+function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean } = {}) {
   const stale = sourceQuery(options.stale ?? [], options.updateError ? { message: "update failed" } : undefined);
   const dueRows = sourceQuery(options.due ?? []);
   const jobInsert = vi.fn().mockResolvedValue({ error: options.jobError ? { message: "audit failed" } : null });
-  const jobTable = Object.assign(query({ data: options.pending ?? [], error: options.pendingError ? { message: "lookup failed" } : null }), { insert: jobInsert });
+  const jobTable = { insert: jobInsert };
   const client = {
     from: vi.fn((table: string) => table === "job_runs" ? jobTable : table === "media_sources" && (options.due ?? []).length ? dueRows : stale),
     rpc: vi.fn(),
@@ -86,7 +86,7 @@ describe("source refresh recovery", () => {
     expect(mocks.revalidateTag).toHaveBeenCalledWith("public-meme-catalog", { expire: 0 });
   });
 
-  it("does not expire catalog data when availability is unchanged", async () => {
+  it("retries catalog expiration even when availability is unchanged", async () => {
     const source = { id: "yt-unchanged", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
     const { client, jobTable } = admin();
     const content = query({ data: [], error: null });
@@ -96,7 +96,7 @@ describe("source refresh recovery", () => {
     await runSourceRefresh();
 
     expect(content.neq).toHaveBeenCalledWith("availability", "dead");
-    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+    expect(mocks.revalidateTag).toHaveBeenCalledOnce();
   });
 
   it("expires catalog data even if a later availability update fails", async () => {
@@ -115,44 +115,18 @@ describe("source refresh recovery", () => {
     expect(mocks.revalidateTag).toHaveBeenCalledOnce();
   });
 
-  it("retries a failed cache expiry on the next run even without further changes", async () => {
-    const source = { id: "yt-retry", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
-    const first = admin();
-    const changed = query({ data: [{ id: "content-1" }], error: null });
-    first.client.from = vi.fn((table: string) => table === "job_runs" ? first.jobTable : table === "meme_contents" ? changed : sourceQuery([source]));
-    mocks.createAdminClient.mockReturnValue(first.client);
-    mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache offline"); });
-
-    const failed = await runSourceRefresh();
-    expect(failed.status).toBe("partial");
-    expect(failed.error).toContain("source_catalog_revalidation_failed");
-    expect(first.jobInsert).toHaveBeenCalledWith(expect.objectContaining({ job_name: "refresh_catalog_cache_revalidation", ok: false }));
-
-    const second = admin({ pending: [{ id: 42 }] });
-    const unchanged = query({ data: [], error: null });
-    second.client.from = vi.fn((table: string) => table === "job_runs" ? second.jobTable : table === "meme_contents" ? unchanged : sourceQuery([source]));
-    mocks.createAdminClient.mockReturnValue(second.client);
-
-    const retried = await runSourceRefresh();
-    expect(retried.status).toBe("ok");
-    expect(mocks.revalidateTag).toHaveBeenCalledTimes(2);
-    expect(second.jobTable.update).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
-    expect(second.jobTable.in).toHaveBeenCalledWith("id", [42]);
-  });
-
-  it("continues source checks when the cache retry lookup fails", async () => {
-    const source = { id: "yt-lookup", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
-    const setup = admin({ pendingError: true });
-    const content = query({ data: [], error: null });
-    setup.client.from = vi.fn((table: string) => table === "job_runs" ? setup.jobTable : table === "meme_contents" ? content : sourceQuery([source]));
+  it("retries cache expiration on the next run after an enqueue error", async () => {
+    const setup = admin();
     mocks.createAdminClient.mockReturnValue(setup.client);
+    mocks.revalidateTag.mockImplementationOnce(() => { throw new Error("cache unavailable"); });
 
-    const result = await runSourceRefresh();
+    const first = await runSourceRefresh();
+    const second = await runSourceRefresh();
 
-    expect(result.youtube.removed).toBe(1);
-    expect(result.status).toBe("partial");
-    expect(result.error).toContain("source_catalog_retry_lookup_failed");
-    expect(mocks.revalidateTag).toHaveBeenCalledOnce();
+    expect(first.status).toBe("partial");
+    expect(first.error).toContain("source_catalog_revalidation_failed");
+    expect(second.status).toBe("ok");
+    expect(mocks.revalidateTag).toHaveBeenCalledTimes(2);
   });
 
   it("reserves Instagram capacity when TikTok has a large backlog", async () => {

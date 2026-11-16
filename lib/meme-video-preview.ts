@@ -26,7 +26,16 @@ function representativeContent(contents: readonly PreviewContent[] | null | unde
 export function socialVideoPreview(
   contents: readonly PreviewContent[] | null | undefined,
 ): SocialVideoPreview | null {
-  const content = representativeContent(contents);
+  const renderable = (contents ?? []).filter(isRenderableContent);
+  const representatives = renderable.filter((item) => item.is_representative);
+  // The card and detail queries do not guarantee the same order for tied
+  // representatives, or when there is no representative. Avoid previewing a
+  // different post from the one selected on the detail page.
+  const content = representatives.length === 1
+    ? representatives[0]
+    : representatives.length === 0 && renderable.length === 1
+      ? renderable[0]
+      : null;
   if (!content?.url || !content.content_id) return null;
   const source = normalizeSourceUrl(content.url);
   if (

@@ -52,4 +52,12 @@ describe("verified social video previews", () => {
       contentId: "6833754937747361025",
     });
   });
+
+  it("does not pick an arbitrary post when the representative is ambiguous", () => {
+    const other = { ...instagram, url: "https://www.instagram.com/reel/AbCdEf12345/", content_id: "AbCdEf12345" };
+    expect(socialVideoPreview([instagram, other])).toBeNull();
+    expect(socialVideoPreview([{ ...instagram, is_representative: false }, { ...other, is_representative: false }])).toBeNull();
+    expect(socialVideoPreview([instagram, { ...other, is_representative: false }])?.contentId).toBe(instagram.content_id);
+    expect(socialVideoPreview([{ ...instagram, is_representative: false }])?.contentId).toBe(instagram.content_id);
+  });
 });

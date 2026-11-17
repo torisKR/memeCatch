@@ -565,6 +565,7 @@ export type SourceRefreshResult = {
   oembed: { checked: number; removed: number; failed: number; errors: string[] };
   observations: RefreshObservations;
   recovery_unmatched_due_keys: number;
+  recovery_conflicting_stale_sources: number;
   error?: string;
 };
 
@@ -572,6 +573,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const startedAt = new Date().toISOString();
   const observations = emptyObservations();
   let unmatchedDueKeys = 0;
+  const conflictingStaleIds = new Set<string>();
   const admin = createAdminClient();
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   let activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
@@ -631,14 +633,37 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     { platforms: ["youtube", "youtube_shorts"], limit: YOUTUBE_BATCH_LIMIT },
     { platforms: ["tiktok"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
     { platforms: ["instagram"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
-  ].map(({ platforms, limit }) => {
-    const query = admin.from("media_sources")
-      .select("id, platform, external_id, canonical_url, embeddable, removed_at")
-      .in("platform", platforms)
-      .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`)
-      .order("last_checked_at", { ascending: true, nullsFirst: true })
-      .limit(limit);
-    return deferredSourceIds.length ? query.not("id", "in", deferredSourceIds) : query;
+  ].map(async ({ platforms, limit }) => {
+    const selected: MediaSourceRow[] = [];
+    const seen = new Set<string>();
+    let offset = 0;
+    while (selected.length < limit) {
+      const query = admin.from("media_sources")
+        .select("id, platform, external_id, canonical_url, embeddable, removed_at")
+        .in("platform", platforms)
+        .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`)
+        .order("last_checked_at", { ascending: true, nullsFirst: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + limit - 1);
+      const result = await (deferredSourceIds.length ? query.not("id", "in", deferredSourceIds) : query);
+      if (result.error) return { data: selected, error: result.error };
+      const page = (result.data ?? []) as MediaSourceRow[];
+      let newRows = 0;
+      for (const source of page) {
+        if (seen.has(source.id)) continue;
+        seen.add(source.id);
+        newRows += 1;
+        if (source.external_id && !canChangeRecoveryKey(activeRecovery, source, sourceAcquisitionKey(source.platform, source.external_id))) {
+          conflictingStaleIds.add(source.id);
+          continue;
+        }
+        selected.push(source);
+        if (selected.length >= limit) break;
+      }
+      if (page.length < limit || newRows === 0) break;
+      offset += page.length;
+    }
+    return { data: selected, error: null };
   }));
   const selectError = staleQueries.find((result) => result.error)?.error;
   const stale = staleQueries.flatMap((result) => result.data ?? []);
@@ -650,6 +675,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
       observations,
       recovery_unmatched_due_keys: unmatchedDueKeys,
+      recovery_conflicting_stale_sources: conflictingStaleIds.size,
       error: selectError.message,
     };
   }
@@ -685,6 +711,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       const matches = source ? recoveries.filter((recovery) => recoveryMatchesSource(recovery, source)) : [];
       unmatchedDueKeys += recoveries.length - matches.length;
       if (!source || matches.length === 0) continue;
+      if (source.external_id && !canChangeRecoveryKey(activeRecovery, source, sourceAcquisitionKey(source.platform, source.external_id))) continue;
       const group = isYouTubePlatform(source.platform) ? "youtube" : source.platform;
       const limit = group === "youtube" ? YOUTUBE_BATCH_LIMIT : SOCIAL_PLATFORM_BATCH_LIMIT;
       if (dueCounts[group] >= limit) continue;
@@ -752,6 +779,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     oembed,
     observations,
     recovery_unmatched_due_keys: unmatchedDueKeys,
+    recovery_conflicting_stale_sources: conflictingStaleIds.size,
     ...(firstError ? { error: firstError } : {}),
   };
 

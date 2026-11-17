@@ -34,8 +34,14 @@ and are not automatically resolved or modified. A future or non-retryable key
 for a source continues to defer that source, including when its identity is old.
 This count only covers due keys in source batches actually examined: batches
 are skipped once their platforms' retry slots are full. It is not a total of all
-stale ledger entries. Ordinary stale-source checks are independent of these
-retry keys. If a later source batch fails, already examined due candidates and
+stale ledger entries. Stale-source checks also skip a source when its current
+platform-and-ID recovery key belongs to a different source or identity. Pages
+are read in `last_checked_at, id` order until the remaining slots are filled.
+`detail.recovery_conflicting_stale_sources` counts distinct conflicting stale
+sources encountered, not the total number in the database; it can be nonzero
+even when the job status is `ok`. The conflicting ledger rows are neither
+rewritten nor resolved and require separate inspection or repair. If a later
+source batch fails, already examined due candidates and
 independently selected stale candidates still run; the job is `partial` with
 `source_recovery_candidate_lookup_failed`. Unexamined candidates are not
 resolved or otherwise changed by the failed lookup.

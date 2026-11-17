@@ -30,11 +30,11 @@ import { listActiveSourceAcquisitionRecovery, listDueSourceAcquisitionRecovery, 
 
 function query(result: { data?: unknown; error?: { message: string } | null }) {
   const builder = {
-    select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), in: vi.fn(), not: vi.fn(),
+    select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), range: vi.fn(), in: vi.fn(), not: vi.fn(),
     update: vi.fn(), eq: vi.fn(), neq: vi.fn(),
     then: undefined,
   } as unknown as Record<string, ReturnType<typeof vi.fn>> & { then: ReturnType<typeof vi.fn> | undefined };
-  for (const method of ["select", "is", "or", "order", "limit", "in", "not", "update", "eq", "neq"]) builder[method].mockReturnValue(builder);
+  for (const method of ["select", "is", "or", "order", "limit", "range", "in", "not", "update", "eq", "neq"]) builder[method].mockReturnValue(builder);
   builder.then = vi.fn((resolve) => Promise.resolve(result).then(resolve));
   return builder;
 }
@@ -93,13 +93,133 @@ function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: bool
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.revalidateTag.mockReset();
-  mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map());
-  mocks.getOEmbed.mockImplementation(async (url: string) => oEmbedResult(url));
+  mocks.fetchYouTubeVideoStatuses.mockReset().mockResolvedValue(new Map());
+  mocks.getOEmbed.mockReset().mockImplementation(async (url: string) => oEmbedResult(url));
+  vi.mocked(recordSourceAcquisitionFailure).mockReset().mockResolvedValue({ attemptCount: 1, nextRetryAt: null, recorded: true });
+  vi.mocked(resolveSourceAcquisitionFailure).mockReset().mockResolvedValue(undefined);
   vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([]);
   vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([]);
 });
 
 describe("source refresh recovery", () => {
+  it("skips stale sources with conflicting recovery keys before the limit on repeated provider failures", async () => {
+    const makeSource = (i: number) => {
+      const externalId = String(2100000000 + i);
+      return { id: `stale-${i}`, platform: "tiktok" as const, external_id: externalId, canonical_url: `https://www.tiktok.com/@a/video/${externalId}`, embeddable: true, removed_at: null };
+    };
+    const conflicts = Array.from({ length: 30 }, (_, i) => makeSource(i));
+    const healthy = makeSource(30);
+    const later = makeSource(31);
+    const future = makeSource(32);
+    const quarantine = makeSource(33);
+    const rows = [...conflicts, healthy, later, future, quarantine];
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const futureAt = new Date(Date.now() + 60_000).toISOString();
+    const recovery = (source: typeof healthy, externalId: string, nextRetryAt: string | null) => ({
+      sourceKey: `tiktok:${source.external_id}`, sourceId: source.id, platform: "tiktok" as const,
+      externalId, canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt,
+      lastErrorCode: "provider_transient" as const, lastErrorRetryable: nextRetryAt !== null,
+      lastAttemptedAt: past, resolvedAt: null,
+    });
+    const conflicting = conflicts.map((source, i) => i % 3 === 0
+      ? recovery(source, "old-id", past)
+      : { ...recovery(source, source.external_id, past), sourceId: i % 3 === 1 ? `other-${i}` : null });
+    const futureKey = recovery(future, future.external_id, futureAt);
+    const quarantineKey = recovery(quarantine, quarantine.external_id, null);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue(conflicting);
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([...conflicting, futureKey, quarantineKey]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => {
+      if (table === "job_runs") return jobTable;
+      if (table === "meme_contents") return content;
+      const builder = query({ data: [], error: null });
+      let ids: string[] | null = null;
+      let platforms: string[] = [];
+      let excluded: string[] = [];
+      let from = 0;
+      let to = 29;
+      builder.in.mockImplementation((column: string, values: string[]) => {
+        if (column === "id") ids = values;
+        if (column === "platform") platforms = values;
+        return builder;
+      });
+      builder.not.mockImplementation((column: string, op: string, values: string[]) => {
+        if (column === "id" && op === "in") excluded = values;
+        return builder;
+      });
+      builder.limit.mockImplementation((value: number) => { to = value - 1; return builder; });
+      builder.range = vi.fn((start: number, end: number) => { from = start; to = end; return builder; });
+      builder.then = vi.fn((resolve) => Promise.resolve({
+        data: ids ? rows.filter((row) => ids!.includes(row.id)) : rows.filter((row) => platforms.includes(row.platform) && !excluded.includes(row.id)).slice(from, to + 1),
+        error: null,
+      }).then(resolve));
+      return builder;
+    });
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockRejectedValue(new Error("provider unavailable"));
+
+    const first = await runSourceRefresh();
+    const second = await runSourceRefresh();
+
+    expect(first.status).toBe("partial");
+    expect(second.status).toBe("partial");
+    expect(first.recovery_conflicting_stale_sources).toBe(30);
+    expect(second.recovery_conflicting_stale_sources).toBe(30);
+    expect(mocks.getOEmbed).toHaveBeenCalledTimes(4);
+    expect(mocks.getOEmbed.mock.calls.map(([url]) => url)).toEqual([healthy.canonical_url, later.canonical_url, healthy.canonical_url, later.canonical_url]);
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledTimes(4);
+    expect(vi.mocked(recordSourceAcquisitionFailure).mock.calls.every(([input]) => [healthy.id, later.id].includes(input.sourceId!))).toBe(true);
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+
+    // If the ledger is repaired outside this job, the source becomes eligible
+    // without this run resolving or rewriting its formerly conflicting key.
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([...conflicting.slice(1), futureKey, quarantineKey]);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue(conflicting.slice(1));
+    const afterRepair = await runSourceRefresh();
+    expect(afterRepair.recovery_conflicting_stale_sources).toBe(29);
+    expect(mocks.getOEmbed.mock.calls.slice(4).map(([url]) => url)).toEqual([conflicts[0].canonical_url, healthy.canonical_url, later.canonical_url]);
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+  });
+
+  it("does not classify or mutate sources when the next stale page fails", async () => {
+    const rows = Array.from({ length: 30 }, (_, i) => {
+      const externalId = String(2100000000 + i);
+      return { id: `blocked-${i}`, platform: "tiktok" as const, external_id: externalId, canonical_url: `https://www.tiktok.com/@a/video/${externalId}`, embeddable: true, removed_at: null };
+    });
+    const due = new Date(Date.now() - 60_000).toISOString();
+    const conflicting = rows.map((row) => ({ sourceKey: `tiktok:${row.external_id}`, sourceId: row.id, platform: "tiktok" as const, externalId: "old-id", canonicalUrl: row.canonical_url, attemptCount: 1, nextRetryAt: due, lastErrorCode: "provider_transient" as const, lastErrorRetryable: true, lastAttemptedAt: due, resolvedAt: null }));
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue(conflicting);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => {
+      if (table === "job_runs") return jobTable;
+      if (table === "meme_contents") return content;
+      const builder = query({ data: [], error: null });
+      let platforms: string[] = [];
+      let offset = 0;
+      builder.in.mockImplementation((column: string, values: string[]) => { if (column === "platform") platforms = values; return builder; });
+      builder.range.mockImplementation((from: number) => { offset = from; return builder; });
+      builder.then = vi.fn((resolve) => Promise.resolve(platforms.includes("tiktok") && offset > 0
+        ? { data: null, error: { message: "stale query failed" } }
+        : { data: platforms.includes("tiktok") ? rows : [], error: null }).then(resolve));
+      return builder;
+    });
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("failed");
+    expect(result.recovery_conflicting_stale_sources).toBe(30);
+    expect(mocks.getOEmbed).not.toHaveBeenCalled();
+    expect(mocks.fetchYouTubeVideoStatuses).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+  });
+
   it.each(["all platforms", "TikTok only"])("stops fetching candidates once retry slots are full (%s)", async (scenario) => {
     const specs = [
       ...Array.from({ length: scenario === "all platforms" ? 300 : 0 }, (_, i) => ({ platform: "youtube" as const, externalId: `yt${String(i).padStart(9, "0")}` })),
@@ -198,7 +318,7 @@ describe("source refresh recovery", () => {
     ["youtube", "live"], ["youtube", "missing"], ["youtube", "private"], ["youtube", "unlisted"], ["youtube", "region_blocked"],
     ["youtube_shorts", "live"], ["youtube_shorts", "missing"],
     ["instagram", "live"], ["instagram", "404"], ["tiktok", "live"], ["tiktok", "404"],
-  ] as const)("preserves a mismatched %s platform key after a stale-source %s result", async (platform, outcome) => {
+  ] as const)("excludes a mismatched %s platform key before a stale-source %s result", async (platform, outcome) => {
     const externalId = platform === "youtube" || platform === "youtube_shorts" ? "abcdefghijk" : platform === "instagram" ? "ABCdef12345" : "1234567890";
     const canonicalUrl = platform === "youtube" ? `https://www.youtube.com/watch?v=${externalId}`
       : platform === "youtube_shorts" ? `https://www.youtube.com/shorts/${externalId}`
@@ -221,7 +341,10 @@ describe("source refresh recovery", () => {
     const result = await runSourceRefresh();
 
     expect(result.status).toBe("ok");
-    expect(result.observations[platform].confirmed).toBe(1);
+    expect(result.observations[platform].selected).toBe(0);
+    expect(result.recovery_conflicting_stale_sources).toBe(1);
+    expect(mocks.getOEmbed).not.toHaveBeenCalled();
+    expect(mocks.fetchYouTubeVideoStatuses).not.toHaveBeenCalled();
     expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({ sourceKey: key }), client);
     expect(recordSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({ sourceKey: key }), client);
   });
@@ -240,7 +363,8 @@ describe("source refresh recovery", () => {
     if (platform === "youtube") mocks.fetchYouTubeVideoStatuses.mockRejectedValueOnce(new Error("provider failure"));
     else mocks.getOEmbed.mockRejectedValueOnce(new Error("provider failure"));
     const result = await runSourceRefresh();
-    expect(result.status).toBe("partial");
+    expect(result.status).toBe("ok");
+    expect(result.observations[platform].selected).toBe(0);
     expect(recordSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({ sourceKey: key }), client);
     expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({ sourceKey: key }), client);
   });
@@ -263,8 +387,10 @@ describe("source refresh recovery", () => {
 
     const result = await runSourceRefresh();
 
-    expect(result.status).toBe("partial");
-    expect(result.oembed).toMatchObject({ checked: 1, failed: 1, removed: 0 });
+    expect(result.status).toBe("ok");
+    expect(result.oembed).toMatchObject({ checked: 0, failed: 0, removed: 0 });
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
     expect(recordSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({ sourceKey: key }), client);
     expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({ sourceKey: key }), client);
   });
@@ -281,8 +407,8 @@ describe("source refresh recovery", () => {
 
     const result = await runSourceRefresh();
 
-    expect(result.status).toBe("partial");
-    expect(result.observations.tiktok).toMatchObject({ inconclusive: 1, confirmed: 0 });
+    expect(result.status).toBe("ok");
+    expect(result.observations.tiktok).toMatchObject({ selected: 0, inconclusive: 0, confirmed: 0 });
     expect(recordSourceAcquisitionFailure).not.toHaveBeenCalled();
     expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
   });

@@ -92,12 +92,15 @@ jobs:
     concurrency:
       group: production
       cancel-in-progress: false
-    timeout-minutes: 45
+    # 5 + 5 minutes setup, 95 minutes for deploy/reconciliation, 5 minutes spare.
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 5
         with:
           persist-credentials: false
       - name: Install cloudflared (pinned)
+        timeout-minutes: 5
         env:
           CLOUDFLARED_VERSION: "2026.11.0"
           CLOUDFLARED_SHA256: "5305dbaf62984e92e7daa29cdd6a35a4797edc23385d4c5b8422ff97eb96a19b"
@@ -107,6 +110,7 @@ jobs:
           echo "${CLOUDFLARED_SHA256}  $RUNNER_TEMP/cloudflared.deb" | sha256sum -c -
           sudo dpkg -i "$RUNNER_TEMP/cloudflared.deb" >/dev/null
       - name: Deploy this commit on the OCI VM
+        timeout-minutes: 95
         env:
           TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

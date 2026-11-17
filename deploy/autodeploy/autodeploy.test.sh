@@ -507,8 +507,8 @@ grep -q '^build$' "$test_calls" || fail "final main check did not reach build"
 ! grep -q '^deploy ' "$test_calls" || fail "main change during final CI verification activated image"
 : >"$test_calls"
 
-# Test the actual caller with a fake SSH transport. Only exit 255 starts
-# read-only status retries; no test may issue the deploy command twice.
+# Test the actual caller with fake SSH and a virtual clock. A disconnected or
+# timed-out deploy only triggers read-only status requests, never another deploy.
 cat >"$stub/ssh" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "${@: -1}" >>"$ssh_calls"
@@ -516,44 +516,89 @@ number=0; [[ -f "$ssh_count" ]] && number="$(cat "$ssh_count")"
 number=$((number + 1)); printf '%s\n' "$number" >"$ssh_count"
 IFS=, read -ra responses <<<"$ssh_results"
 rc="${responses[number - 1]:-3}"
-if (( number > 1 )) && [[ "$rc" == 0 && "${ssh_silent:-0}" != 1 ]]; then
-  printf '2026-11-17T17:46:40Z memecatch-autodeploy: verified deployed %s\n' "${ssh_evidence_sha:-$GITHUB_SHA}"
+if (( number > 1 )); then
+  now="$(cat "$test_clock_file")"
+  advance=30
+  (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
+  if [[ -n "${ssh_ready_at:-}" ]]; then
+    if (( ssh_timeout_seconds < 90 )); then advance="$ssh_timeout_seconds"; fi
+    if (( now + advance >= ssh_ready_at )); then advance=$((ssh_ready_at - now)); rc=0; else rc=3; fi
+  fi
+  if [[ "${ssh_clock_backwards:-0}" == 1 ]]; then advance=-1; fi
+  printf '%s\n' "$((now + advance))" >"$test_clock_file"
+  if [[ "$rc" == 0 && "${ssh_silent:-0}" != 1 ]]; then
+    printf '2026-11-17T17:46:40Z memecatch-autodeploy: verified deployed %s\n' "${ssh_evidence_sha:-$GITHUB_SHA}"
+  fi
 fi
 exit "$rc"
 STUB
 cat >"$stub/timeout" <<'STUB'
 #!/usr/bin/env bash
-shift; exec "$@"
+[[ "$1" == --kill-after=* ]] && shift
+duration="$1"; shift
+printf '%s\n' "$duration" >>"$ssh_timeouts"
+export ssh_timeout_seconds="${duration%s}"
+exec "$@"
 STUB
 cat >"$stub/sleep" <<'STUB'
 #!/usr/bin/env bash
-exit 0
+now="$(cat "$test_clock_file")"
+printf '%s\n' "$((now + $1))" >"$test_clock_file"
 STUB
-chmod +x "$stub/ssh" "$stub/timeout" "$stub/sleep"
-ssh_calls="$stub/ssh-calls"; ssh_count="$stub/ssh-count"
-export ssh_calls ssh_count
-for scenario in direct_success direct_success_unverified disconnect_then_success disconnect_then_retry nontransport_failure never_confirmed silent_status wrong_evidence; do
-  : >"$ssh_calls"; rm -f "$ssh_count"; ssh_silent=0; ssh_evidence_sha="$test_head"
+cat >"$stub/date" <<'STUB'
+#!/usr/bin/env bash
+[[ "$1" == +%s ]] || exit 1
+cat "$test_clock_file"
+STUB
+chmod +x "$stub/ssh" "$stub/timeout" "$stub/sleep" "$stub/date"
+ssh_calls="$stub/ssh-calls"; ssh_count="$stub/ssh-count"; ssh_timeouts="$stub/ssh-timeouts"; test_clock_file="$stub/clock"
+export ssh_calls ssh_count ssh_timeouts test_clock_file
+for scenario in direct_success direct_success_unverified disconnect_then_success disconnect_then_retry timed_out_then_success killed_then_success nontransport_failure never_confirmed silent_status wrong_evidence backward_clock; do
+  : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+  ssh_silent=0; ssh_evidence_sha="$test_head"; ssh_clock_backwards=0
   case "$scenario" in
     direct_success) ssh_results=0,0; expected_rc=0; expected_calls=2 ;;
-    direct_success_unverified) ssh_results=0,3,3,3,3,3,3,3,3; expected_rc=1; expected_calls=9 ;;
+    direct_success_unverified) ssh_results=0,3; expected_rc=1; expected_calls=61 ;;
     disconnect_then_success) ssh_results=255,0; expected_rc=0; expected_calls=2 ;;
     disconnect_then_retry) ssh_results=255,255,124,0; expected_rc=0; expected_calls=4 ;;
+    timed_out_then_success) ssh_results=124,0; expected_rc=0; expected_calls=2 ;;
+    killed_then_success) ssh_results=137,0; expected_rc=0; expected_calls=2 ;;
     nontransport_failure) ssh_results=3; expected_rc=3; expected_calls=1 ;;
-    never_confirmed) ssh_results=255,3,3,3,3,3,3,3,3; expected_rc=1; expected_calls=9 ;;
-    silent_status) ssh_results=255,0,0,0,0,0,0,0,0; ssh_silent=1; expected_rc=1; expected_calls=9 ;;
-    wrong_evidence) ssh_results=255,0,0,0,0,0,0,0,0; ssh_evidence_sha=1111111111111111111111111111111111111111; expected_rc=1; expected_calls=9 ;;
+    never_confirmed) ssh_results=255,3; expected_rc=1; expected_calls=61 ;;
+    silent_status) ssh_results=255,$(printf '0,%.0s' {1..60}); ssh_silent=1; expected_rc=1; expected_calls=61 ;;
+    wrong_evidence) ssh_results=255,$(printf '0,%.0s' {1..60}); ssh_evidence_sha=1111111111111111111111111111111111111111; expected_rc=1; expected_calls=61 ;;
+    backward_clock) ssh_results=255,3; ssh_clock_backwards=1; expected_rc=1; expected_calls=2 ;;
   esac
-  export ssh_results ssh_silent ssh_evidence_sha
+  export ssh_results ssh_silent ssh_evidence_sha ssh_clock_backwards
   rc=0
   ( PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
   [[ "$rc" == "$expected_rc" ]] || fail "$scenario returned $rc instead of $expected_rc"
   [[ "$(wc -l <"$ssh_calls" | tr -d ' ')" == "$expected_calls" ]] || fail "$scenario called SSH unexpectedly"
   [[ "$(head -1 "$ssh_calls")" == "$test_head" ]] || fail "$scenario did not deploy the intended SHA"
+  [[ "$(head -1 "$ssh_timeouts")" == 2700s ]] || fail "$scenario initial SSH timeout was not 45 minutes"
   [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "$scenario repeated a deployment"
   if (( expected_calls > 1 )); then
     [[ "$(grep -c "^status $test_head$" "$ssh_calls")" == "$((expected_calls - 1))" ]] || fail "$scenario sent a non-status retry"
   fi
+done
+
+# A long build can finish well after 30 minutes, right at the 45-minute
+# deadline, or too late. The clock and SSH durations are simulated.
+for ready_at in 1950 2699 2700 2701; do
+  : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+  rc=0
+  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at"; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  if (( ready_at <= 2700 )); then
+    [[ "$rc" == 0 && "$(cat "$test_clock_file")" == "$ready_at" ]] || fail "valid evidence at $ready_at seconds was missed"
+  else
+    [[ "$rc" == 1 && "$(cat "$test_clock_file")" == 2700 ]] || fail "late evidence was accepted or deadline exceeded"
+  fi
+  [[ "$(head -1 "$ssh_timeouts")" == 2700s ]] || fail "deadline scenario initial timeout changed"
+  if (( ready_at >= 2699 )); then
+    [[ "$(tail -1 "$ssh_timeouts")" == 45s ]] || fail "final status timeout exceeded remaining window"
+  fi
+  [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "deadline scenario repeated deployment"
+  [[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "deadline scenario sent a non-status retry"
 done
 
 echo "autodeploy OK"

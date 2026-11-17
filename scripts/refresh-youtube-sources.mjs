@@ -12,6 +12,7 @@ import { normalizeSourceUrl } from "./source-url.mjs";
 import { isYouTubeRegionBlocked } from "../lib/sources/youtube-region.mjs";
 import {
   applyYouTubePrivateMetadataPolicy,
+  buildYouTubeMaintenanceRecoveryBlocks,
   classifyYouTubeMaintenanceSource,
   classifyYouTubeRefreshAvailability,
   validateYouTubeVideoBatchExternalIds,
@@ -60,7 +61,7 @@ async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
 /**
  * @param {{
  *   sources: Array<{ id: string, platform: string, external_id: unknown, canonical_url: unknown }>,
- *   activeQuarantinedSourceIds?: ReadonlySet<string>,
+ *   recoveryBlocks?: ReadonlyMap<string, "youtube_source_active_quarantine" | "youtube_source_retry_deferred">,
  *   apiKey: string,
  *   fetchImpl?: typeof fetch,
  *   rest: Function,
@@ -72,7 +73,7 @@ async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
  */
 export async function runRefreshYouTubeSources({
   sources,
-  activeQuarantinedSourceIds = new Set(),
+  recoveryBlocks = new Map(),
   apiKey,
   fetchImpl = fetch,
   rest,
@@ -97,7 +98,7 @@ export async function runRefreshYouTubeSources({
     const sourceError = classifyYouTubeMaintenanceSource(
       source,
       normalizeSourceUrl(source.canonical_url),
-      activeQuarantinedSourceIds,
+      recoveryBlocks,
     );
     if (sourceError) {
       stats.checked += 1;
@@ -222,11 +223,11 @@ async function main(args = process.argv.slice(2)) {
   const rest = createRestClient(env);
   const activeRecovery = await restAll(
     rest,
-    "source_acquisition_recovery?select=source_id&resolved_at=is.null&source_id=not.is.null",
+    "source_acquisition_recovery?select=source_key,source_id,last_error_code,last_error_retryable,next_retry_at&resolved_at=is.null&source_id=not.is.null",
   ).catch(() => {
     throw new Error("youtube_source_quarantine_read_failed");
   });
-  const activeQuarantinedSourceIds = new Set(activeRecovery.map((row) => row.source_id));
+  const recoveryBlocks = buildYouTubeMaintenanceRecoveryBlocks(activeRecovery, Date.now());
   const sources = await restAll(
     rest,
     "media_sources?select=id,platform,external_id,canonical_url&platform=in.(youtube,youtube_shorts)&removed_at=is.null&order=last_checked_at.asc.nullsfirst",
@@ -235,7 +236,7 @@ async function main(args = process.argv.slice(2)) {
   });
   const result = await runRefreshYouTubeSources({
     sources,
-    activeQuarantinedSourceIds,
+    recoveryBlocks,
     apiKey: env.YOUTUBE_API_KEY,
     rest,
     limit,

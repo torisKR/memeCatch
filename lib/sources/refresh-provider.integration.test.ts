@@ -85,3 +85,41 @@ it("updates a valid returned video and marks only the omitted video unavailable"
   expect(content.update).toHaveBeenCalledWith({ availability: "live" });
   expect(content.update).toHaveBeenCalledWith({ availability: "dead" });
 });
+
+it("quarantines a TikTok source when fetched oEmbed HTML exposes a different video ID", async () => {
+  const sourceRow = {
+    id: "tiktok-source",
+    platform: "tiktok",
+    external_id: "1234567890",
+    canonical_url: "https://www.tiktok.com/@a/video/1234567890",
+    embeddable: true,
+    removed_at: null,
+  };
+  const source = query([sourceRow]);
+  const content = query([]);
+  const jobInsert = vi.fn().mockResolvedValue({ error: null });
+  const client = {
+    from: vi.fn((table: string) => table === "job_runs"
+      ? { insert: jobInsert }
+      : table === "meme_contents" ? content : source),
+  };
+  mocks.createAdminClient.mockReturnValue(client);
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+    title: "video",
+    author_name: "creator",
+    html: '<blockquote data-video-id="0987654321"></blockquote>',
+  })));
+
+  const result = await runSourceRefresh();
+
+  expect(result.status).toBe("partial");
+  expect(result.oembed).toMatchObject({ checked: 1, failed: 1, removed: 0, errors: [] });
+  expect(source.update).not.toHaveBeenCalled();
+  expect(content.update).not.toHaveBeenCalled();
+  expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+    sourceKey: `invalid_identity:${sourceRow.id}`,
+    sourceId: sourceRow.id,
+    externalId: null,
+    code: "metadata_mismatch",
+  }), client);
+});

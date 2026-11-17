@@ -61,6 +61,7 @@ function oEmbedResult(url: string, overrides: Record<string, unknown> = {}) {
     embedUrl: null,
     embedHtml: null,
     contentId: normalized.externalId,
+    providerContentId: null,
     title: "ok",
     authorName: "creator",
     ...overrides,
@@ -392,19 +393,19 @@ describe("source refresh recovery", () => {
     expect(second.oembed).toMatchObject({ checked: 1, failed: 0, removed: 0 });
   });
 
-  it("quarantines a successful social response whose identity differs", async () => {
+  it("quarantines a TikTok response with an independently extracted different ID", async () => {
     const source = {
-      id: "ig-response-mismatch", platform: "instagram", external_id: "ABCdef12345",
-      canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null,
+      id: "tt-response-mismatch", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null,
     } as const;
     const sourceBuilder = sourceQuery([source]);
     const content = query({ data: [], error: null });
     const { client, jobTable } = admin();
     client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
     mocks.createAdminClient.mockReturnValue(client);
-    mocks.getOEmbed.mockResolvedValueOnce(oEmbedResult(
-      "https://www.instagram.com/reel/ZZZdef12345/",
-    ));
+    mocks.getOEmbed.mockResolvedValueOnce(oEmbedResult(source.canonical_url, {
+      providerContentId: "0987654321",
+    }));
 
     const result = await runSourceRefresh();
 
@@ -413,6 +414,41 @@ describe("source refresh recovery", () => {
     expect(content.update).not.toHaveBeenCalled();
     expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
       sourceKey: `invalid_identity:${source.id}`,
+      code: "metadata_mismatch",
+    }), client);
+  });
+
+  it("reports a social identity quarantine write failure and continues with the next source", async () => {
+    const invalid = {
+      id: "tt-quarantine-write-failure", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/0987654321", embeddable: true, removed_at: null,
+    } as const;
+    const healthy = {
+      id: "ig-after-failure", platform: "instagram", external_id: "ABCdef12345",
+      canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null,
+    } as const;
+    const sourceBuilder = sourceQuery([invalid, healthy]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    vi.mocked(recordSourceAcquisitionFailure).mockRejectedValueOnce(new Error("recovery unavailable"));
+
+    const result = await runSourceRefresh();
+
+    expect(result.oembed).toMatchObject({
+      checked: 2,
+      failed: 1,
+      removed: 0,
+      errors: [`invalid_identity_quarantine_failed:${invalid.id}`],
+    });
+    expect(mocks.getOEmbed).toHaveBeenCalledTimes(1);
+    expect(mocks.getOEmbed).toHaveBeenCalledWith(healthy.canonical_url);
+    expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", invalid.id);
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", healthy.id);
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledTimes(1);
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `invalid_identity:${invalid.id}`,
       code: "metadata_mismatch",
     }), client);
   });

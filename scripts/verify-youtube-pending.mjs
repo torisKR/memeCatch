@@ -10,6 +10,7 @@ import { createRestClient, restAll, loadEnv } from "./source-pipeline-rest.mjs";
 import { normalizeSourceUrl } from "./source-url.mjs";
 import {
   applyYouTubePrivateMetadataPolicy,
+  buildYouTubeMaintenanceRecoveryBlocks,
   classifyYouTubeMaintenanceSource,
   validateYouTubeVideoBatchExternalIds,
   validateYouTubeVideosListResponse,
@@ -56,7 +57,7 @@ async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
 /**
  * @param {{
  *   sources: Array<{ id: string, platform: string, external_id: unknown, canonical_url: unknown }>,
- *   activeQuarantinedSourceIds?: ReadonlySet<string>,
+ *   recoveryBlocks?: ReadonlyMap<string, "youtube_source_active_quarantine" | "youtube_source_retry_deferred">,
  *   apiKey: string,
  *   fetchImpl?: typeof fetch,
  *   rest: Function,
@@ -68,7 +69,7 @@ async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
  */
 export async function runVerifyYouTubePending({
   sources,
-  activeQuarantinedSourceIds = new Set(),
+  recoveryBlocks = new Map(),
   apiKey,
   fetchImpl = fetch,
   rest,
@@ -94,7 +95,7 @@ export async function runVerifyYouTubePending({
     const sourceError = classifyYouTubeMaintenanceSource(
       source,
       normalizeSourceUrl(source.canonical_url),
-      activeQuarantinedSourceIds,
+      recoveryBlocks,
     );
     if (sourceError) {
       stats.checked += 1;
@@ -196,11 +197,11 @@ async function main(args = process.argv.slice(2)) {
   const rest = createRestClient(env);
   const activeRecovery = await restAll(
     rest,
-    "source_acquisition_recovery?select=source_id&resolved_at=is.null&source_id=not.is.null",
+    "source_acquisition_recovery?select=source_key,source_id,last_error_code,last_error_retryable,next_retry_at&resolved_at=is.null&source_id=not.is.null",
   ).catch(() => {
     throw new Error("youtube_source_quarantine_read_failed");
   });
-  const activeQuarantinedSourceIds = new Set(activeRecovery.map((row) => row.source_id));
+  const recoveryBlocks = buildYouTubeMaintenanceRecoveryBlocks(activeRecovery, Date.now());
   const pendingLinks = await restAll(
     rest,
     "meme_media?select=source_id&review_state=eq.pending",
@@ -216,7 +217,7 @@ async function main(args = process.argv.slice(2)) {
   });
   const result = await runVerifyYouTubePending({
     sources: sources.filter((source) => pendingIds.has(source.id)),
-    activeQuarantinedSourceIds,
+    recoveryBlocks,
     apiKey: env.YOUTUBE_API_KEY,
     rest,
     limit,

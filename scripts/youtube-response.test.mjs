@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   applyYouTubePrivateMetadataPolicy,
+  buildYouTubeMaintenanceRecoveryBlocks,
   classifyYouTubeMaintenanceSource,
   classifyYouTubeRefreshAvailability,
   validateYouTubeVideoBatchExternalIds,
@@ -80,7 +81,7 @@ function availabilityPatch(calls, externalId) {
   return calls.find((call) => call.path.includes(`content_id=eq.${externalId}`))?.body;
 }
 
-async function spawnRunnerCli(scriptName, { quarantineValid = false } = {}) {
+async function spawnRunnerCli(scriptName, { recovery = null } = {}) {
   const temp = await mkdtemp(join(tmpdir(), "memecatch-youtube-cli-"));
   const fixturePath = join(temp, "source-pipeline-rest-fixture.mjs");
   const hooksPath = join(temp, "hooks.mjs");
@@ -88,6 +89,25 @@ async function spawnRunnerCli(scriptName, { quarantineValid = false } = {}) {
   const writesPath = join(temp, "writes.log");
   const invalidSource = source(0, null);
   const validSource = source(1);
+  const recoveryRows = recovery === "quarantine" ? [{
+    source_key: `invalid_identity:${validSource.id}`,
+    source_id: validSource.id,
+    last_error_code: "metadata_mismatch",
+    last_error_retryable: false,
+    next_retry_at: null,
+  }] : recovery === "future" ? [{
+    source_key: `youtube:${validSource.external_id}`,
+    source_id: validSource.id,
+    last_error_code: "provider_transient",
+    last_error_retryable: true,
+    next_retry_at: "9999-01-01T00:00:00.000Z",
+  }] : recovery === "due" ? [{
+    source_key: `youtube:${validSource.external_id}`,
+    source_id: validSource.id,
+    last_error_code: "provider_transient",
+    last_error_retryable: true,
+    next_retry_at: "2000-01-01T00:00:00.000Z",
+  }] : [];
   await writeFile(writesPath, "");
 
   await writeFile(fixturePath, `
@@ -99,7 +119,7 @@ export function createRestClient() {
 }
 export async function restAll(_rest, path) {
   if (path.startsWith("source_acquisition_recovery")) {
-    return ${JSON.stringify(quarantineValid ? [{ source_id: validSource.id }] : [])};
+    return ${JSON.stringify(recoveryRows)};
   }
   if (path.startsWith("meme_media")) return sources.map((row) => ({ source_id: row.id }));
   return sources;
@@ -165,11 +185,12 @@ test("validates batch IDs and explicit status fields", () => {
 
 test("validates maintenance source identity and active quarantine", () => {
   const valid = source(0);
+  const noRecovery = new Map();
   assert.equal(
     classifyYouTubeMaintenanceSource(
       { ...valid, platform: "youtube_shorts" },
       { platform: "youtube", externalId: valid.external_id, canonicalUrl: valid.canonical_url },
-      new Set(),
+      noRecovery,
     ),
     null,
   );
@@ -177,7 +198,7 @@ test("validates maintenance source identity and active quarantine", () => {
     classifyYouTubeMaintenanceSource(
       valid,
       { platform: valid.platform, externalId: valid.external_id, canonicalUrl: valid.canonical_url },
-      new Set(),
+      noRecovery,
     ),
     null,
   );
@@ -185,12 +206,50 @@ test("validates maintenance source identity and active quarantine", () => {
     classifyYouTubeMaintenanceSource(
       valid,
       { platform: valid.platform, externalId: videoId(1), canonicalUrl: valid.canonical_url },
-      new Set(),
+      noRecovery,
     ),
     "youtube_source_identity_inconclusive",
   );
   assert.equal(
-    classifyYouTubeMaintenanceSource(valid, null, new Set([valid.id])),
+    classifyYouTubeMaintenanceSource(
+      valid,
+      null,
+      new Map([[valid.id, "youtube_source_active_quarantine"]]),
+    ),
+    "youtube_source_active_quarantine",
+  );
+});
+
+test("recovery policy blocks permanent identity and future retries but permits due ownership", () => {
+  const sourceUuid = sourceId(0);
+  const invalidIdentity = {
+    source_key: `invalid_identity:${sourceUuid}`,
+    source_id: sourceUuid,
+    last_error_code: "metadata_mismatch",
+    last_error_retryable: false,
+    next_retry_at: null,
+  };
+  const due = {
+    source_key: "youtube:due",
+    source_id: sourceUuid,
+    last_error_code: "provider_transient",
+    last_error_retryable: true,
+    next_retry_at: "2026-11-18T00:00:00.000Z",
+  };
+  const future = {
+    ...due,
+    source_key: "youtube:future",
+    next_retry_at: "2026-11-18T02:00:00.000Z",
+  };
+  const now = Date.parse("2026-11-18T01:00:00.000Z");
+
+  assert.equal(buildYouTubeMaintenanceRecoveryBlocks([due], now).has(sourceUuid), false);
+  assert.equal(
+    buildYouTubeMaintenanceRecoveryBlocks([future, due], now).get(sourceUuid),
+    "youtube_source_retry_deferred",
+  );
+  assert.equal(
+    buildYouTubeMaintenanceRecoveryBlocks([due, invalidIdentity], now).get(sourceUuid),
     "youtube_source_active_quarantine",
   );
 });
@@ -240,7 +299,7 @@ for (const [name, run] of runners) {
     let requestedIds;
     const result = await run({
       sources: [mismatched, quarantined, healthy],
-      activeQuarantinedSourceIds: new Set([quarantined.id]),
+      recoveryBlocks: new Map([[quarantined.id, "youtube_source_active_quarantine"]]),
       apiKey: API_KEY,
       fetchImpl: async (input) => {
         requestedIds = new URL(input).searchParams.get("id");
@@ -642,7 +701,7 @@ test("both runner CLIs load active quarantine and skip its source", async () => 
     "verify-youtube-pending.mjs",
   ]) {
     const { spawned, writes, validSource } = await spawnRunnerCli(scriptName, {
-      quarantineValid: true,
+      recovery: "quarantine",
     });
     assert.equal(spawned.status, 1, `${scriptName} must report quarantined sources`);
     const output = JSON.parse(spawned.stdout.trim().split("\n").at(-1));
@@ -657,6 +716,28 @@ test("both runner CLIs load active quarantine and skip its source", async () => 
       `${spawned.stdout}\n${spawned.stderr}`,
       /cli-test-key|youtube\.com|vid\d{8}/,
     );
+  }
+});
+
+test("both runner CLIs defer future retries and recheck due retryable sources", async () => {
+  for (const scriptName of [
+    "refresh-youtube-sources.mjs",
+    "verify-youtube-pending.mjs",
+  ]) {
+    const future = await spawnRunnerCli(scriptName, { recovery: "future" });
+    const futureOutput = JSON.parse(future.spawned.stdout.trim().split("\n").at(-1));
+    assert.equal(future.spawned.status, 1);
+    assert.deepEqual(futureOutput.errors, [
+      `youtube_source_identity_inconclusive:${sourceId(0)}`,
+      `youtube_source_retry_deferred:${future.validSource.id}`,
+    ]);
+    assert.doesNotMatch(future.writes, /media_sources\?id=eq\./);
+
+    const due = await spawnRunnerCli(scriptName, { recovery: "due" });
+    const dueOutput = JSON.parse(due.spawned.stdout.trim().split("\n").at(-1));
+    assert.equal(due.spawned.status, 1);
+    assert.equal(dueOutput.failed, 1);
+    assert.match(due.writes, new RegExp(`media_sources\\?id=eq\\.${due.validSource.id}`));
   }
 });
 

@@ -83,19 +83,16 @@ async function quarantineInvalidIdentity(
   }, admin);
 }
 
-function oEmbedIdentityMatches(
+function trustedOEmbedIdentityMismatch(
   row: MediaSourceRow,
   oembed: Awaited<ReturnType<typeof getOEmbed>>,
 ) {
-  const normalized = normalizeSourceUrl(oembed.sourceUrl);
-  return Boolean(
-    normalized &&
-    oembed.provider === row.platform &&
-    oembed.contentId === row.external_id &&
-    normalized.platform === row.platform &&
-    normalized.externalId === row.external_id &&
-    normalized.canonicalUrl === row.canonical_url
-  );
+  // TikTok embeds can expose a provider-owned video ID in returned HTML.
+  // Instagram oEmbed has no equivalent independently trustworthy ID, so its
+  // response cannot strengthen the pre-request canonical identity check.
+  return row.platform === "tiktok" &&
+    oembed.providerContentId !== null &&
+    oembed.providerContentId !== row.external_id;
 }
 
 async function syncMemeContentsAvailability(
@@ -304,6 +301,7 @@ async function refreshOEmbedSources(
   let checked = 0;
   let removed = 0;
   let failed = 0;
+  const errors: string[] = [];
 
   for (const row of rows) {
     const attemptStartedAt = new Date();
@@ -314,16 +312,20 @@ async function refreshOEmbedSources(
       try {
         await quarantineInvalidIdentity(admin, row, attemptStartedAt);
       } catch {
-        // The source still fails closed when the quarantine write fails.
+        errors.push(`invalid_identity_quarantine_failed:${row.id}`);
       }
       continue;
     }
     try {
       const oembed = await getOEmbed(row.canonical_url);
-      if (!oEmbedIdentityMatches(row, oembed)) {
-        await quarantineInvalidIdentity(admin, row, attemptStartedAt);
+      if (trustedOEmbedIdentityMismatch(row, oembed)) {
         failed += 1;
         checked += 1;
+        try {
+          await quarantineInvalidIdentity(admin, row, attemptStartedAt);
+        } catch {
+          errors.push(`invalid_identity_quarantine_failed:${row.id}`);
+        }
         continue;
       }
       // TikTok can return a generic player for any ID, including nonexistent
@@ -397,13 +399,13 @@ async function refreshOEmbedSources(
     checked += 1;
   }
 
-  return { checked, removed, failed };
+  return { checked, removed, failed, errors };
 }
 
 export type SourceRefreshResult = {
   status: "ok" | "partial" | "failed";
   youtube: { checked: number; removed: number; hidden: number; failed: number; errors: string[] };
-  oembed: { checked: number; removed: number; failed: number };
+  oembed: { checked: number; removed: number; failed: number; errors: string[] };
   error?: string;
 };
 
@@ -470,7 +472,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     return {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0 },
+      oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
       error: selectError.message,
     };
   }
@@ -485,7 +487,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     return {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0 },
+      oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
       error: dueError.message,
     };
   }
@@ -509,7 +511,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   );
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-  let oembed = { checked: 0, removed: 0, failed: 0 };
+  let oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[] };
   let firstError: string | undefined;
 
   try {

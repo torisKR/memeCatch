@@ -11,6 +11,8 @@ export type OEmbedResult = {
   embedUrl: string | null;
   embedHtml: string | null;
   contentId: string | null;
+  /** ID independently extracted from trusted provider response content, when available. */
+  providerContentId: string | null;
   title: string | null;
   authorName: string | null;
 };
@@ -58,13 +60,13 @@ function safeText(value: unknown) {
     : null;
 }
 
-function getTikTokId(url: URL, html?: string) {
-  return (
-    url.pathname.match(/\/video\/(\d+)/)?.[1] ??
-    html?.match(/data-video-id=["'](\d+)["']/)?.[1] ??
-    html?.match(/\/video\/(\d+)/)?.[1] ??
-    null
-  );
+function getTikTokId(url: URL) {
+  return url.pathname.match(/\/video\/(\d+)/)?.[1] ?? null;
+}
+
+function getTikTokResponseId(html: unknown) {
+  if (typeof html !== "string") return null;
+  return html.match(/data-video-id=["'](\d+)["']/)?.[1] ?? null;
 }
 
 function getYouTubeId(url: URL) {
@@ -250,6 +252,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
       embedUrl: `https://www.youtube-nocookie.com/embed/${target.youtubeId}?rel=0`,
       embedHtml: null,
       contentId: target.youtubeId ?? null,
+      providerContentId: null,
       title: safeText(data.title),
       authorName: safeText(data.author_name),
     };
@@ -263,10 +266,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
       signal: AbortSignal.timeout(8_000),
     });
     const data = await readJson(response);
-    const id = getTikTokId(
-      new URL(target.sourceUrl),
-      typeof data.html === "string" ? data.html : undefined
-    );
+    const id = getTikTokId(new URL(target.sourceUrl));
     if (!id) {
       throw new OEmbedError(
         "TikTok 게시물 ID를 확인하지 못했습니다.",
@@ -280,6 +280,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
       embedUrl: `https://www.tiktok.com/player/v1/${id}?description=1&music_info=1`,
       embedHtml: null,
       contentId: id,
+      providerContentId: getTikTokResponseId(data.html),
       title: safeText(data.title),
       authorName: safeText(data.author_name),
     };
@@ -321,6 +322,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
       contentId:
         new URL(target.sourceUrl).pathname.match(/\/(?:post|t)\/([A-Za-z0-9_-]+)/)?.[1] ??
         null,
+      providerContentId: null,
       title: safeText(data.title),
       authorName: safeText(data.author_name),
     };
@@ -343,6 +345,9 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
             /^\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/
           )?.[1] ?? null
         : null,
+    // Meta's Instagram oEmbed response does not expose an independently
+    // trustworthy post ID. contentId above is request-derived only.
+    providerContentId: null,
     title: safeText(data.title),
     authorName: safeText(data.author_name),
   };

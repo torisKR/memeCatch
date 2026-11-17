@@ -50,7 +50,7 @@ jobs:
           fi
           sudo timeout 180s apt-get install -y ffmpeg             -o Acquire::Retries=3             -o Acquire::http::Timeout=20             -o Acquire::https::Timeout=20
       - run: pnpm test
-      - run: node --test scripts/import-sheet-snapshot.test.mjs scripts/prepare-sheet-source-candidates.test.mjs scripts/youtube-response.test.mjs
+      - run: node --test scripts/import-sheet-snapshot.test.mjs scripts/prepare-sheet-source-candidates.test.mjs scripts/youtube-response.test.mjs scripts/source-publication-contract.test.mjs
       - run: node scripts/check-env-manifest.mjs
       - run: pnpm build
       - run: bash scripts/deploy-oci.test.sh

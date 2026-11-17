@@ -13,12 +13,13 @@ export const BATTLE_PERIOD_LABELS: Record<BattlePeriod, string> = {
   month: "이번 달",
 };
 
-/** 한 기간에 보여 줄 최대 순위 수. */
-export const BATTLE_LIST_LIMIT = 5;
+/** DB 함수가 허용하는 최대 순위 수. 현재 12개 전체를 담고 이후 항목도 이 상한까지 보여 준다. */
+export const BATTLE_LIST_LIMIT = 50;
 
 export type BattleEntry = {
   postId: string;
   title: string;
+  thumbnailUrl: string | null;
   likeCount: number;
   commentCount: number;
   rank: number;
@@ -73,6 +74,7 @@ export function toBattleBoard(period: BattlePeriod, rows: readonly BattleRow[]):
     entries.push({
       postId: row.post_id,
       title: row.title.trim(),
+      thumbnailUrl: null,
       likeCount,
       commentCount,
       rank,

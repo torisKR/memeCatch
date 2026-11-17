@@ -357,7 +357,10 @@ describe("MemeChatbot", () => {
     await submit();
     expect(screen.getByText(unsafeText)).toBeTruthy();
     expect(screen.getByText("<script>title</script>")).toBeTruthy();
-    expect(container.querySelector("script, img")).toBeNull();
+    expect(container.querySelector("script")).toBeNull();
+    expect([...container.querySelectorAll("img")].every((image) =>
+      ["/images/meme-chat/mascot-wave.gif", "/images/meme-chat/mascot-idle.png"].includes(image.getAttribute("src") ?? ""),
+    )).toBe(true);
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.queryByText("unsafe js")).toBeNull();
     expect(screen.queryByText("unsafe local")).toBeNull();
@@ -637,5 +640,31 @@ describe("MemeChatbot", () => {
     fireEvent.click(within(panel).getByRole("button", { name: copy.close }));
     expect(document.activeElement).toBe(screen.getByRole("button", { name: copy.open }));
     expect(document.body.style.overflow).toBe("");
+  });
+});
+
+
+describe("chat conversation shortcuts", () => {
+  it("prefills a starter without requesting anything, then sends it with Enter", async () => {
+    fetchMock.mockResolvedValue(response(result()));
+    render(<MemeChatbot />);
+    const input = openChat();
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(copy.starterOne.replace(/[?]/g, "\\?")) }));
+    expect((input as HTMLTextAreaElement).value).toBe(copy.starterOne);
+    expect(document.activeElement).toBe(input);
+    expect(fetchMock).not.toHaveBeenCalled();
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string).question).toBe(copy.starterOne);
+  });
+
+  it("does not submit Shift+Enter or an IME confirmation", () => {
+    render(<MemeChatbot />);
+    const input = openChat();
+    typeQuestion();
+    fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

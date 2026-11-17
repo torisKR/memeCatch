@@ -26,6 +26,7 @@ describe("toBattleBoard", () => {
     expect(board.totalPosts).toBe(150);
     expect(board.promotionCount).toBe(2);
     expect(board.entries[2].isPromotionCandidate).toBe(false);
+    expect(board.entries.every((entry) => entry.thumbnailUrl === null)).toBe(true);
   });
 
   it("drops malformed rows instead of drawing a wrong ranking", () => {

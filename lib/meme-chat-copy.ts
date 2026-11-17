@@ -2,6 +2,10 @@ import type { MemeChatLocale } from "@/lib/meme-chat";
 
 export const MEME_CHAT_COPY = {
   ko: {
+    starterOne: "중꺾마는 무슨 뜻이야?",
+    starterTwo: "요즘 응원할 때 쓰는 밈 알려줘",
+    starterThree: "친구 취향을 따라 하는 밈이 뭐야?",
+    inputHint: "Enter로 보내기 · Shift+Enter로 줄바꿈",
     subtitle: "밈을 같이 찾아봐요",
     launcherHint: "밈이 궁금할 땐",
     reading: "질문을 확인하고 있어요",
@@ -31,6 +35,10 @@ export const MEME_CHAT_COPY = {
     unavailable: "지금은 답변을 가져오지 못했어요. 다시 시도해 주세요.",
   },
   en: {
+    starterOne: "What does 중꺾마 mean?",
+    starterTwo: "A meme to cheer someone on",
+    starterThree: "A meme about copying a friend’s taste",
+    inputHint: "Enter to send · Shift+Enter for a new line",
     subtitle: "Let's find your meme",
     launcherHint: "Curious about a meme?",
     reading: "Checking your question",
@@ -60,6 +68,10 @@ export const MEME_CHAT_COPY = {
     unavailable: "We couldn't load an answer. Please try again.",
   },
   ja: {
+    starterOne: "「중꺾마」はどういう意味？",
+    starterTwo: "応援するときのミームを教えて",
+    starterThree: "友達の好みをまねするミームは？",
+    inputHint: "Enterで送信 · Shift+Enterで改行",
     subtitle: "一緒にミームを探そう",
     launcherHint: "ミームが気になったら",
     reading: "質問を確認しています",
@@ -89,6 +101,10 @@ export const MEME_CHAT_COPY = {
     unavailable: "回答を取得できませんでした。もう一度お試しください。",
   },
   zh: {
+    starterOne: "中折马是什么意思？",
+    starterTwo: "推荐一个给人加油的梗",
+    starterThree: "模仿朋友品味的梗是什么？",
+    inputHint: "Enter 发送 · Shift+Enter 换行",
     subtitle: "一起找你想要的梗",
     launcherHint: "有不懂的梗？",
     reading: "正在确认你的问题",
@@ -118,6 +134,10 @@ export const MEME_CHAT_COPY = {
     unavailable: "暂时无法获取回答，请重试。",
   },
   "zh-tw": {
+    starterOne: "中折馬是什麼意思？",
+    starterTwo: "推薦一個替人加油的梗",
+    starterThree: "模仿朋友品味的梗是什麼？",
+    inputHint: "Enter 傳送 · Shift+Enter 換行",
     subtitle: "一起找你想要的迷因",
     launcherHint: "有不懂的迷因？",
     reading: "正在確認你的問題",

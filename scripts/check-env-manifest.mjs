@@ -4,6 +4,7 @@ import { join } from "node:path";
 const root = new URL("..", import.meta.url).pathname;
 const manifest = JSON.parse(readFileSync(new URL("./env-manifest.json", import.meta.url), "utf8"));
 const skip = new Set(["node_modules", ".next", ".git", ".omx", ".omo", "coverage", "dist"]);
+const bashAutomaticVariables = new Set(["BASHPID", "BASH_COMMAND"]);
 
 function files(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -54,6 +55,7 @@ for (const path of shellFiles(root)) {
   const names = new Set();
   for (const match of text.matchAll(/\$\{?([A-Z][A-Z0-9_]*)/g)) names.add(match[1]);
   for (const name of names) {
+    if (bashAutomaticVariables.has(name)) continue;
     if (new RegExp(`(^|\\n)\\s*${name}=`).test(text)) continue;
     used.add(name);
   }

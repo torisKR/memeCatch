@@ -227,4 +227,8 @@ if [[ "$alias_location" != "/ja/memes/gnact78h-valid-ja" ]]; then
   exit 1
 fi
 
-echo "localized soft-404 standalone checks passed: missing=404 stale=404 thin=404 valid=200 alias=308"
+"${psql_admin[@]}" -c "delete from public.memes where short_id = 'gnact78h'" >/dev/null
+assert_status "/memes/cssqxwmb-duplicate" 404 missing_korean_alias
+assert_status "/memes/gnact78h-hidink-hungry" 200 curated_canonical
+
+echo "localized soft-404 standalone checks passed: missing=404 stale=404 thin=404 valid=200 alias=308 missing-ko-alias=404 curated-ko=200"

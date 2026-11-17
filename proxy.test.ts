@@ -285,6 +285,62 @@ describe("proxy public meme existence check", () => {
     },
   );
 
+  it.each(["cssqxwmb", "9ajbp6w6"])(
+    "rewrites missing Korean canonical duplicate %s instead of serving the target fallback",
+    async (duplicateShortId) => {
+      dbMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+
+      const response = await proxy(
+        publicRequest(`/memes/${duplicateShortId}-duplicate`),
+      );
+
+      expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-middleware-rewrite")).toContain(
+        "/__missing_public_meme__",
+      );
+      expect(response.headers.get("location")).toBeNull();
+    },
+  );
+
+  it("keeps the Korean curated fallback for the requested canonical representative", async () => {
+    dbMocks.abortSignal.mockResolvedValueOnce({ data: [], error: null });
+
+    const response = await proxy(
+      publicRequest("/memes/gnact78h-hidink-hungry"),
+    );
+
+    expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it.each(["cssqxwmb", "9ajbp6w6"])(
+    "308-redirects Korean canonical duplicate %s when the representative row exists",
+    async (duplicateShortId) => {
+      dbMocks.abortSignal.mockResolvedValueOnce({
+        data: [
+          publicMemeRow({
+            short_id: "gnact78h",
+            slug: "히딩크-나는-아직-배가-고프다",
+          }),
+        ],
+        error: null,
+      });
+
+      const response = await proxy(
+        publicRequest(`/memes/${duplicateShortId}-duplicate`),
+      );
+
+      expect(response.status).toBe(308);
+      expect(new URL(response.headers.get("location")!).pathname).toBe(
+        "/memes/gnact78h-%ED%9E%88%EB%94%A9%ED%81%AC-%EB%82%98%EB%8A%94-%EC%95%84%EC%A7%81-%EB%B0%B0%EA%B0%80-%EA%B3%A0%ED%94%84%EB%8B%A4",
+      );
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    },
+  );
+
   it("rewrites a canonical duplicate when the target translation is unavailable", async () => {
     dbMocks.abortSignal.mockResolvedValueOnce({
       data: [

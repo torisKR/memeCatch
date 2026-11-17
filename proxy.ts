@@ -274,7 +274,7 @@ export async function proxy(request: NextRequest) {
       if (
         !error &&
         data?.length === 0 &&
-        (urlLocale !== null || !isCuratedCoreShortId(targetShortId))
+        (urlLocale !== null || !isCuratedCoreShortId(requestedShortId))
       ) {
         return rewriteMissingDocument();
       }

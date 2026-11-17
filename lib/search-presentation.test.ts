@@ -14,6 +14,7 @@ const catalog = {
   short_id: "6hgbgvxs",
   title: "오히려 좋아",
 };
+const seed = { ...curated, id: "5062885d-2d6f-577c-a7dd-2187b1cf3bd2" };
 
 describe("search presentation identity", () => {
   it("gives only the explicit curated and catalog pair one presentation key", () => {
@@ -38,6 +39,14 @@ describe("search presentation identity", () => {
 
   it("keeps the curated fallback when the catalog item is absent", () => {
     expect(mergeSearchPresentationItems([curated], [])).toEqual([curated]);
+    expect(mergeSearchPresentationItems([curated], [seed])).toEqual([seed]);
+  });
+
+  it("prefers the explicit catalog ID over the database seed in either order and across pages", () => {
+    expect(mergeSearchPresentationItems([curated], [seed, catalog])).toEqual([catalog]);
+    expect(mergeSearchPresentationItems([catalog, seed])).toEqual([catalog]);
+    expect(mergeSearchPresentationItems([seed], [catalog])).toEqual([catalog]);
+    expect(mergeSearchPresentationItems([catalog], [seed])).toEqual([catalog]);
   });
 
   it("replaces an earlier curated item when the catalog item arrives later", () => {

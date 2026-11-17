@@ -43,6 +43,11 @@ describe("explore preview lookup", () => {
     mocks.qualify.mockResolvedValue([]);
     expect(await (await POST(request({ ids: [id] }))).json()).toEqual({ previews: [] });
   });
+  it("returns a public row even when it has no qualified preview", async () => {
+    mocks.query.mockResolvedValue({ data: [{ id, meme_contents: [] }], error: null });
+    mocks.qualify.mockResolvedValue([[]]);
+    expect(await (await POST(request({ ids: [id] }))).json()).toEqual({ previews: [{ id, contents: [] }] });
+  });
   it.each([[], ["not-a-uuid"], Array(25).fill(id)])("rejects invalid or excessive IDs", async (ids) => {
     expect((await POST(request({ ids }))).status).toBe(400);
     expect(mocks.query).not.toHaveBeenCalled();

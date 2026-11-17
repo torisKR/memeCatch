@@ -14,7 +14,7 @@ import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
-import { mergeSearchPresentationItems } from "@/lib/search-presentation";
+import { mergeSearchPresentationItems, searchPresentationKey } from "@/lib/search-presentation";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -282,6 +282,9 @@ export function ExploreGrid({
   const offsetRef = useRef(initialOffset ?? initial.length);
   const hasMoreRef = useRef(startHasMore);
   const itemsRef = useRef(initial);
+  // A failed public recheck cannot displace a visible fallback. Keep the
+  // candidate until the user retries the preview lookup.
+  const pendingReplacementsRef = useRef(new Map<string, MemeListItem>());
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -299,14 +302,26 @@ export function ExploreGrid({
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
       const candidates = batch.items.filter((m) => !seenRef.current.has(m.id));
-      const nextItems = mergeSearchPresentationItems(itemsRef.current, candidates);
-      const nextIds = new Set(nextItems.map((item) => item.id));
-      const fresh = candidates.filter((item) => nextIds.has(item.id));
-      const removedIds = new Set(
-        itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
+      // Check all candidates that can beat the current card. If two arrive in
+      // one page, the lower-priority one is still needed if the winner is no
+      // longer public by the time previews are re-read.
+      const fresh = candidates.filter((item) =>
+        mergeSearchPresentationItems(itemsRef.current, [item]).some((winner) => winner.id === item.id),
       );
       const ids = fresh.map((item) => item.id);
       const verified = await fetchQualifiedPreviews(ids);
+      const existingKeys = new Set(itemsRef.current.map(searchPresentationKey));
+      const eligible = fresh.filter((item) => {
+        if (verified) return Object.hasOwn(verified, item.id);
+        if (!existingKeys.has(searchPresentationKey(item))) return true;
+        pendingReplacementsRef.current.set(item.id, item);
+        return false;
+      });
+      const nextItems = mergeSearchPresentationItems(itemsRef.current, eligible);
+      const nextIds = new Set(nextItems.map((item) => item.id));
+      const removedIds = new Set(
+        itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
+      );
       if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
       for (const item of candidates) seenRef.current.add(item.id);
       if (removedIds.size > 0) {
@@ -337,8 +352,22 @@ export function ExploreGrid({
       const batch = pendingPreviews.slice(0, PAGE_SIZE);
       const verified = await fetchQualifiedPreviews(batch);
       if (verified) {
-        setPreviews((prev) => ({ ...prev, ...verified }));
-        setPendingPreviews((prev) => prev.filter((id) => !batch.includes(id)));
+        const replacements = batch.flatMap((id) => {
+          const candidate = pendingReplacementsRef.current.get(id);
+          pendingReplacementsRef.current.delete(id);
+          return candidate && Object.hasOwn(verified, id) ? [candidate] : [];
+        });
+        const nextItems = mergeSearchPresentationItems(itemsRef.current, replacements);
+        const nextIds = new Set(nextItems.map((item) => item.id));
+        const removedIds = new Set(itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id));
+        itemsRef.current = nextItems;
+        setItems(nextItems);
+        setPreviews((prev) => {
+          const next = { ...prev, ...verified };
+          for (const id of removedIds) delete next[id];
+          return next;
+        });
+        setPendingPreviews((prev) => prev.filter((id) => !batch.includes(id) && !removedIds.has(id)));
       }
     } finally {
       setRetryingPreviews(false);

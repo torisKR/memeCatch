@@ -142,6 +142,15 @@ describe("meme country display", () => {
     expect(results.map((item) => item.short_id)).not.toContain("6hgbgvxs");
   });
 
+  it("prefers the catalog over the database seed in search results", async () => {
+    const seed = { ...meme, id: "5062885d-2d6f-577c-a7dd-2187b1cf3bd2", short_id: "oyj2021k", title: "오히려 좋아" };
+    const catalog = { ...meme, id: "catalog-ohiryeo-row", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const publicFilter = vi.fn().mockResolvedValue({ data: [seed, catalog], error: null });
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select: () => ({ in: publicFilter }) })) });
+    const results = await searchMemes("오히려 좋아");
+    expect(results.map((item) => item.short_id)).toEqual(["6hgbgvxs"]);
+  });
+
   it("does not hide a search catalog failure behind curated cards", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const publicFilter = vi.fn().mockResolvedValue({

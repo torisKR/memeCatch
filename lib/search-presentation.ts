@@ -4,11 +4,11 @@ type SearchPresentationItem = {
 };
 
 /** List-display identity only. Do not use this map for routing or canonical URLs. */
-const CURATED_CATALOG_EQUIVALENTS: Readonly<Record<string, string>> = {
-  oyj2021k: "6hgbgvxs",
-};
+const CURATED_CATALOG_EQUIVALENTS = new Map<string, string>([
+  ["oyj2021k", "6hgbgvxs"],
+]);
 const CATALOG_EQUIVALENT_SHORT_IDS = new Set(
-  Object.values(CURATED_CATALOG_EQUIVALENTS),
+  CURATED_CATALOG_EQUIVALENTS.values(),
 );
 
 function isCuratedItem(item: SearchPresentationItem): boolean {
@@ -17,12 +17,17 @@ function isCuratedItem(item: SearchPresentationItem): boolean {
 
 export function searchPresentationKey(item: SearchPresentationItem): string {
   const catalogShortId =
-    CURATED_CATALOG_EQUIVALENTS[item.short_id]
+    CURATED_CATALOG_EQUIVALENTS.get(item.short_id)
     ?? (CATALOG_EQUIVALENT_SHORT_IDS.has(item.short_id)
       ? item.short_id
       : null);
 
   return catalogShortId ? `catalog:${catalogShortId}` : `short:${item.short_id}`;
+}
+
+function preference(item: SearchPresentationItem): number {
+  if (CATALOG_EQUIVALENT_SHORT_IDS.has(item.short_id)) return 2;
+  return isCuratedItem(item) ? 0 : 1;
 }
 
 export function mergeSearchPresentationItems<
@@ -35,7 +40,7 @@ export function mergeSearchPresentationItems<
   for (const item of items) {
     const key = searchPresentationKey(item);
     const current = winners.get(key);
-    if (!current || (isCuratedItem(current) && !isCuratedItem(item))) {
+    if (!current || preference(item) > preference(current)) {
       winners.set(key, item);
     }
   }

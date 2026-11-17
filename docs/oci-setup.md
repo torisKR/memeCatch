@@ -121,6 +121,22 @@ Pieces and where they live:
 | Host key pin | secret `DEPLOY_KNOWN_HOSTS` | `StrictHostKeyChecking=yes` |
 | Access token | secrets `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | passed to cloudflared through env, never on the command line |
 
+The deploy runner reads these variables (also documented in `scripts/env-manifest.json`):
+
+| Variable | Source | Purpose |
+| --- | --- | --- |
+| `DEPLOY_HOST` | GitHub `production` environment variable `DEPLOY_HOST` | Cloudflare Access SSH hostname; it is passed to the deploy step. |
+| `GITHUB_SHA` | GitHub Actions automatically supplies it | Full commit SHA requested from the VM agent. |
+| `RUNNER_TEMP` | GitHub Actions automatically supplies it | Runner temporary directory where the workflow writes `deploy_key` and `known_hosts`. |
+
+For illustration only, a runner environment might contain the following non-production values; the SHA and temporary path are supplied by Actions, not configured in the app's `.env`:
+
+```text
+DEPLOY_HOST=deploy.example.invalid
+GITHUB_SHA=0000000000000000000000000000000000000000
+RUNNER_TEMP=/tmp/example-runner-temp
+```
+
 Pull requests (including forks) never run the deploy job, and the `production` environment only serves `main`. A leaked deploy key plus Access token can do one thing: ask the VM to deploy a commit that is on `origin/main` and passed CI.
 
 The agent (`deploy/autodeploy/autodeploy.sh`) accepts only the full current `origin/main` commit SHA, refuses to downgrade, checks the CI `check` run itself, and never auto-deploys a commit that adds files under `db/migrations/`. It verifies the latest main and successful CI again after the image build, immediately before activation. If either check or the migration diff cannot be verified, activation is refused. When migrations are detected, the job fails with the file list; apply them, then:

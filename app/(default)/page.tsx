@@ -74,7 +74,7 @@ export default async function Home() {
       <div className={battleBoards.length > 0 ? "xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start" : undefined}>
         <HomeExperience locale="ko" entries={entries} />
         {battleBoards.length > 0 ? (
-          <aside className="px-4 pb-8 xl:sticky xl:top-20 xl:pr-4 xl:pl-0">
+          <aside className="px-4 pb-8 xl:pr-4 xl:pl-0">
             <CommunityMemeBattle boards={battleBoards} />
           </aside>
         ) : null}

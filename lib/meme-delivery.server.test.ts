@@ -79,4 +79,13 @@ describe("getReviewedMemeMediaSources", () => {
     });
     await expect(getReviewedMemeMediaSources("meme-3")).resolves.toEqual({ ok: true, sources: [] });
   });
+
+  it("fails closed for a malformed or invalid-enum ledger row", async () => {
+    const badRow = {
+      review_state: "approved", rights_basis: "invalid-rights",
+      media_sources: { platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, public_status: "public", removed_at: null, last_checked_at: null },
+    };
+    createAdminClient.mockReturnValue({ from: vi.fn(() => query({ data: [badRow], error: null })) });
+    await expect(getReviewedMemeMediaSources("meme-4")).resolves.toEqual({ ok: false, sources: [] });
+  });
 });

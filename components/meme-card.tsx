@@ -26,7 +26,8 @@ export type { MemeCardModel, MemeCardProps, MemeCardTitleSize };
 export function MemeCard(props: MemeCardProps) {
   if (props.staticMarkup) return <PosterMemeCard {...props} />;
   const { meme, href, priority = false, locale = "ko", titleSize = "grid" } = props;
-  const socialPreview = socialVideoPreview(meme.meme_contents);
+  const previewContents = props.previewContents === undefined ? meme.meme_contents : props.previewContents;
+  const socialPreview = socialVideoPreview(previewContents);
 
   return (
     <div className="isolate relative min-w-0">
@@ -43,7 +44,7 @@ export function MemeCard(props: MemeCardProps) {
           year={meme.origin_year}
           locale={locale}
           art={memeCardArtFromMeme(meme)}
-          videoPreview={videoPreview(meme.meme_contents)}
+          videoPreview={videoPreview(previewContents)}
           priority={priority}
           titleSize={titleSize}
         />

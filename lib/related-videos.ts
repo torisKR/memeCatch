@@ -44,7 +44,9 @@ export function relatedVideoIdentity(content: RelatedVideoContent): string | nul
     (platform === "tiktok" || platform === "instagram") &&
     socialVideoPreview([content]) !== null
   ) {
-    return `${platform}:${content.content_id}`;
+    return platform === "instagram" && normalized
+      ? `instagram:${normalized.canonicalUrl}`
+      : `${platform}:${content.content_id}`;
   }
 
   return null;

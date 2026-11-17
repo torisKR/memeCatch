@@ -28,6 +28,9 @@ vi.mock("@/lib/meme-translations", async (importOriginal) => {
 });
 
 vi.mock("@/lib/meme-delivery.server", () => delivery);
+vi.mock("@/lib/korean-media-snapshot.server", () => ({
+  getKoreanMediaSnapshot: async () => ({ status: "ok", media: { meme_contents: [], meme_sources: [] } }),
+}));
 
 import { generateMetadata as generateKoreanMemeMetadata } from "@/app/(default)/memes/[key]/page";
 import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale]/memes/[key]/page";

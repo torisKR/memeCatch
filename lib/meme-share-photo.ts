@@ -68,6 +68,7 @@ export type SharePhotoSource = {
   moderation_status?: string | null;
   is_representative?: boolean | null;
   manual_video_verified?: boolean | null;
+  type?: string | null;
   created_at?: ShareTimestamp | null;
 };
 
@@ -96,7 +97,7 @@ export function representativeImageUrl(input: {
     reviewedMediaSources: input.reviewedMediaSources,
   });
   const content = delivery.representative;
-  if (!content || !isRenderableContent(content)) return null;
+  if (!content || !delivery.embeddingAllowed || !isRenderableContent(content)) return null;
   const thumb = content.thumbnail_url?.trim() || null;
   const hasPlaybackUrl = Boolean(content.url?.trim());
   const platform = sourcePlatformFromReference(content);

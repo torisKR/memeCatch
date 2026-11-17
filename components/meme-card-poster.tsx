@@ -40,6 +40,8 @@ export type MemeCardModel = {
 
 export type MemeCardProps = {
   meme: MemeCardModel;
+  /** Optional server-qualified video candidates; art still uses the original card. */
+  previewContents?: MemeCardModel["meme_contents"];
   href?: string;
   priority?: boolean;
   rank?: number;

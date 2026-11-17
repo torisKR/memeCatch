@@ -100,8 +100,9 @@ export async function loadKoreanShareCard(key: string): Promise<MemeShareCardCon
         }), document.meme.id, document.meme.meme_contents);
       case "curated":
         return cardFromCurated(document.meme);
-      case "unavailable":
       case "missing":
+        return null;
+      case "unavailable":
         break;
       default: {
         const unreachable: never = document;

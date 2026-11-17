@@ -12,6 +12,7 @@ import { SearchInput } from "./search-input";
 import { MemeReferenceSearch } from "@/components/meme-reference-search";
 import { hasPublicListing } from "@/lib/thin-meme";
 import { koreanPageShare } from "@/lib/korean-share-metadata";
+import { qualifySearchPreviews } from "@/lib/search-preview.server";
 
 const SEARCH_DESCRIPTION =
   "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
@@ -40,6 +41,7 @@ export default async function SearchPage({ searchParams }: Props) {
   // 인기 검색어(입력창 하단 칩)와 폴백 그리드가 같은 급상승 쿼리를 공유한다 — 별도 쿼리 추가 금지.
   const trending = await getTrendingMemes(8);
   const popularTerms = trending.map((meme) => meme.title);
+  const previews = await qualifySearchPreviews(needsFallback ? trending.slice(0, 6) : results);
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
@@ -66,9 +68,9 @@ export default async function SearchPage({ searchParams }: Props) {
           </p>
           <TrackedBlock event="search_result_click" params={{ query }}>
             <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
-              {results.map((meme) => (
+              {results.map((meme, index) => (
                 <li key={meme.id} className="min-w-0">
-                  <MemeCard meme={meme} />
+                  <MemeCard meme={meme} previewContents={previews[index]} />
                 </li>
               ))}
             </ul>
@@ -122,9 +124,9 @@ export default async function SearchPage({ searchParams }: Props) {
             {SECTION_TITLES.trending}
           </h2>
           <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
-            {trending.slice(0, 6).map((meme) => (
+            {trending.slice(0, 6).map((meme, index) => (
               <li key={meme.id} className="min-w-0">
-                <MemeCard meme={meme} />
+                <MemeCard meme={meme} previewContents={previews[index]} />
               </li>
             ))}
           </ul>

@@ -105,11 +105,55 @@ describe("source refresh recovery", () => {
       lastErrorRetryable: true, nextRetryAt: new Date(Date.now() - 1_000).toISOString(),
     } as const;
     vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([otherDueFailure]);
-    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([quarantine, otherDueFailure]);
+    vi.mocked(listActiveSourceAcquisitionRecovery)
+      .mockResolvedValueOnce([quarantine, otherDueFailure])
+      .mockResolvedValueOnce([quarantine, otherDueFailure]);
     mocks.fetchYouTubeVideoStatuses.mockResolvedValueOnce(new Map([[valid.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
     const nextResult = await runSourceRefresh();
     expect(sourceBuilder.not).toHaveBeenCalledWith("id", "in", [invalid.id]);
     expect(nextResult.youtube).toMatchObject({ checked: 1, failed: 0 });
+  });
+
+  it("releases a repaired identity quarantine before rechecking the source with YouTube", async () => {
+    const source = { id: "yt-repaired", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const quarantine = {
+      sourceKey: "invalid_identity:yt-repaired", sourceId: source.id, platform: "youtube", externalId: null,
+      canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt: null, lastErrorCode: "metadata_mismatch",
+      lastErrorRetryable: false, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    } as const;
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([quarantine]).mockResolvedValueOnce([]);
+    const { client, jobTable } = admin();
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValueOnce(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
+
+    const result = await runSourceRefresh();
+
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ sourceKey: quarantine.sourceKey }), client);
+    expect(mocks.fetchYouTubeVideoStatuses).toHaveBeenCalledWith([source.external_id]);
+    expect(result.youtube).toMatchObject({ checked: 1, failed: 0, removed: 0 });
+  });
+
+  it("keeps quarantine when the repaired ID disagrees with the source URL", async () => {
+    const source = { id: "yt-mismatch", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv", embeddable: true, removed_at: null };
+    const quarantine = {
+      sourceKey: "invalid_identity:yt-mismatch", sourceId: source.id, platform: "youtube", externalId: null,
+      canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt: null, lastErrorCode: "metadata_mismatch",
+      lastErrorRetryable: false, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    } as const;
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([quarantine]).mockResolvedValueOnce([quarantine]);
+    const { client, jobTable } = admin();
+    const sourceBuilder = sourceQuery([source]);
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    await runSourceRefresh();
+
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(mocks.fetchYouTubeVideoStatuses).not.toHaveBeenCalled();
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
   });
 
   it("keeps source and content unchanged when the YouTube response is inconclusive", async () => {

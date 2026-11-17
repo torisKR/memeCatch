@@ -154,10 +154,11 @@ export async function runRefreshYouTubeSources({
       const embeddable = isPublic && video.status.embeddable;
       const blockedKr = isYouTubeRegionBlocked(video.contentDetails?.regionRestriction);
       const availability = classifyYouTubeRefreshAvailability(video.status, blockedKr);
+      const projectBeforeSource = isPrivate || !isPublic || blockedKr;
       const thumbnails = video.snippet?.thumbnails ?? {};
 
-      if (isPrivate) {
-        await syncAvailability(source, "dead");
+      if (projectBeforeSource) {
+        await syncAvailability(source, availability);
       }
       if (!dryRun) {
         await safeRest(rest, `media_sources?id=eq.${source.id}`, {
@@ -192,7 +193,7 @@ export async function runRefreshYouTubeSources({
       } else if (!isPublic || (!blockedKr && !embeddable)) {
         stats.hidden += 1;
       }
-      if (!isPrivate) {
+      if (!projectBeforeSource) {
         await syncAvailability(source, availability);
       }
     }

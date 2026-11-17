@@ -6,8 +6,15 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 OUTPUT_DIR="${SOURCE_DISCOVERY_OUTPUT_DIR:-output/source-discovery}"
-mkdir -p "$OUTPUT_DIR"
+if ! mkdir -p "$OUTPUT_DIR"; then
+  echo "source discovery log directory unavailable" >&2
+  exit 1
+fi
 LOG="$OUTPUT_DIR/$(date +%Y-%m-%d).log"
+if ! : >>"$LOG"; then
+  echo "source discovery log unavailable" >&2
+  exit 1
+fi
 FAILED=0
 
 {

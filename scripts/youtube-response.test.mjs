@@ -388,11 +388,36 @@ test("refresh: private, unlisted, link-only, and region-blocked PATCHes match cr
   assert.deepEqual(availabilityPatch(calls, videoId(3)), { availability: "region_blocked" });
 });
 
-for (const [name, items] of [
-  ["missing", []],
-  ["private", [video(videoId(0), "private", false)]],
+for (const { name, items, availability, removed, hidden, removedAt } of [
+  { name: "missing", items: [], availability: "dead", removed: 1, hidden: 0, removedAt: NOW },
+  {
+    name: "private",
+    items: [video(videoId(0), "private", false)],
+    availability: "dead",
+    removed: 1,
+    hidden: 0,
+    removedAt: NOW,
+  },
+  {
+    name: "unlisted",
+    items: [video(videoId(0), "unlisted", false)],
+    availability: "dead",
+    removed: 0,
+    hidden: 1,
+    removedAt: null,
+  },
+  {
+    name: "region-blocked",
+    items: [video(videoId(0), "public", true, {
+      contentDetails: { duration: "PT1M30S", regionRestriction: { blocked: ["KR"] } },
+    })],
+    availability: "region_blocked",
+    removed: 0,
+    hidden: 0,
+    removedAt: null,
+  },
 ]) {
-  test(`refresh: ${name} retries after source removal PATCH fails`, async () => {
+  test(`refresh: ${name} retries after source status PATCH fails`, async () => {
     const firstCalls = [];
     const failingRest = async (path, options) => {
       firstCalls.push({ path, body: JSON.parse(options.body) });
@@ -411,7 +436,7 @@ for (const [name, items] of [
       /^Error: youtube_source_write_failed$/,
     );
     assert.match(firstCalls[0].path, /^meme_contents\?/);
-    assert.deepEqual(firstCalls[0].body, { availability: "dead" });
+    assert.deepEqual(firstCalls[0].body, { availability });
     assert.equal(firstCalls[1].path, `media_sources?id=eq.${sourceId(0)}`);
 
     const retryRecorder = restRecorder();
@@ -422,10 +447,11 @@ for (const [name, items] of [
       rest: retryRecorder.rest,
       now: NOW,
     });
-    assert.equal(retryResult.removed, 1);
+    assert.equal(retryResult.removed, removed);
+    assert.equal(retryResult.hidden, hidden);
     assert.match(retryRecorder.calls[0].path, /^meme_contents\?/);
     assert.equal(retryRecorder.calls[1].path, `media_sources?id=eq.${sourceId(0)}`);
-    assert.equal(sourcePatch(retryRecorder.calls, sourceId(0)).removed_at, NOW);
+    assert.equal(sourcePatch(retryRecorder.calls, sourceId(0)).removed_at, removedAt);
   });
 }
 
@@ -574,4 +600,34 @@ exit 9
   assert.match(log, /YouTube pending 검증 실패 \(exit=9\)/);
   assert.match(log, /후보 수집·검증 실패/);
   assert.doesNotMatch(log, /후보 수집·검증 완료/);
+});
+
+test("daily discovery exits before running steps when the log directory is unavailable", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "memecatch-daily-log-failure-"));
+  const binDir = join(temp, "bin");
+  const marker = join(temp, "node-ran");
+  await mkdir(binDir, { recursive: true });
+  const fakeNode = join(binDir, "node");
+  await writeFile(fakeNode, `#!/bin/bash
+touch ${JSON.stringify(marker)}
+exit 0
+`);
+  await chmod(fakeNode, 0o755);
+
+  const scriptPath = new URL("./daily-source-discovery.sh", import.meta.url).pathname;
+  const spawned = spawnSync("bash", [scriptPath], {
+    cwd: new URL("..", import.meta.url).pathname,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH}`,
+      SOURCE_DISCOVERY_OUTPUT_DIR: "/dev/null",
+    },
+  });
+  const tempEntries = await readdir(temp);
+  await rm(temp, { recursive: true, force: true });
+
+  assert.notEqual(spawned.status, 0);
+  assert.match(spawned.stderr, /source discovery log directory unavailable/);
+  assert.equal(tempEntries.includes("node-ran"), false);
 });

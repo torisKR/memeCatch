@@ -15,7 +15,7 @@ import { getOEmbed, OEmbedError } from "@/lib/oembed";
 import { revalidateTag } from "next/cache";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createAdminClient } from "@/lib/db/admin";
-import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
+import { isYouTubePlatform, normalizeSourceUrl, type MediaSourcePlatform } from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
 import { isYouTubeRegionBlocked } from "./youtube-region.mjs";
 import {
@@ -358,7 +358,39 @@ export type SourceRefreshResult = {
 export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const admin = createAdminClient();
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
-  const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
+  let activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
+  const identityQuarantines = activeRecovery.filter((row) =>
+    row.sourceId && row.sourceKey === `invalid_identity:${row.sourceId}` && row.lastErrorCode === "metadata_mismatch",
+  );
+  if (identityQuarantines.length > 0) {
+    // A repaired ID and canonical URL only release the quarantine; the source
+    // is still checked with its provider before any availability is changed.
+    const repairAttempt = new Date();
+    for (let offset = 0; offset < identityQuarantines.length; offset += 500) {
+      const batch = identityQuarantines.slice(offset, offset + 500);
+      const { data, error } = await admin.from("media_sources")
+        .select("id, platform, external_id, canonical_url")
+        .in("id", batch.map((row) => row.sourceId));
+      if (error) throw new Error("source_identity_repair_lookup_failed");
+      const byId = new Map((data ?? []).map((row) => [row.id, row]));
+      for (const recovery of batch) {
+        if (!recovery.sourceId) continue;
+        const source = byId.get(recovery.sourceId);
+        if (!source || (source.platform !== "youtube" && source.platform !== "youtube_shorts") || !source.external_id) continue;
+        const normalized = normalizeSourceUrl(source.canonical_url);
+        if (!normalized || !isYouTubePlatform(normalized.platform) || normalized.externalId !== source.external_id) continue;
+        await resolveSourceAcquisitionFailure({
+          sourceKey: recovery.sourceKey,
+          attemptIdempotencyKey: `identity-repair:${source.id}:${repairAttempt.toISOString()}`,
+          attemptStartedAt: repairAttempt,
+          resolvedAt: new Date(),
+        }, admin);
+      }
+    }
+    // Resolution can lose a race with a newer failure; re-read authoritative
+    // recovery state rather than assuming every request resolved its key.
+    activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
+  }
   const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
   const nowMs = Date.now();
   const deferredSourceIds = activeRecovery.flatMap((row) =>

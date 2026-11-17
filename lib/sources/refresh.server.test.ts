@@ -61,7 +61,7 @@ function oEmbedResult(url: string, overrides: Record<string, unknown> = {}) {
     embedUrl: null,
     embedHtml: null,
     contentId: normalized.externalId,
-    providerContentId: null,
+    providerContentId: normalized.platform === "tiktok" ? normalized.externalId : null,
     title: "ok",
     authorName: "creator",
     ...overrides,
@@ -393,7 +393,7 @@ describe("source refresh recovery", () => {
     expect(second.oembed).toMatchObject({ checked: 1, failed: 0, removed: 0 });
   });
 
-  it("quarantines a TikTok response with an independently extracted different ID", async () => {
+  it("defers a TikTok response with an independently extracted different ID", async () => {
     const source = {
       id: "tt-response-mismatch", platform: "tiktok", external_id: "1234567890",
       canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null,
@@ -413,9 +413,84 @@ describe("source refresh recovery", () => {
     expect(sourceBuilder.update).not.toHaveBeenCalled();
     expect(content.update).not.toHaveBeenCalled();
     expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
-      sourceKey: `invalid_identity:${source.id}`,
-      code: "metadata_mismatch",
+      sourceKey: `provider_identity:${source.id}`,
+      sourceId: source.id,
+      externalId: source.external_id,
+      code: "provider_transient",
     }), client);
+  });
+
+  it("defers a TikTok HTTP 200 response without a trustworthy provider ID", async () => {
+    const source = {
+      id: "tt-response-inconclusive", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null,
+    } as const;
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockResolvedValueOnce(oEmbedResult(source.canonical_url, { providerContentId: null }));
+
+    const result = await runSourceRefresh();
+
+    expect(result.oembed).toMatchObject({ checked: 1, failed: 1, removed: 0, errors: [] });
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `provider_identity:${source.id}`,
+      code: "provider_transient",
+    }), client);
+  });
+
+  it("releases provider identity recovery only after a matching TikTok response is persisted", async () => {
+    const source = {
+      id: "tt-response-recovered", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null,
+    } as const;
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.oembed).toMatchObject({ checked: 1, failed: 0, removed: 0 });
+    expect(sourceBuilder.update).toHaveBeenCalledOnce();
+    expect(content.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `provider_identity:${source.id}`,
+    }), client);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `tiktok:${source.external_id}`,
+    }), client);
+  });
+
+  it("defers a future provider identity retry without blocking the next TikTok source", async () => {
+    const deferred = {
+      id: "tt-provider-deferred", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null,
+    } as const;
+    const healthy = {
+      id: "tt-provider-next", platform: "tiktok", external_id: "2345678901",
+      canonical_url: "https://www.tiktok.com/@b/video/2345678901", embeddable: true, removed_at: null,
+    } as const;
+    const recovery = {
+      sourceKey: `provider_identity:${deferred.id}`, sourceId: deferred.id, platform: "tiktok",
+      externalId: deferred.external_id, canonicalUrl: deferred.canonical_url, attemptCount: 1,
+      nextRetryAt: new Date(Date.now() + 60_000).toISOString(), lastErrorCode: "provider_transient",
+      lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    } as const;
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([recovery]);
+    mocks.createAdminClient.mockReturnValue(admin({ stale: [deferred, healthy] }).client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.oembed).toMatchObject({ checked: 1, failed: 0 });
+    expect(mocks.getOEmbed).toHaveBeenCalledOnce();
+    expect(mocks.getOEmbed).toHaveBeenCalledWith(healthy.canonical_url);
+    expect(mocks.getOEmbed).not.toHaveBeenCalledWith(deferred.canonical_url);
   });
 
   it("reports a social identity quarantine write failure and continues with the next source", async () => {
@@ -563,11 +638,13 @@ describe("source refresh recovery", () => {
 
   it("includes due recovery sources and resolves successful oEmbed attempts", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
-    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([{ sourceKey: "tiktok:1234567890", sourceId: "s1", platform: "tiktok", externalId: "1234567890", canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "provider_transient", lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null }]);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([{ sourceKey: "provider_identity:s1", sourceId: "s1", platform: "tiktok", externalId: "1234567890", canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "provider_transient", lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null }]);
     mocks.createAdminClient.mockReturnValue(admin({ due: [source] }).client);
     const result = await runSourceRefresh();
     expect(result.status).toBe("ok");
-    expect(resolveSourceAcquisitionFailure).toHaveBeenCalled();
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: "provider_identity:s1",
+    }), expect.anything());
   });
 
   it("uses a resolution time no earlier than the oEmbed attempt", async () => {
@@ -585,7 +662,7 @@ describe("source refresh recovery", () => {
 
       await runSourceRefresh();
 
-      const resolution = vi.mocked(resolveSourceAcquisitionFailure).mock.calls[1][0];
+      const resolution = vi.mocked(resolveSourceAcquisitionFailure).mock.calls.at(-1)![0];
       expect(resolution.resolvedAt.getTime()).toBeGreaterThanOrEqual(resolution.attemptStartedAt.getTime());
       expect(resolution.resolvedAt.getTime()).toBe(Date.parse("2026-11-16T00:00:10Z"));
     } finally {
@@ -647,6 +724,10 @@ describe("source refresh recovery", () => {
     const result = await runSourceRefresh();
     expect(result.status).toBe("partial");
     expect(result.error).toBeTruthy();
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalledWith(
+      expect.objectContaining({ sourceKey: `provider_identity:${source.id}` }),
+      expect.anything(),
+    );
   });
 
   it("marks the job partial and records db_failure when one YouTube source update fails", async () => {

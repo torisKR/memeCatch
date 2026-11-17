@@ -83,16 +83,38 @@ async function quarantineInvalidIdentity(
   }, admin);
 }
 
-function trustedOEmbedIdentityMismatch(
+function providerIdentityRecoveryKey(row: MediaSourceRow) {
+  return `provider_identity:${row.id}`;
+}
+
+function tiktokProviderIdentityState(
   row: MediaSourceRow,
   oembed: Awaited<ReturnType<typeof getOEmbed>>,
 ) {
   // TikTok embeds can expose a provider-owned video ID in returned HTML.
   // Instagram oEmbed has no equivalent independently trustworthy ID, so its
   // response cannot strengthen the pre-request canonical identity check.
-  return row.platform === "tiktok" &&
-    oembed.providerContentId !== null &&
-    oembed.providerContentId !== row.external_id;
+  if (row.platform !== "tiktok") return "not_applicable" as const;
+  if (oembed.providerContentId === null) return "inconclusive" as const;
+  return oembed.providerContentId === row.external_id ? "confirmed" as const : "mismatch" as const;
+}
+
+async function recordProviderIdentityFailure(
+  admin: ReturnType<typeof createAdminClient>,
+  row: MediaSourceRow,
+  attemptedAt: Date,
+) {
+  await recordSourceAcquisitionFailure({
+    sourceKey: providerIdentityRecoveryKey(row),
+    idempotencyKey: `${providerIdentityRecoveryKey(row)}:${attemptedAt.toISOString()}`,
+    platform: row.platform,
+    sourceId: row.id,
+    externalId: row.external_id,
+    canonicalUrl: row.canonical_url,
+    code: "provider_transient",
+    attempt: 1,
+    occurredAt: attemptedAt,
+  }, admin);
 }
 
 async function syncMemeContentsAvailability(
@@ -318,13 +340,14 @@ async function refreshOEmbedSources(
     }
     try {
       const oembed = await getOEmbed(row.canonical_url);
-      if (trustedOEmbedIdentityMismatch(row, oembed)) {
+      const providerIdentity = tiktokProviderIdentityState(row, oembed);
+      if (providerIdentity === "mismatch" || providerIdentity === "inconclusive") {
         failed += 1;
         checked += 1;
         try {
-          await quarantineInvalidIdentity(admin, row, attemptStartedAt);
+          await recordProviderIdentityFailure(admin, row, attemptStartedAt);
         } catch {
-          errors.push(`invalid_identity_quarantine_failed:${row.id}`);
+          errors.push(`provider_identity_recovery_failed:${row.id}`);
         }
         continue;
       }
@@ -348,6 +371,14 @@ async function refreshOEmbedSources(
       if (error) throw new Error("source_refresh_update_failed");
       await syncMemeContentsAvailability(admin, row, "live");
       if (row.external_id) {
+        if (providerIdentity === "confirmed") {
+          await resolveSourceAcquisitionFailure({
+            sourceKey: providerIdentityRecoveryKey(row),
+            attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+            attemptStartedAt,
+            resolvedAt: new Date(),
+          }, admin);
+        }
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
           attemptIdempotencyKey,

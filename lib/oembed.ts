@@ -266,7 +266,10 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
       signal: AbortSignal.timeout(8_000),
     });
     const data = await readJson(response);
-    const id = getTikTokId(new URL(target.sourceUrl));
+    const providerContentId = getTikTokResponseId(data.html);
+    // Final TikTok URLs carry the request ID. vt.tiktok.com short links do not,
+    // so retain the provider HTML data-video-id fallback for direct oEmbed use.
+    const id = getTikTokId(new URL(target.sourceUrl)) ?? providerContentId;
     if (!id) {
       throw new OEmbedError(
         "TikTok 게시물 ID를 확인하지 못했습니다.",
@@ -280,7 +283,7 @@ export async function getOEmbed(rawUrl: string): Promise<OEmbedResult> {
       embedUrl: `https://www.tiktok.com/player/v1/${id}?description=1&music_info=1`,
       embedHtml: null,
       contentId: id,
-      providerContentId: getTikTokResponseId(data.html),
+      providerContentId,
       title: safeText(data.title),
       authorName: safeText(data.author_name),
     };

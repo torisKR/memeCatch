@@ -55,12 +55,12 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
+    ? "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";
@@ -202,6 +202,7 @@ async function fetchFrom(
 
 export function ExploreGrid({
   initial,
+  initialPreviews,
   filters,
   excludeIds = [],
   initialOffset,
@@ -210,6 +211,7 @@ export function ExploreGrid({
   indexableIds,
 }: {
   initial: MemeListItem[];
+  initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
   filters: ExploreFilters;
   /** Discovery ids. Omit to leave the query unfiltered (tests). */
   indexableIds?: readonly string[];
@@ -232,6 +234,9 @@ export function ExploreGrid({
 }) {
   const startHasMore = hasMoreInitial ?? initial.length >= PAGE_SIZE;
   const [items, setItems] = useState<MemeListItem[]>(initial);
+  const [previews, setPreviews] = useState<Record<string, MemeListItem["meme_contents"]>>(() =>
+    Object.fromEntries(initial.map((item, index) => [item.id, initialPreviews?.[index] ?? []])),
+  );
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -259,7 +264,35 @@ export function ExploreGrid({
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
       const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
+      let verified: Record<string, MemeListItem["meme_contents"]> = {};
+      if (fresh.length) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+        try {
+          const response = await fetch("/api/explore/previews", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: fresh.map((item) => item.id) }),
+            signal: controller.signal,
+          });
+          if (!response.ok) throw new Error("preview unavailable");
+          const body: unknown = await response.json();
+          const rows = body && typeof body === "object" ? (body as { previews?: unknown }).previews : null;
+          if (!Array.isArray(rows)) throw new Error("invalid preview response");
+          const allowed = new Set(fresh.map((item) => item.id));
+          verified = Object.fromEntries(rows.flatMap((row: unknown) => {
+            if (!row || typeof row !== "object") return [];
+            const value = row as { id?: unknown; contents?: unknown };
+            return typeof value.id === "string" && allowed.has(value.id) && Array.isArray(value.contents)
+              ? [[value.id, value.contents as MemeListItem["meme_contents"]]] : [];
+          }));
+        } catch {
+          // A failed policy lookup must never fall back to unqualified content.
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
       for (const m of fresh) seenRef.current.add(m.id);
+      setPreviews((prev) => ({ ...prev, ...verified }));
       setItems((prev) => [...prev, ...fresh]);
       offsetRef.current = from + batch.scanned;
       hasMoreRef.current = batch.hasMore;
@@ -406,7 +439,7 @@ export function ExploreGrid({
       <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
-            <MemeCard meme={meme} sourcePlatform={filters.platform} />
+            <MemeCard meme={meme} sourcePlatform={filters.platform} previewContents={meme.id.startsWith("curated-") ? undefined : previews[meme.id] ?? []} />
           </li>
         ))}
       </ul>

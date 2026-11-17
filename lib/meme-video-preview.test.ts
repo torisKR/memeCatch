@@ -14,6 +14,11 @@ describe("youtubeVideoPreview", () => {
     expect(youtubeVideoPreview([{ ...video, moderation_status: "pending" }])).toBeNull();
     expect(youtubeVideoPreview([{ ...video, url: "https://example.com/", content_id: null }, { ...video, is_representative: false }])).toBeNull();
   });
+  it("does not present a known non-video content row as a video poster", () => {
+    expect(youtubeVideoPreview([{ ...video, type: "image" }])).toBeNull();
+    expect(videoPreview([{ ...video, type: "text" }])).toBeNull();
+    expect(youtubeVideoPreview([{ ...video, type: "embed" }])).not.toBeNull();
+  });
 });
 
 describe("verified social video previews", () => {
@@ -37,6 +42,10 @@ describe("verified social video previews", () => {
     expect(socialVideoPreview([{ ...instagram, content_id: "different" }])).toBeNull();
     expect(socialVideoPreview([{ ...instagram, availability: "dead" }])).toBeNull();
     expect(socialVideoPreview([{ ...instagram, moderation_status: "pending" }])).toBeNull();
+  });
+  it("does not offer a social video player for an explicitly non-video row", () => {
+    expect(socialVideoPreview([{ ...instagram, type: "image" }])).toBeNull();
+    expect(videoPreview([{ ...instagram, type: "image" }])).toBeNull();
   });
 
   it("withholds ambiguous Instagram /p/ posts, including mixed carousels with a later video", () => {

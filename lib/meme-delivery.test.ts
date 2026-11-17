@@ -27,6 +27,42 @@ const reviewedYouTube = (overrides: Record<string, unknown> = {}) => ({
 
 describe("resolveMemeDelivery", () => {
   it.each([
+    ["blocked rights", { rights_basis: "blocked" }],
+    ["rejected review", { review_state: "rejected" }],
+    ["private", { public_status: "private" }],
+    ["removed", { removed_at: "2026-11-18T00:00:00.000Z" }],
+    ["not embeddable", { embeddable: false }],
+  ])("suppresses all TikTok account aliases for a single source with %s", (_reason, override) => {
+    const id = "1234567890123456789";
+    const source = reviewedYouTube({ platform: "tiktok", external_id: id, canonical_url: `https://www.tiktok.com/@old/video/${id}`, embeddable: true, public_status: null, ...override });
+    const contents = ["old", "new"].map((account) => liveContent({ id: account, platform: "TikTok", content_id: id, url: `https://www.tiktok.com/@${account}/video/${id}` }));
+    for (const content of contents) {
+      const result = resolveMemeDelivery({ contents: [content], sources: [{ source_url: content.url }], reviewedMediaSources: [source] });
+      expect(result.representative).toBeNull();
+      expect(result.sourceLinks).toEqual([]);
+    }
+  });
+
+  it("permits both TikTok aliases for one approved embeddable source", () => {
+    const id = "1234567890123456789";
+    const source = reviewedYouTube({ platform: "tiktok", external_id: id, canonical_url: `https://www.tiktok.com/@old/video/${id}`, embeddable: true, public_status: null });
+    for (const account of ["old", "new"]) {
+      const content = liveContent({ platform: "TikTok", content_id: id, url: `https://www.tiktok.com/@${account}/video/${id}` });
+      const result = resolveMemeDelivery({ contents: [content], sources: [], reviewedMediaSources: [source] });
+      expect(result.representative).toEqual(content);
+      expect(result.embeddingAllowed).toBe(true);
+    }
+  });
+
+  it("keeps Instagram ledger matching specific to its post path", () => {
+    const source = reviewedYouTube({ platform: "instagram", external_id: "Post123", canonical_url: "https://www.instagram.com/p/Post123/", embeddable: true, public_status: null, rights_basis: "blocked" });
+    const post = liveContent({ platform: "Instagram", content_id: "Post123", url: source.canonical_url });
+    const reel = { ...post, url: "https://www.instagram.com/reel/Post123/" };
+    expect(resolveMemeDelivery({ contents: [post], sources: [], reviewedMediaSources: [source] }).representative).toBeNull();
+    expect(resolveMemeDelivery({ contents: [reel], sources: [], reviewedMediaSources: [source] }).representative).toEqual(reel);
+  });
+
+  it.each([
     { content: "https://www.youtube.com/shorts/abcdefghijk", ledger: "https://www.youtube.com/watch?v=abcdefghijk", platform: "youtube" },
     { content: "https://youtu.be/abcdefghijk", ledger: "https://www.youtube.com/shorts/abcdefghijk", platform: "youtube_shorts" },
   ])("applies link-only policy across YouTube URL variants", ({ content, ledger, platform }) => {

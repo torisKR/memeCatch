@@ -137,9 +137,8 @@ describe("localized detail playback", () => {
     const old = { ...youtube, id: "old", platform: "TikTok", content_id: id, url: `https://www.tiktok.com/@old/video/${id}`, is_representative: isRepresentative };
     const renamed = { ...old, id: "new", url: `https://www.tiktok.com/@new/video/${id}` };
     const oldSource = { ...ledger, platform: "tiktok", external_id: id, canonical_url: old.url, public_status: null };
-    const newSource = { ...oldSource, canonical_url: renamed.url };
     for (const contents of [[old, renamed], [renamed, old]]) {
-      const html = await renderPage(contents, { ok: true, sources: [oldSource, newSource] });
+      const html = await renderPage(contents, { ok: true, sources: [oldSource] });
       expect(html).toContain(`https://www.tiktok.com/player/v1/${id}`);
     }
   });
@@ -154,14 +153,16 @@ describe("localized detail playback", () => {
     expect(html).not.toContain("https://www.tiktok.com/player/v1/");
   });
 
-  it("keeps source rights checks on each TikTok alias", async () => {
+  it("applies the single blocked TikTok source to both account aliases", async () => {
     const id = "1234567890123456789";
     const old = { ...youtube, id: "old", platform: "TikTok", content_id: id, url: `https://www.tiktok.com/@old/video/${id}` };
     const renamed = { ...old, id: "new", url: `https://www.tiktok.com/@new/video/${id}` };
     const source = { ...ledger, platform: "tiktok", external_id: id, canonical_url: old.url, public_status: null };
-    const html = await renderPage([old, renamed], { ok: true, sources: [{ ...source, rights_basis: "blocked" }, { ...source, canonical_url: renamed.url }] });
-    expect(html).toContain(`https://www.tiktok.com/player/v1/${id}`);
-    expect(html).toContain(`href="${renamed.url}"`);
+    for (const contents of [[old, renamed], [renamed, old], [renamed]]) {
+      const html = await renderPage(contents, { ok: true, sources: [{ ...source, rights_basis: "blocked" }] });
+      expect(html).not.toContain(`https://www.tiktok.com/player/v1/${id}`);
+      expect(html).not.toContain(`href="${renamed.url}"`);
+    }
   });
 
   it.each([

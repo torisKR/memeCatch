@@ -371,20 +371,29 @@ async function refreshOEmbedSources(
       if (error) throw new Error("source_refresh_update_failed");
       await syncMemeContentsAvailability(admin, row, "live");
       if (row.external_id) {
-        if (providerIdentity === "confirmed") {
+        try {
+          if (providerIdentity === "confirmed") {
+            await resolveSourceAcquisitionFailure({
+              sourceKey: providerIdentityRecoveryKey(row),
+              attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+              attemptStartedAt,
+              resolvedAt: new Date(),
+            }, admin);
+          }
           await resolveSourceAcquisitionFailure({
-            sourceKey: providerIdentityRecoveryKey(row),
-            attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+            sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+            attemptIdempotencyKey,
             attemptStartedAt,
             resolvedAt: new Date(),
           }, admin);
+        } catch {
+          // Source and content are already live. A recovery-ledger failure is
+          // not provider evidence and must not rewrite or reclassify this row.
+          failed += 1;
+          checked += 1;
+          errors.push(`social_live_recovery_resolve_failed:${row.id}`);
+          continue;
         }
-        await resolveSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          attemptIdempotencyKey,
-          attemptStartedAt,
-          resolvedAt: new Date(),
-        }, admin);
       }
     } catch (error) {
       if (error instanceof OEmbedError && error.status === 404) {

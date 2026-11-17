@@ -467,6 +467,56 @@ describe("source refresh recovery", () => {
     }), client);
   });
 
+  it("keeps live state and continues after provider identity recovery resolution fails", async () => {
+    const failed = {
+      id: "tt-live-resolve-failure", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: false, removed_at: "2026-01-01T00:00:00Z",
+    } as const;
+    const next = {
+      id: "tt-after-resolve-failure", platform: "tiktok", external_id: "2345678901",
+      canonical_url: "https://www.tiktok.com/@b/video/2345678901", embeddable: false, removed_at: "2026-01-01T00:00:00Z",
+    } as const;
+    const sourceBuilder = sourceQuery([failed, next]);
+    const content = query({ data: [], error: null });
+    const jobInsert = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      from: vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : sourceBuilder),
+      rpc: vi.fn(),
+    };
+    mocks.createAdminClient.mockReturnValue(client);
+    vi.mocked(resolveSourceAcquisitionFailure).mockRejectedValueOnce(new Error("sensitive recovery database error"));
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.oembed).toMatchObject({
+      checked: 2,
+      removed: 0,
+      failed: 1,
+      errors: [`social_live_recovery_resolve_failed:${failed.id}`],
+    });
+    expect(mocks.getOEmbed).toHaveBeenCalledTimes(2);
+    expect(sourceBuilder.update).toHaveBeenCalledTimes(2);
+    expect(sourceBuilder.update).toHaveBeenCalledWith(expect.objectContaining({
+      embeddable: true,
+      removed_at: null,
+    }));
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", failed.id);
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", next.id);
+    expect(content.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(recordSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `tiktok:${failed.external_id}`,
+    }), client);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `provider_identity:${next.id}`,
+    }), client);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `tiktok:${next.external_id}`,
+    }), client);
+    expect(JSON.stringify(jobInsert.mock.calls)).not.toContain("sensitive recovery database error");
+  });
+
   it("defers a future provider identity retry without blocking the next TikTok source", async () => {
     const deferred = {
       id: "tt-provider-deferred", platform: "tiktok", external_id: "1234567890",

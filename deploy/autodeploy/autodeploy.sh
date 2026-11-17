@@ -154,14 +154,46 @@ build_images() {
 }
 
 # Quiet Docker builds can leave the SSH channel without application output for
-# several minutes. Emit progress in addition to the client's SSH keepalives;
-# preserve the wrapped command's status and always stop the background logger.
+# several minutes. Emit progress in addition to the client's SSH keepalives and
+# preserve the wrapped command's status. Cleanup covers normal wrapper exit and
+# startup failures. It deliberately does not change or guarantee the wrapped
+# build's pre-existing behavior when an ancestor disappears or signals arrive
+# while the foreground build is running.
 run_with_heartbeat() (
-  local label="$1" heartbeat_pid
+  local label="$1" heartbeat_pid=""
   shift
+
+  # Invoked directly and through finish_heartbeat's EXIT trap.
+  # shellcheck disable=SC2329
+  cleanup_heartbeat() {
+    local pid="$heartbeat_pid"
+    if [[ -z "$pid" ]]; then
+      pid="$(jobs -pr | head -1)" || true
+    fi
+    [[ -n "$pid" ]] || return 0
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    heartbeat_pid=""
+  }
+
+  # Invoked by the EXIT trap below.
+  # shellcheck disable=SC2329
+  finish_heartbeat() {
+    local status=$?
+    trap - EXIT
+    cleanup_heartbeat
+    exit "$status"
+  }
+
+  # Install before spawning so a signal between `&` and `$!` cannot bypass
+  # cleanup or expand an unset heartbeat_pid under `set -u`.
+  trap finish_heartbeat EXIT
   (
     local sleeper=""
     trap 'if [[ -n "$sleeper" ]]; then kill "$sleeper" 2>/dev/null || true; wait "$sleeper" 2>/dev/null || true; fi; exit 0' TERM INT
+    # The logger does not participate in deploy exclusion. If its parent exits,
+    # it must not independently keep main's flock open via inherited fd 9.
+    exec 9>&-
     while true; do
       sleep "$BUILD_HEARTBEAT_SECONDS" &
       sleeper=$!
@@ -171,7 +203,6 @@ run_with_heartbeat() (
     done
   ) &
   heartbeat_pid=$!
-  trap 'kill "$heartbeat_pid" 2>/dev/null || true; wait "$heartbeat_pid" 2>/dev/null || true' EXIT
   "$@"
 )
 

@@ -84,6 +84,26 @@ rc=0
 BUILD_HEARTBEAT_SECONDS=0.01 run_with_heartbeat "failing build" bash -c 'sleep 0.03; exit 7' >/dev/null || rc=$?
 [[ "$rc" == 7 ]] || fail "heartbeat wrapper hid command failure (got $rc)"
 
+# Deterministically signal between heartbeat spawn and heartbeat_pid assignment.
+# The DEBUG hook records $! before sending TERM, making the startup race exact.
+race="$stub/heartbeat-startup-race"
+mkdir -p "$race"
+race_pid_file="$race/heartbeat.pid"
+race_rc=0
+(
+  set -T
+  trap 'if [[ "$BASH_COMMAND" == "heartbeat_pid=\$!" ]]; then trap - DEBUG; printf "%s\n" "$!" >"$race_pid_file"; kill -TERM "$BASHPID"; fi' DEBUG
+  BUILD_HEARTBEAT_SECONDS=300 run_with_heartbeat "startup race" bash -c 'exec 9>&-; sleep 300'
+) 2>"$race/stderr" || race_rc=$?
+race_heartbeat="$(cat "$race_pid_file")"
+race_alive=0
+kill -0 "$race_heartbeat" 2>/dev/null && race_alive=1
+kill "$race_heartbeat" 2>/dev/null || true
+[[ "$race_rc" != 0 ]] || fail "startup signal unexpectedly reported success"
+[[ "$race_alive" == 0 ]] || fail "startup signal left heartbeat running"
+! grep -q 'unbound variable' "$race/stderr" || fail "startup signal hit an unbound heartbeat_pid"
+grep -q 'exec 9>&-' "$here/autodeploy.sh" || fail "heartbeat logger may inherit the deploy lock"
+
 # Rollback redeploys exactly the snapshots recorded before the deploy, even when
 # the replaced containers now run differently named images (GHCR -> local build).
 STATE_DIR="$stub/state"; mkdir -p "$STATE_DIR"

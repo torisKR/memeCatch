@@ -71,13 +71,13 @@ function AnimatedChatPanel({ id, titleId, children }: { id: string; titleId: str
   return (
     <motion.section id={id} role="dialog" aria-modal="false" aria-labelledby={titleId}
       data-chat-panel="" aria-hidden={isPresent ? undefined : true} inert={!isPresent}
-      initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.96 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: reduceMotion ? 0 : 10, scale: reduceMotion ? 1 : 0.97,
         transition: { duration: reduceMotion ? 0 : 0.17, ease: [0.4, 0, 1, 1] } }}
-      transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
+      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 340, damping: 29, mass: 0.8 }}
       style={{ pointerEvents: isPresent ? undefined : "none" }}
-      className={`${styles.panel} flex max-h-[calc(100dvh-16rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] w-[min(23rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-border bg-surface text-foreground shadow-[0_16px_60px_rgba(0,0,0,0.18)] md:max-h-[min(36rem,calc(100dvh-14rem))]`}>
+      className={`${styles.panel} flex max-h-[calc(100dvh-16rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] h-[min(38rem,calc(100dvh-16rem-env(safe-area-inset-bottom)-env(safe-area-inset-top)))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-border bg-surface text-foreground shadow-[0_16px_60px_rgba(0,0,0,0.18)] md:max-h-[min(36rem,calc(100dvh-14rem))]`}>
       {children}
     </motion.section>
   );
@@ -147,6 +147,7 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
   const panelId = useId();
   const titleId = useId();
   const inputId = useId();
+  const inputHintId = useId();
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -162,8 +163,8 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
   const pending = pendingQuestion !== null;
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (open && !pending) inputRef.current?.focus();
+  }, [open, pending]);
 
   useEffect(() => {
     if (!open) return;
@@ -278,8 +279,8 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
       <AnimatePresence initial={false}>
         {open && (
         <AnimatedChatPanel key="chat-panel" id={panelId} titleId={titleId}>
-          <header className={`${styles.panelHeader} flex shrink-0 items-center gap-2 border-b border-border px-4 py-2`}>
-            <MemeChatCharacter size={46} />
+          <header className={`${styles.panelHeader} flex shrink-0 items-center gap-3 border-b border-border px-4 py-3`}>
+            <MemeChatCharacter state={pending ? progress?.stage === "found" && progress.count === 0 ? "idle" : progress?.stage ?? "reading" : turns.length ? "ready" : "idle"} size={54} />
             <div className="min-w-0 flex-1">
               <h2 id={titleId} className="text-base font-bold">{copy.title}</h2>
               <p className="mt-0.5 text-xs text-muted">{copy.subtitle}</p>
@@ -290,26 +291,42 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
             </button>
           </header>
           <div ref={logRef}
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 text-sm">
+            className={`${styles.chatLog} min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 text-sm`}>
             <div role="log" aria-live="polite" aria-relevant="additions" className="space-y-4">
-            {turns.length === 0 && (
-              <div className="rounded-2xl border border-border bg-background p-3">
-                <p className="leading-relaxed">{copy.welcome}</p>
-                <p className="mt-2 text-xs leading-relaxed text-muted">{copy.privacy}</p>
+            {turns.length === 0 && !pending && (
+              <div className={styles.welcome}>
+                <div className="flex items-start gap-2">
+                  <MemeChatCharacter size={42} />
+                  <div className={styles.botBubble}>
+                    <p className="leading-relaxed">{copy.welcome}</p>
+                  </div>
+                </div>
+                <div className={styles.suggestions}>
+                  {[copy.starterOne, copy.starterTwo, copy.starterThree].map((suggestion) => (
+                    <button key={suggestion} type="button" onClick={() => { setQuestion(suggestion); setError(null); inputRef.current?.focus(); }}
+                      className={styles.suggestion}>{suggestion}<span aria-hidden="true">↗</span></button>
+                  ))}
+                </div>
+                <p className="mt-3 text-center text-xs leading-relaxed text-muted">{copy.privacy}</p>
               </div>
             )}
             {turns.map((turn) => (
               <article key={turn.id} className="space-y-2">
                 <p className={`${styles.userBubble} ml-8 whitespace-pre-wrap bg-accent-soft px-3 py-2 text-foreground`}>{turn.question}</p>
-                <div className={`${styles.answer} space-y-3`}>
-                  <p className="text-xs font-medium text-accent-text">{copy[turn.result.mode]}</p>
-                  <p className="whitespace-pre-wrap leading-relaxed">{turn.result.answer}</p>
+                <div className={`${styles.answer} flex items-start gap-2`}>
+                  <MemeChatCharacter state="ready" size={34} />
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div className={styles.botBubble}>
+                      <p className="mb-1 text-xs font-medium text-accent-text">{copy[turn.result.mode]}</p>
+                      <p className="whitespace-pre-wrap leading-relaxed">{turn.result.answer}</p>
+                    </div>
                   {turn.result.items.length > 0 && (
                     <div>
                       <h3 className="mb-2 text-xs font-semibold text-muted">{copy.references}</h3>
                       <ul className="space-y-2">{turn.result.items.map((item, index) => <ReferenceCard key={item.id + index} item={item} locale={locale} />)}</ul>
                     </div>
                   )}
+                  </div>
                 </div>
               </article>
             ))}
@@ -325,10 +342,16 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
             <p className="mb-2 text-xs leading-relaxed text-muted">{copy.disclosure}</p>
             {error && <p role="alert" className="mb-2 text-sm leading-relaxed text-accent-text">{copy[error]}</p>}
             <label htmlFor={inputId} className="sr-only">{copy.question}</label>
-            <textarea ref={inputRef} id={inputId} rows={2} value={question} maxLength={120} disabled={pending}
+            <textarea ref={inputRef} id={inputId} aria-describedby={inputHintId} rows={2} value={question} maxLength={120} disabled={pending}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229 || pending) return;
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }}
               onChange={(event) => { setQuestion(event.target.value); setError(null); }}
               placeholder={copy.placeholder}
               className="block w-full resize-none rounded-2xl border border-border bg-background px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60" />
+            <p id={inputHintId} className={`${styles.keyboardHint} mt-1.5 text-[11px] text-muted`}>{copy.inputHint}</p>
             <div className="mt-2 flex items-center gap-3">
               <button type="button" onClick={clearConversation} className="min-h-11 min-w-11 text-xs text-muted underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-accent">{copy.clear}</button>
               <span className="ml-auto text-xs text-muted" aria-hidden="true">{question.length}/120</span>
@@ -341,11 +364,11 @@ function MemeChatPanel({ locale }: { locale: MemeChatLocale }) {
         </AnimatedChatPanel>
         )}
       </AnimatePresence>
-      <button ref={launcherRef} type="button" aria-label={open ? copy.close : copy.open} aria-expanded={open} aria-controls={open ? panelId : undefined}
+      <button ref={launcherRef} type="button" data-chat-open={open} aria-label={open ? copy.close : copy.open} aria-expanded={open} aria-controls={open ? panelId : undefined}
         onClick={() => { if (open) closePanel(); else setOpen(true); }}
         className={`${styles.launcher} flex h-16 w-16 shrink-0 items-center justify-center border border-accent/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent`}>
         <span className={styles.launcherPrompt} aria-hidden="true">{open ? copy.close : copy.launcherHint}</span>
-        <MemeChatCharacter size={58} />
+        <MemeChatCharacter state={open ? pending ? "searching" : "ready" : "idle"} size={58} />
         {open && <span className={styles.launcherClose} aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="m4 4 8 8m0-8-8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></span>}
       </button>
     </div>

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
-import { Heart, MessageCircle, Trophy } from "lucide-react";
+import { Heart, ImageIcon, MessageCircle, Trophy } from "lucide-react";
+import { MemeThumbnail } from "@/components/meme-thumbnail";
 import {
+  BATTLE_LIST_LIMIT,
   BATTLE_PERIOD_LABELS,
   type BattleBoard,
   type BattlePeriod,
@@ -74,27 +76,45 @@ export function CommunityMemeBattle({ boards }: { boards: readonly BattleBoard[]
                 <li key={entry.postId}>
                   <Link
                     href={`/community/${entry.postId}`}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-2 py-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   >
-                    <span className="w-6 shrink-0 text-center text-sm font-bold tabular-nums">{entry.rank}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{entry.title}</span>
-                      {entry.isPromotionCandidate && (
-                        <span className="mt-0.5 inline-flex rounded-full border border-accent px-2 text-xs font-semibold text-accent">
-                          상위 1% 후보
-                        </span>
-                      )}
+                    <span className="w-5 shrink-0 text-center text-sm font-bold tabular-nums">{entry.rank}</span>
+                    <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-surface-2">
+                      <MemeThumbnail
+                        src={entry.thumbnailUrl}
+                        title={entry.title}
+                        category="image"
+                        variant="compact"
+                        alt=""
+                        fallback={
+                          <span
+                            aria-hidden
+                            data-thumbnail-state="fallback"
+                            className="flex h-full w-full items-center justify-center text-muted"
+                          >
+                            <ImageIcon className="h-5 w-5" />
+                          </span>
+                        }
+                      />
                     </span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
-                      <span className="inline-flex items-center gap-0.5">
-                        <Heart aria-hidden className="h-3.5 w-3.5" />
-                        <span className="sr-only">좋아요</span>
-                        {entry.likeCount}
-                      </span>
-                      <span className="inline-flex items-center gap-0.5">
-                        <MessageCircle aria-hidden className="h-3.5 w-3.5" />
-                        <span className="sr-only">댓글</span>
-                        {entry.commentCount}
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-2 break-words text-sm font-semibold leading-5">{entry.title}</span>
+                      <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                        <span className="inline-flex items-center gap-0.5">
+                          <Heart aria-hidden className="h-3.5 w-3.5" />
+                          <span className="sr-only">좋아요</span>
+                          {entry.likeCount}
+                        </span>
+                        <span className="inline-flex items-center gap-0.5">
+                          <MessageCircle aria-hidden className="h-3.5 w-3.5" />
+                          <span className="sr-only">댓글</span>
+                          {entry.commentCount}
+                        </span>
+                        {entry.isPromotionCandidate && (
+                          <span className="inline-flex rounded-full border border-accent px-1.5 font-semibold text-accent">
+                            상위 1% 후보
+                          </span>
+                        )}
                       </span>
                     </span>
                   </Link>
@@ -104,6 +124,14 @@ export function CommunityMemeBattle({ boards }: { boards: readonly BattleBoard[]
             <p className="mt-2 text-xs text-muted">
               참가 {board.totalPosts}개 중 상위 {board.promotionCount}개가 밈 사전 후보예요.
             </p>
+            {board.totalPosts > BATTLE_LIST_LIMIT && (
+              <Link
+                href="/community"
+                className="mt-2 inline-flex text-xs font-semibold text-accent-text underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                나머지 참가작은 커뮤니티에서 보기
+              </Link>
+            )}
           </>
         )}
       </div>

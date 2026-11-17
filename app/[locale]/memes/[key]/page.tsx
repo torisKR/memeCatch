@@ -17,6 +17,7 @@ import { localeMemeShareImage, localeShareVersion } from "@/lib/meme-share-image
 import { representativeImageUrl } from "@/lib/meme-share-photo";
 import { isOgPageLocale, ogPageContentLocale } from "@/lib/og-default-image";
 import { ExportButton } from "@/components/export-button";
+import { MemeEmbed } from "@/components/meme-embed";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { RelatedMemes } from "@/components/related-memes";
 import { selectLocalizedRelatedCards } from "@/lib/localized-related";
@@ -44,6 +45,9 @@ import { detailIndexableFromDiscovery } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import { getReviewedMemeMediaSources } from "@/lib/meme-delivery.server";
+import { relatedVideoIdentity } from "@/lib/related-videos";
+import { normalizeSourceUrl } from "@/lib/sources/url";
+import { sourcePlatformFromReference } from "@/lib/source-platform";
 
 /** 한국어 상세와 같다. 문서는 캐시하지 않고, 성공한 카탈로그 읽기만 Data Cache에 둔다. */
 export const dynamic = "force-dynamic";
@@ -393,6 +397,23 @@ export default async function LocalizedMemePage({ params }: Props) {
     sources: meme.meme_sources,
     reviewedMediaSources,
   });
+  // Prefer policy-qualified representatives. Tied representatives or fallback
+  // rows must all describe one identity; array order must not choose a video.
+  const videos = delivery.embeddableContents.flatMap((content) => {
+    const identity = relatedVideoIdentity(content);
+    if (!identity) return [];
+    // Instagram /p/ and /reel/ need their own embed paths even when their
+    // shortcodes match. Retain that distinction for the locale main player.
+    const source = content.url ? normalizeSourceUrl(content.url) : null;
+    const key = source && (source.platform === "instagram" || source.platform === "tiktok")
+      ? source.canonicalUrl : identity;
+    return [{ content, key }];
+  });
+  const representatives = videos.filter(({ content }) => content.is_representative);
+  const candidates = representatives.length ? representatives : videos;
+  const uniqueVideo = candidates.length > 0 && candidates.every(({ key }) => key === candidates[0].key);
+  const selectedVideo = uniqueVideo ? candidates[0].content : null;
+  const selectedPlatform = selectedVideo ? sourcePlatformFromReference(selectedVideo) : null;
   const sourceLinks = delivery.sourceLinks.flatMap((source) =>
     source.source_url ? [{ ...source, source_url: source.source_url }] : [],
   );
@@ -549,6 +570,21 @@ export default async function LocalizedMemePage({ params }: Props) {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
         <div className="space-y-6">
+          {selectedVideo && selectedPlatform && (
+            <MemeEmbed
+              content={{
+                ...selectedVideo,
+                platform: selectedPlatform,
+                // URL-less YouTube rows may carry artwork. Here the selected
+                // video, not the artwork, is the locale playback target.
+                thumbnail_url: !selectedVideo.url && (selectedPlatform === "youtube" || selectedPlatform === "youtube_shorts")
+                  ? null : selectedVideo.thumbnail_url,
+              }}
+              title={meme.title}
+              isRepresentative={selectedVideo.is_representative === true}
+              locale={locale}
+            />
+          )}
           {meme.description && (
             <section aria-labelledby="meme-description" className="glass-panel relative overflow-hidden rounded-2xl p-5 sm:p-7">
               {/* 계측 격자 — glass-panel과 같은 노드에 두면 배경 shorthand가 grid-line을

@@ -20,6 +20,22 @@ const tiktokContent = {
 };
 
 describe("MemeEmbed", () => {
+  it.each([
+    ["en", "Open post", "Loading content", "Could not load content.", "View on Instagram"],
+    ["ja", "投稿を開く", "コンテンツを読み込み中", "コンテンツを読み込めませんでした。", "Instagramで見る"],
+    ["zh", "打开帖子", "正在加载内容", "无法加载内容。", "Instagram上查看"],
+    ["zh-tw", "開啟貼文", "正在載入內容", "無法載入內容。", "Instagram上查看"],
+  ] as const)("localizes social loading and error controls for %s", async (locale, openPost, loading, error, openProvider) => {
+    let rejectFetch!: (reason: Error) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((_resolve, reject) => { rejectFetch = reject; })));
+    render(<MemeEmbed content={{ ...tiktokContent, platform: "Instagram", content_id: "Post123", url: "https://instagram.com/reel/Post123/" }} title="Test" locale={locale} />);
+    expect(screen.getByRole("link", { name: openPost })).toBeTruthy();
+    expect(screen.getByRole("status").getAttribute("aria-label")).toContain(loading);
+    await act(async () => rejectFetch(new Error("서버 오류")));
+    expect(screen.getByRole("alert").textContent).toBe(error);
+    expect(screen.getByRole("link", { name: openProvider })).toBeTruthy();
+  });
+
   it("navigates away and back after hydration so early player errors can recur", () => {
     const setter = vi.spyOn(HTMLIFrameElement.prototype, "src", "set");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ provider: "tiktok", embedUrl: "https://www.tiktok.com/player/v1/6833754937747361025" }) }));

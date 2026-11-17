@@ -21,7 +21,7 @@ export type RelatedVideoContent = Pick<
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const VIDEO_MEDIA_TYPES = new Set<RelatedVideoContent["type"]>(["video", "embed"]);
 
-function relatedVideoIdentity(content: RelatedVideoContent): string | null {
+export function relatedVideoIdentity(content: RelatedVideoContent): string | null {
   if (!VIDEO_MEDIA_TYPES.has(content.type) || !content.content_id) return null;
 
   // ID-only recovery is intentionally limited to reviewed YouTube rows with no

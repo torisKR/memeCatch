@@ -108,9 +108,14 @@ node scripts/verify-oembed-sources.mjs [--limit=400]
 
 # 6) `/admin/sources`에서 운영자가 후보를 직접 검수·승인해 게시
 
-# 예외적 수동 운영자 작업(일일 배치에서는 호출하지 않음)
-node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve [--dry-run] [--limit=2000]
+# 기존 자동 승인 스크립트는 읽기 전용 점검만 지원 (일일 배치에서는 호출하지 않음)
+node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve --dry-run [--limit=2000]
 ```
+
+`--dry-run` 없는 기존 호출은 확인 플래그가 있어도 DB 연결 전에 실패합니다. 읽기 전용 결과의
+`approved`는 기존 출력 호환을 위해 남긴 **문자열 휴리스틱 일치 건수**이며 실제 승인 건수가
+아닙니다. 제목·채널명 일치와 임베드 가능만으로 영상의 내용·공식 채널·권리를 확인할 수 없으므로,
+실제 게시 여부는 `/admin/sources`에서 개별 검수합니다.
 
 - `media_sources` — 플랫폼 콘텐츠 1건 = 1행(정규 URL·외부 ID·메타데이터·30일 갱신 시한)
 - `meme_media` — 밈 ↔ 출처 다대다 + 권리 근거(`rights_basis`)·출처 역할(`source_role`)·검수 상태

@@ -66,7 +66,6 @@ export async function qualifySearchPreviews(
         grouped.set(row.id, sources);
       }
       if (malformedCount) console.warn(`[search-preview] malformed ledger rows: ${malformedCount}`);
-      if (malformedCount) options.onFailure?.();
     } catch {
       options.onFailure?.();
       console.warn("[search-preview] ledger batch unavailable");

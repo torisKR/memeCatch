@@ -21,6 +21,25 @@ const tiktokContent = {
 
 describe("MemeEmbed", () => {
   it.each([
+    ["ko", "영상이 보이지 않으면 TikTok에서 직접 열어 보세요.", "TikTok에서 보기"],
+    ["en", "If the video appears blank, open it directly on TikTok.", "View on TikTok"],
+    ["ja", "動画が表示されない場合は、TikTokで直接開いてください。", "TikTokで見る"],
+    ["zh", "如果视频显示为空白，请直接在TikTok中打开。", "TikTok上查看"],
+    ["zh-tw", "若影片顯示空白，請直接在TikTok開啟。", "TikTok上查看"],
+  ] as const)("always renders a prominent external TikTok fallback for %s", (locale, hint, linkName) => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed content={tiktokContent} title="심쿵" locale={locale} />
+    );
+
+    expect(html).toContain(hint);
+    expect(html).toContain(`href="${tiktokContent.url}"`);
+    expect(html).toContain(linkName);
+    expect(html).toContain("bg-accent-strong");
+    expect(html).toContain("w-full");
+    expect(html).toContain("www.tiktok.com/player/v1/6833754937747361025");
+  });
+
+  it.each([
     ["en", "Open post", "Loading content", "Could not load content.", "View on Instagram"],
     ["ja", "投稿を開く", "コンテンツを読み込み中", "コンテンツを読み込めませんでした。", "Instagramで見る"],
     ["zh", "打开帖子", "正在加载内容", "无法加载内容。", "Instagram上查看"],
@@ -195,11 +214,18 @@ describe("MemeEmbed", () => {
     );
 
     const frame = screen.getByTitle("심쿵 — TikTok 관련 콘텐츠");
+    const externalFallback = screen.getByRole("link", { name: "TikTok에서 보기" });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
     expect(frame.className).toContain("h-[min(72svh,680px)]");
     expect(frame.className).toContain("max-w-[382px]");
+    expect(externalFallback.getAttribute("href")).toBe(tiktokContent.url);
+    expect(externalFallback.getAttribute("target")).toBe("_blank");
+    expect(externalFallback.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(externalFallback.className).toContain("bg-accent-strong");
+    expect(externalFallback.className).toContain("w-full");
     expect(screen.getByText("밈 사용 예시")).toBeTruthy();
+    expect(screen.getByText("영상이 보이지 않으면 TikTok에서 직접 열어 보세요.")).toBeTruthy();
     expect(screen.queryByText(/재생하면/)).toBeNull();
     expect(screen.queryByText(/원본이 아닌 사용 예시/)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();

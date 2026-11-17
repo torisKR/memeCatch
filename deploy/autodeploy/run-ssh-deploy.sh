@@ -4,12 +4,13 @@ set -euo pipefail
 
 readonly status_reconcile_seconds=2700
 readonly status_timeout_seconds=90
+readonly status_kill_grace_seconds=5
 readonly status_initial_backoff_seconds=60
 readonly status_max_backoff_seconds=240
 readonly status_max_attempts=13
 
 run_deploy() {
-  local sha="$1" rc attempt evidence start now previous deadline remaining wait_seconds timeout_seconds backoff_seconds
+  local sha="$1" rc attempt evidence start now previous deadline remaining wait_seconds timeout_seconds backoff_seconds final_attempt
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid deployment SHA" >&2; return 1; }
   local ssh_args=(
     -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes
@@ -19,7 +20,7 @@ run_deploy() {
     "ubuntu@${DEPLOY_HOST}"
   )
   # Bound the initial SSH session independently from the reconciliation window.
-  if timeout --kill-after=5s "${status_reconcile_seconds}s" ssh "${ssh_args[@]}" "$sha"; then
+  if timeout --kill-after="${status_kill_grace_seconds}s" "${status_reconcile_seconds}s" ssh "${ssh_args[@]}" "$sha"; then
     echo "SSH completed; verifying deployment evidence without redeploying" >&2
   else
     rc=$?
@@ -38,9 +39,25 @@ run_deploy() {
     [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
     previous="$now"; remaining=$((deadline - now))
     (( remaining > 0 )) || break
+    final_attempt=0
+    if (( attempt == status_max_attempts || remaining <= status_timeout_seconds + status_kill_grace_seconds )); then
+      final_attempt=1
+      wait_seconds=$((remaining - status_timeout_seconds))
+      if (( wait_seconds > 0 )); then
+        sleep "$wait_seconds"
+        now="$(date +%s)" || return 1
+        [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
+        previous="$now"; remaining=$((deadline - now))
+        (( remaining > 0 )) || break
+      fi
+    fi
     timeout_seconds="$status_timeout_seconds"
-    (( remaining < timeout_seconds )) && timeout_seconds="$remaining"
-    if evidence="$(timeout --kill-after=5s "${timeout_seconds}s" ssh "${ssh_args[@]}" "status $sha")" &&
+    if (( final_attempt )); then
+      (( remaining < timeout_seconds )) && timeout_seconds="$remaining"
+    elif (( remaining - status_timeout_seconds - status_kill_grace_seconds < timeout_seconds )); then
+      timeout_seconds=$((remaining - status_timeout_seconds - status_kill_grace_seconds))
+    fi
+    if evidence="$(timeout --kill-after="${status_kill_grace_seconds}s" "${timeout_seconds}s" ssh "${ssh_args[@]}" "status $sha")" &&
       printf '%s\n' "$evidence" | grep -Eq "^[0-9TZ:.-]+ memecatch-autodeploy: verified deployed ${sha}$"; then
       now="$(date +%s)" || return 1
       [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous && now <= deadline )) || return 1
@@ -53,14 +70,14 @@ run_deploy() {
     [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
     previous="$now"; remaining=$((deadline - now))
     (( remaining > 0 )) || break
-    (( attempt < status_max_attempts )) || break
+    (( ! final_attempt )) || break
     # Reserve the last request for near the end of the window, even when
     # earlier status calls fail immediately or consume varying amounts of time.
     wait_seconds="$backoff_seconds"
     if (( attempt == status_max_attempts - 1 )); then
       wait_seconds=$((remaining - status_timeout_seconds))
-    elif (( wait_seconds > remaining - status_timeout_seconds )); then
-      wait_seconds=$((remaining - status_timeout_seconds))
+    elif (( wait_seconds > remaining - status_timeout_seconds - status_kill_grace_seconds )); then
+      wait_seconds=$((remaining - status_timeout_seconds - status_kill_grace_seconds))
     fi
     (( wait_seconds < 0 )) && wait_seconds=0
     (( wait_seconds > 0 )) && sleep "$wait_seconds"

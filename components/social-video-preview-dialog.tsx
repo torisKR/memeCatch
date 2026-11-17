@@ -8,6 +8,7 @@ function previewCopy(locale: Locale, platform: SocialVideoPreview["platform"]) {
   const provider = platform === "tiktok" ? "TikTok" : "Instagram";
   if (locale === "ko") {
     return {
+      provider,
       button: `${provider} 영상 미리보기`,
       title: `${provider} 공식 영상 미리보기`,
       privacy: "선택한 공식 플레이어에서 재생할 수 있어요.",
@@ -16,6 +17,7 @@ function previewCopy(locale: Locale, platform: SocialVideoPreview["platform"]) {
     };
   }
   return {
+    provider,
     button: `Preview ${provider} video`,
     title: `Official ${provider} video preview`,
     privacy: "Play the post in the official embedded player.",
@@ -62,7 +64,10 @@ export function SocialVideoPreviewDialog({
         aria-label={`${title} · ${copy.button}`}
         className="absolute right-2 top-2 z-10 inline-flex size-11 items-center justify-center rounded-full border border-white/70 bg-black/75 text-sm font-bold text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
-        <span aria-hidden>▶</span>
+        <span aria-hidden className="flex flex-col items-center leading-none">
+          <span className="text-xs">▶</span>
+          <span className="mt-0.5 text-[8px] font-semibold tracking-tight">{copy.provider}</span>
+        </span>
         <span className="sr-only">{copy.button}</span>
       </button>
       <dialog

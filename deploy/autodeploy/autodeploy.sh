@@ -190,7 +190,21 @@ run_with_heartbeat() (
   trap finish_heartbeat EXIT
   (
     local sleeper=""
-    trap 'if [[ -n "$sleeper" ]]; then kill "$sleeper" 2>/dev/null || true; wait "$sleeper" 2>/dev/null || true; fi; exit 0' TERM INT
+
+    # Invoked by the TERM/INT trap below.
+    # shellcheck disable=SC2329
+    cleanup_sleeper() {
+      local pid="$sleeper"
+      if [[ -z "$pid" ]]; then
+        pid="$(jobs -pr | head -1)" || true
+      fi
+      [[ -n "$pid" ]] || return 0
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      sleeper=""
+    }
+
+    trap 'cleanup_sleeper; exit 0' TERM INT
     # The logger does not participate in deploy exclusion. If its parent exits,
     # it must not independently keep main's flock open via inherited fd 9.
     exec 9>&-

@@ -104,6 +104,23 @@ kill "$race_heartbeat" 2>/dev/null || true
 ! grep -q 'unbound variable' "$race/stderr" || fail "startup signal hit an unbound heartbeat_pid"
 grep -q 'exec 9>&-' "$here/autodeploy.sh" || fail "heartbeat logger may inherit the deploy lock"
 
+# Deterministically signal the inner logger after sleep starts but before its PID
+# reaches sleeper. The logger must recover that active job and reap it promptly.
+inner_race="$stub/heartbeat-sleeper-race"
+mkdir -p "$inner_race"
+inner_pid_file="$inner_race/sleeper.pid"
+(
+  set -T
+  trap 'if [[ "$BASH_COMMAND" == "sleeper=\$!" ]]; then trap - DEBUG; printf "%s\n" "$!" >"$inner_pid_file"; kill -TERM "$BASHPID"; fi' DEBUG
+  BUILD_HEARTBEAT_SECONDS=300 run_with_heartbeat "inner race" bash -c 'sleep 0.1'
+) 2>"$inner_race/stderr"
+inner_sleeper="$(cat "$inner_pid_file")"
+inner_alive=0
+kill -0 "$inner_sleeper" 2>/dev/null && inner_alive=1
+kill "$inner_sleeper" 2>/dev/null || true
+[[ "$inner_alive" == 0 ]] || fail "inner logger signal left heartbeat sleep running"
+! grep -q 'unbound variable' "$inner_race/stderr" || fail "inner logger signal hit an unbound sleeper"
+
 # Rollback redeploys exactly the snapshots recorded before the deploy, even when
 # the replaced containers now run differently named images (GHCR -> local build).
 STATE_DIR="$stub/state"; mkdir -p "$STATE_DIR"

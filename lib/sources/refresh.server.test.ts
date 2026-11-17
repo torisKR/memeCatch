@@ -89,6 +89,21 @@ describe("source refresh recovery", () => {
     expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", invalid.id);
     expect(sourceBuilder.eq).toHaveBeenCalledWith("id", valid.id);
     expect(content.update).not.toHaveBeenCalledWith({ availability: "dead" });
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: "invalid_identity:yt-null", sourceId: invalid.id, externalId: null, code: "metadata_mismatch",
+    }), client);
+
+    // Once quarantined, the invalid row is excluded from subsequent stale
+    // scans instead of repeatedly consuming the YouTube batch budget.
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([{
+      sourceKey: "invalid_identity:yt-null", sourceId: invalid.id, platform: "youtube", externalId: null,
+      canonicalUrl: invalid.canonical_url, attemptCount: 1, nextRetryAt: null, lastErrorCode: "metadata_mismatch",
+      lastErrorRetryable: false, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    }]);
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValueOnce(new Map([[valid.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
+    const nextResult = await runSourceRefresh();
+    expect(sourceBuilder.not).toHaveBeenCalledWith("id", "in", [invalid.id]);
+    expect(nextResult.youtube).toMatchObject({ checked: 1, failed: 0 });
   });
 
   it("keeps source and content unchanged when the YouTube response is inconclusive", async () => {

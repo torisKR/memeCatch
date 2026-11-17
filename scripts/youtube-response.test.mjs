@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -70,6 +74,59 @@ function sourcePatch(calls, id) {
 
 function availabilityPatch(calls, externalId) {
   return calls.find((call) => call.path.includes(`content_id=eq.${externalId}`))?.body;
+}
+
+async function spawnRunnerCli(scriptName) {
+  const temp = await mkdtemp(join(tmpdir(), "memecatch-youtube-cli-"));
+  const fixturePath = join(temp, "source-pipeline-rest-fixture.mjs");
+  const hooksPath = join(temp, "hooks.mjs");
+  const registerPath = join(temp, "register.mjs");
+  const writesPath = join(temp, "writes.log");
+  const invalidSource = source(0, null);
+  const validSource = source(1);
+
+  await writeFile(fixturePath, `
+import { appendFileSync } from "node:fs";
+const sources = ${JSON.stringify([invalidSource, validSource])};
+export function loadEnv() { return { YOUTUBE_API_KEY: "cli-test-key" }; }
+export function createRestClient() {
+  return async (path) => { appendFileSync(${JSON.stringify(writesPath)}, path + "\\n"); return {}; };
+}
+export async function restAll(_rest, path) {
+  if (path.startsWith("meme_media")) return sources.map((row) => ({ source_id: row.id }));
+  return sources;
+}
+`);
+  await writeFile(hooksPath, `
+const fixtureUrl = ${JSON.stringify(new URL(`file://${fixturePath}`).href)};
+export async function resolve(specifier, context, nextResolve) {
+  if (specifier.endsWith("/source-pipeline-rest.mjs")) {
+    return { url: fixtureUrl, shortCircuit: true };
+  }
+  return nextResolve(specifier, context);
+}
+`);
+  await writeFile(registerPath, `
+import { register } from "node:module";
+register(${JSON.stringify(new URL(`file://${hooksPath}`).href)}, import.meta.url);
+globalThis.fetch = async (input) => {
+  const ids = new URL(input).searchParams.get("id").split(",");
+  return new Response(JSON.stringify({ items: ids.map((id) => ({
+    id,
+    status: { privacyStatus: "public", embeddable: true },
+  })) }), { status: 200 });
+};
+`);
+
+  const scriptPath = new URL(`./${scriptName}`, import.meta.url).pathname;
+  const spawned = spawnSync(process.execPath, ["--import", registerPath, scriptPath], {
+    cwd: new URL("..", import.meta.url).pathname,
+    encoding: "utf8",
+    env: { ...process.env },
+  });
+  const writes = await readFile(writesPath, "utf8");
+  await rm(temp, { recursive: true, force: true });
+  return { spawned, writes, validSource };
 }
 
 test("accepts explicit empty and partial videos.list results", () => {
@@ -190,6 +247,36 @@ for (const [name, run] of runners) {
     assert(sourcePatch(calls, sourceId(4)));
   });
 
+  test(`${name}: invalid rows cannot starve later valid rows and error output is bounded`, async () => {
+    const invalidSources = Array.from({ length: 50 }, (_, index) =>
+      source(index, index % 2 === 0 ? null : `bad/${index}`),
+    );
+    const validSource = source(50);
+    const { rest, calls } = restRecorder();
+    let requestedIds;
+    const result = await run({
+      sources: [...invalidSources, validSource],
+      apiKey: API_KEY,
+      fetchImpl: async (input) => {
+        requestedIds = new URL(input).searchParams.get("id");
+        return response({ items: [video(videoId(50))] });
+      },
+      rest,
+      limit: 1,
+      now: NOW,
+    });
+
+    assert.equal(requestedIds, videoId(50));
+    assert(sourcePatch(calls, sourceId(50)));
+    assert.equal(result.checked, 51);
+    assert.equal(result.failed, 50);
+    assert.equal(result.errors.length, 20);
+    assert.equal(result.errorsTruncated, 30);
+    assert.equal(result.errors[0], `youtube_source_external_id_inconclusive:${sourceId(0)}`);
+    assert.equal(result.errors[19], `youtube_source_external_id_inconclusive:${sourceId(19)}`);
+    assert.doesNotMatch(JSON.stringify(result.errors), /bad\//);
+  });
+
   test(`${name}: dry-run computes results without PATCH`, async () => {
     const { rest, calls } = restRecorder();
     const result = await run({
@@ -301,6 +388,47 @@ test("refresh: private, unlisted, link-only, and region-blocked PATCHes match cr
   assert.deepEqual(availabilityPatch(calls, videoId(3)), { availability: "region_blocked" });
 });
 
+for (const [name, items] of [
+  ["missing", []],
+  ["private", [video(videoId(0), "private", false)]],
+]) {
+  test(`refresh: ${name} retries after source removal PATCH fails`, async () => {
+    const firstCalls = [];
+    const failingRest = async (path, options) => {
+      firstCalls.push({ path, body: JSON.parse(options.body) });
+      if (path.startsWith("media_sources")) throw new Error("database unavailable");
+      return {};
+    };
+
+    await assert.rejects(
+      runRefreshYouTubeSources({
+        sources: [source(0)],
+        apiKey: API_KEY,
+        fetchImpl: async () => response({ items }),
+        rest: failingRest,
+        now: NOW,
+      }),
+      /^Error: youtube_source_write_failed$/,
+    );
+    assert.match(firstCalls[0].path, /^meme_contents\?/);
+    assert.deepEqual(firstCalls[0].body, { availability: "dead" });
+    assert.equal(firstCalls[1].path, `media_sources?id=eq.${sourceId(0)}`);
+
+    const retryRecorder = restRecorder();
+    const retryResult = await runRefreshYouTubeSources({
+      sources: [source(0)],
+      apiKey: API_KEY,
+      fetchImpl: async () => response({ items }),
+      rest: retryRecorder.rest,
+      now: NOW,
+    });
+    assert.equal(retryResult.removed, 1);
+    assert.match(retryRecorder.calls[0].path, /^meme_contents\?/);
+    assert.equal(retryRecorder.calls[1].path, `media_sources?id=eq.${sourceId(0)}`);
+    assert.equal(sourcePatch(retryRecorder.calls, sourceId(0)).removed_at, NOW);
+  });
+}
+
 test("pending: an explicit empty result performs an authoritative removal PATCH", async () => {
   const { rest, calls } = restRecorder();
   const result = await runVerifyYouTubePending({
@@ -385,4 +513,65 @@ test("runner errors do not expose API keys, response bodies, or database errors"
     }),
     /^Error: youtube_source_write_failed$/,
   );
+});
+
+test("both runner CLIs finish valid work and exit nonzero for partial failures", async () => {
+  for (const scriptName of [
+    "refresh-youtube-sources.mjs",
+    "verify-youtube-pending.mjs",
+  ]) {
+    const { spawned, writes, validSource } = await spawnRunnerCli(scriptName);
+    assert.equal(spawned.status, 1, `${scriptName} must report partial failure`);
+    const output = JSON.parse(spawned.stdout.trim().split("\n").at(-1));
+    assert.equal(output.failed, 1);
+    assert.equal(output.checked, 2);
+    assert.match(writes, new RegExp(`media_sources\\?id=eq\\.${validSource.id}`));
+    assert.doesNotMatch(
+      `${spawned.stdout}\n${spawned.stderr}`,
+      /cli-test-key|provider\.example/,
+    );
+  }
+});
+
+test("daily discovery spawn preserves both failures and suppresses success text", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "memecatch-daily-source-"));
+  const binDir = join(temp, "bin");
+  const outputDir = join(temp, "logs");
+  await mkdir(binDir, { recursive: true });
+  const fakeNode = join(binDir, "node");
+  await writeFile(fakeNode, `#!/bin/bash
+if [[ "$1" == *"discover-youtube-candidates.mjs"* ]]; then
+  echo "discover stdout preserved"
+  echo "discover stderr preserved" >&2
+  exit 7
+fi
+echo "verify stdout preserved"
+echo "verify stderr preserved" >&2
+exit 9
+`);
+  await chmod(fakeNode, 0o755);
+
+  const scriptPath = new URL("./daily-source-discovery.sh", import.meta.url).pathname;
+  const spawned = spawnSync("bash", [scriptPath], {
+    cwd: new URL("..", import.meta.url).pathname,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH}`,
+      SOURCE_DISCOVERY_OUTPUT_DIR: outputDir,
+    },
+  });
+  const [logName] = await readdir(outputDir);
+  const log = await readFile(join(outputDir, logName), "utf8");
+  await rm(temp, { recursive: true, force: true });
+
+  assert.equal(spawned.status, 1);
+  assert.match(log, /discover stdout preserved/);
+  assert.match(log, /discover stderr preserved/);
+  assert.match(log, /YouTube 후보 수집 실패 \(exit=7\)/);
+  assert.match(log, /verify stdout preserved/);
+  assert.match(log, /verify stderr preserved/);
+  assert.match(log, /YouTube pending 검증 실패 \(exit=9\)/);
+  assert.match(log, /후보 수집·검증 실패/);
+  assert.doesNotMatch(log, /후보 수집·검증 완료/);
 });

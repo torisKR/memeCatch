@@ -91,8 +91,29 @@ async function refreshYouTubeSources(
   // moving while reporting the bad rows for data repair.
   const validRows = rows.filter((row) => row.external_id && /^[A-Za-z0-9_-]{11}$/.test(row.external_id));
   const validIds = new Set(validRows.map((row) => row.id));
-  const identityErrors = rows.filter((row) => !validIds.has(row.id)).map((row) => `invalid_source_identity:${row.id}`);
+  const invalidRows = rows.filter((row) => !validIds.has(row.id));
+  const identityErrors = invalidRows.map((row) => `invalid_source_identity:${row.id}`);
   const invalidCount = identityErrors.length;
+  const invalidAttemptAt = new Date();
+  for (const row of invalidRows) {
+    try {
+      // Non-retryable recovery records keep malformed rows out of future
+      // refresh budgets while retaining their identity for manual repair.
+      await recordSourceAcquisitionFailure({
+        sourceKey: `invalid_identity:${row.id}`,
+        idempotencyKey: `invalid_identity:${row.id}:${invalidAttemptAt.toISOString()}`,
+        platform: row.platform,
+        sourceId: row.id,
+        externalId: null,
+        canonicalUrl: /^https:\/\//i.test(row.canonical_url) ? row.canonical_url : null,
+        code: "metadata_mismatch",
+        attempt: 1,
+        occurredAt: invalidAttemptAt,
+      }, admin);
+    } catch {
+      identityErrors.push(`invalid_identity_quarantine_failed:${row.id}`);
+    }
+  }
   const ids = validRows.map((row) => row.external_id as string);
   if (ids.length === 0) return { checked: rows.length, removed: 0, hidden: 0, failed: invalidCount, errors: identityErrors };
 

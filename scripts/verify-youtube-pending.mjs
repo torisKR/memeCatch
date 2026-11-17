@@ -16,6 +16,7 @@ import {
 
 const BATCH_SIZE = 50;
 const METADATA_TTL_MS = 30 * 86_400_000;
+const MAX_REPORTED_ERRORS = 20;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 function parseDuration(value) {
@@ -86,19 +87,24 @@ export async function runVerifyYouTubePending({
     failed: 0,
     apiCalls: 0,
     errors: [],
+    errorsTruncated: 0,
   };
-  const targets = sources.slice(0, limit);
-  const validTargets = [];
+  const validSources = [];
 
-  for (const source of targets) {
+  for (const source of sources) {
     if (!validExternalId(source.external_id)) {
       stats.checked += 1;
       stats.failed += 1;
-      stats.errors.push(`youtube_source_external_id_inconclusive:${source.id}`);
+      if (stats.errors.length < MAX_REPORTED_ERRORS) {
+        stats.errors.push(`youtube_source_external_id_inconclusive:${source.id}`);
+      } else {
+        stats.errorsTruncated += 1;
+      }
       continue;
     }
-    validTargets.push(source);
+    validSources.push(source);
   }
+  const validTargets = validSources.slice(0, limit);
 
   for (let index = 0; index < validTargets.length; index += BATCH_SIZE) {
     const batch = validTargets.slice(index, index + BATCH_SIZE);
@@ -206,6 +212,7 @@ async function main(args = process.argv.slice(2)) {
     onProgress: (completed, total) => console.error(`진행 ${completed}/${total}`),
   });
   console.log(JSON.stringify(result));
+  if (result.failed > 0) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

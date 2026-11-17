@@ -20,6 +20,7 @@ import {
 const DISPLAY_PLATFORM = { youtube: "YouTube", youtube_shorts: "YouTube Shorts" };
 const BATCH_SIZE = 50;
 const METADATA_TTL_MS = 30 * 86_400_000;
+const MAX_REPORTED_ERRORS = 20;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 function parseDuration(value) {
@@ -89,19 +90,24 @@ export async function runRefreshYouTubeSources({
     failed: 0,
     apiCalls: 0,
     errors: [],
+    errorsTruncated: 0,
   };
-  const targets = sources.slice(0, limit);
-  const validTargets = [];
+  const validSources = [];
 
-  for (const source of targets) {
+  for (const source of sources) {
     if (!validExternalId(source.external_id)) {
       stats.checked += 1;
       stats.failed += 1;
-      stats.errors.push(`youtube_source_external_id_inconclusive:${source.id}`);
+      if (stats.errors.length < MAX_REPORTED_ERRORS) {
+        stats.errors.push(`youtube_source_external_id_inconclusive:${source.id}`);
+      } else {
+        stats.errorsTruncated += 1;
+      }
       continue;
     }
-    validTargets.push(source);
+    validSources.push(source);
   }
+  const validTargets = validSources.slice(0, limit);
 
   const syncAvailability = async (source, availability) => {
     if (dryRun) return;
@@ -127,6 +133,7 @@ export async function runRefreshYouTubeSources({
 
       if (!video) {
         stats.removed += 1;
+        await syncAvailability(source, "dead");
         if (!dryRun) {
           await safeRest(rest, `media_sources?id=eq.${source.id}`, {
             method: "PATCH",
@@ -139,7 +146,6 @@ export async function runRefreshYouTubeSources({
             }),
           });
         }
-        await syncAvailability(source, "dead");
         continue;
       }
 
@@ -150,6 +156,9 @@ export async function runRefreshYouTubeSources({
       const availability = classifyYouTubeRefreshAvailability(video.status, blockedKr);
       const thumbnails = video.snippet?.thumbnails ?? {};
 
+      if (isPrivate) {
+        await syncAvailability(source, "dead");
+      }
       if (!dryRun) {
         await safeRest(rest, `media_sources?id=eq.${source.id}`, {
           method: "PATCH",
@@ -183,7 +192,9 @@ export async function runRefreshYouTubeSources({
       } else if (!isPublic || (!blockedKr && !embeddable)) {
         stats.hidden += 1;
       }
-      await syncAvailability(source, availability);
+      if (!isPrivate) {
+        await syncAvailability(source, availability);
+      }
     }
     onProgress(Math.min(index + BATCH_SIZE, validTargets.length), validTargets.length);
   }
@@ -219,6 +230,7 @@ async function main(args = process.argv.slice(2)) {
     onProgress: (completed, total) => console.error(`진행 ${completed}/${total}`),
   });
   console.log(JSON.stringify(result));
+  if (result.failed > 0) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

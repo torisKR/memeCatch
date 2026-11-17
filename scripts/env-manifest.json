@@ -54,6 +54,7 @@
   "KAKAO_CLIENT_SECRET": "Kakao OAuth client secret.",
   "LD_LIBRARY_PATH": "Shared-library path for the bundled libpq used by the loop-028 safety_reviewed_at proof script.",
   "LOCAL_OBJECT_STORAGE_DIR": "Disk directory used when R2 upload credentials are unset.",
+  "LOCALIZED_SOFT404_POSTGRES": "Set to docker to run the localized soft-404 integration test against an isolated PostgreSQL container.",
   "MCP_EVENT_CALLBACK_ORIGINS": "Allowed callback origins for ChatGPT integration events.",
   "MCP_EVENT_RETRY_TOKEN": "Retry token for ChatGPT integration event delivery.",
   "MCP_EVENT_STATE_KEY": "Encryption key for ChatGPT integration event state.",

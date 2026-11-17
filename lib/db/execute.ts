@@ -10,7 +10,13 @@ import {
   type QueryPlan,
   type QueryResult,
 } from "@/lib/db/plan";
-import { getDb, withIdentity, type DbIdentity } from "@/lib/db/pool";
+import {
+  getDb,
+  getDeadlineDb,
+  withIdentity,
+  type DbIdentity,
+  type IdentityExecutionOptions,
+} from "@/lib/db/pool";
 
 type ColumnMap = Map<string, Map<string, string>>;
 
@@ -29,8 +35,12 @@ export type Meta = {
 };
 
 type SqlParts = { sql: string; params: unknown[] };
+type MetaPoolScope = "general" | "deadline";
 
-const globalMeta = globalThis as unknown as { __memecatchMeta?: Meta };
+const globalMeta = globalThis as unknown as {
+  __memecatchMeta?: Meta;
+  __memecatchMetaPromises?: Partial<Record<MetaPoolScope, Promise<Meta>>>;
+};
 
 function bindValue(value: unknown, udt: string | undefined): unknown {
   if (value === null || value === undefined) return null;
@@ -452,9 +462,9 @@ function mutationSql(plan: QueryPlan, meta: Meta): SqlParts {
 
 type PgFunction = { proretset: boolean; names: string[] | null; types: string[] | null };
 
-async function loadFunctions(name: string): Promise<PgFunction[]> {
+async function loadFunctions(name: string, db = getDb()): Promise<PgFunction[]> {
   if (!isIdent(name)) throw new Error("invalid identifier");
-  const result = await getDb()
+  const result = await db
     .transaction()
     .execute(async (trx) =>
       trx.executeQuery<{ proretset: boolean; names: string[] | null; types: string[] | null }>(
@@ -515,80 +525,128 @@ function pgArray(value: unknown): string[] {
   return [];
 }
 
-async function loadMeta(): Promise<Meta> {
-  if (globalMeta.__memecatchMeta) return globalMeta.__memecatchMeta;
-  const db = getDb();
-  const loaded = await db.transaction().execute(async (trx) => {
-    const columns = await trx.executeQuery<{ table_name: string; column_name: string; udt: string }>(
-      CompiledQuery.raw(
-        `SELECT c.relname AS table_name, a.attname AS column_name, t.typname AS udt
-           FROM pg_class c
-           JOIN pg_namespace n ON n.oid = c.relnamespace
-           JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-           JOIN pg_type t ON t.oid = a.atttypid
-          WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'm', 'p')`,
-      ),
+function cancelledQueryError(): Error & { code: string } {
+  return Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
+}
+
+function waitForMeta<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(cancelledQueryError());
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort);
+      reject(cancelledQueryError());
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", abort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", abort);
+        reject(error);
+      },
     );
-    const keys = await trx.executeQuery<{ table_name: string; column_name: string }>(
-      CompiledQuery.raw(
-        `SELECT rel.relname AS table_name, att.attname AS column_name
-           FROM pg_index idx
-           JOIN pg_class rel ON rel.oid = idx.indrelid
-           JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-           JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY (idx.indkey)
-          WHERE nsp.nspname = 'public' AND idx.indisprimary
-          ORDER BY rel.relname, array_position(idx.indkey, att.attnum)`,
-      ),
-    );
-    const foreignKeys = await trx.executeQuery<{
-      name: string;
-      src_table: string;
-      dst_table: string;
-      src_cols: string[];
-      dst_cols: string[];
-    }>(
-      CompiledQuery.raw(
-        `SELECT con.conname AS name,
-                src.relname AS src_table,
-                dst.relname AS dst_table,
-                (SELECT array_agg(a.attname ORDER BY cols.ord)
-                   FROM unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ord)
-                   JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = cols.attnum) AS src_cols,
-                (SELECT array_agg(a.attname ORDER BY cols.ord)
-                   FROM unnest(con.confkey) WITH ORDINALITY AS cols(attnum, ord)
-                   JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = cols.attnum) AS dst_cols
-           FROM pg_constraint con
-           JOIN pg_class src ON src.oid = con.conrelid
-           JOIN pg_class dst ON dst.oid = con.confrelid
-           JOIN pg_namespace nsp ON nsp.oid = src.relnamespace
-          WHERE con.contype = 'f' AND nsp.nspname = 'public'`,
-      ),
-    );
-    return { columns: columns.rows, keys: keys.rows, foreignKeys: foreignKeys.rows };
   });
-  const columns: ColumnMap = new Map();
-  for (const row of loaded.columns) {
-    const table = columns.get(row.table_name) ?? new Map<string, string>();
-    table.set(row.column_name, row.udt);
-    columns.set(row.table_name, table);
+}
+
+async function loadMeta(
+  identity: DbIdentity,
+  signal: AbortSignal | undefined,
+  db: ReturnType<typeof getDb>,
+  executionOptions: IdentityExecutionOptions,
+  metaPoolScope: MetaPoolScope,
+): Promise<Meta> {
+  if (globalMeta.__memecatchMeta) return globalMeta.__memecatchMeta;
+  if (signal?.aborted) throw cancelledQueryError();
+  const metaPromises = globalMeta.__memecatchMetaPromises ??= {};
+  if (!metaPromises[metaPoolScope]) {
+    const metaPromise = withIdentity(identity, async (trx) => {
+        const columns = await trx.executeQuery<{ table_name: string; column_name: string; udt: string }>(
+          CompiledQuery.raw(
+            `SELECT c.relname AS table_name, a.attname AS column_name, t.typname AS udt
+               FROM pg_class c
+               JOIN pg_namespace n ON n.oid = c.relnamespace
+               JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+               JOIN pg_type t ON t.oid = a.atttypid
+              WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'm', 'p')`,
+          ),
+        );
+        const keys = await trx.executeQuery<{ table_name: string; column_name: string }>(
+          CompiledQuery.raw(
+            `SELECT rel.relname AS table_name, att.attname AS column_name
+               FROM pg_index idx
+               JOIN pg_class rel ON rel.oid = idx.indrelid
+               JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+               JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY (idx.indkey)
+              WHERE nsp.nspname = 'public' AND idx.indisprimary
+              ORDER BY rel.relname, array_position(idx.indkey, att.attnum)`,
+          ),
+        );
+        const foreignKeys = await trx.executeQuery<{
+          name: string;
+          src_table: string;
+          dst_table: string;
+          src_cols: string[];
+          dst_cols: string[];
+        }>(
+          CompiledQuery.raw(
+            `SELECT con.conname AS name,
+                    src.relname AS src_table,
+                    dst.relname AS dst_table,
+                    (SELECT array_agg(a.attname ORDER BY cols.ord)
+                       FROM unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = cols.attnum) AS src_cols,
+                    (SELECT array_agg(a.attname ORDER BY cols.ord)
+                       FROM unnest(con.confkey) WITH ORDINALITY AS cols(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = cols.attnum) AS dst_cols
+               FROM pg_constraint con
+               JOIN pg_class src ON src.oid = con.conrelid
+               JOIN pg_class dst ON dst.oid = con.confrelid
+               JOIN pg_namespace nsp ON nsp.oid = src.relnamespace
+              WHERE con.contype = 'f' AND nsp.nspname = 'public'`,
+          ),
+        );
+        const columnMap: ColumnMap = new Map();
+        for (const row of columns.rows) {
+          const table = columnMap.get(row.table_name) ?? new Map<string, string>();
+          table.set(row.column_name, row.udt);
+          columnMap.set(row.table_name, table);
+        }
+        const primaryKeys = new Map<string, string[]>();
+        for (const row of keys.rows) {
+          primaryKeys.set(row.table_name, [...(primaryKeys.get(row.table_name) ?? []), row.column_name]);
+        }
+        return {
+          columns: columnMap,
+          primaryKeys,
+          foreignKeys: foreignKeys.rows.map((row) => ({
+            name: row.name,
+            srcTable: row.src_table,
+            dstTable: row.dst_table,
+            srcCols: pgArray(row.src_cols),
+            dstCols: pgArray(row.dst_cols),
+          })),
+        };
+    }, db, executionOptions);
+    metaPromises[metaPoolScope] = metaPromise;
+    void metaPromise.then(
+      (meta) => {
+        if (globalMeta.__memecatchMetaPromises?.[metaPoolScope] === metaPromise) {
+          globalMeta.__memecatchMeta = meta;
+          delete globalMeta.__memecatchMetaPromises[metaPoolScope];
+        }
+      },
+      () => {
+        if (globalMeta.__memecatchMetaPromises?.[metaPoolScope] === metaPromise) {
+          delete globalMeta.__memecatchMetaPromises[metaPoolScope];
+        }
+      },
+    );
   }
-  const primaryKeys = new Map<string, string[]>();
-  for (const row of loaded.keys) {
-    primaryKeys.set(row.table_name, [...(primaryKeys.get(row.table_name) ?? []), row.column_name]);
-  }
-  const meta: Meta = {
-    columns,
-    primaryKeys,
-    foreignKeys: loaded.foreignKeys.map((row) => ({
-      name: row.name,
-      srcTable: row.src_table,
-      dstTable: row.dst_table,
-      srcCols: pgArray(row.src_cols),
-      dstCols: pgArray(row.dst_cols),
-    })),
-  };
-  globalMeta.__memecatchMeta = meta;
-  return meta;
+  const metaPromise = metaPromises[metaPoolScope];
+  return waitForMeta(metaPromise, signal);
 }
 
 function queryError(error: unknown): QueryResult["error"] {
@@ -652,6 +710,8 @@ async function runQuery(
   params: unknown[],
   signal?: AbortSignal,
   json = true,
+  db = getDb(),
+  executionOptions: IdentityExecutionOptions = {},
 ): Promise<Record<string, unknown>[]> {
   return withIdentity(identity, async (trx: Transaction<Record<string, Record<string, unknown>>>, cancel) => {
     if (signal?.aborted) throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
@@ -671,31 +731,39 @@ async function runQuery(
     } finally {
       signal?.removeEventListener("abort", abort);
     }
-  });
+  }, db, executionOptions);
 }
 
-export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
+async function executePlanWithDb(
+  plan: QueryPlan,
+  identity: DbIdentity,
+  signal = undefined as AbortSignal | undefined,
+  resolveDb: typeof getDb,
+  executionOptions: IdentityExecutionOptions,
+  metaPoolScope: MetaPoolScope,
+): Promise<QueryResult> {
   try {
-    const meta = await loadMeta();
+    const db = resolveDb();
+    const meta = await loadMeta(identity, signal, db, executionOptions, metaPoolScope);
     if (plan.op === "rpc") {
       attachDottedFilters(plan);
-      const matches = await loadFunctions(plan.fn ?? "");
+      const matches = await loadFunctions(plan.fn ?? "", db);
       const fn = matches.find((item) => {
         const names = new Set(item.names ?? []);
         return Object.keys(plan.args ?? {}).every((key) => names.has(key) || names.size === 0);
       }) ?? matches[0];
       if (!fn) return { data: null, error: { message: "function not found", code: "42883", status: 404 }, count: null };
       const built = rpcSql(plan, fn, meta);
-      const rows = await runQuery(identity, built.sql, built.params, signal);
+      const rows = await runQuery(identity, built.sql, built.params, signal, true, db, executionOptions);
       return shapeRows(plan, rows, null, !fn.proretset);
     }
     if (plan.op === "select") {
       const dataSql = compileSelectPlan(plan, meta, false);
       const countSql = plan.count === "exact" ? compileSelectPlan(plan, meta, true) : null;
-      const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal);
+      const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal, true, db, executionOptions);
       let count: number | null = null;
       if (countSql) {
-        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false);
+        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false, db, executionOptions);
         count = Number(counted[0]?.count ?? 0);
       }
       return shapeRows(plan, rows, count, false);
@@ -703,13 +771,25 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
     attachDottedFilters(plan);
     const built = mutationSql(plan, meta);
     // Without RETURNING there are no rows, and a WITH wrapper would be rejected.
-    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning);
+    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning, db, executionOptions);
     return shapeRows(plan, rows, null, false);
   } catch (error) {
     return { data: null, error: queryError(error), count: null };
   }
 }
 
+export function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
+  return executePlanWithDb(plan, identity, signal, getDb, {}, "general");
+}
+
+export function executeDeadlinePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
+  return executePlanWithDb(plan, identity, signal, getDeadlineDb, {
+    allowBackendCancel: false,
+    statementTimeoutMs: 1_500,
+  }, "deadline");
+}
+
 export function resetQueryMetadata(): void {
   globalMeta.__memecatchMeta = undefined;
+  globalMeta.__memecatchMetaPromises = undefined;
 }

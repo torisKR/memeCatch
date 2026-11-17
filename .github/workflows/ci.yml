@@ -67,8 +67,8 @@ jobs:
             args+=(--build-arg "${key}=${value}")
           done < deploy/build.env
           docker build -t memecatch:ci --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
-      - name: The runtime user can write the Next.js cache
-        run: docker run --rm --entrypoint sh memecatch:ci -c 'mkdir -p /app/.next/cache/fetch-cache && touch /app/.next/cache/probe'
+      - name: The runtime user can write data and ISR caches
+        run: docker run --rm --entrypoint sh memecatch:ci -c 'mkdir -p /app/.next/cache/fetch-cache && touch /app/.next/cache/probe /app/.next/server/app/isr-probe'
       - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
       - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
       - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .

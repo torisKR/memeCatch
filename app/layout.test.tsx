@@ -99,7 +99,7 @@ describe("multiple root layouts", () => {
   });
 
   it("모든 외국어 루트를 정적 생성하고 공통 PWA·소유권 메타데이터를 보존한다", async () => {
-    expect(dynamicParams).toBe(false);
+    expect(dynamicParams).toBe(true);
     expect(generateStaticParams()).toEqual([
       { locale: "en" },
       { locale: "ja" },

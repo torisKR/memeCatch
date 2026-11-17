@@ -45,9 +45,9 @@ RUN apt-get update \
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
-# ISR and unstable_cache write under .next/cache at run time; root-owned .next
-# made every write fail with EACCES and silently disabled the data cache.
-RUN mkdir -p .next/cache && chown -R node:node .next/cache
+# Data caching writes under .next/cache; ISR regenerates HTML/RSC under
+# .next/server/app after catalog expiration. Both must be writable at runtime.
+RUN mkdir -p .next/cache && chown -R node:node .next/cache .next/server/app
 EXPOSE 3000
 USER node
 CMD ["node", "server.js"]

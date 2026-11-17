@@ -40,13 +40,6 @@ type MediaSourceRow = {
   removed_at: string | null;
 };
 
-const CONTENT_PLATFORM_LABELS: Record<MediaSourcePlatform, string[]> = {
-  youtube: ["YouTube", "youtube"],
-  youtube_shorts: ["YouTube Shorts"],
-  tiktok: ["TikTok"],
-  instagram: ["Instagram"],
-};
-
 const DISPLAY_PLATFORM: Record<MediaSourcePlatform, string> = {
   youtube: "YouTube",
   youtube_shorts: "YouTube Shorts",
@@ -63,9 +56,8 @@ async function syncMemeContentsAvailability(
   source: MediaSourceRow,
   availability: "live" | "dead" | "region_blocked",
 ) {
-  // Keep the legacy embed projection keyed by platform/content_id. Historical
-  // embeds legitimately contain youtu.be, query-param, and Shorts URL variants.
-  const { error: embedError } = await admin
+  // 백필이 정규 URL과 content_id를 맞춰두었다는 전제로 둘 다 매칭한다.
+  const { error } = await admin
     .from("meme_contents")
     .update({ availability })
     .eq("platform", DISPLAY_PLATFORM[source.platform])
@@ -73,26 +65,11 @@ async function syncMemeContentsAvailability(
     .eq("type", "embed")
     .neq("availability", availability)
     .select("id");
-  if (embedError) throw new Error("source_content_availability_update_failed");
-
-  // Video projections were not covered by the legacy path. Match their full
-  // identity so a lowercase platform label cannot broaden updates to a
-  // different video that happens to reuse an external ID.
-  const { error: videoError } = await admin
-    .from("meme_contents")
-    .update({ availability })
-    .in("platform", CONTENT_PLATFORM_LABELS[source.platform])
-    .eq("content_id", source.external_id ?? "")
-    .eq("url", source.canonical_url)
-    .eq("type", "video")
-    .neq("availability", availability)
-    .select("id");
-  if (videoError) throw new Error("source_content_availability_update_failed");
-
+  if (error) throw new Error("source_content_availability_update_failed");
   // Some legacy entries label Shorts or TikTok URLs as YouTube. Only update
   // those mislabeled rows when both the canonical URL and external ID match.
   if (source.platform !== "youtube" && source.external_id) {
-    const { error: legacyEmbedError } = await admin
+    const { error: legacyError } = await admin
       .from("meme_contents")
       .update({ availability })
       .eq("platform", "YouTube")
@@ -101,18 +78,7 @@ async function syncMemeContentsAvailability(
       .eq("type", "embed")
       .neq("availability", availability)
       .select("id");
-    if (legacyEmbedError) throw new Error("source_content_availability_update_failed");
-
-    const { error: legacyVideoError } = await admin
-      .from("meme_contents")
-      .update({ availability })
-      .eq("platform", "YouTube")
-      .eq("content_id", source.external_id)
-      .eq("url", source.canonical_url)
-      .eq("type", "video")
-      .neq("availability", availability)
-      .select("id");
-    if (legacyVideoError) throw new Error("source_content_availability_update_failed");
+    if (legacyError) throw new Error("source_content_availability_update_failed");
   }
 }
 

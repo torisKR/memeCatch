@@ -58,9 +58,9 @@ run_deploy() {
     # earlier status calls fail immediately or consume varying amounts of time.
     wait_seconds="$backoff_seconds"
     if (( attempt == status_max_attempts - 1 )); then
-      wait_seconds=$((remaining - 30))
-    elif (( wait_seconds > remaining - 30 )); then
-      wait_seconds=$((remaining - 30))
+      wait_seconds=$((remaining - status_timeout_seconds))
+    elif (( wait_seconds > remaining - status_timeout_seconds )); then
+      wait_seconds=$((remaining - status_timeout_seconds))
     fi
     (( wait_seconds < 0 )) && wait_seconds=0
     (( wait_seconds > 0 )) && sleep "$wait_seconds"

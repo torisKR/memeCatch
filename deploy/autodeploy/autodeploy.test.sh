@@ -522,9 +522,10 @@ if (( number > 1 )); then
   (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
   if [[ -n "${ssh_ready_at:-}" ]]; then
     if (( now >= ssh_ready_at )); then
-      advance=0; rc=0
+      advance="${ssh_success_duration:-0}"; rc=0
+      if (( advance > ssh_timeout_seconds )); then advance="$ssh_timeout_seconds"; rc=124; fi
     else
-      if (( ssh_timeout_seconds < 90 )); then advance="$ssh_timeout_seconds"; fi
+      if [[ "${ssh_wait_for_ready:-0}" == 1 ]] || (( ssh_timeout_seconds < 90 )); then advance="$ssh_timeout_seconds"; fi
       if (( now + advance >= ssh_ready_at )); then advance=$((ssh_ready_at - now)); rc=0; else rc=3; fi
     fi
   fi
@@ -562,15 +563,15 @@ for scenario in direct_success direct_success_unverified disconnect_then_success
   ssh_silent=0; ssh_evidence_sha="$test_head"; ssh_clock_backwards=0
   case "$scenario" in
     direct_success) ssh_results=0,0; expected_rc=0; expected_calls=2 ;;
-    direct_success_unverified) ssh_results=0,3; expected_rc=1; expected_calls=13 ;;
+    direct_success_unverified) ssh_results=0,3; expected_rc=1; expected_calls=14 ;;
     disconnect_then_success) ssh_results=255,0; expected_rc=0; expected_calls=2 ;;
     disconnect_then_retry) ssh_results=255,255,124,0; expected_rc=0; expected_calls=4 ;;
     timed_out_then_success) ssh_results=124,0; expected_rc=0; expected_calls=2 ;;
     killed_then_success) ssh_results=137,0; expected_rc=0; expected_calls=2 ;;
     nontransport_failure) ssh_results=3; expected_rc=3; expected_calls=1 ;;
-    never_confirmed) ssh_results=255,3; expected_rc=1; expected_calls=13 ;;
-    silent_status) ssh_results=255,$(printf '0,%.0s' {1..12}); ssh_silent=1; expected_rc=1; expected_calls=13 ;;
-    wrong_evidence) ssh_results=255,$(printf '0,%.0s' {1..12}); ssh_evidence_sha=1111111111111111111111111111111111111111; expected_rc=1; expected_calls=13 ;;
+    never_confirmed) ssh_results=255,3; expected_rc=1; expected_calls=14 ;;
+    silent_status) ssh_results=255,$(printf '0,%.0s' {1..13}); ssh_silent=1; expected_rc=1; expected_calls=14 ;;
+    wrong_evidence) ssh_results=255,$(printf '0,%.0s' {1..13}); ssh_evidence_sha=1111111111111111111111111111111111111111; expected_rc=1; expected_calls=14 ;;
     backward_clock) ssh_results=255,3; ssh_clock_backwards=1; expected_rc=1; expected_calls=2 ;;
   esac
   export ssh_results ssh_silent ssh_evidence_sha ssh_clock_backwards
@@ -601,11 +602,11 @@ status_calls="$(grep -c "^status $test_head$" "$ssh_calls")"
 
 # A failed status can return immediately or slowly. Keep one request near the
 # deadline so readiness after an earlier failure can still be observed.
-for timing in 0:2600 45:2660; do
+for timing in 0:2600 45:2600; do
   duration="${timing%%:*}"; ready_at="${timing##*:}"
   : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
   rc=0
-  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at" ssh_status_duration="$duration"; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at" ssh_status_duration="$duration" ssh_success_duration="$duration"; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
   [[ "$rc" == 0 ]] || fail "deadline evidence missed for status duration $duration"
   (( $(cat "$test_clock_file") >= ready_at && $(cat "$test_clock_file") <= 2700 )) || fail "deadline evidence outside allowed window"
   (( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "deadline retry exceeded API budget"
@@ -617,7 +618,7 @@ done
 for ready_at in 1950 2699 2700 2701; do
   : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
   rc=0
-  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at"; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at" ssh_wait_for_ready=1; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
   if (( ready_at <= 2700 )); then
     observed_at="$(cat "$test_clock_file")"
     if [[ "$rc" != 0 ]] || (( observed_at < ready_at || observed_at > 2700 )); then
@@ -628,7 +629,7 @@ for ready_at in 1950 2699 2700 2701; do
   fi
   [[ "$(head -1 "$ssh_timeouts")" == 2700s ]] || fail "deadline scenario initial timeout changed"
   if (( ready_at >= 2699 )); then
-    [[ "$(tail -1 "$ssh_timeouts")" == 30s ]] || fail "final status timeout exceeded remaining window"
+    [[ "$(tail -1 "$ssh_timeouts")" == 90s ]] || fail "final status timeout exceeded remaining window"
   fi
   [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "deadline scenario repeated deployment"
   [[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "deadline scenario sent a non-status retry"

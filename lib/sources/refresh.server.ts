@@ -51,6 +51,53 @@ function daysFromNow(days: number) {
   return new Date(Date.now() + days * 86_400_000).toISOString();
 }
 
+function normalizedSourceIdentity(row: MediaSourceRow) {
+  if (!row.external_id) return null;
+  const normalized = normalizeSourceUrl(row.canonical_url);
+  if (
+    !normalized ||
+    normalized.externalId !== row.external_id ||
+    normalized.canonicalUrl !== row.canonical_url
+  ) return null;
+  if (isYouTubePlatform(row.platform)) {
+    return isYouTubePlatform(normalized.platform) ? normalized : null;
+  }
+  return normalized.platform === row.platform ? normalized : null;
+}
+
+async function quarantineInvalidIdentity(
+  admin: ReturnType<typeof createAdminClient>,
+  row: MediaSourceRow,
+  attemptedAt: Date,
+) {
+  await recordSourceAcquisitionFailure({
+    sourceKey: `invalid_identity:${row.id}`,
+    idempotencyKey: `invalid_identity:${row.id}:${attemptedAt.toISOString()}`,
+    platform: row.platform,
+    sourceId: row.id,
+    externalId: null,
+    canonicalUrl: /^https:\/\//i.test(row.canonical_url) ? row.canonical_url : null,
+    code: "metadata_mismatch",
+    attempt: 1,
+    occurredAt: attemptedAt,
+  }, admin);
+}
+
+function oEmbedIdentityMatches(
+  row: MediaSourceRow,
+  oembed: Awaited<ReturnType<typeof getOEmbed>>,
+) {
+  const normalized = normalizeSourceUrl(oembed.sourceUrl);
+  return Boolean(
+    normalized &&
+    oembed.provider === row.platform &&
+    oembed.contentId === row.external_id &&
+    normalized.platform === row.platform &&
+    normalized.externalId === row.external_id &&
+    normalized.canonicalUrl === row.canonical_url
+  );
+}
+
 async function syncMemeContentsAvailability(
   admin: ReturnType<typeof createAdminClient>,
   source: MediaSourceRow,
@@ -89,7 +136,7 @@ async function refreshYouTubeSources(
   // Missing or malformed IDs were never queried from YouTube and cannot be
   // treated as an authoritative missing-video result. Keep healthy sources
   // moving while reporting the bad rows for data repair.
-  const validRows = rows.filter((row) => row.external_id && /^[A-Za-z0-9_-]{11}$/.test(row.external_id));
+  const validRows = rows.filter((row) => normalizedSourceIdentity(row));
   const validIds = new Set(validRows.map((row) => row.id));
   const invalidRows = rows.filter((row) => !validIds.has(row.id));
   const identityErrors = invalidRows.map((row) => `invalid_source_identity:${row.id}`);
@@ -99,17 +146,7 @@ async function refreshYouTubeSources(
     try {
       // Non-retryable recovery records keep malformed rows out of future
       // refresh budgets while retaining their identity for manual repair.
-      await recordSourceAcquisitionFailure({
-        sourceKey: `invalid_identity:${row.id}`,
-        idempotencyKey: `invalid_identity:${row.id}:${invalidAttemptAt.toISOString()}`,
-        platform: row.platform,
-        sourceId: row.id,
-        externalId: null,
-        canonicalUrl: /^https:\/\//i.test(row.canonical_url) ? row.canonical_url : null,
-        code: "metadata_mismatch",
-        attempt: 1,
-        occurredAt: invalidAttemptAt,
-      }, admin);
+      await quarantineInvalidIdentity(admin, row, invalidAttemptAt);
     } catch {
       identityErrors.push(`invalid_identity_quarantine_failed:${row.id}`);
     }
@@ -271,8 +308,24 @@ async function refreshOEmbedSources(
   for (const row of rows) {
     const attemptStartedAt = new Date();
     const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
+    if (!normalizedSourceIdentity(row)) {
+      failed += 1;
+      checked += 1;
+      try {
+        await quarantineInvalidIdentity(admin, row, attemptStartedAt);
+      } catch {
+        // The source still fails closed when the quarantine write fails.
+      }
+      continue;
+    }
     try {
       const oembed = await getOEmbed(row.canonical_url);
+      if (!oEmbedIdentityMatches(row, oembed)) {
+        await quarantineInvalidIdentity(admin, row, attemptStartedAt);
+        failed += 1;
+        checked += 1;
+        continue;
+      }
       // TikTok can return a generic player for any ID, including nonexistent
       // videos. A bare player is not evidence that the source is public.
       if (row.platform === "tiktok" && (!oembed.title || !oembed.authorName)) {
@@ -375,9 +428,8 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       for (const recovery of batch) {
         if (!recovery.sourceId) continue;
         const source = byId.get(recovery.sourceId);
-        if (!source || (source.platform !== "youtube" && source.platform !== "youtube_shorts") || !source.external_id) continue;
-        const normalized = normalizeSourceUrl(source.canonical_url);
-        if (!normalized || !isYouTubePlatform(normalized.platform) || normalized.externalId !== source.external_id) continue;
+        if (!source || !source.external_id) continue;
+        if (!normalizedSourceIdentity(source as MediaSourceRow)) continue;
         await resolveSourceAcquisitionFailure({
           sourceKey: recovery.sourceKey,
           attemptIdempotencyKey: `identity-repair:${source.id}:${repairAttempt.toISOString()}`,

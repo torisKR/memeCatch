@@ -9,6 +9,21 @@ export type YouTubeVideoStatusFields = {
   [key: string]: unknown;
 };
 
+export declare function classifyYouTubeMaintenanceSource(
+  source: {
+    id?: unknown;
+    platform?: unknown;
+    external_id?: unknown;
+    canonical_url?: unknown;
+  },
+  normalizedSource: {
+    platform?: unknown;
+    externalId?: unknown;
+    canonicalUrl?: unknown;
+  } | null,
+  activeQuarantinedSourceIds: ReadonlySet<unknown>,
+): "youtube_source_active_quarantine" | "youtube_source_identity_inconclusive" | null;
+
 export declare function validateYouTubeVideoBatchExternalIds(
   externalIds: Iterable<unknown>,
 ): Set<string>;

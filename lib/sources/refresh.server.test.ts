@@ -25,6 +25,7 @@ vi.mock("./recovery.server", () => ({
 
 import { runSourceRefresh } from "./refresh.server";
 import { OEmbedError } from "@/lib/oembed";
+import { normalizeSourceUrl } from "./url";
 import { listActiveSourceAcquisitionRecovery, listDueSourceAcquisitionRecovery, recordSourceAcquisitionFailure, resolveSourceAcquisitionFailure } from "./recovery.server";
 
 function query(result: { data?: unknown; error?: { message: string } | null }) {
@@ -49,6 +50,23 @@ function sourceQuery(rows: unknown[], updateError?: { message: string }) {
   return builder;
 }
 
+function oEmbedResult(url: string, overrides: Record<string, unknown> = {}) {
+  const normalized = normalizeSourceUrl(url);
+  if (!normalized || (normalized.platform !== "tiktok" && normalized.platform !== "instagram")) {
+    throw new Error("invalid social test URL");
+  }
+  return {
+    provider: normalized.platform,
+    sourceUrl: normalized.canonicalUrl,
+    embedUrl: null,
+    embedHtml: null,
+    contentId: normalized.externalId,
+    title: "ok",
+    authorName: "creator",
+    ...overrides,
+  };
+}
+
 function admin(options: { stale?: unknown[]; due?: unknown[]; updateError?: boolean; jobError?: boolean } = {}) {
   const stale = sourceQuery(options.stale ?? [], options.updateError ? { message: "update failed" } : undefined);
   const dueRows = sourceQuery(options.due ?? []);
@@ -65,7 +83,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.revalidateTag.mockReset();
   mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map());
-  mocks.getOEmbed.mockResolvedValue({ title: "ok", authorName: "creator" });
+  mocks.getOEmbed.mockImplementation(async (url: string) => oEmbedResult(url));
   vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([]);
   vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([]);
 });
@@ -227,6 +245,64 @@ describe("source refresh recovery", () => {
     expect(nextResult.youtube).toMatchObject({ checked: 1, failed: 0 });
   });
 
+  it.each([
+    { platform: "youtube", canonical_url: "https://www.youtube.com/shorts/abcdefghijk" },
+    { platform: "youtube_shorts", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk" },
+  ] as const)("accepts the existing YouTube watch/shorts identity family for $platform", async (identity) => {
+    const source = {
+      id: `yt-family-${identity.platform}`,
+      platform: identity.platform,
+      external_id: "abcdefghijk",
+      canonical_url: identity.canonical_url,
+      embeddable: true,
+      removed_at: null,
+    };
+    const { client, jobTable } = admin();
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValueOnce(new Map([[source.external_id, {
+      privacyStatus: "public", embeddable: true, title: "ok", channelTitle: null,
+      channelId: null, publishedAt: null, durationSeconds: null, license: null,
+      madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null,
+    }]]));
+
+    const result = await runSourceRefresh();
+
+    expect(mocks.fetchYouTubeVideoStatuses).toHaveBeenCalledWith([source.external_id]);
+    expect(result.youtube).toMatchObject({ checked: 1, failed: 0 });
+    expect(recordSourceAcquisitionFailure).not.toHaveBeenCalledWith(
+      expect.objectContaining({ sourceKey: `invalid_identity:${source.id}` }),
+      client,
+    );
+  });
+
+  it("quarantines a fresh YouTube A/URL B mismatch before videos.list", async () => {
+    const source = {
+      id: "yt-fresh-mismatch", platform: "youtube", external_id: "abcdefghijk",
+      canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv", embeddable: true, removed_at: null,
+    } as const;
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.youtube).toMatchObject({ checked: 1, failed: 1, removed: 0 });
+    expect(mocks.fetchYouTubeVideoStatuses).not.toHaveBeenCalled();
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `invalid_identity:${source.id}`,
+      sourceId: source.id,
+      externalId: null,
+      code: "metadata_mismatch",
+    }), client);
+  });
+
   it("releases a repaired identity quarantine before rechecking the source with YouTube", async () => {
     const source = { id: "yt-repaired", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
     const quarantine = {
@@ -267,6 +343,78 @@ describe("source refresh recovery", () => {
     expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
     expect(mocks.fetchYouTubeVideoStatuses).not.toHaveBeenCalled();
     expect(sourceBuilder.update).not.toHaveBeenCalled();
+  });
+
+  it("quarantines a social A/URL B mismatch before oEmbed and retries after repair", async () => {
+    const invalid = {
+      id: "tt-mismatch", platform: "tiktok", external_id: "1234567890",
+      canonical_url: "https://www.tiktok.com/@a/video/0987654321", embeddable: true, removed_at: null,
+    } as const;
+    const repaired = { ...invalid, external_id: "0987654321" };
+    const quarantine = {
+      sourceKey: `invalid_identity:${invalid.id}`, sourceId: invalid.id, platform: "tiktok", externalId: null,
+      canonicalUrl: invalid.canonical_url, attemptCount: 1, nextRetryAt: null, lastErrorCode: "metadata_mismatch",
+      lastErrorRetryable: false, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    } as const;
+    const { client, jobTable } = admin();
+    const invalidBuilder = sourceQuery([invalid]);
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : invalidBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const first = await runSourceRefresh();
+
+    expect(first.oembed).toMatchObject({ checked: 1, failed: 1, removed: 0 });
+    expect(mocks.getOEmbed).not.toHaveBeenCalled();
+    expect(invalidBuilder.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: quarantine.sourceKey,
+      sourceId: invalid.id,
+      externalId: null,
+      code: "metadata_mismatch",
+    }), client);
+
+    vi.clearAllMocks();
+    mocks.revalidateTag.mockReset();
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([]);
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([quarantine]).mockResolvedValueOnce([]);
+    const repairedBuilder = sourceQuery([repaired]);
+    const content = query({ data: [], error: null });
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : repairedBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockImplementation(async (url: string) => oEmbedResult(url));
+
+    const second = await runSourceRefresh();
+
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: quarantine.sourceKey,
+    }), client);
+    expect(mocks.getOEmbed).toHaveBeenCalledWith(repaired.canonical_url);
+    expect(second.oembed).toMatchObject({ checked: 1, failed: 0, removed: 0 });
+  });
+
+  it("quarantines a successful social response whose identity differs", async () => {
+    const source = {
+      id: "ig-response-mismatch", platform: "instagram", external_id: "ABCdef12345",
+      canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null,
+    } as const;
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockResolvedValueOnce(oEmbedResult(
+      "https://www.instagram.com/reel/ZZZdef12345/",
+    ));
+
+    const result = await runSourceRefresh();
+
+    expect(result.oembed).toMatchObject({ checked: 1, failed: 1, removed: 0 });
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `invalid_identity:${source.id}`,
+      code: "metadata_mismatch",
+    }), client);
   });
 
   it("keeps source and content unchanged when the YouTube response is inconclusive", async () => {
@@ -365,7 +513,7 @@ describe("source refresh recovery", () => {
     mocks.createAdminClient.mockReturnValue(admin({ stale: [...tiktok, instagram] }).client);
     mocks.getOEmbed.mockImplementation(async (url: string) => {
       if (url.includes("tiktok")) throw new Error("provider unavailable");
-      return { title: "ok", authorName: "creator" };
+      return oEmbedResult(url);
     });
 
     const result = await runSourceRefresh();
@@ -393,9 +541,9 @@ describe("source refresh recovery", () => {
       const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
       const second = { ...source, id: "s2", external_id: "0987654321", canonical_url: "https://www.tiktok.com/@a/video/0987654321" };
       mocks.createAdminClient.mockReturnValue(admin({ stale: [source, second] }).client);
-      const delayedResponse = async () => {
+      const delayedResponse = async (url: string) => {
         vi.advanceTimersByTime(5_000);
-        return { title: "ok", authorName: "creator" };
+        return oEmbedResult(url);
       };
       mocks.getOEmbed.mockImplementationOnce(delayedResponse).mockImplementationOnce(delayedResponse);
 
@@ -425,7 +573,10 @@ describe("source refresh recovery", () => {
     const { client, jobTable } = admin();
     client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : builder);
     mocks.createAdminClient.mockReturnValue(client);
-    mocks.getOEmbed.mockResolvedValueOnce({ title: null, authorName: null });
+    mocks.getOEmbed.mockResolvedValueOnce(oEmbedResult(source.canonical_url, {
+      title: null,
+      authorName: null,
+    }));
 
     const result = await runSourceRefresh();
 

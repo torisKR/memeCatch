@@ -39,10 +39,11 @@ import { unavailableMemeMetadata } from "@/lib/public-meme-document";
 import { getRelatedMemes, MemeCatalogUnavailableError } from "@/lib/queries";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath, CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
-import { isPublicDisplaySource, publicSourceUrl } from "@/lib/source-links";
 import titleStyles from "@/components/meme-detail-title.module.css";
 import { detailIndexableFromDiscovery } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
+import { resolveMemeDelivery } from "@/lib/meme-delivery";
+import { getReviewedMemeMediaSources } from "@/lib/meme-delivery.server";
 
 /** 한국어 상세와 같다. 문서는 캐시하지 않고, 성공한 카탈로그 읽기만 Data Cache에 둔다. */
 export const dynamic = "force-dynamic";
@@ -266,9 +267,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, discovery] = await Promise.all([
+  const [versions, discovery, reviewedMediaSources] = await Promise.all([
     getLanguageVersions(meme, locale),
     loadDiscoveryIndex(),
+    getReviewedMemeMediaSources(meme.id),
   ]);
   const indexable = detailIndexableFromDiscovery(
     discovery,
@@ -296,7 +298,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ["x-default", xDefault],
   ]);
   const description = `${meme.title}: ${meme.summary}`;
-  const photo = representativeImageUrl({ contents: meme.meme_contents ?? [] });
+  const photo = representativeImageUrl({
+    contents: meme.meme_contents ?? [],
+    reviewedMediaSources,
+  });
   const image = localeMemeShareImage({
     locale,
     shortId: meme.short_id,
@@ -362,7 +367,7 @@ export default async function LocalizedMemePage({ params }: Props) {
   if (redirectPath) permanentRedirect(redirectPath);
 
   const tagIds = meme.meme_tags_map.map((tag) => tag.tag_id);
-  const [versions, marketPassport, related, discovery] = await Promise.all([
+  const [versions, marketPassport, related, discovery, reviewedMediaSources] = await Promise.all([
     getLanguageVersions(meme, locale),
     getMemeMarketPassport(meme.id, locale),
     getRelatedMemes(
@@ -371,6 +376,7 @@ export default async function LocalizedMemePage({ params }: Props) {
       6,
     ),
     loadDiscoveryIndex(),
+    getReviewedMemeMediaSources(meme.id),
   ]);
   const localizedRelated = await getLocalizedSearchMemesResult(
     related.map((item) => item.short_id),
@@ -382,11 +388,14 @@ export default async function LocalizedMemePage({ params }: Props) {
   const config = SEO_LOCALE_CONFIG[locale];
   const seo = getSeoCopy(shareLocale);
   const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
-  const sourceLinks = meme.meme_sources.flatMap((source) => {
-    if (!isPublicDisplaySource(source)) return [];
-    const url = publicSourceUrl(source.source_url);
-    return url ? [{ ...source, source_url: url }] : [];
+  const delivery = resolveMemeDelivery({
+    contents: meme.meme_contents,
+    sources: meme.meme_sources,
+    reviewedMediaSources,
   });
+  const sourceLinks = delivery.sourceLinks.flatMap((source) =>
+    source.source_url ? [{ ...source, source_url: source.source_url }] : [],
+  );
   const allContexts = usageContexts(meme.usage_context);
   const contextsUnverified = isUnverifiedContexts(allContexts);
   const contexts = contextsUnverified ? [] : allContexts;

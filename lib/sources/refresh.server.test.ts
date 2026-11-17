@@ -278,6 +278,106 @@ describe("source refresh recovery", () => {
     expect(content.update).toHaveBeenCalledWith({ availability: "region_blocked" });
   });
 
+  it("projects a public non-embeddable YouTube source as live link-only content", async () => {
+    const source = { id: "yt-link-only", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: false, title: "watch on YouTube", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg", regionBlocked: null, regionAllowed: null }]]));
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(result.youtube.removed).toBe(0);
+    expect(result.youtube.hidden).toBe(1);
+    expect(sourceBuilder.update).toHaveBeenCalledWith(expect.objectContaining({
+      public_status: "public",
+      removed_at: null,
+      embeddable: false,
+      title: "watch on YouTube",
+    }));
+    expect(content.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(content.update).not.toHaveBeenCalledWith({ availability: "dead" });
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalled();
+  });
+
+  it("restores a stale Korea region block when a public video becomes link-only without restrictions", async () => {
+    const source = { id: "yt-region-recovered", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: false, title: "watch on YouTube", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [], regionAllowed: null }]]));
+    const content = query({ data: [{ id: "content" }], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(result.youtube.hidden).toBe(1);
+    expect(content.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(content.neq).toHaveBeenCalledWith("availability", "live");
+    expect(content.update).not.toHaveBeenCalledWith({ availability: "region_blocked" });
+  });
+
+  it("keeps Korea region blocking authoritative for a public non-embeddable video", async () => {
+    const source = { id: "yt-link-only-region", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: false, title: "blocked", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: ["KR"], regionAllowed: null }]]));
+    const content = query({ data: [{ id: "content" }], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(content.update).toHaveBeenCalledWith({ availability: "region_blocked" });
+    expect(content.update).not.toHaveBeenCalledWith({ availability: "dead" });
+  });
+
+  it("still marks an explicitly private YouTube video removed and dead", async () => {
+    const source = { id: "yt-private", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "private", embeddable: null, title: null, channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: null, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [{ id: "content" }], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(result.youtube.removed).toBe(1);
+    expect(sourceBuilder.update).toHaveBeenCalledWith(expect.objectContaining({
+      removed_at: expect.any(String),
+      embeddable: false,
+      public_status: "private",
+    }));
+    expect(content.update).toHaveBeenCalledWith({ availability: "dead" });
+  });
+
+  it("treats incomplete YouTube status fields as inconclusive and retries later", async () => {
+    const source = { id: "yt-inconclusive", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: null, title: "partial", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.youtube.failed).toBe(1);
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      code: "provider_transient",
+      sourceId: source.id,
+    }), client);
+  });
+
   it("reports an all-success YouTube run as ok", async () => {
     const source = { id: "yt-3", platform: "youtube", external_id: "mnopqrstuvw", canonical_url: "https://www.youtube.com/watch?v=mnopqrstuvw", embeddable: true, removed_at: null };
     mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [] }]]));

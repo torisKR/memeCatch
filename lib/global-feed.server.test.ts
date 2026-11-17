@@ -69,6 +69,7 @@ function row(
         availability: "live",
         moderation_status: "approved",
         is_representative: true,
+        manual_video_verified: false,
       },
     ],
     ...overrides,
@@ -125,6 +126,131 @@ describe("getGlobalFeed", () => {
 
     expect(result.items[0]?.thumbnail_url).toBeNull();
   });
+
+  it("shows only a centrally verified social poster for the selected post", async () => {
+    const verified = {
+      platform: "Instagram",
+      content_id: "DX0AR6UzAWW",
+      url: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+      thumbnail_url:
+        "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/DX0AR6UzAWW.jpg",
+      availability: "live",
+      moderation_status: "approved",
+      is_representative: true,
+      manual_video_verified: false,
+    };
+    const mismatched = {
+      ...verified,
+      thumbnail_url:
+        "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/OTHERPOST1.jpg",
+    };
+    const feedQuery = query({
+      data: [
+        row("verified", "Instagram", { meme_contents: [verified] }),
+        row("mismatched", "Instagram", { meme_contents: [mismatched] }),
+      ],
+      error: null,
+    });
+    const ledgerQuery = query({
+      data: [
+        {
+          meme_id: "verified",
+          media_sources: {
+            platform: "instagram",
+            external_id: verified.content_id,
+            canonical_url: verified.url,
+          },
+        },
+        {
+          meme_id: "mismatched",
+          media_sources: {
+            platform: "instagram",
+            external_id: mismatched.content_id,
+            canonical_url: mismatched.url,
+          },
+        },
+      ],
+      error: null,
+    });
+    createStaticClient.mockReturnValue({ from: vi.fn(() => feedQuery) });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => ledgerQuery) });
+
+    const result = await getGlobalFeed(["instagram"], 2);
+
+    expect(result.items.map((item) => item.thumbnail_url)).toEqual([
+      "/api/media/meme-thumbs/verified/instagram/DX0AR6UzAWW.jpg",
+      null,
+    ]);
+  });
+
+  it("does not use a different video's poster when the selected video has none", async () => {
+    const first = {
+      platform: "Instagram", content_id: "FIRSTPOST01",
+      url: "https://www.instagram.com/reel/FIRSTPOST01/",
+      thumbnail_url: null, availability: "live", moderation_status: "approved",
+      is_representative: true, manual_video_verified: false,
+    };
+    const second = {
+      ...first, content_id: "SECONDPOST2",
+      url: "https://www.instagram.com/reel/SECONDPOST2/",
+      thumbnail_url: "/api/media/meme-thumbs/verified/instagram/SECONDPOST2.jpg",
+      is_representative: false,
+    };
+    const feedQuery = query({ data: [row("1", "Instagram", { meme_contents: [first, second] })], error: null });
+    const ledgerQuery = query({ data: [first, second].map((content) => ({
+      meme_id: "1", media_sources: { platform: "instagram", external_id: content.content_id, canonical_url: content.url },
+    })), error: null });
+    createStaticClient.mockReturnValue({ from: vi.fn(() => feedQuery) });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => ledgerQuery) });
+
+    const result = await getGlobalFeed(["instagram"]);
+
+    expect(result.items[0]?.content_url).toBe(first.url);
+    expect(result.items[0]?.thumbnail_url).toBeNull();
+  });
+
+  it("requires manual video verification before previewing an Instagram post URL", async () => {
+    const post = {
+      platform: "Instagram",
+      content_id: "DJiODQnTOfj",
+      url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      thumbnail_url:
+        "https://catchmeme.com/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+      availability: "live",
+      moderation_status: "approved",
+      is_representative: true,
+      manual_video_verified: true,
+    };
+    const feedQuery = query({
+      data: [
+        row("verified", "Instagram", { meme_contents: [post] }),
+        row("revoked", "Instagram", {
+          meme_contents: [{ ...post, manual_video_verified: false }],
+        }),
+      ],
+      error: null,
+    });
+    const ledgerQuery = query({
+      data: [
+        { meme_id: "verified", media_sources: { platform: "instagram", external_id: post.content_id, canonical_url: post.url } },
+        { meme_id: "revoked", media_sources: { platform: "instagram", external_id: post.content_id, canonical_url: post.url } },
+      ],
+      error: null,
+    });
+    createStaticClient.mockReturnValue({ from: vi.fn(() => feedQuery) });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => ledgerQuery) });
+
+    const result = await getGlobalFeed(["instagram"], 2);
+
+    expect(result.items.map((item) => item.thumbnail_url)).toEqual([
+      "/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+      null,
+    ]);
+    expect(feedQuery.select).toHaveBeenCalledWith(
+      expect.stringContaining("is_representative, manual_video_verified"),
+    );
+  });
+
   it("accepts stored labels and lowercase keys, then returns canonical platform keys", async () => {
     const feedQuery = query({
       data: [

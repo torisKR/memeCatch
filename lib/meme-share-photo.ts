@@ -3,8 +3,11 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { isRenderableContent } from "@/lib/content-availability";
 import { decodeBaselineJpeg } from "@/lib/jpeg-decode";
 import { ownedMemeCardArtPath } from "@/lib/meme-card-art";
-import { resolveMemeDelivery } from "@/lib/meme-delivery";
-import { youtubeVideoPreview } from "@/lib/meme-video-preview";
+import {
+  resolveMemeDelivery,
+  type ReviewedMediaSourceLookup,
+} from "@/lib/meme-delivery";
+import { videoPreview, youtubeVideoPreview } from "@/lib/meme-video-preview";
 import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { decodePng, encodePng } from "@/lib/png-raster";
 import type { ShareTimestamp } from "@/lib/share-version";
@@ -64,6 +67,7 @@ export type SharePhotoSource = {
   availability?: string | null;
   moderation_status?: string | null;
   is_representative?: boolean | null;
+  manual_video_verified?: boolean | null;
   created_at?: ShareTimestamp | null;
 };
 
@@ -83,10 +87,13 @@ export type SharePhotoRef = {
 export function representativeImageUrl(input: {
   contents: readonly SharePhotoSource[];
   sources?: readonly { source_url?: string | null; hidden_from_public?: boolean | null; platform?: string | null }[];
+  reviewedMediaSources: ReviewedMediaSourceLookup;
 }): SharePhotoRef | null {
+  if (!input.reviewedMediaSources.ok) return null;
   const delivery = resolveMemeDelivery({
     contents: input.contents,
     sources: input.sources ?? [],
+    reviewedMediaSources: input.reviewedMediaSources,
   });
   const content = delivery.representative;
   if (!content || !isRenderableContent(content)) return null;
@@ -95,6 +102,10 @@ export function representativeImageUrl(input: {
   const platform = sourcePlatformFromReference(content);
   if (hasPlaybackUrl && (platform === "youtube" || platform === "youtube_shorts")) {
     const preview = youtubeVideoPreview([content]);
+    return preview ? { url: preview, updatedAt: content.created_at ?? null } : null;
+  }
+  if (hasPlaybackUrl && (platform === "instagram" || platform === "tiktok")) {
+    const preview = videoPreview([content]);
     return preview ? { url: preview, updatedAt: content.created_at ?? null } : null;
   }
   const owned = !hasPlaybackUrl ? projectOwnedPath(thumb) : null;

@@ -1,6 +1,10 @@
 export type SourceLink = {
+  id?: string;
   source_url?: string | null;
   platform?: string | null;
+  title?: string | null;
+  creator_name?: string | null;
+  captured_at?: string | null;
   hidden_from_public?: boolean | null;
 };
 

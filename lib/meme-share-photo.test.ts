@@ -37,11 +37,41 @@ const approved = {
   availability: "live",
   created_at: new Date("2026-03-01T00:00:00.000Z"),
 };
+const successfulEmptyLedger = { ok: true as const, sources: [] };
+
+function reviewedSocialSource(overrides: Record<string, unknown> = {}) {
+  return {
+    review_state: "approved",
+    rights_basis: "official_embed",
+    platform: "instagram",
+    external_id: "DX0AR6UzAWW",
+    canonical_url: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+    embeddable: true,
+    public_status: "unknown",
+    removed_at: null,
+    last_checked_at: "2026-11-17T12:00:00.000Z",
+    ...overrides,
+  };
+}
 
 describe("representative share photos", () => {
+  it("requires the authoritative reviewed-source lookup at every public share-photo callsite", () => {
+    for (const path of [
+      "app/(default)/memes/[key]/page.tsx",
+      "app/[locale]/memes/[key]/page.tsx",
+      "lib/legacy-locale-meme-opengraph.tsx",
+      "lib/meme-share-content.ts",
+    ]) {
+      const source = readFileSync(path, "utf8");
+      expect(source, path).toContain("getReviewedMemeMediaSources");
+      expect(source, path).toContain("reviewedMediaSources");
+    }
+  });
+
   it("uses the site path the detail page shows and skips external posters", () => {
     expect(representativeImageUrl({
       contents: [{ ...approved, thumbnail_url: "/ai-memes/hero.png", url: null }],
+      reviewedMediaSources: successfulEmptyLedger,
     })?.url).toBe("/ai-memes/hero.png");
     expect(representativeImageUrl({
       contents: [{
@@ -51,6 +81,7 @@ describe("representative share photos", () => {
         platform: "youtube",
         content_id: "abc",
       }],
+      reviewedMediaSources: successfulEmptyLedger,
     })).toBeNull();
     expect(representativeImageUrl({
       contents: [{
@@ -60,10 +91,109 @@ describe("representative share photos", () => {
         platform: "youtube",
         content_id: "abc",
       }],
+      reviewedMediaSources: successfulEmptyLedger,
     })).toBeNull();
     expect(canonicalShareImageUrl("https://evil.example/a.png")).toBeNull();
     expect(canonicalShareImageUrl("http://127.0.0.1/a.png")).toBeNull();
     expect(canonicalShareImageUrl("https://user:pass@catchmeme.com/a.png")).toBeNull();
+  });
+
+  it("falls back to a text-only card when the reviewed-source lookup fails", () => {
+    expect(representativeImageUrl({
+      contents: [{ ...approved, thumbnail_url: "/ai-memes/hero.png", url: null }],
+      reviewedMediaSources: { ok: false, sources: [] },
+    })).toBeNull();
+  });
+
+  it.each([
+    ["rejected review", { review_state: "rejected" }],
+    ["blocked rights", { rights_basis: "blocked" }],
+    ["private source", { public_status: "private" }],
+    ["removed source", { removed_at: "2026-11-17T11:00:00.000Z" }],
+  ])("does not leak a verified social poster through %s", (_label, sourceOverride) => {
+    const content = {
+      ...approved,
+      platform: "instagram",
+      content_id: "DX0AR6UzAWW",
+      url: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+      thumbnail_url: "/api/media/meme-thumbs/verified/instagram/DX0AR6UzAWW.jpg",
+    };
+    expect(representativeImageUrl({
+      contents: [content],
+      reviewedMediaSources: {
+        ok: true,
+        sources: [reviewedSocialSource(), reviewedSocialSource(sourceOverride)],
+      },
+    })).toBeNull();
+  });
+
+  it("uses only an identity-bound verified social poster", () => {
+    const content = {
+      ...approved,
+      platform: "instagram",
+      content_id: "DX0AR6UzAWW",
+      url: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+    };
+    const reviewedMediaSources = {
+      ok: true as const,
+      sources: [reviewedSocialSource()],
+    };
+
+    expect(representativeImageUrl({
+      contents: [{
+        ...content,
+        thumbnail_url: "/api/media/meme-thumbs/verified/instagram/DX0AR6UzAWW.jpg",
+      }],
+      reviewedMediaSources,
+    })?.url).toBe("/api/media/meme-thumbs/verified/instagram/DX0AR6UzAWW.jpg");
+    expect(representativeImageUrl({
+      contents: [{ ...content, thumbnail_url: "/ai-memes/hero.png" }],
+      reviewedMediaSources,
+    })).toBeNull();
+    expect(representativeImageUrl({
+      contents: [{
+        ...content,
+        thumbnail_url: "/api/media/meme-thumbs/verified/instagram/OTHERPOST1.jpg",
+      }],
+      reviewedMediaSources,
+    })).toBeNull();
+  });
+
+  it("requires explicit video verification before sharing an Instagram /p/ poster", () => {
+    const content = {
+      ...approved,
+      platform: "instagram",
+      content_id: "DJiODQnTOfj",
+      url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      thumbnail_url: "/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg",
+    };
+    const reviewedMediaSources = {
+      ok: true as const,
+      sources: [reviewedSocialSource({
+        external_id: "DJiODQnTOfj",
+        canonical_url: "https://www.instagram.com/p/DJiODQnTOfj/",
+      })],
+    };
+
+    expect(representativeImageUrl({ contents: [content], reviewedMediaSources })).toBeNull();
+    expect(representativeImageUrl({
+      contents: [{ ...content, manual_video_verified: true }],
+      reviewedMediaSources,
+    })?.url).toBe("/api/media/meme-thumbs/verified/instagram/DJiODQnTOfj.jpg");
+  });
+
+  it("does not reuse a dead social poster as alternate card art", () => {
+    expect(representativeImageUrl({
+      contents: [{
+        ...approved,
+        availability: "dead",
+        platform: "instagram",
+        content_id: "DX0AR6UzAWW",
+        url: "https://www.instagram.com/reel/DX0AR6UzAWW/",
+        thumbnail_url: "/api/media/meme-thumbs/verified/instagram/DX0AR6UzAWW.jpg",
+      }],
+      reviewedMediaSources: { ok: true, sources: [reviewedSocialSource()] },
+    })).toBeNull();
   });
 
   it("skips images whose shorter side is under 400px and formats Satori cannot decode", () => {
@@ -167,6 +297,7 @@ describe("YouTube thumbnail ladder", () => {
         platform: "youtube",
         content_id: YOUTUBE_ID,
       }],
+      reviewedMediaSources: successfulEmptyLedger,
     })?.url).toBe(YOUTUBE_RECORDED);
     expect(youtubeThumbnailCandidates(YOUTUBE_RECORDED)).toEqual([
       `https://i.ytimg.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`,
@@ -178,9 +309,11 @@ describe("YouTube thumbnail ladder", () => {
   it("uses the actual video for sharing even when the stored poster belongs to another video", () => {
     expect(representativeImageUrl({
       contents: [{ ...approved, thumbnail_url: "https://i.ytimg.com/vi/WRONGVIDEO1/hqdefault.jpg", url: `https://www.youtube.com/watch?v=${YOUTUBE_ID}`, platform: "youtube", content_id: YOUTUBE_ID }],
+      reviewedMediaSources: successfulEmptyLedger,
     })?.url).toBe(YOUTUBE_RECORDED);
     expect(representativeImageUrl({
       contents: [{ ...approved, thumbnail_url: YOUTUBE_RECORDED, url: "https://www.youtube.com/watch?v=WRONGVIDEO1", platform: "youtube", content_id: YOUTUBE_ID }],
+      reviewedMediaSources: successfulEmptyLedger,
     })).toBeNull();
   });
 

@@ -4,10 +4,11 @@ import "server-only";
  * 출처 메타데이터 재확인 잡.
  *
  * - YouTube/Shorts: videos.list 배치(50개)로 공개·임베드·라이선스 상태 갱신.
- *   조회되지 않는 ID는 삭제로 보고 removed_at을 찍고 제목·썸네일 캐시를 지운다.
+ *   조회되지 않는 ID와 명시적 비공개 영상만 removed_at을 찍는다. 공개지만 임베드가
+ *   꺼진 영상은 출처를 보존하고, 임베드 가능 여부만 false로 갱신한다.
  * - TikTok/Instagram: 공개 oEmbed로 생존 여부만 확인한다(스크래핑·다운로드 없음).
  * - 공개 게시물(meme_contents)의 availability를 출처 상태와 동기화한다.
- *   임베드 불가·삭제 출처는 공개 화면에서 자동으로 숨겨진다.
+ *   삭제·비공개·지역 제한은 숨기되, 공개 임베드 불가 출처는 링크를 위해 보존한다.
  */
 
 import { getOEmbed, OEmbedError } from "@/lib/oembed";
@@ -148,35 +149,54 @@ async function refreshYouTubeSources(
       continue;
     }
 
-    const embeddable = status.privacyStatus === "public" && status.embeddable === true;
+    if (
+      status.privacyStatus === null ||
+      (status.privacyStatus === "public" && status.embeddable === null)
+    ) {
+      throw new Error("source_status_inconclusive");
+    }
+
+    const isPublic = status.privacyStatus === "public";
+    const isPrivate = status.privacyStatus === "private";
+    const embeddable = isPublic && status.embeddable === true;
     const regionBlocked = isYouTubeRegionBlocked({ allowed: status.regionAllowed, blocked: status.regionBlocked });
 
     const { error } = await admin
       .from("media_sources")
       .update({
-        title: status.title,
+        title: isPrivate ? null : status.title,
         channel_name: status.channelTitle,
         channel_id: status.channelId,
         platform_published_at: status.publishedAt,
         duration_seconds: status.durationSeconds,
-        public_status: status.privacyStatus ?? "unknown",
-        removed_at: null,
+        public_status: status.privacyStatus,
+        removed_at: isPrivate ? now : null,
         embeddable,
         license_code: status.license,
         made_for_kids: status.madeForKids,
-        thumbnail_url: status.thumbnailUrl,
+        thumbnail_url: isPrivate ? null : status.thumbnailUrl,
         metadata_refreshed_at: now,
-        metadata_expires_at: daysFromNow(METADATA_TTL_DAYS),
+        metadata_expires_at: isPrivate ? null : daysFromNow(METADATA_TTL_DAYS),
         last_checked_at: now,
       })
       .eq("id", row.id);
     if (error) throw new Error("source_refresh_update_failed");
 
-    if (!embeddable) {
+    if (isPrivate) {
+      await syncMemeContentsAvailability(admin, row, "dead");
+      removed += 1;
+    } else if (!isPublic) {
+      // Unlisted is reachable by URL but is not public catalog content.
       await syncMemeContentsAvailability(admin, row, "dead");
       hidden += 1;
     } else if (regionBlocked) {
       await syncMemeContentsAvailability(admin, row, "region_blocked");
+    } else if (!embeddable) {
+      // A public video with embedding disabled is still live link-only content.
+      // The source update above persists embeddable=false before this projection,
+      // so consumers can fail closed instead of rendering an iframe.
+      await syncMemeContentsAvailability(admin, row, "live");
+      hidden += 1;
     } else {
       await syncMemeContentsAvailability(admin, row, "live");
     }
@@ -200,7 +220,7 @@ async function refreshYouTubeSources(
           platform: row.platform,
           externalId: row.external_id,
           canonicalUrl: row.canonical_url,
-          code: "db_failure",
+          code: message === "source_status_inconclusive" ? "provider_transient" : "db_failure",
           attempt: 1,
           occurredAt: attemptStartedAt,
           sourceId: row.id,

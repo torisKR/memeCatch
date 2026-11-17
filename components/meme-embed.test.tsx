@@ -102,6 +102,29 @@ describe("MemeEmbed", () => {
     expect(html).not.toContain("WRONGVIDEO1");
   });
 
+  it("shows a public non-embeddable YouTube video as an original link", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          platform: "YouTube",
+          content_id: "abcdefghijk",
+          url: "https://www.youtube.com/watch?v=abcdefghijk",
+          thumbnail_url: null,
+          availability: "dead",
+          caption: null,
+        }}
+        title="링크 전용 영상"
+        embeddingAllowed={false}
+      />,
+    );
+
+    expect(html).not.toContain("youtube-nocookie.com/embed");
+    expect(html).toContain("https://www.youtube.com/watch?v=abcdefghijk");
+    expect(html).toContain("원본 콘텐츠는 출처에서 볼 수 있어요.");
+    expect(html).not.toContain("현재 확인할 수 없어요");
+    expect(html).not.toContain("내려갔거나 접근할 수 없어");
+  });
+
   it("includes the TikTok iframe in the initial server markup", () => {
     const html = renderToStaticMarkup(
       <MemeEmbed
@@ -272,6 +295,100 @@ describe("MemeEmbed", () => {
     expect(frame.className).toContain("max-w-[540px]");
     expect(screen.queryByText(/재생하면/)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("links an unverified Instagram /p/ without presenting it as unavailable or video", () => {
+    const url = "https://www.instagram.com/p/DJiODQnTOfj/";
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          ...tiktokContent,
+          platform: "Instagram",
+          content_id: "DJiODQnTOfj",
+          url,
+          manual_video_verified: false,
+        }}
+        title="사진일 수 있는 게시물"
+      />,
+    );
+
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain(`href="${url}"`);
+    expect(html).toContain("원본 콘텐츠는 출처에서 볼 수 있어요.");
+    expect(html).not.toContain("현재 확인할 수 없어요");
+  });
+
+  it("keeps an explicitly verified Instagram /p/ playable", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          ...tiktokContent,
+          platform: "Instagram",
+          content_id: "DJiODQnTOfj",
+          url: "https://www.instagram.com/p/DJiODQnTOfj/",
+          manual_video_verified: true,
+        }}
+        title="확인된 게시물 영상"
+      />,
+    );
+
+    expect(html).toContain("<iframe");
+    expect(html).toContain("www.instagram.com/p/DJiODQnTOfj/embed/captioned/");
+  });
+
+  it("shows only an identity-verified social poster in the loading shell", () => {
+    class IdleIntersectionObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() { return []; }
+      readonly root = null;
+      readonly rootMargin = "0px";
+      readonly thresholds = [0];
+    }
+    vi.stubGlobal("IntersectionObserver", IdleIntersectionObserver);
+
+    const verifiedPoster =
+      "/api/media/meme-thumbs/verified/instagram/DGYAH_wviX0.jpg";
+    const { rerender } = render(
+      <MemeEmbed
+        content={{
+          platform: "Instagram",
+          content_id: "DGYAH_wviX0",
+          url: "https://m.instagram.com/reel/DGYAH_wviX0/",
+          thumbnail_url: verifiedPoster,
+          availability: "live",
+          moderation_status: "approved",
+          is_representative: true,
+          manual_video_verified: false,
+          caption: null,
+        }}
+        title="검증된 릴"
+      />,
+    );
+
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(document.querySelector(`img[src="${verifiedPoster}"]`)).toBeTruthy();
+
+    rerender(
+      <MemeEmbed
+        content={{
+          platform: "Instagram",
+          content_id: "DGYAH_wviX0",
+          url: "https://m.instagram.com/reel/DGYAH_wviX0/",
+          thumbnail_url:
+            "/api/media/meme-thumbs/verified/instagram/OTHERPOST1.jpg",
+          availability: "live",
+          moderation_status: "approved",
+          is_representative: true,
+          manual_video_verified: false,
+          caption: null,
+        }}
+        title="검증된 릴"
+      />,
+    );
+
+    expect(document.querySelector("[role=status] img")).toBeNull();
   });
 
   it("keeps Threads srcDoc popups inside the iframe sandbox", async () => {

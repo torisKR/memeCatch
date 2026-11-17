@@ -8,9 +8,13 @@ readonly status_kill_grace_seconds=5
 readonly status_initial_backoff_seconds=60
 readonly status_max_backoff_seconds=240
 readonly status_max_attempts=13
+# Exit 4 is reserved for a status that did not acquire the lock and therefore
+# cannot have queried the CI API. Limit retries even if a peer returns it early.
+readonly status_lock_busy_rc=4
+readonly status_final_busy_retries=3
 
 run_deploy() {
-  local sha="$1" rc attempt evidence start now previous deadline remaining wait_seconds timeout_seconds backoff_seconds final_attempt
+  local sha="$1" rc attempt evidence start now previous deadline remaining wait_seconds timeout_seconds backoff_seconds final_attempt busy_retries
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid deployment SHA" >&2; return 1; }
   local ssh_args=(
     -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes
@@ -57,14 +61,32 @@ run_deploy() {
     elif (( remaining - status_timeout_seconds - status_kill_grace_seconds < timeout_seconds )); then
       timeout_seconds=$((remaining - status_timeout_seconds - status_kill_grace_seconds))
     fi
-    if evidence="$(timeout --kill-after="${status_kill_grace_seconds}s" "${timeout_seconds}s" ssh "${ssh_args[@]}" "status $sha")" &&
-      printf '%s\n' "$evidence" | grep -Eq "^[0-9TZ:.-]+ memecatch-autodeploy: verified deployed ${sha}$"; then
+    busy_retries=0
+    while true; do
+      rc=0
+      evidence="$(timeout --kill-after="${status_kill_grace_seconds}s" "${timeout_seconds}s" ssh "${ssh_args[@]}" "status $sha")" || rc=$?
+      if (( rc == 0 )) && printf '%s\n' "$evidence" | grep -Eq "^[0-9TZ:.-]+ memecatch-autodeploy: verified deployed ${sha}$"; then
+        now="$(date +%s)" || return 1
+        [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous && now <= deadline )) || return 1
+        printf '%s\n' "$evidence"
+        echo "Deployment evidence verified"
+        return 0
+      fi
+      (( final_attempt && rc == status_lock_busy_rc && busy_retries < status_final_busy_retries )) || break
       now="$(date +%s)" || return 1
-      [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous && now <= deadline )) || return 1
-      printf '%s\n' "$evidence"
-      echo "Deployment evidence verified"
-      return 0
-    fi
+      [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
+      previous="$now"; remaining=$((deadline - now))
+      (( remaining > 1 )) || break
+      echo "Deployment status lock busy; retrying read-only status" >&2
+      sleep 1
+      now="$(date +%s)" || return 1
+      [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
+      previous="$now"; remaining=$((deadline - now))
+      (( remaining > 0 )) || break
+      timeout_seconds="$status_timeout_seconds"
+      (( remaining < timeout_seconds )) && timeout_seconds="$remaining"
+      busy_retries=$((busy_retries + 1))
+    done
     echo "Deployment status not verified (attempt $attempt)" >&2
     now="$(date +%s)" || return 1
     [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1

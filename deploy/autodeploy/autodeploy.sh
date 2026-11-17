@@ -330,7 +330,8 @@ verify_deployment_status() (
   local sha="$1"
   [[ -f "$STATE_DIR/lock" ]] || return 1
   exec 8<"$STATE_DIR/lock" || return 1
-  flock -s -w 30 8 || return 1
+  local lock_rc
+  flock -s -w 30 -E 4 8 || { lock_rc=$?; [[ "$lock_rc" == 4 ]] && return 4; return 1; }
   remote_main_is "$sha" || return 1
   confirmed_deployment "$sha" || return 1
   # A new main may arrive during the public/CI checks.
@@ -346,10 +347,14 @@ main() {
   fi
   if requested_status; then
     [[ -n "${SSH_CONNECTION:-}" ]] || not_deployed "status requires SSH"
+    local status_rc=0
     if verify_deployment_status "$(requested_sha)"; then
       log "verified deployed $(requested_sha)"
       exit 0
+    else
+      status_rc=$?
     fi
+    if [[ "$status_rc" == 4 ]]; then log "deployment status lock busy"; exit 4; fi
     not_deployed "deployment status could not be verified for $(requested_sha)"
   fi
   mkdir -p "$STATE_DIR"

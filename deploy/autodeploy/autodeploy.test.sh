@@ -304,6 +304,7 @@ printf '#!/usr/bin/env bash\nexit 0\n' >"$stub/flock"
 chmod +x "$stub/flock"
 running_sha() { echo "$test_running"; }
 ci_state() {
+  if [[ -n "${test_api_counter:-}" ]]; then printf 'ci\n' >>"$test_api_counter"; fi
   if [[ -n "${test_ci_transition:-}" && -f "$test_ci_transition" ]]; then
     [[ "$test_ci_after" != error ]] || return 1
     echo "$test_ci_after"
@@ -380,6 +381,10 @@ for status_case in missing_marker wrong_marker wrong_image stopped unhealthy sta
   [[ "$rc" == 3 ]] || fail "status $status_case accepted or returned $rc"
   [[ ! -s "$test_calls" ]] || fail "status $status_case attempted deployment"
 done
+# A downstream failure must not be confused with the pre-CI lock-busy code.
+rc=0
+( ci_state() { return 4; }; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "CI error was misreported as lock busy"
 # An app stopping while the public header is checked must not be confirmed.
 rm -f "$stub/stopped-during-public"
 rc=0
@@ -401,28 +406,42 @@ rc=0
 ( export test_remote_sequence="$stub/remote-sequence"; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
 [[ "$rc" == 3 ]] || fail "status accepted a main change during verification"
 
-# Exercise an actual advisory lock with Python's flock. This runs on macOS too;
-# the temporary flock command only substitutes the CLI missing there.
+# Exercise a real advisory lock and its 30-second timeout. Use util-linux flock
+# on Linux; on macOS, the Python shim uses the same kernel lock and timeout.
 mkdir -p "$stub/real-lock"
+if command -v flock >/dev/null 2>&1; then
+  ln -s "$(command -v flock)" "$stub/real-lock/flock"
+else
 cat >"$stub/real-lock/flock" <<'STUB'
 #!/usr/bin/env python3
-import fcntl, sys
-try:
-    fcntl.flock(int(sys.argv[-1]), fcntl.LOCK_SH | fcntl.LOCK_NB)
-except BlockingIOError:
-    sys.exit(1)
+import fcntl, sys, time
+deadline = time.monotonic() + float(sys.argv[sys.argv.index('-w') + 1])
+while True:
+    try:
+        fcntl.flock(int(sys.argv[-1]), fcntl.LOCK_SH | fcntl.LOCK_NB)
+        break
+    except BlockingIOError:
+        if time.monotonic() >= deadline:
+            sys.exit(int(sys.argv[sys.argv.index('-E') + 1]))
+        time.sleep(0.05)
 STUB
 chmod +x "$stub/real-lock/flock"
-python3 -c 'import fcntl,sys,time; f=open(sys.argv[1],"r"); fcntl.flock(f,fcntl.LOCK_EX); open(sys.argv[2],"w").close(); time.sleep(20)' "$stub/manual-state/lock" "$stub/lock-ready" &
+fi
+python3 -c 'import fcntl,sys,time; f=open(sys.argv[1],"r"); fcntl.flock(f,fcntl.LOCK_EX); open(sys.argv[2],"w").close(); time.sleep(60)' "$stub/manual-state/lock" "$stub/lock-ready" &
 lock_holder=$!
 for _ in $(seq 1 100); do [[ -e "$stub/lock-ready" ]] && break; sleep 0.02; done
 if [[ ! -e "$stub/lock-ready" ]]; then kill "$lock_holder" 2>/dev/null || true; wait "$lock_holder" 2>/dev/null || true; fail "lock holder did not start"; fi
 rc=0
-( PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+: >"$stub/lock-ci-calls"
+lock_start=$(date +%s)
+( export test_api_counter="$stub/lock-ci-calls"; PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+lock_elapsed=$(( $(date +%s) - lock_start ))
 kill "$lock_holder" 2>/dev/null || true
 wait "$lock_holder" 2>/dev/null || true
-[[ "$rc" == 3 ]] || fail "status ignored the live deploy lock"
-( PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "status failed after deploy lock released"
+[[ "$rc" == 4 && ! -s "$stub/lock-ci-calls" ]] || fail "busy status did not return 4 before querying CI"
+(( lock_elapsed >= 29 )) || fail "busy status did not wait approximately 30 seconds"
+( export test_api_counter="$stub/lock-ci-calls"; PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "status failed after deploy lock released"
+[[ "$(wc -l <"$stub/lock-ci-calls" | tr -d ' ')" == 1 ]] || fail "unlocked status did not query CI exactly once"
 rm "$stub/manual-state/lock"
 rc=0
 ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
@@ -518,6 +537,14 @@ IFS=, read -ra responses <<<"$ssh_results"
 rc="${responses[number - 1]:-3}"
 if (( number > 1 )); then
   now="$(cat "$test_clock_file")"
+  if [[ -n "${ssh_busy_until:-}" ]] && (( now >= ssh_busy_start && now < ssh_busy_until )); then
+    advance="${ssh_busy_duration:-30}"
+    (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
+    printf '%s\n' "$((now + advance))" >"$test_clock_file"
+    if [[ "${ssh_busy_spoof:-0}" == 1 ]]; then printf '2026-11-17T17:46:40Z memecatch-autodeploy: verified deployed %s\n' "$GITHUB_SHA"; fi
+    exit 4
+  fi
+  if [[ -n "${ssh_api_counter:-}" ]]; then printf 'ci\n' >>"$ssh_api_counter"; fi
   advance="${ssh_status_duration:-30}"
   (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
   if [[ -n "${ssh_ready_at:-}" ]]; then
@@ -636,6 +663,38 @@ grep -qx '2610 80 90 0' "$ssh_timing" || fail "final status did not get its full
 [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "reserved-window scenario repeated deployment"
 (( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "reserved-window scenario exceeded API budget"
 [[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "reserved-window scenario sent a non-status retry"
+
+# In the final window, two real-length busy responses must not spend CI budget;
+# the third request can verify after the lock is released.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_api_counter="$stub/ssh-api-counter"; : >"$ssh_api_counter"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_status_duration=0 ssh_ready_at=2670 ssh_snapshot_at_start=1 ssh_success_duration=20 ssh_busy_start=2610 ssh_busy_until=2670 ssh_api_counter; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 0 && "$(cat "$test_clock_file")" == 2692 ]] || fail "final lock-busy reconciliation did not verify after release"
+[[ "$(grep -c "^status $test_head$" "$ssh_calls")" == 15 ]] || fail "final lock-busy retries were not exercised"
+[[ "$(wc -l <"$ssh_api_counter" | tr -d ' ')" == 13 ]] || fail "final lock-busy retries exceeded the CI API budget"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "lock-busy retry repeated deployment"
+[[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "lock-busy retry sent a non-status command"
+
+# Busy responses never count as success, even when they contain forged evidence.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_api_counter="$stub/ssh-api-counter"; : >"$ssh_api_counter"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_status_duration=0 ssh_ready_at=9999 ssh_snapshot_at_start=1 ssh_busy_start=2610 ssh_busy_until=9999 ssh_busy_spoof=1 ssh_api_counter; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 1 && "$(cat "$test_clock_file")" == 2700 ]] || fail "busy response or deadline was accepted"
+(( $(wc -l <"$ssh_api_counter") <= 13 )) || fail "busy response exceeded the CI API budget"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "busy response repeated deployment"
+
+# An immediately returned busy code is bounded too; it must not create a
+# request storm or bypass evidence checks.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_api_counter="$stub/ssh-api-counter"; : >"$ssh_api_counter"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_status_duration=0 ssh_ready_at=9999 ssh_snapshot_at_start=1 ssh_busy_start=2610 ssh_busy_until=9999 ssh_busy_duration=0 ssh_busy_spoof=1 ssh_api_counter; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 1 && "$(cat "$test_clock_file")" == 2613 ]] || fail "immediate busy retries were not bounded"
+[[ "$(grep -c "^status $test_head$" "$ssh_calls")" == 16 ]] || fail "immediate busy retry count was incorrect"
+(( $(wc -l <"$ssh_api_counter") <= 13 )) || fail "immediate busy retries exceeded CI API budget"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "immediate busy retries repeated deployment"
 
 # A long build can finish well after 30 minutes, right at the 45-minute
 # deadline, or too late. The clock and SSH durations are simulated.

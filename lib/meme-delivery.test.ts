@@ -26,6 +26,29 @@ const reviewedYouTube = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("resolveMemeDelivery", () => {
+  it.each([
+    { content: "https://www.youtube.com/shorts/abcdefghijk", ledger: "https://www.youtube.com/watch?v=abcdefghijk", platform: "youtube" },
+    { content: "https://youtu.be/abcdefghijk", ledger: "https://www.youtube.com/shorts/abcdefghijk", platform: "youtube_shorts" },
+  ])("applies link-only policy across YouTube URL variants", ({ content, ledger, platform }) => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ url: content })],
+      sources: [],
+      reviewedMediaSources: [reviewedYouTube({ canonical_url: ledger, platform })],
+    });
+    expect(result.representative).not.toBeNull();
+    expect(result.embeddingAllowed).toBe(false);
+    expect(result.fallbackSourceUrl).toBe(content);
+  });
+
+  it("suppresses a YouTube row whose URL and content ID disagree", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ url: "https://www.youtube.com/shorts/ZYXWVUTSRQP" })],
+      sources: [],
+      reviewedMediaSources: [reviewedYouTube({ review_state: "rejected" })],
+    });
+    expect(result.representative).toBeNull();
+    expect(result.sourceLinks).toEqual([]);
+  });
   it("selects a live alternate when the representative is dead", () => {
     const result = resolveMemeDelivery({
       contents: [
@@ -232,7 +255,7 @@ describe("resolveMemeDelivery", () => {
   });
 
   it.each([
-    ["platform", { platform: "youtube_shorts" }],
+    ["platform", { platform: "instagram", canonical_url: "https://www.instagram.com/p/abcdefghijk/" }],
     ["content ID", { external_id: "lmnopqrstuv" }],
     ["canonical URL", { canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv" }],
   ])("does not apply an unrelated %s ledger row", (_label, sourceOverride) => {

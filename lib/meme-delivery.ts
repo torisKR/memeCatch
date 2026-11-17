@@ -86,6 +86,10 @@ function hasFreshStatus(source: ReviewedMediaSource, now: number): boolean {
   return Number.isFinite(checkedAt) && checkedAt <= now && now - checkedAt <= SOURCE_STATUS_MAX_AGE_MS;
 }
 
+function mediaPlatformIdentity(platform: string): string {
+  return platform === "youtube_shorts" ? "youtube" : platform;
+}
+
 function exactReviewedMediaSources(
   content: DeliveryContent,
   reviewedMediaSources: readonly ReviewedMediaSource[],
@@ -97,18 +101,19 @@ function exactReviewedMediaSources(
     platform: content.platform,
     url: contentUrl,
   });
-  if (!normalizedContent || !contentPlatform) return [];
+  if (!normalizedContent || !contentPlatform || normalizedContent.externalId !== content.content_id) return [];
 
   return reviewedMediaSources.filter((source) => {
     if (
-      source.platform !== contentPlatform ||
+      mediaPlatformIdentity(source.platform) !== mediaPlatformIdentity(contentPlatform) ||
       source.external_id !== content.content_id
     ) {
       return false;
     }
     const normalizedSource = normalizeSourceUrl(source.canonical_url);
-    return normalizedSource?.platform === source.platform &&
-      normalizedSource.externalId === source.external_id &&
+    if (!normalizedSource || normalizedSource.externalId !== source.external_id ||
+        mediaPlatformIdentity(normalizedSource.platform) !== mediaPlatformIdentity(source.platform)) return false;
+    return mediaPlatformIdentity(source.platform) === "youtube" ||
       normalizedContent.canonicalUrl === normalizedSource.canonicalUrl;
   });
 }
@@ -154,6 +159,10 @@ function sourcePolicy(
   reviewedMediaSources: readonly ReviewedMediaSource[],
   now: number,
 ): SourcePolicy {
+  const normalizedContent = content.url ? normalizeSourceUrl(content.url) : null;
+  if (normalizedContent && content.content_id && normalizedContent.externalId !== content.content_id) {
+    return { access: "suppressed", confirmedUnavailable: false };
+  }
   const policies = exactReviewedMediaSources(content, reviewedMediaSources)
     .map((source) => policyForReviewedSource(source, now));
   if (policies.some((policy) => policy.access === "suppressed")) {

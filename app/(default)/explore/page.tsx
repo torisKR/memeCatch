@@ -293,9 +293,8 @@ export default async function ExplorePage({
         const rows = page.items;
         const items = mergeSearchPresentationItems(curated, rows) as MemeListItem[];
         const winners = new Map(items.map((item) => [searchPresentationKey(item), item]));
-        // Retain only an eligible, distinct curated alternative suppressed by
-        // its catalog equivalent; do not resurrect the same unpublished ID.
-        const alternatives = curated.filter((item) => {
+        // Preserve observed suppressed database rows for a public recheck.
+        const alternatives = rows.filter((item) => {
           const winner = winners.get(searchPresentationKey(item));
           return winner && winner.id !== item.id && winner.short_id !== item.short_id;
         }) as MemeListItem[];

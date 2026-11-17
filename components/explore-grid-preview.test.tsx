@@ -367,13 +367,27 @@ describe("explore pagination preview policy", () => {
     expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
   });
 
-  it("restores the suppressed curated fallback when the initially displayed catalog is no longer public", async () => {
+  it("does not restore a suppressed curated fallback when the catalog is no longer public", async () => {
     const curated = { ...fallback, id: "curated-ohiryeo-joha" } as MemeListItem;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ previews: [] }) }));
     render(<ExploreGrid initial={[replacement]} initialAlternatives={[curated]} initialPreviewUnavailable filters={{ q: "오히려 좋아", categories: [], sort: "trending" }} />);
     fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
-    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(curated.id));
+    await waitFor(() => expect(screen.queryByTestId("card")).toBeNull());
     expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
+  });
+
+  it("preserves an already displayed curated fallback through failure and a missing catalog", async () => {
+    const curated = { ...fallback, id: "curated-ohiryeo-joha" } as MemeListItem;
+    mocks.collect.mockResolvedValueOnce({ items: [replacement], scanned: 1, hasMore: false });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [] }) }));
+    intersectImmediately();
+    render(<ExploreGrid initial={[curated]} hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).toBeTruthy());
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(curated.id);
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(curated.id);
   });
 
   it("does not restore the fallback during lookup failure or while its catalog is public", async () => {
@@ -440,6 +454,26 @@ describe("explore pagination preview policy", () => {
     expect(screen.queryByTestId("card")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
     await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(id));
+  });
+
+  it("keeps an SSR-suppressed seed with its catalog when the retry batch reaches 24 IDs", async () => {
+    const earlier = Array.from({ length: 23 }, (_, i) => ({
+      ...card, id: `00000000-0000-4000-8000-${String(i + 10).padStart(12, "0")}`, short_id: `other${i}`,
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: earlier.map((item) => ({ id: item.id, contents: [] })) }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id: fallback.id, contents: verified }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExploreGrid initial={[...earlier, replacement]} initialAlternatives={[fallback]} initialPreviewUnavailable filters={{ categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).not.toHaveProperty("disabled", true));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).ids).toEqual(earlier.map((item) => item.id));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).ids).toEqual(expect.arrayContaining([id, fallback.id]));
+    expect(screen.getAllByTestId("card").map((element) => element.getAttribute("data-item-id"))).toContain(fallback.id);
+    expect(screen.getAllByTestId("card").map((element) => element.getAttribute("data-item-id"))).not.toContain(id);
   });
 
   it("treats malformed public lookup rows as a retryable failure", async () => {

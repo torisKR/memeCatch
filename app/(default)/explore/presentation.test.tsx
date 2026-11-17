@@ -50,13 +50,21 @@ describe("explore server presentation", () => {
     expect(grid?.hasMoreInitial).toBe(true);
   });
 
-  it("retains the suppressed curated alternative when initial preview qualification fails", async () => {
+  it("does not retain an unobserved curated alternative when initial preview qualification fails", async () => {
     mocks.collect.mockResolvedValue({ items: [catalog], scanned: 1, hasMore: false });
     mocks.qualify.mockRejectedValue(new Error("ledger unavailable"));
     const grid = findGrid(await ExplorePage({ searchParams: Promise.resolve({ q: "오히려 좋아" }) }));
     expect(grid?.initial).toEqual([catalog]);
     expect(grid?.initialPreviewUnavailable).toBe(true);
-    expect(grid?.initialAlternatives).toEqual(expect.arrayContaining([expect.objectContaining({ id: "curated-ohiryeo-joha", short_id: "oyj2021k" })]));
+    expect(grid?.initialAlternatives).toEqual([]);
+  });
+
+  it.each([{}, { q: "오히려 좋아" }])("retains the observed suppressed database candidate: %o", async (searchParams) => {
+    mocks.collect.mockResolvedValue({ items: [seed, catalog], scanned: 2, hasMore: false });
+    mocks.qualify.mockRejectedValue(new Error("ledger unavailable"));
+    const grid = findGrid(await ExplorePage({ searchParams: Promise.resolve(searchParams) }));
+    expect(grid?.initial).toEqual([catalog]);
+    expect(grid?.initialAlternatives).toEqual([seed]);
   });
 
   it("does not retain a curated alternative for the same database short ID", async () => {

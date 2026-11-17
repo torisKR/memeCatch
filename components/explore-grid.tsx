@@ -255,7 +255,7 @@ export function ExploreGrid({
   indexableIds,
 }: {
   initial: MemeListItem[];
-  /** Server-approved curated cards hidden by distinct catalog equivalents. */
+  /** Eligible server-side candidates hidden by distinct catalog equivalents. */
   initialAlternatives?: MemeListItem[];
   initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
   initialPreviewUnavailable?: boolean;
@@ -393,11 +393,17 @@ export function ExploreGrid({
     try {
       // Keep equivalent candidates in the same public check, even when other
       // pending IDs would put them on opposite sides of the 24-ID API limit.
-      const groups = new Map<string, { pending: string[]; displayed: MemeListItem | undefined; candidates: MemeListItem[]; generation: number }>();
+      const groups = new Map<string, { pending: string[]; displayed: MemeListItem | undefined; candidates: MemeListItem[]; alternatives: MemeListItem[]; generation: number }>();
       for (const id of pendingPreviews) {
         const candidate = pendingCandidatesRef.current.get(id);
         const key = candidate ? searchPresentationKey(candidate) : `id:${id}`;
-        const group = groups.get(key) ?? { pending: [], displayed: itemsRef.current.find((item) => searchPresentationKey(item) === key), candidates: [], generation: generationsRef.current.get(key) ?? 0 };
+        const group = groups.get(key) ?? {
+          pending: [],
+          displayed: itemsRef.current.find((item) => searchPresentationKey(item) === key),
+          candidates: [],
+          alternatives: initialAlternatives.filter((item) => !item.id.startsWith("curated-") && searchPresentationKey(item) === key),
+          generation: generationsRef.current.get(key) ?? 0,
+        };
         group.pending.push(id);
         if (candidate) group.candidates.push(candidate);
         groups.set(key, group);
@@ -405,7 +411,7 @@ export function ExploreGrid({
       const batch: string[] = [];
       const selected: typeof groups = new Map();
       for (const [key, group] of groups) {
-        const ids = [...new Set([...group.pending, ...(group.displayed && !group.displayed.id.startsWith("curated-") ? [group.displayed.id] : [])])];
+        const ids = [...new Set([...group.pending, ...group.alternatives.map((item) => item.id), ...(group.displayed && !group.displayed.id.startsWith("curated-") ? [group.displayed.id] : [])])];
         if (batch.length + ids.length > PAGE_SIZE) break;
         batch.push(...ids);
         selected.set(key, group);
@@ -426,19 +432,10 @@ export function ExploreGrid({
             completedPending.add(id);
             pendingCandidatesRef.current.delete(id);
           }
-          const rows = [...group.candidates, ...(current && !current.id.startsWith("curated-") ? [current] : [])];
+          const rows = [...group.candidates, ...group.alternatives, ...(current && !current.id.startsWith("curated-") ? [current] : [])];
           for (const item of rows) {
             checkedIds.add(item.id);
             if (Object.hasOwn(verified, item.id)) replacements.push(item);
-          }
-          // The server may have hidden a distinct curated fallback before the
-          // first preview read failed. Restore it only when this public recheck
-          // confirmed no candidate and did not reject that same short ID.
-          if (rows.length && !rows.some((item) => Object.hasOwn(verified, item.id))) {
-            const alternative = initialAlternatives.find((item) =>
-              searchPresentationKey(item) === key && rows.every((row) => row.short_id !== item.short_id),
-            );
-            if (alternative) replacements.push(alternative);
           }
         }
         const base = itemsRef.current.filter((item) => !checkedIds.has(item.id));

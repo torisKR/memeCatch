@@ -106,9 +106,12 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).toContain("const photo = representativeImageUrl({");
   });
 
-  it("관련 소셜 임베드는 원본 목록이 아니라 정책 필터 결과만 사용한다", () => {
-    expect(source).toContain("const relatedSocialContents = delivery.embeddableContents");
-    expect(source).toContain("socialVideoPreview([content]) !== null");
+  it("관련 영상은 정책 필터 결과 전체를 중복 제거한 뒤 지연 목록으로 전달한다", () => {
+    expect(source).toContain(
+      "const relatedVideos = selectRelatedVideos(delivery.embeddableContents, representative)",
+    );
+    expect(source).toContain('<RelatedVideoList contents={relatedVideos} title={meme.title} />');
+    expect(source).not.toContain(".slice(0, 4)");
     expect(source).not.toContain("meme.meme_contents.filter(isRenderableContent)");
   });
 });

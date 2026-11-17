@@ -99,6 +99,124 @@ describe("source refresh recovery", () => {
     expect(mocks.revalidateTag).toHaveBeenCalledOnce();
   });
 
+  it("updates a lowercase YouTube video only through its separate complete canonical identity query", async () => {
+    const source = {
+      id: "yt-lowercase-video",
+      platform: "youtube",
+      external_id: "JnQu_5O4lh4",
+      canonical_url: "https://www.youtube.com/watch?v=JnQu_5O4lh4",
+      embeddable: true,
+      removed_at: null,
+    };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, {
+      privacyStatus: "private", embeddable: null, title: null, channelTitle: null,
+      channelId: null, publishedAt: null, durationSeconds: null, license: null,
+      madeForKids: null, thumbnailUrl: null, regionBlocked: null, regionAllowed: null,
+    }]]));
+    const embed = query({ data: [], error: null });
+    const video = query({ data: [{ id: "content-video" }], error: null });
+    const sourceBuilder = sourceQuery([source]);
+    const { client, jobTable } = admin();
+    const contentQueries = [embed, video];
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? contentQueries.shift()! : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.youtube.removed).toBe(1);
+    expect(embed.eq).toHaveBeenCalledWith("platform", "YouTube");
+    expect(embed.eq).toHaveBeenCalledWith("content_id", "JnQu_5O4lh4");
+    expect(embed.eq).toHaveBeenCalledWith("type", "embed");
+    expect(embed.eq.mock.calls.some(([column]) => column === "url")).toBe(false);
+    expect(video.in).toHaveBeenCalledWith("platform", ["YouTube", "youtube"]);
+    expect(video.eq).toHaveBeenCalledWith("content_id", "JnQu_5O4lh4");
+    expect(video.eq).toHaveBeenCalledWith("url", source.canonical_url);
+    expect(video.eq).toHaveBeenCalledWith("type", "video");
+    expect(video.update).toHaveBeenCalledWith({ availability: "dead" });
+  });
+
+  it.each([
+    ["youtu.be", "youtube", "YouTube", "https://www.youtube.com/watch?v=JnQu_5O4lh4", "https://youtu.be/JnQu_5O4lh4"],
+    ["watch query params", "youtube", "YouTube", "https://www.youtube.com/watch?v=JnQu_5O4lh4", "https://www.youtube.com/watch?v=JnQu_5O4lh4&t=30s"],
+    ["Shorts", "youtube_shorts", "YouTube Shorts", "https://www.youtube.com/shorts/JnQu_5O4lh4", "https://www.youtube.com/shorts/JnQu_5O4lh4?feature=share"],
+  ])("preserves the production %s embed URL variant by omitting an embed URL predicate", async (_name, platform, displayPlatform, canonicalUrl, variantUrl) => {
+    const source = {
+      id: `variant-${platform}`,
+      platform,
+      external_id: "JnQu_5O4lh4",
+      canonical_url: canonicalUrl,
+      embeddable: true,
+      removed_at: null,
+    };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, {
+      privacyStatus: "private", embeddable: null, title: null, channelTitle: null,
+      channelId: null, publishedAt: null, durationSeconds: null, license: null,
+      madeForKids: null, thumbnailUrl: null, regionBlocked: null, regionAllowed: null,
+    }]]));
+    const embed = query({ data: [{ id: "legacy-embed", url: variantUrl }], error: null });
+    const video = query({ data: [], error: null });
+    const legacyEmbed = query({ data: [], error: null });
+    const legacyVideo = query({ data: [], error: null });
+    const contentQueries = platform === "youtube"
+      ? [embed, video]
+      : [embed, video, legacyEmbed, legacyVideo];
+    const sourceBuilder = sourceQuery([source]);
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? contentQueries.shift()! : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    await runSourceRefresh();
+
+    expect(embed.eq).toHaveBeenCalledWith("platform", displayPlatform);
+    expect(embed.eq).toHaveBeenCalledWith("content_id", source.external_id);
+    expect(embed.eq).toHaveBeenCalledWith("type", "embed");
+    expect(embed.eq.mock.calls.some(([column]) => column === "url")).toBe(false);
+    expect(video.eq).toHaveBeenCalledWith("url", canonicalUrl);
+    expect(video.eq).toHaveBeenCalledWith("type", "video");
+  });
+
+  it("keeps the public dfwcw7uu Shorts/watch canonical mismatch covered by the legacy embed query", async () => {
+    const source = {
+      id: "source-dfwcw7uu",
+      platform: "youtube",
+      external_id: "RdGZAVN0pr4",
+      canonical_url: "https://www.youtube.com/watch?v=RdGZAVN0pr4",
+      embeddable: true,
+      removed_at: null,
+    };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, {
+      privacyStatus: "private", embeddable: null, title: null, channelTitle: null,
+      channelId: null, publishedAt: null, durationSeconds: null, license: null,
+      madeForKids: null, thumbnailUrl: null, regionBlocked: null, regionAllowed: null,
+    }]]));
+    const embed = query({
+      data: [{
+        id: "dfwcw7uu",
+        platform: "YouTube",
+        content_id: "RdGZAVN0pr4",
+        url: "https://www.youtube.com/shorts/RdGZAVN0pr4",
+      }],
+      error: null,
+    });
+    const video = query({ data: [], error: null });
+    const contentQueries = [embed, video];
+    const sourceBuilder = sourceQuery([source]);
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? contentQueries.shift()! : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.youtube.removed).toBe(1);
+    expect(embed.update).toHaveBeenCalledWith({ availability: "dead" });
+    expect(embed.eq).toHaveBeenCalledWith("platform", "YouTube");
+    expect(embed.eq).toHaveBeenCalledWith("content_id", "RdGZAVN0pr4");
+    expect(embed.eq).toHaveBeenCalledWith("type", "embed");
+    expect(embed.eq.mock.calls.some(([column]) => column === "url")).toBe(false);
+    expect(video.eq).toHaveBeenCalledWith("url", source.canonical_url);
+    expect(video.eq).toHaveBeenCalledWith("type", "video");
+  });
+
   it("expires catalog data even if a later availability update fails", async () => {
     const source = { id: "ig-cache", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null };
     const { client, jobTable } = admin();

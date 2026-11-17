@@ -12,6 +12,7 @@ function previewCopy(locale: Locale, platform: SocialVideoPreview["platform"]) {
       button: `${provider} 영상 미리보기`,
       title: `${provider} 공식 영상 미리보기`,
       privacy: "선택한 공식 플레이어에서 재생할 수 있어요.",
+      unavailable: "이 영상은 현재 재생할 수 없어요.",
       close: "미리보기 닫기",
       source: `${provider}에서 원본 열기`,
     };
@@ -21,9 +22,88 @@ function previewCopy(locale: Locale, platform: SocialVideoPreview["platform"]) {
     button: `Preview ${provider} video`,
     title: `Official ${provider} video preview`,
     privacy: "Play the post in the official embedded player.",
+    unavailable: "This video cannot be played right now.",
     close: "Close preview",
     source: `Open original on ${provider}`,
   };
+}
+
+function SocialVideoPreviewPlayer({
+  preview,
+  previewKey,
+  title,
+  unavailableCopy,
+}: {
+  preview: SocialVideoPreview;
+  previewKey: string;
+  title: string;
+  unavailableCopy: string;
+}) {
+  const [unavailable, setUnavailable] = useState(false);
+  const playerRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (preview.platform !== "tiktok" || unavailable) return;
+    const frame = playerRef.current;
+    if (!frame) return;
+
+    const onMessage = (event: MessageEvent) => {
+      if (
+        event.origin !== "https://www.tiktok.com" ||
+        event.source !== frame.contentWindow
+      ) return;
+      const data: unknown = event.data;
+      if (!data || typeof data !== "object" || Array.isArray(data)) return;
+      const message = data as {
+        "x-tiktok-player"?: unknown;
+        type?: unknown;
+        value?: unknown;
+      };
+      if (
+        message["x-tiktok-player"] !== true ||
+        message.type !== "onPlayerError" ||
+        !message.value ||
+        typeof message.value !== "object" ||
+        Array.isArray(message.value)
+      ) return;
+      const value = message.value as { errorCode?: unknown; errorType?: unknown };
+      if (value.errorCode === 1001 && value.errorType === "INVALID_VIDEO") {
+        setUnavailable(true);
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    // Subscribe before the real navigation so the player's first error event
+    // cannot race hydration/effect registration.
+    frame.src = preview.embedUrl;
+    return () => window.removeEventListener("message", onMessage);
+  }, [preview.embedUrl, preview.platform, unavailable]);
+
+  if (unavailable) {
+    return (
+      <div className="mx-auto flex min-h-32 w-full max-w-[382px] items-center justify-center rounded-xl border border-border bg-surface-2 p-5 text-center">
+        <p role="alert" className="text-sm text-muted">{unavailableCopy}</p>
+      </div>
+    );
+  }
+
+  return (
+    <iframe
+      key={previewKey}
+      ref={playerRef}
+      src={preview.platform === "tiktok" ? "about:blank" : preview.embedUrl}
+      title={title}
+      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+      allowFullScreen
+      referrerPolicy="strict-origin-when-cross-origin"
+      className={`mx-auto block w-full rounded-xl border border-border bg-white ${
+        preview.platform === "tiktok"
+          ? "h-[min(72svh,680px)] max-w-[382px]"
+          : "h-[min(72svh,720px)] max-w-[540px]"
+      }`}
+    />
+  );
 }
 
 export function SocialVideoPreviewDialog({
@@ -39,6 +119,12 @@ export function SocialVideoPreviewDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const copy = previewCopy(locale, preview.platform);
   const labelId = useId();
+  const previewKey = [
+    preview.platform,
+    preview.contentId,
+    preview.sourceUrl,
+    preview.embedUrl,
+  ].join("\n");
 
   useEffect(() => {
     if (!active) return;
@@ -47,6 +133,10 @@ export function SocialVideoPreviewDialog({
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
   }, [active]);
+
+  function open() {
+    setActive(true);
+  }
 
   function close() {
     const dialog = dialogRef.current;
@@ -59,7 +149,7 @@ export function SocialVideoPreviewDialog({
     <>
       <button
         type="button"
-        onClick={() => setActive(true)}
+        onClick={open}
         aria-haspopup="dialog"
         aria-label={`${title} · ${copy.button}`}
         className="absolute right-2 top-2 z-10 inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-white/70 bg-black/75 px-2.5 text-sm font-bold text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -92,18 +182,12 @@ export function SocialVideoPreviewDialog({
                 <span aria-hidden>×</span>
               </button>
             </div>
-            <iframe
-              src={preview.embedUrl}
+            <SocialVideoPreviewPlayer
+              key={previewKey}
+              preview={preview}
+              previewKey={previewKey}
               title={`${title} — ${copy.title}`}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-              className={`mx-auto block w-full rounded-xl border border-border bg-white ${
-                preview.platform === "tiktok"
-                  ? "h-[min(72svh,680px)] max-w-[382px]"
-                  : "h-[min(72svh,720px)] max-w-[540px]"
-              }`}
+              unavailableCopy={copy.unavailable}
             />
             <a
               href={preview.sourceUrl}

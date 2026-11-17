@@ -401,6 +401,14 @@ async function refreshOEmbedSources(
         if (sourceError) throw new Error("source_refresh_update_failed");
         await syncMemeContentsAvailability(admin, row, "dead");
         if (row.external_id) {
+          if (row.platform === "tiktok") {
+            await resolveSourceAcquisitionFailure({
+              sourceKey: providerIdentityRecoveryKey(row),
+              attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+              attemptStartedAt,
+              resolvedAt: new Date(),
+            }, admin);
+          }
           await resolveSourceAcquisitionFailure({
             sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
             attemptIdempotencyKey,

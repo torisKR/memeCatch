@@ -700,22 +700,81 @@ describe("source refresh recovery", () => {
     expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ code: "provider_transient" }), expect.anything());
   });
 
-  it("marks an oEmbed 404 unavailable, including an exactly matching mislabeled entry", async () => {
+  it("resolves both recovery keys after an authoritative TikTok 404 and does not select it again", async () => {
     const source = { id: "s1", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
-    const builder = sourceQuery([source]);
-    const { client, jobTable } = admin();
-    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : builder);
-    mocks.createAdminClient.mockReturnValue(client);
+    const recovery = {
+      sourceKey: `provider_identity:${source.id}`, sourceId: source.id, platform: "tiktok",
+      externalId: source.external_id, canonicalUrl: source.canonical_url, attemptCount: 1,
+      nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "provider_transient",
+      lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    } as const;
+    const firstSetup = admin({ due: [source] });
+    const secondSetup = admin();
+    mocks.createAdminClient.mockReturnValueOnce(firstSetup.client).mockReturnValueOnce(secondSetup.client);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([recovery]).mockResolvedValueOnce([]);
     mocks.getOEmbed.mockRejectedValueOnce(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
 
-    const result = await runSourceRefresh();
+    const first = await runSourceRefresh();
+    const second = await runSourceRefresh();
 
-    expect(result.status).toBe("ok");
-    expect(result.oembed.removed).toBe(1);
-    expect(builder.update).toHaveBeenCalledWith({ availability: "dead" });
-    expect(builder.eq).toHaveBeenCalledWith("platform", "YouTube");
-    expect(builder.eq).toHaveBeenCalledWith("url", source.canonical_url);
-    expect(resolveSourceAcquisitionFailure).toHaveBeenCalled();
+    expect(first.status).toBe("ok");
+    expect(first.oembed).toMatchObject({ checked: 1, removed: 1, failed: 0 });
+    expect(second.status).toBe("ok");
+    expect(second.oembed).toMatchObject({ checked: 0, removed: 0, failed: 0 });
+    expect(mocks.getOEmbed).toHaveBeenCalledOnce();
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `provider_identity:${source.id}`,
+    }), firstSetup.client);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `tiktok:${source.external_id}`,
+    }), firstSetup.client);
+  });
+
+  it.each(["source", "content"] as const)("keeps provider identity recovery when the 404 %s write fails and retries it when due", async (failedWrite) => {
+    const source = { id: `s1-${failedWrite}`, platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+    const recovery = {
+      sourceKey: `provider_identity:${source.id}`, sourceId: source.id, platform: "tiktok",
+      externalId: source.external_id, canonicalUrl: source.canonical_url, attemptCount: 1,
+      nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "provider_transient",
+      lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    } as const;
+    const failedSource = sourceQuery([source], failedWrite === "source" ? { message: "source write failed" } : undefined);
+    const failedContent = query({
+      data: [],
+      error: failedWrite === "content" ? { message: "content write failed" } : null,
+    });
+    const failedJob = { insert: vi.fn().mockResolvedValue({ error: null }) };
+    const failedClient = {
+      from: vi.fn((table: string) => table === "job_runs" ? failedJob : table === "meme_contents" ? failedContent : failedSource),
+      rpc: vi.fn(),
+    };
+    const retrySource = sourceQuery([source]);
+    const retryContent = query({ data: [], error: null });
+    const retryJob = { insert: vi.fn().mockResolvedValue({ error: null }) };
+    const retryClient = {
+      from: vi.fn((table: string) => table === "job_runs" ? retryJob : table === "meme_contents" ? retryContent : retrySource),
+      rpc: vi.fn(),
+    };
+    mocks.createAdminClient.mockReturnValueOnce(failedClient).mockReturnValueOnce(retryClient);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([recovery]).mockResolvedValueOnce([recovery]);
+    mocks.getOEmbed.mockRejectedValue(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
+
+    const first = await runSourceRefresh();
+
+    expect(first.status).toBe("partial");
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+
+    const second = await runSourceRefresh();
+
+    expect(second.status).toBe("ok");
+    expect(second.oembed).toMatchObject({ checked: 1, removed: 1, failed: 0 });
+    expect(mocks.getOEmbed).toHaveBeenCalledTimes(2);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: recovery.sourceKey,
+    }), retryClient);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `tiktok:${source.external_id}`,
+    }), retryClient);
   });
 
   it("reports database update and job audit failures", async () => {

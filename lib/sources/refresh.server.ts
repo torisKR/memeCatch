@@ -40,6 +40,21 @@ type MediaSourceRow = {
   removed_at: string | null;
 };
 
+type PlatformObservation = {
+  selected: number;
+  provider_submitted: number;
+  confirmed: number;
+  inconclusive: number;
+  invalid_identity: number;
+};
+
+type RefreshObservations = Record<MediaSourcePlatform, PlatformObservation>;
+
+function emptyObservations(): RefreshObservations {
+  const empty = (): PlatformObservation => ({ selected: 0, provider_submitted: 0, confirmed: 0, inconclusive: 0, invalid_identity: 0 });
+  return { youtube: empty(), youtube_shorts: empty(), instagram: empty(), tiktok: empty() };
+}
+
 const DISPLAY_PLATFORM: Record<MediaSourcePlatform, string> = {
   youtube: "YouTube",
   youtube_shorts: "YouTube Shorts",
@@ -151,6 +166,7 @@ async function syncMemeContentsAvailability(
 async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
+  observations: RefreshObservations,
 ) {
   // Missing or malformed IDs were never queried from YouTube and cannot be
   // treated as an authoritative missing-video result. Keep healthy sources
@@ -158,6 +174,7 @@ async function refreshYouTubeSources(
   const validRows = rows.filter((row) => normalizedSourceIdentity(row));
   const validIds = new Set(validRows.map((row) => row.id));
   const invalidRows = rows.filter((row) => !validIds.has(row.id));
+  for (const row of invalidRows) observations[row.platform].invalid_identity += 1;
   const identityErrors = invalidRows.map((row) => `invalid_source_identity:${row.id}`);
   const invalidCount = identityErrors.length;
   const invalidAttemptAt = new Date();
@@ -176,9 +193,11 @@ async function refreshYouTubeSources(
   const attemptStartedAt = new Date();
   const attemptIdBySource = new Map(rows.map((row) => [row.id, `refresh:${row.id}:${attemptStartedAt.toISOString()}`]));
   let statuses: Awaited<ReturnType<typeof fetchYouTubeVideoStatuses>>;
+  for (const row of validRows) observations[row.platform].provider_submitted += 1;
   try {
     statuses = await fetchYouTubeVideoStatuses(ids);
   } catch (error) {
+    for (const row of validRows) observations[row.platform].inconclusive += 1;
     for (const row of validRows) {
       if (!row.external_id) continue;
       await recordSourceAcquisitionFailure({
@@ -203,6 +222,11 @@ async function refreshYouTubeSources(
 
   for (const row of validRows) {
     const status = row.external_id ? statuses.get(row.external_id) : undefined;
+    const inconclusive = status && (
+      status.privacyStatus === null ||
+      (status.privacyStatus === "public" && status.embeddable === null)
+    );
+    observations[row.platform][inconclusive ? "inconclusive" : "confirmed"] += 1;
 
     try {
     if (!status) {
@@ -318,6 +342,7 @@ async function refreshYouTubeSources(
 async function refreshOEmbedSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
+  observations: RefreshObservations,
 ) {
   const now = new Date().toISOString();
   let checked = 0;
@@ -329,6 +354,7 @@ async function refreshOEmbedSources(
     const attemptStartedAt = new Date();
     const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
     if (!normalizedSourceIdentity(row)) {
+      observations[row.platform].invalid_identity += 1;
       failed += 1;
       checked += 1;
       try {
@@ -338,10 +364,13 @@ async function refreshOEmbedSources(
       }
       continue;
     }
+    let providerClassified = false;
     try {
+      observations[row.platform].provider_submitted += 1;
       const oembed = await getOEmbed(row.canonical_url);
       const providerIdentity = tiktokProviderIdentityState(row, oembed);
       if (providerIdentity === "mismatch" || providerIdentity === "inconclusive") {
+        observations[row.platform].inconclusive += 1;
         failed += 1;
         checked += 1;
         try {
@@ -356,6 +385,8 @@ async function refreshOEmbedSources(
       if (row.platform === "tiktok" && (!oembed.title || !oembed.authorName)) {
         throw new OEmbedError("TikTok source status is inconclusive", "UPSTREAM_ERROR", 502);
       }
+      observations[row.platform].confirmed += 1;
+      providerClassified = true;
       const { error } = await admin
         .from("media_sources")
         .update({
@@ -397,6 +428,7 @@ async function refreshOEmbedSources(
       }
     } catch (error) {
       if (error instanceof OEmbedError && error.status === 404) {
+        if (!providerClassified) observations[row.platform].confirmed += 1;
         try {
           // Project dead content first so a failed source write remains due and
           // cannot leave live content behind a freshly checked removed source.
@@ -460,6 +492,7 @@ async function refreshOEmbedSources(
         }
         removed += 1;
       } else if (row.external_id) {
+        if (!providerClassified) observations[row.platform].inconclusive += 1;
         failed += 1;
         await recordSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -487,10 +520,13 @@ export type SourceRefreshResult = {
   status: "ok" | "partial" | "failed";
   youtube: { checked: number; removed: number; hidden: number; failed: number; errors: string[] };
   oembed: { checked: number; removed: number; failed: number; errors: string[] };
+  observations: RefreshObservations;
   error?: string;
 };
 
 export async function runSourceRefresh(): Promise<SourceRefreshResult> {
+  const startedAt = new Date().toISOString();
+  const observations = emptyObservations();
   const admin = createAdminClient();
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   let activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
@@ -554,6 +590,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
       oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
+      observations,
       error: selectError.message,
     };
   }
@@ -569,6 +606,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
       oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
+      observations,
       error: dueError.message,
     };
   }
@@ -590,18 +628,19 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const oembedRows = (["tiktok", "instagram"] as const).flatMap((platform) =>
     rows.filter((row) => row.platform === platform).slice(0, SOCIAL_PLATFORM_BATCH_LIMIT),
   );
+  for (const row of [...youtubeRows, ...oembedRows]) observations[row.platform].selected += 1;
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
   let oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[] };
   let firstError: string | undefined;
 
   try {
-    youtube = await refreshYouTubeSources(admin, youtubeRows);
+    youtube = await refreshYouTubeSources(admin, youtubeRows, observations);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
   try {
-    oembed = await refreshOEmbedSources(admin, oembedRows);
+    oembed = await refreshOEmbedSources(admin, oembedRows, observations);
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
@@ -618,11 +657,13 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     status: firstError || youtube.failed > 0 || oembed.failed > 0 || oembed.checked < oembedRows.length ? "partial" : "ok",
     youtube,
     oembed,
+    observations,
     ...(firstError ? { error: firstError } : {}),
   };
 
   const { error: jobError } = await admin.from("job_runs").insert({
     job_name: "refresh_media_sources",
+    started_at: startedAt,
     finished_at: new Date().toISOString(),
     ok: result.status === "ok",
     detail: result,

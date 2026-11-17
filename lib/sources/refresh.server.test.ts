@@ -90,6 +90,70 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it("records the actual start and platform observations without treating a generic TikTok player as live", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-11-18T00:00:00Z"));
+      const sources = [
+        { id: "yt", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null },
+        { id: "short", platform: "youtube_shorts", external_id: "lmnopqrstuv", canonical_url: "https://www.youtube.com/shorts/lmnopqrstuv", embeddable: true, removed_at: null },
+        { id: "ig", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/p/ABCdef12345/", embeddable: true, removed_at: null },
+        { id: "tt", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null },
+        { id: "bad", platform: "tiktok", external_id: "not-a-video-id", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null },
+      ];
+      const sourceBuilder = sourceQuery(sources);
+      const content = query({ data: [], error: null });
+      const { client, jobInsert, jobTable } = admin();
+      client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+      mocks.createAdminClient.mockReturnValue(client);
+      mocks.fetchYouTubeVideoStatuses.mockImplementation(async () => {
+        vi.advanceTimersByTime(3_000);
+        return new Map();
+      });
+      mocks.getOEmbed.mockImplementation(async (url: string) => url.includes("tiktok")
+        ? oEmbedResult(url, { providerContentId: null, title: null, authorName: null })
+        : oEmbedResult(url));
+
+      const result = await runSourceRefresh();
+
+      expect(result.observations).toEqual({
+        youtube: { selected: 1, provider_submitted: 1, confirmed: 1, inconclusive: 0, invalid_identity: 0 },
+        youtube_shorts: { selected: 1, provider_submitted: 1, confirmed: 1, inconclusive: 0, invalid_identity: 0 },
+        instagram: { selected: 1, provider_submitted: 1, confirmed: 1, inconclusive: 0, invalid_identity: 0 },
+        tiktok: { selected: 2, provider_submitted: 1, confirmed: 0, inconclusive: 1, invalid_identity: 1 },
+      });
+      expect(jobInsert).toHaveBeenCalledWith(expect.objectContaining({
+        started_at: "2026-11-18T00:00:00.000Z",
+        finished_at: "2026-11-18T00:00:03.000Z",
+        detail: expect.objectContaining({ observations: result.observations }),
+      }));
+      expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", "tt");
+      expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ sourceKey: "provider_identity:tt" }), client);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("records a YouTube batch failure as inconclusive without claiming each HTTP request ran", async () => {
+    const source = { id: "yt-fail", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const { client, jobInsert } = admin({ stale: [source] });
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.fetchYouTubeVideoStatuses.mockRejectedValue(new Error("upstream"));
+    const result = await runSourceRefresh();
+    expect(result.observations.youtube).toEqual({ selected: 1, provider_submitted: 1, confirmed: 0, inconclusive: 1, invalid_identity: 0 });
+    expect(jobInsert).toHaveBeenCalledWith(expect.objectContaining({ detail: expect.objectContaining({ observations: result.observations }) }));
+  });
+
+  it("counts provider confirmation separately from a failed database update", async () => {
+    const source = { id: "ig-fail", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/p/ABCdef12345/", embeddable: true, removed_at: null };
+    const { client } = admin({ stale: [source], updateError: true });
+    mocks.createAdminClient.mockReturnValue(client);
+    const result = await runSourceRefresh();
+    expect(result.status).toBe("partial");
+    expect(result.oembed.failed).toBe(1);
+    expect(result.observations.instagram).toEqual({ selected: 1, provider_submitted: 1, confirmed: 1, inconclusive: 0, invalid_identity: 0 });
+  });
+
   it.each([
     { name: "missing", status: null, availability: "dead" },
     { name: "private", status: { privacyStatus: "private", embeddable: null }, availability: "dead" },
@@ -769,6 +833,7 @@ describe("source refresh recovery", () => {
 
     expect(first.status).toBe("ok");
     expect(first.oembed).toMatchObject({ checked: 1, removed: 1, failed: 0 });
+    expect(first.observations.tiktok).toMatchObject({ provider_submitted: 1, confirmed: 1, inconclusive: 0 });
     expect(second.status).toBe("ok");
     expect(second.oembed).toMatchObject({ checked: 0, removed: 0, failed: 0 });
     expect(mocks.getOEmbed).toHaveBeenCalledOnce();
@@ -817,6 +882,7 @@ describe("source refresh recovery", () => {
     const first = await runSourceRefresh();
 
     expect(first.status).toBe("partial");
+    expect(first.observations[platform]).toMatchObject({ provider_submitted: 1, confirmed: 1, inconclusive: 0 });
     expect(first.oembed).toMatchObject({
       checked: 1,
       removed: 0,

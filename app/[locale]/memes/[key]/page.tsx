@@ -405,7 +405,7 @@ export default async function LocalizedMemePage({ params }: Props) {
     // Instagram /p/ and /reel/ need their own embed paths even when their
     // shortcodes match. Retain that distinction for the locale main player.
     const source = content.url ? normalizeSourceUrl(content.url) : null;
-    const key = source && (source.platform === "instagram" || source.platform === "tiktok")
+    const key = source?.platform === "instagram"
       ? source.canonicalUrl : identity;
     return [{ content, key }];
   });

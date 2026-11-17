@@ -132,6 +132,38 @@ describe("localized detail playback", () => {
     expect(html).not.toContain("/embed/captioned/");
   });
 
+  it.each([false, true])("treats TikTok account aliases as one video identity, representative=%s", async (isRepresentative) => {
+    const id = "1234567890123456789";
+    const old = { ...youtube, id: "old", platform: "TikTok", content_id: id, url: `https://www.tiktok.com/@old/video/${id}`, is_representative: isRepresentative };
+    const renamed = { ...old, id: "new", url: `https://www.tiktok.com/@new/video/${id}` };
+    const oldSource = { ...ledger, platform: "tiktok", external_id: id, canonical_url: old.url, public_status: null };
+    const newSource = { ...oldSource, canonical_url: renamed.url };
+    for (const contents of [[old, renamed], [renamed, old]]) {
+      const html = await renderPage(contents, { ok: true, sources: [oldSource, newSource] });
+      expect(html).toContain(`https://www.tiktok.com/player/v1/${id}`);
+    }
+  });
+
+  it("does not choose between different TikTok video identities", async () => {
+    const firstId = "1234567890123456789";
+    const secondId = "1234567890123456790";
+    const first = { ...youtube, platform: "TikTok", content_id: firstId, url: `https://www.tiktok.com/@old/video/${firstId}`, is_representative: false };
+    const second = { ...first, id: "second", content_id: secondId, url: `https://www.tiktok.com/@new/video/${secondId}` };
+    const sources = [first, second].map((content) => ({ ...ledger, platform: "tiktok", external_id: content.content_id, canonical_url: content.url, public_status: null }));
+    const html = await renderPage([first, second], { ok: true, sources });
+    expect(html).not.toContain("https://www.tiktok.com/player/v1/");
+  });
+
+  it("keeps source rights checks on each TikTok alias", async () => {
+    const id = "1234567890123456789";
+    const old = { ...youtube, id: "old", platform: "TikTok", content_id: id, url: `https://www.tiktok.com/@old/video/${id}` };
+    const renamed = { ...old, id: "new", url: `https://www.tiktok.com/@new/video/${id}` };
+    const source = { ...ledger, platform: "tiktok", external_id: id, canonical_url: old.url, public_status: null };
+    const html = await renderPage([old, renamed], { ok: true, sources: [{ ...source, rights_basis: "blocked" }, { ...source, canonical_url: renamed.url }] });
+    expect(html).toContain(`https://www.tiktok.com/player/v1/${id}`);
+    expect(html).toContain(`href="${renamed.url}"`);
+  });
+
   it.each([
     ["en", "Representative video", "Play related video"],
     ["ja", "代表動画", "関連動画を再生"],

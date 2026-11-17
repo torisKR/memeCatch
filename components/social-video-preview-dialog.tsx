@@ -28,40 +28,22 @@ function previewCopy(locale: Locale, platform: SocialVideoPreview["platform"]) {
   };
 }
 
-export function SocialVideoPreviewDialog({
+function SocialVideoPreviewPlayer({
   preview,
+  previewKey,
   title,
-  locale,
+  unavailableCopy,
 }: {
   preview: SocialVideoPreview;
+  previewKey: string;
   title: string;
-  locale: Locale;
+  unavailableCopy: string;
 }) {
-  const [active, setActive] = useState(false);
-  const [unavailablePreview, setUnavailablePreview] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const playerRef = useRef<HTMLIFrameElement>(null);
-  const copy = previewCopy(locale, preview.platform);
-  const labelId = useId();
-  const previewKey = [
-    preview.platform,
-    preview.contentId,
-    preview.sourceUrl,
-    preview.embedUrl,
-  ].join("\n");
-  const playerUnavailable =
-    preview.platform === "tiktok" && unavailablePreview === previewKey;
 
   useEffect(() => {
-    if (!active) return;
-    const dialog = dialogRef.current;
-    if (!dialog || dialog.open) return;
-    if (typeof dialog.showModal === "function") dialog.showModal();
-    else dialog.setAttribute("open", "");
-  }, [active]);
-
-  useEffect(() => {
-    if (!active || preview.platform !== "tiktok" || playerUnavailable) return;
+    if (preview.platform !== "tiktok" || unavailable) return;
     const frame = playerRef.current;
     if (!frame) return;
 
@@ -86,7 +68,7 @@ export function SocialVideoPreviewDialog({
       ) return;
       const value = message.value as { errorCode?: unknown; errorType?: unknown };
       if (value.errorCode === 1001 && value.errorType === "INVALID_VIDEO") {
-        setUnavailablePreview(previewKey);
+        setUnavailable(true);
       }
     };
 
@@ -95,10 +77,64 @@ export function SocialVideoPreviewDialog({
     // cannot race hydration/effect registration.
     frame.src = preview.embedUrl;
     return () => window.removeEventListener("message", onMessage);
-  }, [active, playerUnavailable, preview.embedUrl, preview.platform, previewKey]);
+  }, [preview.embedUrl, preview.platform, unavailable]);
+
+  if (unavailable) {
+    return (
+      <div className="mx-auto flex min-h-32 w-full max-w-[382px] items-center justify-center rounded-xl border border-border bg-surface-2 p-5 text-center">
+        <p role="alert" className="text-sm text-muted">{unavailableCopy}</p>
+      </div>
+    );
+  }
+
+  return (
+    <iframe
+      key={previewKey}
+      ref={playerRef}
+      src={preview.platform === "tiktok" ? "about:blank" : preview.embedUrl}
+      title={title}
+      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+      allowFullScreen
+      referrerPolicy="strict-origin-when-cross-origin"
+      className={`mx-auto block w-full rounded-xl border border-border bg-white ${
+        preview.platform === "tiktok"
+          ? "h-[min(72svh,680px)] max-w-[382px]"
+          : "h-[min(72svh,720px)] max-w-[540px]"
+      }`}
+    />
+  );
+}
+
+export function SocialVideoPreviewDialog({
+  preview,
+  title,
+  locale,
+}: {
+  preview: SocialVideoPreview;
+  title: string;
+  locale: Locale;
+}) {
+  const [active, setActive] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const copy = previewCopy(locale, preview.platform);
+  const labelId = useId();
+  const previewKey = [
+    preview.platform,
+    preview.contentId,
+    preview.sourceUrl,
+    preview.embedUrl,
+  ].join("\n");
+
+  useEffect(() => {
+    if (!active) return;
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  }, [active]);
 
   function open() {
-    setUnavailablePreview(null);
     setActive(true);
   }
 
@@ -106,7 +142,6 @@ export function SocialVideoPreviewDialog({
     const dialog = dialogRef.current;
     if (dialog?.open && typeof dialog.close === "function") dialog.close();
     else dialog?.removeAttribute("open");
-    setUnavailablePreview(null);
     setActive(false);
   }
 
@@ -127,10 +162,7 @@ export function SocialVideoPreviewDialog({
       </button>
       <dialog
         ref={dialogRef}
-        onClose={() => {
-          setUnavailablePreview(null);
-          setActive(false);
-        }}
+        onClose={() => setActive(false)}
         aria-labelledby={active ? labelId : undefined}
         className="m-auto w-[min(94vw,620px)] max-w-none rounded-2xl border border-border bg-surface p-0 text-foreground shadow-2xl backdrop:bg-black/70"
       >
@@ -150,26 +182,13 @@ export function SocialVideoPreviewDialog({
                 <span aria-hidden>×</span>
               </button>
             </div>
-            {playerUnavailable ? (
-              <div className="mx-auto flex min-h-32 w-full max-w-[382px] items-center justify-center rounded-xl border border-border bg-surface-2 p-5 text-center">
-                <p role="alert" className="text-sm text-muted">{copy.unavailable}</p>
-              </div>
-            ) : (
-              <iframe
-                ref={playerRef}
-                src={preview.platform === "tiktok" ? "about:blank" : preview.embedUrl}
-                title={`${title} — ${copy.title}`}
-                sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
-                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-                className={`mx-auto block w-full rounded-xl border border-border bg-white ${
-                  preview.platform === "tiktok"
-                    ? "h-[min(72svh,680px)] max-w-[382px]"
-                    : "h-[min(72svh,720px)] max-w-[540px]"
-                }`}
-              />
-            )}
+            <SocialVideoPreviewPlayer
+              key={previewKey}
+              preview={preview}
+              previewKey={previewKey}
+              title={`${title} — ${copy.title}`}
+              unavailableCopy={copy.unavailable}
+            />
             <a
               href={preview.sourceUrl}
               target="_blank"

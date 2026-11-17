@@ -127,7 +127,33 @@ describe("SocialVideoPreviewDialog", () => {
     expect(tiktok.container.querySelectorAll("iframe")).toHaveLength(1);
   });
 
-  it("resets unavailable state when reopened or when the preview changes", () => {
+  it("recreates the iframe so a delayed message from preview A cannot mark preview B unavailable", () => {
+    const view = render(
+      <SocialVideoPreviewDialog preview={TIKTOK_PREVIEW} title="A 밈" locale="ko" />,
+    );
+    const frameA = openPreview();
+    const windowA = frameA.contentWindow;
+    const previewB: SocialVideoPreview = {
+      ...TIKTOK_PREVIEW,
+      sourceUrl: "https://www.tiktok.com/@creator/video/9876543210987654321",
+      embedUrl: "https://www.tiktok.com/player/v1/9876543210987654321",
+      contentId: "9876543210987654321",
+    };
+
+    view.rerender(
+      <SocialVideoPreviewDialog preview={previewB} title="B 밈" locale="ko" />,
+    );
+    const frameB = screen.getByTitle(/B 밈/) as HTMLIFrameElement;
+    expect(frameB).not.toBe(frameA);
+    expect(frameB.contentWindow === windowA).toBe(false);
+
+    sendPlayerMessage(frameB, INVALID_VIDEO, undefined, windowA);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(view.container.querySelector("iframe")).toBe(frameB);
+    expect(frameB.getAttribute("src")).toBe(previewB.embedUrl);
+  });
+
+  it("resets unavailable state when reopened and for every A to B to A preview session", () => {
     const view = render(
       <SocialVideoPreviewDialog preview={TIKTOK_PREVIEW} title="첫 밈" locale="ko" />,
     );
@@ -153,5 +179,12 @@ describe("SocialVideoPreviewDialog", () => {
 
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByTitle(/다음 밈/).getAttribute("src")).toBe(nextPreview.embedUrl);
+
+    view.rerender(
+      <SocialVideoPreviewDialog preview={TIKTOK_PREVIEW} title="돌아온 첫 밈" locale="ko" />,
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByTitle(/돌아온 첫 밈/).getAttribute("src"))
+      .toBe(TIKTOK_PREVIEW.embedUrl);
   });
 });

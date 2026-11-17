@@ -99,6 +99,43 @@ describe("fetchYouTubeVideoStatuses", () => {
       /403/,
     );
   });
+
+  it.each([
+    null,
+    {},
+    { items: null },
+    { items: {} },
+    { items: [null] },
+    { items: [{}] },
+    { items: [{ id: "not-requested" }] },
+    { items: [{ id: "requested" }, { id: "requested" }] },
+  ])("rejects an inconclusive video list instead of reporting videos missing: %o", async (body) => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })));
+
+    await expect(fetchYouTubeVideoStatuses(["requested"])).rejects.toThrow(/inconclusive/i);
+  });
+
+  it("accepts an explicit empty video list as an authoritative missing result", async () => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200 })));
+    expect((await fetchYouTubeVideoStatuses(["missing"])).size).toBe(0);
+  });
+
+  it("rejects the entire request when a later batch is inconclusive", async () => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchYouTubeVideoStatuses(Array.from({ length: 51 }, (_, i) => `video-${i}`)))
+      .rejects.toThrow(/inconclusive/i);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("isPublishableCandidate", () => {

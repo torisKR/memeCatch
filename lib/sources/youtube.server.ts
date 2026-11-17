@@ -129,7 +129,19 @@ export async function fetchYouTubeVideoStatuses(
       signal: AbortSignal.timeout(15_000),
     });
     const data = await readJson<YouTubeVideosApiResponse>(response);
-    for (const item of data.items ?? []) {
+    // A successful HTTP response is not sufficient evidence that an omitted
+    // ID is gone. Only a well-formed list for this exact request can make that
+    // assertion; otherwise the caller must retain the old status and retry.
+    if (!data || !Array.isArray(data.items)) {
+      throw new Error("youtube_video_list_inconclusive");
+    }
+    const requested = new Set(batch);
+    const seen = new Set<string>();
+    for (const item of data.items) {
+      if (!item || typeof item.id !== "string" || !requested.has(item.id) || seen.has(item.id)) {
+        throw new Error("youtube_video_list_inconclusive");
+      }
+      seen.add(item.id);
       const mapped = mapVideo(item);
       if (mapped) result.set(mapped.id, mapped);
     }

@@ -633,14 +633,16 @@ function LiteSocialEmbed({
           <p role="alert" className="text-sm text-muted">
             {playerUnavailable ? copy.unavailable : error}
           </p>
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
-          >
-            {locale === "en" ? `View${copy.openProvider} ${providerName}` : `${providerName}${copy.openProvider}`} <span aria-hidden>↗</span>
-          </a>
+          {provider !== "tiktok" && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
+            >
+              {locale === "en" ? `View${copy.openProvider} ${providerName}` : `${providerName}${copy.openProvider}`} <span aria-hidden>↗</span>
+            </a>
+          )}
         </div>
       </div>
     );

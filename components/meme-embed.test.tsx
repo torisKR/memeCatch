@@ -53,6 +53,26 @@ describe("MemeEmbed", () => {
     await act(async () => rejectFetch(new Error("서버 오류")));
     expect(screen.getByRole("alert").textContent).toBe(error);
     expect(screen.getByRole("link", { name: openProvider })).toBeTruthy();
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+  });
+
+  it("keeps exactly one external link when TikTok embed validation fails", async () => {
+    let rejectFetch!: (reason: Error) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((_resolve, reject) => { rejectFetch = reject; })));
+    render(
+      <MemeEmbed
+        content={{ ...tiktokContent, url: "https://www.tiktok.com/t/ZTRshort/" }}
+        title="심쿵"
+      />
+    );
+
+    await act(async () => rejectFetch(new Error("콘텐츠를 불러오지 못했습니다.")));
+
+    expect(screen.getByRole("alert").textContent).toContain("콘텐츠를 불러오지 못했습니다.");
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]?.textContent).toContain("TikTok에서 보기");
+    expect(links[0]?.getAttribute("href")).toBe("https://www.tiktok.com/t/ZTRshort/");
   });
 
   it("navigates away and back after hydration so early player errors can recur", () => {
@@ -80,7 +100,9 @@ describe("MemeEmbed", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     act(() => window.dispatchEvent(new MessageEvent("message", { origin: "https://www.tiktok.com", source: frame.contentWindow, data: message })));
     expect(screen.getByRole("alert").textContent).toContain("현재 재생할 수 없습니다");
-    expect(screen.getAllByRole("link", { name: /게시물 열기|TikTok에서 보기/ }).length).toBeGreaterThan(0);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]?.textContent).toContain("TikTok에서 보기");
     await waitFor(() => expect(screen.queryByTitle(/심쿵 — TikTok/)).toBeNull());
   });
 

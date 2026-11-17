@@ -282,9 +282,9 @@ export function ExploreGrid({
   const offsetRef = useRef(initialOffset ?? initial.length);
   const hasMoreRef = useRef(startHasMore);
   const itemsRef = useRef(initial);
-  // A failed public recheck cannot displace a visible fallback. Keep the
-  // candidate until the user retries the preview lookup.
-  const pendingReplacementsRef = useRef(new Map<string, MemeListItem>());
+  // Keep every candidate from failed public rechecks, including a losing
+  // alternative from the same page, until it can be checked again.
+  const pendingCandidatesRef = useRef(new Map<string, MemeListItem>());
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -305,19 +305,24 @@ export function ExploreGrid({
       // Check all candidates that can beat the current card. If two arrive in
       // one page, the lower-priority one is still needed if the winner is no
       // longer public by the time previews are re-read.
+      const confirmedItems = itemsRef.current.filter((item) => !pendingCandidatesRef.current.has(item.id));
       const fresh = candidates.filter((item) =>
-        mergeSearchPresentationItems(itemsRef.current, [item]).some((winner) => winner.id === item.id),
+        mergeSearchPresentationItems(confirmedItems, [item]).some((winner) => winner.id === item.id),
       );
       const ids = fresh.map((item) => item.id);
       const verified = await fetchQualifiedPreviews(ids);
       const existingKeys = new Set(itemsRef.current.map(searchPresentationKey));
       const eligible = fresh.filter((item) => {
         if (verified) return Object.hasOwn(verified, item.id);
+        pendingCandidatesRef.current.set(item.id, item);
         if (!existingKeys.has(searchPresentationKey(item))) return true;
-        pendingReplacementsRef.current.set(item.id, item);
         return false;
       });
-      const nextItems = mergeSearchPresentationItems(itemsRef.current, eligible);
+      const verifiedKeys = new Set(verified ? eligible.map(searchPresentationKey) : []);
+      const base = itemsRef.current.filter((item) =>
+        !pendingCandidatesRef.current.has(item.id) || !verifiedKeys.has(searchPresentationKey(item)),
+      );
+      const nextItems = mergeSearchPresentationItems(base, eligible);
       const nextIds = new Set(nextItems.map((item) => item.id));
       const removedIds = new Set(
         itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
@@ -325,7 +330,7 @@ export function ExploreGrid({
       if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
       for (const item of candidates) seenRef.current.add(item.id);
       if (removedIds.size > 0) {
-        setPendingPreviews((prev) => prev.filter((id) => !removedIds.has(id)));
+        setPendingPreviews((prev) => prev.filter((id) => !removedIds.has(id) || pendingCandidatesRef.current.has(id)));
       }
       setPreviews((prev) => {
         const next = { ...prev, ...(verified ?? {}) };
@@ -349,15 +354,41 @@ export function ExploreGrid({
     if (retryingPreviews) return;
     setRetryingPreviews(true);
     try {
-      const batch = pendingPreviews.slice(0, PAGE_SIZE);
+      // Keep equivalent candidates in the same public check, even when other
+      // pending IDs would put them on opposite sides of the 24-ID API limit.
+      const groups = new Map<string, string[]>();
+      for (const id of pendingPreviews) {
+        const candidate = pendingCandidatesRef.current.get(id);
+        const key = candidate ? searchPresentationKey(candidate) : `id:${id}`;
+        const group = groups.get(key) ?? [];
+        group.push(id);
+        groups.set(key, group);
+      }
+      const batch: string[] = [];
+      for (const group of groups.values()) {
+        if (batch.length + group.length > PAGE_SIZE) break;
+        batch.push(...group);
+      }
       const verified = await fetchQualifiedPreviews(batch);
       if (verified) {
+        const checkedCandidateIds = new Set<string>();
+        const checkedKeys = new Set<string>();
         const replacements = batch.flatMap((id) => {
-          const candidate = pendingReplacementsRef.current.get(id);
-          pendingReplacementsRef.current.delete(id);
+          const candidate = pendingCandidatesRef.current.get(id);
+          pendingCandidatesRef.current.delete(id);
+          if (candidate) {
+            checkedCandidateIds.add(id);
+            checkedKeys.add(searchPresentationKey(candidate));
+          }
           return candidate && Object.hasOwn(verified, id) ? [candidate] : [];
         });
-        const nextItems = mergeSearchPresentationItems(itemsRef.current, replacements);
+        // Remove provisional candidates before comparing the newly confirmed
+        // rows; an absent catalog row must not hide its now-public seed.
+        const base = itemsRef.current.filter((item) =>
+          !checkedCandidateIds.has(item.id) &&
+          !(pendingCandidatesRef.current.has(item.id) && checkedKeys.has(searchPresentationKey(item))),
+        );
+        const nextItems = mergeSearchPresentationItems(base, replacements);
         const nextIds = new Set(nextItems.map((item) => item.id));
         const removedIds = new Set(itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id));
         itemsRef.current = nextItems;
@@ -367,7 +398,9 @@ export function ExploreGrid({
           for (const id of removedIds) delete next[id];
           return next;
         });
-        setPendingPreviews((prev) => prev.filter((id) => !batch.includes(id) && !removedIds.has(id)));
+        setPendingPreviews((prev) => prev.filter((id) =>
+          !batch.includes(id) && (!removedIds.has(id) || pendingCandidatesRef.current.has(id)),
+        ));
       }
     } finally {
       setRetryingPreviews(false);

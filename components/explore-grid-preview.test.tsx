@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemeListItem } from "@/lib/queries";
 
@@ -151,5 +151,131 @@ describe("explore pagination preview policy", () => {
     fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
     await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).ids).toEqual([id, fallback.id]);
+  });
+
+  it("retains same-page alternatives through repeated read failures and selects the public seed", async () => {
+    mocks.collect.mockResolvedValueOnce({ items: [replacement, fallback], scanned: 2, hasMore: false });
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id: fallback.id, contents: verified }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExploreGrid initial={[]} hasMoreInitial filters={{ q: "오히려 좋아", categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).not.toHaveProperty("disabled", true));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id));
+    expect(screen.getAllByTestId("card")).toHaveLength(1);
+    expect(screen.getByTestId("card").textContent).toContain("reviewed");
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).ids).toEqual([id, fallback.id]);
+    expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
+  });
+
+  it.each([
+    { name: "both public", rows: [{ id, contents: [] }, { id: fallback.id, contents: [] }], winner: id },
+    { name: "both missing", rows: [], winner: null },
+  ])("reselects only public candidates after a same-page failure: $name", async ({ rows, winner }) => {
+    mocks.collect.mockResolvedValueOnce({ items: [replacement, fallback], scanned: 2, hasMore: false });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: rows }) }));
+    render(<ExploreGrid initial={[]} hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(screen.queryByTestId("card")?.getAttribute("data-item-id") ?? null).toBe(winner);
+  });
+
+  it("does not apply a delayed old-page response after a filter-key remount", async () => {
+    let finish!: (value: unknown) => void;
+    const delayed = new Promise((resolve) => { finish = resolve; });
+    mocks.collect.mockResolvedValueOnce({ items: [replacement, fallback], scanned: 2, hasMore: false });
+    vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(delayed));
+    const view = render(<ExploreGrid key="old" initial={[]} hasMoreInitial filters={{ q: "old", categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    const next = { ...card, id: "00000000-0000-4000-8000-000000000099", short_id: "next" };
+    view.rerender(<ExploreGrid key="new" initial={[next]} filters={{ q: "new", categories: [], sort: "trending" }} />);
+    await act(async () => { finish({ ok: true, json: async () => ({ previews: [{ id, contents: verified }] }) }); await delayed; });
+    expect(screen.getAllByTestId("card")).toHaveLength(1);
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(next.id);
+    expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
+  });
+
+  it("keeps equivalent candidates together across the retry API batch boundary", async () => {
+    const earlier = Array.from({ length: 23 }, (_, i) => ({
+      ...card, id: `00000000-0000-4000-8000-${String(i + 10).padStart(12, "0")}`, short_id: `other${i}`,
+    }));
+    mocks.collect.mockResolvedValueOnce({ items: earlier, scanned: 23, hasMore: true })
+      .mockResolvedValueOnce({ items: [replacement, fallback], scanned: 2, hasMore: false });
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: earlier.map((item) => ({ id: item.id, contents: [] })) }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id: fallback.id, contents: verified }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    let observe: IntersectionObserverCallback | undefined;
+    vi.stubGlobal("IntersectionObserver", class { constructor(cb: IntersectionObserverCallback) { observe = cb; } observe() {} disconnect() {} });
+    render(<ExploreGrid initial={[]} hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
+    await waitFor(() => expect(screen.getAllByTestId("card")).toHaveLength(23));
+    await waitFor(() => expect(observe).toBeTypeOf("function"));
+    act(() => observe!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText("끝까지 봤어요")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).not.toHaveProperty("disabled", true));
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).ids).toEqual(earlier.map((item) => item.id));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(JSON.parse(fetchMock.mock.calls[3][1].body).ids).toEqual([id, fallback.id]);
+    expect(screen.getAllByTestId("card").map((element) => element.getAttribute("data-item-id"))).toContain(fallback.id);
+    expect(screen.getAllByTestId("card").map((element) => element.getAttribute("data-item-id"))).not.toContain(id);
+  });
+
+  it("does not let an unconfirmed earlier catalog hide a later public seed", async () => {
+    mocks.collect.mockResolvedValueOnce({ items: [replacement], scanned: 1, hasMore: true })
+      .mockResolvedValueOnce({ items: [fallback], scanned: 1, hasMore: false });
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id: fallback.id, contents: verified }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    let observe: IntersectionObserverCallback | undefined;
+    vi.stubGlobal("IntersectionObserver", class { constructor(cb: IntersectionObserverCallback) { observe = cb; } observe() {} disconnect() {} });
+    render(<ExploreGrid initial={[]} hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).toBeTruthy());
+    await waitFor(() => expect(observe).toBeTypeOf("function"));
+    act(() => observe!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id);
+  });
+
+  it("keeps a later confirmed seed when an earlier catalog retry finishes last", async () => {
+    let finish!: (value: unknown) => void;
+    const delayed = new Promise((resolve) => { finish = resolve; });
+    mocks.collect.mockResolvedValueOnce({ items: [replacement], scanned: 1, hasMore: true })
+      .mockResolvedValueOnce({ items: [fallback], scanned: 1, hasMore: false });
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false }).mockReturnValueOnce(delayed)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id: fallback.id, contents: verified }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    let observe: IntersectionObserverCallback | undefined;
+    vi.stubGlobal("IntersectionObserver", class { constructor(cb: IntersectionObserverCallback) { observe = cb; } observe() {} disconnect() {} });
+    render(<ExploreGrid initial={[]} hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(observe).toBeTypeOf("function"));
+    act(() => observe!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id));
+    await act(async () => { finish({ ok: true, json: async () => ({ previews: [] }) }); await delayed; });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id);
+    expect(screen.getByTestId("card").textContent).toContain("reviewed");
   });
 });

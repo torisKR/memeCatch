@@ -21,9 +21,11 @@ export function generateStaticParams() {
   return SEO_CONTENT_LOCALES.map((locale) => ({ locale }));
 }
 
-// Arabic share metadata stays callable for a future page, but this PR does
-// not publish `/ar` or `/ar/pricing`. Unknown locales 404 like main.
-export const dynamicParams = false;
+// Allow ISR to regenerate a prerendered home after catalog tags expire.
+// With dynamicParams=false, Next 16.3 discards the expired entry then throws
+// NoFallbackError, making every localized home 404 until the process restarts.
+// LocalizedLayout still rejects unsupported locales below (including Arabic).
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;

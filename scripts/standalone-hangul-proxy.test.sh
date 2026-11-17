@@ -92,6 +92,7 @@ fi
 mkdir -p "$root/.next"
 cd "$standalone"
 DATABASE_URL="postgresql://memecatch:${db_password}@127.0.0.1:${pg_port}/memecatch" \
+  CRON_SECRET="ci-localized-home-cache" \
   BETTER_AUTH_SECRET="ci-hangul-proxy-secret-not-production" \
   NEXT_PUBLIC_SITE_URL="http://127.0.0.1:${app_port}" \
   HOSTNAME="127.0.0.1" \
@@ -112,3 +113,4 @@ if [[ "$status" != "0" ]]; then
   tail -n 80 "$root/.next/hangul-standalone.log" >&2 || true
   exit "$status"
 fi
+CRON_SECRET="ci-localized-home-cache" node "$root/scripts/localized-home-cache-check.mjs" "http://127.0.0.1:${proxy_port}"

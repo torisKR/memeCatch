@@ -85,10 +85,9 @@ describe("MemeCard", () => {
     const button = screen.getByRole("button", { name: /Instagram 영상 미리보기/ });
     expect(link?.contains(button)).toBe(false);
     expect(button.getAttribute("aria-label")).toBe("테스트 밈 · Instagram 영상 미리보기");
-    expect(button.className).toContain("size-11");
+    expect(button.className).toContain("h-11");
     const platformLabel = button.querySelector("[aria-hidden] span:last-child");
     expect(platformLabel?.textContent).toBe("Instagram");
-    expect(platformLabel?.className).toContain("text-[8px]");
 
     fireEvent.click(button);
     expect(view.container.querySelectorAll("iframe")).toHaveLength(1);
@@ -112,7 +111,7 @@ describe("MemeCard", () => {
     view.unmount();
   });
 
-  it("shows the TikTok platform name on the 44px preview button", () => {
+  it("shows the TikTok platform name on the 44px preview pill", () => {
     const view = render(<MemeCard meme={{ ...meme, meme_contents: [{
       thumbnail_url: null,
       is_representative: true,
@@ -123,7 +122,8 @@ describe("MemeCard", () => {
     }] }} />);
 
     const button = screen.getByRole("button", { name: /TikTok 영상 미리보기/ });
-    expect(button.className).toContain("size-11");
+    expect(button.getAttribute("aria-label")).toBe("테스트 밈 · TikTok 영상 미리보기");
+    expect(button.className).toContain("h-11");
     expect(button.querySelector("[aria-hidden] span:last-child")?.textContent).toBe("TikTok");
     expect(view.container.querySelector("iframe")).toBeNull();
     view.unmount();

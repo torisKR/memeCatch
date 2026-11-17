@@ -62,11 +62,11 @@ export function SocialVideoPreviewDialog({
         onClick={() => setActive(true)}
         aria-haspopup="dialog"
         aria-label={`${title} · ${copy.button}`}
-        className="absolute right-2 top-2 z-10 inline-flex size-11 items-center justify-center rounded-full border border-white/70 bg-black/75 text-sm font-bold text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        className="absolute right-2 top-2 z-10 inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-white/70 bg-black/75 px-2.5 text-sm font-bold text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
-        <span aria-hidden className="flex flex-col items-center leading-none">
+        <span aria-hidden className="inline-flex items-center gap-1.5 leading-none">
           <span className="text-xs">▶</span>
-          <span className="mt-0.5 text-[8px] font-semibold tracking-tight">{copy.provider}</span>
+          <span className="text-xs font-semibold">{copy.provider}</span>
         </span>
         <span className="sr-only">{copy.button}</span>
       </button>

@@ -51,6 +51,7 @@ it("does not write or mark either source dead when a real HTTP response has inco
   const result = await runSourceRefresh();
   expect(result.status).toBe("partial");
   expect(result.error).toBe("youtube_video_list_inconclusive");
+  expect(result.observations.youtube).toMatchObject({ provider_submitted: 2, confirmed: 0, inconclusive: 2 });
   expect(source.update).not.toHaveBeenCalled();
   expect(content.update).not.toHaveBeenCalled();
   expect(recordSourceAcquisitionFailure).toHaveBeenCalledTimes(2);
@@ -71,6 +72,7 @@ it("marks omitted sources unavailable only after a well-formed empty HTTP list",
   const result = await runSourceRefresh();
   expect(result.status).toBe("ok");
   expect(result.youtube.removed).toBe(2);
+  expect(result.observations.youtube).toMatchObject({ provider_submitted: 2, confirmed: 2, inconclusive: 0 });
   expect(source.update).toHaveBeenCalledTimes(2);
   expect(content.update).toHaveBeenCalledWith({ availability: "dead" });
 });
@@ -84,6 +86,34 @@ it("updates a valid returned video and marks only the omitted video unavailable"
   expect(source.update).toHaveBeenCalledWith(expect.objectContaining({ removed_at: expect.any(String), title: null }));
   expect(content.update).toHaveBeenCalledWith({ availability: "live" });
   expect(content.update).toHaveBeenCalledWith({ availability: "dead" });
+});
+
+it("records a generic TikTok player as inconclusive even when it echoes the requested ID", async () => {
+  const sourceRow = {
+    id: "generic-tiktok",
+    platform: "tiktok",
+    external_id: "1234567890",
+    canonical_url: "https://www.tiktok.com/@a/video/1234567890",
+    embeddable: false,
+    removed_at: "2026-01-01T00:00:00Z",
+  };
+  const source = query([sourceRow]);
+  const content = query([]);
+  const jobInsert = vi.fn().mockResolvedValue({ error: null });
+  mocks.createAdminClient.mockReturnValue({
+    from: vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : source),
+  });
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+    html: '<iframe src="https://www.tiktok.com/player/v1/1234567890"></iframe>',
+    embed_product_id: "1234567890",
+  })));
+
+  const result = await runSourceRefresh();
+
+  expect(result.observations.tiktok).toEqual({ selected: 1, provider_submitted: 1, confirmed: 0, inconclusive: 1, invalid_identity: 0 });
+  expect(source.update).not.toHaveBeenCalled();
+  expect(content.update).not.toHaveBeenCalled();
+  expect(jobInsert).toHaveBeenCalledWith(expect.objectContaining({ detail: expect.objectContaining({ observations: result.observations }) }));
 });
 
 it("defers a TikTok source when fetched oEmbed HTML exposes a different video ID", async () => {
@@ -114,6 +144,7 @@ it("defers a TikTok source when fetched oEmbed HTML exposes a different video ID
 
   expect(result.status).toBe("partial");
   expect(result.oembed).toMatchObject({ checked: 1, failed: 1, removed: 0, errors: [] });
+  expect(result.observations.tiktok).toMatchObject({ provider_submitted: 1, confirmed: 0, inconclusive: 1 });
   expect(source.update).not.toHaveBeenCalled();
   expect(content.update).not.toHaveBeenCalled();
   expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({

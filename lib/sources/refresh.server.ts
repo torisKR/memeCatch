@@ -151,6 +151,7 @@ async function refreshYouTubeSources(
     try {
     if (!status) {
       // 삭제·비공개 전환: 제목·썸네일 캐시를 지우고 게시 임베드를 내린다.
+      await syncMemeContentsAvailability(admin, row, "dead");
       const { error } = await admin
         .from("media_sources")
         .update({
@@ -162,7 +163,6 @@ async function refreshYouTubeSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "dead");
       if (row.external_id) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -186,6 +186,11 @@ async function refreshYouTubeSources(
     const isPrivate = status.privacyStatus === "private";
     const embeddable = isPublic && status.embeddable === true;
     const regionBlocked = isYouTubeRegionBlocked({ allowed: status.regionAllowed, blocked: status.regionBlocked });
+    const availability = !isPublic ? "dead" : regionBlocked ? "region_blocked" : "live";
+
+    // Hide content before persisting a negative source status. On restoration,
+    // persist the source first so a failed write cannot prematurely expose it.
+    if (availability !== "live") await syncMemeContentsAvailability(admin, row, availability);
 
     const { error } = await admin
       .from("media_sources")
@@ -207,24 +212,18 @@ async function refreshYouTubeSources(
       })
       .eq("id", row.id);
     if (error) throw new Error("source_refresh_update_failed");
+    if (availability === "live") await syncMemeContentsAvailability(admin, row, availability);
 
     if (isPrivate) {
-      await syncMemeContentsAvailability(admin, row, "dead");
       removed += 1;
     } else if (!isPublic) {
       // Unlisted is reachable by URL but is not public catalog content.
-      await syncMemeContentsAvailability(admin, row, "dead");
       hidden += 1;
-    } else if (regionBlocked) {
-      await syncMemeContentsAvailability(admin, row, "region_blocked");
-    } else if (!embeddable) {
+    } else if (!regionBlocked && !embeddable) {
       // A public video with embedding disabled is still live link-only content.
       // The source update above persists embeddable=false before this projection,
       // so consumers can fail closed instead of rendering an iframe.
-      await syncMemeContentsAvailability(admin, row, "live");
       hidden += 1;
-    } else {
-      await syncMemeContentsAvailability(admin, row, "live");
     }
     if (row.external_id) {
       await resolveSourceAcquisitionFailure({

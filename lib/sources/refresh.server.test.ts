@@ -71,6 +71,119 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it.each([
+    { name: "missing", status: null, availability: "dead" },
+    { name: "private", status: { privacyStatus: "private", embeddable: null }, availability: "dead" },
+    { name: "unlisted", status: { privacyStatus: "unlisted", embeddable: true }, availability: "dead" },
+    { name: "region blocked", status: { privacyStatus: "public", embeddable: true, regionBlocked: ["KR"] }, availability: "region_blocked" },
+    { name: "live", status: { privacyStatus: "public", embeddable: true }, availability: "live" },
+    { name: "live link-only", status: { privacyStatus: "public", embeddable: false }, availability: "live" },
+  ])("orders $name writes and retries a failed second write", async ({ status, availability }) => {
+    const source = { id: "yt-order", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const { client, jobTable } = admin();
+    const content = query({ data: [], error: null });
+    const sourceWrite = query({ data: null, error: null });
+    const sourceUpdate = vi.fn().mockReturnValue(sourceWrite);
+    let retry = false;
+    const secondWrite = availability === "live" ? content : sourceWrite;
+    secondWrite.then = vi.fn((resolve) => Promise.resolve(retry
+      ? { data: [], error: null }
+      : { data: null, error: { message: "second write failed" } }).then(resolve));
+    client.from = vi.fn((table: string) => {
+      if (table === "job_runs") return jobTable;
+      if (table === "meme_contents") return content;
+      const reader = query({ data: [], error: null });
+      reader.update = sourceUpdate;
+      reader.in.mockImplementation((column: string) => {
+        reader.then = vi.fn((resolve) => Promise.resolve({ data: column === "id" || !retry ? [source] : [], error: null }).then(resolve));
+        return reader;
+      });
+      return reader;
+    });
+    mocks.createAdminClient.mockReturnValue(client);
+    const fullStatus = { title: "video", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null, ...status };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(status ? new Map([[source.external_id, fullStatus]]) : new Map());
+
+    const first = await runSourceRefresh();
+    expect(first.status).toBe("partial");
+    expect(content.update).toHaveBeenCalledWith({ availability });
+    expect(sourceUpdate).toHaveBeenCalledOnce();
+    const contentOrder = content.update.mock.invocationCallOrder[0];
+    const sourceOrder = sourceUpdate.mock.invocationCallOrder[0];
+    if (availability === "live") expect(sourceOrder).toBeLessThan(contentOrder);
+    else expect(contentOrder).toBeLessThan(sourceOrder);
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ sourceId: source.id, code: "db_failure" }), client);
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+
+    retry = true;
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([{
+      sourceKey: `youtube:${source.external_id}`, sourceId: source.id, platform: "youtube", externalId: source.external_id,
+      canonicalUrl: source.canonical_url, attemptCount: 1, nextRetryAt: new Date(Date.now() - 1000).toISOString(),
+      lastErrorCode: "db_failure", lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
+    }]);
+    const second = await runSourceRefresh();
+    expect(second.status).toBe("ok");
+    expect(second.youtube.checked).toBe(1);
+    expect(content.update).toHaveBeenCalledTimes(2);
+    expect(sourceUpdate).toHaveBeenCalledTimes(2);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { name: "missing", status: null, availability: "dead" },
+    { name: "private", status: { privacyStatus: "private", embeddable: null }, availability: "dead" },
+    { name: "unlisted", status: { privacyStatus: "unlisted", embeddable: true }, availability: "dead" },
+    { name: "region blocked", status: { privacyStatus: "public", embeddable: true, regionBlocked: ["KR"] }, availability: "region_blocked" },
+    { name: "live", status: { privacyStatus: "public", embeddable: true }, availability: "live" },
+  ])("does not perform the second write when the first $name write fails", async ({ status, availability }) => {
+    const source = { id: "yt-first-failure", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const { client, jobTable } = admin();
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    const sourceWrite = query({ data: null, error: null });
+    sourceBuilder.update.mockReturnValue(sourceWrite);
+    const firstWrite = availability === "live" ? sourceWrite : content;
+    firstWrite.then!.mockImplementationOnce((resolve) => Promise.resolve({ data: null, error: { message: "first write failed" } }).then(resolve));
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    const fullStatus = { title: "video", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null, ...status };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(status ? new Map([[source.external_id, fullStatus]]) : new Map());
+
+    const result = await runSourceRefresh();
+    expect(result.status).toBe("partial");
+    if (availability === "live") expect(content.update).not.toHaveBeenCalled();
+    else expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ sourceId: source.id, code: "db_failure" }), client);
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+
+    const retry = await runSourceRefresh();
+    expect(retry.status).toBe("ok");
+    expect(retry.youtube.checked).toBe(1);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledOnce();
+  });
+
+  it("does not update a Shorts source until both normal and legacy negative projections succeed", async () => {
+    const source = { id: "shorts-order", platform: "youtube_shorts", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/shorts/abcdefghijk", embeddable: true, removed_at: null };
+    const { client, jobTable } = admin();
+    const sourceBuilder = sourceQuery([source]);
+    const content = query({ data: [], error: null });
+    content.then!.mockImplementationOnce((resolve) => Promise.resolve({ data: [], error: null }).then(resolve))
+      .mockImplementationOnce((resolve) => Promise.resolve({ data: null, error: { message: "legacy projection failed" } }).then(resolve));
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const first = await runSourceRefresh();
+    expect(first.status).toBe("partial");
+    expect(content.update).toHaveBeenCalledTimes(2);
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({ sourceId: source.id, code: "db_failure" }), client);
+
+    const retry = await runSourceRefresh();
+    expect(retry.status).toBe("ok");
+    expect(content.update).toHaveBeenCalledTimes(4);
+    expect(content.update.mock.invocationCallOrder[3]).toBeLessThan(sourceBuilder.update.mock.invocationCallOrder[0]);
+    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledOnce();
+  });
   it("reports invalid source identities without deleting them and still checks valid videos", async () => {
     const invalid = { id: "yt-null", platform: "youtube", external_id: null, canonical_url: "https://www.youtube.com/watch?v=unknown", embeddable: true, removed_at: null };
     const valid = { id: "yt-valid", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };

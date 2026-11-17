@@ -102,12 +102,66 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
       Array.from({ length: pool.options.max }, () => pool.connect()),
     );
     try {
+      const generalResultPromise = executePlan(
+        selectOneMeme,
+        anon,
+        AbortSignal.timeout(1_000),
+      );
+      const queuedDeadline = Date.now() + 500;
+      while (pool.waitingCount !== 1 && Date.now() < queuedDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(pool.waitingCount).toBe(1);
+
       const startedAt = Date.now();
-      const result = await executeDeadlinePlan(selectOneMeme, anon, AbortSignal.timeout(1_500));
+      const result = await executeDeadlinePlan(selectOneMeme, anon, AbortSignal.timeout(1_000));
       expect(result.error).toBeNull();
       expect(result.data).toEqual(expect.any(Array));
-      expect(Date.now() - startedAt).toBeLessThan(1_500);
-      expect(pool.waitingCount).toBe(0);
+      expect(Date.now() - startedAt).toBeLessThan(1_000);
+      expect(pool.waitingCount).toBe(1);
+
+      clients.pop()?.release();
+      const generalResult = await generalResultPromise;
+      expect(generalResult.error).toBeNull();
+      expect(generalResult.data).toEqual(expect.any(Array));
+    } finally {
+      for (const client of clients) client.release();
+    }
+  });
+
+  it("keeps general reads independent from cold metadata queued in a full deadline pool", async () => {
+    resetQueryMetadata();
+    const deadlinePool = getDeadlinePool();
+    const clients = await Promise.all(
+      Array.from({ length: deadlinePool.options.max }, () => deadlinePool.connect()),
+    );
+    try {
+      const deadlineResultPromise = executeDeadlinePlan(
+        selectOneMeme,
+        anon,
+        AbortSignal.timeout(1_000),
+      );
+      const queuedDeadline = Date.now() + 500;
+      while (deadlinePool.waitingCount !== 1 && Date.now() < queuedDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(deadlinePool.waitingCount).toBe(1);
+
+      const startedAt = Date.now();
+      const generalResult = await executePlan(
+        selectOneMeme,
+        anon,
+        AbortSignal.timeout(1_000),
+      );
+      expect(generalResult.error).toBeNull();
+      expect(generalResult.data).toEqual(expect.any(Array));
+      expect(Date.now() - startedAt).toBeLessThan(1_000);
+      expect(deadlinePool.waitingCount).toBe(1);
+
+      clients.pop()?.release();
+      const deadlineResult = await deadlineResultPromise;
+      expect(deadlineResult.error).toBeNull();
+      expect(deadlineResult.data).toEqual(expect.any(Array));
     } finally {
       for (const client of clients) client.release();
     }

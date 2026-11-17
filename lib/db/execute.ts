@@ -35,10 +35,11 @@ export type Meta = {
 };
 
 type SqlParts = { sql: string; params: unknown[] };
+type MetaPoolScope = "general" | "deadline";
 
 const globalMeta = globalThis as unknown as {
   __memecatchMeta?: Meta;
-  __memecatchMetaPromise?: Promise<Meta>;
+  __memecatchMetaPromises?: Partial<Record<MetaPoolScope, Promise<Meta>>>;
 };
 
 function bindValue(value: unknown, udt: string | undefined): unknown {
@@ -555,10 +556,12 @@ async function loadMeta(
   signal: AbortSignal | undefined,
   db: ReturnType<typeof getDb>,
   executionOptions: IdentityExecutionOptions,
+  metaPoolScope: MetaPoolScope,
 ): Promise<Meta> {
   if (globalMeta.__memecatchMeta) return globalMeta.__memecatchMeta;
   if (signal?.aborted) throw cancelledQueryError();
-  if (!globalMeta.__memecatchMetaPromise) {
+  const metaPromises = globalMeta.__memecatchMetaPromises ??= {};
+  if (!metaPromises[metaPoolScope]) {
     const metaPromise = withIdentity(identity, async (trx) => {
         const columns = await trx.executeQuery<{ table_name: string; column_name: string; udt: string }>(
           CompiledQuery.raw(
@@ -627,22 +630,22 @@ async function loadMeta(
           })),
         };
     }, db, executionOptions);
-    globalMeta.__memecatchMetaPromise = metaPromise;
+    metaPromises[metaPoolScope] = metaPromise;
     void metaPromise.then(
       (meta) => {
-        if (globalMeta.__memecatchMetaPromise === metaPromise) {
+        if (globalMeta.__memecatchMetaPromises?.[metaPoolScope] === metaPromise) {
           globalMeta.__memecatchMeta = meta;
-          globalMeta.__memecatchMetaPromise = undefined;
+          delete globalMeta.__memecatchMetaPromises[metaPoolScope];
         }
       },
       () => {
-        if (globalMeta.__memecatchMetaPromise === metaPromise) {
-          globalMeta.__memecatchMetaPromise = undefined;
+        if (globalMeta.__memecatchMetaPromises?.[metaPoolScope] === metaPromise) {
+          delete globalMeta.__memecatchMetaPromises[metaPoolScope];
         }
       },
     );
   }
-  const metaPromise = globalMeta.__memecatchMetaPromise;
+  const metaPromise = metaPromises[metaPoolScope];
   return waitForMeta(metaPromise, signal);
 }
 
@@ -737,10 +740,11 @@ async function executePlanWithDb(
   signal = undefined as AbortSignal | undefined,
   resolveDb: typeof getDb,
   executionOptions: IdentityExecutionOptions,
+  metaPoolScope: MetaPoolScope,
 ): Promise<QueryResult> {
   try {
     const db = resolveDb();
-    const meta = await loadMeta(identity, signal, db, executionOptions);
+    const meta = await loadMeta(identity, signal, db, executionOptions, metaPoolScope);
     if (plan.op === "rpc") {
       attachDottedFilters(plan);
       const matches = await loadFunctions(plan.fn ?? "", db);
@@ -775,17 +779,17 @@ async function executePlanWithDb(
 }
 
 export function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
-  return executePlanWithDb(plan, identity, signal, getDb, {});
+  return executePlanWithDb(plan, identity, signal, getDb, {}, "general");
 }
 
 export function executeDeadlinePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
   return executePlanWithDb(plan, identity, signal, getDeadlineDb, {
     allowBackendCancel: false,
     statementTimeoutMs: 1_500,
-  });
+  }, "deadline");
 }
 
 export function resetQueryMetadata(): void {
   globalMeta.__memecatchMeta = undefined;
-  globalMeta.__memecatchMetaPromise = undefined;
+  globalMeta.__memecatchMetaPromises = undefined;
 }

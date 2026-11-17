@@ -124,6 +124,19 @@ describe("fetchYouTubeVideoStatuses", () => {
     expect((await fetchYouTubeVideoStatuses(["missing"])).size).toBe(0);
   });
 
+  it("accepts a partial list when some requested videos are unavailable", async () => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      kind: "youtube#videoListResponse", etag: "sample", pageInfo: { totalResults: 1 },
+      items: [{ id: "present", status: { privacyStatus: "public", embeddable: true } }],
+    }), { status: 200 })));
+
+    const result = await fetchYouTubeVideoStatuses(["present", "missing"]);
+    expect([...result.keys()]).toEqual(["present"]);
+    expect(result.has("missing")).toBe(false);
+  });
+
   it("rejects the entire request when a later batch is inconclusive", async () => {
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
     const { fetchYouTubeVideoStatuses } = await import("./youtube.server");

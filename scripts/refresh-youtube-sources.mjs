@@ -12,6 +12,13 @@
  */
 import { createRestClient, restAll, loadEnv } from "./source-pipeline-rest.mjs";
 import { isYouTubeRegionBlocked } from "../lib/sources/youtube-region.mjs";
+import {
+  applyYouTubePrivateMetadataPolicy,
+  classifyYouTubeRefreshAvailability,
+  validateYouTubeVideoBatchExternalIds,
+  validateYouTubeVideosListResponse,
+  validateYouTubeVideoStatusItems,
+} from "../lib/sources/youtube-response.mjs";
 
 const args = process.argv.slice(2);
 const limitArg = args.find((a) => a.startsWith("--limit="));
@@ -55,17 +62,27 @@ async function syncAvailability(source, availability) {
 
 for (let i = 0; i < targets.length; i += 50) {
   const batch = targets.slice(i, i + 50);
+  const requestedVideoIds = validateYouTubeVideoBatchExternalIds(
+    batch.map((source) => source.external_id),
+  );
   const url = new URL("https://www.googleapis.com/youtube/v3/videos");
   url.search = new URLSearchParams({
     part: "snippet,status,contentDetails",
-    id: batch.map((s) => s.external_id).filter(Boolean).join(","),
+    id: [...requestedVideoIds].join(","),
     key: API_KEY,
   }).toString();
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-  if (!res.ok) throw new Error(`videos.list HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const data = await res.json();
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) }).catch(() => {
+    throw new Error("videos.list request failed");
+  });
+  if (!res.ok) throw new Error(`videos.list HTTP ${res.status}`);
+  const data = await res.json().catch(() => {
+    throw new Error("videos.list invalid JSON");
+  });
   stats.apiCalls += 1;
-  const byId = new Map((data.items ?? []).map((item) => [item.id, item]));
+  const items = validateYouTubeVideoStatusItems(
+    validateYouTubeVideosListResponse(data, requestedVideoIds),
+  );
+  const byId = new Map(items.map((item) => [item.id, item]));
 
   for (const source of batch) {
     const video = byId.get(source.external_id);
@@ -90,39 +107,45 @@ for (let i = 0; i < targets.length; i += 50) {
     }
 
     const embeddable =
-      video.status?.privacyStatus === "public" && video.status?.embeddable === true;
+      video.status.privacyStatus === "public" && video.status.embeddable;
+    const isPrivate = video.status.privacyStatus === "private";
     const blockedKr = isYouTubeRegionBlocked(video.contentDetails?.regionRestriction);
+    const availability = classifyYouTubeRefreshAvailability(video.status, blockedKr);
     const thumbnails = video.snippet?.thumbnails ?? {};
 
     if (!DRY) {
       await rest(`media_sources?id=eq.${source.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          title: video.snippet?.title ?? null,
-          channel_name: video.snippet?.channelTitle ?? null,
-          channel_id: video.snippet?.channelId ?? null,
-          platform_published_at: video.snippet?.publishedAt ?? null,
-          duration_seconds: parseDuration(video.contentDetails?.duration),
-          public_status: video.status?.privacyStatus ?? "unknown",
-          embeddable,
-          license_code: video.status?.license ?? null,
-          made_for_kids: video.status?.madeForKids ?? null,
-          thumbnail_url:
-            thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url ?? null,
-          metadata_refreshed_at: now,
-          metadata_expires_at: expires,
-          last_checked_at: now,
-        }),
+        body: JSON.stringify(
+          applyYouTubePrivateMetadataPolicy(
+            {
+              title: video.snippet?.title ?? null,
+              channel_name: video.snippet?.channelTitle ?? null,
+              channel_id: video.snippet?.channelId ?? null,
+              platform_published_at: video.snippet?.publishedAt ?? null,
+              duration_seconds: parseDuration(video.contentDetails?.duration),
+              public_status: video.status.privacyStatus,
+              embeddable,
+              license_code: video.status.license ?? null,
+              made_for_kids: video.status.madeForKids ?? null,
+              thumbnail_url:
+                thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url ?? null,
+              metadata_refreshed_at: now,
+              metadata_expires_at: expires,
+              last_checked_at: now,
+            },
+            video.status.privacyStatus,
+            now,
+          ),
+        ),
       });
     }
-    if (!embeddable) {
+    if (isPrivate) {
+      stats.removed += 1;
+    } else if (availability === "dead") {
       stats.hidden += 1;
-      await syncAvailability(source, "dead");
-    } else if (blockedKr) {
-      await syncAvailability(source, "region_blocked");
-    } else {
-      await syncAvailability(source, "live");
     }
+    await syncAvailability(source, availability);
   }
   console.error(`진행 ${Math.min(i + 50, targets.length)}/${targets.length}`);
 }

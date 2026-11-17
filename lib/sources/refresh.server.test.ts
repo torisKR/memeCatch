@@ -71,6 +71,35 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it("keeps source and content unchanged when the YouTube response is inconclusive", async () => {
+    const sources = [
+      { id: "yt-a", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null },
+      { id: "yt-b", platform: "youtube", external_id: "lmnopqrstuv", canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv", embeddable: true, removed_at: null },
+    ];
+    mocks.fetchYouTubeVideoStatuses.mockRejectedValueOnce(new Error("youtube_video_list_inconclusive"));
+    const { client, jobInsert, jobTable } = admin();
+    const sourceBuilder = sourceQuery(sources);
+    const content = query({ data: [], error: null });
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.error).toBe("youtube_video_list_inconclusive");
+    expect(result.youtube.removed).toBe(0);
+    expect(sourceBuilder.update).not.toHaveBeenCalled();
+    expect(content.update).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledTimes(2);
+    for (const source of sources) {
+      expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+        code: "provider_transient", sourceId: source.id,
+      }), client);
+    }
+    expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(jobInsert).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
+  });
+
   it("expires catalog data when a source availability changes", async () => {
     const source = { id: "yt-cache", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
     const { client, jobTable } = admin();

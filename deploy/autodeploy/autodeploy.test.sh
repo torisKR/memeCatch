@@ -53,6 +53,18 @@ nested="$(commit nested)"
 echo 'select 3;' >>"$repo/db/migrations/20990101000000_x.sql"
 changed="$(commit changed)"
 [[ "$(new_migrations "$nested" "$changed")" == db/migrations/20990101000000_x.sql ]] || fail "changed migration not detected"
+# Real Git detects the move as R with similarity, which --diff-filter=AM alone
+# drops. Both pure renames and renames with content changes need approval.
+for n in $(seq 1 100); do printf 'select %s;\n' "$n"; done >"$repo/db/migrations/old.sql"
+rename_base="$(commit rename_base)"
+git -C "$repo" mv db/migrations/old.sql db/migrations/renamed.sql
+echo 'select 101;' >>"$repo/db/migrations/renamed.sql"
+rename_changed="$(commit rename_changed)"
+git -C "$repo" diff --find-renames --name-status "$rename_base" "$rename_changed" -- db/migrations/ | grep -q '^R[0-9]' || fail "rename fixture was not detected by real git"
+[[ "$(new_migrations "$rename_base" "$rename_changed")" == db/migrations/renamed.sql ]] || fail "renamed and changed migration was missed"
+git -C "$repo" mv db/migrations/renamed.sql db/migrations/pure-rename.sql
+rename_pure="$(commit rename_pure)"
+[[ "$(new_migrations "$rename_changed" "$rename_pure")" == db/migrations/pure-rename.sql ]] || fail "renamed migration was missed"
 missing_sha=1111111111111111111111111111111111111111
 if new_migrations "$missing_sha" "$mig" >/dev/null 2>&1; then fail "missing running commit was accepted"; fi
 if new_migrations "$mig" "$missing_sha" >/dev/null 2>&1; then fail "missing target commit was accepted"; fi
@@ -271,6 +283,23 @@ case "$1" in
 esac
 STUB
 chmod +x "$stub/git"
+# Exercise the real health verifier through a controlled Docker CLI, not a
+# mocked verifier. The image SHA and the state come from the inspected app.
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+  "inspect memecatch-app-1")
+    [[ "${test_inspect_error:-0}" != 1 ]] || exit 1
+    running="${test_container_running:-true}"
+    if [[ -n "${test_stop_on_public:-}" && -f "$test_stop_on_public" ]]; then running=false; fi
+    printf '%s %s %s\n' sha256:app "$running" "${test_container_health:-healthy}" ;;
+  "image inspect")
+    [[ "${test_image_error:-0}" != 1 && "${3:-}" == sha256:app ]] || exit 1
+    printf 'RELEASE_SHA=%s\n' "$test_running" ;;
+  *) exit 1 ;;
+esac
+STUB
+chmod +x "$stub/docker"
 printf '#!/usr/bin/env bash\nexit 0\n' >"$stub/flock"
 chmod +x "$stub/flock"
 running_sha() { echo "$test_running"; }
@@ -291,7 +320,10 @@ build_images() {
   return 0
 }
 public_release_is() { return 0; }
-public_release_once() { [[ "${test_public:-ok}" == ok ]]; }
+public_release_once() {
+  if [[ -n "${test_stop_on_public:-}" ]]; then : >"$test_stop_on_public"; fi
+  [[ "${test_public:-ok}" == ok ]]
+}
 self_update() { :; }
 prune_images() { :; }
 test_head=0123456789abcdef0123456789abcdef01234567
@@ -321,7 +353,7 @@ rm -f "$stub/manual-state/failed-$test_head"
 : >"$test_calls"
 ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "verified status rejected"
 [[ ! -s "$test_calls" ]] || fail "status executed a deployment"
-for status_case in missing_marker wrong_marker wrong_image failed_ci missing_ci failed_marker bad_public stale_main; do
+for status_case in missing_marker wrong_marker wrong_image stopped unhealthy starting missing_health inspect_error image_error failed_ci missing_ci failed_marker bad_public stale_main; do
   printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
   rm -f "$stub/manual-state/failed-$test_head"
   rc=0
@@ -332,6 +364,12 @@ for status_case in missing_marker wrong_marker wrong_image failed_ci missing_ci 
   esac
   ( case "$status_case" in
       wrong_image) test_running=1111111111111111111111111111111111111111 ;;
+      stopped) export test_container_running=false ;;
+      unhealthy) export test_container_health=unhealthy ;;
+      starting) export test_container_health=starting ;;
+      missing_health) export test_container_health=missing ;;
+      inspect_error) export test_inspect_error=1 ;;
+      image_error) export test_image_error=1 ;;
       failed_ci) test_ci=failure ;;
       missing_ci) test_ci=pending ;;
       bad_public) test_public=bad ;;
@@ -341,6 +379,20 @@ for status_case in missing_marker wrong_marker wrong_image failed_ci missing_ci 
   ) >/dev/null 2>&1 || rc=$?
   [[ "$rc" == 3 ]] || fail "status $status_case accepted or returned $rc"
   [[ ! -s "$test_calls" ]] || fail "status $status_case attempted deployment"
+done
+# An app stopping while the public header is checked must not be confirmed.
+rm -f "$stub/stopped-during-public"
+rc=0
+( export test_stop_on_public="$stub/stopped-during-public"; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && -e "$stub/stopped-during-public" ]] || fail "status accepted app stopped during public check"
+# The same-SHA no-op must not report success for a stopped or unhealthy app.
+rc=0
+( export test_container_running=false; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "same-SHA no-op accepted stopped app"
+for test_container_health in unhealthy missing; do
+  rc=0
+  ( export test_container_health; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "same-SHA no-op accepted $test_container_health app"
 done
 rm -f "$stub/manual-state/failed-$test_head"
 printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
@@ -403,6 +455,11 @@ rc=0
 grep -q '^deploy ' "$test_calls" || fail "approved migration did not activate"
 rm "$stub/manual-state/allow-$test_head"
 : >"$test_calls"
+
+# Real Git rename detection must reach and block the actual deployment gate.
+rc=0
+( eval "$real_new_migrations"; export test_real_diff=1 test_real_git_root="$repo"; test_head="$rename_changed" test_running="$rename_base" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$rename_changed" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "renamed and changed migration bypassed deployment gate"
 
 # A real git object failure must fail closed even with migration approval present.
 : >"$stub/manual-state/allow-$mig"

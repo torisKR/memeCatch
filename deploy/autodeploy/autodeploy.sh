@@ -66,13 +66,24 @@ running_sha() {
     | sed -n 's/^RELEASE_SHA=//p' | head -1
 }
 
+# Bind health and image identity to one container inspection. Missing health
+# checks and Docker inspection failures are unverified, never success.
+running_app_healthy_for_sha() {
+  local expected="$1" container image running health extra sha
+  container="$(docker inspect memecatch-app-1 --format '{{.Image}} {{.State.Running}} {{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' 2>/dev/null)" || return 1
+  read -r image running health extra <<<"$container"
+  [[ -n "$image" && "$running" == true && "$health" == healthy && -z "$extra" ]] || return 1
+  sha="$(docker image inspect "$image" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^RELEASE_SHA=//p' | head -1)" || return 1
+  [[ "$sha" == "$expected" ]]
+}
+
 # Added or changed migration files between two commits.
 new_migrations() {
   local from="$1" to="$2"
   [[ "$from" =~ ^[0-9a-f]{40}$ && "$to" =~ ^[0-9a-f]{40}$ ]] || return 1
   git -C "$ROOT" cat-file -e "${from}^{commit}" || return 1
   git -C "$ROOT" cat-file -e "${to}^{commit}" || return 1
-  git -C "$ROOT" diff --name-only --diff-filter=AM "$from" "$to" -- ':(glob)db/migrations/**/*.sql'
+  git -C "$ROOT" diff --no-renames --name-only --diff-filter=AM "$from" "$to" -- ':(glob)db/migrations/**/*.sql'
 }
 
 # Image a compose service currently runs.
@@ -296,15 +307,15 @@ requested_status() {
 # release check succeed. Require all independent evidence; an image alone may
 # belong to an interrupted deploy. Call under the deploy lock.
 confirmed_deployment() {
-  local sha="$1" marker state running
+  local sha="$1" marker state
   [[ -f "$STATE_DIR/deployed" && ! -e "$STATE_DIR/failed-$sha" ]] || return 1
   marker="$(cat "$STATE_DIR/deployed")" || return 1
   [[ "$marker" == "$sha" ]] || return 1
-  running="$(running_sha)" || return 1
-  [[ "$running" == "$sha" ]] || return 1
+  running_app_healthy_for_sha "$sha" || return 1
   state="$(ci_state "$sha")" || return 1
   [[ "$state" == success ]] || return 1
-  public_release_once "$sha"
+  public_release_once "$sha" || return 1
+  running_app_healthy_for_sha "$sha"
 }
 
 remote_main_is() {

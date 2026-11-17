@@ -19,6 +19,11 @@ import { createStaticClient } from "@/lib/db/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { originCountryCode } from "@/lib/meme-country";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
+import {
+  hasRequiredLocalizedDocumentFields,
+  isIndexableLocalizedDocument,
+  isSameStoredRevision,
+} from "@/lib/localized-document-eligibility";
 
 export type TranslationStatus = "machine" | "reviewed" | "stale";
 
@@ -121,22 +126,12 @@ export type TranslationLocaleAvailability = {
  * microsecond string never match. Read Dates with getTime() and parse strings
  * with the Date constructor, which floors fractional seconds to milliseconds.
  */
-function timestampMs(value: Date | string): number {
-  return value instanceof Date ? value.getTime() : new Date(value).getTime();
-}
-
-function sameInstant(left: Date | string, right: Date | string): boolean {
-  const leftMs = timestampMs(left);
-  const rightMs = timestampMs(right);
-  return Number.isFinite(leftMs) && Number.isFinite(rightMs) && leftMs === rightMs;
-}
-
 /** A translation is current only when it was produced from this exact source revision. */
 export function isTranslationCurrent(
   sourceUpdatedAt: Date | string,
   baseUpdatedAt: Date | string,
 ): boolean {
-  return sameInstant(sourceUpdatedAt, baseUpdatedAt);
+  return isSameStoredRevision(sourceUpdatedAt, baseUpdatedAt);
 }
 
 /** Required SEO prose must be real text, not merely NOT NULL empty strings. */
@@ -146,12 +141,7 @@ export function hasRequiredTranslationFields(
     "title" | "summary" | "description" | "origin"
   >,
 ): boolean {
-  return [
-    translation.title,
-    translation.summary,
-    translation.description,
-    translation.origin,
-  ].every((value) => value.trim().length > 0);
+  return hasRequiredLocalizedDocumentFields(translation);
 }
 
 /**
@@ -253,12 +243,18 @@ export function isIndexableLocalizedMeme(
     meme_contents: meme.meme_contents,
     meme_tags_map: meme.meme_tags_map,
   };
-  return (
-    meme.translation.status === "reviewed" &&
-    meme.translation.isCurrent &&
-    hasRequiredTranslationFields(meme) &&
-    isIndexableMeme(originalDepth)
-  );
+  return isIndexableLocalizedDocument({
+    baseUpdatedAt: meme.updated_at,
+    original: originalDepth,
+    translation: {
+      status: meme.translation.status,
+      sourceUpdatedAt: meme.translation.sourceUpdatedAt,
+      title: meme.title,
+      summary: meme.summary,
+      description: meme.description,
+      origin: meme.origin,
+    },
+  });
 }
 
 async function fetchReviewedTranslationRows(memeId: string): Promise<MemeTranslationRow[]> {

@@ -21,11 +21,14 @@ import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
 import { retiredProductDocument } from "@/lib/retired-product-document";
 import { retiredProductDecision } from "@/lib/retired-products";
+import { isIndexableLocalizedDocument } from "@/lib/localized-document-eligibility";
 
 const PUBLIC_MEME_STATUSES = ["approved", "limited"] as const;
 const MEME_LOOKUP_TIMEOUT_MS = 1_500;
 const PUBLIC_MEME_CANONICAL_SELECT =
   "id, short_id, slug, updated_at, meme_translations(locale, status, localized_slug, source_updated_at)" as const;
+const PUBLIC_LOCALIZED_MEME_DOCUMENT_SELECT =
+  "id, short_id, slug, updated_at, description, origin, usage_note, caution, usage_examples, meme_sources(source_url, hidden_from_public), meme_contents(availability, moderation_status), meme_tags_map(tag_id), meme_translations(locale, status, localized_slug, title, summary, description, origin, source_updated_at)" as const;
 
 type PublicMemeCanonicalRow = {
   id: string;
@@ -40,25 +43,53 @@ type PublicMemeCanonicalRow = {
   }>;
 };
 
-function sameStoredRevision(left: string, right: string): boolean {
-  const leftTime = Date.parse(left);
-  const rightTime = Date.parse(right);
-  return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime === rightTime;
-}
+type PublicLocalizedMemeDocumentRow = Omit<PublicMemeCanonicalRow, "meme_translations"> & {
+  description: string;
+  origin: string;
+  usage_note: string | null;
+  caution: string | null;
+  usage_examples: unknown;
+  meme_sources: Array<{
+    source_url: string | null;
+    hidden_from_public: boolean | null;
+  }>;
+  meme_contents: Array<{
+    availability: string | null;
+    moderation_status: string | null;
+  }>;
+  meme_tags_map: Array<{ tag_id: string }>;
+  meme_translations: Array<{
+    locale: string;
+    status: string;
+    localized_slug: string | null;
+    title: string;
+    summary: string;
+    description: string;
+    origin: string;
+    source_updated_at: string;
+  }>;
+};
 
-function canonicalSlugForDocument(
-  meme: PublicMemeCanonicalRow,
-  locale: SeoContentLocale | null,
+function localizedDocumentSlug(
+  meme: PublicLocalizedMemeDocumentRow,
+  locale: SeoContentLocale,
 ): string | null {
-  if (!locale) return meme.slug;
-
   const translation = meme.meme_translations.find(
-    (candidate) =>
-      candidate.locale === locale &&
-      candidate.status === "reviewed" &&
-      sameStoredRevision(candidate.source_updated_at, meme.updated_at),
+    (candidate) => candidate.locale === locale,
   );
   if (!translation) return null;
+  if (!isIndexableLocalizedDocument({
+    baseUpdatedAt: meme.updated_at,
+    original: meme,
+    translation: {
+      status: translation.status,
+      sourceUpdatedAt: translation.source_updated_at,
+      title: translation.title,
+      summary: translation.summary,
+      description: translation.description,
+      origin: translation.origin,
+    },
+  })) return null;
   return translation.localized_slug?.trim() || meme.slug;
 }
 
@@ -183,28 +214,42 @@ export async function proxy(request: NextRequest) {
     try {
       const { data, error } = await db
         .from("memes")
-        .select(PUBLIC_MEME_CANONICAL_SELECT)
+        .select(urlLocale ? PUBLIC_LOCALIZED_MEME_DOCUMENT_SELECT : PUBLIC_MEME_CANONICAL_SELECT)
         .eq("short_id", shortIdFromParam(documentDetailKey))
         .in("moderation_status", [...PUBLIC_MEME_STATUSES])
         .limit(1)
         .abortSignal(AbortSignal.timeout(MEME_LOOKUP_TIMEOUT_MS)) as {
-          data: PublicMemeCanonicalRow[] | null;
+          data: (PublicMemeCanonicalRow | PublicLocalizedMemeDocumentRow)[] | null;
           error: { message: string } | null;
         };
       if (error) {
         console.warn("public_meme_existence_check_failed query_error");
       }
       const requestedShortId = shortIdFromParam(documentDetailKey);
-      if (!error && data?.length === 0 && !isCuratedCoreShortId(requestedShortId)) {
+      const rewriteMissingDocument = () => {
         const url = request.nextUrl.clone();
         url.pathname = "/__missing_public_meme__";
         return applyLocale(NextResponse.rewrite(url, {
           status: 404,
           request: { headers: requestHeaders },
         }));
+      };
+      if (
+        !error &&
+        data?.length === 0 &&
+        (urlLocale !== null || !isCuratedCoreShortId(requestedShortId))
+      ) {
+        return rewriteMissingDocument();
       }
       const meme = !error ? data?.[0] : null;
-      const canonicalSlug = meme ? canonicalSlugForDocument(meme, urlLocale) : null;
+      const canonicalSlug = meme
+        ? urlLocale
+          ? localizedDocumentSlug(meme as PublicLocalizedMemeDocumentRow, urlLocale)
+          : meme.slug
+        : null;
+      if (meme && urlLocale && !canonicalSlug) {
+        return rewriteMissingDocument();
+      }
       if (meme && canonicalSlug) {
         const destination = canonicalMemeRedirectPath(documentDetailKey, {
           shortId: meme.short_id,

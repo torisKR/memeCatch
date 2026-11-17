@@ -7,7 +7,9 @@ const mocks = vi.hoisted(() => ({ collect: vi.fn() }));
 vi.mock("@/lib/db/client", () => ({ createClient: () => ({}) }));
 vi.mock("@/lib/thin-meme", async (original) => ({ ...await original(), collectIndexableWindow: mocks.collect }));
 vi.mock("@/components/meme-card", () => ({
-  MemeCard: ({ previewContents }: { previewContents: unknown }) => <div data-testid="card">{JSON.stringify(previewContents)}</div>,
+  MemeCard: ({ meme, previewContents }: { meme: MemeListItem; previewContents: unknown }) => (
+    <div data-testid="card" data-item-id={meme.id}>{JSON.stringify(previewContents)}</div>
+  ),
 }));
 import { ExploreGrid } from "@/components/explore-grid";
 
@@ -39,5 +41,47 @@ describe("explore pagination preview policy", () => {
     fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
     await waitFor(() => expect(screen.getByTestId("card").textContent).toContain("reviewed"));
     expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
+  });
+
+  it("replaces the curated fallback with its later catalog result and remaps the preview", async () => {
+    const curated = {
+      id: "curated-ohiryeo-joha",
+      short_id: "oyj2021k",
+      title: "오히려 좋아",
+    } as MemeListItem;
+    const catalog = {
+      ...card,
+      id,
+      short_id: "6hgbgvxs",
+      title: "오히려 좋아",
+    } as MemeListItem;
+    mocks.collect.mockResolvedValueOnce({ items: [catalog], scanned: 1, hasMore: false });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ previews: [{ id, contents: verified }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(callback: IntersectionObserverCallback) {
+        queueMicrotask(() => callback([{ isIntersecting: true } as IntersectionObserverEntry], this as never));
+      }
+      observe() {}
+      disconnect() {}
+    });
+
+    render(
+      <ExploreGrid
+        initial={[curated]}
+        initialPreviews={[[{ content_id: "curated-poster" } as never]]}
+        hasMoreInitial
+        filters={{ q: "오히려 좋아", categories: [], sort: "trending" }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(id));
+    expect(screen.getAllByTestId("card")).toHaveLength(1);
+    expect(screen.getByTestId("card").textContent).toContain("reviewed");
+    expect(screen.getByTestId("card").textContent).not.toContain("curated-poster");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ ids: [id] });
   });
 });

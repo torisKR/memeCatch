@@ -22,6 +22,7 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from "@/lib/curated-memes";
+import { mergeSearchPresentationItems } from "@/lib/search-presentation";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
@@ -288,12 +289,8 @@ export default async function ExplorePage({
         );
         if (queryFailed) return failed;
         const rows = page.items;
-        const seen = new Set(rows.map((item) => item.short_id));
         return {
-          items: [
-            ...curated.filter((item) => !seen.has(item.short_id)),
-            ...rows,
-          ] as MemeListItem[],
+          items: mergeSearchPresentationItems(curated, rows) as MemeListItem[],
           unavailable: false,
           dbCount: page.scanned,
           hasMore: page.hasMore,

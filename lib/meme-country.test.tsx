@@ -108,6 +108,40 @@ describe("meme country display", () => {
     expect(results[0]?.meme_market_profiles?.[0]?.market_code).toBe("US");
   });
 
+  it("prefers the explicit catalog equivalent and keeps unrelated same-title results", async () => {
+    const unrelated = {
+      ...meme,
+      id: "same-title-row",
+      short_id: "same-title",
+      title: "오히려 좋아",
+    } as MemeListItem;
+    const catalog = {
+      ...meme,
+      id: "catalog-ohiryeo-row",
+      short_id: "6hgbgvxs",
+      title: "오히려 좋아",
+    } as MemeListItem;
+    const publicFilter = vi.fn().mockResolvedValue({ data: [unrelated, catalog], error: null });
+    const select = vi.fn(() => ({ in: publicFilter }));
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select })) });
+
+    const results = await searchMemes("오히려 좋아");
+
+    expect(results.map((item) => item.short_id)).toEqual(["same-title", "6hgbgvxs"]);
+    expect(results.map((item) => item.short_id)).not.toContain("oyj2021k");
+  });
+
+  it("keeps the curated fallback when its catalog equivalent is not returned", async () => {
+    const publicFilter = vi.fn().mockResolvedValue({ data: [], error: null });
+    const select = vi.fn(() => ({ in: publicFilter }));
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select })) });
+
+    const results = await searchMemes("오히려 좋아");
+
+    expect(results.map((item) => item.short_id)).toContain("oyj2021k");
+    expect(results.map((item) => item.short_id)).not.toContain("6hgbgvxs");
+  });
+
   it("does not hide a search catalog failure behind curated cards", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const publicFilter = vi.fn().mockResolvedValue({

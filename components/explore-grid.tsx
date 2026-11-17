@@ -14,6 +14,7 @@ import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
+import { mergeSearchPresentationItems } from "@/lib/search-presentation";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -280,6 +281,7 @@ export function ExploreGrid({
   const loadingRef = useRef(false);
   const offsetRef = useRef(initialOffset ?? initial.length);
   const hasMoreRef = useRef(startHasMore);
+  const itemsRef = useRef(initial);
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -296,13 +298,27 @@ export function ExploreGrid({
     try {
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
-      const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
+      const candidates = batch.items.filter((m) => !seenRef.current.has(m.id));
+      const nextItems = mergeSearchPresentationItems(itemsRef.current, candidates);
+      const nextIds = new Set(nextItems.map((item) => item.id));
+      const fresh = candidates.filter((item) => nextIds.has(item.id));
+      const removedIds = new Set(
+        itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
+      );
       const ids = fresh.map((item) => item.id);
       const verified = await fetchQualifiedPreviews(ids);
       if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
-      for (const m of fresh) seenRef.current.add(m.id);
-      if (verified) setPreviews((prev) => ({ ...prev, ...verified }));
-      setItems((prev) => [...prev, ...fresh]);
+      for (const item of candidates) seenRef.current.add(item.id);
+      if (removedIds.size > 0) {
+        setPendingPreviews((prev) => prev.filter((id) => !removedIds.has(id)));
+      }
+      setPreviews((prev) => {
+        const next = { ...prev, ...(verified ?? {}) };
+        for (const id of removedIds) delete next[id];
+        return next;
+      });
+      itemsRef.current = nextItems;
+      setItems(nextItems);
       offsetRef.current = from + batch.scanned;
       hasMoreRef.current = batch.hasMore;
       setHasMore(batch.hasMore);

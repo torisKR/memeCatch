@@ -77,9 +77,9 @@ describe("fetchYouTubeVideoStatuses", () => {
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
     const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [
-      { id: "allow", contentDetails: { regionRestriction: { allowed: ["KR"] } } },
-      { id: "empty", contentDetails: { regionRestriction: { allowed: [] } } },
-      { id: "block", contentDetails: { regionRestriction: { blocked: ["KR"] } } },
+      { id: "allow", status: { privacyStatus: "public", embeddable: true }, contentDetails: { regionRestriction: { allowed: ["KR"] } } },
+      { id: "empty", status: { privacyStatus: "public", embeddable: true }, contentDetails: { regionRestriction: { allowed: [] } } },
+      { id: "block", status: { privacyStatus: "public", embeddable: true }, contentDetails: { regionRestriction: { blocked: ["KR"] } } },
     ] }), { status: 200 })));
 
     const statuses = await fetchYouTubeVideoStatuses(["allow", "empty", "block"]);
@@ -93,11 +93,12 @@ describe("fetchYouTubeVideoStatuses", () => {
     const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response("quota", { status: 403 })),
+      vi.fn(async () => new Response("sensitive-upstream-body", { status: 403 })),
     );
     await expect(fetchYouTubeVideoStatuses(["a".repeat(11)])).rejects.toThrow(
       /403/,
     );
+    await expect(fetchYouTubeVideoStatuses(["a".repeat(11)])).rejects.not.toThrow(/sensitive-upstream-body/);
   });
 
   it.each([
@@ -135,6 +136,17 @@ describe("fetchYouTubeVideoStatuses", () => {
     const result = await fetchYouTubeVideoStatuses(["present", "missing"]);
     expect([...result.keys()]).toEqual(["present"]);
     expect(result.has("missing")).toBe(false);
+  });
+
+  it.each([
+    { privacyStatus: "public" },
+    { embeddable: true },
+    { privacyStatus: "unrecognized", embeddable: true },
+  ])("rejects a partial list with incomplete returned status: %o", async (status) => {
+    vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    const { fetchYouTubeVideoStatuses } = await import("./youtube.server");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "present", status }] }), { status: 200 })));
+    await expect(fetchYouTubeVideoStatuses(["present", "missing"])).rejects.toThrow(/inconclusive/i);
   });
 
   it("rejects the entire request when a later batch is inconclusive", async () => {

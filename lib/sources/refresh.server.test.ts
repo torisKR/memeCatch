@@ -71,6 +71,26 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it("reports invalid source identities without deleting them and still checks valid videos", async () => {
+    const invalid = { id: "yt-null", platform: "youtube", external_id: null, canonical_url: "https://www.youtube.com/watch?v=unknown", embeddable: true, removed_at: null };
+    const valid = { id: "yt-valid", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    const sourceBuilder = sourceQuery([invalid, valid]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValueOnce(new Map([[valid.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
+
+    const result = await runSourceRefresh();
+
+    expect(mocks.fetchYouTubeVideoStatuses).toHaveBeenCalledWith([valid.external_id]);
+    expect(result.status).toBe("partial");
+    expect(result.youtube).toMatchObject({ checked: 2, removed: 0, failed: 1, errors: ["invalid_source_identity:yt-null"] });
+    expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", invalid.id);
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", valid.id);
+    expect(content.update).not.toHaveBeenCalledWith({ availability: "dead" });
+  });
+
   it("keeps source and content unchanged when the YouTube response is inconclusive", async () => {
     const sources = [
       { id: "yt-a", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null },

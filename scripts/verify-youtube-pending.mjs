@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 /**
- * 검수 대기 YouTube/Shorts 출처 중 API 미검증(embeddable IS NULL)분을
- * videos.list 배치로 검증한다.
- * - 공개+임베드 가능 → 메타데이터 채우고 embeddable=true
- * - 비공개/임베드 불가 → embeddable=false (자동 승인 대상에서 제외)
- * - 조회 불가 → removed_at (제목·썸네일 캐시 삭제)
+ * 검수 대기 YouTube/Shorts 출처를 videos.list 배치로 검증한다.
  *
  * 사용: node scripts/verify-youtube-pending.mjs [--limit=3000] [--dry-run]
  */
+import { pathToFileURL } from "node:url";
+
 import { createRestClient, restAll, loadEnv } from "./source-pipeline-rest.mjs";
 import {
   applyYouTubePrivateMetadataPolicy,
@@ -16,118 +14,203 @@ import {
   validateYouTubeVideoStatusItems,
 } from "../lib/sources/youtube-response.mjs";
 
-const args = process.argv.slice(2);
-const limitArg = args.find((a) => a.startsWith("--limit="));
-const LIMIT = Math.max(50, Number(limitArg?.slice(8) ?? 3000));
-const DRY = args.includes("--dry-run");
-
-const env = loadEnv();
-const API_KEY = env.YOUTUBE_API_KEY;
-if (!API_KEY) {
-  console.error("YOUTUBE_API_KEY 누락");
-  process.exit(1);
-}
-const rest = createRestClient(env);
+const BATCH_SIZE = 50;
+const METADATA_TTL_MS = 30 * 86_400_000;
+const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 function parseDuration(value) {
-  const m = value?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
-  if (!m) return null;
-  return Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
+  const match = value?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) return null;
+  return Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0);
 }
 
-// 검수 대기(pending)로 연결된 미검증 YouTube 출처만 가져온다.
-const pendingLinks = await restAll(
-  rest,
-  "meme_media?select=source_id&review_state=eq.pending"
-);
-const pendingIds = new Set(pendingLinks.map((r) => r.source_id));
+function validExternalId(value) {
+  return typeof value === "string" && YOUTUBE_VIDEO_ID_PATTERN.test(value);
+}
 
-const sources = (
-  await restAll(
-    rest,
-    "media_sources?select=id,platform,external_id&platform=in.(youtube,youtube_shorts)&embeddable=is.null&removed_at=is.null"
-  )
-).filter((s) => pendingIds.has(s.id) && s.external_id);
-const targets = sources.slice(0, LIMIT);
-console.error(`미검증 YouTube 후보 ${sources.length}건 중 ${targets.length}건 검사`);
+async function safeRest(rest, path, options) {
+  try {
+    return await rest(path, options);
+  } catch {
+    throw new Error("youtube_source_write_failed");
+  }
+}
 
-const now = new Date().toISOString();
-const expires = new Date(Date.now() + 30 * 86_400_000).toISOString();
-const stats = { checked: 0, verified: 0, unembeddable: 0, removed: 0, apiCalls: 0 };
-
-for (let i = 0; i < targets.length; i += 50) {
-  const batch = targets.slice(i, i + 50);
-  const requestedVideoIds = validateYouTubeVideoBatchExternalIds(
-    batch.map((source) => source.external_id),
-  );
+async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
   const url = new URL("https://www.googleapis.com/youtube/v3/videos");
   url.search = new URLSearchParams({
     part: "snippet,status,contentDetails",
     id: [...requestedVideoIds].join(","),
-    key: API_KEY,
+    key: apiKey,
   }).toString();
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) }).catch(() => {
+  const response = await fetchImpl(url, { signal: AbortSignal.timeout(15_000) }).catch(() => {
     throw new Error("videos.list request failed");
   });
-  if (!res.ok) throw new Error(`videos.list HTTP ${res.status}`);
-  const data = await res.json().catch(() => {
+  if (!response.ok) throw new Error(`videos.list HTTP ${response.status}`);
+  const data = await response.json().catch(() => {
     throw new Error("videos.list invalid JSON");
   });
-  stats.apiCalls += 1;
-  const items = validateYouTubeVideoStatusItems(
+  return validateYouTubeVideoStatusItems(
     validateYouTubeVideosListResponse(data, requestedVideoIds),
   );
-  const byId = new Map(items.map((item) => [item.id, item]));
-
-  for (const source of batch) {
-    const video = byId.get(source.external_id);
-    stats.checked += 1;
-    if (!video) {
-      stats.removed += 1;
-      if (!DRY) {
-        await rest(`media_sources?id=eq.${source.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ removed_at: now, last_checked_at: now, title: null, thumbnail_url: null }),
-        });
-      }
-      continue;
-    }
-    const embeddable =
-      video.status.privacyStatus === "public" && video.status.embeddable;
-    const isPrivate = video.status.privacyStatus === "private";
-    if (isPrivate) stats.removed += 1;
-    else if (embeddable) stats.verified += 1;
-    else stats.unembeddable += 1;
-    if (!DRY) {
-      const thumbnails = video.snippet?.thumbnails ?? {};
-      await rest(`media_sources?id=eq.${source.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(
-          applyYouTubePrivateMetadataPolicy(
-            {
-              title: video.snippet?.title ?? null,
-              channel_name: video.snippet?.channelTitle ?? null,
-              channel_id: video.snippet?.channelId ?? null,
-              platform_published_at: video.snippet?.publishedAt ?? null,
-              duration_seconds: parseDuration(video.contentDetails?.duration),
-              public_status: video.status.privacyStatus,
-              embeddable,
-              license_code: video.status.license ?? null,
-              made_for_kids: video.status.madeForKids ?? null,
-              thumbnail_url:
-                thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url ?? null,
-              metadata_refreshed_at: now,
-              metadata_expires_at: expires,
-              last_checked_at: now,
-            },
-            video.status.privacyStatus,
-            now,
-          ),
-        ),
-      });
-    }
-  }
-  console.error(`진행 ${Math.min(i + 50, targets.length)}/${targets.length}`);
 }
 
-console.log(JSON.stringify({ dryRun: DRY, ...stats }));
+/**
+ * @param {{
+ *   sources: Array<{ id: string, platform: string, external_id: unknown }>,
+ *   apiKey: string,
+ *   fetchImpl?: typeof fetch,
+ *   rest: Function,
+ *   dryRun?: boolean,
+ *   limit?: number,
+ *   now?: string,
+ *   onProgress?: (completed: number, total: number) => void,
+ * }} options
+ */
+export async function runVerifyYouTubePending({
+  sources,
+  apiKey,
+  fetchImpl = fetch,
+  rest,
+  dryRun = false,
+  limit = 3000,
+  now = new Date().toISOString(),
+  onProgress = () => {},
+}) {
+  const expires = new Date(Date.parse(now) + METADATA_TTL_MS).toISOString();
+  const stats = {
+    checked: 0,
+    verified: 0,
+    unembeddable: 0,
+    removed: 0,
+    failed: 0,
+    apiCalls: 0,
+    errors: [],
+  };
+  const targets = sources.slice(0, limit);
+  const validTargets = [];
+
+  for (const source of targets) {
+    if (!validExternalId(source.external_id)) {
+      stats.checked += 1;
+      stats.failed += 1;
+      stats.errors.push(`youtube_source_external_id_inconclusive:${source.id}`);
+      continue;
+    }
+    validTargets.push(source);
+  }
+
+  for (let index = 0; index < validTargets.length; index += BATCH_SIZE) {
+    const batch = validTargets.slice(index, index + BATCH_SIZE);
+    const requestedVideoIds = validateYouTubeVideoBatchExternalIds(
+      batch.map((source) => source.external_id),
+    );
+    const items = await fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds);
+    stats.apiCalls += 1;
+    const byId = new Map(items.map((item) => [item.id, item]));
+
+    for (const source of batch) {
+      const video = byId.get(source.external_id);
+      stats.checked += 1;
+      if (!video) {
+        stats.removed += 1;
+        if (!dryRun) {
+          await safeRest(rest, `media_sources?id=eq.${source.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              removed_at: now,
+              last_checked_at: now,
+              title: null,
+              thumbnail_url: null,
+              metadata_expires_at: null,
+            }),
+          });
+        }
+        continue;
+      }
+
+      const embeddable =
+        video.status.privacyStatus === "public" && video.status.embeddable;
+      const isPrivate = video.status.privacyStatus === "private";
+      if (isPrivate) stats.removed += 1;
+      else if (embeddable) stats.verified += 1;
+      else stats.unembeddable += 1;
+
+      if (!dryRun) {
+        const thumbnails = video.snippet?.thumbnails ?? {};
+        await safeRest(rest, `media_sources?id=eq.${source.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(
+            applyYouTubePrivateMetadataPolicy(
+              {
+                title: video.snippet?.title ?? null,
+                channel_name: video.snippet?.channelTitle ?? null,
+                channel_id: video.snippet?.channelId ?? null,
+                platform_published_at: video.snippet?.publishedAt ?? null,
+                duration_seconds: parseDuration(video.contentDetails?.duration),
+                public_status: video.status.privacyStatus,
+                embeddable,
+                license_code: video.status.license ?? null,
+                made_for_kids: video.status.madeForKids ?? null,
+                thumbnail_url:
+                  thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url ?? null,
+                metadata_refreshed_at: now,
+                metadata_expires_at: expires,
+                last_checked_at: now,
+              },
+              video.status.privacyStatus,
+              now,
+            ),
+          ),
+        });
+      }
+    }
+    onProgress(Math.min(index + BATCH_SIZE, validTargets.length), validTargets.length);
+  }
+
+  return { dryRun, ...stats };
+}
+
+function parseArgs(args) {
+  const limitArg = args.find((arg) => arg.startsWith("--limit="));
+  return {
+    limit: Math.max(50, Number(limitArg?.slice(8) ?? 3000)),
+    dryRun: args.includes("--dry-run"),
+  };
+}
+
+async function main(args = process.argv.slice(2)) {
+  const { limit, dryRun } = parseArgs(args);
+  const env = loadEnv();
+  if (!env.YOUTUBE_API_KEY) throw new Error("youtube_api_key_missing");
+  const rest = createRestClient(env);
+  const pendingLinks = await restAll(
+    rest,
+    "meme_media?select=source_id&review_state=eq.pending",
+  ).catch(() => {
+    throw new Error("youtube_source_read_failed");
+  });
+  const pendingIds = new Set(pendingLinks.map((row) => row.source_id));
+  const sources = await restAll(
+    rest,
+    "media_sources?select=id,platform,external_id&platform=in.(youtube,youtube_shorts)&embeddable=is.null&removed_at=is.null",
+  ).catch(() => {
+    throw new Error("youtube_source_read_failed");
+  });
+  const result = await runVerifyYouTubePending({
+    sources: sources.filter((source) => pendingIds.has(source.id)),
+    apiKey: env.YOUTUBE_API_KEY,
+    rest,
+    limit,
+    dryRun,
+    onProgress: (completed, total) => console.error(`진행 ${completed}/${total}`),
+  });
+  console.log(JSON.stringify(result));
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(() => {
+    console.error("youtube_pending_verification_failed");
+    process.exitCode = 1;
+  });
+}

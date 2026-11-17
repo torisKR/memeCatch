@@ -86,10 +86,15 @@ async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
 ) {
-  const ids = rows
-    .map((row) => row.external_id)
-    .filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
+  // Missing or malformed IDs were never queried from YouTube and cannot be
+  // treated as an authoritative missing-video result. Keep healthy sources
+  // moving while reporting the bad rows for data repair.
+  const validRows = rows.filter((row) => row.external_id && /^[A-Za-z0-9_-]{11}$/.test(row.external_id));
+  const validIds = new Set(validRows.map((row) => row.id));
+  const identityErrors = rows.filter((row) => !validIds.has(row.id)).map((row) => `invalid_source_identity:${row.id}`);
+  const invalidCount = identityErrors.length;
+  const ids = validRows.map((row) => row.external_id as string);
+  if (ids.length === 0) return { checked: rows.length, removed: 0, hidden: 0, failed: invalidCount, errors: identityErrors };
 
   const attemptStartedAt = new Date();
   const attemptIdBySource = new Map(rows.map((row) => [row.id, `refresh:${row.id}:${attemptStartedAt.toISOString()}`]));
@@ -97,7 +102,7 @@ async function refreshYouTubeSources(
   try {
     statuses = await fetchYouTubeVideoStatuses(ids);
   } catch (error) {
-    for (const row of rows) {
+    for (const row of validRows) {
       if (!row.external_id) continue;
       await recordSourceAcquisitionFailure({
         sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -116,10 +121,10 @@ async function refreshYouTubeSources(
   const now = new Date().toISOString();
   let removed = 0;
   let hidden = 0;
-  let failed = 0;
-  const errors: string[] = [];
+  let failed = invalidCount;
+  const errors: string[] = identityErrors;
 
-  for (const row of rows) {
+  for (const row of validRows) {
     const status = row.external_id ? statuses.get(row.external_id) : undefined;
 
     try {

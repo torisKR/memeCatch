@@ -1,5 +1,5 @@
 import "server-only";
-import { validateYouTubeVideosListResponse } from "./youtube-response.mjs";
+import { validateYouTubeVideosListResponse, validateYouTubeVideoStatusItems } from "./youtube-response.mjs";
 
 /**
  * YouTube Data API v3 클라이언트.
@@ -79,10 +79,11 @@ function apiKey(): string {
 
 async function readJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`YouTube API HTTP ${response.status}: ${body.slice(0, 300)}`);
+    throw new Error(`YouTube API HTTP ${response.status}`);
   }
-  return response.json() as Promise<T>;
+  return response.json().catch(() => {
+    throw new Error("YouTube API invalid JSON");
+  }) as Promise<T>;
 }
 
 function mapVideo(item: NonNullable<YouTubeVideosApiResponse["items"]>[number]) {
@@ -132,7 +133,9 @@ export async function fetchYouTubeVideoStatuses(
     const data = await readJson<YouTubeVideosApiResponse>(response);
     // A well-formed response for the exact batch is required before an
     // omitted ID can be treated as unavailable.
-    const items = validateYouTubeVideosListResponse<NonNullable<YouTubeVideosApiResponse["items"]>[number]>(data, new Set(batch));
+    const items = validateYouTubeVideoStatusItems(
+      validateYouTubeVideosListResponse<NonNullable<YouTubeVideosApiResponse["items"]>[number]>(data, new Set(batch)),
+    );
     for (const item of items) {
       const mapped = mapVideo(item);
       if (mapped) result.set(mapped.id, mapped);

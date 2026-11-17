@@ -116,7 +116,7 @@ node scripts/auto-approve-source-candidates.mjs --operator-confirm-auto-approve 
 - `meme_media` — 밈 ↔ 출처 다대다 + 권리 근거(`rights_basis`)·출처 역할(`source_role`)·검수 상태
 - `meme_claims` — 유래·의미 주장과 근거 출처 연결(검증 전 `verified=false`)
 - `memes.source_work_year` / `meme_first_seen_year` / `korea_viral_year` / `era_type` — YouTube 업로드 날짜와 밈 발생 연도를 분리
-- 스케줄러(`deploy/scheduler/crontab`) `0 17 * * *` → `/api/cron/source-refresh`가 삭제·비공개·임베드 불가를 7일 주기로 확인하고 공개 임베드를 자동으로 내립니다(`meme_contents.availability='dead'`). YouTube 메타데이터는 30일 안에 갱신됩니다.
+- OCI 스케줄러(`deploy/scheduler/crontab`)가 15분마다 `/api/cron/source-refresh`를 호출합니다. 각 출처는 마지막 확인 후 하루가 지나면 다시 검사하며, 플랫폼별 배치 한도와 재시도로 처리량이 달라질 수 있습니다. 삭제·비공개와 임베드 불가는 공개 임베드에서 제외하고, 제공자의 일시적인 오류는 삭제로 판정하지 않습니다. YouTube 메타데이터 갱신 기한은 30일입니다.
 
 ## 환경변수
 

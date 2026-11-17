@@ -87,12 +87,20 @@ describe("밈 상세 hreflang 계약", () => {
 
   it("WebPage에는 실제 게시일과 화면에 표시되는 저장 출처만 전달하고 DB 생성일은 대체값으로 쓰지 않는다", () => {
     expect(source).toContain("datePublished={meme.published_at}");
-    expect(source).toContain("sources={meme.meme_sources}");
+    expect(source).toContain("sources={delivery.publicSources}");
     expect(source).not.toContain("datePublished={meme.published_at ?? meme.created_at}");
   });
 
   it("원본 업로드 시각이 없는 대표 영상에는 VideoObject를 만들지 않는다", () => {
     expect(source).not.toContain("<MemeVideoJsonLd");
     expect(source).not.toContain("uploadDate={meme.created_at}");
+  });
+
+  it("검수된 미디어 원장으로 임베드와 공개 출처를 함께 제한한다", () => {
+    expect(source).toContain("getReviewedMemeMediaSources(meme.id)");
+    expect(source).toContain("reviewedMediaSources,");
+    expect(source).toContain("embeddingAllowed={delivery.embeddingAllowed}");
+    expect(source).toContain("sources={delivery.publicSources}");
+    expect(source).not.toContain("<SourceEvidence sources={meme.meme_sources}");
   });
 });

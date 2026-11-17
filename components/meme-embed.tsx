@@ -9,6 +9,7 @@ import { sourcePlatformFromReference } from "@/lib/source-platform";
 import { isHouseOriginal } from "@/lib/house-original";
 import { HouseOriginalVisual } from "@/components/house-original-visual";
 import { memeCardArtAlt, memeCardArtFromMeme } from "@/lib/meme-card-art";
+import { videoPreview } from "@/lib/meme-video-preview";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
@@ -36,6 +37,7 @@ export function MemeEmbed({
   content,
   fallbackSourceUrl,
   fallbackReason = null,
+  embeddingAllowed = true,
   title,
   isRepresentative = true,
   category,
@@ -43,12 +45,16 @@ export function MemeEmbed({
   originKind,
   summary,
 }: {
-  content: Pick<
+  content: (Pick<
     MemeContentRow,
     "platform" | "content_id" | "url" | "thumbnail_url" | "availability" | "caption"
-  > | null;
+  > & Partial<Pick<
+    MemeContentRow,
+    "moderation_status" | "is_representative" | "manual_video_verified"
+  >>) | null;
   fallbackSourceUrl?: string | null;
   fallbackReason?: "confirmed_unavailable" | "no_playback_reference" | null;
+  embeddingAllowed?: boolean;
   title: string;
   isRepresentative?: boolean;
   /** 폴백 타이포 히어로의 카테고리 틴트·라벨 칩 — 미전달 시 중립(surface-2) 톤 */
@@ -77,19 +83,24 @@ export function MemeEmbed({
   });
   // 재생 가능 여부는 lib/content-availability.ts 단일 판정 — dead와 region_blocked를
   // 함께 제외한다. 불가 판정이면 아래 폴백 카드가 출처 링크를 대신 제시한다.
-  const isPlayable = isAvailableContent(content);
+  // A server-verified link-only source may still carry the legacy `dead`
+  // projection left by the old refresh job. Region blocks remain authoritative.
+  const isVerifiedLinkOnly =
+    embeddingAllowed === false && content?.availability !== "region_blocked";
+  const isPlayable = isAvailableContent(content) || isVerifiedLinkOnly;
   const effectiveFallbackReason =
     fallbackReason ?? (content && !isPlayable ? "confirmed_unavailable" : null);
   const isYouTube =
     content != null &&
     (sourcePlatform === "youtube" || sourcePlatform === "youtube_shorts") &&
     !!content.content_id &&
-    isPlayable;
+    isPlayable &&
+    embeddingAllowed;
 
   const sourceUrl = isPlayable
     ? content?.url ?? fallbackSourceUrl ?? null
     : fallbackSourceUrl ?? null;
-  const socialProvider = isPlayable
+  const socialProvider = isPlayable && embeddingAllowed
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
 
@@ -99,6 +110,7 @@ export function MemeEmbed({
       : [],
   });
   const projectImage = projectOwnedImage(content?.thumbnail_url);
+  const verifiedVideoPoster = content ? videoPreview([content]) : null;
 
   if (isPlayable && projectImage && !ownedArt && !content?.url) {
     return (
@@ -165,7 +177,7 @@ export function MemeEmbed({
           provider={socialProvider}
           sourceUrl={sourceUrl}
           title={title}
-          thumbnailUrl={content?.thumbnail_url}
+          thumbnailUrl={verifiedVideoPoster}
           isRepresentative={isRepresentative}
         />
         {content?.caption && (

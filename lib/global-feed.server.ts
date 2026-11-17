@@ -11,7 +11,7 @@ import {
 } from "@/lib/source-platform";
 import type { GlobalFeedItem } from "@/lib/global-feed.types";
 import { originCountryCode, type MemeOriginProfile } from "@/lib/meme-country";
-import { youtubeVideoPreview } from "@/lib/meme-video-preview";
+import { videoPreview } from "@/lib/meme-video-preview";
 
 /**
  * 글로벌 피드 — 플랫폼별 공개 밈 콘텐츠 조회.
@@ -28,6 +28,7 @@ type FeedContentRow = {
   availability: string;
   moderation_status: string;
   is_representative: boolean;
+  manual_video_verified: boolean;
 };
 
 type ApprovedSourceRow = {
@@ -95,10 +96,7 @@ function pickContent(row: FeedRow, approvedSources: ApprovedSourceRow["media_sou
             (content.content_id && content.content_id === source.external_id)),
       ),
   );
-  const best =
-    alive.find((content) => content.is_representative && content.thumbnail_url) ??
-    alive.find((content) => content.thumbnail_url) ??
-    alive[0];
+  const best = alive.find((content) => content.is_representative) ?? alive[0];
   if (!best?.platform) return null;
   const platform = sourcePlatformFromReference({
     platform: best.platform.replaceAll("_", " "),
@@ -108,9 +106,7 @@ function pickContent(row: FeedRow, approvedSources: ApprovedSourceRow["media_sou
   return {
     platform,
     url: best.url,
-    thumbnail_url: platform === "youtube" || platform === "youtube_shorts"
-      ? youtubeVideoPreview([best])
-      : best.thumbnail_url,
+    thumbnail_url: videoPreview([best]),
   };
 }
 
@@ -142,7 +138,7 @@ export async function getGlobalFeed(
       const { data, error } = await db
         .from("memes")
         .select(
-          `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative), meme_market_profiles!inner(market_code, role, review_state)`
+          `${FEED_COLUMNS.join(", ")}, meme_contents!inner(platform, content_id, url, thumbnail_url, availability, moderation_status, is_representative, manual_video_verified), meme_market_profiles!inner(market_code, role, review_state)`
         )
         .eq("moderation_status", "approved")
         .in("meme_contents.platform", storedPlatforms)

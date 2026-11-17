@@ -47,6 +47,7 @@ import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { isThinMeme, koreanDetailRobots } from "@/lib/thin-meme";
 import { isRenderableContent } from "@/lib/content-availability";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
+import { getReviewedMemeMediaSources } from "@/lib/meme-delivery.server";
 import { listIndexableLocalizedMemes } from "@/lib/meme-translations";
 import {
   getHreflang,
@@ -213,7 +214,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport, discovery] = await Promise.all([
+  const [related, reactionCounts, marketPassport, discovery, reviewedMediaSources] = await Promise.all([
     // 상세 하단은 관련 밈 카드를 최대 6장까지 둔다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
@@ -223,6 +224,7 @@ export default async function MemeDetailPage({ params }: Props) {
     getReactionCounts(meme.id),
     getMemeMarketPassport(meme.id, "ko"),
     loadDiscoveryIndex(),
+    getReviewedMemeMediaSources(meme.id),
   ]);
   const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
   const indexable = detailIndexableFromDiscovery(
@@ -237,6 +239,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const delivery = resolveMemeDelivery({
     contents: meme.meme_contents,
     sources: meme.meme_sources,
+    reviewedMediaSources,
   });
   const representative = delivery.representative;
   const liveContents = meme.meme_contents.filter(isRenderableContent);
@@ -294,7 +297,7 @@ export default async function MemeDetailPage({ params }: Props) {
             slug={meme.slug}
             datePublished={meme.published_at}
             dateModified={meme.updated_at}
-            sources={meme.meme_sources}
+            sources={delivery.publicSources}
           />
           <MemeDefinedTermJsonLd
             name={meme.title}
@@ -356,6 +359,7 @@ export default async function MemeDetailPage({ params }: Props) {
               content={representative}
               fallbackSourceUrl={fallbackSourceUrl}
               fallbackReason={delivery.fallbackReason}
+              embeddingAllowed={delivery.embeddingAllowed}
               title={meme.title}
               isRepresentative={representative?.is_representative ?? true}
               category={meme.category}
@@ -533,7 +537,7 @@ export default async function MemeDetailPage({ params }: Props) {
                 {/* 신뢰 신호 — 근거가 있는 만큼만 말한다. meme_sources만 넘긴다:
                     sourceLinks에는 재생용 콘텐츠 URL이 섞여 있어 근거 수를 부풀린다. */}
                 <TrustNote
-                  sources={meme.meme_sources}
+                  sources={delivery.publicSources}
                   updatedAt={meme.updated_at}
                   moderationStatus={meme.moderation_status}
                   title={meme.title}
@@ -550,7 +554,7 @@ export default async function MemeDetailPage({ params }: Props) {
 
           {/* 참고 자료 근거 목록 — 제목 있는 출처가 하나도 없으면 렌더하지 않는다.
               유래 아래 인라인 링크와 달리 무엇을 근거로 삼았는지 펼쳐 보인다. */}
-          <SourceEvidence sources={meme.meme_sources} shortId={meme.short_id} />
+          <SourceEvidence sources={delivery.publicSources} shortId={meme.short_id} />
 
 
           <div data-detail-order="appendix" className="space-y-5">

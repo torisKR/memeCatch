@@ -66,8 +66,10 @@ describe("localized meme detail metadata", () => {
   });
 
   it("renders only public safe source URLs, keeping JSON-LD citations within the visible list", () => {
-    expect(source).toContain("publicSourceUrl(source.source_url)");
-    expect(source).toContain("source_url: url");
+    expect(source).toContain("getReviewedMemeMediaSources(meme.id)");
+    expect(source).toContain("resolveMemeDelivery({");
+    expect(source).toContain("reviewedMediaSources,");
+    expect(source).toContain("const sourceLinks = delivery.sourceLinks.flatMap");
     expect(source).toContain("href={source.source_url}");
     expect(source).not.toContain("href={source.source_url!}");
   });

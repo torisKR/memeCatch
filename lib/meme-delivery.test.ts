@@ -3,10 +3,25 @@ import { resolveMemeDelivery } from "./meme-delivery";
 
 const liveContent = (overrides: Record<string, unknown> = {}) => ({
   id: "live-1",
-  url: "https://www.youtube.com/watch?v=live",
+  platform: "YouTube",
+  content_id: "abcdefghijk",
+  url: "https://www.youtube.com/watch?v=abcdefghijk",
   availability: "live",
   moderation_status: "approved",
   is_representative: false,
+  ...overrides,
+});
+
+const reviewedYouTube = (overrides: Record<string, unknown> = {}) => ({
+  review_state: "approved",
+  rights_basis: "official_embed",
+  platform: "youtube",
+  external_id: "abcdefghijk",
+  canonical_url: "https://www.youtube.com/watch?v=abcdefghijk",
+  embeddable: false,
+  public_status: "public",
+  removed_at: null,
+  last_checked_at: new Date().toISOString(),
   ...overrides,
 });
 
@@ -47,6 +62,52 @@ describe("resolveMemeDelivery", () => {
       "https://namu.wiki/w/context",
     ]);
     expect(result.fallbackReason).toBe("confirmed_unavailable");
+  });
+
+  it.each([
+    {
+      availability: "dead",
+      contentUrl: "https://www.youtube.com/watch?v=abcdefghijk",
+      sourceUrl: "https://youtu.be/abcdefghijk",
+    },
+    {
+      availability: "region_blocked",
+      contentUrl: "https://www.youtube.com/shorts/abcdefghijk",
+      sourceUrl: "https://www.youtube.com/watch?v=abcdefghijk",
+    },
+  ])(
+    "suppresses a $availability YouTube alias by external video identity",
+    ({ availability, contentUrl, sourceUrl }) => {
+      const result = resolveMemeDelivery({
+        contents: [liveContent({
+          availability,
+          url: contentUrl,
+          is_representative: true,
+        })],
+        sources: [{ source_url: sourceUrl, platform: "YouTube" }],
+      });
+
+      expect(result.representative).toBeNull();
+      expect(result.sourceLinks).toEqual([]);
+      expect(result.publicSources).toEqual([]);
+      expect(result.fallbackSourceUrl).toBeNull();
+    },
+  );
+
+  it("preserves an unrelated arbitrary web fallback", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({
+        availability: "dead",
+        url: "https://example.com/video/dead",
+        is_representative: true,
+      })],
+      sources: [{ source_url: "https://namu.wiki/w/context", platform: "Community" }],
+    });
+
+    expect(result.sourceLinks.map((source) => source.source_url)).toEqual([
+      "https://namu.wiki/w/context",
+    ]);
+    expect(result.fallbackSourceUrl).toBe("https://namu.wiki/w/context");
   });
 
   it("keeps mixed-case YouTube IDs as different resources", () => {
@@ -113,9 +174,128 @@ describe("resolveMemeDelivery", () => {
   it("returns editorial-only delivery when media and sources are absent", () => {
     expect(resolveMemeDelivery({ contents: [], sources: [] })).toEqual({
       representative: null,
+      embeddingAllowed: true,
       fallbackSourceUrl: null,
       sourceLinks: [],
+      publicSources: [],
       fallbackReason: "no_playback_reference",
     });
+  });
+
+  it("turns an exact public non-embeddable YouTube match into link-only delivery", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ is_representative: true })],
+      sources: [],
+      reviewedMediaSources: [reviewedYouTube()],
+    });
+
+    expect(result.representative?.id).toBe("live-1");
+    expect(result.embeddingAllowed).toBe(false);
+    expect(result.fallbackReason).toBeNull();
+    expect(result.fallbackSourceUrl).toBe(
+      "https://www.youtube.com/watch?v=abcdefghijk",
+    );
+  });
+
+  it("rehabilitates a legacy dead projection only from fresh public non-embeddable evidence", () => {
+    const now = Date.parse("2026-11-17T12:00:00.000Z");
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ availability: "dead", is_representative: true })],
+      sources: [],
+      reviewedMediaSources: [reviewedYouTube({ last_checked_at: "2026-11-17T11:00:00.000Z" })],
+      now,
+    });
+
+    expect(result.representative?.id).toBe("live-1");
+    expect(result.embeddingAllowed).toBe(false);
+    expect(result.fallbackSourceUrl).toBe(
+      "https://www.youtube.com/watch?v=abcdefghijk",
+    );
+    expect(result.fallbackReason).toBeNull();
+  });
+
+  it("accepts a URL alias only when it normalizes to the same canonical YouTube identity", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({
+        url: "https://youtu.be/abcdefghijk",
+        is_representative: true,
+      })],
+      sources: [],
+      reviewedMediaSources: [reviewedYouTube()],
+    });
+
+    expect(result.embeddingAllowed).toBe(false);
+    expect(result.representative?.id).toBe("live-1");
+  });
+
+  it.each([
+    ["platform", { platform: "youtube_shorts" }],
+    ["content ID", { external_id: "lmnopqrstuv" }],
+    ["canonical URL", { canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv" }],
+  ])("does not apply an unrelated %s ledger row", (_label, sourceOverride) => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ is_representative: true })],
+      sources: [],
+      reviewedMediaSources: [reviewedYouTube(sourceOverride)],
+    });
+
+    expect(result.embeddingAllowed).toBe(true);
+    expect(result.representative?.id).toBe("live-1");
+  });
+
+  it("suppresses a region-blocked video even when its exact source is fresh, public, and link-only", () => {
+    const url = "https://www.youtube.com/watch?v=abcdefghijk";
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ availability: "region_blocked", is_representative: true })],
+      sources: [{ source_url: url, platform: "YouTube" }],
+      reviewedMediaSources: [reviewedYouTube()],
+    });
+
+    expect(result.representative).toBeNull();
+    expect(result.sourceLinks).toEqual([]);
+    expect(result.fallbackSourceUrl).toBeNull();
+    expect(result.fallbackReason).toBe("confirmed_unavailable");
+  });
+
+  it("suppresses stale public non-embeddable evidence instead of revealing a possibly dead video", () => {
+    const now = Date.parse("2026-11-17T12:00:00.000Z");
+    const url = "https://www.youtube.com/watch?v=abcdefghijk";
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ availability: "dead", is_representative: true })],
+      sources: [{ source_url: url, platform: "YouTube" }],
+      reviewedMediaSources: [reviewedYouTube({ last_checked_at: "2026-11-16T11:59:59.000Z" })],
+      now,
+    });
+
+    expect(result.representative).toBeNull();
+    expect(result.sourceLinks).toEqual([]);
+    expect(result.fallbackSourceUrl).toBeNull();
+  });
+
+  it("suppresses an exact private source without letting an unrelated public row override it", () => {
+    const url = "https://www.youtube.com/watch?v=abcdefghijk";
+    const now = Date.parse("2026-11-17T12:00:00.000Z");
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ is_representative: true })],
+      sources: [{ source_url: url, platform: "YouTube" }],
+      reviewedMediaSources: [
+        reviewedYouTube({ last_checked_at: "2026-11-17T10:00:00.000Z" }),
+        reviewedYouTube({
+          public_status: "private",
+          removed_at: "2026-11-17T11:00:00.000Z",
+          last_checked_at: "2026-11-17T11:00:00.000Z",
+        }),
+        reviewedYouTube({
+          external_id: "lmnopqrstuv",
+          canonical_url: "https://www.youtube.com/watch?v=lmnopqrstuv",
+          last_checked_at: "2026-11-17T11:30:00.000Z",
+        }),
+      ],
+      now,
+    });
+
+    expect(result.representative).toBeNull();
+    expect(result.sourceLinks).toEqual([]);
+    expect(result.fallbackSourceUrl).toBeNull();
   });
 });

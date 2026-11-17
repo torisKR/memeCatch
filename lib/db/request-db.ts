@@ -1,10 +1,16 @@
 import type { NextRequest } from "next/server";
 import { ensureAuthSchema, getAuth } from "@/lib/auth/server";
-import { executePlan } from "@/lib/db/execute";
+import { executeDeadlinePlan, executePlan } from "@/lib/db/execute";
 import { createPlanClient } from "@/lib/db/plan";
 import type { DbIdentity } from "@/lib/db/pool";
 
 type RequestUser = { id: string; email?: string | null; is_anonymous: boolean } | null;
+
+export async function createPublicDeadlineDb() {
+  const identity: DbIdentity = { userId: null, role: "anon", anonymous: false };
+  const database = createPlanClient((plan, signal) => executeDeadlinePlan(plan, identity, signal));
+  return { from: database.from.bind(database), rpc: database.rpc.bind(database) };
+}
 
 export async function createRequestDb(request: NextRequest) {
   let user: RequestUser = null;

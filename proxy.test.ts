@@ -5,6 +5,7 @@ import { proxy, resolveLandingRedirectLocale } from "@/proxy";
 
 const dbMocks = vi.hoisted(() => ({
   abortSignal: vi.fn(),
+  createPublicDeadlineDb: vi.fn(),
   createRequestDb: vi.fn(),
   eq: vi.fn(),
   from: vi.fn(),
@@ -55,6 +56,7 @@ function localizedTranslation(overrides: Record<string, unknown> = {}) {
 }
 
 vi.mock("@/lib/db/request-db", () => ({
+  createPublicDeadlineDb: dbMocks.createPublicDeadlineDb,
   createRequestDb: dbMocks.createRequestDb,
 }));
 
@@ -77,6 +79,10 @@ beforeEach(() => {
   dbMocks.in.mockReset().mockReturnValue(query);
   dbMocks.limit.mockReset().mockReturnValue(query);
   dbMocks.from.mockReset().mockReturnValue(query);
+  dbMocks.createPublicDeadlineDb.mockReset().mockResolvedValue({
+    from: dbMocks.from,
+    rpc: dbMocks.rpc,
+  });
   dbMocks.createRequestDb.mockReset().mockResolvedValue({
     auth: { getUser: dbMocks.getUser },
     from: dbMocks.from,
@@ -348,10 +354,10 @@ describe("proxy public meme existence check", () => {
     }
   });
 
-  it("returns at the hard deadline when request database initialization never settles", async () => {
+  it("returns at the hard deadline when the isolated public database initialization never settles", async () => {
     vi.useFakeTimers();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    dbMocks.createRequestDb.mockImplementationOnce(
+    dbMocks.createPublicDeadlineDb.mockImplementationOnce(
       () => new Promise<never>(() => undefined),
     );
 
@@ -364,6 +370,7 @@ describe("proxy public meme existence check", () => {
       expect(response.headers.get("location")).toBeNull();
       expect(response.headers.get("x-middleware-rewrite")).toBeNull();
       expect(dbMocks.from).not.toHaveBeenCalled();
+      expect(dbMocks.createRequestDb).not.toHaveBeenCalled();
       expect(warn).toHaveBeenCalledExactlyOnceWith(
         "public_meme_existence_check_failed deadline_exceeded",
       );

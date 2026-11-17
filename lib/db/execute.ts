@@ -10,7 +10,7 @@ import {
   type QueryPlan,
   type QueryResult,
 } from "@/lib/db/plan";
-import { getDb, withIdentity, type DbIdentity } from "@/lib/db/pool";
+import { getDb, getDeadlineDb, withIdentity, type DbIdentity } from "@/lib/db/pool";
 
 type ColumnMap = Map<string, Map<string, string>>;
 
@@ -455,9 +455,9 @@ function mutationSql(plan: QueryPlan, meta: Meta): SqlParts {
 
 type PgFunction = { proretset: boolean; names: string[] | null; types: string[] | null };
 
-async function loadFunctions(name: string): Promise<PgFunction[]> {
+async function loadFunctions(name: string, db = getDb()): Promise<PgFunction[]> {
   if (!isIdent(name)) throw new Error("invalid identifier");
-  const result = await getDb()
+  const result = await db
     .transaction()
     .execute(async (trx) =>
       trx.executeQuery<{ proretset: boolean; names: string[] | null; types: string[] | null }>(
@@ -518,16 +518,37 @@ function pgArray(value: unknown): string[] {
   return [];
 }
 
-async function loadMeta(identity: DbIdentity, signal?: AbortSignal): Promise<Meta> {
+function cancelledQueryError(): Error & { code: string } {
+  return Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
+}
+
+function waitForMeta<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(cancelledQueryError());
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort);
+      reject(cancelledQueryError());
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", abort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", abort);
+        reject(error);
+      },
+    );
+  });
+}
+
+async function loadMeta(identity: DbIdentity, signal?: AbortSignal, db = getDb()): Promise<Meta> {
   if (globalMeta.__memecatchMeta) return globalMeta.__memecatchMeta;
+  if (signal?.aborted) throw cancelledQueryError();
   if (!globalMeta.__memecatchMetaPromise) {
-    globalMeta.__memecatchMetaPromise = withIdentity(identity, async (trx, cancel) => {
-      if (signal?.aborted) {
-        throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
-      }
-      const abort = () => cancel();
-      signal?.addEventListener("abort", abort, { once: true });
-      try {
+    const metaPromise = withIdentity(identity, async (trx) => {
         const columns = await trx.executeQuery<{ table_name: string; column_name: string; udt: string }>(
           CompiledQuery.raw(
             `SELECT c.relname AS table_name, a.attname AS column_name, t.typname AS udt
@@ -594,21 +615,24 @@ async function loadMeta(identity: DbIdentity, signal?: AbortSignal): Promise<Met
             dstCols: pgArray(row.dst_cols),
           })),
         };
-      } finally {
-        signal?.removeEventListener("abort", abort);
-      }
-    });
+    }, db);
+    globalMeta.__memecatchMetaPromise = metaPromise;
+    void metaPromise.then(
+      (meta) => {
+        if (globalMeta.__memecatchMetaPromise === metaPromise) {
+          globalMeta.__memecatchMeta = meta;
+          globalMeta.__memecatchMetaPromise = undefined;
+        }
+      },
+      () => {
+        if (globalMeta.__memecatchMetaPromise === metaPromise) {
+          globalMeta.__memecatchMetaPromise = undefined;
+        }
+      },
+    );
   }
   const metaPromise = globalMeta.__memecatchMetaPromise;
-  try {
-    const meta = await metaPromise;
-    globalMeta.__memecatchMeta = meta;
-    return meta;
-  } finally {
-    if (globalMeta.__memecatchMetaPromise === metaPromise) {
-      globalMeta.__memecatchMetaPromise = undefined;
-    }
-  }
+  return waitForMeta(metaPromise, signal);
 }
 
 function queryError(error: unknown): QueryResult["error"] {
@@ -672,6 +696,7 @@ async function runQuery(
   params: unknown[],
   signal?: AbortSignal,
   json = true,
+  db = getDb(),
 ): Promise<Record<string, unknown>[]> {
   return withIdentity(identity, async (trx: Transaction<Record<string, Record<string, unknown>>>, cancel) => {
     if (signal?.aborted) throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
@@ -691,31 +716,37 @@ async function runQuery(
     } finally {
       signal?.removeEventListener("abort", abort);
     }
-  });
+  }, db);
 }
 
-export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
+async function executePlanWithDb(
+  plan: QueryPlan,
+  identity: DbIdentity,
+  signal = undefined as AbortSignal | undefined,
+  resolveDb: typeof getDb,
+): Promise<QueryResult> {
   try {
-    const meta = await loadMeta(identity, signal);
+    const db = resolveDb();
+    const meta = await loadMeta(identity, signal, db);
     if (plan.op === "rpc") {
       attachDottedFilters(plan);
-      const matches = await loadFunctions(plan.fn ?? "");
+      const matches = await loadFunctions(plan.fn ?? "", db);
       const fn = matches.find((item) => {
         const names = new Set(item.names ?? []);
         return Object.keys(plan.args ?? {}).every((key) => names.has(key) || names.size === 0);
       }) ?? matches[0];
       if (!fn) return { data: null, error: { message: "function not found", code: "42883", status: 404 }, count: null };
       const built = rpcSql(plan, fn, meta);
-      const rows = await runQuery(identity, built.sql, built.params, signal);
+      const rows = await runQuery(identity, built.sql, built.params, signal, true, db);
       return shapeRows(plan, rows, null, !fn.proretset);
     }
     if (plan.op === "select") {
       const dataSql = compileSelectPlan(plan, meta, false);
       const countSql = plan.count === "exact" ? compileSelectPlan(plan, meta, true) : null;
-      const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal);
+      const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal, true, db);
       let count: number | null = null;
       if (countSql) {
-        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false);
+        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false, db);
         count = Number(counted[0]?.count ?? 0);
       }
       return shapeRows(plan, rows, count, false);
@@ -723,11 +754,19 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
     attachDottedFilters(plan);
     const built = mutationSql(plan, meta);
     // Without RETURNING there are no rows, and a WITH wrapper would be rejected.
-    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning);
+    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning, db);
     return shapeRows(plan, rows, null, false);
   } catch (error) {
     return { data: null, error: queryError(error), count: null };
   }
+}
+
+export function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
+  return executePlanWithDb(plan, identity, signal, getDb);
+}
+
+export function executeDeadlinePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
+  return executePlanWithDb(plan, identity, signal, getDeadlineDb);
 }
 
 export function resetQueryMetadata(): void {

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { executePlan, resetQueryMetadata } from "@/lib/db/execute";
-import { DB_POOL_ACQUIRE_TIMEOUT_MS, getPool } from "@/lib/db/pool";
+import { executeDeadlinePlan, executePlan, resetQueryMetadata } from "@/lib/db/execute";
+import { getCancelPool, getDeadlinePool, getPool } from "@/lib/db/pool";
 
 const databaseUrl = process.env.DATABASE_URL;
 const anon = { userId: null, role: "anon" as const, anonymous: false };
@@ -23,20 +23,28 @@ const selectOneMeme = {
 describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
   afterAll(async () => {
     resetQueryMetadata();
-    await getPool().end();
+    await Promise.all([getPool().end(), getCancelPool().end(), getDeadlinePool().end()]);
   });
 
-  it("cancels a blocked plan query through PostgreSQL", async () => {
+  it("cancels a blocked plan query while every general-pool slot is occupied", async () => {
     resetQueryMetadata();
     const warm = await executePlan(selectOneMeme, anon);
     expect(warm.error).toBeNull();
 
-    const blocker = await getPool().connect();
+    const pool = getPool();
+    const blocker = await pool.connect();
+    const fillers = await Promise.all(
+      Array.from({ length: pool.options.max - 2 }, () => pool.connect()),
+    );
+    let emergency: ReturnType<typeof setTimeout> | undefined;
     try {
       await blocker.query("begin");
       await blocker.query("set local role service_role");
       await blocker.query("lock table public.memes in access exclusive mode");
       const startedAt = Date.now();
+      emergency = setTimeout(() => {
+        void blocker.query("rollback");
+      }, 1_000);
       const result = await executePlan(
         selectOneMeme,
         anon,
@@ -45,26 +53,82 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
 
       expect(result.error?.code).toBe("57014");
       expect(result.error?.status).toBe(408);
-      expect(Date.now() - startedAt).toBeLessThan(1_000);
+      expect(Date.now() - startedAt).toBeLessThan(700);
     } finally {
+      if (emergency) clearTimeout(emergency);
       await blocker.query("rollback");
       blocker.release();
+      for (const client of fillers) client.release();
     }
   });
 
-  it("rejects a queued pool checkout after the finite acquire timeout", async () => {
+  it("does not impose the proxy checkout deadline on the shared application pool", async () => {
     const pool = getPool();
     const clients = await Promise.all(
       Array.from({ length: pool.options.max }, () => pool.connect()),
     );
-    const startedAt = Date.now();
     try {
-      await expect(pool.connect()).rejects.toThrow(
-        "timeout exceeded when trying to connect",
-      );
-      const elapsed = Date.now() - startedAt;
-      expect(elapsed).toBeGreaterThanOrEqual(DB_POOL_ACQUIRE_TIMEOUT_MS - 100);
-      expect(elapsed).toBeLessThan(DB_POOL_ACQUIRE_TIMEOUT_MS + 1_500);
+      let settled = false;
+      const queued = pool.connect().then((client) => {
+        settled = true;
+        return client;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1_600));
+      expect(settled).toBe(false);
+      expect(pool.waitingCount).toBe(1);
+      clients.pop()?.release();
+      const queuedClient = await queued;
+      queuedClient.release();
+    } finally {
+      for (const client of clients) client.release();
+    }
+  });
+
+  it("keeps deadline-bound public reads independent from a full general pool", async () => {
+    resetQueryMetadata();
+    const pool = getPool();
+    const clients = await Promise.all(
+      Array.from({ length: pool.options.max }, () => pool.connect()),
+    );
+    try {
+      const startedAt = Date.now();
+      const result = await executeDeadlinePlan(selectOneMeme, anon, AbortSignal.timeout(1_500));
+      expect(result.error).toBeNull();
+      expect(result.data).toEqual(expect.any(Array));
+      expect(Date.now() - startedAt).toBeLessThan(1_500);
+      expect(pool.waitingCount).toBe(0);
+    } finally {
+      for (const client of clients) client.release();
+    }
+  });
+
+  it("keeps a shared metadata checkout alive when one pool-full waiter cancels", async () => {
+    resetQueryMetadata();
+    const pool = getPool();
+    const clients = await Promise.all(
+      Array.from({ length: pool.options.max }, () => pool.connect()),
+    );
+    const cancelled = new AbortController();
+    try {
+      const cancelledResultPromise = executePlan(selectOneMeme, anon, cancelled.signal);
+      const activeResultPromise = executePlan(selectOneMeme, anon);
+
+      const queuedDeadline = Date.now() + 500;
+      while (pool.waitingCount !== 1 && Date.now() < queuedDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(pool.waitingCount).toBe(1);
+
+      cancelled.abort();
+      const cancelledResult = await cancelledResultPromise;
+      expect(cancelledResult.error?.code).toBe("57014");
+      expect(cancelledResult.error?.status).toBe(408);
+      expect(pool.waitingCount).toBe(1);
+
+      clients.pop()?.release();
+      const activeResult = await activeResultPromise;
+      expect(activeResult.error).toBeNull();
+      expect(activeResult.data).toEqual(expect.any(Array));
     } finally {
       for (const client of clients) client.release();
     }

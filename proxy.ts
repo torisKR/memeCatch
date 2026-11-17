@@ -1,4 +1,4 @@
-import { createRequestDb } from "@/lib/db/request-db";
+import { createPublicDeadlineDb, createRequestDb } from "@/lib/db/request-db";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   DEFAULT_LOCALE,
@@ -243,13 +243,11 @@ export async function proxy(request: NextRequest) {
     : null;
   if (!needsAuth && !documentDetailKey) return response;
 
-  const dbPromise = createRequestDb(request);
-
   if (documentDetailKey) {
     const requestedShortId = shortIdFromParam(documentDetailKey);
     const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
     const lookup = await runPublicMemeLookupWithDeadline(async (signal) => {
-      const db = await dbPromise;
+      const db = await createPublicDeadlineDb();
       return db
         .from("memes")
         .select(urlLocale ? PUBLIC_LOCALIZED_MEME_DOCUMENT_SELECT : PUBLIC_MEME_CANONICAL_SELECT)
@@ -306,7 +304,7 @@ export async function proxy(request: NextRequest) {
 
   if (!needsAuth) return response;
 
-  const db = await dbPromise;
+  const db = await createRequestDb(request);
 
   let user: { id: string } | null = null;
   let authFailed = false;

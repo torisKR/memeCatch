@@ -1,6 +1,6 @@
 #!/bin/bash
 # Production-build HTTP regression for localized detail status handling.
-# Uses an isolated local PostgreSQL 17 cluster and never contacts production.
+# Uses an isolated PostgreSQL 17 cluster and never contacts production.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,10 +13,16 @@ pg_socket="$scratch/socket"
 pg_port=$((54000 + ($$ % 5000)))
 app_port=$((60000 + ($$ % 5000)))
 app_pid=""
+pg_container=""
+pg_mode="${LOCALIZED_SOFT404_POSTGRES:-native}"
 
 cleanup() {
   if [[ -n "$app_pid" ]]; then kill "$app_pid" >/dev/null 2>&1 || true; fi
-  pg_ctl -D "$pg_data" -m immediate stop >/dev/null 2>&1 || true
+  if [[ -n "$pg_container" ]]; then
+    docker rm -f "$pg_container" >/dev/null 2>&1 || true
+  else
+    pg_ctl -D "$pg_data" -m immediate stop >/dev/null 2>&1 || true
+  fi
   rm -rf -- "$scratch"
 }
 trap cleanup EXIT
@@ -25,29 +31,49 @@ if [[ ! -f "$standalone/server.js" ]]; then
   echo "standalone server missing; run pnpm build first" >&2
   exit 1
 fi
-for command in initdb pg_ctl createdb psql curl; do
+for command in psql curl; do
   command -v "$command" >/dev/null || {
     echo "required command missing: $command" >&2
     exit 1
   }
 done
-if [[ "$(postgres --version)" != *" 17."* ]]; then
-  echo "PostgreSQL 17 is required for this regression" >&2
-  exit 1
+if [[ "$pg_mode" == docker ]]; then
+  command -v docker >/dev/null || { echo "docker is required for PostgreSQL 17 CI mode" >&2; exit 1; }
+  pg_container="memecatch-soft404-pg-$$"
+  docker run -d --name "$pg_container" -e POSTGRES_HOST_AUTH_METHOD=trust \
+    -e POSTGRES_DB=memecatch -p "127.0.0.1:${pg_port}:5432" postgres:17 >/dev/null
+  for _ in $(seq 1 60); do
+    if psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$pg_port" -U postgres -d memecatch -c 'select 1' >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.25
+  done
+  psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$pg_port" -U postgres -d memecatch -c 'select 1' >/dev/null
+  pg_host=127.0.0.1
+else
+  for command in initdb pg_ctl createdb postgres; do
+    command -v "$command" >/dev/null || { echo "required command missing: $command" >&2; exit 1; }
+  done
+  if [[ "$(postgres --version)" != *" 17."* ]]; then
+    echo "PostgreSQL 17 is required for this regression" >&2
+    exit 1
+  fi
+  initdb -D "$pg_data" -A trust --no-locale --encoding=UTF8 -U postgres >/dev/null
+  mkdir -p "$pg_socket"
+  pg_ctl -D "$pg_data" -l "$scratch/postgres.log" \
+    -o "-k $pg_socket -p $pg_port" start >/dev/null
+  createdb -h "$pg_socket" -p "$pg_port" -U postgres memecatch
+  pg_host="$pg_socket"
 fi
 
-initdb -D "$pg_data" -A trust --no-locale --encoding=UTF8 -U postgres >/dev/null
-mkdir -p "$pg_socket"
-pg_ctl -D "$pg_data" -l "$scratch/postgres.log" \
-  -o "-k $pg_socket -p $pg_port" start >/dev/null
-createdb -h "$pg_socket" -p "$pg_port" -U postgres memecatch
+psql_admin=(psql -X -v ON_ERROR_STOP=1 -h "$pg_host" -p "$pg_port" -U postgres -d memecatch)
 
 # Homebrew PostgreSQL does not include pgvector. These detail-route fixtures do
 # not use semantic search, so only vector-specific migrations are omitted.
 sed -E '/CREATE EXTENSION IF NOT EXISTS vector/Id' \
   "$root/deploy/postgres/00-bootstrap.sql" \
-  | psql -v ON_ERROR_STOP=1 -h "$pg_socket" -p "$pg_port" -U postgres -d memecatch >/dev/null
-psql -v ON_ERROR_STOP=1 -h "$pg_socket" -p "$pg_port" -U postgres -d memecatch <<'SQL' >/dev/null
+  | "${psql_admin[@]}" >/dev/null
+"${psql_admin[@]}" <<'SQL' >/dev/null
 create role memecatch login password 'local-soft404';
 grant connect on database memecatch to memecatch;
 SQL
@@ -66,12 +92,11 @@ for migration in "$root"/db/migrations/*.sql; do
     -e '/create extension if not exists pg_net/Id' \
     -e '/create extension if not exists pg_cron/Id' \
     "$migration" \
-    | psql -v ON_ERROR_STOP=1 -h "$pg_socket" -p "$pg_port" -U postgres -d memecatch >/dev/null
+    | "${psql_admin[@]}" >/dev/null
 done
-psql -v ON_ERROR_STOP=1 -h "$pg_socket" -p "$pg_port" -U postgres -d memecatch \
-  -f "$root/deploy/postgres/99-app-identity.sql" >/dev/null
+"${psql_admin[@]}" -f "$root/deploy/postgres/99-app-identity.sql" >/dev/null
 
-psql -v ON_ERROR_STOP=1 -h "$pg_socket" -p "$pg_port" -U postgres -d memecatch <<'SQL' >/dev/null
+"${psql_admin[@]}" <<'SQL' >/dev/null
 insert into auth.users (id, email)
 values ('00000000-0000-4000-8000-000000000001', 'reviewer@local.invalid');
 update public.profiles

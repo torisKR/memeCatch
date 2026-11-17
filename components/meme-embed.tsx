@@ -11,8 +11,21 @@ import { HouseOriginalVisual } from "@/components/house-original-visual";
 import { memeCardArtAlt, memeCardArtFromMeme } from "@/lib/meme-card-art";
 import { videoPreview } from "@/lib/meme-video-preview";
 import { normalizeSourceUrl } from "@/lib/sources/url";
+import type { SeoRouteLocale } from "@/lib/i18n-routing";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
+
+const PLAYER_COPY: Record<SeoRouteLocale, {
+  representativeVideo: string; relatedVideo: string; playRepresentativeVideo: string; playRelatedVideo: string;
+  representativeContent: string; relatedContent: string; example: string;
+  openPost: string; loading: string; unavailable: string; openProvider: string; error: string;
+}> = {
+  ko: { representativeVideo: "대표 영상", relatedVideo: "관련 영상", playRepresentativeVideo: "대표 영상 재생", playRelatedVideo: "관련 영상 재생", representativeContent: "대표 콘텐츠", relatedContent: "관련 콘텐츠", example: "밈 사용 예시", openPost: "게시물 열기", loading: "콘텐츠 불러오는 중", unavailable: "이 TikTok 콘텐츠를 현재 재생할 수 없습니다.", openProvider: "에서 보기", error: "콘텐츠를 불러오지 못했습니다." },
+  en: { representativeVideo: "Representative video", relatedVideo: "Related video", playRepresentativeVideo: "Play representative video", playRelatedVideo: "Play related video", representativeContent: "Representative content", relatedContent: "Related content", example: "Meme example", openPost: "Open post", loading: "Loading content", unavailable: "This TikTok content cannot be played right now.", openProvider: " on", error: "Could not load content." },
+  ja: { representativeVideo: "代表動画", relatedVideo: "関連動画", playRepresentativeVideo: "代表動画を再生", playRelatedVideo: "関連動画を再生", representativeContent: "代表コンテンツ", relatedContent: "関連コンテンツ", example: "ミームの使用例", openPost: "投稿を開く", loading: "コンテンツを読み込み中", unavailable: "このTikTokコンテンツは現在再生できません。", openProvider: "で見る", error: "コンテンツを読み込めませんでした。" },
+  zh: { representativeVideo: "代表视频", relatedVideo: "相关视频", playRepresentativeVideo: "播放代表视频", playRelatedVideo: "播放相关视频", representativeContent: "代表内容", relatedContent: "相关内容", example: "迷因使用示例", openPost: "打开帖子", loading: "正在加载内容", unavailable: "目前无法播放此TikTok内容。", openProvider: "上查看", error: "无法加载内容。" },
+  "zh-tw": { representativeVideo: "代表影片", relatedVideo: "相關影片", playRepresentativeVideo: "播放代表影片", playRelatedVideo: "播放相關影片", representativeContent: "代表內容", relatedContent: "相關內容", example: "迷因使用範例", openPost: "開啟貼文", loading: "正在載入內容", unavailable: "目前無法播放此TikTok內容。", openProvider: "上查看", error: "無法載入內容。" },
+};
 
 /** Desktop detail art stays at most 420px tall so the title remains in the first viewport. */
 const DETAIL_HERO_IMAGE =
@@ -45,6 +58,7 @@ export function MemeEmbed({
   originYear,
   originKind,
   summary,
+  locale = "ko",
 }: {
   content: (Pick<
     MemeContentRow,
@@ -66,6 +80,7 @@ export function MemeEmbed({
   originKind?: string | null;
   /** 자체 제작 밈 요약 설명 */
   summary?: string | null;
+  locale?: SeoRouteLocale;
 }) {
   if (isHouseOriginal(originKind)) {
     return (
@@ -168,6 +183,7 @@ export function MemeEmbed({
           title={title}
           isShort={content.url?.includes("/shorts/") ?? false}
           isRepresentative={isRepresentative}
+          locale={locale}
         />
         {content.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -187,6 +203,7 @@ export function MemeEmbed({
           title={title}
           thumbnailUrl={verifiedVideoPoster}
           isRepresentative={isRepresentative}
+          locale={locale}
         />
         {content?.caption && (
           <figcaption className="mt-2 text-sm text-muted">
@@ -395,13 +412,16 @@ function LiteSocialEmbed({
   title,
   thumbnailUrl,
   isRepresentative,
+  locale,
 }: {
   provider: SocialProvider;
   sourceUrl: string;
   title: string;
   thumbnailUrl?: string | null;
   isRepresentative: boolean;
+  locale: SeoRouteLocale;
 }) {
+  const copy = PLAYER_COPY[locale];
   const [embed, setEmbed] = useState<OEmbedResponse | null>(() =>
     immediateSocialEmbed(provider, sourceUrl)
   );
@@ -470,9 +490,9 @@ function LiteSocialEmbed({
       } catch (loadError) {
         if (!active || controller.signal.aborted) return;
         setError(
-          loadError instanceof Error && loadError.message
+          locale === "ko" && loadError instanceof Error && loadError.message
             ? loadError.message
-            : "콘텐츠를 불러오지 못했습니다."
+            : copy.error
         );
       }
     }
@@ -508,7 +528,7 @@ function LiteSocialEmbed({
       controller.abort();
       io.disconnect();
     };
-  }, [provider, sourceUrl]);
+  }, [provider, sourceUrl, locale, copy.error]);
 
   const frameWidthClass =
     provider === "tiktok"
@@ -536,7 +556,7 @@ function LiteSocialEmbed({
     >
       <span className="font-bold tracking-tight">{providerName}</span>
       {!isRepresentative && (
-        <span className="text-muted">밈 사용 예시</span>
+        <span className="text-muted">{copy.example}</span>
       )}
       <a
         href={sourceUrl}
@@ -544,7 +564,7 @@ function LiteSocialEmbed({
         rel="noopener noreferrer"
         className="ml-auto inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
-        게시물 열기 <span aria-hidden>↗</span>
+        {copy.openPost} <span aria-hidden>↗</span>
       </a>
     </div>
   );
@@ -561,7 +581,7 @@ function LiteSocialEmbed({
           ref={playerRef}
           src={embed.embedUrl ?? undefined}
           srcDoc={threadsDocument}
-          title={`${title} — ${providerName} ${isRepresentative ? "대표 콘텐츠" : "관련 콘텐츠"}`}
+          title={`${title} — ${providerName} ${isRepresentative ? copy.representativeContent : copy.relatedContent}`}
           sandbox={
             provider === "threads"
               ? "allow-scripts allow-popups"
@@ -584,7 +604,7 @@ function LiteSocialEmbed({
         {sourceTape}
         <div className="mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center">
           <p role="alert" className="text-sm text-muted">
-            {playerUnavailable ? "이 TikTok 콘텐츠를 현재 재생할 수 없습니다." : error}
+            {playerUnavailable ? copy.unavailable : error}
           </p>
           <a
             href={sourceUrl}
@@ -592,7 +612,7 @@ function LiteSocialEmbed({
             rel="noopener noreferrer"
             className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
           >
-            {providerName}에서 보기 <span aria-hidden>↗</span>
+            {locale === "en" ? `View${copy.openProvider} ${providerName}` : `${providerName}${copy.openProvider}`} <span aria-hidden>↗</span>
           </a>
         </div>
       </div>
@@ -604,7 +624,7 @@ function LiteSocialEmbed({
       {sourceTape}
       <div
         role="status"
-        aria-label={`${providerName} 콘텐츠 불러오는 중`}
+        aria-label={`${providerName} ${copy.loading}`}
         className={`${frameClass} relative overflow-hidden rounded-2xl border border-border bg-surface-2`}
       >
         {thumbnailUrl && (
@@ -627,12 +647,15 @@ function LiteYouTube({
   title,
   isShort,
   isRepresentative,
+  locale,
 }: {
   videoId: string;
   title: string;
   isShort: boolean;
   isRepresentative: boolean;
+  locale: SeoRouteLocale;
 }) {
+  const copy = PLAYER_COPY[locale];
   const [playing, setPlaying] = useState(false);
   const thumb = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
 
@@ -655,7 +678,7 @@ function LiteYouTube({
         <iframe
           // autoplay는 파사드를 눌러 들어온 경우에만 — 대표 영상 최초 렌더는 자동재생 없음
           src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?rel=0${playing ? "&autoplay=1" : ""}`}
-          title={`${title} — ${isRepresentative ? "대표 영상" : "관련 영상"}`}
+          title={`${title} — ${isRepresentative ? copy.representativeVideo : copy.relatedVideo}`}
           sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
           allow="autoplay; encrypted-media; picture-in-picture"
           allowFullScreen
@@ -666,7 +689,7 @@ function LiteYouTube({
         <button
           type="button"
           onClick={() => setPlaying(true)}
-          aria-label={`${title} ${isRepresentative ? "대표 영상" : "관련 영상"} 재생`}
+          aria-label={`${title} ${isRepresentative ? copy.playRepresentativeVideo : copy.playRelatedVideo}`}
           className="group relative block h-full w-full"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

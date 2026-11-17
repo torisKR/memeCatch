@@ -125,7 +125,7 @@ function exactReviewedMediaSources(
     const normalizedSource = normalizeSourceUrl(source.canonical_url);
     if (!normalizedSource || normalizedSource.externalId !== source.external_id ||
         mediaPlatformIdentity(normalizedSource.platform) !== mediaPlatformIdentity(source.platform)) return false;
-    return mediaPlatformIdentity(source.platform) === "youtube" ||
+    return mediaPlatformIdentity(source.platform) === "youtube" || source.platform === "tiktok" ||
       normalizedContent?.canonicalUrl === normalizedSource.canonicalUrl;
   });
 }

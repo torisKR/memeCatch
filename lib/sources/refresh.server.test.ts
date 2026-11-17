@@ -730,12 +730,17 @@ describe("source refresh recovery", () => {
     }), firstSetup.client);
   });
 
-  it.each(["source", "content"] as const)("keeps provider identity recovery when the 404 %s write fails and retries it when due", async (failedWrite) => {
-    const source = { id: `s1-${failedWrite}`, platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+  it.each([
+    { platform: "tiktok", externalId: "1234567890", url: "https://www.tiktok.com/@a/video/1234567890", failedWrite: "content" },
+    { platform: "tiktok", externalId: "1234567890", url: "https://www.tiktok.com/@a/video/1234567890", failedWrite: "source" },
+    { platform: "instagram", externalId: "ABCdef12345", url: "https://www.instagram.com/reel/ABCdef12345/", failedWrite: "content" },
+    { platform: "instagram", externalId: "ABCdef12345", url: "https://www.instagram.com/reel/ABCdef12345/", failedWrite: "source" },
+  ] as const)("records and retries a new $platform 404 recovery when the $failedWrite write fails", async ({ platform, externalId, url, failedWrite }) => {
+    const source = { id: `${platform}-${failedWrite}`, platform, external_id: externalId, canonical_url: url, embeddable: true, removed_at: null };
     const recovery = {
-      sourceKey: `provider_identity:${source.id}`, sourceId: source.id, platform: "tiktok",
+      sourceKey: `${platform}:${externalId}`, sourceId: source.id, platform,
       externalId: source.external_id, canonicalUrl: source.canonical_url, attemptCount: 1,
-      nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "provider_transient",
+      nextRetryAt: new Date(Date.now() - 1_000).toISOString(), lastErrorCode: "db_failure",
       lastErrorRetryable: true, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
     } as const;
     const failedSource = sourceQuery([source], failedWrite === "source" ? { message: "source write failed" } : undefined);
@@ -756,13 +761,32 @@ describe("source refresh recovery", () => {
       rpc: vi.fn(),
     };
     mocks.createAdminClient.mockReturnValueOnce(failedClient).mockReturnValueOnce(retryClient);
-    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([recovery]).mockResolvedValueOnce([recovery]);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([]).mockResolvedValueOnce([recovery]);
     mocks.getOEmbed.mockRejectedValue(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
 
     const first = await runSourceRefresh();
 
     expect(first.status).toBe("partial");
+    expect(first.oembed).toMatchObject({
+      checked: 1,
+      removed: 0,
+      failed: 1,
+      errors: [`social_404_write_failed:${source.id}`],
+    });
     expect(resolveSourceAcquisitionFailure).not.toHaveBeenCalled();
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceKey: `${platform}:${externalId}`,
+      sourceId: source.id,
+      code: "db_failure",
+    }), failedClient);
+    expect(failedContent.update).toHaveBeenCalledWith({ availability: "dead" });
+    if (failedWrite === "content") {
+      expect(failedSource.update).not.toHaveBeenCalled();
+    } else {
+      expect(failedSource.update).toHaveBeenCalled();
+      expect(failedContent.update.mock.invocationCallOrder[0]).toBeLessThan(failedSource.update.mock.invocationCallOrder[0]);
+    }
+    expect(JSON.stringify(failedJob.insert.mock.calls)).not.toContain(`${failedWrite} write failed`);
 
     const second = await runSourceRefresh();
 
@@ -772,9 +796,42 @@ describe("source refresh recovery", () => {
     expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
       sourceKey: recovery.sourceKey,
     }), retryClient);
-    expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
-      sourceKey: `tiktok:${source.external_id}`,
-    }), retryClient);
+    if (platform === "tiktok") {
+      expect(resolveSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+        sourceKey: `provider_identity:${source.id}`,
+      }), retryClient);
+    }
+  });
+
+  it("continues with the next social source after a row-level 404 write failure", async () => {
+    const failed = { id: "tt-404-content-failure", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null } as const;
+    const next = { id: "ig-after-404-failure", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/reel/ABCdef12345/", embeddable: true, removed_at: null } as const;
+    const sourceBuilder = sourceQuery([failed, next]);
+    const content = query({ data: [], error: null });
+    content.then!.mockImplementationOnce((resolve) => Promise.resolve({
+      data: null,
+      error: { message: "sensitive content database error" },
+    }).then(resolve));
+    const jobInsert = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      from: vi.fn((table: string) => table === "job_runs" ? { insert: jobInsert } : table === "meme_contents" ? content : sourceBuilder),
+      rpc: vi.fn(),
+    };
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockRejectedValue(new OEmbedError("not found", "UPSTREAM_ERROR", 404));
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.oembed).toMatchObject({ checked: 2, removed: 1, failed: 1 });
+    expect(mocks.getOEmbed).toHaveBeenCalledTimes(2);
+    expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", failed.id);
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", next.id);
+    expect(recordSourceAcquisitionFailure).toHaveBeenCalledWith(expect.objectContaining({
+      sourceId: failed.id,
+      code: "db_failure",
+    }), client);
+    expect(JSON.stringify(jobInsert.mock.calls)).not.toContain("sensitive content database error");
   });
 
   it("reports database update and job audit failures", async () => {

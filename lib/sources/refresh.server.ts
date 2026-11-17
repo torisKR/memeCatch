@@ -388,33 +388,66 @@ async function refreshOEmbedSources(
       }
     } catch (error) {
       if (error instanceof OEmbedError && error.status === 404) {
-        const { error: sourceError } = await admin
-          .from("media_sources")
-          .update({
-            removed_at: now,
-            last_checked_at: now,
-            title: null,
-            thumbnail_url: null,
-            metadata_expires_at: null,
-          })
-          .eq("id", row.id);
-        if (sourceError) throw new Error("source_refresh_update_failed");
-        await syncMemeContentsAvailability(admin, row, "dead");
+        try {
+          // Project dead content first so a failed source write remains due and
+          // cannot leave live content behind a freshly checked removed source.
+          await syncMemeContentsAvailability(admin, row, "dead");
+          const { error: sourceError } = await admin
+            .from("media_sources")
+            .update({
+              removed_at: now,
+              last_checked_at: now,
+              title: null,
+              thumbnail_url: null,
+              metadata_expires_at: null,
+            })
+            .eq("id", row.id);
+          if (sourceError) throw new Error("source_refresh_update_failed");
+        } catch {
+          failed += 1;
+          checked += 1;
+          errors.push(`social_404_write_failed:${row.id}`);
+          if (row.external_id) {
+            try {
+              await recordSourceAcquisitionFailure({
+                sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+                idempotencyKey: attemptIdempotencyKey,
+                platform: row.platform,
+                externalId: row.external_id,
+                canonicalUrl: row.canonical_url,
+                code: "db_failure",
+                attempt: 1,
+                occurredAt: attemptStartedAt,
+                sourceId: row.id,
+              }, admin);
+            } catch {
+              errors.push(`source_recovery_record_failed:${row.id}`);
+            }
+          }
+          continue;
+        }
         if (row.external_id) {
-          if (row.platform === "tiktok") {
+          try {
+            if (row.platform === "tiktok") {
+              await resolveSourceAcquisitionFailure({
+                sourceKey: providerIdentityRecoveryKey(row),
+                attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+                attemptStartedAt,
+                resolvedAt: new Date(),
+              }, admin);
+            }
             await resolveSourceAcquisitionFailure({
-              sourceKey: providerIdentityRecoveryKey(row),
-              attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+              sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+              attemptIdempotencyKey,
               attemptStartedAt,
               resolvedAt: new Date(),
             }, admin);
+          } catch {
+            failed += 1;
+            checked += 1;
+            errors.push(`social_404_recovery_resolve_failed:${row.id}`);
+            continue;
           }
-          await resolveSourceAcquisitionFailure({
-            sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-            attemptIdempotencyKey,
-            attemptStartedAt,
-            resolvedAt: new Date(),
-          }, admin);
         }
         removed += 1;
       } else if (row.external_id) {

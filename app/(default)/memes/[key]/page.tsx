@@ -22,6 +22,7 @@ import { UsageExamples } from "@/components/usage-examples";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { AuthInvite } from "@/components/auth-invite";
 import { MemeEmbed } from "@/components/meme-embed";
+import { RelatedVideoList } from "@/components/related-video-list";
 import { ReactionBar } from "@/components/reaction-bar";
 import { Comments } from "@/components/comments";
 import { ExportButton } from "@/components/export-button";
@@ -56,7 +57,7 @@ import {
 } from "@/lib/i18n-routing";
 import { koreanMemeShareImage, shareCacheVersion } from "@/lib/meme-share-image";
 import { representativeImageUrl } from "@/lib/meme-share-photo";
-import { socialVideoPreview } from "@/lib/meme-video-preview";
+import { selectRelatedVideos } from "@/lib/related-videos";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -246,15 +247,8 @@ export default async function MemeDetailPage({ params }: Props) {
     reviewedMediaSources,
   });
   const representative = delivery.representative;
-  // TikTok·Instagram 등 비대표 임베드 — 대표 영상 아래 "관련 콘텐츠"로 노출
-  const relatedSocialContents = delivery.embeddableContents
-    .filter(
-      (c) =>
-        c.id !== representative?.id &&
-        ["tiktok", "instagram"].includes(String(c.platform ?? "").toLowerCase()),
-    )
-    .filter((content) => socialVideoPreview([content]) !== null)
-    .slice(0, 4);
+  // 검수·권리·공개 정책을 통과한 재생 가능 영상만, 플랫폼 영상 ID 기준으로 중복 제거한다.
+  const relatedVideos = selectRelatedVideos(delivery.embeddableContents, representative);
   const sourceLinks = delivery.sourceLinks;
   const fallbackSourceUrl = delivery.fallbackSourceUrl;
   // usage_examples 컬럼·데이터는 에이전트 D가 추가 중 — DB 타입 재생성 전까지
@@ -376,26 +370,17 @@ export default async function MemeDetailPage({ params }: Props) {
           <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
           <ExportButton shortId={meme.short_id} />
 
-
-          {/* 관련 TikTok·Instagram — 대표 아래 공개 사용 예시(비대표 임베드) */}
-          {relatedSocialContents.length > 0 && (
+          {/* 관련 영상 — 대표 아래 공개 사용 예시(비대표 임베드) */}
+          {relatedVideos.length > 0 && (
             <section aria-labelledby="related-social-embeds" className="space-y-3">
               <h2 id="related-social-embeds" className="text-lg font-bold">
-                관련 TikTok·Instagram
+                관련 영상
               </h2>
               <p className="text-sm text-muted">
-                원본 단정이 아닌 공개 사용 예시예요. 권리·맥락은 출처에서 확인하세요.
+                검수된 공개 사용 예시 {relatedVideos.length.toLocaleString("ko-KR")}개예요.
+                원본 단정이 아니며, 권리·맥락은 출처에서 확인하세요.
               </p>
-              <div className="grid gap-4">
-                {relatedSocialContents.map((content) => (
-                  <MemeEmbed
-                    key={content.id}
-                    content={content}
-                    title={meme.title}
-                    isRepresentative={false}
-                  />
-                ))}
-              </div>
+              <RelatedVideoList contents={relatedVideos} title={meme.title} />
             </section>
           )}
         </div>

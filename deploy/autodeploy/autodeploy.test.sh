@@ -45,6 +45,25 @@ mig="$(commit mig)"
 ROOT="$repo"
 [[ -z "$(new_migrations "$base" "$code")" ]] || fail "code-only change flagged as migration"
 [[ "$(new_migrations "$code" "$mig")" == db/migrations/20990101000000_x.sql ]] || fail "migration not detected"
+mkdir -p "$repo/db/migrations/nested"
+echo 'select 2;' >"$repo/db/migrations/nested/new.sql"
+echo ignored >"$repo/db/migrations/nested/readme.txt"
+nested="$(commit nested)"
+[[ "$(new_migrations "$mig" "$nested")" == db/migrations/nested/new.sql ]] || fail "nested migration not detected"
+echo 'select 3;' >>"$repo/db/migrations/20990101000000_x.sql"
+changed="$(commit changed)"
+[[ "$(new_migrations "$nested" "$changed")" == db/migrations/20990101000000_x.sql ]] || fail "changed migration not detected"
+missing_sha=1111111111111111111111111111111111111111
+if new_migrations "$missing_sha" "$mig" >/dev/null 2>&1; then fail "missing running commit was accepted"; fi
+if new_migrations "$mig" "$missing_sha" >/dev/null 2>&1; then fail "missing target commit was accepted"; fi
+if new_migrations invalid "$mig" >/dev/null 2>&1; then fail "invalid running SHA was accepted"; fi
+# A valid commit object with an unavailable tree makes the real git diff fail.
+broken_tree_commit="$(printf 'tree 2222222222222222222222222222222222222222\nauthor t <t@t> 1 +0000\ncommitter t <t@t> 1 +0000\n\nbroken tree\n' | git -C "$repo" hash-object -t commit -w --stdin)"
+git -C "$repo" cat-file -e "${broken_tree_commit}^{commit}" || fail "broken tree fixture is not a commit"
+if new_migrations "$broken_tree_commit" "$mig" >/dev/null 2>&1; then fail "git diff failure was accepted"; fi
+real_new_migrations="$(declare -f new_migrations)"
+test_real_git="$(command -v git)"
+export test_real_git
 
 # Build failure must propagate even under `if !` (errexit off), and must stop
 # before the auxiliary compose build runs.
@@ -229,9 +248,25 @@ cat >"$stub/git" <<'STUB'
 #!/usr/bin/env bash
 shift 2
 case "$1" in
-  fetch|merge-base) exit 0 ;;
+  fetch) exit 0 ;;
+  merge-base) [[ "$4" == "$test_running" && "$3" != "$test_running" ]] && exit 1; exit 0 ;;
+  ls-remote)
+    if [[ -n "${test_remote_flip_after:-}" ]]; then
+      count=0; [[ -f "$test_remote_flip_after" ]] && count="$(cat "$test_remote_flip_after")"
+      count=$((count + 1)); printf '%s\n' "$count" >"$test_remote_flip_after"
+      if (( count >= 3 )); then printf '%s\trefs/heads/main\n' 1111111111111111111111111111111111111111; else printf '%s\trefs/heads/main\n' "$test_head"; fi
+    elif [[ -n "${test_remote_sequence:-}" ]]; then
+      if [[ -f "$test_remote_sequence" ]]; then echo -e "1111111111111111111111111111111111111111\trefs/heads/main"; else : >"$test_remote_sequence"; printf '%s\trefs/heads/main\n' "$test_head"; fi
+    else
+      printf '%s\trefs/heads/main\n' "${test_remote_head:-$test_head}"
+    fi ;;
+
   rev-parse) echo "$test_head" ;;
-  status|diff) exit 0 ;;
+  cat-file|diff)
+    if [[ "${test_real_diff:-}" == 1 ]]; then exec "$test_real_git" -C "$test_real_git_root" "$@"; fi
+    exit 0 ;;
+  reset) echo reset >>"$test_calls"; exit 0 ;;
+  status) exit 0 ;;
   *) exit 1 ;;
 esac
 STUB
@@ -239,17 +274,30 @@ chmod +x "$stub/git"
 printf '#!/usr/bin/env bash\nexit 0\n' >"$stub/flock"
 chmod +x "$stub/flock"
 running_sha() { echo "$test_running"; }
-ci_state() { echo "$test_ci"; }
-new_migrations() { :; }
+ci_state() {
+  if [[ -n "${test_ci_transition:-}" && -f "$test_ci_transition" ]]; then
+    [[ "$test_ci_after" != error ]] || return 1
+    echo "$test_ci_after"
+  else
+    echo "$test_ci"
+  fi
+}
+new_migrations() { printf '%s' "${test_migrations:-}"; }
 tag_rollback() { echo snapshot >>"$test_calls"; }
 checkout_target() { return 0; }
-build_images() { echo build >>"$test_calls"; }
+build_images() {
+  echo build >>"$test_calls"
+  if [[ -n "${test_ci_transition:-}" ]]; then : >"$test_ci_transition"; fi
+  return 0
+}
 public_release_is() { return 0; }
+public_release_once() { [[ "${test_public:-ok}" == ok ]]; }
 self_update() { :; }
 prune_images() { :; }
 test_head=0123456789abcdef0123456789abcdef01234567
 test_running="$test_head"; test_ci=success; test_calls="$stub/manual-calls"
 export test_head test_running test_ci test_calls
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
 : >"$test_calls"
 ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="redeploy $test_head" main ) >/dev/null || fail "manual redeploy failed"
 grep -q '^build$' "$test_calls" || fail "manual redeploy did not build"
@@ -261,5 +309,194 @@ rc=0; ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" ST
 [[ "$rc" == 3 ]] || fail "redeploy allowed a non-running commit"
 rc=0; ( test_ci=failure; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="redeploy $test_head" main ) >/dev/null || rc=$?
 [[ "$rc" == 3 ]] || fail "redeploy bypassed CI failure"
+
+
+# Status is read-only and only confirms the exact running main with completed
+# CI, a success marker, the running image and a matching public observation.
+[[ "$(SSH_ORIGINAL_COMMAND="status $test_head" requested_sha)" == "$test_head" ]] || fail "status SHA rejected"
+SSH_ORIGINAL_COMMAND="status $test_head" requested_status || fail "status request not recognized"
+[[ -z "$(SSH_ORIGINAL_COMMAND="status $test_head; id" requested_sha)" ]] || fail "injected status accepted"
+rm -f "$stub/manual-state/failed-$test_head"
+: >"$stub/manual-state/lock"
+: >"$test_calls"
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "verified status rejected"
+[[ ! -s "$test_calls" ]] || fail "status executed a deployment"
+for status_case in missing_marker wrong_marker wrong_image failed_ci missing_ci failed_marker bad_public stale_main; do
+  printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+  rm -f "$stub/manual-state/failed-$test_head"
+  rc=0
+  case "$status_case" in
+    missing_marker) rm "$stub/manual-state/deployed" ;;
+    wrong_marker) printf '%040d\n' 1 >"$stub/manual-state/deployed" ;;
+    failed_marker) : >"$stub/manual-state/failed-$test_head" ;;
+  esac
+  ( case "$status_case" in
+      wrong_image) test_running=1111111111111111111111111111111111111111 ;;
+      failed_ci) test_ci=failure ;;
+      missing_ci) test_ci=pending ;;
+      bad_public) test_public=bad ;;
+      stale_main) export test_remote_head=1111111111111111111111111111111111111111 ;;
+    esac
+    PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main
+  ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 3 ]] || fail "status $status_case accepted or returned $rc"
+  [[ ! -s "$test_calls" ]] || fail "status $status_case attempted deployment"
+done
+rm -f "$stub/manual-state/failed-$test_head"
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+# A fresh main must be checked again after all other evidence.
+rc=0
+( export test_remote_sequence="$stub/remote-sequence"; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "status accepted a main change during verification"
+
+# Exercise an actual advisory lock with Python's flock. This runs on macOS too;
+# the temporary flock command only substitutes the CLI missing there.
+mkdir -p "$stub/real-lock"
+cat >"$stub/real-lock/flock" <<'STUB'
+#!/usr/bin/env python3
+import fcntl, sys
+try:
+    fcntl.flock(int(sys.argv[-1]), fcntl.LOCK_SH | fcntl.LOCK_NB)
+except BlockingIOError:
+    sys.exit(1)
+STUB
+chmod +x "$stub/real-lock/flock"
+python3 -c 'import fcntl,sys,time; f=open(sys.argv[1],"r"); fcntl.flock(f,fcntl.LOCK_EX); open(sys.argv[2],"w").close(); time.sleep(20)' "$stub/manual-state/lock" "$stub/lock-ready" &
+lock_holder=$!
+for _ in $(seq 1 100); do [[ -e "$stub/lock-ready" ]] && break; sleep 0.02; done
+if [[ ! -e "$stub/lock-ready" ]]; then kill "$lock_holder" 2>/dev/null || true; wait "$lock_holder" 2>/dev/null || true; fail "lock holder did not start"; fi
+rc=0
+( PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+kill "$lock_holder" 2>/dev/null || true
+wait "$lock_holder" 2>/dev/null || true
+[[ "$rc" == 3 ]] || fail "status ignored the live deploy lock"
+( PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "status failed after deploy lock released"
+rm "$stub/manual-state/lock"
+rc=0
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -e "$stub/manual-state/lock" ]] || fail "status without a lock must fail without creating state"
+
+# An automatic same-SHA no-op is not success without the same evidence.
+rm "$stub/manual-state/deployed"
+rc=0
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "same-SHA no-op accepted without marker"
+[[ ! -s "$test_calls" ]] || fail "unverified no-op executed deployment"
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+
+# An older request must not be deployed after main advances.
+rc=0
+( test_running=1111111111111111111111111111111111111111 PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND=2222222222222222222222222222222222222222 main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "stale SHA was allowed to deploy"
+
+# A real new SHA must still go through the CI and migration approval gates.
+old_sha=1111111111111111111111111111111111111111
+rc=0
+( test_running="$old_sha" test_ci=failure PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "new SHA bypassed the CI gate"
+rm -f "$stub/manual-state/failed-$test_head"
+rc=0
+( test_running="$old_sha" test_migrations='db/migrations/new.sql' PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "new SHA bypassed the migration gate"
+: >"$stub/manual-state/allow-$test_head"
+( test_running="$old_sha" test_migrations='db/migrations/new.sql' PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null || fail "approved migration did not deploy"
+grep -q '^deploy ' "$test_calls" || fail "approved migration did not activate"
+rm "$stub/manual-state/allow-$test_head"
+: >"$test_calls"
+
+# A real git object failure must fail closed even with migration approval present.
+: >"$stub/manual-state/allow-$mig"
+rc=0
+( eval "$real_new_migrations"; export test_real_diff=1 test_real_git_root="$repo"; test_head="$mig" test_running="$missing_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$mig" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "missing running commit bypassed migration gate"
+rc=0
+( eval "$real_new_migrations"; export test_real_diff=1 test_real_git_root="$repo"; test_head="$mig" test_running="$broken_tree_commit" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$mig" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "git diff error bypassed migration gate"
+rm "$stub/manual-state/allow-$mig"
+
+# A CI rerun can fail, become pending, or be unreachable during image build.
+for test_ci_after in failure pending error; do
+  rm -f "$stub/ci-during-build"
+  : >"$test_calls"
+  rc=0
+  ( export test_ci_transition="$stub/ci-during-build" test_ci_after; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 3 ]] || fail "CI $test_ci_after after build was accepted"
+  grep -q '^build$' "$test_calls" || fail "CI $test_ci_after test did not reach build"
+  grep -q '^reset$' "$test_calls" || fail "CI $test_ci_after did not restore checkout"
+  ! grep -q '^deploy ' "$test_calls" || fail "CI $test_ci_after activated image"
+done
+rm -f "$stub/ci-during-build"
+: >"$test_calls"
+( export test_ci_transition="$stub/ci-during-build" test_ci_after=failure; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT='' SSH_CONNECTION='' SSH_ORIGINAL_COMMAND='' main ) >/dev/null 2>&1 || fail "timer did not defer failed CI"
+grep -q '^build$' "$test_calls" || fail "timer CI test did not reach build"
+! grep -q '^deploy ' "$test_calls" || fail "timer activated image after CI failure"
+: >"$test_calls"
+
+# The target can cease to be main during a long build. It must not be activated.
+rm -f "$stub/remote-during-build"
+: >"$test_calls"
+rc=0
+( export test_remote_sequence="$stub/remote-during-build"; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "stale target was accepted after build"
+grep -q '^build$' "$test_calls" || fail "main-change test did not reach build"
+! grep -q '^deploy ' "$test_calls" || fail "stale image was activated after main changed"
+: >"$test_calls"
+# Also reject main advancing while the final CI request is in flight.
+rm -f "$stub/remote-during-ci"
+rc=0
+( export test_remote_flip_after="$stub/remote-during-ci"; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "main change during final CI verification was accepted"
+grep -q '^build$' "$test_calls" || fail "final main check did not reach build"
+! grep -q '^deploy ' "$test_calls" || fail "main change during final CI verification activated image"
+: >"$test_calls"
+
+# Test the actual caller with a fake SSH transport. Only exit 255 starts
+# read-only status retries; no test may issue the deploy command twice.
+cat >"$stub/ssh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "${@: -1}" >>"$ssh_calls"
+number=0; [[ -f "$ssh_count" ]] && number="$(cat "$ssh_count")"
+number=$((number + 1)); printf '%s\n' "$number" >"$ssh_count"
+IFS=, read -ra responses <<<"$ssh_results"
+rc="${responses[number - 1]:-3}"
+if (( number > 1 )) && [[ "$rc" == 0 && "${ssh_silent:-0}" != 1 ]]; then
+  printf '2026-11-17T17:46:40Z memecatch-autodeploy: verified deployed %s\n' "${ssh_evidence_sha:-$GITHUB_SHA}"
+fi
+exit "$rc"
+STUB
+cat >"$stub/timeout" <<'STUB'
+#!/usr/bin/env bash
+shift; exec "$@"
+STUB
+cat >"$stub/sleep" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+chmod +x "$stub/ssh" "$stub/timeout" "$stub/sleep"
+ssh_calls="$stub/ssh-calls"; ssh_count="$stub/ssh-count"
+export ssh_calls ssh_count
+for scenario in direct_success direct_success_unverified disconnect_then_success disconnect_then_retry nontransport_failure never_confirmed silent_status wrong_evidence; do
+  : >"$ssh_calls"; rm -f "$ssh_count"; ssh_silent=0; ssh_evidence_sha="$test_head"
+  case "$scenario" in
+    direct_success) ssh_results=0,0; expected_rc=0; expected_calls=2 ;;
+    direct_success_unverified) ssh_results=0,3,3,3,3,3,3,3,3; expected_rc=1; expected_calls=9 ;;
+    disconnect_then_success) ssh_results=255,0; expected_rc=0; expected_calls=2 ;;
+    disconnect_then_retry) ssh_results=255,255,124,0; expected_rc=0; expected_calls=4 ;;
+    nontransport_failure) ssh_results=3; expected_rc=3; expected_calls=1 ;;
+    never_confirmed) ssh_results=255,3,3,3,3,3,3,3,3; expected_rc=1; expected_calls=9 ;;
+    silent_status) ssh_results=255,0,0,0,0,0,0,0,0; ssh_silent=1; expected_rc=1; expected_calls=9 ;;
+    wrong_evidence) ssh_results=255,0,0,0,0,0,0,0,0; ssh_evidence_sha=1111111111111111111111111111111111111111; expected_rc=1; expected_calls=9 ;;
+  esac
+  export ssh_results ssh_silent ssh_evidence_sha
+  rc=0
+  ( PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == "$expected_rc" ]] || fail "$scenario returned $rc instead of $expected_rc"
+  [[ "$(wc -l <"$ssh_calls" | tr -d ' ')" == "$expected_calls" ]] || fail "$scenario called SSH unexpectedly"
+  [[ "$(head -1 "$ssh_calls")" == "$test_head" ]] || fail "$scenario did not deploy the intended SHA"
+  [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "$scenario repeated a deployment"
+  if (( expected_calls > 1 )); then
+    [[ "$(grep -c "^status $test_head$" "$ssh_calls")" == "$((expected_calls - 1))" ]] || fail "$scenario sent a non-status retry"
+  fi
+done
 
 echo "autodeploy OK"

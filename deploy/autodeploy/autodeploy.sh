@@ -69,7 +69,10 @@ running_sha() {
 # Added or changed migration files between two commits.
 new_migrations() {
   local from="$1" to="$2"
-  git -C "$ROOT" diff --name-only --diff-filter=AM "$from" "$to" -- db/migrations/ | grep '\.sql$' || true
+  [[ "$from" =~ ^[0-9a-f]{40}$ && "$to" =~ ^[0-9a-f]{40}$ ]] || return 1
+  git -C "$ROOT" cat-file -e "${from}^{commit}" || return 1
+  git -C "$ROOT" cat-file -e "${to}^{commit}" || return 1
+  git -C "$ROOT" diff --name-only --diff-filter=AM "$from" "$to" -- ':(glob)db/migrations/**/*.sql'
 }
 
 # Image a compose service currently runs.
@@ -231,6 +234,14 @@ public_release_is() {
   return 1
 }
 
+# A single observation for read-only status; retries belong to the caller.
+public_release_once() {
+  local sha="$1" seen
+  seen="$(curl -fsSI --max-time 15 "$PUBLIC_URL/" 2>/dev/null \
+    | tr -d '\r' | awk -F': ' 'tolower($1) == "x-memecatch-release-sha" { print $2 }')" || return 1
+  [[ "$seen" == "$sha" ]]
+}
+
 # Install the checkout's agent as the running copy (atomic rename).
 self_update() {
   local src="$ROOT/deploy/autodeploy/autodeploy.sh" dest="$STATE_DIR/bin/autodeploy.sh"
@@ -267,6 +278,7 @@ not_deployed() {
 # The commit a GitHub run asked for, or empty. Only a full SHA is accepted.
 requested_sha() {
   local req="${SSH_ORIGINAL_COMMAND:-}"
+  [[ "$req" =~ ^status\ [0-9a-f]{40}$ ]] && { printf '%s\n' "${req#status }"; return; }
   [[ "$req" =~ ^redeploy\ [0-9a-f]{40}$ ]] && { printf '%s\n' "${req#redeploy }"; return; }
   [[ "$req" =~ ^[0-9a-f]{40}$ ]] && printf '%s\n' "$req"
   return 0
@@ -276,12 +288,58 @@ requested_redeploy() {
   [[ "${SSH_ORIGINAL_COMMAND:-}" =~ ^redeploy\ [0-9a-f]{40}$ ]]
 }
 
+requested_status() {
+  [[ "${SSH_ORIGINAL_COMMAND:-}" =~ ^status\ [0-9a-f]{40}$ ]]
+}
+
+# A marker is written only after the migration gate, deployment and public
+# release check succeed. Require all independent evidence; an image alone may
+# belong to an interrupted deploy. Call under the deploy lock.
+confirmed_deployment() {
+  local sha="$1" marker state running
+  [[ -f "$STATE_DIR/deployed" && ! -e "$STATE_DIR/failed-$sha" ]] || return 1
+  marker="$(cat "$STATE_DIR/deployed")" || return 1
+  [[ "$marker" == "$sha" ]] || return 1
+  running="$(running_sha)" || return 1
+  [[ "$running" == "$sha" ]] || return 1
+  state="$(ci_state "$sha")" || return 1
+  [[ "$state" == success ]] || return 1
+  public_release_once "$sha"
+}
+
+remote_main_is() {
+  local sha="$1" head
+  head="$(timeout 10s git -C "$ROOT" ls-remote --exit-code origin refs/heads/main | awk '$2 == "refs/heads/main" { print $1 }')" || return 1
+  [[ "$head" == "$sha" ]]
+}
+
+# Read-only status for reconciling a disconnected SSH call. It cannot deploy or
+# create state. A shared lock waits for the original exclusive deploy to finish.
+verify_deployment_status() (
+  local sha="$1"
+  [[ -f "$STATE_DIR/lock" ]] || return 1
+  exec 8<"$STATE_DIR/lock" || return 1
+  flock -s -w 30 8 || return 1
+  remote_main_is "$sha" || return 1
+  confirmed_deployment "$sha" || return 1
+  # A new main may arrive during the public/CI checks.
+  remote_main_is "$sha"
+)
+
 main() {
   # Over SSH a full commit SHA is mandatory: a missing or malformed request
   # must never fall back to deploying whatever origin/main points at. Checked
   # first, so a bare key probe does no git, CI, or docker work.
   if [[ -n "${SSH_CONNECTION:-}" && -z "$(requested_sha)" ]]; then
     not_deployed "an SSH deploy must name a full commit SHA; got '${SSH_ORIGINAL_COMMAND:-}'"
+  fi
+  if requested_status; then
+    [[ -n "${SSH_CONNECTION:-}" ]] || not_deployed "status requires SSH"
+    if verify_deployment_status "$(requested_sha)"; then
+      log "verified deployed $(requested_sha)"
+      exit 0
+    fi
+    not_deployed "deployment status could not be verified for $(requested_sha)"
   fi
   mkdir -p "$STATE_DIR"
   exec 9>"$STATE_DIR/lock"
@@ -307,8 +365,12 @@ main() {
   if [[ -n "$req" ]]; then
     git -C "$ROOT" merge-base --is-ancestor "$req" "$target" 2>/dev/null \
       || not_deployed "${req:0:7} is not on origin/main; refusing"
+    [[ "$req" == "$target" ]] || not_deployed "requested commit is not current origin/main"
     if [[ -z "$force" ]] && git -C "$ROOT" merge-base --is-ancestor "$req" "$current" 2>/dev/null; then
-      log "running ${current:0:7} already includes ${req:0:7}"
+      [[ "$req" == "$target" && "$req" == "$running" ]] || not_deployed "requested commit is not the running origin/main"
+      confirmed_deployment "$req" || not_deployed "running commit lacks verified deployment evidence"
+      remote_main_is "$req" || not_deployed "origin/main changed during deployment verification"
+      log "verified deployed $req"
       exit 0
     fi
     target="$req"
@@ -331,7 +393,8 @@ main() {
     *) not_deployed "CI has not passed on ${target:0:7} yet" ;;
   esac
 
-  migrations="$(new_migrations "$current" "$target")"
+  migrations="$(new_migrations "$current" "$target")" \
+    || not_deployed "cannot determine migrations from ${current:0:7} to ${target:0:7}; refusing to deploy"
   if [[ -n "$migrations" && ! -e "$STATE_DIR/allow-$target" ]]; then
     printf '  %s\n' $migrations
     not_deployed "${target:0:7} adds the migrations above; apply them, then touch $STATE_DIR/allow-$target and re-run"
@@ -342,6 +405,9 @@ main() {
     exit 1
   fi
 
+  if [[ -n "$req" ]]; then
+    remote_main_is "$target" || not_deployed "origin/main changed before deployment"
+  fi
   log "deploying ${target:0:7} (running ${current:0:7})"
   # Snapshot before building; see tag_rollback.
   tag_rollback "$current"
@@ -351,6 +417,23 @@ main() {
     git -C "$ROOT" reset -q --keep "$current"
     touch "$STATE_DIR/failed-$target"
     exit 1
+  fi
+
+  # A build can take minutes. Recheck both the latest main and the latest CI
+  # observation, then main once more after that potentially slow CI query.
+  local activation_error=""
+  if ! remote_main_is "$target"; then
+    activation_error="origin/main changed or could not be verified during image build"
+  elif ! state="$(ci_state "$target")"; then
+    activation_error="CI could not be verified after image build"
+  elif [[ "$state" != success ]]; then
+    activation_error="CI is $state after image build"
+  elif ! remote_main_is "$target"; then
+    activation_error="origin/main changed during final CI verification"
+  fi
+  if [[ -n "$activation_error" ]]; then
+    git -C "$ROOT" reset -q --keep "$current" || not_deployed "could not restore checkout after activation gate failed"
+    not_deployed "$activation_error; not deploying"
   fi
 
   # RELEASE_SHA from the shell overrides any stale value in .env.

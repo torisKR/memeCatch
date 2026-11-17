@@ -244,6 +244,7 @@ function preserveItemPositions(previous: MemeListItem[], next: MemeListItem[]): 
 
 export function ExploreGrid({
   initial,
+  initialAlternatives = [],
   initialPreviews,
   initialPreviewUnavailable = false,
   filters,
@@ -254,6 +255,8 @@ export function ExploreGrid({
   indexableIds,
 }: {
   initial: MemeListItem[];
+  /** Server-approved curated cards hidden by distinct catalog equivalents. */
+  initialAlternatives?: MemeListItem[];
   initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
   initialPreviewUnavailable?: boolean;
   filters: ExploreFilters;
@@ -301,6 +304,7 @@ export function ExploreGrid({
   const pendingCandidatesRef = useRef(new Map<string, MemeListItem>(
     initialPreviewUnavailable ? initial.filter((item) => !item.id.startsWith("curated-")).map((item) => [item.id, item]) : [],
   ));
+  const generationsRef = useRef(new Map<string, number>());
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -325,10 +329,21 @@ export function ExploreGrid({
       const fresh = candidates.filter((item) =>
         mergeSearchPresentationItems(confirmedItems, [item]).some((winner) => winner.id === item.id),
       );
+      const generations = new Map(fresh.map((item) => {
+        const key = searchPresentationKey(item);
+        return [key, generationsRef.current.get(key) ?? 0] as const;
+      }));
       const ids = fresh.map((item) => item.id);
       const verified = await fetchQualifiedPreviews(ids);
       const existingKeys = new Set(itemsRef.current.map(searchPresentationKey));
+      const staleIds: string[] = [];
       const eligible = fresh.filter((item) => {
+        const key = searchPresentationKey(item);
+        if ((generationsRef.current.get(key) ?? 0) !== generations.get(key)) {
+          pendingCandidatesRef.current.set(item.id, item);
+          staleIds.push(item.id);
+          return false;
+        }
         if (verified) return Object.hasOwn(verified, item.id);
         pendingCandidatesRef.current.set(item.id, item);
         if (!existingKeys.has(searchPresentationKey(item))) return true;
@@ -343,13 +358,19 @@ export function ExploreGrid({
       const removedIds = new Set(
         itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
       );
-      if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
+      if (verified) {
+        for (const [key, generation] of generations) {
+          if ((generationsRef.current.get(key) ?? 0) === generation) generationsRef.current.set(key, generation + 1);
+        }
+      }
+      if (!verified || staleIds.length) setPendingPreviews((prev) => [...new Set([...prev, ...(!verified ? ids : staleIds)])]);
       for (const item of candidates) seenRef.current.add(item.id);
       if (removedIds.size > 0) {
         setPendingPreviews((prev) => prev.filter((id) => !removedIds.has(id) || pendingCandidatesRef.current.has(id)));
       }
       setPreviews((prev) => {
-        const next = { ...prev, ...(verified ?? {}) };
+        const next = { ...prev };
+        for (const item of eligible) if (verified && Object.hasOwn(verified, item.id)) next[item.id] = verified[item.id];
         for (const id of removedIds) delete next[id];
         return next;
       });
@@ -372,11 +393,11 @@ export function ExploreGrid({
     try {
       // Keep equivalent candidates in the same public check, even when other
       // pending IDs would put them on opposite sides of the 24-ID API limit.
-      const groups = new Map<string, { pending: string[]; displayed: MemeListItem | undefined; candidates: MemeListItem[] }>();
+      const groups = new Map<string, { pending: string[]; displayed: MemeListItem | undefined; candidates: MemeListItem[]; generation: number }>();
       for (const id of pendingPreviews) {
         const candidate = pendingCandidatesRef.current.get(id);
         const key = candidate ? searchPresentationKey(candidate) : `id:${id}`;
-        const group = groups.get(key) ?? { pending: [], displayed: itemsRef.current.find((item) => searchPresentationKey(item) === key), candidates: [] };
+        const group = groups.get(key) ?? { pending: [], displayed: itemsRef.current.find((item) => searchPresentationKey(item) === key), candidates: [], generation: generationsRef.current.get(key) ?? 0 };
         group.pending.push(id);
         if (candidate) group.candidates.push(candidate);
         groups.set(key, group);
@@ -399,7 +420,8 @@ export function ExploreGrid({
           const pendingNow = [...pendingCandidatesRef.current.values()].filter((item) => searchPresentationKey(item) === key);
           // A later page can change this identity while the request is in flight.
           // Leave that group pending for another authoritative check.
-          if (current !== group.displayed || pendingNow.length !== group.candidates.length || pendingNow.some((item) => !group.candidates.includes(item))) continue;
+          if ((generationsRef.current.get(key) ?? 0) !== group.generation || current !== group.displayed || pendingNow.length !== group.candidates.length || pendingNow.some((item) => !group.candidates.includes(item))) continue;
+          generationsRef.current.set(key, group.generation + 1);
           for (const id of group.pending) {
             completedPending.add(id);
             pendingCandidatesRef.current.delete(id);
@@ -408,6 +430,15 @@ export function ExploreGrid({
           for (const item of rows) {
             checkedIds.add(item.id);
             if (Object.hasOwn(verified, item.id)) replacements.push(item);
+          }
+          // The server may have hidden a distinct curated fallback before the
+          // first preview read failed. Restore it only when this public recheck
+          // confirmed no candidate and did not reject that same short ID.
+          if (rows.length && !rows.some((item) => Object.hasOwn(verified, item.id))) {
+            const alternative = initialAlternatives.find((item) =>
+              searchPresentationKey(item) === key && rows.every((row) => row.short_id !== item.short_id),
+            );
+            if (alternative) replacements.push(alternative);
           }
         }
         const base = itemsRef.current.filter((item) => !checkedIds.has(item.id));
@@ -463,6 +494,15 @@ export function ExploreGrid({
     return () => io.disconnect();
   }, [loadMore, hasMore, items.length]);
 
+  const retryBanner = pendingPreviews.length > 0 && (
+    <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
+      <span>일부 영상 미리보기를 불러오지 못했어요.</span>
+      <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
+        {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
+      </button>
+    </div>
+  );
+
   if (catalogUnavailable && items.length === 0) {
     return (
       <div
@@ -483,6 +523,15 @@ export function ExploreGrid({
             다시 시도
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0 && pendingPreviews.length > 0) {
+    return (
+      <div>
+        {retryBanner}
+        {hasMore && <button type="button" onClick={loadMore} disabled={loading} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">{loading ? "찾는 중…" : "계속 찾기"}</button>}
       </div>
     );
   }
@@ -562,14 +611,7 @@ export function ExploreGrid({
 
   return (
     <div>
-      {pendingPreviews.length > 0 && (
-        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
-          <span>일부 영상 미리보기를 불러오지 못했어요.</span>
-          <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
-            {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
-          </button>
-        </div>
-      )}
+      {retryBanner}
       <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">

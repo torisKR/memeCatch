@@ -9,7 +9,9 @@ vi.mock("@/lib/thin-meme", async (original) => ({ ...await original(), collectIn
 vi.mock("@/lib/search-preview.server", () => ({ qualifySearchPreviews: mocks.qualify }));
 vi.mock("@/lib/explore-preview-deadline.server", () => ({
   createPreviewDeadlineDb: () => ({}),
-  withPreviewDeadline: (run: (signal: AbortSignal) => unknown) => run(new AbortController().signal),
+  withPreviewDeadline: async (run: (signal: AbortSignal) => unknown) => {
+    try { return await run(new AbortController().signal); } catch { return null; }
+  },
 }));
 vi.mock("@/components/explore-grid", () => ({ ExploreGrid: () => null }));
 
@@ -46,5 +48,21 @@ describe("explore server presentation", () => {
     expect(grid?.initialPreviews).toEqual([[{ content_id: "unrelated" }], [{ content_id: "catalog" }]]);
     expect(grid?.initialOffset).toBe(3);
     expect(grid?.hasMoreInitial).toBe(true);
+  });
+
+  it("retains the suppressed curated alternative when initial preview qualification fails", async () => {
+    mocks.collect.mockResolvedValue({ items: [catalog], scanned: 1, hasMore: false });
+    mocks.qualify.mockRejectedValue(new Error("ledger unavailable"));
+    const grid = findGrid(await ExplorePage({ searchParams: Promise.resolve({ q: "오히려 좋아" }) }));
+    expect(grid?.initial).toEqual([catalog]);
+    expect(grid?.initialPreviewUnavailable).toBe(true);
+    expect(grid?.initialAlternatives).toEqual(expect.arrayContaining([expect.objectContaining({ id: "curated-ohiryeo-joha", short_id: "oyj2021k" })]));
+  });
+
+  it("does not retain a curated alternative for the same database short ID", async () => {
+    mocks.collect.mockResolvedValue({ items: [seed], scanned: 1, hasMore: false });
+    const grid = findGrid(await ExplorePage({ searchParams: Promise.resolve({ q: "오히려 좋아" }) }));
+    expect(grid?.initial).toEqual([seed]);
+    expect(grid?.initialAlternatives).toEqual([]);
   });
 });

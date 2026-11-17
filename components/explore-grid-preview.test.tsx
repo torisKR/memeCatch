@@ -367,6 +367,81 @@ describe("explore pagination preview policy", () => {
     expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
   });
 
+  it("restores the suppressed curated fallback when the initially displayed catalog is no longer public", async () => {
+    const curated = { ...fallback, id: "curated-ohiryeo-joha" } as MemeListItem;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ previews: [] }) }));
+    render(<ExploreGrid initial={[replacement]} initialAlternatives={[curated]} initialPreviewUnavailable filters={{ q: "오히려 좋아", categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(curated.id));
+    expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
+  });
+
+  it("does not restore the fallback during lookup failure or while its catalog is public", async () => {
+    const curated = { ...fallback, id: "curated-ohiryeo-joha" } as MemeListItem;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id, contents: [] }] }) }));
+    render(<ExploreGrid initial={[replacement]} initialAlternatives={[curated]} initialPreviewUnavailable filters={{ q: "오히려 좋아", categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).not.toHaveProperty("disabled", true));
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(id);
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(id);
+  });
+
+  it("does not resurrect a curated card for the same short ID rejected by the public check", async () => {
+    const curated = { ...fallback, id: "curated-ohiryeo-joha" } as MemeListItem;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ previews: [] }) }));
+    render(<ExploreGrid initial={[fallback]} initialAlternatives={[curated]} initialPreviewUnavailable filters={{ q: "오히려 좋아", categories: [], sort: "trending" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByTestId("card")).toBeNull());
+  });
+
+  it("does not let a slow page check overwrite a newer retry for the same identity", async () => {
+    let finish!: (value: unknown) => void;
+    const slowPage = new Promise((resolve) => { finish = resolve; });
+    mocks.collect.mockResolvedValueOnce({ items: [replacement], scanned: 1, hasMore: false });
+    const fetchMock = vi.fn().mockReturnValueOnce(slowPage)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id: fallback.id, contents: verified }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id, contents: verified }, { id: fallback.id, contents: verified }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    let observe: IntersectionObserverCallback | undefined;
+    vi.stubGlobal("IntersectionObserver", class { constructor(cb: IntersectionObserverCallback) { observe = cb; } observe() {} disconnect() {} });
+    render(<ExploreGrid initial={[fallback]} initialPreviewUnavailable hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    await waitFor(() => expect(observe).toBeTypeOf("function"));
+    act(() => observe!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull());
+    await act(async () => { finish({ ok: true, json: async () => ({ previews: [{ id, contents: verified }] }) }); await slowPage; });
+    expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(fallback.id);
+    await waitFor(() => expect(screen.getByRole("button", { name: "미리보기 다시 불러오기" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(id));
+  });
+
+  it("keeps a recheck available when the newer retry removes the last visible card", async () => {
+    let finish!: (value: unknown) => void;
+    const slowPage = new Promise((resolve) => { finish = resolve; });
+    mocks.collect.mockResolvedValueOnce({ items: [replacement], scanned: 1, hasMore: false });
+    const fetchMock = vi.fn().mockReturnValueOnce(slowPage)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id, contents: verified }] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    let observe: IntersectionObserverCallback | undefined;
+    vi.stubGlobal("IntersectionObserver", class { constructor(cb: IntersectionObserverCallback) { observe = cb; } observe() {} disconnect() {} });
+    render(<ExploreGrid initial={[fallback]} initialPreviewUnavailable hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
+    await waitFor(() => expect(observe).toBeTypeOf("function"));
+    act(() => observe!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.queryByTestId("card")).toBeNull());
+    await act(async () => { finish({ ok: true, json: async () => ({ previews: [{ id, contents: verified }] }) }); await slowPage; });
+    expect(screen.queryByTestId("card")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.getByTestId("card").getAttribute("data-item-id")).toBe(id));
+  });
+
   it("treats malformed public lookup rows as a retryable failure", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id, contents: null }] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id, contents: verified }] }) }));

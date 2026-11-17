@@ -46,7 +46,7 @@ export function getCancelPool(): pg.Pool {
       connectionString: process.env.DATABASE_URL,
       max: 1,
       connectionTimeoutMillis: DB_CANCEL_CONNECTION_TIMEOUT_MS,
-      query_timeout: 1_000,
+      statement_timeout: 1_000,
       idleTimeoutMillis: 5_000,
       allowExitOnIdle: true,
       application_name: "memecatch-cancel",

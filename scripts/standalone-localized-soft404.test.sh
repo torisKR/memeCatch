@@ -12,7 +12,7 @@ tmp_root="${TMPDIR:-/tmp}"
 }
 scratch="$(mktemp -d "${tmp_root%/}/memecatch-localized-soft404.XXXXXX")"
 pg_data="$scratch/pgdata"
-pg_socket="$scratch/socket"
+pg_socket=""
 pg_port=""
 app_port="$(node -e 'const net=require("node:net");const server=net.createServer();server.listen(0,"127.0.0.1",()=>{console.log(server.address().port);server.close();});')"
 app_pid=""
@@ -26,6 +26,7 @@ cleanup() {
   else
     pg_ctl -D "$pg_data" -m immediate stop >/dev/null 2>&1 || true
   fi
+  if [[ -n "$pg_socket" ]]; then rm -rf -- "$pg_socket"; fi
   rm -rf -- "$scratch"
 }
 trap cleanup EXIT
@@ -64,9 +65,10 @@ else
     echo "PostgreSQL 17 is required for this regression" >&2
     exit 1
   fi
+  [[ -d /tmp && -w /tmp ]] || { echo "short PostgreSQL socket directory is unavailable" >&2; exit 1; }
+  pg_socket="$(mktemp -d /tmp/mc-pg.XXXXXX)"
   pg_port="$(node -e 'const net=require("node:net");const server=net.createServer();server.listen(0,"127.0.0.1",()=>{console.log(server.address().port);server.close();});')"
   initdb -D "$pg_data" -A trust --no-locale --encoding=UTF8 -U postgres >/dev/null
-  mkdir -p "$pg_socket"
   pg_ctl -D "$pg_data" -l "$scratch/postgres.log" \
     -o "-k $pg_socket -p $pg_port" start >/dev/null
   createdb -h "$pg_socket" -p "$pg_port" -U postgres memecatch

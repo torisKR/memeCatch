@@ -181,4 +181,25 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
       for (const client of fillers) client.release();
     }
   });
+
+  it("stops a sent cancel-pool statement on the server before allowing subsequent work", async () => {
+    const cancelPool = getCancelPool();
+    const before = await cancelPool.query<{ pid: number }>("select pg_backend_pid() as pid");
+    const startedAt = Date.now();
+    let timeoutError: unknown;
+    try {
+      await cancelPool.query("select pg_sleep(2)");
+    } catch (error) {
+      timeoutError = error;
+    }
+    const timeoutElapsed = Date.now() - startedAt;
+    expect(timeoutError).toMatchObject({ code: "57014" });
+    expect(timeoutElapsed).toBeGreaterThanOrEqual(850);
+    expect(timeoutElapsed).toBeLessThan(1_500);
+
+    const reuseStartedAt = Date.now();
+    const after = await cancelPool.query<{ pid: number }>("select pg_backend_pid() as pid");
+    expect(Date.now() - reuseStartedAt).toBeLessThan(300);
+    expect(after.rows[0]?.pid).not.toBe(before.rows[0]?.pid);
+  });
 });

@@ -55,12 +55,12 @@ export const PAGE_SIZE = 24;
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
+    ? "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";
@@ -200,8 +200,37 @@ async function fetchFrom(
   );
 }
 
+async function fetchQualifiedPreviews(ids: string[]): Promise<Record<string, MemeListItem["meme_contents"]> | null> {
+  if (!ids.length) return {};
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch("/api/explore/previews", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }), signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    const rows = body && typeof body === "object" ? (body as { previews?: unknown }).previews : null;
+    if (!Array.isArray(rows)) return null;
+    const allowed = new Set(ids);
+    return Object.fromEntries(rows.flatMap((row: unknown) => {
+      if (!row || typeof row !== "object") return [];
+      const value = row as { id?: unknown; contents?: unknown };
+      return typeof value.id === "string" && allowed.has(value.id) && Array.isArray(value.contents)
+        ? [[value.id, value.contents as MemeListItem["meme_contents"]]] : [];
+    }));
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function ExploreGrid({
   initial,
+  initialPreviews,
+  initialPreviewUnavailable = false,
   filters,
   excludeIds = [],
   initialOffset,
@@ -210,6 +239,8 @@ export function ExploreGrid({
   indexableIds,
 }: {
   initial: MemeListItem[];
+  initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
+  initialPreviewUnavailable?: boolean;
   filters: ExploreFilters;
   /** Discovery ids. Omit to leave the query unfiltered (tests). */
   indexableIds?: readonly string[];
@@ -232,6 +263,13 @@ export function ExploreGrid({
 }) {
   const startHasMore = hasMoreInitial ?? initial.length >= PAGE_SIZE;
   const [items, setItems] = useState<MemeListItem[]>(initial);
+  const [previews, setPreviews] = useState<Record<string, MemeListItem["meme_contents"]>>(() =>
+    Object.fromEntries(initial.map((item, index) => [item.id, initialPreviews?.[index] ?? []])),
+  );
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>(() =>
+    initialPreviewUnavailable ? initial.filter((item) => !item.id.startsWith("curated-")).map((item) => item.id) : [],
+  );
+  const [retryingPreviews, setRetryingPreviews] = useState(false);
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -259,7 +297,11 @@ export function ExploreGrid({
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
       const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
+      const ids = fresh.map((item) => item.id);
+      const verified = await fetchQualifiedPreviews(ids);
+      if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
       for (const m of fresh) seenRef.current.add(m.id);
+      if (verified) setPreviews((prev) => ({ ...prev, ...verified }));
       setItems((prev) => [...prev, ...fresh]);
       offsetRef.current = from + batch.scanned;
       hasMoreRef.current = batch.hasMore;
@@ -271,6 +313,21 @@ export function ExploreGrid({
       setLoading(false);
     }
   }, [filters, indexableIds]);
+
+  async function retryPreviewLookup() {
+    if (retryingPreviews) return;
+    setRetryingPreviews(true);
+    try {
+      const batch = pendingPreviews.slice(0, PAGE_SIZE);
+      const verified = await fetchQualifiedPreviews(batch);
+      if (verified) {
+        setPreviews((prev) => ({ ...prev, ...verified }));
+        setPendingPreviews((prev) => prev.filter((id) => !batch.includes(id)));
+      }
+    } finally {
+      setRetryingPreviews(false);
+    }
+  }
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -403,10 +460,18 @@ export function ExploreGrid({
 
   return (
     <div>
+      {pendingPreviews.length > 0 && (
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
+          <span>일부 영상 미리보기를 불러오지 못했어요.</span>
+          <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
+            {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
+          </button>
+        </div>
+      )}
       <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
-            <MemeCard meme={meme} sourcePlatform={filters.platform} />
+            <MemeCard meme={meme} sourcePlatform={filters.platform} previewContents={meme.id.startsWith("curated-") ? undefined : previews[meme.id] ?? []} />
           </li>
         ))}
       </ul>

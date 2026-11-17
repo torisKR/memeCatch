@@ -28,6 +28,7 @@ export type MemeCardModel = {
   origin_year?: number | null;
   card_art_url?: string | null;
   meme_contents?: ReadonlyArray<{
+    type?: string | null;
     thumbnail_url?: string | null;
     is_representative?: boolean | null;
     url?: string | null;

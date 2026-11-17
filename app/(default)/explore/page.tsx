@@ -26,6 +26,8 @@ import { limitQueryToIds } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
+import { qualifySearchPreviews } from "@/lib/search-preview.server";
+import { createPreviewDeadlineDb, withPreviewDeadline } from "@/lib/explore-preview-deadline.server";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
@@ -110,8 +112,8 @@ function parseFilters(sp: RawParams): Filters {
 
 function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
+    ? "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";
@@ -302,6 +304,16 @@ export default async function ExplorePage({
       }
     })();
 
+  const previewResult = await withPreviewDeadline(async (signal) => {
+    let failed = false;
+    const previews = await qualifySearchPreviews(initialLoad.items, {
+      client: createPreviewDeadlineDb("service_role"), signal, onFailure: () => { failed = true; },
+    });
+    if (failed) throw new Error("preview ledger unavailable");
+    return previews;
+  });
+  const initialPreviews = previewResult ?? initialLoad.items.map(() => []);
+
   return (
     <main className="bg-background pb-14 text-foreground">
       <AdsenseScript />
@@ -338,6 +350,8 @@ export default async function ExplorePage({
           <ExploreGrid
             key={filterKey(filters)}
             initial={initialLoad.items}
+            initialPreviews={initialPreviews}
+            initialPreviewUnavailable={previewResult === null}
             initialOffset={initialLoad.dbCount}
             hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}

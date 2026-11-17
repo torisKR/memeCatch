@@ -84,15 +84,48 @@ describe("MemeCard", () => {
     const link = view.container.querySelector("[data-meme-card]");
     const button = screen.getByRole("button", { name: /Instagram 영상 미리보기/ });
     expect(link?.contains(button)).toBe(false);
+    expect(button.getAttribute("aria-label")).toBe("테스트 밈 · Instagram 영상 미리보기");
+    expect(button.className).toContain("h-11");
+    const platformLabel = button.querySelector("[aria-hidden] span:last-child");
+    expect(platformLabel?.textContent).toBe("Instagram");
 
     fireEvent.click(button);
+    expect(view.container.querySelectorAll("iframe")).toHaveLength(1);
     const frame = view.container.querySelector("iframe");
     expect(frame?.getAttribute("src")).toBe(
       "https://www.instagram.com/reel/DX0AR6UzAWW/embed/captioned/",
     );
     expect(frame?.getAttribute("title")).toContain("테스트 밈");
+    expect(frame?.getAttribute("sandbox")).toBe(
+      "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation",
+    );
+    expect(frame?.getAttribute("allow")).toBe(
+      "autoplay; encrypted-media; picture-in-picture; fullscreen",
+    );
+    expect(frame?.hasAttribute("allowfullscreen")).toBe(true);
+    expect(frame?.getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin");
     expect(screen.getByRole("link", { name: /Instagram에서 원본 열기/ }).getAttribute("href"))
       .toBe("https://www.instagram.com/reel/DX0AR6UzAWW/");
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 닫기" }));
+    expect(view.container.querySelectorAll("iframe")).toHaveLength(0);
+    view.unmount();
+  });
+
+  it("shows the TikTok platform name on the 44px preview pill", () => {
+    const view = render(<MemeCard meme={{ ...meme, meme_contents: [{
+      thumbnail_url: null,
+      is_representative: true,
+      url: "https://www.tiktok.com/@creator/video/1234567890123456789",
+      content_id: "1234567890123456789",
+      availability: "live",
+      moderation_status: "approved",
+    }] }} />);
+
+    const button = screen.getByRole("button", { name: /TikTok 영상 미리보기/ });
+    expect(button.getAttribute("aria-label")).toBe("테스트 밈 · TikTok 영상 미리보기");
+    expect(button.className).toContain("h-11");
+    expect(button.querySelector("[aria-hidden] span:last-child")?.textContent).toBe("TikTok");
+    expect(view.container.querySelector("iframe")).toBeNull();
     view.unmount();
   });
 

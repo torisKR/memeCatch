@@ -74,9 +74,11 @@ describe("search preview batch", () => {
     const good = card(2);
     const malformed = { ...row(bad.id), rights_basis: "invalid-rights" };
     mocks.query.mockResolvedValue({ data: [malformed, row(good.id, "abcdefghijk", "official_embed")], error: null });
-    const previews = await qualifySearchPreviews([bad, good]);
+    const onFailure = vi.fn();
+    const previews = await qualifySearchPreviews([bad, good], { onFailure });
     expect(previews[0]).toEqual([]);
     expect(previews[1]).toEqual(good.meme_contents);
+    expect(onFailure).not.toHaveBeenCalled();
     expect(mocks.query).toHaveBeenCalledTimes(1);
   });
   it("logs a safe category and count without row values", async () => {

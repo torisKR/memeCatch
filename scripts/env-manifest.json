@@ -119,6 +119,7 @@
   "RADAR_X_TERMS": "─── Radar 외부 신호 (선택, 전부 서버 전용) ────────────────────── X·Threads는 텍스트 게시물만 요청하고 미디어는 무시합니다. X API는 pay-per-use이므로 RADAR_X_TERMS를 작게 유지하고 콘솔 spending limit을 설정하세요.",
   "RELEASE_SHA": "Build revision shown in diagnostics and CSP reports.",
   "SITE_ADDRESS": "Caddy site address. catchmeme.com in production.",
+  "SOURCE_DISCOVERY_OUTPUT_DIR": "Optional output directory for daily source-discovery logs; defaults to output/source-discovery.",
   "SSH_CONNECTION": "Set by sshd. The deploy agent runs strict when GitHub Actions calls it over SSH.",
   "SSH_ORIGINAL_COMMAND": "Set by sshd for the forced-command deploy key; carries the commit SHA GitHub asks to deploy.",
   "THREADS_ACCESS_TOKEN": "Threads keyword_search 승인 전에는 인증 사용자 소유 게시물만 검색됩니다.",

@@ -95,11 +95,17 @@ describe("source refresh recovery", () => {
 
     // Once quarantined, the invalid row is excluded from subsequent stale
     // scans instead of repeatedly consuming the YouTube batch budget.
-    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([{
+    const quarantine = {
       sourceKey: "invalid_identity:yt-null", sourceId: invalid.id, platform: "youtube", externalId: null,
       canonicalUrl: invalid.canonical_url, attemptCount: 1, nextRetryAt: null, lastErrorCode: "metadata_mismatch",
       lastErrorRetryable: false, lastAttemptedAt: new Date().toISOString(), resolvedAt: null,
-    }]);
+    } as const;
+    const otherDueFailure = {
+      ...quarantine, sourceKey: "youtube:old-invalid", lastErrorCode: "provider_transient",
+      lastErrorRetryable: true, nextRetryAt: new Date(Date.now() - 1_000).toISOString(),
+    } as const;
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValueOnce([otherDueFailure]);
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValueOnce([quarantine, otherDueFailure]);
     mocks.fetchYouTubeVideoStatuses.mockResolvedValueOnce(new Map([[valid.external_id, { privacyStatus: "public", embeddable: true, title: "ok", channelTitle: null, channelId: null, publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: null, regionAllowed: null }]]));
     const nextResult = await runSourceRefresh();
     expect(sourceBuilder.not).toHaveBeenCalledWith("id", "in", [invalid.id]);

@@ -407,8 +407,12 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     };
   }
   const recoveryBySourceId = new Map(activeRecovery.flatMap((row) => row.sourceId ? [[row.sourceId, row] as const] : []));
+  const deferredIds = new Set(deferredSourceIds);
   const candidateRows = [...new Map([...(dueRows ?? []), ...stale].map((row) => [row.id, row])).values()];
   const rows = candidateRows.filter((row) => {
+    // A second recovery key for the same source must not bypass a quarantine
+    // or a later retry time simply because its due record was returned last.
+    if (deferredIds.has(row.id)) return false;
     const recovery = recoveryBySourceId.get(row.id);
     return !recovery || (recovery.nextRetryAt !== null && Date.parse(recovery.nextRetryAt) <= nowMs);
   }) as MediaSourceRow[];

@@ -2,8 +2,14 @@
 # Deploy once; confirm the result using only read-only evidence.
 set -euo pipefail
 
+readonly status_reconcile_seconds=2700
+readonly status_timeout_seconds=90
+readonly status_initial_backoff_seconds=60
+readonly status_max_backoff_seconds=240
+readonly status_max_attempts=13
+
 run_deploy() {
-  local sha="$1" rc attempt evidence start now previous deadline remaining wait_seconds timeout_seconds
+  local sha="$1" rc attempt evidence start now previous deadline remaining wait_seconds timeout_seconds backoff_seconds
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid deployment SHA" >&2; return 1; }
   local ssh_args=(
     -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes
@@ -13,7 +19,7 @@ run_deploy() {
     "ubuntu@${DEPLOY_HOST}"
   )
   # Bound the initial SSH session independently from the reconciliation window.
-  if timeout --kill-after=5s 2700s ssh "${ssh_args[@]}" "$sha"; then
+  if timeout --kill-after=5s "${status_reconcile_seconds}s" ssh "${ssh_args[@]}" "$sha"; then
     echo "SSH completed; verifying deployment evidence without redeploying" >&2
   else
     rc=$?
@@ -25,13 +31,14 @@ run_deploy() {
   # It is still bounded because remote execution has no finite duration limit.
   start="$(date +%s)" || return 1
   [[ "$start" =~ ^[0-9]+$ ]] || return 1
-  deadline=$((start + 2700)); previous="$start"
-  for ((attempt = 1; attempt <= 181; attempt++)); do
+  deadline=$((start + status_reconcile_seconds)); previous="$start"
+  backoff_seconds="$status_initial_backoff_seconds"
+  for ((attempt = 1; attempt <= status_max_attempts; attempt++)); do
     now="$(date +%s)" || return 1
     [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
     previous="$now"; remaining=$((deadline - now))
     (( remaining > 0 )) || break
-    timeout_seconds=90
+    timeout_seconds="$status_timeout_seconds"
     (( remaining < timeout_seconds )) && timeout_seconds="$remaining"
     if evidence="$(timeout --kill-after=5s "${timeout_seconds}s" ssh "${ssh_args[@]}" "status $sha")" &&
       printf '%s\n' "$evidence" | grep -Eq "^[0-9TZ:.-]+ memecatch-autodeploy: verified deployed ${sha}$"; then
@@ -46,9 +53,13 @@ run_deploy() {
     [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
     previous="$now"; remaining=$((deadline - now))
     (( remaining > 0 )) || break
-    wait_seconds=15
+    wait_seconds="$backoff_seconds"
     (( remaining < wait_seconds )) && wait_seconds="$remaining"
     sleep "$wait_seconds"
+    if (( backoff_seconds < status_max_backoff_seconds )); then
+      backoff_seconds=$((backoff_seconds * 2))
+      (( backoff_seconds > status_max_backoff_seconds )) && backoff_seconds="$status_max_backoff_seconds"
+    fi
   done
   echo "::error::Deployment outcome remains unverified" >&2
   return 1

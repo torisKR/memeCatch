@@ -69,6 +69,21 @@ grep -q "^compose" "$calls" && fail "compose build ran after the app build faile
 PATH="$stub:$PATH" stub_calls="$calls" build_images abc || fail "clean build reported failure"
 grep -q "^compose" "$calls" || fail "auxiliary images were not built"
 
+# Long quiet commands emit progress without hiding their exit status or leaving
+# a heartbeat process behind after the command finishes.
+heartbeat_output="$stub/heartbeat-output"
+BUILD_HEARTBEAT_SECONDS=0.02 run_with_heartbeat "test build" bash -c 'sleep 0.07' >"$heartbeat_output"
+heartbeat_count="$(grep -c 'test build still running' "$heartbeat_output")"
+(( heartbeat_count >= 2 )) || fail "quiet command emitted too few heartbeats ($heartbeat_count)"
+sleep 0.05
+[[ "$(grep -c 'test build still running' "$heartbeat_output")" == "$heartbeat_count" ]] \
+  || fail "heartbeat continued after the command finished"
+BUILD_HEARTBEAT_SECONDS=31.337 run_with_heartbeat "child cleanup" bash -c 'sleep 0.05'
+pgrep -f '^sleep 31[.]337$' >/dev/null && fail "heartbeat sleep child survived command completion"
+rc=0
+BUILD_HEARTBEAT_SECONDS=0.01 run_with_heartbeat "failing build" bash -c 'sleep 0.03; exit 7' >/dev/null || rc=$?
+[[ "$rc" == 7 ]] || fail "heartbeat wrapper hid command failure (got $rc)"
+
 # Rollback redeploys exactly the snapshots recorded before the deploy, even when
 # the replaced containers now run differently named images (GHCR -> local build).
 STATE_DIR="$stub/state"; mkdir -p "$STATE_DIR"
@@ -120,7 +135,7 @@ done
 
 # Snapshots are taken before the build, which can drop the replaced image.
 snap_line="$(grep -n 'tag_rollback "\$current"' "$here/autodeploy.sh" | cut -d: -f1)"
-build_line="$(grep -n 'if ! build_images "\$target"' "$here/autodeploy.sh" | cut -d: -f1)"
+build_line="$(sed -n '/if ! run_with_heartbeat .* build_images/=' "$here/autodeploy.sh")"
 (( snap_line > 0 && snap_line < build_line )) || fail "tag_rollback must run before build_images"
 
 # The running agent lives outside the checkout and only changes when the checkout's

@@ -33,6 +33,7 @@ STATE_DIR="${AUTODEPLOY_STATE_DIR:-/var/lib/memecatch-autodeploy}"
 PUBLIC_URL="${AUTODEPLOY_PUBLIC_URL:-https://catchmeme.com}"
 CHECK_NAME="${AUTODEPLOY_CHECK_NAME:-check}"
 KEEP_IMAGES="${AUTODEPLOY_KEEP_IMAGES:-3}"
+BUILD_HEARTBEAT_SECONDS=30
 
 log() { printf '%s memecatch-autodeploy: %s\n' "$(date -u +%FT%TZ)" "$*"; }
 
@@ -151,6 +152,28 @@ build_images() {
       -t "memecatch:release-${sha}" . >/dev/null \
     && nice -n 10 docker compose -p memecatch -f docker-compose.yml build -q mpe-worker scheduler backup )
 }
+
+# Quiet Docker builds can leave the SSH channel without application output for
+# several minutes. Emit progress in addition to the client's SSH keepalives;
+# preserve the wrapped command's status and always stop the background logger.
+run_with_heartbeat() (
+  local label="$1" heartbeat_pid
+  shift
+  (
+    local sleeper=""
+    trap 'if [[ -n "$sleeper" ]]; then kill "$sleeper" 2>/dev/null || true; wait "$sleeper" 2>/dev/null || true; fi; exit 0' TERM INT
+    while true; do
+      sleep "$BUILD_HEARTBEAT_SECONDS" &
+      sleeper=$!
+      wait "$sleeper" || exit 0
+      sleeper=""
+      log "$label still running"
+    done
+  ) &
+  heartbeat_pid=$!
+  trap 'kill "$heartbeat_pid" 2>/dev/null || true; wait "$heartbeat_pid" 2>/dev/null || true' EXIT
+  "$@"
+)
 
 public_release_is() {
   local sha="$1" seen
@@ -278,7 +301,7 @@ main() {
   # Snapshot before building; see tag_rollback.
   tag_rollback "$current"
   checkout_target "$target" || not_deployed "could not check out ${target:0:7} in $ROOT"
-  if ! build_images "$target"; then
+  if ! run_with_heartbeat "building images for ${target:0:7}" build_images "$target"; then
     log "build failed for ${target:0:7}; keeping ${current:0:7}"
     git -C "$ROOT" reset -q --keep "$current"
     touch "$STATE_DIR/failed-$target"

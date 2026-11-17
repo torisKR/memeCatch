@@ -90,6 +90,146 @@ beforeEach(() => {
 });
 
 describe("source refresh recovery", () => {
+  it("starts Instagram while a TikTok provider request is still pending", async () => {
+    const tiktok = { id: "tt-slow", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+    const instagram = { id: "ig-independent", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/p/ABCdef12345/", embeddable: true, removed_at: null };
+    const { client, jobInsert } = admin({ stale: [tiktok, instagram] });
+    mocks.createAdminClient.mockReturnValue(client);
+    let releaseTikTok!: () => void;
+    let notifyInstagram!: () => void;
+    const tiktokGate = new Promise<void>((resolve) => { releaseTikTok = resolve; });
+    const instagramApplied = new Promise<void>((resolve) => { notifyInstagram = resolve; });
+    vi.mocked(resolveSourceAcquisitionFailure).mockImplementationOnce(async () => { notifyInstagram(); });
+    mocks.getOEmbed.mockImplementation(async (url: string) => {
+      if (url.includes("tiktok")) {
+        await tiktokGate;
+        throw new Error("provider unavailable");
+      }
+      return oEmbedResult(url);
+    });
+
+    const running = runSourceRefresh();
+    const startedBeforeRelease = await Promise.race([
+      instagramApplied.then(() => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), 100)),
+    ]);
+    expect(jobInsert).not.toHaveBeenCalled();
+    releaseTikTok();
+    const result = await running;
+
+    expect(startedBeforeRelease).toBe(true);
+    expect(result.observations.instagram).toMatchObject({ confirmed: 1 });
+    expect(result.observations.tiktok).toMatchObject({ inconclusive: 1 });
+    expect(result.oembed).toMatchObject({ checked: 2, failed: 1 });
+  });
+
+  it("continues Instagram after a TikTok provider failure cannot be recorded", async () => {
+    const tiktok = { id: "tt-ledger-failed", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+    const instagram = { id: "ig-after-ledger", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/p/ABCdef12345/", embeddable: true, removed_at: null };
+    const sourceBuilder = sourceQuery([tiktok, instagram]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockImplementation(async (url: string) => {
+      if (url.includes("tiktok")) throw new Error("provider unavailable");
+      return oEmbedResult(url);
+    });
+    vi.mocked(recordSourceAcquisitionFailure).mockRejectedValueOnce(new Error("sensitive database error"));
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("partial");
+    expect(result.oembed).toMatchObject({ checked: 2, failed: 1, errors: ["source_recovery_record_failed:tt-ledger-failed"] });
+    expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", tiktok.id);
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", instagram.id);
+    expect(result.observations.tiktok).toMatchObject({ confirmed: 0, inconclusive: 1 });
+    expect(JSON.stringify(result)).not.toContain("sensitive database error");
+  });
+
+  it("continues the same platform after a recovery write failure", async () => {
+    const first = { id: "tt-failure", platform: "tiktok", external_id: "1234567890", canonical_url: "https://www.tiktok.com/@a/video/1234567890", embeddable: true, removed_at: null };
+    const second = { id: "tt-next", platform: "tiktok", external_id: "2345678901", canonical_url: "https://www.tiktok.com/@b/video/2345678901", embeddable: true, removed_at: null };
+    const sourceBuilder = sourceQuery([first, second]);
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+    mocks.getOEmbed.mockImplementation(async (url: string) => {
+      if (url === first.canonical_url) throw new Error("provider unavailable");
+      return oEmbedResult(url);
+    });
+    vi.mocked(recordSourceAcquisitionFailure).mockRejectedValueOnce(new Error("database unavailable"));
+
+    const result = await runSourceRefresh();
+
+    expect(result.oembed).toMatchObject({ checked: 2, failed: 1, errors: ["source_recovery_record_failed:tt-failure"] });
+    expect(sourceBuilder.eq).not.toHaveBeenCalledWith("id", first.id);
+    expect(sourceBuilder.eq).toHaveBeenCalledWith("id", second.id);
+  });
+
+  it("includes a due Instagram retry when the shared 500-row page is filled by TikTok", async () => {
+    const instagram = { id: "ig-due", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/p/ABCdef12345/", embeddable: true, removed_at: null };
+    const recovery = (sourceId: string, platform: "tiktok" | "instagram", nextRetryAt: string) => ({
+      sourceKey: `${platform}:${sourceId}`, sourceId, platform, externalId: null, canonicalUrl: null,
+      attemptCount: 1, nextRetryAt, lastErrorCode: "provider_transient" as const, lastErrorRetryable: true,
+      lastAttemptedAt: nextRetryAt, resolvedAt: null,
+    });
+    const old = new Date(Date.now() - 60_000).toISOString();
+    const dueTikTok = Array.from({ length: 500 }, (_, i) => recovery(`tt-${i}`, "tiktok", old));
+    const dueInstagram = recovery(instagram.id, "instagram", new Date(Date.now() - 30_000).toISOString());
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue(dueTikTok);
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([...dueTikTok, dueInstagram]);
+    const sourceBuilder = query({ data: [], error: null });
+    sourceBuilder.in.mockImplementation((column: string, values: string[]) => {
+      const rows = column === "id" && values.includes(instagram.id) ? [instagram] : [];
+      sourceBuilder.then = vi.fn((resolve) => Promise.resolve({ data: rows, error: null }).then(resolve));
+      return sourceBuilder;
+    });
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(mocks.getOEmbed).toHaveBeenCalledWith(instagram.canonical_url);
+    expect(result.observations.instagram).toMatchObject({ selected: 1, confirmed: 1 });
+  });
+
+  it("does not let a due key bypass another future retry key or consume its platform slots", async () => {
+    const eligible = { id: "ig-due", platform: "instagram", external_id: "ABCdef12345", canonical_url: "https://www.instagram.com/p/ABCdef12345/", embeddable: true, removed_at: null };
+    const recovery = (sourceId: string, key: string, nextRetryAt: string) => ({
+      sourceKey: key, sourceId, platform: "instagram" as const, externalId: null, canonicalUrl: null,
+      attemptCount: 1, nextRetryAt, lastErrorCode: "provider_transient" as const, lastErrorRetryable: true,
+      lastAttemptedAt: nextRetryAt, resolvedAt: null,
+    });
+    const due = new Date(Date.now() - 60_000).toISOString();
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const blocked = Array.from({ length: 30 }, (_, i) => recovery(`blocked-${i}`, `due-${i}`, due));
+    const later = blocked.map((row, i) => recovery(row.sourceId, `future-${i}`, future));
+    const healthy = recovery(eligible.id, "healthy", due);
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([...blocked, healthy]);
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([...blocked, ...later, healthy]);
+    const sourceBuilder = query({ data: [], error: null });
+    sourceBuilder.in.mockImplementation((column: string, values: string[]) => {
+      const rows = column === "id" && values.includes(eligible.id) ? [eligible] : [];
+      sourceBuilder.then = vi.fn((resolve) => Promise.resolve({ data: rows, error: null }).then(resolve));
+      return sourceBuilder;
+    });
+    const content = query({ data: [], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceBuilder);
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(sourceBuilder.in).toHaveBeenCalledWith("id", [eligible.id]);
+    expect(mocks.getOEmbed).toHaveBeenCalledOnce();
+    expect(mocks.getOEmbed).toHaveBeenCalledWith(eligible.canonical_url);
+    expect(result.observations.instagram).toMatchObject({ selected: 1, confirmed: 1 });
+  });
+
   it("records the actual start and platform observations without treating a generic TikTok player as live", async () => {
     vi.useFakeTimers();
     try {

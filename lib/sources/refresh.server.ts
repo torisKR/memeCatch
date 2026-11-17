@@ -494,19 +494,23 @@ async function refreshOEmbedSources(
       } else if (row.external_id) {
         if (!providerClassified) observations[row.platform].inconclusive += 1;
         failed += 1;
-        await recordSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          idempotencyKey: attemptIdempotencyKey,
-          platform: row.platform,
-          externalId: row.external_id,
-          canonicalUrl: row.canonical_url,
-          code: error instanceof Error && error.message === "source_refresh_update_failed"
-            ? "db_failure"
-            : "provider_transient",
-          attempt: 1,
-          occurredAt: attemptStartedAt,
-          sourceId: row.id,
-        }, admin);
+        try {
+          await recordSourceAcquisitionFailure({
+            sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+            idempotencyKey: attemptIdempotencyKey,
+            platform: row.platform,
+            externalId: row.external_id,
+            canonicalUrl: row.canonical_url,
+            code: error instanceof Error && error.message === "source_refresh_update_failed"
+              ? "db_failure"
+              : "provider_transient",
+            attempt: 1,
+            occurredAt: attemptStartedAt,
+            sourceId: row.id,
+          }, admin);
+        } catch {
+          errors.push(`source_recovery_record_failed:${row.id}`);
+        }
       } else { failed += 1; }
       // 일시 오류(502·네트워크)는 다음 실행으로 미룬다 — last_checked_at을 건드리지 않는다.
     }
@@ -561,10 +565,24 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     // recovery state rather than assuming every request resolved its key.
     activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
   }
-  const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
   const nowMs = Date.now();
   const deferredSourceIds = activeRecovery.flatMap((row) =>
     row.sourceId && (row.nextRetryAt === null || Date.parse(row.nextRetryAt) > nowMs) ? [row.sourceId] : []);
+  const deferredIds = new Set(deferredSourceIds);
+  // The due RPC is globally capped at 500. The active snapshot is already
+  // needed for backoff and quarantine; use it to give every platform a bounded
+  // share even if another provider fills the entire due page.
+  const dueCandidates = [...dueRecovery, ...activeRecovery]
+    .filter((row) => row.sourceId && row.nextRetryAt !== null && Date.parse(row.nextRetryAt) <= nowMs && !deferredIds.has(row.sourceId))
+    .sort((a, b) => Date.parse(a.nextRetryAt!) - Date.parse(b.nextRetryAt!) || (a.sourceId ?? "").localeCompare(b.sourceId ?? ""));
+  const dueSourceIds = ([
+    { platforms: ["youtube", "youtube_shorts"], limit: YOUTUBE_BATCH_LIMIT },
+    { platforms: ["tiktok"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
+    { platforms: ["instagram"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
+  ] as const).flatMap(({ platforms, limit }) => {
+    const ids = dueCandidates.flatMap((row) => row.sourceId && (platforms as readonly string[]).includes(row.platform) ? [row.sourceId] : []);
+    return [...new Set(ids)].slice(0, limit);
+  });
   const staleBefore = new Date(
     Date.now() - LIVENESS_INTERVAL_DAYS * 86_400_000,
   ).toISOString();
@@ -611,7 +629,6 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     };
   }
   const recoveryBySourceId = new Map(activeRecovery.flatMap((row) => row.sourceId ? [[row.sourceId, row] as const] : []));
-  const deferredIds = new Set(deferredSourceIds);
   const candidateRows = [...new Map([...(dueRows ?? []), ...stale].map((row) => [row.id, row])).values()];
   const rows = candidateRows.filter((row) => {
     // A second recovery key for the same source must not bypass a quarantine
@@ -631,7 +648,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   for (const row of [...youtubeRows, ...oembedRows]) observations[row.platform].selected += 1;
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-  let oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[] };
+  const oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[] };
   let firstError: string | undefined;
 
   try {
@@ -639,10 +656,22 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   } catch (error) {
     firstError = firstError ?? (error instanceof Error ? error.message : String(error));
   }
-  try {
-    oembed = await refreshOEmbedSources(admin, oembedRows, observations);
-  } catch (error) {
-    firstError = firstError ?? (error instanceof Error ? error.message : String(error));
+  // Isolate the two providers: a slow TikTok request must not hold Instagram
+  // behind it. Wait for both workers before auditing or invalidating caches.
+  const socialResults = await Promise.allSettled(
+    (["tiktok", "instagram"] as const).map((platform) =>
+      refreshOEmbedSources(admin, oembedRows.filter((row) => row.platform === platform), observations),
+    ),
+  );
+  for (const result of socialResults) {
+    if (result.status === "rejected") {
+      firstError = firstError ?? (result.reason instanceof Error ? result.reason.message : String(result.reason));
+      continue;
+    }
+    oembed.checked += result.value.checked;
+    oembed.removed += result.value.removed;
+    oembed.failed += result.value.failed;
+    oembed.errors.push(...result.value.errors);
   }
 
   // Next.js queues invalidation for the response lifecycle. Retry on every

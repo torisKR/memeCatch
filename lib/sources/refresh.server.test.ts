@@ -278,7 +278,7 @@ describe("source refresh recovery", () => {
     expect(content.update).toHaveBeenCalledWith({ availability: "region_blocked" });
   });
 
-  it("keeps a public non-embeddable YouTube source alive without marking its content dead", async () => {
+  it("projects a public non-embeddable YouTube source as live link-only content", async () => {
     const source = { id: "yt-link-only", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
     mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: false, title: "watch on YouTube", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg", regionBlocked: null, regionAllowed: null }]]));
     const sourceBuilder = sourceQuery([source]);
@@ -298,8 +298,26 @@ describe("source refresh recovery", () => {
       embeddable: false,
       title: "watch on YouTube",
     }));
-    expect(content.update).not.toHaveBeenCalled();
+    expect(content.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(content.update).not.toHaveBeenCalledWith({ availability: "dead" });
     expect(resolveSourceAcquisitionFailure).toHaveBeenCalled();
+  });
+
+  it("restores a stale Korea region block when a public video becomes link-only without restrictions", async () => {
+    const source = { id: "yt-region-recovered", platform: "youtube", external_id: "abcdefghijk", canonical_url: "https://www.youtube.com/watch?v=abcdefghijk", embeddable: true, removed_at: null };
+    mocks.fetchYouTubeVideoStatuses.mockResolvedValue(new Map([[source.external_id, { privacyStatus: "public", embeddable: false, title: "watch on YouTube", channelTitle: "creator", channelId: "channel", publishedAt: null, durationSeconds: null, license: null, madeForKids: false, thumbnailUrl: null, regionBlocked: [], regionAllowed: null }]]));
+    const content = query({ data: [{ id: "content" }], error: null });
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => table === "job_runs" ? jobTable : table === "meme_contents" ? content : sourceQuery([source]));
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(result.status).toBe("ok");
+    expect(result.youtube.hidden).toBe(1);
+    expect(content.update).toHaveBeenCalledWith({ availability: "live" });
+    expect(content.neq).toHaveBeenCalledWith("availability", "live");
+    expect(content.update).not.toHaveBeenCalledWith({ availability: "region_blocked" });
   });
 
   it("keeps Korea region blocking authoritative for a public non-embeddable video", async () => {

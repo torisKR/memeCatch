@@ -190,7 +190,14 @@ async function defaultTransaction(run) {
 
 export async function importRows(sheetId, rows, { transaction = defaultTransaction } = {}) {
   return transaction(async (executeBatch) => {
-    const totals = { received: 0, changed: 0, unchanged: 0, conflicts: 0, batches: 0 };
+    const totals = {
+      received: 0,
+      changed: 0,
+      unchanged: 0,
+      conflicts: 0,
+      conflictRevisionsCreated: 0,
+      batches: 0,
+    };
     for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
       const batch = rows.slice(offset, offset + BATCH_SIZE);
       const result = await executeBatch(sheetId, batch);
@@ -200,6 +207,7 @@ export async function importRows(sheetId, rows, { transaction = defaultTransacti
       totals.changed += Number(value.changed ?? 0);
       totals.unchanged += Number(value.unchanged ?? 0);
       totals.conflicts += Number(value.conflicts ?? 0);
+      totals.conflictRevisionsCreated += Number(value.conflict_revisions_created ?? 0);
       totals.batches += 1;
     }
     return totals;
@@ -227,6 +235,12 @@ export async function main(argv = process.argv.slice(2)) {
   const imported = await importRows(options.sheet_id.trim(), loaded.rows);
   const result = { ...summary, ...imported };
   process.stdout.write(`${JSON.stringify(result)}\n`);
+  if (result.conflicts > 0) {
+    process.stderr.write(
+      `sheet snapshot import preserved ${result.conflicts} conflict(s) as pending revisions; manual review required\n`,
+    );
+    process.exitCode = 2;
+  }
   return result;
 }
 

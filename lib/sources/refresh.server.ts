@@ -192,9 +192,10 @@ async function refreshYouTubeSources(
     } else if (regionBlocked) {
       await syncMemeContentsAvailability(admin, row, "region_blocked");
     } else if (!embeddable) {
-      // A public video with embedding disabled is still a live source. Do not
-      // conflate playback capability with liveness. The current content schema
-      // has no link-only availability value, so preserve its existing state.
+      // A public video with embedding disabled is still live link-only content.
+      // The source update above persists embeddable=false before this projection,
+      // so consumers can fail closed instead of rendering an iframe.
+      await syncMemeContentsAvailability(admin, row, "live");
       hidden += 1;
     } else {
       await syncMemeContentsAvailability(admin, row, "live");

@@ -10,6 +10,7 @@ import { isHouseOriginal } from "@/lib/house-original";
 import { HouseOriginalVisual } from "@/components/house-original-visual";
 import { memeCardArtAlt, memeCardArtFromMeme } from "@/lib/meme-card-art";
 import { videoPreview } from "@/lib/meme-video-preview";
+import { normalizeSourceUrl } from "@/lib/sources/url";
 
 type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 
@@ -100,9 +101,16 @@ export function MemeEmbed({
   const sourceUrl = isPlayable
     ? content?.url ?? fallbackSourceUrl ?? null
     : fallbackSourceUrl ?? null;
-  const socialProvider = isPlayable && embeddingAllowed
+  const candidateSocialProvider = isPlayable && embeddingAllowed
     ? getSocialProvider(content?.platform, sourceUrl)
     : null;
+  const normalizedSocialSource = sourceUrl ? normalizeSourceUrl(sourceUrl) : null;
+  const isUnverifiedInstagramPost =
+    candidateSocialProvider === "instagram" &&
+    normalizedSocialSource?.platform === "instagram" &&
+    new URL(normalizedSocialSource.canonicalUrl).pathname.startsWith("/p/") &&
+    content?.manual_video_verified !== true;
+  const socialProvider = isUnverifiedInstagramPost ? null : candidateSocialProvider;
 
   const ownedArt = memeCardArtFromMeme({
     meme_contents: content?.thumbnail_url

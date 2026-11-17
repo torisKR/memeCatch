@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe("getReviewedMemeMediaSources", () => {
-  it("returns only approved, safe provenance fields", async () => {
+  it("returns every review state so restrictive exact rows remain visible to policy", async () => {
     const builder = query({
       data: [
         {
@@ -40,7 +40,7 @@ describe("getReviewedMemeMediaSources", () => {
           },
         },
         {
-          review_state: "approved",
+          review_state: "pending",
           rights_basis: "blocked",
           media_sources: {
             platform: "youtube",
@@ -57,24 +57,26 @@ describe("getReviewedMemeMediaSources", () => {
     });
     createAdminClient.mockReturnValue({ from: vi.fn(() => builder) });
 
-    await expect(getReviewedMemeMediaSources("meme-1")).resolves.toEqual([
-      expect.objectContaining({
-        review_state: "approved",
-        rights_basis: "official_embed",
-        external_id: "abcdefghijk",
-      }),
-    ]);
-    expect(builder.eq.mock.calls).toEqual([
-      ["meme_id", "meme-1"],
-      ["review_state", "approved"],
-    ]);
+    await expect(getReviewedMemeMediaSources("meme-1")).resolves.toEqual({
+      ok: true,
+      sources: [
+        expect.objectContaining({ review_state: "approved", external_id: "abcdefghijk" }),
+        expect.objectContaining({ review_state: "pending", rights_basis: "blocked" }),
+      ],
+    });
+    expect(builder.eq.mock.calls).toEqual([["meme_id", "meme-1"]]);
   });
 
-  it("fails closed when the provenance query fails", async () => {
+  it("distinguishes query failure from a successful empty ledger", async () => {
     createAdminClient.mockReturnValue({
       from: vi.fn(() => query({ data: null, error: { message: "nope" } })),
     });
 
-    await expect(getReviewedMemeMediaSources("meme-2")).resolves.toEqual([]);
+    await expect(getReviewedMemeMediaSources("meme-2")).resolves.toEqual({ ok: false, sources: [] });
+
+    createAdminClient.mockReturnValue({
+      from: vi.fn(() => query({ data: [], error: null })),
+    });
+    await expect(getReviewedMemeMediaSources("meme-3")).resolves.toEqual({ ok: true, sources: [] });
   });
 });

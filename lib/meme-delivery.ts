@@ -29,15 +29,21 @@ export type ReviewedMediaSource = {
   readonly last_checked_at: string | null;
 };
 
+export type ReviewedMediaSourceLookup =
+  | { readonly ok: true; readonly sources: readonly ReviewedMediaSource[] }
+  | { readonly ok: false; readonly sources: readonly [] };
+
 type DeliveryInput<T extends DeliveryContent, S extends SourceLink> = {
   readonly contents: readonly T[];
   readonly sources: readonly S[];
-  readonly reviewedMediaSources?: readonly ReviewedMediaSource[];
+  readonly reviewedMediaSources?: readonly ReviewedMediaSource[] | ReviewedMediaSourceLookup;
   readonly now?: number;
 };
 
 export type MemeDelivery<T extends DeliveryContent, S extends SourceLink> = {
   readonly representative: T | null;
+  readonly renderableContents: T[];
+  readonly embeddableContents: T[];
   readonly embeddingAllowed: boolean;
   readonly fallbackSourceUrl: string | null;
   readonly sourceLinks: SourceLink[];
@@ -80,23 +86,21 @@ function hasFreshStatus(source: ReviewedMediaSource, now: number): boolean {
   return Number.isFinite(checkedAt) && checkedAt <= now && now - checkedAt <= SOURCE_STATUS_MAX_AGE_MS;
 }
 
-function exactReviewedMediaSource(
+function exactReviewedMediaSources(
   content: DeliveryContent,
   reviewedMediaSources: readonly ReviewedMediaSource[],
-): ReviewedMediaSource | null {
+): ReviewedMediaSource[] {
   const contentUrl = normalizedUrl(content.url);
-  if (!contentUrl || !content.content_id) return null;
+  if (!contentUrl || !content.content_id) return [];
   const normalizedContent = normalizeSourceUrl(contentUrl);
   const contentPlatform = sourcePlatformFromReference({
     platform: content.platform,
     url: contentUrl,
   });
-  if (!normalizedContent || !contentPlatform) return null;
+  if (!normalizedContent || !contentPlatform) return [];
 
-  const matches = reviewedMediaSources.filter((source) => {
+  return reviewedMediaSources.filter((source) => {
     if (
-      source.review_state !== "approved" ||
-      unsafeRights.has(source.rights_basis) ||
       source.platform !== contentPlatform ||
       source.external_id !== content.content_id
     ) {
@@ -107,41 +111,61 @@ function exactReviewedMediaSource(
       normalizedSource.externalId === source.external_id &&
       normalizedContent.canonicalUrl === normalizedSource.canonicalUrl;
   });
-  return matches.reduce<ReviewedMediaSource | null>((latest, candidate) => {
-    if (!latest) return candidate;
-    const latestTime = Date.parse(latest.last_checked_at ?? "");
-    const candidateTime = Date.parse(candidate.last_checked_at ?? "");
-    if (Number.isFinite(candidateTime) && (!Number.isFinite(latestTime) || candidateTime > latestTime)) {
-      return candidate;
-    }
-    if (
-      candidateTime === latestTime &&
-      (candidate.removed_at != null || candidate.public_status !== "public") &&
-      latest.removed_at == null &&
-      latest.public_status === "public"
-    ) {
-      return candidate;
-    }
-    return latest;
-  }, null);
+}
+
+type SourcePolicy = {
+  readonly access: "default" | "link_only" | "suppressed";
+  readonly confirmedUnavailable: boolean;
+};
+
+const explicitNonPublicStatuses = new Set(["private", "unlisted"]);
+
+function normalizeReviewedMediaSourceLookup(
+  value: readonly ReviewedMediaSource[] | ReviewedMediaSourceLookup,
+): ReviewedMediaSourceLookup {
+  return "ok" in value ? value : { ok: true, sources: value };
+}
+
+function policyForReviewedSource(source: ReviewedMediaSource, now: number): SourcePolicy {
+  if (
+    source.review_state !== "approved" ||
+    unsafeRights.has(source.rights_basis)
+  ) {
+    return { access: "suppressed", confirmedUnavailable: false };
+  }
+  if (source.removed_at || explicitNonPublicStatuses.has(source.public_status ?? "")) {
+    return { access: "suppressed", confirmedUnavailable: true };
+  }
+  if (source.embeddable !== false) {
+    return { access: "default", confirmedUnavailable: false };
+  }
+  if (
+    (source.platform === "youtube" || source.platform === "youtube_shorts") &&
+    source.public_status === "public" &&
+    hasFreshStatus(source, now)
+  ) {
+    return { access: "link_only", confirmedUnavailable: false };
+  }
+  return { access: "suppressed", confirmedUnavailable: false };
 }
 
 function sourcePolicy(
   content: DeliveryContent,
   reviewedMediaSources: readonly ReviewedMediaSource[],
   now: number,
-): "default" | "link_only" | "suppressed" {
-  const source = exactReviewedMediaSource(content, reviewedMediaSources);
-  if (!source) return "default";
-  if (source.removed_at || (source.public_status != null && source.public_status !== "public")) {
-    return "suppressed";
+): SourcePolicy {
+  const policies = exactReviewedMediaSources(content, reviewedMediaSources)
+    .map((source) => policyForReviewedSource(source, now));
+  if (policies.some((policy) => policy.access === "suppressed")) {
+    return {
+      access: "suppressed",
+      confirmedUnavailable: policies.some((policy) => policy.confirmedUnavailable),
+    };
   }
-  if (source.embeddable !== false) return "default";
-  return (source.platform === "youtube" || source.platform === "youtube_shorts") &&
-    source.public_status === "public" &&
-    hasFreshStatus(source, now)
-    ? "link_only"
-    : "suppressed";
+  if (policies.some((policy) => policy.access === "link_only")) {
+    return { access: "link_only", confirmedUnavailable: false };
+  }
+  return { access: "default", confirmedUnavailable: false };
 }
 
 export function resolveMemeDelivery<
@@ -153,14 +177,25 @@ export function resolveMemeDelivery<
   reviewedMediaSources = [],
   now = Date.now(),
 }: DeliveryInput<T, S>): MemeDelivery<T, S> {
+  const lookup = normalizeReviewedMediaSourceLookup(reviewedMediaSources);
   const policies = new Map(
-    contents.map((content) => [content, sourcePolicy(content, reviewedMediaSources, now)]),
+    contents.map((content) => [
+      content,
+      !lookup.ok && (
+        normalizedUrl(content.url) ||
+        (content.content_id && ["youtube", "youtube_shorts", "instagram", "tiktok"].includes(
+          sourcePlatformFromReference(content) ?? "",
+        ))
+      )
+        ? { access: "suppressed" as const, confirmedUnavailable: false }
+        : sourcePolicy(content, lookup.sources, now),
+    ]),
   );
   const renderableContents = contents.filter(
     (content) =>
-      policies.get(content) !== "suppressed" &&
+      policies.get(content)?.access !== "suppressed" &&
       (isRenderableContent(content) ||
-        (policies.get(content) === "link_only" &&
+        (policies.get(content)?.access === "link_only" &&
           content.moderation_status === "approved" &&
           content.availability === "dead")),
   );
@@ -168,13 +203,16 @@ export function resolveMemeDelivery<
     renderableContents.find((content) => content.is_representative) ??
     renderableContents[0] ??
     null;
+  const embeddableContents = renderableContents.filter(
+    (content) => policies.get(content)?.access === "default",
+  );
   const unavailableUrls = new Set(
     contents
       .filter(
         (content) =>
-          policies.get(content) === "suppressed" ||
+          policies.get(content)?.access === "suppressed" ||
           content.availability === "region_blocked" ||
-          (content.availability === "dead" && policies.get(content) !== "link_only"),
+          (content.availability === "dead" && policies.get(content)?.access !== "link_only"),
       )
       .map((content) => urlKey(content.url))
       .filter((url): url is string => url !== null),
@@ -182,25 +220,31 @@ export function resolveMemeDelivery<
   const fallbackContents = renderableContents.filter(
     (content) => !unavailableUrls.has(urlKey(content.url) ?? ""),
   );
-  const sourceLinks = sourceLinksWithContent([...sources], fallbackContents).filter((source) => {
+  const sourceLinks = (
+    lookup.ok ? sourceLinksWithContent([...sources], fallbackContents) : []
+  ).filter((source) => {
     const url = normalizedUrl(source.source_url);
     return url !== null && !unavailableUrls.has(urlKey(url) ?? "");
   });
-  const publicSources = sourceLinksWithContent([...sources], []).filter((source) => {
+  const publicSources = (
+    lookup.ok ? sourceLinksWithContent([...sources], []) : []
+  ).filter((source) => {
     const url = normalizedUrl(source.source_url);
     return url !== null && !unavailableUrls.has(urlKey(url) ?? "");
   }) as S[];
 
   return {
     representative,
-    embeddingAllowed: representative == null || policies.get(representative) !== "link_only",
+    renderableContents,
+    embeddableContents,
+    embeddingAllowed: representative == null || policies.get(representative)?.access !== "link_only",
     fallbackSourceUrl: preferredSourceUrl(sourceLinks),
     sourceLinks,
     publicSources,
     fallbackReason:
       representative === null
         ? contents.some(
-            (content) => isUnavailable(content) || policies.get(content) === "suppressed",
+            (content) => isUnavailable(content) || policies.get(content)?.confirmedUnavailable,
           )
           ? "confirmed_unavailable"
           : "no_playback_reference"

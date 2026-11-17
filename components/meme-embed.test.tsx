@@ -297,6 +297,45 @@ describe("MemeEmbed", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("links an unverified Instagram /p/ without presenting it as unavailable or video", () => {
+    const url = "https://www.instagram.com/p/DJiODQnTOfj/";
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          ...tiktokContent,
+          platform: "Instagram",
+          content_id: "DJiODQnTOfj",
+          url,
+          manual_video_verified: false,
+        }}
+        title="사진일 수 있는 게시물"
+      />,
+    );
+
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain(`href="${url}"`);
+    expect(html).toContain("원본 콘텐츠는 출처에서 볼 수 있어요.");
+    expect(html).not.toContain("현재 확인할 수 없어요");
+  });
+
+  it("keeps an explicitly verified Instagram /p/ playable", () => {
+    const html = renderToStaticMarkup(
+      <MemeEmbed
+        content={{
+          ...tiktokContent,
+          platform: "Instagram",
+          content_id: "DJiODQnTOfj",
+          url: "https://www.instagram.com/p/DJiODQnTOfj/",
+          manual_video_verified: true,
+        }}
+        title="확인된 게시물 영상"
+      />,
+    );
+
+    expect(html).toContain("<iframe");
+    expect(html).toContain("www.instagram.com/p/DJiODQnTOfj/embed/captioned/");
+  });
+
   it("shows only an identity-verified social poster in the loading shell", () => {
     class IdleIntersectionObserver {
       observe() {}

@@ -174,6 +174,8 @@ describe("resolveMemeDelivery", () => {
   it("returns editorial-only delivery when media and sources are absent", () => {
     expect(resolveMemeDelivery({ contents: [], sources: [] })).toEqual({
       representative: null,
+      renderableContents: [],
+      embeddableContents: [],
       embeddingAllowed: true,
       fallbackSourceUrl: null,
       sourceLinks: [],
@@ -190,6 +192,7 @@ describe("resolveMemeDelivery", () => {
     });
 
     expect(result.representative?.id).toBe("live-1");
+    expect(result.embeddableContents).toEqual([]);
     expect(result.embeddingAllowed).toBe(false);
     expect(result.fallbackReason).toBeNull();
     expect(result.fallbackSourceUrl).toBe(
@@ -298,4 +301,103 @@ describe("resolveMemeDelivery", () => {
     expect(result.sourceLinks).toEqual([]);
     expect(result.fallbackSourceUrl).toBeNull();
   });
+
+  it("fails closed for external embeds and source links when the ledger lookup fails", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ is_representative: true })],
+      sources: [{ source_url: "https://namu.wiki/w/context", platform: "Community" }],
+      reviewedMediaSources: { ok: false, sources: [] },
+    });
+
+    expect(result.representative).toBeNull();
+    expect(result.renderableContents).toEqual([]);
+    expect(result.embeddableContents).toEqual([]);
+    expect(result.sourceLinks).toEqual([]);
+    expect(result.publicSources).toEqual([]);
+    expect(result.fallbackReason).toBe("no_playback_reference");
+  });
+
+  it("does not embed a YouTube ID without a URL when the ledger lookup fails", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ platform: "YouTube", content_id: "abcdefghijk", url: null })],
+      sources: [],
+      reviewedMediaSources: { ok: false, sources: [] },
+    });
+
+    expect(result.representative).toBeNull();
+    expect(result.embeddableContents).toEqual([]);
+  });
+
+  it("preserves legacy delivery after a successful empty ledger lookup", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ is_representative: true })],
+      sources: [],
+      reviewedMediaSources: { ok: true, sources: [] },
+    });
+
+    expect(result.representative?.id).toBe("live-1");
+    expect(result.renderableContents).toHaveLength(1);
+    expect(result.embeddableContents).toHaveLength(1);
+  });
+
+  it.each(["pending", "blocked", "rejected", "removed", "unknown"])(
+    "lets an exact %s row restrict conflicting approved evidence",
+    (reviewState) => {
+      const result = resolveMemeDelivery({
+        contents: [liveContent({ is_representative: true })],
+        sources: [],
+        reviewedMediaSources: [
+          reviewedYouTube({ embeddable: true }),
+          reviewedYouTube({ review_state: reviewState, embeddable: true }),
+        ],
+      });
+
+      expect(result.representative).toBeNull();
+      expect(result.renderableContents).toEqual([]);
+    },
+  );
+
+  it.each(["unknown", "blocked"])(
+    "lets exact %s rights restrict conflicting approved evidence",
+    (rightsBasis) => {
+      const result = resolveMemeDelivery({
+        contents: [liveContent({ is_representative: true })],
+        sources: [],
+        reviewedMediaSources: [
+          reviewedYouTube({ embeddable: true }),
+          reviewedYouTube({ rights_basis: rightsBasis, embeddable: true }),
+        ],
+      });
+
+      expect(result.representative).toBeNull();
+      expect(result.renderableContents).toEqual([]);
+    },
+  );
+
+  it.each(["tiktok", "instagram"])(
+    "keeps an approved live %s embed visible when re-ingest resets public status to unknown",
+    (platform) => {
+      const url = platform === "tiktok"
+        ? "https://www.tiktok.com/@creator/video/1234567890"
+        : "https://www.instagram.com/reel/AbC123/";
+      const contentId = platform === "tiktok" ? "1234567890" : "AbC123";
+      const result = resolveMemeDelivery({
+        contents: [liveContent({ platform, content_id: contentId, url, is_representative: true })],
+        sources: [],
+        reviewedMediaSources: [{
+          ...reviewedYouTube(),
+          platform,
+          external_id: contentId,
+          canonical_url: url,
+          embeddable: true,
+          public_status: "unknown",
+        }],
+      });
+
+      expect(result.representative?.id).toBe("live-1");
+      expect(result.renderableContents).toHaveLength(1);
+      expect(result.embeddableContents).toHaveLength(1);
+      expect(result.fallbackReason).toBeNull();
+    },
+  );
 });

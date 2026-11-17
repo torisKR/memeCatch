@@ -45,7 +45,6 @@ import { isAdsenseContentEligible } from "@/lib/adsense-policy";
 import { detailIndexableFromDiscovery } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { isThinMeme, koreanDetailRobots } from "@/lib/thin-meme";
-import { isRenderableContent } from "@/lib/content-availability";
 import { resolveMemeDelivery } from "@/lib/meme-delivery";
 import { getReviewedMemeMediaSources } from "@/lib/meme-delivery.server";
 import { listIndexableLocalizedMemes } from "@/lib/meme-translations";
@@ -57,6 +56,7 @@ import {
 } from "@/lib/i18n-routing";
 import { koreanMemeShareImage, shareCacheVersion } from "@/lib/meme-share-image";
 import { representativeImageUrl } from "@/lib/meme-share-photo";
+import { socialVideoPreview } from "@/lib/meme-video-preview";
 import { SITE_URL } from "@/lib/site";
 import { getMemeMarketPassport } from "@/lib/meme-market-passport.server";
 import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
@@ -242,14 +242,14 @@ export default async function MemeDetailPage({ params }: Props) {
     reviewedMediaSources,
   });
   const representative = delivery.representative;
-  const liveContents = meme.meme_contents.filter(isRenderableContent);
   // TikTok·Instagram 등 비대표 임베드 — 대표 영상 아래 "관련 콘텐츠"로 노출
-  const relatedSocialContents = liveContents
+  const relatedSocialContents = delivery.embeddableContents
     .filter(
       (c) =>
         c.id !== representative?.id &&
         ["tiktok", "instagram"].includes(String(c.platform ?? "").toLowerCase()),
     )
+    .filter((content) => socialVideoPreview([content]) !== null)
     .slice(0, 4);
   const sourceLinks = delivery.sourceLinks;
   const fallbackSourceUrl = delivery.fallbackSourceUrl;

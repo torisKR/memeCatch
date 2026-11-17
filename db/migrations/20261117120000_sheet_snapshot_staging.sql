@@ -49,6 +49,48 @@ revoke all on table private.sheet_snapshot_rows
   from public, anon, authenticated, service_role;
 grant select, insert, update on table private.sheet_snapshot_rows to service_role;
 
+create table private.sheet_snapshot_row_revisions (
+  sheet_id text not null,
+  row_id text not null,
+  revision_id text not null check (revision_id ~ '^[0-9a-f]{64}$'),
+  record_kind text not null check (record_kind in ('concept', 'video')),
+  source_tab text not null check (char_length(btrim(source_tab)) between 1 and 256),
+  source_row integer not null check (source_row >= 1),
+  raw_data jsonb not null check (jsonb_typeof(raw_data) = 'array'),
+  concept_url text,
+  concept_url_key text,
+  review_state text not null default 'pending'
+    check (review_state in ('pending', 'reviewing', 'approved', 'rejected')),
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  review_note text,
+  first_imported_at timestamptz not null default now(),
+  primary key (sheet_id, row_id, revision_id),
+  foreign key (sheet_id, row_id)
+    references private.sheet_snapshot_rows (sheet_id, row_id),
+  check (
+    (record_kind = 'concept' and row_id like 'MEME-%')
+    or (record_kind = 'video' and row_id like 'VID-%')
+  )
+);
+
+comment on table private.sheet_snapshot_row_revisions is
+  'Private review queue and backup for changed payloads whose original snapshot row has review activity. Each distinct incoming payload and source location starts pending and never inherits approval.';
+comment on column private.sheet_snapshot_row_revisions.revision_id is
+  'Lowercase SHA-256 of the canonical JSONB document containing sheet/row identity, source location, and the complete normalized incoming snapshot payload.';
+
+create index sheet_snapshot_row_revisions_review_idx
+  on private.sheet_snapshot_row_revisions (review_state, first_imported_at);
+create index sheet_snapshot_row_revisions_source_location_idx
+  on private.sheet_snapshot_row_revisions (sheet_id, source_tab, source_row);
+
+alter table private.sheet_snapshot_row_revisions enable row level security;
+
+revoke all on table private.sheet_snapshot_row_revisions
+  from public, anon, authenticated, service_role;
+grant select, insert, update on table private.sheet_snapshot_row_revisions
+  to service_role;
+
 create or replace function public.import_sheet_snapshot_rows(
   p_sheet_id text,
   p_rows jsonb
@@ -63,6 +105,7 @@ declare
   v_received integer;
   v_changed integer;
   v_conflicts integer;
+  v_conflict_revisions_created integer;
 begin
   if current_user <> 'service_role' then
     raise exception using errcode = '42501', message = 'service_role_required';
@@ -140,6 +183,68 @@ begin
             nullif(item.value->>'concept_url', ''),
             nullif(item.value->>'concept_url_key', ''));
 
+  -- Preserve the complete changed payload as a separately reviewable pending
+  -- revision. JSONB text is canonical for object key order, so exact replays
+  -- have the same collision-resistant identity and insert nothing.
+  insert into private.sheet_snapshot_row_revisions (
+    sheet_id,
+    row_id,
+    revision_id,
+    record_kind,
+    source_tab,
+    source_row,
+    raw_data,
+    concept_url,
+    concept_url_key,
+    review_state
+  )
+  select
+    v_sheet_id,
+    item.value->>'row_id',
+    encode(sha256(convert_to(jsonb_build_object(
+      'sheet_id', v_sheet_id,
+      'row_id', item.value->>'row_id',
+      'record_kind', item.value->>'record_kind',
+      'source_tab', btrim(item.value->>'source_tab'),
+      'source_row', (item.value->>'source_row')::integer,
+      'raw_data', item.value->'raw_data',
+      'concept_url', nullif(item.value->>'concept_url', ''),
+      'concept_url_key', nullif(item.value->>'concept_url_key', '')
+    )::text, 'UTF8')), 'hex'),
+    item.value->>'record_kind',
+    btrim(item.value->>'source_tab'),
+    (item.value->>'source_row')::integer,
+    item.value->'raw_data',
+    nullif(item.value->>'concept_url', ''),
+    nullif(item.value->>'concept_url_key', ''),
+    'pending'
+  from private.sheet_snapshot_rows as staged
+  join jsonb_array_elements(p_rows) as item(value)
+    on item.value->>'row_id' = staged.row_id
+  where staged.sheet_id = v_sheet_id
+    and (
+      staged.review_state <> 'pending'
+      or staged.reviewed_by is not null
+      or staged.reviewed_at is not null
+      or staged.review_note is not null
+    )
+    and (staged.record_kind,
+         staged.source_tab,
+         staged.source_row,
+         staged.raw_data,
+         staged.concept_url,
+         staged.concept_url_key)
+      is distinct from
+          (item.value->>'record_kind',
+           btrim(item.value->>'source_tab'),
+           (item.value->>'source_row')::integer,
+           item.value->'raw_data',
+           nullif(item.value->>'concept_url', ''),
+           nullif(item.value->>'concept_url_key', ''))
+  on conflict (sheet_id, row_id, revision_id) do nothing;
+
+  get diagnostics v_conflict_revisions_created = row_count;
+
   with incoming as (
     select
       v_sheet_id as sheet_id,
@@ -208,7 +313,8 @@ begin
     'received', v_received,
     'changed', v_changed,
     'unchanged', v_received - v_changed - v_conflicts,
-    'conflicts', v_conflicts
+    'conflicts', v_conflicts,
+    'conflict_revisions_created', v_conflict_revisions_created
   );
 end;
 $function$;

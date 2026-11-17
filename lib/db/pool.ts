@@ -46,6 +46,7 @@ export function getCancelPool(): pg.Pool {
       connectionString: process.env.DATABASE_URL,
       max: 1,
       connectionTimeoutMillis: DB_CANCEL_CONNECTION_TIMEOUT_MS,
+      query_timeout: 1_000,
       idleTimeoutMillis: 5_000,
       allowExitOnIdle: true,
       application_name: "memecatch-cancel",
@@ -89,7 +90,7 @@ export function getDeadlineDb(): Kysely<Database> {
 
 export async function withIdentity<T>(
   identity: DbIdentity,
-  run: (trx: Transaction<Database>, cancel: () => void) => Promise<T>,
+  run: (trx: Transaction<Database>, cancel: () => Promise<void>) => Promise<T>,
   db = getDb(),
 ): Promise<T> {
   const claims = JSON.stringify({
@@ -107,8 +108,8 @@ export async function withIdentity<T>(
     await trx.executeQuery(CompiledQuery.raw("set local search_path to public, extensions"));
     const pid = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(trx);
     const backendPid = Number(pid.rows[0]?.pid ?? 0);
-    const cancel = () => {
-      getCancelPool().query("select pg_cancel_backend($1::int)", [backendPid]).catch(() => undefined);
+    const cancel = async () => {
+      await getCancelPool().query("select pg_cancel_backend($1::int)", [backendPid]);
     };
     return run(trx, cancel);
   });

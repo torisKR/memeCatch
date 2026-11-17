@@ -25,6 +25,7 @@ describe("database pool bounds", () => {
     expect(pool.options.connectionTimeoutMillis).toBeUndefined();
     expect(cancelPool.options.max).toBe(1);
     expect(cancelPool.options.connectionTimeoutMillis).toBe(DB_CANCEL_CONNECTION_TIMEOUT_MS);
+    expect(cancelPool.options.query_timeout).toBe(1_000);
     expect(deadlinePool.options.max).toBe(2);
     expect(deadlinePool.options.connectionTimeoutMillis).toBe(1_500);
     expect(DB_CANCEL_CONNECTION_TIMEOUT_MS).toBe(1_500);

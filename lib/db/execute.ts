@@ -700,8 +700,9 @@ async function runQuery(
 ): Promise<Record<string, unknown>[]> {
   return withIdentity(identity, async (trx: Transaction<Record<string, Record<string, unknown>>>, cancel) => {
     if (signal?.aborted) throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
+    let cancelAttempt: Promise<void> | undefined;
     const abort = () => {
-      cancel();
+      cancelAttempt ??= cancel().catch(() => undefined);
     };
     signal?.addEventListener("abort", abort, { once: true });
     try {
@@ -715,6 +716,7 @@ async function runQuery(
       return result.rows.map((row) => row.__row);
     } finally {
       signal?.removeEventListener("abort", abort);
+      await cancelAttempt;
     }
   }, db);
 }

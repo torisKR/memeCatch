@@ -133,4 +133,52 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
       for (const client of clients) client.release();
     }
   });
+
+  it("finishes a queued cancel attempt before reusing its backend for another query", async () => {
+    resetQueryMetadata();
+    const warm = await executePlan(selectOneMeme, anon);
+    expect(warm.error).toBeNull();
+
+    const pool = getPool();
+    const blocker = await pool.connect();
+    const fillers = await Promise.all(
+      Array.from({ length: pool.options.max - 2 }, () => pool.connect()),
+    );
+    const cancelBlocker = getCancelPool().query("select pg_sleep(0.35)");
+    try {
+      await blocker.query("begin");
+      await blocker.query("set local role service_role");
+      await blocker.query("lock table public.memes in access exclusive mode");
+
+      const controller = new AbortController();
+      const first = executePlan(selectOneMeme, anon, controller.signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      controller.abort();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await blocker.query("rollback");
+
+      const firstResult = await first;
+      expect(firstResult.error).toBeNull();
+
+      await blocker.query("begin");
+      await blocker.query("set local role service_role");
+      await blocker.query("lock table public.memes in access exclusive mode");
+      const release = setTimeout(() => {
+        void blocker.query("rollback");
+      }, 500);
+      try {
+        const secondResult = await executePlan(selectOneMeme, anon);
+        expect(secondResult.error).toBeNull();
+        expect(secondResult.data).toEqual(expect.any(Array));
+      } finally {
+        clearTimeout(release);
+        await blocker.query("rollback");
+      }
+    } finally {
+      await cancelBlocker.catch(() => undefined);
+      await blocker.query("rollback");
+      blocker.release();
+      for (const client of fillers) client.release();
+    }
+  });
 });

@@ -8,9 +8,12 @@
 import { pathToFileURL } from "node:url";
 
 import { createRestClient, restAll, loadEnv } from "./source-pipeline-rest.mjs";
+import { normalizeSourceUrl } from "./source-url.mjs";
 import { isYouTubeRegionBlocked } from "../lib/sources/youtube-region.mjs";
 import {
   applyYouTubePrivateMetadataPolicy,
+  buildYouTubeMaintenanceRecoveryBlocks,
+  classifyYouTubeMaintenanceSource,
   classifyYouTubeRefreshAvailability,
   validateYouTubeVideoBatchExternalIds,
   validateYouTubeVideosListResponse,
@@ -21,16 +24,11 @@ const DISPLAY_PLATFORM = { youtube: "YouTube", youtube_shorts: "YouTube Shorts" 
 const BATCH_SIZE = 50;
 const METADATA_TTL_MS = 30 * 86_400_000;
 const MAX_REPORTED_ERRORS = 20;
-const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 function parseDuration(value) {
   const match = value?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
   if (!match) return null;
   return Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0);
-}
-
-function validExternalId(value) {
-  return typeof value === "string" && YOUTUBE_VIDEO_ID_PATTERN.test(value);
 }
 
 async function safeRest(rest, path, options) {
@@ -62,7 +60,8 @@ async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
 
 /**
  * @param {{
- *   sources: Array<{ id: string, platform: string, external_id: unknown }>,
+ *   sources: Array<{ id: string, platform: string, external_id: unknown, canonical_url: unknown }>,
+ *   recoveryBlocks?: ReadonlyMap<string, "youtube_source_active_quarantine" | "youtube_source_retry_deferred">,
  *   apiKey: string,
  *   fetchImpl?: typeof fetch,
  *   rest: Function,
@@ -74,6 +73,7 @@ async function fetchValidatedBatch(fetchImpl, apiKey, requestedVideoIds) {
  */
 export async function runRefreshYouTubeSources({
   sources,
+  recoveryBlocks = new Map(),
   apiKey,
   fetchImpl = fetch,
   rest,
@@ -95,11 +95,16 @@ export async function runRefreshYouTubeSources({
   const validSources = [];
 
   for (const source of sources) {
-    if (!validExternalId(source.external_id)) {
+    const sourceError = classifyYouTubeMaintenanceSource(
+      source,
+      normalizeSourceUrl(source.canonical_url),
+      recoveryBlocks,
+    );
+    if (sourceError) {
       stats.checked += 1;
       stats.failed += 1;
       if (stats.errors.length < MAX_REPORTED_ERRORS) {
-        stats.errors.push(`youtube_source_external_id_inconclusive:${source.id}`);
+        stats.errors.push(`${sourceError}:${source.id}`);
       } else {
         stats.errorsTruncated += 1;
       }
@@ -216,6 +221,13 @@ async function main(args = process.argv.slice(2)) {
   const env = loadEnv();
   if (!env.YOUTUBE_API_KEY) throw new Error("youtube_api_key_missing");
   const rest = createRestClient(env);
+  const activeRecovery = await restAll(
+    rest,
+    "source_acquisition_recovery?select=source_key,source_id,last_error_code,last_error_retryable,next_retry_at&resolved_at=is.null&source_id=not.is.null",
+  ).catch(() => {
+    throw new Error("youtube_source_quarantine_read_failed");
+  });
+  const recoveryBlocks = buildYouTubeMaintenanceRecoveryBlocks(activeRecovery, Date.now());
   const sources = await restAll(
     rest,
     "media_sources?select=id,platform,external_id,canonical_url&platform=in.(youtube,youtube_shorts)&removed_at=is.null&order=last_checked_at.asc.nullsfirst",
@@ -224,6 +236,7 @@ async function main(args = process.argv.slice(2)) {
   });
   const result = await runRefreshYouTubeSources({
     sources,
+    recoveryBlocks,
     apiKey: env.YOUTUBE_API_KEY,
     rest,
     limit,

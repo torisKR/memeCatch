@@ -9,6 +9,26 @@ export type YouTubeVideoStatusFields = {
   [key: string]: unknown;
 };
 
+export declare function buildYouTubeMaintenanceRecoveryBlocks(
+  recoveries: Array<Record<string, unknown>>,
+  nowMs: number,
+): Map<unknown, "youtube_source_active_quarantine" | "youtube_source_retry_deferred">;
+
+export declare function classifyYouTubeMaintenanceSource(
+  source: {
+    id?: unknown;
+    platform?: unknown;
+    external_id?: unknown;
+    canonical_url?: unknown;
+  },
+  normalizedSource: {
+    platform?: unknown;
+    externalId?: unknown;
+    canonicalUrl?: unknown;
+  } | null,
+  recoveryBlocks: ReadonlyMap<unknown, "youtube_source_active_quarantine" | "youtube_source_retry_deferred">,
+): "youtube_source_active_quarantine" | "youtube_source_retry_deferred" | "youtube_source_identity_inconclusive" | null;
+
 export declare function validateYouTubeVideoBatchExternalIds(
   externalIds: Iterable<unknown>,
 ): Set<string>;

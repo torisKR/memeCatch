@@ -51,6 +51,72 @@ function daysFromNow(days: number) {
   return new Date(Date.now() + days * 86_400_000).toISOString();
 }
 
+function normalizedSourceIdentity(row: MediaSourceRow) {
+  if (!row.external_id) return null;
+  const normalized = normalizeSourceUrl(row.canonical_url);
+  if (
+    !normalized ||
+    normalized.externalId !== row.external_id ||
+    normalized.canonicalUrl !== row.canonical_url
+  ) return null;
+  if (isYouTubePlatform(row.platform)) {
+    return isYouTubePlatform(normalized.platform) ? normalized : null;
+  }
+  return normalized.platform === row.platform ? normalized : null;
+}
+
+async function quarantineInvalidIdentity(
+  admin: ReturnType<typeof createAdminClient>,
+  row: MediaSourceRow,
+  attemptedAt: Date,
+) {
+  await recordSourceAcquisitionFailure({
+    sourceKey: `invalid_identity:${row.id}`,
+    idempotencyKey: `invalid_identity:${row.id}:${attemptedAt.toISOString()}`,
+    platform: row.platform,
+    sourceId: row.id,
+    externalId: null,
+    canonicalUrl: /^https:\/\//i.test(row.canonical_url) ? row.canonical_url : null,
+    code: "metadata_mismatch",
+    attempt: 1,
+    occurredAt: attemptedAt,
+  }, admin);
+}
+
+function providerIdentityRecoveryKey(row: MediaSourceRow) {
+  return `provider_identity:${row.id}`;
+}
+
+function tiktokProviderIdentityState(
+  row: MediaSourceRow,
+  oembed: Awaited<ReturnType<typeof getOEmbed>>,
+) {
+  // TikTok embeds can expose a provider-owned video ID in returned HTML.
+  // Instagram oEmbed has no equivalent independently trustworthy ID, so its
+  // response cannot strengthen the pre-request canonical identity check.
+  if (row.platform !== "tiktok") return "not_applicable" as const;
+  if (oembed.providerContentId === null) return "inconclusive" as const;
+  return oembed.providerContentId === row.external_id ? "confirmed" as const : "mismatch" as const;
+}
+
+async function recordProviderIdentityFailure(
+  admin: ReturnType<typeof createAdminClient>,
+  row: MediaSourceRow,
+  attemptedAt: Date,
+) {
+  await recordSourceAcquisitionFailure({
+    sourceKey: providerIdentityRecoveryKey(row),
+    idempotencyKey: `${providerIdentityRecoveryKey(row)}:${attemptedAt.toISOString()}`,
+    platform: row.platform,
+    sourceId: row.id,
+    externalId: row.external_id,
+    canonicalUrl: row.canonical_url,
+    code: "provider_transient",
+    attempt: 1,
+    occurredAt: attemptedAt,
+  }, admin);
+}
+
 async function syncMemeContentsAvailability(
   admin: ReturnType<typeof createAdminClient>,
   source: MediaSourceRow,
@@ -89,7 +155,7 @@ async function refreshYouTubeSources(
   // Missing or malformed IDs were never queried from YouTube and cannot be
   // treated as an authoritative missing-video result. Keep healthy sources
   // moving while reporting the bad rows for data repair.
-  const validRows = rows.filter((row) => row.external_id && /^[A-Za-z0-9_-]{11}$/.test(row.external_id));
+  const validRows = rows.filter((row) => normalizedSourceIdentity(row));
   const validIds = new Set(validRows.map((row) => row.id));
   const invalidRows = rows.filter((row) => !validIds.has(row.id));
   const identityErrors = invalidRows.map((row) => `invalid_source_identity:${row.id}`);
@@ -99,17 +165,7 @@ async function refreshYouTubeSources(
     try {
       // Non-retryable recovery records keep malformed rows out of future
       // refresh budgets while retaining their identity for manual repair.
-      await recordSourceAcquisitionFailure({
-        sourceKey: `invalid_identity:${row.id}`,
-        idempotencyKey: `invalid_identity:${row.id}:${invalidAttemptAt.toISOString()}`,
-        platform: row.platform,
-        sourceId: row.id,
-        externalId: null,
-        canonicalUrl: /^https:\/\//i.test(row.canonical_url) ? row.canonical_url : null,
-        code: "metadata_mismatch",
-        attempt: 1,
-        occurredAt: invalidAttemptAt,
-      }, admin);
+      await quarantineInvalidIdentity(admin, row, invalidAttemptAt);
     } catch {
       identityErrors.push(`invalid_identity_quarantine_failed:${row.id}`);
     }
@@ -267,12 +323,34 @@ async function refreshOEmbedSources(
   let checked = 0;
   let removed = 0;
   let failed = 0;
+  const errors: string[] = [];
 
   for (const row of rows) {
     const attemptStartedAt = new Date();
     const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
+    if (!normalizedSourceIdentity(row)) {
+      failed += 1;
+      checked += 1;
+      try {
+        await quarantineInvalidIdentity(admin, row, attemptStartedAt);
+      } catch {
+        errors.push(`invalid_identity_quarantine_failed:${row.id}`);
+      }
+      continue;
+    }
     try {
       const oembed = await getOEmbed(row.canonical_url);
+      const providerIdentity = tiktokProviderIdentityState(row, oembed);
+      if (providerIdentity === "mismatch" || providerIdentity === "inconclusive") {
+        failed += 1;
+        checked += 1;
+        try {
+          await recordProviderIdentityFailure(admin, row, attemptStartedAt);
+        } catch {
+          errors.push(`provider_identity_recovery_failed:${row.id}`);
+        }
+        continue;
+      }
       // TikTok can return a generic player for any ID, including nonexistent
       // videos. A bare player is not evidence that the source is public.
       if (row.platform === "tiktok" && (!oembed.title || !oembed.authorName)) {
@@ -293,34 +371,92 @@ async function refreshOEmbedSources(
       if (error) throw new Error("source_refresh_update_failed");
       await syncMemeContentsAvailability(admin, row, "live");
       if (row.external_id) {
-        await resolveSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          attemptIdempotencyKey,
-          attemptStartedAt,
-          resolvedAt: new Date(),
-        }, admin);
-      }
-    } catch (error) {
-      if (error instanceof OEmbedError && error.status === 404) {
-        const { error: sourceError } = await admin
-          .from("media_sources")
-          .update({
-            removed_at: now,
-            last_checked_at: now,
-            title: null,
-            thumbnail_url: null,
-            metadata_expires_at: null,
-          })
-          .eq("id", row.id);
-        if (sourceError) throw new Error("source_refresh_update_failed");
-        await syncMemeContentsAvailability(admin, row, "dead");
-        if (row.external_id) {
+        try {
+          if (providerIdentity === "confirmed") {
+            await resolveSourceAcquisitionFailure({
+              sourceKey: providerIdentityRecoveryKey(row),
+              attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+              attemptStartedAt,
+              resolvedAt: new Date(),
+            }, admin);
+          }
           await resolveSourceAcquisitionFailure({
             sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
             attemptIdempotencyKey,
             attemptStartedAt,
             resolvedAt: new Date(),
           }, admin);
+        } catch {
+          // Source and content are already live. A recovery-ledger failure is
+          // not provider evidence and must not rewrite or reclassify this row.
+          failed += 1;
+          checked += 1;
+          errors.push(`social_live_recovery_resolve_failed:${row.id}`);
+          continue;
+        }
+      }
+    } catch (error) {
+      if (error instanceof OEmbedError && error.status === 404) {
+        try {
+          // Project dead content first so a failed source write remains due and
+          // cannot leave live content behind a freshly checked removed source.
+          await syncMemeContentsAvailability(admin, row, "dead");
+          const { error: sourceError } = await admin
+            .from("media_sources")
+            .update({
+              removed_at: now,
+              last_checked_at: now,
+              title: null,
+              thumbnail_url: null,
+              metadata_expires_at: null,
+            })
+            .eq("id", row.id);
+          if (sourceError) throw new Error("source_refresh_update_failed");
+        } catch {
+          failed += 1;
+          checked += 1;
+          errors.push(`social_404_write_failed:${row.id}`);
+          if (row.external_id) {
+            try {
+              await recordSourceAcquisitionFailure({
+                sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+                idempotencyKey: attemptIdempotencyKey,
+                platform: row.platform,
+                externalId: row.external_id,
+                canonicalUrl: row.canonical_url,
+                code: "db_failure",
+                attempt: 1,
+                occurredAt: attemptStartedAt,
+                sourceId: row.id,
+              }, admin);
+            } catch {
+              errors.push(`source_recovery_record_failed:${row.id}`);
+            }
+          }
+          continue;
+        }
+        if (row.external_id) {
+          try {
+            if (row.platform === "tiktok") {
+              await resolveSourceAcquisitionFailure({
+                sourceKey: providerIdentityRecoveryKey(row),
+                attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
+                attemptStartedAt,
+                resolvedAt: new Date(),
+              }, admin);
+            }
+            await resolveSourceAcquisitionFailure({
+              sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+              attemptIdempotencyKey,
+              attemptStartedAt,
+              resolvedAt: new Date(),
+            }, admin);
+          } catch {
+            failed += 1;
+            checked += 1;
+            errors.push(`social_404_recovery_resolve_failed:${row.id}`);
+            continue;
+          }
         }
         removed += 1;
       } else if (row.external_id) {
@@ -344,13 +480,13 @@ async function refreshOEmbedSources(
     checked += 1;
   }
 
-  return { checked, removed, failed };
+  return { checked, removed, failed, errors };
 }
 
 export type SourceRefreshResult = {
   status: "ok" | "partial" | "failed";
   youtube: { checked: number; removed: number; hidden: number; failed: number; errors: string[] };
-  oembed: { checked: number; removed: number; failed: number };
+  oembed: { checked: number; removed: number; failed: number; errors: string[] };
   error?: string;
 };
 
@@ -375,9 +511,8 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       for (const recovery of batch) {
         if (!recovery.sourceId) continue;
         const source = byId.get(recovery.sourceId);
-        if (!source || (source.platform !== "youtube" && source.platform !== "youtube_shorts") || !source.external_id) continue;
-        const normalized = normalizeSourceUrl(source.canonical_url);
-        if (!normalized || !isYouTubePlatform(normalized.platform) || normalized.externalId !== source.external_id) continue;
+        if (!source || !source.external_id) continue;
+        if (!normalizedSourceIdentity(source as MediaSourceRow)) continue;
         await resolveSourceAcquisitionFailure({
           sourceKey: recovery.sourceKey,
           attemptIdempotencyKey: `identity-repair:${source.id}:${repairAttempt.toISOString()}`,
@@ -418,7 +553,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     return {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0 },
+      oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
       error: selectError.message,
     };
   }
@@ -433,7 +568,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     return {
       status: "failed",
       youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0 },
+      oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
       error: dueError.message,
     };
   }
@@ -457,7 +592,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   );
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-  let oembed = { checked: 0, removed: 0, failed: 0 };
+  let oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[] };
   let firstError: string | undefined;
 
   try {

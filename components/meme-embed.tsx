@@ -18,13 +18,13 @@ type SocialProvider = "tiktok" | "instagram" | "facebook" | "threads";
 const PLAYER_COPY: Record<SeoRouteLocale, {
   representativeVideo: string; relatedVideo: string; playRepresentativeVideo: string; playRelatedVideo: string;
   representativeContent: string; relatedContent: string; example: string;
-  openPost: string; loading: string; unavailable: string; openProvider: string; error: string;
+  openPost: string; tiktokBlankHint: string; loading: string; unavailable: string; openProvider: string; error: string;
 }> = {
-  ko: { representativeVideo: "대표 영상", relatedVideo: "관련 영상", playRepresentativeVideo: "대표 영상 재생", playRelatedVideo: "관련 영상 재생", representativeContent: "대표 콘텐츠", relatedContent: "관련 콘텐츠", example: "밈 사용 예시", openPost: "게시물 열기", loading: "콘텐츠 불러오는 중", unavailable: "이 TikTok 콘텐츠를 현재 재생할 수 없습니다.", openProvider: "에서 보기", error: "콘텐츠를 불러오지 못했습니다." },
-  en: { representativeVideo: "Representative video", relatedVideo: "Related video", playRepresentativeVideo: "Play representative video", playRelatedVideo: "Play related video", representativeContent: "Representative content", relatedContent: "Related content", example: "Meme example", openPost: "Open post", loading: "Loading content", unavailable: "This TikTok content cannot be played right now.", openProvider: " on", error: "Could not load content." },
-  ja: { representativeVideo: "代表動画", relatedVideo: "関連動画", playRepresentativeVideo: "代表動画を再生", playRelatedVideo: "関連動画を再生", representativeContent: "代表コンテンツ", relatedContent: "関連コンテンツ", example: "ミームの使用例", openPost: "投稿を開く", loading: "コンテンツを読み込み中", unavailable: "このTikTokコンテンツは現在再生できません。", openProvider: "で見る", error: "コンテンツを読み込めませんでした。" },
-  zh: { representativeVideo: "代表视频", relatedVideo: "相关视频", playRepresentativeVideo: "播放代表视频", playRelatedVideo: "播放相关视频", representativeContent: "代表内容", relatedContent: "相关内容", example: "迷因使用示例", openPost: "打开帖子", loading: "正在加载内容", unavailable: "目前无法播放此TikTok内容。", openProvider: "上查看", error: "无法加载内容。" },
-  "zh-tw": { representativeVideo: "代表影片", relatedVideo: "相關影片", playRepresentativeVideo: "播放代表影片", playRelatedVideo: "播放相關影片", representativeContent: "代表內容", relatedContent: "相關內容", example: "迷因使用範例", openPost: "開啟貼文", loading: "正在載入內容", unavailable: "目前無法播放此TikTok內容。", openProvider: "上查看", error: "無法載入內容。" },
+  ko: { representativeVideo: "대표 영상", relatedVideo: "관련 영상", playRepresentativeVideo: "대표 영상 재생", playRelatedVideo: "관련 영상 재생", representativeContent: "대표 콘텐츠", relatedContent: "관련 콘텐츠", example: "밈 사용 예시", openPost: "게시물 열기", tiktokBlankHint: "영상이 보이지 않으면 TikTok에서 직접 열어 보세요.", loading: "콘텐츠 불러오는 중", unavailable: "이 TikTok 콘텐츠를 현재 재생할 수 없습니다.", openProvider: "에서 보기", error: "콘텐츠를 불러오지 못했습니다." },
+  en: { representativeVideo: "Representative video", relatedVideo: "Related video", playRepresentativeVideo: "Play representative video", playRelatedVideo: "Play related video", representativeContent: "Representative content", relatedContent: "Related content", example: "Meme example", openPost: "Open post", tiktokBlankHint: "If the video appears blank, open it directly on TikTok.", loading: "Loading content", unavailable: "This TikTok content cannot be played right now.", openProvider: " on", error: "Could not load content." },
+  ja: { representativeVideo: "代表動画", relatedVideo: "関連動画", playRepresentativeVideo: "代表動画を再生", playRelatedVideo: "関連動画を再生", representativeContent: "代表コンテンツ", relatedContent: "関連コンテンツ", example: "ミームの使用例", openPost: "投稿を開く", tiktokBlankHint: "動画が表示されない場合は、TikTokで直接開いてください。", loading: "コンテンツを読み込み中", unavailable: "このTikTokコンテンツは現在再生できません。", openProvider: "で見る", error: "コンテンツを読み込めませんでした。" },
+  zh: { representativeVideo: "代表视频", relatedVideo: "相关视频", playRepresentativeVideo: "播放代表视频", playRelatedVideo: "播放相关视频", representativeContent: "代表内容", relatedContent: "相关内容", example: "迷因使用示例", openPost: "打开帖子", tiktokBlankHint: "如果视频显示为空白，请直接在TikTok中打开。", loading: "正在加载内容", unavailable: "目前无法播放此TikTok内容。", openProvider: "上查看", error: "无法加载内容。" },
+  "zh-tw": { representativeVideo: "代表影片", relatedVideo: "相關影片", playRepresentativeVideo: "播放代表影片", playRelatedVideo: "播放相關影片", representativeContent: "代表內容", relatedContent: "相關內容", example: "迷因使用範例", openPost: "開啟貼文", tiktokBlankHint: "若影片顯示空白，請直接在TikTok開啟。", loading: "正在載入內容", unavailable: "目前無法播放此TikTok內容。", openProvider: "上查看", error: "無法載入內容。" },
 };
 
 /** Desktop detail art stays at most 420px tall so the title remains in the first viewport. */
@@ -557,7 +557,27 @@ function LiteSocialEmbed({
 
   // 플랫폼 구분은 사이드 스트라이프(색상 강조 보더) 대신 라벨 텍스트 + 은은한 전체
   // 테두리로 전달 — 디자인 시스템에서 사이드 스트라이프 악센트는 금지
-  const sourceTape = (
+  const sourceTape = provider === "tiktok" ? (
+    <div
+      className={`hover-glow-flame ${frameWidthClass} rounded-xl border border-border bg-surface p-3 text-sm`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="font-bold tracking-tight">{providerName}</span>
+        {!isRepresentative && (
+          <span className="text-muted">{copy.example}</span>
+        )}
+      </div>
+      <p className="mt-1.5 leading-relaxed text-muted">{copy.tiktokBlankHint}</p>
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:active:scale-100 motion-reduce:transition-none"
+      >
+        {locale === "en" ? `View${copy.openProvider} ${providerName}` : `${providerName}${copy.openProvider}`} <span aria-hidden>↗</span>
+      </a>
+    </div>
+  ) : (
     <div
       className={`hover-glow-flame ${frameWidthClass} flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm`}
     >
@@ -613,14 +633,16 @@ function LiteSocialEmbed({
           <p role="alert" className="text-sm text-muted">
             {playerUnavailable ? copy.unavailable : error}
           </p>
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
-          >
-            {locale === "en" ? `View${copy.openProvider} ${providerName}` : `${providerName}${copy.openProvider}`} <span aria-hidden>↗</span>
-          </a>
+          {provider !== "tiktok" && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent"
+            >
+              {locale === "en" ? `View${copy.openProvider} ${providerName}` : `${providerName}${copy.openProvider}`} <span aria-hidden>↗</span>
+            </a>
+          )}
         </div>
       </div>
     );

@@ -10,7 +10,13 @@ import {
   type QueryPlan,
   type QueryResult,
 } from "@/lib/db/plan";
-import { getDb, getDeadlineDb, withIdentity, type DbIdentity } from "@/lib/db/pool";
+import {
+  getDb,
+  getDeadlineDb,
+  withIdentity,
+  type DbIdentity,
+  type IdentityExecutionOptions,
+} from "@/lib/db/pool";
 
 type ColumnMap = Map<string, Map<string, string>>;
 
@@ -544,7 +550,12 @@ function waitForMeta<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   });
 }
 
-async function loadMeta(identity: DbIdentity, signal?: AbortSignal, db = getDb()): Promise<Meta> {
+async function loadMeta(
+  identity: DbIdentity,
+  signal: AbortSignal | undefined,
+  db: ReturnType<typeof getDb>,
+  executionOptions: IdentityExecutionOptions,
+): Promise<Meta> {
   if (globalMeta.__memecatchMeta) return globalMeta.__memecatchMeta;
   if (signal?.aborted) throw cancelledQueryError();
   if (!globalMeta.__memecatchMetaPromise) {
@@ -615,7 +626,7 @@ async function loadMeta(identity: DbIdentity, signal?: AbortSignal, db = getDb()
             dstCols: pgArray(row.dst_cols),
           })),
         };
-    }, db);
+    }, db, executionOptions);
     globalMeta.__memecatchMetaPromise = metaPromise;
     void metaPromise.then(
       (meta) => {
@@ -697,12 +708,12 @@ async function runQuery(
   signal?: AbortSignal,
   json = true,
   db = getDb(),
+  executionOptions: IdentityExecutionOptions = {},
 ): Promise<Record<string, unknown>[]> {
   return withIdentity(identity, async (trx: Transaction<Record<string, Record<string, unknown>>>, cancel) => {
     if (signal?.aborted) throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
-    let cancelAttempt: Promise<void> | undefined;
     const abort = () => {
-      cancelAttempt ??= cancel().catch(() => undefined);
+      cancel();
     };
     signal?.addEventListener("abort", abort, { once: true });
     try {
@@ -716,9 +727,8 @@ async function runQuery(
       return result.rows.map((row) => row.__row);
     } finally {
       signal?.removeEventListener("abort", abort);
-      await cancelAttempt;
     }
-  }, db);
+  }, db, executionOptions);
 }
 
 async function executePlanWithDb(
@@ -726,10 +736,11 @@ async function executePlanWithDb(
   identity: DbIdentity,
   signal = undefined as AbortSignal | undefined,
   resolveDb: typeof getDb,
+  executionOptions: IdentityExecutionOptions,
 ): Promise<QueryResult> {
   try {
     const db = resolveDb();
-    const meta = await loadMeta(identity, signal, db);
+    const meta = await loadMeta(identity, signal, db, executionOptions);
     if (plan.op === "rpc") {
       attachDottedFilters(plan);
       const matches = await loadFunctions(plan.fn ?? "", db);
@@ -739,16 +750,16 @@ async function executePlanWithDb(
       }) ?? matches[0];
       if (!fn) return { data: null, error: { message: "function not found", code: "42883", status: 404 }, count: null };
       const built = rpcSql(plan, fn, meta);
-      const rows = await runQuery(identity, built.sql, built.params, signal, true, db);
+      const rows = await runQuery(identity, built.sql, built.params, signal, true, db, executionOptions);
       return shapeRows(plan, rows, null, !fn.proretset);
     }
     if (plan.op === "select") {
       const dataSql = compileSelectPlan(plan, meta, false);
       const countSql = plan.count === "exact" ? compileSelectPlan(plan, meta, true) : null;
-      const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal, true, db);
+      const rows = plan.head ? [] : await runQuery(identity, dataSql.sql, dataSql.params, signal, true, db, executionOptions);
       let count: number | null = null;
       if (countSql) {
-        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false, db);
+        const counted = await runQuery(identity, countSql.sql, countSql.params, signal, false, db, executionOptions);
         count = Number(counted[0]?.count ?? 0);
       }
       return shapeRows(plan, rows, count, false);
@@ -756,7 +767,7 @@ async function executePlanWithDb(
     attachDottedFilters(plan);
     const built = mutationSql(plan, meta);
     // Without RETURNING there are no rows, and a WITH wrapper would be rejected.
-    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning, db);
+    const rows = await runQuery(identity, built.sql, built.params, signal, plan.returning, db, executionOptions);
     return shapeRows(plan, rows, null, false);
   } catch (error) {
     return { data: null, error: queryError(error), count: null };
@@ -764,11 +775,14 @@ async function executePlanWithDb(
 }
 
 export function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
-  return executePlanWithDb(plan, identity, signal, getDb);
+  return executePlanWithDb(plan, identity, signal, getDb, {});
 }
 
 export function executeDeadlinePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
-  return executePlanWithDb(plan, identity, signal, getDeadlineDb);
+  return executePlanWithDb(plan, identity, signal, getDeadlineDb, {
+    allowBackendCancel: false,
+    statementTimeoutMs: 1_500,
+  });
 }
 
 export function resetQueryMetadata(): void {

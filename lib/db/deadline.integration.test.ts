@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { executeDeadlinePlan, executePlan, resetQueryMetadata } from "@/lib/db/execute";
-import { getCancelPool, getDeadlinePool, getPool } from "@/lib/db/pool";
+import { getDeadlinePool, getPool } from "@/lib/db/pool";
 
 const databaseUrl = process.env.DATABASE_URL;
 const anon = { userId: null, role: "anon" as const, anonymous: false };
@@ -23,43 +23,7 @@ const selectOneMeme = {
 describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
   afterAll(async () => {
     resetQueryMetadata();
-    await Promise.all([getPool().end(), getCancelPool().end(), getDeadlinePool().end()]);
-  });
-
-  it("cancels a blocked plan query while every general-pool slot is occupied", async () => {
-    resetQueryMetadata();
-    const warm = await executePlan(selectOneMeme, anon);
-    expect(warm.error).toBeNull();
-
-    const pool = getPool();
-    const blocker = await pool.connect();
-    const fillers = await Promise.all(
-      Array.from({ length: pool.options.max - 2 }, () => pool.connect()),
-    );
-    let emergency: ReturnType<typeof setTimeout> | undefined;
-    try {
-      await blocker.query("begin");
-      await blocker.query("set local role service_role");
-      await blocker.query("lock table public.memes in access exclusive mode");
-      const startedAt = Date.now();
-      emergency = setTimeout(() => {
-        void blocker.query("rollback");
-      }, 1_000);
-      const result = await executePlan(
-        selectOneMeme,
-        anon,
-        AbortSignal.timeout(100),
-      );
-
-      expect(result.error?.code).toBe("57014");
-      expect(result.error?.status).toBe(408);
-      expect(Date.now() - startedAt).toBeLessThan(700);
-    } finally {
-      if (emergency) clearTimeout(emergency);
-      await blocker.query("rollback");
-      blocker.release();
-      for (const client of fillers) client.release();
-    }
+    await Promise.all([getPool().end(), getDeadlinePool().end()]);
   });
 
   it("does not impose the proxy checkout deadline on the shared application pool", async () => {
@@ -84,6 +48,53 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
     }
   });
 
+  it("preserves same-pool fire-and-forget cancellation for general queries", async () => {
+    resetQueryMetadata();
+    const warm = await executePlan(selectOneMeme, anon);
+    expect(warm.error).toBeNull();
+
+    const pool = getPool();
+    const blocker = await pool.connect();
+    const fillers = await Promise.all(
+      Array.from({ length: pool.options.max - 2 }, () => pool.connect()),
+    );
+    try {
+      await blocker.query("begin");
+      await blocker.query("set local role service_role");
+      await blocker.query("lock table public.memes in access exclusive mode");
+
+      const controller = new AbortController();
+      const running = executePlan(selectOneMeme, anon, controller.signal);
+      const occupiedDeadline = Date.now() + 500;
+      while (pool.idleCount !== 0 && Date.now() < occupiedDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(pool.totalCount).toBe(pool.options.max);
+      expect(pool.idleCount).toBe(0);
+
+      controller.abort();
+      const queuedDeadline = Date.now() + 500;
+      while (pool.waitingCount !== 1 && Date.now() < queuedDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(pool.waitingCount).toBe(1);
+
+      await blocker.query("rollback");
+      const result = await running;
+      expect([null, "57014"]).toContain(result.error?.code ?? null);
+
+      const drainedDeadline = Date.now() + 500;
+      while (pool.waitingCount !== 0 && Date.now() < drainedDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(pool.waitingCount).toBe(0);
+    } finally {
+      await blocker.query("rollback");
+      blocker.release();
+      for (const client of fillers) client.release();
+    }
+  });
+
   it("keeps deadline-bound public reads independent from a full general pool", async () => {
     resetQueryMetadata();
     const pool = getPool();
@@ -100,6 +111,39 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
     } finally {
       for (const client of clients) client.release();
     }
+  });
+
+  it("uses the server deadline while the general pool is full and recovers", async () => {
+    resetQueryMetadata();
+    const warm = await executeDeadlinePlan(selectOneMeme, anon);
+    expect(warm.error).toBeNull();
+
+    const pool = getPool();
+    const blocker = await pool.connect();
+    const fillers = await Promise.all(
+      Array.from({ length: pool.options.max - 1 }, () => pool.connect()),
+    );
+    try {
+      await blocker.query("begin");
+      await blocker.query("set local role service_role");
+      await blocker.query("lock table public.memes in access exclusive mode");
+
+      const startedAt = Date.now();
+      const result = await executeDeadlinePlan(selectOneMeme, anon, AbortSignal.timeout(100));
+      const elapsed = Date.now() - startedAt;
+      expect(result.error?.code).toBe("57014");
+      expect(result.error?.status).toBe(408);
+      expect(elapsed).toBeGreaterThanOrEqual(1_200);
+      expect(elapsed).toBeLessThan(2_200);
+    } finally {
+      await blocker.query("rollback");
+      blocker.release();
+      for (const client of fillers) client.release();
+    }
+
+    const recovered = await executeDeadlinePlan(selectOneMeme, anon);
+    expect(recovered.error).toBeNull();
+    expect(recovered.data).toEqual(expect.any(Array));
   });
 
   it("keeps a shared metadata checkout alive when one pool-full waiter cancels", async () => {
@@ -132,74 +176,5 @@ describe.skipIf(!databaseUrl)("database deadline enforcement", () => {
     } finally {
       for (const client of clients) client.release();
     }
-  });
-
-  it("finishes a queued cancel attempt before reusing its backend for another query", async () => {
-    resetQueryMetadata();
-    const warm = await executePlan(selectOneMeme, anon);
-    expect(warm.error).toBeNull();
-
-    const pool = getPool();
-    const blocker = await pool.connect();
-    const fillers = await Promise.all(
-      Array.from({ length: pool.options.max - 2 }, () => pool.connect()),
-    );
-    const cancelBlocker = getCancelPool().query("select pg_sleep(0.35)");
-    try {
-      await blocker.query("begin");
-      await blocker.query("set local role service_role");
-      await blocker.query("lock table public.memes in access exclusive mode");
-
-      const controller = new AbortController();
-      const first = executePlan(selectOneMeme, anon, controller.signal);
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      controller.abort();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      await blocker.query("rollback");
-
-      const firstResult = await first;
-      expect(firstResult.error).toBeNull();
-
-      await blocker.query("begin");
-      await blocker.query("set local role service_role");
-      await blocker.query("lock table public.memes in access exclusive mode");
-      const release = setTimeout(() => {
-        void blocker.query("rollback");
-      }, 500);
-      try {
-        const secondResult = await executePlan(selectOneMeme, anon);
-        expect(secondResult.error).toBeNull();
-        expect(secondResult.data).toEqual(expect.any(Array));
-      } finally {
-        clearTimeout(release);
-        await blocker.query("rollback");
-      }
-    } finally {
-      await cancelBlocker.catch(() => undefined);
-      await blocker.query("rollback");
-      blocker.release();
-      for (const client of fillers) client.release();
-    }
-  });
-
-  it("stops a sent cancel-pool statement on the server before allowing subsequent work", async () => {
-    const cancelPool = getCancelPool();
-    const before = await cancelPool.query<{ pid: number }>("select pg_backend_pid() as pid");
-    const startedAt = Date.now();
-    let timeoutError: unknown;
-    try {
-      await cancelPool.query("select pg_sleep(2)");
-    } catch (error) {
-      timeoutError = error;
-    }
-    const timeoutElapsed = Date.now() - startedAt;
-    expect(timeoutError).toMatchObject({ code: "57014" });
-    expect(timeoutElapsed).toBeGreaterThanOrEqual(850);
-    expect(timeoutElapsed).toBeLessThan(1_500);
-
-    const reuseStartedAt = Date.now();
-    const after = await cancelPool.query<{ pid: number }>("select pg_backend_pid() as pid");
-    expect(Date.now() - reuseStartedAt).toBeLessThan(300);
-    expect(after.rows[0]?.pid).not.toBe(before.rows[0]?.pid);
   });
 });

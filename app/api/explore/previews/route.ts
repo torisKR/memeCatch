@@ -1,4 +1,4 @@
-import { createStaticClient } from "@/lib/db/server";
+import { createPreviewDeadlineDb, withPreviewDeadline } from "@/lib/explore-preview-deadline.server";
 import { hasTrustedOrigin } from "@/lib/origin";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { readBoundedJson, RequestBodyTooLargeError } from "@/lib/request-body";
@@ -9,8 +9,6 @@ export const dynamic = "force-dynamic";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_IDS = 24;
-const MAX_ACTIVE_QUERIES = 6;
-let activeQueries = 0;
 
 /** Re-read public content and its review ledger; never trust browser-supplied URLs. */
 export async function POST(request: Request): Promise<Response> {
@@ -30,21 +28,19 @@ export async function POST(request: Request): Promise<Response> {
       !ids.every((id) => typeof id === "string" && UUID.test(id))) {
     return Response.json({ error: "invalid ids" }, { status: 400 });
   }
-  if (activeQueries >= MAX_ACTIVE_QUERIES) return Response.json({ error: "database busy" }, { status: 503 });
-  activeQueries += 1;
-  try {
-    const { data, error } = await createStaticClient().from("memes").select(
+  const result = await withPreviewDeadline(async (signal) => {
+    const { data, error } = await createPreviewDeadlineDb("anon").from("memes").select(
       "id, meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)",
-    ).in("id", [...new Set(ids)]).in("moderation_status", ["approved", "limited"]);
+    ).in("id", [...new Set(ids)]).in("moderation_status", ["approved", "limited"]).abortSignal(signal);
     if (error || !Array.isArray(data)) throw new Error("catalog unavailable");
     const cards = data as unknown as MemeListItem[];
-    const previews = await qualifySearchPreviews(cards);
-    return Response.json({ previews: cards.map((card, index) => ({ id: card.id, contents: previews[index] ?? [] })) }, {
-      headers: { "Cache-Control": "no-store" },
+    let ledgerFailed = false;
+    const previews = await qualifySearchPreviews(cards, {
+      client: createPreviewDeadlineDb("service_role"), signal, onFailure: () => { ledgerFailed = true; },
     });
-  } catch {
-    return Response.json({ error: "previews unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
-  } finally {
-    activeQueries -= 1;
-  }
+    if (ledgerFailed) throw new Error("ledger unavailable");
+    return cards.map((card, index) => ({ id: card.id, contents: previews[index] ?? [] }));
+  }, request.signal);
+  if (!result) return Response.json({ error: "previews unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  return Response.json({ previews: result }, { headers: { "Cache-Control": "no-store" } });
 }

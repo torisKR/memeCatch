@@ -200,9 +200,37 @@ async function fetchFrom(
   );
 }
 
+async function fetchQualifiedPreviews(ids: string[]): Promise<Record<string, MemeListItem["meme_contents"]> | null> {
+  if (!ids.length) return {};
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch("/api/explore/previews", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }), signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    const rows = body && typeof body === "object" ? (body as { previews?: unknown }).previews : null;
+    if (!Array.isArray(rows)) return null;
+    const allowed = new Set(ids);
+    return Object.fromEntries(rows.flatMap((row: unknown) => {
+      if (!row || typeof row !== "object") return [];
+      const value = row as { id?: unknown; contents?: unknown };
+      return typeof value.id === "string" && allowed.has(value.id) && Array.isArray(value.contents)
+        ? [[value.id, value.contents as MemeListItem["meme_contents"]]] : [];
+    }));
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function ExploreGrid({
   initial,
   initialPreviews,
+  initialPreviewUnavailable = false,
   filters,
   excludeIds = [],
   initialOffset,
@@ -212,6 +240,7 @@ export function ExploreGrid({
 }: {
   initial: MemeListItem[];
   initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
+  initialPreviewUnavailable?: boolean;
   filters: ExploreFilters;
   /** Discovery ids. Omit to leave the query unfiltered (tests). */
   indexableIds?: readonly string[];
@@ -237,6 +266,10 @@ export function ExploreGrid({
   const [previews, setPreviews] = useState<Record<string, MemeListItem["meme_contents"]>>(() =>
     Object.fromEntries(initial.map((item, index) => [item.id, initialPreviews?.[index] ?? []])),
   );
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>(() =>
+    initialPreviewUnavailable ? initial.filter((item) => !item.id.startsWith("curated-")).map((item) => item.id) : [],
+  );
+  const [retryingPreviews, setRetryingPreviews] = useState(false);
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -264,35 +297,11 @@ export function ExploreGrid({
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
       const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
-      let verified: Record<string, MemeListItem["meme_contents"]> = {};
-      if (fresh.length) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10_000);
-        try {
-          const response = await fetch("/api/explore/previews", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids: fresh.map((item) => item.id) }),
-            signal: controller.signal,
-          });
-          if (!response.ok) throw new Error("preview unavailable");
-          const body: unknown = await response.json();
-          const rows = body && typeof body === "object" ? (body as { previews?: unknown }).previews : null;
-          if (!Array.isArray(rows)) throw new Error("invalid preview response");
-          const allowed = new Set(fresh.map((item) => item.id));
-          verified = Object.fromEntries(rows.flatMap((row: unknown) => {
-            if (!row || typeof row !== "object") return [];
-            const value = row as { id?: unknown; contents?: unknown };
-            return typeof value.id === "string" && allowed.has(value.id) && Array.isArray(value.contents)
-              ? [[value.id, value.contents as MemeListItem["meme_contents"]]] : [];
-          }));
-        } catch {
-          // A failed policy lookup must never fall back to unqualified content.
-        } finally {
-          clearTimeout(timeout);
-        }
-      }
+      const ids = fresh.map((item) => item.id);
+      const verified = await fetchQualifiedPreviews(ids);
+      if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
       for (const m of fresh) seenRef.current.add(m.id);
-      setPreviews((prev) => ({ ...prev, ...verified }));
+      if (verified) setPreviews((prev) => ({ ...prev, ...verified }));
       setItems((prev) => [...prev, ...fresh]);
       offsetRef.current = from + batch.scanned;
       hasMoreRef.current = batch.hasMore;
@@ -304,6 +313,21 @@ export function ExploreGrid({
       setLoading(false);
     }
   }, [filters, indexableIds]);
+
+  async function retryPreviewLookup() {
+    if (retryingPreviews) return;
+    setRetryingPreviews(true);
+    try {
+      const batch = pendingPreviews.slice(0, PAGE_SIZE);
+      const verified = await fetchQualifiedPreviews(batch);
+      if (verified) {
+        setPreviews((prev) => ({ ...prev, ...verified }));
+        setPendingPreviews((prev) => prev.filter((id) => !batch.includes(id)));
+      }
+    } finally {
+      setRetryingPreviews(false);
+    }
+  }
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -436,6 +460,14 @@ export function ExploreGrid({
 
   return (
     <div>
+      {pendingPreviews.length > 0 && (
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
+          <span>일부 영상 미리보기를 불러오지 못했어요.</span>
+          <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
+            {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
+          </button>
+        </div>
+      )}
       <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">

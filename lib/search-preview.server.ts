@@ -35,7 +35,10 @@ function parseRow(value: unknown, ids: ReadonlySet<string>): { id: string; sourc
 }
 
 /** One server-only ledger query per bounded batch, with no persistent rights cache. */
-export async function qualifySearchPreviews(cards: readonly MemeListItem[]): Promise<(PreviewContents | undefined)[]> {
+export async function qualifySearchPreviews(
+  cards: readonly MemeListItem[],
+  options: { client?: Pick<ReturnType<typeof createAdminClient>, "from">; signal?: AbortSignal; onFailure?: () => void } = {},
+): Promise<(PreviewContents | undefined)[]> {
   const ids = [...new Set(cards.map((card) => card?.id).filter((id): id is string => typeof id === "string" && UUID.test(id)))];
   const grouped = new Map<string, ReviewedMediaSource[]>();
   const failed = new Set<string>();
@@ -43,9 +46,10 @@ export async function qualifySearchPreviews(cards: readonly MemeListItem[]): Pro
     const chunk = ids.slice(offset, offset + BATCH_SIZE);
     const allowed = new Set(chunk);
     try {
-      const { data, error } = await createAdminClient().from("meme_media").select(
+      const query = (options.client ?? createAdminClient()).from("meme_media").select(
         "meme_id, review_state, rights_basis, media_sources!inner(platform, external_id, canonical_url, embeddable, public_status, removed_at, last_checked_at)",
       ).in("meme_id", chunk);
+      const { data, error } = await (options.signal ? query.abortSignal(options.signal) : query);
       if (error || !Array.isArray(data)) throw new Error("ledger_unavailable");
       let malformedCount = 0;
       for (const value of data) {
@@ -62,7 +66,9 @@ export async function qualifySearchPreviews(cards: readonly MemeListItem[]): Pro
         grouped.set(row.id, sources);
       }
       if (malformedCount) console.warn(`[search-preview] malformed ledger rows: ${malformedCount}`);
+      if (malformedCount) options.onFailure?.();
     } catch {
+      options.onFailure?.();
       console.warn("[search-preview] ledger batch unavailable");
       for (const id of chunk) failed.add(id);
     }

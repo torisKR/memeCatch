@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), qualify: vi.fn(), allowed: true, quota: true }));
-vi.mock("@/lib/db/server", () => ({
-  createStaticClient: () => ({ from: () => ({ select: () => ({ in: () => ({ in: mocks.query }) }) }) }),
+vi.mock("server-only", () => ({}));
+const mocks = vi.hoisted(() => ({ query: vi.fn(), filter: vi.fn(), qualify: vi.fn(), allowed: true, quota: true }));
+vi.mock("@/lib/explore-preview-deadline.server", async (original) => ({
+  ...await original(),
+  createPreviewDeadlineDb: () => ({ from: () => ({ select: () => ({ in: () => ({ in: (...args: unknown[]) => {
+    mocks.filter(...args); return { abortSignal: mocks.query };
+  } }) }) }) }),
 }));
 vi.mock("@/lib/search-preview.server", () => ({ qualifySearchPreviews: mocks.qualify }));
 vi.mock("@/lib/origin", () => ({ hasTrustedOrigin: () => mocks.allowed }));
@@ -19,7 +23,7 @@ const request = (body: unknown) => new Request("https://catchmeme.com/api/explor
 });
 
 beforeEach(() => {
-  mocks.query.mockReset(); mocks.qualify.mockReset(); mocks.allowed = true; mocks.quota = true;
+  mocks.query.mockReset(); mocks.filter.mockReset(); mocks.qualify.mockReset(); mocks.allowed = true; mocks.quota = true;
 });
 
 describe("explore preview lookup", () => {
@@ -31,8 +35,8 @@ describe("explore preview lookup", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({ previews: [{ id, contents: [content] }] });
-    expect(mocks.qualify).toHaveBeenCalledWith([row]);
-    expect(mocks.query).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
+    expect(mocks.qualify).toHaveBeenCalledWith([row], expect.objectContaining({ signal: expect.any(AbortSignal), onFailure: expect.any(Function) }));
+    expect(mocks.filter).toHaveBeenCalledWith("moderation_status", ["approved", "limited"]);
   });
   it("does not disclose unreturned private rows or invent previews", async () => {
     mocks.query.mockResolvedValue({ data: [], error: null });
@@ -60,8 +64,8 @@ describe("explore preview lookup", () => {
     const pending = new Promise((resolve) => { finish = resolve; });
     mocks.query.mockReturnValue(pending);
     mocks.qualify.mockResolvedValue([]);
-    const active = Array.from({ length: 6 }, () => POST(request({ ids: [id] })));
-    await vi.waitFor(() => expect(mocks.query).toHaveBeenCalledTimes(6));
+    const active = Array.from({ length: 4 }, () => POST(request({ ids: [id] })));
+    await vi.waitFor(() => expect(mocks.query).toHaveBeenCalledTimes(4));
     expect((await POST(request({ ids: [id] }))).status).toBe(503);
     finish({ data: [], error: null });
     expect((await Promise.all(active)).every((response) => response.status === 200)).toBe(true);

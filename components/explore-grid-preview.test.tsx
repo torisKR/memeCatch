@@ -31,9 +31,13 @@ describe("explore pagination preview policy", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ ids: [id] });
   });
   it("still shows the card without an unqualified preview when lookup fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ previews: [{ id, contents: verified }] }) }));
     render(<ExploreGrid initial={[]} hasMoreInitial filters={{ categories: [], sort: "trending" }} />);
     fireEvent.click(screen.getByRole("button", { name: "계속 찾기" }));
     await waitFor(() => expect(screen.getByTestId("card").textContent).toBe("[]"));
+    fireEvent.click(screen.getByRole("button", { name: "미리보기 다시 불러오기" }));
+    await waitFor(() => expect(screen.getByTestId("card").textContent).toContain("reviewed"));
+    expect(screen.queryByRole("button", { name: "미리보기 다시 불러오기" })).toBeNull();
   });
 });

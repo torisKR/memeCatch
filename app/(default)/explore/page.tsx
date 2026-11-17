@@ -27,6 +27,7 @@ import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
 import { qualifySearchPreviews } from "@/lib/search-preview.server";
+import { createPreviewDeadlineDb, withPreviewDeadline } from "@/lib/explore-preview-deadline.server";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
@@ -303,7 +304,15 @@ export default async function ExplorePage({
       }
     })();
 
-  const initialPreviews = await qualifySearchPreviews(initialLoad.items);
+  const previewResult = await withPreviewDeadline(async (signal) => {
+    let failed = false;
+    const previews = await qualifySearchPreviews(initialLoad.items, {
+      client: createPreviewDeadlineDb("service_role"), signal, onFailure: () => { failed = true; },
+    });
+    if (failed) throw new Error("preview ledger unavailable");
+    return previews;
+  });
+  const initialPreviews = previewResult ?? initialLoad.items.map(() => []);
 
   return (
     <main className="bg-background pb-14 text-foreground">
@@ -342,6 +351,7 @@ export default async function ExplorePage({
             key={filterKey(filters)}
             initial={initialLoad.items}
             initialPreviews={initialPreviews}
+            initialPreviewUnavailable={previewResult === null}
             initialOffset={initialLoad.dbCount}
             hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}

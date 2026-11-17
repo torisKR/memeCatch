@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createAdminClient } from "@/lib/db/admin";
+import { isValidReviewedMediaSource } from "@/lib/meme-delivery";
 import type {
   ReviewedMediaSource,
   ReviewedMediaSourceLookup,
@@ -27,14 +28,16 @@ export const getReviewedMemeMediaSources = cache(async function getReviewedMemeM
       .eq("meme_id", memeId);
     if (error || !data) return { ok: false, sources: [] };
 
+    if (!Array.isArray(data)) return { ok: false, sources: [] };
     const sources = (data as unknown as ReviewedMediaRow[]).flatMap((row) => {
-      if (!row.media_sources) return [];
+      if (!row?.media_sources) return [null];
       return [{
+        ...row.media_sources,
         review_state: row.review_state,
         rights_basis: row.rights_basis,
-        ...row.media_sources,
       }];
     });
+    if (!sources.every(isValidReviewedMediaSource)) return { ok: false, sources: [] };
     return { ok: true, sources };
   } catch {
     return { ok: false, sources: [] };

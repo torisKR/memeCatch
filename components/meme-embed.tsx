@@ -99,11 +99,7 @@ export function MemeEmbed({
   });
   // 재생 가능 여부는 lib/content-availability.ts 단일 판정 — dead와 region_blocked를
   // 함께 제외한다. 불가 판정이면 아래 폴백 카드가 출처 링크를 대신 제시한다.
-  // A server-verified link-only source may still carry the legacy `dead`
-  // projection left by the old refresh job. Region blocks remain authoritative.
-  const isVerifiedLinkOnly =
-    embeddingAllowed === false && content?.availability !== "region_blocked";
-  const isPlayable = isAvailableContent(content) || isVerifiedLinkOnly;
+  const isPlayable = isAvailableContent(content);
   const effectiveFallbackReason =
     fallbackReason ?? (content && !isPlayable ? "confirmed_unavailable" : null);
   const isYouTube =
@@ -215,6 +211,17 @@ export function MemeEmbed({
   }
 
   if (sourceUrl) {
+    if (!embeddingAllowed) {
+      return (
+        <PlaybackNote art={ownedArt} title={title} category={category} originYear={originYear}>
+          <p className="text-base font-semibold">콘텐츠는 출처에서 확인할 수 있어요.</p>
+          <p className="mt-1 text-sm leading-relaxed">외부 링크로 연결해요.</p>
+          <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold text-foreground transition-colors hover:border-accent hover:text-accent">
+            출처에서 콘텐츠 보기 <span aria-hidden>↗</span>
+          </a>
+        </PlaybackNote>
+      );
+    }
     const isContextSource = isContextSourceUrl(sourceUrl);
     return (
       <PlaybackNote art={ownedArt} title={title} category={category} originYear={originYear}>

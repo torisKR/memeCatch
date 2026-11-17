@@ -71,6 +71,14 @@ describe("selectRelatedVideos", () => {
     expect(selectRelatedVideos([watch, shorts], null)).toEqual([watch]);
   });
 
+  it("keeps verified Instagram post and reel paths distinct, without showing an unverified post", () => {
+    const post = video("Post123", "Instagram", "https://www.instagram.com/p/Post123/", { manual_video_verified: true });
+    const reel = video("Post123", "Instagram", "https://www.instagram.com/reel/Post123/", { id: "reel" });
+    const unverified = video("Other456", "Instagram", "https://www.instagram.com/p/Other456/", { manual_video_verified: false });
+    expect(selectRelatedVideos([post, reel, unverified], null)).toEqual([post, reel]);
+    expect(selectRelatedVideos([post, reel], post)).toEqual([reel]);
+  });
+
   it("excludes the representative identity and unverified Instagram posts", () => {
     const representative = video(
       "YtRep12345A",

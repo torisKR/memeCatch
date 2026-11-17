@@ -118,7 +118,7 @@ describe("MemeEmbed", () => {
     expect(html).not.toContain("WRONGVIDEO1");
   });
 
-  it("shows a public non-embeddable YouTube video as an original link", () => {
+  it("shows a public non-embeddable YouTube video as a source link", () => {
     const html = renderToStaticMarkup(
       <MemeEmbed
         content={{
@@ -126,7 +126,7 @@ describe("MemeEmbed", () => {
           content_id: "abcdefghijk",
           url: "https://www.youtube.com/watch?v=abcdefghijk",
           thumbnail_url: null,
-          availability: "dead",
+          availability: "live",
           caption: null,
         }}
         title="링크 전용 영상"
@@ -136,9 +136,18 @@ describe("MemeEmbed", () => {
 
     expect(html).not.toContain("youtube-nocookie.com/embed");
     expect(html).toContain("https://www.youtube.com/watch?v=abcdefghijk");
-    expect(html).toContain("원본 콘텐츠는 출처에서 볼 수 있어요.");
+    expect(html).toContain("콘텐츠는 출처에서 확인할 수 있어요.");
     expect(html).not.toContain("현재 확인할 수 없어요");
     expect(html).not.toContain("내려갔거나 접근할 수 없어");
+  });
+
+  it("does not restore a dead link-only video", () => {
+    const html = renderToStaticMarkup(<MemeEmbed content={{
+      platform: "YouTube", content_id: "abcdefghijk", url: "https://www.youtube.com/watch?v=abcdefghijk",
+      thumbnail_url: null, availability: "dead", caption: null,
+    }} title="사라진 영상" embeddingAllowed={false} />);
+    expect(html).not.toContain("youtube.com/watch?v=abcdefghijk");
+    expect(html).not.toContain("youtube-nocookie.com/embed/abcdefghijk");
   });
 
   it("includes the TikTok iframe in the initial server markup", () => {

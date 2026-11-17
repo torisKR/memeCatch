@@ -59,7 +59,7 @@ type MemeListColumn = SplitColumns<typeof LIST_COLUMNS>;
  */
 export type MemeListItem = Pick<MemeRow, MemeListColumn> & {
   meme_contents?: (Pick<MemeContentRow, "thumbnail_url" | "is_representative"> &
-    Partial<Pick<MemeContentRow, "platform" | "url" | "content_id" | "availability" | "moderation_status" | "manual_video_verified">>)[];
+    Partial<Pick<MemeContentRow, "platform" | "url" | "content_id" | "availability" | "moderation_status" | "manual_video_verified" | "type">>)[];
   meme_sources?: Array<Pick<MemeSourceRow, "platform" | "source_url"> & { hidden_from_public?: boolean | null }>;
   meme_market_profiles?: MemeOriginProfile[];
 };
@@ -86,7 +86,7 @@ export const LIST_SELECT =
  * signals the detail page uses. Card columns stay in LIST_COLUMNS.
  */
 export const INDEXABLE_LIST_SELECT =
-  `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)` as const;
+  `${LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified, type), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)` as const;
 
 /** 오늘의 급상승 — 2026년 등장·국내 유행 밈을 trend_score 순으로 표시 */
 export async function getTrendingMemes(limit = 10): Promise<MemeListItem[]> {

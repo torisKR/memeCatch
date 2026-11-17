@@ -6,6 +6,7 @@ import { koreanDetailRobots } from "@/lib/thin-meme";
 import { memePathFrom, shortIdFromParam } from "@/lib/labels";
 import { curatedShareVersion, koreanMemeShareImage } from "@/lib/meme-share-image";
 import { classifyPublicMemeLookup, type PublicMemeLookup } from "@/lib/public-meme-lookup";
+import { getKoreanMediaSnapshot } from "@/lib/korean-media-snapshot.server";
 import {
   getMemeByShortId,
   MemeCatalogUnavailableError,
@@ -17,7 +18,7 @@ type RouteIds = {
   targetShortId: string;
 };
 
-export type KoreanMemeDocument = PublicMemeLookup<MemeDetail, CuratedMeme> & RouteIds;
+export type KoreanMemeDocument = PublicMemeLookup<MemeDetail, CuratedMeme> & RouteIds & { mediaUnavailable?: boolean };
 
 function withRoute(
   lookup: PublicMemeLookup<MemeDetail, CuratedMeme>,
@@ -48,7 +49,16 @@ export const resolveKoreanMemeDocument = cache(async function resolveKoreanMemeD
   const curated = findCuratedCoreMeme(targetShortId);
   try {
     const row = await getMemeByShortId(targetShortId);
-    const lookup = classifyPublicMemeLookup({ row, curated, catalogUnavailable: false });
+    if (row) {
+      const media = await getKoreanMediaSnapshot(row.id);
+      if (media.status === "not_public") return withRoute({ kind: "missing" }, requestedShortId, targetShortId);
+      if (media.status === "unavailable") {
+        console.warn(`[meme-media-snapshot] ${media.reason}`);
+        return { ...withRoute({ kind: "database", meme: { ...row, meme_contents: [], meme_sources: [] } }, requestedShortId, targetShortId), mediaUnavailable: true };
+      }
+      return withRoute({ kind: "database", meme: { ...row, ...media.media } }, requestedShortId, targetShortId);
+    }
+    const lookup = classifyPublicMemeLookup<MemeDetail, CuratedMeme>({ row, curated, catalogUnavailable: false });
     return withRoute(lookup, requestedShortId, targetShortId);
   } catch (error) {
     if (!(error instanceof MemeCatalogUnavailableError)) throw error;

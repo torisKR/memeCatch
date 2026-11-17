@@ -15,6 +15,8 @@ type DeliveryContent = {
   readonly availability?: string | null;
   readonly moderation_status?: string | null;
   readonly is_representative?: boolean | null;
+  readonly manual_video_verified?: boolean | null;
+  readonly type?: string | null;
 };
 
 export type ReviewedMediaSource = {
@@ -42,6 +44,7 @@ type DeliveryInput<T extends DeliveryContent, S extends SourceLink> = {
 
 export type MemeDelivery<T extends DeliveryContent, S extends SourceLink> = {
   readonly representative: T | null;
+  readonly representativeAmbiguous: boolean;
   readonly renderableContents: T[];
   readonly embeddableContents: T[];
   readonly embeddingAllowed: boolean;
@@ -99,6 +102,43 @@ function contentIdentityKey(content: DeliveryContent): string | null {
     ? `youtube:${content.content_id}` : null;
 }
 
+function videoIdentity(content: DeliveryContent): string | null {
+  if (content.type != null && content.type !== "video" && content.type !== "embed") return null;
+  if (!content.content_id) return null;
+  const source = content.url ? normalizeSourceUrl(content.url) : null;
+  if (content.url && (!source || source.externalId !== content.content_id)) return null;
+  const platform = source?.platform ?? sourcePlatformFromReference(content);
+  if (platform === "youtube" || platform === "youtube_shorts") {
+    return /^[A-Za-z0-9_-]{11}$/.test(content.content_id) ? `youtube:${content.content_id}` : null;
+  }
+  if (!source) return null;
+  if (source.platform === "instagram") {
+    if (source.canonicalUrl.includes("/p/") && content.manual_video_verified !== true) return null;
+    return source.canonicalUrl;
+  }
+  return source.platform === "tiktok" ? `tiktok:${source.externalId}` : null;
+}
+
+function selectRepresentative<T extends DeliveryContent>(contents: T[]): { item: T | null; ambiguous: boolean } {
+  const representatives = contents.filter((content) => content.is_representative);
+  const pool = representatives.length ? representatives : contents;
+  const videos = pool.flatMap((content) => {
+    const identity = videoIdentity(content);
+    return identity ? [{ content, identity }] : [];
+  });
+  const unknownVideos = pool.filter((content) => {
+    if ((content.type !== "video" && content.type !== "embed") || videoIdentity(content)) return false;
+    const source = content.url ? normalizeSourceUrl(content.url) : null;
+    return !(source?.platform === "instagram" && source.canonicalUrl.includes("/p/") && content.manual_video_verified !== true);
+  });
+  const identities = new Set(videos.map(({ identity }) => identity));
+  if (identities.size > 1 || (unknownVideos.length > 0 && videos.length + unknownVideos.length > 1) || (representatives.length > 1 && videos.length > 0 && videos.length !== representatives.length)) {
+    return { item: null, ambiguous: true };
+  }
+  if (representatives.length) return { item: representatives[0], ambiguous: false };
+  return { item: videos[0]?.content ?? contents[0] ?? null, ambiguous: false };
+}
+
 function exactReviewedMediaSources(
   content: DeliveryContent,
   reviewedMediaSources: readonly ReviewedMediaSource[],
@@ -136,6 +176,23 @@ type SourcePolicy = {
 };
 
 const explicitNonPublicStatuses = new Set(["private", "unlisted"]);
+const validSourcePlatforms = new Set(["youtube", "youtube_shorts", "tiktok", "instagram", "broadcast_archive", "public_archive", "web"]);
+const validRights = new Set(["official_embed", "creator_permission", "creative_commons", "public_data", "link_only", "unknown", "blocked"]);
+const validReviews = new Set(["pending", "approved", "rejected", "removed"]);
+const validPublicStatuses = new Set(["public", "unlisted", "private", "unknown"]);
+
+export function isValidReviewedMediaSource(value: unknown): value is ReviewedMediaSource {
+  if (!value || typeof value !== "object") return false;
+  const source = value as Record<string, unknown>;
+  const nullableString = (item: unknown) => item === null || typeof item === "string";
+  return typeof source.platform === "string" && validSourcePlatforms.has(source.platform) &&
+    typeof source.review_state === "string" && validReviews.has(source.review_state) &&
+    typeof source.rights_basis === "string" && validRights.has(source.rights_basis) &&
+    (source.public_status === null || (typeof source.public_status === "string" && validPublicStatuses.has(source.public_status))) &&
+    typeof source.canonical_url === "string" && nullableString(source.external_id) &&
+    nullableString(source.removed_at) && nullableString(source.last_checked_at) &&
+    (source.embeddable === null || typeof source.embeddable === "boolean");
+}
 
 function normalizeReviewedMediaSourceLookup(
   value: readonly ReviewedMediaSource[] | ReviewedMediaSourceLookup,
@@ -145,6 +202,7 @@ function normalizeReviewedMediaSourceLookup(
 
 function policyForReviewedSource(source: ReviewedMediaSource, now: number): SourcePolicy {
   if (
+    !isValidReviewedMediaSource(source) ||
     source.review_state !== "approved" ||
     unsafeRights.has(source.rights_basis)
   ) {
@@ -152,6 +210,9 @@ function policyForReviewedSource(source: ReviewedMediaSource, now: number): Sour
   }
   if (source.removed_at || explicitNonPublicStatuses.has(source.public_status ?? "")) {
     return { access: "suppressed", confirmedUnavailable: true };
+  }
+  if (source.rights_basis === "link_only") {
+    return { access: "link_only", confirmedUnavailable: false };
   }
   if (source.embeddable !== false) {
     return { access: "default", confirmedUnavailable: false };
@@ -171,12 +232,37 @@ function sourcePolicy(
   reviewedMediaSources: readonly ReviewedMediaSource[],
   now: number,
 ): SourcePolicy {
+  if (reviewedMediaSources.some((source) => !isValidReviewedMediaSource(source)) ||
+      (content.availability != null && !["live", "dead", "region_blocked", "unchecked"].includes(content.availability))) {
+    return { access: "suppressed", confirmedUnavailable: false };
+  }
   const normalizedContent = content.url ? normalizeSourceUrl(content.url) : null;
   if (normalizedContent && content.content_id && normalizedContent.externalId !== content.content_id) {
     return { access: "suppressed", confirmedUnavailable: false };
   }
-  const policies = exactReviewedMediaSources(content, reviewedMediaSources)
-    .map((source) => policyForReviewedSource(source, now));
+  const platform = sourcePlatformFromReference(content);
+  const matching = content.content_id && platform ? reviewedMediaSources.filter((source) => {
+    const samePlatform = mediaPlatformIdentity(source.platform) === mediaPlatformIdentity(platform);
+    const normalizedSource = normalizeSourceUrl(source.canonical_url);
+    const canonicalMatches = normalizedSource && mediaPlatformIdentity(normalizedSource.platform) === mediaPlatformIdentity(platform) && normalizedSource.externalId === content.content_id;
+    return (samePlatform && source.external_id === content.content_id) || Boolean(canonicalMatches);
+  }) : [];
+  const exact = new Set(exactReviewedMediaSources(content, matching));
+  const policies = matching.flatMap((source) => {
+    const policy = policyForReviewedSource(source, now);
+    if (policy.access === "suppressed" || exact.has(source)) return [policy];
+    const sourceUrl = normalizeSourceUrl(source.canonical_url);
+    if (policy.access === "link_only" && normalizedContent?.platform === "instagram" &&
+        sourceUrl?.platform === "instagram" && sourceUrl.externalId === source.external_id &&
+        sourceUrl.externalId === content.content_id) return [policy];
+    // A valid approval for another Instagram path neither approves nor blocks
+    // this path. Legacy content approval remains the existing fallback. A
+    // restrictive row above still wins by platform and external ID.
+    if (normalizedContent?.platform === "instagram" && sourceUrl?.platform === "instagram" &&
+        sourceUrl.externalId === source.external_id && sourceUrl.externalId === content.content_id &&
+        sourceUrl.canonicalUrl !== normalizedContent.canonicalUrl) return [];
+    return [{ access: "suppressed" as const, confirmedUnavailable: false }];
+  });
   if (policies.some((policy) => policy.access === "suppressed")) {
     return {
       access: "suppressed",
@@ -215,15 +301,10 @@ export function resolveMemeDelivery<
   const renderableContents = contents.filter(
     (content) =>
       policies.get(content)?.access !== "suppressed" &&
-      (isRenderableContent(content) ||
-        (policies.get(content)?.access === "link_only" &&
-          content.moderation_status === "approved" &&
-          content.availability === "dead")),
+      isRenderableContent(content),
   );
-  const representative =
-    renderableContents.find((content) => content.is_representative) ??
-    renderableContents[0] ??
-    null;
+  const selected = selectRepresentative(renderableContents);
+  const representative = selected.item;
   const embeddableContents = renderableContents.filter(
     (content) => policies.get(content)?.access === "default",
   );
@@ -233,7 +314,7 @@ export function resolveMemeDelivery<
         (content) =>
           policies.get(content)?.access === "suppressed" ||
           content.availability === "region_blocked" ||
-          (content.availability === "dead" && policies.get(content)?.access !== "link_only"),
+          (content.availability === "dead" && !renderableContents.includes(content)),
       )
       .map(contentIdentityKey)
       .filter((url): url is string => url !== null),
@@ -262,6 +343,7 @@ export function resolveMemeDelivery<
 
   return {
     representative,
+    representativeAmbiguous: selected.ambiguous,
     renderableContents,
     embeddableContents,
     embeddingAllowed: representative == null || policies.get(representative)?.access !== "link_only",

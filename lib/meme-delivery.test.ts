@@ -351,6 +351,31 @@ describe("resolveMemeDelivery", () => {
     expect(result.embeddableContents).toEqual([]);
   });
 
+  it("uses a reviewed original link for an ID-only public non-embeddable video", () => {
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ url: null, is_representative: true })],
+      sources: [],
+      reviewedMediaSources: { ok: true, sources: [reviewedYouTube()] },
+    });
+
+    expect(result.representative?.id).toBe("live-1");
+    expect(result.embeddingAllowed).toBe(false);
+    expect(result.fallbackSourceUrl).toBe("https://www.youtube.com/watch?v=abcdefghijk");
+  });
+
+  it("filters a blocked ID-only video's source URL from fallback links", () => {
+    const url = "https://www.youtube.com/watch?v=abcdefghijk";
+    const result = resolveMemeDelivery({
+      contents: [liveContent({ url: null })],
+      sources: [{ source_url: url, platform: "YouTube" }],
+      reviewedMediaSources: { ok: true, sources: [reviewedYouTube({ rights_basis: "blocked" })] },
+    });
+
+    expect(result.representative).toBeNull();
+    expect(result.sourceLinks).toEqual([]);
+    expect(result.fallbackSourceUrl).toBeNull();
+  });
+
   it("preserves legacy delivery after a successful empty ledger lookup", () => {
     const result = resolveMemeDelivery({
       contents: [liveContent({ is_representative: true })],

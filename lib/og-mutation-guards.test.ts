@@ -9,6 +9,9 @@ const translations = vi.hoisted(() => ({
   getAvailableTranslationLocales: vi.fn(),
   getLocalizedMemeByShortId: vi.fn(),
 }));
+const delivery = vi.hoisted(() => ({
+  getReviewedMemeMediaSources: vi.fn(async () => ({ ok: true, sources: [] })),
+}));
 
 vi.mock("@/lib/queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/queries")>();
@@ -23,6 +26,8 @@ vi.mock("@/lib/meme-translations", async (importOriginal) => {
     getLocalizedMemeByShortId: translations.getLocalizedMemeByShortId,
   };
 });
+
+vi.mock("@/lib/meme-delivery.server", () => delivery);
 
 import { generateMetadata as generateKoreanMemeMetadata } from "@/app/(default)/memes/[key]/page";
 import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale]/memes/[key]/page";

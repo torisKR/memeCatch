@@ -267,9 +267,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
 
-  const [versions, discovery] = await Promise.all([
+  const [versions, discovery, reviewedMediaSources] = await Promise.all([
     getLanguageVersions(meme, locale),
     loadDiscoveryIndex(),
+    getReviewedMemeMediaSources(meme.id),
   ]);
   const indexable = detailIndexableFromDiscovery(
     discovery,
@@ -297,7 +298,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ["x-default", xDefault],
   ]);
   const description = `${meme.title}: ${meme.summary}`;
-  const photo = representativeImageUrl({ contents: meme.meme_contents ?? [] });
+  const photo = representativeImageUrl({
+    contents: meme.meme_contents ?? [],
+    reviewedMediaSources,
+  });
   const image = localeMemeShareImage({
     locale,
     shortId: meme.short_id,

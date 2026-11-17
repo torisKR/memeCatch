@@ -72,5 +72,7 @@ describe("localized meme detail metadata", () => {
     expect(source).toContain("const sourceLinks = delivery.sourceLinks.flatMap");
     expect(source).toContain("href={source.source_url}");
     expect(source).not.toContain("href={source.source_url!}");
+    expect(source).toContain("const photo = representativeImageUrl({");
+    expect(source).toContain("reviewedMediaSources,");
   });
 });

@@ -102,6 +102,8 @@ describe("밈 상세 hreflang 계약", () => {
     expect(source).toContain("embeddingAllowed={delivery.embeddingAllowed}");
     expect(source).toContain("sources={delivery.publicSources}");
     expect(source).not.toContain("<SourceEvidence sources={meme.meme_sources}");
+    expect(source).toContain("reviewedMediaSources,");
+    expect(source).toContain("const photo = representativeImageUrl({");
   });
 
   it("관련 소셜 임베드는 원본 목록이 아니라 정책 필터 결과만 사용한다", () => {

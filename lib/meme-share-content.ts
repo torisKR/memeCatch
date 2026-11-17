@@ -3,6 +3,7 @@ import type { SeoContentLocale } from "@/lib/i18n-routing";
 import { type MemeCategory } from "@/lib/labels";
 import { blankToNull, type MemeShareCardContent, type ShareCardLocale } from "@/lib/meme-share-image";
 import { representativeImageUrl, type SharePhotoSource } from "@/lib/meme-share-photo";
+import { getReviewedMemeMediaSources } from "@/lib/meme-delivery.server";
 import { resolveKoreanMemeDocument } from "@/lib/public-meme-document";
 
 function categoryOrNull(value: string | null | undefined): MemeCategory | null {
@@ -74,12 +75,14 @@ export function cardFromLocalized(
  * Same document the Korean page shows. A catalog miss still resolves a curated
  * seed id (`bjk2021k`, `okk2020k`) or its slug suffix (`bun-jo-ka`).
  */
-function withRepresentativePhoto(
+async function withRepresentativePhoto(
   card: MemeShareCardContent | null,
+  memeId: string,
   contents: readonly SharePhotoSource[],
-): MemeShareCardContent | null {
+): Promise<MemeShareCardContent | null> {
   if (!card) return null;
-  const photo = representativeImageUrl({ contents });
+  const reviewedMediaSources = await getReviewedMemeMediaSources(memeId);
+  const photo = representativeImageUrl({ contents, reviewedMediaSources });
   return photo ? { ...card, photoUrl: photo.url } : card;
 }
 
@@ -88,13 +91,13 @@ export async function loadKoreanShareCard(key: string): Promise<MemeShareCardCon
     const document = await resolveKoreanMemeDocument(key);
     switch (document.kind) {
       case "database":
-        return withRepresentativePhoto(cardFromFields({
+        return await withRepresentativePhoto(cardFromFields({
           locale: "ko",
           title: document.meme.title,
           summary: document.meme.summary,
           year: document.meme.origin_year,
           category: document.meme.category,
-        }), document.meme.meme_contents);
+        }), document.meme.id, document.meme.meme_contents);
       case "curated":
         return cardFromCurated(document.meme);
       case "unavailable":

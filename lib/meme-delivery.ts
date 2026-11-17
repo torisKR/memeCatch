@@ -90,18 +90,30 @@ function mediaPlatformIdentity(platform: string): string {
   return platform === "youtube_shorts" ? "youtube" : platform;
 }
 
+function contentIdentityKey(content: DeliveryContent): string | null {
+  const key = urlKey(content.url);
+  if (key) return key;
+  const platform = sourcePlatformFromReference(content);
+  return platform && mediaPlatformIdentity(platform) === "youtube" &&
+    content.content_id && /^[A-Za-z0-9_-]{11}$/.test(content.content_id)
+    ? `youtube:${content.content_id}` : null;
+}
+
 function exactReviewedMediaSources(
   content: DeliveryContent,
   reviewedMediaSources: readonly ReviewedMediaSource[],
 ): ReviewedMediaSource[] {
   const contentUrl = normalizedUrl(content.url);
-  if (!contentUrl || !content.content_id) return [];
-  const normalizedContent = normalizeSourceUrl(contentUrl);
+  if (!content.content_id) return [];
+  const normalizedContent = contentUrl ? normalizeSourceUrl(contentUrl) : null;
   const contentPlatform = sourcePlatformFromReference({
     platform: content.platform,
     url: contentUrl,
   });
-  if (!normalizedContent || !contentPlatform || normalizedContent.externalId !== content.content_id) return [];
+  if (!contentPlatform || (contentUrl && !normalizedContent) ||
+      (normalizedContent && normalizedContent.externalId !== content.content_id) ||
+      (!contentUrl && (mediaPlatformIdentity(contentPlatform) !== "youtube" ||
+        !/^[A-Za-z0-9_-]{11}$/.test(content.content_id)))) return [];
 
   return reviewedMediaSources.filter((source) => {
     if (
@@ -114,7 +126,7 @@ function exactReviewedMediaSources(
     if (!normalizedSource || normalizedSource.externalId !== source.external_id ||
         mediaPlatformIdentity(normalizedSource.platform) !== mediaPlatformIdentity(source.platform)) return false;
     return mediaPlatformIdentity(source.platform) === "youtube" ||
-      normalizedContent.canonicalUrl === normalizedSource.canonicalUrl;
+      normalizedContent?.canonicalUrl === normalizedSource.canonicalUrl;
   });
 }
 
@@ -223,14 +235,20 @@ export function resolveMemeDelivery<
           content.availability === "region_blocked" ||
           (content.availability === "dead" && policies.get(content)?.access !== "link_only"),
       )
-      .map((content) => urlKey(content.url))
+      .map(contentIdentityKey)
       .filter((url): url is string => url !== null),
   );
   const fallbackContents = renderableContents.filter(
-    (content) => !unavailableUrls.has(urlKey(content.url) ?? ""),
+    (content) => !unavailableUrls.has(contentIdentityKey(content) ?? ""),
   );
+  const linkOnlySources = lookup.ok ? renderableContents.flatMap((content) => {
+    if (content.url || policies.get(content)?.access !== "link_only") return [];
+    return exactReviewedMediaSources(content, lookup.sources)
+      .filter((source) => policyForReviewedSource(source, now).access === "link_only")
+      .map((source) => ({ source_url: source.canonical_url, platform: source.platform }));
+  }) : [];
   const sourceLinks = (
-    lookup.ok ? sourceLinksWithContent([...sources], fallbackContents) : []
+    lookup.ok ? sourceLinksWithContent([...sources, ...linkOnlySources], fallbackContents) : []
   ).filter((source) => {
     const url = normalizedUrl(source.source_url);
     return url !== null && !unavailableUrls.has(urlKey(url) ?? "");

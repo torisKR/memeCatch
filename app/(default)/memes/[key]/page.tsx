@@ -104,9 +104,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (redirectPath) permanentRedirect(redirectPath);
   const path = memePathFrom(meme.short_id, meme.slug);
-  const [discovery, localizedCandidates] = await Promise.all([
+  const [discovery, localizedCandidates, reviewedMediaSources] = await Promise.all([
     loadDiscoveryIndex(),
     listIndexableLocalizedMemes(meme),
+    getReviewedMemeMediaSources(meme.id),
   ]);
   const indexable = detailIndexableFromDiscovery(
     discovery,
@@ -143,7 +144,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meme.summary,
     meme.origin_kind,
   );
-  const photo = representativeImageUrl({ contents: meme.meme_contents });
+  const photo = representativeImageUrl({
+    contents: meme.meme_contents,
+    reviewedMediaSources,
+  });
   const image = koreanMemeShareImage({
     shortId: meme.short_id,
     slug: meme.slug,

@@ -15,7 +15,7 @@ import { getOEmbed, OEmbedError } from "@/lib/oembed";
 import { revalidateTag } from "next/cache";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createAdminClient } from "@/lib/db/admin";
-import { isYouTubePlatform, type MediaSourcePlatform } from "./url";
+import { isYouTubePlatform, normalizeSourceUrl, type MediaSourcePlatform } from "./url";
 import { fetchYouTubeVideoStatuses } from "./youtube.server";
 import { isYouTubeRegionBlocked } from "./youtube-region.mjs";
 import {
@@ -86,10 +86,36 @@ async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
 ) {
-  const ids = rows
-    .map((row) => row.external_id)
-    .filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
+  // Missing or malformed IDs were never queried from YouTube and cannot be
+  // treated as an authoritative missing-video result. Keep healthy sources
+  // moving while reporting the bad rows for data repair.
+  const validRows = rows.filter((row) => row.external_id && /^[A-Za-z0-9_-]{11}$/.test(row.external_id));
+  const validIds = new Set(validRows.map((row) => row.id));
+  const invalidRows = rows.filter((row) => !validIds.has(row.id));
+  const identityErrors = invalidRows.map((row) => `invalid_source_identity:${row.id}`);
+  const invalidCount = identityErrors.length;
+  const invalidAttemptAt = new Date();
+  for (const row of invalidRows) {
+    try {
+      // Non-retryable recovery records keep malformed rows out of future
+      // refresh budgets while retaining their identity for manual repair.
+      await recordSourceAcquisitionFailure({
+        sourceKey: `invalid_identity:${row.id}`,
+        idempotencyKey: `invalid_identity:${row.id}:${invalidAttemptAt.toISOString()}`,
+        platform: row.platform,
+        sourceId: row.id,
+        externalId: null,
+        canonicalUrl: /^https:\/\//i.test(row.canonical_url) ? row.canonical_url : null,
+        code: "metadata_mismatch",
+        attempt: 1,
+        occurredAt: invalidAttemptAt,
+      }, admin);
+    } catch {
+      identityErrors.push(`invalid_identity_quarantine_failed:${row.id}`);
+    }
+  }
+  const ids = validRows.map((row) => row.external_id as string);
+  if (ids.length === 0) return { checked: rows.length, removed: 0, hidden: 0, failed: invalidCount, errors: identityErrors };
 
   const attemptStartedAt = new Date();
   const attemptIdBySource = new Map(rows.map((row) => [row.id, `refresh:${row.id}:${attemptStartedAt.toISOString()}`]));
@@ -97,7 +123,7 @@ async function refreshYouTubeSources(
   try {
     statuses = await fetchYouTubeVideoStatuses(ids);
   } catch (error) {
-    for (const row of rows) {
+    for (const row of validRows) {
       if (!row.external_id) continue;
       await recordSourceAcquisitionFailure({
         sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -116,15 +142,16 @@ async function refreshYouTubeSources(
   const now = new Date().toISOString();
   let removed = 0;
   let hidden = 0;
-  let failed = 0;
-  const errors: string[] = [];
+  let failed = invalidCount;
+  const errors: string[] = identityErrors;
 
-  for (const row of rows) {
+  for (const row of validRows) {
     const status = row.external_id ? statuses.get(row.external_id) : undefined;
 
     try {
     if (!status) {
       // 삭제·비공개 전환: 제목·썸네일 캐시를 지우고 게시 임베드를 내린다.
+      await syncMemeContentsAvailability(admin, row, "dead");
       const { error } = await admin
         .from("media_sources")
         .update({
@@ -136,7 +163,6 @@ async function refreshYouTubeSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      await syncMemeContentsAvailability(admin, row, "dead");
       if (row.external_id) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -160,6 +186,11 @@ async function refreshYouTubeSources(
     const isPrivate = status.privacyStatus === "private";
     const embeddable = isPublic && status.embeddable === true;
     const regionBlocked = isYouTubeRegionBlocked({ allowed: status.regionAllowed, blocked: status.regionBlocked });
+    const availability = !isPublic ? "dead" : regionBlocked ? "region_blocked" : "live";
+
+    // Hide content before persisting a negative source status. On restoration,
+    // persist the source first so a failed write cannot prematurely expose it.
+    if (availability !== "live") await syncMemeContentsAvailability(admin, row, availability);
 
     const { error } = await admin
       .from("media_sources")
@@ -181,24 +212,18 @@ async function refreshYouTubeSources(
       })
       .eq("id", row.id);
     if (error) throw new Error("source_refresh_update_failed");
+    if (availability === "live") await syncMemeContentsAvailability(admin, row, availability);
 
     if (isPrivate) {
-      await syncMemeContentsAvailability(admin, row, "dead");
       removed += 1;
     } else if (!isPublic) {
       // Unlisted is reachable by URL but is not public catalog content.
-      await syncMemeContentsAvailability(admin, row, "dead");
       hidden += 1;
-    } else if (regionBlocked) {
-      await syncMemeContentsAvailability(admin, row, "region_blocked");
-    } else if (!embeddable) {
+    } else if (!regionBlocked && !embeddable) {
       // A public video with embedding disabled is still live link-only content.
       // The source update above persists embeddable=false before this projection,
       // so consumers can fail closed instead of rendering an iframe.
-      await syncMemeContentsAvailability(admin, row, "live");
       hidden += 1;
-    } else {
-      await syncMemeContentsAvailability(admin, row, "live");
     }
     if (row.external_id) {
       await resolveSourceAcquisitionFailure({
@@ -332,7 +357,39 @@ export type SourceRefreshResult = {
 export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const admin = createAdminClient();
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
-  const activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
+  let activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
+  const identityQuarantines = activeRecovery.filter((row) =>
+    row.sourceId && row.sourceKey === `invalid_identity:${row.sourceId}` && row.lastErrorCode === "metadata_mismatch",
+  );
+  if (identityQuarantines.length > 0) {
+    // A repaired ID and canonical URL only release the quarantine; the source
+    // is still checked with its provider before any availability is changed.
+    const repairAttempt = new Date();
+    for (let offset = 0; offset < identityQuarantines.length; offset += 500) {
+      const batch = identityQuarantines.slice(offset, offset + 500);
+      const { data, error } = await admin.from("media_sources")
+        .select("id, platform, external_id, canonical_url")
+        .in("id", batch.map((row) => row.sourceId));
+      if (error) throw new Error("source_identity_repair_lookup_failed");
+      const byId = new Map((data ?? []).map((row) => [row.id, row]));
+      for (const recovery of batch) {
+        if (!recovery.sourceId) continue;
+        const source = byId.get(recovery.sourceId);
+        if (!source || (source.platform !== "youtube" && source.platform !== "youtube_shorts") || !source.external_id) continue;
+        const normalized = normalizeSourceUrl(source.canonical_url);
+        if (!normalized || !isYouTubePlatform(normalized.platform) || normalized.externalId !== source.external_id) continue;
+        await resolveSourceAcquisitionFailure({
+          sourceKey: recovery.sourceKey,
+          attemptIdempotencyKey: `identity-repair:${source.id}:${repairAttempt.toISOString()}`,
+          attemptStartedAt: repairAttempt,
+          resolvedAt: new Date(),
+        }, admin);
+      }
+    }
+    // Resolution can lose a race with a newer failure; re-read authoritative
+    // recovery state rather than assuming every request resolved its key.
+    activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
+  }
   const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
   const nowMs = Date.now();
   const deferredSourceIds = activeRecovery.flatMap((row) =>
@@ -381,8 +438,12 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     };
   }
   const recoveryBySourceId = new Map(activeRecovery.flatMap((row) => row.sourceId ? [[row.sourceId, row] as const] : []));
+  const deferredIds = new Set(deferredSourceIds);
   const candidateRows = [...new Map([...(dueRows ?? []), ...stale].map((row) => [row.id, row])).values()];
   const rows = candidateRows.filter((row) => {
+    // A second recovery key for the same source must not bypass a quarantine
+    // or a later retry time simply because its due record was returned last.
+    if (deferredIds.has(row.id)) return false;
     const recovery = recoveryBySourceId.get(row.id);
     return !recovery || (recovery.nextRetryAt !== null && Date.parse(recovery.nextRetryAt) <= nowMs);
   }) as MediaSourceRow[];

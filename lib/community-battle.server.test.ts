@@ -79,7 +79,7 @@ describe("getCommunityMemeBattle", () => {
       .mockResolvedValueOnce({ data: [battleRow("month", 1)], error: null });
     const query = previewQuery({
       data: [
-        { id: "shared", body: "![사진](/api/media/meme-uploads/u/shared.png)" },
+        { id: "shared", body: "https://youtu.be/dQw4w9WgXcQ" },
         { id: "day", body: "본문만" },
       ],
       error: null,
@@ -96,10 +96,10 @@ describe("getCommunityMemeBattle", () => {
     expect(query.in).toHaveBeenCalledTimes(1);
     expect(new Set(query.in.mock.calls[0][1])).toEqual(new Set(["shared", "day", "week", "month"]));
     expect(boards[0].entries[0].thumbnailUrl).toBe(
-      "/api/media/meme-uploads/u/shared.png",
+      "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
     );
     expect(boards[1].entries[0].thumbnailUrl).toBe(
-      "/api/media/meme-uploads/u/shared.png",
+      "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
     );
     expect(boards[0].entries[1].thumbnailUrl).toBeNull();
     expect(boards[1].entries).toHaveLength(2);

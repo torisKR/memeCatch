@@ -26,6 +26,21 @@ function and `finished_at` immediately before the audit insert. Existing records
 retain their original timestamps. A process crash, early selection error, or
 failed audit insert can still leave no job record; monitor the scheduler too.
 
+`detail.recovery_unmatched_due_keys` counts due recovery keys examined during
+the run that did not match the current source platform and identity, including
+missing sources and keys whose identity could not be verified. Duplicate keys
+from the due and active snapshots count once. They do not consume retry slots
+and are not automatically resolved or modified. A future or non-retryable key
+for a source continues to defer that source, including when its identity is old.
+This count only covers examined due keys and is not a total of all stale ledger
+entries. Ordinary stale-source checks are independent of these retry keys.
+For TikTok, a `provider_identity:<source-id>` key is resolved only when the
+active snapshot's platform and external ID match the checked source. If an
+inconclusive result finds that key belongs to a different identity, its failure
+is recorded under the current platform-and-ID key instead. This snapshot check
+does not protect against identity changes after the snapshot; the existing
+non-atomic refresh and cache-coherence limitations still apply.
+
 For a read-only snapshot of stale sources, including deferred and quarantined
 rows, an operator can run:
 

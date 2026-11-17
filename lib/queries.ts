@@ -447,8 +447,8 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
     console.error("search_memes failed");
     throw new Error("search_memes failed");
   }
-  const rows = takeIndexableMemes((data ?? []) as unknown as MemeListItem[], limit);
-  return mergeSearchPresentationItems(curatedSearchCards(q), rows) as MemeListItem[];
+  const rows = takeIndexableMemes((data ?? []) as unknown as MemeListItem[], 50);
+  return mergeSearchPresentationItems(curatedSearchCards(q), rows).slice(0, limit) as MemeListItem[];
 }
 
 /** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */

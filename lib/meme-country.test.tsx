@@ -151,6 +151,16 @@ describe("meme country display", () => {
     expect(results.map((item) => item.short_id)).toEqual(["6hgbgvxs"]);
   });
 
+  it("fills the search limit after removing duplicate presentation identities", async () => {
+    const seed = { ...meme, id: "seed", short_id: "oyj2021k", title: "오히려 좋아" };
+    const catalog = { ...meme, id: "catalog", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const other = { ...meme, id: "other", short_id: "other", title: "오히려 좋아" };
+    const publicFilter = vi.fn().mockResolvedValue({ data: [seed, catalog, other], error: null });
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select: () => ({ in: publicFilter }) })) });
+    const results = await searchMemes("오히려 좋아", 2);
+    expect(results.map((item) => item.short_id)).toEqual(["6hgbgvxs", "other"]);
+  });
+
   it("does not hide a search catalog failure behind curated cards", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const publicFilter = vi.fn().mockResolvedValue({

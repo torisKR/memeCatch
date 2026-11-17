@@ -348,16 +348,17 @@ export default async function MemeDetailPage({ params }: Props) {
           {/* 렌더 가능한 콘텐츠가 하나도 없으면(폴백 히어로) 이 자리는 여전히 이 밈의
               대표 미디어 슬롯이다. 아래 MemeEmbed의 isRepresentative와 같은 식을 써서
               라벨과 컴포넌트 판정이 갈리지 않게 한다. */}
-          {resolved.mediaUnavailable ? (
+          {resolved.mediaUnavailable && (
             <p role="status" className="text-sm text-muted">영상과 출처를 일시적으로 불러오지 못했어요.</p>
-          ) : (!delivery.representativeAmbiguous || isHouseOriginal(meme.origin_kind)) && <section
+          )}
+          {(isHouseOriginal(meme.origin_kind) || (!resolved.mediaUnavailable && !delivery.representativeAmbiguous)) && <section
             aria-label={
               (representative?.is_representative ?? true) ? "대표 콘텐츠" : "관련 콘텐츠"
             }
           >
             <MemeEmbed
-              content={representative}
-              fallbackSourceUrl={fallbackSourceUrl}
+              content={resolved.mediaUnavailable ? null : representative}
+              fallbackSourceUrl={resolved.mediaUnavailable ? null : fallbackSourceUrl}
               fallbackReason={delivery.fallbackReason}
               embeddingAllowed={delivery.embeddingAllowed}
               title={meme.title}

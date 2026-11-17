@@ -67,6 +67,55 @@ const source = (id: string, rights: string) => ({
 
 describe("Korean routes with a stale cached document", () => {
   it.each([
+    ["query_error", { data: null, error: { message: "offline" } }],
+    ["invalid_response", { data: { id: memeId, meme_contents: [{ id: "broken" }], meme_sources: [] }, error: null }],
+  ])("shows generated house art without stale media during %s and after recovery", async (_reason, snapshot) => {
+    const stale = { ...video("abcdefghijk", true), meme_id: memeId, thumbnail_url: "https://stale.example.com/poster.jpg" };
+    const fresh = { ...video("lmnopqrstuv", true), meme_id: memeId };
+    mocks.cached.mockResolvedValue({
+      id: memeId, short_id: "abc12345", slug: "test-meme", title: "House title", summary: "House summary",
+      category: "phrase", safety_level: "green", lifecycle_status: "active", moderation_status: "approved",
+      origin_year: null, origin_kind: "house_original", description: "House meaning", origin: null, usage_note: null,
+      caution: null, usage_context: null, usage_examples: [], meme_contents: [stale],
+      meme_sources: [{ meme_id: memeId, source_url: "https://stale.example.com/source" }], meme_tags_map: [],
+    });
+    mocks.snapshot.mockResolvedValue(snapshot);
+    mocks.ledger.mockResolvedValue({ ok: true, sources: [source(fresh.content_id, "official_embed")] });
+    const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const detail = renderToStaticMarkup(await KoreanDetailPage({ params: Promise.resolve({ key: "abc12345-test-meme" }) }));
+      expect(detail).toContain('alt="House title 자체 밈 카드"');
+      const encoded = detail.match(/src="data:image\/svg\+xml;base64,([^"]+)"/)?.[1];
+      expect(encoded).toBeTruthy();
+      const art = Buffer.from(encoded!, "base64").toString("utf8");
+      expect(art).toContain("House title");
+      expect(art).toContain("House summary");
+      expect(art).not.toContain("abcdefghijk");
+      expect(art).not.toContain("stale.example.com");
+      expect(detail).toContain('role="status"');
+      expect(detail).not.toContain("abcdefghijk");
+      expect(detail).not.toContain("stale.example.com");
+      expect(detail).not.toContain("<iframe");
+      expect((await loadKoreanShareCard("abc12345-test-meme"))?.photoUrl).toBeUndefined();
+
+      mocks.snapshot.mockResolvedValue({ data: { id: memeId, meme_contents: [fresh], meme_sources: [] }, error: null });
+      const recovered = renderToStaticMarkup(await KoreanDetailPage({ params: Promise.resolve({ key: "abc12345-test-meme" }) }));
+      expect(recovered).toContain('alt="House title 자체 밈 카드"');
+      expect(recovered).not.toContain("영상과 출처를 일시적으로 불러오지 못했어요.");
+      expect(recovered).not.toContain("abcdefghijk");
+      expect(recovered).not.toContain("stale.example.com");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("does not render cached house art when the snapshot confirms the document is not public", async () => {
+    mocks.cached.mockResolvedValue({ id: memeId, short_id: "abc12345", slug: "test-meme", origin_kind: "house_original", meme_contents: [], meme_sources: [] });
+    mocks.snapshot.mockResolvedValue({ data: null, error: null });
+    await expect(KoreanDetailPage({ params: Promise.resolve({ key: "abc12345-test-meme" }) })).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
+  });
+
+  it.each([
     ["query_error", { data: null, error: { message: "secret diagnostic" } }],
     ["invalid_response", { data: { id: memeId, meme_contents: [{ id: "broken" }], meme_sources: [] }, error: null }],
   ])("keeps cached text but hides stale media on %s", async (reason, snapshot) => {

@@ -45,6 +45,37 @@ mig="$(commit mig)"
 ROOT="$repo"
 [[ -z "$(new_migrations "$base" "$code")" ]] || fail "code-only change flagged as migration"
 [[ "$(new_migrations "$code" "$mig")" == db/migrations/20990101000000_x.sql ]] || fail "migration not detected"
+mkdir -p "$repo/db/migrations/nested"
+echo 'select 2;' >"$repo/db/migrations/nested/new.sql"
+echo ignored >"$repo/db/migrations/nested/readme.txt"
+nested="$(commit nested)"
+[[ "$(new_migrations "$mig" "$nested")" == db/migrations/nested/new.sql ]] || fail "nested migration not detected"
+echo 'select 3;' >>"$repo/db/migrations/20990101000000_x.sql"
+changed="$(commit changed)"
+[[ "$(new_migrations "$nested" "$changed")" == db/migrations/20990101000000_x.sql ]] || fail "changed migration not detected"
+# Real Git detects the move as R with similarity, which --diff-filter=AM alone
+# drops. Both pure renames and renames with content changes need approval.
+for n in $(seq 1 100); do printf 'select %s;\n' "$n"; done >"$repo/db/migrations/old.sql"
+rename_base="$(commit rename_base)"
+git -C "$repo" mv db/migrations/old.sql db/migrations/renamed.sql
+echo 'select 101;' >>"$repo/db/migrations/renamed.sql"
+rename_changed="$(commit rename_changed)"
+git -C "$repo" diff --find-renames --name-status "$rename_base" "$rename_changed" -- db/migrations/ | grep -q '^R[0-9]' || fail "rename fixture was not detected by real git"
+[[ "$(new_migrations "$rename_base" "$rename_changed")" == db/migrations/renamed.sql ]] || fail "renamed and changed migration was missed"
+git -C "$repo" mv db/migrations/renamed.sql db/migrations/pure-rename.sql
+rename_pure="$(commit rename_pure)"
+[[ "$(new_migrations "$rename_changed" "$rename_pure")" == db/migrations/pure-rename.sql ]] || fail "renamed migration was missed"
+missing_sha=1111111111111111111111111111111111111111
+if new_migrations "$missing_sha" "$mig" >/dev/null 2>&1; then fail "missing running commit was accepted"; fi
+if new_migrations "$mig" "$missing_sha" >/dev/null 2>&1; then fail "missing target commit was accepted"; fi
+if new_migrations invalid "$mig" >/dev/null 2>&1; then fail "invalid running SHA was accepted"; fi
+# A valid commit object with an unavailable tree makes the real git diff fail.
+broken_tree_commit="$(printf 'tree 2222222222222222222222222222222222222222\nauthor t <t@t> 1 +0000\ncommitter t <t@t> 1 +0000\n\nbroken tree\n' | git -C "$repo" hash-object -t commit -w --stdin)"
+git -C "$repo" cat-file -e "${broken_tree_commit}^{commit}" || fail "broken tree fixture is not a commit"
+if new_migrations "$broken_tree_commit" "$mig" >/dev/null 2>&1; then fail "git diff failure was accepted"; fi
+real_new_migrations="$(declare -f new_migrations)"
+test_real_git="$(command -v git)"
+export test_real_git
 
 # Build failure must propagate even under `if !` (errexit off), and must stop
 # before the auxiliary compose build runs.
@@ -229,27 +260,77 @@ cat >"$stub/git" <<'STUB'
 #!/usr/bin/env bash
 shift 2
 case "$1" in
-  fetch|merge-base) exit 0 ;;
+  fetch) exit 0 ;;
+  merge-base) [[ "$4" == "$test_running" && "$3" != "$test_running" ]] && exit 1; exit 0 ;;
+  ls-remote)
+    if [[ -n "${test_remote_flip_after:-}" ]]; then
+      count=0; [[ -f "$test_remote_flip_after" ]] && count="$(cat "$test_remote_flip_after")"
+      count=$((count + 1)); printf '%s\n' "$count" >"$test_remote_flip_after"
+      if (( count >= 3 )); then printf '%s\trefs/heads/main\n' 1111111111111111111111111111111111111111; else printf '%s\trefs/heads/main\n' "$test_head"; fi
+    elif [[ -n "${test_remote_sequence:-}" ]]; then
+      if [[ -f "$test_remote_sequence" ]]; then echo -e "1111111111111111111111111111111111111111\trefs/heads/main"; else : >"$test_remote_sequence"; printf '%s\trefs/heads/main\n' "$test_head"; fi
+    else
+      printf '%s\trefs/heads/main\n' "${test_remote_head:-$test_head}"
+    fi ;;
+
   rev-parse) echo "$test_head" ;;
-  status|diff) exit 0 ;;
+  cat-file|diff)
+    if [[ "${test_real_diff:-}" == 1 ]]; then exec "$test_real_git" -C "$test_real_git_root" "$@"; fi
+    exit 0 ;;
+  reset) echo reset >>"$test_calls"; exit 0 ;;
+  status) exit 0 ;;
   *) exit 1 ;;
 esac
 STUB
 chmod +x "$stub/git"
+# Exercise the real health verifier through a controlled Docker CLI, not a
+# mocked verifier. The image SHA and the state come from the inspected app.
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+  "inspect memecatch-app-1")
+    [[ "${test_inspect_error:-0}" != 1 ]] || exit 1
+    running="${test_container_running:-true}"
+    if [[ -n "${test_stop_on_public:-}" && -f "$test_stop_on_public" ]]; then running=false; fi
+    printf '%s %s %s\n' sha256:app "$running" "${test_container_health:-healthy}" ;;
+  "image inspect")
+    [[ "${test_image_error:-0}" != 1 && "${3:-}" == sha256:app ]] || exit 1
+    printf 'RELEASE_SHA=%s\n' "$test_running" ;;
+  *) exit 1 ;;
+esac
+STUB
+chmod +x "$stub/docker"
 printf '#!/usr/bin/env bash\nexit 0\n' >"$stub/flock"
 chmod +x "$stub/flock"
 running_sha() { echo "$test_running"; }
-ci_state() { echo "$test_ci"; }
-new_migrations() { :; }
+ci_state() {
+  if [[ -n "${test_api_counter:-}" ]]; then printf 'ci\n' >>"$test_api_counter"; fi
+  if [[ -n "${test_ci_transition:-}" && -f "$test_ci_transition" ]]; then
+    [[ "$test_ci_after" != error ]] || return 1
+    echo "$test_ci_after"
+  else
+    echo "$test_ci"
+  fi
+}
+new_migrations() { printf '%s' "${test_migrations:-}"; }
 tag_rollback() { echo snapshot >>"$test_calls"; }
 checkout_target() { return 0; }
-build_images() { echo build >>"$test_calls"; }
+build_images() {
+  echo build >>"$test_calls"
+  if [[ -n "${test_ci_transition:-}" ]]; then : >"$test_ci_transition"; fi
+  return 0
+}
 public_release_is() { return 0; }
+public_release_once() {
+  if [[ -n "${test_stop_on_public:-}" ]]; then : >"$test_stop_on_public"; fi
+  [[ "${test_public:-ok}" == ok ]]
+}
 self_update() { :; }
 prune_images() { :; }
 test_head=0123456789abcdef0123456789abcdef01234567
 test_running="$test_head"; test_ci=success; test_calls="$stub/manual-calls"
 export test_head test_running test_ci test_calls
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
 : >"$test_calls"
 ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="redeploy $test_head" main ) >/dev/null || fail "manual redeploy failed"
 grep -q '^build$' "$test_calls" || fail "manual redeploy did not build"
@@ -261,5 +342,381 @@ rc=0; ( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" ST
 [[ "$rc" == 3 ]] || fail "redeploy allowed a non-running commit"
 rc=0; ( test_ci=failure; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION='test' SSH_ORIGINAL_COMMAND="redeploy $test_head" main ) >/dev/null || rc=$?
 [[ "$rc" == 3 ]] || fail "redeploy bypassed CI failure"
+
+
+# Status is read-only and only confirms the exact running main with completed
+# CI, a success marker, the running image and a matching public observation.
+[[ "$(SSH_ORIGINAL_COMMAND="status $test_head" requested_sha)" == "$test_head" ]] || fail "status SHA rejected"
+SSH_ORIGINAL_COMMAND="status $test_head" requested_status || fail "status request not recognized"
+[[ -z "$(SSH_ORIGINAL_COMMAND="status $test_head; id" requested_sha)" ]] || fail "injected status accepted"
+rm -f "$stub/manual-state/failed-$test_head"
+: >"$stub/manual-state/lock"
+: >"$test_calls"
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "verified status rejected"
+[[ ! -s "$test_calls" ]] || fail "status executed a deployment"
+for status_case in missing_marker wrong_marker wrong_image stopped unhealthy starting missing_health inspect_error image_error failed_ci missing_ci failed_marker bad_public stale_main; do
+  printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+  rm -f "$stub/manual-state/failed-$test_head"
+  rc=0
+  case "$status_case" in
+    missing_marker) rm "$stub/manual-state/deployed" ;;
+    wrong_marker) printf '%040d\n' 1 >"$stub/manual-state/deployed" ;;
+    failed_marker) : >"$stub/manual-state/failed-$test_head" ;;
+  esac
+  ( case "$status_case" in
+      wrong_image) test_running=1111111111111111111111111111111111111111 ;;
+      stopped) export test_container_running=false ;;
+      unhealthy) export test_container_health=unhealthy ;;
+      starting) export test_container_health=starting ;;
+      missing_health) export test_container_health=missing ;;
+      inspect_error) export test_inspect_error=1 ;;
+      image_error) export test_image_error=1 ;;
+      failed_ci) test_ci=failure ;;
+      missing_ci) test_ci=pending ;;
+      bad_public) test_public=bad ;;
+      stale_main) export test_remote_head=1111111111111111111111111111111111111111 ;;
+    esac
+    PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main
+  ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 3 ]] || fail "status $status_case accepted or returned $rc"
+  [[ ! -s "$test_calls" ]] || fail "status $status_case attempted deployment"
+done
+# A downstream failure must not be confused with the pre-CI lock-busy code.
+rc=0
+( ci_state() { return 4; }; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "CI error was misreported as lock busy"
+# An app stopping while the public header is checked must not be confirmed.
+rm -f "$stub/stopped-during-public"
+rc=0
+( export test_stop_on_public="$stub/stopped-during-public"; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && -e "$stub/stopped-during-public" ]] || fail "status accepted app stopped during public check"
+# The same-SHA no-op must not report success for a stopped or unhealthy app.
+rc=0
+( export test_container_running=false; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "same-SHA no-op accepted stopped app"
+for test_container_health in unhealthy missing; do
+  rc=0
+  ( export test_container_health; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "same-SHA no-op accepted $test_container_health app"
+done
+rm -f "$stub/manual-state/failed-$test_head"
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+# A fresh main must be checked again after all other evidence.
+rc=0
+( export test_remote_sequence="$stub/remote-sequence"; PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "status accepted a main change during verification"
+
+# Exercise a real advisory lock and its 30-second timeout. Use util-linux flock
+# on Linux; on macOS, the Python shim uses the same kernel lock and timeout.
+mkdir -p "$stub/real-lock"
+if command -v flock >/dev/null 2>&1; then
+  ln -s "$(command -v flock)" "$stub/real-lock/flock"
+else
+cat >"$stub/real-lock/flock" <<'STUB'
+#!/usr/bin/env python3
+import fcntl, sys, time
+deadline = time.monotonic() + float(sys.argv[sys.argv.index('-w') + 1])
+while True:
+    try:
+        fcntl.flock(int(sys.argv[-1]), fcntl.LOCK_SH | fcntl.LOCK_NB)
+        break
+    except BlockingIOError:
+        if time.monotonic() >= deadline:
+            sys.exit(int(sys.argv[sys.argv.index('-E') + 1]))
+        time.sleep(0.05)
+STUB
+chmod +x "$stub/real-lock/flock"
+fi
+python3 -c 'import fcntl,sys,time; f=open(sys.argv[1],"r"); fcntl.flock(f,fcntl.LOCK_EX); open(sys.argv[2],"w").close(); time.sleep(60)' "$stub/manual-state/lock" "$stub/lock-ready" &
+lock_holder=$!
+for _ in $(seq 1 100); do [[ -e "$stub/lock-ready" ]] && break; sleep 0.02; done
+if [[ ! -e "$stub/lock-ready" ]]; then kill "$lock_holder" 2>/dev/null || true; wait "$lock_holder" 2>/dev/null || true; fail "lock holder did not start"; fi
+rc=0
+: >"$stub/lock-ci-calls"
+lock_start=$(date +%s)
+( export test_api_counter="$stub/lock-ci-calls"; PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+lock_elapsed=$(( $(date +%s) - lock_start ))
+kill "$lock_holder" 2>/dev/null || true
+wait "$lock_holder" 2>/dev/null || true
+[[ "$rc" == 4 && ! -s "$stub/lock-ci-calls" ]] || fail "busy status did not return 4 before querying CI"
+(( lock_elapsed >= 29 )) || fail "busy status did not wait approximately 30 seconds"
+( export test_api_counter="$stub/lock-ci-calls"; PATH="$stub/real-lock:$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null || fail "status failed after deploy lock released"
+[[ "$(wc -l <"$stub/lock-ci-calls" | tr -d ' ')" == 1 ]] || fail "unlocked status did not query CI exactly once"
+rm "$stub/manual-state/lock"
+rc=0
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -e "$stub/manual-state/lock" ]] || fail "status without a lock must fail without creating state"
+
+# An automatic same-SHA no-op is not success without the same evidence.
+rm "$stub/manual-state/deployed"
+rc=0
+( PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "same-SHA no-op accepted without marker"
+[[ ! -s "$test_calls" ]] || fail "unverified no-op executed deployment"
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+
+# An older request must not be deployed after main advances.
+rc=0
+( test_running=1111111111111111111111111111111111111111 PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND=2222222222222222222222222222222222222222 main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "stale SHA was allowed to deploy"
+
+# A real new SHA must still go through the CI and migration approval gates.
+old_sha=1111111111111111111111111111111111111111
+rc=0
+( test_running="$old_sha" test_ci=failure PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "new SHA bypassed the CI gate"
+rm -f "$stub/manual-state/failed-$test_head"
+rc=0
+( test_running="$old_sha" test_migrations='db/migrations/new.sql' PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "new SHA bypassed the migration gate"
+: >"$stub/manual-state/allow-$test_head"
+( test_running="$old_sha" test_migrations='db/migrations/new.sql' PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null || fail "approved migration did not deploy"
+grep -q '^deploy ' "$test_calls" || fail "approved migration did not activate"
+rm "$stub/manual-state/allow-$test_head"
+: >"$test_calls"
+
+# Real Git rename detection must reach and block the actual deployment gate.
+rc=0
+( eval "$real_new_migrations"; export test_real_diff=1 test_real_git_root="$repo"; test_head="$rename_changed" test_running="$rename_base" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$rename_changed" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "renamed and changed migration bypassed deployment gate"
+
+# A real git object failure must fail closed even with migration approval present.
+: >"$stub/manual-state/allow-$mig"
+rc=0
+( eval "$real_new_migrations"; export test_real_diff=1 test_real_git_root="$repo"; test_head="$mig" test_running="$missing_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$mig" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "missing running commit bypassed migration gate"
+rc=0
+( eval "$real_new_migrations"; export test_real_diff=1 test_real_git_root="$repo"; test_head="$mig" test_running="$broken_tree_commit" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$mig" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 && ! -s "$test_calls" ]] || fail "git diff error bypassed migration gate"
+rm "$stub/manual-state/allow-$mig"
+
+# A CI rerun can fail, become pending, or be unreachable during image build.
+for test_ci_after in failure pending error; do
+  rm -f "$stub/ci-during-build"
+  : >"$test_calls"
+  rc=0
+  ( export test_ci_transition="$stub/ci-during-build" test_ci_after; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 3 ]] || fail "CI $test_ci_after after build was accepted"
+  grep -q '^build$' "$test_calls" || fail "CI $test_ci_after test did not reach build"
+  grep -q '^reset$' "$test_calls" || fail "CI $test_ci_after did not restore checkout"
+  ! grep -q '^deploy ' "$test_calls" || fail "CI $test_ci_after activated image"
+done
+rm -f "$stub/ci-during-build"
+: >"$test_calls"
+( export test_ci_transition="$stub/ci-during-build" test_ci_after=failure; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT='' SSH_CONNECTION='' SSH_ORIGINAL_COMMAND='' main ) >/dev/null 2>&1 || fail "timer did not defer failed CI"
+grep -q '^build$' "$test_calls" || fail "timer CI test did not reach build"
+! grep -q '^deploy ' "$test_calls" || fail "timer activated image after CI failure"
+: >"$test_calls"
+
+# The target can cease to be main during a long build. It must not be activated.
+rm -f "$stub/remote-during-build"
+: >"$test_calls"
+rc=0
+( export test_remote_sequence="$stub/remote-during-build"; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "stale target was accepted after build"
+grep -q '^build$' "$test_calls" || fail "main-change test did not reach build"
+! grep -q '^deploy ' "$test_calls" || fail "stale image was activated after main changed"
+: >"$test_calls"
+# Also reject main advancing while the final CI request is in flight.
+rm -f "$stub/remote-during-ci"
+rc=0
+( export test_remote_flip_after="$stub/remote-during-ci"; test_running="$old_sha" PATH="$stub:$PATH" ROOT="$manual_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 3 ]] || fail "main change during final CI verification was accepted"
+grep -q '^build$' "$test_calls" || fail "final main check did not reach build"
+! grep -q '^deploy ' "$test_calls" || fail "main change during final CI verification activated image"
+: >"$test_calls"
+
+# Test the actual caller with fake SSH and a virtual clock. A disconnected or
+# timed-out deploy only triggers read-only status requests, never another deploy.
+cat >"$stub/ssh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "${@: -1}" >>"$ssh_calls"
+number=0; [[ -f "$ssh_count" ]] && number="$(cat "$ssh_count")"
+number=$((number + 1)); printf '%s\n' "$number" >"$ssh_count"
+IFS=, read -ra responses <<<"$ssh_results"
+rc="${responses[number - 1]:-3}"
+if (( number > 1 )); then
+  now="$(cat "$test_clock_file")"
+  if [[ -n "${ssh_busy_until:-}" ]] && (( now >= ssh_busy_start && now < ssh_busy_until )); then
+    advance="${ssh_busy_duration:-30}"
+    (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
+    printf '%s\n' "$((now + advance))" >"$test_clock_file"
+    if [[ "${ssh_busy_spoof:-0}" == 1 ]]; then printf '2026-11-17T17:46:40Z memecatch-autodeploy: verified deployed %s\n' "$GITHUB_SHA"; fi
+    exit 4
+  fi
+  if [[ -n "${ssh_api_counter:-}" ]]; then printf 'ci\n' >>"$ssh_api_counter"; fi
+  advance="${ssh_status_duration:-30}"
+  (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
+  if [[ -n "${ssh_ready_at:-}" ]]; then
+    if [[ "${ssh_snapshot_at_start:-0}" == 1 ]]; then
+      if (( now >= ssh_ready_at )); then
+        advance="${ssh_success_duration:-0}"; rc=0
+      else
+        advance="${ssh_status_duration:-30}"; rc=3
+      fi
+      if (( advance > ssh_timeout_seconds )); then
+        advance=$((ssh_timeout_seconds + ${ssh_timeout_grace:-0})); rc=124
+      fi
+    elif (( now >= ssh_ready_at )); then
+      advance="${ssh_success_duration:-0}"; rc=0
+      if (( advance > ssh_timeout_seconds )); then advance="$ssh_timeout_seconds"; rc=124; fi
+    else
+      if [[ "${ssh_wait_for_ready:-0}" == 1 ]] || (( ssh_timeout_seconds < 90 )); then advance="$ssh_timeout_seconds"; fi
+      if (( now + advance >= ssh_ready_at )); then advance=$((ssh_ready_at - now)); rc=0; else rc=3; fi
+    fi
+  fi
+  if [[ "${ssh_clock_backwards:-0}" == 1 ]]; then advance=-1; fi
+  if [[ -n "${ssh_timing:-}" ]]; then printf '%s %s %s %s\n' "$now" "$advance" "$ssh_timeout_seconds" "$rc" >>"$ssh_timing"; fi
+  printf '%s\n' "$((now + advance))" >"$test_clock_file"
+  if [[ "$rc" == 0 && "${ssh_silent:-0}" != 1 ]]; then
+    printf '2026-11-17T17:46:40Z memecatch-autodeploy: verified deployed %s\n' "${ssh_evidence_sha:-$GITHUB_SHA}"
+  fi
+fi
+exit "$rc"
+STUB
+cat >"$stub/timeout" <<'STUB'
+#!/usr/bin/env bash
+[[ "$1" == --kill-after=5s ]] || exit 90
+shift
+duration="$1"; shift
+printf '%s\n' "$duration" >>"$ssh_timeouts"
+export ssh_timeout_seconds="${duration%s}"
+exec "$@"
+STUB
+cat >"$stub/sleep" <<'STUB'
+#!/usr/bin/env bash
+now="$(cat "$test_clock_file")"
+printf '%s\n' "$((now + $1))" >"$test_clock_file"
+STUB
+cat >"$stub/date" <<'STUB'
+#!/usr/bin/env bash
+[[ "$1" == +%s ]] || exit 1
+cat "$test_clock_file"
+STUB
+chmod +x "$stub/ssh" "$stub/timeout" "$stub/sleep" "$stub/date"
+ssh_calls="$stub/ssh-calls"; ssh_count="$stub/ssh-count"; ssh_timeouts="$stub/ssh-timeouts"; test_clock_file="$stub/clock"
+export ssh_calls ssh_count ssh_timeouts test_clock_file
+for scenario in direct_success direct_success_unverified disconnect_then_success disconnect_then_retry timed_out_then_success killed_then_success nontransport_failure never_confirmed silent_status wrong_evidence backward_clock; do
+  : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+  ssh_silent=0; ssh_evidence_sha="$test_head"; ssh_clock_backwards=0
+  case "$scenario" in
+    direct_success) ssh_results=0,0; expected_rc=0; expected_calls=2 ;;
+    direct_success_unverified) ssh_results=0,3; expected_rc=1; expected_calls=13 ;;
+    disconnect_then_success) ssh_results=255,0; expected_rc=0; expected_calls=2 ;;
+    disconnect_then_retry) ssh_results=255,255,124,0; expected_rc=0; expected_calls=4 ;;
+    timed_out_then_success) ssh_results=124,0; expected_rc=0; expected_calls=2 ;;
+    killed_then_success) ssh_results=137,0; expected_rc=0; expected_calls=2 ;;
+    nontransport_failure) ssh_results=3; expected_rc=3; expected_calls=1 ;;
+    never_confirmed) ssh_results=255,3; expected_rc=1; expected_calls=13 ;;
+    silent_status) ssh_results=255,$(printf '0,%.0s' {1..12}); ssh_silent=1; expected_rc=1; expected_calls=13 ;;
+    wrong_evidence) ssh_results=255,$(printf '0,%.0s' {1..12}); ssh_evidence_sha=1111111111111111111111111111111111111111; expected_rc=1; expected_calls=13 ;;
+    backward_clock) ssh_results=255,3; ssh_clock_backwards=1; expected_rc=1; expected_calls=2 ;;
+  esac
+  export ssh_results ssh_silent ssh_evidence_sha ssh_clock_backwards
+  rc=0
+  ( PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == "$expected_rc" ]] || fail "$scenario returned $rc instead of $expected_rc"
+  [[ "$(wc -l <"$ssh_calls" | tr -d ' ')" == "$expected_calls" ]] || fail "$scenario called SSH unexpectedly"
+  [[ "$(head -1 "$ssh_calls")" == "$test_head" ]] || fail "$scenario did not deploy the intended SHA"
+  [[ "$(head -1 "$ssh_timeouts")" == 2700s ]] || fail "$scenario initial SSH timeout was not 45 minutes"
+  [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "$scenario repeated a deployment"
+  if (( expected_calls > 1 )); then
+    [[ "$(grep -c "^status $test_head$" "$ssh_calls")" == "$((expected_calls - 1))" ]] || fail "$scenario sent a non-status retry"
+    (( expected_calls - 1 <= 13 )) || fail "$scenario exceeded the status API budget"
+  fi
+done
+
+# Regression: a deployment that becomes verifiable after 20 minutes must still
+# be observed without exhausting GitHub's unauthenticated checks API budget.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at=1200; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 0 ]] || fail "20-minute delayed deployment was not verified"
+status_calls="$(grep -c "^status $test_head$" "$ssh_calls")"
+(( status_calls > 1 && status_calls <= 13 )) || fail "20-minute reconciliation exceeded the status API budget"
+(( $(cat "$test_clock_file") >= 1200 && $(cat "$test_clock_file") <= 1440 )) || fail "20-minute deployment was not verified within one capped backoff"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "20-minute scenario repeated deployment"
+[[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "20-minute scenario sent a non-status retry"
+
+# A failed status can return immediately or slowly. Keep one request near the
+# deadline so readiness after an earlier failure can still be observed.
+for timing in 0:2600 45:2600; do
+  duration="${timing%%:*}"; ready_at="${timing##*:}"
+  : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+  rc=0
+  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at" ssh_status_duration="$duration" ssh_success_duration="$duration"; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 0 ]] || fail "deadline evidence missed for status duration $duration"
+  (( $(cat "$test_clock_file") >= ready_at && $(cat "$test_clock_file") <= 2700 )) || fail "deadline evidence outside allowed window"
+  (( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "deadline retry exceeded API budget"
+  [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "deadline scenario repeated deployment"
+done
+
+# A status that observed the old state before readiness can run until killed.
+# Its 5-second kill grace must finish before the final 90-second request starts.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_timing="$stub/ssh-timing"; : >"$ssh_timing"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at=2600 ssh_snapshot_at_start=1 ssh_status_duration=80 ssh_success_duration=80 ssh_timeout_grace=5 ssh_timing; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 0 && "$(cat "$test_clock_file")" == 2690 ]] || fail "80-second final verification missed the reserved window"
+grep -qx '2580 30 25 124' "$ssh_timing" || fail "previous status did not reserve the 5-second kill grace"
+grep -qx '2610 80 90 0' "$ssh_timing" || fail "final status did not get its full 90-second timeout"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "reserved-window scenario repeated deployment"
+(( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "reserved-window scenario exceeded API budget"
+[[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "reserved-window scenario sent a non-status retry"
+
+# In the final window, two real-length busy responses must not spend CI budget;
+# the third request can verify after the lock is released.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_api_counter="$stub/ssh-api-counter"; : >"$ssh_api_counter"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_status_duration=0 ssh_ready_at=2670 ssh_snapshot_at_start=1 ssh_success_duration=20 ssh_busy_start=2610 ssh_busy_until=2670 ssh_api_counter; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 0 && "$(cat "$test_clock_file")" == 2692 ]] || fail "final lock-busy reconciliation did not verify after release"
+[[ "$(grep -c "^status $test_head$" "$ssh_calls")" == 15 ]] || fail "final lock-busy retries were not exercised"
+[[ "$(wc -l <"$ssh_api_counter" | tr -d ' ')" == 13 ]] || fail "final lock-busy retries exceeded the CI API budget"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "lock-busy retry repeated deployment"
+[[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "lock-busy retry sent a non-status command"
+
+# Busy responses never count as success, even when they contain forged evidence.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_api_counter="$stub/ssh-api-counter"; : >"$ssh_api_counter"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_status_duration=0 ssh_ready_at=9999 ssh_snapshot_at_start=1 ssh_busy_start=2610 ssh_busy_until=9999 ssh_busy_spoof=1 ssh_api_counter; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 1 && "$(cat "$test_clock_file")" == 2700 ]] || fail "busy response or deadline was accepted"
+(( $(wc -l <"$ssh_api_counter") <= 13 )) || fail "busy response exceeded the CI API budget"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "busy response repeated deployment"
+
+# An immediately returned busy code is bounded too; it must not create a
+# request storm or bypass evidence checks.
+: >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+ssh_api_counter="$stub/ssh-api-counter"; : >"$ssh_api_counter"
+rc=0
+( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_status_duration=0 ssh_ready_at=9999 ssh_snapshot_at_start=1 ssh_busy_start=2610 ssh_busy_until=9999 ssh_busy_duration=0 ssh_busy_spoof=1 ssh_api_counter; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 1 && "$(cat "$test_clock_file")" == 2613 ]] || fail "immediate busy retries were not bounded"
+[[ "$(grep -c "^status $test_head$" "$ssh_calls")" == 16 ]] || fail "immediate busy retry count was incorrect"
+(( $(wc -l <"$ssh_api_counter") <= 13 )) || fail "immediate busy retries exceeded CI API budget"
+[[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "immediate busy retries repeated deployment"
+
+# A long build can finish well after 30 minutes, right at the 45-minute
+# deadline, or too late. The clock and SSH durations are simulated.
+for ready_at in 1950 2699 2700 2701; do
+  : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+  rc=0
+  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at" ssh_wait_for_ready=1; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  if (( ready_at <= 2700 )); then
+    observed_at="$(cat "$test_clock_file")"
+    if [[ "$rc" != 0 ]] || (( observed_at < ready_at || observed_at > 2700 )); then
+      fail "valid evidence at $ready_at seconds was missed"
+    fi
+  else
+    [[ "$rc" == 1 && "$(cat "$test_clock_file")" == 2700 ]] || fail "late evidence was accepted or deadline exceeded"
+  fi
+  [[ "$(head -1 "$ssh_timeouts")" == 2700s ]] || fail "deadline scenario initial timeout changed"
+  if (( ready_at >= 2699 )); then
+    [[ "$(tail -1 "$ssh_timeouts")" == 90s ]] || fail "final status timeout exceeded remaining window"
+  fi
+  [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "deadline scenario repeated deployment"
+  [[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "deadline scenario sent a non-status retry"
+  (( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "deadline scenario exceeded the status API budget"
+done
 
 echo "autodeploy OK"

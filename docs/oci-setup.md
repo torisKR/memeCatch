@@ -121,13 +121,33 @@ Pieces and where they live:
 | Host key pin | secret `DEPLOY_KNOWN_HOSTS` | `StrictHostKeyChecking=yes` |
 | Access token | secrets `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | passed to cloudflared through env, never on the command line |
 
+The deploy runner reads these variables (also documented in `scripts/env-manifest.json`):
+
+| Variable | Source | Purpose |
+| --- | --- | --- |
+| `DEPLOY_HOST` | GitHub `production` environment variable `DEPLOY_HOST` | Cloudflare Access SSH hostname; it is passed to the deploy step. |
+| `GITHUB_SHA` | GitHub Actions automatically supplies it | Full commit SHA requested from the VM agent. |
+| `RUNNER_TEMP` | GitHub Actions automatically supplies it | Runner temporary directory where the workflow writes `deploy_key` and `known_hosts`. |
+
+For illustration only, a runner environment might contain the following non-production values; the SHA and temporary path are supplied by Actions, not configured in the app's `.env`:
+
+```text
+DEPLOY_HOST=deploy.example.invalid
+GITHUB_SHA=0000000000000000000000000000000000000000
+RUNNER_TEMP=/tmp/example-runner-temp
+```
+
 Pull requests (including forks) never run the deploy job, and the `production` environment only serves `main`. A leaked deploy key plus Access token can do one thing: ask the VM to deploy a commit that is on `origin/main` and passed CI.
 
-The agent (`deploy/autodeploy/autodeploy.sh`) accepts only a full commit SHA on `origin/main`, refuses to downgrade, checks the CI `check` run itself, and never auto-deploys a commit that adds files under `db/migrations/`. In that case the job fails with the file list; apply them, then:
+The agent (`deploy/autodeploy/autodeploy.sh`) accepts only the full current `origin/main` commit SHA, refuses to downgrade, checks the CI `check` run itself, and never auto-deploys a commit that adds files under `db/migrations/`. It verifies the latest main and successful CI again after the image build, immediately before activation. If either check or the migration diff cannot be verified, activation is refused. When migrations are detected, the job fails with the file list; apply them, then:
 
 ```bash
 touch /var/lib/memecatch-autodeploy/allow-<full-sha>   # then re-run the deploy job in GitHub
 ```
+
+After the automatic deploy SSH request completes, disconnects, or times out, the workflow does not send another deploy command. It retries a read-only `status <sha>` request and succeeds only when the agent verifies the current main SHA, completed CI, success marker, running and healthy app container with the matching image SHA, and public release header under the deployment lock. The initial SSH call is limited to 45 minutes; after success, disconnect, or client timeout, status reconciliation has a separate 45-minute deadline, with bounded individual requests. The agent can wait up to 30 minutes to acquire its deploy lock, but remote build and deployment execution have no fixed maximum; completion beyond the reconciliation deadline remains unverified and the job fails. The workflow reserves 95 minutes for the deployment step and 110 minutes for the full job. Missing evidence or an unreachable agent leaves the run failed. A VM still running the older agent cannot answer `status`. On the first upgrade, interruption after the deployed marker is written but before self-update leaves the old agent installed; a same-SHA rerun is a no-op and cannot repair it. The workflow remains failed without verification. With separate authorization, an operator can hold the deployment lock, verify current main and successful CI, the deployed marker, absence of a failed marker, the running image SHA, and the public release header, then atomically install the agent from that verified matching checkout using the agent self-update copy-and-rename procedure. After releasing the lock, rerun the job for read-only reconciliation. Do not force a rebuild solely to repair the agent.
+
+During the final status window, a distinct lock-busy response permits up to three more read-only status requests within the same deadline. A busy response occurs before any CI API request; the runner permits at most 13 status attempts that can reach the CI API. This per-run bound does not reserve GitHub's shared IP quota. If the lock releases too late for the remaining verification, the job remains unverified.
 
 A re-run in GitHub retries a commit that failed before. Install or update the agent with `bash deploy/autodeploy/install.sh` (add `--with-timer` to also poll main every 3 minutes as a fallback). Logs: the GitHub job, or `journalctl -u memecatch-autodeploy` for timer runs. Each deploy tags the running images `memecatch*:rollback-<previous-sha>` first.
 

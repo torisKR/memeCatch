@@ -92,9 +92,15 @@ jobs:
     concurrency:
       group: production
       cancel-in-progress: false
-    timeout-minutes: 45
+    # 5 + 5 minutes setup, 95 minutes for deploy/reconciliation, 5 minutes spare.
+    timeout-minutes: 110
     steps:
+      - uses: actions/checkout@v4
+        timeout-minutes: 5
+        with:
+          persist-credentials: false
       - name: Install cloudflared (pinned)
+        timeout-minutes: 5
         env:
           CLOUDFLARED_VERSION: "2026.11.0"
           CLOUDFLARED_SHA256: "5305dbaf62984e92e7daa29cdd6a35a4797edc23385d4c5b8422ff97eb96a19b"
@@ -104,6 +110,7 @@ jobs:
           echo "${CLOUDFLARED_SHA256}  $RUNNER_TEMP/cloudflared.deb" | sha256sum -c -
           sudo dpkg -i "$RUNNER_TEMP/cloudflared.deb" >/dev/null
       - name: Deploy this commit on the OCI VM
+        timeout-minutes: 95
         env:
           TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
@@ -116,8 +123,6 @@ jobs:
           done
           install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<<"$DEPLOY_SSH_KEY"
           install -m 644 /dev/stdin "$RUNNER_TEMP/known_hosts" <<<"$DEPLOY_KNOWN_HOSTS"
-          # The agent prints its own log; exit 3 means "not deployed" (CI, migration gate).
-          ssh -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes \
-            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" -o StrictHostKeyChecking=yes \
-            -o ServerAliveInterval=30 -o ProxyCommand="cloudflared access ssh --hostname %h" \
-            "ubuntu@${DEPLOY_HOST}" "$GITHUB_SHA"
+          # Verify status after success or an ambiguous 255; the script never
+          # repeats a deployment or the manual redeploy command.
+          bash deploy/autodeploy/run-ssh-deploy.sh

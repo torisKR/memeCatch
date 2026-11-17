@@ -5,13 +5,16 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 standalone="$root/.next/standalone"
-scratch="$(mktemp -d /private/tmp/memecatch-localized-soft404.XXXXXX)"
+tmp_root="${TMPDIR:-/tmp}"
+[[ -d "$tmp_root" && -w "$tmp_root" ]] || {
+  echo "temporary directory is unavailable" >&2
+  exit 1
+}
+scratch="$(mktemp -d "${tmp_root%/}/memecatch-localized-soft404.XXXXXX")"
 pg_data="$scratch/pgdata"
 pg_socket="$scratch/socket"
-# Keep parallel agents from sharing fixed test ports. The isolated socket is
-# authoritative; TCP is enabled only because the standalone app uses a URL.
-pg_port=$((54000 + ($$ % 5000)))
-app_port=$((60000 + ($$ % 5000)))
+pg_port=""
+app_port="$(node -e 'const net=require("node:net");const server=net.createServer();server.listen(0,"127.0.0.1",()=>{console.log(server.address().port);server.close();});')"
 app_pid=""
 pg_container=""
 pg_mode="${LOCALIZED_SOFT404_POSTGRES:-native}"
@@ -31,7 +34,7 @@ if [[ ! -f "$standalone/server.js" ]]; then
   echo "standalone server missing; run pnpm build first" >&2
   exit 1
 fi
-for command in psql curl; do
+for command in node psql curl; do
   command -v "$command" >/dev/null || {
     echo "required command missing: $command" >&2
     exit 1
@@ -41,7 +44,10 @@ if [[ "$pg_mode" == docker ]]; then
   command -v docker >/dev/null || { echo "docker is required for PostgreSQL 17 CI mode" >&2; exit 1; }
   pg_container="memecatch-soft404-pg-$$"
   docker run -d --name "$pg_container" -e POSTGRES_HOST_AUTH_METHOD=trust \
-    -e POSTGRES_DB=memecatch -p "127.0.0.1:${pg_port}:5432" postgres:17 >/dev/null
+    -e POSTGRES_DB=memecatch -p "127.0.0.1::5432" postgres:17 >/dev/null
+  published_port="$(docker port "$pg_container" 5432/tcp)"
+  pg_port="${published_port##*:}"
+  [[ "$pg_port" =~ ^[0-9]+$ ]] || { echo "failed to resolve PostgreSQL container port" >&2; exit 1; }
   for _ in $(seq 1 60); do
     if psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$pg_port" -U postgres -d memecatch -c 'select 1' >/dev/null 2>&1; then
       break
@@ -58,6 +64,7 @@ else
     echo "PostgreSQL 17 is required for this regression" >&2
     exit 1
   fi
+  pg_port="$(node -e 'const net=require("node:net");const server=net.createServer();server.listen(0,"127.0.0.1",()=>{console.log(server.address().port);server.close();});')"
   initdb -D "$pg_data" -A trust --no-locale --encoding=UTF8 -U postgres >/dev/null
   mkdir -p "$pg_socket"
   pg_ctl -D "$pg_data" -l "$scratch/postgres.log" \

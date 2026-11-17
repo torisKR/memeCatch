@@ -11,6 +11,8 @@ export type DbIdentity = {
 
 type Database = Record<string, Record<string, unknown>>;
 
+export const DB_POOL_ACQUIRE_TIMEOUT_MS = 1_500;
+
 const ROLE_SQL: Record<DbRole, string> = {
   anon: "set local role anon",
   authenticated: "set local role authenticated",
@@ -28,6 +30,7 @@ export function getPool(): pg.Pool {
     globalDb.__memecatchPool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
       max: 8,
+      connectionTimeoutMillis: DB_POOL_ACQUIRE_TIMEOUT_MS,
       application_name: "memecatch",
     });
   }

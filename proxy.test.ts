@@ -5,6 +5,7 @@ import { proxy, resolveLandingRedirectLocale } from "@/proxy";
 
 const dbMocks = vi.hoisted(() => ({
   abortSignal: vi.fn(),
+  createRequestDb: vi.fn(),
   eq: vi.fn(),
   from: vi.fn(),
   getUser: vi.fn(),
@@ -54,11 +55,7 @@ function localizedTranslation(overrides: Record<string, unknown> = {}) {
 }
 
 vi.mock("@/lib/db/request-db", () => ({
-  createRequestDb: async () => ({
-    auth: { getUser: dbMocks.getUser },
-    from: dbMocks.from,
-    rpc: dbMocks.rpc,
-  }),
+  createRequestDb: dbMocks.createRequestDb,
 }));
 
 beforeEach(() => {
@@ -80,6 +77,11 @@ beforeEach(() => {
   dbMocks.in.mockReset().mockReturnValue(query);
   dbMocks.limit.mockReset().mockReturnValue(query);
   dbMocks.from.mockReset().mockReturnValue(query);
+  dbMocks.createRequestDb.mockReset().mockResolvedValue({
+    auth: { getUser: dbMocks.getUser },
+    from: dbMocks.from,
+    rpc: dbMocks.rpc,
+  });
 });
 
 describe("proxy operator authorization", () => {
@@ -248,6 +250,127 @@ describe("proxy public meme existence check", () => {
     expect(new URL(response.headers.get("location")!).pathname).toBe(
       "/ja/memes/gjq95suv-%E7%8F%BE%E5%9C%A8%E3%81%AE%E5%90%8D%E5%89%8D",
     );
+  });
+
+  it.each(["cssqxwmb", "9ajbp6w6"])(
+    "resolves canonical duplicate %s before checking localized eligibility",
+    async (duplicateShortId) => {
+      dbMocks.abortSignal.mockResolvedValueOnce({
+        data: [
+          publicMemeRow({
+            short_id: "gnact78h",
+            slug: "히딩크-나는-아직-배가-고프다",
+            meme_translations: [localizedTranslation()],
+          }),
+        ],
+        error: null,
+      });
+
+      const response = await proxy(
+        publicRequest(`/ja/memes/${duplicateShortId}-duplicate`),
+      );
+
+      expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+      expect(response.status).toBe(308);
+      expect(new URL(response.headers.get("location")!).pathname).toBe(
+        "/ja/memes/gnact78h-%E7%8F%BE%E5%9C%A8%E3%81%AE%E5%90%8D%E5%89%8D",
+      );
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    },
+  );
+
+  it("rewrites a canonical duplicate when the target translation is unavailable", async () => {
+    dbMocks.abortSignal.mockResolvedValueOnce({
+      data: [
+        publicMemeRow({
+          short_id: "gnact78h",
+          slug: "히딩크-나는-아직-배가-고프다",
+          meme_translations: [],
+        }),
+      ],
+      error: null,
+    });
+
+    const response = await proxy(publicRequest("/ja/memes/cssqxwmb-duplicate"));
+
+    expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-middleware-rewrite")).toContain(
+      "/__missing_public_meme__",
+    );
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("fails open for a canonical duplicate when the target lookup fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    dbMocks.abortSignal.mockResolvedValueOnce({
+      data: null,
+      error: { message: "provider unavailable" },
+    });
+
+    const response = await proxy(publicRequest("/ja/memes/9ajbp6w6-duplicate"));
+
+    expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "public_meme_existence_check_failed query_error",
+    );
+    expect(warn.mock.calls.flat().join(" ")).not.toContain("provider unavailable");
+    warn.mockRestore();
+  });
+
+  it("returns at the hard deadline when the database lookup never settles", async () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    dbMocks.abortSignal.mockImplementationOnce(
+      () => new Promise<never>(() => undefined),
+    );
+
+    try {
+      const responsePromise = proxy(publicRequest("/ja/memes/cssqxwmb-duplicate"));
+      await vi.advanceTimersByTimeAsync(1_500);
+      const response = await responsePromise;
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+      expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
+      const signal = dbMocks.abortSignal.mock.calls[0]?.[0] as AbortSignal;
+      expect(signal.aborted).toBe(true);
+      expect(warn).toHaveBeenCalledExactlyOnceWith(
+        "public_meme_existence_check_failed deadline_exceeded",
+      );
+    } finally {
+      warn.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns at the hard deadline when request database initialization never settles", async () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    dbMocks.createRequestDb.mockImplementationOnce(
+      () => new Promise<never>(() => undefined),
+    );
+
+    try {
+      const responsePromise = proxy(publicRequest("/ja/memes/cssqxwmb-duplicate"));
+      await vi.advanceTimersByTimeAsync(1_500);
+      const response = await responsePromise;
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+      expect(dbMocks.from).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledExactlyOnceWith(
+        "public_meme_existence_check_failed deadline_exceeded",
+      );
+    } finally {
+      warn.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("serves an exact eligible localized canonical key without rewriting", async () => {

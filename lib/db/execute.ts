@@ -30,7 +30,10 @@ export type Meta = {
 
 type SqlParts = { sql: string; params: unknown[] };
 
-const globalMeta = globalThis as unknown as { __memecatchMeta?: Meta };
+const globalMeta = globalThis as unknown as {
+  __memecatchMeta?: Meta;
+  __memecatchMetaPromise?: Promise<Meta>;
+};
 
 function bindValue(value: unknown, udt: string | undefined): unknown {
   if (value === null || value === undefined) return null;
@@ -515,80 +518,97 @@ function pgArray(value: unknown): string[] {
   return [];
 }
 
-async function loadMeta(): Promise<Meta> {
+async function loadMeta(identity: DbIdentity, signal?: AbortSignal): Promise<Meta> {
   if (globalMeta.__memecatchMeta) return globalMeta.__memecatchMeta;
-  const db = getDb();
-  const loaded = await db.transaction().execute(async (trx) => {
-    const columns = await trx.executeQuery<{ table_name: string; column_name: string; udt: string }>(
-      CompiledQuery.raw(
-        `SELECT c.relname AS table_name, a.attname AS column_name, t.typname AS udt
-           FROM pg_class c
-           JOIN pg_namespace n ON n.oid = c.relnamespace
-           JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-           JOIN pg_type t ON t.oid = a.atttypid
-          WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'm', 'p')`,
-      ),
-    );
-    const keys = await trx.executeQuery<{ table_name: string; column_name: string }>(
-      CompiledQuery.raw(
-        `SELECT rel.relname AS table_name, att.attname AS column_name
-           FROM pg_index idx
-           JOIN pg_class rel ON rel.oid = idx.indrelid
-           JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-           JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY (idx.indkey)
-          WHERE nsp.nspname = 'public' AND idx.indisprimary
-          ORDER BY rel.relname, array_position(idx.indkey, att.attnum)`,
-      ),
-    );
-    const foreignKeys = await trx.executeQuery<{
-      name: string;
-      src_table: string;
-      dst_table: string;
-      src_cols: string[];
-      dst_cols: string[];
-    }>(
-      CompiledQuery.raw(
-        `SELECT con.conname AS name,
-                src.relname AS src_table,
-                dst.relname AS dst_table,
-                (SELECT array_agg(a.attname ORDER BY cols.ord)
-                   FROM unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ord)
-                   JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = cols.attnum) AS src_cols,
-                (SELECT array_agg(a.attname ORDER BY cols.ord)
-                   FROM unnest(con.confkey) WITH ORDINALITY AS cols(attnum, ord)
-                   JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = cols.attnum) AS dst_cols
-           FROM pg_constraint con
-           JOIN pg_class src ON src.oid = con.conrelid
-           JOIN pg_class dst ON dst.oid = con.confrelid
-           JOIN pg_namespace nsp ON nsp.oid = src.relnamespace
-          WHERE con.contype = 'f' AND nsp.nspname = 'public'`,
-      ),
-    );
-    return { columns: columns.rows, keys: keys.rows, foreignKeys: foreignKeys.rows };
-  });
-  const columns: ColumnMap = new Map();
-  for (const row of loaded.columns) {
-    const table = columns.get(row.table_name) ?? new Map<string, string>();
-    table.set(row.column_name, row.udt);
-    columns.set(row.table_name, table);
+  if (!globalMeta.__memecatchMetaPromise) {
+    globalMeta.__memecatchMetaPromise = withIdentity(identity, async (trx, cancel) => {
+      if (signal?.aborted) {
+        throw Object.assign(new Error("canceling statement due to user request"), { code: "57014" });
+      }
+      const abort = () => cancel();
+      signal?.addEventListener("abort", abort, { once: true });
+      try {
+        const columns = await trx.executeQuery<{ table_name: string; column_name: string; udt: string }>(
+          CompiledQuery.raw(
+            `SELECT c.relname AS table_name, a.attname AS column_name, t.typname AS udt
+               FROM pg_class c
+               JOIN pg_namespace n ON n.oid = c.relnamespace
+               JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+               JOIN pg_type t ON t.oid = a.atttypid
+              WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'm', 'p')`,
+          ),
+        );
+        const keys = await trx.executeQuery<{ table_name: string; column_name: string }>(
+          CompiledQuery.raw(
+            `SELECT rel.relname AS table_name, att.attname AS column_name
+               FROM pg_index idx
+               JOIN pg_class rel ON rel.oid = idx.indrelid
+               JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+               JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY (idx.indkey)
+              WHERE nsp.nspname = 'public' AND idx.indisprimary
+              ORDER BY rel.relname, array_position(idx.indkey, att.attnum)`,
+          ),
+        );
+        const foreignKeys = await trx.executeQuery<{
+          name: string;
+          src_table: string;
+          dst_table: string;
+          src_cols: string[];
+          dst_cols: string[];
+        }>(
+          CompiledQuery.raw(
+            `SELECT con.conname AS name,
+                    src.relname AS src_table,
+                    dst.relname AS dst_table,
+                    (SELECT array_agg(a.attname ORDER BY cols.ord)
+                       FROM unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = cols.attnum) AS src_cols,
+                    (SELECT array_agg(a.attname ORDER BY cols.ord)
+                       FROM unnest(con.confkey) WITH ORDINALITY AS cols(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = cols.attnum) AS dst_cols
+               FROM pg_constraint con
+               JOIN pg_class src ON src.oid = con.conrelid
+               JOIN pg_class dst ON dst.oid = con.confrelid
+               JOIN pg_namespace nsp ON nsp.oid = src.relnamespace
+              WHERE con.contype = 'f' AND nsp.nspname = 'public'`,
+          ),
+        );
+        const columnMap: ColumnMap = new Map();
+        for (const row of columns.rows) {
+          const table = columnMap.get(row.table_name) ?? new Map<string, string>();
+          table.set(row.column_name, row.udt);
+          columnMap.set(row.table_name, table);
+        }
+        const primaryKeys = new Map<string, string[]>();
+        for (const row of keys.rows) {
+          primaryKeys.set(row.table_name, [...(primaryKeys.get(row.table_name) ?? []), row.column_name]);
+        }
+        return {
+          columns: columnMap,
+          primaryKeys,
+          foreignKeys: foreignKeys.rows.map((row) => ({
+            name: row.name,
+            srcTable: row.src_table,
+            dstTable: row.dst_table,
+            srcCols: pgArray(row.src_cols),
+            dstCols: pgArray(row.dst_cols),
+          })),
+        };
+      } finally {
+        signal?.removeEventListener("abort", abort);
+      }
+    });
   }
-  const primaryKeys = new Map<string, string[]>();
-  for (const row of loaded.keys) {
-    primaryKeys.set(row.table_name, [...(primaryKeys.get(row.table_name) ?? []), row.column_name]);
+  const metaPromise = globalMeta.__memecatchMetaPromise;
+  try {
+    const meta = await metaPromise;
+    globalMeta.__memecatchMeta = meta;
+    return meta;
+  } finally {
+    if (globalMeta.__memecatchMetaPromise === metaPromise) {
+      globalMeta.__memecatchMetaPromise = undefined;
+    }
   }
-  const meta: Meta = {
-    columns,
-    primaryKeys,
-    foreignKeys: loaded.foreignKeys.map((row) => ({
-      name: row.name,
-      srcTable: row.src_table,
-      dstTable: row.dst_table,
-      srcCols: pgArray(row.src_cols),
-      dstCols: pgArray(row.dst_cols),
-    })),
-  };
-  globalMeta.__memecatchMeta = meta;
-  return meta;
 }
 
 function queryError(error: unknown): QueryResult["error"] {
@@ -676,7 +696,7 @@ async function runQuery(
 
 export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?: AbortSignal): Promise<QueryResult> {
   try {
-    const meta = await loadMeta();
+    const meta = await loadMeta(identity, signal);
     if (plan.op === "rpc") {
       attachDottedFilters(plan);
       const matches = await loadFunctions(plan.fn ?? "");
@@ -712,4 +732,5 @@ export async function executePlan(plan: QueryPlan, identity: DbIdentity, signal?
 
 export function resetQueryMetadata(): void {
   globalMeta.__memecatchMeta = undefined;
+  globalMeta.__memecatchMetaPromise = undefined;
 }

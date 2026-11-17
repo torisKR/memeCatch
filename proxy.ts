@@ -17,7 +17,10 @@ import {
 } from "@/lib/i18n-routing";
 import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { shortIdFromParam } from "@/lib/labels";
-import { canonicalMemeRedirectPath } from "@/lib/canonical-meme-path";
+import {
+  CANONICAL_MEME_ALIAS_MAP,
+  canonicalMemeRedirectPath,
+} from "@/lib/canonical-meme-path";
 import { withAllowlistedSearch } from "@/lib/safe-redirect";
 import { retiredProductDocument } from "@/lib/retired-product-document";
 import { retiredProductDecision } from "@/lib/retired-products";
@@ -69,6 +72,38 @@ type PublicLocalizedMemeDocumentRow = Omit<PublicMemeCanonicalRow, "meme_transla
     source_updated_at: string;
   }>;
 };
+
+type PublicMemeLookupResult = {
+  data: (PublicMemeCanonicalRow | PublicLocalizedMemeDocumentRow)[] | null;
+  error: { message: string } | null;
+};
+
+type PublicMemeLookupOutcome =
+  | { kind: "completed"; result: PublicMemeLookupResult }
+  | { kind: "deadline" }
+  | { kind: "request_error" };
+
+async function runPublicMemeLookupWithDeadline(
+  lookup: (signal: AbortSignal) => PromiseLike<PublicMemeLookupResult>,
+): Promise<PublicMemeLookupOutcome> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const completed = Promise.resolve()
+    .then(() => lookup(controller.signal))
+    .then<PublicMemeLookupOutcome, PublicMemeLookupOutcome>(
+      (result) => ({ kind: "completed", result }),
+      () => ({ kind: "request_error" }),
+    );
+  const deadline = new Promise<PublicMemeLookupOutcome>((resolve) => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      resolve({ kind: "deadline" });
+    }, MEME_LOOKUP_TIMEOUT_MS);
+  });
+  const outcome = await Promise.race([completed, deadline]);
+  if (timeout) clearTimeout(timeout);
+  return outcome;
+}
 
 function localizedDocumentSlug(
   meme: PublicLocalizedMemeDocumentRow,
@@ -208,24 +243,28 @@ export async function proxy(request: NextRequest) {
     : null;
   if (!needsAuth && !documentDetailKey) return response;
 
-  const db = await createRequestDb(request);
+  const dbPromise = createRequestDb(request);
 
   if (documentDetailKey) {
-    try {
-      const { data, error } = await db
+    const requestedShortId = shortIdFromParam(documentDetailKey);
+    const targetShortId = CANONICAL_MEME_ALIAS_MAP[requestedShortId] ?? requestedShortId;
+    const lookup = await runPublicMemeLookupWithDeadline(async (signal) => {
+      const db = await dbPromise;
+      return db
         .from("memes")
         .select(urlLocale ? PUBLIC_LOCALIZED_MEME_DOCUMENT_SELECT : PUBLIC_MEME_CANONICAL_SELECT)
-        .eq("short_id", shortIdFromParam(documentDetailKey))
+        .eq("short_id", targetShortId)
         .in("moderation_status", [...PUBLIC_MEME_STATUSES])
         .limit(1)
-        .abortSignal(AbortSignal.timeout(MEME_LOOKUP_TIMEOUT_MS)) as {
-          data: (PublicMemeCanonicalRow | PublicLocalizedMemeDocumentRow)[] | null;
-          error: { message: string } | null;
-        };
-      if (error) {
-        console.warn("public_meme_existence_check_failed query_error");
-      }
-      const requestedShortId = shortIdFromParam(documentDetailKey);
+        .abortSignal(signal) as PromiseLike<PublicMemeLookupResult>;
+    });
+    if (lookup.kind === "deadline") {
+      console.warn("public_meme_existence_check_failed deadline_exceeded");
+    } else if (lookup.kind === "request_error") {
+      console.warn("public_meme_existence_check_failed request_error");
+    } else {
+      const { data, error } = lookup.result;
+      if (error) console.warn("public_meme_existence_check_failed query_error");
       const rewriteMissingDocument = () => {
         const url = request.nextUrl.clone();
         url.pathname = "/__missing_public_meme__";
@@ -237,7 +276,7 @@ export async function proxy(request: NextRequest) {
       if (
         !error &&
         data?.length === 0 &&
-        (urlLocale !== null || !isCuratedCoreShortId(requestedShortId))
+        (urlLocale !== null || !isCuratedCoreShortId(targetShortId))
       ) {
         return rewriteMissingDocument();
       }
@@ -262,13 +301,12 @@ export async function proxy(request: NextRequest) {
           return applyLocale(NextResponse.redirect(url, 308));
         }
       }
-    } catch {
-      // Fail open: a provider outage must not turn valid public content into a 404.
-      console.warn("public_meme_existence_check_failed request_error");
     }
   }
 
   if (!needsAuth) return response;
+
+  const db = await dbPromise;
 
   let user: { id: string } | null = null;
   let authFailed = false;

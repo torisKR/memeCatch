@@ -53,9 +53,17 @@ run_deploy() {
     [[ "$now" =~ ^[0-9]+$ ]] && (( now >= previous )) || return 1
     previous="$now"; remaining=$((deadline - now))
     (( remaining > 0 )) || break
+    (( attempt < status_max_attempts )) || break
+    # Reserve the last request for near the end of the window, even when
+    # earlier status calls fail immediately or consume varying amounts of time.
     wait_seconds="$backoff_seconds"
-    (( remaining < wait_seconds )) && wait_seconds="$remaining"
-    sleep "$wait_seconds"
+    if (( attempt == status_max_attempts - 1 )); then
+      wait_seconds=$((remaining - 30))
+    elif (( wait_seconds > remaining - 30 )); then
+      wait_seconds=$((remaining - 30))
+    fi
+    (( wait_seconds < 0 )) && wait_seconds=0
+    (( wait_seconds > 0 )) && sleep "$wait_seconds"
     if (( backoff_seconds < status_max_backoff_seconds )); then
       backoff_seconds=$((backoff_seconds * 2))
       (( backoff_seconds > status_max_backoff_seconds )) && backoff_seconds="$status_max_backoff_seconds"

@@ -518,7 +518,7 @@ IFS=, read -ra responses <<<"$ssh_results"
 rc="${responses[number - 1]:-3}"
 if (( number > 1 )); then
   now="$(cat "$test_clock_file")"
-  advance=30
+  advance="${ssh_status_duration:-30}"
   (( advance > ssh_timeout_seconds )) && advance="$ssh_timeout_seconds"
   if [[ -n "${ssh_ready_at:-}" ]]; then
     if (( now >= ssh_ready_at )); then
@@ -598,6 +598,19 @@ status_calls="$(grep -c "^status $test_head$" "$ssh_calls")"
 (( $(cat "$test_clock_file") >= 1200 && $(cat "$test_clock_file") <= 1440 )) || fail "20-minute deployment was not verified within one capped backoff"
 [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "20-minute scenario repeated deployment"
 [[ "$(tail -n +2 "$ssh_calls" | grep -vc "^status $test_head$" || true)" == 0 ]] || fail "20-minute scenario sent a non-status retry"
+
+# A failed status can return immediately or slowly. Keep one request near the
+# deadline so readiness after an earlier failure can still be observed.
+for timing in 0:2600 45:2660; do
+  duration="${timing%%:*}"; ready_at="${timing##*:}"
+  : >"$ssh_calls"; : >"$ssh_timeouts"; rm -f "$ssh_count"; echo 0 >"$test_clock_file"
+  rc=0
+  ( export ssh_results=255,3 ssh_silent=0 ssh_evidence_sha="$test_head" ssh_clock_backwards=0 ssh_ready_at="$ready_at" ssh_status_duration="$duration"; PATH="$stub:$PATH" RUNNER_TEMP="$stub" DEPLOY_HOST=example.invalid GITHUB_SHA="$test_head" bash "$here/run-ssh-deploy.sh" ) >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 0 ]] || fail "deadline evidence missed for status duration $duration"
+  (( $(cat "$test_clock_file") >= ready_at && $(cat "$test_clock_file") <= 2700 )) || fail "deadline evidence outside allowed window"
+  (( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "deadline retry exceeded API budget"
+  [[ "$(grep -c "^$test_head$" "$ssh_calls")" == 1 ]] || fail "deadline scenario repeated deployment"
+done
 
 # A long build can finish well after 30 minutes, right at the 45-minute
 # deadline, or too late. The clock and SSH durations are simulated.

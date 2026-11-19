@@ -19,7 +19,8 @@ describe("TrustNote", () => {
     expect(html).not.toContain("검수팀 확인");
     expect(html).toContain("근거 출처 준비 중");
     expect(html).toContain("출처를 아시면 알려 주세요");
-    expect(html).toContain("/submit?name=");
+    expect(html).toContain("#contribute-source");
+    expect(html).not.toContain("/submit?name=");
   });
 
   it("URL이 공백뿐인 출처는 근거로 세지 않는다", () => {

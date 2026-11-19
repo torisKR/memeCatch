@@ -30,7 +30,21 @@ describe("DocStatusNote", () => {
     expect(html).toContain("아직 정리 중인 문서예요");
     expect(html).toContain("유래");
     expect(html).toContain("출처");
-    expect(html).toContain("/submit?name=");
+    // 새 밈 제보(/submit)가 아니라 같은 페이지의 보강 제보 폼을 연다.
+    expect(html).not.toContain("/submit?name=");
+    // 예문이 비어 있으면 예문 탭부터 연다(안내 문구가 「실제로 써 보셨다면」).
+    expect(html).toContain('href="#contribute-example"');
+  });
+
+  it("예문은 있고 출처가 비었으면 출처 탭부터 연다", () => {
+    const html = renderToStaticMarkup(
+      <DocStatusNote
+        meme={{ ...thin, usage_examples: [{ situation: "단톡방", text: "예문" }] }}
+        title="테스트 밈"
+        shortId="pp3tzbgm"
+      />
+    );
+    expect(html).toContain('href="#contribute-source"');
   });
 
   it("충실한 문서에는 아예 렌더하지 않는다", () => {

@@ -40,6 +40,9 @@ import { ContextNav } from "@/components/context-nav";
 import { SourceEvidence } from "@/components/source-evidence";
 import { TrustNote } from "@/components/trust-note";
 import { DocStatusNote } from "@/components/doc-status-note";
+import { MemeContribute } from "@/components/meme-contribute";
+import { getMemeContributors } from "@/lib/meme-contributions.server";
+import { flags } from "@/lib/flags";
 import { MemeLifecycleGuide } from "@/components/meme-lifecycle-guide";
 import { AdsenseScript } from "@/components/adsense-script";
 import { isAdsenseContentEligible } from "@/lib/adsense-policy";
@@ -219,7 +222,7 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport, discovery, reviewedMediaSources] = await Promise.all([
+  const [related, reactionCounts, marketPassport, discovery, reviewedMediaSources, contributors] = await Promise.all([
     // 상세 하단은 관련 밈 카드를 최대 6장까지 둔다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
@@ -230,6 +233,7 @@ export default async function MemeDetailPage({ params }: Props) {
     getMemeMarketPassport(meme.id, "ko"),
     loadDiscoveryIndex(),
     getReviewedMemeMediaSources(meme.id),
+    getMemeContributors(meme.id),
   ]);
   const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
   const indexable = detailIndexableFromDiscovery(
@@ -535,6 +539,14 @@ export default async function MemeDetailPage({ params }: Props) {
                   title={meme.title}
                   shortId={meme.short_id}
                   originKind={meme.origin_kind}
+                />
+                {/* 보강 제보 — TrustNote·DocStatusNote의 CTA(#contribute…)가 여기를 연다.
+                    받은 출처·예문은 이 밈에 묶여 관리자 검수 큐로 간다. */}
+                <MemeContribute
+                  memeId={meme.id}
+                  shortId={meme.short_id}
+                  contributors={contributors}
+                  enabled={flags.submissionsOpen}
                 />
               </div>
             </section>

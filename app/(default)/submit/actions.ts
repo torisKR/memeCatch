@@ -211,3 +211,112 @@ export async function submitMemeWithAttachment(
 
   return { status: "success", submissionId: data as string };
 }
+
+/* ── 밈 상세 보강 제보(출처 링크·사용 예문) ───────────────── */
+
+export type ContributionKind = "source" | "example";
+
+export type ContributionInput = {
+  memeId: string;
+  kind: ContributionKind;
+  sourceUrl?: string;
+  note?: string;
+  situation?: string;
+  text?: string;
+  creditPublic?: boolean;
+};
+
+export type ContributionResult =
+  | { ok: true }
+  | { ok: false; error: "login_required" | "invalid" | "closed" | "duplicate" | "rate_limited" | "failed"; message: string };
+
+const contributionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    memeId: z.uuid(),
+    kind: z.literal("source"),
+    sourceUrl: z
+      .string()
+      .trim()
+      .max(500, "링크는 500자까지 넣을 수 있어요.")
+      .regex(/^https:\/\/\S+\.\S+$/, "https://로 시작하는 링크를 넣어 주세요."),
+    note: z.string().trim().max(300, "설명은 300자까지 쓸 수 있어요.").optional().default(""),
+    creditPublic: z.boolean().optional().default(true),
+  }),
+  z.object({
+    memeId: z.uuid(),
+    kind: z.literal("example"),
+    situation: z
+      .string()
+      .trim()
+      .min(1, "어떤 상황에서 썼는지 적어 주세요.")
+      .max(120, "상황은 120자까지 쓸 수 있어요."),
+    text: z
+      .string()
+      .trim()
+      .min(1, "실제로 쓴 문장을 적어 주세요.")
+      .max(500, "예문은 500자까지 쓸 수 있어요."),
+    creditPublic: z.boolean().optional().default(true),
+  }),
+]);
+
+/**
+ * 밈 상세의 인라인 보강 제보 — submit_meme_contribution RPC.
+ * 새 밈 제보(meme_submissions)와 큐를 나눠, 승인해도 새 밈이 생기지 않고 이 밈에만 붙는다.
+ */
+export async function submitMemeContribution(
+  input: ContributionInput,
+): Promise<ContributionResult> {
+  if (!flags.submissionsOpen) {
+    return { ok: false, error: "closed", message: "지금은 제보를 잠시 받지 않고 있어요." };
+  }
+  const parsed = contributionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "invalid",
+      message: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요.",
+    };
+  }
+  const data = parsed.data;
+
+  const db = await createClient();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "login_required", message: "로그인하면 제보할 수 있어요." };
+  }
+
+  const isSource = data.kind === "source";
+  const { error } = await db.rpc("submit_meme_contribution", {
+    p_meme_id: data.memeId,
+    p_kind: data.kind,
+    p_source_url: isSource ? data.sourceUrl : null,
+    p_note: isSource && data.note ? data.note : null,
+    p_situation: isSource ? null : data.situation,
+    p_text: isSource ? null : data.text,
+    p_credit_public: data.creditPublic,
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+    if (message.includes("login_required")) {
+      return { ok: false, error: "login_required", message: "로그인하면 제보할 수 있어요." };
+    }
+    if (error.code === "P0429" || message.includes("rate_limited")) {
+      return { ok: false, error: "rate_limited", message: "제보가 많아 잠시 쉬어 가요. 1시간 뒤에 다시 보내 주세요." };
+    }
+    if (message.includes("already_linked")) {
+      return { ok: false, error: "duplicate", message: "이미 이 문서에 연결된 링크예요." };
+    }
+    if (message.includes("already_pending")) {
+      return { ok: false, error: "duplicate", message: "같은 링크가 이미 검토를 기다리고 있어요." };
+    }
+    if (message.includes("invalid_url")) {
+      return { ok: false, error: "invalid", message: "https://로 시작하는 링크를 넣어 주세요." };
+    }
+    return { ok: false, error: "failed", message: "제보를 보내지 못했어요. 잠시 뒤 다시 시도해 주세요." };
+  }
+
+  return { ok: true };
+}

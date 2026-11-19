@@ -2,6 +2,7 @@ import Link from "next/link";
 import { evidenceTimestamp, summarizeEvidence, type EvidenceSourceInput } from "@/lib/source-links";
 import { TrackedBlock } from "@/components/tracked-block";
 import { houseOriginalPublicLabel, trustCopyKind } from "@/lib/house-original";
+import { CONTRIBUTE_ANCHOR } from "@/lib/meme-contribution-anchor";
 
 /**
  * 신뢰 신호 — "이 설명을 무엇으로 확인했나"를 실제 근거 상태에 맞춰 말한다.
@@ -13,7 +14,7 @@ import { houseOriginalPublicLabel, trustCopyKind } from "@/lib/house-original";
  *
  * 네 상태만 쓴다(1인 운영이 유지할 수 있는 최소 단위):
  *   자체 제작  → 밈캐치가 만든 밈. 인터넷 원본 부재를 결함으로 말하지 않는다.
- *   0건        → 근거 미연결. 검수 주장을 하지 않고 제보 경로를 연다.
+ *   0건        → 근거 미연결. 검수 주장을 하지 않고 같은 페이지의 출처 보강 폼을 연다.
  *   맥락 출처만 → 위키 자료가 연결돼 있음을 밝힌다.
  *   일반 출처 있음 → 연결된 자료 수만 센다. 제목만으로 원본·보도 검증을 주장하지 않는다.
  *
@@ -84,18 +85,19 @@ export function TrustNote({
           <span className="font-semibold text-foreground">근거 출처 준비 중</span> — 이
           문서는 아직 확인된 출처가 연결되지 않았어요. 마지막 업데이트 {updated}
         </p>
-        {/* 정정 제보 진입 계측(HG-006 B안) — 개인정보 없음: 문서 short_id + 진입 위치만. */}
+        {/* 정정 제보 진입 계측(HG-006 B안) — 개인정보 없음: 문서 short_id + 진입 위치만.
+            새 밈 제보(/submit)가 아니라 같은 페이지의 보강 제보 폼(출처 탭)을 연다 —
+            components/meme-contribute.tsx. 받은 링크는 이 밈에 묶여 검수 큐로 간다. */}
         <TrackedBlock
           event="correction_report_started"
           params={{ short_id: shortId, from: "trust_note" }}
         >
-          <Link
-            href={`/submit?name=${encodeURIComponent(title)}`}
-            rel="nofollow"
+          <a
+            href={`#${CONTRIBUTE_ANCHOR}-source`}
             className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2 transition-colors hover:text-foreground"
           >
             출처를 아시면 알려 주세요
-          </Link>
+          </a>
         </TrackedBlock>
       </div>
     );

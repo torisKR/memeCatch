@@ -248,6 +248,61 @@ export async function rejectSubmission(input: {
   }
 }
 
+/* ── 문서 보강 제보(밈 상세의 출처 링크·사용 예문) ─────────── */
+
+const CONTRIBUTION_REVIEW_ERRORS: Record<string, string> = {
+  operator_required: "운영자 권한이 없어요.",
+  contribution_not_found: "제보를 찾을 수 없어요.",
+  already_reviewed: "이미 처리된 제보예요.",
+  reject_reason_required: "반려 사유를 입력해 주세요.",
+  examples_full: "이 밈에는 예문이 이미 3개 있어요. 밈 관리에서 기존 예문을 정리한 뒤 승인해 주세요.",
+  invalid_example: "예문은 상황 120자, 문장 500자까지예요.",
+  invalid_source_title: "자료 제목은 300자까지예요.",
+};
+
+/**
+ * 보강 제보 승인·반려 — review_meme_contribution RPC가 반영(meme_sources 추가 또는
+ * usage_examples 추가)과 감사 로그를 한 트랜잭션으로 처리한다.
+ */
+export async function reviewMemeContribution(input: {
+  contributionId: string;
+  decision: "approve" | "reject";
+  sourceTitle?: string;
+  situation?: string;
+  text?: string;
+  rejectReason?: string;
+}): Promise<ActionResult> {
+  try {
+    const { db } = await requireOperator();
+    if (input.decision === "reject" && !input.rejectReason?.trim()) {
+      return { ok: false, error: "반려 사유를 입력해 주세요." };
+    }
+    const { data, error } = await db.rpc("review_meme_contribution", {
+      p_id: input.contributionId,
+      p_decision: input.decision,
+      p_source_title: input.sourceTitle?.trim() || null,
+      p_situation: input.situation?.trim() || null,
+      p_text: input.text?.trim() || null,
+      p_reject_reason: input.rejectReason?.trim() || null,
+    });
+    if (error) {
+      const key = Object.keys(CONTRIBUTION_REVIEW_ERRORS).find((k) => error.message?.includes(k));
+      return { ok: false, error: key ? CONTRIBUTION_REVIEW_ERRORS[key] : error.message };
+    }
+    const memeId =
+      data && typeof data === "object" && !Array.isArray(data) && typeof data.memeId === "string"
+        ? data.memeId
+        : null;
+    if (input.decision === "approve" && memeId) {
+      revalidateCanonicalMemePaths(await loadMemeRevalidationIdentity(db, memeId));
+    }
+    revalidatePath("/admin/submissions");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
 function slugify(title: string): string {
   const s = title
     .trim()

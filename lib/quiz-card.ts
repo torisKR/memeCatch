@@ -12,6 +12,8 @@ export interface QuizCardData {
   mode: QuizMode;
   questions: QuizQuestion[];
   answers: number[];
+  /** 결과 공유 링크(/quiz/r/{token}) — 없으면 /quiz */
+  shareUrl?: string;
 }
 
 /**
@@ -331,7 +333,7 @@ export async function downloadOrShareQuizCard(
         await navigator.share({
           files: [file],
           title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
-          text: `나의 밈력 ${data.score}점! 밈력고사에서 측정해보세요 👉 ${SITE_URL}/quiz`,
+          text: `나의 밈력 ${data.score}점! 같은 문제로 내 점수 이겨보기 👉 ${data.shareUrl ?? `${SITE_URL}/quiz`}`,
         });
         return { shared: true, downloaded: false };
       }

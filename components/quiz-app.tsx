@@ -12,12 +12,31 @@ import {
   type QuizQuestion,
 } from "@/lib/quiz";
 import { downloadOrShareQuizCard } from "@/lib/quiz-card";
+import {
+  QUIZ_MODE_LABEL,
+  quizResultPath,
+  quizShareTokenFor,
+} from "@/lib/quiz-share";
 
 /**
  * 밈력고사 클라이언트 플로우 — 시작(모드 선택) → 진행(10문항, 즉시 정오답
  * 피드백 + 키보드 1~4) → 결과(점수·등급·밈 감성 연대·오답 복습·공유).
  * 페이지 셸은 정적(○), 문항은 시작 시 /api/quiz에서 fetch(no-store).
+ *
+ * challenge가 있으면(/quiz/r/{token} 공유 링크) 친구 결과 카드 →
+ * "내 점수 이겨보기"로 같은 문제 세트(set=short_id 목록)를 출제한다.
  */
+
+/** 공유 링크로 받은 친구 결과 — 서버 페이지가 토큰을 해석해 넘긴다 */
+export type QuizChallenge = {
+  mode: QuizMode;
+  shortIds: string[];
+  correct: boolean[];
+  score: number;
+  total: number;
+  gradeLabel: string;
+  gradeComment: string;
+};
 
 type Phase = "start" | "loading" | "playing" | "result" | "error";
 
@@ -27,24 +46,30 @@ const MODES: { key: QuizMode; label: string; desc: string }[] = [
   { key: "retro", label: "추억 밈만", desc: "2009년 이전 그 시절 밈" },
 ];
 
-export function QuizApp() {
+export function QuizApp({ challenge }: { challenge?: QuizChallenge } = {}) {
   const [phase, setPhase] = useState<Phase>("start");
-  const [mode, setMode] = useState<QuizMode>("all");
+  const [mode, setMode] = useState<QuizMode>(challenge?.mode ?? "all");
+  // 친구 도전장 진행 여부 — "새 문제로 풀기"/"모드 변경"을 누르면 일반 퀴즈로 전환
+  const [activeChallenge, setActiveChallenge] = useState<QuizChallenge | null>(
+    challenge ?? null
+  );
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
 
-  const start = useCallback(async (nextMode: QuizMode) => {
+  const start = useCallback(async (nextMode: QuizMode, set?: string[]) => {
     setMode(nextMode);
     setPhase("loading");
     setQuestions([]);
     setIndex(0);
     setSelected(null);
     setAnswers([]);
-    track("quiz_start", { mode: nextMode });
+    track("quiz_start", set ? { mode: nextMode, challenge: 1 } : { mode: nextMode });
+    const query = new URLSearchParams({ mode: nextMode });
+    if (set) query.set("set", set.join(","));
     try {
-      const res = await fetch(`/api/quiz?mode=${nextMode}`, { cache: "no-store" });
+      const res = await fetch(`/api/quiz?${query.toString()}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const body = (await res.json()) as { questions: QuizQuestion[] };
       if (!Array.isArray(body.questions) || body.questions.length === 0) {
@@ -100,17 +125,35 @@ export function QuizApp() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [phase, selected, select, next]);
 
-  if (phase === "start") return <StartScreen onStart={start} />;
+  const startChallenge = useCallback(() => {
+    if (activeChallenge) void start(activeChallenge.mode, activeChallenge.shortIds);
+  }, [activeChallenge, start]);
+  const retry = activeChallenge ? startChallenge : () => start(mode);
+
+  if (phase === "start")
+    return activeChallenge ? (
+      <ChallengeStartScreen
+        challenge={activeChallenge}
+        onStart={startChallenge}
+        onSkip={() => setActiveChallenge(null)}
+      />
+    ) : (
+      <StartScreen onStart={start} />
+    );
   if (phase === "loading") return <LoadingScreen />;
-  if (phase === "error") return <ErrorScreen onRetry={() => start(mode)} />;
+  if (phase === "error") return <ErrorScreen onRetry={retry} />;
   if (phase === "result")
     return (
       <ResultScreen
         questions={questions}
         answers={answers}
         mode={mode}
-        onRetry={() => start(mode)}
-        onChangeMode={() => setPhase("start")}
+        challenge={activeChallenge}
+        onRetry={retry}
+        onChangeMode={() => {
+          setActiveChallenge(null);
+          setPhase("start");
+        }}
       />
     );
 
@@ -185,6 +228,74 @@ function StartScreen({ onStart }: { onStart: (mode: QuizMode) => void }) {
         </p>
       </div>
     </section>
+  );
+}
+
+function ChallengeStartScreen({
+  challenge,
+  onStart,
+  onSkip,
+}: {
+  challenge: QuizChallenge;
+  onStart: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <section aria-label="친구의 밈력고사 결과" className="mt-6">
+      <div className="edge-signal relative overflow-hidden rounded-3xl p-5 text-center shadow-sm sm:p-8">
+        <div aria-hidden className="instrument-grid pointer-events-none absolute inset-0" />
+        <p className="text-sm font-semibold text-accent-strong">
+          친구가 보낸 도전장 · {QUIZ_MODE_LABEL[challenge.mode]} 모드
+        </p>
+        <p className="mt-2 text-5xl font-extrabold tabular-nums">
+          <span
+            className="stat-mono text-(--signal-cyan)"
+            style={{ filter: "drop-shadow(0 0 14px var(--signal-cyan))" }}
+          >
+            {challenge.score}
+          </span>
+          <span className="text-2xl font-bold text-muted">/{challenge.total}</span>
+        </p>
+        <p className="mt-3 inline-flex items-center rounded-full bg-accent-soft px-4 py-1.5 text-base font-bold text-accent-strong">
+          {challenge.gradeLabel}
+        </p>
+        <p className="mt-2 text-sm text-muted sm:text-base">{challenge.gradeComment}</p>
+        <ScoreBars correct={challenge.correct} label="친구의 문항별 정답" />
+        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base">
+          친구가 푼 것과 같은 {challenge.total}문항이 그대로 나와요. 몇 점이면 이길 수 있을까요?
+        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={onStart}
+            className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            내 점수 이겨보기
+          </button>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 font-semibold transition-colors hover:border-accent hover:text-accent"
+          >
+            새 문제로 풀기
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ScoreBars({ correct, label }: { correct: boolean[]; label: string }) {
+  return (
+    <ol aria-label={label} className="mx-auto mt-4 flex max-w-xs justify-center gap-1.5">
+      {correct.map((ok, i) => (
+        <li
+          key={i}
+          aria-label={`${i + 1}번 ${ok ? "정답" : "오답"}`}
+          className={`h-2 flex-1 rounded-full ${ok ? "bg-(--signal-cyan)" : "bg-surface-2"}`}
+        />
+      ))}
+    </ol>
   );
 }
 
@@ -362,12 +473,14 @@ function ResultScreen({
   questions,
   answers,
   mode,
+  challenge,
   onRetry,
   onChangeMode,
 }: {
   questions: QuizQuestion[];
   answers: number[];
   mode: QuizMode;
+  challenge: QuizChallenge | null;
   onRetry: () => void;
   onChangeMode: () => void;
 }) {
@@ -389,6 +502,11 @@ function ResultScreen({
   const wrong = questions
     .map((q, i) => ({ q, picked: answers[i] }))
     .filter(({ q, picked }) => picked !== q.answerIndex);
+  const shareToken = quizShareTokenFor(mode, questions, answers);
+  const shareUrl = shareToken
+    ? `${SITE_URL}${quizResultPath(shareToken)}`
+    : `${SITE_URL}/quiz`;
+  const versus = challenge ? versusMessage(score, total, challenge) : null;
 
   async function saveCardImage() {
     setSavingImage(true);
@@ -402,6 +520,7 @@ function ResultScreen({
         mode,
         questions,
         answers,
+        shareUrl,
       });
       if (res.downloaded) {
         setImageNotice("성적표 이미지가 다운로드되었습니다!");
@@ -416,14 +535,14 @@ function ResultScreen({
   }
 
   async function share() {
-    const text = `나의 밈력 ${score}점 — 밈력고사에서 측정해보세요 ${SITE_URL}/quiz`;
+    const text = `나의 밈력 ${score}/${total}점 (${grade.label}) — 같은 문제로 내 점수 이겨볼 사람?`;
     track("quiz_share", { score, mode });
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ text });
+        await navigator.share({ text, url: shareUrl });
         return;
       }
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(`${text} ${shareUrl}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -453,6 +572,14 @@ function ResultScreen({
             당신의 밈 감성은 {era}
           </p>
         )}
+        {versus && challenge && (
+          <p
+            role="status"
+            className="mx-auto mt-4 max-w-md rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold sm:text-base"
+          >
+            친구 {challenge.score}/{challenge.total} vs 나 {score}/{total} — {versus}
+          </p>
+        )}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <button
@@ -470,14 +597,14 @@ function ResultScreen({
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-5 font-semibold transition-colors hover:border-accent hover:text-accent"
           >
             <ShareIcon />
-            {copied ? "링크 복사됨!" : "링크 복사"}
+            {copied ? "결과 링크 복사됨!" : "결과 링크 공유"}
           </button>
           <button
             type="button"
             onClick={onRetry}
             className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 font-semibold transition-colors hover:border-accent hover:text-accent"
           >
-            다시 풀기
+            {challenge ? "같은 문제 다시 풀기" : "다시 풀기"}
           </button>
           <button
             type="button"
@@ -522,6 +649,15 @@ function ResultScreen({
       )}
     </section>
   );
+}
+
+/** 친구 점수와 비교 — 문항 수가 달라질 수 있어(삭제된 밈) 정답률로 비교 */
+function versusMessage(score: number, total: number, challenge: QuizChallenge): string {
+  const mine = total > 0 ? score / total : 0;
+  const theirs = challenge.total > 0 ? challenge.score / challenge.total : 0;
+  if (mine > theirs) return "친구를 이겼어요! 결과 링크로 자랑해 보세요.";
+  if (mine === theirs) return "무승부! 다시 붙어 볼까요?";
+  return "아쉽게 졌어요. 한 번 더 도전해 보세요.";
 }
 
 /* -------------------------------- SVG 아이콘 -------------------------------- */

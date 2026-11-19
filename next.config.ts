@@ -155,6 +155,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
     "/og/[locale]": ["./assets/og-fonts/**/*"],
+    "/og/quiz/[token]": ["./assets/og-fonts/share/ko.otf"],
     "/opengraph-image": ["./assets/og-fonts/**/*"],
     "/[locale]/memes/[key]/opengraph-image": ["./assets/og-fonts/**/*"],
     "/memes/[key]/opengraph-image-k2cx9c": ["./assets/og-fonts/**/*"],

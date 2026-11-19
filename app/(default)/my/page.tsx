@@ -5,6 +5,7 @@ import { type SafetyLevel } from "@/lib/labels";
 import { MyContent, type SavedMeme, type MySubmission } from "./my-content";
 import { getMemeCardCollectionPage } from "@/lib/meme-collectible.server";
 import { MemeCollectibleCollection } from "@/components/meme-collectible-collection";
+import { DailyMemeQuiz } from "@/components/daily-meme-quiz";
 import {
   SAVED_LIBRARY_PAGE_SIZE,
   parseSavedLibraryFilters,
@@ -159,6 +160,7 @@ export default async function MyPage({
       savedSafety={savedFilters.safety}
       savedPage={savedFilters.page}
       savedPageCount={savedPageCount}
+      dailyQuiz={<DailyMemeQuiz variant="compact" />}
       memeCards={<MemeCollectibleCollection key={user.id} ownerUserId={user.id} initialPage={memeCards.page} initialError={memeCards.error} initialLoginRequired={memeCards.loginRequired} />}
     />
   );

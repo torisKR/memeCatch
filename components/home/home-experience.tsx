@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   MessagesSquare,
@@ -38,9 +39,12 @@ export type HomeEntry = {
 export function HomeExperience({
   locale,
   entries,
+  afterHero,
 }: {
   locale: SeoRouteLocale;
   entries: readonly HomeEntry[];
+  /** 히어로 바로 아래에 끼우는 로케일 전용 블록(예: 한국어 오늘의 밈 퀴즈) */
+  afterHero?: ReactNode;
 }) {
   const copy = HOME_COPY[locale];
   const web3 = HOME_WEB3_COPY[locale];
@@ -52,6 +56,7 @@ export function HomeExperience({
     <div className={styles.page}>
       {locale === "ko" && <TranslatedEditionHint />}
       <HomeImmersiveStory locale={locale} />
+      {afterHero}
 
       {hasPublicListing(entries.length) ? (
         <section

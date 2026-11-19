@@ -11,6 +11,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      daily_meme_quiz_completions: {
+        Row: {
+          completed_at: string
+          correct: boolean
+          meme_short_id: string
+          quiz_date: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          correct: boolean
+          meme_short_id: string
+          quiz_date: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          correct?: boolean
+          meme_short_id?: string
+          quiz_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meme_collectible_cards: {
         Row: {
           id: string
@@ -4330,6 +4354,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      complete_daily_meme_quiz: {
+        Args: { p_correct: boolean; p_meme_short_id: string }
+        Returns: {
+          best_streak: number
+          completed_at: string | null
+          correct: boolean | null
+          current_streak: number
+          quiz_date: string
+          total_days: number
+        }[]
+      }
       complete_plus_global_daily_challenge: {
         Args: { p_locale: string }
         Returns: Json
@@ -4527,6 +4562,17 @@ export type Database = {
       }
       growth_kpi_unavailable: { Args: { p_reason: string }; Returns: Json }
       has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
+      get_daily_meme_quiz_status: {
+        Args: never
+        Returns: {
+          best_streak: number
+          completed_at: string | null
+          correct: boolean | null
+          current_streak: number
+          quiz_date: string
+          total_days: number
+        }[]
+      }
       get_my_profile: {
         Args: never
         Returns: {

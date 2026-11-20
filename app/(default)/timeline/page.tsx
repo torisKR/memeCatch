@@ -156,14 +156,10 @@ export default async function TimelinePage() {
         />
       )}
 
-      {/* Signal Desk 관제 라벨 — 홈·탐색·검색과 동일한 사이트 공용 어휘(instrument-grid는 정적 배경, 모션 없음) */}
-      <div className="instrument-grid rounded-2xl border border-border/70 p-5 sm:p-6">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-          Timeline signal
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">한국 밈 연표</h1>
+      <div>
+        <h1 className="page-title">한국 밈 연표</h1>
         {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록(GEO 톤) */}
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+        <p className="page-lede">
           한국 밈의 역사는 1990년대 개그 프로그램 유행어에서 시작해, 2000년대
           디시인사이드 짤방과 싸이월드 감성을 거쳐, 2010년대 급식체와 인터넷
           방송 밈으로 확장됐고, 2020년대 들어서는 숏폼 챌린지가 중심이 됐어요.

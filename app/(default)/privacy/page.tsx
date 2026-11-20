@@ -21,7 +21,7 @@ const EFFECTIVE = "2026년 8월 18일";
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
-      <h1 className="text-3xl font-extrabold tracking-tight">개인정보처리방침</h1>
+      <h1 className="page-title">개인정보처리방침</h1>
       <p className="mt-2 text-sm text-muted">시행일: {EFFECTIVE}</p>
 
       <div className="prose-sm mt-8 max-w-3xl space-y-8 text-base leading-relaxed">

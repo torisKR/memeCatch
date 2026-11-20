@@ -90,11 +90,8 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
-      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-        {copy.eyebrow}
-      </p>
-      <h1 className="mt-1 text-2xl font-bold">{copy.title}</h1>
-      <p className="mt-1 text-base text-muted">{copy.description}</p>
+      <h1 className="page-title">{copy.title}</h1>
+      <p className="page-lede">{copy.description}</p>
       <div className="relative mt-5">
         <SearchInput
           initialQuery={query}
@@ -109,7 +106,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
       {query && results.length > 0 && (
         <section
           aria-label={copy.resultSection}
-          className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
+          className="mt-8"
         >
           <p className="text-base text-muted">{copy.resultSummary(query, results.length)}</p>
           <TrackedBlock event="search_result_click" params={{ query }}>

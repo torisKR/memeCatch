@@ -17,7 +17,7 @@ export default function ContactPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-extrabold tracking-tight">문의</h1>
+        <h1 className="page-title">문의</h1>
         <p className="mt-3 text-lg leading-relaxed text-muted">
           콘텐츠 정정, 저작권 삭제, 제휴 문의는 이메일로 보내 주세요.
         </p>

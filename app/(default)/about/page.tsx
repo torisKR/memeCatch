@@ -25,7 +25,7 @@ export default async function AboutPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-extrabold tracking-tight">밈캐치 소개</h1>
+        <h1 className="page-title">밈캐치 소개</h1>
         <p className="mt-3 text-lg leading-relaxed text-muted">
           밈캐치는 한국 밈·유행어·챌린지의 <strong className="text-foreground">뜻·유래·지금 써도
           되는지</strong>를 한 번에 알려주는 실시간 밈 사전입니다. 1990년대부터

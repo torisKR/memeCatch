@@ -69,8 +69,15 @@ export function GlobalHeader() {
                   placeholder={messages.searchPlaceholder}
                   autoComplete="off"
                   enterKeyHint="search"
-                  className="h-11 w-48 rounded-xl border border-border bg-surface-2 pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20 xl:w-60"
+                  className="peer h-11 w-48 rounded-xl border border-border bg-surface-2 pl-9 pr-9 text-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20 xl:w-60"
                 />
+                {/* The key that focuses this field (components/search-shortcut.tsx). */}
+                <kbd
+                  aria-hidden
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border bg-surface px-1.5 font-sans text-xs font-semibold leading-5 text-muted peer-focus:hidden"
+                >
+                  /
+                </kbd>
               </div>
             </form>
 

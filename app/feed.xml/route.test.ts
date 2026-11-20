@@ -155,7 +155,7 @@ describe("RSS publication export", () => {
   });
 
   it("selects hidden_from_public so hidden rows can be excluded from the gate", () => {
-    const source = readFileSync(join(process.cwd(), "app/feed.xml/route.ts"), "utf-8");
+    const source = readFileSync(join(process.cwd(), "lib/meme-rss.ts"), "utf-8");
     expect(source).toContain("meme_sources(source_url, hidden_from_public)");
   });
 

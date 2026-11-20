@@ -87,6 +87,7 @@ ${SEO_CONTENT_LOCALES.map((locale) => `- [${locale} index](${SITE_URL}/${locale}
 - [이번 주 밈 결산](${SITE_URL}/weekly): 매주 자동 갱신되는 급상승·신규 정리
 ${showRankings ? `- [오늘의 랭킹](${SITE_URL}/rankings)\n` : ""}- [전체 사이트맵](${SITE_URL}/sitemap.xml): 밈 상세 페이지 전체 URL
 - [RSS 피드](${SITE_URL}/feed.xml): 최신 등록 밈
+- [RSS 피드 (최근 수정)](${SITE_URL}/feed/updated.xml): 내용이 최근 보강·수정된 밈
 
 ## 카테고리
 ${categories}

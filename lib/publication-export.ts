@@ -21,7 +21,7 @@ type PublicationExportCandidate<T extends PublicationExportRow> = T & {
 
 type PublicationExportOptions = {
   select: string;
-  primaryOrder: "published_at" | "trend_score";
+  primaryOrder: "published_at" | "updated_at" | "trend_score";
   limit: number;
   /** llms exports display the real eligible corpus count, so they must scan to exhaustion. */
   countAll: boolean;
@@ -59,9 +59,9 @@ export async function loadApprovedIndexableMemes<T extends PublicationExportRow>
       .select(`${options.select}, moderation_status`)
       .in("moderation_status", ["approved", "limited"]);
 
-    query = options.primaryOrder === "published_at"
-      ? query.order("published_at", { ascending: false, nullsFirst: false })
-      : query.order("trend_score", { ascending: false });
+    query = options.primaryOrder === "trend_score"
+      ? query.order("trend_score", { ascending: false })
+      : query.order(options.primaryOrder, { ascending: false, nullsFirst: false });
     query = query.order("id", { ascending: false });
 
     const { data, error } = await query.range(

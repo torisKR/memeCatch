@@ -285,6 +285,13 @@ describe("proxy public meme existence check", () => {
     },
   );
 
+  it("answers a direct visit to the missing-meme page with 404", async () => {
+    const response = await proxy(publicRequest("/missing-public-meme"));
+
+    expect(response.status).toBe(404);
+    expect(dbMocks.eq).not.toHaveBeenCalled();
+  });
+
   it.each(["cssqxwmb", "9ajbp6w6"])(
     "rewrites missing Korean canonical duplicate %s instead of serving the target fallback",
     async (duplicateShortId) => {
@@ -297,7 +304,7 @@ describe("proxy public meme existence check", () => {
       expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
       expect(response.status).toBe(404);
       expect(response.headers.get("x-middleware-rewrite")).toContain(
-        "/__missing_public_meme__",
+        "/missing-public-meme",
       );
       expect(response.headers.get("location")).toBeNull();
     },
@@ -358,7 +365,7 @@ describe("proxy public meme existence check", () => {
     expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
     expect(response.status).toBe(404);
     expect(response.headers.get("x-middleware-rewrite")).toContain(
-      "/__missing_public_meme__",
+      "/missing-public-meme",
     );
     expect(response.headers.get("location")).toBeNull();
   });
@@ -486,7 +493,7 @@ describe("proxy public meme existence check", () => {
 
     expect(response.status).toBe(404);
     expect(response.headers.get("location")).toBeNull();
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
   });
 
   it.each([
@@ -531,7 +538,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest("/ja/memes/gjq95suv-old"));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
     expect(response.headers.get("location")).toBeNull();
   });
 
@@ -584,7 +591,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest(path));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
     expect(response.headers.get("content-language")).toBe(language);
     expect(dbMocks.from).toHaveBeenCalledWith("memes");
     expect(dbMocks.select).toHaveBeenCalledWith(
@@ -639,7 +646,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest("/en/memes/jkm2022k-jung-kkuk-ma"));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
   });
 
   it.each([undefined, "navigate"])("checks a document request with fetch mode %s", async (fetchMode) => {

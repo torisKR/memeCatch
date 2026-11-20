@@ -51,6 +51,14 @@ async function loadServerStatus(): Promise<DailyQuizStatus | null> {
   return statusFromRpcRow(data as RpcRow);
 }
 
+/** null on failure: the local record stays and the next visit sends it again. */
+async function completeOnServer(memeShortId: string, correct: boolean): Promise<DailyQuizStatus | null> {
+  const { data, error } = await createClient()
+    .rpc("complete_daily_meme_quiz", { p_meme_short_id: memeShortId, p_correct: correct })
+    .single();
+  return !error && data ? statusFromRpcRow(data as RpcRow) : null;
+}
+
 export function DailyMemeQuiz({ variant = "home" }: { variant?: "home" | "compact" }) {
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
   const [day, setDay] = useState<string | null>(null);
@@ -58,12 +66,15 @@ export function DailyMemeQuiz({ variant = "home" }: { variant?: "home" | "compac
   const [status, setStatus] = useState<DailyQuizStatus | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
+  const [unsyncedSelection, setUnsyncedSelection] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const res = await fetch("/api/daily-quiz");
+        // The KST day is part of the URL, so a CDN copy of yesterday's question
+        // cannot be served under today's key after midnight.
+        const res = await fetch(`/api/daily-quiz?d=${kstDayKey()}`);
         if (!res.ok) throw new Error(String(res.status));
         const body = (await res.json()) as { date: string; question: QuizQuestion };
         if (!active) return;
@@ -80,12 +91,31 @@ export function DailyMemeQuiz({ variant = "home" }: { variant?: "home" | "compac
       if (!active) return;
       setSignedIn(server !== null);
       setStatus(server ?? statusFromLocal(local, today));
-      if (local?.lastDate === today) setSelected(local.lastSelected);
+      if (local?.lastDate === today) {
+        setSelected(local.lastSelected);
+        // Answered on this device (as a guest, or the save failed) but the
+        // account's streak has not counted today yet.
+        if (server && !server.answeredToday) setUnsyncedSelection(local.lastSelected);
+      }
     })();
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (unsyncedSelection === null || !question) return;
+    let active = true;
+    (async () => {
+      const saved = await completeOnServer(question.meme.shortId, unsyncedSelection === question.answerIndex);
+      if (!active) return;
+      if (saved) setStatus(saved);
+      setUnsyncedSelection(null);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [question, unsyncedSelection]);
 
   const answered = selected !== null || status?.answeredToday === true;
 
@@ -103,13 +133,8 @@ export function DailyMemeQuiz({ variant = "home" }: { variant?: "home" | "compac
       setStatus(localStatus);
 
       if (!signedIn) return;
-      const { data, error } = await createClient()
-        .rpc("complete_daily_meme_quiz", {
-          p_meme_short_id: question.meme.shortId,
-          p_correct: correct,
-        })
-        .single();
-      if (!error && data) setStatus(statusFromRpcRow(data as RpcRow));
+      const saved = await completeOnServer(question.meme.shortId, correct);
+      if (saved) setStatus(saved);
     },
     [answered, day, question, signedIn],
   );

@@ -68,12 +68,14 @@ describe("submitMemeContribution", () => {
       p_note: null,
       p_situation: "시험 끝나고",
       p_text: "럭키비키잖아",
-      p_credit_public: true,
+      // Not stated by the caller, so the nickname stays private.
+      p_credit_public: false,
     });
   });
 
   it.each([
     [{ code: "P0429", message: "rate_limited" }, "rate_limited"],
+    [{ code: "P0429", message: "too_many_pending" }, "too_many_pending"],
     [{ code: "23505", message: "already_linked" }, "duplicate"],
     [{ code: "23505", message: "already_pending" }, "duplicate"],
     [{ code: "XX000", message: "boom" }, "failed"],

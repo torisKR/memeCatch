@@ -115,6 +115,11 @@ export default async function AboutPage() {
             </li>
           </ol>
           <p className="mt-4 text-base leading-relaxed">
+            검색 결과와 목록에는 뜻·유래·사용법·예문을 합친 설명이 250자 이상이고
+            확인한 출처가 붙은 문서만 올립니다. 아직 설명이 짧은 문서는 주소로는
+            열리지만, 보강할 때까지 목록과 검색 노출에서 뺍니다.
+          </p>
+          <p className="mt-4 text-base leading-relaxed">
             어떤 밈을 수록하고 무엇을 수록하지 않는지, 사용 안전 등급을 어떤
             근거로 매기는지, 출처의 권리를 어떻게 확인하는지는{" "}
             <Link href="/editorial" className="text-accent-text underline underline-offset-2">

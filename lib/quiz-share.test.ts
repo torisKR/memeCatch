@@ -40,6 +40,13 @@ describe("quiz share token", () => {
     expect(decodeQuizShareToken(token)).toBeNull();
   });
 
+  it("accepts curated seed ids outside the random-id alphabet", () => {
+    const curated = ["jkm2022k", "oyj2021k", "okk2020k"];
+    const token = encodeQuizShareToken({ mode: "all", shortIds: curated, correct: [true, true, false] });
+    expect(token).not.toBeNull();
+    expect(decodeQuizShareToken(token!)).toMatchObject({ shortIds: curated, score: 2, total: 3 });
+  });
+
   it("refuses to encode ids that could not be decoded", () => {
     expect(encodeQuizShareToken({ mode: "all", shortIds: ["p0"], correct: [true] })).toBeNull();
     expect(encodeQuizShareToken({ mode: "all", shortIds: [], correct: [] })).toBeNull();

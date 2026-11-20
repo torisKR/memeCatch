@@ -12,7 +12,11 @@
  */
 import { gradeForScore, QUIZ_SIZE, type QuizGrade, type QuizMode, type QuizQuestion } from "@/lib/quiz";
 
-export const QUIZ_SHORT_ID_PATTERN = /^[abcdefghjkmnpqrstuvwxyz23456789]{8}$/;
+/**
+ * gen_short_id()는 혼동 문자(0·1·i·l·o)를 빼지만, 큐레이션 시드 밈은 jkm2022k·oyj2021k
+ * 처럼 직접 지정한 id를 쓴다. 카탈로그에 실제로 있는 형태(소문자 영숫자 8자)를 모두 허용.
+ */
+export const QUIZ_SHORT_ID_PATTERN = /^[a-z0-9]{8}$/;
 const SHORT_ID_LENGTH = 8;
 const HEADER_LENGTH = 4;
 

@@ -295,6 +295,16 @@ describe("proxy public meme existence check", () => {
     expect(known.status).toBe(200);
   });
 
+  it("answers an unknown guide with the missing page's 404 and lets known ones through", async () => {
+    const unknown = await proxy(publicRequest("/guides/nope"));
+    expect(unknown.status).toBe(404);
+    expect(unknown.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
+
+    const known = await proxy(publicRequest("/guides/usage-signals"));
+    expect(known.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(known.status).toBe(200);
+  });
+
   it("passes the missing-meme page through so the standalone rewrite fetch cannot loop", async () => {
     const response = await proxy(publicRequest("/missing-public-meme"));
 

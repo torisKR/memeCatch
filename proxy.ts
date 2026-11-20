@@ -17,6 +17,7 @@ import {
 } from "@/lib/i18n-routing";
 import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
 import { getCollection } from "@/lib/collections";
+import { getGuide } from "@/lib/guides";
 import { shortIdFromParam } from "@/lib/labels";
 import {
   CANONICAL_MEME_ALIAS_MAP,
@@ -243,11 +244,13 @@ export async function proxy(request: NextRequest) {
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
   const needsAuth = path.startsWith("/my") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
-  // An unknown collection slug renders the not-found text inside the (default)
-  // layout, whose loading screen streams first, so the status stayed 200 (a
-  // soft 404). The list of collections is static: answer from it here.
-  const collectionMatch = urlLocale ? null : path.match(/^\/collections\/([^/]+)$/);
-  if (collectionMatch && !getCollection(collectionMatch[1])) {
+  // An unknown collection or guide slug renders the not-found text inside the
+  // (default) layout, whose loading screen streams first, so the status stayed
+  // 200 (a soft 404). Both lists are static: answer from them here.
+  const staticSlugMatch = urlLocale ? null : path.match(/^\/(collections|guides)\/([^/]+)$/);
+  const unknownStaticSlug = staticSlugMatch
+    && !(staticSlugMatch[1] === "collections" ? getCollection(staticSlugMatch[2]) : getGuide(staticSlugMatch[2]));
+  if (unknownStaticSlug) {
     const url = request.nextUrl.clone();
     url.pathname = MISSING_PUBLIC_MEME_PATH;
     return applyLocale(NextResponse.rewrite(url, {

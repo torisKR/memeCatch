@@ -2,7 +2,11 @@ import Link from "next/link";
 import { requireOperatorPage } from "@/app/(default)/admin/require-operator";
 import { OverdueBadge } from "@/components/admin/badges";
 import { isSubmissionOverdue } from "@/components/admin/constants";
-import { SUBMISSION_STATUS } from "@/lib/labels";
+import { memePathFrom, SUBMISSION_STATUS } from "@/lib/labels";
+import {
+  ContributionReview,
+  type ContributionQueueItem,
+} from "@/components/admin/contribution-review";
 
 export const metadata = { title: "제보 큐" };
 
@@ -27,6 +31,30 @@ export default async function SubmissionsQueuePage() {
 
   if (error) throw new Error(`제보 목록을 불러오지 못했어요: ${error.message}`);
 
+  // 문서 보강 제보(밈 상세의 출처·예문). 이 큐가 깨져도 새 밈 제보 큐는 보여야 하므로
+  // 조회 실패는 안내만 하고 넘어간다(마이그레이션 적용 전 환경 포함).
+  const { data: contributionRows, error: contributionError } = await db
+    .from("meme_contributions")
+    .select(
+      "id, kind, source_url, note, example_situation, example_text, credit_public, created_at, meme:memes!meme_contributions_meme_id_fkey(title, short_id, slug), contributor:profiles!meme_contributions_contributor_id_fkey(nickname)"
+    )
+    .in("status", ["pending", "reviewing"])
+    .order("created_at", { ascending: true })
+    .limit(100);
+  const contributions: ContributionQueueItem[] = (contributionRows ?? []).map((c) => ({
+    id: c.id,
+    kind: c.kind === "example" ? "example" : "source",
+    sourceUrl: c.source_url,
+    note: c.note,
+    situation: c.example_situation,
+    text: c.example_text,
+    creditPublic: c.credit_public,
+    contributorNickname: c.contributor?.nickname ?? null,
+    memeTitle: c.meme?.title ?? "(삭제된 밈)",
+    memePath: c.meme ? memePathFrom(c.meme.short_id, c.meme.slug) : null,
+    createdAtLabel: fmt.format(new Date(c.created_at)),
+  }));
+
   const list = [...(submissions ?? [])].sort((a, b) => {
     const ao = isSubmissionOverdue(a.created_at) ? 0 : 1;
     const bo = isSubmissionOverdue(b.created_at) ? 0 : 1;
@@ -43,6 +71,35 @@ export default async function SubmissionsQueuePage() {
         </p>
       </div>
 
+      <section aria-labelledby="contribution-queue" className="space-y-3">
+        <div>
+          <h2 id="contribution-queue" className="text-xl font-bold">
+            문서 보강 제보 {contributions.length > 0 && <span className="text-muted">{contributions.length}</span>}
+          </h2>
+          <p className="mt-1 text-base text-muted">
+            밈 상세에서 받은 출처 링크·사용 예문이에요. 승인하면 새 밈을 만들지 않고 그 밈 문서에 바로 붙어요.
+          </p>
+        </div>
+        {contributionError ? (
+          <p className="rounded-xl border border-border bg-surface-2 p-4 text-base text-muted">
+            보강 제보를 불러오지 못했어요. ({contributionError.message})
+          </p>
+        ) : contributions.length === 0 ? (
+          <p className="rounded-xl border border-border bg-surface p-4 text-base text-muted">
+            대기 중인 보강 제보가 없어요.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {contributions.map((item) => (
+              <li key={item.id}>
+                <ContributionReview item={item} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <h2 className="text-xl font-bold">새 밈 제보</h2>
       {list.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-10 text-center">
           <p className="text-lg font-semibold">대기 중인 제보가 없어요</p>

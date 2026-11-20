@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SEO_ROUTE_LOCALES, localizePath } from "@/lib/i18n-routing";
 import { SITE_URL } from "@/lib/site";
-import robots from "@/app/robots";
+import { DAUM_WEBMASTER_VERIFICATION, renderRobotsTxt, robots } from "@/lib/robots";
 
 function values(value: string | string[] | undefined): string[] {
   if (!value) return [];
@@ -70,5 +70,16 @@ describe("robots locale crawl policy", () => {
       expect(values(rule?.allow), bot).toContain("/");
       expect(values(rule?.disallow), bot).toEqual(disallows);
     }
+  });
+
+  it("renders robots.txt text ending with the Daum webmaster verification line", () => {
+    const text = renderRobotsTxt();
+    expect(text).toContain("User-Agent: *\nAllow: /\nDisallow: /admin\n");
+    expect(text).toContain("User-Agent: GPTBot\n");
+    expect(text).toContain(`Sitemap: ${SITE_URL}/sitemap.xml\n`);
+    expect(text.trimEnd().split("\n").at(-1)).toBe(DAUM_WEBMASTER_VERIFICATION);
+    expect(DAUM_WEBMASTER_VERIFICATION).toBe(
+      "#DaumWebMasterTool:4bdf39757ad941fd692decfa5a97dfd5b26f372c0690ffa5832b6d14d43a48d7:9OXzxfMP1b1VGCOsL/bJCQ==",
+    );
   });
 });

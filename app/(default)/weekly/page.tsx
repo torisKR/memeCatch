@@ -86,12 +86,8 @@ export default async function WeeklyPage() {
         <span aria-hidden>›</span> 주간 결산
       </nav>
 
-      <p className="mt-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-        Weekly report
-      </p>
-
-      <div className="mt-1 flex flex-wrap items-center gap-2.5">
-        <h1 className="text-3xl font-extrabold tracking-tight">
+      <div className="mt-3 flex flex-wrap items-center gap-2.5">
+        <h1 className="page-title">
           {range.year}년 {range.month}월 {range.weekOfMonth}주차 밈 결산
         </h1>
         {range.isOngoing && (
@@ -105,7 +101,7 @@ export default async function WeeklyPage() {
       </div>
 
       {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록 */}
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+      <p className="page-lede">
         이번 주 밈캐치에서 급상승한 밈과 새로 등록된 밈을 자동으로 모았어요.
         지금 이 순간에도 급상승 순위가 계속 바뀌고 있어서, 매시 새로 집계돼요.
         지나간 유행을 놓쳤다면 여기서 한 번에 따라잡아 보세요.

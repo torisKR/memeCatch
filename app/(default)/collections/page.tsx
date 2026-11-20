@@ -89,15 +89,12 @@ export default function CollectionsIndexPage() {
       </nav>
 
       <header className="mt-6 max-w-3xl">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-          Curated index
-        </p>
-        <h1 className="mt-2 text-4xl font-black tracking-[-0.035em] sm:text-5xl">
+        <h1 className="page-title">
           흩어진 밈을,
           <br />
-          <span className="text-accent">맥락별로 모았습니다.</span>
+          맥락별로 모았습니다.
         </h1>
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+        <p className="page-lede">
           최신 유행을 따라가거나 한 시대의 분위기를 되짚고 싶을 때, 전체 목록을
           헤매지 않고 목적에 맞는 모음에서 시작하세요.
         </p>

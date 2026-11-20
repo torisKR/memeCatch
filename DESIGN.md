@@ -443,6 +443,6 @@ app/apple-icon.png · public/icons/*(192·512·maskable, 안전영역 80%)
   리스너를 쓰되 기울이지 않는다.
 - **`/` 단축키**: 어디서든 `/`를 누르면 헤더 검색으로 이동(`components/search-shortcut.tsx`). 입력 중이거나
   헤더 검색이 숨겨진 모바일에서는 동작하지 않는다. 검색창 안에 `/` 키 표시.
-- **손대지 않은 것**: `quiz`·`weekly`·`collections`·`community/[id]` 페이지는
-  `lib/meme-share-card.test.ts`가 내용 해시로 잠가 두어 그대로 뒀다. 홈 히어로 장면, 로그인, 밈 카드 컬렉션,
-  오리지널, 관리자 화면도 이번 범위 밖이다.
+- `quiz`·`weekly`·`collections`·`community/[id]`에도 같은 제목부를 적용했다. 이 네 파일은
+  `lib/meme-share-card.test.ts`가 내용 해시로 잠가 두므로, 소유자 승인 후 해시를 새 내용으로 갱신했다.
+- **손대지 않은 것**: 홈 히어로 장면, 로그인, 밈 카드 컬렉션, 오리지널, MY, 관리자 화면.

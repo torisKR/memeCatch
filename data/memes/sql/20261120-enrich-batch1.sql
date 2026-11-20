@@ -283,6 +283,7 @@ update public.memes set
   usage_note = '여럿이 음식을 나누거나 마지막 한 점을 서로 양보할 때, 문을 먼저 지나가라고 권할 때 장난스럽게 인용하면 어울린다. 어른 세대와 대화할 때 옛 광고 이야기로 친근함을 더하기에도 좋다.',
   caution = '형과 아우를 가르는 표현이라 나이나 성별, 직급에 따른 위계를 강조하는 말로 들릴 수 있다. 격식 있는 자리에서 윗사람에게 먼저 하라는 뜻으로 가볍게 던지면 오히려 무례해 보일 수 있으니 친한 사이에서만 쓰는 것이 좋다.',
   usage_examples = '[{"situation":"회식 자리에서 마지막 만두 한 알이 남았을 때","text":"마지막 건 형님먼저 아우먼저~ 식기 전에 누가 드세요ㅋㅋ"},{"situation":"팀 단톡방에서 점심 메뉴를 정할 때","text":"저는 다 괜찮아요. 형님먼저 아우먼저, 먹고 싶은 거 먼저 고르세요!"}]'::jsonb,
+  origin_year = null,
   content_reviewed_at = '2026-11-20T18:00:00+09:00'::timestamptz,
   updated_at = now()
 where short_id = 'xawqwxax'
@@ -2116,6 +2117,7 @@ update public.memes set
   usage_note = '중년 모임이나 직장 선배의 말투를 애정 어린 농담으로 흉내 낼 때 어울린다. ''열쩡!'' 같은 구호를 단톡방에서 의욕을 북돋는 장난으로 쓰는 식이다.',
   caution = '특정 연령대나 실제 중년 남성을 조롱하는 말투로 쓰면 불쾌감을 줄 수 있다. 콩트 속 캐릭터 설정이므로 실제 산악회나 등산객 전반을 비꼬는 뜻으로 넓혀 쓰지 않는 편이 좋다.',
   usage_examples = '[{"situation":"단톡방, 주말 등산 약속","text":"이번 주말 산행 간다! 다들 열쩡으로 가자~"},{"situation":"SNS 캡션, 등산 인증샷","text":"배까지 끌어올린 등산바지 입으니 나도 한사랑산악회 입문 완료"}]'::jsonb,
+  origin_year = 2021,
   content_reviewed_at = '2026-11-20T18:00:00+09:00'::timestamptz,
   updated_at = now()
 where short_id = 'segffxbc'
@@ -2606,7 +2608,7 @@ where meme.short_id = 'umbkdcjs' and meme.slug = '안정환-반지-세레모니'
 insert into public.meme_sources (
   meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
 )
-select meme.id, 'Web', 'https://www.huffingtonpost.kr/article/118916', '(헤드라인이 페이지에 표시되지 않음. 본문 첫 줄: 2002년 한일월드컵이 어느새 20주년을 맞았다.)', '허프포스트코리아',
+select meme.id, 'Web', 'https://www.huffingtonpost.kr/article/118916', '"아내가 목걸이로 만들어 지금도 찬다" 한일월드컵에서 빼놓을 수 없는 ''반지의 제왕'' 안정환이 꼈던 반지의 행방', '허프포스트코리아',
   'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
 from public.memes as meme
 where meme.short_id = 'umbkdcjs' and meme.slug = '안정환-반지-세레모니'

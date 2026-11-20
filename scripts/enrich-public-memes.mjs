@@ -8,7 +8,9 @@
  *
  * Batch: { batch_id, checked_at, memes: [{ short_id, slug, title, description,
  *   origin, usage_note, caution, usage_examples: [{situation, text}],
- *   sources: [{url, title, publisher}] }], dropped: [{short_id, slug, title, reason}] }
+ *   sources: [{url, title, publisher}], origin_year? }], dropped: [{short_id, slug, title, reason}] }
+ * origin_year is optional: a year (1980-2026, the memes_origin_year_check range) replaces a stored
+ * year the sources show is wrong; null clears a stored year that is wrong but has no in-range fix.
  *
  * The SQL follows data/memes/sql/20261111-loop028-priority-enrichment.sql:
  * it updates only the public row matching short_id + slug, never changes
@@ -28,6 +30,10 @@ const SUPPORTING_PROSE = 40;
 const BOILERPLATE_ORIGIN = /공개\s*Wikimedia\s*기록을\s*바탕으로/;
 const SHORT_ID = /^[a-z0-9]{8}$/;
 const MAX_FIELD = 3000;
+const EARLIEST_YEAR = 1980; // memes_origin_year_check
+const LATEST_YEAR = 2026;
+/** A title that describes a failed fetch instead of naming the page. */
+const NOTE_TITLE = /표시되지 않|헤드라인이 (?:없|안)|본문 첫 줄|제목 없음|^\s*untitled\s*$|^\s*unknown\s*$/i;
 /** Self links and hosts that block crawlers or were unreliable in loop-028. */
 const BLOCKED_HOSTS = ["catchmeme.com", "namu.wiki", "merriam-webster.com", "vop.co.kr", "etnews.com"];
 
@@ -86,9 +92,14 @@ export function validateEnrichmentBatch(batch) {
       if (!canonical) { errors.push(`${at}: source ${source?.url} is not a public https URL`); continue; }
       if (blockedHost(canonical)) { errors.push(`${at}: source ${canonical} is a self link or blocked host`); continue; }
       if (!trimmed(source?.title) || !trimmed(source?.publisher)) errors.push(`${at}: source ${canonical} needs title and publisher`);
+      else if (NOTE_TITLE.test(source.title)) errors.push(`${at}: source ${canonical} title is a note, not the page title`);
       urls.add(canonical);
     }
     if (urls.size < 2) errors.push(`${at}: sources needs two distinct public URLs that were opened`);
+    if (meme?.origin_year !== undefined && meme.origin_year !== null
+      && !(Number.isInteger(meme.origin_year) && meme.origin_year >= EARLIEST_YEAR && meme.origin_year <= LATEST_YEAR)) {
+      errors.push(`${at}: origin_year must be null or a whole year from ${EARLIEST_YEAR} to ${LATEST_YEAR}`);
+    }
   }
   return errors;
 }
@@ -135,6 +146,8 @@ export function buildEnrichmentSql(batch, { reviewedAt }) {
       `  usage_note = ${q(trimmed(meme.usage_note))},`,
       `  caution = ${q(trimmed(meme.caution))},`,
       `  usage_examples = ${q(JSON.stringify(examples))}::jsonb,`,
+      ...(Number.isInteger(meme.origin_year) ? [`  origin_year = ${meme.origin_year},`] : []),
+      ...(meme.origin_year === null ? ["  origin_year = null,"] : []),
       `  content_reviewed_at = ${q(reviewedAt)}::timestamptz,`,
       "  updated_at = now()",
       `where short_id = ${q(meme.short_id)}`,

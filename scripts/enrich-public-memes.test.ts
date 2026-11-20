@@ -71,6 +71,39 @@ describe("validateEnrichmentBatch", () => {
     }
   });
 
+  it("rejects a source title that is a note about a failed fetch", () => {
+    for (const title of ["(헤드라인이 페이지에 표시되지 않음. 본문 첫 줄: …)", "제목 없음", "Untitled"]) {
+      const errors = validateEnrichmentBatch(batch([meme({
+        sources: [
+          { url: "https://www.yna.co.kr/view/AKR001", title, publisher: "연합뉴스" },
+          { url: "https://www.hani.co.kr/arti/1001", title: "기사 B", publisher: "한겨레" },
+        ],
+      })]));
+      expect(errors.join("\n"), title).toMatch(/title/);
+    }
+  });
+
+  it("keeps real headlines that start with a bracketed tag", () => {
+    for (const title of ["[종합] 기사 제목", "[단독] 기사 제목", "(토마토칼럼) YOLO 열풍, 그리고 그 다음"]) {
+      const errors = validateEnrichmentBatch(batch([meme({
+        sources: [
+          { url: "https://www.yna.co.kr/view/AKR001", title, publisher: "연합뉴스" },
+          { url: "https://www.hani.co.kr/arti/1001", title: "기사 B", publisher: "한겨레" },
+        ],
+      })]));
+      expect(errors, title).toEqual([]);
+    }
+  });
+
+  it("accepts an optional corrected origin_year in range only", () => {
+    expect(validateEnrichmentBatch(batch([meme({ origin_year: 1995 })]))).toEqual([]);
+    expect(validateEnrichmentBatch(batch([meme({ origin_year: null })]))).toEqual([]);
+    expect(validateEnrichmentBatch(batch([meme({ origin_year: 1995.5 })])).join("\n")).toMatch(/origin_year/);
+    // memes_origin_year_check allows 1980 to 2100.
+    expect(validateEnrichmentBatch(batch([meme({ origin_year: 1975 })])).join("\n")).toMatch(/origin_year/);
+    expect(validateEnrichmentBatch(batch([meme({ origin_year: 2099 })])).join("\n")).toMatch(/origin_year/);
+  });
+
   it("rejects duplicate short ids and malformed ids", () => {
     expect(validateEnrichmentBatch(batch([meme(), meme()])).join("\n")).toMatch(/duplicate/);
     expect(validateEnrichmentBatch(batch([meme({ short_id: "BAD" })])).join("\n")).toMatch(/short_id/);
@@ -101,6 +134,17 @@ describe("buildEnrichmentSql", () => {
     expect(sql.indexOf("create temporary table")).toBeLessThan(sql.indexOf("update public.memes set"));
     expect(sql).toContain("set safety_reviewed_at = backup.safety_reviewed_at");
     expect(sql).toContain("content_reviewed_at = '2026-11-20T18:00:00+09:00'::timestamptz");
+  });
+
+  it("updates origin_year only for records that correct it", () => {
+    const sql = buildEnrichmentSql(batch([
+      meme({ origin_year: 1995 }),
+      meme({ short_id: "efgh5678", slug: "다른-밈" }),
+      meme({ short_id: "ijkl9012", slug: "셋째-밈", origin_year: null }),
+    ]), options);
+    expect(sql.match(/origin_year = 1995,/g)).toHaveLength(1);
+    expect(sql.match(/origin_year = null,/g)).toHaveLength(1);
+    expect(sql.match(/origin_year =/g)).toHaveLength(2);
   });
 
   it("escapes quotes in text and json", () => {

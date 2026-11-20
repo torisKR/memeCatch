@@ -58,7 +58,8 @@ describe.each(["deploy/Caddyfile", "deploy/Caddyfile.site"])("%s www redirect", 
     expect(redirectFor(rule, { method: "GET", host: "www.catchmeme.com", uri: "/api/auth/callback?code=1" })).toBeNull();
     expect(redirectFor(rule, { method: "POST", host: "www.catchmeme.com", uri: "/api/webhooks/x" })).toBeNull();
     expect(redirectFor(rule, { method: "GET", host: "www.catchmeme.com", uri: "/auth/callback?code=1" })).toBeNull();
-    expect(redirectFor(rule, { method: "GET", host: "www.catchmeme.com", uri: "/auth/tiktok?state=x" })).toBeNull();
+    expect(redirectFor(rule, { method: "GET", host: "www.catchmeme.com", uri: "/auth/tiktok/callback?state=x" })).toBeNull();
+    expect(redirectFor(rule, { method: "GET", host: "www.catchmeme.com", uri: "/auth/tiktok" })).not.toBeNull();
   });
 
   it("never redirects other methods or the apex host", () => {

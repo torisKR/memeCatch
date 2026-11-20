@@ -181,13 +181,15 @@ const MISSING_PUBLIC_MEME_PATH = "/missing-public-meme";
 
 const WWW_HOST = "www.catchmeme.com";
 const APEX_ORIGIN = "https://catchmeme.com";
-const WWW_KEEP_PREFIXES = ["/api", "/auth"] as const;
+const WWW_KEEP_PREFIXES = ["/api", "/auth/callback", "/auth/tiktok/callback"] as const;
 
 /**
  * www.catchmeme.com served the apex content with 200 and Bing crawled its own
  * www sitemap. GET/HEAD move to the apex with the same path and query (301).
- * /api/* and /auth/* stay so webhooks and OAuth or magic-link callbacks that
- * started on www keep their host-scoped PKCE/state cookies.
+ * /api/* and the auth callbacks stay so webhooks and OAuth or magic-link
+ * callbacks that started on www keep their host-scoped PKCE/state cookies.
+ * Auth start routes (/auth/tiktok) still move: their callback is the apex, so
+ * the state cookie must be set on the apex.
  * This runs in the app, so it holds whichever front proxy (Caddy site address,
  * Cloudflare) forwards www. The Host header is read because nextUrl carries the
  * standalone server's bind host.
@@ -398,11 +400,11 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|xml|txt|webmanifest)$).*)",
-    // www host only: every path except /api and /auth (callbacks keep their
-    // www cookies), including sitemap.xml, robots.txt and static files the
+    // www host only: every path except /api and the auth callbacks (they keep
+    // their www cookies), including sitemap.xml, robots.txt and static files the
     // matcher above skips, so wwwApexRedirect can move them.
     {
-      source: "/((?!api/|auth/).*)",
+      source: "/((?!api/|auth/callback|auth/tiktok/callback).*)",
       has: [{ type: "header", key: "host", value: "www\\.catchmeme\\.com(?::\\d+)?" }],
     },
   ],

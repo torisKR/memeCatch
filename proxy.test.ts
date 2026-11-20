@@ -899,15 +899,21 @@ describe("www to apex redirect", () => {
     },
   );
 
+  it("moves the TikTok start route to the apex so its state cookie reaches the apex callback", () => {
+    expect(wwwApexRedirect(wwwRequest("/auth/tiktok?next=%2F"))?.headers.get("location")).toBe(
+      "https://catchmeme.com/auth/tiktok?next=%2F",
+    );
+  });
+
   it("redirects HEAD and a www host with a port", async () => {
     expect((await proxy(wwwRequest("/explore", { method: "HEAD" }))).status).toBe(301);
     expect((await proxy(wwwRequest("/explore", { host: "WWW.catchmeme.com:443" }))).status).toBe(301);
   });
 
-  it("leaves /api/*, /auth/*, POST and the apex host alone", () => {
+  it("leaves /api/*, auth callbacks, POST and the apex host alone", () => {
     expect(wwwApexRedirect(wwwRequest("/api/auth/callback?code=1"))).toBeNull();
     expect(wwwApexRedirect(wwwRequest("/auth/callback?code=1"))).toBeNull();
-    expect(wwwApexRedirect(wwwRequest("/auth/tiktok?state=x"))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/auth/tiktok/callback?state=x"))).toBeNull();
     expect(wwwApexRedirect(wwwRequest("/submit", { method: "POST" }))).toBeNull();
     expect(wwwApexRedirect(wwwRequest("/", { host: "catchmeme.com" }))).toBeNull();
   });
@@ -927,6 +933,8 @@ describe("www to apex redirect", () => {
     expect(source.test("/sitemap.xml")).toBe(true);
     expect(source.test("/api/webhooks/x")).toBe(false);
     expect(source.test("/auth/callback")).toBe(false);
+    expect(source.test("/auth/tiktok/callback")).toBe(false);
+    expect(source.test("/auth/tiktok")).toBe(true);
     expect(source.test("/authors")).toBe(true);
   });
 });

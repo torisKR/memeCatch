@@ -7,7 +7,7 @@ catchmeme.com, www.catchmeme.com {
 	@www_to_apex {
 		host www.catchmeme.com
 		method GET HEAD
-		not path /api/* /auth/*
+		not path /api/* /auth/callback /auth/callback/* /auth/tiktok/callback /auth/tiktok/callback/*
 	}
 	redir @www_to_apex https://catchmeme.com{uri} 301
 

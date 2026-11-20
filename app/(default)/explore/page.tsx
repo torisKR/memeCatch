@@ -22,6 +22,7 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from "@/lib/curated-memes";
+import { mergeSearchPresentationItems, searchPresentationKey } from "@/lib/search-presentation";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
@@ -243,6 +244,7 @@ export default async function ExplorePage({
 
   const initialLoad = await (async (): Promise<{
       items: MemeListItem[];
+      alternatives: MemeListItem[];
       unavailable: boolean;
       dbCount: number;
       hasMore: boolean;
@@ -258,6 +260,7 @@ export default async function ExplorePage({
         : [];
       const failed = {
         items: [] as MemeListItem[],
+        alternatives: [] as MemeListItem[],
         unavailable: true,
         dbCount: 0,
         hasMore: false,
@@ -288,12 +291,16 @@ export default async function ExplorePage({
         );
         if (queryFailed) return failed;
         const rows = page.items;
-        const seen = new Set(rows.map((item) => item.short_id));
+        const items = mergeSearchPresentationItems(curated, rows) as MemeListItem[];
+        const winners = new Map(items.map((item) => [searchPresentationKey(item), item]));
+        // Preserve observed suppressed database rows for a public recheck.
+        const alternatives = rows.filter((item) => {
+          const winner = winners.get(searchPresentationKey(item));
+          return winner && winner.id !== item.id && winner.short_id !== item.short_id;
+        }) as MemeListItem[];
         return {
-          items: [
-            ...curated.filter((item) => !seen.has(item.short_id)),
-            ...rows,
-          ] as MemeListItem[],
+          items,
+          alternatives,
           unavailable: false,
           dbCount: page.scanned,
           hasMore: page.hasMore,
@@ -350,6 +357,7 @@ export default async function ExplorePage({
           <ExploreGrid
             key={filterKey(filters)}
             initial={initialLoad.items}
+            initialAlternatives={initialLoad.alternatives}
             initialPreviews={initialPreviews}
             initialPreviewUnavailable={previewResult === null}
             initialOffset={initialLoad.dbCount}

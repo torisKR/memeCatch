@@ -108,6 +108,83 @@ describe("meme country display", () => {
     expect(results[0]?.meme_market_profiles?.[0]?.market_code).toBe("US");
   });
 
+  it("prefers the explicit catalog equivalent and keeps unrelated same-title results", async () => {
+    const unrelated = {
+      ...meme,
+      id: "same-title-row",
+      short_id: "same-title",
+      title: "오히려 좋아",
+    } as MemeListItem;
+    const catalog = {
+      ...meme,
+      id: "catalog-ohiryeo-row",
+      short_id: "6hgbgvxs",
+      title: "오히려 좋아",
+    } as MemeListItem;
+    const publicFilter = vi.fn().mockResolvedValue({ data: [unrelated, catalog], error: null });
+    const select = vi.fn(() => ({ in: publicFilter }));
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select })) });
+
+    const results = await searchMemes("오히려 좋아");
+
+    expect(results.map((item) => item.short_id)).toEqual(["same-title", "6hgbgvxs"]);
+    expect(results.map((item) => item.short_id)).not.toContain("oyj2021k");
+  });
+
+  it("keeps the curated fallback when its catalog equivalent is not returned", async () => {
+    const publicFilter = vi.fn().mockResolvedValue({ data: [], error: null });
+    const select = vi.fn(() => ({ in: publicFilter }));
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select })) });
+
+    const results = await searchMemes("오히려 좋아");
+
+    expect(results.map((item) => item.short_id)).toContain("oyj2021k");
+    expect(results.map((item) => item.short_id)).not.toContain("6hgbgvxs");
+  });
+
+  it("prefers the catalog over the database seed in search results", async () => {
+    const seed = { ...meme, id: "5062885d-2d6f-577c-a7dd-2187b1cf3bd2", short_id: "oyj2021k", title: "오히려 좋아" };
+    const catalog = { ...meme, id: "catalog-ohiryeo-row", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const publicFilter = vi.fn().mockResolvedValue({ data: [seed, catalog], error: null });
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select: () => ({ in: publicFilter }) })) });
+    const results = await searchMemes("오히려 좋아");
+    expect(results.map((item) => item.short_id)).toEqual(["6hgbgvxs"]);
+  });
+
+  it("fills the search limit after removing duplicate presentation identities", async () => {
+    const seed = { ...meme, id: "seed", short_id: "oyj2021k", title: "오히려 좋아" };
+    const catalog = { ...meme, id: "catalog", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const other = { ...meme, id: "other", short_id: "other", title: "오히려 좋아" };
+    const publicFilter = vi.fn().mockResolvedValue({ data: [seed, catalog, other], error: null });
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select: () => ({ in: publicFilter }) })) });
+    const results = await searchMemes("오히려 좋아", 2);
+    expect(results.map((item) => item.short_id)).toEqual(["6hgbgvxs", "other"]);
+  });
+
+  it("keeps the curated fallback when its catalog equivalent ranks outside the result limit", async () => {
+    const catalog = { ...meme, id: "catalog", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const others = Array.from({ length: 30 }, (_, i) => ({ ...meme, id: `row-${i}`, short_id: `id${i}` }));
+    const publicFilter = vi.fn().mockResolvedValue({ data: [...others, catalog], error: null });
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select: () => ({ in: publicFilter }) })) });
+
+    const results = await searchMemes("오히려 좋아");
+
+    expect(results).toHaveLength(20);
+    expect(results[0]?.short_id).toBe("oyj2021k");
+    expect(results.map((item) => item.short_id)).not.toContain("6hgbgvxs");
+  });
+
+  it("cannot fill 50 results when the capped RPC page contains the duplicate pair", async () => {
+    const seed = { ...meme, id: "seed", short_id: "oyj2021k", title: "오히려 좋아" };
+    const catalog = { ...meme, id: "catalog", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const others = Array.from({ length: 48 }, (_, i) => ({ ...meme, id: `row-${i}`, short_id: `id${i}` }));
+    const publicFilter = vi.fn().mockResolvedValue({ data: [seed, catalog, ...others], error: null });
+    const rpc = vi.fn(() => ({ select: () => ({ in: publicFilter }) }));
+    createStaticClient.mockReturnValue({ rpc });
+    expect(await searchMemes("오히려 좋아", 50)).toHaveLength(49);
+    expect(rpc).toHaveBeenCalledWith("search_memes", { p_query: "오히려 좋아", p_limit: 50 }, { get: true });
+  });
+
   it("does not hide a search catalog failure behind curated cards", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const publicFilter = vi.fn().mockResolvedValue({

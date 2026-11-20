@@ -9,6 +9,7 @@ import { cacheCatalogRead, ConfirmedCatalogMiss } from "@/lib/catalog-read-cache
 import { createStaticClient } from "@/lib/db/server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { curatedSearchCards } from "@/lib/curated-memes";
+import { mergeSearchPresentationItems } from "@/lib/search-presentation";
 import { getSemanticRelatedMemeIds } from "@/lib/meme-vector-lookup.server";
 import type { Database } from "@/lib/database.types";
 import type { MemeCategory } from "@/lib/labels";
@@ -446,12 +447,17 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
     console.error("search_memes failed");
     throw new Error("search_memes failed");
   }
-  const rows = takeIndexableMemes((data ?? []) as unknown as MemeListItem[], limit);
-  const seen = new Set(rows.map((item) => item.short_id));
-  return [
-    ...curatedSearchCards(q).filter((item) => !seen.has(item.short_id)),
-    ...rows,
-  ] as MemeListItem[];
+  const rows = takeIndexableMemes((data ?? []) as unknown as MemeListItem[], 50);
+  // Merge only the prefix needed to fill the page. A preferred equivalent that
+  // ranks outside the page must not suppress its visible fallback.
+  const candidates = [...curatedSearchCards(q), ...rows];
+  let end = limit;
+  let merged = mergeSearchPresentationItems(candidates.slice(0, end));
+  while (merged.length < limit && end < candidates.length) {
+    end += limit - merged.length;
+    merged = mergeSearchPresentationItems(candidates.slice(0, end));
+  }
+  return merged as MemeListItem[];
 }
 
 /** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */

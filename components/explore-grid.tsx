@@ -14,6 +14,7 @@ import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
+import { mergeSearchPresentationItems, searchPresentationKey } from "@/lib/search-presentation";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -214,12 +215,14 @@ async function fetchQualifiedPreviews(ids: string[]): Promise<Record<string, Mem
     const rows = body && typeof body === "object" ? (body as { previews?: unknown }).previews : null;
     if (!Array.isArray(rows)) return null;
     const allowed = new Set(ids);
-    return Object.fromEntries(rows.flatMap((row: unknown) => {
-      if (!row || typeof row !== "object") return [];
+    const result: Record<string, MemeListItem["meme_contents"]> = {};
+    for (const row of rows) {
+      if (!row || typeof row !== "object") return null;
       const value = row as { id?: unknown; contents?: unknown };
-      return typeof value.id === "string" && allowed.has(value.id) && Array.isArray(value.contents)
-        ? [[value.id, value.contents as MemeListItem["meme_contents"]]] : [];
-    }));
+      if (typeof value.id !== "string" || !allowed.has(value.id) || !Array.isArray(value.contents) || Object.hasOwn(result, value.id)) return null;
+      result[value.id] = value.contents as MemeListItem["meme_contents"];
+    }
+    return result;
   } catch {
     return null;
   } finally {
@@ -227,8 +230,21 @@ async function fetchQualifiedPreviews(ids: string[]): Promise<Record<string, Mem
   }
 }
 
+/** Keep each existing identity's slot, then append genuinely new identities. */
+function preserveItemPositions(previous: MemeListItem[], next: MemeListItem[]): MemeListItem[] {
+  const winners = new Map(next.map((item) => [searchPresentationKey(item), item]));
+  return [...previous, ...next].flatMap((item) => {
+    const key = searchPresentationKey(item);
+    const winner = winners.get(key);
+    if (!winner) return [];
+    winners.delete(key);
+    return [winner];
+  });
+}
+
 export function ExploreGrid({
   initial,
+  initialAlternatives = [],
   initialPreviews,
   initialPreviewUnavailable = false,
   filters,
@@ -239,6 +255,8 @@ export function ExploreGrid({
   indexableIds,
 }: {
   initial: MemeListItem[];
+  /** Eligible server-side candidates hidden by distinct catalog equivalents. */
+  initialAlternatives?: MemeListItem[];
   initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
   initialPreviewUnavailable?: boolean;
   filters: ExploreFilters;
@@ -280,6 +298,13 @@ export function ExploreGrid({
   const loadingRef = useRef(false);
   const offsetRef = useRef(initialOffset ?? initial.length);
   const hasMoreRef = useRef(startHasMore);
+  const itemsRef = useRef(initial);
+  // Keep every candidate from failed public rechecks, including a losing
+  // alternative from the same page, until it can be checked again.
+  const pendingCandidatesRef = useRef(new Map<string, MemeListItem>(
+    initialPreviewUnavailable ? initial.filter((item) => !item.id.startsWith("curated-")).map((item) => [item.id, item]) : [],
+  ));
+  const generationsRef = useRef(new Map<string, number>());
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -296,13 +321,61 @@ export function ExploreGrid({
     try {
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
-      const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
+      const candidates = batch.items.filter((m) => !seenRef.current.has(m.id));
+      // Check all candidates that can beat the current card. If two arrive in
+      // one page, the lower-priority one is still needed if the winner is no
+      // longer public by the time previews are re-read.
+      const confirmedItems = itemsRef.current.filter((item) => !pendingCandidatesRef.current.has(item.id));
+      const fresh = candidates.filter((item) =>
+        mergeSearchPresentationItems(confirmedItems, [item]).some((winner) => winner.id === item.id),
+      );
+      const generations = new Map(fresh.map((item) => {
+        const key = searchPresentationKey(item);
+        return [key, generationsRef.current.get(key) ?? 0] as const;
+      }));
       const ids = fresh.map((item) => item.id);
       const verified = await fetchQualifiedPreviews(ids);
-      if (!verified) setPendingPreviews((prev) => [...new Set([...prev, ...ids])]);
-      for (const m of fresh) seenRef.current.add(m.id);
-      if (verified) setPreviews((prev) => ({ ...prev, ...verified }));
-      setItems((prev) => [...prev, ...fresh]);
+      const existingKeys = new Set(itemsRef.current.map(searchPresentationKey));
+      const staleIds: string[] = [];
+      const eligible = fresh.filter((item) => {
+        const key = searchPresentationKey(item);
+        if ((generationsRef.current.get(key) ?? 0) !== generations.get(key)) {
+          pendingCandidatesRef.current.set(item.id, item);
+          staleIds.push(item.id);
+          return false;
+        }
+        if (verified) return Object.hasOwn(verified, item.id);
+        pendingCandidatesRef.current.set(item.id, item);
+        if (!existingKeys.has(searchPresentationKey(item))) return true;
+        return false;
+      });
+      const verifiedKeys = new Set(verified ? eligible.map(searchPresentationKey) : []);
+      const base = itemsRef.current.filter((item) =>
+        !pendingCandidatesRef.current.has(item.id) || !verifiedKeys.has(searchPresentationKey(item)),
+      );
+      const nextItems = preserveItemPositions(itemsRef.current, mergeSearchPresentationItems(base, eligible));
+      const nextIds = new Set(nextItems.map((item) => item.id));
+      const removedIds = new Set(
+        itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
+      );
+      if (verified) {
+        for (const [key, generation] of generations) {
+          if ((generationsRef.current.get(key) ?? 0) === generation) generationsRef.current.set(key, generation + 1);
+        }
+      }
+      if (!verified || staleIds.length) setPendingPreviews((prev) => [...new Set([...prev, ...(!verified ? ids : staleIds)])]);
+      for (const item of candidates) seenRef.current.add(item.id);
+      if (removedIds.size > 0) {
+        setPendingPreviews((prev) => prev.filter((id) => !removedIds.has(id) || pendingCandidatesRef.current.has(id)));
+      }
+      setPreviews((prev) => {
+        const next = { ...prev };
+        for (const item of eligible) if (verified && Object.hasOwn(verified, item.id)) next[item.id] = verified[item.id];
+        for (const id of removedIds) delete next[id];
+        return next;
+      });
+      itemsRef.current = nextItems;
+      setItems(nextItems);
       offsetRef.current = from + batch.scanned;
       hasMoreRef.current = batch.hasMore;
       setHasMore(batch.hasMore);
@@ -318,11 +391,68 @@ export function ExploreGrid({
     if (retryingPreviews) return;
     setRetryingPreviews(true);
     try {
-      const batch = pendingPreviews.slice(0, PAGE_SIZE);
+      // Keep equivalent candidates in the same public check, even when other
+      // pending IDs would put them on opposite sides of the 24-ID API limit.
+      const groups = new Map<string, { pending: string[]; displayed: MemeListItem | undefined; candidates: MemeListItem[]; alternatives: MemeListItem[]; generation: number }>();
+      for (const id of pendingPreviews) {
+        const candidate = pendingCandidatesRef.current.get(id);
+        const key = candidate ? searchPresentationKey(candidate) : `id:${id}`;
+        const group = groups.get(key) ?? {
+          pending: [],
+          displayed: itemsRef.current.find((item) => searchPresentationKey(item) === key),
+          candidates: [],
+          alternatives: initialAlternatives.filter((item) => !item.id.startsWith("curated-") && searchPresentationKey(item) === key),
+          generation: generationsRef.current.get(key) ?? 0,
+        };
+        group.pending.push(id);
+        if (candidate) group.candidates.push(candidate);
+        groups.set(key, group);
+      }
+      const batch: string[] = [];
+      const selected: typeof groups = new Map();
+      for (const [key, group] of groups) {
+        const ids = [...new Set([...group.pending, ...group.alternatives.map((item) => item.id), ...(group.displayed && !group.displayed.id.startsWith("curated-") ? [group.displayed.id] : [])])];
+        if (batch.length + ids.length > PAGE_SIZE) break;
+        batch.push(...ids);
+        selected.set(key, group);
+      }
       const verified = await fetchQualifiedPreviews(batch);
       if (verified) {
-        setPreviews((prev) => ({ ...prev, ...verified }));
-        setPendingPreviews((prev) => prev.filter((id) => !batch.includes(id)));
+        const checkedIds = new Set<string>();
+        const completedPending = new Set<string>();
+        const replacements: MemeListItem[] = [];
+        for (const [key, group] of selected) {
+          const current = itemsRef.current.find((item) => searchPresentationKey(item) === key);
+          const pendingNow = [...pendingCandidatesRef.current.values()].filter((item) => searchPresentationKey(item) === key);
+          // A later page can change this identity while the request is in flight.
+          // Leave that group pending for another authoritative check.
+          if ((generationsRef.current.get(key) ?? 0) !== group.generation || current !== group.displayed || pendingNow.length !== group.candidates.length || pendingNow.some((item) => !group.candidates.includes(item))) continue;
+          generationsRef.current.set(key, group.generation + 1);
+          for (const id of group.pending) {
+            completedPending.add(id);
+            pendingCandidatesRef.current.delete(id);
+          }
+          const rows = [...group.candidates, ...group.alternatives, ...(current && !current.id.startsWith("curated-") ? [current] : [])];
+          for (const item of rows) {
+            checkedIds.add(item.id);
+            if (Object.hasOwn(verified, item.id)) replacements.push(item);
+          }
+        }
+        const base = itemsRef.current.filter((item) => !checkedIds.has(item.id));
+        const nextItems = preserveItemPositions(itemsRef.current, mergeSearchPresentationItems(base, replacements));
+        const nextIds = new Set(nextItems.map((item) => item.id));
+        const removedIds = new Set(itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id));
+        itemsRef.current = nextItems;
+        setItems(nextItems);
+        setPreviews((prev) => {
+          const next = { ...prev };
+          for (const id of checkedIds) if (Object.hasOwn(verified, id)) next[id] = verified[id];
+          for (const id of removedIds) delete next[id];
+          return next;
+        });
+        setPendingPreviews((prev) => prev.filter((id) =>
+          !completedPending.has(id) && (!removedIds.has(id) || pendingCandidatesRef.current.has(id)),
+        ));
       }
     } finally {
       setRetryingPreviews(false);
@@ -361,6 +491,15 @@ export function ExploreGrid({
     return () => io.disconnect();
   }, [loadMore, hasMore, items.length]);
 
+  const retryBanner = pendingPreviews.length > 0 && (
+    <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
+      <span>일부 영상 미리보기를 불러오지 못했어요.</span>
+      <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
+        {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
+      </button>
+    </div>
+  );
+
   if (catalogUnavailable && items.length === 0) {
     return (
       <div
@@ -381,6 +520,15 @@ export function ExploreGrid({
             다시 시도
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0 && pendingPreviews.length > 0) {
+    return (
+      <div>
+        {retryBanner}
+        {hasMore && <button type="button" onClick={loadMore} disabled={loading} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">{loading ? "찾는 중…" : "계속 찾기"}</button>}
       </div>
     );
   }
@@ -460,14 +608,7 @@ export function ExploreGrid({
 
   return (
     <div>
-      {pendingPreviews.length > 0 && (
-        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
-          <span>일부 영상 미리보기를 불러오지 못했어요.</span>
-          <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
-            {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
-          </button>
-        </div>
-      )}
+      {retryBanner}
       <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">

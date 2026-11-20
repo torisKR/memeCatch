@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdsenseScript } from "@/components/adsense-script";
 import { HomeExperience } from "@/components/home/home-experience";
+import { DailyMemeQuiz } from "@/components/daily-meme-quiz";
 import { DefinedTermSetJsonLd, WebSiteJsonLd } from "@/components/json-ld";
 import {
   SEO_ROUTE_LOCALES,
@@ -72,7 +73,7 @@ export default async function Home() {
       <WebSiteJsonLd />
       <DefinedTermSetJsonLd />
       <div className={battleBoards.length > 0 ? "xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start" : undefined}>
-        <HomeExperience locale="ko" entries={entries} />
+        <HomeExperience locale="ko" entries={entries} afterHero={<DailyMemeQuiz />} />
         {battleBoards.length > 0 ? (
           <aside className="px-4 pb-8 xl:pr-4 xl:pl-0">
             <CommunityMemeBattle boards={battleBoards} />

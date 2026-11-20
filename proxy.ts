@@ -181,11 +181,13 @@ const MISSING_PUBLIC_MEME_PATH = "/missing-public-meme";
 
 const WWW_HOST = "www.catchmeme.com";
 const APEX_ORIGIN = "https://catchmeme.com";
+const WWW_KEEP_PREFIXES = ["/api", "/auth"] as const;
 
 /**
  * www.catchmeme.com served the apex content with 200 and Bing crawled its own
  * www sitemap. GET/HEAD move to the apex with the same path and query (301).
- * /api/* stays so OAuth callbacks and webhooks registered on www keep working.
+ * /api/* and /auth/* stay so webhooks and OAuth or magic-link callbacks that
+ * started on www keep their host-scoped PKCE/state cookies.
  * This runs in the app, so it holds whichever front proxy (Caddy site address,
  * Cloudflare) forwards www. The Host header is read because nextUrl carries the
  * standalone server's bind host.
@@ -195,7 +197,7 @@ export function wwwApexRedirect(request: NextRequest): NextResponse | null {
   if (host !== WWW_HOST) return null;
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/api" || pathname.startsWith("/api/")) return null;
+  if (WWW_KEEP_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return null;
   return NextResponse.redirect(`${APEX_ORIGIN}${pathname}${search}`, 301);
 }
 
@@ -396,10 +398,11 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|xml|txt|webmanifest)$).*)",
-    // www host only: every non-API path, including sitemap.xml, robots.txt and
-    // static files the matcher above skips, so wwwApexRedirect can move them.
+    // www host only: every path except /api and /auth (callbacks keep their
+    // www cookies), including sitemap.xml, robots.txt and static files the
+    // matcher above skips, so wwwApexRedirect can move them.
     {
-      source: "/((?!api/).*)",
+      source: "/((?!api/|auth/).*)",
       has: [{ type: "header", key: "host", value: "www\\.catchmeme\\.com(?::\\d+)?" }],
     },
   ],

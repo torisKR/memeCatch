@@ -904,8 +904,10 @@ describe("www to apex redirect", () => {
     expect((await proxy(wwwRequest("/explore", { host: "WWW.catchmeme.com:443" }))).status).toBe(301);
   });
 
-  it("leaves /api/*, POST and the apex host alone", () => {
+  it("leaves /api/*, /auth/*, POST and the apex host alone", () => {
     expect(wwwApexRedirect(wwwRequest("/api/auth/callback?code=1"))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/auth/callback?code=1"))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/auth/tiktok?state=x"))).toBeNull();
     expect(wwwApexRedirect(wwwRequest("/submit", { method: "POST" }))).toBeNull();
     expect(wwwApexRedirect(wwwRequest("/", { host: "catchmeme.com" }))).toBeNull();
   });
@@ -924,5 +926,7 @@ describe("www to apex redirect", () => {
     const source = new RegExp(`^${wwwMatcher!.source}$`);
     expect(source.test("/sitemap.xml")).toBe(true);
     expect(source.test("/api/webhooks/x")).toBe(false);
+    expect(source.test("/auth/callback")).toBe(false);
+    expect(source.test("/authors")).toBe(true);
   });
 });

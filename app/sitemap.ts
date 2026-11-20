@@ -316,14 +316,16 @@ async function buildSitemap(): Promise<{
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),
-    // 주요 정적 페이지 — 탐색·커뮤니티·정책
+    // 주요 정적 페이지 — 탐색·커뮤니티·정책.
+    // 스튜디오·퀴즈·글로벌 피드는 사이트맵에 넣지 않는다. 도구 화면이거나 글이 거의 없어
+    // 사전의 대표 문서로 읽히지 않는다(2026-11-20 AdSense 저가치 거부 후). 페이지는 그대로다.
     {
       url: `${SITE_URL}/explore`,
       ...lastModified(homeLastMod),
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const)
+    ...(["/timeline", "/slang", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const)
       .filter((path) => showRankings || path !== "/rankings")
       .map((path) => ({
         url: `${SITE_URL}${path}`,

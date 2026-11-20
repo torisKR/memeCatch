@@ -17,7 +17,7 @@ const dbMocks = vi.hoisted(() => ({
 }));
 
 const BASE_UPDATED_AT = "2026-09-20T00:00:00Z";
-const INDEXABLE_DESCRIPTION = "밈".repeat(210);
+const INDEXABLE_DESCRIPTION = "밈".repeat(260);
 
 function publicMemeRow(overrides: Record<string, unknown> = {}) {
   return {

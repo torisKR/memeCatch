@@ -79,13 +79,16 @@ describe("contentDepth 판정", () => {
 });
 
 /**
- * 배너·광고는 250자 isSubstantial을 유지한다. 색인은 현재 main의 150자 하한을
- * 유지하므로 150~249자 문서는 색인될 수 있지만 광고·배너에는 남지 않는다.
+ * 2026-11-20 AdSense 「가치가 별로 없는 콘텐츠」 거부 후 색인 하한을 광고 기준과 같은
+ * 250자로 올렸다. 150~249자 문서는 이제 색인·목록·광고 어디에도 오르지 않는다.
  */
-describe("색인과 광고의 기존 하한은 분리된다", () => {
-  it("산문 150~249자 문서는 색인되지만 배너·광고 기준은 통과하지 못한다", () => {
-    // 정의 100(0점, BASIC 150 미만) + 유래 60(2점) + 출처 2개(2점) + 미디어 1개(1점) = 5점,
-    // 산문 160자 — MIN_PROSE_CHARS_INDEX(150) 이상, MIN_PROSE_CHARS(250) 미만.
+describe("색인 하한은 광고 기준과 같다", () => {
+  it("색인 하한과 광고 하한이 같은 값이다", () => {
+    expect(T.MIN_PROSE_CHARS_INDEX).toBe(T.MIN_PROSE_CHARS);
+  });
+
+  it("산문 150~249자 문서는 점수를 채워도 색인되지 않는다", () => {
+    // 정의 100(0점) + 유래 60(2점) + 출처 2개(2점) + 미디어 1개(1점) = 5점, 산문 160자.
     const between: ContentDepthInput = {
       description: chars(100),
       origin: chars(60),
@@ -99,36 +102,26 @@ describe("색인과 광고의 기존 하한은 분리된다", () => {
 
     expect(depth.score).toBe(T.MIN_SCORE);
     expect(depth.proseChars).toBe(160);
-    expect(depth.proseChars).toBeGreaterThanOrEqual(T.MIN_PROSE_CHARS_INDEX);
-    expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS);
-
-    expect(isIndexableMeme(between)).toBe(true);
-    // 배너(DocStatusNote)·광고(AdsenseScript)는 250자 기준을 그대로 쓰므로 미통과.
+    expect(isIndexableMeme(between)).toBe(false);
     expect(depth.isSubstantial).toBe(false);
-    expect(depth.isThin).toBe(true);
   });
 
-  it("산문 150자 미만이면 색인·배너·광고 모두 미통과다", () => {
-    // 정의 100(0점) + 유래 30(1점) + 출처 2개(2점) + 미디어 1개(1점) + 태그 3개(1점) = 5점,
-    // 산문 130자 — MIN_PROSE_CHARS_INDEX(150) 미만.
-    const under: ContentDepthInput = {
-      description: chars(100),
-      origin: chars(30),
+  it("산문 250자 이상이고 점수를 채우면 색인과 광고를 함께 통과한다", () => {
+    // 정의 190(1점) + 유래 60(2점) + 출처 2개(2점) = 5점, 산문 250자.
+    const enough: ContentDepthInput = {
+      description: chars(190),
+      origin: chars(60),
       meme_sources: [
         { source_url: "https://a.example/1" },
         { source_url: "https://b.example/2" },
       ],
-      meme_contents: [{ availability: "live", moderation_status: "approved" }],
-      meme_tags_map: [{ tag_id: "a" }, { tag_id: "b" }, { tag_id: "c" }],
     };
-    const depth = contentDepth(under);
+    const depth = contentDepth(enough);
 
     expect(depth.score).toBe(T.MIN_SCORE);
-    expect(depth.proseChars).toBe(130);
-    expect(depth.proseChars).toBeLessThan(T.MIN_PROSE_CHARS_INDEX);
-
-    expect(isIndexableMeme(under)).toBe(false);
-    expect(depth.isSubstantial).toBe(false);
+    expect(depth.proseChars).toBe(250);
+    expect(isIndexableMeme(enough)).toBe(true);
+    expect(depth.isSubstantial).toBe(true);
   });
 });
 
@@ -419,8 +412,10 @@ function indexableCandidate(id: string, overrides: Partial<IndexCandidate> = {})
 
 describe("discovery index policy", () => {
   it("matches isIndexableMeme without adding section-by-section requirements", () => {
+    // No usage note or examples: the prose floor (250) is met by the
+    // description and origin alone, and no section-by-section rule applies.
     const sparseSections = indexableCandidate("sparse", {
-      description: chars(100),
+      description: chars(190),
       origin: chars(60),
       usage_note: null,
       usage_examples: null,

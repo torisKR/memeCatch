@@ -374,7 +374,11 @@ export default async function MemeDetailPage({ params }: Props) {
             />
           </section>}
 
-          <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
+          {/* While reactions are off, the bar only said "coming soon" on every
+              meme page: an unfinished-site signal for readers and reviewers. */}
+          {flags.communityEnabled && (
+            <ReactionBar memeId={meme.id} initialCounts={reactionCounts} />
+          )}
           <ExportButton shortId={meme.short_id} />
 
           {/* 관련 영상 — 대표 아래 공개 사용 예시(비대표 임베드) */}

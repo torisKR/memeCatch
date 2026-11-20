@@ -137,7 +137,7 @@ export async function RankingsScreen({ locale }: { locale: Locale }) {
           <span className="rounded-full bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">
             베타
           </span>
-          <p className="text-base text-muted">집계 준비 중이에요 — 순위는 참고용이에요.</p>
+          <p className="text-base text-muted">밈캐치 안에서 모은 조회·저장 신호예요. 표본이 적어 순위는 참고용이에요.</p>
         </div>
       )}
 

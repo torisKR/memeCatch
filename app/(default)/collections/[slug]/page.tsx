@@ -13,12 +13,17 @@ import { AdsenseScript } from "@/components/adsense-script";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 
-/** 테마별 밈 모음 허브. slug는 미리 열거하지만 문서는 요청별 SSR로 렌더한다. */
 /** 테마별 모음 허브. ISR 재생성 비용을 줄이려고 24시간 단위로 캐시한다. */
 export const revalidate = 86400;
 
-export function generateStaticParams() {
-  return COLLECTIONS.map((c) => ({ slug: c.slug }));
+/**
+ * 빌드 때는 아무 모음도 미리 렌더하지 않는다. 운영 이미지 빌드(Docker)에는 DB가
+ * 없어서, 미리 렌더하면 카드 없이 소개 문구만 있는 페이지가 24시간 캐시됐다
+ * (2026-11-20 측정: 사이트맵의 모음 13개가 전부 빈 페이지). 첫 요청 때 렌더하고
+ * 그 결과를 같은 주기로 캐시한다. 알 수 없는 slug는 아래에서 404다.
+ */
+export function generateStaticParams(): { slug: string }[] {
+  return [];
 }
 
 export async function generateMetadata({
@@ -49,48 +54,49 @@ export async function generateMetadata({
 const SELECT = "*, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)";
 const LIMIT = 24;
 
+/**
+ * 조회 실패는 던진다. 빈 배열로 삼키면 그 빈 페이지가 ISR 캐시에 24시간 남는다.
+ * 던진 렌더는 캐시되지 않고, 재검증 중 실패면 직전 성공 페이지가 유지된다.
+ */
 async function loadMemes(col: CollectionDef): Promise<MemeListItem[]> {
-  try {
-    const db = createStaticClient();
-    let q = db
-      .from("memes")
-      .select(SELECT)
-      .in("moderation_status", ["approved", "limited"]);
-    switch (col.filter.kind) {
-      case "decade":
-        q = q
-          .gte("origin_year", col.filter.from)
-          .lte("origin_year", col.filter.to)
-          .order("trend_score", { ascending: false });
-        break;
-      case "category":
-        q = q
-          .eq("category", col.filter.category)
-          .order("trend_score", { ascending: false });
-        break;
-      case "beginner":
-        q = q
-          .eq("difficulty", "beginner")
-          .order("trend_score", { ascending: false });
-        break;
-      case "latest":
-        q = q.order("published_at", { ascending: false, nullsFirst: false });
-        break;
-      case "keywords": {
-        // 제목·요약·유래 중 하나라도 키워드를 포함하면 매치.
-        // .or() 필터 문자열에서는 %가 아닌 *를 와일드카드로 써야 인코딩이 안전하다.
-        const ors = col.filter.terms
-          .flatMap((t) => ["title", "summary", "origin"].map((c) => `${c}.ilike.*${t}*`))
-          .join(",");
-        q = q.or(ors).order("trend_score", { ascending: false });
-        break;
-      }
+  const db = createStaticClient();
+  let q = db
+    .from("memes")
+    .select(SELECT)
+    .in("moderation_status", ["approved", "limited"]);
+  switch (col.filter.kind) {
+    case "decade":
+      q = q
+        .gte("origin_year", col.filter.from)
+        .lte("origin_year", col.filter.to)
+        .order("trend_score", { ascending: false });
+      break;
+    case "category":
+      q = q
+        .eq("category", col.filter.category)
+        .order("trend_score", { ascending: false });
+      break;
+    case "beginner":
+      q = q
+        .eq("difficulty", "beginner")
+        .order("trend_score", { ascending: false });
+      break;
+    case "latest":
+      q = q.order("published_at", { ascending: false, nullsFirst: false });
+      break;
+    case "keywords": {
+      // 제목·요약·유래 중 하나라도 키워드를 포함하면 매치.
+      // .or() 필터 문자열에서는 %가 아닌 *를 와일드카드로 써야 인코딩이 안전하다.
+      const ors = col.filter.terms
+        .flatMap((t) => ["title", "summary", "origin"].map((c) => `${c}.ilike.*${t}*`))
+        .join(",");
+      q = q.or(ors).order("trend_score", { ascending: false });
+      break;
     }
-    const { data } = await q.order("id", { ascending: false }).limit(indexableScanLimit(LIMIT));
-    return takeIndexableMemes((data ?? []) as unknown as MemeListItem[], LIMIT);
-  } catch {
-    return [];
   }
+  const { data, error } = await q.order("id", { ascending: false }).limit(indexableScanLimit(LIMIT));
+  if (error) throw new Error(`collection ${col.slug} read failed`);
+  return takeIndexableMemes((data ?? []) as unknown as MemeListItem[], LIMIT);
 }
 
 export default async function CollectionPage({

@@ -8,7 +8,7 @@
  *
  * 소비처는 두 갈래다.
  *
- *   [번역·기존 색인 판정 — isIndexableMeme, MIN_PROSE_CHARS_INDEX=150]
+ *   [번역·색인 판정 — isIndexableMeme, MIN_PROSE_CHARS_INDEX=250]
  *   - app/sitemap.ts                      — 번역 URL과 localized explore 집계
  *   - lib/meme-translations.ts            — 번역이 없으면 기존처럼 404
  *   한국어 상세의 noindex, 한국어 사이트맵 URL, 공개 카드 레일도
@@ -30,9 +30,15 @@ export const CONTENT_DEPTH_THRESHOLDS = {
    */
   MIN_PROSE_CHARS: 250,
   /**
-   * 현재 main의 색인 산문 하한. discovery·사이트맵·robots가 함께 쓴다.
+   * 색인 산문 하한. discovery·사이트맵·robots·공개 목록이 함께 쓴다.
+   *
+   * 2026-11-20: 150자에서 250자로 올려 광고 기준(MIN_PROSE_CHARS)과 맞췄다. AdSense가
+   * 사이트를 「가치가 별로 없는 콘텐츠」로 거부했고, 그날 운영 사이트맵의 한국어 밈
+   * 518개를 전수 측정하니 고유 산문 중앙값이 231자, 60%가 250자 미만이었다. 광고에
+   * 부족하다고 스스로 정한 문서를 색인·목록으로 노출하면 사이트 전체가 얇게 읽힌다.
+   * 문서는 지우지 않는다. 250자 미만은 noindex로 남고 목록에서 빠진다.
    */
-  MIN_PROSE_CHARS_INDEX: 150,
+  MIN_PROSE_CHARS_INDEX: 250,
   /** 종합 점수 하한. 산문 하한을 넘겨도 이 점수 미만이면 얇음. 색인·배너·광고 모두 공통. */
   MIN_SCORE: 5,
   /** 정의 본문(description) 길이 구간 → 3 / 2 / 1점 */

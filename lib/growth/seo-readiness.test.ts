@@ -12,7 +12,7 @@ function meme(overrides: Partial<SeoAuditMeme> = {}): SeoAuditMeme {
     slug: "alpha",
     title: "알파 밈",
     summary: "알파 밈을 설명하는 충분히 긴 요약입니다",
-    description: "알파 밈의 의미와 쓰임을 구체적으로 설명하는 본문입니다. ".repeat(5),
+    description: "알파 밈의 의미와 쓰임을 구체적으로 설명하는 본문입니다. ".repeat(9),
     origin: "알파 밈이 처음 등장하고 확산된 배경을 충분한 근거와 함께 설명합니다.",
     origin_year: 2025,
     usage_note: "친구와 대화할 때 상황을 확인한 뒤 가볍게 사용할 수 있습니다.",

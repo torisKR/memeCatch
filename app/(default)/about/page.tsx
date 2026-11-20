@@ -41,6 +41,14 @@ export default async function AboutPage() {
             분위기가 식는 일도 흔했습니다. 밈은 뜻보다 <strong>쓸 자리</strong>
             에서 사고가 납니다. 밈캐치는 그 지점에 답하려고 만든 사전입니다.
           </p>
+          <p className="mt-4 text-base leading-relaxed">
+            사전을 만들며 정리한 판단 기준은{" "}
+            <Link href="/guides" className="text-accent-text underline underline-offset-2">
+              가이드
+            </Link>
+            에 긴 글로 풀어 두었습니다. 사용 신호 읽는 법, 단톡방에 보내기 전 점검,
+            출처 확인 방법 같은 내용입니다.
+          </p>
         </section>
 
         <section className="mt-10">

@@ -23,6 +23,7 @@ import {
   SEO_CONTENT_LOCALES,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { GUIDES } from "@/lib/guides";
 import { memePathFrom } from "@/lib/labels";
 import {
   isIndexableLocalizedMeme,
@@ -310,6 +311,13 @@ describe("사이트맵 날짜 진실성", () => {
 });
 
 describe("사이트맵 다국어 색인 계약", () => {
+  it("가이드 인덱스와 다섯 편의 가이드 URL을 포함한다", async () => {
+    useRows([]);
+    const pathnames = (await sitemap()).map((entry) => new URL(entry.url).pathname);
+    expect(pathnames).toContain("/guides");
+    for (const guide of GUIDES) expect(pathnames).toContain(`/guides/${guide.slug}`);
+  });
+
   it("테마별 모음 인덱스를 독립 URL로 노출한다", async () => {
     useRows([]);
     const entries = await sitemap();

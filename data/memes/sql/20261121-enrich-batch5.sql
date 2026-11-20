@@ -96,7 +96,7 @@ where meme.short_id = 'upktm4ve' and meme.slug = '1577-1577-대리운전-CM송'
 
 -- 해를 품은 달 아역 신드롬 (4f5tmxv3 / 해를-품은-달-아역-신드롬)
 update public.memes set
-  description = '2012년 MBC 수목미니시리즈 ''해를 품은 달''은 여진구, 김유정, 이민호, 임시완, 이원근 등 아역 배우들의 열연으로 방영 초반부터 큰 관심을 모았다. 어린 시절 인물을 맡은 배우들의 연기가 호평을 받았고, 그 기대감은 성인 연기자로 바뀐 뒤의 전개에도 이어졌다는 평가다. 13회는 자체 최고 시청률 42.9%(수도권 기준)를 기록했고, 최종회는 42.2%를 찍으며 드라마의 흥행을 확인시켰다. 방영 중 시청률 기록이 연이어 경신되면서 아역 연기 역시 주요 화제로 함께 다뤄졌다.',
+  description = '2012년 MBC 수목미니시리즈 ''해를 품은 달''은 여진구, 김유정, 임시완, 이원근 등 아역 배우들의 열연으로 방영 초반부터 큰 관심을 모았다. 어린 시절 인물을 맡은 배우들의 연기가 호평을 받았고, 그 기대감은 성인 연기자로 바뀐 뒤의 전개에도 이어졌다는 평가다. 13회는 자체 최고 시청률 42.9%(수도권 기준)를 기록했고, 최종회는 42.2%를 찍으며 드라마의 흥행을 확인시켰다. 방영 중 시청률 기록이 연이어 경신되면서 아역 연기 역시 주요 화제로 함께 다뤄졌다.',
   origin = '2012년 MBC 수목드라마로 방영됐으며 3월에 종영했다. 극본은 진수완이 맡았다. 방영 중 기사들은 아역 배우들의 활약을 인기의 주요 요인으로 꼽았다. 방영 중 13회에서 자체 최고 시청률을 경신했다는 보도가 있다.',
   usage_note = '사극 드라마의 아역 배우가 성인 연기자 못지않은 몰입을 주었던 사례를 이야기할 때 쓰인다. 이후 성인 배우로 이어지는 흐름을 말할 때 인용하기 좋다.',
   caution = '배우들은 방영 당시 아역이었으므로 현재 나이와 근황을 단정하는 식의 언급은 피한다. 이 드라마는 실존 인물이 아닌 가상 인물 중심의 판타지 사극이라 역사 고증 잣대로 평가하지 않도록 한다. 장면 클립을 재사용할 때는 방송사의 저작권을 확인해야 한다.',
@@ -266,7 +266,7 @@ where meme.short_id = 'n2k442e4' and meme.slug = '리사-다리-밈-챌린지'
 
 -- 모태범 밴쿠버올림픽 금메달 (q6t3gkuy / 모태범-밴쿠버올림픽-금메달)
 update public.memes set
-  description = '모태범은 2010 밴쿠버 동계올림픽 스피드스케이팅 남자 500m에서 1·2차 시기 합계 69초82로 우승해 한국 스피드스케이팅 사상 첫 올림픽 금메달을 안겼다. 단거리 주종목 선수도 우승 후보도 아닌 막내의 우승이라 화제가 됐다. 1차 시기에서 34초92로 2위였던 그는 2차 시기에서 34초906으로 역전했다. 2위는 일본의 나카지마 게이치로(69초98), 3위는 가토 조지(70초01)였고 두 선수의 차이는 0.16초였다. 한국시간 2010년 2월 16일 소식이 국내외 매체에 보도됐다.',
+  description = '모태범은 2010 밴쿠버 동계올림픽 스피드스케이팅 남자 500m에서 1·2차 시기 합계 69초82로 우승해 한국 스피드스케이팅 사상 첫 올림픽 금메달을 안겼다. 단거리 주종목 선수도 우승 후보도 아닌 막내의 우승이라 화제가 됐다. 1차 시기에서 34초92로 2위였던 그는 2차 시기에서 34초906으로 역전했다. 2위는 일본의 나카지마 게이치로(69초98), 3위는 가토 조지(70초01)였고, 우승한 모태범과 2위의 차이는 0.16초였다. 한국시간 2010년 2월 16일 소식이 국내외 매체에 보도됐다.',
   origin = '한국시간 2010년 2월 16일 캐나다 리치먼드 올림픽 오벌에서 열린 밴쿠버 올림픽 남자 500m 경기 결과다. 한국 스피드스케이팅이 올림픽에서 처음 딴 금메달로 보도됐다. 2위는 나카지마 게이치로, 3위는 가토 조지였다.',
   usage_note = '한국 빙상 역사에서 예상을 깬 우승을 설명하는 사례로 인용된다. 기대하지 않았던 선수의 활약을 이야기할 때 예로 들 수 있다.',
   caution = '올림픽 기록과 순위는 공식 결과와 주요 보도 기준으로 적어야 하며, 기사마다 표기가 다를 수 있음을 염두에 둔다. 선수 개인의 사생활이나 가족 관계는 확인된 자료 범위에서만 다룬다. 시상식 사진이나 경기 영상은 방송사와 통신사의 저작권을 확인해야 한다.',
@@ -684,14 +684,14 @@ where meme.short_id = 't8wncvva' and meme.slug = 'BTS-다이너마이트-챌린�
 insert into public.meme_sources (
   meme_id, platform, source_url, title, creator_name, copyright_status, source_role, rights_basis
 )
-select meme.id, 'Web', 'https://www.wikipedia.org/wiki/Dynamite_(BTS_song)', 'Dynamite (BTS song) - Wikipedia', 'Wikipedia (English)',
+select meme.id, 'Web', 'https://en.wikipedia.org/wiki/Dynamite_(BTS_song)', 'Dynamite (BTS song) - Wikipedia', 'Wikipedia (English)',
   'unknown'::public.copyright_status, 'secondary_reference', 'link_only'
 from public.memes as meme
 where meme.short_id = 't8wncvva' and meme.slug = 'BTS-다이너마이트-챌린지'
   and meme.moderation_status in ('approved'::public.moderation_status, 'limited'::public.moderation_status)
   and not exists (
     select 1 from public.meme_sources as existing
-    where existing.meme_id = meme.id and existing.source_url = 'https://www.wikipedia.org/wiki/Dynamite_(BTS_song)'
+    where existing.meme_id = meme.id and existing.source_url = 'https://en.wikipedia.org/wiki/Dynamite_(BTS_song)'
   );
 
 insert into public.meme_sources (

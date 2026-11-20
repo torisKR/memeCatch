@@ -12,6 +12,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
 const FOOTER_LINKS = [
   { href: "/about", label: "about" },
   { href: "/editorial", label: "editorial" },
+  { href: "/guides", label: "guides" },
   { href: "/privacy", label: "privacy" },
   { href: "/terms", label: "terms" },
   { href: "/rankings", label: "rankings" },

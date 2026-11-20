@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { createStaticClient } from "@/lib/db/server";
 import { memePathFrom } from "@/lib/labels";
+import { GUIDES } from "@/lib/guides";
 import { COLLECTIONS } from "@/lib/collections";
 import type { ContentDepthInput } from "@/lib/content-depth";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
@@ -332,6 +333,13 @@ async function buildSitemap(): Promise<{
         changeFrequency: "daily" as const,
         priority: 0.6,
       })),
+    // 가이드 — DB 없이 렌더되는 정적 긴 글(lib/guides.ts).
+    { url: `${SITE_URL}/guides`, changeFrequency: "monthly" as const, priority: 0.6 },
+    ...GUIDES.map((guide) => ({
+      url: `${SITE_URL}/guides/${guide.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
   ];
 
   // 공개 밈 중 **콘텐츠가 충실한 것만** 색인 노출한다.

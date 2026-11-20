@@ -285,10 +285,10 @@ describe("proxy public meme existence check", () => {
     },
   );
 
-  it("answers a direct visit to the missing-meme page with 404", async () => {
+  it("passes the missing-meme page through so the standalone rewrite fetch cannot loop", async () => {
     const response = await proxy(publicRequest("/missing-public-meme"));
 
-    expect(response.status).toBe(404);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
     expect(dbMocks.eq).not.toHaveBeenCalled();
   });
 

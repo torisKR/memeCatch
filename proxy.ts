@@ -170,7 +170,11 @@ export function resolveLandingRedirectLocale({
  * 로케일 우선순위: ① URL prefix ② ko. 쿠키·Accept-Language·prefetch는
  * 문서를 바꾸지 않는다. memecatch_locale은 언어 선택기만 기록한다.
  */
-/** Must be a routable folder: a leading underscore makes a Next folder private. */
+/**
+ * Must be a routable folder: a leading underscore makes a Next folder private.
+ * Do not rewrite this path again. The standalone server fetches a rewrite
+ * target over HTTP, so a second rewrite here loops until the socket closes.
+ */
 const MISSING_PUBLIC_MEME_PATH = "/missing-public-meme";
 
 export async function proxy(request: NextRequest) {
@@ -186,12 +190,6 @@ export async function proxy(request: NextRequest) {
     // A preference redirect must not refresh the cookie. Prefetch and RSC
     // requests used to persist the last localized hop.
     return NextResponse.redirect(url, 302);
-  }
-
-  // The rewrite target for missing memes is a real route so the brand 404 has
-  // a layout. Opened directly, it is still a missing page.
-  if (request.nextUrl.pathname === MISSING_PUBLIC_MEME_PATH) {
-    return NextResponse.rewrite(request.nextUrl, { status: 404 });
   }
 
   const urlLocale = localeFromPathname(request.nextUrl.pathname);

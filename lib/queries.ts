@@ -448,7 +448,16 @@ export async function searchMemes(query: string, limit = 20): Promise<MemeListIt
     throw new Error("search_memes failed");
   }
   const rows = takeIndexableMemes((data ?? []) as unknown as MemeListItem[], 50);
-  return mergeSearchPresentationItems(curatedSearchCards(q), rows).slice(0, limit) as MemeListItem[];
+  // Merge only the prefix needed to fill the page. A preferred equivalent that
+  // ranks outside the page must not suppress its visible fallback.
+  const candidates = [...curatedSearchCards(q), ...rows];
+  let end = limit;
+  let merged = mergeSearchPresentationItems(candidates.slice(0, end));
+  while (merged.length < limit && end < candidates.length) {
+    end += limit - merged.length;
+    merged = mergeSearchPresentationItems(candidates.slice(0, end));
+  }
+  return merged as MemeListItem[];
 }
 
 /** /slang 사전 행 — 표제어·한 줄 뜻·신호등·연도만 싣는 경량 행 */

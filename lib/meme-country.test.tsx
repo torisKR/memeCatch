@@ -161,6 +161,19 @@ describe("meme country display", () => {
     expect(results.map((item) => item.short_id)).toEqual(["6hgbgvxs", "other"]);
   });
 
+  it("keeps the curated fallback when its catalog equivalent ranks outside the result limit", async () => {
+    const catalog = { ...meme, id: "catalog", short_id: "6hgbgvxs", title: "오히려 좋아" };
+    const others = Array.from({ length: 30 }, (_, i) => ({ ...meme, id: `row-${i}`, short_id: `id${i}` }));
+    const publicFilter = vi.fn().mockResolvedValue({ data: [...others, catalog], error: null });
+    createStaticClient.mockReturnValue({ rpc: vi.fn(() => ({ select: () => ({ in: publicFilter }) })) });
+
+    const results = await searchMemes("오히려 좋아");
+
+    expect(results).toHaveLength(20);
+    expect(results[0]?.short_id).toBe("oyj2021k");
+    expect(results.map((item) => item.short_id)).not.toContain("6hgbgvxs");
+  });
+
   it("cannot fill 50 results when the capped RPC page contains the duplicate pair", async () => {
     const seed = { ...meme, id: "seed", short_id: "oyj2021k", title: "오히려 좋아" };
     const catalog = { ...meme, id: "catalog", short_id: "6hgbgvxs", title: "오히려 좋아" };

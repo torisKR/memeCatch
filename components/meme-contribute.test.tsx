@@ -93,13 +93,15 @@ describe("MemeContribute", () => {
       kind: "source",
       sourceUrl: "https://www.youtube.com/watch?v=abc",
       note: "",
-      creditPublic: true,
+      // Credit is opt-in: unchecked unless the reader ticks the box.
+      creditPublic: false,
     });
     expect(track).toHaveBeenCalledWith("meme_contribution_submitted", {
       short_id: "pp3tzbgm",
       kind: "source",
     });
-    expect(container.textContent).toContain("함께 채운 사람」에 닉네임이 올라가요");
+    expect(container.textContent).toContain("검수를 거쳐 이 문서에 반영할게요");
+    expect(container.textContent).not.toContain("닉네임이 올라가요");
   });
 
   it("로그인이 필요하면 돌아올 앵커를 담은 로그인 링크를 준다", async () => {

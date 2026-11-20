@@ -74,6 +74,29 @@ describe("DailyMemeQuiz", () => {
     expect(screen.queryByRole("link", { name: "로그인" })).toBeNull();
   });
 
+  it("asks for today's question by KST date so a cached response from yesterday is not reused", async () => {
+    db.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    render(<DailyMemeQuiz />);
+    await screen.findByText("「테스트 밈」, 무슨 뜻일까요?");
+    expect(fetch).toHaveBeenCalledWith("/api/daily-quiz?d=2026-11-19");
+  });
+
+  it("sends an answer recorded on this device to the server when the signed-in streak has not counted today", async () => {
+    db.getUser.mockResolvedValue({ data: { user: { id: "u1", is_anonymous: false } }, error: null });
+    db.rpc.mockReset();
+    db.rpc.mockImplementation((fn: string) =>
+      fn === "get_daily_meme_quiz_status"
+        ? rpcResult({ quiz_date: "2026-11-19", completed_at: null, correct: null, current_streak: 6, best_streak: 9, total_days: 20 })
+        : rpcResult({ quiz_date: "2026-11-19", completed_at: "2026-11-19T01:00:00Z", correct: true, current_streak: 7, best_streak: 9, total_days: 21 }),
+    );
+    window.localStorage.setItem(LOCAL_STREAK_KEY, JSON.stringify({ lastDate: "2026-11-19", streak: 1, best: 1, total: 1, lastSelected: 1, lastCorrect: true }));
+
+    render(<DailyMemeQuiz />);
+
+    await waitFor(() => expect(db.rpc).toHaveBeenCalledWith("complete_daily_meme_quiz", { p_meme_short_id: "abc12345", p_correct: true }));
+    await waitFor(() => expect(screen.getByText(/7일 연속 출석!/)).toBeTruthy());
+  });
+
   it("renders nothing when the question cannot be loaded", async () => {
     db.getUser.mockResolvedValue({ data: { user: null }, error: null });
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 502, json: async () => ({}) })));

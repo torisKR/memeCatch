@@ -228,7 +228,7 @@ export type ContributionInput = {
 
 export type ContributionResult =
   | { ok: true }
-  | { ok: false; error: "login_required" | "invalid" | "closed" | "duplicate" | "rate_limited" | "failed"; message: string };
+  | { ok: false; error: "login_required" | "invalid" | "closed" | "duplicate" | "rate_limited" | "too_many_pending" | "failed"; message: string };
 
 const contributionSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -240,7 +240,7 @@ const contributionSchema = z.discriminatedUnion("kind", [
       .max(500, "링크는 500자까지 넣을 수 있어요.")
       .regex(/^https:\/\/\S+\.\S+$/, "https://로 시작하는 링크를 넣어 주세요."),
     note: z.string().trim().max(300, "설명은 300자까지 쓸 수 있어요.").optional().default(""),
-    creditPublic: z.boolean().optional().default(true),
+    creditPublic: z.boolean().optional().default(false),
   }),
   z.object({
     memeId: z.uuid(),
@@ -255,7 +255,7 @@ const contributionSchema = z.discriminatedUnion("kind", [
       .trim()
       .min(1, "실제로 쓴 문장을 적어 주세요.")
       .max(500, "예문은 500자까지 쓸 수 있어요."),
-    creditPublic: z.boolean().optional().default(true),
+    creditPublic: z.boolean().optional().default(false),
   }),
 ]);
 
@@ -302,6 +302,13 @@ export async function submitMemeContribution(
     const message = error.message ?? "";
     if (message.includes("login_required")) {
       return { ok: false, error: "login_required", message: "로그인하면 제보할 수 있어요." };
+    }
+    if (message.includes("too_many_pending")) {
+      return {
+        ok: false,
+        error: "too_many_pending",
+        message: "검수를 기다리는 제보가 많아요. 먼저 보낸 제보가 처리되면 다시 보내 주세요.",
+      };
     }
     if (error.code === "P0429" || message.includes("rate_limited")) {
       return { ok: false, error: "rate_limited", message: "제보가 많아 잠시 쉬어 가요. 1시간 뒤에 다시 보내 주세요." };

@@ -59,7 +59,8 @@ export function MemeContribute({
   const [note, setNote] = useState("");
   const [situation, setSituation] = useState("");
   const [text, setText] = useState("");
-  const [creditPublic, setCreditPublic] = useState(true);
+  // Opt-in: a nickname is shown publicly only when the reader ticks the box.
+  const [creditPublic, setCreditPublic] = useState(false);
   const [notice, setNotice] = useState<
     { kind: "error" | "success"; message: string; loginLink?: boolean } | null
   >(null);

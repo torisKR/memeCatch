@@ -22,7 +22,7 @@ export default function RootError({
   }, [error]);
 
   return (
-    <main className="relative mx-auto flex min-h-[70dvh] w-full max-w-5xl flex-col items-center justify-center overflow-hidden px-4 py-14 sm:py-20">
+    <main className="relative mx-auto flex min-h-[70dvh] w-full max-w-site flex-col items-center justify-center overflow-hidden px-4 py-14 sm:py-20">
       {/* 신호 단절 라인 — 일러스트의 끊긴 펄스를 페이지 구조로 확장.
           카드 좌우로 뻗다가 중앙(카드) 앞에서 끊긴다. */}
       <div

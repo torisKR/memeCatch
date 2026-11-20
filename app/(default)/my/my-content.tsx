@@ -165,8 +165,8 @@ export function MyContent({
       };
 
   return (
-    // 컨테이너는 헤더(max-w-5xl px-4)와 사이드 간격을 정확히 일치시킨다.
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    // 컨테이너는 헤더(max-w-site px-4)와 사이드 간격을 정확히 일치시킨다.
+    <main className="mx-auto w-full max-w-site px-4 py-8">
       {/* 프로필 헤더 */}
       <motion.div
         {...section}

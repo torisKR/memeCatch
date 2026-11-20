@@ -3,7 +3,7 @@ import { MemeGridSkeleton, SkeletonBone } from "@/components/skeletons";
 /** 주간 결산 로딩 — 헤딩 + 인트로 + 급상승/신규 그리드 + 카테고리 바 스켈레톤 */
 export default function WeeklyLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8" aria-busy>
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8" aria-busy>
       <SkeletonBone className="h-4 w-24" />
       <SkeletonBone className="mt-3 h-9 w-72" />
       <SkeletonBone className="mt-3 h-5 w-full max-w-2xl" />

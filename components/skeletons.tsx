@@ -60,7 +60,7 @@ export function AnswerCardSkeleton() {
 /** 밈 상세 전체 스켈레톤 — 실제 페이지 순서(정답 카드 → 대표 미디어 → 본문)와 일치 */
 export function MemeDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+    <div className="mx-auto max-w-site space-y-6 px-4 py-6">
       <AnswerCardSkeleton />
       {/* 이전의 h-11×4 블록은 실제 화면에 대응물이 없어 제거(양방향 CLS 원인) */}
       <Bone className="aspect-video w-full rounded-xl" />

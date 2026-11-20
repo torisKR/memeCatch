@@ -71,7 +71,7 @@ export function TranslatedEditionHint() {
   return (
     <p
       lang={locale === "zh-tw" ? "zh-Hant" : locale === "zh" ? "zh-Hans" : locale}
-      className="mx-auto mb-4 flex w-full max-w-5xl flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-surface px-4 py-2 text-sm text-foreground"
+      className="mx-auto mb-4 flex w-full max-w-site flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-surface px-4 py-2 text-sm text-foreground"
     >
       <span className="text-muted">{copy.lead}</span>
       <a

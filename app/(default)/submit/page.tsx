@@ -26,7 +26,7 @@ export default async function SubmitPage({
   const imported = typeof sp.imported === "string" ? Number(sp.imported) : null;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <main className="mx-auto w-full max-w-site px-4 py-8">
       <div className="mx-auto w-full max-w-md">
         <h1 className="page-title">{copy.page.title}</h1>
         <p className="page-lede">{copy.page.intro}</p>

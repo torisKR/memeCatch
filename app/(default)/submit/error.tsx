@@ -12,7 +12,7 @@ export default function SubmitError({
   const { locale } = useLocale();
   const copy = SUBMIT_COPY[locale].page;
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-16 text-center">
+    <main className="mx-auto w-full max-w-site px-4 py-16 text-center">
       <div className="mx-auto w-full max-w-md">
         <h1 className="text-xl font-bold">{copy.loadErrorTitle}</h1>
         <p className="mt-2 text-muted">{copy.loadErrorBody}</p>

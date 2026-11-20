@@ -123,7 +123,7 @@ export async function RankingsScreen({ locale }: { locale: Locale }) {
   const rankedForSchema = (data.fallback ?? data.today).slice(0, 10);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6">
+    <main className="mx-auto max-w-site px-4 py-6">
       <AdsenseScript />
       {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
       <h1 className="page-title">밈캐치 내 급상승</h1>
@@ -268,7 +268,7 @@ export default async function RankingsPage() {
  */
 function PublishedWeeklyList({ memes }: { memes: MemeRow[] }) {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6">
+    <main className="mx-auto max-w-site px-4 py-6">
       <AdsenseScript />
       <RankingsJsonLd items={memes.slice(0, 10)} />
       <h1 className="page-title">이번 주 많이 본 밈</h1>

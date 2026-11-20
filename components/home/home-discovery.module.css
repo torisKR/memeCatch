@@ -12,7 +12,7 @@
   border-block: 1px solid var(--discovery-rule);
   /* Percent, not vw: beside the desktop sidebar the column is narrower than the viewport. */
   padding-block: clamp(3.5rem, 8vw, 7rem);
-  padding-inline: max(1rem, calc((100% - 72rem) / 2));
+  padding-inline: max(1rem, calc((100% - 84rem) / 2));
 }
 
 .headingGrid {
@@ -28,7 +28,7 @@
 .previewEyebrow {
   margin: 0;
   color: var(--discovery-orange);
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 900;
   letter-spacing: 0.16em;
   line-height: 1.3;

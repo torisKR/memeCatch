@@ -18,7 +18,7 @@ export default async function LoginPage({
   const initialMode = sp.tab === "signup" ? "signup" : "login";
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10">
+    <main className="mx-auto w-full max-w-site px-4 py-10">
       <div className="mx-auto grid w-full max-w-md overflow-hidden rounded-3xl lg:max-w-4xl lg:grid-cols-[0.85fr_1.15fr] lg:border lg:border-border lg:bg-surface">
         {/* 브랜드 비주얼 패널(lg+) — 키 비주얼 세로판. 폼 흐름과 무관한 장식 */}
         <div aria-hidden className="relative hidden lg:block">

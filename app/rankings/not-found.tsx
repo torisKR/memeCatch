@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function RankingsNotFound() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-14 sm:py-20">
+    <main className="mx-auto w-full max-w-site px-4 py-14 sm:py-20">
       <div className="mx-auto w-full max-w-xl rounded-3xl border border-border bg-surface-2 px-6 py-10 text-center sm:px-10 sm:py-12">
         <h1 className="text-2xl font-extrabold tracking-tight">
           랭킹을 잠시 볼 수 없어요

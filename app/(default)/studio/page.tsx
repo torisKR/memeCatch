@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default function StudioPage() {
   return (
     <main className="bg-background text-foreground">
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:pt-10">
+      <div className="mx-auto max-w-site px-4 pb-16 pt-8 sm:pt-10">
         <header className="max-w-3xl">
           <p className="text-sm font-bold text-accent">밈 스튜디오</p>
           <h1 className="mt-1.5 text-3xl font-extrabold tracking-tight sm:text-4xl">

@@ -1,6 +1,6 @@
 export default function OnboardingLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10" aria-busy>
+    <main className="mx-auto w-full max-w-site px-4 py-10" aria-busy>
       <div className="mx-auto w-full max-w-md">
         <span className="sr-only">불러오는 중이에요</span>
         <div className="h-8 w-20 rounded-lg shimmer" />

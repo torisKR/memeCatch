@@ -15,7 +15,7 @@ export function RankingsUnavailable({ locale }: { locale: Locale }) {
     <main
       lang={getDocumentLanguage(locale)}
       dir={direction}
-      className={`mx-auto max-w-5xl px-4 py-6 ${rtl ? "text-right" : "text-start"}`}
+      className={`mx-auto max-w-site px-4 py-6 ${rtl ? "text-right" : "text-start"}`}
     >
       <h1 className="text-2xl font-bold">{copy.title}</h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">{copy.guidance}</p>

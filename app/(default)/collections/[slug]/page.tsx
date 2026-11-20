@@ -107,7 +107,7 @@ export default async function CollectionPage({
   const url = `${SITE_URL}/collections/${col.slug}`;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8">
       <AdsenseScript />
       {/* CollectionPage + ItemList — 허브의 구조화 데이터 */}
       <script
@@ -156,7 +156,7 @@ export default async function CollectionPage({
           <MotionList
             as="ul"
             itemAs="li"
-            className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+            className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6"
             itemClassName="min-w-0"
           >
             {memes.map((meme, idx) => {

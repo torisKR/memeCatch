@@ -56,7 +56,7 @@ const orderedCollections = GROUPS.flatMap((group) =>
 
 export default function CollectionsIndexPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-16 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-8">
       <AdsenseScript />
       <script
         type="application/ld+json"

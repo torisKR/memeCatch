@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function QuizPage() {
   return (
-    <main className="ink-grid mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="ink-grid mx-auto max-w-site px-4 pb-14 pt-8">
       <h1 className="page-title">밈력고사, 내 밈력은 몇 점?</h1>
       <p className="page-lede">
         밈 사전 데이터로 자동 출제되는 밈 지식 퀴즈예요. 제목만 보고 진짜 뜻을

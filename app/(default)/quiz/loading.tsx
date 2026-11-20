@@ -3,7 +3,7 @@ import { SkeletonBone } from "@/components/skeletons";
 /** /quiz 로딩 스켈레톤 — 인트로 + 시작 카드(모드 3버튼)를 흉내낸다 */
 export default function QuizLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8" aria-busy>
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8" aria-busy>
       <SkeletonBone className="h-4 w-16" />
       <SkeletonBone className="mt-2 h-8 w-64" />
       <div className="mt-3 space-y-2">

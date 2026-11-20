@@ -126,7 +126,7 @@ export default async function TimelinePage() {
     .slice(0, 10);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8">
       <AdsenseScript />
       {schemaItems.length > 0 && (
         <script

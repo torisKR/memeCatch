@@ -43,12 +43,14 @@ const loadCachedDirectory = unstable_cache(
       if (error) throw new Error("meme directory read failed");
       const rows = (data ?? []) as unknown as DirectoryRow[];
       for (const row of rows) {
-        if (!row.title?.trim() || !isDirectoryMeme(row, ids)) continue;
+        // Same predicate as the sitemap, with no extra filter, so the sitemap's
+        // page count and this list never disagree.
+        if (!isDirectoryMeme(row, ids)) continue;
         items.push({
           id: row.id,
           short_id: row.short_id,
           slug: row.slug,
-          title: row.title.trim(),
+          title: row.title?.trim() || row.slug,
           summary: row.summary?.trim() ?? "",
           category: row.category,
           origin_year: row.origin_year,

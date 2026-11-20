@@ -156,7 +156,7 @@ export default async function CollectionPage({
           <MotionList
             as="ul"
             itemAs="li"
-            className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+            className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6"
             itemClassName="min-w-0"
           >
             {memes.map((meme, idx) => {

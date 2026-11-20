@@ -96,8 +96,9 @@ describe("TimelineView — 레이아웃", () => {
     expect(html).toContain("sm:w-20");
     expect(html).toContain("lg:w-24");
     expect(html).toContain("whitespace-nowrap");
-    expect(html).toContain("md:grid-cols-3");
-    expect(html).toContain("lg:grid-cols-4");
+    // Two columns, then three from 1024px, like every other meme card grid.
+    expect(html).toContain("lg:grid-cols-3");
+    expect(html).not.toContain("grid-cols-4");
     expect(html).not.toContain("sm:overflow-x-auto");
   });
 });

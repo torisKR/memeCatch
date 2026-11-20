@@ -64,7 +64,7 @@ export default async function SearchPage({ searchParams }: Props) {
             &lsquo;{query}&rsquo; 검색 결과 <span className="stat-mono">{results.length}</span>개예요.
           </p>
           <TrackedBlock event="search_result_click" params={{ query }}>
-            <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${MOBILE_CARD_CLEARANCE}`}>
+            <ul className={`mt-3 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6 ${MOBILE_CARD_CLEARANCE}`}>
               {results.map((meme, index) => (
                 <li key={meme.id} className="min-w-0">
                   <MemeCard meme={meme} previewContents={previews[index]} />
@@ -120,7 +120,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <h2 id="search-trending" className="text-xl font-bold">
             {SECTION_TITLES.trending}
           </h2>
-          <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${MOBILE_CARD_CLEARANCE}`}>
+          <ul className={`mt-3 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6 ${MOBILE_CARD_CLEARANCE}`}>
             {trending.slice(0, 6).map((meme, index) => (
               <li key={meme.id} className="min-w-0">
                 <MemeCard meme={meme} previewContents={previews[index]} />

@@ -56,7 +56,7 @@ export function HomeExperience({
     <div className={styles.page}>
       {locale === "ko" && <TranslatedEditionHint />}
       <HomeImmersiveStory locale={locale} />
-      {afterHero}
+      {afterHero ? <div className={styles.plainSection}>{afterHero}</div> : null}
 
       {hasPublicListing(entries.length) ? (
         <section
@@ -65,7 +65,6 @@ export function HomeExperience({
           aria-label={copy.recent.title}
           className={`${styles.editorialSection} ${styles.anchorTarget}`}
         >
-          <span aria-hidden className={`${styles.sectionNumber} ${styles.discoveryNumber}`}>01</span>
           <HomeDiscovery locale={locale} entries={entries} />
           <div className={styles.recentSignalRail}>
             <Link href={explorePath} className={styles.contributionLinkStrong}>
@@ -79,7 +78,7 @@ export function HomeExperience({
       <section
         id="home-safety-showcase"
         data-home-section="safety-showcase"
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+        className={styles.plainSection}
       >
         <HomeSafetyShowcase />
       </section>
@@ -88,7 +87,7 @@ export function HomeExperience({
       <section
         id="home-safety-quiz"
         data-home-section="safety-quiz"
-        className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
+        className={styles.plainSection}
       >
         <SafetyDiagnosticQuiz />
       </section>
@@ -99,7 +98,6 @@ export function HomeExperience({
         className={`${styles.signalsSection} ${styles.anchorTarget}`}
       >
         <div className={styles.signalsFrame}>
-          <span aria-hidden className={styles.sectionNumber}>02</span>
           <SafetySignalGuide locale={locale} />
         </div>
       </section>
@@ -112,7 +110,6 @@ export function HomeExperience({
       >
         <div className={styles.sectionInner}>
           <header className={styles.pathwaysHeader}>
-            <span aria-hidden className={styles.sectionNumber}>03</span>
             <h2 id={pathwaysTitleId} className={styles.sectionTitle}>
               {copy.pathways.title}
             </h2>
@@ -173,7 +170,6 @@ export function HomeExperience({
         className={`${styles.editorialTrust} ${styles.anchorTarget}`}
       >
         <div className={styles.trustGrid}>
-          <span aria-hidden className={styles.sectionNumber}>04</span>
           <div className={styles.trustCopy}>
             <h2 id={trustTitleId} className={styles.trustTitle}>
               {cjkKeepPhrases(copy.trust.title, copy.trust.titlePhrases, styles.keepPhrase)}

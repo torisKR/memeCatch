@@ -1,3 +1,5 @@
+import { SearchShortcut } from "@/components/search-shortcut";
+import { SignalPointer } from "@/components/signal-pointer";
 import { Suspense } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AttributionTracker } from "@/components/attribution-tracker";
@@ -49,6 +51,8 @@ export function RootDocument({
           <LocaleDocumentSync />
           <LocaleAutoDetect />
           <ScrollChrome />
+          <SignalPointer />
+          <SearchShortcut />
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>

@@ -24,14 +24,17 @@ import { SHARE_CARD_BYTE_LIMIT } from "@/lib/jpeg-encode";
 import { readFontAdvances } from "@/lib/ttf-metrics";
 
 /** Non-detail pages that must stay byte-identical to main e5841d8c. Git history
- * is absent in the shallow CI checkout, so the lock is the content hash. */
+ * is absent in the shallow CI checkout, so the lock is the content hash.
+ * 2026-11-20: the owner approved relocking community/[id], quiz, weekly and
+ * collections after the design renewal (PR #125) changed their title blocks.
+ * The two not-found pages still match e5841d8c. */
 const MAIN_FILE_SHA: Record<string, string> = {
-  "app/(default)/community/[id]/page.tsx": "d2970639234251beb0c2dcfd3a6943f052adb4f3f8fcbeb84e7efcea12f728eb",
+  "app/(default)/community/[id]/page.tsx": "8639d78d1ca7b5a91d0451270f3b71c99d3603b7b94321393b0f92ed46851324",
   "app/[locale]/not-found.tsx": "ef253029a73492bd5b44e1b70e10d2e7a1e7271d56e500a615e41d2c92b86f06",
   "app/(default)/not-found.tsx": "0445ade89cdc8dcbd2eb884622e3cc7af31936a1a0623077b9daf9e82c5ab511",
-  "app/(default)/quiz/page.tsx": "5999e8189f2e0cab4f3a525ab957a9345f8db3f6d5e704870406e0eed943997b",
-  "app/(default)/weekly/page.tsx": "4a3658c682d3b2fa0509144fd8a8cb3a43eb83932cb525434617c7fb6906a2ca",
-  "app/(default)/collections/page.tsx": "b4186d5d3e92201f20ab1cedf0bd7b911f586c3299346b623f7d779ee72e405e",
+  "app/(default)/quiz/page.tsx": "67193866e7e93694a6d9b0c6bb291f4ad77a912eb2c97604f53ec9a9b22a71a8",
+  "app/(default)/weekly/page.tsx": "b54ab41aed06fcc27205ca8d1636f09fd35d9a40a49903e58829d87d230d53c7",
+  "app/(default)/collections/page.tsx": "115ecfebadaebc8736599f78ad30dd74193d05a7f7ac7fef9b9166531e89f0d2",
 };
 
 function sha256(body: Buffer) {

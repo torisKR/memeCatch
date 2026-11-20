@@ -100,12 +100,6 @@ export function HeaderMenu() {
           aria-label={messages.menu}
           className="menu-pop instrument-grid absolute end-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
         >
-          <p
-            aria-hidden
-            className="px-3 pb-1.5 pt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted"
-          >
-            Menu
-          </p>
           <ul>
             {items.map((item) => {
               const active = pathname.startsWith(item.href);

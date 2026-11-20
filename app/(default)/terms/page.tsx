@@ -20,7 +20,7 @@ const EFFECTIVE = "2026년 8월 18일";
 export default function TermsPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
-      <h1 className="text-3xl font-extrabold tracking-tight">이용약관</h1>
+      <h1 className="page-title">이용약관</h1>
       <p className="mt-2 text-sm text-muted">시행일: {EFFECTIVE}</p>
 
       <div className="mt-8 max-w-3xl space-y-8 text-base leading-relaxed">

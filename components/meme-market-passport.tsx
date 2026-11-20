@@ -35,10 +35,7 @@ export function MemeMarketPassport({
       data-market-variant-count={passport.variants.length}
       className="rounded-2xl border border-border bg-surface-2 p-5 sm:p-7"
     >
-      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-signal-cyan">
-        {copy.eyebrow}
-      </p>
-      <h2 id="meme-market-passport-title" className="mt-1 text-xl font-black tracking-tight">
+      <h2 id="meme-market-passport-title" className="text-xl font-black tracking-tight">
         {copy.title}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">{copy.description}</p>

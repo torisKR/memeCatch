@@ -35,6 +35,7 @@ export function MemeCard(props: MemeCardProps) {
         href={href ?? memePathFrom(meme.short_id, meme.slug)}
         className={memeCardClassName()}
         data-meme-card=""
+      data-pointer-light=""
         data-meme-card-title-size={titleSize}
       >
         <MemeCardFace

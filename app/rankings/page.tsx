@@ -126,8 +126,8 @@ export async function RankingsScreen({ locale }: { locale: Locale }) {
     <main className="mx-auto max-w-5xl px-4 py-6">
       <AdsenseScript />
       {rankedForSchema.length > 0 && <RankingsJsonLd items={rankedForSchema} />}
-      <h1 className="text-2xl font-bold">밈캐치 내 급상승</h1>
-      <p className="mt-1 text-base text-muted">밈캐치 내부 조회·반응 신호를 기준으로 모았어요.</p>
+      <h1 className="page-title">밈캐치 내 급상승</h1>
+      <p className="page-lede">밈캐치 내부 조회·반응 신호를 기준으로 모았어요.</p>
 
       {!flags.communityEnabled && (
         <div
@@ -164,7 +164,7 @@ export async function RankingsScreen({ locale }: { locale: Locale }) {
       )}
 
       {!data.fallback && (
-        <div className="instrument-grid mt-6 rounded-3xl border border-border/60 p-4 sm:p-6">
+        <div className="mt-8">
           {/* CSS 라디오 탭 — 클라이언트 상태나 JS 없이 서버 렌더 마크업으로 전환 */}
           <input type="radio" name="rank-tab" id="rank-tab-today" className="peer/today sr-only" defaultChecked />
           <input type="radio" name="rank-tab" id="rank-tab-week" className="peer/week sr-only" />
@@ -271,8 +271,8 @@ function PublishedWeeklyList({ memes }: { memes: MemeRow[] }) {
     <main className="mx-auto max-w-5xl px-4 py-6">
       <AdsenseScript />
       <RankingsJsonLd items={memes.slice(0, 10)} />
-      <h1 className="text-2xl font-bold">이번 주 많이 본 밈</h1>
-      <p className="mt-1 text-base text-muted">공개된 밈 기록에서 최근 글을 모았어요.</p>
+      <h1 className="page-title">이번 주 많이 본 밈</h1>
+      <p className="page-lede">공개된 밈 기록에서 최근 글을 모았어요.</p>
       <ol className="mt-6 grid gap-2 lg:grid-cols-2 lg:gap-x-8">
         {memes.map((meme, index) => (
           <RankItem key={meme.id} meme={meme} rank={index + 1} />

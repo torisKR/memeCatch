@@ -17,7 +17,7 @@ import {
  */
 export function CommunityPostCard({ post }: { post: CommunityPostRow }) {
   return (
-    <article className="hover-glow-flame relative rounded-2xl border border-border bg-surface p-4 shadow-sm">
+    <article data-pointer-light="" className="signal-surface hover-glow-flame rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <header className="flex items-center gap-2 text-sm text-muted">
         <span className="font-semibold text-foreground">
           {post.profiles?.nickname ?? "익명"}

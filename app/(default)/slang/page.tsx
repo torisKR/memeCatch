@@ -234,11 +234,9 @@ export default async function SlangPage() {
         />
       )}
 
-      <h1 className="text-3xl font-extrabold tracking-tight">
-        줄임말·<span className="text-signal">유행어</span> 사전
-      </h1>
+      <h1 className="page-title">줄임말·유행어 사전</h1>
       {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록(GEO 톤) */}
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+      <p className="page-lede">
         지금 쓰는 줄임말과 예전에 유행했던 말을 연대별로 모았어요. 1990년대
         PC통신 인사말부터 2000년대 싸이월드 감성 문구, 2010년대 급식체, 그리고
         요즘 SNS와 숏폼에서 도는 신조어까지 — 표제어마다 한 줄 뜻과 함께 지금

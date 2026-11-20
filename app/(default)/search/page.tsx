@@ -45,11 +45,8 @@ export default async function SearchPage({ searchParams }: Props) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
-      <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-        Search
-      </p>
-      <h1 className="mt-1 text-2xl font-bold">밈 검색</h1>
-      <p className="mt-1 text-base text-muted">이름·초성·별칭으로 바로 찾아보세요.</p>
+      <h1 className="page-title">밈 검색</h1>
+      <p className="page-lede">이름·초성·별칭으로 바로 찾아보세요.</p>
       <div className="relative mt-5">
         <SearchInput initialQuery={query} popularTerms={popularTerms} />
       </div>
@@ -61,7 +58,7 @@ export default async function SearchPage({ searchParams }: Props) {
       {query && results.length > 0 && (
         <section
           aria-label="검색 결과"
-          className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
+          className="mt-8"
         >
           <p className="text-base text-muted">
             &lsquo;{query}&rsquo; 검색 결과 <span className="stat-mono">{results.length}</span>개예요.

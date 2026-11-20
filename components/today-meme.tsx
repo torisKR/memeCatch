@@ -4,26 +4,12 @@ import { AnswerCard } from "@/components/answer-card";
 import { ShareButton } from "@/components/share-button";
 import { TrackedBlock } from "@/components/tracked-block";
 import Link from "next/link";
+import { hashCode, kstDayKey } from "@/lib/daily-quiz";
 
 /**
  * 오늘의 밈 위젯 (Wave 1 / D1) — hash(KST일자) % N 번째 밈을 하루 동안 고정 노출.
  * 요청별 SSR에서 KST 날짜를 계산하므로 자정 이후 다음 요청부터 교체된다. 정답 카드 재사용 + 공유.
  */
-function kstDayKey(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function hashCode(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
 async function loadTodayMeme() {
   try {
     const db = createStaticClient();

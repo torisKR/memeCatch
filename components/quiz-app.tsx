@@ -141,7 +141,21 @@ export function QuizApp({ challenge }: { challenge?: QuizChallenge } = {}) {
       <StartScreen onStart={start} />
     );
   if (phase === "loading") return <LoadingScreen />;
-  if (phase === "error") return <ErrorScreen onRetry={retry} />;
+  if (phase === "error")
+    return (
+      <ErrorScreen
+        onRetry={retry}
+        // 삭제·비공개된 밈만 남은 도전장은 재시도해도 실패 — 새 문제로 빠져나갈 길을 둔다
+        onSkip={
+          activeChallenge
+            ? () => {
+                setActiveChallenge(null);
+                setPhase("start");
+              }
+            : undefined
+        }
+      />
+    );
   if (phase === "result")
     return (
       <ResultScreen
@@ -314,7 +328,7 @@ function LoadingScreen() {
   );
 }
 
-function ErrorScreen({ onRetry }: { onRetry: () => void }) {
+function ErrorScreen({ onRetry, onSkip }: { onRetry: () => void; onSkip?: () => void }) {
   return (
     <section className="mt-6" aria-label="출제 실패">
       <div className="rounded-3xl border border-border bg-surface p-8 text-center shadow-sm">
@@ -329,6 +343,15 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
         >
           다시 시도
         </button>
+        {onSkip && (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="ml-2 mt-4 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 font-semibold transition-colors hover:border-accent hover:text-accent"
+          >
+            새 문제로 풀기
+          </button>
+        )}
       </div>
     </section>
   );

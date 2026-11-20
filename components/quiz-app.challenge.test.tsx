@@ -66,6 +66,15 @@ describe("QuizApp challenge link", () => {
     expect(writeText.mock.calls[0]![0]).toContain(`/quiz/r/n003${IDS.join("")}`);
   });
 
+  it("offers a fresh quiz when the shared set can no longer be served", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({}, { status: 502 })));
+    render(<QuizApp challenge={challenge} />);
+    fireEvent.click(screen.getByRole("button", { name: "내 점수 이겨보기" }));
+    await waitFor(() => expect(screen.getByText("문제를 불러오지 못했어요.")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "새 문제로 풀기" }));
+    expect(screen.getByText("범위를 골라 바로 시작하세요")).toBeTruthy();
+  });
+
   it("lets the recipient skip to a fresh quiz", () => {
     render(<QuizApp challenge={challenge} />);
     fireEvent.click(screen.getByRole("button", { name: "새 문제로 풀기" }));

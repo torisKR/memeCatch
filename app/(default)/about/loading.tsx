@@ -3,7 +3,7 @@ import { SkeletonBone } from "@/components/skeletons";
 /** 소개 페이지 로딩 — 제목 + 인트로 문단 + 섹션 여러 개 스켈레톤 */
 export default function AboutLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10" aria-busy>
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10" aria-busy>
       <div className="max-w-3xl">
         <span className="sr-only">불러오는 중이에요</span>
 

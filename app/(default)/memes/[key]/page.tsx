@@ -272,7 +272,7 @@ export default async function MemeDetailPage({ params }: Props) {
   );
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-5 pb-14">
+    <main className="mx-auto max-w-site space-y-6 px-4 py-5 pb-14">
       {/*
         광고는 충실도 판정을 통과한 문서에서만 게재한다. 얇은 문서는 noindex로
         색인에서 빠지지만 사람은 여전히 도달하므로, 로더를 렌더하지 않아야

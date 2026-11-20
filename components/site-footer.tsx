@@ -26,7 +26,7 @@ export function SiteFooter() {
   return (
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
-        <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="mx-auto max-w-site px-4 py-8">
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
               {locale === "ko" && (

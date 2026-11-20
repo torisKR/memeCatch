@@ -56,7 +56,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
             <MotionList
               as="ul"
               itemAs="li"
-              className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
               itemClassName="min-w-0"
             >
               {fresh.map((meme) => (

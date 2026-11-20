@@ -40,7 +40,7 @@ export default async function NewsPage() {
   } satisfies Record<Audience, readonly MemeNewsBrief[]>;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8">
       <AdsenseScript />
       {/* JSON-LD는 ko 정적 데이터 기준 — 클라이언트 로케일과 무관(ISR 유지) */}
       <NewsCollectionJsonLd

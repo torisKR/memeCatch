@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 /** Public contact page. The address and reply window are already published on the site. */
 export default function ContactPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10">
       <div className="max-w-3xl">
         <h1 className="page-title">문의</h1>
         <p className="mt-3 text-lg leading-relaxed text-muted">

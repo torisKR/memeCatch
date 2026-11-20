@@ -20,7 +20,7 @@ const EFFECTIVE = "2026년 8월 18일";
 /** 개인정보처리방침 — 정보통신망법·개인정보보호법 기준 최소 필수 고지 */
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10">
       <h1 className="page-title">개인정보처리방침</h1>
       <p className="mt-2 text-sm text-muted">시행일: {EFFECTIVE}</p>
 

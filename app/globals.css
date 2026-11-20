@@ -73,6 +73,9 @@
 }
 
 @theme inline {
+  /* 사이트 공용 컨테이너 폭(max-w-site). 페이지·헤더·푸터가 모두 이 값을 쓴다.
+     1440px 화면에서 좌우 48px, 1920px에서 288px 여백. 홈 CSS 모듈의 84rem과 같은 값. */
+  --container-site: 84rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);

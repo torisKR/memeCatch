@@ -60,7 +60,7 @@ const REVIEW_STEPS = [
 
 export default function EditorialPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10">
       <div className="max-w-3xl">
         <h1 className="page-title">편집 원칙</h1>
         <p className="mt-2 text-sm text-muted">최종 개정: {EFFECTIVE}</p>

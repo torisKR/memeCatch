@@ -89,7 +89,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-6">
       <h1 className="page-title">{copy.title}</h1>
       <p className="page-lede">{copy.description}</p>
       <div className="relative mt-5">
@@ -110,7 +110,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
         >
           <p className="text-base text-muted">{copy.resultSummary(query, results.length)}</p>
           <TrackedBlock event="search_result_click" params={{ query }}>
-            <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
+            <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${MOBILE_CARD_CLEARANCE}`}>
               {results.map((meme) => {
                 const localized = localizedByShortId.get(meme.short_id);
                 return (
@@ -179,7 +179,7 @@ export default async function LocalizedSearchPage({ params, searchParams }: Prop
       {needsFallback && hasPublicListing(trending.length) && (
         <section aria-labelledby="search-trending" className="mt-8">
           <h2 id="search-trending" className="text-xl font-bold">{copy.trendingTitle}</h2>
-          <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
+          <ul className={`mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${MOBILE_CARD_CLEARANCE}`}>
             {trending.slice(0, 6).map((meme) => {
               const localized = localizedByShortId.get(meme.short_id);
               return (

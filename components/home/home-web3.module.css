@@ -36,7 +36,7 @@
 
 .emptyAssist {
   display: flex;
-  width: min(100% - 2rem, 72rem);
+  width: min(100% - 2rem, 84rem);
   margin: 0 auto;
   padding: 0 0 clamp(1.5rem, 3vw, 2.5rem);
   flex-wrap: wrap;
@@ -54,7 +54,7 @@
 }
 
 .recentSignalRail {
-  width: min(100% - 2rem, 72rem);
+  width: min(100% - 2rem, 84rem);
   margin: 0 auto;
   padding: 0 0 clamp(1.5rem, 3vw, 2.5rem);
   border-top: 1px solid var(--web3-line);
@@ -64,7 +64,7 @@
   margin: 0;
   padding: 1rem 0 0.7rem;
   color: #67635c;
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -103,7 +103,7 @@
   white-space: nowrap;
 }
 
-.sectionInner { width: min(100%, 72rem); margin-inline: auto; }
+.sectionInner { width: min(100%, 84rem); margin-inline: auto; }
 
 /* One frame for every section below the hero, so their left edges line up. */
 .plainSection {
@@ -113,7 +113,7 @@
 }
 
 .plainSection > * {
-  width: min(100%, 72rem);
+  width: min(100%, 84rem);
   margin-inline: auto;
 }
 
@@ -124,7 +124,7 @@
 
 .signalsFrame {
   position: relative;
-  width: min(100%, 72rem);
+  width: min(100%, 84rem);
   margin-inline: auto;
   padding-top: 1.25rem;
   border-top: 1px solid var(--web3-line);
@@ -215,7 +215,7 @@
 .cardMark {
   max-width: 13rem;
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1.4;
@@ -317,7 +317,7 @@
 
 .trustGrid {
   display: grid;
-  width: min(100%, 72rem);
+  width: min(100%, 84rem);
   margin-inline: auto;
   grid-template-columns: minmax(0, 0.72fr) minmax(20rem, 1.28fr);
   gap: clamp(2rem, 7vw, 7rem);

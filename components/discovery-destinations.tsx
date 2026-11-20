@@ -9,7 +9,7 @@ const DESTINATIONS = [
 /** Compact editorial route bar and contribution actions for the home page. */
 export function DiscoveryDestinations() {
   return (
-    <section aria-label="밈캐치 둘러보기" className="mx-auto max-w-6xl px-4 pt-3 sm:pt-5">
+    <section aria-label="밈캐치 둘러보기" className="mx-auto max-w-site px-4 pt-3 sm:pt-5">
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <nav aria-label="바로 가기">
           <ul className="grid grid-cols-2 divide-x divide-border">

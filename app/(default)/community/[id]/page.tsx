@@ -90,7 +90,7 @@ export default async function CommunityPostPage({ params }: Props) {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-site space-y-6 px-4 pb-14 pt-6">
       <ForumPostingJsonLd
         postId={post.id}
         title={post.title}

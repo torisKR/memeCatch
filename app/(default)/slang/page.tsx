@@ -208,7 +208,7 @@ export default async function SlangPage() {
   );
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8">
       <AdsenseScript />
       {schemaTerms.length > 0 && (
         <script

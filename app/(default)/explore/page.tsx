@@ -324,7 +324,7 @@ export default async function ExplorePage({
   return (
     <main className="bg-background pb-14 text-foreground">
       <AdsenseScript />
-      <div className="mx-auto max-w-6xl px-4 pt-8">
+      <div className="mx-auto max-w-site px-4 pt-8">
         <ExploreCollectionJsonLd />
         {/* The title is the page, not a card: no box around it. */}
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pb-2">

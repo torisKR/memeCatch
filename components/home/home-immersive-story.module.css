@@ -26,7 +26,7 @@
   position: absolute;
   top: 22rem;
   left: 50%;
-  width: min(76vw, 72rem);
+  width: min(76vw, 84rem);
   aspect-ratio: 1;
   border: 1px solid #ffffff14;
   border-radius: 50%;

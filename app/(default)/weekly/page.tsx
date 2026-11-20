@@ -49,7 +49,7 @@ export default async function WeeklyPage() {
       : [];
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8">
       <AdsenseScript />
       {/* CollectionPage + ItemList — 주간 결산의 구조화 데이터 */}
       {schemaItems.length > 0 && (

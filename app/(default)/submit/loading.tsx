@@ -6,7 +6,7 @@ import { SUBMIT_COPY } from "@/lib/i18n-submit";
 export default function SubmitLoading() {
   const { locale } = useLocale();
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8" aria-busy>
+    <main className="mx-auto w-full max-w-site px-4 py-8" aria-busy>
       <div className="mx-auto w-full max-w-md">
         <span className="sr-only">{SUBMIT_COPY[locale].page.loading}</span>
         <div className="h-8 w-36 rounded-lg shimmer" />

@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AboutPage() {
   const count = await getIndexableKoreanMemeCount().catch(() => null);
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10">
       <div className="max-w-3xl">
         <h1 className="page-title">밈캐치 소개</h1>
         <p className="mt-3 text-lg leading-relaxed text-muted">

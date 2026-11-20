@@ -433,7 +433,7 @@ export default async function LocalizedMemePage({ params }: Props) {
     <article
       lang={config.documentLanguage}
       dir={config.direction}
-      className="mx-auto max-w-5xl px-4 py-8 pb-16 text-foreground"
+      className="mx-auto max-w-site px-4 py-8 pb-16 text-foreground"
     >
       {indexable && (
         <>

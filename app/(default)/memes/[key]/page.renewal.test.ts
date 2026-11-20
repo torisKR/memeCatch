@@ -25,7 +25,8 @@ describe("meme detail renewal", () => {
 
   it("uses aboutSectionHeading for sr-only about h2 and page metadata, not hardcoded folk 유래", () => {
     expect(source).toContain("{aboutSectionHeading(meme.origin_kind)}");
-    expect(source).toContain("memeDetailMetadataDescription(");
+    expect(source).toContain('memeSeoDescription("ko"');
+    expect(source).toContain("houseOriginal: isHouseOriginal(meme.origin_kind)");
     expect(source).not.toMatch(/<h2[^>]*>\s*뜻과 유래/);
     expect(source).not.toContain("뜻과 유래 ·");
   });

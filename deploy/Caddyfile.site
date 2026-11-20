@@ -2,7 +2,15 @@
 # memeCatch does not edit that Caddy. The app listens only on 127.0.0.1:12730.
 # Refresh Cloudflare ranges from https://www.cloudflare.com/ips-v4 and /ips-v6
 # if this Caddy is not already configured with them.
-catchmeme.com {
+catchmeme.com, www.catchmeme.com {
+	# Same www -> apex rule as deploy/Caddyfile (GET/HEAD only, /api/* excluded).
+	@www_to_apex {
+		host www.catchmeme.com
+		method GET HEAD
+		not path /api/*
+	}
+	redir @www_to_apex https://catchmeme.com{uri} 301
+
 	encode gzip
 	reverse_proxy 127.0.0.1:12730
 }

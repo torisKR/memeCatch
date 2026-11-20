@@ -6,7 +6,7 @@ import { SITE_URL } from "@/lib/site";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 const DESCRIPTION =
-  "최신 밈부터 시대별·주제별 한국 밈까지, 목적에 맞게 편집한 밈캐치 모음을 살펴보세요.";
+  "최신 밈부터 시대별·주제별 한국 밈까지, 목적에 맞게 편집한 밈캐치 모음을 살펴보세요. 모음마다 소개글이 있고, 뜻·유래·사용 신호를 정리한 밈 문서로 바로 이어져요. 유행어·짤·챌린지별로도 골라 볼 수 있어요.";
 
 export const metadata: Metadata = {
   title: "테마별 밈 모음",

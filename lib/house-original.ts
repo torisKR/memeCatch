@@ -84,14 +84,6 @@ export function aboutSectionHeading(originKind: string | null | undefined): stri
   return isHouseOriginal(originKind) ? "뜻과 제작" : "뜻과 유래";
 }
 
-export function memeDetailMetadataDescription(
-  title: string,
-  summary: string,
-  originKind: string | null | undefined,
-): string {
-  return `${title} ${aboutSectionHeading(originKind)} · ${summary}. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.`;
-}
-
 /** Admin year field. Catalog keeps folk “first seen”; house originals are when CatchMeme made it. */
 export function originYearFieldLabel(originKind: string | null | undefined): string {
   return isHouseOriginal(originKind) ? "제작 연도" : "유행 시작 연도";

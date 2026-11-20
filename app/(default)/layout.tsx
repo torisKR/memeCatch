@@ -5,7 +5,7 @@ import {
   SHARED_ROOT_METADATA,
 } from "@/app/_root/metadata";
 import { DEFAULT_LOCALE } from "@/lib/i18n";
-import { KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES } from "@/lib/i18n-routing";
+import { KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES, getSeoCopy } from "@/lib/i18n-routing";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import "../globals.css";
 
@@ -15,8 +15,8 @@ export const metadata: Metadata = {
     default: "밈캐치 — 그 밈, 3초 안에 알려드려요",
     template: "%s | 밈캐치",
   },
-  description:
-    "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지. 한국 밈의 실시간 사전, 밈캐치.",
+  // 홈·기본 설명. 110~160자(Bing "메타 설명이 너무 짧음" 대응), 한국어 SEO 문구와 같은 값.
+  description: getSeoCopy("ko").description,
   applicationName: "밈캐치",
   appleWebApp: {
     capable: true,
@@ -26,8 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     title: "밈캐치 — 그 밈, 3초 안에 알려드려요",
-    description:
-      "뜻·유래부터 지금 써도 되는지까지. 한국 밈을 3초 안에 따라잡아요.",
+    description: getSeoCopy("ko").description,
     siteName: "밈캐치",
     locale: "ko_KR",
     alternateLocale: KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES,

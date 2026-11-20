@@ -42,7 +42,7 @@ import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
  */
 
 const EXPLORE_DESCRIPTION =
-  "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.";
+  "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요. 카드마다 뜻과 지금 써도 되는지 사용 신호가 붙어 있고, 플랫폼별 사례로도 좁힐 수 있어요. 가나다순 전체 목록도 있어요.";
 
 export const metadata: Metadata = {
   title: "밈 탐색",
@@ -334,12 +334,21 @@ export default async function ExplorePage({
               검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
             </p>
           </div>
-          <Link
-            href="/collections"
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 transition-colors hover:decoration-accent"
-          >
-            테마별 모음 보기
-          </Link>
+          <div className="flex flex-wrap gap-x-5">
+            <Link
+              href="/collections"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              테마별 모음 보기
+            </Link>
+            <Link
+              href="/memes"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              가나다순 전체 목록
+            </Link>
+          </div>
         </div>
 
         <ExploreFilters />

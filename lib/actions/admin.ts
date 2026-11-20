@@ -12,6 +12,7 @@ import { after } from "next/server";
 import { PUBLIC_CATALOG_CACHE_TAG, PUBLIC_COUNT_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createClient } from "@/lib/db/server";
 import { createAdminClient } from "@/lib/db/admin";
+import { scheduleIndexNowForMeme } from "@/lib/indexnow.server";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
@@ -537,6 +538,8 @@ export async function approveSubmission(input: {
     } else {
       invalidateApproval();
     }
+    // 새로 공개된 문서를 IndexNow로 알린다. 응답 뒤에 실행되며 실패해도 승인 결과는 그대로다.
+    scheduleIndexNowForMeme(db, memeId);
     return {
       ok: true,
       data: {
@@ -794,6 +797,7 @@ export async function updateMeme(input: {
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);
+    scheduleIndexNowForMeme(db, input.memeId);
     return {
       ok: true,
       data: {
@@ -903,7 +907,9 @@ export async function transitionMemeStatus(input: {
     } else {
       const { error } = await db
         .from("memes")
-        .update({ moderation_status: input.to, updated_at: new Date().toISOString() })
+        // updated_at은 본문 수정 시각이다(사이트맵 lastmod, 번역 최신 여부 판정).
+        // 공개 상태 전환은 본문을 바꾸지 않으므로 건드리지 않는다.
+        .update({ moderation_status: input.to })
         .eq("id", input.memeId);
       if (error) {
         const msg = error.message.includes("invalid moderation transition")
@@ -921,6 +927,8 @@ export async function transitionMemeStatus(input: {
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);
+    // 공개·비공개 전환 모두 알린다. 내려간 문서도 404를 빨리 확인시킨다.
+    scheduleIndexNowForMeme(db, input.memeId);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };

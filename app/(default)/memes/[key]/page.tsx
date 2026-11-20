@@ -9,9 +9,9 @@ import {
   aboutSectionHeading,
   houseOriginalPublicLabel,
   isHouseOriginal,
-  memeDetailMetadataDescription,
   originSectionHeading,
 } from "@/lib/house-original";
+import { memeSeoDescription, memeSeoTitle, usageExampleCount } from "@/lib/meme-seo-copy";
 import {
   getReactionCounts,
   getRelatedMemes,
@@ -36,6 +36,10 @@ import { usageRegionLabelledBy } from "@/lib/detail-usage";
 import { memePathFrom } from "@/lib/labels";
 import { ViewTracker } from "./view-tracker";
 import { ContinueStream } from "@/components/continue-stream";
+import { MemeNeighbourLinks } from "@/components/meme-neighbour-links";
+import { RELATED_MEMES_LIMIT } from "@/lib/related-memes-limit";
+import { directoryNeighbours } from "@/lib/meme-directory";
+import { loadMemeDirectory } from "@/lib/meme-directory.server";
 import { ContextNav } from "@/components/context-nav";
 import { SourceEvidence } from "@/components/source-evidence";
 import { TrustNote } from "@/components/trust-note";
@@ -143,11 +147,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // 해외 주 타깃 전환: x-default는 영어 문서. en 번역이 없으면 ko 원문 유지
   // (존재하지 않는 /en URL을 가리키면 유해).
   const languages = { ...hreflangs, "x-default": hreflangs.en ?? path };
-  const description = memeDetailMetadataDescription(
-    meme.title,
-    meme.summary,
-    meme.origin_kind,
-  );
+  // 제목·설명은 DB 필드로만 조합한다(lib/meme-seo-copy.ts). og·twitter도 같은 값을 쓴다.
+  const title = memeSeoTitle("ko", meme.title, {
+    houseOriginal: isHouseOriginal(meme.origin_kind),
+  });
+  const description = memeSeoDescription("ko", {
+    title: meme.title,
+    summary: meme.summary,
+    originYear: meme.origin_year,
+    yearPrecision: (meme as typeof meme & { year_precision?: string | null }).year_precision,
+    safetyLevel: meme.safety_level,
+    usageExampleCount: usageExampleCount(
+      (meme as typeof meme & { usage_examples?: unknown }).usage_examples,
+    ),
+    hasOrigin: Boolean(meme.origin?.trim()),
+    hasCaution: Boolean(meme.caution?.trim()),
+    houseOriginal: isHouseOriginal(meme.origin_kind),
+  });
   const photo = representativeImageUrl({
     contents: meme.meme_contents,
     reviewedMediaSources,
@@ -163,8 +179,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   return {
     metadataBase: new URL(SITE_URL),
-    // "X 뜻" 롱테일 검색 질의와 일치하는 타이틀 패턴 (템플릿이 "| 밈캐치" 부착)
-    title: `${meme.title} 뜻`,
+    // "X 뜻" 롱테일 질의를 앞에 두고 유래·사용 가능 여부를 덧붙인다 (템플릿이 "| 밈캐치" 부착)
+    title,
     description,
     // canonical — short_id+slug 변형 URL의 신호 분산 방지
     alternates: { canonical: path, languages },
@@ -179,14 +195,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       alternateLocale: localizedVersions.map(({ locale }) =>
         getOpenGraphLocale(locale),
       ),
-      title: `${meme.title} 뜻`,
+      title,
       description,
       url: path,
       images: [image],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${meme.title} 뜻`,
+      title,
       description,
       images: [image],
     },
@@ -222,19 +238,27 @@ export default async function MemeDetailPage({ params }: Props) {
   const tagNames = storedTagNames.length > 0
     ? storedTagNames
     : findCuratedCoreMeme(meme.short_id)?.tags ?? [];
-  const [related, reactionCounts, marketPassport, discovery, reviewedMediaSources, contributors] = await Promise.all([
-    // 상세 하단은 관련 밈 카드를 최대 6장까지 둔다.
+  const [related, reactionCounts, marketPassport, discovery, reviewedMediaSources, contributors, directory] = await Promise.all([
+    // 상세 하단은 관련 밈 카드를 최대 12장까지 둔다.
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
       tagIds,
-      6
+      RELATED_MEMES_LIMIT,
     ),
     getReactionCounts(meme.id),
     getMemeMarketPassport(meme.id, "ko"),
     loadDiscoveryIndex(),
     getReviewedMemeMediaSources(meme.id),
     getMemeContributors(meme.id),
+    loadMemeDirectory(),
   ]);
+  // 같은 분류·같은 해 링크는 색인 대상 목록에서만 고른다(얇은 문서 링크를 늘리지 않음).
+  const neighbours = directory.ok
+    ? directoryNeighbours(directory.items, meme, {
+        exclude: new Set(related.map((item) => item.id)),
+        limit: 8,
+      })
+    : { sameCategory: [], sameYear: [] };
   const indexableIds = discovery.ok ? discovery.ids : new Set<string>();
   const indexable = detailIndexableFromDiscovery(
     discovery,
@@ -459,6 +483,15 @@ export default async function MemeDetailPage({ params }: Props) {
               category={meme.category}
               related={related}
               indexableIds={indexableIds}
+            />
+          </div>
+
+          <div data-detail-order="neighbours">
+            <MemeNeighbourLinks
+              category={meme.category}
+              originYear={meme.origin_year}
+              sameCategory={neighbours.sameCategory}
+              sameYear={neighbours.sameYear}
             />
           </div>
 

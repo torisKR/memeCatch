@@ -27,6 +27,7 @@ import {
 
 
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
+import { directoryPageCount, directoryPagePath } from "@/lib/meme-directory";
 
 /**
  * A database-less image build must not cache a sitemap that has no meme URLs.
@@ -442,6 +443,18 @@ async function buildSitemap(): Promise<{
       }
     }
     if (data.length < PAGE) break;
+  }
+
+  // 전체 밈 목록(/memes?page=N). 위에서 센 한국어 색인 대상 수로 페이지를 나눈다.
+  // 목록 페이지(lib/meme-directory)는 같은 판정(별칭 제외·discovery·얇은 문서 제외)을 쓴다.
+  if (!catalogUnavailable && koreanMemeCount > 0) {
+    for (let page = 1; page <= directoryPageCount(koreanMemeCount); page += 1) {
+      entries.push({
+        url: absolute(directoryPagePath(page)),
+        changeFrequency: "weekly" as const,
+        priority: page === 1 ? 0.7 : 0.5,
+      });
+    }
   }
 
   for (const [index, locale] of SEO_CONTENT_LOCALES.entries()) {

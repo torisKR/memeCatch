@@ -34,16 +34,6 @@
   background: var(--web3-paper);
 }
 
-.discoveryNumber {
-  position: absolute;
-  top: clamp(2rem, 4vw, 4rem);
-  right: max(1rem, calc((100vw - 76rem) / 2));
-  z-index: 1;
-  margin: 0;
-  color: #79766f;
-  pointer-events: none;
-}
-
 .emptyAssist {
   display: flex;
   width: min(100% - 2rem, 72rem);
@@ -113,17 +103,18 @@
   white-space: nowrap;
 }
 
-.sectionInner { width: min(100%, 76rem); margin-inline: auto; }
+.sectionInner { width: min(100%, 72rem); margin-inline: auto; }
 
-.sectionNumber {
-  display: block;
-  margin-bottom: 0.75rem;
-  color: #5c5953;
-  font-size: clamp(1.5rem, 2.4vw, 2rem);
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1;
-  user-select: none;
+/* One frame for every section below the hero, so their left edges line up. */
+.plainSection {
+  position: relative;
+  padding: clamp(1.5rem, 3vw, 2.5rem) 1rem;
+  background: var(--web3-paper);
+}
+
+.plainSection > * {
+  width: min(100%, 72rem);
+  margin-inline: auto;
 }
 
 .signalsSection {
@@ -133,7 +124,7 @@
 
 .signalsFrame {
   position: relative;
-  width: min(100%, 76rem);
+  width: min(100%, 72rem);
   margin-inline: auto;
   padding-top: 1.25rem;
   border-top: 1px solid var(--web3-line);
@@ -326,7 +317,7 @@
 
 .trustGrid {
   display: grid;
-  width: min(100%, 76rem);
+  width: min(100%, 72rem);
   margin-inline: auto;
   grid-template-columns: minmax(0, 0.72fr) minmax(20rem, 1.28fr);
   gap: clamp(2rem, 7vw, 7rem);
@@ -388,7 +379,6 @@
 
 @media (max-width: 47.99rem) {
   .anchorTarget { scroll-margin-top: 11rem; }
-  .sectionNumber { margin-bottom: 0.5rem; }
   .trustGrid { grid-template-columns: minmax(0, 1fr); }
 
   .pathwayCard { min-height: 16rem; margin-top: 0; }

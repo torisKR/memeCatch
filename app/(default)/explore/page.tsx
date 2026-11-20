@@ -326,33 +326,27 @@ export default async function ExplorePage({
       <AdsenseScript />
       <div className="mx-auto max-w-6xl px-4 pt-8">
         <ExploreCollectionJsonLd />
-        <div className="hover-glow-flame rounded-2xl border border-border bg-surface px-4 py-5 md:px-6">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            Discover
-          </p>
-          <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
-                밈 <span className="text-signal">탐색</span>
-              </h1>
-              <p className="mt-1 text-base text-muted">
-                검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
-              </p>
-            </div>
-            <Link
-              href="/collections"
-              className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
-            >
-              테마별 모음 <span aria-hidden className="ml-1">→</span>
-            </Link>
+        {/* The title is the page, not a card: no box around it. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pb-2">
+          <div className="min-w-0">
+            <h1 className="text-4xl font-extrabold tracking-[-0.03em] sm:text-5xl">밈 탐색</h1>
+            <p className="mt-2 max-w-xl text-base text-muted">
+              검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
+            </p>
           </div>
+          <Link
+            href="/collections"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 transition-colors hover:decoration-accent"
+          >
+            테마별 모음 보기
+          </Link>
         </div>
 
         <ExploreFilters />
 
         <section
           aria-label="밈 탐색 결과"
-          className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
+          className="mt-6"
         >
           <ExploreGrid
             key={filterKey(filters)}

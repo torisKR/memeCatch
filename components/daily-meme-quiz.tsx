@@ -148,7 +148,7 @@ export function DailyMemeQuiz({ variant = "home" }: { variant?: "home" | "compac
     <section
       aria-labelledby="daily-meme-quiz-title"
       data-home-section="daily-quiz"
-      className={compact ? "" : "mx-auto max-w-6xl px-4 py-8 sm:px-6"}
+      /* The page that places the card owns its width and spacing. */
     >
       <div className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

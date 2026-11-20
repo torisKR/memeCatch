@@ -10,7 +10,9 @@
     linear-gradient(90deg, transparent 0 49.95%, rgba(17, 16, 14, 0.045) 50%, transparent 50.05%),
     var(--discovery-paper);
   border-block: 1px solid var(--discovery-rule);
-  padding: clamp(3.5rem, 8vw, 7rem) max(1rem, calc((100vw - 72rem) / 2));
+  /* Percent, not vw: beside the desktop sidebar the column is narrower than the viewport. */
+  padding-block: clamp(3.5rem, 8vw, 7rem);
+  padding-inline: max(1rem, calc((100% - 72rem) / 2));
 }
 
 .headingGrid {

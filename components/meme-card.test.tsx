@@ -47,7 +47,8 @@ describe("MemeCard", () => {
     expect(html).toContain("써도 됨");
     expect(html).toContain("2024");
     expect(html).toContain('data-meme-card-art="fallback"');
-    expect(html).toContain("rgb(20 20 20 / 0.85)");
+    // The scrim moved from an inline gradient to the card stylesheet.
+    expect(html).toContain('data-meme-card-scrim=""');
     expect(html).not.toContain("hqdefault");
     expect(html).not.toContain("ytimg.com");
     expect(html).not.toContain("밈 용어");

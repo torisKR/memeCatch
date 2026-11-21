@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   buildQuestions,
+  buildQuestionsForSet,
   eraDecadeLabel,
   gradeForScore,
   maskTitleWords,
   MIN_SUMMARY_LENGTH,
   OPTION_COUNT,
+  seededRng,
   type QuizPoolMeme,
 } from "@/lib/quiz";
 
@@ -155,5 +157,43 @@ describe("eraDecadeLabel — 밈 감성 연대 판정", () => {
 
   it("연도 정보가 없으면 null", () => {
     expect(eraDecadeLabel([])).toBeNull();
+  });
+});
+
+describe("buildQuestionsForSet — 공유 링크 같은 문제 세트", () => {
+  const pool: QuizPoolMeme[] = [
+    ...Array.from({ length: 8 }, (_, i) => meme({ short_id: `p${i}`, category: "phrase" })),
+    ...Array.from({ length: 8 }, (_, i) => meme({ short_id: `d${i}`, category: "dance" })),
+  ];
+  const targets = [pool[5]!, pool[9]!, pool[1]!];
+
+  it("keeps the shared set order", () => {
+    const questions = buildQuestionsForSet(targets, pool, seededRng("seed"));
+    expect(questions.map((q) => q.meme.shortId)).toEqual(["p5", "d1", "p1"]);
+    for (const q of questions) expect(q.options).toHaveLength(OPTION_COUNT);
+  });
+
+  it("reproduces identical options for the same seed and pool", () => {
+    const a = buildQuestionsForSet(targets, pool, seededRng("p5d1p1"));
+    const b = buildQuestionsForSet(targets, [...pool], seededRng("p5d1p1"));
+    expect(b).toEqual(a);
+  });
+
+  it("uses targets missing from the pool and skips ineligible ones", () => {
+    const outside = meme({ short_id: "x1", category: "phrase" });
+    const tooShort = meme({ short_id: "x2", summary: "짧음" });
+    const questions = buildQuestionsForSet([outside, tooShort], pool, seededRng("s"));
+    expect(questions.map((q) => q.meme.shortId)).toEqual(["x1"]);
+  });
+});
+
+describe("seededRng", () => {
+  it("is deterministic and stays in [0, 1)", () => {
+    const a = seededRng("abc");
+    const b = seededRng("abc");
+    const values = Array.from({ length: 50 }, () => a());
+    expect(values).toEqual(Array.from({ length: 50 }, () => b()));
+    expect(values.every((v) => v >= 0 && v < 1)).toBe(true);
+    expect(seededRng("abd")()).not.toBe(values[0]);
   });
 });

@@ -50,6 +50,13 @@ const SEARCH_LIMIT = 50;
 export const PAGE_SIZE = 24;
 
 /**
+ * 스크롤만으로 자동으로 이어 붙이는 페이지 수. 이 뒤로는 '밈 더 보기' 버튼을 눌러야 한다.
+ * 제한이 없으면 푸터에 닿을 때마다 다음 페이지가 붙어 전체 목록을 다 불러올 때까지
+ * 푸터(사이트 링크·정보)에 도달할 수 없다.
+ */
+export const AUTO_LOAD_PAGES = 2;
+
+/**
  * 목록 카드가 읽는 memes 컬럼만 — lib/queries.ts의 LIST_COLUMN_LIST와 반드시 동기화.
  * ("use client" 경계라 lib/queries.ts를 값으로 import하면 서버 전용 모듈이 딸려온다 → 의도적 복제)
  */
@@ -291,6 +298,9 @@ export function ExploreGrid({
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [autoLoads, setAutoLoads] = useState(0);
+  const autoLoadsRef = useRef(0);
+  const autoPaused = autoLoads >= AUTO_LOAD_PAGES;
 
   // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
@@ -387,6 +397,15 @@ export function ExploreGrid({
     }
   }, [filters, indexableIds]);
 
+  // 센티넬이 부르는 자동 로드 — AUTO_LOAD_PAGES번까지만. 그 뒤는 버튼으로만 이어 간다.
+  const autoLoadMore = useCallback(() => {
+    if (loadingRef.current || !hasMoreRef.current) return;
+    if (autoLoadsRef.current >= AUTO_LOAD_PAGES) return;
+    autoLoadsRef.current += 1;
+    setAutoLoads(autoLoadsRef.current);
+    void loadMore();
+  }, [loadMore]);
+
   async function retryPreviewLookup() {
     if (retryingPreviews) return;
     setRetryingPreviews(true);
@@ -461,7 +480,7 @@ export function ExploreGrid({
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !hasMoreRef.current) return;
+    if (!el || !hasMoreRef.current || autoPaused) return;
 
     const nearBottom = () => {
       const rect = el.getBoundingClientRect();
@@ -474,7 +493,7 @@ export function ExploreGrid({
       typeof window.IntersectionObserver === "function";
     if (!supportsIntersectionObserver) {
       const onScroll = () => {
-        if (nearBottom()) void loadMore();
+        if (nearBottom()) autoLoadMore();
       };
       window.addEventListener("scroll", onScroll, { passive: true });
       onScroll();
@@ -483,13 +502,13 @@ export function ExploreGrid({
 
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) void loadMore();
+        if (entries[0]?.isIntersecting) autoLoadMore();
       },
       { rootMargin: "600px 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [loadMore, hasMore, items.length]);
+  }, [autoLoadMore, autoPaused, hasMore, items.length]);
 
   const retryBanner = pendingPreviews.length > 0 && (
     <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
@@ -632,7 +651,21 @@ export function ExploreGrid({
       )}
 
       {/* 무한 스크롤 센티넬 */}
-      {hasMore && !failed && <div ref={sentinelRef} className="h-1 w-full" />}
+      {hasMore && !failed && !autoPaused && <div ref={sentinelRef} className="h-1 w-full" />}
+
+      {/* 자동 로드 한도 이후 — 푸터에 닿을 수 있게 버튼으로만 이어 간다 */}
+      {hasMore && !failed && autoPaused && (
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loading}
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-6 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? "불러오는 중…" : "밈 더 보기"}
+          </button>
+        </div>
+      )}
 
       {/* 조회 실패 — 재시도 */}
       {failed && (

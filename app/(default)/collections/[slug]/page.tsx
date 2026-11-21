@@ -52,7 +52,11 @@ export async function generateMetadata({
 }
 
 const SELECT = "*, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)";
-const LIMIT = 24;
+/**
+ * 허브 하나가 링크하는 색인 대상 밈 수. 24장이면 모음 13개를 합쳐도 상세로 가는
+ * 정적 링크가 적어(2026-11-21 진단) 48장으로 올렸다. 얇은 문서는 takeIndexableMemes가 뺀다.
+ */
+const LIMIT = 48;
 
 /**
  * 조회 실패는 던진다. 빈 배열로 삼키면 그 빈 페이지가 ISR 캐시에 24시간 남는다.
@@ -190,6 +194,13 @@ export default async function CollectionPage({
               className="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-[filter] hover:brightness-95 active:scale-[0.97]"
             >
               전체 탐색에서 더 보기 <span aria-hidden className="ml-1">→</span>
+            </Link>
+            <Link
+              href="/memes"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center rounded-full border border-border px-6 text-base font-semibold"
+            >
+              밈 전체 목록(가나다순)
             </Link>
           </div>
         </>

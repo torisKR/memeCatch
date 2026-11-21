@@ -50,6 +50,7 @@
   "HOME": "Login user's home; the deploy-key installer writes ~/.ssh/authorized_keys there.",
   "HOST": "Bind address for the optional ChatGPT integration server.",
   "IMPORT_APPROVED": "Allows a maintenance import to write approved rows.",
+  "INDEXNOW_DISABLED": "Set to 1 to stop IndexNow submissions from admin actions (production only; previews never submit).",
   "KAKAO_CLIENT_ID": "Kakao OAuth client id. Kakao login stays closed when empty.",
   "KAKAO_CLIENT_SECRET": "Kakao OAuth client secret.",
   "LD_LIBRARY_PATH": "Shared-library path for the bundled libpq used by the loop-028 safety_reviewed_at proof script.",

@@ -264,9 +264,10 @@ describe("transitionMemeStatus house original gate", () => {
 
     await expect(transitionMemeStatus({ memeId, to: "approved" })).resolves.toEqual({ ok: true });
     expect(rpc).not.toHaveBeenCalled();
+    // A status change is not a body edit: updated_at (sitemap lastmod and the
+    // translation freshness key) stays put.
     expect(memeUpdate.update).toHaveBeenCalledWith({
       moderation_status: "approved",
-      updated_at: expect.any(String),
     });
   });
 });

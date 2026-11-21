@@ -25,6 +25,7 @@
     "content:review-international-origins": "node scripts/review-international-meme-origins.mjs",
     "content:ingest": "node scripts/ingest-meme-content.mjs",
     "content:ingest:test": "node --test scripts/ingest-meme-content.test.mjs",
+    "indexnow:submit-sitemap": "node scripts/indexnow-submit-sitemap.mjs",
     "smoke": "node scripts/smoke.mts",
     "mpe:worker": "node --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/mpe-media-worker.mjs --watch",
     "mpe:worker:once": "node --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/mpe-media-worker.mjs",

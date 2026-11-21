@@ -26,4 +26,27 @@ describe("RelatedMemes", () => {
     expect(html).not.toContain("max-md:pb-");
     expect(html).not.toContain("4.5rem+4rem+1rem");
   });
+
+  it("renders up to 12 related cards", () => {
+    const ids = Array.from({ length: 14 }, (_, i) => String(i + 1));
+    const html = renderToStaticMarkup(
+      <RelatedMemes
+        locale="ko"
+        memes={ids.map((id) => ({
+          meme: {
+            id,
+            short_id: `abc1234${id}`,
+            slug: `test-${id}`,
+            title: `테스트 밈 ${id}`,
+            summary: "한 줄 뜻",
+            category: "phrase",
+            safety_level: "green",
+          },
+        }))}
+      />,
+    );
+    expect(html.match(/<li /g)).toHaveLength(12);
+    expect(html).toContain("테스트 밈 12");
+    expect(html).not.toContain("테스트 밈 13");
+  });
 });

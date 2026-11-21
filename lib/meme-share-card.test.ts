@@ -35,7 +35,7 @@ const MAIN_FILE_SHA: Record<string, string> = {
   "app/(default)/not-found.tsx": "0445ade89cdc8dcbd2eb884622e3cc7af31936a1a0623077b9daf9e82c5ab511",
   "app/(default)/quiz/page.tsx": "7563b2369f11914f2eede3a0219135355ac51699a1cb0b0527ac3e4466ba9e00",
   "app/(default)/weekly/page.tsx": "ac6b0ceab2f45bf6ffa1c2f89082f1efbcd0ad9ec227d480a1005e8853a75848",
-  "app/(default)/collections/page.tsx": "c0a90195a228379bde33d735c5d32b8a39c4f3b83e1a49d5602cf5dbf1f0d7fa",
+  "app/(default)/collections/page.tsx": "256e7a70c96da56f8df32abdc17138c09bfc2871541e53e278e55eb8a880582f", // description lengthened for search snippets (2026-11-21)
 };
 
 function sha256(body: Buffer) {

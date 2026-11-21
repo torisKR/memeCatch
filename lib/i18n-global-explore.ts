@@ -22,7 +22,7 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
   en: {
     eyebrow: "Discover",
     title: "Explore Korean memes",
-    description: "Browse Korean memes with their meaning, origin, and usage context.",
+    description: "Browse Korean memes with their meaning, origin, and usage context. Each entry explains where the meme came from and whether it is still safe to use.",
     intro: "Only current, human-reviewed translations of substantial public entries appear here.",
     read: "Read the explanation",
     home: "Back to home",
@@ -39,7 +39,7 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
   ja: {
     eyebrow: "Discover",
     title: "韓国ミームを探す",
-    description: "意味、由来、使うときの文脈まで韓国ミームを探せます。",
+    description: "意味、由来、使うときの文脈まで韓国ミームを探せます。各ページでは、どこから広まったのか、今使っても大丈夫かを解説し、韓国語の原文ページにもリンクしています。",
     intro: "内容が充実し、人が確認した最新の翻訳だけを公開しています。",
     read: "解説を読む",
     home: "ホームに戻る",
@@ -56,7 +56,7 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
   zh: {
     eyebrow: "Discover",
     title: "探索韩国迷因",
-    description: "浏览韩国迷因的含义、来源和使用语境。",
+    description: "浏览韩国迷因的含义、来源和使用语境。每个词条都说明它从哪里流行起来、现在还能不能用，并附上韩文原文页面的链接，方便对照查看。",
     intro: "这里只发布内容完整、经过人工审核且保持最新的翻译。",
     read: "阅读解释",
     home: "返回首页",
@@ -73,7 +73,7 @@ export const LOCALIZED_EXPLORE_COPY: Record<SeoContentLocale, LocalizedExploreCo
   "zh-tw": {
     eyebrow: "Discover",
     title: "探索韓國迷因",
-    description: "瀏覽韓國迷因的含義、來源和使用語境。",
+    description: "瀏覽韓國迷因的含義、來源和使用語境。每個詞條都說明它從哪裡流行起來、現在還能不能用，並附上韓文原文頁面的連結，方便對照查看。",
     intro: "這裡只發布內容完整、經過人工審核且保持最新的翻譯。",
     read: "閱讀解釋",
     home: "返回首頁",

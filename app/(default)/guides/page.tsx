@@ -5,7 +5,7 @@ import { GUIDES } from "@/lib/guides";
 import { koreanPageShare } from "@/lib/korean-share-metadata";
 
 const DESCRIPTION =
-  "밈을 쓰기 전에 알아 두면 좋은 것들 — 사용 신호 읽는 법, 단톡방 점검, 한국 밈의 시대 변화, 출처 확인, 숏폼 챌린지의 권리 문제를 정리한 밈캐치 가이드입니다.";
+  "밈을 쓰기 전에 알아 두면 좋은 것들 — 사용 신호 읽는 법, 단톡방 점검, 한국 밈의 시대 변화, 출처 확인, 숏폼 챌린지의 권리 문제를 정리한 밈캐치 가이드입니다. 실제 밈 문서와 함께 읽어 보세요.";
 
 export const metadata: Metadata = {
   title: "가이드",

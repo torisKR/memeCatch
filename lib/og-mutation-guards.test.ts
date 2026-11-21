@@ -149,10 +149,10 @@ describe("meme detail share tags survive the known mutants", () => {
       params: Promise.resolve({ key: "zzdb0001-database-only" }),
     });
 
-    expect(metadata.title).toBe("데이터베이스밈 뜻");
+    expect(metadata.title).toBe("데이터베이스밈 뜻·유래, 지금 써도 될까?");
     expect(metadata.title).not.toBe(HOME_TITLE);
     expect(metadata.openGraph).toMatchObject({
-      title: "데이터베이스밈 뜻",
+      title: "데이터베이스밈 뜻·유래, 지금 써도 될까?",
       url: "/memes/zzdb0001-database-only",
     });
     expectMemeCard(
@@ -167,7 +167,7 @@ describe("meme detail share tags survive the known mutants", () => {
     );
     expect(metadata.twitter).toMatchObject({
       card: "summary_large_image",
-      title: "데이터베이스밈 뜻",
+      title: "데이터베이스밈 뜻·유래, 지금 써도 될까?",
     });
     expect(metadata.twitter).not.toMatchObject({ title: HOME_TITLE });
   });
@@ -180,7 +180,7 @@ describe("meme detail share tags survive the known mutants", () => {
       params: Promise.resolve({ locale: "en", key: "zzdb0001-database-only" }),
     });
 
-    expect(metadata.openGraph).toMatchObject({ title: "Database meme · Meaning" });
+    expect(metadata.openGraph).toMatchObject({ title: "Database meme Meaning & Origin: Is It OK to Use?" });
     expectMemeCard(
       metadata,
       localeMemeShareImage({

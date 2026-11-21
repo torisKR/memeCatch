@@ -26,6 +26,34 @@ function and `finished_at` immediately before the audit insert. Existing records
 retain their original timestamps. A process crash, early selection error, or
 failed audit insert can still leave no job record; monitor the scheduler too.
 
+`detail.recovery_unmatched_due_keys` counts due recovery keys examined during
+the run that did not match the current source platform and identity, including
+missing sources and keys whose identity could not be verified. Duplicate keys
+from the due and active snapshots count once. They do not consume retry slots
+and are not automatically resolved or modified. A future or non-retryable key
+for a source continues to defer that source, including when its identity is old.
+This count only covers due keys in source batches actually examined: batches
+are skipped once their platforms' retry slots are full. It is not a total of all
+stale ledger entries. Stale-source checks also skip a source when its current
+platform-and-ID recovery key belongs to a different source or identity. Pages
+are read in `last_checked_at, id` order until the remaining slots are filled.
+`detail.recovery_conflicting_stale_sources` counts distinct conflicting stale
+sources encountered, not the total number in the database; it can be nonzero
+even when the job status is `ok`. The conflicting ledger rows are neither
+rewritten nor resolved and require separate inspection or repair. If a later
+source batch fails, already examined due candidates and
+independently selected stale candidates still run; the job is `partial` with
+`source_recovery_candidate_lookup_failed`. Unexamined candidates are not
+resolved or otherwise changed by the failed lookup.
+For TikTok, a `provider_identity:<source-id>` key is resolved only when the
+active snapshot's platform and external ID match the checked source. If an
+inconclusive result finds that key belongs to a different identity, its failure
+is recorded under the current platform-and-ID key instead if that key also
+matches. All platform-and-ID keys with mismatched identity in the active
+snapshot are protected from both resolution and failure-record overwrites. This snapshot check
+does not protect against identity changes after the snapshot; the existing
+non-atomic refresh and cache-coherence limitations still apply.
+
 For a read-only snapshot of stale sources, including deferred and quarantined
 rows, an operator can run:
 

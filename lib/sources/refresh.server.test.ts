@@ -332,6 +332,35 @@ describe("source refresh recovery", () => {
     expect(result.error).toBeUndefined();
   });
 
+  it("still examines another platform's due retry behind a long run of missing TikTok sources", async () => {
+    const older = new Date(Date.now() - 120_000).toISOString();
+    const newer = new Date(Date.now() - 60_000).toISOString();
+    const ghost = (i: number) => ({
+      sourceKey: `tiktok:${String(3000000000 + i)}`, sourceId: `missing-${i}`, platform: "tiktok" as const, externalId: null,
+      canonicalUrl: "u", attemptCount: 1, nextRetryAt: older, lastErrorCode: "provider_transient" as const,
+      lastErrorRetryable: true, lastAttemptedAt: older, resolvedAt: null,
+    });
+    const instagram = { id: "ig-due", platform: "instagram" as const, external_id: "ABC12345678", canonical_url: "https://www.instagram.com/p/ABC12345678/", embeddable: true, removed_at: null };
+    const instagramKey = { ...ghost(0), sourceKey: `instagram:${instagram.external_id}`, sourceId: instagram.id, platform: "instagram" as const, externalId: instagram.external_id, nextRetryAt: newer };
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([...Array.from({ length: 2500 }, (_, i) => ghost(i)), instagramKey]);
+    const { client, jobTable } = admin();
+    const content = query({ data: [], error: null });
+    client.from = vi.fn((table: string) => {
+      if (table === "job_runs") return jobTable;
+      if (table === "meme_contents") return content;
+      const builder = query({ data: [], error: null });
+      let ids: string[] | null = null;
+      builder.in.mockImplementation((column: string, values: string[]) => { if (column === "id") ids = values; return builder; });
+      builder.then = vi.fn((resolve) => Promise.resolve({ data: ids?.includes(instagram.id) ? [instagram] : [], error: null }).then(resolve));
+      return builder;
+    });
+    mocks.createAdminClient.mockReturnValue(client);
+
+    await runSourceRefresh();
+
+    expect(mocks.getOEmbed.mock.calls.map(([url]) => url)).toEqual([instagram.canonical_url]);
+  });
+
   it("stops starting social sources once the provider budget is spent and leaves the rest untouched", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     try {
@@ -377,7 +406,7 @@ describe("source refresh recovery", () => {
       ...Array.from({ length: scenario === "all platforms" ? 300 : 0 }, (_, i) => ({ platform: "youtube" as const, externalId: `yt${String(i).padStart(9, "0")}` })),
       ...Array.from({ length: 30 }, (_, i) => ({ platform: "tiktok" as const, externalId: String(2000000000 + i) })),
       ...Array.from({ length: scenario === "all platforms" ? 30 : 0 }, (_, i) => ({ platform: "instagram" as const, externalId: `ABC${String(i).padStart(8, "0")}` })),
-      ...Array.from({ length: scenario === "all platforms" ? 141 : 471 }, (_, i) => ({ platform: "tiktok" as const, externalId: String(3000000000 + i) })),
+      ...Array.from({ length: scenario === "all platforms" ? 140 : 471 }, (_, i) => ({ platform: "tiktok" as const, externalId: String(3000000000 + i) })),
     ];
     const sources = specs.map(({ platform, externalId }, i) => ({
       id: `item-${i}`, platform, external_id: externalId,

@@ -34,9 +34,14 @@ and are not automatically resolved or modified. A future or non-retryable key
 for a source continues to defer that source, including when its identity is old.
 Keys that cannot match any source (a platform-and-ID key whose recorded
 external id differs from the key, or a provider-identity key outside TikTok)
-are counted without a source lookup. The remaining due keys are looked up in
-batches of 500 source ids, at most 4 batches and none started more than 15 s
-after job start. This count only covers due keys in source batches actually
+are counted without a source lookup. The remaining due sources are interleaved across
+the YouTube, TikTok and Instagram groups (oldest retry first within each group)
+and looked up in batches of 500 ids: at most 4 lookups, none started more than
+15 s after job start, and batches with nothing left to fill do not count. A long
+run of never-matching keys on one platform therefore uses only that platform's
+share of each batch. Those keys keep their retry time, so if one platform has
+more of them than its share they can still hide that platform's newer due
+retries until the ledger is repaired; watch `recovery_unmatched_due_keys`. This count only covers due keys in source batches actually
 examined: batches are skipped once their platforms' retry slots are full or the
 lookup cap is reached. It is not a total of all
 stale ledger entries.

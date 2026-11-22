@@ -768,10 +768,24 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const dueRows: MediaSourceRow[] = [];
   const dueCounts = { youtube: 0, tiktok: 0, instagram: 0 };
   let dueLookupFailed = false;
-  const dueSourceIds = [...dueBySource.keys()];
+  // Interleave the platform groups (oldest retry first within each) so a
+  // long run of never-matching keys on one platform cannot fill every capped
+  // lookup batch and hide the other platforms' due retries.
+  const dueIdsByGroup = new Map<string, string[]>();
+  for (const [id, recoveries] of dueBySource) {
+    const platform = recoveries[0]?.platform;
+    const group = platform && isYouTubePlatform(platform) ? "youtube" : String(platform);
+    dueIdsByGroup.set(group, [...(dueIdsByGroup.get(group) ?? []), id]);
+  }
+  const dueSourceIds: string[] = [];
+  const groupQueues = [...dueIdsByGroup.values()];
+  for (let index = 0; groupQueues.some((queue) => index < queue.length); index += 1) {
+    for (const queue of groupQueues) if (index < queue.length) dueSourceIds.push(queue[index]);
+  }
   const dueLookupStopAt = Date.parse(startedAt) + DUE_LOOKUP_BUDGET_MS;
+  let dueLookups = 0;
   for (let offset = 0; offset < dueSourceIds.length; offset += 500) {
-    if (offset >= DUE_LOOKUP_MAX_BATCHES * 500 || Date.now() >= dueLookupStopAt) break;
+    if (dueLookups >= DUE_LOOKUP_MAX_BATCHES || Date.now() >= dueLookupStopAt) break;
     if (dueCounts.youtube >= YOUTUBE_BATCH_LIMIT && dueCounts.tiktok >= SOCIAL_PLATFORM_BATCH_LIMIT && dueCounts.instagram >= SOCIAL_PLATFORM_BATCH_LIMIT) break;
     const ids = dueSourceIds.slice(offset, offset + 500).filter((id) =>
       (dueBySource.get(id) ?? []).some((recovery) => {
@@ -780,6 +794,8 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       }),
     );
     if (ids.length === 0) continue;
+    // Only real lookups count toward the cap; slices of full platforms do not.
+    dueLookups += 1;
     let data: MediaSourceRow[];
     try {
       const result = await admin.from("media_sources")

@@ -24,12 +24,31 @@ import {
   recordSourceAcquisitionFailure,
   resolveSourceAcquisitionFailure,
   sourceAcquisitionKey,
+  type SourceAcquisitionRecoveryDto,
 } from "./recovery.server";
 
 const LIVENESS_INTERVAL_DAYS = 1;
 const METADATA_TTL_DAYS = 30;
 const YOUTUBE_BATCH_LIMIT = 300;
 const SOCIAL_PLATFORM_BATCH_LIMIT = 30;
+/** Extra stale rows read per group in case the in-memory identity check drops some. */
+const STALE_CONFLICT_HEADROOM = 50;
+/** Upper bound for each candidate lookup, so one slow query cannot stall the run. */
+const SOURCE_LOOKUP_TIMEOUT_MS = 10_000;
+/**
+ * Due-retry source lookups examine at most this many 500-id batches and stop
+ * starting new batches this long after job start, so keys that never match a
+ * source cannot page on and eat the provider budget.
+ */
+const DUE_LOOKUP_MAX_BATCHES = 4;
+const DUE_LOOKUP_BUDGET_MS = 15_000;
+/**
+ * Time from job start after which a provider worker starts no new source.
+ * The cron route allows 60 s and an oEmbed request can take 8 s, so this
+ * leaves room for in-flight requests and the job audit insert. Unstarted rows
+ * keep their last_checked_at and are picked up by the next run.
+ */
+export const SOURCE_REFRESH_PROVIDER_BUDGET_MS = 40_000;
 
 type MediaSourceRow = {
   id: string;
@@ -102,6 +121,72 @@ function providerIdentityRecoveryKey(row: MediaSourceRow) {
   return `provider_identity:${row.id}`;
 }
 
+function recoveryMatchesSource(recovery: SourceAcquisitionRecoveryDto, source: MediaSourceRow) {
+  if (recovery.sourceId !== source.id || recovery.platform !== source.platform || !source.external_id) return false;
+  if (recovery.sourceKey === sourceAcquisitionKey(source.platform, source.external_id)) {
+    return recovery.externalId === null || recovery.externalId === source.external_id;
+  }
+  return source.platform === "tiktok" && recovery.sourceKey === providerIdentityRecoveryKey(source)
+    && recovery.externalId === source.external_id;
+}
+
+/**
+ * Builds an `or` filter that keeps stale-source selection away from unowned
+ * platform-and-ID recovery keys: keys with no source id, or whose recorded
+ * external id differs from the key. Every source with such an ID would fail
+ * the identity check, and since it is never refreshed it would keep the oldest
+ * positions forever.
+ *
+ * The filter is flat (`external_id.is.null,external_id.not.in.(...)`) because
+ * the database plan client (`lib/db/plan.ts`) parses only flat `or` groups and
+ * splits `in` lists on commas. Rows without an external id always pass, so
+ * invalid identities still reach quarantine. IDs containing list syntax are
+ * left to the in-memory check. Owned keys are not filtered here: a second
+ * source sharing an owned ID is a duplicate row, and the in-memory check plus
+ * the headroom rows handle it. The filter is per external id, so within the
+ * YouTube group a Shorts row sharing an ID with an unowned YouTube key is also
+ * held back.
+ */
+export function staleRecoveryExclusion(
+  activeRecovery: SourceAcquisitionRecoveryDto[],
+  platforms: readonly MediaSourcePlatform[],
+): { filter: string | null; unownedKeys: number } {
+  const unowned = new Set<string>();
+  for (const recovery of activeRecovery) {
+    if (!platforms.includes(recovery.platform as MediaSourcePlatform)) continue;
+    const prefix = `${recovery.platform}:`;
+    if (!recovery.sourceKey.startsWith(prefix)) continue;
+    const externalId = recovery.sourceKey.slice(prefix.length);
+    if (!externalId) continue;
+    if (!recovery.sourceId || (recovery.externalId !== null && recovery.externalId !== externalId)) unowned.add(externalId);
+  }
+  const listed = [...unowned].filter((externalId) => !/[,()"\\]/.test(externalId));
+  return {
+    filter: listed.length > 0 ? `external_id.is.null,external_id.not.in.(${listed.join(",")})` : null,
+    unownedKeys: unowned.size,
+  };
+}
+
+/**
+ * False when a key can never match a source: a platform-and-ID key whose
+ * recorded external id differs from the key, or a provider-identity key on a
+ * platform other than TikTok. Mirrors the source-independent parts of
+ * recoveryMatchesSource.
+ */
+function recoveryKeyIsSelfConsistent(recovery: SourceAcquisitionRecoveryDto) {
+  if (recovery.sourceKey.startsWith("provider_identity:")) {
+    return recovery.platform === "tiktok" && recovery.externalId !== null;
+  }
+  const prefix = `${recovery.platform}:`;
+  if (!recovery.sourceKey.startsWith(prefix)) return false;
+  return recovery.externalId === null || recovery.externalId === recovery.sourceKey.slice(prefix.length);
+}
+
+function canChangeRecoveryKey(activeRecovery: SourceAcquisitionRecoveryDto[], source: MediaSourceRow, key: string) {
+  const recovery = activeRecovery.find((entry) => entry.sourceKey === key);
+  return !recovery || recoveryMatchesSource(recovery, source);
+}
+
 function tiktokProviderIdentityState(
   row: MediaSourceRow,
   oembed: Awaited<ReturnType<typeof getOEmbed>>,
@@ -118,10 +203,16 @@ async function recordProviderIdentityFailure(
   admin: ReturnType<typeof createAdminClient>,
   row: MediaSourceRow,
   attemptedAt: Date,
+  preserveExistingProviderKey: boolean,
+  activeRecovery: SourceAcquisitionRecoveryDto[],
 ) {
+  const sourceKey = preserveExistingProviderKey && row.external_id
+    ? sourceAcquisitionKey(row.platform, row.external_id)
+    : providerIdentityRecoveryKey(row);
+  if (!canChangeRecoveryKey(activeRecovery, row, sourceKey)) throw new Error("source_recovery_identity_mismatch");
   await recordSourceAcquisitionFailure({
-    sourceKey: providerIdentityRecoveryKey(row),
-    idempotencyKey: `${providerIdentityRecoveryKey(row)}:${attemptedAt.toISOString()}`,
+    sourceKey,
+    idempotencyKey: `${sourceKey}:${attemptedAt.toISOString()}`,
     platform: row.platform,
     sourceId: row.id,
     externalId: row.external_id,
@@ -167,6 +258,7 @@ async function refreshYouTubeSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
   observations: RefreshObservations,
+  activeRecovery: SourceAcquisitionRecoveryDto[],
 ) {
   // Missing or malformed IDs were never queried from YouTube and cannot be
   // treated as an authoritative missing-video result. Keep healthy sources
@@ -200,6 +292,7 @@ async function refreshYouTubeSources(
     for (const row of validRows) observations[row.platform].inconclusive += 1;
     for (const row of validRows) {
       if (!row.external_id) continue;
+      if (!canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) continue;
       await recordSourceAcquisitionFailure({
         sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
         idempotencyKey: attemptIdBySource.get(row.id) ?? `refresh:${row.id}:${attemptStartedAt.toISOString()}`,
@@ -243,7 +336,7 @@ async function refreshYouTubeSources(
         })
         .eq("id", row.id);
       if (error) throw new Error("source_refresh_update_failed");
-      if (row.external_id) {
+      if (row.external_id && canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
         await resolveSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
           attemptIdempotencyKey: attemptIdBySource.get(row.id) ?? "",
@@ -305,7 +398,7 @@ async function refreshYouTubeSources(
       // so consumers can fail closed instead of rendering an iframe.
       hidden += 1;
     }
-    if (row.external_id) {
+    if (row.external_id && canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
       await resolveSourceAcquisitionFailure({
         sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
         attemptIdempotencyKey: attemptIdBySource.get(row.id) ?? "",
@@ -318,6 +411,10 @@ async function refreshYouTubeSources(
       const message = error instanceof Error ? error.message : "source_refresh_failed";
       errors.push(message);
       if (!row.external_id) continue;
+      if (!canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
+        errors.push(`source_recovery_identity_mismatch:${row.id}`);
+        continue;
+      }
       try {
         await recordSourceAcquisitionFailure({
           sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -343,6 +440,8 @@ async function refreshOEmbedSources(
   admin: ReturnType<typeof createAdminClient>,
   rows: MediaSourceRow[],
   observations: RefreshObservations,
+  activeRecovery: SourceAcquisitionRecoveryDto[],
+  deadlineMs: number = Number.POSITIVE_INFINITY,
 ) {
   const now = new Date().toISOString();
   let checked = 0;
@@ -350,9 +449,17 @@ async function refreshOEmbedSources(
   let failed = 0;
   const errors: string[] = [];
 
+  let deferredByDeadline = 0;
   for (const row of rows) {
+    if (Date.now() >= deadlineMs) {
+      // Leave the rest untouched (no ledger write, no last_checked_at change).
+      deferredByDeadline = rows.length - rows.indexOf(row);
+      break;
+    }
     const attemptStartedAt = new Date();
     const attemptIdempotencyKey = `refresh:${row.id}:${attemptStartedAt.toISOString()}`;
+    const providerRecovery = activeRecovery.find((recovery) => recovery.sourceKey === providerIdentityRecoveryKey(row));
+    const mayResolveProviderRecovery = !!providerRecovery && recoveryMatchesSource(providerRecovery, row);
     if (!normalizedSourceIdentity(row)) {
       observations[row.platform].invalid_identity += 1;
       failed += 1;
@@ -374,7 +481,7 @@ async function refreshOEmbedSources(
         failed += 1;
         checked += 1;
         try {
-          await recordProviderIdentityFailure(admin, row, attemptStartedAt);
+          await recordProviderIdentityFailure(admin, row, attemptStartedAt, !!providerRecovery && !mayResolveProviderRecovery, activeRecovery);
         } catch {
           errors.push(`provider_identity_recovery_failed:${row.id}`);
         }
@@ -403,7 +510,7 @@ async function refreshOEmbedSources(
       await syncMemeContentsAvailability(admin, row, "live");
       if (row.external_id) {
         try {
-          if (providerIdentity === "confirmed") {
+          if (providerIdentity === "confirmed" && mayResolveProviderRecovery) {
             await resolveSourceAcquisitionFailure({
               sourceKey: providerIdentityRecoveryKey(row),
               attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
@@ -411,12 +518,14 @@ async function refreshOEmbedSources(
               resolvedAt: new Date(),
             }, admin);
           }
-          await resolveSourceAcquisitionFailure({
-            sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-            attemptIdempotencyKey,
-            attemptStartedAt,
-            resolvedAt: new Date(),
-          }, admin);
+          if (canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
+            await resolveSourceAcquisitionFailure({
+              sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+              attemptIdempotencyKey,
+              attemptStartedAt,
+              resolvedAt: new Date(),
+            }, admin);
+          }
         } catch {
           // Source and content are already live. A recovery-ledger failure is
           // not provider evidence and must not rewrite or reclassify this row.
@@ -448,7 +557,7 @@ async function refreshOEmbedSources(
           failed += 1;
           checked += 1;
           errors.push(`social_404_write_failed:${row.id}`);
-          if (row.external_id) {
+          if (row.external_id && canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
             try {
               await recordSourceAcquisitionFailure({
                 sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
@@ -469,7 +578,7 @@ async function refreshOEmbedSources(
         }
         if (row.external_id) {
           try {
-            if (row.platform === "tiktok") {
+            if (row.platform === "tiktok" && mayResolveProviderRecovery) {
               await resolveSourceAcquisitionFailure({
                 sourceKey: providerIdentityRecoveryKey(row),
                 attemptIdempotencyKey: `${attemptIdempotencyKey}:provider_identity`,
@@ -477,12 +586,14 @@ async function refreshOEmbedSources(
                 resolvedAt: new Date(),
               }, admin);
             }
-            await resolveSourceAcquisitionFailure({
-              sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-              attemptIdempotencyKey,
-              attemptStartedAt,
-              resolvedAt: new Date(),
-            }, admin);
+            if (canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
+              await resolveSourceAcquisitionFailure({
+                sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+                attemptIdempotencyKey,
+                attemptStartedAt,
+                resolvedAt: new Date(),
+              }, admin);
+            }
           } catch {
             failed += 1;
             checked += 1;
@@ -494,39 +605,55 @@ async function refreshOEmbedSources(
       } else if (row.external_id) {
         if (!providerClassified) observations[row.platform].inconclusive += 1;
         failed += 1;
-        await recordSourceAcquisitionFailure({
-          sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
-          idempotencyKey: attemptIdempotencyKey,
-          platform: row.platform,
-          externalId: row.external_id,
-          canonicalUrl: row.canonical_url,
-          code: error instanceof Error && error.message === "source_refresh_update_failed"
-            ? "db_failure"
-            : "provider_transient",
-          attempt: 1,
-          occurredAt: attemptStartedAt,
-          sourceId: row.id,
-        }, admin);
+        if (!canChangeRecoveryKey(activeRecovery, row, sourceAcquisitionKey(row.platform, row.external_id))) {
+          errors.push(`source_recovery_identity_mismatch:${row.id}`);
+          checked += 1;
+          continue;
+        }
+        try {
+          await recordSourceAcquisitionFailure({
+            sourceKey: sourceAcquisitionKey(row.platform, row.external_id),
+            idempotencyKey: attemptIdempotencyKey,
+            platform: row.platform,
+            externalId: row.external_id,
+            canonicalUrl: row.canonical_url,
+            code: error instanceof Error && error.message === "source_refresh_update_failed"
+              ? "db_failure"
+              : "provider_transient",
+            attempt: 1,
+            occurredAt: attemptStartedAt,
+            sourceId: row.id,
+          }, admin);
+        } catch {
+          errors.push(`source_recovery_record_failed:${row.id}`);
+        }
       } else { failed += 1; }
       // 일시 오류(502·네트워크)는 다음 실행으로 미룬다 — last_checked_at을 건드리지 않는다.
     }
     checked += 1;
   }
 
-  return { checked, removed, failed, errors };
+  return { checked, removed, failed, errors, deferred_by_deadline: deferredByDeadline };
 }
 
 export type SourceRefreshResult = {
   status: "ok" | "partial" | "failed";
   youtube: { checked: number; removed: number; hidden: number; failed: number; errors: string[] };
-  oembed: { checked: number; removed: number; failed: number; errors: string[] };
+  oembed: { checked: number; removed: number; failed: number; errors: string[]; deferred_by_deadline: number };
   observations: RefreshObservations;
+  recovery_unmatched_due_keys: number;
+  recovery_conflicting_stale_sources: number;
+  recovery_unowned_keys: number;
   error?: string;
 };
 
 export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const startedAt = new Date().toISOString();
+  const providerDeadlineMs = Date.parse(startedAt) + SOURCE_REFRESH_PROVIDER_BUDGET_MS;
   const observations = emptyObservations();
+  let unmatchedDueKeys = 0;
+  const countedUnmatchedKeys = new Set<string>();
+  const conflictingStaleIds = new Set<string>();
   const admin = createAdminClient();
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
   let activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
@@ -561,57 +688,142 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     // recovery state rather than assuming every request resolved its key.
     activeRecovery = await listActiveSourceAcquisitionRecovery(admin);
   }
-  const dueSourceIds = dueRecovery.flatMap((row) => row.sourceId ? [row.sourceId] : []);
   const nowMs = Date.now();
   const deferredSourceIds = activeRecovery.flatMap((row) =>
     row.sourceId && (row.nextRetryAt === null || Date.parse(row.nextRetryAt) > nowMs) ? [row.sourceId] : []);
+  const deferredIds = new Set(deferredSourceIds);
+  // The due RPC is globally capped at 500. The active snapshot is already
+  // needed for backoff and quarantine; use it to give every platform a bounded
+  // share even if another provider fills the entire due page.
+  const dueCandidates = [...dueRecovery, ...activeRecovery]
+    .filter((row) => row.sourceId && row.nextRetryAt !== null && Date.parse(row.nextRetryAt) <= nowMs && !deferredIds.has(row.sourceId))
+    .sort((a, b) => Date.parse(a.nextRetryAt!) - Date.parse(b.nextRetryAt!) || (a.sourceId ?? "").localeCompare(b.sourceId ?? ""));
+  const dueBySource = new Map<string, SourceAcquisitionRecoveryDto[]>();
+  for (const recovery of dueCandidates) {
+    if (!recovery.sourceId) continue;
+    if (!recoveryKeyIsSelfConsistent(recovery)) {
+      // Cannot match any source, whatever the lookup returns: count it here
+      // instead of spending a lookup on it.
+      if (!countedUnmatchedKeys.has(recovery.sourceKey)) {
+        countedUnmatchedKeys.add(recovery.sourceKey);
+        unmatchedDueKeys += 1;
+      }
+      continue;
+    }
+    const entries = dueBySource.get(recovery.sourceId) ?? [];
+    if (!entries.some((entry) => entry.sourceKey === recovery.sourceKey)) entries.push(recovery);
+    dueBySource.set(recovery.sourceId, entries);
+  }
   const staleBefore = new Date(
     Date.now() - LIVENESS_INTERVAL_DAYS * 86_400_000,
   ).toISOString();
 
-  const staleQueries = await Promise.all([
-    { platforms: ["youtube", "youtube_shorts"], limit: YOUTUBE_BATCH_LIMIT },
-    { platforms: ["tiktok"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
-    { platforms: ["instagram"], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
-  ].map(({ platforms, limit }) => {
-    const query = admin.from("media_sources")
-      .select("id, platform, external_id, canonical_url, embeddable, removed_at")
-      .in("platform", platforms)
-      .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`)
-      .order("last_checked_at", { ascending: true, nullsFirst: true })
-      .limit(limit);
-    return deferredSourceIds.length ? query.not("id", "in", deferredSourceIds) : query;
-  }));
-  const selectError = staleQueries.find((result) => result.error)?.error;
-  const stale = staleQueries.flatMap((result) => result.data ?? []);
-
-  if (selectError) {
-    return {
-      status: "failed",
-      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
-      observations,
-      error: selectError.message,
-    };
-  }
-
-  const { data: dueRows, error: dueError } = dueSourceIds.length
-    ? await admin
-        .from("media_sources")
+  // Each platform group is selected by one bounded query. Unowned recovery
+  // keys are excluded in the database, so a growing set of conflicting rows
+  // cannot hold the oldest positions forever, and there is no OFFSET paging
+  // that could skip rows when earlier ones change mid-scan. A group whose
+  // lookup fails or times out is skipped; the other groups still run.
+  const staleGroups = [
+    { group: "youtube", platforms: ["youtube", "youtube_shorts"] as MediaSourcePlatform[], limit: YOUTUBE_BATCH_LIMIT },
+    { group: "tiktok", platforms: ["tiktok"] as MediaSourcePlatform[], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
+    { group: "instagram", platforms: ["instagram"] as MediaSourcePlatform[], limit: SOCIAL_PLATFORM_BATCH_LIMIT },
+  ] as const;
+  let unownedRecoveryKeys = 0;
+  const staleLookupErrors: string[] = [];
+  const staleSelections = await Promise.all(staleGroups.map(async ({ group, platforms, limit }) => {
+    const exclusion = staleRecoveryExclusion(activeRecovery, platforms);
+    unownedRecoveryKeys += exclusion.unownedKeys;
+    try {
+      let query = admin.from("media_sources")
         .select("id, platform, external_id, canonical_url, embeddable, removed_at")
-        .in("id", dueSourceIds)
-    : { data: [], error: null };
-  if (dueError) {
-    return {
-      status: "failed",
-      youtube: { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] },
-      oembed: { checked: 0, removed: 0, failed: 0, errors: [] },
-      observations,
-      error: dueError.message,
-    };
+        .in("platform", platforms)
+        .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`);
+      // Each `or` call is its own group; the plan client ANDs the groups.
+      if (exclusion.filter) query = query.or(exclusion.filter);
+      if (deferredSourceIds.length) query = query.not("id", "in", deferredSourceIds);
+      const result = await query
+        .order("last_checked_at", { ascending: true, nullsFirst: true })
+        .order("id", { ascending: true })
+        .limit(limit + STALE_CONFLICT_HEADROOM)
+        .abortSignal(AbortSignal.timeout(SOURCE_LOOKUP_TIMEOUT_MS));
+      if (result.error) throw new Error(result.error.message);
+      const selected: MediaSourceRow[] = [];
+      for (const source of (result.data ?? []) as MediaSourceRow[]) {
+        // The database exclusion is a pre-filter; this check stays authoritative.
+        if (source.external_id && !canChangeRecoveryKey(activeRecovery, source, sourceAcquisitionKey(source.platform, source.external_id))) {
+          conflictingStaleIds.add(source.id);
+          continue;
+        }
+        selected.push(source);
+        if (selected.length >= limit) break;
+      }
+      return selected;
+    } catch {
+      staleLookupErrors.push(`source_stale_lookup_failed:${group}`);
+      return [];
+    }
+  }));
+  const stale = staleSelections.flat();
+
+  const dueRows: MediaSourceRow[] = [];
+  const dueCounts = { youtube: 0, tiktok: 0, instagram: 0 };
+  let dueLookupFailed = false;
+  // Interleave the platform groups (oldest retry first within each) so a
+  // long run of never-matching keys on one platform cannot fill every capped
+  // lookup batch and hide the other platforms' due retries.
+  const dueIdsByGroup = new Map<string, string[]>();
+  for (const [id, recoveries] of dueBySource) {
+    const platform = recoveries[0]?.platform;
+    const group = platform && isYouTubePlatform(platform) ? "youtube" : String(platform);
+    dueIdsByGroup.set(group, [...(dueIdsByGroup.get(group) ?? []), id]);
+  }
+  const dueSourceIds: string[] = [];
+  const groupQueues = [...dueIdsByGroup.values()];
+  for (let index = 0; groupQueues.some((queue) => index < queue.length); index += 1) {
+    for (const queue of groupQueues) if (index < queue.length) dueSourceIds.push(queue[index]);
+  }
+  const dueLookupStopAt = Date.parse(startedAt) + DUE_LOOKUP_BUDGET_MS;
+  let dueLookups = 0;
+  for (let offset = 0; offset < dueSourceIds.length; offset += 500) {
+    if (dueLookups >= DUE_LOOKUP_MAX_BATCHES || Date.now() >= dueLookupStopAt) break;
+    if (dueCounts.youtube >= YOUTUBE_BATCH_LIMIT && dueCounts.tiktok >= SOCIAL_PLATFORM_BATCH_LIMIT && dueCounts.instagram >= SOCIAL_PLATFORM_BATCH_LIMIT) break;
+    const ids = dueSourceIds.slice(offset, offset + 500).filter((id) =>
+      (dueBySource.get(id) ?? []).some((recovery) => {
+        const group = isYouTubePlatform(recovery.platform) ? "youtube" : recovery.platform;
+        return dueCounts[group] < (group === "youtube" ? YOUTUBE_BATCH_LIMIT : SOCIAL_PLATFORM_BATCH_LIMIT);
+      }),
+    );
+    if (ids.length === 0) continue;
+    // Only real lookups count toward the cap; slices of full platforms do not.
+    dueLookups += 1;
+    let data: MediaSourceRow[];
+    try {
+      const result = await admin.from("media_sources")
+        .select("id, platform, external_id, canonical_url, embeddable, removed_at")
+        .in("id", ids)
+        .abortSignal(AbortSignal.timeout(SOURCE_LOOKUP_TIMEOUT_MS));
+      if (result.error) throw new Error("source_recovery_candidate_lookup_failed");
+      data = (result.data ?? []) as MediaSourceRow[];
+    } catch {
+      dueLookupFailed = true;
+      break;
+    }
+    const sources = new Map(data.map((source) => [source.id, source]));
+    for (const id of ids) {
+      const source = sources.get(id);
+      const recoveries = dueBySource.get(id) ?? [];
+      const matches = source ? recoveries.filter((recovery) => recoveryMatchesSource(recovery, source)) : [];
+      unmatchedDueKeys += recoveries.length - matches.length;
+      if (!source || matches.length === 0) continue;
+      if (source.external_id && !canChangeRecoveryKey(activeRecovery, source, sourceAcquisitionKey(source.platform, source.external_id))) continue;
+      const group = isYouTubePlatform(source.platform) ? "youtube" : source.platform;
+      const limit = group === "youtube" ? YOUTUBE_BATCH_LIMIT : SOCIAL_PLATFORM_BATCH_LIMIT;
+      if (dueCounts[group] >= limit) continue;
+      dueCounts[group] += 1;
+      dueRows.push(source);
+    }
   }
   const recoveryBySourceId = new Map(activeRecovery.flatMap((row) => row.sourceId ? [[row.sourceId, row] as const] : []));
-  const deferredIds = new Set(deferredSourceIds);
   const candidateRows = [...new Map([...(dueRows ?? []), ...stale].map((row) => [row.id, row])).values()];
   const rows = candidateRows.filter((row) => {
     // A second recovery key for the same source must not bypass a quarantine
@@ -631,18 +843,37 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   for (const row of [...youtubeRows, ...oembedRows]) observations[row.platform].selected += 1;
 
   let youtube = { checked: 0, removed: 0, hidden: 0, failed: 0, errors: [] as string[] };
-  let oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[] };
-  let firstError: string | undefined;
+  const oembed = { checked: 0, removed: 0, failed: 0, errors: [] as string[], deferred_by_deadline: 0 };
+  let firstError: string | undefined = [
+    ...staleLookupErrors,
+    ...(dueLookupFailed ? ["source_recovery_candidate_lookup_failed"] : []),
+  ].join("; ") || undefined;
 
-  try {
-    youtube = await refreshYouTubeSources(admin, youtubeRows, observations);
-  } catch (error) {
-    firstError = firstError ?? (error instanceof Error ? error.message : String(error));
+  // Run the three providers side by side: a slow YouTube batch or TikTok
+  // request must not hold another provider behind it. Wait for all of them
+  // before auditing or invalidating caches.
+  const [youtubeResult, ...socialResults] = await Promise.allSettled([
+    refreshYouTubeSources(admin, youtubeRows, observations, activeRecovery),
+    ...(["tiktok", "instagram"] as const).map((platform) =>
+      refreshOEmbedSources(admin, oembedRows.filter((row) => row.platform === platform), observations, activeRecovery, providerDeadlineMs),
+    ),
+  ]);
+  if (youtubeResult.status === "fulfilled") {
+    youtube = youtubeResult.value;
+  } else {
+    firstError = firstError ?? (youtubeResult.reason instanceof Error ? youtubeResult.reason.message : String(youtubeResult.reason));
   }
-  try {
-    oembed = await refreshOEmbedSources(admin, oembedRows, observations);
-  } catch (error) {
-    firstError = firstError ?? (error instanceof Error ? error.message : String(error));
+  for (const result of socialResults) {
+    if (result.status === "rejected") {
+      firstError = firstError ?? (result.reason instanceof Error ? result.reason.message : String(result.reason));
+      continue;
+    }
+    const value = result.value as Awaited<ReturnType<typeof refreshOEmbedSources>>;
+    oembed.checked += value.checked;
+    oembed.removed += value.removed;
+    oembed.failed += value.failed;
+    oembed.deferred_by_deadline += value.deferred_by_deadline;
+    oembed.errors.push(...value.errors);
   }
 
   // Next.js queues invalidation for the response lifecycle. Retry on every
@@ -658,6 +889,9 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
     youtube,
     oembed,
     observations,
+    recovery_unmatched_due_keys: unmatchedDueKeys,
+    recovery_conflicting_stale_sources: conflictingStaleIds.size,
+    recovery_unowned_keys: unownedRecoveryKeys,
     ...(firstError ? { error: firstError } : {}),
   };
 

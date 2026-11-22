@@ -26,6 +26,65 @@ function and `finished_at` immediately before the audit insert. Existing records
 retain their original timestamps. A process crash, early selection error, or
 failed audit insert can still leave no job record; monitor the scheduler too.
 
+`detail.recovery_unmatched_due_keys` counts due recovery keys examined during
+the run that did not match the current source platform and identity, including
+missing sources and keys whose identity could not be verified. Duplicate keys
+from the due and active snapshots count once. They do not consume retry slots
+and are not automatically resolved or modified. A future or non-retryable key
+for a source continues to defer that source, including when its identity is old.
+Keys that cannot match any source (a platform-and-ID key whose recorded
+external id differs from the key, or a provider-identity key outside TikTok)
+are counted without a source lookup. The remaining due sources are interleaved across
+the YouTube, TikTok and Instagram groups (oldest retry first within each group)
+and looked up in batches of 500 ids: at most 4 lookups, none started more than
+15 s after job start, and batches with nothing left to fill do not count. A long
+run of never-matching keys on one platform therefore uses only that platform's
+share of each batch. Those keys keep their retry time, so if one platform has
+more of them than its share they can still hide that platform's newer due
+retries until the ledger is repaired; watch `recovery_unmatched_due_keys`. This count only covers due keys in source batches actually
+examined: batches are skipped once their platforms' retry slots are full or the
+lookup cap is reached. It is not a total of all
+stale ledger entries.
+
+Stale sources are selected with one query per platform group (YouTube and
+Shorts, TikTok, Instagram), in `last_checked_at, id` order, reading the group's
+limit plus 50 rows of headroom, with a 10 s timeout. There is no OFFSET paging.
+The query excludes sources whose ID has an unowned platform-and-ID recovery key
+(no source id, or a recorded external id that differs from the key); every such
+source would fail the identity check and, never refreshed, would hold the oldest
+positions. The exclusion is a flat `or` group, because the database plan client
+parses only flat groups. Rows without an external id are never excluded, so
+invalid identities still reach quarantine. A second source that shares an owned
+key's ID is not excluded in the query; the in-memory identity check skips it and
+the headroom rows cover it. Within the YouTube group the exclusion is by ID
+across both platforms, so a Shorts row that shares an ID with an unowned YouTube
+key is also held back.
+`detail.recovery_unowned_keys` counts the unowned keys behind those exclusions.
+Their ledger rows are neither rewritten nor resolved and need separate repair.
+`detail.recovery_conflicting_stale_sources` counts rows the query returned that
+the in-memory identity check still skipped; it should normally be 0, and it can
+be nonzero while the job status is `ok`.
+
+A failed or timed-out stale lookup skips only that group: the other groups still
+run and the job is `partial` with `source_stale_lookup_failed:<group>`. If a
+later due-source batch fails, already examined due candidates and the stale
+candidates still run; the job is `partial` with
+`source_recovery_candidate_lookup_failed`. Unexamined candidates are not
+resolved or otherwise changed by the failed lookup.
+
+YouTube, TikTok and Instagram run side by side. The TikTok and Instagram workers
+start no new source after 40 s from job start (an oEmbed request can still take
+up to 8 s), leaving the rest untouched for the next run;
+`detail.oembed.deferred_by_deadline` counts them and the job is `partial`.
+For TikTok, a `provider_identity:<source-id>` key is resolved only when the
+active snapshot's platform and external ID match the checked source. If an
+inconclusive result finds that key belongs to a different identity, its failure
+is recorded under the current platform-and-ID key instead if that key also
+matches. All platform-and-ID keys with mismatched identity in the active
+snapshot are protected from both resolution and failure-record overwrites. This snapshot check
+does not protect against identity changes after the snapshot; the existing
+non-atomic refresh and cache-coherence limitations still apply.
+
 For a read-only snapshot of stale sources, including deferred and quarantined
 rows, an operator can run:
 

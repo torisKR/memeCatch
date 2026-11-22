@@ -34,17 +34,35 @@ and are not automatically resolved or modified. A future or non-retryable key
 for a source continues to defer that source, including when its identity is old.
 This count only covers due keys in source batches actually examined: batches
 are skipped once their platforms' retry slots are full. It is not a total of all
-stale ledger entries. Stale-source checks also skip a source when its current
-platform-and-ID recovery key belongs to a different source or identity. Pages
-are read in `last_checked_at, id` order until the remaining slots are filled.
-`detail.recovery_conflicting_stale_sources` counts distinct conflicting stale
-sources encountered, not the total number in the database; it can be nonzero
-even when the job status is `ok`. The conflicting ledger rows are neither
-rewritten nor resolved and require separate inspection or repair. If a later
-source batch fails, already examined due candidates and
-independently selected stale candidates still run; the job is `partial` with
+stale ledger entries.
+
+Stale sources are selected with one query per platform group (YouTube and
+Shorts, TikTok, Instagram), in `last_checked_at, id` order, reading the group's
+limit plus 50 rows of headroom, with a 10 s timeout. There is no OFFSET paging.
+The query excludes sources whose platform-and-ID recovery key they must not
+change: an unowned key (no source id, or a recorded external id that differs
+from the key) excludes every source with that ID, and an owned key excludes
+every source with that ID except its owner. Rows without an external id are
+never excluded, so invalid identities still reach quarantine. Within the
+YouTube group the exclusion is by ID across both platforms, so a Shorts row that
+shares an ID with a blocked YouTube key is also held back.
+`detail.recovery_unowned_keys` counts the unowned keys behind those exclusions.
+Their ledger rows are neither rewritten nor resolved and need separate repair.
+`detail.recovery_conflicting_stale_sources` counts rows the query returned that
+the in-memory identity check still skipped; it should normally be 0, and it can
+be nonzero while the job status is `ok`.
+
+A failed or timed-out stale lookup skips only that group: the other groups still
+run and the job is `partial` with `source_stale_lookup_failed:<group>`. If a
+later due-source batch fails, already examined due candidates and the stale
+candidates still run; the job is `partial` with
 `source_recovery_candidate_lookup_failed`. Unexamined candidates are not
 resolved or otherwise changed by the failed lookup.
+
+YouTube, TikTok and Instagram run side by side. The TikTok and Instagram workers
+start no new source after 40 s from job start (an oEmbed request can still take
+up to 8 s), leaving the rest untouched for the next run;
+`detail.oembed.deferred_by_deadline` counts them and the job is `partial`.
 For TikTok, a `provider_identity:<source-id>` key is resolved only when the
 active snapshot's platform and external ID match the checked source. If an
 inconclusive result finds that key belongs to a different identity, its failure

@@ -17,10 +17,10 @@ import { recordSourceAcquisitionFailure } from "./recovery.server";
 
 function query(data: unknown[]) {
   const builder = {
-    select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), range: vi.fn(), in: vi.fn(), not: vi.fn(),
+    select: vi.fn(), is: vi.fn(), or: vi.fn(), order: vi.fn(), limit: vi.fn(), range: vi.fn(), abortSignal: vi.fn(), in: vi.fn(), not: vi.fn(),
     update: vi.fn(), eq: vi.fn(), neq: vi.fn(), then: undefined,
   } as unknown as Record<string, ReturnType<typeof vi.fn>> & { then: ReturnType<typeof vi.fn> | undefined };
-  for (const method of ["select", "is", "or", "order", "limit", "range", "in", "not", "update", "eq", "neq"]) builder[method].mockReturnValue(builder);
+  for (const method of ["select", "is", "or", "order", "limit", "range", "abortSignal", "in", "not", "update", "eq", "neq"]) builder[method].mockReturnValue(builder);
   builder.then = vi.fn((resolve) => Promise.resolve({ data, error: null }).then(resolve));
   return builder;
 }

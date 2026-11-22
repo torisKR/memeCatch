@@ -34,7 +34,7 @@ export default async function OnboardingPage({
     .maybeSingle();
 
   return (
-    <main className="instrument-grid mx-auto w-full max-w-5xl px-4 py-10">
+    <main className="instrument-grid mx-auto w-full max-w-site px-4 py-10">
       <div className="mx-auto w-full max-w-md">
         <OnboardingForm
           next={next}

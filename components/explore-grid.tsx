@@ -14,6 +14,7 @@ import type { MemeCategory } from "@/lib/labels";
 import type { SocialPlatform } from "@/lib/source-platform";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
+import { mergeSearchPresentationItems, searchPresentationKey } from "@/lib/search-presentation";
 
 /**
  * 레인 B 여정2 — 전체 탐색 그리드 (무한 스크롤).
@@ -49,18 +50,25 @@ const SEARCH_LIMIT = 50;
 export const PAGE_SIZE = 24;
 
 /**
+ * 스크롤만으로 자동으로 이어 붙이는 페이지 수. 이 뒤로는 '밈 더 보기' 버튼을 눌러야 한다.
+ * 제한이 없으면 푸터에 닿을 때마다 다음 페이지가 붙어 전체 목록을 다 불러올 때까지
+ * 푸터(사이트 링크·정보)에 도달할 수 없다.
+ */
+export const AUTO_LOAD_PAGES = 2;
+
+/**
  * 목록 카드가 읽는 memes 컬럼만 — lib/queries.ts의 LIST_COLUMN_LIST와 반드시 동기화.
  * ("use client" 경계라 lib/queries.ts를 값으로 import하면 서버 전용 모듈이 딸려온다 → 의도적 복제)
  */
 const MEME_LIST_COLUMNS =
   "id, short_id, slug, title, summary, category, safety_level, lifecycle_status, media_type, origin_year, trend_score";
 
-export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
+export const EXPLORE_SELECT = `${MEME_LIST_COLUMNS}, ${THIN_MEME_BODY_COLUMNS}, meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), meme_sources(platform, source_url, hidden_from_public), meme_tags_map(tag_id), meme_market_profiles(market_code, role, review_state)`;
 
 function exploreSelect(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
+    ? "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";
@@ -200,8 +208,52 @@ async function fetchFrom(
   );
 }
 
+async function fetchQualifiedPreviews(ids: string[]): Promise<Record<string, MemeListItem["meme_contents"]> | null> {
+  if (!ids.length) return {};
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch("/api/explore/previews", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }), signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    const rows = body && typeof body === "object" ? (body as { previews?: unknown }).previews : null;
+    if (!Array.isArray(rows)) return null;
+    const allowed = new Set(ids);
+    const result: Record<string, MemeListItem["meme_contents"]> = {};
+    for (const row of rows) {
+      if (!row || typeof row !== "object") return null;
+      const value = row as { id?: unknown; contents?: unknown };
+      if (typeof value.id !== "string" || !allowed.has(value.id) || !Array.isArray(value.contents) || Object.hasOwn(result, value.id)) return null;
+      result[value.id] = value.contents as MemeListItem["meme_contents"];
+    }
+    return result;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Keep each existing identity's slot, then append genuinely new identities. */
+function preserveItemPositions(previous: MemeListItem[], next: MemeListItem[]): MemeListItem[] {
+  const winners = new Map(next.map((item) => [searchPresentationKey(item), item]));
+  return [...previous, ...next].flatMap((item) => {
+    const key = searchPresentationKey(item);
+    const winner = winners.get(key);
+    if (!winner) return [];
+    winners.delete(key);
+    return [winner];
+  });
+}
+
 export function ExploreGrid({
   initial,
+  initialAlternatives = [],
+  initialPreviews,
+  initialPreviewUnavailable = false,
   filters,
   excludeIds = [],
   initialOffset,
@@ -210,6 +262,10 @@ export function ExploreGrid({
   indexableIds,
 }: {
   initial: MemeListItem[];
+  /** Eligible server-side candidates hidden by distinct catalog equivalents. */
+  initialAlternatives?: MemeListItem[];
+  initialPreviews?: Array<MemeListItem["meme_contents"] | undefined>;
+  initialPreviewUnavailable?: boolean;
   filters: ExploreFilters;
   /** Discovery ids. Omit to leave the query unfiltered (tests). */
   indexableIds?: readonly string[];
@@ -232,9 +288,19 @@ export function ExploreGrid({
 }) {
   const startHasMore = hasMoreInitial ?? initial.length >= PAGE_SIZE;
   const [items, setItems] = useState<MemeListItem[]>(initial);
+  const [previews, setPreviews] = useState<Record<string, MemeListItem["meme_contents"]>>(() =>
+    Object.fromEntries(initial.map((item, index) => [item.id, initialPreviews?.[index] ?? []])),
+  );
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>(() =>
+    initialPreviewUnavailable ? initial.filter((item) => !item.id.startsWith("curated-")).map((item) => item.id) : [],
+  );
+  const [retryingPreviews, setRetryingPreviews] = useState(false);
   const [hasMore, setHasMore] = useState(startHasMore);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [autoLoads, setAutoLoads] = useState(0);
+  const autoLoadsRef = useRef(0);
+  const autoPaused = autoLoads >= AUTO_LOAD_PAGES;
 
   // IntersectionObserver 콜백은 effect가 다시 만들어지기 전까지 이전
   // 렌더의 값을 잡고 있을 수 있다. 요청 가드는 ref로 유지해 빠른 재교차,
@@ -242,6 +308,13 @@ export function ExploreGrid({
   const loadingRef = useRef(false);
   const offsetRef = useRef(initialOffset ?? initial.length);
   const hasMoreRef = useRef(startHasMore);
+  const itemsRef = useRef(initial);
+  // Keep every candidate from failed public rechecks, including a losing
+  // alternative from the same page, until it can be checked again.
+  const pendingCandidatesRef = useRef(new Map<string, MemeListItem>(
+    initialPreviewUnavailable ? initial.filter((item) => !item.id.startsWith("curated-")).map((item) => [item.id, item]) : [],
+  ));
+  const generationsRef = useRef(new Map<string, number>());
 
   // 이미 담은 id — 중복 방지 (excludeIds는 시작부터 제외 처리)
   const seenRef = useRef<Set<string>>(
@@ -258,9 +331,61 @@ export function ExploreGrid({
     try {
       const db = createClient();
       const batch = await fetchFrom(db, filters, from, indexableIds);
-      const fresh = batch.items.filter((m) => !seenRef.current.has(m.id));
-      for (const m of fresh) seenRef.current.add(m.id);
-      setItems((prev) => [...prev, ...fresh]);
+      const candidates = batch.items.filter((m) => !seenRef.current.has(m.id));
+      // Check all candidates that can beat the current card. If two arrive in
+      // one page, the lower-priority one is still needed if the winner is no
+      // longer public by the time previews are re-read.
+      const confirmedItems = itemsRef.current.filter((item) => !pendingCandidatesRef.current.has(item.id));
+      const fresh = candidates.filter((item) =>
+        mergeSearchPresentationItems(confirmedItems, [item]).some((winner) => winner.id === item.id),
+      );
+      const generations = new Map(fresh.map((item) => {
+        const key = searchPresentationKey(item);
+        return [key, generationsRef.current.get(key) ?? 0] as const;
+      }));
+      const ids = fresh.map((item) => item.id);
+      const verified = await fetchQualifiedPreviews(ids);
+      const existingKeys = new Set(itemsRef.current.map(searchPresentationKey));
+      const staleIds: string[] = [];
+      const eligible = fresh.filter((item) => {
+        const key = searchPresentationKey(item);
+        if ((generationsRef.current.get(key) ?? 0) !== generations.get(key)) {
+          pendingCandidatesRef.current.set(item.id, item);
+          staleIds.push(item.id);
+          return false;
+        }
+        if (verified) return Object.hasOwn(verified, item.id);
+        pendingCandidatesRef.current.set(item.id, item);
+        if (!existingKeys.has(searchPresentationKey(item))) return true;
+        return false;
+      });
+      const verifiedKeys = new Set(verified ? eligible.map(searchPresentationKey) : []);
+      const base = itemsRef.current.filter((item) =>
+        !pendingCandidatesRef.current.has(item.id) || !verifiedKeys.has(searchPresentationKey(item)),
+      );
+      const nextItems = preserveItemPositions(itemsRef.current, mergeSearchPresentationItems(base, eligible));
+      const nextIds = new Set(nextItems.map((item) => item.id));
+      const removedIds = new Set(
+        itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id),
+      );
+      if (verified) {
+        for (const [key, generation] of generations) {
+          if ((generationsRef.current.get(key) ?? 0) === generation) generationsRef.current.set(key, generation + 1);
+        }
+      }
+      if (!verified || staleIds.length) setPendingPreviews((prev) => [...new Set([...prev, ...(!verified ? ids : staleIds)])]);
+      for (const item of candidates) seenRef.current.add(item.id);
+      if (removedIds.size > 0) {
+        setPendingPreviews((prev) => prev.filter((id) => !removedIds.has(id) || pendingCandidatesRef.current.has(id)));
+      }
+      setPreviews((prev) => {
+        const next = { ...prev };
+        for (const item of eligible) if (verified && Object.hasOwn(verified, item.id)) next[item.id] = verified[item.id];
+        for (const id of removedIds) delete next[id];
+        return next;
+      });
+      itemsRef.current = nextItems;
+      setItems(nextItems);
       offsetRef.current = from + batch.scanned;
       hasMoreRef.current = batch.hasMore;
       setHasMore(batch.hasMore);
@@ -272,9 +397,90 @@ export function ExploreGrid({
     }
   }, [filters, indexableIds]);
 
+  // 센티넬이 부르는 자동 로드 — AUTO_LOAD_PAGES번까지만. 그 뒤는 버튼으로만 이어 간다.
+  const autoLoadMore = useCallback(() => {
+    if (loadingRef.current || !hasMoreRef.current) return;
+    if (autoLoadsRef.current >= AUTO_LOAD_PAGES) return;
+    autoLoadsRef.current += 1;
+    setAutoLoads(autoLoadsRef.current);
+    void loadMore();
+  }, [loadMore]);
+
+  async function retryPreviewLookup() {
+    if (retryingPreviews) return;
+    setRetryingPreviews(true);
+    try {
+      // Keep equivalent candidates in the same public check, even when other
+      // pending IDs would put them on opposite sides of the 24-ID API limit.
+      const groups = new Map<string, { pending: string[]; displayed: MemeListItem | undefined; candidates: MemeListItem[]; alternatives: MemeListItem[]; generation: number }>();
+      for (const id of pendingPreviews) {
+        const candidate = pendingCandidatesRef.current.get(id);
+        const key = candidate ? searchPresentationKey(candidate) : `id:${id}`;
+        const group = groups.get(key) ?? {
+          pending: [],
+          displayed: itemsRef.current.find((item) => searchPresentationKey(item) === key),
+          candidates: [],
+          alternatives: initialAlternatives.filter((item) => !item.id.startsWith("curated-") && searchPresentationKey(item) === key),
+          generation: generationsRef.current.get(key) ?? 0,
+        };
+        group.pending.push(id);
+        if (candidate) group.candidates.push(candidate);
+        groups.set(key, group);
+      }
+      const batch: string[] = [];
+      const selected: typeof groups = new Map();
+      for (const [key, group] of groups) {
+        const ids = [...new Set([...group.pending, ...group.alternatives.map((item) => item.id), ...(group.displayed && !group.displayed.id.startsWith("curated-") ? [group.displayed.id] : [])])];
+        if (batch.length + ids.length > PAGE_SIZE) break;
+        batch.push(...ids);
+        selected.set(key, group);
+      }
+      const verified = await fetchQualifiedPreviews(batch);
+      if (verified) {
+        const checkedIds = new Set<string>();
+        const completedPending = new Set<string>();
+        const replacements: MemeListItem[] = [];
+        for (const [key, group] of selected) {
+          const current = itemsRef.current.find((item) => searchPresentationKey(item) === key);
+          const pendingNow = [...pendingCandidatesRef.current.values()].filter((item) => searchPresentationKey(item) === key);
+          // A later page can change this identity while the request is in flight.
+          // Leave that group pending for another authoritative check.
+          if ((generationsRef.current.get(key) ?? 0) !== group.generation || current !== group.displayed || pendingNow.length !== group.candidates.length || pendingNow.some((item) => !group.candidates.includes(item))) continue;
+          generationsRef.current.set(key, group.generation + 1);
+          for (const id of group.pending) {
+            completedPending.add(id);
+            pendingCandidatesRef.current.delete(id);
+          }
+          const rows = [...group.candidates, ...group.alternatives, ...(current && !current.id.startsWith("curated-") ? [current] : [])];
+          for (const item of rows) {
+            checkedIds.add(item.id);
+            if (Object.hasOwn(verified, item.id)) replacements.push(item);
+          }
+        }
+        const base = itemsRef.current.filter((item) => !checkedIds.has(item.id));
+        const nextItems = preserveItemPositions(itemsRef.current, mergeSearchPresentationItems(base, replacements));
+        const nextIds = new Set(nextItems.map((item) => item.id));
+        const removedIds = new Set(itemsRef.current.filter((item) => !nextIds.has(item.id)).map((item) => item.id));
+        itemsRef.current = nextItems;
+        setItems(nextItems);
+        setPreviews((prev) => {
+          const next = { ...prev };
+          for (const id of checkedIds) if (Object.hasOwn(verified, id)) next[id] = verified[id];
+          for (const id of removedIds) delete next[id];
+          return next;
+        });
+        setPendingPreviews((prev) => prev.filter((id) =>
+          !completedPending.has(id) && (!removedIds.has(id) || pendingCandidatesRef.current.has(id)),
+        ));
+      }
+    } finally {
+      setRetryingPreviews(false);
+    }
+  }
+
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !hasMoreRef.current) return;
+    if (!el || !hasMoreRef.current || autoPaused) return;
 
     const nearBottom = () => {
       const rect = el.getBoundingClientRect();
@@ -287,7 +493,7 @@ export function ExploreGrid({
       typeof window.IntersectionObserver === "function";
     if (!supportsIntersectionObserver) {
       const onScroll = () => {
-        if (nearBottom()) void loadMore();
+        if (nearBottom()) autoLoadMore();
       };
       window.addEventListener("scroll", onScroll, { passive: true });
       onScroll();
@@ -296,13 +502,22 @@ export function ExploreGrid({
 
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) void loadMore();
+        if (entries[0]?.isIntersecting) autoLoadMore();
       },
       { rootMargin: "600px 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [loadMore, hasMore, items.length]);
+  }, [autoLoadMore, autoPaused, hasMore, items.length]);
+
+  const retryBanner = pendingPreviews.length > 0 && (
+    <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
+      <span>일부 영상 미리보기를 불러오지 못했어요.</span>
+      <button type="button" onClick={retryPreviewLookup} disabled={retryingPreviews} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">
+        {retryingPreviews ? "불러오는 중…" : "미리보기 다시 불러오기"}
+      </button>
+    </div>
+  );
 
   if (catalogUnavailable && items.length === 0) {
     return (
@@ -324,6 +539,15 @@ export function ExploreGrid({
             다시 시도
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0 && pendingPreviews.length > 0) {
+    return (
+      <div>
+        {retryBanner}
+        {hasMore && <button type="button" onClick={loadMore} disabled={loading} className="min-h-11 rounded-lg border border-border px-3 font-semibold disabled:opacity-60">{loading ? "찾는 중…" : "계속 찾기"}</button>}
       </div>
     );
   }
@@ -403,10 +627,11 @@ export function ExploreGrid({
 
   return (
     <div>
-      <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${MOBILE_CARD_CLEARANCE}`}>
+      {retryBanner}
+      <ul className={`grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6 ${MOBILE_CARD_CLEARANCE}`}>
         {items.map((meme) => (
           <li key={meme.id} className="min-w-0">
-            <MemeCard meme={meme} sourcePlatform={filters.platform} />
+            <MemeCard meme={meme} sourcePlatform={filters.platform} previewContents={meme.id.startsWith("curated-") ? undefined : previews[meme.id] ?? []} />
           </li>
         ))}
       </ul>
@@ -414,7 +639,7 @@ export function ExploreGrid({
       {/* 로딩 스켈레톤 — 다음 페이지 조회 중 */}
       {loading && (
         <ul
-          className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4"
+          className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6"
           aria-hidden
         >
           {Array.from({ length: 6 }).map((_, i) => (
@@ -426,7 +651,21 @@ export function ExploreGrid({
       )}
 
       {/* 무한 스크롤 센티넬 */}
-      {hasMore && !failed && <div ref={sentinelRef} className="h-1 w-full" />}
+      {hasMore && !failed && !autoPaused && <div ref={sentinelRef} className="h-1 w-full" />}
+
+      {/* 자동 로드 한도 이후 — 푸터에 닿을 수 있게 버튼으로만 이어 간다 */}
+      {hasMore && !failed && autoPaused && (
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loading}
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-6 text-base font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? "불러오는 중…" : "밈 더 보기"}
+          </button>
+        </div>
+      )}
 
       {/* 조회 실패 — 재시도 */}
       {failed && (

@@ -28,6 +28,7 @@ export type MemeCardModel = {
   origin_year?: number | null;
   card_art_url?: string | null;
   meme_contents?: ReadonlyArray<{
+    type?: string | null;
     thumbnail_url?: string | null;
     is_representative?: boolean | null;
     url?: string | null;
@@ -107,6 +108,7 @@ export function MemeCard({
       href={href ?? memePathFrom(meme.short_id, meme.slug)}
       className={memeCardClassName()}
       data-meme-card=""
+      data-pointer-light=""
       data-meme-card-title-size={titleSize}
       {...(staticMarkup ? { "data-meme-card-aspect": "fixed" } : {})}
     >
@@ -156,17 +158,18 @@ export function MemeCardFrame({
   const showOwnedBubble = art.kind === "poster";
 
   return (
-    <div className={`${styles.frame} relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]`}>
-      <MemeCardArtLayer title={title} locale={locale} art={art} />
-      <div
-        aria-hidden
-        data-meme-card-scrim=""
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(to bottom left, rgb(20 20 20 / 0), rgb(20 20 20 / 0.85))",
-        }}
-      />
+    <div
+      data-safety={safetyLevel ?? undefined}
+      className={`${styles.frame} relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]`}
+    >
+      <div className={styles.art}>
+        <MemeCardArtLayer title={title} locale={locale} art={art} />
+      </div>
+      {/* The copy sits at the bottom, so the scrim darkens from the bottom.
+          Thumbnails often carry their own burned-in captions; the title must
+          stay readable over them. */}
+      <div aria-hidden data-meme-card-scrim="" className={styles.scrim} />
+      <div aria-hidden className={styles.light} />
       <div className={`${styles.face} ${showOwnedBubble ? styles.fallback : ""} absolute inset-0`}>
         {showOwnedBubble ? (
           <div className={styles.bubbleSlot}>
@@ -201,6 +204,7 @@ export function MemeCardFrame({
           </div>
         </div>
       </div>
+      <div aria-hidden className={styles.edge} />
     </div>
   );
 }

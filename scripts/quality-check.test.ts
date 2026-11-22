@@ -189,7 +189,8 @@ describe("quality-check", () => {
     expect(report.scope.documents).toBe(1);
   });
 
-  test("H1은 SEO 색인과 다른 250자 정리 중 배너·광고 기준임을 표시한다", () => {
+  test("H1은 250자 정리 중 배너·광고 기준을 표시하고, 같은 문서는 색인에서도 빠진다", () => {
+    // Since 2026-11-20 the index floor equals the banner and ad floor (250).
     const gap = row({
       description: "설".repeat(160),
       origin: "유".repeat(40),
@@ -199,7 +200,7 @@ describe("quality-check", () => {
       ],
       meme_tags_map: [{ tag_id: "t1" }, { tag_id: "t2" }, { tag_id: "t3" }],
     });
-    expect(isIndexableMeme(gap)).toBe(true);
+    expect(isIndexableMeme(gap)).toBe(false);
     expect(buildReport([gap]).depth.thin).toBe(1);
     const check = buildChecks([gap]).find((item) => item.id === "DQ-H1-thin-document");
     expect(check?.count).toBe(1);

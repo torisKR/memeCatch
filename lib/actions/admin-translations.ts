@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/db/server";
+import { scheduleIndexNowForMeme } from "@/lib/indexnow.server";
 import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import type { Json } from "@/lib/database.types";
 import {
@@ -729,6 +730,8 @@ export async function reviewMemeTranslation(
         previous_updated_at: input.expectedTranslationUpdatedAt,
       },
     );
+    // 검수로 새로 열린 번역 URL을 응답 뒤 IndexNow로 알린다(ko 원문 URL 포함).
+    scheduleIndexNowForMeme(db, input.memeId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: errorMessage(error) };

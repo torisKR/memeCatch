@@ -1,4 +1,5 @@
 import { MemeCard, type MemeCardModel } from "@/components/meme-card";
+import { RELATED_MEMES_LIMIT } from "@/lib/related-memes-limit";
 import { withLocaleFallback, type Locale } from "@/lib/i18n";
 import { hasPublicListing } from "@/lib/thin-meme";
 
@@ -42,7 +43,7 @@ export function RelatedMemes({
   memes: readonly RelatedMeme[];
   locale: Locale;
 }) {
-  const cards = memes.slice(0, 6);
+  const cards = memes.slice(0, RELATED_MEMES_LIMIT);
   if (!hasPublicListing(cards.length)) return null;
   const copy = RELATED_COPY[locale];
 

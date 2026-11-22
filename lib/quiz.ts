@@ -152,61 +152,122 @@ export function buildQuestions(
   count: number = QUIZ_SIZE,
   rng: Rng = Math.random
 ): QuizQuestion[] {
-  const eligible = pool.filter(
+  const eligible = eligiblePool(pool);
+
+  const questions: QuizQuestion[] = [];
+  for (const answer of shuffle(eligible, rng)) {
+    if (questions.length >= count) break;
+    const question = buildQuestionFor(answer, eligible, rng);
+    if (question) questions.push(question);
+  }
+
+  return questions;
+}
+
+/**
+ * 공유 링크의 "같은 문제 세트" 재출제 — targets 순서 그대로 문항을 만든다.
+ * 오답 후보는 pool + targets. rng를 세트 id로 시드하면(seededRng) 같은 풀에서
+ * 보기 구성까지 동일하게 재현된다. 출제 불가한 target은 건너뛴다.
+ */
+export function buildQuestionsForSet(
+  targets: QuizPoolMeme[],
+  pool: QuizPoolMeme[],
+  rng: Rng = Math.random
+): QuizQuestion[] {
+  const seen = new Set<string>();
+  const merged = [...targets, ...pool].filter((m) => {
+    if (seen.has(m.short_id)) return false;
+    seen.add(m.short_id);
+    return true;
+  });
+  const eligible = eligiblePool(merged);
+  const questions: QuizQuestion[] = [];
+  for (const target of targets) {
+    const answer = eligible.find((m) => m.short_id === target.short_id);
+    if (!answer) continue;
+    const question = buildQuestionFor(answer, eligible, rng);
+    if (question) questions.push(question);
+  }
+  return questions;
+}
+
+/** 문자열 시드 결정적 rng (FNV-1a → mulberry32) — 같은 세트는 같은 보기 순서 */
+export function seededRng(seed: string): Rng {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function eligiblePool(pool: QuizPoolMeme[]): QuizPoolMeme[] {
+  return pool.filter(
     (m) =>
       m.short_id &&
       m.slug &&
       m.title &&
       normalizeSummary(m.summary).length >= MIN_SUMMARY_LENGTH
   );
+}
 
-  const questions: QuizQuestion[] = [];
-  for (const answer of shuffle(eligible, rng)) {
-    if (questions.length >= count) break;
-
-    const answerSummary = normalizeSummary(answer.summary);
-    const sameCategory: QuizPoolMeme[] = [];
-    const others: QuizPoolMeme[] = [];
-    for (const candidate of eligible) {
-      if (candidate.short_id === answer.short_id) continue;
-      if (normalizeSummary(candidate.summary) === answerSummary) continue;
-      (candidate.category === answer.category ? sameCategory : others).push(
-        candidate
-      );
-    }
-
-    const distractors = pickDistractors(answerSummary, sameCategory, others, rng);
-    if (distractors.length < OPTION_COUNT - 1) continue;
-
-    // 제목 단어를 정답에서 마스킹 — "제목에 답이 있는" 문제 방지.
-    // 오답에도 같은 토큰을 적용(우연히 포함된 경우 대비)하되, 대부분 정답만 바뀐다.
-    const nameTokens = titleNameTokens(answer.title);
-    const raw = [answerSummary, ...distractors];
-    const options = shuffle(
-      raw.map((s) => maskTitleWords(s, nameTokens)),
-      rng
+/**
+ * 정답 밈 하나로 문항 조립.
+ * - 요약 중복 제외, 보기 4개(정답 1 + 오답 3) 셔플
+ * - 오답을 3개 못 채우거나 마스킹 후 변별 불가하면 null
+ */
+function buildQuestionFor(
+  answer: QuizPoolMeme,
+  eligible: QuizPoolMeme[],
+  rng: Rng
+): QuizQuestion | null {
+  const answerSummary = normalizeSummary(answer.summary);
+  const sameCategory: QuizPoolMeme[] = [];
+  const others: QuizPoolMeme[] = [];
+  for (const candidate of eligible) {
+    if (candidate.short_id === answer.short_id) continue;
+    if (normalizeSummary(candidate.summary) === answerSummary) continue;
+    (candidate.category === answer.category ? sameCategory : others).push(
+      candidate
     );
-    const maskedAnswer = maskTitleWords(answerSummary, nameTokens);
-    // 마스킹 후 정답이 너무 짧거나 다른 보기와 겹치면(변별 불가) 이 밈은 건너뛴다
-    if (maskedAnswer.replace(/○/g, "").trim().length < 10) continue;
-    if (new Set(options).size < OPTION_COUNT) continue;
-
-    questions.push({
-      question: `「${answer.title}」, 무슨 뜻일까요?`,
-      options,
-      answerIndex: options.indexOf(maskedAnswer),
-      meme: {
-        id: answer.id,
-        shortId: answer.short_id,
-        slug: answer.slug,
-        title: answer.title,
-        originYear: answer.origin_year,
-        safetyLevel: answer.safety_level,
-      },
-    });
   }
 
-  return questions;
+  const distractors = pickDistractors(answerSummary, sameCategory, others, rng);
+  if (distractors.length < OPTION_COUNT - 1) return null;
+
+  // 제목 단어를 정답에서 마스킹 — "제목에 답이 있는" 문제 방지.
+  // 오답에도 같은 토큰을 적용(우연히 포함된 경우 대비)하되, 대부분 정답만 바뀐다.
+  const nameTokens = titleNameTokens(answer.title);
+  const raw = [answerSummary, ...distractors];
+  const options = shuffle(
+    raw.map((s) => maskTitleWords(s, nameTokens)),
+    rng
+  );
+  const maskedAnswer = maskTitleWords(answerSummary, nameTokens);
+  // 마스킹 후 정답이 너무 짧거나 다른 보기와 겹치면(변별 불가) 이 밈은 건너뛴다
+  if (maskedAnswer.replace(/○/g, "").trim().length < 10) return null;
+  if (new Set(options).size < OPTION_COUNT) return null;
+
+  return {
+    question: `「${answer.title}」, 무슨 뜻일까요?`,
+    options,
+    answerIndex: options.indexOf(maskedAnswer),
+    meme: {
+      id: answer.id,
+      shortId: answer.short_id,
+      slug: answer.slug,
+      title: answer.title,
+      originYear: answer.origin_year,
+      safetyLevel: answer.safety_level,
+    },
+  };
 }
 
 /** 등급 5단계 — 위트 있되 비하 없음 (기획 확정 문구) */

@@ -19,6 +19,9 @@
  *            출처 링크 클릭. HG-006 B안 — 개인정보 무포함(문서 ID·정규화 플랫폼명만)
  *          | correction_report_started(short_id, from) — 상세의 정정 제보 CTA 진입.
  *            from=trust_note(근거 0건) | doc_status(얇은 문서). HG-006 B안
+ *            ↳ 2026-11: /submit 대신 같은 페이지의 보강 제보 폼(#contribute)으로 연다
+ *          | meme_contribution_submitted(short_id, kind) — 보강 제보 접수 성공.
+ *            kind=source(출처 링크) | example(사용 예문). 입력 내용은 싣지 않는다
  *          | meme_view(meme_id) | follow_click(meme_id) | copy(format)
  *          | paywall_view (legacy durable event)
  *          | plus_weekly_brief_opened(brief_id, item_count)
@@ -47,6 +50,7 @@ type GtagEvent =
   | "search_no_result"
   | "meme_source_opened"
   | "correction_report_started"
+  | "meme_contribution_submitted"
   | "meme_view"
   | "follow_click"
   | "copy"

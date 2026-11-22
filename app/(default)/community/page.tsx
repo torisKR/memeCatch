@@ -65,7 +65,7 @@ export default async function CommunityPage({
   const visible = hasNext ? posts.slice(0, POSTS_PAGE_SIZE) : posts;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-6">
       <CommunityPageIntro />
 
       {failed && (

@@ -50,8 +50,8 @@ export default async function SupportPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-foreground">고객센터</h1>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">
+      <h1 className="page-title">고객센터</h1>
+      <p className="page-lede">
         버그 신고, 콘텐츠 정정·삭제 요청, 건의사항을 보내 주세요. 답변이 등록되면 이
         페이지에서 확인할 수 있어요.
       </p>

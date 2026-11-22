@@ -26,10 +26,10 @@ export default async function SubmitPage({
   const imported = typeof sp.imported === "string" ? Number(sp.imported) : null;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <main className="mx-auto w-full max-w-site px-4 py-8">
       <div className="mx-auto w-full max-w-md">
-        <h1 className="text-2xl font-bold">{copy.page.title}</h1>
-        <p className="mt-2 text-muted">{copy.page.intro}</p>
+        <h1 className="page-title">{copy.page.title}</h1>
+        <p className="page-lede">{copy.page.intro}</p>
 
         {/* 검수 프로세스 가시화 — 제보가 어떻게 처리되는지 (E-E-A-T 신뢰 신호) */}
         <ol

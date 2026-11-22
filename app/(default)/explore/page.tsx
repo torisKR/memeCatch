@@ -22,10 +22,13 @@ import {
 import { ExploreCollectionJsonLd } from "@/components/json-ld";
 import { isSocialPlatform, type SocialPlatform } from "@/lib/source-platform";
 import { curatedPassesIndexGate, curatedSearchCards, findCuratedCoreMeme } from "@/lib/curated-memes";
+import { mergeSearchPresentationItems, searchPresentationKey } from "@/lib/search-presentation";
 import { limitQueryToIds } from "@/lib/index-gate";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
 import { AdsenseScript } from "@/components/adsense-script";
 import { collectIndexableWindow, THIN_MEME_BODY_COLUMNS } from "@/lib/thin-meme";
+import { qualifySearchPreviews } from "@/lib/search-preview.server";
+import { createPreviewDeadlineDb, withPreviewDeadline } from "@/lib/explore-preview-deadline.server";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
@@ -39,7 +42,7 @@ import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
  */
 
 const EXPLORE_DESCRIPTION =
-  "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요.";
+  "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요. 카드마다 뜻과 지금 써도 되는지 사용 신호가 붙어 있고, 플랫폼별 사례로도 좁힐 수 있어요. 가나다순 전체 목록도 있어요.";
 
 export const metadata: Metadata = {
   title: "밈 탐색",
@@ -110,8 +113,8 @@ function parseFilters(sp: RawParams): Filters {
 
 function selectForPlatform(platform?: SocialPlatform, topicTag?: string) {
   const contents = platform
-    ? "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
-    : "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
+    ? "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner(platform, url, availability, moderation_status)"
+    : "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified)";
   const topic = topicTag
     ? ", topic_tags:meme_tags_map!inner(tags!inner(name))"
     : "";
@@ -241,6 +244,7 @@ export default async function ExplorePage({
 
   const initialLoad = await (async (): Promise<{
       items: MemeListItem[];
+      alternatives: MemeListItem[];
       unavailable: boolean;
       dbCount: number;
       hasMore: boolean;
@@ -256,6 +260,7 @@ export default async function ExplorePage({
         : [];
       const failed = {
         items: [] as MemeListItem[],
+        alternatives: [] as MemeListItem[],
         unavailable: true,
         dbCount: 0,
         hasMore: false,
@@ -286,12 +291,16 @@ export default async function ExplorePage({
         );
         if (queryFailed) return failed;
         const rows = page.items;
-        const seen = new Set(rows.map((item) => item.short_id));
+        const items = mergeSearchPresentationItems(curated, rows) as MemeListItem[];
+        const winners = new Map(items.map((item) => [searchPresentationKey(item), item]));
+        // Preserve observed suppressed database rows for a public recheck.
+        const alternatives = rows.filter((item) => {
+          const winner = winners.get(searchPresentationKey(item));
+          return winner && winner.id !== item.id && winner.short_id !== item.short_id;
+        }) as MemeListItem[];
         return {
-          items: [
-            ...curated.filter((item) => !seen.has(item.short_id)),
-            ...rows,
-          ] as MemeListItem[],
+          items,
+          alternatives,
           unavailable: false,
           dbCount: page.scanned,
           hasMore: page.hasMore,
@@ -302,29 +311,42 @@ export default async function ExplorePage({
       }
     })();
 
+  const previewResult = await withPreviewDeadline(async (signal) => {
+    let failed = false;
+    const previews = await qualifySearchPreviews(initialLoad.items, {
+      client: createPreviewDeadlineDb("service_role"), signal, onFailure: () => { failed = true; },
+    });
+    if (failed) throw new Error("preview ledger unavailable");
+    return previews;
+  });
+  const initialPreviews = previewResult ?? initialLoad.items.map(() => []);
+
   return (
     <main className="bg-background pb-14 text-foreground">
       <AdsenseScript />
-      <div className="mx-auto max-w-6xl px-4 pt-8">
+      <div className="mx-auto max-w-site px-4 pt-8">
         <ExploreCollectionJsonLd />
-        <div className="hover-glow-flame rounded-2xl border border-border bg-surface px-4 py-5 md:px-6">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            Discover
-          </p>
-          <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
-                밈 <span className="text-signal">탐색</span>
-              </h1>
-              <p className="mt-1 text-base text-muted">
-                검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
-              </p>
-            </div>
+        {/* The title is the page, not a card: no box around it. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pb-2">
+          <div className="min-w-0">
+            <h1 className="text-4xl font-extrabold tracking-[-0.03em] sm:text-5xl">밈 탐색</h1>
+            <p className="mt-2 max-w-xl text-base text-muted">
+              검색하고, 필요한 조건만 골라 바로 결과를 확인하세요.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-5">
             <Link
               href="/collections"
-              className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-accent"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 transition-colors hover:decoration-accent"
             >
-              테마별 모음 <span aria-hidden className="ml-1">→</span>
+              테마별 모음 보기
+            </Link>
+            <Link
+              href="/memes"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              가나다순 전체 목록
             </Link>
           </div>
         </div>
@@ -333,11 +355,14 @@ export default async function ExplorePage({
 
         <section
           aria-label="밈 탐색 결과"
-          className="instrument-grid mt-6 rounded-2xl border border-border/70 p-3"
+          className="mt-6"
         >
           <ExploreGrid
             key={filterKey(filters)}
             initial={initialLoad.items}
+            initialAlternatives={initialLoad.alternatives}
+            initialPreviews={initialPreviews}
+            initialPreviewUnavailable={previewResult === null}
             initialOffset={initialLoad.dbCount}
             hasMoreInitial={initialLoad.hasMore}
             catalogUnavailable={initialLoad.unavailable}

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { contentDepth, type ContentDepthInput } from "@/lib/content-depth";
 import { TrackedBlock } from "@/components/tracked-block";
+import { CONTRIBUTE_ANCHOR } from "@/lib/meme-contribution-anchor";
 
 /**
  * 정리 진행 중 안내 — lib/content-depth.ts가 '얇음'으로 판정한 문서에만 붙는다.
@@ -30,6 +30,8 @@ export function DocStatusNote({
   if (depth.signals.originChars === 0) missing.push("유래");
   if (depth.signals.usageExampleCount === 0) missing.push("사용 예문");
   if (depth.signals.sourceCount === 0) missing.push("출처");
+  // 안내 문구가 「실제로 써 보셨다면」이라 예문이 비어 있으면 예문 탭부터 연다.
+  const preferExample = depth.signals.usageExampleCount === 0;
 
   return (
     <aside
@@ -62,13 +64,14 @@ export function DocStatusNote({
         event="correction_report_started"
         params={{ short_id: shortId, from: "doc_status" }}
       >
-        <Link
-          href={`/submit?name=${encodeURIComponent(title)}`}
-          rel="nofollow"
+        {/* 새 밈 제보(/submit)가 아니라 같은 페이지의 보강 제보 폼을 연다. 비어 있는 게
+            예문이면 예문 탭, 그 밖에는 출처 탭부터 보여 준다. */}
+        <a
+          href={`#${CONTRIBUTE_ANCHOR}-${preferExample ? "example" : "source"}`}
           className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-surface px-4 py-2.5 text-base font-semibold underline underline-offset-2 transition-colors hover:text-foreground"
         >
-          아는 내용 제보하기
-        </Link>
+          아는 내용 보태기
+        </a>
       </TrackedBlock>
     </aside>
   );

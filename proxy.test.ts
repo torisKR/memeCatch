@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LOCALE_COOKIE, LOCALE_HEADER } from "@/lib/i18n";
-import { proxy, resolveLandingRedirectLocale } from "@/proxy";
+import { proxy, resolveLandingRedirectLocale, wwwApexRedirect } from "@/proxy";
 
 const dbMocks = vi.hoisted(() => ({
   abortSignal: vi.fn(),
@@ -17,7 +17,7 @@ const dbMocks = vi.hoisted(() => ({
 }));
 
 const BASE_UPDATED_AT = "2026-09-20T00:00:00Z";
-const INDEXABLE_DESCRIPTION = "밈".repeat(210);
+const INDEXABLE_DESCRIPTION = "밈".repeat(260);
 
 function publicMemeRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -285,6 +285,33 @@ describe("proxy public meme existence check", () => {
     },
   );
 
+  it("answers an unknown collection with the missing page's 404 and lets known ones through", async () => {
+    const unknown = await proxy(publicRequest("/collections/nope"));
+    expect(unknown.status).toBe(404);
+    expect(unknown.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
+
+    const known = await proxy(publicRequest("/collections/2020s"));
+    expect(known.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(known.status).toBe(200);
+  });
+
+  it("answers an unknown guide with the missing page's 404 and lets known ones through", async () => {
+    const unknown = await proxy(publicRequest("/guides/nope"));
+    expect(unknown.status).toBe(404);
+    expect(unknown.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
+
+    const known = await proxy(publicRequest("/guides/usage-signals"));
+    expect(known.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(known.status).toBe(200);
+  });
+
+  it("passes the missing-meme page through so the standalone rewrite fetch cannot loop", async () => {
+    const response = await proxy(publicRequest("/missing-public-meme"));
+
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(dbMocks.eq).not.toHaveBeenCalled();
+  });
+
   it.each(["cssqxwmb", "9ajbp6w6"])(
     "rewrites missing Korean canonical duplicate %s instead of serving the target fallback",
     async (duplicateShortId) => {
@@ -297,7 +324,7 @@ describe("proxy public meme existence check", () => {
       expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
       expect(response.status).toBe(404);
       expect(response.headers.get("x-middleware-rewrite")).toContain(
-        "/__missing_public_meme__",
+        "/missing-public-meme",
       );
       expect(response.headers.get("location")).toBeNull();
     },
@@ -358,7 +385,7 @@ describe("proxy public meme existence check", () => {
     expect(dbMocks.eq).toHaveBeenCalledWith("short_id", "gnact78h");
     expect(response.status).toBe(404);
     expect(response.headers.get("x-middleware-rewrite")).toContain(
-      "/__missing_public_meme__",
+      "/missing-public-meme",
     );
     expect(response.headers.get("location")).toBeNull();
   });
@@ -486,7 +513,7 @@ describe("proxy public meme existence check", () => {
 
     expect(response.status).toBe(404);
     expect(response.headers.get("location")).toBeNull();
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
   });
 
   it.each([
@@ -531,7 +558,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest("/ja/memes/gjq95suv-old"));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
     expect(response.headers.get("location")).toBeNull();
   });
 
@@ -584,7 +611,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest(path));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
     expect(response.headers.get("content-language")).toBe(language);
     expect(dbMocks.from).toHaveBeenCalledWith("memes");
     expect(dbMocks.select).toHaveBeenCalledWith(
@@ -639,7 +666,7 @@ describe("proxy public meme existence check", () => {
     const response = await proxy(publicRequest("/en/memes/jkm2022k-jung-kkuk-ma"));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toContain("/__missing_public_meme__");
+    expect(response.headers.get("x-middleware-rewrite")).toContain("/missing-public-meme");
   });
 
   it.each([undefined, "navigate"])("checks a document request with fetch mode %s", async (fetchMode) => {
@@ -852,5 +879,62 @@ describe("proxy auth return path", () => {
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("next")).toBe("/admin/memes?focus=unsourced");
     expect(location.search).not.toContain("private@example.com");
+  });
+});
+
+describe("www to apex redirect", () => {
+  function wwwRequest(path: string, init: { method?: string; host?: string } = {}) {
+    return new NextRequest(`http://127.0.0.1:3000${path}`, {
+      method: init.method ?? "GET",
+      headers: { host: init.host ?? "www.catchmeme.com" },
+    });
+  }
+
+  it.each(["/", "/memes/abc-%EB%B0%88?ref=x&y=1", "/sitemap.xml", "/robots.txt", "/en/explore"])(
+    "301s www GET %s to the apex with the same path and query",
+    async (path) => {
+      const response = await proxy(wwwRequest(path));
+      expect(response.status).toBe(301);
+      expect(response.headers.get("location")).toBe(`https://catchmeme.com${path === "/" ? "/" : path}`);
+    },
+  );
+
+  it("moves the TikTok start route to the apex so its state cookie reaches the apex callback", () => {
+    expect(wwwApexRedirect(wwwRequest("/auth/tiktok?next=%2F"))?.headers.get("location")).toBe(
+      "https://catchmeme.com/auth/tiktok?next=%2F",
+    );
+  });
+
+  it("redirects HEAD and a www host with a port", async () => {
+    expect((await proxy(wwwRequest("/explore", { method: "HEAD" }))).status).toBe(301);
+    expect((await proxy(wwwRequest("/explore", { host: "WWW.catchmeme.com:443" }))).status).toBe(301);
+  });
+
+  it("leaves /api/*, auth callbacks, POST and the apex host alone", () => {
+    expect(wwwApexRedirect(wwwRequest("/api/auth/callback?code=1"))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/auth/callback?code=1"))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/auth/tiktok/callback?state=x"))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/submit", { method: "POST" }))).toBeNull();
+    expect(wwwApexRedirect(wwwRequest("/", { host: "catchmeme.com" }))).toBeNull();
+  });
+
+  it("matches www requests the page matcher skips, except /api", async () => {
+    const { config } = await import("@/proxy");
+    const wwwMatcher = config.matcher.find(
+      (entry): entry is { source: string; has: Array<{ type: string; key: string; value: string }> } =>
+        typeof entry === "object",
+    );
+    expect(wwwMatcher?.has[0]).toMatchObject({ type: "header", key: "host" });
+    const host = new RegExp(`^${wwwMatcher!.has[0].value}$`);
+    expect(host.test("www.catchmeme.com")).toBe(true);
+    expect(host.test("www.catchmeme.com:443")).toBe(true);
+    expect(host.test("catchmeme.com")).toBe(false);
+    const source = new RegExp(`^${wwwMatcher!.source}$`);
+    expect(source.test("/sitemap.xml")).toBe(true);
+    expect(source.test("/api/webhooks/x")).toBe(false);
+    expect(source.test("/auth/callback")).toBe(false);
+    expect(source.test("/auth/tiktok/callback")).toBe(false);
+    expect(source.test("/auth/tiktok")).toBe(true);
+    expect(source.test("/authors")).toBe(true);
   });
 });

@@ -6,7 +6,7 @@ import { SITE_URL } from "@/lib/site";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 const DESCRIPTION =
-  "최신 밈부터 시대별·주제별 한국 밈까지, 목적에 맞게 편집한 밈캐치 모음을 살펴보세요.";
+  "최신 밈부터 시대별·주제별 한국 밈까지, 목적에 맞게 편집한 밈캐치 모음을 살펴보세요. 모음마다 소개글이 있고, 뜻·유래·사용 신호를 정리한 밈 문서로 바로 이어져요. 유행어·짤·챌린지별로도 골라 볼 수 있어요.";
 
 export const metadata: Metadata = {
   title: "테마별 밈 모음",
@@ -56,7 +56,7 @@ const orderedCollections = GROUPS.flatMap((group) =>
 
 export default function CollectionsIndexPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-16 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-8">
       <AdsenseScript />
       <script
         type="application/ld+json"
@@ -89,15 +89,12 @@ export default function CollectionsIndexPage() {
       </nav>
 
       <header className="mt-6 max-w-3xl">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-          Curated index
-        </p>
-        <h1 className="mt-2 text-4xl font-black tracking-[-0.035em] sm:text-5xl">
+        <h1 className="page-title">
           흩어진 밈을,
           <br />
-          <span className="text-accent">맥락별로 모았습니다.</span>
+          맥락별로 모았습니다.
         </h1>
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+        <p className="page-lede">
           최신 유행을 따라가거나 한 시대의 분위기를 되짚고 싶을 때, 전체 목록을
           헤매지 않고 목적에 맞는 모음에서 시작하세요.
         </p>

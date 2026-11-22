@@ -19,6 +19,7 @@ vi.mock("@/lib/db/admin", () => ({
   createAdminClient: () => ({ from: () => ({ select: () => ({ in: mocks.listLedger }) }) }),
 }));
 vi.mock("@/lib/meme-market-passport.server", () => ({ getMemeMarketPassport: async () => null }));
+vi.mock("@/lib/meme-contributions.server", () => ({ getMemeContributors: async () => [] }));
 vi.mock("@/lib/index-gate.server", () => ({ loadDiscoveryIndex: async () => ({ ok: true, ids: new Set() }) }));
 vi.mock("@/lib/meme-translations", () => ({ listIndexableLocalizedMemes: async () => [] }));
 vi.mock("@/components/answer-card", () => ({ AnswerCard: () => null }));

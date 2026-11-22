@@ -16,6 +16,8 @@ import {
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
 import { isCuratedCoreShortId } from "@/lib/curated-meme-ids";
+import { getCollection } from "@/lib/collections";
+import { getGuide } from "@/lib/guides";
 import { shortIdFromParam } from "@/lib/labels";
 import {
   CANONICAL_MEME_ALIAS_MAP,
@@ -170,7 +172,41 @@ export function resolveLandingRedirectLocale({
  * 로케일 우선순위: ① URL prefix ② ko. 쿠키·Accept-Language·prefetch는
  * 문서를 바꾸지 않는다. memecatch_locale은 언어 선택기만 기록한다.
  */
+/**
+ * Must be a routable folder: a leading underscore makes a Next folder private.
+ * Do not rewrite this path again. The standalone server fetches a rewrite
+ * target over HTTP, so a second rewrite here loops until the socket closes.
+ */
+const MISSING_PUBLIC_MEME_PATH = "/missing-public-meme";
+
+const WWW_HOST = "www.catchmeme.com";
+const APEX_ORIGIN = "https://catchmeme.com";
+const WWW_KEEP_PREFIXES = ["/api", "/auth/callback", "/auth/tiktok/callback"] as const;
+
+/**
+ * www.catchmeme.com served the apex content with 200 and Bing crawled its own
+ * www sitemap. GET/HEAD move to the apex with the same path and query (301).
+ * /api/* and the auth callbacks stay so webhooks and OAuth or magic-link
+ * callbacks that started on www keep their host-scoped PKCE/state cookies.
+ * Auth start routes (/auth/tiktok) still move: their callback is the apex, so
+ * the state cookie must be set on the apex.
+ * This runs in the app, so it holds whichever front proxy (Caddy site address,
+ * Cloudflare) forwards www. The Host header is read because nextUrl carries the
+ * standalone server's bind host.
+ */
+export function wwwApexRedirect(request: NextRequest): NextResponse | null {
+  const host = request.headers.get("host")?.toLowerCase().replace(/:\d+$/, "");
+  if (host !== WWW_HOST) return null;
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const { pathname, search } = request.nextUrl;
+  if (WWW_KEEP_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return null;
+  return NextResponse.redirect(`${APEX_ORIGIN}${pathname}${search}`, 301);
+}
+
 export async function proxy(request: NextRequest) {
+  const wwwRedirect = wwwApexRedirect(request);
+  if (wwwRedirect) return wwwRedirect;
+
   const landingLocale = resolveLandingRedirectLocale({
     pathname: request.nextUrl.pathname,
     cookieValue: request.cookies.get(LOCALE_COOKIE)?.value,
@@ -235,6 +271,21 @@ export async function proxy(request: NextRequest) {
   const path = pathWithoutLocalePrefix(request.nextUrl.pathname, urlLocale);
   const authReturnPath = buildAuthReturnPath(path, request.nextUrl.searchParams);
   const needsAuth = path.startsWith("/my") || path.startsWith("/submit") || path.startsWith("/admin") || path === "/login";
+  // An unknown collection or guide slug renders the not-found text inside the
+  // (default) layout, whose loading screen streams first, so the status stayed
+  // 200 (a soft 404). Both lists are static: answer from them here.
+  const staticSlugMatch = urlLocale ? null : path.match(/^\/(collections|guides)\/([^/]+)$/);
+  const unknownStaticSlug = staticSlugMatch
+    && !(staticSlugMatch[1] === "collections" ? getCollection(staticSlugMatch[2]) : getGuide(staticSlugMatch[2]));
+  if (unknownStaticSlug) {
+    const url = request.nextUrl.clone();
+    url.pathname = MISSING_PUBLIC_MEME_PATH;
+    return applyLocale(NextResponse.rewrite(url, {
+      status: 404,
+      request: { headers: requestHeaders },
+    }));
+  }
+
   const detailMatch = path.match(/^\/memes\/([^/]+)$/);
   const detailKey = detailMatch?.[1] === "random" && !urlLocale ? null : detailMatch?.[1];
   const fetchMode = request.headers.get("sec-fetch-mode");
@@ -265,7 +316,7 @@ export async function proxy(request: NextRequest) {
       if (error) console.warn("public_meme_existence_check_failed query_error");
       const rewriteMissingDocument = () => {
         const url = request.nextUrl.clone();
-        url.pathname = "/__missing_public_meme__";
+        url.pathname = MISSING_PUBLIC_MEME_PATH;
         return applyLocale(NextResponse.rewrite(url, {
           status: 404,
           request: { headers: requestHeaders },
@@ -347,5 +398,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|xml|txt|webmanifest)$).*)"],
+  matcher: [
+    "/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|xml|txt|webmanifest)$).*)",
+    // www host only: every path except /api and the auth callbacks (they keep
+    // their www cookies), including sitemap.xml, robots.txt and static files the
+    // matcher above skips, so wwwApexRedirect can move them.
+    {
+      source: "/((?!api/|auth/callback|auth/tiktok/callback).*)",
+      has: [{ type: "header", key: "host", value: "www\\.catchmeme\\.com(?::\\d+)?" }],
+    },
+  ],
 };

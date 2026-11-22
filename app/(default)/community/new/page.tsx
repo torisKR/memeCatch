@@ -30,10 +30,10 @@ export default async function CommunityNewPage() {
   if (!user) redirect("/login?next=/community/new");
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <main className="mx-auto w-full max-w-site px-4 py-8">
       <div className="mx-auto w-full max-w-md">
-        <h1 className="text-2xl font-bold">커뮤니티 글쓰기</h1>
-        <p className="mt-2 text-muted">
+        <h1 className="page-title">커뮤니티 글쓰기</h1>
+        <p className="page-lede">
           밈 추천, 추억, 토론 — 뭐든 편하게 써 주세요. 밈을 첨부하면 함께 보여드려요.
         </p>
         <div className="instrument-grid mt-6 rounded-2xl border border-border bg-surface p-5">

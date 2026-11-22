@@ -8,7 +8,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
   return (
     <>
       <section aria-labelledby="home-hero-title" className="bg-background text-foreground">
-        <div className="mx-auto grid max-w-6xl gap-7 px-4 py-8 sm:gap-9 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:items-center lg:gap-12 lg:py-14">
+        <div className="mx-auto grid max-w-site gap-7 px-4 py-8 sm:gap-9 sm:py-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:items-center lg:gap-12 lg:py-14">
           <div className="max-w-2xl">
             <p className="text-sm font-bold tracking-wide text-accent-text">
               뜻 · 유래 · 사용 맥락
@@ -85,7 +85,7 @@ export function HeroWeb3({ totalCount }: { totalCount: number }) {
       </section>
 
       <section aria-label="밈 발견 바로가기" className="border-y border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto flex max-w-site flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="mr-1 font-semibold text-muted">바로 찾아보기</span>
             {EXAMPLE_SEARCHES.map((query) => (

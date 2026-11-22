@@ -26,7 +26,7 @@ export function GlobalHeader() {
   return (
     <HideOnAdmin>
       <header data-site-header="" className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/70">
-        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
+        <div className="mx-auto flex min-h-16 max-w-site flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 sm:flex-nowrap sm:px-6 sm:py-0 lg:gap-x-3">
           <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto">
             {/* 워드마크 — 불꽃 SVG(오렌지) + 텍스트 */}
             <Link
@@ -69,8 +69,15 @@ export function GlobalHeader() {
                   placeholder={messages.searchPlaceholder}
                   autoComplete="off"
                   enterKeyHint="search"
-                  className="h-11 w-48 rounded-xl border border-border bg-surface-2 pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20 xl:w-60"
+                  className="peer h-11 w-48 rounded-xl border border-border bg-surface-2 pl-9 pr-9 text-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20 xl:w-60"
                 />
+                {/* The key that focuses this field (components/search-shortcut.tsx). */}
+                <kbd
+                  aria-hidden
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border bg-surface px-1.5 font-sans text-xs font-semibold leading-5 text-muted peer-focus:hidden"
+                >
+                  /
+                </kbd>
               </div>
             </form>
 

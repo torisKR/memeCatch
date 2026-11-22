@@ -12,6 +12,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
 const FOOTER_LINKS = [
   { href: "/about", label: "about" },
   { href: "/editorial", label: "editorial" },
+  { href: "/guides", label: "guides" },
   { href: "/privacy", label: "privacy" },
   { href: "/terms", label: "terms" },
   { href: "/rankings", label: "rankings" },
@@ -26,9 +27,21 @@ export function SiteFooter() {
   return (
     <HideOnAdmin>
       <footer className="instrument-grid mt-16 border-t border-border bg-surface-2">
-        <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="mx-auto max-w-site px-4 py-8">
           <nav aria-label={messages.footerNav}>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              {locale === "ko" && (
+                <li>
+                  {/* 색인 대상 밈 전체 목록(/memes) — 모든 페이지에서 크롤러가 따라갈 수 있는 링크. */}
+                  <Link
+                    href="/memes"
+                    prefetch={false}
+                    className="-mx-1 inline-flex min-h-11 items-center px-1 font-medium text-muted underline decoration-transparent decoration-2 underline-offset-4 transition-[color,text-decoration-color] hover:text-foreground hover:decoration-flame-500 focus-visible:decoration-flame-500"
+                  >
+                    밈 전체 목록
+                  </Link>
+                </li>
+              )}
               {locale === "ko" && (
                 <li>
                   <Link

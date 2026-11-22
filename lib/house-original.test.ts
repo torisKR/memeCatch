@@ -8,7 +8,6 @@ import {
   isHouseOriginalRightsSource,
   parseAdminOriginFilter,
   aboutSectionHeading,
-  memeDetailMetadataDescription,
   originSectionHeading,
   originYearFieldLabel,
   houseOriginalOriginHint,
@@ -156,17 +155,6 @@ describe("admin origin filter and empty copy", () => {
     expect(aboutSectionHeading("catalog")).toBe("뜻과 유래");
     expect(aboutSectionHeading("house_original")).toBe("뜻과 제작");
     expect(aboutSectionHeading(undefined)).toBe("뜻과 유래");
-    expect(
-      memeDetailMetadataDescription("대기표 밈", "줄 서는 농담", "house_original"),
-    ).toBe(
-      "대기표 밈 뜻과 제작 · 줄 서는 농담. 지금 써도 되는지 사용 안전 신호등까지 확인하세요.",
-    );
-    expect(
-      memeDetailMetadataDescription("대기표 밈", "줄 서는 농담", "house_original"),
-    ).not.toContain("뜻과 유래");
-    expect(memeDetailMetadataDescription("딴딴", "한 줄 요약", "catalog")).toContain(
-      "뜻과 유래",
-    );
   });
 
   it("labels the year field as make-year for house originals and folk-year for catalog", () => {

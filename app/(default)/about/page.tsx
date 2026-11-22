@@ -23,9 +23,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AboutPage() {
   const count = await getIndexableKoreanMemeCount().catch(() => null);
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10">
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10">
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-extrabold tracking-tight">밈캐치 소개</h1>
+        <h1 className="page-title">밈캐치 소개</h1>
         <p className="mt-3 text-lg leading-relaxed text-muted">
           밈캐치는 한국 밈·유행어·챌린지의 <strong className="text-foreground">뜻·유래·지금 써도
           되는지</strong>를 한 번에 알려주는 실시간 밈 사전입니다. 1990년대부터
@@ -40,6 +40,14 @@ export default async function AboutPage() {
             되나&rdquo;는 여전히 알 수 없었고, 유행이 지난 줄 모르고 썼다가
             분위기가 식는 일도 흔했습니다. 밈은 뜻보다 <strong>쓸 자리</strong>
             에서 사고가 납니다. 밈캐치는 그 지점에 답하려고 만든 사전입니다.
+          </p>
+          <p className="mt-4 text-base leading-relaxed">
+            사전을 만들며 정리한 판단 기준은{" "}
+            <Link href="/guides" className="text-accent-text underline underline-offset-2">
+              가이드
+            </Link>
+            에 긴 글로 풀어 두었습니다. 사용 신호 읽는 법, 단톡방에 보내기 전 점검,
+            출처 확인 방법 같은 내용입니다.
           </p>
         </section>
 
@@ -114,6 +122,11 @@ export default async function AboutPage() {
               </p>
             </li>
           </ol>
+          <p className="mt-4 text-base leading-relaxed">
+            검색 결과와 목록에는 뜻·유래·사용법·예문을 합친 설명이 250자 이상이고
+            확인한 출처가 붙은 문서만 올립니다. 아직 설명이 짧은 문서는 주소로는
+            열리지만, 보강할 때까지 목록과 검색 노출에서 뺍니다.
+          </p>
           <p className="mt-4 text-base leading-relaxed">
             어떤 밈을 수록하고 무엇을 수록하지 않는지, 사용 안전 등급을 어떤
             근거로 매기는지, 출처의 권리를 어떻게 확인하는지는{" "}

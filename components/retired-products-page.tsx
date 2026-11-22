@@ -42,7 +42,7 @@ export function RetiredProductsPage({
   const cards = memes.slice(0, 4);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-14 sm:py-20">
+    <main className="mx-auto w-full max-w-site px-4 py-14 sm:py-20">
       <meta name="robots" content="noindex, follow" />
       <div className="mx-auto flex max-w-xl flex-col items-center text-center">
         <h1 className="text-balance text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">

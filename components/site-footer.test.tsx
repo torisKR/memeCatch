@@ -36,4 +36,10 @@ describe("SiteFooter", () => {
     expect(html).toContain('href="/about"');
     expect(html).toContain('href="/contact"');
   });
+
+  it("links the crawlable all-memes directory on Korean pages", () => {
+    const html = renderToStaticMarkup(<SiteFooter />);
+    expect(html).toContain('href="/memes"');
+    expect(html).toContain(">밈 전체 목록<");
+  });
 });

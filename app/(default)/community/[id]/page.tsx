@@ -90,7 +90,7 @@ export default async function CommunityPostPage({ params }: Props) {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 pb-14 pt-6">
+    <main className="mx-auto max-w-site space-y-6 px-4 pb-14 pt-6">
       <ForumPostingJsonLd
         postId={post.id}
         title={post.title}
@@ -114,7 +114,7 @@ export default async function CommunityPostPage({ params }: Props) {
 
       <article className="hover-glow-flame rounded-2xl border border-border bg-surface p-5">
         <header>
-          <h1 className="text-2xl font-extrabold leading-snug">{post.title}</h1>
+          <h1 className="text-3xl font-extrabold leading-snug tracking-[-0.02em] [word-break:keep-all] sm:text-4xl">{post.title}</h1>
           <p className="mt-2 flex items-center gap-2 text-sm text-muted">
             <span id="author" className="font-semibold text-foreground">
               {post.profiles?.nickname ?? "익명"}

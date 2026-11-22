@@ -7,6 +7,20 @@
 }
 
 {$SITE_ADDRESS:catchmeme.com} {
+	# www.catchmeme.com answered 200 with the apex content, and Bing crawled a
+	# separate www sitemap. Send page and file requests to the apex with the same
+	# path and query. This only runs when SITE_ADDRESS on the VM lists
+	# www.catchmeme.com; proxy.ts (wwwApexRedirect) applies the same rule in the
+	# app, so the redirect holds either way. /api/* stays on www so OAuth
+	# callbacks and webhooks registered with www keep working, and only GET/HEAD
+	# move so a POST is never turned into a GET.
+	@www_to_apex {
+		host www.catchmeme.com
+		method GET HEAD
+		not path /api/* /auth/callback /auth/callback/* /auth/tiktok/callback /auth/tiktok/callback/*
+	}
+	redir @www_to_apex https://catchmeme.com{uri} 301
+
 	encode gzip
 	reverse_proxy app:3000
 }

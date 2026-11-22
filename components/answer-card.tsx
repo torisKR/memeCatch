@@ -42,29 +42,14 @@ export function AnswerCard({
   return (
     <motion.section
       aria-label="정답 카드"
-      className="hover-glow-flame rounded-2xl border border-border bg-surface p-5 shadow-sm"
+      className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-8"
       initial={reduce ? false : { y: 12 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* 판독 헤더 — 계측 화면의 채널 라벨. 지금 이 밈이 어느 단계인지 먼저 말한다. */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-          <span aria-hidden className="size-1.5 rounded-full bg-(--signal-cyan)" />
-          Life signal
-        </span>
-        <span className="stat-mono text-[11px] font-bold text-muted">
-          {LIFECYCLE_STATUS[meme.lifecycle_status].user}
-        </span>
-      </div>
-
-      {/* 이 밈 자신의 파형 — 홈 범례에서 배운 언어를 상세에서 크게 읽는다. */}
-      <div className="instrument-grid mt-2 rounded-xl border border-border/70 px-3 py-2">
-        <SignalTrace status={meme.lifecycle_status} size="lg" />
-      </div>
-
-      <div className="mt-4 flex items-start justify-between gap-3">
-        <h1 className={`${titleStyles.title} min-w-0 flex-1 whitespace-normal text-2xl font-extrabold leading-tight md:text-3xl`}>
+      {/* The answer first: name, meaning, then whether it is safe to use. */}
+      <div className="flex items-start justify-between gap-3">
+        <h1 className={`${titleStyles.title} min-w-0 flex-1 whitespace-normal text-3xl font-extrabold leading-[1.15] tracking-[-0.03em] md:text-5xl`}>
           {meme.title}
         </h1>
         <CopyTextButton
@@ -107,6 +92,20 @@ export function AnswerCard({
           <SaveButton memeId={saveMemeId} />
         </div>
       )}
+
+      {/* Where this meme is in its life. Supporting evidence, so it comes
+          after the verdict and takes one quiet row. */}
+      <div className="mt-5 flex items-center gap-4 border-t border-border pt-4">
+        <p className="shrink-0 text-sm text-muted">
+          유행 단계{" "}
+          <strong className="font-bold text-foreground">
+            {LIFECYCLE_STATUS[meme.lifecycle_status].user}
+          </strong>
+        </p>
+        <div className="min-w-0 flex-1">
+          <SignalTrace status={meme.lifecycle_status} size="lg" />
+        </div>
+      </div>
     </motion.section>
   );
 }

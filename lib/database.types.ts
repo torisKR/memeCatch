@@ -11,6 +11,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      daily_meme_quiz_completions: {
+        Row: {
+          completed_at: string
+          correct: boolean
+          meme_short_id: string
+          quiz_date: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          correct: boolean
+          meme_short_id: string
+          quiz_date: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          correct?: boolean
+          meme_short_id?: string
+          quiz_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meme_collectible_cards: {
         Row: {
           id: string
@@ -1517,6 +1541,89 @@ export type Database = {
             columns: ["meme_id"]
             isOneToOne: false
             referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meme_contributions: {
+        Row: {
+          applied_source_id: string | null
+          contributor_id: string | null
+          created_at: string
+          credit_public: boolean
+          example_situation: string | null
+          example_text: string | null
+          id: string
+          kind: string
+          meme_id: string
+          note: string | null
+          reject_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_url: string | null
+          status: Database["public"]["Enums"]["submission_status"]
+        }
+        Insert: {
+          applied_source_id?: string | null
+          contributor_id?: string | null
+          created_at?: string
+          credit_public?: boolean
+          example_situation?: string | null
+          example_text?: string | null
+          id?: string
+          kind: string
+          meme_id: string
+          note?: string | null
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+        }
+        Update: {
+          applied_source_id?: string | null
+          contributor_id?: string | null
+          created_at?: string
+          credit_public?: boolean
+          example_situation?: string | null
+          example_text?: string | null
+          id?: string
+          kind?: string
+          meme_id?: string
+          note?: string | null
+          reject_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meme_contributions_applied_source_id_fkey"
+            columns: ["applied_source_id"]
+            isOneToOne: false
+            referencedRelation: "meme_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_contributions_contributor_id_fkey"
+            columns: ["contributor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_contributions_meme_id_fkey"
+            columns: ["meme_id"]
+            isOneToOne: false
+            referencedRelation: "memes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meme_contributions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4133,6 +4240,14 @@ export type Database = {
       }
     }
     Functions: {
+      get_meme_contributors: {
+        Args: { p_meme_id: string }
+        Returns: {
+          example_count: number
+          nickname: string
+          source_count: number
+        }[]
+      }
       record_instagram_post_video_verification: {
         Args: { p_content_id: string; p_decision: string; p_evidence_note: string; p_operation_id: string }
         Returns: Json
@@ -4142,6 +4257,17 @@ export type Database = {
         Returns: undefined
       }
       register_catalog_meme: { Args: { p_input: Json }; Returns: Json }
+      review_meme_contribution: {
+        Args: {
+          p_decision: string
+          p_id: string
+          p_reject_reason: string | null
+          p_situation: string | null
+          p_source_title: string | null
+          p_text: string | null
+        }
+        Returns: Json
+      }
       search_meme_references: {
         Args: { p_query: string; p_embedding: number[]; p_limit?: number }
         Returns: { id: string; short_id: string; slug: string; title: string; summary: string }[]
@@ -4328,6 +4454,17 @@ export type Database = {
           outbox_id: string
           payload: Json
           user_id: string
+        }[]
+      }
+      complete_daily_meme_quiz: {
+        Args: { p_correct: boolean; p_meme_short_id: string }
+        Returns: {
+          best_streak: number
+          completed_at: string | null
+          correct: boolean | null
+          current_streak: number
+          quiz_date: string
+          total_days: number
         }[]
       }
       complete_plus_global_daily_challenge: {
@@ -4527,6 +4664,17 @@ export type Database = {
       }
       growth_kpi_unavailable: { Args: { p_reason: string }; Returns: Json }
       has_active_plus: { Args: { p_user_id: string }; Returns: boolean }
+      get_daily_meme_quiz_status: {
+        Args: never
+        Returns: {
+          best_streak: number
+          completed_at: string | null
+          correct: boolean | null
+          current_streak: number
+          quiz_date: string
+          total_days: number
+        }[]
+      }
       get_my_profile: {
         Args: never
         Returns: {
@@ -4984,6 +5132,18 @@ export type Database = {
           p_seen_at: string
           p_tags: string[]
           p_url: string
+        }
+        Returns: string
+      }
+      submit_meme_contribution: {
+        Args: {
+          p_credit_public: boolean
+          p_kind: string
+          p_meme_id: string
+          p_note: string | null
+          p_situation: string | null
+          p_source_url: string | null
+          p_text: string | null
         }
         Returns: string
       }

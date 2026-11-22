@@ -3,7 +3,7 @@ import { SkeletonBone } from "@/components/skeletons";
 /** 이용약관 로딩 — 제목 + 시행일 + 조항 다수 스켈레톤 */
 export default function TermsLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-16 pt-10" aria-busy>
+    <main className="mx-auto max-w-site px-4 pb-16 pt-10" aria-busy>
       <span className="sr-only">불러오는 중이에요</span>
 
       <SkeletonBone className="h-8 w-32" />

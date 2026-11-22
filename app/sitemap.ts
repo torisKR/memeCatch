@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { createStaticClient } from "@/lib/db/server";
 import { memePathFrom } from "@/lib/labels";
+import { GUIDES } from "@/lib/guides";
 import { COLLECTIONS } from "@/lib/collections";
 import type { ContentDepthInput } from "@/lib/content-depth";
 import { loadDiscoveryIndex } from "@/lib/index-gate.server";
@@ -26,6 +27,7 @@ import {
 
 
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
+import { directoryPageCount, directoryPagePath } from "@/lib/meme-directory";
 
 /**
  * A database-less image build must not cache a sitemap that has no meme URLs.
@@ -316,20 +318,29 @@ async function buildSitemap(): Promise<{
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),
-    // 주요 정적 페이지 — 탐색·커뮤니티·정책
+    // 주요 정적 페이지 — 탐색·커뮤니티·정책.
+    // 스튜디오·퀴즈·글로벌 피드는 사이트맵에 넣지 않는다. 도구 화면이거나 글이 거의 없어
+    // 사전의 대표 문서로 읽히지 않는다(2026-11-20 AdSense 저가치 거부 후). 페이지는 그대로다.
     {
       url: `${SITE_URL}/explore`,
       ...lastModified(homeLastMod),
       changeFrequency: "daily" as const,
       priority: 0.6,
     },
-    ...(["/global", "/studio", "/timeline", "/slang", "/quiz", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const)
+    ...(["/timeline", "/slang", "/weekly", "/rankings", "/community", "/news", "/about", "/editorial", "/privacy", "/terms", "/contact"] as const)
       .filter((path) => showRankings || path !== "/rankings")
       .map((path) => ({
         url: `${SITE_URL}${path}`,
         changeFrequency: "daily" as const,
         priority: 0.6,
       })),
+    // 가이드 — DB 없이 렌더되는 정적 긴 글(lib/guides.ts).
+    { url: `${SITE_URL}/guides`, changeFrequency: "monthly" as const, priority: 0.6 },
+    ...GUIDES.map((guide) => ({
+      url: `${SITE_URL}/guides/${guide.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
   ];
 
   // 공개 밈 중 **콘텐츠가 충실한 것만** 색인 노출한다.
@@ -432,6 +443,18 @@ async function buildSitemap(): Promise<{
       }
     }
     if (data.length < PAGE) break;
+  }
+
+  // 전체 밈 목록(/memes?page=N). 위에서 센 한국어 색인 대상 수로 페이지를 나눈다.
+  // 목록 페이지(lib/meme-directory)는 같은 판정(별칭 제외·discovery·얇은 문서 제외)을 쓴다.
+  if (!catalogUnavailable && koreanMemeCount > 0) {
+    for (let page = 1; page <= directoryPageCount(koreanMemeCount); page += 1) {
+      entries.push({
+        url: absolute(directoryPagePath(page)),
+        changeFrequency: "weekly" as const,
+        priority: page === 1 ? 0.7 : 0.5,
+      });
+    }
   }
 
   for (const [index, locale] of SEO_CONTENT_LOCALES.entries()) {

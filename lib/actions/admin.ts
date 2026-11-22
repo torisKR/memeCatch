@@ -12,6 +12,7 @@ import { after } from "next/server";
 import { PUBLIC_CATALOG_CACHE_TAG, PUBLIC_COUNT_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createClient } from "@/lib/db/server";
 import { createAdminClient } from "@/lib/db/admin";
+import { scheduleIndexNowForMeme } from "@/lib/indexnow.server";
 import { memePathFrom, type SafetyLevel } from "@/lib/labels";
 import type { Json } from "@/lib/database.types";
 import { getOEmbed, isSupportedOEmbedUrl } from "@/lib/oembed";
@@ -241,6 +242,61 @@ export async function rejectSubmission(input: {
       category: input.category,
       reason: input.reason.trim(),
     });
+    revalidatePath("/admin/submissions");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: errMessage(e) };
+  }
+}
+
+/* ── 문서 보강 제보(밈 상세의 출처 링크·사용 예문) ─────────── */
+
+const CONTRIBUTION_REVIEW_ERRORS: Record<string, string> = {
+  operator_required: "운영자 권한이 없어요.",
+  contribution_not_found: "제보를 찾을 수 없어요.",
+  already_reviewed: "이미 처리된 제보예요.",
+  reject_reason_required: "반려 사유를 입력해 주세요.",
+  examples_full: "이 밈에는 예문이 이미 3개 있어요. 밈 관리에서 기존 예문을 정리한 뒤 승인해 주세요.",
+  invalid_example: "예문은 상황 120자, 문장 500자까지예요.",
+  invalid_source_title: "자료 제목은 300자까지예요.",
+};
+
+/**
+ * 보강 제보 승인·반려 — review_meme_contribution RPC가 반영(meme_sources 추가 또는
+ * usage_examples 추가)과 감사 로그를 한 트랜잭션으로 처리한다.
+ */
+export async function reviewMemeContribution(input: {
+  contributionId: string;
+  decision: "approve" | "reject";
+  sourceTitle?: string;
+  situation?: string;
+  text?: string;
+  rejectReason?: string;
+}): Promise<ActionResult> {
+  try {
+    const { db } = await requireOperator();
+    if (input.decision === "reject" && !input.rejectReason?.trim()) {
+      return { ok: false, error: "반려 사유를 입력해 주세요." };
+    }
+    const { data, error } = await db.rpc("review_meme_contribution", {
+      p_id: input.contributionId,
+      p_decision: input.decision,
+      p_source_title: input.sourceTitle?.trim() || null,
+      p_situation: input.situation?.trim() || null,
+      p_text: input.text?.trim() || null,
+      p_reject_reason: input.rejectReason?.trim() || null,
+    });
+    if (error) {
+      const key = Object.keys(CONTRIBUTION_REVIEW_ERRORS).find((k) => error.message?.includes(k));
+      return { ok: false, error: key ? CONTRIBUTION_REVIEW_ERRORS[key] : error.message };
+    }
+    const memeId =
+      data && typeof data === "object" && !Array.isArray(data) && typeof data.memeId === "string"
+        ? data.memeId
+        : null;
+    if (input.decision === "approve" && memeId) {
+      revalidateCanonicalMemePaths(await loadMemeRevalidationIdentity(db, memeId));
+    }
     revalidatePath("/admin/submissions");
     return { ok: true };
   } catch (e) {
@@ -482,6 +538,8 @@ export async function approveSubmission(input: {
     } else {
       invalidateApproval();
     }
+    // 새로 공개된 문서를 IndexNow로 알린다. 응답 뒤에 실행되며 실패해도 승인 결과는 그대로다.
+    scheduleIndexNowForMeme(db, memeId);
     return {
       ok: true,
       data: {
@@ -739,6 +797,7 @@ export async function updateMeme(input: {
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);
+    scheduleIndexNowForMeme(db, input.memeId);
     return {
       ok: true,
       data: {
@@ -848,7 +907,9 @@ export async function transitionMemeStatus(input: {
     } else {
       const { error } = await db
         .from("memes")
-        .update({ moderation_status: input.to, updated_at: new Date().toISOString() })
+        // updated_at은 본문 수정 시각이다(사이트맵 lastmod, 번역 최신 여부 판정).
+        // 공개 상태 전환은 본문을 바꾸지 않으므로 건드리지 않는다.
+        .update({ moderation_status: input.to })
         .eq("id", input.memeId);
       if (error) {
         const msg = error.message.includes("invalid moderation transition")
@@ -866,6 +927,8 @@ export async function transitionMemeStatus(input: {
     revalidatePath("/admin/memes");
     revalidatePath(`/admin/memes/${input.memeId}`);
     revalidateCanonicalMemePaths(revalidationIdentity);
+    // 공개·비공개 전환 모두 알린다. 내려간 문서도 404를 빨리 확인시킨다.
+    scheduleIndexNowForMeme(db, input.memeId);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errMessage(e) };

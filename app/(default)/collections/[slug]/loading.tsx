@@ -3,7 +3,7 @@ import { MemeCardSkeleton, SkeletonBone } from "@/components/skeletons";
 /** 컬렉션 허브 로딩 — 브레드크럼 + 제목 + 인트로 + 카드 그리드 스켈레톤 */
 export default function CollectionLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8" aria-busy>
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8" aria-busy>
       <span className="sr-only">불러오는 중이에요</span>
 
       {/* 브레드크럼 */}
@@ -19,7 +19,7 @@ export default function CollectionLoading() {
       </div>
 
       {/* 카드 그리드 */}
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6">
         {Array.from({ length: 12 }).map((_, i) => (
           <MemeCardSkeleton key={i} />
         ))}

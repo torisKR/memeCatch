@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { memeSeoDescription, memeSeoTitle } from "@/lib/meme-seo-copy";
 import type { Metadata } from "next";
 import { CANONICAL_MEME_ALIAS_MAP } from "@/lib/canonical-meme-path";
 import { curatedDepthInput, findCuratedCoreMeme, type CuratedMeme } from "@/lib/curated-memes";
@@ -83,7 +84,15 @@ export function unavailableMemeMetadata(): Metadata {
 
 export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
   const path = memePathFrom(meme.short_id, meme.slug);
-  const title = `${meme.title} 뜻`;
+  const title = memeSeoTitle("ko", meme.title);
+  const description = memeSeoDescription("ko", {
+    title: meme.title,
+    summary: meme.summary,
+    originYear: meme.origin_year,
+    safetyLevel: meme.safety_level,
+    usageExampleCount: meme.usage_examples.length,
+    hasOrigin: Boolean(meme.origin.trim()),
+  });
   const robots = koreanDetailRobots(curatedDepthInput(meme));
   const image = koreanMemeShareImage({
     shortId: meme.short_id,
@@ -93,7 +102,7 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
   });
   return {
     title,
-    description: meme.summary,
+    description,
     alternates: { canonical: path },
     ...(robots ? { robots } : {}),
     openGraph: {
@@ -101,14 +110,14 @@ export function curatedMemeMetadata(meme: CuratedMeme): Metadata {
       siteName: "밈캐치",
       locale: "ko_KR",
       title,
-      description: meme.summary,
+      description,
       url: path,
       images: [image],
     },
     twitter: {
       card: "summary_large_image",
       title,
-      description: meme.summary,
+      description,
       images: [image],
     },
   };

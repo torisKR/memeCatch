@@ -23,11 +23,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
     <div className="mt-8 flex flex-col gap-10">
       {showTrending && (
         <Reveal as="section">
-          <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            <span aria-hidden className="signal-live size-1.5 rounded-full bg-(--signal-cyan)" />
-            Trending now
-          </p>
-          <h2 id="weekly-trending" className="mt-1 text-xl font-extrabold tracking-tight">
+          <h2 id="weekly-trending" className="text-2xl font-extrabold tracking-tight">
             지금 가장 뜨거운 밈
           </h2>
           <p className="mt-1 text-sm text-muted">
@@ -50,10 +46,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
 
       {showFresh && (
         <Reveal as="section" delay={0.05}>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            New entries
-          </p>
-          <h2 id="weekly-fresh" className="mt-1 text-xl font-extrabold tracking-tight">
+          <h2 id="weekly-fresh" className="text-2xl font-extrabold tracking-tight">
             {SECTION_TITLES.fresh}
           </h2>
           <p className="mt-1 text-sm text-muted">
@@ -63,7 +56,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
             <MotionList
               as="ul"
               itemAs="li"
-              className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6"
               itemClassName="min-w-0"
             >
               {fresh.map((meme) => (
@@ -76,10 +69,7 @@ export function WeeklyDigest({ digest }: { digest: WeeklyDigestData }) {
 
       {categoryBreakdown.length > 0 && (
         <Reveal as="section" delay={0.1}>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            Category mix
-          </p>
-          <h2 id="weekly-categories" className="mt-1 text-xl font-extrabold tracking-tight">
+          <h2 id="weekly-categories" className="text-2xl font-extrabold tracking-tight">
             카테고리 하이라이트
           </h2>
           <p className="mt-1 text-sm text-muted">

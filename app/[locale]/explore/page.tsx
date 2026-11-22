@@ -104,11 +104,8 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
         <ExploreJsonLd locale={locale} name={copy.title} description={copy.description} />
       )}
       <section className="border-b border-border px-4 py-12 sm:py-16">
-        <div className="mx-auto max-w-5xl">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-            {copy.eyebrow}
-          </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">
+        <div className="mx-auto max-w-site">
+          <h1 className="page-title max-w-3xl">
             {copy.title}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
@@ -126,7 +123,7 @@ export default async function LocalizedExplorePage({ params, searchParams }: Pro
         </div>
       </section>
 
-      <section aria-labelledby="localized-explore-results" className="mx-auto max-w-5xl px-4 py-12">
+      <section aria-labelledby="localized-explore-results" className="mx-auto max-w-site px-4 py-12">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="localized-explore-results" className="text-2xl font-black tracking-tight">

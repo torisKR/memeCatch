@@ -33,9 +33,8 @@ export function NewsPageContent({
   return (
     <>
       <header className="max-w-3xl">
-        <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">{copy.newsEyebrow}</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">{copy.newsTitle}</h1>
-        <p className="mt-3 text-base leading-relaxed text-muted sm:text-lg">
+        <h1 className="page-title">{copy.newsTitle}</h1>
+        <p className="page-lede">
           {copy.newsIntro}
         </p>
         <nav aria-label={copy.ageNav} className="mt-5 flex flex-wrap gap-2">
@@ -100,7 +99,7 @@ function AudienceSection({
           <p className="mt-1 text-sm text-muted">{copy.voteInfo}</p>
           <TrackedBlock
             event="generation_news_click"
-            className="instrument-grid mt-3 rounded-2xl border border-border/60 p-3 sm:p-4"
+            className="mt-4"
           >
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {highlights.map((item) => (

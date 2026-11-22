@@ -73,6 +73,9 @@
 }
 
 @theme inline {
+  /* 사이트 공용 컨테이너 폭(max-w-site). 페이지·헤더·푸터가 모두 이 값을 쓴다.
+     1440px 화면에서 좌우 48px, 1920px에서 288px 여백. 홈 CSS 모듈의 84rem과 같은 값. */
+  --container-site: 84rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
@@ -183,6 +186,53 @@ html:lang(zh-Hans) body {
   line-break: strict;
   overflow-wrap: anywhere;
   word-break: normal;
+}
+
+/* ── 페이지 제목부 (DESIGN.md §17) ─────────────────────────────
+   모든 목록·문서 페이지가 같은 제목 크기와 리드 문단을 쓴다. 제목은 상자에
+   넣지 않고, 영문 대문자 라벨을 위에 얹지 않는다. */
+.page-title {
+  font-size: clamp(2rem, 1.35rem + 2.6vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.14;
+  word-break: keep-all;
+}
+.page-lede {
+  margin-top: 0.75rem;
+  max-width: 42rem;
+  color: var(--muted);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+/* ── 포인터 조명 표면 (DESIGN.md §17) ─────────────────────────
+   텍스트 카드용. components/signal-pointer.tsx가 쓰는 --px/--py 위치에 옅은
+   불꽃색 조명을 비춘다. 밈 카드와 달리 기울이지 않는다(글 읽기를 방해한다).
+   요소에 data-pointer-light 속성과 이 클래스를 함께 단다. */
+.signal-surface {
+  position: relative;
+  isolation: isolate;
+}
+.signal-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    20rem circle at var(--px, 50%) var(--py, 50%),
+    color-mix(in srgb, var(--accent) 13%, transparent),
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity var(--dur-micro, 200ms) var(--ease-out, ease-out);
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .signal-surface:hover::before {
+    opacity: 1;
+  }
 }
 
 /* ── 모션 타이밍 토큰 (DESIGN.md §5) ── */

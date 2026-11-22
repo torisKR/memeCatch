@@ -4,6 +4,7 @@ import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { INDEXABLE_LIST_SELECT, MemeCatalogUnavailableError, type MemeListItem } from "@/lib/queries";
 import type { MemeCategory } from "@/lib/labels";
 import { RelatedMemes } from "@/components/related-memes";
+import { RELATED_MEMES_LIMIT } from "@/lib/related-memes-limit";
 import { indexableScanLimit, omitThinMemes } from "@/lib/thin-meme";
 
 const loadCategoryStream = cacheCatalogRead(
@@ -30,11 +31,11 @@ const loadCategoryStream = cacheCatalogRead(
   { revalidate: 86_400, tags: [PUBLIC_CATALOG_CACHE_TAG] },
 );
 
-/** 상세의 관련 밈은 최대 6장. 관련 결과가 적으면 같은 카테고리로 채운다. */
-const RELATED_LIMIT = 6;
+/** 상세의 관련 밈은 최대 12장. 관련 결과가 적으면 같은 카테고리로 채운다. */
+const RELATED_LIMIT = RELATED_MEMES_LIMIT;
 
 /**
- * 상세 하단의 관련 밈. 비슷한 밈을 앞에 두고, 같은 카테고리로 6장까지 채운다.
+ * 상세 하단의 관련 밈. 비슷한 밈을 앞에 두고, 같은 카테고리로 12장까지 채운다.
  * 한 장도 없으면 섹션 자체를 그리지 않는다.
  */
 export async function ContinueStream({

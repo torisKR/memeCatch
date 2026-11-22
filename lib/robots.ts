@@ -28,7 +28,7 @@ const AI_CRAWLER_USER_AGENTS = [
   "CCBot", // Common Crawl (다수 AI 학습 데이터셋의 원천)
 ] as const;
 
-export default function robots(): MetadataRoute.Robots {
+export function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
@@ -45,4 +45,35 @@ export default function robots(): MetadataRoute.Robots {
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
+}
+
+/**
+ * 다음(Daum) 웹마스터도구 사이트 소유 확인 줄. 다음이 robots.txt 하단에 이 주석이
+ * 그대로 있는지로 소유를 확인하므로 값을 바꾸거나 지우지 말 것.
+ * MetadataRoute.Robots에는 임의 줄을 넣을 자리가 없어서 app/robots.txt/route.ts가
+ * 직접 텍스트를 만든다.
+ */
+export const DAUM_WEBMASTER_VERIFICATION =
+  "#DaumWebMasterTool:4bdf39757ad941fd692decfa5a97dfd5b26f372c0690ffa5832b6d14d43a48d7:9OXzxfMP1b1VGCOsL/bJCQ==";
+
+function list(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+/** Next의 robots.ts 직렬화(resolveRobots)와 같은 형식으로 쓰고 끝에 다음 인증 줄을 붙인다. */
+export function renderRobotsTxt(data: MetadataRoute.Robots = robots()): string {
+  let content = "";
+  const rules = Array.isArray(data.rules) ? data.rules : [data.rules];
+  for (const rule of rules) {
+    for (const agent of list(rule.userAgent ?? "*")) content += `User-Agent: ${agent}\n`;
+    for (const item of list(rule.allow)) content += `Allow: ${item}\n`;
+    for (const item of list(rule.disallow)) content += `Disallow: ${item}\n`;
+    if (rule.crawlDelay) content += `Crawl-delay: ${rule.crawlDelay}\n`;
+    content += "\n";
+  }
+  if (data.host) content += `Host: ${data.host}\n`;
+  for (const sitemap of list(data.sitemap)) content += `Sitemap: ${sitemap}\n`;
+  content += `\n${DAUM_WEBMASTER_VERIFICATION}\n`;
+  return content;
 }

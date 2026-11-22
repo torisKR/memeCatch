@@ -1,3 +1,5 @@
+import { SearchShortcut } from "@/components/search-shortcut";
+import { SignalPointer } from "@/components/signal-pointer";
 import { Suspense } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AttributionTracker } from "@/components/attribution-tracker";
@@ -10,12 +12,14 @@ import { ScrollChrome } from "@/components/scroll-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { OrganizationJsonLd } from "@/components/json-ld";
 import { PublicWebMcpTools } from "@/components/webmcp/public-tools";
+import { MEME_FEEDS } from "@/lib/meme-rss-feeds";
 import {
   LocaleAutoDetect,
   LocaleDocumentSync,
   LocaleProvider,
 } from "@/lib/i18n-client";
 import {
+  DEFAULT_LOCALE,
   getDocumentDirection,
   getDocumentLanguage,
   type Locale,
@@ -45,10 +49,24 @@ export function RootDocument({
     >
       <body className="flex min-h-dvh flex-col max-md:pb-[calc(4.5rem+4rem+1rem)] md:pb-0">
         <LocaleProvider initialLocale={locale}>
+          {/* Feed discovery. React hoists these <link>s into <head>. They are
+              not in `metadata.alternates.types` because Next merges metadata
+              shallowly: every page that sets a canonical would drop them. */}
+          {locale === DEFAULT_LOCALE && Object.values(MEME_FEEDS).map((feed) => (
+            <link
+              key={feed.path}
+              rel="alternate"
+              type="application/rss+xml"
+              title={feed.title}
+              href={feed.path}
+            />
+          ))}
           <PublicWebMcpTools />
           <LocaleDocumentSync />
           <LocaleAutoDetect />
           <ScrollChrome />
+          <SignalPointer />
+          <SearchShortcut />
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>

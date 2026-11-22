@@ -17,6 +17,7 @@ import { generateMetadata as generateLocalizedMemeMetadata } from "@/app/[locale
 import { metadata as koreanLayoutMetadata } from "@/app/(default)/layout";
 import { generateRankingsMetadata } from "@/app/rankings/page";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
+import { memeSeoDescription, memeSeoTitle } from "@/lib/meme-seo-copy";
 import { curatedShareVersion, isGenericShareImageUrl, koreanMemeShareImage, localeMemeShareImage } from "@/lib/meme-share-image";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import type { Metadata } from "next";
@@ -140,7 +141,17 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
       const metadata = await generateKoreanMemeMetadata({
         params: Promise.resolve({ key: `${meme.short_id}-${meme.slug}` }),
       });
-      const title = `${meme.title} 뜻`;
+      const title = memeSeoTitle("ko", meme.title);
+      const description = memeSeoDescription("ko", {
+        title: meme.title,
+        summary: meme.summary,
+        originYear: meme.origin_year,
+        safetyLevel: meme.safety_level,
+        usageExampleCount: meme.usage_examples.length,
+        hasOrigin: Boolean(meme.origin.trim()),
+      });
+      expect(title.startsWith(`${meme.title} 뜻`)).toBe(true);
+      expect(description).toContain(meme.summary.trim().slice(0, 10));
       const image = koreanMemeShareImage({
         shortId: meme.short_id,
         slug: meme.slug,
@@ -148,17 +159,17 @@ describe("Korean pages keep their own X card and canonical og:url", () => {
         version: curatedShareVersion(meme),
       });
       expect(metadata.title).toBe(title);
-      expect(metadata.description).toBe(meme.summary);
+      expect(metadata.description).toBe(description);
       expect(metadata.openGraph).toMatchObject({
         title,
-        description: meme.summary,
+        description,
         url: `/memes/${meme.short_id}-${meme.slug}`,
         images: [image],
       });
       expect(metadata.twitter).toMatchObject({
         card: "summary_large_image",
         title,
-        description: meme.summary,
+        description,
         images: [image],
       });
       const urls = JSON.stringify(metadata);

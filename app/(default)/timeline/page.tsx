@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
+import { cacheCatalogRead } from "@/lib/catalog-read-cache";
+import { PUBLIC_CATALOG_CACHE_TAG } from "@/lib/db/cache-tags";
 import { createStaticClient } from "@/lib/db/server";
 import { SITE_URL } from "@/lib/site";
 import { memePathFrom } from "@/lib/labels";
@@ -11,10 +13,13 @@ import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 
 /**
  * 레인 A — /timeline: 한국 밈 연표 (1990년대 ~ 2020년대).
- * "밈 역사/연도별 밈" 검색 유입 + 체류형 탐험 페이지. 문서는 요청별 SSR이며,
- * revalidate는 명시적으로 캐시 가능한 fetch의 세그먼트 기본값으로만 유지한다.
+ * "밈 역사/연도별 밈" 검색 유입 + 체류형 탐험 페이지.
+ *
+ * 요청 때 렌더한다. 정적(ISR)으로 두면 DB가 없는 운영 이미지 빌드에서 렌더된
+ * 「연표를 아직 준비 중이에요」가 배포 직후 한 시간 동안 그대로 나갔다(2026-11-20).
+ * 무거운 조회(후보 2,500건)는 아래 cacheCatalogRead로 한 시간 캐시한다.
  */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const PUBLIC_STATUSES = ["approved", "limited"] as const;
 /** 연도당 카드 상한 */
@@ -29,12 +34,9 @@ const DECADE_DEFS = [
   { key: "2020s", label: "2020년대", from: 2020, to: 2029 },
 ] as const;
 
-/**
- * 연대→연도별 대표 밈 그룹핑.
- * 요청당 한 번만 조회되도록 React cache로 감싸(generateMetadata·본문 중복 호출 dedupe).
- */
-const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
-  try {
+/** 연대·연도별 대표 밈. 성공한 결과만 한 시간 캐시한다(실패는 캐시하지 않는다). */
+const readTimeline = cacheCatalogRead(
+  async (): Promise<TimelineDecade[]> => {
     const db = createStaticClient();
     // trend_score 상위 pool을 먼저 뽑고 연도별로 버킷팅 — 연도 오름차순 limit이면
     // 데이터 증가 시 최신 연대가 조용히 잘리므로, 대표성(trend) 기준으로 선별한다.
@@ -45,7 +47,7 @@ const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
       .not("origin_year", "is", null)
       .order("trend_score", { ascending: false })
       .limit(CANDIDATE_LIMIT);
-    // 쿼리 에러는 throw해 아래 공통 catch에서 현재 요청의 빈 배열 폴백으로 처리한다.
+    // 실패는 던진다: 캐시에는 성공한 결과만 들어가고, 이 요청만 아래에서 빈 연표가 된다.
     if (error) throw error;
     if (!data) return [];
 
@@ -73,6 +75,18 @@ const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
       }
     }
     return decades;
+  },
+  ["timeline-decades-v1"],
+  { revalidate: 3600, tags: [PUBLIC_CATALOG_CACHE_TAG] },
+);
+
+/**
+ * 요청당 한 번만 조회되도록 React cache로 감싼다(generateMetadata·본문 중복 호출 dedupe).
+ * 실패한 요청은 빈 연표로 렌더한다. 요청 때 렌더하므로 이 빈 화면은 캐시되지 않는다.
+ */
+const loadTimeline = cache(async (): Promise<TimelineDecade[]> => {
+  try {
+    return await readTimeline();
   } catch {
     return [];
   }
@@ -126,7 +140,7 @@ export default async function TimelinePage() {
     .slice(0, 10);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-8">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-8">
       <AdsenseScript />
       {schemaItems.length > 0 && (
         <script
@@ -156,14 +170,10 @@ export default async function TimelinePage() {
         />
       )}
 
-      {/* Signal Desk 관제 라벨 — 홈·탐색·검색과 동일한 사이트 공용 어휘(instrument-grid는 정적 배경, 모션 없음) */}
-      <div className="instrument-grid rounded-2xl border border-border/70 p-5 sm:p-6">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-(--signal-cyan)">
-          Timeline signal
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">한국 밈 연표</h1>
+      <div>
+        <h1 className="page-title">한국 밈 연표</h1>
         {/* 고유 인트로 — 씬 콘텐츠 방지 + AI 인용 가능 블록(GEO 톤) */}
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+        <p className="page-lede">
           한국 밈의 역사는 1990년대 개그 프로그램 유행어에서 시작해, 2000년대
           디시인사이드 짤방과 싸이월드 감성을 거쳐, 2010년대 급식체와 인터넷
           방송 밈으로 확장됐고, 2020년대 들어서는 숏폼 챌린지가 중심이 됐어요.
@@ -174,10 +184,9 @@ export default async function TimelinePage() {
 
       {decades.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">
-          <p className="text-lg font-bold">연표를 아직 준비 중이에요</p>
+          <p className="text-lg font-bold">연표를 불러오지 못했어요</p>
           <p className="mt-1.5 text-base text-muted">
-            연도 정보가 확인된 밈이 모이면 이 페이지가 채워져요. 잠시 후 다시
-            들러 주세요.
+            잠시 후 새로고침해 주세요. 그동안 연대별 밈은 탐색에서 볼 수 있어요.
           </p>
         </div>
       ) : (

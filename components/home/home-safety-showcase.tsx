@@ -93,7 +93,8 @@ export function HomeSafetyShowcase() {
             <Link
               key={meme.id}
               href={detailHref}
-              className="group relative flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:shadow-lg active:scale-[0.99]"
+              data-pointer-light=""
+              className="signal-surface group flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:shadow-lg active:scale-[0.99]"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

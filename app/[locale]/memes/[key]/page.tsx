@@ -20,6 +20,8 @@ import { ExportButton } from "@/components/export-button";
 import { MemeEmbed } from "@/components/meme-embed";
 import { MemeMarketPassport } from "@/components/meme-market-passport";
 import { RelatedMemes } from "@/components/related-memes";
+import { RELATED_MEMES_LIMIT } from "@/lib/related-memes-limit";
+import { memeSeoDescription, memeSeoTitle, usageExampleCount } from "@/lib/meme-seo-copy";
 import { selectLocalizedRelatedCards } from "@/lib/localized-related";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
@@ -284,7 +286,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const indexableVersions = versions.filter(({ meme: version }) =>
     isIndexableLocalizedMeme(version),
   );
-  const copy = DETAIL_COPY[locale];
   const canonical = localizedMemePath(shareLocale, meme.short_id, meme.slug);
   const koreanPath = localizedMemePath("ko", meme.short_id, meme.original.slug);
   const englishVersion = indexableVersions.find(({ locale: versionLocale }) =>
@@ -301,7 +302,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ]),
     ["x-default", xDefault],
   ]);
-  const description = `${meme.title}: ${meme.summary}`;
+  // 제목·설명은 DB 필드(번역 요약·유래 연도·사용 신호)로만 조합한다. og·twitter도 같은 값.
+  const title = memeSeoTitle(locale, meme.title);
+  const description = memeSeoDescription(locale, {
+    title: meme.title,
+    summary: meme.summary,
+    originYear: meme.origin_year,
+    safetyLevel: meme.safety_level,
+    usageExampleCount: usageExampleCount(meme.usage_examples),
+    hasCaution: Boolean(meme.caution?.trim()),
+  });
   const photo = representativeImageUrl({
     contents: meme.meme_contents ?? [],
     reviewedMediaSources,
@@ -321,7 +331,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const metadata = buildLocalizedMetadata({
     locale: shareLocale,
     pathname: canonical,
-    title: `${meme.title} · ${copy.meaningTitle}`,
+    title,
     description,
   });
 
@@ -377,7 +387,7 @@ export default async function LocalizedMemePage({ params }: Props) {
     getRelatedMemes(
       { id: meme.id, category: meme.category, origin_year: meme.origin_year },
       tagIds,
-      6,
+      RELATED_MEMES_LIMIT,
     ),
     loadDiscoveryIndex(),
     getReviewedMemeMediaSources(meme.id),
@@ -433,7 +443,7 @@ export default async function LocalizedMemePage({ params }: Props) {
     <article
       lang={config.documentLanguage}
       dir={config.direction}
-      className="mx-auto max-w-5xl px-4 py-8 pb-16 text-foreground"
+      className="mx-auto max-w-site px-4 py-8 pb-16 text-foreground"
     >
       {indexable && (
         <>

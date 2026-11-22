@@ -3,7 +3,7 @@ import { CommunityPageIntro } from "@/components/community-page-intro";
 /** 커뮤니티 소개와 글쓰기 동선은 유지하면서 목록만 스켈레톤으로 대체한다. */
 export default function CommunityLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-14 pt-6" aria-busy="true">
+    <main className="mx-auto max-w-site px-4 pb-14 pt-6" aria-busy="true">
       <CommunityPageIntro />
       <p role="status" className="sr-only">
         커뮤니티 글을 불러오는 중

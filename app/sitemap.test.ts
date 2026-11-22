@@ -23,6 +23,7 @@ import {
   SEO_CONTENT_LOCALES,
   type SeoContentLocale,
 } from "@/lib/i18n-routing";
+import { GUIDES } from "@/lib/guides";
 import { memePathFrom } from "@/lib/labels";
 import {
   isIndexableLocalizedMeme,
@@ -241,6 +242,23 @@ describe("사이트맵 페이지네이션 안정성", () => {
     const koreanMemes = entries.filter((entry) => new URL(entry.url).pathname.startsWith("/memes/"));
     expect(koreanMemes).toHaveLength(2);
   });
+
+  it("adds one /memes directory page per 100 indexable Korean memes", async () => {
+    useRows(Array.from({ length: 101 }, (_, i) => indexableMeme(i + 1, [])));
+    const urls = (await sitemap()).map((entry) => entry.url);
+    expect(urls).toContain(`${SITE_URL}/memes`);
+    expect(urls).toContain(`${SITE_URL}/memes?page=2`);
+    expect(urls).not.toContain(`${SITE_URL}/memes?page=3`);
+    expect(urls).not.toContain(`${SITE_URL}/memes?page=1`);
+  });
+
+  it("omits the directory when no Korean meme is indexable or the catalog is down", async () => {
+    useRows([]);
+    expect((await sitemap()).map((entry) => entry.url)).not.toContain(`${SITE_URL}/memes`);
+    clearSitemapCache();
+    useRows([indexableMeme(1, [])], { message: "down" });
+    expect((await sitemap()).map((entry) => entry.url)).not.toContain(`${SITE_URL}/memes`);
+  });
 });
 
 describe("사이트맵 날짜 진실성", () => {
@@ -310,6 +328,13 @@ describe("사이트맵 날짜 진실성", () => {
 });
 
 describe("사이트맵 다국어 색인 계약", () => {
+  it("가이드 인덱스와 다섯 편의 가이드 URL을 포함한다", async () => {
+    useRows([]);
+    const pathnames = (await sitemap()).map((entry) => new URL(entry.url).pathname);
+    expect(pathnames).toContain("/guides");
+    for (const guide of GUIDES) expect(pathnames).toContain(`/guides/${guide.slug}`);
+  });
+
   it("테마별 모음 인덱스를 독립 URL로 노출한다", async () => {
     useRows([]);
     const entries = await sitemap();

@@ -56,7 +56,7 @@ describe("explore platform query", () => {
     const { calls, client } = recorder();
     buildMemesQuery(client, filters("youtube"));
     expect(calls.find((call) => call.method === "select")?.args[0]).toContain(
-      "meme_contents(thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner",
+      "meme_contents(type, thumbnail_url, is_representative, platform, url, content_id, availability, moderation_status, manual_video_verified), matched_contents:meme_contents!inner",
     );
   });
 

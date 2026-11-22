@@ -11,8 +11,8 @@ const createClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/db/client", () => ({ createClient }));
 
 vi.mock("@/components/meme-card", () => ({
-  MemeCard: ({ meme }: { meme: MemeListItem }) => (
-    <a href={`/memes/${meme.id}`} data-testid="explore-card">
+  MemeCard: ({ meme, previewContents }: { meme: MemeListItem; previewContents?: MemeListItem["meme_contents"] }) => (
+    <a href={`/memes/${meme.id}`} data-testid="explore-card" data-previews={JSON.stringify(previewContents)}>
       {meme.title}
     </a>
   ),
@@ -41,6 +41,14 @@ afterEach(() => {
 });
 
 describe("ExploreGrid", () => {
+  it("uses server-qualified initial previews and never falls back to raw database content", () => {
+    const raw = { ...meme, meme_contents: [{ content_id: "unreviewed" }] } as unknown as MemeListItem;
+    const { rerender } = render(<ExploreGrid initial={[raw]} filters={{ categories: [], sort: "trending" }} />);
+    expect(screen.getByTestId("explore-card").getAttribute("data-previews")).toBe("[]");
+    rerender(<ExploreGrid key="fresh" initial={[raw]} initialPreviews={[[{ content_id: "reviewed" } as never]]} filters={{ categories: [], sort: "trending" }} />);
+    expect(screen.getByTestId("explore-card").getAttribute("data-previews")).toContain("reviewed");
+    expect(screen.getByTestId("explore-card").getAttribute("data-previews")).not.toContain("unreviewed");
+  });
   it("renders loaded cards without an initial hidden animation state", () => {
     render(
       <ExploreGrid

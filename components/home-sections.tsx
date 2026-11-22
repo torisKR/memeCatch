@@ -106,7 +106,8 @@ export function HomePathwaysSection() {
               <Link
                 href={item.href}
                 prefetch={item.href === "/timeline" ? false : undefined}
-                className={`group flex h-full min-h-40 flex-col justify-between rounded-2xl border border-border bg-surface p-5 shadow-sm transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-accent hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none sm:p-6 ${
+                data-pointer-light=""
+                className={`signal-surface group flex h-full min-h-40 flex-col justify-between rounded-2xl border border-border bg-surface p-5 shadow-sm transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-accent hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none sm:p-6 ${
                   index === 0 ? "lg:min-h-80 lg:p-8" : ""
                 }`}
               >

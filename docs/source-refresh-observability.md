@@ -32,8 +32,13 @@ missing sources and keys whose identity could not be verified. Duplicate keys
 from the due and active snapshots count once. They do not consume retry slots
 and are not automatically resolved or modified. A future or non-retryable key
 for a source continues to defer that source, including when its identity is old.
-This count only covers due keys in source batches actually examined: batches
-are skipped once their platforms' retry slots are full. It is not a total of all
+Keys that cannot match any source (a platform-and-ID key whose recorded
+external id differs from the key, or a provider-identity key outside TikTok)
+are counted without a source lookup. The remaining due keys are looked up in
+batches of 500 source ids, at most 4 batches and none started more than 15 s
+after job start. This count only covers due keys in source batches actually
+examined: batches are skipped once their platforms' retry slots are full or the
+lookup cap is reached. It is not a total of all
 stale ledger entries.
 
 Stale sources are selected with one query per platform group (YouTube and

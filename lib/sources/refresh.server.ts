@@ -36,6 +36,13 @@ const STALE_CONFLICT_HEADROOM = 50;
 /** Upper bound for each candidate lookup, so one slow query cannot stall the run. */
 const SOURCE_LOOKUP_TIMEOUT_MS = 10_000;
 /**
+ * Due-retry source lookups examine at most this many 500-id batches and stop
+ * starting new batches this long after job start, so keys that never match a
+ * source cannot page on and eat the provider budget.
+ */
+const DUE_LOOKUP_MAX_BATCHES = 4;
+const DUE_LOOKUP_BUDGET_MS = 15_000;
+/**
  * Time from job start after which a provider worker starts no new source.
  * The cron route allows 60 s and an oEmbed request can take 8 s, so this
  * leaves room for in-flight requests and the job audit insert. Unstarted rows
@@ -158,6 +165,21 @@ export function staleRecoveryExclusion(
     filter: listed.length > 0 ? `external_id.is.null,external_id.not.in.(${listed.join(",")})` : null,
     unownedKeys: unowned.size,
   };
+}
+
+/**
+ * False when a key can never match a source: a platform-and-ID key whose
+ * recorded external id differs from the key, or a provider-identity key on a
+ * platform other than TikTok. Mirrors the source-independent parts of
+ * recoveryMatchesSource.
+ */
+function recoveryKeyIsSelfConsistent(recovery: SourceAcquisitionRecoveryDto) {
+  if (recovery.sourceKey.startsWith("provider_identity:")) {
+    return recovery.platform === "tiktok" && recovery.externalId !== null;
+  }
+  const prefix = `${recovery.platform}:`;
+  if (!recovery.sourceKey.startsWith(prefix)) return false;
+  return recovery.externalId === null || recovery.externalId === recovery.sourceKey.slice(prefix.length);
 }
 
 function canChangeRecoveryKey(activeRecovery: SourceAcquisitionRecoveryDto[], source: MediaSourceRow, key: string) {
@@ -630,6 +652,7 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const providerDeadlineMs = Date.parse(startedAt) + SOURCE_REFRESH_PROVIDER_BUDGET_MS;
   const observations = emptyObservations();
   let unmatchedDueKeys = 0;
+  const countedUnmatchedKeys = new Set<string>();
   const conflictingStaleIds = new Set<string>();
   const admin = createAdminClient();
   const dueRecovery = await listDueSourceAcquisitionRecovery(new Date(), 500, admin);
@@ -678,6 +701,15 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const dueBySource = new Map<string, SourceAcquisitionRecoveryDto[]>();
   for (const recovery of dueCandidates) {
     if (!recovery.sourceId) continue;
+    if (!recoveryKeyIsSelfConsistent(recovery)) {
+      // Cannot match any source, whatever the lookup returns: count it here
+      // instead of spending a lookup on it.
+      if (!countedUnmatchedKeys.has(recovery.sourceKey)) {
+        countedUnmatchedKeys.add(recovery.sourceKey);
+        unmatchedDueKeys += 1;
+      }
+      continue;
+    }
     const entries = dueBySource.get(recovery.sourceId) ?? [];
     if (!entries.some((entry) => entry.sourceKey === recovery.sourceKey)) entries.push(recovery);
     dueBySource.set(recovery.sourceId, entries);
@@ -737,7 +769,9 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
   const dueCounts = { youtube: 0, tiktok: 0, instagram: 0 };
   let dueLookupFailed = false;
   const dueSourceIds = [...dueBySource.keys()];
+  const dueLookupStopAt = Date.parse(startedAt) + DUE_LOOKUP_BUDGET_MS;
   for (let offset = 0; offset < dueSourceIds.length; offset += 500) {
+    if (offset >= DUE_LOOKUP_MAX_BATCHES * 500 || Date.now() >= dueLookupStopAt) break;
     if (dueCounts.youtube >= YOUTUBE_BATCH_LIMIT && dueCounts.tiktok >= SOCIAL_PLATFORM_BATCH_LIMIT && dueCounts.instagram >= SOCIAL_PLATFORM_BATCH_LIMIT) break;
     const ids = dueSourceIds.slice(offset, offset + 500).filter((id) =>
       (dueBySource.get(id) ?? []).some((recovery) => {

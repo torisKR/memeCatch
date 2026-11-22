@@ -300,6 +300,38 @@ describe("source refresh recovery", () => {
     expect(compileSelectPlan(structuredClone(tiktok), meta as never).params).toContainEqual(["222"]);
   });
 
+  it("bounds due-retry lookups and counts keys that cannot match without looking them up", async () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const key = (i: number, externalId: string | null, platform: "tiktok" | "instagram" = "tiktok") => ({
+      sourceKey: `${platform}:${String(3000000000 + i)}`, sourceId: `missing-${i}`, platform, externalId,
+      canonicalUrl: "u", attemptCount: 1, nextRetryAt: past, lastErrorCode: "provider_transient" as const,
+      lastErrorRetryable: true, lastAttemptedAt: past, resolvedAt: null,
+    });
+    const mismatched = Array.from({ length: 1000 }, (_, i) => key(i, "old-id"));
+    const missingSources = Array.from({ length: 2500 }, (_, i) => key(5000 + i, null));
+    vi.mocked(listDueSourceAcquisitionRecovery).mockResolvedValue([]);
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([...mismatched, ...missingSources]);
+    const idLookups: string[][] = [];
+    const { client, jobTable } = admin();
+    client.from = vi.fn((table: string) => {
+      if (table === "job_runs") return jobTable;
+      const builder = query({ data: [], error: null });
+      builder.in.mockImplementation((column: string, values: string[]) => {
+        if (column === "id") idLookups.push(values);
+        return builder;
+      });
+      return builder;
+    });
+    mocks.createAdminClient.mockReturnValue(client);
+
+    const result = await runSourceRefresh();
+
+    expect(idLookups).toHaveLength(4);
+    expect(idLookups.flat().some((id) => mismatched.some((entry) => entry.sourceId === id))).toBe(false);
+    expect(result.recovery_unmatched_due_keys).toBe(1000 + 2000);
+    expect(result.error).toBeUndefined();
+  });
+
   it("stops starting social sources once the provider budget is spent and leaves the rest untouched", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     try {

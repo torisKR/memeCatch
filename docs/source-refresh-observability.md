@@ -39,13 +39,16 @@ stale ledger entries.
 Stale sources are selected with one query per platform group (YouTube and
 Shorts, TikTok, Instagram), in `last_checked_at, id` order, reading the group's
 limit plus 50 rows of headroom, with a 10 s timeout. There is no OFFSET paging.
-The query excludes sources whose platform-and-ID recovery key they must not
-change: an unowned key (no source id, or a recorded external id that differs
-from the key) excludes every source with that ID, and an owned key excludes
-every source with that ID except its owner. Rows without an external id are
-never excluded, so invalid identities still reach quarantine. Within the
-YouTube group the exclusion is by ID across both platforms, so a Shorts row that
-shares an ID with a blocked YouTube key is also held back.
+The query excludes sources whose ID has an unowned platform-and-ID recovery key
+(no source id, or a recorded external id that differs from the key); every such
+source would fail the identity check and, never refreshed, would hold the oldest
+positions. The exclusion is a flat `or` group, because the database plan client
+parses only flat groups. Rows without an external id are never excluded, so
+invalid identities still reach quarantine. A second source that shares an owned
+key's ID is not excluded in the query; the in-memory identity check skips it and
+the headroom rows cover it. Within the YouTube group the exclusion is by ID
+across both platforms, so a Shorts row that shares an ID with an unowned YouTube
+key is also held back.
 `detail.recovery_unowned_keys` counts the unowned keys behind those exclusions.
 Their ledger rows are neither rewritten nor resolved and need separate repair.
 `detail.recovery_conflicting_stale_sources` counts rows the query returned that

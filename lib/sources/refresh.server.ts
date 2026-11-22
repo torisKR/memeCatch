@@ -124,50 +124,40 @@ function recoveryMatchesSource(recovery: SourceAcquisitionRecoveryDto, source: M
 }
 
 /**
- * Builds a PostgREST `or` filter that keeps stale-source selection away from
- * platform-and-ID recovery keys that a source must not change.
+ * Builds an `or` filter that keeps stale-source selection away from unowned
+ * platform-and-ID recovery keys: keys with no source id, or whose recorded
+ * external id differs from the key. Every source with such an ID would fail
+ * the identity check, and since it is never refreshed it would keep the oldest
+ * positions forever.
  *
- * - An unowned key (no source id, or a recorded external id that differs from
- *   the key) blocks every source with that ID.
- * - An owned key blocks every source with that ID except its owner.
- *
- * Rows without an external id always pass so invalid identities still reach
- * quarantine. The filter is per external id, not per platform, so within the
- * YouTube group a Shorts row sharing an ID with a blocked YouTube key is also
- * held back; the in-memory check remains the authoritative gate.
+ * The filter is flat (`external_id.is.null,external_id.not.in.(...)`) because
+ * the database plan client (`lib/db/plan.ts`) parses only flat `or` groups and
+ * splits `in` lists on commas. Rows without an external id always pass, so
+ * invalid identities still reach quarantine. IDs containing list syntax are
+ * left to the in-memory check. Owned keys are not filtered here: a second
+ * source sharing an owned ID is a duplicate row, and the in-memory check plus
+ * the headroom rows handle it. The filter is per external id, so within the
+ * YouTube group a Shorts row sharing an ID with an unowned YouTube key is also
+ * held back.
  */
 export function staleRecoveryExclusion(
   activeRecovery: SourceAcquisitionRecoveryDto[],
   platforms: readonly MediaSourcePlatform[],
 ): { filter: string | null; unownedKeys: number } {
   const unowned = new Set<string>();
-  const owned = new Map<string, Set<string>>();
   for (const recovery of activeRecovery) {
     if (!platforms.includes(recovery.platform as MediaSourcePlatform)) continue;
     const prefix = `${recovery.platform}:`;
     if (!recovery.sourceKey.startsWith(prefix)) continue;
     const externalId = recovery.sourceKey.slice(prefix.length);
     if (!externalId) continue;
-    if (!recovery.sourceId || (recovery.externalId !== null && recovery.externalId !== externalId)) {
-      unowned.add(externalId);
-    } else {
-      const owners = owned.get(externalId) ?? new Set<string>();
-      owners.add(recovery.sourceId);
-      owned.set(externalId, owners);
-    }
+    if (!recovery.sourceId || (recovery.externalId !== null && recovery.externalId !== externalId)) unowned.add(externalId);
   }
-  if (unowned.size === 0 && owned.size === 0) return { filter: null, unownedKeys: 0 };
-  const quote = (value: string) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-  const list = (values: Iterable<string>) => `(${[...values].map(quote).join(",")})`;
-  const blocked = new Set([...unowned, ...owned.keys()]);
-  const ownerIds = new Set([...owned.entries()].flatMap(([externalId, owners]) => unowned.has(externalId) ? [] : [...owners]));
-  const clauses = ["external_id.is.null", `external_id.not.in.${list(blocked)}`];
-  if (ownerIds.size > 0) {
-    clauses.push(unowned.size > 0
-      ? `and(id.in.${list(ownerIds)},external_id.not.in.${list(unowned)})`
-      : `id.in.${list(ownerIds)}`);
-  }
-  return { filter: clauses.join(","), unownedKeys: unowned.size };
+  const listed = [...unowned].filter((externalId) => !/[,()"\\]/.test(externalId));
+  return {
+    filter: listed.length > 0 ? `external_id.is.null,external_id.not.in.(${listed.join(",")})` : null,
+    unownedKeys: unowned.size,
+  };
 }
 
 function canChangeRecoveryKey(activeRecovery: SourceAcquisitionRecoveryDto[], source: MediaSourceRow, key: string) {
@@ -715,11 +705,9 @@ export async function runSourceRefresh(): Promise<SourceRefreshResult> {
       let query = admin.from("media_sources")
         .select("id, platform, external_id, canonical_url, embeddable, removed_at")
         .in("platform", platforms)
-        // One logic tree, so the staleness and exclusion clauses never rely on
-        // how repeated `or` parameters combine.
-        .or(exclusion.filter
-          ? `and(or(last_checked_at.is.null,last_checked_at.lt.${staleBefore}),or(${exclusion.filter}))`
-          : `last_checked_at.is.null,last_checked_at.lt.${staleBefore}`);
+        .or(`last_checked_at.is.null,last_checked_at.lt.${staleBefore}`);
+      // Each `or` call is its own group; the plan client ANDs the groups.
+      if (exclusion.filter) query = query.or(exclusion.filter);
       if (deferredSourceIds.length) query = query.not("id", "in", deferredSourceIds);
       const result = await query
         .order("last_checked_at", { ascending: true, nullsFirst: true })

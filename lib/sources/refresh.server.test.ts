@@ -24,6 +24,8 @@ vi.mock("./recovery.server", () => ({
 }));
 
 import { runSourceRefresh, staleRecoveryExclusion } from "./refresh.server";
+import { createPlanClient, parseOrFilter, type QueryPlan } from "@/lib/db/plan";
+import { compileSelectPlan } from "@/lib/db/execute";
 import { OEmbedError } from "@/lib/oembed";
 import { normalizeSourceUrl } from "./url";
 import { listActiveSourceAcquisitionRecovery, listDueSourceAcquisitionRecovery, recordSourceAcquisitionFailure, resolveSourceAcquisitionFailure } from "./recovery.server";
@@ -236,29 +238,66 @@ describe("source refresh recovery", () => {
     }
     expect(builders.map((builder) => builder.limit.mock.calls[0][0]).sort((x, y) => x - y)).toEqual([80, 80, 350]);
     const orFilters = builders.flatMap((builder) => builder.or.mock.calls.map(([filter]) => filter as string));
-    expect(orFilters).toHaveLength(3);
-    expect(orFilters.filter((filter) => filter.startsWith("and(or(last_checked_at.is.null,last_checked_at.lt."))).toEqual([
-      expect.stringContaining('or(external_id.is.null,external_id.not.in.("222"))'),
-    ]);
+    expect(orFilters.filter((filter) => filter.startsWith("last_checked_at.is.null,last_checked_at.lt."))).toHaveLength(3);
+    expect(orFilters.filter((filter) => filter.startsWith("external_id."))).toEqual(["external_id.is.null,external_id.not.in.(222)"]);
   });
 
-  it("excludes unowned and foreign-owned recovery IDs in the stale query filter", () => {
+  it("excludes only unowned recovery IDs, with a flat filter the plan client can parse", () => {
     const base = { platform: "tiktok" as const, canonicalUrl: "u", attemptCount: 1, nextRetryAt: null, lastErrorCode: "provider_transient" as const, lastErrorRetryable: true, lastAttemptedAt: "2026-11-21T00:00:00.000Z", resolvedAt: null };
     const recovery = [
       { ...base, sourceKey: "tiktok:111", sourceId: "owner-1", externalId: "111" },
       { ...base, sourceKey: "tiktok:222", sourceId: null, externalId: "222" },
       { ...base, sourceKey: "tiktok:333", sourceId: "owner-3", externalId: "old" },
       { ...base, sourceKey: "provider_identity:owner-1", sourceId: "owner-1", externalId: "111" },
+      { ...base, sourceKey: "tiktok:4,4", sourceId: null, externalId: null },
       { ...base, platform: "instagram" as const, sourceKey: "instagram:ABC", sourceId: null, externalId: null },
     ];
 
-    expect(staleRecoveryExclusion(recovery, ["tiktok"])).toEqual({
-      filter: 'external_id.is.null,external_id.not.in.("222","333","111"),and(id.in.("owner-1"),external_id.not.in.("222","333"))',
-      unownedKeys: 2,
-    });
-    expect(staleRecoveryExclusion(recovery.slice(0, 1), ["tiktok"]).filter).toBe('external_id.is.null,external_id.not.in.("111"),id.in.("owner-1")');
+    const exclusion = staleRecoveryExclusion(recovery, ["tiktok"]);
+    expect(exclusion).toEqual({ filter: "external_id.is.null,external_id.not.in.(222,333)", unownedKeys: 3 });
+    expect(parseOrFilter(exclusion.filter!)).toEqual([
+      { column: "external_id", op: "is", value: null, negate: false },
+      { column: "external_id", op: "in", value: ["222", "333"], negate: true },
+    ]);
+    expect(staleRecoveryExclusion(recovery.slice(0, 1), ["tiktok"])).toEqual({ filter: null, unownedKeys: 0 });
     expect(staleRecoveryExclusion([], ["tiktok"])).toEqual({ filter: null, unownedKeys: 0 });
-    expect(staleRecoveryExclusion([{ ...base, sourceKey: 'tiktok:a"b', sourceId: null, externalId: null }], ["tiktok"]).filter).toBe('external_id.is.null,external_id.not.in.("a\\"b")');
+  });
+
+  it("builds stale lookups that compile to SQL through the real plan client", async () => {
+    vi.mocked(listActiveSourceAcquisitionRecovery).mockResolvedValue([{ sourceKey: "tiktok:222", sourceId: null, platform: "tiktok", externalId: null, canonicalUrl: "u", attemptCount: 1, nextRetryAt: new Date(Date.now() + 60_000).toISOString(), lastErrorCode: "provider_transient", lastErrorRetryable: true, lastAttemptedAt: "2026-11-21T00:00:00.000Z", resolvedAt: null }]);
+    const plans: QueryPlan[] = [];
+    mocks.createAdminClient.mockReturnValue(createPlanClient(async (plan) => {
+      plans.push(plan);
+      return { data: plan.op === "select" ? [] : null, error: null, count: null };
+    }));
+
+    const result = await runSourceRefresh();
+
+    expect(result.error).toBeUndefined();
+    const staleLookups = plans.filter((plan) => plan.op === "select" && plan.table === "media_sources");
+    expect(staleLookups).toHaveLength(3);
+    const meta = {
+      columns: new Map([["media_sources", new Map(["id", "platform", "external_id", "canonical_url", "embeddable", "removed_at", "last_checked_at"].map((column) => [column, column === "last_checked_at" ? "timestamptz" : "text"]))]]),
+      foreignKeys: [],
+      primaryKeys: new Map([["media_sources", ["id"]]]),
+    };
+    const tiktok = staleLookups.find((plan) => plan.filters.some((filter) => filter.column === "platform" && (filter.value as string[]).includes("tiktok")))!;
+    expect(tiktok.orGroups).toEqual([
+      [
+        { column: "last_checked_at", op: "is", value: null, negate: false },
+        expect.objectContaining({ column: "last_checked_at", op: "lt" }),
+      ],
+      [
+        { column: "external_id", op: "is", value: null, negate: false },
+        { column: "external_id", op: "in", value: ["222"], negate: true },
+      ],
+    ]);
+    for (const plan of staleLookups) {
+      const built = compileSelectPlan(structuredClone(plan), meta as never);
+      expect(built.sql).toContain("ORDER BY");
+      expect(plan.offset).toBeNull();
+    }
+    expect(compileSelectPlan(structuredClone(tiktok), meta as never).params).toContainEqual(["222"]);
   });
 
   it("stops starting social sources once the provider budget is spent and leaves the rest untouched", async () => {

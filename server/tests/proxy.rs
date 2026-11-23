@@ -144,7 +144,7 @@ async fn bodiless_responses_keep_exactly_the_length_headers_the_upstream_sent() 
         let response = raw_request(
             app,
             &format!(
-                "{method} /robots.txt HTTP/1.1\r\nHost: catchmeme.com\r\nConnection: close\r\n\r\n"
+                "{method} /explore HTTP/1.1\r\nHost: catchmeme.com\r\nConnection: close\r\n\r\n"
             ),
         )
         .await;

@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, SocketAddr};
 
 use memecatch_server::config::Config;
 use memecatch_server::{AppState, build_app};
@@ -28,10 +28,15 @@ async fn run() -> Result<(), String> {
     let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, port))
         .await
         .map_err(|error| format!("cannot listen on port {port}: {error}"))?;
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .map_err(|error| format!("server stopped: {error}"))
+    // The peer address is the rate limit key of a request that carries no
+    // X-Forwarded-For (routes/public/rate_limit.rs).
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .map_err(|error| format!("server stopped: {error}"))
 }
 
 // As PID 1 in a container the process gets no default SIGTERM action, so

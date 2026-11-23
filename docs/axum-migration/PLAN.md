@@ -437,6 +437,57 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 3. **TypeScript의 OpenRouter 주소는 운영에서 바꿀 수 없다.** 채팅은 `https://openrouter.ai`로 고정이고, 초안은 `NODE_ENV=production`에서 그 origin만 받는다. Axum은 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`(루프백 `http://host:port`만 받는다)으로 같은 요청을 스텁에 보낸다.
 4. **Axum 컨테이너는 두 경로가 읽는 변수를 Next와 같은 `.env` 값으로 받는다.** `docker-compose.axum.yml`이 `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`·`OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`을 넘긴다(의미 검색의 두 변수는 #148). 처음에는 넘기지 않아, 운영에 키를 넣으면 Next만 생성할 뻔했다. `server/tests/compose_env.rs`가 서버가 읽는 변수를 소스에서 찾아, 컴포즈에 없고 일부러 뺀 목록(`BEDROCK_*`, `AWS_*`, `CSP_*`, 빌드 값, 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`)에도 없으면 실패한다.
 
+## R7: Open Graph 이미지
+
+브랜치 `torisKR/axum-routes-r7`. `next/og`를 쓰는 경로를 모두 찾았다: 기본 카드 `app/og/[locale]/route.ts`, 루트 `app/opengraph-image.tsx`, 퀴즈 결과 `app/og/quiz/[token]/route.ts`, 밈 공유 카드 둘(`app/(default)/memes/[key]/opengraph-image-k2cx9c/route.ts`, `app/[locale]/memes/[key]/opengraph-image/route.ts`), 카드 내보내기 `app/(default)/memes/[key]/export/route.ts`. 앞의 셋을 옮겼다(`server/src/og/`, `server/src/routes/og.rs`). 이 절의 차이는 `R7-n`으로 적는다.
+
+| Route id | 경로 | 메서드 | 비고 |
+| --- | --- | --- | --- |
+| `og-default` | `/og/{ko,en,ja,zh,zh-tw,ar}` | `GET`, `HEAD` | Next가 빌드 때 미리 그린 카드. Axum은 프로세스마다 처음 요청에 한 번 그려 둔다. `ar`은 커밋된 PNG 그대로. 다른 세그먼트(`/og/xx`는 Next가 한 번 그려 두는 404), `%`가 든 경로, 다른 메서드는 Next가 답한다 |
+| `opengraph-image` | `/opengraph-image` | `GET`, `HEAD` | 한국어 기본 카드와 같은 그림, `Cache-Control`만 다르다 |
+| `og-quiz` | `/og/quiz/{token}` | `GET`, `HEAD` | 토큰만으로 그린다(DB 없음). 틀린 토큰은 404 `Not found`. `%`가 든 토큰(Next가 풀고 `trim`한다)과 다른 메서드는 Next가 답한다 |
+
+### 어떻게 같게 그리나
+
+Next(Satori 0.25 + sharp)는 레이아웃을 SVG로 쓰고 글자를 모두 글리프 외곽선 경로로 바꾼 뒤, sharp가 설치되어 있으므로(Next의 선택 의존성, standalone에도 들어간다) resvg가 아니라 libvips(librsvg)로 PNG를 만든다. Axum은 같은 SVG 기하를 직접 만들고 resvg 0.50으로 그린다.
+
+- 글꼴은 앱의 파일 그대로(`assets/og-fonts`를 `server/assets/og`에 복사, 서버 이미지가 `server/`만 받기 때문. `tests/og_cards.rs`가 바이트가 같은지 본다).
+- 글자 배치는 Satori가 쓰는 opentype.js를 따랐다(`server/src/og/font.rs`, `text.rs`): `hhea` 어센더, GPOS 커닝은 기본 스크립트의 `kern` 기능 중 타입 2 조회만(확장 조회는 opentype.js처럼 건너뛴다. 그래서 영어 카드에는 커닝이 없다), 줄 폭은 글자소마다 따로 잰 폭의 합의 올림, 글리프 경로는 공백마다 끊고 그 앞까지의 잰 폭에서 시작, 좌표는 `toFixed(1)`. 상자 배치는 Yoga의 반올림(반은 올림)을 따랐다.
+- 확인: `server/tests/og_cards.rs`가 기본 카드 5개와 퀴즈 카드 13개를 Satori가 낸 SVG(`server/tests/fixtures/og/`, `server/parity/og-reference.mjs`가 앱의 TSX로 만든다)와 **같은 래스터라이저로 그려 픽셀이 하나도 다르지 않음**을 본다. 개발 중에는 퀴즈 토큰 50개(총문항 1~10, 모든 등급·모드·점수 자릿수)도 모두 같았다.
+- 실제 Next와 비교: `server/parity/og.mjs`. 이미지마다 상태·헤더(`content-length` 빼고)와 크기가 같고, 픽셀은 허용 오차 안(채널 차이 평균 ≤ 0.5, 32 넘게 다른 채널 ≤ 0.05 %, 최대 ≤ 96)이어야 한다. 결과 79/79, 이미지 60장 중 가장 나쁜 값은 최대 67, 평균 0.303, 32 초과 0.0072 %다. 같은 SVG를 두 래스터라이저로 그렸을 때의 차이와 같다(가장자리 안티에일리어싱과 퀴즈 배경 그러데이션의 띠).
+
+### Next에 남긴 경로
+
+| 경로 | 이유 |
+| --- | --- |
+| `/memes/{key}/opengraph-image-k2cx9c`, `/{locale}/memes/{key}/opengraph-image` | 대표 사진이 있으면 저장소에서 읽어 앱의 JPEG·PNG 디코더로 풀고 `object-fit: cover`로 채워 그린다. 이미지 리샘플링은 래스터라이저마다 달라 사진 픽셀의 허용 오차를 장담할 수 없고, 1 MB를 넘으면 앱의 JPEG 인코더로 다시 줄인다. 제목은 자유 문자열이라 글자마다 글꼴(한·일·간·번 OTF 4개와 이모지 13개, 21 MB)을 고르고, 어느 글꼴에도 없는 글자는 Satori가 그 자리에서 Google Fonts·twemoji를 내려받는다(외부 호출). 문서 조회(`resolveKoreanMemeDocument`, 번역 판정, 검토된 매체)도 함께 옮겨야 한다. 별도 배치(R7b)로 할 일이다 |
+| `/memes/{key}/export` | 요청 때 jsDelivr에서 Pretendard를 내려받고(실패하면 Satori 기본 글꼴과 위의 동적 글꼴 내려받기), 제목·요약이 여러 줄로 접힌다(Satori의 `linebreak`(UAX #14)와 `Intl.Segmenter`). 로그인과 `reserve_meme_export` 쿼터가 앞선다 |
+
+### Next와 남은 차이
+
+| # | 차이 | 판정 |
+| --- | --- | --- |
+| R7-1 | 래스터라이저가 다르다(resvg ↔ libvips). 같은 SVG에서 가장자리 안티에일리어싱과 그러데이션 띠만 다르다(위 수치). PNG 인코더도 달라 바이트와 `Content-Length`가 다르다 | 수용 |
+| R7-2 | 미리 그린 카드를 Next는 빌드 때, Axum은 프로세스가 처음 요청받을 때 그린다. 첫 요청만 수십 ms 늦다. `x-nextjs-cache: HIT`는 늘 붙인다(`/robots.txt`와 같다) | 수용 |
+| R7-3 | 그리기는 한 번에 둘까지다(`src/og/mod.rs`의 `MAX_RENDERS`). 더 오면 기다린다. Next에는 제한이 없다 | 수용 |
+| R7-4 | 그리기가 실패하면 Axum은 그 요청을 Next에 넘긴다. Next라면 500이다 | 수용 |
+| R7-5 | 운영의 Next는 리눅스용 sharp로 그린다. 픽셀 비교는 macOS의 Next와 리눅스 Next 이미지(`docker build .`) 둘 다와 했고 결과가 같았다(72/72, 최대 67, 평균 0.303) | 확인됨 |
+
+### 그리는 비용
+
+각 서버 이미지를 운영 컴포즈의 제한으로 띄워 쟀다(`docker run --memory --cpus`, 메모리는 컨테이너 cgroup의 `memory.current`·`memory.peak`). 퀴즈 카드는 매번 그리고, 기본 카드는 미리 그려 둔 것을 낸다.
+
+| | Axum (256 MB, 0.35 CPU) | Next (2816 MB, 0.75 CPU) | Next를 Axum 제한으로 (256 MB, 0.35 CPU) |
+| --- | --- | --- | --- |
+| 시작 직후 메모리 | 15 MB | 171 MB | 96 MB |
+| 첫 `/og/ko` | 12 ms (이때 그린다) | 14 ms | 14 ms |
+| 퀴즈 카드 20장 하나씩 | 중앙값 83 ms, 최대 89 ms | 중앙값 44 ms, 최대 424 ms | 중앙값 107 ms, 최대 1.1 s |
+| 퀴즈 카드 30장 동시 | 2.8 s, 모두 200 | 1.6 s, 모두 200 | 4.7 s, 모두 200 |
+| 그동안 `/robots.txt` | 최대 90 ms | 최대 1.27 s | 최대 4.3 s |
+| 최대 메모리 | 33 MB | 400 MB | 256 MB(제한에 닿음) |
+
+Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3) 이미지 요청이 몰려도 다른 요청이 막히지 않고 메모리가 늘지 않는다.
+
 ### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
 
 | # | 동작 | 위치 |
@@ -457,3 +508,6 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 ### 단계 5에서 추가로 확인할 것
 
 - TypeScript 동작 1: 플래너를 고치면(`types`를 배열로 읽기) 두 저장 함수가 처음으로 실행된다. 그때 Axum의 같은 두 문장도 고쳐야 하고, 성공한 답(`{ ok: true, data }`)은 아직 어느 서버에서도 본 적이 없다.
+
+| 1 | `/og/en` 같은 영어·일본어·중국어 카드에도 `Content-Language: ko`가 붙는다. `proxy.ts`가 `/og/*`를 문서 경로로 보지 않아 기본값 `ko`를 쓴다 | `proxy.ts` `documentLocaleFromPathname` |
+| 2 | `POST /og/{locale}`도 미리 그린 카드를 200으로 낸다(Next가 정적 경로를 메서드와 상관없이 낸다). Axum은 `POST`를 Next에 넘기므로 결과는 같다 | Next |

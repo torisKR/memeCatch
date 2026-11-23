@@ -178,3 +178,20 @@ POST /api/memes/semantic-search
 # run. semantic-search.mjs covers it with bodies on the R1 seed.
 GET /api/memes/semantic-search
 OPTIONS /api/memes/semantic-search
+
+# Open Graph images (routes/og.rs). Their pixels differ by rasterizer, so
+# og.mjs compares them; these are the byte-comparable answers: the quiz
+# 404s Axum writes, HEAD of the cards (headers only), and what goes to Next.
+/og/quiz/a005
+/og/quiz/a008aaaaaaa1aaaaaaa2aaaaaaa3
+HEAD /og/ko
+HEAD /og/ar
+HEAD /opengraph-image
+HEAD /og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3
+/og/xx
+/og/%6Bo
+/og/ko/
+POST /og/ko
+POST /opengraph-image
+POST /og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3
+/og/quiz/%20a005aaaaaaa1aaaaaaa2aaaaaaa3

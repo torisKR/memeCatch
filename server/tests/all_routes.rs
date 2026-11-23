@@ -119,6 +119,9 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "/api/memes/semantic-search",
         ),
         ("memes-chat", "POST", "/api/memes/chat"),
+        ("og-default", "GET", "/og/ko"),
+        ("opengraph-image", "GET", "/opengraph-image"),
+        ("og-quiz", "GET", "/og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

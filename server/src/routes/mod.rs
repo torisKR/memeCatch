@@ -10,6 +10,7 @@ pub mod media;
 pub mod media_type;
 pub mod mpe;
 pub mod multipart;
+pub mod og;
 pub mod openrouter;
 pub mod origin;
 pub mod public;
@@ -30,7 +31,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 44] = [
+pub const ROUTE_IDS: [&str; 47] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -75,6 +76,9 @@ pub const ROUTE_IDS: [&str; 44] = [
     "admin-meme-studio",
     "memes-semantic-search",
     "memes-chat",
+    "og-default",
+    "opengraph-image",
+    "og-quiz",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
@@ -236,6 +240,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))
+        .merge(og::router(state))
         .merge(search::router(state))
         .merge(chat::router(state))
 }

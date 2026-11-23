@@ -105,6 +105,10 @@ pub struct Config {
     /// `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
     pub r2: Option<R2Config>,
     pub bedrock_studio: BedrockStudioConfig,
+    /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
+    pub semantic_search_enabled: bool,
+    /// `MEME_EMBEDDING_URL` as given.
+    pub embedding_url: Option<String>,
     /// `OBJECT_SIGNING_SECRET`, trimmed. The TS code falls back to
     /// `BETTER_AUTH_SECRET` when this is unset; that fallback belongs to the
     /// storage module.
@@ -276,6 +280,9 @@ impl Config {
                 .map(Secret::new),
             r2,
             bedrock_studio: bedrock_studio(&lookup),
+            semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
+                == Some("true"),
+            embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),

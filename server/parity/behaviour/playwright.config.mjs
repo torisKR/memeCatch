@@ -11,9 +11,13 @@
 // frame calls are Next's and refuse a request from another origin. Both are
 // loopback hosts on purpose: the session cookie of a production build is
 // `__Secure-`, which a browser keeps over plain HTTP only there.
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+
+const checkout = createHash("sha256").update(dirname(fileURLToPath(import.meta.url))).digest("hex").slice(0, 12);
 
 const servers = { next: process.env.NEXT_URL, axum: process.env.AXUM_URL };
 for (const [name, url] of Object.entries(servers)) {
@@ -27,7 +31,9 @@ const sizes = {
 
 export default defineConfig({
   testDir: "scenarios",
-  outputDir: join(tmpdir(), "memecatch-behaviour-results"),
+  // One folder per checkout: Playwright empties it at the start of a run,
+  // and runs from other worktrees on the same machine must not empty ours.
+  outputDir: join(tmpdir(), `memecatch-behaviour-results-${checkout}`),
   // Scenarios share one database (saved memes, sessions): one at a time.
   fullyParallel: false,
   workers: 1,

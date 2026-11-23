@@ -21,6 +21,7 @@ pub fn response(site: &Site, target: &str) -> Response {
         canonical: None,
         languages: Vec::new(),
         image: None,
+        ..Head::default()
     };
     html_response(
         StatusCode::NOT_FOUND,

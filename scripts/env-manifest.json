@@ -28,6 +28,7 @@
   "BEDROCK_MEME_STUDIO_ENABLED": "─── 관리자 자체 밈 초안 생성 (선택, 서버 전용) ──────────────── MPE와 분리된 관리자 house-original 전용 경로입니다. public Studio는 템플릿만 사용합니다.",
   "BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN": "nano-USD per input token reserved for an admin meme-studio draft.",
   "BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN": "nano-USD per output token reserved for an admin meme-studio draft.",
+  "BEHAVIOUR_CPU_THROTTLE": "Behaviour gate only (server/parity/behaviour): a CPU slowdown factor for every page, as in Chromium DevTools, to expose timing defects.",
   "BETTER_AUTH_SECRET": "Signs sessions, Kaia challenges, and magic links.",
   "BETTER_AUTH_URL": "Public origin Better Auth uses for callbacks.",
   "CHROME_PATH": "Optional Chrome binary for Playwright. Defaults to the local Google Chrome path.",

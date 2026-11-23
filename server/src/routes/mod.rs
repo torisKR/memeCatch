@@ -26,10 +26,19 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 33] = [
+pub const ROUTE_IDS: [&str; 42] = [
     "page-about",
     "page-meme",
     "page-assets",
+    "page-contact",
+    "page-editorial",
+    "page-guides",
+    "page-guide",
+    "page-privacy",
+    "page-terms",
+    "page-offline",
+    "page-missing-meme",
+    "page-retired-products",
     "health",
     "media-signed",
     "robots",
@@ -66,7 +75,19 @@ pub const ROUTE_IDS: [&str; 33] = [
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 2] = ["page-about", "page-meme"];
+pub const PAGE_ROUTE_IDS: [&str; 11] = [
+    "page-about",
+    "page-meme",
+    "page-contact",
+    "page-editorial",
+    "page-guides",
+    "page-guide",
+    "page-privacy",
+    "page-terms",
+    "page-offline",
+    "page-missing-meme",
+    "page-retired-products",
+];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
 /// variable is the rollback switch: an ignored typo would leave the route
@@ -156,6 +177,19 @@ impl<'a> Routes<'a> {
         // to every response proxied for another method.
         let methods = any(proxy::forward).merge(native);
         self.router = self.router.route(path, methods);
+        self
+    }
+
+    /// `add` for several paths under one id and one set of methods.
+    pub fn add_all(
+        mut self,
+        id: &'static str,
+        paths: &[String],
+        methods: MethodRouter<AppState>,
+    ) -> Self {
+        for path in paths {
+            self = self.add(id, path, methods.clone());
+        }
         self
     }
 

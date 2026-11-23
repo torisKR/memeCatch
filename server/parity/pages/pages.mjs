@@ -9,7 +9,8 @@
 // headers; <html lang dir>; <title>; every <meta name|property>; canonical,
 // hreflang, feed, manifest and icon links; JSON-LD parsed and compared as
 // data; the visible text of <body>; its links; its images; and the markup of
-// <main>. Exit code 0 means no difference outside ACCEPTED.
+// <main>. It also sends each request as HEAD and compares its status,
+// headers and empty body. Exit code 0 means no difference outside ACCEPTED.
 //
 // Both documents are first settled (dom.mjs): Next streams part of a page
 // into hidden segments and, for browsers and Googlebot, sends the metadata
@@ -94,7 +95,7 @@ const NOT_PORTED = [
 const ACCEPTED = [
   {
     when: (target) => target.status === 404,
-    fields: ["header cache-control", "html", "meta", "feeds", "JSON-LD", "text", "links", "images", "main markup"],
+    fields: ["header cache-control", "html", "meta", "feeds", "JSON-LD", "text", "links", "images", "main markup", "HEAD"],
     reason:
       "Next answers a missing meme with a prerendered file: a year-long s-maxage, the site default share card, and an <html> without lang and a <body> without content until its scripts run. Axum sends no-store and the same message as HTML. Status, <title> and noindex are compared.",
   },
@@ -107,7 +108,7 @@ const ACCEPTED = [
 
 // ---------------------------------------------------------------------------
 
-function request(base, path, host, userAgent) {
+function request(base, path, host, userAgent, method = "GET") {
   const url = new URL(base);
   return new Promise((resolve, reject) => {
     const req = http.request(
@@ -115,7 +116,7 @@ function request(base, path, host, userAgent) {
         host: url.hostname,
         port: url.port,
         path,
-        method: "GET",
+        method,
         headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity" },
       },
       (res) => {
@@ -420,6 +421,19 @@ async function check(target, agent, userAgent) {
     return { target, agent, status: "---", info: "", expectations: [`request failed: ${error.message}`], unexpected: [], accepted: [] };
   }
   const { differences, expectations = [], info } = compare(target, next, axum);
+  // The same request as HEAD: the status and headers of the GET, no body.
+  const [nextHead, axumHead] = await Promise.all([
+    request(nextBase, target.path, host, userAgent, "HEAD"),
+    request(axumBase, target.path, host, userAgent, "HEAD"),
+  ]);
+  const headFacts = (response) => JSON.stringify({
+    status: response.status,
+    headers: Object.fromEntries([...comparableHeaders(response.rawHeaders)].sort(([a], [b]) => a.localeCompare(b))),
+    body: response.body.length,
+  });
+  if (headFacts(nextHead) !== headFacts(axumHead)) {
+    differences.push({ field: "HEAD", detail: describe("HEAD", headFacts(nextHead), headFacts(axumHead)) });
+  }
   if (target.status !== undefined && next.status !== target.status) {
     expectations.push(`next answered ${next.status}, the target list says ${target.status}`);
   }

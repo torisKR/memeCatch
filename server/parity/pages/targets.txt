@@ -29,3 +29,59 @@
 # and a curated meme with no database row.
 /memes/wk36uaq4-ai-slop                                                 200 proxied
 /memes/jkm2022k                                                         proxied
+
+# Batch B1: the static documents. Each page as linked, with a query string,
+# with a trailing slash (Next's 308), and under a locale prefix it does not have.
+/contact 200 index native
+/contact?utm_source=kakao&utm_medium=social 200 index native
+/contact/ 308
+/en/contact 404 proxied
+/editorial 200 index native
+/editorial?from=footer 200 index native
+/editorial/ 308
+/guides 200 index native
+/guides?ref=menu 200 index native
+/guides/ 308
+/en/guides 404 proxied
+/guides/usage-signals 200 index native
+/guides/before-sending-at-work 200 index native
+/guides/korean-meme-eras 200 index native
+/guides/checking-meme-sources 200 index native
+/guides/short-form-challenge-rights 200 index native
+/guides/short-form-challenge-rights?utm_source=x 200 index native
+/guides/usage-signals/ 308
+/guides/no-such-guide 404 proxied
+/privacy 200 index native
+/privacy?v=1 200 index native
+/privacy/ 308
+/terms 200 index native
+/terms?v=1 200 index native
+/terms/ 308
+/offline 200 noindex native
+/offline?from=sw 200 noindex native
+/missing-public-meme 404 noindex native
+
+# Batch B1: the retired product pages, which proxy.ts answers before any page:
+# a 410 document of its own, a 308 for English products, an empty 404 for a
+# translated /retired-products, and Next's 404 for what the decision skips.
+/retired-products 410 noindex native
+/retired-products?ref=old 410 noindex native
+/retired-products/ 308
+/products 410 noindex native
+/products/abc-123 410 noindex native
+/products/abc/ 308
+/go/products/x 410 noindex native
+/go/products 410 noindex native
+/en/retired-products 410 noindex native
+/en/go/products/x 410 noindex native
+/en/products 308
+/en/products/x 308
+/ja/products/x 410 noindex native
+/zh/go/products 410 noindex native
+/zh-tw/products 410 noindex native
+/products/export?locale=ja 410 noindex native
+/zh-tw/retired-products 404
+/admin/creator-products 308
+/admin/creator-products/x 308
+/products/x.png 404 proxied
+/ar/products 404 proxied

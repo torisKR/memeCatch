@@ -63,7 +63,7 @@ fn lucide(name: &str, class: &str, stroke_width: &str, children: &'static str) -
 }
 
 /// `components/brand-mark.tsx` `BrandTile`.
-fn brand_tile(size: &str) -> Markup {
+pub(crate) fn brand_tile(size: &str) -> Markup {
     html! {
         span aria-hidden="true" class=(format!("inline-grid shrink-0 place-items-center rounded-[30%] bg-accent {size}")) {
             svg viewBox="0 0 64 64" class="h-[74%] w-[74%]" fill="none" {

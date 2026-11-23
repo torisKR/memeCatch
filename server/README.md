@@ -101,9 +101,10 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 
 `src/pages` renders pages as finished HTML with Maud templates; the choice
 and the plan for the other pages are in `docs/axum-migration/UI-PLAN.md`. Two
-pages exist: `/about` and the Korean `/memes/{key}`. A page route is off until
-`AXUM_PILOT_ROUTES` names it (`page-about`, `page-meme`; an id that is not a
-page stops the server at startup), and `AXUM_DISABLED_ROUTES` still switches
+pages exist: `/about`, the Korean `/memes/{key}`, and the static documents of
+batch B1 (`src/pages/documents`, `src/pages/retired.rs`). A page route is off
+until `AXUM_PILOT_ROUTES` names it (`routes::PAGE_ROUTE_IDS`; an id that is
+not a page stops the server at startup), and `AXUM_DISABLED_ROUTES` still switches
 it off. A page is switched on in its batch, after the page gate and the
 behaviour gate (`parity/README.md`) pass for it; the meme page still stops
 after the origin section.

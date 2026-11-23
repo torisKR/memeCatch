@@ -671,7 +671,8 @@ function queryPlan(op, name, { fields = [{ kind: "star" }], filters = [], single
         ...(op === "rpc" ? { args } : {}),
     };
 }
-async function runPlan(plan) {
+const BUSY_RETRY_MAX_SECONDS = 5;
+async function runPlan(plan, retried = false) {
     try {
         const response = await fetch("/api/db/query", {
             method: "POST",
@@ -679,7 +680,13 @@ async function runPlan(plan) {
             credentials: "same-origin",
             body: JSON.stringify({ plan }),
         });
-        return await response.json();
+        const body = await response.json();
+        if (response.status === 503 && body?.error?.message === "database busy" && !retried) {
+            const wait = Math.min(Number(response.headers.get("retry-after")) || 1, BUSY_RETRY_MAX_SECONDS);
+            await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+            return runPlan(plan, true);
+        }
+        return body;
     }
     catch {
         return { data: null, error: { message: "network" } };

@@ -59,6 +59,13 @@ services:
       # Keys the view counter and the analytics events (server/src/routes/
       # tracking.rs). Without it those two routes stay Next's.
       MEMECATCH_SIGNING_SECRET: ${MEMECATCH_SIGNING_SECRET:-}
+      # The semantic search route (server/src/routes/search/) reads both, as
+      # Next does. Without MEME_SEMANTIC_SEARCH_ENABLED it answers the keyword
+      # fallback with reason "disabled" where Next says "model_unavailable".
+      # The BEDROCK_* and AWS_* variables are not passed: the operator studio
+      # stays Next's until its credential source is known (PLAN.md row 61).
+      MEME_SEMANTIC_SEARCH_ENABLED: ${MEME_SEMANTIC_SEARCH_ENABLED:-}
+      MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
       # Read at run time by Next too (components/adsense-script.tsx).
       ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
       # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and

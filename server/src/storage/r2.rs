@@ -19,7 +19,9 @@ use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 
-use super::{DEFAULT_CONTENT_TYPE, ListEntry, StorageError, StoredObject, form_encode_key};
+use super::{
+    DEFAULT_CONTENT_TYPE, ListEntry, ObjectStream, StorageError, StoredObject, form_encode_key,
+};
 
 const R2_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -73,9 +75,7 @@ impl R2 {
         format!("{}/{}", self.bucket_url, encoded.join("/"))
     }
 
-    /// Signs and sends one request and reads the whole answer. Like aws4fetch
-    /// for S3, the payload is not part of the signature (`UNSIGNED-PAYLOAD`)
-    /// and neither is the content type.
+    /// Signs and sends one request and reads the whole answer.
     async fn send(
         &self,
         method: Method,
@@ -83,6 +83,24 @@ impl R2 {
         content_type: Option<&str>,
         body: Bytes,
     ) -> Result<Response<Bytes>, StorageError> {
+        let response = self.start(method, url, content_type, body).await?;
+        let (parts, body) = response.into_parts();
+        let bytes = axum::body::to_bytes(body, usize::MAX)
+            .await
+            .map_err(|error| StorageError::Transport(error.to_string()))?;
+        Ok(Response::from_parts(parts, bytes))
+    }
+
+    /// Signs and sends one request. The answer's body is still on its way.
+    /// Like aws4fetch for S3, the payload is not part of the signature
+    /// (`UNSIGNED-PAYLOAD`) and neither is the content type.
+    async fn start(
+        &self,
+        method: Method,
+        url: &str,
+        content_type: Option<&str>,
+        body: Bytes,
+    ) -> Result<Response<Body>, StorageError> {
         let transport = |error: &dyn fmt::Display| StorageError::Transport(error.to_string());
 
         let mut request = Request::builder()
@@ -127,11 +145,7 @@ impl R2 {
             .request(request)
             .await
             .map_err(|error| transport(&error))?;
-        let (parts, body) = response.into_parts();
-        let bytes = axum::body::to_bytes(Body::new(body), usize::MAX)
-            .await
-            .map_err(|error| transport(&error))?;
-        Ok(Response::from_parts(parts, bytes))
+        Ok(response.map(Body::new))
     }
 
     pub(super) async fn put(
@@ -177,8 +191,22 @@ impl R2 {
     }
 
     pub(super) async fn read(&self, key: &str) -> Result<Option<StoredObject>, StorageError> {
+        let Some(object) = self.open(key).await? else {
+            return Ok(None);
+        };
+        let bytes = axum::body::to_bytes(object.body, usize::MAX)
+            .await
+            .map_err(|error| StorageError::Transport(error.to_string()))?;
+        Ok(Some(StoredObject {
+            bytes,
+            content_type: object.content_type,
+        }))
+    }
+
+    /// The object at `key`, read from R2 as the caller reads the body.
+    pub(super) async fn open(&self, key: &str) -> Result<Option<ObjectStream>, StorageError> {
         let response = self
-            .send(Method::GET, &self.object_url(key), None, Bytes::new())
+            .start(Method::GET, &self.object_url(key), None, Bytes::new())
             .await?;
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);
@@ -190,8 +218,8 @@ impl R2 {
             .and_then(|value| value.to_str().ok())
             .unwrap_or(DEFAULT_CONTENT_TYPE)
             .to_owned();
-        Ok(Some(StoredObject {
-            bytes: response.into_body(),
+        Ok(Some(ObjectStream {
+            body: response.into_body(),
             content_type,
         }))
     }

@@ -5,10 +5,14 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use axum::body::Bytes;
+use axum::body::{Body, Bytes};
 use time::OffsetDateTime;
+use tokio::io::AsyncReadExt;
 
-use super::{DEFAULT_CONTENT_TYPE, ListEntry, StorageError, StoredObject};
+use super::{DEFAULT_CONTENT_TYPE, ListEntry, ObjectStream, StorageError, StoredObject};
+
+/// How much of a file [`open`] holds at a time.
+const STREAM_CHUNK_BYTES: usize = 64 * 1024;
 
 pub(super) async fn put(root: &Path, key: &str, bytes: Bytes) -> Result<(), StorageError> {
     let file = root.join(key);
@@ -39,6 +43,27 @@ pub(super) async fn read(root: &Path, key: &str) -> Option<StoredObject> {
             bytes: bytes.into(),
             content_type: DEFAULT_CONTENT_TYPE.to_owned(),
         })
+}
+
+/// [`read`] without holding the file: the body reads it a chunk at a time.
+/// A file that cannot be opened, or is not a regular file, counts as missing.
+/// A failure after that ends the body early.
+pub(super) async fn open(root: &Path, key: &str) -> Option<ObjectStream> {
+    let file = tokio::fs::File::open(root.join(key)).await.ok()?;
+    // A directory opens too; only reading it fails.
+    if !file.metadata().await.ok()?.is_file() {
+        return None;
+    }
+    let chunks = futures_util::stream::try_unfold(file, |mut file| async move {
+        let mut chunk = vec![0; STREAM_CHUNK_BYTES];
+        let read = file.read(&mut chunk).await?;
+        chunk.truncate(read);
+        Ok::<_, std::io::Error>((read > 0).then(|| (Bytes::from(chunk), file)))
+    });
+    Some(ObjectStream {
+        body: Body::from_stream(chunks),
+        content_type: DEFAULT_CONTENT_TYPE.to_owned(),
+    })
 }
 
 /// The entries directly under the directory `base`.
@@ -113,5 +138,43 @@ mod tests {
         ] {
             assert_eq!(js_mtime_iso(modified).as_deref(), Some(expected));
         }
+    }
+
+    #[tokio::test]
+    async fn open_reads_a_file_a_chunk_at_a_time() {
+        use http_body_util::BodyExt;
+
+        let root = tempfile::tempdir().unwrap();
+        // Three and a bit chunks, every byte different from its neighbours.
+        let content: Vec<u8> = (0..STREAM_CHUNK_BYTES * 3 + 1000)
+            .map(|i| (i % 251) as u8)
+            .collect();
+        tokio::fs::create_dir(root.path().join("dir"))
+            .await
+            .unwrap();
+        tokio::fs::write(root.path().join("dir/big.bin"), &content)
+            .await
+            .unwrap();
+
+        let mut object = open(root.path(), "dir/big.bin").await.expect("object");
+        let mut frame_sizes = Vec::new();
+        let mut read = Vec::new();
+        while let Some(frame) = object.body.frame().await {
+            let data = frame.unwrap().into_data().unwrap();
+            frame_sizes.push(data.len());
+            read.extend_from_slice(&data);
+        }
+
+        assert_eq!(read, content);
+        assert!(frame_sizes.len() >= 4, "{frame_sizes:?}");
+        assert!(
+            frame_sizes.iter().all(|size| *size <= STREAM_CHUNK_BYTES),
+            "{frame_sizes:?}"
+        );
+        assert_eq!(object.content_type, DEFAULT_CONTENT_TYPE);
+        // As for `read`: a folder and a missing file are both "no such object".
+        assert!(open(root.path(), "dir").await.is_none());
+        assert!(open(root.path(), "dir/missing.bin").await.is_none());
+        assert!(open(root.path(), "dir/big.bin/below").await.is_none());
     }
 }

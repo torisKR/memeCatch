@@ -11,7 +11,7 @@
 //! | `from(bucket).list(prefix)` | [`Storage::list`] |
 //! | `from(bucket).createSignedUrl(name, seconds)` | [`Storage::signed_object_url`] |
 //! | `verifySignedObject(key, exp, sig)` | [`Storage::verify_signed_object`] |
-//! | `readSignedObject(key)` | [`Storage::read_signed_object`] |
+//! | `readSignedObject(key)` | [`Storage::read_signed_object`], or [`Storage::open_signed_object`] to stream it |
 //!
 //! Signed URLs are interchangeable with the TypeScript ones in both directions.
 //! `tests/fixtures/object-storage-ts.json` holds what the TypeScript produces and
@@ -38,7 +38,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use aws_credential_types::Credentials;
-use axum::body::Bytes;
+use axum::body::{Body, Bytes};
 use axum::http::StatusCode;
 use serde::Serialize;
 
@@ -79,6 +79,12 @@ impl std::error::Error for StorageError {}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoredObject {
     pub bytes: Bytes,
+    pub content_type: String,
+}
+
+/// One object whose bytes are read as `body` is read, and its content type.
+pub struct ObjectStream {
+    pub body: Body,
     pub content_type: String,
 }
 
@@ -191,6 +197,21 @@ impl Storage {
         key: &str,
     ) -> Result<Option<StoredObject>, StorageError> {
         self.read(&safe_key(key)?).await
+    }
+
+    /// [`Self::read_signed_object`] for an object of any size: nothing is
+    /// read until the body is, and never more than a chunk is held. The route
+    /// uses this, because a render video can be larger than this server's
+    /// memory.
+    pub async fn open_signed_object(
+        &self,
+        key: &str,
+    ) -> Result<Option<ObjectStream>, StorageError> {
+        let key = safe_key(key)?;
+        match &self.0.backend {
+            Backend::R2(r2) => r2.open(&key).await,
+            Backend::Local { root } => Ok(local::open(root, &key).await),
+        }
     }
 
     /// The object `name` in `bucket`. `Ok(None)`: no such object.

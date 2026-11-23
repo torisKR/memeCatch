@@ -36,7 +36,9 @@ async fn signed(State(state): State<AppState>, uri: Uri) -> Response {
     {
         return json(StatusCode::UNAUTHORIZED, r#"{"message":"expired"}"#);
     }
-    match state.storage.read_signed_object(key).await {
+    // Streamed: Next holds the whole object in memory, which this server does
+    // not have for a render video.
+    match state.storage.open_signed_object(key).await {
         Ok(Some(object)) => match HeaderValue::from_str(&object.content_type) {
             Ok(content_type) => (
                 [
@@ -46,7 +48,7 @@ async fn signed(State(state): State<AppState>, uri: Uri) -> Response {
                         HeaderValue::from_static("private, max-age=60"),
                     ),
                 ],
-                object.bytes,
+                object.body,
             )
                 .into_response(),
             Err(_) => json(StatusCode::BAD_REQUEST, r#"{"message":"unreadable"}"#),

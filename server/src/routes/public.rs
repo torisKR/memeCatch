@@ -18,13 +18,13 @@
 //! | `explore-previews` | `POST /api/explore/previews` |
 
 mod content_depth;
-mod csp_report;
+pub(crate) mod csp_report;
 pub mod daily_quiz;
 mod explore_previews;
 mod feeds;
 pub(crate) mod js;
 mod js_date;
-mod labels;
+pub(crate) mod labels;
 mod llms;
 mod llms_full;
 mod llms_localized;

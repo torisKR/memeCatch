@@ -41,6 +41,8 @@ use super::{html as html_response, labels, not_found};
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::headers::AnsweredBeforeRouting;
 use crate::routes::public::js;
+use crate::routes::public::labels::meme_path;
+use crate::routes::request::decode_uri_component;
 use crate::{AppState, proxy};
 
 // CURATED_CORE_SHORT_IDS in lib/curated-meme-ids.ts: editorial cards that
@@ -190,31 +192,6 @@ pub(super) fn is_canonical_alias(short_id: &str) -> bool {
     CANONICAL_ALIASES
         .iter()
         .any(|(alias, _)| *alias == short_id)
-}
-
-/// `memePathFrom` in lib/labels.ts.
-fn meme_path(short_id: &str, slug: &str) -> String {
-    format!("/memes/{short_id}-{}", js::encode_uri_component(slug))
-}
-
-/// `decodeURIComponent`. `None` where JavaScript throws: a malformed escape
-/// or bytes that are not UTF-8.
-fn decode_uri_component(value: &str) -> Option<String> {
-    let bytes = value.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%' {
-            let hex = bytes.get(index + 1..index + 3)?;
-            let hex = std::str::from_utf8(hex).ok()?;
-            out.push(u8::from_str_radix(hex, 16).ok()?);
-            index += 3;
-        } else {
-            out.push(bytes[index]);
-            index += 1;
-        }
-    }
-    String::from_utf8(out).ok()
 }
 
 /// `shortIdFromParam`: what precedes the first `-` of the decoded key.

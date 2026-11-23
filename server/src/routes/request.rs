@@ -4,7 +4,7 @@
 
 use axum::body::Body;
 use axum::extract::FromRequestParts;
-use axum::http::header::{CONTENT_LENGTH, CONTENT_TYPE, HeaderMap, HeaderName, ORIGIN};
+use axum::http::header::{CONTENT_TYPE, HeaderMap, HeaderName, ORIGIN};
 use axum::http::request::Parts;
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
@@ -14,6 +14,7 @@ use url::Url;
 
 use crate::AppState;
 use crate::auth::{RequestIdentity, SessionUser};
+use crate::routes::public::csp_report;
 
 /// The user `createClient()` of lib/db/server.ts gives a route: the user of
 /// the session cookie, or none. A session that cannot be looked up counts as
@@ -129,24 +130,11 @@ pub async fn read_bounded_text(
     body: Body,
     max_bytes: usize,
 ) -> Result<String, BodyError> {
-    if declares_more_than(headers, max_bytes) {
+    if csp_report::declares_too_large(headers, max_bytes) {
         return Err(BodyError::TooLarge);
     }
     let bytes = read_at_most(body, max_bytes).await?;
     Ok(decode_text(&bytes))
-}
-
-/// A non-empty `Content-Length` that is not all digits or is above the limit.
-fn declares_more_than(headers: &HeaderMap, max_bytes: usize) -> bool {
-    headers.get(CONTENT_LENGTH).is_some_and(|value| {
-        let declared = value.as_bytes();
-        !declared.is_empty()
-            && std::str::from_utf8(declared)
-                .ok()
-                .filter(|text| text.bytes().all(|byte| byte.is_ascii_digit()))
-                .and_then(|text| text.parse::<usize>().ok())
-                .is_none_or(|length| length > max_bytes)
-    })
 }
 
 /// Reads the body, giving up as soon as it is longer than `max_bytes`, so at

@@ -12,7 +12,7 @@ use sqlx::PgConnection;
 use super::catalog;
 use super::{CardError, PAGE_SIZE, ensure_count, is_card_id};
 use crate::db::{BoxFuture, Db, DbIdentity, IdentityOptions};
-use crate::routes::public::js;
+use crate::routes::public::labels;
 
 /// `eligibleQuery`: active cards of approved, green, published memes. `$1`
 /// is a title pattern, `$2` a category and `$3` a list of card ids; a null
@@ -131,8 +131,7 @@ fn normalize(row: CardRow) -> Result<Card, CardError> {
     let art = catalog::card_art(&id).filter(|_| consistent);
     let art = art.ok_or(CardError::UNAVAILABLE)?;
     Ok(Card {
-        // `memePathFrom` in lib/labels.ts.
-        href: format!("/memes/{short_id}-{}", js::encode_uri_component(&slug)),
+        href: labels::meme_path(&short_id, &slug),
         id,
         card_no,
         edition,

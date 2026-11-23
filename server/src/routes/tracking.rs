@@ -20,7 +20,6 @@ mod view;
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::Router;
 use axum::extract::{ConnectInfo, Request, State};
@@ -32,6 +31,7 @@ use axum::routing::post;
 
 use self::growth::GrowthKeys;
 use super::Routes;
+use super::public::csp_report::now_ms;
 use super::public::rate_limit::{self, RateLimit, RateLimiter};
 use super::request::{self, SiteOrigin};
 use crate::AppState;
@@ -107,15 +107,6 @@ fn rate_limited(retry_after_sec: i64) -> Response {
 /// `Response.json({ ok: false, error }, { status })`.
 fn refused(status: StatusCode, error: &'static str) -> Response {
     request::json(status, format!(r#"{{"ok":false,"error":"{error}"}}"#))
-}
-
-/// `Date.now()`.
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |elapsed| {
-            i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
-        })
 }
 
 /// The client address two ways (`rate_limit.rs`): the rate limit key, which

@@ -83,7 +83,7 @@ fn is_report(headers: &HeaderMap) -> bool {
 
 /// The `Content-Length` check of `readBoundedText`: a non-empty value that is
 /// not all digits, or is larger than `max_bytes`.
-pub(super) fn declares_too_large(headers: &HeaderMap, max_bytes: usize) -> bool {
+pub(crate) fn declares_too_large(headers: &HeaderMap, max_bytes: usize) -> bool {
     headers.get(CONTENT_LENGTH).is_some_and(|value| {
         let declared = value.as_bytes();
         !declared.is_empty()

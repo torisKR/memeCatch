@@ -179,6 +179,17 @@ POST /api/memes/semantic-search
 GET /api/memes/semantic-search
 OPTIONS /api/memes/semantic-search
 
+# better-auth's session read without a cookie (routes/better_auth/session.rs):
+# null from either server. auth-session.mjs covers it with sessions.
+/api/auth/get-session
+# Still Next's: HEAD, other methods, a query string, sign-out without a JSON
+# body, and every other better-auth path.
+HEAD /api/auth/get-session
+POST /api/auth/get-session
+/api/auth/get-session?disableRefresh=true
+POST /api/auth/sign-out
+/api/auth/list-sessions
+
 # R4 (routes/ops.rs). Without credentials: what a stranger gets. The cases with
 # the cron bearer, a session and a request body are in ops.mjs.
 GET /api/cron/adpick-hotdeals

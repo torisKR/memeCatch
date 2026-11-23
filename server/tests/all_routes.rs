@@ -120,6 +120,8 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "POST",
             "/api/memes/semantic-search",
         ),
+        ("auth-get-session", "GET", "/api/auth/get-session"),
+        ("auth-sign-out", "POST", "/api/auth/sign-out"),
         ("memes-chat", "POST", "/api/memes/chat"),
         ("growth-baseline", "GET", "/api/cron/growth-baseline"),
         ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
@@ -140,6 +142,31 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     samples
 }
 
+/// The headers and body a sample needs to be answered natively: sign-out
+/// takes only a JSON object (everything else is Next's 415 or 400).
+fn sample_request(id: &str) -> (&'static [(&'static str, &'static str)], &'static str) {
+    match id {
+        "auth-sign-out" => (&[("content-type", "application/json")], "{}"),
+        _ => (&[], ""),
+    }
+}
+
+async fn send_sample(
+    app: SocketAddr,
+    id: &str,
+    method: &str,
+    path: &str,
+    extra: &[(&str, &str)],
+) -> common::Reply {
+    let (headers, body) = sample_request(id);
+    let headers = [headers, extra].concat();
+    send(app, method, path, &headers, Body::from(body)).await
+}
+
+/// Routes that hand a request with an `RSC` header to Next on purpose: Next
+/// redirects it before better-auth runs (`routes/better_auth/session.rs`).
+const RSC_TO_NEXT: [&str; 1] = ["auth-get-session"];
+
 #[tokio::test]
 async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
     let upstream = marker_upstream().await;
@@ -154,7 +181,7 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
     assert_eq!(sampled, known);
 
     for (id, method, path) in &samples {
-        let native = send(all_on, method, path, &[], Body::empty()).await;
+        let native = send_sample(all_on, id, method, path, &[]).await;
         assert_ne!(
             native.status,
             StatusCode::IM_A_TEAPOT,
@@ -162,7 +189,7 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
         );
 
         let disabled = app(upstream, &[PILOTS_ON, ("AXUM_DISABLED_ROUTES", id)]).await;
-        let proxied = send(disabled, method, path, &[], Body::empty()).await;
+        let proxied = send_sample(disabled, id, method, path, &[]).await;
         assert_eq!(proxied.status, StatusCode::IM_A_TEAPOT, "{id}");
         assert_eq!(
             proxied.body,
@@ -179,7 +206,7 @@ async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
     let default = app(upstream, &[]).await;
 
     for (id, method, path) in &samples {
-        let reply = send(default, method, path, &[], Body::empty()).await;
+        let reply = send_sample(default, id, method, path, &[]).await;
 
         if PAGE_ROUTE_IDS.contains(id) {
             assert_eq!(reply.body, format!("upstream saw {method} {path}"), "{id}");
@@ -204,9 +231,11 @@ async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
         &[("sec-fetch-mode", "same-origin"), ("rsc", "1")],
     ] {
         for (id, method, path) in &samples {
-            let reply = send(all_on, method, path, fetch, Body::empty()).await;
+            let reply = send_sample(all_on, id, method, path, fetch).await;
+            let to_next = PAGE_ROUTE_IDS.contains(id)
+                || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
 
-            if PAGE_ROUTE_IDS.contains(id) {
+            if to_next {
                 assert_eq!(
                     reply.body,
                     format!("upstream saw {method} {path}"),
@@ -247,4 +276,83 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
     // Every valid combination starts.
     let valid = [PILOTS_ON, ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms")];
     assert!(state(upstream, &valid).is_ok());
+}
+
+/// Method, path, headers and body of one request.
+type Sample = (
+    &'static str,
+    &'static str,
+    &'static [(&'static str, &'static str)],
+    &'static str,
+);
+
+// Only `GET /api/auth/get-session` and a JSON-object `POST /api/auth/sign-out`
+// are answered here; every other better-auth request goes to Next as it came.
+#[tokio::test]
+async fn the_other_auth_requests_go_to_next() {
+    let upstream = marker_upstream().await;
+    let all_on = app(upstream, &[PILOTS_ON]).await;
+    const JSON: (&str, &str) = ("content-type", "application/json");
+    let requests: [Sample; 15] = [
+        ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),
+        ("GET", "/api/auth/callback/google?code=x", &[], ""),
+        (
+            "GET",
+            "/api/auth/get-session?disableCookieCache=true",
+            &[],
+            "",
+        ),
+        ("GET", "/api/auth/get-session", &[("rsc", "1")], ""),
+        ("POST", "/api/auth/get-session", &[JSON], "{}"),
+        ("GET", "/api/auth/sign-out", &[], ""),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[("content-type", "text/plain")],
+            "{}",
+        ),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"callbackURL":"/"}"#,
+        ),
+        ("POST", "/api/auth/sign-out", &[JSON], "[]"),
+        // better-auth's origin check reads `callbackURL` from the query too,
+        // and these body keys, and refuses untrusted or non-string ones.
+        (
+            "POST",
+            "/api/auth/sign-out?callbackURL=https://evil.example",
+            &[JSON],
+            "{}",
+        ),
+        ("POST", "/api/auth/sign-out?x=1", &[JSON], "{}"),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"redirectTo":"https://evil.example"}"#,
+        ),
+        ("POST", "/api/auth/sign-out", &[JSON], r#"{"redirectTo":1}"#),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"errorCallbackURL":"https://evil.example"}"#,
+        ),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"newUserCallbackURL":"https://evil.example"}"#,
+        ),
+    ];
+    for (method, path, headers, body) in requests {
+        let reply = send(all_on, method, path, headers, Body::from(body)).await;
+        assert_eq!(
+            reply.body,
+            format!("upstream saw {method} {path}"),
+            "{method} {path} {headers:?} {body}"
+        );
+    }
 }

@@ -1,6 +1,7 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
 //! merges them. A request no native route answers reaches `proxy::forward`.
 
+pub mod better_auth;
 pub mod cards;
 pub mod chat;
 pub mod health;
@@ -31,7 +32,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 50] = [
+pub const ROUTE_IDS: [&str; 52] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -75,6 +76,8 @@ pub const ROUTE_IDS: [&str; 50] = [
     "meme-studio",
     "admin-meme-studio",
     "memes-semantic-search",
+    "auth-get-session",
+    "auth-sign-out",
     "memes-chat",
     "growth-baseline",
     "saved-state-emails",
@@ -239,6 +242,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(public::router(state))
         .merge(cards::router(state))
         .merge(tracking::router(state))
+        .merge(better_auth::router(state))
         .merge(ops::router(state))
         .merge(crate::pages::router(state))
         .merge(mpe::router(state))

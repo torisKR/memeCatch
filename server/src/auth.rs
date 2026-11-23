@@ -54,7 +54,7 @@ const SECURE_SESSION_COOKIE: &str = "__Secure-better-auth.session_token";
 /// reads. Never both: a browser only accepts a `__Secure-` cookie over HTTPS
 /// from the site itself, so reading the plain name in production would let a
 /// planted cookie sign a visitor in to someone else's session.
-fn session_cookie_name(use_secure_cookies: bool) -> &'static str {
+pub(crate) fn session_cookie_name(use_secure_cookies: bool) -> &'static str {
     if use_secure_cookies {
         SECURE_SESSION_COOKIE
     } else {
@@ -328,7 +328,7 @@ fn is_expired(expires_at_ms: i64, now_ms: i64) -> bool {
     expires_at_ms < now_ms
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     let since_epoch = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default();
@@ -338,15 +338,19 @@ fn now_ms() -> i64 {
 /// The session token from the cookie named `cookie_name`, if its signature is
 /// good.
 fn session_token(headers: &HeaderMap, cookie_name: &str, secret: &str) -> Option<String> {
-    // Node joins repeated Cookie headers with "; " before Next sees them.
-    let cookies = headers
+    let value = cookie_value(&cookie_header(headers)?, cookie_name)?;
+    verify_signed_value(&value, secret).map(str::to_owned)
+}
+
+/// `request.headers.get("cookie")` as the Next app sees it: Node joins
+/// repeated Cookie headers with "; ". `None` without a Cookie header.
+pub(crate) fn cookie_header(headers: &HeaderMap) -> Option<String> {
+    let values: Vec<String> = headers
         .get_all(COOKIE)
         .iter()
         .map(node_header_text)
-        .collect::<Vec<_>>()
-        .join("; ");
-    let value = cookie_value(&cookies, cookie_name)?;
-    verify_signed_value(&value, secret).map(str::to_owned)
+        .collect();
+    (!values.is_empty()).then(|| values.join("; "))
 }
 
 /// A header value as Node gives it to the Next app: each byte is one
@@ -367,7 +371,7 @@ fn js_trim(text: &str) -> &str {
 /// `parseCookies` (better-call dist/cookies.mjs:21-43) for one name: the first
 /// cookie with that name wins, surrounding quotes are dropped and the value is
 /// percent-decoded.
-fn cookie_value(header: &str, name: &str) -> Option<String> {
+pub(crate) fn cookie_value(header: &str, name: &str) -> Option<String> {
     let mut index = 0;
     while index < header.len() {
         let eq = index + header[index..].find('=')?;
@@ -398,7 +402,7 @@ fn cookie_value(header: &str, name: &str) -> Option<String> {
 
 /// `tryDecode` (better-call dist/utils.mjs:56-62): `decodeURIComponent`, or
 /// the text unchanged when it is not valid percent-encoded UTF-8.
-fn try_decode(text: &str) -> String {
+pub(crate) fn try_decode(text: &str) -> String {
     fn decode(text: &str) -> Option<String> {
         let hex = |byte: Option<&u8>| char::from(*byte?).to_digit(16);
         let bytes = text.as_bytes();
@@ -424,7 +428,7 @@ fn try_decode(text: &str) -> String {
 /// HMAC-SHA256 over the token, keyed with the secret's UTF-8 bytes
 /// (better-call dist/crypto.mjs:7-31). Returns the token when the signature
 /// matches. The comparison is constant-time.
-fn verify_signed_value<'a>(value: &'a str, secret: &str) -> Option<&'a str> {
+pub(crate) fn verify_signed_value<'a>(value: &'a str, secret: &str) -> Option<&'a str> {
     let dot = value.rfind('.').filter(|&at| at >= 1)?;
     let (token, signature) = (&value[..dot], &value[dot + 1..]);
     if signature.len() != 44 || !signature.ends_with('=') {

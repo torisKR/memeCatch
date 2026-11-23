@@ -140,6 +140,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-terms", "/terms", get(documents::terms::page))
         .add("page-offline", "/offline", get(documents::offline))
         .add(
+            "page-originals",
+            "/originals",
+            get(documents::originals::page),
+        )
+        .add(
             "page-missing-meme",
             "/missing-public-meme",
             get(documents::missing_public_meme),

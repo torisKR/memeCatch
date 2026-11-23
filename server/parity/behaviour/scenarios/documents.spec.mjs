@@ -11,6 +11,7 @@ const PAGES = [
   ["/privacy", "개인정보처리방침"],
   ["/terms", "이용약관"],
   ["/offline", "지금은 오프라인이에요"],
+  ["/originals", "우리가 직접 만든 밈을 한곳에서"],
 ];
 
 for (const [path, heading] of PAGES) {
@@ -102,4 +103,13 @@ test("retired products in English: the English copy and home", async ({ page, is
   const nav = page.getByRole("navigation", { name: "Main navigation" });
   if (isMobile) await expect(nav.getByRole("link")).toHaveText(["Home", "Latest", "Community", "Submit", "My"]);
   else await expect(nav).toBeHidden();
+});
+
+test("originals: each edition in the list opens its page", async ({ page }) => {
+  await open(page, "/originals");
+  const editions = page.getByRole("main").getByRole("link");
+  await expect(editions).toHaveCount(3);
+  await editions.filter({ hasText: "퇴근 5분 전" }).click();
+  await expect(page).toHaveURL(/\/originals\/edition\/five-minutes-to-go$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("퇴근 5분 전");
 });

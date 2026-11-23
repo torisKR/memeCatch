@@ -85,3 +85,9 @@
 /admin/creator-products/x 308
 /products/x.png 404 proxied
 /ar/products 404 proxied
+
+# Batch B2.
+/originals 200 index native
+/originals?ref=menu 200 index native
+/originals/ 308
+/en/originals 404 proxied

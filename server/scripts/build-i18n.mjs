@@ -27,6 +27,7 @@ import {
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
 import { MEME_CHAT_COPY } from "@/lib/meme-chat-copy";
 import { GUIDES } from "@/lib/guides";
+import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -86,6 +87,8 @@ const FILES = {
   }),
   // The five articles of /guides and /guides/{slug}, as lib/guides.ts holds them.
   "guides.json": () => GUIDES,
+  // The illustrated originals of /originals and /originals/edition/{slug}.
+  "originals.json": () => EDITORIAL_ORIGINALS,
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

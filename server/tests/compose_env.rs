@@ -30,6 +30,13 @@ const LEFT_OUT: &[&str] = &[
     "NEXT_PUBLIC_ADSENSE_CLIENT",
     // Tests and parity runs only: sends OpenRouter requests to a local stub.
     "AXUM_TEST_OPENROUTER_ORIGIN",
+    // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
+    // stub or a provider behind a private CA. Production trusts only the
+    // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
+    "AXUM_EXTRA_CA_CERTS",
+    // Sign-out's extra trusted origins (A1). The Next service is not given
+    // it, so Axum is not either: both trust the same origins.
+    "BETTER_AUTH_TRUSTED_ORIGINS",
 ];
 
 fn matches(entry: &str, name: &str) -> bool {

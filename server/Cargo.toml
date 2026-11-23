@@ -11,6 +11,9 @@ base64 = "0.22.1"
 futures-util = "0.3.34"
 hex = "0.4.3"
 hmac = "0.13.0"
+# The reason phrase of an HTTP/1 answer (`hyper::ext::ReasonPhrase`); already
+# in the build through axum.
+hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 hyper-rustls = { version = "0.27.10", default-features = false, features = ["http1", "ring", "tls12", "webpki-tokio"] }
 hyper-util = { version = "0.1.21", features = ["client-legacy", "http1", "tokio"] }
 maud = "0.27.0"
@@ -34,6 +37,9 @@ tracing-subscriber = "0.3.23"
 ttf-parser = "0.25.1"
 unicode-normalization = "0.1.26"
 url = "2.5.9"
+# Already in the build through hyper-rustls; named here so outbound HTTPS can
+# add AXUM_EXTRA_CA_CERTS to the same roots (outbound.rs).
+webpki-roots = "1.0.12"
 
 [dev-dependencies]
 http-body-util = "0.1.5"

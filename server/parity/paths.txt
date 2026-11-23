@@ -195,3 +195,41 @@ POST /og/ko
 POST /opengraph-image
 POST /og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3
 /og/quiz/%20a005aaaaaaa1aaaaaaa2aaaaaaa3
+# better-auth's session read without a cookie (routes/better_auth/session.rs):
+# null from either server. auth-session.mjs covers it with sessions.
+/api/auth/get-session
+# Still Next's: HEAD, other methods, a query string, sign-out without a JSON
+# body, and every other better-auth path.
+HEAD /api/auth/get-session
+POST /api/auth/get-session
+/api/auth/get-session?disableRefresh=true
+POST /api/auth/sign-out
+/api/auth/list-sessions
+
+# R4 (routes/ops.rs). Without credentials: what a stranger gets. The cases with
+# the cron bearer, a session and a request body are in ops.mjs.
+GET /api/cron/adpick-hotdeals
+HEAD /api/cron/adpick-hotdeals
+POST /api/cron/adpick-hotdeals
+GET /api/creator-products
+HEAD /api/creator-products
+POST /api/creator-products
+PUT /api/creator-products/x
+PATCH /api/creator-products/x/y
+DELETE /api/creator-products/x
+GET /api/cron/growth-baseline
+HEAD /api/cron/growth-baseline
+POST /api/cron/source-refresh
+GET /api/cron/saved-state-emails
+POST /api/admin/instagram-video-verification/revalidate
+# Their other methods, and the routes of the batch left to Next.
+OPTIONS /api/creator-products
+PUT /api/cron/adpick-hotdeals
+POST /api/cron/growth-baseline
+GET /api/cron/source-refresh
+POST /api/cron/saved-state-emails
+GET /api/admin/instagram-video-verification/revalidate
+GET /api/cron/trend-pulse
+GET /api/cron/mcp-events
+POST /api/admin/source-ingestions
+POST /api/db/query

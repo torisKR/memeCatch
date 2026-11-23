@@ -62,6 +62,8 @@ with no body.
 | `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
+| `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
+| `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
 | `harness.mjs` | Shared by the two scripts above; not run on its own. |
 
@@ -434,6 +436,46 @@ docker run --rm --network none -v "$PWD":/w:ro -w /w node:22-bookworm-slim \
   server/parity/meme-studio-bedrock-fixture.mjs > server/tests/fixtures/meme_studio_bedrock.json
 ```
 
+## Session read and sign-out
+
+`auth-session.mjs` compares `GET /api/auth/get-session` and
+`POST /api/auth/sign-out` (`src/routes/better_auth/`) with the real
+better-auth in Next, on one database. Users and sessions are minted by the
+app's own better-auth (`tests/better_auth_cookie.mjs`). A case that writes
+puts its session in the same state before each server's turn and restores it
+after; it compares the answers (status, headers, `Set-Cookie` lines in order,
+body) and the row each server left, with the times the call wrote shown as
+minutes from the call.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET and NODE_ENV.
+TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits]
+```
+
+Sections: `get-session` (no cookie, bad and foreign signatures, the other
+cookie name, `session_data` and its chunks, `dont_remember`, due for a
+refresh, expired, unknown token, a row that vanishes during the refresh
+(401, by a trigger), a database that fails (500, by renaming the table), and
+the requests handed to Next: `HEAD`, `POST`, a query string, `RSC`, a
+trailing slash; a 17 KB cookie, 431 on both), `sign-out` (content types,
+bodies, the origin check with and without cookies, `Referer`, the row deleted,
+the cookies cleared; the query `callbackURL` and the `redirectTo`,
+`errorCallbackURL` and `newUserCallbackURL` bodies, which Next answers; a
+delete the database refuses, where Next answers 200 and Axum 500
+`FAILED_TO_SIGN_OUT` with the same cookies, PLAN.md A1-4) and
+`limits` (production only: the 101st request in ten seconds, per address and
+path).
+
+A standalone Next build always names the cookie `__Secure-`: the build fixes
+`NODE_ENV`. Compare `NODE_ENV=development` against `next dev` instead; the
+development CSP then differs and is not compared.
+
+`tests/auth_session_cross.rs` (ignored; needs Node) runs the same endpoints
+in Rust against better-auth's own `getSession` and `signOut` on the test
+database, both ways and across the refresh and expiry boundaries:
+`cargo test --test auth_session_cross -- --ignored --nocapture`.
+
 ## Meme chat
 
 `chat.mjs` compares `POST /api/memes/chat` on the R1 seed
@@ -521,3 +563,35 @@ node server/parity/og-reference.mjs /tmp/og-ref default ko en ja zh zh-tw
 node server/parity/og-reference.mjs /tmp/og-ref quiz <token>...   # the names in tests/fixtures/og
 cp /tmp/og-ref/*.svg server/tests/fixtures/og/
 ```
+## The R4 routes
+
+```sh
+# A throwaway CA and a certificate for 127.0.0.1, in a scratch directory.
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 3 -subj "/CN=stub CA" \
+  -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign"
+openssl req -newkey rsa:2048 -nodes -keyout stub.key -out stub.csr -subj "/CN=127.0.0.1"
+printf 'subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n' > ext.cnf
+openssl x509 -req -in stub.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out stub.pem -days 3 -extfile ext.cnf
+node server/parity/https-stub.mjs stub.pem stub.key 3443 &
+
+# Both servers with the same CRON_SECRET and PLUS_DIGEST_*:
+#   PLUS_DIGEST_DELIVERY_URL=https://127.0.0.1:3443/send PLUS_DIGEST_FROM_EMAIL=... PLUS_DIGEST_DELIVERY_TOKEN=...
+# Next with NODE_EXTRA_CA_CERTS=ca.pem, Axum with AXUM_EXTRA_CA_CERTS=ca.pem.
+node server/parity/seed-memes.mjs pool 3 | psql        # the page of the cache section
+PARITY_USER="$(cat user1.json)" PARITY_USER_2="$(cat user2.json)" STUB_CA=ca.pem CRON_SECRET=... \
+  node server/parity/ops.mjs $NEXT $AXUM cache db-query retired growth-baseline source-refresh instagram-video saved-state
+```
+
+`not-configured` and `no-token` are for a pair started with an empty or
+`http:` delivery URL, and with no token. Never send an authenticated `GET` to
+`/api/cron/source-refresh`: that runs the real refresh, which calls YouTube
+and the oEmbed endpoints.
+
+Next's `server.js` forks the process that listens. To restart Next with other
+settings, stop that child too, or the new one loses the port to the old one
+and the old settings keep answering.
+
+The saved-state batch is sent to one server, the rows and the stub are read,
+the batch is put back, and the same is done through the other: the outbox
+ids are fixed, so the two runs must send byte-equal bodies and leave equal
+rows.

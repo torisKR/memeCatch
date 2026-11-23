@@ -113,6 +113,23 @@ export function focusRing(page) {
 export const localStorageItem = (page, key) => page.evaluate((name) => localStorage.getItem(name), key);
 export const sessionStorageItem = (page, key) => page.evaluate((name) => sessionStorage.getItem(name), key);
 
+/**
+ * SQL as the superuser of the test database container (TEST_DB_CONTAINER, as
+ * ../harness.mjs uses it), for a scenario that must make the database fail.
+ */
+export function databaseSql(sql) {
+  const container = process.env.TEST_DB_CONTAINER ?? "memecatch-axum-test-pg";
+  const result = spawnSync(
+    "docker",
+    ["exec", "-i", container, "psql", "-U", "postgres", "-d", "memecatch", "-v", "ON_ERROR_STOP=1", "-X", "-q", "-At"],
+    { input: sql, encoding: "utf8" },
+  );
+  if (result.status !== 0) throw new Error(`psql failed: ${result.stderr.slice(-600)}`);
+  return result.stdout.trim();
+}
+
+export const sqlText = (value) => `'${String(value).replaceAll("'", "''")}'`;
+
 export async function cookieValue(page, name) {
   const cookies = await page.context().cookies();
   return cookies.find((cookie) => cookie.name === name)?.value ?? null;

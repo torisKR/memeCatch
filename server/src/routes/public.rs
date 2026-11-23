@@ -1,14 +1,35 @@
-//! Public routes answered without Next: `/robots.txt`, `/api/random-meme`,
-//! `/memes/random`, `/api/csp-report` and `/api/daily-quiz`.
+//! Public routes answered without Next. Each has a route id for
+//! `AXUM_DISABLED_ROUTES`:
 //!
-//! Each has a route id for `AXUM_DISABLED_ROUTES`: `robots`, `random-meme`,
-//! `memes-random`, `csp-report`, `daily-quiz`.
+//! | id | route |
+//! | --- | --- |
+//! | `robots` | `/robots.txt` |
+//! | `memes-random` | `/memes/random` |
+//! | `random-meme` | `/api/random-meme` |
+//! | `csp-report` | `/api/csp-report` |
+//! | `daily-quiz` | `/api/daily-quiz` |
+//! | `llms` | `/llms.txt` |
+//! | `llms-full` | `/llms-full.txt` |
+//! | `feed` | `/feed.xml` |
+//! | `feed-updated` | `/feed/updated.xml` |
+//! | `llms-localized` | `/{en,ja,zh,zh-tw}/llms.txt` |
+//! | `llms-full-localized` | `/{en,ja,zh,zh-tw}/llms-full.txt` |
 
+mod content_depth;
 mod csp_report;
 pub mod daily_quiz;
+mod feeds;
 mod js;
+mod js_date;
+mod labels;
+mod llms;
+mod llms_full;
+mod llms_localized;
+mod localized;
+mod publication_export;
 pub mod quiz;
 mod random;
+mod rankings;
 mod rate_limit;
 mod robots;
 
@@ -23,6 +44,7 @@ use axum::response::Response;
 use axum::routing::{get, post};
 
 use self::random::RedirectTargets;
+use self::rankings::RankingsVisibility;
 use self::rate_limit::RateLimiter;
 use super::Routes;
 use crate::{AppState, proxy};
@@ -51,6 +73,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
         ),
     }
 
+    let pages = text_routes(pages);
+
     let limiter = Arc::new(RateLimiter::new(csp_report::now_ms()));
     let api = Routes::new(state)
         .add("random-meme", "/api/random-meme", get(random::json))
@@ -69,6 +93,42 @@ pub fn router(state: &AppState) -> Router<AppState> {
             www_to_upstream,
         ))
         .merge(api.build())
+}
+
+/// The feeds and the llms exports. `proxy.ts` skips paths that end in `.txt`
+/// or `.xml`, so nothing but the www redirect applies to them, and the
+/// handlers set `Content-Language` themselves where Next does.
+fn text_routes(pages: Routes<'_>) -> Routes<'_> {
+    let rankings = Arc::new(RankingsVisibility::default());
+    let mut pages = pages
+        .add(
+            "llms",
+            "/llms.txt",
+            get(move |state: State<AppState>| llms::index(state, rankings.clone())),
+        )
+        .add("llms-full", "/llms-full.txt", get(llms_full::full))
+        .add("feed", "/feed.xml", get(feeds::new_memes))
+        .add(
+            "feed-updated",
+            "/feed/updated.xml",
+            get(feeds::updated_memes),
+        );
+    // One fixed path per locale. Next's `[locale]` segment also matches every
+    // other prefix (and answers 404); those requests keep going to Next.
+    for locale in &llms_localized::LOCALES {
+        pages = pages
+            .add(
+                "llms-localized",
+                &format!("/{}/llms.txt", locale.code),
+                get(move |state: State<AppState>| llms_localized::index(state, locale)),
+            )
+            .add(
+                "llms-full-localized",
+                &format!("/{}/llms-full.txt", locale.code),
+                get(move |state: State<AppState>| llms_localized::full(state, locale)),
+            );
+    }
+    pages
 }
 
 /// Leaves requests for the `www` host to Next. `proxy.ts` answers them with a

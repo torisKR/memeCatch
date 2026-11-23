@@ -5,6 +5,9 @@ use std::net::SocketAddr;
 
 use axum::Router;
 use axum::body::Body;
+use axum::extract::Request;
+use axum::http::{HeaderMap, StatusCode};
+use http_body_util::BodyExt;
 use hyper_util::client::legacy::Client;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
@@ -115,4 +118,60 @@ pub fn parse_head(raw: &str) -> (String, Vec<(String, String)>) {
 
 pub fn client() -> Client<HttpConnector, Body> {
     Client::builder(TokioExecutor::new()).build(HttpConnector::new())
+}
+
+/// A whole response, body read.
+pub struct Reply {
+    pub status: StatusCode,
+    pub headers: HeaderMap,
+    pub body: String,
+}
+
+impl Reply {
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .get(name)
+            .map(|value| value.to_str().expect("ascii header"))
+    }
+}
+
+pub async fn send(
+    app: SocketAddr,
+    method: &str,
+    path: &str,
+    headers: &[(&str, &str)],
+    body: impl Into<Body>,
+) -> Reply {
+    let mut request = Request::builder()
+        .method(method)
+        .uri(format!("http://{app}{path}"));
+    for (name, value) in headers {
+        request = request.header(*name, *value);
+    }
+    let response = client()
+        .request(request.body(body.into()).unwrap())
+        .await
+        .expect("response");
+    let (parts, body) = response.into_parts();
+    let body = body.collect().await.expect("body").to_bytes();
+    Reply {
+        status: parts.status,
+        headers: parts.headers,
+        body: String::from_utf8(body.to_vec()).expect("utf-8 body"),
+    }
+}
+
+pub async fn get(app: SocketAddr, path: &str) -> Reply {
+    send(app, "GET", path, &[], Body::empty()).await
+}
+
+/// An upstream that answers every request with 418 and names what it saw.
+pub async fn marker_upstream() -> SocketAddr {
+    spawn_router(Router::new().fallback(|request: Request| async move {
+        (
+            StatusCode::IM_A_TEAPOT,
+            format!("upstream saw {} {}", request.method(), request.uri()),
+        )
+    }))
+    .await
 }

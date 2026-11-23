@@ -19,9 +19,15 @@ The proxy tests need no database. The tests that use one refuse any
 container named `memecatch-axum-test-pg`; set `TEST_DB_CONTAINER` to another
 name when someone else may be using that one.
 
-`tests/public_routes` replaces the approved rows of `memes`, so it refuses a
-database that holds more than the migrations' memes. Run `cargo test` before
-the parity scripts below, or on a fresh database.
+`tests/public_routes` replaces the approved rows of `memes` and
+`tests/text_routes` replaces every meme, so both refuse a database that holds
+more than the migrations' memes. Run `cargo test` before the parity scripts
+below, or on a fresh database.
+
+`tests/text_routes` compares the feeds and the llms exports with the bodies the
+real Next server rendered from `tests/fixtures/r1_seed.sql`. After a change to
+one of those routes in the TypeScript, capture the fixtures again
+(`parity/README.md`, "Text routes").
 
 Two tests are `#[ignore]`d because they run the real TypeScript, which needs
 Node 22.18 or newer and the packages of the repository root
@@ -70,6 +76,7 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state for the two scripts above. Throwaway database only. |
 | `storage-parity.sh` | Signed URLs and stored objects, TypeScript against Rust. With `STORAGE_PARITY_DIR` set it keeps the directory and writes `media-targets.txt` for `parity.mjs` (the script header has the steps). |
 | `daily-quiz-fixture.mjs` | Rewrites `tests/fixtures/daily_quiz.json` from the real `lib/quiz.ts` after a change there. |
+| `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 
 ## Add a native route
 

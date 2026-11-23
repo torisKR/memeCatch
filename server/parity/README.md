@@ -85,6 +85,52 @@ Both servers write one `[CSP-VIOLATION] ...` line to their log for each report
 they accept. To compare that part, cut those lines out of the two logs after a
 `csp-report.mjs` run (`grep -o '\[CSP-VIOLATION\].*'`) and `cmp` them.
 
+## Text routes
+
+`/llms.txt`, `/llms-full.txt`, `/feed.xml`, `/feed/updated.xml` and the
+localized `/{en,ja,zh,zh-tw}/llms.txt` and `llms-full.txt` render rows of
+`memes`, so they are compared on a seeded database. `paths.txt` has their
+targets.
+
+```sh
+psql() { docker exec -i memecatch-axum-test-pg psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q --single-transaction; }
+
+psql < server/tests/fixtures/r1_reviewer.sql        # the reviewer of the seeded translations
+psql < server/tests/fixtures/r1_seed.sql            # replaces every meme: 53 memes, 31 translations
+node server/parity/parity.mjs $NEXT $AXUM server/parity/paths.txt
+
+psql < server/parity/text-routes-big.sql            # 2,600 more: paging, the 400 and 30 limits
+node server/parity/parity.mjs $NEXT $AXUM server/parity/paths.txt
+
+echo 'delete from public.memes' | psql              # the placeholders
+echo 'revoke select on public.memes from anon' | psql   # 503 on the Korean routes, empty lists on the localized ones
+echo 'grant select on public.memes to anon' | psql
+```
+
+Restart both servers after each change of the rows, and delete Next's data
+cache (`.next/standalone/.next/cache/fetch-cache`) first. Next keeps the set of
+indexable meme ids there for an hour and whether the rankings page has a list
+in memory for a minute; Axum keeps the second for a minute too. A comparison
+made against a stale Next shows differences that are not there.
+
+The localized exports list translations in the order Postgres returns them
+(the TypeScript orders the embedded meme row, not the query), so their bodies
+change when the query plan does, on both servers at once. The harness sends
+its three requests within a second and sees the same plan.
+
+The files under `server/tests/fixtures/r1/` are what Next answered for the
+seed, built with `NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3411`:
+
+```sh
+curl -s $NEXT/llms.txt > server/tests/fixtures/r1/llms.txt        # and llms-full.txt, feed.xml
+curl -s $NEXT/feed/updated.xml > server/tests/fixtures/r1/feed-updated.xml
+curl -s $NEXT/ja/llms.txt > server/tests/fixtures/r1/ja-llms.txt  # <locale>-llms.txt, <locale>-llms-full.txt
+```
+
+`en-llms.plan-a.txt` and `en-llms.plan-b.txt` are `/en/llms.txt` right after
+seeding and again after `analyze` ran on `memes` and `meme_translations`: two
+plans, two orders, and between them all 23 English lines.
+
 `/robots.txt` is rendered by `next build`; Axum renders it at startup. They
 match when Axum runs with the `NEXT_PUBLIC_SITE_URL` of the Next build.
 `server/tests/fixtures/robots.txt` is the body of a Next built with

@@ -13,7 +13,7 @@ use serde::Serialize;
 use sqlx::PgConnection;
 use url::Url;
 
-use super::js;
+use super::labels;
 use crate::AppState;
 use crate::db::{BoxFuture, Db, DbIdentity, IdentityOptions};
 
@@ -36,9 +36,8 @@ const APPROVED_AT_OFFSET: &str = "select short_id, slug from public.memes \
 
 type MemeKey = (String, String);
 
-/// `memePathFrom` in lib/labels.ts.
 fn meme_path((short_id, slug): &MemeKey) -> String {
-    format!("/memes/{short_id}-{}", js::encode_uri_component(slug))
+    labels::meme_path(short_id, slug)
 }
 
 fn random_short_id() -> String {

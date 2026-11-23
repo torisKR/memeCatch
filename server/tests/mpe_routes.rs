@@ -301,7 +301,7 @@ async fn other_methods_and_disabled_routes_go_to_the_upstream() {
         UNUSED_DATABASE_URL,
         &[(
             "AXUM_DISABLED_ROUTES",
-            "mpe-job,mpe-renders,admin-mpe-candidates",
+            "mpe-job,mpe-renders,admin-mpe-candidates,admin-mpe-candidates-post",
         )],
     )
     .await;
@@ -314,7 +314,8 @@ async fn other_methods_and_disabled_routes_go_to_the_upstream() {
         (native, "OPTIONS", "/api/mpe/renders"),
         (disabled, "GET", job),
         (disabled, "POST", "/api/mpe/renders"),
-        (native, "POST", "/api/admin/mpe-candidates"),
+        (native, "PUT", "/api/admin/mpe-candidates"),
+        (disabled, "POST", "/api/admin/mpe-candidates"),
         (disabled, "GET", "/api/admin/mpe-candidates"),
     ] {
         let reply = send(app, method, path, &[ORIGIN], Body::empty()).await;

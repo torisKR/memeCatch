@@ -68,6 +68,42 @@ pub struct BedrockStudioConfig {
     pub endpoint_url: Option<String>,
 }
 
+/// The variables the OpenRouter calls read: the meme chat
+/// (lib/meme-chat.server.ts) and the MPE evidence draft
+/// (lib/mpe/openrouter.server.ts). Kept as given; each route checks them as
+/// its TypeScript does.
+#[derive(Clone, Debug, Default)]
+pub struct OpenRouterConfig {
+    /// `OPENROUTER_API_KEY` as set (each route trims it).
+    pub api_key: Option<Secret>,
+    /// `OPENROUTER_BASE_URL` as set.
+    pub base_url: Option<String>,
+    /// `OPENROUTER_MPE_MODEL` as set.
+    pub mpe_model: Option<String>,
+    /// `MEME_CHAT_GENERATION_ENABLED` as set.
+    pub chat_generation: Option<String>,
+    /// `MEME_CHAT_PROVIDER` as set.
+    pub chat_provider: Option<String>,
+    /// For tests only: `AXUM_TEST_OPENROUTER_ORIGIN`, an
+    /// `http://127.0.0.1:<port>` or `http://localhost:<port>` that receives
+    /// the requests meant for `https://openrouter.ai`. Nothing else is taken,
+    /// so it cannot send them to another host.
+    pub test_origin: Option<String>,
+}
+
+/// A loopback `http://host:port` with nothing after it, as written.
+fn loopback_origin(raw: &str) -> Option<String> {
+    let url = url::Url::parse(raw).ok()?;
+    let loopback = matches!(url.host_str(), Some("127.0.0.1" | "localhost"));
+    let bare = url.path() == "/" && url.query().is_none() && url.fragment().is_none();
+    (url.scheme() == "http"
+        && loopback
+        && url.port().is_some()
+        && bare
+        && url.username().is_empty())
+    .then(|| url.origin().ascii_serialization())
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -105,6 +141,7 @@ pub struct Config {
     /// `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
     pub r2: Option<R2Config>,
     pub bedrock_studio: BedrockStudioConfig,
+    pub openrouter: OpenRouterConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
     /// `MEME_EMBEDDING_URL` as given.
@@ -241,6 +278,14 @@ impl Config {
             Authority::from_static("127.0.0.1:3001")
         });
 
+        let test_origin = optional("AXUM_TEST_OPENROUTER_ORIGIN");
+        let openrouter_test_origin = test_origin.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&test_origin, &openrouter_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_OPENROUTER_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -281,6 +326,14 @@ impl Config {
                 .map(Secret::new),
             r2,
             bedrock_studio: bedrock_studio(&lookup),
+            openrouter: OpenRouterConfig {
+                api_key: lookup("OPENROUTER_API_KEY").map(Secret::new),
+                base_url: lookup("OPENROUTER_BASE_URL"),
+                mpe_model: lookup("OPENROUTER_MPE_MODEL"),
+                chat_generation: lookup("MEME_CHAT_GENERATION_ENABLED"),
+                chat_provider: lookup("MEME_CHAT_PROVIDER"),
+                test_origin: openrouter_test_origin,
+            },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
             embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
@@ -434,6 +487,34 @@ mod tests {
 
         assert!(partial.r2.is_none());
         assert_eq!(full.r2.expect("r2 configured").bucket, "bucket");
+    }
+
+    #[test]
+    fn the_openrouter_test_origin_must_be_a_loopback_origin() {
+        let with = |origin: &str| {
+            let mut vars = REQUIRED.to_vec();
+            vars.push(("AXUM_TEST_OPENROUTER_ORIGIN", origin));
+            config(&vars)
+        };
+        let accepted = with("http://127.0.0.1:3530/").expect("a loopback origin");
+        assert_eq!(
+            accepted.openrouter.test_origin.as_deref(),
+            Some("http://127.0.0.1:3530")
+        );
+        assert!(with("http://localhost:9").is_ok());
+        for refused in [
+            "https://127.0.0.1:3530",
+            "http://example.com:80",
+            "http://127.0.0.1",
+            "http://127.0.0.1:1/x",
+            "nope",
+        ] {
+            assert!(with(refused).is_err(), "{refused}");
+        }
+        assert_eq!(
+            config(&REQUIRED).expect("valid").openrouter.test_origin,
+            None
+        );
     }
 
     #[test]

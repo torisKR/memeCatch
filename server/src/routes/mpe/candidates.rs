@@ -3,9 +3,7 @@
 //! `lib/mpe/candidates.server.ts`. Route id `admin-mpe-candidates`.
 //!
 //! An operator reads the stored matches of one candidate, as themselves, so
-//! row-level security applies. `POST` (create a candidate, match it, draft
-//! its evidence) computes embeddings and calls OpenRouter, and stays with
-//! Next.
+//! row-level security applies. `POST` is `candidate_post.rs`.
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
@@ -23,7 +21,7 @@ use crate::{AppState, proxy};
 const MATCHES_SQL: &str = r#"WITH __q AS (SELECT r1.* FROM public."candidate_matches" r1 WHERE r1."candidate_id" = $1::uuid ORDER BY r1."rank" ASC) SELECT row_to_json(__q)::text FROM __q"#;
 
 /// Why the caller may not read: `operatorClient()` and `requireOperator`.
-async fn refused(
+pub(super) async fn refused(
     state: &AppState,
     request: &mut axum::http::request::Parts,
 ) -> Result<SessionUser, Response> {

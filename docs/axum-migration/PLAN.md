@@ -116,10 +116,12 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `mpe-renders` | `/api/mpe/renders` | `POST` | TypeScript와 같은 문장을 보내 같은 400을 낸다(8절 TypeScript 동작 1) |
 | `mpe-uploads` | `/api/mpe/uploads` | `POST` | R2 값 네 개가 있을 때만 등록한다. 로컬 저장소에서는 Next가 답한다(8절) |
 | `upload` | `/api/upload` | `POST` | 위와 같다 |
-| `admin-mpe-candidates` | `/api/admin/mpe-candidates` | `GET`, `HEAD` | 운영자만. `POST`(후보 생성·매칭·근거 초안, 임베딩과 OpenRouter 호출)는 Next가 답한다 |
+| `admin-mpe-candidates` | `/api/admin/mpe-candidates` | `GET`, `HEAD` | 운영자만. `POST`는 아래 `admin-mpe-candidates-post` |
+| `admin-mpe-candidates-post` | `/api/admin/mpe-candidates` | `POST` | 운영자만. 후보 생성·매칭·근거 초안. TypeScript처럼 마지막 저장 호출(`replace_mpe_candidate_matches`·`replace_mpe_candidate_evidence`)이 함수를 찾지 못해 500으로 끝난다(10절 TypeScript 동작 1). 같은 경로의 `GET`과 따로 되돌릴 수 있다 |
 | `meme-studio` | `/api/meme-studio` | `POST` | 모델을 부르지 않는 템플릿 세 개. 주소별 시간당 10회 제한은 프로세스별이다 |
 | `admin-meme-studio` | `/api/admin/meme-studio` | `POST` | 운영자만. `BEDROCK_MEME_STUDIO_ENABLED=true`일 때만 등록한다(아니면 Next가 답한다). 평생 예산을 먼저 예약하고 AWS Bedrock(Converse)을 부른다. 자격 증명은 환경 변수만 읽는다(9절) |
 | `memes-semantic-search` | `/api/memes/semantic-search` | `POST` | 의미 검색 경로가 쓸 수 없을 때만 등록한다(꺼짐, 또는 쓸 수 있는 `MEME_EMBEDDING_URL`이 없음. 운영이 이 경우다). 그러면 답은 언제나 키워드 검색(`search_memes` + 큐레이션 카드)이고 이유는 `disabled`나 `model_unavailable`이다. 임베딩 URL이 있으면 Next가 답한다 |
+| `memes-chat` | `/api/memes/chat` | `POST` | `memes-semantic-search`와 같은 조건에서만 등록한다. 키워드 검색으로 찾은 공개 기록의 요약을 내고, `OPENROUTER_API_KEY`가 있으면 그 기록을 인용하는 답을 OpenRouter에 묻는다(운영은 키가 없어 요약이다). `Accept: application/x-ndjson`이면 진행 줄과 결과를 스트림으로 낸다. 주소별 10분 5회·전체 1분 20회 제한과 답 캐시는 프로세스별이다 |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -246,6 +248,19 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 71 | 계정 메뉴·챗봇 패널은 CSS `menu-pop`으로 나타나고, 로그인 안내·설치 안내 시트는 애니메이션 없이 나타난다. Next는 motion의 스프링·슬라이드를 쓴다 | 수용 |
 | 72 | `PublicWebMcpTools`(`document.modelContext`에 공개 도구 등록)는 옮기지 않았다. 브라우저가 이 API를 내놓기 전에는 아무 일도 하지 않는 컴포넌트다 | 미해결, 이 API가 쓰이게 되면 |
 | 73 | 페이지를 켜는 변수는 이름이 `AXUM_PILOT_ROUTES` 그대로다. 이제 시범이 아니라 모든 페이지의 스위치이지만, `docker-compose.axum.yml`이 이 이름으로 넘기므로(#143) 이름을 바꾸려면 컴포즈 파일도 함께 바꿔야 한다 | 수용 |
+| 74 | 밈 채팅의 두 제한(주소별 10분 5회, 서버 전체 1분 20회)과 생성 답 캐시(32개, 1분)는 Axum 프로세스 안에 있다. Next의 카운터·캐시와 나뉘고, 전환 직후 캐시는 비어 있다 | 수용 |
+| 75 | 채팅의 `MEME_CHAT_PROVIDER=opencodex`(로컬 프록시)는 Axum에서 언제나 꺼짐이다. Axum 뒤의 standalone Next도 `NODE_ENV=production`이라 꺼짐이고, `next dev`를 뒤에 둘 때만 다르다 | 수용 |
+| 76 | OpenRouter 요청(채팅, 근거 초안)의 헤더는 undici와 같다(`authorization`, `content-type`, `accept: */*`, `accept-language: *`, `sec-fetch-mode: cors`, `user-agent: node`, `cache: "no-store"`가 더하는 `cache-control`·`pragma: no-cache`) 다만 `accept-encoding: gzip, deflate`는 보내지 않는다(압축을 풀지 않는다). 본문은 바이트 단위로 같다(`parity/chat.mjs`, `mpe-candidates.mjs`) | 수용 |
+| 77 | 채팅의 OpenRouter 답은 4 MiB까지 읽는다(넘으면 형식 오류로 보고 요약을 낸다). Next는 끝까지 읽는다 | 수용 |
+| 78 | 채팅 질문 본문, OpenRouter의 답(채팅 `content`, 근거 초안의 답과 `content`)에도 차이 54의 세 경우가 해당한다. 채팅은 요약으로, 초안은 500으로 떨어진다 | 수용 |
+| 79 | 제목 키(`memeTitleKey`)의 `\s\p{P}\p{S}_`와 후보 텍스트 정규화의 `\p{Script=Hangul}\p{L}\p{N}`은 Node 22의 V8이 만든 표(`src/routes/unicode_classes.rs`, Unicode 17)를 쓴다. NFKC와 소문자화는 Rust 크레이트·표준 라이브러리의 표라 새로 배정된 글자에서 버전 차이가 날 수 있다. Next 이미지의 Node를 올리면 `parity/unicode-classes.mjs`를 다시 돌린다 | Node를 올릴 때 확인 |
+| 80 | 근거 초안의 OpenRouter 요청은 리디렉션을 따르지 않는다(3xx는 실패한 답이다). Next의 `fetch`는 따라간다. OpenRouter가 리디렉션을 내지 않으므로 비교하지 않았다 | 수용 |
+| 81 | 초안 재시도의 `Retry-After`는 수(`Number`가 읽는 꼴)와 HTTP 날짜만 읽는다. V8의 다른 날짜 꼴은 기본 대기(250 ms부터)로 떨어진다. 기다리는 시간만 다르다 | 수용 |
+| 82 | `POST /api/admin/mpe-candidates` 본문은 1 MiB까지만 읽고 더 길면 JSON이 아닌 본문처럼 400이다. Next(`request.json()`)는 길이 제한이 없다 | 수용 |
+| 83 | 후보 경로의 오류 메시지에 들어가는 DB 메시지(`candidate_search_failed: …` 등)는 Postgres가 낸 오류면 같다. 연결 실패는 sqlx와 node-pg의 문구가 다르다(차이 57과 같다) | 수용 |
+| 84 | 근거 초안의 `권리 확인 시각`은 `row_to_json`이 세션 시간대로 쓴 글자다. sqlx 세션은 UTC, node-pg는 DB 기본값이라 DB 기본이 UTC가 아니면 다르다(7절 발견 4와 같다) | 수용 |
+| 85 | Axum 컨테이너는 `MEME_SEMANTIC_SEARCH_ENABLED`·`MEME_CHAT_*`·`OPENROUTER_*`를 받지 않는다(`docker-compose.axum.yml`). 그래서 Axum의 채팅은 생성 없는 요약, 초안은 503 `draft_provider_not_configured`이고, 이는 키가 없는 지금 운영의 Next와 같다. `.env`에 `OPENROUTER_API_KEY`를 넣으면 Next만 받아 둘이 달라진다. 같은 이유로 `memes-semantic-search`(R5b)는 Axum에서 이유를 `model_unavailable`이 아니라 `disabled`로 낸다 | 미해결, 단계 5 |
+| 86 | 채팅의 `text()` 자르기가 서로게이트 쌍을 가르면 그 반쪽을 Next처럼 `\udXXX`로 쓴다(`routes/js_string.rs`). Next가 받는 질문에 짝 없는 서로게이트 이스케이프가 있으면 Next는 읽고 Axum은 400이다(차이 78) | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 
@@ -371,8 +386,8 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 경로 | 이유 |
 | --- | --- |
 | `/api/memes/semantic-search`의 의미 검색 경로 | 쓸 수 있는 `MEME_EMBEDDING_URL`이 있을 때(임베딩 HTTP 호출, 번들 런타임의 HMAC, `search_meme_references`)는 Next가 답한다. 운영에는 URL이 없다(아래 발견 5) |
-| `/api/memes/chat` | 같은 참조 검색 위에 행 읽기(번역·출처 임베드), 인용 가능한 출처, 로캘 경로, 제목 키, NDJSON 스트림과 연결 끊김 처리가 얹힌다. 생성 호출은 `https://openrouter.ai`로 고정되어 있어 Next를 스텁으로 돌릴 수 없고(`opencodex`는 운영 모드에서 꺼진다) TypeScript를 프로세스 안에서 `fetch`를 가로채 비교해야 한다. 이번 배치에서 하지 않았다. 생성은 무료 모델·`max_price` 0이라 계량이 없다 |
-| `POST /api/admin/mpe-candidates` | 후보 생성·해시와 결정적 텍스트 임베딩 매칭(`lib/mpe/candidates.server.ts`, `candidates.ts`)과 OpenRouter 근거 초안(`lib/mpe/openrouter.server.ts`, `evidence-draft.server.ts`)과 그 일일 예산이다. 이번 배치에서 하지 않았다 |
+
+`/api/memes/chat`과 `POST /api/admin/mpe-candidates`는 R5c에서 옮겼다(10절).
 
 ### 계획을 바꾸는 발견
 
@@ -397,3 +412,41 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 - VM에서 Bedrock 자격 증명이 환경 변수로 들어가는지(차이 61). 파일이나 다른 체인을 쓰면 Axum에서는 운영자 스튜디오가 503이 된다.
 - `BEDROCK_MEME_STUDIO_*`, `AWS_REGION`과 AWS 키를 Axum 컨테이너에도 넘길 것. `BEDROCK_MEME_STUDIO_ENABLED`가 없으면 운영자 스튜디오는 Next에 남고, 켜져 있는데 키가 없으면 Axum이 503으로 답한다.
+
+## 10. 단계 3 일부: R5c (밈 채팅, 후보 초안)
+
+브랜치 `torisKR/axum-routes-r5c`(`torisKR/axum-routes-r5` 위). 두 경로를 옮겼다: `memes-chat`, `admin-mpe-candidates-post`. 동치 확인은 다음에 있다.
+
+- `server/parity/chat.mjs`: 운영과 같은 설정(생성 켬, 키 없음)에서 모든 상태와 스트림, 제한, 25초 기한; 키를 준 두 서버에서 OpenRouter를 대신하는 기록 스텁으로 생성 답·거절 18가지·캐시·동시 요청 공유·대기 중 기록 변경·스트림의 진행 줄과 연결 끊김. Next의 `fetch`는 `parity/openrouter-intercept.mjs`가 프로세스 안에서 가로채 같은 스텁으로 보낸다.
+- `server/parity/mpe-candidates.mjs`: 경우마다 다시 시드하고 Next, 남은 행, 다시 시드, Axum, 남은 행을 비교한다. 운영 설정의 모든 상태, 키를 준 설정의 초안 요청·재시도·예산 행, 그리고 저장이 실패할 때 Axum이 기록하는 매칭을 실제 `generateCandidateMatches`가 같은 행으로 계산한 값(`parity/mpe-candidates-flow.mjs`)과 비교한다.
+- `server/tests/fixtures/meme_chat.json`, `mpe_candidates.json`: 실제 TypeScript가 만든 픽스처. 채팅은 20가지 기록·답에 대해 OpenRouter 요청 본문(바이트)과 결과, 제목 키, 답 검사 정규식의 판정(정규식은 소스에서 읽는다). 후보는 정규화·유사도·텍스트 임베딩·`Math.hypot`·해시·작업 검사·순위·해시 발견, 주장 검사, 그리고 스텁 클라이언트로 돌린 `generateEvidenceDraft`의 요청 본문·예약 횟수·저장 인자 16가지.
+- `server/tests/chat.rs`, `mpe_candidates.rs`: HTTP 통합 테스트.
+
+### 계획을 바꾸는 발견
+
+1. **`POST /api/admin/mpe-candidates`는 지금 한 번도 성공하지 못한다.** 아래 TypeScript 동작 1. 운영자 화면의 후보 생성·매칭·근거 초안은 전부 500이다.
+2. **운영의 채팅은 생성하지 않는다.** `MEME_CHAT_GENERATION_ENABLED`가 있어도 `OPENROUTER_API_KEY`가 없어 `generationConfig()`가 `null`이고, 답은 언제나 검색된 기록의 요약(`mode: "retrieved"`, `retrievalMode: "keyword"`)이다. 초안은 같은 이유로 503 `draft_provider_not_configured`다.
+3. **TypeScript의 OpenRouter 주소는 운영에서 바꿀 수 없다.** 채팅은 `https://openrouter.ai`로 고정이고, 초안은 `NODE_ENV=production`에서 그 origin만 받는다. Axum은 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`(루프백 `http://host:port`만 받는다)으로 같은 요청을 스텁에 보낸다.
+4. **compose가 Axum에 채팅·OpenRouter 변수를 넘기지 않는다**(차이 85). 지금은 운영 Next와 답이 같지만, 키를 넣는 순간 달라진다.
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | RPC 플래너가 함수 인자 타입을 `name[]`의 글자열로 받아(8절 동작 1과 같은 원인) 배열 인자를 `text[]`로, 나머지를 타입 없이 보낸다. `replace_mpe_candidate_matches(p_candidate_id => unknown, p_matches => text[])`와 `replace_mpe_candidate_evidence(p_candidate_id => unknown, p_draft_json => unknown, p_evidence => text[])`는 없는 함수라, 매칭·생성·초안이 그 앞의 일을 다 한 뒤 500 `candidate_match_replace_failed: …`·`draft_replace_failed: …`로 끝난다. 그 앞의 일: 텍스트 임베딩 지문 교체, 후보 생성과 삭제, 예산 예약과 OpenRouter 호출. Axum은 같은 문장을 oid 0(타입 없음) 매개변수로 보내 같은 메시지를 얻는다 | `lib/db/execute.ts`, `lib/mpe/candidates.server.ts`, `evidence-draft.server.ts` |
+| 2 | `create`가 이미 있는 후보를 찾으면(`created: false`) 실패해도 되돌리지 않는다. 새로 만든 후보는 지우는데, 그 삭제가 실패하면 그 오류가 원래 오류를 덮는다 | `app/api/admin/mpe-candidates/route.ts` |
+| 3 | 초안은 요청(재시도, 교정 요청 포함, 최대 4번)마다 일일 예산을 먼저 예약한다. 실패한 요청도 예산을 쓴다 | `lib/mpe/openrouter.server.ts` |
+| 4 | 초안의 공급자 오류(500, 연결 실패, 답이 JSON이 아님, 빈 내용)는 모두 같은 500 `mpe_candidate_failed`다. 답이 JSON이 아니면 재시도하지 않는다 | 같은 곳, `route.ts`의 `errorResponse` |
+| 5 | 매칭의 검색어는 후보 제목과 모든 텍스트 조각을 이은 글 전체라, `search_memes`의 부분 문자열 조건(`ilike '%…%'`)에는 거의 걸리지 않는다 | `lib/mpe/candidates.server.ts` |
+| 6 | 채팅의 `text()`는 UTF-16 단위로 자른다. 이모지 한가운데서 자르면 제목·요약·출처 이름에 반쪽이 남아 `\ud83d`로 나가고, 번역 슬러그가 그렇게 잘리면 `encodeURIComponent`가 던져 그 로캘의 답 전체가 503 `search_unavailable`(스트림은 오류 줄)이다 | `lib/meme-chat.server.ts` |
+| 7 | 채팅의 주소별 제한은 클라이언트가 보낸 `X-Forwarded-For` 첫 항목으로 센다. 본문을 읽기 전에 세므로 잘못된 요청도 센다 | `app/api/memes/chat/route.ts`, `lib/rate-limit.ts` |
+| 8 | 매칭·생성·초안은 요청 하나에 `is_operator`를 서너 번 묻는다 | `lib/mpe/*.server.ts` |
+
+### Next와 남은 차이
+
+5절 「Next와 남은 차이」 표의 74~86번이다.
+
+### 단계 5에서 추가로 확인할 것
+
+- 차이 85: Axum 컨테이너에 `MEME_SEMANTIC_SEARCH_ENABLED`, `MEME_EMBEDDING_URL`, `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`, `OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`을 Next와 같은 값으로 넘길 것(`docker-compose.axum.yml`, 이 작업 범위 밖). 넘기기 전에 키를 넣으려면 `AXUM_DISABLED_ROUTES=memes-chat,admin-mpe-candidates-post`로 두 경로를 Next에 돌려준다.
+- TypeScript 동작 1: 플래너를 고치면(`types`를 배열로 읽기) 두 저장 함수가 처음으로 실행된다. 그때 Axum의 같은 두 문장도 고쳐야 하고, 성공한 답(`{ ok: true, data }`)은 아직 어느 서버에서도 본 적이 없다.

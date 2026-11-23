@@ -27,6 +27,7 @@ pub mod meme_card;
 pub mod meme_detail;
 pub mod not_found;
 pub mod retired;
+pub mod timeline;
 pub mod weekly;
 
 use std::sync::Arc;
@@ -82,6 +83,8 @@ pub struct Shared {
     pub(self) directory: Timed<directory::Directory>,
     /// The four cards of the retired product pages.
     retired_cards: Timed<Vec<retired::Card>>,
+    /// The decades of /timeline (`timeline.rs`).
+    timeline: Timed<timeline::Timeline>,
     /// The lists of /collections/{slug} (`collections.rs`).
     collections: collections::Lists,
     /// Rendered frame fragments by (locale, path and query).
@@ -105,6 +108,7 @@ impl Pages {
             js_name,
             directory: Timed::new(directory::DIRECTORY_TTL),
             collections: collections::lists(),
+            timeline: Timed::new(timeline::TIMELINE_TTL),
             retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
                 body.len()
@@ -132,6 +136,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-memes", "/memes", get(directory::page))
         .add("page-collections", "/collections", get(collections::index))
         .add("page-weekly", "/weekly", get(weekly::page))
+        .add("page-timeline", "/timeline", get(timeline::page))
         .add(
             "page-collection",
             "/collections/{slug}",

@@ -188,6 +188,15 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-card",
   "data-card-preview",
   "data-card-dialog",
+  // The timeline (ui/timeline.js): its rows, tabs, cards and sentinel.
+  "data-timeline",
+  "data-initial",
+  "data-total",
+  "data-decade-tab",
+  "data-decade",
+  "data-timeline-card",
+  "data-year",
+  "data-timeline-sentinel",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).

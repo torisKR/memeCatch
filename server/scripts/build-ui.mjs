@@ -63,6 +63,7 @@ const UI_FILES = [
   "pointer.js",
   "originals.js",
   "card.js",
+  "timeline.js",
 ];
 
 async function buildCss() {

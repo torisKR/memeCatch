@@ -183,3 +183,66 @@ test.describe("the weekly digest", () => {
     expect(events.filter(([name]) => name === "weekly_click")).toEqual([["weekly_click", { to: href }]]);
   });
 });
+
+// The timeline (components/timeline-view.tsx), on b2-seed.sql: 37 year rows
+// from 1990 to 2025, four in the document.
+// The year labels shown, in order (a card's own year badge is inside its link).
+const yearsShown = (page) => page.locator("main").getByText(/^(19|20)\d\d$/)
+  .evaluateAll((nodes) => nodes.filter((node) => !node.closest("a")).map((node) => Number(node.textContent)));
+
+test.describe("the timeline", () => {
+  test("mounts four more years each time the end of the list comes near", async ({ page }) => {
+    await stubOutside(page);
+    await open(page, "/timeline");
+    expect(await yearsShown(page)).toEqual([1990, 1991, 1992, 1993]);
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText(["1990년대"]);
+    // Each batch adds up to four years, never removes one.
+    let seen = 4;
+    for (let round = 0; round < 30 && seen < 37; round += 1) {
+      await page.mouse.wheel(0, 3000);
+      await page.waitForTimeout(250);
+      const now = (await yearsShown(page)).length;
+      expect(now).toBeGreaterThanOrEqual(seen);
+      expect(now - seen).toBeLessThanOrEqual(8);
+      seen = now;
+    }
+    expect(seen).toBe(37);
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText(["1990년대", "2000년대", "2010년대", "2020년대"]);
+    const years = await yearsShown(page);
+    expect(years).toEqual([...years].sort((a, b) => a - b));
+    expect(new Set(years).size).toBe(37);
+    expect(await page.locator("main [data-meme-card]").count()).toBeLessThanOrEqual(37 * 8);
+  });
+
+  test("opens on a decade from its address", async ({ page }) => {
+    await stubOutside(page);
+    await page.goto("/timeline#decade-2010s", { waitUntil: "load" });
+    const heading = page.getByRole("heading", { name: "2010년대", level: 2 });
+    await expect(heading).toBeInViewport();
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText(["1990년대", "2000년대", "2010년대"]);
+  });
+
+  test("a decade tab mounts that decade and scrolls to it", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "the decade tabs exist at phone width only");
+    await stubOutside(page);
+    await open(page, "/timeline");
+    await page.getByRole("navigation", { name: "연대 바로가기" }).getByRole("link", { name: "2020년대" }).click();
+    await expect(page).toHaveURL(/\/timeline#decade-2020s$/);
+    await expect(page.getByRole("heading", { name: "2020년대", level: 2 })).toBeInViewport();
+  });
+
+  test("reports the card followed with its year and decade", async ({ page }) => {
+    await stubOutside(page);
+    await recordGaEvents(page);
+    await open(page, "/timeline");
+    const first = page.locator("main [data-meme-card]").first();
+    const href = await first.getAttribute("href");
+    await first.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
+    const events = (await page.evaluate(() => JSON.parse(sessionStorage.getItem("ga-events") || "[]")))
+      .filter(([name]) => name === "timeline_click");
+    expect(events).toHaveLength(1);
+    expect(events[0][1]).toMatchObject({ year: 1990, decade: "1990s" });
+    expect(events[0][1].meme_id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});

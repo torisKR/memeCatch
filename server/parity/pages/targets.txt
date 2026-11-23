@@ -145,3 +145,9 @@
 /weekly?utm_source=x 200 index native
 /weekly/ 308
 /en/weekly 404 proxied
+
+# Batch B2: the timeline, four year rows in the document (b2-seed.sql gives 37).
+/timeline 200 index native
+/timeline?utm_source=x 200 index native
+/timeline/ 308
+/en/timeline 404 proxied

@@ -24,7 +24,7 @@ use crate::routes::public::meme_delivery::{Normalized, normalize_source_url};
 /// planner's embed has it.
 pub const CARD_COLUMNS: &str = "\
 m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
-m.safety_level::text as safety_level, \
+m.safety_level::text as safety_level, m.trend_score, \
 m.origin_year, \
 (select coalesce(json_agg(json_build_object('type', c.type, 'thumbnail_url', c.thumbnail_url, \
         'is_representative', c.is_representative, 'url', c.url, 'content_id', c.content_id, \
@@ -57,6 +57,7 @@ pub struct CardMeme {
     pub summary: String,
     pub safety_level: Option<SafetyLevel>,
     pub origin_year: Option<i32>,
+    pub trend_score: Option<f64>,
     pub contents: Vec<CardContent>,
 }
 
@@ -77,6 +78,7 @@ impl CardMeme {
             summary: summary.unwrap_or_default(),
             safety_level: safety.as_deref().and_then(SafetyLevel::parse_known),
             origin_year: row.try_get("origin_year")?,
+            trend_score: row.try_get("trend_score")?,
             contents: serde_json::from_str(&contents)
                 .map_err(|error| sqlx::Error::Decode(Box::new(error)))?,
         })

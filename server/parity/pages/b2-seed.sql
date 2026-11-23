@@ -84,6 +84,13 @@ insert into meme_contents (meme_id, type, platform, url, content_id, thumbnail_u
   ('00000000-0000-4000-8000-000000000207', 'video', 'tiktok', 'https://www.tiktok.com/@memecatch/video/7300000000000000008', '7300000000000000008', null, false, 'live', 'approved', false),
   ('00000000-0000-4000-8000-000000000208', 'video', 'youtube', 'https://www.youtube.com/watch?v=b2Video0008', 'b2Video0008', null, true, 'dead', 'approved', false);
 
+-- The timeline: 360 of the directory's memes get a year from 1990 to 2025
+-- (ten a year) and a trend score, so that every decade has years of three or
+-- more and a year more than the eight it shows.
+update memes m set origin_year = 1990 + (r.n - 1) % 36, trend_score = (r.n % 97) / 10.0
+  from (select id, row_number() over (order by short_id) as n from memes where slug like 'dir-%') r
+ where m.id = r.id and r.n <= 360;
+
 -- `meme_contents_manual_video_projection_guard` keeps the flag a projection
 -- of the review ledger and clears it on insert; set it past the trigger.
 set local session_replication_role = replica;

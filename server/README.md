@@ -97,16 +97,29 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 
 `src/pages` renders pages as finished HTML with Maud templates; the choice
 and the plan for the other pages are in `docs/axum-migration/UI-PLAN.md`. Two
-pages exist, as pilots: `/about` and the Korean `/memes/{key}`. A pilot route
-is off until `AXUM_PILOT_ROUTES` names it (`page-about`, `page-meme`), because
-the header menu, the language switch, the account menu and the chat panel do
-nothing on a native page yet, and the meme page stops after the origin
-section. `AXUM_DISABLED_ROUTES` switches a pilot off like any other route.
+pages exist: `/about` and the Korean `/memes/{key}`. A page route is off until
+`AXUM_PAGE_ROUTES` names it (`page-about`, `page-meme`; an id that is not a
+page stops the server at startup), and `AXUM_DISABLED_ROUTES` still switches
+it off. A page is switched on in its batch, after the page gate and the
+behaviour gate (`parity/README.md`) pass for it; the meme page still stops
+after the origin section.
+
+Every page is drawn inside the frame of `src/pages/chrome` (header, menus,
+language switch, account menu, bottom navigation, chat, install prompt,
+navigation progress, footer), in any of the 19 languages. Its strings come
+from the TypeScript dictionaries through `i18n/frame.json`; its behaviour is
+`ui/*.js`, built into one script.
 
 ```sh
-# After changing a class name in src/pages, app/globals.css or ui/site.css:
-node scripts/build-ui.mjs            # rewrites assets/site.css (committed)
-node scripts/build-ui.mjs --check    # exit 1 if it is stale
+# After changing src/pages, a file of ui/, app/globals.css or a lib/ module
+# the scripts use (all from the repository root):
+node server/scripts/build-ui.mjs            # rewrites assets/site.css and assets/site.js (committed)
+node server/scripts/build-ui.mjs --check    # exit 1 if either is stale (CI)
+node server/scripts/build-ui.mjs --sizes    # what each script part weighs
+
+# After a change to lib/i18n*.ts, lib/meme-chat-copy.ts or SAVE_COPY:
+node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs          # rewrites i18n/frame.json
+node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check  # CI
 
 # Start a page port from the markup Next really sends:
 node scripts/html-to-maud.mjs http://127.0.0.1:3001/about main

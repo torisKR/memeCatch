@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Page parity gate: is the page Axum renders the page Next renders?
 //
-//   node server/parity/pages/pages.mjs <next> <axum> [targets.txt] [--expect-proxied]
+//   node server/parity/pages/pages.mjs <next> <axum> [targets] [--expect-proxied]
+//     [--concurrency=4] [--examples=3]
 //
 // For every target and every user agent in USER_AGENTS it asks both servers
 // and compares, in this order: status; Location and Refresh; the response
@@ -23,6 +24,13 @@
 //   native | proxied  whether Axum rendered the page or passed Next's on
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
+//
+// At scale, `targets` can instead be a sitemap (`curl <site>/sitemap.xml`) or
+// a file of URLs, one per line: their paths are compared with no
+// expectations. `--concurrency` bounds the requests in flight (each target
+// is asked of both servers, once per user agent), `--examples` how many
+// requests the details of each kind of difference are printed for; the
+// summary at the end counts every request by the kind of difference.
 //
 // Requests carry no Sec-Fetch-Mode header, like a crawler's: proxy.ts looks a
 // meme up only for a navigation or a request without that header, and Node's
@@ -152,7 +160,7 @@ const sortKeys = (value) =>
       ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortKeys(value[key])]))
       : value;
 
-// Attributes that only tell ui/site.js what to act on.
+// Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-copy",
   "data-share",
@@ -163,6 +171,9 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-track",
   "data-track-from",
   "data-track-short-id",
+  "data-save-copy",
+  "data-saved-class",
+  "data-unsaved-class",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
@@ -352,14 +363,26 @@ function compare(target, next, axum) {
   return { differences, expectations, info };
 }
 
+/** The path and query of a URL or of a path. */
+const pathOf = (value) => {
+  const url = new URL(value, "http://targets.invalid");
+  return `${url.pathname}${url.search}`;
+};
+
 function parseTargets(file, expectProxied) {
-  return readFileSync(file, "utf8")
+  const text = readFileSync(file, "utf8");
+  if (/<urlset[\s>]/.test(text)) {
+    return [...text.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((match) => ({
+      path: pathOf(match[1].replaceAll("&amp;", "&")),
+    }));
+  }
+  return text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"))
     .map((line) => {
-      const [path, ...tokens] = line.split(/\s+/);
-      const target = { path };
+      const [first, ...tokens] = line.split(/\s+/);
+      const target = { path: /^https?:\/\//.test(first) ? pathOf(first) : first };
       for (const token of tokens) {
         if (/^\d{3}$/.test(token)) target.status = Number(token);
         else if (token === "index" || token === "noindex") target.index = token === "index";
@@ -371,39 +394,80 @@ function parseTargets(file, expectProxied) {
 }
 
 const args = process.argv.slice(2);
+const option = (name, fallback) => {
+  const given = args.find((arg) => arg.startsWith(`--${name}=`));
+  return given ? Number(given.split("=")[1]) : fallback;
+};
 const expectProxied = args.includes("--expect-proxied");
+const concurrency = option("concurrency", 4);
+const examples = option("examples", 3);
 const [nextBase, axumBase, targetsFile = new URL("./targets.txt", import.meta.url).pathname] = args.filter((arg) => !arg.startsWith("--"));
-if (!nextBase || !axumBase) {
-  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied]");
+if (!nextBase || !axumBase || !(concurrency >= 1) || !(examples >= 0)) {
+  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied] [--concurrency=N] [--examples=N]");
   process.exit(2);
 }
 const host = new URL(nextBase).host;
-let failures = 0;
-const acceptedSeen = new Map();
 
-for (const target of parseTargets(targetsFile, expectProxied)) {
-  for (const [agent, userAgent] of Object.entries(USER_AGENTS)) {
-    const [next, axum] = await Promise.all([
+async function check(target, agent, userAgent) {
+  let next;
+  let axum;
+  try {
+    [next, axum] = await Promise.all([
       request(nextBase, target.path, host, userAgent),
       request(axumBase, target.path, host, userAgent),
     ]);
-    const { differences, expectations = [], info } = compare(target, next, axum);
-    if (target.status !== undefined && next.status !== target.status) {
-      expectations.push(`next answered ${next.status}, the target list says ${target.status}`);
+  } catch (error) {
+    return { target, agent, status: "---", info: "", expectations: [`request failed: ${error.message}`], unexpected: [], accepted: [] };
+  }
+  const { differences, expectations = [], info } = compare(target, next, axum);
+  if (target.status !== undefined && next.status !== target.status) {
+    expectations.push(`next answered ${next.status}, the target list says ${target.status}`);
+  }
+  const unexpected = [];
+  const accepted = [];
+  for (const difference of differences) {
+    const entry = ACCEPTED.find((candidate) => candidate.when({ ...target, status: next.status }) && candidate.fields.includes(difference.field));
+    if (entry) accepted.push([entry, difference.field]);
+    else unexpected.push(difference);
+  }
+  return { target, agent, status: next.status, info, expectations, unexpected, accepted };
+}
+
+const jobs = parseTargets(targetsFile, expectProxied).flatMap((target) =>
+  Object.entries(USER_AGENTS).map(([agent, userAgent]) => () => check(target, agent, userAgent)),
+);
+// Bounded concurrency; results keep the order of the targets.
+const results = new Array(jobs.length);
+let nextJob = 0;
+await Promise.all(
+  Array.from({ length: Math.min(concurrency, jobs.length) }, async () => {
+    while (nextJob < jobs.length) {
+      const index = nextJob++;
+      results[index] = await jobs[index]();
     }
-    const unexpected = [];
-    for (const difference of differences) {
-      const accepted = ACCEPTED.find(
-        (entry) => entry.when({ ...target, status: next.status }) && entry.fields.includes(difference.field),
-      );
-      if (accepted) acceptedSeen.set(accepted, (acceptedSeen.get(accepted) ?? new Set()).add(difference.field));
-      else unexpected.push(difference);
-    }
-    const failed = unexpected.length > 0 || expectations.length > 0;
-    failures += failed ? 1 : 0;
-    console.log(`${failed ? "DIFF" : "ok  "} ${next.status} ${agent.padEnd(9)} ${target.path}  (${info})`);
-    for (const message of expectations) console.log(`    expectation: ${message}`);
-    for (const { detail } of unexpected) console.log(`    ${detail}`);
+  }),
+);
+
+let failures = 0;
+const acceptedSeen = new Map();
+const byKind = new Map();
+for (const result of results) {
+  for (const [entry, field] of result.accepted) {
+    acceptedSeen.set(entry, (acceptedSeen.get(entry) ?? new Set()).add(field));
+  }
+  const failed = result.unexpected.length > 0 || result.expectations.length > 0;
+  failures += failed ? 1 : 0;
+  console.log(`${failed ? "DIFF" : "ok  "} ${result.status} ${result.agent.padEnd(9)} ${result.target.path}  (${result.info})`);
+  const kinds = [
+    ...result.expectations.map((message) => ["expectation", `expectation: ${message}`]),
+    ...result.unexpected.map(({ field, detail }) => [field, detail]),
+  ];
+  for (const [kind, detail] of kinds) {
+    const seen = byKind.get(kind) ?? { requests: 0, paths: new Set() };
+    seen.requests += 1;
+    seen.paths.add(result.target.path);
+    byKind.set(kind, seen);
+    if (seen.requests <= examples) console.log(`    ${detail}`);
   }
 }
 
@@ -411,5 +475,11 @@ console.log("");
 for (const [entry, fields] of acceptedSeen) {
   console.log(`accepted difference in ${[...fields].join(", ")}: ${entry.reason}`);
 }
-console.log(failures === 0 ? "pages match" : `${failures} request(s) differ`);
+if (byKind.size) {
+  console.log("\ndifferences by kind (requests, distinct paths):");
+  for (const [kind, seen] of [...byKind].sort((a, b) => b[1].requests - a[1].requests)) {
+    console.log(`  ${kind.padEnd(24)} ${String(seen.requests).padStart(6)} ${String(seen.paths.size).padStart(6)}`);
+  }
+}
+console.log(failures === 0 ? `pages match (${results.length} requests)` : `${failures} of ${results.length} request(s) differ`);
 process.exit(failures === 0 ? 0 : 1);

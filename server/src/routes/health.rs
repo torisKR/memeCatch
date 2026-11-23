@@ -13,8 +13,8 @@ use super::Routes;
 use crate::AppState;
 
 // node-pg fails at once when Postgres refuses the connection. sqlx retries
-// until its 30 s acquire timeout, longer than the 5 s the compose healthcheck
-// allows, so the probe gets its own limit.
+// until the pool's acquire timeout (5 s, `db.rs`), which is all the compose
+// healthcheck allows, so the probe gets its own shorter limit.
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(3);
 
 pub fn router(state: &AppState) -> Router<AppState> {

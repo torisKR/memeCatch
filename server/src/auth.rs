@@ -62,8 +62,9 @@ fn session_cookie_name(use_secure_cookies: bool) -> &'static str {
 }
 
 // node-pg fails at once when Postgres refuses the connection. sqlx retries
-// until its 30 s acquire timeout, so a database outage would hold every
-// signed-in request for 30 s. Same limit as the health check.
+// until the pool's acquire timeout (5 s, `db.rs`), so a database outage would
+// hold every signed-in request that long before its route runs. Same limit
+// as the health check.
 const AUTH_DB_TIMEOUT: Duration = Duration::from_secs(3);
 
 // `atob`, which better-call decodes the signature with, ignores the unused

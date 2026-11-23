@@ -120,6 +120,8 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `meme-studio` | `/api/meme-studio` | `POST` | 모델을 부르지 않는 템플릿 세 개. 주소별 시간당 10회 제한은 프로세스별이다 |
 | `admin-meme-studio` | `/api/admin/meme-studio` | `POST` | 운영자만. `BEDROCK_MEME_STUDIO_ENABLED=true`일 때만 등록한다(아니면 Next가 답한다). 평생 예산을 먼저 예약하고 AWS Bedrock(Converse)을 부른다. 자격 증명은 환경 변수만 읽는다(9절) |
 | `memes-semantic-search` | `/api/memes/semantic-search` | `POST` | 의미 검색 경로가 쓸 수 없을 때만 등록한다(꺼짐, 또는 쓸 수 있는 `MEME_EMBEDDING_URL`이 없음. 운영이 이 경우다). 그러면 답은 언제나 키워드 검색(`search_memes` + 큐레이션 카드)이고 이유는 `disabled`나 `model_unavailable`이다. 임베딩 URL이 있으면 Next가 답한다 |
+| `auth-get-session` | `/api/auth/get-session` | `GET` | better-auth 1.7.20의 `getSession`: 세션 읽기, 하루 지난 세션 연장, 만료 세션 삭제(10절). `HEAD`, 쿼리 문자열, `RSC` 헤더가 있는 요청은 Next가 답한다 |
+| `auth-sign-out` | `/api/auth/sign-out` | `POST` | 본문이 `callbackURL`·`disableRedirect`·`state` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 본문, 나머지 `/api/auth/*`는 Next가 답한다(10절) |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -246,6 +248,10 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 71 | 계정 메뉴·챗봇 패널은 CSS `menu-pop`으로 나타나고, 로그인 안내·설치 안내 시트는 애니메이션 없이 나타난다. Next는 motion의 스프링·슬라이드를 쓴다 | 수용 |
 | 72 | `PublicWebMcpTools`(`document.modelContext`에 공개 도구 등록)는 옮기지 않았다. 브라우저가 이 API를 내놓기 전에는 아무 일도 하지 않는 컴포넌트다 | 미해결, 이 API가 쓰이게 되면 |
 | 73 | 페이지를 켜는 변수는 이름이 `AXUM_PILOT_ROUTES` 그대로다. 이제 시범이 아니라 모든 페이지의 스위치이지만, `docker-compose.axum.yml`이 이 이름으로 넘기므로(#143) 이름을 바꾸려면 컴포즈 파일도 함께 바꿔야 한다 | 수용 |
+| 74 | better-auth 제한기(운영에서만, 10초에 100회, IP·경로마다)의 카운터는 프로세스별이다. `get-session`·`sign-out`은 Axum이 세고 나머지 `/api/auth/*`는 Next가 센다. 키가 경로마다 따로라 원래 두 경로는 다른 경로와 카운터를 나누지 않는다. 재시작하면 둘 다 0이 된다 | 수용 |
+| 75 | 세션 연장 여부와 새 `expiresAt`·`updatedAt`을 Rust는 한 시각으로 정한다. better-auth는 만료 판단, 연장 판단, `expiresAt`, `updatedAt`에서 시계를 따로 읽는다(`dist/api/routes/session.mjs:155,180,199-200`). 경계에서 1 ms 안쪽일 때만 다를 수 있다 | 수용 |
+| 76 | 두 경로의 쿼리는 `statement_timeout` 15초(`DbIdentity::better_auth`, 역할 전환은 없다) 안에 끝나야 한다. better-auth의 풀에는 시간 제한이 없다. 넘기면 `get-session`은 500 `FAILED_TO_GET_SESSION`, `sign-out`은 행을 지우지 못한 채 200이다. better-auth가 DB 오류에 내는 답과 같다 | 수용 |
+| 77 | `BETTER_AUTH_TRUSTED_ORIGINS`에 와일드카드나 `http(s)`가 아닌 항목이 있으면 `auth-sign-out`을 등록하지 않는다(Next가 답한다). 그런 패턴의 비교는 옮기지 않았다. 지금 Next 컨테이너는 이 변수를 받지 않는다 | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 
@@ -397,3 +403,30 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 - VM에서 Bedrock 자격 증명이 환경 변수로 들어가는지(차이 61). 파일이나 다른 체인을 쓰면 Axum에서는 운영자 스튜디오가 503이 된다.
 - `BEDROCK_MEME_STUDIO_*`, `AWS_REGION`과 AWS 키를 Axum 컨테이너에도 넘길 것. `BEDROCK_MEME_STUDIO_ENABLED`가 없으면 운영자 스튜디오는 Next에 남고, 켜져 있는데 키가 없으면 Axum이 503으로 답한다.
+
+## 10. 단계 6 일부: A1 (세션 읽기·연장과 로그아웃)
+
+브랜치 `torisKR/axum-auth-a1`. UI-PLAN의 인증 순서 ①·②다. 옮긴 경로는 5절 표의 `auth-get-session`·`auth-sign-out` 둘이다(`server/src/routes/better_auth/`). 기준은 better-auth 1.7.20과 better-call 1.4.5이고, 따른 원본 파일과 줄은 코드 주석에 있다. 이 앱의 설정에서는 쿠키 캐시·보조 저장소·`deferSessionRefresh`가 없으므로 그 분기는 옮기지 않았다. 세션 테이블은 better-auth가 쓰는 대로 로그인 역할 `memecatch`로 읽고 쓴다(`DbIdentity::better_auth`: `set role`도 설정값도 없고 `statement_timeout`만 둔다). `service_role`은 `user`·`session`에 `SELECT`만 있다.
+
+동치 확인:
+
+- `server/parity/auth-session.mjs`: 실제 Next와 두 경로의 모든 경우. 답(상태, 헤더, `Set-Cookie` 순서, 본문)과 쓰는 경우의 세션 행을 비교한다. 운영 빌드(`NODE_ENV=production`, 쿠키 `__Secure-`) 51/51, `next dev`(`NODE_ENV=development`) 50/50.
+- `server/tests/auth_session_cross.rs`(무시된 테스트, Node 필요): 같은 DB에서 실제 better-auth와 양방향. better-auth가 만든 세션을 Rust가 읽고, 연장하고, 만료시키고, 로그아웃한 뒤 better-auth의 `getSession`이 그 상태에 동의한다. 반대로 better-auth가 연장·만료·로그아웃한 뒤 Rust가 동의한다. 연장 경계(`expiresAt - 7일 + 1일 <= now`)와 만료 경계를 1초 앞뒤에서 본다. 두 `NODE_ENV` 모두.
+- `server/tests/all_routes.rs`: 두 id 모두 `AXUM_DISABLED_ROUTES`에 적으면 Next로 간다. 나머지 `/api/auth/*`와 Next에 넘기는 요청(쿼리, `RSC`, 다른 메서드, 다른 본문)이 Next로 가는 것도 본다.
+- B0 브라우저 게이트(`server/parity/behaviour/scenarios/account.spec.mjs`): 헤더의 로그인 상태가 페이지를 읽을 때 맞고, 계정 메뉴의 로그아웃이 세션을 끝낸다. Next와 Axum, 폰과 데스크톱 32/32. Axum과 Next 사이에 두 경로를 599로 거절하는 프록시를 두고도 Axum 쪽 16개가 통과했고(프록시까지 간 요청 0), 두 id를 끄면 실패했다.
+
+### 옮기지 않은 것
+
+| 요청 | 이유 |
+| --- | --- |
+| `HEAD /api/auth/get-session` | Next는 404다. 그대로 Next가 답한다 |
+| 쿼리 문자열이 있는 `get-session` | `disableCookieCache`·`disableRefresh` 질의 스키마를 옮기지 않았다 |
+| `RSC: 1`이 있는 `get-session` | Next가 better-auth 앞에서 `?_rsc`로 307을 낸다. `nextCookies`의 연장 건너뛰기(`dist/integrations/next-js.mjs:40-71`)는 HTTP 요청(`_flag === "router"`)에는 작동하지 않는다 |
+| JSON 객체가 아닌 `sign-out` 본문, `callbackURL`·`disableRedirect`·`state`가 있는 본문 | 415·400과 콜백 URL 검사는 Next가 낸다 |
+| `Origin: null`과 `Sec-Fetch-Site: same-origin`인 `sign-out` | better-auth가 요청 URL에서 출처를 추정한다. Next가 답한다 |
+
+### 계획을 바꾸는 발견
+
+1. **운영 Next 빌드는 언제나 `__Secure-` 쿠키를 쓴다.** `useSecureCookies`가 `NODE_ENV === "production"`인데 Next의 운영 빌드가 이 값을 빌드 때 박아 넣는다. 그래서 `NODE_ENV=development` 비교는 standalone이 아니라 `next dev`와 했다. Axum은 `NODE_ENV`를 실행 때 읽고, 컴포즈는 둘 다 `production`이다.
+2. **로그아웃의 출처 검사에는 `BETTER_AUTH_URL`이 필요하다.** 믿는 출처의 첫째가 `BETTER_AUTH_URL`(없으면 사이트 URL)의 origin이다. 컴포즈가 Axum에도 같은 값을 넘긴다.
+3. **Next 컨테이너는 `BETTER_AUTH_TRUSTED_ORIGINS`를 받지 않는다.** 그래서 믿는 출처는 사이트 origin, `http://localhost:3000`, `http://127.0.0.1:3000`뿐이다(`lib/auth/server.ts`).

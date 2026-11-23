@@ -172,3 +172,15 @@ POST /api/memes/semantic-search
 # run. semantic-search.mjs covers it with bodies on the R1 seed.
 GET /api/memes/semantic-search
 OPTIONS /api/memes/semantic-search
+
+# better-auth's session read without a cookie (routes/better_auth/session.rs):
+# null from either server. auth-session.mjs covers it with sessions.
+/api/auth/get-session
+# Still Next's: HEAD, other methods, a query string, sign-out without a JSON
+# body, and every other better-auth path.
+HEAD /api/auth/get-session
+POST /api/auth/get-session
+/api/auth/get-session?disableRefresh=true
+POST /api/auth/sign-out
+/api/auth/list-sessions
+

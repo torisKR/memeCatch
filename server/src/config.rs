@@ -146,6 +146,16 @@ pub struct Config {
     /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
     /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
     pub adsense_auto_ads: bool,
+    /// `BETTER_AUTH_URL`, trimmed; `None` when unset or blank. better-auth's
+    /// `baseURL` is this or `SITE_URL` (lib/auth/server.ts:64), and its origin
+    /// is a trusted origin of the sign-out check.
+    pub better_auth_url: Option<String>,
+    /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
+    /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
+    pub better_auth_trusted_origins: Vec<String>,
+    /// `NODE_ENV` is exactly `production`: better-auth's `isProduction`,
+    /// which turns its rate limiter on (dist/context/create-context.mjs:172).
+    pub node_env_production: bool,
 }
 
 /// A comma-separated list of route ids. Blank entries are dropped.
@@ -296,6 +306,16 @@ impl Config {
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
                 && lookup("NODE_ENV").as_deref() == Some("production"),
+            better_auth_url: optional("BETTER_AUTH_URL"),
+            better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
+                .map(|raw| {
+                    raw.split(',')
+                        .filter(|entry| !entry.is_empty())
+                        .map(str::to_owned)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            node_env_production: lookup("NODE_ENV").as_deref() == Some("production"),
         })
     }
 }

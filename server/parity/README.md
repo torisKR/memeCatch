@@ -433,3 +433,40 @@ docker run --rm --network none -v "$PWD":/w:ro -w /w node:22-bookworm-slim \
   node --experimental-transform-types --import ./scripts/register-ts-paths.mjs \
   server/parity/meme-studio-bedrock-fixture.mjs > server/tests/fixtures/meme_studio_bedrock.json
 ```
+
+## Session read and sign-out
+
+`auth-session.mjs` compares `GET /api/auth/get-session` and
+`POST /api/auth/sign-out` (`src/routes/better_auth/`) with the real
+better-auth in Next, on one database. Users and sessions are minted by the
+app's own better-auth (`tests/better_auth_cookie.mjs`). A case that writes
+puts its session in the same state before each server's turn and restores it
+after; it compares the answers (status, headers, `Set-Cookie` lines in order,
+body) and the row each server left, with the times the call wrote shown as
+minutes from the call.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET and NODE_ENV.
+TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits]
+```
+
+Sections: `get-session` (no cookie, bad and foreign signatures, the other
+cookie name, `session_data` and its chunks, `dont_remember`, due for a
+refresh, expired, unknown token, a row that vanishes during the refresh
+(401, by a trigger), a database that fails (500, by renaming the table), and
+the requests handed to Next: `HEAD`, `POST`, a query string, `RSC`, a
+trailing slash), `sign-out` (content types, bodies, the origin check with and
+without cookies, `Referer`, the row deleted, the cookies cleared) and
+`limits` (production only: the 101st request in ten seconds, per address and
+path).
+
+A standalone Next build always names the cookie `__Secure-`: the build fixes
+`NODE_ENV`. Compare `NODE_ENV=development` against `next dev` instead; the
+development CSP then differs and is not compared.
+
+`tests/auth_session_cross.rs` (ignored; needs Node) runs the same endpoints
+in Rust against better-auth's own `getSession` and `signOut` on the test
+database, both ways and across the refresh and expiry boundaries:
+`cargo test --test auth_session_cross -- --ignored --nocapture`.
+

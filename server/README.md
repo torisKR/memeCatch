@@ -95,6 +95,7 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `semantic-search.mjs <next> <axum>` | `POST /api/memes/semantic-search` on the R1 seed, both servers with semantic search on and no embedding URL (as production): every answer, the limit, a refused `search_memes`. |
 | `curated-search-catalog.mjs` | Rewrites `src/routes/search/curated.json` (the curated search cards) from the real `lib/curated-memes.ts`. |
 | `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
+| `auth-session.mjs <next> <axum> [section...]` | `GET /api/auth/get-session` and `POST /api/auth/sign-out`: every case, with sessions minted by the real better-auth, and the session row each leaves. Run once per `NODE_ENV`. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 
 ## Pages

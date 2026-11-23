@@ -53,6 +53,10 @@ services:
       # The native pages (server/README.md, "Pages") stay Next's until listed here.
       AXUM_PILOT_ROUTES: ${AXUM_PILOT_ROUTES:-}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      # As for the Next app: sign-out's trusted origins start from it
+      # (server/src/routes/better_auth.rs). BETTER_AUTH_TRUSTED_ORIGINS is not
+      # given to Next, so not here either.
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://catchmeme.com}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}

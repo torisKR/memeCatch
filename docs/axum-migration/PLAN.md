@@ -110,6 +110,12 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `meme-cards-claim` | `/api/meme-cards/claim` | `POST` | `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin`이 사이트 origin이 아닌 요청은 Next로 넘긴다(7절 발견 2) |
 | `memes-view` | `/api/memes/view` | `POST` | `MEMECATCH_SIGNING_SECRET`이 없거나 `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin` 규칙은 위와 같다 |
 | `analytics-events` | `/api/analytics/events` | `POST` | 위와 같다 |
+| `media-object` | `/api/media/{...path}` | `GET`, `HEAD` | 업로드(`meme-uploads/`)는 저장소를 읽기 전에 소유자인지, 승인된 제보에 첨부됐는지 판정한다. 객체는 스트림으로 내보낸다. 로컬 저장소에서 못 찾으면 Next로 넘긴다(8절). Next에서처럼 `/api/media/signed`는 이 경로가 아니다: `media-signed`를 끄면 Next가 답한다 |
+| `mpe-job` | `/api/mpe/jobs/{id}` | `GET`, `HEAD` | 로그인한 사용자 신원으로 읽는다(RLS). 끝난 렌더에는 60초 서명 URL |
+| `mpe-renders` | `/api/mpe/renders` | `POST` | TypeScript와 같은 문장을 보내 같은 400을 낸다(8절 TypeScript 동작 1) |
+| `mpe-uploads` | `/api/mpe/uploads` | `POST` | R2 값 네 개가 있을 때만 등록한다. 로컬 저장소에서는 Next가 답한다(8절) |
+| `upload` | `/api/upload` | `POST` | 위와 같다 |
+| `admin-mpe-candidates` | `/api/admin/mpe-candidates` | `GET`, `HEAD` | 운영자만. `POST`(후보 생성·매칭·근거 초안, 임베딩과 OpenRouter 호출)는 Next가 답한다 |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -195,6 +201,16 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | 47 | `mc_growth_session` MAC의 느슨한 base64 규칙은 Node 26에서 확인한 것을 옮겼다. 운영 이미지는 Node 22다. 규칙이 다르다면 표준이 아닌 표기로 고쳐 쓴 쿠키에서만 차이가 난다 | 수용 |
 | 48 | 무작위 퀴즈의 난수원이 `Math.random`이 아니라 `rand`다. 출제되는 밈의 집합과 응답 구조는 같다 | 수용 |
 | 49 | 분석 경로가 500으로 끝날 때 로그 내용이 다르다. 응답(본문 없는 500)은 같다 | 수용 |
+| 50 | 업로드 두 경로는 R2일 때만 Axum이 답한다. 로컬 저장소에서는 Axum이 쓴 파일을 Next가 볼 수 없으므로 등록하지 않는다(8절 발견 1) | 수용 |
+| 51 | 업로드 폼은 Node 22(undici 6.29)가 읽는 대로 읽는다. Next 이미지가 Node 24 이상으로 오르면 몇 가지 비정상 폼(마지막 경계 뒤의 글자, `filename`이 `name`보다 앞인 경우, 따옴표 없는 `name`, `filename*=utf-8''…`, 이름 앞의 BOM)의 해석이 달라진다(8절 발견 2). 그때 `parity/multipart-fixture.mjs`를 새 Node로 다시 돌리고 파서를 맞춰야 한다 | Node를 올릴 때 미해결 |
+| 52 | 선언한 `Content-Length`보다 많이 보낸 요청: 두 서버 모두 선언한 만큼만 읽고(폼이 아니라 400), 아무것도 저장하지 않고, 한 번 계량한다. 남은 바이트는 다음 요청으로 읽혀 400이 된다. Node는 그 400을 바로 내고 연결을 닫아 경로의 응답이 클라이언트에 가지 않는다. hyper는 경로의 응답(400 `no_file`)을 먼저 보낸다 | 수용 |
+| 53 | 읽지 않은 요청 본문(일찍 거절했거나 한도를 넘은 경우)은 Node처럼 버리면서 끝까지 받는다. Axum은 응답 뒤 300초(Node의 `requestTimeout`)까지만 받는다. Node의 한도는 요청이 시작된 때부터 잰다 | 수용 |
+| 54 | `rightsDeclaration`, 렌더 요청 본문의 JSON에 짝 없는 `\uD800` 같은 이스케이프, double보다 큰 수, 128단계보다 깊은 중첩이 있으면 Axum은 형식이 틀린 JSON으로 본다(`routes/request.rs`의 `Json`). 렌더는 둘 다 400이지만 오류 코드가 `invalid_render_request`(Next는 `render_not_available`)이고, 권리 선언은 Axum만 `rights_required`다 | 수용 |
+| 55 | R2 PUT의 서명된 부분(키, 경로 인코딩, `content-type`, `x-amz-content-sha256: UNSIGNED-PAYLOAD`, 서명 헤더 목록, 범위)은 TypeScript와 같다. 서명하지 않는 헤더는 다르다: undici는 `user-agent`·`accept`·`accept-language`·`sec-fetch-mode`·`accept-encoding`을 더한다 | 수용 |
+| 56 | `/api/media/...`에서 R2 연결 자체가 실패하면 본문 없는 500이다. Next는 `fetch`가 던져 Next의 500 페이지가 나간다. 비교하지 않았다 | 수용 |
+| 57 | 후보 매칭 목록을 DB 오류로 못 읽으면 본문이 `candidate_match_list_failed: <메시지>`다. Postgres가 낸 오류는 메시지가 같고, 연결 실패는 sqlx와 node-pg의 문구가 다르다 | 수용 |
+| 58 | 후보 매칭의 `evidence_json`에 double을 넘는 수(`1e400`)가 있으면 Axum은 그 행 전체를 `null`로 낸다. Next는 그 수만 `null`이다. 앱은 JavaScript 수만 쓰므로 생기지 않는다 | 수용 |
+| 59 | `mpe-renders`의 출처 검사는 `explore-previews`와 같은 규칙(#34)이고, 업로드 둘은 사이트 origin이 아닌 `Origin`을 Next에 넘긴다(#42와 같은 규칙). 결과는 같고 Next가 내려가 있을 때만 다르다 | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 
@@ -267,3 +283,46 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 
 - `docker-compose.axum.yml`의 `app` 환경에 `MEMECATCH_SIGNING_SECRET` 추가(발견 1). 그 전에는 `memes-view`·`analytics-events`가 Next에 남는다.
 - 메인 풀 크기. 한 요청이 쓰는 트랜잭션은 카탈로그가 최대 셋(페이지, 대조, 보충), 컬렉션이 셋(세션, 소유 행, 카드), 카드 받기가 넷(세션, 자격, 쓰기, 읽기)이다. 차례로 쓰므로 연결은 요청당 하나지만, `AXUM_DB_POOL_MAX`(기본 4)를 정할 때 조회·분석 이벤트의 빈도와 함께 봐야 한다.
+
+## 8. 단계 3 일부: R3 (미디어·업로드·밈 제작 API)
+
+브랜치 `torisKR/axum-routes-r3`. 옮긴 경로는 5절 표의 `media-object`부터 `admin-mpe-candidates`까지 여섯 개다(`admin-mpe-candidates`는 `GET`만). 동치 확인은 `server/parity/mpe.mjs`(작업·렌더·후보 목록·미디어를 실제 세션으로), `server/parity/uploads.mjs`(업로드 두 경로, TypeScript와 Rust의 R2 요청, 워커), `server/tests/mpe_routes.rs`·`media_objects.rs`·`uploads.rs`(HTTP 통합 테스트, 업로드는 S3 게이트웨이와 함께), `server/tests/fixtures/multipart.json`(Node 22의 실제 `formData()`가 79개 본문에 낸 답)에 있다.
+
+### 옮기지 않은 것
+
+| 경로 | 이유 |
+| --- | --- |
+| `POST /api/admin/mpe-candidates` | 후보를 만들고 해시·텍스트 임베딩으로 매칭한 뒤(`lib/mpe/candidates.server.ts`) OpenRouter로 근거 초안을 만든다(`lib/mpe/evidence-draft.server.ts`). 외부 호출을 기록하는 스텁으로 TypeScript와 비교하는 일을 이번 배치에서 하지 않았으므로 Next에 둔다. 같은 경로의 `GET`(저장된 매칭 목록)만 옮겼다 |
+
+### 계획을 바꾸는 발견
+
+1. **로컬 저장소에서는 업로드를 Next에 둔다.** 5절 발견 8의 결론이다. Axum이 자기 컨테이너에 쓴 파일은 Next도 워커도 보지 못하므로, `upload`·`mpe-uploads`는 R2 값 네 개가 있을 때만 등록된다. 컴포즈 기본(로컬 저장소)에서는 두 경로가 Next에 남는다. 읽기(`media-object`)는 로컬에서 못 찾은 객체를 Next에 넘긴다.
+2. **Next 이미지는 Node 22이고 로컬 Node는 26이다. 둘의 `formData()`가 다르다.** Node 22는 undici 6.29, Node 26은 undici 8이다. 같은 79개 본문 중 6개를 다르게 읽는다(5절 차이 51). 파서(`routes/multipart.rs`)는 운영과 같은 Node 22를 따르고, 픽스처 스크립트는 다른 버전에서 실행되기를 거부한다. 업로드 비교도 Node 22로 띄운 Next와 했다. 로컬 Node로 띄운 Next와 비교하면 그 6가지에서 차이가 보이는 것이 맞다.
+3. **Node는 핸들러가 읽지 않은 본문을 버리면서 끝까지 받고, hyper는 연결을 닫는다.** 20 MB를 보내는 중인 클라이언트를 401이나 413으로 거절하면 hyper에서는 클라이언트가 응답 대신 끊긴 연결을 본다. 업로드 두 경로는 거절할 때 남은 본문을 백그라운드에서 버리며 받는다(`multipart::drain`, 메모리에 남기지 않는다). 그 덕분에 한도를 1바이트 넘긴 요청도 Next처럼 413을 받는다.
+4. **업로드 본문은 한도까지만 쌓는다.** 한도는 두 경로 모두 20 MiB + 128 KiB다. `Content-Length`가 한도를 넘으면 읽기 전에, chunked면 한도를 넘기는 조각이 도착했을 때 413이다. 한도 안의 본문은 TypeScript처럼 다 받은 뒤 폼을 읽으므로 업로드 하나가 요청 동안 최대 약 20 MB를 차지한다.
+5. **MPE 업로드는 지금 운영에서 성공할 수 없다.** 아래 TypeScript 동작 2. 워커가 Axum이 만든 작업을 처리하는지는 그 조건만 채워서 확인했다(아래 "워커").
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | RPC 플래너가 함수 인자 타입을 배열이 아니라 글자로 받아(`loadFunctions`의 `types`, node-pg가 `name[]`을 풀지 않는다) 어떤 인자에도 캐스트를 붙이지 않고 배열 인자를 `text[]`로 보낸다. `queue_metered_mpe_render_job(..., p_segments jsonb, ...)` 호출은 함수를 찾지 못해 실패하고, 검증을 통과한 렌더 요청은 전부 400 `render_not_available`이다. 작업은 쌓이지 않고 계량도 되지 않는다. 문장 로그로 Next가 `"p_segments" => $2::text[]`를 보내는 것을 확인했다 | `lib/db/execute.ts`, `app/api/mpe/renders/route.ts` |
+| 2 | `create_media_ingestion`은 `storage.objects`에 임시 객체 행이 있어야 하는데, 지금 그 테이블에 행을 쓰는 코드가 없다(Supabase 저장소를 쓰던 때의 검사다. 부트스트랩의 `storage.objects`는 빈 껍데기다). 그래서 `/api/mpe/uploads`는 객체를 저장했다가 지우고 500 `ingestion_failed`를 낸다. `mpe_upload_storage`와 `mpe_ingestion` 한도는 그래도 한 번씩 쓴다 | `db/migrations/20260824220000_mpe_pipeline.sql`, `lib/object-storage.ts` |
+| 3 | `next.config.ts`의 정적 자산 헤더 규칙(`/:path*\.(svg|png|jpg|jpeg|webp|avif|ico|woff2)`)이 `/api/media/...`에도 걸려, 핸들러의 `private, no-store` 대신 `public, max-age=2592000, stale-while-revalidate=86400`이 나간다. 비공개 업로드와 404도 마찬가지다. 앞단 캐시가 비공개 업로드를 30일 보관할 수 있으므로 따로 검토가 필요하다 | `next.config.ts`, `app/api/media/[...path]/route.ts` |
+| 4 | 두 업로드 경로는 본문을 읽기 전에 `reserve_api_request`로 한도를 쓴다. 한도를 넘는 본문, 폼이 아닌 본문도 한 번으로 센다 | `app/api/upload/route.ts`, `app/api/mpe/uploads/route.ts` |
+| 5 | `readBoundedFormData`가 크기 말고 다른 이유로 실패하면(폼이 아님, 본문이 끊김) 오류를 삼키고 "파일 없음"(`no_file`, `file_required`)으로 답한다 | 같은 곳 |
+| 6 | `/api/upload`의 `too_large`는 두 가지다: 본문이 한도를 넘으면 413, 이미지가 5 MiB를 넘으면 400. 빈 파일은 `invalid_type`이다 | `app/api/upload/route.ts` |
+| 7 | 렌더 결과의 서명 URL에 `download` 파일 이름 옵션을 넘기지만 저장소 계층이 무시한다 | `app/api/mpe/jobs/[id]/route.ts`, `lib/object-storage.ts` |
+| 8 | 후보 목록은 `is_operator`를 두 번 묻는다(경로와 `listCandidateMatches`) | `app/api/admin/mpe-candidates/route.ts` |
+| 9 | 운영자도 남의 비공개 업로드를 `/api/media/...`로 읽지 못한다(승인된 제보에 첨부된 것만) | `app/api/media/[...path]/route.ts` |
+
+### 워커
+
+`server/parity/uploads.mjs worker`가 확인한다. 레코딩 프록시가 Axum의 PUT을 받으면 `storage.objects` 행을 써 준다(TypeScript 동작 2의 조건만 채운다). 그러면 Axum의 `/api/mpe/uploads`가 201과 작업 id를 내고, `media_ingestions` 행(형식·종류·크기·sha256·키·만료 24시간)이 TypeScript가 보내는 인자대로 만들어진다. 게이트웨이의 객체를 워커 전용 디렉터리에 복사하고 `scripts/mpe-media-worker.mjs`를 한 번 실행하면 그 `inspect` 작업이 `completed`가 된다(`ffprobe` 결과의 형식 `mov,mp4,...`, 폭 64). 같은 업로드를 Next에 보내면 행이 없어 500 `ingestion_failed`다.
+
+### 단계 5에서 추가로 확인할 것
+
+- 업로드 동시성과 메모리. 업로드 하나가 요청 동안 최대 약 20 MB를 쥔다(TypeScript도 같다). Axum 컨테이너 256 MB에서는 동시 업로드 열 개 안팎이 한계다. 한도는 사용자별이라 여러 사용자가 동시에 올리면 막지 못한다. 동시 업로드 수 제한이나 메모리 상향을 정해야 한다.
+- `storage.objects` 검사(TypeScript 동작 2)를 함수에서 빼거나, 저장할 때 행을 쓰거나. MPE 업로드를 살리려면 TypeScript·마이그레이션 쪽 결정이 먼저다.
+- 비공개 업로드의 캐시 헤더(TypeScript 동작 3).
+- Next 이미지의 Node를 올릴 때 5절 차이 51.

@@ -45,6 +45,9 @@ pub async fn get_session(
     auth: Arc<BetterAuth>,
     request: Request,
 ) -> Response {
+    if let Some(refused) = super::cookie_too_large(request.headers()) {
+        return refused;
+    }
     let handed_to_next = request.method() == Method::HEAD
         || request.uri().query().is_some()
         || request.headers().contains_key("rsc");

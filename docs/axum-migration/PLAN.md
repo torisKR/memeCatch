@@ -430,3 +430,11 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 1. **운영 Next 빌드는 언제나 `__Secure-` 쿠키를 쓴다.** `useSecureCookies`가 `NODE_ENV === "production"`인데 Next의 운영 빌드가 이 값을 빌드 때 박아 넣는다. 그래서 `NODE_ENV=development` 비교는 standalone이 아니라 `next dev`와 했다. Axum은 `NODE_ENV`를 실행 때 읽고, 컴포즈는 둘 다 `production`이다.
 2. **로그아웃의 출처 검사에는 `BETTER_AUTH_URL`이 필요하다.** 믿는 출처의 첫째가 `BETTER_AUTH_URL`(없으면 사이트 URL)의 origin이다. 컴포즈가 Axum에도 같은 값을 넘긴다.
 3. **Next 컨테이너는 `BETTER_AUTH_TRUSTED_ORIGINS`를 받지 않는다.** 그래서 믿는 출처는 사이트 origin, `http://localhost:3000`, `http://127.0.0.1:3000`뿐이다(`lib/auth/server.ts`).
+
+### 보안 리뷰 후 고친 것과 남은 차이
+
+리뷰(쿠키 파싱, 로그아웃 검사, 로그아웃 DB 실패, `NODE_ENV`) 뒤에 고친 내용이다. id는 이 절 안에서만 쓴다.
+
+| id | 내용 | 판정 |
+| --- | --- | --- |
+| A1-1 | `Cookie` 헤더 파싱과 `Set-Cookie` 줄 정리가 쿠키 수에 대해 이차였다(400 KB 헤더 하나에 수 초). 둘 다 `HashMap`으로 선형이 됐다(`cookies.rs`, 400 KB가 디버그 빌드에서도 0.5초 안). 두 경로는 `Cookie` 헤더(여러 개면 합)가 16 KiB를 넘으면 무엇보다 먼저 431, 빈 본문, `connection: close`로 답한다. Node가 그런 요청을 Next 앞에서 431로 거절하는 것과 같다. 차이: Node는 모든 헤더 바이트를 세고 Axum은 `Cookie`만 센다. 그래서 `Cookie`는 16 KiB 이하인데 헤더 전체가 16 KiB를 넘는 요청은 Next가 431, Axum은 보통 답이다. Axum의 431에는 `headers::apply`의 헤더가 붙고 Node의 431에는 아무 헤더도 없다 | 수용 |

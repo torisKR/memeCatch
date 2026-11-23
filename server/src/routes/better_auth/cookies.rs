@@ -4,6 +4,8 @@
 //! dist/crypto.mjs:26-31), and the chunked `session_data` store
 //! (dist/cookies/session-store.mjs:30-155).
 
+use std::collections::HashMap;
+
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use hmac::{Hmac, KeyInit, Mac};
@@ -110,14 +112,10 @@ impl SetCookies {
     }
 
     pub fn into_lines(self) -> Vec<String> {
-        let mut lines: Vec<(String, String)> = Vec::new();
-        for (name, line) in self.0 {
-            match lines.iter_mut().find(|(seen, _)| *seen == name) {
-                Some(entry) => entry.1 = line,
-                None => lines.push((name, line)),
-            }
-        }
-        lines.into_iter().map(|(_, line)| line).collect()
+        first_place_last_value(self.0)
+            .into_iter()
+            .map(|(_, line)| line)
+            .collect()
     }
 }
 
@@ -159,28 +157,40 @@ fn chunk_index(base: &str, name: &str) -> Option<u64> {
 /// spaces and tabs, quotes dropped, only RFC 6265 names and values kept. A
 /// repeated name keeps its first place and takes the last value (`Map.set`).
 fn parse_cookies(header: &str) -> Vec<(String, String)> {
-    let mut cookies: Vec<(String, String)> = Vec::new();
     if header.chars().count() < 2 {
-        return cookies;
+        return Vec::new();
     }
     let trim_ows = |text: &str| text.trim_matches([' ', '\t']).to_owned();
-    for chunk in header.split(';') {
-        let Some(eq) = chunk.find('=') else { continue };
+    let pairs = header.split(';').filter_map(|chunk| {
+        let eq = chunk.find('=')?;
         let key = trim_ows(&chunk[..eq]);
         let mut value = trim_ows(&chunk[eq + 1..]);
         if value.len() >= 2 && value.starts_with('"') && value.ends_with('"') {
             value = value[1..value.len() - 1].to_owned();
         }
-        if !is_cookie_name(&key) || !is_cookie_value(&value) {
-            continue;
-        }
-        let value = decode(&value);
-        match cookies.iter_mut().find(|(seen, _)| *seen == key) {
-            Some(entry) => entry.1 = value,
-            None => cookies.push((key, value)),
+        (is_cookie_name(&key) && is_cookie_value(&value)).then(|| (key, decode(&value)))
+    });
+    first_place_last_value(pairs)
+}
+
+/// What a JavaScript `Map` keeps after `set` for each pair: one entry per
+/// key, where the key first appeared, with its last value. Linear in the
+/// pairs: a `Cookie` header comes from anyone.
+fn first_place_last_value(
+    pairs: impl IntoIterator<Item = (String, String)>,
+) -> Vec<(String, String)> {
+    let mut entries: Vec<(String, String)> = Vec::new();
+    let mut place: HashMap<String, usize> = HashMap::new();
+    for (key, value) in pairs {
+        match place.get(&key) {
+            Some(&at) => entries[at].1 = value,
+            None => {
+                place.insert(key.clone(), entries.len());
+                entries.push((key, value));
+            }
         }
     }
-    cookies
+    entries
 }
 
 /// `cookieNameRegex`.
@@ -278,5 +288,63 @@ mod tests {
         assert!(has_chunked_cookie(Some(&format!("{DATA}.1=v")), DATA));
         assert!(has_chunked_cookie(Some(&format!("{DATA}=v")), DATA));
         assert!(!has_chunked_cookie(None, DATA));
+    }
+
+    /// Everything a request's `Cookie` header goes through here: both
+    /// readers, and the `Set-Cookie` lines for every chunk it names.
+    fn read_and_clear(header: &str) {
+        let cookies = AuthCookies::new(true);
+        let chunks = existing_chunks(Some(header), DATA);
+        has_chunked_cookie(Some(header), DATA);
+        let mut set = SetCookies::default();
+        set.clean_chunks(&cookies, &chunks);
+        set.delete_session_cookie(&cookies, &chunks);
+        set.into_lines();
+    }
+
+    /// `count` distinct names: `0=;1=;...` (the review's header) followed by
+    /// as many `session_data` chunks.
+    fn many_cookies(count: usize) -> String {
+        (0..count)
+            .map(|index| format!("{index}=;{DATA}.{index}=v"))
+            .collect::<Vec<_>>()
+            .join(";")
+    }
+
+    /// How long `read_and_clear(header)` takes, or `None` after `limit`.
+    fn timed(header: String, limit: std::time::Duration) -> Option<std::time::Duration> {
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let started = std::time::Instant::now();
+            read_and_clear(&header);
+            let _ = done.send(started.elapsed());
+        });
+        finished.recv_timeout(limit).ok()
+    }
+
+    #[test]
+    fn a_400_kb_cookie_header_takes_milliseconds() {
+        let header = many_cookies(12_000);
+        assert!(header.len() > 400_000, "{}", header.len());
+        let limit = std::time::Duration::from_millis(500);
+        let took = timed(header, limit);
+        assert!(took.is_some(), "not done within {limit:?}");
+    }
+
+    #[test]
+    fn the_work_grows_linearly_with_the_header() {
+        let best = |count: usize| {
+            (0..5)
+                .map(|_| timed(many_cookies(count), std::time::Duration::from_secs(10)))
+                .map(|took| took.expect("done within 10 s"))
+                .min()
+                .expect("five runs")
+        };
+        let small = best(2_000);
+        let large = best(8_000);
+        // Four times the header: about four times the work when linear,
+        // sixteen when quadratic.
+        let ratio = large.as_secs_f64() / small.as_secs_f64();
+        assert!(ratio < 8.0, "{small:?} -> {large:?}: x{ratio:.1}");
     }
 }

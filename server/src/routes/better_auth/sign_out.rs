@@ -42,6 +42,9 @@ pub async fn sign_out(
     auth: Arc<BetterAuth>,
     request: Request,
 ) -> Response {
+    if let Some(refused) = super::cookie_too_large(request.headers()) {
+        return refused;
+    }
     let (parts, body) = request.into_parts();
     let (bytes, rest) = read_prefix(body).await;
     let handled = rest.is_none()

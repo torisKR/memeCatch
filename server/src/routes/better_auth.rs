@@ -20,6 +20,10 @@
 //! header (Next answers it with a redirect before better-auth runs), and the
 //! sign-out bodies listed in `sign_out.rs`.
 //!
+//! A request whose `Cookie` headers are longer than 16 KiB gets Node's 431
+//! before anything else (`cookie_too_large`): Node refuses such headers
+//! before Next runs, and a header that size is never parsed here.
+//!
 //! The session rows are written as better-auth writes them: as the login role
 //! that owns the tables (`DbIdentity::better_auth`). Nothing here writes
 //! `user`, `account` or `verification`.
@@ -34,8 +38,11 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::{Request, State};
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
-use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue, PRAGMA, SET_COOKIE};
+use axum::http::header::{
+    CACHE_CONTROL, CONNECTION, CONTENT_TYPE, COOKIE, HeaderValue, PRAGMA, SET_COOKIE,
+};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use hyper::ext::ReasonPhrase;
@@ -123,6 +130,24 @@ pub fn router(state: &AppState) -> Router<AppState> {
             }),
         )
         .build()
+}
+
+/// Node's `--max-http-header-size` default. A request whose `Cookie` headers
+/// alone are longer never reaches better-auth: Node answers 431 with no body
+/// and closes the connection.
+const NODE_MAX_HEADER_BYTES: usize = 16 * 1024;
+
+/// Node's 431 for a `Cookie` header over `NODE_MAX_HEADER_BYTES`. Checked
+/// first, so an oversized header is never parsed.
+fn cookie_too_large(headers: &HeaderMap) -> Option<Response> {
+    let len: usize = headers.get_all(COOKIE).iter().map(HeaderValue::len).sum();
+    (len > NODE_MAX_HEADER_BYTES).then(|| {
+        let mut response = StatusCode::REQUEST_HEADER_FIELDS_TOO_LARGE.into_response();
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+        response
+    })
 }
 
 /// A better-call answer: `status` with better-call's reason phrase, a JSON

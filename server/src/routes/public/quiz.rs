@@ -1,13 +1,14 @@
-//! The pure logic behind `/api/daily-quiz`: `buildQuestions` and its helpers
-//! from `lib/quiz.ts`, and the date key, hash, generator and pivot from
-//! `lib/daily-quiz.ts`.
+//! The pure logic behind `/api/daily-quiz` and `/api/quiz`: `buildQuestions`,
+//! `buildQuestionsForSet`, `seededRng` and their helpers from `lib/quiz.ts`,
+//! and the date key, hash, generator and pivot from `lib/daily-quiz.ts`.
 //!
-//! Everyone must get the same question on the same day from either server, so
-//! this follows the JavaScript to the bit: 32-bit integer wrap-around, lengths
-//! in UTF-16 code units, JavaScript's whitespace class, stable sorts, and the
-//! exact number and order of generator calls (a shuffle draws even when its
-//! result goes unused). `server/tests/daily_quiz_parity.rs` checks it against
-//! output of the real TypeScript.
+//! Everyone must get the same question on the same day from either server,
+//! and a shared quiz link must show the same options, so this follows the
+//! JavaScript to the bit: 32-bit integer wrap-around, lengths in UTF-16 code
+//! units, JavaScript's whitespace class, stable sorts, and the exact number
+//! and order of generator calls (a shuffle draws even when its result goes
+//! unused). `server/tests/daily_quiz_parity.rs` and `quiz_parity.rs` check it
+//! against output of the real TypeScript.
 
 use std::cmp::Reverse;
 use std::collections::HashSet;
@@ -125,19 +126,43 @@ pub fn hash_code(value: &str) -> u32 {
         .unsigned_abs()
 }
 
-/// `seededRng(seed: number)` of lib/daily-quiz.ts (mulberry32).
-pub struct Rng(u32);
+/// The `rng` argument of the TypeScript: a seeded mulberry32, or
+/// `Math.random`.
+pub struct Rng(Source);
+
+enum Source {
+    Mulberry(u32),
+    System,
+}
 
 impl Rng {
+    /// `seededRng(seed: number)` of lib/daily-quiz.ts.
     pub fn seeded(seed: u32) -> Self {
-        Self(seed)
+        Self(Source::Mulberry(seed))
+    }
+
+    /// `seededRng(seed: string)` of lib/quiz.ts: the FNV-1a hash of the
+    /// seed's UTF-16 code units starts the same generator.
+    pub fn from_text(seed: &str) -> Self {
+        let hash = seed.encode_utf16().fold(0x811c_9dc5_u32, |hash, unit| {
+            (hash ^ u32::from(unit)).wrapping_mul(0x0100_0193)
+        });
+        Self::seeded(hash)
+    }
+
+    /// `Math.random`: a new quiz on every call.
+    pub fn random() -> Self {
+        Self(Source::System)
     }
 
     /// A value in `[0, 1)`. Every `| 0`, `>>> 0` and `Math.imul` in the
     /// JavaScript is arithmetic modulo 2^32, which is `u32` wrapping here.
     pub fn next_value(&mut self) -> f64 {
-        self.0 = self.0.wrapping_add(0x6d2b_79f5);
-        let a = self.0;
+        let Source::Mulberry(state) = &mut self.0 else {
+            return rand::random::<f64>();
+        };
+        *state = state.wrapping_add(0x6d2b_79f5);
+        let a = *state;
         let mut t = (a ^ (a >> 15)).wrapping_mul(1 | a);
         t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t)) ^ t;
         f64::from(t ^ (t >> 14)) / 4_294_967_296.0
@@ -155,7 +180,12 @@ fn daily_rng(day: &str) -> Rng {
 
 /// `dailyPivot`: the short id the day's pool starts from.
 pub fn daily_pivot(day: &str) -> String {
-    let mut rng = daily_rng(day);
+    short_id_pivot(&mut daily_rng(day))
+}
+
+/// Eight characters of the short id alphabet, one draw each: `dailyPivot`,
+/// and `randomShortId` of app/api/quiz/route.ts with `Rng::random()`.
+pub fn short_id_pivot(rng: &mut Rng) -> String {
     (0..8)
         .map(|_| char::from(SHORT_ID_ALPHABET[rng.below(SHORT_ID_ALPHABET.len())]))
         .collect()
@@ -170,7 +200,9 @@ pub fn daily_quiz_json(day: &str, pool: &[PoolMeme]) -> Option<String> {
         date: &'a str,
         question: Question,
     }
-    let question = first_question(pool, &mut daily_rng(day))?;
+    let question = build_questions(pool, 1, &mut daily_rng(day))
+        .into_iter()
+        .next()?;
     Some(
         serde_json::to_string(&DailyQuiz {
             date: day,
@@ -187,20 +219,56 @@ struct Eligible<'a> {
     summary: String,
 }
 
-/// `buildQuestions(pool, 1, rng)[0]`.
-fn first_question(pool: &[PoolMeme], rng: &mut Rng) -> Option<Question> {
-    let eligible: Vec<Eligible> = pool
-        .iter()
-        .filter(|meme| !meme.short_id.is_empty() && !meme.slug.is_empty() && !meme.title.is_empty())
+/// `eligiblePool`.
+fn eligible_pool<'a>(pool: impl Iterator<Item = &'a PoolMeme>) -> Vec<Eligible<'a>> {
+    pool.filter(|meme| !meme.short_id.is_empty() && !meme.slug.is_empty() && !meme.title.is_empty())
         .map(|meme| Eligible {
             meme,
             summary: normalize_summary(&meme.summary),
         })
         .filter(|candidate| js::utf16_len(&candidate.summary) >= MIN_SUMMARY_LENGTH)
-        .collect();
-    shuffle(eligible.iter().collect(), rng)
-        .into_iter()
-        .find_map(|answer| build_question_for(answer, &eligible, rng))
+        .collect()
+}
+
+/// `buildQuestions(pool, count, rng)`: up to `count` questions, answers in
+/// shuffled order. No answer is tried once `count` questions exist, so the
+/// generator is not advanced past that point.
+pub fn build_questions(pool: &[PoolMeme], count: usize, rng: &mut Rng) -> Vec<Question> {
+    let eligible = eligible_pool(pool.iter());
+    let mut questions = Vec::new();
+    for answer in shuffle(eligible.iter().collect(), rng) {
+        if questions.len() >= count {
+            break;
+        }
+        questions.extend(build_question_for(answer, &eligible, rng));
+    }
+    questions
+}
+
+/// `buildQuestionsForSet(targets, pool, rng)`: one question per target, in
+/// the order given. Wrong options come from the targets and the pool; a
+/// target that cannot be asked is skipped.
+pub fn build_questions_for_set(
+    targets: &[PoolMeme],
+    pool: &[PoolMeme],
+    rng: &mut Rng,
+) -> Vec<Question> {
+    // The first row of each short id is kept: a target, then the pool's.
+    let mut seen = HashSet::new();
+    let merged = targets
+        .iter()
+        .chain(pool)
+        .filter(|meme| seen.insert(meme.short_id.as_str()));
+    let eligible = eligible_pool(merged);
+    targets
+        .iter()
+        .filter_map(|target| {
+            let answer = eligible
+                .iter()
+                .find(|candidate| candidate.meme.short_id == target.short_id)?;
+            build_question_for(answer, &eligible, rng)
+        })
+        .collect()
 }
 
 /// `buildQuestionFor`.

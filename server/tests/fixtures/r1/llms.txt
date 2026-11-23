@@ -1,0 +1,74 @@
+# 밈캐치 (MemeCatch)
+
+> 한국 밈·유행어·챌린지 48건의 뜻·유래·사용 안전도를 기록하는 실시간 밈 사전.
+> 각 밈은 "무슨 뜻인가 / 어디서 시작됐나 / 지금 써도 되는가(신호등)" 구조로 정리되어 있으며,
+> 공개 승인 상태이고 사이트의 콘텐츠 충실도 기준을 통과한 항목만 포함합니다. 이는 독립적인 사실 검증 완료를 뜻하지 않습니다. 언어: 한국어(ko).
+> English summary: MemeCatch explains Korean memes, slang, and challenges with meaning, origin, usage context, safety signals, and source attribution.
+
+## 다국어 / Languages
+- [en index](http://127.0.0.1:3411/en/llms.txt) · [en reviewed corpus](http://127.0.0.1:3411/en/llms-full.txt)
+- [ja index](http://127.0.0.1:3411/ja/llms.txt) · [ja reviewed corpus](http://127.0.0.1:3411/ja/llms-full.txt)
+- [zh index](http://127.0.0.1:3411/zh/llms.txt) · [zh reviewed corpus](http://127.0.0.1:3411/zh/llms-full.txt)
+- [zh-tw index](http://127.0.0.1:3411/zh-tw/llms.txt) · [zh-tw reviewed corpus](http://127.0.0.1:3411/zh-tw/llms-full.txt)
+
+주요 진입점:
+- [전체 밈 탐색](http://127.0.0.1:3411/explore): 카테고리·연도·난이도 필터 + 검색
+- [검색](http://127.0.0.1:3411/search): 키워드·초성·별칭 검색
+- [밈 연표](http://127.0.0.1:3411/timeline): 1990년대부터 지금까지 연대별 대표 밈
+- [줄임말·유행어 사전](http://127.0.0.1:3411/slang): 요즘 신조어부터 1990년대 유행어까지 연대별 표제어·뜻·사용 안전도
+- [밈력고사](http://127.0.0.1:3411/quiz): 사전 데이터로 매번 새로 출제되는 10문항 밈 지식 퀴즈
+- [이번 주 밈 결산](http://127.0.0.1:3411/weekly): 매주 자동 갱신되는 급상승·신규 정리
+- [오늘의 랭킹](http://127.0.0.1:3411/rankings)
+- [전체 사이트맵](http://127.0.0.1:3411/sitemap.xml): 밈 상세 페이지 전체 URL
+- [RSS 피드](http://127.0.0.1:3411/feed.xml): 최신 등록 밈
+- [RSS 피드 (최근 수정)](http://127.0.0.1:3411/feed/updated.xml): 내용이 최근 보강·수정된 밈
+
+## 카테고리
+- [AI 밈](http://127.0.0.1:3411/explore?category=ai-meme)
+- [밈 용어(유행어)](http://127.0.0.1:3411/explore?category=meme_term)
+- [챌린지 댄스](http://127.0.0.1:3411/explore?category=challenge_dance)
+- [노래](http://127.0.0.1:3411/explore?category=song)
+- [드라마 장면](http://127.0.0.1:3411/explore?category=drama_scene)
+- [밈 영상](http://127.0.0.1:3411/explore?category=meme_video)
+
+## 테마별 모음
+- [2020년대 밈 모음](http://127.0.0.1:3411/collections/2020s): 코로나 시대부터 지금까지 — 2020년대를 정의한 한국 밈 총정리.
+- [2010년대 밈 모음](http://127.0.0.1:3411/collections/2010s): 급식체·페북 감성·초기 유튜브 — 2010년대 한국 밈 총정리.
+- [2000년대 밈 모음](http://127.0.0.1:3411/collections/2000s): 싸이월드·디시·플래시 시대 — 2000년대 추억의 한국 밈 총정리.
+- [1990년대 클래식 밈 모음](http://127.0.0.1:3411/collections/classic): TV·CF·초기 PC통신 — 1990년대에 태어난 원조 유행어 총정리.
+- [유행어 모음](http://127.0.0.1:3411/collections/phrase): 지금 도는 한국 유행어 — 뜻·유래·사용 안전도까지 한 번에.
+- [챌린지 모음](http://127.0.0.1:3411/collections/challenge): 틱톡·쇼츠를 달군 한국 챌린지 — 원본 영상과 함께 총정리.
+- [밈송·노래 밈 모음](http://127.0.0.1:3411/collections/song): 한 소절만 들어도 아는 밈송 — 원곡과 유행 맥락 총정리.
+- [짤 모음](http://127.0.0.1:3411/collections/image): 대화방 필수 짤 — 유래와 쓰는 상황까지 정리한 한국 짤 사전.
+- [스트리머 밈 모음](http://127.0.0.1:3411/collections/streamer): 아프리카TV·트위치·치지직에서 태어난 인터넷 방송 밈 총정리.
+- [게임 밈 모음](http://127.0.0.1:3411/collections/game): 스타크래프트부터 롤·배그까지 — 한국 게임 커뮤니티 밈 총정리.
+- [밈 입문 — 왕초보 필수 밈](http://127.0.0.1:3411/collections/beginner): 요즘 대화를 따라가기 위한 최소한의 밈 — 입문자용 큐레이션.
+- [신규 등록 밈 — 최근 추가된 사전 수록 항목](http://127.0.0.1:3411/collections/latest): 밈캐치 사전에 최근 새롭게 수록·검수된 밈 및 유행어 목록입니다.
+
+## 지금 뜨는 밈
+- [중꺾마 \[대괄호\] \\백슬래시 <b> & "쌍" '홑'](http://127.0.0.1:3411/memes/r1aaaa01-axum-r1-%EC%A4%91%EA%BA%BE%EB%A7%88%20%EB%B0%88%3F%26%23): 꺾이지 않는 마음 이라는 \[뜻\] & <요약>
+- [챌린지 밈](http://127.0.0.1:3411/memes/r1aaaa03-axum-r1-challenge): 챌린지 밈 요약
+- [댄스 밈](http://127.0.0.1:3411/memes/r1aaaa02-axum-r1-dance): 댄스 밈 요약
+- [노래 밈](http://127.0.0.1:3411/memes/r1aaaa04-axum-r1-song): 노래 밈 요약
+- [드라마 밈](http://127.0.0.1:3411/memes/r1aaaa05-axum-r1-comment): 드라마 밈 요약
+- [영상 밈](http://127.0.0.1:3411/memes/r1aaaa06-axum-r1-image): 영상 밈 요약
+- [예문 밈](http://127.0.0.1:3411/memes/r1aaaa12-axum-r1-examples): 예문 밈 요약
+- [생성 밈 40](http://127.0.0.1:3411/memes/r1gggg40-axum-r1-gen-40): 생성 밈 40 요약
+- [생성 밈 39](http://127.0.0.1:3411/memes/r1gggg39-axum-r1-gen-39): 생성 밈 39 요약
+- [생성 밈 38](http://127.0.0.1:3411/memes/r1gggg38-axum-r1-gen-38): 생성 밈 38 요약
+- [생성 밈 37](http://127.0.0.1:3411/memes/r1gggg37-axum-r1-gen-37): 생성 밈 37 요약
+- [생성 밈 36](http://127.0.0.1:3411/memes/r1gggg36-axum-r1-gen-36): 생성 밈 36 요약
+- [생성 밈 35](http://127.0.0.1:3411/memes/r1gggg35-axum-r1-gen-35): 생성 밈 35 요약
+- [생성 밈 34](http://127.0.0.1:3411/memes/r1gggg34-axum-r1-gen-34): 생성 밈 34 요약
+- [생성 밈 33](http://127.0.0.1:3411/memes/r1gggg33-axum-r1-gen-33): 생성 밈 33 요약
+
+## 인용 안내
+- 밈 상세 페이지 URL 형식: http://127.0.0.1:3411/memes/{short_id}-{밈이름}
+- 각 페이지는 JSON-LD(DefinedTerm·WebPage)로 구조화되어 있습니다.
+- 제3자 원본 영상·이미지는 저장하지 않고 출처 링크·임베드로만 제공합니다.
+- 문의: toris@toris.kr
+
+## 정책
+- [소개 및 검수 원칙](http://127.0.0.1:3411/about)
+- [개인정보처리방침](http://127.0.0.1:3411/privacy)
+- [이용약관](http://127.0.0.1:3411/terms)

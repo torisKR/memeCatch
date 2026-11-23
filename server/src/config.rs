@@ -87,6 +87,11 @@ pub struct Config {
     pub object_signing_secret: Option<Secret>,
     /// `LOCAL_OBJECT_STORAGE_DIR`, default `/tmp/memecatch-objects`.
     pub local_object_storage_dir: String,
+    /// `MEMECATCH_SIGNING_SECRET`, trimmed; `None` when unset or blank
+    /// (`signingSecret()` in `lib/auth/signing-secret.ts`). It keys the view
+    /// counter and the analytics session cookie. The routes that need it are
+    /// registered only when it is set (`routes/tracking.rs`).
+    pub signing_secret: Option<Secret>,
     /// Host and port of `UPSTREAM_URL` (plain `http://host:port`), default
     /// `http://127.0.0.1:3001`.
     pub upstream: Authority,
@@ -98,6 +103,31 @@ pub struct Config {
     /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
     /// registered, so their requests fall through to the upstream.
     pub disabled_routes: HashSet<String>,
+    /// `AXUM_PILOT_ROUTES`: comma-separated ids of the pilot routes to switch
+    /// on. A pilot route does not yet do all that Next's does
+    /// (`routes::PILOT_ROUTE_IDS`), so it is registered only when named here.
+    pub pilot_routes: HashSet<String>,
+    /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
+    /// fixes it at build time; give Axum the value the Next image was built
+    /// with. `None` loads no analytics.
+    pub ga_id: Option<String>,
+    /// `NEXT_PUBLIC_ADSENSE_CLIENT`: the `google-adsense-account` meta of
+    /// native pages, and the client of the ad loader. Also a Next build value.
+    pub adsense_client: Option<String>,
+    /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
+    /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
+    pub adsense_auto_ads: bool,
+}
+
+/// A comma-separated list of route ids. Blank entries are dropped.
+fn id_list(raw: Option<String>) -> HashSet<String> {
+    raw.map(|raw| {
+        raw.split(',')
+            .map(|id| id.trim().to_owned())
+            .filter(|id| !id.is_empty())
+            .collect()
+    })
+    .unwrap_or_default()
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -208,16 +238,15 @@ impl Config {
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),
+            signing_secret: optional("MEMECATCH_SIGNING_SECRET").map(Secret::new),
             upstream,
             db_pool_max,
-            disabled_routes: optional("AXUM_DISABLED_ROUTES")
-                .map(|raw| {
-                    raw.split(',')
-                        .map(|id| id.trim().to_owned())
-                        .filter(|id| !id.is_empty())
-                        .collect()
-                })
-                .unwrap_or_default(),
+            disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
+            pilot_routes: id_list(optional("AXUM_PILOT_ROUTES")),
+            ga_id: optional("NEXT_PUBLIC_GA_ID"),
+            adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
+            adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
+                && lookup("NODE_ENV").as_deref() == Some("production"),
         })
     }
 }
@@ -273,6 +302,7 @@ mod tests {
         assert_eq!(config.local_object_storage_dir, "/tmp/memecatch-objects");
         assert!(config.r2.is_none());
         assert!(config.cron_secret.is_none());
+        assert!(config.signing_secret.is_none());
         assert!(config.disabled_routes.is_empty());
     }
 
@@ -379,6 +409,7 @@ mod tests {
             ("BETTER_AUTH_SECRET", " \tpadded auth secret\n"),
             ("CRON_SECRET", " padded cron secret "),
             ("OBJECT_SIGNING_SECRET", " padded signing secret\n"),
+            ("MEMECATCH_SIGNING_SECRET", " padded view secret\n"),
         ])
         .expect("valid config");
         let blank = config(&[
@@ -386,6 +417,7 @@ mod tests {
             ("BETTER_AUTH_SECRET", "auth"),
             ("CRON_SECRET", "   "),
             ("OBJECT_SIGNING_SECRET", "   "),
+            ("MEMECATCH_SIGNING_SECRET", " \t"),
         ])
         .expect("valid config");
 
@@ -401,9 +433,14 @@ mod tests {
             padded.object_signing_secret.as_ref().map(Secret::expose),
             Some("padded signing secret")
         );
+        assert_eq!(
+            padded.signing_secret.as_ref().map(Secret::expose),
+            Some("padded view secret")
+        );
         // `!secret` is false for a blank string that is not empty.
         assert_eq!(blank.cron_secret.as_ref().map(Secret::expose), Some("   "));
         assert_eq!(blank.object_signing_secret, None);
+        assert_eq!(blank.signing_secret, None);
         assert_eq!(with_required(&[("CRON_SECRET", "")]).cron_secret, None);
         // A blank auth secret is still refused at startup.
         assert!(config(&[database, ("BETTER_AUTH_SECRET", " \t")]).is_err());
@@ -414,6 +451,7 @@ mod tests {
         let config = with_required(&[
             ("CRON_SECRET", "cron-secret-value"),
             ("OBJECT_SIGNING_SECRET", "signing-secret-value"),
+            ("MEMECATCH_SIGNING_SECRET", "view-secret-value"),
             ("R2_ACCOUNT_ID", "acct"),
             ("R2_ACCESS_KEY_ID", "key"),
             ("R2_SECRET_ACCESS_KEY", "r2-secret-value"),
@@ -427,6 +465,7 @@ mod tests {
             "test-auth-secret",
             "cron-secret-value",
             "signing-secret-value",
+            "view-secret-value",
             "r2-secret-value",
         ] {
             assert!(!debug.contains(secret), "{secret} leaked into {debug}");

@@ -58,7 +58,7 @@ pub async fn report(limiter: Arc<RateLimiter>, request: Request) -> Response {
             .into_response();
     }
 
-    if is_report(&parts.headers) && !declares_too_large(&parts.headers) {
+    if is_report(&parts.headers) && !declares_too_large(&parts.headers, MAX_BODY_BYTES) {
         // More than the limit is an error here, as in readBoundedText.
         match to_bytes(body, MAX_BODY_BYTES).await {
             Ok(bytes) => {
@@ -82,8 +82,8 @@ fn is_report(headers: &HeaderMap) -> bool {
 }
 
 /// The `Content-Length` check of `readBoundedText`: a non-empty value that is
-/// not all digits, or is larger than the limit.
-fn declares_too_large(headers: &HeaderMap) -> bool {
+/// not all digits, or is larger than `max_bytes`.
+pub(crate) fn declares_too_large(headers: &HeaderMap, max_bytes: usize) -> bool {
     headers.get(CONTENT_LENGTH).is_some_and(|value| {
         let declared = value.as_bytes();
         !declared.is_empty()
@@ -91,7 +91,7 @@ fn declares_too_large(headers: &HeaderMap) -> bool {
                 .ok()
                 .filter(|text| text.bytes().all(|byte| byte.is_ascii_digit()))
                 .and_then(|text| text.parse::<usize>().ok())
-                .is_none_or(|length| length > MAX_BODY_BYTES)
+                .is_none_or(|length| length > max_bytes)
     })
 }
 
@@ -170,6 +170,10 @@ fn safe_field(value: Option<&Value>, fallback: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn too_large(headers: &HeaderMap) -> bool {
+        declares_too_large(headers, MAX_BODY_BYTES)
+    }
     use axum::http::header::HeaderName;
 
     fn lines(body: &str) -> Vec<String> {
@@ -306,16 +310,13 @@ mod tests {
 
     #[test]
     fn declared_length_over_the_limit_is_refused_before_reading() {
-        assert!(!declares_too_large(&headers(&[])));
-        assert!(!declares_too_large(&headers(&[(
-            "content-length",
-            "16384"
-        )])));
-        assert!(declares_too_large(&headers(&[("content-length", "16385")])));
-        assert!(declares_too_large(&headers(&[(
+        assert!(!too_large(&headers(&[])));
+        assert!(!too_large(&headers(&[("content-length", "16384")])));
+        assert!(too_large(&headers(&[("content-length", "16385")])));
+        assert!(too_large(&headers(&[(
             "content-length",
             "99999999999999999999999"
         )])));
-        assert!(declares_too_large(&headers(&[("content-length", "12a")])));
+        assert!(too_large(&headers(&[("content-length", "12a")])));
     }
 }

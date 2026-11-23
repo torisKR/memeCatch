@@ -59,6 +59,11 @@ with no body.
 | `csp-report.mjs <next> <axum>` | `POST /api/csp-report` with report bodies of every kind, and the 60-per-minute limit with each way the client address is derived. Status and headers. |
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state. For a throwaway database only: it deletes every approved meme. |
 | `daily-quiz-fixture.mjs` | Not a comparison of servers: it runs the real `lib/quiz.ts` and `lib/daily-quiz.ts` under Node and writes the values `server/tests/daily_quiz_parity.rs` holds the Rust port to. |
+| `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
+| `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
+| `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
+| `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
+| `harness.mjs` | Shared by the two scripts above; not run on its own. |
 
 ```sh
 psql() { docker exec -i memecatch-axum-test-pg psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q; }
@@ -85,7 +90,194 @@ Both servers write one `[CSP-VIOLATION] ...` line to their log for each report
 they accept. To compare that part, cut those lines out of the two logs after a
 `csp-report.mjs` run (`grep -o '\[CSP-VIOLATION\].*'`) and `cmp` them.
 
+## Pages Axum renders itself
+
+`parity.mjs` compares bytes, which a page rendered by another engine cannot
+match. `pages/pages.mjs` compares what a reader or a crawler gets.
+
+```sh
+# 1. Seed, then start Next with an empty Data Cache: it keeps the catalog for a day.
+docker exec -i <container> psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q < server/parity/pages/seed.sql
+rm -rf .next/standalone/.next/cache   # then start Next as in server/README.md
+
+# 2. Axum with the pilot pages switched on, in front of that Next.
+AXUM_PILOT_ROUTES=page-about,page-meme ... cargo run
+
+# 3. The gate. Exit code 0: nothing differs outside the accepted list.
+node server/parity/pages/pages.mjs $NEXT $AXUM
+
+# 4. The rollback switch: with the routes disabled every target is Next's page.
+AXUM_PILOT_ROUTES=page-about,page-meme AXUM_DISABLED_ROUTES=page-about,page-meme,page-assets ... cargo run
+node server/parity/pages/pages.mjs $NEXT $AXUM --expect-proxied
+```
+
+For each line of `pages/targets.txt`, as a browser, as Googlebot and as Yeti,
+it compares: the status; `Location` and `Refresh`; every response header but
+the ones below; `<html lang dir>`; `<title>`; every `<meta name|property>`;
+the canonical, hreflang, feed, manifest and icon links; JSON-LD, parsed and
+compared as data; the visible text of `<body>`; its links (href, text, rel,
+target); its images; and the markup of `<main>`, element by element.
+
+A target line also states what the case is (`200`, `308`, `404`; `index` or
+`noindex`; `native` or `proxied`), and the gate fails when either server
+disagrees, so a seed that stops producing the case is noticed.
+
+Both documents are settled first (`pages/dom.mjs`): Next streams part of a
+page into hidden segments that an inline script moves into place, and for
+browsers and Googlebot it sends `<title>`, the description, the canonical
+link and the rest of the metadata inside `<body>`. Axum sends one finished
+document with the metadata in `<head>`, which is what Next sends to the
+crawlers it does not stream to (Yeti, Bingbot, the link-preview bots). The
+output says where Next put the metadata for each request.
+
+What it does not compare, with the reason, is in three lists at the top of
+the script:
+
+| List | Content |
+| --- | --- |
+| `IGNORED_HEADERS` | Hop-by-hop headers, Next's cache internals, and the `Link` preload hint that names Next's own stylesheet files. `Vary` is compared as a set without `Accept-Encoding`. |
+| `NOT_PORTED` | Sections of the meme page the pilot does not render. They are cut out of Next's document before text, links, images and markup are compared, and the count is printed. Delete an entry when the section is ported. |
+| `ACCEPTED` | Decided differences. One today: the 404 document. Next answers a missing meme with a prerendered file whose `<body>` is empty until scripts run, with a year-long `s-maxage`; Axum sends the message as HTML with `no-store`. Status, `<title>` and `noindex` are still compared. |
+
+In the markup comparison a class list is compared as a set, a CSS-module
+class (`module_local__hash` in Next, `module-local` in Axum) is compared by
+module and local name, React's generated ids are skipped, and so are the
+`data-*` attributes that only feed `ui/site.js` and the start state the
+motion library leaves in Next's markup (Axum animates the same thing in CSS).
+Icon links are compared without the file hash Next appends as a query.
+
+It does not run scripts, so it says nothing about what a page does after it
+loads, and it does not look at pixels.
+
+`paths.txt` lists three `/memes/...` URLs of memes that do not exist. With
+the pilot pages off (the default) Axum passes Next's 404 on and `parity.mjs`
+finds them identical. With `page-meme` switched on Axum answers them itself
+and `parity.mjs` reports them: that is the accepted difference above, in
+bytes. Run `parity.mjs` with the pilots off and `pages.mjs` with them on.
+## Text routes
+
+`/llms.txt`, `/llms-full.txt`, `/feed.xml`, `/feed/updated.xml` and the
+localized `/{en,ja,zh,zh-tw}/llms.txt` and `llms-full.txt` render rows of
+`memes`, so they are compared on a seeded database. `paths.txt` has their
+targets.
+
+```sh
+psql() { docker exec -i memecatch-axum-test-pg psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q --single-transaction; }
+
+psql < server/tests/fixtures/r1_reviewer.sql        # the reviewer of the seeded translations
+psql < server/tests/fixtures/r1_seed.sql            # replaces every meme: 53 memes, 31 translations
+node server/parity/parity.mjs $NEXT $AXUM server/parity/paths.txt
+
+psql < server/parity/text-routes-big.sql            # 2,600 more: paging, the 400 and 30 limits
+node server/parity/parity.mjs $NEXT $AXUM server/parity/paths.txt
+
+echo 'delete from public.memes' | psql              # the placeholders
+echo 'revoke select on public.memes from anon' | psql   # 503 on the Korean routes, empty lists on the localized ones
+echo 'grant select on public.memes to anon' | psql
+```
+
+Restart both servers after each change of the rows, and delete Next's data
+cache (`.next/standalone/.next/cache/fetch-cache`) first. Next keeps the set of
+indexable meme ids there for an hour and whether the rankings page has a list
+in memory for a minute; Axum keeps the second for a minute too. A comparison
+made against a stale Next shows differences that are not there.
+
+The localized exports list translations in the order Postgres returns them
+(the TypeScript orders the embedded meme row, not the query), so their bodies
+change when the query plan does, on both servers at once. The harness sends
+its three requests within a second and sees the same plan.
+
+The files under `server/tests/fixtures/r1/` are what Next answered for the
+seed, built with `NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3411`:
+
+```sh
+curl -s $NEXT/llms.txt > server/tests/fixtures/r1/llms.txt        # and llms-full.txt, feed.xml
+curl -s $NEXT/feed/updated.xml > server/tests/fixtures/r1/feed-updated.xml
+curl -s $NEXT/ja/llms.txt > server/tests/fixtures/r1/ja-llms.txt  # <locale>-llms.txt, <locale>-llms-full.txt
+```
+
+`en-llms.plan-a.txt` and `en-llms.plan-b.txt` are `/en/llms.txt` right after
+seeding and again after `analyze` ran on `memes` and `meme_translations`: two
+plans, two orders, and between them all 23 English lines.
+
+## Explore previews
+
+`POST /api/explore/previews` needs request bodies, so it has its own script,
+and rows of its own on top of the text corpus:
+
+```sh
+psql < server/tests/fixtures/previews_seed.sql      # 15 memes, one case each (the title says which)
+node server/parity/previews.mjs $NEXT $AXUM
+```
+
+It compares status, headers and body for every seeded case, for each way a
+request can name its origin, for the bodies the route refuses, and for the
+two rate limits (120 a minute for one client address, 1,200 for all). Restart
+both servers first, or wait a minute: the limit for all clients counts every
+request either server has seen.
+
+Which content a meme may show is decided by the ported rights policy. That
+part is compared case by case in `cargo test`:
+`preview-fixture.mjs` runs the real `resolveMemeDelivery` over 914 generated
+cases and writes `server/tests/fixtures/preview_delivery.json`.
+`server/tests/fixtures/previews.json` is Next's answer for the fifteen seeded
+memes:
+
+```sh
+ids=$(seq -f '"a3000000-0000-4000-8000-0000000000%02g"' -s, 1 15)
+curl -s -X POST $NEXT/api/explore/previews -H 'sec-fetch-site: same-origin' \
+  -d "{\"ids\":[$ids]}" > server/tests/fixtures/previews.json
+```
+
 `/robots.txt` is rendered by `next build`; Axum renders it at startup. They
 match when Axum runs with the `NEXT_PUBLIC_SITE_URL` of the Next build.
 `server/tests/fixtures/robots.txt` is the body of a Next built with
 `NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001`.
+
+## Meme cards, quiz, views and analytics events
+
+These two scripts seed what they need through `docker exec` into the database
+container (`TEST_DB_CONTAINER`, default `memecatch-axum-test-pg`), so both
+servers must use that database. They replace the cards, the card owners and
+the approved memes: throwaway database only.
+
+```sh
+# Two signed-in users, minted by the app's own better-auth (repository root).
+# NODE_ENV=production names the cookie as the standalone Next reads it.
+for n in 1 2; do
+  DATABASE_URL=... BETTER_AUTH_SECRET=<the servers' secret> NODE_ENV=production \
+    node --import ./scripts/register-ts-paths.mjs server/tests/better_auth_cookie.mjs > user$n.json
+done
+
+export TEST_DB_CONTAINER=memecatch-axum-test-pg
+export PARITY_USER="$(cat user1.json)" PARITY_USER_2="$(cat user2.json)"
+node server/parity/cards-quiz.mjs $NEXT $AXUM
+node server/parity/tracking.mjs $NEXT $AXUM
+```
+
+Both servers need the same `MEMECATCH_SIGNING_SECRET` (without it Axum leaves
+the view and analytics routes to Next, and the comparison proves nothing), and
+Axum needs `NODE_ENV=production` to read the cookie the standalone Next reads.
+
+Build Next with a `NEXT_PUBLIC_SITE_URL` whose origin differs from
+`http://localhost:<port of Next>`, for example `http://127.0.0.1:<port>`.
+Next takes `http://localhost:<port>` for its own origin, and the scripts send
+both: the site origin is answered by Axum, the other one is handed to Next.
+
+What makes a write comparable when both servers share the database:
+
+- A claim is sent to one server and then to the other. The second answer
+  must be the first one's row. One card is claimed first through Next and
+  another first through Axum, and the two rows are compared.
+- A view is counted once per viewer and day. The same view sent to both
+  servers must add one row: two rows would mean two different viewer keys.
+- An analytics event is deduplicated by a key that contains the session. The
+  same events go to Next under one session and to Axum under another, and the
+  rows of the two sessions must be equal but for the session. The same event
+  under one session through both servers must leave one row.
+- The database counts events per session and minute for both servers
+  together. Sixty through one server make the other one's first event the
+  database's refusal (`retry-after: 60`).
+
+`tracking.mjs` uses new client addresses on each run. The requests without
+`X-Forwarded-For` share one bucket per server, so leave a minute between runs.

@@ -48,3 +48,89 @@ OPTIONS /api/csp-report
 POST /api/daily-quiz
 # Without a body this is the "no content type" case of csp-report.mjs.
 POST /api/csp-report
+# The text routes (routes/public.rs): feeds and llms exports. They render
+# rows, so seed the database first (README.md, "Text routes").
+/llms.txt
+/llms-full.txt
+/feed.xml
+/feed/updated.xml
+/en/llms.txt
+/en/llms-full.txt
+/ja/llms.txt
+/ja/llms-full.txt
+/zh/llms.txt
+/zh/llms-full.txt
+/zh-tw/llms.txt
+/zh-tw/llms-full.txt
+HEAD /llms.txt
+HEAD /llms-full.txt
+HEAD /feed.xml
+HEAD /feed/updated.xml
+HEAD /en/llms.txt
+HEAD /zh-tw/llms-full.txt
+/llms.txt?utm_source=x
+/feed.xml?format=atom
+/en/llms-full.txt?x=1
+# Their other methods are still Next's.
+POST /llms.txt
+OPTIONS /llms-full.txt
+PUT /feed.xml
+DELETE /feed/updated.xml
+POST /en/llms.txt
+OPTIONS /ja/llms-full.txt
+# Next's [locale] segment matches any prefix; only the four translated
+# locales are native, so these show what Next answers for the rest.
+/ko/llms.txt
+/fr/llms-full.txt
+/EN/llms.txt
+/%65n/llms.txt
+/en/llms.txt/
+/api/llms.txt
+/memes/llms.txt
+/zh-TW/llms-full.txt
+# POST /api/explore/previews is native (previews.mjs sends its bodies). With
+# no body and no origin both servers answer 403; its other methods are Next's.
+POST /api/explore/previews
+GET /api/explore/previews
+HEAD /api/explore/previews
+OPTIONS /api/explore/previews
+# Meme cards, quiz, view counter and analytics events (routes/cards.rs,
+# routes/public/quiz_api.rs, routes/tracking.rs). cards-quiz.mjs and
+# tracking.mjs cover them with bodies, sessions and seeded rows; these are the
+# requests that need none. /api/quiz without a set is random: with enough
+# approved memes its body shows as unstable, and cards-quiz.mjs compares it.
+/api/meme-cards
+HEAD /api/meme-cards
+/api/meme-cards?page=2&category=dance&query=%EB%B0%88
+/api/meme-cards?page=0
+/api/meme-cards?_rsc=abc
+/api/meme-cards/mc-0001
+HEAD /api/meme-cards/mc-0001
+/api/meme-cards/nope
+# Next decodes the id; Axum leaves an escaped one to it.
+/api/meme-cards/mc%2D0001
+/api/meme-cards/%ff
+/api/meme-cards/collection
+HEAD /api/meme-cards/collection
+/api/meme-cards/collection?cardIds=mc-0001
+/api/meme-cards/collection?cardIds=
+/api/quiz
+HEAD /api/quiz
+/api/quiz?mode=now
+/api/quiz?set=
+/api/quiz?mode=retro&set=abcdefgh,jkm2022k
+# Without a body or an Origin: refused by either server.
+POST /api/meme-cards/claim
+POST /api/analytics/events
+POST /api/memes/view
+# Their other methods are still Next's.
+POST /api/meme-cards
+OPTIONS /api/meme-cards
+DELETE /api/meme-cards/mc-0001
+POST /api/meme-cards/collection
+GET /api/meme-cards/claim
+POST /api/quiz
+GET /api/memes/view
+GET /api/analytics/events
+# Not ported: Next answers it.
+POST /api/memes/11111111-1111-4111-8111-111111111111/view

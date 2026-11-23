@@ -113,3 +113,28 @@ test("originals: each edition in the list opens its page", async ({ page }) => {
   await expect(page).toHaveURL(/\/originals\/edition\/five-minutes-to-go$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("퇴근 5분 전");
 });
+
+test.describe("an original edition", () => {
+  test.use({ permissions: ["clipboard-read", "clipboard-write"] });
+
+  test("copies its link, saves a captioned card, and links on to the next edition", async ({ page, baseURL }) => {
+    await open(page, "/originals/edition/monday-loading");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("월요일, 아직 로딩 중");
+    const status = page.getByRole("status").filter({ hasText: "PNG" });
+    await expect(status).toHaveText("한국어 원문 캡션과 출처가 포함된 PNG로 저장됩니다.");
+
+    await page.getByRole("button", { name: "작품 링크 복사" }).click();
+    await expect(page.getByRole("button", { name: "링크 복사됨" })).toBeVisible();
+    // The site's own address, whichever server answered.
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/originals\/edition\/monday-loading$/);
+
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "문구 포함 카드 저장" }).click();
+    expect((await download).suggestedFilename()).toBe("memecatch-monday-loading-meme-card.png");
+    await expect(page.getByRole("status").filter({ hasText: "밈 카드 PNG를 저장했어요." })).toBeVisible();
+
+    await expect(page.getByRole("link", { name: /그림만 저장/ })).toHaveAttribute("href", "/images/originals/monday-loading.png");
+    await page.getByRole("link", { name: /다음 오리지널/ }).click();
+    await expect(page).toHaveURL(/\/originals\/edition\/five-minutes-to-go$/);
+  });
+});

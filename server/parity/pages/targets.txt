@@ -91,3 +91,9 @@
 /originals?ref=menu 200 index native
 /originals/ 308
 /en/originals 404 proxied
+/originals/edition/monday-loading 200 index native
+/originals/edition/five-minutes-to-go 200 index native
+/originals/edition/late-night-meeting 200 index native
+/originals/edition/late-night-meeting?utm_source=x 200 index native
+/originals/edition/monday-loading/ 308
+/originals/edition/no-such-edition 200 noindex proxied

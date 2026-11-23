@@ -145,6 +145,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             get(documents::originals::page),
         )
         .add(
+            "page-original-edition",
+            "/originals/edition/{slug}",
+            get(documents::originals::edition),
+        )
+        .add(
             "page-missing-meme",
             "/missing-public-meme",
             get(documents::missing_public_meme),

@@ -98,6 +98,8 @@ pub struct Head {
     /// No share tags of the page's own: the layout's card
     /// (`SHARED_ROOT_METADATA` in app/_root/metadata.ts) with the site title.
     pub site_card: bool,
+    /// `openGraph.type: "article"` instead of `"website"`.
+    pub article: bool,
 }
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
@@ -177,7 +179,7 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
                 meta property="og:locale:alternate" content=(locale);
             }
         }
-        meta property="og:type" content="website";
+        meta property="og:type" content=(if head.article { "article" } else { "website" });
         meta name="twitter:card" content="summary_large_image";
         meta name="twitter:title" content=(head.title);
         @if let Some(description) = &head.description {

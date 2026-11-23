@@ -58,6 +58,7 @@ with no body.
 | `random-targets.mjs <next> <axum> <path> [draws]` | `/api/random-meme` and `/memes/random` answer with a random meme. It draws from each server and compares the two sets of targets, and the status, headers and body around the target. |
 | `csp-report.mjs <next> <axum>` | `POST /api/csp-report` with report bodies of every kind, and the 60-per-minute limit with each way the client address is derived. Status and headers. |
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state. For a throwaway database only: it deletes every approved meme. |
+| `directory-catalog.mjs` | Not a comparison of servers: the catalog of 3,562 titles (every short title of `data/` and generated edge cases) and the order the real `sortDirectory` gives it, run on the Node of the Next image, for `server/tests/directory_order.rs`; with `sql`, the same catalog as rows. |
 | `daily-quiz-fixture.mjs` | Not a comparison of servers: it runs the real `lib/quiz.ts` and `lib/daily-quiz.ts` under Node and writes the values `server/tests/daily_quiz_parity.rs` holds the Rust port to. |
 | `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
@@ -117,6 +118,27 @@ node server/parity/pages/pages.mjs $NEXT $AXUM --expect-proxied
 curl -s $NEXT/sitemap.xml > /tmp/sitemap.xml
 node server/parity/pages/pages.mjs $NEXT $AXUM /tmp/sitemap.xml --concurrency=8 --examples=3
 ```
+
+The list pages of batch B2 need more rows than `seed.sql`:
+
+```sh
+psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years
+node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of the /memes order fixture
+```
+
+`b2-seed.sql` dates four memes minutes before it runs, for this week's
+`/weekly`; seed again on another day. Three pages are ISR on Next
+(`/weekly`, `/slang`, `/collections/{slug}`): Next answers the first request
+with the copy it keeps next to the build (`.next/standalone/.next/server/app`,
+which clearing `.next/cache` does not touch) and regenerates it behind the
+answer. Before a comparison, restore that directory from `.next/server/app`
+and ask each of those pages until Next answers `x-nextjs-cache: HIT`.
+
+The empty and unreadable states are compared with the same targets as URLs
+(no expectations): `revoke select on public.memes from anon` for an
+unreadable catalog, every approved meme set to `pending` (with
+`session_replication_role = replica`, past the moderation trigger) for an
+empty one. Restart both servers each time.
 
 The targets argument takes `targets.txt` lines, a sitemap, or a file of URLs
 (one per line; only their path and query are used, and nothing is expected of
@@ -209,6 +231,8 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `account.spec.mjs` | Signed out: the sign-in link. Signed in as a user and as an operator: the account menu, its requests, focus, Escape, sign-out. Saving a meme signed out (the sign-in dialog, a modal) and signed in (stored, announced) |
 | `chat.spec.mjs` | The chat panel: open, ask, the streamed answer with references, Escape, the conversation kept and cleared; the errors. `/api/memes/chat` is answered by the scenario |
 | `visit.spec.mjs` | Where the visitor came from, the meme view count, the install prompt on an iPhone |
+| `documents.spec.mjs` | Batches B1 and B2: the frame (menu, chat, language switch) on each static document and list page, and the links of the guides, contact, originals |
+| `lists.spec.mjs` | Batch B2, on `pages/b2-seed.sql`: paging the directory; the meme card (opening it with its list as context, the still, the poster for a failed image, the TikTok and Instagram players with Escape, close, focus and an unplayable post); the weekly rails and `weekly_click`; the timeline's infinite scroll, `#decade-…`, tabs and `timeline_click`; the slang tabs in place and back. TikTok, Instagram, the YouTube stills and Google's tag are answered by the scenario |
 
 ### Adding a scenario for a component
 

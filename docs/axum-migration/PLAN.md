@@ -102,6 +102,9 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-offline`, `page-missing-meme` | `/offline`, `/missing-public-meme` | `GET`, `HEAD` | 페이지(B1). 앞은 서비스 워커의 오프라인 화면, 뒤는 없는 밈의 404 문서 |
 | `page-retired-products` | `/retired-products`, `/products/...`, `/go/products/...`(접두사 없이와 `/en`·`/ja`·`/zh`·`/zh-tw` 아래), `/admin/creator-products/...` | `GET`, `HEAD` | 페이지(B1). `proxy.ts`의 `retiredProductDecision`대로 410 문서·308·빈 404. 끝 슬래시, 파일 이름, `/en/products...`(`next.config.ts`의 리디렉션)는 Next로 넘긴다 |
 | `page-originals`, `page-original-edition` | `/originals`, `/originals/edition/{slug}` | `GET`, `HEAD` | 페이지(B2). 글은 `lib/editorial-originals.ts`를 `server/i18n/originals.json`으로 내보낸 것. 작품 이미지는 Next의 `/_next/image`를 그대로 쓴다. 없는 slug는 Next로 넘긴다(Next는 200·noindex로 답한다) |
+| `page-memes` | `/memes` | `GET`, `HEAD` | 페이지(B2). 사이트맵이 싣는 한국어 밈 전체를 가나다순(ICU4X `icu_collator` 2.4, 차이 B2-2)으로 100개씩. 목록은 프로세스에 5분 보관하고 `/about`의 문서 수도 같은 목록을 센다. `?page=1`, 쪽 번호가 아닌 값, 끝을 넘는 쪽, 목록을 못 읽은 경우는 Next로 넘긴다 |
+| `page-collections`, `page-collection` | `/collections`, `/collections/{slug}` | `GET`, `HEAD` | 페이지(B2). 모음은 `lib/collections.ts`를 `server/i18n/collections.json`으로 내보낸 것. 목록마다 프로세스에 5분 보관(최대 2 MB). 없는 slug와 읽기 실패는 Next로 넘긴다 |
+| `page-weekly`, `page-timeline`, `page-slang` | `/weekly`, `/timeline`, `/slang` | `GET`, `HEAD` | 페이지(B2). 주간 결산은 요청마다 읽고, 연표는 프로세스에 5분 보관한다. 읽기 실패는 Next처럼 빈 화면이다 |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -556,3 +559,23 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 | A1-2 | better-auth의 `originCheckMiddleware`는 `sign-out`에서도 쿼리의 `callbackURL`과 본문의 `redirectTo`·`errorCallbackURL`·`newUserCallbackURL`을 믿는 출처와 비교한다(쿠키가 없어도). 믿지 않는 값이면 403(`INVALID_CALLBACK_URL` 등), 문자열이 아니면 400이고 세션은 남는다. Rust는 이런 요청에 200을 내고 세션을 지웠다. 이제 쿼리 문자열이 있거나 이 키가 있는 요청은 Next가 답한다. 검사 자체는 옮기지 않았다. `auth-session.mjs`의 `sign-out` 절이 각 경우를 실제 Next와 비교한다 | 해결 |
 | A1-3 | `NODE_ENV`가 없을 때 쿠키 이름은 운영(`__Secure-`)으로, 제한기는 개발(꺼짐)로 읽었다. 이제 둘 다 같은 판정 하나(`NODE_ENV`가 `production`이거나 없음)를 따른다(`config.rs`). 운영 Next 빌드가 `NODE_ENV`를 `production`으로 박아 넣으므로 그 빌드와 같다. `NODE_ENV=development`·`test`이면 둘 다 꺼진다. 컴포즈는 `production`을 넘기므로 운영은 바뀌지 않는다 | 해결 |
 | A1-4 | **better-auth와 일부러 다르게 했다.** better-auth의 `signOut`은 세션 행을 지우다 DB 오류가 나면 기록("Failed to delete session from database")만 하고 쿠키를 지운 뒤 200 `{"success":true}`를 낸다. 실제 `lib/auth/server.ts`로 연결을 거부하는 DB에 대고 재 보니 5 ms에 200 success였고 행은 남았다. 그 토큰을 가진 누구나 세션을 계속 쓰고 연장할 수 있는데 사용자는 로그아웃됐다고 본다. Rust는 지우기가 풀 타임아웃(5초)으로 실패하면 한 번 더 시도한다(node-pg는 연결을 기다리므로 바쁜 풀에서는 결국 지운다). 그래도 못 지우면(DB가 연결을 거부, 10초 넘게 바쁜 풀, 그 밖의 DB 오류) 500 `{"message":"Failed to sign out","code":"FAILED_TO_SIGN_OUT"}`을 낸다. 쿠키 만료 줄은 성공 때와 같이 보내므로 이 기기에서는 로그아웃된다. 서버 기록 "sign-out could not delete the session"에 오류가 남는다(토큰은 없다). 호출하는 곳: Next의 로그아웃(계정 메뉴, `/my`)은 서버 액션이 `getAuth().api.signOut`을 프로세스 안에서 부르므로 이 경로를 HTTP로 부르지 않는다. HTTP로 부르는 곳은 Axum 화면의 계정 메뉴 스크립트(`server/ui`)뿐이고, 답의 상태를 보지 않고 로그인 표시를 지운 뒤 `/`로 간다. B0 `account.spec.mjs`의 "signing out when the server cannot end the session"이 행 삭제를 막은 채 Next와 Axum에서 같은 결과(쿠키 없음, `/`, 로그인 링크, 행은 남음)를 본다. `auth-session.mjs`는 이 차이(Next 200, Axum 500, 같은 쿠키 줄)를 확인한다 | 의도한 차이 |
+
+## B2: 목록·탐색 페이지
+
+화면 묶음 B2의 차이(`UI-PLAN.md` 5.3절). 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B2-1 | 목록 페이지의 데이터를 Axum은 5분 보관한다(밈 전체 목록·모음·연표). Next는 1시간~하루(ISR, `unstable_cache`) 보관하고 운영자 액션의 태그 무효화로 비운다. 편집 직후와 Next 캐시가 오래된 동안에는 두 서버의 목록이 다를 수 있다 | 수용 |
+| B2-2 | `/memes`의 가나다순은 Node의 `Intl.Collator("ko", { sensitivity: "base", numeric: true })` 대신 ICU4X `icu_collator` 2.4(한국어, 1차 강도, 숫자 정렬)다. 3,562개 제목(저장소의 실제 제목과 한글·자모·라틴 대소문자·악센트·전각 숫자·기호·이모지·공백 경계 사례)에서 Node 22.23.5·26의 ICU 78.3과 순서가 같다(`tests/directory_order.rs`). Next 이미지의 `node:22-bookworm-slim`이 ICU를 올리면 `parity/directory-catalog.mjs`로 픽스처를 다시 만들어야 한다. 동점의 짧은 id 비교는 바이트 순서로, `gen_short_id()`의 영소문자·숫자에서만 `localeCompare`와 같다 | 수용, Node 이미지를 올릴 때 픽스처 재생성 |
+| B2-3 | Next는 `/memes`의 `?page=1`(영구 리디렉션)과 잘못된 쪽(`notFound()`)을 스트리밍하는 중에 내므로 308·404가 아니라 200이다(리디렉션은 스크립트로, 404는 noindex 문서로). 목록을 못 읽으면 색인 가능한 200 오류 화면이다. Axum은 이 경우를 모두 Next에 넘겨 같은 답이 나간다. TypeScript 쪽에서 상태 코드를 바로잡을지 결정이 필요하다 | 미해결, TypeScript |
+| B2-4 | `MotionList`·`Reveal`의 등장 애니메이션(투명도·10px)은 옮기지 않았다. 카드와 절이 처음부터 보인다 | 수용 |
+| B2-5 | ISR 페이지(`/weekly`, `/slang`, `/collections/{slug}`)를 Next는 저장된 사본으로 먼저 답하고(첫 요청은 빌드 때 사본, `Cache-Control` 없음) 뒤에서 다시 만든다. Axum은 요청마다(목록은 5분 보관) 그린다. `Cache-Control`은 Next가 저장된 사본에 붙이는 값과 같다 | 수용 |
+| B2-6 | `/slang`의 탭과 `/timeline`의 나머지 연도는 Next에서 React 데이터로, Axum에서 `<template>`과 `ui/slang.js`·`ui/timeline.js`로 온다. 크롤러가 받는 글자·링크는 같다 | 수용 |
+| B2-7 | 밈 카드의 소유 그림은 `meme_contents.thumbnail_url`에서만 온다. TypeScript의 `card_art_url`은 `memes`에 그런 열이 없어 언제나 비어 있다 | 수용 |
+| B2-8 | 시드의 `manual_video_verified`는 검수 원장의 투영이라 트리거(`meme_contents_manual_video_projection_guard`)가 넣을 때 지운다. 검증 시드(`b2-seed.sql`)는 트리거를 끄고 값을 쓴다 | 수용, 시험 데이터만 |
+
+### B2에서 옮기지 않은 페이지
+
+`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`(9개)는 이번 작업에서 옮기지 않았다. `/news`는 본문 문구를 방문자의 언어로 브라우저에서 다시 그리므로(`PAGE_COPY` 19개 언어와 `localizeBrief`) 틀만 바꾸는 차이 67로는 같지 않다. `/global`은 `service_role`로 읽는 매체 권리 원장이 필요하다.
+

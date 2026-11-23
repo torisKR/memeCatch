@@ -243,16 +243,28 @@ Lighthouse(5절과 같은 조건, 3회 중앙값), `/guides/usage-signals`: Next
 
 Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차이는 `PLAN.md` 74~77(퇴역 상품 카드의 캐시 시간, 410 문서의 스타일시트 링크, 빌드 때 렌더한 문서의 연도, 옮겨 적은 마크업).
 
-### B2 목록·탐색 (진행 중)
+### 5.3 B2 목록·탐색 (진행 중)
 
-2026-11-24, 브랜치 `torisKR/axum-ui-b2`. 17개 중 2개를 옮겼다. 켠 페이지는 없다.
+2026-11-24, 브랜치 `torisKR/axum-ui-b2`. 17개 중 8개를 옮겼다. 켠 페이지는 없다. 목록의 밈 카드(`components/meme-card.tsx`)는 `server/src/pages/meme_card.rs` 하나로 모든 목록이 쓴다.
 
-| 페이지 | 경로 id | 다룬 URL 형태 | 결과 |
+| 페이지 | 경로 id | 다룬 URL 형태와 상태 | 결과 |
 | --- | --- | --- | --- |
-| `/originals` | `page-originals` | 그대로, 쿼리, 끝 슬래시, `/en/originals`(404) | 페이지 게이트 일치, 틀과 목록 링크 동작 시험 통과 |
-| `/originals/edition/{slug}` | `page-original-edition` | 세 편, 쿼리, 끝 슬래시, 없는 slug(Next의 200·noindex) | 페이지 게이트 일치, 링크 복사·카드 PNG 저장·그림 링크·다음 작품 동작 시험 통과(스크립트를 비우면 실패) |
+| `/originals` | `page-originals` | 그대로, 쿼리, 끝 슬래시, `/en/originals`(404) | 페이지 게이트 일치, 틀과 목록 링크 |
+| `/originals/edition/{slug}` | `page-original-edition` | 세 편, 쿼리, 끝 슬래시, 없는 slug(Next의 200·noindex) | 일치, 링크 복사·카드 PNG·그림 링크·다음 작품 |
+| `/memes` | `page-memes` | 1쪽, 쿼리, 2쪽, 퍼센트 인코딩한 쪽, 마지막 쪽(36), 끝을 넘는 쪽, `?page=1`, `0`·`02`·`abc`·빈 값·두 번(모두 Next의 200), 끝 슬래시, 빈 목록, 못 읽는 목록 | 일치. 쪽 넘기기·쪽 번호·밈 열기 |
+| `/collections` | `page-collections` | 그대로, 쿼리, 끝 슬래시, `/en/collections`(404) | 일치, 틀 |
+| `/collections/{slug}` | `page-collection` | 열두 모음, 카드 3장 미만 모음(소개만), 쿼리, 끝 슬래시, 없는 slug(404), 못 읽음(500) | 일치. 카드 열기(맥락 쿼리), 영상 정지 화면, 그림 실패 시 포스터, TikTok·Instagram 플레이어(Esc·닫기·초점·재생 불가), 검수 안 된 게시물엔 플레이어 없음 |
+| `/weekly` | `page-weekly` | 그대로, 쿼리, 끝 슬래시, `/en/weekly`(404), 못 읽음(빈 결산) | 일치. 두 줄·분포 막대·`weekly_click` |
+| `/timeline` | `page-timeline` | 그대로, 쿼리, 끝 슬래시, `/en/timeline`(404), 못 읽음(안내 문구) | 일치. 무한 스크롤(네 해씩), `#decade-…` 주소, 연대 탭(휴대폰), `timeline_click` |
+| `/slang` | `page-slang` | 그대로, `?era=2010s`·`risky`·모르는 값, 끝 슬래시, `/en/slang`(404), 못 읽음(준비 중) | 일치. 탭 제자리 전환·뒤로 가기·주소의 탭·표제어 |
 
-스크립트는 `ui/originals.js` 1,841 B(gzip)를 더해 `site.js`가 18,109 B(gzip)다. 남은 15개(`/collections`, `/collections/[slug]`, `/explore`, `/global`, `/meme-cards`, `/memes`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/slang`, `/studio`, `/timeline`, `/weekly`)는 손대지 않았다. `/memes`의 가나다 정렬은 `Intl.Collator("ko", { numeric: true, sensitivity: "base" })`라, Rust에서 같은 순서를 내려면 ICU 정렬기(의존성 추가)나 Postgres ICU 정렬 규칙(마이그레이션)이 필요하다. 결정이 필요하다.
+시드: `server/parity/pages/b2-seed.sql`(목록과 카드 그림 경우마다 24건, 연도 360건), `server/parity/directory-catalog.mjs sql`(정렬 픽스처의 3,562건). 모든 대상(357개 요청)이 켜면 일치하고 끄면(`AXUM_DISABLED_ROUTES`) 전부 Next 화면으로 일치한다. 목록을 못 읽는 상태에서는 B2 URL 123개 요청이 일치한다.
+
+**`/memes`의 가나다순은 ICU4X다.** `icu_collator` 2.4(한국어, 1차 강도, 숫자 정렬)로 정렬하고, 실제 `sortDirectory`가 Next 이미지의 Node(22.23.5, ICU 78.3)에서 3,562개 제목에 낸 순서와 같아야 한다(`server/tests/directory_order.rs`). 한 제목도 다르게 놓이지 않았다. 숫자 정렬을 끄면 536개, 강도를 3차로 올리면 14개가 어긋나 시험이 실패한다.
+
+스크립트(gzip): `ui/card.js` 1,001 B, `ui/timeline.js` 1,103 B, `ui/slang.js` 743 B, `ui/originals.js` 1,841 B. `site.js`는 모든 페이지가 한 파일을 받으므로 20,079 B이고, 예산 30 KB 안이다. `/memes`·`/collections`·`/weekly`는 카드 스크립트 말고 자기 스크립트가 없다.
+
+남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-8).
 
 ## 6. 확인하지 못한 것과 위험
 

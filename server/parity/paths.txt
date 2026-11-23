@@ -19,3 +19,8 @@ HEAD /
 # Methods the native /api/health route does not handle go to Next.
 POST /api/health
 OPTIONS /api/health
+# /api/media/signed with nothing valid to verify: 401 from either server.
+# Signed URLs expire, so those targets are generated: see storage-parity.sh.
+/api/media/signed
+/api/media/signed?key=uploads%2Fa.png&exp=1&sig=00
+POST /api/media/signed

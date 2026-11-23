@@ -530,6 +530,39 @@ tried to store, and `mpe-candidates-flow.mjs` runs the real
 `generateCandidateMatches` on the same rows with that one call caught.
 `mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.
 
+## Open Graph images
+
+`og.mjs` compares `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`
+(`src/routes/og.rs`) with the real Next. No database or seed is needed.
+For each image the status and every header but `content-length` must be
+equal, the PNGs the same size, and the pixels within `TOLERANCE` (mean
+channel difference at most 0.5, at most 0.05 % of channels more than 32
+apart, none more than 96): Next rasterizes Satori's SVG with libvips (sharp
+is installed beside Next), Axum the same geometry with resvg, and those two
+differ in anti-aliasing only. Each image case writes Next | Axum | the
+difference ×4 to `server/target/og-parity/`.
+
+```sh
+node server/parity/og.mjs $NEXT $AXUM [default] [quiz] [next-only]
+```
+
+Sections: `default` (the six locales, a query string, `HEAD`, the root
+card), `quiz` (every total from 1 to 10 with every grade band, mode and
+score digit; a query string; `HEAD`; nine malformed tokens, 404) and
+`next-only` (what Axum hands to Next: an unknown or percent-encoded locale,
+a trailing slash, `POST`, an encoded space before a token).
+
+`og-reference.mjs` renders the same cards through the app's own TSX with the
+Satori and sharp of `next/og` and keeps Satori's SVG; its PNG is the bytes
+Next serves. `tests/og_cards.rs` checks that the SVGs Axum writes paint the
+same pixels as those (`tests/fixtures/og/`). After a change to a card's TSX
+or font, write them again:
+
+```sh
+node server/parity/og-reference.mjs /tmp/og-ref default ko en ja zh zh-tw
+node server/parity/og-reference.mjs /tmp/og-ref quiz <token>...   # the names in tests/fixtures/og
+cp /tmp/og-ref/*.svg server/tests/fixtures/og/
+```
 ## The R4 routes
 
 ```sh

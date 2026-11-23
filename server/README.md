@@ -106,6 +106,7 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `unicode-classes.mjs` | Rewrites `src/routes/unicode_classes.rs`, two regex character classes as Node 22 decides them. Run with Node 22. |
 | `curated-search-catalog.mjs` | Rewrites `src/routes/search/curated.json` (the curated search cards) from the real `lib/curated-memes.ts`. |
 | `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
+| `og.mjs <next> <axum> [section...]` | `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`: headers, and pixels within a stated tolerance, with a side-by-side image per case; `og-reference.mjs` writes the Satori fixtures of `tests/og_cards.rs`. |
 | `auth-session.mjs <next> <axum> [section...]` | `GET /api/auth/get-session` and `POST /api/auth/sign-out`: every case, with sessions minted by the real better-auth, and the session row each leaves. Run once per `NODE_ENV`. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes (cron jobs, the retired product APIs, the Instagram video cache route), Next's cache through both servers, and the refusals of `/api/db/query`, which stays with Next. Needs two session cookies and `https-stub.mjs` running. |

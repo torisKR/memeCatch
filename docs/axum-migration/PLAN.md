@@ -555,3 +555,58 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 | A1-2 | better-auth의 `originCheckMiddleware`는 `sign-out`에서도 쿼리의 `callbackURL`과 본문의 `redirectTo`·`errorCallbackURL`·`newUserCallbackURL`을 믿는 출처와 비교한다(쿠키가 없어도). 믿지 않는 값이면 403(`INVALID_CALLBACK_URL` 등), 문자열이 아니면 400이고 세션은 남는다. Rust는 이런 요청에 200을 내고 세션을 지웠다. 이제 쿼리 문자열이 있거나 이 키가 있는 요청은 Next가 답한다. 검사 자체는 옮기지 않았다. `auth-session.mjs`의 `sign-out` 절이 각 경우를 실제 Next와 비교한다 | 해결 |
 | A1-3 | `NODE_ENV`가 없을 때 쿠키 이름은 운영(`__Secure-`)으로, 제한기는 개발(꺼짐)로 읽었다. 이제 둘 다 같은 판정 하나(`NODE_ENV`가 `production`이거나 없음)를 따른다(`config.rs`). 운영 Next 빌드가 `NODE_ENV`를 `production`으로 박아 넣으므로 그 빌드와 같다. `NODE_ENV=development`·`test`이면 둘 다 꺼진다. 컴포즈는 `production`을 넘기므로 운영은 바뀌지 않는다 | 해결 |
 | A1-4 | **better-auth와 일부러 다르게 했다.** better-auth의 `signOut`은 세션 행을 지우다 DB 오류가 나면 기록("Failed to delete session from database")만 하고 쿠키를 지운 뒤 200 `{"success":true}`를 낸다. 실제 `lib/auth/server.ts`로 연결을 거부하는 DB에 대고 재 보니 5 ms에 200 success였고 행은 남았다. 그 토큰을 가진 누구나 세션을 계속 쓰고 연장할 수 있는데 사용자는 로그아웃됐다고 본다. Rust는 지우기가 풀 타임아웃(5초)으로 실패하면 한 번 더 시도한다(node-pg는 연결을 기다리므로 바쁜 풀에서는 결국 지운다). 그래도 못 지우면(DB가 연결을 거부, 10초 넘게 바쁜 풀, 그 밖의 DB 오류) 500 `{"message":"Failed to sign out","code":"FAILED_TO_SIGN_OUT"}`을 낸다. 쿠키 만료 줄은 성공 때와 같이 보내므로 이 기기에서는 로그아웃된다. 서버 기록 "sign-out could not delete the session"에 오류가 남는다(토큰은 없다). 호출하는 곳: Next의 로그아웃(계정 메뉴, `/my`)은 서버 액션이 `getAuth().api.signOut`을 프로세스 안에서 부르므로 이 경로를 HTTP로 부르지 않는다. HTTP로 부르는 곳은 Axum 화면의 계정 메뉴 스크립트(`server/ui`)뿐이고, 답의 상태를 보지 않고 로그인 표시를 지운 뒤 `/`로 간다. B0 `account.spec.mjs`의 "signing out when the server cannot end the session"이 행 삭제를 막은 채 Next와 Axum에서 같은 결과(쿠키 없음, `/`, 로그인 링크, 행은 남음)를 본다. `auth-session.mjs`는 이 차이(Next 200, Axum 500, 같은 쿠키 줄)를 확인한다 | 의도한 차이 |
+
+## 13. 단계 3 일부: R7 (Open Graph 이미지)
+
+브랜치 `torisKR/axum-routes-r7`. `next/og`를 쓰는 경로를 모두 찾았다: 기본 카드 `app/og/[locale]/route.ts`, 루트 `app/opengraph-image.tsx`, 퀴즈 결과 `app/og/quiz/[token]/route.ts`, 밈 공유 카드 둘(`app/(default)/memes/[key]/opengraph-image-k2cx9c/route.ts`, `app/[locale]/memes/[key]/opengraph-image/route.ts`), 카드 내보내기 `app/(default)/memes/[key]/export/route.ts`. 앞의 셋을 옮겼다(`server/src/og/`, `server/src/routes/og.rs`). 이 절의 차이는 `R7-n`으로 적는다.
+
+| Route id | 경로 | 메서드 | 비고 |
+| --- | --- | --- | --- |
+| `og-default` | `/og/{ko,en,ja,zh,zh-tw,ar}` | `GET`, `HEAD` | Next가 빌드 때 미리 그린 카드. Axum은 프로세스마다 처음 요청에 한 번 그려 둔다. `ar`은 커밋된 PNG 그대로. 다른 세그먼트(`/og/xx`는 Next가 한 번 그려 두는 404), `%`가 든 경로, 다른 메서드는 Next가 답한다 |
+| `opengraph-image` | `/opengraph-image` | `GET`, `HEAD` | 한국어 기본 카드와 같은 그림, `Cache-Control`만 다르다 |
+| `og-quiz` | `/og/quiz/{token}` | `GET`, `HEAD` | 토큰만으로 그린다(DB 없음). 틀린 토큰은 404 `Not found`. `%`가 든 토큰(Next가 풀고 `trim`한다)과 다른 메서드는 Next가 답한다 |
+
+### 어떻게 같게 그리나
+
+Next(Satori 0.25 + sharp)는 레이아웃을 SVG로 쓰고 글자를 모두 글리프 외곽선 경로로 바꾼 뒤, sharp가 설치되어 있으므로(Next의 선택 의존성, standalone에도 들어간다) resvg가 아니라 libvips(librsvg)로 PNG를 만든다. Axum은 같은 SVG 기하를 직접 만들고 resvg 0.50으로 그린다.
+
+- 글꼴은 앱의 파일 그대로(`assets/og-fonts`를 `server/assets/og`에 복사, 서버 이미지가 `server/`만 받기 때문. `tests/og_cards.rs`가 바이트가 같은지 본다).
+- 글자 배치는 Satori가 쓰는 opentype.js를 따랐다(`server/src/og/font.rs`, `text.rs`): `hhea` 어센더, GPOS 커닝은 기본 스크립트의 `kern` 기능 중 타입 2 조회만(확장 조회는 opentype.js처럼 건너뛴다. 그래서 영어 카드에는 커닝이 없다), 줄 폭은 글자소마다 따로 잰 폭의 합의 올림, 글리프 경로는 공백마다 끊고 그 앞까지의 잰 폭에서 시작, 좌표는 `toFixed(1)`. 상자 배치는 Yoga의 반올림(반은 올림)을 따랐다.
+- 확인: `server/tests/og_cards.rs`가 기본 카드 5개와 퀴즈 카드 13개를 Satori가 낸 SVG(`server/tests/fixtures/og/`, `server/parity/og-reference.mjs`가 앱의 TSX로 만든다)와 **같은 래스터라이저로 그려 픽셀이 하나도 다르지 않음**을 본다. 개발 중에는 퀴즈 토큰 50개(총문항 1~10, 모든 등급·모드·점수 자릿수)도 모두 같았다.
+- 실제 Next와 비교: `server/parity/og.mjs`. 이미지마다 상태·헤더(`content-length` 빼고)와 크기가 같고, 픽셀은 허용 오차 안(채널 차이 평균 ≤ 0.5, 32 넘게 다른 채널 ≤ 0.05 %, 최대 ≤ 96)이어야 한다. 결과 79/79, 이미지 60장 중 가장 나쁜 값은 최대 67, 평균 0.303, 32 초과 0.0072 %다. 같은 SVG를 두 래스터라이저로 그렸을 때의 차이와 같다(가장자리 안티에일리어싱과 퀴즈 배경 그러데이션의 띠).
+
+### Next에 남긴 경로
+
+| 경로 | 이유 |
+| --- | --- |
+| `/memes/{key}/opengraph-image-k2cx9c`, `/{locale}/memes/{key}/opengraph-image` | 대표 사진이 있으면 저장소에서 읽어 앱의 JPEG·PNG 디코더로 풀고 `object-fit: cover`로 채워 그린다. 이미지 리샘플링은 래스터라이저마다 달라 사진 픽셀의 허용 오차를 장담할 수 없고, 1 MB를 넘으면 앱의 JPEG 인코더로 다시 줄인다. 제목은 자유 문자열이라 글자마다 글꼴(한·일·간·번 OTF 4개와 이모지 13개, 21 MB)을 고르고, 어느 글꼴에도 없는 글자는 Satori가 그 자리에서 Google Fonts·twemoji를 내려받는다(외부 호출). 문서 조회(`resolveKoreanMemeDocument`, 번역 판정, 검토된 매체)도 함께 옮겨야 한다. 별도 배치(R7b)로 할 일이다 |
+| `/memes/{key}/export` | 요청 때 jsDelivr에서 Pretendard를 내려받고(실패하면 Satori 기본 글꼴과 위의 동적 글꼴 내려받기), 제목·요약이 여러 줄로 접힌다(Satori의 `linebreak`(UAX #14)와 `Intl.Segmenter`). 로그인과 `reserve_meme_export` 쿼터가 앞선다 |
+
+### Next와 남은 차이
+
+| # | 차이 | 판정 |
+| --- | --- | --- |
+| R7-1 | 래스터라이저가 다르다(resvg ↔ libvips). 같은 SVG에서 가장자리 안티에일리어싱과 그러데이션 띠만 다르다(위 수치). PNG 인코더도 달라 바이트와 `Content-Length`가 다르다 | 수용 |
+| R7-2 | 미리 그린 카드를 Next는 빌드 때, Axum은 프로세스가 처음 요청받을 때 그린다. 첫 요청만 수십 ms 늦다. `x-nextjs-cache: HIT`는 늘 붙인다(`/robots.txt`와 같다) | 수용 |
+| R7-3 | 그리기는 한 번에 둘까지다(`src/og/mod.rs`의 `MAX_RENDERS`). 더 오면 기다린다. Next에는 제한이 없다 | 수용 |
+| R7-4 | 그리기가 실패하면 Axum은 그 요청을 Next에 넘긴다. Next라면 500이다 | 수용 |
+| R7-5 | 운영의 Next는 리눅스용 sharp로 그린다. 픽셀 비교는 macOS의 Next와 리눅스 Next 이미지(`docker build .`) 둘 다와 했고 결과가 같았다(72/72, 최대 67, 평균 0.303) | 확인됨 |
+
+### 그리는 비용
+
+각 서버 이미지를 운영 컴포즈의 제한으로 띄워 쟀다(`docker run --memory --cpus`, 메모리는 컨테이너 cgroup의 `memory.current`·`memory.peak`). 퀴즈 카드는 매번 그리고, 기본 카드는 미리 그려 둔 것을 낸다.
+
+| | Axum (256 MB, 0.35 CPU) | Next (2816 MB, 0.75 CPU) | Next를 Axum 제한으로 (256 MB, 0.35 CPU) |
+| --- | --- | --- | --- |
+| 시작 직후 메모리 | 15 MB | 171 MB | 96 MB |
+| 첫 `/og/ko` | 12 ms (이때 그린다) | 14 ms | 14 ms |
+| 퀴즈 카드 20장 하나씩 | 중앙값 83 ms, 최대 89 ms | 중앙값 44 ms, 최대 424 ms | 중앙값 107 ms, 최대 1.1 s |
+| 퀴즈 카드 30장 동시 | 2.8 s, 모두 200 | 1.6 s, 모두 200 | 4.7 s, 모두 200 |
+| 그동안 `/robots.txt` | 최대 90 ms | 최대 1.27 s | 최대 4.3 s |
+| 최대 메모리 | 33 MB | 400 MB | 256 MB(제한에 닿음) |
+
+Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3) 이미지 요청이 몰려도 다른 요청이 막히지 않고 메모리가 늘지 않는다.
+
+
+| 1 | `/og/en` 같은 영어·일본어·중국어 카드에도 `Content-Language: ko`가 붙는다. `proxy.ts`가 `/og/*`를 문서 경로로 보지 않아 기본값 `ko`를 쓴다 | `proxy.ts` `documentLocaleFromPathname` |
+| 2 | `POST /og/{locale}`도 미리 그린 카드를 200으로 낸다(Next가 정적 경로를 메서드와 상관없이 낸다). Axum은 `POST`를 Next에 넘기므로 결과는 같다 | Next |

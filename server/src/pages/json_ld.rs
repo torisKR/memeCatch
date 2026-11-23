@@ -352,6 +352,40 @@ pub fn collection_page(
     script(&Json::Object(fields))
 }
 
+/// The `DefinedTermSet` of /slang: name, summary and path of each term.
+pub fn slang_term_set(site: &Site, terms: &[(String, String, String)]) -> Markup {
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("DefinedTermSet")),
+        ("@id", text(site.absolute("/slang#termset"))),
+        ("name", text("줄임말·유행어 사전")),
+        (
+            "description",
+            text(
+                "1990년대부터 지금까지, 연대별 한국 줄임말·유행어의 뜻과 사용 안전도를 정리한 용어집.",
+            ),
+        ),
+        ("url", text(site.absolute("/slang"))),
+        ("inLanguage", text("ko")),
+        (
+            "hasDefinedTerm",
+            Json::List(
+                terms
+                    .iter()
+                    .map(|(name, description, path)| {
+                        Json::Object(vec![
+                            ("@type", text("DefinedTerm")),
+                            ("name", text(name.as_str())),
+                            ("description", text(description.as_str())),
+                            ("url", text(site.absolute(path))),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+    ]))
+}
+
 /// `isPartOf` of the list pages.
 fn website(site: &Site) -> Json {
     Json::Object(vec![

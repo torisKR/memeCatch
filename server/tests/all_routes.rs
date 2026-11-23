@@ -19,7 +19,7 @@ use memecatch_server::{AppState, build_app};
 // Every page route id (`PAGE_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -83,6 +83,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-collection", "GET", "/collections/latest"),
         ("page-weekly", "GET", "/weekly"),
         ("page-timeline", "GET", "/timeline"),
+        ("page-slang", "GET", "/slang"),
         (
             "page-original-edition",
             "GET",

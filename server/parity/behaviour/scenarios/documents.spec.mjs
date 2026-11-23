@@ -17,6 +17,7 @@ const PAGES = [
   ["/collections/challenge", "챌린지 모음"],
   ["/weekly", /^\d{4}년 \d{1,2}월 \d주차 밈 결산$/],
   ["/timeline", "한국 밈 연표"],
+  ["/slang", "줄임말·유행어 사전"],
 ];
 
 for (const [path, heading] of PAGES) {

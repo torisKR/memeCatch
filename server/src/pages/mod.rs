@@ -27,6 +27,7 @@ pub mod meme_card;
 pub mod meme_detail;
 pub mod not_found;
 pub mod retired;
+pub mod slang;
 pub mod timeline;
 pub mod weekly;
 
@@ -137,6 +138,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-collections", "/collections", get(collections::index))
         .add("page-weekly", "/weekly", get(weekly::page))
         .add("page-timeline", "/timeline", get(timeline::page))
+        .add("page-slang", "/slang", get(slang::page))
         .add(
             "page-collection",
             "/collections/{slug}",

@@ -197,6 +197,12 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-timeline-card",
   "data-year",
   "data-timeline-sentinel",
+  // The slang dictionary (ui/slang.js).
+  "data-slang",
+  "data-tab-current",
+  "data-tab-idle",
+  "data-era-tab",
+  "data-era",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).

@@ -151,3 +151,11 @@
 /timeline?utm_source=x 200 index native
 /timeline/ 308
 /en/timeline 404 proxied
+
+# Batch B2: the slang dictionary (ISR on Next; every panel in the document).
+/slang 200 index native
+/slang?era=2010s 200 index native
+/slang?era=risky 200 index native
+/slang?era=nope&utm_source=x 200 index native
+/slang/ 308
+/en/slang 404 proxied

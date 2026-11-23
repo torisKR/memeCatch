@@ -246,3 +246,49 @@ test.describe("the timeline", () => {
     expect(events[0][1].meme_id).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
+
+// The slang dictionary (components/slang-dictionary.tsx): five panels, one shown.
+test.describe("the slang dictionary", () => {
+  const shownPanel = (page) => page.locator("main section:not([hidden]) h2");
+
+  test("switches panels in place, keeping the scroll, and back again", async ({ page }) => {
+    await open(page, "/slang");
+    const tabs = page.getByRole("navigation", { name: "연대 선택" }).getByRole("link");
+    await expect(tabs).toHaveText(["요즘2020~", "2010년대2010~19", "2000년대2000~09", "1990년대1990~99", "주의·위험"]);
+    await expect(shownPanel(page)).toHaveText(["요즘 유행어"]);
+    await expect(tabs.first()).toHaveAttribute("aria-current", "page");
+
+    await page.evaluate(() => window.scrollTo(0, 200));
+    const before = await page.evaluate(() => window.scrollY);
+    // A navigation would reset this marker; switching in place keeps it.
+    await page.evaluate(() => { window.__samePage = true; });
+    await tabs.filter({ hasText: "2000년대" }).click();
+    await expect(page).toHaveURL(/\/slang\?era=2000s$/);
+    await expect(shownPanel(page)).toHaveText(["2000년대 유행어"]);
+    await expect(tabs.filter({ hasText: "2000년대" })).toHaveAttribute("aria-current", "page");
+    await expect(tabs.first()).not.toHaveAttribute("aria-current", "page");
+    expect(await page.evaluate(() => window.__samePage)).toBe(true);
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+
+    await tabs.filter({ hasText: "주의·위험" }).click();
+    await expect(shownPanel(page)).toHaveText(["주의·위험 유행어"]);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/slang\?era=2000s$/);
+    await expect(shownPanel(page)).toHaveText(["2000년대 유행어"]);
+  });
+
+  test("opens on the panel its address names, and on the first for an unknown one", async ({ page }) => {
+    await open(page, "/slang?era=1990s");
+    await expect(shownPanel(page)).toHaveText(["1990년대 유행어"]);
+    await open(page, "/slang?era=nope");
+    await expect(shownPanel(page)).toHaveText(["요즘 유행어"]);
+  });
+
+  test("a term opens its meme", async ({ page }) => {
+    await open(page, "/slang");
+    const term = page.locator("main section:not([hidden]) li").first().getByRole("link");
+    const href = await term.getAttribute("href");
+    await term.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
+  });
+});

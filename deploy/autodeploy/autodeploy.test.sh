@@ -838,7 +838,7 @@ STUB
   [[ " ${env[*]} " == *" MEMECATCH_IMAGE=memecatch:rollback-a2 "* && " ${env[*]} " == *" MEMECATCH_AXUM=0 "* ]] || fail "Next-only rollback: ${env[*]}"
   [[ " ${env[*]} " != *MEMECATCH_SERVER_IMAGE* ]] || fail "a Next-only rollback named an Axum image"
 
-  # The Axum image is built for the commit with the Next image's site URL,
+  # The Axum image is built for the commit with the Next image's build args,
   # after the Next image and before the auxiliary ones; its failure stops there.
   cat >"$axum_stub/docker" <<'STUB'
 #!/usr/bin/env bash
@@ -847,12 +847,13 @@ echo "$*" >>"$stub_calls"
 exit 0
 STUB
   ROOT="$repo"
-  site_url="$(grep -m1 '^NEXT_PUBLIC_SITE_URL=' "$root/deploy/build.env")"
-  server_build="build -q -f Dockerfile.server --build-arg RELEASE_SHA=abc --build-arg $site_url -t memecatch-server:release-abc ."
+  mapfile -t next_args < <(build_args "$root/deploy/build.env")
+  [[ " ${next_args[*]} " == *" NEXT_PUBLIC_SITE_URL="*" NEXT_PUBLIC_GA_ID="* ]] || fail "build.env lacks the values Axum needs: ${next_args[*]}"
+  server_build="build -q -f Dockerfile.server --build-arg RELEASE_SHA=abc ${next_args[*]} -t memecatch-server:release-abc ."
   : >"$axum_calls"
   AXUM=1 build_images abc || fail "clean Axum build reported failure"
   [[ "$(sed -n 2p "$axum_calls")" == "$server_build" ]] || fail "server image build: $(sed -n 2p "$axum_calls")"
-  [[ "$(sed -n 1p "$axum_calls")" == "build -q -f Dockerfile "*"-t memecatch:release-abc ." && "$(sed -n 3p "$axum_calls")" == compose* ]] || fail "build order: $(cat "$axum_calls")"
+  [[ "$(sed -n 1p "$axum_calls")" == "build -q -f Dockerfile --build-arg RELEASE_SHA=abc ${next_args[*]} -t memecatch:release-abc ." && "$(sed -n 3p "$axum_calls")" == compose* ]] || fail "build order: $(cat "$axum_calls")"
   : >"$axum_calls"
   if AXUM=1 stub_fail_build=Dockerfile.server build_images abc; then fail "failed server build reported success"; fi
   if grep -q '^compose' "$axum_calls"; then fail "compose build ran after the server build failed"; fi

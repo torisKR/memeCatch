@@ -93,6 +93,11 @@ fi
 # Longer than Next's health check takes to give up (12 tries, 10 s apart).
 next_wait_seconds=180
 
+force_recreate=()
+if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" ]]; then
+  force_recreate=(--force-recreate)
+fi
+
 if [[ "${MEMECATCH_IMAGE:-}" == ghcr.io/* ]]; then
   docker compose -p memecatch "${files[@]}" pull "$next_service"
 fi
@@ -111,11 +116,11 @@ if [[ "$axum" == 1 ]]; then
   # whose image changed and starts none of them until all the old ones have
   # stopped. The worker can take most of its 10 s grace period to stop, and
   # with `app` in that batch the site has no listener for as long (measured:
-  # 10 s together, 0.3 s alone).
-  docker compose -p memecatch "${files[@]}" up -d --no-deps app
+  # 10 s together, 0.3 s alone). A manual redeploy recreates it here, once.
+  docker compose -p memecatch "${files[@]}" up -d --no-deps "${force_recreate[@]}" app
 fi
 docker compose -p memecatch "${files[@]}" up -d
-if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" ]]; then
+if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" && "$axum" != 1 ]]; then
   docker compose -p memecatch "${files[@]}" up -d --no-deps --force-recreate app
 fi
 if [[ "$axum" != 1 ]]; then

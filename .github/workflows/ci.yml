@@ -166,10 +166,16 @@ jobs:
           RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           # A Dockerfile.server that does not build must fail here, not on the
-          # VM. The agent reads the release from the image environment, and
-          # the site URL has to be the one the Next image is built with.
-          site_url="$(grep -m1 '^NEXT_PUBLIC_SITE_URL=' deploy/build.env)"
+          # VM. The agent builds it with the Next image's build args
+          # (deploy/build.env) and reads the release from the image
+          # environment; the values the server reads must arrive there.
+          args=()
+          while IFS='=' read -r key value; do
+            [[ -z "$key" || "$key" == \#* ]] || args+=(--build-arg "${key}=${value}")
+          done <deploy/build.env
           docker build -f Dockerfile.server -t memecatch-server:ci \
-            --build-arg RELEASE_SHA="${RELEASE_SHA}" --build-arg "${site_url}" .
+            --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
           [ "$(docker run --rm memecatch-server:ci printenv RELEASE_SHA)" = "${RELEASE_SHA}" ]
-          [ "NEXT_PUBLIC_SITE_URL=$(docker run --rm memecatch-server:ci printenv NEXT_PUBLIC_SITE_URL)" = "${site_url}" ]
+          for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT; do
+            [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
+          done

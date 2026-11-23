@@ -26,13 +26,18 @@ ENV PORT=3000
 EXPOSE 3000
 USER memecatch
 CMD ["memecatch-server"]
-# The same two build args as Dockerfile, kept in the image environment the
-# same way. Next fixes its response headers from them at build time and the
-# server reads them at start, so both images of a release must be built with
-# the same values. The deploy agent also reads RELEASE_SHA from the image to
-# tell which release is running. They come last: a new commit that leaves
+# Build args of Dockerfile, kept in the image environment the same way. Next
+# fixes its response headers and the analytics tags of its pages from them at
+# build time, and the server reads them at start, so both images of a release
+# must be built with the same values (the deploy agent passes RELEASE_SHA and
+# deploy/build.env to both). The agent also reads RELEASE_SHA from the image
+# to tell which release is running. They come last: a new commit that leaves
 # server/ alone rebuilds nothing above.
 ARG RELEASE_SHA=
 ARG NEXT_PUBLIC_SITE_URL=https://catchmeme.com
+ARG NEXT_PUBLIC_ADSENSE_CLIENT=
+ARG NEXT_PUBLIC_GA_ID=
 ENV RELEASE_SHA=${RELEASE_SHA}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_ADSENSE_CLIENT=${NEXT_PUBLIC_ADSENSE_CLIENT}
+ENV NEXT_PUBLIC_GA_ID=${NEXT_PUBLIC_GA_ID}

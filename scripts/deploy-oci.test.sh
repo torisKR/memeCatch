@@ -117,6 +117,8 @@ if grep -qE '^(ps|rm) ' "$calls"; then echo 'Axum deploy looked for a container 
 # A manual redeploy recreates Next first, then the listener.
 deploy MEMECATCH_AXUM=1 DEPLOY_OCI_FORCE_RECREATE=1
 in_order "$axum_files up -d --no-deps --force-recreate --wait --wait-timeout 180 next" "$axum_files up -d --no-deps --force-recreate app" || { echo 'manual Axum redeploy did not recreate next before app' >&2; exit 1; }
+# ...and the listener only once: each recreate is a moment without one.
+[[ "$(grep -c -- '--force-recreate app' "$calls")" == 1 ]] || { echo "manual Axum redeploy recreated app more than once: $(cat "$calls")" >&2; exit 1; }
 # The health gate fails when either container is not healthy, even though the
 # health URL answers (the curl stub always does).
 for failing in test_app_health=unhealthy test_next_health=unhealthy test_next_health=starting test_app_health=; do

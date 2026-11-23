@@ -46,10 +46,11 @@ SERVER_CHECK_NAME=server
 # Free space, in MB, that Docker's data directory must have before the Axum
 # image is built. Postgres keeps its data on the same disk, and a full disk
 # stops it. Measured (docs/oci-setup.md, "Disk"): a build with nothing cached
-# writes 1.7 GB, all of which stays in the build cache, and the Next and worker
-# images of the same run write 1.9 GB before it starts. That is 3.6 GB, rounded
-# up. A later build reuses the cache and writes about 25 MB, but Docker can
-# drop the cache at any time, so every run is held to the cold figure.
+# writes 1.7 GB, all of which stays in the build cache, plus its 150 MB image,
+# and the Next and worker images of the same run write up to 1.9 GB before it
+# starts. That is 3.8 GB, rounded up. A later build reuses the cache and writes
+# about 40 MB, but Docker can drop the cache at any time, so every run is held
+# to the cold figure.
 # AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB replaces it (see server_build_min_free_mb).
 SERVER_BUILD_MIN_FREE_MB=4000
 # Set to 1 by main when MEMECATCH_AXUM=1; one reading decides the whole run.
@@ -265,16 +266,15 @@ build_args() {
   done <"$file"
 }
 
-# The Axum image for <sha>. Run from the checkout. It is built with the release
-# and the site URL of the Next image of the same commit (deploy/build.env):
-# Next fixes its response headers when it is built, Axum reads the same two
-# values from its image when it starts, and the routes Axum answers itself
-# must send the headers Next would.
+# The Axum image for <sha>, built with the same build args as the Next image
+# of the commit (RELEASE_SHA and deploy/build.env, as $2...). Run from the
+# checkout. Next fixes its release header, site URL and analytics IDs when it
+# is built; Axum reads the same values from its image when it starts, and the
+# routes and pages it answers itself must send what Next would.
 build_server_image() {
-  local sha="$1" site_url
-  site_url="$(grep -m1 '^NEXT_PUBLIC_SITE_URL=' deploy/build.env)" || return 1
-  nice -n 10 docker build -q -f Dockerfile.server \
-    --build-arg "RELEASE_SHA=${sha}" --build-arg "$site_url" \
+  local sha="$1"
+  shift
+  nice -n 10 docker build -q -f Dockerfile.server --build-arg "RELEASE_SHA=${sha}" "$@" \
     -t "memecatch-server:release-${sha}" . >/dev/null
 }
 
@@ -286,7 +286,7 @@ build_images() {
   ( cd "$ROOT" \
     && nice -n 10 docker build -q -f Dockerfile --build-arg "RELEASE_SHA=${sha}" "${args[@]}" \
       -t "memecatch:release-${sha}" . >/dev/null \
-    && { [[ -z "$AXUM" ]] || build_server_image "$sha"; } \
+    && { [[ -z "$AXUM" ]] || build_server_image "$sha" "${args[@]}"; } \
     && nice -n 10 docker compose -p memecatch -f docker-compose.yml build -q mpe-worker scheduler backup )
 }
 

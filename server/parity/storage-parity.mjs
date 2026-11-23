@@ -30,13 +30,13 @@ const STORAGE_ENV = [
 ];
 
 // The module reads process.env on every call.
-function useEnv(env) {
+function setEnv(env) {
   for (const name of STORAGE_ENV) delete process.env[name];
   Object.assign(process.env, env);
 }
 
 const realNow = Date.now;
-function useClock(now) {
+function setClock(now) {
   Date.now = now === undefined ? realNow : () => now;
 }
 
@@ -120,10 +120,10 @@ const SIGNED_KEYS = [
 ];
 
 async function fixture() {
-  useClock(NOW);
+  setClock(NOW);
 
   // Signed URLs for the key table.
-  useEnv({ ...SIGNING, ...SITE });
+  setEnv({ ...SIGNING, ...SITE });
   const urls = KEY_TABLE.map(([note, bucket, name]) => {
     let url;
     try {
@@ -135,7 +135,7 @@ async function fixture() {
   });
 
   // The requests the R2 backend makes, recorded in place of `fetch`.
-  useEnv({ ...SIGNING, ...R2 });
+  setEnv({ ...SIGNING, ...R2 });
   const recorded = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (request) => {
@@ -182,7 +182,7 @@ async function fixture() {
 
   // Which whole keys readSignedObject lets through to the backend.
   const emptyDir = mkdtempSync(path.join(tmpdir(), "storage-parity-"));
-  useEnv({ ...SIGNING, LOCAL_OBJECT_STORAGE_DIR: emptyDir });
+  setEnv({ ...SIGNING, LOCAL_OBJECT_STORAGE_DIR: emptyDir });
   const signedKeys = [];
   for (const key of SIGNED_KEYS) {
     const accepted = await readSignedObject(key).then(
@@ -198,15 +198,15 @@ async function fixture() {
   // agree or the fixture is not written.
   const verify = [];
   const check = (name, env, { key, exp, sig }, expected) => {
-    useEnv(env);
-    useClock(NOW);
+    setEnv(env);
+    setClock(NOW);
     const accepted = verifySignedObject(key, exp, sig);
     assert.equal(accepted, expected, name);
     verify.push({ name, env, key, exp, sig, accepted });
   };
   const mint = (env, expiresIn, at = NOW) => {
-    useEnv(env);
-    useClock(at);
+    setEnv(env);
+    setClock(at);
     return parts(signedObjectUrl("uploads", "2026/a.png", expiresIn));
   };
 
@@ -282,7 +282,7 @@ async function fixture() {
   // Signed over the text as sent, which is not what the module signs.
   check("exp signed as text, not as a number", SIGNING, { key, exp: `${E}.0`, sig: hmac(SIGNING, key, `${E}.0`) }, false);
 
-  useClock();
+  setClock();
   const body = JSON.stringify({ now: NOW, env: { ...SIGNING, ...SITE }, urls, r2, signedKeys, verify }, null, 2);
   // Escaped so invisible characters in the cases stay visible in the file.
   const ascii = body.replace(/[\u007f-￿]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
@@ -318,7 +318,7 @@ async function list(prefix) {
 
 async function seed(dir) {
   const env = liveEnv(dir);
-  useEnv(env);
+  setEnv(env);
   const bucket = objectStorage().from(BUCKET);
   const objects = [];
   for (const [name, bytes] of TS_OBJECTS) {
@@ -333,9 +333,9 @@ async function seed(dir) {
   const target = (url) => new URL(url).pathname + new URL(url).search;
   const query = (fields) => `/api/media/signed?${new URLSearchParams(fields)}`;
   const valid = parts(objects[0].url);
-  useClock(realNow() - 600_000);
+  setClock(realNow() - 600_000);
   const expired = signedObjectUrl(BUCKET, "ts/a.txt", 60);
-  useClock();
+  setClock();
   const exp = String(realNow() + LIVE_SECONDS * 1000);
   const signedRaw = (key) => query({ key, exp, sig: hmac(env, key, exp) });
   const targets = [
@@ -372,7 +372,7 @@ async function seed(dir) {
 
 async function check(dir) {
   const env = liveEnv(dir);
-  useEnv(env);
+  setEnv(env);
   const rust = JSON.parse(readFileSync(path.join(dir, "rust.json"), "utf8"));
   const bucket = objectStorage().from(BUCKET);
   let failed = 0;
@@ -403,9 +403,9 @@ async function check(dir) {
   }
   expect("verifySignedObject rejects the URL Rust minted already expired", accepts(rust.expiredUrl), false);
   expect("verifySignedObject rejects the URL Rust minted under a different secret", accepts(rust.otherSecretUrl), false);
-  useEnv({ ...env, OBJECT_SIGNING_SECRET: rust.otherSecret });
+  setEnv({ ...env, OBJECT_SIGNING_SECRET: rust.otherSecret });
   expect("  and accepts it under that secret", accepts(rust.otherSecretUrl), true);
-  useEnv(env);
+  setEnv(env);
 
   for (const [prefix, entries] of Object.entries(rust.lists)) {
     expect(`list(${JSON.stringify(prefix)}) equals what Rust listed`, await list(prefix), entries);

@@ -134,13 +134,13 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 `scripts/deploy-oci.sh`와 배포 에이전트가 `MEMECATCH_AXUM`을 읽는다. 켜고 끄는 방법, 측정값, 롤백은 `docs/oci-setup.md`의 "Axum in front of Next"에 있다. 운영 VM에는 접속하지 않았고, 아래는 이 저장소와 격리된 Docker 데몬(Docker 29.10.0, Compose 5.7.1)에서 확인한 것이다.
 
 - [x] `scripts/deploy-oci.sh`: 플래그가 켜지면 컴포즈 파일 목록에 `docker-compose.axum.yml`을 더하고, `next`를 먼저 올려 health를 기다린 뒤 `app`을 바꾸고, 두 컨테이너가 모두 healthy여야 게이트를 통과한다. 플래그가 꺼져 있으면 `DEPLOY_OCI_PRINT_PLAN=1` 출력이 이전 스크립트와 바이트 단위로 같고, 남아 있는 `next` 컨테이너만 지운다.
-- [x] 두 이미지의 값 일치: `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`은 두 Dockerfile의 빌드 인자이고 이미지 환경에 남는다. 에이전트가 `deploy/build.env`의 사이트 URL로 서버 이미지를 빌드하므로 `.env`의 낡은 값이 끼어들지 않는다.
-- [x] 리허설: 플래그 꺼짐(이전 에이전트가 이 변경을 담은 커밋을 배포) → 켜짐 → 켠 채 두 번째 커밋 → 꺼짐 → 다시 켜고 Next가 healthy가 되지 않는 커밋. 단계마다 패리티 하네스 34개 대상이 모두 일치했고, 끈 뒤 Next 컨테이너는 하나였고, 실패한 배포는 이전 이미지 쌍으로 돌아갔다.
-- [x] 사이트가 답하지 않는 시간(Caddy를 지난 `GET /`가 200이 아닌 시간): 새 커밋 배포가 지금(플래그 꺼짐)은 9.4초, 플래그를 켜면 0.6초. 지금의 9.4초는 Next 기동이 아니라 `docker compose up -d`가 `app`과 워커를 한 묶음으로 바꾸면서 워커가 멈출 때까지 `app`을 시작하지 않아서 생긴다. 플래그가 켜지면 스크립트가 `app`을 따로 먼저 바꾼다. 켜기·끄기(같은 커밋 재배포)는 각 0.4초.
+- [x] 두 이미지의 값 일치: `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`과 파일럿 페이지가 쓰는 `NEXT_PUBLIC_GA_ID`·`NEXT_PUBLIC_ADSENSE_CLIENT`는 두 Dockerfile의 빌드 인자이고 이미지 환경에 남는다. 에이전트가 Next 이미지와 똑같은 빌드 인자(`RELEASE_SHA`와 `deploy/build.env` 전체)로 서버 이미지를 빌드하므로 `.env`의 낡은 값이 끼어들지 않는다. CI `server` 작업이 같은 인자로 이미지를 빌드하고 네 값이 이미지 환경에 있는지 확인한다.
+- [x] 리허설(`origin/main` `bcaf5351e` 위에 이 브랜치): 플래그 꺼짐(이전 에이전트가 이 변경을 담은 커밋을 배포) → 켜짐 → 켠 채 두 번째 커밋 → 꺼짐 → 끈 채 세 번째 커밋 → 다시 켬 → Next가 healthy가 되지 않는 커밋(켠 채, 끈 채 각각). 플래그가 켜진 단계마다 패리티 하네스 104개 대상이 모두 일치했고, 끈 뒤 Next 컨테이너는 하나였고, 실패한 배포는 이전 이미지 쌍으로 돌아갔다. 여유가 4,000 MB에 못 미친 실행 하나는 디스크 확인이 실제로 거부했다(3,935 MB, 아무것도 바뀌지 않음).
+- [x] 사이트가 답하지 않는 시간(Caddy를 지난 `GET /`가 200이 아닌 시간): 새 커밋 배포가 지금(플래그 꺼짐)은 10.6초·4.2초, 플래그를 켜면 2.1초(`next`가 다시 뜨는 동안). 지금의 창은 Next 기동만이 아니라 `docker compose up -d`가 `app`과 워커를 한 묶음으로 바꾸면서 워커가 멈출 때까지 `app`을 시작하지 않아서 생긴다. 플래그가 켜지면 스크립트가 `next`를, 이어서 `app`을 따로 바꾼다. 켜기는 0초·0.2초, 끄기는 0.4초이고 롤백 직후처럼 워커 이미지도 바뀌면 지금의 경로 그대로 10.9초. Next가 healthy가 되지 않는 커밋은 켠 채 132초, 끈 채 144초 동안 답하지 않다가 롤백됐다.
 - [x] Compose 버전: VM은 v5.7.0이다. `!override`·`!reset`·`extends`는 v5.5.0에서 렌더링되고 v5.7.1에서 배포까지 됐다.
-- [x] `cpus`: 0.25는 DB를 쓰는 네이티브 경로에서 Next 혼자 버티는 요청률에 스로틀됐다(`/api/random-meme` 620 req/s에서 주기의 52%, `/api/health` 58%). 0.35에서는 스로틀되지 않아 0.35로 올렸다. 페이지 프록시는 600 req/s에서 0.05 CPU를 쓴다.
-- [x] 종료 시간: `docker stop`은 유휴·부하 중 모두 0.2초 안팎이다. 요청을 일부만 보낸 연결이 하나라도 있으면 유예 10초를 다 쓰고 강제 종료된다(종료 코드 137). 그동안 `app`에는 리스너가 없다. 줄이려면 `stop_grace_period`를 짧게 하거나 서버에 종료 기한을 둔다. 정하지 않았다.
-- [x] 서버 이미지 빌드: 캐시 없이 2 CPU에서 103초, 디스크 1,717 MB(전부 빌드 캐시로 남는다). `server/src`만 바뀌면 13초·24 MB, `server/`가 그대로면 1초·0 MB. 에이전트는 Docker 데이터 디렉터리의 여유가 `AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB`(기본 4000) 미만이면 아무것도 바꾸기 전에 배포를 거부한다.
+- [x] `cpus`: 0.25는 DB를 쓰는 네이티브 경로에서 Next 혼자 버티는 요청률에 스로틀됐다(`/api/random-meme` 607 req/s에서 주기의 25%·p99 73 ms, `/api/health` 45%). 0.30은 1~2%, 0.35는 0%여서 0.35로 올렸다. 페이지 프록시는 Next의 최대 요청률에서 0.05 CPU 이하를 쓰고 스로틀되지 않는다.
+- [x] 종료 시간: `docker stop`은 유휴 0.12초, 부하 중 0.17초다. 요청을 일부만 보낸 연결이 하나라도 있으면 유예 10초를 다 쓰고 강제 종료된다(10.2초, 종료 코드 137). 그동안 `app`에는 리스너가 없다. 줄이려면 `stop_grace_period`를 짧게 하거나 서버에 종료 기한을 둔다. 정하지 않았다.
+- [x] 서버 이미지 빌드: 캐시 없이 2 CPU에서 128초, 디스크 1,738 MB(전부 빌드 캐시로 남는다). `server/src`만 바뀌면 28초·39 MB, `server/`가 그대로면 1초·0 MB. 에이전트는 Docker 데이터 디렉터리의 여유가 `AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB`(기본 4000) 미만이면 아무것도 바꾸기 전에 배포를 거부한다.
 - [x] CI: `deploy` 작업이 `server` 작업을 기다리고, 플래그가 켜진 에이전트는 `check`와 `server` 실행을 모두 확인한다. `server` 작업이 `Dockerfile.server`를 빌드한다.
 
 ### 단계 5b에서 확인할 것
@@ -152,7 +152,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 - VM의 Compose v5.7.0으로 `docker compose -f docker-compose.yml -f docker-compose.own-caddy.yml -f docker-compose.axum.yml config`가 렌더링되는지.
 - 전환하는 동안의 메모리와 연결. 최대 1분쯤 이전 `app`(Next)과 새 `next`가 함께 돈다: 한도 2,816 MB 둘, 연결 풀 최대 10개 둘. 그 뒤로는 Next 10 + Axum 6 = 16에 워커·백업과 Postgres의 슈퍼유저 예약 3개를 더해 30 안에 드는지. 워커의 풀 크기는 확인하지 않았다.
 - `service_role`의 `user`·`session` 읽기 권한. Rust의 세션 조회는 `service_role`로 돈다(better-auth는 로그인 롤로 돈다). 이 권한은 마이그레이션이 아니라 Next가 실행 중에 부여한다(`lib/auth/server.ts`). 권한이 없으면 세션 쿠키가 있는 요청은 전부 503이 된다(열리지 않고 닫힌다). 다음에 마이그레이션이 허용될 때 권한을 마이그레이션으로 옮기는 것이 낫다.
-- 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. `MEMECATCH_SIGNING_SECRET`은 조회수·분석 이벤트 경로가 옮겨질 때를 위해 넘긴다. Next가 받는 나머지 변수는 넘기지 않으므로, 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다.
+- 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. 서버가 읽는 변수는 모두 받는다: `.env`에서 `DATABASE_URL`(비밀번호), `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `OBJECT_SIGNING_SECRET`, `R2_*` 넷, `LOCAL_OBJECT_STORAGE_DIR`, `ADSENSE_AUTO_ADS_ENABLED`, `AXUM_DB_POOL_MAX`·`AXUM_DISABLED_ROUTES`·`AXUM_PILOT_ROUTES`; 이미지에서 `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_ADSENSE_CLIENT`. `CSP_ENFORCE`·`CSP_REPORT_URI`는 일부러 넘기지 않는다(5절 발견 1). `docker-compose.yml`이 Next에만 주는 나머지(`BETTER_AUTH_URL`, OAuth 클라이언트 `GOOGLE_*`·`KAKAO_*`·`TIKTOK_*`, `AWS_*`·`BEDROCK_*`, `GA4_*`, `MEME_CHAT_*`·`MEME_EMBEDDING_*`·`MEME_SEMANTIC_SEARCH_ENABLED`, `META_*`·`THREADS_ACCESS_TOKEN`·`X_API_BEARER_TOKEN`·`YOUTUBE_API_KEY`·`RADAR_*`, `MCP_*`, `OPENAI_*`·`OPENROUTER_*`, `PLUS_DIGEST_*`, `AUTH_EMAIL_WEBHOOK`, `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`)는 아직 Next에 있는 경로가 읽는다. 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다.
 - R2. 리허설은 R2 값 없이 로컬 저장소로 돌았다. 운영은 값 네 개가 설정되어 있으므로 전환 뒤 `/api/media/signed`를 실제 서명 URL로 확인한다.
 - Cloudflare를 지난 릴리스 헤더. 에이전트는 `https://catchmeme.com/`의 `X-MemeCatch-Release-Sha`로 배포를 확인한다. 리허설은 Caddy까지만 지났다.
 - 종료 유예. 느린 업로드가 걸려 있는 동안 배포하면 `app` 교체가 최대 10초 걸린다(위 "종료 시간").
@@ -209,7 +209,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 43 | 세션을 조회하지 못하면 결과는 Next와 같지만(비로그인으로 처리) 최대 3초 뒤에 답한다. DB가 내려가 있을 때의 지연이다(5절 차이 7) | 수용 |
 | 44 | `claimedAt`은 UTC로 적힌다. DB 기본 타임존이 UTC가 아니면 Next와 오프셋 표기가 달라진다(7절 발견 4) | 수용, 지금은 영향 없음 |
 | 45 | 페이지와 개수 쿼리를 한 트랜잭션에서 읽는다. TypeScript는 쿼리마다 트랜잭션이 따로다. 그 사이에 행이 바뀌는 경우에만 결과가 다를 수 있다 | 수용 |
-| 46 | `MEMECATCH_SIGNING_SECRET`이 Axum에 없으면 조회·분석 경로는 Next가 답한다(7절 발견 1) | 수용, 단계 5의 요구사항 |
+| 46 | `MEMECATCH_SIGNING_SECRET`이 Axum에 없으면 조회·분석 경로는 Next가 답한다(7절 발견 1) | 수용. 단계 5a부터 `docker-compose.axum.yml`이 Next와 같은 값을 넘긴다 |
 | 47 | `mc_growth_session` MAC의 느슨한 base64 규칙은 Node 26에서 확인한 것을 옮겼다. 운영 이미지는 Node 22다. 규칙이 다르다면 표준이 아닌 표기로 고쳐 쓴 쿠키에서만 차이가 난다 | 수용 |
 | 48 | 무작위 퀴즈의 난수원이 `Math.random`이 아니라 `rand`다. 출제되는 밈의 집합과 응답 구조는 같다 | 수용 |
 | 49 | 분석 경로가 500으로 끝날 때 로그 내용이 다르다. 응답(본문 없는 500)은 같다 | 수용 |
@@ -254,7 +254,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 ### 계획을 바꾸는 발견
 
-1. **`docker-compose.axum.yml`은 `MEMECATCH_SIGNING_SECRET`을 Axum에 넘기지 않는다.** 그래서 지금 opt-in 컴포즈로 켜면 `memes-view`와 `analytics-events`는 등록되지 않고 Next가 계속 답한다(값 없이 직접 답하면 503이 되므로 등록하지 않게 했다). 단계 5에서 컴포즈의 `app` 환경에 Next와 같은 값을 추가해야 두 경로가 네이티브가 된다. 값이 같아야 `mc_growth_session` 쿠키와 조회·네트워크 해시가 두 서버 사이에서 통한다.
+1. **`docker-compose.axum.yml`은 `MEMECATCH_SIGNING_SECRET`을 Axum에 넘기지 않는다.** 그래서 지금 opt-in 컴포즈로 켜면 `memes-view`와 `analytics-events`는 등록되지 않고 Next가 계속 답한다(값 없이 직접 답하면 503이 되므로 등록하지 않게 했다). 단계 5에서 컴포즈의 `app` 환경에 Next와 같은 값을 추가해야 두 경로가 네이티브가 된다. 값이 같아야 `mc_growth_session` 쿠키와 조회·네트워크 해시가 두 서버 사이에서 통한다. 단계 5a에서 추가했다(`.env`의 같은 변수를 두 서비스가 읽는다).
 2. **Next의 `request.url`은 `Host` 헤더가 아니라 Next 자신의 리슨 주소로 만들어진다.** standalone 서버에서 `http://localhost:<PORT>`이고(127.0.0.1에 바인드해도 `localhost`), `X-Forwarded-Proto`에 `https`가 들어 있으면 `https://localhost:<PORT>`다. `hasTrustedOrigin`·`/api/memes/view`·`/api/analytics/events`는 `Origin`을 이 값과 `SITE_URL`의 origin 두 개와 비교한다. Axum은 앞의 값을 알 수 없으므로, `Origin`이 `SITE_URL`의 origin과 같으면 직접 처리하고 그 밖의 `Origin`은 Next에 넘겨 Next가 판정하게 했다. 운영에서 브라우저가 보내는 `Origin`은 사이트 origin뿐이라 실제 트래픽은 전부 네이티브로 처리된다. Next를 없애는 단계에서는 이 검사를 다시 정의해야 한다.
 3. **`record_meme_view` 함수는 어디에도 없다.** `/api/memes/[id]/view`는 죽은 경로다. 지우거나 함수를 만드는 것은 TypeScript 쪽 과제다.
 4. **sqlx는 세션 `TimeZone`을 UTC로 고정하고 node-pg는 DB 기본값을 쓴다.** 타임스탬프를 글자로 내보내는 경로(`claimedAt`)는 DB 기본 타임존이 UTC일 때만 Next와 같다. 컴포즈의 Postgres 이미지는 `Etc/UTC`다. 타임존을 바꾸면 Axum 쪽 표기만 `+00:00`으로 남는다.
@@ -283,5 +283,5 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 ### 단계 5에서 추가로 확인할 것
 
-- `docker-compose.axum.yml`의 `app` 환경에 `MEMECATCH_SIGNING_SECRET` 추가(발견 1). 그 전에는 `memes-view`·`analytics-events`가 Next에 남는다.
+- [x] `docker-compose.axum.yml`의 `app` 환경에 `MEMECATCH_SIGNING_SECRET` 추가(발견 1). 단계 5a에서 했다.
 - 메인 풀 크기. 한 요청이 쓰는 트랜잭션은 카탈로그가 최대 셋(페이지, 대조, 보충), 컬렉션이 셋(세션, 소유 행, 카드), 카드 받기가 넷(세션, 자격, 쓰기, 읽기)이다. 차례로 쓰므로 연결은 요청당 하나지만, `AXUM_DB_POOL_MAX`(기본 4)를 정할 때 조회·분석 이벤트의 빈도와 함께 봐야 한다.

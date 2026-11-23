@@ -177,7 +177,7 @@ Build-time values live in `deploy/build.env`. Every one ships in the HTML, so th
 
 With the flag off, the plan `DEPLOY_OCI_PRINT_PLAN=1` prints and the `docker compose` commands the script runs are the ones it ran before the flag existed. The one addition is a `docker ps` that looks for a `next` container to remove.
 
-Both images of a release carry the same `RELEASE_SHA` and `NEXT_PUBLIC_SITE_URL` in their image environment (build arguments; the site URL comes from `deploy/build.env`). Next fixes its response headers from them when it is built and Axum reads them when it starts, so `.env` cannot make the two disagree.
+Both images of a release are built with the same build arguments, `RELEASE_SHA` and every line of `deploy/build.env`, and keep `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_ADSENSE_CLIENT` in their image environment. Next fixes its response headers and the analytics tags of its pages from them when it is built and Axum reads them when it starts, so `.env` cannot make the two disagree. The Axum container gets from `.env` only the variables the server reads (`docker-compose.axum.yml` lists them); the others stay with Next, whose routes still use them.
 
 ### What a deploy does with the flag on
 
@@ -186,18 +186,20 @@ Both images of a release carry the same `RELEASE_SHA` and `NEXT_PUBLIC_SITE_URL`
 3. Everything else is brought up to date (`docker compose up -d`).
 4. The health gate passes when `/api/health` answers and both containers report healthy.
 
-Measured in a rehearsal on an isolated Docker 29.10 / Compose 5.7.1 daemon, with `GET /` through Caddy requested every 0.1 s (the site "does not answer" when that is not a 200):
+Measured in a rehearsal on an isolated Docker 29.10 / Compose 5.7.1 daemon, with `GET /` through Caddy requested every 0.1 s (the site "does not answer" when that is not a 200). Each new commit changed the Next, Axum and worker images.
 
 | Deploy | Site did not answer for |
 | --- | --- |
-| New commit, flag off (today) | 9.4 s |
-| New commit, flag on | 0.6 s, while `next` restarts |
-| Turn the flag on (redeploy of the running commit) | 0.4 s |
-| Turn the flag off (redeploy of the running commit) | 0.4 s |
-| New commit whose Next never becomes healthy, flag on | 132 s, until the rollback restored the previous pair |
-| The same broken commit, flag off (today) | 132 s |
+| New commit, flag off (today; two runs) | 10.6 s and 4.2 s |
+| New commit, flag on | 2.1 s, while `next` restarts |
+| Turn the flag on (redeploy of the running commit; two runs) | 0 s and 0.2 s |
+| Turn the flag off (redeploy of the running commit) | 0.4 s; 10.9 s right after a rollback, see below |
+| New commit whose Next never becomes healthy, flag on | 132.4 s, until the rollback restored the previous pair |
+| The same broken commit, flag off (today) | 144.1 s, until the rollback |
 
-Today's 9.4 s is not Next starting: a recreated Next answers again after about 1 s. A new commit also changes the worker image, `docker compose up -d` replaces `app` and the worker in one batch, and it starts neither until both old containers have stopped. The worker can take most of its 10 s grace period to stop. With the flag on the script replaces `app` on its own first (step 2), which takes 0.3 s. The flag-off path is left as it was.
+Today's window is not only Next starting: a recreated Next answers again after about 2 s. A new commit also changes the worker image, `docker compose up -d` replaces `app` and the worker in one batch, and it starts neither until both old containers have stopped. The worker can take most of its 10 s grace period to stop, so the window varies from run to run. With the flag on the script replaces `next` on its own while the old Axum keeps listening, then `app` on its own (0.3 s), so only Next's start remains. Shorter would need the old and new Next side by side, which one compose service with a fixed container name cannot do. The flag-off path is left as it was, so turning the flag off pays today's window whenever the worker image changes too: right after a rollback the worker runs its rollback tag, the off redeploy puts it back on `memecatch-worker:local`, and the site was down 10.9 s.
+
+A Next that never becomes healthy takes the site down with the flag on as without it. `next` is replaced before its health check can pass, and Axum then proxies to it, so pages get 502 until the health check gives up (12 tries, 10 s apart) and the agent restores the snapshot.
 
 While `next` restarts, Axum still answers the routes it serves itself; pages get a 502.
 
@@ -247,26 +249,26 @@ Where the default comes from, measured on an arm64 machine:
 
 | Build of `Dockerfile.server` | Time on 2 CPUs | Written to Docker's disk | Left behind |
 | --- | --- | --- | --- |
-| Nothing cached (base image, crates, dependencies) | 103 s | 1,717 MB | 1,717 MB of build cache |
-| A change under `server/src` | 13 s | 24 MB | 24 MB |
+| Nothing cached (base image, crates, dependencies) | 128 s | 1,738 MB | 1,738 MB of build cache |
+| A change under `server/src` | 28 s | 39 MB | 39 MB |
 | A new commit that leaves `server/` alone | 1 s | 0 MB | 0 MB |
 
-The first row is in a private BuildKit pinned to two cores. In the rehearsal daemon the same cold build added 1,599 MB, final image included (147 MB). A deploy of a new commit also writes about 1,850 MB for the Next and worker images before the Axum build starts, with the flag on or off. 1,717 + 1,850 is 3.6 GB, rounded up to 4,000 MB. The agent holds every deploy to that figure, because Docker's cache collection or a `docker builder prune` can make any build a cold one.
+The first row is in a private BuildKit pinned to two cores; the final image (150 MB) is not in it. In the rehearsal a deploy of a new commit with the flag off, which builds only the Next and worker images, wrote 1,845 and 1,922 MB; with the flag on, the Axum build reusing its cache, 1,896 MB. 1,738 + 1,922 + 150 is 3.8 GB, rounded up to 4,000 MB. The agent holds every deploy to that figure, because Docker's cache collection or a `docker builder prune` can make any build a cold one.
 
 `docker builder prune` frees build cache when the agent refuses. The next deploy is then a cold build of every image.
 
 ### Axum's CPU limit
 
-Every request passes through Axum. Measured with the containers' production limits (Next 0.75 CPU, Postgres 0.5), 16 connections, 15 s per run; "throttled" is the share of 100 ms scheduler periods in which the Axum container ran out of quota.
+Every request passes through Axum. Measured in the rehearsal with the containers' production limits (Next 0.75 CPU, Postgres 0.5), 16 connections, 15 s per run, the load generator outside the containers; "throttled" is the share of 100 ms scheduler periods in which the Axum container ran out of quota.
 
-| Request | Next alone | Axum at 0.25 | Axum at 0.35 |
-| --- | --- | --- | --- |
-| `/` (169 KB page, proxied) | 412 req/s, p99 207 ms | 574 req/s, p99 92 ms; uses 0.05 CPU, never throttled | not needed |
-| `/robots.txt` (native) | 2,140 req/s | at 2,140 req/s: p99 1.2 ms, 0.06 CPU, never throttled; 25,479 req/s flat out | not needed |
-| `/api/random-meme` (native, one query) | about 620 req/s, p99 87 to 102 ms | at 620 req/s: throttled 52 %, p99 44 ms | at 620 req/s: throttled 0 %, p99 11 ms |
-| `/api/health` (native, asks Postgres and Next) | 1,757 to 1,855 req/s | at Next's rate: throttled 58 % | at Next's rate: throttled 1 % |
+| Request | Next alone | Axum at 0.25 | Axum at 0.30 | Axum at 0.35 |
+| --- | --- | --- | --- | --- |
+| `/` (page, proxied) | 435 req/s, p99 141 ms | 493 req/s flat out, 0.05 CPU, never throttled | the same | the same |
+| `/robots.txt` (native) | 1,865 req/s | at that rate: p99 1.3 ms, 0.06 CPU, never throttled; 22,790 req/s flat out | the same | the same |
+| `/api/random-meme` (native, one query) | 607 req/s, p99 105 ms | at 607 req/s: throttled 25 %, p99 73 ms | throttled 1 %, p99 11 ms | throttled 0 %, p99 9 ms |
+| `/api/health` (native, asks Postgres and Next) | 1,772 req/s | throttled 45 %, 1,399 req/s | throttled 2 % | throttled 0 % |
 
-With the containers pinned to two cores, as the VM has, 0.25 was throttled in 9 % of periods on `/api/health` and 1 % on `/api/random-meme` at Next's rate, and 0.30 and above in none. 0.35 is the smallest limit that was not throttled at a load Next alone sustains in either setup, so `docker-compose.axum.yml` sets it. Next's own limit is what caps pages: its container was throttled in 99 % of periods at 412 req/s.
+Axum's `/api/health` never reaches Next's own rate because each request also asks Next; at 0.30 and above that, not the CPU limit, is what holds it back. With Next, Axum and Postgres pinned to two cores, as the VM has, Next alone reaches only 546 req/s on `/api/random-meme` and no limit was throttled there; `/api/health` was throttled in 2 % of periods at 0.25 and none above. 0.35 is the smallest limit that was not throttled at a load Next alone sustains in either setup, so `docker-compose.axum.yml` sets it. Next's own limit is what caps pages: its container was throttled in 100 % of periods on `/`.
 
 ## Backups
 

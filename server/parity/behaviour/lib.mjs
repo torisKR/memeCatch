@@ -143,6 +143,16 @@ export const test = base.extend({
     });
     await provide(context);
   },
+  // `BEHAVIOUR_CPU_THROTTLE=4` runs every page on a CPU four times slower,
+  // as Chromium's DevTools do: for timing defects that a fast machine hides.
+  page: async ({ page }, provide) => {
+    const rate = Number(process.env.BEHAVIOUR_CPU_THROTTLE);
+    if (rate > 1) {
+      const devtools = await page.context().newCDPSession(page);
+      await devtools.send("Emulation.setCPUThrottlingRate", { rate });
+    }
+    await provide(page);
+  },
   /** `"next"` or `"axum"`: the server this project drives. */
   server: [async ({}, provide, testInfo) => provide(testInfo.project.metadata.server), { scope: "test" }],
   /** `signIn("user" | "operator")` puts a fresh session cookie in the context. */

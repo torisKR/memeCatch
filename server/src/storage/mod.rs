@@ -188,6 +188,20 @@ impl Storage {
         })))
     }
 
+    /// The object `GET /api/media/{...path}` serves, streamed. On R2 the key
+    /// is `<bucket>/<name>` exactly as the route received it (`r2Get` does
+    /// not clean it); on the local backend it is cleaned, as `download` does.
+    pub async fn open_media_object(
+        &self,
+        bucket: &str,
+        name: &str,
+    ) -> Result<Option<ObjectStream>, StorageError> {
+        match &self.0.backend {
+            Backend::R2(r2) => r2.open(&format!("{bucket}/{name}")).await,
+            Backend::Local { root } => Ok(local::open(root, &object_key(bucket, name)?).await),
+        }
+    }
+
     /// Whether objects are kept in this server's own directory, not in R2.
     /// Next in another container has a directory of its own, so an object
     /// that is not found here may still exist there.

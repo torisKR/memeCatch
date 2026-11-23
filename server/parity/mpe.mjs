@@ -1,10 +1,15 @@
 #!/usr/bin/env node
-// The MPE API on Next and on Axum: GET /api/mpe/jobs/{id} and
-// POST /api/mpe/renders. These need a session and rows of their own, so they
-// have this script. See README.md in this directory.
+// The routes that need a session, on Next and on Axum: GET /api/mpe/jobs/{id},
+// POST /api/mpe/renders and GET /api/media/{...path}. They need sessions and
+// rows of their own, so they have this script. See README.md in this
+// directory.
 //
 //   node server/parity/mpe.mjs seed <state.json>            # prints SQL: psql it as the superuser
-//   node server/parity/mpe.mjs <next-base-url> <axum-base-url> <state.json>
+//   node server/parity/mpe.mjs <next-base-url> <axum-base-url> <state.json> [<object-dir>]
+//
+// <object-dir> is the LOCAL_OBJECT_STORAGE_DIR both servers were started with
+// (no R2_* value set). With it the script writes a few objects there and
+// compares GET /api/media/{...path}.
 //
 // state.json holds three sessions minted by the real better-auth
 // (server/tests/better_auth_cookie.mjs prints one):
@@ -15,12 +20,13 @@
 // and the database counts them again, for both servers together. The cases
 // below stay inside those limits when the script runs once in a minute on
 // freshly started servers; run it again after a minute, not sooner.
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import http from "node:http";
 
 const args = process.argv.slice(2);
 const seeding = args[0] === "seed";
-const [nextBase, axumBase, statePath] = seeding ? [null, null, args[1]] : args;
+const [nextBase, axumBase, statePath, objectDir] = seeding ? [null, null, args[1]] : args;
 if (!statePath) {
   console.error("usage: mpe.mjs seed <state.json> | mpe.mjs <next-base-url> <axum-base-url> <state.json>");
   process.exit(2);
@@ -28,6 +34,13 @@ if (!statePath) {
 const { user, other, operator } = JSON.parse(readFileSync(statePath, "utf8"));
 const ingestion = (n) => `c1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const job = (n) => `d1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+// Uploads for GET /api/media: the user's own, and two of the other user's
+// that a submission attaches (one approved, one still pending).
+const uploads = {
+  own: `meme-uploads/${user.userId}/e1000000-0000-4000-8000-000000000001.png`,
+  approved: `meme-uploads/${other.userId}/e1000000-0000-4000-8000-000000000002.jpg`,
+  pending: `meme-uploads/${other.userId}/e1000000-0000-4000-8000-000000000003.webp`,
+};
 
 if (seeding) {
   const artifact = (n) => `${user.userId}/${ingestion(n)}/renders/${"e".repeat(64)}.mp4`;
@@ -59,6 +72,11 @@ insert into public.processing_jobs
   (id, ingestion_id, job_type, status, attempts, processor_name, processor_version, input_hash, output_json, error_code, started_at, completed_at, created_at)
 values
 ${jobs.map(([n, of, type, status, attempts, output, error, times]) => `  ('${job(n)}', '${ingestion(of)}', '${type}', '${status}', ${attempts}, 'p', '1', repeat('${n}', 64), ${quote(output)}::jsonb, ${error}, ${times}, '2026-11-01T00:00:00.123456+00')`).join(",\n")};
+-- Submissions that attach two of the other user's uploads.
+delete from public.meme_submissions where name like 'axum-r3-%';
+insert into public.meme_submissions (submitter_id, name, attachment_path, status) values
+  ('${other.userId}', 'axum-r3-approved', '${uploads.approved}', 'approved'),
+  ('${other.userId}', 'axum-r3-pending', '${uploads.pending}', 'pending');
 -- The operator has used up this minute's (and the next ten minutes') renders.
 delete from public.api_rate_limits where user_id = '${operator.userId}';
 insert into public.api_rate_limits (user_id, action, window_start, request_count)
@@ -196,6 +214,45 @@ await compare("render, the sixth request of another user", post(other, "{}"), { 
 await compare("render, the database's limit reached", post(operator, render(ingestion(1), one)));
 await compare("render, GET", { path: "/api/mpe/renders", cookie: user.cookie });
 await compare("render, OPTIONS", { method: "OPTIONS", path: "/api/mpe/renders" });
+
+// --- GET /api/media/{...path}
+if (objectDir) {
+  const objects = {
+    ...Object.fromEntries(Object.values(uploads).map((key) => [key, `upload ${key}`])),
+    "meme-thumbs/tiktok/axum-r3.jpg": "thumbnail bytes",
+    "meme-thumbs/tiktok/AXUM-R3.PNG": "upper case extension",
+    "meme-card-art/axum-r3.webp": "card art bytes",
+    "meme-thumbs/tiktok/axum-r3.html": "<script>alert(1)</script>",
+    "other-bucket/axum-r3.png": "not an allowed prefix",
+  };
+  for (const [key, bytes] of Object.entries(objects)) {
+    mkdirSync(path.join(objectDir, path.dirname(key)), { recursive: true });
+    writeFileSync(path.join(objectDir, key), bytes);
+  }
+  const media = (key, who, method = "GET") => ({ method, path: `/api/media/${key}`, cookie: who?.cookie });
+  await compare("media, a thumbnail", media("meme-thumbs/tiktok/axum-r3.jpg"));
+  await compare("media, a thumbnail, HEAD", media("meme-thumbs/tiktok/axum-r3.jpg", null, "HEAD"));
+  await compare("media, an extension in upper case", media("meme-thumbs/tiktok/AXUM-R3.PNG"));
+  await compare("media, card art", media("meme-card-art/axum-r3.webp", user));
+  await compare("media, a thumbnail that is not stored", media("meme-thumbs/tiktok/missing.jpg"));
+  await compare("media, an extension that is not media", media("meme-thumbs/tiktok/axum-r3.html"));
+  await compare("media, no extension", media("meme-thumbs/tiktok/axum-r3"));
+  await compare("media, a prefix that is not served", media("other-bucket/axum-r3.png"));
+  await compare("media, two dots in the key", media("meme-thumbs/tiktok/axum..r3.jpg"));
+  await compare("media, an encoded segment", media("meme-thumbs/tiktok/axum%2Dr3.jpg"));
+  await compare("media, POST", media("meme-thumbs/tiktok/axum-r3.jpg", null, "POST"));
+  await compare("media, own upload", media(uploads.own, user));
+  await compare("media, own upload, signed out", media(uploads.own));
+  await compare("media, own upload, another user", media(uploads.own, other));
+  await compare("media, own upload, an operator", media(uploads.own, operator));
+  await compare("media, approved attachment, signed out", media(uploads.approved));
+  await compare("media, approved attachment, another user", media(uploads.approved, user));
+  await compare("media, pending attachment, its owner", media(uploads.pending, other));
+  await compare("media, pending attachment, another user", media(uploads.pending, user));
+  await compare("media, pending attachment, an operator", media(uploads.pending, operator));
+  await compare("media, an upload nobody stored, its owner", media(`meme-uploads/${user.userId}/missing.png`, user));
+  await compare("media, an upload path without a file", media(`meme-uploads/${user.userId}.png`, user));
+}
 
 console.log(failed ? `\n${failed} differences` : "\nall requests answered identically");
 process.exit(failed ? 1 : 0);

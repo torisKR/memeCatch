@@ -416,3 +416,44 @@ async fn the_signed_route_serves_an_object_from_r2_with_its_content_type() {
     assert_eq!(head.status, StatusCode::NOT_FOUND);
     assert_eq!(body, r#"{"message":"missing"}"#);
 }
+
+#[tokio::test]
+async fn the_media_route_streams_an_object_from_r2_and_answers_404_itself() {
+    let server = S3Server::start().await;
+    let storage = server.storage();
+    // The stored type is HTML; the route answers with the type of the extension.
+    storage
+        .put(
+            "meme-thumbs",
+            "tiktok/a.gif",
+            Bytes::from_static(b"gif bytes"),
+            Some("text/html"),
+        )
+        .await
+        .unwrap();
+    let mut state = AppState::new(server.config(&server.secret_key)).expect("app state");
+    state.storage = storage;
+    let app = common::spawn_router(build_app(state)).await;
+
+    let stored = common::get(app, "/api/media/meme-thumbs/tiktok/a.gif").await;
+    let missing = common::get(app, "/api/media/meme-thumbs/tiktok/no.gif").await;
+    let image = common::get(app, "/api/media/meme-card-art/no.png").await;
+
+    assert_eq!(stored.status, StatusCode::OK);
+    assert_eq!(stored.body, "gif bytes");
+    assert_eq!(stored.header("content-type"), Some("image/gif"));
+    assert_eq!(
+        stored.header("cache-control"),
+        Some("public, max-age=60, s-maxage=300")
+    );
+    assert_eq!(stored.header("x-content-type-options"), Some("nosniff"));
+    // With R2 both servers read one bucket, so a missing object is a 404 here.
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert_eq!(missing.body, "Not found");
+    assert_eq!(missing.header("cache-control"), None);
+    // next.config.ts gives an image path its static-asset cache header.
+    assert_eq!(
+        image.header("cache-control"),
+        Some("public, max-age=2592000, stale-while-revalidate=86400")
+    );
+}

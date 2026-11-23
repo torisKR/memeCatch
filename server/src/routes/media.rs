@@ -1,3 +1,4 @@
+//! `GET /api/media/{...path}` (`media/objects.rs`, route id `media-object`) and
 //! `GET /api/media/signed`, same contract as `app/api/media/signed/route.ts`:
 //! serves the object a signed URL names (`Storage::signed_object_url`).
 //!
@@ -5,6 +6,8 @@
 //! is not in this server's directory. Next in another container stores
 //! objects in a directory of its own, so only Next knows whether it exists.
 //! With R2 both servers read the same bucket and 404 is answered here.
+
+mod objects;
 
 use axum::Router;
 use axum::extract::{Query, Request, State};
@@ -19,6 +22,7 @@ use crate::{AppState, proxy};
 pub fn router(state: &AppState) -> Router<AppState> {
     Routes::new(state)
         .add("media-signed", "/api/media/signed", get(signed))
+        .add("media-object", "/api/media/{*path}", get(objects::object))
         .build()
 }
 

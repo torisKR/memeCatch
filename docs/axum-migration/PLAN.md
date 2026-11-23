@@ -97,6 +97,10 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-about` | `/about` | `GET`, `HEAD` | 페이지. `AXUM_PILOT_ROUTES`(쉼표로 나눈 페이지 경로 id, 모든 페이지의 스위치로 이 이름을 그대로 쓴다. 차이 73)에 적어야 켜진다(기본은 Next). `AXUM_DISABLED_ROUTES`가 이긴다. 페이지가 아닌 id나 없는 id를 적으면 시작을 거부한다. 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
 | `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 페이지, 위와 같다. "유래" 절까지만 그린다. 미디어·번역·자체 제작·편집 밈과 DB 조회 실패는 Next로 넘긴다 |
 | `page-assets` | `/_axum/{file}`, `/_axum/frame/{locale}` | `GET`, `HEAD` | 페이지의 스타일시트와 스크립트(파일 이름에 내용 해시가 들어간다), 그리고 언어 선택이 제자리에서 바꿀 때 받는 다른 언어의 틀(JSON, 프로세스에 1시간·최대 4 MB 보관) |
+| `page-contact`, `page-editorial`, `page-privacy`, `page-terms` | `/contact`, `/editorial`, `/privacy`, `/terms` | `GET`, `HEAD` | 페이지(B1), 위와 같다. Next가 빌드 때 만든 문서라 `Cache-Control: s-maxage=31536000`을 그대로 낸다 |
+| `page-guides`, `page-guide` | `/guides`, `/guides/{slug}` | `GET`, `HEAD` | 페이지(B1). 글은 `lib/guides.ts`를 `server/i18n/guides.json`으로 내보낸 것. 없는 slug는 Next로 넘긴다 |
+| `page-offline`, `page-missing-meme` | `/offline`, `/missing-public-meme` | `GET`, `HEAD` | 페이지(B1). 앞은 서비스 워커의 오프라인 화면, 뒤는 없는 밈의 404 문서 |
+| `page-retired-products` | `/retired-products`, `/products/...`, `/go/products/...`(접두사 없이와 `/en`·`/ja`·`/zh`·`/zh-tw` 아래), `/admin/creator-products/...` | `GET`, `HEAD` | 페이지(B1). `proxy.ts`의 `retiredProductDecision`대로 410 문서·308·빈 404. 끝 슬래시, 파일 이름, `/en/products...`(`next.config.ts`의 리디렉션)는 Next로 넘긴다 |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -246,6 +250,10 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 71 | 계정 메뉴·챗봇 패널은 CSS `menu-pop`으로 나타나고, 로그인 안내·설치 안내 시트는 애니메이션 없이 나타난다. Next는 motion의 스프링·슬라이드를 쓴다 | 수용 |
 | 72 | `PublicWebMcpTools`(`document.modelContext`에 공개 도구 등록)는 옮기지 않았다. 브라우저가 이 API를 내놓기 전에는 아무 일도 하지 않는 컴포넌트다 | 미해결, 이 API가 쓰이게 되면 |
 | 73 | 페이지를 켜는 변수는 이름이 `AXUM_PILOT_ROUTES` 그대로다. 이제 시범이 아니라 모든 페이지의 스위치이지만, `docker-compose.axum.yml`이 이 이름으로 넘기므로(#143) 이름을 바꾸려면 컴포즈 파일도 함께 바꿔야 한다 | 수용 |
+| 74 | 퇴역 상품 410 문서의 카드 네 장은 Axum이 5분마다 다시 읽는다(`RETIRED_CARDS_TTL`). Next는 공개 카탈로그 캐시로 최대 하루 보관하고 운영자 액션의 태그 무효화로 비운다. 편집 직후에는 두 서버의 카드가 다를 수 있다 | 수용 |
+| 75 | 퇴역 상품 410 문서는 Axum의 스타일시트(`/_axum/site.<해시>.css`)를 건다. Next는 빌드의 CSS 파일들을 건다. 클래스는 같다 | 수용 |
+| 76 | B1의 정적 문서는 Next가 빌드 때 한 번 렌더하고 Axum은 요청마다 렌더한다. `Cache-Control`은 같다. 푸터의 연도는 Next에서 빌드한 해, Axum에서 응답한 해다 | 수용 |
+| 77 | B1의 정적 문서(소개 제외)는 TypeScript에서 그대로 옮겨 적은 마크업이다(가이드와 퇴역 상품의 문구는 생성된 JSON). 문구를 고치면 TypeScript와 `server/src/pages/documents/`를 함께 고치고 페이지 게이트로 확인한다 | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 

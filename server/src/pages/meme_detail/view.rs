@@ -134,7 +134,7 @@ fn answer_card(meme: &MemeDocument, usage_note: Option<&str>) -> Markup {
                 span aria-hidden="true" class="answer-card-glow pointer-events-none absolute inset-0 rounded-2xl" style=(format!("box-shadow:0 0 24px 4px var(--safety-{})", safety.token())) {}
                 p class=(format!("safety-pulse instrument-grid flex min-h-14 items-center gap-3 rounded-2xl px-5 py-3.5 shadow-[0_0_0_1px_color-mix(in_srgb,currentColor_38%,transparent),0_0_10px_-2px_color-mix(in_srgb,currentColor_55%,transparent)] {}", safety.tone())) {
                     span aria-hidden="true" class="grid size-9 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,currentColor_14%,transparent)] text-2xl leading-none" {
-                        (safety_icon(safety, "size-6"))
+                        (safety.icon("size-6"))
                     }
                     span class="flex min-w-0 flex-col" {
                         span class="text-sm font-medium opacity-80" { "사용 안전 신호" }
@@ -168,32 +168,6 @@ fn answer_card(meme: &MemeDocument, usage_note: Option<&str>) -> Markup {
                 }
                 div class="min-w-0 flex-1" {
                     (signal_trace::large(lifecycle))
-                }
-            }
-        }
-    }
-}
-
-/// `components/safety-icon.tsx`.
-fn safety_icon(level: SafetyLevel, class: &str) -> Markup {
-    html! {
-        svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class=(class) data-safety-icon=(level.token()) aria-hidden="true" focusable="false" {
-            @match level {
-                SafetyLevel::Green => {
-                    path d="M4.75 12.35 9.2 16.8 19.25 6.75" {}
-                    path d="M12 2.75a9.25 9.25 0 1 1-6.54 2.71" opacity=".32" {}
-                }
-                SafetyLevel::Yellow => {
-                    path d="M5.25 4.25h13.5a2 2 0 0 1 2 2v8.25a2 2 0 0 1-2 2H10l-4.75 3v-3a2 2 0 0 1-2-2V6.25a2 2 0 0 1 2-2Z" {}
-                    path d="M12 7.4v4.15M12 14.1h.01" {}
-                }
-                SafetyLevel::Gray => {
-                    path d="M12 3.25a8.75 8.75 0 1 1-8.75 8.75A8.75 8.75 0 0 1 12 3.25Z" {}
-                    path d="M12 7.1v5.25l3.35 2.05M3.3 5.35h3.15M2.25 8h2.1" {}
-                }
-                SafetyLevel::Red => {
-                    path d="m8.35 2.75-5.6 5.6v7.3l5.6 5.6h7.3l5.6-5.6v-7.3l-5.6-5.6h-7.3Z" {}
-                    path d="M7.25 12h9.5" {}
                 }
             }
         }

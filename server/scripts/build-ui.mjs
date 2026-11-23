@@ -36,7 +36,7 @@ const jsOutput = resolve(server, "assets/site.js");
 const requireFromRoot = createRequire(resolve(root, "package.json"));
 
 // CSS modules a native page renders markup of.
-const MODULES = ["meme-chatbot", "meme-detail-title"];
+const MODULES = ["meme-card", "meme-chatbot", "meme-detail-title"];
 const TAILWIND_IMPORT = '@import "tailwindcss";';
 // Pure modules of the Next app the scripts reuse, so their rules exist once.
 const LIB_MODULES = {

@@ -128,8 +128,10 @@ pub async fn apply(State(state): State<AppState>, request: Request, next: Next) 
         return response;
     }
     let (mut parts, body) = response.into_parts();
+    let own_vary = parts.headers.contains_key(VARY);
     state.native_headers.apply(&mut parts.headers);
-    if parts.extensions.get::<AnsweredBeforeRouting>().is_some() {
+    // The router's `Vary` goes; one the handler set itself stays.
+    if parts.extensions.get::<AnsweredBeforeRouting>().is_some() && !own_vary {
         parts.headers.remove(VARY);
     }
     Response::from_parts(parts, Body::from_stream(body.into_data_stream()))

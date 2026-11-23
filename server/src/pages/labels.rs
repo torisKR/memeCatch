@@ -1,6 +1,8 @@
 //! The enum labels of `lib/labels.ts` and `lib/safety-copy.ts` that native
 //! pages show, in Korean.
 
+use maud::{Markup, html};
+
 use super::meme_detail::signal_trace;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,6 +38,33 @@ impl SafetyLevel {
             Self::Yellow => "yellow",
             Self::Gray => "gray",
             Self::Red => "red",
+        }
+    }
+
+    /// `components/safety-icon.tsx`.
+    pub fn icon(self, class: &str) -> Markup {
+        let level = self;
+        html! {
+            svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class=(class) data-safety-icon=(level.token()) aria-hidden="true" focusable="false" {
+                @match level {
+                    SafetyLevel::Green => {
+                        path d="M4.75 12.35 9.2 16.8 19.25 6.75" {}
+                        path d="M12 2.75a9.25 9.25 0 1 1-6.54 2.71" opacity=".32" {}
+                    }
+                    SafetyLevel::Yellow => {
+                        path d="M5.25 4.25h13.5a2 2 0 0 1 2 2v8.25a2 2 0 0 1-2 2H10l-4.75 3v-3a2 2 0 0 1-2-2V6.25a2 2 0 0 1 2-2Z" {}
+                        path d="M12 7.4v4.15M12 14.1h.01" {}
+                    }
+                    SafetyLevel::Gray => {
+                        path d="M12 3.25a8.75 8.75 0 1 1-8.75 8.75A8.75 8.75 0 0 1 12 3.25Z" {}
+                        path d="M12 7.1v5.25l3.35 2.05M3.3 5.35h3.15M2.25 8h2.1" {}
+                    }
+                    SafetyLevel::Red => {
+                        path d="m8.35 2.75-5.6 5.6v7.3l5.6 5.6h7.3l5.6-5.6v-7.3l-5.6-5.6h-7.3Z" {}
+                        path d="M7.25 12h9.5" {}
+                    }
+                }
+            }
         }
     }
 

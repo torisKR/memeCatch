@@ -76,3 +76,30 @@ test("the missing-meme target answers 404", async ({ page }) => {
   const response = await page.goto("/missing-public-meme");
   expect(response?.status()).toBe(404);
 });
+
+test("retired products: a 410 page of its own, whose cards open their meme pages", async ({ page }) => {
+  const response = await page.goto("/products/old-item", { waitUntil: "load" });
+  expect(response?.status()).toBe(410);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("밈상품 페이지는 더 이상 운영하지 않아요.");
+  // Not the site frame: no menu, no chat.
+  await expect(page.getByRole("button", { name: "메뉴", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "밈캐치 챗봇 열기" })).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("link", { name: "밈 탐색" })).toHaveAttribute("href", "/explore");
+  const cards = page.getByRole("region", { name: "지금 많이 보는 밈" }).getByRole("link");
+  await expect(cards).toHaveCount(4);
+  const href = await cards.first().getAttribute("href");
+  expect(href).toMatch(/^\/memes\//);
+  await cards.first().click();
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+});
+
+test("retired products in English: the English copy and home", async ({ page, isMobile }) => {
+  const response = await page.goto("/en/retired-products", { waitUntil: "load" });
+  expect(response?.status()).toBe(410);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("link", { name: "MemeCatch home" })).toHaveAttribute("href", "/en");
+  // The bottom navigation exists at phone width only.
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  if (isMobile) await expect(nav.getByRole("link")).toHaveText(["Home", "Latest", "Community", "Submit", "My"]);
+  else await expect(nav).toBeHidden();
+});

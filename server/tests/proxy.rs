@@ -9,7 +9,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::{Body, Bytes};
 use axum::extract::{Request, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
 use axum::routing::{get, post};
 use common::{
     UNUSED_DATABASE_URL, client, closed_addr, config, parse_head, raw_request, raw_upstream,
@@ -272,6 +272,40 @@ async fn request_body_is_streamed_to_the_upstream_without_a_size_limit() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = response.into_body().collect().await.unwrap().to_bytes();
     assert_eq!(body, (5 + 3 * 1024 * 1024).to_string());
+}
+
+// Node sends a response with up to 2,000 headers. hyper's client reads 100
+// unless told otherwise and fails with "message head is too large".
+#[tokio::test]
+async fn an_upstream_response_with_150_headers_is_passed_through() {
+    let upstream = spawn_router(Router::new().fallback(|| async {
+        let mut headers = HeaderMap::new();
+        for n in 0..150 {
+            let name = HeaderName::try_from(format!("x-many-{n}")).unwrap();
+            headers.insert(name, HeaderValue::from(n));
+        }
+        (headers, "all of them")
+    }))
+    .await;
+    let app = spawn_app(config(upstream, UNUSED_DATABASE_URL, &[])).await;
+
+    // Raw, because the test's own hyper client has the same limit of 100.
+    let response = raw_request(
+        app,
+        "GET /page HTTP/1.1\r\nHost: catchmeme.com\r\nConnection: close\r\n\r\n",
+    )
+    .await;
+    let (status_line, headers) = parse_head(&response);
+
+    assert_eq!(status_line, "HTTP/1.1 200 OK");
+    let passed: Vec<&str> = headers
+        .iter()
+        .filter(|(name, _)| name.starts_with("x-many-"))
+        .map(|(_, value)| value.as_str())
+        .collect();
+    assert_eq!(passed.len(), 150);
+    assert!(passed.contains(&"0") && passed.contains(&"149"));
+    assert!(response.contains("all of them"));
 }
 
 #[tokio::test]

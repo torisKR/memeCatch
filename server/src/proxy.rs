@@ -41,6 +41,12 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 // Dropping ours first avoids sending a request into a socket Node is closing,
 // which would surface as a 502.
 const POOL_IDLE_TIMEOUT: Duration = Duration::from_secs(4);
+// Node sends a response with up to 2,000 headers (`maxHeadersCount`). hyper's
+// client reads 100 by default and fails the response, which would be a 502
+// for an answer Next alone delivers. The other direction is not raised: this
+// server still refuses a request with more than 100 headers (431), where
+// Node takes 2,000. `axum::serve` has no setting for it.
+const MAX_UPSTREAM_HEADERS: usize = 2_000;
 
 const HOP_BY_HOP: [HeaderName; 8] = [
     CONNECTION,
@@ -66,6 +72,7 @@ impl Upstream {
         connector.set_nodelay(true);
         let client = Client::builder(TokioExecutor::new())
             .pool_idle_timeout(POOL_IDLE_TIMEOUT)
+            .http1_max_headers(MAX_UPSTREAM_HEADERS)
             .build(connector);
         Self { client, authority }
     }

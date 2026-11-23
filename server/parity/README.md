@@ -59,6 +59,11 @@ with no body.
 | `csp-report.mjs <next> <axum>` | `POST /api/csp-report` with report bodies of every kind, and the 60-per-minute limit with each way the client address is derived. Status and headers. |
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state. For a throwaway database only: it deletes every approved meme. |
 | `daily-quiz-fixture.mjs` | Not a comparison of servers: it runs the real `lib/quiz.ts` and `lib/daily-quiz.ts` under Node and writes the values `server/tests/daily_quiz_parity.rs` holds the Rust port to. |
+| `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
+| `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
+| `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
+| `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
+| `harness.mjs` | Shared by the two scripts above; not run on its own. |
 
 ```sh
 psql() { docker exec -i memecatch-axum-test-pg psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q; }
@@ -228,3 +233,51 @@ curl -s -X POST $NEXT/api/explore/previews -H 'sec-fetch-site: same-origin' \
 match when Axum runs with the `NEXT_PUBLIC_SITE_URL` of the Next build.
 `server/tests/fixtures/robots.txt` is the body of a Next built with
 `NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001`.
+
+## Meme cards, quiz, views and analytics events
+
+These two scripts seed what they need through `docker exec` into the database
+container (`TEST_DB_CONTAINER`, default `memecatch-axum-test-pg`), so both
+servers must use that database. They replace the cards, the card owners and
+the approved memes: throwaway database only.
+
+```sh
+# Two signed-in users, minted by the app's own better-auth (repository root).
+# NODE_ENV=production names the cookie as the standalone Next reads it.
+for n in 1 2; do
+  DATABASE_URL=... BETTER_AUTH_SECRET=<the servers' secret> NODE_ENV=production \
+    node --import ./scripts/register-ts-paths.mjs server/tests/better_auth_cookie.mjs > user$n.json
+done
+
+export TEST_DB_CONTAINER=memecatch-axum-test-pg
+export PARITY_USER="$(cat user1.json)" PARITY_USER_2="$(cat user2.json)"
+node server/parity/cards-quiz.mjs $NEXT $AXUM
+node server/parity/tracking.mjs $NEXT $AXUM
+```
+
+Both servers need the same `MEMECATCH_SIGNING_SECRET` (without it Axum leaves
+the view and analytics routes to Next, and the comparison proves nothing), and
+Axum needs `NODE_ENV=production` to read the cookie the standalone Next reads.
+
+Build Next with a `NEXT_PUBLIC_SITE_URL` whose origin differs from
+`http://localhost:<port of Next>`, for example `http://127.0.0.1:<port>`.
+Next takes `http://localhost:<port>` for its own origin, and the scripts send
+both: the site origin is answered by Axum, the other one is handed to Next.
+
+What makes a write comparable when both servers share the database:
+
+- A claim is sent to one server and then to the other. The second answer
+  must be the first one's row. One card is claimed first through Next and
+  another first through Axum, and the two rows are compared.
+- A view is counted once per viewer and day. The same view sent to both
+  servers must add one row: two rows would mean two different viewer keys.
+- An analytics event is deduplicated by a key that contains the session. The
+  same events go to Next under one session and to Axum under another, and the
+  rows of the two sessions must be equal but for the session. The same event
+  under one session through both servers must leave one row.
+- The database counts events per session and minute for both servers
+  together. Sixty through one server make the other one's first event the
+  database's refusal (`retry-after: 60`).
+
+`tracking.mjs` uses new client addresses on each run. The requests without
+`X-Forwarded-For` share one bucket per server, so leave a minute between runs.

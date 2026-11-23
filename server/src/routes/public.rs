@@ -8,6 +8,7 @@
 //! | `random-meme` | `/api/random-meme` |
 //! | `csp-report` | `/api/csp-report` |
 //! | `daily-quiz` | `/api/daily-quiz` |
+//! | `quiz` | `/api/quiz` |
 //! | `llms` | `/llms.txt` |
 //! | `llms-full` | `/llms-full.txt` |
 //! | `feed` | `/feed.xml` |
@@ -31,9 +32,10 @@ mod localized;
 mod meme_delivery;
 mod publication_export;
 pub mod quiz;
+mod quiz_api;
 mod random;
 mod rankings;
-mod rate_limit;
+pub(crate) mod rate_limit;
 mod robots;
 
 use std::sync::Arc;
@@ -88,6 +90,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             post(move |request: Request| csp_report::report(limiter.clone(), request)),
         )
         .add("daily-quiz", "/api/daily-quiz", get(daily_quiz::daily_quiz))
+        .add("quiz", "/api/quiz", get(quiz_api::quiz))
         .add(
             "explore-previews",
             "/api/explore/previews",

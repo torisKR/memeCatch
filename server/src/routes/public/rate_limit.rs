@@ -115,12 +115,24 @@ impl Buckets {
     }
 }
 
-/// `getClientIp` as it behaves inside the Next server: the first entry of
-/// `X-Forwarded-For`, else `X-Real-IP`, else `unknown`.
+/// `getClientIp` as it behaves inside the Next server, for a rate limit key:
+/// the first entry of `X-Forwarded-For`, else `X-Real-IP`, else `unknown`.
 ///
 /// Unlike Next, an entry or an `X-Real-IP` that is not an IP address counts
 /// as `unknown`, so a key is never longer than an address (45 bytes). An
 /// address is returned as the client wrote it, as Next keys it.
+pub fn client_ip(headers: &HeaderMap, peer: Option<IpAddr>) -> Vec<u8> {
+    let address = client_address(headers, peer);
+    if is_ip_address(&address) {
+        address
+    } else {
+        b"unknown".to_vec()
+    }
+}
+
+/// `getClientIp` with nothing changed: whatever text the header holds. For
+/// code that hashes the value, where the bytes must be the ones Next hashes.
+/// Never a map key: a client chooses its length ([`client_ip`] is the key).
 ///
 /// Next fills in a missing `X-Forwarded-For` with the address of the TCP peer
 /// before any route runs (`req.headers['x-forwarded-for'] ??=
@@ -131,7 +143,7 @@ impl Buckets {
 ///
 /// Bytes, because a header value need not be UTF-8; Node reads it as Latin-1,
 /// where equal bytes are equal strings.
-pub fn client_ip(headers: &HeaderMap, peer: Option<IpAddr>) -> Vec<u8> {
+pub fn client_address(headers: &HeaderMap, peer: Option<IpAddr>) -> Vec<u8> {
     let name = HeaderName::from_static("x-forwarded-for");
     let forwarded = match peer {
         Some(peer) if !headers.contains_key(&name) => peer.to_string().into_bytes(),
@@ -149,10 +161,10 @@ pub fn client_ip(headers: &HeaderMap, peer: Option<IpAddr>) -> Vec<u8> {
         first.to_vec()
     };
     let candidate = trim(&candidate);
-    if is_ip_address(candidate) {
-        candidate.to_vec()
-    } else {
+    if candidate.is_empty() {
         b"unknown".to_vec()
+    } else {
+        candidate.to_vec()
     }
 }
 
@@ -380,6 +392,42 @@ mod tests {
         let mut huge = HeaderMap::new();
         huge.insert("x-forwarded-for", HeaderValue::from_bytes(&long).unwrap());
         assert_eq!(client_ip(&huge, None), b"unknown");
+    }
+
+    #[test]
+    fn client_address_keeps_the_text_next_would_hash() {
+        let cases: [(&HeaderPairs, &[u8]); 6] = [
+            (
+                &[("x-forwarded-for", b"203.0.113.7, 10.0.0.1")],
+                b"203.0.113.7",
+            ),
+            (
+                &[("x-forwarded-for", b" not-an-address ")],
+                b"not-an-address",
+            ),
+            (
+                &[("x-forwarded-for", b"203.0.113.7:8080")],
+                b"203.0.113.7:8080",
+            ),
+            (
+                &[("x-forwarded-for", b","), ("x-real-ip", b" r\xe9al ")],
+                b"r\xe9al",
+            ),
+            (&[("x-forwarded-for", b"")], b"unknown"),
+            (
+                &[("x-forwarded-for", b","), ("x-real-ip", b"  ")],
+                b"unknown",
+            ),
+        ];
+
+        for (pairs, expected) in cases {
+            assert_eq!(client_address(&headers(pairs), None), expected, "{pairs:?}");
+        }
+        assert_eq!(
+            client_address(&HeaderMap::new(), Some(IpAddr::from([192, 0, 2, 9]))),
+            b"192.0.2.9"
+        );
+        assert_eq!(client_address(&HeaderMap::new(), None), b"unknown");
     }
 
     // The reviewer's reproduction: every request names a different 120 KB

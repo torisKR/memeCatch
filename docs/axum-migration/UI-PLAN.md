@@ -275,7 +275,7 @@ Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 
 
 Next의 LCP는 이번에도 회차마다 갈렸다(모음 5,155·1,536·5,285 ms, `/memes` 1,536·1,536·5,214 ms). Axum은 여섯 번 모두 905~910 ms였다.
 
-남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-8).
+남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-9).
 
 ## 6. 확인하지 못한 것과 위험
 

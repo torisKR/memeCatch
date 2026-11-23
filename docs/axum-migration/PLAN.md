@@ -574,6 +574,7 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 | B2-6 | `/slang`의 탭과 `/timeline`의 나머지 연도는 Next에서 React 데이터로, Axum에서 `<template>`과 `ui/slang.js`·`ui/timeline.js`로 온다. 크롤러가 받는 글자·링크는 같다 | 수용 |
 | B2-7 | 밈 카드의 소유 그림은 `meme_contents.thumbnail_url`에서만 온다. TypeScript의 `card_art_url`은 `memes`에 그런 열이 없어 언제나 비어 있다 | 수용 |
 | B2-8 | 시드의 `manual_video_verified`는 검수 원장의 투영이라 트리거(`meme_contents_manual_video_projection_guard`)가 넣을 때 지운다. 검증 시드(`b2-seed.sql`)는 트리거를 끄고 값을 쓴다 | 수용, 시험 데이터만 |
+| B2-9 | 카드 그림이 스크립트가 돌기 전에 이미 실패했으면 Axum(`ui/card.js`)은 포스터로 바꾼다. Next의 `MemeCardFace`는 하이드레이션 뒤의 `error`만 받아 깨진 이미지가 남는다(동작 게이트에서 하이드레이션 전에 끊은 영상 정지 화면으로 관찰). 그 뒤에 실패하면 둘 다 포스터다 | 수용, TypeScript는 `MemeThumbnail`처럼 `complete`·`naturalWidth`를 볼 수 있다 |
 
 ### B2에서 옮기지 않은 페이지
 

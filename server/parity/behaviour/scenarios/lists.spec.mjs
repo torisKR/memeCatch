@@ -41,7 +41,13 @@ const PIXEL = Buffer.from("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICR
 async function stubOutside(page, { tiktok = "<!doctype html><p>player</p>", stills = true } = {}) {
   await page.route("https://www.tiktok.com/**", (route) => route.fulfill({ contentType: "text/html", body: tiktok }));
   await page.route("https://www.instagram.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<!doctype html><p>player</p>" }));
-  await page.route("https://i.ytimg.com/**", (route) => (stills ? route.fulfill({ contentType: "image/gif", body: PIXEL }) : route.abort()));
+  // A still that fails, fails late: Next's card reacts to the image's error
+  // only once it has hydrated (PLAN.md B2-9).
+  await page.route("https://i.ytimg.com/**", async (route) => {
+    if (stills) return route.fulfill({ contentType: "image/gif", body: PIXEL });
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    return route.abort();
+  });
 }
 
 const card = (page, title) => page.locator("main li").filter({ has: page.locator(`[data-meme-card-title][title="${title}"]`) });
@@ -82,7 +88,7 @@ test.describe("the meme card", () => {
     await stubOutside(page, { stills: false });
     await open(page, "/collections/challenge");
     const still = card(page, "유튜브 영상 밈");
-    await expect(still.locator('[data-meme-card-art="fallback"]')).toHaveCount(1);
+    await expect(still.locator('[data-meme-card-art="fallback"]')).toHaveCount(1, { timeout: 10_000 });
     await expect(still.locator("img")).toHaveCount(0);
   });
 

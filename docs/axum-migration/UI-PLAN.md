@@ -1,0 +1,213 @@
+# 화면 계층과 인증을 Rust로 옮기는 계획
+
+작성 2026-11-24. `PLAN.md`의 단계 6(인증)·7(화면)에 해당한다. 기준 커밋 `origin/main` 4f8609c19.
+숫자는 전부 이 저장소에서 다시 만들 수 있다: 재고는 `inventory/inventory.mjs`, 동치는 `server/parity/pages/pages.mjs`.
+
+## 1. 결론
+
+- **렌더링 방식: 서버가 완성된 HTML을 내는 템플릿(Maud) + 페이지당 작은 스크립트 하나.** 브라우저에 WebAssembly를 보내지 않는다.
+- 두 파일럿(`/about`, 한국어 `/memes/[key]`)을 이 방식으로 만들었고, 실제 Next와 같은 DB에서 **상태·리디렉션·헤더·`<head>`·JSON-LD·본문 글자·링크·이미지·`<main>` 마크업이 일치**한다(42개 요청, 5절).
+- 실험실 측정에서 Axum 쪽이 나쁜 지표는 없었다. `/about`: LCP 1.54초 → 0.91초, 자바스크립트 351 KB → 4.4 KB(전송 기준).
+- **브라우저 쪽 동작은 Rust가 되지 않는다.** 메뉴·폼·퀴즈 같은 동작은 프레임워크 없는 자바스크립트로 다시 쓴다. "전부 Rust"를 브라우저 안까지 뜻한다면 Leptos islands가 차선이고, 그 값은 3절에 적었다.
+- 파일럿 두 페이지는 **기본으로 꺼져 있다**(`AXUM_PILOT_ROUTES`로만 켜진다). 헤더 메뉴·언어 선택·계정 메뉴·챗봇이 Axum 페이지에서 아직 동작하지 않고, 밈 문서는 "유래" 절까지만 그린다. 이 브랜치를 합쳐도 운영 화면은 바뀌지 않는다.
+
+## 2. 재고 조사
+
+표 전체는 `inventory/`에 있다(`pages.md`, `client-components.md`, `third-party.md`, `server-dependencies.md`, `auth.md`, `batches.md`). 아래는 요약이다.
+
+| 항목 | 수 | 비고 |
+| --- | --- | --- |
+| 페이지 (`app/**/page.tsx`) | 66 | 요청 시 렌더 46, 정적 12, ISR 4(3,600초 3개·86,400초 1개), 경로별 정적 생성 4 |
+| 색인 대상 | 38 | 항상 색인 28, 문서별 판정 10(`/memes/[key]`, `/[locale]/*`, `/rankings` 등). 나머지: robots.txt 차단 23(운영자 20·`/login`·`/my`·`/submit`), noindex 5 |
+| 클라이언트 컴포넌트 | 121개 24,517줄 | `useState` 76개, `useEffect` 54개. 500줄 이상 8개(퀴즈 759, 임베드 748, 탐색 그리드 703, 내 정보 609, 제보 폼 602 등) |
+| 그중 어느 페이지도 쓰지 않는 것 | 12 | `ui/carousel`(embla), `ui/live-caret-input`(703줄), `trending-carousel` 등. 옮기지 않는다 |
+| 레이아웃이 모든 페이지에 얹는 클라이언트 컴포넌트 | 14 | 헤더·메뉴·언어 선택·계정 메뉴·하단 내비·챗봇·PWA 설치·내비 진행 표시 등 |
+| 서버 액션 | 파일 15개, 함수 58개 | `"use server"`로 시작하는 파일 기준 |
+| 라우트 핸들러 | 53 | 이 중 7개가 이미 Axum |
+| 쿼리 플래너 호출 | `.from("…")` 254곳, `.rpc(` 86곳, 파일 109개 | 플래너 자체는 `plan.ts` 428줄 + `execute.ts` 796줄 |
+| `next/cache` | `unstable_cache` 3곳, `revalidateTag` 12곳, `revalidatePath` 62곳 | 태그 2개: `public-meme-catalog`, `public-social-platform-counts` |
+| `next/og` 이미지 | 파일 4개 | 밈 공유 카드, 기본 카드, 퀴즈 카드, 카드 내보내기 |
+| i18n 사전 | 파일 12개 2,729줄 | 화면 언어 19개, 번역 문서 언어 4개(en·ja·zh·zh-tw) |
+| 임베딩 모델 | 파일 1개 | `lib/meme-embedding-runtime.server.ts` |
+
+### 브라우저에서 도는 서드파티 코드
+
+| 무엇 | 어디서 | Rust 페이지에서 |
+| --- | --- | --- |
+| `motion` | 파일 15개, 레이아웃을 통해 64개 페이지 | CSS 애니메이션·전환으로 바꾼다(파일럿의 정답 카드가 그렇게 돼 있다) |
+| `lucide-react` | 파일 9개 | 템플릿 안의 인라인 SVG(파일럿에서 그대로 옮김) |
+| `three` | 파일 2개, 홈만 | 홈에서만 늦게 불러오는 스크립트로 남긴다. 정지 이미지로 바꿀지는 홈을 옮길 때 정한다 |
+| `react-markdown`(+remark 2개) | 파일 1개, 페이지 1개 | 서버에서 Markdown을 HTML로 바꾼다(Rust 크레이트 추가가 필요하다) |
+| `embla-carousel-react` | 쓰지 않는 `ui/carousel`뿐 | 버린다 |
+| `next/link`·`next/navigation` | 파일 38·40개 | 보통 `<a>`와 전체 페이지 이동. 클라이언트 라우터는 두지 않는다 |
+| Google Analytics | 루트 레이아웃 | **Rust가 될 수 없다.** gtag 스크립트를 `async`로 그대로 불러온다(파일럿 구현) |
+| AdSense 로더 | 충실한 밈 문서 | **Rust가 될 수 없다.** 서버가 "광고 가능"만 표시하고 스크립트가 운영 호스트에서만 로더를 붙인다(파일럿 구현, 운영 호스트에서는 미확인) |
+| 서비스 워커(Serwist) | `app/sw.ts` | **Rust가 될 수 없다.** Next가 사라질 때 손으로 쓴 작은 `sw.js`(오프라인 화면·아이콘)로 바꾼다. 그때까지는 Next의 `/sw.js`를 그대로 프록시한다 |
+| YouTube·TikTok·Instagram 임베드 | `meme-embed` 등 | iframe은 그대로다. 포스터는 서버가 그리고, 누르면 iframe으로 바꾸는 스크립트만 둔다 |
+
+### 인증 (better-auth 1.7.20)
+
+이메일·비밀번호(인증 메일 필수, 최소 12자, 가입 뒤 자동 로그인 없음), 비밀번호 재설정, Google, Kakao(`genericOAuth`), TikTok(자체 경로 + 매직 링크), 가입 전후 훅(차단 도메인, 프로필 동기화), 메일 발송 웹훅. 비밀번호 해시는 두 가지다: 이전 저장소에서 온 bcrypt(`$2a$`·`$2b$`·`$2y$`)와 better-auth의 scrypt. 테이블 `user`·`session`·`account`·`verification`은 마이그레이션이 아니라 better-auth가 실행 중에 만든다(열 목록은 `inventory/auth.md`). 브라우저가 직접 부르는 엔드포인트는 `/api/auth/get-session`과 `/api/auth/sign-in/social`이고, 나머지는 서버 액션이 `auth.api.*`로 부른다.
+
+## 3. 결정과 근거
+
+후보 넷을 같은 기준으로 봤다. 측정한 것과 문서에서 읽은 것을 구분해 적는다.
+
+| 기준 | **템플릿(Maud) + 스크립트** | Askama 템플릿 | Leptos SSR (islands) | Dioxus fullstack |
+| --- | --- | --- | --- | --- |
+| 크롤러가 받는 HTML | **측정**: `<main>`이 요소 단위로 Next와 같다. 메타데이터는 항상 `<head>` | 같을 수 있다(미측정) | 섬마다 `<leptos-island>` 요소가 끼고, 기본값인 순서 없는 스트리밍은 자바스크립트가 있어야 조각이 제자리에 온다. 메타 태그를 `<head>`에 두려면 `async` 모드가 필요하다(문서) | 하이드레이션용 데이터를 HTML에 함께 싣는다. 섬 방식이 아니라 "CSR 기본" 쪽이라고 문서가 밝힌다 |
+| 페이지당 WebAssembly | **0** | 0 | **측정**: 버튼 하나짜리 섬이 wasm 86.0 KB(brotli 31.9 KB) + 글루 JS 22.3 KB(brotli 4.3 KB). 문서의 탭 예제는 약 200 KB | **측정**: 버튼 하나가 wasm 394.4 KB(brotli 137.0 KB) + JS 97 KB. 문서의 TodoMVC는 최적화 후 234 KB |
+| 페이지당 자체 JS | **측정**: 5.1 KB(gzip 4.4 KB) 한 파일 | 같다 | 위 글루 + 섬 코드 | 위 |
+| TSX를 기계적으로 옮기기 | Next가 실제로 낸 HTML을 Maud 소스로 바꾸는 스크립트(`html-to-maud.mjs`, 86줄)로 정적 마크업을 만든다. 조건·반복은 손으로 | HTML을 그대로 붙여 넣을 수 있어 변환기가 필요 없다. 대신 컴포넌트 조합이 함수가 아니라 매크로·include다 | `view!`가 JSX와 가장 비슷하다. 훅은 시그널로 다시 써야 한다 | `rsx!`. 훅 이름이 비슷하지만 다시 써야 한다 |
+| Tailwind 4·기존 CSS | **측정**: `app/globals.css`를 고치지 않고 같은 컴파일러(4.3.3)로 Rust 소스를 훑어 60.7 KB(brotli 10.9 KB). Next는 `/about`에 146.6 KB, 밈 문서에 210.6 KB | 같다 | 같다(Rust 소스를 훑는 것은 같다) | 같다 |
+| 빌드 | 크레이트 2개 추가(`maud`, `maud_macros`). wasm 도구 없음. **측정**(개발용 Mac, 15코어): 서버 전체 릴리스 빌드 28초, 바이너리 7.1 MB, 이미지 147.5 MB. 2-CPU ARM VM에서는 재지 않았다. 이미지는 지금처럼 CI에서 빌드하는 편이 맞다 | 비슷하다 | 빌드가 둘이다(서버 + wasm32). `cargo-leptos`, `wasm-bindgen`, `wasm-opt`가 필요하다 | `dx` CLI와 wasm 빌드가 필요하다 |
+| 프록시 뒤의 페이지 단위 전환 | **측정**: `Routes::add` 그대로. 문서 요청만 답하고 `RSC` 요청은 Next로 넘긴다 | 같다 | 가능하다. 다만 Leptos 라우터와 하이드레이션 스크립트가 Next와 한 페이지에 섞이지 않게 페이지 전체를 넘겨야 한다 | 같다 |
+| 유지 상태 | 0.27.0(2025-02-02)이 마지막 릴리스. 저장소는 살아 있다(2026-11-14 커밋, 미출시 변경 있음) | 0.16.1(2026-09-04) | 0.8.23(2026-10-31), 0.9.0-rc1 진행 중 | 0.7.10, 0.8.0-alpha.3 진행 중 |
+
+**왜 템플릿인가.** 이 사이트에서 값이 큰 것은 크롤러가 받는 HTML과 Core Web Vitals다. 템플릿은 둘 다 측정으로 확인됐고, 나머지 후보는 그 위에 wasm 다운로드와 두 번째 빌드를 얹는다. 섬 하나만 있어도 페이지마다 brotli 36 KB가 붙는데, 지금 Axum 페이지가 보내는 스크립트 전체가 4.4 KB다.
+
+**Maud와 Askama 사이.** Askama는 만들어 보지 않았다. 문서로 판단하면 둘의 차이는 조합 방식이다. 컴포넌트 121개와 서버 컴포넌트를 함수로 옮기는 편이 맞아서 Maud를 골랐다. Maud가 방치되면 템플릿을 Askama나 hypertext로 옮기는 일은 기계적이다.
+
+**이 방식이 나쁜 점.**
+
+1. 브라우저 동작은 자바스크립트로 남는다. 서버와 브라우저가 타입을 공유하지 않는다.
+2. 클라이언트 라우터가 없어 모든 이동이 전체 페이지 요청이다(CSS·JS는 캐시된다).
+3. 큰 클라이언트 컴포넌트 8개는 다시 쓰는 일이지 옮기는 일이 아니다.
+4. 생성된 CSS(`server/assets/site.css`)를 커밋한다. 클래스 이름을 바꾸고 `build-ui.mjs`를 돌리지 않으면 스타일이 빠진다. CI에 `--check`를 넣어야 한다(지금은 없다).
+
+파일럿이 이 방식을 무너뜨린 곳은 없었다. 바꿔야 할 신호는 "스크립트가 페이지당 수십 KB를 넘고 상태 관리가 필요해지는 페이지가 여럿"일 때다. 그때는 그 페이지들만 Leptos islands로 가는 것이 차선이다.
+
+## 4. 설계
+
+### 페이지 하나가 옮겨지는 방식
+
+- **코드 위치**: `server/src/pages/<page>.rs`, 크면 `pages/<page>/{mod,view,…}.rs`. `mod.rs`는 조회·판정·응답, `view.rs`는 마크업. 공통 틀은 `document.rs`(head와 문서 뼈대), `chrome.rs`(헤더·푸터·하단 내비), `json_ld.rs`.
+- **데이터**: 플래너를 옮기지 않고 **`with_identity`를 거친 직접 SQL**로 쓴다. 플래너는 254곳이 쓰는 동적 질의 조립기라서 Rust로 옮기면 타입 없는 질의 조립기를 하나 더 갖게 된다. 파일럿의 밈 문서는 관계까지 한 질의로 읽는다. RLS는 그대로 적용된다(익명 역할). 대가: 질의마다 Next와 같은 행을 읽는지 게이트로 확인해야 한다.
+- **캐시**: ISR·`unstable_cache` 자리에 프로세스 안 캐시(`pages/cache.rs`, 시간 제한, 실패는 저장하지 않음)를 둔다. 운영자 액션이 Next에 있는 동안은 `revalidateTag`가 Axum에 닿지 않으므로 **제한 시간이 유일한 한계**다. 그래서 짧게 둔다(파일럿: 색인 문서 수 5분, 밈 문서는 캐시 없음). 운영자 액션이 Rust로 오면 같은 프로세스에서 캐시를 비운다. `Cache-Control`은 페이지마다 Next가 내던 값을 그대로 낸다. 메모리 256 MB 한도 때문에 키가 있는 캐시에는 크기 상한을 둔다.
+- **메타데이터·JSON-LD**: 페이지가 `Head` 값을 만들고 `document.rs`가 Next와 같은 순서로 쓴다. JSON-LD는 키 순서와 `<` 이스케이프까지 Next와 같다. 항상 응답의 첫 부분에 있다.
+- **i18n**: 문서 언어는 URL 접두어만 따른다(`proxy.ts`와 같다). 사전 2,729줄은 손으로 옮기지 않고 TypeScript 사전을 JSON으로 뽑아 Rust가 읽는 생성 단계를 둔다. `Content-Language`와 `<html lang dir>`은 페이지가 낸다.
+- **서버 액션**: 액션은 `POST` 엔드포인트가 된다. 폼은 보통 HTML 폼으로 보내고 결과는 리디렉션이다. 같은 출처 검사(`Origin`·`Sec-Fetch-Site`)와 기존 `SignedInUser`·`Operator` 추출자를 쓴다. Next의 액션 id는 빌드마다 달라 Rust 페이지가 부를 수 없으므로 **폼이 있는 페이지는 그 액션과 함께 옮긴다.**
+- **스크립트**: `server/ui/`의 프레임워크 없는 자바스크립트. 입력은 `data-*` 속성으로 받는다. 스크립트 없이도 문서는 완성돼 있어야 한다.
+- **혼재 기간의 규칙**: Axum은 문서 요청(`RSC` 헤더 없음, `Sec-Fetch-Mode` 없음 또는 `navigate`)만 답한다. Next의 클라이언트 라우터가 보내는 요청은 Next로 간다. 그래서 Next 화면 안에서 이동한 방문자는 옮긴 페이지도 Next 판으로 본다. 크롤러와 새로 연 탭은 Axum 판을 본다.
+
+### 페이지 동치 게이트 (`server/parity/pages/pages.mjs`)
+
+대상 URL마다 브라우저·Googlebot·Yeti로 두 서버에 물어 상태, `Location`·`Refresh`, 응답 헤더, `<html lang dir>`, `<title>`, 모든 `<meta>`, canonical·hreflang·피드·manifest·아이콘 링크, JSON-LD(파싱해서 데이터로), 보이는 글자, 링크, 이미지, `<main>` 마크업을 비교한다. 대상 목록은 각 경우가 무엇인지도 적어 두므로(200·308·404, index·noindex, native·proxied) 시드가 그 경우를 더 만들지 못하면 실패한다.
+
+무시하는 것과 이유(스크립트 맨 위 세 목록, `server/parity/README.md`):
+
+- 홉 단위 헤더, Next 캐시 내부 헤더, Next의 스타일시트 파일 이름이 든 `Link` 미리 불러오기 헤더.
+- `NOT_PORTED`: 파일럿이 아직 그리지 않는 절. Next 문서에서 잘라 낸 뒤 비교하고 몇 개를 잘랐는지 출력한다.
+- `ACCEPTED`: 정해 둔 차이. 지금은 404 문서 하나다(5절).
+- 스크립트를 실행하지 않는다. 불러온 뒤의 동작과 픽셀은 보지 않는다.
+
+### 인증
+
+- **유지하는 것**: 네 테이블과 쿠키 형식. 기존 세션과 비밀번호 해시가 그대로 통해야 한다. Rust는 이미 better-auth가 낸 세션 쿠키를 읽는다(`server/src/auth.rs`).
+- **옮기는 순서**: ① `get-session`과 세션 연장(지금 Rust는 읽기만 한다) → ② 로그아웃 → ③ 이메일 로그인(bcrypt·scrypt 검증) → ④ 가입·인증 메일·비밀번호 재설정(`verification` 테이블, 메일 웹훅, 가입 전후 훅) → ⑤ Google·Kakao → ⑥ TikTok 매직 링크. 로그인·가입 폼(서버 액션)은 ③·④와 함께 간다.
+- **OAuth state·PKCE**: better-auth는 state와 `codeVerifier`를 `verification` 테이블에 두고 `oauth_state` 쿠키를 쓴다. 공급자마다 시작 경로와 콜백을 **한 번에** 넘기고, 콜백에서 Rust가 만든 state가 아니면 Next로 넘긴다. 그러면 전환 순간에 진행 중이던 로그인도 끝난다. state 형식을 흉내 낼 필요가 없다.
+- **실제 better-auth로 시험할 것**: Rust가 낸 세션을 better-auth가 받는지(반대 방향은 이미 있다), 해시 양방향(두 형식), 인증·재설정 토큰 양방향, 세션 연장 시점, 가짜 공급자 서버로 OAuth 전체 흐름을 양쪽에서 돌려 DB 행과 쿠키 비교.
+- **확인하지 못한 것**: scrypt 매개변수와 state 행의 정확한 형식은 패키지 소스로 일부만 확인했다. 운영 DB에 `service_role` 읽기 권한이 있는지는 PLAN.md 5절의 미확인 항목 그대로다.
+
+### 작업 순서
+
+크기는 `inventory/batches.md`(앞 묶음에서 센 파일은 다시 세지 않는다).
+
+| 묶음 | 페이지 | 새로 필요한 UI | 클라이언트 컴포넌트 | 병렬 | 비고 |
+| --- | --- | --- | --- | --- | --- |
+| B0 공통 틀 | 없음 | 30개 3,313줄 | 18 | 틀이 끝나야 나머지가 시작된다 | 헤더 메뉴·언어 선택·계정 메뉴·하단 내비·챗봇·PWA 설치의 스크립트, i18n 생성 단계, 캐시, CI의 CSS 검사. **이것이 끝나야 어떤 페이지든 켤 수 있다** |
+| B1 정적 문서 | 10 | 20개 2,521줄 | 1 | 페이지마다 따로 | `/about`(완료), 약관·개인정보·편집 원칙·가이드·문의 |
+| B2 목록·탐색 | 17 | 48개 8,253줄 | 21 | 목록 / 탐색·검색 / 퀴즈로 셋 | 색인 대상이다. 카드 컴포넌트를 처음 옮긴다 |
+| B3 밈 문서(한국어) | 1 | 34개 5,653줄 | 16 | 절 단위로 | **B1·B2에서 방식이 확인된 뒤.** 파일럿이 첫 화면까지 돼 있다. 남은 11개 절, 미디어, 번역 hreflang |
+| B4 홈 | 1 | 15개 3,879줄 | 7 | 단독 | three.js 장면 |
+| B5 번역 문서 | 7 | 7개 1,298줄 | 0 | B3 뒤 | 4개 언어의 색인 규칙 |
+| B6 로그인·계정·제보·커뮤니티 | 10 | 29개 5,137줄 | 13 | 인증 이관과 묶어서 | 폼과 액션이 함께 간다 |
+| B7 운영자 | 20 | 51개 9,122줄 | 20 | 화면 단위로 | **마지막.** 색인되지 않고 액션 파일 7개(2,261줄)가 달려 있다. 여기까지 오면 `revalidateTag`가 필요 없어진다 |
+
+마지막에 남는 것: `next/og` 이미지 4종, 임베딩 모델, 서비스 워커. Next를 내리기 전에 대체물을 정해야 한다(PLAN.md 3절).
+
+## 5. 파일럿 결과
+
+실제 Next(16.3.4, standalone)와 Axum을 같은 시드 DB(`server/parity/pages/seed.sql`)에 붙여 측정했다.
+
+### 동치
+
+`pages.mjs` 14개 대상 × 3개 사용자 에이전트 = 42개 요청 전부 일치.
+
+| 경우 | 대상 | 결과 |
+| --- | --- | --- |
+| 정적 문서 | `/about` | 일치. 색인 문서 수(13건)까지 같다 |
+| 있는 밈, 색인 기준 통과 | `pgrich01`, 한글 슬러그 `pgkor003`, 사건 기록 `pgevt004` | 일치. JSON-LD 4개(Organization·WebPage·DefinedTerm·BreadcrumbList) |
+| 색인 기준 미달 | `pgthin02` | 양쪽 `noindex, follow`, JSON-LD는 브레드크럼만 |
+| 정규 URL이 아님 | 짧은 id, 옛 슬러그, 쿼리 포함, 소문자 퍼센트 인코딩, `%2D` | 양쪽 308, `Location`·`Refresh`·본문 같음 |
+| 없는 밈 | `zzzzzzzz`, `zzzzzzzz-nothing` | 양쪽 404·`noindex`. 본문은 정해 둔 차이 |
+| 파일럿이 다루지 않는 형태 | 미디어가 있는 밈, 편집 밈 | Axum이 Next 응답을 그대로 전달 |
+| 경로 끄기 | `AXUM_DISABLED_ROUTES=page-about,page-meme,page-assets` | 전 대상이 Next 화면. `parity.mjs`로 바이트 단위 일치 |
+
+`/about` 전체 화면 캡처(모바일 412×3,482픽셀)는 1,434,584픽셀 중 657픽셀만 다르다(챗봇 캐릭터의 움직이는 GIF 자리). 밈 문서는 옮긴 부분까지 눈으로 봐서 같다.
+
+정해 둔 차이 하나: **없는 밈의 404 문서.** Next는 미리 렌더한 파일을 보낸다. `<body>`가 스크립트 실행 전까지 비어 있고 `<html>`에 `lang`이 없으며 `s-maxage=31536000`이 붙는다. Axum은 같은 안내를 HTML로 보내고 `no-store`다. 상태·제목·`noindex`는 같다.
+
+### 찾은 것
+
+- Next는 **브라우저와 Googlebot에게 제목·설명·canonical·hreflang·robots를 `<body>` 안에 스트리밍**하고 스크립트로 옮긴다. Yeti·Bingbot·미리보기 봇에게만 `<head>`에 넣는다. Axum은 누구에게나 `<head>`에 넣는다.
+- Next의 `/about`은 본문 `<main>`이 숨긴 조각에 들어 있다가 스크립트로 제자리에 온다.
+- `/about` 원문에 띄어쓰기가 하나 빠져 있다("1990년대부터오늘까지"). 파일럿은 그대로 옮겼다. 고치려면 TypeScript 쪽에서 고친다.
+- `sec-fetch-mode: cors`로 없는 밈을 요청하면 Next는 200을 낸다(`proxy.ts`가 조회를 건너뛴다). Axum은 그런 요청을 Next로 넘겨 같은 답이 나간다.
+
+### 측정
+
+문서 크기(압축 전 / gzip 6):
+
+| | Next | Axum | 설명 |
+| --- | --- | --- | --- |
+| `/about` | 73,671 / 16,894 B | 27,903 / 8,004 B | Next 문서의 40,530 B가 RSC 데이터(같은 내용을 한 번 더 싣는다) |
+| 밈 문서 | 172,227 / 32,351 B | 39,142 / 9,650 B | **같은 조건이 아니다.** Next 쪽 87,981 B가 RSC 데이터, 36,836 B가 파일럿이 안 그린 절이다. 옮긴 부분의 마크업은 39,554 B 대 38,999 B로 같다. 절을 다 옮기면 Axum 문서는 약 76 KB가 된다 |
+
+Lighthouse 13.6.0, 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시:
+
+| | 점수 | FCP | LCP | TBT | CLS | 자체 요청 | JS 전송 | CSS 전송 | wasm |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/about` Next | 100 | 1,535 ms | 1,540 ms | 24 ms | 0 | 60 | 351,220 B (25개) | 45,132 B | 0 |
+| `/about` Axum | 100 | 905 ms | 905 ms | 2 ms | 0 | 7 | 4,410 B (1개) | 14,681 B | 0 |
+| 밈 문서 Next | 80 | 1,534 ms | 5,307 ms | 43 ms | 0 | 72 | 401,878 B (30개) | 45,132 B | 0 |
+| 밈 문서 Axum | 100 | 905 ms | 905 ms | 6 ms | 0 | 8 | 4,410 B (1개) | 14,681 B | 0 |
+
+Next의 LCP는 회차마다 갈렸다(`/about` 1,540·1,535·5,010 ms, 밈 문서 5,307·1,534·5,436 ms). Axum은 세 번 다 905 ms였다. 콘솔 오류는 양쪽 다 없었다.
+
+**파일럿이 나쁜 곳**: 지표로는 없다. 다만 이 비교는 Axum에 유리하게 기울어 있다. Axum 페이지는 헤더 메뉴·언어 선택·계정 메뉴·챗봇·저장이 동작하지 않고, 밈 문서는 11개 절이 없다. 그 스크립트와 마크업이 붙으면 숫자는 올라간다.
+
+### 밈 문서에서 아직 없는 것
+
+페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
+
+스크립트가 하는 것: Analytics 초기화, 조회 기록, 복사, 공유, 링크 추적, 검색 단축키, 광고 로더 조건. 하지 않는 것: 헤더 메뉴, 언어 선택, 로그인 상태 표시, 챗봇, 밈 저장(로그인 화면으로 보낸다).
+
+## 6. 확인하지 못한 것과 위험
+
+확인하지 못한 것:
+
+- 운영 규모의 데이터. 시드 4건과 마이그레이션의 10건으로만 비교했다. 색인 판정이 3,905건에서 Next와 같은지는 모른다.
+- 운영 환경: Cloudflare 압축, 2-CPU ARM VM에서의 빌드 시간(개발용 Mac에서만 쟀다), 운영 호스트에서의 광고 로더.
+- 스크립트의 동작. 불러와지고 콘솔 오류가 없다는 것만 봤다. 클릭 동작을 브라우저에서 시험하지 않았다.
+- 로그인한 상태의 화면, 한국어 밖의 언어, 데스크톱 폭의 화면 캡처.
+- Askama와 Leptos SSR로 만든 페이지(wasm 크기와 문서로만 판단했다).
+
+전체 이관을 실패하게 만들 가능성이 큰 위험 셋:
+
+1. **브라우저 동작이 조용히 달라진다.** 121개 컴포넌트의 동작을 자바스크립트로 다시 쓰는데, 지금 게이트는 스크립트를 실행하지 않는다. B0를 시작하기 전에 브라우저로 누르고 비교하는 동작 시험(Playwright)이 있어야 한다.
+2. **데이터 계층이 어긋난다.** 340곳의 플래너 호출을 SQL로 다시 쓰면 RLS·정렬·캐시 시차에서 문서 몇 건의 `noindex`나 JSON-LD가 Next와 달라질 수 있고, 이 사이트에서는 그것이 곧 색인 사고다. 묶음을 켜기 전마다 운영 백업을 복원한 DB에서 사이트맵 전체 URL로 게이트를 돌려야 한다.
+3. **두 서버가 함께 사는 기간이 길다.** 그동안 Next 안에서 이동한 방문자는 Next 판을, 새로 들어온 방문자는 Axum 판을 본다. 캐시 무효화가 프로세스를 넘지 못하고, 세션 연장과 OAuth가 두 서버에 걸친다. 묶음 순서를 지켜 기간을 줄이고, 인증은 공급자 단위로 한 번에 넘긴다.
+
+## 7. 출처
+
+| 주장 | 출처 | 확인한 버전 |
+| --- | --- | --- |
+| 각 크레이트의 최신 버전과 날짜 | `https://crates.io/api/v1/crates/{leptos,dioxus,maud,askama,wasm-bindgen,axum}` (2026-11-24 조회) | leptos 0.8.23, dioxus 0.7.10, maud 0.27.0, askama 0.16.1 |
+| Leptos islands: `<leptos-island>` 요소, 정적 24 KB·섬 166 KB·탭 예제 약 200 KB | Leptos Book, "Guide: Islands" `https://book.leptos.dev/islands.html` | 0.8 |
+| Leptos SSR 모드: 기본은 순서 없는 스트리밍, 자바스크립트 필요, 메타 태그에는 `async`·blocking | Leptos Book, "Async Rendering and SSR Modes" `https://book.leptos.dev/ssr/23_ssr_modes.html` | 0.8 |
+| Dioxus는 "CSR 기본, 일부 데이터만 서버 캐시" 방식이고 하이드레이션 데이터를 HTML에 싣는다 | Dioxus 0.7 문서, Fullstack "Server-Side Rendering" `https://dioxuslabs.com/learn/0.7/essentials/fullstack/ssr` | 0.7 |
+| Dioxus wasm: TodoMVC 2.36 MB → 234 KB | Dioxus 0.7 문서, "Optimizing" `https://dioxuslabs.com/learn/0.7/guides/tips/optimizing` | 0.7 |
+| Maud: 0.27.0에서 axum 0.8 지원, 그 뒤 미출시 변경 | `https://github.com/lambda-fairy/maud/blob/main/CHANGELOG.md`, 저장소 커밋 기록 | 0.27.0 |
+| Next가 스트리밍하지 않는 크롤러 목록 | `node_modules/next/dist/shared/lib/router/utils/html-bots.js` | Next 16.3.4 |
+| wasm 크기 측정 | 이 작업에서 만든 최소 예제 셋(leptos 0.8.23 `hydrate`, `islands`; dioxus 0.7.10 `web`), `opt-level="z"`·LTO·`wasm-opt -Oz` | wasm-bindgen 0.2.130 |

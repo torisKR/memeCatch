@@ -70,6 +70,33 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state for the two scripts above. Throwaway database only. |
 | `storage-parity.sh` | Signed URLs and stored objects, TypeScript against Rust. With `STORAGE_PARITY_DIR` set it keeps the directory and writes `media-targets.txt` for `parity.mjs` (the script header has the steps). |
 | `daily-quiz-fixture.mjs` | Rewrites `tests/fixtures/daily_quiz.json` from the real `lib/quiz.ts` after a change there. |
+| `pages/pages.mjs <next> <axum> [targets]` | The page gate: status, redirects, headers, `<head>`, JSON-LD as data, visible text, links, images and the markup of `<main>` for each target in `pages/targets.txt`, as a browser, Googlebot and Yeti. Seed with `pages/seed.sql` first. |
+
+## Pages
+
+`src/pages` renders pages as finished HTML with Maud templates; the choice
+and the plan for the other pages are in `docs/axum-migration/UI-PLAN.md`. Two
+pages exist, as pilots: `/about` and the Korean `/memes/{key}`. A pilot route
+is off until `AXUM_PILOT_ROUTES` names it (`page-about`, `page-meme`), because
+the header menu, the language switch, the account menu and the chat panel do
+nothing on a native page yet, and the meme page stops after the origin
+section. `AXUM_DISABLED_ROUTES` switches a pilot off like any other route.
+
+```sh
+# After changing a class name in src/pages, app/globals.css or ui/site.css:
+node scripts/build-ui.mjs            # rewrites assets/site.css (committed)
+node scripts/build-ui.mjs --check    # exit 1 if it is stale
+
+# Start a page port from the markup Next really sends:
+node scripts/html-to-maud.mjs http://127.0.0.1:3001/about main
+
+# Compare the pages with a real Next (parity/README.md has the steps):
+node parity/pages/pages.mjs http://127.0.0.1:3001 http://127.0.0.1:3100
+```
+
+Native pages take `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_ADSENSE_CLIENT` from
+the environment, where Next fixed them at build time: give Axum the values
+the Next image was built with.
 
 ## Add a native route
 

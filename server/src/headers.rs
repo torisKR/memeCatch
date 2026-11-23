@@ -11,7 +11,7 @@
 
 use axum::body::Body;
 use axum::extract::{Request, State};
-use axum::http::header::{HeaderMap, HeaderName, HeaderValue, InvalidHeaderValue};
+use axum::http::header::{HeaderMap, HeaderName, HeaderValue, InvalidHeaderValue, VARY};
 use axum::middleware::Next;
 use axum::response::Response;
 
@@ -42,6 +42,12 @@ const CSP_DIRECTIVES: [&str; 14] = [
 // handler returns (seen on /api/health, /robots.txt, /sitemap.xml and others).
 const APP_ROUTER_VARY: &str =
     "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch";
+
+/// Marks an answer `proxy.ts` gives before Next's router runs, such as the
+/// canonical redirect of a meme URL. Next puts the `next.config.ts` headers
+/// on those too, but no `Vary`: that one comes from the app router.
+#[derive(Clone, Copy)]
+pub struct AnsweredBeforeRouting;
 
 /// The header set, built once at startup.
 #[derive(Clone, Debug)]
@@ -123,6 +129,9 @@ pub async fn apply(State(state): State<AppState>, request: Request, next: Next) 
     }
     let (mut parts, body) = response.into_parts();
     state.native_headers.apply(&mut parts.headers);
+    if parts.extensions.get::<AnsweredBeforeRouting>().is_some() {
+        parts.headers.remove(VARY);
+    }
     Response::from_parts(parts, Body::from_stream(body.into_data_stream()))
 }
 

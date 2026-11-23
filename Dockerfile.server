@@ -12,6 +12,11 @@ RUN mkdir src \
 # The placeholder build is newer than the copied sources; touch them so cargo
 # rebuilds the crate.
 COPY server/src ./src
+# The stylesheet and the script of the native pages, embedded with
+# include_str! (src/pages/mod.rs). assets/site.css is built ahead of time by
+# server/scripts/build-ui.mjs and committed, so this image needs no Node.
+COPY server/assets ./assets
+COPY server/ui ./ui
 RUN touch src/main.rs src/lib.rs && cargo build --release --locked
 
 FROM debian:bookworm-slim AS runner

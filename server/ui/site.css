@@ -1,0 +1,52 @@
+/*
+ * Styles of the native pages that are not in app/globals.css.
+ *
+ * scripts/build-ui.mjs puts three things in front of this file: Tailwind and
+ * the design tokens of app/globals.css (unchanged), with the class names
+ * scanned from src/pages instead of from the React sources; and the CSS
+ * modules a native page uses, with each class spelled `<module>-<class>`
+ * where Next generates `<module>_<class>__<hash>`.
+ */
+
+/*
+ * components/answer-card.tsx. Next renders the card 12px low and its glow
+ * transparent, and the motion library animates both once its script has
+ * loaded. Here the same two movements are CSS animations, so they need no
+ * script and the card does not wait for one.
+ */
+@keyframes answer-card-in {
+  from {
+    transform: translateY(12px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes answer-card-glow {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.answer-card-in {
+  animation: answer-card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.answer-card-glow {
+  opacity: 0;
+  animation: answer-card-glow 1.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer-card-in,
+  .answer-card-glow {
+    animation: none;
+  }
+}

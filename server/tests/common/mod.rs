@@ -1,6 +1,8 @@
 // Each test binary uses a different subset of these helpers.
 #![allow(dead_code)]
 
+pub mod session;
+
 use std::net::SocketAddr;
 
 use axum::Router;

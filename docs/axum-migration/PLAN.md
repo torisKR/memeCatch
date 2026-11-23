@@ -511,3 +511,27 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 
 - `AXUM_EXTRA_CA_CERTS`: 바깥으로 나가는 HTTPS(지금은 메일 전송)가 바이너리의 Mozilla 루트에 더해 믿을 PEM 파일. Node의 `NODE_EXTRA_CA_CERTS`에 해당한다. 운영에서는 비워 둔다.
 - `docker-compose.axum.yml`의 Axum 환경에 `PLUS_DIGEST_DELIVERY_URL`·`PLUS_DIGEST_DELIVERY_TOKEN`·`PLUS_DIGEST_FROM_EMAIL`을 `docker-compose.yml`이 Next에 주는 방식 그대로 더했다.
+
+## 12. 단계 3 일부: R8 (바깥 호스트가 고정된 경로)
+
+브랜치 `torisKR/axum-routes-r8`(main 위). 11절은 R6(`torisKR/axum-routes-r6`)이 쓴다. 옮긴 경로는 없다. 세 경로 모두 Next의 캐시에 닿아서 Next에 남긴다. 호출 경로를 끝까지 따라가 확인했다.
+
+| 경로 | Next에 남긴 까닭 |
+| --- | --- |
+| `GET /api/cron/trend-pulse` | `runTrendPulse()`가 `compute_trend_scores` 뒤에 `revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 })`를 부른다(`lib/trend/pulse.server.ts`). Axum이 Next의 캐시를 지우는 길(R4의 `/api/internal/cache`, #146)이 main에 없다. 바깥 호출(X, Threads, Instagram의 고정 주소)은 그 뒤의 문제다 |
+| `GET /api/cron/source-refresh` | 실행마다 끝에서 같은 `revalidateTag`를 부른다(`lib/sources/refresh.server.ts`). 같은 경로의 `POST`는 R4가 옮겼다. #146이 main에 온 뒤에 옮긴다 |
+| `POST /api/admin/source-ingestions` | `ingestSource()`가 부르는 `getOEmbed()`는 공급자를 `fetch(..., { next: { revalidate: 3_600 } })`로 묻는다(`lib/oembed.ts`). Next 16.3.4에서 이것은 데이터 캐시다(`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/fetch.md`, `options.next.revalidate`). 같은 URL의 답을 한 시간 동안 Next 안에 두고 다시 쓰므로, 매번 공급자에 묻는 Axum은 공급자의 답이 바뀌거나 실패할 때 다른 결과를 낸다. Axum은 그 캐시를 읽을 수 없다 |
+
+### `/api/cron/source-refresh`가 502인 까닭(코드에서. 경로 동작은 바꾸지 않았다)
+
+1. **502는 "일부 실패"(`status: "partial"`)다.** #89(2026-11-16 머지)가 두 가지를 바꿨다. 하나, `partial`도 502로 답한다(그 전에는 `failed`만 502였고 `partial`은 200이었다). 둘, 스케줄러가 하루 한 번(17:00)이 아니라 15분마다 부른다(`deploy/scheduler/crontab`). `partial`은 고른 행 하나만 실패해도 된다. 해당하는 경우는 오래된 행·재시도 행 조회의 실패, YouTube 호출의 실패, oEmbed 행 하나의 실패(모양이 잘못된 ID 포함), 기한(40초)에 걸려 미뤄진 oEmbed 행(#139부터), 캐시 만료의 실패, `job_runs` 기록의 실패다.
+2. **계속 실패하는 행이 코드에 보인다: Instagram.** Instagram 출처의 확인은 `https://graph.facebook.com/<버전>/instagram_oembed?url=…&maxwidth=658&omitscript=true`를 access token 없이 부른다. `META_INSTAGRAM_ACCESS_TOKEN`은 compose가 Next에 넘기지만 레이더 커넥터만 읽는다(`lib/trend/radar-platform-connectors.server.ts`). Meta의 문서로는 이 엔드포인트에 토큰이 필수라, 답은 오류다. `readJson()`은 404나 "없는 게시물"(400, code 24/subcode 2207045)이 아닌 오류를 모두 502로 바꾸므로 그 행은 삭제가 아니라 실패로 세어진다. 실제 Meta를 부르지 않았으므로 이 부분은 확인하지 않았다. TikTok에서는 제목이나 작성자가 없는 일반 플레이어 답이 "판정 불가"로 실패한다.
+3. **실패한 행이 실행 대부분을 실패로 만든다.** 실패한 행은 `last_checked_at`을 바꾸지 않고 복구 대기열에 들어간다. DB 함수 `record_source_acquisition_failure`가 5분에서 시작해 두 배씩(최대 24시간) 다음 시도를 미룬다. 15분마다 도는 실행에 다시 시도할 행이 하나라도 끼면 그 실행은 502다. 실패하는 Instagram 행이 여럿이면 대부분의 실행이 그렇다. 행 수와 시각이 있어야 80 %를 계산할 수 있다.
+4. **시작일 2026-11-18은 코드로는 확정할 수 없다.** #89는 11-16에 머지됐고, 11-17~18에 배포 경로를 고친 커밋(#103, #111)이 있다. #89가 VM에 처음 올라간 날이 11-18일 수 있다.
+5. **확인하는 법**(운영 DB, 읽기 전용): `select started_at, detail->>'error', detail->'oembed'->'errors', detail->'observations' from job_runs where job_name = 'refresh_media_sources' order by started_at desc limit 50;`. `observations`(#115, 11-18)에 플랫폼별 `selected`·`confirmed`·`inconclusive`·`invalid_identity`가 있다. 2번이 맞다면 `instagram.inconclusive`가 `selected`와 같고, `oembed.errors`는 비어 있으며(실패는 `failed`로만 센다), `detail->>'error'`도 없다.
+
+### 다음 묶음에서
+
+- #146이 main에 오면 `trend-pulse`와 `source-refresh`의 `GET`을 다시 본다. 캐시 만료는 R4의 길로, 바깥 호출은 프로세스 안의 `fetch` 가로채기(Next)와 테스트 전용 기준 URL(Rust)로 비교한다.
+- `source-ingestions`는 데이터 캐시가 있는 한 Next에 둔다. 옮기려면 Axum 쪽에 같은 한 시간 캐시를 두는 것으로는 부족하다(Next 프로세스의 캐시와 공유되지 않는다). TypeScript가 그 `fetch`에서 캐시를 빼야 한다.
+

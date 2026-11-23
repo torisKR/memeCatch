@@ -62,4 +62,82 @@ grep -q 'up -d --no-deps --force-recreate app' "$calls" || { echo 'manual deploy
 PATH="$stub:$PATH" test_calls="$calls" MEMECATCH_ENV_FILE="$tmp" bash "$script" >/dev/null
 if grep -q -- '--force-recreate' "$calls"; then echo 'automatic deploy recreated app unconditionally' >&2; exit 1; fi
 
+# MEMECATCH_AXUM puts the Axum server in front of Next. It is off unless the
+# value is exactly 1, and off must plan what this script planned before the
+# flag existed, byte for byte.
+plan_own_off=$'memecatch: MEMECATCH_CADDY=own. Starting memeCatch\'s own Caddy.\nmode=own\nfiles=-f docker-compose.yml -f docker-compose.own-caddy.yml\nhealth=http://127.0.0.1/api/health'
+plan_shared_off=$'memecatch: shared proxy on 127.0.0.1:12730. Paste deploy/Caddyfile.site into the existing reverse proxy.\nmemecatch: this script will not edit that proxy. Set MEMECATCH_CADDY=own only when 80 and 443 are free.\nmode=shared\nfiles=-f docker-compose.yml -f docker-compose.shared-proxy.yml\nhealth=http://127.0.0.1:12730/api/health'
+printf 'OTHER=1\n' >"$tmp"
+[[ "$(plan "$tmp" yes yes)" == "$plan_shared_off" ]] || { echo 'shared plan changed with the flag off' >&2; exit 1; }
+[[ "$(plan "$tmp" yes yes MEMECATCH_CADDY=own)" == "$plan_own_off" ]] || { echo 'own plan changed with the flag off' >&2; exit 1; }
+for value in 0 true yes on 11 ' 1'; do
+  [[ "$(plan "$tmp" yes yes MEMECATCH_AXUM="$value")" == "$plan_shared_off" ]] || { echo "MEMECATCH_AXUM='$value' turned Axum on" >&2; exit 1; }
+  printf 'MEMECATCH_AXUM=%s\n' "$value" >"$tmp"
+  [[ "$(plan "$tmp" yes yes)" == "$plan_shared_off" ]] || { echo "MEMECATCH_AXUM='$value' in the env file turned Axum on" >&2; exit 1; }
+  printf 'OTHER=1\n' >"$tmp"
+done
+
+# On, from the env file or the environment, in both Caddy modes: the same
+# mode and health URL, with docker-compose.axum.yml last in the file list.
+printf 'MEMECATCH_AXUM="1"\n' >"$tmp"
+axum_shared="$(plan "$tmp" yes yes)"
+[[ "$axum_shared" == *$'\nmode=shared\nfiles=-f docker-compose.yml -f docker-compose.shared-proxy.yml -f docker-compose.axum.yml\nhealth=http://127.0.0.1:12730/api/health' ]]
+axum_own="$(plan "$tmp" yes yes MEMECATCH_CADDY=own)"
+[[ "$axum_own" == *$'\nmode=own\nfiles=-f docker-compose.yml -f docker-compose.own-caddy.yml -f docker-compose.axum.yml\nhealth=http://127.0.0.1/api/health' ]]
+# The environment wins over the env file, as for MEMECATCH_CADDY.
+[[ "$(plan "$tmp" yes yes MEMECATCH_AXUM=0)" == "$plan_shared_off" ]] || { echo 'MEMECATCH_AXUM=0 did not override the env file' >&2; exit 1; }
+printf 'OTHER=1\n' >"$tmp"
+[[ "$(plan "$tmp" yes yes MEMECATCH_AXUM=1)" == "$axum_shared" ]] || { echo 'MEMECATCH_AXUM=1 from the environment was ignored' >&2; exit 1; }
+
+# The docker calls of a deploy, with the containers' health under test control.
+cat >"$stub/docker" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$test_calls"
+case "$*" in
+  "ps -aq --filter label=com.docker.compose.project=memecatch --filter label=com.docker.compose.service=next") printf '%s\n' "${test_stale_next:-}" ;;
+  "inspect memecatch-app-1 "*) printf '%s\n' "${test_app_health-healthy}" ;;
+  "inspect memecatch-next-1 "*) printf '%s\n' "${test_next_health-healthy}" ;;
+esac
+STUB
+printf '#!/usr/bin/env bash\nexit 0\n' >"$stub/sleep"
+chmod +x "$stub/sleep"
+deploy() { : >"$calls"; env PATH="$stub:$PATH" test_calls="$calls" MEMECATCH_ENV_FILE="$tmp" "$@" bash "$script" >/dev/null 2>&1; }
+line_of() { grep -n -x -- "$1" "$calls" | head -1 | cut -d: -f1; }
+# Both calls were made, the first before the second.
+in_order() { [[ -n "$(line_of "$1")" && -n "$(line_of "$2")" ]] && (( $(line_of "$1") < $(line_of "$2") )); }
+axum_files='compose -p memecatch -f docker-compose.yml -f docker-compose.shared-proxy.yml -f docker-compose.axum.yml'
+
+# On: Next comes up and passes its health check before `app` is replaced, and
+# `app` is replaced by itself before the containers that are slow to stop.
+deploy MEMECATCH_AXUM=1 || { echo 'Axum deploy failed with both containers healthy' >&2; exit 1; }
+in_order "$axum_files up -d --wait --wait-timeout 180 next" "$axum_files up -d --no-deps app" || { echo 'next was not brought up healthy before app was replaced' >&2; exit 1; }
+in_order "$axum_files up -d --no-deps app" "$axum_files up -d" || { echo 'app was not replaced on its own before the other containers' >&2; exit 1; }
+if grep -q -- '--force-recreate' "$calls"; then echo 'Axum deploy recreated containers unconditionally' >&2; exit 1; fi
+if grep -qE '^(ps|rm) ' "$calls"; then echo 'Axum deploy looked for a container to remove' >&2; exit 1; fi
+# A manual redeploy recreates Next first, then the listener.
+deploy MEMECATCH_AXUM=1 DEPLOY_OCI_FORCE_RECREATE=1
+in_order "$axum_files up -d --no-deps --force-recreate --wait --wait-timeout 180 next" "$axum_files up -d --no-deps --force-recreate app" || { echo 'manual Axum redeploy did not recreate next before app' >&2; exit 1; }
+# The health gate fails when either container is not healthy, even though the
+# health URL answers (the curl stub always does).
+for failing in test_app_health=unhealthy test_next_health=unhealthy test_next_health=starting test_app_health=; do
+  if deploy MEMECATCH_AXUM=1 "$failing"; then echo "Axum deploy passed the health gate with $failing" >&2; exit 1; fi
+done
+deploy test_next_health=unhealthy || { echo 'a deploy without the flag looked at the next container health' >&2; exit 1; }
+[[ "$(grep -c '^compose ' "$calls")" == 1 ]] || { echo 'a deploy without the flag ran more than its one compose command' >&2; exit 1; }
+# The Next image is pulled for the service that runs it.
+deploy MEMECATCH_AXUM=1 MEMECATCH_IMAGE=ghcr.io/example/memecatch:1
+grep -q -x -- "$axum_files pull next" "$calls" || { echo 'Axum deploy did not pull the Next image for next' >&2; exit 1; }
+deploy MEMECATCH_IMAGE=ghcr.io/example/memecatch:1
+grep -q -x -- 'compose -p memecatch -f docker-compose.yml -f docker-compose.shared-proxy.yml pull app' "$calls" || { echo 'deploy without the flag did not pull app' >&2; exit 1; }
+
+# Off after on: the `next` container an Axum deploy left is removed, after
+# `app` is Next again, and nothing else is.
+deploy test_stale_next=abc123
+in_order 'compose -p memecatch -f docker-compose.yml -f docker-compose.shared-proxy.yml up -d' 'rm -f abc123' || { echo 'the leftover next container was not removed after app was replaced' >&2; exit 1; }
+[[ "$(grep -c '^rm ' "$calls")" == 1 ]] || { echo 'more than the next container was removed' >&2; exit 1; }
+if grep -q 'axum' "$calls"; then echo 'deploy without the flag named docker-compose.axum.yml' >&2; exit 1; fi
+# Off with nothing left behind removes nothing.
+deploy
+if grep -q '^rm ' "$calls"; then echo 'deploy without the flag removed a container' >&2; exit 1; fi
+
 echo "deploy-oci plan ok"

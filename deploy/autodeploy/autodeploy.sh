@@ -22,6 +22,13 @@
 #   - an optional systemd timer (deploy/autodeploy/install.sh --with-timer),
 #     which quietly retries on the next tick.
 #
+# With MEMECATCH_AXUM=1 (docs/axum-migration/PLAN.md) a release is two
+# containers: `app` is the Axum server and `next` is the Next app behind it.
+# Step 2 then also needs the CI `server` run, step 4 also builds the Axum image
+# (after checking that the disk has room for it) and snapshots both containers,
+# and the release counts as running only when both run images of the commit.
+# Without the flag nothing below differs from a Next-only deploy.
+#
 # The agent runs from $STATE_DIR/bin, outside the checkout. A rollback can reset
 # the checkout to a commit that predates this file; the running copy must survive
 # that. It replaces itself with the checkout's version only after a good deploy.
@@ -34,13 +41,66 @@ PUBLIC_URL="${AUTODEPLOY_PUBLIC_URL:-https://catchmeme.com}"
 CHECK_NAME="${AUTODEPLOY_CHECK_NAME:-check}"
 KEEP_IMAGES="${AUTODEPLOY_KEEP_IMAGES:-3}"
 BUILD_HEARTBEAT_SECONDS=30
+# The CI job that tests server/ and builds its image. Required with Axum in front.
+SERVER_CHECK_NAME=server
+# Free space, in MB, that Docker's data directory must have before the Axum
+# image is built. Postgres keeps its data on the same disk, and a full disk
+# stops it. Measured (docs/oci-setup.md, "Disk"): a build with nothing cached
+# writes 1.7 GB, all of which stays in the build cache, and the Next and worker
+# images of the same run write 1.9 GB before it starts. That is 3.6 GB, rounded
+# up. A later build reuses the cache and writes about 25 MB, but Docker can
+# drop the cache at any time, so every run is held to the cold figure.
+# AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB replaces it (see server_build_min_free_mb).
+SERVER_BUILD_MIN_FREE_MB=4000
+# Set to 1 by main when MEMECATCH_AXUM=1; one reading decides the whole run.
+AXUM=""
 
 log() { printf '%s memecatch-autodeploy: %s\n' "$(date -u +%FT%TZ)" "$*"; }
 
-# CI state of a commit: success | pending | failure.
-# Reads the check-runs JSON on stdin so tests can feed fixtures.
+# The last value of KEY in an env file, without surrounding quotes. The same
+# reading as dotenv_value in scripts/deploy-oci.sh, repeated here because the
+# agent runs from outside the checkout and must not depend on a file in it.
+dotenv_value() {
+  local key="$1" file="$2" value
+  [[ -f "$file" ]] || return 0
+  value="$(awk -v key="$key" 'index($0, key "=") == 1 { val = substr($0, length(key) + 2) } END { print val }' "$file")"
+  value="${value%$'\r'}"
+  if [[ ${#value} -ge 2 && "${value:0:1}" == '"' && "${value: -1}" == '"' ]]; then
+    value="${value:1:${#value}-2}"
+  elif [[ ${#value} -ge 2 && "${value:0:1}" == "'" && "${value: -1}" == "'" ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+  printf '%s' "$value"
+}
+
+# A deploy setting, read as scripts/deploy-oci.sh reads MEMECATCH_CADDY: its
+# value in the environment ($2) first, then the env file. The env file matters
+# here: sshd gives the forced command no variables of the operator's choosing.
+setting() {
+  local value="$2"
+  [[ -n "$value" ]] || value="$(dotenv_value "$1" "${MEMECATCH_ENV_FILE:-$ROOT/.env}")"
+  printf '%s' "$value"
+}
+
+# Whether this deploy puts Axum in front of Next. Only the value 1 is on.
+axum_enabled() {
+  [[ "$(setting MEMECATCH_AXUM "${MEMECATCH_AXUM:-}")" == 1 ]]
+}
+
+# The free space the Axum build needs, in MB. An override that is not a number
+# is ignored, so a typing mistake cannot switch the check off.
+server_build_min_free_mb() {
+  local value
+  value="$(setting AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB "${AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB:-}")"
+  [[ "$value" =~ ^[0-9]+$ ]] || value="$SERVER_BUILD_MIN_FREE_MB"
+  printf '%s' "$value"
+}
+
+# CI state of one check of a commit: success | pending | failure.
+# Reads the check-runs JSON on stdin so tests can feed fixtures. The check is
+# $1, or the `check` job when no name is given.
 ci_state_from_json() {
-  jq -r --arg name "$CHECK_NAME" '
+  jq -r --arg name "${1:-$CHECK_NAME}" '
     [.check_runs[] | select(.name == $name)] | sort_by(.started_at) | last
     | if . == null then "pending"
       elif .status != "completed" then "pending"
@@ -49,16 +109,38 @@ ci_state_from_json() {
 }
 
 ci_state() {
-  local sha="$1"
-  curl -fsS --max-time 20 \
+  local sha="$1" runs name state result=success
+  if [[ -z "$AXUM" ]]; then
+    curl -fsS --max-time 20 \
+      -H "Accept: application/vnd.github+json" \
+      "https://api.github.com/repos/${REPO}/commits/${sha}/check-runs?check_name=${CHECK_NAME}" \
+      | ci_state_from_json
+    return
+  fi
+  # With Axum in front a red `server` job must stop the deploy too. One request
+  # returns the latest run of every check of the commit, so the second name
+  # costs nothing against GitHub's unauthenticated rate limit. A failure in
+  # either wins over a run that has not finished.
+  runs="$(curl -fsS --max-time 20 \
     -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/${REPO}/commits/${sha}/check-runs?check_name=${CHECK_NAME}" \
-    | ci_state_from_json
+    "https://api.github.com/repos/${REPO}/commits/${sha}/check-runs?per_page=100")" || return 1
+  for name in "$CHECK_NAME" "$SERVER_CHECK_NAME"; do
+    state="$(ci_state_from_json "$name" <<<"$runs")" || return 1
+    case "$state" in
+      success) ;;
+      failure) echo failure; return 0 ;;
+      *) result=pending ;;
+    esac
+  done
+  echo "$result"
 }
 
 # Release SHA baked into the running app image at build time, or empty.
 # Read the image, not the container: compose also passes RELEASE_SHA from .env,
 # and a stale value there would make the container env lie about the release.
+# With Axum in front `app` is the Axum image, which carries the SHA the same
+# way (Dockerfile.server). `next` is replaced first, so after an interrupted
+# deploy `app` still names the older release and the deploy runs again.
 running_sha() {
   local image
   image="$(docker inspect memecatch-app-1 --format '{{.Image}}' 2>/dev/null)" || return 0
@@ -68,13 +150,20 @@ running_sha() {
 
 # Bind health and image identity to one container inspection. Missing health
 # checks and Docker inspection failures are unverified, never success.
-running_app_healthy_for_sha() {
-  local expected="$1" container image running health extra sha
-  container="$(docker inspect memecatch-app-1 --format '{{.Image}} {{.State.Running}} {{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' 2>/dev/null)" || return 1
+container_healthy_for_sha() {
+  local name="$1" expected="$2" container image running health extra sha
+  container="$(docker inspect "$name" --format '{{.Image}} {{.State.Running}} {{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' 2>/dev/null)" || return 1
   read -r image running health extra <<<"$container"
   [[ -n "$image" && "$running" == true && "$health" == healthy && -z "$extra" ]] || return 1
   sha="$(docker image inspect "$image" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^RELEASE_SHA=//p' | head -1)" || return 1
   [[ "$sha" == "$expected" ]]
+}
+
+# The release <sha> is what answers: the listener and, with Axum in front, the
+# Next app behind it both run an image of that commit and are healthy.
+running_app_healthy_for_sha() {
+  container_healthy_for_sha memecatch-app-1 "$1" || return 1
+  [[ -z "$AXUM" ]] || container_healthy_for_sha memecatch-next-1 "$1"
 }
 
 # Added or changed migration files between two commits.
@@ -91,9 +180,11 @@ service_image() {
   docker inspect "memecatch-$1-1" --format '{{.Config.Image}}' 2>/dev/null
 }
 
-# Snapshot name for a service. Always a local repository, whatever registry the
-# running image came from: deploy-oci.sh pulls any ghcr.io/ reference, and a
-# snapshot exists only on this VM.
+# Snapshot name for an image role. Always a local repository, whatever registry
+# the running image came from: deploy-oci.sh pulls any ghcr.io/ reference, and a
+# snapshot exists only on this VM. The roles are the compose services, except
+# that the Next image is always `app` and the Axum image is always `server`
+# (see tag_rollback).
 rollback_ref() {
   local service="$1" sha="$2"
   case "$service" in
@@ -110,15 +201,29 @@ rollback_ref() {
 # memecatch-worker:local, and the image they replace can disappear once it loses
 # its last tag. A service whose image is already gone is skipped with a warning
 # (a rollback then leaves that service on the new image).
+#
+# The record names what each image is, not which service ran it, because the
+# `app` service runs either image. The containers decide, not MEMECATCH_AXUM:
+# the flag says what this deploy will run, the snapshot says what ran before
+# it, and they differ on the deploy that turns the flag on or off.
 tag_rollback() {
-  local sha="$1" service image id ref record="$STATE_DIR/rollback-$1.refs"
+  local sha="$1" service role image id ref record="$STATE_DIR/rollback-$1.refs"
   : >"$record"
-  for service in app mpe-worker scheduler backup; do
+  for service in app next mpe-worker scheduler backup; do
     image="$(service_image "$service")" || continue
     id="$(docker inspect "memecatch-$service-1" --format '{{.Image}}')" || continue
-    ref="$(rollback_ref "$service" "$sha")"
+    role="$service"
+    if [[ "$service" == app && "$image" == *memecatch-server:* ]]; then
+      role=server
+    elif [[ "$service" == next ]]; then
+      # `next` is the release's Next image only behind Axum. Beside a Next
+      # `app` it is the leftover of an interrupted switch.
+      grep -q '^server ' "$record" || continue
+      role=app
+    fi
+    ref="$(rollback_ref "$role" "$sha")"
     if docker tag "$id" "$ref" 2>/dev/null; then
-      printf '%s %s\n' "$service" "$ref" >>"$record"
+      printf '%s %s\n' "$role" "$ref" >>"$record"
     else
       log "warning: cannot snapshot $service ($id is gone); its rollback keeps the new image"
     fi
@@ -126,18 +231,22 @@ tag_rollback() {
 }
 
 # Image references to redeploy for the snapshot of <sha>, as KEY=VALUE lines.
-# app and mpe-worker take their image from compose variables; scheduler and
-# backup are compose-built under fixed names, so their snapshots are retagged.
+# The Next, Axum and mpe-worker images come from compose variables; scheduler
+# and backup are compose-built under fixed names, so their snapshots are
+# retagged. MEMECATCH_AXUM is always set: a rollback restores the containers
+# the snapshot was taken from, whatever the flag says now.
 rollback_env() {
-  local record="$STATE_DIR/rollback-$1.refs" service ref
+  local record="$STATE_DIR/rollback-$1.refs" role ref axum=0
   [[ -f "$record" ]] || return 1
-  while read -r service ref; do
-    case "$service" in
+  while read -r role ref; do
+    case "$role" in
       app) printf 'MEMECATCH_IMAGE=%s\n' "$ref" ;;
+      server) axum=1; printf 'MEMECATCH_SERVER_IMAGE=%s\n' "$ref" ;;
       mpe-worker) printf 'MEMECATCH_WORKER_IMAGE=%s\n' "$ref" ;;
-      scheduler | backup) docker tag "$ref" "memecatch-$service:local" ;;
+      scheduler | backup) docker tag "$ref" "memecatch-$role:local" ;;
     esac
   done <"$record"
+  printf 'MEMECATCH_AXUM=%s\n' "$axum"
 }
 
 restore_rollback() {
@@ -156,6 +265,19 @@ build_args() {
   done <"$file"
 }
 
+# The Axum image for <sha>. Run from the checkout. It is built with the release
+# and the site URL of the Next image of the same commit (deploy/build.env):
+# Next fixes its response headers when it is built, Axum reads the same two
+# values from its image when it starts, and the routes Axum answers itself
+# must send the headers Next would.
+build_server_image() {
+  local sha="$1" site_url
+  site_url="$(grep -m1 '^NEXT_PUBLIC_SITE_URL=' deploy/build.env)" || return 1
+  nice -n 10 docker build -q -f Dockerfile.server \
+    --build-arg "RELEASE_SHA=${sha}" --build-arg "$site_url" \
+    -t "memecatch-server:release-${sha}" . >/dev/null
+}
+
 # Callers run this under `if !`, where bash turns errexit off; chain with && so a
 # failed app build can never fall through to a "successful" auxiliary build.
 build_images() {
@@ -164,6 +286,7 @@ build_images() {
   ( cd "$ROOT" \
     && nice -n 10 docker build -q -f Dockerfile --build-arg "RELEASE_SHA=${sha}" "${args[@]}" \
       -t "memecatch:release-${sha}" . >/dev/null \
+    && { [[ -z "$AXUM" ]] || build_server_image "$sha"; } \
     && nice -n 10 docker compose -p memecatch -f docker-compose.yml build -q mpe-worker scheduler backup )
 }
 
@@ -266,7 +389,7 @@ self_update() {
 # Keep the newest $KEEP_IMAGES release and rollback tags per repository.
 prune_images() {
   local repo kind
-  for repo in memecatch memecatch-worker memecatch-scheduler memecatch-backup; do
+  for repo in memecatch memecatch-server memecatch-worker memecatch-scheduler memecatch-backup; do
     for kind in release rollback; do
       docker images --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' "$repo" \
         | grep "|${repo}:${kind}-" | sort -r | tail -n "+$((KEEP_IMAGES + 1))" | cut -d'|' -f2 \
@@ -274,6 +397,13 @@ prune_images() {
     done
   done
   docker image prune -f >/dev/null 2>&1 || true
+}
+
+# Free space, in MB, on the filesystem that holds Docker's data directory.
+docker_free_mb() {
+  local dir
+  dir="$(docker info --format '{{.DockerRootDir}}')" || return 1
+  df -Pm "$dir" | awk 'NR == 2 { print $4 }'
 }
 
 STRICT=""
@@ -339,6 +469,7 @@ verify_deployment_status() (
 )
 
 main() {
+  if axum_enabled; then AXUM=1; fi
   # Over SSH a full commit SHA is mandatory: a missing or malformed request
   # must never fall back to deploying whatever origin/main points at. Checked
   # first, so a bare key probe does no git, CI, or docker work.
@@ -366,7 +497,7 @@ main() {
   fi
 
   git -C "$ROOT" fetch -q origin main
-  local target current state migrations req force="" running
+  local target current state migrations req force="" running free_mb min_free_mb
   target="$(git -C "$ROOT" rev-parse origin/main)"
   running="$(running_sha)"
   current="$running"
@@ -421,6 +552,17 @@ main() {
     exit 1
   fi
 
+  # The Axum image is built on this disk. Refuse while nothing has changed yet;
+  # an unreadable figure is not room.
+  if [[ -n "$AXUM" ]]; then
+    free_mb="$(docker_free_mb)" || free_mb=""
+    min_free_mb="$(server_build_min_free_mb)"
+    [[ "$free_mb" =~ ^[0-9]+$ ]] \
+      || not_deployed "cannot read the free space of Docker's data directory; not building the Axum image"
+    (( free_mb >= min_free_mb )) \
+      || not_deployed "Docker's data directory has ${free_mb} MB free and building the Axum image needs ${min_free_mb} MB (AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB); free some, for example with docker builder prune, and re-run. Nothing was changed"
+  fi
+
   if [[ -n "$req" ]]; then
     remote_main_is "$target" || not_deployed "origin/main changed before deployment"
   fi
@@ -452,8 +594,13 @@ main() {
     not_deployed "$activation_error; not deploying"
   fi
 
-  # RELEASE_SHA from the shell overrides any stale value in .env.
-  if RELEASE_SHA="$target" MEMECATCH_IMAGE="memecatch:release-${target}" DEPLOY_OCI_FORCE_RECREATE="$force" bash "$ROOT/scripts/deploy-oci.sh" \
+  # RELEASE_SHA from the shell overrides any stale value in .env. MEMECATCH_AXUM
+  # is passed either way, so the script deploys what this run decided and built
+  # even if the env file changed since; MEMECATCH_SERVER_IMAGE is read only
+  # with the flag on.
+  if RELEASE_SHA="$target" MEMECATCH_IMAGE="memecatch:release-${target}" \
+    MEMECATCH_AXUM="${AXUM:-0}" MEMECATCH_SERVER_IMAGE="memecatch-server:release-${target}" \
+    DEPLOY_OCI_FORCE_RECREATE="$force" bash "$ROOT/scripts/deploy-oci.sh" \
     && public_release_is "$target"; then
     printf '%s\n' "$target" >"$STATE_DIR/deployed"
     log "deployed ${target:0:7}"

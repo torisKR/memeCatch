@@ -24,8 +24,8 @@ use std::time::Duration;
 use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::header::{
-    CONNECTION, CONTENT_TYPE, HeaderMap, HeaderName, PROXY_AUTHENTICATE, PROXY_AUTHORIZATION, TE,
-    TRAILER, TRANSFER_ENCODING, UPGRADE,
+    AUTHORIZATION, CONNECTION, CONTENT_TYPE, HeaderMap, HeaderName, PROXY_AUTHENTICATE,
+    PROXY_AUTHORIZATION, TE, TRAILER, TRANSFER_ENCODING, UPGRADE,
 };
 use axum::http::uri::{Authority, PathAndQuery, Scheme, Uri};
 use axum::http::{StatusCode, Version};
@@ -93,6 +93,58 @@ impl Upstream {
         response
             .map(|response| response.status())
             .map_err(|error| error_chain(&error))
+    }
+}
+
+/// A part of Next's cache that a native route expires after its work, where
+/// the Next route would have called `revalidateTag` or `revalidatePath`. Next
+/// does the expiry itself (`app/api/internal/cache/route.ts`): its cache is
+/// in its own process.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CacheScope {
+    /// `revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 })`.
+    PublicCatalog,
+    /// `expireInstagramVideoVerificationCache()`: the catalog tag and
+    /// `revalidatePath("/", "layout")`.
+    InstagramVideoVerification,
+}
+
+impl CacheScope {
+    fn name(self) -> &'static str {
+        match self {
+            Self::PublicCatalog => "public-catalog",
+            Self::InstagramVideoVerification => "instagram-video-verification",
+        }
+    }
+}
+
+/// How long a cache expiry may take. Next answers it without other work.
+const CACHE_EXPIRY_TIMEOUT: Duration = Duration::from_secs(10);
+
+impl Upstream {
+    /// Asks Next to expire `scope`, with the cron bearer the internal route
+    /// requires. `Err` when Next did not confirm: the caller answers as the
+    /// TypeScript does when `revalidateTag` throws.
+    pub async fn expire_cache(&self, scope: CacheScope, cron_secret: &str) -> Result<(), String> {
+        let uri = Uri::builder()
+            .scheme(Scheme::HTTP)
+            .authority(self.authority.clone())
+            .path_and_query(format!("/api/internal/cache?scope={}", scope.name()))
+            .build()
+            .map_err(|error| error.to_string())?;
+        let request = Request::post(uri)
+            .header(AUTHORIZATION, format!("Bearer {cron_secret}"))
+            .body(Body::empty())
+            .map_err(|error| error.to_string())?;
+        let response = tokio::time::timeout(CACHE_EXPIRY_TIMEOUT, self.client.request(request))
+            .await
+            .map_err(|_| "timed out".to_owned())?
+            .map_err(|error| error_chain(&error))?;
+        if response.status() == StatusCode::OK {
+            Ok(())
+        } else {
+            Err(format!("Next answered {}", response.status()))
+        }
     }
 }
 

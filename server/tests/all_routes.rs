@@ -23,9 +23,11 @@ const PILOTS_ON: (&str, &str) = (
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
-const BASE: [(&str, &str); 8] = [
+const BASE: [(&str, &str); 9] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
+    // The Instagram video cache route needs it to reach Next's cache.
+    ("CRON_SECRET", "test-only-cron-secret"),
     ("NODE_ENV", "development"),
     ("R2_ACCOUNT_ID", "not-used"),
     ("R2_ACCESS_KEY_ID", "not-used"),
@@ -119,6 +121,16 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "/api/memes/semantic-search",
         ),
         ("memes-chat", "POST", "/api/memes/chat"),
+        ("growth-baseline", "GET", "/api/cron/growth-baseline"),
+        ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
+        ("source-refresh", "POST", "/api/cron/source-refresh"),
+        (
+            "instagram-video-cache",
+            "POST",
+            "/api/admin/instagram-video-verification/revalidate",
+        ),
+        ("adpick-hotdeals", "GET", "/api/cron/adpick-hotdeals"),
+        ("creator-products", "GET", "/api/creator-products/x"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

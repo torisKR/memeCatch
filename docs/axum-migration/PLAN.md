@@ -53,7 +53,7 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | --- | --- | --- |
 | 0 | Axum 크레이트, Next로의 스트리밍 리버스 프록시, DB 신원 계층, 헬스체크, 패리티 하네스, Docker·CI | 완료. `torisKR/axum-foundation` `561dbde26` |
 | 1 | R2/객체 저장소 + `/api/media/signed`, better-auth 세션 판독·운영자·크론 가드, 공개 읽기 경로 1차 | 완료. `torisKR/axum-foundation` `6365dcfbf` (병합 T2 `496b2e6f0`, T3 `a0c156bc4`, T4 `15cd5cddc`) |
-| 2 | 나머지 공개 읽기 경로(llms.txt, 피드, oembed, 탐색 미리보기, 밈 카드, 퀴즈) | 대기 |
+| 2 | 나머지 공개 읽기 경로(llms.txt, 피드, oembed, 탐색 미리보기, 밈 카드, 퀴즈) | 진행 중. R1: llms.txt·피드 6개와 탐색 미리보기 완료, oembed는 프록시(6절) |
 | 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 대기 |
 | 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | 대기 |
 | 5 | 운영 전환: `scripts/deploy-oci.sh`의 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next` 서비스의 health로 배포 게이트, Next 이미지를 빌드한 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`을 Axum에 전달. 5절 "단계 5에서 확인할 것" 참조 | 사용자 승인 필요 |
@@ -96,6 +96,13 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-about` | `/about` | `GET`, `HEAD` | 파일럿. `AXUM_PILOT_ROUTES`에 id를 적어야 켜진다(기본은 Next). 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
 | `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 파일럿, 위와 같다. "유래" 절까지만 그린다. 미디어·번역·자체 제작·편집 밈과 DB 조회 실패는 Next로 넘긴다 |
 | `page-assets` | `/_axum/{file}` | `GET`, `HEAD` | 위 두 페이지의 스타일시트와 스크립트. 파일 이름에 내용 해시가 들어간다 |
+| `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
+| `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
+| `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
+| `feed-updated` | `/feed/updated.xml` | `GET`, `HEAD` | 최근 수정 30개. www 호스트 요청은 Next로 넘긴다 |
+| `llms-localized` | `/en/llms.txt`, `/ja/llms.txt`, `/zh/llms.txt`, `/zh-tw/llms.txt` | `GET`, `HEAD` | 번역 로케일 넷의 고정 경로만 등록한다. 다른 접두사(`/ko/llms.txt` 등)는 Next가 답한다(404). www 호스트 요청은 Next로 넘긴다 |
+| `llms-full-localized` | `/en/llms-full.txt`, `/ja/llms-full.txt`, `/zh/llms-full.txt`, `/zh-tw/llms-full.txt` | `GET`, `HEAD` | 위와 같다 |
+| `explore-previews` | `/api/explore/previews` | `POST` | Next도 `POST`만 답한다. 데드라인 풀(연결 2개, 문장 1.5초)로 익명 롤과 `service_role`이 한 번씩 읽는다. 동시에 4개까지, 4초 안에 못 끝내면 503. 제한기(전체 분당 1,200, 주소별 분당 120)는 프로세스별이다 |
 
 인증 추출자(`RequestIdentity`·`SignedInUser`·`Operator`·`CronAuthorized`·`CronAuthorizedTrimmed`)와 객체 저장소(`state.storage`)는 만들어졌고, 이를 쓰는 경로는 단계 2·3에서 붙는다. 크론 가드가 둘인 이유: 크론 경로 넷(`trend-pulse`·`source-refresh`·`growth-baseline`·`saved-state-emails`)은 `CRON_SECRET`을 그대로 비교하고 `meme-embeddings`는 trim한 뒤 비교한다.
 
@@ -157,3 +164,42 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | 25 | 헤더가 100개를 넘는 요청은 431. Node는 2,000개까지 받는다. `axum::serve`에 설정이 없어 고치려면 hyper 연결 루프를 직접 써야 한다(하지 않기로 했다) | 수용 |
 | 26 | 요청 헤더를 읽는 시간 제한이 없다. Node는 60초 뒤 끊는다. Caddy 말고 다른 것이 3000 포트에 닿을 때만 문제다 | 수용 |
 | 27 | UTF-8이 아닌 요청 대상은 hyper가 400으로 답한다 | 수용 |
+| 28 | `/llms.txt`의 「오늘의 랭킹」 링크 여부를 Axum이 따로 60초 보관한다. Next는 같은 판정을 랭킹 페이지·사이트맵과 한 변수로 함께 쓴다. 카탈로그가 바뀐 뒤 1분 안에는 두 서버의 답이 다를 수 있다 | 수용 |
+| 29 | 그 판정에 Next는 「컴백」 목록도 읽지만 결과에 영향이 없어 Axum은 읽지 않는다(쿼리 하나 적다) | 수용 |
+| 30 | 로케일 llms: Next는 색인 가능 밈 id 집합을 Data Cache에 1시간 두고 카탈로그 수정 때 비운다. Axum은 요청마다 다시 읽는다. 실리는 밈은 양쪽 다 현재 행으로 다시 검사하므로, 최근 1시간 안에 색인 가능해진 밈이 Axum에 먼저 실리는 것만 다르다. 요청당 DB 부하는 `/llms.txt`와 같은 수준(전체 후보 스캔)이다 | 수용 |
+| 31 | Next의 Data Cache에 남은 id 집합이 있으면 Next는 그 읽기가 실패해도 목록을 낸다. Axum은 읽기가 실패하면 빈 목록을 낸다(둘 다 200) | 수용 |
+| 32 | JSON 안의 타임스탬프 문자열을 Axum은 항상 UTC로 받는다(sqlx가 세션 시간대를 UTC로 고정). Next는 DB 기본 시간대를 따른다. `/{locale}/llms-full.txt`의 번역 갱신 시각 줄에만 드러나고, 이 저장소의 Postgres 기본값은 UTC라 지금은 같다 | 수용 |
+| 33 | 날짜 문자열 해석: Postgres가 쓰지 않는 형태(없는 날짜 `2026-02-30`, 시간대 없는 시각)를 V8은 숫자로 읽고 Axum은 날짜가 아닌 것으로 본다. DB에서 온 값으로는 닿지 않는다 | 수용 |
+| 34 | `/api/explore/previews`의 출처 검사에서 「Next 자신의 요청 URL」 출처를 Axum은 `<프로토콜>://localhost:<UPSTREAM_URL의 포트>`로 본다(프로토콜은 `x-forwarded-proto`). 127.0.0.1에 묶인 Next에서 측정한 값이고, 다른 주소에 묶인 Next는 그 주소를 쓸 수 있다. 브라우저는 사이트 출처(`NEXT_PUBLIC_SITE_URL`)를 보내므로 운영 요청과는 무관하다 | 수용 |
+| 35 | 그 경로의 제한기 둘도 프로세스별이고, 주소가 아닌 `X-Forwarded-For` 값은 `unknown` 버킷을 함께 쓴다(#1~#3과 같다) | 수용 |
+| 36 | 그 경로의 동시 읽기 4자리: Next는 4초 기한이 지나도 뒤의 작업이 끝날 때까지 자리를 쥐고, Axum은 기한에 자리를 돌려준다(남은 쿼리는 1.5초 `statement_timeout`으로 끝난다) | 수용 |
+| 37 | 그 경로의 요청 본문: `JSON.parse`는 받고 `serde_json`은 거부하는 입력(#20의 셋)은 400 `invalid request`다. Next는 그 본문에서 `ids`를 읽는다 | 수용 |
+| 38 | 그 경로가 읽은 행의 형이 스키마와 다르면(열 형과 CHECK 제약이 막는 경우) Next는 그 카드만 비우고 Axum은 503이다 | 수용 |
+
+## 6. 단계 2 진행: R1 (공개 텍스트 경로)
+
+브랜치 `torisKR/axum-routes-r1`. 대상 8개 중 7개를 옮겼다. 검증은 같은 시드 DB에서 실제 Next와 바이트 단위로 비교했고(`server/parity/README.md` "Text routes", "Explore previews"), `cargo test`는 Next가 낸 본문을 픽스처(`server/tests/fixtures/r1/`, `previews.json`)로 들고 있다.
+
+### 캐시와 `proxy.ts`
+
+- 텍스트 경로 여섯 모두 Next에서 `force-dynamic`이다. 프리렌더·ISR이 없고, 응답 헤더는 핸들러가 넣는 `Cache-Control: public, max-age=3600`(실패 시 `no-store` + `Retry-After: 300`)뿐이다. Axum도 요청마다 렌더링한다.
+- `proxy.ts`의 첫 매처는 `.txt`·`.xml`로 끝나는 경로를 건너뛴다. 그래서 이 경로들에는 `proxy.ts`가 붙이는 `Content-Language`가 없고(llms는 핸들러가 직접 넣는다), 적용되는 것은 www 호스트의 301뿐이다. Axum은 www 요청을 Next로 넘긴다.
+- Next는 이 경로들의 본문을 압축하지 않는다(630 KB인 `/llms-full.txt`도). Axum도 압축하지 않는다.
+
+### 이식한 TypeScript 동작(버그 포함)
+
+1. **로케일 llms의 번역 순서는 정해져 있지 않다.** `getLocalizedFeaturedMemes`가 `trend_score` 정렬을 임베드된 `memes` 행(한 행)에 걸어, 최상위 쿼리에는 `ORDER BY`가 없다. 「트렌드 상위」가 아니라 Postgres가 읽은 순서대로 실리고, `LIMIT`에 걸리는 번역도 그 순서로 정해진다. 같은 DB에서 ANALYZE 전후로 순서가 뒤집히는 것을 확인했다. Axum은 같은 SQL을 준비하지 않은 문장으로 보내 Next와 같은 계획·같은 순서를 얻는다.
+2. **제한 공개(`limited`) 밈도 번역이 검수됐으면 로케일 llms에 실린다.** 한국어 내보내기는 `approved`만 싣는다.
+3. **`/llms-full.txt`의 별칭 줄.** 별칭이 전부 공백이면 `- 별칭: ` 뒤가 빈 줄이 그대로 나간다.
+4. **내보내기 한도.** 후보가 50,000행을 넘으면 한국어 내보내기 넷은 503이고, 로케일 llms의 색인 집합은 오류 없이 50,000행에서 멈춘다.
+
+### `/api/explore/previews`
+
+- 과제 표에는 `GET`으로 적혀 있었지만 Next의 핸들러는 `POST`뿐이다(`GET`은 405). `POST`만 옮겼고 나머지 메서드는 Next가 답한다. `force-dynamic`, 응답은 `Cache-Control: no-store`.
+- 어떤 콘텐츠를 미리보기로 내고 임베드를 허용할지는 `lib/meme-delivery.ts`의 권리 정책이 정한다. 그 부분(`resolveMemeDelivery` 중 이 경로가 읽는 것, `normalizeSourceUrl`, `sourcePlatformFromReference`)을 옮기고, 실제 TypeScript가 914개 사례에 낸 답을 픽스처(`server/tests/fixtures/preview_delivery.json`, `server/parity/preview-fixture.mjs`가 만든다)로 두어 사례마다 비교한다. 이식본을 38가지로 고쳐 보는 변이 시험에서 37개가 잡혔고, 남은 하나는 어떤 입력에서도 답을 바꾸지 못한다.
+- 출처 검사(`lib/origin.ts`)는 Next 자신의 요청 URL을 쓴다. 독립 실행 Next에서 그 값은 `Host` 헤더가 아니라 `<x-forwarded-proto 또는 http>://localhost:<Next의 포트>`다(#34).
+- 응답 카드의 순서는 Postgres가 행을 돌려준 순서다(쿼리에 `ORDER BY`가 없다). 요청한 id 순서가 아니다. 그대로 옮겼다.
+
+### 프록시로 남긴 경로
+
+- **`/api/oembed`.** `reserve_oembed_request()`를 부르는데 이 함수를 만드는 마이그레이션이 없다(`lib/database.types.ts`와 라우트·테스트에만 이름이 있다). `db/migrations`로 만든 DB에서는 로그인 안 한 요청은 401, 로그인한 요청은 전부 429라서 성공 경로에 닿을 수 없다. `components/meme-embed.tsx`가 모든 방문자에게 이 경로를 부르므로 제품 버그일 가능성이 크다(운영 DB에 함수가 따로 있는지는 확인하지 않았다). 성공 경로의 동치(할당량 호출, 플랫폼 요청, Next의 1시간 fetch 캐시)를 실제 스키마로 증명할 수 없어 옮기지 않았다. 함수를 마이그레이션으로 넣을지, 할당량 호출을 뺄지를 먼저 정해야 한다.

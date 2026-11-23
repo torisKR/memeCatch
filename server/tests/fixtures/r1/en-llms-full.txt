@@ -1,0 +1,565 @@
+# MemeCatch — llms-full (en)
+
+> Full human-reviewed, current translation corpus for Korean meme retrieval and citation.
+>
+> Machine translations, stale translations, incomplete Korean entries, and thin source records are excluded.
+
+For attribution, cite the localized entry URL and retain its Korean title. Use the listed source URLs to distinguish primary material from contextual references.
+Contact: toris@toris.kr
+Canonical index: http://127.0.0.1:3411/en/llms.txt
+Entries: 23
+
+##   Unbreakable   spirit
+(중꺾마) [x] 
+URL: http://127.0.0.1:3411/en/memes/r1aaaa01-axum-r1-en%20unbreakable%3F%26%23
+Original Korean title: 중꺾마 [대괄호] \백슬래시 <b> & "쌍" '홑'
+Summary: What   matters is	an unbroken heart.
+
+### Meaning
+Meaning line one
+line two
+
+### Origin
+Origin text
+
+### Usage
+Usage
+note
+
+### Caution
+Not specified
+
+### Sources
+- [Source <A> & "B"](https://example.com/a?x=1&y=2)
+- [youtube](https://example.com/b)
+- [Sources](https://example.com/c)
+
+Translation updated: 2026-05-03T04:05:06.789012+00:00
+
+---
+
+## Dance meme
+URL: http://127.0.0.1:3411/en/memes/r1aaaa02-axum-r1-en-dance
+Original Korean title: 댄스 밈
+Summary: Dance summary
+
+### Meaning
+Dance meaning
+
+### Origin
+Dance origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-03T00:00:00+00:00
+
+---
+
+## Limited meme
+URL: http://127.0.0.1:3411/en/memes/r1aaaa08-axum-r1-en-limited
+Original Korean title: 제한 밈
+Summary: Limited summary
+
+### Meaning
+Limited meaning
+
+### Origin
+Limited origin
+
+### Usage
+Not specified
+
+### Caution
+Limited caution
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-03T00:00:00+00:00
+
+---
+
+## Generated 01
+URL: http://127.0.0.1:3411/en/memes/r1gggg01-axum-r1-en-gen-01
+Original Korean title: 생성 밈 1
+Summary: Generated summary 01
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:01+00:00
+
+---
+
+## Generated 02
+URL: http://127.0.0.1:3411/en/memes/r1gggg02-axum-r1-en-gen-02
+Original Korean title: 생성 밈 2
+Summary: Generated summary 02
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:02+00:00
+
+---
+
+## Generated 03
+URL: http://127.0.0.1:3411/en/memes/r1gggg03-axum-r1-en-gen-03
+Original Korean title: 생성 밈 3
+Summary: Generated summary 03
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:03+00:00
+
+---
+
+## Generated 04
+URL: http://127.0.0.1:3411/en/memes/r1gggg04-axum-r1-en-gen-04
+Original Korean title: 생성 밈 4
+Summary: Generated summary 04
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:04+00:00
+
+---
+
+## Generated 05
+URL: http://127.0.0.1:3411/en/memes/r1gggg05-axum-r1-en-gen-05
+Original Korean title: 생성 밈 5
+Summary: Generated summary 05
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:05+00:00
+
+---
+
+## Generated 06
+URL: http://127.0.0.1:3411/en/memes/r1gggg06-axum-r1-en-gen-06
+Original Korean title: 생성 밈 6
+Summary: Generated summary 06
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:06+00:00
+
+---
+
+## Generated 07
+URL: http://127.0.0.1:3411/en/memes/r1gggg07-axum-r1-en-gen-07
+Original Korean title: 생성 밈 7
+Summary: Generated summary 07
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:07+00:00
+
+---
+
+## Generated 08
+URL: http://127.0.0.1:3411/en/memes/r1gggg08-axum-r1-en-gen-08
+Original Korean title: 생성 밈 8
+Summary: Generated summary 08
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:08+00:00
+
+---
+
+## Generated 09
+URL: http://127.0.0.1:3411/en/memes/r1gggg09-axum-r1-en-gen-09
+Original Korean title: 생성 밈 9
+Summary: Generated summary 09
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:09+00:00
+
+---
+
+## Generated 10
+URL: http://127.0.0.1:3411/en/memes/r1gggg10-axum-r1-en-gen-10
+Original Korean title: 생성 밈 10
+Summary: Generated summary 10
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:10+00:00
+
+---
+
+## Generated 11
+URL: http://127.0.0.1:3411/en/memes/r1gggg11-axum-r1-en-gen-11
+Original Korean title: 생성 밈 11
+Summary: Generated summary 11
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:11+00:00
+
+---
+
+## Generated 12
+URL: http://127.0.0.1:3411/en/memes/r1gggg12-axum-r1-en-gen-12
+Original Korean title: 생성 밈 12
+Summary: Generated summary 12
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:12+00:00
+
+---
+
+## Generated 13
+URL: http://127.0.0.1:3411/en/memes/r1gggg13-axum-r1-en-gen-13
+Original Korean title: 생성 밈 13
+Summary: Generated summary 13
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:13+00:00
+
+---
+
+## Generated 14
+URL: http://127.0.0.1:3411/en/memes/r1gggg14-axum-r1-en-gen-14
+Original Korean title: 생성 밈 14
+Summary: Generated summary 14
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:14+00:00
+
+---
+
+## Generated 15
+URL: http://127.0.0.1:3411/en/memes/r1gggg15-axum-r1-en-gen-15
+Original Korean title: 생성 밈 15
+Summary: Generated summary 15
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:15+00:00
+
+---
+
+## Generated 16
+URL: http://127.0.0.1:3411/en/memes/r1gggg16-axum-r1-en-gen-16
+Original Korean title: 생성 밈 16
+Summary: Generated summary 16
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:16+00:00
+
+---
+
+## Generated 17
+URL: http://127.0.0.1:3411/en/memes/r1gggg17-axum-r1-en-gen-17
+Original Korean title: 생성 밈 17
+Summary: Generated summary 17
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:17+00:00
+
+---
+
+## Generated 18
+URL: http://127.0.0.1:3411/en/memes/r1gggg18-axum-r1-en-gen-18
+Original Korean title: 생성 밈 18
+Summary: Generated summary 18
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:18+00:00
+
+---
+
+## Generated 19
+URL: http://127.0.0.1:3411/en/memes/r1gggg19-axum-r1-en-gen-19
+Original Korean title: 생성 밈 19
+Summary: Generated summary 19
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:19+00:00
+
+---
+
+## Generated 20
+URL: http://127.0.0.1:3411/en/memes/r1gggg20-axum-r1-en-gen-20
+Original Korean title: 생성 밈 20
+Summary: Generated summary 20
+
+### Meaning
+Generated meaning
+
+### Origin
+Generated origin
+
+### Usage
+Not specified
+
+### Caution
+Not specified
+
+### Sources
+- Not specified
+
+Translation updated: 2026-05-05T00:00:20+00:00

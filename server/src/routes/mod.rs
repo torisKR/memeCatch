@@ -15,7 +15,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 10] = [
+pub const ROUTE_IDS: [&str; 17] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -26,6 +26,13 @@ pub const ROUTE_IDS: [&str; 10] = [
     "random-meme",
     "csp-report",
     "daily-quiz",
+    "llms",
+    "llms-full",
+    "feed",
+    "feed-updated",
+    "llms-localized",
+    "llms-full-localized",
+    "explore-previews",
 ];
 
 /// Routes that do not yet do all that Next's do, so they are off unless

@@ -1,0 +1,33 @@
+# MemeCatch
+
+> A multilingual guide to Korean meme terms, challenge dances, songs, drama scenes, and meme videos, explaining meaning, origin, usage, and cultural risk.
+>
+> Indexable translations are human-reviewed, current with the Korean source, and backed by substantial source material. Machine and outdated drafts remain private to the operator workflow and are excluded from public pages, search, and AI discovery feeds.
+
+## Key entry points
+- [Korean meme dictionary](http://127.0.0.1:3411/en)
+- [Full translated corpus for AI systems](http://127.0.0.1:3411/en/llms-full.txt)
+- [Korean source site](http://127.0.0.1:3411)
+
+## Featured reviewed translations
+- [Unbreakable spirit (중꺾마) [x]](http://127.0.0.1:3411/en/memes/r1aaaa01-axum-r1-en%20unbreakable%3F%26%23): What matters is an unbroken heart.
+- [Dance meme](http://127.0.0.1:3411/en/memes/r1aaaa02-axum-r1-en-dance): Dance summary
+- [Limited meme](http://127.0.0.1:3411/en/memes/r1aaaa08-axum-r1-en-limited): Limited summary
+- [Generated 01](http://127.0.0.1:3411/en/memes/r1gggg01-axum-r1-en-gen-01): Generated summary 01
+- [Generated 02](http://127.0.0.1:3411/en/memes/r1gggg02-axum-r1-en-gen-02): Generated summary 02
+- [Generated 03](http://127.0.0.1:3411/en/memes/r1gggg03-axum-r1-en-gen-03): Generated summary 03
+- [Generated 04](http://127.0.0.1:3411/en/memes/r1gggg04-axum-r1-en-gen-04): Generated summary 04
+- [Generated 05](http://127.0.0.1:3411/en/memes/r1gggg05-axum-r1-en-gen-05): Generated summary 05
+- [Generated 06](http://127.0.0.1:3411/en/memes/r1gggg06-axum-r1-en-gen-06): Generated summary 06
+- [Generated 07](http://127.0.0.1:3411/en/memes/r1gggg07-axum-r1-en-gen-07): Generated summary 07
+- [Generated 08](http://127.0.0.1:3411/en/memes/r1gggg08-axum-r1-en-gen-08): Generated summary 08
+- [Generated 09](http://127.0.0.1:3411/en/memes/r1gggg09-axum-r1-en-gen-09): Generated summary 09
+- [Generated 10](http://127.0.0.1:3411/en/memes/r1gggg10-axum-r1-en-gen-10): Generated summary 10
+- [Generated 11](http://127.0.0.1:3411/en/memes/r1gggg11-axum-r1-en-gen-11): Generated summary 11
+- [Generated 12](http://127.0.0.1:3411/en/memes/r1gggg12-axum-r1-en-gen-12): Generated summary 12
+
+## Citation and attribution
+- Cite the localized meme page URL, not this index.
+- Keep the original Korean title when identifying a meme.
+- Follow the source links on each entry for primary or contextual evidence.
+- Corrections and removal requests: toris@toris.kr

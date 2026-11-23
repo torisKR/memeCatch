@@ -100,7 +100,7 @@ match. `pages/pages.mjs` compares what a reader or a crawler gets.
 docker exec -i <container> psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q < server/parity/pages/seed.sql
 rm -rf .next/standalone/.next/cache   # then start Next as in server/README.md
 
-# 2. Axum with the pilot pages switched on, in front of that Next.
+# 2. Axum with the pages switched on, in front of that Next.
 AXUM_PILOT_ROUTES=page-about,page-meme ... cargo run
 
 # 3. The gate. Exit code 0: nothing differs outside the accepted list.
@@ -109,7 +109,19 @@ node server/parity/pages/pages.mjs $NEXT $AXUM
 # 4. The rollback switch: with the routes disabled every target is Next's page.
 AXUM_PILOT_ROUTES=page-about,page-meme AXUM_DISABLED_ROUTES=page-about,page-meme,page-assets ... cargo run
 node server/parity/pages/pages.mjs $NEXT $AXUM --expect-proxied
+
+# 5. At scale, before a batch is switched on: every URL of the sitemap, on a
+#    database restored from a production backup.
+curl -s $NEXT/sitemap.xml > /tmp/sitemap.xml
+node server/parity/pages/pages.mjs $NEXT $AXUM /tmp/sitemap.xml --concurrency=8 --examples=3
 ```
+
+The targets argument takes `targets.txt` lines, a sitemap, or a file of URLs
+(one per line; only their path and query are used, and nothing is expected of
+them beyond matching). `--concurrency` bounds the targets in flight;
+`--examples` how many requests the details of each kind of difference are
+printed for. The run ends with every kind of difference and how many
+requests and distinct paths had it, most frequent first.
 
 For each line of `pages/targets.txt`, as a browser, as Googlebot and as Yeti,
 it compares: the status; `Location` and `Refresh`; every response header but
@@ -142,18 +154,87 @@ the script:
 In the markup comparison a class list is compared as a set, a CSS-module
 class (`module_local__hash` in Next, `module-local` in Axum) is compared by
 module and local name, React's generated ids are skipped, and so are the
-`data-*` attributes that only feed `ui/site.js` and the start state the
+`data-*` attributes that only feed the scripts of `ui/` and the start state the
 motion library leaves in Next's markup (Axum animates the same thing in CSS).
 Icon links are compared without the file hash Next appends as a query.
 
 It does not run scripts, so it says nothing about what a page does after it
-loads, and it does not look at pixels.
+loads, and it does not look at pixels: the behaviour gate below does the
+first.
 
 `paths.txt` lists three `/memes/...` URLs of memes that do not exist. With
 the pilot pages off (the default) Axum passes Next's 404 on and `parity.mjs`
 finds them identical. With `page-meme` switched on Axum answers them itself
 and `parity.mjs` reports them: that is the accepted difference above, in
 bytes. Run `parity.mjs` with the pilots off and `pages.mjs` with them on.
+## Browser behaviour gate
+
+`behaviour/` drives a real browser (Playwright) through the same steps on Next
+and on Axum, on the same database, at a phone width and a desktop width, and a
+scenario passes only when both servers pass the same assertions. It asserts
+what a user can observe: the URL, visible text and state, focus and its ring,
+`aria-*`, cookies, storage, and the requests a step causes (method, path, body
+and its shape). It does not look at class names or markup structure.
+
+```sh
+# Next on its own origin, Axum on the site origin the Next build was given
+# (NEXT_PUBLIC_SITE_URL), with Next behind it: as in production, the page and
+# the APIs it calls (still Next's) share one origin. Next trusts a request
+# from its own `http://localhost:<port>` or from SITE_URL (lib/origin.ts), so
+# with a build for http://127.0.0.1:3001:
+PORT=3002 HOSTNAME=127.0.0.1 node .next/standalone/server.js               # Next
+PORT=3001 UPSTREAM_URL=http://127.0.0.1:3002 NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 \
+  AXUM_PILOT_ROUTES=page-about,page-meme ... cargo run                       # Axum
+
+NEXT_URL=http://localhost:3002 AXUM_URL=http://127.0.0.1:3001 \
+DATABASE_URL=<the database both use> BETTER_AUTH_SECRET=<their secret> \
+  node_modules/.bin/playwright test -c server/parity/behaviour/playwright.config.mjs
+# narrow it: --project=axum-mobile, a file name, -g "<title>"
+```
+
+Projects are `next-mobile`, `next-desktop`, `axum-mobile`, `axum-desktop`.
+Signed-in scenarios make a fresh user and session with the app's own
+better-auth on that database (`behaviour/session.mjs`, as
+`server/tests/better_auth_cookie.mjs` does), so `DATABASE_URL` must be on
+localhost and the secret the servers' own. Scenarios run one at a time: they
+share saved memes and sessions.
+
+Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
+
+| File | What |
+| --- | --- |
+| `frame.spec.mjs` | Header menu (Escape, focus return and ring, press outside), language switch in place (Arabic, right to left) and to a language with its own URLs, bottom navigation, scrolling hides the header and the bar on a phone, the `/` search shortcut, footer and its fold, navigation progress |
+| `account.spec.mjs` | Signed out: the sign-in link. Signed in as a user and as an operator: the account menu, its requests, focus, Escape, sign-out. Saving a meme signed out (the sign-in dialog, a modal) and signed in (stored, announced) |
+| `chat.spec.mjs` | The chat panel: open, ask, the streamed answer with references, Escape, the conversation kept and cleared; the errors. `/api/memes/chat` is answered by the scenario |
+| `visit.spec.mjs` | Where the visitor came from, the meme view count, the install prompt on an iPhone |
+
+### Adding a scenario for a component
+
+1. Find what the React component does that a user can notice, on Next, in the
+   browser: what changes on screen, where focus goes, which `aria-*` change,
+   what is stored, what is requested.
+2. Write it once with `test` from `lib.mjs`, in a file of
+   `behaviour/scenarios/` (one per feature area). Use `open(page, path)` to
+   load a page, role and label locators, `focused`, `focusRing`,
+   `requestsDuring`, `localStorageItem`, `sessionStorageItem`, `cookieValue`,
+   and the `signIn("user" | "operator")` fixture. Use `mobileOnly` or
+   `desktopOnly` where the behaviour exists at one width.
+3. Run it on `next-*` first: it must pass on Next as it is. Then run it on
+   `axum-*`, and port the component until it passes there too.
+4. Do not make a scenario pass by asserting less. When the two servers
+   legitimately differ (a server action against a named endpoint), accept
+   either explicitly, as `account.spec.mjs` does for signing out, and list
+   the difference in `docs/axum-migration/PLAN.md`.
+5. Check the scenario catches a broken script: break the feature's file in
+   `server/ui`, rebuild (`node server/scripts/build-ui.mjs`, then the
+   server), and see it fail on `axum-*`.
+
+A request the step did not cause is filtered out in `lib.mjs`
+(`NOT_BEHAVIOUR`: bundles, assets, `/_axum/` fragments, Next's own router
+payloads). A page that is leaving cannot be evaluated from outside while the
+next one loads; watch it from inside with an init script that logs, as the
+navigation progress scenario does.
+
 ## Text routes
 
 `/llms.txt`, `/llms-full.txt`, `/feed.xml`, `/feed/updated.xml` and the

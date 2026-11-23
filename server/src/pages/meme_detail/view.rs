@@ -13,7 +13,16 @@ use maud::{Markup, html};
 use super::signal_trace;
 use super::{Fallback, MemeDocument, UsageExample};
 use crate::pages::content_depth::ContentDepth;
+use crate::pages::i18n::Locale;
 use crate::pages::labels::{Lifecycle, SafetyLevel};
+
+const SAVED_CLASS: &str = "border-accent bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]";
+const UNSAVED_CLASS: &str = "border-border bg-surface text-foreground";
+
+/// `SAVE_COPY` of the page's language, for `ui/save.js`.
+fn save_copy() -> String {
+    serde_json::to_string(Locale::korean().save()).expect("save copy serializes")
+}
 
 pub struct DetailView<'a> {
     pub meme: &'a MemeDocument,
@@ -27,7 +36,7 @@ pub struct DetailView<'a> {
     /// The AdSense client, when this document may carry ads
     /// (`isAdsenseContentEligible`) and auto ads are switched on. Next
     /// renders nothing for it on the server either: the loader is added in
-    /// the browser, on the live host only (`ui/site.js`).
+    /// the browser, on the live host only (`ui/page.js`).
     pub ads_client: Option<&'a str>,
 }
 
@@ -141,7 +150,9 @@ fn answer_card(meme: &MemeDocument, usage_note: Option<&str>) -> Markup {
             }
             div class="mt-4" {
                 div {
-                    button type="button" aria-pressed="false" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-colors border-border bg-surface text-foreground" data-save-meme=(meme.id) {
+                    // `components/save-button.tsx`; `ui/save.js` swaps the two class
+                    // lists and the label, and opens the frame's sign-in dialog.
+                    button type="button" aria-pressed="false" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-colors border-border bg-surface text-foreground" data-save-meme=(meme.id) data-save-copy=(save_copy()) data-saved-class=(SAVED_CLASS) data-unsaved-class=(UNSAVED_CLASS) {
                         svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" {
                             path d="M6 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17l-6-4-6 4V4Z" stroke-linecap="round" stroke-linejoin="round" {}
                         }

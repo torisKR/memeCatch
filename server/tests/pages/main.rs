@@ -480,7 +480,7 @@ async fn each_page_route_id_in_axum_disabled_routes_falls_through_to_the_upstrea
 }
 
 #[tokio::test]
-async fn the_pilot_pages_are_off_until_axum_pilot_routes_names_them() {
+async fn the_pages_are_off_until_axum_page_routes_names_them() {
     let upstream = marker_upstream().await;
     let default = app(upstream, UNUSED_DATABASE_URL, &[("AXUM_PILOT_ROUTES", "")]).await;
     let only_about = app(
@@ -508,7 +508,7 @@ async fn the_pilot_pages_are_off_until_axum_pilot_routes_names_them() {
     .err()
     .expect("an unknown pilot id is refused");
     assert!(
-        error.contains("AXUM_PILOT_ROUTES names no pilot route: page-abuot"),
+        error.contains("AXUM_PILOT_ROUTES names no page route: page-abuot"),
         "{error}"
     );
     assert!(error.contains("page-about, page-meme"), "{error}");

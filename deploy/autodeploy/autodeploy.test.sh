@@ -719,4 +719,226 @@ for ready_at in 1950 2699 2700 2701; do
   (( $(grep -c "^status $test_head$" "$ssh_calls") <= 13 )) || fail "deadline scenario exceeded the status API budget"
 done
 
+# MEMECATCH_AXUM=1: Axum is `app`, Next is `next`, and a release is both. The
+# stubs live in their own directory: $stub now holds a fake clock and timeout.
+axum_stub="$stub/axum"; mkdir -p "$axum_stub"
+cp "$stub/git" "$stub/flock" "$stub/nice" "$axum_stub/"
+axum_calls="$stub/axum-calls"
+run_json() { printf '{"name":"%s","status":"%s","conclusion":"%s","started_at":"1"}' "$1" "$2" "$3"; }
+runs_json() { local IFS=,; printf '{"check_runs":[%s]}' "$*"; }
+
+# The pure functions, as the agent defines them (the ones above are replaced by
+# now). Sourcing again only redefines; nothing runs.
+(
+  # shellcheck source=deploy/autodeploy/autodeploy.sh
+  source "$here/autodeploy.sh"
+  STATE_DIR="$stub/axum-state"; mkdir -p "$STATE_DIR"
+  export stub_calls="$axum_calls" PATH="$axum_stub:$PATH"
+
+  # The flag: the environment first, then the env file; only the value 1.
+  env_file="$stub/axum.env"
+  export MEMECATCH_ENV_FILE="$env_file"
+  printf 'OTHER=1\n' >"$env_file"
+  if axum_enabled; then fail "Axum was on without the flag"; fi
+  MEMECATCH_AXUM=1 axum_enabled || fail "MEMECATCH_AXUM=1 in the environment was ignored"
+  for value in 0 true yes 11 ' 1'; do
+    if MEMECATCH_AXUM="$value" axum_enabled; then fail "MEMECATCH_AXUM='$value' turned Axum on"; fi
+    printf 'MEMECATCH_AXUM=%s\n' "$value" >"$env_file"
+    if axum_enabled; then fail "MEMECATCH_AXUM='$value' in the env file turned Axum on"; fi
+  done
+  printf 'MEMECATCH_AXUM="1"\n' >"$env_file"
+  axum_enabled || fail "MEMECATCH_AXUM=1 in the env file was ignored"
+  if MEMECATCH_AXUM=0 axum_enabled; then fail "the environment did not override the env file"; fi
+
+  # CI gate: `check` and `server` must both have succeeded, from one request.
+  cat >"$axum_stub/curl" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "${@: -1}" >>"$stub_calls"
+[[ "$test_runs" != error ]] || exit 22
+printf '%s' "$test_runs"
+STUB
+  chmod +x "$axum_stub/curl"
+  ok_check="$(run_json check completed success)"; ok_server="$(run_json server completed success)"
+  ci() { AXUM="$1" test_runs="$2" ci_state 0123; }
+  export test_runs
+  : >"$axum_calls"
+  [[ "$(ci 1 "$(runs_json "$ok_check" "$ok_server")")" == success ]] || fail "check and server success must deploy"
+  [[ "$(wc -l <"$axum_calls" | tr -d ' ')" == 1 ]] || fail "the two checks cost more than one API request"
+  grep -q '/commits/0123/check-runs?per_page=100$' "$axum_calls" || fail "Axum CI request: $(cat "$axum_calls")"
+  [[ "$(ci 1 "$(runs_json "$ok_check")")" == pending ]] || fail "a missing server run must wait"
+  [[ "$(ci 1 "$(runs_json "$ok_check" "$(run_json server in_progress null)")")" == pending ]] || fail "a running server job must wait"
+  [[ "$(ci 1 "$(runs_json "$ok_check" "$(run_json server completed failure)")")" == failure ]] || fail "a red server job must stop the deploy"
+  [[ "$(ci 1 "$(runs_json "$(run_json check completed failure)" "$ok_server")")" == failure ]] || fail "a red check job must stop the deploy"
+  [[ "$(ci 1 "$(runs_json "$(run_json check in_progress null)" "$(run_json server completed failure)")")" == failure ]] || fail "failure must win over pending"
+  [[ "$(ci 1 "$(runs_json "$ok_server")")" == pending ]] || fail "server alone must not deploy"
+  if ci 1 error >/dev/null 2>&1; then fail "an unreachable CI API was accepted"; fi
+  # Without the flag the request and the answer are what they were.
+  : >"$axum_calls"
+  [[ "$(ci "" "$(runs_json "$ok_check" "$(run_json server completed failure)")")" == success ]] || fail "the server job gated a deploy without the flag"
+  grep -q '/commits/0123/check-runs?check_name=check$' "$axum_calls" || fail "CI request changed without the flag: $(cat "$axum_calls")"
+
+  # A release runs only when the listener and the Next app behind it are both
+  # healthy on images of that commit.
+  cat >"$axum_stub/docker" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+  "inspect memecatch-app-1") printf 'sha256:app true %s\n' "${test_app:-healthy}" ;;
+  "inspect memecatch-next-1")
+    [[ "${test_next:-healthy}" != missing ]] || exit 1
+    printf 'sha256:next true %s\n' "${test_next:-healthy}" ;;
+  "image inspect")
+    case "$3" in
+      sha256:app) printf 'RELEASE_SHA=%s\n' "${test_app_sha:-new}" ;;
+      sha256:next) printf 'RELEASE_SHA=%s\n' "${test_next_sha:-new}" ;;
+      *) exit 1 ;;
+    esac ;;
+  *) exit 1 ;;
+esac
+STUB
+  chmod +x "$axum_stub/docker"
+  AXUM=1
+  running_app_healthy_for_sha new || fail "a healthy pair on the commit was rejected"
+  for bad in test_next=missing test_next=unhealthy test_next=starting test_next_sha=old test_app=unhealthy test_app_sha=old; do
+    if ( export "${bad?}"; running_app_healthy_for_sha new ); then fail "release accepted with $bad"; fi
+  done
+  AXUM=""
+  ( export test_next=missing; running_app_healthy_for_sha new ) || fail "the next container was required without the flag"
+
+  # Snapshots record what each image is. `app` is the Axum image and `next` the
+  # Next image when Axum is in front, whatever the flag says now.
+  cat >"$axum_stub/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$stub_calls"
+config() { [[ "$1" == *Config.Image* ]]; }
+case "$1 $2" in
+  "inspect memecatch-app-1") if config "$*"; then echo "$stub_app_image"; else echo sha256:app; fi ;;
+  "inspect memecatch-next-1")
+    [[ -n "${stub_next_image:-}" ]] || exit 1
+    if config "$*"; then echo "$stub_next_image"; else echo sha256:next; fi ;;
+  "inspect "*) if config "$*"; then echo "${2%-1}:local"; else echo "sha256:${2#memecatch-}"; fi ;;
+esac
+exit 0
+STUB
+  : >"$axum_calls"
+  stub_app_image=memecatch-server:release-old stub_next_image=memecatch:release-old tag_rollback a1
+  [[ "$(cat "$STATE_DIR/rollback-a1.refs")" == $'server memecatch-server:rollback-a1\napp memecatch:rollback-a1\nmpe-worker memecatch-worker:rollback-a1\nscheduler memecatch-scheduler:rollback-a1\nbackup memecatch-backup:rollback-a1' ]] \
+    || fail "Axum snapshot record: $(cat "$STATE_DIR/rollback-a1.refs")"
+  grep -q '^tag sha256:app memecatch-server:rollback-a1$' "$axum_calls" || fail "the Axum image was not snapshotted from app"
+  grep -q '^tag sha256:next memecatch:rollback-a1$' "$axum_calls" || fail "the Next image was not snapshotted from next"
+  mapfile -t env < <(rollback_env a1)
+  [[ " ${env[*]} " == *" MEMECATCH_IMAGE=memecatch:rollback-a1 "* ]] || fail "Next rollback ref: ${env[*]}"
+  [[ " ${env[*]} " == *" MEMECATCH_SERVER_IMAGE=memecatch-server:rollback-a1 "* ]] || fail "Axum rollback ref: ${env[*]}"
+  [[ " ${env[*]} " == *" MEMECATCH_AXUM=1 "* ]] || fail "an Axum snapshot must be restored with Axum in front: ${env[*]}"
+  # Next alone, with a `next` container an interrupted switch left behind: the
+  # leftover is not the release, and the restore turns Axum off.
+  stub_app_image=memecatch:release-old stub_next_image=memecatch:release-older tag_rollback a2
+  [[ "$(grep -c '^app ' "$STATE_DIR/rollback-a2.refs")" == 1 ]] || fail "a leftover next container was recorded as the release"
+  if grep -q '^server ' "$STATE_DIR/rollback-a2.refs"; then fail "a Next app was recorded as the Axum image"; fi
+  mapfile -t env < <(rollback_env a2)
+  [[ " ${env[*]} " == *" MEMECATCH_IMAGE=memecatch:rollback-a2 "* && " ${env[*]} " == *" MEMECATCH_AXUM=0 "* ]] || fail "Next-only rollback: ${env[*]}"
+  [[ " ${env[*]} " != *MEMECATCH_SERVER_IMAGE* ]] || fail "a Next-only rollback named an Axum image"
+
+  # The Axum image is built for the commit with the Next image's build args,
+  # after the Next image and before the auxiliary ones; its failure stops there.
+  cat >"$axum_stub/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$stub_calls"
+[[ "$*" == *"${stub_fail_build:-no build fails}"* ]] && exit 1
+exit 0
+STUB
+  ROOT="$repo"
+  mapfile -t next_args < <(build_args "$root/deploy/build.env")
+  [[ " ${next_args[*]} " == *" NEXT_PUBLIC_SITE_URL="*" NEXT_PUBLIC_GA_ID="* ]] || fail "build.env lacks the values Axum needs: ${next_args[*]}"
+  server_build="build -q -f Dockerfile.server --build-arg RELEASE_SHA=abc ${next_args[*]} -t memecatch-server:release-abc ."
+  : >"$axum_calls"
+  AXUM=1 build_images abc || fail "clean Axum build reported failure"
+  [[ "$(sed -n 2p "$axum_calls")" == "$server_build" ]] || fail "server image build: $(sed -n 2p "$axum_calls")"
+  [[ "$(sed -n 1p "$axum_calls")" == "build -q -f Dockerfile --build-arg RELEASE_SHA=abc ${next_args[*]} -t memecatch:release-abc ." && "$(sed -n 3p "$axum_calls")" == compose* ]] || fail "build order: $(cat "$axum_calls")"
+  : >"$axum_calls"
+  if AXUM=1 stub_fail_build=Dockerfile.server build_images abc; then fail "failed server build reported success"; fi
+  if grep -q '^compose' "$axum_calls"; then fail "compose build ran after the server build failed"; fi
+  : >"$axum_calls"
+  AXUM="" build_images abc || fail "build without the flag failed"
+  if grep -q 'Dockerfile.server' "$axum_calls"; then fail "the server image was built without the flag"; fi
+
+  # Old Axum images are pruned with the others.
+  declare -f prune_images | grep -q 'for repo in memecatch memecatch-server ' || fail "memecatch-server tags are not pruned"
+)
+
+# Through main, with the replaced gates above: the disk guard stops before
+# anything changes, and the deploy is told what this run decided.
+axum_root="$stub/axum-root"; mkdir -p "$axum_root/scripts"
+cat >"$axum_root/scripts/deploy-oci.sh" <<'STUB'
+#!/usr/bin/env bash
+printf 'deploy axum=%s server=%s image=%s\n' "$MEMECATCH_AXUM" "$MEMECATCH_SERVER_IMAGE" "$MEMECATCH_IMAGE" >>"$test_calls"
+STUB
+cat >"$axum_stub/docker" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+  "inspect memecatch-app-1") printf 'sha256:app true healthy\n' ;;
+  "inspect memecatch-next-1")
+    [[ "${test_next:-healthy}" != missing ]] || exit 1
+    printf 'sha256:next true %s\n' "${test_next:-healthy}" ;;
+  "image inspect") [[ "$3" == sha256:app || "$3" == sha256:next ]] || exit 1; printf 'RELEASE_SHA=%s\n' "$test_running" ;;
+  "info --format") echo disk >>"$test_calls"; [[ "$test_free_mb" != unreadable ]] || exit 1; echo /var/lib/docker ;;
+  *) exit 1 ;;
+esac
+STUB
+cat >"$axum_stub/df" <<'STUB'
+#!/usr/bin/env bash
+printf 'Filesystem 1048576-blocks Used Available Capacity Mounted on\n/dev/sda1 48000 42000 %s 89%% /\n' "$test_free_mb"
+STUB
+chmod +x "$axum_stub/docker" "$axum_stub/df"
+# One SSH deploy of a new commit with <free MB> on the disk and the given
+# NAME=VALUE settings in the agent's environment.
+axum_main() { ( export test_free_mb="$1"; shift; for pair in "$@"; do export "${pair?}"; done; test_running="$old_sha" PATH="$axum_stub:$PATH" ROOT="$axum_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" main ); }
+[[ "$SERVER_BUILD_MIN_FREE_MB" =~ ^[0-9]+$ ]] || fail "the default threshold is not a number of MB: $SERVER_BUILD_MIN_FREE_MB"
+SERVER_BUILD_MIN_FREE_MB=500
+needed=500
+for free in $((needed - 1)) 0 unreadable ''; do
+  : >"$test_calls"; rc=0
+  axum_main "$free" MEMECATCH_AXUM=1 >"$stub/axum-out" 2>&1 || rc=$?
+  [[ "$rc" == 3 ]] || fail "disk guard let a build start with '$free' MB free (rc $rc)"
+  [[ "$(cat "$test_calls")" == disk ]] || fail "disk guard ran after something changed: $(cat "$test_calls")"
+  [[ ! -e "$stub/manual-state/failed-$test_head" ]] || fail "a full disk marked the commit as failed"
+  # A figure that cannot be read is said to be unreadable, not reported as 0 MB.
+  [[ "$free" =~ ^[0-9]+$ ]] || grep -q 'cannot read the free space' "$stub/axum-out" || fail "unreadable free space: $(cat "$stub/axum-out")"
+done
+refusal="$(axum_main $((needed - 1)) MEMECATCH_AXUM=1 2>&1 || true)"
+[[ "$refusal" == *"$((needed - 1)) MB free"*"needs $needed MB (AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB)"* ]] || fail "the refusal does not give the figures and the variable to change: $refusal"
+: >"$test_calls"
+axum_main "$needed" MEMECATCH_AXUM=1 >/dev/null || fail "Axum deploy failed with exactly the room it needs"
+[[ "$(cat "$test_calls")" == $'disk\nsnapshot\nbuild\n'"deploy axum=1 server=memecatch-server:release-$test_head image=memecatch:release-$test_head" ]] \
+  || fail "Axum deploy steps: $(cat "$test_calls")"
+# The threshold can be changed from the environment or, for the SSH forced
+# command, from the env file; the environment wins, and a value that is not a
+# number changes nothing.
+threshold_env="$stub/axum-threshold.env"
+printf 'MEMECATCH_AXUM=1\nAUTODEPLOY_SERVER_BUILD_MIN_FREE_MB=100\n' >"$threshold_env"
+deploys() { : >"$test_calls"; rm -f "$stub/manual-state/failed-$test_head"; axum_main "$@" >/dev/null 2>&1 && grep -q '^deploy axum=1 ' "$test_calls"; }
+deploys 100 MEMECATCH_AXUM=1 AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB=100 || fail "the threshold was not read from the environment"
+deploys 100 MEMECATCH_ENV_FILE="$threshold_env" || fail "the threshold was not read from the env file"
+if deploys 99 MEMECATCH_ENV_FILE="$threshold_env"; then fail "the env file threshold was not applied"; fi
+if deploys 199 MEMECATCH_ENV_FILE="$threshold_env" AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB=200; then fail "the environment did not override the env file threshold"; fi
+for value in 100MB -1 ''; do
+  if deploys $((needed - 1)) MEMECATCH_AXUM=1 AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB="$value"; then fail "threshold '$value' switched the disk check off"; fi
+done
+# Without the flag the disk is never read, and the script is told the flag is
+# off even if the env file changes while the images build.
+rm -f "$stub/manual-state/failed-$test_head"
+: >"$test_calls"
+axum_main 0 >/dev/null || fail "deploy without the flag failed"
+[[ "$(cat "$test_calls")" == $'snapshot\nbuild\n'"deploy axum=0 server=memecatch-server:release-$test_head image=memecatch:release-$test_head" ]] \
+  || fail "deploy steps without the flag: $(cat "$test_calls")"
+# Status with the flag on needs the Next container behind Axum as well.
+printf '%s\n' "$test_head" >"$stub/manual-state/deployed"
+: >"$stub/manual-state/lock"
+axum_status() { ( export test_next="$1" test_free_mb=0; MEMECATCH_AXUM="$2" PATH="$axum_stub:$PATH" ROOT="$axum_root" STATE_DIR="$stub/manual-state" STRICT=1 SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" main ) >/dev/null 2>&1; }
+axum_status healthy 1 || fail "status rejected a healthy Axum and Next pair"
+for test_next in missing unhealthy starting; do
+  rc=0; axum_status "$test_next" 1 || rc=$?
+  [[ "$rc" == 3 ]] || fail "status accepted a $test_next next container behind Axum (rc $rc)"
+done
+axum_status missing 0 || fail "status needed a next container without the flag"
+
 echo "autodeploy OK"

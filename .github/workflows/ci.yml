@@ -82,14 +82,14 @@ jobs:
       - run: bash scripts/postgres/instagram-post-video-verification.test.sh
       - run: bash deploy/backup/ci-test-restore.sh
 
-  # CD: after `check` passes on a push to main, ask the VM's deploy agent to
-  # deploy this commit. The VM has no open SSH port. The runner reaches it
+  # CD: after `check` and `server` pass on a push to main, ask the VM's deploy
+  # agent to deploy this commit. The VM has no open SSH port. The runner reaches it
   # through a Cloudflare Tunnel guarded by Cloudflare Access (service token),
   # and the SSH key can only run the agent (forced command on the VM). The
   # secrets live in the `production` environment, which only main can use;
   # pull requests, including forks, never reach this job.
   deploy:
-    needs: check
+    needs: [check, server]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
@@ -131,8 +131,9 @@ jobs:
           # repeats a deployment or the manual redeploy command.
           bash deploy/autodeploy/run-ssh-deploy.sh
 
-  # The Axum server in server/ (docs/axum-migration/PLAN.md). Not in `deploy`'s
-  # `needs`: production does not run it yet, so it must not hold up a deploy.
+  # The Axum server in server/ (docs/axum-migration/PLAN.md). In `deploy`'s
+  # `needs`: with MEMECATCH_AXUM=1 on the VM it answers every request, and the
+  # deploy agent then asks for this job's check run by name as well.
   server:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -159,3 +160,22 @@ jobs:
           DATABASE_URL="$(scripts/test-db.sh up)"
           export DATABASE_URL
           cargo test
+      - name: Build the server image as the VM's deploy agent does
+        working-directory: .
+        env:
+          RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # A Dockerfile.server that does not build must fail here, not on the
+          # VM. The agent builds it with the Next image's build args
+          # (deploy/build.env) and reads the release from the image
+          # environment; the values the server reads must arrive there.
+          args=()
+          while IFS='=' read -r key value; do
+            [[ -z "$key" || "$key" == \#* ]] || args+=(--build-arg "${key}=${value}")
+          done <deploy/build.env
+          docker build -f Dockerfile.server -t memecatch-server:ci \
+            --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
+          [ "$(docker run --rm memecatch-server:ci printenv RELEASE_SHA)" = "${RELEASE_SHA}" ]
+          for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT; do
+            [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
+          done

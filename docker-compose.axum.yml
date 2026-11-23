@@ -1,16 +1,13 @@
 # Opt-in: the Axum server becomes the public listener and Next moves behind it.
-#
-#   docker compose -f docker-compose.yml -f docker-compose.axum.yml up -d
-#
 # Without this file nothing changes. See docs/axum-migration/PLAN.md.
 #
-# Pause automatic deploys before you opt in by hand. scripts/deploy-oci.sh
-# does not load this file (that is stage 5 of the plan), so its next run turns
-# `app` back into Next and leaves `next` running as an orphan: two Next
-# servers, each with its own connection pool and memory limit, and no Axum.
+# scripts/deploy-oci.sh adds this file when MEMECATCH_AXUM=1 and leaves it out
+# otherwise (docs/oci-setup.md, "Axum in front of Next"). Set the flag instead
+# of passing the file by hand: a deploy without the flag turns `app` back into
+# Next and removes the `next` container.
 #
 # Needs a Docker Compose that knows `!override`, `!reset` and `extends` with
-# `depends_on` (it renders on v5.5.0; the version on the VM is not checked).
+# `depends_on`. It renders on v5.5.0 and has deployed on v5.7.1; the VM runs v5.7.0.
 
 services:
   # The Next app as docker-compose.yml defines it (image, environment, limits,
@@ -27,13 +24,24 @@ services:
   # Keeps the service name and port, so Caddy (`reverse_proxy app:3000`) and
   # the scheduler (`http://app:3000/api/cron/*`) need no change.
   app:
+    # The deploy agent builds memecatch-server:release-<sha> and names it here.
+    # Without the variable compose builds the image under a fixed name, like
+    # the scheduler, so `compose up` sees a rebuilt image.
     build:
       context: .
       dockerfile: Dockerfile.server
-    # A fixed name, like the scheduler: `compose up` sees a rebuilt image.
-    image: memecatch-server:local
+      args:
+        RELEASE_SHA: ${RELEASE_SHA:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
+        NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+    image: ${MEMECATCH_SERVER_IMAGE:-memecatch-server:local}
     mem_limit: 256m
-    cpus: 0.25
+    # Every request passes through this container. At 0.25 it was throttled on
+    # the routes that query the database at request rates Next alone sustains;
+    # 0.35 is the smallest limit measured that was not (docs/oci-setup.md,
+    # "Axum's CPU limit"). Proxying a page costs it about 0.05 of a CPU.
+    cpus: 0.35
     # Replaces the Next environment instead of merging into it.
     environment: !override
       PORT: "3000"
@@ -42,18 +50,25 @@ services:
       # The main pool. Two more connections belong to the deadline pool: 6 in all.
       AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
+      # The native pages (server/README.md, "Pages") stay Next's until listed here.
+      AXUM_PILOT_ROUTES: ${AXUM_PILOT_ROUTES:-}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}
-      # Next fixes its response headers at build time from these two values
-      # (the Dockerfile build args). Axum reads them at start; they must be
-      # the same for the headers of native routes to match.
-      # CSP_ENFORCE and CSP_REPORT_URI are left out on purpose: the Next image
-      # is built without them, and a runtime value does not change what Next
+      # Keys the view counter and the analytics events (server/src/routes/
+      # tracking.rs). Without it those two routes stay Next's.
+      MEMECATCH_SIGNING_SECRET: ${MEMECATCH_SIGNING_SECRET:-}
+      # Read at run time by Next too (components/adsense-script.tsx).
+      ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
+      # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and
+      # NEXT_PUBLIC_ADSENSE_CLIENT are left out on purpose. Next fixes them at
+      # build time, and Axum must run with the same ones for native routes and
+      # pages to match. They are build args of both images, kept in the image
+      # environment, so a release's two images agree whatever .env holds.
+      # CSP_ENFORCE and CSP_REPORT_URI are left out too: the Next image is
+      # built without them, and a runtime value does not change what Next
       # sends, so passing one here would make native routes differ.
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
-      RELEASE_SHA: ${RELEASE_SHA:-}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}

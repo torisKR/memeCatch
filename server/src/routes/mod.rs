@@ -31,7 +31,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 50] = [
+pub const ROUTE_IDS: [&str; 51] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -79,6 +79,7 @@ pub const ROUTE_IDS: [&str; 50] = [
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",
+    "trend-pulse",
     "instagram-video-cache",
     "adpick-hotdeals",
     "creator-products",

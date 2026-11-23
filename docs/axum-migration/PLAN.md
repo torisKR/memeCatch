@@ -128,7 +128,8 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `memes-chat` | `/api/memes/chat` | `POST` | `memes-semantic-search`와 같은 조건에서만 등록한다. 키워드 검색으로 찾은 공개 기록의 요약을 내고, `OPENROUTER_API_KEY`가 있으면 그 기록을 인용하는 답을 OpenRouter에 묻는다(운영은 키가 없어 요약이다). `Accept: application/x-ndjson`이면 진행 줄과 결과를 스트림으로 낸다. 주소별 10분 5회·전체 1분 20회 제한과 답 캐시는 프로세스별이다 |
 | `growth-baseline` | `/api/cron/growth-baseline` | `GET`, `HEAD` | 크론 bearer. `capture_growth_funnel_baseline()`을 `service_role`로 한 번 부른다. 실패는 본문 없는 500 |
 | `saved-state-emails` | `/api/cron/saved-state-emails` | `GET`, `HEAD` | 크론 bearer. 저장 상태 메일 10건을 동시에 `PLUS_DIGEST_DELIVERY_URL`(https만)로 보낸다. `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다 |
-| `source-refresh` | `/api/cron/source-refresh` | `POST` | 크론 bearer. 카탈로그 캐시 만료를 Next에 맡긴다(11절 "Next의 캐시"). `GET`(새로고침 실행)은 Next가 답한다 |
+| `source-refresh` | `/api/cron/source-refresh` | `POST` | 크론 bearer. 카탈로그 캐시 만료를 Next에 맡긴다(11절 "Next의 캐시"). `GET`(새로고침 실행)은 Next가 답한다(12절) |
+| `trend-pulse` | `/api/cron/trend-pulse` | `GET`, `HEAD` | 크론 bearer. 트렌드 점수, 설정된 레이더 커넥터(X, Threads, Instagram), 두 팬아웃을 `service_role`로 돌리고 끝에서 카탈로그 캐시 만료를 Next에 맡긴다(12절) |
 | `instagram-video-cache` | `/api/admin/instagram-video-verification/revalidate` | `POST` | 운영자. 분당 30회(주소별, 프로세스별). 캐시 만료는 Next에 맡긴다. `CRON_SECRET`이 없거나 `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin`이 사이트 origin이 아닌 요청은 Next로 넘긴다 |
 | `adpick-hotdeals` | `/api/cron/adpick-hotdeals` | `GET`, `HEAD`, `POST` | 은퇴한 상품 API: 410 `{"error":"gone"}`, `X-Robots-Tag: noindex` |
 | `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE` | 위와 같다. 끝에 `/`가 붙은 경로는 Next의 리디렉션이다 |
@@ -459,14 +460,14 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 
 확인: `/memes/<key>`는 밈을 `cacheCatalogRead`(태그 `public-meme-catalog`, 24시간)로 읽는다. DB에서 제목을 바꾸면 페이지는 옛 제목을 계속 보이고, Axum의 `POST /api/cron/source-refresh`, Next의 같은 경로, Axum의 운영자 경로, Next의 운영자 경로 각각을 부른 뒤에는 새 제목을 보인다. 아무것도 부르지 않으면 옛 제목이 남는다(`ops.mjs cache`).
 
-캐시를 지우는 R4 경로 가운데 Axum으로 옮긴 것은 이 둘뿐이다. 나머지(`trend-pulse`, `source-refresh`의 `GET`, `/api/db/query`의 영상 확인)는 Next에 남아 있어서 지금처럼 Next 안에서 지운다.
+캐시를 지우는 R4 경로 가운데 Axum으로 옮긴 것은 이 둘뿐이다. 나머지(`source-refresh`의 `GET`, `/api/db/query`의 영상 확인)는 Next에 남아 있어서 지금처럼 Next 안에서 지운다. `trend-pulse`는 R8이 같은 길로 옮겼다(12절).
 
 ### Next에 남긴 경로와 이유
 
 | 경로 | 이유 |
 | --- | --- |
-| `GET /api/cron/trend-pulse` | `RADAR_*`와 토큰이 설정되면 X(`api.x.com`), Threads(`graph.threads.com`), Instagram(`graph.facebook.com`)을 고정 주소로 부른다. TypeScript를 고치지 않고는 로컬 스텁으로 돌릴 수 없어 같은 요청을 보내는지 증명할 수 없다. 레이더 코드도 1,400줄이다. 레이더 없는 부분(`compute_trend_scores`, 실패 기록, 캐시 만료, 두 팬아웃)은 작으니, 컨테이너의 DNS를 스텁으로 돌리는 하네스를 만든 뒤 함께 옮긴다 |
-| `GET /api/cron/source-refresh` | YouTube Data API와 다섯 플랫폼의 oEmbed를 고정 주소로 부른다(위와 같은 이유). 약 1,500줄이다. `POST`는 옮겼다 |
+| `GET /api/cron/trend-pulse` | (R8이 옮겼다, 12절) `RADAR_*`와 토큰이 설정되면 X(`api.x.com`), Threads(`graph.threads.com`), Instagram(`graph.facebook.com`)을 고정 주소로 부른다. TypeScript를 고치지 않고는 로컬 스텁으로 돌릴 수 없어 같은 요청을 보내는지 증명할 수 없다. 레이더 코드도 1,400줄이다. 레이더 없는 부분(`compute_trend_scores`, 실패 기록, 캐시 만료, 두 팬아웃)은 작으니, 컨테이너의 DNS를 스텁으로 돌리는 하네스를 만든 뒤 함께 옮긴다 |
+| `GET /api/cron/source-refresh` | YouTube Data API와 다섯 플랫폼의 oEmbed를 고정 주소로 부른다(위와 같은 이유). 약 1,500줄이다. `POST`는 옮겼다. R8은 Next의 oEmbed 캐시 때문에 남겼다(12절) |
 | `POST /api/admin/source-ingestions` | 같은 oEmbed 조회(`getOEmbed`)를 고정 주소로 한다 |
 | `GET /api/cron/mcp-events` | 전송(`sendPinned`)이 DNS 답을 검사해 공인 IPv4가 아닌 목적지를 거부하고 TLS를 그 주소에 고정한다. 로컬 스텁은 설계상 거부되므로 성공한 전송을 비교할 수 없다. 상태는 Node MCP 서버와 함께 쓰는 AES-256-GCM 암호문 JSON이라, 키 순서까지 Node와 같게 다시 써야 한다 |
 | `POST /api/db/query` | 아래 |
@@ -514,24 +515,68 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 
 ## 12. 단계 3 일부: R8 (바깥 호스트가 고정된 경로)
 
-브랜치 `torisKR/axum-routes-r8`(main 위). 11절은 R6(`torisKR/axum-routes-r6`)이 쓴다. 옮긴 경로는 없다. 세 경로 모두 Next의 캐시에 닿아서 Next에 남긴다. 호출 경로를 끝까지 따라가 확인했다.
+브랜치 `torisKR/axum-routes-r8`(main 위, R4 #146 포함). `GET /api/cron/trend-pulse`를 옮겼다(경로 id `trend-pulse`). `GET /api/cron/source-refresh`와 `POST /api/admin/source-ingestions`는 Next에 남긴다. 코드는 `server/src/routes/ops/trend_pulse.rs`, `radar.rs`, `radar_connectors.rs`, `radar_text.rs`. 비교는 `server/parity/trend-pulse.mjs`(실제 Next 운영 빌드와 같은 DB, 바깥 호스트는 Next 쪽 `radar-intercept.mjs`, Axum 쪽 `AXUM_TEST_RADAR_ORIGIN`으로 같은 녹음 스텁에 보낸다), 시험은 `server/tests/trend_pulse.rs`.
+
+### `trend-pulse`가 하는 일
+
+`compute_trend_scores()` → (커넥터가 설정돼 있으면) 레이더 → `fan_out_trend_alerts()` → `fan_out_saved_context_alerts()`. 모두 `service_role`, 문장마다 트랜잭션 하나. 함수는 이름으로 먼저 찾고 없으면 `function not found`다(계획 실행기와 같다). `compute`가 실패하면 `job_runs`에 실패를 적고 502로 끝난다. 팬아웃이 실패하면 502, 레이더가 실패하거나 일부만 되면 200 `partial`이다.
+
+**캐시 만료의 순서.** TypeScript는 `compute_trend_scores` 바로 뒤에서 `revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 })`를 부른다. 그러나 경로 핸들러 안의 `revalidateTag`는 태그를 적어 두기만 한다. Next는 핸들러가 응답을 돌려준 뒤 `executeRevalidates`로 만료하고(`next/dist/server/route-modules/app-route/module.js`의 `resolvePendingRevalidations`, `revalidation-utils.js`), 그 결과는 `waitUntil`로 응답과 따로 간다. 그래서 실제로 만료되는 때는 실행의 모든 쓰기 뒤이고, 만료가 실패해도 답은 같다. Axum은 이를 따라 `compute`를 지난 실행이면 끝에서 R4의 `Upstream::expire_cache(PublicCatalog)`를 부르고, 실패는 로그만 남긴다. 호출 자리를 TypeScript 글자 그대로(레이더 앞) 두면 레이더와 팬아웃 사이에 그려진 페이지가 캐시에 남을 수 있어 Next와 달라진다. R4의 `POST /api/cron/source-refresh`는 만료 실패에 500을 내는데, 그 경로의 `catch`는 Next 안에서는 닿지 않는다(5절 차이 96). 이 경로에는 그런 `catch`가 없다.
+
+확인: `/memes/<key>`의 제목을 DB에서 바꾸면 페이지는 옛 제목을 보이고, Axum의 trend-pulse 뒤에도 Next의 trend-pulse 뒤에도 새 제목을 보인다. `compute_trend_scores`가 없을 때(502)는 두 서버 모두 옛 제목이 남는다(`trend-pulse.mjs cache`).
+
+### 레이더가 실제로 닿는 곳
+
+레이더 코드(`lib/trend/radar*.ts`)는 1,400줄이지만 운영 스키마에서 실행되는 부분은 그 앞부분뿐이다. 신호를 하나라도 모으면 저장에서 반드시 실패하기 때문이다(R8-1). 그래서 옮긴 것: 커넥터 상태 읽기, 세 커넥터의 요청과 응답 읽기(동시에, 커넥터마다 30초), 신호의 시각 검사(`normalizeRadarSignal`), 실패하는 신호 저장, 신호가 없을 때의 커넥터 상태 쓰기와 밈 두 읽기. 매칭·점수·상태 추천·안전 검토 대기열은 닿을 수 없어 옮기지 않았다. `tests/trend_pulse.rs`가 `external_signals.raw_expires_at`의 `NOT NULL`을 고정해 두므로, 이를 바꾸는 마이그레이션은 시험을 깨뜨린다. 그런 스키마에서 저장이 성공하면 Axum은 그 저장을 되돌리고 오늘처럼 `RADAR_SIGNAL_WRITE_FAILED`로 답하며 오류를 남긴다.
+
+### 옮겨 온 TypeScript 버그
+
+| id | 버그 | 위치 |
+| --- | --- | --- |
+| R8-1 | 신호 저장(`signalInsert`)이 `raw_expires_at: signal.rawExpiresAt`을 넣는데 어느 커넥터도 그 값을 정하지 않는다. 계획 실행기는 빈 값을 `NULL`로 보내고, 열은 `NOT NULL`(기본값 `now() + 30 days`는 명시한 `NULL`에 쓰이지 않는다)이라 신호가 하나라도 있으면 실행은 `RADAR_SIGNAL_WRITE_FAILED`다. 커넥터 상태도 그 뒤라 기록되지 않는다 | `lib/trend/radar-repository.server.ts` |
+| R8-2 | X 커넥터의 키 `x`는 `connector_health.connector_key`의 검사 `^[a-z0-9][a-z0-9_-]{1,63}$`(두 글자 이상)를 통과하지 못한다. X가 설정되면 신호가 없는 실행도 `RADAR_CONNECTOR_HEALTH_WRITE_FAILED`이고, 그래서 X의 커서(`since_id`)는 한 번도 저장되지 않는다. `external_signals.platform`의 같은 검사도 `x`를 거절한다(R8-1이 먼저 실패한다) | 같은 파일, `radar-connectors.server.ts` |
+| R8-3 | `normalizeRadarHashtag`는 `#`을 앞뒤 공백을 지우기 전에 뗀다(`/^#+/`). 그래서 `RADAR_X_TERMS="밈, #짤"`의 두 번째 항목은 `#짤`로 남아 X 검색어가 `"#짤"`이 된다 | `lib/trend/radar.ts` |
+
+### Next와 남은 차이
+
+| id | 차이 | 판정 |
+| --- | --- | --- |
+| R8-4 | 캐시 만료: Axum은 실행 뒤, 응답 전에 만료를 기다린다. Next는 응답과 함께 백그라운드로 만료한다. 둘 다 만료 실패는 답을 바꾸지 않는다 | 수용 |
+| R8-5 | 공급자 요청의 헤더는 undici와 같다(`authorization`, `accept: */*`, `accept-language: *`, `sec-fetch-mode: cors`, `user-agent: node`, `cache: "no-store"`의 `cache-control`·`pragma`). `accept-encoding`은 보내지 않는다(5절 차이 81과 같다). 리디렉션을 따라가지 않고, 32 MiB가 넘는 답은 `terminated`로 실패한다(`response.json()`에는 한도가 없다) | 수용 |
+| R8-6 | 2xx인데 JSON이 아닌 답: 두 서버 모두 그 커넥터가 실패하지만 `last_error`의 글이 다르다(Next `Unexpected token '<', "<html>" is not valid JSON`, Axum `expected value at line 1 column 1`). 빈 답(`Unexpected end of JSON input`)은 같다. JSON 안의 짝 없는 서로게이트 이스케이프(`"\ud800"`)는 V8이 받고 serde_json은 거절한다 | 수용 |
+| R8-7 | 공급자 시각: `Date.parse`가 받는 ISO 꼴(연, 연-월, 연-월-일, 6자리 부호 연도, `T`·`t`·공백 뒤 시각, 소수 초, `Z`·`±HH:MM`·`±HHMM`, 월말 넘김, `24:00`)은 같다(`radar_text.rs` 시험). V8의 옛 파서가 받는 그 밖의 꼴(`Nov 24 2026` 등)은 Axum이 거절해 그 커넥터가 실패한다. 시간대 없는 시각은 Next에게 지역 시각, Axum에게 UTC다(이미지의 시간대는 UTC). X·Meta는 ISO로 보낸다 | 수용 |
+| R8-8 | 함수가 아닌 것을 부르는 `TypeError`의 글에는 Next 운영 빌드가 줄인 변수 이름이 들어간다(`a.trim`, `a.normalize`, `(k.data ?? []).map`, `(h.data ?? []).filter`, `(p.data ?? []).filter`). Axum은 비교한 빌드(Next 16.3.4)의 글을 그대로 쓴다. 다른 빌드에서 이름이 바뀌면 그 `last_error`만 달라진다(5절 차이 93과 같다) | 수용, 공급자가 규격에 없는 답을 할 때만 |
+| R8-9 | DB에 닿지 못할 때 `compute:` 뒤의 글은 node-pg(`connect ECONNREFUSED …`)와 sqlx가 다르게 쓴다. DB가 낸 오류의 글은 같다 | 수용 |
+| R8-10 | 실패할 수밖에 없는 신호 저장(R8-1)에 넣는 해시태그는 `\p{L}\p{N}` 대신 Rust의 알파벳·숫자로 뽑는다. 그 행은 저장되지 않는다 | 수용 |
+| R8-11 | TLS 신뢰 루트는 바이너리의 Mozilla 루트, Node는 자신의 루트다(5절 차이 94와 같다). `AXUM_EXTRA_CA_CERTS`는 레이더에 쓰이지 않는다 | 수용 |
+
+### 비교 결과
+
+같은 DB에서 실제 Next(standalone, Node 22)와 Axum을 나란히 띄워 각 경우마다 DB를 같은 상태로 되돌린 뒤 한 서버씩 실행하고, 답(상태, `content-type`, `cache-control`, 본문), 공급자가 받은 요청(메서드, 경로와 질의, 헤더), 남은 행(`connector_health` 전체, `external_signals` 수, `job_runs`의 `compute_trend_scores` 행, 밈 점수의 해시. 시각은 꼴만)을 비교했다.
+
+- 레이더 설정 없음(운영의 지금): bearer 다섯 가지, 다른 메서드 넷, `HEAD`, 정상, 팬아웃 값 7과 `null`, `compute`의 예외와 부재, 두 팬아웃의 예외. 28/28. 캐시 4/4.
+- 세 커넥터 모두(`RADAR_X_TERMS="밈, #짤,밈"`, 공백 있는 토큰, `META_GRAPH_API_VERSION=" v99.0 "`): 27경우 81/81.
+- Threads·Instagram만(커넥터 상태가 기록돼 `last_error`까지 비교된다): 같은 27경우 81/81. 경우: 빈 답, 앞선 상태(커서·실패 수·`quota_remaining` 5.5·잘못된 형의 값), 신호가 있는 각 공급자, 고유 번호 없는 검색, 객체인 `data`, 401·404·500·403, 연결 거절, 한 검색어만 실패, 날짜가 아닌 시각·`null` 시각·없는 시각·`+0000`·숫자 시각, `null` 게시물, 숫자 본문, `null` 본문, 문자열·숫자 `data`, 빈 200, 걸러지기 전의 `null`, `true` 시각, 객체 캡션.
+- 30초 시간 초과는 두 서버 모두 `Connector threads timed out`. HTML 답은 R8-6.
+- `paths.txt` 160개 중 158개가 같다(나머지 둘은 `/memes/random`의 무작위 리디렉션).
+
+### 새 설정
+
+- `AXUM_TEST_RADAR_ORIGIN`: 시험과 비교 전용. `http://127.0.0.1:<port>`(또는 `localhost`)만 받고, `https://api.x.com`·`https://graph.threads.com`·`https://graph.facebook.com`으로 갈 요청을 `<origin>/<host><path>`로 보낸다.
+- `docker-compose.axum.yml`의 Axum 환경에 `RADAR_X_TERMS`, `X_API_BEARER_TOKEN`, `RADAR_THREADS_TERMS`, `THREADS_ACCESS_TOKEN`, `RADAR_INSTAGRAM_HASHTAGS`, `META_INSTAGRAM_ACCESS_TOKEN`, `META_INSTAGRAM_USER_ID`, `META_GRAPH_API_VERSION`을 `docker-compose.yml`이 Next에 주는 그대로 더했다. 없으면 Next가 모을 때 Axum은 아무것도 모으지 않는다(`server/tests/compose_env.rs`가 지킨다).
+
+### Next에 남긴 경로
 
 | 경로 | Next에 남긴 까닭 |
 | --- | --- |
-| `GET /api/cron/trend-pulse` | `runTrendPulse()`가 `compute_trend_scores` 뒤에 `revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 })`를 부른다(`lib/trend/pulse.server.ts`). Axum이 Next의 캐시를 지우는 길(R4의 `/api/internal/cache`, #146)이 main에 없다. 바깥 호출(X, Threads, Instagram의 고정 주소)은 그 뒤의 문제다 |
-| `GET /api/cron/source-refresh` | 실행마다 끝에서 같은 `revalidateTag`를 부른다(`lib/sources/refresh.server.ts`). 같은 경로의 `POST`는 R4가 옮겼다. #146이 main에 온 뒤에 옮긴다 |
-| `POST /api/admin/source-ingestions` | `ingestSource()`가 부르는 `getOEmbed()`는 공급자를 `fetch(..., { next: { revalidate: 3_600 } })`로 묻는다(`lib/oembed.ts`). Next 16.3.4에서 이것은 데이터 캐시다(`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/fetch.md`, `options.next.revalidate`). 같은 URL의 답을 한 시간 동안 Next 안에 두고 다시 쓰므로, 매번 공급자에 묻는 Axum은 공급자의 답이 바뀌거나 실패할 때 다른 결과를 낸다. Axum은 그 캐시를 읽을 수 없다 |
+| `GET /api/cron/source-refresh` | TikTok·Instagram·Threads·Facebook 출처를 `getOEmbed()`로 확인하는데, `getOEmbed()`는 공급자를 `fetch(..., { next: { revalidate: 3_600 } })`로 묻는다(`lib/oembed.ts`). Next 16.3.4에서 이것은 데이터 캐시다(`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/fetch.md`, `options.next.revalidate`). `force-dynamic` 경로 핸들러에서도 명시한 `revalidate`는 캐시되고, 200 답만 저장된다(`next/dist/server/lib/patch-fetch.js`). 키는 공급자 URL이라 `/api/oembed`, 제출 액션, 운영자 액션, `source-ingestions`가 같은 캐시를 쓴다. 그래서 판정 불가(200, 제목·작성자 없음)인 TikTok 답의 재시도(5분, 10분, 20분, 40분)는 한 시간 동안 TikTok에 닿지 않고 캐시된 답을 다시 읽는다. 매번 묻는 Axum은 다른 답을 받을 수 있다. YouTube(`videos.list`, `cache: "no-store"`)는 해당하지 않는다. `POST`는 R4가 옮겼다 |
+| `POST /api/admin/source-ingestions` | 같은 `getOEmbed()`와 같은 캐시를 쓴다 |
 
-### `/api/cron/source-refresh`가 502인 까닭(코드에서. 경로 동작은 바꾸지 않았다)
+`getOEmbed()`를 부르는 경로는 그 캐시와 함께 한 묶음으로 옮긴다. Axum 쪽에 한 시간 캐시를 따로 두는 것으로는 부족하다(Next 프로세스의 캐시와 공유되지 않는다).
+
+### `/api/cron/source-refresh`가 502인 까닭(경로 동작은 바꾸지 않았다)
 
 1. **502는 "일부 실패"(`status: "partial"`)다.** #89(2026-11-16 머지)가 두 가지를 바꿨다. 하나, `partial`도 502로 답한다(그 전에는 `failed`만 502였고 `partial`은 200이었다). 둘, 스케줄러가 하루 한 번(17:00)이 아니라 15분마다 부른다(`deploy/scheduler/crontab`). `partial`은 고른 행 하나만 실패해도 된다. 해당하는 경우는 오래된 행·재시도 행 조회의 실패, YouTube 호출의 실패, oEmbed 행 하나의 실패(모양이 잘못된 ID 포함), 기한(40초)에 걸려 미뤄진 oEmbed 행(#139부터), 캐시 만료의 실패, `job_runs` 기록의 실패다.
-2. **계속 실패하는 행이 코드에 보인다: Instagram.** Instagram 출처의 확인은 `https://graph.facebook.com/<버전>/instagram_oembed?url=…&maxwidth=658&omitscript=true`를 access token 없이 부른다. `META_INSTAGRAM_ACCESS_TOKEN`은 compose가 Next에 넘기지만 레이더 커넥터만 읽는다(`lib/trend/radar-platform-connectors.server.ts`). Meta의 문서로는 이 엔드포인트에 토큰이 필수라, 답은 오류다. `readJson()`은 404나 "없는 게시물"(400, code 24/subcode 2207045)이 아닌 오류를 모두 502로 바꾸므로 그 행은 삭제가 아니라 실패로 세어진다. 실제 Meta를 부르지 않았으므로 이 부분은 확인하지 않았다. TikTok에서는 제목이나 작성자가 없는 일반 플레이어 답이 "판정 불가"로 실패한다.
-3. **실패한 행이 실행 대부분을 실패로 만든다.** 실패한 행은 `last_checked_at`을 바꾸지 않고 복구 대기열에 들어간다. DB 함수 `record_source_acquisition_failure`가 5분에서 시작해 두 배씩(최대 24시간) 다음 시도를 미룬다. 15분마다 도는 실행에 다시 시도할 행이 하나라도 끼면 그 실행은 502다. 실패하는 Instagram 행이 여럿이면 대부분의 실행이 그렇다. 행 수와 시각이 있어야 80 %를 계산할 수 있다.
+2. **운영에서 계속 실패하는 것은 TikTok이다.** 운영 `job_runs`(`refresh_media_sources`의 `detail->'observations'`, 읽기 전용 조회)로는 Instagram과 YouTube 행은 확인되고, TikTok oEmbed는 449건 중 0건이 확인됐다. 그러니 `partial`은 주로 TikTok에서 온다. 앞선 메모의 "Instagram oEmbed가 토큰 없이 불려 계속 실패한다"는 추측은 운영 기록과 맞지 않아 거둔다. TikTok의 확인은 제목이나 작성자가 없는 일반 플레이어 답을 "판정 불가"로 실패시키고, 그 200 답은 위의 한 시간 캐시에 남아 재시도에도 같은 답이 돌아온다. 경로 동작은 바꾸지 않았다.
+3. **실패한 행이 실행 대부분을 실패로 만든다.** 실패한 행은 `last_checked_at`을 바꾸지 않고 복구 대기열에 들어간다. DB 함수 `record_source_acquisition_failure`가 5분에서 시작해 두 배씩(최대 24시간) 다음 시도를 미룬다. 15분마다 도는 실행에 다시 시도할 TikTok 행이 하나라도 끼면 그 실행은 502다.
 4. **시작일 2026-11-18은 코드로는 확정할 수 없다.** #89는 11-16에 머지됐고, 11-17~18에 배포 경로를 고친 커밋(#103, #111)이 있다. #89가 VM에 처음 올라간 날이 11-18일 수 있다.
-5. **확인하는 법**(운영 DB, 읽기 전용): `select started_at, detail->>'error', detail->'oembed'->'errors', detail->'observations' from job_runs where job_name = 'refresh_media_sources' order by started_at desc limit 50;`. `observations`(#115, 11-18)에 플랫폼별 `selected`·`confirmed`·`inconclusive`·`invalid_identity`가 있다. 2번이 맞다면 `instagram.inconclusive`가 `selected`와 같고, `oembed.errors`는 비어 있으며(실패는 `failed`로만 센다), `detail->>'error'`도 없다.
-
-### 다음 묶음에서
-
-- #146이 main에 오면 `trend-pulse`와 `source-refresh`의 `GET`을 다시 본다. 캐시 만료는 R4의 길로, 바깥 호출은 프로세스 안의 `fetch` 가로채기(Next)와 테스트 전용 기준 URL(Rust)로 비교한다.
-- `source-ingestions`는 데이터 캐시가 있는 한 Next에 둔다. 옮기려면 Axum 쪽에 같은 한 시간 캐시를 두는 것으로는 부족하다(Next 프로세스의 캐시와 공유되지 않는다). TypeScript가 그 `fetch`에서 캐시를 빼야 한다.
-

@@ -66,7 +66,9 @@ The meme chat and the candidate draft call OpenRouter only with
 `OPENROUTER_API_KEY`. For tests, `AXUM_TEST_OPENROUTER_ORIGIN` (a loopback
 `http://host:port`, nothing else is accepted) sends those requests to a local
 stub instead of `https://openrouter.ai`; `parity/README.md` ("Meme chat") has
-the Next side.
+the Next side. `AXUM_TEST_RADAR_ORIGIN` does the same for the trend pulse's
+radar hosts (`api.x.com`, `graph.threads.com`, `graph.facebook.com`), under
+`/<host>/<path>`; `parity/README.md` ("The trend pulse").
 
 `NODE_ENV=development` makes Axum read the session cookie a browser holds
 over plain HTTP (`better-auth.session_token`). Unset or `production`, it reads

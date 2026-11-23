@@ -104,6 +104,26 @@ fn loopback_origin(raw: &str) -> Option<String> {
     .then(|| url.origin().ascii_serialization())
 }
 
+/// The radar connectors of `lib/trend/radar-platform-connectors.server.ts`,
+/// each variable exactly as the environment holds it: the TypeScript trims
+/// some and splits others untrimmed.
+#[derive(Clone, Debug, Default)]
+pub struct RadarConfig {
+    pub x_terms: Option<String>,
+    pub x_bearer_token: Option<Secret>,
+    pub threads_terms: Option<String>,
+    pub threads_access_token: Option<Secret>,
+    pub instagram_hashtags: Option<String>,
+    pub instagram_access_token: Option<Secret>,
+    pub instagram_user_id: Option<String>,
+    pub graph_api_version: Option<String>,
+    /// For tests only: `AXUM_TEST_RADAR_ORIGIN`, a loopback `http://host:port`
+    /// that receives the requests meant for `https://api.x.com`,
+    /// `https://graph.threads.com` and `https://graph.facebook.com`, under
+    /// `/<host>/<path>`.
+    pub test_origin: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -190,6 +210,8 @@ pub struct Config {
     /// counterpart of `NODE_EXTRA_CA_CERTS`, for a provider behind a private
     /// CA or a test stub. `None`, the production case, trusts only the roots.
     pub extra_ca_certs: Option<String>,
+    /// The connectors `/api/cron/trend-pulse` collects from.
+    pub radar: RadarConfig,
 }
 
 /// `PLUS_DIGEST_DELIVERY_URL`, `PLUS_DIGEST_DELIVERY_TOKEN` and
@@ -304,6 +326,14 @@ impl Config {
             ));
         }
 
+        let radar_test = optional("AXUM_TEST_RADAR_ORIGIN");
+        let radar_test_origin = radar_test.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&radar_test, &radar_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_RADAR_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -375,6 +405,17 @@ impl Config {
                 from_email: lookup("PLUS_DIGEST_FROM_EMAIL").unwrap_or_default(),
             },
             extra_ca_certs: optional("AXUM_EXTRA_CA_CERTS"),
+            radar: RadarConfig {
+                x_terms: lookup("RADAR_X_TERMS"),
+                x_bearer_token: lookup("X_API_BEARER_TOKEN").map(Secret::new),
+                threads_terms: lookup("RADAR_THREADS_TERMS"),
+                threads_access_token: lookup("THREADS_ACCESS_TOKEN").map(Secret::new),
+                instagram_hashtags: lookup("RADAR_INSTAGRAM_HASHTAGS"),
+                instagram_access_token: lookup("META_INSTAGRAM_ACCESS_TOKEN").map(Secret::new),
+                instagram_user_id: lookup("META_INSTAGRAM_USER_ID"),
+                graph_api_version: lookup("META_GRAPH_API_VERSION"),
+                test_origin: radar_test_origin,
+            },
         })
     }
 }

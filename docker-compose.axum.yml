@@ -84,6 +84,17 @@ services:
       PLUS_DIGEST_DELIVERY_TOKEN: ${PLUS_DIGEST_DELIVERY_TOKEN:-}
       PLUS_DIGEST_DELIVERY_URL: ${PLUS_DIGEST_DELIVERY_URL:-}
       PLUS_DIGEST_FROM_EMAIL: ${PLUS_DIGEST_FROM_EMAIL:-}
+      # The trend pulse's radar connectors (server/src/routes/ops/radar_connectors.rs),
+      # as docker-compose.yml gives them to Next. Without them Axum collects
+      # nothing where Next would.
+      RADAR_X_TERMS: ${RADAR_X_TERMS:-}
+      X_API_BEARER_TOKEN: ${X_API_BEARER_TOKEN:-}
+      RADAR_THREADS_TERMS: ${RADAR_THREADS_TERMS:-}
+      THREADS_ACCESS_TOKEN: ${THREADS_ACCESS_TOKEN:-}
+      RADAR_INSTAGRAM_HASHTAGS: ${RADAR_INSTAGRAM_HASHTAGS:-}
+      META_INSTAGRAM_ACCESS_TOKEN: ${META_INSTAGRAM_ACCESS_TOKEN:-}
+      META_INSTAGRAM_USER_ID: ${META_INSTAGRAM_USER_ID:-}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
       # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and
       # NEXT_PUBLIC_ADSENSE_CLIENT are left out on purpose. Next fixes them at
       # build time, and Axum must run with the same ones for native routes and

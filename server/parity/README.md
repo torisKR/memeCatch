@@ -456,8 +456,12 @@ cookie name, `session_data` and its chunks, `dont_remember`, due for a
 refresh, expired, unknown token, a row that vanishes during the refresh
 (401, by a trigger), a database that fails (500, by renaming the table), and
 the requests handed to Next: `HEAD`, `POST`, a query string, `RSC`, a
-trailing slash), `sign-out` (content types, bodies, the origin check with and
-without cookies, `Referer`, the row deleted, the cookies cleared) and
+trailing slash; a 17 KB cookie, 431 on both), `sign-out` (content types,
+bodies, the origin check with and without cookies, `Referer`, the row deleted,
+the cookies cleared; the query `callbackURL` and the `redirectTo`,
+`errorCallbackURL` and `newUserCallbackURL` bodies, which Next answers; a
+delete the database refuses, where Next answers 200 and Axum 500
+`FAILED_TO_SIGN_OUT` with the same cookies, PLAN.md A1-4) and
 `limits` (production only: the 101st request in ten seconds, per address and
 path).
 

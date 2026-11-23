@@ -410,10 +410,10 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 동치 확인:
 
-- `server/parity/auth-session.mjs`: 실제 Next와 두 경로의 모든 경우. 답(상태, 헤더, `Set-Cookie` 순서, 본문)과 쓰는 경우의 세션 행을 비교한다. 운영 빌드(`NODE_ENV=production`, 쿠키 `__Secure-`) 51/51, `next dev`(`NODE_ENV=development`) 50/50.
+- `server/parity/auth-session.mjs`: 실제 Next와 두 경로의 모든 경우. 답(상태, 헤더, `Set-Cookie` 순서, 본문)과 쓰는 경우의 세션 행을 비교한다. 운영 빌드(`NODE_ENV=production`, 쿠키 `__Secure-`) 51/51, `next dev`(`NODE_ENV=development`) 50/50. 리뷰 수정(A1-1~A1-4) 뒤 다시: 67/67, 66/66.
 - `server/tests/auth_session_cross.rs`(무시된 테스트, Node 필요): 같은 DB에서 실제 better-auth와 양방향. better-auth가 만든 세션을 Rust가 읽고, 연장하고, 만료시키고, 로그아웃한 뒤 better-auth의 `getSession`이 그 상태에 동의한다. 반대로 better-auth가 연장·만료·로그아웃한 뒤 Rust가 동의한다. 연장 경계(`expiresAt - 7일 + 1일 <= now`)와 만료 경계를 1초 앞뒤에서 본다. 두 `NODE_ENV` 모두.
 - `server/tests/all_routes.rs`: 두 id 모두 `AXUM_DISABLED_ROUTES`에 적으면 Next로 간다. 나머지 `/api/auth/*`와 Next에 넘기는 요청(쿼리, `RSC`, 다른 메서드, 다른 본문)이 Next로 가는 것도 본다.
-- B0 브라우저 게이트(`server/parity/behaviour/scenarios/account.spec.mjs`): 헤더의 로그인 상태가 페이지를 읽을 때 맞고, 계정 메뉴의 로그아웃이 세션을 끝낸다. Next와 Axum, 폰과 데스크톱 32/32. Axum과 Next 사이에 두 경로를 599로 거절하는 프록시를 두고도 Axum 쪽 16개가 통과했고(프록시까지 간 요청 0), 두 id를 끄면 실패했다.
+- B0 브라우저 게이트(`server/parity/behaviour/scenarios/account.spec.mjs`): 헤더의 로그인 상태가 페이지를 읽을 때 맞고, 계정 메뉴의 로그아웃이 세션을 끝낸다. Next와 Axum, 폰과 데스크톱 32/32. 행 삭제가 막힌 로그아웃(A1-4)을 더해 36/36. Axum과 Next 사이에 두 경로를 599로 거절하는 프록시를 두고도 Axum 쪽 16개가 통과했고(프록시까지 간 요청 0), 두 id를 끄면 실패했다.
 
 ### 옮기지 않은 것
 

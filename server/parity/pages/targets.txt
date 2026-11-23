@@ -29,3 +29,34 @@
 # and a curated meme with no database row.
 /memes/wk36uaq4-ai-slop                                                 200 proxied
 /memes/jkm2022k                                                         proxied
+
+# Batch B1: the static documents. Each page as linked, with a query string,
+# with a trailing slash (Next's 308), and under a locale prefix it does not have.
+/contact 200 index native
+/contact?utm_source=kakao&utm_medium=social 200 index native
+/contact/ 308
+/en/contact 404 proxied
+/editorial 200 index native
+/editorial?from=footer 200 index native
+/editorial/ 308
+/guides 200 index native
+/guides?ref=menu 200 index native
+/guides/ 308
+/en/guides 404 proxied
+/guides/usage-signals 200 index native
+/guides/before-sending-at-work 200 index native
+/guides/korean-meme-eras 200 index native
+/guides/checking-meme-sources 200 index native
+/guides/short-form-challenge-rights 200 index native
+/guides/short-form-challenge-rights?utm_source=x 200 index native
+/guides/usage-signals/ 308
+/guides/no-such-guide 404 proxied
+/privacy 200 index native
+/privacy?v=1 200 index native
+/privacy/ 308
+/terms 200 index native
+/terms?v=1 200 index native
+/terms/ 308
+/offline 200 noindex native
+/offline?from=sw 200 noindex native
+/missing-public-meme 404 noindex native

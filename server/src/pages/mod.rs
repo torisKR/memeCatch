@@ -16,6 +16,7 @@ pub mod cache;
 pub mod chrome;
 pub mod content_depth;
 pub mod document;
+pub mod documents;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
@@ -119,6 +120,26 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let pages = Routes::new(state)
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
+        .add("page-contact", "/contact", get(documents::contact::page))
+        .add(
+            "page-editorial",
+            "/editorial",
+            get(documents::editorial::page),
+        )
+        .add("page-guides", "/guides", get(documents::guides::list))
+        .add(
+            "page-guide",
+            "/guides/{slug}",
+            get(documents::guides::article),
+        )
+        .add("page-privacy", "/privacy", get(documents::privacy::page))
+        .add("page-terms", "/terms", get(documents::terms::page))
+        .add("page-offline", "/offline", get(documents::offline))
+        .add(
+            "page-missing-meme",
+            "/missing-public-meme",
+            get(documents::missing_public_meme),
+        )
         .build()
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -202,14 +223,20 @@ async fn frame_fragment(
         .into_response()
 }
 
-/// A rendered document with the headers Next puts on a page.
+/// A rendered document with the headers Next puts on a page it renders on
+/// request.
 pub fn html(status: StatusCode, document: Markup) -> Response {
+    html_cached(status, DYNAMIC_PAGE_CACHE, document)
+}
+
+/// The same with the `Cache-Control` Next sends for that page.
+pub fn html_cached(status: StatusCode, cache_control: &'static str, document: Markup) -> Response {
     (
         status,
         [
             (CONTENT_TYPE, "text/html; charset=utf-8"),
             (CONTENT_LANGUAGE, "ko"),
-            (CACHE_CONTROL, DYNAMIC_PAGE_CACHE),
+            (CACHE_CONTROL, cache_control),
         ],
         document.into_string(),
     )

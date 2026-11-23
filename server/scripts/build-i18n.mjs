@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Exports the TypeScript dictionaries to JSON that the Rust pages read, so no
-// string is translated twice. Run from the repository root:
+// Exports the TypeScript dictionaries, and copy that lives as data in
+// lib/, to JSON that the Rust pages read, so no string is written twice. Run from the repository root:
 //
 //   node --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs          write
 //   node --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check  exit 1 if stale
@@ -26,6 +26,7 @@ import {
 } from "@/lib/i18n";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
 import { MEME_CHAT_COPY } from "@/lib/meme-chat-copy";
+import { GUIDES } from "@/lib/guides";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -79,6 +80,8 @@ const FILES = {
     chat: MEME_CHAT_COPY,
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
   }),
+  // The five articles of /guides and /guides/{slug}, as lib/guides.ts holds them.
+  "guides.json": () => GUIDES,
 };
 
 let stale = 0;

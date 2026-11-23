@@ -5,11 +5,45 @@ pub mod health;
 pub mod media;
 pub mod public;
 
+use std::collections::HashSet;
+
 use axum::Router;
 use axum::middleware;
 use axum::routing::{MethodRouter, any};
 
 use crate::{AppState, headers, proxy};
+
+/// The id of every native route. `Routes::add` takes no other id, so this
+/// list cannot fall behind the routes.
+pub const ROUTE_IDS: [&str; 7] = [
+    "health",
+    "media-signed",
+    "robots",
+    "memes-random",
+    "random-meme",
+    "csp-report",
+    "daily-quiz",
+];
+
+/// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
+/// variable is the rollback switch: an ignored typo would leave the route
+/// native while the operator believes Next has it back.
+pub fn check_disabled_ids(disabled: &HashSet<String>) -> Result<(), String> {
+    let mut unknown: Vec<&str> = disabled
+        .iter()
+        .map(String::as_str)
+        .filter(|id| !ROUTE_IDS.contains(id))
+        .collect();
+    if unknown.is_empty() {
+        return Ok(());
+    }
+    unknown.sort_unstable();
+    Err(format!(
+        "AXUM_DISABLED_ROUTES names no native route: {}. The route ids are: {}",
+        unknown.join(", "),
+        ROUTE_IDS.join(", ")
+    ))
+}
 
 /// Builds one module's router. Every native route has an id; an id listed in
 /// `AXUM_DISABLED_ROUTES` is not registered, so Next keeps answering it.
@@ -42,6 +76,10 @@ impl<'a> Routes<'a> {
     /// Call `add` once per path, with all its methods in one `MethodRouter`,
     /// and do not give that `MethodRouter` a fallback of its own.
     pub fn add(mut self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
+        assert!(
+            ROUTE_IDS.contains(&id),
+            "add the route id {id:?} to ROUTE_IDS"
+        );
         if self.state.config.disabled_routes.contains(id) {
             tracing::info!(id, path, "native route disabled, proxying to upstream");
             return self;

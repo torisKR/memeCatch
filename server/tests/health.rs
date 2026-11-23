@@ -11,10 +11,12 @@ use axum::extract::Request;
 use axum::http::{Response, StatusCode};
 use axum::routing::get;
 use common::{
-    client, closed_addr, config, database_url, parse_head, raw_request, spawn_app, spawn_router,
+    UNUSED_DATABASE_URL, client, closed_addr, config, database_url, parse_head, raw_request,
+    spawn_app, spawn_router,
 };
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
+use memecatch_server::AppState;
 use tokio::net::TcpListener;
 
 /// An upstream that answers every request with 418 and names what it saw.
@@ -208,6 +210,41 @@ async fn a_disabled_route_id_sends_the_request_to_the_upstream() {
         headers_without_date(&response),
         headers_without_date(&direct)
     );
+}
+
+const ROUTE_IDS: [&str; 7] = [
+    "health",
+    "media-signed",
+    "robots",
+    "memes-random",
+    "random-meme",
+    "csp-report",
+    "daily-quiz",
+];
+
+// `AXUM_DISABLED_ROUTES` is the rollback switch. A typo that was ignored
+// would leave the route native while the operator believes it went back.
+#[tokio::test]
+async fn an_unknown_id_in_axum_disabled_routes_is_refused_at_startup() {
+    let state = |disabled: &str| {
+        AppState::new(config(
+            "127.0.0.1:1".parse().unwrap(),
+            UNUSED_DATABASE_URL,
+            &[("AXUM_DISABLED_ROUTES", disabled)],
+        ))
+    };
+
+    // An underscore for the hyphen, and a misspelling, next to a valid id.
+    let refused = state("health, media_signed,robotz").err();
+    let every_id_at_once = state(&ROUTE_IDS.join(","));
+
+    let message = refused.expect("startup is refused");
+    assert!(message.contains("AXUM_DISABLED_ROUTES"), "{message}");
+    assert!(message.contains("media_signed, robotz"), "{message}");
+    for id in ROUTE_IDS {
+        assert!(message.contains(id), "valid id {id} not listed: {message}");
+    }
+    assert!(every_id_at_once.is_ok());
 }
 
 #[tokio::test]

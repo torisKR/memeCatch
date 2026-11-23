@@ -32,6 +32,7 @@ pub struct AppState {
 impl AppState {
     /// Opens no connection: the database pools connect on first use.
     pub fn new(config: Config) -> Result<Self, String> {
+        routes::check_disabled_ids(&config.disabled_routes)?;
         let db = Db::connect_lazy(config.database_url.expose(), config.db_pool_max)
             .map_err(|error| format!("DATABASE_URL is not a valid Postgres URL: {error}"))?;
         let native_headers = NativeRouteHeaders::new(&config).map_err(|_| {

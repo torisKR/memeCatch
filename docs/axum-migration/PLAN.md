@@ -254,6 +254,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 75 | 퇴역 상품 410 문서는 Axum의 스타일시트(`/_axum/site.<해시>.css`)를 건다. Next는 빌드의 CSS 파일들을 건다. 클래스는 같다 | 수용 |
 | 76 | B1의 정적 문서는 Next가 빌드 때 한 번 렌더하고 Axum은 요청마다 렌더한다. `Cache-Control`은 같다. 푸터의 연도는 Next에서 빌드한 해, Axum에서 응답한 해다 | 수용 |
 | 77 | B1의 정적 문서(소개 제외)는 TypeScript에서 그대로 옮겨 적은 마크업이다(가이드와 퇴역 상품의 문구는 생성된 JSON). 문구를 고치면 TypeScript와 `server/src/pages/documents/`를 함께 고치고 페이지 게이트로 확인한다 | 수용 |
+| 78 | Axum 페이지의 스크립트는 `/api/db/query`가 `503 "database busy"`(프로세스 안 동시 쿼리 6개 상한, 실행 전 거절)와 `Retry-After`로 답하면 그만큼 기다렸다 한 번 다시 보낸다. Next의 `lib/db/client.ts`는 오류로 읽어 저장한 밈이 저장 안 됨으로, 닉네임이 기본값으로 보인다(부하 시험 B0 저장 시나리오 간헐 실패의 원인). TypeScript 쪽도 같이 고치는 것이 맞다 | 미해결, `lib/db/client.ts` |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 

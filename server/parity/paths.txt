@@ -1,0 +1,21 @@
+# Default targets for parity.mjs. One per line: a percent-encoded path, or
+# "METHOD path". No request body is sent.
+/
+/robots.txt
+/api/health
+/sitemap.xml
+# Hangul slug, as a browser sends it.
+/memes/rk3w632x-%EC%A4%91%EA%BA%BE%EB%A7%88
+# Short id: Next answers with a redirect, which must come back unfollowed.
+/memes/rk3w632x
+# Lowercase percent-encoding: Next redirects to the canonical form, so the
+# target must reach it without being normalized.
+/memes/rk3w632x-%ec%a4%91%ea%ba%be%eb%a7%88
+/search?q=%EC%A4%91%EA%BA%BE%EB%A7%88
+/no-such-page
+# Bodiless answers: the length headers must be exactly Next's.
+HEAD /robots.txt
+HEAD /
+# Methods the native /api/health route does not handle go to Next.
+POST /api/health
+OPTIONS /api/health

@@ -80,3 +80,6 @@ data/memes/collected/.work/
 .codex/skills/.system/**
 !.codex/prompts/
 !.codex/prompts/**
+
+# Rust build output of the Axum server
+/server/target/

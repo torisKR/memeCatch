@@ -1,0 +1,46 @@
+use std::net::Ipv4Addr;
+
+use memecatch_server::config::Config;
+use memecatch_server::{AppState, build_app};
+use tokio::net::TcpListener;
+use tokio::signal::unix::{SignalKind, signal};
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt().with_ansi(false).init();
+    if let Err(message) = run().await {
+        tracing::error!("{message}");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<(), String> {
+    let config = Config::from_env().map_err(|error| error.to_string())?;
+    let port = config.port;
+    tracing::info!(
+        port,
+        upstream = %config.upstream,
+        db_pool_max = config.db_pool_max,
+        disabled_routes = ?config.disabled_routes,
+        "starting memecatch-server"
+    );
+    let app = build_app(AppState::new(config)?);
+    let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, port))
+        .await
+        .map_err(|error| format!("cannot listen on port {port}: {error}"))?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .map_err(|error| format!("server stopped: {error}"))
+}
+
+// As PID 1 in a container the process gets no default SIGTERM action, so
+// `docker stop` would wait out its grace period without this.
+async fn shutdown_signal() {
+    let mut terminate = signal(SignalKind::terminate()).expect("SIGTERM handler");
+    let mut interrupt = signal(SignalKind::interrupt()).expect("SIGINT handler");
+    tokio::select! {
+        _ = terminate.recv() => {}
+        _ = interrupt.recv() => {}
+    }
+}

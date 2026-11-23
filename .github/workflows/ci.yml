@@ -130,3 +130,32 @@ jobs:
           # Verify status after success or an ambiguous 255; the script never
           # repeats a deployment or the manual redeploy command.
           bash deploy/autodeploy/run-ssh-deploy.sh
+
+  # The Axum server in server/ (docs/axum-migration/PLAN.md). Not in `deploy`'s
+  # `needs`: production does not run it yet, so it must not hold up a deploy.
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: server
+    env:
+      # Same Rust release as the build stage of Dockerfile.server.
+      RUSTUP_TOOLCHAIN: "1.96.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/target
+          key: server-cargo-${{ runner.os }}-${{ hashFiles('server/Cargo.lock') }}
+      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component rustfmt --component clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - name: cargo test against the Docker test database
+        run: |
+          DATABASE_URL="$(scripts/test-db.sh up)"
+          export DATABASE_URL
+          cargo test

@@ -59,7 +59,7 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | 5a | 배포 스크립트와 에이전트가 `MEMECATCH_AXUM=1`일 때 Axum 구성을 배포한다(기본은 꺼짐). 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next`를 먼저 올려 health를 기다린 뒤 `app` 교체, 두 컨테이너의 health로 게이트, 두 이미지에 같은 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`, 서버 이미지 빌드와 디스크 확인, CI `server` 확인, 두 이미지 스냅샷·롤백. 5절 "단계 5a 결과" 참조 | 완료. `torisKR/axum-deploy` |
 | 5b | 운영 전환: VM의 `.env`에 `MEMECATCH_AXUM=1`을 넣고 수동 재배포. 5절 "단계 5b에서 확인할 것" 참조 | 사용자 승인 필요 |
 | 6 | `/api/auth/*`(better-auth)를 Rust로 | 옮기기로 결정. 순서와 시험 항목은 [`UI-PLAN.md`](./UI-PLAN.md) 4절 "인증". 구현은 대기 |
-| 7 | 화면 계층을 Rust로 | 옮기기로 결정. 방식(Maud 템플릿 + 작은 스크립트), 묶음 순서, 파일럿 두 페이지의 결과는 [`UI-PLAN.md`](./UI-PLAN.md). B0(모든 페이지가 쓰는 틀: 헤더·메뉴·언어 선택·계정 메뉴·하단 내비·챗봇·설치 안내·이동 표시·검색 단축키·푸터·저장 진입점, i18n 생성, 크기 상한 캐시, 브라우저 동작 게이트) 완료, 페이지는 아직 하나도 켜지 않았다. 페이지는 `AXUM_PAGE_ROUTES`로 켠다(아래 경로 표). 나머지 묶음은 대기 |
+| 7 | 화면 계층을 Rust로 | 옮기기로 결정. 방식(Maud 템플릿 + 작은 스크립트), 묶음 순서, 파일럿 두 페이지의 결과는 [`UI-PLAN.md`](./UI-PLAN.md). B0(모든 페이지가 쓰는 틀: 헤더·메뉴·언어 선택·계정 메뉴·하단 내비·챗봇·설치 안내·이동 표시·검색 단축키·푸터·저장 진입점, i18n 생성, 크기 상한 캐시, 브라우저 동작 게이트) 완료, 페이지는 아직 하나도 켜지 않았다. 페이지는 `AXUM_PILOT_ROUTES`로 켠다(아래 경로 표). 나머지 묶음은 대기 |
 
 Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, `@huggingface/transformers`(onnxruntime) 임베딩 경로 2개, better-auth. 이들은 대체 구현을 정하기 전까지 Next에 둔다.
 
@@ -94,7 +94,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `random-meme` | `/api/random-meme` | `GET`, `HEAD` | |
 | `csp-report` | `/api/csp-report` | `POST` | 분당 60회 제한의 카운터는 프로세스별이다. 키는 IP 주소이거나 `unknown`이고 버킷은 최대 10,000개다 |
 | `daily-quiz` | `/api/daily-quiz` | `GET`, `HEAD` | |
-| `page-about` | `/about` | `GET`, `HEAD` | 페이지. `AXUM_PAGE_ROUTES`(쉼표로 나눈 페이지 경로 id)에 적어야 켜진다(기본은 Next). `AXUM_DISABLED_ROUTES`가 이긴다. 페이지가 아닌 id나 없는 id를 적으면 시작을 거부한다. 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
+| `page-about` | `/about` | `GET`, `HEAD` | 페이지. `AXUM_PILOT_ROUTES`(쉼표로 나눈 페이지 경로 id, 모든 페이지의 스위치로 이 이름을 그대로 쓴다. 차이 66)에 적어야 켜진다(기본은 Next). `AXUM_DISABLED_ROUTES`가 이긴다. 페이지가 아닌 id나 없는 id를 적으면 시작을 거부한다. 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
 | `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 페이지, 위와 같다. "유래" 절까지만 그린다. 미디어·번역·자체 제작·편집 밈과 DB 조회 실패는 Next로 넘긴다 |
 | `page-assets` | `/_axum/{file}`, `/_axum/frame/{locale}` | `GET`, `HEAD` | 페이지의 스타일시트와 스크립트(파일 이름에 내용 해시가 들어간다), 그리고 언어 선택이 제자리에서 바꿀 때 받는 다른 언어의 틀(JSON, 프로세스에 1시간·최대 4 MB 보관) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
@@ -235,7 +235,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 63 | 이동 표시줄은 클릭 120 ms 뒤 나타나 다음 페이지가 올 때까지 남는다(전체 페이지 이동이라 100 %로 채우는 마무리가 없다). 하단 내비 탭의 대기 스피너(`useLinkStatus`)는 옮기지 않았다: 브라우저 자체의 로딩 표시가 대신한다 | 수용 |
 | 64 | 계정 메뉴·챗봇 패널은 CSS `menu-pop`으로 나타나고, 로그인 안내·설치 안내 시트는 애니메이션 없이 나타난다. Next는 motion의 스프링·슬라이드를 쓴다 | 수용 |
 | 65 | `PublicWebMcpTools`(`document.modelContext`에 공개 도구 등록)는 옮기지 않았다. 브라우저가 이 API를 내놓기 전에는 아무 일도 하지 않는 컴포넌트다 | 미해결, 이 API가 쓰이게 되면 |
-| 66 | 페이지를 켜려면 `docker-compose.axum.yml`이 `AXUM_PAGE_ROUTES`를 컨테이너에 넘겨야 한다. 아직 넘기지 않는다 | 미해결, 첫 페이지를 켜는 묶음에서 |
+| 66 | 페이지를 켜는 변수는 이름이 `AXUM_PILOT_ROUTES` 그대로다. 이제 시범이 아니라 모든 페이지의 스위치이지만, `docker-compose.axum.yml`이 이 이름으로 넘기므로(#143) 이름을 바꾸려면 컴포즈 파일도 함께 바꿔야 한다 | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 

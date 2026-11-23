@@ -83,7 +83,7 @@ async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("RELEASE_SHA", "abc123"),
         // The pages are pilots: off unless switched on.
-        ("AXUM_PAGE_ROUTES", "page-about,page-meme"),
+        ("AXUM_PILOT_ROUTES", "page-about,page-meme"),
     ];
     // `extra` first: the first value found for a name wins.
     spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
@@ -482,11 +482,11 @@ async fn each_page_route_id_in_axum_disabled_routes_falls_through_to_the_upstrea
 #[tokio::test]
 async fn the_pages_are_off_until_axum_page_routes_names_them() {
     let upstream = marker_upstream().await;
-    let default = app(upstream, UNUSED_DATABASE_URL, &[("AXUM_PAGE_ROUTES", "")]).await;
+    let default = app(upstream, UNUSED_DATABASE_URL, &[("AXUM_PILOT_ROUTES", "")]).await;
     let only_about = app(
         upstream,
         UNUSED_DATABASE_URL,
-        &[("AXUM_PAGE_ROUTES", "page-about")],
+        &[("AXUM_PILOT_ROUTES", "page-about")],
     )
     .await;
 
@@ -503,12 +503,12 @@ async fn the_pages_are_off_until_axum_page_routes_names_them() {
     let error = memecatch_server::AppState::new(config(
         upstream,
         UNUSED_DATABASE_URL,
-        &[("AXUM_PAGE_ROUTES", "page-abuot")],
+        &[("AXUM_PILOT_ROUTES", "page-abuot")],
     ))
     .err()
     .expect("an unknown pilot id is refused");
     assert!(
-        error.contains("AXUM_PAGE_ROUTES names no page route: page-abuot"),
+        error.contains("AXUM_PILOT_ROUTES names no page route: page-abuot"),
         "{error}"
     );
     assert!(error.contains("page-about, page-meme"), "{error}");

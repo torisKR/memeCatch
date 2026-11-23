@@ -1,6 +1,6 @@
 //! Every native route and both switch variables together: the routes of
 //! `routes/` and the page pilots of `pages/` register through one builder,
-//! so one id list, `AXUM_DISABLED_ROUTES` and `AXUM_PAGE_ROUTES` govern all.
+//! so one id list, `AXUM_DISABLED_ROUTES` and `AXUM_PILOT_ROUTES` govern all.
 //!
 //! Needs the test database: `export DATABASE_URL="$(scripts/test-db.sh up)"`.
 //! It only reads.
@@ -16,7 +16,7 @@ use memecatch_server::routes::{PAGE_ROUTE_IDS, ROUTE_IDS};
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
-const PILOTS_ON: (&str, &str) = ("AXUM_PAGE_ROUTES", "page-about,page-meme");
+const PILOTS_ON: (&str, &str) = ("AXUM_PILOT_ROUTES", "page-about,page-meme");
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
 const BASE: [(&str, &str); 7] = [
@@ -185,9 +185,9 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
     let refused = |extra: &[(&str, &str)]| state(upstream, extra).err().unwrap_or_default();
 
     let disabled = refused(&[("AXUM_DISABLED_ROUTES", "quiz,llms,page-meme,memes-id-view")]);
-    let pilot = refused(&[("AXUM_PAGE_ROUTES", "page-about,page-mem")]);
+    let pilot = refused(&[("AXUM_PILOT_ROUTES", "page-about,page-mem")]);
     // A real route that is not a pilot cannot be named as one.
-    let not_a_pilot = refused(&[("AXUM_PAGE_ROUTES", "quiz")]);
+    let not_a_pilot = refused(&[("AXUM_PILOT_ROUTES", "quiz")]);
 
     assert!(
         disabled.starts_with("AXUM_DISABLED_ROUTES names no native route: memes-id-view."),
@@ -197,11 +197,11 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
         assert!(disabled.contains(id), "{id} is missing from: {disabled}");
     }
     assert!(
-        pilot.starts_with("AXUM_PAGE_ROUTES names no page route: page-mem."),
+        pilot.starts_with("AXUM_PILOT_ROUTES names no page route: page-mem."),
         "{pilot}"
     );
     assert!(
-        not_a_pilot.starts_with("AXUM_PAGE_ROUTES names no page route: quiz."),
+        not_a_pilot.starts_with("AXUM_PILOT_ROUTES names no page route: quiz."),
         "{not_a_pilot}"
     );
     // Every valid combination starts.

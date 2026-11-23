@@ -57,7 +57,7 @@ pub const ROUTE_IDS: [&str; 30] = [
     "admin-mpe-candidates",
 ];
 
-/// Pages, which are off unless `AXUM_PAGE_ROUTES` names them: a page is
+/// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
@@ -70,9 +70,9 @@ pub fn check_disabled_ids(disabled: &HashSet<String>) -> Result<(), String> {
     check_ids("AXUM_DISABLED_ROUTES", "native", disabled, &ROUTE_IDS)
 }
 
-/// Refuses an `AXUM_PAGE_ROUTES` that names anything but a page route.
+/// Refuses an `AXUM_PILOT_ROUTES` that names anything but a page route.
 pub fn check_page_ids(pages: &HashSet<String>) -> Result<(), String> {
-    check_ids("AXUM_PAGE_ROUTES", "page", pages, &PAGE_ROUTE_IDS)
+    check_ids("AXUM_PILOT_ROUTES", "page", pages, &PAGE_ROUTE_IDS)
 }
 
 fn check_ids(
@@ -99,7 +99,7 @@ fn check_ids(
 
 /// Builds one module's router. Every native route has an id; an id listed in
 /// `AXUM_DISABLED_ROUTES` is not registered, so Next keeps answering it. A
-/// page route is registered only when `AXUM_PAGE_ROUTES` lists it as well.
+/// page route is registered only when `AXUM_PILOT_ROUTES` lists it as well.
 ///
 /// ```ignore
 /// pub fn router(state: &AppState) -> Router<AppState> {

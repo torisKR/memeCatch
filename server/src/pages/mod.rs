@@ -4,7 +4,7 @@
 //!
 //! Route ids: `page-about`, `page-meme` and `page-assets` (the stylesheet,
 //! the script and the frame in another language). A page route is off until
-//! `AXUM_PAGE_ROUTES` names it (`routes::PAGE_ROUTE_IDS`), and
+//! `AXUM_PILOT_ROUTES` names it (`routes::PAGE_ROUTE_IDS`), and
 //! `AXUM_DISABLED_ROUTES` still switches it off.
 //!
 //! Only a plain document request is answered here. Next's own client router

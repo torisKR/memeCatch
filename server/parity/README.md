@@ -101,13 +101,13 @@ docker exec -i <container> psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q <
 rm -rf .next/standalone/.next/cache   # then start Next as in server/README.md
 
 # 2. Axum with the pages switched on, in front of that Next.
-AXUM_PAGE_ROUTES=page-about,page-meme ... cargo run
+AXUM_PILOT_ROUTES=page-about,page-meme ... cargo run
 
 # 3. The gate. Exit code 0: nothing differs outside the accepted list.
 node server/parity/pages/pages.mjs $NEXT $AXUM
 
 # 4. The rollback switch: with the routes disabled every target is Next's page.
-AXUM_PAGE_ROUTES=page-about,page-meme AXUM_DISABLED_ROUTES=page-about,page-meme,page-assets ... cargo run
+AXUM_PILOT_ROUTES=page-about,page-meme AXUM_DISABLED_ROUTES=page-about,page-meme,page-assets ... cargo run
 node server/parity/pages/pages.mjs $NEXT $AXUM --expect-proxied
 
 # 5. At scale, before a batch is switched on: every URL of the sitemap, on a
@@ -184,7 +184,7 @@ and its shape). It does not look at class names or markup structure.
 # with a build for http://127.0.0.1:3001:
 PORT=3002 HOSTNAME=127.0.0.1 node .next/standalone/server.js               # Next
 PORT=3001 UPSTREAM_URL=http://127.0.0.1:3002 NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 \
-  AXUM_PAGE_ROUTES=page-about,page-meme ... cargo run                       # Axum
+  AXUM_PILOT_ROUTES=page-about,page-meme ... cargo run                       # Axum
 
 NEXT_URL=http://localhost:3002 AXUM_URL=http://127.0.0.1:3001 \
 DATABASE_URL=<the database both use> BETTER_AUTH_SECRET=<their secret> \

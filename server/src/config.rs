@@ -103,8 +103,9 @@ pub struct Config {
     /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
     /// registered, so their requests fall through to the upstream.
     pub disabled_routes: HashSet<String>,
-    /// `AXUM_PAGE_ROUTES`: comma-separated ids of the page routes to switch
-    /// on (`routes::PAGE_ROUTE_IDS`). A page is registered only when named
+    /// `AXUM_PILOT_ROUTES`: comma-separated ids of the page routes to switch
+    /// on (`routes::PAGE_ROUTE_IDS`). The switch of every page, under its
+    /// first name: docker-compose.axum.yml passes it by that name. A page is registered only when named
     /// here, and `AXUM_DISABLED_ROUTES` still wins.
     pub page_routes: HashSet<String>,
     /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
@@ -242,7 +243,7 @@ impl Config {
             upstream,
             db_pool_max,
             disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
-            page_routes: id_list(optional("AXUM_PAGE_ROUTES")),
+            page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")

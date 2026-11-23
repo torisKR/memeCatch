@@ -325,3 +325,30 @@ runs `scripts/mpe-media-worker.mjs` once, in an empty directory (it reads
 
 `multipart-fixture.mjs` must run on Node 22 as well; it refuses another
 version.
+
+## The meme studio
+
+`studio.mjs` runs two Bedrock stubs and expects both servers to point at
+them: Next with `AWS_ENDPOINT_URL_BEDROCK_RUNTIME=http://127.0.0.1:3421` (the
+AWS SDK speaks HTTP/2 to Bedrock Runtime) and Axum with
+`http://127.0.0.1:3422`, both with `BEDROCK_MEME_STUDIO_ENABLED=true`,
+`AWS_REGION=ap-northeast-2` and made-up `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY`. With the endpoint set nothing reaches AWS. It mints
+its own users (an operator through the superuser) and rewrites the lifetime
+budget row, which only the superuser can read, to compare both sides of the
+ceiling.
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/studio.mjs $NEXT $AXUM
+```
+
+The two fixture scripts run the TypeScript itself. The Bedrock one must run
+where nothing can reach AWS:
+
+```sh
+node --experimental-transform-types --import ./scripts/register-ts-paths.mjs \
+  server/parity/meme-studio-fixture.mjs > server/tests/fixtures/meme_studio.json
+docker run --rm --network none -v "$PWD":/w:ro -w /w node:22-bookworm-slim \
+  node --experimental-transform-types --import ./scripts/register-ts-paths.mjs \
+  server/parity/meme-studio-bedrock-fixture.mjs > server/tests/fixtures/meme_studio_bedrock.json
+```

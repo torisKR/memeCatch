@@ -156,3 +156,14 @@ POST /api/upload
 POST /api/mpe/uploads
 GET /api/upload
 GET /api/mpe/uploads
+# The meme studio (routes/studio). studio.mjs covers both routes with bodies,
+# sessions and a Bedrock stub; these need none. The operator route is native
+# only when BEDROCK_MEME_STUDIO_ENABLED=true.
+POST /api/meme-studio
+GET /api/meme-studio
+OPTIONS /api/meme-studio
+POST /api/admin/meme-studio
+GET /api/admin/meme-studio
+# Not ported in R5: Next answers them.
+POST /api/memes/chat
+POST /api/memes/semantic-search

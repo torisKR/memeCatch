@@ -19,7 +19,7 @@ use memecatch_server::{AppState, build_app};
 const PILOTS_ON: (&str, &str) = ("AXUM_PILOT_ROUTES", "page-about,page-meme");
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
-const BASE: [(&str, &str); 7] = [
+const BASE: [(&str, &str); 8] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
     ("NODE_ENV", "development"),
@@ -27,6 +27,8 @@ const BASE: [(&str, &str); 7] = [
     ("R2_ACCESS_KEY_ID", "not-used"),
     ("R2_SECRET_ACCESS_KEY", "not-used"),
     ("R2_BUCKET", "not-used"),
+    // The operator studio is registered only with Bedrock switched on.
+    ("BEDROCK_MEME_STUDIO_ENABLED", "true"),
 ];
 
 fn state(upstream: SocketAddr, extra: &[(&str, &str)]) -> Result<AppState, String> {
@@ -91,6 +93,8 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("upload", "POST", "/api/upload"),
         ("mpe-uploads", "POST", "/api/mpe/uploads"),
         ("admin-mpe-candidates", "GET", "/api/admin/mpe-candidates"),
+        ("meme-studio", "POST", "/api/meme-studio"),
+        ("admin-meme-studio", "POST", "/api/admin/meme-studio"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

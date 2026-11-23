@@ -90,6 +90,8 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `preview-fixture.mjs` | Rewrites `tests/fixtures/preview_delivery.json` from the real `lib/meme-delivery.ts` after a change there. |
 | `mpe.mjs <next> <axum> <state.json> [<object-dir>]` | `GET /api/mpe/jobs/{id}`, `POST /api/mpe/renders`, `GET /api/admin/mpe-candidates` and `GET /api/media/{...path}` with three real sessions; `mpe.mjs seed <state.json>` prints its rows. |
 | `uploads.mjs <next> <axum> [section...]` | `POST /api/upload` and `POST /api/mpe/uploads` against a Next on Node 22, with Axum started on R2 at a local S3 gateway it runs; also the R2 requests of both sides and a job worked by the real MPE worker. |
+| `studio.mjs <next> <axum>` | `POST /api/meme-studio` and `POST /api/admin/meme-studio`, with Bedrock replaced by local stubs (HTTP/2 for Next's SDK, HTTP/1.1 for Axum) and the lifetime budget at its boundary. |
+| `meme-studio-fixture.mjs`, `meme-studio-bedrock-fixture.mjs` | Rewrite `tests/fixtures/meme_studio.json` (the templates) and `meme_studio_bedrock.json` (the Converse bodies the real SDK sends; run it in a container without a network). |
 | `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 

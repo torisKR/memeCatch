@@ -11,6 +11,7 @@ pub mod multipart;
 pub mod origin;
 pub mod public;
 pub mod request;
+pub mod studio;
 pub mod tracking;
 pub mod upload;
 
@@ -24,7 +25,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 30] = [
+pub const ROUTE_IDS: [&str; 32] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -55,6 +56,8 @@ pub const ROUTE_IDS: [&str; 30] = [
     "upload",
     "mpe-uploads",
     "admin-mpe-candidates",
+    "meme-studio",
+    "admin-meme-studio",
 ];
 
 /// Routes that do not yet do all that Next's do, so they are off unless
@@ -173,4 +176,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(crate::pages::router(state))
         .merge(mpe::router(state))
         .merge(upload::router(state))
+        .merge(studio::router(state))
 }

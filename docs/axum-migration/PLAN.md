@@ -117,6 +117,8 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `mpe-uploads` | `/api/mpe/uploads` | `POST` | R2 값 네 개가 있을 때만 등록한다. 로컬 저장소에서는 Next가 답한다(8절) |
 | `upload` | `/api/upload` | `POST` | 위와 같다 |
 | `admin-mpe-candidates` | `/api/admin/mpe-candidates` | `GET`, `HEAD` | 운영자만. `POST`(후보 생성·매칭·근거 초안, 임베딩과 OpenRouter 호출)는 Next가 답한다 |
+| `meme-studio` | `/api/meme-studio` | `POST` | 모델을 부르지 않는 템플릿 세 개. 주소별 시간당 10회 제한은 프로세스별이다 |
+| `admin-meme-studio` | `/api/admin/meme-studio` | `POST` | 운영자만. `BEDROCK_MEME_STUDIO_ENABLED=true`일 때만 등록한다(아니면 Next가 답한다). 평생 예산을 먼저 예약하고 AWS Bedrock(Converse)을 부른다. 자격 증명은 환경 변수만 읽는다(9절) |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -229,6 +231,11 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 57 | 후보 매칭 목록을 DB 오류로 못 읽으면 본문이 `candidate_match_list_failed: <메시지>`다. Postgres가 낸 오류는 메시지가 같고, 연결 실패는 sqlx와 node-pg의 문구가 다르다 | 수용 |
 | 58 | 후보 매칭의 `evidence_json`에 double을 넘는 수(`1e400`)가 있으면 Axum은 그 행 전체를 `null`로 낸다. Next는 그 수만 `null`이다. 앱은 JavaScript 수만 쓰므로 생기지 않는다 | 수용 |
 | 59 | `mpe-renders`의 출처 검사는 `explore-previews`와 같은 규칙(#34)이고, 업로드 둘은 사이트 origin이 아닌 `Origin`을 Next에 넘긴다(#42와 같은 규칙). 결과는 같고 Next가 내려가 있을 때만 다르다 | 수용 |
+| 60 | Bedrock 호출은 HTTP/1.1이다(SDK는 HTTP/2). 서명된 부분 중 경로, `content-type`, 본문 해시(`x-amz-content-sha256`), 범위(`<날짜>/<리전>/bedrock/aws4_request`)와 본문(데이터로)은 SDK와 같다. 서명 헤더 목록은 다르다: SDK는 `amz-sdk-invocation-id`·`amz-sdk-request`·`x-amz-user-agent`까지 서명하고 HTTP/2의 `:authority`를, Axum은 `host`를 서명한다 | 수용 |
+| 61 | Bedrock 자격 증명은 환경 변수(`AWS_ACCESS_KEY_ID`·`AWS_SECRET_ACCESS_KEY`·`AWS_SESSION_TOKEN`)만 읽는다. SDK의 기본 체인은 그 밖에 공유 설정 파일, SSO, 컨테이너·인스턴스 메타데이터도 본다. 환경 변수가 없으면 Axum은 예약한 뒤 503이다(SDK가 자격 증명을 못 찾을 때와 같은 답) | 수용, 단계 5에서 VM의 값 확인 |
+| 62 | `/api/admin/meme-studio` 본문은 1 MiB까지만 읽고 더 길면 형식이 틀린 JSON으로 본다(400). Next(`request.json()`)는 길이 제한이 없다. Bedrock의 답은 4 MiB까지 읽는다(넘으면 503) | 수용 |
+| 63 | 두 스튜디오 경로의 JSON에도 차이 54의 세 경우(짝 없는 서로게이트 이스케이프, double을 넘는 수, 128단계 넘는 중첩)가 해당한다. 공개 스튜디오는 400 메시지가 「JSON 요청 본문이 올바르지 않습니다」가 되고 Next는 스키마 오류 문구다 | 수용 |
+| 64 | Bedrock 답의 캡션 중복 검사에서 소문자화가 로캘과 무관하다. Next의 `toLocaleLowerCase()`는 프로세스 기본 로캘을 따른다. 터키어·리투아니아어 같은 로캘에서만 다를 수 있다 | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 
@@ -344,3 +351,37 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 - `storage.objects` 검사(TypeScript 동작 2)를 함수에서 빼거나, 저장할 때 행을 쓰거나. MPE 업로드를 살리려면 TypeScript·마이그레이션 쪽 결정이 먼저다.
 - 비공개 업로드의 캐시 헤더(TypeScript 동작 3).
 - Next 이미지의 Node를 올릴 때 5절 차이 51.
+
+## 9. 단계 3 일부: R5 (AI 경로)
+
+브랜치 `torisKR/axum-routes-r5`. 대상 다섯 중 둘을 옮겼다: `meme-studio`, `admin-meme-studio`. 동치 확인은 `server/parity/studio.mjs`(두 경로, Bedrock을 대신하는 기록 스텁, 예산 경계), `server/tests/fixtures/meme_studio.json`(실제 `generateMemeConcepts`가 228개 입력에 낸 답), `server/tests/fixtures/meme_studio_bedrock.json`(실제 SDK가 보낸 Converse 요청 본문 10개), `server/tests/studio.rs`에 있다.
+
+### 옮기지 않은 경로
+
+| 경로 | 이유 |
+| --- | --- |
+| `/api/memes/semantic-search` | 의미 검색이 꺼져 있거나(기본) 임베딩·RPC가 실패하면 `searchMemes`로 떨어진다. 그 경로는 큐레이션 검색 카드(`lib/curated-memes.ts`), 검색 표시 병합(`lib/search-presentation.ts`), 얇은 밈 거르기(`lib/thin-meme.ts`)와 `search_memes` RPC의 임베드 선택까지 옮겨야 한다. 이번 배치에서 하지 않았다. 의미 검색 쪽(임베딩 URL, 번들 런타임의 HMAC 헤더, `search_meme_references`)은 옮길 수 있는 형태다(외부 URL 호출이라 스텁으로 비교 가능) |
+| `/api/memes/chat` | 같은 참조 검색 위에 행 읽기(번역·출처 임베드), 인용 가능한 출처, 로캘 경로, 제목 키, NDJSON 스트림과 연결 끊김 처리가 얹힌다. 생성 호출은 `https://openrouter.ai`로 고정되어 있어 Next를 스텁으로 돌릴 수 없고(`opencodex`는 운영 모드에서 꺼진다) TypeScript를 프로세스 안에서 `fetch`를 가로채 비교해야 한다. 이번 배치에서 하지 않았다. 생성은 무료 모델·`max_price` 0이라 계량이 없다 |
+| `POST /api/admin/mpe-candidates` | 후보 생성·해시와 결정적 텍스트 임베딩 매칭(`lib/mpe/candidates.server.ts`, `candidates.ts`)과 OpenRouter 근거 초안(`lib/mpe/openrouter.server.ts`, `evidence-draft.server.ts`)과 그 일일 예산이다. 이번 배치에서 하지 않았다 |
+
+### 계획을 바꾸는 발견
+
+1. **공개 스튜디오는 AI를 부르지 않는다.** 정해진 템플릿 세 개를 주제 길이(UTF-16)로 돌려 낸다. 비용이 드는 생성은 운영자 경로뿐이다.
+2. **AWS SDK(3.1121)는 Bedrock Runtime에 HTTP/2로 말하고, `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`을 요청 시점에 읽는다.** 그래서 Next를 HTTP/2 스텁에, Axum을 HTTP/1.1 스텁에 붙여 같은 응답으로 비교했다. 본문 픽스처는 네트워크 없는 컨테이너에서 실제 SDK로 만든다. Axum도 같은 두 변수를 읽는다.
+3. **Next는 `lib/meme-studio-bedrock.server.ts`의 매개변수 속성 때문에 Node의 타입 제거(`--experimental-strip-types`)로 못 읽는다.** 픽스처 스크립트는 `--experimental-transform-types`로 돈다.
+4. **평생 예산 원장(`bedrock_meme_studio_lifetime_budget`)은 `service_role`도 읽지 못한다.** 테스트는 예약 함수가 돌려주는 합계로 원장을 움직인다. 한 번 천장에 닿으면 슈퍼유저만 되돌릴 수 있으므로 `cargo test`의 예산 테스트는 새 DB가 필요하다(패리티 스크립트는 슈퍼유저로 행을 다시 쓴다).
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | 운영자 스튜디오는 요청마다 최대 비용(입력 4,096 + 출력 2,048 토큰, 기본 0.043 USD)을 예약하고 정산하지 않는다. Bedrock이 실패하거나 답이 검사를 통과하지 못해도 예약은 남는다 | `lib/meme-studio.server.ts`, `reserve_bedrock_meme_studio_budget` |
+| 2 | 운영자 스튜디오에는 요청 수 제한이 없다. 예산만 막는다 | `app/api/admin/meme-studio/route.ts` |
+| 3 | 공개 스튜디오의 제한은 스키마 검사 뒤에 센다. 잘못된 요청은 세지 않는다. 키는 클라이언트가 보낸 `X-Forwarded-For` 첫 항목이다 | `app/api/meme-studio/route.ts`, `lib/rate-limit.ts` |
+| 4 | 공개 스튜디오는 본문이 4 KiB를 넘어도 413이 아니라 400(「JSON 요청 본문이 올바르지 않습니다」)이다 | `app/api/meme-studio/route.ts` |
+| 5 | 운영자 스튜디오의 실패는 전부(꺼짐, 요율 설정 오류, 예산 거절, Bedrock 실패, 답 검사 실패) 같은 503 `bedrock_unavailable`이다 | `app/api/admin/meme-studio/route.ts` |
+
+### 단계 5에서 추가로 확인할 것
+
+- VM에서 Bedrock 자격 증명이 환경 변수로 들어가는지(차이 61). 파일이나 다른 체인을 쓰면 Axum에서는 운영자 스튜디오가 503이 된다.
+- `BEDROCK_MEME_STUDIO_*`, `AWS_REGION`과 AWS 키를 Axum 컨테이너에도 넘길 것. `BEDROCK_MEME_STUDIO_ENABLED`가 없으면 운영자 스튜디오는 Next에 남고, 켜져 있는데 키가 없으면 Axum이 503으로 답한다.

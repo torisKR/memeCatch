@@ -15,7 +15,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 13] = [
+pub const ROUTE_IDS: [&str; 14] = [
     "health",
     "media-signed",
     "robots",
@@ -29,6 +29,7 @@ pub const ROUTE_IDS: [&str; 13] = [
     "feed-updated",
     "llms-localized",
     "llms-full-localized",
+    "explore-previews",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The

@@ -88,3 +88,9 @@ OPTIONS /ja/llms-full.txt
 /api/llms.txt
 /memes/llms.txt
 /zh-TW/llms-full.txt
+# POST /api/explore/previews is native (previews.mjs sends its bodies). With
+# no body and no origin both servers answer 403; its other methods are Next's.
+POST /api/explore/previews
+GET /api/explore/previews
+HEAD /api/explore/previews
+OPTIONS /api/explore/previews

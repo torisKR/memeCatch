@@ -131,6 +131,35 @@ curl -s $NEXT/ja/llms.txt > server/tests/fixtures/r1/ja-llms.txt  # <locale>-llm
 seeding and again after `analyze` ran on `memes` and `meme_translations`: two
 plans, two orders, and between them all 23 English lines.
 
+## Explore previews
+
+`POST /api/explore/previews` needs request bodies, so it has its own script,
+and rows of its own on top of the text corpus:
+
+```sh
+psql < server/tests/fixtures/previews_seed.sql      # 15 memes, one case each (the title says which)
+node server/parity/previews.mjs $NEXT $AXUM
+```
+
+It compares status, headers and body for every seeded case, for each way a
+request can name its origin, for the bodies the route refuses, and for the
+two rate limits (120 a minute for one client address, 1,200 for all). Restart
+both servers first, or wait a minute: the limit for all clients counts every
+request either server has seen.
+
+Which content a meme may show is decided by the ported rights policy. That
+part is compared case by case in `cargo test`:
+`preview-fixture.mjs` runs the real `resolveMemeDelivery` over 914 generated
+cases and writes `server/tests/fixtures/preview_delivery.json`.
+`server/tests/fixtures/previews.json` is Next's answer for the fifteen seeded
+memes:
+
+```sh
+ids=$(seq -f '"a3000000-0000-4000-8000-0000000000%02g"' -s, 1 15)
+curl -s -X POST $NEXT/api/explore/previews -H 'sec-fetch-site: same-origin' \
+  -d "{\"ids\":[$ids]}" > server/tests/fixtures/previews.json
+```
+
 `/robots.txt` is rendered by `next build`; Axum renders it at startup. They
 match when Axum runs with the `NEXT_PUBLIC_SITE_URL` of the Next build.
 `server/tests/fixtures/robots.txt` is the body of a Next built with

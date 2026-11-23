@@ -14,10 +14,12 @@
 //! | `feed-updated` | `/feed/updated.xml` |
 //! | `llms-localized` | `/{en,ja,zh,zh-tw}/llms.txt` |
 //! | `llms-full-localized` | `/{en,ja,zh,zh-tw}/llms-full.txt` |
+//! | `explore-previews` | `POST /api/explore/previews` |
 
 mod content_depth;
 mod csp_report;
 pub mod daily_quiz;
+mod explore_previews;
 mod feeds;
 mod js;
 mod js_date;
@@ -26,6 +28,7 @@ mod llms;
 mod llms_full;
 mod llms_localized;
 mod localized;
+mod meme_delivery;
 mod publication_export;
 pub mod quiz;
 mod random;
@@ -76,6 +79,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let pages = text_routes(pages);
 
     let limiter = Arc::new(RateLimiter::new(csp_report::now_ms()));
+    let previews = Arc::new(explore_previews::Previews::new(csp_report::now_ms()));
     let api = Routes::new(state)
         .add("random-meme", "/api/random-meme", get(random::json))
         .add(
@@ -83,7 +87,14 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/api/csp-report",
             post(move |request: Request| csp_report::report(limiter.clone(), request)),
         )
-        .add("daily-quiz", "/api/daily-quiz", get(daily_quiz::daily_quiz));
+        .add("daily-quiz", "/api/daily-quiz", get(daily_quiz::daily_quiz))
+        .add(
+            "explore-previews",
+            "/api/explore/previews",
+            post(move |state: State<AppState>, request: Request| {
+                explore_previews::previews(state, previews.clone(), request)
+            }),
+        );
 
     // Only the paths outside /api: proxy.ts never runs for /api.
     pages

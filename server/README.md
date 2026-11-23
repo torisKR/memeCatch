@@ -76,6 +76,8 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state for the two scripts above. Throwaway database only. |
 | `storage-parity.sh` | Signed URLs and stored objects, TypeScript against Rust. With `STORAGE_PARITY_DIR` set it keeps the directory and writes `media-targets.txt` for `parity.mjs` (the script header has the steps). |
 | `daily-quiz-fixture.mjs` | Rewrites `tests/fixtures/daily_quiz.json` from the real `lib/quiz.ts` after a change there. |
+| `previews.mjs <next> <axum>` | `POST /api/explore/previews`: every seeded case, who may ask, refused bodies and both rate limits. Leave a minute after any other request to that route. |
+| `preview-fixture.mjs` | Rewrites `tests/fixtures/preview_delivery.json` from the real `lib/meme-delivery.ts` after a change there. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 
 ## Add a native route

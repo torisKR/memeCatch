@@ -151,7 +151,10 @@ POST /api/mpe/renders
 GET /api/mpe/renders
 /api/admin/mpe-candidates
 /api/admin/mpe-candidates?candidateId=00000000-0000-4000-8000-000000000000
+# POST is native too (admin-mpe-candidates-post): without an Origin, 403.
+# mpe-candidates.mjs covers it with sessions, bodies and an OpenRouter stub.
 POST /api/admin/mpe-candidates
+PUT /api/admin/mpe-candidates
 POST /api/upload
 POST /api/mpe/uploads
 GET /api/upload
@@ -164,8 +167,11 @@ GET /api/meme-studio
 OPTIONS /api/meme-studio
 POST /api/admin/meme-studio
 GET /api/admin/meme-studio
-# Not ported: Next answers it.
+# The meme chat (routes/chat.rs), native when the embedding path cannot run:
+# without an Origin, 403. chat.mjs covers it with bodies and streams.
 POST /api/memes/chat
+GET /api/memes/chat
+OPTIONS /api/memes/chat
 # Native (without a body or Origin: 403 from either server).
 POST /api/memes/semantic-search
 # Semantic search (routes/search.rs): native when the embedding path cannot

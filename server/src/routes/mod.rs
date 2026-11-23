@@ -2,18 +2,22 @@
 //! merges them. A request no native route answers reaches `proxy::forward`.
 
 pub mod cards;
+pub mod chat;
 pub mod health;
 pub mod js_json;
+pub mod js_string;
 pub mod media;
 pub mod media_type;
 pub mod mpe;
 pub mod multipart;
+pub mod openrouter;
 pub mod origin;
 pub mod public;
 pub mod request;
 pub mod search;
 pub mod studio;
 pub mod tracking;
+pub mod unicode_classes;
 pub mod upload;
 
 use std::collections::HashSet;
@@ -26,7 +30,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 42] = [
+pub const ROUTE_IDS: [&str; 44] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -66,9 +70,11 @@ pub const ROUTE_IDS: [&str; 42] = [
     "upload",
     "mpe-uploads",
     "admin-mpe-candidates",
+    "admin-mpe-candidates-post",
     "meme-studio",
     "admin-meme-studio",
     "memes-semantic-search",
+    "memes-chat",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
@@ -154,21 +160,43 @@ impl<'a> Routes<'a> {
     /// route that ports only `GET` leaves `POST` and `OPTIONS` as they were.
     /// Call `add` once per path, with all its methods in one `MethodRouter`,
     /// and do not give that `MethodRouter` a fallback of its own.
-    pub fn add(mut self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
-        assert!(
-            ROUTE_IDS.contains(&id),
-            "add the route id {id:?} to ROUTE_IDS"
-        );
+    pub fn add(self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
+        self.add_each(path, vec![(id, methods)])
+    }
+
+    /// Registers several methods of one path, each under its own id, so each
+    /// can be handed back to Next on its own. The ids that are disabled (or
+    /// pages not switched on) are left out; with none left, Next keeps the
+    /// whole path.
+    pub fn add_each(
+        mut self,
+        path: &str,
+        entries: Vec<(&'static str, MethodRouter<AppState>)>,
+    ) -> Self {
         let config = &self.state.config;
-        if config.disabled_routes.contains(id) {
-            tracing::info!(id, path, "native route disabled, proxying to upstream");
-            return self;
+        let mut native: Option<MethodRouter<AppState>> = None;
+        for (id, methods) in entries {
+            assert!(
+                ROUTE_IDS.contains(&id),
+                "add the route id {id:?} to ROUTE_IDS"
+            );
+            if config.disabled_routes.contains(id) {
+                tracing::info!(id, path, "native route disabled, proxying to upstream");
+                continue;
+            }
+            if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
+                tracing::info!(id, path, "page route not switched on, proxying to upstream");
+                continue;
+            }
+            native = Some(match native {
+                Some(known) => known.merge(methods),
+                None => methods,
+            });
         }
-        if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
-            tracing::info!(id, path, "page route not switched on, proxying to upstream");
+        let Some(native) = native else {
             return self;
-        }
-        let native = methods.route_layer(middleware::from_fn_with_state(
+        };
+        let native = native.route_layer(middleware::from_fn_with_state(
             self.state.clone(),
             headers::apply,
         ));
@@ -209,4 +237,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(upload::router(state))
         .merge(studio::router(state))
         .merge(search::router(state))
+        .merge(chat::router(state))
 }

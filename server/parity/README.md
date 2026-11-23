@@ -433,3 +433,57 @@ docker run --rm --network none -v "$PWD":/w:ro -w /w node:22-bookworm-slim \
   node --experimental-transform-types --import ./scripts/register-ts-paths.mjs \
   server/parity/meme-studio-bedrock-fixture.mjs > server/tests/fixtures/meme_studio_bedrock.json
 ```
+
+## Meme chat
+
+`chat.mjs` compares `POST /api/memes/chat` on the R1 seed
+(`tests/fixtures/r1_reviewer.sql`, `r1_seed.sql`) plus `chat-seed.sql`. Run it
+against two pairs of servers, all with `MEME_SEMANTIC_SEARCH_ENABLED=true`,
+`MEME_CHAT_GENERATION_ENABLED=true` and no `MEME_EMBEDDING_URL`:
+
+- the production pair, without `OPENROUTER_API_KEY`: sections `production`,
+  `failures`, `limits`, `slowBody`;
+- the generation pair, with a made-up key: section `generation`. The script
+  runs the OpenRouter stub on `127.0.0.1:3530`. Start Next with the fetch
+  interceptor pointing there, and Axum with the test origin:
+
+```sh
+# Next (standalone, Node 22), generation pair:
+OPENROUTER_API_KEY=parity-key node \
+  --import "file://$PWD/server/parity/openrouter-intercept.mjs?origin=http://127.0.0.1:3530" server.js
+# Axum, generation pair:
+OPENROUTER_API_KEY=parity-key AXUM_TEST_OPENROUTER_ORIGIN=http://127.0.0.1:3530 memecatch-server
+
+TEST_DB_CONTAINER=... node server/parity/chat.mjs $NEXT $AXUM production failures limits slowBody
+TEST_DB_CONTAINER=... node server/parity/chat.mjs $NEXT_KEY $AXUM_KEY generation
+```
+
+Each server allows 20 chat requests a minute, so the script paces itself; the
+`limits` section waits for a quiet minute first. `chat-fixture.mjs` rewrites
+`tests/fixtures/meme_chat.json` from the real `answerMemeQuestion`, with the
+search and the database stubbed (`chat-fixture-hooks.mjs`,
+`chat-fixture-stubs.mjs`) and `fetch` caught; the header of the script has the
+command. `unicode-classes.mjs` rewrites `src/routes/unicode_classes.rs` (the
+character classes of two regexes, as Node 22's V8 decides them).
+
+## MPE candidates
+
+`mpe-candidates.mjs` compares `POST /api/admin/mpe-candidates`. It needs two
+sessions minted by the real better-auth in one file (`operator`, promoted by
+the login role as `service_role`, and `user`), and reseeds its own rows
+(`mpe-candidates-seed.mjs`) before each request to each server, then compares
+the rows left behind (fingerprints, candidates, matches, evidence, the daily
+budget). The same two pairs of servers as the meme chat:
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/mpe-candidates.mjs --state=state.json $NEXT $AXUM production
+TEST_DB_CONTAINER=... node server/parity/mpe-candidates.mjs --state=state.json $NEXT_KEY $AXUM_KEY generation
+DATABASE_URL=... TEST_DB_CONTAINER=... node server/parity/mpe-candidates.mjs --state=state.json \
+  --axum-log=<Axum's log file> $NEXT $AXUM matching
+```
+
+`matching` checks what no response shows: the matches the route computes. The
+store fails on both servers (PLAN.md section 10), Axum logs the matches it
+tried to store, and `mpe-candidates-flow.mjs` runs the real
+`generateCandidateMatches` on the same rows with that one call caught.
+`mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.

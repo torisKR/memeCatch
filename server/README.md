@@ -62,6 +62,12 @@ node parity/parity.mjs http://127.0.0.1:3001 http://127.0.0.1:3100 parity/paths.
 `MEMECATCH_SIGNING_SECRET`; give both servers the same value. Without it Axum
 leaves the two routes to Next.
 
+The meme chat and the candidate draft call OpenRouter only with
+`OPENROUTER_API_KEY`. For tests, `AXUM_TEST_OPENROUTER_ORIGIN` (a loopback
+`http://host:port`, nothing else is accepted) sends those requests to a local
+stub instead of `https://openrouter.ai`; `parity/README.md` ("Meme chat") has
+the Next side.
+
 `NODE_ENV=development` makes Axum read the session cookie a browser holds
 over plain HTTP (`better-auth.session_token`). Unset or `production`, it reads
 only `__Secure-better-auth.session_token`, as the production Next does.
@@ -93,6 +99,11 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `studio.mjs <next> <axum>` | `POST /api/meme-studio` and `POST /api/admin/meme-studio`, with Bedrock replaced by local stubs (HTTP/2 for Next's SDK, HTTP/1.1 for Axum) and the lifetime budget at its boundary. |
 | `meme-studio-fixture.mjs`, `meme-studio-bedrock-fixture.mjs` | Rewrite `tests/fixtures/meme_studio.json` (the templates) and `meme_studio_bedrock.json` (the Converse bodies the real SDK sends; run it in a container without a network). |
 | `semantic-search.mjs <next> <axum>` | `POST /api/memes/semantic-search` on the R1 seed, both servers with semantic search on and no embedding URL (as production): every answer, the limit, a refused `search_memes`. |
+| `chat.mjs <next> <axum> [section...]` | `POST /api/memes/chat` on the R1 seed and `chat-seed.sql`: production (no key) and, with a made-up key, generation through a recording OpenRouter stub (`openrouter-intercept.mjs` catches Next's `fetch`). |
+| `chat-fixture.mjs` | Rewrites `tests/fixtures/meme_chat.json`: the OpenRouter requests and results of the real `answerMemeQuestion`, title keys, the answer check. |
+| `mpe-candidates.mjs --state=<file> <next> <axum> [section...]` | `POST /api/admin/mpe-candidates`: every status, the rows each request leaves, the draft's OpenRouter requests and budget, and the matches against the real `generateCandidateMatches` (`mpe-candidates-flow.mjs`). Rows from `mpe-candidates-seed.mjs`. |
+| `mpe-candidates-fixture.mjs` | Rewrites `tests/fixtures/mpe_candidates.json` from `lib/mpe/*`: matching, claim checks, the evidence draft on a stub client. |
+| `unicode-classes.mjs` | Rewrites `src/routes/unicode_classes.rs`, two regex character classes as Node 22 decides them. Run with Node 22. |
 | `curated-search-catalog.mjs` | Rewrites `src/routes/search/curated.json` (the curated search cards) from the real `lib/curated-memes.ts`. |
 | `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |

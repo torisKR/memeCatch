@@ -144,6 +144,12 @@ Icon links are compared without the file hash Next appends as a query.
 It does not run scripts, so it says nothing about what a page does after it
 loads, and it does not look at pixels.
 
+`paths.txt` lists three `/memes/...` URLs of memes that do not exist. With
+the pilot pages off (the default) Axum passes Next's 404 on and `parity.mjs`
+finds them identical. With `page-meme` switched on Axum answers them itself
+and `parity.mjs` reports them: that is the accepted difference above, in
+bytes. Run `parity.mjs` with the pilots off and `pages.mjs` with them on.
+
 `/robots.txt` is rendered by `next build`; Axum renders it at startup. They
 match when Axum runs with the `NEXT_PUBLIC_SITE_URL` of the Next build.
 `server/tests/fixtures/robots.txt` is the body of a Next built with

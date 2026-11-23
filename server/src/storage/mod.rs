@@ -126,6 +126,7 @@ pub struct Storage(Arc<Inner>);
 
 struct Inner {
     /// `OBJECT_SIGNING_SECRET`, or `BETTER_AUTH_SECRET` when that is not set.
+    /// Both trimmed, as the TypeScript trims them.
     signing_secret: Secret,
     /// `NEXT_PUBLIC_SITE_URL` without trailing slashes, or
     /// `DEFAULT_SIGNED_URL_SITE` when it is unset.
@@ -175,7 +176,8 @@ impl Storage {
             signing_secret: config
                 .object_signing_secret
                 .clone()
-                .unwrap_or_else(|| config.better_auth_secret.clone()),
+                // `process.env.BETTER_AUTH_SECRET?.trim()` in lib/object-storage.ts.
+                .unwrap_or_else(|| Secret::new(config.better_auth_secret.expose().trim())),
             site_url: config
                 .site_url_env
                 .as_deref()

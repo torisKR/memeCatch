@@ -65,14 +65,19 @@ pub struct Config {
     /// `None`, reporting off. This one keeps the unset/empty distinction that
     /// `next.config.ts` has (`??`).
     pub csp_report_uri: Option<String>,
-    /// `BETTER_AUTH_SECRET`, required (as in `docker-compose.yml`).
+    /// `BETTER_AUTH_SECRET`, required (as in `docker-compose.yml`) and kept
+    /// exactly as given: better-auth signs session cookies with the untouched
+    /// value (`lib/auth/server.ts`). `lib/object-storage.ts` trims it for its
+    /// fallback, and so does the storage module.
     pub better_auth_secret: Secret,
     /// better-auth's `useSecureCookies`, which the Next app sets from
     /// `NODE_ENV === "production"` (lib/auth/server.ts). It decides which
     /// session cookie name is read. Unset counts as production: a container
     /// that forgets `NODE_ENV` must not accept the unprefixed cookie.
     pub use_secure_cookies: bool,
-    /// `CRON_SECRET`.
+    /// `CRON_SECRET` exactly as given; `None` when unset or empty. Four cron
+    /// routes compare it untouched and one trims it first; the cron guards
+    /// in `auth.rs` name them.
     pub cron_secret: Option<Secret>,
     /// `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
     pub r2: Option<R2Config>,
@@ -126,7 +131,11 @@ impl Config {
             })
         };
         let database_url = required("DATABASE_URL");
-        let better_auth_secret = required("BETTER_AUTH_SECRET");
+        // Kept as given: better-auth signs with the untouched value.
+        let better_auth_secret = lookup("BETTER_AUTH_SECRET").unwrap_or_default();
+        if better_auth_secret.trim().is_empty() {
+            problems.push("BETTER_AUTH_SECRET is required".to_owned());
+        }
 
         let port = match optional("PORT") {
             None => DEFAULT_PORT,
@@ -190,7 +199,9 @@ impl Config {
             site_url_env,
             better_auth_secret: Secret::new(better_auth_secret),
             use_secure_cookies: optional("NODE_ENV").is_none_or(|mode| mode == "production"),
-            cron_secret: optional("CRON_SECRET").map(Secret::new),
+            cron_secret: lookup("CRON_SECRET")
+                .filter(|secret| !secret.is_empty())
+                .map(Secret::new),
             r2,
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
@@ -351,6 +362,49 @@ mod tests {
         assert_eq!(config.disabled_routes.len(), 2);
         assert!(config.disabled_routes.contains("health"));
         assert!(config.disabled_routes.contains("robots"));
+    }
+
+    // lib/auth/server.ts:65 and four cron routes use the value untouched;
+    // lib/object-storage.ts:22 trims.
+    #[test]
+    fn each_secret_is_kept_the_way_its_typescript_use_site_reads_it() {
+        let database = (
+            "DATABASE_URL",
+            "postgresql://memecatch:pw@127.0.0.1:5432/memecatch",
+        );
+        let padded = config(&[
+            database,
+            ("BETTER_AUTH_SECRET", " \tpadded auth secret\n"),
+            ("CRON_SECRET", " padded cron secret "),
+            ("OBJECT_SIGNING_SECRET", " padded signing secret\n"),
+        ])
+        .expect("valid config");
+        let blank = config(&[
+            database,
+            ("BETTER_AUTH_SECRET", "auth"),
+            ("CRON_SECRET", "   "),
+            ("OBJECT_SIGNING_SECRET", "   "),
+        ])
+        .expect("valid config");
+
+        assert_eq!(
+            padded.better_auth_secret.expose(),
+            " \tpadded auth secret\n"
+        );
+        assert_eq!(
+            padded.cron_secret.as_ref().map(Secret::expose),
+            Some(" padded cron secret ")
+        );
+        assert_eq!(
+            padded.object_signing_secret.as_ref().map(Secret::expose),
+            Some("padded signing secret")
+        );
+        // `!secret` is false for a blank string that is not empty.
+        assert_eq!(blank.cron_secret.as_ref().map(Secret::expose), Some("   "));
+        assert_eq!(blank.object_signing_secret, None);
+        assert_eq!(with_required(&[("CRON_SECRET", "")]).cron_secret, None);
+        // A blank auth secret is still refused at startup.
+        assert!(config(&[database, ("BETTER_AUTH_SECRET", " \t")]).is_err());
     }
 
     #[test]

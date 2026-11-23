@@ -28,8 +28,10 @@ use hmac::{Hmac, KeyInit, Mac};
 use http_body_util::BodyExt;
 use memecatch_server::AppState;
 use memecatch_server::auth::{
-    CronAuthorized, Operator, RequestIdentity, SessionUser, SignedInUser, resolve_session,
+    CronAuthorized, CronAuthorizedTrimmed, Operator, RequestIdentity, SessionUser, SignedInUser,
+    resolve_session,
 };
+use memecatch_server::config::Config;
 use memecatch_server::db::{DbIdentity, IdentityOptions};
 use sha2::Sha256;
 use sqlx::PgPool;
@@ -226,12 +228,17 @@ async fn cron(_: CronAuthorized) -> &'static str {
     "ran"
 }
 
+async fn cron_trimmed(_: CronAuthorizedTrimmed) -> &'static str {
+    "ran"
+}
+
 async fn spawn(state: AppState) -> SocketAddr {
     let router = Router::new()
         .route("/whoami", get(whoami))
         .route("/me", get(me))
         .route("/admin", get(admin))
         .route("/cron", get(cron))
+        .route("/cron-trimmed", get(cron_trimmed))
         .with_state(state);
     common::spawn_router(router).await
 }
@@ -571,12 +578,96 @@ async fn cron_guard_refuses_everything_while_the_secret_is_unset() {
         let app = spawn(state_for(common::UNUSED_DATABASE_URL, extra).await).await;
 
         for sent in ["Bearer ", "Bearer", "Bearer undefined", "Bearer    "] {
-            let (status, _) = fetch(app, "/cron", &[("authorization", sent)]).await;
-            assert_eq!(status, StatusCode::UNAUTHORIZED, "{extra:?} {sent:?}");
+            for path in ["/cron", "/cron-trimmed"] {
+                let (status, _) = fetch(app, path, &[("authorization", sent)]).await;
+                assert_eq!(
+                    status,
+                    StatusCode::UNAUTHORIZED,
+                    "{extra:?} {path} {sent:?}"
+                );
+            }
         }
         let (status, _) = fetch(app, "/cron", &[]).await;
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{extra:?} no header");
     }
+}
+
+/// App state on the test database with `secret` as `BETTER_AUTH_SECRET`
+/// (`common::config` has a fixed one).
+async fn state_with_auth_secret(secret: &'static str) -> AppState {
+    let database_url = database_url();
+    let config = Config::from_lookup(|name| match name {
+        "DATABASE_URL" => Some(database_url.clone()),
+        "BETTER_AUTH_SECRET" => Some(secret.to_owned()),
+        _ => None,
+    })
+    .expect("valid config");
+    let state = AppState::new(config).expect("app state");
+    sqlx::raw_sql(AUTH_TABLES)
+        .execute(state.db.pool())
+        .await
+        .expect("create the better-auth tables");
+    state
+}
+
+// better-auth signs with the secret exactly as the environment holds it
+// (`secret: process.env.BETTER_AUTH_SECRET`, lib/auth/server.ts:65).
+#[tokio::test]
+async fn a_session_cookie_is_checked_with_the_auth_secret_as_given() {
+    const PADDED: &str = " \tpadded-auth-secret-0123456789 ";
+    let state = state_with_auth_secret(PADDED).await;
+    let user = create_user(state.db.pool()).await;
+    let token = create_session(state.db.pool(), &user, HOUR).await;
+
+    let as_better_auth_signs = resolve(&state, &signed_cookie(SECURE, &token, PADDED)).await;
+    let with_the_trimmed_secret =
+        resolve(&state, &signed_cookie(SECURE, &token, PADDED.trim())).await;
+
+    assert_eq!(as_better_auth_signs, Some(user));
+    assert_eq!(with_the_trimmed_secret, None);
+}
+
+// trend-pulse, source-refresh, growth-baseline and saved-state-emails compare
+// the header with `Bearer ${process.env.CRON_SECRET}`, the secret untouched.
+// meme-embeddings trims the secret first (`hasExactBearer`).
+#[tokio::test]
+async fn the_cron_guard_compares_the_secret_as_given() {
+    let state = state_for(
+        common::UNUSED_DATABASE_URL,
+        &[("CRON_SECRET", " padded-cron-secret")],
+    );
+    let app = spawn(state.await).await;
+
+    let as_given = fetch(
+        app,
+        "/cron",
+        &[("authorization", "Bearer  padded-cron-secret")],
+    )
+    .await;
+    let trimmed = fetch(
+        app,
+        "/cron",
+        &[("authorization", "Bearer padded-cron-secret")],
+    )
+    .await;
+
+    let trimming_route_as_given = fetch(
+        app,
+        "/cron-trimmed",
+        &[("authorization", "Bearer  padded-cron-secret")],
+    )
+    .await;
+    let trimming_route_trimmed = fetch(
+        app,
+        "/cron-trimmed",
+        &[("authorization", "Bearer padded-cron-secret")],
+    )
+    .await;
+
+    assert_eq!(as_given, (StatusCode::OK, "ran".to_owned()));
+    assert_eq!(trimmed.0, StatusCode::UNAUTHORIZED);
+    assert_eq!(trimming_route_as_given.0, StatusCode::UNAUTHORIZED);
+    assert_eq!(trimming_route_trimmed, (StatusCode::OK, "ran".to_owned()));
 }
 
 /// What tests/better_auth_cookie.mjs prints.

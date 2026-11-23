@@ -17,6 +17,7 @@
 //! async fn save(SignedInUser(user): SignedInUser) {}  // 401 when signed out
 //! async fn review(Operator(user): Operator) {}        // 401 signed out, 403 not an operator
 //! async fn nightly(_: CronAuthorized) {}              // 401 without the cron bearer
+//! async fn reindex(_: CronAuthorizedTrimmed) {}       // the same, secret trimmed first
 //! ```
 //!
 //! All of them answer 503 when the database cannot be asked. A handler that
@@ -156,9 +157,18 @@ pub struct SignedInUser(pub SessionUser);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Operator(pub SessionUser);
 
-/// A request that carries `Authorization: Bearer <CRON_SECRET>`.
+/// A request that carries `Authorization: Bearer <CRON_SECRET>`, with the
+/// secret exactly as the environment holds it. This is the check of
+/// `app/api/cron/trend-pulse`, `source-refresh`, `growth-baseline` and
+/// `saved-state-emails`, and what the scheduler sends.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CronAuthorized;
+
+/// [`CronAuthorized`] with the secret trimmed first, the check of
+/// `app/api/cron/meme-embeddings` (`hasExactBearer`). The two differ only
+/// for a secret with whitespace around it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CronAuthorizedTrimmed;
 
 impl FromRequestParts<AppState> for RequestIdentity {
     type Rejection = AuthRejection;
@@ -215,7 +225,24 @@ impl FromRequestParts<AppState> for CronAuthorized {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, AuthRejection> {
-        if cron_authorized(&parts.headers, state.config.cron_secret.as_ref()) {
+        let secret = state.config.cron_secret.as_ref().map(Secret::expose);
+        if cron_authorized(&parts.headers, secret) {
+            Ok(Self)
+        } else {
+            Err(AuthRejection::CronUnauthorized)
+        }
+    }
+}
+
+impl FromRequestParts<AppState> for CronAuthorizedTrimmed {
+    type Rejection = AuthRejection;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, AuthRejection> {
+        let secret = state.config.cron_secret.as_ref();
+        if cron_authorized(&parts.headers, secret.map(|secret| secret.expose().trim())) {
             Ok(Self)
         } else {
             Err(AuthRejection::CronUnauthorized)
@@ -411,20 +438,24 @@ fn verify_signed_value<'a>(value: &'a str, secret: &str) -> Option<&'a str> {
 }
 
 /// The check the cron routes make: the Authorization header must be exactly
-/// `Bearer <CRON_SECRET>`, and nothing passes while `CRON_SECRET` is unset or
-/// blank (app/api/cron/trend-pulse/route.ts:11-12, source-refresh:13-16,
+/// `Bearer <secret>`, and nothing passes while the secret is unset or empty
+/// (app/api/cron/trend-pulse/route.ts:11-12, source-refresh:13-16,
 /// growth-baseline:7-8, saved-state-emails:8-9, meme-embeddings:20-29).
+/// The caller passes the secret as its route reads it, trimmed or not.
 /// Both sides are hashed and the digests compared in constant time, as
 /// `hasExactBearer` in the meme-embeddings route does.
-fn cron_authorized(headers: &HeaderMap, secret: Option<&Secret>) -> bool {
+fn cron_authorized(headers: &HeaderMap, secret: Option<&str>) -> bool {
     // Of a repeated Authorization header Node keeps the first, as `get` does.
-    let (Some(secret), Some(value)) = (secret, headers.get(AUTHORIZATION)) else {
+    let (Some(secret), Some(value)) = (
+        secret.filter(|secret| !secret.is_empty()),
+        headers.get(AUTHORIZATION),
+    ) else {
         return false;
     };
     // `Headers.get` strips the whitespace around a value.
     let actual = node_header_text(value);
     let actual = actual.trim_matches([' ', '\t']);
-    let expected = format!("Bearer {}", secret.expose());
+    let expected = format!("Bearer {secret}");
     Sha256::digest(actual)
         .ct_eq(&Sha256::digest(expected))
         .into()
@@ -630,7 +661,7 @@ mod tests {
             .iter()
             .map(|value| ("authorization", *value))
             .collect();
-        cron_authorized(&headers(&pairs), secret.map(Secret::new).as_ref())
+        cron_authorized(&headers(&pairs), secret)
     }
 
     #[test]
@@ -663,6 +694,9 @@ mod tests {
             assert!(!cron(&[sent], None), "{sent:?}");
         }
         assert!(!cron(&[], None));
+        // An empty secret is "not set" to every route (`!secret`).
+        assert!(!cron(&["Bearer "], Some("")));
+        assert!(!cron(&["Bearer"], Some("")));
     }
 
     #[test]

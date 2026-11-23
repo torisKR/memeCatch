@@ -128,6 +128,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         canonical: Some("/about".to_owned()),
         languages: Vec::new(),
         image: Some(ShareImage::site_default(site)),
+        ..Head::default()
     };
     html_response(
         StatusCode::OK,

@@ -26,7 +26,17 @@ const password = `pw-${randomUUID()}`;
 // `ax` and twelve hex digits: the nickname of every test user on this database.
 const nickname = `ax${id.slice(0, 12)}`;
 
-await ensureAuthSchema();
+// Scenarios may run in parallel workers; better-auth's schema check then
+// runs in several processes at once and its migrations collide. One at a time.
+const SCHEMA_LOCK = 734001;
+const lock = await getPool().connect();
+try {
+  await lock.query("select pg_advisory_lock($1)", [SCHEMA_LOCK]);
+  await ensureAuthSchema();
+} finally {
+  await lock.query("select pg_advisory_unlock($1)", [SCHEMA_LOCK]).catch(() => {});
+  lock.release();
+}
 const auth = getAuth();
 const signedUp = await auth.api.signUpEmail({ body: { email, password, name: nickname } });
 // The app requires a verified address before sign-in. The test has no inbox.

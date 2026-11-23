@@ -1,0 +1,152 @@
+//! Every environment variable the server reads must reach it in production:
+//! the Axum service of `docker-compose.axum.yml` replaces Next's environment
+//! (`environment: !override`), so a variable missing there leaves a native
+//! route with other settings than Next's. That happened to
+//! `memes-semantic-search` (reason `disabled` on Axum, `model_unavailable`
+//! on Next). This test reads the variable names out of the Rust sources and
+//! fails when one is neither passed to the service nor left out below.
+
+use std::collections::BTreeSet;
+use std::fs;
+use std::path::Path;
+
+/// Read by the server, and not passed to it on purpose. A trailing `*` is a
+/// prefix.
+const LEFT_OUT: &[&str] = &[
+    // The operator studio stays Next's until its Bedrock credential source on
+    // the VM is known (PLAN.md section 5, row 61): without these Axum does
+    // not register it.
+    "BEDROCK_*",
+    "AWS_*",
+    // The Next image is built without them and a runtime value does not
+    // change what Next sends, so passing one would make native routes differ.
+    "CSP_ENFORCE",
+    "CSP_REPORT_URI",
+    // Fixed in the Next image at build time; both images get them as build
+    // args and keep them in the image environment.
+    "RELEASE_SHA",
+    "NEXT_PUBLIC_SITE_URL",
+    "NEXT_PUBLIC_GA_ID",
+    "NEXT_PUBLIC_ADSENSE_CLIENT",
+    // Tests and parity runs only: sends OpenRouter requests to a local stub.
+    "AXUM_TEST_OPENROUTER_ORIGIN",
+    // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
+    // stub or a provider behind a private CA. Production trusts only the
+    // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
+    "AXUM_EXTRA_CA_CERTS",
+    // Sign-out's extra trusted origins (A1). The Next service is not given
+    // it, so Axum is not either: both trust the same origins.
+    "BETTER_AUTH_TRUSTED_ORIGINS",
+];
+
+fn matches(entry: &str, name: &str) -> bool {
+    match entry.strip_suffix('*') {
+        Some(prefix) => name.starts_with(prefix),
+        None => entry == name,
+    }
+}
+
+fn rust_files(dir: &Path, out: &mut Vec<String>) {
+    for entry in fs::read_dir(dir).expect("a source directory") {
+        let path = entry.expect("an entry").path();
+        if path.is_dir() {
+            rust_files(&path, out);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            out.push(fs::read_to_string(&path).expect("a source file"));
+        }
+    }
+}
+
+/// The names in `lookup("X")`, `optional("X")`, `required("X")`, `set("X")`
+/// and `var("X")`: every way `config.rs` (or any other file) reads one.
+fn names_read() -> BTreeSet<String> {
+    let mut sources = Vec::new();
+    rust_files(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+        &mut sources,
+    );
+    let mut names = BTreeSet::new();
+    for source in &sources {
+        for call in [
+            "lookup(\"",
+            "optional(\"",
+            "required(\"",
+            "set(\"",
+            "var(\"",
+        ] {
+            for (at, _) in source.match_indices(call) {
+                let rest = &source[at + call.len()..];
+                let name: String = rest
+                    .chars()
+                    .take_while(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || *c == '_')
+                    .collect();
+                if !name.is_empty() && rest[name.len()..].starts_with('"') {
+                    names.insert(name);
+                }
+            }
+        }
+    }
+    names
+}
+
+/// The keys of `services.app.environment` in `docker-compose.axum.yml`.
+fn names_passed() -> BTreeSet<String> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../docker-compose.axum.yml");
+    let compose = fs::read_to_string(path).expect("docker-compose.axum.yml");
+    let lines: Vec<&str> = compose.lines().collect();
+    let indent = |line: &str| line.len() - line.trim_start().len();
+    let app = lines
+        .iter()
+        .position(|line| *line == "  app:")
+        .expect("the app service");
+    let service: Vec<&str> = lines[app + 1..]
+        .iter()
+        .take_while(|line| line.trim().is_empty() || indent(line) > 2)
+        .copied()
+        .collect();
+    let start = service
+        .iter()
+        .position(|line| line.trim_start().starts_with("environment:"))
+        .expect("its environment");
+    service[start + 1..]
+        .iter()
+        .take_while(|line| line.trim().is_empty() || indent(line) > 4)
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .filter_map(|line| line.split_once(':').map(|(key, _)| key.to_owned()))
+        .collect()
+}
+
+#[test]
+fn every_variable_the_server_reads_is_passed_to_axum_or_left_out_on_purpose() {
+    let (read, passed) = (names_read(), names_passed());
+    assert!(
+        read.contains("DATABASE_URL") && read.contains("OPENROUTER_API_KEY"),
+        "{read:?}"
+    );
+    assert!(
+        passed.contains("DATABASE_URL") && passed.contains("NODE_ENV"),
+        "{passed:?}"
+    );
+    let missing: Vec<&String> = read
+        .iter()
+        .filter(|name| {
+            !passed.contains(*name) && !LEFT_OUT.iter().any(|entry| matches(entry, name))
+        })
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "read by the server but not passed in docker-compose.axum.yml: {missing:?}"
+    );
+    for entry in LEFT_OUT {
+        let named: Vec<&String> = read.iter().filter(|name| matches(entry, name)).collect();
+        assert!(
+            !named.is_empty(),
+            "{entry} is left out but no longer read: drop it"
+        );
+        assert!(
+            named.iter().all(|name| !passed.contains(*name)),
+            "{entry} is left out but passed"
+        );
+    }
+}

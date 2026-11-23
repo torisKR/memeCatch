@@ -54,7 +54,7 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | 0 | Axum 크레이트, Next로의 스트리밍 리버스 프록시, DB 신원 계층, 헬스체크, 패리티 하네스, Docker·CI | 완료. `torisKR/axum-foundation` `561dbde26` |
 | 1 | R2/객체 저장소 + `/api/media/signed`, better-auth 세션 판독·운영자·크론 가드, 공개 읽기 경로 1차 | 완료. `torisKR/axum-foundation` `6365dcfbf` (병합 T2 `496b2e6f0`, T3 `a0c156bc4`, T4 `15cd5cddc`) |
 | 2 | 나머지 공개 읽기 경로(llms.txt, 피드, oembed, 탐색 미리보기, 밈 카드, 퀴즈) | 진행 중. R1: llms.txt·피드 6개와 탐색 미리보기 완료, oembed는 프록시(6절) |
-| 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 대기 |
+| 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 진행 중. R3: 미디어 읽기·업로드·MPE API(8절). R4: 크론 넷과 작은 운영자 API 둘(10절). 트렌드 펄스·출처 새로고침 실행·출처 수집·MCP 이벤트·`/api/db/query`는 Next에 남겼다 |
 | 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | 대기 |
 | 5a | 배포 스크립트와 에이전트가 `MEMECATCH_AXUM=1`일 때 Axum 구성을 배포한다(기본은 꺼짐). 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next`를 먼저 올려 health를 기다린 뒤 `app` 교체, 두 컨테이너의 health로 게이트, 두 이미지에 같은 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`, 서버 이미지 빌드와 디스크 확인, CI `server` 확인, 두 이미지 스냅샷·롤백. 5절 "단계 5a 결과" 참조 | 완료. `torisKR/axum-deploy` |
 | 5b | 운영 전환: VM의 `.env`에 `MEMECATCH_AXUM=1`을 넣고 수동 재배포. 5절 "단계 5b에서 확인할 것" 참조 | 사용자 승인 필요 |
@@ -97,6 +97,10 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-about` | `/about` | `GET`, `HEAD` | 페이지. `AXUM_PILOT_ROUTES`(쉼표로 나눈 페이지 경로 id, 모든 페이지의 스위치로 이 이름을 그대로 쓴다. 차이 73)에 적어야 켜진다(기본은 Next). `AXUM_DISABLED_ROUTES`가 이긴다. 페이지가 아닌 id나 없는 id를 적으면 시작을 거부한다. 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
 | `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 페이지, 위와 같다. "유래" 절까지만 그린다. 미디어·번역·자체 제작·편집 밈과 DB 조회 실패는 Next로 넘긴다 |
 | `page-assets` | `/_axum/{file}`, `/_axum/frame/{locale}` | `GET`, `HEAD` | 페이지의 스타일시트와 스크립트(파일 이름에 내용 해시가 들어간다), 그리고 언어 선택이 제자리에서 바꿀 때 받는 다른 언어의 틀(JSON, 프로세스에 1시간·최대 4 MB 보관) |
+| `page-contact`, `page-editorial`, `page-privacy`, `page-terms` | `/contact`, `/editorial`, `/privacy`, `/terms` | `GET`, `HEAD` | 페이지(B1), 위와 같다. Next가 빌드 때 만든 문서라 `Cache-Control: s-maxage=31536000`을 그대로 낸다 |
+| `page-guides`, `page-guide` | `/guides`, `/guides/{slug}` | `GET`, `HEAD` | 페이지(B1). 글은 `lib/guides.ts`를 `server/i18n/guides.json`으로 내보낸 것. 없는 slug는 Next로 넘긴다 |
+| `page-offline`, `page-missing-meme` | `/offline`, `/missing-public-meme` | `GET`, `HEAD` | 페이지(B1). 앞은 서비스 워커의 오프라인 화면, 뒤는 없는 밈의 404 문서 |
+| `page-retired-products` | `/retired-products`, `/products/...`, `/go/products/...`(접두사 없이와 `/en`·`/ja`·`/zh`·`/zh-tw` 아래), `/admin/creator-products/...` | `GET`, `HEAD` | 페이지(B1). `proxy.ts`의 `retiredProductDecision`대로 410 문서·308·빈 404. 끝 슬래시, 파일 이름, `/en/products...`(`next.config.ts`의 리디렉션)는 Next로 넘긴다 |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -116,12 +120,20 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `mpe-renders` | `/api/mpe/renders` | `POST` | TypeScript와 같은 문장을 보내 같은 400을 낸다(8절 TypeScript 동작 1) |
 | `mpe-uploads` | `/api/mpe/uploads` | `POST` | R2 값 네 개가 있을 때만 등록한다. 로컬 저장소에서는 Next가 답한다(8절) |
 | `upload` | `/api/upload` | `POST` | 위와 같다 |
-| `admin-mpe-candidates` | `/api/admin/mpe-candidates` | `GET`, `HEAD` | 운영자만. `POST`(후보 생성·매칭·근거 초안, 임베딩과 OpenRouter 호출)는 Next가 답한다 |
+| `admin-mpe-candidates` | `/api/admin/mpe-candidates` | `GET`, `HEAD` | 운영자만. `POST`는 아래 `admin-mpe-candidates-post` |
+| `admin-mpe-candidates-post` | `/api/admin/mpe-candidates` | `POST` | 운영자만. 후보 생성·매칭·근거 초안. TypeScript처럼 마지막 저장 호출(`replace_mpe_candidate_matches`·`replace_mpe_candidate_evidence`)이 함수를 찾지 못해 500으로 끝난다(10절 TypeScript 동작 1). 같은 경로의 `GET`과 따로 되돌릴 수 있다 |
 | `meme-studio` | `/api/meme-studio` | `POST` | 모델을 부르지 않는 템플릿 세 개. 주소별 시간당 10회 제한은 프로세스별이다 |
 | `admin-meme-studio` | `/api/admin/meme-studio` | `POST` | 운영자만. `BEDROCK_MEME_STUDIO_ENABLED=true`일 때만 등록한다(아니면 Next가 답한다). 평생 예산을 먼저 예약하고 AWS Bedrock(Converse)을 부른다. 자격 증명은 환경 변수만 읽는다(9절) |
 | `memes-semantic-search` | `/api/memes/semantic-search` | `POST` | 의미 검색 경로가 쓸 수 없을 때만 등록한다(꺼짐, 또는 쓸 수 있는 `MEME_EMBEDDING_URL`이 없음. 운영이 이 경우다). 그러면 답은 언제나 키워드 검색(`search_memes` + 큐레이션 카드)이고 이유는 `disabled`나 `model_unavailable`이다. 임베딩 URL이 있으면 Next가 답한다 |
-| `auth-get-session` | `/api/auth/get-session` | `GET` | better-auth 1.7.20의 `getSession`: 세션 읽기, 하루 지난 세션 연장, 만료 세션 삭제(10절). `HEAD`, 쿼리 문자열, `RSC` 헤더가 있는 요청은 Next가 답한다 |
-| `auth-sign-out` | `/api/auth/sign-out` | `POST` | 쿼리 문자열이 없고 본문이 `callbackURL`·`disableRedirect`·`state`·`redirectTo`·`errorCallbackURL`·`newUserCallbackURL` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 요청, 나머지 `/api/auth/*`는 Next가 답한다(10절) |
+| `memes-chat` | `/api/memes/chat` | `POST` | `memes-semantic-search`와 같은 조건에서만 등록한다. 키워드 검색으로 찾은 공개 기록의 요약을 내고, `OPENROUTER_API_KEY`가 있으면 그 기록을 인용하는 답을 OpenRouter에 묻는다(운영은 키가 없어 요약이다). `Accept: application/x-ndjson`이면 진행 줄과 결과를 스트림으로 낸다. 주소별 10분 5회·전체 1분 20회 제한과 답 캐시는 프로세스별이다 |
+| `growth-baseline` | `/api/cron/growth-baseline` | `GET`, `HEAD` | 크론 bearer. `capture_growth_funnel_baseline()`을 `service_role`로 한 번 부른다. 실패는 본문 없는 500 |
+| `saved-state-emails` | `/api/cron/saved-state-emails` | `GET`, `HEAD` | 크론 bearer. 저장 상태 메일 10건을 동시에 `PLUS_DIGEST_DELIVERY_URL`(https만)로 보낸다. `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다 |
+| `source-refresh` | `/api/cron/source-refresh` | `POST` | 크론 bearer. 카탈로그 캐시 만료를 Next에 맡긴다(11절 "Next의 캐시"). `GET`(새로고침 실행)은 Next가 답한다 |
+| `instagram-video-cache` | `/api/admin/instagram-video-verification/revalidate` | `POST` | 운영자. 분당 30회(주소별, 프로세스별). 캐시 만료는 Next에 맡긴다. `CRON_SECRET`이 없거나 `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin`이 사이트 origin이 아닌 요청은 Next로 넘긴다 |
+| `adpick-hotdeals` | `/api/cron/adpick-hotdeals` | `GET`, `HEAD`, `POST` | 은퇴한 상품 API: 410 `{"error":"gone"}`, `X-Robots-Tag: noindex` |
+| `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE` | 위와 같다. 끝에 `/`가 붙은 경로는 Next의 리디렉션이다 |
+| `auth-get-session` | `/api/auth/get-session` | `GET` | better-auth 1.7.20의 `getSession`: 세션 읽기, 하루 지난 세션 연장, 만료 세션 삭제(12절). `HEAD`, 쿼리 문자열, `RSC` 헤더가 있는 요청은 Next가 답한다 |
+| `auth-sign-out` | `/api/auth/sign-out` | `POST` | 쿼리 문자열이 없고 본문이 `callbackURL`·`disableRedirect`·`state`·`redirectTo`·`errorCallbackURL`·`newUserCallbackURL` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 요청, 나머지 `/api/auth/*`는 Next가 답한다(12절) |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -163,7 +175,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 - VM의 Compose v5.7.0으로 `docker compose -f docker-compose.yml -f docker-compose.own-caddy.yml -f docker-compose.axum.yml config`가 렌더링되는지.
 - 전환하는 동안의 메모리와 연결. 최대 1분쯤 이전 `app`(Next)과 새 `next`가 함께 돈다: 한도 2,816 MB 둘, 연결 풀 최대 10개 둘. 그 뒤로는 Next 10 + Axum 6 = 16에 워커·백업과 Postgres의 슈퍼유저 예약 3개를 더해 30 안에 드는지. 워커의 풀 크기는 확인하지 않았다.
 - `service_role`의 `user`·`session` 읽기 권한. Rust의 세션 조회는 `service_role`로 돈다(better-auth는 로그인 롤로 돈다). 이 권한은 마이그레이션이 아니라 Next가 실행 중에 부여한다(`lib/auth/server.ts`). 권한이 없으면 세션 쿠키가 있는 요청은 전부 503이 된다(열리지 않고 닫힌다). 다음에 마이그레이션이 허용될 때 권한을 마이그레이션으로 옮기는 것이 낫다.
-- 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. 서버가 읽는 변수는 모두 받는다: `.env`에서 `DATABASE_URL`(비밀번호), `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `OBJECT_SIGNING_SECRET`, `R2_*` 넷, `LOCAL_OBJECT_STORAGE_DIR`, `ADSENSE_AUTO_ADS_ENABLED`, `AXUM_DB_POOL_MAX`·`AXUM_DISABLED_ROUTES`·`AXUM_PILOT_ROUTES`; 이미지에서 `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_ADSENSE_CLIENT`. `CSP_ENFORCE`·`CSP_REPORT_URI`는 일부러 넘기지 않는다(5절 발견 1). `docker-compose.yml`이 Next에만 주는 나머지(`BETTER_AUTH_URL`, OAuth 클라이언트 `GOOGLE_*`·`KAKAO_*`·`TIKTOK_*`, `AWS_*`·`BEDROCK_*`, `GA4_*`, `MEME_CHAT_*`·`MEME_EMBEDDING_*`·`MEME_SEMANTIC_SEARCH_ENABLED`, `META_*`·`THREADS_ACCESS_TOKEN`·`X_API_BEARER_TOKEN`·`YOUTUBE_API_KEY`·`RADAR_*`, `MCP_*`, `OPENAI_*`·`OPENROUTER_*`, `PLUS_DIGEST_*`, `AUTH_EMAIL_WEBHOOK`, `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`)는 아직 Next에 있는 경로가 읽는다. 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다.
+- 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. 서버가 읽는 변수는 모두 받는다: `.env`에서 `DATABASE_URL`(비밀번호), `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `OBJECT_SIGNING_SECRET`, `R2_*` 넷, `LOCAL_OBJECT_STORAGE_DIR`, `ADSENSE_AUTO_ADS_ENABLED`, `MEME_SEMANTIC_SEARCH_ENABLED`·`MEME_EMBEDDING_URL`, `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`, `OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`, `AXUM_DB_POOL_MAX`·`AXUM_DISABLED_ROUTES`·`AXUM_PILOT_ROUTES`; 이미지에서 `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_ADSENSE_CLIENT`. `CSP_ENFORCE`·`CSP_REPORT_URI`는 일부러 넘기지 않는다(5절 발견 1). `docker-compose.yml`이 Next에만 주는 나머지(`BETTER_AUTH_URL`, OAuth 클라이언트 `GOOGLE_*`·`KAKAO_*`·`TIKTOK_*`, `AWS_*`·`BEDROCK_*`, `GA4_*`, 채팅의 로컬 프록시 변수 `MEME_CHAT_API_KEY`·`MEME_CHAT_BASE_URL`·`MEME_CHAT_MODEL`과 `MEME_EMBEDDING_RUNTIME`·`MEME_EMBEDDING_API_KEY`·`MEME_EMBEDDING_REINDEX_ENABLED`, `META_*`·`THREADS_ACCESS_TOKEN`·`X_API_BEARER_TOKEN`·`YOUTUBE_API_KEY`·`RADAR_*`, `MCP_*`, `OPENAI_*`, `PLUS_DIGEST_*`, `AUTH_EMAIL_WEBHOOK`, `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`)는 아직 Next에 있는 경로가 읽는다. 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다. 빠뜨리면 `server/tests/compose_env.rs`가 실패한다.
 - R2. 리허설은 R2 값 없이 로컬 저장소로 돌았다. 운영은 값 네 개가 설정되어 있으므로 전환 뒤 `/api/media/signed`를 실제 서명 URL로 확인한다.
 - Cloudflare를 지난 릴리스 헤더. 에이전트는 `https://catchmeme.com/`의 `X-MemeCatch-Release-Sha`로 배포를 확인한다. 리허설은 Caddy까지만 지났다.
 - 종료 유예. 느린 업로드가 걸려 있는 동안 배포하면 `app` 교체가 최대 10초 걸린다(위 "종료 시간").
@@ -248,10 +260,34 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 71 | 계정 메뉴·챗봇 패널은 CSS `menu-pop`으로 나타나고, 로그인 안내·설치 안내 시트는 애니메이션 없이 나타난다. Next는 motion의 스프링·슬라이드를 쓴다 | 수용 |
 | 72 | `PublicWebMcpTools`(`document.modelContext`에 공개 도구 등록)는 옮기지 않았다. 브라우저가 이 API를 내놓기 전에는 아무 일도 하지 않는 컴포넌트다 | 미해결, 이 API가 쓰이게 되면 |
 | 73 | 페이지를 켜는 변수는 이름이 `AXUM_PILOT_ROUTES` 그대로다. 이제 시범이 아니라 모든 페이지의 스위치이지만, `docker-compose.axum.yml`이 이 이름으로 넘기므로(#143) 이름을 바꾸려면 컴포즈 파일도 함께 바꿔야 한다 | 수용 |
-| 74 | better-auth 제한기(운영에서만, 10초에 100회, IP·경로마다)의 카운터는 프로세스별이다. `get-session`·`sign-out`은 Axum이 세고 나머지 `/api/auth/*`는 Next가 센다. 키가 경로마다 따로라 원래 두 경로는 다른 경로와 카운터를 나누지 않는다. 재시작하면 둘 다 0이 된다 | 수용 |
-| 75 | 세션 연장 여부와 새 `expiresAt`·`updatedAt`을 Rust는 한 시각으로 정한다. better-auth는 만료 판단, 연장 판단, `expiresAt`, `updatedAt`에서 시계를 따로 읽는다(`dist/api/routes/session.mjs:155,180,199-200`). 경계에서 1 ms 안쪽일 때만 다를 수 있다 | 수용 |
-| 76 | 두 경로의 쿼리는 `statement_timeout` 15초(`DbIdentity::better_auth`, 역할 전환은 없다) 안에 끝나야 한다. better-auth의 풀에는 시간 제한이 없다. 넘기면 `get-session`은 500 `FAILED_TO_GET_SESSION`이다. better-auth가 DB 오류에 내는 답과 같다. `sign-out`은 A1-4를 본다 | 수용 |
-| 77 | `BETTER_AUTH_TRUSTED_ORIGINS`에 와일드카드나 `http(s)`가 아닌 항목이 있으면 `auth-sign-out`을 등록하지 않는다(Next가 답한다). 그런 패턴의 비교는 옮기지 않았다. 지금 Next 컨테이너는 이 변수를 받지 않는다 | 수용 |
+| 74 | 퇴역 상품 410 문서의 카드 네 장은 Axum이 5분마다 다시 읽는다(`RETIRED_CARDS_TTL`). Next는 공개 카탈로그 캐시로 최대 하루 보관하고 운영자 액션의 태그 무효화로 비운다. 편집 직후에는 두 서버의 카드가 다를 수 있다 | 수용 |
+| 75 | 퇴역 상품 410 문서는 Axum의 스타일시트(`/_axum/site.<해시>.css`)를 건다. Next는 빌드의 CSS 파일들을 건다. 클래스는 같다 | 수용 |
+| 76 | B1의 정적 문서는 Next가 빌드 때 한 번 렌더하고 Axum은 요청마다 렌더한다. `Cache-Control`은 같다. 푸터의 연도는 Next에서 빌드한 해, Axum에서 응답한 해다 | 수용 |
+| 77 | B1의 정적 문서(소개 제외)는 TypeScript에서 그대로 옮겨 적은 마크업이다(가이드와 퇴역 상품의 문구는 생성된 JSON). 문구를 고치면 TypeScript와 `server/src/pages/documents/`를 함께 고치고 페이지 게이트로 확인한다 | 수용 |
+| 78 | Axum 페이지의 스크립트는 `/api/db/query`가 `503 "database busy"`(프로세스 안 동시 쿼리 6개 상한, 실행 전 거절)와 `Retry-After`로 답하면 그만큼 기다렸다 한 번 다시 보낸다. Next의 `lib/db/client.ts`는 오류로 읽어 저장한 밈이 저장 안 됨으로, 닉네임이 기본값으로 보인다(부하 시험 B0 저장 시나리오 간헐 실패의 원인). TypeScript 쪽도 같이 고치는 것이 맞다 | 미해결, `lib/db/client.ts` |
+| 79 | 밈 채팅의 두 제한(주소별 10분 5회, 서버 전체 1분 20회)과 생성 답 캐시(32개, 1분)는 Axum 프로세스 안에 있다. Next의 카운터·캐시와 나뉘고, 전환 직후 캐시는 비어 있다 | 수용 |
+| 80 | 채팅의 `MEME_CHAT_PROVIDER=opencodex`(로컬 프록시)는 Axum에서 언제나 꺼짐이다. Axum 뒤의 standalone Next도 `NODE_ENV=production`이라 꺼짐이고, `next dev`를 뒤에 둘 때만 다르다 | 수용 |
+| 81 | OpenRouter 요청(채팅, 근거 초안)의 헤더는 undici와 같다(`authorization`, `content-type`, `accept: */*`, `accept-language: *`, `sec-fetch-mode: cors`, `user-agent: node`, `cache: "no-store"`가 더하는 `cache-control`·`pragma: no-cache`) 다만 `accept-encoding: gzip, deflate`는 보내지 않는다(압축을 풀지 않는다). 본문은 바이트 단위로 같다(`parity/chat.mjs`, `mpe-candidates.mjs`) | 수용 |
+| 82 | 채팅의 OpenRouter 답은 4 MiB까지 읽는다(넘으면 형식 오류로 보고 요약을 낸다). Next는 끝까지 읽는다 | 수용 |
+| 83 | 채팅 질문 본문, OpenRouter의 답(채팅 `content`, 근거 초안의 답과 `content`)에도 차이 54의 세 경우가 해당한다. 채팅은 요약으로, 초안은 500으로 떨어진다 | 수용 |
+| 84 | 제목 키(`memeTitleKey`)의 `\s\p{P}\p{S}_`와 후보 텍스트 정규화의 `\p{Script=Hangul}\p{L}\p{N}`은 Node 22의 V8이 만든 표(`src/routes/unicode_classes.rs`, Unicode 17)를 쓴다. NFKC와 소문자화는 Rust 크레이트·표준 라이브러리의 표라 새로 배정된 글자에서 버전 차이가 날 수 있다. Next 이미지의 Node를 올리면 `parity/unicode-classes.mjs`를 다시 돌린다 | Node를 올릴 때 확인 |
+| 85 | 근거 초안의 OpenRouter 요청은 리디렉션을 따르지 않는다(3xx는 실패한 답이다). Next의 `fetch`는 따라간다. OpenRouter가 리디렉션을 내지 않으므로 비교하지 않았다 | 수용 |
+| 86 | 초안 재시도의 `Retry-After`는 수(`Number`가 읽는 꼴)와 HTTP 날짜만 읽는다. V8의 다른 날짜 꼴은 기본 대기(250 ms부터)로 떨어진다. 기다리는 시간만 다르다 | 수용 |
+| 87 | `POST /api/admin/mpe-candidates` 본문은 1 MiB까지만 읽고 더 길면 JSON이 아닌 본문처럼 400이다. Next(`request.json()`)는 길이 제한이 없다 | 수용 |
+| 88 | 후보 경로의 오류 메시지에 들어가는 DB 메시지(`candidate_search_failed: …` 등)는 Postgres가 낸 오류면 같다. 연결 실패는 sqlx와 node-pg의 문구가 다르다(차이 57과 같다) | 수용 |
+| 89 | 근거 초안의 `권리 확인 시각`은 `row_to_json`이 세션 시간대로 쓴 글자다. sqlx 세션은 UTC, node-pg는 DB 기본값이라 DB 기본이 UTC가 아니면 다르다(7절 발견 4와 같다) | 수용 |
+| 90 | 채팅의 `text()` 자르기가 서로게이트 쌍을 가르면 그 반쪽을 Next처럼 `\udXXX`로 쓴다(`routes/js_string.rs`). Next가 받는 질문에 짝 없는 서로게이트 이스케이프가 있으면 Next는 읽고 Axum은 400이다(차이 78) | 수용 |
+| 91 | 저장 상태 메일: 메일 제공자가 리디렉션으로 답하면 Node의 `fetch`는 따라가고(최대 20번) Axum은 그 상태 코드를 `provider_http_3xx`로 기록한다 | 수용, 제공자 API가 POST에 리디렉션을 내는 일은 없다고 본다 |
+| 92 | 저장 상태 메일: Axum이 보내는 헤더는 `content-type`, `authorization`(토큰이 있을 때), `host`, `content-length`뿐이다. `fetch`는 `accept`, `accept-language`, `accept-encoding`, `sec-fetch-mode`, `user-agent: node`를 더한다. 본문과 앞의 헤더는 같다(9절) | 수용 |
+| 93 | 저장 상태 메일: 상태 이름이 `Object.prototype`의 속성(`toString`, `constructor`, `__proto__` 등)이면 TypeScript는 `TypeError`로 실패하고 그 메시지를 기록한다. 메시지에는 Next 운영 빌드의 압축된 변수 이름이 들어간다(`a.replaceAll is not a function`). Axum은 그 문자열을 그대로 기록하므로, 다른 빌드에서 이름이 바뀌면 그 행의 `last_error` 글자만 달라진다 | 수용, 그런 상태는 DB가 만들지 않는다 |
+| 94 | 저장 상태 메일: TLS 신뢰 루트는 Axum이 바이너리에 든 Mozilla 루트(`webpki-roots`)와 `AXUM_EXTRA_CA_CERTS`, Node가 자신에 든 루트와 `NODE_EXTRA_CA_CERTS`다. 버전에 따라 루트 목록이 조금 다를 수 있다. 연결 시도 제한도 Axum 5초, undici 10초라 연결이 5~8초 걸리는 제공자에서는 기록되는 오류가 `fetch failed`와 시간 초과 메시지로 갈린다 | 수용 |
+| 95 | 저장 상태 메일: 받는 사람은 `"user".email`만 읽는다. Next의 `getUserById`는 먼저 `ensureAuthSchema()`로 better-auth 테이블이 없으면 만든다. 테이블이 없는 DB에서 Next는 만들고 보내며 Axum은 `recipient_lookup_failed`를 기록한다. 운영에는 테이블이 있다 | 수용, Rust는 better-auth 테이블에 쓰지 않는다 |
+| 96 | 캐시를 만료하는 두 경로(`source-refresh` `POST`, `instagram-video-cache`)는 Next의 `/api/internal/cache`를 부른다. Next가 응답하지 않으면 Axum은 TypeScript가 `revalidateTag`가 던질 때 내는 답(500 `REVALIDATION_FAILED`, 503 `retry-after: 1`)을 낸다. Next 자신이 답할 때는 이 실패가 생길 수 없다 | 수용 |
+| 97 | `instagram-video-cache`의 분당 30회 제한은 프로세스별이다(5절 차이 3). Axum과 Next가 카운터를 나누지 않는다 | 수용 |
+| A1-5 | better-auth 제한기(운영에서만, 10초에 100회, IP·경로마다)의 카운터는 프로세스별이다. `get-session`·`sign-out`은 Axum이 세고 나머지 `/api/auth/*`는 Next가 센다. 키가 경로마다 따로라 원래 두 경로는 다른 경로와 카운터를 나누지 않는다. 재시작하면 둘 다 0이 된다 | 수용 |
+| A1-6 | 세션 연장 여부와 새 `expiresAt`·`updatedAt`을 Rust는 한 시각으로 정한다. better-auth는 만료 판단, 연장 판단, `expiresAt`, `updatedAt`에서 시계를 따로 읽는다(`dist/api/routes/session.mjs:155,180,199-200`). 경계에서 1 ms 안쪽일 때만 다를 수 있다 | 수용 |
+| A1-7 | 두 경로의 쿼리는 `statement_timeout` 15초(`DbIdentity::better_auth`, 역할 전환은 없다) 안에 끝나야 한다. better-auth의 풀에는 시간 제한이 없다. 넘기면 `get-session`은 500 `FAILED_TO_GET_SESSION`이다. better-auth가 DB 오류에 내는 답과 같다. `sign-out`은 A1-4를 본다 | 수용 |
+| A1-8 | `BETTER_AUTH_TRUSTED_ORIGINS`에 와일드카드나 `http(s)`가 아닌 항목이 있으면 `auth-sign-out`을 등록하지 않는다(Next가 답한다). 그런 패턴의 비교는 옮기지 않았다. 지금 Next 컨테이너는 이 변수를 받지 않는다 | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 
@@ -377,8 +413,8 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 경로 | 이유 |
 | --- | --- |
 | `/api/memes/semantic-search`의 의미 검색 경로 | 쓸 수 있는 `MEME_EMBEDDING_URL`이 있을 때(임베딩 HTTP 호출, 번들 런타임의 HMAC, `search_meme_references`)는 Next가 답한다. 운영에는 URL이 없다(아래 발견 5) |
-| `/api/memes/chat` | 같은 참조 검색 위에 행 읽기(번역·출처 임베드), 인용 가능한 출처, 로캘 경로, 제목 키, NDJSON 스트림과 연결 끊김 처리가 얹힌다. 생성 호출은 `https://openrouter.ai`로 고정되어 있어 Next를 스텁으로 돌릴 수 없고(`opencodex`는 운영 모드에서 꺼진다) TypeScript를 프로세스 안에서 `fetch`를 가로채 비교해야 한다. 이번 배치에서 하지 않았다. 생성은 무료 모델·`max_price` 0이라 계량이 없다 |
-| `POST /api/admin/mpe-candidates` | 후보 생성·해시와 결정적 텍스트 임베딩 매칭(`lib/mpe/candidates.server.ts`, `candidates.ts`)과 OpenRouter 근거 초안(`lib/mpe/openrouter.server.ts`, `evidence-draft.server.ts`)과 그 일일 예산이다. 이번 배치에서 하지 않았다 |
+
+`/api/memes/chat`과 `POST /api/admin/mpe-candidates`는 R5c에서 옮겼다(10절).
 
 ### 계획을 바꾸는 발견
 
@@ -404,7 +440,85 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 - VM에서 Bedrock 자격 증명이 환경 변수로 들어가는지(차이 61). 파일이나 다른 체인을 쓰면 Axum에서는 운영자 스튜디오가 503이 된다.
 - `BEDROCK_MEME_STUDIO_*`, `AWS_REGION`과 AWS 키를 Axum 컨테이너에도 넘길 것. `BEDROCK_MEME_STUDIO_ENABLED`가 없으면 운영자 스튜디오는 Next에 남고, 켜져 있는데 키가 없으면 Axum이 503으로 답한다.
 
-## 10. 단계 6 일부: A1 (세션 읽기·연장과 로그아웃)
+## 10. 단계 3 일부: R5c (밈 채팅, 후보 초안)
+
+브랜치 `torisKR/axum-routes-r5c`(`torisKR/axum-routes-r5` 위). 두 경로를 옮겼다: `memes-chat`, `admin-mpe-candidates-post`. 동치 확인은 다음에 있다.
+
+- `server/parity/chat.mjs`: 운영과 같은 설정(생성 켬, 키 없음)에서 모든 상태와 스트림, 제한, 25초 기한; 키를 준 두 서버에서 OpenRouter를 대신하는 기록 스텁으로 생성 답·거절 18가지·캐시·동시 요청 공유·대기 중 기록 변경·스트림의 진행 줄과 연결 끊김. Next의 `fetch`는 `parity/openrouter-intercept.mjs`가 프로세스 안에서 가로채 같은 스텁으로 보낸다.
+- `server/parity/mpe-candidates.mjs`: 경우마다 다시 시드하고 Next, 남은 행, 다시 시드, Axum, 남은 행을 비교한다. 운영 설정의 모든 상태, 키를 준 설정의 초안 요청·재시도·예산 행, 그리고 저장이 실패할 때 Axum이 기록하는 매칭을 실제 `generateCandidateMatches`가 같은 행으로 계산한 값(`parity/mpe-candidates-flow.mjs`)과 비교한다.
+- `server/tests/fixtures/meme_chat.json`, `mpe_candidates.json`: 실제 TypeScript가 만든 픽스처. 채팅은 20가지 기록·답에 대해 OpenRouter 요청 본문(바이트)과 결과, 제목 키, 답 검사 정규식의 판정(정규식은 소스에서 읽는다). 후보는 정규화·유사도·텍스트 임베딩·`Math.hypot`·해시·작업 검사·순위·해시 발견, 주장 검사, 그리고 스텁 클라이언트로 돌린 `generateEvidenceDraft`의 요청 본문·예약 횟수·저장 인자 16가지.
+- `server/tests/chat.rs`, `mpe_candidates.rs`: HTTP 통합 테스트.
+
+### 계획을 바꾸는 발견
+
+1. **`POST /api/admin/mpe-candidates`는 지금 한 번도 성공하지 못한다.** 아래 TypeScript 동작 1. 운영자 화면의 후보 생성·매칭·근거 초안은 전부 500이다.
+2. **운영의 채팅은 생성하지 않는다.** `MEME_CHAT_GENERATION_ENABLED`가 있어도 `OPENROUTER_API_KEY`가 없어 `generationConfig()`가 `null`이고, 답은 언제나 검색된 기록의 요약(`mode: "retrieved"`, `retrievalMode: "keyword"`)이다. 초안은 같은 이유로 503 `draft_provider_not_configured`다.
+3. **TypeScript의 OpenRouter 주소는 운영에서 바꿀 수 없다.** 채팅은 `https://openrouter.ai`로 고정이고, 초안은 `NODE_ENV=production`에서 그 origin만 받는다. Axum은 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`(루프백 `http://host:port`만 받는다)으로 같은 요청을 스텁에 보낸다.
+4. **Axum 컨테이너는 두 경로가 읽는 변수를 Next와 같은 `.env` 값으로 받는다.** `docker-compose.axum.yml`이 `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`·`OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`을 넘긴다(의미 검색의 두 변수는 #148). 처음에는 넘기지 않아, 운영에 키를 넣으면 Next만 생성할 뻔했다. `server/tests/compose_env.rs`가 서버가 읽는 변수를 소스에서 찾아, 컴포즈에 없고 일부러 뺀 목록(`BEDROCK_*`, `AWS_*`, `CSP_*`, 빌드 값, 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`)에도 없으면 실패한다.
+## 11. 단계 3 일부: R4 (크론과 작은 운영자 API)
+
+`server/src/routes/ops.rs`와 그 아래 모듈. 경로 id는 5절 표의 `growth-baseline`·`saved-state-emails`·`source-refresh`·`instagram-video-cache`·`adpick-hotdeals`·`creator-products`다. 비교는 `server/parity/ops.mjs`(실제 Next 운영 빌드와 같은 DB, 메일 제공자 대신 `server/parity/https-stub.mjs`), 시험은 `server/tests/ops_routes.rs`.
+
+### Next의 캐시
+
+Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 수 없다. 그래서 Next에 내부 경로 `POST /api/internal/cache?scope=<범위>`(`app/api/internal/cache/route.ts`)를 더했다. 크론 경로와 같은 `Authorization: Bearer $CRON_SECRET`을 요구하고, 범위는 둘뿐이다: `public-catalog`(`revalidateTag(PUBLIC_CATALOG_CACHE_TAG, { expire: 0 })`)와 `instagram-video-verification`(`expireInstagramVideoVerificationCache()`, 카탈로그 태그와 `revalidatePath("/", "layout")`). 호출하는 쪽이 태그나 경로를 고를 수 없다. Axum은 `proxy::Upstream::expire_cache`로 이 경로를 부른다.
+
+확인: `/memes/<key>`는 밈을 `cacheCatalogRead`(태그 `public-meme-catalog`, 24시간)로 읽는다. DB에서 제목을 바꾸면 페이지는 옛 제목을 계속 보이고, Axum의 `POST /api/cron/source-refresh`, Next의 같은 경로, Axum의 운영자 경로, Next의 운영자 경로 각각을 부른 뒤에는 새 제목을 보인다. 아무것도 부르지 않으면 옛 제목이 남는다(`ops.mjs cache`).
+
+캐시를 지우는 R4 경로 가운데 Axum으로 옮긴 것은 이 둘뿐이다. 나머지(`trend-pulse`, `source-refresh`의 `GET`, `/api/db/query`의 영상 확인)는 Next에 남아 있어서 지금처럼 Next 안에서 지운다.
+
+### Next에 남긴 경로와 이유
+
+| 경로 | 이유 |
+| --- | --- |
+| `GET /api/cron/trend-pulse` | `RADAR_*`와 토큰이 설정되면 X(`api.x.com`), Threads(`graph.threads.com`), Instagram(`graph.facebook.com`)을 고정 주소로 부른다. TypeScript를 고치지 않고는 로컬 스텁으로 돌릴 수 없어 같은 요청을 보내는지 증명할 수 없다. 레이더 코드도 1,400줄이다. 레이더 없는 부분(`compute_trend_scores`, 실패 기록, 캐시 만료, 두 팬아웃)은 작으니, 컨테이너의 DNS를 스텁으로 돌리는 하네스를 만든 뒤 함께 옮긴다 |
+| `GET /api/cron/source-refresh` | YouTube Data API와 다섯 플랫폼의 oEmbed를 고정 주소로 부른다(위와 같은 이유). 약 1,500줄이다. `POST`는 옮겼다 |
+| `POST /api/admin/source-ingestions` | 같은 oEmbed 조회(`getOEmbed`)를 고정 주소로 한다 |
+| `GET /api/cron/mcp-events` | 전송(`sendPinned`)이 DNS 답을 검사해 공인 IPv4가 아닌 목적지를 거부하고 TLS를 그 주소에 고정한다. 로컬 스텁은 설계상 거부되므로 성공한 전송을 비교할 수 없다. 상태는 Node MCP 서버와 함께 쓰는 AES-256-GCM 암호문 JSON이라, 키 순서까지 Node와 같게 다시 써야 한다 |
+| `POST /api/db/query` | 아래 |
+
+### `/api/db/query`
+
+브라우저 쪽 DB 클라이언트(`lib/db/client.ts`)의 유일한 통로다. 저장·반응·댓글·투표·제출·검색·탐색 등 컴포넌트 18개가 쓴다. 브라우저가 쿼리 계획(`lib/db/plan.ts`의 `QueryPlan`)을 보내면 서버가 매개변수 SQL로 바꿔 실행한다: `public` 스키마의 아무 테이블에 `select`·`insert`·`update`·`delete`·`upsert`, 아무 함수에 `rpc`. 누가 부를 수 있나: 신뢰된 origin(사이트 origin, Next 자신의 origin, 또는 `Sec-Fetch-Site: same-origin`)에서 오는 누구나. 세션이 있으면 `authenticated`(그 사용자 id)로, 없거나 위조면 `anon`으로 돈다. 허가는 Postgres의 권한과 행 수준 보안이 전부다. 라우트가 직접 거르는 것은 origin(403), 제한(전체 분당 1,200, 주소별 180: 429), 본문 1 MB(413), 계획 모양(연산 여섯 가지, 필드 50·깊이 2·행 1,000·임베드 100·필터 50 등: 400), 동시 실행 6개(503)뿐이다. 오류 메시지는 `login_required`·`premium_save_limit` 말고는 `query failed`로 바꾸고 SQLSTATE만 낸다.
+
+옮기지 않았다. 계획 컴파일러(`lib/db/execute.ts`, `plan.ts`, 1,200줄)는 스키마 메타데이터를 읽어 임베드·필터·함수 오버로드를 풀고, 결과를 `row_to_json`으로 모양 짓는다. 임의의 계획에 대해 같은 SQL과 같은 권한 판단을 낸다는 것을 이 배치에서 증명할 수 없다. 틀린 번역은 곧 권한 우회가 될 수 있는 경로다. 대신 거부 경우를 Next에 직접, 그리고 Axum의 프록시를 거쳐 보내 같은 답을 확인했다(`ops.mjs db-query`, 허용되는 읽기 셋과 함께 검사 24개): origin 없음·다른 origin, JSON 아님, 1 MB 초과, 계획 없음·모르는 연산·필드 모양·한도 초과·음수 한도·필터 51개·임베드 세 단계, 식별자 아닌 테이블, 익명의 outbox 읽기(42501), 익명의 `service_role` 함수 호출(42501), 없는 함수(404), 익명의 밈 쓰기(42501), 로그인 사용자의 권한 없는 열 읽기(42501)와 자기 역할 올리기(42501, 행이 그대로인 것까지), 위조 쿠키는 익명, 주소별 181번째 요청(429). 옮길 때 이 목록이 출발점이다.
+
+### Next와 남은 차이
+
+5절 「Next와 남은 차이」 표의 74~80번이다.
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | RPC 플래너가 함수 인자 타입을 `name[]`의 글자열로 받아(8절 동작 1과 같은 원인) 배열 인자를 `text[]`로, 나머지를 타입 없이 보낸다. `replace_mpe_candidate_matches(p_candidate_id => unknown, p_matches => text[])`와 `replace_mpe_candidate_evidence(p_candidate_id => unknown, p_draft_json => unknown, p_evidence => text[])`는 없는 함수라, 매칭·생성·초안이 그 앞의 일을 다 한 뒤 500 `candidate_match_replace_failed: …`·`draft_replace_failed: …`로 끝난다. 그 앞의 일: 텍스트 임베딩 지문 교체, 후보 생성과 삭제, 예산 예약과 OpenRouter 호출. Axum은 같은 문장을 oid 0(타입 없음) 매개변수로 보내 같은 메시지를 얻는다 | `lib/db/execute.ts`, `lib/mpe/candidates.server.ts`, `evidence-draft.server.ts` |
+| 2 | `create`가 이미 있는 후보를 찾으면(`created: false`) 실패해도 되돌리지 않는다. 새로 만든 후보는 지우는데, 그 삭제가 실패하면 그 오류가 원래 오류를 덮는다 | `app/api/admin/mpe-candidates/route.ts` |
+| 3 | 초안은 요청(재시도, 교정 요청 포함, 최대 4번)마다 일일 예산을 먼저 예약한다. 실패한 요청도 예산을 쓴다 | `lib/mpe/openrouter.server.ts` |
+| 4 | 초안의 공급자 오류(500, 연결 실패, 답이 JSON이 아님, 빈 내용)는 모두 같은 500 `mpe_candidate_failed`다. 답이 JSON이 아니면 재시도하지 않는다 | 같은 곳, `route.ts`의 `errorResponse` |
+| 5 | 매칭의 검색어는 후보 제목과 모든 텍스트 조각을 이은 글 전체라, `search_memes`의 부분 문자열 조건(`ilike '%…%'`)에는 거의 걸리지 않는다 | `lib/mpe/candidates.server.ts` |
+| 6 | 채팅의 `text()`는 UTF-16 단위로 자른다. 이모지 한가운데서 자르면 제목·요약·출처 이름에 반쪽이 남아 `\ud83d`로 나가고, 번역 슬러그가 그렇게 잘리면 `encodeURIComponent`가 던져 그 로캘의 답 전체가 503 `search_unavailable`(스트림은 오류 줄)이다 | `lib/meme-chat.server.ts` |
+| 7 | 채팅의 주소별 제한은 클라이언트가 보낸 `X-Forwarded-For` 첫 항목으로 센다. 본문을 읽기 전에 세므로 잘못된 요청도 센다 | `app/api/memes/chat/route.ts`, `lib/rate-limit.ts` |
+| 8 | 매칭·생성·초안은 요청 하나에 `is_operator`를 서너 번 묻는다 | `lib/mpe/*.server.ts` |
+
+### Next와 남은 차이
+
+5절 「Next와 남은 차이」 표의 74~85번이다.
+
+### 단계 5에서 추가로 확인할 것
+
+- TypeScript 동작 1: 플래너를 고치면(`types`를 배열로 읽기) 두 저장 함수가 처음으로 실행된다. 그때 Axum의 같은 두 문장도 고쳐야 하고, 성공한 답(`{ ok: true, data }`)은 아직 어느 서버에서도 본 적이 없다.
+| 1 | 저장 상태 메일의 상태 이름이 `Object.prototype`의 속성이면 `STATE_LABELS[locale][state]`가 함수나 객체라서 `escapeHtml`이 `TypeError`를 던지고, 그 행은 그 메시지로 실패한다(5절 차이 76) | `lib/trend/outbox.server.ts` |
+| 2 | 제목을 `slice(0, 200)`으로 UTF-16 단위로 자른다. 서로게이트 쌍이 잘리면 반쪽이 제공자에게 가는 JSON에 `\ud83d` 꼴로 들어간다 | 같은 파일 |
+| 3 | 성공 기록(`finish_notification_outbox`)이 실패하면 같은 행을 실패로 다시 기록하려 한다. 그 호출도 실패하면 행은 `processing`으로 남는다 | 같은 파일 |
+| 4 | `growth-baseline`은 다른 크론 경로와 달리 401 본문이 소문자 `unauthorized`이고, DB 오류는 객체를 그대로 던져 본문 없는 500이 된다 | `app/api/cron/growth-baseline/route.ts` |
+| 5 | 운영자 경로는 `is_operator()` 조회가 실패해도 503이 아니라 403이다 | `app/api/admin/instagram-video-verification/revalidate/route.ts` |
+
+### 새 설정
+
+- `AXUM_EXTRA_CA_CERTS`: 바깥으로 나가는 HTTPS(지금은 메일 전송)가 바이너리의 Mozilla 루트에 더해 믿을 PEM 파일. Node의 `NODE_EXTRA_CA_CERTS`에 해당한다. 운영에서는 비워 둔다.
+- `docker-compose.axum.yml`의 Axum 환경에 `PLUS_DIGEST_DELIVERY_URL`·`PLUS_DIGEST_DELIVERY_TOKEN`·`PLUS_DIGEST_FROM_EMAIL`을 `docker-compose.yml`이 Next에 주는 방식 그대로 더했다.
+
+## 12. 단계 6 일부: A1 (세션 읽기·연장과 로그아웃)
 
 브랜치 `torisKR/axum-auth-a1`. UI-PLAN의 인증 순서 ①·②다. 옮긴 경로는 5절 표의 `auth-get-session`·`auth-sign-out` 둘이다(`server/src/routes/better_auth/`). 기준은 better-auth 1.7.20과 better-call 1.4.5이고, 따른 원본 파일과 줄은 코드 주석에 있다. 이 앱의 설정에서는 쿠키 캐시·보조 저장소·`deferSessionRefresh`가 없으므로 그 분기는 옮기지 않았다. 세션 테이블은 better-auth가 쓰는 대로 로그인 역할 `memecatch`로 읽고 쓴다(`DbIdentity::better_auth`: `set role`도 설정값도 없고 `statement_timeout`만 둔다). `service_role`은 `user`·`session`에 `SELECT`만 있다.
 

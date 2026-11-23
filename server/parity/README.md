@@ -62,6 +62,8 @@ with no body.
 | `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
+| `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
+| `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
 | `harness.mjs` | Shared by the two scripts above; not run on its own. |
 
@@ -474,3 +476,89 @@ in Rust against better-auth's own `getSession` and `signOut` on the test
 database, both ways and across the refresh and expiry boundaries:
 `cargo test --test auth_session_cross -- --ignored --nocapture`.
 
+## Meme chat
+
+`chat.mjs` compares `POST /api/memes/chat` on the R1 seed
+(`tests/fixtures/r1_reviewer.sql`, `r1_seed.sql`) plus `chat-seed.sql`. Run it
+against two pairs of servers, all with `MEME_SEMANTIC_SEARCH_ENABLED=true`,
+`MEME_CHAT_GENERATION_ENABLED=true` and no `MEME_EMBEDDING_URL`:
+
+- the production pair, without `OPENROUTER_API_KEY`: sections `production`,
+  `failures`, `limits`, `slowBody`;
+- the generation pair, with a made-up key: section `generation`. The script
+  runs the OpenRouter stub on `127.0.0.1:3530`. Start Next with the fetch
+  interceptor pointing there, and Axum with the test origin:
+
+```sh
+# Next (standalone, Node 22), generation pair:
+OPENROUTER_API_KEY=parity-key node \
+  --import "file://$PWD/server/parity/openrouter-intercept.mjs?origin=http://127.0.0.1:3530" server.js
+# Axum, generation pair:
+OPENROUTER_API_KEY=parity-key AXUM_TEST_OPENROUTER_ORIGIN=http://127.0.0.1:3530 memecatch-server
+
+TEST_DB_CONTAINER=... node server/parity/chat.mjs $NEXT $AXUM production failures limits slowBody
+TEST_DB_CONTAINER=... node server/parity/chat.mjs $NEXT_KEY $AXUM_KEY generation
+```
+
+Each server allows 20 chat requests a minute, so the script paces itself; the
+`limits` section waits for a quiet minute first. `chat-fixture.mjs` rewrites
+`tests/fixtures/meme_chat.json` from the real `answerMemeQuestion`, with the
+search and the database stubbed (`chat-fixture-hooks.mjs`,
+`chat-fixture-stubs.mjs`) and `fetch` caught; the header of the script has the
+command. `unicode-classes.mjs` rewrites `src/routes/unicode_classes.rs` (the
+character classes of two regexes, as Node 22's V8 decides them).
+
+## MPE candidates
+
+`mpe-candidates.mjs` compares `POST /api/admin/mpe-candidates`. It needs two
+sessions minted by the real better-auth in one file (`operator`, promoted by
+the login role as `service_role`, and `user`), and reseeds its own rows
+(`mpe-candidates-seed.mjs`) before each request to each server, then compares
+the rows left behind (fingerprints, candidates, matches, evidence, the daily
+budget). The same two pairs of servers as the meme chat:
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/mpe-candidates.mjs --state=state.json $NEXT $AXUM production
+TEST_DB_CONTAINER=... node server/parity/mpe-candidates.mjs --state=state.json $NEXT_KEY $AXUM_KEY generation
+DATABASE_URL=... TEST_DB_CONTAINER=... node server/parity/mpe-candidates.mjs --state=state.json \
+  --axum-log=<Axum's log file> $NEXT $AXUM matching
+```
+
+`matching` checks what no response shows: the matches the route computes. The
+store fails on both servers (PLAN.md section 10), Axum logs the matches it
+tried to store, and `mpe-candidates-flow.mjs` runs the real
+`generateCandidateMatches` on the same rows with that one call caught.
+`mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.
+
+## The R4 routes
+
+```sh
+# A throwaway CA and a certificate for 127.0.0.1, in a scratch directory.
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 3 -subj "/CN=stub CA" \
+  -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign"
+openssl req -newkey rsa:2048 -nodes -keyout stub.key -out stub.csr -subj "/CN=127.0.0.1"
+printf 'subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n' > ext.cnf
+openssl x509 -req -in stub.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out stub.pem -days 3 -extfile ext.cnf
+node server/parity/https-stub.mjs stub.pem stub.key 3443 &
+
+# Both servers with the same CRON_SECRET and PLUS_DIGEST_*:
+#   PLUS_DIGEST_DELIVERY_URL=https://127.0.0.1:3443/send PLUS_DIGEST_FROM_EMAIL=... PLUS_DIGEST_DELIVERY_TOKEN=...
+# Next with NODE_EXTRA_CA_CERTS=ca.pem, Axum with AXUM_EXTRA_CA_CERTS=ca.pem.
+node server/parity/seed-memes.mjs pool 3 | psql        # the page of the cache section
+PARITY_USER="$(cat user1.json)" PARITY_USER_2="$(cat user2.json)" STUB_CA=ca.pem CRON_SECRET=... \
+  node server/parity/ops.mjs $NEXT $AXUM cache db-query retired growth-baseline source-refresh instagram-video saved-state
+```
+
+`not-configured` and `no-token` are for a pair started with an empty or
+`http:` delivery URL, and with no token. Never send an authenticated `GET` to
+`/api/cron/source-refresh`: that runs the real refresh, which calls YouTube
+and the oEmbed endpoints.
+
+Next's `server.js` forks the process that listens. To restart Next with other
+settings, stop that child too, or the new one loses the port to the old one
+and the old settings keep answering.
+
+The saved-state batch is sent to one server, the rows and the stub are read,
+the batch is put back, and the same is done through the other: the outbox
+ids are fixed, so the two runs must send byte-equal bodies and leave equal
+rows.

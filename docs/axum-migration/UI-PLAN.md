@@ -106,7 +106,7 @@
 - **유지하는 것**: 네 테이블과 쿠키 형식. 기존 세션과 비밀번호 해시가 그대로 통해야 한다. Rust는 이미 better-auth가 낸 세션 쿠키를 읽는다(`server/src/auth.rs`).
 - **옮기는 순서**: ① `get-session`과 세션 연장(지금 Rust는 읽기만 한다) → ② 로그아웃 → ③ 이메일 로그인(bcrypt·scrypt 검증) → ④ 가입·인증 메일·비밀번호 재설정(`verification` 테이블, 메일 웹훅, 가입 전후 훅) → ⑤ Google·Kakao → ⑥ TikTok 매직 링크. 로그인·가입 폼(서버 액션)은 ③·④와 함께 간다.
 - **OAuth state·PKCE**: better-auth는 state와 `codeVerifier`를 `verification` 테이블에 두고 `oauth_state` 쿠키를 쓴다. 공급자마다 시작 경로와 콜백을 **한 번에** 넘기고, 콜백에서 Rust가 만든 state가 아니면 Next로 넘긴다. 그러면 전환 순간에 진행 중이던 로그인도 끝난다. state 형식을 흉내 낼 필요가 없다.
-- **진행**: ①(세션 읽기·연장)과 ②(로그아웃)는 A1에서 옮겼다(`PLAN.md` 10절, 브랜치 `torisKR/axum-auth-a1`). Rust가 연장한 세션을 better-auth가 받는지와 연장 시점은 `server/tests/auth_session_cross.rs`가 양방향으로 본다.
+- **진행**: ①(세션 읽기·연장)과 ②(로그아웃)는 A1에서 옮겼다(`PLAN.md` 12절, 브랜치 `torisKR/axum-auth-a1`). Rust가 연장한 세션을 better-auth가 받는지와 연장 시점은 `server/tests/auth_session_cross.rs`가 양방향으로 본다.
 - **실제 better-auth로 시험할 것**: Rust가 낸 세션을 better-auth가 받는지(반대 방향은 이미 있다), 해시 양방향(두 형식), 인증·재설정 토큰 양방향, 세션 연장 시점, 가짜 공급자 서버로 OAuth 전체 흐름을 양쪽에서 돌려 DB 행과 쿠키 비교.
 - **확인하지 못한 것**: scrypt 매개변수와 state 행의 정확한 형식은 패키지 소스로 일부만 확인했다. 운영 DB에 `service_role` 읽기 권한이 있는지는 PLAN.md 5절의 미확인 항목 그대로다.
 
@@ -219,6 +219,29 @@ Next의 LCP는 이번에도 회차마다 갈렸다(`/about` 5,072·5,000·1,535 
 - 페이지 하나를 켜려면: `pages/mod.rs`의 `router`에 경로 추가, `routes::ROUTE_IDS`와 `PAGE_ROUTE_IDS`에 id 추가, `document::page`로 틀을 두르고, 페이지 전용 동작은 `server/ui/<기능>.js`로(`build-ui.mjs`의 `UI_FILES`에 추가), 문자열은 `build-i18n.mjs`의 `FILES`로, 그 페이지의 대상을 `pages/targets.txt`에, 시나리오를 `behaviour/scenarios/`에. 두 게이트가 통과한 뒤 운영 규모 데이터에서 사이트맵으로 `pages.mjs`를 돌리고 나서 켠다.
 - 켜는 스위치는 `AXUM_PILOT_ROUTES` 하나다(이름은 그대로 둔다. `docker-compose.axum.yml`이 이 이름으로 넘긴다, `PLAN.md` 차이 73). `AXUM_DISABLED_ROUTES`가 이긴다.
 - 다른 언어로 된 페이지(B5)는 `document::page`에 로케일을 받게 하면 된다. 틀은 이미 19개 언어를 그린다.
+
+### 5.2 B1: 정적 문서
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b1`. 켠 페이지는 없다. 각 페이지는 경로 id를 `AXUM_PILOT_ROUTES`에 적어야 켜진다.
+
+| 페이지 | 경로 id | 다룬 URL 형태 |
+| --- | --- | --- |
+| `/contact` | `page-contact` | 그대로, 쿼리, 끝 슬래시(308), `/en/contact`(404) |
+| `/editorial` | `page-editorial` | 그대로, 쿼리, 끝 슬래시 |
+| `/guides` | `page-guides` | 그대로, 쿼리, 끝 슬래시, `/en/guides`(404) |
+| `/guides/{slug}` | `page-guide` | 다섯 편 모두, 쿼리, 끝 슬래시, 없는 slug(Next의 404) |
+| `/privacy`, `/terms` | `page-privacy`, `page-terms` | 그대로, 쿼리, 끝 슬래시 |
+| `/offline` | `page-offline` | 그대로, 쿼리 |
+| `/missing-public-meme` | `page-missing-meme` | 그대로(404, 정해 둔 차이) |
+| 퇴역 상품 | `page-retired-products` | `/retired-products`(쿼리, 끝 슬래시), `/products`, `/products/x`, `/go/products(/x)`, `/en`·`/ja`·`/zh`·`/zh-tw` 아래, `/products/export?locale=ja`, `/zh-tw/retired-products`(빈 404), `/admin/creator-products(/x)`(308), `/en/products(/x)`(Next의 308), `/products/x.png`·`/ar/products`(Next의 404) |
+
+모든 형태를 `GET`과 `HEAD`로 보낸다. 페이지 게이트는 이제 `HEAD`의 상태·헤더·빈 본문도 비교한다. 결과: 페이지를 켜면 189개 요청 전부 일치, 끄면 189개 전부 Next 화면으로 일치. 동작 게이트(`documents.spec.mjs`): 페이지마다 틀(메뉴·포커스·챗봇·제자리 언어 전환)과 페이지 자신의 링크(가이드 목록과 글, 문의의 메일 링크, 오프라인의 다시 시도, 퇴역 상품 카드), 두 서버 네 프로젝트에서 13개씩 52개 통과.
+
+B1에는 폼도 서버 액션도 없다(문의는 `mailto:` 링크다). 그래서 옮긴 `POST` 엔드포인트가 없다.
+
+Lighthouse(5절과 같은 조건, 3회 중앙값), `/guides/usage-signals`: Next 100점, FCP·LCP 1,535 ms, TBT 17 ms, 자체 요청 59개, JS 353,623 B(26개). Axum 100점, FCP·LCP 906 ms, TBT 0 ms, 자체 요청 9개, JS 18,722 B(1개).
+
+Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차이는 `PLAN.md` 74~77(퇴역 상품 카드의 캐시 시간, 410 문서의 스타일시트 링크, 빌드 때 렌더한 문서의 연도, 옮겨 적은 마크업).
 
 ## 6. 확인하지 못한 것과 위험
 

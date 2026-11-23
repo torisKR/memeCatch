@@ -1,0 +1,168 @@
+{
+ "copy": {
+  "ko": {
+   "message": "밈상품 페이지는 더 이상 운영하지 않아요.",
+   "explore": "밈 탐색",
+   "exploreHref": "/explore",
+   "popular": "지금 많이 보는 밈"
+  },
+  "en": {
+   "message": "Meme product pages are no longer available.",
+   "explore": "Explore memes",
+   "exploreHref": "/en/explore",
+   "popular": "Popular memes"
+  }
+ },
+ "document": {
+  "ko": {
+   "lang": "ko",
+   "title": "밈상품 페이지는 더 이상 운영하지 않아요",
+   "message": "밈상품 페이지는 더 이상 운영하지 않아요.",
+   "explore": "밈 탐색",
+   "exploreHref": "/explore"
+  },
+  "en": {
+   "lang": "en",
+   "title": "Meme product pages are no longer available",
+   "message": "Meme product pages are no longer available.",
+   "explore": "Explore memes",
+   "exploreHref": "/en/explore"
+  }
+ },
+ "brand": {
+  "ko": {
+   "name": "밈캐치",
+   "home": "밈캐치 홈",
+   "homeHref": "/"
+  },
+  "en": {
+   "name": "MemeCatch",
+   "home": "MemeCatch home",
+   "homeHref": "/en"
+  }
+ },
+ "nav": {
+  "ko": [
+   [
+    "/",
+    "홈"
+   ],
+   [
+    "/explore?sort=recent",
+    "최신"
+   ],
+   [
+    "/community",
+    "커뮤니티"
+   ],
+   [
+    "/submit",
+    "제보"
+   ],
+   [
+    "/my",
+    "내 정보"
+   ]
+  ],
+  "en": [
+   [
+    "/en",
+    "Home"
+   ],
+   [
+    "/en/explore?sort=recent",
+    "Latest"
+   ],
+   [
+    "/community",
+    "Community"
+   ],
+   [
+    "/submit",
+    "Submit"
+   ],
+   [
+    "/my",
+    "My"
+   ]
+  ]
+ },
+ "fallbackPicks": [
+  {
+   "id": "279d001e-3f4a-4801-9816-3fb089c6834b",
+   "shortId": "xazbup6j",
+   "slug": "ai-slop",
+   "title": "AI 슬롭",
+   "summary": "생성형 AI로 대량 제작된 낮은 품질의 디지털 콘텐츠를 낮춰 부르는 비판적 인터넷 표현.",
+   "category": "phrase",
+   "safety": "yellow",
+   "year": 2024,
+   "thumbnail": "/ai-memes/ai-slop.jpg"
+  },
+  {
+   "id": "d6fdc6c3-0ac6-4508-8b01-f4e048c0aeca",
+   "shortId": "us5jg4gj",
+   "slug": "italian-brainrot",
+   "title": "이탈리안 브레인롯",
+   "summary": "AI로 만든 동물·사물 혼합 캐릭터와 의사 이탈리아어 내레이션을 결합한 2025년의 초현실주의 인터넷 밈 흐름.",
+   "category": "image",
+   "safety": "yellow",
+   "year": 2025,
+   "thumbnail": "/ai-memes/italian-brainrot.jpg"
+  },
+  {
+   "id": "d2abe3a0-fc36-40e8-8e50-5ab03fb6b280",
+   "shortId": "py3fd5gq",
+   "slug": "tralalero-tralala",
+   "title": "트랄랄레로 트랄랄라",
+   "summary": "세 개의 다리와 운동화를 가진 AI 상어로 알려진 이탈리안 브레인롯의 대표 캐릭터.",
+   "category": "image",
+   "safety": "gray",
+   "year": 2025,
+   "thumbnail": "/ai-memes/tralalero-tralala.jpg"
+  },
+  {
+   "id": "33a63717-9a70-4601-891a-54337d5740c2",
+   "shortId": "djjz3enf",
+   "slug": "ballerina-cappuccina",
+   "title": "발레리나 카푸치나",
+   "summary": "카푸치노 잔 머리와 발레리나의 몸을 합친 이탈리안 브레인롯 계열의 AI 캐릭터.",
+   "category": "image",
+   "safety": "yellow",
+   "year": 2025,
+   "thumbnail": "/ai-memes/ballerina-cappuccina.jpg"
+  }
+ ],
+ "safetyLabels": {
+  "ko": {
+   "green": "써도 됨",
+   "yellow": "맥락 주의",
+   "gray": "이미 늦음",
+   "red": "쓰면 위험"
+  },
+  "en": {
+   "green": "Safe to use",
+   "yellow": "Check the context",
+   "gray": "Past its moment",
+   "red": "Risky to use"
+  },
+  "ja": {
+   "green": "使ってOK",
+   "yellow": "文脈に注意",
+   "gray": "旬を過ぎた",
+   "red": "使用は危険"
+  },
+  "zh": {
+   "green": "可以使用",
+   "yellow": "注意语境",
+   "gray": "已经过时",
+   "red": "使用有风险"
+  },
+  "zh-tw": {
+   "green": "可以使用",
+   "yellow": "留意語境",
+   "gray": "已經過時",
+   "red": "使用有風險"
+  }
+ }
+}

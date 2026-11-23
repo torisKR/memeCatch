@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Exports the TypeScript dictionaries to JSON that the Rust pages read, so no
-// string is translated twice. Run from the repository root:
+// Exports the TypeScript dictionaries, and copy that lives as data in
+// lib/, to JSON that the Rust pages read, so no string is written twice. Run from the repository root:
 //
 //   node --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs          write
 //   node --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check  exit 1 if stale
@@ -26,24 +26,26 @@ import {
 } from "@/lib/i18n";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
 import { MEME_CHAT_COPY } from "@/lib/meme-chat-copy";
+import { GUIDES } from "@/lib/guides";
+import { getSafetySignalCopy } from "@/lib/safety-copy";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
 const perLocale = (value) => Object.fromEntries(SUPPORTED_LOCALES.map((locale) => [locale, value(locale)]));
 
 /**
- * The object literal passed to `withLocaleFallback(` after `const <name> =`
- * in a .tsx file, which Node cannot import. Copy that lives in a component
- * is read from its source so that it is still written once. Fails loudly
- * when the declaration moves.
+ * The literal (object or array) that follows `marker` in a source file that
+ * Node cannot import (a .tsx, or a module that pulls in React or the
+ * database). Copy that lives there is read from the source so that it is
+ * still written once. Fails loudly when the declaration moves.
  */
-function componentCopy(file, name) {
+function sourceLiteral(file, marker) {
   const source = readFileSync(resolve(here, "../..", file), "utf8");
-  const marker = `const ${name} = withLocaleFallback(`;
   const start = source.indexOf(marker);
   if (start === -1) throw new Error(`${file} no longer declares ${marker}; update build-i18n.mjs`);
   let depth = 0;
   let quote = null;
+  let begin = -1;
   for (let index = start + marker.length; index < source.length; index += 1) {
     const char = source[index];
     if (quote) {
@@ -51,15 +53,18 @@ function componentCopy(file, name) {
       else if (char === quote) quote = null;
     } else if (char === '"' || char === "'" || char === "`") {
       quote = char;
-    } else if (char === "{") {
+    } else if (char === "{" || char === "[") {
+      if (depth === 0) begin = index;
       depth += 1;
-    } else if (char === "}" && --depth === 0) {
-      const literal = source.slice(start + marker.length, index + 1);
-      return withLocaleFallback(new Function(`return (${literal});`)());
+    } else if ((char === "}" || char === "]") && --depth === 0) {
+      return new Function(`return (${source.slice(begin, index + 1)});`)();
     }
   }
-  throw new Error(`${file}: ${name} has no end`);
+  throw new Error(`${file}: ${marker} has no end`);
 }
+
+/** `const <name> = withLocaleFallback({...})` in a component, fallbacks applied. */
+const componentCopy = (file, name) => withLocaleFallback(sourceLiteral(file, `const ${name} = withLocaleFallback(`));
 
 const FILES = {
   // What the page frame says: lib/i18n.ts with its fallbacks applied, the one
@@ -78,6 +83,25 @@ const FILES = {
     memeCardsNav: perLocale((locale) => MEME_CARDS_COPY[locale].nav),
     chat: MEME_CHAT_COPY,
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
+  }),
+  // The five articles of /guides and /guides/{slug}, as lib/guides.ts holds them.
+  "guides.json": () => GUIDES,
+  // The 410 document of the retired product pages (lib/retired-products.ts):
+  // its copy, its own header and navigation, the shipped illustrations that
+  // fill missing cards, and the safety labels its cards show in each language
+  // a meme path can have.
+  "retired.json": () => ({
+    copy: sourceLiteral("components/retired-products-page.tsx", "const COPY = "),
+    document: sourceLiteral("lib/retired-product-document.ts", "const COPY = "),
+    brand: sourceLiteral("lib/retired-product-document.ts", "const BRAND = "),
+    nav: sourceLiteral("lib/retired-product-document.ts", "const NAV = "),
+    fallbackPicks: sourceLiteral("lib/retired-product-memes.ts", "export const RETIRED_PRODUCT_FALLBACK_PICKS = "),
+    safetyLabels: Object.fromEntries(
+      ["ko", "en", "ja", "zh", "zh-tw"].map((locale) => [
+        locale,
+        Object.fromEntries(Object.entries(getSafetySignalCopy(locale).levels).map(([level, signal]) => [level, signal.label])),
+      ]),
+    ),
   }),
 };
 

@@ -16,12 +16,18 @@ use memecatch_server::routes::{PAGE_ROUTE_IDS, ROUTE_IDS};
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
-const PILOTS_ON: (&str, &str) = ("AXUM_PILOT_ROUTES", "page-about,page-meme");
+// Every page route id (`PAGE_ROUTE_IDS`), switched on.
+const PILOTS_ON: (&str, &str) = (
+    "AXUM_PILOT_ROUTES",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products",
+);
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
-const BASE: [(&str, &str); 8] = [
+const BASE: [(&str, &str); 9] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
+    // The Instagram video cache route needs it to reach Next's cache.
+    ("CRON_SECRET", "test-only-cron-secret"),
     ("NODE_ENV", "development"),
     ("R2_ACCOUNT_ID", "not-used"),
     ("R2_ACCESS_KEY_ID", "not-used"),
@@ -62,6 +68,15 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     let fixed = [
         ("page-about", "GET", "/about"),
         ("page-meme", "GET", "/memes/zzzzzzzz-no-such-meme"),
+        ("page-contact", "GET", "/contact"),
+        ("page-editorial", "GET", "/editorial"),
+        ("page-guides", "GET", "/guides"),
+        ("page-guide", "GET", "/guides/usage-signals"),
+        ("page-privacy", "GET", "/privacy"),
+        ("page-terms", "GET", "/terms"),
+        ("page-offline", "GET", "/offline"),
+        ("page-missing-meme", "GET", "/missing-public-meme"),
+        ("page-retired-products", "GET", "/retired-products"),
         ("health", "GET", "/api/health"),
         ("media-signed", "GET", "/api/media/signed"),
         ("robots", "GET", "/robots.txt"),
@@ -93,6 +108,11 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("upload", "POST", "/api/upload"),
         ("mpe-uploads", "POST", "/api/mpe/uploads"),
         ("admin-mpe-candidates", "GET", "/api/admin/mpe-candidates"),
+        (
+            "admin-mpe-candidates-post",
+            "POST",
+            "/api/admin/mpe-candidates",
+        ),
         ("meme-studio", "POST", "/api/meme-studio"),
         ("admin-meme-studio", "POST", "/api/admin/meme-studio"),
         (
@@ -102,6 +122,17 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("auth-get-session", "GET", "/api/auth/get-session"),
         ("auth-sign-out", "POST", "/api/auth/sign-out"),
+        ("memes-chat", "POST", "/api/memes/chat"),
+        ("growth-baseline", "GET", "/api/cron/growth-baseline"),
+        ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
+        ("source-refresh", "POST", "/api/cron/source-refresh"),
+        (
+            "instagram-video-cache",
+            "POST",
+            "/api/admin/instagram-video-verification/revalidate",
+        ),
+        ("adpick-hotdeals", "GET", "/api/cron/adpick-hotdeals"),
+        ("creator-products", "GET", "/api/creator-products/x"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

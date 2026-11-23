@@ -44,8 +44,8 @@ const SEARCH_SQL: &str = r#"WITH __q AS (SELECT r1."id", r1."short_id", r1."slug
 
 /// `MemeReference`: what each result carries.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-struct Reference {
-    id: String,
+pub(crate) struct Reference {
+    pub(crate) id: String,
     short_id: String,
     slug: String,
     title: String,
@@ -280,7 +280,7 @@ async fn rows(state: &AppState, query: &str) -> Result<Vec<Reference>, sqlx::Err
 }
 
 /// `searchMemes(q, limit)`, then `reference` of each item.
-async fn keyword_search(
+pub(crate) async fn keyword_search(
     state: &AppState,
     query: &str,
     limit: usize,

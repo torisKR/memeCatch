@@ -10,9 +10,18 @@
 //! written only by the database functions the TypeScript calls, with the same
 //! arguments, so the worker sees what it saw before.
 
+mod candidate_post;
 mod candidates;
+mod create;
+mod draft;
+#[cfg(test)]
+mod fixture_tests;
 mod jobs;
+mod matches;
+mod matching;
 mod renders;
+mod rows;
+mod structured;
 mod uploads;
 
 use std::sync::Arc;
@@ -25,6 +34,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 
 use super::Routes;
+use super::openrouter::OpenRouter;
 use super::public::csp_report::now_ms;
 use super::public::rate_limit::{RateLimit, RateLimiter};
 use super::request::SiteOrigin;
@@ -36,11 +46,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let limiter = Arc::new(RateLimiter::new(now_ms()));
     let routes = Routes::new(state)
         .add("mpe-job", "/api/mpe/jobs/{id}", get(jobs::job))
-        .add(
-            "admin-mpe-candidates",
-            "/api/admin/mpe-candidates",
-            get(candidates::list),
-        )
+        .add_each("/api/admin/mpe-candidates", candidate_methods(state))
         .add(
             "mpe-renders",
             "/api/mpe/renders",
@@ -62,6 +68,29 @@ pub fn router(state: &AppState) -> Router<AppState> {
             }),
         )
         .build()
+}
+
+/// `GET` and, when the site URL and the OpenRouter client allow, `POST` of
+/// `/api/admin/mpe-candidates`, each under its own id.
+fn candidate_methods(
+    state: &AppState,
+) -> Vec<(&'static str, axum::routing::MethodRouter<AppState>)> {
+    let mut methods = vec![("admin-mpe-candidates", get(candidates::list))];
+    let site = SiteOrigin::from_site_url(&state.config.site_url);
+    let client = OpenRouter::new(state.config.openrouter.test_origin.as_deref());
+    match (site, client) {
+        (Some(site), Ok(client)) => methods.push((
+            "admin-mpe-candidates-post",
+            post(move |state: State<AppState>, request: Request| {
+                candidate_post::post(state, site.clone(), client.clone(), request)
+            }),
+        )),
+        (_, Err(error)) => {
+            tracing::error!(%error, "admin-mpe-candidates-post left to the upstream")
+        }
+        (None, _) => {}
+    }
+    methods
 }
 
 /// `Response.json(body, { status })` for a body already written as JSON.

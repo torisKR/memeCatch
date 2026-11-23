@@ -16,11 +16,13 @@ pub mod cache;
 pub mod chrome;
 pub mod content_depth;
 pub mod document;
+pub mod documents;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
 pub mod meme_detail;
 pub mod not_found;
+pub mod retired;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -76,6 +78,8 @@ pub struct Shared {
     js_name: String,
     /// How many memes the sitemap lists (`about.rs`).
     pub(self) indexable_count: Timed<i64>,
+    /// The four cards of the retired product pages.
+    retired_cards: Timed<Vec<retired::Card>>,
     /// Rendered frame fragments by (locale, path and query).
     frames: Keyed<(&'static str, String), Arc<str>>,
 }
@@ -96,6 +100,7 @@ impl Pages {
             css_name,
             js_name,
             indexable_count: Timed::new(INDEXABLE_COUNT_TTL),
+            retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
                 body.len()
             }),
@@ -119,6 +124,31 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let pages = Routes::new(state)
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
+        .add("page-contact", "/contact", get(documents::contact::page))
+        .add(
+            "page-editorial",
+            "/editorial",
+            get(documents::editorial::page),
+        )
+        .add("page-guides", "/guides", get(documents::guides::list))
+        .add(
+            "page-guide",
+            "/guides/{slug}",
+            get(documents::guides::article),
+        )
+        .add("page-privacy", "/privacy", get(documents::privacy::page))
+        .add("page-terms", "/terms", get(documents::terms::page))
+        .add("page-offline", "/offline", get(documents::offline))
+        .add(
+            "page-missing-meme",
+            "/missing-public-meme",
+            get(documents::missing_public_meme),
+        )
+        .add_all(
+            "page-retired-products",
+            &retired_paths(),
+            get(retired::page),
+        )
         .build()
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -151,6 +181,27 @@ async fn documents_only(State(state): State<AppState>, request: Request, next: N
         return proxy::forward(State(state), request).await;
     }
     next.run(request).await
+}
+
+/// Every path the decision of `retired.rs` can answer, under each prefix it
+/// knows. Paths it does not answer there go on to Next.
+fn retired_paths() -> Vec<String> {
+    let mut paths = vec![
+        "/admin/creator-products".to_owned(),
+        "/admin/creator-products/{*rest}".to_owned(),
+    ];
+    for prefix in ["", "/en", "/ja", "/zh", "/zh-tw"] {
+        for path in [
+            "/retired-products",
+            "/products",
+            "/products/{*rest}",
+            "/go/products",
+            "/go/products/{*rest}",
+        ] {
+            paths.push(format!("{prefix}{path}"));
+        }
+    }
+    paths
 }
 
 /// The request target as received: path and query, still percent-encoded.
@@ -202,14 +253,20 @@ async fn frame_fragment(
         .into_response()
 }
 
-/// A rendered document with the headers Next puts on a page.
+/// A rendered document with the headers Next puts on a page it renders on
+/// request.
 pub fn html(status: StatusCode, document: Markup) -> Response {
+    html_cached(status, DYNAMIC_PAGE_CACHE, document)
+}
+
+/// The same with the `Cache-Control` Next sends for that page.
+pub fn html_cached(status: StatusCode, cache_control: &'static str, document: Markup) -> Response {
     (
         status,
         [
             (CONTENT_TYPE, "text/html; charset=utf-8"),
             (CONTENT_LANGUAGE, "ko"),
-            (CACHE_CONTROL, DYNAMIC_PAGE_CACHE),
+            (CACHE_CONTROL, cache_control),
         ],
         document.into_string(),
     )

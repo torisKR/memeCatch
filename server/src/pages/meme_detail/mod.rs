@@ -59,8 +59,6 @@ const MAX_USAGE_EXAMPLES: usize = 3;
 const MAX_SITUATION_LENGTH: usize = 120;
 const MAX_EXAMPLE_TEXT_LENGTH: usize = 500;
 const NOINDEX_FOLLOW: &str = "noindex, follow";
-// ADSENSE_CLIENT_ID in lib/adsense-policy.ts: no other client loads ads.
-const ADSENSE_CLIENT_ID: &str = "ca-pub-3004906966180197";
 
 // One row with its relations as JSON text: sqlx is built without its `json`
 // feature. Timestamps are written as Postgres writes them into JSON, which
@@ -442,6 +440,7 @@ fn render(state: &AppState, meme: &MemeDocument, target: &str) -> Response {
             alt: meme.title.clone(),
         }),
         canonical: Some(path.clone()),
+        ..Head::default()
     };
 
     let term = MemeTerm {
@@ -478,11 +477,7 @@ fn render(state: &AppState, meme: &MemeDocument, target: &str) -> Response {
         usage_examples: &usage_examples,
         json_ld,
         // `AdsenseScript`: switched on, and the client is the site's own.
-        ads_client: site
-            .adsense_client
-            .as_deref()
-            .filter(|client| *client == ADSENSE_CLIENT_ID)
-            .filter(|_| site.adsense_auto_ads && meme.may_carry_ads(&depth)),
+        ads_client: site.ads_client().filter(|_| meme.may_carry_ads(&depth)),
     });
     html_response(StatusCode::OK, document::page(site, &head, target, main))
 }

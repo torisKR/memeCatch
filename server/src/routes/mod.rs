@@ -3,18 +3,23 @@
 
 pub mod better_auth;
 pub mod cards;
+pub mod chat;
 pub mod health;
 pub mod js_json;
+pub mod js_string;
 pub mod media;
 pub mod media_type;
 pub mod mpe;
 pub mod multipart;
+pub mod openrouter;
+pub mod ops;
 pub mod origin;
 pub mod public;
 pub mod request;
 pub mod search;
 pub mod studio;
 pub mod tracking;
+pub mod unicode_classes;
 pub mod upload;
 
 use std::collections::HashSet;
@@ -27,10 +32,19 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 35] = [
+pub const ROUTE_IDS: [&str; 52] = [
     "page-about",
     "page-meme",
     "page-assets",
+    "page-contact",
+    "page-editorial",
+    "page-guides",
+    "page-guide",
+    "page-privacy",
+    "page-terms",
+    "page-offline",
+    "page-missing-meme",
+    "page-retired-products",
     "health",
     "media-signed",
     "robots",
@@ -58,18 +72,38 @@ pub const ROUTE_IDS: [&str; 35] = [
     "upload",
     "mpe-uploads",
     "admin-mpe-candidates",
+    "admin-mpe-candidates-post",
     "meme-studio",
     "admin-meme-studio",
     "memes-semantic-search",
     "auth-get-session",
     "auth-sign-out",
+    "memes-chat",
+    "growth-baseline",
+    "saved-state-emails",
+    "source-refresh",
+    "instagram-video-cache",
+    "adpick-hotdeals",
+    "creator-products",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 2] = ["page-about", "page-meme"];
+pub const PAGE_ROUTE_IDS: [&str; 11] = [
+    "page-about",
+    "page-meme",
+    "page-contact",
+    "page-editorial",
+    "page-guides",
+    "page-guide",
+    "page-privacy",
+    "page-terms",
+    "page-offline",
+    "page-missing-meme",
+    "page-retired-products",
+];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
 /// variable is the rollback switch: an ignored typo would leave the route
@@ -136,21 +170,43 @@ impl<'a> Routes<'a> {
     /// route that ports only `GET` leaves `POST` and `OPTIONS` as they were.
     /// Call `add` once per path, with all its methods in one `MethodRouter`,
     /// and do not give that `MethodRouter` a fallback of its own.
-    pub fn add(mut self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
-        assert!(
-            ROUTE_IDS.contains(&id),
-            "add the route id {id:?} to ROUTE_IDS"
-        );
+    pub fn add(self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
+        self.add_each(path, vec![(id, methods)])
+    }
+
+    /// Registers several methods of one path, each under its own id, so each
+    /// can be handed back to Next on its own. The ids that are disabled (or
+    /// pages not switched on) are left out; with none left, Next keeps the
+    /// whole path.
+    pub fn add_each(
+        mut self,
+        path: &str,
+        entries: Vec<(&'static str, MethodRouter<AppState>)>,
+    ) -> Self {
         let config = &self.state.config;
-        if config.disabled_routes.contains(id) {
-            tracing::info!(id, path, "native route disabled, proxying to upstream");
-            return self;
+        let mut native: Option<MethodRouter<AppState>> = None;
+        for (id, methods) in entries {
+            assert!(
+                ROUTE_IDS.contains(&id),
+                "add the route id {id:?} to ROUTE_IDS"
+            );
+            if config.disabled_routes.contains(id) {
+                tracing::info!(id, path, "native route disabled, proxying to upstream");
+                continue;
+            }
+            if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
+                tracing::info!(id, path, "page route not switched on, proxying to upstream");
+                continue;
+            }
+            native = Some(match native {
+                Some(known) => known.merge(methods),
+                None => methods,
+            });
         }
-        if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
-            tracing::info!(id, path, "page route not switched on, proxying to upstream");
+        let Some(native) = native else {
             return self;
-        }
-        let native = methods.route_layer(middleware::from_fn_with_state(
+        };
+        let native = native.route_layer(middleware::from_fn_with_state(
             self.state.clone(),
             headers::apply,
         ));
@@ -159,6 +215,19 @@ impl<'a> Routes<'a> {
         // to every response proxied for another method.
         let methods = any(proxy::forward).merge(native);
         self.router = self.router.route(path, methods);
+        self
+    }
+
+    /// `add` for several paths under one id and one set of methods.
+    pub fn add_all(
+        mut self,
+        id: &'static str,
+        paths: &[String],
+        methods: MethodRouter<AppState>,
+    ) -> Self {
+        for path in paths {
+            self = self.add(id, path, methods.clone());
+        }
         self
     }
 
@@ -174,9 +243,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(cards::router(state))
         .merge(tracking::router(state))
         .merge(better_auth::router(state))
+        .merge(ops::router(state))
         .merge(crate::pages::router(state))
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))
         .merge(search::router(state))
+        .merge(chat::router(state))
 }

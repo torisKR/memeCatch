@@ -1,0 +1,31 @@
+# Targets of the page parity gate (pages.mjs). The memes are the rows of
+# seed.sql plus one from the migrations. Format: <path> <expectation>...
+
+# Static content.
+/about                                                                  200 index native
+
+# An existing meme that passes the index gate: WebPage, DefinedTerm and
+# BreadcrumbList JSON-LD.
+/memes/pgrich01-parity-rich                                             200 index native
+# Below the index gate: noindex, breadcrumb only.
+/memes/pgthin02-parity-thin                                             200 noindex native
+# A Korean slug with a space, dialogue examples, no year, rising.
+/memes/pgkor003-%EC%A4%91%EA%BA%BE%EB%A7%88%20%EC%A0%95%EC%8B%A0        200 index native
+# An event record, archived, with one wiki source.
+/memes/pgevt004-parity-event                                            200 index native
+
+# Not the canonical URL: one 308 each.
+/memes/pgrich01                                                         308
+/memes/pgrich01-old-slug                                                308
+/memes/pgrich01?utm_source=x&q=%ED%95%9C                                308
+/memes/pgkor003-%ec%a4%91%ea%ba%be%eb%a7%88%20%ec%a0%95%ec%8b%a0        308
+/memes/pgkor003%2D%EC%A4%91%EA%BA%BE%EB%A7%88%20%EC%A0%95%EC%8B%A0      308
+
+# No such meme: a real 404, noindex.
+/memes/zzzzzzzz-nothing                                                 404 noindex native
+/memes/zzzzzzzz                                                         404 noindex native
+
+# Shapes the pilot leaves to Next: a meme with media (from the migrations)
+# and a curated meme with no database row.
+/memes/wk36uaq4-ai-slop                                                 200 proxied
+/memes/jkm2022k                                                         proxied

@@ -1,0 +1,415 @@
+#!/usr/bin/env node
+// Page parity gate: is the page Axum renders the page Next renders?
+//
+//   node server/parity/pages/pages.mjs <next> <axum> [targets.txt] [--expect-proxied]
+//
+// For every target and every user agent in USER_AGENTS it asks both servers
+// and compares, in this order: status; Location and Refresh; the response
+// headers; <html lang dir>; <title>; every <meta name|property>; canonical,
+// hreflang, feed, manifest and icon links; JSON-LD parsed and compared as
+// data; the visible text of <body>; its links; its images; and the markup of
+// <main>. Exit code 0 means no difference outside ACCEPTED.
+//
+// Both documents are first settled (dom.mjs): Next streams part of a page
+// into hidden segments and, for browsers and Googlebot, sends the metadata
+// inside <body>. A crawler that runs scripts ends up with the settled
+// document, so that is what is compared. Where Next put the metadata is
+// printed for information.
+//
+// A target line is `<path> <expectation>...`. Expectations are checked on
+// both servers, so a seed that no longer produces the case fails the gate:
+//   200 | 308 | 404   the status
+//   index | noindex   whether a robots meta says noindex
+//   native | proxied  whether Axum rendered the page or passed Next's on
+// `--expect-proxied` replaces native with proxied on every line: use it with
+// an Axum started with the page routes in AXUM_DISABLED_ROUTES.
+//
+// Requests carry no Sec-Fetch-Mode header, like a crawler's: proxy.ts looks a
+// meme up only for a navigation or a request without that header, and Node's
+// fetch() always sends `cors`. Both servers get the Host of the Next URL.
+//
+// Needs the packages of the repository root (jsdom).
+import { readFileSync } from "node:fs";
+import http from "node:http";
+import { settle } from "./dom.mjs";
+
+const USER_AGENTS = {
+  browser:
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  googlebot:
+    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  // On Next's list of crawlers that get the metadata in <head> without streaming.
+  yeti: "Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd)",
+};
+
+// ---------------------------------------------------------------------------
+// What is not compared, and why.
+
+const IGNORED_HEADERS = new Map([
+  ["date", "stamped by whichever server writes the response"],
+  ["connection", "hop-by-hop"],
+  ["keep-alive", "hop-by-hop"],
+  ["transfer-encoding", "hop-by-hop: each server frames its own body"],
+  ["content-length", "framing; Next sets it only on its prerendered 404"],
+  ["etag", "validator of Next's prerendered 404 file"],
+  ["x-nextjs-cache", "Next's cache state for this request"],
+  ["x-nextjs-prerender", "Next internals"],
+  ["x-nextjs-stale-time", "Next internals"],
+  ["x-middleware-rewrite", "names the internal rewrite target of proxy.ts"],
+  ["x-powered-by", "Next internals"],
+  ["link", "a preload hint that names Next's own stylesheet files; Next sends it only to the crawlers it does not stream to"],
+]);
+
+// Parts of a page Next renders and the Axum pilot does not yet. They are cut
+// out of Next's document before text, links, images and markup are compared,
+// and counted in the output. UI-PLAN.md lists them as missing.
+const NOT_PORTED = [
+  {
+    paths: /^\/memes\//,
+    selectors: [
+      'section[aria-labelledby="reaction-bar-title"]', // reaction bar
+      "main > div > div.space-y-4 > button", // "export card" button
+      'section[aria-labelledby="related-social-embeds"]', // related videos
+      '[data-detail-order="related"]', // similar memes
+      '[data-detail-order="neighbours"]', // same category, same year
+      '[data-detail-order="sources"]', // sources panel, trust note, contribution form
+      "[data-auth-invite]", // sign-in invite
+      "[data-market-passport]", // market passport
+      'section[aria-labelledby="source-evidence-title"]', // evidence list
+      '[data-detail-order="appendix"]', // safety rationale, lifecycle guide
+      'section[aria-label="댓글"]', // comments
+    ],
+  },
+];
+
+// Differences that are decided, with the reason. Anything else fails.
+const ACCEPTED = [
+  {
+    when: (target) => target.status === 404,
+    fields: ["header cache-control", "html", "meta", "feeds", "JSON-LD", "text", "links", "images", "main markup"],
+    reason:
+      "Next answers a missing meme with a prerendered file: a year-long s-maxage, the site default share card, and an <html> without lang and a <body> without content until its scripts run. Axum sends no-store and the same message as HTML. Status, <title> and noindex are compared.",
+  },
+  {
+    when: () => true,
+    fields: ["icon links"],
+    reason: "Next appends a hash of each icon file as a query string; the paths are compared.",
+  },
+];
+
+// ---------------------------------------------------------------------------
+
+function request(base, path, host, userAgent) {
+  const url = new URL(base);
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        host: url.hostname,
+        port: url.port,
+        path,
+        method: "GET",
+        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity" },
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(chunk));
+        res.on("end", () =>
+          resolve({ status: res.statusCode, rawHeaders: res.rawHeaders, body: Buffer.concat(chunks).toString("utf8") }),
+        );
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function comparableHeaders(rawHeaders) {
+  const headers = new Map();
+  for (let index = 0; index < rawHeaders.length; index += 2) {
+    const name = rawHeaders[index].toLowerCase();
+    if (IGNORED_HEADERS.has(name)) continue;
+    headers.set(name, [...(headers.get(name) ?? []), rawHeaders[index + 1]]);
+  }
+  // Which hop compresses is not the page's business: Accept-Encoding aside,
+  // Vary must list the same request headers.
+  if (headers.has("vary")) {
+    const fields = headers
+      .get("vary")
+      .flatMap((value) => value.split(","))
+      .map((field) => field.trim().toLowerCase())
+      .filter((field) => field && field !== "accept-encoding");
+    headers.set("vary", [[...new Set(fields)].sort().join(", ")]);
+  }
+  return headers;
+}
+
+const squash = (text) => text.replace(/\s+/g, " ").trim();
+const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+const sortKeys = (value) =>
+  Array.isArray(value)
+    ? value.map(sortKeys)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortKeys(value[key])]))
+      : value;
+
+// Attributes that only tell ui/site.js what to act on.
+const SCRIPT_INPUT_ATTRIBUTES = new Set([
+  "data-copy",
+  "data-share",
+  "data-share-title",
+  "data-save-meme",
+  "data-meme-id",
+  "data-ads",
+  "data-track",
+  "data-track-from",
+  "data-track-short-id",
+]);
+// The motion library's start state in Next's markup, and the CSS animation
+// classes that replace it (ui/site.css).
+const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "opacity:0"]);
+const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
+
+function normalizedAttribute(name, value) {
+  if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
+  if (/^_R_|^:r/.test(value)) return null; // React's generated ids
+  if (name === "class") {
+    const tokens = value
+      .split(/\s+/)
+      .filter(Boolean)
+      // A CSS-module class: Next writes module_local__hash, Axum module-local.
+      .map((token) => token.replace(/^([a-z-]+)_([A-Za-z0-9]+)__[\w-]+$/, (_, module, local) => `${module}-${kebab(local)}`))
+      .filter((token) => !MOTION_CLASSES.has(token));
+    return tokens.length ? [...new Set(tokens)].sort().join(" ") : null;
+  }
+  if (name === "style") {
+    const declarations = value
+      .split(";")
+      .map((part) => part.trim())
+      .filter((part) => part && !MOTION_START_STYLES.has(part.replace(/\s+/g, "")));
+    return declarations.length ? declarations.join(";") : null;
+  }
+  return value;
+}
+
+/** One line per element or text run, indented by depth. */
+function outline(node, depth, out) {
+  let text = "";
+  const flush = () => {
+    if (squash(text)) out.push(`${"  ".repeat(depth)}${JSON.stringify(squash(text))}`);
+    text = "";
+  };
+  for (const child of node.childNodes) {
+    if (child.nodeType === 3) {
+      text += child.data;
+    } else if (child.nodeType === 1) {
+      flush();
+      const attributes = [...child.attributes]
+        .map(({ name, value }) => [name, normalizedAttribute(name, value)])
+        .filter(([, value]) => value !== null)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, value]) => `${name}=${JSON.stringify(value)}`);
+      out.push(`${"  ".repeat(depth)}<${[child.localName, ...attributes].join(" ")}>`);
+      outline(child, depth + 1, out);
+    }
+  }
+  flush();
+}
+
+const rendererOf = (body) => (body.includes('href="/_axum/site.') ? "axum" : body.includes("/_next/static/") ? "next" : "none");
+
+/** `cutNotPorted`: this is Next's document and Axum rendered its own. */
+function facts(response, path, cutNotPorted) {
+  const { document, unresolved } = settle(response.body);
+  const all = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const metadataInHead = Boolean(document.head.querySelector("title"));
+  const result = {
+    unresolved,
+    renderer: rendererOf(response.body),
+    metadataInHead,
+    html: `lang=${document.documentElement.getAttribute("lang")} dir=${document.documentElement.getAttribute("dir")}`,
+    title: all("title").map((element) => element.textContent),
+    meta: all("meta[name], meta[property]")
+      .map((element) => {
+        const key = element.getAttribute("name") ?? element.getAttribute("property");
+        const media = element.getAttribute("media");
+        return `${key}${media ? ` [${media}]` : ""} = ${element.getAttribute("content")}`;
+      })
+      .sort(),
+    canonical: all('link[rel="canonical"]').map((element) => element.getAttribute("href")),
+    hreflang: all('link[rel="alternate"][hreflang]').map((element) => `${element.getAttribute("hreflang")} = ${element.getAttribute("href")}`),
+    feeds: all('link[rel="alternate"][type]').map((element) => `${element.getAttribute("type")} ${element.getAttribute("title")} = ${element.getAttribute("href")}`),
+    manifest: all('link[rel="manifest"]').map((element) => element.getAttribute("href")),
+    icons: all('link[rel="icon"], link[rel="apple-touch-icon"]').map(
+      (element) => `${element.getAttribute("rel")} ${element.getAttribute("type")} ${element.getAttribute("sizes")} = ${element.getAttribute("href").split("?")[0]}`,
+    ),
+    jsonLd: all('script[type="application/ld+json"]')
+      .map((element) => {
+        try {
+          return JSON.stringify(sortKeys(JSON.parse(element.textContent)));
+        } catch {
+          return `unparseable: ${element.textContent.slice(0, 80)}`;
+        }
+      })
+      .sort(),
+  };
+  result.noindex = result.meta.some((entry) => /^robots = .*noindex/.test(entry));
+
+  let removed = 0;
+  if (cutNotPorted) {
+    for (const gap of NOT_PORTED.filter((gap) => gap.paths.test(path))) {
+      for (const selector of gap.selectors) {
+        for (const element of all(selector)) {
+          element.remove();
+          removed += 1;
+        }
+      }
+    }
+  }
+  result.removed = removed;
+  // Not content: scripts, styles, the empty hidden containers React leaves
+  // behind after streaming, and metadata Next streamed into <body> (compared
+  // above; a <title> there would count as text).
+  for (const element of all("script, style, template, noscript, body > div[hidden], body title, body meta, body link")) {
+    element.remove();
+  }
+  result.text = squash(document.body?.textContent ?? "");
+  result.links = all("a[href]", document.body).map((element) =>
+    [element.getAttribute("href"), squash(element.textContent), element.getAttribute("rel") ?? "", element.getAttribute("target") ?? ""].join(" | "),
+  );
+  result.images = all("img, source", document.body).map((element) =>
+    ["src", "srcset", "alt", "width", "height", "media"].map((name) => `${name}=${element.getAttribute(name) ?? ""}`).join(" "),
+  );
+  const main = document.querySelector("main");
+  result.main = [];
+  if (main) outline(main, 0, result.main);
+  return result;
+}
+
+function firstDifference(a, b) {
+  const length = Math.min(a.length, b.length);
+  let index = 0;
+  while (index < length && a[index] === b[index]) index += 1;
+  return index;
+}
+
+function describe(field, next, axum) {
+  if (Array.isArray(next) && Array.isArray(axum)) {
+    const index = firstDifference(next, axum);
+    return `${field}: ${next.length} vs ${axum.length} entries, first difference at #${index}\n      next: ${next[index] ?? "(none)"}\n      axum: ${axum[index] ?? "(none)"}`;
+  }
+  if (typeof next === "string" && typeof axum === "string" && next.length > 120) {
+    const index = firstDifference(next, axum);
+    const from = Math.max(0, index - 40);
+    return `${field}: ${next.length} vs ${axum.length} characters, first difference at ${index}\n      next: …${next.slice(from, index + 60)}\n      axum: …${axum.slice(from, index + 60)}`;
+  }
+  return `${field}:\n      next: ${JSON.stringify(next)}\n      axum: ${JSON.stringify(axum)}`;
+}
+
+function compare(target, next, axum) {
+  const differences = [];
+  const differ = (field, a, b) => {
+    if (JSON.stringify(a) !== JSON.stringify(b)) differences.push({ field, detail: describe(field, a, b) });
+  };
+
+  differ("status", next.status, axum.status);
+  const nextHeaders = comparableHeaders(next.rawHeaders);
+  const axumHeaders = comparableHeaders(axum.rawHeaders);
+  for (const name of [...new Set([...nextHeaders.keys(), ...axumHeaders.keys()])].sort()) {
+    differ(`header ${name}`, nextHeaders.get(name) ?? null, axumHeaders.get(name) ?? null);
+  }
+  if (next.status >= 300 && next.status < 400) {
+    differ("redirect body", next.body, axum.body);
+    return { differences, info: `→ ${nextHeaders.get("location")}` };
+  }
+
+  const a = facts(next, target.path, rendererOf(axum.body) === "axum");
+  const b = facts(axum, target.path, false);
+  for (const field of ["html", "title", "meta", "canonical", "hreflang", "feeds", "manifest", "jsonLd", "text", "links", "images"]) {
+    differ(field === "jsonLd" ? "JSON-LD" : field, a[field], b[field]);
+  }
+  differ("icon links", a.icons, b.icons);
+  differ("main markup", a.main, b.main);
+
+  const expectations = [];
+  for (const [name, facts] of [["next", a], ["axum", b]]) {
+    if (target.index !== undefined && facts.noindex === target.index) {
+      expectations.push(`${name} is ${facts.noindex ? "noindex" : "indexable"}, the target list says ${target.index ? "index" : "noindex"}`);
+    }
+  }
+  if (target.renderer && b.renderer !== target.renderer) {
+    expectations.push(`axum sent a page rendered by ${b.renderer}, the target list says ${target.renderer === "axum" ? "native" : "proxied"}`);
+  }
+  if (a.unresolved || b.unresolved) expectations.push(`streamed segments not placed: next ${a.unresolved}, axum ${b.unresolved}`);
+  const info = [
+    `rendered by ${b.renderer}`,
+    a.noindex ? "noindex" : "indexable",
+    `${a.jsonLd.length} JSON-LD`,
+    `next metadata in ${a.metadataInHead ? "<head>" : "<body> (streamed)"}`,
+    a.removed ? `${a.removed} not-ported nodes cut from next` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  return { differences, expectations, info };
+}
+
+function parseTargets(file, expectProxied) {
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => {
+      const [path, ...tokens] = line.split(/\s+/);
+      const target = { path };
+      for (const token of tokens) {
+        if (/^\d{3}$/.test(token)) target.status = Number(token);
+        else if (token === "index" || token === "noindex") target.index = token === "index";
+        else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
+        else throw new Error(`unknown expectation ${token} in: ${line}`);
+      }
+      return target;
+    });
+}
+
+const args = process.argv.slice(2);
+const expectProxied = args.includes("--expect-proxied");
+const [nextBase, axumBase, targetsFile = new URL("./targets.txt", import.meta.url).pathname] = args.filter((arg) => !arg.startsWith("--"));
+if (!nextBase || !axumBase) {
+  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied]");
+  process.exit(2);
+}
+const host = new URL(nextBase).host;
+let failures = 0;
+const acceptedSeen = new Map();
+
+for (const target of parseTargets(targetsFile, expectProxied)) {
+  for (const [agent, userAgent] of Object.entries(USER_AGENTS)) {
+    const [next, axum] = await Promise.all([
+      request(nextBase, target.path, host, userAgent),
+      request(axumBase, target.path, host, userAgent),
+    ]);
+    const { differences, expectations = [], info } = compare(target, next, axum);
+    if (target.status !== undefined && next.status !== target.status) {
+      expectations.push(`next answered ${next.status}, the target list says ${target.status}`);
+    }
+    const unexpected = [];
+    for (const difference of differences) {
+      const accepted = ACCEPTED.find(
+        (entry) => entry.when({ ...target, status: next.status }) && entry.fields.includes(difference.field),
+      );
+      if (accepted) acceptedSeen.set(accepted, (acceptedSeen.get(accepted) ?? new Set()).add(difference.field));
+      else unexpected.push(difference);
+    }
+    const failed = unexpected.length > 0 || expectations.length > 0;
+    failures += failed ? 1 : 0;
+    console.log(`${failed ? "DIFF" : "ok  "} ${next.status} ${agent.padEnd(9)} ${target.path}  (${info})`);
+    for (const message of expectations) console.log(`    expectation: ${message}`);
+    for (const { detail } of unexpected) console.log(`    ${detail}`);
+  }
+}
+
+console.log("");
+for (const [entry, fields] of acceptedSeen) {
+  console.log(`accepted difference in ${[...fields].join(", ")}: ${entry.reason}`);
+}
+console.log(failures === 0 ? "pages match" : `${failures} request(s) differ`);
+process.exit(failures === 0 ? 0 : 1);

@@ -85,6 +85,65 @@ Both servers write one `[CSP-VIOLATION] ...` line to their log for each report
 they accept. To compare that part, cut those lines out of the two logs after a
 `csp-report.mjs` run (`grep -o '\[CSP-VIOLATION\].*'`) and `cmp` them.
 
+## Pages Axum renders itself
+
+`parity.mjs` compares bytes, which a page rendered by another engine cannot
+match. `pages/pages.mjs` compares what a reader or a crawler gets.
+
+```sh
+# 1. Seed, then start Next with an empty Data Cache: it keeps the catalog for a day.
+docker exec -i <container> psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q < server/parity/pages/seed.sql
+rm -rf .next/standalone/.next/cache   # then start Next as in server/README.md
+
+# 2. Axum with the pilot pages switched on, in front of that Next.
+AXUM_PILOT_ROUTES=page-about,page-meme ... cargo run
+
+# 3. The gate. Exit code 0: nothing differs outside the accepted list.
+node server/parity/pages/pages.mjs $NEXT $AXUM
+
+# 4. The rollback switch: with the routes disabled every target is Next's page.
+AXUM_PILOT_ROUTES=page-about,page-meme AXUM_DISABLED_ROUTES=page-about,page-meme,page-assets ... cargo run
+node server/parity/pages/pages.mjs $NEXT $AXUM --expect-proxied
+```
+
+For each line of `pages/targets.txt`, as a browser, as Googlebot and as Yeti,
+it compares: the status; `Location` and `Refresh`; every response header but
+the ones below; `<html lang dir>`; `<title>`; every `<meta name|property>`;
+the canonical, hreflang, feed, manifest and icon links; JSON-LD, parsed and
+compared as data; the visible text of `<body>`; its links (href, text, rel,
+target); its images; and the markup of `<main>`, element by element.
+
+A target line also states what the case is (`200`, `308`, `404`; `index` or
+`noindex`; `native` or `proxied`), and the gate fails when either server
+disagrees, so a seed that stops producing the case is noticed.
+
+Both documents are settled first (`pages/dom.mjs`): Next streams part of a
+page into hidden segments that an inline script moves into place, and for
+browsers and Googlebot it sends `<title>`, the description, the canonical
+link and the rest of the metadata inside `<body>`. Axum sends one finished
+document with the metadata in `<head>`, which is what Next sends to the
+crawlers it does not stream to (Yeti, Bingbot, the link-preview bots). The
+output says where Next put the metadata for each request.
+
+What it does not compare, with the reason, is in three lists at the top of
+the script:
+
+| List | Content |
+| --- | --- |
+| `IGNORED_HEADERS` | Hop-by-hop headers, Next's cache internals, and the `Link` preload hint that names Next's own stylesheet files. `Vary` is compared as a set without `Accept-Encoding`. |
+| `NOT_PORTED` | Sections of the meme page the pilot does not render. They are cut out of Next's document before text, links, images and markup are compared, and the count is printed. Delete an entry when the section is ported. |
+| `ACCEPTED` | Decided differences. One today: the 404 document. Next answers a missing meme with a prerendered file whose `<body>` is empty until scripts run, with a year-long `s-maxage`; Axum sends the message as HTML with `no-store`. Status, `<title>` and `noindex` are still compared. |
+
+In the markup comparison a class list is compared as a set, a CSS-module
+class (`module_local__hash` in Next, `module-local` in Axum) is compared by
+module and local name, React's generated ids are skipped, and so are the
+`data-*` attributes that only feed `ui/site.js` and the start state the
+motion library leaves in Next's markup (Axum animates the same thing in CSS).
+Icon links are compared without the file hash Next appends as a query.
+
+It does not run scripts, so it says nothing about what a page does after it
+loads, and it does not look at pixels.
+
 `/robots.txt` is rendered by `next build`; Axum renders it at startup. They
 match when Axum runs with the `NEXT_PUBLIC_SITE_URL` of the Next build.
 `server/tests/fixtures/robots.txt` is the body of a Next built with

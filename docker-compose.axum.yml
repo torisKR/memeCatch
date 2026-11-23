@@ -1,0 +1,74 @@
+# Opt-in: the Axum server becomes the public listener and Next moves behind it.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.axum.yml up -d
+#
+# Without this file nothing changes. See docs/axum-migration/PLAN.md.
+#
+# Pause automatic deploys before you opt in by hand. scripts/deploy-oci.sh
+# does not load this file (that is stage 5 of the plan), so its next run turns
+# `app` back into Next and leaves `next` running as an orphan: two Next
+# servers, each with its own connection pool and memory limit, and no Axum.
+#
+# Needs a Docker Compose that knows `!override`, `!reset` and `extends` with
+# `depends_on` (it renders on v5.5.0; the version on the VM is not checked).
+
+services:
+  # The Next app as docker-compose.yml defines it (image, environment, limits,
+  # volume), on port 3001. Nothing but `app` talks to it.
+  next:
+    extends:
+      file: docker-compose.yml
+      service: app
+    environment:
+      PORT: "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+
+  # Keeps the service name and port, so Caddy (`reverse_proxy app:3000`) and
+  # the scheduler (`http://app:3000/api/cron/*`) need no change.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    # A fixed name, like the scheduler: `compose up` sees a rebuilt image.
+    image: memecatch-server:local
+    mem_limit: 256m
+    cpus: 0.25
+    # Replaces the Next environment instead of merging into it.
+    environment: !override
+      PORT: "3000"
+      UPSTREAM_URL: http://next:3001
+      DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
+      # The main pool. Two more connections belong to the deadline pool: 6 in all.
+      AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
+      AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      # As for the Next app: both read the `__Secure-` session cookie.
+      NODE_ENV: production
+      CRON_SECRET: ${CRON_SECRET:-}
+      # Next fixes its response headers at build time from these two values
+      # (the Dockerfile build args). Axum reads them at start; they must be
+      # the same for the headers of native routes to match.
+      # CSP_ENFORCE and CSP_REPORT_URI are left out on purpose: the Next image
+      # is built without them, and a runtime value does not change what Next
+      # sends, so passing one here would make native routes differ.
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
+      RELEASE_SHA: ${RELEASE_SHA:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      OBJECT_SIGNING_SECRET: ${OBJECT_SIGNING_SECRET:-}
+      LOCAL_OBJECT_STORAGE_DIR: ${LOCAL_OBJECT_STORAGE_DIR:-}
+    volumes: !reset []
+    depends_on:
+      postgres:
+        condition: service_healthy
+      next:
+        condition: service_healthy
+    healthcheck:
+      # The runtime image has no curl or node; bash can open the socket.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3000 && printf 'GET /api/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"]
+      interval: 10s
+      timeout: 5s
+      retries: 12

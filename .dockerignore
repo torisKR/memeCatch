@@ -20,3 +20,4 @@ coverage
 *.log
 .env*
 deploy/smoke.env
+server/target

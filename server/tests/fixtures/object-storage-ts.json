@@ -1,0 +1,945 @@
+{
+  "now": 1764000000000,
+  "env": {
+    "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+    "BETTER_AUTH_SECRET": "fixture-better-auth-secret",
+    "NEXT_PUBLIC_SITE_URL": "https://media.example//"
+  },
+  "urls": [
+    {
+      "note": "plain",
+      "bucket": "uploads",
+      "name": "a.png",
+      "url": "https://media.example/api/media/signed?key=uploads%2Fa.png&exp=1764000060000&sig=924762f5e943effc9c21382eca353450a39263cc2f82a5505e8d345337107b5c",
+      "r2Get": "/fixture-bucket/uploads/a.png",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2Fa.png%2F&delimiter=%2F"
+    },
+    {
+      "note": "nested",
+      "bucket": "uploads",
+      "name": "2026/11/clip-01_final.v2.mp4",
+      "url": "https://media.example/api/media/signed?key=uploads%2F2026%2F11%2Fclip-01_final.v2.mp4&exp=1764000060000&sig=16f7d21898d58ccda08ca70fa8856db88212baa97a86d49eb2e57dc000046221",
+      "r2Get": "/fixture-bucket/uploads/2026/11/clip-01_final.v2.mp4",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2F2026%2F11%2Fclip-01_final.v2.mp4%2F&delimiter=%2F"
+    },
+    {
+      "note": "leading slash",
+      "bucket": "uploads",
+      "name": "/leading/slash.png",
+      "url": "https://media.example/api/media/signed?key=uploads%2Fleading%2Fslash.png&exp=1764000060000&sig=3075c138749933d0ff8f7b38bdabd3a7e58a1b0ff4e9ba1cc888c4d6e174923c",
+      "r2Get": "/fixture-bucket/uploads/leading/slash.png",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2Fleading%2Fslash.png%2F&delimiter=%2F"
+    },
+    {
+      "note": "empty segments",
+      "bucket": "uploads",
+      "name": "a//b///c.png",
+      "url": "https://media.example/api/media/signed?key=uploads%2Fa%2Fb%2Fc.png&exp=1764000060000&sig=9ef1afda87337338a52da3095691bc23ddc58d9f2c2639b7bfa0e531f3ff46f6",
+      "r2Get": "/fixture-bucket/uploads/a/b/c.png",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2Fa%2Fb%2Fc.png%2F&delimiter=%2F"
+    },
+    {
+      "note": "dot segments",
+      "bucket": "uploads",
+      "name": "./a/../b.png",
+      "url": "https://media.example/api/media/signed?key=uploads%2Fa%2Fb.png&exp=1764000060000&sig=f46b70750ba7ea0fa1387d35ef83e8e750d7112134372950f430611e8dd5930a",
+      "r2Get": "/fixture-bucket/uploads/a/b.png",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2Fa%2Fb.png%2F&delimiter=%2F"
+    },
+    {
+      "note": "trailing slash",
+      "bucket": "uploads",
+      "name": "trailing/",
+      "url": "https://media.example/api/media/signed?key=uploads%2Ftrailing&exp=1764000060000&sig=f14de56fd2fb616ab1a80026c21751e439c34f30227cd711f612eef498ccce1a",
+      "r2Get": "/fixture-bucket/uploads/trailing",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2Ftrailing%2F&delimiter=%2F"
+    },
+    {
+      "note": "three dots is a name",
+      "bucket": "uploads",
+      "name": "...",
+      "url": "https://media.example/api/media/signed?key=uploads%2F...&exp=1764000060000&sig=a3f093ca352fccaff696259041badeed1cb0ec20e6d8d5342a7ae5127a670eff",
+      "r2Get": "/fixture-bucket/uploads/...",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2F...%2F&delimiter=%2F"
+    },
+    {
+      "note": "bucket with a slash",
+      "bucket": "up/loads",
+      "name": "x",
+      "url": "https://media.example/api/media/signed?key=up%2Floads%2Fx&exp=1764000060000&sig=5d943a7df9e619cf98a3a1f1697410e65dc92f84e36697ed6d17ea6e707e0e68",
+      "r2Get": "/fixture-bucket/up/loads/x",
+      "r2List": "/fixture-bucket?list-type=2&prefix=up%2Floads%2Fx%2F&delimiter=%2F"
+    },
+    {
+      "note": "bucket with dot segments",
+      "bucket": "../uploads/.",
+      "name": "x",
+      "url": "https://media.example/api/media/signed?key=uploads%2Fx&exp=1764000060000&sig=0c4560f8e0f114d9b0be9185efad8f2e387e64ef41b8aae0c38879a667a514f6",
+      "r2Get": "/fixture-bucket/uploads/x",
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2Fx%2F&delimiter=%2F"
+    },
+    {
+      "note": "only dot-dot",
+      "bucket": "uploads",
+      "name": "..",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "empty name",
+      "bucket": "uploads",
+      "name": "",
+      "url": null,
+      "r2Get": null,
+      "r2List": "/fixture-bucket?list-type=2&prefix=uploads%2F&delimiter=%2F"
+    },
+    {
+      "note": "empty bucket",
+      "bucket": "",
+      "name": "a.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "Hangul",
+      "bucket": "uploads",
+      "name": "\ud55c\uae00.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "Hangul segment",
+      "bucket": "uploads",
+      "name": "\ubc08/a.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "space",
+      "bucket": "uploads",
+      "name": "with space.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "percent escape",
+      "bucket": "uploads",
+      "name": "a%20b.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "plus",
+      "bucket": "uploads",
+      "name": "a+b.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "trailing newline",
+      "bucket": "uploads",
+      "name": "a.png\n",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "accented letter",
+      "bucket": "uploads",
+      "name": "\u00e9.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "fullwidth letter",
+      "bucket": "uploads",
+      "name": "\uff41.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "Kelvin sign",
+      "bucket": "uploads",
+      "name": "\u212a.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "backslash",
+      "bucket": "uploads",
+      "name": "a\\b.png",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    },
+    {
+      "note": "query characters",
+      "bucket": "uploads",
+      "name": "a.png?x=1&y=2",
+      "url": null,
+      "r2Get": null,
+      "r2List": null
+    }
+  ],
+  "siteUrls": [
+    {
+      "note": "NEXT_PUBLIC_SITE_URL unset",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "url": "http://localhost:3000/api/media/signed?key=uploads%2Fa.png&exp=1764000060000&sig=924762f5e943effc9c21382eca353450a39263cc2f82a5505e8d345337107b5c"
+    },
+    {
+      "note": "NEXT_PUBLIC_SITE_URL empty",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret",
+        "NEXT_PUBLIC_SITE_URL": ""
+      },
+      "url": "/api/media/signed?key=uploads%2Fa.png&exp=1764000060000&sig=924762f5e943effc9c21382eca353450a39263cc2f82a5505e8d345337107b5c"
+    }
+  ],
+  "r2": {
+    "env": {
+      "R2_ACCOUNT_ID": "fixture-account",
+      "R2_ACCESS_KEY_ID": "fixture-access-key",
+      "R2_SECRET_ACCESS_KEY": "fixture-secret-key",
+      "R2_BUCKET": "fixture-bucket"
+    },
+    "get": {
+      "method": "GET",
+      "host": "fixture-account.r2.cloudflarestorage.com",
+      "target": "/fixture-bucket/uploads/a.png",
+      "contentType": null,
+      "credentialScope": "auto/s3/aws4_request",
+      "signedHeaders": "host;x-amz-content-sha256;x-amz-date",
+      "contentSha256": "UNSIGNED-PAYLOAD"
+    },
+    "put": {
+      "method": "PUT",
+      "host": "fixture-account.r2.cloudflarestorage.com",
+      "target": "/fixture-bucket/uploads/a.png",
+      "contentType": "image/png",
+      "credentialScope": "auto/s3/aws4_request",
+      "signedHeaders": "host;x-amz-content-sha256;x-amz-date",
+      "contentSha256": "UNSIGNED-PAYLOAD"
+    },
+    "putDefaultType": {
+      "method": "PUT",
+      "host": "fixture-account.r2.cloudflarestorage.com",
+      "target": "/fixture-bucket/uploads/a.bin",
+      "contentType": "application/octet-stream",
+      "credentialScope": "auto/s3/aws4_request",
+      "signedHeaders": "host;x-amz-content-sha256;x-amz-date",
+      "contentSha256": "UNSIGNED-PAYLOAD"
+    },
+    "delete": {
+      "method": "DELETE",
+      "host": "fixture-account.r2.cloudflarestorage.com",
+      "target": "/fixture-bucket/uploads/a.png",
+      "contentType": null,
+      "credentialScope": "auto/s3/aws4_request",
+      "signedHeaders": "host;x-amz-content-sha256;x-amz-date",
+      "contentSha256": "UNSIGNED-PAYLOAD"
+    },
+    "list": {
+      "method": "GET",
+      "host": "fixture-account.r2.cloudflarestorage.com",
+      "target": "/fixture-bucket?list-type=2&prefix=uploads%2F2026%2F&delimiter=%2F",
+      "contentType": null,
+      "credentialScope": "auto/s3/aws4_request",
+      "signedHeaders": "host;x-amz-content-sha256;x-amz-date",
+      "contentSha256": "UNSIGNED-PAYLOAD"
+    },
+    "listBucket": {
+      "method": "GET",
+      "host": "fixture-account.r2.cloudflarestorage.com",
+      "target": "/fixture-bucket?list-type=2&prefix=uploads%2F&delimiter=%2F",
+      "contentType": null,
+      "credentialScope": "auto/s3/aws4_request",
+      "signedHeaders": "host;x-amz-content-sha256;x-amz-date",
+      "contentSha256": "UNSIGNED-PAYLOAD"
+    }
+  },
+  "signedKeys": [
+    {
+      "key": "uploads/a.png",
+      "accepted": true
+    },
+    {
+      "key": "/uploads/a.png",
+      "accepted": true
+    },
+    {
+      "key": "uploads//a.png",
+      "accepted": true
+    },
+    {
+      "key": "uploads/./a.png",
+      "accepted": true
+    },
+    {
+      "key": "uploads/a.png/",
+      "accepted": true
+    },
+    {
+      "key": "../../etc/passwd",
+      "accepted": true
+    },
+    {
+      "key": "a",
+      "accepted": true
+    },
+    {
+      "key": "..",
+      "accepted": false
+    },
+    {
+      "key": "/",
+      "accepted": false
+    },
+    {
+      "key": "",
+      "accepted": false
+    },
+    {
+      "key": "uploads/\ud55c\uae00.png",
+      "accepted": false
+    },
+    {
+      "key": "uploads/a b.png",
+      "accepted": false
+    },
+    {
+      "key": "uploads/a.png\n",
+      "accepted": false
+    }
+  ],
+  "verify": [
+    {
+      "name": "minted by the module",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "last signature digit changed",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa0",
+      "accepted": false
+    },
+    {
+      "name": "first signature digit changed",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "0363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "signature in upper case",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "E363444BB19663F96D401DA218B6CAA70A589AE3E4AC096ED0395C5C11275FA2",
+      "accepted": false
+    },
+    {
+      "name": "signature one digit short",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa",
+      "accepted": false
+    },
+    {
+      "name": "signature one digit long",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa20",
+      "accepted": false
+    },
+    {
+      "name": "signature with a space after it",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2 ",
+      "accepted": false
+    },
+    {
+      "name": "empty signature",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "",
+      "accepted": false
+    },
+    {
+      "name": "signature that is not hex",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "accepted": false
+    },
+    {
+      "name": "signature of 64 non-ASCII letters",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+      "accepted": false
+    },
+    {
+      "name": "another key under the same signature",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/b.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "the key with a leading slash",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "/uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "a later expiry under the same signature",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600001",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "expired two minutes ago",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1763999880000",
+      "sig": "095c1addd6832c8006ff5d7cba625a119d922288eee6f734fb4f5d2d55ddbb69",
+      "accepted": false
+    },
+    {
+      "name": "expired one millisecond ago",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1763999999999",
+      "sig": "38a110e9954e2905a89a562f6ec5d4f7f8003731fec1738f9e61c9cbd287d10f",
+      "accepted": false
+    },
+    {
+      "name": "expires at this very millisecond",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000000000",
+      "sig": "51f8cb25a28c6df5792d3ea5096721304c6bccce48c1924b6a58ed6961e428e2",
+      "accepted": true
+    },
+    {
+      "name": "minted under a different secret",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "067919f7d2ccbbb768847606450d25f5e87ab15ec373aba274c32a3bcbdba6b2",
+      "accepted": false
+    },
+    {
+      "name": "no object secret: the auth secret signs",
+      "env": {
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "d88b0c38487916a03f89eb291818e986f9742d40970b94cce7d83a84702d76da",
+      "accepted": true
+    },
+    {
+      "name": "object secret set: the auth secret no longer signs",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "d88b0c38487916a03f89eb291818e986f9742d40970b94cce7d83a84702d76da",
+      "accepted": false
+    },
+    {
+      "name": "blank object secret falls back to the auth secret",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "  ",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "d88b0c38487916a03f89eb291818e986f9742d40970b94cce7d83a84702d76da",
+      "accepted": true
+    },
+    {
+      "name": "object secret is trimmed",
+      "env": {
+        "OBJECT_SIGNING_SECRET": " fixture-object-signing-secret\n",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "auth secret is trimmed",
+      "env": {
+        "BETTER_AUTH_SECRET": " fixture-better-auth-secret "
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000",
+      "sig": "d88b0c38487916a03f89eb291818e986f9742d40970b94cce7d83a84702d76da",
+      "accepted": true
+    },
+    {
+      "name": "exp with spaces around it",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": " 1764000600000 ",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp with a tab and a newline",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "\t1764000600000\n",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp with no-break spaces",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "\u00a01764000600000\u00a0",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp with a byte order mark",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "\ufeff1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp with a line separator",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000\u2028",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp with U+0085, which is not JavaScript whitespace",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "\u00851764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp with a plus sign",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "+1764000600000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp with a decimal point",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000.0",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp ending in a point",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000.",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in exponent form",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1.7640006e12",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in exponent form, upper case",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "17640006E5",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in hex",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0x19ab6a10fc0",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in hex, upper case",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0X19AB6A10FC0",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in octal",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0o31526650207700",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in binary",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0b11001101010110110101000010000111111000000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": true
+    },
+    {
+      "name": "exp in hex with a sign",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "+0x19ab6a10fc0",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp in hex with a sign after the prefix",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0x+19ab6a10fc0",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp hex prefix only",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0x",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp with a digit separator",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1_764_000_600_000",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp followed by letters",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000abc",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp negative",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "-1764000600000",
+      "sig": "076da40cd54ddf41c7922ad5f20950810beaa09077c1b4de67d632b9f22aad8a",
+      "accepted": false
+    },
+    {
+      "name": "exp empty",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "",
+      "sig": "19228505bda1f1b510abf508e0f80568a42891531dcbba3249a9b8d3f1cf7c42",
+      "accepted": false
+    },
+    {
+      "name": "exp blank",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "   ",
+      "sig": "19228505bda1f1b510abf508e0f80568a42891531dcbba3249a9b8d3f1cf7c42",
+      "accepted": false
+    },
+    {
+      "name": "exp a word",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "soon",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp Infinity",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "Infinity",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp infinity as Rust spells it",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "inf",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp NaN",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "NaN",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp overflowing to Infinity",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1e400",
+      "sig": "e363444bb19663f96d401da218b6caa70a589ae3e4ac096ed0395c5c11275fa2",
+      "accepted": false
+    },
+    {
+      "name": "exp with half a millisecond",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000.5",
+      "sig": "d800128ddf6f0df444fb5880f8953271e7009bfa643baed34d9febdf47319aad",
+      "accepted": true
+    },
+    {
+      "name": "exp beyond 2^53",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "12345678901234567890",
+      "sig": "f3ba643aec62caff04a0c7ff6030fc32b379b101551e300b0e135e4172911131",
+      "accepted": true
+    },
+    {
+      "name": "exp printed in exponent form",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1e21",
+      "sig": "69cc55462d665972d51260c438fe7a0fce2229a3ca74b42d05f0103e469859b2",
+      "accepted": true
+    },
+    {
+      "name": "exp printed in exponent form with a fraction",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1500000000000000000000",
+      "sig": "68a0fe09d16a9972d4052654abb0715a3e7e17bb31e6621a8122095ab0a9e07c",
+      "accepted": true
+    },
+    {
+      "name": "exp hex beyond 2^64",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "0x10000000000000000000",
+      "sig": "f75f33314e6893964d29dc3022f5fdd5c0bb72bf3f34a8c7d378423b78242201",
+      "accepted": true
+    },
+    {
+      "name": "exp signed as text, not as a number",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "key": "uploads/2026/a.png",
+      "exp": "1764000600000.0",
+      "sig": "b4365c8a34a949e0633d3c48c46dee6c0eb0204f1a865c928884ee617fd66c38",
+      "accepted": false
+    }
+  ]
+}

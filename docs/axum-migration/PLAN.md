@@ -163,7 +163,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 - VM의 Compose v5.7.0으로 `docker compose -f docker-compose.yml -f docker-compose.own-caddy.yml -f docker-compose.axum.yml config`가 렌더링되는지.
 - 전환하는 동안의 메모리와 연결. 최대 1분쯤 이전 `app`(Next)과 새 `next`가 함께 돈다: 한도 2,816 MB 둘, 연결 풀 최대 10개 둘. 그 뒤로는 Next 10 + Axum 6 = 16에 워커·백업과 Postgres의 슈퍼유저 예약 3개를 더해 30 안에 드는지. 워커의 풀 크기는 확인하지 않았다.
 - `service_role`의 `user`·`session` 읽기 권한. Rust의 세션 조회는 `service_role`로 돈다(better-auth는 로그인 롤로 돈다). 이 권한은 마이그레이션이 아니라 Next가 실행 중에 부여한다(`lib/auth/server.ts`). 권한이 없으면 세션 쿠키가 있는 요청은 전부 503이 된다(열리지 않고 닫힌다). 다음에 마이그레이션이 허용될 때 권한을 마이그레이션으로 옮기는 것이 낫다.
-- 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. 서버가 읽는 변수는 모두 받는다: `.env`에서 `DATABASE_URL`(비밀번호), `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `OBJECT_SIGNING_SECRET`, `R2_*` 넷, `LOCAL_OBJECT_STORAGE_DIR`, `ADSENSE_AUTO_ADS_ENABLED`, `AXUM_DB_POOL_MAX`·`AXUM_DISABLED_ROUTES`·`AXUM_PILOT_ROUTES`; 이미지에서 `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_ADSENSE_CLIENT`. `CSP_ENFORCE`·`CSP_REPORT_URI`는 일부러 넘기지 않는다(5절 발견 1). `docker-compose.yml`이 Next에만 주는 나머지(`BETTER_AUTH_URL`, OAuth 클라이언트 `GOOGLE_*`·`KAKAO_*`·`TIKTOK_*`, `AWS_*`·`BEDROCK_*`, `GA4_*`, `MEME_CHAT_*`·`MEME_EMBEDDING_*`·`MEME_SEMANTIC_SEARCH_ENABLED`, `META_*`·`THREADS_ACCESS_TOKEN`·`X_API_BEARER_TOKEN`·`YOUTUBE_API_KEY`·`RADAR_*`, `MCP_*`, `OPENAI_*`·`OPENROUTER_*`, `PLUS_DIGEST_*`, `AUTH_EMAIL_WEBHOOK`, `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`)는 아직 Next에 있는 경로가 읽는다. 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다.
+- 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. 서버가 읽는 변수는 모두 받는다: `.env`에서 `DATABASE_URL`(비밀번호), `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `OBJECT_SIGNING_SECRET`, `R2_*` 넷, `LOCAL_OBJECT_STORAGE_DIR`, `ADSENSE_AUTO_ADS_ENABLED`, `MEME_SEMANTIC_SEARCH_ENABLED`·`MEME_EMBEDDING_URL`, `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`, `OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`, `AXUM_DB_POOL_MAX`·`AXUM_DISABLED_ROUTES`·`AXUM_PILOT_ROUTES`; 이미지에서 `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_ADSENSE_CLIENT`. `CSP_ENFORCE`·`CSP_REPORT_URI`는 일부러 넘기지 않는다(5절 발견 1). `docker-compose.yml`이 Next에만 주는 나머지(`BETTER_AUTH_URL`, OAuth 클라이언트 `GOOGLE_*`·`KAKAO_*`·`TIKTOK_*`, `AWS_*`·`BEDROCK_*`, `GA4_*`, 채팅의 로컬 프록시 변수 `MEME_CHAT_API_KEY`·`MEME_CHAT_BASE_URL`·`MEME_CHAT_MODEL`과 `MEME_EMBEDDING_RUNTIME`·`MEME_EMBEDDING_API_KEY`·`MEME_EMBEDDING_REINDEX_ENABLED`, `META_*`·`THREADS_ACCESS_TOKEN`·`X_API_BEARER_TOKEN`·`YOUTUBE_API_KEY`·`RADAR_*`, `MCP_*`, `OPENAI_*`, `PLUS_DIGEST_*`, `AUTH_EMAIL_WEBHOOK`, `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`)는 아직 Next에 있는 경로가 읽는다. 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다. 빠뜨리면 `server/tests/compose_env.rs`가 실패한다.
 - R2. 리허설은 R2 값 없이 로컬 저장소로 돌았다. 운영은 값 네 개가 설정되어 있으므로 전환 뒤 `/api/media/signed`를 실제 서명 URL로 확인한다.
 - Cloudflare를 지난 릴리스 헤더. 에이전트는 `https://catchmeme.com/`의 `X-MemeCatch-Release-Sha`로 배포를 확인한다. 리허설은 Caddy까지만 지났다.
 - 종료 유예. 느린 업로드가 걸려 있는 동안 배포하면 `app` 교체가 최대 10초 걸린다(위 "종료 시간").
@@ -259,8 +259,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 82 | `POST /api/admin/mpe-candidates` 본문은 1 MiB까지만 읽고 더 길면 JSON이 아닌 본문처럼 400이다. Next(`request.json()`)는 길이 제한이 없다 | 수용 |
 | 83 | 후보 경로의 오류 메시지에 들어가는 DB 메시지(`candidate_search_failed: …` 등)는 Postgres가 낸 오류면 같다. 연결 실패는 sqlx와 node-pg의 문구가 다르다(차이 57과 같다) | 수용 |
 | 84 | 근거 초안의 `권리 확인 시각`은 `row_to_json`이 세션 시간대로 쓴 글자다. sqlx 세션은 UTC, node-pg는 DB 기본값이라 DB 기본이 UTC가 아니면 다르다(7절 발견 4와 같다) | 수용 |
-| 85 | Axum 컨테이너는 `MEME_SEMANTIC_SEARCH_ENABLED`·`MEME_CHAT_*`·`OPENROUTER_*`를 받지 않는다(`docker-compose.axum.yml`). 그래서 Axum의 채팅은 생성 없는 요약, 초안은 503 `draft_provider_not_configured`이고, 이는 키가 없는 지금 운영의 Next와 같다. `.env`에 `OPENROUTER_API_KEY`를 넣으면 Next만 받아 둘이 달라진다. 같은 이유로 `memes-semantic-search`(R5b)는 Axum에서 이유를 `model_unavailable`이 아니라 `disabled`로 낸다 | 미해결, 단계 5 |
-| 86 | 채팅의 `text()` 자르기가 서로게이트 쌍을 가르면 그 반쪽을 Next처럼 `\udXXX`로 쓴다(`routes/js_string.rs`). Next가 받는 질문에 짝 없는 서로게이트 이스케이프가 있으면 Next는 읽고 Axum은 400이다(차이 78) | 수용 |
+| 85 | 채팅의 `text()` 자르기가 서로게이트 쌍을 가르면 그 반쪽을 Next처럼 `\udXXX`로 쓴다(`routes/js_string.rs`). Next가 받는 질문에 짝 없는 서로게이트 이스케이프가 있으면 Next는 읽고 Axum은 400이다(차이 78) | 수용 |
 
 ## 6. 단계 2 진행: R1 (공개 텍스트 경로)
 
@@ -427,7 +426,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 1. **`POST /api/admin/mpe-candidates`는 지금 한 번도 성공하지 못한다.** 아래 TypeScript 동작 1. 운영자 화면의 후보 생성·매칭·근거 초안은 전부 500이다.
 2. **운영의 채팅은 생성하지 않는다.** `MEME_CHAT_GENERATION_ENABLED`가 있어도 `OPENROUTER_API_KEY`가 없어 `generationConfig()`가 `null`이고, 답은 언제나 검색된 기록의 요약(`mode: "retrieved"`, `retrievalMode: "keyword"`)이다. 초안은 같은 이유로 503 `draft_provider_not_configured`다.
 3. **TypeScript의 OpenRouter 주소는 운영에서 바꿀 수 없다.** 채팅은 `https://openrouter.ai`로 고정이고, 초안은 `NODE_ENV=production`에서 그 origin만 받는다. Axum은 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`(루프백 `http://host:port`만 받는다)으로 같은 요청을 스텁에 보낸다.
-4. **compose가 Axum에 채팅·OpenRouter 변수를 넘기지 않는다**(차이 85). 지금은 운영 Next와 답이 같지만, 키를 넣는 순간 달라진다.
+4. **Axum 컨테이너는 두 경로가 읽는 변수를 Next와 같은 `.env` 값으로 받는다.** `docker-compose.axum.yml`이 `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`·`OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`을 넘긴다(의미 검색의 두 변수는 #148). 처음에는 넘기지 않아, 운영에 키를 넣으면 Next만 생성할 뻔했다. `server/tests/compose_env.rs`가 서버가 읽는 변수를 소스에서 찾아, 컴포즈에 없고 일부러 뺀 목록(`BEDROCK_*`, `AWS_*`, `CSP_*`, 빌드 값, 테스트 전용 `AXUM_TEST_OPENROUTER_ORIGIN`)에도 없으면 실패한다.
 
 ### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
 
@@ -444,9 +443,8 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 ### Next와 남은 차이
 
-5절 「Next와 남은 차이」 표의 74~86번이다.
+5절 「Next와 남은 차이」 표의 74~85번이다.
 
 ### 단계 5에서 추가로 확인할 것
 
-- 차이 85: Axum 컨테이너에 `MEME_SEMANTIC_SEARCH_ENABLED`, `MEME_EMBEDDING_URL`, `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`, `OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`을 Next와 같은 값으로 넘길 것(`docker-compose.axum.yml`, 이 작업 범위 밖). 넘기기 전에 키를 넣으려면 `AXUM_DISABLED_ROUTES=memes-chat,admin-mpe-candidates-post`로 두 경로를 Next에 돌려준다.
 - TypeScript 동작 1: 플래너를 고치면(`types`를 배열로 읽기) 두 저장 함수가 처음으로 실행된다. 그때 Axum의 같은 두 문장도 고쳐야 하고, 성공한 답(`{ ok: true, data }`)은 아직 어느 서버에서도 본 적이 없다.

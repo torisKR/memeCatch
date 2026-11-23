@@ -3,10 +3,16 @@
 
 pub mod cards;
 pub mod health;
+pub mod js_json;
 pub mod media;
+pub mod media_type;
+pub mod mpe;
+pub mod multipart;
+pub mod origin;
 pub mod public;
 pub mod request;
 pub mod tracking;
+pub mod upload;
 
 use std::collections::HashSet;
 
@@ -18,7 +24,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 24] = [
+pub const ROUTE_IDS: [&str; 30] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -43,6 +49,12 @@ pub const ROUTE_IDS: [&str; 24] = [
     "meme-cards-claim",
     "memes-view",
     "analytics-events",
+    "mpe-job",
+    "mpe-renders",
+    "media-object",
+    "upload",
+    "mpe-uploads",
+    "admin-mpe-candidates",
 ];
 
 /// Routes that do not yet do all that Next's do, so they are off unless
@@ -159,4 +171,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(cards::router(state))
         .merge(tracking::router(state))
         .merge(crate::pages::router(state))
+        .merge(mpe::router(state))
+        .merge(upload::router(state))
 }

@@ -70,6 +70,21 @@ pub fn request_origin(headers: &HeaderMap, site: &SiteOrigin) -> RequestOrigin {
     }
 }
 
+/// `hasTrustedOrigin(request)` (lib/origin.ts) as far as this process can
+/// decide it: `Some(true)` for the site's origin or, without an origin, a
+/// same-origin fetch; `Some(false)` for neither; `None` for another origin,
+/// which only Next can judge (see [`RequestOrigin::Other`]).
+pub fn trusted_origin(headers: &HeaderMap, site: &SiteOrigin) -> Option<bool> {
+    match request_origin(headers, site) {
+        RequestOrigin::Site => Some(true),
+        RequestOrigin::Other => None,
+        RequestOrigin::Absent => {
+            let fetch_site = HeaderName::from_static("sec-fetch-site");
+            Some(header_text(headers, &fetch_site, ", ").as_deref() == Some("same-origin"))
+        }
+    }
+}
+
 /// `request.headers.get(name)`: the values of a repeated header joined with
 /// `separator` (Node uses `"; "` for `Cookie` and `", "` for the rest), each
 /// byte one character (Latin-1), as Node hands header text to Next.

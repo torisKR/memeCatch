@@ -13,21 +13,27 @@ use axum::body::Body;
 use axum::http::StatusCode;
 use common::{config, database_url, marker_upstream, send, spawn_router};
 use memecatch_server::routes::{PILOT_ROUTE_IDS, ROUTE_IDS};
+use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
 const PILOTS_ON: (&str, &str) = ("AXUM_PILOT_ROUTES", "page-about,page-meme");
-const BASE: [(&str, &str); 3] = [
+// R2 values, so that the upload routes (R2 only) are registered too. The
+// storage is pointed at a closed local port: no sample reaches it.
+const BASE: [(&str, &str); 7] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
     ("NODE_ENV", "development"),
+    ("R2_ACCOUNT_ID", "not-used"),
+    ("R2_ACCESS_KEY_ID", "not-used"),
+    ("R2_SECRET_ACCESS_KEY", "not-used"),
+    ("R2_BUCKET", "not-used"),
 ];
 
 fn state(upstream: SocketAddr, extra: &[(&str, &str)]) -> Result<AppState, String> {
-    AppState::new(config(
-        upstream,
-        &database_url(),
-        &[extra, &BASE[..]].concat(),
-    ))
+    let config = config(upstream, &database_url(), &[extra, &BASE[..]].concat());
+    let mut state = AppState::new(config.clone())?;
+    state.storage = Storage::with_r2_endpoint(&config, "http://127.0.0.1:1")?;
+    Ok(state)
 }
 
 async fn app(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
@@ -79,6 +85,12 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("meme-cards-claim", "POST", "/api/meme-cards/claim"),
         ("memes-view", "POST", "/api/memes/view"),
         ("analytics-events", "POST", "/api/analytics/events"),
+        ("media-object", "GET", "/api/media/other-bucket/a.png"),
+        ("mpe-job", "GET", "/api/mpe/jobs/no-such-job"),
+        ("mpe-renders", "POST", "/api/mpe/renders"),
+        ("upload", "POST", "/api/upload"),
+        ("mpe-uploads", "POST", "/api/mpe/uploads"),
+        ("admin-mpe-candidates", "GET", "/api/admin/mpe-candidates"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

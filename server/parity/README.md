@@ -281,3 +281,47 @@ What makes a write comparable when both servers share the database:
 
 `tracking.mjs` uses new client addresses on each run. The requests without
 `X-Forwarded-For` share one bucket per server, so leave a minute between runs.
+
+## Media, the MPE API and uploads
+
+`mpe.mjs` needs three sessions minted by the real better-auth (`user`,
+`other`, `operator`, with the operator's profile promoted) in one JSON file,
+and both servers on the same `LOCAL_OBJECT_STORAGE_DIR` without R2. Its rate
+limit cases expect freshly started servers (or a minute's pause).
+
+```sh
+node server/parity/mpe.mjs seed state.json | psql        # superuser, throwaway database
+node server/parity/mpe.mjs $NEXT $AXUM state.json "$OBJECT_DIR"
+```
+
+`uploads.mjs` starts its own Axum: R2 is configured there and pointed, from
+an ignored test (`cargo test --test uploads serve_for_parity -- --ignored`),
+at a Versity S3 Gateway container behind a recording proxy, both started by
+the script and removed when it exits. Next stays on its local directory, so
+nothing reaches Cloudflare. Run Next on **Node 22**, the version of the Next
+image: Node 24 and 26 parse some malformed forms differently
+(docs/axum-migration/PLAN.md, section 8). Each case signs in a user of its
+own (a `user` and `session` row and the cookie the shared secret signs).
+
+```sh
+# Repository root. NEXT_OBJECT_DIR is the LOCAL_OBJECT_STORAGE_DIR Next runs with.
+TEST_DB_CONTAINER=... NEXT_OBJECT_DIR=... DATABASE_URL=<the app role's URL> \
+  <node 22> --experimental-strip-types --import ./scripts/register-ts-paths.mjs \
+  server/parity/uploads.mjs $NEXT http://127.0.0.1:3412
+```
+
+Sections: `uploadChecks` and `mpeChecks` (every answer of the two routes,
+and what each server kept), `limits` (the in-memory and database limits, the
+storage quota, and a database that refuses the calls, by revoking and
+granting back `EXECUTE`), `storeFailures` (a failed PUT on each side; the
+cleanup failure on Axum only), `shortContentLength`, `r2Requests` (the
+TypeScript's `r2Put` and `objectStorage().upload` run in the script with
+`fetch` sent on to the proxy, against Axum's PUTs for the same uploads: key,
+content type, scope and signed headers; the gateway checks both signatures)
+and `worker`. For `worker` the proxy writes the `storage.objects` row that
+`create_media_ingestion` requires and nothing writes today; the script then
+runs `scripts/mpe-media-worker.mjs` once, in an empty directory (it reads
+`.env` files from its working directory) and with a copy of the object.
+
+`multipart-fixture.mjs` must run on Node 22 as well; it refuses another
+version.

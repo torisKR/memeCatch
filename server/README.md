@@ -88,6 +88,9 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `meme-card-catalog.mjs` | Rewrites `src/routes/cards/catalog.json`, the captions and art of the cards, from `data/meme-cards/catalog-1000.json`. |
 | `previews.mjs <next> <axum>` | `POST /api/explore/previews`: every seeded case, who may ask, refused bodies and both rate limits. Leave a minute after any other request to that route. |
 | `preview-fixture.mjs` | Rewrites `tests/fixtures/preview_delivery.json` from the real `lib/meme-delivery.ts` after a change there. |
+| `mpe.mjs <next> <axum> <state.json> [<object-dir>]` | `GET /api/mpe/jobs/{id}`, `POST /api/mpe/renders`, `GET /api/admin/mpe-candidates` and `GET /api/media/{...path}` with three real sessions; `mpe.mjs seed <state.json>` prints its rows. |
+| `uploads.mjs <next> <axum> [section...]` | `POST /api/upload` and `POST /api/mpe/uploads` against a Next on Node 22, with Axum started on R2 at a local S3 gateway it runs; also the R2 requests of both sides and a job worked by the real MPE worker. |
+| `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 
 ## Pages

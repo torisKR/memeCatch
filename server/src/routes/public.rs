@@ -23,7 +23,7 @@ pub mod daily_quiz;
 mod explore_previews;
 mod feeds;
 pub(crate) mod js;
-mod js_date;
+pub(crate) mod js_date;
 pub(crate) mod labels;
 mod llms;
 mod llms_full;

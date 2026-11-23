@@ -15,7 +15,8 @@
 //! address Next itself listens on, which this process cannot know.
 
 mod events;
-mod growth;
+pub(crate) mod growth;
+pub(crate) use events::iso_timestamp;
 mod view;
 
 use std::net::{IpAddr, SocketAddr};

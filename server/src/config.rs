@@ -98,6 +98,31 @@ pub struct Config {
     /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
     /// registered, so their requests fall through to the upstream.
     pub disabled_routes: HashSet<String>,
+    /// `AXUM_PILOT_ROUTES`: comma-separated ids of the pilot routes to switch
+    /// on. A pilot route does not yet do all that Next's does
+    /// (`routes::PILOT_ROUTE_IDS`), so it is registered only when named here.
+    pub pilot_routes: HashSet<String>,
+    /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
+    /// fixes it at build time; give Axum the value the Next image was built
+    /// with. `None` loads no analytics.
+    pub ga_id: Option<String>,
+    /// `NEXT_PUBLIC_ADSENSE_CLIENT`: the `google-adsense-account` meta of
+    /// native pages, and the client of the ad loader. Also a Next build value.
+    pub adsense_client: Option<String>,
+    /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
+    /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
+    pub adsense_auto_ads: bool,
+}
+
+/// A comma-separated list of route ids. Blank entries are dropped.
+fn id_list(raw: Option<String>) -> HashSet<String> {
+    raw.map(|raw| {
+        raw.split(',')
+            .map(|id| id.trim().to_owned())
+            .filter(|id| !id.is_empty())
+            .collect()
+    })
+    .unwrap_or_default()
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -210,14 +235,12 @@ impl Config {
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),
             upstream,
             db_pool_max,
-            disabled_routes: optional("AXUM_DISABLED_ROUTES")
-                .map(|raw| {
-                    raw.split(',')
-                        .map(|id| id.trim().to_owned())
-                        .filter(|id| !id.is_empty())
-                        .collect()
-                })
-                .unwrap_or_default(),
+            disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
+            pilot_routes: id_list(optional("AXUM_PILOT_ROUTES")),
+            ga_id: optional("NEXT_PUBLIC_GA_ID"),
+            adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
+            adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
+                && lookup("NODE_ENV").as_deref() == Some("production"),
         })
     }
 }

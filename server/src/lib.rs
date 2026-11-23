@@ -5,6 +5,7 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod headers;
+pub mod pages;
 pub mod proxy;
 pub mod routes;
 pub mod storage;
@@ -16,6 +17,7 @@ use axum::Router;
 use crate::config::Config;
 use crate::db::Db;
 use crate::headers::NativeRouteHeaders;
+use crate::pages::Pages;
 use crate::proxy::Upstream;
 use crate::storage::Storage;
 
@@ -27,12 +29,14 @@ pub struct AppState {
     pub storage: Storage,
     pub upstream: Upstream,
     pub native_headers: NativeRouteHeaders,
+    pub pages: Pages,
 }
 
 impl AppState {
     /// Opens no connection: the database pools connect on first use.
     pub fn new(config: Config) -> Result<Self, String> {
         routes::check_disabled_ids(&config.disabled_routes)?;
+        routes::check_pilot_ids(&config.pilot_routes)?;
         let db = Db::connect_lazy(config.database_url.expose(), config.db_pool_max)
             .map_err(|error| format!("DATABASE_URL is not a valid Postgres URL: {error}"))?;
         let native_headers = NativeRouteHeaders::new(&config).map_err(|_| {
@@ -42,6 +46,7 @@ impl AppState {
         Ok(Self {
             storage: Storage::new(&config)?,
             upstream: Upstream::new(config.upstream.clone()),
+            pages: Pages::new(&config),
             db,
             native_headers,
             config: Arc::new(config),

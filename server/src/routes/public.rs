@@ -6,7 +6,7 @@
 
 mod csp_report;
 pub mod daily_quiz;
-mod js;
+pub(crate) mod js;
 pub mod quiz;
 mod random;
 mod rate_limit;
@@ -75,7 +75,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
 /// 301 to the apex host before any route runs, and that logic has not moved
 /// here yet (PLAN.md, stage 4). This sits outside the native-route header
 /// layer, so the upstream's answer goes back untouched.
-async fn www_to_upstream(State(state): State<AppState>, request: Request, next: Next) -> Response {
+pub(crate) async fn www_to_upstream(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
     if names_www_host(request.headers()) {
         return proxy::forward(State(state), request).await;
     }

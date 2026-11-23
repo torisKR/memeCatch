@@ -97,3 +97,21 @@
 /originals/edition/late-night-meeting?utm_source=x 200 index native
 /originals/edition/monday-loading/ 308
 /originals/edition/no-such-edition 200 noindex proxied
+
+# Batch B2: the meme directory, 가나다순, with the 3,562 titles of
+# directory-catalog.mjs seeded (36 pages). A page number that is not one, a
+# page past the end and `?page=1` are Next's: it streams them as a 200
+# (a not-found document, or a client-side redirect to /memes).
+/memes 200 index native
+/memes?utm_source=x&ref=menu 200 index native
+/memes?page=2 200 index native
+/memes?page=%32%30 200 index native
+/memes?page=36 200 index native
+/memes?page=37 200 noindex proxied
+/memes?page=1 200 proxied
+/memes?page=0 200 noindex proxied
+/memes?page=02 200 noindex proxied
+/memes?page=abc 200 noindex proxied
+/memes?page= 200 noindex proxied
+/memes?page=2&page=3 200 noindex proxied
+/memes/ 308

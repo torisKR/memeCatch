@@ -300,6 +300,60 @@ pub fn meme_breadcrumb(site: &Site, meme: &MemeTerm<'_>) -> Option<Markup> {
     ])))
 }
 
+/// The `CollectionPage` of /memes: the page, and the first ten of its list
+/// with their position in the whole directory.
+pub fn directory_page(
+    site: &Site,
+    name: &str,
+    path: &str,
+    item_count: usize,
+    start: usize,
+    first: &[(String, String)],
+) -> Markup {
+    let number = |value: usize| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("CollectionPage")),
+        ("name", text(name)),
+        ("url", text(site.absolute(path))),
+        ("inLanguage", text("ko")),
+        ("isPartOf", website(site)),
+        (
+            "mainEntity",
+            Json::Object(vec![
+                ("@type", text("ItemList")),
+                ("numberOfItems", number(item_count)),
+                (
+                    "itemListElement",
+                    Json::List(
+                        first
+                            .iter()
+                            .enumerate()
+                            .map(|(index, (name, path))| {
+                                Json::Object(vec![
+                                    ("@type", text("ListItem")),
+                                    ("position", number(start + index + 1)),
+                                    ("name", text(name.as_str())),
+                                    ("url", text(site.absolute(path))),
+                                ])
+                            })
+                            .collect(),
+                    ),
+                ),
+            ]),
+        ),
+    ]))
+}
+
+/// `isPartOf` of the list pages.
+fn website(site: &Site) -> Json {
+    Json::Object(vec![
+        ("@type", text("WebSite")),
+        ("name", text(SITE_NAME)),
+        ("url", text(site.url.clone())),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

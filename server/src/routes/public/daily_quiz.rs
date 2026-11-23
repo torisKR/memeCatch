@@ -9,7 +9,6 @@ use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use axum::response::{IntoResponse, Response};
 
 use super::quiz::{self, PoolMeme};
-use super::unsized_body;
 use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 
@@ -43,7 +42,7 @@ pub async fn daily_quiz(State(state): State<AppState>) -> Response {
                     "public, s-maxage=300, stale-while-revalidate=60",
                 ),
             ],
-            unsized_body(body),
+            body,
         )
             .into_response(),
         // A failed query and a pool too small for a question answer alike.
@@ -53,7 +52,7 @@ pub async fn daily_quiz(State(state): State<AppState>) -> Response {
                 (CONTENT_TYPE, "application/json"),
                 (CACHE_CONTROL, "no-store"),
             ],
-            unsized_body(UNAVAILABLE),
+            UNAVAILABLE,
         )
             .into_response(),
     }

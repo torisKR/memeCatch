@@ -9,7 +9,9 @@ use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::{Response, StatusCode};
-use common::{client, closed_addr, config, database_url, spawn_app, spawn_router};
+use common::{
+    client, closed_addr, config, database_url, parse_head, raw_request, spawn_app, spawn_router,
+};
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
 
@@ -164,4 +166,38 @@ async fn head_on_health_is_answered_natively_without_a_body() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(body, "");
     assert!(response.headers().contains_key("content-security-policy"));
+}
+
+/// The framing headers of the answer to `method /api/health`, as sent.
+async fn framing_headers(app: std::net::SocketAddr, method: &str) -> Vec<(String, String)> {
+    let response = raw_request(
+        app,
+        &format!(
+            "{method} /api/health HTTP/1.1\r\nHost: catchmeme.com\r\nConnection: close\r\n\r\n"
+        ),
+    )
+    .await;
+    let (status_line, headers) = parse_head(&response);
+    assert_eq!(status_line, "HTTP/1.1 200 OK", "{method}");
+    headers
+        .into_iter()
+        .filter(|(name, _)| name == "content-length" || name == "transfer-encoding")
+        .collect()
+}
+
+// Next sends a route handler's body chunked and puts no length on the HEAD
+// answer. axum would send `Content-Length: 11` on both.
+#[tokio::test]
+async fn native_answers_declare_no_body_length_as_next_does() {
+    let app = spawn_app(config(marker_upstream().await, &database_url(), &[])).await;
+
+    let get = framing_headers(app, "GET").await;
+    let head = framing_headers(app, "HEAD").await;
+
+    assert_eq!(head, [], "HEAD");
+    assert_eq!(
+        get,
+        [("transfer-encoding".to_owned(), "chunked".to_owned())],
+        "GET"
+    );
 }

@@ -13,7 +13,7 @@ use serde::Serialize;
 use sqlx::PgConnection;
 use url::Url;
 
-use super::{js, unsized_body};
+use super::js;
 use crate::AppState;
 use crate::db::{BoxFuture, Db, DbIdentity, IdentityOptions};
 
@@ -88,7 +88,7 @@ pub async fn json(State(state): State<AppState>) -> Response {
             (CONTENT_TYPE, "application/json"),
             (CACHE_CONTROL, "no-store"),
         ],
-        unsized_body(body),
+        body,
     )
         .into_response()
 }
@@ -143,7 +143,6 @@ pub async fn redirect(State(state): State<AppState>, targets: RedirectTargets) -
     response
         .headers_mut()
         .insert(CONTENT_LANGUAGE, HeaderValue::from_static("ko"));
-    *response.body_mut() = unsized_body("");
     response
 }
 

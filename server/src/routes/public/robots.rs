@@ -8,8 +8,6 @@
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use axum::response::{IntoResponse, Response};
 
-use super::unsized_body;
-
 const PRIVATE_PATHS: [&str; 7] = [
     "/admin", "/my", "/api/", "/go/", "/auth/", "/submit", "/login",
 ];
@@ -67,7 +65,7 @@ pub fn response(body: String) -> Response {
         ],
         // The prerender cache always holds this route, so Next always says HIT.
         [("x-nextjs-cache", "HIT")],
-        unsized_body(body),
+        body,
     )
         .into_response()
 }

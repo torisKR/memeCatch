@@ -31,12 +31,9 @@ the proxy, so it is listed as "unstable" and not counted as a difference.
 | `connection`, `keep-alive`, `transfer-encoding` | Hop-by-hop. They describe one connection; the proxy strips them and each server frames its own. |
 | `x-nextjs-cache` | `HIT`, `MISS` or `STALE` depends on which request reached Next first. |
 
-`content-length` is compared, with one exception. Next sends most bodies
-chunked, with no length; a route Axum answers itself sends the same bytes with
-a length. When Next sent no `content-length`, the method is not `HEAD` and
-Axum's value equals the number of body bytes, that is the same body framed
-differently and is not counted. A length on a `HEAD` answer that Next did not
-send, or a different value, is a difference.
+`content-length` is compared like any other header. Next sends route handler
+bodies chunked and puts no length on a `HEAD` answer; the layer every native
+route goes through (`headers::apply`) makes Axum do the same.
 
 Header names are compared case-insensitively: Node writes
 `X-MemeCatch-Release-Sha`, hyper writes `x-memecatch-release-sha`, and HTTP

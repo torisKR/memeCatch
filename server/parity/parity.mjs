@@ -73,7 +73,6 @@ function send(base, { method, path }) {
         });
         response.on("end", () => {
           const fields = { status: String(response.statusCode), body: `sha256:${hash.digest("hex")} (${bytes} bytes)` };
-          Object.defineProperty(fields, "bytes", { value: bytes }); // not a compared field
           for (const [name, values] of Object.entries(response.headersDistinct)) {
             if (!IGNORED_HEADERS.has(name)) fields[`header ${name}`] = values.join("\n");
           }
@@ -85,17 +84,6 @@ function send(base, { method, path }) {
     request.on("error", reject);
     request.end();
   });
-}
-
-// Next streams most bodies chunked, with no length. A route Axum answers
-// itself sends the same bytes with a Content-Length. Only that case is let
-// through; any other Content-Length difference counts.
-function sameBytesFramedWithLength(target, next, axum) {
-  return (
-    target.method !== "HEAD" &&
-    next["header content-length"] === undefined &&
-    axum["header content-length"] === String(next.bytes)
-  );
 }
 
 let failed = 0;
@@ -119,7 +107,6 @@ for (const target of targets) {
   for (const name of names) {
     if (first[name] !== second[name]) unstable.push(name);
     else if (first[name] === viaAxum[name]) continue;
-    else if (name === "header content-length" && sameBytesFramedWithLength(target, first, viaAxum)) continue;
     else different.push(name);
   }
   if (different.length === 0) {

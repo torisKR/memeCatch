@@ -15,7 +15,6 @@ mod robots;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::body::{Body, Bytes};
 use axum::extract::{Request, State};
 use axum::http::HeaderMap;
 use axum::http::header::HOST;
@@ -93,15 +92,6 @@ fn names_www_host(headers: &HeaderMap) -> bool {
             .windows(WWW_HOST.len())
             .any(|window| window == WWW_HOST)
     })
-}
-
-/// A response body with no declared size.
-///
-/// Next sends route handler bodies chunked, without `Content-Length`, and its
-/// `HEAD` answers carry no length either. Given a body of known size, axum
-/// adds a `Content-Length`, also to the `HEAD` answer.
-fn unsized_body(bytes: impl Into<Bytes>) -> Body {
-    Body::from_stream(Body::from(bytes.into()).into_data_stream())
 }
 
 #[cfg(test)]

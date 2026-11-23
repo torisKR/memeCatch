@@ -9,6 +9,7 @@
 //! `CSP_REPORT_URI`. To stay byte-identical, give Axum the values the Next
 //! image was built with.
 
+use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::header::{HeaderMap, HeaderName, HeaderValue, InvalidHeaderValue};
 use axum::middleware::Next;
@@ -105,10 +106,16 @@ fn csp_value(report_uri: Option<&str>) -> String {
 
 /// Middleware for native routes. `routes::Routes::add` installs it; route
 /// modules do not add it themselves.
+///
+/// Besides the headers, it hands the body on with no declared size. Next
+/// sends a route handler's body chunked and puts no length on the `HEAD`
+/// answer (checked on every native route). Given a body of known size, axum
+/// adds a `Content-Length` to both. A `Content-Length` the handler set itself
+/// is kept.
 pub async fn apply(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    let mut response = next.run(request).await;
-    state.native_headers.apply(response.headers_mut());
-    response
+    let (mut parts, body) = next.run(request).await.into_parts();
+    state.native_headers.apply(&mut parts.headers);
+    Response::from_parts(parts, Body::from_stream(body.into_data_stream()))
 }
 
 #[cfg(test)]

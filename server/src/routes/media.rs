@@ -9,15 +9,11 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 
 use super::Routes;
-use crate::{AppState, proxy};
+use crate::AppState;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    // `get` alone would also answer HEAD, and axum puts a Content-Length on
-    // that answer where Next sends none. HEAD stays with Next until native
-    // HEAD answers can match it.
-    let methods = get(signed).head(proxy::forward);
     Routes::new(state)
-        .add("media-signed", "/api/media/signed", methods)
+        .add("media-signed", "/api/media/signed", get(signed))
         .build()
 }
 

@@ -108,14 +108,38 @@ async fn a_valid_signature_serves_the_object_with_a_private_one_minute_cache() {
         "application/octet-stream"
     );
     assert_eq!(headers.get("cache-control").unwrap(), "private, max-age=60");
-    assert_eq!(
-        headers.get("content-length").unwrap(),
-        &OBJECT.len().to_string()
-    );
+    // Sent chunked, as Next sends it.
+    assert!(!headers.contains_key("content-length"));
     // The headers Next adds to every route response.
     assert_eq!(headers.get("x-memecatch-release-sha").unwrap(), "abc123");
     assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
     assert!(headers.contains_key("content-security-policy"));
+}
+
+#[tokio::test]
+async fn head_gets_the_headers_of_get_without_a_body_or_a_length() {
+    // No upstream: the answer is Axum's own.
+    let site = site(closed_addr().await, &[]).await;
+    let url = site
+        .storage
+        .signed_object_url("uploads", "2026/a.bin", 60)
+        .unwrap();
+
+    let (response, body) = send(site.app, "HEAD", target(&url)).await;
+    let (refused, _) = send(site.app, "HEAD", "/api/media/signed").await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(body.is_empty());
+    let headers = response.headers();
+    assert_eq!(
+        headers.get("content-type").unwrap(),
+        "application/octet-stream"
+    );
+    assert_eq!(headers.get("cache-control").unwrap(), "private, max-age=60");
+    // Next puts no length on a HEAD answer.
+    assert!(!headers.contains_key("content-length"));
+    assert_eq!(refused.status(), StatusCode::UNAUTHORIZED);
+    assert!(!refused.headers().contains_key("content-length"));
 }
 
 #[tokio::test]
@@ -306,16 +330,13 @@ async fn other_methods_and_the_disabled_route_id_go_to_the_upstream() {
         .signed_object_url("uploads", "2026/a.bin", 60)
         .unwrap();
 
-    // HEAD too: Next sends no Content-Length on it and axum would.
-    for method in ["HEAD", "POST", "OPTIONS", "DELETE"] {
+    for method in ["POST", "OPTIONS", "DELETE"] {
         let (direct, _) = send(upstream, method, target(&url)).await;
         let (response, body) = send(enabled.app, method, target(&url)).await;
 
         assert_eq!(response.status(), StatusCode::IM_A_TEAPOT, "{method}");
-        if method != "HEAD" {
-            let expected = format!("upstream saw {method} /api/media/signed");
-            assert_eq!(String::from_utf8_lossy(&body), expected);
-        }
+        let expected = format!("upstream saw {method} /api/media/signed");
+        assert_eq!(String::from_utf8_lossy(&body), expected);
         let length = |response: &Response<()>| response.headers().get("content-length").cloned();
         assert_eq!(length(&response), length(&direct), "{method}");
         assert!(!response.headers().contains_key("allow"), "{method}");

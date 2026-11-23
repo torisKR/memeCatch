@@ -13,9 +13,11 @@
 /memes/rk3w632x-%ec%a4%91%ea%ba%be%eb%a7%88
 /search?q=%EC%A4%91%EA%BA%BE%EB%A7%88
 /no-such-page
-# Bodiless answers: the length headers must be exactly Next's.
+# Bodiless answers: the length headers must be exactly Next's. HEAD on the
+# routes Axum answers itself is here and further down.
 HEAD /robots.txt
 HEAD /
+HEAD /api/health
 # Methods the native /api/health route does not handle go to Next.
 POST /api/health
 OPTIONS /api/health
@@ -23,6 +25,8 @@ OPTIONS /api/health
 # Signed URLs expire, so those targets are generated: see storage-parity.sh.
 /api/media/signed
 /api/media/signed?key=uploads%2Fa.png&exp=1&sig=00
+HEAD /api/media/signed
+HEAD /api/media/signed?key=uploads%2Fa.png&exp=1&sig=00
 POST /api/media/signed
 # Routes Axum answers itself (routes/public.rs). The two random routes pass
 # when the database holds at most one approved meme; with more, their target
@@ -39,6 +43,7 @@ POST /robots.txt
 OPTIONS /api/random-meme
 POST /memes/random
 GET /api/csp-report
+HEAD /api/csp-report
 OPTIONS /api/csp-report
 POST /api/daily-quiz
 # Without a body this is the "no content type" case of csp-report.mjs.

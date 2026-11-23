@@ -71,9 +71,21 @@ impl Upstream {
     }
 }
 
+/// Marks an answer that [`forward`] produced. A native handler that hands its
+/// request to the upstream returns that answer, and the layer that adds the
+/// headers of a native answer (`headers::apply`) must leave it as it is.
+#[derive(Clone, Copy)]
+pub struct FromUpstream;
+
 /// The router fallback, and the fallback of every native route for methods it
 /// does not handle.
-pub async fn forward(State(state): State<AppState>, mut request: Request) -> Response {
+pub async fn forward(state: State<AppState>, request: Request) -> Response {
+    let mut response = send_upstream(state, request).await;
+    response.extensions_mut().insert(FromUpstream);
+    response
+}
+
+async fn send_upstream(State(state): State<AppState>, mut request: Request) -> Response {
     let upstream = &state.upstream;
     let path_and_query = request
         .uri()

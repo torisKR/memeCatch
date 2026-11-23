@@ -17,6 +17,7 @@ use axum::response::Response;
 
 use crate::AppState;
 use crate::config::Config;
+use crate::proxy::FromUpstream;
 
 // Mirrors CSP_DIRECTIVES in next.config.ts, production branch (no
 // 'unsafe-eval'). Keep the order and spacing: the value must match byte for byte.
@@ -112,8 +113,15 @@ fn csp_value(report_uri: Option<&str>) -> String {
 /// answer (checked on every native route). Given a body of known size, axum
 /// adds a `Content-Length` to both. A `Content-Length` the handler set itself
 /// is kept.
+///
+/// An answer the handler fetched from the upstream (`proxy::forward`) is
+/// Next's own and goes back untouched.
 pub async fn apply(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    let (mut parts, body) = next.run(request).await.into_parts();
+    let response = next.run(request).await;
+    if response.extensions().get::<FromUpstream>().is_some() {
+        return response;
+    }
+    let (mut parts, body) = response.into_parts();
     state.native_headers.apply(&mut parts.headers);
     Response::from_parts(parts, Body::from_stream(body.into_data_stream()))
 }

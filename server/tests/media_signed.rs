@@ -244,22 +244,63 @@ async fn malformed_parameters_are_answered_401_expired() {
     }
 }
 
+// The local directory is this server's own disk. Next in another container
+// keeps its objects on its own, so "not here" does not mean "missing": Next
+// answers. (`storage_s3.rs` has the R2 case, where 404 is answered here.)
 #[tokio::test]
-async fn a_signed_url_for_a_missing_object_is_answered_404_missing() {
-    let site = site(closed_addr().await, &[]).await;
+async fn on_the_local_backend_an_object_that_is_not_here_is_left_to_the_upstream() {
+    let upstream = marker_upstream().await;
+    let site = site(upstream, &[("RELEASE_SHA", "abc123")]).await;
+    let here = site
+        .storage
+        .signed_object_url("uploads", "2026/a.bin", 60)
+        .unwrap();
 
     for name in ["2026/no-such.bin", "2026", "2026/a.bin/below"] {
         let url = site.storage.signed_object_url("uploads", name, 60).unwrap();
+        for method in ["GET", "HEAD"] {
+            let case = format!("{method} {name}");
+            let (direct, _) = send(upstream, method, target(&url)).await;
 
-        let response = send(site.app, "GET", target(&url)).await;
+            let (response, body) = send(site.app, method, target(&url)).await;
 
-        assert_json(
-            &response,
-            StatusCode::NOT_FOUND,
-            r#"{"message":"missing"}"#,
-            name,
-        );
+            assert_eq!(response.status(), StatusCode::IM_A_TEAPOT, "{case}");
+            if method == "GET" {
+                assert_eq!(body, b"upstream saw GET /api/media/signed", "{case}");
+            }
+            // The upstream's answer as it is: nothing a native answer carries.
+            let headers = response.headers();
+            assert_eq!(
+                headers.get("content-length"),
+                direct.headers().get("content-length"),
+                "{case}"
+            );
+            assert!(!headers.contains_key("x-memecatch-release-sha"), "{case}");
+            assert!(!headers.contains_key("x-content-type-options"), "{case}");
+        }
     }
+    // An object that is here is still served from here.
+    let (served, body) = send(site.app, "GET", target(&here)).await;
+    assert_eq!(served.status(), StatusCode::OK);
+    assert_eq!(body, OBJECT);
+    assert_eq!(
+        served.headers().get("x-memecatch-release-sha").unwrap(),
+        "abc123"
+    );
+}
+
+#[tokio::test]
+async fn an_object_that_is_not_here_is_a_502_while_the_upstream_is_down() {
+    let site = site(closed_addr().await, &[]).await;
+    let url = site
+        .storage
+        .signed_object_url("uploads", "2026/no-such.bin", 60)
+        .unwrap();
+
+    let (response, body) = send(site.app, "GET", target(&url)).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+    assert_eq!(body, b"Bad Gateway");
 }
 
 #[tokio::test]

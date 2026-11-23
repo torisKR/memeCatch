@@ -262,7 +262,7 @@ async fn the_other_auth_requests_go_to_next() {
     let upstream = marker_upstream().await;
     let all_on = app(upstream, &[PILOTS_ON]).await;
     const JSON: (&str, &str) = ("content-type", "application/json");
-    let requests: [Sample; 9] = [
+    let requests: [Sample; 15] = [
         ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),
         ("GET", "/api/auth/callback/google?code=x", &[], ""),
         (
@@ -287,6 +287,34 @@ async fn the_other_auth_requests_go_to_next() {
             r#"{"callbackURL":"/"}"#,
         ),
         ("POST", "/api/auth/sign-out", &[JSON], "[]"),
+        // better-auth's origin check reads `callbackURL` from the query too,
+        // and these body keys, and refuses untrusted or non-string ones.
+        (
+            "POST",
+            "/api/auth/sign-out?callbackURL=https://evil.example",
+            &[JSON],
+            "{}",
+        ),
+        ("POST", "/api/auth/sign-out?x=1", &[JSON], "{}"),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"redirectTo":"https://evil.example"}"#,
+        ),
+        ("POST", "/api/auth/sign-out", &[JSON], r#"{"redirectTo":1}"#),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"errorCallbackURL":"https://evil.example"}"#,
+        ),
+        (
+            "POST",
+            "/api/auth/sign-out",
+            &[JSON],
+            r#"{"newUserCallbackURL":"https://evil.example"}"#,
+        ),
     ];
     for (method, path, headers, body) in requests {
         let reply = send(all_on, method, path, headers, Body::from(body)).await;

@@ -121,7 +121,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `admin-meme-studio` | `/api/admin/meme-studio` | `POST` | 운영자만. `BEDROCK_MEME_STUDIO_ENABLED=true`일 때만 등록한다(아니면 Next가 답한다). 평생 예산을 먼저 예약하고 AWS Bedrock(Converse)을 부른다. 자격 증명은 환경 변수만 읽는다(9절) |
 | `memes-semantic-search` | `/api/memes/semantic-search` | `POST` | 의미 검색 경로가 쓸 수 없을 때만 등록한다(꺼짐, 또는 쓸 수 있는 `MEME_EMBEDDING_URL`이 없음. 운영이 이 경우다). 그러면 답은 언제나 키워드 검색(`search_memes` + 큐레이션 카드)이고 이유는 `disabled`나 `model_unavailable`이다. 임베딩 URL이 있으면 Next가 답한다 |
 | `auth-get-session` | `/api/auth/get-session` | `GET` | better-auth 1.7.20의 `getSession`: 세션 읽기, 하루 지난 세션 연장, 만료 세션 삭제(10절). `HEAD`, 쿼리 문자열, `RSC` 헤더가 있는 요청은 Next가 답한다 |
-| `auth-sign-out` | `/api/auth/sign-out` | `POST` | 본문이 `callbackURL`·`disableRedirect`·`state` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 본문, 나머지 `/api/auth/*`는 Next가 답한다(10절) |
+| `auth-sign-out` | `/api/auth/sign-out` | `POST` | 쿼리 문자열이 없고 본문이 `callbackURL`·`disableRedirect`·`state`·`redirectTo`·`errorCallbackURL`·`newUserCallbackURL` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 요청, 나머지 `/api/auth/*`는 Next가 답한다(10절) |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -422,7 +422,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | `HEAD /api/auth/get-session` | Next는 404다. 그대로 Next가 답한다 |
 | 쿼리 문자열이 있는 `get-session` | `disableCookieCache`·`disableRefresh` 질의 스키마를 옮기지 않았다 |
 | `RSC: 1`이 있는 `get-session` | Next가 better-auth 앞에서 `?_rsc`로 307을 낸다. `nextCookies`의 연장 건너뛰기(`dist/integrations/next-js.mjs:40-71`)는 HTTP 요청(`_flag === "router"`)에는 작동하지 않는다 |
-| JSON 객체가 아닌 `sign-out` 본문, `callbackURL`·`disableRedirect`·`state`가 있는 본문 | 415·400과 콜백 URL 검사는 Next가 낸다 |
+| JSON 객체가 아닌 `sign-out` 본문, `callbackURL`·`disableRedirect`·`state`·`redirectTo`·`errorCallbackURL`·`newUserCallbackURL`이 있는 본문, 쿼리 문자열이 있는 `sign-out` | 415·400과 콜백 URL 검사(403, 문자열이 아니면 400)는 Next가 낸다(A1-2) |
 | `Origin: null`과 `Sec-Fetch-Site: same-origin`인 `sign-out` | better-auth가 요청 URL에서 출처를 추정한다. Next가 답한다 |
 
 ### 계획을 바꾸는 발견
@@ -438,3 +438,4 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | id | 내용 | 판정 |
 | --- | --- | --- |
 | A1-1 | `Cookie` 헤더 파싱과 `Set-Cookie` 줄 정리가 쿠키 수에 대해 이차였다(400 KB 헤더 하나에 수 초). 둘 다 `HashMap`으로 선형이 됐다(`cookies.rs`, 400 KB가 디버그 빌드에서도 0.5초 안). 두 경로는 `Cookie` 헤더(여러 개면 합)가 16 KiB를 넘으면 무엇보다 먼저 431, 빈 본문, `connection: close`로 답한다. Node가 그런 요청을 Next 앞에서 431로 거절하는 것과 같다. 차이: Node는 모든 헤더 바이트를 세고 Axum은 `Cookie`만 센다. 그래서 `Cookie`는 16 KiB 이하인데 헤더 전체가 16 KiB를 넘는 요청은 Next가 431, Axum은 보통 답이다. Axum의 431에는 `headers::apply`의 헤더가 붙고 Node의 431에는 아무 헤더도 없다 | 수용 |
+| A1-2 | better-auth의 `originCheckMiddleware`는 `sign-out`에서도 쿼리의 `callbackURL`과 본문의 `redirectTo`·`errorCallbackURL`·`newUserCallbackURL`을 믿는 출처와 비교한다(쿠키가 없어도). 믿지 않는 값이면 403(`INVALID_CALLBACK_URL` 등), 문자열이 아니면 400이고 세션은 남는다. Rust는 이런 요청에 200을 내고 세션을 지웠다. 이제 쿼리 문자열이 있거나 이 키가 있는 요청은 Next가 답한다. 검사 자체는 옮기지 않았다. `auth-session.mjs`의 `sign-out` 절이 각 경우를 실제 Next와 비교한다 | 해결 |

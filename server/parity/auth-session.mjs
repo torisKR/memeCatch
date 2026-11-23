@@ -135,6 +135,19 @@ async function getSession() {
   await compare("RSC request", get(user.cookie, { rsc: "1" }));
   await compare("trailing slash", { path: "/api/auth/get-session/", headers: { cookie: user.cookie } });
   await compare("another auth path", { path: "/api/auth/list-sessions", headers: { cookie: user.cookie } });
+  await oversizedCookie();
+}
+
+/** Node refuses headers over 16 KiB before Next runs; Axum refuses such a Cookie header. Status, connection and body. */
+async function oversizedCookie() {
+  const cookie = `a=${"x".repeat(17_000)}`;
+  for (const [label, request] of [["get-session", get(cookie)], ["sign-out", signOutRequest({ cookie, origin: SITE })]]) {
+    const answer = async (base) => {
+      const response = await send(base, request);
+      return `${response.status} connection=${response.headers.connection} body=${response.body.length} bytes`;
+    };
+    expectEqual(`${label}: a 17 KB cookie`, await answer(axumBase), await answer(nextBase));
+  }
 }
 
 const signOutRequest = (headers, body = "{}") => ({ method: "POST", path: "/api/auth/sign-out", headers: { "content-type": "application/json", ...headers }, body });
@@ -162,6 +175,18 @@ async function signOut() {
     ["body null", signOutRequest({ cookie: user.cookie, origin: SITE }, "null")],
     ["body []", signOutRequest({ cookie: user.cookie, origin: SITE }, "[]")],
     ["callbackURL", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"callbackURL":"https://evil.example"}')],
+    // The origin check also reads the query's callbackURL and these body keys.
+    ["query callbackURL of another site", { ...signOutRequest({ cookie: user.cookie, origin: SITE }), path: "/api/auth/sign-out?callbackURL=https%3A%2F%2Fevil.example" }],
+    ["query callbackURL, relative", { ...signOutRequest({ cookie: user.cookie, origin: SITE }), path: "/api/auth/sign-out?callbackURL=%2Fabout" }],
+    ["query callbackURL, no cookie", { ...signOutRequest({}), path: "/api/auth/sign-out?callbackURL=https%3A%2F%2Fevil.example" }],
+    ["another query", { ...signOutRequest({ cookie: user.cookie, origin: SITE }), path: "/api/auth/sign-out?x=%E2%82%AC" }],
+    ["redirectTo of another site", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"redirectTo":"https://evil.example"}')],
+    ["redirectTo, relative", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"redirectTo":"/about"}')],
+    ["redirectTo not a string", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"redirectTo":1}')],
+    ["redirectTo empty", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"redirectTo":""}')],
+    ["errorCallbackURL of another site", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"errorCallbackURL":"https://evil.example"}')],
+    ["newUserCallbackURL of another site", signOutRequest({ cookie: user.cookie, origin: SITE }, '{"newUserCallbackURL":"https://evil.example"}')],
+    ["newUserCallbackURL not a string, no cookie", signOutRequest({}, '{"newUserCallbackURL":true}')],
     ["Origin null on a same-origin fetch", signOutRequest({ cookie: user.cookie, origin: "null", "sec-fetch-site": "same-origin" })],
   ]) {
     await sameWrite(label, t, null, request);

@@ -3,13 +3,18 @@
 //! (better-call dist/utils.mjs:4-30) and the origin check
 //! (dist/api/middlewares/origin-check.mjs:44-120).
 //!
-//! Answered here: a JSON content type and a body that is a JSON object
-//! without any of the schema's keys (`callbackURL`, `disableRedirect`,
-//! `state`), which is what the page frame sends (`{}`). Every other body goes
-//! to Next as it came: a missing or other content type (415), a body that is
-//! not JSON or not an object (400), and the schema's keys, which validate a
-//! callback URL. So does `Origin: null` on a same-origin fetch, which
-//! better-auth replaces with an origin it infers from the request.
+//! Answered here: no query string, a JSON content type and a body that is a
+//! JSON object without any of the schema's keys (`callbackURL`,
+//! `disableRedirect`, `state`) or the keys the origin check validates
+//! (`redirectTo`, `errorCallbackURL`, `newUserCallbackURL`), which is what
+//! the page frame sends (`{}`). Every other request goes to Next as it came:
+//! a missing or other content type (415), a body that is not JSON or not an
+//! object (400), and those keys, which better-auth checks against the trusted
+//! origins (403, or 400 for a non-string). So does any query string: the
+//! origin check reads `callbackURL` from the query too
+//! (origin-check.mjs:51), and Next answers 400 to a raw non-ASCII byte in it.
+//! So does `Origin: null` on a same-origin fetch, which better-auth replaces
+//! with an origin it infers from the request.
 //!
 //! What it does: with a Cookie header, the request's `Origin` (or its
 //! `Referer`) must be a trusted origin (403 otherwise); the session of a
@@ -35,7 +40,16 @@ use crate::{AppState, proxy};
 
 /// The most of a body read before deciding; a longer one is handed to Next.
 const MAX_BODY_BYTES: usize = 64 * 1024;
-const SCHEMA_KEYS: [&str; 3] = ["callbackURL", "disableRedirect", "state"];
+/// The body schema's keys, then the ones `originCheckMiddleware` validates
+/// (origin-check.mjs:50-54): a body with any of them goes to Next.
+const NEXT_KEYS: [&str; 6] = [
+    "callbackURL",
+    "disableRedirect",
+    "state",
+    "redirectTo",
+    "errorCallbackURL",
+    "newUserCallbackURL",
+];
 
 pub async fn sign_out(
     State(state): State<AppState>,
@@ -48,6 +62,7 @@ pub async fn sign_out(
     let (parts, body) = request.into_parts();
     let (bytes, rest) = read_prefix(body).await;
     let handled = rest.is_none()
+        && parts.uri.query().is_none()
         && is_json_content_type(&parts.headers)
         && is_plain_object(&bytes)
         && !same_origin_null(&parts.headers);
@@ -134,11 +149,11 @@ fn is_json_content_type(headers: &axum::http::HeaderMap) -> bool {
     })
 }
 
-/// The body parses as a JSON object without the schema's keys.
+/// The body parses as a JSON object without any of `NEXT_KEYS`.
 fn is_plain_object(bytes: &[u8]) -> bool {
     match serde_json::from_slice::<serde_json::Value>(bytes) {
         Ok(serde_json::Value::Object(object)) => {
-            SCHEMA_KEYS.iter().all(|key| !object.contains_key(*key))
+            NEXT_KEYS.iter().all(|key| !object.contains_key(*key))
         }
         _ => false,
     }
@@ -202,6 +217,9 @@ mod tests {
             b"{",
             br#"{"callbackURL":"/"}"#,
             br#"{"state":"s"}"#,
+            br#"{"redirectTo":"/"}"#,
+            br#"{"errorCallbackURL":1}"#,
+            br#"{"newUserCallbackURL":null}"#,
         ] {
             assert!(!is_plain_object(body), "{}", String::from_utf8_lossy(body));
         }

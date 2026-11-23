@@ -475,9 +475,13 @@ async function worker() {
   // it runs with --drain: every queued job, then this one is checked.
   psql(`update public.processing_jobs set status = 'skipped' where status = 'queued' and ingestion_id <> '${ingestion}'`);
   const node = process.env.WORKER_NODE ?? process.execPath;
-  // The worker reads .env files from its working directory: it runs in an empty one.
+  // The worker gets this script's environment (it needs ffprobe on the path)
+  // without any R2 value, so it reads the copied object from its directory
+  // and can never reach R2. It reads .env files from its working directory:
+  // it runs in an empty one.
+  const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("R2_")));
   execFileSync(node, ["--experimental-strip-types", "--import", path.join(ROOT, "scripts/register-ts-paths.mjs"), path.join(ROOT, "scripts/mpe-media-worker.mjs"), "--drain"], {
-    cwd: dir, stdio: "inherit", env: { PATH: process.env.PATH, DATABASE_URL, LOCAL_OBJECT_STORAGE_DIR: dir, MPE_FFPROBE_TIMEOUT_MS: "30000" },
+    cwd: dir, stdio: "inherit", env: { ...env, DATABASE_URL, LOCAL_OBJECT_STORAGE_DIR: dir, MPE_FFPROBE_TIMEOUT_MS: "30000" },
   });
   const job = psql(`select job_type || ' ' || status || ' ' || attempts || ' ' || coalesce(error_code, '-') || ' ' || coalesce(output_json->>'formatName', '-') || ' ' || coalesce(output_json->>'width', '-') from public.processing_jobs where ingestion_id = '${ingestion}' order by created_at limit 1`);
   console.log(`      the job after the worker ran: ${job}`);

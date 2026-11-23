@@ -103,10 +103,10 @@ pub struct Config {
     /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
     /// registered, so their requests fall through to the upstream.
     pub disabled_routes: HashSet<String>,
-    /// `AXUM_PILOT_ROUTES`: comma-separated ids of the pilot routes to switch
-    /// on. A pilot route does not yet do all that Next's does
-    /// (`routes::PILOT_ROUTE_IDS`), so it is registered only when named here.
-    pub pilot_routes: HashSet<String>,
+    /// `AXUM_PAGE_ROUTES`: comma-separated ids of the page routes to switch
+    /// on (`routes::PAGE_ROUTE_IDS`). A page is registered only when named
+    /// here, and `AXUM_DISABLED_ROUTES` still wins.
+    pub page_routes: HashSet<String>,
     /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
     /// fixes it at build time; give Axum the value the Next image was built
     /// with. `None` loads no analytics.
@@ -242,7 +242,7 @@ impl Config {
             upstream,
             db_pool_max,
             disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
-            pilot_routes: id_list(optional("AXUM_PILOT_ROUTES")),
+            page_routes: id_list(optional("AXUM_PAGE_ROUTES")),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")

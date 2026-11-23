@@ -57,12 +57,11 @@ pub const ROUTE_IDS: [&str; 30] = [
     "admin-mpe-candidates",
 ];
 
-/// Routes that do not yet do all that Next's do, so they are off unless
-/// `AXUM_PILOT_ROUTES` names them. Both render a complete document, but the
-/// site chrome around it has no script yet: the header menu, the language
-/// switch, the account menu and the chat panel do nothing, and the meme page
-/// stops after the origin section (docs/axum-migration/UI-PLAN.md).
-pub const PILOT_ROUTE_IDS: [&str; 2] = ["page-about", "page-meme"];
+/// Pages, which are off unless `AXUM_PAGE_ROUTES` names them: a page is
+/// switched on in its batch, after both parity gates pass on production-sized
+/// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
+/// origin section and leaves the meme pages it cannot render to Next.
+pub const PAGE_ROUTE_IDS: [&str; 2] = ["page-about", "page-meme"];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
 /// variable is the rollback switch: an ignored typo would leave the route
@@ -71,9 +70,9 @@ pub fn check_disabled_ids(disabled: &HashSet<String>) -> Result<(), String> {
     check_ids("AXUM_DISABLED_ROUTES", "native", disabled, &ROUTE_IDS)
 }
 
-/// Refuses an `AXUM_PILOT_ROUTES` that names anything but a pilot route.
-pub fn check_pilot_ids(pilot: &HashSet<String>) -> Result<(), String> {
-    check_ids("AXUM_PILOT_ROUTES", "pilot", pilot, &PILOT_ROUTE_IDS)
+/// Refuses an `AXUM_PAGE_ROUTES` that names anything but a page route.
+pub fn check_page_ids(pages: &HashSet<String>) -> Result<(), String> {
+    check_ids("AXUM_PAGE_ROUTES", "page", pages, &PAGE_ROUTE_IDS)
 }
 
 fn check_ids(
@@ -100,7 +99,7 @@ fn check_ids(
 
 /// Builds one module's router. Every native route has an id; an id listed in
 /// `AXUM_DISABLED_ROUTES` is not registered, so Next keeps answering it. A
-/// pilot route is registered only when `AXUM_PILOT_ROUTES` lists it as well.
+/// page route is registered only when `AXUM_PAGE_ROUTES` lists it as well.
 ///
 /// ```ignore
 /// pub fn router(state: &AppState) -> Router<AppState> {
@@ -139,12 +138,8 @@ impl<'a> Routes<'a> {
             tracing::info!(id, path, "native route disabled, proxying to upstream");
             return self;
         }
-        if PILOT_ROUTE_IDS.contains(&id) && !config.pilot_routes.contains(id) {
-            tracing::info!(
-                id,
-                path,
-                "pilot route not switched on, proxying to upstream"
-            );
+        if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
+            tracing::info!(id, path, "page route not switched on, proxying to upstream");
             return self;
         }
         let native = methods.route_layer(middleware::from_fn_with_state(

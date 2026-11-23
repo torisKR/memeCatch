@@ -12,7 +12,8 @@ use maud::{Markup, html};
 use super::document::{self, Head, Site};
 use super::html as html_response;
 
-pub fn response(site: &Site, request_path: &str) -> Response {
+/// `target` is the request's path and query, as received.
+pub fn response(site: &Site, target: &str) -> Response {
     let head = Head {
         title: "이 밈은 아직 없어요".to_owned(),
         description: None,
@@ -23,7 +24,7 @@ pub fn response(site: &Site, request_path: &str) -> Response {
     };
     html_response(
         StatusCode::NOT_FOUND,
-        document::page(site, &head, request_path, main()),
+        document::page(site, &head, target, main()),
     )
 }
 

@@ -156,3 +156,19 @@ POST /api/upload
 POST /api/mpe/uploads
 GET /api/upload
 GET /api/mpe/uploads
+# The meme studio (routes/studio). studio.mjs covers both routes with bodies,
+# sessions and a Bedrock stub; these need none. The operator route is native
+# only when BEDROCK_MEME_STUDIO_ENABLED=true.
+POST /api/meme-studio
+GET /api/meme-studio
+OPTIONS /api/meme-studio
+POST /api/admin/meme-studio
+GET /api/admin/meme-studio
+# Not ported: Next answers it.
+POST /api/memes/chat
+# Native (without a body or Origin: 403 from either server).
+POST /api/memes/semantic-search
+# Semantic search (routes/search.rs): native when the embedding path cannot
+# run. semantic-search.mjs covers it with bodies on the R1 seed.
+GET /api/memes/semantic-search
+OPTIONS /api/memes/semantic-search

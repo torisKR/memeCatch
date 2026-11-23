@@ -86,7 +86,7 @@ fn now_ms() -> u64 {
 }
 
 /// JavaScript `Number(text)`. `None` is `NaN`.
-fn js_number(text: &str) -> Option<f64> {
+pub(crate) fn js_number(text: &str) -> Option<f64> {
     // JavaScript trims U+FEFF and does not trim U+0085; Rust has it the other
     // way round.
     let is_js_whitespace = |c: char| (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}';

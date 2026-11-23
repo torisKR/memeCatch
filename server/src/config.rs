@@ -45,6 +45,29 @@ pub struct R2Config {
     pub bucket: String,
 }
 
+/// What `POST /api/admin/meme-studio` reads from the environment, as the
+/// TypeScript and the AWS SDK read it (lib/meme-studio-bedrock.server.ts).
+/// Values are kept as given: the route checks them per request, as the
+/// TypeScript does.
+#[derive(Clone, Debug, Default)]
+pub struct BedrockStudioConfig {
+    /// `BEDROCK_MEME_STUDIO_ENABLED === "true"`.
+    pub enabled: bool,
+    /// `BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN` and the output rate.
+    pub input_rate: Option<String>,
+    pub output_rate: Option<String>,
+    /// `AWS_REGION?.trim()`, empty as unset.
+    pub region: Option<String>,
+    /// The SDK's environment credentials: both keys non-empty, and the
+    /// session token when set. No other credential source is read.
+    pub access_key_id: Option<String>,
+    pub secret_access_key: Option<Secret>,
+    pub session_token: Option<Secret>,
+    /// `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`, else `AWS_ENDPOINT_URL`, as the
+    /// SDK reads them; unset is `https://bedrock-runtime.<region>.amazonaws.com`.
+    pub endpoint_url: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -81,6 +104,11 @@ pub struct Config {
     pub cron_secret: Option<Secret>,
     /// `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
     pub r2: Option<R2Config>,
+    pub bedrock_studio: BedrockStudioConfig,
+    /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
+    pub semantic_search_enabled: bool,
+    /// `MEME_EMBEDDING_URL` as given.
+    pub embedding_url: Option<String>,
     /// `OBJECT_SIGNING_SECRET`, trimmed. The TS code falls back to
     /// `BETTER_AUTH_SECRET` when this is unset; that fallback belongs to the
     /// storage module.
@@ -128,6 +156,22 @@ fn id_list(raw: Option<String>) -> HashSet<String> {
             .collect()
     })
     .unwrap_or_default()
+}
+
+fn bedrock_studio(lookup: &impl Fn(&str) -> Option<String>) -> BedrockStudioConfig {
+    let set = |name: &str| lookup(name).filter(|value| !value.is_empty());
+    BedrockStudioConfig {
+        enabled: lookup("BEDROCK_MEME_STUDIO_ENABLED").as_deref() == Some("true"),
+        input_rate: lookup("BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN"),
+        output_rate: lookup("BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN"),
+        region: lookup("AWS_REGION")
+            .map(|region| region.trim().to_owned())
+            .filter(|region| !region.is_empty()),
+        access_key_id: set("AWS_ACCESS_KEY_ID"),
+        secret_access_key: set("AWS_SECRET_ACCESS_KEY").map(Secret::new),
+        session_token: set("AWS_SESSION_TOKEN").map(Secret::new),
+        endpoint_url: set("AWS_ENDPOINT_URL_BEDROCK_RUNTIME").or_else(|| set("AWS_ENDPOINT_URL")),
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -235,6 +279,10 @@ impl Config {
                 .filter(|secret| !secret.is_empty())
                 .map(Secret::new),
             r2,
+            bedrock_studio: bedrock_studio(&lookup),
+            semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
+                == Some("true"),
+            embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),

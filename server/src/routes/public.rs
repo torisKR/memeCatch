@@ -17,7 +17,7 @@
 //! | `llms-full-localized` | `/{en,ja,zh,zh-tw}/llms-full.txt` |
 //! | `explore-previews` | `POST /api/explore/previews` |
 
-mod content_depth;
+pub(crate) mod content_depth;
 pub(crate) mod csp_report;
 pub mod daily_quiz;
 mod explore_previews;

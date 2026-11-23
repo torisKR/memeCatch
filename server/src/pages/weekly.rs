@@ -125,7 +125,7 @@ fn breakdown(trending: &[CardMeme], fresh: &[CardMeme]) -> Vec<(String, usize, u
             (category, count, percentage)
         })
         .collect();
-    out.sort_by(|a, b| b.1.cmp(&a.1));
+    out.sort_by_key(|entry| std::cmp::Reverse(entry.1));
     out
 }
 

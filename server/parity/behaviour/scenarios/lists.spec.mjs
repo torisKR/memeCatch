@@ -136,3 +136,50 @@ test.describe("the meme card", () => {
     await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute("src", "https://www.instagram.com/p/B2postCode6/embed/captioned/");
   });
 });
+
+// GA events (`gtag("event", ...)`) as the page pushes them, kept in
+// sessionStorage so that they outlive the navigation a click causes.
+async function recordGaEvents(page) {
+  await page.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  await page.addInitScript(() => {
+    let layer;
+    Object.defineProperty(window, "dataLayer", {
+      configurable: true,
+      get: () => layer,
+      set(value) {
+        layer = value;
+        const push = value.push.bind(value);
+        value.push = (...items) => {
+          for (const item of items) {
+            const args = Array.from(item);
+            if (args[0] !== "event") continue;
+            const seen = JSON.parse(sessionStorage.getItem("ga-events") || "[]");
+            sessionStorage.setItem("ga-events", JSON.stringify([...seen, args.slice(1)]));
+          }
+          return push(...items);
+        };
+      },
+    });
+  });
+}
+
+test.describe("the weekly digest", () => {
+  test("shows this week's rails and reports the card followed", async ({ page }) => {
+    await stubOutside(page);
+    await recordGaEvents(page);
+    await open(page, "/weekly");
+    await expect(page.getByText("집계 중")).toBeVisible();
+    const trending = page.locator("section").filter({ has: page.getByRole("heading", { name: "지금 가장 뜨거운 밈" }) });
+    await expect(trending.getByRole("link")).toHaveCount(10);
+    await expect(page.getByRole("heading", { name: "새로 등록된 밈" })).toBeVisible();
+    // The category split is one bar per category with its share.
+    await expect(page.getByRole("img", { name: /^phrase 비중 \d+%$/ })).toHaveCount(1);
+
+    const first = trending.getByRole("link").first();
+    const href = await first.getAttribute("href");
+    await first.click();
+    await expect(page).toHaveURL(new RegExp(`${href.replace(/[?]/g, "\\?")}$`));
+    const events = await page.evaluate(() => JSON.parse(sessionStorage.getItem("ga-events") || "[]"));
+    expect(events.filter(([name]) => name === "weekly_click")).toEqual([["weekly_click", { to: href }]]);
+  });
+});

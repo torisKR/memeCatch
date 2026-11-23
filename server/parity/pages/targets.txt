@@ -139,3 +139,9 @@
 /collections/2020s?utm_source=x 200 index native
 /collections/latest/ 308
 /collections/nope 404 proxied
+
+# Batch B2: this week's digest (ISR on Next: ask until x-nextjs-cache is HIT).
+/weekly 200 index native
+/weekly?utm_source=x 200 index native
+/weekly/ 308
+/en/weekly 404 proxied

@@ -12,7 +12,9 @@ use maud::{Markup, html};
 use serde::Deserialize;
 use url::Url;
 
+use super::content_depth::{DEPTH_COLUMNS, row_depth};
 use super::labels::SafetyLevel;
+use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::js;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::meme_delivery::{Normalized, normalize_source_url};
@@ -21,7 +23,8 @@ use crate::routes::public::meme_delivery::{Normalized, normalize_source_url};
 /// `meme_contents` as JSON text in the order Postgres returns them, as the
 /// planner's embed has it.
 pub const CARD_COLUMNS: &str = "\
-m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.safety_level::text as safety_level, \
+m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
+m.safety_level::text as safety_level, \
 m.origin_year, \
 (select coalesce(json_agg(json_build_object('type', c.type, 'thumbnail_url', c.thumbnail_url, \
         'is_representative', c.is_representative, 'url', c.url, 'content_id', c.content_id, \
@@ -46,6 +49,8 @@ pub struct CardContent {
 /// `MemeCardModel`.
 #[derive(Clone, Debug)]
 pub struct CardMeme {
+    pub id: String,
+    pub category: String,
     pub short_id: String,
     pub slug: String,
     pub title: String,
@@ -64,6 +69,8 @@ impl CardMeme {
         let title: Option<String> = row.try_get("title")?;
         let summary: Option<String> = row.try_get("summary")?;
         Ok(Self {
+            id: row.try_get("id")?,
+            category: row.try_get("category")?,
             short_id: row.try_get("short_id")?,
             slug: row.try_get("slug")?,
             title: title.unwrap_or_default(),
@@ -79,6 +86,53 @@ impl CardMeme {
         meme_path(&self.short_id, &self.slug)
     }
 }
+
+/// A listing as `takeIndexableMemes` reads it: up to `scan` rows of
+/// `memes m` matching `condition` in `order`, of which the first `take` that
+/// pass the index test. `condition` and `order` are SQL built from constants;
+/// values travel in `binds` (text, `$1`...).
+pub async fn indexable(
+    db: &Db,
+    condition: &str,
+    order: &str,
+    scan: usize,
+    take: usize,
+    binds: Vec<String>,
+) -> Result<Vec<CardMeme>, sqlx::Error> {
+    let sql = format!(
+        "select {CARD_COLUMNS}, {DEPTH_COLUMNS} from public.memes m \
+          where {condition} order by {order} limit {scan}"
+    );
+    let rows = db
+        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                let mut statement = sqlx::query(sqlx::AssertSqlSafe(sql));
+                for value in binds {
+                    statement = statement.bind(value);
+                }
+                statement.fetch_all(tx).await
+            })
+        })
+        .await?;
+    let mut cards = Vec::new();
+    for row in rows {
+        if cards.len() == take {
+            break;
+        }
+        if row_depth(&row)?.is_indexable() {
+            cards.push(CardMeme::from_row(&row)?);
+        }
+    }
+    Ok(cards)
+}
+
+/// `indexableScanLimit(limit)`.
+pub fn scan_limit(take: usize) -> usize {
+    (take * 20).clamp(take, 400)
+}
+
+/// `MIN_PUBLIC_LISTING_CARDS`: a rail of fewer cards is not shown.
+pub const MIN_LISTING: usize = 3;
 
 /// `isRenderableContent`.
 fn is_renderable(content: &CardContent) -> bool {

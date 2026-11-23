@@ -15,6 +15,7 @@ const PAGES = [
   ["/memes", "밈 전체 목록"],
   ["/collections", "흩어진 밈을,맥락별로 모았습니다."],
   ["/collections/challenge", "챌린지 모음"],
+  ["/weekly", /^\d{4}년 \d{1,2}월 \d주차 밈 결산$/],
 ];
 
 for (const [path, heading] of PAGES) {

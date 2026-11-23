@@ -66,7 +66,10 @@ select
   '[{"situation": "회의가 길어질 때", "text": "이쯤 되면 그 밈이죠."}]'::jsonb,
   category, origin_year, 'year', safety, 'active', 'approved', 'meme',
   difficulty, trend_score,
-  ('2026-11-' || lpad((25 - n)::text, 2, '0') || 'T09:00:00Z')::timestamptz,
+  -- The first four are this week's for /weekly (minutes before the seed ran,
+  -- unless it ran in the first hour of a Korean Monday); the rest fixed.
+  case when n <= 4 then now() - n * interval '10 minutes'
+       else ('2026-11-' || lpad((25 - n)::text, 2, '0') || 'T09:00:00Z')::timestamptz end,
   '2026-11-24T00:00:00Z', '2026-11-01T00:00:00Z'
 from b2;
 

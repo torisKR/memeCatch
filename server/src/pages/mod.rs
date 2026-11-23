@@ -27,6 +27,7 @@ pub mod meme_card;
 pub mod meme_detail;
 pub mod not_found;
 pub mod retired;
+pub mod weekly;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -130,6 +131,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
         .add("page-memes", "/memes", get(directory::page))
         .add("page-collections", "/collections", get(collections::index))
+        .add("page-weekly", "/weekly", get(weekly::page))
         .add(
             "page-collection",
             "/collections/{slug}",

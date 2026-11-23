@@ -15,14 +15,12 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use maud::{Markup, html};
 use serde::Deserialize;
-use sqlx::AssertSqlSafe;
 
 use super::cache::Keyed;
-use super::content_depth::{DEPTH_COLUMNS, row_depth};
 use super::document::{self, Head, ShareImage};
-use super::meme_card::{self, CARD_COLUMNS, CardMeme};
+use super::meme_card::{self, CardMeme};
 use super::{html_cached, json_ld, path_and_query};
-use crate::db::{Db, DbIdentity, IdentityOptions};
+use crate::db::Db;
 use crate::{AppState, proxy};
 
 const COLLECTIONS_JSON: &str = include_str!("../../i18n/collections.json");
@@ -34,10 +32,6 @@ const INDEX_CACHE: &str = "s-maxage=31536000";
 const LIST_CACHE: &str = "s-maxage=86400, stale-while-revalidate=31449600";
 /// `LIMIT`: the indexable memes a list links.
 const LIMIT: usize = 48;
-/// `indexableScanLimit(48)`: rows read so thin documents do not take the slots.
-const SCAN_LIMIT: i64 = 400;
-/// `MIN_PUBLIC_LISTING_CARDS`: fewer and the list shows no cards.
-const MIN_LISTING: usize = 3;
 // Next keeps a list a day and drops it on a catalog edit, which this process
 // does not hear about: it reads again sooner.
 pub const LIST_TTL: Duration = Duration::from_secs(300);
@@ -179,9 +173,9 @@ fn group_section(index: usize, group: &Group) -> Markup {
     }
 }
 
-/// The `where` and `order by` of `loadMemes` for a filter, and its one
-/// bound value, if any. Built from constants and enum values only.
-fn query(filter: &Filter) -> (String, Vec<String>) {
+/// The `where` and `order by` of `loadMemes` for a filter, and the values
+/// it binds. Built from constants and the numbers of the catalog only.
+fn query(filter: &Filter) -> (String, &'static str, Vec<String>) {
     let mut binds = Vec::new();
     let (condition, order) = match filter {
         Filter::Decade { from, to } => (
@@ -209,39 +203,27 @@ fn query(filter: &Filter) -> (String, Vec<String>) {
             (format!("({})", any.join(" or ")), "m.trend_score desc")
         }
     };
-    let sql = format!(
-        "select {CARD_COLUMNS}, {DEPTH_COLUMNS} from public.memes m \
-          where m.moderation_status in ('approved', 'limited') and {condition} \
-          order by {order}, m.id desc limit {SCAN_LIMIT}"
-    );
-    (sql, binds)
+    (
+        format!("m.moderation_status in ('approved', 'limited') and {condition}"),
+        order,
+        binds,
+    )
 }
 
 async fn read(db: &Db, filter: &'static Filter) -> Result<Arc<Vec<CardMeme>>, sqlx::Error> {
-    let (sql, binds) = query(filter);
-    let rows = db
-        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
-            Box::pin(async move {
-                let mut statement = sqlx::query(AssertSqlSafe(sql));
-                for value in binds {
-                    statement = statement.bind(value);
-                }
-                statement.fetch_all(tx).await
-            })
-        })
-        .await?;
-    let mut cards = Vec::new();
-    for row in rows {
-        if cards.len() == LIMIT {
-            break;
-        }
-        // `takeIndexableMemes`.
-        if row_depth(&row)?.is_indexable() {
-            cards.push(CardMeme::from_row(&row)?);
-        }
-    }
+    let (condition, order, binds) = query(filter);
+    let order = format!("{order}, m.id desc");
+    let mut cards = meme_card::indexable(
+        db,
+        &condition,
+        &order,
+        meme_card::scan_limit(LIMIT),
+        LIMIT,
+        binds,
+    )
+    .await?;
     // `hasPublicListing`.
-    if cards.len() < MIN_LISTING {
+    if cards.len() < meme_card::MIN_LISTING {
         cards.clear();
     }
     Ok(Arc::new(cards))
@@ -366,11 +348,11 @@ mod tests {
 
     #[test]
     fn a_keyword_list_binds_each_term_once_for_three_columns() {
-        let (sql, binds) = query(&find("game").unwrap().filter);
+        let (condition, _, binds) = query(&find("game").unwrap().filter);
         assert_eq!(binds.len(), 8);
-        assert!(sql.contains("m.title ilike $8 or m.summary ilike $8 or m.origin ilike $8"));
-        let (sql, binds) = query(&find("latest").unwrap().filter);
+        assert!(condition.contains("m.title ilike $8 or m.summary ilike $8 or m.origin ilike $8"));
+        let (_, order, binds) = query(&find("latest").unwrap().filter);
         assert!(binds.is_empty());
-        assert!(sql.contains("order by m.published_at desc nulls last, m.id desc"));
+        assert_eq!(order, "m.published_at desc nulls last");
     }
 }

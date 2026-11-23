@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use axum::extract::{ConnectInfo, Request, State};
 use axum::http::StatusCode;
-use axum::http::header::{CACHE_CONTROL, HeaderName, HeaderValue, RETRY_AFTER};
+use axum::http::header::{CACHE_CONTROL, HeaderValue, RETRY_AFTER};
 use axum::http::request::Parts;
 use axum::response::Response;
 
@@ -25,7 +25,7 @@ use crate::auth::{self, CronAuthorized};
 use crate::proxy::{self, CacheScope};
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::rate_limit::{self, RateLimit, RateLimiter};
-use crate::routes::request::{self, RequestOrigin, SiteOrigin};
+use crate::routes::request::{self, SiteOrigin};
 
 const NOT_OK: &str = r#"{"ok":false}"#;
 const OK: &str = r#"{"ok":true}"#;
@@ -80,20 +80,15 @@ pub async fn instagram_video(
     request: Request,
 ) -> Response {
     let (site, limiter) = &*expiry.0;
-    if !request::has_ascii_target(request.uri()) {
+    // `hasTrustedOrigin`. Another origin may be Next's own, which only Next
+    // knows: those requests, and targets Next refuses before the route runs,
+    // go to Next.
+    let trusted = request::trusted_origin(request.headers(), site);
+    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
         return proxy::forward(State(state), request).await;
-    }
-    match request::request_origin(request.headers(), site) {
-        RequestOrigin::Site => {}
-        // Next's own origin also passes, and only Next knows it.
-        RequestOrigin::Other => return proxy::forward(State(state), request).await,
-        RequestOrigin::Absent => {
-            let fetch_site = HeaderName::from_static("sec-fetch-site");
-            let same_origin = request::header_text(request.headers(), &fetch_site, ", ");
-            if same_origin.as_deref() != Some("same-origin") {
-                return request::json(StatusCode::FORBIDDEN, NOT_OK);
-            }
-        }
+    };
+    if !trusted {
+        return request::json(StatusCode::FORBIDDEN, NOT_OK);
     }
     let (mut parts, _body) = request.into_parts();
     let key = [RATE_PREFIX.as_bytes(), &client_key(&parts)].concat();

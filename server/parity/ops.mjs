@@ -42,6 +42,17 @@ function stubRequests() {
   });
 }
 
+/** PARITY_USER is an operator, PARITY_USER_2 is not. protect_profile_columns
+ * lets only service_role change a role, and reads that from the app's login
+ * role; the superuser here skips the trigger. */
+function promoteOperator() {
+  psql(`begin;
+        set local session_replication_role = replica;
+        update public.profiles set role = 'operator' where id = ${sqlText(user.userId)}::uuid;
+        update public.profiles set role = 'user' where id = ${sqlText(otherUser.userId)}::uuid;
+        commit;`);
+}
+
 async function retired() {
   const paths = ["/api/cron/adpick-hotdeals", "/api/creator-products", "/api/creator-products/x",
     "/api/creator-products/a/b/c?q=1", "/api/creator-products/%E2%9C%93", "/api/creator-products/"];
@@ -83,13 +94,7 @@ async function sourceRefresh() {
 
 async function instagramVideo() {
   const path = "/api/admin/instagram-video-verification/revalidate";
-  // protect_profile_columns lets only service_role change a role, and reads
-  // that from the app's login role; the superuser here skips the trigger.
-  psql(`begin;
-        set local session_replication_role = replica;
-        update public.profiles set role = 'operator' where id = ${sqlText(user.userId)}::uuid;
-        update public.profiles set role = 'user' where id = ${sqlText(otherUser.userId)}::uuid;
-        commit;`);
+  promoteOperator();
   let n = 0;
   const from = () => ({ "x-forwarded-for": `198.51.100.${++n}` });
   const cases = [
@@ -230,6 +235,7 @@ async function cache() {
     return /<title>([^<|]*)/.exec(response.body.toString("utf8"))?.[1]?.trim() ?? `(status ${response.status})`;
   };
   const setTitle = (title) => psql(`update public.memes set title = ${sqlText(title)} where slug = 'parity-0'`);
+  promoteOperator();
   const operator = { origin: SITE, cookie: user.cookie, "x-forwarded-for": "192.0.2.10" };
   const routes = [
     ["Axum POST /api/cron/source-refresh", axumBase, "/api/cron/source-refresh", bearer],

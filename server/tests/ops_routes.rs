@@ -18,7 +18,7 @@ use axum::body::Body;
 use axum::extract::Request;
 use axum::http::StatusCode;
 use common::{
-    Reply, UNUSED_DATABASE_URL, closed_addr, config, database_url, marker_upstream, send,
+    Reply, UNUSED_DATABASE_URL, closed_addr, config, database_url, marker_upstream, send, session,
     spawn_app, spawn_router,
 };
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
@@ -537,95 +537,30 @@ where
     found.expect("test query")
 }
 
-/// The tables better-auth creates (`ensureAuthSchema`), as in `tests/auth.rs`.
-const AUTH_TABLES: &str = r#"
-select pg_advisory_xact_lock(72031120);
-create table if not exists public."user" (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  email text not null unique,
-  "emailVerified" boolean not null,
-  image text,
-  "createdAt" timestamptz not null default current_timestamp,
-  "updatedAt" timestamptz not null default current_timestamp
-);
-create table if not exists public.session (
-  id uuid primary key default gen_random_uuid(),
-  "expiresAt" timestamptz not null,
-  token text not null unique,
-  "createdAt" timestamptz not null default current_timestamp,
-  "updatedAt" timestamptz not null,
-  "ipAddress" text,
-  "userAgent" text,
-  "userId" uuid not null references public."user" (id) on delete cascade
-);
-create index if not exists "session_userId_idx" on public.session ("userId");
-grant select on public."user", public.session to service_role;
-"#;
-
 struct TestUser {
     id: String,
     cookie: String,
 }
 
-/// A better-auth user with a profile (made by the `auth.users` trigger) and a
-/// session. The nickname is `ax` and 12 hex digits, the form the other test
-/// binaries recognise as a test user (`tests/public_routes/memes_table.rs`).
+/// A better-auth user with a profile and a one-hour session
+/// (`common::session`), promoted to operator when asked.
 async fn sign_in(db: &Db, operator: bool) -> TestUser {
     let pool = db.pool();
-    sqlx::raw_sql(AUTH_TABLES)
+    sqlx::raw_sql(session::AUTH_TABLES)
         .execute(pool)
         .await
         .expect("auth tables");
-    let (id, email): (String, String) = sqlx::query_as(
-        r#"insert into public."user" (name, email, "emailVerified")
-           values ('axum r4 test', 'axum-r4-' || gen_random_uuid() || '@example.com', true)
-           returning id::text, email"#,
-    )
-    .fetch_one(pool)
-    .await
-    .expect("insert user");
-    sqlx::query(
-        "insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data)
-         values ($1::uuid, $2, now(),
-                 jsonb_build_object('nickname', 'ax' || substr(replace($1, '-', ''), 1, 12)))",
-    )
-    .bind(&id)
-    .bind(&email)
-    .execute(pool)
-    .await
-    .expect("insert auth.users");
+    let user = session::create_user(pool).await;
     if operator {
-        let promote =
-            format!("update public.profiles set role = 'operator' where id = '{id}'::uuid");
+        let promote = format!(
+            "update public.profiles set role = 'operator' where id = '{}'::uuid",
+            user.id
+        );
         execute(db, promote).await;
     }
-    let token: String = sqlx::query_scalar(
-        r#"insert into public.session (token, "expiresAt", "updatedAt", "userId")
-           values (replace(gen_random_uuid()::text, '-', ''), now() + interval '1 hour', now(), $1::uuid)
-           returning token"#,
-    )
-    .bind(&id)
-    .fetch_one(pool)
-    .await
-    .expect("insert session");
+    let token = session::create_session(pool, &user, 3600.0).await;
     TestUser {
-        cookie: session_cookie(&token),
-        id,
+        cookie: session::signed_cookie(session::PLAIN, &token, "test-only-auth-secret"),
+        id: user.id,
     }
-}
-
-/// `<token>.<base64 HMAC-SHA256>`, percent-encoded, as better-auth sets it
-/// (`BETTER_AUTH_SECRET` of `common::config`).
-fn session_cookie(token: &str) -> String {
-    use base64::Engine;
-    use hmac::{Hmac, KeyInit, Mac};
-    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(b"test-only-auth-secret").expect("key");
-    mac.update(token.as_bytes());
-    let signature = base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
-    let value = format!("{token}.{signature}")
-        .replace('+', "%2B")
-        .replace('/', "%2F")
-        .replace('=', "%3D");
-    format!("better-auth.session_token={value}")
 }

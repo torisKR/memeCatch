@@ -3,6 +3,7 @@
 
 mod common;
 
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use common::{closed_addr, database_url};
@@ -273,6 +274,44 @@ async fn role_and_settings_do_not_leak_into_the_next_use_of_the_connection() {
             "not the same connection"
         );
     }
+}
+
+// A client that goes away cancels its request: the handler's future is
+// dropped in the middle of a statement, with the role and the settings of
+// its identity in place. Nothing of that may reach the next request.
+#[tokio::test]
+async fn a_transaction_dropped_mid_statement_leaves_nothing_on_the_connection() {
+    // One connection, so the next acquire gets the one that was dropped.
+    let db = db(1);
+    let baseline = session(&mut db.pool().acquire().await.unwrap())
+        .await
+        .unwrap();
+    let inside = Arc::new(Mutex::new(None));
+    let seen_inside = inside.clone();
+    let user = DbIdentity::authenticated(USER_ID);
+
+    let sleeping = db.with_identity(&user, IdentityOptions::default(), |tx| {
+        Box::pin(async move {
+            *seen_inside.lock().unwrap() = Some(session(tx).await?);
+            sqlx::query("select pg_sleep(2)").execute(&mut *tx).await?;
+            Ok::<_, sqlx::Error>(())
+        })
+    });
+    let dropped = tokio::time::timeout(Duration::from_millis(500), sleeping).await;
+    let after = session(&mut db.pool().acquire().await.unwrap())
+        .await
+        .unwrap();
+
+    assert!(dropped.is_err(), "the statement was still running");
+    // The identity was in place on that connection when it was dropped.
+    let inside = inside.lock().unwrap().take().expect("the closure ran");
+    assert_eq!(inside.current_user, "authenticated");
+    assert_eq!(inside.app_user_id, USER_ID);
+    assert_eq!(inside.backend_pid, baseline.backend_pid);
+    // The same connection, as the plain login role with no settings.
+    assert_eq!(after, baseline);
+    assert_eq!(after.current_user, "memecatch");
+    assert_eq!(after.app_user_id, "");
 }
 
 async fn count_memes(db: &Db, identity: &DbIdentity, short_id: &str) -> i64 {

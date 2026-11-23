@@ -101,6 +101,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-guides`, `page-guide` | `/guides`, `/guides/{slug}` | `GET`, `HEAD` | 페이지(B1). 글은 `lib/guides.ts`를 `server/i18n/guides.json`으로 내보낸 것. 없는 slug는 Next로 넘긴다 |
 | `page-offline`, `page-missing-meme` | `/offline`, `/missing-public-meme` | `GET`, `HEAD` | 페이지(B1). 앞은 서비스 워커의 오프라인 화면, 뒤는 없는 밈의 404 문서 |
 | `page-retired-products` | `/retired-products`, `/products/...`, `/go/products/...`(접두사 없이와 `/en`·`/ja`·`/zh`·`/zh-tw` 아래), `/admin/creator-products/...` | `GET`, `HEAD` | 페이지(B1). `proxy.ts`의 `retiredProductDecision`대로 410 문서·308·빈 404. 끝 슬래시, 파일 이름, `/en/products...`(`next.config.ts`의 리디렉션)는 Next로 넘긴다 |
+| `page-originals`, `page-original-edition` | `/originals`, `/originals/edition/{slug}` | `GET`, `HEAD` | 페이지(B2). 글은 `lib/editorial-originals.ts`를 `server/i18n/originals.json`으로 내보낸 것. 작품 이미지는 Next의 `/_next/image`를 그대로 쓴다. 없는 slug는 Next로 넘긴다(Next는 200·noindex로 답한다) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |

@@ -243,6 +243,17 @@ Lighthouse(5절과 같은 조건, 3회 중앙값), `/guides/usage-signals`: Next
 
 Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차이는 `PLAN.md` 74~77(퇴역 상품 카드의 캐시 시간, 410 문서의 스타일시트 링크, 빌드 때 렌더한 문서의 연도, 옮겨 적은 마크업).
 
+### 5.3 B2: 목록·탐색 (진행 중)
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b2`. 17개 중 2개를 옮겼다. 켠 페이지는 없다.
+
+| 페이지 | 경로 id | 다룬 URL 형태 | 결과 |
+| --- | --- | --- | --- |
+| `/originals` | `page-originals` | 그대로, 쿼리, 끝 슬래시, `/en/originals`(404) | 페이지 게이트 일치, 틀과 목록 링크 동작 시험 통과 |
+| `/originals/edition/{slug}` | `page-original-edition` | 세 편, 쿼리, 끝 슬래시, 없는 slug(Next의 200·noindex) | 페이지 게이트 일치, 링크 복사·카드 PNG 저장·그림 링크·다음 작품 동작 시험 통과(스크립트를 비우면 실패) |
+
+스크립트는 `ui/originals.js` 1,841 B(gzip)를 더해 `site.js`가 18,109 B(gzip)다. 남은 15개(`/collections`, `/collections/[slug]`, `/explore`, `/global`, `/meme-cards`, `/memes`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/slang`, `/studio`, `/timeline`, `/weekly`)는 손대지 않았다. `/memes`의 가나다 정렬은 `Intl.Collator("ko", { numeric: true, sensitivity: "base" })`라, Rust에서 같은 순서를 내려면 ICU 정렬기(의존성 추가)나 Postgres ICU 정렬 규칙(마이그레이션)이 필요하다. 결정이 필요하다.
+
 ## 6. 확인하지 못한 것과 위험
 
 확인하지 못한 것:

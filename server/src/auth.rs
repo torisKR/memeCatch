@@ -49,6 +49,18 @@ use crate::db::{DbIdentity, IdentityOptions};
 const SESSION_COOKIE: &str = "better-auth.session_token";
 const SECURE_SESSION_COOKIE: &str = "__Secure-better-auth.session_token";
 
+/// The one session cookie name this process reads, the same one the Next app
+/// reads. Never both: a browser only accepts a `__Secure-` cookie over HTTPS
+/// from the site itself, so reading the plain name in production would let a
+/// planted cookie sign a visitor in to someone else's session.
+fn session_cookie_name(use_secure_cookies: bool) -> &'static str {
+    if use_secure_cookies {
+        SECURE_SESSION_COOKIE
+    } else {
+        SESSION_COOKIE
+    }
+}
+
 // node-pg fails at once when Postgres refuses the connection. sqlx retries
 // until its 30 s acquire timeout, so a database outage would hold every
 // signed-in request for 30 s. Same limit as the health check.
@@ -218,7 +230,10 @@ pub async fn resolve_session(
     state: &AppState,
     headers: &HeaderMap,
 ) -> Result<Option<SessionUser>, sqlx::Error> {
-    let Some(token) = session_token(headers, state.config.better_auth_secret.expose()) else {
+    let config = &state.config;
+    let cookie_name = session_cookie_name(config.use_secure_cookies);
+    let Some(token) = session_token(headers, cookie_name, config.better_auth_secret.expose())
+    else {
         return Ok(None);
     };
     let Some((user, expires_at_ms)) = within_timeout(find_session(state, token)).await? else {
@@ -292,8 +307,9 @@ fn now_ms() -> i64 {
     i64::try_from(since_epoch.as_millis()).unwrap_or(i64::MAX)
 }
 
-/// The session token from the cookie header, if its signature is good.
-fn session_token(headers: &HeaderMap, secret: &str) -> Option<String> {
+/// The session token from the cookie named `cookie_name`, if its signature is
+/// good.
+fn session_token(headers: &HeaderMap, cookie_name: &str, secret: &str) -> Option<String> {
     // Node joins repeated Cookie headers with "; " before Next sees them.
     let cookies = headers
         .get_all(COOKIE)
@@ -301,13 +317,7 @@ fn session_token(headers: &HeaderMap, secret: &str) -> Option<String> {
         .map(node_header_text)
         .collect::<Vec<_>>()
         .join("; ");
-    // better-auth reads one of the two names, whichever its configuration
-    // says. Here the `__Secure-` one wins when both are sent, and a bad
-    // `__Secure-` cookie does not fall back to the plain one, as in
-    // better-auth's own two-name lookup `getSessionCookie`
-    // (dist/cookies/index.mjs:269).
-    let value = cookie_value(&cookies, SECURE_SESSION_COOKIE)
-        .or_else(|| cookie_value(&cookies, SESSION_COOKIE))?;
+    let value = cookie_value(&cookies, cookie_name)?;
     verify_signed_value(&value, secret).map(str::to_owned)
 }
 
@@ -443,14 +453,45 @@ mod tests {
             .collect()
     }
 
-    fn token_from(cookie_header: &str) -> Option<String> {
-        session_token(&headers(&[("cookie", cookie_header)]), SECRET)
+    /// What a process that reads the plain name (`NODE_ENV` other than
+    /// production) makes of a Cookie header.
+    fn plain(cookie_header: &str) -> Option<String> {
+        let headers = headers(&[("cookie", cookie_header)]);
+        session_token(&headers, session_cookie_name(false), SECRET)
+    }
+
+    /// The same for a process that reads the `__Secure-` name (production).
+    fn secure(cookie_header: &str) -> Option<String> {
+        let headers = headers(&[("cookie", cookie_header)]);
+        session_token(&headers, session_cookie_name(true), SECRET)
     }
 
     #[test]
-    fn accepts_cookies_signed_by_better_auth_under_both_names() {
-        assert_eq!(token_from(PLAIN_COOKIE).as_deref(), Some(PLAIN_TOKEN));
-        assert_eq!(token_from(SECURE_COOKIE).as_deref(), Some(SECURE_TOKEN));
+    fn accepts_cookies_signed_by_better_auth_under_the_configured_name() {
+        assert_eq!(session_cookie_name(false), "better-auth.session_token");
+        assert_eq!(
+            session_cookie_name(true),
+            "__Secure-better-auth.session_token"
+        );
+        assert_eq!(plain(PLAIN_COOKIE).as_deref(), Some(PLAIN_TOKEN));
+        assert_eq!(secure(SECURE_COOKIE).as_deref(), Some(SECURE_TOKEN));
+    }
+
+    #[test]
+    fn a_validly_signed_cookie_under_the_other_name_is_signed_out() {
+        // The same signed value under the name this process does not read.
+        let planted = PLAIN_COOKIE.replacen("better-auth", "__Secure-better-auth", 1);
+        let unprefixed = SECURE_COOKIE.replacen("__Secure-", "", 1);
+        let both = format!("{PLAIN_COOKIE}; {SECURE_COOKIE}");
+
+        assert_eq!(secure(PLAIN_COOKIE), None, "production, unprefixed cookie");
+        assert_eq!(secure(&unprefixed), None);
+        assert_eq!(plain(SECURE_COOKIE), None, "development, prefixed cookie");
+        assert_eq!(plain(&planted), None);
+        // With both sent, each mode reads its own and ignores the other.
+        assert_eq!(secure(&both).as_deref(), Some(SECURE_TOKEN));
+        assert_eq!(plain(&both).as_deref(), Some(PLAIN_TOKEN));
+        assert_eq!(secure(&planted).as_deref(), Some(PLAIN_TOKEN), "control");
     }
 
     #[test]
@@ -459,30 +500,26 @@ mod tests {
         let quoted = PLAIN_COOKIE.replacen('=', "=\"", 1) + "\"";
         let split = headers(&[("cookie", "memecatch_locale=en"), ("cookie", PLAIN_COOKIE)]);
 
-        assert_eq!(token_from(&header).as_deref(), Some(PLAIN_TOKEN));
-        assert_eq!(token_from(&quoted).as_deref(), Some(PLAIN_TOKEN));
-        assert_eq!(
-            session_token(&split, SECRET).as_deref(),
-            Some(PLAIN_TOKEN),
-            "repeated Cookie headers"
-        );
-    }
-
-    #[test]
-    fn the_secure_cookie_wins_and_a_bad_one_does_not_fall_back() {
-        let both = format!("{PLAIN_COOKIE}; {SECURE_COOKIE}");
-        let bad_secure = format!("{PLAIN_COOKIE}; __Secure-better-auth.session_token=nope");
         // parseCookies keeps the first of two cookies with one name.
         let duplicate = format!("better-auth.session_token=nope; {PLAIN_COOKIE}");
 
-        assert_eq!(token_from(&both).as_deref(), Some(SECURE_TOKEN));
-        assert_eq!(token_from(&bad_secure), None);
-        assert_eq!(token_from(&duplicate), None);
+        assert_eq!(plain(&header).as_deref(), Some(PLAIN_TOKEN));
+        assert_eq!(plain(&quoted).as_deref(), Some(PLAIN_TOKEN));
+        assert_eq!(
+            session_token(&split, SESSION_COOKIE, SECRET).as_deref(),
+            Some(PLAIN_TOKEN),
+            "repeated Cookie headers"
+        );
+        assert_eq!(plain(&duplicate), None);
     }
 
     #[test]
     fn rejects_a_cookie_signed_with_another_secret_or_altered() {
-        let other_secret = session_token(&headers(&[("cookie", PLAIN_COOKIE)]), "another-secret");
+        let other_secret = session_token(
+            &headers(&[("cookie", PLAIN_COOKIE)]),
+            SESSION_COOKIE,
+            "another-secret",
+        );
         let altered_token = PLAIN_COOKIE.replacen("OYqt", "OYqu", 1);
         let altered_signature = PLAIN_COOKIE.replacen("fMKB", "fMKC", 1);
         let swapped_signature = format!(
@@ -491,9 +528,9 @@ mod tests {
         );
 
         assert_eq!(other_secret, None);
-        assert_eq!(token_from(&altered_token), None);
-        assert_eq!(token_from(&altered_signature), None);
-        assert_eq!(token_from(&swapped_signature), None);
+        assert_eq!(plain(&altered_token), None);
+        assert_eq!(plain(&altered_signature), None);
+        assert_eq!(plain(&swapped_signature), None);
     }
 
     #[test]
@@ -521,13 +558,16 @@ mod tests {
             "tok\u{e9}n.\u{e9}\u{e9}\u{e9}=",
             long.as_str(),
         ] {
-            let plain = format!("{name}={value}");
-            let secure = format!("__Secure-{name}={value}");
-            assert_eq!(token_from(&plain), None, "{value:?}");
-            assert_eq!(token_from(&secure), None, "{value:?}");
+            assert_eq!(plain(&format!("{name}={value}")), None, "{value:?}");
+            assert_eq!(
+                secure(&format!("__Secure-{name}={value}")),
+                None,
+                "{value:?}"
+            );
         }
         for header in ["", ";", ";;;=", "=;", "better-auth.session_token", "a;b;c"] {
-            assert_eq!(token_from(header), None, "{header:?}");
+            assert_eq!(plain(header), None, "{header:?}");
+            assert_eq!(secure(header), None, "{header:?}");
         }
         // Bytes that are not UTF-8 reach the parser as Latin-1 text.
         let mut raw = HeaderMap::new();
@@ -535,7 +575,7 @@ mod tests {
             COOKIE,
             HeaderValue::from_bytes(b"better-auth.session_token=\xff\xfe.\xc3=").unwrap(),
         );
-        assert_eq!(session_token(&raw, SECRET), None);
+        assert_eq!(session_token(&raw, SESSION_COOKIE, SECRET), None);
     }
 
     #[test]

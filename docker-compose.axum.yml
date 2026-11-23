@@ -34,6 +34,8 @@ services:
       AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      # As for the Next app: both read the `__Secure-` session cookie.
+      NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}
       # Next fixes its response headers at build time from these two values
       # (the Dockerfile build args). Axum reads them at start; they must be

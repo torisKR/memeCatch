@@ -63,6 +63,11 @@ pub struct Config {
     pub csp_report_uri: Option<String>,
     /// `BETTER_AUTH_SECRET`, required (as in `docker-compose.yml`).
     pub better_auth_secret: Secret,
+    /// better-auth's `useSecureCookies`, which the Next app sets from
+    /// `NODE_ENV === "production"` (lib/auth/server.ts). It decides which
+    /// session cookie name is read. Unset counts as production: a container
+    /// that forgets `NODE_ENV` must not accept the unprefixed cookie.
+    pub use_secure_cookies: bool,
     /// `CRON_SECRET`.
     pub cron_secret: Option<Secret>,
     /// `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
@@ -176,6 +181,7 @@ impl Config {
             csp_report_uri: Some(csp_report_uri).filter(|uri| !uri.is_empty()),
             site_url,
             better_auth_secret: Secret::new(better_auth_secret),
+            use_secure_cookies: optional("NODE_ENV").is_none_or(|mode| mode == "production"),
             cron_secret: optional("CRON_SECRET").map(Secret::new),
             r2,
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
@@ -305,6 +311,15 @@ mod tests {
         assert!(!with_required(&[("CSP_ENFORCE", "false")]).csp_enforce);
         assert!(with_required(&[("CSP_ENFORCE", "FALSE")]).csp_enforce);
         assert!(with_required(&[("CSP_ENFORCE", "0")]).csp_enforce);
+    }
+
+    #[test]
+    fn secure_cookies_are_off_only_when_node_env_names_another_mode() {
+        assert!(with_required(&[]).use_secure_cookies);
+        assert!(with_required(&[("NODE_ENV", "")]).use_secure_cookies);
+        assert!(with_required(&[("NODE_ENV", "production")]).use_secure_cookies);
+        assert!(!with_required(&[("NODE_ENV", "development")]).use_secure_cookies);
+        assert!(!with_required(&[("NODE_ENV", "test")]).use_secure_cookies);
     }
 
     #[test]

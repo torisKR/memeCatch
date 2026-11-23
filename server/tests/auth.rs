@@ -253,26 +253,42 @@ async fn fetch(app: SocketAddr, path: &str, headers: &[(&str, &str)]) -> (Status
     )
 }
 
+/// `NODE_ENV` decides the one cookie name a process reads, as it does for the
+/// Next app (`useSecureCookies`, lib/auth/server.ts:120). Unset is production.
 #[tokio::test]
-async fn a_valid_session_resolves_to_its_user_under_both_cookie_names() {
-    let state = state(&[]).await;
-    let user = create_user(state.db.pool()).await;
-    let token = create_session(state.db.pool(), &user, HOUR).await;
+async fn a_valid_session_resolves_only_under_the_cookie_name_of_the_mode() {
+    let cases = [
+        (None, SECURE, PLAIN),
+        (Some(""), SECURE, PLAIN),
+        (Some("production"), SECURE, PLAIN),
+        (Some("development"), PLAIN, SECURE),
+    ];
+    for (node_env, accepted, ignored) in cases {
+        let env: Vec<_> = node_env
+            .map(|mode| ("NODE_ENV", mode))
+            .into_iter()
+            .collect();
+        let state = state(&env).await;
+        let user = create_user(state.db.pool()).await;
+        let token = create_session(state.db.pool(), &user, HOUR).await;
+        let right_name = signed_cookie(accepted, &token, SECRET);
+        let wrong_name = signed_cookie(ignored, &token, SECRET);
 
-    let plain = resolve(&state, &signed_cookie(PLAIN, &token, SECRET)).await;
-    let secure = resolve(&state, &signed_cookie(SECURE, &token, SECRET)).await;
-    let among_others = resolve(
-        &state,
-        &format!(
-            "memecatch_locale=en; {}; theme=dark",
-            signed_cookie(PLAIN, &token, SECRET)
-        ),
-    )
-    .await;
+        let resolved = resolve(&state, &right_name).await;
+        let among_others = resolve(
+            &state,
+            &format!("memecatch_locale=en; {right_name}; theme=dark"),
+        )
+        .await;
+        // The same valid, correctly signed session under the other name.
+        let other_name = resolve(&state, &wrong_name).await;
+        let both = resolve(&state, &format!("{wrong_name}; {right_name}")).await;
 
-    assert_eq!(plain.as_ref(), Some(&user));
-    assert_eq!(secure.as_ref(), Some(&user));
-    assert_eq!(among_others.as_ref(), Some(&user));
+        assert_eq!(resolved.as_ref(), Some(&user), "{env:?} {accepted}");
+        assert_eq!(among_others.as_ref(), Some(&user), "{env:?}");
+        assert_eq!(other_name, None, "{env:?} must ignore {ignored}");
+        assert_eq!(both.as_ref(), Some(&user), "{env:?} both names sent");
+    }
 }
 
 #[tokio::test]
@@ -282,40 +298,48 @@ async fn cookies_better_auth_would_refuse_resolve_to_signed_out() {
     let user = create_user(pool).await;
     let live = create_session(pool, &user, HOUR).await;
     let expired = create_session(pool, &user, -HOUR).await;
-    let good = signed_cookie(PLAIN, &live, SECRET);
+    let good = signed_cookie(SECURE, &live, SECRET);
     let good_signature = signature(&live, SECRET);
     // One character changed in the signature, and one in the token.
-    let tampered_signature = cookie(PLAIN, &live, &first_char_changed(&good_signature, 'A', 'B'));
-    let tampered_token = cookie(PLAIN, &first_char_changed(&live, '0', '1'), &good_signature);
+    let tampered_signature = cookie(
+        SECURE,
+        &live,
+        &first_char_changed(&good_signature, 'A', 'B'),
+    );
+    let tampered_token = cookie(
+        SECURE,
+        &first_char_changed(&live, '0', '1'),
+        &good_signature,
+    );
 
     let cases = [
         ("tampered signature", tampered_signature),
         ("tampered token", tampered_token),
         (
             "token not in the table",
-            signed_cookie(PLAIN, "0123456789abcdef0123456789abcdef", SECRET),
+            signed_cookie(SECURE, "0123456789abcdef0123456789abcdef", SECRET),
         ),
-        ("expired session", signed_cookie(PLAIN, &expired, SECRET)),
+        ("expired session", signed_cookie(SECURE, &expired, SECRET)),
         (
-            "expired session, secure name",
-            signed_cookie(SECURE, &expired, SECRET),
+            "valid session under the unprefixed name",
+            signed_cookie(PLAIN, &live, SECRET),
         ),
         (
             "signed with a different secret",
-            signed_cookie(PLAIN, &live, "another-secret"),
+            signed_cookie(SECURE, &live, "another-secret"),
         ),
-        ("unsigned token", format!("{PLAIN}={live}")),
-        ("empty value", format!("{PLAIN}=")),
-        ("only a dot", format!("{PLAIN}=.")),
-        ("lone quote", format!("{PLAIN}=\"")),
-        ("bad percent escape", format!("{PLAIN}={live}.%zz%3D")),
+        ("unsigned token", format!("{SECURE}={live}")),
+        ("empty value", format!("{SECURE}=")),
+        ("only a dot", format!("{SECURE}=.")),
+        ("lone quote", format!("{SECURE}=\"")),
+        ("bad percent escape", format!("{SECURE}={live}.%zz%3D")),
         (
             "signature that is not base64",
-            format!("{PLAIN}={live}.{}%3D", "!".repeat(43)),
+            format!("{SECURE}={live}.{}%3D", "!".repeat(43)),
         ),
         (
             "signature of the wrong length",
-            format!("{PLAIN}={live}.AAAA%3D"),
+            format!("{SECURE}={live}.AAAA%3D"),
         ),
         (
             "no cookie pair at all",
@@ -338,14 +362,14 @@ async fn cookies_better_auth_would_refuse_resolve_to_signed_out() {
 #[tokio::test]
 async fn a_database_failure_is_an_error_not_signed_out() {
     let state = state_without_database().await;
-    let cookie = signed_cookie(PLAIN, "0123456789abcdef0123456789abcdef", SECRET);
+    let cookie = signed_cookie(SECURE, "0123456789abcdef0123456789abcdef", SECRET);
     let started = Instant::now();
 
     let with_valid_signature = resolve_session(&state, &cookie_headers(&cookie)).await;
     // No session cookie and a bad signature never reach the database.
     let no_cookie = resolve_session(&state, &HeaderMap::new()).await;
     let bad_signature =
-        resolve_session(&state, &cookie_headers(&format!("{PLAIN}=token.nope"))).await;
+        resolve_session(&state, &cookie_headers(&format!("{SECURE}=token.nope"))).await;
 
     assert!(
         with_valid_signature.is_err(),
@@ -363,7 +387,7 @@ async fn a_database_failure_is_an_error_not_signed_out() {
 #[tokio::test]
 async fn extractors_answer_503_when_the_database_is_down() {
     let app = spawn(state_without_database().await).await;
-    let cookie = signed_cookie(PLAIN, "0123456789abcdef0123456789abcdef", SECRET);
+    let cookie = signed_cookie(SECURE, "0123456789abcdef0123456789abcdef", SECRET);
     let signed = [("cookie", cookie.as_str())];
 
     let (whoami, me, admin, anonymous) = tokio::join!(
@@ -390,11 +414,14 @@ async fn extractors_separate_signed_out_users_and_operators() {
     let user = create_user(pool).await;
     let operator = create_user(pool).await;
     make_operator(&state, &operator).await;
-    let user_cookie = signed_cookie(PLAIN, &create_session(pool, &user, HOUR).await, SECRET);
+    let user_cookie = signed_cookie(SECURE, &create_session(pool, &user, HOUR).await, SECRET);
     let operator_cookie =
         signed_cookie(SECURE, &create_session(pool, &operator, HOUR).await, SECRET);
-    let expired_operator_cookie =
-        signed_cookie(PLAIN, &create_session(pool, &operator, -HOUR).await, SECRET);
+    let expired_operator_cookie = signed_cookie(
+        SECURE,
+        &create_session(pool, &operator, -HOUR).await,
+        SECRET,
+    );
     let app = spawn(state).await;
     let as_user = [("cookie", user_cookie.as_str())];
     let as_operator = [("cookie", operator_cookie.as_str())];
@@ -447,7 +474,7 @@ async fn the_resolved_identity_is_the_one_row_level_security_sees() {
     let state = state(&[]).await;
     let user = create_user(state.db.pool()).await;
     let token = create_session(state.db.pool(), &user, HOUR).await;
-    let signed_in = RequestIdentity(resolve(&state, &signed_cookie(PLAIN, &token, SECRET)).await);
+    let signed_in = RequestIdentity(resolve(&state, &signed_cookie(SECURE, &token, SECRET)).await);
     let signed_out = RequestIdentity(resolve(&state, "theme=dark").await);
 
     let mut seen = Vec::new();
@@ -594,7 +621,13 @@ async fn real_better_auth_cookies_resolve_to_the_same_user() {
     for (node_env, cookie_name) in [("development", PLAIN), ("production", SECURE)] {
         let minted = mint_with_better_auth(node_env);
         // After the script: its `ensureAuthSchema` created the real tables.
-        let state = state(&[]).await;
+        // Rust runs in the same mode as the better-auth that minted the cookie.
+        let state = state(&[("NODE_ENV", node_env)]).await;
+        let other_mode = match node_env {
+            "production" => "development",
+            _ => "production",
+        };
+        let other_state = state_for(&database_url(), &[("NODE_ENV", other_mode)]).await;
         let better_auth_user = SessionUser {
             id: minted.user_id.clone(),
             email: minted.email.clone(),
@@ -605,14 +638,20 @@ async fn real_better_auth_cookies_resolve_to_the_same_user() {
         let (name, value) = minted.cookie.split_once('=').expect("name=value");
         let tampered = format!("{name}={}", first_char_changed(value, '0', '1'));
         let tampered_resolved = resolve(&state, &tampered).await;
+        let in_other_mode = resolve(&other_state, &minted.cookie).await;
 
         println!("NODE_ENV={node_env}");
         println!("  cookie       {}", minted.cookie);
         println!("  better-auth  {} {}", minted.user_id, minted.email);
         println!("  rust         {resolved:?}");
+        println!("  rust with NODE_ENV={other_mode}  {in_other_mode:?}");
         assert_eq!(minted.cookie_name, cookie_name);
         assert_eq!(resolved.as_ref(), Some(&better_auth_user));
         assert_eq!(tampered_resolved, None, "{tampered}");
+        assert_eq!(
+            in_other_mode, None,
+            "NODE_ENV={other_mode} reads the other name"
+        );
 
         // The same cookie through the extractors, before and after the user
         // becomes an operator. The profile is the one the app's own sign-up

@@ -87,6 +87,29 @@ async fn csp_report_limits_each_client_ip_to_60_requests_a_minute() {
     assert_eq!(another_client.header("retry-after"), None);
 }
 
+// Next would give each of these made-up clients its own bucket. Here they
+// share one, so a caller cannot grow the limiter's memory with header text.
+#[tokio::test]
+async fn csp_report_counts_every_value_that_is_not_an_address_as_one_client() {
+    let app = app_without_db(closed_addr().await, &[]).await;
+    let huge_value = "x".repeat(120_000);
+
+    for request in 1..=59 {
+        let made_up = format!("client-{request}");
+        let reply = csp(app, &[("x-forwarded-for", made_up.as_str())], "").await;
+        assert_eq!(reply.header("retry-after"), None, "request {request}");
+    }
+    let huge = csp(app, &[("x-forwarded-for", huge_value.as_str())], "").await;
+    let over_limit = csp(app, &[("x-forwarded-for", "client-61")], "").await;
+    let an_address = csp(app, &[("x-forwarded-for", "203.0.113.9")], "").await;
+
+    assert_eq!(huge.status, StatusCode::NO_CONTENT);
+    assert_eq!(huge.header("retry-after"), None, "request 60");
+    assert_eq!(over_limit.status, StatusCode::NO_CONTENT);
+    assert_eq!(over_limit.header("retry-after"), Some("60"));
+    assert_eq!(an_address.header("retry-after"), None);
+}
+
 /// The app served the way `main.rs` serves it: handlers can see the address
 /// of the TCP peer. (`common::spawn_app` serves without it.)
 async fn app_with_peer_address() -> SocketAddr {

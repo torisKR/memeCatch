@@ -28,8 +28,10 @@ const LEFT_OUT: &[&str] = &[
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_GA_ID",
     "NEXT_PUBLIC_ADSENSE_CLIENT",
-    // Tests and parity runs only: sends OpenRouter requests to a local stub.
+    // Tests and parity runs only: send OpenRouter, llms-full.txt and ChatGPT
+    // client metadata requests to a local stub.
     "AXUM_TEST_OPENROUTER_ORIGIN",
+    "AXUM_TEST_MCP_ORIGIN",
 ];
 
 fn matches(entry: &str, name: &str) -> bool {

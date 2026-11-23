@@ -119,6 +119,27 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "/api/memes/semantic-search",
         ),
         ("memes-chat", "POST", "/api/memes/chat"),
+        ("mcp", "POST", "/api/mcp"),
+        ("mcp-operator", "GET", "/api/mcp-operator"),
+        ("mcp-operator-post", "POST", "/api/mcp-operator"),
+        (
+            "mcp-oauth-authorize",
+            "GET",
+            "/api/mcp-operator/oauth/authorize",
+        ),
+        ("mcp-oauth-token", "POST", "/api/mcp-operator/oauth/token"),
+        (
+            "mcp-oauth-metadata",
+            "GET",
+            "/.well-known/oauth-authorization-server",
+        ),
+        (
+            "mcp-resource-metadata",
+            "GET",
+            "/.well-known/oauth-protected-resource/api/mcp-operator",
+        ),
+        ("mcp-github", "POST", "/api/mcp-operator/github"),
+        ("mcp-events-cron", "GET", "/api/cron/mcp-events"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

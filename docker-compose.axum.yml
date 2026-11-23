@@ -76,6 +76,14 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       OPENROUTER_MPE_MODEL: ${OPENROUTER_MPE_MODEL:-}
+      # The ChatGPT connector routes (server/src/routes/mcp/): the retry
+      # cron's second bearer, the GitHub webhook secret, and the state key.
+      # The key decides which server answers: without it (as Next has it
+      # now) Axum gives the fixed answers the stateful routes give; with it
+      # Axum leaves them to Next.
+      MCP_EVENT_RETRY_TOKEN: ${MCP_EVENT_RETRY_TOKEN:-}
+      MCP_GITHUB_WEBHOOK_SECRET: ${MCP_GITHUB_WEBHOOK_SECRET:-}
+      MCP_EVENT_STATE_KEY: ${MCP_EVENT_STATE_KEY:-}
       # Read at run time by Next too (components/adsense-script.tsx).
       ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
       # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and

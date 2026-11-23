@@ -104,6 +104,22 @@ fn loopback_origin(raw: &str) -> Option<String> {
     .then(|| url.origin().ascii_serialization())
 }
 
+/// The variables the ChatGPT connector routes read (routes/mcp.rs), as set.
+#[derive(Clone, Debug, Default)]
+pub struct McpConfig {
+    /// `MCP_EVENT_RETRY_TOKEN`: a second bearer for the retry cron.
+    pub retry_token: Option<String>,
+    /// `MCP_GITHUB_WEBHOOK_SECRET`: the GitHub webhook signing secret.
+    pub github_secret: Option<String>,
+    /// `MCP_EVENT_STATE_KEY`, only to know whether it is set: with it the
+    /// stateful routes stay with Next.
+    pub state_key: Option<String>,
+    /// For tests only: `AXUM_TEST_MCP_ORIGIN`, a loopback `http://host:port`
+    /// that receives the requests meant for `https://catchmeme.com` and
+    /// `https://chatgpt.com`.
+    pub test_origin: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -142,6 +158,7 @@ pub struct Config {
     pub r2: Option<R2Config>,
     pub bedrock_studio: BedrockStudioConfig,
     pub openrouter: OpenRouterConfig,
+    pub mcp: McpConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
     /// `MEME_EMBEDDING_URL` as given.
@@ -286,6 +303,14 @@ impl Config {
             ));
         }
 
+        let mcp_origin = optional("AXUM_TEST_MCP_ORIGIN");
+        let mcp_test_origin = mcp_origin.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&mcp_origin, &mcp_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_MCP_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -333,6 +358,12 @@ impl Config {
                 chat_generation: lookup("MEME_CHAT_GENERATION_ENABLED"),
                 chat_provider: lookup("MEME_CHAT_PROVIDER"),
                 test_origin: openrouter_test_origin,
+            },
+            mcp: McpConfig {
+                retry_token: lookup("MCP_EVENT_RETRY_TOKEN"),
+                github_secret: lookup("MCP_GITHUB_WEBHOOK_SECRET"),
+                state_key: lookup("MCP_EVENT_STATE_KEY"),
+                test_origin: mcp_test_origin,
             },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),

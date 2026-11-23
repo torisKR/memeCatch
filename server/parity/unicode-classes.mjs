@@ -5,6 +5,7 @@
 //
 //   TITLE_KEY_DROP  /[\s\p{P}\p{S}_]/u   memeTitleKey (scripts/meme-title-key.mjs)
 //   WORD            /[\p{Script=Hangul}\p{L}\p{N}]/u   normalizeKoreanText (lib/mpe/candidates.ts)
+//   LETTER_OR_NUMBER  /[\p{L}\p{N}]/u   the MCP corpus search (integrations/memecatch-chatgpt/src/corpus.mjs)
 //
 // Run it with the Node of the Next image (22) after a Node upgrade there:
 //
@@ -53,4 +54,5 @@ pub fn contains(ranges: &[(u32, u32)], point: char) -> bool {
 }
 
 ${table("TITLE_KEY_DROP", "`/[\\s\\p{P}\\p{S}_]/u` of `memeTitleKey`.", /[\s\p{P}\p{S}_]/u)}
-${table("WORD", "`/[\\p{Script=Hangul}\\p{L}\\p{N}]/u` of `normalizeKoreanText`.", /[\p{Script=Hangul}\p{L}\p{N}]/u)}`);
+${table("WORD", "`/[\\p{Script=Hangul}\\p{L}\\p{N}]/u` of `normalizeKoreanText`.", /[\p{Script=Hangul}\p{L}\p{N}]/u)}
+${table("LETTER_OR_NUMBER", "`/[\\p{L}\\p{N}]/u` of the MCP corpus search.", /[\p{L}\p{N}]/u)}`);

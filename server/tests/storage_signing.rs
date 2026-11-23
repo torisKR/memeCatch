@@ -29,6 +29,7 @@ struct Fixture {
     now: u64,
     env: Env,
     urls: Vec<UrlRow>,
+    site_urls: Vec<SiteUrlRow>,
     r2: R2Fixture,
     signed_keys: Vec<SignedKey>,
     verify: Vec<VerifyCase>,
@@ -46,6 +47,14 @@ struct UrlRow {
     r2_get: Option<String>,
     /// Path and query of the request `list(name)` sends to R2.
     r2_list: Option<String>,
+}
+
+/// The URL `signedObjectUrl("uploads", "a.png", 60)` gives under `env`.
+#[derive(Deserialize)]
+struct SiteUrlRow {
+    note: String,
+    env: Env,
+    url: String,
 }
 
 #[derive(Deserialize)]
@@ -137,6 +146,18 @@ fn mints_the_urls_typescript_mints_and_refuses_the_names_it_refuses() {
             "{}",
             row.note
         );
+    }
+}
+
+#[test]
+fn mints_the_site_typescript_mints_when_the_site_url_is_unset_or_empty() {
+    let fixture = fixture();
+    assert_eq!(fixture.site_urls.len(), 2);
+
+    for row in &fixture.site_urls {
+        let minted = storage(&row.env).signed_object_url_at("uploads", "a.png", 60, fixture.now);
+
+        assert_eq!(minted.ok().as_ref(), Some(&row.url), "{}", row.note);
     }
 }
 

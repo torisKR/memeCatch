@@ -191,6 +191,25 @@
       "r2List": null
     }
   ],
+  "siteUrls": [
+    {
+      "note": "NEXT_PUBLIC_SITE_URL unset",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret"
+      },
+      "url": "http://localhost:3000/api/media/signed?key=uploads%2Fa.png&exp=1764000060000&sig=924762f5e943effc9c21382eca353450a39263cc2f82a5505e8d345337107b5c"
+    },
+    {
+      "note": "NEXT_PUBLIC_SITE_URL empty",
+      "env": {
+        "OBJECT_SIGNING_SECRET": "fixture-object-signing-secret",
+        "BETTER_AUTH_SECRET": "fixture-better-auth-secret",
+        "NEXT_PUBLIC_SITE_URL": ""
+      },
+      "url": "/api/media/signed?key=uploads%2Fa.png&exp=1764000060000&sig=924762f5e943effc9c21382eca353450a39263cc2f82a5505e8d345337107b5c"
+    }
+  ],
   "r2": {
     "env": {
       "R2_ACCOUNT_ID": "fixture-account",

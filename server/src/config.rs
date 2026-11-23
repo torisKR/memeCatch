@@ -56,7 +56,8 @@ pub struct Config {
     /// `NEXT_PUBLIC_SITE_URL`, default `https://catchmeme.com`.
     pub site_url: String,
     /// `NEXT_PUBLIC_SITE_URL` as given, `None` when unset. For code whose
-    /// default is not `site_url`'s (`app/(default)/memes/random/route.ts`).
+    /// default is not `site_url`'s (`app/(default)/memes/random/route.ts`,
+    /// `signedObjectUrl` in `lib/object-storage.ts`).
     pub site_url_env: Option<String>,
     /// `CSP_ENFORCE`: anything except the exact string `false` enforces.
     pub csp_enforce: bool,

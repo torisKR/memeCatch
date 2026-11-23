@@ -28,9 +28,6 @@
 //!   storage root there. Keys the application signs are already clean.
 //! - [`Storage::list`] on R2 reads each `<Contents>` whatever the order of its
 //!   children. The TypeScript needs `<Key>` before `<LastModified>`.
-//! - With `NEXT_PUBLIC_SITE_URL` unset, signed URLs start with the `Config`
-//!   default (`https://catchmeme.com`); the TypeScript uses
-//!   `http://localhost:3000`. Compose always sets the variable.
 
 use std::fmt;
 use std::path::PathBuf;
@@ -59,6 +56,9 @@ use time::OffsetDateTime;
 use crate::config::{Config, Secret};
 
 const DEFAULT_CONTENT_TYPE: &str = "application/octet-stream";
+// `signedObjectUrl` in lib/object-storage.ts has its own default site, not
+// `Config::site_url`'s. Both compose files always set the variable.
+const DEFAULT_SIGNED_URL_SITE: &str = "http://localhost:3000";
 const R2_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// What `encodeURIComponent` leaves as it is.
@@ -144,7 +144,8 @@ pub struct Storage(Arc<Inner>);
 struct Inner {
     /// `OBJECT_SIGNING_SECRET`, or `BETTER_AUTH_SECRET` when that is not set.
     signing_secret: Secret,
-    /// `NEXT_PUBLIC_SITE_URL` without trailing slashes.
+    /// `NEXT_PUBLIC_SITE_URL` without trailing slashes, or
+    /// `DEFAULT_SIGNED_URL_SITE` when it is unset.
     site_url: String,
     backend: Backend,
 }
@@ -192,7 +193,12 @@ impl Storage {
                 .object_signing_secret
                 .clone()
                 .unwrap_or_else(|| config.better_auth_secret.clone()),
-            site_url: config.site_url.trim_end_matches('/').to_owned(),
+            site_url: config
+                .site_url_env
+                .as_deref()
+                .unwrap_or(DEFAULT_SIGNED_URL_SITE)
+                .trim_end_matches('/')
+                .to_owned(),
             backend,
         })))
     }

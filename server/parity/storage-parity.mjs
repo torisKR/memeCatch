@@ -134,6 +134,15 @@ async function fixture() {
     return { note, bucket, name, url };
   });
 
+  // The site a signed URL starts with when NEXT_PUBLIC_SITE_URL is not a URL.
+  const siteUrls = [
+    ["NEXT_PUBLIC_SITE_URL unset", SIGNING],
+    ["NEXT_PUBLIC_SITE_URL empty", { ...SIGNING, NEXT_PUBLIC_SITE_URL: "" }],
+  ].map(([note, env]) => {
+    setEnv(env);
+    return { note, env, url: signedObjectUrl("uploads", "a.png", 60) };
+  });
+
   // The requests the R2 backend makes, recorded in place of `fetch`.
   setEnv({ ...SIGNING, ...R2 });
   const recorded = [];
@@ -283,7 +292,7 @@ async function fixture() {
   check("exp signed as text, not as a number", SIGNING, { key, exp: `${E}.0`, sig: hmac(SIGNING, key, `${E}.0`) }, false);
 
   setClock();
-  const body = JSON.stringify({ now: NOW, env: { ...SIGNING, ...SITE }, urls, r2, signedKeys, verify }, null, 2);
+  const body = JSON.stringify({ now: NOW, env: { ...SIGNING, ...SITE }, urls, siteUrls, r2, signedKeys, verify }, null, 2);
   // Escaped so invisible characters in the cases stay visible in the file.
   const ascii = body.replace(/[\u007f-￿]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
   process.stdout.write(`${ascii}\n`);

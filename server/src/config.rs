@@ -96,7 +96,8 @@ pub struct Config {
     /// better-auth's `useSecureCookies`, which the Next app sets from
     /// `NODE_ENV === "production"` (lib/auth/server.ts). It decides which
     /// session cookie name is read. Unset counts as production: a container
-    /// that forgets `NODE_ENV` must not accept the unprefixed cookie.
+    /// that forgets `NODE_ENV` must not accept the unprefixed cookie. Always
+    /// equal to `node_env_production`.
     pub use_secure_cookies: bool,
     /// `CRON_SECRET` exactly as given; `None` when unset or empty. Four cron
     /// routes compare it untouched and one trims it first; the cron guards
@@ -153,8 +154,10 @@ pub struct Config {
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
-    /// `NODE_ENV` is exactly `production`: better-auth's `isProduction`,
-    /// which turns its rate limiter on (dist/context/create-context.mjs:172).
+    /// better-auth's `isProduction`, which turns its rate limiter on
+    /// (dist/context/create-context.mjs:172). `NODE_ENV` is `production` or
+    /// unset, the same reading as `use_secure_cookies`: the production Next
+    /// build fixes `NODE_ENV`, so its cookies and its limiter never disagree.
     pub node_env_production: bool,
 }
 
@@ -276,6 +279,10 @@ impl Config {
             _ => None,
         };
 
+        // `NODE_ENV === "production"` as the production Next build sees it:
+        // the build fixes it, so unset counts as production.
+        let production = optional("NODE_ENV").is_none_or(|mode| mode == "production");
+
         Ok(Self {
             database_url: Secret::new(database_url),
             port,
@@ -285,7 +292,7 @@ impl Config {
             site_url,
             site_url_env,
             better_auth_secret: Secret::new(better_auth_secret),
-            use_secure_cookies: optional("NODE_ENV").is_none_or(|mode| mode == "production"),
+            use_secure_cookies: production,
             cron_secret: lookup("CRON_SECRET")
                 .filter(|secret| !secret.is_empty())
                 .map(Secret::new),
@@ -315,7 +322,7 @@ impl Config {
                         .collect()
                 })
                 .unwrap_or_default(),
-            node_env_production: lookup("NODE_ENV").as_deref() == Some("production"),
+            node_env_production: production,
         })
     }
 }
@@ -440,6 +447,23 @@ mod tests {
         assert!(with_required(&[("NODE_ENV", "production")]).use_secure_cookies);
         assert!(!with_required(&[("NODE_ENV", "development")]).use_secure_cookies);
         assert!(!with_required(&[("NODE_ENV", "test")]).use_secure_cookies);
+    }
+
+    // The production Next build fixes `NODE_ENV` to `production`, which turns
+    // on both the `__Secure-` cookie names and better-auth's limiter.
+    #[test]
+    fn the_cookie_names_and_the_limiter_follow_one_node_env_reading() {
+        for (vars, production) in [
+            (&[][..], true),
+            (&[("NODE_ENV", "")][..], true),
+            (&[("NODE_ENV", "production")][..], true),
+            (&[("NODE_ENV", "development")][..], false),
+            (&[("NODE_ENV", "test")][..], false),
+        ] {
+            let config = with_required(vars);
+            assert_eq!(config.use_secure_cookies, production, "{vars:?}");
+            assert_eq!(config.node_env_production, production, "{vars:?}");
+        }
     }
 
     #[test]

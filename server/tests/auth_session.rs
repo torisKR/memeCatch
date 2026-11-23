@@ -68,3 +68,39 @@ async fn a_cookie_header_over_16_kib_gets_node_s_431() {
     .await;
     assert_eq!(reply.status, StatusCode::REQUEST_HEADER_FIELDS_TOO_LARGE);
 }
+
+/// better-auth's limiter: 100 requests a 10 s window per address and path.
+async fn the_101st_get_session(node_env: Option<&str>) -> StatusCode {
+    let upstream = marker_upstream().await;
+    let vars: Vec<(&str, &str)> = node_env
+        .map(|mode| ("NODE_ENV", mode))
+        .into_iter()
+        .collect();
+    let app = spawn_app(config(upstream, UNUSED_DATABASE_URL, &vars)).await;
+    let address = [("x-forwarded-for", "198.18.0.7")];
+    for _ in 0..100 {
+        let reply = send(app, "GET", "/api/auth/get-session", &address, Body::empty()).await;
+        assert_eq!(reply.status, StatusCode::OK, "{node_env:?}");
+    }
+    send(app, "GET", "/api/auth/get-session", &address, Body::empty())
+        .await
+        .status
+}
+
+#[tokio::test]
+async fn the_limiter_is_on_exactly_when_the_cookies_are_secure() {
+    // `NODE_ENV` unset reads as production for the cookie names (config.rs),
+    // so it must for the limiter too.
+    assert_eq!(
+        the_101st_get_session(None).await,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    assert_eq!(
+        the_101st_get_session(Some("production")).await,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    assert_eq!(
+        the_101st_get_session(Some("development")).await,
+        StatusCode::OK
+    );
+}

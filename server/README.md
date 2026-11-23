@@ -74,8 +74,9 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 ## Add a native route
 
 Add it in its module's `router` function with `Routes::add(id, path, methods)`
-(`src/routes/mod.rs`). The id is what an operator lists in
-`AXUM_DISABLED_ROUTES` to hand the route back to Next. Then add the path to
+and add the id to `ROUTE_IDS` (both in `src/routes/mod.rs`). The id is what an
+operator lists in `AXUM_DISABLED_ROUTES` to hand the route back to Next; the
+server refuses to start on an id that is not in the list. Then add the path to
 `parity/paths.txt`, with a `HEAD` line if the route answers `GET`, and run the
 harness against a real Next.
 
@@ -84,3 +85,7 @@ the body as Next does (chunked, no `Content-Length`, also on `HEAD`), so a
 handler returns a plain body. For a path outside `/api`, check what `proxy.ts`
 does to it first: see `routes/public.rs` for `Content-Language` and the www
 host.
+
+This server has 256 MB, a tenth of what Next has. Do not hold a whole object
+or body in memory (`routes/media.rs` streams), and give any map keyed by
+something a client chooses a size limit (`routes/public/rate_limit.rs`).

@@ -3,6 +3,14 @@
 #   docker compose -f docker-compose.yml -f docker-compose.axum.yml up -d
 #
 # Without this file nothing changes. See docs/axum-migration/PLAN.md.
+#
+# Pause automatic deploys before you opt in by hand. scripts/deploy-oci.sh
+# does not load this file (that is stage 5 of the plan), so its next run turns
+# `app` back into Next and leaves `next` running as an orphan: two Next
+# servers, each with its own connection pool and memory limit, and no Axum.
+#
+# Needs a Docker Compose that knows `!override`, `!reset` and `extends` with
+# `depends_on` (it renders on v5.5.0; the version on the VM is not checked).
 
 services:
   # The Next app as docker-compose.yml defines it (image, environment, limits,
@@ -31,6 +39,7 @@ services:
       PORT: "3000"
       UPSTREAM_URL: http://next:3001
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
+      # The main pool. Two more connections belong to the deadline pool: 6 in all.
       AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}

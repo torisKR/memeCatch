@@ -90,8 +90,10 @@ pub struct Config {
     /// Host and port of `UPSTREAM_URL` (plain `http://host:port`), default
     /// `http://127.0.0.1:3001`.
     pub upstream: Authority,
-    /// `AXUM_DB_POOL_MAX`, default 4. Postgres allows 30 connections in total
-    /// and the Next app, the worker and the backup share them.
+    /// `AXUM_DB_POOL_MAX`, default 4: the size of the main pool. The deadline
+    /// pool holds 2 more, so this server can open `AXUM_DB_POOL_MAX` + 2
+    /// connections. Postgres allows 30 in total and the Next app, the worker
+    /// and the backup share them.
     pub db_pool_max: u32,
     /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
     /// registered, so their requests fall through to the upstream.

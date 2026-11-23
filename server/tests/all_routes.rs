@@ -12,7 +12,7 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::{config, database_url, marker_upstream, send, spawn_router};
-use memecatch_server::routes::{PILOT_ROUTE_IDS, ROUTE_IDS};
+use memecatch_server::routes::{PAGE_ROUTE_IDS, ROUTE_IDS};
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
@@ -142,7 +142,7 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
 }
 
 #[tokio::test]
-async fn pilots_are_off_without_axum_pilot_routes_and_the_rest_is_native() {
+async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
     let upstream = marker_upstream().await;
     let samples = samples(&css_name(upstream).await);
     let default = app(upstream, &[]).await;
@@ -150,7 +150,7 @@ async fn pilots_are_off_without_axum_pilot_routes_and_the_rest_is_native() {
     for (id, method, path) in &samples {
         let reply = send(default, method, path, &[], Body::empty()).await;
 
-        if PILOT_ROUTE_IDS.contains(id) {
+        if PAGE_ROUTE_IDS.contains(id) {
             assert_eq!(reply.body, format!("upstream saw {method} {path}"), "{id}");
         } else {
             assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id}");
@@ -175,7 +175,7 @@ async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
         for (id, method, path) in &samples {
             let reply = send(all_on, method, path, fetch, Body::empty()).await;
 
-            if PILOT_ROUTE_IDS.contains(id) {
+            if PAGE_ROUTE_IDS.contains(id) {
                 assert_eq!(
                     reply.body,
                     format!("upstream saw {method} {path}"),
@@ -206,11 +206,11 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
         assert!(disabled.contains(id), "{id} is missing from: {disabled}");
     }
     assert!(
-        pilot.starts_with("AXUM_PILOT_ROUTES names no pilot route: page-mem."),
+        pilot.starts_with("AXUM_PILOT_ROUTES names no page route: page-mem."),
         "{pilot}"
     );
     assert!(
-        not_a_pilot.starts_with("AXUM_PILOT_ROUTES names no pilot route: quiz."),
+        not_a_pilot.starts_with("AXUM_PILOT_ROUTES names no page route: quiz."),
         "{not_a_pilot}"
     );
     // Every valid combination starts.

@@ -8,9 +8,10 @@
 //! sends to the crawlers it lists as unable to run scripts.
 
 use maud::{DOCTYPE, Markup, html};
-use time::OffsetDateTime;
 
-use super::{chrome, json_ld};
+use super::chrome::{Frame, chat, footer, header, overlays};
+use super::i18n::Locale;
+use super::json_ld;
 use crate::routes::public::js;
 
 const BRAND: &str = "밈캐치";
@@ -159,23 +160,31 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
     }
 }
 
-/// The whole document. `request_path` is the path as requested, still
-/// percent-encoded: the sign-in link returns to it.
-pub fn page(site: &Site, page_head: &Head, request_path: &str, main: Markup) -> Markup {
-    let login_href = format!("/login?next={}", js::encode_uri_component(request_path));
+/// The whole document of a Korean page. `path_and_query` is the request
+/// target as received, still percent-encoded: the sign-in links return to
+/// its path and the language switch keeps its query.
+pub fn page(site: &Site, page_head: &Head, path_and_query: &str, main: Markup) -> Markup {
+    let frame = Frame {
+        locale: Locale::korean(),
+        path_and_query,
+    };
+    let info = frame.locale.info();
     html! {
         (DOCTYPE)
-        html lang="ko" dir="ltr" data-ga=[site.ga_id.as_deref()] {
+        html lang=(info.lang) dir=(info.dir) data-ga=[site.ga_id.as_deref()] {
             head { (head(site, page_head)) }
             body class="flex min-h-dvh flex-col max-md:pb-[calc(4.5rem+4rem+1rem)] md:pb-0" {
                 (json_ld::organization(site))
+                (overlays::nav_progress())
                 div class="flex min-w-0 flex-1 flex-col" {
-                    (chrome::header(&login_href))
+                    (header::header(&frame))
                     div class="min-w-0 flex-1" { (main) }
-                    (chrome::footer(OffsetDateTime::now_utc().year()))
+                    (footer::footer(&frame))
                 }
-                (chrome::bottom_nav())
-                (chrome::chat_launcher())
+                (footer::bottom_nav(&frame))
+                (chat::chat(&frame))
+                (overlays::login_gate(&frame))
+                (overlays::install_prompt())
                 @if let Some(id) = &site.ga_id {
                     script async src=(format!("https://www.googletagmanager.com/gtag/js?id={}", js::encode_uri_component(id))) {}
                 }

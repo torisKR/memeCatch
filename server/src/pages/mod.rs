@@ -2,10 +2,10 @@
 //! place of a React server render. `docs/axum-migration/UI-PLAN.md` explains
 //! the choice and lists what each page still leaves to Next.
 //!
-//! Route ids: `page-about`, `page-meme` and `page-assets` (the stylesheet and
-//! script of these pages). The two pages are pilots: off until
-//! `AXUM_PILOT_ROUTES` names them (`routes::PILOT_ROUTE_IDS` says why), and
-//! `AXUM_DISABLED_ROUTES` still switches them off.
+//! Route ids: `page-about`, `page-meme` and `page-assets` (the stylesheet,
+//! the script and the frame in another language). A page route is off until
+//! `AXUM_PILOT_ROUTES` names it (`routes::PAGE_ROUTE_IDS`), and
+//! `AXUM_DISABLED_ROUTES` still switches it off.
 //!
 //! Only a plain document request is answered here. Next's own client router
 //! asks for the same paths with an `RSC` header and expects a React payload,
@@ -16,6 +16,7 @@ pub mod cache;
 pub mod chrome;
 pub mod content_depth;
 pub mod document;
+pub mod i18n;
 pub mod json_ld;
 pub mod labels;
 pub mod meme_detail;
@@ -25,7 +26,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use axum::extract::{Path, Request, State};
+use axum::extract::{Path, Query, Request, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::{self, Next};
@@ -34,16 +35,19 @@ use axum::routing::get;
 use maud::Markup;
 use sha2::{Digest, Sha256};
 
-use self::cache::Timed;
+use self::cache::{Keyed, Timed};
+use self::chrome::Frame;
 use self::document::Site;
+use self::i18n::Locale;
 use crate::config::Config;
 use crate::routes::Routes;
 use crate::routes::public::www_to_upstream;
 use crate::{AppState, proxy};
 
-/// Built by `scripts/build-ui.mjs` from `ui/site.css` and `app/globals.css`.
+/// Built by `scripts/build-ui.mjs`: the stylesheet from `ui/site.css` and
+/// `app/globals.css`, the script from `ui/*.js` and the `lib/` modules it uses.
 const SITE_CSS: &str = include_str!("../../assets/site.css");
-const SITE_JS: &str = include_str!("../../ui/site.js");
+const SITE_JS: &str = include_str!("../../assets/site.js");
 const ASSET_PREFIX: &str = "/_axum/";
 
 // `Cache-Control` of a page Next renders on request.
@@ -53,6 +57,14 @@ const IMMUTABLE_ASSET_CACHE: &str = "public, max-age=31536000, immutable";
 // `SITEMAP_CACHE_MS` in app/sitemap.ts keeps the same count for an hour.
 // Nothing tells this process about an edit, so it asks again sooner.
 const INDEXABLE_COUNT_TTL: Duration = Duration::from_secs(300);
+// The frame in another language for one page (`GET /_axum/frame/{locale}`).
+// It changes only with a deploy, which restarts the process.
+const FRAME_FRAGMENT_TTL: Duration = Duration::from_secs(3600);
+// Its key carries a path from the request, so the cap bounds what any number
+// of paths can hold: about 30 KB a fragment, so some 130 of them.
+const FRAME_FRAGMENT_MAX_BYTES: usize = 4 * 1024 * 1024;
+// A path longer than this is not a page of this site.
+const FRAME_PATH_MAX: usize = 2048;
 
 /// What every native page needs besides the database. Cheap to clone.
 #[derive(Clone)]
@@ -64,6 +76,8 @@ pub struct Shared {
     js_name: String,
     /// How many memes the sitemap lists (`about.rs`).
     pub(self) indexable_count: Timed<i64>,
+    /// Rendered frame fragments by (locale, path and query).
+    frames: Keyed<(&'static str, String), Arc<str>>,
 }
 
 impl Pages {
@@ -82,6 +96,9 @@ impl Pages {
             css_name,
             js_name,
             indexable_count: Timed::new(INDEXABLE_COUNT_TTL),
+            frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
+                body.len()
+            }),
         }))
     }
 }
@@ -114,6 +131,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         ));
     let assets = Routes::new(state)
         .add("page-assets", "/_axum/{file}", get(asset))
+        .add("page-assets", "/_axum/frame/{locale}", get(frame_fragment))
         .build();
     pages.merge(assets)
 }
@@ -133,6 +151,55 @@ async fn documents_only(State(state): State<AppState>, request: Request, next: N
         return proxy::forward(State(state), request).await;
     }
     next.run(request).await
+}
+
+/// The request target as received: path and query, still percent-encoded.
+pub fn path_and_query(request: &Request) -> &str {
+    request
+        .uri()
+        .path_and_query()
+        .map_or_else(|| request.uri().path(), |target| target.as_str())
+}
+
+#[derive(serde::Deserialize)]
+struct FrameQuery {
+    path: String,
+}
+
+/// The frame of the page at `?path=` in another language, for the language
+/// switch (`ui/locale.js`): `chrome::fragment` as JSON.
+async fn frame_fragment(
+    State(state): State<AppState>,
+    Path(code): Path<String>,
+    Query(query): Query<FrameQuery>,
+) -> Response {
+    let Some(locale) = Locale::get(&code) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let path = query.path;
+    if !path.starts_with('/') || path.starts_with("//") || path.len() > FRAME_PATH_MAX {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+    let render = || async {
+        let frame = Frame {
+            locale,
+            path_and_query: &path,
+        };
+        Ok::<_, std::convert::Infallible>(Arc::from(chrome::fragment(&frame).to_string()))
+    };
+    let Ok(body) = state
+        .pages
+        .frames
+        .get_or_load((locale.code(), path.clone()), render)
+        .await;
+    (
+        [
+            (CONTENT_TYPE, "application/json"),
+            (CACHE_CONTROL, DYNAMIC_PAGE_CACHE),
+        ],
+        body.to_string(),
+    )
+        .into_response()
 }
 
 /// A rendered document with the headers Next puts on a page.

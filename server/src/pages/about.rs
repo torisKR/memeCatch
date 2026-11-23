@@ -131,7 +131,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     };
     html_response(
         StatusCode::OK,
-        document::page(site, &head, request.uri().path(), main(count)),
+        document::page(site, &head, super::path_and_query(&request), main(count)),
     )
 }
 

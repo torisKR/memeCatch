@@ -366,6 +366,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     // The key as it was sent: the canonical check compares its encoding.
     let request_path = request.uri().path().to_owned();
     let query = request.uri().query().map(str::to_owned);
+    let target = crate::pages::path_and_query(&request).to_owned();
     let key = request_path.strip_prefix("/memes/").unwrap_or_default();
 
     let requested_short_id = short_id_from_param(key);
@@ -384,7 +385,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
 
     let meme = match load(&state.db, target_short_id.to_owned()).await {
         Ok(Some(meme)) => meme,
-        Ok(None) => return not_found::response(&state.pages.site, &request_path),
+        Ok(None) => return not_found::response(&state.pages.site, &target),
         Err(error) => {
             tracing::warn!(%error, "meme document read failed, leaving the request to the upstream");
             return proxy::forward(State(state), request).await;
@@ -396,10 +397,11 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     if !meme.is_ported() {
         return proxy::forward(State(state), request).await;
     }
-    render(&state, &meme, &request_path)
+    render(&state, &meme, &target)
 }
 
-fn render(state: &AppState, meme: &MemeDocument, request_path: &str) -> Response {
+/// `target` is the request's path and query, as received.
+fn render(state: &AppState, meme: &MemeDocument, target: &str) -> Response {
     let site = &state.pages.site;
     let path = meme.path();
     let depth = meme.depth();
@@ -482,10 +484,7 @@ fn render(state: &AppState, meme: &MemeDocument, request_path: &str) -> Response
             .filter(|client| *client == ADSENSE_CLIENT_ID)
             .filter(|_| site.adsense_auto_ads && meme.may_carry_ads(&depth)),
     });
-    html_response(
-        StatusCode::OK,
-        document::page(site, &head, request_path, main),
-    )
+    html_response(StatusCode::OK, document::page(site, &head, target, main))
 }
 
 #[cfg(test)]

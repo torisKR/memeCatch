@@ -62,7 +62,7 @@ test.describe("the meme card", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText("틱톡 챌린지 밈");
   });
 
-  test("shows a video's still, and the poster when an image does not load", async ({ page }) => {
+  test("shows a video's still, and the poster when its own art does not load", async ({ page }) => {
     await stubOutside(page, { stills: true });
     await open(page, "/collections/challenge");
     const still = card(page, "유튜브 영상 밈").locator("img");
@@ -75,12 +75,15 @@ test.describe("the meme card", () => {
     await expect(art.getByRole("img", { name: "그림 카드 밈 상징 일러스트" })).toHaveCount(0);
     await expect(art.locator('[data-meme-card-art="fallback"]')).toHaveCount(1);
     await expect(art.locator("[data-meme-card-bubble]")).toHaveCount(1);
+  });
 
-    // A still that fails becomes the poster too.
-    await page.unrouteAll();
+  // A test of its own: a still loaded once may come from the browser's cache.
+  test("shows the poster when a video's still does not load", async ({ page }) => {
     await stubOutside(page, { stills: false });
     await open(page, "/collections/challenge");
-    await expect(card(page, "유튜브 영상 밈").locator('[data-meme-card-art="fallback"]')).toHaveCount(1);
+    const still = card(page, "유튜브 영상 밈");
+    await expect(still.locator('[data-meme-card-art="fallback"]')).toHaveCount(1);
+    await expect(still.locator("img")).toHaveCount(0);
   });
 
   test("plays one TikTok post in a dialog, and closes it with Escape or its button", async ({ page }) => {

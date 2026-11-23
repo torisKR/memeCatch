@@ -264,6 +264,17 @@ Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차�
 
 스크립트(gzip): `ui/card.js` 1,001 B, `ui/timeline.js` 1,103 B, `ui/slang.js` 743 B, `ui/originals.js` 1,841 B. `site.js`는 모든 페이지가 한 파일을 받으므로 20,079 B이고, 예산 30 KB 안이다. `/memes`·`/collections`·`/weekly`는 카드 스크립트 말고 자기 스크립트가 없다.
 
+Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시, Axum은 디버그 빌드):
+
+| | 점수 | FCP | LCP | TBT | 자체 요청 | JS 전송 | CSS 전송 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/collections/challenge` Next | 81 | 1,536 ms | 5,155 ms | 29 ms | 75 | 359,513 B (27개) | 45,132 B |
+| `/collections/challenge` Axum | 100 | 906 ms | 906 ms | 0 ms | 9 | 22,328 B (1개) | 19,492 B |
+| `/memes` Next | 100 | 1,536 ms | 1,536 ms | 30 ms | 59 | 351,220 B (25개) | 45,132 B |
+| `/memes` Axum | 100 | 906 ms | 906 ms | 0 ms | 9 | 22,328 B (1개) | 19,492 B |
+
+Next의 LCP는 이번에도 회차마다 갈렸다(모음 5,155·1,536·5,285 ms, `/memes` 1,536·1,536·5,214 ms). Axum은 여섯 번 모두 905~910 ms였다.
+
 남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-8).
 
 ## 6. 확인하지 못한 것과 위험

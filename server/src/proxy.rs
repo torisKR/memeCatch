@@ -69,6 +69,24 @@ impl Upstream {
             .build(connector);
         Self { client, authority }
     }
+
+    /// The status of the upstream's own `GET /api/health`, for this server's
+    /// health check. The caller sets the time limit.
+    pub async fn health(&self) -> Result<StatusCode, String> {
+        let uri = Uri::builder()
+            .scheme(Scheme::HTTP)
+            .authority(self.authority.clone())
+            .path_and_query("/api/health")
+            .build()
+            .map_err(|error| error.to_string())?;
+        let request = Request::get(uri)
+            .body(Body::empty())
+            .map_err(|error| error.to_string())?;
+        let response = self.client.request(request).await;
+        response
+            .map(|response| response.status())
+            .map_err(|error| error_chain(&error))
+    }
 }
 
 /// Marks an answer that [`forward`] produced. A native handler that hands its

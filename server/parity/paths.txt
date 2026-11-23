@@ -24,3 +24,22 @@ OPTIONS /api/health
 /api/media/signed
 /api/media/signed?key=uploads%2Fa.png&exp=1&sig=00
 POST /api/media/signed
+# Routes Axum answers itself (routes/public.rs). The two random routes pass
+# when the database holds at most one approved meme; with more, their target
+# shows as unstable and random-targets.mjs compares the sets instead.
+/api/random-meme
+HEAD /api/random-meme
+/memes/random
+HEAD /memes/random
+/memes/random?utm_source=x
+/api/daily-quiz
+HEAD /api/daily-quiz
+# Their other methods are still Next's.
+POST /robots.txt
+OPTIONS /api/random-meme
+POST /memes/random
+GET /api/csp-report
+OPTIONS /api/csp-report
+POST /api/daily-quiz
+# Without a body this is the "no content type" case of csp-report.mjs.
+POST /api/csp-report

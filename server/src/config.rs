@@ -55,6 +55,9 @@ pub struct Config {
     pub release_sha: Option<String>,
     /// `NEXT_PUBLIC_SITE_URL`, default `https://catchmeme.com`.
     pub site_url: String,
+    /// `NEXT_PUBLIC_SITE_URL` as given, `None` when unset. For code whose
+    /// default is not `site_url`'s (`app/(default)/memes/random/route.ts`).
+    pub site_url_env: Option<String>,
     /// `CSP_ENFORCE`: anything except the exact string `false` enforces.
     pub csp_enforce: bool,
     /// `CSP_REPORT_URI`. Unset: `<site_url>/api/csp-report`. Set but empty:
@@ -155,7 +158,10 @@ impl Config {
             return Err(ConfigError(problems.join("; ")));
         }
 
-        let site_url = lookup("NEXT_PUBLIC_SITE_URL").unwrap_or_else(|| DEFAULT_SITE_URL.into());
+        let site_url_env = lookup("NEXT_PUBLIC_SITE_URL");
+        let site_url = site_url_env
+            .clone()
+            .unwrap_or_else(|| DEFAULT_SITE_URL.into());
         let csp_report_uri =
             lookup("CSP_REPORT_URI").unwrap_or_else(|| format!("{site_url}/api/csp-report"));
         let r2 = match (
@@ -180,6 +186,7 @@ impl Config {
             csp_enforce: lookup("CSP_ENFORCE").as_deref() != Some("false"),
             csp_report_uri: Some(csp_report_uri).filter(|uri| !uri.is_empty()),
             site_url,
+            site_url_env,
             better_auth_secret: Secret::new(better_auth_secret),
             use_secure_cookies: optional("NODE_ENV").is_none_or(|mode| mode == "production"),
             cron_secret: optional("CRON_SECRET").map(Secret::new),

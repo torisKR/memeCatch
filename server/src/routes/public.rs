@@ -1,15 +1,16 @@
 //! Public routes answered without Next: `/robots.txt`, `/api/random-meme`,
-//! `/memes/random`, `/api/csp-report` and `/api/daily-quiz`.
+//! `/memes/random`, `/api/csp-report`, `/api/daily-quiz` and `/api/quiz`.
 //!
 //! Each has a route id for `AXUM_DISABLED_ROUTES`: `robots`, `random-meme`,
-//! `memes-random`, `csp-report`, `daily-quiz`.
+//! `memes-random`, `csp-report`, `daily-quiz`, `quiz`.
 
 mod csp_report;
 pub mod daily_quiz;
-mod js;
+pub(crate) mod js;
 pub mod quiz;
+mod quiz_api;
 mod random;
-mod rate_limit;
+pub(crate) mod rate_limit;
 mod robots;
 
 use std::sync::Arc;
@@ -59,7 +60,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/api/csp-report",
             post(move |request: Request| csp_report::report(limiter.clone(), request)),
         )
-        .add("daily-quiz", "/api/daily-quiz", get(daily_quiz::daily_quiz));
+        .add("daily-quiz", "/api/daily-quiz", get(daily_quiz::daily_quiz))
+        .add("quiz", "/api/quiz", get(quiz_api::quiz));
 
     // Only the paths outside /api: proxy.ts never runs for /api.
     pages

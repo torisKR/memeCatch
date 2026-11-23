@@ -1,9 +1,12 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
 //! merges them. A request no native route answers reaches `proxy::forward`.
 
+pub mod cards;
 pub mod health;
 pub mod media;
 pub mod public;
+pub mod request;
+pub mod tracking;
 
 use std::collections::HashSet;
 
@@ -15,7 +18,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 7] = [
+pub const ROUTE_IDS: [&str; 14] = [
     "health",
     "media-signed",
     "robots",
@@ -23,6 +26,13 @@ pub const ROUTE_IDS: [&str; 7] = [
     "random-meme",
     "csp-report",
     "daily-quiz",
+    "quiz",
+    "meme-cards",
+    "meme-card",
+    "meme-cards-collection",
+    "meme-cards-claim",
+    "memes-view",
+    "analytics-events",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
@@ -105,4 +115,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
     health::router(state)
         .merge(media::router(state))
         .merge(public::router(state))
+        .merge(cards::router(state))
+        .merge(tracking::router(state))
 }

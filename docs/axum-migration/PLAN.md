@@ -93,6 +93,15 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `random-meme` | `/api/random-meme` | `GET`, `HEAD` | |
 | `csp-report` | `/api/csp-report` | `POST` | 분당 60회 제한의 카운터는 프로세스별이다. 키는 IP 주소이거나 `unknown`이고 버킷은 최대 10,000개다 |
 | `daily-quiz` | `/api/daily-quiz` | `GET`, `HEAD` | |
+| `quiz` | `/api/quiz` | `GET`, `HEAD` | `set`이 있으면 Next와 바이트 단위로 같다. 없으면 호출마다 무작위라 구조와 출제 가능한 밈 집합이 같다 |
+| `meme-cards` | `/api/meme-cards` | `GET`, `HEAD` | |
+| `meme-card` | `/api/meme-cards/{id}` | `GET`, `HEAD` | id 세그먼트에 `%`가 있으면 Next로 넘긴다. Next가 세그먼트를 먼저 디코딩하고 `%ff` 같은 값에는 직접 500을 낸다 |
+| `meme-cards-collection` | `/api/meme-cards/collection` | `GET`, `HEAD` | 로그인한 사용자의 카드. 비로그인은 401 |
+| `meme-cards-claim` | `/api/meme-cards/claim` | `POST` | `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin`이 사이트 origin이 아닌 요청은 Next로 넘긴다(아래 "단계 2·3 일부" 발견 2) |
+| `memes-view` | `/api/memes/view` | `POST` | `MEMECATCH_SIGNING_SECRET`이 없거나 `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin` 규칙은 위와 같다 |
+| `analytics-events` | `/api/analytics/events` | `POST` | 위와 같다 |
+
+`/api/memes/{id}/view`는 옮기지 않았다(아래 "단계 2·3 일부" 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
 인증 추출자(`RequestIdentity`·`SignedInUser`·`Operator`·`CronAuthorized`·`CronAuthorizedTrimmed`)와 객체 저장소(`state.storage`)는 만들어졌고, 이를 쓰는 경로는 단계 2·3에서 붙는다. 크론 가드가 둘인 이유: 크론 경로 넷(`trend-pulse`·`source-refresh`·`growth-baseline`·`saved-state-emails`)은 `CRON_SECRET`을 그대로 비교하고 `meme-embeddings`는 trim한 뒤 비교한다.
 
@@ -154,3 +163,59 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | 25 | 헤더가 100개를 넘는 요청은 431. Node는 2,000개까지 받는다. `axum::serve`에 설정이 없어 고치려면 hyper 연결 루프를 직접 써야 한다(하지 않기로 했다) | 수용 |
 | 26 | 요청 헤더를 읽는 시간 제한이 없다. Node는 60초 뒤 끊는다. Caddy 말고 다른 것이 3000 포트에 닿을 때만 문제다 | 수용 |
 | 27 | UTF-8이 아닌 요청 대상은 hyper가 400으로 답한다 | 수용 |
+
+## 6. 단계 2·3 일부: 밈 카드·퀴즈·조회수·분석 이벤트
+
+브랜치 `torisKR/axum-routes-r2`. 옮긴 경로는 5절 표의 `quiz`부터 `analytics-events`까지 일곱 개다. 동치 확인은 `server/parity/cards-quiz.mjs`·`tracking.mjs`(실제 Next와 같은 DB에서 요청·행 비교), `server/tests/quiz_parity.rs`(실제 `lib/quiz.ts` 출력), `server/tests/engagement_routes`(HTTP 통합 테스트)에 있다.
+
+### 옮기지 않은 경로
+
+| 경로 | 이유 |
+| --- | --- |
+| `/api/memes/{id}/view` | 통과시키는 `Origin`이 `new URL(request.url).origin` 하나뿐인데, 이 값은 Next가 자기 리슨 주소로 만든다(발견 2). Axum은 그 값을 알 수 없어 어떤 `Origin`이 통과인지 판정할 수 없다. 게다가 이 경로가 부르는 `record_meme_view` 함수가 마이그레이션에 없어서 검사를 통과해도 항상 400 `view_not_recorded`이고, 이 경로를 부르는 클라이언트 코드도 없다 |
+
+### 계획을 바꾸는 발견
+
+1. **`docker-compose.axum.yml`은 `MEMECATCH_SIGNING_SECRET`을 Axum에 넘기지 않는다.** 그래서 지금 opt-in 컴포즈로 켜면 `memes-view`와 `analytics-events`는 등록되지 않고 Next가 계속 답한다(값 없이 직접 답하면 503이 되므로 등록하지 않게 했다). 단계 5에서 컴포즈의 `app` 환경에 Next와 같은 값을 추가해야 두 경로가 네이티브가 된다. 값이 같아야 `mc_growth_session` 쿠키와 조회·네트워크 해시가 두 서버 사이에서 통한다.
+2. **Next의 `request.url`은 `Host` 헤더가 아니라 Next 자신의 리슨 주소로 만들어진다.** standalone 서버에서 `http://localhost:<PORT>`이고(127.0.0.1에 바인드해도 `localhost`), `X-Forwarded-Proto`에 `https`가 들어 있으면 `https://localhost:<PORT>`다. `hasTrustedOrigin`·`/api/memes/view`·`/api/analytics/events`는 `Origin`을 이 값과 `SITE_URL`의 origin 두 개와 비교한다. Axum은 앞의 값을 알 수 없으므로, `Origin`이 `SITE_URL`의 origin과 같으면 직접 처리하고 그 밖의 `Origin`은 Next에 넘겨 Next가 판정하게 했다. 운영에서 브라우저가 보내는 `Origin`은 사이트 origin뿐이라 실제 트래픽은 전부 네이티브로 처리된다. Next를 없애는 단계에서는 이 검사를 다시 정의해야 한다.
+3. **`record_meme_view` 함수는 어디에도 없다.** `/api/memes/[id]/view`는 죽은 경로다. 지우거나 함수를 만드는 것은 TypeScript 쪽 과제다.
+4. **sqlx는 세션 `TimeZone`을 UTC로 고정하고 node-pg는 DB 기본값을 쓴다.** 타임스탬프를 글자로 내보내는 경로(`claimedAt`)는 DB 기본 타임존이 UTC일 때만 Next와 같다. 컴포즈의 Postgres 이미지는 `Etc/UTC`다. 타임존을 바꾸면 Axum 쪽 표기만 `+00:00`으로 남는다.
+5. **`growth_client_rate_limits`는 소유자와 SECURITY DEFINER 함수만 만질 수 있다.** `service_role`도 읽지 못한다. 그래서 통합 테스트는 그 테이블을 응답으로만 확인하고, 패리티 스크립트가 슈퍼유저로 직접 읽는다.
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | `/api/memes/view`(분당 120)와 `/api/memes/[id]/view`(분당 30)가 제한기 키 `meme-view:<ip>` 하나를 같이 쓴다. Axum은 앞의 경로만 답하므로 이 공유는 끊겼다(차이 R2-3) | `app/api/memes/view/route.ts`, `app/api/memes/[id]/view/route.ts` |
+| 2 | 조회 본문은 128바이트 제한인데 `request.text()`로 전부 읽은 뒤에 잰다. `Content-Length`가 128을 넘으면 읽기 전에 413이고, 길이 선언이 없으면 BOM 3바이트를 뺀 뒤 잰다. 그래서 BOM + 128바이트는 선언하면 413, chunked면 통과다. Axum은 131바이트까지만 읽고 같은 답을 낸다 | `app/api/memes/view/route.ts` |
+| 3 | `db.auth.getUser()`는 오류를 돌려주지 않아서 분석 경로의 `auth_unavailable`(503) 분기는 도달할 수 없다. 세션 조회가 실패하면 비로그인 이벤트로 기록된다 | `lib/db/server.ts`, `app/api/analytics/events/route.ts` |
+| 4 | 분석 이벤트의 함수 호출이 한도(`P0429`) 말고 다른 이유로 실패하면 경로가 예외를 던져 500(본문 없음)이 된다. 세 가지가 확인됐다: `slice(0, 100)`이 서로게이트 쌍을 잘라 반쪽이 metadata JSON에 `\ud83d` 꼴로 들어간 경우, 문자열에 NUL이 있는 경우, 없는 밈 id(외래 키) | `app/api/analytics/events/route.ts` |
+| 5 | 같은 dedupe key(같은 세션·이벤트·identity·분)의 두 번째 이벤트는 행을 쓰지 않지만 202이고 한도 카운터는 올라간다 | `record_growth_event` |
+| 6 | 본문 길이·자르기가 UTF-16 코드 유닛 기준이다. 잘린 반쪽 서로게이트는 text 인자로는 U+FFFD가 되어 저장된다 | `app/api/analytics/events/route.ts` |
+| 7 | 카드 받기 본문의 키가 반복되면(`{"cardId":"x","cardId":"mc-0001"}`) 마지막 값으로 통과한다 | `app/api/meme-cards/claim/route.ts` |
+| 8 | `?cardIds=`의 `ownedCardIds`는 `ORDER BY`가 없어 Postgres가 돌려주는 순서다 | `lib/meme-collectible.server.ts` |
+| 9 | 필터 없는 카탈로그 페이지는 같은 페이지를 두 번 읽고 대조한다. 예전 캐시와 맞춰 보던 로직이 캐시 없이 남은 것이다 | `lib/meme-collectible.server.ts` |
+| 10 | `mc_growth_session` 쿠키의 MAC을 Node의 느슨한 base64 디코더로 읽는다. 같은 MAC의 다른 표기(`=` 패딩, 표준 알파벳, 중간에 낀 알파벳 밖 문자)도 통과하고, `uuid.mac.` 뒤의 조각은 보지 않는다 | `lib/growth/events.server.ts` |
+| 11 | 퀴즈의 `set`은 mode의 연도 필터를 받지 않는다. 오답을 뽑는 풀만 필터된다. `set`의 각 id는 trim된다 | `app/api/quiz/route.ts` |
+| 12 | 로그인한 사용자의 `auth.users` 행이 없으면 카드 받기는 외래 키 오류로 409 `card_unavailable`이다 | `lib/meme-collectible.server.ts` |
+
+### Next와 남은 차이
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| R2-1 | `serde_json`이 거부하고 `JSON.parse`가 받는 세 입력(짝 없는 `\uD800` 꼴 이스케이프, `1e999`, 128단 넘는 중첩)이 본문에 있으면 Rust는 잘못된 JSON으로 답한다(카드 받기 400 `invalid_input`, 조회·분석 400 `invalid_json`). Next는 본문을 받아들여 처리한다. 5절 차이 20과 같은 원인인데 여기서는 상태 코드가 달라진다. 앱의 클라이언트는 이런 본문을 보내지 않는다 | 수용 |
+| R2-2 | 제한기 키는 IP 주소 아니면 `unknown`이고 버킷은 최대 10,000개다(5절 차이 1·2). `meme-view:`, `analytics:ip:`, `analytics:session:` 키가 한 제한기를 같이 쓴다. 해시에 들어가는 클라이언트 주소는 Next와 같은 원문이라 저장되는 값은 같다 | 수용 |
+| R2-3 | 제한기 카운터는 프로세스별이다(5절 차이 3). `/api/memes/view`는 Next의 `/api/memes/[id]/view`와 더 이상 카운터를 나누지 않는다 | 수용 |
+| R2-4 | `Origin`이 사이트 origin이 아닌 `POST`(세 경로)는 Next가 답한다. Next가 내려가 있으면 403이나 정상 처리 대신 502다. 그런 요청의 제한 카운트는 Next 쪽에 쌓인다 | 수용 |
+| R2-5 | 세션을 조회하지 못하면 결과는 Next와 같지만(비로그인으로 처리) 최대 3초 뒤에 답한다. DB가 내려가 있을 때의 지연이다(5절 차이 7) | 수용 |
+| R2-6 | `claimedAt`은 UTC로 적힌다. DB 기본 타임존이 UTC가 아니면 Next와 오프셋 표기가 달라진다(발견 4) | 수용, 지금은 영향 없음 |
+| R2-7 | 페이지와 개수 쿼리를 한 트랜잭션에서 읽는다. TypeScript는 쿼리마다 트랜잭션이 따로다. 그 사이에 행이 바뀌는 경우에만 결과가 다를 수 있다 | 수용 |
+| R2-8 | `MEMECATCH_SIGNING_SECRET`이 Axum에 없으면 조회·분석 경로는 Next가 답한다(발견 1) | 수용, 단계 5의 요구사항 |
+| R2-9 | `mc_growth_session` MAC의 느슨한 base64 규칙은 Node 26에서 확인한 것을 옮겼다. 운영 이미지는 Node 22다. 규칙이 다르다면 표준이 아닌 표기로 고쳐 쓴 쿠키에서만 차이가 난다 | 수용 |
+| R2-10 | 무작위 퀴즈의 난수원이 `Math.random`이 아니라 `rand`다. 출제되는 밈의 집합과 응답 구조는 같다 | 수용 |
+| R2-11 | 분석 경로가 500으로 끝날 때 로그 내용이 다르다. 응답(본문 없는 500)은 같다 | 수용 |
+
+### 단계 5에서 추가로 확인할 것
+
+- `docker-compose.axum.yml`의 `app` 환경에 `MEMECATCH_SIGNING_SECRET` 추가(발견 1). 그 전에는 `memes-view`·`analytics-events`가 Next에 남는다.
+- 메인 풀 크기. 한 요청이 쓰는 트랜잭션은 카탈로그가 최대 셋(페이지, 대조, 보충), 컬렉션이 셋(세션, 소유 행, 카드), 카드 받기가 넷(세션, 자격, 쓰기, 읽기)이다. 차례로 쓰므로 연결은 요청당 하나지만, `AXUM_DB_POOL_MAX`(기본 4)를 정할 때 조회·분석 이벤트의 빈도와 함께 봐야 한다.

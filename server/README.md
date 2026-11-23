@@ -20,8 +20,9 @@ container named `memecatch-axum-test-pg`; set `TEST_DB_CONTAINER` to another
 name when someone else may be using that one.
 
 `tests/public_routes` replaces the approved rows of `memes`, so it refuses a
-database that holds more than the migrations' memes. Run `cargo test` before
-the parity scripts below, or on a fresh database.
+database that holds more than the migrations' memes. `tests/engagement_routes`
+replaces them too, and the collectible cards and their owners. Run
+`cargo test` before the parity scripts below, or on a fresh database.
 
 Two tests are `#[ignore]`d because they run the real TypeScript, which needs
 Node 22.18 or newer and the packages of the repository root
@@ -51,6 +52,10 @@ DATABASE_URL=... BETTER_AUTH_SECRET=... UPSTREAM_URL=http://127.0.0.1:3001 PORT=
 node parity/parity.mjs http://127.0.0.1:3001 http://127.0.0.1:3100 parity/paths.txt
 ```
 
+`/api/memes/view` and `/api/analytics/events` are native only when Axum has
+`MEMECATCH_SIGNING_SECRET`; give both servers the same value. Without it Axum
+leaves the two routes to Next.
+
 `NODE_ENV=development` makes Axum read the session cookie a browser holds
 over plain HTTP (`better-auth.session_token`). Unset or `production`, it reads
 only `__Secure-better-auth.session_token`, as the production Next does.
@@ -70,6 +75,10 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state for the two scripts above. Throwaway database only. |
 | `storage-parity.sh` | Signed URLs and stored objects, TypeScript against Rust. With `STORAGE_PARITY_DIR` set it keeps the directory and writes `media-targets.txt` for `parity.mjs` (the script header has the steps). |
 | `daily-quiz-fixture.mjs` | Rewrites `tests/fixtures/daily_quiz.json` from the real `lib/quiz.ts` after a change there. |
+| `quiz-fixture.mjs` | Rewrites `tests/fixtures/quiz.json` (the questions of `/api/quiz`) from the real `lib/quiz.ts`. |
+| `cards-quiz.mjs <next> <axum> [cards] [quiz]` | The meme card routes and `/api/quiz`: every status, signed out and signed in, and the rows a claim leaves. Needs two session cookies; replaces the cards and the approved memes. |
+| `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`: every status, the limits, and the rows each request leaves. |
+| `meme-card-catalog.mjs` | Rewrites `src/routes/cards/catalog.json`, the captions and art of the cards, from `data/meme-cards/catalog-1000.json`. |
 
 ## Add a native route
 
@@ -85,6 +94,14 @@ the body as Next does (chunked, no `Content-Length`, also on `HEAD`), so a
 handler returns a plain body. For a path outside `/api`, check what `proxy.ts`
 does to it first: see `routes/public.rs` for `Content-Language` and the www
 host.
+
+`routes/request.rs` has what a handler needs to read a request the way the
+TypeScript does: the `Origin` check, a body with a size limit, `JSON.parse`
+with JavaScript's key order, `URLSearchParams` and the session user. A route
+that compares `Origin` with `new URL(request.url).origin` cannot be decided
+here: Next builds that URL from its own listen address. Answer what the site
+origin decides and hand every other `Origin` to Next (`proxy::forward`), as
+`routes/cards/claim.rs` does.
 
 This server has 256 MB, a tenth of what Next has. Do not hold a whole object
 or body in memory (`routes/media.rs` streams), and give any map keyed by

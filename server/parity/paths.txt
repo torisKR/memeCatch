@@ -48,3 +48,43 @@ OPTIONS /api/csp-report
 POST /api/daily-quiz
 # Without a body this is the "no content type" case of csp-report.mjs.
 POST /api/csp-report
+# Meme cards, quiz, view counter and analytics events (routes/cards.rs,
+# routes/public/quiz_api.rs, routes/tracking.rs). cards-quiz.mjs and
+# tracking.mjs cover them with bodies, sessions and seeded rows; these are the
+# requests that need none. /api/quiz without a set is random: with enough
+# approved memes its body shows as unstable, and cards-quiz.mjs compares it.
+/api/meme-cards
+HEAD /api/meme-cards
+/api/meme-cards?page=2&category=dance&query=%EB%B0%88
+/api/meme-cards?page=0
+/api/meme-cards?_rsc=abc
+/api/meme-cards/mc-0001
+HEAD /api/meme-cards/mc-0001
+/api/meme-cards/nope
+# Next decodes the id; Axum leaves an escaped one to it.
+/api/meme-cards/mc%2D0001
+/api/meme-cards/%ff
+/api/meme-cards/collection
+HEAD /api/meme-cards/collection
+/api/meme-cards/collection?cardIds=mc-0001
+/api/meme-cards/collection?cardIds=
+/api/quiz
+HEAD /api/quiz
+/api/quiz?mode=now
+/api/quiz?set=
+/api/quiz?mode=retro&set=abcdefgh,jkm2022k
+# Without a body or an Origin: refused by either server.
+POST /api/meme-cards/claim
+POST /api/analytics/events
+POST /api/memes/view
+# Their other methods are still Next's.
+POST /api/meme-cards
+OPTIONS /api/meme-cards
+DELETE /api/meme-cards/mc-0001
+POST /api/meme-cards/collection
+GET /api/meme-cards/claim
+POST /api/quiz
+GET /api/memes/view
+GET /api/analytics/events
+# Not ported: Next answers it.
+POST /api/memes/11111111-1111-4111-8111-111111111111/view
